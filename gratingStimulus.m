@@ -25,10 +25,13 @@ classdef gratingStimulus < baseStimulus
 		driftDirection=1
 		speed = 0
 		moveAngle = 0
+		aspectRatio = 1
+		disableNorm = 1
+		contrastPreMultiplicator = 0.5
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition)$';
+		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastPreMultiplicator)$';
 	end
 	
    methods %----------PUBLIC METHODS---------%
