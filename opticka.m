@@ -40,7 +40,7 @@ classdef opticka < dynamicprops
 				if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
 					mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);
 				end
-				obj.path.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
+				obj.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
 				if ~exist([obj.paths.temp 'History'],'dir')
 					mkdir([obj.paths.temp 'History']);
 				end
@@ -58,10 +58,10 @@ classdef opticka < dynamicprops
 				end
 				obj.paths.historypath=[obj.paths.temp 'History'];
 			end
-			obj.handles.uihandle=opticka_UI; %our GUI file
+			obj.handles.uihandle=opticka_ui; %our GUI file
 			obj.h=guidata(obj.handles.uihandle);
 			if ismac
-				javax.swing.UIManager.setLookAndFeel(oldlook);
+				javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 			end
 			
 			obj.r = runExperiment;
@@ -84,7 +84,7 @@ classdef opticka < dynamicprops
 			string=get(obj.h.OKGLDst,'Value');
 			obj.r.dstMode = string{value};
 			obj.r.blend = get(obj.h.OKOpenGLBlending,'Value');
-			if ~strcmp('[]', get(obj.h.OKWindowSize,'String')
+			if ~strcmp('[]', get(obj.h.OKWindowSize,'String'))
 				obj.r.windowed = 1;
 			end
 			obj.r.hideFlash = get(obj.h.OKHideFlash, 'Value');
