@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 07-Sep-2010 08:35:17
+% Last Modified by GUIDE v2.5 07-Sep-2010 17:59:12
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -811,3 +811,17 @@ function OKToolbarToggleGlobal_OffCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.OKPanelProtocols,'Visible','on')
 set(handles.OKPanelGlobal,'Visible','off')
+
+
+% --- Executes on button press in OKVariablesLinear.
+function OKVariablesLinear_Callback(hObject, eventdata, handles)
+% hObject    handle to OKVariablesLinear (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in OKVariablesLog.
+function OKVariablesLog_Callback(hObject, eventdata, handles)
+% hObject    handle to OKVariablesLog (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
