@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 05-Sep-2010 20:14:47
+% Last Modified by GUIDE v2.5 07-Sep-2010 08:35:17
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -72,15 +72,6 @@ function varargout = opticka_ui_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-
-
-% --- Executes on button press in OKInitializeButton.
-function OKInitializeButton_Callback(hObject, eventdata, handles)
-% hObject    handle to OKInitializeButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
 % --------------------------------------------------------------------
 function OKMenuFile_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuFile (see GCBO)
@@ -127,6 +118,8 @@ function OKMenuQuit_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuQuit (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+clear o;
+rmappdata(0,'o');
 close(gcf);
 
 % --- Executes on selection change in OKStimList.
@@ -139,74 +132,137 @@ function OKStimList_Callback(hObject, eventdata, handles)
 %        contents{get(hObject,'Value')} returns selected item from
 %        OKStimList
 
+% --- Executes on selection change in OKSelectScreen.
+function OKSelectScreen_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
 
 function OKMonitorDistance_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMonitorDistance (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKMonitorDistance as text
-%        str2double(get(hObject,'String')) returns contents of OKMonitorDistance as a double
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
 
 
 function OKPixelsPerCm_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPixelsPerCm (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPixelsPerCm as text
-%        str2double(get(hObject,'String')) returns contents of OKPixelsPerCm as a double
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
 
 
 function OKXCenter_Callback(hObject, eventdata, handles)
-% hObject    handle to OKXCenter (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKXCenter as text
-%        str2double(get(hObject,'String')) returns contents of OKXCenter as a double
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
 
 function OKYCenter_Callback(hObject, eventdata, handles)
-% hObject    handle to OKYCenter (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
 
-% Hints: get(hObject,'String') returns contents of OKYCenter as text
-%        str2double(get(hObject,'String')) returns contents of OKYCenter as a double
+function OKWindowSize_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
 
+function OKGLSrc_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+
+function OKGLDst_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+function OKMultiSampling_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+function OKSerialPortName_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+% --- Executes on button press in OKUsePhotoDiode.
+function OKUsePhotoDiode_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+% --- Executes on button press in OKUseLabJack.
+function OKUseLabJack_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+% --- Executes on button press in OKVerbose.
+function OKVerbose_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+% --- Executes on button press in OKOpenGLBlending.
+function OKOpenGLBlending_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+% --- Executes on button press in OKHideFlash.
+function OKHideFlash_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+% --- Executes on button press in OKDebug.
+function OKDebug_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
 
 function OKBackgroundColour_Callback(hObject, eventdata, handles)
-% hObject    handle to OKBackgroundColour (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getTaskVals;
+end
 
-% Hints: get(hObject,'String') returns contents of OKBackgroundColour as text
-%        str2double(get(hObject,'String')) returns contents of OKBackgroundColour as a double
-
-
-
-function OKTrialNumber_Callback(hObject, eventdata, handles)
-% hObject    handle to OKTrialNumber (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKTrialNumber as text
-%        str2double(get(hObject,'String')) returns contents of OKTrialNumber as a double
+function OKnTrials_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getTaskVals;
+end
 
 
+function OKisTime_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getTaskVals;
+end
 
-
-function OKInterStimulusTime_Callback(hObject, eventdata, handles)
-% hObject    handle to OKInterStimulusTime (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKInterStimulusTime as text
-%        str2double(get(hObject,'String')) returns contents of OKInterStimulusTime as a double
-
+function OKtrialTime_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getTaskVals;
+end
 
 % --------------------------------------------------------------------
 function OKMenuNoiseTexture_Callback(hObject, eventdata, handles)
@@ -231,41 +287,8 @@ function OKVarList_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hints: contents = get(hObject,'String') returns OKVarList contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from OKVarList
-
-
-% --- Executes on button press in OKTestButton.
-function OKTestButton_Callback(hObject, eventdata, handles)
-% hObject    handle to OKTestButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-% --- Executes on button press in OKOpenGLBlending.
-function OKOpenGLBlending_Callback(hObject, eventdata, handles)
-% hObject    handle to OKOpenGLBlending (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of OKOpenGLBlending
-
-
-% --- Executes on button press in OKHideFlash.
-function OKHideFlash_Callback(hObject, eventdata, handles)
-% hObject    handle to OKHideFlash (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of OKHideFlash
-
-
-% --- Executes on button press in OKDebug.
-function OKDebug_Callback(hObject, eventdata, handles)
-% hObject    handle to OKDebug (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of OKDebug
+%        contents{get(hObject,'Value')} returns selected item from
+%        OKVarList
 
 % --------------------------------------------------------------------
 function OKMenuPlaid_Callback(hObject, eventdata, handles)
@@ -390,7 +413,6 @@ function OKPanelGratingTime_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of OKPanelGratingTime as a double
 
 
-function OKWindowSize_Callback(hObject, eventdata, handles)
 
 
 function OKPanelBarContrast_Callback(hObject, eventdata, handles)
@@ -431,71 +453,6 @@ function OKHistoryList_Callback(hObject, eventdata, handles)
 
 
 function OKPanelGratingMask_Callback(hObject, eventdata, handles)
-
-
-
-% --- Executes on selection change in OKGLSrc.
-function OKGLSrc_Callback(hObject, eventdata, handles)
-% hObject    handle to OKGLSrc (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns OKGLSrc contents as cell array
-
-
-% --- Executes on selection change in OKGLDst.
-function OKGLDst_Callback(hObject, eventdata, handles)
-% hObject    handle to OKGLDst (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns OKGLDst contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from OKGLDst
-
-
-function OKMultiSampling_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMultiSampling (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKMultiSampling as text
-%        str2double(get(hObject,'String')) returns contents of OKMultiSampling as a double
-
-
-function OKSerialPortName_Callback(hObject, eventdata, handles)
-% hObject    handle to OKSerialPortName (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKSerialPortName as text
-%        str2double(get(hObject,'String')) returns contents of OKSerialPortName as a double
-
-
-% --- Executes on button press in OKUsePhotoDiode.
-function OKUsePhotoDiode_Callback(hObject, eventdata, handles)
-% hObject    handle to OKUsePhotoDiode (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of OKUsePhotoDiode
-
-
-% --- Executes on button press in OKUseLabJack.
-function OKUseLabJack_Callback(hObject, eventdata, handles)
-% hObject    handle to OKUseLabJack (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of OKUseLabJack
-
-
-% --- Executes on button press in OKVerbose.
-function OKVerbose_Callback(hObject, eventdata, handles)
-% hObject    handle to OKVerbose (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of OKVerbose
 
 
 % --- Executes on button press in OKProtocolLoad.
@@ -541,22 +498,22 @@ function OKMenuCalibrateSize_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 
-function OKInterTrialTime_Callback(hObject, eventdata, handles)
-% hObject    handle to OKInterTrialTime (see GCBO)
+function OKitTime_Callback(hObject, eventdata, handles)
+% hObject    handle to OKitTime (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of OKInterTrialTime as text
-%        str2double(get(hObject,'String')) returns contents of OKInterTrialTime as a double
+% Hints: get(hObject,'String') returns contents of OKitTime as text
+%        str2double(get(hObject,'String')) returns contents of OKitTime as a double
 
-% --- Executes on selection change in OKRandomAlgorithm.
-function OKRandomAlgorithm_Callback(hObject, eventdata, handles)
-% hObject    handle to OKRandomAlgorithm (see GCBO)
+% --- Executes on selection change in OKrandomGenerator.
+function OKrandomGenerator_Callback(hObject, eventdata, handles)
+% hObject    handle to OKrandomGenerator (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: contents = cellstr(get(hObject,'String')) returns OKRandomAlgorithm contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from OKRandomAlgorithm
+% Hints: contents = cellstr(get(hObject,'String')) returns OKrandomGenerator contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from OKrandomGenerator
 
 function OKRandomSeed_Callback(hObject, eventdata, handles)
 % hObject    handle to OKRandomSeed (see GCBO)
@@ -565,14 +522,6 @@ function OKRandomSeed_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of OKRandomSeed as text
 %        str2double(get(hObject,'String')) returns contents of OKRandomSeed as a double
-
-function OKTrialTime_Callback(hObject, eventdata, handles)
-% hObject    handle to OKTrialTime (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKTrialTime as text
-%        str2double(get(hObject,'String')) returns contents of OKTrialTime as a double
 
 
 function edit86_Callback(hObject, eventdata, handles)
@@ -819,67 +768,6 @@ function OKCopyVariable_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-function OKTrialTime_CreateFcn(hObject, eventdata, handles)
-function OKRandomSeed_CreateFcn(hObject, eventdata, handles)
-function OKRandomAlgorithm_CreateFcn(hObject, eventdata, handles)
-function OKInterTrialTime_CreateFcn(hObject, eventdata, handles)
-function OKSerialPortName_CreateFcn(hObject, eventdata, handles)
-function OKMultiSampling_CreateFcn(hObject, eventdata, handles)
-function OKGLDst_CreateFcn(hObject, eventdata, handles)
-function OKGLSrc_CreateFcn(hObject, eventdata, handles)
-function popupmenu1_CreateFcn(hObject, eventdata, handles)
-function OKWindowSize_CreateFcn(hObject, eventdata, handles)
-function OKInterStimulusTime_CreateFcn(hObject, eventdata, handles)
-function OKTrialNumber_CreateFcn(hObject, eventdata, handles)
-function OKBackgroundColour_CreateFcn(hObject, eventdata, handles)
-function OKYCenter_CreateFcn(hObject, eventdata, handles)
-function OKXCenter_CreateFcn(hObject, eventdata, handles)
-function OKPixelsPerCm_CreateFcn(hObject, eventdata, handles)
-function OKMonitorDistance_CreateFcn(hObject, eventdata, handles)
-function OKVariableName_CreateFcn(hObject, eventdata, handles)
-function OKVariableValues_CreateFcn(hObject, eventdata, handles)
-function OKVariableStimuli_CreateFcn(hObject, eventdata, handles)
-function OKVariableList_CreateFcn(hObject, eventdata, handles)
-function OKPanelBarSpeed_CreateFcn(hObject, eventdata, handles)
-function OKPanelBarStartPosition_CreateFcn(hObject, eventdata, handles)
-function OKPanelBarAngle_CreateFcn(hObject, eventdata, handles)
-function OKPanelBarAlpha_CreateFcn(hObject, eventdata, handles)
-function OKPanelBarColour_CreateFcn(hObject, eventdata, handles)
-function popupmenu8_CreateFcn(hObject, eventdata, handles)
-function OKPanelBarXPos_CreateFcn(hObject, eventdata, handles)
-function OKPanelBarYPos_CreateFcn(hObject, eventdata, handles)
-function OKPanelBarLength_CreateFcn(hObject, eventdata, handles)
-function OKPanelBarWidth_CreateFcn(hObject, eventdata, handles)
-function OKPanelBarContrast_CreateFcn(hObject, eventdata, handles)
-function OKPanelGratingSize_CreateFcn(hObject, eventdata, handles)
-function OKPanelGratingAlpha_CreateFcn(hObject, eventdata, handles)
-function OKPanelGratingColour_CreateFcn(hObject, eventdata, handles)
-function edit86_CreateFcn(hObject, eventdata, handles)
-function OKPanelGratingType_CreateFcn(hObject, eventdata, handles)
-function edit77_CreateFcn(hObject, eventdata, handles)
-function OKPanelGratingTime_CreateFcn(hObject, eventdata, handles)
-function OKPanelGratingContrast_CreateFcn(hObject, eventdata, handles)
-function OKPanelGratingSF_CreateFcn(hObject, eventdata, handles)
-function OKPanelGratingY_CreateFcn(hObject, eventdata, handles)
-function OKPanelGratingX_CreateFcn(hObject, eventdata, handles)
-function edit113_CreateFcn(hObject, eventdata, handles)
-function edit112_CreateFcn(hObject, eventdata, handles)
-function OKPanelDotsAngle_CreateFcn(hObject, eventdata, handles)
-function OKPanelDotsAlpha_CreateFcn(hObject, eventdata, handles)
-function OKPanelDotsColour_CreateFcn(hObject, eventdata, handles)
-function OKPanelDotsType_CreateFcn(hObject, eventdata, handles)
-function OKPanelDotsXPos_CreateFcn(hObject, eventdata, handles)
-function OKPanelDotsYPos_CreateFcn(hObject, eventdata, handles)
-function OKPanelDotSize_CreateFcn(hObject, eventdata, handles)
-function OKPanelDostDotSize_CreateFcn(hObject, eventdata, handles)
-function edit104_CreateFcn(hObject, eventdata, handles)
-function OKVarList_CreateFcn(hObject, eventdata, handles)
-function OKStimList_CreateFcn(hObject, eventdata, handles)
-function OKTitleText_CreateFcn(hObject, eventdata, handles)
-function OKHistoryList_CreateFcn(hObject, eventdata, handles)
-function OKProtocolsList_CreateFcn(hObject, eventdata, handles)
-
-
 
 function OKPanelGratingAspectRatio_Callback(hObject, eventdata, handles)
 % hObject    handle to OKPanelGratingAspectRatio (see GCBO)
@@ -887,15 +775,8 @@ function OKPanelGratingAspectRatio_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hints: get(hObject,'String') returns contents of OKPanelGratingAspectRatio as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingAspectRatio as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingAspectRatio_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingAspectRatio (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
+%        str2double(get(hObject,'String')) returns contents of
+%        OKPanelGratingAspectRatio as a double
 
 
 function edit118_Callback(hObject, eventdata, handles)
@@ -905,14 +786,6 @@ function edit118_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of edit118 as text
 %        str2double(get(hObject,'String')) returns contents of edit118 as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function edit118_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit118 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
 
 
 % --------------------------------------------------------------------

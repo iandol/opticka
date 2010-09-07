@@ -68,32 +68,42 @@ classdef opticka < dynamicprops
 			obj.r.task = stimulusSequence;
 			obj.getScreenVals;
 			obj.getTaskVals;
-			
+			setappdata(0,'o',obj);
 			
 		end
 		
 		function getScreenVals(obj)
-			obj.r.distance=str2double(get(obj.h.OKMonitorDistance,'String'));
-			obj.r.pixelspercm=str2double(get(obj.h.OKPixelsPerCm,'String'));
-			obj.r.screenXOffset=str2double(get(obj.h.OKXCenter,'String'));
-			obj.r.screenYOffset=str2double(get(obj.h.OKYCenter,'String'));
-			value=get(obj.h.OKGLSrc,'Value');
-			string=get(obj.h.OKGLSrc,'Value');
+			obj.r.distance = obj.gd(obj.h.OKMonitorDistance);
+			obj.r.pixelsPerCm = obj.gd(obj.h.OKPixelsPerCm);
+			obj.r.screenXOffset = obj.gd(obj.h.OKXCenter);
+			obj.r.screenYOffset = obj.gd(obj.h.OKYCenter);
+			
+			value = obj.gv(obj.h.OKGLSrc);
+			string = obj.gs(obj.h.OKGLSrc);
 			obj.r.srcMode = string{value};
-			value=get(obj.h.OKGLDst,'Value');
-			string=get(obj.h.OKGLDst,'Value');
+			
+			value = obj.gv(obj.h.OKGLDst);
+			string = obj.gs(obj.h.OKGLDst);
 			obj.r.dstMode = string{value};
-			obj.r.blend = get(obj.h.OKOpenGLBlending,'Value');
+			
+			obj.r.blend = obj.gv(obj.h.OKOpenGLBlending);
 			if ~strcmp('[]', get(obj.h.OKWindowSize,'String'))
 				obj.r.windowed = 1;
 			end
-			obj.r.hideFlash = get(obj.h.OKHideFlash, 'Value');
-			obj.r.antiAlias = str2double(get(obj.h.OKMultiSampling,'String'));
-			obj.r.photoDiode =  get(obj.h.OKUsePhotoDiode, 'Value');
+			obj.r.hideFlash = obj.gv(obj.h.OKHideFlash);
+			obj.r.antiAlias = obj.gd(obj.h.OKMultiSampling);
+			obj.r.photoDiode = obj.gv(obj.h.OKUsePhotoDiode);
+			obj.r.verbose = obj.gd(obj.h.OKVerbose);
 		end
 		
 		function getTaskVals(obj)
-			
+			obj.r.task.trialTime = obj.gd(obj.h.OKtrialTime);
+			obj.r.task.randomSeed = obj.gd(obj.h.OKRandomSeed);
+			obj.r.task.randomGenerator = obj.gs(obj.h.OKrandomGenerator);
+			obj.r.task.itTime = obj.gd(obj.h.OKitTime);
+			obj.r.task.randomise = obj.gd(obj.h.OKRandomise);
+			obj.r.task.isTime = obj.gd(obj.h.OKisTime);
+			obj.r.task.nTrials = obj.gd(obj.h.OKnTrials);
 		end
 		
 	end
@@ -111,5 +121,16 @@ classdef opticka < dynamicprops
 				end
 			end
 		end
+		
+		function outhandle = gs(obj,inhandle)
+			outhandle = get(inhandle,'String');
+		end
+		function outhandle = gd(obj,inhandle)
+			outhandle = str2double(get(inhandle,'String'));
+		end
+		function outhandle = gv(obj,inhandle)
+			outhandle = get(inhandle,'Value');
+		end
+		
 	end
 end
