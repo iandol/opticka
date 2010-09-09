@@ -21,7 +21,7 @@ classdef barStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(barWidth|barLength|angle|speed|startPosition|endPosition|contrast)$';
+		allowedProperties='^(type|barWidth|barLength|angle|speed|contrast)$';
 	end
 	
    methods %----------PUBLIC METHODS---------%
@@ -32,11 +32,6 @@ classdef barStimulus < baseStimulus
 				args.family = 'bar';
 			end
 			obj=obj@baseStimulus(args); %we call the superclass constructor first
-			%check we are a grating
-% 			if ~strcmp(obj.family,'bar')
-% 				error('Sorry, you are trying to call a barStimulus with a family other than bar');
-% 			end
-			%start to build our parameters
 			if nargin>0 && isstruct(args)
 				fnames = fieldnames(args); %find our argument names
 				for i=1:length(fnames);
@@ -55,10 +50,10 @@ classdef barStimulus < baseStimulus
 			%correct dimensions
 			bw = round(obj.barWidth*ppd);
 			bl = round(obj.barLength*ppd);
-			obj.matrix(:,:,1)=ones(bl,bw)*obj.color(1);
-			obj.matrix(:,:,2)=ones(bl,bw)*obj.color(2);
-			obj.matrix(:,:,3)=ones(bl,bw)*obj.color(3);
-			obj.matrix(:,:,4)=ones(bl,bw)*obj.color(4);
+			obj.matrix(:,:,1)=ones(bl,bw)*obj.colour(1);
+			obj.matrix(:,:,2)=ones(bl,bw)*obj.colour(2);
+			obj.matrix(:,:,3)=ones(bl,bw)*obj.colour(3);
+			obj.matrix(:,:,4)=ones(bl,bw)*obj.colour(4);
 			switch obj.type
 				case 'random'
 					obj.rmatrix=rand(bl,bw);

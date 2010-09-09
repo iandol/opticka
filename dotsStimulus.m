@@ -8,7 +8,7 @@ classdef dotsStimulus < baseStimulus
 		speed = 1    % dot speed (deg/sec)
 		nDots = 100 % number of dots
 		angle = 0
-		colorType = 'randomBW'
+		colourType = 'randomBW'
 		dotSize  = 0.2  % width of dot (deg)
 		coherence = 0.5;
 		kill      = 0.2 % fraction of dots to kill each frame  (limited lifetime)
@@ -18,7 +18,7 @@ classdef dotsStimulus < baseStimulus
 	properties (SetAccess = private, GetAccess = public)
 		xy
 		dxdy
-		colors
+		colours
 	end
 	properties (SetAccess = private, GetAccess = private)
 		antiAlias = 4
@@ -31,7 +31,7 @@ classdef dotsStimulus < baseStimulus
 		delta
 		dx
 		dy
-		allowedProperties='^(type|speed|nDots|dotSize|angle|colorType|coherence|dotType|kill)$';
+		allowedProperties='^(type|speed|nDots|dotSize|angle|colourType|coherence|dotType|kill)$';
 	end
 	
 	methods %----------PUBLIC METHODS---------%
@@ -75,27 +75,28 @@ classdef dotsStimulus < baseStimulus
 			obj.rDots=obj.nDots-floor(obj.nDots*(obj.coherence));
 			if obj.rDots>0
 				obj.angles(1:obj.rDots)=(2*pi).*rand(1,obj.rDots);
+				obj.angles = shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
 			end
 			
 			%make our dot colours
-			switch obj.colorType
+			switch obj.colourType
 				case 'random'
-					obj.colors = randn(4,obj.nDots);
-					obj.colors(4,:) = obj.alpha;
+					obj.colours = randn(4,obj.nDots);
+					obj.colours(4,:) = obj.alpha;
 				case 'randomBW'
-					obj.colors=zeros(4,obj.nDots);
+					obj.colours=zeros(4,obj.nDots);
 					for i = 1:obj.nDots
-						obj.colors(:,i)=rand;
+						obj.colours(:,i)=rand;
 					end
-					obj.colors(4,:)=obj.alpha;
+					obj.colours(4,:)=obj.alpha;
 				case 'binary'
-					obj.colors=zeros(4,obj.nDots);
+					obj.colours=zeros(4,obj.nDots);
 					rix = round(rand(obj.nDots,1)) > 0;
-					obj.colors(:,rix) = 1;
-					obj.colors(4,:)=obj.alpha; %set the alpha level
+					obj.colours(:,rix) = 1;
+					obj.colours(4,:)=obj.alpha; %set the alpha level
 				otherwise
-					obj.colors=obj.color;
-					obj.colors(4)=obj.alpha;
+					obj.colours=obj.colour;
+					obj.colours(4)=obj.alpha;
 			end
 			
 			%calculate positions and vector offsets
@@ -152,24 +153,24 @@ classdef dotsStimulus < baseStimulus
 					obj.angles(1:obj.rDots)=(2*pi).*rand(1,obj.rDots);
 				end
 				
-				switch obj.colorType
+				switch obj.colourType
 					case 'random'
-						obj.colors = randn(4,obj.nDots);
-						obj.colors(4,:) = obj.alpha;
+						obj.colours = randn(4,obj.nDots);
+						obj.colours(4,:) = obj.alpha;
 					case 'randomBW'
-						obj.colors=zeros(4,obj.nDots);
+						obj.colours=zeros(4,obj.nDots);
 						for i = 1:obj.nDots
-							obj.colors(:,i)=rand;
+							obj.colours(:,i)=rand;
 						end
-						obj.colors(4,:)=obj.alpha;
+						obj.colours(4,:)=obj.alpha;
 					case 'binary'
-						obj.colors=zeros(4,obj.nDots);
+						obj.colours=zeros(4,obj.nDots);
 						rix = round(rand(obj.nDots,1)) > 0;
-						obj.colors(:,rix) = 1;
-						obj.colors(4,:)=obj.alpha; %set the alpha level
+						obj.colours(:,rix) = 1;
+						obj.colours(4,:)=obj.alpha; %set the alpha level
 					otherwise
-						obj.colors=obj.color;
-						obj.colors(4)=obj.dotAlpha;
+						obj.colours=obj.colour;
+						obj.colours(4)=obj.dotAlpha;
 				end
 				
 				obj.xy = (obj.size*obj.ppd).*rand(2,obj.nDots);
@@ -179,7 +180,7 @@ classdef dotsStimulus < baseStimulus
 				
 				vbl=Screen('Flip', w);
 				while 1
-					Screen('DrawDots', w, obj.xy, obj.dSize, obj.colors, center, 1);  % change 1 to 0 to draw square dots
+					Screen('DrawDots', w, obj.xy, obj.dSize, obj.colours, center, 1);  % change 1 to 0 to draw square dots
 					Screen('gluDisk',w,[1 1 0],center(1),center(2),5);
 					Screen('DrawingFinished', w); % Tell PTB that no  further drawing commands will follow before Screen('Flip')
 

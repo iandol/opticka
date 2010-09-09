@@ -14,20 +14,20 @@ classdef gratingStimulus < baseStimulus
    properties %--------------------PUBLIC PROPERTIES----------%
 		family = 'grating'
 		type = 'procedural'
-		sf = 5
-		tf = 2
+		sf = 1
+		tf = 1
 		angle = 0
 		rotationMethod = 1
 		phase = 0
-		contrast = 0.75
-		mask = 0
+		contrast = 0.5
+		mask = 1
 		gabor = 0
 		driftDirection=1
 		speed = 0
 		moveAngle = 0
 		aspectRatio = 1
 		disableNorm = 1
-		contrastPreMultiplicator = 0.5
+		contrastMult = 0.5
 	end
 	
 	properties (SetAccess = private, GetAccess = private)

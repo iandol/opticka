@@ -6,13 +6,13 @@ classdef baseStimulus < dynamicprops
 		xPosition = 0
 		yPosition = 0
 		size = 2
-		color = [0.5 0.5 0.5 0.9]
+		colour = [0.5 0.5 0.5 1]
 		alpha = 1
 		verbose=0
 		startPosition=0;
 	end
 	properties (SetAccess = private, GetAccess = private)
-		allowedPropertiesBase='^(type|xPosition|yPosition|size|color|verbose)$'
+		allowedPropertiesBase='^(type|xPosition|yPosition|size|colour|verbose|alpha)$'
 	end
 	methods
 		%-------------------CONSTRUCTOR----------------------%

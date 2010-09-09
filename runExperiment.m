@@ -27,7 +27,7 @@ classdef runExperiment < dynamicprops
 		visualDebug = 1 %show the info text and position grid
 		doubleBuffer = 1 %normally should be left at 1
 		antiAlias = [] %multisampling sent to the graphics card, try values []=disabled, 4, 8 and 16
-		backgroundColor % background of display during stimulus presentation
+		backgroundColour = [0.5 0.5 0.5 0] % background of display during stimulus presentation
 		screenXOffset = 0 %shunt screen center by X degrees
 		screenYOffset = 0 %shunt screen center by Y degrees
 		blend = 0 %use OpenGL blending mode
@@ -120,9 +120,9 @@ classdef runExperiment < dynamicprops
 				
 				obj.timeLog.preOpenWindow=GetSecs;
 				if obj.windowed==1
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, 0.5,[1 1 801 601], [], obj.doubleBuffer+1,[],obj.antiAlias);
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[1 1 801 601], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				else
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, 0.5,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
 				
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
@@ -195,7 +195,7 @@ classdef runExperiment < dynamicprops
 					if obj.task.isBlank==1
 						%obj.drawBackground;
 					else
-						if ~isempty(obj.backgroundColor)
+						if ~isempty(obj.backgroundColour)
 							obj.drawBackground;
 						end
 						for j=1:obj.sList.n
@@ -605,7 +605,8 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).contrast = ts.contrast/2;
 			obj.sVals(i).angle = ts.angle;
 			obj.sVals(i).phase = ts.phase;
-			obj.sVals(i).color = ts.color;
+			obj.sVals(i).colour = ts.colour;
+			obj.sVals(i).alpha = ts.alpha;
 			obj.sVals(i).xPosition = ts.xPosition;
 			obj.sVals(i).yPosition = ts.yPosition;
 			obj.sVals(i).speed = ts.speed;
@@ -640,10 +641,14 @@ classdef runExperiment < dynamicprops
 				obj.sVals(i).mask = [];
 			end
 			
+			if length(obj.sVals(i).colour) == 3
+				obj.sVals(i).colour = [obj.sVals(i).colour obj.sVals(i).alpha];
+			end
+			
 			if ts.gabor==0
-				obj.sVals(i).texture = CreateProceduralSineGrating(obj.win, obj.sVals(i).res(1), obj.sVals(i).res(2),obj.sVals(i).color, obj.sVals(i).mask);
+				obj.sVals(i).texture = CreateProceduralSineGrating(obj.win, obj.sVals(i).res(1), obj.sVals(i).res(2),obj.sVals(i).colour, obj.sVals(i).mask);
 			else
-				obj.sVals(i).texture = CreateProceduralGabor(obj.win, obj.sVals(i).res(1), obj.sVals(i).res(2), 1, obj.sVals(i).color);
+				obj.sVals(i).texture = CreateProceduralGabor(obj.win, obj.sVals(i).res(1), obj.sVals(i).res(2), 1, obj.sVals(i).colour);
 			end
 			
 			obj.sVals(i).dstRect=Screen('Rect',obj.sVals(i).texture);
@@ -664,7 +669,8 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).type = ts.type;
 			obj.sVals(i).startPosition = ts.startPosition;
 			
-			obj.sVals(i).color = ts.color;
+			obj.sVals(i).colour = ts.colour;
+			obj.sVals(i).alpha = ts.alpha
 			obj.sVals(i).xPosition = ts.xPosition;
 			obj.sVals(i).yPosition = ts.yPosition;
 			
@@ -679,6 +685,10 @@ classdef runExperiment < dynamicprops
  				obj.task.stimIsMoving=[obj.task.stimIsMoving i];
 			else
 				obj.sVals(i).doMotion=0;
+			end
+			
+			if length(obj.sVals(i).colour) == 3
+				obj.sVals(i).colour = [obj.sVals(i).colour obj.sVals(i).alpha];
 			end
 			
 			obj.sVals(i).dstRect=Screen('Rect',obj.sVals(i).texture);
@@ -698,7 +708,7 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).alpha = ts.alpha;
 			obj.sVals(i).dotType = ts.dotType;
 			obj.sVals(i).dotSize = ts.dotSize*obj.ppd;
-			obj.sVals(i).color = ts.color;
+			obj.sVals(i).colour = ts.colour;
 			obj.sVals(i).xPosition = ts.xPosition;
 			obj.sVals(i).yPosition = ts.yPosition;
 			
@@ -709,13 +719,17 @@ classdef runExperiment < dynamicprops
 				obj.sVals(i).doDots=0;
 			end
 			
+			if length(obj.sVals(i).colour) == 3
+				obj.sVals(i).colour = [obj.sVals(i).colour obj.sVals(i).alpha];
+			end
+			
 			in.ppd = obj.ppd;
 			in.ifi = obj.screenVals.ifi;
 			ts.initialiseDots(in);
 			
 			obj.sVals(i).xy=ts.xy;
 			obj.sVals(i).dxdy=ts.dxdy;
-			obj.sVals(i).colors=ts.colors;
+			obj.sVals(i).colours=ts.colours;
 		end
 		
 		%-------------------Draw the grating-------------------%
@@ -740,7 +754,7 @@ classdef runExperiment < dynamicprops
 		function drawDots(obj,i)
 			x = obj.xCenter+(obj.sVals(i).xPosition*obj.ppd);
 			y = obj.xCenter+(obj.sVals(i).yPosition*obj.ppd);
-			Screen('DrawDots',obj.win,obj.sVals(i).xy,obj.sVals(i).dotSize,obj.sVals(i).colors,...
+			Screen('DrawDots',obj.win,obj.sVals(i).xy,obj.sVals(i).dotSize,obj.sVals(i).colours,...
 				[x y],obj.sVals(i).dotType);
 		end
 		
@@ -774,7 +788,7 @@ classdef runExperiment < dynamicprops
 		
 		%--------------------Draw background-------------%
 		function drawBackground(obj)
-			Screen('FillRect',obj.win,obj.backgroundColor,[]);
+			Screen('FillRect',obj.win,obj.backgroundColour,[]);
 		end
 		
 		%--------------------Print time log-------------------%
