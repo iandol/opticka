@@ -12,7 +12,7 @@ classdef baseStimulus < dynamicprops
 		startPosition=0;
 	end
 	properties (SetAccess = private, GetAccess = private)
-		allowedPropertiesBase='^(type|xPosition|yPosition|size|colour|verbose|alpha)$'
+		allowedPropertiesBase='^(type|xPosition|yPosition|size|colour|verbose|alpha|startPosition)$'
 	end
 	methods
 		%-------------------CONSTRUCTOR----------------------%

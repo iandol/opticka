@@ -53,12 +53,16 @@ classdef stimulusSequence < dynamicprops
 		
 		%-------------------set up the random number generator------------
 		function initialiseRandom(obj)
+			
 			if isempty(obj.randomSeed)
 				obj.randomSeed=GetSecs;
 			end
-			obj.oldStream = RandStream.getDefaultStream;
+			if isempty(obj.oldStream)
+				obj.oldStream = RandStream.getDefaultStream;
+			end
 			obj.taskStream = RandStream.create(obj.randomGenerator,'Seed',obj.randomSeed);
 			RandStream.setDefaultStream(obj.taskStream);
+			
 		end
 		
 		%------------------reset the random number generator-------------

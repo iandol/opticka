@@ -8,6 +8,7 @@ classdef opticka < dynamicprops
 		r
 		verbose
 		store
+		version='0.41'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -66,20 +67,28 @@ classdef opticka < dynamicprops
 				javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 			end
 			
+			set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version])
+			set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
 			obj.getScreenVals;
 			obj.getTaskVals;
 			setappdata(0,'o',obj); %we stash our object in the root appdata store
 			
+			obj.store.nVars = 0;
 			obj.store.visibleStimulus = 'grating'; %our default shown stimulus
 			obj.store.gratingN = 0;
 			obj.store.barN = 0;
 			obj.store.dotsN = 0;
+			obj.store.spotN = 0;
 			obj.store.plaidN = 0;
 			obj.store.noiseN = 0;
+			
+			set(obj.h.OKVarList,'String','');
+			set(obj.h.OKStimList,'String','');
 			
 		end
 				
 		function getScreenVals(obj)
+			
 			if isempty(obj.r)
 				obj.r = runExperiment;
 			end
@@ -100,41 +109,52 @@ classdef opticka < dynamicprops
 			if ~strcmp('[]', get(obj.h.OKWindowSize,'String'))
 				obj.r.windowed = 1;
 			end
+			
 			obj.r.hideFlash = obj.gv(obj.h.OKHideFlash);
-			obj.r.antiAlias = obj.gv(obj.h.OKMultiSampling);
+			obj.r.antiAlias = obj.gd(obj.h.OKAntiAliasing);
 			obj.r.photoDiode = obj.gv(obj.h.OKUsePhotoDiode);
 			obj.r.verbose = obj.gv(obj.h.OKVerbose);
 			obj.r.debug = obj.gv(obj.h.OKDebug);
 			obj.r.visualDebug = obj.gv(obj.h.OKDebug);
 			obj.r.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
+			obj.r.fixationPoint = obj.gv(obj.h.OKFixationSpot);
+			
 		end
 		
 		function getTaskVals(obj)
+			
 			if isempty(obj.r.task)
 				obj.r.task = stimulusSequence;
 				obj.r.task.randomiseStimuli;
 			end
 			obj.r.task.trialTime = obj.gd(obj.h.OKtrialTime);
-			obj.r.task.randomSeed = obj.gd(obj.h.OKRandomSeed);
-			obj.r.task.randomGenerator = obj.gs(obj.h.OKrandomGenerator);
+			obj.r.task.randomSeed = obj.gn(obj.h.OKRandomSeed);
+			if isempty(obj.r.task.randomSeed) || isnan(obj.r.task.randomSeed)
+				obj.r.task.randomSeed = GetSecs;
+			end
+			v = obj.gv(obj.h.OKrandomGenerator);
+			obj.r.task.randomGenerator = obj.gs(obj.h.OKrandomGenerator,v);
 			obj.r.task.itTime = obj.gd(obj.h.OKitTime);
-			obj.r.task.randomise = obj.gd(obj.h.OKRandomise);
+			obj.r.task.randomise = obj.gv(obj.h.OKRandomise);
 			obj.r.task.isTime = obj.gd(obj.h.OKisTime);
 			obj.r.task.nTrials = obj.gd(obj.h.OKnTrials);
+			obj.r.task.initialiseRandom;
+			
 		end
 		
 		function clearStimulusList(obj)
 			if ~isempty(obj.r)
 				if ~isempty(obj.r.stimulus)
 					obj.r.stimulus = [];
-					set(obj.h.OKStimList,'String',{''});
 					obj.store.gratingN = 0;
 					obj.store.barN = 0;
 					obj.store.dotsN = 0;
+					obj.store.spotN = 0;
 					obj.store.plaidN = 0;
 					obj.store.noiseN = 0;
 				end
 			end
+			set(obj.h.OKStimList,'String','');
 		end
 		
 		function clearVariableList(obj)
@@ -143,6 +163,7 @@ classdef opticka < dynamicprops
 					obj.r.task = [];
 				end
 			end
+			set(obj.h.OKVarList,'String','');
 		end
 		
 		function addGrating(obj)
@@ -161,18 +182,23 @@ classdef opticka < dynamicprops
 			tmp.startPosition = obj.gd(obj.h.OKPanelGratingstartPosition);
 			tmp.aspectRatio = obj.gd(obj.h.OKPanelGratingaspectRatio);
 			tmp.contrastMult = obj.gd(obj.h.OKPanelGratingcontrastMult);
-			tmp.disableNorm = obj.gd(obj.h.OKPanelGratingdisableNorm);
+			tmp.driftDirection = obj.gv(obj.h.OKPanelGratingdriftDirection);
 			tmp.colour = obj.gn(obj.h.OKPanelGratingcolour);
 			tmp.alpha = obj.gd(obj.h.OKPanelGratingalpha);
 			tmp.rotationMethod = obj.gv(obj.h.OKPanelGratingrotationMethod);
 			tmp.mask = obj.gv(obj.h.OKPanelGratingmask);
 			tmp.disableNorm = obj.gv(obj.h.OKPanelGratingdisableNorm);
-			
+			tmp.spatialConstant = obj.gn(obj.h.OKPanelGratingspatialConstant);
 			obj.r.stimulus.g(obj.store.gratingN+1) = gratingStimulus(tmp);
 			
 			obj.store.gratingN = obj.store.gratingN + 1;
 			string = obj.gs(obj.h.OKStimList);
-			string{length(string)+1} = ['Grating #' num2str(obj.store.gratingN)];
+			switch tmp.gabor
+				case 0
+					string{length(string)+1} = ['Grating #' num2str(obj.store.gratingN)];
+				case 1
+					string{length(string)+1} = ['Gabor #' num2str(obj.store.gratingN)];
+			end
 			set(obj.h.OKStimList,'String',string);
 		end
 		
@@ -220,52 +246,116 @@ classdef opticka < dynamicprops
 			set(obj.h.OKStimList,'String',string);
 		end
 		
+		function addSpot(obj)
+			tmp = struct;
+			tmp.xPosition = obj.gd(obj.h.OKPanelSpotxPosition);
+			tmp.yPosition = obj.gd(obj.h.OKPanelSpotyPosition);
+			tmp.size = obj.gd(obj.h.OKPanelSpotsize);
+			tmp.angle = obj.gd(obj.h.OKPanelSpotangle);
+			tmp.speed = obj.gd(obj.h.OKPanelSpotspeed);
+			tmp.colour = obj.gn(obj.h.OKPanelSpotcolour);
+			tmp.alpha = obj.gd(obj.h.OKPanelSpotalpha);
+			
+			obj.r.stimulus.d(obj.store.spotN + 1) = spotStimulus(tmp);
+			
+			obj.store.spotN = obj.store.spotN + 1;
+			string = obj.gs(obj.h.OKStimList);
+			string{length(string)+1} = ['Spot #' num2str(obj.store.spotN)];
+			set(obj.h.OKStimList,'String',string);
+		end
+		
 		function deleteGrating(obj)
+			
+			if isfield(obj.r.stimulus,'g')
+			obj.r.stimulus.g = obj.r.stimulus.g(1:obj.store.gratingN-1);
+			obj.store.gratingN = obj.store.gratingN - 1;
+			end
+			
+			if obj.store.gratingN<0;obj.store.gratingN=0;end
 			
 			string = obj.gs(obj.h.OKStimList);
 			string = string(1:length(string)-1);
 			set(obj.h.OKStimList,'Value',1);
 			set(obj.h.OKStimList,'String',string);
-			obj.r.stimulus.g = obj.r.stimulus.g(1:obj.store.gratingN-1);
-			obj.store.gratingN = obj.store.gratingN - 1;
 			
 		end
 		
 		function deleteBar(obj)
 			
+			obj.r.stimulus.b = obj.r.stimulus.b(1:obj.store.barN-1);
+			obj.store.barN = obj.store.barN - 1;
+			
+			if obj.store.barN<0;obj.store.barN=0;end
+			
 			string = obj.gs(obj.h.OKStimList);
 			string = string(1:length(string)-1);
 			set(obj.h.OKStimList,'Value',1);
 			set(obj.h.OKStimList,'String',string);
-			obj.r.stimulus.b = obj.r.stimulus.b(1:obj.store.barN-1);
-			obj.store.barN = obj.store.barN - 1;
 			
 		end
 		
 		function deleteDots(obj)
 			
+			obj.r.stimulus.d = obj.r.stimulus.d(1:obj.store.dotsN-1);
+			obj.store.dotsN = obj.store.dotsN - 1;
+			
+			if obj.store.dotsN<0;obj.store.dotsN=0;end
+			
 			string = obj.gs(obj.h.OKStimList);
 			string = string(1:length(string)-1);
 			set(obj.h.OKStimList,'Value',1);
 			set(obj.h.OKStimList,'String',string);
-			obj.r.stimulus.d = obj.r.stimulus.d(1:obj.store.dotsN-1);
-			obj.store.dotsN = obj.store.dotsN - 1;
 			
 		end
 		
-		function fixUI(obj)
-			ch = findall(obj.handles.uihandle);
-			set(obj.handles.uihandle,'Units','pixels');
-			for k = 1:length(ch)
-				if isprop(ch(k),'Units')
-					set(ch(k),'Units','pixels');
-				end
-				if isprop(ch(k),'FontName')
-					set(ch(k),'FontName','verdana');
-				end
-			end
+		function deleteSpot(obj)
+			
+			obj.r.stimulus.s = obj.r.stimulus.s(1:obj.store.spotN-1);
+			obj.store.spotN = obj.store.spotN - 1;
+			
+			if obj.store.spotN<0;obj.store.spotN=0;end
+			
+			string = obj.gs(obj.h.OKStimList);
+			string = string(1:length(string)-1);
+			set(obj.h.OKStimList,'Value',1);
+			set(obj.h.OKStimList,'String',string);
+			
 		end
 		
+		function addVariable(obj)
+			
+			obj.store.nVars = obj.store.nVars + 1;
+			obj.r.task.nVars = obj.store.nVars;
+			obj.r.task.nVar(obj.r.task.nVars).name = obj.gs(obj.h.OKVariableName);
+			obj.r.task.nVar(obj.r.task.nVars).values = obj.gn(obj.h.OKVariableValues);
+			obj.r.task.nVar(obj.r.task.nVars).stimulus = obj.gn(obj.h.OKVariableStimuli);
+			
+			obj.r.task.randomiseStimuli;
+			
+			string = obj.gs(obj.h.OKVarList);
+			string{length(string)+1} = [obj.r.task.nVar(obj.r.task.nVars).name... 
+				' on Stimuli: ' num2str(obj.r.task.nVar(obj.r.task.nVars).stimulus)];
+			set(obj.h.OKVarList,'String',string);
+			
+		end
+		
+		function deleteVariable(obj)
+			
+			obj.r.task.nVars = obj.store.nVars - 1;
+			if isfield(obj.r.task,'nVar')
+				obj.r.task.nVar=obj.r.task.nVar(1:obj.r.task.nVars);
+			end
+			obj.store.nVars = obj.store.nVars - 1;
+			
+			if obj.r.task.nVars<0;obj.r.task.nVars=0;end
+			if obj.store.nVars<0;obj.store.nVars=0;end
+			
+			string = obj.gs(obj.h.OKVarList);
+			string = string(1:length(string)-1);
+			set(obj.h.OKVarList,'Value',1);
+			set(obj.h.OKVarList,'String',string);
+			
+		end
 	end
 	
 	methods ( Access = protected ) %----------PRIVATE METHODS---------%
@@ -299,6 +389,19 @@ classdef opticka < dynamicprops
 		end
 		function outhandle = gv(obj,inhandle)
 			outhandle = get(inhandle,'Value');
+		end
+		
+		function fixUI(obj)
+			ch = findall(obj.handles.uihandle);
+			set(obj.handles.uihandle,'Units','pixels');
+			for k = 1:length(ch)
+				if isprop(ch(k),'Units')
+					set(ch(k),'Units','pixels');
+				end
+				if isprop(ch(k),'FontName')
+					set(ch(k),'FontName','verdana');
+				end
+			end
 		end
 		
 	end

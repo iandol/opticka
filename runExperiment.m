@@ -167,6 +167,8 @@ classdef runExperiment < dynamicprops
 							obj.setupBar(j);
 						case 'dots'
 							obj.setupDots(j);
+						case 'spot'
+							obj.setupSpot(j);
 						case 'annulus'
 							obj.setupAnnulus(j);
 					end
@@ -206,6 +208,8 @@ classdef runExperiment < dynamicprops
 									obj.drawBar(j);
 								case 'dots'
 									obj.drawDots(j);
+								case 'spot'
+									obj.drawSpot(j);
 								case 'annulus'
 									obj.drawAnnulus(j);
 							end
@@ -247,6 +251,7 @@ classdef runExperiment < dynamicprops
 					end
 					
 					obj.task.tick=obj.task.tick+1;
+					
 				end
 				
 				%---------------------------------------------Finished
@@ -307,7 +312,13 @@ classdef runExperiment < dynamicprops
 			obj.pixelsPerCm = value;
 			obj.ppd=round(obj.pixelsPerCm*(57.3/obj.distance)); %set the pixels per degree
 			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
-		end 
+		end
+		
+% 		function set.verbose(obj,value)
+% 			for i = 1:obj.sList.n
+% 				ts = obj.stimulus.(obj.sList.list(i));
+% 			end
+% 		end
 	end
 	
 	%-------------------------END PUBLIC METHODS--------------------------------%
@@ -447,6 +458,19 @@ classdef runExperiment < dynamicprops
 			end
 		end
 		
+		%---------------Reset variables like phase--------------------------%
+		function resetVars(obj)
+			for i=1:obj.sList.n
+				ts = obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
+				switch obj.sList.list(i)
+					case 'g'
+						obj.sVals(i).phase=ts.phase;
+					case 'b'
+						
+				end
+			end
+		end
+		
 		%---------------Update the stimulus values for the current trial and increments the switchTime timer---------%
 		function updateTask(obj)
 			obj.task.timeNow = GetSecs;
@@ -476,6 +500,11 @@ classdef runExperiment < dynamicprops
 						t.updateDots;
 						obj.sVals(ix).xy=t.xy;
 					end
+					
+					for i=1:length(obj.task.stimIsFlashing)
+						ix=obj.task.stimIsFlashing(i);
+					end
+					
 				else %blank stimulus, we don't need to update anything
 					
 				end
@@ -508,6 +537,7 @@ classdef runExperiment < dynamicprops
 						mR = obj.task.thisRun + 1;
 					end
 					
+					obj.resetVars;
 					obj.updateVars(mT,mR);
 					obj.logMe('OutaBlank');
 					
@@ -572,7 +602,7 @@ classdef runExperiment < dynamicprops
 			for i=1:8
 				a(i)=GetSecs;
 			end
-			obj.timeLog.deltaGetSecs=mean(diff(a))*1000; %what overhead does GetSecs have?
+			obj.timeLog.deltaGetSecs=mean(diff(a))*1000; %what overhead does GetSecs have in milliseconds?
 			WaitSecs(0.01); %preload function
 			
 			Screen('Preference', 'TextRenderer', 0); %fast text renderer
@@ -582,6 +612,8 @@ classdef runExperiment < dynamicprops
 		%--------------------Configure grating specific variables-----------%
 		function setupGrating(obj,i)
 			ts = obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
+			
+			obj.sVals(i).doDots = [];
 			
 			obj.sVals(i).family = ts.family;
 			
@@ -593,8 +625,8 @@ classdef runExperiment < dynamicprops
 			
 			obj.sVals(i).gabor=ts.gabor;
 			if obj.sVals(i).gabor==0
-				obj.sVals(i).scaledown=2;
-				obj.sVals(i).scaleup=0.5;
+				obj.sVals(i).scaledown=1;
+				obj.sVals(i).scaleup=1;
 			else
 				obj.sVals(i).scaledown=1; %scaling gabors does weird things!!!
 				obj.sVals(i).scaleup=1;
@@ -602,7 +634,10 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).gratingSize = round(obj.ppd*ts.size);
 			obj.sVals(i).sf = (ts.sf/obj.ppd)*obj.sVals(i).scaledown;
 			obj.sVals(i).tf = ts.tf;
-			obj.sVals(i).contrast = ts.contrast/2;
+			obj.sVals(i).contrast = ts.contrast;
+			if ts.gabor
+				obj.sVals(i).contrast = obj.sVals(i).contrast*100;
+			end
 			obj.sVals(i).angle = ts.angle;
 			obj.sVals(i).phase = ts.phase;
 			obj.sVals(i).colour = ts.colour;
@@ -610,7 +645,11 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).xPosition = ts.xPosition;
 			obj.sVals(i).yPosition = ts.yPosition;
 			obj.sVals(i).speed = ts.speed;
+			obj.sVals(i).spatialConstant = ts.spatialConstant*obj.ppd;
 			obj.sVals(i).startPosition=ts.startPosition;
+			obj.sVals(i).contrastMult = ts.contrastMult;
+			obj.sVals(i).disableNorm = ts.disableNorm;
+			obj.sVals(i).aspectRatio = ts.aspectRatio;
 			obj.sVals(i).phaseincrement = (obj.sVals(i).tf * 360) * obj.screenVals.ifi;
 			obj.sVals(i).delta = (ts.speed*obj.ppd) * obj.screenVals.ifi;
 			[obj.sVals(i).dX obj.sVals(i).dY] = obj.updatePosition(obj.sVals(i).delta,obj.sVals(i).angle);
@@ -646,9 +685,17 @@ classdef runExperiment < dynamicprops
 			end
 			
 			if ts.gabor==0
-				obj.sVals(i).texture = CreateProceduralSineGrating(obj.win, obj.sVals(i).res(1), obj.sVals(i).res(2),obj.sVals(i).colour, obj.sVals(i).mask);
+				obj.sVals(i).texture = CreateProceduralSineGrating(obj.win, obj.sVals(i).res(1),...
+					obj.sVals(i).res(2),obj.sVals(i).colour, obj.sVals(i).mask, obj.sVals(i).contrastMult);
 			else
-				obj.sVals(i).texture = CreateProceduralGabor(obj.win, obj.sVals(i).res(1), obj.sVals(i).res(2), 1, obj.sVals(i).colour);
+				if obj.sVals(i).aspectRatio == 1
+					nonSymmetric = 0;
+				else
+					nonSymmetric = 1;
+				end
+				obj.sVals(i).texture = CreateProceduralGabor(obj.win, obj.sVals(i).res(1),...
+					obj.sVals(i).res(2), nonSymmetric, obj.sVals(i).colour,obj.sVals(i).disableNorm,...
+					obj.sVals(i).contrastMult);
 			end
 			
 			obj.sVals(i).dstRect=Screen('Rect',obj.sVals(i).texture);
@@ -661,6 +708,9 @@ classdef runExperiment < dynamicprops
 		%--------------------Configure grating specific variables-----------%
 		function setupBar(obj,i)
 			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
+			
+			obj.sVals(i).doDots = [];
+
 			obj.sVals(i).barWidth=ts.barWidth;
 			obj.sVals(i).barLength=ts.barLength;
 			obj.sVals(i).angle = ts.angle;
@@ -711,6 +761,7 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).colour = ts.colour;
 			obj.sVals(i).xPosition = ts.xPosition;
 			obj.sVals(i).yPosition = ts.yPosition;
+			obj.sVals(i).startPosition=0;
 			
 			if obj.sVals(i).speed>0 %we need to say this needs animating
 				obj.sVals(i).doDots=1;
@@ -732,6 +783,30 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).colours=ts.colours;
 		end
 		
+		%-------------------Setup dots-------------------%
+		function setupSpot(obj,i)
+			
+			obj.sVals(i).doDots = [];
+			
+			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
+			obj.sVals(i).angle = ts.angle;
+			obj.sVals(i).speed = ts.speed;
+			obj.sVals(i).size = ts.size*obj.ppd;
+			obj.sVals(i).delta = obj.sVals(i).speed * obj.ppd * obj.screenVals.ifi;
+			obj.sVals(i).alpha = ts.alpha;
+			obj.sVals(i).colour = ts.colour;
+			obj.sVals(i).xPosition = obj.xCenter+(ts.xPosition*obj.ppd);
+			obj.sVals(i).yPosition = obj.xCenter+(ts.yPosition*obj.ppd);
+			
+			if obj.sVals(i).speed>0 %we need to say this needs animating
+				obj.sVals(i).doMotion=1;
+ 				obj.task.stimIsMoving=[obj.task.stimIsMoving i];
+			else
+				obj.sVals(i).doMotion=0;
+			end
+			
+		end
+		
 		%-------------------Draw the grating-------------------%
 		function drawGrating(obj,i)
 			if obj.sVals(i).gabor==0
@@ -741,7 +816,7 @@ classdef runExperiment < dynamicprops
 			else
 				Screen('DrawTexture', obj.win, obj.sVals(i).texture, [],...
 					obj.sVals(i).mvRect, obj.sVals(i).angle, [], [], [], [], kPsychDontDoRotation,...
-					[obj.sVals(i).phase, obj.sVals(i).sf, 10, 10, 0.5, 0, 0, 0]);
+					[obj.sVals(i).phase, obj.sVals(i).sf, obj.sVals(i).spatialConstant, obj.sVals(i).contrast, obj.sVals(i).aspectRatio, 0, 0, 0]);
 			end
 		end
 		
@@ -752,10 +827,18 @@ classdef runExperiment < dynamicprops
 		
 		%-------------------Draw the dots-------------------%
 		function drawDots(obj,i)
+			
 			x = obj.xCenter+(obj.sVals(i).xPosition*obj.ppd);
 			y = obj.xCenter+(obj.sVals(i).yPosition*obj.ppd);
 			Screen('DrawDots',obj.win,obj.sVals(i).xy,obj.sVals(i).dotSize,obj.sVals(i).colours,...
 				[x y],obj.sVals(i).dotType);
+			
+		end
+		
+		function drawSpot(obj,i)
+			
+			Screen('gluDisk',obj.win,obj.sVals(i).colour,obj.sVals(i).xPosition,obj.sVals(i).yPosition,obj.sVals(i).size);
+			
 		end
 		
 		%--------------------Draw Fixation spot-------------%
@@ -769,9 +852,10 @@ classdef runExperiment < dynamicprops
 				x=horzcat(x,[-4 -3 -2 -1 0 1 2 3 4;i i i i i i i i i]);
 			end
 			x=x.*obj.ppd;
-			Screen('DrawDots',obj.win,x,1,[0.8 0.8 0.4],[obj.xCenter obj.yCenter]);
+			Screen('DrawDots',obj.win,x,1,[0.8 0.8 0.4 1],[obj.xCenter obj.yCenter]);
 		end
 		
+		%--------------------Draw Info text-------------------%
 		function infoText(obj)
 			t=sprintf('T: %i | R: %i | isBlank: %i | Time: %3.3f',obj.task.thisTrial,...
 			obj.task.thisRun,obj.task.isBlank,(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime)); 
@@ -873,10 +957,12 @@ classdef runExperiment < dynamicprops
 		end
 		
 		function logMe(obj,tag)
-			if ~exist('tag','var')
-				tag='#';
+			if obj.verbose==1
+				if ~exist('tag','var')
+					tag='#';
+				end
+				fprintf('%s -- T: %i | R: %i | B: %i | Tick: %i | Time: %5.5g\n',tag,obj.task.thisTrial,obj.task.thisRun,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
 			end
-			fprintf('%s -- T: %i | R: %i | B: %i | Tick: %i | Time: %5.5g\n',tag,obj.task.thisTrial,obj.task.thisRun,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
 		end
 		
 	end

@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 09-Sep-2010 06:43:14
+% Last Modified by GUIDE v2.5 12-Sep-2010 12:54:20
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -59,7 +59,7 @@ handles.output = hObject;
 guidata(hObject, handles);
 
 % UIWAIT makes opticka_ui wait for user response (see UIRESUME)
-% uiwait(handles.optika_uifig);
+% uiwait(handles.OKRoot);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -187,7 +187,7 @@ if isappdata(0,'o')
 	o.getScreenVals;
 end
 
-function OKMultiSampling_Callback(hObject, eventdata, handles)
+function OKAntiAliasing_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.getScreenVals;
@@ -247,6 +247,14 @@ if isappdata(0,'o')
 	o.getScreenVals;
 end
 
+% --- Executes on button press in OKFixationSpot.
+function OKFixationSpot_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+
 function OKnTrials_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
@@ -265,6 +273,7 @@ if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.getTaskVals;
 end
+
 
 % --------------------------------------------------------------------
 function OKMenuNoiseTexture_Callback(hObject, eventdata, handles)
@@ -292,17 +301,6 @@ function OKVarList_Callback(hObject, eventdata, handles)
 %        contents{get(hObject,'Value')} returns selected item from
 %        OKVarList
 
-% --------------------------------------------------------------------
-function OKMenuPlaid_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuPlaid (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-set(handles.OKPanelDots,'Visible','off')
-%set(handles.OKPanelNoise,'Visible','off')
-set(handles.OKPanelGrating,'Visible','off')
-set(handles.OKPanelBar,'Visible','off')
-%set(handles.OKPanelPlaid,'Visible','on')
-
 
 % --------------------------------------------------------------------
 function OKMenuDots_Callback(hObject, eventdata, handles)
@@ -312,7 +310,7 @@ function OKMenuDots_Callback(hObject, eventdata, handles)
 %set(handles.OKPanelNoise,'Visible','off')
 set(handles.OKPanelGrating,'Visible','off')
 set(handles.OKPanelBar,'Visible','off')
-%set(handles.OKPanelPlaid,'Visible','off')
+set(handles.OKPanelSpot,'Visible','off')
 set(handles.OKPanelDots,'Visible','on')
 if isappdata(0,'o')
 	o = getappdata(0,'o');
@@ -325,10 +323,9 @@ function OKMenuBar_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.OKPanelGrating,'Visible','off')
+set(handles.OKPanelSpot,'Visible','off')
 set(handles.OKPanelBar,'Visible','on')
 set(handles.OKPanelDots,'Visible','off')
-%set(handles.OKPanelPlaid,'Visible','off')
-%set(handles.OKPanelNoise,'Visible','on')
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.store.visibleStimulus='bar';
@@ -340,14 +337,28 @@ function OKMenuGrating_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.OKPanelDots,'Visible','off')
-%set(handles.OKPanelNoise,'Visible','off')
+set(handles.OKPanelSpot,'Visible','off')
 set(handles.OKPanelBar,'Visible','off')
-%set(handles.OKPanelPlaid,'Visible','off')
 set(handles.OKPanelGrating,'Visible','on')
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.store.visibleStimulus='grating';
 end
+
+% --------------------------------------------------------------------
+function OKMenuSpot_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuSpot (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.OKPanelGrating,'Visible','off')
+set(handles.OKPanelBar,'Visible','off')
+set(handles.OKPanelDots,'Visible','off')
+set(handles.OKPanelSpot,'Visible','on')
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.store.visibleStimulus='spot';
+end
+
 
 
 function OKPanelGratingxPosition_Callback(hObject, eventdata, handles)
@@ -430,21 +441,16 @@ function OKPanelGratingangle_Callback(hObject, eventdata, handles)
 
 
 
-
 function OKPanelBarcontrast_Callback(hObject, eventdata, handles)
-
 
 
 function OKPanelBarbarWidth_Callback(hObject, eventdata, handles)
 
 
-
 function OKPanelBarbarLength_Callback(hObject, eventdata, handles)
 
 
-
 function OKPanelBaryPosition_Callback(hObject, eventdata, handles)
-
 
 
 function OKPanelBarxPosition_Callback(hObject, eventdata, handles)
@@ -455,8 +461,23 @@ function OKMenuPreferences_Callback(hObject, eventdata, handles)
 
 function OKPanelGratinggabor_Callback(hObject, eventdata, handles)
 
+switch get(hObject,'Value')
+	case 1
+		set(handles.OKPanelGratingaspectRatio,'Enable','off')
+		set(handles.OKPanelGratingcontrastMult,'Enable','off')
+		set(handles.OKPanelGratingspatialConstant,'Enable','off')
+		set(handles.OKPanelGratingdisableNorm,'Enable','off')
+		set(handles.OKPanelGratingmask,'Enable','on')
+		set(handles.OKPanelGratingrotationMethod,'Enable','on')
+	otherwise
+		set(handles.OKPanelGratingaspectRatio,'Enable','on')
+		set(handles.OKPanelGratingcontrastMult,'Enable','on')
+		set(handles.OKPanelGratingspatialConstant,'Enable','on')
+		set(handles.OKPanelGratingdisableNorm,'Enable','on')
+		set(handles.OKPanelGratingmask,'Enable','off')
+		set(handles.OKPanelGratingrotationMethod,'Enable','off')
+end
 
-function OKRandomise_Callback(hObject, eventdata, handles)
 
 
 function OKProtocolsList_Callback(hObject, eventdata, handles)
@@ -499,7 +520,6 @@ function OKProtocolDelete_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 
-
 % --------------------------------------------------------------------
 function OKMenuCalibrateLuminance_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuCalibrateLuminance (see GCBO)
@@ -512,7 +532,7 @@ function OKMenuCalibrateSize_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuCalibrateSize (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+MeasureDpi;
 
 function OKitTime_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
@@ -520,23 +540,33 @@ if isappdata(0,'o')
 	o.getTaskVals;
 end
 
+function OKRandomise_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getTaskVals;
+end
 % --- Executes on selection change in OKrandomGenerator.
 function OKrandomGenerator_Callback(hObject, eventdata, handles)
 % hObject    handle to OKrandomGenerator (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 % Hints: contents = cellstr(get(hObject,'String')) returns OKrandomGenerator contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from OKrandomGenerator
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getTaskVals;
+end
 
 function OKRandomSeed_Callback(hObject, eventdata, handles)
 % hObject    handle to OKRandomSeed (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 % Hints: get(hObject,'String') returns contents of OKRandomSeed as text
 %        str2double(get(hObject,'String')) returns contents of OKRandomSeed as a double
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getTaskVals;
+end
 
 function OKPanelGratingtf_Callback(hObject, eventdata, handles)
 % hObject    handle to OKPanelGratingtf (see GCBO)
@@ -545,7 +575,6 @@ function OKPanelGratingtf_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of OKPanelGratingtf as text
 %        str2double(get(hObject,'String')) returns contents of OKPanelGratingtf as a double
-
 
 
 function OKPanelGratingcolour_Callback(hObject, eventdata, handles)
@@ -776,11 +805,17 @@ function OKVariableName_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of OKVariableName as a double
 
 
-% --- Executes on button press in OKCopyVariable.
-function OKCopyVariable_Callback(hObject, eventdata, handles)
-% hObject    handle to OKCopyVariable (see GCBO)
+% --- Executes on button press in OKCopyVariableName.
+function OKCopyVariableName_Callback(hObject, eventdata, handles)
+% hObject    handle to OKCopyVariableName (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+string = get(handles.OKVariableList,'String');
+value = get(handles.OKVariableList,'Value');
+string=string{value};
+set(handles.OKVariableName,'String',string);
+
+function OKCopyVariable_Callback(hObject, eventdata, handles)
 
 
 function OKPanelGratingaspectRatio_Callback(hObject, eventdata, handles)
@@ -800,14 +835,6 @@ function OKPanelGratingcontrastMult_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of OKPanelGratingcontrastMult as text
 %        str2double(get(hObject,'String')) returns contents of OKPanelGratingcontrastMult as a double
-
-
-% --------------------------------------------------------------------
-function OKMenuSpot_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuSpot (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 
 % --------------------------------------------------------------------
 function OKToolbarToggleGlobal_OnCallback(hObject, eventdata, handles)
@@ -858,12 +885,13 @@ if isappdata(0,'o')
 	o.store.gratingN = 0;
 	o.store.barN = 0;
 	o.store.dotsN = 0;
+	o.store.spotN = 0;
 	o.store.plaidN = 0;
 	o.store.noiseN = 0;
-	o.getScreenVals
-	o.getTaskVals;
 	o.clearStimulusList;
 	o.clearVariableList;
+	o.getScreenVals;
+	o.getTaskVals;
 end
 
 
@@ -881,6 +909,8 @@ if isappdata(0,'o')
 			o.addBar;
 		case 'dots'
 			o.addDots;
+		case 'spot'
+			o.addSpot;
 	end
 end
 
@@ -898,6 +928,8 @@ if isappdata(0,'o')
 			o.deleteBar;
 		case 'dots'
 			o.deleteDots;
+		case 'spot'
+			o.deleteSpot;
 	end
 end
 
@@ -906,14 +938,20 @@ function OKAddVariable_Callback(hObject, eventdata, handles)
 % hObject    handle to OKAddVariable (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.addVariable;
+end
 
 % --- Executes on button press in OKDeleteVariable.
 function OKDeleteVariable_Callback(hObject, eventdata, handles)
 % hObject    handle to OKDeleteVariable (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.deleteVariable;
+end
 
 
 function OKPanelGratingstartPosition_Callback(hObject, eventdata, handles)
@@ -975,813 +1013,185 @@ if isappdata(0,'o')
 	o.r.run;
 end
 
-% --- Executes during object creation, after setting all properties.
-function OKMonitorDistance_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKMonitorDistance (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPixelsPerCm_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPixelsPerCm (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKXCenter_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKXCenter (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKYCenter_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKYCenter (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKbackgroundColour_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to okbackgroundcolour (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKnTrials_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKnTrials (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKisTime_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKisTime (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKWindowSize_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKWindowSize (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKSelectScreen_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKSelectScreen (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKitTime_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKitTime (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKrandomGenerator_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKrandomGenerator (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKRandomSeed_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKRandomSeed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKtrialTime_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKtrialTime (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKGLSrc_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKGLSrc (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKGLDst_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKGLDst (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKMultiSampling_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKMultiSampling (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKSerialPortName_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKSerialPortName (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKHistoryList_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKHistoryList (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: listbox controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKProtocolsList_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKProtocolsList (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: listbox controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKVariableList_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKVariableList (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: listbox controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKVariableStimuli_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKVariableStimuli (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKVariableValues_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKVariableValues (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKVariableName_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKVariableName (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelBartype_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelBartype (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelBarxPosition_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarxPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelBaryPosition_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelBaryPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelBarbarLength_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarbarLength (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelBarbarWidth_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarbarWidth (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelBarspeed_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarspeed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelBarcontrast_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarcontrast (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelBarangle_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarangle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelBarstartPosition_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarstartPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelBarcolour_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarcolour (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelBaralpha_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelBaralpha (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingxPosition_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingxPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingyPosition_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingyPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingcontrast_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingcontrast (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingstartPosition_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingstartPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratinggabor_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratinggabor (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingtf_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingtf (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingcolour_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingcolour (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingalpha_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingalpha (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingsize_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingsize (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingaspectRatio_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingaspectRatio (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingsf_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingsf (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingangle_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingangle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingcontrastMult_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingcontrastMult (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingphase_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingphase (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes on button press in OKPanelGratingdisableNorm.
-function OKPanelGratingdisableNorm_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingdisableNorm (see GCBO)
+% --- Executes on button press in OKPanelGratingdriftDirection.
+function OKPanelGratingdriftDirection_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelGratingdriftDirection (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of OKPanelGratingdisableNorm
+% Hint: get(hObject,'Value') returns toggle state of OKPanelGratingdriftDirection
 
+% --- Executes on button press in OKVariablesLog.
+function OKPanelGratingdisableNorm_Callback(hObject, eventdata, handles) %#ok<*INUSD>
+% hObject    handle to OKVariablesLog (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuLogs_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuLogs (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuCheckIO_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuCheckIO (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuEditConfiguration_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuEditConfiguration (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuAllTimingLogs_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuAllTimingLogs (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuMissedFrames_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuMissedFrames (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuCut_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuCut (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuCopy_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuCopy (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuPaste_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuPaste (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
 
 
 function OKPanelGratingspeed_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingspeed (see GCBO)
+
+
+
+function OKPanelGratingspatialConstant_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelGratingspatialConstant (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of OKPanelGratingspeed as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingspeed as a double
+% Hints: get(hObject,'String') returns contents of OKPanelGratingspatialConstant as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelGratingspatialConstant as a double
 
 
-% --- Executes during object creation, after setting all properties.
-function OKPanelGratingspeed_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingspeed (see GCBO)
+% --- Executes on button press in OKCopyStimulus.
+function OKCopyStimulus_Callback(hObject, eventdata, handles)
+% hObject    handle to OKCopyStimulus (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% handles    structure with handles and user data (see GUIDATA)
 
 
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotsnDots_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsnDots (see GCBO)
+% --- Executes on selection change in OKPanelSpottype.
+function OKPanelSpottype_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpottype (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% Hints: contents = cellstr(get(hObject,'String')) returns OKPanelSpottype contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from
+%        OKPanelSpottype
 
 
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotsdotSize_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsdotSize (see GCBO)
+function OKPanelSpotxPosition_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpotxPosition (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% Hints: get(hObject,'String') returns contents of OKPanelSpotxPosition as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelSpotxPosition as a double
 
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotssize_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotssize (see GCBO)
+function OKPanelSpotyPosition_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpotyPosition (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% Hints: get(hObject,'String') returns contents of OKPanelSpotyPosition as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelSpotyPosition as a double
 
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotsyPosition_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsyPosition (see GCBO)
+function OKPanelSpotsize_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpotsize (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% Hints: get(hObject,'String') returns contents of OKPanelSpotsize as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelSpotsize as a double
 
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotsxPosition_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsxPosition (see GCBO)
+function OKPanelSpotflashTime_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpotflashTime (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% Hints: get(hObject,'String') returns contents of OKPanelSpotflashTime as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelSpotflashTime as a double
 
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotsdotType_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsdotType (see GCBO)
+function OKPanelSpotspeed_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpotspeed (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% Hints: get(hObject,'String') returns contents of OKPanelSpotspeed as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelSpotspeed as a double
 
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotscolour_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotscolour (see GCBO)
+function OKPanelSpotcontrast_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpotcontrast (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% Hints: get(hObject,'String') returns contents of OKPanelSpotcontrast as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelSpotcontrast as a double
 
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotsalpha_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsalpha (see GCBO)
+function OKPanelSpotangle_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpotangle (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% Hints: get(hObject,'String') returns contents of OKPanelSpotangle as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelSpotangle as a double
 
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotsangle_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsangle (see GCBO)
+function OKPanelSpotstartPosition_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpotstartPosition (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% Hints: get(hObject,'String') returns contents of OKPanelSpotstartPosition as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelSpotstartPosition as a double
 
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotscoherence_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotscoherence (see GCBO)
+function OKPanelSpotcolour_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpotcolour (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% Hints: get(hObject,'String') returns contents of OKPanelSpotcolour as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelSpotcolour as a double
 
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotsspeed_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsspeed (see GCBO)
+function OKPanelSpotalpha_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpotalpha (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function OKPanelDotstype_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotstype (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+% Hints: get(hObject,'String') returns contents of OKPanelSpotalpha as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelSpotalpha as a double

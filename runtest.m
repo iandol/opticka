@@ -25,8 +25,11 @@ stim.g(6)=gratingStimulus(struct('sf',1,'contrast',0.5,'colour',[0.6 0.4 0.4 0.5
 stim.b(1)=barStimulus(struct('type','random','barWidth',1,'barLength',4,'speed',2,'xPosition',0,...
 	'yPosition',0,'startPosition',-2,'color',[1 1 1 1]));
 
-stim.d(1)=dotsStimulus(struct('nDots',100,'speed',1,'coherence',1,'xPosition',4,...
+stim.d(1)=dotsStimulus(struct('nDots',200,'speed',1,'coherence',0.5,'xPosition',4,...
 	'yPosition',-4,'colour',[1 1 1 1],'dotSize',0.1,'colorType','randomBW'));
+
+stim.s(1)=spotStimulus(struct('speed',0,'xPosition',4,...
+	'yPosition',4,'colour',[1 1 0 1],'size',1));
 
 %stimulus sequence allows us to vary parameters and run blocks of trials
 s = stimulusSequence;
@@ -51,5 +54,5 @@ s.randomiseStimuli;
 %% ss is the object which interfaces with the screen and runs our
 %% experiment
 r=runExperiment(struct('distance',57.3,'pixelsPerCm',44,'blend',1,...
-	'stimulus',stim,'task',s,'windowed',0,'debug',0,'hideFlash',0,'verbose',1));
+	'stimulus',stim,'task',s,'windowed',1,'antiAlias',0,'debug',1,'hideFlash',0,'verbose',1));
 %r.run
