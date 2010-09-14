@@ -4,17 +4,22 @@ classdef sendTTL < handle
 	properties
 		name='LabJack'
 		deviceID = 3
-		silentMode=0 %this allows us to be called even if no serial port is attached
+		silentMode=0
 		header = '/usr/local/include/labjackusb.h'
 		library = '/usr/local/lib/liblabjackusb'
 		verbosity=0
 		openNow=1 %allows the constructor to run the open method immediately
 		version
 		devCount
-		isOpen
-		handle
+		isOpen = 0
+		handle = []
 	end
 	properties (SetAccess = private, GetAccess = private)
+		fio4 = 0
+		inp = []
+		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])';
+		fio4Low = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])';
+		vhandle = 0
 		allowedPropertiesBase='^(name|silentMode|verbosity|openNow)$'
 	end
 	methods%------------------PUBLIC METHODS--------------%
@@ -52,7 +57,14 @@ classdef sendTTL < handle
 				obj.version =  calllib('liblabjackusb','LJUSB_GetLibraryVersion');
 				obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',obj.deviceID);
 				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',1,0,obj.deviceID);
-				obj.isOpen = 1;
+				obj.validhandle;
+				if obj.vhandle
+					obj.isOpen = 1;
+				else
+					obj.isOpen = 1;
+					obj.handle=[];
+				end
+				
 			end
 		end
 		
@@ -64,6 +76,20 @@ classdef sendTTL < handle
 				calllib('liblabjackusb','LJUSB_CloseDevice',obj.handle);
 				obj.isOpen = 0;
 				obj.handle=[];
+			end
+		end
+		
+		%===============CHECK Labjack================%
+		% 		bool LJUSB_IsHandleValid(HANDLE hDevice);
+		% 		//Is handle valid.
+		function validhandle(obj)
+			if ~isempty(obj.handle)
+				obj.vhandle = calllib('liblabjackusb','LJUSB_IsHandleValid',obj.handle);
+				if obj.vhandle
+					disp('Handle is valid')
+				else
+					disp('INVALID Handle')
+				end
 			end
 		end
 		
@@ -98,20 +124,17 @@ classdef sendTTL < handle
 		%['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04';
 		%'00']
 		function setFIO4(obj,val)
-			highPtr = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])';
-			lowPtr = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])';
-			%highPtr=libpointer('uint8Ptr',high);
-			%lowPtr=libpointer('uint8Ptr',low);
 			if ~exist('val','var')
-				val = 0;
+				val = obj.fio4;
 			end
-			inp=[];
 			if val == 1
-				out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, highPtr, 12);
-				in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, inp, 10);
+				out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4High, 12);
+				in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
+				obj.fio4 = 1;
 			else
-				out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, lowPtr, 12);
-				in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, inp, 10);
+				out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4Low, 12);
+				in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
+				obj.fio4 = 0;
 			end	
 		end		
 	end
