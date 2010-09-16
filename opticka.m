@@ -8,7 +8,7 @@ classdef opticka < dynamicprops
 		r
 		verbose
 		store
-		version='0.41'
+		version='0.42'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -75,6 +75,8 @@ classdef opticka < dynamicprops
 			
 			obj.store.nVars = 0;
 			obj.store.visibleStimulus = 'grating'; %our default shown stimulus
+			obj.store.stimN = 0;
+			obj.store.stimList = '';
 			obj.store.gratingN = 0;
 			obj.store.barN = 0;
 			obj.store.dotsN = 0;
@@ -106,7 +108,7 @@ classdef opticka < dynamicprops
 			obj.r.dstMode = string{value};
 			
 			obj.r.blend = obj.gv(obj.h.OKOpenGLBlending);
-			if ~strcmp('[]', get(obj.h.OKWindowSize,'String'))
+			if regexp(get(obj.h.OKWindowSize,'String'),'[]')
 				obj.r.windowed = 1;
 			end
 			
@@ -118,6 +120,7 @@ classdef opticka < dynamicprops
 			obj.r.visualDebug = obj.gv(obj.h.OKDebug);
 			obj.r.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
 			obj.r.fixationPoint = obj.gv(obj.h.OKFixationSpot);
+			obj.r.useLabJack = obj.gv(obj.h.OKuseLabJack);
 			
 		end
 		
@@ -141,11 +144,12 @@ classdef opticka < dynamicprops
 			obj.r.task.initialiseRandom;
 			
 		end
-		
+		%---------------------------------------------------------
 		function clearStimulusList(obj)
 			if ~isempty(obj.r)
 				if ~isempty(obj.r.stimulus)
 					obj.r.stimulus = [];
+					obj.store.stimN = 0;
 					obj.store.gratingN = 0;
 					obj.store.barN = 0;
 					obj.store.dotsN = 0;
@@ -157,6 +161,7 @@ classdef opticka < dynamicprops
 			set(obj.h.OKStimList,'String','');
 		end
 		
+		%---------------------------------------------------------
 		function clearVariableList(obj)
 			if ~isempty(obj.r)
 				if ~isempty(obj.r.task)
@@ -166,6 +171,18 @@ classdef opticka < dynamicprops
 			set(obj.h.OKVarList,'String','');
 		end
 		
+		%---------------------------------------------------------
+		function deleteStimulus(obj)
+			n = fieldnames(obj.r.stimulus); %get what stimulus fields we have
+			s=length(obj.r.stimulus.(n{end})); %how many of that stim are there?
+			obj.r.stimulus.(n{end}) = obj.r.stimulus.(n{end})(1:s-1);
+			if isempty(obj.r.stimulus.(n{end}))
+				rmfield(obj.r.stimulus,n{end});
+			end
+			obj.store.stimN = obj.store.stimN - 1;
+		end
+		
+		%---------------------------------------------------------
 		function addGrating(obj)
 			tmp = struct;
 			
@@ -200,6 +217,9 @@ classdef opticka < dynamicprops
 					string{length(string)+1} = ['Gabor #' num2str(obj.store.gratingN)];
 			end
 			set(obj.h.OKStimList,'String',string);
+			
+			obj.store.stimList = [obj.store.stimList 'g'];
+			obj.r.updatesList;
 		end
 		
 		function addBar(obj)
@@ -221,6 +241,9 @@ classdef opticka < dynamicprops
 			string = obj.gs(obj.h.OKStimList);
 			string{length(string)+1} = ['Bar #' num2str(obj.store.barN)];
 			set(obj.h.OKStimList,'String',string);
+			
+			obj.store.stimList = [obj.store.stimList 'b'];
+			obj.r.updatesList;
 		end
 		
 		function addDots(obj)
@@ -231,6 +254,7 @@ classdef opticka < dynamicprops
 			tmp.angle = obj.gd(obj.h.OKPanelDotsangle);
 			tmp.coherence = obj.gd(obj.h.OKPanelDotscoherence);
 			tmp.nDots = obj.gd(obj.h.OKPanelDotsnDots);
+			tmp.dotSize = obj.gd(obj.h.OKPanelDotsdotSize);
 			tmp.speed = obj.gd(obj.h.OKPanelDotsspeed);
 			tmp.colour = obj.gn(obj.h.OKPanelDotscolour);
 			tmp.alpha = obj.gd(obj.h.OKPanelDotsalpha);
@@ -244,6 +268,10 @@ classdef opticka < dynamicprops
 			string = obj.gs(obj.h.OKStimList);
 			string{length(string)+1} = ['Coherent Dots #' num2str(obj.store.dotsN)];
 			set(obj.h.OKStimList,'String',string);
+			
+			obj.r.updatesList;
+			obj.store.stimList = [obj.store.stimList 'd'];
+			
 		end
 		
 		function addSpot(obj)
@@ -262,6 +290,10 @@ classdef opticka < dynamicprops
 			string = obj.gs(obj.h.OKStimList);
 			string{length(string)+1} = ['Spot #' num2str(obj.store.spotN)];
 			set(obj.h.OKStimList,'String',string);
+			
+			obj.r.updatesList;
+			obj.store.stimList = [obj.store.stimList 's'];
+			
 		end
 		
 		function deleteGrating(obj)
@@ -324,8 +356,9 @@ classdef opticka < dynamicprops
 		
 		function addVariable(obj)
 			
-			obj.store.nVars = obj.store.nVars + 1;
-			obj.r.task.nVars = obj.store.nVars;
+			obj.r.task.nVars = obj.r.task.nVars + 1;
+			obj.store.nVars = obj.r.task.nVars;
+			
 			obj.r.task.nVar(obj.r.task.nVars).name = obj.gs(obj.h.OKVariableName);
 			obj.r.task.nVar(obj.r.task.nVars).values = obj.gn(obj.h.OKVariableValues);
 			obj.r.task.nVar(obj.r.task.nVars).stimulus = obj.gn(obj.h.OKVariableStimuli);
@@ -341,11 +374,11 @@ classdef opticka < dynamicprops
 		
 		function deleteVariable(obj)
 			
-			obj.r.task.nVars = obj.store.nVars - 1;
-			if isfield(obj.r.task,'nVar')
+			if isobject(obj.r.task)
+				obj.r.task.nVars = obj.r.task.nVars - 1;
+				obj.store.nVars = obj.r.task.nVars;
 				obj.r.task.nVar=obj.r.task.nVar(1:obj.r.task.nVars);
 			end
-			obj.store.nVars = obj.store.nVars - 1;
 			
 			if obj.r.task.nVars<0;obj.r.task.nVars=0;end
 			if obj.store.nVars<0;obj.store.nVars=0;end

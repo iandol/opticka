@@ -36,6 +36,7 @@ classdef runExperiment < dynamicprops
 		fixationPoint = 1 %show a fixation spot?
 		photoDiode = 1 %show a white square to trigger a photodiode attached to screen
 		serialPortName = 'dummy' %name of serial port to send TTL out on, if set to 'dummy' then ignore
+		useLabJack = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -55,6 +56,7 @@ classdef runExperiment < dynamicprops
 		white=1 %white index
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
 		serialP %serial port object opened
+		labJack %LabJack object
 		xCenter %computed X center
 		yCenter %computed Y center
 		win %the handle returned by opening a PTB window
@@ -314,11 +316,35 @@ classdef runExperiment < dynamicprops
 			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
 		end
 		
+		function getTimeLog(obj)
+			obj.printlog;
+		end
+		
+		function updatesList(obj)
+			obj.sList.n=0;
+			obj.sList.list = [];
+			obj.sList.index = [];
+			if ~isempty(obj.stimulus)
+				obj.sList.fields = fieldnames(obj.stimulus);
+				for i=1:length(obj.sList.fields)
+					for j=1:length(obj.stimulus.(obj.sList.fields{i}))
+						obj.sList.n = obj.sList.n+1;
+						obj.sList.list = [obj.sList.list obj.sList.fields{i}];
+						obj.sList.index = [obj.sList.index j];
+					end
+				end
+			else
+				obj.sList.fields = '';
+			end
+		end
+		
 % 		function set.verbose(obj,value)
 % 			for i = 1:obj.sList.n
 % 				ts = obj.stimulus.(obj.sList.list(i));
 % 			end
 % 		end
+
+
 	end
 	
 	%-------------------------END PUBLIC METHODS--------------------------------%
@@ -337,17 +363,7 @@ classdef runExperiment < dynamicprops
 			end
 			%find out how many stimuli there are, wrapped in the obj.stimulus
 			%structure
-			obj.sList.n=0;
-			obj.sList.list = [];
-			obj.sList.index = [];
-			obj.sList.fields = fieldnames(obj.stimulus);
-			for i=1:length(obj.sList.fields)
-				for j=1:length(obj.stimulus.(obj.sList.fields{i}))
-					obj.sList.n = obj.sList.n+1;
-					obj.sList.list = [obj.sList.list obj.sList.fields{i}];
-					obj.sList.index = [obj.sList.index j];
-				end
-			end
+			obj.updatesList;
 				
 			%Set up the task structures needed
 			
@@ -442,12 +458,27 @@ classdef runExperiment < dynamicprops
 					end
 				elseif (strcmp(name,'angle')||strcmp(name,'moveAngle'))
 					for j=1:length(ix)
-						if isempty(obj.sVals(ix(j)).doDots)
-						[obj.sVals(ix(j)).dX obj.sVals(ix(j)).dY]=obj.updatePosition(obj.sVals(ix(j)).delta,obj.sVals(ix(j)).angle);
+						ts = obj.stimulus.(obj.sList.list(ix(j)))(obj.sList.index(ix(j)));
+						switch obj.sVals(ix(j)).family
+							case {'grating','bar', 'spot'}
+								[obj.sVals(ix(j)).dX obj.sVals(ix(j)).dY]=obj.updatePosition(obj.sVals(ix(j)).delta,obj.sVals(ix(j)).angle);
+							case {'dots'}
+								ts.updateDots(obj.sVals(ix(j)).coherence,obj.sVals(ix(j)).angle);
+								obj.sVals(ix(j)).xy = ts.xy;
+								obj.sVals(ix(j)).dxdy = ts.dxdy;
 						end
 					end
 				elseif strcmp(name,'coherence')
-					
+					for j=1:length(ix)
+						switch obj.sVals(ix(j)).family
+							case {'grating','bar', 'spot'}
+								
+							case {'dots'}
+								ts.updateDots(obj.sVals(ix(j)).coherence,obj.sVals(ix(j)).angle);
+								obj.sVals(ix(j)).xy = ts.xy;
+								obj.sVals(ix(j)).dxdy = ts.dxdy;
+						end
+					end
 				end
 				for j=1:length(ix)
 					if (obj.sVals(ix(j)).speed) > 0 && ~isempty(obj.sVals(ix(j)).startPosition) && (obj.sVals(ix(j)).startPosition ~= 0)
@@ -513,7 +544,7 @@ classdef runExperiment < dynamicprops
 				
 				if obj.task.isBlank == 0 %we come from showing a stimulus
 					
-					obj.logMe('IntoBlank');
+					%obj.logMe('IntoBlank');
 					obj.task.isBlank = 1;
 					
 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we within a trial block or not? we add the required time to our switch timer
@@ -539,11 +570,11 @@ classdef runExperiment < dynamicprops
 					
 					obj.resetVars;
 					obj.updateVars(mT,mR);
-					obj.logMe('OutaBlank');
+					%obj.logMe('OutaBlank');
 					
 				else %we have to show the new run on the next flip
 					
-					obj.logMe('IntoTrial');
+					%obj.logMe('IntoTrial');
 					obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
 					obj.task.isBlank = 0;
 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
@@ -552,7 +583,7 @@ classdef runExperiment < dynamicprops
 					else
 						obj.task.thisRun = obj.task.thisRun + 1;
 					end
-					obj.logMe('OutaTrial');
+					%obj.logMe('OutaTrial');
 					
 				end
 			end
@@ -614,7 +645,8 @@ classdef runExperiment < dynamicprops
 			ts = obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
 			
 			obj.sVals(i).doDots = [];
-			
+			obj.sVals(i).doMation = [];
+			obj.sVals(i).doDrift = [];
 			obj.sVals(i).family = ts.family;
 			
 			if ts.rotationMethod==1
@@ -710,6 +742,9 @@ classdef runExperiment < dynamicprops
 			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
 			
 			obj.sVals(i).doDots = [];
+			obj.sVals(i).doMation = [];
+			obj.sVals(i).doDrift = [];
+			obj.sVals(i).family = ts.family;
 
 			obj.sVals(i).barWidth=ts.barWidth;
 			obj.sVals(i).barLength=ts.barLength;
@@ -720,7 +755,7 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).startPosition = ts.startPosition;
 			
 			obj.sVals(i).colour = ts.colour;
-			obj.sVals(i).alpha = ts.alpha
+			obj.sVals(i).alpha = ts.alpha;
 			obj.sVals(i).xPosition = ts.xPosition;
 			obj.sVals(i).yPosition = ts.yPosition;
 			
@@ -750,6 +785,12 @@ classdef runExperiment < dynamicprops
 		%-------------------Setup dots-------------------%
 		function setupDots(obj,i)
 			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
+			
+			obj.sVals(i).doDots = [];
+			obj.sVals(i).doMation = [];
+			obj.sVals(i).doDrift = [];
+			obj.sVals(i).family = ts.family;
+			
 			obj.sVals(i).nDots = ts.nDots;
 			obj.sVals(i).angle = ts.angle;
 			obj.sVals(i).speed = ts.speed;
@@ -758,6 +799,7 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).alpha = ts.alpha;
 			obj.sVals(i).dotType = ts.dotType;
 			obj.sVals(i).dotSize = ts.dotSize*obj.ppd;
+			obj.sVals(i).coherence = ts.coherence;
 			obj.sVals(i).colour = ts.colour;
 			obj.sVals(i).xPosition = ts.xPosition;
 			obj.sVals(i).yPosition = ts.yPosition;
@@ -829,7 +871,7 @@ classdef runExperiment < dynamicprops
 		function drawDots(obj,i)
 			
 			x = obj.xCenter+(obj.sVals(i).xPosition*obj.ppd);
-			y = obj.xCenter+(obj.sVals(i).yPosition*obj.ppd);
+			y = obj.yCenter+(obj.sVals(i).yPosition*obj.ppd);
 			Screen('DrawDots',obj.win,obj.sVals(i).xy,obj.sVals(i).dotSize,obj.sVals(i).colours,...
 				[x y],obj.sVals(i).dotType);
 			
@@ -843,13 +885,13 @@ classdef runExperiment < dynamicprops
 		
 		%--------------------Draw Fixation spot-------------%
 		function drawFixationPoint(obj)
-			Screen('gluDisk',obj.win,[1 1 0],obj.xCenter,obj.yCenter,5);
+			Screen('gluDisk',obj.win,[1 0 1],obj.xCenter,obj.yCenter,3);
 		end
 		
 		function drawGrid(obj)
 			x=[];
-			for i=-4:4
-				x=horzcat(x,[-4 -3 -2 -1 0 1 2 3 4;i i i i i i i i i]);
+			for i=-5:5
+				x=horzcat(x,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
 			end
 			x=x.*obj.ppd;
 			Screen('DrawDots',obj.win,x,1,[0.8 0.8 0.4 1],[obj.xCenter obj.yCenter]);

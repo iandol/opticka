@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 12-Sep-2010 12:54:20
+% Last Modified by GUIDE v2.5 16-Sep-2010 14:49:09
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -206,8 +206,8 @@ if isappdata(0,'o')
 	o.getScreenVals;
 end
 
-% --- Executes on button press in OKUseLabJack.
-function OKUseLabJack_Callback(hObject, eventdata, handles)
+% --- Executes on button press in OKuseLabJack.
+function OKuseLabJack_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.getScreenVals;
@@ -859,7 +859,10 @@ function OKVariablesLinear_Callback(hObject, eventdata, handles)
 % hObject    handle to OKVariablesLinear (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+values = str2num(get(handles.OKVariableValues,'String'));
+string = num2str(values);
+string = regexprep(string,'\s+',' '); %collapse spaces
+set(handles.OKVariableValues,'String',string);
 
 % --- Executes on button press in OKVariablesLog.
 function OKVariablesLog_Callback(hObject, eventdata, handles) %#ok<*INUSD>
@@ -902,6 +905,7 @@ function OKAddStimulus_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
+	
 	switch o.store.visibleStimulus
 		case 'grating'
 			o.addGrating;
@@ -912,6 +916,7 @@ if isappdata(0,'o')
 		case 'spot'
 			o.addSpot;
 	end
+	o.store.stimN = o.store.stimN + 1;
 end
 
 % --- Executes on button press in OKDeleteStimulus.
@@ -921,16 +926,7 @@ function OKDeleteStimulus_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	switch o.store.visibleStimulus
-		case 'grating'
-			o.deleteGrating;
-		case 'bar'
-			o.deleteBar;
-		case 'dots'
-			o.deleteDots;
-		case 'spot'
-			o.deleteSpot;
-	end
+	o.deleteStimulus;
 end
 
 % --- Executes on button press in OKAddVariable.

@@ -4,15 +4,18 @@ classdef sendTTL < handle
 	properties
 		name='LabJack'
 		deviceID = 3
-		silentMode=0
+		silentMode = 0
 		header = '/usr/local/include/labjackusb.h'
 		library = '/usr/local/lib/liblabjackusb'
-		verbosity=0
-		openNow=1 %allows the constructor to run the open method immediately
+		verbosity = 0
+		openNow = 1 %allows the constructor to run the open method immediately
 		version
 		devCount
 		isOpen = 0
 		handle = []
+	end
+	properties (SetAccess = private, GetAccess = public)
+		functions
 	end
 	properties (SetAccess = private, GetAccess = private)
 		fio4 = 0
@@ -36,11 +39,9 @@ classdef sendTTL < handle
 						end
 					end
 				end
-			elseif nargin==1 && ischar(args)
-				obj.name=args; %assume a name
 			end
-			if isempty(obj.name) %we were deliberately passed an empty name, will re-specify default
-				obj.name='LabJack';
+			if isempty(obj.name) %we were deliberately passed an empty name, means go into silent mode
+				obj.silentMode = 1;
 			end
 			if obj.openNow==1
 				obj.open
@@ -53,7 +54,7 @@ classdef sendTTL < handle
 				if ~libisloaded('liblabjackusb')
 					loadlibrary(obj.library,obj.header);
 				end
-				libfunctions liblabjackusb -full
+				obj.functions = libfunctions('liblabjackusb', '-full');
 				obj.version =  calllib('liblabjackusb','LJUSB_GetLibraryVersion');
 				obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',obj.deviceID);
 				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',1,0,obj.deviceID);
@@ -61,8 +62,9 @@ classdef sendTTL < handle
 				if obj.vhandle
 					obj.isOpen = 1;
 				else
-					obj.isOpen = 1;
-					obj.handle=[];
+					obj.isOpen = 0;
+					obj.handle = [];
+					obj.silentMode = 1; %we switch into silent mode just in case someone tries to use the object
 				end
 				
 			end
@@ -83,12 +85,14 @@ classdef sendTTL < handle
 		% 		bool LJUSB_IsHandleValid(HANDLE hDevice);
 		% 		//Is handle valid.
 		function validhandle(obj)
-			if ~isempty(obj.handle)
-				obj.vhandle = calllib('liblabjackusb','LJUSB_IsHandleValid',obj.handle);
-				if obj.vhandle
-					disp('Handle is valid')
-				else
-					disp('INVALID Handle')
+			if obj.silentMode == 0
+				if ~isempty(obj.handle)
+					obj.vhandle = calllib('liblabjackusb','LJUSB_IsHandleValid',obj.handle);
+					if obj.vhandle && obj.verbosity == 1
+						disp('VALID Handle')
+					else
+						disp('INVALID Handle')
+					end
 				end
 			end
 		end
@@ -124,18 +128,20 @@ classdef sendTTL < handle
 		%['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04';
 		%'00']
 		function setFIO4(obj,val)
-			if ~exist('val','var')
-				val = obj.fio4;
+			if obj.silentMode == 0
+				if ~exist('val','var')
+					val = obj.fio4;
+				end
+				if val == 1
+					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4High, 12);
+					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
+					obj.fio4 = 1;
+				else
+					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4Low, 12);
+					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
+					obj.fio4 = 0;
+				end
 			end
-			if val == 1
-				out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4High, 12);
-				in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
-				obj.fio4 = 1;
-			else
-				out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4Low, 12);
-				in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
-				obj.fio4 = 0;
-			end	
 		end		
 	end
 	

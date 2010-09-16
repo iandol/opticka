@@ -9,10 +9,10 @@ classdef dotsStimulus < baseStimulus
 		nDots = 100 % number of dots
 		angle = 0
 		colourType = 'randomBW'
-		dotSize  = 0.2  % width of dot (deg)
-		coherence = 0.5;
+		dotSize  = 0.1  % width of dot (deg)
+		coherence = 0.5
 		kill      = 0.2 % fraction of dots to kill each frame  (limited lifetime)
-		dotType = 2;
+		dotType = 2
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -68,7 +68,7 @@ classdef dotsStimulus < baseStimulus
 		function initialiseDots(obj,in)
 			obj.ppd = in.ppd;
 			obj.ifi = in.ifi;
-			obj.delta = obj.speed * obj.ppd * obj.ifi;% dot  speed (pixels/frame)
+			obj.delta = obj.speed * obj.ppd * obj.ifi; % dot  speed (pixels/frame)
 			
 			%sort out our angles and percent incoherent
 			obj.angles=ones(obj.nDots,1).*obj.d2r(obj.angle);
@@ -107,14 +107,18 @@ classdef dotsStimulus < baseStimulus
 			
 		end
 		
-		function updateDots(obj,coherence)
+		function updateDots(obj,coherence,angle)
 			
 			if exist('coherence','var') %we need a new full set of values
+				if ~exist('angle','var')
+					angle = obj.angle;
+				end
 				%sort out our angles and percent incoherent
-				obj.angles=ones(obj.nDots,1).*obj.d2r(obj.angle);
+				obj.angles=ones(obj.nDots,1).*obj.d2r(angle);
 				obj.rDots=obj.nDots-floor(obj.nDots*(coherence));
 				if obj.rDots>0
 					obj.angles(1:obj.rDots)=(2*pi).*rand(1,obj.rDots);
+					obj.angles = shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
 				end
 				%calculate positions and vector offsets
 				obj.xy = (obj.size*obj.ppd).*rand(2,obj.nDots);
