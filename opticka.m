@@ -8,7 +8,7 @@ classdef opticka < dynamicprops
 		r
 		verbose
 		store
-		version='0.42'
+		version='0.43'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -174,12 +174,21 @@ classdef opticka < dynamicprops
 		%---------------------------------------------------------
 		function deleteStimulus(obj)
 			n = fieldnames(obj.r.stimulus); %get what stimulus fields we have
-			s=length(obj.r.stimulus.(n{end})); %how many of that stim are there?
-			obj.r.stimulus.(n{end}) = obj.r.stimulus.(n{end})(1:s-1);
-			if isempty(obj.r.stimulus.(n{end}))
-				rmfield(obj.r.stimulus,n{end});
+			if ~isempty(n)
+				s=length(obj.r.stimulus.(n{end})); %how many of that stim are there?
+				obj.r.stimulus.(n{end}) = obj.r.stimulus.(n{end})(1:s-1);
+				if isempty(obj.r.stimulus.(n{end}))
+					obj.r.stimulus=rmfield(obj.r.stimulus,n{end});
+				end
+				
+				obj.store.stimN = obj.store.stimN - 1;
+				if obj.store.stimN < 0;obj.store.stimN = 0;end
+				obj.r.updatesList;
+				
+				string = obj.gs(obj.h.OKStimList);
+				set(obj.h.OKStimList,'String',string(1:end-1));
 			end
-			obj.store.stimN = obj.store.stimN - 1;
+			
 		end
 		
 		%---------------------------------------------------------
@@ -206,20 +215,23 @@ classdef opticka < dynamicprops
 			tmp.mask = obj.gv(obj.h.OKPanelGratingmask);
 			tmp.disableNorm = obj.gv(obj.h.OKPanelGratingdisableNorm);
 			tmp.spatialConstant = obj.gn(obj.h.OKPanelGratingspatialConstant);
-			obj.r.stimulus.g(obj.store.gratingN+1) = gratingStimulus(tmp);
 			
-			obj.store.gratingN = obj.store.gratingN + 1;
+			obj.r.stimulus.g(obj.r.sList.gN + 1) = gratingStimulus(tmp);
+			
+			obj.r.updatesList;
+			
+			obj.store.gratingN = obj.r.sList.gN;
 			string = obj.gs(obj.h.OKStimList);
 			switch tmp.gabor
 				case 0
-					string{length(string)+1} = ['Grating #' num2str(obj.store.gratingN)];
+					string{length(string)+1} = ['Grating #' num2str(obj.r.sList.gN)];
 				case 1
-					string{length(string)+1} = ['Gabor #' num2str(obj.store.gratingN)];
+					string{length(string)+1} = ['Gabor #' num2str(obj.r.sList.gN)];
 			end
 			set(obj.h.OKStimList,'String',string);
 			
-			obj.store.stimList = [obj.store.stimList 'g'];
-			obj.r.updatesList;
+			obj.store.stimList = obj.r.sList.list;
+			
 		end
 		
 		function addBar(obj)
@@ -235,15 +247,17 @@ classdef opticka < dynamicprops
 			tmp.colour = obj.gn(obj.h.OKPanelBarcolour);
 			tmp.alpha = obj.gd(obj.h.OKPanelBaralpha);
 			
-			obj.r.stimulus.b(obj.store.barN + 1) = barStimulus(tmp);
+			obj.r.stimulus.b(obj.r.sList.bN + 1) = barStimulus(tmp);
 			
-			obj.store.barN = obj.store.barN + 1;
+			obj.r.updatesList;
+			
+			obj.store.barN = obj.r.sList.bN;
 			string = obj.gs(obj.h.OKStimList);
-			string{length(string)+1} = ['Bar #' num2str(obj.store.barN)];
+			string{length(string)+1} = ['Bar #' num2str(obj.r.sList.bN)];
 			set(obj.h.OKStimList,'String',string);
 			
-			obj.store.stimList = [obj.store.stimList 'b'];
-			obj.r.updatesList;
+			obj.store.stimList = obj.r.sList.list;
+			
 		end
 		
 		function addDots(obj)
@@ -262,15 +276,16 @@ classdef opticka < dynamicprops
 			v = obj.gv(obj.h.OKPanelDotstype);
 			tmp.type = obj.gs(obj.h.OKPanelDotstype,v);
 			
-			obj.r.stimulus.d(obj.store.dotsN + 1) = dotsStimulus(tmp);
-			
-			obj.store.dotsN = obj.store.dotsN + 1;
-			string = obj.gs(obj.h.OKStimList);
-			string{length(string)+1} = ['Coherent Dots #' num2str(obj.store.dotsN)];
-			set(obj.h.OKStimList,'String',string);
+			obj.r.stimulus.d(obj.r.sList.dN + 1) = dotsStimulus(tmp);
 			
 			obj.r.updatesList;
-			obj.store.stimList = [obj.store.stimList 'd'];
+			
+			obj.store.dotsN = obj.r.sList.dN;
+			string = obj.gs(obj.h.OKStimList);
+			string{length(string)+1} = ['Coherent Dots #' num2str(obj.r.sList.dN)];
+			set(obj.h.OKStimList,'String',string);
+			
+			obj.store.stimList = obj.r.sList.list;
 			
 		end
 		
@@ -284,86 +299,27 @@ classdef opticka < dynamicprops
 			tmp.colour = obj.gn(obj.h.OKPanelSpotcolour);
 			tmp.alpha = obj.gd(obj.h.OKPanelSpotalpha);
 			
-			obj.r.stimulus.d(obj.store.spotN + 1) = spotStimulus(tmp);
-			
-			obj.store.spotN = obj.store.spotN + 1;
-			string = obj.gs(obj.h.OKStimList);
-			string{length(string)+1} = ['Spot #' num2str(obj.store.spotN)];
-			set(obj.h.OKStimList,'String',string);
+			obj.r.stimulus.d(obj.r.sList.sN + 1) = spotStimulus(tmp);
 			
 			obj.r.updatesList;
-			obj.store.stimList = [obj.store.stimList 's'];
 			
-		end
-		
-		function deleteGrating(obj)
-			
-			if isfield(obj.r.stimulus,'g')
-			obj.r.stimulus.g = obj.r.stimulus.g(1:obj.store.gratingN-1);
-			obj.store.gratingN = obj.store.gratingN - 1;
-			end
-			
-			if obj.store.gratingN<0;obj.store.gratingN=0;end
-			
+			obj.store.spotN = obj.r.sList.sN;
 			string = obj.gs(obj.h.OKStimList);
-			string = string(1:length(string)-1);
-			set(obj.h.OKStimList,'Value',1);
+			string{length(string)+1} = ['Spot #' num2str(obj.r.sList.sN)];
 			set(obj.h.OKStimList,'String',string);
 			
-		end
-		
-		function deleteBar(obj)
-			
-			obj.r.stimulus.b = obj.r.stimulus.b(1:obj.store.barN-1);
-			obj.store.barN = obj.store.barN - 1;
-			
-			if obj.store.barN<0;obj.store.barN=0;end
-			
-			string = obj.gs(obj.h.OKStimList);
-			string = string(1:length(string)-1);
-			set(obj.h.OKStimList,'Value',1);
-			set(obj.h.OKStimList,'String',string);
-			
-		end
-		
-		function deleteDots(obj)
-			
-			obj.r.stimulus.d = obj.r.stimulus.d(1:obj.store.dotsN-1);
-			obj.store.dotsN = obj.store.dotsN - 1;
-			
-			if obj.store.dotsN<0;obj.store.dotsN=0;end
-			
-			string = obj.gs(obj.h.OKStimList);
-			string = string(1:length(string)-1);
-			set(obj.h.OKStimList,'Value',1);
-			set(obj.h.OKStimList,'String',string);
-			
-		end
-		
-		function deleteSpot(obj)
-			
-			obj.r.stimulus.s = obj.r.stimulus.s(1:obj.store.spotN-1);
-			obj.store.spotN = obj.store.spotN - 1;
-			
-			if obj.store.spotN<0;obj.store.spotN=0;end
-			
-			string = obj.gs(obj.h.OKStimList);
-			string = string(1:length(string)-1);
-			set(obj.h.OKStimList,'Value',1);
-			set(obj.h.OKStimList,'String',string);
+			obj.store.stimList = obj.r.sList.list;
 			
 		end
 		
 		function addVariable(obj)
 			
-			obj.r.task.nVars = obj.r.task.nVars + 1;
-			obj.store.nVars = obj.r.task.nVars;
-			
-			obj.r.task.nVar(obj.r.task.nVars).name = obj.gs(obj.h.OKVariableName);
-			obj.r.task.nVar(obj.r.task.nVars).values = obj.gn(obj.h.OKVariableValues);
-			obj.r.task.nVar(obj.r.task.nVars).stimulus = obj.gn(obj.h.OKVariableStimuli);
+			obj.r.task.nVar(obj.r.task.nVars+1).name = obj.gs(obj.h.OKVariableName);
+			obj.r.task.nVar(obj.r.task.nVars+1).values = obj.gn(obj.h.OKVariableValues);
+			obj.r.task.nVar(obj.r.task.nVars+1).stimulus = obj.gn(obj.h.OKVariableStimuli);
 			
 			obj.r.task.randomiseStimuli;
+			obj.store.nVars = obj.r.task.nVars;
 			
 			string = obj.gs(obj.h.OKVarList);
 			string{length(string)+1} = [obj.r.task.nVar(obj.r.task.nVars).name... 

@@ -21,6 +21,8 @@ classdef stimulusSequence < dynamicprops
 		taskStream
 		minTrials
 		currentState
+		states
+		nstates = 1
 		outValues
 		outVars
 	end
@@ -76,6 +78,8 @@ classdef stimulusSequence < dynamicprops
 			obj.nVars=length(obj.nVar);
 			
 			obj.currentState=obj.taskStream.State;
+			%obj.states(obj.nstates) = obj.currentState;
+			%obj.nstates = obj.nstates + 1;
 			
 			nLevels = zeros(obj.nVars, 1);
 			for f = 1:obj.nVars

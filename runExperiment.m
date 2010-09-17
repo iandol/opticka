@@ -50,8 +50,10 @@ classdef runExperiment < dynamicprops
 		sVals %calculated stimulus values for display
 		taskLog %detailed info as the experiment runs
 		sList %for heterogenous stimuli, we need a way to index into the stimulus so we don't wast time doing this on each iteration
+		grid
 	end
 	properties (SetAccess = private, GetAccess = private)
+		
 		black=0 %black index
 		white=1 %white index
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
@@ -303,8 +305,9 @@ classdef runExperiment < dynamicprops
 				value = 57.3;
 			end
 			obj.distance = value;
-			obj.ppd=round(obj.pixelsPerCm*(57.3/obj.distance)); %set the pixels per degree
-			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
+			obj.ppd=obj.pixelsPerCm*(57.3/obj.distance); %set the pixels per degree
+			obj.makeGrid;
+			obj.salutation(['set distance: ' num2str(obj.distance) '|ppd: ' num2str(obj.ppd)],'Custom set method')
 		end 
 		%------------------Make sure pixelsPerDegree is also changed-----
 		function set.pixelsPerCm(obj,value)
@@ -312,8 +315,9 @@ classdef runExperiment < dynamicprops
 				value = 44;
 			end
 			obj.pixelsPerCm = value;
-			obj.ppd=round(obj.pixelsPerCm*(57.3/obj.distance)); %set the pixels per degree
-			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
+			obj.ppd=obj.pixelsPerCm*(57.3/obj.distance); %set the pixels per degree
+			obj.makeGrid;
+			obj.salutation(['set pixelsPerCm: ' num2str(obj.pixelsPerCm) '|ppd: ' num2str(obj.ppd)],'Custom set method')
 		end
 		
 		function getTimeLog(obj)
@@ -324,6 +328,10 @@ classdef runExperiment < dynamicprops
 			obj.sList.n=0;
 			obj.sList.list = [];
 			obj.sList.index = [];
+			obj.sList.gN = 0;
+			obj.sList.bN = 0;
+			obj.sList.dN = 0;
+			obj.sList.sN = 0;
 			if ~isempty(obj.stimulus)
 				obj.sList.fields = fieldnames(obj.stimulus);
 				for i=1:length(obj.sList.fields)
@@ -331,11 +339,20 @@ classdef runExperiment < dynamicprops
 						obj.sList.n = obj.sList.n+1;
 						obj.sList.list = [obj.sList.list obj.sList.fields{i}];
 						obj.sList.index = [obj.sList.index j];
+						obj.sList.([obj.sList.fields{i} 'N']) = obj.sList.([obj.sList.fields{i} 'N']) + 1;
 					end
 				end
 			else
 				obj.sList.fields = '';
 			end
+		end
+		
+		function makeGrid(obj)
+			obj.grid=[];
+			for i=-5:5
+				obj.grid=horzcat(obj.grid,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
+			end
+			obj.grid=obj.grid.*obj.ppd;
 		end
 		
 % 		function set.verbose(obj,value)
@@ -446,13 +463,14 @@ classdef runExperiment < dynamicprops
 				
 				if strcmp(name,'xPosition')||strcmp(name,'yPosition')
 					for j=1:length(ix)
-						if isempty(obj.sVals(ix(j)).doDots)
-							obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
-							obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
-							obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPosition*obj.ppd,obj.sVals(ix(j)).yPosition*obj.ppd);
-							obj.sVals(ix(j)).mvRect=obj.sVals(ix(j)).dstRect;
-						else
-							
+						switch obj.sVals(ix(j)).family
+							case {'grating','bar', 'spot'}
+								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
+								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
+								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPosition*obj.ppd,obj.sVals(ix(j)).yPosition*obj.ppd);
+								obj.sVals(ix(j)).mvRect=obj.sVals(ix(j)).dstRect;
+							case {'dots'}
+								
 						end
 						
 					end
@@ -638,6 +656,10 @@ classdef runExperiment < dynamicprops
 			
 			Screen('Preference', 'TextRenderer', 0); %fast text renderer
 			
+			obj.makeGrid;
+			
+			obj.updatesList;
+			
 		end
 		
 		%--------------------Configure grating specific variables-----------%
@@ -804,6 +826,7 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).xPosition = ts.xPosition;
 			obj.sVals(i).yPosition = ts.yPosition;
 			obj.sVals(i).startPosition=0;
+			obj.sVals(i).colourType = ts.colourtype;
 			
 			if obj.sVals(i).speed>0 %we need to say this needs animating
 				obj.sVals(i).doDots=1;
@@ -885,16 +908,12 @@ classdef runExperiment < dynamicprops
 		
 		%--------------------Draw Fixation spot-------------%
 		function drawFixationPoint(obj)
-			Screen('gluDisk',obj.win,[1 0 1],obj.xCenter,obj.yCenter,3);
+			Screen('gluDisk',obj.win,[1 0 1 1],obj.xCenter,obj.yCenter,3);
 		end
 		
+		%------------------------------------------------------------
 		function drawGrid(obj)
-			x=[];
-			for i=-5:5
-				x=horzcat(x,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
-			end
-			x=x.*obj.ppd;
-			Screen('DrawDots',obj.win,x,1,[0.8 0.8 0.4 1],[obj.xCenter obj.yCenter]);
+			Screen('DrawDots',obj.win,obj.grid,1,[0.8 0.8 0.4 1],[obj.xCenter obj.yCenter]);
 		end
 		
 		%--------------------Draw Info text-------------------%

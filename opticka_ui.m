@@ -905,7 +905,7 @@ function OKAddStimulus_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	
+	o.r.updatesList; %initialise it.
 	switch o.store.visibleStimulus
 		case 'grating'
 			o.addGrating;
