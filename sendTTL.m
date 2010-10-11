@@ -7,7 +7,7 @@ classdef sendTTL < handle
 		silentMode = 0
 		header = '/usr/local/include/labjackusb.h'
 		library = '/usr/local/lib/liblabjackusb'
-		verbosity = 0
+		verbosity = 1
 		openNow = 1 %allows the constructor to run the open method immediately
 		version
 		devCount
@@ -22,7 +22,7 @@ classdef sendTTL < handle
 		inp = []
 		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])';
 		fio4Low = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])';
-		vhandle = 0
+		vHandle = 0
 		allowedPropertiesBase='^(name|silentMode|verbosity|openNow)$'
 	end
 	methods%------------------PUBLIC METHODS--------------%
@@ -58,15 +58,21 @@ classdef sendTTL < handle
 				obj.version =  calllib('liblabjackusb','LJUSB_GetLibraryVersion');
 				obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',obj.deviceID);
 				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',1,0,obj.deviceID);
-				obj.validhandle;
-				if obj.vhandle
+				obj.validHandle;
+				if obj.vHandle
 					obj.isOpen = 1;
+					obj.salutation('open method','LabJack succesfully opened...')
+					obj
 				else
 					obj.isOpen = 0;
 					obj.handle = [];
 					obj.silentMode = 1; %we switch into silent mode just in case someone tries to use the object
+					obj.salutation('open method','LabJack open failed, going into silent mode')
 				end
-				
+			else
+				obj.isOpen = 0;
+				obj.handle = [];
+				obj.silentMode = 1; %we switch into silent mode just in case someone tries to use the object
 			end
 		end
 		
@@ -76,6 +82,8 @@ classdef sendTTL < handle
 		function close(obj)
 			if ~isempty(obj.handle)
 				calllib('liblabjackusb','LJUSB_CloseDevice',obj.handle);
+				obj.validHandle;
+				obj.salutation('close method',['Closed handle:' obj.num2str(obj.vHandle)])
 				obj.isOpen = 0;
 				obj.handle=[];
 			end
@@ -84,14 +92,14 @@ classdef sendTTL < handle
 		%===============CHECK Labjack================%
 		% 		bool LJUSB_IsHandleValid(HANDLE hDevice);
 		% 		//Is handle valid.
-		function validhandle(obj)
+		function validHandle(obj)
 			if obj.silentMode == 0
 				if ~isempty(obj.handle)
-					obj.vhandle = calllib('liblabjackusb','LJUSB_IsHandleValid',obj.handle);
-					if obj.vhandle && obj.verbosity == 1
-						disp('VALID Handle')
+					obj.vHandle = calllib('liblabjackusb','LJUSB_IsHandleValid',obj.handle);
+					if obj.vHandle
+						obj.salutation('validHandle Method','VALID Handle')
 					else
-						disp('INVALID Handle')
+						obj.salutation('validHandle Method','INVALID Handle')
 					end
 				end
 			end
@@ -128,7 +136,7 @@ classdef sendTTL < handle
 		%['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04';
 		%'00']
 		function setFIO4(obj,val)
-			if obj.silentMode == 0
+			if obj.silentMode == 0 && obj.vHandle == 1
 				if ~exist('val','var')
 					val = obj.fio4;
 				end
@@ -136,13 +144,24 @@ classdef sendTTL < handle
 					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4High, 12);
 					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
 					obj.fio4 = 1;
+					obj.salutation('FIO4 is HIGH')
 				else
 					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4Low, 12);
 					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
 					obj.fio4 = 0;
+					obj.salutation('FIO4 is LOW')
 				end
 			end
-		end		
+		end	
+		
+		%===============Toggle FIO4======================%
+		function toggleFIO4(obj)
+			if obj.silentMode == 0 && obj.vHandle == 1
+				obj.fio4=abs(obj.fio4-1);
+				obj.setFIO4(obj.fio4);
+			end
+		end
+		
 	end
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
@@ -150,12 +169,12 @@ classdef sendTTL < handle
 		function salutation(obj,in,message)
 			if obj.verbosity > 0
 				if ~exist('in','var')
-					in = 'random user';
+					in = 'General Message';
 				end
 				if exist('message','var')
 					fprintf([message ' | ' in '\n']);
 				else
-					fprintf(['\nHello from ' obj.name ' | sendSerial\n\n']);
+					fprintf(['\nHello from ' obj.name ' | sendTTL\n\n']);
 				end
 			end
 		end

@@ -104,6 +104,8 @@ classdef runExperiment < dynamicprops
 			
 			obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',0));
 			obj.serialP.setDTR(0);
+			obj.labJack = sendTTL(struct('name','','openNow',1,'verbosity',1));
+			obj.labJack.setFIO4(0);
 			
 			try
 				if obj.debug==1 || obj.windowed==1
@@ -180,9 +182,6 @@ classdef runExperiment < dynamicprops
 				
 				obj.updateVars; %set the variables for the very first run;
 				
-				obj.photoDiodeRect(:,1)=[0 0 25 25]';
-				%obj.photoDiodeRect(:,2)=[obj.winRect(3)-100 obj.winRect(4)-100 obj.winRect(3) obj.winRect(4)]';
-				
 				KbReleaseWait; %make sure keyboard keys are all released
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -240,18 +239,33 @@ classdef runExperiment < dynamicprops
 					
 					obj.updateTask;
 					
-					% Show it at next retrace:
+					%======= Show it at next retrace: ========%
 					[obj.timeLog.vbl(obj.task.tick+1),obj.timeLog.show(obj.task.tick+1),obj.timeLog.flip(obj.task.tick+1),obj.timeLog.miss(obj.task.tick+1)] = Screen('Flip', obj.win, (obj.timeLog.vbl(obj.task.tick)+obj.screenVals.halfisi));
+					%=========================================%
+					
 					if obj.task.isBlank==0
 						obj.timeLog.stimTime(obj.task.tick+1)=1;
 					else
 						obj.timeLog.stimTime(obj.task.tick+1)=0;
 					end
+					
+					if obj.task.switched == 1
+						switch obj.task.isBlank
+							case 1
+								obj.serialP.setDTR(0);
+								obj.labJack.setFIO4(0);
+							case 0
+								obj.serialP.setDTR(1);
+								obj.labJack.setFIO4(1);
+						end
+					end
+					
 					if obj.task.tick==1
 						obj.timeLog.startflip=obj.timeLog.vbl(obj.task.tick) + obj.screenVals.halfisi;
 						obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
 						%WaitSecs('UntilTime',obj.timeLog.show(thisRun+1));
 						obj.serialP.setDTR(1);
+						obj.labJack.setFIO4(1);
 					end
 					
 					obj.task.tick=obj.task.tick+1;
@@ -263,6 +277,7 @@ classdef runExperiment < dynamicprops
 				Screen('Flip', obj.win);
 				obj.timeLog.afterDisplay=GetSecs;
 				obj.serialP.setDTR(0);
+				obj.labJack.setFIO4(0);
 				
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
 				obj.timeLog.deltaUntilDisplay=obj.timeLog.beforeDisplay-obj.timeLog.start;
@@ -278,6 +293,8 @@ classdef runExperiment < dynamicprops
 				Priority(0);
 				ShowCursor;
 				obj.serialP.close;
+				obj.labJack.close;
+				obj.labJack=[];
 				
 			catch ME
 				
@@ -290,6 +307,8 @@ classdef runExperiment < dynamicprops
 				Priority(0);
 				ShowCursor;
 				obj.serialP.close;
+				obj.labJack.close;
+				obj.labJack=[];
 				rethrow(ME)
 				
 			end
@@ -347,13 +366,6 @@ classdef runExperiment < dynamicprops
 			end
 		end
 		
-		function makeGrid(obj)
-			obj.grid=[];
-			for i=-5:5
-				obj.grid=horzcat(obj.grid,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
-			end
-			obj.grid=obj.grid.*obj.ppd;
-		end
 		
 % 		function set.verbose(obj,value)
 % 			for i = 1:obj.sList.n
@@ -367,6 +379,14 @@ classdef runExperiment < dynamicprops
 	%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	methods ( Access = protected ) %----------PRIVATE METHODS-------------------%
+		
+		function makeGrid(obj)
+			obj.grid=[];
+			for i=-5:5
+				obj.grid=horzcat(obj.grid,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
+			end
+			obj.grid=obj.grid.*obj.ppd;
+		end
 		
 		%---------------Update the stimulus values for the current trial---------%
 		function initialiseTask(obj)
@@ -403,6 +423,11 @@ classdef runExperiment < dynamicprops
 				obj.task.addprop('isBlank'); %add new dynamic property
 			end
 			obj.task.isBlank=0;
+			
+			if isempty(obj.task.findprop('switched'))
+				obj.task.addprop('switched'); %add new dynamic property
+			end
+			obj.task.switched=0;
 			
 			if isempty(obj.task.findprop('startTime'))
 				obj.task.addprop('startTime'); %add new dynamic property
@@ -530,7 +555,7 @@ classdef runExperiment < dynamicprops
 			end
 			
 			if  obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime) %we haven't hit a time trigger yet
-				
+				obj.task.switched = 0;
 				if obj.task.isBlank == 0 %not in an interstimulus time, need to update drift, motion and pulsation
 					
 					for i=1:length(obj.task.stimIsDrifting) %only update those stimuli which are drifting
@@ -559,7 +584,7 @@ classdef runExperiment < dynamicprops
 				end
 				
 			else %need to switch to next trial or blank
-				
+				obj.task.switched = 1;
 				if obj.task.isBlank == 0 %we come from showing a stimulus
 					
 					%obj.logMe('IntoBlank');
@@ -638,6 +663,12 @@ classdef runExperiment < dynamicprops
 			obj.serialP.toggleDTRLine;
 			obj.serialP.close;
 			
+			obj.labJack = sendTTL(struct('openNow',1,'verbosity',1));
+			obj.labJack.setFIO4(1);
+			obj.labJack.setFIO4(0);
+			obj.labJack.close;
+			obj.labJack=[];
+			
 			try
 				AssertOpenGL;
 			catch ME
@@ -657,6 +688,8 @@ classdef runExperiment < dynamicprops
 			Screen('Preference', 'TextRenderer', 0); %fast text renderer
 			
 			obj.makeGrid;
+			
+			obj.photoDiodeRect(:,1)=[0 0 50 50]';
 			
 			obj.updatesList;
 			
@@ -826,7 +859,7 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).xPosition = ts.xPosition;
 			obj.sVals(i).yPosition = ts.yPosition;
 			obj.sVals(i).startPosition=0;
-			obj.sVals(i).colourType = ts.colourtype;
+			obj.sVals(i).colourType = ts.colourType;
 			
 			if obj.sVals(i).speed>0 %we need to say this needs animating
 				obj.sVals(i).doDots=1;
@@ -928,7 +961,7 @@ classdef runExperiment < dynamicprops
 		
 		%--------------------Draw photodiode block-------------%
 		function drawPhotoDiodeSquare(obj)
-			Screen('FillRect',obj.win,[1 1 1 0],obj.photoDiodeRect);
+			Screen('FillRect',obj.win,[1 1 1 1],obj.photoDiodeRect);
 		end
 		
 		%--------------------Draw background-------------%

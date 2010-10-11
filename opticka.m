@@ -142,6 +142,7 @@ classdef opticka < dynamicprops
 			obj.r.task.isTime = obj.gd(obj.h.OKisTime);
 			obj.r.task.nTrials = obj.gd(obj.h.OKnTrials);
 			obj.r.task.initialiseRandom;
+			obj.r.task.randomiseStimuli;
 			
 		end
 		%---------------------------------------------------------
@@ -314,17 +315,29 @@ classdef opticka < dynamicprops
 		
 		function addVariable(obj)
 			
-			obj.r.task.nVar(obj.r.task.nVars+1).name = obj.gs(obj.h.OKVariableName);
-			obj.r.task.nVar(obj.r.task.nVars+1).values = obj.gn(obj.h.OKVariableValues);
-			obj.r.task.nVar(obj.r.task.nVars+1).stimulus = obj.gn(obj.h.OKVariableStimuli);
+			revertN = obj.r.task.nVars;
 			
-			obj.r.task.randomiseStimuli;
-			obj.store.nVars = obj.r.task.nVars;
+			try
 			
-			string = obj.gs(obj.h.OKVarList);
-			string{length(string)+1} = [obj.r.task.nVar(obj.r.task.nVars).name... 
-				' on Stimuli: ' num2str(obj.r.task.nVar(obj.r.task.nVars).stimulus)];
-			set(obj.h.OKVarList,'String',string);
+				obj.r.task.nVar(obj.r.task.nVars+1).name = obj.gs(obj.h.OKVariableName);
+				obj.r.task.nVar(obj.r.task.nVars+1).values = obj.gn(obj.h.OKVariableValues);
+				obj.r.task.nVar(obj.r.task.nVars+1).stimulus = obj.gn(obj.h.OKVariableStimuli);
+
+				obj.r.task.randomiseStimuli;
+				obj.store.nVars = obj.r.task.nVars;
+
+				string = obj.gs(obj.h.OKVarList);
+				string{length(string)+1} = [obj.r.task.nVar(obj.r.task.nVars).name... 
+					' on Stimuli: ' num2str(obj.r.task.nVar(obj.r.task.nVars).stimulus)];
+				set(obj.h.OKVarList,'String',string);
+			
+			catch ME
+				
+				obj.r.task.nVars = revertN;
+				obj.r.task.nVars = obj.r.task.nVars(1:revertN);
+				rethrow ME;
+				
+			end
 			
 		end
 		
