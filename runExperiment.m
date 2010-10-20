@@ -104,7 +104,7 @@ classdef runExperiment < dynamicprops
 			
 			obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',0));
 			obj.serialP.setDTR(0);
-			obj.labJack = sendTTL(struct('name','','openNow',1,'verbosity',1));
+			obj.labJack = sendTTL(struct('openNow',0,'name','','verbosity',1));
 			obj.labJack.setFIO4(0);
 			
 			try
@@ -663,7 +663,7 @@ classdef runExperiment < dynamicprops
 			obj.serialP.toggleDTRLine;
 			obj.serialP.close;
 			
-			obj.labJack = sendTTL(struct('openNow',1,'verbosity',1));
+			obj.labJack = sendTTL(struct('name','','openNow',1,'verbosity',1));
 			obj.labJack.setFIO4(1);
 			obj.labJack.setFIO4(0);
 			obj.labJack.close;

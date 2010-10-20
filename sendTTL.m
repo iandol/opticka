@@ -144,12 +144,12 @@ classdef sendTTL < handle
 					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4High, 12);
 					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
 					obj.fio4 = 1;
-					obj.salutation('FIO4 is HIGH')
+					obj.salutation('SETFIO4','FIO4 is HIGH')
 				else
 					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4Low, 12);
 					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
 					obj.fio4 = 0;
-					obj.salutation('FIO4 is LOW')
+					obj.salutation('SETFIO4','FIO4 is LOW')
 				end
 			end
 		end	
