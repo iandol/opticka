@@ -8,7 +8,7 @@ classdef opticka < dynamicprops
 		r
 		verbose
 		store
-		version='0.43'
+		version='0.44'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -19,7 +19,10 @@ classdef opticka < dynamicprops
 		allowedPropertiesBase='^(workingDir|verbose)$'
 	end
 	
+	%========================================================
 	methods
+	%========================================================
+	
 		%-------------------CONSTRUCTOR----------------------%
 		function obj = opticka(args)
 			if nargin>0 && isstruct(args)
@@ -36,6 +39,22 @@ classdef opticka < dynamicprops
 			obj.initialiseUI;
 		end
 		
+		%-------------------Route calls to private methods----------------------%
+		function router(obj,in)
+			switch in
+				case 'saveProtocol'
+					obj.saveProtocol;
+				case 'loadProtocol'
+					obj.loadProtocol;
+			end
+		end
+		
+	end
+	
+	%========================================================
+	methods (Hidden = true) %these have to be available publically, but lets hide them from obvious view
+	%========================================================
+	
 		%-------------------Start the UI----------------------%
 		function initialiseUI(obj)
 			if ismac
@@ -44,6 +63,8 @@ classdef opticka < dynamicprops
 					mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);
 				end
 				obj.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
+				cd(obj.paths.protocols);
+				obj.paths.currentPath = pwd;
 				if ~exist([obj.paths.temp 'History'],'dir')
 					mkdir([obj.paths.temp 'History']);
 				end
@@ -56,6 +77,8 @@ classdef opticka < dynamicprops
 					mkdir(['c:\MatlabFiles\Protocols'])
 				end
 				obj.paths.protocols = ['c:\MatlabFiles\Protocols'];
+				cd(obj.paths.protocols);
+				obj.paths.currentPath = pwd;
 				if ~exist(['c:\MatlabFiles\History'],'dir')
 					mkdir(['c:\MatlabFiles\History'])
 				end
@@ -71,7 +94,9 @@ classdef opticka < dynamicprops
 			set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
 			obj.getScreenVals;
 			obj.getTaskVals;
-			setappdata(0,'o',obj); %we stash our object in the root appdata store
+			obj.refreshProtocolsList;
+			
+			setappdata(0,'o',obj); %we stash our object in the root appdata store for retirieval from the UI
 			
 			obj.store.nVars = 0;
 			obj.store.visibleStimulus = 'grating'; %our default shown stimulus
@@ -88,7 +113,8 @@ classdef opticka < dynamicprops
 			set(obj.h.OKStimList,'String','');
 			
 		end
-				
+		
+		%=========================================
 		function getScreenVals(obj)
 			
 			if isempty(obj.r)
@@ -100,12 +126,10 @@ classdef opticka < dynamicprops
 			obj.r.screenYOffset = obj.gd(obj.h.OKYCenter);
 			
 			value = obj.gv(obj.h.OKGLSrc);
-			string = obj.gs(obj.h.OKGLSrc);
-			obj.r.srcMode = string{value};
+			obj.r.srcMode = obj.gs(obj.h.OKGLSrc, value);
 			
 			value = obj.gv(obj.h.OKGLDst);
-			string = obj.gs(obj.h.OKGLDst);
-			obj.r.dstMode = string{value};
+			obj.r.dstMode = obj.gs(obj.h.OKGLDst, value);
 			
 			obj.r.blend = obj.gv(obj.h.OKOpenGLBlending);
 			if regexp(get(obj.h.OKWindowSize,'String'),'[]')
@@ -124,6 +148,7 @@ classdef opticka < dynamicprops
 			
 		end
 		
+		%=========================================
 		function getTaskVals(obj)
 			
 			if isempty(obj.r.task)
@@ -145,7 +170,8 @@ classdef opticka < dynamicprops
 			obj.r.task.randomiseStimuli;
 			
 		end
-		%---------------------------------------------------------
+		
+		%=========================================
 		function clearStimulusList(obj)
 			if ~isempty(obj.r)
 				if ~isempty(obj.r.stimulus)
@@ -160,9 +186,10 @@ classdef opticka < dynamicprops
 				end
 			end
 			set(obj.h.OKStimList,'String','');
+			set(obj.h.OKStimList,'Value',1);
 		end
 		
-		%---------------------------------------------------------
+		%=========================================
 		function clearVariableList(obj)
 			if ~isempty(obj.r)
 				if ~isempty(obj.r.task)
@@ -170,9 +197,10 @@ classdef opticka < dynamicprops
 				end
 			end
 			set(obj.h.OKVarList,'String','');
+			set(obj.h.OKVarList,'Value',1);
 		end
 		
-		%---------------------------------------------------------
+		%=========================================
 		function deleteStimulus(obj)
 			n = fieldnames(obj.r.stimulus); %get what stimulus fields we have
 			if ~isempty(n)
@@ -182,17 +210,32 @@ classdef opticka < dynamicprops
 					obj.r.stimulus=rmfield(obj.r.stimulus,n{end});
 				end
 				
-				obj.store.stimN = obj.store.stimN - 1;
-				if obj.store.stimN < 0;obj.store.stimN = 0;end
 				obj.r.updatesList;
 				
+				obj.store.stimN = obj.r.sList.n;
+				if obj.store.stimN < 0;obj.store.stimN = 0;end
+				obj.store.stimList = obj.r.sList.list;
+				
 				string = obj.gs(obj.h.OKStimList);
-				set(obj.h.OKStimList,'String',string(1:end-1));
+				string = string(1:end-1);
+				if isempty(string)
+					set(obj.h.OKStimList,'Value',1);
+					set(obj.h.OKStimList,'String','');
+				else
+					set(obj.h.OKStimList,'Value',1);
+					set(obj.h.OKStimList,'String',string);
+				end
+			else
+				obj.r.updatesList;
+				set(obj.h.OKStimList,'Value',1);
+				set(obj.h.OKStimList,'String','');
+				obj.store.stimN = obj.r.sList.n;
+				if obj.store.stimN < 0;obj.store.stimN = 0;end
+				obj.store.stimList = obj.r.sList.list;
 			end
-			
 		end
 		
-		%---------------------------------------------------------
+		%=========================================
 		function addGrating(obj)
 			tmp = struct;
 			
@@ -235,6 +278,7 @@ classdef opticka < dynamicprops
 			
 		end
 		
+		%=========================================
 		function addBar(obj)
 			tmp = struct;
 			tmp.xPosition = obj.gd(obj.h.OKPanelBarxPosition);
@@ -261,6 +305,7 @@ classdef opticka < dynamicprops
 			
 		end
 		
+		%=========================================
 		function addDots(obj)
 			tmp = struct;
 			tmp.xPosition = obj.gd(obj.h.OKPanelDotsxPosition);
@@ -290,6 +335,7 @@ classdef opticka < dynamicprops
 			
 		end
 		
+		%=========================================
 		function addSpot(obj)
 			tmp = struct;
 			tmp.xPosition = obj.gd(obj.h.OKPanelSpotxPosition);
@@ -313,6 +359,7 @@ classdef opticka < dynamicprops
 			
 		end
 		
+		%=========================================
 		function addVariable(obj)
 			
 			revertN = obj.r.task.nVars;
@@ -341,6 +388,7 @@ classdef opticka < dynamicprops
 			
 		end
 		
+		%=========================================
 		function deleteVariable(obj)
 			
 			if isobject(obj.r.task)
@@ -360,8 +408,109 @@ classdef opticka < dynamicprops
 		end
 	end
 	
+	%========================================================
 	methods ( Access = protected ) %----------PRIVATE METHODS---------%
+	%========================================================
+	
+		%==================Save Protocol================
+		function saveProtocol(obj)
+			
+			obj.paths.currentPath = pwd;
+			cd(obj.paths.protocols);
+			tmp = obj;
+			tmp.store.oldlook = [];
+			uisave('tmp','new protocol');
+			cd(obj.paths.currentPath);
+			obj.refreshProtocolsList;
+			
+		end
 		
+		%==================Load Protocol================
+		function loadProtocol(obj)
+			
+			v = obj.gv(obj.h.OKProtocolsList);
+			file = obj.gs(obj.h.OKProtocolsList,v);
+			
+			obj.paths.currentPath = pwd;
+			cd(obj.paths.protocols);
+			
+			if isempty(file)
+				uiload('MATLAB');
+			else
+				load(file);
+			end
+			
+			if isa(tmp,'opticka')
+				
+				%copy screen parameters
+				
+				set(obj.h.OKXCenter,'String', num2str(tmp.r.screenXOffset));
+				set(obj.h.OKYCenter,'String', num2str(tmp.r.screenYOffset));
+				
+				list = obj.gs(obj.h.OKGLSrc);
+				val = findValue(list,tmp.r.srcMode);
+				obj.r.srcMode = list{val};
+				
+				list = obj.gs(obj.h.OKGLDst);
+				val = findValue(list,tmp.r.dstMode);
+				obj.r.dstMode = list{val};
+				
+				set(obj.h.OKOpenGLBlending,'Value', tmp.r.blend);
+				set(obj.h.OKAntiAliasing,'Value', tmp.r.antiAlias);
+				set(obj.h.OKbackgroundColour,'String',num2str(tmp.r.backgroundColour));
+
+				%copy task parameters
+				if isempty(obj.r.task)
+					obj.r.task = stimulusSequence;
+					obj.r.task.randomiseStimuli;
+				end
+				set(obj.h.OKtrialTime, 'String', num2str(tmp.r.task.trialTime));
+				set(obj.h.OKRandomSeed, 'String', num2str(tmp.r.task.randomSeed));
+				
+				v = obj.gv(obj.h.OKrandomGenerator);
+				obj.r.task.randomGenerator = obj.gs(obj.h.OKrandomGenerator,v);
+				obj.r.task.itTime = obj.gd(obj.h.OKitTime);
+				obj.r.task.randomise = obj.gv(obj.h.OKRandomise);
+				obj.r.task.isTime = obj.gd(obj.h.OKisTime);
+				obj.r.task.nTrials = obj.gd(obj.h.OKnTrials);
+				obj.r.task.initialiseRandom;
+				obj.r.task.randomiseStimuli;
+				
+			end
+				
+		end
+		
+		%==================Load Protocol================
+		function refreshProtocolsList(obj)
+			
+			set(obj.h.OKProtocolsList,'String',{''});
+			obj.paths.currentPath = pwd;
+			cd(obj.paths.protocols);
+			
+			% Generate path based on given root directory
+			files = dir(pwd);
+			if isempty(files)
+				set(obj.h.OKProtocolsList,'String',{''});
+				return
+			end
+			
+			% set logical vector for subdirectory entries in d
+			isdir = logical(cat(1,files.isdir));
+			isfile = ~isdir;
+			
+			files = files(isfile); % select only directory entries from the current listing
+			
+			filelist=cell(size(files));
+			for i=1:length(files)
+				filename = files(i).name;
+				filelist{i} = filename;
+			end
+			
+			set(obj.h.OKProtocolsList,'String',filelist);
+			
+		end
+		
+		%=============fprintf wrapper function===========
 		function salutation(obj,in,message)
 			if obj.verbose==1
 				if ~exist('in','var')
@@ -374,8 +523,23 @@ classdef opticka < dynamicprops
 				end
 			end
 		end
-
+		
+		%=======================================
+		function value = findValue(obj,list,entry)
+			value = 1;
+			for i=1:length(list)
+				if regexp(list{i},entry)
+					value = i;
+					return
+				end
+			end
+		end
+		
+		
+		
+		%===========================a set of shortcut functions
 		function outhandle = gs(obj,inhandle,value)
+		%quick alias to get string value
 			if exist('value','var')
 				s = get(inhandle,'String');
 				outhandle = s{value};
@@ -383,17 +547,25 @@ classdef opticka < dynamicprops
 				outhandle = get(inhandle,'String');
 			end
 		end
+		
 		function outhandle = gd(obj,inhandle)
+		%quick alias to get double value
 			outhandle = str2double(get(inhandle,'String'));
 		end
+		
 		function outhandle = gn(obj,inhandle)
+		%quick alias to get number value
 			outhandle = str2num(get(inhandle,'String'));
 		end
+		
 		function outhandle = gv(obj,inhandle)
+		%quick alias to get ui value
 			outhandle = get(inhandle,'Value');
 		end
 		
+		%============================================
 		function fixUI(obj)
+		%try to work around GUIDE OS X bugs
 			ch = findall(obj.handles.uihandle);
 			set(obj.handles.uihandle,'Units','pixels');
 			for k = 1:length(ch)

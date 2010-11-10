@@ -497,28 +497,40 @@ function OKProtocolLoad_Callback(hObject, eventdata, handles)
 % hObject    handle to OKProtocolLoad (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.router('loadProtocol');
+end
 
 % --- Executes on button press in OKProtocolSave.
 function OKProtocolSave_Callback(hObject, eventdata, handles)
 % hObject    handle to OKProtocolSave (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.router('saveProtocol');
+end
 
 % --- Executes on button press in OKProtocolDuplicate.
 function OKProtocolDuplicate_Callback(hObject, eventdata, handles)
 % hObject    handle to OKProtocolDuplicate (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.router('duplicateProtocol');
+end
 
 % --- Executes on button press in OKProtocolDelete.
 function OKProtocolDelete_Callback(hObject, eventdata, handles)
 % hObject    handle to OKProtocolDelete (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.router('deleteProtocol');
+end
 
 % --------------------------------------------------------------------
 function OKMenuCalibrateLuminance_Callback(hObject, eventdata, handles)

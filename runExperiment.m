@@ -49,7 +49,7 @@ classdef runExperiment < dynamicprops
 		timeLog %log times during display
 		sVals %calculated stimulus values for display
 		taskLog %detailed info as the experiment runs
-		sList %for heterogenous stimuli, we need a way to index into the stimulus so we don't wast time doing this on each iteration
+		sList %for heterogenous stimuli, we need a way to index into the stimulus so we don't waste time doing this on each iteration
 		grid
 	end
 	properties (SetAccess = private, GetAccess = private)
@@ -131,10 +131,18 @@ classdef runExperiment < dynamicprops
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
 				
-				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
-				
 				obj.timeLog.postOpenWindow=GetSecs;
 				obj.timeLog.deltaOpenWindow=(obj.timeLog.postOpenWindow-obj.timeLog.preOpenWindow)*1000;
+				
+				Priority(9); %(MaxPriority(obj.win)); %bump our priority to maximum allowed
+				%find our fps if not defined before  
+				obj.screenVals.ifi=Screen('GetFlipInterval', obj.win);
+				if obj.screenVals.fps==0
+					obj.screenVals.fps=1/obj.screenVals.ifi;
+				end
+				obj.screenVals.halfisi=obj.screenVals.ifi/2;
+				
+				Priority(0);
 				
 				if obj.hideFlash==1
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
@@ -152,12 +160,6 @@ classdef runExperiment < dynamicprops
 				obj.xCenter=obj.xCenter+(obj.screenXOffset*obj.ppd);
 				obj.yCenter=obj.yCenter+(obj.screenYOffset*obj.ppd);
 				
-				%find our fps if not defined before  
-				obj.screenVals.ifi=Screen('GetFlipInterval', obj.win);
-				if obj.screenVals.fps==0
-					obj.screenVals.fps=1/obj.screenVals.ifi;
-				end
-				obj.screenVals.halfisi=obj.screenVals.ifi/2;
 				
 				obj.black = BlackIndex(obj.win);
 				obj.white = WhiteIndex(obj.win);
@@ -189,6 +191,7 @@ classdef runExperiment < dynamicprops
 				% Our main display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				Priority(9);
 				
 				obj.task.tick=1;
 				obj.timeLog.beforeDisplay=GetSecs;
@@ -198,7 +201,9 @@ classdef runExperiment < dynamicprops
 				while obj.task.thisTrial <= obj.task.nTrials
 					
 					if obj.task.isBlank==1
-						%obj.drawBackground;
+						if obj.photoDiode==1
+							obj.drawPhotoDiodeSquare([0 0 0 0]);
+						end
 					else
 						if ~isempty(obj.backgroundColour)
 							obj.drawBackground;
@@ -218,7 +223,7 @@ classdef runExperiment < dynamicprops
 							end
 						end
 						if obj.photoDiode==1
-							obj.drawPhotoDiodeSquare;
+							obj.drawPhotoDiodeSquare([1 1 1 1]);
 						end
 						if obj.fixationPoint==1
 							obj.drawFixationPoint;
@@ -773,7 +778,7 @@ classdef runExperiment < dynamicprops
 			
 			if ts.gabor==0
 				obj.sVals(i).texture = CreateProceduralSineGrating(obj.win, obj.sVals(i).res(1),...
-					obj.sVals(i).res(2),obj.sVals(i).colour, obj.sVals(i).mask, obj.sVals(i).contrastMult);
+					obj.sVals(i).res(2), obj.sVals(i).colour, obj.sVals(i).mask);
 			else
 				if obj.sVals(i).aspectRatio == 1
 					nonSymmetric = 0;
@@ -960,8 +965,8 @@ classdef runExperiment < dynamicprops
 		end
 		
 		%--------------------Draw photodiode block-------------%
-		function drawPhotoDiodeSquare(obj)
-			Screen('FillRect',obj.win,[1 1 1 1],obj.photoDiodeRect);
+		function drawPhotoDiodeSquare(obj,colour)
+			Screen('FillRect',obj.win,colour,obj.photoDiodeRect);
 		end
 		
 		%--------------------Draw background-------------%
