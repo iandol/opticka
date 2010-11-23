@@ -11,6 +11,8 @@ classdef sendSerial < handle
 		openNow=0 %allows the constructor to run the open method immediately
 	end
 	properties (SetAccess = private, GetAccess = private)
+		defaultName='usbserial-A600drIC';
+		%defaultName = 'pci-serial0';
 		allowedPropertiesBase='^(name|baudRate|silentMode|verbosity|openNow)$'
 		toggleRTS=0 %keep the state here to toggle on succesive calls
 		toggleDTR=0
@@ -33,8 +35,8 @@ classdef sendSerial < handle
 				obj.name=args; %assume a name
 			end
 			obj.find; %find the full connection info
-			if isempty(obj.name) %we were deliberately passed an empty name, will re-specify default
-				obj.name='usbserial-A600drIC';
+			if isempty(obj.name) || strcmpi(obj.name,'default')%we were deliberately passed an empty name, will re-specify default
+				obj.name=obj.defaultName;
 			end
 			if obj.openNow==1
 				obj.open

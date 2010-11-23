@@ -145,6 +145,7 @@ classdef opticka < dynamicprops
 			obj.r.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
 			obj.r.fixationPoint = obj.gv(obj.h.OKFixationSpot);
 			obj.r.useLabJack = obj.gv(obj.h.OKuseLabJack);
+			obj.r.serialPortName = obj.gs(obj.h.OKSerialPortName);
 			
 		end
 		

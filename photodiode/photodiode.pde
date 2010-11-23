@@ -24,32 +24,32 @@ void setup(){
   sbi(ADCSRA, ADPS2); //analogRead multiplier is 16, much faster...
   cbi(ADCSRA, ADPS1); 
   cbi(ADCSRA, ADPS0);
-  Serial.begin(9600);
+  //Serial.begin(9600);
   pinMode(ledPin, OUTPUT); 
   //Events.addHandler(blinky, 13);  // Every 13ms, equivalent to a 75hz signal
 }
 void loop(){ 
   //Events.loop();
   sensorValue = analogRead(analogInPin);            
-  outputValue = map(sensorValue, 60, 600, 0, 255);
+  outputValue = map(sensorValue, 10, 850, 0, 255);
   outputValue = constrain(outputValue, 0, 255);
-  if (sensorValue > 400) {
+  if (sensorValue > 700) {
     togled(HIGH);
   }
   else {
     togled(LOW);
   }
-  analogWrite(analogOutPin, outputValue);
+  //analogWrite(analogOutPin, outputValue);
   //time = Timing.millis(); //micros();
   //timedifference = time-timebefore;
   //Serial.print("Time:");
   //Serial.print(time);
   //Serial.print("\tDiff:");
   //Serial.print(timedifference);
-  Serial.print("Sensor: ");  
-  Serial.print(sensorValue);
-  Serial.print("\tOut: ");  
-  Serial.println(outputValue);
+  //Serial.print("Sensor: ");  
+  //Serial.print(sensorValue);
+  //Serial.print("\tOut: ");  
+  //Serial.println(outputValue);
 
   //if (ledState == LOW) {
   //    ledState = HIGH;

@@ -102,9 +102,14 @@ classdef runExperiment < dynamicprops
 				obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.screenVals.gammaTable(128,:), 256, 1));
 			end
 			
-			obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',0));
+			obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
 			obj.serialP.setDTR(0);
-			obj.labJack = sendTTL(struct('openNow',0,'name','','verbosity',1));
+			if obj.useLabJack == 1
+				strct = struct('openNow',1,'name','default','verbosity',obj.verbose);
+			else
+					strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
+			end
+			obj.labJack = sendTTL(strct);
 			obj.labJack.setFIO4(0);
 			
 			try
@@ -668,7 +673,7 @@ classdef runExperiment < dynamicprops
 			obj.serialP.toggleDTRLine;
 			obj.serialP.close;
 			
-			obj.labJack = sendTTL(struct('name','','openNow',1,'verbosity',1));
+			obj.labJack = sendTTL(struct('name','default','openNow',1,'verbosity',1));
 			obj.labJack.setFIO4(1);
 			obj.labJack.setFIO4(0);
 			obj.labJack.close;
@@ -951,7 +956,7 @@ classdef runExperiment < dynamicprops
 		
 		%------------------------------------------------------------
 		function drawGrid(obj)
-			Screen('DrawDots',obj.win,obj.grid,1,[0.8 0.8 0.4 1],[obj.xCenter obj.yCenter]);
+			Screen('DrawDots',obj.win,obj.grid,1,[0.8 0.8 0.4],[obj.xCenter obj.yCenter]);
 		end
 		
 		%--------------------Draw Info text-------------------%

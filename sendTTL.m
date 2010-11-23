@@ -21,7 +21,9 @@ classdef sendTTL < handle
 		fio4 = 0
 		inp = []
 		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])';
+		fio5High = hex2dec(['1f'; 'f8'; '03'; '00'; '22'; '01'; '00'; '0d'; '85'; '0b'; '85'; '00'])';
 		fio4Low = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])';
+		fio5Low = hex2dec(['9e'; 'f8'; '03'; '00'; 'a2'; '00'; '00'; '0d'; '85'; '0b'; '05'; '00'])';
 		vHandle = 0
 		allowedPropertiesBase='^(name|silentMode|verbosity|openNow)$'
 	end
@@ -40,7 +42,7 @@ classdef sendTTL < handle
 					end
 				end
 			end
-			if isempty(obj.name) %we were deliberately passed an empty name, means go into silent mode
+			if regexp(obj.name,'null') %we were deliberately passed null, means go into silent mode
 				obj.silentMode = 1;
 			end
 			if obj.openNow==1
@@ -61,18 +63,18 @@ classdef sendTTL < handle
 				obj.validHandle;
 				if obj.vHandle
 					obj.isOpen = 1;
-					obj.salutation('open method','LabJack succesfully opened...')
-					obj
+					obj.salutation('open method','LabJack succesfully opened...');
 				else
 					obj.isOpen = 0;
 					obj.handle = [];
 					obj.silentMode = 1; %we switch into silent mode just in case someone tries to use the object
-					obj.salutation('open method','LabJack open failed, going into silent mode')
+					obj.salutation('open method','LabJack open failed, going into silent mode');
 				end
 			else
 				obj.isOpen = 0;
 				obj.handle = [];
-				obj.silentMode = 1; %we switch into silent mode just in case someone tries to use the object
+				obj.vHandle = 0;
+				obj.silentMode = 1; %double make sure it is set to 1 exactly
 			end
 		end
 		
@@ -80,12 +82,18 @@ classdef sendTTL < handle
 		% 		void LJUSB_CloseDevice(HANDLE hDevice);
 		% 		//Closes the handle of a LabJack USB device.
 		function close(obj)
-			if ~isempty(obj.handle)
-				calllib('liblabjackusb','LJUSB_CloseDevice',obj.handle);
-				obj.validHandle;
-				obj.salutation('close method',['Closed handle:' obj.num2str(obj.vHandle)])
+			if ~isempty(obj.handle) && obj.silentMode==0
+				obj.validHandle; %double-check we still have valid handle
+				if obj.vHandle && ~isempty(obj.handle)
+					calllib('liblabjackusb','LJUSB_CloseDevice',obj.handle);
+				end
+				%obj.validHandle;
 				obj.isOpen = 0;
 				obj.handle=[];
+				obj.vHandle = 0;
+				obj.salutation('close method',['Closed handle: ' num2str(obj.vHandle)]);
+			else
+				obj.salutation('close method',['No handle to close: ' num2str(obj.vHandle)]);
 			end
 		end
 		
@@ -97,10 +105,15 @@ classdef sendTTL < handle
 				if ~isempty(obj.handle)
 					obj.vHandle = calllib('liblabjackusb','LJUSB_IsHandleValid',obj.handle);
 					if obj.vHandle
-						obj.salutation('validHandle Method','VALID Handle')
+						obj.salutation('validHandle Method','VALID Handle');
 					else
-						obj.salutation('validHandle Method','INVALID Handle')
+						obj.salutation('validHandle Method','INVALID Handle');
 					end
+				else 
+					obj.vHandle = 0;
+					obj.isOpen = 0;
+					obj.handle = [];
+					obj.salutation('validHandle Method','INVALID Handle');
 				end
 			end
 		end
