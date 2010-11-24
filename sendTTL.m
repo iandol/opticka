@@ -9,23 +9,24 @@ classdef sendTTL < handle
 		library = '/usr/local/lib/liblabjackusb'
 		verbosity = 1
 		openNow = 1 %allows the constructor to run the open method immediately
-		version
 		devCount
 		isOpen = 0
-		handle = []
 	end
 	properties (SetAccess = private, GetAccess = public)
 		functions
+		version
+		handle = []
 	end
 	properties (SetAccess = private, GetAccess = private)
 		fio4 = 0
+		fio5 = 0
 		inp = []
 		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])';
 		fio5High = hex2dec(['1f'; 'f8'; '03'; '00'; '22'; '01'; '00'; '0d'; '85'; '0b'; '85'; '00'])';
 		fio4Low = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])';
 		fio5Low = hex2dec(['9e'; 'f8'; '03'; '00'; 'a2'; '00'; '00'; '0d'; '85'; '0b'; '05'; '00'])';
 		vHandle = 0
-		allowedPropertiesBase='^(name|silentMode|verbosity|openNow)$'
+		allowedPropertiesBase='^(name|silentMode|verbosity|openNow|header|library)$'
 	end
 	methods%------------------PUBLIC METHODS--------------%
 		
@@ -140,14 +141,13 @@ classdef sendTTL < handle
 	
 		end
 		
-		%===============Raw WRITE PORT================%
+		%===============SET FIO4================%
 		%HIGH:
 		%[0x1d, 0xf8, 0x3, 0x0, 0x20, 0x1, 0x0, 0xd, 0x84, 0xb, 0x84, 0x0]
 		%['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00']
 		%LOW:
 		%[0x9c, 0xf8, 0x3, 0x0, 0xa0, 0x0, 0x0, 0xd, 0x84, 0xb, 0x4, 0x0]
-		%['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04';
-		%'00']
+		%['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00']
 		function setFIO4(obj,val)
 			if obj.silentMode == 0 && obj.vHandle == 1
 				if ~exist('val','var')
@@ -172,6 +172,34 @@ classdef sendTTL < handle
 			if obj.silentMode == 0 && obj.vHandle == 1
 				obj.fio4=abs(obj.fio4-1);
 				obj.setFIO4(obj.fio4);
+			end
+		end
+		
+		%===============SET FIO5================%
+		function setFIO5(obj,val)
+			if obj.silentMode == 0 && obj.vHandle == 1
+				if ~exist('val','var')
+					val = obj.fio5;
+				end
+				if val == 1
+					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio5High, 12);
+					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
+					obj.fio5 = 1;
+					obj.salutation('SETFIO5','FIO5 is HIGH')
+				else
+					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio5Low, 12);
+					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
+					obj.fio5 = 0;
+					obj.salutation('SETFIO5','FIO5 is LOW')
+				end
+			end
+		end	
+		
+		%===============Toggle FIO5======================%
+		function toggleFIO5(obj)
+			if obj.silentMode == 0 && obj.vHandle == 1
+				obj.fio5=abs(obj.fio5-1);
+				obj.setFIO5(obj.fio5);
 			end
 		end
 		

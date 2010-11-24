@@ -8,7 +8,7 @@ classdef opticka < dynamicprops
 		r
 		verbose
 		store
-		version='0.44'
+		version='0.45'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -186,8 +186,8 @@ classdef opticka < dynamicprops
 					obj.store.noiseN = 0;
 				end
 			end
-			set(obj.h.OKStimList,'String','');
 			set(obj.h.OKStimList,'Value',1);
+			set(obj.h.OKStimList,'String','');			
 		end
 		
 		%=========================================
@@ -197,8 +197,8 @@ classdef opticka < dynamicprops
 					obj.r.task = [];
 				end
 			end
-			set(obj.h.OKVarList,'String','');
 			set(obj.h.OKVarList,'Value',1);
+			set(obj.h.OKVarList,'String','');
 		end
 		
 		%=========================================
@@ -459,23 +459,22 @@ classdef opticka < dynamicprops
 				set(obj.h.OKOpenGLBlending,'Value', tmp.r.blend);
 				set(obj.h.OKAntiAliasing,'Value', tmp.r.antiAlias);
 				set(obj.h.OKbackgroundColour,'String',num2str(tmp.r.backgroundColour));
-
+				
 				%copy task parameters
-				if isempty(obj.r.task)
+				if isempty(tmp.r.task)
 					obj.r.task = stimulusSequence;
 					obj.r.task.randomiseStimuli;
+				else
+					obj.r.task = tmp.r.task;
 				end
-				set(obj.h.OKtrialTime, 'String', num2str(tmp.r.task.trialTime));
-				set(obj.h.OKRandomSeed, 'String', num2str(tmp.r.task.randomSeed));
+				set(obj.h.OKtrialTime, 'String', num2str(obj.r.task.trialTime));
+				set(obj.h.OKRandomSeed, 'String', num2str(obj.r.task.randomSeed));
+				set(obj.h.OKitTime,'String',num2str(obj.r.task.itTime));
+				tmp.r.task.isTime = set(obj.h.OKisTime,'String',num2str(obj.r.task.isTime);
+				set(obj.h.OKnTrials,'String',num2str(obj.r.task.nTrials));
 				
-				v = obj.gv(obj.h.OKrandomGenerator);
-				obj.r.task.randomGenerator = obj.gs(obj.h.OKrandomGenerator,v);
-				obj.r.task.itTime = obj.gd(obj.h.OKitTime);
-				obj.r.task.randomise = obj.gv(obj.h.OKRandomise);
-				obj.r.task.isTime = obj.gd(obj.h.OKisTime);
-				obj.r.task.nTrials = obj.gd(obj.h.OKnTrials);
-				obj.r.task.initialiseRandom;
-				obj.r.task.randomiseStimuli;
+				obj.r.stimulus = tmp.r.stimulus;
+				
 				
 			end
 				
@@ -507,6 +506,7 @@ classdef opticka < dynamicprops
 				filelist{i} = filename;
 			end
 			
+			set(obj.h.OKProtocolsList,'Value', 1);
 			set(obj.h.OKProtocolsList,'String',filelist);
 			
 		end
