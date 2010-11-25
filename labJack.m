@@ -1,25 +1,37 @@
+% ========================================================================
+%> @brief LABJACK Connects and manages a LabJack U3-HV
+%>
+%> Connects and manages a LabJack U3-HV
+%>
+% ========================================================================
 classdef labJack < handle
-	%LABJACK Connects and manages a LabJack U3-HV
-	%   Connects and manages a LabJack U3-HV
+	
 	properties
 		name='LabJack'
-		deviceID = 3
+		%> silentMode allows one to call methods without needing a labJack
 		silentMode = 0
+		%> header needed by loadlib
 		header = '/usr/local/include/labjackusb.h'
+		%> the library itself
 		library = '/usr/local/lib/liblabjackusb'
+		%> how much detail to show 
 		verbosity = 1
-		openNow = 1 %allows the constructor to run the open method immediately
-		devCount
-		isOpen = 0
+		%> allows the constructor to run the open method immediately
+		openNow = 1 
 	end
+	
 	properties (SetAccess = private, GetAccess = public)
+		deviceID = 3
 		functions
 		version
+		devCount
 		handle = []
+		isOpen = 0
 		inp = []
 		fio4 = 0
 		fio5 = 0
 	end
+	
 	properties (SetAccess = private, GetAccess = private)
 		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])';
 		fio5High = hex2dec(['1f'; 'f8'; '03'; '00'; '22'; '01'; '00'; '0d'; '85'; '0b'; '85'; '00'])';
@@ -30,9 +42,20 @@ classdef labJack < handle
 		vHandle = 0
 		allowedPropertiesBase='^(name|silentMode|verbosity|openNow|header|library)$'
 	end
-	methods%------------------PUBLIC METHODS--------------%
-		
-		%==============CONSTRUCTOR============%
+	
+	%=======================================================================
+	methods %------------------PUBLIC METHODS
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief Class constructor
+		%>
+		%> More detailed description of what the constructor does.
+		%>
+		%> @param args are passed as a structure of properties which is
+		%> parsed.
+		%> @return instance of labJack class.
+		% ===================================================================
 		function obj = labJack(args)
 			if nargin>0 && isstruct(args)
 				if nargin>0 && isstruct(args)
@@ -53,7 +76,11 @@ classdef labJack < handle
 			end
 		end
 		
-		%===============OPEN Labjack================%
+		% ===================================================================
+		%> @brief Open the LabJack device
+		%>
+		%> Open the LabJack device
+		% ===================================================================
 		function open(obj)
 			if obj.silentMode==0
 				if ~libisloaded('liblabjackusb')
@@ -83,9 +110,11 @@ classdef labJack < handle
 			end
 		end
 		
-		%===============CLOSE Labjack================%
-		% 		void LJUSB_CloseDevice(HANDLE hDevice);
-		% 		//Closes the handle of a LabJack USB device.
+		% ===================================================================
+		%> @brief Close the LabJack device
+		%>	void LJUSB_CloseDevice(HANDLE hDevice);
+		%>	//Closes the handle of a LabJack USB device.
+		% ===================================================================
 		function close(obj)
 			if ~isempty(obj.handle) && obj.silentMode==0
 				obj.validHandle; %double-check we still have valid handle
@@ -102,9 +131,11 @@ classdef labJack < handle
 			end
 		end
 		
-		%===============CHECK Labjack================%
-		% 		bool LJUSB_IsHandleValid(HANDLE hDevice);
-		% 		//Is handle valid.
+		% ===================================================================
+		%> @brief Is Handle Valid?
+		%>	bool LJUSB_IsHandleValid(HANDLE hDevice);
+		%>	//Is handle valid.
+		% ===================================================================
 		function validHandle(obj)
 			if obj.silentMode == 0
 				if ~isempty(obj.handle)
@@ -123,26 +154,38 @@ classdef labJack < handle
 			end
 		end
 		
-		%===============Raw WRITE================%
-		% 		unsigned long LJUSB_Write(HANDLE hDevice, BYTE *pBuff, unsigned long count);
-		% 		// Writes to a device. Returns the number of bytes written, or -1 on error.
-		% 		// hDevice = The handle for your device
-		% 		// pBuff = The buffer to be written to the device.
-		% 		// count = The number of bytes to write.
-		% 		// This function replaces the deprecated LJUSB_BulkWrite, which required the endpoint
+		% ===================================================================
+		%> @brief Write formatted command string to LabJack
+		%> 		unsigned long LJUSB_Write(HANDLE hDevice, BYTE *pBuff, unsigned long count);
+		%> 		// Writes to a device. Returns the number of bytes written, or -1 on error.
+		%> 		// hDevice = The handle for your device
+		%> 		// pBuff = The buffer to be written to the device.
+		%> 		// count = The number of bytes to write.
+		%> 		// This function replaces the deprecated LJUSB_BulkWrite, which required the endpoint
+		%>
+		%> @param byte The raw hex encoded command packet to send
+		% ===================================================================
 		function out = rawWrite(obj,byte)
 			out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, byte, length(byte));
 		end
 		
-		%===============Raw READ================%
-		% 		unsigned long LJUSB_Read(HANDLE hDevice, BYTE *pBuff, unsigned long count);
-		% 		// Reads from a device. Returns the number of bytes read, or -1 on error.
-		% 		// hDevice = The handle for your device
-		% 		// pBuff = The buffer to filled in with bytes from the device.
-		% 		// count = The number of bytes expected to be read.
-		% 		// This function replaces the deprecated LJUSB_BulkRead, which required the endpoint
-		function in = rawRead(obj,bytein)
-			in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, bytein, length(bytein));
+		% ===================================================================
+		%> @brief Write formatted command string to LabJack
+		%> 		unsigned long LJUSB_Read(HANDLE hDevice, BYTE *pBuff, unsigned long count);
+		%> 		// Reads from a device. Returns the number of bytes read, or -1 on error.
+		%> 		// hDevice = The handle for your device
+		%> 		// pBuff = The buffer to filled in with bytes from the device.
+		%> 		// count = The number of bytes expected to be read.
+		%> 		// This function replaces the deprecated LJUSB_BulkRead, which required the endpoint
+		%>
+		%> @param bytein
+		%> @param count
+		% ===================================================================
+		function in = rawRead(obj,bytein,count)
+			if ~exist('count','var')
+				count = length(bytein);
+			end
+			in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, bytein, count);
 		end
 		
 		%===============LED ON================%
@@ -221,7 +264,7 @@ classdef labJack < handle
 			end
 		end
 		
-		%===============Toggle FIO5======================%
+		%===============RESET======================%
 		function reset(obj,resetType)
 			if ~exist('resetType','var')
 				resetType = 0;

@@ -1,29 +1,48 @@
+% ======================================================================
+%> @brief Opticka stimulus generator class
+%>
+%> Opticka is a stimulus generator based on Psychophysics toolbox
+%>
+% ======================================================================
 classdef opticka < dynamicprops
-	%OPTICKA GUI controller class
-	%   Detailed explanation to come
+	
 	properties
+		%> default install directory
 		workingDir = '~/Code/opticka/';
+		%> storage of various paths
 		paths
+		%> all of the handles to th opticka_ui GUI
 		h
-		r
+		%> this is the main runExperiment object
+		r 
+		%> run in verbose mode?
 		verbose
+		%> general store for misc properties
 		store
-		version='0.45'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		handles
+		version='0.45'
 		load
 	end
+	
 	properties (SetAccess = private, GetAccess = private)
-		allowedPropertiesBase='^(workingDir|verbose)$'
+		allowedPropertiesBase='^(workingDir|verbose)$' %used to sanitise passed values on construction
 	end
 	
-	%========================================================
-	methods
-	%========================================================
+	%=======================================================================
+	methods %------------------PUBLIC METHODS
+	%=======================================================================
 	
-		%-------------------CONSTRUCTOR----------------------%
+		% ===================================================================
+		%> @brief Class constructor
+		%>
+		%> More detailed description of what the constructor does.
+		%>
+		%> @param args are passed as a structure of properties which is
+		%> parsed.
+		%> @return instance of opticka class.
+		% ===================================================================
 		function obj = opticka(args)
 			if nargin>0 && isstruct(args)
 				if nargin>0 && isstruct(args)
@@ -39,7 +58,12 @@ classdef opticka < dynamicprops
 			obj.initialiseUI;
 		end
 		
-		%-------------------Route calls to private methods----------------------%
+		
+		% ===================================================================
+		%> @brief Route calls to private methods (yeah, I know...)
+		%>
+		%> @param in switch to route to correct method.
+		% ===================================================================
 		function router(obj,in)
 			switch in
 				case 'saveProtocol'
@@ -55,7 +79,12 @@ classdef opticka < dynamicprops
 	methods (Hidden = true) %these have to be available publically, but lets hide them from obvious view
 	%========================================================
 	
-		%-------------------Start the UI----------------------%
+		
+		% ===================================================================
+		%> @brief Start the UI
+		%>
+		%> @param 
+		% ===================================================================
 		function initialiseUI(obj)
 			if ismac
 				obj.paths.temp=tempdir;
@@ -84,8 +113,9 @@ classdef opticka < dynamicprops
 				end
 				obj.paths.historypath=[obj.paths.temp 'History'];
 			end
-			obj.handles.uihandle=opticka_ui; %our GUI file
-			obj.h=guidata(obj.handles.uihandle);
+			uihandle=opticka_ui; %our GUI file
+			obj.h=guidata(uihandle);
+			obj.h.uihandle = uihandle;
 			if ismac
 				javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 			end
@@ -114,7 +144,11 @@ classdef opticka < dynamicprops
 			
 		end
 		
-		%=========================================
+		% ===================================================================
+		%> @brief getScreenVals
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
 		function getScreenVals(obj)
 			
 			if isempty(obj.r)
@@ -149,7 +183,11 @@ classdef opticka < dynamicprops
 			
 		end
 		
-		%=========================================
+		% ===================================================================
+		%> @brief getScreenVals
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
 		function getTaskVals(obj)
 			
 			if isempty(obj.r.task)
@@ -172,7 +210,11 @@ classdef opticka < dynamicprops
 			
 		end
 		
-		%=========================================
+		% ===================================================================
+		%> @brief getScreenVals
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
 		function clearStimulusList(obj)
 			if ~isempty(obj.r)
 				if ~isempty(obj.r.stimulus)
@@ -190,7 +232,11 @@ classdef opticka < dynamicprops
 			set(obj.h.OKStimList,'String','');			
 		end
 		
-		%=========================================
+		% ===================================================================
+		%> @brief getScreenVals
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
 		function clearVariableList(obj)
 			if ~isempty(obj.r)
 				if ~isempty(obj.r.task)
@@ -201,7 +247,11 @@ classdef opticka < dynamicprops
 			set(obj.h.OKVarList,'String','');
 		end
 		
-		%=========================================
+		% ===================================================================
+		%> @brief getScreenVals
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
 		function deleteStimulus(obj)
 			n = fieldnames(obj.r.stimulus); %get what stimulus fields we have
 			if ~isempty(n)
@@ -236,7 +286,11 @@ classdef opticka < dynamicprops
 			end
 		end
 		
-		%=========================================
+		% ===================================================================
+		%> @brief getScreenVals
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
 		function addGrating(obj)
 			tmp = struct;
 			
@@ -279,7 +333,11 @@ classdef opticka < dynamicprops
 			
 		end
 		
-		%=========================================
+		% ===================================================================
+		%> @brief getScreenVals
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
 		function addBar(obj)
 			tmp = struct;
 			tmp.xPosition = obj.gd(obj.h.OKPanelBarxPosition);
@@ -306,7 +364,11 @@ classdef opticka < dynamicprops
 			
 		end
 		
-		%=========================================
+		% ===================================================================
+		%> @brief getScreenVals
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
 		function addDots(obj)
 			tmp = struct;
 			tmp.xPosition = obj.gd(obj.h.OKPanelDotsxPosition);
@@ -336,7 +398,11 @@ classdef opticka < dynamicprops
 			
 		end
 		
-		%=========================================
+		% ===================================================================
+		%> @brief getScreenVals
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
 		function addSpot(obj)
 			tmp = struct;
 			tmp.xPosition = obj.gd(obj.h.OKPanelSpotxPosition);
@@ -360,7 +426,11 @@ classdef opticka < dynamicprops
 			
 		end
 		
-		%=========================================
+		% ===================================================================
+		%> @brief getScreenVals
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
 		function addVariable(obj)
 			
 			revertN = obj.r.task.nVars;
@@ -389,7 +459,11 @@ classdef opticka < dynamicprops
 			
 		end
 		
-		%=========================================
+		% ===================================================================
+		%> @brief getScreenVals
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
 		function deleteVariable(obj)
 			
 			if isobject(obj.r.task)
@@ -413,7 +487,11 @@ classdef opticka < dynamicprops
 	methods ( Access = protected ) %----------PRIVATE METHODS---------%
 	%========================================================
 	
-		%==================Save Protocol================
+		% ===================================================================
+		%> @brief Save Protocol
+		%> Save Protocol
+		%> @param 
+		% ===================================================================
 		function saveProtocol(obj)
 			
 			obj.paths.currentPath = pwd;
@@ -426,7 +504,11 @@ classdef opticka < dynamicprops
 			
 		end
 		
-		%==================Load Protocol================
+		% ===================================================================
+		%> @brief Load Protocol
+		%> Load Protocol
+		%> @param 
+		% ===================================================================
 		function loadProtocol(obj)
 			
 			v = obj.gv(obj.h.OKProtocolsList);
@@ -470,7 +552,7 @@ classdef opticka < dynamicprops
 				set(obj.h.OKtrialTime, 'String', num2str(obj.r.task.trialTime));
 				set(obj.h.OKRandomSeed, 'String', num2str(obj.r.task.randomSeed));
 				set(obj.h.OKitTime,'String',num2str(obj.r.task.itTime));
-				tmp.r.task.isTime = set(obj.h.OKisTime,'String',num2str(obj.r.task.isTime);
+				set(obj.h.OKisTime,'String',num2str(obj.r.task.isTime));
 				set(obj.h.OKnTrials,'String',num2str(obj.r.task.nTrials));
 				
 				obj.r.stimulus = tmp.r.stimulus;
@@ -480,7 +562,11 @@ classdef opticka < dynamicprops
 				
 		end
 		
-		%==================Load Protocol================
+		% ======================================================================
+		%> @brief Refresh the UI list of Protocols
+		%> Refresh the UI list of Protocols
+		%> @param
+		% ======================================================================
 		function refreshProtocolsList(obj)
 			
 			set(obj.h.OKProtocolsList,'String',{''});
@@ -511,7 +597,30 @@ classdef opticka < dynamicprops
 			
 		end
 		
-		%=============fprintf wrapper function===========
+		% ===================================================================
+		%> @brief getstring
+		%> 
+		%> @param 
+		% ===================================================================
+		function refreshStimulusList(obj)
+			
+		end
+		
+		% ===================================================================
+		%> @brief getstring
+		%> 
+		%> @param 
+		% ===================================================================
+		function refreshVariableList(obj)
+			
+		end
+		
+		% ===================================================================
+		%> @brief fprintf Wrapper function
+		%> fprintf Wrapper function
+		%> @param in -- Calling function
+		%> @param message -- message to print
+		% ===================================================================
 		function salutation(obj,in,message)
 			if obj.verbose==1
 				if ~exist('in','var')
@@ -525,7 +634,11 @@ classdef opticka < dynamicprops
 			end
 		end
 		
-		%=======================================
+		% ===================================================================
+		%> @brief find the value in a cell string list
+		%> 
+		%> @param 
+		% ===================================================================
 		function value = findValue(obj,list,entry)
 			value = 1;
 			for i=1:length(list)
@@ -538,7 +651,11 @@ classdef opticka < dynamicprops
 		
 		
 		
-		%===========================a set of shortcut functions
+		% ===================================================================
+		%> @brief getstring
+		%> 
+		%> @param 
+		% ===================================================================
 		function outhandle = gs(obj,inhandle,value)
 		%quick alias to get string value
 			if exist('value','var')
@@ -549,24 +666,42 @@ classdef opticka < dynamicprops
 			end
 		end
 		
+		% ===================================================================
+		%> @brief getdouble
+		%> 
+		%> @param 
+		% ===================================================================
 		function outhandle = gd(obj,inhandle)
 		%quick alias to get double value
 			outhandle = str2double(get(inhandle,'String'));
 		end
 		
+		% ===================================================================
+		%> @brief getnumber
+		%> 
+		%> @param 
+		% ===================================================================
 		function outhandle = gn(obj,inhandle)
 		%quick alias to get number value
 			outhandle = str2num(get(inhandle,'String'));
 		end
 		
+		% ===================================================================
+		%> @brief getvalue
+		%> 
+		%> @param 
+		% ===================================================================
 		function outhandle = gv(obj,inhandle)
 		%quick alias to get ui value
 			outhandle = get(inhandle,'Value');
 		end
 		
-		%============================================
+		% ===================================================================
+		%> @brief try to work around GUIDE OS X bugs
+		%> 
+		%> @param 
+		% ===================================================================
 		function fixUI(obj)
-		%try to work around GUIDE OS X bugs
 			ch = findall(obj.handles.uihandle);
 			set(obj.handles.uihandle,'Units','pixels');
 			for k = 1:length(ch)
