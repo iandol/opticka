@@ -1,6 +1,6 @@
-classdef sendTTL < handle
-	%SENDSERIAL Connects and manages Serial port communication
-	%   Connects and manages Serial port communication
+classdef labJack < handle
+	%LABJACK Connects and manages a LabJack U3-HV
+	%   Connects and manages a LabJack U3-HV
 	properties
 		name='LabJack'
 		deviceID = 3
@@ -16,28 +16,30 @@ classdef sendTTL < handle
 		functions
 		version
 		handle = []
-	end
-	properties (SetAccess = private, GetAccess = private)
+		inp = []
 		fio4 = 0
 		fio5 = 0
-		inp = []
+	end
+	properties (SetAccess = private, GetAccess = private)
 		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])';
 		fio5High = hex2dec(['1f'; 'f8'; '03'; '00'; '22'; '01'; '00'; '0d'; '85'; '0b'; '85'; '00'])';
-		fio4Low = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])';
-		fio5Low = hex2dec(['9e'; 'f8'; '03'; '00'; 'a2'; '00'; '00'; '0d'; '85'; '0b'; '05'; '00'])';
+		fio4Low  = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])';
+		fio5Low  = hex2dec(['9e'; 'f8'; '03'; '00'; 'a2'; '00'; '00'; '0d'; '85'; '0b'; '05'; '00'])';
+		ledIsON  = hex2dec(['05'; 'f8'; '02'; '00'; '0a'; '00'; '00'; '09'; '01'; '00']);
+		ledIsOFF = hex2dec(['04'; 'f8'; '02'; '00'; '09'; '00'; '00'; '09'; '00'; '00']);
 		vHandle = 0
 		allowedPropertiesBase='^(name|silentMode|verbosity|openNow|header|library)$'
 	end
 	methods%------------------PUBLIC METHODS--------------%
 		
 		%==============CONSTRUCTOR============%
-		function obj = sendTTL(args)
+		function obj = labJack(args)
 			if nargin>0 && isstruct(args)
 				if nargin>0 && isstruct(args)
 					fnames = fieldnames(args); %find our argument names
 					for i=1:length(fnames);
 						if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
-							obj.salutation(fnames{i},'Configuring property in sendTTL constructor');
+							obj.salutation(fnames{i},'Configuring property in LabJack constructor');
 							obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 						end
 					end
@@ -65,11 +67,13 @@ classdef sendTTL < handle
 				if obj.vHandle
 					obj.isOpen = 1;
 					obj.salutation('open method','LabJack succesfully opened...');
+					obj.setFIO4(0);
+					obj.setFIO5(0);
 				else
+					obj.salutation('open method','LabJack open failed, going into silent mode');
 					obj.isOpen = 0;
 					obj.handle = [];
 					obj.silentMode = 1; %we switch into silent mode just in case someone tries to use the object
-					obj.salutation('open method','LabJack open failed, going into silent mode');
 				end
 			else
 				obj.isOpen = 0;
@@ -110,7 +114,7 @@ classdef sendTTL < handle
 					else
 						obj.salutation('validHandle Method','INVALID Handle');
 					end
-				else 
+				else
 					obj.vHandle = 0;
 					obj.isOpen = 0;
 					obj.handle = [];
@@ -125,9 +129,9 @@ classdef sendTTL < handle
 		% 		// hDevice = The handle for your device
 		% 		// pBuff = The buffer to be written to the device.
 		% 		// count = The number of bytes to write.
-		% 		// This function replaces the deprecated LJUSB_BulkWrite, which required the endpoint	
-		function rawWrite(obj)
-			
+		% 		// This function replaces the deprecated LJUSB_BulkWrite, which required the endpoint
+		function out = rawWrite(obj,byte)
+			out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, byte, length(byte));
 		end
 		
 		%===============Raw READ================%
@@ -137,35 +141,49 @@ classdef sendTTL < handle
 		% 		// pBuff = The buffer to filled in with bytes from the device.
 		% 		// count = The number of bytes expected to be read.
 		% 		// This function replaces the deprecated LJUSB_BulkRead, which required the endpoint
-		function rawRead(obj)
-	
+		function in = rawRead(obj,bytein)
+			in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, bytein, length(bytein));
 		end
 		
+		%===============LED ON================%
+		function ledON(obj)
+			if obj.silentMode == 0 && obj.vHandle == 1
+				out = obj.rawWrite(obj.ledIsON);
+				in  = obj.rawRead(obj.inp);
+			end
+		end
+			
+		%===============LED OFF================%
+		function ledOFF(obj)
+			if obj.silentMode == 0 && obj.vHandle == 1
+				out = obj.rawWrite(obj.ledIsOFF);
+				in  = obj.rawRead(obj.inp);
+			end
+		end
+		
+		%===============STROBE WORD================%
+		function strobeWord(obj,val)
+			
+		end
 		%===============SET FIO4================%
-		%HIGH:
-		%[0x1d, 0xf8, 0x3, 0x0, 0x20, 0x1, 0x0, 0xd, 0x84, 0xb, 0x84, 0x0]
-		%['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00']
-		%LOW:
-		%[0x9c, 0xf8, 0x3, 0x0, 0xa0, 0x0, 0x0, 0xd, 0x84, 0xb, 0x4, 0x0]
-		%['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00']
 		function setFIO4(obj,val)
 			if obj.silentMode == 0 && obj.vHandle == 1
 				if ~exist('val','var')
-					val = obj.fio4;
+					val = abs(obj.fio4-1);
 				end
 				if val == 1
-					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4High, 12);
-					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
+					out = obj.rawWrite(obj.fio4High);
+					in  = obj.rawRead(obj.inp);
 					obj.fio4 = 1;
 					obj.salutation('SETFIO4','FIO4 is HIGH')
 				else
-					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio4Low, 12);
-					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
+					out = obj.rawWrite(obj.fio4Low);
+					in  = obj.rawRead(obj.inp);
 					obj.fio4 = 0;
 					obj.salutation('SETFIO4','FIO4 is LOW')
 				end
 			end
-		end	
+		end
 		
 		%===============Toggle FIO4======================%
 		function toggleFIO4(obj)
@@ -179,7 +197,7 @@ classdef sendTTL < handle
 		function setFIO5(obj,val)
 			if obj.silentMode == 0 && obj.vHandle == 1
 				if ~exist('val','var')
-					val = obj.fio5;
+					val = abs(obj.fio5-1);
 				end
 				if val == 1
 					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio5High, 12);
@@ -193,7 +211,7 @@ classdef sendTTL < handle
 					obj.salutation('SETFIO5','FIO5 is LOW')
 				end
 			end
-		end	
+		end
 		
 		%===============Toggle FIO5======================%
 		function toggleFIO5(obj)
@@ -203,9 +221,69 @@ classdef sendTTL < handle
 			end
 		end
 		
+		%===============Toggle FIO5======================%
+		function reset(obj,resetType)
+			if ~exist('resetType','var')
+				resetType = 0;
+			end
+			cmd(1) = 0;
+			cmd(2) = hex2dec('99'); %command code
+			if resetType == 0 %soft reset
+				cmd(3) = bin2dec('01');
+			else
+				cmd(3) = bin2dec('10');
+			end
+			cmd(4) = 0;
+			
+			cmd(1) = obj.checksum8(cmd(2:end));
+			cmd
+		end
+		
+	end
+	
+	methods ( Static )
+		
+		function chk = checksum8(in)
+			if ischar(in) %hex input
+				in = hex2dec(in);
+				hexMode = 1;
+			end
+			in = sum(uint16(in));
+			quo = floor(in/2^8);
+			remd = rem(in,2^8);
+			in = quo+remd;
+			quo = floor(in/2^8);
+			remd = rem(in,2^8);
+			chk = quo + remd;
+			if exist('hexMode','var')
+				chk = dec2hex(chk);
+			end
+		end
+		
+		function [lsb,msb] = checksum16(in)
+			if ischar(in) %hex input
+				in = hex2dec(in);
+				hexMode = 1;
+			end
+			in = sum(uint16(in));
+			lsb=bitand(in,255);
+			msb=bitshift(in,-8);
+			if exist('hexMode','var')
+				lsb = dec2hex(lsb);
+				msb = dec2hex(msb);
+			end
+		end
+		
 	end
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
+		
+		%===============Destructor======================%
+		function delete(obj)
+			obj.salutation('DELETE Method','Cleaning up...')
+			obj.close;
+		end
+		
 		%===========Salutation==========%
 		function salutation(obj,in,message)
 			if obj.verbosity > 0
@@ -215,7 +293,7 @@ classdef sendTTL < handle
 				if exist('message','var')
 					fprintf([message ' | ' in '\n']);
 				else
-					fprintf(['\nHello from ' obj.name ' | sendTTL\n\n']);
+					fprintf(['\nHello from ' obj.name ' | labJack\n\n']);
 				end
 			end
 		end

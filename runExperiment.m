@@ -58,7 +58,7 @@ classdef runExperiment < dynamicprops
 		white=1 %white index
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
 		serialP %serial port object opened
-		labJack %LabJack object
+		lJack %LabJack object
 		xCenter %computed X center
 		yCenter %computed Y center
 		win %the handle returned by opening a PTB window
@@ -109,8 +109,8 @@ classdef runExperiment < dynamicprops
 			else
 					strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
 			end
-			obj.labJack = sendTTL(strct);
-			obj.labJack.setFIO4(0);
+			obj.lJack = labJack(strct);
+			obj.lJack.setFIO4(0);
 			
 			try
 				if obj.debug==1 || obj.windowed==1
@@ -263,10 +263,10 @@ classdef runExperiment < dynamicprops
 						switch obj.task.isBlank
 							case 1
 								obj.serialP.setDTR(0);
-								obj.labJack.setFIO4(0);
+								obj.lJack.setFIO4(0);
 							case 0
 								obj.serialP.setDTR(1);
-								obj.labJack.setFIO4(1);
+								obj.lJack.setFIO4(1);
 						end
 					end
 					
@@ -275,7 +275,7 @@ classdef runExperiment < dynamicprops
 						obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
 						%WaitSecs('UntilTime',obj.timeLog.show(thisRun+1));
 						obj.serialP.setDTR(1);
-						obj.labJack.setFIO4(1);
+						obj.lJack.setFIO4(1);
 					end
 					
 					obj.task.tick=obj.task.tick+1;
@@ -287,7 +287,7 @@ classdef runExperiment < dynamicprops
 				Screen('Flip', obj.win);
 				obj.timeLog.afterDisplay=GetSecs;
 				obj.serialP.setDTR(0);
-				obj.labJack.setFIO4(0);
+				obj.lJack.setFIO4(0);
 				
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
 				obj.timeLog.deltaUntilDisplay=obj.timeLog.beforeDisplay-obj.timeLog.start;
@@ -303,8 +303,8 @@ classdef runExperiment < dynamicprops
 				Priority(0);
 				ShowCursor;
 				obj.serialP.close;
-				obj.labJack.close;
-				obj.labJack=[];
+				obj.lJack.close;
+				obj.lJack=[];
 				
 			catch ME
 				
@@ -317,8 +317,8 @@ classdef runExperiment < dynamicprops
 				Priority(0);
 				ShowCursor;
 				obj.serialP.close;
-				obj.labJack.close;
-				obj.labJack=[];
+				obj.lJack.close;
+				obj.lJack=[];
 				rethrow(ME)
 				
 			end
@@ -673,11 +673,11 @@ classdef runExperiment < dynamicprops
 			obj.serialP.toggleDTRLine;
 			obj.serialP.close;
 			
-			obj.labJack = sendTTL(struct('name','default','openNow',1,'verbosity',1));
-			obj.labJack.setFIO4(1);
-			obj.labJack.setFIO4(0);
-			obj.labJack.close;
-			obj.labJack=[];
+			obj.lJack = labJack(struct('name','labJack','openNow',1,'verbosity',1));
+			obj.lJack.setFIO4(1);
+			obj.lJack.setFIO4(0);
+			obj.lJack.close;
+			obj.lJack=[];
 			
 			try
 				AssertOpenGL;
