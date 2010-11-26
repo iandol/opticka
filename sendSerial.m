@@ -2,20 +2,22 @@ classdef sendSerial < handle
 	%SENDSERIAL Connects and manages Serial port communication
 	%   Connects and manages Serial port communication
 	properties
-		name='usbserial-A600drIC'
-		deviceID
+		name='pci-serial0'
 		baudRate=115200
 		silentMode=0 %this allows us to be called even if no serial port is attached
-		portHandle
-		verbosity=0
-		openNow=0 %allows the constructor to run the open method immediately
+		verbosity=1
+		openNow=1 %allows the constructor to run the open method immediately
 	end
-	properties (SetAccess = private, GetAccess = private)
-		defaultName='usbserial-A600drIC';
-		%defaultName = 'pci-serial0';
-		allowedPropertiesBase='^(name|baudRate|silentMode|verbosity|openNow)$'
+	properties (SetAccess = private, GetAccess = public)
+		portHandle
+		deviceID
 		toggleRTS=0 %keep the state here to toggle on succesive calls
 		toggleDTR=0
+	end
+	properties (SetAccess = private, GetAccess = private)
+		%defaultName='usbserial-A600drIC';
+		defaultName = 'pci-serial0';
+		allowedPropertiesBase='^(name|baudRate|silentMode|verbosity|openNow)$'
 	end
 	methods%------------------PUBLIC METHODS--------------%
 		
@@ -34,10 +36,10 @@ classdef sendSerial < handle
 			elseif nargin==1 && ischar(args)
 				obj.name=args; %assume a name
 			end
-			obj.find; %find the full connection info
 			if isempty(obj.name) || strcmpi(obj.name,'default')%we were deliberately passed an empty name, will re-specify default
 				obj.name=obj.defaultName;
 			end
+			obj.find; %find the full connection info
 			if obj.openNow==1
 				obj.open
 			end

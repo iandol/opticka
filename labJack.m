@@ -283,21 +283,21 @@ classdef labJack < handle
 		% ===================================================================
 		function strobeWord(obj,value,mask)
 			if obj.silentMode == 0 && obj.vHandle == 1
-				if length(value) == 2
+				if length(value) == 2 %assume fio isn't passed
 					value(2:3) = value;
 					value(1) = 0;
 					mask(2:3) = mask;
 					mask(1) = 0;
 				end
 				cmd=zeros(24,1);
-				cmd(2) = hex2dec('f8');
+				cmd(2) = 248; %command byte for feedback command (f8 in hex)
 				cmd(3) = 9;
-				cmd(8) = hex2dec('1b'); %IOType for PortStateWrite
+				cmd(8) = 27; %IOType for PortStateWrite (1b in hex)
 				cmd(9:11) = mask;
 				cmd(12:14) = value;
 				cmd(15) = 6; %IOType for waitlong is 6
-				cmd(16) = hex2dec('3c');
-				cmd(17) = hex2dec('1b'); %IOType for PortStateWrite
+				cmd(16) = 15;
+				cmd(17) = 27; %IOType for PortStateWrite
 				cmd(18:20) = mask;
 				cmd(21:23) = 0;
 				

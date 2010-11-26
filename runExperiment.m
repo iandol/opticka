@@ -90,11 +90,11 @@ classdef runExperiment < dynamicprops
 			%initialise timeLog for this run
 			obj.timeLog.date=clock;
 			obj.timeLog.startrun=GetSecs;
-			obj.timeLog.vbl=zeros(10000,1);
-			obj.timeLog.show=zeros(10000,1);
-			obj.timeLog.flip=zeros(10000,1);
-			obj.timeLog.miss=zeros(10000,1);
-			obj.timeLog.stimTime=zeros(10000,1);
+			obj.timeLog.vbl=zeros(100000,1);
+			obj.timeLog.show=zeros(100000,1);
+			obj.timeLog.flip=zeros(100000,1);
+			obj.timeLog.miss=zeros(100000,1);
+			obj.timeLog.stimTime=zeros(100000,1);
 			
 			%HideCursor; %hide mouse
 			
@@ -104,13 +104,14 @@ classdef runExperiment < dynamicprops
 			
 			obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
 			obj.serialP.setDTR(0);
+			
 			if obj.useLabJack == 1
 				strct = struct('openNow',1,'name','default','verbosity',obj.verbose);
 			else
-					strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
+				strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
 			end
 			obj.lJack = labJack(strct);
-			obj.lJack.setFIO4(0);
+			obj.lJack.strobeWord([255,255,255],[255,255,255]);
 			
 			try
 				if obj.debug==1 || obj.windowed==1
@@ -236,8 +237,8 @@ classdef runExperiment < dynamicprops
 					end
 					
 					if obj.visualDebug==1
-						obj.infoText;
 						obj.drawGrid;
+						obj.infoText;
 					end
 					
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
@@ -253,29 +254,31 @@ classdef runExperiment < dynamicprops
 					[obj.timeLog.vbl(obj.task.tick+1),obj.timeLog.show(obj.task.tick+1),obj.timeLog.flip(obj.task.tick+1),obj.timeLog.miss(obj.task.tick+1)] = Screen('Flip', obj.win, (obj.timeLog.vbl(obj.task.tick)+obj.screenVals.halfisi));
 					%=========================================%
 					
-					if obj.task.isBlank==0
-						obj.timeLog.stimTime(obj.task.tick+1)=1+obj.task.switched;
-					else
-						obj.timeLog.stimTime(obj.task.tick+1)=0-obj.task.switched;
-					end
-					
 					if obj.task.switched == 1
 						switch obj.task.isBlank
 							case 1
 								obj.serialP.setDTR(0);
-								obj.lJack.setFIO4(0);
+								obj.lJack.strobeWord([255,255,255],[255,255,255]);
+								%obj.lJack.setFIO4(0);
 							case 0
+								obj.lJack.strobeWord([224,255,255],[255,255,255]);
 								obj.serialP.setDTR(1);
-								obj.lJack.setFIO4(1);
+								%obj.lJack.setFIO4(1);
 						end
 					end
 					
 					if obj.task.tick==1
 						obj.timeLog.startflip=obj.timeLog.vbl(obj.task.tick) + obj.screenVals.halfisi;
 						obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
-						%WaitSecs('UntilTime',obj.timeLog.show(thisRun+1));
+						obj.lJack.strobeWord([240,255,255],[255,255,255]);
 						obj.serialP.setDTR(1);
-						obj.lJack.setFIO4(1);
+						%obj.lJack.setFIO4(1);
+					end
+					
+					if obj.task.isBlank==0
+						obj.timeLog.stimTime(obj.task.tick+1)=1+obj.task.switched;
+					else
+						obj.timeLog.stimTime(obj.task.tick+1)=0-obj.task.switched;
 					end
 					
 					obj.task.tick=obj.task.tick+1;
@@ -380,7 +383,7 @@ classdef runExperiment < dynamicprops
 % 		function set.verbose(obj,value)
 % 			for i = 1:obj.sList.n
 % 				ts = obj.stimulus.(obj.sList.list(i));
-% 			end
+	% 			end
 % 		end
 
 
@@ -944,9 +947,7 @@ classdef runExperiment < dynamicprops
 		end
 		
 		function drawSpot(obj,i)
-			
 			Screen('gluDisk',obj.win,obj.sVals(i).colour,obj.sVals(i).xPosition,obj.sVals(i).yPosition,obj.sVals(i).size);
-			
 		end
 		
 		%--------------------Draw Fixation spot-------------%
@@ -956,7 +957,7 @@ classdef runExperiment < dynamicprops
 		
 		%------------------------------------------------------------
 		function drawGrid(obj)
-			Screen('DrawDots',obj.win,obj.grid,1,[0.8 0.8 0.4],[obj.xCenter obj.yCenter]);
+			Screen('DrawDots',obj.win,obj.grid,2,[1 0 0 1],[obj.xCenter obj.yCenter]);
 		end
 		
 		%--------------------Draw Info text-------------------%
