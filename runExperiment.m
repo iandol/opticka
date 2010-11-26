@@ -254,9 +254,9 @@ classdef runExperiment < dynamicprops
 					%=========================================%
 					
 					if obj.task.isBlank==0
-						obj.timeLog.stimTime(obj.task.tick+1)=1;
+						obj.timeLog.stimTime(obj.task.tick+1)=1+obj.task.switched;
 					else
-						obj.timeLog.stimTime(obj.task.tick+1)=0;
+						obj.timeLog.stimTime(obj.task.tick+1)=0-obj.task.switched;
 					end
 					
 					if obj.task.switched == 1

@@ -7,8 +7,9 @@
 classdef labJack < handle
 	
 	properties
+		%> friendly name, setting this to 'null' will force silentMode=1
 		name='LabJack'
-		%> silentMode allows one to call methods without needing a labJack
+		%> silentMode allows one to call methods without a working labJack
 		silentMode = 0
 		%> header needed by loadlib
 		header = '/usr/local/include/labjackusb.h'
@@ -30,6 +31,8 @@ classdef labJack < handle
 		inp = []
 		fio4 = 0
 		fio5 = 0
+		led = 1
+		command = []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -121,7 +124,6 @@ classdef labJack < handle
 				if obj.vHandle && ~isempty(obj.handle)
 					calllib('liblabjackusb','LJUSB_CloseDevice',obj.handle);
 				end
-				%obj.validHandle;
 				obj.isOpen = 0;
 				obj.handle=[];
 				obj.vHandle = 0;
@@ -170,7 +172,7 @@ classdef labJack < handle
 		end
 		
 		% ===================================================================
-		%> @brief Write formatted command string to LabJack
+		%> @brief Read response string back from LabJack
 		%> 		unsigned long LJUSB_Read(HANDLE hDevice, BYTE *pBuff, unsigned long count);
 		%> 		// Reads from a device. Returns the number of bytes read, or -1 on error.
 		%> 		// hDevice = The handle for your device
@@ -188,26 +190,129 @@ classdef labJack < handle
 			in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, bytein, count);
 		end
 		
-		%===============LED ON================%
+		% ===================================================================
+		%> @brief Turn LED ON
+		%>	
+		%>	
+		% ===================================================================
 		function ledON(obj)
 			if obj.silentMode == 0 && obj.vHandle == 1
-				out = obj.rawWrite(obj.ledIsON);
-				in  = obj.rawRead(obj.inp);
+				obj.rawWrite(obj.ledIsON);
+				in = obj.rawRead(obj.inp,10);
 			end
 		end
 			
-		%===============LED OFF================%
+		% ===================================================================
+		%> @brief Turn LED OFF
+		%>	
+		%>	
+		% ===================================================================
 		function ledOFF(obj)
 			if obj.silentMode == 0 && obj.vHandle == 1
-				out = obj.rawWrite(obj.ledIsOFF);
-				in  = obj.rawRead(obj.inp);
+				obj.rawWrite(obj.ledIsOFF);
+				in = obj.rawRead(obj.inp,10);
 			end
 		end
 		
-		%===============STROBE WORD================%
-		function strobeWord(obj,val)
-			
+		% ===================================================================
+		%> @brief Turn LED OFF
+		%>	
+		%>	
+		% ===================================================================
+		function flashLED(obj,n)
+			if obj.silentMode == 0 && obj.vHandle == 1
+				if ~exist('n','var')
+					n=3;
+				end
+				for i=1:n
+					obj.ledOFF;
+					obj.waitLong(700);
+					obj.ledON;
+					obj.waitLong(700);
+					obj.salutation('flashLED',['Flash: ' num2str(i)]);
+				end
+			end
 		end
+		
+		
+		% ===================================================================
+		%> @brief WaitShort
+		%>	LabJack Wait in multiples of 128µs
+		%>	@param time time in ms, remember 0.128ms is the atomic minimum
+		% ===================================================================
+		function waitShort(obj,time)
+			time=ceil(time/0.128);
+			cmd=zeros(10,1);
+			obj.inp=zeros(10,1);
+			cmd(2) = hex2dec('f8'); %feedback
+			cmd(3) = 2; %number of bytes in packet
+			cmd(8) = 5; %IOType for waitlong is 6
+			cmd(9) = time;
+			
+			obj.command = obj.checksum(cmd,'extended');
+			
+			out = obj.rawWrite(obj.command);
+			in = obj.rawRead(obj.inp,10);
+		end
+		
+		% ===================================================================
+		%> @brief WaitLong
+		%>	LabJack Wait in multiples of 32ms
+		%>	@param time time in ms, remember 32ms is the atomic minimum
+		% ===================================================================
+		function waitLong(obj,time)
+			time=ceil(time/32);
+			cmd=zeros(10,1);
+			obj.inp=zeros(10,1);
+			cmd(2) = hex2dec('f8'); %feedback
+			cmd(3) = 2; %number of bytes in packet
+			cmd(8) = 6; %IOType for waitlong is 6
+			cmd(9) = time;
+			
+			obj.command = obj.checksum(cmd,'extended');
+			
+			out = obj.rawWrite(obj.command);
+			in = obj.rawRead(obj.inp,10);
+		end
+		
+		% ===================================================================
+		%> @brief Strobe Word
+		%>	
+		%>	@param value The value to be strobed, range is 1-4094 for 12bit
+		%>  as 0 and 4095 are reserved
+		% ===================================================================
+		function strobeWord(obj,value,mask)
+			if obj.silentMode == 0 && obj.vHandle == 1
+				if length(value) == 2
+					value(2:3) = value;
+					value(1) = 0;
+					mask(2:3) = mask;
+					mask(1) = 0;
+				end
+				cmd=zeros(24,1);
+				cmd(2) = hex2dec('f8');
+				cmd(3) = 9;
+				cmd(8) = hex2dec('1b'); %IOType for PortStateWrite
+				cmd(9:11) = mask;
+				cmd(12:14) = value;
+				cmd(15) = 6; %IOType for waitlong is 6
+				cmd(16) = hex2dec('3c');
+				cmd(17) = hex2dec('1b'); %IOType for PortStateWrite
+				cmd(18:20) = mask;
+				cmd(21:23) = 0;
+				
+				obj.command = obj.checksum(cmd,'extended');
+				
+				out = obj.rawWrite(obj.command);
+				in = obj.rawRead(obj.inp,10);
+				
+% 				if in(6) > 0
+% 					obj.salutation('strobeWord',['Feedback error in IOType ' num2str(in(7))]);
+% 				end
+				
+			end			
+		end
+		
 		%===============SET FIO4================%
 		function setFIO4(obj,val)
 			if obj.silentMode == 0 && obj.vHandle == 1
@@ -216,12 +321,12 @@ classdef labJack < handle
 				end
 				if val == 1
 					out = obj.rawWrite(obj.fio4High);
-					in  = obj.rawRead(obj.inp);
+					in  = obj.rawRead(obj.inp,10);
 					obj.fio4 = 1;
 					obj.salutation('SETFIO4','FIO4 is HIGH')
 				else
 					out = obj.rawWrite(obj.fio4Low);
-					in  = obj.rawRead(obj.inp);
+					in  = obj.rawRead(obj.inp,10);
 					obj.fio4 = 0;
 					obj.salutation('SETFIO4','FIO4 is LOW')
 				end
@@ -269,23 +374,41 @@ classdef labJack < handle
 			if ~exist('resetType','var')
 				resetType = 0;
 			end
-			cmd(1) = 0;
+			cmd=zeros(4,1);
 			cmd(2) = hex2dec('99'); %command code
 			if resetType == 0 %soft reset
 				cmd(3) = bin2dec('01');
 			else
 				cmd(3) = bin2dec('10');
 			end
-			cmd(4) = 0;
 			
-			cmd(1) = obj.checksum8(cmd(2:end));
-			cmd
+			obj.command = obj.checksum(cmd,'normal');
+			
+			%out = obj.rawWrite(cmd);
+			%in  = obj.rawRead(obj.inp,4);
+		end
+		
+		% ===================================================================
+		%> @brief checksum
+		%>	Calculate checksum for data packet
+		%>	
+		% ===================================================================
+		function command = checksum(obj,command,type)
+			switch type
+				case 'normal'
+					command(1) = obj.checksum8(command(2:end));
+				case 'extended'
+					[command(5),command(6)] = obj.checksum16(command(7:end));
+					command(1) = obj.checksum8(command(2:6));
+			end
 		end
 		
 	end
 	
-	methods ( Static )
-		
+	%=======================================================================
+	methods ( Static ) % STATIC METHODS
+	%=======================================================================
+	
 		function chk = checksum8(in)
 			if ischar(in) %hex input
 				in = hex2dec(in);
@@ -319,8 +442,11 @@ classdef labJack < handle
 		
 	end
 	
-	methods ( Access = private ) %----------PRIVATE METHODS---------%
-		
+	
+	%=======================================================================
+	methods ( Access = private ) % PRIVATE METHODS
+	%=======================================================================
+	
 		%===============Destructor======================%
 		function delete(obj)
 			obj.salutation('DELETE Method','Cleaning up...')
