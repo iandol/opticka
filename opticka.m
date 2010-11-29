@@ -248,8 +248,8 @@ classdef opticka < dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief getScreenVals
-		%> Gets the settings from th UI and updates our runExperiment object
+		%> @brief deleteStimulus
+		%> 
 		%> @param 
 		% ===================================================================
 		function deleteStimulus(obj)
@@ -267,15 +267,7 @@ classdef opticka < dynamicprops
 				if obj.store.stimN < 0;obj.store.stimN = 0;end
 				obj.store.stimList = obj.r.sList.list;
 				
-				string = obj.gs(obj.h.OKStimList);
-				string = string(1:end-1);
-				if isempty(string)
-					set(obj.h.OKStimList,'Value',1);
-					set(obj.h.OKStimList,'String','');
-				else
-					set(obj.h.OKStimList,'Value',1);
-					set(obj.h.OKStimList,'String',string);
-				end
+				obj.refreshStimulusList;
 			else
 				obj.r.updatesList;
 				set(obj.h.OKStimList,'Value',1);
@@ -287,8 +279,8 @@ classdef opticka < dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief getScreenVals
-		%> Gets the settings from th UI and updates our runExperiment object
+		%> @brief addGrating
+		%> 
 		%> @param 
 		% ===================================================================
 		function addGrating(obj)
@@ -320,22 +312,15 @@ classdef opticka < dynamicprops
 			obj.r.updatesList;
 			
 			obj.store.gratingN = obj.r.sList.gN;
-			string = obj.gs(obj.h.OKStimList);
-			switch tmp.gabor
-				case 0
-					string{length(string)+1} = ['Grating #' num2str(obj.r.sList.gN)];
-				case 1
-					string{length(string)+1} = ['Gabor #' num2str(obj.r.sList.gN)];
-			end
-			set(obj.h.OKStimList,'String',string);
+			obj.refreshStimulusList;
 			
 			obj.store.stimList = obj.r.sList.list;
 			
 		end
 		
 		% ===================================================================
-		%> @brief getScreenVals
-		%> Gets the settings from th UI and updates our runExperiment object
+		%> @brief addBar
+		%> Add bar stimulus
 		%> @param 
 		% ===================================================================
 		function addBar(obj)
@@ -356,16 +341,14 @@ classdef opticka < dynamicprops
 			obj.r.updatesList;
 			
 			obj.store.barN = obj.r.sList.bN;
-			string = obj.gs(obj.h.OKStimList);
-			string{length(string)+1} = ['Bar #' num2str(obj.r.sList.bN)];
-			set(obj.h.OKStimList,'String',string);
+			obj.refreshStimulusList;
 			
 			obj.store.stimList = obj.r.sList.list;
 			
 		end
 		
 		% ===================================================================
-		%> @brief getScreenVals
+		%> @brief addDots
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
@@ -390,16 +373,14 @@ classdef opticka < dynamicprops
 			obj.r.updatesList;
 			
 			obj.store.dotsN = obj.r.sList.dN;
-			string = obj.gs(obj.h.OKStimList);
-			string{length(string)+1} = ['Coherent Dots #' num2str(obj.r.sList.dN)];
-			set(obj.h.OKStimList,'String',string);
+			obj.refreshStimulusList;
 			
 			obj.store.stimList = obj.r.sList.list;
 			
 		end
 		
 		% ===================================================================
-		%> @brief getScreenVals
+		%> @brief addSpot
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
@@ -418,16 +399,14 @@ classdef opticka < dynamicprops
 			obj.r.updatesList;
 			
 			obj.store.spotN = obj.r.sList.sN;
-			string = obj.gs(obj.h.OKStimList);
-			string{length(string)+1} = ['Spot #' num2str(obj.r.sList.sN)];
-			set(obj.h.OKStimList,'String',string);
+			obj.refreshStimulusList;
 			
 			obj.store.stimList = obj.r.sList.list;
 			
 		end
 		
 		% ===================================================================
-		%> @brief getScreenVals
+		%> @brief addVariable
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
@@ -444,10 +423,7 @@ classdef opticka < dynamicprops
 				obj.r.task.randomiseStimuli;
 				obj.store.nVars = obj.r.task.nVars;
 
-				string = obj.gs(obj.h.OKVarList);
-				string{length(string)+1} = [obj.r.task.nVar(obj.r.task.nVars).name... 
-					' on Stimuli: ' num2str(obj.r.task.nVar(obj.r.task.nVars).stimulus)];
-				set(obj.h.OKVarList,'String',string);
+				obj.refreshVariableList;
 			
 			catch ME
 				
@@ -460,7 +436,7 @@ classdef opticka < dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief getScreenVals
+		%> @brief deleteVariable
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
@@ -475,16 +451,13 @@ classdef opticka < dynamicprops
 			if obj.r.task.nVars<0;obj.r.task.nVars=0;end
 			if obj.store.nVars<0;obj.store.nVars=0;end
 			
-			string = obj.gs(obj.h.OKVarList);
-			string = string(1:length(string)-1);
-			set(obj.h.OKVarList,'Value',1);
-			set(obj.h.OKVarList,'String',string);
+			obj.refreshVariableList;
 			
 		end
 	end
 	
 	%========================================================
-	methods ( Access = protected ) %----------PRIVATE METHODS---------%
+	methods ( Access = protected ) %----------PRIVATE METHODS
 	%========================================================
 	
 		% ===================================================================
@@ -531,11 +504,11 @@ classdef opticka < dynamicprops
 				set(obj.h.OKYCenter,'String', num2str(tmp.r.screenYOffset));
 				
 				list = obj.gs(obj.h.OKGLSrc);
-				val = findValue(list,tmp.r.srcMode);
+				val = obj.findValue(list,tmp.r.srcMode);
 				obj.r.srcMode = list{val};
 				
 				list = obj.gs(obj.h.OKGLDst);
-				val = findValue(list,tmp.r.dstMode);
+				val = obj.findValue(list,tmp.r.dstMode);
 				obj.r.dstMode = list{val};
 				
 				set(obj.h.OKOpenGLBlending,'Value', tmp.r.blend);
@@ -556,7 +529,11 @@ classdef opticka < dynamicprops
 				set(obj.h.OKnTrials,'String',num2str(obj.r.task.nTrials));
 				
 				obj.r.stimulus = tmp.r.stimulus;
+				clear tmp;
 				
+				obj.r.updatesList;				
+				obj.refreshStimulusList;
+				obj.refreshVariableList;
 				
 			end
 				
@@ -598,12 +575,46 @@ classdef opticka < dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief getstring
-		%> 
+		%> @brief refreshStimulusList
+		%> refreshes the stimulus list in th UI after adding new stimulus
 		%> @param 
 		% ===================================================================
 		function refreshStimulusList(obj)
-			
+			str = cell(obj.r.sList.n,1);
+			for i=1:obj.r.sList.n
+				s = obj.r.stimulus.(obj.r.sList.list(i))(obj.r.sList.index(i));
+				switch obj.r.sList.list(i)
+					case 'g'
+						x=s.xPosition;
+						y=s.yPosition;
+						c=s.contrast;
+						a=s.angle;
+						if s.gabor == 0
+							name = 'Grating ';
+						else
+							name = 'Gabor ';
+						end
+						str{i} = [name num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' c=' num2str(c) ' ang=' num2str(a)];
+					case 'b'
+						x=s.xPosition;
+						y=s.yPosition;
+						a=s.angle;
+						str{i} = ['Bar ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
+					case 'd'
+						x=s.xPosition;
+						y=s.yPosition;
+						sz=s.size;
+						a=s.angle;
+						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a)];
+					case 's'
+						x=s.xPosition;
+						y=s.yPosition;
+						sz=s.size;
+						str{i} = ['Spot ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz)];
+				end
+			end
+			set(obj.h.OKStimList,'String', str);
+			set(obj.h.OKStimList, 'Value', 1);
 		end
 		
 		% ===================================================================
@@ -612,7 +623,13 @@ classdef opticka < dynamicprops
 		%> @param 
 		% ===================================================================
 		function refreshVariableList(obj)
-			
+			str = cell(obj.r.task.nVars,1);
+			for i=1:obj.r.task.nVars
+				str{i} = [obj.r.task.nVar(i).name ' on Stim: ' num2str(obj.r.task.nVar(i).stimulus) '|' num2str(obj.r.task.nVar(i).values)];
+				str{i}=regexprep(str{i},'(  )+',' ');
+			end
+			set(obj.h.OKVarList,'Value',1);
+			set(obj.h.OKVarList,'String',str);
 		end
 		
 		% ===================================================================

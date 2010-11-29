@@ -356,6 +356,11 @@ classdef runExperiment < dynamicprops
 			obj.printlog;
 		end
 		
+		% ===================================================================
+		%> @brief updatesList
+		%> Updates the list of stimuli current in the object
+		%> @param 
+		% ===================================================================
 		function updatesList(obj)
 			obj.sList.n=0;
 			obj.sList.list = [];

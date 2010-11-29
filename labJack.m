@@ -276,12 +276,12 @@ classdef labJack < handle
 		end
 		
 		% ===================================================================
-		%> @brief Strobe Word
+		%> @brief Prepare Strobe Word
 		%>	
 		%>	@param value The value to be strobed, range is 1-4094 for 12bit
 		%>  as 0 and 4095 are reserved
 		% ===================================================================
-		function strobeWord(obj,value,mask)
+		function prepareStrobe(obj,value,mask,sendNow)
 			if obj.silentMode == 0 && obj.vHandle == 1
 				if length(value) == 2 %assume fio isn't passed
 					value(2:3) = value;
@@ -296,21 +296,33 @@ classdef labJack < handle
 				cmd(9:11) = mask;
 				cmd(12:14) = value;
 				cmd(15) = 6; %IOType for waitlong is 6
-				cmd(16) = 15;
+				cmd(16) = 15; %time to wait in unit multiples
 				cmd(17) = 27; %IOType for PortStateWrite
 				cmd(18:20) = mask;
 				cmd(21:23) = 0;
-				
+
 				obj.command = obj.checksum(cmd,'extended');
-				
+				if exist('sendNow','var')
+					obj.strobeWord;
+				end
+			end			
+		end
+		
+		% ===================================================================
+		%> @brief Prepare Strobe Word
+		%>	
+		%>	@param value The value to be strobed, range is 1-4094 for 12bit
+		%>  as 0 and 4095 are reserved
+		% ===================================================================
+		function strobeWord(obj)
+			if ~isempty(obj.command)
 				out = obj.rawWrite(obj.command);
 				in = obj.rawRead(obj.inp,10);
 				
 % 				if in(6) > 0
 % 					obj.salutation('strobeWord',['Feedback error in IOType ' num2str(in(7))]);
 % 				end
-				
-			end			
+			end
 		end
 		
 		%===============SET FIO4================%
@@ -348,13 +360,13 @@ classdef labJack < handle
 					val = abs(obj.fio5-1);
 				end
 				if val == 1
-					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio5High, 12);
-					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
+					out = obj.rawWrite(obj.fio5High);
+					in  = obj.rawRead(obj.inp,10);
 					obj.fio5 = 1;
 					obj.salutation('SETFIO5','FIO5 is HIGH')
 				else
-					out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, obj.fio5Low, 12);
-					in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, obj.inp, 10);
+					out = obj.rawWrite(obj.fio5Low);
+					in  = obj.rawRead(obj.inp,10);
 					obj.fio5 = 0;
 					obj.salutation('SETFIO5','FIO5 is LOW')
 				end
@@ -409,11 +421,16 @@ classdef labJack < handle
 	methods ( Static ) % STATIC METHODS
 	%=======================================================================
 	
+		% ===================================================================
+		%> @brief checksum8
+		%>	Calculate checksum for data packet
+		%>	
+		% ===================================================================
 		function chk = checksum8(in)
-			if ischar(in) %hex input
-				in = hex2dec(in);
-				hexMode = 1;
-			end
+% 			if ischar(in) %hex input
+% 				in = hex2dec(in);
+% 				hexMode = 1;
+% 			end
 			in = sum(uint16(in));
 			quo = floor(in/2^8);
 			remd = rem(in,2^8);
@@ -421,23 +438,28 @@ classdef labJack < handle
 			quo = floor(in/2^8);
 			remd = rem(in,2^8);
 			chk = quo + remd;
-			if exist('hexMode','var')
-				chk = dec2hex(chk);
-			end
+% 			if exist('hexMode','var')
+% 				chk = dec2hex(chk);
+% 			end
 		end
 		
+		% ===================================================================
+		%> @brief checksum16
+		%>	Calculate checksum for data packet
+		%>
+		% ===================================================================
 		function [lsb,msb] = checksum16(in)
-			if ischar(in) %hex input
-				in = hex2dec(in);
-				hexMode = 1;
-			end
+% 			if ischar(in) %hex input
+% 				in = hex2dec(in);
+% 				hexMode = 1;
+% 			end
 			in = sum(uint16(in));
 			lsb=bitand(in,255);
 			msb=bitshift(in,-8);
-			if exist('hexMode','var')
-				lsb = dec2hex(lsb);
-				msb = dec2hex(msb);
-			end
+% 			if exist('hexMode','var')
+% 				lsb = dec2hex(lsb);
+% 				msb = dec2hex(msb);
+% 			end
 		end
 		
 	end
