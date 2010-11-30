@@ -297,7 +297,7 @@ classdef labJack < handle
 				cmd(12:14) = value;
 				cmd(15) = 6; %IOType for waitlong is 6
 				cmd(16) = 15; %time to wait in unit multiples
-				cmd(17) = 27; %IOType for PortStateWrite
+				cmd(17) = 27; %IOType for PortStateWrite (1b in hex)
 				cmd(18:20) = mask;
 				cmd(21:23) = 0;
 

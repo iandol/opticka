@@ -52,8 +52,8 @@ classdef runExperiment < dynamicprops
 		sList %for heterogenous stimuli, we need a way to index into the stimulus so we don't waste time doing this on each iteration
 		grid
 	end
+	
 	properties (SetAccess = private, GetAccess = private)
-		
 		black=0 %black index
 		white=1 %white index
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
@@ -87,7 +87,7 @@ classdef runExperiment < dynamicprops
 		%-------------------------Main Grating----------------------------%
 		function run(obj)
 			
-			%initialise timeLog for this run
+			%initialise timeLog for this run (100,000 should be a 19min run)
 			obj.timeLog.date=clock;
 			obj.timeLog.startrun=GetSecs;
 			obj.timeLog.vbl=zeros(100000,1);
@@ -102,6 +102,7 @@ classdef runExperiment < dynamicprops
 				obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.screenVals.gammaTable(128,:), 256, 1));
 			end
 			
+			%-------Set up serial line and LabJack for this run...
 			obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
 			obj.serialP.setDTR(0);
 			
@@ -111,7 +112,8 @@ classdef runExperiment < dynamicprops
 				strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
 			end
 			obj.lJack = labJack(strct);
-			obj.lJack.strobeWord([255,255,255],[255,255,255]);
+			obj.lJack.prepareStrobe([255,255,255],[255,255,255],1);
+			%-----------------------------------------------------
 			
 			try
 				if obj.debug==1 || obj.windowed==1
@@ -215,7 +217,7 @@ classdef runExperiment < dynamicprops
 							obj.drawBackground;
 						end
 						for j=1:obj.sList.n
-							switch obj.stimulus.(obj.sList.list(j))(obj.sList.index(j)).family
+								switch obj.stimulus.(obj.sList.list(j))(obj.sList.index(j)).family
 								case 'grating'
 									obj.drawGrating(j);
 								case 'bar'
@@ -258,10 +260,10 @@ classdef runExperiment < dynamicprops
 						switch obj.task.isBlank
 							case 1
 								obj.serialP.setDTR(0);
-								obj.lJack.strobeWord([255,255,255],[255,255,255]);
+								obj.lJack.prepareStrobe([255,255,255],[255,255,255],1);
 								%obj.lJack.setFIO4(0);
 							case 0
-								obj.lJack.strobeWord([224,255,255],[255,255,255]);
+								obj.lJack.prepareStrobe([224,255,255],[255,255,255],1);
 								obj.serialP.setDTR(1);
 								%obj.lJack.setFIO4(1);
 						end
@@ -270,7 +272,7 @@ classdef runExperiment < dynamicprops
 					if obj.task.tick==1
 						obj.timeLog.startflip=obj.timeLog.vbl(obj.task.tick) + obj.screenVals.halfisi;
 						obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
-						obj.lJack.strobeWord([240,255,255],[255,255,255]);
+						obj.lJack.prepareStrobe([240,255,255],[255,255,255],1);
 						obj.serialP.setDTR(1);
 						%obj.lJack.setFIO4(1);
 					end
