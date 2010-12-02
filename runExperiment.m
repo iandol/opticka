@@ -133,10 +133,10 @@ classdef runExperiment < dynamicprops
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 				
 				obj.timeLog.preOpenWindow=GetSecs;
-				if obj.windowed==1
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[1 1 801 601], [], obj.doubleBuffer+1,[],obj.antiAlias);
-				else
+				if obj.windowed==0
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
+				else
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[1 1 801 601], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
 				
 				obj.timeLog.postOpenWindow=GetSecs;
@@ -292,7 +292,7 @@ classdef runExperiment < dynamicprops
 				Screen('Flip', obj.win);
 				obj.timeLog.afterDisplay=GetSecs;
 				obj.serialP.setDTR(0);
-				obj.lJack.setFIO4(0);
+				obj.lJack.prepareStrobe([255,255,255],[255,255,255],1);
 				
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
 				obj.timeLog.deltaUntilDisplay=obj.timeLog.beforeDisplay-obj.timeLog.start;
@@ -793,7 +793,7 @@ classdef runExperiment < dynamicprops
 			
 			if ts.gabor==0
 				obj.sVals(i).texture = CreateProceduralSineGrating(obj.win, obj.sVals(i).res(1),...
-					obj.sVals(i).res(2), obj.sVals(i).colour, obj.sVals(i).mask);
+					obj.sVals(i).res(2), obj.sVals(i).colour, obj.sVals(i).mask, obj.sVals(i).contrastMult);
 			else
 				if obj.sVals(i).aspectRatio == 1
 					nonSymmetric = 0;
@@ -801,7 +801,7 @@ classdef runExperiment < dynamicprops
 					nonSymmetric = 1;
 				end
 				obj.sVals(i).texture = CreateProceduralGabor(obj.win, obj.sVals(i).res(1),...
-					obj.sVals(i).res(2), nonSymmetric, obj.sVals(i).colour,obj.sVals(i).disableNorm,...
+					obj.sVals(i).res(2), nonSymmetric, obj.sVals(i).colour, obj.sVals(i).disableNorm,...
 					obj.sVals(i).contrastMult);
 			end
 			

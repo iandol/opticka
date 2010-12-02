@@ -22,7 +22,7 @@ classdef opticka < dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		version='0.45'
+		version='0.46'
 		load
 	end
 	
@@ -122,6 +122,7 @@ classdef opticka < dynamicprops
 			
 			set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version])
 			set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
+			drawnow;
 			obj.getScreenVals;
 			obj.getTaskVals;
 			obj.refreshProtocolsList;
@@ -152,7 +153,11 @@ classdef opticka < dynamicprops
 		function getScreenVals(obj)
 			
 			if isempty(obj.r)
+				set(obj.h.OKOptickaVersion,'String','Initialising Stimulus object...')
+				drawnow
 				obj.r = runExperiment;
+				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
+				drawnow
 			end
 			obj.r.distance = obj.gd(obj.h.OKMonitorDistance);
 			obj.r.pixelsPerCm = obj.gd(obj.h.OKPixelsPerCm);
@@ -166,8 +171,10 @@ classdef opticka < dynamicprops
 			obj.r.dstMode = obj.gs(obj.h.OKGLDst, value);
 			
 			obj.r.blend = obj.gv(obj.h.OKOpenGLBlending);
-			if regexp(get(obj.h.OKWindowSize,'String'),'[]')
+			if ~regexp(get(obj.h.OKWindowSize,'String'),'\[\]')
 				obj.r.windowed = 1;
+			else
+				obj.r.windowed = 0;
 			end
 			
 			obj.r.hideFlash = obj.gv(obj.h.OKHideFlash);
