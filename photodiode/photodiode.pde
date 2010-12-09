@@ -13,27 +13,31 @@
 //unsigned long timebefore = 0;
 //unsigned long timedifference = 0;
 const int ledPin = 13;
-const int analogInPin = 0;  // Analog input pin that the potentiometer is attached to
-const int analogOutPin = 9; // Analog output pin that the LED is attached to
+  const int analogInPin = 0;  // Analog input pin that the potentiometer is attached to
+const int potPin = 1;
+//const int analogOutPin = 9; // Analog output pin that the LED is attached to
 //int ledState = LOW;
 //int other = HIGH;
 int sensorValue = 0;        // value read from the pd
+int potValue = 0;          // value from the 10K pot
 int outputValue = 0;        // value output to the PWM (analog out)
 
 void setup(){
   sbi(ADCSRA, ADPS2); //analogRead multiplier is 16, much faster...
   cbi(ADCSRA, ADPS1); 
   cbi(ADCSRA, ADPS0);
-  //Serial.begin(9600);
+  Serial.begin(2400);
   pinMode(ledPin, OUTPUT); 
   //Events.addHandler(blinky, 13);  // Every 13ms, equivalent to a 75hz signal
 }
 void loop(){ 
   //Events.loop();
-  sensorValue = analogRead(analogInPin);            
-  outputValue = map(sensorValue, 10, 850, 0, 255);
+  sensorValue = analogRead(analogInPin);  
+  potValue = analogRead(potPin) -150;  
+  potValue = constrain(potValue, 0, 850);
+  outputValue = map(sensorValue, 0, 850, 0, 255);
   outputValue = constrain(outputValue, 0, 255);
-  if (sensorValue > 700) {
+  if (sensorValue > potValue) {
     togled(HIGH);
   }
   else {
@@ -46,10 +50,13 @@ void loop(){
   //Serial.print(time);
   //Serial.print("\tDiff:");
   //Serial.print(timedifference);
-  //Serial.print("Sensor: ");  
-  //Serial.print(sensorValue);
-  //Serial.print("\tOut: ");  
-  //Serial.println(outputValue);
+  Serial.print("Sensor: ");  
+  Serial.print(sensorValue);
+  Serial.print("\tOut: ");  
+  Serial.print(outputValue);
+  Serial.print("\tPot: ");
+  Serial.println(potValue);
+  
 
   //if (ledState == LOW) {
   //    ledState = HIGH;

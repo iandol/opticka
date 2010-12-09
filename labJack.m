@@ -97,8 +97,8 @@ classdef labJack < handle
 				if obj.vHandle
 					obj.isOpen = 1;
 					obj.salutation('open method','LabJack succesfully opened...');
-					obj.setFIO4(0);
-					obj.setFIO5(0);
+					obj.setDIO([255,255,255],[255,255,255]);
+					obj.prepareStrobe([255,255,255],[255,255,255],1);
 				else
 					obj.salutation('open method','LabJack open failed, going into silent mode');
 					obj.isOpen = 0;
@@ -244,7 +244,7 @@ classdef labJack < handle
 			time=ceil(time/0.128);
 			cmd=zeros(10,1);
 			obj.inp=zeros(10,1);
-			cmd(2) = hex2dec('f8'); %feedback
+			cmd(2) = 248; %hex2dec('f8'); %feedback
 			cmd(3) = 2; %number of bytes in packet
 			cmd(8) = 5; %IOType for waitlong is 6
 			cmd(9) = time;
@@ -264,7 +264,7 @@ classdef labJack < handle
 			time=ceil(time/32);
 			cmd=zeros(10,1);
 			obj.inp=zeros(10,1);
-			cmd(2) = hex2dec('f8'); %feedback
+			cmd(2) = 248; %hex2dec('f8'); %feedback
 			cmd(3) = 2; %number of bytes in packet
 			cmd(8) = 6; %IOType for waitlong is 6
 			cmd(9) = time;
@@ -273,8 +273,28 @@ classdef labJack < handle
 			
 			out = obj.rawWrite(obj.command);
 			in = obj.rawRead(obj.inp,10);
-		end
+        end
 		
+        % ===================================================================
+		%> @brief SetDIO
+		%>	SetDIO sets the direction for FIO, EIO and CIO as read or write
+		%>	@param value is binary idsentifier for 0-7 bit range
+        %>  @param mask is the mask to apply the command
+		% ===================================================================
+		function setDIO(obj,value,mask)
+            if obj.silentMode == 0 && obj.vHandle == 1
+                cmd=zeros(14,1);
+                cmd(2) = 248; %command byte for feedback command (f8 in hex)
+                cmd(3) = (length(cmd)-6)/2;
+                cmd(8) = 29; %IOType for PortDirWrite = 29
+                cmd(9:11) = mask;
+                cmd(12:14) = value;
+                
+                cmd = obj.checksum(cmd,'extended');
+                out = obj.rawWrite(cmd);
+                in = obj.rawRead(obj.inp,10);
+            end
+        end
 		% ===================================================================
 		%> @brief Prepare Strobe Word
 		%>	
@@ -291,12 +311,12 @@ classdef labJack < handle
 				end
 				cmd=zeros(24,1);
 				cmd(2) = 248; %command byte for feedback command (f8 in hex)
-				cmd(3) = 9;
+				cmd(3) = (24-6)/2;
 				cmd(8) = 27; %IOType for PortStateWrite (1b in hex)
 				cmd(9:11) = mask;
 				cmd(12:14) = value;
 				cmd(15) = 6; %IOType for waitlong is 6
-				cmd(16) = 15; %time to wait in unit multiples
+				cmd(16) = 32; %time to wait in unit multiples
 				cmd(17) = 27; %IOType for PortStateWrite (1b in hex)
 				cmd(18:20) = mask;
 				cmd(21:23) = 0;

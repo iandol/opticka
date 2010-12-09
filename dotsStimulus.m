@@ -75,7 +75,7 @@ classdef dotsStimulus < baseStimulus
 			obj.rDots=obj.nDots-floor(obj.nDots*(obj.coherence));
 			if obj.rDots>0
 				obj.angles(1:obj.rDots)=(2*pi).*rand(1,obj.rDots);
-				obj.angles = shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
+				obj.angles = Shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
 			end
 			
 			%make our dot colours
