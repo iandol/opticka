@@ -23,8 +23,9 @@ classdef stimulusSequence < dynamicprops
 		currentState
 		states
 		nstates = 1
-		outValues
-		outVars
+		outValues %structure of variable values
+		outVars %variable values wrapped in trial cell
+		outIndex %the unique identifier for each stimulus
 	end
 	
 	properties (Dependent = true,  SetAccess = private)
@@ -94,6 +95,7 @@ classdef stimulusSequence < dynamicprops
 			% initialize cell array that will hold balanced variables
 			obj.outVars = cell(obj.nTrials, obj.nVars);
 			obj.outValues = [];
+			obj.outIndex = [];
 
 			% the following initializes and runs the main loop in the function, which
 			% generates enough repetitions of each factor, ensuring a balanced design,
@@ -103,9 +105,10 @@ classdef stimulusSequence < dynamicprops
 				len1 = obj.minTrials;
 				len2 = 1;
 				[~, index] = sort(rand(obj.minTrials, 1));
+				obj.outIndex = [obj.outIndex index];
 				for f = 1:obj.nVars
 					len1 = len1 / nLevels(f);
-					if size(obj.nVar(f).values, 1) ~= 1
+						if size(obj.nVar(f).values, 1) ~= 1
 						% ensure that factor levels are arranged in one row
 						obj.nVar(f).values = reshape(obj.nVar(f).values, 1, numel(obj.nVar(1).values));
 					end

@@ -36,7 +36,7 @@ classdef labJack < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])';
+		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])'; %cached fixed commands
 		fio5High = hex2dec(['1f'; 'f8'; '03'; '00'; '22'; '01'; '00'; '0d'; '85'; '0b'; '85'; '00'])';
 		fio4Low  = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])';
 		fio5Low  = hex2dec(['9e'; 'f8'; '03'; '00'; 'a2'; '00'; '00'; '0d'; '85'; '0b'; '05'; '00'])';
@@ -44,6 +44,7 @@ classdef labJack < handle
 		ledIsOFF = hex2dec(['04'; 'f8'; '02'; '00'; '09'; '00'; '00'; '09'; '00'; '00']);
 		vHandle = 0
 		allowedPropertiesBase='^(name|silentMode|verbosity|openNow|header|library)$'
+		comment = ''
 	end
 	
 	%=======================================================================
@@ -71,7 +72,7 @@ classdef labJack < handle
 					end
 				end
 			end
-			if regexp(obj.name,'null') %we were deliberately passed null, means go into silent mode
+			if ~isempty(regexp(obj.name,'null', 'once')) || ispc %we were deliberately passed null, means go into silent mode
 				obj.silentMode = 1;
 			end
 			if obj.openNow==1
@@ -89,7 +90,7 @@ classdef labJack < handle
 				if ~libisloaded('liblabjackusb')
 					loadlibrary(obj.library,obj.header);
 				end
-				obj.functions = libfunctions('liblabjackusb', '-full');
+				obj.functions = libfunctions('liblabjackusb', '-full'); %store our raw lib functions
 				obj.version =  calllib('liblabjackusb','LJUSB_GetLibraryVersion');
 				obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',obj.deviceID);
 				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',1,0,obj.deviceID);
@@ -97,8 +98,8 @@ classdef labJack < handle
 				if obj.vHandle
 					obj.isOpen = 1;
 					obj.salutation('open method','LabJack succesfully opened...');
-					obj.setDIO([255,255,255],[255,255,255]);
-					obj.prepareStrobe([255,255,255],[255,255,255],1);
+					obj.setDIO([255,255,255],[255,255,255]); %set all our DIO to output
+					%obj.prepareStrobe([239,255,255],[239,255,255],1); %initialise a strobe out on all DIO
 				else
 					obj.salutation('open method','LabJack open failed, going into silent mode');
 					obj.isOpen = 0;
@@ -215,27 +216,6 @@ classdef labJack < handle
 		end
 		
 		% ===================================================================
-		%> @brief Turn LED OFF
-		%>	
-		%>	
-		% ===================================================================
-		function flashLED(obj,n)
-			if obj.silentMode == 0 && obj.vHandle == 1
-				if ~exist('n','var')
-					n=3;
-				end
-				for i=1:n
-					obj.ledOFF;
-					obj.waitLong(700);
-					obj.ledON;
-					obj.waitLong(700);
-					obj.salutation('flashLED',['Flash: ' num2str(i)]);
-				end
-			end
-		end
-		
-		
-		% ===================================================================
 		%> @brief WaitShort
 		%>	LabJack Wait in multiples of 128µs
 		%>	@param time time in ms, remember 0.128ms is the atomic minimum
@@ -297,26 +277,35 @@ classdef labJack < handle
         end
 		% ===================================================================
 		%> @brief Prepare Strobe Word
-		%>	
+		%>	sets the strobe value for FIO, EIO and CIO
 		%>	@param value The value to be strobed, range is 1-4094 for 12bit
 		%>  as 0 and 4095 are reserved
 		% ===================================================================
 		function prepareStrobe(obj,value,mask,sendNow)
 			if obj.silentMode == 0 && obj.vHandle == 1
-				if length(value) == 2 %assume fio isn't passed
+				if length(value) == 1 %assume we need to make eio and cio from single value
+					if value>2047;value=2047;end %block anything bigger than 2^11(-1)
+					obj.comment = ['Original Value = ' num2str(value) ' | '];
+					[eio,cio]=obj.prepareWords(value); %construct our word split to eio and cio
+					value(1) = 32; %fio will be 0
+					value(2) = eio;
+					value(3) = cio;
+					mask = [32,255,255]; %lock fio, allow all of eio and cio
+				elseif length(value) == 2 %assume fio isn't passed
 					value(2:3) = value;
-					value(1) = 0;
+					value(1) = 32; %fio will be 0
 					mask(2:3) = mask;
-					mask(1) = 0;
+					mask(1) = 32; %fio will be 0
 				end
+				obj.comment = [obj.comment 'FIO EIO & CIO: ' num2str(value)];
 				cmd=zeros(24,1);
 				cmd(2) = 248; %command byte for feedback command (f8 in hex)
 				cmd(3) = (24-6)/2;
 				cmd(8) = 27; %IOType for PortStateWrite (1b in hex)
 				cmd(9:11) = mask;
 				cmd(12:14) = value;
-				cmd(15) = 6; %IOType for waitlong is 6
-				cmd(16) = 32; %time to wait in unit multiples
+				cmd(15) = 5; %IOType for waitshort is 5, waitlong is 6
+				cmd(16) = 8; %time to wait in unit multiples
 				cmd(17) = 27; %IOType for PortStateWrite (1b in hex)
 				cmd(18:20) = mask;
 				cmd(21:23) = 0;
@@ -329,23 +318,46 @@ classdef labJack < handle
 		end
 		
 		% ===================================================================
-		%> @brief Prepare Strobe Word
+		%> @brief Send the Strobe command
 		%>	
-		%>	@param value The value to be strobed, range is 1-4094 for 12bit
-		%>  as 0 and 4095 are reserved
+		%>	
 		% ===================================================================
 		function strobeWord(obj)
 			if ~isempty(obj.command)
 				out = obj.rawWrite(obj.command);
 				in = obj.rawRead(obj.inp,10);
-				
+				obj.salutation('strobeWord', obj.comment);
+				obj.comment = '';
+				obj.command = [];
 % 				if in(6) > 0
 % 					obj.salutation('strobeWord',['Feedback error in IOType ' num2str(in(7))]);
 % 				end
 			end
 		end
 		
-		%===============SET FIO4================%
+		% ===================================================================
+		%> @brief Prepare Strobe Word split into EIO (8bit) and CIO (4bit)
+		%>	
+		%>	@param value The value to be split into EIO and CIO
+		%>  @param shift The number of bits to shift (should be 1 for the
+		%>  moment). 2048 is the max # of variables with 2^11bits 
+		%>  @return eio is an 8bit word value represented the LSB
+		%>  @return cio is a 4bit value where the 1st bit is 1 for strobe line 22
+		%>  and the rest is the 3bit remainder to combine with eio to make an
+		%>  11bit strobed word.
+		% ===================================================================
+		function [eio,cio] = prepareWords(obj,value)
+			eio = bitand(value,255); %get eio easily ANDing with 255
+			msb = bitshift(value,-8); %our msb is bitshifted 8 bits
+			msb = bitshift(msb,1); %shift it across as cio0 is reserved;
+			cio = bitor(msb,1); %OR with 1 as cio0 is the strobe trigger and needs to be 1
+		end
+		
+		% ===================================================================
+		%> @brief Set FIO4 to a value
+		%>	
+		%>	@param val The value to be set
+		% ===================================================================
 		function setFIO4(obj,val)
 			if obj.silentMode == 0 && obj.vHandle == 1
 				if ~exist('val','var')
@@ -365,7 +377,11 @@ classdef labJack < handle
 			end
 		end
 		
-		%===============Toggle FIO4======================%
+		% ===================================================================
+		%> @brief Toggle FIO4 value
+		%>	
+		%>
+		% ===================================================================
 		function toggleFIO4(obj)
 			if obj.silentMode == 0 && obj.vHandle == 1
 				obj.fio4=abs(obj.fio4-1);
@@ -373,7 +389,11 @@ classdef labJack < handle
 			end
 		end
 		
-		%===============SET FIO5================%
+		% ===================================================================
+		%> @brief Set FIO5 to a value
+		%>	
+		%>	@param val The value to be set
+		% ===================================================================
 		function setFIO5(obj,val)
 			if obj.silentMode == 0 && obj.vHandle == 1
 				if ~exist('val','var')
@@ -393,7 +413,11 @@ classdef labJack < handle
 			end
 		end
 		
-		%===============Toggle FIO5======================%
+		% ===================================================================
+		%> @brief Toggle FIO5 value
+		%>	
+		%>
+		% ===================================================================
 		function toggleFIO5(obj)
 			if obj.silentMode == 0 && obj.vHandle == 1
 				obj.fio5=abs(obj.fio5-1);
@@ -401,7 +425,12 @@ classdef labJack < handle
 			end
 		end
 		
-		%===============RESET======================%
+		% ===================================================================
+		%> @brief Reset the LabJack
+		%>	
+		%> @param resetType whether to use a soft (1) or hard (2) reset
+		%> type
+		% ===================================================================
 		function reset(obj,resetType)
 			if ~exist('resetType','var')
 				resetType = 0;
@@ -465,7 +494,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief checksum16
-		%>	Calculate checksum for data packet
+		%>	Calculate checksum (lsb and msb) for extended data packet
 		%>
 		% ===================================================================
 		function [lsb,msb] = checksum16(in)

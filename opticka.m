@@ -22,7 +22,7 @@ classdef opticka < dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		version='0.46'
+		version='0.47'
 		load
 	end
 	

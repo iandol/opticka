@@ -37,6 +37,7 @@ classdef runExperiment < dynamicprops
 		photoDiode = 1 %show a white square to trigger a photodiode attached to screen
 		serialPortName = 'dummy' %name of serial port to send TTL out on, if set to 'dummy' then ignore
 		useLabJack = 0
+		lJack %LabJack object
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -58,7 +59,6 @@ classdef runExperiment < dynamicprops
 		white=1 %white index
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
 		serialP %serial port object opened
-		lJack %LabJack object
 		xCenter %computed X center
 		yCenter %computed Y center
 		win %the handle returned by opening a PTB window
@@ -67,7 +67,15 @@ classdef runExperiment < dynamicprops
 	end
 	
 	methods
-		%-------------------CONSTRUCTOR----------------------%
+		% ===================================================================
+		%> @brief Class constructor
+		%>
+		%> More detailed description of what the constructor does.
+		%>
+		%> @param args are passed as a structure of properties which is
+		%> parsed.
+		%> @return instance of the class.
+		% ===================================================================
 		function obj = runExperiment(args)
 			obj.timeLog.construct=GetSecs;
 			if nargin>0 && isstruct(args) %user passed some settings, we will parse through them and set them up
@@ -103,8 +111,8 @@ classdef runExperiment < dynamicprops
 			end
 			
 			%-------Set up serial line and LabJack for this run...
-			obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
-			obj.serialP.setDTR(0);
+			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
+			%obj.serialP.setDTR(0);
 			
 			if obj.useLabJack == 1
 				strct = struct('openNow',1,'name','default','verbosity',obj.verbose);
@@ -112,7 +120,7 @@ classdef runExperiment < dynamicprops
 				strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
 			end
 			obj.lJack = labJack(strct);
-			obj.lJack.prepareStrobe([255,255,255],[255,255,255],1);
+			obj.lJack.prepareStrobe(0,[],1);
 			%-----------------------------------------------------
 			
 			try
@@ -142,7 +150,7 @@ classdef runExperiment < dynamicprops
 				obj.timeLog.postOpenWindow=GetSecs;
 				obj.timeLog.deltaOpenWindow=(obj.timeLog.postOpenWindow-obj.timeLog.preOpenWindow)*1000;
 				
-				Priority(9); %(MaxPriority(obj.win)); %bump our priority to maximum allowed
+				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				%find our fps if not defined before  
 				obj.screenVals.ifi=Screen('GetFlipInterval', obj.win);
 				if obj.screenVals.fps==0
@@ -199,7 +207,8 @@ classdef runExperiment < dynamicprops
 				% Our main display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				Priority(9);
+				obj.lJack.setFIO4(1) %this is RSTART, unpausing the omniplex
+				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				
 				obj.task.tick=1;
 				obj.timeLog.beforeDisplay=GetSecs;
@@ -246,35 +255,21 @@ classdef runExperiment < dynamicprops
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
 					[~, ~, buttons]=GetMouse(obj.screen);
-					if any(buttons) % break out of loop
-						break;
-					end;
+					if any(buttons);break;end; %break on any mouse click, needs to change
 					
-					obj.updateTask;
+					obj.updateTask; %update our task structure
 					
 					%======= Show it at next retrace: ========%
 					[obj.timeLog.vbl(obj.task.tick+1),obj.timeLog.show(obj.task.tick+1),obj.timeLog.flip(obj.task.tick+1),obj.timeLog.miss(obj.task.tick+1)] = Screen('Flip', obj.win, (obj.timeLog.vbl(obj.task.tick)+obj.screenVals.halfisi));
 					%=========================================%
 					
 					if obj.task.switched == 1
-						switch obj.task.isBlank
-							case 1
-								obj.serialP.setDTR(0);
-								obj.lJack.prepareStrobe([255,255,255],[255,255,255],1);
-								%obj.lJack.setFIO4(0);
-							case 0
-								obj.lJack.prepareStrobe([224,255,255],[255,255,255],1);
-								obj.serialP.setDTR(1);
-								%obj.lJack.setFIO4(1);
-						end
+						obj.lJack.strobeWord; %send our word out to the LabJack
 					end
 					
 					if obj.task.tick==1
 						obj.timeLog.startflip=obj.timeLog.vbl(obj.task.tick) + obj.screenVals.halfisi;
 						obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
-						obj.lJack.prepareStrobe([240,255,255],[255,255,255],1);
-						obj.serialP.setDTR(1);
-						%obj.lJack.setFIO4(1);
 					end
 					
 					if obj.task.isBlank==0
@@ -287,12 +282,13 @@ classdef runExperiment < dynamicprops
 					
 				end
 				
-				%---------------------------------------------Finished
+				%---------------------------------------------Finished display loop
 				
 				Screen('Flip', obj.win);
 				obj.timeLog.afterDisplay=GetSecs;
-				obj.serialP.setDTR(0);
-				obj.lJack.prepareStrobe([255,255,255],[255,255,255],1);
+				obj.lJack.prepareStrobe(0,[],1);
+				obj.lJack.setFIO4(0); %this is RSTOP, pausing the omniplex
+				obj.lJack.setFIO5(0);
 				
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
 				obj.timeLog.deltaUntilDisplay=obj.timeLog.beforeDisplay-obj.timeLog.start;
@@ -313,6 +309,8 @@ classdef runExperiment < dynamicprops
 				
 			catch ME
 				
+				obj.lJack.setFIO4(0) %this is RSTOP, unpausing the omniplex
+				obj.lJack.setFIO5(0);
 				if obj.hideFlash == 1 || obj.windowed == 1
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 				end
@@ -438,6 +436,11 @@ classdef runExperiment < dynamicprops
 				obj.task.addprop('thisTrial'); %add new dynamic property
 			end
 			obj.task.thisTrial=1;
+			
+			if isempty(obj.task.findprop('totalRuns'))
+				obj.task.addprop('totalRuns'); %add new dynamic property
+			end
+			obj.task.totalRuns=1;
 			
 			if isempty(obj.task.findprop('isBlank'))
 				obj.task.addprop('isBlank'); %add new dynamic property
@@ -574,6 +577,7 @@ classdef runExperiment < dynamicprops
 				obj.task.switchTime=obj.task.trialTime; %first ever time is for the first trial
 			end
 			
+			%-------------------------------------------------------------------
 			if  obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime) %we haven't hit a time trigger yet
 				obj.task.switched = 0;
 				if obj.task.isBlank == 0 %not in an interstimulus time, need to update drift, motion and pulsation
@@ -602,7 +606,7 @@ classdef runExperiment < dynamicprops
 				else %blank stimulus, we don't need to update anything
 					
 				end
-				
+			%-------------------------------------------------------------------	
 			else %need to switch to next trial or blank
 				obj.task.switched = 1;
 				if obj.task.isBlank == 0 %we come from showing a stimulus
@@ -623,6 +627,8 @@ classdef runExperiment < dynamicprops
 						obj.sVals(ix).mvRect=obj.sVals(ix).dstRect;
 					end
 					
+					obj.task.totalRuns = obj.task.totalRuns + 1;
+					
 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
 						mT=obj.task.thisTrial+1;
 						mR = 1;
@@ -633,11 +639,12 @@ classdef runExperiment < dynamicprops
 					
 					obj.resetVars;
 					obj.updateVars(mT,mR);
+					obj.lJack.prepareStrobe(0); %get the strobe word ready
 					%obj.logMe('OutaBlank');
 					
 				else %we have to show the new run on the next flip
 					
-					%obj.logMe('IntoTrial');
+					obj.logMe('IntoTrial');
 					obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
 					obj.task.isBlank = 0;
 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
@@ -646,6 +653,7 @@ classdef runExperiment < dynamicprops
 					else
 						obj.task.thisRun = obj.task.thisRun + 1;
 					end
+					obj.lJack.prepareStrobe(obj.task.outIndex(obj.task.totalRuns)); %get the strobe word ready
 					%obj.logMe('OutaTrial');
 					
 				end
@@ -684,8 +692,7 @@ classdef runExperiment < dynamicprops
 			obj.serialP.close;
 			
 			obj.lJack = labJack(struct('name','labJack','openNow',1,'verbosity',1));
-			obj.lJack.setFIO4(1);
-			obj.lJack.setFIO4(0);
+			obj.lJack.prepareStrobe([0,255,255],[0,255,255],1);
 			obj.lJack.close;
 			obj.lJack=[];
 			
@@ -699,7 +706,7 @@ classdef runExperiment < dynamicprops
 			obj.ptb=Screen('version');
 			
 			obj.timeLog.prepTime=GetSecs-obj.timeLog.construct;
-			for i=1:8
+			for i=1:20
 				a(i)=GetSecs;
 			end
 			obj.timeLog.deltaGetSecs=mean(diff(a))*1000; %what overhead does GetSecs have in milliseconds?
@@ -709,7 +716,7 @@ classdef runExperiment < dynamicprops
 			
 			obj.makeGrid;
 			
-			obj.photoDiodeRect(:,1)=[0 0 50 50]';
+			obj.photoDiodeRect(:,1)=[20 20 70 70]';
 			
 			obj.updatesList;
 			
@@ -1073,7 +1080,7 @@ classdef runExperiment < dynamicprops
 				if ~exist('tag','var')
 					tag='#';
 				end
-				fprintf('%s -- T: %i | R: %i | B: %i | Tick: %i | Time: %5.5g\n',tag,obj.task.thisTrial,obj.task.thisRun,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
+				fprintf('%s -- T: %i | R: %i [%i] | B: %i | Tick: %i | Time: %5.5g\n',tag,obj.task.thisTrial,obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
 			end
 		end
 		

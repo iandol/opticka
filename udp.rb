@@ -1,12 +1,15 @@
+require 'rubygems'
 require 'eventmachine'
 
 module UDPServer
   def post_init
-    puts "we've connected!"
+    puts "We've connected!"
   end
   
-  def receive_data(data)
-    p data
+  def receive_data data
+    puts ">>> they sent: #{data}"
+    send_data ">>> you sent: #{data}"
+    close_connection if data =~ /quit/i
   end
 end
 
