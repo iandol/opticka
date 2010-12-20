@@ -10,6 +10,7 @@ module EchoServer
     puts ">>> they sent: #{data}"
     send_data ">>> you sent: #{data}"
     close_connection if data =~ /quit/i
+    EventMachine::stop_event_loop if data =~ /exit/i
   end
   
   def unbind
