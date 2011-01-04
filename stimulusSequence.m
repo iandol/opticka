@@ -14,6 +14,7 @@ classdef stimulusSequence < dynamicprops
 		verbose = 0
 		randomSeed
 		randomGenerator='mt19937ar' %mersenne twister default
+		fps = 60 %used for dynamically estimating total number of frames
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -30,6 +31,7 @@ classdef stimulusSequence < dynamicprops
 	
 	properties (Dependent = true,  SetAccess = private)
 		nRuns
+		nFrames
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -37,7 +39,15 @@ classdef stimulusSequence < dynamicprops
 	end
 	
 	methods
-		%-------------------CONSTRUCTOR----------------------%
+		% ===================================================================
+		%> @brief Class constructor
+		%>
+		%> More detailed description of what the constructor does.
+		%>
+		%> @param args are passed as a structure of properties which is
+		%> parsed.
+		%> @return instance of the class.
+		% ===================================================================
 		function obj = stimulusSequence(args) 
 			if nargin>0 && isstruct(args)
 				%if isfield(args,'family');obj.family=args.family;end
@@ -54,7 +64,11 @@ classdef stimulusSequence < dynamicprops
 			obj.initialiseRandom();
 		end
 		
-		%-------------------set up the random number generator------------
+		% ===================================================================
+		%> @brief set up the random number generator
+		%>
+		%> set up the random number generator
+		% ===================================================================
 		function initialiseRandom(obj)
 			
 			if isempty(obj.randomSeed)
@@ -68,12 +82,20 @@ classdef stimulusSequence < dynamicprops
 			
 		end
 		
-		%------------------reset the random number generator-------------
+		% ===================================================================
+		%> @brief Reset the random number generator
+		%>
+		%> reset the random number generator
+		% ===================================================================
 		function resetRandom(obj)
 			RandStream.setDefaultStream(obj.oldStream);
 		end
 		
-		%-------------------Do the randomisation-------------------------
+		% ===================================================================
+		%> @brief Do the randomisation
+		%>
+		%> Do the randomisation
+		% ===================================================================
 		function randomiseStimuli(obj)
 			
 			obj.nVars=length(obj.nVar);
@@ -105,10 +127,10 @@ classdef stimulusSequence < dynamicprops
 				len1 = obj.minTrials;
 				len2 = 1;
 				[~, index] = sort(rand(obj.minTrials, 1));
-				obj.outIndex = [obj.outIndex index];
+				obj.outIndex = [obj.outIndex; index];
 				for f = 1:obj.nVars
 					len1 = len1 / nLevels(f);
-						if size(obj.nVar(f).values, 1) ~= 1
+					if size(obj.nVar(f).values, 1) ~= 1
 						% ensure that factor levels are arranged in one row
 						obj.nVar(f).values = reshape(obj.nVar(f).values, 1, numel(obj.nVar(1).values));
 					end
@@ -127,12 +149,32 @@ classdef stimulusSequence < dynamicprops
 			end
 		end
 		
-		%this depends on other values
+		% ===================================================================
+		%> @brief Dynamic property nruns get method
+		%>
+		%> Dynamic property nruns get method
+		% ===================================================================
 		function nRuns = get.nRuns(obj)
-			nRuns = obj.nVars*obj.nTrials;
+			nRuns = obj.minTrials*obj.nTrials;
 		end
 		
-		%-------------------blah blah blah-----------------------------------
+		% ===================================================================
+		%> @brief Dynamic property nruns get method
+		%>
+		%> Dynamic property nruns get method
+		% ===================================================================
+		function nFrames = get.nFrames(obj)
+			nSecs = (obj.nRuns * obj.trialTime) + (obj.minTrials-1 * obj.isTime) + (obj.nTrials-1 * obj.itTime);
+			nFrames = nSecs * ceil(obj.fps); %be a bit generous in defining how many frames the task will take
+		end
+		
+		% ===================================================================
+		%> @brief Prints messages dependent on verbosity
+		%>
+		%> Prints messages dependent on verbosity
+		%> @param in the calling function
+		%> @param message the message that needs printing to command window
+		% ===================================================================
 		function salutation(obj,in,message)
 			if obj.verbose==1
 				if ~exist('in','var')
@@ -141,7 +183,7 @@ classdef stimulusSequence < dynamicprops
 				if exist('message','var')
 					fprintf([message ' | ' in '\n']);
 				else
-					fprintf(['\nHello from randomise, ' in '\n\n']);
+					fprintf(['\nstimulusSequence, ' in '\n\n']);
 				end
 			end
 		end

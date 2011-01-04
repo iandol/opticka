@@ -1,5 +1,5 @@
 classdef spotStimulus < baseStimulus
-%BARSTIMULUS single bar stimulus, inherits from baseStimulus
+%SPOTSTIMULUS single bar stimulus, inherits from baseStimulus
 %   The current properties are:
 
    properties %--------------------PUBLIC PROPERTIES----------%
@@ -12,16 +12,25 @@ classdef spotStimulus < baseStimulus
 	
 	properties (SetAccess = private, GetAccess = public)
 		flashSegment = 1
+		delta
 		dX
 		dY
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(type|flashTime|speed)$';
+		allowedProperties='^(type|flashTime|speed|angle)$';
 	end
 	
    methods %----------PUBLIC METHODS---------%
-		%-------------------CONSTRUCTOR----------------------%
+		% ===================================================================
+		%> @brief Class constructor
+		%>
+		%> More detailed description of what the constructor does.
+		%>
+		%> @param args are passed as a structure of properties which is
+		%> parsed.
+		%> @return instance of the class.
+		% ===================================================================
 		function obj = spotStimulus(args) 
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
@@ -40,6 +49,10 @@ classdef spotStimulus < baseStimulus
 			obj.salutation('constructor','Spot Stimulus initialisation complete');
 		end
 		
+		% ===================================================================
+		%> @brief update the position
+		%>
+		% ===================================================================
 		function updatePosition(obj,angle,delta)
 			obj.dX= delta * cos(ang2rad(angle));
 			obj.dY= delta * sin(ang2rad(angle));

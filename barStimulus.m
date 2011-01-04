@@ -25,7 +25,15 @@ classdef barStimulus < baseStimulus
 	end
 	
    methods %----------PUBLIC METHODS---------%
-		%-------------------CONSTRUCTOR----------------------%
+		% ===================================================================
+		%> @brief Class constructor
+		%>
+		%> More detailed description of what the constructor does.
+		%>
+		%> @param args are passed as a structure of properties which is
+		%> parsed.
+		%> @return instance of the class.
+		% ===================================================================
 		function obj = barStimulus(args) 
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
@@ -48,6 +56,9 @@ classdef barStimulus < baseStimulus
 		function constructMatrix(obj,ppd)
 			%use the passed pixels per degree to make a RGBA matrix of the
 			%correct dimensions
+			if length(obj.colour) == 3
+				obj.colour(4) = obj.alpha;
+			end
 			bw = round(obj.barWidth*ppd);
 			bl = round(obj.barLength*ppd);
 			obj.matrix(:,:,1)=ones(bl,bw)*obj.colour(1);
@@ -63,6 +74,14 @@ classdef barStimulus < baseStimulus
 					obj.matrix(:,:,4)=ones(bl,bw)*obj.alpha;
 				case 'randomN'
 					obj.rmatrix=randn(bl,bw);
+					for i=1:3
+						obj.matrix(:,:,i)=obj.matrix(:,:,i).*obj.rmatrix;
+					end
+					obj.matrix(:,:,4)=ones(bl,bw)*obj.alpha;
+				case 'randomBW'
+					obj.rmatrix=rand(bl,bw);
+					obj.rmatrix(obj.rmatrix < 0.5) = 0;
+					obj.rmatrix(obj.rmatrix >= 0.5) = 1;
 					for i=1:3
 						obj.matrix(:,:,i)=obj.matrix(:,:,i).*obj.rmatrix;
 					end

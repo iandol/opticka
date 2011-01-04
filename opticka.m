@@ -171,7 +171,7 @@ classdef opticka < dynamicprops
 			obj.r.dstMode = obj.gs(obj.h.OKGLDst, value);
 			
 			obj.r.blend = obj.gv(obj.h.OKOpenGLBlending);
-			if ~regexp(get(obj.h.OKWindowSize,'String'),'\[\]')
+			if isempty(regexp(get(obj.h.OKWindowSize,'String'),'\[\]', 'once'))
 				obj.r.windowed = 1;
 			else
 				obj.r.windowed = 0;
@@ -400,8 +400,9 @@ classdef opticka < dynamicprops
 			tmp.speed = obj.gd(obj.h.OKPanelSpotspeed);
 			tmp.colour = obj.gn(obj.h.OKPanelSpotcolour);
 			tmp.alpha = obj.gd(obj.h.OKPanelSpotalpha);
+			tmp.startPosition = obj.gd(obj.h.OKPanelSpotstartPosition);
 			
-			obj.r.stimulus.d(obj.r.sList.sN + 1) = spotStimulus(tmp);
+			obj.r.stimulus.s(obj.r.sList.sN + 1) = spotStimulus(tmp);
 			
 			obj.r.updatesList;
 			

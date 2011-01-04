@@ -1,4 +1,4 @@
-function hFig = uiinspect(obj, fig, onlyProps)
+function hFig = uiinspect(obj, fig)
 % uiinspect Inspect an object handle (Java/COM/HG) and display its methods/props/callbacks in a unified window
 %
 % Syntax:
@@ -60,6 +60,8 @@ function hFig = uiinspect(obj, fig, onlyProps)
 %    Please send to Yair Altman (altmany at gmail dot com)
 %
 % Change log:
+%    2010-11-01: Major fix for pre-R2010 compatibility
+%    2010-10-20: Minor fix suggested by Andrew Stamps; added automatic callbacks grouping
 %    2010-06-13: Fixed download (m-file => zip-file)
 %    2010-06-11: Displayed class modifiers; improved performance; removed empty panels by default; fixed warning msgs when sorting props table; fixes for R2010b
 %    2010-03-18: Minor fix in copy-handle-value-to-clipboard (in tree context-menu)
@@ -85,11 +87,11 @@ function hFig = uiinspect(obj, fig, onlyProps)
 % referenced and attributed as such. The original author maintains the right to be solely associated with this work.
 
 % Programmed by Yair M. Altman: altmany(at)gmail.com
-% $Revision: 1.15 $  $Date: 2010/06/13 01:27:02 $
+% $Revision: 1.17 $  $Date: 2010/11/01 21:16:24 $
 
   try
       % Arg check
-      error(nargchk(1,3,nargin));
+      error(nargchk(1,2,nargin));
       try
           mc = getMetaClass(obj);
       catch
@@ -102,15 +104,11 @@ function hFig = uiinspect(obj, fig, onlyProps)
       elseif isnumeric(obj) && ishandle(obj)
           obj = handle(obj);
       end
-      if nargin < 2 || isempty(fig)
+      if nargin < 2
           fig = [];
       elseif ~ishandle(fig) || ~ishghandle(fig) || ~isa(handle(fig),'figure')
           myError('YMA:uiinspect:notAFigure','Second input to uiinspect must be a valid figure handle');
-		end
-		
-		if ~exist('onlyProps','var')
-			onlyProps = 1;
-		end
+      end
 
       % Get object data
       objMethods   = getObjMethods(obj);
@@ -119,7 +117,7 @@ function hFig = uiinspect(obj, fig, onlyProps)
       objChildren  = getObjChildren(obj);
       
       % Display object data
-      fig = displayObj(obj, objMethods, objProps, objCallbacks, objChildren, inputname(1), fig, onlyProps);
+      fig = displayObj(obj, objMethods, objProps, objCallbacks, objChildren, inputname(1), fig);
       if nargout,  hFig = fig;  end
 % {
   % Error handling
@@ -310,11 +308,8 @@ function objChildren = getObjChildren(obj)
 %end  % getObjChildren
 
 %% Display object data
-function hFig = displayObj(obj, objMethods, objProps, objCallbacks, objChildren, objName, hFig, onlyProps)
+function hFig = displayObj(obj, objMethods, objProps, objCallbacks, objChildren, objName, hFig)
 
-		if ~exist('onlyProps','var')
-			onlyProps = 0;
-		end
       % Prepare the data panes
       [methodsPane, hgFlag] = getMethodsPane(objMethods, obj);
       [callbacksPanel, cbTable] = getCbsPane(objCallbacks, false);
@@ -341,8 +336,8 @@ function hFig = displayObj(obj, objMethods, objProps, objCallbacks, objChildren,
       hsplitPane.setResizeWeight(0.6);
 
       % blog link at bottom
-      blogLabel = JLabel('<html><center>...</center></html>');
-      set(handle(blogLabel,'CallbackProperties'), 'MouseClickedCallback', 'web(''http://144.82.131.18/'')');
+      blogLabel = JLabel('<html><center>More undocumented stuff at: <b><a href="">UndocumentedMatlab.com</a></center></html>');
+      set(handle(blogLabel,'CallbackProperties'), 'MouseClickedCallback', 'web(''http://UndocumentedMatlab.com'')');
       blogLabel.setCursor(java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
       lowerPanel = JPanel(FlowLayout);
       lowerPanel.add(blogLabel);
@@ -395,10 +390,7 @@ function hFig = displayObj(obj, objMethods, objProps, objCallbacks, objChildren,
           hDivPos = 1.0;
       elseif length(objMethods.widths) < 3
           hDivPos = 0.4;
-		end
-		if onlyProps > 0
-			hDivPos=0;
-		end
+      end
       hsplitPane.setDividerLocation(hDivPos);
 
 	  % Update the right vertical divider position based on #properties
@@ -413,7 +405,7 @@ function hFig = displayObj(obj, objMethods, objProps, objCallbacks, objChildren,
 	  end
 
 	  % Update the left vertical divider position based on #methods,#callbacks
-      vDivPos = max(0.8, 1-cbTable.getRowCount/10);
+      vDivPos = max(0.7, 1-cbTable.getRowCount/10);
       try
           % For non-HG handles
           if ~hgFlag
@@ -436,7 +428,7 @@ function hFig = displayObj(obj, objMethods, objProps, objCallbacks, objChildren,
       figure(hFig);  % focus in front
 
       % Check for a newer version
-      %checkVersion();
+      checkVersion();
 
       return;  % debugable point
 %end  % displayObj
@@ -780,7 +772,7 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
 														 charizeBoolData(mp.Transient,' Transient')];
 							  propsData{idx,7} = strtrim(propsData{idx,7});
 						  end
-						  if strcmpi(mp.SetAccess,'public')
+						  if strcmpi(mp.GetAccess,'public')
 							  try
 								  value = obj.(propName);
 								  propsData{idx,3} = charizeData(value);
@@ -875,6 +867,40 @@ function data = charizeData(data)
       end
 %end  % charizeData
 
+%% Prepare a hierarchical callbacks table data
+function setProp(list,name,value,category)
+        prop = eval('com.jidesoft.grid.DefaultProperty();');  % prevent JIDE alert by run-time (not load-time) evaluation
+        prop.setName(name);
+        prop.setType(java.lang.String('').getClass);
+        prop.setValue(value);
+        prop.setEditable(true);
+        prop.setExpert(true);
+        %prop.setCategory(['<html><b><u><font color="blue">' category ' callbacks']);
+        prop.setCategory([category ' callbacks']);
+        list.add(prop);
+%end  % getTreeData
+
+%% Prepare a hierarchical callbacks table data
+function list = getTreeData(data)
+        list = java.util.ArrayList();
+        names = regexprep(data,'([A-Z][a-z]+).*','$1');
+        %hash = java.util.Hashtable;
+        others = {};
+        for propIdx = 1 : length(data)
+            if (propIdx < length(data) && strcmp(names{propIdx},names{propIdx+1})) || ...
+               (propIdx > 1            && strcmp(names{propIdx},names{propIdx-1}))
+                % Child callback property
+                setProp(list,data{propIdx,1},data{propIdx,2},names{propIdx});
+            else
+                % Singular callback property => Add to 'Other' category at bottom of the list
+                others(end+1,:) = data(propIdx,:);  %#ok
+            end
+        end
+        for propIdx = 1 : length(others)
+            setProp(list,others{propIdx,1},others{propIdx,2},'Other');
+        end
+%end  % getTreeData
+
 %% Prepare the callbacks pane
 function [callbacksPanel, callbacksTable] = getCbsPane(obj, stripStdCbsFlag)
       % Prepare the callbacks pane
@@ -887,7 +913,21 @@ function [callbacksPanel, callbacksTable] = getCbsPane(obj, stripStdCbsFlag)
           com.mathworks.mwswing.MJUtilities.initJIDE;
           %callbacksTableModel = javax.swing.table.DefaultTableModel(cbData,cbHeaders);  %#ok
           %callbacksTable = eval('com.jidesoft.grid.PropertyTable(callbacksTableModel);');  % prevent JIDE alert by run-time (not load-time) evaluation
-          callbacksTable = eval('com.jidesoft.grid.TreeTable(cbData,cbHeaders);');  % prevent JIDE alert by run-time (not load-time) evaluation
+          try
+              list = getTreeData(cbData);  %#ok
+              model = eval('com.jidesoft.grid.PropertyTableModel(list);');  %#ok prevent JIDE alert by run-time (not load-time) evaluation
+              %callbacksTable = eval('com.jidesoft.grid.TreeTable(model);');  %#ok prevent JIDE alert by run-time (not load-time) evaluation
+              callbacksTable = eval('com.jidesoft.grid.PropertyTable(model);');  %#ok prevent JIDE alert by run-time (not load-time) evaluation
+
+              %callbacksTable.expandFirstLevel;
+              callbacksTable.setShowsRootHandles(true);
+              callbacksTable.setShowTreeLines(false);
+              %callbacksTable.setShowNonEditable(0);  %=SHOW_NONEDITABLE_NEITHER
+              callbacksPane = eval('com.jidesoft.grid.PropertyPane(callbacksTable);');  % prevent JIDE alert by run-time (not load-time) evaluation
+              callbacksPane.setShowDescription(false);
+          catch
+              callbacksTable = eval('com.jidesoft.grid.TreeTable(cbData,cbHeaders);');  % prevent JIDE alert by run-time (not load-time) evaluation
+          end
           callbacksTable.setRowAutoResizes(true);
           callbacksTable.setColumnAutoResizable(true);
           callbacksTable.setColumnResizable(true);
@@ -903,13 +943,15 @@ function [callbacksPanel, callbacksTable] = getCbsPane(obj, stripStdCbsFlag)
           callbacksTopPanel.setLayout(BoxLayout(callbacksTopPanel, BoxLayout.LINE_AXIS));
           callbacksTopPanel.add(callbacksLabel);
           hgHandleFlag = 0;  try  hgHandleFlag = ishghandle(obj);  catch,  end  %#ok
+          %{
           if ~hgHandleFlag && ~iscom(obj)
-              callbacksTopPanel.add(Box.createHorizontalGlue);
               jcb = JCheckBox('Hide standard callbacks', stripStdCbsFlag);
               set(handle(jcb,'CallbackProperties'), 'ActionPerformedCallback',@cbHideStdCbs_Callback);
               set(jcb, 'userdata',callbacksTable, 'tooltip','Hide standard Swing callbacks - only component-specific callbacks will be displayed');
+              callbacksTopPanel.add(Box.createHorizontalGlue);
               callbacksTopPanel.add(jcb);
           end
+          %}
           callbacksPanel.add(callbacksTopPanel, BorderLayout.NORTH);
       catch
           % Otherwise, use a standard Swing JTable (keep the headers to enable resizing)
@@ -917,9 +959,9 @@ function [callbacksPanel, callbacksTable] = getCbsPane(obj, stripStdCbsFlag)
       end
       set(callbacksTable, 'userdata',obj);
       if iscom(obj)
-          cbToolTipText = '<html>&nbsp;Callbacks may be ''string'' or @funcHandle';
+          cbToolTipText = 'Callbacks may be ''string'' or @funcHandle';
       else
-          cbToolTipText = '<html>&nbsp;Callbacks may be ''string'', @funcHandle or {@funcHandle,arg1,...}';
+          cbToolTipText = 'Callbacks may be ''string'', @funcHandle or {@funcHandle,arg1,...}';
       end
       %cbToolTipText = [cbToolTipText '<br>&nbsp;{Cell} callbacks are displayed as: [Ljava.lang...'];
       callbacksTable.setToolTipText(cbToolTipText);
@@ -934,9 +976,18 @@ function [callbacksPanel, callbacksTable] = getCbsPane(obj, stripStdCbsFlag)
       end
       hModel = handle(callbacksTable.getModel, 'CallbackProperties');
       set(hModel, 'TableChangedCallback',@tbCallbacksChanged);
-      set(callbacksTable.getModel,'UserData',obj);
-      cbScrollPane = JScrollPane(callbacksTable);
-      cbScrollPane.setVerticalScrollBarPolicy(cbScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+      try
+          set(callbacksTable.getModel,'UserData',obj);
+      catch
+          setappdata(hModel,'UserData',obj);
+      end
+      try
+          cbScrollPane = callbacksPane; %JScrollPane(callbacksPane);
+          %cbScrollPane.setHorizontalScrollBarPolicy(cbScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+      catch
+          cbScrollPane = JScrollPane(callbacksTable);
+          cbScrollPane.setVerticalScrollBarPolicy(cbScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+      end
       callbacksPanel.add(cbScrollPane, BorderLayout.CENTER);
       callbacksPanel.setToolTipText(cbToolTipText);
 %end  % getCbsPane
@@ -1146,7 +1197,11 @@ function handleTree = getHandleTree(obj)
       userdata.initialHandle = obj;
       userdata.inInit = true;
       userdata.jTree = jTreeObj;
-      set(tree_h.java, 'userdata',userdata);
+      try
+          set(tree_h.java, 'userdata',userdata);
+      catch
+          setappdata(tree_h, 'userdata',userdata);
+      end
 
       % Set the callback functions
       set(tree_h, 'NodeExpandedCallback', {@nodeExpanded, tree_h});
@@ -1166,7 +1221,11 @@ function handleTree = getHandleTree(obj)
 
       % Update userdata
       userdata.inInit = false;
-      set(tree_h.java, 'userdata',userdata);
+      try
+          set(tree_h.java, 'userdata',userdata);
+      catch
+          setappdata(tree_h, 'userdata',userdata);
+      end
 %end  % getHandleTree
 
 %% Set up the uitree context (right-click) menu
@@ -1367,7 +1426,11 @@ function treeMousePressedCallback(hTree, eventData)
         try
             % Modify the context menu based on the clicked node
             node = treePath.getLastPathComponent;
-            userdata = get(node,'userdata');
+            try
+                userdata = get(node,'userdata');
+            catch
+                userdata = getappdata(node,'userdata');
+            end
             obj = userdata.obj;
             jmenu = setTreeContextMenu(obj,node);
 
@@ -1433,7 +1496,11 @@ function treeMouseMovedCallback(hTree, eventData)
           try
               % Set the tooltip string based on the hovered node
               node = treePath.getLastPathComponent;
-              userdata = get(node,'userdata');
+              try
+                  userdata = get(node,'userdata');
+              catch
+                  userdata = getappdata(node,'userdata');
+              end
               obj = userdata.obj;
               tooltipStr = getNodeTitleStr(obj,node);
               set(hTree,'ToolTipText',tooltipStr)
@@ -1584,8 +1651,16 @@ function expandNode(tree, tree_h, parentNode, parentRow)
                 % Select the current node
                 try
                     selectedNodeFlag = 0;
-                    nodedata = get(childNode, 'userdata');
-                    userdata = get(tree_h, 'userdata');
+                    try
+                        nodedata = get(childNode, 'userdata');
+                    catch
+                        nodedata = getappdata(childNode, 'userdata');
+                    end
+                    try
+                        userdata = get(tree_h, 'userdata');
+                    catch
+                        userdata = getappdata(tree_h, 'userdata');
+                    end
                     if userdata.initialHandle == nodedata.obj
                         pause(0.001);  % as short as possible...
                         drawnow;
@@ -1713,7 +1788,12 @@ function nodeSelected(src, evd, hFig)
         %nodeHandle = evd.getCurrentNode.getUserObject;
         nodedata = get(evd.getCurrentNode,'userdata');
         nodeHandle = nodedata.obj;
-        userdata = get(src,'userdata');
+        try
+            userdata = get(src,'userdata');
+        catch
+            userdata = getappdata(src,'userdata');
+        end
+
         if ~isempty(nodeHandle) && ~isempty(userdata) && ~userdata.inInit
 
             % Ensure the object handle is valid
@@ -1791,6 +1871,7 @@ function methodsTable = getMethodsTable(methodsObj, methodsPanel)
       % Create a checkbox for extra methods info
       import javax.swing.*
       cbExtra = JCheckBox('Extra', 0);
+      hcbExtra = handle(cbExtra,'CallbackProperties');
       methodsPanel.add(cbExtra);
 
       % Hide the extra data by default
@@ -1856,8 +1937,13 @@ function methodsTable = getMethodsTable(methodsObj, methodsPanel)
 
       % Set meta-data for the Extra checkbox callback
       methodsObj.tableObj = b;
-      set(handle(cbExtra,'CallbackProperties'), 'ActionPerformedCallback',@updateMethodsTable);
-      set(cbExtra, 'userdata',methodsObj, 'tooltip','Also show qualifiers, interrupts & inheritance');
+      set(hcbExtra, 'ActionPerformedCallback',@updateMethodsTable);
+      set(cbExtra,  'tooltip','Also show qualifiers, interrupts & inheritance');
+      try
+          set(cbExtra, 'userdata',methodsObj);
+      catch
+          setappdata(hcbExtra,'userdata',methodsObj);
+      end
       
       % Return the scrollpane
       methodsTable = scroll;
@@ -1943,7 +2029,11 @@ function [othersPane, propsNum] = getChildrenPane(obj, inspectorTable, propsPane
       ud.inspectorTable = inspectorTable;
       hModel = handle(propsTable.getModel, 'CallbackProperties');
       set(hModel, 'TableChangedCallback',@tbPropChanged);
-      set(propsTable.getModel, 'UserData',ud);
+      try
+          set(propsTable.getModel, 'UserData',ud);
+      catch
+          setappdata(hModel,'UserData',ud);
+      end
       scrollPane = JScrollPane(propsTable);
       scrollPane.setVerticalScrollBarPolicy(scrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
       %scrollPane.setHorizontalScrollBarPolicy(scrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -1951,12 +2041,24 @@ function [othersPane, propsNum] = getChildrenPane(obj, inspectorTable, propsPane
 
       % Preserve persistent info in the propsTable's userdata
       if ~isempty(cbMetaData)
-          set(handle(cbMetaData,   'CallbackProperties'), 'ActionPerformedCallback',@updatePropsTable);
-          set(cbMetaData,    'userdata',propsTable, 'tooltip','Also show property meta-data (type, visibility, get/set availability, etc.)');
+          hcbMetaData = handle(cbMetaData,'CallbackProperties');
+          set(hcbMetaData, 'ActionPerformedCallback',@updatePropsTable);
+          set(cbMetaData,  'tooltip','Also show property meta-data (type, visibility, get/set availability, etc.)');
+          try
+              set(cbMetaData,'userdata',propsTable);
+          catch
+              setappdata(hcbMetaData,'userdata',propsTable);
+          end
       end
       if ~isempty(cbInspectable)
-          set(handle(cbInspectable,'CallbackProperties'), 'ActionPerformedCallback',@updatePropsTable);
-          set(cbInspectable, 'userdata',propsTable, 'tooltip','Also show inspectable properties (displayed in the table above)');
+          hcbInspectable = handle(cbInspectable,'CallbackProperties');
+          set(hcbInspectable, 'ActionPerformedCallback',@updatePropsTable);
+          set(cbInspectable,  'tooltip','Also show inspectable properties (displayed in the table above)');
+          try
+              set(cbInspectable, 'userdata',propsTable);
+          catch
+              setappdata(hcbInspectable,'userdata',propsTable);
+          end
       end
       set(propsTable, 'userdata',ud);
 %end  % getChildrenPane
@@ -2027,7 +2129,11 @@ function cbHideStdCbs_Callback(src, evd, varargin)
 function updateMethodsTable(src, evd, varargin)  %#ok partially unused
     try
         % Update callbacks table data according to the modified checkbox state
-        methodsObj = get(src,'userdata');
+        try
+            methodsObj = get(src,'userdata');
+        catch
+            methodsObj = getappdata(src,'userdata');
+        end
         data = methodsObj.methods(methodsObj.sortIdx,:);
         headers = methodsObj.headers;
         if ~evd.getSource.isSelected  % Extra data requested
@@ -2065,7 +2171,11 @@ function updateMethodsTable(src, evd, varargin)  %#ok partially unused
 function updatePropsTable(src, evd, varargin)  %#ok partially unused
     try
         % Update callbacks table data according to the modified checkbox state
-        propsTable = get(src,'userdata');
+        try
+            propsTable = get(src,'userdata');
+        catch
+            propsTable = getappdata(src,'userdata');
+        end
         ud = get(propsTable, 'userdata');
         obj = ud.obj;
         inspectorTable = ud.inspectorTable;
@@ -2094,8 +2204,13 @@ function updatePropsTable(src, evd, varargin)  %#ok partially unused
                 end
             end
             ud.inspectorTable = inspectorTable;
-            set(handle(propsTableModel,'CallbackProperties'), 'TableChangedCallback',@tbPropChanged);
-            set(propsTableModel, 'UserData',ud);
+            hpropsTableModel = handle(propsTableModel,'CallbackProperties');
+            set(hpropsTableModel, 'TableChangedCallback',@tbPropChanged);
+            try
+                set(propsTableModel, 'UserData',ud);
+            catch
+                setappdata(hpropsTableModel, 'UserData',ud);
+            end
             propsTable.setModel(propsTableModel)
             try
                 % Try to auto-resize the columns
@@ -2148,11 +2263,16 @@ function tbCallbacksChanged(src, evd)
         hash.put(src,1);
 
         % Update the object's callback with the modified value
+        drawnow; pause(0.05);
         modifiedColIdx = evd.getColumn;
-        modifiedRowIdx = evd.getFirstRow;
-        if modifiedColIdx==1 && modifiedRowIdx>=0  %sanity check - should always be true
+        modifiedRowIdx = evd.getLastRow;
+        if modifiedRowIdx>=0 %&& modifiedColIdx==1 %sanity check - should always be true
             table = evd.getSource;
-            object = get(src,'userdata');
+            try
+                object = get(src,'userdata');
+            catch
+                object = getappdata(src,'UserData');
+            end
             cbName = strtrim(table.getValueAt(modifiedRowIdx,0));
             try
                 cbValue = strtrim(char(table.getValueAt(modifiedRowIdx,1)));
@@ -2163,20 +2283,32 @@ function tbCallbacksChanged(src, evd)
                     revertCbTableModification(table, modifiedRowIdx, modifiedColIdx, cbName, object, '');
                 else
                     for objIdx = 1 : length(object)
-                        if ~iscom(object(objIdx))
+                        obj = object(objIdx);
+                        if ~iscom(obj)
                             try
-                                set(object(objIdx), cbName, cbValue);
+                                try
+                                    if isjava(obj)
+                                        obj = handle(obj,'CallbackProperties');
+                                    end
+                                catch
+                                    % never mind...
+                                end
+                                set(obj, cbName, cbValue);
                             catch
-                                set(handle(object(objIdx),'CallbackProperties'), cbName, cbValue);
+                                try
+                                    set(handle(obj,'CallbackProperties'), cbName, cbValue);
+                                catch
+                                    % never mind - probably a callback-group header
+                                end
                             end
                         else
-                            cbs = object(objIdx).eventlisteners;
+                            cbs = obj.eventlisteners;
                             if ~isempty(cbs)
                                 cbs = cbs(strcmpi(cbs(:,1),cbName),:);
-                                object(objIdx).unregisterevent(cbs);
+                                obj.unregisterevent(cbs);
                             end
                             if ~isempty(cbValue)
-                                object(objIdx).registerevent({cbName, cbValue});
+                                obj.registerevent({cbName, cbValue});
                             end
                         end
                     end
@@ -2284,7 +2416,11 @@ function tbPropChanged(src, evd)
     modifiedRowIdx = evd.getFirstRow;
     if modifiedRowIdx>=0 && modifiedColIdx>=0  %sanity check - should always be true
         table = evd.getSource;
-        ud = get(src,'userdata');
+        try
+            ud = get(src,'userdata');
+        catch
+            ud = getappdata(src,'userdata');
+        end
         object = ud.obj;
         inspectorTable = ud.inspectorTable;
         propName = strtrim(table.getValueAt(modifiedRowIdx,0));

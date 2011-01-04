@@ -31,8 +31,8 @@ classdef runExperiment < dynamicprops
 		screenXOffset = 0 %shunt screen center by X degrees
 		screenYOffset = 0 %shunt screen center by Y degrees
 		blend = 0 %use OpenGL blending mode
-		srcMode = 'GL_SRC_ALPHA' %GL_ONE %src mode
-		dstMode = 'GL_ONE_MINUS_SRC_ALPHA' %GL_ONE % dst mode
+		srcMode = 'GL_ONE' %GL_ONE %src mode
+		dstMode = 'GL_ZERO' %GL_ONE % dst mode
 		fixationPoint = 1 %show a fixation spot?
 		photoDiode = 1 %show a white square to trigger a photodiode attached to screen
 		serialPortName = 'dummy' %name of serial port to send TTL out on, if set to 'dummy' then ignore
@@ -41,6 +41,9 @@ classdef runExperiment < dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		win %the handle returned by opening a PTB window
+		xCenter %computed X center
+		yCenter %computed Y center
 		ppd %calculated from distance and pixelsPerCm
 		maxScreen %set automatically on construction
 		info %?
@@ -59,14 +62,14 @@ classdef runExperiment < dynamicprops
 		white=1 %white index
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
 		serialP %serial port object opened
-		xCenter %computed X center
-		yCenter %computed Y center
-		win %the handle returned by opening a PTB window
 		winRect %the window rectangle
 		photoDiodeRect %the photoDiode rectangle
 	end
 	
-	methods
+	%=======================================================================
+	methods %------------------PUBLIC METHODS
+	%=======================================================================
+	
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -98,11 +101,11 @@ classdef runExperiment < dynamicprops
 			%initialise timeLog for this run (100,000 should be a 19min run)
 			obj.timeLog.date=clock;
 			obj.timeLog.startrun=GetSecs;
-			obj.timeLog.vbl=zeros(100000,1);
-			obj.timeLog.show=zeros(100000,1);
-			obj.timeLog.flip=zeros(100000,1);
-			obj.timeLog.miss=zeros(100000,1);
-			obj.timeLog.stimTime=zeros(100000,1);
+			obj.timeLog.vbl=zeros(obj.task.nFrames,1);
+			obj.timeLog.show=zeros(obj.task.nFrames,1);
+			obj.timeLog.flip=zeros(obj.task.nFrames,1);
+			obj.timeLog.miss=zeros(obj.task.nFrames,1);
+			obj.timeLog.stimTime=zeros(obj.task.nFrames,1);
 			
 			%HideCursor; %hide mouse
 			
@@ -270,6 +273,7 @@ classdef runExperiment < dynamicprops
 					if obj.task.tick==1
 						obj.timeLog.startflip=obj.timeLog.vbl(obj.task.tick) + obj.screenVals.halfisi;
 						obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
+						obj.logMe('IntoTrial');
 					end
 					
 					if obj.task.isBlank==0
@@ -383,17 +387,8 @@ classdef runExperiment < dynamicprops
 				obj.sList.fields = '';
 			end
 		end
-		
-		
-% 		function set.verbose(obj,value)
-% 			for i = 1:obj.sList.n
-% 				ts = obj.stimulus.(obj.sList.list(i));
-	% 			end
-% 		end
-
 
 	end
-	
 	%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	methods ( Access = protected ) %----------PRIVATE METHODS-------------------%
@@ -460,7 +455,12 @@ classdef runExperiment < dynamicprops
 			if isempty(obj.task.findprop('switchTime'))
 				obj.task.addprop('switchTime'); %add new dynamic property
 			end
-			obj.task.startTime=0;
+			obj.task.switchTime=0;
+			
+			if isempty(obj.task.findprop('switchTick'))
+				obj.task.addprop('switchTick'); %add new dynamic property
+			end
+			obj.task.switchTick=0;
 			
 			if isempty(obj.task.findprop('timeNow'))
 				obj.task.addprop('timeNow'); %add new dynamic property
@@ -512,11 +512,13 @@ classdef runExperiment < dynamicprops
 				if strcmp(name,'xPosition')||strcmp(name,'yPosition')
 					for j=1:length(ix)
 						switch obj.sVals(ix(j)).family
-							case {'grating','bar', 'spot'}
+							case {'grating','bar'}
 								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
 								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
 								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPosition*obj.ppd,obj.sVals(ix(j)).yPosition*obj.ppd);
 								obj.sVals(ix(j)).mvRect=obj.sVals(ix(j)).dstRect;
+							case {'spot'}
+								
 							case {'dots'}
 								
 						end
@@ -534,6 +536,17 @@ classdef runExperiment < dynamicprops
 								obj.sVals(ix(j)).dxdy = ts.dxdy;
 						end
 					end
+				elseif strcmp(name,'size')
+					for j=1:length(ix)
+						ts = obj.stimulus.(obj.sList.list(ix(j)))(obj.sList.index(ix(j)));
+						switch obj.sVals(ix(j)).family
+							case {'grating'}
+							case {'bar'}
+							case {'spot'}
+								obj.sVals(ix(j)).size = (obj.sVals(ix(j)).size * obj.ppd) / 2;
+							case {'dots'}
+						end
+					end
 				elseif strcmp(name,'coherence')
 					for j=1:length(ix)
 						switch obj.sVals(ix(j)).family
@@ -549,7 +562,13 @@ classdef runExperiment < dynamicprops
 				for j=1:length(ix)
 					if (obj.sVals(ix(j)).speed) > 0 && ~isempty(obj.sVals(ix(j)).startPosition) && (obj.sVals(ix(j)).startPosition ~= 0)
 						[dx dy]=pol2cart(obj.d2r(obj.sVals(ix(j)).angle),obj.sVals(ix(j)).startPosition);
-						obj.sVals(ix(j)).mvRect=OffsetRect(obj.sVals(ix(j)).dstRect,dx*obj.ppd,dy*obj.ppd);
+						switch obj.sVals(ix(j)).family
+							case {'grating','bar'}
+								obj.sVals(ix(j)).mvRect=OffsetRect(obj.sVals(ix(j)).dstRect,dx*obj.ppd,dy*obj.ppd);
+							case {'spot'}
+								obj.sVals(ix(j)).xT=obj.sVals(ix(j)).xPosition + round((dx * obj.ppd));
+								obj.sVals(ix(j)).yT=obj.sVals(ix(j)).yPosition + round((dy * obj.ppd));
+						end
 					end
 				end
 			end
@@ -575,10 +594,11 @@ classdef runExperiment < dynamicprops
 				obj.task.isBlank=0;
 				obj.task.startTime=obj.task.timeNow;
 				obj.task.switchTime=obj.task.trialTime; %first ever time is for the first trial
+				obj.task.switchTick=obj.task.trialTime*ceil(obj.screenVals.fps);
 			end
 			
 			%-------------------------------------------------------------------
-			if  obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime) %we haven't hit a time trigger yet
+			if  (obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime)) || obj.task.tick <= obj.task.switchTick %we haven't hit a time trigger yet
 				obj.task.switched = 0;
 				if obj.task.isBlank == 0 %not in an interstimulus time, need to update drift, motion and pulsation
 					
@@ -589,7 +609,13 @@ classdef runExperiment < dynamicprops
 					
 					for i=1:length(obj.task.stimIsMoving) %only update those stimuli which are moving
 						ix=obj.task.stimIsMoving(i);
-						obj.sVals(ix).mvRect=OffsetRect(obj.sVals(ix).mvRect,obj.sVals(ix).dX,obj.sVals(ix).dY);
+						switch obj.sVals(ix).family
+							case {'grating','bar','dots'}
+								obj.sVals(ix).mvRect=OffsetRect(obj.sVals(ix).mvRect,obj.sVals(ix).dX,obj.sVals(ix).dY);
+							case {'spot'}
+								obj.sVals(ix).xT = obj.sVals(ix).xT + obj.sVals(ix).dX;
+								obj.sVals(ix).yT = obj.sVals(ix).yT + obj.sVals(ix).dY;
+						end
 					end
 					
 					for i=1:length(obj.task.stimIsDots) %only update those stimuli which are moving
@@ -600,7 +626,7 @@ classdef runExperiment < dynamicprops
 					end
 					
 					for i=1:length(obj.task.stimIsFlashing)
-						ix=obj.task.stimIsFlashing(i);
+						%ix=obj.task.stimIsFlashing(i);
 					end
 					
 				else %blank stimulus, we don't need to update anything
@@ -616,18 +642,24 @@ classdef runExperiment < dynamicprops
 					
 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we within a trial block or not? we add the required time to our switch timer
 						obj.task.switchTime=obj.task.switchTime+obj.task.itTime;
+						obj.task.switchTick=obj.task.switchTick+(obj.task.itTime*ceil(obj.screenVals.fps));
 					else
 						obj.task.switchTime=obj.task.switchTime+obj.task.isTime;
+						obj.task.switchTick=obj.task.switchTick+(obj.task.isTime*ceil(obj.screenVals.fps));
 					end
 					
 					%now update our stimuli, we do it in the blank as less
 					%critical timingwise
 					for i=1:length(obj.task.stimIsMoving) %reset the motion rect back to the default
 						ix=obj.task.stimIsMoving(i);
-						obj.sVals(ix).mvRect=obj.sVals(ix).dstRect;
+						switch obj.sVals(ix).family
+							case {'grating','bar','dots'}
+								obj.sVals(ix).mvRect = obj.sVals(ix).dstRect;
+							case {'spot'}
+								obj.sVals(ix).xT = obj.sVals(ix).xPosition;
+								obj.sVals(ix).yT = obj.sVals(ix).yPosition;
+						end
 					end
-					
-					obj.task.totalRuns = obj.task.totalRuns + 1;
 					
 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
 						mT=obj.task.thisTrial+1;
@@ -644,16 +676,26 @@ classdef runExperiment < dynamicprops
 					
 				else %we have to show the new run on the next flip
 					
-					obj.logMe('IntoTrial');
-					obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
-					obj.task.isBlank = 0;
-					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
-						obj.task.thisTrial=obj.task.thisTrial+1;
-						obj.task.thisRun = 1;
+					%obj.logMe('IntoTrial');
+					if obj.task.thisTrial <= obj.task.nTrials
+						obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
+						obj.task.switchTick=obj.task.switchTick+(obj.task.trialTime*ceil(obj.screenVals.fps)); %update our timer
+						obj.task.isBlank = 0;
+						obj.task.totalRuns = obj.task.totalRuns + 1;
+						if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
+							obj.task.thisTrial=obj.task.thisTrial+1;
+							obj.task.thisRun = 1;
+						else
+							obj.task.thisRun = obj.task.thisRun + 1;
+						end
+						if obj.task.totalRuns < length(obj.task.outIndex)
+							obj.lJack.prepareStrobe(obj.task.outIndex(obj.task.totalRuns)); %get the strobe word ready
+						else
+							
+						end
 					else
-						obj.task.thisRun = obj.task.thisRun + 1;
+						obj.task.thisTrial = obj.task.nTrials + 1;
 					end
-					obj.lJack.prepareStrobe(obj.task.outIndex(obj.task.totalRuns)); %get the strobe word ready
 					%obj.logMe('OutaTrial');
 					
 				end
@@ -726,50 +768,11 @@ classdef runExperiment < dynamicprops
 		function setupGrating(obj,i)
 			ts = obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
 			
-			obj.sVals(i).doDots = [];
-			obj.sVals(i).doMation = [];
-			obj.sVals(i).doDrift = [];
-			obj.sVals(i).family = ts.family;
+			out = ts.setup(obj);
 			
-			if ts.rotationMethod==1
-				obj.sVals(i).rotateMode = kPsychUseTextureMatrixForRotation;
-			else
-				obj.sVals(i).rotateMode = [];
-			end
-			
-			obj.sVals(i).gabor=ts.gabor;
-			if obj.sVals(i).gabor==0
-				obj.sVals(i).scaledown=1;
-				obj.sVals(i).scaleup=1;
-			else
-				obj.sVals(i).scaledown=1; %scaling gabors does weird things!!!
-				obj.sVals(i).scaleup=1;
-			end
-			obj.sVals(i).gratingSize = round(obj.ppd*ts.size);
-			obj.sVals(i).sf = (ts.sf/obj.ppd)*obj.sVals(i).scaledown;
-			obj.sVals(i).tf = ts.tf;
-			obj.sVals(i).contrast = ts.contrast;
-			if ts.gabor
-				obj.sVals(i).contrast = obj.sVals(i).contrast*100;
-			end
-			obj.sVals(i).angle = ts.angle;
-			obj.sVals(i).phase = ts.phase;
-			obj.sVals(i).colour = ts.colour;
-			obj.sVals(i).alpha = ts.alpha;
-			obj.sVals(i).xPosition = ts.xPosition;
-			obj.sVals(i).yPosition = ts.yPosition;
-			obj.sVals(i).speed = ts.speed;
-			obj.sVals(i).spatialConstant = ts.spatialConstant*obj.ppd;
-			obj.sVals(i).startPosition=ts.startPosition;
-			obj.sVals(i).contrastMult = ts.contrastMult;
-			obj.sVals(i).disableNorm = ts.disableNorm;
-			obj.sVals(i).aspectRatio = ts.aspectRatio;
-			obj.sVals(i).phaseincrement = (obj.sVals(i).tf * 360) * obj.screenVals.ifi;
-			obj.sVals(i).delta = (ts.speed*obj.ppd) * obj.screenVals.ifi;
-			[obj.sVals(i).dX obj.sVals(i).dY] = obj.updatePosition(obj.sVals(i).delta,obj.sVals(i).angle);
-			
-			if ts.driftDirection < 1
-				obj.sVals(i).phaseincrement = -obj.sVals(i).phaseincrement;
+			fn = fieldnames(out);
+			for j=1:length(fn)
+				obj.sVals(i).(fn{j}) = out.(fn{j});
 			end
 			
 			if obj.sVals(i).tf>0 %we need to say this needs animating
@@ -786,37 +789,6 @@ classdef runExperiment < dynamicprops
 				obj.sVals(i).doMotion=0;
 			end
 
-			obj.sVals(i).res = [obj.sVals(i).gratingSize obj.sVals(i).gratingSize]*obj.sVals(i).scaleup;
-			
-			if ts.mask>0
-				obj.sVals(i).mask = (floor((obj.ppd*ts.size)/2)*obj.sVals(i).scaleup);
-			else
-				obj.sVals(i).mask = [];
-			end
-			
-			if length(obj.sVals(i).colour) == 3
-				obj.sVals(i).colour = [obj.sVals(i).colour obj.sVals(i).alpha];
-			end
-			
-			if ts.gabor==0
-				obj.sVals(i).texture = CreateProceduralSineGrating(obj.win, obj.sVals(i).res(1),...
-					obj.sVals(i).res(2), obj.sVals(i).colour, obj.sVals(i).mask, obj.sVals(i).contrastMult);
-			else
-				if obj.sVals(i).aspectRatio == 1
-					nonSymmetric = 0;
-				else
-					nonSymmetric = 1;
-				end
-				obj.sVals(i).texture = CreateProceduralGabor(obj.win, obj.sVals(i).res(1),...
-					obj.sVals(i).res(2), nonSymmetric, obj.sVals(i).colour, obj.sVals(i).disableNorm,...
-					obj.sVals(i).contrastMult);
-			end
-			
-			obj.sVals(i).dstRect=Screen('Rect',obj.sVals(i).texture);
-			obj.sVals(i).dstRect=ScaleRect(obj.sVals(i).dstRect,obj.sVals(i).scaledown,obj.sVals(i).scaledown);
-			obj.sVals(i).dstRect=CenterRectOnPoint(obj.sVals(i).dstRect,obj.xCenter,obj.yCenter);
-			obj.sVals(i).dstRect=OffsetRect(obj.sVals(i).dstRect,(obj.sVals(i).xPosition)*obj.ppd,(obj.sVals(i).yPosition)*obj.ppd);
-			obj.sVals(i).mvRect=obj.sVals(i).dstRect;
 		end
 		
 		%--------------------Configure grating specific variables-----------%
@@ -826,20 +798,13 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).doDots = [];
 			obj.sVals(i).doMation = [];
 			obj.sVals(i).doDrift = [];
-			obj.sVals(i).family = ts.family;
-
-			obj.sVals(i).barWidth=ts.barWidth;
-			obj.sVals(i).barLength=ts.barLength;
-			obj.sVals(i).angle = ts.angle;
-			obj.sVals(i).speed = ts.speed;
-			obj.sVals(i).delta = (ts.speed*obj.ppd) * obj.screenVals.ifi;
-			obj.sVals(i).type = ts.type;
-			obj.sVals(i).startPosition = ts.startPosition;
 			
-			obj.sVals(i).colour = ts.colour;
-			obj.sVals(i).alpha = ts.alpha;
-			obj.sVals(i).xPosition = ts.xPosition;
-			obj.sVals(i).yPosition = ts.yPosition;
+			fn = fieldnames(ts);
+			for j=1:length(fn)
+				obj.sVals(i).(fn{j}) = ts.(fn{j});
+			end
+
+			obj.sVals(i).delta = (ts.speed*obj.ppd) * obj.screenVals.ifi;
 			
 			ts.constructMatrix(obj.ppd) %make our matrix
 			obj.sVals(i).matrix=ts.matrix;
@@ -871,22 +836,15 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).doDots = [];
 			obj.sVals(i).doMation = [];
 			obj.sVals(i).doDrift = [];
-			obj.sVals(i).family = ts.family;
 			
-			obj.sVals(i).nDots = ts.nDots;
-			obj.sVals(i).angle = ts.angle;
-			obj.sVals(i).speed = ts.speed;
-			obj.sVals(i).size = ts.size*obj.ppd;
+			fn = fieldnames(ts);
+			for j=1:length(fn)
+				obj.sVals(i).(fn{j}) = ts.(fn{j});
+			end
+
+			obj.sVals(i).size = obj.sVals(i).size*obj.ppd;
+			obj.sVals(i).dotSize = obj.sVals(i).dotSize*obj.ppd;
 			obj.sVals(i).delta = obj.sVals(i).speed * obj.ppd * obj.screenVals.ifi;
-			obj.sVals(i).alpha = ts.alpha;
-			obj.sVals(i).dotType = ts.dotType;
-			obj.sVals(i).dotSize = ts.dotSize*obj.ppd;
-			obj.sVals(i).coherence = ts.coherence;
-			obj.sVals(i).colour = ts.colour;
-			obj.sVals(i).xPosition = ts.xPosition;
-			obj.sVals(i).yPosition = ts.yPosition;
-			obj.sVals(i).startPosition=0;
-			obj.sVals(i).colourType = ts.colourType;
 			
 			if obj.sVals(i).speed>0 %we need to say this needs animating
 				obj.sVals(i).doDots=1;
@@ -911,23 +869,41 @@ classdef runExperiment < dynamicprops
 		%-------------------Setup dots-------------------%
 		function setupSpot(obj,i)
 			
-			obj.sVals(i).doDots = [];
-			
 			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
-			obj.sVals(i).angle = ts.angle;
-			obj.sVals(i).speed = ts.speed;
-			obj.sVals(i).size = ts.size*obj.ppd;
+			
+			obj.sVals(i).doDots = [];
+			obj.sVals(i).doMation = [];
+			obj.sVals(i).doDrift = [];
+			
+			fn = fieldnames(ts);
+			
+			for j=1:length(fn)
+				obj.sVals(i).(fn{j}) = ts.(fn{j});
+			end
+			
+			obj.sVals(i).size = (obj.sVals(i).size*obj.ppd) / 2; %divide by 2 to get diameter
 			obj.sVals(i).delta = obj.sVals(i).speed * obj.ppd * obj.screenVals.ifi;
-			obj.sVals(i).alpha = ts.alpha;
-			obj.sVals(i).colour = ts.colour;
 			obj.sVals(i).xPosition = obj.xCenter+(ts.xPosition*obj.ppd);
-			obj.sVals(i).yPosition = obj.xCenter+(ts.yPosition*obj.ppd);
+			obj.sVals(i).yPosition = obj.yCenter+(ts.yPosition*obj.ppd);
+			
+			obj.sVals(i).xT = obj.sVals(i).xPosition; %xT and yT are temporary position stores.
+			obj.sVals(i).yT = obj.sVals(i).yPosition;
+			
+			[obj.sVals(i).dX obj.sVals(i).dY] = obj.updatePosition(obj.sVals(i).delta,obj.sVals(i).angle);
 			
 			if obj.sVals(i).speed>0 %we need to say this needs animating
 				obj.sVals(i).doMotion=1;
  				obj.task.stimIsMoving=[obj.task.stimIsMoving i];
 			else
 				obj.sVals(i).doMotion=0;
+			end
+			
+			if length(obj.sVals(i).colour) == 3
+				obj.sVals(i).colour = [obj.sVals(i).colour obj.sVals(i).alpha];
+			end
+			
+			if strcmp(obj.sVals(i).type,'flash')
+				
 			end
 			
 		end
@@ -960,8 +936,9 @@ classdef runExperiment < dynamicprops
 			
 		end
 		
+		%-------------------Draw the spot-------------------%
 		function drawSpot(obj,i)
-			Screen('gluDisk',obj.win,obj.sVals(i).colour,obj.sVals(i).xPosition,obj.sVals(i).yPosition,obj.sVals(i).size);
+			Screen('gluDisk',obj.win,obj.sVals(i).colour,obj.sVals(i).xT,obj.sVals(i).yT,obj.sVals(i).size);
 		end
 		
 		%--------------------Draw Fixation spot-------------%
@@ -976,12 +953,12 @@ classdef runExperiment < dynamicprops
 		
 		%--------------------Draw Info text-------------------%
 		function infoText(obj)
-			t=sprintf('T: %i | R: %i | isBlank: %i | Time: %3.3f',obj.task.thisTrial,...
-			obj.task.thisRun,obj.task.isBlank,(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime)); 
+			t=sprintf('T: %i | R: %i [%i] | isBlank: %i | Time: %3.3f',obj.task.thisTrial,...
+			obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime)); 
 			for i=1:obj.task.nVars
 				t=[t sprintf('\n\n\t\t%s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
 			end
-			Screen('DrawText',obj.win,t,50,0);
+			Screen('DrawText',obj.win,t,50,1,[1 1 1 1],[0 0 1]);
 		end
 		
 		%--------------------Draw photodiode block-------------%
@@ -996,27 +973,27 @@ classdef runExperiment < dynamicprops
 		
 		%--------------------Print time log-------------------%
 		function printLog(obj)
-			obj.timeLog.vbl=obj.timeLog.vbl(obj.timeLog.vbl>0)*1000;
-			obj.timeLog.show=obj.timeLog.show(obj.timeLog.show>0)*1000;
-			obj.timeLog.flip=obj.timeLog.flip(obj.timeLog.flip>0)*1000;
-			index=min([length(obj.timeLog.vbl) length(obj.timeLog.flip) length(obj.timeLog.show)]);
-			obj.timeLog.vbl=obj.timeLog.vbl(1:index);
-			obj.timeLog.show=obj.timeLog.show(1:index);
-			obj.timeLog.flip=obj.timeLog.flip(1:index);
-			obj.timeLog.miss=obj.timeLog.miss(1:index);
-			obj.timeLog.stimTime=obj.timeLog.stimTime(1:index);
+			vbl=obj.timeLog.vbl(obj.timeLog.vbl>0)*1000;
+			show=obj.timeLog.show(obj.timeLog.show>0)*1000;
+			flip=obj.timeLog.flip(obj.timeLog.flip>0)*1000;
+			index=min([length(vbl) length(flip) length(show)]);
+			vbl=vbl(1:index);
+			show=show(1:index);
+			flip=flip(1:index);
+			miss=obj.timeLog.miss(1:index);
+			stimTime=obj.timeLog.stimTime(1:index);
 			
 			figure
-			plot(1:index-2,diff(obj.timeLog.vbl(2:end)),'ro:')
+			plot(1:index-2,diff(vbl(2:end)),'ro:')
 			hold on
-			plot(1:index-2,diff(obj.timeLog.show(2:end)),'b--')
-			plot(1:index-2,diff(obj.timeLog.flip(2:end)),'g-.')
+			plot(1:index-2,diff(show(2:end)),'b--')
+			plot(1:index-2,diff(flip(2:end)),'g-.')
 			legend('VBL','Show','Flip')
-			[m,e]=stderr(diff(obj.timeLog.vbl),'SE');
+			[m,e]=stderr(diff(vbl),'SE');
 			t=sprintf('VBL mean=%2.2f+-%2.2f s.e.', m, e);
-			[m,e]=stderr(diff(obj.timeLog.show),'SE');
+			[m,e]=stderr(diff(show),'SE');
 			t=[t sprintf(' | Show mean=%2.2f+-%2.2f', m, e)];
-			[m,e]=stderr(diff(obj.timeLog.flip),'SE');
+			[m,e]=stderr(diff(flip),'SE');
 			t=[t sprintf(' | Flip mean=%2.2f+-%2.2f', m, e)];
 			title(t)
 			xlabel('Frame number (difference between frames)');
@@ -1025,10 +1002,10 @@ classdef runExperiment < dynamicprops
 			
 			figure
 			hold on
-			plot(obj.timeLog.show(2:index)-obj.timeLog.vbl(2:index),'r')
-			plot(obj.timeLog.show(2:index)-obj.timeLog.flip(2:index),'g')
-			plot(obj.timeLog.vbl(2:index)-obj.timeLog.flip(2:index),'b')
-			plot(obj.timeLog.stimTime(2:index)*10,'k');
+			plot(show(2:index)-vbl(2:index),'r')
+			plot(show(2:index)-flip(2:index),'g')
+			plot(vbl(2:index)-flip(2:index),'b')
+			plot(stimTime(2:index)*10,'k');
 			title('VBL - Flip time in ms')
 			legend('Show-VBL','Show-Flip','VBL-Flip')
 			xlabel('Frame number');
@@ -1036,12 +1013,20 @@ classdef runExperiment < dynamicprops
 			
 			figure
 			hold on
-			plot(obj.timeLog.miss,'r.-')
-			plot(obj.timeLog.stimTime/50,'k');
+			plot(miss,'r.-')
+			plot(stimTime/50,'k');
 			title('Missed frames')
+			
+			clear vbl show flip index miss stimTime
 		end
 		
-		%-------------------blah blah blah-----------------------------------
+		% ===================================================================
+		%> @brief Prints messages dependent on verbosity
+		%>
+		%> Prints messages dependent on verbosity
+		%> @param in the calling function
+		%> @param message the message that needs printing to command window
+		% ===================================================================
 		function salutation(obj,in,message)
 			if obj.verbose==1
 				if ~exist('in','var')
@@ -1075,6 +1060,12 @@ classdef runExperiment < dynamicprops
 			dY = delta * sin(obj.d2r(angle));
 		end
 		
+		% ===================================================================
+		%> @brief Logs the run loop parameters along with a calling tag
+		%>
+		%> Logs the run loop parameters along with a calling tag
+		%> @param tag the calling function
+		% ===================================================================
 		function logMe(obj,tag)
 			if obj.verbose==1
 				if ~exist('tag','var')

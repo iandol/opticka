@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 16-Sep-2010 14:49:09
+% Last Modified by GUIDE v2.5 28-Dec-2010 09:43:49
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1203,3 +1203,45 @@ function OKPanelSpotalpha_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of OKPanelSpotalpha as text
 %        str2double(get(hObject,'String')) returns contents of OKPanelSpotalpha as a double
+
+
+
+function OKRemoteIP_Callback(hObject, eventdata, handles)
+% hObject    handle to OKRemoteIP (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKRemoteIP as text
+%        str2double(get(hObject,'String')) returns contents of OKRemoteIP as a double
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getTaskVals;
+end
+
+
+function OKRemotePort_Callback(hObject, eventdata, handles)
+% hObject    handle to OKRemotePort (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKRemotePort as text
+%        str2double(get(hObject,'String')) returns contents of OKRemotePort as a double
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getTaskVals;
+end
+
+% --- Executes on button press in OKUseServer.
+function OKUseServer_Callback(hObject, eventdata, handles)
+% hObject    handle to OKUseServer (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% Hint: get(hObject,'Value') returns toggle state of OKUseServer
+switch get(hObject,'Value')
+	case 1
+		set(handles.OKRemotePort,'Enable','on')
+		set(handles.OKRemoteIP,'Enable','on')
+	otherwise
+		set(handles.OKRemotePort,'Enable','off')
+		set(handles.OKRemoteIP,'Enable','off')
+end
