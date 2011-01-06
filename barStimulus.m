@@ -56,11 +56,13 @@ classdef barStimulus < baseStimulus
 		function constructMatrix(obj,ppd)
 			%use the passed pixels per degree to make a RGBA matrix of the
 			%correct dimensions
+			obj.matrix=[]; %reset the matrix
 			if length(obj.colour) == 3
 				obj.colour(4) = obj.alpha;
 			end
 			bw = round(obj.barWidth*ppd);
 			bl = round(obj.barLength*ppd);
+			obj.matrix = ones(bl,bw,4); %allocate the size correctly
 			obj.matrix(:,:,1)=ones(bl,bw)*obj.colour(1);
 			obj.matrix(:,:,2)=ones(bl,bw)*obj.colour(2);
 			obj.matrix(:,:,3)=ones(bl,bw)*obj.colour(3);

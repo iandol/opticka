@@ -352,6 +352,7 @@ classdef opticka < dynamicprops
 			tmp.startPosition = obj.gd(obj.h.OKPanelBarstartPosition);
 			tmp.colour = obj.gn(obj.h.OKPanelBarcolour);
 			tmp.alpha = obj.gd(obj.h.OKPanelBaralpha);
+			tmp.speed = obj.gd(obj.h.OKPanelBarspeed);
 			
 			obj.r.stimulus.b(obj.r.sList.bN + 1) = barStimulus(tmp);
 			
@@ -493,6 +494,13 @@ classdef opticka < dynamicprops
 			cd(obj.paths.currentPath);
 			obj.refreshProtocolsList;
 			
+		end
+		
+		function dealUItoStructure(obj)
+			tt=fieldnames(obj.h);
+			for i=1:length(tt)
+				
+			end
 		end
 		
 		% ===================================================================

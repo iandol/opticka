@@ -84,10 +84,10 @@ classdef baseStimulus < dynamicprops
 		%>
 		% ===================================================================
 		function [dX dY] = updatePosition(delta,angle)
-			dX = delta * cos(baseStimulus.d2r(angle));
-			dY = delta * sin(baseStimulus.d2r(angle));
-			if dX < 1e-4; dX = 0; end
-			if dY < 1e-4; dY = 0; end
+			dX = delta .* cos(baseStimulus.d2r(angle));
+			dY = delta .* sin(baseStimulus.d2r(angle));
+			if abs(dX) < 1e-6; dX = 0; end
+			if abs(dY) < 1e-6; dY = 0; end
 		end
 		
 	end%---END STATIC METHODS---%

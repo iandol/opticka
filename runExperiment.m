@@ -549,6 +549,7 @@ classdef runExperiment < dynamicprops
 					end
 				elseif strcmp(name,'coherence')
 					for j=1:length(ix)
+						ts = obj.stimulus.(obj.sList.list(ix(j)))(obj.sList.index(ix(j)));
 						switch obj.sVals(ix(j)).family
 							case {'grating','bar', 'spot'}
 								
