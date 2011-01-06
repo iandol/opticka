@@ -512,7 +512,7 @@ classdef runExperiment < dynamicprops
 				if strcmp(name,'xPosition')||strcmp(name,'yPosition')
 					for j=1:length(ix)
 						switch obj.sVals(ix(j)).family
-							case {'grating','bar'}
+							case {'grating','bar'} %!!!!!!!!!this needs refacxtoring
 								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
 								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
 								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPosition*obj.ppd,obj.sVals(ix(j)).yPosition*obj.ppd);
@@ -529,7 +529,7 @@ classdef runExperiment < dynamicprops
 						ts = obj.stimulus.(obj.sList.list(ix(j)))(obj.sList.index(ix(j)));
 						switch obj.sVals(ix(j)).family
 							case {'grating','bar', 'spot'}
-								[obj.sVals(ix(j)).dX obj.sVals(ix(j)).dY]=obj.updatePosition(obj.sVals(ix(j)).delta,obj.sVals(ix(j)).angle);
+								[obj.sVals(ix(j)).dX obj.sVals(ix(j)).dY]=ts.updatePosition(obj.sVals(ix(j)).delta,obj.sVals(ix(j)).angle);
 							case {'dots'}
 								ts.updateDots(obj.sVals(ix(j)).coherence,obj.sVals(ix(j)).angle);
 								obj.sVals(ix(j)).xy = ts.xy;
@@ -561,7 +561,7 @@ classdef runExperiment < dynamicprops
 				end
 				for j=1:length(ix)
 					if (obj.sVals(ix(j)).speed) > 0 && ~isempty(obj.sVals(ix(j)).startPosition) && (obj.sVals(ix(j)).startPosition ~= 0)
-						[dx dy]=pol2cart(obj.d2r(obj.sVals(ix(j)).angle),obj.sVals(ix(j)).startPosition);
+						[dx dy]=pol2cart(baseStimulus.d2r(obj.sVals(ix(j)).angle),obj.sVals(ix(j)).startPosition);
 						switch obj.sVals(ix(j)).family
 							case {'grating','bar'}
 								obj.sVals(ix(j)).mvRect=OffsetRect(obj.sVals(ix(j)).dstRect,dx*obj.ppd,dy*obj.ppd);
@@ -810,7 +810,7 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).matrix=ts.matrix;
 			obj.sVals(i).texture=Screen('MakeTexture',obj.win,obj.sVals(i).matrix,1,[],2);
 			
-			[obj.sVals(i).dX obj.sVals(i).dY] = obj.updatePosition(obj.sVals(i).delta,obj.sVals(i).angle);
+			[obj.sVals(i).dX obj.sVals(i).dY] = ts.updatePosition(obj.sVals(i).delta,obj.sVals(i).angle);
 			
 			if obj.sVals(i).speed>0 %we need to say this needs animating
 				obj.sVals(i).doMotion=1;
@@ -889,7 +889,7 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).xT = obj.sVals(i).xPosition; %xT and yT are temporary position stores.
 			obj.sVals(i).yT = obj.sVals(i).yPosition;
 			
-			[obj.sVals(i).dX obj.sVals(i).dY] = obj.updatePosition(obj.sVals(i).delta,obj.sVals(i).angle);
+			[obj.sVals(i).dX obj.sVals(i).dY] = ts.updatePosition(obj.sVals(i).delta,obj.sVals(i).angle);
 			
 			if obj.sVals(i).speed>0 %we need to say this needs animating
 				obj.sVals(i).doMotion=1;
@@ -1038,26 +1038,6 @@ classdef runExperiment < dynamicprops
 					fprintf(['\nHello from ' obj.screen ' stimulus, ' in '\n\n']);
 				end
 			end
-		end
-		
-		function r = d2r(obj,degrees)
-			r=degrees*(pi/180);
-			return
-		end
-		
-		function degrees=r2d(obj,radians)
-			degrees=radians*(180/pi);
-		end
-		
-		function distance=findDistance(obj,x1,y1,x2,y2)
-			dx = x2 - x1;
-			dy = y2 - y1;
-			distance=sqrt(dx^2 + dy^2);
-		end
-		
-		function [dX dY] = updatePosition(obj,delta,angle)
-			dX = delta * cos(obj.d2r(angle));
-			dY = delta * sin(obj.d2r(angle));
 		end
 		
 		% ===================================================================

@@ -53,10 +53,6 @@ classdef spotStimulus < baseStimulus
 		%> @brief update the position
 		%>
 		% ===================================================================
-		function updatePosition(obj,angle,delta)
-			obj.dX= delta * cos(ang2rad(angle));
-			obj.dY= delta * sin(ang2rad(angle));
-		end
 		
 		
 	end %---END PUBLIC METHODS---%

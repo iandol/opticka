@@ -107,11 +107,11 @@ classdef gratingStimulus < baseStimulus
 			end
 			
 			if out.gabor==0
-				out.scaledown=0.25;
-				out.scaleup=4;
-			else
-				out.scaledown=1; %scaling gabors does weird things!!!
 				out.scaleup=1;
+				out.scaledown=1/out.scaleup;				
+			else
+				out.scaleup=1;%scaling gabors does weird things!!!
+				out.scaledown=1/out.scaleup;
 			end
 			
 			out.gratingSize = round(rE.ppd*obj.size);

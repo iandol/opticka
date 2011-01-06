@@ -210,9 +210,9 @@ classdef dataConnection < handle
 		end
 		
 		% ===================================================================
-		%> @brief Open the LabJack device
+		%> @brief 
 		%>
-		%> Open the LabJack device
+		%> 
 		% ===================================================================
 		% Write data to the given pnet socket.
 		function status = write(obj, data)
@@ -283,7 +283,7 @@ classdef dataConnection < handle
 						[obj.rAddress,obj.rPort]=pnet(obj.rconn,'gethost');
 						fprintf('START SERVING NEW CONNECTION FROM IP %d.%d.%d.%d port:%d',obj.rAddress,obj.rPort);
 						obj.serverLoop;
-					catch ME
+					catch
 						disp 'Server loop initialisation failed';
 					end
 				end

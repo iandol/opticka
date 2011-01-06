@@ -22,7 +22,7 @@ classdef opticka < dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		version='0.47'
+		version='0.48'
 		load
 	end
 	
@@ -86,11 +86,19 @@ classdef opticka < dynamicprops
 		%> @param 
 		% ===================================================================
 		function initialiseUI(obj)
+			
+			obj.paths.whoami = mfilename;
+			obj.paths.whereami = fileparts(which(mfilename));
+			obj.paths.startServer = [obj.paths.whereami filesep 'udpserver' filesep 'launchDataConnection'];
+			
 			if ismac
+				
+				obj.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "' obj.paths.startServer '"'' -e ''end tell'''];
+
 				obj.paths.temp=tempdir;
 				if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
 					mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);
-				end
+					end
 				obj.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
 				cd(obj.paths.protocols);
 				obj.paths.currentPath = pwd;
@@ -101,6 +109,8 @@ classdef opticka < dynamicprops
 				obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
 				javax.swing.UIManager.setLookAndFeel('javax.swing.plaf.metal.MetalLookAndFeel');
 			elseif ispc
+				
+				obj.store.serverCommand = ['!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));"'];
 				obj.paths.temp=tempdir;
 				if ~exist(['c:\MatlabFiles\Protocols'],'dir')
 					mkdir(['c:\MatlabFiles\Protocols'])
@@ -719,6 +729,15 @@ classdef opticka < dynamicprops
 		function outhandle = gv(obj,inhandle)
 		%quick alias to get ui value
 			outhandle = get(inhandle,'Value');
+		end
+		
+		% ===================================================================
+		%> @brief saveobj
+		%> 
+		%> @param obj
+		% ===================================================================
+		function obj = saveobj(obj)
+			obj.store.oldlook=[]; %need to remove this as java objects not supported for save in matlab
 		end
 		
 		% ===================================================================

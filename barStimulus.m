@@ -91,11 +91,6 @@ classdef barStimulus < baseStimulus
 			end
 		end
 		
-		function updatePosition(obj,angle,delta)
-			obj.dX= delta * cos(ang2rad(angle));
-			obj.dY= delta * sin(ang2rad(angle));
-		end
-		
 		function set.barLength(obj,value)
 			if ~(value > 0)
 				value = 0.1;

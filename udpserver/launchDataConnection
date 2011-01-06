@@ -2,4 +2,8 @@
 # Attempt to launch Matlab in 32-bit MACI mode and invoke the Snow Dots 
 # dotsServer function.
 
-/Applications/MATLAB_R2010a.app/bin/matlab -maci -nosplash -nodesktop -r "d=dataConnection(struct('autoServer',1,'lPort',3333));"
+if [ $OSTYPE = "darwin10.0" ]; then
+	/Applications/MATLAB_R2010a.app/bin/matlab -maci -nosplash -nodesktop -r "d=dataConnection(struct('autoServer',1,'lPort',5678));"
+else
+	matlab -nosplash -nodesktop -r "d=dataConnection(struct('autoServer',1,'lPort',5678));"
+fi

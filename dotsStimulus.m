@@ -217,25 +217,6 @@ classdef dotsStimulus < baseStimulus
 	%---END PUBLIC METHODS---%
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
-		
-		function [dX dY] = updatePosition(obj,delta,angle)
-			dX = delta .* cos(angle);
-			dY = delta .* sin(angle);
-		end
-		
-		function r = d2r(obj,degrees)
-			r=degrees*(pi/180);
-			return
-		end
-		
-		function degrees=r2d(obj,radians)
-			degrees=radians*(180/pi);
-		end
-		
-		function distance=findDistance(obj,x1,y1,x2,y2)
-			dx = x2 - x1;
-			dy = y2 - y1;
-			distance=sqrt(dx^2 + dy^2);
-		end
+
 	end
 end

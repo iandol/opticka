@@ -1,3 +1,9 @@
+% ========================================================================
+%> @brief baseStimulus is the superclass for opticka stimulus objects
+%>
+%> Superclass providing basic structure for all stimulus classes
+%>
+% ========================================================================
 classdef baseStimulus < dynamicprops
 	%BASESTIMULUS Superclass providing basic structure for all stimulus
 	%classes
@@ -9,10 +15,10 @@ classdef baseStimulus < dynamicprops
 		colour = [0.5 0.5 0.5 1]
 		alpha = 1
 		verbose=0
-		startPosition=0;
+		startPosition=0
 	end
 	properties (SetAccess = private, GetAccess = private)
-		allowedPropertiesBase='^(type|xPosition|yPosition|size|colour|verbose|alpha|startPosition)$'
+		allowedPropertiesBase='^(xPosition|yPosition|size|colour|verbose|alpha|startPosition)$'
 	end
 	
 	%=======================================================================
@@ -43,27 +49,52 @@ classdef baseStimulus < dynamicprops
 		end 
 	end %---END PUBLIC METHODS---%
 	
-	methods ( Access = protected ) %----------PRIVATE METHODS---------%
-		
-		function r = d2r(obj,degrees)
+	%=======================================================================
+	methods ( Static ) %----------STATIC METHODS
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief degrees2radians
+		%>
+		% ===================================================================
+		function r = d2r(degrees)
 			r=degrees*(pi/180);
 		end
 		
-		function degrees=r2d(obj,radians)
-			degrees=radians*(180/pi);
+		% ===================================================================
+		%> @brief radians2degrees
+		%>
+		% ===================================================================
+		function degrees=r2d(r)
+			degrees=r*(180/pi);
 		end
 		
-		function distance=findDistance(obj,x1,y1,x2,y2)
+		% ===================================================================
+		%> @brief findDistance in X and Y coordinates
+		%>
+		% ===================================================================
+		function distance=findDistance(x1,y1,x2,y2)
 			dx = x2 - x1;
 			dy = y2 - y1;
 			distance=sqrt(dx^2 + dy^2);
 		end
 		
-		function [dX dY] = updatePosition(obj,delta,angle)
-			dX = delta * cos(obj.d2r(angle));
-			dY = delta * sin(obj.d2r(angle));
+		% ===================================================================
+		%> @brief updatePosition returns dX and dY given an angle and delta
+		%>
+		% ===================================================================
+		function [dX dY] = updatePosition(delta,angle)
+			dX = delta * cos(baseStimulus.d2r(angle));
+			dY = delta * sin(baseStimulus.d2r(angle));
+			if dX < 1e-4; dX = 0; end
+			if dY < 1e-4; dY = 0; end
 		end
 		
+	end%---END STATIC METHODS---%
+	
+	%=======================================================================
+	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
+	%=======================================================================
 		function salutation(obj,in,message)
 			if obj.verbose==1
 				if ~exist('in','var')
@@ -76,5 +107,5 @@ classdef baseStimulus < dynamicprops
 				end
 			end
 		end
-	end
+	end%---END PRIVATE METHODS---%
 end
