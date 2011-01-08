@@ -1,24 +1,28 @@
-classdef spotStimulus < baseStimulus
-%SPOTSTIMULUS single bar stimulus, inherits from baseStimulus
-%   The current properties are:
-
-   properties %--------------------PUBLIC PROPERTIES----------%
-		family = 'spot'
-		type = 'normal'
-		flashTime = [0.5 0.5]
+% ========================================================================
+%> @brief textureStimulus is the superclass for texture based stimulus objects
+%>
+%> Superclass providing basic structure for texture stimulus classes
+%>
+% ========================================================================	
+classdef textureStimulus < baseStimulus	
+	properties %--------------------PUBLIC PROPERTIES----------%
+		family = 'texture'
+		type = 'simple'
 		speed = 0
 		angle = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		flashSegment = 1
+
 	end
-	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(type|flashTime|speed|angle)$';
+		allowedProperties='^(type|speed|angle)$';
 	end
 	
-   methods %----------PUBLIC METHODS---------%
+	%=======================================================================
+	methods %------------------PUBLIC METHODS
+	%=======================================================================
+	
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -26,30 +30,35 @@ classdef spotStimulus < baseStimulus
 		%>
 		%> @param args are passed as a structure of properties which is
 		%> parsed.
-		%> @return instance of the class.
+		%> @return instance of opticka class.
 		% ===================================================================
-		function obj = spotStimulus(args) 
+		function obj = textureStimulus(args)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
-				args.family = 'spot';
+				args.family = 'texture';
 			end
 			obj=obj@baseStimulus(args); %we call the superclass constructor first
+			%check we are a grating
+			if ~strcmp(obj.family,'texture')
+				error('Sorry, you are trying to call a textureStimulus with a family other than texture');
+			end
+			%start to build our parameters
 			if nargin>0 && isstruct(args)
 				fnames = fieldnames(args); %find our argument names
 				for i=1:length(fnames);
 					if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in spotStimulus constructor');
+						obj.salutation(fnames{i},'Configuring setting in textureStimulus constructor');
 						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 					end
 				end
 			end
-			obj.salutation('constructor','Spot Stimulus initialisation complete');
+			obj.salutation('constructor','Texture Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
-		%> @brief Setup an structure for runExperiment
+		%> @brief Generate an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
+		%> @param in runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
 		function out = setup(obj,rE)
@@ -59,27 +68,20 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Update an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
+		%> @param in runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
 		function out = update(obj,rE)
 			
 		end
 		
-		% ===================================================================
-		%> @brief Draw an structure for runExperiment
-		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
-		% ===================================================================
-		function out = draw(obj,rE)
-			
-		end
 		
-		
-	end %---END PUBLIC METHODS---%
+	end
+	
+	
+	%---END PUBLIC METHODS---%
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
-		
+
 	end
 end

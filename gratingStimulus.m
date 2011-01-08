@@ -32,13 +32,15 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		scaleup = 1
+		scaledown
 		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant)$';
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
-		
+	
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -46,7 +48,7 @@ classdef gratingStimulus < baseStimulus
 		%>
 		%> @param args are passed as a structure of properties which is
 		%> parsed.
-		%> @return instance of class.
+		%> @return instance of opticka class.
 		% ===================================================================
 		function obj = gratingStimulus(args) 
 			%Initialise for superclass, stops a noargs error
@@ -68,6 +70,7 @@ classdef gratingStimulus < baseStimulus
 					end
 				end
 			end
+			obj.scaledown=1/obj.scaleup;
 			obj.salutation('constructor','Grating Stimulus initialisation complete');
 		end
 		
@@ -92,12 +95,18 @@ classdef gratingStimulus < baseStimulus
 		function out = setup(obj,rE)
 			
 			out.doDots = [];
-			out.doMation = [];
+			out.doMotion = [];
 			out.doDrift = [];
 			
 			fn = fieldnames(obj);
 			for j=1:length(fn)
-				out.(fn{j}) = obj.(fn{j});
+				out.(fn{j}) = obj.(fn{j}); %copy our object propert value to our out
+				if isempty(obj.findprop(['t' fn{j}])) %create a temporary dynamic property
+					p=obj.addprop(['t' fn{j}]);
+					p.Transient = true;
+					p.Hidden = true;
+				end
+				obj.(['t' fn{j}]) = obj.(fn{j}); %copy our property value to our tempory copy
 			end
 			
 			if obj.rotationMethod==1
@@ -107,8 +116,8 @@ classdef gratingStimulus < baseStimulus
 			end
 			
 			if out.gabor==0
-				out.scaleup=1;
-				out.scaledown=1/out.scaleup;				
+				out.scaleup=obj.scaleup;
+				out.scaledown=obj.scaledown;				
 			else
 				out.scaleup=1;%scaling gabors does weird things!!!
 				out.scaledown=1/out.scaleup;
@@ -173,6 +182,26 @@ classdef gratingStimulus < baseStimulus
 			out.dstRect=CenterRectOnPoint(out.dstRect,rE.xCenter,rE.yCenter);
 			out.dstRect=OffsetRect(out.dstRect,(out.xPosition)*rE.ppd,(out.yPosition)*rE.ppd);
 			out.mvRect=out.dstRect;
+		end
+		
+		% ===================================================================
+		%> @brief Update an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
+		function out = update(obj,rE)
+			
+		end
+		
+		% ===================================================================
+		%> @brief Draw an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
+		function out = draw(obj,rE)
+			
 		end
 		
 	end %---END PUBLIC METHODS---%

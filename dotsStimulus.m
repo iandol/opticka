@@ -28,7 +28,6 @@ classdef dotsStimulus < baseStimulus
 		ppd = 44
 		ifi
 		fps = 60
-		delta
 		dx
 		dy
 		allowedProperties='^(type|speed|nDots|dotSize|angle|colourType|coherence|dotType|kill)$';
@@ -132,6 +131,36 @@ classdef dotsStimulus < baseStimulus
 				fix=find(obj.xy < -(obj.size*obj.ppd)/2);  %cull negative
 				obj.xy(fix)=obj.xy(fix)+(obj.size*obj.ppd);
 			end
+		end
+		
+		% ===================================================================
+		%> @brief Setup an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
+		function out = setup(obj,rE)
+			
+		end
+		
+		% ===================================================================
+		%> @brief Update an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
+		function out = update(obj,rE)
+			
+		end
+		
+		% ===================================================================
+		%> @brief Draw an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
+		function out = draw(obj,rE)
+			
 		end
 		
 		function run(obj)

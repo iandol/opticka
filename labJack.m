@@ -16,7 +16,7 @@ classdef labJack < handle
 		%> the library itself
 		library = '/usr/local/lib/liblabjackusb'
 		%> how much detail to show 
-		verbosity = 1
+		verbosity = 0
 		%> allows the constructor to run the open method immediately
 		openNow = 1 
 	end
@@ -74,8 +74,8 @@ classdef labJack < handle
 			end
 			if ~isempty(regexp(obj.name,'null', 'once')) || ispc %we were deliberately passed null, means go into silent mode
 				obj.silentMode = 1;
-			end
-			if obj.openNow==1
+				obj.verbosity = 0;
+			elseif obj.openNow==1
 				obj.open
 			end
 		end
@@ -88,7 +88,13 @@ classdef labJack < handle
 		function open(obj)
 			if obj.silentMode==0
 				if ~libisloaded('liblabjackusb')
-					loadlibrary(obj.library,obj.header);
+					try
+						loadlibrary(obj.library,obj.header);
+					catch
+						obj.silentMode = 1;
+						obj.verbosity = 0;
+						return
+					end
 				end
 				obj.functions = libfunctions('liblabjackusb', '-full'); %store our raw lib functions
 				obj.version =  calllib('liblabjackusb','LJUSB_GetLibraryVersion');

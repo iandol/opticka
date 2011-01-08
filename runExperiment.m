@@ -1,4 +1,4 @@
-classdef runExperiment < dynamicprops
+classdef (Sealed) runExperiment < dynamicprops
 	%RUNEXPERIMENT The main class which accepts a task and stimulus object
 	%and runs the stimuli based on the task object passed. The class
 	%controls the fundamental configuration of the screen (calibration, size
@@ -95,7 +95,11 @@ classdef runExperiment < dynamicprops
 			obj.prepareScreen;
 		end
 	
-		%-------------------------Main Grating----------------------------%
+		% ===================================================================
+		%> @brief The main run loop
+		%>
+		%> @param obj required class object
+		% ===================================================================
 		function run(obj)
 			
 			%initialise timeLog for this run (100,000 should be a 19min run)
@@ -144,10 +148,10 @@ classdef runExperiment < dynamicprops
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 				
 				obj.timeLog.preOpenWindow=GetSecs;
-				if obj.windowed==0
+				if obj.windowed(1)==0
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				else
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[1 1 801 601], [], obj.doubleBuffer+1,[],obj.antiAlias);
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[1 1 obj.windowed(1)+1 obj.windowed(2)+1], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
 				
 				obj.timeLog.postOpenWindow=GetSecs;
@@ -315,7 +319,7 @@ classdef runExperiment < dynamicprops
 				
 				obj.lJack.setFIO4(0) %this is RSTOP, unpausing the omniplex
 				obj.lJack.setFIO5(0);
-				if obj.hideFlash == 1 || obj.windowed == 1
+				if obj.hideFlash == 1 || obj.windowed(1) ~= 1
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 				end
 				Screen('Close');
@@ -765,11 +769,17 @@ classdef runExperiment < dynamicprops
 			
 		end
 		
+		% ===================================================================
+		%> @brief Configure grating specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		%--------------------Configure grating specific variables-----------%
 		function setupGrating(obj,i)
 			ts = obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
 			
-			out = ts.setup(obj);
+			out = ts.setup(obj); %get the object to set itself up
 			
 			fn = fieldnames(out);
 			for j=1:length(fn)
@@ -792,26 +802,21 @@ classdef runExperiment < dynamicprops
 
 		end
 		
-		%--------------------Configure grating specific variables-----------%
+		% ===================================================================
+		%> @brief Configure bar specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function setupBar(obj,i)
 			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
 			
-			obj.sVals(i).doDots = [];
-			obj.sVals(i).doMation = [];
-			obj.sVals(i).doDrift = [];
+			out = ts.setup(obj); %get the object to set itself up
 			
-			fn = fieldnames(ts);
+			fn = fieldnames(out);
 			for j=1:length(fn)
-				obj.sVals(i).(fn{j}) = ts.(fn{j});
+				obj.sVals(i).(fn{j}) = out.(fn{j});
 			end
-
-			obj.sVals(i).delta = (ts.speed*obj.ppd) * obj.screenVals.ifi;
-			
-			ts.constructMatrix(obj.ppd) %make our matrix
-			obj.sVals(i).matrix=ts.matrix;
-			obj.sVals(i).texture=Screen('MakeTexture',obj.win,obj.sVals(i).matrix,1,[],2);
-			
-			[obj.sVals(i).dX obj.sVals(i).dY] = ts.updatePosition(obj.sVals(i).delta,obj.sVals(i).angle);
 			
 			if obj.sVals(i).speed>0 %we need to say this needs animating
 				obj.sVals(i).doMotion=1;
@@ -819,23 +824,19 @@ classdef runExperiment < dynamicprops
 			else
 				obj.sVals(i).doMotion=0;
 			end
-			
-			if length(obj.sVals(i).colour) == 3
-				obj.sVals(i).colour = [obj.sVals(i).colour obj.sVals(i).alpha];
-			end
-			
-			obj.sVals(i).dstRect=Screen('Rect',obj.sVals(i).texture);
-			obj.sVals(i).dstRect=CenterRectOnPoint(obj.sVals(i).dstRect,obj.xCenter,obj.yCenter);
-			obj.sVals(i).dstRect=OffsetRect(obj.sVals(i).dstRect,(obj.sVals(i).xPosition)*obj.ppd,(obj.sVals(i).yPosition)*obj.ppd);
-			obj.sVals(i).mvRect=obj.sVals(i).dstRect;
 		end
 		
-		%-------------------Setup dots-------------------%
+		% ===================================================================
+		%> @brief Configure dots specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function setupDots(obj,i)
 			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
 			
 			obj.sVals(i).doDots = [];
-			obj.sVals(i).doMation = [];
+			obj.sVals(i).doMotion = [];
 			obj.sVals(i).doDrift = [];
 			
 			fn = fieldnames(ts);
@@ -867,13 +868,18 @@ classdef runExperiment < dynamicprops
 			obj.sVals(i).colours=ts.colours;
 		end
 		
-		%-------------------Setup dots-------------------%
+		% ===================================================================
+		%> @brief Configure spot specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function setupSpot(obj,i)
 			
 			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
 			
 			obj.sVals(i).doDots = [];
-			obj.sVals(i).doMation = [];
+			obj.sVals(i).doMotion = [];
 			obj.sVals(i).doDrift = [];
 			
 			fn = fieldnames(ts);
@@ -909,7 +915,12 @@ classdef runExperiment < dynamicprops
 			
 		end
 		
-		%-------------------Draw the grating-------------------%
+		% ===================================================================
+		%> @brief Configure grating specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function drawGrating(obj,i)
 			if obj.sVals(i).gabor==0
 				Screen('DrawTexture', obj.win, obj.sVals(i).texture, [],obj.sVals(i).mvRect,...
@@ -922,12 +933,22 @@ classdef runExperiment < dynamicprops
 			end
 		end
 		
-		%-------------------Draw the bar-------------------%
+		% ===================================================================
+		%> @brief Configure grating specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function drawBar(obj,i)
 			Screen('DrawTexture',obj.win,obj.sVals(i).texture,[],obj.sVals(i).mvRect,obj.sVals(i).angle);
 		end
 		
-		%-------------------Draw the dots-------------------%
+		% ===================================================================
+		%> @brief Configure grating specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function drawDots(obj,i)
 			
 			x = obj.xCenter+(obj.sVals(i).xPosition*obj.ppd);
@@ -937,22 +958,42 @@ classdef runExperiment < dynamicprops
 			
 		end
 		
-		%-------------------Draw the spot-------------------%
+		% ===================================================================
+		%> @brief Configure grating specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function drawSpot(obj,i)
 			Screen('gluDisk',obj.win,obj.sVals(i).colour,obj.sVals(i).xT,obj.sVals(i).yT,obj.sVals(i).size);
 		end
 		
-		%--------------------Draw Fixation spot-------------%
+		% ===================================================================
+		%> @brief Configure grating specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function drawFixationPoint(obj)
 			Screen('gluDisk',obj.win,[1 0 1 1],obj.xCenter,obj.yCenter,3);
 		end
 		
-		%------------------------------------------------------------
+		% ===================================================================
+		%> @brief Configure grating specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function drawGrid(obj)
 			Screen('DrawDots',obj.win,obj.grid,2,[1 0 0 1],[obj.xCenter obj.yCenter]);
 		end
 		
-		%--------------------Draw Info text-------------------%
+		% ===================================================================
+		%> @brief Configure grating specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function infoText(obj)
 			t=sprintf('T: %i | R: %i [%i] | isBlank: %i | Time: %3.3f',obj.task.thisTrial,...
 			obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime)); 
@@ -962,17 +1003,32 @@ classdef runExperiment < dynamicprops
 			Screen('DrawText',obj.win,t,50,1,[1 1 1 1],[0 0 1]);
 		end
 		
-		%--------------------Draw photodiode block-------------%
+		% ===================================================================
+		%> @brief Configure grating specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function drawPhotoDiodeSquare(obj,colour)
 			Screen('FillRect',obj.win,colour,obj.photoDiodeRect);
 		end
 		
-		%--------------------Draw background-------------%
+		% ===================================================================
+		%> @brief Configure grating specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function drawBackground(obj)
 			Screen('FillRect',obj.win,obj.backgroundColour,[]);
 		end
 		
-		%--------------------Print time log-------------------%
+		% ===================================================================
+		%> @brief Configure grating specific variables
+		%>
+		%> @param i
+		%> @return 
+		% ===================================================================
 		function printLog(obj)
 			vbl=obj.timeLog.vbl(obj.timeLog.vbl>0)*1000;
 			show=obj.timeLog.show(obj.timeLog.show>0)*1000;

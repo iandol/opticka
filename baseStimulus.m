@@ -9,13 +9,28 @@ classdef baseStimulus < dynamicprops
 	%classes
 	%   Detailed explanation to come
 	properties
+		%> X Position in degrees relative to screen center
 		xPosition = 0
+		%> Y Position in degrees relative to screen center
 		yPosition = 0
+		%> Size in degrees
 		size = 2
+		%> Colour as a 0-1 range RGBA
 		colour = [0.5 0.5 0.5 1]
+		%> Alpha as a 0-1 range
 		alpha = 1
+		%> Do we print details to the commandline?
 		verbose=0
+		%> For moving stimuli do we start "before" our initial position?
 		startPosition=0
+	end
+	properties (SetAccess = protected, GetAccess = public)
+		%> X update which is computed from our speed and angle
+		dX
+		%> X update which is computed from our speed and angle
+		dY
+		%> What our per-frame motion delta is
+		delta
 	end
 	properties (SetAccess = private, GetAccess = private)
 		allowedPropertiesBase='^(xPosition|yPosition|size|colour|verbose|alpha|startPosition)$'
@@ -48,6 +63,14 @@ classdef baseStimulus < dynamicprops
 			end
 		end 
 	end %---END PUBLIC METHODS---%
+	
+	%=======================================================================
+	methods (Abstract)%------------------ABSTRACT METHODS
+	%=======================================================================
+		out = setup(runObject) %initialise the stimulus
+		out = update(runObject) %update the stimulus
+		out = draw(runObject) %draw to the screen buffer
+	end %---END ABSTRACT METHODS---%
 	
 	%=======================================================================
 	methods ( Static ) %----------STATIC METHODS

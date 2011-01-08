@@ -4,11 +4,9 @@
 %> Opticka is a stimulus generator based on Psychophysics toolbox
 %>
 % ======================================================================
-classdef opticka < dynamicprops
+classdef (Sealed) opticka < dynamicprops
 	
 	properties
-		%> default install directory
-		workingDir = '~/Code/opticka/';
 		%> storage of various paths
 		paths
 		%> all of the handles to th opticka_ui GUI
@@ -181,10 +179,12 @@ classdef opticka < dynamicprops
 			obj.r.dstMode = obj.gs(obj.h.OKGLDst, value);
 			
 			obj.r.blend = obj.gv(obj.h.OKOpenGLBlending);
-			if isempty(regexp(get(obj.h.OKWindowSize,'String'),'\[\]', 'once'))
-				obj.r.windowed = 1;
-			else
+			
+			s=str2num(get(obj.h.OKWindowSize,'String'));
+			if isempty(s)
 				obj.r.windowed = 0;
+			else
+				obj.r.windowed = s;
 			end
 			
 			obj.r.hideFlash = obj.gv(obj.h.OKHideFlash);
