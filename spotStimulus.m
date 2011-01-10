@@ -54,6 +54,34 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function out = setup(obj,rE)
 			
+			out.doDots = [];
+			out.doMotion = [];
+			out.doDrift = [];
+			
+			fn = fieldnames(obj);
+			for j=1:length(fn)
+				out.(fn{j}) = obj.(fn{j}); %copy our object propert value to our out
+				if isempty(obj.findprop(['t' fn{j}])) %create a temporary dynamic property
+					p=obj.addprop(['t' fn{j}]);
+					p.Transient = true;
+					p.Hidden = true;
+				end
+				obj.(['t' fn{j}]) = obj.(fn{j}); %copy our property value to our tempory copy
+			end
+			
+			out.size = (out.size*rE.ppd) / 2; %divide by 2 to get diameter
+			out.delta = out.speed * rE.ppd * rE.screenVals.ifi;
+			out.xPosition = rE.xCenter+(out.xPosition*rE.ppd);
+			out.yPosition = rE.yCenter+(out.yPosition*rE.ppd);
+			
+			out.xT = out.xPosition; %xT and yT are temporary position stores.
+			out.yT = out.yPosition;
+			
+			[out.dX out.dY] = obj.updatePosition(out.delta,out.angle);
+			
+			if length(out.colour) == 3
+				out.colour = [out.colour out.alpha];
+			end
 		end
 		
 		% ===================================================================

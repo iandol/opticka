@@ -117,7 +117,7 @@ classdef dotsStimulus < baseStimulus
 				obj.rDots=obj.nDots-floor(obj.nDots*(coherence));
 				if obj.rDots>0
 					obj.angles(1:obj.rDots)=(2*pi).*rand(1,obj.rDots);
-					obj.angles = shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
+					obj.angles = Shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
 				end
 				%calculate positions and vector offsets
 				obj.xy = (obj.size*obj.ppd).*rand(2,obj.nDots);
@@ -140,6 +140,37 @@ classdef dotsStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function out = setup(obj,rE)
+			
+			out.doDots = [];
+			out.doMotion = [];
+			out.doDrift = [];
+			
+			fn = fieldnames(obj);
+			for j=1:length(fn)
+				out.(fn{j}) = obj.(fn{j}); %copy our object propert value to our out
+				if isempty(obj.findprop(['t' fn{j}])) %create a temporary dynamic property
+					p=obj.addprop(['t' fn{j}]);
+					p.Transient = true;
+					p.Hidden = true;
+				end
+				obj.(['t' fn{j}]) = obj.(fn{j}); %copy our property value to our tempory copy
+			end
+			
+			out.size = out.size*rE.ppd;
+			out.dotSize = out.dotSize*rE.ppd;
+			out.delta = out.speed * rE.ppd * rE.screenVals.ifi;
+			
+			if length(out.colour) == 3
+				out.colour = [out.colour out.alpha];
+			end
+			
+			in.ppd = rE.ppd;
+			in.ifi = rE.screenVals.ifi;
+			obj.initialiseDots(in);
+			
+			out.xy=obj.xy;
+			out.dxdy=obj.dxdy;
+			out.colours=obj.colours;
 			
 		end
 		

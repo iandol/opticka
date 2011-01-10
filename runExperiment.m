@@ -395,7 +395,7 @@ classdef (Sealed) runExperiment < dynamicprops
 	end
 	%-------------------------END PUBLIC METHODS--------------------------------%
 	
-	methods ( Access = protected ) %----------PRIVATE METHODS-------------------%
+	methods ( Access = private ) %----------PRIVATE METHODS-------------------%
 		
 		function makeGrid(obj)
 			obj.grid=[];
@@ -516,7 +516,7 @@ classdef (Sealed) runExperiment < dynamicprops
 				if strcmp(name,'xPosition')||strcmp(name,'yPosition')
 					for j=1:length(ix)
 						switch obj.sVals(ix(j)).family
-							case {'grating','bar'} %!!!!!!!!!this needs refacxtoring
+							case {'grating','bar'} %!!!!!!!!!this needs refactoring
 								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
 								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
 								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPosition*obj.ppd,obj.sVals(ix(j)).yPosition*obj.ppd);
@@ -835,18 +835,12 @@ classdef (Sealed) runExperiment < dynamicprops
 		function setupDots(obj,i)
 			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
 			
-			obj.sVals(i).doDots = [];
-			obj.sVals(i).doMotion = [];
-			obj.sVals(i).doDrift = [];
+			out = ts.setup(obj); %get the object to set itself up
 			
-			fn = fieldnames(ts);
+			fn = fieldnames(out);
 			for j=1:length(fn)
-				obj.sVals(i).(fn{j}) = ts.(fn{j});
+				obj.sVals(i).(fn{j}) = out.(fn{j});
 			end
-
-			obj.sVals(i).size = obj.sVals(i).size*obj.ppd;
-			obj.sVals(i).dotSize = obj.sVals(i).dotSize*obj.ppd;
-			obj.sVals(i).delta = obj.sVals(i).speed * obj.ppd * obj.screenVals.ifi;
 			
 			if obj.sVals(i).speed>0 %we need to say this needs animating
 				obj.sVals(i).doDots=1;
@@ -854,18 +848,6 @@ classdef (Sealed) runExperiment < dynamicprops
 			else
 				obj.sVals(i).doDots=0;
 			end
-			
-			if length(obj.sVals(i).colour) == 3
-				obj.sVals(i).colour = [obj.sVals(i).colour obj.sVals(i).alpha];
-			end
-			
-			in.ppd = obj.ppd;
-			in.ifi = obj.screenVals.ifi;
-			ts.initialiseDots(in);
-			
-			obj.sVals(i).xy=ts.xy;
-			obj.sVals(i).dxdy=ts.dxdy;
-			obj.sVals(i).colours=ts.colours;
 		end
 		
 		% ===================================================================
@@ -878,35 +860,18 @@ classdef (Sealed) runExperiment < dynamicprops
 			
 			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
 			
-			obj.sVals(i).doDots = [];
-			obj.sVals(i).doMotion = [];
-			obj.sVals(i).doDrift = [];
+			out = ts.setup(obj); %get the object to set itself up
 			
-			fn = fieldnames(ts);
-			
+			fn = fieldnames(out);
 			for j=1:length(fn)
-				obj.sVals(i).(fn{j}) = ts.(fn{j});
+				obj.sVals(i).(fn{j}) = out.(fn{j});
 			end
-			
-			obj.sVals(i).size = (obj.sVals(i).size*obj.ppd) / 2; %divide by 2 to get diameter
-			obj.sVals(i).delta = obj.sVals(i).speed * obj.ppd * obj.screenVals.ifi;
-			obj.sVals(i).xPosition = obj.xCenter+(ts.xPosition*obj.ppd);
-			obj.sVals(i).yPosition = obj.yCenter+(ts.yPosition*obj.ppd);
-			
-			obj.sVals(i).xT = obj.sVals(i).xPosition; %xT and yT are temporary position stores.
-			obj.sVals(i).yT = obj.sVals(i).yPosition;
-			
-			[obj.sVals(i).dX obj.sVals(i).dY] = ts.updatePosition(obj.sVals(i).delta,obj.sVals(i).angle);
 			
 			if obj.sVals(i).speed>0 %we need to say this needs animating
 				obj.sVals(i).doMotion=1;
  				obj.task.stimIsMoving=[obj.task.stimIsMoving i];
 			else
 				obj.sVals(i).doMotion=0;
-			end
-			
-			if length(obj.sVals(i).colour) == 3
-				obj.sVals(i).colour = [obj.sVals(i).colour obj.sVals(i).alpha];
 			end
 			
 			if strcmp(obj.sVals(i).type,'flash')
