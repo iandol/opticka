@@ -32,9 +32,12 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		scaleup = 1
-		scaledown
+		scaleup = 4
 		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant)$';
+	end
+	
+	properties (Dependent = true, SetAccess = private, GetAccess = private)
+		scaledown
 	end
 	
 	%=======================================================================
@@ -70,7 +73,6 @@ classdef gratingStimulus < baseStimulus
 					end
 				end
 			end
-			obj.scaledown=1/obj.scaleup;
 			obj.salutation('constructor','Grating Stimulus initialisation complete');
 		end
 		
@@ -84,6 +86,14 @@ classdef gratingStimulus < baseStimulus
 			end
 			obj.sf = value;
 			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
+		end
+		
+		% ===================================================================
+		%> @brief scaledown Get method
+		%>
+		% ===================================================================
+		function value = get.scaledown(obj)
+			value = 1/obj.scaleup;
 		end
 		
 		% ===================================================================
@@ -136,20 +146,6 @@ classdef gratingStimulus < baseStimulus
 			if obj.driftDirection < 1
 				out.phaseincrement = -out.phaseincrement;
 			end
-			
-% 			if out.tf>0 %we need to say this needs animating
-% 				out.doDrift=1;
-% 				rE.stimIsDrifting=[rE.stimIsDrifting i];
-% 			else
-% 				out.doDrift=0;
-% 			end
-% 			
-% 			if out.speed>0 %we need to say this needs animating
-% 				out.doMotion=1;
-%  				rE.task.stimIsMoving=[rE.task.stimIsMoving i];
-% 			else
-% 				out.doMotion=0;
-% 			end
 
 			out.res = [out.gratingSize out.gratingSize]*out.scaleup;
 			

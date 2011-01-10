@@ -118,6 +118,35 @@ classdef baseStimulus < dynamicprops
 	%=======================================================================
 	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
 	%=======================================================================
+	
+		% ===================================================================
+		%> @brief Converts properties to a structure
+		%>
+		%> Prints messages dependent on verbosity
+		%> @param tmp is whether to use the temporary or permanent properties
+		%> @return out the structure
+		% ===================================================================
+		function out=toStructure(obj,tmp)
+			if ~exist('tmp','var')
+				tmp = 0; %copy real properties, not temporary ones
+			end
+			fn = fieldnames(obj);
+			for j=1:length(fn)
+				if tmp == 0
+					out.(fn{j}) = obj.(fn{j});
+				else
+					out.(fn{j}) = obj.(['t' fn{j}]);
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Prints messages dependent on verbosity
+		%>
+		%> Prints messages dependent on verbosity
+		%> @param in the calling function
+		%> @param message the message that needs printing to command window
+		% ===================================================================
 		function salutation(obj,in,message)
 			if obj.verbose==1
 				if ~exist('in','var')

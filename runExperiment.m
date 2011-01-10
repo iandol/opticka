@@ -1,4 +1,10 @@
-classdef (Sealed) runExperiment < dynamicprops
+% ========================================================================
+%> @brief runExperiment is the main Experiment Loop
+%>
+%> 
+%>
+% ========================================================================
+classdef (Sealed) runExperiment < handle
 	%RUNEXPERIMENT The main class which accepts a task and stimulus object
 	%and runs the stimuli based on the task object passed. The class
 	%controls the fundamental configuration of the screen (calibration, size
@@ -15,29 +21,51 @@ classdef (Sealed) runExperiment < dynamicprops
 	%	display indefinately
 	
 	properties
-		pixelsPerCm = 44 %MBP 1440x900 is 33.2x20.6cm so approx 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
-		distance = 57.3 % rad2ang(2*(atan((0.5*1cm)/57.3cm))) equals 1deg
-		stimulus %stimulus class passed from gratingStulus and friends
-		task %the structure of the task, and any callbacks embedded
-		screen = [] %which screen to display on, [] means use max screen
-		windowed = 0 % if 1 useful for debugging, but remember timing will be poor
-		verbose = 0 %show time log after stumlus presentation
-		hideFlash = 0 %hide the black flash as PTB tests it refresh timing.
-		debug = 1 % change the parameters for poorer temporal fidelity during debugging
-		visualDebug = 1 %show the info text and position grid
-		doubleBuffer = 1 %normally should be left at 1
-		antiAlias = [] %multisampling sent to the graphics card, try values []=disabled, 4, 8 and 16
-		backgroundColour = [0.5 0.5 0.5 0] % background of display during stimulus presentation
-		screenXOffset = 0 %shunt screen center by X degrees
-		screenYOffset = 0 %shunt screen center by Y degrees
-		blend = 0 %use OpenGL blending mode
-		srcMode = 'GL_ONE' %GL_ONE %src mode
-		dstMode = 'GL_ZERO' %GL_ONE % dst mode
-		fixationPoint = 1 %show a fixation spot?
-		photoDiode = 1 %show a white square to trigger a photodiode attached to screen
-		serialPortName = 'dummy' %name of serial port to send TTL out on, if set to 'dummy' then ignore
+		%> MBP 1440x900 is 33.2x20.6cm so approx 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
+		pixelsPerCm = 44 
+		%> distance of subject from CRT -- rad2ang(2*(atan((0.5*1cm)/57.3cm))) equals 1deg
+		distance = 57.3 
+		%> set of stimulus classes passed from gratingStulus and friends
+		stimulus 
+		%> the stimulusSequence object(s) for the task
+		task 
+		%> which screen to display on, [] means use max screen
+		screen = [] 
+		%> windowed: if 1 useful for debugging, but remember timing will be poor
+		windowed = 0 
+		%>show command logs and a time log after stimlus presentation 1 = yes | 0 = no
+		verbose = 0 
+		%> hide the black flash as PTB tests it refresh timing, uses a gamma trick 1 = yes | 0 = no
+		hideFlash = 0 
+		%> change the parameters for poorer temporal fidelity during debugging 1 = yes | 0 = no
+		debug = 1 
+		%> shows the info text and position grid during stimulus presentation 1 = yes | 0 = no
+		visualDebug = 1 
+		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
+		doubleBuffer = 1 
+		%> multisampling sent to the graphics card, try values []=disabled, 4, 8 and 16
+		antiAlias = [] 
+		%> background of display during stimulus presentation
+		backgroundColour = [0.5 0.5 0.5 0] 
+		%> shunt screen center by X degrees
+		screenXOffset = 0 
+		%> shunt screen center by Y degrees
+		screenYOffset = 0 
+		%> use OpenGL blending mode 1 = yes | 0 = no
+		blend = 0 
+		%> GL_ONE %src mode
+		srcMode = 'GL_ONE' 
+		%> GL_ONE % dst mode
+		dstMode = 'GL_ZERO' 
+		%> show a fixation spot?
+		fixationPoint = 1 
+		%> show a white square to trigger a photodiode attached to screen
+		photoDiode = 1 
+		%> name of serial port to send TTL out on, if set to 'dummy' then ignore
+		serialPortName = 'dummy' 
 		useLabJack = 0
-		lJack %LabJack object
+		%> LabJack object
+		lJack 
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -54,7 +82,6 @@ classdef (Sealed) runExperiment < dynamicprops
 		sVals %calculated stimulus values for display
 		taskLog %detailed info as the experiment runs
 		sList %for heterogenous stimuli, we need a way to index into the stimulus so we don't waste time doing this on each iteration
-		grid
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -64,6 +91,7 @@ classdef (Sealed) runExperiment < dynamicprops
 		serialP %serial port object opened
 		winRect %the window rectangle
 		photoDiodeRect %the photoDiode rectangle
+		grid
 	end
 	
 	%=======================================================================
@@ -813,16 +841,13 @@ classdef (Sealed) runExperiment < dynamicprops
 			
 			out = ts.setup(obj); %get the object to set itself up
 			
+			if ts.speed>0 %we need to say this needs animating
+ 				rE.task.stimIsMoving=[rE.task.stimIsMoving i];
+			end
+			
 			fn = fieldnames(out);
 			for j=1:length(fn)
 				obj.sVals(i).(fn{j}) = out.(fn{j});
-			end
-			
-			if obj.sVals(i).speed>0 %we need to say this needs animating
-				obj.sVals(i).doMotion=1;
- 				obj.task.stimIsMoving=[obj.task.stimIsMoving i];
-			else
-				obj.sVals(i).doMotion=0;
 			end
 		end
 		

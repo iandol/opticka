@@ -5,7 +5,7 @@
 %>
 % ======================================================================
 classdef (Sealed) opticka < dynamicprops
-	
+		
 	properties
 		%> storage of various paths
 		paths

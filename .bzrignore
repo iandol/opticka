@@ -1,5 +1,6 @@
 *.asv
 *~
 *.tmp
+html*
 .DS_Store
 .idea

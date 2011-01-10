@@ -16,6 +16,9 @@ classdef barStimulus < baseStimulus
 	properties (SetAccess = private, GetAccess = public)
 		matrix
 		rmatrix
+		dstRect
+		mvRect
+		texture
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -107,13 +110,10 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function out = setup(obj,rE)
-			out.doDots = [];
-			out.doMotion = [];
-			out.doDrift = [];
-			
+		
 			fn = fieldnames(obj);
 			for j=1:length(fn)
-				out.(fn{j}) = obj.(fn{j});
+				%out.(fn{j}) = obj.(fn{j});
 				if isempty(obj.findprop(['t' fn{j}])) %create a temporary dynamic property
 					p=obj.addprop(['t' fn{j}]);
 					p.Transient = true;
@@ -122,22 +122,38 @@ classdef barStimulus < baseStimulus
 				obj.(['t' fn{j}]) = obj.(fn{j}); %copy our property value to our tempory copy
 			end
 			
-			out.delta = (obj.speed*rE.ppd) * rE.screenVals.ifi;
+			if isempty(obj.findprop('doDots'));obj.addprop('doDots');end
+			if isempty(obj.findprop('doMotion'));obj.addprop('doMotion');end
+			if isempty(obj.findprop('doDrift'));obj.addprop('doDrift');end
+			obj.doDots = [];
+			obj.doMotion = [];
+			obj.doDrift = [];
+			
+			obj.delta = (obj.speed*rE.ppd) * rE.screenVals.ifi;
 			
 			obj.constructMatrix(rE.ppd) %make our matrix
-			out.matrix=obj.matrix;
-			out.texture=Screen('MakeTexture',rE.win,out.matrix,1,[],2);
+			obj.texture=Screen('MakeTexture',rE.win,obj.matrix,1,[],2);
 			
-			[out.dX out.dY] = obj.updatePosition(out.delta,out.angle);
+			[obj.dX obj.dY] = obj.updatePosition(obj.delta,obj.angle);
 			
-			if length(out.colour) == 3
-				out.colour = [out.colour out.alpha];
+			if length(obj.colour) == 3
+				obj.colour = [obj.colour obj.alpha];
+			end
+			out.colour=obj.colour;
+			
+			if obj.speed>0 %we need to say this needs animating
+				obj.doMotion=1;
+ 				%rE.task.stimIsMoving=[rE.task.stimIsMoving i];
+			else
+				obj.doMotion=0;
 			end
 			
-			out.dstRect=Screen('Rect',out.texture);
-			out.dstRect=CenterRectOnPoint(out.dstRect,rE.xCenter,rE.yCenter);
-			out.dstRect=OffsetRect(out.dstRect,(out.xPosition)*rE.ppd,(out.yPosition)*rE.ppd);
-			out.mvRect=out.dstRect;
+			obj.dstRect=Screen('Rect',obj.texture);
+			obj.dstRect=CenterRectOnPoint(obj.dstRect,rE.xCenter,rE.yCenter);
+			obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*rE.ppd,(obj.yPosition)*rE.ppd);
+			obj.mvRect=obj.dstRect;
+			
+			out = obj.toStructure;
 		end
 		
 		% ===================================================================

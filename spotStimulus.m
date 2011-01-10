@@ -12,6 +12,7 @@ classdef spotStimulus < baseStimulus
 	
 	properties (SetAccess = private, GetAccess = public)
 		flashSegment = 1
+		
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -70,7 +71,9 @@ classdef spotStimulus < baseStimulus
 			end
 			
 			out.size = (out.size*rE.ppd) / 2; %divide by 2 to get diameter
+			obj.tsize=out.size;
 			out.delta = out.speed * rE.ppd * rE.screenVals.ifi;
+			obj.delta
 			out.xPosition = rE.xCenter+(out.xPosition*rE.ppd);
 			out.yPosition = rE.yCenter+(out.yPosition*rE.ppd);
 			
@@ -101,7 +104,7 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function out = draw(obj,rE)
-			
+			Screen('gluDisk',rE.win,obj.tcolour,obj.txT,obj.tyT,obj.tsize);
 		end
 		
 		
