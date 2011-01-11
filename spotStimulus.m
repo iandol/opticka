@@ -12,7 +12,6 @@ classdef spotStimulus < baseStimulus
 	
 	properties (SetAccess = private, GetAccess = public)
 		flashSegment = 1
-		
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -54,33 +53,36 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function out = setup(obj,rE)
-			
-			out.doDots = [];
-			out.doMotion = [];
-			out.doDrift = [];
-			
+
 			fn = fieldnames(obj);
 			for j=1:length(fn)
-				out.(fn{j}) = obj.(fn{j}); %copy our object propert value to our out
-				if isempty(obj.findprop(['t' fn{j}])) %create a temporary dynamic property
-					p=obj.addprop(['t' fn{j}]);
+				%out.(fn{j}) = obj.(fn{j}); %copy our object propert value to our out
+				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
+					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;
-					p.Hidden = true;
+					%p.Hidden = true;
 				end
-				obj.(['t' fn{j}]) = obj.(fn{j}); %copy our property value to our tempory copy
+				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 			end
 			
-			out.size = (out.size*rE.ppd) / 2; %divide by 2 to get diameter
-			obj.tsize=out.size;
-			out.delta = out.speed * rE.ppd * rE.screenVals.ifi;
-			obj.delta
-			out.xPosition = rE.xCenter+(out.xPosition*rE.ppd);
-			out.yPosition = rE.yCenter+(out.yPosition*rE.ppd);
+			if isempty(obj.findprop('doDots'));obj.addprop('doDots');end
+			if isempty(obj.findprop('doMotion'));obj.addprop('doMotion');end
+			if isempty(obj.findprop('doDrift'));obj.addprop('doDrift');end
+			obj.doDots = [];
+			obj.doMotion = [];
+			obj.doDrift = [];
 			
-			out.xT = out.xPosition; %xT and yT are temporary position stores.
-			out.yT = out.yPosition;
+			obj.sizeOut = (obj.size*rE.ppd) / 2; %divide by 2 to get diameter
+			obj.delta = obj.speed * rE.ppd * rE.screenVals.ifi;
+			obj.xPositionOut = rE.xCenter+(obj.xPosition*rE.ppd);
+			obj.yPositionOut = rE.yCenter+(obj.yPosition*rE.ppd);
 			
-			[out.dX out.dY] = obj.updatePosition(out.delta,out.angle);
+			if isempty(obj.findprop('xTmp'));obj.addprop('xTmp');end
+			if isempty(obj.findprop('yTmp'));obj.addprop('yTmp');end
+			obj.xTmp = obj.xPositionOut; %xT and yT are temporary position stores.
+			obj.yTmp = obj.yPositionOut;
+			
+			[obj.dX obj.dY] = obj.updatePosition(obj.delta,obj.angleOut);
 			
 			if length(out.colour) == 3
 				out.colour = [out.colour out.alpha];

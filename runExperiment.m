@@ -544,7 +544,13 @@ classdef (Sealed) runExperiment < handle
 				if strcmp(name,'xPosition')||strcmp(name,'yPosition')
 					for j=1:length(ix)
 						switch obj.sVals(ix(j)).family
-							case {'grating','bar'} %!!!!!!!!!this needs refactoring
+							case {'grating'} %!!!!!!!!!this needs refactoring
+								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
+								obj.sVals(ix(j)).dstRect=ScaleRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).scaledown,obj.sVals(ix(j)).scaledown);
+								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
+								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPosition*obj.ppd,obj.sVals(ix(j)).yPosition*obj.ppd);
+								obj.sVals(ix(j)).mvRect=obj.sVals(ix(j)).dstRect;
+							case {'bar'}
 								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
 								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
 								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPosition*obj.ppd,obj.sVals(ix(j)).yPosition*obj.ppd);
@@ -841,8 +847,8 @@ classdef (Sealed) runExperiment < handle
 			
 			out = ts.setup(obj); %get the object to set itself up
 			
-			if ts.speed>0 %we need to say this needs animating
- 				rE.task.stimIsMoving=[rE.task.stimIsMoving i];
+			if out.speed>0 %we need to say this needs animating
+				obj.task.stimIsMoving=[obj.task.stimIsMoving i];
 			end
 			
 			fn = fieldnames(out);

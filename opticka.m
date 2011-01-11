@@ -615,12 +615,13 @@ classdef (Sealed) opticka < dynamicprops
 						y=s.yPosition;
 						c=s.contrast;
 						a=s.angle;
+						sz=s.size;
 						if s.gabor == 0
 							name = 'Grating ';
 						else
 							name = 'Gabor ';
 						end
-						str{i} = [name num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' c=' num2str(c) ' ang=' num2str(a)];
+						str{i} = [name num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' c=' num2str(c) ' ang=' num2str(a) ' sz=' num2str(sz)];
 					case 'b'
 						x=s.xPosition;
 						y=s.yPosition;

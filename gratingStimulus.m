@@ -32,7 +32,7 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		scaleup = 4
+		scaleup = 2
 		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant)$';
 	end
 	
@@ -134,7 +134,7 @@ classdef gratingStimulus < baseStimulus
 			end
 			
 			out.gratingSize = round(rE.ppd*obj.size);
-			out.sf = (out.sf/rE.ppd)*out.scaledown;
+			out.sf = (out.sf/rE.ppd) * out.scaledown;
 			%if ts.gabor
 				%out.contrast = out.contrast*100;
 			%end
