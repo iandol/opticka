@@ -32,7 +32,7 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		scaleup = 2
+		scaleup = 1
 		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant)$';
 	end
 	
@@ -104,80 +104,83 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function out = setup(obj,rE)
 			
-			out.doDots = [];
-			out.doMotion = [];
-			out.doDrift = [];
-			
 			fn = fieldnames(obj);
 			for j=1:length(fn)
-				out.(fn{j}) = obj.(fn{j}); %copy our object propert value to our out
-				if isempty(obj.findprop(['t' fn{j}])) %create a temporary dynamic property
-					p=obj.addprop(['t' fn{j}]);
-					p.Transient = true;
-					p.Hidden = true;
+				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
+					p=obj.addprop([fn{j} 'Out']);
+					p.Transient = true;%p.Hidden = true;
 				end
-				obj.(['t' fn{j}]) = obj.(fn{j}); %copy our property value to our tempory copy
+				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 			end
 			
+			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient=true;end
+			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient=true;end
+			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient=true;end
+			obj.doDots = [];
+			obj.doMotion = [];
+			obj.doDrift = [];
+			
+			if isempty(obj.findprop('rotateMode'));p=obj.addprop('rotateMode');p.Transient=true;end
 			if obj.rotationMethod==1
-				out.rotateMode = kPsychUseTextureMatrixForRotation;
+				obj.rotateMode = kPsychUseTextureMatrixForRotation;
 			else
-				out.rotateMode = [];
+				obj.rotateMode = [];
 			end
 			
-			if out.gabor==0
-				out.scaleup=obj.scaleup;
-				out.scaledown=obj.scaledown;				
-			else
-				out.scaleup=1;%scaling gabors does weird things!!!
-				out.scaledown=1/out.scaleup;
+			if obj.gabor==1
+				obj.scaleup=1;%scaling gabors does weird things!!!
 			end
 			
-			out.gratingSize = round(rE.ppd*obj.size);
-			out.sf = (out.sf/rE.ppd) * out.scaledown;
-			%if ts.gabor
-				%out.contrast = out.contrast*100;
-			%end
-			out.spatialConstant = out.spatialConstant*rE.ppd;
-			out.phaseincrement = (out.tf * 360) * rE.screenVals.ifi;
-			out.delta = (obj.speed*rE.ppd) * rE.screenVals.ifi;
-			[out.dX out.dY] = obj.updatePosition(out.delta,out.angle);
+			if isempty(obj.findprop('gratingSize'));p=obj.addprop('gratingSize');p.Transient=true;end
+			obj.gratingSize = round(rE.ppd*obj.size);
+			obj.sfOut = (obj.sf/rE.ppd) * obj.scaledown;
+			obj.spatialConstantOut = obj.spatialConstant*rE.ppd;
+			if isempty(obj.findprop('phaseIncrement'));p=obj.addprop('phaseIncrement');p.Transient=true;end
+			obj.phaseIncrement = (obj.tf * 360) * rE.screenVals.ifi;
+			obj.delta = (obj.speed*rE.ppd) * rE.screenVals.ifi;
+			[obj.dX obj.dY] = obj.updatePosition(obj.delta,obj.angle);
 			
 			if obj.driftDirection < 1
-				out.phaseincrement = -out.phaseincrement;
+				obj.phaseIncrement = -obj.phaseIncrement;
 			end
-
-			out.res = [out.gratingSize out.gratingSize]*out.scaleup;
+			
+			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
+			obj.res = [obj.gratingSize obj.gratingSize].*obj.scaleup;
+			
 			
 			if obj.mask>0
-				out.mask = (floor((rE.ppd*obj.size)/2)*out.scaleup);
+				obj.maskOut = (floor((rE.ppd*obj.size)/2)*obj.scaleup);
 			else
-				out.mask = [];
+				obj.maskOut = [];
 			end
 			
-			if length(out.colour) == 3
-				out.colour = [out.colour out.alpha];
+			if length(obj.colour) == 3
+				obj.colour = [obj.colour obj.alpha];
 			end
 			
+			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
 			if obj.gabor==0
-				out.texture = CreateProceduralSineGrating(rE.win, out.res(1),...
-					out.res(2), out.colour, out.mask, out.contrastMult);
+				obj.texture = CreateProceduralSineGrating(rE.win, obj.res(1),...
+					obj.res(2), obj.colour, obj.maskOut, obj.contrastMult);
 			else
-				if out.aspectRatio == 1
+				if obj.aspectRatio == 1
 					nonSymmetric = 0;
 				else
 					nonSymmetric = 1;
 				end
-				out.texture = CreateProceduralGabor(rE.win, out.res(1),...
-					out.res(2), nonSymmetric, out.colour, out.disableNorm,...
-					out.contrastMult);
+				obj.texture = CreateProceduralGabor(rE.win, obj.res(1),...
+					obj.res(2), nonSymmetric, obj.colour, obj.disableNorm,...
+					obj.contrastMult);
 			end
 			
-			out.dstRect=Screen('Rect',out.texture);
-			out.dstRect=ScaleRect(out.dstRect,out.scaledown,out.scaledown);
-			out.dstRect=CenterRectOnPoint(out.dstRect,rE.xCenter,rE.yCenter);
-			out.dstRect=OffsetRect(out.dstRect,(out.xPosition)*rE.ppd,(out.yPosition)*rE.ppd);
-			out.mvRect=out.dstRect;
+			obj.dstRect=Screen('Rect',obj.texture);
+			obj.dstRect=ScaleRect(obj.dstRect,obj.scaledown,obj.scaledown);
+			obj.dstRect=CenterRectOnPoint(obj.dstRect,rE.xCenter,rE.yCenter);
+			obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*rE.ppd,(obj.yPosition)*rE.ppd);
+			obj.mvRect=obj.dstRect;
+			
+			out = obj.toStructure;
+			
 		end
 		
 		% ===================================================================

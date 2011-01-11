@@ -16,9 +16,6 @@ classdef barStimulus < baseStimulus
 	properties (SetAccess = private, GetAccess = public)
 		matrix
 		rmatrix
-		dstRect
-		mvRect
-		texture
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -113,13 +110,11 @@ classdef barStimulus < baseStimulus
 		
 			fn = fieldnames(obj);
 			for j=1:length(fn)
-				%out.(fn{j}) = obj.(fn{j});
-				if isempty(obj.findprop(['t' fn{j}])) %create a temporary dynamic property
-					p=obj.addprop(['t' fn{j}]);
-					p.Transient = true;
-					%p.Hidden = true;
+				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
+					p=obj.addprop([fn{j} 'Out']);
+					p.Transient = true;%p.Hidden = true;
 				end
-				obj.(['t' fn{j}]) = obj.(fn{j}); %copy our property value to our tempory copy
+				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 			end
 			
 			if isempty(obj.findprop('doDots'));obj.addprop('doDots');end

@@ -56,11 +56,9 @@ classdef spotStimulus < baseStimulus
 
 			fn = fieldnames(obj);
 			for j=1:length(fn)
-				%out.(fn{j}) = obj.(fn{j}); %copy our object propert value to our out
 				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
-					p.Transient = true;
-					%p.Hidden = true;
+					p.Transient = true;%p.Hidden = true;
 				end
 				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 			end
@@ -84,9 +82,11 @@ classdef spotStimulus < baseStimulus
 			
 			[obj.dX obj.dY] = obj.updatePosition(obj.delta,obj.angleOut);
 			
-			if length(out.colour) == 3
-				out.colour = [out.colour out.alpha];
+			if length(obj.colour) == 3
+				obj.colour = [obj.colour obj.alpha];
 			end
+			
+			out = obj.toStructure;
 		end
 		
 		% ===================================================================

@@ -4,9 +4,9 @@ function m = serializer(v, n)
 %   matcode = SERIALIZER(x) generates matlab code of x
 %   matcode = SERIALIZER(x, n) generates matlab code of x retaining n digits
 %   of precision
-%   SERIALIZE() enters self test mode
+%   SERIALIZER() enters self test mode
 %
-%   SERIALIZE should be able to create matlab code of the following data types:
+%   SERIALIZER should be able to create matlab code of the following data types:
 %   - matrices, vectors, and scalars of any class and dimension
 %   - strings
 %   - structs, arrays of structs with up to six dimensions
@@ -42,9 +42,10 @@ switch nargin
 	case 1
 		n = 15;
 end
-
+warning('off','MATLAB:structOnObject');
 val = serializevalue(v, n);
 m = [val ';'];
+warning('on','MATLAB:structOnObject');
 end
 %
 % Main hub for serializing values

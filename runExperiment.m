@@ -1,24 +1,21 @@
 % ========================================================================
-%> @brief runExperiment is the main Experiment Loop
+%> @brief runExperiment is the main Experiment object; Inherits from Handle
 %>
-%> 
+%>RUNEXPERIMENT The main class which accepts a task and stimulus object
+%>and runs the stimuli based on the task object passed. The class
+%>controls the fundamental configuration of the screen (calibration, size
+%>etc.), and manages communication to the DAQ system using TTL pulses out
+%>and communication over a UDP client<->server socket.
+%>  Stimulus must be a stimulus class, i.e. gratingStimulus and friends,
+%>  so for example: 
 %>
+%>  gs.g=gratingStimulus(struct('mask',1,'sf',1));
+%>  ss=runExperiment(struct('stimulus',gs,'windowed',1));
+%>  ss.run;
+%>	
+%>	will run a minimal experiment showing a 1c/d circularly masked grating
 % ========================================================================
 classdef (Sealed) runExperiment < handle
-	%RUNEXPERIMENT The main class which accepts a task and stimulus object
-	%and runs the stimuli based on the task object passed. The class
-	%controls the fundamental configuration of the screen (calibration, size
-	%etc.), and manages communication to the DAQ system using TTL pulses out
-	%and communication over a UDP client<->server socket.
-	%  Stimulus must be a stimulus class, i.e. gratingStimulus and friends,
-	%  so for example: 
-	%
-	%  gs.g=gratingStimulus(struct('mask',1,'sf',1));
-	%  ss=runExperiment(struct('stimulus',gs,'windowed',1));
-	%  ss.run;
-	%	
-	%	will run a minimal experiment showing a 1c/d circularly masked grating, repeating the
-	%	display indefinately
 	
 	properties
 		%> MBP 1440x900 is 33.2x20.6cm so approx 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
@@ -68,29 +65,36 @@ classdef (Sealed) runExperiment < handle
 		lJack 
 	end
 	
+	properties (SetAccess = private, GetAccess = public, Dependent = true)
+		%> calculated from distance and pixelsPerCm
+		ppd
+	end
+	
 	properties (SetAccess = private, GetAccess = public)
-		win %the handle returned by opening a PTB window
-		xCenter %computed X center
-		yCenter %computed Y center
-		ppd %calculated from distance and pixelsPerCm
-		maxScreen %set automatically on construction
-		info %?
-		computer %general computer info
-		ptb %PTB info
-		screenVals %gamma tables and the like
-		timeLog %log times during display
-		sVals %calculated stimulus values for display
-		taskLog %detailed info as the experiment runs
-		sList %for heterogenous stimuli, we need a way to index into the stimulus so we don't waste time doing this on each iteration
+		%> the handle returned by opening a PTB window
+		win 
+		%> computed X center
+		xCenter 
+		%> computed Y center
+		yCenter 
+		maxScreen %> set automatically on construction
+		info %> ?
+		computer %> general computer info
+		ptb %> PTB info
+		screenVals %> gamma tables and the like
+		timeLog %> log times during display
+		sVals %> calculated stimulus values for display
+		taskLog %> detailed info as the experiment runs
+		sList %> for heterogenous stimuli, we need a way to index into the stimulus so we don't waste time doing this on each iteration
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		black=0 %black index
-		white=1 %white index
+		black=0 %> black index
+		white=1 %> white index
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
-		serialP %serial port object opened
-		winRect %the window rectangle
-		photoDiodeRect %the photoDiode rectangle
+		serialP %> serial port object opened
+		winRect %> the window rectangle
+		photoDiodeRect %> the photoDiode rectangle
 		grid
 	end
 	
@@ -305,7 +309,7 @@ classdef (Sealed) runExperiment < handle
 					if obj.task.tick==1
 						obj.timeLog.startflip=obj.timeLog.vbl(obj.task.tick) + obj.screenVals.halfisi;
 						obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
-						obj.logMe('IntoTrial');
+						%obj.logMe('IntoTrial');
 					end
 					
 					if obj.task.isBlank==0
@@ -367,27 +371,48 @@ classdef (Sealed) runExperiment < handle
 			end
 		end
 		
-		%------------------Make sure pixelsPerDegree is also changed-----
+		% ===================================================================
+		%> @brief Set method for distance
+		%> 
+		%> @param 
+		% ===================================================================
 		function set.distance(obj,value)
 			if ~(value > 0)
 				value = 57.3;
 			end
 			obj.distance = value;
-			obj.ppd=obj.pixelsPerCm*(57.3/obj.distance); %set the pixels per degree
 			obj.makeGrid;
 			obj.salutation(['set distance: ' num2str(obj.distance) '|ppd: ' num2str(obj.ppd)],'Custom set method')
 		end 
-		%------------------Make sure pixelsPerDegree is also changed-----
+		
+		% ===================================================================
+		%> @brief Set method for pixelsPerCm
+		%> 
+		%> @param 
+		% ===================================================================
 		function set.pixelsPerCm(obj,value)
 			if ~(value > 0)
 				value = 44;
 			end
 			obj.pixelsPerCm = value;
-			obj.ppd=obj.pixelsPerCm*(57.3/obj.distance); %set the pixels per degree
 			obj.makeGrid;
 			obj.salutation(['set pixelsPerCm: ' num2str(obj.pixelsPerCm) '|ppd: ' num2str(obj.ppd)],'Custom set method')
 		end
 		
+		% ===================================================================
+		%> @brief Get method for ppd (a dependent property)
+		%> 
+		%> @param 
+		% ===================================================================
+		function ppd = get.ppd(obj)
+			ppd=round(obj.pixelsPerCm*(57.3/obj.distance)); %set the pixels per degree
+		end
+		
+		% ===================================================================
+		%> @brief getTimeLog Prints out the frame time plots from a run
+		%> 
+		%> @param 
+		% ===================================================================
 		function getTimeLog(obj)
 			obj.printlog;
 		end
@@ -423,7 +448,9 @@ classdef (Sealed) runExperiment < handle
 	end
 	%-------------------------END PUBLIC METHODS--------------------------------%
 	
-	methods ( Access = private ) %----------PRIVATE METHODS-------------------%
+	%=======================================================================
+		methods (Access = private) %------------------PRIVATE METHODS
+	%=======================================================================
 		
 		function makeGrid(obj)
 			obj.grid=[];
@@ -643,7 +670,7 @@ classdef (Sealed) runExperiment < handle
 					
 					for i=1:length(obj.task.stimIsDrifting) %only update those stimuli which are drifting
 						ix=obj.task.stimIsDrifting(i);
-						obj.sVals(ix).phase=obj.sVals(ix).phase+obj.sVals(ix).phaseincrement;
+						obj.sVals(ix).phase=obj.sVals(ix).phase+obj.sVals(ix).phaseIncrement;
 					end
 					
 					for i=1:length(obj.task.stimIsMoving) %only update those stimuli which are moving
@@ -744,7 +771,7 @@ classdef (Sealed) runExperiment < handle
 		%---------------Calculates the screen values----------------%
 		function prepareScreen(obj)
 			
-			obj.ppd=round(obj.pixelsPerCm*(57.3/obj.distance)); %set the pixels per degree
+			%obj.ppd=round(obj.pixelsPerCm*(57.3/obj.distance)); %set the pixels per degree
 			obj.maxScreen=max(Screen('Screens'));
 			
 			if isempty(obj.screen) || obj.screen > obj.maxScreen
@@ -1010,9 +1037,9 @@ classdef (Sealed) runExperiment < handle
 		end
 		
 		% ===================================================================
-		%> @brief Configure grating specific variables
+		%> @brief Draw the background colour
 		%>
-		%> @param i
+		%> @param
 		%> @return 
 		% ===================================================================
 		function drawBackground(obj)
@@ -1020,9 +1047,9 @@ classdef (Sealed) runExperiment < handle
 		end
 		
 		% ===================================================================
-		%> @brief Configure grating specific variables
+		%> @brief print Log of the frame timings
 		%>
-		%> @param i
+		%> @param
 		%> @return 
 		% ===================================================================
 		function printLog(obj)

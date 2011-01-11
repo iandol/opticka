@@ -31,6 +31,12 @@ classdef baseStimulus < dynamicprops
 		dY
 		%> What our per-frame motion delta is
 		delta
+		%> Our screen rectangle position in PTB format
+		dstRect
+		%> Our screen rectangle position in PTB format
+		mvRect
+		%> Our texture pointer for texture-based stimuli
+		texture
 	end
 	properties (SetAccess = private, GetAccess = private)
 		allowedPropertiesBase='^(xPosition|yPosition|size|colour|verbose|alpha|startPosition)$'
