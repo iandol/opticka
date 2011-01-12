@@ -566,7 +566,7 @@ classdef (Sealed) runExperiment < handle
 				ix = obj.task.nVar(i).stimulus; %which stimulus
 				value=obj.task.outVars{thisTrial,i}(thisRun);
 				name=obj.task.nVar(i).name; %which parameter
-				[obj.sVals(ix).(name)]=deal(value); %set our value(s) to current variable(s)
+				[obj.sVals(ix).([name 'Out'])]=deal(value); %set our value(s) to current variable(s)
 				
 				if strcmp(name,'xPosition')||strcmp(name,'yPosition')
 					for j=1:length(ix)
@@ -575,12 +575,12 @@ classdef (Sealed) runExperiment < handle
 								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
 								obj.sVals(ix(j)).dstRect=ScaleRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).scaledown,obj.sVals(ix(j)).scaledown);
 								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
-								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPosition*obj.ppd,obj.sVals(ix(j)).yPosition*obj.ppd);
+								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPositionOut*obj.ppd,obj.sVals(ix(j)).yPositionOut*obj.ppd);
 								obj.sVals(ix(j)).mvRect=obj.sVals(ix(j)).dstRect;
 							case {'bar'}
 								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
 								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
-								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPosition*obj.ppd,obj.sVals(ix(j)).yPosition*obj.ppd);
+								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPositionOut*obj.ppd,obj.sVals(ix(j)).yPositionOut*obj.ppd);
 								obj.sVals(ix(j)).mvRect=obj.sVals(ix(j)).dstRect;
 							case {'spot'}
 								
@@ -594,9 +594,9 @@ classdef (Sealed) runExperiment < handle
 						ts = obj.stimulus.(obj.sList.list(ix(j)))(obj.sList.index(ix(j)));
 						switch obj.sVals(ix(j)).family
 							case {'grating','bar', 'spot'}
-								[obj.sVals(ix(j)).dX obj.sVals(ix(j)).dY]=ts.updatePosition(obj.sVals(ix(j)).delta,obj.sVals(ix(j)).angle);
+								[obj.sVals(ix(j)).dX obj.sVals(ix(j)).dY]=ts.updatePosition(obj.sVals(ix(j)).delta,obj.sVals(ix(j)).angleOut);
 							case {'dots'}
-								ts.updateDots(obj.sVals(ix(j)).coherence,obj.sVals(ix(j)).angle);
+								ts.updateDots(obj.sVals(ix(j)).coherenceOut,obj.sVals(ix(j)).angleOut);
 								obj.sVals(ix(j)).xy = ts.xy;
 								obj.sVals(ix(j)).dxdy = ts.dxdy;
 						end
@@ -606,9 +606,16 @@ classdef (Sealed) runExperiment < handle
 						ts = obj.stimulus.(obj.sList.list(ix(j)))(obj.sList.index(ix(j)));
 						switch obj.sVals(ix(j)).family
 							case {'grating'}
+								scale=obj.sVals(ix(j)).sizeOut/obj.sVals(ix(j)).size;
+								obj.sVals(ix(j)).sfOut = obj.sVals(ix(j)).sfOut * scale
+								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
+								obj.sVals(ix(j)).dstRect=ScaleRect(obj.sVals(ix(j)).dstRect,scale,scale);
+								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
+								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPositionOut*obj.ppd,obj.sVals(ix(j)).yPositionOut*obj.ppd);
+								obj.sVals(ix(j)).mvRect=obj.sVals(ix(j)).dstRect;
 							case {'bar'}
 							case {'spot'}
-								obj.sVals(ix(j)).size = (obj.sVals(ix(j)).size * obj.ppd) / 2;
+								obj.sVals(ix(j)).size = (obj.sVals(ix(j)).sizeOut * obj.ppd) / 2;
 							case {'dots'}
 						end
 					end
@@ -619,7 +626,7 @@ classdef (Sealed) runExperiment < handle
 							case {'grating','bar', 'spot'}
 								
 							case {'dots'}
-								ts.updateDots(obj.sVals(ix(j)).coherence,obj.sVals(ix(j)).angle);
+								ts.updateDots(obj.sVals(ix(j)).coherenceOut,obj.sVals(ix(j)).angleOut);
 								obj.sVals(ix(j)).xy = ts.xy;
 								obj.sVals(ix(j)).dxdy = ts.dxdy;
 						end
@@ -627,13 +634,13 @@ classdef (Sealed) runExperiment < handle
 				end
 				for j=1:length(ix)
 					if (obj.sVals(ix(j)).speed) > 0 && ~isempty(obj.sVals(ix(j)).startPosition) && (obj.sVals(ix(j)).startPosition ~= 0)
-						[dx dy]=pol2cart(baseStimulus.d2r(obj.sVals(ix(j)).angle),obj.sVals(ix(j)).startPosition);
+						[dx dy]=pol2cart(baseStimulus.d2r(obj.sVals(ix(j)).angleOut),obj.sVals(ix(j)).startPosition);
 						switch obj.sVals(ix(j)).family
 							case {'grating','bar'}
 								obj.sVals(ix(j)).mvRect=OffsetRect(obj.sVals(ix(j)).dstRect,dx*obj.ppd,dy*obj.ppd);
 							case {'spot'}
-								obj.sVals(ix(j)).xT=obj.sVals(ix(j)).xPosition + round((dx * obj.ppd));
-								obj.sVals(ix(j)).yT=obj.sVals(ix(j)).yPosition + round((dy * obj.ppd));
+								obj.sVals(ix(j)).xT=obj.sVals(ix(j)).xPositionOut + round((dx * obj.ppd));
+								obj.sVals(ix(j)).yT=obj.sVals(ix(j)).yPositionOut + round((dy * obj.ppd));
 						end
 					end
 				end
@@ -646,7 +653,8 @@ classdef (Sealed) runExperiment < handle
 				ts = obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
 				switch obj.sList.list(i)
 					case 'g'
-						obj.sVals(i).phase=ts.phase;
+						obj.sVals(i).phaseOut=ts.phase;
+						obj.sVals(i).sfOut=ts.sfOut;
 					case 'b'
 						
 				end
@@ -670,7 +678,7 @@ classdef (Sealed) runExperiment < handle
 					
 					for i=1:length(obj.task.stimIsDrifting) %only update those stimuli which are drifting
 						ix=obj.task.stimIsDrifting(i);
-						obj.sVals(ix).phase=obj.sVals(ix).phase+obj.sVals(ix).phaseIncrement;
+						obj.sVals(ix).phaseOut=obj.sVals(ix).phaseOut+obj.sVals(ix).phaseIncrement;
 					end
 					
 					for i=1:length(obj.task.stimIsMoving) %only update those stimuli which are moving
@@ -947,23 +955,23 @@ classdef (Sealed) runExperiment < handle
 		function drawGrating(obj,i)
 			if obj.sVals(i).gabor==0
 				Screen('DrawTexture', obj.win, obj.sVals(i).texture, [],obj.sVals(i).mvRect,...
-					obj.sVals(i).angle, [], [], [], [],obj.sVals(i).rotateMode, [obj.sVals(i).phase,...
-					obj.sVals(i).sf,obj.sVals(i).contrast, 0]);
+					obj.sVals(i).angleOut, [], [], [], [], obj.sVals(i).rotateMode,...
+					[obj.sVals(i).phaseOut,obj.sVals(i).sfOut,obj.sVals(i).contrastOut, 0]);
 			else
-				Screen('DrawTexture', obj.win, obj.sVals(i).texture, [],...
-					obj.sVals(i).mvRect, obj.sVals(i).angle, [], [], [], [], kPsychDontDoRotation,...
-					[obj.sVals(i).phase, obj.sVals(i).sf, obj.sVals(i).spatialConstant, obj.sVals(i).contrast, obj.sVals(i).aspectRatio, 0, 0, 0]);
+				Screen('DrawTexture', obj.win, obj.sVals(i).texture, [],obj.sVals(i).mvRect,...
+					obj.sVals(i).angleOut+180, [], [], [], [], obj.sVals(i).rotateMode,...
+					[obj.sVals(i).phaseOut, obj.sVals(i).sfOut, obj.sVals(i).spatialConstantOut, obj.sVals(i).contrastOut, obj.sVals(i).aspectRatioOut, 0, 0, 0]);
 			end
 		end
 		
 		% ===================================================================
 		%> @brief Configure grating specific variables
 		%>
-		%> @param i
+		%> @param iOut
 		%> @return 
 		% ===================================================================
 		function drawBar(obj,i)
-			Screen('DrawTexture',obj.win,obj.sVals(i).texture,[],obj.sVals(i).mvRect,obj.sVals(i).angle);
+			Screen('DrawTexture',obj.win,obj.sVals(i).texture,[],obj.sVals(i).mvRect,obj.sVals(i).angleOut);
 		end
 		
 		% ===================================================================
@@ -976,8 +984,8 @@ classdef (Sealed) runExperiment < handle
 			
 			x = obj.xCenter+(obj.sVals(i).xPosition*obj.ppd);
 			y = obj.yCenter+(obj.sVals(i).yPosition*obj.ppd);
-			Screen('DrawDots',obj.win,obj.sVals(i).xy,obj.sVals(i).dotSize,obj.sVals(i).colours,...
-				[x y],obj.sVals(i).dotType);
+			Screen('DrawDots',obj.win,obj.sVals(i).xy,obj.sVals(i).dotSizeOut,obj.sVals(i).coloursOut,...
+				[x y],obj.sVals(i).dotTypeOut);
 			
 		end
 		
@@ -988,7 +996,7 @@ classdef (Sealed) runExperiment < handle
 		%> @return 
 		% ===================================================================
 		function drawSpot(obj,i)
-			Screen('gluDisk',obj.win,obj.sVals(i).colour,obj.sVals(i).xT,obj.sVals(i).yT,obj.sVals(i).size);
+			Screen('gluDisk',obj.win,obj.sVals(i).colour,obj.sVals(i).xT,obj.sVals(i).yT,obj.sVals(i).sizeOut);
 		end
 		
 		% ===================================================================

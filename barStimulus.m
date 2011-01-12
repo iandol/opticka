@@ -113,8 +113,8 @@ classdef barStimulus < baseStimulus
 				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
+					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 				end
-				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 			end
 			
 			if isempty(obj.findprop('doDots'));obj.addprop('doDots');end

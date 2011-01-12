@@ -1,17 +1,17 @@
 classdef gratingStimulus < baseStimulus
-%GRATINGSTIMULUS single grating stimulus, inherits from baseStimulus
-%   The current properties are:
-%   sf = spatial frequency in degrees
-%   tf = temporal frequency
-%   angle = angle in degrees
-%   rotationMethod = do we rotate the grating texture (1) or the patch
-%   itself (0)
-%   phase = phase of grating
-%   contrast = contrast from 0 - 1
-%   mask = use circular mask (1) or not (0)
-%   gabor = use a gabor rather than grating
-
-   properties %--------------------PUBLIC PROPERTIES----------%
+	%GRATINGSTIMULUS single grating stimulus, inherits from baseStimulus
+	%   The current properties are:
+	%   sf = spatial frequency in degrees
+	%   tf = temporal frequency
+	%   angle = angle in degrees
+	%   rotationMethod = do we rotate the grating texture (1) or the patch
+	%   itself (0)
+	%   phase = phase of grating
+	%   contrast = contrast from 0 - 1
+	%   mask = use circular mask (1) or not (0)
+	%   gabor = use a gabor rather than grating
+	
+	properties %--------------------PUBLIC PROPERTIES----------%
 		family = 'grating'
 		type = 'procedural'
 		sf = 1
@@ -30,20 +30,27 @@ classdef gratingStimulus < baseStimulus
 		contrastMult = 0.5
 		spatialConstant = 1
 	end
-	
-	properties (SetAccess = private, GetAccess = private)
+
+	properties (SetAccess = private, GetAccess = public)
 		scaleup = 1
-		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant)$';
 	end
 	
-	properties (Dependent = true, SetAccess = private, GetAccess = private)
+	properties (Dependent = true, SetAccess = private, GetAccess = public)
 		scaledown
+	end
+	
+	properties (SetAccess = private, GetAccess = private)
+		ppd
+		ifi
+		xCenter
+		yCenter
+		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant)$';
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
-	
+		%=======================================================================
+		
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -53,7 +60,7 @@ classdef gratingStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of opticka class.
 		% ===================================================================
-		function obj = gratingStimulus(args) 
+		function obj = gratingStimulus(args)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
 				args.family = 'grating';
@@ -89,6 +96,22 @@ classdef gratingStimulus < baseStimulus
 		end
 		
 		% ===================================================================
+		%> @brief sf Set method
+		%>
+		% ===================================================================
+		function setsfOut(obj,value)
+			obj.sfOut = (value/obj.ppd) * obj.scaledown;
+		end
+		
+		% ===================================================================
+		%> @brief sf Set method
+		%>
+		% ===================================================================
+		function sfOut = getsfOut(obj)
+			sfOut = (obj.sfOut/obj.ppd) * obj.scaledown;
+		end
+		
+		% ===================================================================
 		%> @brief scaledown Get method
 		%>
 		% ===================================================================
@@ -104,13 +127,19 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function out = setup(obj,rE)
 			
+			obj.ppd=rE.ppd;
+			obj.ifi=rE.screenVals.ifi;
+			obj.xCenter=rE.xCenter;
+			obj.yCenter=rE.yCenter;
+			
 			fn = fieldnames(obj);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
+					p.Transient = true%p.Hidden = true;
+					if strcmp(fn{j},'sf');p.SetMethod = @setsfOut;end
+					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 				end
-				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 			end
 			
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient=true;end
@@ -132,9 +161,9 @@ classdef gratingStimulus < baseStimulus
 			end
 			
 			if isempty(obj.findprop('gratingSize'));p=obj.addprop('gratingSize');p.Transient=true;end
-			obj.gratingSize = round(rE.ppd*obj.size);
-			obj.sfOut = (obj.sf/rE.ppd) * obj.scaledown;
-			obj.spatialConstantOut = obj.spatialConstant*rE.ppd;
+			obj.gratingSize = round(obj.ppd*obj.size);
+			obj.sfOut = (obj.sf/obj.ppd) * obj.scaledown;
+			%obj.spatialConstantOut = obj.spatialConstant*rE.ppd;
 			if isempty(obj.findprop('phaseIncrement'));p=obj.addprop('phaseIncrement');p.Transient=true;end
 			obj.phaseIncrement = (obj.tf * 360) * rE.screenVals.ifi;
 			obj.delta = (obj.speed*rE.ppd) * rE.screenVals.ifi;
@@ -199,8 +228,16 @@ classdef gratingStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = draw(obj,rE)
-			
+		function draw(obj,rE)
+			if obj.gabor==0
+				Screen('DrawTexture', rE.win, obj.texture, [],obj.mvRect,...
+					obj.angleOut, [], [], [], [], obj.rotateMode,...
+					[obj.phaseOut,obj.sfOut,obj.contrastOut, 0]);
+			else
+				Screen('DrawTexture', rE.win, obj.texture, [],obj.mvRect,...
+					obj.angleOut, [], [], [], [], kPsychDontDoRotation,...
+					[obj.phaseOut, obj.sfOut, obj.spatialConstantOut, obj.contrastOut, obj.aspectRatioOut, 0, 0, 0]);
+			end
 		end
 		
 	end %---END PUBLIC METHODS---%
