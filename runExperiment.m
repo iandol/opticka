@@ -163,7 +163,7 @@ classdef (Sealed) runExperiment < handle
 			%-----------------------------------------------------
 			
 			try
-				if obj.debug==1 || obj.windowed==1
+				if obj.debug==1 || obj.windowed(1)>0
 					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
 					Screen('Preference', 'Verbosity', 2); 
@@ -180,9 +180,11 @@ classdef (Sealed) runExperiment < handle
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 				
 				obj.timeLog.preOpenWindow=GetSecs;
+				
 				if obj.windowed(1)==0
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				else
+					if length(obj.windowed)==1;obj.windowed=[800 600];end
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[1 1 obj.windowed(1)+1 obj.windowed(2)+1], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
 				
@@ -639,8 +641,8 @@ classdef (Sealed) runExperiment < handle
 							case {'grating','bar'}
 								obj.sVals(ix(j)).mvRect=OffsetRect(obj.sVals(ix(j)).dstRect,dx*obj.ppd,dy*obj.ppd);
 							case {'spot'}
-								obj.sVals(ix(j)).xT=obj.sVals(ix(j)).xPositionOut + round((dx * obj.ppd));
-								obj.sVals(ix(j)).yT=obj.sVals(ix(j)).yPositionOut + round((dy * obj.ppd));
+								obj.sVals(ix(j)).xTmp=obj.sVals(ix(j)).xPositionOut + round((dx * obj.ppd));
+								obj.sVals(ix(j)).yTmp=obj.sVals(ix(j)).yPositionOut + round((dy * obj.ppd));
 						end
 					end
 				end
@@ -687,8 +689,8 @@ classdef (Sealed) runExperiment < handle
 							case {'grating','bar','dots'}
 								obj.sVals(ix).mvRect=OffsetRect(obj.sVals(ix).mvRect,obj.sVals(ix).dX,obj.sVals(ix).dY);
 							case {'spot'}
-								obj.sVals(ix).xT = obj.sVals(ix).xT + obj.sVals(ix).dX;
-								obj.sVals(ix).yT = obj.sVals(ix).yT + obj.sVals(ix).dY;
+								obj.sVals(ix).xTmp = obj.sVals(ix).xTmp + obj.sVals(ix).dX;
+								obj.sVals(ix).yTmp = obj.sVals(ix).yTmp + obj.sVals(ix).dY;
 						end
 					end
 					
@@ -730,8 +732,8 @@ classdef (Sealed) runExperiment < handle
 							case {'grating','bar','dots'}
 								obj.sVals(ix).mvRect = obj.sVals(ix).dstRect;
 							case {'spot'}
-								obj.sVals(ix).xT = obj.sVals(ix).xPosition;
-								obj.sVals(ix).yT = obj.sVals(ix).yPosition;
+								obj.sVals(ix).xTmp = obj.sVals(ix).xPosition;
+								obj.sVals(ix).yTmp = obj.sVals(ix).yPosition;
 						end
 					end
 					
@@ -996,7 +998,7 @@ classdef (Sealed) runExperiment < handle
 		%> @return 
 		% ===================================================================
 		function drawSpot(obj,i)
-			Screen('gluDisk',obj.win,obj.sVals(i).colour,obj.sVals(i).xT,obj.sVals(i).yT,obj.sVals(i).sizeOut);
+			Screen('gluDisk',obj.win,obj.sVals(i).colour,obj.sVals(i).xTmp,obj.sVals(i).yTmp,obj.sVals(i).sizeOut);
 		end
 		
 		% ===================================================================

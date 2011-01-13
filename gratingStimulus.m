@@ -40,16 +40,12 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		ppd
-		ifi
-		xCenter
-		yCenter
 		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant)$';
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -58,7 +54,7 @@ classdef gratingStimulus < baseStimulus
 		%>
 		%> @param args are passed as a structure of properties which is
 		%> parsed.
-		%> @return instance of opticka class.
+		%> @return instance of class.
 		% ===================================================================
 		function obj = gratingStimulus(args)
 			%Initialise for superclass, stops a noargs error
@@ -96,19 +92,11 @@ classdef gratingStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief sf Set method
+		%> @brief sfOut Set method
 		%>
 		% ===================================================================
 		function setsfOut(obj,value)
 			obj.sfOut = (value/obj.ppd) * obj.scaledown;
-		end
-		
-		% ===================================================================
-		%> @brief sf Set method
-		%>
-		% ===================================================================
-		function sfOut = getsfOut(obj)
-			sfOut = (obj.sfOut/obj.ppd) * obj.scaledown;
 		end
 		
 		% ===================================================================
@@ -117,6 +105,17 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function value = get.scaledown(obj)
 			value = 1/obj.scaleup;
+		end
+		
+		% ===================================================================
+		%> @brief phaseIncrement Get method
+		%>
+		% ===================================================================
+		function phaseIncrement = getphaseIncrement(obj)
+			phaseIncrement = (obj.tfOut * 360) * obj.ifi;
+			if obj.driftDirectionOut<1
+				phaseIncrement = -phaseIncrement;
+			end
 		end
 		
 		% ===================================================================
@@ -131,15 +130,16 @@ classdef gratingStimulus < baseStimulus
 			obj.ifi=rE.screenVals.ifi;
 			obj.xCenter=rE.xCenter;
 			obj.yCenter=rE.yCenter;
+			obj.win=rE.win;
 			
-			fn = fieldnames(obj);
+			fn = fieldnames(gratingStimulus);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
-					p.Transient = true%p.Hidden = true;
+					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'sf');p.SetMethod = @setsfOut;end
-					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 				end
+				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 			end
 			
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient=true;end
@@ -162,23 +162,17 @@ classdef gratingStimulus < baseStimulus
 			
 			if isempty(obj.findprop('gratingSize'));p=obj.addprop('gratingSize');p.Transient=true;end
 			obj.gratingSize = round(obj.ppd*obj.size);
-			obj.sfOut = (obj.sf/obj.ppd) * obj.scaledown;
-			%obj.spatialConstantOut = obj.spatialConstant*rE.ppd;
-			if isempty(obj.findprop('phaseIncrement'));p=obj.addprop('phaseIncrement');p.Transient=true;end
-			obj.phaseIncrement = (obj.tf * 360) * rE.screenVals.ifi;
-			obj.delta = (obj.speed*rE.ppd) * rE.screenVals.ifi;
-			[obj.dX obj.dY] = obj.updatePosition(obj.delta,obj.angle);
+			obj.sfOut = obj.sf; %this should use our attached set method to change it automagically
+			if isempty(obj.findprop('phaseIncrement'));p=obj.addprop('phaseIncrement');p.Transient=true;p.GetMethod = @getphaseIncrement;p.Dependent = true;end
 			
-			if obj.driftDirection < 1
-				obj.phaseIncrement = -obj.phaseIncrement;
-			end
+			obj.delta = (obj.speed*obj.ppd) * obj.ifi;
+			[obj.dX obj.dY] = obj.updatePosition(obj.delta,obj.angleOut);
 			
 			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
 			obj.res = [obj.gratingSize obj.gratingSize].*obj.scaleup;
 			
-			
 			if obj.mask>0
-				obj.maskOut = (floor((rE.ppd*obj.size)/2)*obj.scaleup);
+				obj.maskOut = (floor((obj.ppd*obj.size)/2)*obj.scaleup);
 			else
 				obj.maskOut = [];
 			end
@@ -204,10 +198,11 @@ classdef gratingStimulus < baseStimulus
 			
 			obj.dstRect=Screen('Rect',obj.texture);
 			obj.dstRect=ScaleRect(obj.dstRect,obj.scaledown,obj.scaledown);
-			obj.dstRect=CenterRectOnPoint(obj.dstRect,rE.xCenter,rE.yCenter);
-			obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*rE.ppd,(obj.yPosition)*rE.ppd);
+			obj.dstRect=CenterRectOnPoint(obj.dstRect,obj.xCenter,obj.yCenter);
+			obj.dstRect=OffsetRect(obj.dstRect,(obj.xPositionOut)*obj.ppd,(obj.yPositionOut)*obj.ppd);
 			obj.mvRect=obj.dstRect;
 			
+
 			out = obj.toStructure;
 			
 		end
@@ -239,6 +234,27 @@ classdef gratingStimulus < baseStimulus
 					[obj.phaseOut, obj.sfOut, obj.spatialConstantOut, obj.contrastOut, obj.aspectRatioOut, 0, 0, 0]);
 			end
 		end
+		
+		% ===================================================================
+		%> @brief Animate an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
+		function out = animate(obj,rE)
+			
+		end
+		
+		% ===================================================================
+		%> @brief Reset an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
+		function out = reset(obj,rE)
+			
+		end
+		
 		
 	end %---END PUBLIC METHODS---%
 	

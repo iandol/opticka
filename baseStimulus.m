@@ -38,6 +38,22 @@ classdef baseStimulus < dynamicprops
 		%> Our texture pointer for texture-based stimuli
 		texture
 	end
+	
+	properties (SetAccess = protected, GetAccess = protected)
+		%> pixels per degree (calculated in runExperiment)
+		ppd
+		%> Inter frame interval (calculated in runExperiment)
+		ifi
+		%> computed X center (calculated in runExperiment)
+		xCenter
+		%> computed Y center (calculated in runExperiment)
+		yCenter
+		%> window to attach to
+		win
+		%> dynamic properties added
+		p = []
+	end
+	
 	properties (SetAccess = private, GetAccess = private)
 		allowedPropertiesBase='^(xPosition|yPosition|size|colour|verbose|alpha|startPosition)$'
 	end
@@ -76,6 +92,8 @@ classdef baseStimulus < dynamicprops
 		out = setup(runObject) %initialise the stimulus
 		out = update(runObject) %update the stimulus
 		out = draw(runObject) %draw to the screen buffer
+		out = animate(runObject) %animate the settings
+		out = reset(runObject) %reset to default values
 	end %---END ABSTRACT METHODS---%
 	
 	%=======================================================================

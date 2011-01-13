@@ -347,8 +347,11 @@ classdef (Sealed) opticka < dynamicprops
 			tmp.barLength = obj.gd(obj.h.OKPanelBarbarLength);
 			tmp.barWidth = obj.gd(obj.h.OKPanelBarbarWidth);
 			tmp.contrast = obj.gd(obj.h.OKPanelBarcontrast);
+			tmp.scale = obj.gd(obj.h.OKPanelBarscale);
 			v = obj.gv(obj.h.OKPanelBartype);
 			tmp.type = obj.gs(obj.h.OKPanelBartype,v);
+			v = obj.gv(obj.h.OKPanelBarinterpMethod);
+			tmp.interpMethod = obj.gs(obj.h.OKPanelBarinterpMethod,v);
 			tmp.startPosition = obj.gd(obj.h.OKPanelBarstartPosition);
 			tmp.colour = obj.gn(obj.h.OKPanelBarcolour);
 			tmp.alpha = obj.gd(obj.h.OKPanelBaralpha);

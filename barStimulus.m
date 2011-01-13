@@ -11,6 +11,8 @@ classdef barStimulus < baseStimulus
 		angle = 0
 		speed = 1
 		contrast = []
+		scale = 1
+		interpMethod = 'nearest'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -19,7 +21,7 @@ classdef barStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(type|barWidth|barLength|angle|speed|contrast)$';
+		allowedProperties='^(type|barWidth|barLength|angle|speed|contrast|scale|interpMethod)$';
 	end
 	
    %=======================================================================
@@ -67,36 +69,71 @@ classdef barStimulus < baseStimulus
 			if length(obj.colour) == 3
 				obj.colour(4) = obj.alpha;
 			end
-			bw = round(obj.barWidth*ppd);
-			bl = round(obj.barLength*ppd);
-			obj.matrix = ones(bl,bw,4); %allocate the size correctly
-			obj.matrix(:,:,1)=ones(bl,bw)*obj.colour(1);
-			obj.matrix(:,:,2)=ones(bl,bw)*obj.colour(2);
-			obj.matrix(:,:,3)=ones(bl,bw)*obj.colour(3);
-			obj.matrix(:,:,4)=ones(bl,bw)*obj.colour(4);
-			switch obj.type
-				case 'random'
-					obj.rmatrix=rand(bl,bw);
-					for i=1:3
-						obj.matrix(:,:,i)=obj.matrix(:,:,i).*obj.rmatrix;
-					end
-					obj.matrix(:,:,4)=ones(bl,bw)*obj.alpha;
-				case 'randomN'
-					obj.rmatrix=randn(bl,bw);
-					for i=1:3
-						obj.matrix(:,:,i)=obj.matrix(:,:,i).*obj.rmatrix;
-					end
-					obj.matrix(:,:,4)=ones(bl,bw)*obj.alpha;
-				case 'randomBW'
-					obj.rmatrix=rand(bl,bw);
-					obj.rmatrix(obj.rmatrix < 0.5) = 0;
-					obj.rmatrix(obj.rmatrix >= 0.5) = 1;
-					for i=1:3
-						obj.matrix(:,:,i)=obj.matrix(:,:,i).*obj.rmatrix;
-					end
-					obj.matrix(:,:,4)=ones(bl,bw)*obj.alpha;
-				otherwise
-					obj.matrix(:,:,4)=ones(bl,bw)*obj.alpha;
+			
+			try
+				bwpixels = round(obj.barWidth*ppd);
+				blpixels = round(obj.barLength*ppd);
+				if rem(bwpixels,2);bwpixels=bwpixels+1;end
+				if rem(blpixels,2);blpixels=blpixels+1;end
+				bwscale = (bwpixels/obj.scale)+1;
+				blscale = (blpixels/obj.scale)+1;
+
+				tmat = ones(blscale,bwscale,4); %allocate the size correctly
+				tmat(:,:,1)=ones(blscale,bwscale)*obj.colour(1);
+				tmat(:,:,2)=ones(blscale,bwscale)*obj.colour(2);
+				tmat(:,:,3)=ones(blscale,bwscale)*obj.colour(3);
+				tmat(:,:,4)=ones(blscale,bwscale)*obj.colour(4);
+				rmat=ones(blscale,bwscale);
+				switch obj.type
+					case 'random'
+						rmat=rand(blscale,bwscale);
+						for i=1:3
+							tmat(:,:,i)=tmat(:,:,i).*rmat;
+						end
+						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+					case 'randomColour'
+						for i=1:3
+							rmat=rand(blscale,bwscale);
+							tmat(:,:,i)=tmat(:,:,i).*rmat;
+						end
+						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+					case 'randomN'
+						rmat=randn(blscale,bwscale);
+						for i=1:3
+							tmat(:,:,i)=tmat(:,:,i).*rmat;
+						end
+						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+					case 'randomBW'
+						rmat=rand(blscale,bwscale);
+						rmat(rmat < 0.5) = 0;
+						rmat(rmat >= 0.5) = 1;
+						for i=1:3
+							tmat(:,:,i)=tmat(:,:,i).*rmat;
+						end
+						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+					otherwise
+						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+				end
+				aw=0:obj.scale:bwpixels;
+				al=0:obj.scale:blpixels;
+				[a,b]=meshgrid(aw,al);
+				[A,B]=meshgrid(0:bwpixels,0:blpixels);
+				for i=1:4
+					outmat(:,:,i) = interp2(a,b,tmat(:,:,i),A,B,obj.interpMethod);
+				end
+				obj.matrix = outmat(1:blpixels,1:bwpixels,:);
+				obj.rmatrix = rmat;
+			catch
+				bwpixels = round(obj.barWidth*ppd);
+				blpixels = round(obj.barLength*ppd);
+				tmat = ones(blpixels,bwpixels,4); %allocate the size correctly
+				tmat(:,:,1)=ones(blpixels,bwpixels)*obj.colour(1);
+				tmat(:,:,2)=ones(blpixels,bwpixels)*obj.colour(2);
+				tmat(:,:,3)=ones(blpixels,bwpixels)*obj.colour(3);
+				tmat(:,:,4)=ones(blpixels,bwpixels)*obj.colour(4);
+				rmat=ones(blpixels,bwpixels);
+				obj.matrix=tmat;
+				obj.rmatrix=rmat;
 			end
 		end
 		
@@ -107,14 +144,21 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function out = setup(obj,rE)
-		
-			fn = fieldnames(obj);
+			
+			obj.ppd=rE.ppd;
+			obj.ifi=rE.screenVals.ifi;
+			obj.xCenter=rE.xCenter;
+			obj.yCenter=rE.yCenter;
+			obj.win=rE.win;
+			
+			fn = fieldnames(barStimulus);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
-					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+					if strcmp(fn{j},'sf');p.SetMethod = @setsfOut;end
 				end
+				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 			end
 			
 			if isempty(obj.findprop('doDots'));obj.addprop('doDots');end
@@ -168,6 +212,26 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function out = draw(obj,rE)
+			
+		end
+		
+		% ===================================================================
+		%> @brief Animate an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
+		function out = animate(obj,rE)
+			
+		end
+		
+		% ===================================================================
+		%> @brief Reset an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
+		function out = reset(obj,rE)
 			
 		end
 		

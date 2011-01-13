@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 28-Dec-2010 09:43:49
+% Last Modified by GUIDE v2.5 12-Jan-2011 18:19:57
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1245,3 +1245,21 @@ switch get(hObject,'Value')
 		set(handles.OKRemotePort,'Enable','off')
 		set(handles.OKRemoteIP,'Enable','off')
 end
+
+function OKPanelBarscale_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelBarscale (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKPanelBarscale as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelBarscale as a double
+
+
+% --- Executes on selection change in OKPanelBarinterpMethod.
+function OKPanelBarinterpMethod_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelBarinterpMethod (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns OKPanelBarinterpMethod contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from OKPanelBarinterpMethod

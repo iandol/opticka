@@ -54,5 +54,5 @@ s.randomiseStimuli;
 %% ss is the object which interfaces with the screen and runs our
 %% experiment
 r=runExperiment(struct('distance',57.3,'pixelsPerCm',44,'blend',1,...
-	'stimulus',stim,'task',s,'windowed',1,'antiAlias',4,'debug',1,'hideFlash',0,'verbose',1));
+	'stimulus',stim,'task',s,'windowed',0,'antiAlias',4,'debug',1,'hideFlash',0,'verbose',1));
 %r.run

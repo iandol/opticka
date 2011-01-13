@@ -25,16 +25,25 @@ classdef dotsStimulus < baseStimulus
 		rDots
 		angles
 		dSize
-		ppd = 44
-		ifi
 		fps = 60
 		dx
 		dy
 		allowedProperties='^(type|speed|nDots|dotSize|angle|colourType|coherence|dotType|kill)$';
 	end
 	
-	methods %----------PUBLIC METHODS---------%
-		%-------------------CONSTRUCTOR----------------------%
+	%=======================================================================
+	methods %------------------PUBLIC METHODS
+	%=======================================================================
+		
+		% ===================================================================
+		%> @brief Class constructor
+		%>
+		%> More detailed description of what the constructor does.
+		%>
+		%> @param args are passed as a structure of properties which is
+		%> parsed.
+		%> @return instance of class.
+		% ===================================================================
 		function obj = dotsStimulus(args)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
@@ -63,10 +72,15 @@ classdef dotsStimulus < baseStimulus
 			obj.salutation('constructor','Dots Stimulus initialisation complete');
 		end
 		
+		% ===================================================================
+		%> @brief Setup an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
 		%-------------------Set up our dot matrices----------------------%
-		function initialiseDots(obj,in)
-			obj.ppd = in.ppd;
-			obj.ifi = in.ifi;
+		function initialiseDots(obj)
+
 			obj.delta = obj.speed * obj.ppd * obj.ifi; % dot  speed (pixels/frame)
 			
 			%sort out our angles and percent incoherent
@@ -106,6 +120,12 @@ classdef dotsStimulus < baseStimulus
 			
 		end
 		
+		% ===================================================================
+		%> @brief Setup an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
 		function updateDots(obj,coherence,angle)
 			
 			if exist('coherence','var') %we need a new full set of values
@@ -141,36 +161,44 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function out = setup(obj,rE)
 			
-			out.doDots = [];
-			out.doMotion = [];
-			out.doDrift = [];
+			obj.ppd=rE.ppd;
+			obj.ifi=rE.screenVals.ifi;
+			obj.xCenter=rE.xCenter;
+			obj.yCenter=rE.yCenter;
+			obj.win=rE.win;
 			
-			fn = fieldnames(obj);
+			fn = fieldnames(dotsStimulus);
 			for j=1:length(fn)
-				out.(fn{j}) = obj.(fn{j}); %copy our object propert value to our out
-				if isempty(obj.findprop(['t' fn{j}])) %create a temporary dynamic property
-					p=obj.addprop(['t' fn{j}]);
-					p.Transient = true;
-					p.Hidden = true;
+				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
+					p=obj.addprop([fn{j} 'Out']);
+					p.Transient = true;%p.Hidden = true;
+					if strcmp(fn{j},'sf');p.SetMethod = @setsfOut;end
 				end
-				obj.(['t' fn{j}]) = obj.(fn{j}); %copy our property value to our tempory copy
+				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 			end
 			
-			out.size = out.size*rE.ppd;
-			out.dotSize = out.dotSize*rE.ppd;
-			out.delta = out.speed * rE.ppd * rE.screenVals.ifi;
+			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient=true;end
+			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient=true;end
+			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient=true;end
+			obj.doDots = [];
+			obj.doMotion = [];
+			obj.doDrift = [];
 			
-			if length(out.colour) == 3
-				out.colour = [out.colour out.alpha];
+			obj.sizeOut = obj.size*obj.ppd;
+			obj.dotSizeOut = obj.dotSize*obj.ppd;
+			obj.delta = obj.speed * obj.ppd * obj.ifi;
+			
+			if length(obj.colour) == 3
+				obj.colour = [obj.colour obj.alpha];
 			end
 			
-			in.ppd = rE.ppd;
-			in.ifi = rE.screenVals.ifi;
-			obj.initialiseDots(in);
+			obj.initialiseDots();
 			
-			out.xy=obj.xy;
-			out.dxdy=obj.dxdy;
-			out.colours=obj.colours;
+			obj.xyOut=obj.xy;
+			obj.dxdyOut=obj.dxdy;
+			obj.coloursOut=obj.colours;
+			
+			out = obj.toStructure;
 			
 		end
 		
@@ -191,6 +219,26 @@ classdef dotsStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function out = draw(obj,rE)
+			
+		end
+		
+		% ===================================================================
+		%> @brief Animate an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
+		function out = animate(obj,rE)
+			
+		end
+		
+		% ===================================================================
+		%> @brief Reset an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
+		function out = reset(obj,rE)
 			
 		end
 		
