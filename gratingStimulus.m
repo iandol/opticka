@@ -16,14 +16,12 @@ classdef gratingStimulus < baseStimulus
 		type = 'procedural'
 		sf = 1
 		tf = 1
-		angle = 0
 		rotationMethod = 1
 		phase = 0
 		contrast = 0.5
 		mask = 1
 		gabor = 0
 		driftDirection=1
-		speed = 0
 		moveAngle = 0
 		aspectRatio = 1
 		disableNorm = 1
@@ -80,45 +78,6 @@ classdef gratingStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief sf Set method
-		%>
-		% ===================================================================
-		function set.sf(obj,value)
-			if ~(value > 0)
-				value = 0.01;
-			end
-			obj.sf = value;
-			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
-		end
-		
-		% ===================================================================
-		%> @brief sfOut Set method
-		%>
-		% ===================================================================
-		function setsfOut(obj,value)
-			obj.sfOut = (value/obj.ppd) * obj.scaledown;
-		end
-		
-		% ===================================================================
-		%> @brief scaledown Get method
-		%>
-		% ===================================================================
-		function value = get.scaledown(obj)
-			value = 1/obj.scaleup;
-		end
-		
-		% ===================================================================
-		%> @brief phaseIncrement Get method
-		%>
-		% ===================================================================
-		function phaseIncrement = getphaseIncrement(obj)
-			phaseIncrement = (obj.tfOut * 360) * obj.ifi;
-			if obj.driftDirectionOut<1
-				phaseIncrement = -phaseIncrement;
-			end
-		end
-		
-		% ===================================================================
 		%> @brief Generate an structure for runExperiment
 		%>
 		%> @param in runExperiment object for reference
@@ -134,20 +93,24 @@ classdef gratingStimulus < baseStimulus
 			
 			fn = fieldnames(gratingStimulus);
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
+				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'sf');p.SetMethod = @setsfOut;end
 				end
-				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
+					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				end
 			end
 			
-			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient=true;end
-			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient=true;end
-			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient=true;end
+			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
+			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
+			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
+			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
 			obj.doDots = [];
 			obj.doMotion = [];
 			obj.doDrift = [];
+			obj.doFlash = [];
 			
 			if isempty(obj.findprop('rotateMode'));p=obj.addprop('rotateMode');p.Transient=true;end
 			if obj.rotationMethod==1
@@ -163,10 +126,10 @@ classdef gratingStimulus < baseStimulus
 			if isempty(obj.findprop('gratingSize'));p=obj.addprop('gratingSize');p.Transient=true;end
 			obj.gratingSize = round(obj.ppd*obj.size);
 			obj.sfOut = obj.sf; %this should use our attached set method to change it automagically
-			if isempty(obj.findprop('phaseIncrement'));p=obj.addprop('phaseIncrement');p.Transient=true;p.GetMethod = @getphaseIncrement;p.Dependent = true;end
-			
-			obj.delta = (obj.speed*obj.ppd) * obj.ifi;
-			[obj.dX obj.dY] = obj.updatePosition(obj.delta,obj.angleOut);
+			if isempty(obj.findprop('phaseIncrement'));
+				p=obj.addprop('phaseIncrement');
+				p.Transient=true;p.GetMethod = @getphaseIncrement;p.Dependent = true;
+			end
 			
 			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
 			obj.res = [obj.gratingSize obj.gratingSize].*obj.scaleup;
@@ -175,10 +138,6 @@ classdef gratingStimulus < baseStimulus
 				obj.maskOut = (floor((obj.ppd*obj.size)/2)*obj.scaleup);
 			else
 				obj.maskOut = [];
-			end
-			
-			if length(obj.colour) == 3
-				obj.colour = [obj.colour obj.alpha];
 			end
 			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
@@ -255,7 +214,51 @@ classdef gratingStimulus < baseStimulus
 			
 		end
 		
+		% ===================================================================
+		%> @brief sf Set method
+		%>
+		% ===================================================================
+		function set.sf(obj,value)
+			if ~(value > 0)
+				value = 0.01;
+			end
+			obj.sf = value;
+			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
+		end
+		
+		% ===================================================================
+		%> @brief scaledown Get method
+		%>
+		% ===================================================================
+		function value = get.scaledown(obj)
+			value = 1/obj.scaleup;
+		end
+		
 		
 	end %---END PUBLIC METHODS---%
 	
+	%=======================================================================
+	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	%=======================================================================
+		
+		% ===================================================================
+		%> @brief sfOut Set method
+		%>
+		% ===================================================================
+		function setsfOut(obj,value)
+			obj.sfOut = (value/obj.ppd) * obj.scaledown;
+		end
+		
+		
+		% ===================================================================
+		%> @brief phaseIncrement Get method
+		%>
+		% ===================================================================
+		function phaseIncrement = getphaseIncrement(obj)
+			phaseIncrement = (obj.tfOut * 360) * obj.ifi;
+			if obj.driftDirectionOut<1
+				phaseIncrement = -phaseIncrement;
+			end
+		end
+	end
 end

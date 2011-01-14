@@ -6,8 +6,6 @@ classdef spotStimulus < baseStimulus
 		family = 'spot'
 		type = 'normal'
 		flashTime = [0.5 0.5]
-		speed = 0
-		angle = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -54,45 +52,42 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function out = setup(obj,rE)
 			
-			obj.ppd=rE.ppd;
-			obj.ifi=rE.screenVals.ifi;
-			obj.xCenter=rE.xCenter;
-			obj.yCenter=rE.yCenter;
-			obj.win=rE.win;
+			if exist('rE','var')
+				obj.ppd=rE.ppd;
+				obj.ifi=rE.screenVals.ifi;
+				obj.xCenter=rE.xCenter;
+				obj.yCenter=rE.yCenter;
+				obj.win=rE.win;
+			end
 
 			fn = fieldnames(spotStimulus);
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
+				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
-					if strcmp(fn{j},'sf');p.SetMethod = @setsfOut;end
+					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
+					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
+					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
 				end
-				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
+					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				end
 			end
 			
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
 			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
+			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
 			obj.doDots = [];
 			obj.doMotion = [];
 			obj.doDrift = [];
-			
-			obj.sizeOut = (obj.size*rE.ppd) / 2; %divide by 2 to get diameter
-			obj.delta = obj.speed * rE.ppd * rE.screenVals.ifi;
-			obj.xPositionOut = obj.xCenter+(obj.xPosition*obj.ppd);
-			obj.yPositionOut = obj.yCenter+(obj.yPosition*obj.ppd);
+			obj.doFlash = [];
 			
 			if isempty(obj.findprop('xTmp'));p=obj.addprop('xTmp');p.Transient = true;end
 			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
 			obj.xTmp = obj.xPositionOut; %xTmp and yTmp are temporary position stores.
 			obj.yTmp = obj.yPositionOut;
-			
-			[obj.dX obj.dY] = obj.updatePosition(obj.delta,obj.angleOut);
-			
-			if length(obj.colour) == 3
-				obj.colour = [obj.colour obj.alpha];
-			end
-			
+
 			out = obj.toStructure;
 		end
 		
@@ -102,7 +97,7 @@ classdef spotStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = update(obj,rE)
+		function update(obj)
 			
 		end
 		
@@ -112,8 +107,8 @@ classdef spotStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = draw(obj,rE)
-			Screen('gluDisk',rE.win,obj.tcolour,obj.txT,obj.tyT,obj.tsize);
+		function draw(obj)
+			Screen('gluDisk',obj.win,obj.colourOut,obj.xTmp,obj.yTmp,obj.sizeOut);
 		end
 		
 		% ===================================================================
@@ -122,7 +117,7 @@ classdef spotStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = animate(obj,rE)
+		function animate(obj)
 			
 		end
 		
@@ -132,14 +127,38 @@ classdef spotStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = reset(obj,rE)
+		function reset(obj)
 			
 		end
 		
 		
 	end %---END PUBLIC METHODS---%
 	
-	methods ( Access = private ) %----------PRIVATE METHODS---------%
+	%=======================================================================
+	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	%=======================================================================
+		% ===================================================================
+		%> @brief sizeOut Set method
+		%>
+		% ===================================================================
+		function setsizeOut(obj,value)
+			obj.sizeOut = (value*obj.ppd) / 2; %divide by 2 to get diameter
+		end
 		
+		% ===================================================================
+		%> @brief xPositionOut Set method
+		%>
+		% ===================================================================
+		function setxPositionOut(obj,value)
+			obj.xPositionOut = obj.xCenter+(value*obj.ppd);
+		end
+		
+		% ===================================================================
+		%> @brief yPositionOut Set method
+		%>
+		% ===================================================================
+		function setyPositionOut(obj,value)
+			obj.yPositionOut = obj.yCenter+(value*obj.ppd);
+		end
 	end
 end

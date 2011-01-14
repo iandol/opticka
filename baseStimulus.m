@@ -16,21 +16,20 @@ classdef baseStimulus < dynamicprops
 		%> Size in degrees
 		size = 2
 		%> Colour as a 0-1 range RGBA
-		colour = [0.5 0.5 0.5 1]
+		colour = [0.5 0.5 0.5]
 		%> Alpha as a 0-1 range
 		alpha = 1
 		%> Do we print details to the commandline?
 		verbose=0
 		%> For moving stimuli do we start "before" our initial position?
 		startPosition=0
+		%> speed in degs/s
+		speed = 0
+		%> angle in degrees
+		angle = 0
 	end
+	
 	properties (SetAccess = protected, GetAccess = public)
-		%> X update which is computed from our speed and angle
-		dX
-		%> X update which is computed from our speed and angle
-		dY
-		%> What our per-frame motion delta is
-		delta
 		%> Our screen rectangle position in PTB format
 		dstRect
 		%> Our screen rectangle position in PTB format
@@ -39,19 +38,29 @@ classdef baseStimulus < dynamicprops
 		texture
 	end
 	
+	properties (Dependent = true, SetAccess = private, GetAccess = public)
+		%> What our per-frame motion delta is
+		delta
+		%> X update which is computed from our speed and angle
+		dX
+		%> X update which is computed from our speed and angle
+		dY
+	end
+	
 	properties (SetAccess = protected, GetAccess = protected)
 		%> pixels per degree (calculated in runExperiment)
-		ppd
+		ppd = 44
 		%> Inter frame interval (calculated in runExperiment)
-		ifi
+		ifi = 0.0167
 		%> computed X center (calculated in runExperiment)
-		xCenter
+		xCenter = 0
 		%> computed Y center (calculated in runExperiment)
-		yCenter
+		yCenter = 0
 		%> window to attach to
 		win
-		%> dynamic properties added
-		p = []
+		%> Which properties to ignore to clone when making transient copies in
+		%> the setup method
+		ignoreProperties='^(dX|dY|delta|verbose|texture|dstRect|mvRect|xy|dxdy|colours|family)$';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -84,6 +93,57 @@ classdef baseStimulus < dynamicprops
 				end
 			end
 		end 
+	
+		% ===================================================================
+		%> @brief colour Get method
+		%>
+		% ===================================================================
+		function value = get.colour(obj)
+			if length(obj.colour) == 1
+				value = [obj.colour obj.colour obj.colour];
+			elseif length(obj.colour) == 3
+				value = [obj.colour obj.alpha];
+			else
+				value = [obj.colour];
+			end
+		end
+		
+		% ===================================================================
+		%> @brief delta Get method
+		%>
+		% ===================================================================
+		function value = get.delta(obj)
+			if isempty(obj.findprop('speedOut'));
+				value = (obj.speed * obj.ppd) * obj.ifi;
+			else
+				value = (obj.speedOut * obj.ppd) * obj.ifi;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief dX Get method
+		%>
+		% ===================================================================
+		function value = get.dX(obj)
+			if isempty(obj.findprop('angleOut'));
+				[value,~]=obj.updatePosition(obj.delta,obj.angle);
+			else
+				[value,~]=obj.updatePosition(obj.delta,obj.angleOut);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief dY Get method
+		%>
+		% ===================================================================
+		function value = get.dY(obj)
+			if isempty(obj.findprop('angleOut'));
+				[~,value]=obj.updatePosition(obj.delta,obj.angle);
+			else
+				[~,value]=obj.updatePosition(obj.delta,obj.angleOut);
+			end
+		end
+		
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================

@@ -447,11 +447,10 @@ classdef (Sealed) runExperiment < handle
 			end
 		end
 
-	end
-	%-------------------------END PUBLIC METHODS--------------------------------%
+	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
-		methods (Access = private) %------------------PRIVATE METHODS
+	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
 		
 		function makeGrid(obj)
@@ -986,7 +985,7 @@ classdef (Sealed) runExperiment < handle
 			
 			x = obj.xCenter+(obj.sVals(i).xPosition*obj.ppd);
 			y = obj.yCenter+(obj.sVals(i).yPosition*obj.ppd);
-			Screen('DrawDots',obj.win,obj.sVals(i).xy,obj.sVals(i).dotSizeOut,obj.sVals(i).coloursOut,...
+			Screen('DrawDots',obj.win,obj.sVals(i).xy,obj.sVals(i).dotSizeOut,obj.sVals(i).colours,...
 				[x y],obj.sVals(i).dotTypeOut);
 			
 		end

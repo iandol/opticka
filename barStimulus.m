@@ -8,15 +8,15 @@ classdef barStimulus < baseStimulus
 		pixelScale = 1 %scale up the texture in the bar
 		barWidth = 1
 		barLength = 2
-		angle = 0
-		speed = 1
 		contrast = []
 		scale = 1
 		interpMethod = 'nearest'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> computed matrix for the bar
 		matrix
+		%> random matrix used for texture generation
 		rmatrix
 	end
 	
@@ -24,7 +24,7 @@ classdef barStimulus < baseStimulus
 		allowedProperties='^(type|barWidth|barLength|angle|speed|contrast|scale|interpMethod)$';
 	end
 	
-   %=======================================================================
+	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
 	
@@ -153,32 +153,26 @@ classdef barStimulus < baseStimulus
 			
 			fn = fieldnames(barStimulus);
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
+				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
-					if strcmp(fn{j},'sf');p.SetMethod = @setsfOut;end
 				end
-				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
+					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				end
 			end
 			
-			if isempty(obj.findprop('doDots'));obj.addprop('doDots');end
-			if isempty(obj.findprop('doMotion'));obj.addprop('doMotion');end
-			if isempty(obj.findprop('doDrift'));obj.addprop('doDrift');end
+			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
+			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
+			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
+			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
 			obj.doDots = [];
 			obj.doMotion = [];
 			obj.doDrift = [];
+			obj.doFlash = [];
 			
-			obj.delta = (obj.speed*rE.ppd) * rE.screenVals.ifi;
-			
-			obj.constructMatrix(rE.ppd) %make our matrix
-			obj.texture=Screen('MakeTexture',rE.win,obj.matrix,1,[],2);
-			
-			[obj.dX obj.dY] = obj.updatePosition(obj.delta,obj.angle);
-			
-			if length(obj.colour) == 3
-				obj.colour = [obj.colour obj.alpha];
-			end
-			out.colour=obj.colour;
+			obj.constructMatrix(obj.ppd) %make our matrix
+			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
 			
 			if obj.speed>0 %we need to say this needs animating
 				obj.doMotion=1;
@@ -189,7 +183,7 @@ classdef barStimulus < baseStimulus
 			
 			obj.dstRect=Screen('Rect',obj.texture);
 			obj.dstRect=CenterRectOnPoint(obj.dstRect,rE.xCenter,rE.yCenter);
-			obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*rE.ppd,(obj.yPosition)*rE.ppd);
+			obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
 			obj.mvRect=obj.dstRect;
 			
 			out = obj.toStructure;
@@ -201,7 +195,7 @@ classdef barStimulus < baseStimulus
 		%> @param in runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = update(obj,rE)
+		function update(obj)
 			
 		end
 		
@@ -211,8 +205,8 @@ classdef barStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = draw(obj,rE)
-			
+		function draw(obj)
+			Screen('DrawTexture',obj.win,obj.texture,[],obj.mvRect,obj.angleOut);
 		end
 		
 		% ===================================================================
@@ -221,7 +215,7 @@ classdef barStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = animate(obj,rE)
+		function animate(obj)
 			
 		end
 		
@@ -229,17 +223,17 @@ classdef barStimulus < baseStimulus
 		%> @brief Reset an structure for runExperiment
 		%>
 		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
+		%> @return
 		% ===================================================================
-		function out = reset(obj,rE)
+		function reset(obj)
 			
 		end
 		
 		% ===================================================================
-		%> @brief Update an structure for runExperiment
+		%> @brief barLength set method
 		%>
-		%> @param in runExperiment object for reference
-		%> @return stimulus structure.
+		%> @param length of bar
+		%> @return
 		% ===================================================================
 		function set.barLength(obj,value)
 			if ~(value > 0)
@@ -253,10 +247,10 @@ classdef barStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Update an structure for runExperiment
+		%> @brief barWidth set method
 		%>
-		%> @param in runExperiment object for reference
-		%> @return stimulus structure.
+		%> @param width of bar in degrees
+		%> @return
 		% ===================================================================
 		function set.barWidth(obj,value)
 			if ~(value > 0)
@@ -271,7 +265,9 @@ classdef barStimulus < baseStimulus
 		
 	end %---END PUBLIC METHODS---%
 	
-	methods ( Access = private ) %----------PRIVATE METHODS---------%
+	%=======================================================================
+	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	%=======================================================================
 		
 	end
 end

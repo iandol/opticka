@@ -5,9 +5,7 @@ classdef dotsStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		family = 'dots'
 		type = 'simple'
-		speed = 1    % dot speed (deg/sec)
 		nDots = 100 % number of dots
-		angle = 0
 		colourType = 'randomBW'
 		dotSize  = 0.1  % width of dot (deg)
 		coherence = 0.5
@@ -64,11 +62,6 @@ classdef dotsStimulus < baseStimulus
 					end
 				end
 			end
-			
-			obj.ifi = 1/obj.fps;
-			obj.delta = obj.speed * obj.ppd * obj.ifi;% dot  speed (pixels/frame)
-			obj.dSize = obj.dotSize* obj.ppd;
-			
 			obj.salutation('constructor','Dots Stimulus initialisation complete');
 		end
 		
@@ -80,8 +73,6 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		%-------------------Set up our dot matrices----------------------%
 		function initialiseDots(obj)
-
-			obj.delta = obj.speed * obj.ppd * obj.ifi; % dot  speed (pixels/frame)
 			
 			%sort out our angles and percent incoherent
 			obj.angles=ones(obj.nDots,1).*obj.d2r(obj.angle);
@@ -161,42 +152,44 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function out = setup(obj,rE)
 			
-			obj.ppd=rE.ppd;
-			obj.ifi=rE.screenVals.ifi;
-			obj.xCenter=rE.xCenter;
-			obj.yCenter=rE.yCenter;
-			obj.win=rE.win;
+			if exist('rE','var')
+				obj.ppd=rE.ppd;
+				obj.ifi=rE.screenVals.ifi;
+				obj.xCenter=rE.xCenter;
+				obj.yCenter=rE.yCenter;
+				obj.win=rE.win;
+			end
 			
 			fn = fieldnames(dotsStimulus);
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) %create a temporary dynamic property
+				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
-					if strcmp(fn{j},'sf');p.SetMethod = @setsfOut;end
+					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
+					if strcmp(fn{j},'dotSize');p.SetMethod = @setdotSizeOut;end
+					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
+					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
 				end
-				obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
+					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				end
 			end
 			
-			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient=true;end
-			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient=true;end
-			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient=true;end
+			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
+			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
+			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
+			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
 			obj.doDots = [];
 			obj.doMotion = [];
 			obj.doDrift = [];
+			obj.doFlash = [];
 			
-			obj.sizeOut = obj.size*obj.ppd;
-			obj.dotSizeOut = obj.dotSize*obj.ppd;
-			obj.delta = obj.speed * obj.ppd * obj.ifi;
-			
-			if length(obj.colour) == 3
-				obj.colour = [obj.colour obj.alpha];
-			end
+			if isempty(obj.findprop('xTmp'));p=obj.addprop('xTmp');p.Transient = true;end
+			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
+			obj.xTmp = obj.xPositionOut; %xTmp and yTmp are temporary position stores.
+			obj.yTmp = obj.yPositionOut;
 			
 			obj.initialiseDots();
-			
-			obj.xyOut=obj.xy;
-			obj.dxdyOut=obj.dxdy;
-			obj.coloursOut=obj.colours;
 			
 			out = obj.toStructure;
 			
@@ -219,7 +212,10 @@ classdef dotsStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function out = draw(obj,rE)
-			
+			x = obj.xCenter+(obj.sVals(i).xPosition*obj.ppd);
+			y = obj.yCenter+(obj.sVals(i).yPosition*obj.ppd);
+			Screen('DrawDots',obj.win,obj.sVals(i).xy,obj.sVals(i).dotSizeOut,obj.sVals(i).coloursOut,...
+				[x y],obj.sVals(i).dotTypeOut);
 		end
 		
 		% ===================================================================
@@ -242,7 +238,16 @@ classdef dotsStimulus < baseStimulus
 			
 		end
 		
+		% ===================================================================
+		%> @brief Reset an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return stimulus structure.
+		% ===================================================================
 		function run(obj)
+						
+			obj.dSize = obj.dotSize * obj.ppd;
+			
 			try
 				Screen('Preference', 'SkipSyncTests', 2);
 				Screen('Preference', 'VisualDebugLevel', 0);
@@ -251,7 +256,7 @@ classdef dotsStimulus < baseStimulus
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 				[w, rect]=PsychImaging('OpenWindow', 0, 0.5,[1 1 801 601], [], 2,[],obj.antiAlias);
 				%[w, rect] = Screen('OpenWindow', screenNumber, 0,[1 1 801 601],[], 2);
-				Screen('BlendFunction', w, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				Screen('BlendFunction', w, GL_ONE, GL_ONE);
 				[center(1), center(2)] = RectCenter(rect);
 				obj.fps=Screen('FrameRate',w);      % frames per second
 				obj.ifi=Screen('GetFlipInterval', w);
@@ -325,6 +330,36 @@ classdef dotsStimulus < baseStimulus
 	%---END PUBLIC METHODS---%
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
-
+		% ===================================================================
+		%> @brief sfOut Set method
+		%>
+		% ===================================================================
+		function setsizeOut(obj,value)
+			obj.sizeOut = value * obj.ppd;
+		end
+		
+		% ===================================================================
+		%> @brief sfOut Set method
+		%>
+		% ===================================================================
+		function setdotSizeOut(obj,value)
+			obj.dotSizeOut = value * obj.ppd;
+		end
+		
+		% ===================================================================
+		%> @brief xPositionOut Set method
+		%>
+		% ===================================================================
+		function setxPositionOut(obj,value)
+			obj.xPositionOut = obj.xCenter+(value*obj.ppd);
+		end
+		
+		% ===================================================================
+		%> @brief yPositionOut Set method
+		%>
+		% ===================================================================
+		function setyPositionOut(obj,value)
+			obj.yPositionOut = obj.yCenter+(value*obj.ppd);
+		end
 	end
 end

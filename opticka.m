@@ -7,10 +7,6 @@
 classdef (Sealed) opticka < dynamicprops
 		
 	properties
-		%> storage of various paths
-		paths
-		%> all of the handles to th opticka_ui GUI
-		h
 		%> this is the main runExperiment object
 		r 
 		%> run in verbose mode?
@@ -20,6 +16,10 @@ classdef (Sealed) opticka < dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> storage of various paths
+		paths
+		%> all of the handles to th opticka_ui GUI
+		h
 		version='0.48'
 		load
 	end
