@@ -36,6 +36,7 @@ classdef labJack < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%>raw commands
 		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])'; %cached fixed commands
 		fio5High = hex2dec(['1f'; 'f8'; '03'; '00'; '22'; '01'; '00'; '0d'; '85'; '0b'; '85'; '00'])';
 		fio4Low  = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])';
@@ -264,7 +265,7 @@ classdef labJack < handle
         % ===================================================================
 		%> @brief SetDIO
 		%>	SetDIO sets the direction for FIO, EIO and CIO as read or write
-		%>	@param value is binary idsentifier for 0-7 bit range
+		%>	@param value is binary identifier for 0-7 bit range
         %>  @param mask is the mask to apply the command
 		% ===================================================================
 		function setDIO(obj,value,mask)

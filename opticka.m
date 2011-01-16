@@ -4,7 +4,7 @@
 %> Opticka is a stimulus generator based on Psychophysics toolbox
 %>
 % ======================================================================
-classdef (Sealed) opticka < dynamicprops
+classdef (Sealed) opticka < handle
 		
 	properties
 		%> this is the main runExperiment object
@@ -20,7 +20,9 @@ classdef (Sealed) opticka < dynamicprops
 		paths
 		%> all of the handles to th opticka_ui GUI
 		h
-		version='0.48'
+		%> version number
+		version='0.491'
+		%> ?
 		load
 	end
 	
@@ -85,71 +87,81 @@ classdef (Sealed) opticka < dynamicprops
 		% ===================================================================
 		function initialiseUI(obj)
 			
-			obj.paths.whoami = mfilename;
-			obj.paths.whereami = fileparts(which(mfilename));
-			obj.paths.startServer = [obj.paths.whereami filesep 'udpserver' filesep 'launchDataConnection'];
-			
-			if ismac
-				
-				obj.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "' obj.paths.startServer '"'' -e ''end tell'''];
+			try
+				obj.paths.whoami = mfilename;
+				obj.paths.whereami = fileparts(which(mfilename));
+				obj.paths.startServer = [obj.paths.whereami filesep 'udpserver' filesep 'launchDataConnection'];
 
-				obj.paths.temp=tempdir;
-				if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
-					mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);
+				if ismac
+
+					obj.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "' obj.paths.startServer '"'' -e ''end tell'''];
+
+					obj.paths.temp=tempdir;
+					if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
+						mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);
+						end
+					obj.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
+					cd(obj.paths.protocols);
+					obj.paths.currentPath = pwd;
+					if ~exist([obj.paths.temp 'History'],'dir')
+						mkdir([obj.paths.temp 'History']);
 					end
-				obj.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
-				cd(obj.paths.protocols);
-				obj.paths.currentPath = pwd;
-				if ~exist([obj.paths.temp 'History'],'dir')
-					mkdir([obj.paths.temp 'History']);
+					obj.paths.historypath=[obj.paths.temp 'History'];
+					obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
+					javax.swing.UIManager.setLookAndFeel('javax.swing.plaf.metal.MetalLookAndFeel');
+				elseif ispc
+
+					obj.store.serverCommand = ['!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));"'];
+					obj.paths.temp=tempdir;
+					if ~exist(['c:\MatlabFiles\Protocols'],'dir')
+						mkdir(['c:\MatlabFiles\Protocols'])
+					end
+					obj.paths.protocols = ['c:\MatlabFiles\Protocols'];
+					cd(obj.paths.protocols);
+					obj.paths.currentPath = pwd;
+					if ~exist(['c:\MatlabFiles\History'],'dir')
+						mkdir(['c:\MatlabFiles\History'])
+					end
+					obj.paths.historypath=[obj.paths.temp 'History'];
 				end
-				obj.paths.historypath=[obj.paths.temp 'History'];
-				obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
-				javax.swing.UIManager.setLookAndFeel('javax.swing.plaf.metal.MetalLookAndFeel');
-			elseif ispc
-				
-				obj.store.serverCommand = ['!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));"'];
-				obj.paths.temp=tempdir;
-				if ~exist(['c:\MatlabFiles\Protocols'],'dir')
-					mkdir(['c:\MatlabFiles\Protocols'])
+				uihandle=opticka_ui; %our GUI file
+				obj.h=guidata(uihandle);
+				obj.h.uihandle = uihandle;
+				if ismac
+					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
-				obj.paths.protocols = ['c:\MatlabFiles\Protocols'];
-				cd(obj.paths.protocols);
-				obj.paths.currentPath = pwd;
-				if ~exist(['c:\MatlabFiles\History'],'dir')
-					mkdir(['c:\MatlabFiles\History'])
+
+				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version])
+				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
+				drawnow;
+				obj.getScreenVals;
+				obj.getTaskVals;
+				obj.refreshProtocolsList;
+
+				setappdata(0,'o',obj); %we stash our object in the root appdata store for retirieval from the UI
+
+				obj.store.nVars = 0;
+				obj.store.visibleStimulus = 'grating'; %our default shown stimulus
+				obj.store.stimN = 0;
+				obj.store.stimList = '';
+				obj.store.gratingN = 0;
+				obj.store.barN = 0;
+				obj.store.dotsN = 0;
+				obj.store.spotN = 0;
+				obj.store.plaidN = 0;
+				obj.store.noiseN = 0;
+
+				set(obj.h.OKVarList,'String','');
+				set(obj.h.OKStimList,'String','');
+			catch ME
+				if isappdata(0,'o')
+					rmappdata(0,'o');
+					clear o;
 				end
-				obj.paths.historypath=[obj.paths.temp 'History'];
+				close(uihandle);
+				errordlg('Problen in initialising Opticka, please check errors on commandline')
+				rethrow(ME)
 			end
-			uihandle=opticka_ui; %our GUI file
-			obj.h=guidata(uihandle);
-			obj.h.uihandle = uihandle;
-			if ismac
-				javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
-			end
-			
-			set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version])
-			set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
-			drawnow;
-			obj.getScreenVals;
-			obj.getTaskVals;
-			obj.refreshProtocolsList;
-			
-			setappdata(0,'o',obj); %we stash our object in the root appdata store for retirieval from the UI
-			
-			obj.store.nVars = 0;
-			obj.store.visibleStimulus = 'grating'; %our default shown stimulus
-			obj.store.stimN = 0;
-			obj.store.stimList = '';
-			obj.store.gratingN = 0;
-			obj.store.barN = 0;
-			obj.store.dotsN = 0;
-			obj.store.spotN = 0;
-			obj.store.plaidN = 0;
-			obj.store.noiseN = 0;
-			
-			set(obj.h.OKVarList,'String','');
-			set(obj.h.OKStimList,'String','');
 			
 		end
 		
@@ -331,8 +343,6 @@ classdef (Sealed) opticka < dynamicprops
 			obj.store.gratingN = obj.r.sList.gN;
 			obj.refreshStimulusList;
 			
-			obj.store.stimList = obj.r.sList.list;
-			
 		end
 		
 		% ===================================================================
@@ -413,8 +423,11 @@ classdef (Sealed) opticka < dynamicprops
 			tmp.angle = obj.gd(obj.h.OKPanelSpotangle);
 			tmp.speed = obj.gd(obj.h.OKPanelSpotspeed);
 			tmp.colour = obj.gn(obj.h.OKPanelSpotcolour);
+			tmp.flashTime = obj.gn(obj.h.OKPanelSpotflashTime);
 			tmp.alpha = obj.gd(obj.h.OKPanelSpotalpha);
 			tmp.startPosition = obj.gd(obj.h.OKPanelSpotstartPosition);
+			v = obj.gv(obj.h.OKPanelSpottype);
+			tmp.type = obj.gs(obj.h.OKPanelSpottype,v);
 			
 			obj.r.stimulus.s(obj.r.sList.sN + 1) = spotStimulus(tmp);
 			

@@ -224,8 +224,8 @@ classdef dotsStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = animate(obj,rE)
-			
+		function animate(obj)
+			obj.updateDots();
 		end
 		
 		% ===================================================================

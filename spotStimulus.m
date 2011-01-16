@@ -4,19 +4,27 @@ classdef spotStimulus < baseStimulus
 
    properties %--------------------PUBLIC PROPERTIES----------%
 		family = 'spot'
-		type = 'normal'
+		type = 'simple'
 		flashTime = [0.5 0.5]
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		flashSegment = 1
+
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(type|flashTime|speed|angle)$';
+		flashCounter
+		flashSwitch
+		flashBG = [0.5 0.5 0.5 1]
+		flashFG = [1 1 1 1]
+		flashOn
+		allowedProperties='^(type|flashTime)$';
 	end
 	
-   methods %----------PUBLIC METHODS---------%
+	%=======================================================================
+	methods %------------------PUBLIC METHODS
+	%=======================================================================
+	
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -48,9 +56,9 @@ classdef spotStimulus < baseStimulus
 		%> @brief Setup an structure for runExperiment
 		%>
 		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
+		%> @return
 		% ===================================================================
-		function out = setup(obj,rE)
+		function setup(obj,rE)
 			
 			if exist('rE','var')
 				obj.ppd=rE.ppd;
@@ -78,17 +86,22 @@ classdef spotStimulus < baseStimulus
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
 			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
 			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			obj.doDots = [];
-			obj.doMotion = [];
-			obj.doDrift = [];
-			obj.doFlash = [];
+			obj.doDots = 0;
+			obj.doMotion = 0;
+			obj.doDrift = 0;
+			obj.doFlash = 0;
+			if obj.speedOut > 0; obj.doMotion = 1; end
 			
+			if strcmp(obj.type,'flash')
+				obj.doFlash = 1;
+				bg = [rE.backgroundColour(1:3) obj.alpha];
+				obj.setupFlash(bg);
+			end
+
 			if isempty(obj.findprop('xTmp'));p=obj.addprop('xTmp');p.Transient = true;end
 			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
-			obj.xTmp = obj.xPositionOut; %xTmp and yTmp are temporary position stores.
-			obj.yTmp = obj.yPositionOut;
-
-			out = obj.toStructure;
+			obj.computePosition;
+			
 		end
 		
 		% ===================================================================
@@ -98,7 +111,10 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function update(obj)
-			
+			obj.computePosition;
+			if obj.doFlash
+				obj.resetFlash;
+			end
 		end
 		
 		% ===================================================================
@@ -110,7 +126,7 @@ classdef spotStimulus < baseStimulus
 		function draw(obj)
 			Screen('gluDisk',obj.win,obj.colourOut,obj.xTmp,obj.yTmp,obj.sizeOut);
 		end
-		
+
 		% ===================================================================
 		%> @brief Animate an structure for runExperiment
 		%>
@@ -118,7 +134,23 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			
+			if obj.doMotion == 1
+				obj.xTmp = obj.xTmp + obj.dX;
+				obj.yTmp = obj.yTmp + obj.dY;
+			end
+			if obj.doFlash == 1
+				if obj.flashCounter <= obj.flashSwitch
+					obj.flashCounter=obj.flashCounter+1;
+				else
+					obj.flashCounter = 1;
+					obj.flashOn = ~obj.flashOn;
+					if obj.flashOn == true
+						obj.colourOut = obj.flashFG;
+					else
+						obj.colourOut = obj.flashBG;
+					end
+				end
+			end
 		end
 		
 		% ===================================================================
@@ -128,7 +160,7 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function reset(obj)
-			
+			obj.removeTmpProperties;
 		end
 		
 		
@@ -150,15 +182,53 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function setxPositionOut(obj,value)
-			obj.xPositionOut = obj.xCenter+(value*obj.ppd);
+			obj.xPositionOut = (value*obj.ppd) + obj.xCenter;
+		end
+
+		% ===================================================================
+		%> @brief yPositionOut Set method
+		%>
+		% ===================================================================
+		function setyPositionOut(obj,value)
+			obj.yPositionOut = (value*obj.ppd) + obj.yCenter;
+		end
+		
+		% ===================================================================
+		%> @brief setupFlash
+		%>
+		% ===================================================================
+		function setupFlash(obj,bg)
+			obj.flashFG = obj.colourOut;
+			obj.flashBG = bg;
+			obj.flashOn = true;
+			obj.flashCounter = 1;
+			obj.flashSwitch = round(obj.flashTime(1) / obj.ifi);
 		end
 		
 		% ===================================================================
 		%> @brief yPositionOut Set method
 		%>
 		% ===================================================================
-		function setyPositionOut(obj,value)
-			obj.yPositionOut = obj.yCenter+(value*obj.ppd);
+		function resetFlash(obj)
+			obj.colourOut = obj.flashFG;
+			obj.flashOn = true;
+			obj.flashCounter = 1;
+			obj.flashSwitch = round(obj.flashTime(1) / obj.ifi);
 		end
+		
+		% ===================================================================
+		%> @brief compute xTmp and yTmp
+		%>
+		% ===================================================================
+		function computePosition(obj)
+			if isempty(obj.findprop('angleOut'));
+				[dx dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+			else
+				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);
+			end
+			obj.xTmp = obj.xPositionOut + (dx * obj.ppd); 
+			obj.yTmp = obj.yPositionOut + (dy * obj.ppd);
+		end
+			
 	end
 end

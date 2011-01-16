@@ -77,24 +77,40 @@ classdef (Sealed) runExperiment < handle
 		xCenter 
 		%> computed Y center
 		yCenter 
-		maxScreen %> set automatically on construction
-		info %> ?
-		computer %> general computer info
-		ptb %> PTB info
-		screenVals %> gamma tables and the like
-		timeLog %> log times during display
-		sVals %> calculated stimulus values for display
-		taskLog %> detailed info as the experiment runs
-		sList %> for heterogenous stimuli, we need a way to index into the stimulus so we don't waste time doing this on each iteration
+		%> set automatically on construction
+		maxScreen 
+		%> ?
+		info 
+		%> general computer info
+		computer 
+		%> PTB info
+		ptb 
+		%> gamma tables and the like
+		screenVals 
+		%> log times during display
+		timeLog 
+		%> calculated stimulus values for display
+		sVals 
+		%> detailed info as the experiment runs
+		taskLog 
+		%> for heterogenous stimuli, we need a way to index into the stimulus so
+		%> we don't waste time doing this on each iteration
+		sList 
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		black=0 %> black index
-		white=1 %> white index
+		%> black index
+		black=0 
+		%> white index
+		white=1 
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
-		serialP %> serial port object opened
-		winRect %> the window rectangle
-		photoDiodeRect %> the photoDiode rectangle
+		%> serial port object opened
+		serialP 
+		%> the window rectangle
+		winRect 
+		%> the photoDiode rectangle
+		photoDiodeRect 
+		%> the values comuted to draw the 1deg dotted grid in debug mode
 		grid
 	end
 	
@@ -143,9 +159,9 @@ classdef (Sealed) runExperiment < handle
 			obj.timeLog.miss=zeros(obj.task.nFrames,1);
 			obj.timeLog.stimTime=zeros(obj.task.nFrames,1);
 			
-			%HideCursor; %hide mouse
+			if obj.windowed(1)==0;HideCursor;end
 			
-			if obj.hideFlash==1 && obj.windowed==0
+			if obj.hideFlash==1 && obj.windowed(1)==0
 				obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.screenVals.gammaTable(128,:), 256, 1));
 			end
 			
@@ -225,17 +241,19 @@ classdef (Sealed) runExperiment < handle
 				
 				obj.sVals=[];
 				for j=1:obj.sList.n
-					switch obj.stimulus.(obj.sList.list(j))(obj.sList.index(j)).family %as our stimuli may be different structures, we need to use these indexes to cycle quickly through them
-						case 'grating'
-							obj.setupGrating(j);
-						case 'bar'
-							obj.setupBar(j);
-						case 'dots'
-							obj.setupDots(j);
-						case 'spot'
-							obj.setupSpot(j);
-						case 'annulus'
-							obj.setupAnnulus(j);
+					ts = obj.stimulus.(obj.sList.list(j))(obj.sList.index(j));
+					ts.setup(obj);
+					if ts.doMotion == 1
+						obj.task.stimIsMoving=[obj.task.stimIsMoving j];
+					end
+					if ts.doDots == 1
+						obj.task.stimIsDots=[obj.task.stimIsDots j];
+					end
+					if ts.doDrift == 1
+						obj.task.stimIsDrifting=[obj.task.stimIsDrifting j];
+					end
+					if ts.doFlash == 1
+						obj.task.stimIsDrifting=[obj.task.stimIsDrifting j];
 					end
 				end
 				
@@ -267,18 +285,8 @@ classdef (Sealed) runExperiment < handle
 							obj.drawBackground;
 						end
 						for j=1:obj.sList.n
-								switch obj.stimulus.(obj.sList.list(j))(obj.sList.index(j)).family
-								case 'grating'
-									obj.drawGrating(j);
-								case 'bar'
-									obj.drawBar(j);
-								case 'dots'
-									obj.drawDots(j);
-								case 'spot'
-									obj.drawSpot(j);
-								case 'annulus'
-									obj.drawAnnulus(j);
-							end
+							ts = obj.stimulus.(obj.sList.list(j))(obj.sList.index(j));
+							ts.draw();
 						end
 						if obj.photoDiode==1
 							obj.drawPhotoDiodeSquare([1 1 1 1]);
@@ -424,7 +432,7 @@ classdef (Sealed) runExperiment < handle
 		%> Updates the list of stimuli current in the object
 		%> @param 
 		% ===================================================================
-		function updatesList(obj)
+		function updatesList(obj) %need to sort ordering!!!!!!!!!!
 			obj.sList.n=0;
 			obj.sList.list = [];
 			obj.sList.index = [];
@@ -452,14 +460,6 @@ classdef (Sealed) runExperiment < handle
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
-		
-		function makeGrid(obj)
-			obj.grid=[];
-			for i=-5:5
-				obj.grid=horzcat(obj.grid,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
-			end
-			obj.grid=obj.grid.*obj.ppd;
-		end
 		
 		%---------------Update the stimulus values for the current trial---------%
 		function initialiseTask(obj)
@@ -546,12 +546,15 @@ classdef (Sealed) runExperiment < handle
 				obj.task.addprop('stimIsFlashing'); %add new dynamic property
 			end
 			obj.task.stimIsFlashing=[];
-			
-			%work out which stimuli have animaton parameters to update
 
 		end
 		
-		%-------------set up variables from the task structure -------------------%
+		% ===================================================================
+		%> @brief updateVars
+		%> Updates the stimulus objects with the current variable set
+		%> @param thisTrial is the current trial
+		%> @param thisRun is the current run
+		% ===================================================================
 		function updateVars(obj,thisTrial,thisRun)
 			
 			%As we change variables in the blank, we optionally send the
@@ -560,109 +563,29 @@ classdef (Sealed) runExperiment < handle
 				thisTrial=obj.task.thisTrial;
 				thisRun=obj.task.thisRun;
 			end
+			
 			if thisTrial > obj.task.nTrials 
 				return %we've reached the end of the experiment, no need to update anything!
 			end
+			
+			%start looping through out variables
 			for i=1:obj.task.nVars
 				ix = obj.task.nVar(i).stimulus; %which stimulus
 				value=obj.task.outVars{thisTrial,i}(thisRun);
 				name=obj.task.nVar(i).name; %which parameter
-				[obj.sVals(ix).([name 'Out'])]=deal(value); %set our value(s) to current variable(s)
 				
-				if strcmp(name,'xPosition')||strcmp(name,'yPosition')
-					for j=1:length(ix)
-						switch obj.sVals(ix(j)).family
-							case {'grating'} %!!!!!!!!!this needs refactoring
-								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
-								obj.sVals(ix(j)).dstRect=ScaleRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).scaledown,obj.sVals(ix(j)).scaledown);
-								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
-								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPositionOut*obj.ppd,obj.sVals(ix(j)).yPositionOut*obj.ppd);
-								obj.sVals(ix(j)).mvRect=obj.sVals(ix(j)).dstRect;
-							case {'bar'}
-								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
-								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
-								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPositionOut*obj.ppd,obj.sVals(ix(j)).yPositionOut*obj.ppd);
-								obj.sVals(ix(j)).mvRect=obj.sVals(ix(j)).dstRect;
-							case {'spot'}
-								
-							case {'dots'}
-								
-						end
-						
-					end
-				elseif (strcmp(name,'angle')||strcmp(name,'moveAngle'))
-					for j=1:length(ix)
-						ts = obj.stimulus.(obj.sList.list(ix(j)))(obj.sList.index(ix(j)));
-						switch obj.sVals(ix(j)).family
-							case {'grating','bar', 'spot'}
-								[obj.sVals(ix(j)).dX obj.sVals(ix(j)).dY]=ts.updatePosition(obj.sVals(ix(j)).delta,obj.sVals(ix(j)).angleOut);
-							case {'dots'}
-								ts.updateDots(obj.sVals(ix(j)).coherenceOut,obj.sVals(ix(j)).angleOut);
-								obj.sVals(ix(j)).xy = ts.xy;
-								obj.sVals(ix(j)).dxdy = ts.dxdy;
-						end
-					end
-				elseif strcmp(name,'size')
-					for j=1:length(ix)
-						ts = obj.stimulus.(obj.sList.list(ix(j)))(obj.sList.index(ix(j)));
-						switch obj.sVals(ix(j)).family
-							case {'grating'}
-								scale=obj.sVals(ix(j)).sizeOut/obj.sVals(ix(j)).size;
-								obj.sVals(ix(j)).sfOut = obj.sVals(ix(j)).sfOut * scale
-								obj.sVals(ix(j)).dstRect=Screen('Rect',obj.sVals(ix(j)).texture);
-								obj.sVals(ix(j)).dstRect=ScaleRect(obj.sVals(ix(j)).dstRect,scale,scale);
-								obj.sVals(ix(j)).dstRect=CenterRectOnPoint(obj.sVals(ix(j)).dstRect,obj.xCenter,obj.yCenter);
-								obj.sVals(ix(j)).dstRect=OffsetRect(obj.sVals(ix(j)).dstRect,obj.sVals(ix(j)).xPositionOut*obj.ppd,obj.sVals(ix(j)).yPositionOut*obj.ppd);
-								obj.sVals(ix(j)).mvRect=obj.sVals(ix(j)).dstRect;
-							case {'bar'}
-							case {'spot'}
-								obj.sVals(ix(j)).size = (obj.sVals(ix(j)).sizeOut * obj.ppd) / 2;
-							case {'dots'}
-						end
-					end
-				elseif strcmp(name,'coherence')
-					for j=1:length(ix)
-						ts = obj.stimulus.(obj.sList.list(ix(j)))(obj.sList.index(ix(j)));
-						switch obj.sVals(ix(j)).family
-							case {'grating','bar', 'spot'}
-								
-							case {'dots'}
-								ts.updateDots(obj.sVals(ix(j)).coherenceOut,obj.sVals(ix(j)).angleOut);
-								obj.sVals(ix(j)).xy = ts.xy;
-								obj.sVals(ix(j)).dxdy = ts.dxdy;
-						end
-					end
-				end
-				for j=1:length(ix)
-					if (obj.sVals(ix(j)).speed) > 0 && ~isempty(obj.sVals(ix(j)).startPosition) && (obj.sVals(ix(j)).startPosition ~= 0)
-						[dx dy]=pol2cart(baseStimulus.d2r(obj.sVals(ix(j)).angleOut),obj.sVals(ix(j)).startPosition);
-						switch obj.sVals(ix(j)).family
-							case {'grating','bar'}
-								obj.sVals(ix(j)).mvRect=OffsetRect(obj.sVals(ix(j)).dstRect,dx*obj.ppd,dy*obj.ppd);
-							case {'spot'}
-								obj.sVals(ix(j)).xTmp=obj.sVals(ix(j)).xPositionOut + round((dx * obj.ppd));
-								obj.sVals(ix(j)).yTmp=obj.sVals(ix(j)).yPositionOut + round((dy * obj.ppd));
-						end
-					end
+				for j=1:length(ix) %loop through our stimuli references for this variable
+					ts = obj.stimulus.(obj.sList.list(ix(j)))(obj.sList.index(ix(j)));
+					ts.([name 'Out'])=value;
 				end
 			end
 		end
 		
-		%---------------Reset variables like phase--------------------------%
-		function resetVars(obj)
-			for i=1:obj.sList.n
-				ts = obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
-				switch obj.sList.list(i)
-					case 'g'
-						obj.sVals(i).phaseOut=ts.phase;
-						obj.sVals(i).sfOut=ts.sfOut;
-					case 'b'
-						
-				end
-			end
-		end
-		
-		%---------------Update the stimulus values for the current trial and increments the switchTime timer---------%
+		% ===================================================================
+		%> @brief updateTask
+		%> Updates the stimulus run state; update the stimulus values for the
+		%> current trial and increments the switchTime timer
+		% ===================================================================
 		function updateTask(obj)
 			obj.task.timeNow = GetSecs;
 			if obj.task.tick==1 %first ever loop
@@ -673,35 +596,13 @@ classdef (Sealed) runExperiment < handle
 			end
 			
 			%-------------------------------------------------------------------
-			if  (obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime)) || obj.task.tick <= obj.task.switchTick %we haven't hit a time trigger yet
+			if  (obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime))% || obj.task.tick <= obj.task.switchTick %we haven't hit a time trigger yet
 				obj.task.switched = 0;
 				if obj.task.isBlank == 0 %not in an interstimulus time, need to update drift, motion and pulsation
 					
-					for i=1:length(obj.task.stimIsDrifting) %only update those stimuli which are drifting
-						ix=obj.task.stimIsDrifting(i);
-						obj.sVals(ix).phaseOut=obj.sVals(ix).phaseOut+obj.sVals(ix).phaseIncrement;
-					end
-					
-					for i=1:length(obj.task.stimIsMoving) %only update those stimuli which are moving
-						ix=obj.task.stimIsMoving(i);
-						switch obj.sVals(ix).family
-							case {'grating','bar','dots'}
-								obj.sVals(ix).mvRect=OffsetRect(obj.sVals(ix).mvRect,obj.sVals(ix).dX,obj.sVals(ix).dY);
-							case {'spot'}
-								obj.sVals(ix).xTmp = obj.sVals(ix).xTmp + obj.sVals(ix).dX;
-								obj.sVals(ix).yTmp = obj.sVals(ix).yTmp + obj.sVals(ix).dY;
-						end
-					end
-					
-					for i=1:length(obj.task.stimIsDots) %only update those stimuli which are moving
-						ix=obj.task.stimIsDots(i);
-						t=obj.stimulus.(obj.sList.list(ix))(obj.sList.index(ix));
-						t.updateDots;
-						obj.sVals(ix).xy=t.xy;
-					end
-					
-					for i=1:length(obj.task.stimIsFlashing)
-						%ix=obj.task.stimIsFlashing(i);
+					for i = 1:obj.sList.n
+						ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
+						ts.animate
 					end
 					
 				else %blank stimulus, we don't need to update anything
@@ -723,18 +624,6 @@ classdef (Sealed) runExperiment < handle
 						obj.task.switchTick=obj.task.switchTick+(obj.task.isTime*ceil(obj.screenVals.fps));
 					end
 					
-					%now update our stimuli, we do it in the blank as less
-					%critical timingwise
-					for i=1:length(obj.task.stimIsMoving) %reset the motion rect back to the default
-						ix=obj.task.stimIsMoving(i);
-						switch obj.sVals(ix).family
-							case {'grating','bar','dots'}
-								obj.sVals(ix).mvRect = obj.sVals(ix).dstRect;
-							case {'spot'}
-								obj.sVals(ix).xTmp = obj.sVals(ix).xPosition;
-								obj.sVals(ix).yTmp = obj.sVals(ix).yPosition;
-						end
-					end
 					
 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
 						mT=obj.task.thisTrial+1;
@@ -744,8 +633,14 @@ classdef (Sealed) runExperiment < handle
 						mR = obj.task.thisRun + 1;
 					end
 					
-					obj.resetVars;
+					%now update our stimuli, we do it in the blank as less
+					%critical timingwise
 					obj.updateVars(mT,mR);
+					for i = 1:obj.sList.n
+						ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
+						ts.update;
+					end
+					
 					obj.lJack.prepareStrobe(0); %get the strobe word ready
 					%obj.logMe('OutaBlank');
 					
@@ -837,167 +732,6 @@ classdef (Sealed) runExperiment < handle
 			
 			obj.updatesList;
 			
-		end
-		
-		% ===================================================================
-		%> @brief Configure grating specific variables
-		%>
-		%> @param i
-		%> @return 
-		% ===================================================================
-		%--------------------Configure grating specific variables-----------%
-		function setupGrating(obj,i)
-			ts = obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
-			
-			out = ts.setup(obj); %get the object to set itself up
-			
-			fn = fieldnames(out);
-			for j=1:length(fn)
-				obj.sVals(i).(fn{j}) = out.(fn{j});
-			end
-			
-			if obj.sVals(i).tf>0 %we need to say this needs animating
-				obj.sVals(i).doDrift=1;
-				obj.task.stimIsDrifting=[obj.task.stimIsDrifting i];
-			else
-				obj.sVals(i).doDrift=0;
-			end
-			
-			if obj.sVals(i).speed>0 %we need to say this needs animating
-				obj.sVals(i).doMotion=1;
- 				obj.task.stimIsMoving=[obj.task.stimIsMoving i];
-			else
-				obj.sVals(i).doMotion=0;
-			end
-
-		end
-		
-		% ===================================================================
-		%> @brief Configure bar specific variables
-		%>
-		%> @param i
-		%> @return 
-		% ===================================================================
-		function setupBar(obj,i)
-			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
-			
-			out = ts.setup(obj); %get the object to set itself up
-			
-			if out.speed>0 %we need to say this needs animating
-				obj.task.stimIsMoving=[obj.task.stimIsMoving i];
-			end
-			
-			fn = fieldnames(out);
-			for j=1:length(fn)
-				obj.sVals(i).(fn{j}) = out.(fn{j});
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Configure dots specific variables
-		%>
-		%> @param i
-		%> @return 
-		% ===================================================================
-		function setupDots(obj,i)
-			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
-			
-			out = ts.setup(obj); %get the object to set itself up
-			
-			fn = fieldnames(out);
-			for j=1:length(fn)
-				obj.sVals(i).(fn{j}) = out.(fn{j});
-			end
-			
-			if obj.sVals(i).speed>0 %we need to say this needs animating
-				obj.sVals(i).doDots=1;
- 				obj.task.stimIsDots=[obj.task.stimIsDots i];
-			else
-				obj.sVals(i).doDots=0;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Configure spot specific variables
-		%>
-		%> @param i
-		%> @return 
-		% ===================================================================
-		function setupSpot(obj,i)
-			
-			ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
-			
-			out = ts.setup(obj); %get the object to set itself up
-			
-			fn = fieldnames(out);
-			for j=1:length(fn)
-				obj.sVals(i).(fn{j}) = out.(fn{j});
-			end
-			
-			if obj.sVals(i).speed>0 %we need to say this needs animating
-				obj.sVals(i).doMotion=1;
- 				obj.task.stimIsMoving=[obj.task.stimIsMoving i];
-			else
-				obj.sVals(i).doMotion=0;
-			end
-			
-			if strcmp(obj.sVals(i).type,'flash')
-				
-			end
-			
-		end
-		
-		% ===================================================================
-		%> @brief Configure grating specific variables
-		%>
-		%> @param i
-		%> @return 
-		% ===================================================================
-		function drawGrating(obj,i)
-			if obj.sVals(i).gabor==0
-				Screen('DrawTexture', obj.win, obj.sVals(i).texture, [],obj.sVals(i).mvRect,...
-					obj.sVals(i).angleOut, [], [], [], [], obj.sVals(i).rotateMode,...
-					[obj.sVals(i).phaseOut,obj.sVals(i).sfOut,obj.sVals(i).contrastOut, 0]);
-			else
-				Screen('DrawTexture', obj.win, obj.sVals(i).texture, [],obj.sVals(i).mvRect,...
-					obj.sVals(i).angleOut+180, [], [], [], [], obj.sVals(i).rotateMode,...
-					[obj.sVals(i).phaseOut, obj.sVals(i).sfOut, obj.sVals(i).spatialConstantOut, obj.sVals(i).contrastOut, obj.sVals(i).aspectRatioOut, 0, 0, 0]);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Configure grating specific variables
-		%>
-		%> @param iOut
-		%> @return 
-		% ===================================================================
-		function drawBar(obj,i)
-			Screen('DrawTexture',obj.win,obj.sVals(i).texture,[],obj.sVals(i).mvRect,obj.sVals(i).angleOut);
-		end
-		
-		% ===================================================================
-		%> @brief Configure grating specific variables
-		%>
-		%> @param i
-		%> @return 
-		% ===================================================================
-		function drawDots(obj,i)
-			
-			x = obj.xCenter+(obj.sVals(i).xPosition*obj.ppd);
-			y = obj.yCenter+(obj.sVals(i).yPosition*obj.ppd);
-			Screen('DrawDots',obj.win,obj.sVals(i).xy,obj.sVals(i).dotSizeOut,obj.sVals(i).colours,...
-				[x y],obj.sVals(i).dotTypeOut);
-			
-		end
-		
-		% ===================================================================
-		%> @brief Configure grating specific variables
-		%>
-		%> @param i
-		%> @return 
-		% ===================================================================
-		function drawSpot(obj,i)
-			Screen('gluDisk',obj.win,obj.sVals(i).colour,obj.sVals(i).xTmp,obj.sVals(i).yTmp,obj.sVals(i).sizeOut);
 		end
 		
 		% ===================================================================
@@ -1142,6 +876,18 @@ classdef (Sealed) runExperiment < handle
 				end
 				fprintf('%s -- T: %i | R: %i [%i] | B: %i | Tick: %i | Time: %5.5g\n',tag,obj.task.thisTrial,obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
 			end
+		end
+		
+		% ===================================================================
+		%> @brief Makes a 5x5 1deg dot grid for debug mode
+		%>
+		% ===================================================================
+		function makeGrid(obj)
+			obj.grid=[];
+			for i=-5:5
+				obj.grid=horzcat(obj.grid,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
+			end
+			obj.grid=obj.grid.*obj.ppd;
 		end
 		
 	end

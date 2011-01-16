@@ -150,18 +150,18 @@ classdef stimulusSequence < dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief Dynamic property nruns get method
+		%> @brief Dependent property nRuns get method
 		%>
-		%> Dynamic property nruns get method
+		%> Dependent property nruns get method
 		% ===================================================================
 		function nRuns = get.nRuns(obj)
 			nRuns = obj.minTrials*obj.nTrials;
 		end
 		
 		% ===================================================================
-		%> @brief Dynamic property nruns get method
+		%> @brief Dependent property nFrames get method
 		%>
-		%> Dynamic property nruns get method
+		%> Dependent property nFrames get method
 		% ===================================================================
 		function nFrames = get.nFrames(obj)
 			nSecs = (obj.nRuns * obj.trialTime) + (obj.minTrials-1 * obj.isTime) + (obj.nTrials-1 * obj.itTime);

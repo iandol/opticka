@@ -2,7 +2,7 @@
 %> @brief baseStimulus is the superclass for opticka stimulus objects
 %>
 %> Superclass providing basic structure for all stimulus classes
-%>
+	%>
 % ========================================================================
 classdef baseStimulus < dynamicprops
 	%BASESTIMULUS Superclass providing basic structure for all stimulus
@@ -57,14 +57,14 @@ classdef baseStimulus < dynamicprops
 		%> computed Y center (calculated in runExperiment)
 		yCenter = 0
 		%> window to attach to
-		win
+		win = []
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignoreProperties='^(dX|dY|delta|verbose|texture|dstRect|mvRect|xy|dxdy|colours|family)$';
+		ignoreProperties='^(dX|dY|delta|verbose|texture|dstRect|mvRect|xy|dxdy|colours|family|type)$';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedPropertiesBase='^(xPosition|yPosition|size|colour|verbose|alpha|startPosition)$'
+		allowedPropertiesBase='^(xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed)$'
 	end
 	
 	%=======================================================================
@@ -149,11 +149,16 @@ classdef baseStimulus < dynamicprops
 	%=======================================================================
 	methods (Abstract)%------------------ABSTRACT METHODS
 	%=======================================================================
-		out = setup(runObject) %initialise the stimulus
-		out = update(runObject) %update the stimulus
-		out = draw(runObject) %draw to the screen buffer
-		out = animate(runObject) %animate the settings
-		out = reset(runObject) %reset to default values
+		%> initialise the stimulus
+		out = setup(runObject)
+		%> update the stimulus
+		out = update(runObject)
+		%>draw to the screen buffer
+		out = draw(runObject)
+		%> animate the settings
+		out = animate(runObject)
+		%> reset to default values
+		out = reset(runObject) 
 	end %---END ABSTRACT METHODS---%
 	
 	%=======================================================================
@@ -219,7 +224,22 @@ classdef baseStimulus < dynamicprops
 				if tmp == 0
 					out.(fn{j}) = obj.(fn{j});
 				else
-					out.(fn{j}) = obj.(['t' fn{j}]);
+					out.(fn{j}) = obj.([fn{j} 'Out']);
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Finds and removes transient properties
+		%> 
+		%> @param obj
+		%> @return
+		% ===================================================================
+		function removeTmpProperties(obj)
+			fn=fieldnames(obj);
+			for i=1:length(fn)
+				if ~isempty(regexp(fn{i},'Out$','once'))
+					delete(obj.findprop(fn{i}));
 				end
 			end
 		end

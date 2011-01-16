@@ -156,6 +156,8 @@ classdef barStimulus < baseStimulus
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
+					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
+					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
@@ -181,10 +183,7 @@ classdef barStimulus < baseStimulus
 				obj.doMotion=0;
 			end
 			
-			obj.dstRect=Screen('Rect',obj.texture);
-			obj.dstRect=CenterRectOnPoint(obj.dstRect,rE.xCenter,rE.yCenter);
-			obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
-			obj.mvRect=obj.dstRect;
+			obj.setRect();
 			
 			out = obj.toStructure;
 		end
@@ -268,6 +267,38 @@ classdef barStimulus < baseStimulus
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
+		% ===================================================================
+		%> @brief xPositionOut Set method
+		%>
+		% ===================================================================
+		function setxPositionOut(obj,value)
+			obj.xPositionOut = value*obj.ppd;
+			obj.setRect(); %make sure our psychrect is updated 
+		end
 		
+		% ===================================================================
+		%> @brief yPositionOut Set method
+		%>
+		% ===================================================================
+		function setyPositionOut(obj,value)
+			obj.yPositionOut = value*obj.ppd;
+			obj.setRect(); %make sure our psychrect is updated 
+		end
+		
+		% ===================================================================
+		%> @brief setRect
+		%>  setRect makes the PsychRect based on the texture and screen values
+		% ===================================================================
+		function setRect(obj)
+			obj.dstRect=Screen('Rect',obj.texture);
+			obj.dstRect=ScaleRect(obj.dstRect,obj.scaledown,obj.scaledown);
+			obj.dstRect=CenterRectOnPoint(obj.dstRect,obj.xCenter,obj.yCenter);
+			if isempty(obj.findprop('xPositionOut'));
+				obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
+			else
+				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut,obj.yPositionOut);
+			end
+			obj.mvRect=obj.dstRect;
+		end
 	end
 end
