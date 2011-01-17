@@ -12,7 +12,6 @@ classdef spotStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -21,7 +20,7 @@ classdef spotStimulus < baseStimulus
 		flashBG = [0.5 0.5 0.5 1]
 		flashFG = [1 1 1 1]
 		flashOn
-		allowedProperties='^(type|flashTime)$';
+		allowedProperties='^(type|flashTime)$'
 	end
 	
 	%=======================================================================
@@ -186,6 +185,7 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function setxPositionOut(obj,value)
 			obj.xPositionOut = (value*obj.ppd) + obj.xCenter;
+			if ~isempty(obj.findprop('xTmp'));obj.computePosition;end
 		end
 
 		% ===================================================================
@@ -194,6 +194,7 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function setyPositionOut(obj,value)
 			obj.yPositionOut = (value*obj.ppd) + obj.yCenter;
+			if ~isempty(obj.findprop('xTmp'));obj.computePosition;end
 		end
 		
 		% ===================================================================
