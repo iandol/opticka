@@ -95,7 +95,7 @@ classdef (Sealed) runExperiment < handle
 		taskLog 
 		%> for heterogenous stimuli, we need a way to index into the stimulus so
 		%> we don't waste time doing this on each iteration
-		sList 
+		sList
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -159,7 +159,7 @@ classdef (Sealed) runExperiment < handle
 			obj.timeLog.miss=zeros(obj.task.nFrames,1);
 			obj.timeLog.stimTime=zeros(obj.task.nFrames,1);
 			
-			if obj.windowed(1)==0;HideCursor;end
+			%if obj.windowed(1)==0;HideCursor;end
 			
 			if obj.hideFlash==1 && obj.windowed(1)==0
 				obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.screenVals.gammaTable(128,:), 256, 1));
@@ -241,18 +241,17 @@ classdef (Sealed) runExperiment < handle
 				
 				obj.sVals=[];
 				for j=1:obj.sList.n
-					ts = obj.stimulus.(obj.sList.list(j))(obj.sList.index(j));
-					ts.setup(obj);
-					if ts.doMotion == 1
+					obj.stimulus{j}.setup(obj); %call setup and pass it the runExperiment object
+					if obj.stimulus{j}.doMotion == 1
 						obj.task.stimIsMoving=[obj.task.stimIsMoving j];
 					end
-					if ts.doDots == 1
+					if obj.stimulus{j}.doDots == 1
 						obj.task.stimIsDots=[obj.task.stimIsDots j];
 					end
-					if ts.doDrift == 1
+					if obj.stimulus{j}.doDrift == 1
 						obj.task.stimIsDrifting=[obj.task.stimIsDrifting j];
 					end
-					if ts.doFlash == 1
+					if obj.stimulus{j}.doFlash == 1
 						obj.task.stimIsDrifting=[obj.task.stimIsDrifting j];
 					end
 				end
@@ -285,8 +284,7 @@ classdef (Sealed) runExperiment < handle
 							obj.drawBackground;
 						end
 						for j=1:obj.sList.n
-							ts = obj.stimulus.(obj.sList.list(j))(obj.sList.index(j));
-							ts.draw();
+							obj.stimulus{j}.draw();
 						end
 						if obj.photoDiode==1
 							obj.drawPhotoDiodeSquare([1 1 1 1]);
@@ -306,7 +304,7 @@ classdef (Sealed) runExperiment < handle
 					[~, ~, buttons]=GetMouse(obj.screen);
 					if any(buttons);break;end; %break on any mouse click, needs to change
 					
-					obj.updateTask; %update our task structure
+					obj.updateTask(); %update our task structure
 					
 					%======= Show it at next retrace: ========%
 					[obj.timeLog.vbl(obj.task.tick+1),obj.timeLog.show(obj.task.tick+1),obj.timeLog.flip(obj.task.tick+1),obj.timeLog.miss(obj.task.tick+1)] = Screen('Flip', obj.win, (obj.timeLog.vbl(obj.task.tick)+obj.screenVals.halfisi));
@@ -433,25 +431,37 @@ classdef (Sealed) runExperiment < handle
 		%> @param 
 		% ===================================================================
 		function updatesList(obj) %need to sort ordering!!!!!!!!!!
-			obj.sList.n=0;
+			obj.sList.n = 0;
 			obj.sList.list = [];
 			obj.sList.index = [];
 			obj.sList.gN = 0;
 			obj.sList.bN = 0;
 			obj.sList.dN = 0;
 			obj.sList.sN = 0;
+			obj.sList.uN = 0;
 			if ~isempty(obj.stimulus)
-				obj.sList.fields = fieldnames(obj.stimulus);
-				for i=1:length(obj.sList.fields)
-					for j=1:length(obj.stimulus.(obj.sList.fields{i}))
-						obj.sList.n = obj.sList.n+1;
-						obj.sList.list = [obj.sList.list obj.sList.fields{i}];
-						obj.sList.index = [obj.sList.index j];
-						obj.sList.([obj.sList.fields{i} 'N']) = obj.sList.([obj.sList.fields{i} 'N']) + 1;
+				sn=length(obj.stimulus);
+				obj.sList.n=sn;
+				for i=1:sn
+					obj.sList.index = [obj.sList.index i];
+					switch obj.stimulus{i}.family
+						case 'grating'
+							obj.sList.list = [obj.sList.list 'g'];
+							obj.sList.gN = obj.sList.gN + 1;
+						case 'bar'
+							obj.sList.list = [obj.sList.list 'b'];
+							obj.sList.bN = obj.sList.bN + 1;
+						case 'dots'
+							obj.sList.list = [obj.sList.list 'd'];
+							obj.sList.dN = obj.sList.dN + 1;
+						case 'spot'
+							obj.sList.list = [obj.sList.list 's'];
+							obj.sList.sN = obj.sList.sN + 1;
+						otherwise
+							obj.sList.list = [obj.sList.list 'u'];
+							obj.sList.uN = obj.sList.uN + 1;
 					end
 				end
-			else
-				obj.sList.fields = '';
 			end
 		end
 
@@ -575,8 +585,7 @@ classdef (Sealed) runExperiment < handle
 				name=obj.task.nVar(i).name; %which parameter
 				
 				for j=1:length(ix) %loop through our stimuli references for this variable
-					ts = obj.stimulus.(obj.sList.list(ix(j)))(obj.sList.index(ix(j)));
-					ts.([name 'Out'])=value;
+					obj.stimulus{ix(j)}.([name 'Out'])=value;
 				end
 			end
 		end
@@ -601,8 +610,7 @@ classdef (Sealed) runExperiment < handle
 				if obj.task.isBlank == 0 %not in an interstimulus time, need to update drift, motion and pulsation
 					
 					for i = 1:obj.sList.n
-						ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
-						ts.animate
+						obj.stimulus{i}.animate;
 					end
 					
 				else %blank stimulus, we don't need to update anything
@@ -637,8 +645,7 @@ classdef (Sealed) runExperiment < handle
 					%critical timingwise
 					obj.updateVars(mT,mR);
 					for i = 1:obj.sList.n
-						ts=obj.stimulus.(obj.sList.list(i))(obj.sList.index(i));
-						ts.update;
+						obj.stimulus{i}.update;
 					end
 					
 					obj.lJack.prepareStrobe(0); %get the strobe word ready
@@ -707,6 +714,14 @@ classdef (Sealed) runExperiment < handle
 			obj.lJack.prepareStrobe([0,255,255],[0,255,255],1);
 			obj.lJack.close;
 			obj.lJack=[];
+			
+			obj.sList.n = 0;
+			obj.sList.list = [];
+			obj.sList.index = [];
+			obj.sList.gN = 0;
+			obj.sList.bN = 0;
+			obj.sList.dN = 0;
+			obj.sList.sN = 0;
 			
 			try
 				AssertOpenGL;

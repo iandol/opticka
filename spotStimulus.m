@@ -1,6 +1,9 @@
+% ========================================================================
+%> @brief single bar stimulus, inherits from baseStimulus
+%> SPOTSTIMULUS single bar stimulus, inherits from baseStimulus
+%>   The current properties are:
+% ========================================================================
 classdef spotStimulus < baseStimulus
-%SPOTSTIMULUS single bar stimulus, inherits from baseStimulus
-%   The current properties are:
 
    properties %--------------------PUBLIC PROPERTIES----------%
 		family = 'spot'

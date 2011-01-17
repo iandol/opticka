@@ -928,7 +928,6 @@ if isappdata(0,'o')
 		case 'spot'
 			o.addSpot;
 	end
-	o.store.stimN = o.store.stimN + 1;
 end
 
 % --- Executes on button press in OKDeleteStimulus.

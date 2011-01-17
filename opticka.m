@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.491'
+		version='0.492'
 		%> ?
 		load
 	end
@@ -240,21 +240,15 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief getScreenVals
-		%> Gets the settings from th UI and updates our runExperiment object
+		%> @brief clearStimulusList
+		%> Erase any stimuli in the list.
 		%> @param 
 		% ===================================================================
 		function clearStimulusList(obj)
 			if ~isempty(obj.r)
 				if ~isempty(obj.r.stimulus)
-					obj.r.stimulus = [];
-					obj.store.stimN = 0;
-					obj.store.gratingN = 0;
-					obj.store.barN = 0;
-					obj.store.dotsN = 0;
-					obj.store.spotN = 0;
-					obj.store.plaidN = 0;
-					obj.store.noiseN = 0;
+					obj.r.stimulus = {};
+					obj.r.updatesList();
 				end
 			end
 			set(obj.h.OKStimList,'Value',1);
@@ -270,7 +264,7 @@ classdef (Sealed) opticka < handle
 			if ~isempty(obj.r)
 				if ~isempty(obj.r.task)
 					obj.r.task = [];
-				end
+					end
 			end
 			set(obj.h.OKVarList,'Value',1);
 			set(obj.h.OKVarList,'String','');
@@ -282,28 +276,21 @@ classdef (Sealed) opticka < handle
 		%> @param 
 		% ===================================================================
 		function deleteStimulus(obj)
-			n = fieldnames(obj.r.stimulus); %get what stimulus fields we have
+			n = length(obj.r.stimulus); %get what stimulus fields we have
 			if ~isempty(n)
-				s=length(obj.r.stimulus.(n{end})); %how many of that stim are there?
-				obj.r.stimulus.(n{end}) = obj.r.stimulus.(n{end})(1:s-1);
-				if isempty(obj.r.stimulus.(n{end}))
-					obj.r.stimulus=rmfield(obj.r.stimulus,n{end});
+				get(obj.h.OKVarList,'Value');
+				obj.r.stimulus = obj.r.stimulus(1:n-1);
+				if isempty(obj.r.stimulus)
+					obj.r.stimulus={};
 				end
 				
 				obj.r.updatesList;
-				
-				obj.store.stimN = obj.r.sList.n;
-				if obj.store.stimN < 0;obj.store.stimN = 0;end
-				obj.store.stimList = obj.r.sList.list;
 				
 				obj.refreshStimulusList;
 			else
 				obj.r.updatesList;
 				set(obj.h.OKStimList,'Value',1);
 				set(obj.h.OKStimList,'String','');
-				obj.store.stimN = obj.r.sList.n;
-				if obj.store.stimN < 0;obj.store.stimN = 0;end
-				obj.store.stimList = obj.r.sList.list;
 			end
 		end
 		
@@ -336,13 +323,10 @@ classdef (Sealed) opticka < handle
 			tmp.disableNorm = obj.gv(obj.h.OKPanelGratingdisableNorm);
 			tmp.spatialConstant = obj.gn(obj.h.OKPanelGratingspatialConstant);
 			
-			obj.r.stimulus.g(obj.r.sList.gN + 1) = gratingStimulus(tmp);
+			obj.r.stimulus{obj.r.sList.n+1} = gratingStimulus(tmp);
 			
 			obj.r.updatesList;
-			
-			obj.store.gratingN = obj.r.sList.gN;
 			obj.refreshStimulusList;
-			
 		end
 		
 		% ===================================================================
@@ -367,15 +351,10 @@ classdef (Sealed) opticka < handle
 			tmp.alpha = obj.gd(obj.h.OKPanelBaralpha);
 			tmp.speed = obj.gd(obj.h.OKPanelBarspeed);
 			
-			obj.r.stimulus.b(obj.r.sList.bN + 1) = barStimulus(tmp);
+			obj.r.stimulus{obj.r.sList.n+1} = barStimulus(tmp);
 			
 			obj.r.updatesList;
-			
-			obj.store.barN = obj.r.sList.bN;
-			obj.refreshStimulusList;
-			
-			obj.store.stimList = obj.r.sList.list;
-			
+			obj.refreshStimulusList;			
 		end
 		
 		% ===================================================================
@@ -399,15 +378,10 @@ classdef (Sealed) opticka < handle
 			v = obj.gv(obj.h.OKPanelDotstype);
 			tmp.type = obj.gs(obj.h.OKPanelDotstype,v);
 			
-			obj.r.stimulus.d(obj.r.sList.dN + 1) = dotsStimulus(tmp);
+			obj.r.stimulus{obj.r.sList.n+1} = dotsStimulus(tmp);
 			
 			obj.r.updatesList;
-			
-			obj.store.dotsN = obj.r.sList.dN;
 			obj.refreshStimulusList;
-			
-			obj.store.stimList = obj.r.sList.list;
-			
 		end
 		
 		% ===================================================================
@@ -429,15 +403,10 @@ classdef (Sealed) opticka < handle
 			v = obj.gv(obj.h.OKPanelSpottype);
 			tmp.type = obj.gs(obj.h.OKPanelSpottype,v);
 			
-			obj.r.stimulus.s(obj.r.sList.sN + 1) = spotStimulus(tmp);
+			obj.r.stimulus{obj.r.sList.n+1} = spotStimulus(tmp);
 			
 			obj.r.updatesList;
-			
-			obj.store.spotN = obj.r.sList.sN;
 			obj.refreshStimulusList;
-			
-			obj.store.stimList = obj.r.sList.list;
-			
 		end
 		
 		% ===================================================================
@@ -570,7 +539,12 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKisTime,'String',num2str(obj.r.task.isTime));
 				set(obj.h.OKnTrials,'String',num2str(obj.r.task.nTrials));
 				
-				obj.r.stimulus = tmp.r.stimulus;
+				if iscell(tmp.r.stimulus);
+					obj.r.stimulus = tmp.r.stimulus;
+				else
+					errordlg('Sorry, this protocol is not compatible with current opticka, please remake');
+					obj.r.stimulus={};
+				end
 				clear tmp;
 				
 				obj.r.updatesList;				
@@ -624,9 +598,9 @@ classdef (Sealed) opticka < handle
 		function refreshStimulusList(obj)
 			str = cell(obj.r.sList.n,1);
 			for i=1:obj.r.sList.n
-				s = obj.r.stimulus.(obj.r.sList.list(i))(obj.r.sList.index(i));
-				switch obj.r.sList.list(i)
-					case 'g'
+				s = obj.r.stimulus{i};
+				switch s.family
+					case 'grating'
 						x=s.xPosition;
 						y=s.yPosition;
 						c=s.contrast;
@@ -638,18 +612,18 @@ classdef (Sealed) opticka < handle
 							name = 'Gabor ';
 						end
 						str{i} = [name num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' c=' num2str(c) ' ang=' num2str(a) ' sz=' num2str(sz)];
-					case 'b'
+					case 'bar'
 						x=s.xPosition;
 						y=s.yPosition;
 						a=s.angle;
 						str{i} = ['Bar ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
-					case 'd'
+					case 'dots'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
 						a=s.angle;
 						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a)];
-					case 's'
+					case 'spot'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;

@@ -1,15 +1,18 @@
+% ========================================================================
+%> @brief single grating stimulus, inherits from baseStimulus
+%> GRATINGSTIMULUS single grating stimulus, inherits from baseStimulus
+%>   The current properties are:
+%>   sf = spatial frequency in degrees
+%>   tf = temporal frequency
+%>   angle = angle in degrees
+%>   rotationMethod = do we rotate the grating texture (1) or the patch
+%>   itself (0)
+%>   phase = phase of grating
+%>   contrast = contrast from 0 - 1
+%>   mask = use circular mask (1) or not (0)
+%>   gabor = use a gabor rather than grating
+% ========================================================================
 classdef gratingStimulus < baseStimulus
-	%GRATINGSTIMULUS single grating stimulus, inherits from baseStimulus
-	%   The current properties are:
-	%   sf = spatial frequency in degrees
-	%   tf = temporal frequency
-	%   angle = angle in degrees
-	%   rotationMethod = do we rotate the grating texture (1) or the patch
-	%   itself (0)
-	%   phase = phase of grating
-	%   contrast = contrast from 0 - 1
-	%   mask = use circular mask (1) or not (0)
-	%   gabor = use a gabor rather than grating
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		family = 'grating'
@@ -79,7 +82,7 @@ classdef gratingStimulus < baseStimulus
 		%> @param in runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = setup(obj,rE)
+		function setup(obj,rE)
 			
 			obj.ppd=rE.ppd;
 			obj.ifi=rE.screenVals.ifi;
@@ -330,7 +333,7 @@ classdef gratingStimulus < baseStimulus
 			if isempty(obj.findprop('xPositionOut'));
 				obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
 			else
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+dx,obj.yPositionOut+dy);
+				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
 			end
 			obj.mvRect=obj.dstRect;
 		end

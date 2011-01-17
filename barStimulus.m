@@ -151,6 +151,8 @@ classdef barStimulus < baseStimulus
 			obj.yCenter=rE.yCenter;
 			obj.win=rE.win;
 			
+			obj.texture = []; %we need to reset this
+			
 			fn = fieldnames(barStimulus);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
@@ -273,7 +275,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function setxPositionOut(obj,value)
 			obj.xPositionOut = value*obj.ppd;
-			obj.setRect(); %make sure our psychrect is updated 
+			if ~isempty(obj.texture);obj.setRect;end
 		end
 		
 		% ===================================================================
@@ -282,7 +284,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function setyPositionOut(obj,value)
 			obj.yPositionOut = value*obj.ppd;
-			obj.setRect(); %make sure our psychrect is updated 
+			if ~isempty(obj.texture);obj.setRect;end
 		end
 		
 		% ===================================================================
@@ -290,13 +292,17 @@ classdef barStimulus < baseStimulus
 		%>  setRect makes the PsychRect based on the texture and screen values
 		% ===================================================================
 		function setRect(obj)
+			if isempty(obj.findprop('angleOut'));
+				[dx dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+			else
+				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
+			end
 			obj.dstRect=Screen('Rect',obj.texture);
-			obj.dstRect=ScaleRect(obj.dstRect,obj.scaledown,obj.scaledown);
 			obj.dstRect=CenterRectOnPoint(obj.dstRect,obj.xCenter,obj.yCenter);
 			if isempty(obj.findprop('xPositionOut'));
-				obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
+				obj.dstRect=OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
 			else
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut,obj.yPositionOut);
+				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
 			end
 			obj.mvRect=obj.dstRect;
 		end
