@@ -11,15 +11,15 @@ classdef spotStimulus < baseStimulus
 		flashTime = [0.5 0.5]
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (Dependent = true, SetAccess = private, GetAccess = private)
+		flashSwitch
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		flashCounter
-		flashSwitch
+		flashCounter = 1
 		flashBG = [0.5 0.5 0.5 1]
 		flashFG = [1 1 1 1]
-		flashOn
+		flashOn = true
 		allowedProperties='^(type|flashTime)$'
 	end
 	
@@ -165,6 +165,18 @@ classdef spotStimulus < baseStimulus
 			obj.removeTmpProperties;
 		end
 		
+		% ===================================================================
+		%> @brief flashSwitch Get method
+		%>
+		% ===================================================================
+		function flashSwitch = get.flashSwitch(obj)
+			if obj.flashOn == true
+				flashSwitch = round(obj.flashTime(1) / obj.ifi);
+			else
+				flashSwitch = round(obj.flashTime(2) / obj.ifi);
+			end
+		end
+		
 		
 	end %---END PUBLIC METHODS---%
 	
@@ -206,7 +218,6 @@ classdef spotStimulus < baseStimulus
 			obj.flashBG = bg;
 			obj.flashOn = true;
 			obj.flashCounter = 1;
-			obj.flashSwitch = round(obj.flashTime(1) / obj.ifi);
 		end
 		
 		% ===================================================================
@@ -217,7 +228,6 @@ classdef spotStimulus < baseStimulus
 			obj.colourOut = obj.flashFG;
 			obj.flashOn = true;
 			obj.flashCounter = 1;
-			obj.flashSwitch = round(obj.flashTime(1) / obj.ifi);
 		end
 		
 		% ===================================================================

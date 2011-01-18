@@ -172,7 +172,7 @@ classdef gratingStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function update(obj)
-			obj.setRect;
+			obj.setRect();
 			obj.driftPhase=obj.phaseOut;
 		end
 		

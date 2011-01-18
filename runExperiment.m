@@ -586,6 +586,9 @@ classdef (Sealed) runExperiment < handle
 				
 				for j=1:length(ix) %loop through our stimuli references for this variable
 					obj.stimulus{ix(j)}.([name 'Out'])=value;
+					if thisTrial ==1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
+						obj.stimulus{ix(j)}.update;
+					end
 				end
 			end
 		end
