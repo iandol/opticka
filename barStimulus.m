@@ -217,7 +217,9 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			
+			if obj.doMotion == 1
+				obj.mvRect=OffsetRect(obj.mvRect,obj.dX,obj.dY);
+			end
 		end
 		
 		% ===================================================================
@@ -227,7 +229,8 @@ classdef barStimulus < baseStimulus
 		%> @return
 		% ===================================================================
 		function reset(obj)
-			
+			obj.texture=[];
+			obj.removeTmpProperties;
 		end
 		
 		% ===================================================================

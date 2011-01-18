@@ -99,8 +99,19 @@ classdef dataConnection < handle
 					end
 					
 				case 'tcp'
-					obj.conn=pnet('tcpconnect',obj.rAddress,obj.rAddress);
+					while obj.conn == -1
+						obj.conn=pnet('tcpconnect',obj.rAddress,obj.rAddress);
+						if con==-1,
+							disp(sprintf('CAN NOT CONNECT TO HOST: %s PORT: %d\nRETRY....',rhost,rport));
+							pause(1);
+						else
+							disp(sprintf('CONNECTED TO HOST: %s PORT: %d !\n',rhost,rport));
+						end
+					end
 					if obj.conn >= 0
+						% disable blocking
+						pnet(obj.conn ,'setwritetimeout', 0);
+						pnet(obj.conn ,'setreadtimeout', 0);
 						obj.status = pnet(obj.conn,'status');
 						if obj.status < 1
 							obj.close
@@ -108,9 +119,6 @@ classdef dataConnection < handle
 								mfilename, status);
 							return
 						end
-						% disable blocking
-						pnet(obj.conn ,'setwritetimeout', 0);
-						pnet(obj.conn ,'setreadtimeout', 0);
 						obj.isOpen = 1;
 						conn = obj.conn;
 					else
@@ -307,12 +315,22 @@ classdef dataConnection < handle
 		%> Initialize the server loop
 		% ===================================================================
 		function sendCommand(obj,cmd)
-			if obj.rconn < 0
+			if obj.conn < 0
 				obj.open;
+			end
+			if ~exist('cmd','var')
+				x=55;
+				cmd.cmd='put';
+				cmd.name='x';
+				cmd.variable=x;
 			end
 			switch cmd.cmd
 				case 'echo'
 					
+				case 'put'
+					pnet(obj.conn,'printf','\n--remote--\n');
+					obj.flushStatus; % Flush status buffer. Keep last status in readbuffer
+					obj.putVar(obj.conn,cmd.name,cmd.variable);
 				otherwise
 					
 			end
@@ -415,6 +433,79 @@ classdef dataConnection < handle
 				dump=pnet(obj.conn,'readline',1024,'noblock'); % Then remove last line
 			end
 		end
+		
+		% ===================================================================
+		%> @brief putVar
+		%>
+		%> 
+		% ===================================================================
+		function putVar(obj,varargin)
+			if length(varargin)~=1,
+				for n=1:length(varargin),
+					pnet_sendvar(obj.conn,varargin{n});
+				end
+				return;
+			end
+			VAR=varargin{1};
+			switch class(VAR),
+				case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
+					pnet(obj.conn,'printf','\n%s\n',class(VAR));
+					pnet(obj.conn,'Write',uint32(ndims(VAR)));
+					pnet(obj.conn,'Write',uint32(size(VAR)));
+					pnet(obj.conn,'Write',VAR);
+				otherwise
+					tmpfile=[tempname,'.mat'];
+					try
+						save(tmpfile,'VAR');
+						filedata=dir(tmpfile);
+						pnet(obj.conn,'printf','\n--matfile--\n');
+						pnet(obj.conn,'Write',uint32(filedata.bytes));
+						pnet(obj.conn,'WriteFromFile',tmpfile);
+					end
+					try
+						delete(tmpfile);
+					end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief getVar
+		%>
+		%>
+		% ===================================================================
+		function varargout = getVar(obj)
+			if nargout~=1,
+				for n=1:nargout,
+					varargout{n}=pnet_getvar(obj.conn);
+				end
+				return
+			end
+			while 1
+				dataclass=pnet(obj.conn,'readline',1024);
+				switch dataclass,
+					case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
+						datadims=double(pnet(obj.conn,'Read',1,'uint32'));
+						datasize=double(pnet(obj.conn,'Read',datadims,'uint32'));
+						VAR=pnet(obj.conn,'Read',datasize,dataclass);
+						break;
+					case '--matfile--'
+						tmpfile=[tempname,'.mat'];
+						VAR=[];
+						try
+							bytes=double(pnet(obj.conn,'Read',[1 1],'uint32'));
+							pnet(obj.conn,'ReadToFile',tmpfile,bytes);
+							load(tmpfile);
+						end
+						try
+							delete(tmpfile);
+						end
+						break
+				end
+			end
+			varargout{1}=VAR;
+			return;
+		end
+		
 		
 		% ===================================================================
 		%> @brief Destructor

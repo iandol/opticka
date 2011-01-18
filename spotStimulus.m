@@ -162,6 +162,7 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function reset(obj)
+			obj.texture=[];
 			obj.removeTmpProperties;
 		end
 		
