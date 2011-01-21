@@ -746,7 +746,7 @@ classdef (Sealed) runExperiment < handle
 			
 			obj.makeGrid;
 			
-			obj.photoDiodeRect(:,1)=[20 20 70 70]';
+			obj.photoDiodeRect(:,1)=[0 0 40 40]';
 			
 			obj.updatesList;
 			

@@ -150,7 +150,7 @@ classdef dotsStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = setup(obj,rE)
+		function setup(obj,rE)
 			
 			if exist('rE','var')
 				obj.ppd=rE.ppd;
@@ -190,9 +190,7 @@ classdef dotsStimulus < baseStimulus
 			obj.yTmp = obj.yPositionOut;
 			
 			obj.initialiseDots();
-			
-			out = obj.toStructure;
-			
+
 		end
 		
 		% ===================================================================
@@ -201,21 +199,21 @@ classdef dotsStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = update(obj,rE)
+		function update(obj,rE)
 			
 		end
 		
 		% ===================================================================
 		%> @brief Draw an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
+			%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = draw(obj,rE)
-			x = obj.xCenter+(obj.sVals(i).xPosition*obj.ppd);
-			y = obj.yCenter+(obj.sVals(i).yPosition*obj.ppd);
-			Screen('DrawDots',obj.win,obj.sVals(i).xy,obj.sVals(i).dotSizeOut,obj.sVals(i).coloursOut,...
-				[x y],obj.sVals(i).dotTypeOut);
+		function draw(obj,rE)
+			x = obj.xCenter+obj.xPositionOut;
+			y = obj.yCenter+obj.yPositionOut;
+			Screen('DrawDots',obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
+				[x y],obj.dotTypeOut);
 		end
 		
 		% ===================================================================
@@ -234,7 +232,7 @@ classdef dotsStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = reset(obj,rE)
+		function reset(obj,rE)
 			
 		end
 		
@@ -351,7 +349,7 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function setxPositionOut(obj,value)
-			obj.xPositionOut = obj.xCenter+(value*obj.ppd);
+			obj.xPositionOut = obj.xCenter + (value * obj.ppd);
 		end
 		
 		% ===================================================================
@@ -359,7 +357,7 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function setyPositionOut(obj,value)
-			obj.yPositionOut = obj.yCenter+(value*obj.ppd);
+			obj.yPositionOut = obj.yCenter + (value * obj.ppd);
 		end
 	end
 end
