@@ -1062,7 +1062,10 @@ function OKMenuAllTimingLogs_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuAllTimingLogs (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.r.getTimeLog;
+end
 
 % --------------------------------------------------------------------
 function OKMenuMissedFrames_Callback(hObject, eventdata, handles)

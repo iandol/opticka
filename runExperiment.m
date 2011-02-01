@@ -63,6 +63,7 @@ classdef (Sealed) runExperiment < handle
 		useLabJack = 0
 		%> LabJack object
 		lJack 
+		recordMovie = 1
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -256,6 +257,12 @@ classdef (Sealed) runExperiment < handle
 					end
 				end
 				
+				if obj.recordMovie == 1
+					moviePtr = Screen('CreateMovie', obj.win,...
+						['/Users/opticka/Desktop/test' num2str(round(rand(1,1, 'double')*1e8)) '.mov'],[],[],60,...
+						'EncodingQuality=1; CodecFOURCC=rle ');
+				end
+				
 				obj.updateVars; %set the variables for the very first run;
 				
 				KbReleaseWait; %make sure keyboard keys are all released
@@ -271,6 +278,7 @@ classdef (Sealed) runExperiment < handle
 				obj.task.tick=1;
 				obj.timeLog.beforeDisplay=GetSecs;
 				obj.timeLog.stimTime(1) = 1;
+				obj.logMe('Start');
 				[obj.timeLog.vbl(1),vbl.timeLog.show(1),obj.timeLog.flip(1),obj.timeLog.miss(1)] = Screen('Flip', obj.win);
 				
 				while obj.task.thisTrial <= obj.task.nTrials
@@ -328,6 +336,10 @@ classdef (Sealed) runExperiment < handle
 					
 					obj.task.tick=obj.task.tick+1;
 					
+					if obj.recordMovie == 1
+						Screen('AddFrameToMovie', obj.win);
+					end
+					
 				end
 				
 				%---------------------------------------------Finished display loop
@@ -337,6 +349,10 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack.prepareStrobe(0,[],1);
 				obj.lJack.setFIO4(0); %this is RSTOP, pausing the omniplex
 				obj.lJack.setFIO5(0);
+				
+				if obj.recordMovie == 1
+					Screen('FinalizeMovie', moviePtr);
+				end
 				
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
 				obj.timeLog.deltaUntilDisplay=obj.timeLog.beforeDisplay-obj.timeLog.start;
@@ -361,6 +377,9 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack.setFIO5(0);
 				if obj.hideFlash == 1 || obj.windowed(1) ~= 1
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
+				end
+				if obj.recordMovie == 1
+					Screen('FinalizeMovie', moviePtr);
 				end
 				Screen('Close');
 				Screen('CloseAll');
@@ -422,7 +441,7 @@ classdef (Sealed) runExperiment < handle
 		%> @param 
 		% ===================================================================
 		function getTimeLog(obj)
-			obj.printlog;
+			obj.printLog;
 		end
 		
 		% ===================================================================
@@ -608,8 +627,8 @@ classdef (Sealed) runExperiment < handle
 			end
 			
 			%-------------------------------------------------------------------
-			if  (obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime))% || obj.task.tick <= obj.task.switchTick %we haven't hit a time trigger yet
-				obj.task.switched = 0;
+			if  (obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime)) || obj.task.tick <= obj.task.switchTick %we haven't hit a time trigger yet
+				
 				if obj.task.isBlank == 0 %not in an interstimulus time, need to update drift, motion and pulsation
 					
 					for i = 1:obj.sList.n
@@ -618,13 +637,24 @@ classdef (Sealed) runExperiment < handle
 					
 				else %blank stimulus, we don't need to update anything
 					
+					%now update our stimuli, we do it in the blank as less
+					%critical timingwise
+					if obj.task.switched == 1
+						obj.updateVars(obj.task.thisTrial,obj.task.thisRun);
+						for i = 1:obj.sList.n
+							obj.stimulus{i}.update;
+						end
+					end
+					
 				end
+				obj.task.switched = 0;
+				
 			%-------------------------------------------------------------------	
 			else %need to switch to next trial or blank
 				obj.task.switched = 1;
 				if obj.task.isBlank == 0 %we come from showing a stimulus
 					
-					%obj.logMe('IntoBlank');
+					obj.logMe('IntoBlank');
 					obj.task.isBlank = 1;
 					
 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we within a trial block or not? we add the required time to our switch timer
@@ -636,27 +666,20 @@ classdef (Sealed) runExperiment < handle
 					end
 					
 					
-					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
-						mT=obj.task.thisTrial+1;
-						mR = 1;
-					else
-						mT=obj.task.thisTrial;
-						mR = obj.task.thisRun + 1;
-					end
-					
-					%now update our stimuli, we do it in the blank as less
-					%critical timingwise
-					obj.updateVars(mT,mR);
-					for i = 1:obj.sList.n
-						obj.stimulus{i}.update;
-					end
+% 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
+% 						mT=obj.task.thisTrial+1;
+% 						mR = 1;
+% 					else
+% 						mT=obj.task.thisTrial;
+% 						mR = obj.task.thisRun + 1;
+% 					end
 					
 					obj.lJack.prepareStrobe(0); %get the strobe word ready
-					%obj.logMe('OutaBlank');
+					obj.logMe('OutaBlank');
 					
 				else %we have to show the new run on the next flip
 					
-					%obj.logMe('IntoTrial');
+					obj.logMe('IntoTrial');
 					if obj.task.thisTrial <= obj.task.nTrials
 						obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
 						obj.task.switchTick=obj.task.switchTick+(obj.task.trialTime*ceil(obj.screenVals.fps)); %update our timer
@@ -676,7 +699,7 @@ classdef (Sealed) runExperiment < handle
 					else
 						obj.task.thisTrial = obj.task.nTrials + 1;
 					end
-					%obj.logMe('OutaTrial');
+					obj.logMe('OutaTrial');
 					
 				end
 			end
@@ -814,6 +837,10 @@ classdef (Sealed) runExperiment < handle
 		%> @return 
 		% ===================================================================
 		function printLog(obj)
+			if ~isfield(obj.timeLog,'date')
+				warndlg('No timing data available')
+				return
+			end
 			vbl=obj.timeLog.vbl(obj.timeLog.vbl>0)*1000;
 			show=obj.timeLog.show(obj.timeLog.show>0)*1000;
 			flip=obj.timeLog.flip(obj.timeLog.flip>0)*1000;
@@ -824,7 +851,12 @@ classdef (Sealed) runExperiment < handle
 			miss=obj.timeLog.miss(1:index);
 			stimTime=obj.timeLog.stimTime(1:index);
 			
-			figure
+			figure;
+			
+			scnsize = get(0,'ScreenSize');
+			pos=get(gcf,'Position');
+			
+			subplot(3,1,1);
 			plot(1:index-2,diff(vbl(2:end)),'ro:')
 			hold on
 			plot(1:index-2,diff(show(2:end)),'b--')
@@ -841,7 +873,7 @@ classdef (Sealed) runExperiment < handle
 			ylabel('Time (milliseconds)');
 			hold off
 			
-			figure
+			subplot(3,1,2)
 			hold on
 			plot(show(2:index)-vbl(2:index),'r')
 			plot(show(2:index)-flip(2:index),'g')
@@ -852,12 +884,14 @@ classdef (Sealed) runExperiment < handle
 			xlabel('Frame number');
 			ylabel('Time (milliseconds)');
 			
-			figure
+			subplot(3,1,3)
 			hold on
 			plot(miss,'r.-')
 			plot(stimTime/50,'k');
 			title('Missed frames')
 			
+			newpos = [pos(1) 1 pos(3) pos(4)*2];
+			set(gcf,'Position',newpos);
 			clear vbl show flip index miss stimTime
 		end
 		
@@ -888,11 +922,11 @@ classdef (Sealed) runExperiment < handle
 		%> @param tag the calling function
 		% ===================================================================
 		function logMe(obj,tag)
-			if obj.verbose==1
+			if obj.verbose == 1 && obj.debug == 1
 				if ~exist('tag','var')
 					tag='#';
 				end
-				fprintf('%s -- T: %i | R: %i [%i] | B: %i | Tick: %i | Time: %5.5g\n',tag,obj.task.thisTrial,obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
+				fprintf('%s -- T: %i | R: %i [%i] | B: %i | Tick: %i | Time: %5.8g\n',tag,obj.task.thisTrial,obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
 			end
 		end
 		
