@@ -68,8 +68,8 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Setup an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
+		%> @param 
+		%> @return 
 		% ===================================================================
 		%-------------------Set up our dot matrices----------------------%
 		function initialiseDots(obj)
@@ -112,10 +112,10 @@ classdef dotsStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Setup an structure for runExperiment
+		%> @brief Update the dots per frame and wrap dots that exceed the size
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
+		%> @param coherence
+		%> @param angle
 		% ===================================================================
 		function updateDots(obj,coherence,angle)
 			
@@ -148,7 +148,7 @@ classdef dotsStimulus < baseStimulus
 		%> @brief Setup an structure for runExperiment
 		%>
 		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
+		%> @return
 		% ===================================================================
 		function setup(obj,rE)
 			

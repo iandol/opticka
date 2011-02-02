@@ -6,9 +6,8 @@
 classdef rfMapper < baseStimulus
 
    properties %--------------------PUBLIC PROPERTIES----------%
-		family = 'spot'
-		type = 'simple'
-		flashTime = [0.5 0.5]
+		screen = 0
+		
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = private)
@@ -16,10 +15,6 @@ classdef rfMapper < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		flashCounter = 1
-		flashBG = [0.5 0.5 0.5 1]
-		flashFG = [1 1 1 1]
-		flashOn = true
 		allowedProperties='^(type|flashTime)$'
 	end
 	
@@ -52,6 +47,10 @@ classdef rfMapper < baseStimulus
 				end
 			end
 			obj.salutation('constructor','Spot Stimulus initialisation complete');
+		end
+		
+		function run(obj)
+			
 		end
 	end
 end

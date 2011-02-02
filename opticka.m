@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.492'
+		version='0.493'
 		%> ?
 		load
 	end
@@ -154,6 +154,9 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKVarList,'String','');
 				set(obj.h.OKStimList,'String','');
 			catch ME
+				if ismac
+					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
+				end
 				if isappdata(0,'o')
 					rmappdata(0,'o');
 					clear o;

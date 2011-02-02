@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 12-Jan-2011 18:19:57
+% Last Modified by GUIDE v2.5 02-Feb-2011 18:25:13
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -247,20 +247,23 @@ if isappdata(0,'o')
 	o.getScreenVals;
 end
 
-% --- Executes on button press in OKFixationSpot.
 function OKFixationSpot_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.getScreenVals;
 end
 
+function OKrecordMovie_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
 
 function OKnTrials_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.getTaskVals;
 end
-
 
 function OKisTime_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
@@ -273,7 +276,6 @@ if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.getTaskVals;
 end
-
 
 % --------------------------------------------------------------------
 function OKMenuNoiseTexture_Callback(hObject, eventdata, handles)
@@ -359,88 +361,6 @@ if isappdata(0,'o')
 	o.store.visibleStimulus='spot';
 end
 
-
-
-function OKPanelGratingxPosition_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingxPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingxPosition as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingxPosition as a double
-
-
-
-
-function OKPanelGratingyPosition_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingyPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingyPosition as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingyPosition as a double
-
-
-function OKPanelGratingTF_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingTF (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingTF as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingTF as a double
-
-
-
-% --- Executes on button press in OKPanelGratingGaussian.
-function OKPanelGratingGaussian_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingGaussian (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of OKPanelGratingGaussian
-
-
-
-function OKPanelGratingsize_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingsize (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingsize as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingsize as a double
-
-
-
-function OKPanelGratingsf_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingsf (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingsf as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingsf as a double
-
-
-
-function OKPanelGratingcontrast_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingcontrast (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingcontrast as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingcontrast as a double
-
-
-
-function OKPanelGratingangle_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingangle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingangle as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingangle as a double
-
-
-
 function OKPanelBarcontrast_Callback(hObject, eventdata, handles)
 
 
@@ -460,7 +380,6 @@ function OKMenuPreferences_Callback(hObject, eventdata, handles)
 
 
 function OKPanelGratinggabor_Callback(hObject, eventdata, handles)
-
 switch get(hObject,'Value')
 	case 1
 		set(handles.OKPanelGratingaspectRatio,'Enable','off')
@@ -489,7 +408,6 @@ function pushbutton22_Callback(hObject, eventdata, handles)
 function OKHistoryList_Callback(hObject, eventdata, handles)
 
 
-function OKPanelGratingmask_Callback(hObject, eventdata, handles)
 
 
 % --- Executes on button press in OKProtocolLoad.
@@ -579,32 +497,6 @@ if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.getTaskVals;
 end
-
-function OKPanelGratingtf_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingtf (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingtf as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingtf as a double
-
-
-function OKPanelGratingcolour_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingcolour (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingcolour as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingcolour as a double
-
-function OKPanelGratingalpha_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingalpha (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingalpha as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingalpha as a double
-
 
 % --- Executes on selection change in OKPanelBartype.
 function OKPanelBartype_Callback(hObject, eventdata, handles)
@@ -748,16 +640,6 @@ function OKPanelDotsangle_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of OKPanelDotsangle as a double
 
 
-% --- Executes on button press in OKPanelGratingrotationMethod.
-function OKPanelGratingrotationMethod_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingrotationMethod (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of
-% OKPanelGratingrotationMethod
-
-
 % --- Executes on button press in OKHistoryUp.
 function OKHistoryUp_Callback(hObject, eventdata, handles)
 % hObject    handle to OKHistoryUp (see GCBO)
@@ -797,26 +679,6 @@ function OKVariableStimuli_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of OKVariableStimuli as text
 %        str2double(get(hObject,'String')) returns contents of OKVariableStimuli as a double
 
-
-function OKVariableValues_Callback(hObject, eventdata, handles)
-% hObject    handle to OKVariableValues (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKVariableValues as text
-%        str2double(get(hObject,'String')) returns contents of OKVariableValues as a double
-
-
-
-function OKVariableName_Callback(hObject, eventdata, handles)
-% hObject    handle to OKVariableName (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKVariableName as text
-%        str2double(get(hObject,'String')) returns contents of OKVariableName as a double
-
-
 % --- Executes on button press in OKCopyVariableName.
 function OKCopyVariableName_Callback(hObject, eventdata, handles)
 % hObject    handle to OKCopyVariableName (see GCBO)
@@ -827,26 +689,26 @@ value = get(handles.OKVariableList,'Value');
 string=string{value};
 set(handles.OKVariableName,'String',string);
 
+% --- Executes on button press in OKCopyVariableNameValues.
+function OKCopyVariableNameValues_Callback(hObject, eventdata, handles)
+% hObject    handle to OKCopyVariableNameValues (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+string = get(handles.OKVariableList,'String');
+value = get(handles.OKVariableList,'Value');
+string=string{value};
+set(handles.OKVariableName,'String',string);
+
+switch string
+	case 'angle'
+		set(handles.OKVariableValues,'String',num2str([-90:45:90]));
+	case 'size'
+		set(handles.OKVariableValues,'String',num2str([0 0.1 0.2 0.35 0.5 0.75 1 2 4 6 8]));
+	case 'contrast'
+		set(handles.OKVariableValues,'String',num2str([0:0.1:1]));	
+end
+
 function OKCopyVariable_Callback(hObject, eventdata, handles)
-
-
-function OKPanelGratingaspectRatio_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingaspectRatio (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingaspectRatio as text
-%        str2double(get(hObject,'String')) returns contents of
-%        OKPanelGratingaspectRatio as a double
-
-
-function OKPanelGratingcontrastMult_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingcontrastMult (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingcontrastMult as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingcontrastMult as a double
 
 % --------------------------------------------------------------------
 function OKToolbarToggleGlobal_OnCallback(hObject, eventdata, handles)
@@ -961,26 +823,6 @@ if isappdata(0,'o')
 end
 
 
-function OKPanelGratingstartPosition_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingstartPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingstartPosition as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingstartPosition as a double
-
-
-
-function OKPanelGratingphase_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingphase (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingphase as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingphase as a double
-
-
-
 function OKPanelDotscoherence_Callback(hObject, eventdata, handles)
 % hObject    handle to OKPanelDotscoherence (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1019,22 +861,6 @@ if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.r.run;
 end
-
-
-% --- Executes on button press in OKPanelGratingdriftDirection.
-function OKPanelGratingdriftDirection_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingdriftDirection (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of OKPanelGratingdriftDirection
-
-% --- Executes on button press in OKVariablesLog.
-function OKPanelGratingdisableNorm_Callback(hObject, eventdata, handles) %#ok<*INUSD>
-% hObject    handle to OKVariablesLog (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 
 % --------------------------------------------------------------------
 function OKMenuLogs_Callback(hObject, eventdata, handles)
@@ -1093,19 +919,6 @@ function OKMenuPaste_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuPaste (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-
-function OKPanelGratingspeed_Callback(hObject, eventdata, handles)
-
-
-
-function OKPanelGratingspatialConstant_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingspatialConstant (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingspatialConstant as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingspatialConstant as a double
 
 
 % --- Executes on button press in OKCopyStimulus.

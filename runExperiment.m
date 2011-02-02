@@ -63,7 +63,8 @@ classdef (Sealed) runExperiment < handle
 		useLabJack = 0
 		%> LabJack object
 		lJack 
-		recordMovie = 1
+		%> Save the images to a quicktime movie
+		recordMovie = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -101,9 +102,9 @@ classdef (Sealed) runExperiment < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> black index
-		black=0 
+		black = 0 
 		%> white index
-		white=1 
+		white = 1 
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
 		%> serial port object opened
 		serialP 
@@ -113,6 +114,8 @@ classdef (Sealed) runExperiment < handle
 		photoDiodeRect 
 		%> the values comuted to draw the 1deg dotted grid in debug mode
 		grid
+		%> the movie pointer
+		moviePtr = []
 	end
 	
 	%=======================================================================
@@ -258,7 +261,7 @@ classdef (Sealed) runExperiment < handle
 				end
 				
 				if obj.recordMovie == 1
-					moviePtr = Screen('CreateMovie', obj.win,...
+					obj.moviePtr = Screen('CreateMovie', obj.win,...
 						['/Users/opticka/Desktop/test' num2str(round(rand(1,1, 'double')*1e8)) '.mov'],[],[],60,...
 						'EncodingQuality=1; CodecFOURCC=rle ');
 				end
@@ -273,12 +276,13 @@ classdef (Sealed) runExperiment < handle
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				obj.lJack.setFIO4(1) %this is RSTART, unpausing the omniplex
+				WaitSecs(0.1);
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				
 				obj.task.tick=1;
 				obj.timeLog.beforeDisplay=GetSecs;
 				obj.timeLog.stimTime(1) = 1;
-				obj.logMe('Start');
+				%obj.logMe('Start');
 				[obj.timeLog.vbl(1),vbl.timeLog.show(1),obj.timeLog.flip(1),obj.timeLog.miss(1)] = Screen('Flip', obj.win);
 				
 				while obj.task.thisTrial <= obj.task.nTrials
@@ -318,7 +322,7 @@ classdef (Sealed) runExperiment < handle
 					[obj.timeLog.vbl(obj.task.tick+1),obj.timeLog.show(obj.task.tick+1),obj.timeLog.flip(obj.task.tick+1),obj.timeLog.miss(obj.task.tick+1)] = Screen('Flip', obj.win, (obj.timeLog.vbl(obj.task.tick)+obj.screenVals.halfisi));
 					%=========================================%
 					
-					if obj.task.switched == 1
+					if obj.task.switched == 1 || obj.task.tick == 1
 						obj.lJack.strobeWord; %send our word out to the LabJack
 					end
 					
@@ -351,7 +355,7 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack.setFIO5(0);
 				
 				if obj.recordMovie == 1
-					Screen('FinalizeMovie', moviePtr);
+					Screen('FinalizeMovie', obj.moviePtr);
 				end
 				
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
@@ -373,13 +377,13 @@ classdef (Sealed) runExperiment < handle
 				
 			catch ME
 				
-				obj.lJack.setFIO4(0) %this is RSTOP, unpausing the omniplex
+				obj.lJack.setFIO4(0) %this is RSTOP, repausing the omniplex
 				obj.lJack.setFIO5(0);
 				if obj.hideFlash == 1 || obj.windowed(1) ~= 1
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 				end
 				if obj.recordMovie == 1
-					Screen('FinalizeMovie', moviePtr);
+					Screen('FinalizeMovie', obj.moviePtr);
 				end
 				Screen('Close');
 				Screen('CloseAll');
@@ -620,10 +624,11 @@ classdef (Sealed) runExperiment < handle
 		function updateTask(obj)
 			obj.task.timeNow = GetSecs;
 			if obj.task.tick==1 %first ever loop
-				obj.task.isBlank=0;
-				obj.task.startTime=obj.task.timeNow;
-				obj.task.switchTime=obj.task.trialTime; %first ever time is for the first trial
-				obj.task.switchTick=obj.task.trialTime*ceil(obj.screenVals.fps);
+				obj.task.isBlank = 0;
+				obj.task.startTime = obj.task.timeNow;
+				obj.task.switchTime = obj.task.trialTime; %first ever time is for the first trial
+				obj.task.switchTick = obj.task.trialTime*ceil(obj.screenVals.fps);
+				obj.lJack.prepareStrobe(obj.task.outIndex(obj.task.totalRuns));
 			end
 			
 			%-------------------------------------------------------------------
@@ -769,7 +774,7 @@ classdef (Sealed) runExperiment < handle
 			
 			obj.makeGrid;
 			
-			obj.photoDiodeRect(:,1)=[0 0 40 40]';
+			obj.photoDiodeRect(:,1)=[0 0 80 80]';
 			
 			obj.updatesList;
 			
@@ -890,7 +895,7 @@ classdef (Sealed) runExperiment < handle
 			plot(stimTime/50,'k');
 			title('Missed frames')
 			
-			newpos = [pos(1) 1 pos(3) pos(4)*2];
+			newpos = [pos(1) 1 pos(3) scnsize(2)];
 			set(gcf,'Position',newpos);
 			clear vbl show flip index miss stimTime
 		end
