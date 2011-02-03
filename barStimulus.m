@@ -59,12 +59,12 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Generate an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
+		%> @param ppd use the passed pixels per degree to make a RGBA matrix of
+		%> the correct dimensions
+		%> @return
 		% ===================================================================
 		function constructMatrix(obj,ppd)
-			%use the passed pixels per degree to make a RGBA matrix of the
-			%correct dimensions
+			if ~exist('ppd','var');ppd=obj.ppd;end
 			obj.matrix=[]; %reset the matrix
 			if length(obj.colour) == 3
 				obj.colour(4) = obj.alpha;
@@ -153,7 +153,7 @@ classdef barStimulus < baseStimulus
 			
 			obj.texture = []; %we need to reset this
 			
-			fn = fieldnames(barStimulus);
+			fn = fieldnames(rfMapper);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
@@ -241,13 +241,9 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function set.barLength(obj,value)
 			if ~(value > 0)
-				value = 0.1;
+				value = 0.2;
 			end
 			obj.barLength = value;
-			if obj.barLength>obj.barWidth
-				obj.salutation('WARNING:','Length is smaller than width');
-			end
-			obj.salutation(['set length: ' num2str(value)],'Custom set method')
 		end
 		
 		% ===================================================================
@@ -261,10 +257,6 @@ classdef barStimulus < baseStimulus
 				value = 0.1;
 			end
 			obj.barWidth = value;
-			if obj.barWidth<obj.barLength
-				obj.salutation('WARNING:','Width is larger than length');
-			end
-			obj.salutation(['set width: ' num2str(value)],'Custom set method')
 		end
 		
 	end %---END PUBLIC METHODS---%

@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 02-Feb-2011 18:25:13
+% Last Modified by GUIDE v2.5 03-Feb-2011 00:14:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -754,7 +754,7 @@ if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.r=[];
 	set(handles.OKPanelDots,'Visible','off')
-	%set(handles.OKPanelNoise,'Visible','off')
+	set(handles.OKPanelSpot,'Visible','off')
 	set(handles.OKPanelBar,'Visible','off')
 	%set(handles.OKPanelPlaid,'Visible','off')
 	set(handles.OKPanelGrating,'Visible','on')
@@ -1078,3 +1078,15 @@ function OKPanelBarinterpMethod_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns OKPanelBarinterpMethod contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from OKPanelBarinterpMethod
+
+
+% --------------------------------------------------------------------
+function OKRFMapper_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to OKRFMapper (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	rf=rfMapper;
+	rf.run(o.r)
+end

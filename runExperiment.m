@@ -729,12 +729,8 @@ classdef (Sealed) runExperiment < handle
 			obj.screenVals.height=rect(4);
 			
 			obj.screenVals.fps=Screen('FrameRate',obj.screen);
-			
-			%initialise 10,000 timeLog values
-			obj.timeLog.vbl=zeros(10000,1);
-			obj.timeLog.show=zeros(10000,1);
-			obj.timeLog.flip=zeros(10000,1);
-			obj.timeLog.miss=zeros(10000,1);
+			if obj.screenVals.fps == 0;obj.screenVals.fps = 60;end
+			obj.screenVals.ifi=1/obj.screenVals.fps;
 			
 			%make sure we load up and test the serial port
 			obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1));

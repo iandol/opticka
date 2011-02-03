@@ -205,6 +205,7 @@ classdef (Sealed) opticka < handle
 			obj.r.hideFlash = obj.gv(obj.h.OKHideFlash);
 			obj.r.antiAlias = obj.gd(obj.h.OKAntiAliasing);
 			obj.r.photoDiode = obj.gv(obj.h.OKUsePhotoDiode);
+			obj.r.recordMovie = obj.gv(obj.h.OKrecordMovie);
 			obj.r.verbose = obj.gv(obj.h.OKVerbose);
 			obj.r.debug = obj.gv(obj.h.OKDebug);
 			obj.r.visualDebug = obj.gv(obj.h.OKDebug);
