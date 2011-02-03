@@ -21,9 +21,11 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.493'
+		version='0.494'
 		%> ?
 		load
+		%> is this a remote instance?
+		remote = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -73,12 +75,22 @@ classdef (Sealed) opticka < handle
 			end
 		end
 		
+		% ===================================================================
+		%> @brief Check if we are remote by checking existance of UI
+		%>
+		%> @param obj self object
+		% ===================================================================
+		function amIRemote(obj)
+			if ~ishandle(obj.h.uihandle)
+				obj.remote = 1;
+			end
+		end
+		
 	end
 	
 	%========================================================
 	methods (Hidden = true) %these have to be available publically, but lets hide them from obvious view
 	%========================================================
-	
 		
 		% ===================================================================
 		%> @brief Start the UI
@@ -111,7 +123,7 @@ classdef (Sealed) opticka < handle
 					javax.swing.UIManager.setLookAndFeel('javax.swing.plaf.metal.MetalLookAndFeel');
 				elseif ispc
 
-					obj.store.serverCommand = ['!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));"'];
+					obj.store.serverCommand = ['!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &'];
 					obj.paths.temp=tempdir;
 					if ~exist(['c:\MatlabFiles\Protocols'],'dir')
 						mkdir(['c:\MatlabFiles\Protocols'])
@@ -465,9 +477,21 @@ classdef (Sealed) opticka < handle
 	end
 	
 	%========================================================
-	methods ( Access = protected ) %----------PRIVATE METHODS
+	methods ( Access = private ) %----------PRIVATE METHODS
 	%========================================================
 	
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function dealUItoStructure(obj)
+			tt=fieldnames(obj.h);
+			for i=1:length(tt)
+				
+			end
+		end
+		
 		% ===================================================================
 		%> @brief Save Protocol
 		%> Save Protocol
@@ -483,13 +507,6 @@ classdef (Sealed) opticka < handle
 			cd(obj.paths.currentPath);
 			obj.refreshProtocolsList;
 			
-		end
-		
-		function dealUItoStructure(obj)
-			tt=fieldnames(obj.h);
-			for i=1:length(tt)
-				
-			end
 		end
 		
 		% ===================================================================
@@ -686,8 +703,6 @@ classdef (Sealed) opticka < handle
 				end
 			end
 		end
-		
-		
 		
 		% ===================================================================
 		%> @brief getstring

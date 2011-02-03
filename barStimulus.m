@@ -143,17 +143,17 @@ classdef barStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function out = setup(obj,rE)
+		function setup(obj,rE)
 			
 			obj.ppd=rE.ppd;
 			obj.ifi=rE.screenVals.ifi;
-			obj.xCenter=rE.xCenter;
-			obj.yCenter=rE.yCenter;
-			obj.win=rE.win;
+			if isempty(obj.xCenter);obj.xCenter=rE.xCenter;end
+			if isempty(obj.yCenter);obj.yCenter=rE.yCenter;end
+			if isempty(obj.win);obj.win = rE.win;end
 			
 			obj.texture = []; %we need to reset this
 			
-			fn = fieldnames(rfMapper);
+			fn = fieldnames(barStimulus);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
@@ -187,7 +187,6 @@ classdef barStimulus < baseStimulus
 			
 			obj.setRect();
 			
-			out = obj.toStructure;
 		end
 		
 		% ===================================================================

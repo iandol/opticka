@@ -11,9 +11,9 @@ classdef dataConnection < handle
 	
 	properties
 		type = 'client'
-		protocol = 'udp'
+		protocol = 'tcp'
 		lPort = 1111
-		rPort = 3333
+		rPort = 5678
 		lAddress = '127.0.0.1'
 		rAddress = '127.0.0.1'
 		autoOpen = 0
@@ -310,9 +310,9 @@ classdef dataConnection < handle
 		end
 		
 		% ===================================================================
-		%> @brief Initialize the server loop
+		%> @brief Send command to remote server
 		%>
-		%> Initialize the server loop
+		%> Send command to remote server
 		% ===================================================================
 		function sendCommand(obj,cmd)
 			if obj.conn < 0

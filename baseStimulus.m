@@ -58,6 +58,8 @@ classdef baseStimulus < dynamicprops
 		yCenter = 0
 		%> window to attach to
 		win = []
+		%>screen to use
+		screen = 0
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
 		ignoreProperties='^(dX|dY|delta|verbose|texture|dstRect|mvRect|xy|dxdy|colours|family|type)$';

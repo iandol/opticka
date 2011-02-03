@@ -449,6 +449,15 @@ classdef (Sealed) runExperiment < handle
 		end
 		
 		% ===================================================================
+		%> @brief refresh the screen values stored in the object
+		%> 
+		%> @param 
+		% ===================================================================
+		function refreshScreen(obj)
+			obj.prepareScreen;
+		end
+		
+		% ===================================================================
 		%> @brief updatesList
 		%> Updates the list of stimuli current in the object
 		%> @param 
@@ -659,7 +668,7 @@ classdef (Sealed) runExperiment < handle
 				obj.task.switched = 1;
 				if obj.task.isBlank == 0 %we come from showing a stimulus
 					
-					obj.logMe('IntoBlank');
+					%obj.logMe('IntoBlank');
 					obj.task.isBlank = 1;
 					
 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we within a trial block or not? we add the required time to our switch timer
@@ -670,7 +679,6 @@ classdef (Sealed) runExperiment < handle
 						obj.task.switchTick=obj.task.switchTick+(obj.task.isTime*ceil(obj.screenVals.fps));
 					end
 					
-					
 % 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
 % 						mT=obj.task.thisTrial+1;
 % 						mR = 1;
@@ -680,11 +688,11 @@ classdef (Sealed) runExperiment < handle
 % 					end
 					
 					obj.lJack.prepareStrobe(0); %get the strobe word ready
-					obj.logMe('OutaBlank');
+					%obj.logMe('OutaBlank');
 					
 				else %we have to show the new run on the next flip
 					
-					obj.logMe('IntoTrial');
+					%obj.logMe('IntoTrial');
 					if obj.task.thisTrial <= obj.task.nTrials
 						obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
 						obj.task.switchTick=obj.task.switchTick+(obj.task.trialTime*ceil(obj.screenVals.fps)); %update our timer
@@ -696,7 +704,7 @@ classdef (Sealed) runExperiment < handle
 						else
 							obj.task.thisRun = obj.task.thisRun + 1;
 						end
-						if obj.task.totalRuns < length(obj.task.outIndex)
+								if obj.task.totalRuns < length(obj.task.outIndex)
 							obj.lJack.prepareStrobe(obj.task.outIndex(obj.task.totalRuns)); %get the strobe word ready
 						else
 							
@@ -704,16 +712,20 @@ classdef (Sealed) runExperiment < handle
 					else
 						obj.task.thisTrial = obj.task.nTrials + 1;
 					end
-					obj.logMe('OutaTrial');
+					%obj.logMe('OutaTrial');
 					
 				end
 			end
 		end
 		
-		%---------------Calculates the screen values----------------%
+		% ===================================================================
+		%> @brief prepare the Screen values on the local machine
+		%>
+		%> @param
+		%> @return 
+		% ===================================================================
 		function prepareScreen(obj)
 			
-			%obj.ppd=round(obj.pixelsPerCm*(57.3/obj.distance)); %set the pixels per degree
 			obj.maxScreen=max(Screen('Screens'));
 			
 			if isempty(obj.screen) || obj.screen > obj.maxScreen
@@ -741,14 +753,6 @@ classdef (Sealed) runExperiment < handle
 			obj.lJack.prepareStrobe([0,255,255],[0,255,255],1);
 			obj.lJack.close;
 			obj.lJack=[];
-			
-			obj.sList.n = 0;
-			obj.sList.list = [];
-			obj.sList.index = [];
-			obj.sList.gN = 0;
-			obj.sList.bN = 0;
-			obj.sList.dN = 0;
-			obj.sList.sN = 0;
 			
 			try
 				AssertOpenGL;
@@ -854,7 +858,7 @@ classdef (Sealed) runExperiment < handle
 			
 			figure;
 			
-			scnsize = get(0,'ScreenSize');
+			scnsize = get(0,'ScreenSize')
 			pos=get(gcf,'Position');
 			
 			subplot(3,1,1);
@@ -891,7 +895,7 @@ classdef (Sealed) runExperiment < handle
 			plot(stimTime/50,'k');
 			title('Missed frames')
 			
-			newpos = [pos(1) 1 pos(3) scnsize(2)];
+			newpos = [pos(1) 1 pos(3) scnsize(2)]
 			set(gcf,'Position',newpos);
 			clear vbl show flip index miss stimTime
 		end

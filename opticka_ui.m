@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 03-Feb-2011 00:14:01
+% Last Modified by GUIDE v2.5 03-Feb-2011 17:43:06
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1089,4 +1089,15 @@ if isappdata(0,'o')
 	o = getappdata(0,'o');
 	rf=rfMapper;
 	rf.run(o.r)
+end
+
+
+% --------------------------------------------------------------------
+function OKToolbarToggleRemote_OnCallback(hObject, eventdata, handles)
+% hObject    handle to OKToolbarToggleRemote (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	eval(o.store.serverCommand)
 end

@@ -11,7 +11,7 @@ classdef rfMapper < barStimulus
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8 and 16
 		antiAlias = 4
 		%> background of display during stimulus presentation
-		backgroundColour = [0.5 0.5 0.5 0] 
+		backgroundColour = [0 0 0 0] 
 		%> use OpenGL blending mode 1 = yes | 0 = no
 		blend = 0 
 		%> GL_ONE %src mode
@@ -21,9 +21,10 @@ classdef rfMapper < barStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		winRect
-		buttons
-		rchar
+		winRect = []
+		buttons = []
+		rchar = ''
+		ntextures = 1
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -63,8 +64,12 @@ classdef rfMapper < barStimulus
 			obj.salutation('constructor','rfMapper initialisation complete');
 		end
 		
-		
+		% ===================================================================
+		%> @brief 
+		%>  
+		% ===================================================================
 		function run(obj,rE)
+			obj.screen = rE.screen;
 			try
 				Screen('Preference', 'SkipSyncTests', 2);
 				Screen('Preference', 'VisualDebugLevel', 0);
@@ -73,9 +78,11 @@ classdef rfMapper < barStimulus
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
-				[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[1 1 800 600], [], obj.doubleBuffer+1,[],obj.antiAlias);
+				[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				
-				obj.constructMatrix(rE.ppd);
+				[obj.xCenter, obj.yCenter] = RectCenter(obj.winRect);
+				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
+				
 				obj.setup(rE);
 				AssertGLSL;
 				
@@ -84,15 +91,12 @@ classdef rfMapper < barStimulus
 					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
 				end
 				
-				[obj.xCenter, obj.yCenter] = RectCenter(obj.winRect);
-				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
-				
-				obj.dstRect=Screen('Rect',obj.texture);
 				obj.buttons = [0 0 0]; % When the user clicks the mouse, 'buttons' becomes nonzero.
 				mX = 0; % The x-coordinate of the mouse cursor
 				mY = 0; % The y-coordinate of the mouse cursor
 				obj.rchar='nan';
 				FlushEvents;
+				HideCursor;
 				ListenChar(2);
 				
 				while ~strcmpi(obj.rchar,'escape')
@@ -101,17 +105,31 @@ classdef rfMapper < barStimulus
 					[keyIsDown, ~, keyCode] = KbCheck;
 					if keyIsDown == 1
 						obj.rchar = KbName(keyCode);
+						switch obj.rchar
+							case 'l'
+								obj.dstRect=ScaleRect(obj.dstRect,1,1.05);
+							case 'k'
+								obj.dstRect=ScaleRect(obj.dstRect,1,0.95);
+							case 'h'
+								obj.dstRect=ScaleRect(obj.dstRect,1.05,1);
+							case 'j'
+								obj.dstRect=ScaleRect(obj.dstRect,0.95,1);
+							case 'LeftArrow'
+								obj.angleOut = obj.angleOut+5;
+							case 'RightArrow'
+								obj.angleOut = obj.angleOut+5;
+						end
 					end
-					flushevents('keyDown');
+					FlushEvents('keyDown');
 
 					% We need to redraw the text or else it will disappear after a
 					% subsequent call to Screen('Flip').
 					t=sprintf('Buttons: %d\t',obj.buttons);
 					if ischar(obj.rchar);t=[t sprintf('| Char: %s',obj.rchar)];end
-					Screen('DrawText', obj.win, t, 0, 0, [0 0 0]);
+					Screen('DrawText', obj.win, t, 0, 0, [1 1 0]);
 
 					% Draw the sprite at the new location.
-					Screen('DrawTexture', obj.win, obj.texture, [], pbj.dstRect);
+					Screen('DrawTexture', obj.win, obj.texture, [], obj.dstRect, obj.angleOut);
 					
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
@@ -127,7 +145,7 @@ classdef rfMapper < barStimulus
 				ShowCursor; 
 				Screen('CloseAll');
 				
-			catch
+			catch ME
 				obj.win=[];
 				Priority(0);
 				ListenChar(0)
@@ -135,7 +153,8 @@ classdef rfMapper < barStimulus
 				% return the user to the familiar MATLAB prompt.
 				ShowCursor; 
 				Screen('CloseAll');
-				psychrethrow(psychlasterror);
+				%psychrethrow(psychlasterror);
+				rethrow ME
 			end
 		end
 	end
