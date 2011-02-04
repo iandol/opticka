@@ -24,6 +24,11 @@ classdef rfMapper < barStimulus
 		winRect = []
 		buttons = []
 		rchar = ''
+		xClick = [0]
+		yClick = [0]
+		xyDots = [0;0]
+		comment = ''
+		showClicks = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -97,19 +102,26 @@ classdef rfMapper < barStimulus
 				obj.buttons = [0 0 0]; % When the user clicks the mouse, 'buttons' becomes nonzero.
 				mX = 0; % The x-coordinate of the mouse cursor
 				mY = 0; % The y-coordinate of the mouse cursor
+				xOut = 0;
+				yOut = 0;
 				obj.rchar='';
 				FlushEvents;
 				HideCursor;
 				ListenChar(2);
 				
 				while ~strcmpi(obj.rchar,'escape')
-					xOut = (mX - obj.xCenter)/obj.ppd;
-					yOut = (yX - obj.yCenter)/obj.ppd;
 					Screen('FillRect',obj.win,obj.backgroundColour,[]);
-					t=sprintf('Buttons: %d\t',obj.buttons);
-					t=[t sprintf(' | X = %d| Y = %d',xOut,yOut)];
+					t=sprintf('Buttons: %i\t',obj.buttons);
+					t=[t sprintf(' | X = %2.3g| Y = %2.3g',xOut,yOut)];
 					if ischar(obj.rchar);t=[t sprintf('| Char: %s',obj.rchar)];end
+					t=[t sprintf('Scale = %2.2g',obj.scale)];
 					Screen('DrawText', obj.win, t, 0, 0, [1 1 0]);
+					sColour = obj.backgroundColour./2;
+					if max(sColour)==0;sColour=[0.5 0.5 0.5 1];end
+					Screen('gluDisk',obj.win,sColour,obj.xCenter,obj.yCenter,3);
+					if obj.showClicks == 1
+						Screen('DrawDots',obj.win,obj.xyDots,2,sColour,[obj.xCenter obj.yCenter],1);
+					end
 
 					% Draw the sprite at the new location.
 					Screen('DrawTexture', obj.win, obj.texture, [], obj.dstRect, obj.angleOut,[],obj.alpha);
@@ -117,6 +129,13 @@ classdef rfMapper < barStimulus
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
 					[mX, mY, obj.buttons] = GetMouse(obj.screen);
+					xOut = (mX - obj.xCenter)/obj.ppd;
+					yOut = (mY - obj.yCenter)/obj.ppd;
+					if obj.buttons(2) == 1
+						obj.xClick = [obj.xClick xOut];
+						obj.yClick = [obj.yClick yOut];
+						obj.xyDots = vertcat((obj.xClick.*obj.ppd),(obj.yClick*obj.ppd));
+					end
 					obj.dstRect=CenterRectOnPoint(obj.dstRect,mX,mY);
 					[keyIsDown, ~, keyCode] = KbCheck;
 					if keyIsDown == 1
@@ -150,10 +169,12 @@ classdef rfMapper < barStimulus
 							case '1!'
 								obj.colourIndex = obj.colourIndex+1;
 								obj.setColours;
+								WaitSecs(0.03);
 								obj.regenerate;
 							case '2@'
 								obj.bgcolourIndex = obj.bgcolourIndex+1;
 								obj.setColours;
+								WaitSecs(0.03);
 								obj.regenerate;
 							case '3#'
 								obj.scale = obj.scale * 1.1;
@@ -166,7 +187,15 @@ classdef rfMapper < barStimulus
 								obj.barWidth = obj.dstRect(3)/obj.ppd;
 								obj.barLength = obj.dstRect(4)/obj.ppd;
 								obj.type = obj.textureList{obj.textureIndex};
+								WaitSecs(0.1);
 								obj.regenerate;
+							case ';:'
+								obj.showClicks = ~obj.showClicks;
+								WaitSecs(0.1);
+							case '''"'
+								obj.xClick = 0;
+								obj.yClick = 0;
+								obj.xyDots = vertcat((obj.xClick.*obj.ppd),(obj.yClick*obj.ppd));
 						end
 					end
 					FlushEvents('keyDown');

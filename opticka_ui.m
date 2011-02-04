@@ -1087,8 +1087,10 @@ function OKRFMapper_ClickedCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
+	o.store.rfLog = [];
 	rf=rfMapper;
 	rf.run(o.r);
+	o.store.rfLog = rf;
 	clear rf;
 end
 
