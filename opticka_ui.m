@@ -1088,7 +1088,8 @@ function OKRFMapper_ClickedCallback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	rf=rfMapper;
-	rf.run(o.r)
+	rf.run(o.r);
+	clear rf;
 end
 
 

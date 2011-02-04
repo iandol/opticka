@@ -13,7 +13,7 @@ classdef rfMapper < barStimulus
 		%> background of display during stimulus presentation
 		backgroundColour = [0 0 0 0] 
 		%> use OpenGL blending mode 1 = yes | 0 = no
-		blend = 0 
+		blend = 1
 		%> GL_ONE %src mode
 		srcMode = 'GL_ONE' 
 		%> GL_ONE % dst mode
@@ -24,11 +24,15 @@ classdef rfMapper < barStimulus
 		winRect = []
 		buttons = []
 		rchar = ''
-		ntextures = 1
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(type|screen)$'
+		colourIndex = 1
+		bgcolourIndex = 2
+		colourList = {[1 1 1];[0 0 0];[1 0 0];[0 1 0];[0 0 1];[1 1 0];[1 0 1];[0 1 1];[.5 .5 .5]}
+		textureIndex = 1
+		textureList = {'simple','random','randomColour','randomN','randomBW'};
+		allowedProperties='^(type|screen|blend|antiAlias)$'
 	end
 	
 	%=======================================================================
@@ -59,7 +63,6 @@ classdef rfMapper < barStimulus
 					end
 				end
 			end
-			obj.verbose = 1;
 			obj.family = 'rfmapper';
 			obj.salutation('constructor','rfMapper initialisation complete');
 		end
@@ -94,48 +97,80 @@ classdef rfMapper < barStimulus
 				obj.buttons = [0 0 0]; % When the user clicks the mouse, 'buttons' becomes nonzero.
 				mX = 0; % The x-coordinate of the mouse cursor
 				mY = 0; % The y-coordinate of the mouse cursor
-				obj.rchar='nan';
+				obj.rchar='';
 				FlushEvents;
 				HideCursor;
 				ListenChar(2);
 				
 				while ~strcmpi(obj.rchar,'escape')
-					[mX, mY, obj.buttons] = GetMouse;
+					xOut = (mX - obj.xCenter)/obj.ppd;
+					yOut = (yX - obj.yCenter)/obj.ppd;
+					Screen('FillRect',obj.win,obj.backgroundColour,[]);
+					t=sprintf('Buttons: %d\t',obj.buttons);
+					t=[t sprintf(' | X = %d| Y = %d',xOut,yOut)];
+					if ischar(obj.rchar);t=[t sprintf('| Char: %s',obj.rchar)];end
+					Screen('DrawText', obj.win, t, 0, 0, [1 1 0]);
+
+					% Draw the sprite at the new location.
+					Screen('DrawTexture', obj.win, obj.texture, [], obj.dstRect, obj.angleOut,[],obj.alpha);
+					
+					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
+					
+					[mX, mY, obj.buttons] = GetMouse(obj.screen);
 					obj.dstRect=CenterRectOnPoint(obj.dstRect,mX,mY);
 					[keyIsDown, ~, keyCode] = KbCheck;
 					if keyIsDown == 1
 						obj.rchar = KbName(keyCode);
+						if iscell(obj.rchar);obj.rchar=obj.rchar{1};end
 						switch obj.rchar
 							case 'l'
 								obj.dstRect=ScaleRect(obj.dstRect,1,1.05);
 							case 'k'
 								obj.dstRect=ScaleRect(obj.dstRect,1,0.95);
-							case 'h'
-								obj.dstRect=ScaleRect(obj.dstRect,1.05,1);
 							case 'j'
+								obj.dstRect=ScaleRect(obj.dstRect,1.05,1);
+							case 'h'
 								obj.dstRect=ScaleRect(obj.dstRect,0.95,1);
 							case 'LeftArrow'
-								obj.angleOut = obj.angleOut+5;
+								obj.angleOut = obj.angleOut-5;
 							case 'RightArrow'
 								obj.angleOut = obj.angleOut+5;
+							case 'UpArrow'
+								obj.alpha = obj.alpha * 1.1;
+								if obj.alpha > 1;obj.alpha = 1;end
+							case 'DownArrow'
+								obj.alpha = obj.alpha * 0.9;
+								if obj.alpha < 0;obj.alpha = 0;end
+							case ',<'
+								obj.backgroundColour = obj.backgroundColour .* 0.9;
+								obj.backgroundColour(obj.backgroundColour<0) = 0;
+							case '.>'
+								obj.backgroundColour = obj.backgroundColour .* 1.1;
+								obj.backgroundColour(obj.backgroundColour>1) = 1;
+							case '1!'
+								obj.colourIndex = obj.colourIndex+1;
+								obj.setColours;
+								obj.regenerate;
+							case '2@'
+								obj.bgcolourIndex = obj.bgcolourIndex+1;
+								obj.setColours;
+								obj.regenerate;
+							case '3#'
+								obj.scale = obj.scale * 1.1;
+								if obj.scale > 5;obj.scale = 5;end
+							case '4$'
+								obj.scale = obj.scale * 0.9;
+								if obj.scale <1;obj.scale = 1;end
+							case 'space'
+								obj.textureIndex = obj.textureIndex + 1;
+								obj.barWidth = obj.dstRect(3)/obj.ppd;
+								obj.barLength = obj.dstRect(4)/obj.ppd;
+								obj.type = obj.textureList{obj.textureIndex};
+								obj.regenerate;
 						end
 					end
 					FlushEvents('keyDown');
 
-					% We need to redraw the text or else it will disappear after a
-					% subsequent call to Screen('Flip').
-					t=sprintf('Buttons: %d\t',obj.buttons);
-					if ischar(obj.rchar);t=[t sprintf('| Char: %s',obj.rchar)];end
-					Screen('DrawText', obj.win, t, 0, 0, [1 1 0]);
-
-					% Draw the sprite at the new location.
-					Screen('DrawTexture', obj.win, obj.texture, [], obj.dstRect, obj.angleOut);
-					
-					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
-					
-					% Call Screen('Flip') to update the screen.  Note that calling
-					% 'Flip' after we have both erased and redrawn the sprite prevents
-					% the sprite from flickering.
 					Screen('Flip', obj.win);
 				end
 				
@@ -153,8 +188,47 @@ classdef rfMapper < barStimulus
 				% return the user to the familiar MATLAB prompt.
 				ShowCursor; 
 				Screen('CloseAll');
-				%psychrethrow(psychlasterror);
+				psychrethrow(psychlasterror);
 				rethrow ME
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param 
+		%> @return
+		% ===================================================================
+		function set.colourIndex(obj,value)
+			obj.colourIndex = value;
+			if obj.colourIndex > length(obj.colourList)
+				obj.colourIndex = 1;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param 
+		%> @return
+		% ===================================================================
+		function set.bgcolourIndex(obj,value)
+			obj.bgcolourIndex = value;
+			if obj.bgcolourIndex > length(obj.colourList)
+				obj.bgcolourIndex = 1;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param 
+		%> @return
+		% ===================================================================
+		function set.textureIndex(obj,value)
+			obj.textureIndex = value;
+			if obj.textureIndex > length(obj.textureList)
+				obj.textureIndex = 1;
 			end
 		end
 	end
@@ -163,23 +237,22 @@ classdef rfMapper < barStimulus
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
 		% ===================================================================
-		%> @brief setRect
-		%>  setRect makes the PsychRect based on the texture and screen values
+		%> @brief setColours
+		%>  sets the colours based on the current index
 		% ===================================================================
-		function setRect(obj)
-			if isempty(obj.findprop('angleOut'));
-				[dx dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
-			else
-				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
-			end
-			obj.dstRect=Screen('Rect',obj.texture);
-			obj.dstRect=CenterRectOnPoint(obj.dstRect,obj.xCenter,obj.yCenter);
-			if isempty(obj.findprop('xPositionOut'));
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
-			else
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
-			end
-			obj.mvRect=obj.dstRect;
+		function setColours(obj)
+			obj.colour = obj.colourList{obj.colourIndex};
+			obj.backgroundColour = obj.colourList{obj.bgcolourIndex};
+		end
+	
+		% ===================================================================
+		%> @brief regenerate
+		%>  regenerates the texture
+		% ===================================================================
+		function regenerate(obj)
+			Screen('Close',obj.texture);
+			obj.constructMatrix(obj.ppd) %make our matrix
+			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
 		end
 	end
 end

@@ -53,9 +53,9 @@ classdef baseStimulus < dynamicprops
 		%> Inter frame interval (calculated in runExperiment)
 		ifi = 0.0167
 		%> computed X center (calculated in runExperiment)
-		xCenter = 0
+		xCenter = []
 		%> computed Y center (calculated in runExperiment)
-		yCenter = 0
+		yCenter = []
 		%> window to attach to
 		win = []
 		%>screen to use
