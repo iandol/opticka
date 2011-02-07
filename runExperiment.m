@@ -462,7 +462,7 @@ classdef (Sealed) runExperiment < handle
 		%> Updates the list of stimuli current in the object
 		%> @param 
 		% ===================================================================
-		function updatesList(obj) %need to sort ordering!!!!!!!!!!
+		function updatesList(obj)
 			obj.sList.n = 0;
 			obj.sList.list = [];
 			obj.sList.index = [];
@@ -503,7 +503,11 @@ classdef (Sealed) runExperiment < handle
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
 		
-		%---------------Update the stimulus values for the current trial---------%
+		% ===================================================================
+		%> @brief InitialiseTask
+		%> Sets up the task structure with dynamic properties
+		%> @param 
+		% ===================================================================
 		function initialiseTask(obj)
 			
 			if isempty(obj.task) %we have no task setup, so we generate one.
@@ -650,11 +654,17 @@ classdef (Sealed) runExperiment < handle
 					end
 					
 				else %blank stimulus, we don't need to update anything
-					
+					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
+						mT=obj.task.thisTrial+1;
+						mR = 1;
+					else
+						mT=obj.task.thisTrial;
+						mR = obj.task.thisRun + 1;
+					end
 					%now update our stimuli, we do it in the blank as less
 					%critical timingwise
 					if obj.task.switched == 1
-						obj.updateVars(obj.task.thisTrial,obj.task.thisRun);
+						obj.updateVars(mT,mR);
 						for i = 1:obj.sList.n
 							obj.stimulus{i}.update;
 						end
@@ -678,14 +688,6 @@ classdef (Sealed) runExperiment < handle
 						obj.task.switchTime=obj.task.switchTime+obj.task.isTime;
 						obj.task.switchTick=obj.task.switchTick+(obj.task.isTime*ceil(obj.screenVals.fps));
 					end
-					
-% 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
-% 						mT=obj.task.thisTrial+1;
-% 						mR = 1;
-% 					else
-% 						mT=obj.task.thisTrial;
-% 						mR = obj.task.thisRun + 1;
-% 					end
 					
 					obj.lJack.prepareStrobe(0); %get the strobe word ready
 					%obj.logMe('OutaBlank');
@@ -858,7 +860,7 @@ classdef (Sealed) runExperiment < handle
 			
 			figure;
 			
-			scnsize = get(0,'ScreenSize')
+			scnsize = get(0,'ScreenSize');
 			pos=get(gcf,'Position');
 			
 			subplot(3,1,1);
@@ -895,7 +897,7 @@ classdef (Sealed) runExperiment < handle
 			plot(stimTime/50,'k');
 			title('Missed frames')
 			
-			newpos = [pos(1) 1 pos(3) scnsize(2)]
+			newpos = [pos(1) 1 pos(3) scnsize(4)];
 			set(gcf,'Position',newpos);
 			clear vbl show flip index miss stimTime
 		end

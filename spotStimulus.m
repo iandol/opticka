@@ -9,6 +9,8 @@ classdef spotStimulus < baseStimulus
 		family = 'spot'
 		type = 'simple'
 		flashTime = [0.5 0.5]
+		flashOn = true
+		contrast = 1
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = private)
@@ -16,11 +18,11 @@ classdef spotStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		doFlash = 0
 		flashCounter = 1
 		flashBG = [0.5 0.5 0.5 1]
 		flashFG = [1 1 1 1]
-		flashOn = true
-		allowedProperties='^(type|flashTime)$'
+		allowedProperties='^(type|flashTime|flashOn|contrast)$'
 	end
 	
 	%=======================================================================
@@ -78,6 +80,7 @@ classdef spotStimulus < baseStimulus
 					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
+					if strcmp(fn{j},'contrast');p.SetMethod = @setcontrastOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
@@ -211,13 +214,24 @@ classdef spotStimulus < baseStimulus
 		end
 		
 		% ===================================================================
+		%> @brief contrast Set method
+		%>
+		% ===================================================================
+		function setcontrastOut(obj,value)
+			obj.contrast = value;
+			if obj.contrast < 1
+				obj.flashFG = obj.colour .* obj.contrast;
+				obj.flashFG = obj.colour .* obj.contrast;
+			end
+		end
+		
+		% ===================================================================
 		%> @brief setupFlash
 		%>
 		% ===================================================================
 		function setupFlash(obj,bg)
-			obj.flashFG = obj.colourOut;
-			obj.flashBG = bg;
-			obj.flashOn = true;
+			obj.flashFG = obj.colour .* obj.contrast;
+			obj.flashBG = bg .* 1-obj.contrast;
 			obj.flashCounter = 1;
 		end
 		
@@ -227,7 +241,6 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function resetFlash(obj)
 			obj.colourOut = obj.flashFG;
-			obj.flashOn = true;
 			obj.flashCounter = 1;
 		end
 		

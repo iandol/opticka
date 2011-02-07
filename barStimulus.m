@@ -196,7 +196,7 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function update(obj)
-			obj.mvRect=obj.dstRect;
+			obj.setRect();
 		end
 		
 		% ===================================================================

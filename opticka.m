@@ -72,6 +72,8 @@ classdef (Sealed) opticka < handle
 					obj.saveProtocol;
 				case 'loadProtocol'
 					obj.loadProtocol;
+				case 'deleteProtocol'
+					obj.deleteProtocol
 			end
 		end
 		
@@ -412,6 +414,7 @@ classdef (Sealed) opticka < handle
 			tmp.size = obj.gd(obj.h.OKPanelSpotsize);
 			tmp.angle = obj.gd(obj.h.OKPanelSpotangle);
 			tmp.speed = obj.gd(obj.h.OKPanelSpotspeed);
+			tmp.contrast = obj.gd(obj.h.OKPanelSpotcontrast);
 			tmp.colour = obj.gn(obj.h.OKPanelSpotcolour);
 			tmp.flashTime = obj.gn(obj.h.OKPanelSpotflashTime);
 			tmp.alpha = obj.gd(obj.h.OKPanelSpotalpha);
@@ -485,10 +488,11 @@ classdef (Sealed) opticka < handle
 		%> 
 		%> @param 
 		% ===================================================================
-		function dealUItoStructure(obj)
+		function out = dealUItoStructure(obj,fragment)
 			tt=fieldnames(obj.h);
 			for i=1:length(tt)
-				
+				[ii,oo]=regexp(tt{i},fragment);
+				out.(tt{i}(oo:end))=[];
 			end
 		end
 		
@@ -764,8 +768,8 @@ classdef (Sealed) opticka < handle
 		%> @param 
 		% ===================================================================
 		function fixUI(obj)
-			ch = findall(obj.handles.uihandle);
-			set(obj.handles.uihandle,'Units','pixels');
+			ch = findall(obj.h.uihandle);
+			set(obj.h.uihandle,'Units','pixels');
 			for k = 1:length(ch)
 				if isprop(ch(k),'Units')
 					set(ch(k),'Units','pixels');

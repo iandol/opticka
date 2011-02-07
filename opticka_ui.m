@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 03-Feb-2011 17:43:06
+% Last Modified by GUIDE v2.5 07-Feb-2011 10:20:59
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -97,21 +97,46 @@ function OKMenuNewProtocol_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuNewProtocol (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.r=[];
+	set(handles.OKPanelDots,'Visible','off')
+	set(handles.OKPanelSpot,'Visible','off')
+	set(handles.OKPanelBar,'Visible','off')
+	%set(handles.OKPanelPlaid,'Visible','off')
+	set(handles.OKPanelGrating,'Visible','on')
+	o.store.visibleStimulus='grating';
+	o.store.gratingN = 0;
+	o.store.barN = 0;
+	o.store.dotsN = 0;
+	o.store.spotN = 0;
+	o.store.plaidN = 0;
+	o.store.noiseN = 0;
+	o.clearStimulusList;
+	o.clearVariableList;
+	o.getScreenVals;
+	o.getTaskVals;
+end
 
 % --------------------------------------------------------------------
 function OKMenuOpen_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuOpen (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.router('loadProtocol');
+end
 
 % --------------------------------------------------------------------
 function OKMenuSave_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuSave (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.router('saveProtocol');
+end
 
 % --------------------------------------------------------------------
 function OKMenuQuit_Callback(hObject, eventdata, handles)
@@ -1104,3 +1129,11 @@ if isappdata(0,'o')
 	o = getappdata(0,'o');
 	eval(o.store.serverCommand)
 end
+
+
+% --------------------------------------------------------------------
+function OKMenumanageCode_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenumanageCode (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+manageCode
