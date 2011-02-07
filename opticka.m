@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.494'
+		version='0.495'
 		%> ?
 		load
 		%> is this a remote instance?
@@ -176,7 +176,7 @@ classdef (Sealed) opticka < handle
 					clear o;
 				end
 				close(uihandle);
-				errordlg('Problen in initialising Opticka, please check errors on commandline')
+				errordlg('Problen in initialising Opticka, please check errors on the commandline')
 				rethrow(ME)
 			end
 			
@@ -193,9 +193,19 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKOptickaVersion,'String','Initialising Stimulus object...')
 				drawnow
 				obj.r = runExperiment;
+				s=cell(obj.r.maxScreen+1,1);
+				for i=0:obj.r.maxScreen
+					s{i+1} = num2str(i);
+				end
+				set(obj.h.OKSelectScreen,'String', s);
+				set(obj.h.OKSelectScreen, 'Value', obj.r.screen+1);
+				clear s;
 				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
 				drawnow
 			end
+			
+			obj.r.screen = obj.gv(obj.h.OKSelectScreen)-1;
+			
 			obj.r.distance = obj.gd(obj.h.OKMonitorDistance);
 			obj.r.pixelsPerCm = obj.gd(obj.h.OKPixelsPerCm);
 			obj.r.screenXOffset = obj.gd(obj.h.OKXCenter);

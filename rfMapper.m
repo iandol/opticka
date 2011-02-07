@@ -109,7 +109,7 @@ classdef rfMapper < barStimulus
 				HideCursor;
 				ListenChar(2);
 				
-				while ~strcmpi(obj.rchar,'escape')
+				while ~regexpi(obj.rchar,'escape')
 					Screen('FillRect',obj.win,obj.backgroundColour,[]);
 					t=sprintf('Buttons: %i\t',obj.buttons);
 					t=[t sprintf(' | X = %2.3g| Y = %2.3g',xOut,yOut)];
@@ -150,14 +150,14 @@ classdef rfMapper < barStimulus
 								obj.dstRect=ScaleRect(obj.dstRect,1.05,1);
 							case 'h'
 								obj.dstRect=ScaleRect(obj.dstRect,0.95,1);
-							case 'LeftArrow'
+							case {'LeftArrow','left'}
 								obj.angleOut = obj.angleOut-5;
-							case 'RightArrow'
+							case {'RightArrow','right'}
 								obj.angleOut = obj.angleOut+5;
-							case 'UpArrow'
+							case {'UpArrow','up'}
 								obj.alpha = obj.alpha * 1.1;
 								if obj.alpha > 1;obj.alpha = 1;end
-							case 'DownArrow'
+							case {'DownArrow','down'}
 								obj.alpha = obj.alpha * 0.9;
 								if obj.alpha < 0;obj.alpha = 0;end
 							case ',<'
@@ -189,10 +189,10 @@ classdef rfMapper < barStimulus
 								obj.type = obj.textureList{obj.textureIndex};
 								WaitSecs(0.1);
 								obj.regenerate;
-							case ';:'
+							case {';:',';'}
 								obj.showClicks = ~obj.showClicks;
 								WaitSecs(0.1);
-							case '''"'
+							case {'''"',''''}
 								obj.xClick = 0;
 								obj.yClick = 0;
 								obj.xyDots = vertcat((obj.xClick.*obj.ppd),(obj.yClick*obj.ppd));

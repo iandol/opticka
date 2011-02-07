@@ -480,14 +480,23 @@ function OKMenuCalibrateLuminance_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuCalibrateLuminance (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+v=get(handles.OKSelectScreen,'Value');
+[gammaTable1, gammaTable2, displayBaseline, displayRange, displayGamma] = calibrateLuminance(9,v-1);
+lab={'gm1','gm2','dB','dR','dG'};
+def={'gammaTable1', 'gammaTable2', 'displayBaseline', 'displayRange', 'displayGamma'};
+items={gammaTable1, gammaTable2, displayBaseline, displayRange, displayGamma};
+export2wsdlg(lab,def,items,'What to save?');
 
 % --------------------------------------------------------------------
 function OKMenuCalibrateSize_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuCalibrateSize (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-MeasureDpi;
+v=get(handles.OKSelectScreen,'Value');
+s=str2num(get(handles.OKMonitorDistance,'String')); %#ok<ST2NM>
+dpc=calibrateSize(v-1,s);
+set(handles.OKPixelsPerCm,'String',num2str(dpc));
+
 
 function OKitTime_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')

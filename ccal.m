@@ -150,9 +150,15 @@ vals(4,1)=cc.Trigger;
 set(gh('ccaltriggerlevel'),'String',num2str(cc.Trigger));
 
 cMatrix = ColorCal2('ReadColorMatrix');
-s = ColorCal2('MeasureXYZ')
-correctedValues = cMatrix(1:3,:) * [s.x s.y s.z]'
+s = ColorCal2('MeasureXYZ');
+correctedValues = cMatrix(1:3,:) * [s.x s.y s.z]';
+X = correctedValues(1);
+Y = correctedValues(2);
+Z = correctedValues(3);
 vals(1:3,3)=correctedValues;
+vals(1,4) = X / (X + Y + Z);
+vals(2,4) = Y / (X + Y + Z);
+vals(3,4) = Y;
 
 set(handles.ccaltable,'Data',vals);
 
@@ -183,22 +189,28 @@ function ccalmeasurenow_Callback(hObject, eventdata, handles)
 % hObject    handle to ccalmeasurenow (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-cc=ColorCal2('GetRawData');
+%cc=ColorCal2('GetRawData');
 vals=zeros(4,4);
-vals(1,1)=cc.Xdata;
-vals(1,2)=cc.Xzero;
-vals(2,1)=cc.Ydata;
-vals(2,2)=cc.Yzero;
-vals(3,1)=cc.Zdata;
-vals(3,2)=cc.Zzero;
-vals(4,1)=cc.Trigger;
+vals(1,1)=0;%cc.Xdata;
+vals(1,2)=0;%cc.Xzero;
+vals(2,1)=0;%cc.Ydata;
+vals(2,2)=0;%cc.Yzero;
+vals(3,1)=0;%cc.Zdata;
+vals(3,2)=0;%cc.Zzero;
+vals(4,1)=0;%cc.Trigger;
 
-set(gh('ccaltriggerlevel'),'String',num2str(cc.Trigger));
+%set(gh('ccaltriggerlevel'),'String',num2str(cc.Trigger));
 
 cMatrix = ColorCal2('ReadColorMatrix');
-s = ColorCal2('MeasureXYZ')
-correctedValues = cMatrix(1:3,:) * [s.x s.y s.z]'
+s = ColorCal2('MeasureXYZ');
+correctedValues = cMatrix(1:3,:) * [s.x s.y s.z]';
+X = correctedValues(1);
+Y = correctedValues(2);
+Z = correctedValues(3);
 vals(1:3,3)=correctedValues;
+vals(1,4) = X / (X + Y + Z);
+vals(2,4) = Y / (X + Y + Z);
+vals(3,4) = Y;
 
 set(handles.ccaltable,'Data',vals);
 
