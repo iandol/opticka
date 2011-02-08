@@ -87,10 +87,10 @@ classdef spotStimulus < baseStimulus
 				end
 			end
 			
+			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
 			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
-			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
 			obj.doDots = 0;
 			obj.doMotion = 0;
 			obj.doDrift = 0;

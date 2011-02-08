@@ -436,7 +436,7 @@ classdef (Sealed) runExperiment < handle
 		%> @param 
 		% ===================================================================
 		function ppd = get.ppd(obj)
-			ppd=round(obj.pixelsPerCm*(57.3/obj.distance)); %set the pixels per degree
+			ppd=round(obj.pixelsPerCm*(obj.distance/57.3)); %set the pixels per degree
 		end
 		
 		% ===================================================================

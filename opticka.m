@@ -122,8 +122,6 @@ classdef (Sealed) opticka < handle
 						mkdir([obj.paths.temp 'History']);
 					end
 					obj.paths.historypath=[obj.paths.temp 'History'];
-					obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
-					javax.swing.UIManager.setLookAndFeel('javax.swing.plaf.metal.MetalLookAndFeel');
 				elseif ispc
 
 					obj.store.serverCommand = ['!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &'];
@@ -139,10 +137,14 @@ classdef (Sealed) opticka < handle
 					end
 					obj.paths.historypath=[obj.paths.temp 'History'];
 				end
+				if ismac || ispc
+					obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
+					javax.swing.UIManager.setLookAndFeel('javax.swing.plaf.metal.MetalLookAndFeel');
+				end
 				uihandle=opticka_ui; %our GUI file
 				obj.h=guidata(uihandle);
 				obj.h.uihandle = uihandle;
-				if ismac
+				if ismac || ispc
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
 
