@@ -109,7 +109,7 @@ classdef rfMapper < barStimulus
 				HideCursor;
 				ListenChar(2);
 				
-				while ~regexpi(obj.rchar,'escape')
+				while isempty(regexpi(obj.rchar,'^esc'))
 					Screen('FillRect',obj.win,obj.backgroundColour,[]);
 					t=sprintf('Buttons: %i\t',obj.buttons);
 					t=[t sprintf(' | X = %2.3g| Y = %2.3g',xOut,yOut)];
@@ -161,8 +161,10 @@ classdef rfMapper < barStimulus
 								obj.alpha = obj.alpha * 0.9;
 								if obj.alpha < 0;obj.alpha = 0;end
 							case ',<'
-								obj.backgroundColour = obj.backgroundColour .* 0.9;
-								obj.backgroundColour(obj.backgroundColour<0) = 0;
+								if max(obj.backgroundColour)>0.1
+									obj.backgroundColour = obj.backgroundColour .* 0.9;
+									obj.backgroundColour(obj.backgroundColour<0) = 0;
+								end
 							case '.>'
 								obj.backgroundColour = obj.backgroundColour .* 1.1;
 								obj.backgroundColour(obj.backgroundColour>1) = 1;
@@ -174,11 +176,11 @@ classdef rfMapper < barStimulus
 							case '2@'
 								obj.bgcolourIndex = obj.bgcolourIndex+1;
 								obj.setColours;
-								WaitSecs(0.03);
+								WaitSecs(0.02);
 								obj.regenerate;
 							case '3#'
 								obj.scale = obj.scale * 1.1;
-								if obj.scale > 5;obj.scale = 5;end
+								if obj.scale > 8;obj.scale = 8;end
 							case '4$'
 								obj.scale = obj.scale * 0.9;
 								if obj.scale <1;obj.scale = 1;end

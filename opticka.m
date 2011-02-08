@@ -22,8 +22,6 @@ classdef (Sealed) opticka < handle
 		h
 		%> version number
 		version='0.495'
-		%> ?
-		load
 		%> is this a remote instance?
 		remote = 0
 	end
@@ -66,14 +64,17 @@ classdef (Sealed) opticka < handle
 		%>
 		%> @param in switch to route to correct method.
 		% ===================================================================
-		function router(obj,in)
+		function router(obj,in,vars)
+			if ~exist('vars','var')
+				vars=[];
+			end
 			switch in
 				case 'saveProtocol'
 					obj.saveProtocol;
 				case 'loadProtocol'
-					obj.loadProtocol;
+					obj.loadProtocol(vars);
 				case 'deleteProtocol'
-					obj.deleteProtocol
+					obj.deleteProtocoll
 			end
 		end
 		
@@ -439,12 +440,33 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
+		%> @brief editStimulus
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
+		function editStimulus(obj)
+			v=obj.gv(obj.h.OKStimList);
+			family=obj.r.stimulus{v}.family;
+			switch family
+				case 'grating'
+					fragment = 'OKPanelGrating';
+				otherwise
+					fragment = 'OKPanelSpot';
+			end
+			out = obj.dealUItoStructure(fragment);
+			
+			out
+					
+		end
+		
+		% ===================================================================
 		%> @brief addVariable
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
 		function addVariable(obj)
 			
+			if isempty(obj.r.task.nVars);obj.r.task.nVars=0;end
 			revertN = obj.r.task.nVars;
 			
 			try
@@ -499,11 +521,39 @@ classdef (Sealed) opticka < handle
 		%> @param 
 		% ===================================================================
 		function out = dealUItoStructure(obj,fragment)
+			if ~exist('fragment','var')
+				fragment = 'OKPanelGrating';
+			end
 			tt=fieldnames(obj.h);
+			a=1;
+			out=[];
 			for i=1:length(tt)
 				[ii,oo]=regexp(tt{i},fragment);
-				out.(tt{i}(oo:end))=[];
+				l=length(tt{i});
+				if ~isempty(ii) && oo < l
+					out(a).name=tt{i}(ii:end);
+					out(a).fragment=tt{i}(oo:end);
+					a=a+1;
+				end
 			end
+		end
+		
+		% ===================================================================
+		%> @brief Delete Protocol
+		%> Delete Protocol
+		%> @param 
+		% ===================================================================
+		function deleteProtocol(obj)
+			v = obj.gv(obj.h.OKProtocolsList);
+			file = obj.gs(obj.h.OKProtocolsList,v);
+			obj.paths.currentPath = pwd;
+			cd(obj.paths.protocols);
+			out=questdlg(['Are you sure you want to delete ' file '?'],'Protocol Delete');
+			if strcmpi(out,'yes')
+				delete(file);
+			end
+			obj.refreshProtocolsList;
+			cd(obj.paths.currentPath);
 		end
 		
 		% ===================================================================
@@ -526,18 +576,26 @@ classdef (Sealed) opticka < handle
 		% ===================================================================
 		%> @brief Load Protocol
 		%> Load Protocol
-		%> @param 
+		%> @param uiload do we show a uiload dialog?
 		% ===================================================================
-		function loadProtocol(obj)
+		function loadProtocol(obj,ui)
 			
-			v = obj.gv(obj.h.OKProtocolsList);
-			file = obj.gs(obj.h.OKProtocolsList,v);
+			file = [];
+			
+			if ~exist('ui','var') || isempty(ui)
+				ui=0;
+			end
+			
+			if ui == 0
+				v = obj.gv(obj.h.OKProtocolsList);
+				file = obj.gs(obj.h.OKProtocolsList,v);
+			end
 			
 			obj.paths.currentPath = pwd;
 			cd(obj.paths.protocols);
 			
 			if isempty(file)
-				uiload('MATLAB');
+				uiload;
 			else
 				load(file);
 			end
@@ -558,8 +616,10 @@ classdef (Sealed) opticka < handle
 				obj.r.dstMode = list{val};
 				
 				set(obj.h.OKOpenGLBlending,'Value', tmp.r.blend);
-				set(obj.h.OKAntiAliasing,'Value', tmp.r.antiAlias);
-				set(obj.h.OKbackgroundColour,'String',num2str(tmp.r.backgroundColour));
+				set(obj.h.OKAntiAliasing,'String', num2str(tmp.r.antiAlias));
+				string = num2str(tmp.r.backgroundColour);
+				string = regexprep(string,'\s+',' '); %collapse spaces
+				set(obj.h.OKbackgroundColour,'String',string);
 				
 				%copy task parameters
 				if isempty(tmp.r.task)

@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 07-Feb-2011 10:20:59
+% Last Modified by GUIDE v2.5 08-Feb-2011 08:31:46
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -125,7 +125,7 @@ function OKMenuOpen_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	o.router('loadProtocol');
+	o.router('loadProtocol','1');
 end
 
 % --------------------------------------------------------------------
@@ -723,11 +723,7 @@ value = get(handles.OKVariableList,'Value');
 string=string{value};
 set(handles.OKVariableName,'String',string);
 
-% --- Executes on button press in OKCopyVariableNameValues.
 function OKCopyVariableNameValues_Callback(hObject, eventdata, handles)
-% hObject    handle to OKCopyVariableNameValues (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 string = get(handles.OKVariableList,'String');
 value = get(handles.OKVariableList,'Value');
 string=string{value};
@@ -742,31 +738,18 @@ switch string
 		set(handles.OKVariableValues,'String',num2str([0:0.1:1]));	
 end
 
-function OKCopyVariable_Callback(hObject, eventdata, handles)
-
-% --------------------------------------------------------------------
 function OKToolbarToggleGlobal_OnCallback(hObject, eventdata, handles)
-% hObject    handle to OKToolbarToggleGlobal (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 set(handles.OKPanelProtocols,'Visible','off')
 set(handles.OKPanelGlobal,'Visible','on')
 
 
-% --------------------------------------------------------------------
 function OKToolbarToggleGlobal_OffCallback(hObject, eventdata, handles) %#ok<*INUSL>
-% hObject    handle to OKToolbarToggleGlobal (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 set(handles.OKPanelProtocols,'Visible','on')
 set(handles.OKPanelGlobal,'Visible','off')
 
 
 % --- Executes on button press in OKVariablesLinear.
 function OKVariablesLinear_Callback(hObject, eventdata, handles)
-% hObject    handle to OKVariablesLinear (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 values = str2num(get(handles.OKVariableValues,'String'));
 string = num2str(values);
 string = regexprep(string,'\s+',' '); %collapse spaces
@@ -774,9 +757,6 @@ set(handles.OKVariableValues,'String',string);
 
 % --- Executes on button press in OKVariablesLog.
 function OKVariablesLog_Callback(hObject, eventdata, handles) %#ok<*INUSD>
-% hObject    handle to OKVariablesLog (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
 
 % --------------------------------------------------------------------
@@ -836,6 +816,26 @@ if isappdata(0,'o')
 	o.deleteStimulus;
 end
 
+% --- Executes on button press in OKCopyStimulus.
+function OKCopyStimulus_Callback(hObject, eventdata, handles)
+% hObject    handle to OKCopyStimulus (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.copyStimulus;
+end
+
+% --- Executes on button press in OKEditStimulus.
+function OKEditStimulus_Callback(hObject, eventdata, handles)
+% hObject    handle to OKEditStimulus (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.editStimulus;
+end
+
 % --- Executes on button press in OKAddVariable.
 function OKAddVariable_Callback(hObject, eventdata, handles)
 % hObject    handle to OKAddVariable (see GCBO)
@@ -848,12 +848,21 @@ end
 
 % --- Executes on button press in OKDeleteVariable.
 function OKDeleteVariable_Callback(hObject, eventdata, handles)
-% hObject    handle to OKDeleteVariable (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.deleteVariable;
+end
+
+function OKCopyVariable_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.copyVariable;
+end
+
+function OKEditVariable_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.editVariable;
 end
 
 
@@ -955,11 +964,6 @@ function OKMenuPaste_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 
-% --- Executes on button press in OKCopyStimulus.
-function OKCopyStimulus_Callback(hObject, eventdata, handles)
-% hObject    handle to OKCopyStimulus (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
 
 % --- Executes on selection change in OKPanelSpottype.
@@ -1146,3 +1150,27 @@ function OKMenumanageCode_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 manageCode
+
+
+% --- Executes on button press in OKPanelGratingcolourDialog.
+function OKPanelGratingcolourDialog_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelGratingcolourDialog (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	cc = str2num(get(handles.OKPanelGratingcolour,'String'));
+	cc = uisetcolor(cc(1:3));
+	cc = num2str(cc);
+	cc = regexprep(cc,'\s+',' '); %collapse spaces
+	%if ismac;javax.swing.UIManager.setLookAndFeel('javax.swing.plaf.metal.MetalLookAndFeel');end
+	set(handles.OKPanelGratingcolour,'String',cc);
+	%if ismac;javax.swing.UIManager.setLookAndFeel(o.store.oldlook);end
+end
+
+
+% --------------------------------------------------------------------
+function OKMenurfMapperLog_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenurfMapperLog (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
