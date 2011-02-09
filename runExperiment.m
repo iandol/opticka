@@ -645,7 +645,7 @@ classdef (Sealed) runExperiment < handle
 			end
 			
 			%-------------------------------------------------------------------
-			if  (obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime)) || obj.task.tick <= obj.task.switchTick %we haven't hit a time trigger yet
+			if  (obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime))% || obj.task.tick <= obj.task.switchTick %we haven't hit a time trigger yet
 				
 				if obj.task.isBlank == 0 %not in an interstimulus time, need to update drift, motion and pulsation
 					

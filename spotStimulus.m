@@ -18,9 +18,8 @@ classdef spotStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		doFlash = 0
 		flashCounter = 1
-		flashBG = [0.5 0.5 0.5 1]
+		flashBG = [0.5 0.5 0.5 0]
 		flashFG = [1 1 1 1]
 		allowedProperties='^(type|flashTime|flashOn|contrast)$'
 	end
@@ -231,7 +230,7 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function setupFlash(obj,bg)
 			obj.flashFG = obj.colour .* obj.contrast;
-			obj.flashBG = bg .* 1-obj.contrast;
+			obj.flashBG = bg;% .* 1-obj.contrast;
 			obj.flashCounter = 1;
 		end
 		
