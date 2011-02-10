@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 08-Feb-2011 08:31:46
+% Last Modified by GUIDE v2.5 10-Feb-2011 07:01:18
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -297,6 +297,12 @@ if isappdata(0,'o')
 end
 
 function OKtrialTime_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getTaskVals;
+end
+
+function OKrealTime_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.getTaskVals;
@@ -1174,3 +1180,13 @@ function OKMenurfMapperLog_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenurfMapperLog (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+
+function OKVariableOffset_Callback(hObject, eventdata, handles)
+% hObject    handle to OKVariableOffset (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKVariableOffset as text
+%        str2double(get(hObject,'String')) returns contents of OKVariableOffset as a double

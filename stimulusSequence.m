@@ -12,6 +12,7 @@ classdef stimulusSequence < dynamicprops
 		itTime = 2 %inter trial time
 		isStimulus %what do we show in the blank?
 		verbose = 0
+		realTime = 1
 		randomSeed
 		randomGenerator='mt19937ar' %mersenne twister default
 		fps = 60 %used for dynamically estimating total number of frames
@@ -35,7 +36,7 @@ classdef stimulusSequence < dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedPropertiesBase='^(randomMode|numOfVariables|numOfTrials|blankTime)$'
+		allowedPropertiesBase='^(randomise|nVars|nTrials|trialTime|isTime|itTime|realTime|randomSeed|fps)$'
 	end
 	
 	methods
@@ -88,6 +89,7 @@ classdef stimulusSequence < dynamicprops
 		%> reset the random number generator
 		% ===================================================================
 		function resetRandom(obj)
+			obj.randomSeed=[];
 			RandStream.setDefaultStream(obj.oldStream);
 		end
 		

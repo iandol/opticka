@@ -261,9 +261,12 @@ classdef (Sealed) runExperiment < handle
 				end
 				
 				if obj.recordMovie == 1
-					obj.moviePtr = Screen('CreateMovie', obj.win,...
-						['/Users/opticka/Desktop/test' num2str(round(rand(1,1, 'double')*1e8)) '.mov'],[],[],60,...
-						'EncodingQuality=1; CodecFOURCC=rle ');
+					maxa=50;
+					a=1;
+					mimg = cell(maxa,1);
+					%obj.moviePtr = Screen('CreateMovie', obj.win,...
+					%	['/Users/opticka/Desktop/test' num2str(round(rand(1,1, 'double')*1e8)) '.mov'],[],[],60,...
+					%	'EncodingQuality=1; CodecFOURCC=rle ');
 				end
 				
 				obj.updateVars; %set the variables for the very first run;
@@ -340,8 +343,10 @@ classdef (Sealed) runExperiment < handle
 					
 					obj.task.tick=obj.task.tick+1;
 					
-					if obj.recordMovie == 1
-						Screen('AddFrameToMovie', obj.win);
+					if obj.recordMovie == 1 && obj.task.isBlank==0 && a <= maxa
+						%Screen('AddFrameToMovie', obj.win);
+						mimg{a}=Screen('GetImage', obj.win, [], 'frontBuffer', 1, 3);
+						a=a+1;
 					end
 					
 				end
@@ -355,7 +360,8 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack.setFIO5(0);
 				
 				if obj.recordMovie == 1
-					Screen('FinalizeMovie', obj.moviePtr);
+					%Screen('FinalizeMovie', obj.moviePtr);
+					
 				end
 				
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
@@ -368,6 +374,10 @@ classdef (Sealed) runExperiment < handle
 				
 				Screen('Close');
 				Screen('CloseAll');
+				if obj.recordMovie == 1
+					%Screen('FinalizeMovie', obj.moviePtr);
+					uisave('mimg');
+				end
 				obj.win=[];
 				Priority(0);
 				ShowCursor;
@@ -383,7 +393,8 @@ classdef (Sealed) runExperiment < handle
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 				end
 				if obj.recordMovie == 1
-					Screen('FinalizeMovie', obj.moviePtr);
+					%Screen('FinalizeMovie', obj.moviePtr);
+					clear mimg
 				end
 				Screen('Close');
 				Screen('CloseAll');
@@ -645,7 +656,12 @@ classdef (Sealed) runExperiment < handle
 			end
 			
 			%-------------------------------------------------------------------
-			if  (obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime))% || obj.task.tick <= obj.task.switchTick %we haven't hit a time trigger yet
+			if obj.task.realTime == 1 %we measure real time
+				trigger = obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime);
+			else %we measure frames, prone to error build-up
+				trigger = obj.task.tick <= obj.task.switchTick;
+			end
+			if trigger
 				
 				if obj.task.isBlank == 0 %not in an interstimulus time, need to update drift, motion and pulsation
 					
@@ -706,7 +722,7 @@ classdef (Sealed) runExperiment < handle
 						else
 							obj.task.thisRun = obj.task.thisRun + 1;
 						end
-								if obj.task.totalRuns < length(obj.task.outIndex)
+						if obj.task.totalRuns < length(obj.task.outIndex)
 							obj.lJack.prepareStrobe(obj.task.outIndex(obj.task.totalRuns)); %get the strobe word ready
 						else
 							
@@ -809,11 +825,12 @@ classdef (Sealed) runExperiment < handle
 		%> @return 
 		% ===================================================================
 		function infoText(obj)
-			t=sprintf('T: %i | R: %i [%i] | isBlank: %i | Time: %3.3f',obj.task.thisTrial,...
-			obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime)); 
+			t=sprintf('T: %i | R: %i [%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+			obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick); 
 			for i=1:obj.task.nVars
 				t=[t sprintf('\n\n\t\t%s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
 			end
+			
 			Screen('DrawText',obj.win,t,50,1,[1 1 1 1],[0 0 1]);
 		end
 		

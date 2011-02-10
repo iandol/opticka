@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.495'
+		version='0.496'
 		%> is this a remote instance?
 		remote = 0
 	end
@@ -108,7 +108,6 @@ classdef (Sealed) opticka < handle
 				obj.paths.startServer = [obj.paths.whereami filesep 'udpserver' filesep 'launchDataConnection'];
 
 				if ismac
-
 					obj.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "' obj.paths.startServer '"'' -e ''end tell'''];
 
 					obj.paths.temp=tempdir;
@@ -137,9 +136,10 @@ classdef (Sealed) opticka < handle
 					end
 					obj.paths.historypath=[obj.paths.temp 'History'];
 				end
+				obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
+				obj.store.newlook='javax.swing.plaf.metal.MetalLookAndFeel';
 				if ismac || ispc
-					obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
-					javax.swing.UIManager.setLookAndFeel('javax.swing.plaf.metal.MetalLookAndFeel');
+					javax.swing.UIManager.setLookAndFeel(obj.store.newlook);
 				end
 				uihandle=opticka_ui; %our GUI file
 				obj.h=guidata(uihandle);
@@ -222,7 +222,7 @@ classdef (Sealed) opticka < handle
 			
 			obj.r.blend = obj.gv(obj.h.OKOpenGLBlending);
 			
-			s=str2num(get(obj.h.OKWindowSize,'String'));
+			s=str2num(get(obj.h.OKWindowSize,'String')); %#ok<ST2NM>
 			if isempty(s)
 				obj.r.windowed = 0;
 			else
@@ -244,27 +244,24 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief getScreenVals
-		%> Gets the settings from th UI and updates our runExperiment object
+		%> @brief getTaskVals
+		%> Gets the settings from th UI and updates our task object
 		%> @param 
 		% ===================================================================
 		function getTaskVals(obj)
-			
 			if isempty(obj.r.task)
 				obj.r.task = stimulusSequence;
-				obj.r.task.randomiseStimuli;
 			end
+			obj.r.task.fps = obj.r.screenVals.fps;
 			obj.r.task.trialTime = obj.gd(obj.h.OKtrialTime);
 			obj.r.task.randomSeed = obj.gn(obj.h.OKRandomSeed);
-			if isempty(obj.r.task.randomSeed) || isnan(obj.r.task.randomSeed)
-				obj.r.task.randomSeed = GetSecs;
-			end
 			v = obj.gv(obj.h.OKrandomGenerator);
 			obj.r.task.randomGenerator = obj.gs(obj.h.OKrandomGenerator,v);
 			obj.r.task.itTime = obj.gd(obj.h.OKitTime);
 			obj.r.task.randomise = obj.gv(obj.h.OKRandomise);
 			obj.r.task.isTime = obj.gd(obj.h.OKisTime);
 			obj.r.task.nTrials = obj.gd(obj.h.OKnTrials);
+			obj.r.task.realTime = obj.gv(obj.h.OKrealTime);
 			obj.r.task.initialiseRandom;
 			obj.r.task.randomiseStimuli;
 			
@@ -367,6 +364,7 @@ classdef (Sealed) opticka < handle
 		% ===================================================================
 		function addBar(obj)
 			tmp = struct;
+			tmp.angle = obj.gd(obj.h.OKPanelBarangle);
 			tmp.xPosition = obj.gd(obj.h.OKPanelBarxPosition);
 			tmp.yPosition = obj.gd(obj.h.OKPanelBaryPosition);
 			tmp.barLength = obj.gd(obj.h.OKPanelBarbarLength);
@@ -452,13 +450,12 @@ classdef (Sealed) opticka < handle
 			switch family
 				case 'grating'
 					fragment = 'OKPanelGrating';
-				otherwise
+				case 'spot'
+					fragment = 'OKPanelSpot';
+				otherwise 
 					fragment = 'OKPanelSpot';
 			end
-			out = obj.dealUItoStructure(fragment);
-			
-			out
-					
+			out = obj.dealUItoStructure(fragment)
 		end
 		
 		% ===================================================================
@@ -521,6 +518,7 @@ classdef (Sealed) opticka < handle
 		%> @brief 
 		%> 
 		%> @param 
+		%> @return
 		% ===================================================================
 		function out = dealUItoStructure(obj,fragment)
 			if ~exist('fragment','var')
