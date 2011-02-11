@@ -286,7 +286,8 @@ classdef labJack < handle
 		%> @brief Prepare Strobe Word
 		%>	sets the strobe value for FIO, EIO and CIO
 		%>	@param value The value to be strobed, range is 1-4094 for 12bit
-		%>  as 0 and 4095 are reserved
+		%>  as 0 and 4095 are reserved, or value can be 3 byte markers
+		%>  @param mask Which bits to mask
 		% ===================================================================
 		function prepareStrobe(obj,value,mask,sendNow)
 			if obj.silentMode == 0 && obj.vHandle == 1

@@ -103,8 +103,9 @@ gammaTable1 = ((([0:255]'/255))).^(1/fittedmodel.g); %#ok<NBRAK>
 
 firstFit = fittedmodel([0:255]/255); %#ok<NBRAK>
 
+method = 'pchipinterp' % 'splineinterp'
 %Spline interp fitting
-fittedmodel = fit(inputV',vals','splineinterp');
+fittedmodel = fit(inputV',vals',method);
 secondFit = fittedmodel([0:255]/255); %#ok<NBRAK>
 
 figure;

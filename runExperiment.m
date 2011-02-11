@@ -65,6 +65,8 @@ classdef (Sealed) runExperiment < handle
 		lJack 
 		%> Save the images to a quicktime movie
 		recordMovie = 0
+		%> Choose the gamma correction table to use
+		gammaTable
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)

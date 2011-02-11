@@ -147,7 +147,8 @@ classdef (Sealed) opticka < handle
 				if ismac || ispc
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
-
+				drawnow;
+				
 				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version])
 				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
 				drawnow;
