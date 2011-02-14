@@ -11,16 +11,18 @@ classdef spotStimulus < baseStimulus
 		flashTime = [0.5 0.5]
 		flashOn = true
 		contrast = 1
+		backgroundColour = [0.5 0.5 0.5]
 	end
 	
-	properties (Dependent = true, SetAccess = private, GetAccess = private)
+	properties (Dependent = true, SetAccess = private, GetAccess = public)
 		flashSwitch
 	end
 	
-	properties (SetAccess = private, GetAccess = private)
+	properties (SetAccess = private, GetAccess = public)
 		flashCounter = 1
-		flashBG = [0.5 0.5 0.5 0]
-		flashFG = [1 1 1 1]
+		flashBG = [0.5 0.5 0.5]
+		flashFG = [1 1 1]
+		currentColour = [1 1 1]
 		allowedProperties='^(type|flashTime|flashOn|contrast)$'
 	end
 	
@@ -79,7 +81,7 @@ classdef spotStimulus < baseStimulus
 					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
-					if strcmp(fn{j},'contrast');p.SetMethod = @setcontrastOut;end
+					if strcmp(fn{j},'colour');p.GetMethod = @getcolourOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
@@ -109,10 +111,10 @@ classdef spotStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Update an structure for runExperiment
+		%> @brief Update a structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
+		%> @param 
+		%> @return 
 		% ===================================================================
 		function update(obj)
 			obj.computePosition;
@@ -128,7 +130,11 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			Screen('gluDisk',obj.win,obj.colourOut,obj.xTmp,obj.yTmp,obj.sizeOut);
+			if obj.doFlash == 0
+				Screen('gluDisk',obj.win,obj.colourOut,obj.xTmp,obj.yTmp,obj.sizeOut);
+			else
+				Screen('gluDisk',obj.win,obj.currentColour,obj.xTmp,obj.yTmp,obj.sizeOut);
+			end
 		end
 
 		% ===================================================================
@@ -147,11 +153,12 @@ classdef spotStimulus < baseStimulus
 					obj.flashCounter=obj.flashCounter+1;
 				else
 					obj.flashCounter = 1;
-					obj.flashOn = ~obj.flashOn;
-					if obj.flashOn == true
-						obj.colourOut = obj.flashFG;
+					obj.flashOnOut = ~obj.flashOnOut;
+					if obj.flashOnOut == true
+						obj.currentColour = obj.flashFG;
 					else
-						obj.colourOut = obj.flashBG;
+						obj.currentColour = obj.flashBG;
+						%fprintf('Current: %s | %s\n',num2str(obj.colourOut), num2str(obj.flashOnOut));
 					end
 				end
 			end
@@ -173,7 +180,12 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function flashSwitch = get.flashSwitch(obj)
-			if obj.flashOn == true
+			if isempty(obj.findprop('flashOnOut'))
+				trigger = obj.flashOn;
+			else
+				trigger = obj.flashOnOut;
+			end
+			if trigger
 				flashSwitch = round(obj.flashTime(1) / obj.ifi);
 			else
 				flashSwitch = round(obj.flashTime(2) / obj.ifi);
@@ -213,14 +225,14 @@ classdef spotStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief contrast Set method
+		%> @brief colourOut GET method
 		%>
 		% ===================================================================
-		function setcontrastOut(obj,value)
-			obj.contrast = value;
-			if obj.contrast < 1
-				obj.flashFG = obj.colour .* obj.contrast;
-				obj.flashFG = obj.colour .* obj.contrast;
+		function value = getcolourOut(obj)
+			if isempty(obj.findprop('contrastOut')) 
+				value = [(obj.colourOut(1:3) .* obj.contrast) obj.alpha];
+			else
+				value = [(obj.colourOut(1:3) .* obj.contrastOut) obj.alpha];
 			end
 		end
 		
@@ -229,17 +241,28 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function setupFlash(obj,bg)
-			obj.flashFG = obj.colour .* obj.contrast;
-			obj.flashBG = bg;% .* 1-obj.contrast;
+			obj.flashFG = obj.colourOut;
+			obj.flashBG = bg;
 			obj.flashCounter = 1;
+			if obj.flashOnOut == true
+				obj.currentColour = obj.flashFG;
+			else
+				obj.currentColour = obj.flashBG;
+			end
 		end
 		
 		% ===================================================================
-		%> @brief yPositionOut Set method
+		%> @brief resetFlash
 		%>
 		% ===================================================================
 		function resetFlash(obj)
-			obj.colourOut = obj.flashFG;
+			obj.flashFG = obj.colourOut;
+			obj.flashOnOut = obj.flashOn;
+			if obj.flashOnOut == true
+				obj.currentColour = obj.flashFG;
+			else
+				obj.currentColour = obj.flashBG;
+			end
 			obj.flashCounter = 1;
 		end
 		

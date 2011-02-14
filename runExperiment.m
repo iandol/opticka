@@ -245,7 +245,6 @@ classdef (Sealed) runExperiment < handle
 				
 				obj.initialiseTask; %set up our task structure for this run
 				
-				obj.sVals=[];
 				for j=1:obj.sList.n
 					obj.stimulus{j}.setup(obj); %call setup and pass it the runExperiment object
 					if obj.stimulus{j}.doMotion == 1
@@ -258,7 +257,7 @@ classdef (Sealed) runExperiment < handle
 						obj.task.stimIsDrifting=[obj.task.stimIsDrifting j];
 					end
 					if obj.stimulus{j}.doFlash == 1
-						obj.task.stimIsDrifting=[obj.task.stimIsDrifting j];
+						obj.task.stimIsFlashing=[obj.task.stimIsFlashing j];
 					end
 				end
 				
@@ -291,7 +290,9 @@ classdef (Sealed) runExperiment < handle
 				[obj.timeLog.vbl(1),vbl.timeLog.show(1),obj.timeLog.flip(1),obj.timeLog.miss(1)] = Screen('Flip', obj.win);
 				
 				while obj.task.thisTrial <= obj.task.nTrials
-					
+% 					if obj.task.switched == 1
+% 						fprintf('Stop trap here\n')
+% 					end
 					if obj.task.isBlank==1
 						if obj.photoDiode==1
 							obj.drawPhotoDiodeSquare([0 0 0 0]);
@@ -310,7 +311,6 @@ classdef (Sealed) runExperiment < handle
 							obj.drawFixationPoint;
 						end
 					end
-					
 					if obj.visualDebug==1
 						obj.drawGrid;
 						obj.infoText;
@@ -331,7 +331,7 @@ classdef (Sealed) runExperiment < handle
 						obj.lJack.strobeWord; %send our word out to the LabJack
 					end
 					
-					if obj.task.tick==1
+						if obj.task.tick==1
 						obj.timeLog.startflip=obj.timeLog.vbl(obj.task.tick) + obj.screenVals.halfisi;
 						obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
 						%obj.logMe('IntoTrial');
@@ -817,7 +817,7 @@ classdef (Sealed) runExperiment < handle
 		%> @return 
 		% ===================================================================
 		function drawGrid(obj)
-			Screen('DrawDots',obj.win,obj.grid,2,[1 0 0 1],[obj.xCenter obj.yCenter]);
+			Screen('DrawDots',obj.win,obj.grid,1,[1 0 0 1],[obj.xCenter obj.yCenter],1);
 		end
 		
 		% ===================================================================

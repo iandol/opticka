@@ -167,7 +167,7 @@ classdef stimulusSequence < dynamicprops
 		% ===================================================================
 		function nFrames = get.nFrames(obj)
 			nSecs = (obj.nRuns * obj.trialTime) + (obj.minTrials-1 * obj.isTime) + (obj.nTrials-1 * obj.itTime);
-			nFrames = nSecs * ceil(obj.fps); %be a bit generous in defining how many frames the task will take
+			nFrames = ceil(nSecs) * ceil(obj.fps); %be a bit generous in defining how many frames the task will take
 		end
 		
 		% ===================================================================

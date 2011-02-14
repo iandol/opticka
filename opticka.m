@@ -123,16 +123,16 @@ classdef (Sealed) opticka < handle
 					obj.paths.historypath=[obj.paths.temp 'History'];
 				elseif ispc
 
-					obj.store.serverCommand = ['!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &'];
+					obj.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
 					obj.paths.temp=tempdir;
-					if ~exist(['c:\MatlabFiles\Protocols'],'dir')
-						mkdir(['c:\MatlabFiles\Protocols'])
+					if ~exist('c:\MatlabFiles\Protocols','dir')
+						mkdir('c:\MatlabFiles\Protocols')
 					end
 					obj.paths.protocols = ['c:\MatlabFiles\Protocols'];
 					cd(obj.paths.protocols);
 					obj.paths.currentPath = pwd;
-					if ~exist(['c:\MatlabFiles\History'],'dir')
-						mkdir(['c:\MatlabFiles\History'])
+					if ~exist('c:\MatlabFiles\History','dir')
+						mkdir('c:\MatlabFiles\History')
 					end
 					obj.paths.historypath=[obj.paths.temp 'History'];
 				end
@@ -147,7 +147,9 @@ classdef (Sealed) opticka < handle
 				if ismac || ispc
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
+				set(obj.h.OKPanelGrating,'Visible','off')
 				drawnow;
+				set(obj.h.OKPanelGrating,'Visible','on')
 				
 				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version])
 				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
@@ -433,6 +435,7 @@ classdef (Sealed) opticka < handle
 			tmp.startPosition = obj.gd(obj.h.OKPanelSpotstartPosition);
 			v = obj.gv(obj.h.OKPanelSpottype);
 			tmp.type = obj.gs(obj.h.OKPanelSpottype,v);
+			tmp.flashOn = logical(obj.gv(obj.h.OKPanelSpotflashOn));
 			
 			obj.r.stimulus{obj.r.sList.n+1} = spotStimulus(tmp);
 			

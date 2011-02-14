@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 13-Feb-2011 22:09:50
+% Last Modified by GUIDE v2.5 14-Feb-2011 20:15:27
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1227,3 +1227,12 @@ function OKMenurfMapperLog_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenurfMapperLog (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in OKPanelSpotflashOn.
+function OKPanelSpotflashOn_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelSpotflashOn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of OKPanelSpotflashOn
