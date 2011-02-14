@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 10-Feb-2011 07:01:18
+% Last Modified by GUIDE v2.5 13-Feb-2011 22:09:50
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -149,15 +149,6 @@ if isappdata(0,'o')
 end
 close(gcf);
 
-% --- Executes on selection change in OKStimList.
-function OKStimList_Callback(hObject, eventdata, handles)
-% hObject    handle to OKStimList (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = get(hObject,'String') returns OKStimList contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from
-%        OKStimList
 
 % --- Executes on selection change in OKSelectScreen.
 function OKSelectScreen_Callback(hObject, eventdata, handles)
@@ -791,6 +782,8 @@ if isappdata(0,'o')
 	o.getTaskVals;
 end
 
+% --- Executes on selection change in OKStimList.
+function OKStimList_Callback(hObject, eventdata, handles)
 
 % --- Executes on button press in OKAddStimulus.
 function OKAddStimulus_Callback(hObject, eventdata, handles)
@@ -810,6 +803,11 @@ if isappdata(0,'o')
 		case 'spot'
 			o.addSpot;
 	end
+	if ~isempty(o.r.stimulus)
+		set(handles.OKDeleteStimulus,'Enable','on');
+		set(handles.OKModifyStimulus,'Enable','on');
+	end
+		
 end
 
 % --- Executes on button press in OKDeleteStimulus.
@@ -820,6 +818,10 @@ function OKDeleteStimulus_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.deleteStimulus;
+	if isempty(o.r.stimulus)
+		set(handles.OKDeleteStimulus,'Enable','off');
+		set(handles.OKModifyStimulus,'Enable','off');
+	end
 end
 
 % --- Executes on button press in OKCopyStimulus.
@@ -842,14 +844,47 @@ if isappdata(0,'o')
 	o.editStimulus;
 end
 
+
+% --- Executes on button press in OKInspectStimulus.
+function OKInspectStimulus_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	v = get(handles.OKStimList,'Value');
+	if v > 0;
+		uiinspect(o.r.stimulus{v});
+	end
+end
+
+% --- Executes on button press in OKInspectVariable.
+function OKInspectVariable_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	v = get(handles.OKVarList,'Value');
+	if v > 0;
+		uiinspect(o.r.task.nVar(v));
+	end
+end
+
+
+% --- Executes on button press in OKModifyStimulus.
+function OKModifyStimulus_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	v = get(handles.OKStimList,'Value');
+	if v > 0;
+		seditor(o.r.stimulus{v});
+	end
+	
+end
+
 % --- Executes on button press in OKAddVariable.
 function OKAddVariable_Callback(hObject, eventdata, handles)
-% hObject    handle to OKAddVariable (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.addVariable;
+	if o.r.task.nVars > 0
+		set(handles.OKDeleteVariable,'Enable','on');
+	end
 end
 
 % --- Executes on button press in OKDeleteVariable.
@@ -857,6 +892,9 @@ function OKDeleteVariable_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.deleteVariable;
+	if o.r.task.nVars < 1
+		set(handles.OKDeleteVariable,'Enable','off');
+	end
 end
 
 function OKCopyVariable_Callback(hObject, eventdata, handles)
@@ -870,6 +908,15 @@ if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.editVariable;
 end
+
+function OKVariableOffset_Callback(hObject, eventdata, handles)
+% hObject    handle to OKVariableOffset (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKVariableOffset as text
+%        str2double(get(hObject,'String')) returns contents of OKVariableOffset
+%        as a double
 
 
 function OKPanelDotscoherence_Callback(hObject, eventdata, handles)
@@ -1180,13 +1227,3 @@ function OKMenurfMapperLog_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenurfMapperLog (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-
-
-function OKVariableOffset_Callback(hObject, eventdata, handles)
-% hObject    handle to OKVariableOffset (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKVariableOffset as text
-%        str2double(get(hObject,'String')) returns contents of OKVariableOffset as a double

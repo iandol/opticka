@@ -74,7 +74,7 @@ classdef (Sealed) opticka < handle
 				case 'loadProtocol'
 					obj.loadProtocol(vars);
 				case 'deleteProtocol'
-					obj.deleteProtocoll
+					obj.deleteProtocol
 			end
 		end
 		
@@ -456,7 +456,16 @@ classdef (Sealed) opticka < handle
 				otherwise 
 					fragment = 'OKPanelSpot';
 			end
-			out = obj.dealUItoStructure(fragment)
+			out = obj.dealUItoStructure(fragment);
+		end
+		
+		% ===================================================================
+		%> @brief editStimulus
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
+		function modifyStimulus(obj)
+			obj.refreshStimulusList;
 		end
 		
 		% ===================================================================
@@ -601,7 +610,7 @@ classdef (Sealed) opticka < handle
 				load(file);
 			end
 			
-			if isa(tmp,'opticka')
+			if exist('tmp','var') && isa(tmp,'opticka')
 				
 				%copy screen parameters
 				

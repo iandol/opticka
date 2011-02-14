@@ -109,11 +109,11 @@ classdef (Sealed) runExperiment < handle
 		white = 1 
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
 		%> serial port object opened
-		serialP 
+		serialP
 		%> the window rectangle
-		winRect 
+		winRect
 		%> the photoDiode rectangle
-		photoDiodeRect 
+		photoDiodeRect
 		%> the values comuted to draw the 1deg dotted grid in debug mode
 		grid
 		%> the movie pointer
