@@ -30,14 +30,19 @@ classdef gratingStimulus < baseStimulus
 		disableNorm = 1
 		contrastMult = 0.5
 		spatialConstant = 1
+		scale = 1
 	end
 
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
-		scale
+		%scale
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant)$';
+	end
+	
+	events
+		changeScale %better forformance than dependent property
 	end
 	
 	%=======================================================================
@@ -73,6 +78,7 @@ classdef gratingStimulus < baseStimulus
 					end
 				end
 			end
+			addlistener(obj,'changeScale',@obj.calculateScale);
 			obj.salutation('constructor','Grating Stimulus initialisation complete');
 		end
 		
@@ -81,24 +87,24 @@ classdef gratingStimulus < baseStimulus
 		%>
 		%> @param in runExperiment object for reference
 		%> @return stimulus structure.
-		% ===================================================================
+		% ==================================================================
 		function setup(obj,rE)
-			
+
 			obj.ppd=rE.ppd;
 			obj.ifi=rE.screenVals.ifi;
 			obj.xCenter=rE.xCenter;
 			obj.yCenter=rE.yCenter;
 			obj.win=rE.win;
-			
+
 			obj.texture = []; %we need to reset this
-			
+
 			fn = fieldnames(gratingStimulus);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'sf');p.SetMethod = @setsfOut;p.GetMethod = @getsfOut;end
-					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;p.GetMethod = @getsizeOut;end
+					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
 				end
@@ -226,7 +232,7 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function set.sf(obj,value)
 			if value <= 0
-				value = 1;
+				value = 0.05;
 			end
 			obj.sf = value;
 			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
@@ -239,13 +245,13 @@ classdef gratingStimulus < baseStimulus
 		%> gratings are resized using scaleRect and that would also affect sf so
 		%> we have to correct using a scale factor.
 		% ===================================================================
-		function value = get.scale(obj)
-			if isempty(obj.findprop('sizeOut'));
-				value = 1;
-			else
-				value = obj.sizeOut/(obj.size*obj.ppd);
-			end
-		end
+% 		function value = get.scale(obj)
+% 			if isempty(obj.findprop('sizeOut'));
+% 				value = 1;
+% 			else
+% 				value = obj.sizeOut/(obj.size*obj.ppd);
+% 			end
+% 		end
 		
 	end %---END PUBLIC METHODS---%
 	
@@ -262,12 +268,22 @@ classdef gratingStimulus < baseStimulus
 		end
 		
 		% ===================================================================
+		%> @brief calculateScale
+		%> Use an event to recalculate scale as get method is slower (called
+		%> many more times, than an event which is only called on update
+		% ===================================================================
+		function calculateScale(obj,eventSrc,eventData)
+			obj.scale = obj.sizeOut/(obj.size*obj.ppd);
+		end
+		
+		% ===================================================================
 		%> @brief sizeOut Set method
 		%> we also need to change scale when sizeOut is changed, used for both
 		%setting sfOut and the dstRect properly
 		% ===================================================================
 		function setsizeOut(obj,value)
 			obj.sizeOut = value*obj.ppd;
+			notify(obj,'changeScale');
 		end
 		
 		% ===================================================================
@@ -278,14 +294,6 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function sfOut = getsfOut(obj)
 			sfOut = obj.sfOut * obj.scale;
-		end
-		
-		% ===================================================================
-		%> @brief sizeOut Get method
-		%>
-		% ===================================================================
-		function sizeOut = getsizeOut(obj)
-			sizeOut = obj.sizeOut;
 		end
 		
 		% ===================================================================

@@ -14,16 +14,16 @@ classdef spotStimulus < baseStimulus
 		backgroundColour = [0.5 0.5 0.5]
 	end
 	
-	properties (Dependent = true, SetAccess = private, GetAccess = public)
+	properties (Dependent = true, SetAccess = private, GetAccess = private)
 		flashSwitch
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = private, GetAccess = private)
 		flashCounter = 1
 		flashBG = [0.5 0.5 0.5]
 		flashFG = [1 1 1]
 		currentColour = [1 1 1]
-		allowedProperties='^(type|flashTime|flashOn|contrast)$'
+		allowedProperties='^(type|flashTime|flashOn|contrast|backgroundColour)$'
 	end
 	
 	%=======================================================================

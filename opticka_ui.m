@@ -728,11 +728,25 @@ set(handles.OKVariableName,'String',string);
 
 switch string
 	case 'angle'
-		set(handles.OKVariableValues,'String',num2str([-90:45:90]));
+		string = num2str([-90:45:90]);
+		string = regexprep(string,'\s+',' '); %collapse spaces
+		set(handles.OKVariableValues,'String',string);
 	case 'size'
-		set(handles.OKVariableValues,'String',num2str([0 0.1 0.2 0.35 0.5 0.75 1 2 4 6 8]));
+		string = num2str([0 0.1 0.2 0.35 0.5 0.75 1 2 4 6 8]);
+		string = regexprep(string,'\s+',' '); %collapse spaces
+		set(handles.OKVariableValues,'String',string);
 	case 'contrast'
-		set(handles.OKVariableValues,'String',num2str([0:0.1:1]));	
+		string = num2str([0:0.1:1]);
+		string = regexprep(string,'\s+',' '); %collapse spaces
+		set(handles.OKVariableValues,'String',string);
+	case 'xPosition'
+		string = num2str([-1:0.2:1]);
+		string = regexprep(string,'\s+',' '); %collapse spaces
+		set(handles.OKVariableValues,'String',string);	
+	case 'yPosition'
+		string = num2str([-1:0.2:1]);
+		string = regexprep(string,'\s+',' '); %collapse spaces
+		set(handles.OKVariableValues,'String',string);	
 end
 
 function OKToolbarToggleGlobal_OnCallback(hObject, eventdata, handles)
