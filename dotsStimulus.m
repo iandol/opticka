@@ -104,7 +104,7 @@ classdef dotsStimulus < baseStimulus
 			end
 			
 			%calculate positions and vector offsets
-			obj.xy = (obj.size*obj.ppd).*rand(2,obj.nDots);
+			obj.xy = (obj.sizeOut).*rand(2,obj.nDots);
 			obj.xy = obj.xy - (obj.size*obj.ppd)/2; %so we are centered for -xy to +xy
 			[obj.dx, obj.dy] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
 			obj.dxdy=[obj.dx';obj.dy'];
@@ -210,10 +210,8 @@ classdef dotsStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj,rE)
-			x = obj.xCenter+obj.xPositionOut;
-			y = obj.yCenter+obj.yPositionOut;
 			Screen('DrawDots',obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
-				[x y],obj.dotTypeOut);
+				[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
 		end
 		
 		% ===================================================================
