@@ -29,20 +29,23 @@ classdef gratingStimulus < baseStimulus
 		aspectRatio = 1
 		disableNorm = 1
 		contrastMult = 0.5
-		spatialConstant = 1
+		% a divisor for the size in pixels for the gaussian envelope for a gabor
+		spatialConstant = 6
 		scale = 1
 	end
-
-	properties (Dependent = true, SetAccess = private, GetAccess = public)
-		%scale
+	
+	properties (SetAccess = private, GetAccess = public)
+		phaseIncrement = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant)$';
+		ignoreProperties='phaseIncrement|disableNorm|gabor|contrastMult|mask'
 	end
 	
 	events
-		changeScale %better forformance than dependent property
+		changeScale %better performance than dependent property
+		changePhaseIncrement %better performance than dependent property
 	end
 	
 	%=======================================================================
@@ -78,7 +81,9 @@ classdef gratingStimulus < baseStimulus
 					end
 				end
 			end
+			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
 			addlistener(obj,'changeScale',@obj.calculateScale);
+			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
 			obj.salutation('constructor','Grating Stimulus initialisation complete');
 		end
 		
@@ -104,6 +109,8 @@ classdef gratingStimulus < baseStimulus
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'sf');p.SetMethod = @setsfOut;p.GetMethod = @getsfOut;end
+					if strcmp(fn{j},'tf');p.SetMethod = @settfOut;end
+					if strcmp(fn{j},'driftDirection');p.SetMethod = @setdriftDirectionOut;end
 					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
@@ -147,15 +154,15 @@ classdef gratingStimulus < baseStimulus
 			obj.res = [obj.gratingSize obj.gratingSize];
 			
 			if obj.mask>0
-				obj.maskOut = floor((obj.ppd*obj.size)/2);
+				obj.mask = floor((obj.ppd*obj.size)/2);
 			else
-				obj.maskOut = [];
+				obj.mask = [];
 			end
 			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
 			if obj.gabor==0
 				obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
-					obj.res(2), obj.colour, obj.maskOut, obj.contrastMult);
+					obj.res(2), obj.colour, obj.mask, obj.contrastMult);
 			else
 				if obj.aspectRatio == 1
 					nonSymmetric = 0;
@@ -238,21 +245,6 @@ classdef gratingStimulus < baseStimulus
 			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
 		end
 		
-		% ===================================================================
-		%> @brief scale Get method
-		%> This is used if we are actually running different sizes to keep sf
-		%> relative to the size of the current grating. Remember procedural
-		%> gratings are resized using scaleRect and that would also affect sf so
-		%> we have to correct using a scale factor.
-		% ===================================================================
-% 		function value = get.scale(obj)
-% 			if isempty(obj.findprop('sizeOut'));
-% 				value = 1;
-% 			else
-% 				value = obj.sizeOut/(obj.size*obj.ppd);
-% 			end
-% 		end
-		
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================
@@ -268,12 +260,57 @@ classdef gratingStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief calculateScale
-		%> Use an event to recalculate scale as get method is slower (called
-		%> many more times, than an event which is only called on update
+		%> @brief sfOut Get method
+		%> Spatial frequency depends on whether the grating has been resized, so
+		%> we need to take this into account by using the scale value that is set
+		%> when sizeOut is changed
 		% ===================================================================
-		function calculateScale(obj,eventSrc,eventData)
+		function sfOut = getsfOut(obj)
+			sfOut = obj.sfOut * obj.scale;
+		end
+		
+		% ===================================================================
+		%> @brief sfOut Set method
+		%>
+		% ===================================================================
+		function settfOut(obj,value)
+			obj.tfOut = value;
+			notify(obj,'changePhaseIncrement');
+		end
+		
+		% ===================================================================
+		%> @brief sfOut Set method
+		%>
+		% ===================================================================
+		function setdriftDirectionOut(obj,value)
+			obj.driftDirectionOut = value;
+			notify(obj,'changePhaseIncrement');
+		end
+		
+		% ===================================================================
+		%> @brief calculateScale 
+		%> Use an event to recalculate scale as get method is slower (called
+		%> many more times), than an event which is only called on update
+		% ===================================================================
+		function calculateScale(obj,~,~)
 			obj.scale = obj.sizeOut/(obj.size*obj.ppd);
+			obj.spatialConstantOut=obj.sizeOut/obj.spatialConstant;
+		end
+		
+		% ===================================================================
+		%> @brief calculatePhaseIncrement
+		%> Use an event to recalculate as get method is slower (called
+		%> many more times), than an event which is only called on update
+		% ===================================================================
+		function calculatePhaseIncrement(obj,~,~)
+			if ~isempty(obj.findprop('tfOut'))
+				obj.phaseIncrement = (obj.tfOut * 360) * obj.ifi;
+				if ~isempty(obj.findprop('driftDirectionOut'))
+					if obj.driftDirectionOut<1
+						obj.phaseIncrement = -obj.phaseIncrement;
+					end
+				end
+			end
 		end
 		
 		% ===================================================================
@@ -284,16 +321,6 @@ classdef gratingStimulus < baseStimulus
 		function setsizeOut(obj,value)
 			obj.sizeOut = value*obj.ppd;
 			notify(obj,'changeScale');
-		end
-		
-		% ===================================================================
-		%> @brief sfOut Get method
-		%> Spatial frequency depends on whether the grating has been resized, so
-		%> we need to take this into account by using the scale value that is set
-		%> when sizeOut is changed
-		% ===================================================================
-		function sfOut = getsfOut(obj)
-			sfOut = obj.sfOut * obj.scale;
 		end
 		
 		% ===================================================================
@@ -312,18 +339,6 @@ classdef gratingStimulus < baseStimulus
 		function setyPositionOut(obj,value)
 			obj.yPositionOut = value*obj.ppd;
 			if ~isempty(obj.texture);obj.setRect;end
-		end
-		
-		% ===================================================================
-		%> @brief phaseIncrement Dependent Get method
-		%> phase increment depends on temporal frequency and whether drift
-		%> direction is normal or reversed
-		% ===================================================================
-		function phaseIncrement = getphaseIncrement(obj)
-			phaseIncrement = (obj.tfOut * 360) * obj.ifi;
-			if obj.driftDirectionOut<1
-				phaseIncrement = -phaseIncrement;
-			end
 		end
 		
 		% ===================================================================

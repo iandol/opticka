@@ -24,6 +24,7 @@ classdef spotStimulus < baseStimulus
 		flashFG = [1 1 1]
 		currentColour = [1 1 1]
 		allowedProperties='^(type|flashTime|flashOn|contrast|backgroundColour)$'
+		ignoreProperties = 'flashSwitch|FlashOn';
 	end
 	
 	%=======================================================================
@@ -54,6 +55,7 @@ classdef spotStimulus < baseStimulus
 					end
 				end
 			end
+			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
 			obj.salutation('constructor','Spot Stimulus initialisation complete');
 		end
 		

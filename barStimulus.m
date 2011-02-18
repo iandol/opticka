@@ -22,6 +22,7 @@ classdef barStimulus < baseStimulus
 	
 	properties (SetAccess = private, GetAccess = private)
 		allowedProperties='^(type|barWidth|barLength|angle|speed|contrast|scale|interpMethod)$';
+		ignoreProperties = 'interpMethod|matrix|rmatrix|pixelScale';
 	end
 	
 	%=======================================================================
@@ -52,7 +53,7 @@ classdef barStimulus < baseStimulus
 					end
 				end
 			end
-			obj.family='bar';
+			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
 			obj.salutation('constructor','Bar Stimulus initialisation complete');
 		end
 		

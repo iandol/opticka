@@ -15,6 +15,7 @@ classdef seditor < handle
 		function obj = seditor(stimin)
 			if exist('stimin','var')
 				obj.stim = stimin;
+				obj.stim.reset; %remove temporary/transient properties
 			end
 			obj.handles = struct();
 			oldlook=javax.swing.UIManager.getLookAndFeel;

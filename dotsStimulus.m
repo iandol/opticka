@@ -27,6 +27,7 @@ classdef dotsStimulus < baseStimulus
 		dx
 		dy
 		allowedProperties='^(type|speed|nDots|dotSize|angle|colourType|coherence|dotType|kill)$';
+		ignoreProperties='xy|dxdy|colours|colourType'
 	end
 	
 	%=======================================================================
@@ -62,6 +63,7 @@ classdef dotsStimulus < baseStimulus
 					end
 				end
 			end
+			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
 			obj.salutation('constructor','Dots Stimulus initialisation complete');
 		end
 		
