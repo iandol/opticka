@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 14-Feb-2011 20:15:27
+% Last Modified by GUIDE v2.5 18-Feb-2011 20:11:15
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -313,17 +313,6 @@ function OKMenuLineTexture_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuLineTexture (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-
-% --- Executes on selection change in OKVarList.
-function OKVarList_Callback(hObject, eventdata, handles)
-% hObject    handle to OKVarList (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = get(hObject,'String') returns OKVarList contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from
-%        OKVarList
 
 
 % --------------------------------------------------------------------
@@ -700,15 +689,6 @@ function OKVariableList_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns OKVariableList contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from OKVariableList
-
-
-function OKVariableStimuli_Callback(hObject, eventdata, handles)
-% hObject    handle to OKVariableStimuli (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKVariableStimuli as text
-%        str2double(get(hObject,'String')) returns contents of OKVariableStimuli as a double
 
 % --- Executes on button press in OKCopyVariableName.
 function OKCopyVariableName_Callback(hObject, eventdata, handles)
@@ -1248,5 +1228,3 @@ function OKPanelSpotflashOn_Callback(hObject, eventdata, handles)
 % hObject    handle to OKPanelSpotflashOn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of OKPanelSpotflashOn

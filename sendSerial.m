@@ -39,7 +39,12 @@ classdef sendSerial < handle
 			if isempty(obj.name) || strcmpi(obj.name,'default')%we were deliberately passed an empty name, will re-specify default
 				obj.name=obj.defaultName;
 			end
-			obj.find; %find the full connection info
+			if ismac
+					obj.find; %find the full connection info
+			else
+				obj.name = 'com1';
+				obj.deviceID = obj.name;
+			end
 			if obj.openNow==1
 				obj.open
 			end

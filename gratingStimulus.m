@@ -1,3 +1,4 @@
+
 % ========================================================================
 %> @brief single grating stimulus, inherits from baseStimulus
 %> GRATINGSTIMULUS single grating stimulus, inherits from baseStimulus
@@ -25,12 +26,13 @@ classdef gratingStimulus < baseStimulus
 		mask = 1
 		gabor = 0
 		driftDirection=1
-		moveAngle = 0
+		motionAngle = 0
 		aspectRatio = 1
 		disableNorm = 1
 		contrastMult = 0.5
 		% a divisor for the size in pixels for the gaussian envelope for a gabor
 		spatialConstant = 6
+		sigma = 10;
 		scale = 1
 	end
 	
@@ -39,7 +41,7 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(sf|tf|method|angle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant)$';
+		allowedProperties='^(sf|tf|method|angle|motionAngle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant|sigma)$';
 		ignoreProperties='phaseIncrement|disableNorm|gabor|contrastMult|mask'
 	end
 	
@@ -199,7 +201,7 @@ classdef gratingStimulus < baseStimulus
 			if obj.gabor==0
 				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
 					obj.angleOut, [], [], [], [], obj.rotateMode,...
-					[obj.driftPhase,obj.sfOut,obj.contrastOut, 0]);
+					[obj.driftPhase,obj.sfOut,obj.contrastOut, obj.sigmaOut]);
 			else
 				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
 					obj.angleOut, [], [], [], [], kPsychDontDoRotation,...
@@ -346,10 +348,10 @@ classdef gratingStimulus < baseStimulus
 		%>  setRect makes the PsychRect based on the texture and screen values
 		% ===================================================================
 		function setRect(obj)
-			if isempty(obj.findprop('angleOut'));
-				[dx dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+			if isempty(obj.findprop('motionAngleOut'));
+				[sx sy]=pol2cart(obj.d2r(obj.motionAngle),obj.startPosition);
 			else
-				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
+				[sx sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
 			end
 			obj.dstRect=Screen('Rect',obj.texture);
 			obj.dstRect=ScaleRect(obj.dstRect,obj.scale,obj.scale);
@@ -357,7 +359,7 @@ classdef gratingStimulus < baseStimulus
 			if isempty(obj.findprop('xPositionOut'));
 				obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
 			else
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
+				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));
 			end
 			obj.mvRect=obj.dstRect;
 		end

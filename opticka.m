@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.496'
+		version='0.497'
 		%> is this a remote instance?
 		remote = 0
 	end
@@ -174,14 +174,14 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKVarList,'String','');
 				set(obj.h.OKStimList,'String','');
 			catch ME
-				if ismac
+				close(obj.h.uihandle);
+				if ismac || ispc
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
 				if isappdata(0,'o')
 					rmappdata(0,'o');
 					clear o;
 				end
-				close(uihandle);
 				errordlg('Problen in initialising Opticka, please check errors on the commandline')
 				rethrow(ME)
 			end
@@ -343,6 +343,7 @@ classdef (Sealed) opticka < handle
 			tmp.phase = obj.gd(obj.h.OKPanelGratingphase);
 			tmp.speed = obj.gd(obj.h.OKPanelGratingspeed);
 			tmp.angle = obj.gd(obj.h.OKPanelGratingangle);
+			tmp.motionAngle = obj.gd(obj.h.OKPanelGratingmotionAngle);
 			tmp.startPosition = obj.gd(obj.h.OKPanelGratingstartPosition);
 			tmp.aspectRatio = obj.gd(obj.h.OKPanelGratingaspectRatio);
 			tmp.contrastMult = obj.gd(obj.h.OKPanelGratingcontrastMult);
@@ -353,6 +354,7 @@ classdef (Sealed) opticka < handle
 			tmp.mask = obj.gv(obj.h.OKPanelGratingmask);
 			tmp.disableNorm = obj.gv(obj.h.OKPanelGratingdisableNorm);
 			tmp.spatialConstant = obj.gn(obj.h.OKPanelGratingspatialConstant);
+			tmp.sigma = obj.gn(obj.h.OKPanelGratingsigma);
 			
 			obj.r.stimulus{obj.r.sList.n+1} = gratingStimulus(tmp);
 			

@@ -127,10 +127,19 @@ classdef baseStimulus < dynamicprops
 		%>
 		% ===================================================================
 		function value = get.dX(obj)
-			if isempty(obj.findprop('angleOut'));
-				[value,~]=obj.updatePosition(obj.delta,obj.angle);
-			else
-				[value,~]=obj.updatePosition(obj.delta,obj.angleOut);
+			switch obj.family
+				case 'grating'
+					if isempty(obj.findprop('motionAngleOut'));
+						[value,~]=obj.updatePosition(obj.delta,obj.motionAngle);
+					else
+						[value,~]=obj.updatePosition(obj.delta,obj.motionAngleOut);
+					end
+				otherwise
+					if isempty(obj.findprop('angleOut'));
+						[value,~]=obj.updatePosition(obj.delta,obj.angle);
+					else
+						[value,~]=obj.updatePosition(obj.delta,obj.angleOut);
+					end
 			end
 		end
 		
@@ -139,10 +148,19 @@ classdef baseStimulus < dynamicprops
 		%>
 		% ===================================================================
 		function value = get.dY(obj)
-			if isempty(obj.findprop('angleOut'));
-				[~,value]=obj.updatePosition(obj.delta,obj.angle);
-			else
-				[~,value]=obj.updatePosition(obj.delta,obj.angleOut);
+			switch obj.family
+				case 'grating'
+					if isempty(obj.findprop('motionAngleOut'));
+						[~,value]=obj.updatePosition(obj.delta,obj.motionAngle);
+					else
+						[~,value]=obj.updatePosition(obj.delta,obj.motionAngleOut);
+					end
+				otherwise
+					if isempty(obj.findprop('angleOut'));
+						[~,value]=obj.updatePosition(obj.delta,obj.angle);
+					else
+						[~,value]=obj.updatePosition(obj.delta,obj.angleOut);
+					end
 			end
 		end
 		
