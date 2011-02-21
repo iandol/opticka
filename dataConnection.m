@@ -59,6 +59,8 @@ classdef dataConnection < handle
 			end
 			pnet('closeall'); %makes sure nothing else interfering and loads mex file in memory
 			if obj.autoServer == 1
+				obj.type='server';
+				obj.protocol='tcp';
 				obj.startServer;
 			elseif obj.autoOpen == 1
 				obj.open;
@@ -100,12 +102,12 @@ classdef dataConnection < handle
 					
 				case 'tcp'
 					while obj.conn == -1
-						obj.conn=pnet('tcpconnect',obj.rAddress,obj.rAddress);
-						if con==-1,
-							disp(sprintf('CAN NOT CONNECT TO HOST: %s PORT: %d\nRETRY....',rhost,rport));
+						obj.conn=pnet('tcpconnect',obj.rAddress,obj.rPort);
+						if obj.conn==-1,
+							fprintf('CAN NOT CONNECT TO HOST: %s PORT: %d\nRETRY....',obj.rAddress,obj.rPort);
 							pause(1);
 						else
-							disp(sprintf('CONNECTED TO HOST: %s PORT: %d !\n',rhost,rport));
+							fprintf('CONNECTED TO HOST: %s PORT: %d !\n',obj.rAddress,obj.rPort);
 						end
 					end
 					if obj.conn >= 0
@@ -218,9 +220,9 @@ classdef dataConnection < handle
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
-		%> 
+		%>
 		% ===================================================================
 		% Write data to the given pnet socket.
 		function status = write(obj, data)
@@ -289,14 +291,14 @@ classdef dataConnection < handle
 					msgloop=1;
 					try
 						[obj.rAddress,obj.rPort]=pnet(obj.rconn,'gethost');
-						fprintf('START SERVING NEW CONNECTION FROM IP %d.%d.%d.%d port:%d',obj.rAddress,obj.rPort);
+						fprintf('START SERVING NEW CONNECTION FROM IP %d.%d.%d.%d port:%d\n\n',obj.rAddress,obj.rPort);
 						obj.serverLoop;
 					catch
 						disp 'Server loop initialisation failed';
 					end
 				end
 				
-				if KbCheck %allow keyboard break
+				if obj.checkForEscape == 1
 					pnet('closeall')
 					obj.conn = -1;
 					obj.rconn = -1;
@@ -314,7 +316,7 @@ classdef dataConnection < handle
 		%>
 		%> Send command to remote server
 		% ===================================================================
-		function sendCommand(obj,cmd)
+		function varargout = sendCommand(obj,varargin)
 			if obj.conn < 0
 				obj.open;
 			end
@@ -324,13 +326,24 @@ classdef dataConnection < handle
 				cmd.name='x';
 				cmd.variable=x;
 			end
-			switch cmd.cmd
+			switch varargin{1}
 				case 'echo'
 					
 				case 'put'
 					pnet(obj.conn,'printf','\n--remote--\n');
 					obj.flushStatus; % Flush status buffer. Keep last status in readbuffer
-					obj.putVar(obj.conn,cmd.name,cmd.variable);
+					obj.putVar(obj.conn,varargin);
+					return
+				case 'eval'
+					obj.waitNotBusy; %pnet_remote(obj.conn,'WAITNOTBUSY');
+					pnet(obj.conn,'printf','\n--remote--\n');
+					obj.putVar(obj.conn,varargin);
+					return
+				case 'get'
+					pnet(obj.conn,'printf','\n--remote--\n');
+					obj.flushStatus; % Flush status buffer. Keep last status in readbuffer
+					obj.putVar(obj.conn,varargin);
+					varargout=obj.getVar;
 				otherwise
 					
 			end
@@ -343,6 +356,31 @@ classdef dataConnection < handle
 	%=======================================================================
 	methods ( Access = private ) % PRIVATE METHODS
 		%=======================================================================
+		
+		% ===================================================================
+		%> @brief checkForEscape
+		%>
+		%> Check if the user has hit escape
+		% ===================================================================
+		function waitNotBusy(obj)
+			while strcmp(obj.flushStatus,'busy'),
+				pause(0.01);
+			end
+			return
+		end
+		% ===================================================================
+		%> @brief checkForEscape
+		%>
+		%> Check if the user has hit escape
+		% ===================================================================
+		function out = checkForEscape(obj)
+			out=0;
+			[~,~,key]=KbCheck;
+			key=KbName(key);
+			if strcmpi(key,'escape') %allow keyboard break
+				out=1;
+			end
+		end
 		
 		% ===================================================================
 		%> @brief Run the server loop
@@ -365,20 +403,22 @@ classdef dataConnection < handle
 					pnet(obj.rconn,'printf',['\n' obj.busyCmd '\n']);
 					drawnow;
 					
-					switch upper(C{1})
-						case 'EVAL'
+					switch lower(C{1})
+						case 'eval'
 							global DEFAULT_CON__;
 							DEFAULT_CON__=obj.rconn;
 							try
+								fprintf('\n');
 								disp(['REMOTE EVAL>> ' C{2:min(2:end)}]);
 								evalin('caller',C{2:end},'okflag=0;');
 							catch
 								okflag=0;
 							end
 							DEFAULT_CON__=[];
-						case 'PUT'
+						case 'put'
 							C=C(2:end);
-							for n=1:2:length(C),
+							for n=1:2:length(C)
+								fprintf('\n');
 								disp(['REMOTE PUT>> ' C{n}]);
 								try
 									assignin('caller',C{n:n+1});
@@ -386,10 +426,11 @@ classdef dataConnection < handle
 									okflag=0;
 								end
 							end
-						case 'GET'
+						case 'get'
 							C=C(2:end);
 							R=cell(size(C));
-							for n=1:length(C),
+							for n=1:length(C)
+								fprintf('\n');
 								disp(['REMOTE GET>> ' C{n}]);
 								try
 									R{n}=evalin('caller',[C{n} ';']);
@@ -398,7 +439,7 @@ classdef dataConnection < handle
 								end
 							end
 							pnet_putvar(obj.rconn,R);
-						case 'CLOSE'
+						case 'close'
 							pnet(obj.rconn,'close');
 							return;
 					end %END SWITCH
@@ -437,16 +478,16 @@ classdef dataConnection < handle
 		% ===================================================================
 		%> @brief putVar
 		%>
-		%> 
+		%>
 		% ===================================================================
 		function putVar(obj,varargin)
-			if length(varargin)~=1,
-				for n=1:length(varargin),
-					pnet_sendvar(obj.conn,varargin{n});
-				end
-				return;
-			end
-			VAR=varargin{1};
+			% 			if length(varargin)~=1,
+			% 				for n=1:length(varargin),
+			% 					pnet_sendvar(obj.conn,varargin{n});
+			% 				end
+			% 				return;
+			% 			end
+			VAR=varargin{2};
 			switch class(VAR),
 				case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
 					pnet(obj.conn,'printf','\n%s\n',class(VAR));
@@ -510,7 +551,7 @@ classdef dataConnection < handle
 		% ===================================================================
 		%> @brief Destructor
 		%>
-		%> 
+		%>
 		% ===================================================================
 		function delete(obj)
 			obj.salutation('DELETE Method','Cleaning up...')
