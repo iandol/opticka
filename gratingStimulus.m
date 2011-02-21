@@ -30,9 +30,10 @@ classdef gratingStimulus < baseStimulus
 		aspectRatio = 1
 		disableNorm = 1
 		contrastMult = 0.5
-		% a divisor for the size in pixels for the gaussian envelope for a gabor
+		% a divisor for the size for the gaussian envelope for a gabor
 		spatialConstant = 6
-		sigma = 10;
+		%cosine smoothing sigma in pixels for circular masked gratings
+		sigma = 0;
 		scale = 1
 	end
 	

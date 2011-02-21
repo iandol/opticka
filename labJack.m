@@ -519,7 +519,7 @@ classdef labJack < handle
 % 			end
 		end
 		
-	end
+	end % END STATIC METHODS
 	
 	
 	%=======================================================================

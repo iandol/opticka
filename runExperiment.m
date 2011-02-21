@@ -7,106 +7,108 @@
 %>etc.), and manages communication to the DAQ system using TTL pulses out
 %>and communication over a UDP client<->server socket.
 %>  Stimulus must be a stimulus class, i.e. gratingStimulus and friends,
-%>  so for example: 
+%>  so for example:
 %>
 %>  gs.g=gratingStimulus(struct('mask',1,'sf',1));
 %>  ss=runExperiment(struct('stimulus',gs,'windowed',1));
 %>  ss.run;
-%>	
+%>
 %>	will run a minimal experiment showing a 1c/d circularly masked grating
 % ========================================================================
 classdef (Sealed) runExperiment < handle
 	
 	properties
 		%> MBP 1440x900 is 33.2x20.6cm so approx 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
-		pixelsPerCm = 44 
+		pixelsPerCm = 44
 		%> distance of subject from CRT -- rad2ang(2*(atan((0.5*1cm)/57.3cm))) equals 1deg
-		distance = 57.3 
+		distance = 57.3
 		%> set of stimulus classes passed from gratingStulus and friends
-		stimulus 
+		stimulus
 		%> the stimulusSequence object(s) for the task
-		task 
+		task
 		%> which screen to display on, [] means use max screen
-		screen = [] 
+		screen = []
 		%> windowed: if 1 useful for debugging, but remember timing will be poor
-		windowed = 0 
+		windowed = 0
 		%>show command logs and a time log after stimlus presentation 1 = yes | 0 = no
-		verbose = 0 
+		verbose = 0
 		%> hide the black flash as PTB tests it refresh timing, uses a gamma trick 1 = yes | 0 = no
-		hideFlash = 0 
+		hideFlash = 0
 		%> change the parameters for poorer temporal fidelity during debugging 1 = yes | 0 = no
-		debug = 1 
+		debug = 1
 		%> shows the info text and position grid during stimulus presentation 1 = yes | 0 = no
-		visualDebug = 1 
+		visualDebug = 1
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
-		doubleBuffer = 1 
+		doubleBuffer = 1
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8 and 16
-		antiAlias = [] 
+		antiAlias = []
 		%> background of display during stimulus presentation
-		backgroundColour = [0.5 0.5 0.5 0] 
+		backgroundColour = [0.5 0.5 0.5 0]
 		%> shunt screen center by X degrees
-		screenXOffset = 0 
+		screenXOffset = 0
 		%> shunt screen center by Y degrees
-		screenYOffset = 0 
+		screenYOffset = 0
 		%> use OpenGL blending mode 1 = yes | 0 = no
-		blend = 0 
+		blend = 0
 		%> GL_ONE %src mode
-		srcMode = 'GL_ONE' 
+		srcMode = 'GL_ONE'
 		%> GL_ONE % dst mode
-		dstMode = 'GL_ZERO' 
+		dstMode = 'GL_ZERO'
 		%> show a fixation spot?
-		fixationPoint = 1 
+		fixationPoint = 1
 		%> show a white square to trigger a photodiode attached to screen
-		photoDiode = 1 
+		photoDiode = 1
 		%> name of serial port to send TTL out on, if set to 'dummy' then ignore
-		serialPortName = 'dummy' 
+		serialPortName = 'dummy'
 		useLabJack = 0
 		%> LabJack object
-		lJack 
-		%> Save the images to a quicktime movie
-		recordMovie = 0
+		lJack
+		%> settings for movie output
+		movieSettings = []
 		%> Choose the gamma correction table to use
 		gammaTable
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
-		%> calculated from distance and pixelsPerCm
+		%> dependent property calculated from distance and pixelsPerCm
 		ppd
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
 		%> the handle returned by opening a PTB window
-		win 
+		win
 		%> computed X center
-		xCenter 
+		xCenter
 		%> computed Y center
-		yCenter 
+		yCenter
 		%> set automatically on construction
-		maxScreen 
+		maxScreen
 		%> ?
-		info 
+		info
 		%> general computer info
-		computer 
+		computer
 		%> PTB info
-		ptb 
+		ptb
 		%> gamma tables and the like
-		screenVals 
+		screenVals
 		%> log times during display
-		timeLog 
+		timeLog
 		%> calculated stimulus values for display
-		sVals 
+		sVals
 		%> detailed info as the experiment runs
-		taskLog 
+		taskLog
 		%> for heterogenous stimuli, we need a way to index into the stimulus so
 		%> we don't waste time doing this on each iteration
 		sList
+		%> info on the current run
+		currentInfo
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> black index
-		black = 0 
+		black = 0
 		%> white index
-		white = 1 
+		white = 1
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
 		%> serial port object opened
 		serialP
@@ -122,8 +124,8 @@ classdef (Sealed) runExperiment < handle
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
-	
+		%=======================================================================
+		
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -148,7 +150,7 @@ classdef (Sealed) runExperiment < handle
 			end
 			obj.prepareScreen;
 		end
-	
+		
 		% ===================================================================
 		%> @brief The main run loop
 		%>
@@ -188,7 +190,7 @@ classdef (Sealed) runExperiment < handle
 				if obj.debug==1 || obj.windowed(1)>0
 					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
-					Screen('Preference', 'Verbosity', 2); 
+					Screen('Preference', 'Verbosity', 2);
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				else
 					Screen('Preference', 'SkipSyncTests', 0);
@@ -214,10 +216,10 @@ classdef (Sealed) runExperiment < handle
 				obj.timeLog.deltaOpenWindow=(obj.timeLog.postOpenWindow-obj.timeLog.preOpenWindow)*1000;
 				
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
-				%find our fps if not defined before  
+				%find our fps if not defined before
 				obj.screenVals.ifi=Screen('GetFlipInterval', obj.win);
 				if obj.screenVals.fps==0
-					obj.screenVals.fps=1/obj.screenVals.ifi;
+					obj.screenVals.fps=round(1/obj.screenVals.ifi);
 				end
 				obj.screenVals.halfisi=obj.screenVals.ifi/2;
 				
@@ -261,13 +263,19 @@ classdef (Sealed) runExperiment < handle
 					end
 				end
 				
-				if obj.recordMovie == 1
-					maxa=50;
-					a=1;
-					mimg = cell(maxa,1);
-					%obj.moviePtr = Screen('CreateMovie', obj.win,...
-					%	['/Users/opticka/Desktop/test' num2str(round(rand(1,1, 'double')*1e8)) '.mov'],[],[],60,...
-					%	'EncodingQuality=1; CodecFOURCC=rle ');
+				if obj.movieSettings.record == 1
+					obj.movieSettings.size=CenterRect([0 0 obj.movieSettings.size(1) obj.movieSettings.size(2)],obj.winRect);
+					disp(num2str(obj.movieSettings.size));
+					disp('---');
+					switch obj.movieSettings.type
+						case 1
+							obj.moviePtr = Screen('CreateMovie', obj.win,...
+								['/Users/opticka/Desktop/test' num2str(round(rand(1,1, 'double')*1e8)) '.mov'],[],[], ...
+								obj.screenVals.fps, 'EncodingQuality=1; CodecFOURCC=rle ');
+						case 2
+							obj.movieSettings.loop=1;
+							mimg = cell(obj.movieSettings.nFrames,1);
+					end
 				end
 				
 				obj.updateVars; %set the variables for the very first run;
@@ -286,13 +294,9 @@ classdef (Sealed) runExperiment < handle
 				obj.task.tick=1;
 				obj.timeLog.beforeDisplay=GetSecs;
 				obj.timeLog.stimTime(1) = 1;
-				%obj.logMe('Start');
 				[obj.timeLog.vbl(1),vbl.timeLog.show(1),obj.timeLog.flip(1),obj.timeLog.miss(1)] = Screen('Flip', obj.win);
 				
 				while obj.task.thisTrial <= obj.task.nTrials
-% 					if obj.task.switched == 1
-% 						fprintf('Stop trap here\n')
-% 					end
 					if obj.task.isBlank==1
 						if obj.photoDiode==1
 							obj.drawPhotoDiodeSquare([0 0 0 0]);
@@ -326,15 +330,13 @@ classdef (Sealed) runExperiment < handle
 					%======= Show it at next retrace: ========%
 					[obj.timeLog.vbl(obj.task.tick+1),obj.timeLog.show(obj.task.tick+1),obj.timeLog.flip(obj.task.tick+1),obj.timeLog.miss(obj.task.tick+1)] = Screen('Flip', obj.win, (obj.timeLog.vbl(obj.task.tick)+obj.screenVals.halfisi));
 					%=========================================%
-					
 					if obj.task.switched == 1 || obj.task.tick == 1
 						obj.lJack.strobeWord; %send our word out to the LabJack
 					end
 					
-						if obj.task.tick==1
+					if obj.task.tick==1
 						obj.timeLog.startflip=obj.timeLog.vbl(obj.task.tick) + obj.screenVals.halfisi;
 						obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
-						%obj.logMe('IntoTrial');
 					end
 					
 					if obj.task.isBlank==0
@@ -345,10 +347,16 @@ classdef (Sealed) runExperiment < handle
 					
 					obj.task.tick=obj.task.tick+1;
 					
-					if obj.recordMovie == 1 && obj.task.isBlank==0 && a <= maxa
-						%Screen('AddFrameToMovie', obj.win);
-						mimg{a}=Screen('GetImage', obj.win, [], 'frontBuffer', 1, 3);
-						a=a+1;
+					if obj.movieSettings.record == 1
+						if obj.task.isBlank==0 && obj.movieSettings.loop <= obj.movieSettings.nFrames
+							switch obj.movieSettings.type
+								case 1
+									Screen('AddFrameToMovie', obj.win, obj.movieSettings.size, 'frontBuffer', obj.movieSettings.quality, 3);
+								case 2
+									mimg{obj.movieSettings.loop}=Screen('GetImage', obj.win, obj.movieSettings.size, 'frontBuffer', obj.movieSettings.quality, 3);
+									obj.movieSettings.loop=obj.movieSettings.loop+1;
+							end
+						end
 					end
 					
 				end
@@ -361,11 +369,6 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack.setFIO4(0); %this is RSTOP, pausing the omniplex
 				obj.lJack.setFIO5(0);
 				
-				if obj.recordMovie == 1
-					%Screen('FinalizeMovie', obj.moviePtr);
-					
-				end
-				
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
 				obj.timeLog.deltaUntilDisplay=obj.timeLog.beforeDisplay-obj.timeLog.start;
 				obj.timeLog.deltaToFirstVBL=obj.timeLog.vbl(1)-obj.timeLog.beforeDisplay;
@@ -376,10 +379,16 @@ classdef (Sealed) runExperiment < handle
 				
 				Screen('Close');
 				Screen('CloseAll');
-				if obj.recordMovie == 1
-					%Screen('FinalizeMovie', obj.moviePtr);
-					uisave('mimg');
+				
+				if obj.movieSettings.record == 1
+					switch obj.movieSettings.type
+						case 1
+							Screen('FinalizeMovie', obj.moviePtr);
+						case 2
+							save('~/Desktop/movie.mat','mimg');
+					end
 				end
+				
 				obj.win=[];
 				Priority(0);
 				ShowCursor;
@@ -394,9 +403,13 @@ classdef (Sealed) runExperiment < handle
 				if obj.hideFlash == 1 || obj.windowed(1) ~= 1
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 				end
-				if obj.recordMovie == 1
-					%Screen('FinalizeMovie', obj.moviePtr);
-					clear mimg
+				if obj.movieSettings.record == 1
+					switch obj.movieSettings.type
+						case 1
+							Screen('FinalizeMovie', obj.moviePtr);
+						case 2
+							clear mimg;
+					end
 				end
 				Screen('Close');
 				Screen('CloseAll');
@@ -417,8 +430,8 @@ classdef (Sealed) runExperiment < handle
 		
 		% ===================================================================
 		%> @brief Set method for distance
-		%> 
-		%> @param 
+		%>
+		%> @param
 		% ===================================================================
 		function set.distance(obj,value)
 			if ~(value > 0)
@@ -427,12 +440,12 @@ classdef (Sealed) runExperiment < handle
 			obj.distance = value;
 			obj.makeGrid;
 			obj.salutation(['set distance: ' num2str(obj.distance) '|ppd: ' num2str(obj.ppd)],'Custom set method')
-		end 
+		end
 		
 		% ===================================================================
 		%> @brief Set method for pixelsPerCm
-		%> 
-		%> @param 
+		%>
+		%> @param
 		% ===================================================================
 		function set.pixelsPerCm(obj,value)
 			if ~(value > 0)
@@ -445,8 +458,8 @@ classdef (Sealed) runExperiment < handle
 		
 		% ===================================================================
 		%> @brief Get method for ppd (a dependent property)
-		%> 
-		%> @param 
+		%>
+		%> @param
 		% ===================================================================
 		function ppd = get.ppd(obj)
 			ppd=round(obj.pixelsPerCm*(obj.distance/57.3)); %set the pixels per degree
@@ -454,8 +467,8 @@ classdef (Sealed) runExperiment < handle
 		
 		% ===================================================================
 		%> @brief getTimeLog Prints out the frame time plots from a run
-		%> 
-		%> @param 
+		%>
+		%> @param
 		% ===================================================================
 		function getTimeLog(obj)
 			obj.printLog;
@@ -463,8 +476,8 @@ classdef (Sealed) runExperiment < handle
 		
 		% ===================================================================
 		%> @brief refresh the screen values stored in the object
-		%> 
-		%> @param 
+		%>
+		%> @param
 		% ===================================================================
 		function refreshScreen(obj)
 			obj.prepareScreen;
@@ -473,7 +486,7 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		%> @brief updatesList
 		%> Updates the list of stimuli current in the object
-		%> @param 
+		%> @param
 		% ===================================================================
 		function updatesList(obj)
 			obj.sList.n = 0;
@@ -509,17 +522,17 @@ classdef (Sealed) runExperiment < handle
 				end
 			end
 		end
-
+		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief InitialiseTask
 		%> Sets up the task structure with dynamic properties
-		%> @param 
+		%> @param
 		% ===================================================================
 		function initialiseTask(obj)
 			
@@ -533,7 +546,7 @@ classdef (Sealed) runExperiment < handle
 			%find out how many stimuli there are, wrapped in the obj.stimulus
 			%structure
 			obj.updatesList;
-				
+			
 			%Set up the task structures needed
 			
 			if isempty(obj.task.findprop('tick'))
@@ -605,7 +618,7 @@ classdef (Sealed) runExperiment < handle
 				obj.task.addprop('stimIsFlashing'); %add new dynamic property
 			end
 			obj.task.stimIsFlashing=[];
-
+			
 		end
 		
 		% ===================================================================
@@ -623,7 +636,7 @@ classdef (Sealed) runExperiment < handle
 				thisRun=obj.task.thisRun;
 			end
 			
-			if thisTrial > obj.task.nTrials 
+			if thisTrial > obj.task.nTrials
 				return %we've reached the end of the experiment, no need to update anything!
 			end
 			
@@ -691,7 +704,7 @@ classdef (Sealed) runExperiment < handle
 				end
 				obj.task.switched = 0;
 				
-			%-------------------------------------------------------------------	
+				%-------------------------------------------------------------------
 			else %need to switch to next trial or blank
 				obj.task.switched = 1;
 				if obj.task.isBlank == 0 %we come from showing a stimulus
@@ -742,7 +755,7 @@ classdef (Sealed) runExperiment < handle
 		%> @brief prepare the Screen values on the local machine
 		%>
 		%> @param
-		%> @return 
+		%> @return
 		% ===================================================================
 		function prepareScreen(obj)
 			
@@ -751,6 +764,12 @@ classdef (Sealed) runExperiment < handle
 			if isempty(obj.screen) || obj.screen > obj.maxScreen
 				obj.screen = obj.maxScreen;
 			end
+			
+			obj.movieSettings.record = 0;
+			obj.movieSettings.size = [400 400];
+			obj.movieSettings.quality = 0;
+			obj.movieSettings.nFrames = 100;
+			obj.movieSettings.type = 2;
 			
 			%get the gammatable and dac information
 			[obj.screenVals.gammaTable,obj.screenVals.dacBits,obj.screenVals.lutSize]=Screen('ReadNormalizedGammaTable', obj.screen);
@@ -804,7 +823,7 @@ classdef (Sealed) runExperiment < handle
 		%> @brief Configure grating specific variables
 		%>
 		%> @param i
-		%> @return 
+		%> @return
 		% ===================================================================
 		function drawFixationPoint(obj)
 			Screen('gluDisk',obj.win,[1 0 1 1],obj.xCenter,obj.yCenter,3);
@@ -814,21 +833,21 @@ classdef (Sealed) runExperiment < handle
 		%> @brief Configure grating specific variables
 		%>
 		%> @param i
-		%> @return 
+		%> @return
 		% ===================================================================
 		function drawGrid(obj)
 			Screen('DrawDots',obj.win,obj.grid,1,[1 0 0 1],[obj.xCenter obj.yCenter],1);
 		end
 		
 		% ===================================================================
-		%> @brief Configure grating specific variables
+		%> @brief infoText - draws text about frame to screen
 		%>
-		%> @param i
-		%> @return 
+		%> @param
+		%> @return
 		% ===================================================================
 		function infoText(obj)
 			t=sprintf('T: %i | R: %i [%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
-			obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick); 
+				obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
 			for i=1:obj.task.nVars
 				t=[t sprintf('\n\n\t\t%s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
 			end
@@ -837,10 +856,25 @@ classdef (Sealed) runExperiment < handle
 		end
 		
 		% ===================================================================
+		%> @brief infoText - draws text about frame to screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function infoTextUI(obj)
+			t=sprintf('T: %i | R: %i [%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+				obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
+			for i=1:obj.task.nVars
+				t=[t sprintf('\n\n\t\t%s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
+			end
+			
+		end
+		
+		% ===================================================================
 		%> @brief Configure grating specific variables
 		%>
 		%> @param i
-		%> @return 
+		%> @return
 		% ===================================================================
 		function drawPhotoDiodeSquare(obj,colour)
 			Screen('FillRect',obj.win,colour,obj.photoDiodeRect);
@@ -850,7 +884,7 @@ classdef (Sealed) runExperiment < handle
 		%> @brief Draw the background colour
 		%>
 		%> @param
-		%> @return 
+		%> @return
 		% ===================================================================
 		function drawBackground(obj)
 			Screen('FillRect',obj.win,obj.backgroundColour,[]);
@@ -860,7 +894,7 @@ classdef (Sealed) runExperiment < handle
 		%> @brief print Log of the frame timings
 		%>
 		%> @param
-		%> @return 
+		%> @return
 		% ===================================================================
 		function printLog(obj)
 			if ~isfield(obj.timeLog,'date')

@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 18-Feb-2011 20:11:15
+% Last Modified by GUIDE v2.5 20-Feb-2011 00:23:07
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -372,21 +372,6 @@ if isappdata(0,'o')
 	o.store.visibleStimulus='spot';
 end
 
-function OKPanelBarcontrast_Callback(hObject, eventdata, handles)
-
-
-function OKPanelBarbarWidth_Callback(hObject, eventdata, handles)
-
-
-function OKPanelBarbarLength_Callback(hObject, eventdata, handles)
-
-
-function OKPanelBaryPosition_Callback(hObject, eventdata, handles)
-
-
-function OKPanelBarxPosition_Callback(hObject, eventdata, handles)
-
-
 function OKMenuPreferences_Callback(hObject, eventdata, handles)
 
 
@@ -417,8 +402,6 @@ function pushbutton22_Callback(hObject, eventdata, handles)
 
 
 function OKHistoryList_Callback(hObject, eventdata, handles)
-
-
 
 
 % --- Executes on button press in OKProtocolLoad.
@@ -467,11 +450,11 @@ function OKMenuCalibrateLuminance_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 v=get(handles.OKSelectScreen,'Value');
-[gammaTable1, gammaTable2, displayBaseline, displayRange, displayGamma] = calibrateLuminance(9,v-1);
-lab={'gm1','gm2','dB','dR','dG'};
-def={'gammaTable1', 'gammaTable2', 'displayBaseline', 'displayRange', 'displayGamma'};
-items={gammaTable1, gammaTable2, displayBaseline, displayRange, displayGamma};
-export2wsdlg(lab,def,items,'What to save?');
+c = calibrateLuminance(9,v-1);
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.router('deleteProtocol');
+end
 
 % --------------------------------------------------------------------
 function OKMenuCalibrateSize_Callback(hObject, eventdata, handles)
@@ -517,148 +500,6 @@ if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.getTaskVals;
 end
-
-% --- Executes on selection change in OKPanelBartype.
-function OKPanelBartype_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelBartype (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns OKPanelBartype contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from OKPanelBartype
-
-
-function OKPanelBarcolour_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarcolour (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelBarcolour as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelBarcolour as a double
-
-
-function OKPanelBaralpha_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelBaralpha (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelBaralpha as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelBaralpha as a double
-
-
-
-function OKPanelBarangle_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarangle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelBarangle as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelBarangle as a double
-
-
-function OKPanelBarstartPosition_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarstartPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelBarstartPosition as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelBarstartPosition as a double
-
-
-function OKPanelBarspeed_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarspeed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelBarspeed as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelBarspeed as a double
-
-
-
-function OKPanelDotsnDots_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsnDots (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelDotsnDots as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelDotsnDots as a double
-
-
-
-function OKPanelDotsdotSize_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsdotSize (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelDotsdotSize as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelDotsdotSize as a double
-
-
-function OKPanelDotssize_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotssize (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelDotssize as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelDotssize as a double
-
-
-
-function OKPanelDotsyPosition_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsyPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelDotsyPosition as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelDotsyPosition as a double
-
-
-function OKPanelDotsxPosition_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsxPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelDotsxPosition as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelDotsxPosition as a double
-
-
-% --- Executes on selection change in OKPanelDotsdotType.
-function OKPanelDotsdotType_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsdotType (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns OKPanelDotsdotType contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from OKPanelDotsdotType
-
-
-function OKPanelDotscolour_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotscolour (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelDotscolour as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelDotscolour as a double
-
-
-
-function OKPanelDotsalpha_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsalpha (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelDotsalpha as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelDotsalpha as a double
-
-
-function OKPanelDotsangle_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsangle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelDotsangle as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelDotsangle as a double
-
 
 % --- Executes on button press in OKHistoryUp.
 function OKHistoryUp_Callback(hObject, eventdata, handles)
@@ -912,35 +753,6 @@ function OKVariableOffset_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of OKVariableOffset
 %        as a double
 
-
-function OKPanelDotscoherence_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotscoherence (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelDotscoherence as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelDotscoherence as a double
-
-
-
-function OKPanelDotsspeed_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotsspeed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelDotsspeed as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelDotsspeed as a double
-
-
-% --- Executes on selection change in OKPanelDotstype.
-function OKPanelDotstype_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDotstype (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns OKPanelDotstype contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from OKPanelDotstype
-
 % --------------------------------------------------------------------
 function OKToolbarRun_ClickedCallback(hObject, eventdata, handles)
 % hObject    handle to OKToolbarRun (see GCBO)
@@ -1009,101 +821,6 @@ function OKMenuPaste_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuPaste (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-
-
-
-% --- Executes on selection change in OKPanelSpottype.
-function OKPanelSpottype_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpottype (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns OKPanelSpottype contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from
-%        OKPanelSpottype
-
-
-function OKPanelSpotxPosition_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpotxPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelSpotxPosition as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelSpotxPosition as a double
-
-function OKPanelSpotyPosition_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpotyPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelSpotyPosition as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelSpotyPosition as a double
-
-function OKPanelSpotsize_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpotsize (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelSpotsize as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelSpotsize as a double
-
-function OKPanelSpotflashTime_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpotflashTime (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelSpotflashTime as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelSpotflashTime as a double
-
-function OKPanelSpotspeed_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpotspeed (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelSpotspeed as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelSpotspeed as a double
-
-function OKPanelSpotcontrast_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpotcontrast (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelSpotcontrast as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelSpotcontrast as a double
-
-function OKPanelSpotangle_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpotangle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelSpotangle as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelSpotangle as a double
-
-function OKPanelSpotstartPosition_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpotstartPosition (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelSpotstartPosition as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelSpotstartPosition as a double
-
-function OKPanelSpotcolour_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpotcolour (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelSpotcolour as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelSpotcolour as a double
-
-function OKPanelSpotalpha_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpotalpha (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelSpotalpha as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelSpotalpha as a double
-
 
 
 function OKRemoteIP_Callback(hObject, eventdata, handles)
@@ -1228,3 +945,55 @@ function OKPanelSpotflashOn_Callback(hObject, eventdata, handles)
 % hObject    handle to OKPanelSpotflashOn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+
+function OKSettingsmovieSize_Callback(hObject, eventdata, handles)
+% hObject    handle to OKSettingsmovieSize (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKSettingsmovieSize as text
+%        str2double(get(hObject,'String')) returns contents of OKSettingsmovieSize as a double
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.r.movieSettings.size=str2num(get(hObject,'String'));
+end
+
+
+function OKSettingsmovieFrames_Callback(hObject, eventdata, handles)
+% hObject    handle to OKSettingsmovieFrames (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKSettingsmovieFrames as text
+%        str2double(get(hObject,'String')) returns contents of OKSettingsmovieFrames as a double
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.r.movieSettings.nFrames=str2num(get(hObject,'String'));
+end
+
+% --- Executes on button press in OKSettingsmoviePrecision.
+function OKSettingsmoviePrecision_Callback(hObject, eventdata, handles)
+% hObject    handle to OKSettingsmoviePrecision (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of OKSettingsmoviePrecision
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.r.movieSettings.quality=get(hObject,'Value');
+end
+
+% --- Executes on selection change in OKSettingsmovieType.
+function OKSettingsmovieType_Callback(hObject, eventdata, handles)
+% hObject    handle to OKSettingsmovieType (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns OKSettingsmovieType contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from OKSettingsmovieType
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.r.movieSettings.type=get(hObject,'Value');
+end

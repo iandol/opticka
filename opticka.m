@@ -108,7 +108,7 @@ classdef (Sealed) opticka < handle
 				obj.paths.startServer = [obj.paths.whereami filesep 'udpserver' filesep 'launchDataConnection'];
 
 				if ismac
-					obj.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "' obj.paths.startServer '"'' -e ''end tell'''];
+					obj.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -maci -r \"runServer\""'' -e ''end tell'''];
 
 					obj.paths.temp=tempdir;
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
@@ -235,7 +235,7 @@ classdef (Sealed) opticka < handle
 			obj.r.hideFlash = obj.gv(obj.h.OKHideFlash);
 			obj.r.antiAlias = obj.gd(obj.h.OKAntiAliasing);
 			obj.r.photoDiode = obj.gv(obj.h.OKUsePhotoDiode);
-			obj.r.recordMovie = obj.gv(obj.h.OKrecordMovie);
+			obj.r.movieSettings.record = obj.gv(obj.h.OKrecordMovie);
 			obj.r.verbose = obj.gv(obj.h.OKVerbose);
 			obj.r.debug = obj.gv(obj.h.OKDebug);
 			obj.r.visualDebug = obj.gv(obj.h.OKDebug);
@@ -732,12 +732,14 @@ classdef (Sealed) opticka < handle
 						y=s.yPosition;
 						sz=s.size;
 						a=s.angle;
-						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a)];
+						c=s.coherence;
+						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c)];
 					case 'spot'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
-						str{i} = ['Spot ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz)];
+						c=s.contrast;
+						str{i} = ['Spot ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c)];
 				end
 			end
 			set(obj.h.OKStimList,'String', str);
