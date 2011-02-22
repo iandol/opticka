@@ -183,7 +183,8 @@ classdef (Sealed) runExperiment < handle
 				strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
 			end
 			obj.lJack = labJack(strct);
-			obj.lJack.prepareStrobe(0,[],1);
+			obj.lJack.setFIO6(1);WaitSecs(0.05);obj.lJack.setFIO6(0); %Trigger the omniplex into paused mode
+			WaitSecs(0.5);
 			%-----------------------------------------------------
 			
 			try
@@ -362,10 +363,11 @@ classdef (Sealed) runExperiment < handle
 				end
 				
 				%---------------------------------------------Finished display loop
-				
+				obj.drawBackground;
 				Screen('Flip', obj.win);
-				obj.timeLog.afterDisplay=GetSecs;
 				obj.lJack.prepareStrobe(0,[],1);
+				obj.timeLog.afterDisplay=GetSecs;
+				WaitSecs(0.1);
 				obj.lJack.setFIO4(0); %this is RSTOP, pausing the omniplex
 				obj.lJack.setFIO5(0);
 				
@@ -393,6 +395,8 @@ classdef (Sealed) runExperiment < handle
 				Priority(0);
 				ShowCursor;
 				obj.serialP.close;
+				WaitSecs(0.5);
+				obj.lJack.setFIO6(1);WaitSecs(0.05);obj.lJack.setFIO6(0); %we stop recording mode completely
 				obj.lJack.close;
 				obj.lJack=[];
 				
@@ -400,6 +404,7 @@ classdef (Sealed) runExperiment < handle
 				
 				obj.lJack.setFIO4(0) %this is RSTOP, repausing the omniplex
 				obj.lJack.setFIO5(0);
+				obj.lJack.setFIO6(0);
 				if obj.hideFlash == 1 || obj.windowed(1) ~= 1
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 				end
@@ -720,7 +725,7 @@ classdef (Sealed) runExperiment < handle
 						obj.task.switchTick=obj.task.switchTick+(obj.task.isTime*ceil(obj.screenVals.fps));
 					end
 					
-					obj.lJack.prepareStrobe(0); %get the strobe word ready
+					obj.lJack.prepareStrobe(2047); %get the strobe word to signify stimulus OFF ready
 					%obj.logMe('OutaBlank');
 					
 				else %we have to show the new run on the next flip
@@ -789,7 +794,7 @@ classdef (Sealed) runExperiment < handle
 			obj.serialP.close;
 			
 			obj.lJack = labJack(struct('name','labJack','openNow',1,'verbosity',1));
-			obj.lJack.prepareStrobe([0,255,255],[0,255,255],1);
+			obj.lJack.prepareStrobe(0,[0,255,255],1);
 			obj.lJack.close;
 			obj.lJack=[];
 			
@@ -813,7 +818,7 @@ classdef (Sealed) runExperiment < handle
 			
 			obj.makeGrid;
 			
-			obj.photoDiodeRect(:,1)=[0 0 80 80]';
+			obj.photoDiodeRect(:,1)=[0 0 60 60]';
 			
 			obj.updatesList;
 			
