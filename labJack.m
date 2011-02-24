@@ -7,6 +7,8 @@
 classdef labJack < handle
 	
 	properties
+		%> what LabJack device to use; 3 = U3, 6 = U6
+		deviceID = 6
 		%> friendly name, setting this to 'null' will force silentMode=1
 		name='LabJack'
 		%> silentMode allows one to call methods without a working labJack
@@ -18,12 +20,12 @@ classdef labJack < handle
 		%> how much detail to show 
 		verbosity = 0
 		%> allows the constructor to run the open method immediately
-		openNow = 1 
+		openNow = 1
+		%> strobeTime is time of strobe in unit multiples of 127uS 8 ~=1ms
+		strobeTime = 16
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		%> what LabJack device to use; 3 = U3
-		deviceID = 3
 		%> function list returned from loading the exodriver
 		functions
 		%> library version returned on first open
@@ -34,8 +36,12 @@ classdef labJack < handle
 		handle = []
 		%> on succesful open set this to 1
 		isOpen = 0
-		%> ?
+		%> an input buffer, currently unused.
 		inp = []
+		%> FIO0 state
+		fio0 = 0
+		%> FIO1 state
+		fio1 = 0
 		%> FIO4 state
 		fio4 = 0
 		%> FIO5 state
@@ -52,16 +58,20 @@ classdef labJack < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%>raw commands
-		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])'; %cached fixed commands
-		fio5High = hex2dec(['1f'; 'f8'; '03'; '00'; '22'; '01'; '00'; '0d'; '85'; '0b'; '85'; '00'])';
-		fio6High = hex2dec(['21'; 'f8'; '03'; '00'; '24'; '01'; '00'; '0d'; '86'; '0b'; '86'; '00'])';
-		fio7High = hex2dec(['23'; 'f8'; '03'; '00'; '26'; '01'; '00'; '0d'; '87'; '0b'; '87'; '00'])';
-		fio4Low  = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])';
-		fio5Low  = hex2dec(['9e'; 'f8'; '03'; '00'; 'a2'; '00'; '00'; '0d'; '85'; '0b'; '05'; '00'])';
-		fio6Low  = hex2dec(['a0'; 'f8'; '03'; '00'; 'a4'; '00'; '00'; '0d'; '86'; '0b'; '06'; '00'])';
-		fio7Low  = hex2dec(['a2'; 'f8'; '03'; '00'; 'a6'; '00'; '00'; '0d'; '87'; '0b'; '07'; '00'])';
-		ledIsON  = hex2dec(['05'; 'f8'; '02'; '00'; '0a'; '00'; '00'; '09'; '01'; '00']);
-		ledIsOFF = hex2dec(['04'; 'f8'; '02'; '00'; '09'; '00'; '00'; '09'; '00'; '00']);
+		fio0High = hex2dec(['15'; 'f8'; '03'; '00'; '18'; '01'; '00'; '0d'; '80'; '0b'; '80'; '00'])'
+		fio1High = hex2dec(['17'; 'f8'; '03'; '00'; '1a'; '01'; '00'; '0d'; '81'; '0b'; '81'; '00'])'
+		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])'
+		fio5High = hex2dec(['1f'; 'f8'; '03'; '00'; '22'; '01'; '00'; '0d'; '85'; '0b'; '85'; '00'])'
+		fio6High = hex2dec(['21'; 'f8'; '03'; '00'; '24'; '01'; '00'; '0d'; '86'; '0b'; '86'; '00'])'
+		fio7High = hex2dec(['23'; 'f8'; '03'; '00'; '26'; '01'; '00'; '0d'; '87'; '0b'; '87'; '00'])'
+		fio0Low  = hex2dec(['94'; 'f8'; '03'; '00'; '98'; '00'; '00'; '0d'; '80'; '0b'; '00'; '00'])'
+		fio1Low  = hex2dec(['96'; 'f8'; '03'; '00'; '9a'; '00'; '00'; '0d'; '81'; '0b'; '01'; '00'])'  
+		fio4Low  = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])'
+		fio5Low  = hex2dec(['9e'; 'f8'; '03'; '00'; 'a2'; '00'; '00'; '0d'; '85'; '0b'; '05'; '00'])'
+		fio6Low  = hex2dec(['a0'; 'f8'; '03'; '00'; 'a4'; '00'; '00'; '0d'; '86'; '0b'; '06'; '00'])'
+		fio7Low  = hex2dec(['a2'; 'f8'; '03'; '00'; 'a6'; '00'; '00'; '0d'; '87'; '0b'; '07'; '00'])'
+		ledIsON  = hex2dec(['05'; 'f8'; '02'; '00'; '0a'; '00'; '00'; '09'; '01'; '00'])'
+		ledIsOFF = hex2dec(['04'; 'f8'; '02'; '00'; '09'; '00'; '00'; '09'; '00'; '00'])'
 		%> Is our handle a valid one?
 		vHandle = 0
 		%> what properties are allowed to be passed on construction
@@ -127,9 +137,8 @@ classdef labJack < handle
 				if obj.vHandle
 					obj.isOpen = 1;
 					obj.salutation('open method','LabJack succesfully opened...');
-					all=[255,255,255];
 					none=[0,0,0];
-					obj.setDIO(all,all,none,all); %set all our DIO to output LOW
+					obj.setDIO(none); %set all our DIO to output LOW
 					%obj.prepareStrobe([239,255,255],[239,255,255],1); %initialise a strobe out on all DIO
 				else
 					obj.salutation('open method','LabJack open failed, going into silent mode');
@@ -230,7 +239,7 @@ classdef labJack < handle
 		function ledON(obj)
 			if obj.silentMode == 0 && obj.vHandle == 1
 				obj.rawWrite(obj.ledIsON);
-				in = obj.rawRead(obj.inp,10);
+				%in = obj.rawRead(obj.inp,10);
 			end
 		end
 			
@@ -242,7 +251,7 @@ classdef labJack < handle
 		function ledOFF(obj)
 			if obj.silentMode == 0 && obj.vHandle == 1
 				obj.rawWrite(obj.ledIsOFF);
-				in = obj.rawRead(obj.inp,10);
+				%in = obj.rawRead(obj.inp,10);
 			end
 		end
 		
@@ -254,7 +263,7 @@ classdef labJack < handle
 		function waitShort(obj,time)
 			time=ceil(time/0.128);
 			cmd=zeros(10,1);
-			obj.inp=zeros(10,1);
+			%obj.inp=zeros(10,1);
 			cmd(2) = 248; %hex2dec('f8'); %feedback
 			cmd(3) = 2; %number of bytes in packet
 			cmd(8) = 5; %IOType for waitlong is 6
@@ -263,7 +272,7 @@ classdef labJack < handle
 			obj.command = obj.checksum(cmd,'extended');
 			
 			out = obj.rawWrite(obj.command);
-			in = obj.rawRead(obj.inp,10);
+			%in = obj.rawRead(obj.inp,10);
 		end
 		
 		% ===================================================================
@@ -274,7 +283,7 @@ classdef labJack < handle
 		function waitLong(obj,time)
 			time=ceil(time/32);
 			cmd=zeros(10,1);
-			obj.inp=zeros(10,1);
+			%obj.inp=zeros(10,1);
 			cmd(2) = 248; %hex2dec('f8'); %feedback
 			cmd(3) = 2; %number of bytes in packet
 			cmd(8) = 6; %IOType for waitlong is 6
@@ -283,16 +292,21 @@ classdef labJack < handle
 			obj.command = obj.checksum(cmd,'extended');
 			
 			out = obj.rawWrite(obj.command);
-			in = obj.rawRead(obj.inp,10);
+			%in = obj.rawRead(obj.inp,10);
 		end
 		
 		% ===================================================================
 		%> @brief SetDIO
 		%>	SetDIO sets the direction/value for FIO, EIO and CIO as read or write
+		%>  if only value supplied, set all others to [255,255,255]
 		%>	@param value is binary identifier for 0-7 bit range
         %>  @param mask is the mask to apply the command
+		%>  @param valuedir binary identifier for input (0) or output (1)
+		%>  @param maskdir is the mask to apply the command
 		% ===================================================================
-		function setDIO(obj,valuedir,maskdir,value,mask)
+		function setDIO(obj,value,mask,valuedir,maskdir)
+			if ~exist('mask','var');mask=[255,255,255];end
+			if ~exist('valuedir','var');valuedir=[255,255,255];maskdir=valuedir;end
             if obj.silentMode == 0 && obj.vHandle == 1
                 cmd=zeros(14,1);
                 cmd(2) = 248; %command byte for feedback command (f8 in hex)
@@ -317,6 +331,7 @@ classdef labJack < handle
         %>  @param mask is the mask to apply the command
 		% ===================================================================
 		function setDIODirection(obj,value,mask)
+			if ~exist('mask','var');mask=[255,255,255];end
             if obj.silentMode == 0 && obj.vHandle == 1
                 cmd=zeros(14,1);
                 cmd(2) = 248; %command byte for feedback command (f8 in hex)
@@ -338,6 +353,7 @@ classdef labJack < handle
         %>  @param mask is the mask to apply the command
 		% ===================================================================
 		function setDIOValue(obj,value,mask)
+			if ~exist('mask','var');mask=[255,255,255];end
             if obj.silentMode == 0 && obj.vHandle == 1
                 cmd=zeros(14,1);
                 cmd(2) = 248; %command byte for feedback command (f8 in hex)
@@ -383,7 +399,7 @@ classdef labJack < handle
 				cmd(9:11) = mask;
 				cmd(12:14) = value;
 				cmd(15) = 5; %IOType for waitshort is 5, waitlong is 6
-				cmd(16) = 8; %time to wait in unit multiples
+				cmd(16) = obj.strobeTime; %time to wait in unit multiples
 				cmd(17) = 27; %IOType for PortStateWrite (1b in hex)
 				cmd(18:20) = mask;
 				cmd(21:23) = 0;
@@ -429,6 +445,49 @@ classdef labJack < handle
 			msb = bitshift(value,-8); %our msb is bitshifted 8 bits
 			msb = bitshift(msb,1); %shift it across as cio0 is reserved;
 			cio = bitor(msb,1); %OR with 1 as cio0 is the strobe trigger and needs to be 1
+		end
+		
+		% ===================================================================
+		%> @brief Set FIO4 to a value
+		%>	
+		%>	@param val The value to be set
+		%> line which FIO to set
+		% ===================================================================
+		function setFIO(obj,val,line)
+			if obj.silentMode == 0 && obj.vHandle == 1
+				if ~exist('line','var');line=0;end
+				myname = ['fio' num2str(line)];
+				cmdHigh = [myname 'High'];
+				cmdLow = [myname 'Low'];
+				if ~exist('val','var')
+					val = abs(obj.(myname)-1);
+				end
+				if val == 1
+					out = obj.rawWrite(obj.(cmdHigh));
+					%in  = obj.rawRead(obj.inp,10);
+					obj.(myname) = 1;
+					obj.salutation('SETFIO',[myname ' is HIGH'])
+				else
+					out = obj.rawWrite(obj.(cmdLow));
+					%in  = obj.rawRead(obj.inp,10);
+					obj.(myname) = 0;
+					obj.salutation('SETFIO',[myname ' is LOW'])
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Toggle FIO4 value
+		%>	
+		%>
+		% ===================================================================
+		function toggleFIO(obj,line)
+			if obj.silentMode == 0 && obj.vHandle == 1
+				if ~exist('line','var');line=0;end
+				myname = ['fio' num2str(line)];
+				obj.(myname)=abs(obj.(myname)-1);
+				obj.setFIO(obj.(myname),line);
+			end
 		end
 		
 		% ===================================================================

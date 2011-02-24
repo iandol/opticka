@@ -183,7 +183,7 @@ classdef (Sealed) runExperiment < handle
 				strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
 			end
 			obj.lJack = labJack(strct);
-			obj.lJack.setFIO6(1);WaitSecs(0.05);obj.lJack.setFIO6(0); %Trigger the omniplex into paused mode
+			obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %Trigger the omniplex into paused mode
 			WaitSecs(0.5);
 			%-----------------------------------------------------
 			
@@ -288,8 +288,8 @@ classdef (Sealed) runExperiment < handle
 				% Our main display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				obj.lJack.setFIO4(1) %this is RSTART, unpausing the omniplex
-				WaitSecs(0.1);
+				obj.lJack.setDIO([1,0,0],[1,0,0]) %this is RSTART, unpausing the omniplex
+				WaitSecs(0.2);
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				
 				obj.task.tick=1;
@@ -368,8 +368,7 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack.prepareStrobe(0,[],1);
 				obj.timeLog.afterDisplay=GetSecs;
 				WaitSecs(0.1);
-				obj.lJack.setFIO4(0); %this is RSTOP, pausing the omniplex
-				obj.lJack.setFIO5(0);
+				obj.lJack.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
 				obj.timeLog.deltaUntilDisplay=obj.timeLog.beforeDisplay-obj.timeLog.start;
@@ -396,15 +395,13 @@ classdef (Sealed) runExperiment < handle
 				ShowCursor;
 				obj.serialP.close;
 				WaitSecs(0.5);
-				obj.lJack.setFIO6(1);WaitSecs(0.05);obj.lJack.setFIO6(0); %we stop recording mode completely
+				obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
 				obj.lJack.close;
 				obj.lJack=[];
 				
 			catch ME
 				
-				obj.lJack.setFIO4(0) %this is RSTOP, repausing the omniplex
-				obj.lJack.setFIO5(0);
-				obj.lJack.setFIO6(0);
+				obj.lJack.setDIO([0,0,0]);
 				if obj.hideFlash == 1 || obj.windowed(1) ~= 1
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 				end
@@ -697,8 +694,8 @@ classdef (Sealed) runExperiment < handle
 						mT=obj.task.thisTrial;
 						mR = obj.task.thisRun + 1;
 					end
-					%now update our stimuli, we do it in the blank as less
-					%critical timingwise
+					% now update our stimuli, we do it in the blank as less
+					% critical timingwise
 					if obj.task.switched == 1
 						obj.updateVars(mT,mR);
 						for i = 1:obj.sList.n
@@ -733,7 +730,7 @@ classdef (Sealed) runExperiment < handle
 					%obj.logMe('IntoTrial');
 					if obj.task.thisTrial <= obj.task.nTrials
 						obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
-						obj.task.switchTick=obj.task.switchTick+(obj.task.trialTime*ceil(obj.screenVals.fps)); %update our timer
+						obj.task.switchTick=obj.task.switchTick+(obj.task.trialTime*round(obj.screenVals.fps)); %update our timer
 						obj.task.isBlank = 0;
 						obj.task.totalRuns = obj.task.totalRuns + 1;
 						if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
@@ -742,7 +739,7 @@ classdef (Sealed) runExperiment < handle
 						else
 							obj.task.thisRun = obj.task.thisRun + 1;
 						end
-						if obj.task.totalRuns < length(obj.task.outIndex)
+						if obj.task.totalRuns <= length(obj.task.outIndex)
 							obj.lJack.prepareStrobe(obj.task.outIndex(obj.task.totalRuns)); %get the strobe word ready
 						else
 							
@@ -851,13 +848,13 @@ classdef (Sealed) runExperiment < handle
 		%> @return
 		% ===================================================================
 		function infoText(obj)
-			t=sprintf('T: %i | R: %i [%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
-				obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
+			t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+				obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
+				(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
 			for i=1:obj.task.nVars
-				t=[t sprintf('\n\n\t\t%s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
+				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
 			end
-			
-			Screen('DrawText',obj.win,t,50,1,[1 1 1 1],[0 0 1]);
+			Screen('DrawText',obj.win,t,50,1,[1 1 1 1],[0 0 0 1]);
 		end
 		
 		% ===================================================================
@@ -867,10 +864,11 @@ classdef (Sealed) runExperiment < handle
 		%> @return
 		% ===================================================================
 		function infoTextUI(obj)
-			t=sprintf('T: %i | R: %i [%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
-				obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
+			t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+				obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
+				(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
 			for i=1:obj.task.nVars
-				t=[t sprintf('\n\n\t\t%s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
+				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
 			end
 			
 		end

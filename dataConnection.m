@@ -217,25 +217,34 @@ classdef dataConnection < handle
 				all = 0;
 			end
 			loop = 1;
+			olddataType=obj.dataType;
 			switch obj.protocol
 				case 'udp'
-					while loop == 1
-						obj.dataIn = pnet(obj.conn, 'read', 65536, obj.dataType);
-						if isempty(obj.dataIn)
+					while loop > 0
+						dataIn = pnet(obj.conn, 'read', 65536, obj.dataType);
+						if isempty(dataIn)
 							nBytes = pnet(obj.conn, 'readpacket');
 							if nBytes > 0
-								obj.dataIn = pnet(obj.conn, 'read', nBytes, obj.dataType);
+								dataIn = pnet(obj.conn, 'read', nBytes, obj.dataType);
+							end
+							if regexpi(dataIn,'--matfile--')
+								obj.dataType = 'uint32';
 							end
 						end
 						if all == 0
 							loop = 0;
-							data = obj.dataIn;
+							data = dataIn;
 						else
-							data{loop} = obj.dataIn;
-							loop = obj.checkData;
+							data{loop} = dataIn;
+							if obj.checkData
+								loop = loop + 1;
+							else
+								loop = 0;
+							end
 						end
 					end
-					
+					obj.dataIn = data;
+					obj.dataType = olddataType;
 				case 'tcp'
 					
 			end
@@ -269,27 +278,33 @@ classdef dataConnection < handle
 		% ===================================================================
 		% Read any avalable data from the given pnet socket.
 		function data = readVar(obj)
+			VAR='';
 			switch obj.protocol
 				case 'udp'
-					dataclass=pnet(obj.conn,'readline',1024);
-					switch dataclass,
-						case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
-							datadims=double(pnet(obj.conn,'Read',1,'uint32'));
-							datasize=double(pnet(obj.conn,'Read',datadims,'uint32'));
-							VAR=pnet(obj.conn,'Read',datasize,dataclass);
-							return
-						case '--matfile--'
-							tmpfile=[tempname,'.mat'];
-							VAR=[];
-							try
-								bytes=double(pnet(obj.conn,'Read',[1 1],'uint32'));
-								pnet(obj.conn,'ReadToFile',tmpfile,bytes);
-								load(tmpfile);
-							end
-							try
-								delete(tmpfile);
-							end
-							return
+					while obj.checkData
+						nBytes = pnet(obj.conn, 'readpacket');
+						if nBytes > 0
+							dataclass = pnet(obj.conn, 'read', nBytes, obj.dataType);
+						end
+						switch dataclass,
+							case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
+								datadims=double(pnet(obj.conn,'Read',1,'uint32'));
+								datasize=double(pnet(obj.conn,'Read',datadims,'uint32'));
+								VAR=pnet(obj.conn,'Read',datasize,dataclass);
+								return
+							case '--matfile--'
+								tmpfile=[tempname,'.mat'];
+								VAR=[];
+								try
+									bytes=double(pnet(obj.conn,'Read',[1 1],'uint32'));
+									pnet(obj.conn,'ReadToFile',tmpfile,bytes);
+									load(tmpfile);
+								end
+								try
+									delete(tmpfile);
+								end
+								return
+						end
 					end
 			end
 			data=VAR;
@@ -305,6 +320,7 @@ classdef dataConnection < handle
 		function status = writeVar(obj, varargin)
 			switch obj.protocol
 				case 'udp'
+					tic
 					VAR=varargin{2};
 					switch class(VAR),
 						case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
@@ -321,7 +337,7 @@ classdef dataConnection < handle
 							try
 								save(tmpfile,'VAR');
 								filedata=dir(tmpfile);
-								pnet(obj.conn,'printf','\n--matfile--\n');
+								pnet(obj.conn,'printf','--matfile--');
 								obj.status = pnet(obj.conn, 'writepacket');
 								pnet(obj.conn,'Write',uint32(filedata.bytes));
 								obj.status = pnet(obj.conn, 'writepacket');
@@ -332,7 +348,8 @@ classdef dataConnection < handle
 								delete(tmpfile);
 							end
 					end
-					status=obj.status;
+					toc
+					%status=obj.status;
 				case 'tcp'
 					
 			end
