@@ -29,6 +29,7 @@ classdef dataConnection < handle
 		isOpen = 0
 		dataIn = []
 		status
+		statusMessage
 		error
 	end
 	
@@ -214,7 +215,7 @@ classdef dataConnection < handle
 		% Read any avalable data from the given pnet socket.
 		function data = read(obj,all)
 			if ~exist('all','var')
-				all = 0;
+				all = 1;
 			end
 			loop = 1;
 			olddataType=obj.dataType;
@@ -245,6 +246,7 @@ classdef dataConnection < handle
 					end
 					obj.dataIn = data;
 					obj.dataType = olddataType;
+					
 				case 'tcp'
 					
 			end
@@ -279,36 +281,43 @@ classdef dataConnection < handle
 		% Read any avalable data from the given pnet socket.
 		function data = readVar(obj)
 			VAR='';
+			dataclass='';
 			switch obj.protocol
 				case 'udp'
 					while obj.checkData
-						nBytes = pnet(obj.conn, 'readpacket');
-						if nBytes > 0
-							dataclass = pnet(obj.conn, 'read', nBytes, obj.dataType);
+						dataclass = pnet(obj.conn, 'read', 65536, obj.dataType);
+						if isempty(dataclass)
+							nBytes = pnet(obj.conn, 'readpacket');
+							if nBytes > 0
+								dataclass = pnet(obj.conn, 'read', nBytes, obj.dataType);
+							end
 						end
-						switch dataclass,
+						switch dataclass
 							case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
+								nBytes = pnet(obj.conn, 'readpacket');
 								datadims=double(pnet(obj.conn,'Read',1,'uint32'));
+								nBytes = pnet(obj.conn, 'readpacket');
 								datasize=double(pnet(obj.conn,'Read',datadims,'uint32'));
+								nBytes = pnet(obj.conn, 'readpacket');
 								VAR=pnet(obj.conn,'Read',datasize,dataclass);
 								return
 							case '--matfile--'
-								tmpfile=[tempname,'.mat'];
+								tmpfile=[tempname,'.mat']
 								VAR=[];
 								try
+									nBytes = pnet(obj.conn, 'readpacket');
 									bytes=double(pnet(obj.conn,'Read',[1 1],'uint32'));
+									nBytes = pnet(obj.conn, 'readpacket');
 									pnet(obj.conn,'ReadToFile',tmpfile,bytes);
 									load(tmpfile);
 								end
 								try
 									delete(tmpfile);
 								end
-								return
 						end
 					end
+					data=VAR;
 			end
-			data=VAR;
-			
 		end
 		
 		% ===================================================================
@@ -324,7 +333,7 @@ classdef dataConnection < handle
 					VAR=varargin{2};
 					switch class(VAR),
 						case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
-							pnet(obj.conn,'printf','\n%s\n',class(VAR));
+							pnet(obj.conn,'printf','%s',class(VAR));
 							obj.status = pnet(obj.conn, 'writepacket');
 							pnet(obj.conn,'Write',uint32(ndims(VAR)));
 							obj.status = pnet(obj.conn, 'writepacket');
@@ -355,7 +364,6 @@ classdef dataConnection < handle
 			end
 		end
 		
-		
 		% ===================================================================
 		%> @brief Check status
 		%>
@@ -374,6 +382,29 @@ classdef dataConnection < handle
 		function status = checkStatus(obj)
 			obj.status = pnet(obj.conn,'status');
 			if obj.status <=0;obj.isOpen = 0;obj.salutation('status Method','Connection appears closed...');end
+			switch obj.status
+				case 0
+					obj.statusMessage = 'STATUS_NOCONNECT';
+				case 1
+					obj.statusMessage = 'STATUS_TCP_SOCKET';
+				case 5
+					obj.statusMessage = 'STATUS_IO_OK';
+				case 6
+					obj.statusMessage = 'STATUS_UDP_CLIENT';
+				case 8
+					obj.statusMessage = 'UDP_SERVER';
+				case 10
+					obj.statusMessage = 'STATUS_CONNECT';
+				case 11
+					obj.statusMessage = 'STATUS_TCP_CLIENT';
+				case 12
+					obj.statusMessage = 'STATUS_TCP_SERVER';
+				case 18
+					obj.statusMessage = 'STATUS_UDP_CLIENT_CONNECT';
+				case 19
+					obj.statusMessage = 'STATUS_UDP_SERVER_CONNECT';
+			end
+			disp(obj.statusMessage)
 			status = obj.status;
 		end
 		
@@ -470,7 +501,7 @@ classdef dataConnection < handle
 	
 	%=======================================================================
 	methods ( Access = private ) % PRIVATE METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief checkForEscape
