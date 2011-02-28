@@ -115,12 +115,12 @@ classdef opxOnline < handle
 							fprintf('\nMaster growls, time to lick some boot...');
 						case '--quit--'
 							fprintf('\nMy service is no longer required (sniff)...\n');
-							pause(0.5);
+							data = obj.msconn.read(1); %we flush out the remaining commands
 							%eval('exit')
 							break
 						case '--obey me!--'
-							fprintf('\nThe master has barked...');
-							obj.msconn.write('--i quiver before you--')
+							fprintf('\nThe master has barked because of opticka...');
+							obj.msconn.write('--i quiver before you and opticka--')
 						case '--tempfile--'
 							obj.tmpfile = obj.msconn.read(0);
 							fprintf('\nThe master told us tmp file is: %s', obj.tmpfile);
@@ -163,35 +163,49 @@ classdef opxOnline < handle
 				if ~rem(loop,200);fprintf('\n');fprintf('~');obj.msconn.write('--master growls--');end
 				
 				if obj.conn.checkData
-					data = obj.conn.read(0);
-					fprintf('\n{message:%s}',data);
-					switch data
-						case '--readStimulus--'
-							obj.stimulus=obj.conn.readVar;
-							fprintf('We have the stimulus from opticka, waiting for GO!');
-						case '--GO!--'
-							loop = 0;
-							obj.parseData;
-						case '--flushData--'
-							fprintf('Opticka asked us to clear data, we MUST comply!');
-							obj.flushData;
-						case '--bark order--'
-							fprintf('Opticka asked us to bark, we MUST comply!');
-							obj.msconn.write('--obey me!--');
-						case '--quit--'
-							fprintf('Opticka asked us to quit, meanies!');
-							obj.msconn.write('--quit--')
-							loop = 0;
-							break
-						otherwise
-							fprintf('Someone spoke, but what did they say?...')
+					data = obj.conn.read(1);
+					fprintf('\n{opticka message:%s}',data);
+					for i=1:size(data,1)
+						if iscell(data)
+							datatmp = data{i};
+						else
+							datatmp = data(i,:);
+						end
+						switch datatmp
+							case '--readStimulus--'
+								obj.stimulus=obj.conn.readVar;
+								fprintf('We have the stimulus from opticka, waiting for GO!');
+							case '--GO!--'
+								loop = 0;
+								obj.parseData;
+							case '--flushData--'
+								fprintf('Opticka asked us to clear data, we MUST comply!');
+								obj.flushData;
+							case '--bark order--'
+								fprintf('Opticka asked us to bark, we MUST comply!');
+								obj.msconn.write('--obey me!--');
+							case '--quit--'
+								fprintf('Opticka asked us to quit, meanies!');
+								obj.msconn.write('--quit--')
+								loop = 0;
+								break
+							otherwise
+								fprintf('Someone spoke, but what did they say?...')
+						end
 					end
 					
 				end
 				if obj.msconn.checkData
 					fprintf('\nSlave Message: ');
 					data = obj.msconn.read(1);
-					fprintf('%s\n',data);
+					if iscell(data)
+						for i = 1:length(data)
+							fprintf('%s\t',data{i});
+						end
+						fprintf('\n');
+					else
+						fprintf('%s\n',data);
+					end
 				end
 				
 				if obj.msconn.checkStatus == 0
@@ -223,7 +237,7 @@ classdef opxOnline < handle
 				pause(0.2)
 				loop = loop + 1;
 			end
-			fprintf('\Master is sleeping, use listenMaster to make me listen again...');	
+			fprintf('\nMaster is sleeping, use listenMaster to make me listen again...');	
 		end
 		
 		% ===================================================================

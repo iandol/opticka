@@ -84,13 +84,13 @@ classdef dataConnection < handle
 						pnet(obj.conn ,'setwritetimeout', 0);
 						pnet(obj.conn ,'setreadtimeout', 0);
 						obj.isOpen = 1;
-						conn = obj.conn;
 					else
 						sprintf('%s cannot open UDP socket (%d)', ...
 							mfilename, obj.conn);
 						obj.isOpen = 0;
 						obj.conn = -1;
 					end
+					conn = obj.conn;
 					
 				case 'tcp'
 					if strcmpi(obj.type, 'server')
@@ -98,7 +98,6 @@ classdef dataConnection < handle
 						pnet(obj.rconn ,'setwritetimeout', 0);
 						pnet(obj.rconn ,'setreadtimeout', 0);
 						obj.checkStatus('rconn')
-						obj.status = pnet(obj.rconn,'status');
 						if obj.status < 1
 							obj.close('rconn')
 							warning('%s cannot create remote TCP host (%d)',mfilename,obj.status);
@@ -106,6 +105,7 @@ classdef dataConnection < handle
 						else
 							obj.isOpen = 1;
 						end
+						conn = obj.rconn;
 					else
 						while obj.conn == -1
 							obj.conn=pnet('tcpconnect',obj.rAddress,obj.rPort);
@@ -127,15 +127,14 @@ classdef dataConnection < handle
 								return
 							end
 							obj.isOpen = 1;
-							conn = obj.conn;
 						else
 							sprintf('%s cannot open TCP socket (%d)', ...
 								mfilename, obj.conn);
 							obj.isOpen = 0;
 							obj.conn = -1;
 						end
+						conn = obj.conn;
 					end
-					
 			end
 		end
 		
@@ -235,7 +234,7 @@ classdef dataConnection < handle
 		% Attempt to read from the given pnet socket without consuming
 		% available data.
 		function hasData = checkData(obj)
-			hasData = 0;
+			obj.hasData = 0;
 			switch obj.protocol
 				
 				case 'udp'
@@ -245,7 +244,6 @@ classdef dataConnection < handle
 					else
 						obj.hasData = 1;
 					end
-					hasData = obj.hasData;
 					
 				case 'tcp'
 					data = pnet(obj.conn, 'read', 65536, obj.dataType, 'noblock', 'view');
@@ -254,6 +252,7 @@ classdef dataConnection < handle
 					end
 					
 			end
+			hasData = obj.hasData;
 		end
 		
 		% ===================================================================
@@ -322,6 +321,7 @@ classdef dataConnection < handle
 					
 					%============================TCP
 				case 'tcp'
+					all = 1;
 					while loop > 0
 						dataIn=pnet(obj.conn,'read', 65536, obj.dataType,'noblock');
 						if all == 0
@@ -438,38 +438,42 @@ classdef dataConnection < handle
 		% 		#define STATUS_TCP_SERVER  12
 		% 		#define STATUS_UDP_CLIENT_CONNECT 18
 		% 		#define STATUS_UDP_SERVER_CONNECT 19
-		function status = checkStatus(obj,conn)
-			if ~exist('conn','var');
-				conn='conn';
-			else
-				conn = 'rconn';
+		function status = checkStatus(obj,conn) %#ok<INUSD>
+			try
+				if ~exist('conn','var') || obj.conn ~= -1
+					conn='conn';
+				else
+					conn = 'rconn';
+				end
+				obj.status = pnet(obj.(conn),'status');
+				if obj.status <=0;obj.isOpen = 0;obj.salutation('status Method','Connection appears closed...');end
+				switch obj.status
+					case 0
+						obj.statusMessage = 'STATUS_NOCONNECT';
+					case 1
+						obj.statusMessage = 'STATUS_TCP_SOCKET';
+					case 5
+						obj.statusMessage = 'STATUS_IO_OK';
+					case 6
+						obj.statusMessage = 'STATUS_UDP_CLIENT';
+					case 8
+						obj.statusMessage = 'UDP_SERVER';
+					case 10
+						obj.statusMessage = 'STATUS_CONNECT';
+					case 11
+						obj.statusMessage = 'STATUS_TCP_CLIENT';
+					case 12
+						obj.statusMessage = 'STATUS_TCP_SERVER';
+					case 18
+						obj.statusMessage = 'STATUS_UDP_CLIENT_CONNECT';
+					case 19
+						obj.statusMessage = 'STATUS_UDP_SERVER_CONNECT';
+				end
+				obj.salutation(obj.statusMessage,'CheckStatus')
+				status = obj.status;
+			catch
+				fprintf('Couldn''t check status')
 			end
-			obj.status = pnet(obj.(conn),'status');
-			if obj.status <=0;obj.isOpen = 0;obj.salutation('status Method','Connection appears closed...');end
-			switch obj.status
-				case 0
-					obj.statusMessage = 'STATUS_NOCONNECT';
-				case 1
-					obj.statusMessage = 'STATUS_TCP_SOCKET';
-				case 5
-					obj.statusMessage = 'STATUS_IO_OK';
-				case 6
-					obj.statusMessage = 'STATUS_UDP_CLIENT';
-				case 8
-					obj.statusMessage = 'UDP_SERVER';
-				case 10
-					obj.statusMessage = 'STATUS_CONNECT';
-				case 11
-					obj.statusMessage = 'STATUS_TCP_CLIENT';
-				case 12
-					obj.statusMessage = 'STATUS_TCP_SERVER';
-				case 18
-					obj.statusMessage = 'STATUS_UDP_CLIENT_CONNECT';
-				case 19
-					obj.statusMessage = 'STATUS_UDP_SERVER_CONNECT';
-			end
-			obj.salutation(obj.statusMessage,'CheckStatus')
-			status = obj.status;
 		end
 		
 		% ===================================================================
