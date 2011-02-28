@@ -15,7 +15,7 @@ classdef opxOnline < handle
 		rAddress = '127.0.0.1'
 		rPort = 8888
 		lAddress = '127.0.0.1'
-		lPort = 9999
+		lPort = 9889
 		pollTime = 0.5
 		verbosity = 0
 	end
@@ -374,7 +374,7 @@ classdef opxOnline < handle
 				obj.conn.close;
 			end
 			if isa(obj.msconn,'dataConnection')
-				obj.conn.msclose;
+				obj.msconn.close;
 			end
 		end
 	end %END METHODS

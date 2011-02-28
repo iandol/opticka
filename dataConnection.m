@@ -97,10 +97,11 @@ classdef dataConnection < handle
 						obj.rconn = pnet('tcpsocket',obj.lPort);
 						pnet(obj.rconn ,'setwritetimeout', 0);
 						pnet(obj.rconn ,'setreadtimeout', 0);
+						obj.checkStatus('rconn')
 						obj.status = pnet(obj.rconn,'status');
 						if obj.status < 1
 							obj.close('rconn')
-							warning('%s cannot connect to remote TCP host (%d)',mfilename,obj.status);
+							warning('%s cannot create remote TCP host (%d)',mfilename,obj.status);
 							return
 						else
 							obj.isOpen = 1;
@@ -437,8 +438,13 @@ classdef dataConnection < handle
 		% 		#define STATUS_TCP_SERVER  12
 		% 		#define STATUS_UDP_CLIENT_CONNECT 18
 		% 		#define STATUS_UDP_SERVER_CONNECT 19
-		function status = checkStatus(obj)
-			obj.status = pnet(obj.conn,'status');
+		function status = checkStatus(obj,conn)
+			if ~exist('conn','var');
+				conn='conn';
+			else
+				conn = 'rconn';
+			end
+			obj.status = pnet(obj.(conn),'status');
 			if obj.status <=0;obj.isOpen = 0;obj.salutation('status Method','Connection appears closed...');end
 			switch obj.status
 				case 0
