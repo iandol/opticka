@@ -24,6 +24,8 @@ classdef (Sealed) opticka < handle
 		version='0.497'
 		%> is this a remote instance?
 		remote = 0
+		%> omniplex connection
+		oc
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -86,6 +88,21 @@ classdef (Sealed) opticka < handle
 		function amIRemote(obj)
 			if ~ishandle(obj.h.uihandle)
 				obj.remote = 1;
+			end
+		end
+		
+		function connectToOmniplex(obj)
+			rPort = obj.gn(obj.h.OKRemotePort);
+			rAddress = obj.gs(obj.h.OKRemoteIP);
+			obj.oc = dataConnection(struct('rPort',rPort,'rAddress',rAddress,'protocol','tcp'));
+			obj.oc.open;
+			obj.oc.write('--ping--');
+			bmsg = [];
+			bmsg = obj.oc.read;
+			if ~isempty(bmsg)
+				fprintf('\nWe seem to have connected! message: %s\n',bmsg);
+			else
+				fprintf('\nNo response, perhaps omniplex master is asleep?\n')
 			end
 		end
 		

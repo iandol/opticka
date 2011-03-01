@@ -6,6 +6,7 @@
 % ========================================================================
 classdef opxOnline < handle
 	properties
+		type = 'master'
 		eventStart = 257
 		eventEnd = -255
 		maxWait = 30000
@@ -13,7 +14,7 @@ classdef opxOnline < handle
 		isSlave = 0
 		protocol = 'udp'
 		rAddress = '127.0.0.1'
-		rPort = 8888
+		rPort = 8998
 		lAddress = '127.0.0.1'
 		lPort = 9889
 		pollTime = 0.5
@@ -23,7 +24,7 @@ classdef opxOnline < handle
 	properties (SetAccess = private, GetAccess = public)
 		masterPort = 9990
 		slavePort = 9991
-		opxConn = 0 %> connection to the omniplex
+		opxConn %> connection to the omniplex
 		conn %listen connection
 		msconn %master slave connection
 		spikes %hold the sorted spikes
@@ -39,8 +40,9 @@ classdef opxOnline < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(isSlave|protocol|rPort|rAddress|verbosity)$'
-		runCommand
+		allowedProperties='^(type|isSlave|protocol|rPort|rAddress|verbosity)$'
+		slaveCommand
+		masterCommand
 		myFigure = -1
 		myAxis = -1
 	end
@@ -68,10 +70,15 @@ classdef opxOnline < handle
 					end
 				end
 			end
+			if strcmpi(obj.type,'master')
+				obj.isSlave = 0;
+			end
 			if ispc
-				obj.runCommand = '!matlab -nodesktop -nosplash -r "opxRunSlave" &';
+				obj.masterCommand = '!matlab -nodesktop -nosplash -r "opxRunMaster" &';
+				obj.slaveCommand = '!matlab -nodesktop -nosplash -nojvm -r "opxRunSlave" &';
 			else
-				obj.runCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -maci -r \"opxRunSlave\""'' -e ''end tell''';
+				obj.masterCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -maci -r \"opxRunMaster\""'' -e ''end tell''';
+				obj.slaveCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -maci -r \"opxRunSlave\""'' -e ''end tell''';
 			end
 			if obj.isSlave == 0
 				
@@ -245,6 +252,15 @@ classdef opxOnline < handle
 		%>
 		%>
 		% ===================================================================
+		function parseData(obj)
+			
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
 		function run(obj)
 			abort=0;
 			obj.opxConn = PL_InitClient(0);
@@ -381,8 +397,9 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function close(obj)
-			if exist('mexPlexOnline')
+			if exist('mexPlexOnline','file') && ~isempty(obj.opxConn) && obj.opxConn > 0
 				PL_Close(obj.opxConn);
+				obj.opxConn = [];
 			end
 			if isa(obj.conn,'dataConnection')
 				obj.conn.close;
@@ -441,7 +458,7 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function spawnSlave(obj)
-			eval(obj.runCommand);
+			eval(obj.slaveCommand);
 			obj.msconn=dataConnection(struct('rPort',obj.slavePort,'lPort', ...
 				obj.masterPort, 'rAddress', obj.lAddress,'protocol',obj.protocol,'autoOpen',1, ...
 				'verbosity',obj.verbosity));
