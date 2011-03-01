@@ -264,7 +264,7 @@ classdef dataConnection < handle
 		function data = read(obj,all,dataType)
 			
 			if ~exist('all','var')
-				all = 1;
+				all = 0;
 			end
 			if ~exist('dataType','var')
 				dataType=obj.dataType;
@@ -321,10 +321,10 @@ classdef dataConnection < handle
 					
 					%============================TCP
 				case 'tcp'
-					all = 1;
 					while loop > 0
 						dataIn=pnet(obj.conn,'read', 65536, obj.dataType,'noblock');
 						if all == 0
+							data = dataIn;
 							break
 						end
 						if isempty(dataIn)
@@ -413,10 +413,12 @@ classdef dataConnection < handle
 					else
 						obj.conn = -1;
 						obj.isOpen = 1;
-						%obj.salutation('No client available')
+						obj.salutation('No client available')
 					end
 					
 				catch
+					obj.conn = -1;
+					obj.isOpen = 1;
 					obj.salutation('Couldn''t find client connection');
 				end
 			end
@@ -442,11 +444,9 @@ classdef dataConnection < handle
 			try
 				if ~exist('conn','var') || obj.conn ~= -1
 					conn='conn';
-				else
-					conn = 'rconn';
 				end
 				obj.status = pnet(obj.(conn),'status');
-				if obj.status <=0;obj.isOpen = 0;obj.salutation('status Method','Connection appears closed...');end
+				if obj.status <=0;obj.isOpen = 0;obj.(conn)=-1;obj.salutation('status Method','Connection appears closed...');end
 				switch obj.status
 					case 0
 						obj.statusMessage = 'STATUS_NOCONNECT';

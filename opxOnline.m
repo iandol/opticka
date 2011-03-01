@@ -105,6 +105,9 @@ classdef opxOnline < handle
 					data = obj.msconn.read(0);
 					fprintf('\n{message:%s}',data);
 					switch data
+						case '--ping--'
+							obj.msconn.write('--ping--');
+							fprintf('\nMaster pinged us, we ping back!');
 						case '--hello--'
 							fprintf('\nThe master has spoken...');
 							obj.msconn.write('--i bow--')
@@ -118,6 +121,9 @@ classdef opxOnline < handle
 							data = obj.msconn.read(1); %we flush out the remaining commands
 							%eval('exit')
 							break
+						case '--GO!--'
+							fprintf('Time to run, yay!')
+							loop = 0;
 						case '--obey me!--'
 							fprintf('\nThe master has barked because of opticka...');
 							obj.msconn.write('--i quiver before you and opticka--')
@@ -163,38 +169,46 @@ classdef opxOnline < handle
 				if ~rem(loop,200);fprintf('\n');fprintf('~');obj.msconn.write('--master growls--');end
 				
 				if obj.conn.checkData
-					data = obj.conn.read(1);
+					data = obj.conn.read(0);
 					fprintf('\n{opticka message:%s}',data);
-					for i=1:size(data,1)
-						if iscell(data)
-							datatmp = data{i};
-						else
-							datatmp = data(i,:);
-						end
-						switch datatmp
-							case '--readStimulus--'
-								obj.stimulus=obj.conn.readVar;
+					switch datatmp
+						case '--ping--'
+							obj.conn.write('--ping--');
+							obj.msconn.write('--ping--');
+							fprintf('\nOpticka pinged us, we ping opticka and slave!');
+						case '--readStimulus--'
+							obj.stimulus=obj.conn.readVar;
+							if isa(obj.stimulus,'opticka')
 								fprintf('We have the stimulus from opticka, waiting for GO!');
-							case '--GO!--'
+								obj.msconn.write('--nRuns--')
+								pause(0.1)
+								obj.msconn.write(obj.stimulus.r.task.nRuns);
+							else
+								fprintf('We have the stimulus from opticka, but it is malformed!');
+								obj.stimulus = [];
+							end
+						case '--GO!--'
+							if ~isempty(obj.stimulus)
 								loop = 0;
-								obj.parseData;
-							case '--flushData--'
-								fprintf('Opticka asked us to clear data, we MUST comply!');
-								obj.flushData;
-							case '--bark order--'
-								fprintf('Opticka asked us to bark, we MUST comply!');
-								obj.msconn.write('--obey me!--');
-							case '--quit--'
-								fprintf('Opticka asked us to quit, meanies!');
-								obj.msconn.write('--quit--')
-								loop = 0;
+								%obj.parseData;
 								break
-							otherwise
-								fprintf('Someone spoke, but what did they say?...')
-						end
+							end
+						case '--flushData--'
+							fprintf('Opticka asked us to clear data, we should comply!');
+							%obj.flushData;
+						case '--bark order--'
+							obj.msconn.write('--obey me!--');
+							fprintf('\nOpticka asked us to bark, we should comply!');
+						case '--quit--'
+							fprintf('\nOpticka asked us to quit, meanies!');
+							obj.msconn.write('--quit--')
+							loop = 0;
+							break
+						otherwise
+							fprintf('Someone spoke, but what did they say?...')
 					end
-					
 				end
+				
 				if obj.msconn.checkData
 					fprintf('\nSlave Message: ');
 					data = obj.msconn.read(1);
@@ -208,20 +222,20 @@ classdef opxOnline < handle
 					end
 				end
 				
-				if obj.msconn.checkStatus == 0
+				if obj.msconn.checkStatus ~= 6 %are we a udp client?
 					checkS = 1;
 					while checkS < 10
 						obj.msconn.close;
 						pause(0.1)
 						obj.msconn.open;
-						if obj.msconn.checkStatus ~= 0; 
+						if obj.msconn.checkStatus == 6; 
 							break
 						end
 						checkS = checkS + 1;
 					end
 				end
 				
-				if obj.conn.conn < 0; 
+				if obj.conn.checkStatus ~= 12; %are we a TCP server?
 					obj.conn.checkClient;
 					if obj.conn.conn > -1
 						fprintf('\nWe''ve opened a new connection to opticka...\n')
@@ -397,6 +411,35 @@ classdef opxOnline < handle
 	methods ( Access = private ) % PRIVATE METHODS
 		%=======================================================================
 		
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
+		function reopenConnctions(obj)
+			switch obj.isSlave
+				case 0
+					try
+						if obj.conn.checkStatus == 0
+							obj.conn.closeAll;
+							obj.msconn.closeAll;
+							obj.msconn.open;
+							obj.conn.open;
+						end
+					catch ME
+						
+					end
+				case 1
+					try
+						if obj.conn.checkStatus == 0
+							obj.msconn.closeAll;
+							obj.msconn.open;
+						end
+					catch ME
+						
+					end
+			end
+		end
 		% ===================================================================
 		%> @brief
 		%>

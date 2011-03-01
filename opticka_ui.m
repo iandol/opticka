@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 20-Feb-2011 00:23:07
+% Last Modified by GUIDE v2.5 01-Mar-2011 09:31:54
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -996,4 +996,15 @@ function OKSettingsmovieType_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.r.movieSettings.type=get(hObject,'Value');
+end
+
+
+% --------------------------------------------------------------------
+function OKPanelTellOmniplex_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to OKPanelTellOmniplex (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.connectToOmniplex;
 end

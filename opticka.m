@@ -21,9 +21,11 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.497'
+		version='0.498'
 		%> is this a remote instance?
 		remote = 0
+		%> omniplex connection
+		oc
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -75,6 +77,7 @@ classdef (Sealed) opticka < handle
 					obj.loadProtocol(vars);
 				case 'deleteProtocol'
 					obj.deleteProtocol
+					
 			end
 		end
 		
@@ -522,6 +525,39 @@ classdef (Sealed) opticka < handle
 			
 			obj.refreshVariableList;
 			
+		end
+		
+		% ===================================================================
+		%> @brief deleteVariable
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
+		function connectToOmniplex(obj)
+			if isempty(obj.oc)
+				rPort = gn(obh.h.OKRemotePort);
+				rAddress = gs(obh.h.OKRemoteIP);
+				in = struct('rPort',rPort,'rAddress',rAddress,'protocol','tcp');
+				obj.oc = dataConnection(in);
+			end
+			if obj.oc.checkStatus < 1
+				loop = 1;
+				while loop <= 10
+					obj.oc.close;
+					obj.oc.open;
+					if obj.oc.checkStatus > 0
+						break
+					end
+					pause(0.1);
+				end
+				obj.oc.write('--ping--');
+				pause(0.1);
+				in = obj.oc.read;
+				if regexpi(in,'ping')
+					fprintf('We can ping omniplex master...')
+				else
+					fprintf('Omniplex master not responding')
+				end
+			end
 		end
 	end
 	
