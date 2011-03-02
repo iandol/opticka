@@ -99,8 +99,8 @@ classdef (Sealed) opticka < handle
 		% ===================================================================
 		function connectToOmniplex(obj)
 			if isempty(obj.oc)
-				rPort = gn(obh.h.OKRemotePort);
-				rAddress = gs(obh.h.OKRemoteIP);
+				rPort = obj.gn(obj.h.OKRemotePort);
+				rAddress = obj.gs(obj.h.OKRemoteIP);
 				in = struct('rPort',rPort,'rAddress',rAddress,'protocol','tcp');
 				obj.oc = dataConnection(in);
 			end
@@ -116,11 +116,15 @@ classdef (Sealed) opticka < handle
 				end
 				obj.oc.write('--ping--');
 				pause(0.1);
-				in = obj.oc.read;
+				in = obj.oc.read(1);
 				if regexpi(in,'ping')
 					fprintf('We can ping omniplex master...')
+					set(o.h.OKRemotePort,'ForegroundColor',[0.5 0 0])
+					set(o.h.OKRemoteIP,'ForegroundColor',[0.5 0 0])
 				else
 					fprintf('Omniplex master not responding')
+					set(o.h.OKRemotePort,'ForegroundColor',[0 0 0])
+					set(o.h.OKRemoteIP,'ForegroundColor',[0 0 0])
 				end
 			end
 		end

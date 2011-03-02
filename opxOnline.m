@@ -219,8 +219,7 @@ classdef opxOnline < handle
 					fprintf('\n{message:%s}',data);
 					switch data
 						case '--nRuns--'
-							nRuns = obj.msconn.read(0,'uint8');
-							nRuns = str2num(nRuns);
+							nRuns = obj.msconn.read(0,'uint32')
 							obj.totalRuns = nRuns;
 							fprintf('\nMaster send us number of runs: %d\n',obj.totalRuns);
 						case '--ping--'

@@ -266,7 +266,7 @@ classdef dataConnection < handle
 			if ~exist('all','var')
 				all = 0;
 			end
-			if ~isempty(all) %convert from string if string not empty
+			if ischar(all) && ~isempty(all) %convert from string if string not empty
 				all = 1;
 			end
 			if ~exist('dataType','var')
@@ -288,7 +288,7 @@ classdef dataConnection < handle
 							if nBytes > 0
 								dataIn = pnet(obj.conn, 'read', nBytes, dataType);
 							end
-							if regexpi(dataIn,'--matfile--')
+							if ischar(dataIn) && regexpi(dataIn,'--matfile--')
 								dataType = 'uint32';
 								tmpfile=[tempname,'.mat'];
 								VAR=[];

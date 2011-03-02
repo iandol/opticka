@@ -860,7 +860,7 @@ if isappdata(0,'o')
 		case 1
 			set(handles.OKRemotePort,'Enable','on')
 			set(handles.OKRemoteIP,'Enable','on')
-			resp = questdlg('Is opxOnline running on the Omniplex machine?','Check OPX','No')
+			resp = questdlg('Is opxOnline running on the Omniplex machine?','Check OPX','No');
 			switch resp
 				case 'Yes'
 					o.connectToOmniplex
