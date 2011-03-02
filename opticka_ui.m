@@ -854,13 +854,22 @@ function OKUseServer_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Hint: get(hObject,'Value') returns toggle state of OKUseServer
-switch get(hObject,'Value')
-	case 1
-		set(handles.OKRemotePort,'Enable','on')
-		set(handles.OKRemoteIP,'Enable','on')
-	otherwise
-		set(handles.OKRemotePort,'Enable','off')
-		set(handles.OKRemoteIP,'Enable','off')
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	switch get(hObject,'Value')
+		case 1
+			set(handles.OKRemotePort,'Enable','on')
+			set(handles.OKRemoteIP,'Enable','on')
+			resp = questdlg('Is opxOnline running on the Omniplex machine?','Check OPX','No')
+			switch resp
+				case 'Yes'
+					o.connectToOmniplex
+				otherwise
+			end
+		otherwise
+			set(handles.OKRemotePort,'Enable','off')
+			set(handles.OKRemoteIP,'Enable','off')
+	end
 end
 
 function OKPanelBarscale_Callback(hObject, eventdata, handles)

@@ -92,7 +92,57 @@ classdef (Sealed) opticka < handle
 			end
 		end
 		
-	end
+		% ===================================================================
+		%> @brief connectToOmniplex
+		%> Gets the settings from the UI and connects to omniplex
+		%> @param 
+		% ===================================================================
+		function connectToOmniplex(obj)
+			if isempty(obj.oc)
+				rPort = gn(obh.h.OKRemotePort);
+				rAddress = gs(obh.h.OKRemoteIP);
+				in = struct('rPort',rPort,'rAddress',rAddress,'protocol','tcp');
+				obj.oc = dataConnection(in);
+			end
+			if obj.oc.checkStatus < 1
+				loop = 1;
+				while loop <= 10
+					obj.oc.close;
+					obj.oc.open;
+					if obj.oc.checkStatus > 0
+						break
+					end
+					pause(0.1);
+				end
+				obj.oc.write('--ping--');
+				pause(0.1);
+				in = obj.oc.read;
+				if regexpi(in,'ping')
+					fprintf('We can ping omniplex master...')
+				else
+					fprintf('Omniplex master not responding')
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief connectToOmniplex
+		%> Gets the settings from the UI and connects to omniplex
+		%> @param 
+		% ===================================================================
+		function sendOmniplexStimulus(obj)
+			if obj.oc.checkStatus > 0
+				%flush read buffer
+				data=obj.oc.read('all');
+				if obj.oc.checkStatus > 0 %check again to make sure we are still open
+					obj.oc.write('--readStimulus--');
+					pause(0.2)
+					obj.oc.writeVar('o',obj);
+				end
+			end
+		end
+		
+	end % END PUBLIC METHODS
 	
 	%========================================================
 	methods (Hidden = true) %these have to be available publically, but lets hide them from obvious view
@@ -526,39 +576,7 @@ classdef (Sealed) opticka < handle
 			obj.refreshVariableList;
 			
 		end
-		
-		% ===================================================================
-		%> @brief deleteVariable
-		%> Gets the settings from th UI and updates our runExperiment object
-		%> @param 
-		% ===================================================================
-		function connectToOmniplex(obj)
-			if isempty(obj.oc)
-				rPort = gn(obh.h.OKRemotePort);
-				rAddress = gs(obh.h.OKRemoteIP);
-				in = struct('rPort',rPort,'rAddress',rAddress,'protocol','tcp');
-				obj.oc = dataConnection(in);
-			end
-			if obj.oc.checkStatus < 1
-				loop = 1;
-				while loop <= 10
-					obj.oc.close;
-					obj.oc.open;
-					if obj.oc.checkStatus > 0
-						break
-					end
-					pause(0.1);
-				end
-				obj.oc.write('--ping--');
-				pause(0.1);
-				in = obj.oc.read;
-				if regexpi(in,'ping')
-					fprintf('We can ping omniplex master...')
-				else
-					fprintf('Omniplex master not responding')
-				end
-			end
-		end
+
 	end
 	
 	%========================================================

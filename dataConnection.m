@@ -266,9 +266,13 @@ classdef dataConnection < handle
 			if ~exist('all','var')
 				all = 0;
 			end
+			if ~isempty(all) %convert from string if string not empty
+				all = 1;
+			end
 			if ~exist('dataType','var')
 				dataType=obj.dataType;
 			end
+			
 			data = [];
 			loop = 1;
 			olddataType=obj.dataType;
@@ -322,8 +326,8 @@ classdef dataConnection < handle
 					%============================TCP
 				case 'tcp'
 					while loop > 0
-						dataIn=pnet(obj.conn,'read', 65536, obj.dataType,'noblock');
-						if all == 0
+						dataIn=pnet(obj.conn,'read', 200000, dataType,'noblock');
+						if all == false
 							data = dataIn;
 							break
 						end
@@ -442,12 +446,16 @@ classdef dataConnection < handle
 		% 		#define STATUS_UDP_SERVER_CONNECT 19
 		function status = checkStatus(obj,conn) %#ok<INUSD>
 			try
-				if ~exist('conn','var') || obj.conn ~= -1
+				if ~exist('conn','var') || obj.conn ~= -1 || strcmp(conn,'conn')
 					conn='conn';
+				else
+					conn = 'rconn';
 				end
 				obj.status = pnet(obj.(conn),'status');
-				if obj.status <=0;obj.isOpen = 0;obj.(conn)=-1;obj.salutation('status Method','Connection appears closed...');end
+				if obj.status <=0;obj.(conn) = -1; obj.isOpen = 0;obj.salutation('status Method','Connection appears closed...');end
 				switch obj.status
+					case -1
+						obj.statusMessage = 'STATUS_NOTFOUND';
 					case 0
 						obj.statusMessage = 'STATUS_NOCONNECT';
 					case 1
@@ -472,7 +480,9 @@ classdef dataConnection < handle
 				obj.salutation(obj.statusMessage,'CheckStatus')
 				status = obj.status;
 			catch
-				fprintf('Couldn''t check status')
+				obj.(conn) = -1;
+				obj.isOpen = 0;
+				fprintf('Couldn''t check status\n')
 			end
 		end
 		
