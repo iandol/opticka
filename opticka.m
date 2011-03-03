@@ -99,8 +99,8 @@ classdef (Sealed) opticka < handle
 		% ===================================================================
 		function connectToOmniplex(obj)
 			if isempty(obj.oc)
-				rPort = obj.gn(obj.h.OKRemotePort);
-				rAddress = obj.gs(obj.h.OKRemoteIP);
+				rPort = obj.gn(obj.h.OKOmniplexPort);
+				rAddress = obj.gs(obj.h.OKOmniplexIP);
 				in = struct('rPort',rPort,'rAddress',rAddress,'protocol','tcp');
 				obj.oc = dataConnection(in);
 			else
@@ -110,6 +110,7 @@ classdef (Sealed) opticka < handle
 				loop = 1;
 				while loop <= 10
 					obj.oc.close('conn');
+					fprintf('\nTrying to connect...\n');
 					obj.oc.open;
 					if obj.oc.checkStatus > 0
 						break
@@ -117,17 +118,21 @@ classdef (Sealed) opticka < handle
 					pause(0.1);
 				end
 				obj.oc.write('--ping--');
-				pause(0.1);
-				in = obj.oc.read(0);
-				if regexpi(in,'ping')
-					fprintf('We can ping omniplex master...')
-					set(obj.h.OKRemotePort,'ForegroundColor',[0.5 0 0])
-					set(obj.h.OKRemoteIP,'ForegroundColor',[0.5 0 0])
-				else
-					fprintf('Omniplex master not responding')
-					set(obj.h.OKRemotePort,'ForegroundColor',[0 0 0])
-					set(obj.h.OKRemoteIP,'ForegroundColor',[0 0 0])
+				loop = 1;
+				while loop < 8
+					in = obj.oc.read(0);
+					if regexpi(in,'ping')
+						fprintf('\nWe can ping omniplex master on try: \n',loop)
+						set(obj.h.OKOmniplexStatus,'String','Omniplex: connected')
+						break
+					else
+						fprintf('\nOmniplex master not responding, try: %d\n',loop)
+						set(obj.h.OKOmniplexStatus,'String','Omniplex: not responding')
+					end
+					loop=loop+1;
+					pause(0.2);
 				end
+				drawnow;
 			end
 		end
 		

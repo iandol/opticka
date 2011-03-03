@@ -109,8 +109,27 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function listenMaster(obj)
+			
 			fprintf('\nListening for opticka, and controlling slave!');
 			loop = 1;
+			
+			if obj.msconn.checkStatus ~= 6 %are we a udp client to the slave?
+				checkS = 1;
+				while checkS < 10
+					obj.msconn.close;
+					pause(0.1)
+					obj.msconn.open;
+					if obj.msconn.checkStatus == 6;
+						break
+					end
+					checkS = checkS + 1;
+				end
+			end
+			
+			if obj.conn.checkStatus < 1;
+				obj.conn.open;
+			end
+			
 			while loop
 				if ~rem(loop,20);fprintf('.');end
 				if ~rem(loop,200);fprintf('\n');fprintf('~');obj.msconn.write('--master growls--');end
@@ -125,14 +144,14 @@ classdef opxOnline < handle
 							obj.msconn.write('--ping--');
 							fprintf('\nOpticka pinged us, we ping opticka and slave!');
 						case '--readStimulus--'
-							obj.stimulus=obj.conn.readVar;
+							obj.stimulus = []; obj.stimulus=obj.conn.readVar;
 							obj.totalRuns = obj.stimulus.r.task.nRuns;
 							if isa(obj.stimulus,'opticka')
 								fprintf('We have the stimulus from opticka, waiting for GO!');
 								obj.msconn.write('--nRuns--');
 								obj.msconn.write(uint32(obj.totalRuns));
 							else
-								fprintf('We have the stimulus from opticka, but it is malformed!');
+								fprintf('We have a stimulus from opticka, but it is malformed!');
 								obj.stimulus = [];
 							end
 						case '--GO!--'
@@ -177,7 +196,7 @@ classdef opxOnline < handle
 						obj.msconn.close;
 						pause(0.1)
 						obj.msconn.open;
-						if obj.msconn.checkStatus == 6; 
+						if obj.msconn.checkStatus == 6;
 							break
 						end
 						checkS = checkS + 1;
@@ -200,7 +219,7 @@ classdef opxOnline < handle
 				pause(0.1)
 				loop = loop + 1;
 			end
-			fprintf('\nMaster is sleeping, use listenMaster to make me listen again...');	
+			fprintf('\nMaster is sleeping, use listenMaster to make me listen again...');
 		end
 		
 		% ===================================================================
@@ -211,6 +230,20 @@ classdef opxOnline < handle
 		function waitSlave(obj)
 			fprintf('\nHumble Slave is Eagerly Listening to Master');
 			loop = 1;
+			
+			if obj.msconn.checkStatus < 1 %have we disconnected?
+				checkS = 1;
+				while checkS < 5
+					obj.msconn.close; %lets reconnect
+					pause(0.1)
+					obj.msconn.open;
+					if obj.msconn.checkStatus > 0;
+						break
+					end
+					checkS = checkS + 1;
+				end
+			end
+			
 			while loop
 				if ~rem(loop,20);fprintf('.');end
 				if ~rem(loop,200);fprintf('\n');fprintf('~');obj.msconn.write('--abuse me do!--');end
@@ -220,7 +253,7 @@ classdef opxOnline < handle
 					fprintf('\n{message:%s}',data);
 					switch data
 						case '--nRuns--'
-							nRuns = double(obj.msconn.read(0,'uint32'))
+							nRuns = double(obj.msconn.read(0,'uint32'));
 							obj.totalRuns = nRuns;
 							fprintf('\nMaster send us number of runs: %d\n',obj.totalRuns);
 						case '--ping--'
@@ -254,7 +287,7 @@ classdef opxOnline < handle
 				end
 				if obj.msconn.checkStatus == 0 %have we disconnected?
 					checkS = 1;
-					while checkS < 10
+					while checkS < 5
 						obj.msconn.close; %lets reconnect
 						pause(0.1)
 						obj.msconn.open;
@@ -569,7 +602,7 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function delete(obj)
-			obj.salutation('DELETE Method','Cleaning up now...')
+			obj.salutation('opxOnline Delete Method','Cleaning up now...')
 			obj.closeAll;
 		end
 		

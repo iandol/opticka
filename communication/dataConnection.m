@@ -100,7 +100,7 @@ classdef dataConnection < handle
 						obj.checkStatus('rconn')
 						if obj.status < 1
 							obj.close('rconn')
-							warning('%s cannot create remote TCP host (%d)',mfilename,obj.status);
+							warning('%s cannot create TCP server (status: %d)',mfilename,obj.status);
 							return
 						else
 							obj.isOpen = 1;
