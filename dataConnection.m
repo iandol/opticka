@@ -145,11 +145,13 @@ classdef dataConnection < handle
 		% ===================================================================
 		% Close the given pnet socket.
 		function status = close(obj,type)
+			
 			if ~exist('type','var')
 				type = 'conn';
 			end
 			
 			obj.status = 0;
+			
 			switch type
 				case 'conn'
 					try
@@ -167,6 +169,24 @@ classdef dataConnection < handle
 							end
 						end
 						obj.conn = -1;
+						status = 1;
+					end
+				case 'rconn'
+					try
+						obj.salutation('close Method','Trying to close PNet connection...')
+						obj.status = pnet(obj.rconn,'status');
+						if obj.status <=0;
+							obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
+						else
+							try
+								pnet(obj.rconn, 'close');
+							catch ME
+								warn('Couldn''t close connection, perhaps closed?');
+								obj.status = -1;
+								obj.error = ME;
+							end
+						end
+						obj.rconn = -1;
 						status = 1;
 					end
 				otherwise
@@ -261,7 +281,30 @@ classdef dataConnection < handle
 		%> Read any avalable data from the given pnet socket.
 		% ===================================================================
 		% Read any avalable data from the given pnet socket.
-		function data = read(obj,all,dataType)
+		function data = readline(obj)
+			data = [];
+			switch obj.protocol
+				
+				%============================UDP
+				case 'udp'
+					nBytes = pnet(obj.conn, 'readpacket');
+					if nBytes > 0
+						data = pnet(obj.conn, 'readline', nBytes, 'noblock');
+					end
+				%============================TCP
+				case 'tcp'
+					data = pnet(obj.conn, 'readline', 1024,' noblock');
+			end
+			obj.dataIn = data;
+		end
+		
+		% ===================================================================
+		%> @brief Read any avalable data from the given pnet socket.
+		%>
+		%> Read any avalable data from the given pnet socket.
+		% ===================================================================
+		% Read any avalable data from the given pnet socket.
+		function data = read(obj,all,dataType,size)
 			
 			if ~exist('all','var')
 				all = 0;
@@ -269,7 +312,7 @@ classdef dataConnection < handle
 			if ischar(all) && ~isempty(all) %convert from string if string not empty
 				all = 1;
 			end
-			if ~exist('dataType','var')
+			if ~exist('dataType','var') || isempty(dataType)
 				dataType=obj.dataType;
 			end
 			
@@ -281,14 +324,15 @@ classdef dataConnection < handle
 				
 				%============================UDP
 				case 'udp'
+					if ~exist('size','var');size=65536;end
 					while loop > 0
-						dataIn = pnet(obj.conn, 'read', 65536, dataType);
+						dataIn = pnet(obj.conn, 'read', size, dataType);
 						if isempty(dataIn)
 							nBytes = pnet(obj.conn, 'readpacket');
 							if nBytes > 0
 								dataIn = pnet(obj.conn, 'read', nBytes, dataType);
 							end
-							if ischar(dataIn) && regexpi(dataIn,'--matfile--')
+							if ischar(dataIn) && ~isempty(regexpi(dataIn,'--matfile--'))
 								dataType = 'uint32';
 								tmpfile=[tempname,'.mat'];
 								VAR=[];
@@ -323,10 +367,11 @@ classdef dataConnection < handle
 					end
 					obj.dataIn = data;
 					
-					%============================TCP
+				%============================TCP
 				case 'tcp'
+					if ~exist('size','var');size=256000;end
 					while loop > 0
-						dataIn=pnet(obj.conn,'read', 200000, dataType,'noblock');
+						dataIn=pnet(obj.conn,'read', size, dataType,'noblock');
 						if all == false
 							data = dataIn;
 							break
@@ -445,6 +490,7 @@ classdef dataConnection < handle
 		% 		#define STATUS_UDP_CLIENT_CONNECT 18
 		% 		#define STATUS_UDP_SERVER_CONNECT 19
 		function status = checkStatus(obj,conn) %#ok<INUSD>
+			status = -1;
 			try
 				if ~exist('conn','var') || obj.conn ~= -1 || strcmp(conn,'conn')
 					conn='conn';
@@ -480,6 +526,8 @@ classdef dataConnection < handle
 				obj.salutation(obj.statusMessage,'CheckStatus')
 				status = obj.status;
 			catch
+				obj.status = -1;
+				status = obj.status;
 				obj.(conn) = -1;
 				obj.isOpen = 0;
 				fprintf('Couldn''t check status\n')

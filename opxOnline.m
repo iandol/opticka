@@ -34,17 +34,17 @@ classdef opxOnline < handle
 		parameters
 		units
 		stimulus
-		tmpfile
+		tmpFile
 		isSlaveConnected = 0
 		isMasterConnected = 0
+		error
+		h %GUI handles
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(type|isSlave|protocol|rPort|rAddress|verbosity)$'
+		allowedProperties='^(type|eventStart|eventEnd|protocol|rPort|rAddress|verbosity)$'
 		slaveCommand
 		masterCommand
-		myFigure = -1
-		myAxis = -1
 	end
 	
 	%=======================================================================
@@ -110,7 +110,6 @@ classdef opxOnline < handle
 		% ===================================================================
 		function listenMaster(obj)
 			fprintf('\nListening for opticka, and controlling slave!');
-			obj.msconn.write('--obey me!--');
 			loop = 1;
 			while loop
 				if ~rem(loop,20);fprintf('.');end
@@ -118,6 +117,7 @@ classdef opxOnline < handle
 				
 				if obj.conn.checkData
 					data = obj.conn.read(0);
+					%data = regexprep(data,'\n','');
 					fprintf('\n{opticka message:%s}',data);
 					switch data
 						case '--ping--'
@@ -126,11 +126,11 @@ classdef opxOnline < handle
 							fprintf('\nOpticka pinged us, we ping opticka and slave!');
 						case '--readStimulus--'
 							obj.stimulus=obj.conn.readVar;
+							obj.totalRuns = obj.stimulus.r.task.nRuns;
 							if isa(obj.stimulus,'opticka')
 								fprintf('We have the stimulus from opticka, waiting for GO!');
 								obj.msconn.write('--nRuns--');
-								pause(0.1);
-								obj.msconn.write(obj.stimulus.r.task.nRuns);
+								obj.msconn.write(uint32(obj.totalRuns));
 							else
 								fprintf('We have the stimulus from opticka, but it is malformed!');
 								obj.stimulus = [];
@@ -146,7 +146,7 @@ classdef opxOnline < handle
 							fprintf('Opticka asked us to clear data, we should comply!');
 							%obj.flushData;
 						case '--bark order--'
-							obj.msconn.write('--obey me!--');
+							obj.msconn.write('\n--obey me!--\n');
 							fprintf('\nOpticka asked us to bark, we should comply!');
 						case '--quit--'
 							fprintf('\nOpticka asked us to quit, meanies!');
@@ -159,15 +159,15 @@ classdef opxOnline < handle
 				end
 				
 				if obj.msconn.checkData
-					fprintf('\nSlave Message: ');
-					data = obj.msconn.read(1);
+					fprintf('\n{slave message: ');
+					data = obj.msconn.read(0);
 					if iscell(data)
 						for i = 1:length(data)
 							fprintf('%s\t',data{i});
 						end
-						fprintf('\n');
+						fprintf('}\n');
 					else
-						fprintf('%s\n',data);
+						fprintf('%s}\n',data);
 					end
 				end
 				
@@ -216,10 +216,11 @@ classdef opxOnline < handle
 				if ~rem(loop,200);fprintf('\n');fprintf('~');obj.msconn.write('--abuse me do!--');end
 				if obj.msconn.checkData
 					data = obj.msconn.read(0);
+					data = regexprep(data,'\n','');
 					fprintf('\n{message:%s}',data);
 					switch data
 						case '--nRuns--'
-							nRuns = obj.msconn.read(0,'uint32')
+							nRuns = double(obj.msconn.read(0,'uint32'))
 							obj.totalRuns = nRuns;
 							fprintf('\nMaster send us number of runs: %d\n',obj.totalRuns);
 						case '--ping--'
@@ -228,9 +229,9 @@ classdef opxOnline < handle
 						case '--hello--'
 							fprintf('\nThe master has spoken...');
 							obj.msconn.write('--i bow--')
-						case '--tmpfile--'
-							obj.tmpfile = obj.msconn.read(0);
-							fprintf('\nThe master tells me tmpfile= %s',obj.tmpfile);
+						case '--tmpFile--'
+							obj.tmpFile = obj.msconn.read(0);
+							fprintf('\nThe master tells me tmpFile= %s',obj.tmpFile);
 						case '--master growls--'
 							fprintf('\nMaster growls, time to lick some boot...');
 						case '--quit--'
@@ -245,8 +246,8 @@ classdef opxOnline < handle
 							fprintf('\nThe master has barked because of opticka...');
 							obj.msconn.write('--i quiver before you and opticka--')
 						case '--tempfile--'
-							obj.tmpfile = obj.msconn.read(0);
-							fprintf('\nThe master told us tmp file is: %s', obj.tmpfile);
+							obj.tmpFile = obj.msconn.read(0);
+							fprintf('\nThe master told us tmp file is: %s', obj.tmpFile);
 						otherwise
 							fprintf('\nThe master has barked, but I understand not!...');
 					end
@@ -287,7 +288,10 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function run(obj)
+			tic
 			abort=0;
+			obj.nRuns = 0;
+			
 			obj.opxConn = PL_InitClient(0);
 			if obj.opxConn == 0
 				return
@@ -296,54 +300,52 @@ classdef opxOnline < handle
 			obj.getParameters;
 			obj.getnUnits;
 			
+			save(obj.tmpFile,obj);
+			obj.msconn.write('--beforeRun--');
+			pause(0.1);
+			
 			obj.trial = struct;
-			obj.nTrials=1;
-			
-			if ~ishandle(obj.myFigure);
-				obj.myFigure = figure;
-			end
-			if ~ishandle(obj.myAxis);
-				obj.myAxis = axes;
-			end
-			obj.draw;
-			
+			obj.nRuns=1;
+			toc
 			try
-				while obj.nTrials <= obj.totalTrials
+				while obj.nRuns <= obj.totalRuns
 					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1 2 3], [1], 0);
-					fprintf('\nLooping at %i\n', obj.nTrials);
+					fprintf('\nLooping at %i\n', obj.nRuns);
 					[rn, trial, spike, analog, last] = PL_TrialStatus(obj.opxConn, 3, obj.maxWait); %wait until end of trial
 					fprintf('rn: %i tr: %i sp: %i al: %i lst: %i\n',rn, trial, spike, analog, last);
 					if last > 0
-						[obj.trial(obj.nTrials).ne, obj.trial(obj.nTrials).eventList]  = PL_TrialEvents(obj.opxConn, 0, 0);
-						[obj.trial(obj.nTrials).ns, obj.trial(obj.nTrials).spikeList]  = PL_TrialSpikes(obj.opxConn, 0, 0);
-						obj.nTrials = obj.nTrials+1;
+						tic
+						[obj.trial(obj.nRuns).ne, obj.trial(obj.nRuns).eventList]  = PL_TrialEvents(obj.opxConn, 0, 0);
+						[obj.trial(obj.nRuns).ns, obj.trial(obj.nRuns).spikeList]  = PL_TrialSpikes(obj.opxConn, 0, 0);
+						
+						save(obj.tmpFile,obj);
+						obj.msconn.write('--finishRun--');
+						obj.msconn.write(uint32(obj.nRuns));
+						
+						obj.nRuns = obj.nRuns+1;
+						toc
 					end
-					obj.draw;
-					if obj.conn.checkData
-						data = obj.conn.read(0);
-						switch data
+					if obj.msconn.checkData
+						command = obj.conn.read(0);
+						switch command
 							case '--abort--'
 								abort = 1;
 								break
 						end
 					end
-					% 					esc=obj.checkKeys;
-					% 					if esc == 1
-					% 						break
-					% 					end
+
 				end
+				
 				% you need to call PL_Close(s) to close the connection
 				% with the Plexon server
-				obj.close;
-				obj.opxConn = 0;
+				obj.closePlexon;
 				
-				obj.listen;
+				obj.waitSlave;
 				
 			catch ME
-				obj.nTrials = 0;
-				obj.close;
-				obj.opxConn = 0;
-				rethrow(ME)
+				obj.nRuns = 0;
+				obj.closePlexon;
+				obj.error = ME;
 			end
 		end
 		
@@ -354,10 +356,42 @@ classdef opxOnline < handle
 		% ===================================================================
 		function draw(obj)
 			axes(obj.myAxis);
-			plot([1:10],[1:10]*obj.nTrials)
-			title(['On Trial: ' num2str(obj.nTrials)]);
+			plot([1:10],[1:10]*obj.nRuns)
+			title(['On Trial: ' num2str(obj.nRuns)]);
 			drawnow;
 		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
+		function closePlexon(obj)
+			if exist('mexPlexOnline','file') && ~isempty(obj.opxConn) && obj.opxConn > 0
+				PL_Close(obj.opxConn);
+				obj.opxConn = [];
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
+		function closeAll(obj)
+			obj.closePlexon;
+			if isa(obj.conn,'dataConnection')
+				obj.conn.close;
+			end
+			if isa(obj.msconn,'dataConnection')
+				obj.msconn.close;
+			end
+		end
+	end %END METHODS
+	
+	%=======================================================================
+	methods ( Access = private ) % PRIVATE METHODS
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief
@@ -381,6 +415,7 @@ classdef opxOnline < handle
 				obj.parameters.raw = pars;
 				obj.parameters.channels = pars(1);
 				obj.parameters.timestamp=pars(2);
+				obj.parameters.timedivisor = 1e6 / obj.parameters.timestamp;
 			end
 		end
 		
@@ -412,41 +447,9 @@ classdef opxOnline < handle
 		%>
 		%>
 		% ===================================================================
-		function updateUnits(obj)
-			
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%>
-		% ===================================================================
-		function close(obj)
-			if exist('mexPlexOnline','file') && ~isempty(obj.opxConn) && obj.opxConn > 0
-				PL_Close(obj.opxConn);
-				obj.opxConn = [];
-			end
-			if isa(obj.conn,'dataConnection')
-				obj.conn.close;
-			end
-			if isa(obj.msconn,'dataConnection')
-				obj.msconn.close;
-			end
-		end
-	end %END METHODS
-	
-	%=======================================================================
-	methods ( Access = private ) % PRIVATE METHODS
-		%=======================================================================
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%>
-		% ===================================================================
 		function reopenConnctions(obj)
-			switch obj.isSlave
-				case 0
+			switch obj.type
+				case 'master'
 					try
 						if obj.conn.checkStatus == 0
 							obj.conn.closeAll;
@@ -455,16 +458,16 @@ classdef opxOnline < handle
 							obj.conn.open;
 						end
 					catch ME
-						
+						obj.error = ME;
 					end
-				case 1
+				case 'slave'
 					try
 						if obj.conn.checkStatus == 0
 							obj.msconn.closeAll;
 							obj.msconn.open;
 						end
 					catch ME
-						
+						obj.error = ME;
 					end
 			end
 		end
@@ -475,18 +478,18 @@ classdef opxOnline < handle
 		% ===================================================================
 		function initializeMaster(obj)
 			fprintf('\nMaster is initializing, bow before my greatness...\n');
-			obj.conn=dataConnection(struct('rPort',obj.rPort,'lPort', ...
-					obj.lPort, 'rAddress', obj.rAddress,'protocol','tcp', ...
-					'autoOpen',1,'type','server','verbosity',obj.verbosity));
+			obj.conn=dataConnection(struct('verbosity',obj.verbosity, 'rPort', obj.rPort, ...
+				'lPort', obj.lPort, 'lAddress', obj.lAddress, 'rAddress', ... 
+				obj.rAddress, 'protocol', 'tcp', 'autoOpen', 1, 'type', 'server'));
 			if obj.conn.isOpen == 1
-				fprintf('Master can listen to opticka...')
+				fprintf('Master can listen for opticka...')
 			else
 				fprintf('Master is deaf...')
 			end
-			obj.tmpfile = [tempname,'.mat'];
-			obj.msconn.write('--tmpfile--');
-			obj.msconn.write(obj.tmpfile)
-			fprintf('We tell slave to use tmpfile = %s', obj.tmpfile)
+			obj.tmpFile = [tempname,'.mat'];
+			obj.msconn.write('--tmpFile--');
+			obj.msconn.write(obj.tmpFile)
+			fprintf('We tell slave to use tmpFile = %s', obj.tmpFile)
 		end
 		
 		% ===================================================================
@@ -496,9 +499,9 @@ classdef opxOnline < handle
 		% ===================================================================
 		function initializeSlave(obj)
 			fprintf('\n===Slave is initializing, do with me what you will...===\n\n');
-			obj.msconn=dataConnection(struct('rPort',obj.masterPort,'lPort', ...
-					obj.slavePort, 'rAddress', obj.lAddress,'protocol',obj.protocol,'autoOpen',1, ...
-					'verbosity',obj.verbosity));
+			obj.msconn=dataConnection(struct('verbosity', obj.verbosity, 'rPort', obj.masterPort, ...
+					'lPort', obj.slavePort, 'rAddress', obj.lAddress, ... 
+					'protocol',	obj.protocol,'autoOpen',1));
 			if obj.msconn.isOpen == 1
 				fprintf('Slave has opened its ears...\n')
 			else
@@ -531,7 +534,7 @@ classdef opxOnline < handle
 				pause(0.1)
 				response = obj.msconn.read;
 				if iscell(response);response=response{1};end
-				if regexpi(response, '--i bow--')
+				if ~isempty(response) && ~isempty(regexpi(response, '--i bow--'))
 					fprintf('\nSlave knows who is boss...')
 					obj.isSlaveConnected = 1;
 					obj.isMasterConnected = 1;
@@ -567,7 +570,7 @@ classdef opxOnline < handle
 		% ===================================================================
 		function delete(obj)
 			obj.salutation('DELETE Method','Cleaning up now...')
-			obj.close;
+			obj.closeAll;
 		end
 		
 		% ===================================================================

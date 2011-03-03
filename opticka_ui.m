@@ -860,12 +860,6 @@ if isappdata(0,'o')
 		case 1
 			set(handles.OKRemotePort,'Enable','on')
 			set(handles.OKRemoteIP,'Enable','on')
-			resp = questdlg('Is opxOnline running on the Omniplex machine?','Check OPX','No');
-			switch resp
-				case 'Yes'
-					o.connectToOmniplex
-				otherwise
-			end
 		otherwise
 			set(handles.OKRemotePort,'Enable','off')
 			set(handles.OKRemoteIP,'Enable','off')
@@ -1015,5 +1009,10 @@ function OKPanelTellOmniplex_ClickedCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	o.connectToOmniplex;
+	resp = questdlg('Is opxOnline running on the Omniplex machine?','Check OPX','No');
+	switch resp
+		case 'Yes'
+			o.connectToOmniplex
+		otherwise
+	end
 end
