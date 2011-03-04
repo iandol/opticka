@@ -14,8 +14,8 @@ classdef dataConnection < handle
 		protocol = 'tcp'
 		lPort = 1111
 		rPort = 5678
-		lAddress = '127.0.0.1'
-		rAddress = '127.0.0.1'
+		lAddress = [127 0 0 1]
+		rAddress = [127 0 0 1]
 		autoOpen = 0
 		dataOut = []
 		dataType = 'string'
@@ -35,6 +35,8 @@ classdef dataConnection < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		connList
+		rconnList
 		conn = -1
 		rconn = -1
 		allowedProperties='^(type|protocol|lPort|rPort|lAddress|rAddress|autoOpen|dataType|verbosity|autoRead|autoServer)$'
@@ -84,6 +86,7 @@ classdef dataConnection < handle
 						pnet(obj.conn ,'setwritetimeout', 0);
 						pnet(obj.conn ,'setreadtimeout', 0);
 						obj.isOpen = 1;
+						obj.connList = [obj.connList obj.conn];
 					else
 						sprintf('%s cannot open UDP socket (%d)', ...
 							mfilename, obj.conn);
@@ -93,47 +96,68 @@ classdef dataConnection < handle
 					conn = obj.conn;
 					
 				case 'tcp'
-					if strcmpi(obj.type, 'server')
-						obj.rconn = pnet('tcpsocket',obj.lPort);
-						pnet(obj.rconn ,'setwritetimeout', 0);
-						pnet(obj.rconn ,'setreadtimeout', 0);
-						obj.checkStatus('rconn')
-						if obj.status < 1
-							obj.close('rconn')
-							warning('%s cannot create TCP server (status: %d)',mfilename,obj.status);
-							return
-						else
-							obj.isOpen = 1;
-						end
-						conn = obj.rconn;
-					else
-						while obj.conn == -1
-							obj.conn=pnet('tcpconnect',obj.rAddress,obj.rPort);
-							if obj.conn==-1,
-								fprintf('CAN NOT CONNECT TO HOST: %s PORT: %d\nRETRY....',obj.rAddress,obj.rPort);
-								pause(1);
+					switch obj.type
+						
+						case 'server'
+							loop = 1;
+							while loop <= 10
+								obj.rconn = pnet('tcpsocket',obj.lPort);
+								pnet(obj.rconn ,'setwritetimeout', 0);
+								pnet(obj.rconn ,'setreadtimeout', 0);
+								if obj.rconn < 1
+									fprintf('\n%s cannot create TCP server (status: %d)',mfilename,obj.rconn);
+									pause(0.1);
+									if loop == 2 %see if we have rogue connetions
+										for i = 1:length(obj.rconnList)
+											try %#ok<TRYNC>
+												pnet(obj.rconnList(i),'close');
+											end
+										end
+									end
+								else
+									obj.isOpen = 1;
+									obj.rconnList = [obj.rconnList obj.rconn];
+									obj.checkStatus('rconn')
+									loop = 11;
+									break
+								end
+								loop = loop + 1;
+							end
+							conn = obj.rconn;
+							
+						case 'client'
+							loop = 1;
+							while loop < 5
+								obj.conn=pnet('tcpconnect',obj.rAddress,obj.rPort);
+								if obj.conn == -1
+									fprintf('CAN NOT CONNECT TO HOST: %s PORT: %d\nRETRY....',obj.rAddress,obj.rPort);
+									pause(1);
+								else
+									fprintf('CONNECTED TO HOST: %s PORT: %d !\n',obj.rAddress,obj.rPort);
+									break
+								end
+							end
+							
+							if obj.conn >= 0
+								% disable blocking
+								pnet(obj.conn ,'setwritetimeout', 0);
+								pnet(obj.conn ,'setreadtimeout', 0);
+								obj.status = pnet(obj.conn,'status');
+								if obj.status < 1
+									obj.close('conn')
+									warning('%s cannot connect to remote TCP host (status: %d)',mfilename,obj.status);
+								else
+									obj.isOpen = 1;
+									obj.connList = [obj.connList obj.conn];
+								end
 							else
-								fprintf('CONNECTED TO HOST: %s PORT: %d !\n',obj.rAddress,obj.rPort);
+								sprintf('%s cannot open TCP socket (%d)', ...
+									mfilename, obj.conn);
+								obj.isOpen = 0;
+								obj.conn = -1;
 							end
-						end
-						if obj.conn >= 0
-							% disable blocking
-							pnet(obj.conn ,'setwritetimeout', 0);
-							pnet(obj.conn ,'setreadtimeout', 0);
-							obj.status = pnet(obj.conn,'status');
-							if obj.status < 1
-								obj.close
-								warning('%s cannot connect to remote TCP host (%d)',mfilename,obj.status);
-								return
-							end
-							obj.isOpen = 1;
-						else
-							sprintf('%s cannot open TCP socket (%d)', ...
-								mfilename, obj.conn);
-							obj.isOpen = 0;
-							obj.conn = -1;
-						end
-						conn = obj.conn;
+							conn = obj.conn;
+							
 					end
 			end
 		end
@@ -144,81 +168,57 @@ classdef dataConnection < handle
 		%> Close the ethernet connection
 		% ===================================================================
 		% Close the given pnet socket.
-		function status = close(obj,type)
+		function status = close(obj,type,force)
 			
 			if ~exist('type','var')
 				type = 'conn';
 			end
+			if ~exist('force','var')
+				force = 1;
+			end
 			
-			obj.status = 0;
+			status = 0;
 			
 			switch type
+				
 				case 'conn'
 					try
-						obj.salutation('close Method','Trying to close PNet connection...')
+						obj.salutation('close Method','Trying to close PNet conn connection...')
 						obj.status = pnet(obj.conn,'status');
 						if obj.status <=0;
 							obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
-						else
-							try
+						elseif force == 0
+							try %#ok<TRYNC>
 								pnet(obj.conn, 'close');
-							catch ME
-								warn('Couldn''t close connection, perhaps closed?');
-								obj.status = -1;
-								obj.error = ME;
+							end
+						else
+							for i = 1:length(obj.connList)
+								try
+									pnet(obj.connList(i), 'close');
+								catch %#ok<CTCH>
+									fprintf('Couldn''t close connection %i, perhaps closed?\n',obj.rconnList(i));
+								end
 							end
 						end
 						obj.conn = -1;
-						status = 1;
 					end
+					
 				case 'rconn'
 					try
-						obj.salutation('close Method','Trying to close PNet connection...')
+						obj.salutation('close Method','Trying to close PNet rconn connection...')
 						obj.status = pnet(obj.rconn,'status');
 						if obj.status <=0;
 							obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
 						else
-							try
-								pnet(obj.rconn, 'close');
-							catch ME
-								warn('Couldn''t close connection, perhaps closed?');
-								obj.status = -1;
-								obj.error = ME;
+							for i = 1:length(obj.rconnList)
+								try
+									pnet(obj.rconnList(i), 'close');
+								catch %#ok<CTCH>
+									fprintf('Couldn''t close rconnection %i, perhaps closed?\n',obj.rconnList(i));
+								end
 							end
 						end
 						obj.rconn = -1;
-						status = 1;
-					end
-				otherwise
-					try
-						obj.salutation('close Method','Trying to close PNet connection...')
-						obj.status = pnet(obj.conn,'status');
-						if obj.status <=0;
-							obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
-						else
-							try
-								pnet(obj.conn, 'close');
-							catch ME
-								warn('Couldn''t close connection, perhaps closed?');
-								obj.status = -1;
-								obj.error = ME;
-							end
-						end
-						obj.conn = -1;
-						obj.status = pnet(obj.rconn,'status');
-						if obj.status <=0;
-							obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
-						else
-							try
-								pnet(obj.rconn, 'close');
-							catch ME
-								warn('Couldn''t close connection, perhaps closed?');
-								obj.status = -1;
-								obj.error = ME;
-							end
-						end
-						obj.rconn = -1;
-						status = 1;
 					end
 			end
 		end
@@ -235,14 +235,11 @@ classdef dataConnection < handle
 			obj.rconn = -1;
 			try
 				pnet('closeall');
-				obj.salutation('closeAll Method','Trying to close all PNet connections')
-				
+				obj.salutation('closeAll Method','Closed all PNet connections')
 			catch
 				obj.salutation('closeAll Method','Failed to close all PNet connections')
 				obj.status = -1;
 			end
-			obj.status = pnet(obj.conn,'status');
-			if obj.status <=0;obj.isOpen = 0;obj.salutation('closeAll Method','Connection appears closed...');end
 			status = obj.status;
 		end
 		

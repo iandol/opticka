@@ -13,9 +13,9 @@ classdef opxOnline < handle
 		autoRun = 1
 		isSlave = 0
 		protocol = 'udp'
-		rAddress = '127.0.0.1'
+		rAddress = [127 0 0 1]
 		rPort = 8998
-		lAddress = '127.0.0.1'
+		lAddress = [127 0 0 1]
 		lPort = 9889
 		pollTime = 0.5
 		verbosity = 0
