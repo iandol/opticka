@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.498'
+		version='0.499'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection
@@ -109,7 +109,7 @@ classdef (Sealed) opticka < handle
 			if obj.oc.checkStatus < 1
 				loop = 1;
 				while loop <= 10
-					obj.oc.close('conn');
+					obj.oc.close('conn',1);
 					fprintf('\nTrying to connect...\n');
 					obj.oc.open;
 					if obj.oc.checkStatus > 0
@@ -147,8 +147,9 @@ classdef (Sealed) opticka < handle
 				data=obj.oc.read('all');
 				if obj.oc.checkStatus > 0 %check again to make sure we are still open
 					obj.oc.write('--readStimulus--');
-					pause(0.2)
-					obj.oc.writeVar('o',obj);
+					pause(0.25);
+					tmpobj=obj.r;
+					obj.oc.writeVar('o',tmpobj);
 				end
 			end
 		end
@@ -419,6 +420,8 @@ classdef (Sealed) opticka < handle
 			tmp.disableNorm = obj.gv(obj.h.OKPanelGratingdisableNorm);
 			tmp.spatialConstant = obj.gn(obj.h.OKPanelGratingspatialConstant);
 			tmp.sigma = obj.gn(obj.h.OKPanelGratingsigma);
+			tmp.useAlpha = obj.gv(obj.h.OKPanelGratinguseAlpha);
+			tmp.smoothMethod = obj.gv(obj.h.OKPanelGratingsmoothMethod);
 			
 			obj.r.stimulus{obj.r.sList.n+1} = gratingStimulus(tmp);
 			
@@ -912,6 +915,7 @@ classdef (Sealed) opticka < handle
 		% ===================================================================
 		function obj = saveobj(obj)
 			obj.store.oldlook=[]; %need to remove this as java objects not supported for save in matlab
+			obj.oc = [];
 		end
 		
 		% ===================================================================

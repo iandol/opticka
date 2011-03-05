@@ -30,10 +30,15 @@ classdef gratingStimulus < baseStimulus
 		aspectRatio = 1
 		disableNorm = 1
 		contrastMult = 0.5
-		% a divisor for the size for the gaussian envelope for a gabor
+		%> a divisor for the size for the gaussian envelope for a gabor
 		spatialConstant = 6
-		%cosine smoothing sigma in pixels for circular masked gratings
-		sigma = 0;
+		%> cosine smoothing sigma in pixels for circular masked gratings
+		sigma = 0.0
+		%> use colour or alpha channel for smoothing?
+		useAlpha = 0.0
+		%> use cosine (o) or hermite interpolation (1)
+		smoothMethod = 1.0
+		%> scale is used when changing size as an independent variable to keep sf accurate
 		scale = 1
 	end
 	
@@ -42,7 +47,7 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(sf|tf|method|angle|motionAngle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant|sigma)$';
+		allowedProperties='^(sf|tf|method|angle|motionAngle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod)$';
 		ignoreProperties='phaseIncrement|disableNorm|gabor|contrastMult|mask'
 	end
 	
@@ -164,8 +169,16 @@ classdef gratingStimulus < baseStimulus
 			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
 			if obj.gabor==0
-				obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
-					obj.res(2), obj.colour, obj.mask, obj.contrastMult);
+				if obj.sigma > 0
+					p = mfilename('fullpath');
+					shaderPath = [fileparts(p) filesep];
+					obj.texture = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
+						obj.res(2), obj.colour, obj.mask, obj.contrastMult, obj.sigma, ...
+						obj.useAlpha, obj.smoothMethod, shaderPath);
+				else
+					obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
+						obj.res(2), obj.colour, obj.mask, obj.contrastMult);
+				end
 			else
 				if obj.aspectRatio == 1
 					nonSymmetric = 0;

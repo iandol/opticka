@@ -35,10 +35,10 @@ function hFig = uiinspect(obj, fig)
 %    a Java frame that is not easily accessible from Matlab).
 %
 % Examples:
-%    hFig = uiinspect(0);              % root (desktop)
-%    hFig = uiinspect(handle(0));      % root handle
-%    hFig = uiinspect(gcf);            % current figure
-%    uiinspect(get(gcf,'JavaFrame'));  % current figure's Java Frame
+%    hFig = uiinspect(0);                         % root (desktop)
+%    hFig = uiinspect(handle(0));                 % root handle
+%    hFig = uiinspect(gcf);                       % current figure
+%    uiinspect(get(gcf,'JavaFrame'));             % current figure's Java Frame
 %    uiinspect(classhandle(handle(gcf)));         % a schema.class object
 %    uiinspect(findprop(handle(gcf),'MenuBar'));  % a schema.prop object
 %    uiinspect('java.lang.String');               % a Java class name
@@ -47,6 +47,7 @@ function hFig = uiinspect(obj, fig)
 %    uiinspect(Employee)                          % a Matlab class object
 %    uiinspect(?handle)                           % a Matlab metaclass object
 %    uiinspect('meta.class')                      % a Matlab class name
+%    uiinspect(System.Diagnostics.Process.GetCurrentProcess)   % a .Net object
 %
 % Known issues/limitations:
 %    - Fix: some fields generate a Java Exception, or a Matlab warning
@@ -60,6 +61,9 @@ function hFig = uiinspect(obj, fig)
 %    Please send to Yair Altman (altmany at gmail dot com)
 %
 % Change log:
+%    2011-03-03: Fixed several issues in the Value field of the "Other properties" table
+%    2011-02-28: Removed R2010b warning messages; minor fix for Dot-Net classes
+%    2010-11-02: Minor fixes for callbacks table; fixed online docpage for Swing classes
 %    2010-11-01: Major fix for pre-R2010 compatibility
 %    2010-10-20: Minor fix suggested by Andrew Stamps; added automatic callbacks grouping
 %    2010-06-13: Fixed download (m-file => zip-file)
@@ -87,7 +91,7 @@ function hFig = uiinspect(obj, fig)
 % referenced and attributed as such. The original author maintains the right to be solely associated with this work.
 
 % Programmed by Yair M. Altman: altmany(at)gmail.com
-% $Revision: 1.17 $  $Date: 2010/11/01 21:16:24 $
+% $Revision: 1.19 $  $Date: 2011/03/03 10:24:53 $
 
   try
       % Arg check
@@ -443,7 +447,9 @@ function [propsPane, inspectorTable] = getPropsPane(obj)
       classNameLabel.setForeground(Color.blue);
       objProps = updateObjTooltip(obj, classNameLabel);  %#ok unused
       propsPane = JPanel(BorderLayout);
+      oldWarn = warning('off','MATLAB:hg:JavaSetHGProperty');
       set(propsPane, 'UserData',classNameLabel);
+      warning(oldWarn);
       propsPane.add(classNameLabel, BorderLayout.NORTH);
       % TODO: Maybe uncomment the following - in the meantime it's unused (java properties are un-groupable)
       %objReg = com.mathworks.services.ObjectRegistry.getLayoutRegistry;
@@ -572,6 +578,7 @@ function [cbData, cbHeaders, cbTableEnabled] = getCbsData(obj, stripStdCbsFlag)
               elseif iscell(cbNames)
                   %cbData = [cbNames, get(obj,cbNames)'];
                   cbData = cbNames;
+                  oldWarn = warning('off','MATLAB:hg:JavaSetHGProperty');
                   for idx = 1 : length(cbNames)
                       try
                           cbData{idx,2} = charizeData(get(obj,cbNames{idx}));
@@ -579,6 +586,7 @@ function [cbData, cbHeaders, cbTableEnabled] = getCbsData(obj, stripStdCbsFlag)
                           cbData{idx,2} = '(callback value inaccessible)';
                       end
                   end
+                  warning(oldWarn);
               else  % only one event callback
                   %cbData = {cbNames, get(obj,cbNames)'};
                   %cbData{1,2} = charizeData(cbData{1,2});
@@ -725,13 +733,21 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
                       % TODO: some fields (see EOL comment below) generate a Java Exception from: com.mathworks.mlwidgets.inspector.PropertyRootNode$PropertyListener$1$1.run
                       if strcmpi(sp.AccessFlags.PublicGet,'on') % && ~any(strcmpi(sp.Name,{'FixedColors','ListboxTop','Extent'}))
                           try
-                              % Trap warning about unused/depracated properties
+                              % Trap warning about unused/deprecated properties
                               s = warning('off','all');
                               lastwarn('');
                               value = get(obj, sp.Name);
-                              disp(lastwarn);
+                              strToIgnore = 'Possible deprecated use of get on a Java object';
+                              if ~strncmpi(strToIgnore,lastwarn,length(strToIgnore))
+                                  disp(lastwarn);
+                              end
                               warning(s);
-                              propsData{idx,3} = charizeData(value);
+                              value = charizeData(value);
+                              if ~isempty(value) && any(strfind(value,'>'))
+                                  propsData{idx,3} = ['<html>' value];
+                              else
+                                  propsData{idx,3} = value;
+                              end
                           catch
                               errMsg = regexprep(lasterr, {char(10),'Error using ==> get.Java exception occurred:..'}, {' ',''});
                               propsData{idx,3} = [errorPrefix errMsg];
@@ -775,7 +791,12 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
 						  if strcmpi(mp.GetAccess,'public')
 							  try
 								  value = obj.(propName);
-								  propsData{idx,3} = charizeData(value);
+                                  value = charizeData(value);
+                                  if ~isempty(value) && any(strfind(value,'>'))
+                                      propsData{idx,3} = ['<html>' value];
+                                  else
+                                      propsData{idx,3} = value;
+                                  end
 							  catch
 								  errMsg = regexprep(lasterr, {char(10),'Error using ==> get.Java exception occurred:..'}, {' ',''});
 								  propsData{idx,3} = [errorPrefix errMsg];
@@ -896,7 +917,7 @@ function list = getTreeData(data)
                 others(end+1,:) = data(propIdx,:);  %#ok
             end
         end
-        for propIdx = 1 : length(others)
+        for propIdx = 1 : size(others,1)
             setProp(list,others{propIdx,1},others{propIdx,2},'Other');
         end
 %end  % getTreeData
@@ -1105,8 +1126,9 @@ function [methodsPane, hgFlag] = getMethodsPane(methodsObj, obj)
 						  prefix = 'j2se/1.5.0';
 					  otherwise %case com.mathworks.util.PlatformInfo.VERSION_16
 						  prefix = 'javase/6';
-				  end
-				  url = ['http://java.sun.com/' prefix '/docs/api/' strrep(hyperlink,'.','/') '.html']; % TODO: treat classNames with internal '.'
+                  end
+                  domain = 'http://java.sun.com'; %download.oracle.com';  % old: java.sun.com
+				  url = [domain '/' prefix '/docs/api/' strrep(hyperlink,'.','/') '.html']; % TODO: treat classNames with internal '.'
 				  targetStr = ['web(''' url ''')'];
 			  end
 			  set(handle(methodsLabel,'CallbackProperties'), 'MouseClickedCallback', targetStr);
@@ -1165,7 +1187,9 @@ function handleTree = getHandleTree(obj)
       rootName = getNodeName(hRoot);
       isLeaf = isempty(allchild(hRoot));
       try
+          oldWarn = warning('off','MATLAB:uitreenode:DeprecatedFunction');
           rootNode = uitreenode('v0', handle(hRoot), rootName, icon, isLeaf);
+          warning(oldWarn);
       catch  % old matlab version don't have the 'v0' option
           rootNode = uitreenode(handle(hRoot), rootName, icon, isLeaf);
       end
@@ -1749,7 +1773,9 @@ function nodes = getChildrenNodes(tree, parentNode)  %#ok tree is unused
                 [icon, iconObj] = getNodeIcon(thisChild);
                 isLeaf = isempty(findall(thisChild));
                 try
+                    oldWarn = warning('off','MATLAB:uitreenode:DeprecatedFunction');
                     nodes(cIdx) = uitreenode('v0', thisChildHandle, childName, icon, isLeaf);
+                    warning(oldWarn);
                 catch  % old matlab version don't have the 'v0' option
                     try
                         nodes(cIdx) = uitreenode(thisChildHandle, childName, icon, isLeaf);
@@ -1964,11 +1990,13 @@ function [othersPane, propsNum] = getChildrenPane(obj, inspectorTable, propsPane
 		  othersLabel.setToolTipText('Properties not inspectable by the inspect table above');
       else
           try
+              oldWarn = warning('off','MATLAB:hg:JavaSetHGProperty');
               classNameLabel = get(propsPane, 'UserData');
               othersLabel.setToolTipText(classNameLabel.getToolTipText);
           catch
               % never mind...
           end
+          warning(oldWarn);
 	  end
 	  othersLabel.setForeground(Color.blue);
 	  ud.othersLabel = othersLabel;
@@ -2017,7 +2045,7 @@ function [othersPane, propsNum] = getChildrenPane(obj, inspectorTable, propsPane
       propNameTextField.setEditable(false);  % ensure that the prop names are not modified...
       propNameCellEditor = DefaultCellEditor(propNameTextField);
       propNameCellEditor.setClickCountToStart(intmax);  % i.e, never enter edit mode...
-	  if isempty(inspectorTable)
+	  if ~isobject(obj) && isempty(inspectorTable)
 		  readOnlyCols = 0 : propsTable.getColumnModel.getColumnCount-1;
 	  else
 		  readOnlyCols = 0;
@@ -2239,7 +2267,7 @@ function updatePropsTable(src, evd, varargin)  %#ok partially unused
         propCellEditor.setClickCountToStart(intmax);  % i.e, never enter edit mode...
         for colIdx = 0 : propsTable.getColumnModel.getColumnCount-1
             thisColumn = propsTable.getColumnModel.getColumn(colIdx);
-            if ~strcmp(thisColumn.getHeaderValue,'Value')
+            if ~strcmp(thisColumn.getHeaderValue,'Value') || (~isobject(ud.obj) && isempty(ud.inspectorTable))
                 thisColumn.setCellEditor(propCellEditor);
             end
         end
@@ -2307,7 +2335,7 @@ function tbCallbacksChanged(src, evd)
                                 cbs = cbs(strcmpi(cbs(:,1),cbName),:);
                                 obj.unregisterevent(cbs);
                             end
-                            if ~isempty(cbValue)
+                            if ~isempty(cbValue) && ~strcmp(cbName,'-')
                                 obj.registerevent({cbName, cbValue});
                             end
                         end
@@ -2460,7 +2488,7 @@ function tbPropChanged(src, evd)
 
 %% Repaint inspectorTable following a property modification
 function repaintInspector(timerObj, timerData, inspectorTable)  %#ok partially unused
-    inspectorTable.repaint;
+    try inspectorTable.repaint; catch, end
 %end % repaintInspector
 
 %% Get an HTML representation of the object's properties
@@ -2554,6 +2582,8 @@ function dataFields = updateObjTooltip(obj, uiObject)
         ch = classhandle(handle(obj));
         dataFields = [];
         [sortedNames, sortedIdx] = sort(get(ch.Properties,'Name'));
+        oldWarn1 = warning('off','MATLAB:hg:JavaSetHGProperty');
+        oldWarn2 = warning('off','MATLAB:hg:Root');
         for idx = 1 : length(sortedIdx)
             sp = ch.Properties(sortedIdx(idx));
             % TODO: some fields (see EOL comment below) generate a Java Exception from: com.mathworks.mlwidgets.inspector.PropertyRootNode$PropertyListener$1$1.run
@@ -2567,6 +2597,8 @@ function dataFields = updateObjTooltip(obj, uiObject)
                 dataFields.(sp.Name) = '(no public getter method)';
             end
         end
+        warning(oldWarn2);
+        warning(oldWarn1);
         dataFieldsStr = getPropsHtml(obj, dataFields);
     catch
         % Probably a non-HG java object

@@ -13,23 +13,23 @@ classdef opxOnline < handle
 		autoRun = 1
 		isSlave = 0
 		protocol = 'udp'
-		rAddress = [127 0 0 1]
+		rAddress = '127.0.0.1'
 		rPort = 8998
-		lAddress = [127 0 0 1]
+		lAddress = '127.0.0.1'
 		lPort = 9889
 		pollTime = 0.5
 		verbosity = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		masterPort = 9990
-		slavePort = 9991
+		masterPort = 11111
+		slavePort = 11112
 		opxConn %> connection to the omniplex
 		conn %listen connection
 		msconn %master slave connection
 		spikes %hold the sorted spikes
 		nRuns = 0
-		totalRuns = 5
+		totalRuns = 0
 		trial = struct()
 		parameters
 		units
@@ -75,7 +75,7 @@ classdef opxOnline < handle
 			end
 			if ispc
 				obj.masterCommand = '!matlab -nodesktop -nosplash -r "opxRunMaster" &';
-				obj.slaveCommand = '!matlab -nodesktop -nosplash -nojvm -r "opxRunSlave" &';
+				obj.slaveCommand = '!matlab -nodesktop -nosplash -r "opxRunSlave" &';
 			else
 				obj.masterCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -maci -r \"opxRunMaster\""'' -e ''end tell''';
 				obj.slaveCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -nojvm -maci -r \"opxRunSlave\""'' -e ''end tell''';
@@ -84,6 +84,7 @@ classdef opxOnline < handle
 				
 				case 'master'
 					
+					obj.initializeUI;					
 					obj.spawnSlave;
 					if obj.isSlaveConnected == 0
 						warning('Sorry, slave process failed to initialize!!!')
@@ -94,7 +95,7 @@ classdef opxOnline < handle
 				case 'slave'
 					
 					obj.initializeSlave;
-					obj.waitSlave;
+					obj.listenSlave;
 					
 				case 'launcher'
 					%we simply need to launch a new master and return
@@ -126,34 +127,54 @@ classdef opxOnline < handle
 				end
 			end
 			
-			if obj.conn.checkStatus < 1;
+			if obj.conn.checkStatus('rconn') < 1;
 				obj.conn.open;
 			end
 			
 			while loop
-				if ~rem(loop,20);fprintf('.');end
-				if ~rem(loop,200);fprintf('\n');fprintf('~');obj.msconn.write('--master growls--');end
+				if ~rem(loop,30);
+					fprintf('.');
+					if isa(obj.stimulus,'runExperiment')
+						set(obj.h.opxUIInfoBox,'String',['We have stimulus, nRuns= ' num2str(obj.totalRuns) ' | waiting for go...'])
+					elseif obj.conn.checkStatus('conn') > 0
+						set(obj.h.opxUIInfoBox,'String','Waiting for opticka to connect...')
+					end
+				end
+				if ~rem(loop,300);fprintf('\n');fprintf('growl');obj.msconn.write('--master growls--');end
 				
 				if obj.conn.checkData
 					data = obj.conn.read(0);
 					%data = regexprep(data,'\n','');
 					fprintf('\n{opticka message:%s}',data);
 					switch data
+						
 						case '--ping--'
 							obj.conn.write('--ping--');
 							obj.msconn.write('--ping--');
 							fprintf('\nOpticka pinged us, we ping opticka and slave!');
+							
 						case '--readStimulus--'
-							obj.stimulus = []; obj.stimulus=obj.conn.readVar;
-							obj.totalRuns = obj.stimulus.r.task.nRuns;
-							if isa(obj.stimulus,'opticka')
-								fprintf('We have the stimulus from opticka, waiting for GO!');
-								obj.msconn.write('--nRuns--');
-								obj.msconn.write(uint32(obj.totalRuns));
-							else
-								fprintf('We have a stimulus from opticka, but it is malformed!');
-								obj.stimulus = [];
+							obj.stimulus = [];
+							tloop = 1;
+							while tloop < 10
+								pause(0.3);
+								if obj.conn.checkData
+									pause(0.3);
+									obj.stimulus=obj.conn.readVar;
+									if isa(obj.stimulus,'runExperiment')
+										fprintf('We have the stimulus from opticka, waiting for GO!');
+										obj.totalRuns = obj.stimulus.task.nRuns;
+										obj.msconn.write('--nRuns--');
+										obj.msconn.write(uint32(obj.totalRuns));
+									else
+										fprintf('We have a stimulus from opticka, but it is malformed!');
+										obj.stimulus = [];
+									end
+									break
+								end
+								tloop = tloop + 1;
 							end
+							
 						case '--GO!--'
 							if ~isempty(obj.stimulus)
 								loop = 0;
@@ -161,17 +182,17 @@ classdef opxOnline < handle
 								obj.parseData;
 								break
 							end
-						case '--flushData--'
-							fprintf('Opticka asked us to clear data, we should comply!');
-							%obj.flushData;
+							
 						case '--bark order--'
-							obj.msconn.write('\n--obey me!--\n');
+							obj.msconn.write('--obey me!--');
 							fprintf('\nOpticka asked us to bark, we should comply!');
+							
 						case '--quit--'
 							fprintf('\nOpticka asked us to quit, meanies!');
 							obj.msconn.write('--quit--')
 							loop = 0;
 							break
+							
 						otherwise
 							fprintf('Someone spoke, but what did they say?...')
 					end
@@ -205,10 +226,10 @@ classdef opxOnline < handle
 				
 				if obj.conn.checkStatus ~= 12; %are we a TCP server?
 					obj.conn.checkClient;
-					if obj.conn.conn > -1
+					if obj.conn.conn > 0
 						fprintf('\nWe''ve opened a new connection to opticka...\n')
 						obj.conn.write('--opened--');
-						pause(0.25)
+						pause(0.2)
 					end
 				end
 				
@@ -227,9 +248,10 @@ classdef opxOnline < handle
 		%>
 		%>
 		% ===================================================================
-		function waitSlave(obj)
-			fprintf('\nHumble Slave is Eagerly Listening to Master');
+		function listenSlave(obj)
+			fprintf('\nHumble Slave is Eagerly Listening to Master\n');
 			loop = 1;
+			obj.totalRuns = 0; %we reset it waiting for new stimulus
 			
 			if obj.msconn.checkStatus < 1 %have we disconnected?
 				checkS = 1;
@@ -245,56 +267,85 @@ classdef opxOnline < handle
 			end
 			
 			while loop
-				if ~rem(loop,20);fprintf('.');end
-				if ~rem(loop,200);fprintf('\n');fprintf('~');obj.msconn.write('--abuse me do!--');end
+				if ~rem(loop,30);fprintf('.');end
+				if ~rem(loop,300);fprintf('\n');fprintf('quiver');obj.msconn.write('--abuse me do!--');end
 				if obj.msconn.checkData
 					data = obj.msconn.read(0);
 					data = regexprep(data,'\n','');
 					fprintf('\n{message:%s}',data);
 					switch data
+						
 						case '--nRuns--'
-							nRuns = double(obj.msconn.read(0,'uint32'));
-							obj.totalRuns = nRuns;
-							fprintf('\nMaster send us number of runs: %d\n',obj.totalRuns);
+							tloop = 1;
+							while tloop < 10
+								pause(0.1);
+								if obj.msconn.checkData
+									pause(0.1);
+									nRun = double(obj.msconn.read(0,'uint32'));
+									obj.totalRuns = nRun;
+									fprintf('\nMaster send us number of runs: %d\n',obj.totalRuns);
+									break
+								end
+							end
+							
 						case '--ping--'
 							obj.msconn.write('--ping--');
-							fprintf('\nMaster pinged us, we ping back!');
+							fprintf('\nMaster pinged us, we ping back!\n');
+							
 						case '--hello--'
-							fprintf('\nThe master has spoken...');
-							obj.msconn.write('--i bow--')
+							fprintf('\nThe master has spoken...\n');
+							obj.msconn.write('--i bow--');
+							
 						case '--tmpFile--'
-							obj.tmpFile = obj.msconn.read(0);
-							fprintf('\nThe master tells me tmpFile= %s',obj.tmpFile);
+							tloop = 1;
+							while tloop < 10
+								pause(0.1);
+								if obj.msconn.checkData
+									obj.tmpFile = obj.msconn.read(0);
+									fprintf('\nThe master tells me tmpFile= %s\n',obj.tmpFile);
+									break
+								end
+								tloop = tloop + 1;
+							end
+							
 						case '--master growls--'
-							fprintf('\nMaster growls, time to lick some boot...');
+							fprintf('\nMaster growls, we should lick some boot...\n');
+							
 						case '--quit--'
 							fprintf('\nMy service is no longer required (sniff)...\n');
 							data = obj.msconn.read(1); %we flush out the remaining commands
 							%eval('exit')
 							break
+							
 						case '--GO!--'
-							fprintf('Time to run, yay!')
+							fprintf('\nTime to run, yay!\n')
 							loop = 0;
+							if obj.totalRuns > 0
+								obj.collectData;
+							end
+							
 						case '--obey me!--'
-							fprintf('\nThe master has barked because of opticka...');
-							obj.msconn.write('--i quiver before you and opticka--')
-						case '--tempfile--'
-							obj.tmpFile = obj.msconn.read(0);
-							fprintf('\nThe master told us tmp file is: %s', obj.tmpFile);
+							fprintf('\nThe master has barked because of opticka...\n');
+							obj.msconn.write('--i quiver before you and opticka--');
+							
 						otherwise
-							fprintf('\nThe master has barked, but I understand not!...');
+							fprintf('\nThe master has barked, but I understand not!...\n');
 					end
 				end
-				if obj.msconn.checkStatus == 0 %have we disconnected?
-					checkS = 1;
-					while checkS < 5
-						obj.msconn.close; %lets reconnect
-						pause(0.1)
+				if obj.msconn.checkStatus('conn') < 1 %have we disconnected?
+					loop = 1;
+					while loop < 10
+						for i = 1:length(obj.msconn.connList)
+							try %#ok<TRYNC>
+								pnet(obj.msconn.connList(i), 'close');
+							end
+						end
 						obj.msconn.open;
 						if obj.msconn.checkStatus ~= 0; 
 							break
 						end
-						checkS = checkS + 1;
+						pause(0.1);
+						loop = loop + 1;
 					end
 				end
 				if obj.checkKeys
@@ -303,7 +354,7 @@ classdef opxOnline < handle
 				pause(0.2);
 				loop = loop + 1;
 			end
-			fprintf('\nSlave is sleeping, use waitSlave to make me listen again...');		
+			fprintf('\nSlave is sleeping, use listenSlave to make me listen again...');		
 		end
 		
 		% ===================================================================
@@ -312,7 +363,20 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function parseData(obj)
-			
+			loop = 1;
+			fprintf('\n\n===Parse Data Loop Starting===\n')
+			while loop
+				if ~rem(loop,20);fprintf('.');end
+				if ~rem(loop,200);fprintf('\n');fprintf('ParseData:');obj.msconn.write('--master growls--');end
+				
+				if obj.conn.checkData
+					data = obj.conn.read(0);
+					%data = regexprep(data,'\n','');
+					fprintf('\n{opticka message:%s}',data);
+				end
+				pause(0.1);
+				loop = loop + 1;
+			end
 		end
 		
 		% ===================================================================
@@ -320,7 +384,7 @@ classdef opxOnline < handle
 		%>
 		%>
 		% ===================================================================
-		function run(obj)
+		function collectData(obj)
 			tic
 			abort=0;
 			obj.nRuns = 0;
@@ -373,7 +437,7 @@ classdef opxOnline < handle
 				% with the Plexon server
 				obj.closePlexon;
 				
-				obj.waitSlave;
+				obj.listenSlave;
 				
 			catch ME
 				obj.nRuns = 0;
@@ -504,6 +568,19 @@ classdef opxOnline < handle
 					end
 			end
 		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
+		function initializeUI(obj)
+			uihandle=opx_ui; %our GUI file
+			obj.h=guidata(uihandle);
+			obj.h.uihandle = uihandle;
+		end
+		
+		
 		% ===================================================================
 		%> @brief
 		%>
@@ -522,7 +599,7 @@ classdef opxOnline < handle
 			obj.tmpFile = [tempname,'.mat'];
 			obj.msconn.write('--tmpFile--');
 			obj.msconn.write(obj.tmpFile)
-			fprintf('We tell slave to use tmpFile = %s', obj.tmpFile)
+			fprintf('We tell slave to use tmpFile = %s\n', obj.tmpFile)
 		end
 		
 		% ===================================================================
@@ -549,9 +626,8 @@ classdef opxOnline < handle
 		% ===================================================================
 		function spawnSlave(obj)
 			eval(obj.slaveCommand);
-			obj.msconn=dataConnection(struct('rPort',obj.slavePort,'lPort', ...
-				obj.masterPort, 'rAddress', obj.lAddress,'protocol',obj.protocol,'autoOpen',1, ...
-				'verbosity',obj.verbosity));
+			obj.msconn=dataConnection(struct('verbosity',obj.verbosity, 'rPort',obj.slavePort,'lPort', ...
+				obj.masterPort, 'rAddress', obj.lAddress,'protocol',obj.protocol,'autoOpen',1));
 			if obj.msconn.isOpen == 1
 				fprintf('\nMaster can bark at slave...')
 			else
@@ -567,7 +643,7 @@ classdef opxOnline < handle
 				pause(0.1)
 				response = obj.msconn.read;
 				if iscell(response);response=response{1};end
-				if ~isempty(response) && ~isempty(regexpi(response, '--i bow--'))
+				if ~isempty(response) && ~isempty(regexpi(response, 'i bow'))
 					fprintf('\nSlave knows who is boss...')
 					obj.isSlaveConnected = 1;
 					obj.isMasterConnected = 1;

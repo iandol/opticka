@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 03-Mar-2011 13:14:40
+% Last Modified by GUIDE v2.5 04-Mar-2011 14:46:43
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1042,8 +1042,6 @@ if isappdata(0,'o')
 		o.sendOmniplexStimulus;
 	end
 end
-
-
 
 function OKOmniplexIP_Callback(hObject, eventdata, handles)
 % hObject    handle to OKOmniplexIP (see GCBO)

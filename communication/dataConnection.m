@@ -14,8 +14,8 @@ classdef dataConnection < handle
 		protocol = 'tcp'
 		lPort = 1111
 		rPort = 5678
-		lAddress = [127 0 0 1]
-		rAddress = [127 0 0 1]
+		lAddress = '127.0.0.1'
+		rAddress = '127.0.0.1'
 		autoOpen = 0
 		dataOut = []
 		dataType = 'string'
@@ -196,7 +196,7 @@ classdef dataConnection < handle
 								try
 									pnet(obj.connList(i), 'close');
 								catch %#ok<CTCH>
-									fprintf('Couldn''t close connection %i, perhaps closed?\n',obj.rconnList(i));
+									fprintf('Couldn''t close connection %i, perhaps closed?\n',obj.connList(i));
 								end
 							end
 						end
@@ -209,6 +209,10 @@ classdef dataConnection < handle
 						obj.status = pnet(obj.rconn,'status');
 						if obj.status <=0;
 							obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
+						elseif force == 0
+							try %#ok<TRYNC>
+								pnet(obj.rconn, 'close');
+							end
 						else
 							for i = 1:length(obj.rconnList)
 								try
@@ -263,7 +267,7 @@ classdef dataConnection < handle
 					end
 					
 				case 'tcp'
-					data = pnet(obj.conn, 'read', 65536, obj.dataType, 'noblock', 'view');
+					data = pnet(obj.conn, 'read', 1024, obj.dataType, 'noblock', 'view');
 					if ~isempty(data)
 						obj.hasData = 1;
 					end
@@ -420,9 +424,7 @@ classdef dataConnection < handle
 		% ===================================================================
 		% Read any avalable data from the given pnet socket.
 		function data = readVar(obj)
-			tic
 			data = obj.getVar;
-			toc
 		end
 		
 		% ===================================================================
@@ -432,9 +434,7 @@ classdef dataConnection < handle
 		% ===================================================================
 		% Write data to the given pnet socket.
 		function writeVar(obj, varargin)
-			tic
 			obj.putVar(varargin);
-			toc
 		end
 		
 		% ===================================================================
@@ -489,7 +489,7 @@ classdef dataConnection < handle
 		function status = checkStatus(obj,conn) %#ok<INUSD>
 			status = -1;
 			try
-				if ~exist('conn','var') || obj.conn ~= -1 || strcmp(conn,'conn')
+				if ~exist('conn','var') || strcmp(conn,'conn')
 					conn='conn';
 				else
 					conn = 'rconn';
@@ -792,17 +792,17 @@ classdef dataConnection < handle
 								pnet(obj.conn,'Write',uint32(size(VAR)));
 								pnet(obj.conn,'Write',VAR);
 							otherwise
-								tmpfile=[tempname,'.mat'];
+								tmpfile=[tempname,'.mat']
 								try
 									save(tmpfile,'VAR');
 									filedata=dir(tmpfile);
-									%obj.dataLength = filedata.bytes;
+									dataLength = filedata.bytes
 									pnet(obj.conn,'printf','\n--matfile--\n');
 									pnet(obj.conn,'Write',uint32(filedata.bytes));
 									pnet(obj.conn,'WriteFromFile',tmpfile);
 								end
 								try
-									delete(tmpfile);
+									%delete(tmpfile);
 								end
 						end
 				end
@@ -870,7 +870,7 @@ classdef dataConnection < handle
 									load(tmpfile);
 								end
 								try
-									delete(tmpfile);
+									%delete(tmpfile);
 								end
 								break
 						end
