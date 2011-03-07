@@ -55,6 +55,7 @@ void main()
         gl_FragColor = (baseColor * (sv * Mod)) + Offset;
     }
     else {
-        gl_FragColor.a = Mod;
+		gl_FragColor = (baseColor * sv) + Offset;
+      gl_FragColor.a = Mod;
     }
 }

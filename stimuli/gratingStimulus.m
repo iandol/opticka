@@ -26,7 +26,9 @@ classdef gratingStimulus < baseStimulus
 		mask = 1
 		gabor = 0
 		driftDirection=1
+		%> the angle which the direction of the grating patch is moving
 		motionAngle = 0
+		%> aspect ratio of the gabor
 		aspectRatio = 1
 		disableNorm = 1
 		contrastMult = 0.5
@@ -40,6 +42,8 @@ classdef gratingStimulus < baseStimulus
 		smoothMethod = 1.0
 		%> scale is used when changing size as an independent variable to keep sf accurate
 		scale = 1
+		%> do we need to correct the phase to be relative to center not edge?
+		correctPhase = 1
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -156,7 +160,12 @@ classdef gratingStimulus < baseStimulus
 			end
 			
 			if isempty(obj.findprop('driftPhase'));p=obj.addprop('driftPhase');p.Transient=true;end
-			obj.driftPhase = obj.phaseOut;
+			if obj.correctPhase
+				ps=obj.calculatePhase;
+				obj.driftPhase=obj.phaseOut-ps;
+			else
+				obj.driftPhase=obj.phaseOut;
+			end
 			
 			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
 			obj.res = [obj.gratingSize obj.gratingSize];
@@ -202,7 +211,12 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function update(obj)
 			obj.setRect();
-			obj.driftPhase=obj.phaseOut;
+			if obj.correctPhase
+				ps=obj.calculatePhase;
+				obj.driftPhase=obj.phaseOut-ps;
+			else
+				obj.driftPhase=obj.phaseOut;
+			end
 		end
 		
 		% ===================================================================
@@ -259,6 +273,22 @@ classdef gratingStimulus < baseStimulus
 			end
 			obj.sf = value;
 			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
+		end
+		
+		% ===================================================================
+		%> @brief calculate phase offset
+		%>
+		% ===================================================================
+		function phase = calculatePhase(obj)
+			phase = 0;
+			if obj.correctPhase > 0
+				ppd = obj.ppd;
+				size = (obj.sizeOut/2); %divide by 2 to get the 0 point
+				sf = obj.sfOut*obj.ppd;
+				md = size / (ppd/sf);
+				md=md-floor(md);
+				phase = (360*md);
+			end
 		end
 		
 	end %---END PUBLIC METHODS---%

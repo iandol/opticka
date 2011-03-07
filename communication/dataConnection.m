@@ -22,6 +22,8 @@ classdef dataConnection < handle
 		verbosity = 1
 		autoRead = 1
 		autoServer = 0
+		readTimeOut = 0.1
+		writeTimeOut = 0.1
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -39,7 +41,7 @@ classdef dataConnection < handle
 		rconnList
 		conn = -1
 		rconn = -1
-		allowedProperties='^(type|protocol|lPort|rPort|lAddress|rAddress|autoOpen|dataType|verbosity|autoRead|autoServer)$'
+		allowedProperties='^(type|protocol|lPort|rPort|lAddress|rAddress|autoOpen|dataType|verbosity|autoRead|autoServer|readTimeOut|writeTimeOut)$'
 		remoteCmd = '--remote--'
 		breakCmd = '--break--'
 		busyCmd = '--busy--'
@@ -83,8 +85,8 @@ classdef dataConnection < handle
 				case 'udp'
 					obj.conn = pnet('udpsocket', obj.lPort);
 					if obj.conn >= 0
-						pnet(obj.conn ,'setwritetimeout', 0);
-						pnet(obj.conn ,'setreadtimeout', 0);
+						pnet(obj.conn ,'setwritetimeout', obj.writeTimeOut);
+						pnet(obj.conn ,'setreadtimeout', obj.readTimeOut);
 						obj.isOpen = 1;
 						obj.connList = [obj.connList obj.conn];
 					else
@@ -102,15 +104,21 @@ classdef dataConnection < handle
 							loop = 1;
 							while loop <= 10
 								obj.rconn = pnet('tcpsocket',obj.lPort);
-								pnet(obj.rconn ,'setwritetimeout', 0);
-								pnet(obj.rconn ,'setreadtimeout', 0);
-								if obj.rconn < 1
+								pnet(obj.rconn ,'setwritetimeout', obj.writeTimeOut);
+								pnet(obj.rconn ,'setreadtimeout', obj.readTimeOut);
+								if obj.rconn < 0
 									fprintf('\n%s cannot create TCP server (status: %d)',mfilename,obj.rconn);
 									pause(0.1);
 									if loop == 2 %see if we have rogue connetions
 										for i = 1:length(obj.rconnList)
 											try %#ok<TRYNC>
 												pnet(obj.rconnList(i),'close');
+											end
+										end
+									elseif loop == 3
+										for i = 0:8
+											try
+												pnet(i,'close');
 											end
 										end
 									end
@@ -140,8 +148,8 @@ classdef dataConnection < handle
 							
 							if obj.conn >= 0
 								% disable blocking
-								pnet(obj.conn ,'setwritetimeout', 0);
-								pnet(obj.conn ,'setreadtimeout', 0);
+								pnet(obj.conn ,'setwritetimeout', obj.writeTimeOut);
+								pnet(obj.conn ,'setreadtimeout', obj.readTimeOut);
 								obj.status = pnet(obj.conn,'status');
 								if obj.status < 1
 									obj.close('conn')
@@ -397,23 +405,33 @@ classdef dataConnection < handle
 		%>
 		% ===================================================================
 		% Write data to the given pnet socket.
-		function status = write(obj, data)
+		function nOut = write(obj, data, formatted)
+			
+			if ~exist('data','var')
+				data = obj.dataOut;
+			end
+			if ~exist('formatted','var')
+				formatted = 0;
+			end
+			
 			switch obj.protocol
 				
 				%============================UDP
 				case 'udp'
-					if ~exist('data','var')
-						data = obj.dataOut;
+					if formatted == 0
+						pnet(obj.conn, 'write', data);
+					else
+						nOut = pnet(obj.conn, 'printf', data);
 					end
-					pnet(obj.conn, 'write', data);
-					obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
+					pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
 					
 					%============================TCP
 				case 'tcp'
-					if ~exist('data','var')
-						data = obj.dataOut;
+					if formatted == 0
+						pnet(obj.conn, 'write', data);
+					else
+						pnet(obj.conn, 'printf', data);
 					end
-					pnet(obj.conn, 'write', data)
 			end
 		end
 		
@@ -424,7 +442,9 @@ classdef dataConnection < handle
 		% ===================================================================
 		% Read any avalable data from the given pnet socket.
 		function data = readVar(obj)
+			pnet(obj.conn ,'setreadtimeout', 5);
 			data = obj.getVar;
+			pnet(obj.conn ,'setreadtimeout', 0);
 		end
 		
 		% ===================================================================
@@ -434,7 +454,9 @@ classdef dataConnection < handle
 		% ===================================================================
 		% Write data to the given pnet socket.
 		function writeVar(obj, varargin)
+			pnet(obj.conn ,'setwritetimeout', 5);
 			obj.putVar(varargin);
+			pnet(obj.conn ,'setwritetimeout', 0);
 		end
 		
 		% ===================================================================
@@ -450,8 +472,8 @@ classdef dataConnection < handle
 					if obj.conn > -1
 						[rhost,rport]=pnet(obj.conn,'gethost');
 						fprintf('START SERVING NEW CONNECTION FROM IP %d.%d.%d.%d port:%d',rhost,rport)
-						pnet(obj.conn ,'setwritetimeout', 0);
-						pnet(obj.conn ,'setreadtimeout', 0);
+						pnet(obj.conn ,'setwritetimeout', obj.writeTimeOut);
+						pnet(obj.conn ,'setreadtimeout', obj.readTimeOut);
 						obj.rPort = rport;
 						obj.rAddress = rhost;
 						obj.isOpen = 2;
@@ -538,8 +560,8 @@ classdef dataConnection < handle
 		% ===================================================================
 		function startServer(obj)
 			obj.conn = pnet('tcpsocket',obj.lPort);
-			pnet(obj.conn ,'setwritetimeout', 0.5);
-			pnet(obj.conn ,'setreadtimeout', 0.5);
+			pnet(obj.conn ,'setwritetimeout', obj.writeTimeOut);
+			pnet(obj.conn ,'setreadtimeout', obj.readTimeOut);
 			ls = 1;
 			msgloop=1;
 			while ls

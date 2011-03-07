@@ -104,6 +104,8 @@ classdef (Sealed) opticka < handle
 				in = struct('rPort',rPort,'rAddress',rAddress,'protocol','tcp');
 				obj.oc = dataConnection(in);
 			else
+				obj.oc.rPort = obj.gn(obj.h.OKOmniplexPort);
+				obj.oc.rAddress = obj.gs(obj.h.OKOmniplexIP);
 				data=obj.oc.read(0);
 			end
 			if obj.oc.checkStatus < 1
@@ -422,6 +424,7 @@ classdef (Sealed) opticka < handle
 			tmp.sigma = obj.gn(obj.h.OKPanelGratingsigma);
 			tmp.useAlpha = obj.gv(obj.h.OKPanelGratinguseAlpha);
 			tmp.smoothMethod = obj.gv(obj.h.OKPanelGratingsmoothMethod);
+			tmp.correctPhase = obj.gv(obj.h.OKPanelGratingcorrectPhase);
 			
 			obj.r.stimulus{obj.r.sList.n+1} = gratingStimulus(tmp);
 			
@@ -774,22 +777,28 @@ classdef (Sealed) opticka < handle
 		%> @param 
 		% ===================================================================
 		function refreshStimulusList(obj)
+			pos = get(obj.h.OKStimList, 'Value');
 			str = cell(obj.r.sList.n,1);
 			for i=1:obj.r.sList.n
 				s = obj.r.stimulus{i};
 				switch s.family
 					case 'grating'
-						x=s.xPosition;
-						y=s.yPosition;
-						c=s.contrast;
-						a=s.angle;
-						sz=s.size;
 						if s.gabor == 0
 							name = 'Grating ';
 						else
 							name = 'Gabor ';
 						end
-						str{i} = [name num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' c=' num2str(c) ' ang=' num2str(a) ' sz=' num2str(sz)];
+						tstr = [name num2str(i) ':'];
+						tstr = [tstr ' x=' num2str(s.xPosition)];
+						tstr = [tstr ' y=' num2str(s.yPosition)];
+						tstr = [tstr ' c=' num2str(s.contrast)];
+						tstr = [tstr ' a=' num2str(s.angle)];
+						tstr = [tstr ' sz=' num2str(s.size)];
+						tstr = [tstr ' sf=' num2str(s.sf)];
+						tstr = [tstr ' tf=' num2str(s.tf)];
+						tstr = [tstr ' p=' num2str(s.phase)];
+						tstr = [tstr ' sg=' num2str(s.sigma)];
+						str{i} = tstr;
 					case 'bar'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -810,8 +819,11 @@ classdef (Sealed) opticka < handle
 						str{i} = ['Spot ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c)];
 				end
 			end
+			if pos > length(str)
+				pos = 1;
+			end
 			set(obj.h.OKStimList,'String', str);
-			set(obj.h.OKStimList, 'Value', 1);
+			set(obj.h.OKStimList, 'Value', pos);
 		end
 		
 		% ===================================================================

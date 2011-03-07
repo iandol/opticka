@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 04-Mar-2011 14:46:43
+% Last Modified by GUIDE v2.5 06-Mar-2011 11:03:57
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -641,6 +641,8 @@ if isappdata(0,'o')
 	if ~isempty(o.r.stimulus)
 		set(handles.OKDeleteStimulus,'Enable','on');
 		set(handles.OKModifyStimulus,'Enable','on');
+		set(handles.OKStimulusUp,'Enable','on');
+		set(handles.OKStimulusDown,'Enable','on');
 	end
 		
 end
@@ -656,6 +658,8 @@ if isappdata(0,'o')
 	if isempty(o.r.stimulus)
 		set(handles.OKDeleteStimulus,'Enable','off');
 		set(handles.OKModifyStimulus,'Enable','off');
+		set(handles.OKStimulusUp,'Enable','off');
+		set(handles.OKStimulusDown,'Enable','off');
 	end
 end
 
@@ -671,12 +675,45 @@ end
 
 % --- Executes on button press in OKEditStimulus.
 function OKEditStimulus_Callback(hObject, eventdata, handles)
-% hObject    handle to OKEditStimulus (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.editStimulus;
+end
+
+% --- Executes on button press in OKStimulusDown.
+function OKStimulusDown_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	value = get(handles.OKStimList,'Value'); %where are we in the stimulus list
+	slength = length(o.r.stimulus);
+	if value < slength
+		idx = 1:slength;
+		idx2 = idx;
+		idx2(value) = idx2(value)+1;
+		idx2(value+1) = idx2(value+1)-1;
+		o.r.stimulus(idx) = o.r.stimulus(idx2);
+		set(handles.OKStimList,'Value',value+1);
+		o.r.updatesList;
+		o.modifyStimulus;
+	end
+end
+
+% --- Executes on button press in OKStimulusUp.
+function OKStimulusUp_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	value = get(handles.OKStimList,'Value'); %where are we in the stimulus list
+	slength = length(o.r.stimulus);
+	if value > 1
+		idx = 1:slength;
+		idx2 = idx;
+		idx2(value) = idx2(value)-1;
+		idx2(value-1) = idx2(value-1)+1;
+		o.r.stimulus(idx) = o.r.stimulus(idx2);
+		set(handles.OKStimList,'Value',value-1);
+		o.r.updatesList;
+		o.modifyStimulus;
+	end
 end
 
 
@@ -1086,3 +1123,12 @@ function OKOmniplexPort_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in OKPanelGratingcorrectPhase.
+function OKPanelGratingcorrectPhase_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelGratingcorrectPhase (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of OKPanelGratingcorrectPhase

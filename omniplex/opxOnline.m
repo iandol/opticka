@@ -367,7 +367,7 @@ classdef opxOnline < handle
 			fprintf('\n\n===Parse Data Loop Starting===\n')
 			while loop
 				if ~rem(loop,20);fprintf('.');end
-				if ~rem(loop,200);fprintf('\n');fprintf('ParseData:');obj.msconn.write('--master growls--');end
+				if ~rem(loop,200);fprintf('\n');fprintf('ParseData:');end
 				
 				if obj.conn.checkData
 					data = obj.conn.read(0);
@@ -440,9 +440,11 @@ classdef opxOnline < handle
 				obj.listenSlave;
 				
 			catch ME
+				fprintf('There was some error during data collection by slave!');
 				obj.nRuns = 0;
 				obj.closePlexon;
 				obj.error = ME;
+				obj.listenSlave;
 			end
 		end
 		
