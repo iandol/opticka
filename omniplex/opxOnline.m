@@ -73,6 +73,9 @@ classdef opxOnline < handle
 			if strcmpi(obj.type,'master') || strcmpi(obj.type,'launcher')
 				obj.isSlave = 0;
 			end
+			Screen('Preference', 'SuppressAllWarnings',1);
+			Screen('Preference', 'Verbosity', 0);
+			Screen('Preference', 'VisualDebugLevel',0);
 			if ispc
 				obj.masterCommand = '!matlab -nodesktop -nosplash -r "opxRunMaster" &';
 				obj.slaveCommand = '!matlab -nodesktop -nosplash -r "opxRunSlave" &';
@@ -90,6 +93,10 @@ classdef opxOnline < handle
 						warning('Sorry, slave process failed to initialize!!!')
 					end
 					obj.initializeMaster;
+					if ispc
+						p=fileparts(mfilename('fullpath'));
+						dos([p filesep 'moveMatlab.exe']);
+					end
 					obj.listenMaster;
 					
 				case 'slave'
@@ -113,6 +120,7 @@ classdef opxOnline < handle
 			
 			fprintf('\nListening for opticka, and controlling slave!');
 			loop = 1;
+			runNext = '';
 			
 			if obj.msconn.checkStatus ~= 6 %are we a udp client to the slave?
 				checkS = 1;
@@ -137,7 +145,9 @@ classdef opxOnline < handle
 					if isa(obj.stimulus,'runExperiment')
 						set(obj.h.opxUIInfoBox,'String',['We have stimulus, nRuns= ' num2str(obj.totalRuns) ' | waiting for go...'])
 					elseif obj.conn.checkStatus('conn') > 0
-						set(obj.h.opxUIInfoBox,'String','Waiting for opticka to connect...')
+						set(obj.h.opxUIInfoBox,'String','Opticka has connected to us, waiting for stimulus!...');
+					else
+						set(obj.h.opxUIInfoBox,'String','Waiting for Opticka to connect to us...');
 					end
 				end
 				if ~rem(loop,300);fprintf('\n');fprintf('growl');obj.msconn.write('--master growls--');end
@@ -178,9 +188,22 @@ classdef opxOnline < handle
 						case '--GO!--'
 							if ~isempty(obj.stimulus)
 								loop = 0;
-								opx.msconn.write('--GO!--') %tell slave to run
-								obj.parseData;
+								obj.msconn.write('--GO!--') %tell slave to run
+								runNext = 'parseData';
 								break
+							end
+							
+						case '--eval--'
+							tloop = 1;
+							while tloop < 10
+								pause(0.1);
+								if obj.conn.checkData
+									command = obj.msconn.read(0);
+									fprintf('\nOpticka tells us to eval= %s\n',command);
+									eval(command);
+									break
+								end
+								tloop = tloop + 1;
 							end
 							
 						case '--bark order--'
@@ -239,8 +262,15 @@ classdef opxOnline < handle
 				end
 				pause(0.1)
 				loop = loop + 1;
+			end %end of main while loop
+			
+			switch runNext
+				case 'parseData'
+					obj.parseData;
+				otherwise
+					fprintf('\nMaster is sleeping, use listenMaster to make me listen again...');
 			end
-			fprintf('\nMaster is sleeping, use listenMaster to make me listen again...');
+			
 		end
 		
 		% ===================================================================
@@ -303,6 +333,19 @@ classdef opxOnline < handle
 								if obj.msconn.checkData
 									obj.tmpFile = obj.msconn.read(0);
 									fprintf('\nThe master tells me tmpFile= %s\n',obj.tmpFile);
+									break
+								end
+								tloop = tloop + 1;
+							end
+							
+						case '--eval--'
+							tloop = 1;
+							while tloop < 10
+								pause(0.1);
+								if obj.msconn.checkData
+									command = obj.msconn.read(0);
+									fprintf('\nThe master tells us to eval= %s\n',command);
+									eval(command);
 									break
 								end
 								tloop = tloop + 1;
@@ -373,10 +416,21 @@ classdef opxOnline < handle
 					data = obj.conn.read(0);
 					%data = regexprep(data,'\n','');
 					fprintf('\n{opticka message:%s}',data);
+					switch data
+						case '--ping--'
+							obj.conn.write('--ping--');
+							obj.msconn.write('--ping--');
+							fprintf('\nOpticka pinged us, we ping opticka and slave!');
+							
+						case '--quit--'
+							loop = 0;
+							break
+					end
 				end
 				pause(0.1);
 				loop = loop + 1;
 			end
+			opx.listenMaster
 		end
 		
 		% ===================================================================
@@ -426,11 +480,14 @@ classdef opxOnline < handle
 						command = obj.conn.read(0);
 						switch command
 							case '--abort--'
-								abort = 1;
+								fprintf('\nWe''ve been asked to abort\n')
 								break
 						end
 					end
-
+					if obj.checkKeys
+						break
+					end
+					
 				end
 				
 				% you need to call PL_Close(s) to close the connection

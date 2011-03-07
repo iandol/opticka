@@ -123,6 +123,7 @@ classdef (Sealed) opticka < handle
 				loop = 1;
 				while loop < 8
 					in = obj.oc.read(0);
+					fprintf('\n{opticka said: %s}\n',in)
 					if regexpi(in,'ping')
 						fprintf('\nWe can ping omniplex master on try: \n',loop)
 						set(obj.h.OKOmniplexStatus,'String','Omniplex: connected')
