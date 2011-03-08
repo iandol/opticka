@@ -477,6 +477,24 @@ classdef (Sealed) runExperiment < handle
 		end
 		
 		% ===================================================================
+		%> @brief getTimeLog Prints out the frame time plots from a run
+		%>
+		%> @param
+		% ===================================================================
+		function deleteTimeLog(obj)
+			obj.timeLog = [];
+		end
+		
+		% ===================================================================
+		%> @brief getTimeLog Prints out the frame time plots from a run
+		%>
+		%> @param
+		% ===================================================================
+		function restoreTimeLog(obj,tLog)
+			if isstruct(tLog);obj.timeLog = tLog;end
+		end
+		
+		% ===================================================================
 		%> @brief refresh the screen values stored in the object
 		%>
 		%> @param

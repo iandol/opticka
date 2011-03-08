@@ -148,11 +148,17 @@ classdef (Sealed) opticka < handle
 			if obj.oc.checkStatus > 0
 				%flush read buffer
 				data=obj.oc.read('all');
+				tLog=[];
 				if obj.oc.checkStatus > 0 %check again to make sure we are still open
+					tic
 					obj.oc.write('--readStimulus--');
 					pause(0.25);
+					if ~isempty(obj.r.timeLog);tLog = obj.r.timeLog;end
+					obj.r.deleteTimeLog; %so we don't send too much data over TCP
 					tmpobj=obj.r;
 					obj.oc.writeVar('o',tmpobj);
+					if ~isempty(tLog);obj.r.restoreTimeLog(tLog);end
+					toc
 				end
 			end
 		end

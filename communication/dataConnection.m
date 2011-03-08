@@ -89,6 +89,7 @@ classdef dataConnection < handle
 						pnet(obj.conn ,'setreadtimeout', obj.readTimeOut);
 						obj.isOpen = 1;
 						obj.connList = [obj.connList obj.conn];
+						obj.connList = unique(obj.connList);
 					else
 						sprintf('%s cannot open UDP socket (%d)', ...
 							mfilename, obj.conn);
@@ -125,6 +126,7 @@ classdef dataConnection < handle
 								else
 									obj.isOpen = 1;
 									obj.rconnList = [obj.rconnList obj.rconn];
+									obj.rconnList = unique(obj.rconnList);
 									obj.checkStatus('rconn')
 									loop = 11;
 									break
@@ -157,6 +159,7 @@ classdef dataConnection < handle
 								else
 									obj.isOpen = 1;
 									obj.connList = [obj.connList obj.conn];
+									obj.connList = unique(obj.connList);
 								end
 							else
 								sprintf('%s cannot open TCP socket (%d)', ...
@@ -184,6 +187,9 @@ classdef dataConnection < handle
 			if ~exist('force','var')
 				force = 1;
 			end
+			if ischar(force)
+				force = 1;
+			end
 			
 			status = 0;
 			
@@ -192,23 +198,27 @@ classdef dataConnection < handle
 				case 'conn'
 					try
 						obj.salutation('close Method','Trying to close PNet conn connection...')
-						obj.status = pnet(obj.conn,'status');
-						if obj.status <=0;
-							obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
-						elseif force == 0
-							try %#ok<TRYNC>
-								pnet(obj.conn, 'close');
-							end
-						else
+						if force == 1
 							for i = 1:length(obj.connList)
 								try
 									pnet(obj.connList(i), 'close');
+									fprintf('Closed connection %i.\n',obj.connList(i));
 								catch %#ok<CTCH>
 									fprintf('Couldn''t close connection %i, perhaps closed?\n',obj.connList(i));
 								end
 							end
+						else
+							obj.status = pnet(obj.conn,'status');
+							if obj.status <=0;
+								obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
+							elseif force == 0
+								try %#ok<TRYNC>
+									pnet(obj.conn, 'close');
+								end
+								
+							end
+							obj.conn = -1;
 						end
-						obj.conn = -1;
 					end
 					
 				case 'rconn'

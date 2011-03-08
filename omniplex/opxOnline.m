@@ -220,6 +220,11 @@ classdef opxOnline < handle
 							loop = 0;
 							break
 							
+						case '--exit--'
+							fprintf('\nMy service is no longer required (sniff)...\n');
+							eval('exit')
+							break
+							
 						otherwise
 							fprintf('Someone spoke, but what did they say?...')
 					end
@@ -361,8 +366,11 @@ classdef opxOnline < handle
 						case '--quit--'
 							fprintf('\nMy service is no longer required (sniff)...\n');
 							data = obj.msconn.read(1); %we flush out the remaining commands
-							%eval('exit')
 							break
+							
+						case '--exit--'
+							fprintf('\nMy service is no longer required (sniff)...\n');
+							eval('exit');
 							
 						case '--GO!--'
 							fprintf('\nTime to run, yay!\n')
@@ -411,6 +419,7 @@ classdef opxOnline < handle
 		% ===================================================================
 		function parseData(obj)
 			loop = 1;
+			opx=[];
 			fprintf('\n\n===Parse Data Loop Starting===\n')
 			while loop
 				if ~rem(loop,20);fprintf('.');end
@@ -440,6 +449,9 @@ classdef opxOnline < handle
 						
 						case '--beforeRun--'
 							fprintf('\nSlave is about to run the main collection loop...');
+							load(obj.tmpFile);
+							obj.units = opx.units;
+							obj.parameters = opx.parameters;
 							
 						case '--finishRun--'
 							tloop = 1;
@@ -452,11 +464,24 @@ classdef opxOnline < handle
 								pause(0.1);
 								tloop = tloop + 1;
 							end
+							load(obj.tmpFile);
+							obj.trial = opx.trial;
+							obj.plotData;
+							
+						case '--finishAll--'
+							tmp=load(obj.tmpFile);
+							obj.trial = opx.trial;
+							obj.plotData
+							loop = 0;
+							save(obj.tmpFile,'obj');
+							pause(0.2)
+							break
+								
 					end
 				end
 				
 			end
-			opx.listenMaster
+			obj.listenMaster
 		end
 		
 		% ===================================================================
@@ -466,66 +491,71 @@ classdef opxOnline < handle
 		% ===================================================================
 		function collectData(obj)
 			tic
+			abort=0;
 			obj.nRuns = 0;
 			
-			obj.opxConn = PL_InitClient(0);
-			if obj.opxConn == 0
-				return
+			status = obj.openPlexon;
+			if status == -1
+				abort = 1;
 			end
 			
 			obj.getParameters;
 			obj.getnUnits;
 			
-			save(obj.tmpFile,obj);
-			obj.msconn.write('--beforeRun--');
-			pause(0.1);
-			
 			obj.trial = struct;
 			obj.nRuns=1;
+			
+			obj.saveData;
+			obj.msconn.write('--beforeRun--');
+			pause(0.1);
 			toc
 			try
-				while obj.nRuns <= obj.totalRuns
+				while obj.nRuns <= obj.totalRuns && abort < 1
 					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1 2 3], [1], 0);
 					fprintf('\nLooping at %i\n', obj.nRuns);
 					[rn, trial, spike, analog, last] = PL_TrialStatus(obj.opxConn, 3, obj.maxWait); %wait until end of trial
+					tic
 					fprintf('rn: %i tr: %i sp: %i al: %i lst: %i\n',rn, trial, spike, analog, last);
 					if last > 0
-						tic
 						[obj.trial(obj.nRuns).ne, obj.trial(obj.nRuns).eventList]  = PL_TrialEvents(obj.opxConn, 0, 0);
 						[obj.trial(obj.nRuns).ns, obj.trial(obj.nRuns).spikeList]  = PL_TrialSpikes(obj.opxConn, 0, 0);
 						
-						save(obj.tmpFile,obj);
+						obj.saveData;
 						obj.msconn.write('--finishRun--');
 						obj.msconn.write(uint32(obj.nRuns));
 						
 						obj.nRuns = obj.nRuns+1;
-						toc
 					end
 					if obj.msconn.checkData
 						command = obj.conn.read(0);
 						switch command
 							case '--abort--'
 								fprintf('\nWe''ve been asked to abort\n')
+								abort = 1;
 								break
 						end
 					end
 					if obj.checkKeys
 						break
 					end
+					toc
 					
 				end
-				
+				obj.saveData; %final save of data
+				obj.msconn.write('--finishAll--');
+				obj.msconn.write(uint32(obj.nRuns));
 				% you need to call PL_Close(s) to close the connection
 				% with the Plexon server
 				obj.closePlexon;
-				
 				obj.listenSlave;
 				
 			catch ME
-				fprintf('There was some error during data collection by slave!');
+				obj.error = ME;
+				fprintf('There was some error during data collection by slave!\n');
+				fprintf('Error message: %s\n',obj.error.message);
+				fprintf('Line: %d',obj.error.stack.line);
 				obj.nRuns = 0;
 				obj.closePlexon;
-				obj.error = ME;
 				obj.listenSlave;
 			end
 		end
@@ -535,13 +565,46 @@ classdef opxOnline < handle
 		%>
 		%>
 		% ===================================================================
-		function draw(obj)
-			axes(obj.myAxis);
-			plot([1:10],[1:10]*obj.nRuns)
-			title(['On Trial: ' num2str(obj.nRuns)]);
-			drawnow;
+		function plotData(obj)
+			try
+				n=round((rand)*4);
+				if n<1;n=1;end
+				subplot(2,2,n,'Parent',obj.h.opxUIPanel)
+				plot(rand(1,10),[1:10],'k.-')
+				title(['On Trial: ' num2str(obj.nRuns)]);
+				drawnow;
+			end
 		end
 		
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
+		function saveData(obj)
+			opx.type = obj.type;
+			opx.nRuns = obj.nRuns;
+			opx.totalRuns = obj.totalRuns;
+			opx.spikes = obj.spikes;
+			opx.trial = obj.trial;
+			opx.units = obj.units;
+			opx.parameters = obj.parameters;
+			opx.stimulus = obj.stimulus;
+			opx.tmpFile = obj.tmpFile;
+			save(obj.tmpFile,'opx');
+		end
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
+		function status=openPlexon(obj)
+			status = -1;
+			obj.opxConn = PL_InitClient(0);
+			if obj.opxConn ~= 0
+				status = 1;
+			end
+		end
 		% ===================================================================
 		%> @brief
 		%>
@@ -610,16 +673,17 @@ classdef opxOnline < handle
 				obj.units.raw = PL_GetNumUnits(obj.opxConn);
 				obj.units.activeChs = find(obj.units.raw > 0);
 				obj.units.nCh = length(obj.units.activeChs);
-				obj.units.nSpikes = obj.units.raw(obj.units.raw > 0);
+				obj.units.nCells = obj.units.raw(obj.units.raw > 0);
+				obj.units.totalCells = sum(obj.units.nCells);
 				for i=1:length(obj.units.activeChs)
 					if i==1
-						obj.units.index{1}=1:obj.units.nSpikes(1);
+						obj.units.index{1}=1:obj.units.nCells(1);
 					else
-						inc=sum(obj.units.nSpikes(1:i-1));
-						obj.units.index{i}=(1:obj.units.nSpikes(i))+inc;
+						inc=sum(obj.units.nCells(1:i-1));
+						obj.units.index{i}=(1:obj.units.nCells(i))+inc;
 					end
 				end
-				obj.units.spikes = cell(sum(obj.units.nSpikes),1);
+				obj.units.spikes = cell(obj.units.totalCells,1);
 			end
 		end
 		

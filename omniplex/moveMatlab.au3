@@ -1,5 +1,6 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\Icons\au3.ico
+#AutoIt3Wrapper_Icon=..\..\..\..\Program Files\AutoIt3\Icons\au3.ico
+#AutoIt3Wrapper_Compression=4
 #AutoIt3Wrapper_Res_Fileversion=1.0.0.0
 #AutoIt3Wrapper_Run_Tidy=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -16,3 +17,6 @@ For $i = 1 To $wins[0][0]
 	EndIf
 	WinMove($wins[$i][1], "", @DesktopWidth - $mod, @DesktopHeight - 400, 400, 400)
 Next
+
+$uiwin = WinList("Omniplex Online Data Display")
+WinMove($uiwin[1][1], "", @DesktopWidth - 800, 0)
