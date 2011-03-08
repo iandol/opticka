@@ -43,7 +43,7 @@ classdef gratingStimulus < baseStimulus
 		%> scale is used when changing size as an independent variable to keep sf accurate
 		scale = 1
 		%> do we need to correct the phase to be relative to center not edge?
-		correctPhase = 1
+		correctPhase = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -51,7 +51,7 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(sf|tf|method|angle|motionAngle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod)$';
+		allowedProperties='^(sf|tf|method|angle|motionAngle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod|correctPhase)$';
 		ignoreProperties='phaseIncrement|disableNorm|gabor|contrastMult|mask'
 	end
 	

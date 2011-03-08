@@ -124,8 +124,8 @@ classdef (Sealed) opticka < handle
 				while loop < 8
 					in = obj.oc.read(0);
 					fprintf('\n{opticka said: %s}\n',in)
-					if regexpi(in,'ping')
-						fprintf('\nWe can ping omniplex master on try: \n',loop)
+					if regexpi(in,'(opened|ping)')
+						fprintf('\nWe can ping omniplex master on try: %d\n',loop)
 						set(obj.h.OKOmniplexStatus,'String','Omniplex: connected')
 						break
 					else
@@ -250,7 +250,7 @@ classdef (Sealed) opticka < handle
 					rmappdata(0,'o');
 					clear o;
 				end
-				errordlg('Problen in initialising Opticka, please check errors on the commandline')
+				errordlg('Problem initialising Opticka, please check errors on the commandline')
 				rethrow(ME)
 			end
 			

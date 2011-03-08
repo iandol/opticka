@@ -78,7 +78,7 @@ classdef opxOnline < handle
 			Screen('Preference', 'VisualDebugLevel',0);
 			if ispc
 				obj.masterCommand = '!matlab -nodesktop -nosplash -r "opxRunMaster" &';
-				obj.slaveCommand = '!matlab -nodesktop -nosplash -r "opxRunSlave" &';
+				obj.slaveCommand = '!matlab -nodesktop -nosplash -nojvm -r "opxRunSlave" &';
 			else
 				obj.masterCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -maci -r \"opxRunMaster\""'' -e ''end tell''';
 				obj.slaveCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -nojvm -maci -r \"opxRunSlave\""'' -e ''end tell''';
@@ -93,9 +93,13 @@ classdef opxOnline < handle
 						warning('Sorry, slave process failed to initialize!!!')
 					end
 					obj.initializeMaster;
+					pause(0.1)
 					if ispc
 						p=fileparts(mfilename('fullpath'));
 						dos([p filesep 'moveMatlab.exe']);
+					elseif ismac
+						p=fileparts(mfilename('fullpath'));
+						unix(['osascript ' p filesep 'moveMatlab.applescript']);
 					end
 					obj.listenMaster;
 					
@@ -308,14 +312,14 @@ classdef opxOnline < handle
 						case '--nRuns--'
 							tloop = 1;
 							while tloop < 10
-								pause(0.1);
 								if obj.msconn.checkData
-									pause(0.1);
-									nRun = double(obj.msconn.read(0,'uint32'));
-									obj.totalRuns = nRun;
+									tRun = double(obj.msconn.read(0,'uint32'));
+									obj.totalRuns = tRun;
 									fprintf('\nMaster send us number of runs: %d\n',obj.totalRuns);
 									break
 								end
+								pause(0.1);
+								tloop = tloop + 1;
 							end
 							
 						case '--ping--'
@@ -414,21 +418,43 @@ classdef opxOnline < handle
 				
 				if obj.conn.checkData
 					data = obj.conn.read(0);
-					%data = regexprep(data,'\n','');
+					data = regexprep(data,'\n','');
 					fprintf('\n{opticka message:%s}',data);
 					switch data
+						
 						case '--ping--'
 							obj.conn.write('--ping--');
 							obj.msconn.write('--ping--');
 							fprintf('\nOpticka pinged us, we ping opticka and slave!');
-							
+
 						case '--quit--'
 							loop = 0;
 							break
 					end
 				end
-				pause(0.1);
-				loop = loop + 1;
+				
+				if obj.msconn.checkData
+					data = obj.msconn.read(0);
+					fprintf('\n{message:%s}',data);
+					switch data
+						
+						case '--beforeRun--'
+							fprintf('\nSlave is about to run the main collection loop...');
+							
+						case '--finishRun--'
+							tloop = 1;
+							while tloop < 10
+								if obj.msconn.checkData
+									obj.nRuns = double(obj.msconn.read(0,'uint32'));
+									fprintf('\nThe slave has completed run %d\n',obj.nRuns);
+									break
+								end
+								pause(0.1);
+								tloop = tloop + 1;
+							end
+					end
+				end
+				
 			end
 			opx.listenMaster
 		end
@@ -440,7 +466,6 @@ classdef opxOnline < handle
 		% ===================================================================
 		function collectData(obj)
 			tic
-			abort=0;
 			obj.nRuns = 0;
 			
 			obj.opxConn = PL_InitClient(0);
