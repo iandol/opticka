@@ -28,6 +28,7 @@ classdef stimulusSequence < dynamicprops
 		outValues %structure of variable values
 		outVars %variable values wrapped in trial cell
 		outIndex %the unique identifier for each stimulus
+		outMap %mapping the stimulus to the number as a X Y and Z etc position for display
 	end
 	
 	properties (Dependent = true,  SetAccess = private)
@@ -148,6 +149,13 @@ classdef stimulusSequence < dynamicprops
 					obj.outValues(mn:mx,f)=obj.outVars{i,f};
 				end
 				offset=offset+obj.minTrials;
+			end
+			obj.outMap=zeros(size(obj.outValues));
+			for f = 1:obj.nVars
+				for g = 1:length(obj.nVar(f).values)
+					gidx = find(obj.outValues(:,f) == obj.nVar(f).values(g));
+					obj.outMap(gidx,f) = g;
+				end
 			end
 		end
 		

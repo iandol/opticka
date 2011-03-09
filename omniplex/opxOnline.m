@@ -19,6 +19,9 @@ classdef opxOnline < handle
 		lPort = 9889
 		pollTime = 0.5
 		verbosity = 0
+		%> sometimes we shouldn't cleanup connections on delete, e.g. when we pass this
+		%> object to another matlab instance as we will close the wrong connections!!!
+		cleanup = 1 
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -42,7 +45,7 @@ classdef opxOnline < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(type|eventStart|eventEnd|protocol|rPort|rAddress|verbosity)$'
+		allowedProperties='^(type|eventStart|eventEnd|protocol|rPort|rAddress|verbosity|cleanup)$'
 		slaveCommand
 		masterCommand
 	end
@@ -675,18 +678,19 @@ classdef opxOnline < handle
 				obj.units.nCh = length(obj.units.activeChs);
 				obj.units.nCells = obj.units.raw(obj.units.raw > 0);
 				obj.units.totalCells = sum(obj.units.nCells);
-				for i=1:length(obj.units.activeChs)
+				for i=1:obj.units.nCh
 					if i==1
 						obj.units.index{1}=1:obj.units.nCells(1);
 						obj.units.indexb{1}=1:obj.units.nCells(1);
+						obj.units.list(1:obj.units.nCells(i))=i;
 					else
 						inc=sum(obj.units.nCells(1:i-1));
 						obj.units.index{i}=(1:obj.units.nCells(i))+inc;
 						obj.units.indexb{i}=1:obj.units.nCells(i);
 					end
 				end
-				for i=1:obj.totalCells
-					obj.units.list(i) = 
+				for i=1:obj.units.totalCells
+					
 				end
 			end
 		end
@@ -744,14 +748,14 @@ classdef opxOnline < handle
 				'lPort', obj.lPort, 'lAddress', obj.lAddress, 'rAddress', ... 
 				obj.rAddress, 'protocol', 'tcp', 'autoOpen', 1, 'type', 'server'));
 			if obj.conn.isOpen == 1
-				fprintf('Master can listen for opticka...')
+				fprintf('Master can listen for opticka...\n')
 			else
-				fprintf('Master is deaf...')
+				fprintf('Master is deaf...\n')
 			end
 			obj.tmpFile = [tempname,'.mat'];
 			obj.msconn.write('--tmpFile--');
 			obj.msconn.write(obj.tmpFile)
-			fprintf('We tell slave to use tmpFile = %s\n', obj.tmpFile)
+			fprintf('We tell slave to use tmpFile: %s\n', obj.tmpFile)
 		end
 		
 		% ===================================================================
@@ -781,9 +785,9 @@ classdef opxOnline < handle
 			obj.msconn=dataConnection(struct('verbosity',obj.verbosity, 'rPort',obj.slavePort,'lPort', ...
 				obj.masterPort, 'rAddress', obj.lAddress,'protocol',obj.protocol,'autoOpen',1));
 			if obj.msconn.isOpen == 1
-				fprintf('\nMaster can bark at slave...')
+				fprintf('Master can bark at slave...\n')
 			else
-				fprintf('\nMaster cannot bark at slave...')
+				fprintf('Master cannot bark at slave...\n')
 			end
 			i=1;
 			while i
@@ -796,7 +800,7 @@ classdef opxOnline < handle
 				response = obj.msconn.read;
 				if iscell(response);response=response{1};end
 				if ~isempty(response) && ~isempty(regexpi(response, 'i bow'))
-					fprintf('\nSlave knows who is boss...')
+					fprintf('Slave knows who is boss...\n')
 					obj.isSlaveConnected = 1;
 					obj.isMasterConnected = 1;
 					break
@@ -830,8 +834,12 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function delete(obj)
-			obj.salutation('opxOnline Delete Method','Cleaning up now...')
-			obj.closeAll;
+			if obj.cleanup == 1
+				obj.salutation('opxOnline Delete Method','Cleaning up now...')
+				obj.closeAll;
+			else
+				obj.salutation('opxOnline Delete Method','Closing (no cleanup)...')
+			end
 		end
 		
 		% ===================================================================
