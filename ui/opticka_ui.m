@@ -798,7 +798,7 @@ function OKToolbarRun_ClickedCallback(hObject, eventdata, handles)
 
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	if o.oc.isOpen == 1 && o.r.useLabJack == 1
+	if ~isempty(o.oc) && o.oc.isOpen == 1 && o.r.useLabJack == 1
 		o.oc.write('--GO!--');
 		pause(0.5);
 	end

@@ -678,12 +678,16 @@ classdef opxOnline < handle
 				for i=1:length(obj.units.activeChs)
 					if i==1
 						obj.units.index{1}=1:obj.units.nCells(1);
+						obj.units.indexb{1}=1:obj.units.nCells(1);
 					else
 						inc=sum(obj.units.nCells(1:i-1));
 						obj.units.index{i}=(1:obj.units.nCells(i))+inc;
+						obj.units.indexb{i}=1:obj.units.nCells(i);
 					end
 				end
-				obj.units.spikes = cell(obj.units.totalCells,1);
+				for i=1:obj.totalCells
+					obj.units.list(i) = 
+				end
 			end
 		end
 		
