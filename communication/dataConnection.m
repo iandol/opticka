@@ -24,6 +24,9 @@ classdef dataConnection < handle
 		autoServer = 0
 		readTimeOut = 0.1
 		writeTimeOut = 0.1
+		%> sometimes we shouldn't cleanup connections on delete, e.g. when we pass this
+		%> object to another matlab instance as we will close the wrong connections!!!
+		cleanup = 1 
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -34,14 +37,14 @@ classdef dataConnection < handle
 		statusMessage
 		dataLength
 		error
-	end
-	
-	properties (SetAccess = private, GetAccess = public)
 		connList
 		rconnList
 		conn = -1
 		rconn = -1
-		allowedProperties='^(type|protocol|lPort|rPort|lAddress|rAddress|autoOpen|dataType|verbosity|autoRead|autoServer|readTimeOut|writeTimeOut)$'
+	end
+	
+	properties (SetAccess = private, GetAccess = private)
+		allowedProperties='^(type|protocol|lPort|rPort|lAddress|rAddress|autoOpen|dataType|verbosity|autoRead|autoServer|readTimeOut|writeTimeOut|cleanup)$'
 		remoteCmd = '--remote--'
 		breakCmd = '--break--'
 		busyCmd = '--busy--'
@@ -921,8 +924,12 @@ classdef dataConnection < handle
 		%>
 		% ===================================================================
 		function delete(obj)
-			obj.salutation('DELETE Method','Cleaning up now...')
-			obj.close;
+			if obj.cleanup == 1
+				obj.salutation('dataConnection delete Method','Cleaning up now...')
+				obj.close;
+			else
+				obj.salutation('dataConnection delete Method','Closing (no cleanup)...')
+			end
 		end
 		
 		% ===================================================================

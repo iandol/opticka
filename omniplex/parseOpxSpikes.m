@@ -1,4 +1,4 @@
-classdef parseOpxSpikes
+classdef parseOpxSpikes < handle
 	%UNTITLED4 Summary of this class goes here
 	%   Detailed explanation goes here
 	
@@ -7,9 +7,11 @@ classdef parseOpxSpikes
 		thisRun = 0
 		run
 		nVars
-		input
 		units
 		parameters
+		xValues
+		yValues
+		zValues
 		raw
 	end
 	
@@ -21,6 +23,37 @@ classdef parseOpxSpikes
 		function obj = parseOpxSpikes(args)
 			
 		end
+		
+		function initialize(obj,opx)
+			if isa(opx,'opxOnline')
+				obj.units = opx.units;
+				obj.parameters = opx.parameters;
+			end
+			
+			if isa(opx.stimulus,'runExperiment')
+				obj.stimulus = opx.stimulus;
+				obj.nVars = obj.stimulus.task.nVars;
+				if obj.nVars == 0
+					obj.raw = cell(1,1,1);
+				elseif obj.nVars == 1
+					obj.raw = cell(1,length(obj.stimulus.task.nVar(1).values),1);
+					obj.xValues = obj.stimulus.task.nVar(1).values;
+				elseif obj.nVars == 2
+					obj.raw = cell(length(obj.stimulus.task.nVar(2).values),length(obj.stimulus.task.nVar(1).values),1);
+					obj.xValues = obj.stimulus.task.nVar(1).values;
+					obj.yValues = obj.stimulus.task.nVar(2).values;
+				else
+					obj.raw = cell(length(obj.stimulus.task.nVar(2).values),length(obj.stimulus.task.nVar(1).values),length(obj.stimulus.task.nVar(3).values));
+					obj.xValues = obj.stimulus.task.nVar(1).values;
+					obj.yValues = obj.stimulus.task.nVar(2).values;
+					obj.zValues = obj.stimulus.task.nVar(3).values;
+				end
+			end
+			
+			
+
+		end
+		
 		
 		function parseRun(obj,data)
 			if isempty(data)
@@ -51,8 +84,8 @@ classdef parseOpxSpikes
 			
 		end
 		
-		function parseAllRuns(obj.data)
-			
+		function parseAllRuns(obj,data)
+		
 		end
 		
 				
