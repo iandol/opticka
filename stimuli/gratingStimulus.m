@@ -284,7 +284,7 @@ classdef gratingStimulus < baseStimulus
 			if obj.correctPhase > 0
 				ppd = obj.ppd;
 				size = (obj.sizeOut/2); %divide by 2 to get the 0 point
-				sf = obj.sfOut*obj.ppd;
+				sf = (obj.sfOut/obj.scale)*obj.ppd;
 				md = size / (ppd/sf);
 				md=md-floor(md);
 				phase = (360*md);
