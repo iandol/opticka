@@ -38,6 +38,7 @@ classdef opxOnline < handle
 		units
 		stimulus
 		tmpFile
+		data
 		isSlaveConnected = 0
 		isMasterConnected = 0
 		error
@@ -455,6 +456,8 @@ classdef opxOnline < handle
 							load(obj.tmpFile);
 							obj.units = opx.units;
 							obj.parameters = opx.parameters;
+							obj.data=parseOpxSpikes;
+							obj.data.initialize(obj);
 							
 						case '--finishRun--'
 							tloop = 1;
@@ -469,6 +472,7 @@ classdef opxOnline < handle
 							end
 							load(obj.tmpFile);
 							obj.trial = opx.trial;
+							obj.data.parseNextRun;
 							obj.plotData;
 							
 						case '--finishAll--'
@@ -638,7 +642,7 @@ classdef opxOnline < handle
 	
 	%=======================================================================
 	methods ( Access = private ) % PRIVATE METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief
@@ -680,18 +684,20 @@ classdef opxOnline < handle
 				obj.units.totalCells = sum(obj.units.nCells);
 				for i=1:obj.units.nCh
 					if i==1
-						obj.units.index{1}=1:obj.units.nCells(1);
 						obj.units.indexb{1}=1:obj.units.nCells(1);
-						obj.units.list(1:obj.units.nCells(i))=i;
+						obj.units.index{1}=1:obj.units.nCells(1);
+						obj.units.listb(1:obj.units.nCells(i))=i;
+						obj.units.list{i}(1:obj.units.nCells(i))=i;
 					else
 						inc=sum(obj.units.nCells(1:i-1));
-						obj.units.index{i}=(1:obj.units.nCells(i))+inc;
-						obj.units.indexb{i}=1:obj.units.nCells(i);
+						obj.units.indexb{i}=(1:obj.units.nCells(i))+inc;
+						obj.units.index{i}=1:obj.units.nCells(i);
+						obj.units.listb(1:obj.units.nCells(i))=i;
+						obj.units.list{i}(1:obj.units.nCells(i))=i;
 					end
 				end
-				for i=1:obj.units.totalCells
-					
-				end
+				obj.units.chlist = [obj.units.list{:}];
+				obj.units.celllist=[obj.units.index{:}];
 			end
 		end
 		
@@ -825,6 +831,21 @@ classdef opxOnline < handle
 				if regexpi(key,'^esc')
 					out=1;
 				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief save object method
+		%>
+		%>
+		% ===================================================================
+		function saveobj(obj)
+			obj.cleanup=0;
+			if isa(obj.conn,'dataConnection')
+				obj.conn.cleanup=0;
+			end
+			if isa(obj.msconn,'dataConnection')
+				obj.msconn.cleanup=0;
 			end
 		end
 		

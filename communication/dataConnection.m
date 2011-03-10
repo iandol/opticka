@@ -214,11 +214,10 @@ classdef dataConnection < handle
 							obj.status = pnet(obj.conn,'status');
 							if obj.status <=0;
 								obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
-							elseif force == 0
+							else
 								try %#ok<TRYNC>
 									pnet(obj.conn, 'close');
 								end
-								
 							end
 							obj.conn = -1;
 						end
@@ -227,23 +226,26 @@ classdef dataConnection < handle
 				case 'rconn'
 					try
 						obj.salutation('close Method','Trying to close PNet rconn connection...')
-						obj.status = pnet(obj.rconn,'status');
-						if obj.status <=0;
-							obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
-						elseif force == 0
-							try %#ok<TRYNC>
-								pnet(obj.rconn, 'close');
-							end
-						else
+						if force == 1
 							for i = 1:length(obj.rconnList)
 								try
 									pnet(obj.rconnList(i), 'close');
+									fprintf('Closed connection %i.\n',obj.rconnList(i));
 								catch %#ok<CTCH>
-									fprintf('Couldn''t close rconnection %i, perhaps closed?\n',obj.rconnList(i));
+									fprintf('Couldn''t close connection %i, perhaps closed?\n',obj.rconnList(i));
 								end
 							end
+						else
+							obj.status = pnet(obj.rconn,'status');
+							if obj.status <=0;
+								obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
+							else
+								try %#ok<TRYNC>
+									pnet(obj.rconn, 'close');
+								end
+							end
+							obj.conn = -1;
 						end
-						obj.rconn = -1;
 					end
 			end
 		end
@@ -899,12 +901,12 @@ classdef dataConnection < handle
 							case '--matfile--'
 								tmpfile=[tempname,'.mat'];
 								VAR=[];
-								try
+								try %#ok<*TRYNC>
 									bytes=double(pnet(obj.conn,'Read',[1 1],'uint32'));
 									pnet(obj.conn,'ReadToFile',tmpfile,bytes);
 									load(tmpfile);
 								end
-								try
+								try %#ok<TRYNC>
 									%delete(tmpfile);
 								end
 								break
@@ -917,6 +919,18 @@ classdef dataConnection < handle
 			
 		end
 		
+		% ===================================================================
+		%> @brief save object method
+		%>
+		%>
+		% ===================================================================
+		function saveobj(obj)
+			obj.cleanup=0;
+			obj.conn=-1;
+			obj.rconn=-1;
+			obj.connList=[];
+			obj.rconnList=[];
+		end
 		
 		% ===================================================================
 		%> @brief Destructor
