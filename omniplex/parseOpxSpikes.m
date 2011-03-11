@@ -9,15 +9,23 @@ classdef parseOpxSpikes < handle
 		sIndex %stimulus number sent to be strobed.
 		trialTime
 		thisRun = 0
+		thisIndex
+		ts
 		run
 		nVars
 		nTrials
+		nRuns
+		nDisp
 		units
 		parameters
 		xValues
 		yValues
 		zValues
+		xLength
+		yLength
+		zLength
 		unit
+		error
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -54,8 +62,6 @@ classdef parseOpxSpikes < handle
 			if isa(opx,'opxOnline')
 				obj.units = opx.units;
 				obj.parameters = opx.parameters;
-				obj.units.celllist=[1 2 3 1 2 1];
-				obj.units.chlist=[1 1 1 2 2 3];
 			end
 			
 			obj.unit = cell(obj.units.totalCells,1);
@@ -67,34 +73,53 @@ classdef parseOpxSpikes < handle
 				obj.sIndex = obj.stimulus.task.outIndex;
 				obj.nVars = obj.stimulus.task.nVars;
 				obj.nTrials = obj.stimulus.task.nTrials;
+				obj.nRuns = obj.stimulus.task.nRuns;
+				obj.nDisp = obj.nRuns / obj.nTrials;
 				obj.trialTime = obj.stimulus.task.trialTime;
 				if obj.nVars == 0
-					raw = cell(1,1,1);
+					obj.xLength = 1;
+					obj.yLength = 1;
+					obj.zLength = 1;
 				elseif obj.nVars == 1
-					raw = cell(1,length(obj.stimulus.task.nVar(1).values),1);
 					obj.xValues = obj.stimulus.task.nVar(1).values;
+					obj.xLength = length(obj.stimulus.task.nVar(1).values);
+					obj.yLength = 1;
+					obj.zLength = 1;
 				elseif obj.nVars == 2
-					raw = cell(length(obj.stimulus.task.nVar(2).values),length(obj.stimulus.task.nVar(1).values),1);
 					obj.xValues = obj.stimulus.task.nVar(1).values;
+					obj.xLength = length(obj.stimulus.task.nVar(1).values);
 					obj.yValues = obj.stimulus.task.nVar(2).values;
+					obj.yLength = length(obj.stimulus.task.nVar(2).values);
+					obj.zLength = 1;
 				else
-					raw = cell(length(obj.stimulus.task.nVar(2).values),length(obj.stimulus.task.nVar(1).values),length(obj.stimulus.task.nVar(3).values));
 					obj.xValues = obj.stimulus.task.nVar(1).values;
+					obj.xLength = length(obj.stimulus.task.nVar(1).values);
 					obj.yValues = obj.stimulus.task.nVar(2).values;
+					obj.yLength = length(obj.stimulus.task.nVar(2).values);
 					obj.zValues = obj.stimulus.task.nVar(3).values;
+					obj.zLength = length(obj.stimulus.task.nVar(3).values);
 				end
-			end
+				raw = cell(obj.yLength,obj.xLength,obj.zLength);
+				
+				for i = 1:length(obj.unit)
+					obj.unit{i}.raw = raw;
+					obj.unit{i}.trial = cell(obj.nRuns,1);
+					obj.unit{i}.trials = raw;
+					obj.unit{i}.map = raw;
+					for k = 1:(size(raw,1)*size(raw,2))
+						obj.unit{i}.map{k} = k;
+					end
+					[obj.unit{i}.trials{:}]=deal(zeros);
+				end
 			
-			for i = 1:length(obj.unit)
-				obj.unit{i}.raw = raw;
-				obj.unit{i}.trial = cell(opx.totalRuns,1);
-				obj.unit{i}.trials = raw;
-				obj.unit{i}.map = raw;
-				[obj.unit{i}.trials{:}]=deal(zeros);
 			end
-			
 		end
 		
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
 		function parseRun(obj,data,num)
 			
 			if isempty(data)
@@ -111,9 +136,32 @@ classdef parseOpxSpikes < handle
 				num=l;
 			end
 			
+			obj.thisIndex = obj.stimulus.task.outIndex(num);
+			
 			startTime = data.trial(num).eventList(1,1);
 			endTime = data.trial(num).eventList(end,1);
 			raw = data.trial(num).spikeList;
+			
+			x = 1;
+			y = 1;
+			z = 1;
+			switch obj.nVars
+				case 1
+					x=obj.sMap(num,1);
+				case 2
+					x=obj.sMap(num,1);
+					y=obj.sMap(num,2);
+				case 3
+					x=obj.sMap(num,1);
+					y=obj.sMap(num,2);
+					z=obj.sMap(num,3);
+			end
+			obj.ts.x = x;
+			obj.ts.y = y;
+			obj.ts.z = z;
+			fprintf('\nRUN: %d = x: %d | y: %d | z: %d > ',num,x,y,z);
+			fprintf('map: %d',obj.sMap(num,:));
+			fprintf('\n')
 					
 			for j=1:obj.units.totalCells
 				obj.unit{j}.trial{num}.raw=raw;
@@ -123,25 +171,36 @@ classdef parseOpxSpikes < handle
 				s = s(s(:,3)==obj.units.celllist(j));
 				s = (s-startTime)./obj.parameters.timedivisor;
 				obj.unit{j}.trial{num}.spikes = s;
-				x=obj.sMap(num,1);
-				y=obj.sMap(num,2);
-				obj.unit{j}.trials{y,x}=obj.unit{j}.trials{y,x}+1;
-				obj.unit{j}.raw{y,x} = sort([obj.unit{j}.raw{y,x}; obj.unit{j}.trial{num}.spikes]);
+				obj.unit{j}.trials{y,x,z}=obj.unit{j}.trials{y,x,z}+1;
+				obj.unit{j}.raw{y,x,z} = sort([obj.unit{j}.raw{y,x,z}; obj.unit{j}.trial{num}.spikes]);
 			end
 			
-			obj.thisRun = obj.thisRun+1;
+			obj.thisRun = num;
 			
 		end
 		
-		function parseNextRun(data)
-			if isempty(data)
-				return
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
+		function parseNextRun(obj,data)
+			try
+				if isempty(data)
+					return
+				end
+				obj.parseRun(data,obj.thisRun+1);
+			catch ME
+				fprintf('parseRun error at: %d',obj.thisRun+1);
+				obj.error = ME;
 			end
-			tic
-			obj.parseRun(data,obj.thisRun+1);
-			toc
 		end
 		
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
 		function parseAllRuns(obj,data)
 			if isempty(data)
 				return

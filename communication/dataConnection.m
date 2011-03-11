@@ -30,17 +30,20 @@ classdef dataConnection < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		hasData = 0
-		isOpen = 0
 		dataIn = []
-		status
-		statusMessage
 		dataLength
-		error
-		connList
-		rconnList
+	end
+	
+	properties (SetAccess = private, GetAccess = public, Transient = true)
+		connList = []
+		rconnList = []
 		conn = -1
 		rconn = -1
+		hasData = 0
+		isOpen = 0
+		status = -1
+		statusMessage = ''
+		error
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -420,13 +423,16 @@ classdef dataConnection < handle
 		%>
 		% ===================================================================
 		% Write data to the given pnet socket.
-		function nOut = write(obj, data, formatted)
+		function write(obj, data, formatted, sendPacket)
 			
 			if ~exist('data','var')
 				data = obj.dataOut;
 			end
 			if ~exist('formatted','var')
 				formatted = 0;
+			end
+			if ~exist('sendPacket','var')
+				sendPacket = 1;
 			end
 			
 			switch obj.protocol
@@ -436,9 +442,9 @@ classdef dataConnection < handle
 					if formatted == 0
 						pnet(obj.conn, 'write', data);
 					else
-						nOut = pnet(obj.conn, 'printf', data);
+						pnet(obj.conn, 'printf', data);
 					end
-					pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
+					if sendPacket;pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);end
 					
 					%============================TCP
 				case 'tcp'
@@ -920,19 +926,6 @@ classdef dataConnection < handle
 		end
 		
 		% ===================================================================
-		%> @brief save object method
-		%>
-		%>
-		% ===================================================================
-		function saveobj(obj)
-			obj.cleanup=0;
-			obj.conn=-1;
-			obj.rconn=-1;
-			obj.connList=[];
-			obj.rconnList=[];
-		end
-		
-		% ===================================================================
 		%> @brief Destructor
 		%>
 		%>
@@ -962,6 +955,23 @@ classdef dataConnection < handle
 					fprintf([message ' | ' in '\n']);
 				end
 			end
+		end
+	end
+	
+	methods (Static)
+	% ===================================================================
+		%> @brief save object method
+		%>
+		%>
+		% ===================================================================
+		function lobj=loadobj(in)
+			fprintf('\nLoading dataConnection object...\n')
+			in.cleanup=0;
+			in.conn=-1;
+			in.rconn=-1;
+			in.connList=[];
+			in.rconnList=[];
+			lobj=in;
 		end
 	end
 end

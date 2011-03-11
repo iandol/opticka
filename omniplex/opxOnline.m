@@ -27,7 +27,6 @@ classdef opxOnline < handle
 	properties (SetAccess = private, GetAccess = public)
 		masterPort = 11111
 		slavePort = 11112
-		opxConn %> connection to the omniplex
 		conn %listen connection
 		msconn %master slave connection
 		spikes %hold the sorted spikes
@@ -39,10 +38,14 @@ classdef opxOnline < handle
 		stimulus
 		tmpFile
 		data
-		isSlaveConnected = 0
-		isMasterConnected = 0
 		error
 		h %GUI handles
+	end
+	
+	properties (SetAccess = private, GetAccess = public, Transient = true)
+		opxConn %> connection to the omniplex
+		isSlaveConnected = 0
+		isMasterConnected = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -423,6 +426,7 @@ classdef opxOnline < handle
 		% ===================================================================
 		function parseData(obj)
 			loop = 1;
+			abort = 0;
 			opx=[];
 			fprintf('\n\n===Parse Data Loop Starting===\n')
 			while loop
@@ -440,9 +444,11 @@ classdef opxOnline < handle
 							obj.msconn.write('--ping--');
 							fprintf('\nOpticka pinged us, we ping opticka and slave!');
 
-						case '--quit--'
-							loop = 0;
-							break
+						case '--abort--'
+							obj.msconn.write('--abort--');
+							fprintf('\nOpticka asks us to abort, tell slave to stop too!');
+							pause(0.3);
+							abort = 1;
 					end
 				end
 				
@@ -458,6 +464,9 @@ classdef opxOnline < handle
 							obj.parameters = opx.parameters;
 							obj.data=parseOpxSpikes;
 							obj.data.initialize(obj);
+							obj.initializePlot;
+							obj.plotData;
+							clear opx
 							
 						case '--finishRun--'
 							tloop = 1;
@@ -472,21 +481,34 @@ classdef opxOnline < handle
 							end
 							load(obj.tmpFile);
 							obj.trial = opx.trial;
-							obj.data.parseNextRun;
+							obj.data.parseNextRun(obj);
 							obj.plotData;
+							clear opx
 							
 						case '--finishAll--'
-							tmp=load(obj.tmpFile);
+							load(obj.tmpFile);
 							obj.trial = opx.trial;
 							obj.plotData
 							loop = 0;
+							pause(0.2)
 							save(obj.tmpFile,'obj');
 							pause(0.2)
-							break
-								
+							abort = 1;
+							
+						case '--finishAbort--'
+							load(obj.tmpFile);
+							obj.trial = opx.trial;
+							obj.plotData
+							loop = 0;
+							pause(0.2)
+							save(obj.tmpFile,'obj');
+							pause(0.2)
+							abort = 1;
 					end
 				end
-				
+				if abort == 1;
+					break
+				end
 			end
 			obj.listenMaster
 		end
@@ -511,15 +533,14 @@ classdef opxOnline < handle
 			
 			obj.trial = struct;
 			obj.nRuns=1;
-			
 			obj.saveData;
 			obj.msconn.write('--beforeRun--');
 			pause(0.1);
 			toc
 			try
 				while obj.nRuns <= obj.totalRuns && abort < 1
-					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1 2 3], [1], 0);
-					fprintf('\nLooping at %i\n', obj.nRuns);
+					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1,2,3,4,5,6],0,0);
+					fprintf('\nWaiting for run: %i\n', obj.nRuns);
 					[rn, trial, spike, analog, last] = PL_TrialStatus(obj.opxConn, 3, obj.maxWait); %wait until end of trial
 					tic
 					fprintf('rn: %i tr: %i sp: %i al: %i lst: %i\n',rn, trial, spike, analog, last);
@@ -546,10 +567,13 @@ classdef opxOnline < handle
 						break
 					end
 					toc
-					
 				end
 				obj.saveData; %final save of data
-				obj.msconn.write('--finishAll--');
+				if abort == 1
+					obj.msconn.write('--finishAbort--');
+				else
+					obj.msconn.write('--finishAll--');
+				end
 				obj.msconn.write(uint32(obj.nRuns));
 				% you need to call PL_Close(s) to close the connection
 				% with the Plexon server
@@ -560,7 +584,7 @@ classdef opxOnline < handle
 				obj.error = ME;
 				fprintf('There was some error during data collection by slave!\n');
 				fprintf('Error message: %s\n',obj.error.message);
-				fprintf('Line: %d',obj.error.stack.line);
+				fprintf('Line: %d ',obj.error.stack.line);
 				obj.nRuns = 0;
 				obj.closePlexon;
 				obj.listenSlave;
@@ -573,13 +597,49 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function plotData(obj)
+			cv = get(obj.h.opxUICell,'Value');
 			try
-				n=round((rand)*4);
-				if n<1;n=1;end
-				subplot(2,2,n,'Parent',obj.h.opxUIPanel)
-				plot(rand(1,10),[1:10],'k.-')
-				title(['On Trial: ' num2str(obj.nRuns)]);
-				drawnow;
+				thisRun = obj.data.thisRun;
+				index = obj.data.thisIndex;
+				data = obj.data.unit{cv}.raw{index};
+				subplot(obj.data.yLength,obj.data.xLength,index,'Parent',obj.h.opxUIPanel)
+				hist(data,40)
+				title(['Cell: ' num2str(cv) ' | Trial: ' num2str(obj.nRuns) ' | Data Trial: ' num2str(obj.data.thisRun)]);
+			end
+			drawnow;
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
+		function initializePlot(obj)
+			try
+				s=cellstr(num2str((1:obj.units.totalCells)'));
+				set(obj.h.opxUICell,'String', s);
+				set(obj.h.opxUIAnalysisMethod,'Value',2);
+				switch obj.stimulus.task.nVars
+					case 0
+						set(obj.h.opxUISelect1,'Enable','off')
+						set(obj.h.opxUISelect2,'Enable','off')
+					case 1
+						set(obj.h.opxUISelect1,'Enable','on')
+						set(obj.h.opxUISelect2,'Enable','off')
+						set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
+						set(obj.h.opxUISelect2,'String','')
+					case 2
+						set(obj.h.opxUISelect1,'Enable','on')
+						set(obj.h.opxUISelect2,'Enable','on')
+						set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
+						set(obj.h.opxUISelect2,'String',num2str(obj.stimulus.task.nVar(2).values'))
+					case 3
+						set(obj.h.opxUISelect1,'Enable','on')
+						set(obj.h.opxUISelect2,'Enable','on')
+						set(obj.h.opxUISelect1,'Enable','on')
+						set(obj.h.opxUISelect2,'Enable','off')
+				end
+				subplot(obj.data.yLength,obj.data.xLength,1,'Parent',obj.h.opxUIPanel);
 			end
 		end
 		
@@ -797,7 +857,7 @@ classdef opxOnline < handle
 			end
 			i=1;
 			while i
-				if i > 100
+				if i > 10
 					i=0;
 					break
 				end
@@ -812,7 +872,6 @@ classdef opxOnline < handle
 					break
 				end
 				i=i+1;
-				pause(0.5)
 			end
 			
 		end
@@ -831,21 +890,6 @@ classdef opxOnline < handle
 				if regexpi(key,'^esc')
 					out=1;
 				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief save object method
-		%>
-		%>
-		% ===================================================================
-		function saveobj(obj)
-			obj.cleanup=0;
-			if isa(obj.conn,'dataConnection')
-				obj.conn.cleanup=0;
-			end
-			if isa(obj.msconn,'dataConnection')
-				obj.msconn.cleanup=0;
 			end
 		end
 		
@@ -881,6 +925,25 @@ classdef opxOnline < handle
 					fprintf(['\nHello from ' obj.name ' | opxOnline\n\n']);
 				end
 			end
+		end
+	end
+	
+	methods (Static)
+		% ===================================================================
+		%> @brief load object method
+		%>
+		%>
+		% ===================================================================
+		function lobj=loadobj(in)
+			fprintf('Loading opxOnline object...\n')
+			in.cleanup=0;
+			if isa(in.conn,'dataConnection')
+				in.conn.cleanup=0;
+			end
+			if isa(in.conn,'dataConnection')
+				in.msconn.cleanup=0;
+			end
+			lobj=in;
 		end
 	end
 end
