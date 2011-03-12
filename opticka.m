@@ -195,8 +195,8 @@ classdef (Sealed) opticka < handle
 						mkdir([obj.paths.temp 'History']);
 					end
 					obj.paths.historypath=[obj.paths.temp 'History'];
+				
 				elseif ispc
-
 					obj.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
 					obj.paths.temp=tempdir;
 					if ~exist('c:\MatlabFiles\Protocols','dir')
@@ -210,6 +210,7 @@ classdef (Sealed) opticka < handle
 					end
 					obj.paths.historypath=[obj.paths.temp 'History'];
 				end
+				
 				obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
 				obj.store.newlook='javax.swing.plaf.metal.MetalLookAndFeel';
 				if ismac || ispc
@@ -221,9 +222,9 @@ classdef (Sealed) opticka < handle
 				if ismac || ispc
 					%javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
-				set(obj.h.OKPanelGrating,'Visible','off')
-				drawnow;
-				set(obj.h.OKPanelGrating,'Visible','on')
+				%set(obj.h.OKPanelGrating,'Visible','off')
+				%drawnow;
+				%set(obj.h.OKPanelGrating,'Visible','on')
 				
 				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version])
 				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])

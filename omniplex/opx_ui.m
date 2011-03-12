@@ -22,7 +22,7 @@ function varargout = opx_ui(varargin)
 
 % Edit the above text to modify the response to help opx_ui
 
-% Last Modified by GUIDE v2.5 04-Mar-2011 19:10:07
+% Last Modified by GUIDE v2.5 12-Mar-2011 13:11:33
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -59,8 +59,7 @@ handles.output = hObject;
 guidata(hObject, handles);
 
 % UIWAIT makes opx_ui wait for user response (see UIRESUME)
-% uiwait(handles.opxUI);
-
+% uiwait(handles.opxUIFigure);
 
 % --- Outputs from this function are returned to the command line.
 function varargout = opx_ui_OutputFcn(hObject, eventdata, handles) 
@@ -68,10 +67,8 @@ function varargout = opx_ui_OutputFcn(hObject, eventdata, handles)
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 % Get default command line output from handles structure
 varargout{1} = handles.output;
-
 
 % --- Executes on button press in opxUIQuitButton.
 function opxUIQuitButton_Callback(hObject, eventdata, handles)
@@ -85,7 +82,6 @@ function opxUICell_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUICell (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUICell contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUICell
 
@@ -94,7 +90,6 @@ function opxUIAnalysisMethod_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUIAnalysisMethod (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUIAnalysisMethod contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUIAnalysisMethod
 
@@ -102,7 +97,6 @@ function opxUIEdit1_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUIEdit1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 % Hints: get(hObject,'String') returns contents of opxUIEdit1 as text
 %        str2double(get(hObject,'String')) returns contents of opxUIEdit1 as a double
 
@@ -110,7 +104,6 @@ function opxUIEdit2_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUIEdit2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 % Hints: get(hObject,'String') returns contents of opxUIEdit2 as text
 %        str2double(get(hObject,'String')) returns contents of opxUIEdit2 as a double
 
@@ -119,33 +112,48 @@ function opxUISelect1_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUISelect1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUISelect1 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUISelect1
-
 
 % --- Executes on selection change in opxUISelect2.
 function opxUISelect2_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUISelect2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUISelect2 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUISelect2
 
-
-% --- Executes on button press in opxUIButton1.
-function opxUIButton1_Callback(hObject, eventdata, handles)
-% hObject    handle to opxUIButton1 (see GCBO)
+% --- Executes on button press in opxUIReplot.
+function opxUIReplot_Callback(hObject, eventdata, handles)
+% hObject    handle to opxUIReplot (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-
-
+if isappdata(0,'opx')
+	opx = getappdata(0,'opx');
+	opx.replotFlag = 1;
+	opx.plotData;
+end
+	
+	
 function opxUIInfoBox_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUIInfoBox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 % Hints: get(hObject,'String') returns contents of opxUIInfoBox as text
 %        str2double(get(hObject,'String')) returns contents of opxUIInfoBox as a double
+
+% --- Executes on selection change in opxUISelect3.
+function opxUISelect3_Callback(hObject, eventdata, handles)
+% hObject    handle to opxUISelect3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% Hints: contents = cellstr(get(hObject,'String')) returns opxUISelect3 contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from opxUISelect3
+
+function opxUIEdit3_Callback(hObject, eventdata, handles)
+% hObject    handle to opxUIEdit3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% Hints: get(hObject,'String') returns contents of opxUIEdit3 as text
+%        str2double(get(hObject,'String')) returns contents of opxUIEdit3 as a
+%        double

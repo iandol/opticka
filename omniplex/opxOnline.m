@@ -7,9 +7,9 @@
 classdef opxOnline < handle
 	properties
 		type = 'launcher'
-		eventStart = 257
+		eventStart = 257 %257 is any strobed event
 		eventEnd = -255
-		maxWait = 30000
+		maxWait = 6000
 		autoRun = 1
 		isSlave = 0
 		protocol = 'udp'
@@ -21,7 +21,9 @@ classdef opxOnline < handle
 		verbosity = 0
 		%> sometimes we shouldn't cleanup connections on delete, e.g. when we pass this
 		%> object to another matlab instance as we will close the wrong connections!!!
-		cleanup = 1 
+		cleanup = 1
+		%> should we replot all data in the ui?
+		replotFlag = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -33,25 +35,26 @@ classdef opxOnline < handle
 		nRuns = 0
 		totalRuns = 0
 		trial = struct()
-		parameters
-		units
+		parameters = struct()
+		units = struct()
 		stimulus
 		tmpFile
 		data
 		error
-		h %GUI handles
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
 		opxConn %> connection to the omniplex
 		isSlaveConnected = 0
 		isMasterConnected = 0
+		h %GUI handles
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		allowedProperties='^(type|eventStart|eventEnd|protocol|rPort|rAddress|verbosity|cleanup)$'
 		slaveCommand
 		masterCommand
+		oldcv
 	end
 	
 	%=======================================================================
@@ -77,30 +80,37 @@ classdef opxOnline < handle
 					end
 				end
 			end
+			
 			if strcmpi(obj.type,'master') || strcmpi(obj.type,'launcher')
 				obj.isSlave = 0;
 			end
-			Screen('Preference', 'SuppressAllWarnings',1);
-			Screen('Preference', 'Verbosity', 0);
-			Screen('Preference', 'VisualDebugLevel',0);
+			
+			
 			if ispc
+				Screen('Preference', 'SuppressAllWarnings',1);
+				Screen('Preference', 'Verbosity', 0);
+				Screen('Preference', 'VisualDebugLevel',0);
 				obj.masterCommand = '!matlab -nodesktop -nosplash -r "opxRunMaster" &';
 				obj.slaveCommand = '!matlab -nodesktop -nosplash -nojvm -r "opxRunSlave" &';
 			else
 				obj.masterCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -maci -r \"opxRunMaster\""'' -e ''end tell''';
 				obj.slaveCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -nojvm -maci -r \"opxRunSlave\""'' -e ''end tell''';
 			end
+			
 			switch obj.type
 				
 				case 'master'
 					
 					obj.initializeUI;					
 					obj.spawnSlave;
+					
 					if obj.isSlaveConnected == 0
 						warning('Sorry, slave process failed to initialize!!!')
 					end
+					
 					obj.initializeMaster;
 					pause(0.1)
+					
 					if ispc
 						p=fileparts(mfilename('fullpath'));
 						dos([p filesep 'moveMatlab.exe']);
@@ -108,6 +118,7 @@ classdef opxOnline < handle
 						p=fileparts(mfilename('fullpath'));
 						unix(['osascript ' p filesep 'moveMatlab.applescript']);
 					end
+					
 					obj.listenMaster;
 					
 				case 'slave'
@@ -151,17 +162,18 @@ classdef opxOnline < handle
 			end
 			
 			while loop
-				if ~rem(loop,30);
-					fprintf('.');
+				
+				if ~rem(loop,10);x
 					if isa(obj.stimulus,'runExperiment')
 						set(obj.h.opxUIInfoBox,'String',['We have stimulus, nRuns= ' num2str(obj.totalRuns) ' | waiting for go...'])
 					elseif obj.conn.checkStatus('conn') > 0
 						set(obj.h.opxUIInfoBox,'String','Opticka has connected to us, waiting for stimulus!...');
 					else
-						set(obj.h.opxUIInfoBox,'String','Waiting for Opticka to connect to us...');
+						set(obj.h.opxUIInfoBox,'String','Waiting for Opticka to (re)connect to us...');
 					end
 				end
-				if ~rem(loop,300);fprintf('\n');fprintf('growl');obj.msconn.write('--master growls--');end
+				if ~rem(loop,40);fprintf('.');end
+				if ~rem(loop,400);fprintf('\n');fprintf('growl');obj.msconn.write('--master growls--');end
 				
 				if obj.conn.checkData
 					data = obj.conn.read(0);
@@ -295,6 +307,7 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function listenSlave(obj)
+			
 			fprintf('\nHumble Slave is Eagerly Listening to Master\n');
 			loop = 1;
 			obj.totalRuns = 0; %we reset it waiting for new stimulus
@@ -313,8 +326,10 @@ classdef opxOnline < handle
 			end
 			
 			while loop
-				if ~rem(loop,30);fprintf('.');end
-				if ~rem(loop,300);fprintf('\n');fprintf('quiver');obj.msconn.write('--abuse me do!--');end
+				
+				if ~rem(loop,40);fprintf('.');end
+				if ~rem(loop,400);fprintf('\n');fprintf('quiver');obj.msconn.write('--abuse me do!--');end
+				
 				if obj.msconn.checkData
 					data = obj.msconn.read(0);
 					data = regexprep(data,'\n','');
@@ -430,8 +445,9 @@ classdef opxOnline < handle
 			opx=[];
 			fprintf('\n\n===Parse Data Loop Starting===\n')
 			while loop
-				if ~rem(loop,20);fprintf('.');end
-				if ~rem(loop,200);fprintf('\n');fprintf('ParseData:');end
+				
+				if ~rem(loop,40);fprintf('.');end
+				if ~rem(loop,400);fprintf('\n');fprintf('ParseData:');end
 				
 				if obj.conn.checkData
 					data = obj.conn.read(0);
@@ -597,16 +613,40 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function plotData(obj)
+			if ~exist('oldcv','var');oldcv=1;end
 			cv = get(obj.h.opxUICell,'Value');
+			xmax = str2num(get(obj.h.opxUIEdit1,'String'));
+			ymax = str2num(get(obj.h.opxUIEdit2,'String'));
+			if isempty(xmax);xmax=2;end
+			if isempty(ymax);ymax=10;end
 			try
-				thisRun = obj.data.thisRun;
-				index = obj.data.thisIndex;
-				data = obj.data.unit{cv}.raw{index};
-				subplot(obj.data.yLength,obj.data.xLength,index,'Parent',obj.h.opxUIPanel)
-				hist(data,40)
-				title(['Cell: ' num2str(cv) ' | Trial: ' num2str(obj.nRuns) ' | Data Trial: ' num2str(obj.data.thisRun)]);
+				if obj.replotFlag == 1 || (cv ~= oldcv)
+					for i = 1:obj.data.nDisp
+						data = obj.data.unit{cv}.raw{i};
+						nt = obj.data.unit{cv}.trials{i};
+						subplot(obj.data.yLength,obj.data.xLength,i,'Parent',obj.h.opxUIPanel)
+						hist(data,40)
+						title(['Cell: ' num2str(cv) ' | Trials: ' num2str(nt)]);
+						axis([0 xmax 0 ymax]);
+						h = findobj(gca,'Type','patch');
+						set(h,'FaceColor','k','EdgeColor',[0.3 0.3 0.3])
+					end
+				else
+					thisRun = obj.data.thisRun;
+					index = obj.data.thisIndex;
+					data = obj.data.unit{cv}.raw{index};
+					nt = opx.data.unit{1}.trials{index};
+					subplot(obj.data.yLength,obj.data.xLength,index,'Parent',obj.h.opxUIPanel)
+					hist(data,40)
+					title(['Cell: ' num2str(cv) ' | Run: ' num2str(thisRun) ' | Trials: ' num2str(nt)]);
+					axis([0 xmax 0 ymax]);
+					h = findobj(gca,'Type','patch');
+					set(h,'FaceColor','b','EdgeColor','r')
+				end
 			end
 			drawnow;
+			obj.replotFlag = 0;
+			oldcv=cv;
 		end
 		
 		% ===================================================================
@@ -615,6 +655,9 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function initializePlot(obj)
+			if isstruct(obj.h) && ~ishandle(obj.h.uihandle)
+				obj.initializeUI;
+			end
 			try
 				s=cellstr(num2str((1:obj.units.totalCells)'));
 				set(obj.h.opxUICell,'String', s);
@@ -623,22 +666,35 @@ classdef opxOnline < handle
 					case 0
 						set(obj.h.opxUISelect1,'Enable','off')
 						set(obj.h.opxUISelect2,'Enable','off')
+						set(obj.h.opxUISelect3,'Enable','off')
+						set(obj.h.opxUISelect1,'String','')
+						set(obj.h.opxUISelect2,'String','')
+						set(obj.h.opxUISelect3,'String','')
 					case 1
 						set(obj.h.opxUISelect1,'Enable','on')
 						set(obj.h.opxUISelect2,'Enable','off')
+						set(obj.h.opxUISelect3,'Enable','off')
 						set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
 						set(obj.h.opxUISelect2,'String','')
+						set(obj.h.opxUISelect3,'String','')
 					case 2
 						set(obj.h.opxUISelect1,'Enable','on')
 						set(obj.h.opxUISelect2,'Enable','on')
+						set(obj.h.opxUISelect3,'Enable','off')
 						set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
 						set(obj.h.opxUISelect2,'String',num2str(obj.stimulus.task.nVar(2).values'))
+						set(obj.h.opxUISelect3,'String',' ')
 					case 3
 						set(obj.h.opxUISelect1,'Enable','on')
 						set(obj.h.opxUISelect2,'Enable','on')
-						set(obj.h.opxUISelect1,'Enable','on')
-						set(obj.h.opxUISelect2,'Enable','off')
+						set(obj.h.opxUISelect3,'Enable','on')
+						set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
+						set(obj.h.opxUISelect2,'String',num2str(obj.stimulus.task.nVar(2).values'))
+						set(obj.h.opxUISelect3,'String',num2str(obj.stimulus.task.nVar(3).values'))
 				end
+				set(obj.h.opxUIEdit1,'String','')
+				set(obj.h.opxUIEdit1,'String','')
+				set(obj.h.opxUISelect1,'String','')
 				subplot(obj.data.yLength,obj.data.xLength,1,'Parent',obj.h.opxUIPanel);
 			end
 		end
@@ -797,9 +853,11 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function initializeUI(obj)
+			obj.h = [];
 			uihandle=opx_ui; %our GUI file
 			obj.h=guidata(uihandle);
 			obj.h.uihandle = uihandle;
+			setappdata(0,'opx',obj); %we stash our object in the root appdata store for retirieval from the UI
 		end
 		
 		

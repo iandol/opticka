@@ -105,11 +105,11 @@ classdef parseOpxSpikes < handle
 					obj.unit{i}.raw = raw;
 					obj.unit{i}.trial = cell(obj.nRuns,1);
 					obj.unit{i}.trials = raw;
+					[obj.unit{i}.trials{:}]=deal(zeros);
 					obj.unit{i}.map = raw;
 					for k = 1:(size(raw,1)*size(raw,2))
 						obj.unit{i}.map{k} = k;
 					end
-					[obj.unit{i}.trials{:}]=deal(zeros);
 				end
 			
 			end

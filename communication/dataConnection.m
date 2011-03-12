@@ -960,12 +960,15 @@ classdef dataConnection < handle
 	
 	methods (Static)
 	% ===================================================================
-		%> @brief save object method
+		%> @brief load object method
 		%>
-		%>
+		%> we have to make sure we don't load a saved object with connection
+		%> numbers intact, this can cause wrongly closed connections if another
+		%> dataConnection is open with the same numbered connection. cleanup
+		%> property is used to stop the delete method from calling close methods.
 		% ===================================================================
 		function lobj=loadobj(in)
-			fprintf('\nLoading dataConnection object...\n')
+			fprintf('Loading dataConnection object...\n');
 			in.cleanup=0;
 			in.conn=-1;
 			in.rconn=-1;
