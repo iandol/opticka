@@ -39,11 +39,11 @@ classdef sendSerial < handle
 			if isempty(obj.name) || strcmpi(obj.name,'default')%we were deliberately passed an empty name, will re-specify default
 				obj.name=obj.defaultName;
 			end
-			if ismac
-					obj.find; %find the full connection info
-			else
+			if ispc % there is a find bug on windows in PTB (reported to the forum)
 				obj.name = 'com1';
 				obj.deviceID = obj.name;
+			else
+				obj.find; %find the full connection info
 			end
 			if obj.openNow==1
 				obj.open
@@ -124,6 +124,12 @@ classdef sendSerial < handle
 	
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
+		%===========Delete Method==========%
+		function delete(obj)
+			fprintf('sendSerial Delete method will automagically close connection if open...\n');
+			obj.close;
+		end
+		
 		%===========Salutation==========%
 		function salutation(obj,in,message)
 			if obj.verbosity > 0
