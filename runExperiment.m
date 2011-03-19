@@ -67,6 +67,8 @@ classdef (Sealed) runExperiment < handle
 		movieSettings = []
 		%> Choose the gamma correction table to use
 		gammaTable
+		%> this lets the UI leave commands
+		uiCommand = ''
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -324,8 +326,8 @@ classdef (Sealed) runExperiment < handle
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
 					[~, ~, buttons]=GetMouse(obj.screen);
-					if any(buttons);break;end; %break on any mouse click, needs to change
-					
+					if buttons(2)==1;break;end; %break on any mouse click, needs to change
+					if strcmp(obj.uiCommand,'stop');break;end
 					obj.updateTask(); %update our task structure
 					
 					%======= Show it at next retrace: ========%
@@ -715,6 +717,7 @@ classdef (Sealed) runExperiment < handle
 					% now update our stimuli, we do it in the blank as less
 					% critical timingwise
 					if obj.task.switched == 1
+						obj.uiCommand;
 						obj.updateVars(mT,mR);
 						for i = 1:obj.sList.n
 							obj.stimulus{i}.update;

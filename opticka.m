@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.499'
+		version='0.500'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection
@@ -214,17 +214,17 @@ classdef (Sealed) opticka < handle
 				obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
 				obj.store.newlook='javax.swing.plaf.metal.MetalLookAndFeel';
 				if ismac || ispc
-					%javax.swing.UIManager.setLookAndFeel(obj.store.newlook);
+					javax.swing.UIManager.setLookAndFeel(obj.store.newlook);
 				end
 				uihandle=opticka_ui; %our GUI file
 				obj.h=guidata(uihandle);
 				obj.h.uihandle = uihandle;
 				if ismac || ispc
-					%javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
+					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
-				%set(obj.h.OKPanelGrating,'Visible','off')
-				%drawnow;
-				%set(obj.h.OKPanelGrating,'Visible','on')
+				set(obj.h.OKPanelGrating,'Visible','off')
+				drawnow;
+				set(obj.h.OKPanelGrating,'Visible','on')
 				
 				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version])
 				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
