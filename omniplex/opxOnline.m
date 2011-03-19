@@ -54,7 +54,7 @@ classdef opxOnline < handle
 		allowedProperties='^(type|eventStart|eventEnd|protocol|rPort|rAddress|verbosity|cleanup)$'
 		slaveCommand
 		masterCommand
-		oldcv
+		oldcv = 0
 	end
 	
 	%=======================================================================
@@ -84,7 +84,6 @@ classdef opxOnline < handle
 			if strcmpi(obj.type,'master') || strcmpi(obj.type,'launcher')
 				obj.isSlave = 0;
 			end
-			
 			
 			if ispc
 				Screen('Preference', 'SuppressAllWarnings',1);
@@ -163,7 +162,7 @@ classdef opxOnline < handle
 			
 			while loop
 				
-				if ~rem(loop,10);x
+				if ~rem(loop,10);
 					if isa(obj.stimulus,'runExperiment')
 						set(obj.h.opxUIInfoBox,'String',['We have stimulus, nRuns= ' num2str(obj.totalRuns) ' | waiting for go...'])
 					elseif obj.conn.checkStatus('conn') > 0
@@ -481,7 +480,6 @@ classdef opxOnline < handle
 							obj.data=parseOpxSpikes;
 							obj.data.initialize(obj);
 							obj.initializePlot;
-							obj.plotData;
 							clear opx
 							
 						case '--finishRun--'
@@ -519,6 +517,10 @@ classdef opxOnline < handle
 							pause(0.2)
 							save(obj.tmpFile,'obj');
 							pause(0.2)
+							abort = 1;
+							
+						case '--error--'
+							fprintf('\nSlave choked on an error!...');
 							abort = 1;
 					end
 				end
@@ -571,12 +573,15 @@ classdef opxOnline < handle
 						obj.nRuns = obj.nRuns+1;
 					end
 					if obj.msconn.checkData
-						command = obj.conn.read(0);
+						command = obj.msconn.read(0);
 						switch command
 							case '--abort--'
 								fprintf('\nWe''ve been asked to abort\n')
 								abort = 1;
 								break
+							case '--ping--'
+								fprintf('\nMaster pinged, we ping back...\n')
+								obj.msconn.write('--ping--')
 						end
 					end
 					if obj.checkKeys
@@ -613,14 +618,15 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function plotData(obj)
-			if ~exist('oldcv','var');oldcv=1;end
 			cv = get(obj.h.opxUICell,'Value');
+			fprintf('Plot data from cell: %d\n',cv)
 			xmax = str2num(get(obj.h.opxUIEdit1,'String'));
 			ymax = str2num(get(obj.h.opxUIEdit2,'String'));
 			if isempty(xmax);xmax=2;end
 			if isempty(ymax);ymax=10;end
 			try
-				if obj.replotFlag == 1 || (cv ~= oldcv)
+				if obj.replotFlag == 1 || (cv ~= obj.oldcv)
+					fprintf('Plotting all points...\n')
 					for i = 1:obj.data.nDisp
 						data = obj.data.unit{cv}.raw{i};
 						nt = obj.data.unit{cv}.trials{i};
@@ -629,10 +635,11 @@ classdef opxOnline < handle
 						title(['Cell: ' num2str(cv) ' | Trials: ' num2str(nt)]);
 						axis([0 xmax 0 ymax]);
 						h = findobj(gca,'Type','patch');
-						set(h,'FaceColor','k','EdgeColor',[0.3 0.3 0.3])
+						set(h,'FaceColor','k','EdgeColor',[0.1 0.1 0.1],'Fontsize',7)
 					end
 				else
 					thisRun = obj.data.thisRun;
+					fprintf('Plotting run: %d\n',thisRun)
 					index = obj.data.thisIndex;
 					data = obj.data.unit{cv}.raw{index};
 					nt = opx.data.unit{1}.trials{index};
@@ -643,10 +650,15 @@ classdef opxOnline < handle
 					h = findobj(gca,'Type','patch');
 					set(h,'FaceColor','b','EdgeColor','r')
 				end
+			catch ME
+				obj.error = ME;
+				fprintf('Plot error!\n')
+				fprintf('Error message: %s\n',obj.error.message);
+				fprintf('Line: %d ',obj.error.stack.line);
 			end
 			drawnow;
 			obj.replotFlag = 0;
-			oldcv=cv;
+			obj.oldcv=cv;
 		end
 		
 		% ===================================================================
@@ -667,16 +679,16 @@ classdef opxOnline < handle
 						set(obj.h.opxUISelect1,'Enable','off')
 						set(obj.h.opxUISelect2,'Enable','off')
 						set(obj.h.opxUISelect3,'Enable','off')
-						set(obj.h.opxUISelect1,'String','')
-						set(obj.h.opxUISelect2,'String','')
-						set(obj.h.opxUISelect3,'String','')
+						set(obj.h.opxUISelect1,'String',' ')
+						set(obj.h.opxUISelect2,'String',' ')
+						set(obj.h.opxUISelect3,'String',' ')
 					case 1
 						set(obj.h.opxUISelect1,'Enable','on')
 						set(obj.h.opxUISelect2,'Enable','off')
 						set(obj.h.opxUISelect3,'Enable','off')
 						set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
-						set(obj.h.opxUISelect2,'String','')
-						set(obj.h.opxUISelect3,'String','')
+						set(obj.h.opxUISelect2,'String',' ')
+						set(obj.h.opxUISelect3,'String',' ')
 					case 2
 						set(obj.h.opxUISelect1,'Enable','on')
 						set(obj.h.opxUISelect2,'Enable','on')
@@ -692,10 +704,11 @@ classdef opxOnline < handle
 						set(obj.h.opxUISelect2,'String',num2str(obj.stimulus.task.nVar(2).values'))
 						set(obj.h.opxUISelect3,'String',num2str(obj.stimulus.task.nVar(3).values'))
 				end
-				set(obj.h.opxUIEdit1,'String','')
-				set(obj.h.opxUIEdit1,'String','')
-				set(obj.h.opxUISelect1,'String','')
-				subplot(obj.data.yLength,obj.data.xLength,1,'Parent',obj.h.opxUIPanel);
+				set(obj.h.opxUIEdit1,'String','2')
+				set(obj.h.opxUIEdit2,'String','10')
+				set(obj.h.opxUIEdit3,'String','10')
+				%subplot(obj.data.yLength,obj.data.xLength,1,'Parent',obj.h.opxUIPanel);
+				obj.replotFlag = 1;
 			end
 		end
 		
@@ -933,7 +946,6 @@ classdef opxOnline < handle
 			end
 			
 		end
-		
 		% ===================================================================
 		%> @brief
 		%>
