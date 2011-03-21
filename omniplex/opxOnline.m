@@ -619,36 +619,49 @@ classdef opxOnline < handle
 		% ===================================================================
 		function plotData(obj)
 			cv = get(obj.h.opxUICell,'Value');
+			zval = get(obj.h.opxUISelect3,'Value');
 			fprintf('Plot data from cell: %d\n',cv)
 			xmax = str2num(get(obj.h.opxUIEdit1,'String'));
 			ymax = str2num(get(obj.h.opxUIEdit2,'String'));
+			binWidth = str2num(get(obj.h.opxUIEdit3,'String'));
+			if isempty(binWidth);binWidth = 25;end
+			bins = round((obj.data.trialTime*1000) / binWidth);
 			if isempty(xmax);xmax=2;end
 			if isempty(ymax);ymax=10;end
+			if isempty(zval);zval=1;end
 			try
+				matrixSize = obj.data.matrixSize;
+				offset = matrixSize*(zval-1);
 				if obj.replotFlag == 1 || (cv ~= obj.oldcv)
-					fprintf('Plotting all points...\n')
-					for i = 1:obj.data.nDisp
+					pos = 1;
+					startP = 1 + offset;
+					endP = matrixSize + offset;
+					fprintf('Plotting all points...\n');
+					for i = startP:endP
 						data = obj.data.unit{cv}.raw{i};
 						nt = obj.data.unit{cv}.trials{i};
-						subplot(obj.data.yLength,obj.data.xLength,i,'Parent',obj.h.opxUIPanel)
-						hist(data,40)
+						subplot(obj.data.yLength,obj.data.xLength,pos,'Parent',obj.h.opxUIPanel)
+						hist(data,bins)
 						title(['Cell: ' num2str(cv) ' | Trials: ' num2str(nt)]);
 						axis([0 xmax 0 ymax]);
+						set(gca,'FontSize',7);
 						h = findobj(gca,'Type','patch');
-						set(h,'FaceColor','k','EdgeColor',[0.1 0.1 0.1],'Fontsize',7)
+						set(h,'FaceColor',[0 0 0],'EdgeColor',[0.1 0.1 0.1]);
+						pos = pos + 1;
 					end
 				else
 					thisRun = obj.data.thisRun;
 					fprintf('Plotting run: %d\n',thisRun)
 					index = obj.data.thisIndex;
 					data = obj.data.unit{cv}.raw{index};
-					nt = opx.data.unit{1}.trials{index};
-					subplot(obj.data.yLength,obj.data.xLength,index,'Parent',obj.h.opxUIPanel)
-					hist(data,40)
+					nt = obj.data.unit{1}.trials{index};
+					subplot(obj.data.yLength,obj.data.xLength,index-offset,'Parent',obj.h.opxUIPanel)
+					hist(data,bins)
 					title(['Cell: ' num2str(cv) ' | Run: ' num2str(thisRun) ' | Trials: ' num2str(nt)]);
 					axis([0 xmax 0 ymax]);
+					set(gca,'FontSize',7);
 					h = findobj(gca,'Type','patch');
-					set(h,'FaceColor','b','EdgeColor','r')
+					set(h,'FaceColor',[0 0 0],'EdgeColor',[0.3 0.1 0.1])
 				end
 			catch ME
 				obj.error = ME;

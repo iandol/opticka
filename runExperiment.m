@@ -124,6 +124,12 @@ classdef (Sealed) runExperiment < handle
 		moviePtr = []
 	end
 	
+	events
+		runInfo
+		abortRun
+		endRun
+	end
+	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 		%=======================================================================
@@ -326,7 +332,7 @@ classdef (Sealed) runExperiment < handle
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
 					[~, ~, buttons]=GetMouse(obj.screen);
-					if buttons(2)==1;break;end; %break on any mouse click, needs to change
+					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
 					if strcmp(obj.uiCommand,'stop');break;end
 					obj.updateTask(); %update our task structure
 					
@@ -350,6 +356,7 @@ classdef (Sealed) runExperiment < handle
 					
 					obj.task.tick=obj.task.tick+1;
 					
+					
 					if obj.movieSettings.record == 1
 						if obj.task.isBlank==0 && obj.movieSettings.loop <= obj.movieSettings.nFrames
 							switch obj.movieSettings.type
@@ -371,6 +378,7 @@ classdef (Sealed) runExperiment < handle
 				obj.timeLog.afterDisplay=GetSecs;
 				WaitSecs(0.1);
 				obj.lJack.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
+				notify(obj,'endRun');
 				
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
 				obj.timeLog.deltaUntilDisplay=obj.timeLog.beforeDisplay-obj.timeLog.start;
@@ -891,7 +899,6 @@ classdef (Sealed) runExperiment < handle
 			for i=1:obj.task.nVars
 				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
 			end
-			
 		end
 		
 		% ===================================================================

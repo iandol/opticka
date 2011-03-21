@@ -84,7 +84,11 @@ function opxUICell_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUICell contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUICell
-
+if isappdata(0,'opx')
+	opx = getappdata(0,'opx');
+	opx.replotFlag = 1;
+	opx.plotData;
+end
 % --- Executes on selection change in opxUIAnalysisMethod.
 function opxUIAnalysisMethod_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUIAnalysisMethod (see GCBO)
@@ -92,6 +96,11 @@ function opxUIAnalysisMethod_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUIAnalysisMethod contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUIAnalysisMethod
+if isappdata(0,'opx')
+	opx = getappdata(0,'opx');
+	opx.replotFlag = 1;
+	opx.plotData;
+end
 
 function opxUIEdit1_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUIEdit1 (see GCBO)
@@ -106,6 +115,15 @@ function opxUIEdit2_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'String') returns contents of opxUIEdit2 as text
 %        str2double(get(hObject,'String')) returns contents of opxUIEdit2 as a double
+
+
+function opxUIEdit3_Callback(hObject, eventdata, handles)
+% hObject    handle to opxUIEdit3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% Hints: get(hObject,'String') returns contents of opxUIEdit3 as text
+%        str2double(get(hObject,'String')) returns contents of opxUIEdit3 as a
+%        double
 
 % --- Executes on selection change in opxUISelect1.
 function opxUISelect1_Callback(hObject, eventdata, handles)
@@ -123,6 +141,19 @@ function opxUISelect2_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUISelect2 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUISelect2
 
+% --- Executes on selection change in opxUISelect3.
+function opxUISelect3_Callback(hObject, eventdata, handles)
+% hObject    handle to opxUISelect3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% Hints: contents = cellstr(get(hObject,'String')) returns opxUISelect3 contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from opxUISelect3
+if isappdata(0,'opx')
+	opx = getappdata(0,'opx');
+	opx.replotFlag = 1;
+	opx.plotData;
+end
+
 % --- Executes on button press in opxUIReplot.
 function opxUIReplot_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUIReplot (see GCBO)
@@ -133,27 +164,10 @@ if isappdata(0,'opx')
 	opx.replotFlag = 1;
 	opx.plotData;
 end
-	
-	
+
 function opxUIInfoBox_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUIInfoBox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'String') returns contents of opxUIInfoBox as text
 %        str2double(get(hObject,'String')) returns contents of opxUIInfoBox as a double
-
-% --- Executes on selection change in opxUISelect3.
-function opxUISelect3_Callback(hObject, eventdata, handles)
-% hObject    handle to opxUISelect3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-% Hints: contents = cellstr(get(hObject,'String')) returns opxUISelect3 contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from opxUISelect3
-
-function opxUIEdit3_Callback(hObject, eventdata, handles)
-% hObject    handle to opxUIEdit3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-% Hints: get(hObject,'String') returns contents of opxUIEdit3 as text
-%        str2double(get(hObject,'String')) returns contents of opxUIEdit3 as a
-%        double

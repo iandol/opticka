@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 19-Mar-2011 03:07:27
+% Last Modified by GUIDE v2.5 21-Mar-2011 17:04:59
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -552,12 +552,28 @@ switch string
 		string = num2str([-90:45:90]);
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);
+	case 'motionAngle'
+		string = num2str([-90:45:90]);
+		string = regexprep(string,'\s+',' '); %collapse spaces
+		set(handles.OKVariableValues,'String',string);
+	case 'phase'
+		string = num2str([0:22.5:180]);
+		string = regexprep(string,'\s+',' '); %collapse spaces
+		set(handles.OKVariableValues,'String',string);
 	case 'size'
 		string = num2str([0 0.1 0.2 0.35 0.5 0.75 1 2 4 6 8]);
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);
 	case 'contrast'
 		string = num2str([0:0.1:1]);
+		string = regexprep(string,'\s+',' '); %collapse spaces
+		set(handles.OKVariableValues,'String',string);
+	case 'sf'
+		string = num2str([0 0.1 0.5 0.7 1 1.5 2 3 4 5 6]);
+		string = regexprep(string,'\s+',' '); %collapse spaces
+		set(handles.OKVariableValues,'String',string);
+	case 'tf'
+		string = num2str([0.5 1 2 3 4 5]);
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);
 	case 'xPosition'
@@ -825,7 +841,10 @@ function OKToolbarAbort_ClickedCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	o.r.uiCommand='abort'
+	o.r.uiCommand='abort';
+	if isa(o.oc,'dataConnection')
+		o.oc.write('--abort--');
+	end
 	drawnow;
 end
 
@@ -1075,10 +1094,8 @@ function OKPanelTellOmniplex_ClickedCallback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	resp = questdlg('Is opxOnline running on the Omniplex machine?','Check OPX','No');
-	switch resp
-		case 'Yes'
-			o.connectToOmniplex
-		otherwise
+	if strcmpi(resp,'Yes')
+		o.connectToOmniplex
 	end
 end
 
@@ -1093,7 +1110,7 @@ if isappdata(0,'o')
 	if isa(o.oc,'dataConnection')
 		o.oc.closeAll;
 		o.connectToOmniplex;
-		end
+	end
 end
 
 % --------------------------------------------------------------------
@@ -1105,5 +1122,45 @@ if isappdata(0,'o')
 	o = getappdata(0,'o');
 	if isa(o.oc,'dataConnection')
 		o.sendOmniplexStimulus;
+	end
+end
+
+% --------------------------------------------------------------------
+function OKPanelDisconnectOmniplex_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to OKPanelDisconnectOmniplex (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	if isa(o.oc,'dataConnection')
+		o.disconnectOmniplex;
+	end
+end
+
+
+% --------------------------------------------------------------------
+function OKPanelPingOmniplex_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to OKPanelPingOmniplex (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	if isa(o.oc,'dataConnection') && o.oc.isOpen == 1
+		o.oc.write('--ping--');
+		loop = 1;
+		while loop < 8
+			in = o.oc.read(0);
+			fprintf('\n{opticka said: %s}\n',in)
+			if regexpi(in,'ping')
+				fprintf('\nWe can ping omniplex master on try: %d\n',loop)
+				set(handles.OKOmniplexStatus,'String','Omniplex: connected and pinged')
+				break
+			else
+				fprintf('\nOmniplex master not responding, try: %d\n',loop)
+				set(handles.OKOmniplexStatus,'String','Omniplex: not responding')
+			end
+			loop=loop+1;
+			pause(0.1);
+		end
 	end
 end

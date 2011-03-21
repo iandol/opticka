@@ -101,6 +101,11 @@ classdef (Sealed) opticka < handle
 			if isempty(obj.oc)
 				rPort = obj.gn(obj.h.OKOmniplexPort);
 				rAddress = obj.gs(obj.h.OKOmniplexIP);
+				status = obj.ping(rAddress);
+				if status > 0
+					set(obj.h.OKOmniplexStatus,'String','Omniplex: ping ERROR!')
+					error('Cannot ping Omniplex, please ensure it is connected!!!')
+				end
 				in = struct('rPort',rPort,'rAddress',rAddress,'protocol','tcp');
 				obj.oc = dataConnection(in);
 			else
@@ -232,6 +237,9 @@ classdef (Sealed) opticka < handle
 				obj.getScreenVals;
 				obj.getTaskVals;
 				obj.refreshProtocolsList;
+				addlistener(obj.r,'abortRun',@obj.abortRunEvent);
+				addlistener(obj.r,'endRun',@obj.endRunEvent);
+				addlistener(obj.r,'runInfo',@obj.runInfoEvent);
 
 				setappdata(0,'o',obj); %we stash our object in the root appdata store for retirieval from the UI
 
@@ -740,8 +748,18 @@ classdef (Sealed) opticka < handle
 				obj.refreshStimulusList;
 				obj.refreshVariableList;
 				
-			end
+				if obj.r.task.nVars > 0
+					set(obj.h.OKDeleteVariable,'Enable','on');
+				end
+				if ~isempty(obj.r.stimulus)
+					set(obj.h.OKDeleteStimulus,'Enable','on');
+					set(obj.h.OKModifyStimulus,'Enable','on');
+					set(obj.h.OKStimulusUp,'Enable','on');
+					set(obj.h.OKStimulusDown,'Enable','on');
+				end
 				
+			end
+			
 		end
 		
 		% ======================================================================
@@ -884,6 +902,36 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
+		%> @brief find the value in a cell string list
+		%> 
+		%> @param 
+		% ===================================================================
+		function value = abortRunEvent(obj,src,evtdata)
+			fprintf('abortRun triggered!!!\n')
+			if isa(obj.oc,'dataConnection') && obj.oc.isOpen == 1
+				obj.oc.write('--abort--');
+			end
+		end
+		
+		% ===================================================================
+		%> @brief find the value in a cell string list
+		%> 
+		%> @param 
+		% ===================================================================
+		function value = endRunEvent(obj,src,evtdata)
+			fprintf('endRun triggered!!!\n')
+		end
+		
+		% ===================================================================
+		%> @brief find the value in a cell string list
+		%> 
+		%> @param 
+		% ===================================================================
+		function value = runInfoEvent(obj,src,evtdata)
+			fprintf('runInfo triggered!!!\n')
+		end
+		
+		% ===================================================================
 		%> @brief getstring
 		%> 
 		%> @param 
@@ -939,6 +987,20 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
+		%> @brief pingOmniplex
+		%> 
+		%> @param obj
+		% ===================================================================
+		function status = ping(obj,rAddress)
+			if ispc
+				cmd = 'ping -n 1 -w 10 ';
+			else
+				cmd = 'ping -c 1 -W 10 ';
+			end
+			[status,~]=system([cmd rAddress]);
+		end
+		
+		% ===================================================================
 		%> @brief try to work around GUIDE OS X bugs
 		%> 
 		%> @param 
@@ -957,4 +1019,4 @@ classdef (Sealed) opticka < handle
 		end
 		
 	end
-end
+	end

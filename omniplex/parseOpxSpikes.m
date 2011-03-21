@@ -16,6 +16,7 @@ classdef parseOpxSpikes < handle
 		nTrials
 		nRuns
 		nDisp
+		matrixSize
 		units
 		parameters
 		xValues
@@ -99,7 +100,9 @@ classdef parseOpxSpikes < handle
 					obj.zValues = obj.stimulus.task.nVar(3).values;
 					obj.zLength = length(obj.stimulus.task.nVar(3).values);
 				end
+				
 				raw = cell(obj.yLength,obj.xLength,obj.zLength);
+				obj.matrixSize = obj.xLength * obj.yLength;
 				
 				for i = 1:length(obj.unit)
 					obj.unit{i}.raw = raw;
