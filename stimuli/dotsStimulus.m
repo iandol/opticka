@@ -17,6 +17,8 @@ classdef dotsStimulus < baseStimulus
 		xy
 		dxdy
 		colours
+		mask
+		maskTexture
 	end
 	properties (SetAccess = private, GetAccess = private)
 		antiAlias = 4
@@ -214,6 +216,7 @@ classdef dotsStimulus < baseStimulus
 		function draw(obj,rE)
 			Screen('DrawDots',obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
 				[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
+			%Screen('DrawTexture',obj.win,obj.maskTexture,[],[]);
 		end
 		
 		% ===================================================================

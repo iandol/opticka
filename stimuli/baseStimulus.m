@@ -36,6 +36,8 @@ classdef baseStimulus < dynamicprops
 		mvRect
 		%> Our texture pointer for texture-based stimuli
 		texture
+		%> true or false, whether to draw() this object
+      isVisible;
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
@@ -162,6 +164,22 @@ classdef baseStimulus < dynamicprops
 						[~,value]=obj.updatePosition(obj.delta,obj.angleOut);
 					end
 			end
+		end
+		
+		% ===================================================================
+		%> @brief Shorthand to set isVisible=true.
+		%>
+		% ===================================================================
+		function show(obj)
+			obj.isVisible = true;
+		end
+		
+		% ===================================================================
+		%> @brief Shorthand to set isVisible=false.
+		%>
+		% ===================================================================
+		function hide(obj)
+			obj.isVisible = false;
 		end
 		
 	end %---END PUBLIC METHODS---%

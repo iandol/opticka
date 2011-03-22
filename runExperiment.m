@@ -209,6 +209,7 @@ classdef (Sealed) runExperiment < handle
 				end
 				
 				PsychImaging('PrepareConfiguration');
+				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 				
@@ -403,7 +404,7 @@ classdef (Sealed) runExperiment < handle
 				obj.win=[];
 				Priority(0);
 				ShowCursor;
-				obj.serialP.close;
+				%obj.serialP.close;
 				WaitSecs(0.5);
 				obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
 				obj.lJack.close;
@@ -428,7 +429,7 @@ classdef (Sealed) runExperiment < handle
 				obj.win=[];
 				Priority(0);
 				ShowCursor;
-				obj.serialP.close;
+				%obj.serialP.close;
 				obj.lJack.close;
 				obj.lJack=[];
 				rethrow(ME)
@@ -815,9 +816,9 @@ classdef (Sealed) runExperiment < handle
 			obj.screenVals.ifi=1/obj.screenVals.fps;
 			
 			%make sure we load up and test the serial port
-			obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1));
-			obj.serialP.toggleDTRLine;
-			obj.serialP.close;
+			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1));
+			%obj.serialP.toggleDTRLine;
+			%obj.serialP.close;
 			
 			obj.lJack = labJack(struct('name','labJack','openNow',1,'verbosity',1));
 			obj.lJack.prepareStrobe(0,[0,255,255],1);
