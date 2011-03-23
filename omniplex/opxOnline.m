@@ -44,6 +44,7 @@ classdef opxOnline < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
+		isLooping = false
 		opxConn %> connection to the omniplex
 		isSlaveConnected = 0
 		isMasterConnected = 0
@@ -440,6 +441,7 @@ classdef opxOnline < handle
 		% ===================================================================
 		function parseData(obj)
 			loop = 1;
+			obj.isLooping = true;
 			abort = 0;
 			opx=[];
 			fprintf('\n\n===Parse Data Loop Starting===\n')
@@ -528,6 +530,7 @@ classdef opxOnline < handle
 					break
 				end
 			end
+			obj.isLooping = false;
 			obj.listenMaster
 		end
 		
@@ -557,7 +560,7 @@ classdef opxOnline < handle
 			toc
 			try
 				while obj.nRuns <= obj.totalRuns && abort < 1
-					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1,2,3,4,5,6],0,0);
+					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1,2,3,4,5,6,7,8,9],0,0);
 					fprintf('\nWaiting for run: %i\n', obj.nRuns);
 					[rn, trial, spike, analog, last] = PL_TrialStatus(obj.opxConn, 3, obj.maxWait); %wait until end of trial
 					tic
@@ -717,9 +720,10 @@ classdef opxOnline < handle
 						set(obj.h.opxUISelect2,'String',num2str(obj.stimulus.task.nVar(2).values'))
 						set(obj.h.opxUISelect3,'String',num2str(obj.stimulus.task.nVar(3).values'))
 				end
-				set(obj.h.opxUIEdit1,'String','2')
+				time=obj.stimulus.r.task.trialTime;
+				set(obj.h.opxUIEdit1,'String',num2str(time))
 				set(obj.h.opxUIEdit2,'String','10')
-				set(obj.h.opxUIEdit3,'String','10')
+				set(obj.h.opxUIEdit3,'String','50')
 				%subplot(obj.data.yLength,obj.data.xLength,1,'Parent',obj.h.opxUIPanel);
 				obj.replotFlag = 1;
 			end
