@@ -1145,22 +1145,28 @@ function OKPanelPingOmniplex_ClickedCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	if isa(o.oc,'dataConnection') && o.oc.isOpen == 1
-		o.oc.write('--ping--');
-		loop = 1;
-		while loop < 8
-			in = o.oc.read(0);
-			fprintf('\n{opticka said: %s}\n',in)
-			if regexpi(in,'ping')
-				fprintf('\nWe can ping omniplex master on try: %d\n',loop)
-				set(handles.OKOmniplexStatus,'String','Omniplex: connected and pinged')
-				break
-			else
-				fprintf('\nOmniplex master not responding, try: %d\n',loop)
-				set(handles.OKOmniplexStatus,'String','Omniplex: not responding')
+	rAddress = get(handles.OKOmniplexIP,'String');
+	status = o.ping(rAddress);
+	if status > 0
+		set(obj.h.OKOmniplexStatus,'String','Omniplex: machine ping ERROR!')
+	else
+		if isa(o.oc,'dataConnection') && o.oc.isOpen == 1
+			o.oc.write('--ping--');
+			loop = 1;
+			while loop < 8
+				in = o.oc.read(0);
+				fprintf('\n{opticka said: %s}\n',in)
+				if regexpi(in,'ping')
+					fprintf('\nWe can ping omniplex master on try: %d\n',loop)
+					set(handles.OKOmniplexStatus,'String','Omniplex: connected and pinged')
+					break
+				else
+					fprintf('\nOmniplex master not responding, try: %d\n',loop)
+					set(handles.OKOmniplexStatus,'String','Omniplex: not responding')
+				end
+				loop=loop+1;
+				pause(0.1);
 			end
-			loop=loop+1;
-			pause(0.1);
 		end
 	end
 end

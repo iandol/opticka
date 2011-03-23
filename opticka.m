@@ -32,6 +32,10 @@ classdef (Sealed) opticka < handle
 		allowedPropertiesBase='^(workingDir|verbose)$' %used to sanitise passed values on construction
 	end
 	
+	events
+		variableChange
+	end
+	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
@@ -59,7 +63,6 @@ classdef (Sealed) opticka < handle
 			end
 			obj.initialiseUI;
 		end
-		
 		
 		% ===================================================================
 		%> @brief Route calls to private methods (yeah, I know...)
@@ -93,7 +96,7 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief connectToOmniplex
+			%> @brief connectToOmniplex
 		%> Gets the settings from the UI and connects to omniplex
 		%> @param 
 		% ===================================================================
@@ -106,7 +109,7 @@ classdef (Sealed) opticka < handle
 					set(obj.h.OKOmniplexStatus,'String','Omniplex: ping ERROR!')
 					error('Cannot ping Omniplex, please ensure it is connected!!!')
 				end
-				in = struct('rPort',rPort,'rAddress',rAddress,'protocol','tcp');
+				in = struct('verbosity',0,'rPort',rPort,'rAddress',rAddress,'protocol','tcp');
 				obj.oc = dataConnection(in);
 			else
 				obj.oc.rPort = obj.gn(obj.h.OKOmniplexPort);
@@ -601,6 +604,9 @@ classdef (Sealed) opticka < handle
 				obj.r.task.nVars = obj.r.task.nVars - 1;
 				obj.store.nVars = obj.r.task.nVars;
 				obj.r.task.nVar=obj.r.task.nVar(1:obj.r.task.nVars);
+				if obj.r.task.nVars > 0
+					obj.r.task.randomiseStimuli;
+				end
 			end
 			
 			if obj.r.task.nVars<0;obj.r.task.nVars=0;end
@@ -987,20 +993,6 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief pingOmniplex
-		%> 
-		%> @param obj
-		% ===================================================================
-		function status = ping(obj,rAddress)
-			if ispc
-				cmd = 'ping -n 1 -w 10 ';
-			else
-				cmd = 'ping -c 1 -W 10 ';
-			end
-			[status,~]=system([cmd rAddress]);
-		end
-		
-		% ===================================================================
 		%> @brief try to work around GUIDE OS X bugs
 		%> 
 		%> @param 
@@ -1019,4 +1011,25 @@ classdef (Sealed) opticka < handle
 		end
 		
 	end
+	
+	%========================================================
+	methods ( Static ) %----------Static METHODS
+	%========================================================
+	
+		% ===================================================================
+		%> @brief ping a network address
+		%>	We send a single packet and wait only 10ms to ensure we have a fast connection
+		%> @param rAddress remote address
+		% ===================================================================
+		function status = ping(rAddress)
+			
+			if ispc
+				cmd = 'ping -n 1 -w 10 ';
+			else
+				cmd = 'ping -c 1 -W 10 ';
+			end
+			[status,~]=system([cmd rAddress]);
+		end
+	end
+	
 	end

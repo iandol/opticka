@@ -191,8 +191,7 @@ classdef (Sealed) runExperiment < handle
 				strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
 			end
 			obj.lJack = labJack(strct);
-			obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %Trigger the omniplex into paused mode
-			WaitSecs(0.5);
+			obj.lJack.setDIO([2,0,0]);WaitSecs(0.01);obj.lJack.setDIO([0,0,0]); %Trigger the omniplex into paused mode
 			%-----------------------------------------------------
 			
 			try
