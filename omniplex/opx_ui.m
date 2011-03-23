@@ -22,7 +22,7 @@ function varargout = opx_ui(varargin)
 
 % Edit the above text to modify the response to help opx_ui
 
-% Last Modified by GUIDE v2.5 12-Mar-2011 13:11:33
+% Last Modified by GUIDE v2.5 22-Mar-2011 14:46:52
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -70,12 +70,17 @@ function varargout = opx_ui_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-% --- Executes on button press in opxUIQuitButton.
-function opxUIQuitButton_Callback(hObject, eventdata, handles)
-% hObject    handle to opxUIQuitButton (see GCBO)
+% --- Executes on button press in opxUISaveButton.
+function opxUISaveButton_Callback(hObject, eventdata, handles)
+% hObject    handle to opxUISaveButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+if isappdata(0,'opx')
+	opx = getappdata(0,'opx');
+	if opx.isLooping == false
+		uisave(opx)
+	end
+end
 
 % --- Executes on selection change in opxUICell.
 function opxUICell_Callback(hObject, eventdata, handles)
