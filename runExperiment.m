@@ -31,13 +31,13 @@ classdef (Sealed) runExperiment < handle
 		%> windowed: if 1 useful for debugging, but remember timing will be poor
 		windowed = 0
 		%>show command logs and a time log after stimlus presentation 1 = yes | 0 = no
-		verbose = 0
+		verbose = false
 		%> hide the black flash as PTB tests it refresh timing, uses a gamma trick 1 = yes | 0 = no
-		hideFlash = 0
+		hideFlash = false
 		%> change the parameters for poorer temporal fidelity during debugging 1 = yes | 0 = no
-		debug = 1
+		debug = false
 		%> shows the info text and position grid during stimulus presentation 1 = yes | 0 = no
-		visualDebug = 1
+		visualDebug = true
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer = 1
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8 and 16
@@ -49,15 +49,15 @@ classdef (Sealed) runExperiment < handle
 		%> shunt screen center by Y degrees
 		screenYOffset = 0
 		%> use OpenGL blending mode 1 = yes | 0 = no
-		blend = 0
+		blend = false
 		%> GL_ONE %src mode
 		srcMode = 'GL_ONE'
 		%> GL_ONE % dst mode
 		dstMode = 'GL_ZERO'
 		%> show a fixation spot?
-		fixationPoint = 1
+		fixationPoint = false
 		%> show a white square to trigger a photodiode attached to screen
-		photoDiode = 1
+		photoDiode = false
 		%> name of serial port to send TTL out on, if set to 'dummy' then ignore
 		serialPortName = 'dummy'
 		useLabJack = 0

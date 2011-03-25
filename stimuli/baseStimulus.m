@@ -20,7 +20,7 @@ classdef baseStimulus < dynamicprops
 		%> Alpha as a 0-1 range
 		alpha = 1
 		%> Do we print details to the commandline?
-		verbose=0
+		verbose=false
 		%> For moving stimuli do we start "before" our initial position?
 		startPosition=0
 		%> speed in degs/s
@@ -37,7 +37,7 @@ classdef baseStimulus < dynamicprops
 		%> Our texture pointer for texture-based stimuli
 		texture
 		%> true or false, whether to draw() this object
-      isVisible;
+      isVisible = true
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
@@ -58,13 +58,15 @@ classdef baseStimulus < dynamicprops
 		xCenter = []
 		%> computed Y center (calculated in runExperiment)
 		yCenter = []
+		%> background colour (calculated in runExperiment)
+		backgroundColour = [0.5 0.5 0.5 0]
 		%> window to attach to
 		win = []
 		%>screen to use
 		screen = 0
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase='dX|dY|delta|verbose|texture|dstRect|mvRect|family|type';
+		ignorePropertiesBase='family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -236,8 +238,8 @@ classdef baseStimulus < dynamicprops
 		function [dX dY] = updatePosition(delta,angle)
 			dX = delta .* cos(baseStimulus.d2r(angle));
 			dY = delta .* sin(baseStimulus.d2r(angle));
-			if abs(dX) < 1e-6; dX = 0; end
-			if abs(dY) < 1e-6; dY = 0; end
+			%if abs(dX) < 1e-6; dX = 0; end
+			%if abs(dY) < 1e-6; dY = 0; end
 		end
 		
 	end%---END STATIC METHODS---%
@@ -290,7 +292,7 @@ classdef baseStimulus < dynamicprops
 		%> @param message the message that needs printing to command window
 		% ===================================================================
 		function salutation(obj,in,message)
-			if obj.verbose==1
+			if obj.verbose==true
 				if ~exist('in','var')
 					in = 'undefined';
 				end

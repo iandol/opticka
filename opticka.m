@@ -318,16 +318,16 @@ classdef (Sealed) opticka < handle
 				obj.r.windowed = s;
 			end
 			
-			obj.r.hideFlash = obj.gv(obj.h.OKHideFlash);
+			obj.r.hideFlash = logical(obj.gv(obj.h.OKHideFlash));
 			obj.r.antiAlias = obj.gd(obj.h.OKAntiAliasing);
-			obj.r.photoDiode = obj.gv(obj.h.OKUsePhotoDiode);
+			obj.r.photoDiode = logical(obj.gv(obj.h.OKUsePhotoDiode));
 			obj.r.movieSettings.record = obj.gv(obj.h.OKrecordMovie);
-			obj.r.verbose = obj.gv(obj.h.OKVerbose);
-			obj.r.debug = obj.gv(obj.h.OKDebug);
+			obj.r.verbose = logical(obj.gv(obj.h.OKVerbose));
+			obj.r.debug = logical(obj.gv(obj.h.OKDebug));
 			obj.r.visualDebug = obj.gv(obj.h.OKDebug);
 			obj.r.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
-			obj.r.fixationPoint = obj.gv(obj.h.OKFixationSpot);
-			obj.r.useLabJack = obj.gv(obj.h.OKuseLabJack);
+			obj.r.fixationPoint = logical(obj.gv(obj.h.OKFixationSpot));
+			obj.r.useLabJack = logical(obj.gv(obj.h.OKuseLabJack));
 			obj.r.serialPortName = obj.gs(obj.h.OKSerialPortName);
 			
 		end
@@ -497,9 +497,11 @@ classdef (Sealed) opticka < handle
 			tmp.speed = obj.gd(obj.h.OKPanelDotsspeed);
 			tmp.colour = obj.gn(obj.h.OKPanelDotscolour);
 			tmp.alpha = obj.gd(obj.h.OKPanelDotsalpha);
+			tmp.maskColour = obj.gn(obj.h.OKPanelDotsmaskColour);
+			tmp.mask = logical(obj.gv(obj.h.OKPanelDotsmask));
 			tmp.dotType = obj.gv(obj.h.OKPanelDotsdotType)-1;
-			v = obj.gv(obj.h.OKPanelDotstype);
-			tmp.type = obj.gs(obj.h.OKPanelDotstype,v);
+			v = obj.gv(obj.h.OKPanelDotscolourType);
+			tmp.colourType = obj.gs(obj.h.OKPanelDotscolourType,v);
 			
 			obj.r.stimulus{obj.r.sList.n+1} = dotsStimulus(tmp);
 			

@@ -293,7 +293,7 @@ classdef barStimulus < baseStimulus
 				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
 			end
 			obj.dstRect=Screen('Rect',obj.texture);
-			obj.dstRect=CenterRectOnPoint(obj.dstRect,obj.xCenter,obj.yCenter);
+			obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
 			if isempty(obj.findprop('xPositionOut'));
 				obj.dstRect=OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
 			else

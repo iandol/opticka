@@ -5,36 +5,44 @@ classdef dotsStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		family = 'dots'
 		type = 'simple'
+		density = 35;
 		nDots = 100 % number of dots
 		colourType = 'randomBW'
-		dotSize  = 0.1  % width of dot (deg)
+		dotSize  = 0.05  % width of dot (deg)
 		coherence = 0.5
 		kill      = 0.2 % fraction of dots to kill each frame  (limited lifetime)
-		dotType = 2
+		dotType = 1
+		mask = true
+		maskColour = [0.5 0.5 0.5 0.5]
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
 		xy
 		dxdy
 		colours
-		mask
-		maskTexture
 	end
 	properties (SetAccess = private, GetAccess = private)
+		fieldScale = 1.1
+		fieldSize
+		maskTexture
+		maskRect
+		srcMode = 'GL_ONE'
+		dstMode = 'GL_ZERO'
 		antiAlias = 4
 		rDots
+		nDotsMax = 5000
 		angles
 		dSize
 		fps = 60
-		dx
-		dy
-		allowedProperties='^(type|speed|nDots|dotSize|angle|colourType|coherence|dotType|kill)$';
-		ignoreProperties='xy|dxdy|colours|colourType'
+		dxs
+		dys
+		allowedProperties='^(type|nDots|dotSize|colourType|coherence|dotType|kill|mask)$';
+		ignoreProperties='xy|dxdy|colours|mask|maskTexture|colourType'
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -52,7 +60,7 @@ classdef dotsStimulus < baseStimulus
 			end
 			obj=obj@baseStimulus(args); %we call the superclass constructor first
 			%check we are a grating
-			if ~strcmp(obj.family,'dots')
+			if ~strcmpi(obj.family,'dots')
 				error('Sorry, you are trying to call a dotsStimulus with a family other than dots');
 			end
 			%start to build our parameters
@@ -72,85 +80,6 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Setup an structure for runExperiment
 		%>
-		%> @param 
-		%> @return 
-		% ===================================================================
-		%-------------------Set up our dot matrices----------------------%
-		function initialiseDots(obj)
-			
-			%sort out our angles and percent incoherent
-			obj.angles=ones(obj.nDots,1).*obj.d2r(obj.angle);
-			obj.rDots=obj.nDots-floor(obj.nDots*(obj.coherence));
-			if obj.rDots>0
-				obj.angles(1:obj.rDots)=(2*pi).*rand(1,obj.rDots);
-				obj.angles = Shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
-			end
-			
-			%make our dot colours
-			switch obj.colourType
-				case 'random'
-					obj.colours = randn(4,obj.nDots);
-					obj.colours(4,:) = obj.alpha;
-				case 'randomBW'
-					obj.colours=zeros(4,obj.nDots);
-					for i = 1:obj.nDots
-						obj.colours(:,i)=rand;
-					end
-					obj.colours(4,:)=obj.alpha;
-				case 'binary'
-					obj.colours=zeros(4,obj.nDots);
-					rix = round(rand(obj.nDots,1)) > 0;
-					obj.colours(:,rix) = 1;
-					obj.colours(4,:)=obj.alpha; %set the alpha level
-				otherwise
-					obj.colours=obj.colour;
-					obj.colours(4)=obj.alpha;
-			end
-			
-			%calculate positions and vector offsets
-			obj.xy = (obj.sizeOut).*rand(2,obj.nDots);
-			obj.xy = obj.xy - (obj.size*obj.ppd)/2; %so we are centered for -xy to +xy
-			[obj.dx, obj.dy] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
-			obj.dxdy=[obj.dx';obj.dy'];
-			
-		end
-		
-		% ===================================================================
-		%> @brief Update the dots per frame and wrap dots that exceed the size
-		%>
-		%> @param coherence
-		%> @param angle
-		% ===================================================================
-		function updateDots(obj,coherence,angle)
-			
-			if exist('coherence','var') %we need a new full set of values
-				if ~exist('angle','var')
-					angle = obj.angle;
-				end
-				%sort out our angles and percent incoherent
-				obj.angles=ones(obj.nDots,1).*obj.d2r(angle);
-				obj.rDots=obj.nDots-floor(obj.nDots*(coherence));
-				if obj.rDots>0
-					obj.angles(1:obj.rDots)=(2*pi).*rand(1,obj.rDots);
-					obj.angles = Shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
-				end
-				%calculate positions and vector offsets
-				obj.xy = (obj.size*obj.ppd).*rand(2,obj.nDots);
-				obj.xy = obj.xy - (obj.size*obj.ppd)/2; %so we are centered for -xy to +xy
-				[obj.dx, obj.dy] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
-				obj.dxdy=[obj.dx';obj.dy'];
-			else %just update our dot positions
-				obj.xy=obj.xy+obj.dxdy; %increment position
-				fix=find(obj.xy > ((obj.size*obj.ppd)/2)); %cull positive
-				obj.xy(fix)=obj.xy(fix)-(obj.size*obj.ppd);
-				fix=find(obj.xy < -(obj.size*obj.ppd)/2);  %cull negative
-				obj.xy(fix)=obj.xy(fix)+(obj.size*obj.ppd);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Setup an structure for runExperiment
-		%>
 		%> @param rE runExperiment object for reference
 		%> @return
 		% ===================================================================
@@ -162,6 +91,9 @@ classdef dotsStimulus < baseStimulus
 				obj.xCenter=rE.xCenter;
 				obj.yCenter=rE.yCenter;
 				obj.win=rE.win;
+				obj.srcMode=rE.srcMode;
+				obj.dstMode=rE.dstMode;
+				obj.backgroundColour = rE.backgroundColour;
 			end
 			
 			fn = fieldnames(dotsStimulus);
@@ -193,8 +125,59 @@ classdef dotsStimulus < baseStimulus
 			obj.xTmp = obj.xPositionOut; %xTmp and yTmp are temporary position stores.
 			obj.yTmp = obj.yPositionOut;
 			
-			obj.initialiseDots();
-
+			wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
+			mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
+			mrect = CenterRect(mrect,wrect);
+			bg = [obj.backgroundColour(1:3) 1];
+			obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, bg, wrect);
+			Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
+			obj.maskRect = CenterRectOnPointd(wrect,obj.xPositionOut,obj.yPositionOut);
+			
+			%make our dot colours
+			switch obj.colourType
+				case 'random'
+					obj.colours = rand(4,obj.nDots);
+					obj.colours(4,:) = obj.alpha;
+				case 'randomN'
+					obj.colours = randn(4,obj.nDots);
+					obj.colours(4,:) = obj.alpha;
+				case 'randomBW'
+					obj.colours=zeros(4,obj.nDots);
+					for i = 1:obj.nDots
+						obj.colours(:,i)=rand;
+					end
+					obj.colours(4,:)=obj.alpha;
+				case 'binary'
+					obj.colours=zeros(4,obj.nDots);
+					rix = round(rand(obj.nDots,1)) > 0;
+					obj.colours(:,rix) = 1;
+					obj.colours(4,:)=obj.alpha; %set the alpha level
+				otherwise
+					obj.colours=obj.colour;
+					obj.colours(4)=obj.alpha;
+			end
+			
+			obj.updateDots;
+			
+		end
+		
+		% ===================================================================
+		%> @brief Update the dots per frame and wrap dots that exceed the size
+		%>
+		% ===================================================================
+		function updateDots(obj)
+			%sort out our angles and percent incoherent
+			obj.angles = ones(obj.nDots,1) .* obj.angleOut;
+			obj.rDots=obj.nDots-floor(obj.nDots*(obj.coherenceOut));
+			if obj.rDots>0
+				obj.angles(1:obj.rDots)= obj.r2d((2*pi).*rand(1,obj.rDots));
+				obj.angles = Shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
+			end
+			%calculate positions and vector offsets
+			obj.xy = obj.sizeOut .* rand(2,obj.nDots);
+			obj.xy = obj.xy - obj.sizeOut/2; %so we are centered for -xy to +xy
+			[obj.dxs, obj.dys] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
+			obj.dxdy=[obj.dxs';obj.dys'];
 		end
 		
 		% ===================================================================
@@ -203,20 +186,29 @@ classdef dotsStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function update(obj,rE)
-			
+		function update(obj)
+			obj.updateDots;
 		end
 		
 		% ===================================================================
 		%> @brief Draw an structure for runExperiment
 		%>
-			%> @param rE runExperiment object for reference
+		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function draw(obj,rE)
-			Screen('DrawDots',obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
-				[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
-			%Screen('DrawTexture',obj.win,obj.maskTexture,[],[]);
+		function draw(obj)
+			if obj.isVisible == true
+				if obj.mask == true
+					Screen('BlendFunction', obj.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					Screen('DrawDots', obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
+						[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
+					Screen('DrawTexture', obj.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], 0);
+					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
+				else
+					Screen('DrawDots',obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
+						[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
+				end
+			end
 		end
 		
 		% ===================================================================
@@ -226,7 +218,11 @@ classdef dotsStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			obj.updateDots();
+			obj.xy = obj.xy + obj.dxdy; %increment position
+			fix = find(obj.xy > obj.sizeOut/2); %cull positive
+			obj.xy(fix) = obj.xy(fix) - obj.sizeOut;
+			fix = find(obj.xy < -obj.sizeOut/2);  %cull negative
+			obj.xy(fix) = obj.xy(fix) + obj.sizeOut;
 		end
 		
 		% ===================================================================
@@ -235,8 +231,14 @@ classdef dotsStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function reset(obj,rE)
-			
+		function reset(obj)
+			obj.removeTmpProperties;
+			obj.angles = [];
+			obj.xy = [];
+			obj.dxs = [];
+			obj.dys = [];
+			obj.dxdy = [];
+			obj.colours = [];
 		end
 		
 		% ===================================================================
@@ -246,62 +248,44 @@ classdef dotsStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function run(obj)
-						
-			obj.dSize = obj.dotSize * obj.ppd;
 			
 			try
+				obj.dSize = obj.dotSize * obj.ppd;
+				obj.setup;
 				Screen('Preference', 'SkipSyncTests', 2);
 				Screen('Preference', 'VisualDebugLevel', 0);
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 				[w, rect]=PsychImaging('OpenWindow', 0, 0.5,[1 1 801 601], [], 2,[],obj.antiAlias);
-				%[w, rect] = Screen('OpenWindow', screenNumber, 0,[1 1 801 601],[], 2);
-				Screen('BlendFunction', w, GL_ONE, GL_ONE);
 				[center(1), center(2)] = RectCenter(rect);
+				Screen('BlendFunction', w, GL_ONE, GL_ZERO);
+				
 				obj.fps=Screen('FrameRate',w);      % frames per second
 				obj.ifi=Screen('GetFlipInterval', w);
 				if obj.fps==0
 					obj.fps=1/obj.ifi;
 				end;
 				
-				obj.angles=ones(obj.nDots,1).*ang2rad(obj.angle);
-				obj.rDots=obj.nDots-floor(obj.nDots*(obj.coherence));
-				if obj.rDots>0
-					obj.angles(1:obj.rDots)=(2*pi).*rand(1,obj.rDots);
-				end
-				
-				switch obj.colourType
-					case 'random'
-						obj.colours = randn(4,obj.nDots);
-						obj.colours(4,:) = obj.alpha;
-					case 'randomBW'
-						obj.colours=zeros(4,obj.nDots);
-						for i = 1:obj.nDots
-							obj.colours(:,i)=rand;
-						end
-						obj.colours(4,:)=obj.alpha;
-					case 'binary'
-						obj.colours=zeros(4,obj.nDots);
-						rix = round(rand(obj.nDots,1)) > 0;
-						obj.colours(:,rix) = 1;
-						obj.colours(4,:)=obj.alpha; %set the alpha level
-					otherwise
-						obj.colours=obj.colour;
-						obj.colours(4)=obj.dotAlpha;
-				end
-				
-				obj.xy = (obj.size*obj.ppd).*rand(2,obj.nDots);
-				obj.xy = obj.xy - (obj.size*obj.ppd)/2; %so we are centered for -xy to +xy
-				[obj.dx, obj.dy] = obj.updatePosition(repmat(obj.pfs,size(obj.angles)),obj.angles);
-				obj.dxdy=[obj.dx';obj.dy'];
+				wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
+				%wrect = CenterRectOnPointd(wrect,center(1),center(2));
+				orect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
+				orect = CenterRect(orect,wrect);
+				obj.maskTexture = Screen('OpenOffscreenwindow', w, [0.55 0.5 0.5 1], wrect);
+				Screen('FillOval', obj.maskTexture, [0.5 0.5 0.5 0.5], orect);
+				outrect = CenterRectOnPointd(wrect,center(1),center(2));
 				
 				vbl=Screen('Flip', w);
 				while 1
-					Screen('DrawDots', w, obj.xy, obj.dSize, obj.colours, center, 1);  % change 1 to 0 to draw square dots
-					Screen('gluDisk',w,[1 1 0],center(1),center(2),5);
+					Screen('BlendFunction', w, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					Screen('DrawDots', w, obj.xy, obj.dSize, obj.colours, center, obj.dotType);  % change 1 to 0 to draw square dots
+					Screen('DrawTexture', w, obj.maskTexture, [], outrect, [], [], [], [], 0);
+					%Screen('DrawTexture',obj.win,obj.maskTexture,myrect,myrect);
+					Screen('BlendFunction', w, obj.srcMode, obj.dstMode);
+					Screen('gluDisk',w,[1 0 1],center(1),center(2),2);
 					Screen('DrawingFinished', w); % Tell PTB that no  further drawing commands will follow before Screen('Flip')
-
+					
 					[~, ~, buttons]=GetMouse(0);
 					if any(buttons) % break out of loop
 						break;
@@ -314,13 +298,13 @@ classdef dotsStimulus < baseStimulus
 					vbl=Screen('Flip', w);
 				end
 				
+				obj.reset;
 				Priority(0);
-				ShowCursor
 				Screen('CloseAll');
 				
 			catch ME
+				obj.reset;
 				Priority(0);
-				ShowCursor
 				Screen('CloseAll');
 				rethrow(ME)
 			end
@@ -335,8 +319,31 @@ classdef dotsStimulus < baseStimulus
 		%> @brief sfOut Set method
 		%>
 		% ===================================================================
+		function setcoherenceOut(obj,value)
+			obj.coherenceOut = value;
+			obj.updateDots;
+		end
+		
+		% ===================================================================
+		%> @brief sfOut Set method
+		%>
+		% ===================================================================
+		function setangleOut(obj,value)
+			obj.coherenceOut = value;
+			obj.updateDots;
+		end
+		
+		% ===================================================================
+		%> @brief sfOut Set method
+		%>
+		% ===================================================================
 		function setsizeOut(obj,value)
 			obj.sizeOut = value * obj.ppd;
+			if obj.mask == 1
+				obj.fieldSize = obj.sizeOut * obj.fieldScale; %for masking!
+			else
+				obj.fieldSize = obj.sizeOut;
+			end
 		end
 		
 		% ===================================================================
