@@ -4,20 +4,18 @@
 %>   The current properties are:
 % ========================================================================
 classdef rfMapper < barStimulus
-
+	
 	properties %--------------------PUBLIC PROPERTIES----------%
-	   %> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
-		doubleBuffer = 1 
+		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
+		doubleBuffer = 1
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8 and 16
 		antiAlias = 4
-		%> background of display during stimulus presentation
-		backgroundColour = [0 0 0 0] 
 		%> use OpenGL blending mode 1 = yes | 0 = no
-		blend = 1
+		blend = true
 		%> GL_ONE %src mode
-		srcMode = 'GL_ONE' 
+		srcMode = 'GL_ONE'
 		%> GL_ONE % dst mode
-		dstMode = 'GL_ZERO' 
+		dstMode = 'GL_ZERO'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -29,9 +27,14 @@ classdef rfMapper < barStimulus
 		xyDots = [0;0]
 		comment = ''
 		showClicks = 0
+		stimulus = 'bar'
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		gratingTexture
+		sf
+		tf
+		
 		colourIndex = 1
 		bgcolourIndex = 2
 		colourList = {[1 1 1];[0 0 0];[1 0 0];[0 1 0];[0 0 1];[1 1 0];[1 0 1];[0 1 1];[.5 .5 .5]}
@@ -42,7 +45,7 @@ classdef rfMapper < barStimulus
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -53,7 +56,7 @@ classdef rfMapper < barStimulus
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function obj = rfMapper(args) 
+		function obj = rfMapper(args)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
 				args.family = 'rfmapper';
@@ -68,20 +71,21 @@ classdef rfMapper < barStimulus
 					end
 				end
 			end
+			obj.backgroundColour = [ 0 0 0 0];
 			obj.family = 'rfmapper';
 			obj.salutation('constructor','rfMapper initialisation complete');
 		end
 		
 		% ===================================================================
-		%> @brief 
-		%>  
+		%> @brief
+		%>
 		% ===================================================================
 		function run(obj,rE)
 			obj.screen = rE.screen;
 			try
 				Screen('Preference', 'SkipSyncTests', 2);
 				Screen('Preference', 'VisualDebugLevel', 0);
-				Screen('Preference', 'Verbosity', 2); 
+				Screen('Preference', 'Verbosity', 2);
 				Screen('Preference', 'SuppressAllWarnings', 0);
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
@@ -110,21 +114,34 @@ classdef rfMapper < barStimulus
 				ListenChar(2);
 				
 				while isempty(regexpi(obj.rchar,'^esc'))
+					
+					%draw background
 					Screen('FillRect',obj.win,obj.backgroundColour,[]);
+					
+					%draw text
 					t=sprintf('Buttons: %i\t',obj.buttons);
 					t=[t sprintf(' | X = %2.3g| Y = %2.3g',xOut,yOut)];
 					if ischar(obj.rchar);t=[t sprintf('| Char: %s',obj.rchar)];end
 					t=[t sprintf('Scale = %2.2g',obj.scale)];
 					Screen('DrawText', obj.win, t, 0, 0, [1 1 0]);
+					
+					%draw central spot
 					sColour = obj.backgroundColour./2;
 					if max(sColour)==0;sColour=[0.5 0.5 0.5 1];end
-					Screen('gluDisk',obj.win,sColour,obj.xCenter,obj.yCenter,3);
+					Screen('gluDisk',obj.win,sColour,obj.xCenter,obj.yCenter,2);
+					
+					%draw clicked points
 					if obj.showClicks == 1
 						Screen('DrawDots',obj.win,obj.xyDots,2,sColour,[obj.xCenter obj.yCenter],1);
 					end
-
+					
 					% Draw the sprite at the new location.
-					Screen('DrawTexture', obj.win, obj.texture, [], obj.dstRect, obj.angleOut,[],obj.alpha);
+					switch obj.stimulus
+						case 'bar'
+							Screen('DrawTexture', obj.win, obj.texture, [], obj.dstRect, obj.angleOut,[],obj.alpha);
+						case 'grating'
+							
+					end
 					
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
@@ -136,20 +153,67 @@ classdef rfMapper < barStimulus
 						obj.yClick = [obj.yClick yOut];
 						obj.xyDots = vertcat((obj.xClick.*obj.ppd),(obj.yClick*obj.ppd));
 					end
-					obj.dstRect=CenterRectOnPoint(obj.dstRect,mX,mY);
+					obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
 					[keyIsDown, ~, keyCode] = KbCheck;
 					if keyIsDown == 1
 						obj.rchar = KbName(keyCode);
 						if iscell(obj.rchar);obj.rchar=obj.rchar{1};end
 						switch obj.rchar
-							case 'l'
-								obj.dstRect=ScaleRect(obj.dstRect,1,1.05);
-							case 'k'
-								obj.dstRect=ScaleRect(obj.dstRect,1,0.95);
-							case 'j'
-								obj.dstRect=ScaleRect(obj.dstRect,1.05,1);
-							case 'h'
-								obj.dstRect=ScaleRect(obj.dstRect,0.95,1);
+							case 'l' %increase length
+								switch obj.stimulus
+									case 'bar'
+										obj.dstRect=ScaleRect(obj.dstRect,1,1.05);
+										obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
+								end
+							case 'k' %decrease length
+								switch obj.stimulus
+									case 'bar'
+										obj.dstRect=ScaleRect(obj.dstRect,1,0.95);
+										obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
+								end
+							case 'j' %increase width
+								switch obj.stimulus
+									case 'bar'
+										obj.dstRect=ScaleRect(obj.dstRect,1.05,1);
+										obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
+								end
+							case 'h' %decrease width
+								switch obj.stimulus
+									case 'bar'
+										obj.dstRect=ScaleRect(obj.dstRect,0.95,1);
+										obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
+								end
+							case 'm' %increase size
+								switch obj.stimulus
+									case 'bar'
+										[w,h]=RectSize(obj.dstRect);
+										if w ~= h
+											m = max(w,h);
+											obj.dstRect = SetRect(0,0,m,m);
+											
+										end
+										obj.dstRect=ScaleRect(obj.dstRect,1.05,1.05);
+										obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
+								end
+							case 'n' %decrease size
+								switch obj.stimulus
+									case 'bar'
+										[w,h]=RectSize(obj.dstRect);
+										if w ~= h
+											m = max(w,h);
+											obj.dstRect =  SetRect(0,0,m,m);
+										end
+										obj.dstRect=ScaleRect(obj.dstRect,0.95,0.95);
+										obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
+								end
+							case 'g'
+								switch obj.stimulus
+									case 'bar'
+										obj.stimulus = 'grating';
+									case 'grating'
+										obj.stimulus = 'bar';
+								end
+								
 							case {'LeftArrow','left'}
 								obj.angleOut = obj.angleOut-5;
 							case {'RightArrow','right'}
@@ -179,18 +243,29 @@ classdef rfMapper < barStimulus
 								WaitSecs(0.02);
 								obj.regenerate;
 							case '3#'
-								obj.scale = obj.scale * 1.1;
-								if obj.scale > 8;obj.scale = 8;end
+								switch obj.stimulus
+									case 'bar'
+										obj.scale = obj.scale * 1.1;
+										if obj.scale > 8;obj.scale = 8;end
+								end
 							case '4$'
-								obj.scale = obj.scale * 0.9;
-								if obj.scale <1;obj.scale = 1;end
+								switch obj.stimulus
+									case 'bar'
+										obj.scale = obj.scale * 0.9;
+										if obj.scale <1;obj.scale = 1;end
+								end
 							case 'space'
-								obj.textureIndex = obj.textureIndex + 1;
-								obj.barWidth = obj.dstRect(3)/obj.ppd;
-								obj.barLength = obj.dstRect(4)/obj.ppd;
-								obj.type = obj.textureList{obj.textureIndex};
-								WaitSecs(0.1);
-								obj.regenerate;
+								switch obj.stimulus
+									case 'bar'
+										obj.textureIndex = obj.textureIndex + 1;
+										obj.barWidth = obj.dstRect(3)/obj.ppd;
+										obj.barLength = obj.dstRect(4)/obj.ppd;
+										obj.type = obj.textureList{obj.textureIndex};
+										WaitSecs(0.1);
+										obj.regenerate;
+									case 'grating'
+										
+								end
 							case {';:',';'}
 								obj.showClicks = ~obj.showClicks;
 								WaitSecs(0.1);
@@ -201,14 +276,14 @@ classdef rfMapper < barStimulus
 						end
 					end
 					FlushEvents('keyDown');
-
+					
 					Screen('Flip', obj.win);
 				end
 				
 				obj.win=[];
 				Priority(0);
 				ListenChar(0)
-				ShowCursor; 
+				ShowCursor;
 				Screen('CloseAll');
 				
 			catch ME
@@ -217,7 +292,7 @@ classdef rfMapper < barStimulus
 				ListenChar(0)
 				% If there is an error in our try block, let's
 				% return the user to the familiar MATLAB prompt.
-				ShowCursor; 
+				ShowCursor;
 				Screen('CloseAll');
 				psychrethrow(psychlasterror);
 				rethrow ME
@@ -225,9 +300,9 @@ classdef rfMapper < barStimulus
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
-		%> @param 
+		%> @param
 		%> @return
 		% ===================================================================
 		function set.colourIndex(obj,value)
@@ -238,9 +313,9 @@ classdef rfMapper < barStimulus
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
-		%> @param 
+		%> @param
 		%> @return
 		% ===================================================================
 		function set.bgcolourIndex(obj,value)
@@ -251,9 +326,9 @@ classdef rfMapper < barStimulus
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
-		%> @param 
+		%> @param
 		%> @return
 		% ===================================================================
 		function set.textureIndex(obj,value)
@@ -266,7 +341,7 @@ classdef rfMapper < barStimulus
 	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
+		%=======================================================================
 		% ===================================================================
 		%> @brief setColours
 		%>  sets the colours based on the current index
@@ -275,7 +350,7 @@ classdef rfMapper < barStimulus
 			obj.colour = obj.colourList{obj.colourIndex};
 			obj.backgroundColour = obj.colourList{obj.bgcolourIndex};
 		end
-	
+		
 		% ===================================================================
 		%> @brief regenerate
 		%>  regenerates the texture
