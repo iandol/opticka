@@ -1,4 +1,4 @@
-function [gratingid, gratingrect] = CreateProceduralSineSmoothedGrating(windowPtr, width, height, backgroundColorOffset, radius, contrastPreMultiplicator, sigma, useAlpha, method)
+function [gratingid, gratingrect] = CreateProceduralSineSquareGrating(windowPtr, width, height, backgroundColorOffset, radius, contrastPreMultiplicator)
 % [gratingid, gratingrect] = CreateProceduralSineGrating(windowPtr, width, height [, backgroundColorOffset =(0,0,0,0)] [, radius=inf][, contrastPreMultiplicator=1])
 %
 % Creates a procedural texture that allows to draw sine grating stimulus patches
@@ -25,9 +25,6 @@ function [gratingid, gratingrect] = CreateProceduralSineSmoothedGrating(windowPt
 % value will correspond to what practitioners of the field usually
 % understand to be the contrast value of a grating.
 %
-% 'useAlpha' whether to use colour (0) or alpha (1) for smoothing channel
-%
-% 'method' whether to use cosine (0) or smoothstep(1) functions
 %
 % The function returns a procedural texture handle 'gratingid' that you can
 % pass to the Screen('DrawTexture(s)', windowPtr, gratingid, ...) functions
@@ -70,51 +67,35 @@ global GL;
 AssertGLSL;
 
 if nargin < 3 || isempty(windowPtr) || isempty(width) || isempty(height)
-	error('You must provide "windowPtr", "width" and "height"!');
+    error('You must provide "windowPtr", "width" and "height"!');
 end
 
 if nargin < 4 || isempty(backgroundColorOffset)
-	backgroundColorOffset = [0 0 0 0];
+    backgroundColorOffset = [0 0 0 0];
 else
-	if length(backgroundColorOffset) < 4
-		error('The "backgroundColorOffset" must be a 4 component RGBA vector [red green blue alpha]!');
-	end
+    if length(backgroundColorOffset) < 4
+        error('The "backgroundColorOffset" must be a 4 component RGBA vector [red green blue alpha]!');
+    end
 end
 
 if nargin < 5 || isempty(radius)
-	% Don't apply circular aperture if no radius given:
-	radius = inf;
+    % Don't apply circular aperture if no radius given:
+    radius = inf;
 end
 
 if nargin < 6 || isempty(contrastPreMultiplicator)
-	contrastPreMultiplicator = 1.0;
-end
-
-if nargin < 7 || isempty(sigma)
-	sigma = 0.0;
-end
-
-if nargin < 8 || isempty(useAlpha)
-	useAlpha = 0.0;
-end
-
-if nargin < 9 || isempty(method)
-	method = 0.0;
-end
-
-if nargin < 10 || isempty(shaderPath)
-	shaderPath = '';
+    contrastPreMultiplicator = 1.0;
 end
 
 p = mfilename('fullpath');
 p = [fileparts(p) filesep];
 
 if isinf(radius)
-	% Load standard grating shader:
-	gratingShader = LoadGLSLProgramFromFiles('BasicSineGratingShader', 1);
+    % Load standard grating shader:
+    gratingShader = LoadGLSLProgramFromFiles([p 'squareWaveShader'], 1);
 else
-	% Load grating shader with circular aperture and smoothing support:
-	gratingShader = LoadGLSLProgramFromFiles({[p 'cosineaperture.vert.txt'], [p 'cosineaperture.frag.txt']}, 1);
+    % Load grating shader with circular aperture support:
+    gratingShader = LoadGLSLProgramFromFiles({[p 'squareWaveShader.vert.txt'], [p 'squareWaveApertureShader.frag.txt']}, 1);
 end
 
 % Setup shader:
@@ -126,14 +107,8 @@ glUniform2f(glGetUniformLocation(gratingShader, 'Center'), width/2, height/2);
 glUniform4f(glGetUniformLocation(gratingShader, 'Offset'), backgroundColorOffset(1),backgroundColorOffset(2),backgroundColorOffset(3),backgroundColorOffset(4));
 
 if ~isinf(radius)
-	% Set radius of circular aperture:
-	glUniform1f(glGetUniformLocation(gratingShader, 'Radius'), radius);
-	% Apply sigma:
-	glUniform1f(glGetUniformLocation(gratingShader, 'Sigma'), sigma);
-	% Apply useAlpha:
-	glUniform1f(glGetUniformLocation(gratingShader, 'useAlpha'), useAlpha);
-	% Apply method:
-	glUniform1f(glGetUniformLocation(gratingShader, 'Method'), method);
+    % Set radius of circular aperture:
+    glUniform1f(glGetUniformLocation(gratingShader, 'Radius'), radius);
 end
 
 % Apply contrast premultiplier:

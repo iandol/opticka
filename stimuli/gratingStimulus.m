@@ -18,32 +18,40 @@ classdef gratingStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		family = 'grating'
 		type = 'procedural'
+		%> spatial frequency
 		sf = 1
+		%> temporal frequency
 		tf = 1
 		rotationMethod = 1
 		phase = 0
 		contrast = 0.5
-		mask = 1
-		gabor = 0
+		%> use a circular mask?
+		mask = true
+		%> generate a gabor?
+		gabor = false
+		%> which direction to drift?
 		driftDirection=1
 		%> the angle which the direction of the grating patch is moving
 		motionAngle = 0
 		%> aspect ratio of the gabor
 		aspectRatio = 1
-		disableNorm = 1
+		%> should we disable normalisation of the gabor?
+		disableNorm = true
 		contrastMult = 0.5
 		%> a divisor for the size for the gaussian envelope for a gabor
 		spatialConstant = 6
 		%> cosine smoothing sigma in pixels for circular masked gratings
 		sigma = 0.0
 		%> use colour or alpha channel for smoothing?
-		useAlpha = 0.0
-		%> use cosine (o) or hermite interpolation (1)
-		smoothMethod = 1.0
+		useAlpha = false
+		%> use cosine (0) or hermite interpolation (1)
+		smoothMethod = true
 		%> scale is used when changing size as an independent variable to keep sf accurate
 		scale = 1
 		%> do we need to correct the phase to be relative to center not edge?
-		correctPhase = 0
+		correctPhase = false
+		%> do we generate a square wave?
+		squareWave = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -51,8 +59,11 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(sf|tf|method|angle|motionAngle|phase|rotationMethod|contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod|correctPhase)$';
-		ignoreProperties='phaseIncrement|disableNorm|gabor|contrastMult|mask'
+		allowedProperties = ['^(sf|tf|method|angle|motionAngle|phase|rotationMethod|' ... 
+			'contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|' ... 
+			'disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod|' ...
+			'correctPhase|squareWave)$']
+		ignoreProperties = 'phaseIncrement|disableNorm|correctPhase|gabor|contrastMult|mask'
 	end
 	
 	events
@@ -177,16 +188,20 @@ classdef gratingStimulus < baseStimulus
 			end
 			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
-			if obj.gabor==0
-				if obj.sigma > 0
-					p = mfilename('fullpath');
-					shaderPath = [fileparts(p) filesep];
-					obj.texture = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
-						obj.res(2), obj.colour, obj.mask, obj.contrastMult, obj.sigma, ...
-						obj.useAlpha, obj.smoothMethod, shaderPath);
-				else
-					obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
+			
+			if obj.gabor==false
+				if obj.squareWave == true
+					obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
 						obj.res(2), obj.colour, obj.mask, obj.contrastMult);
+				else
+					if obj.sigma > 0
+						obj.texture = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
+							obj.res(2), obj.colour, obj.mask, obj.contrastMult, obj.sigma, ...
+							obj.useAlpha, obj.smoothMethod);
+					else
+						obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
+							obj.res(2), obj.colour, obj.mask, obj.contrastMult);
+					end
 				end
 			else
 				if obj.aspectRatio == 1

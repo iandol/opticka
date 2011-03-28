@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.500'
+		version='0.501'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection
@@ -419,7 +419,14 @@ classdef (Sealed) opticka < handle
 		function addGrating(obj)
 			tmp = struct;
 			
-			tmp.gabor = obj.gv(obj.h.OKPanelGratinggabor)-1;
+			tmp.gabor = 0;
+			tmp.squareWave = 0;
+			switch obj.gv(obj.h.OKPanelGratingtype)
+				case 2
+					tmp.squareWave = 1;
+				case 3
+					tmp.gabor = 1;
+			end
 			tmp.xPosition = obj.gd(obj.h.OKPanelGratingxPosition);
 			tmp.yPosition = obj.gd(obj.h.OKPanelGratingyPosition);
 			tmp.size = obj.gd(obj.h.OKPanelGratingsize);

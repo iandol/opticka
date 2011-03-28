@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 22-Mar-2011 02:36:53
+% Last Modified by GUIDE v2.5 27-Mar-2011 23:39:53
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -375,7 +375,7 @@ end
 function OKMenuPreferences_Callback(hObject, eventdata, handles)
 
 
-function OKPanelGratinggabor_Callback(hObject, eventdata, handles)
+function OKPanelGratingtype_Callback(hObject, eventdata, handles)
 switch get(hObject,'Value')
 	case 1
 		set(handles.OKPanelGratingaspectRatio,'Enable','off')

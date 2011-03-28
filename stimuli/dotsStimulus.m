@@ -13,7 +13,9 @@ classdef dotsStimulus < baseStimulus
 		kill      = 0.2 % fraction of dots to kill each frame  (limited lifetime)
 		dotType = 1
 		mask = true
-		maskColour = [0.5 0.5 0.5 0.5]
+		maskColour = [0.5 0.5 0.5 0]
+		msrcMode = 'GL_SRC_ALPHA'
+		mdstMode = 'GL_ONE_MINUS_SRC_ALPHA'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -28,7 +30,7 @@ classdef dotsStimulus < baseStimulus
 		maskRect
 		srcMode = 'GL_ONE'
 		dstMode = 'GL_ZERO'
-		antiAlias = 4
+		antiAlias = 0
 		rDots
 		nDotsMax = 5000
 		angles
@@ -36,7 +38,7 @@ classdef dotsStimulus < baseStimulus
 		fps = 60
 		dxs
 		dys
-		allowedProperties='^(type|nDots|dotSize|colourType|coherence|dotType|kill|mask)$';
+		allowedProperties='^(msrcMode|mdstMode|type|nDots|dotSize|colourType|coherence|dotType|kill|mask)$';
 		ignoreProperties='xy|dxdy|colours|mask|maskTexture|colourType'
 	end
 	
@@ -103,7 +105,7 @@ classdef dotsStimulus < baseStimulus
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
 					if strcmp(fn{j},'dotSize');p.SetMethod = @setdotSizeOut;end
-					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
+				if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
@@ -125,6 +127,7 @@ classdef dotsStimulus < baseStimulus
 			obj.xTmp = obj.xPositionOut; %xTmp and yTmp are temporary position stores.
 			obj.yTmp = obj.yPositionOut;
 			
+			%build the mask
 			wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
 			mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
 			mrect = CenterRect(mrect,wrect);
@@ -171,6 +174,7 @@ classdef dotsStimulus < baseStimulus
 			obj.rDots=obj.nDots-floor(obj.nDots*(obj.coherenceOut));
 			if obj.rDots>0
 				obj.angles(1:obj.rDots)= obj.r2d((2*pi).*rand(1,obj.rDots));
+				%obj.angles=flipud(obj.angles);
 				obj.angles = Shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
 			end
 			%calculate positions and vector offsets
@@ -199,7 +203,7 @@ classdef dotsStimulus < baseStimulus
 		function draw(obj)
 			if obj.isVisible == true
 				if obj.mask == true
-					Screen('BlendFunction', obj.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					Screen('BlendFunction', obj.win, obj.msrcMode, obj.mdstMode);
 					Screen('DrawDots', obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
 						[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
 					Screen('DrawTexture', obj.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], 0);
@@ -250,20 +254,23 @@ classdef dotsStimulus < baseStimulus
 		function run(obj)
 			
 			try
+				obj.xCenter=0;
+				obj.yCenter=0;
+				obj.backgroundColour = [0.5 0.5 0.5];
 				obj.dSize = obj.dotSize * obj.ppd;
-				obj.setup;
 				Screen('Preference', 'SkipSyncTests', 2);
 				Screen('Preference', 'VisualDebugLevel', 0);
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
-				[w, rect]=PsychImaging('OpenWindow', 0, 0.5,[1 1 801 601], [], 2,[],obj.antiAlias);
+				[obj.win, rect]=PsychImaging('OpenWindow', 0, obj.backgroundColour, [1 1 801 601], [], 2,[],obj.antiAlias);
 				[center(1), center(2)] = RectCenter(rect);
-				Screen('BlendFunction', w, GL_ONE, GL_ZERO);
 				
-				obj.fps=Screen('FrameRate',w);      % frames per second
-				obj.ifi=Screen('GetFlipInterval', w);
+				obj.setup;
+				
+				obj.fps=Screen('FrameRate',obj.win);      % frames per second
+				obj.ifi=Screen('GetFlipInterval', obj.win);
 				if obj.fps==0
 					obj.fps=1/obj.ifi;
 				end;
@@ -272,19 +279,22 @@ classdef dotsStimulus < baseStimulus
 				%wrect = CenterRectOnPointd(wrect,center(1),center(2));
 				orect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
 				orect = CenterRect(orect,wrect);
-				obj.maskTexture = Screen('OpenOffscreenwindow', w, [0.55 0.5 0.5 1], wrect);
-				Screen('FillOval', obj.maskTexture, [0.5 0.5 0.5 0.5], orect);
+					obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, [obj.backgroundColour(1:3) 1], wrect);
+				Screen('FillOval', obj.maskTexture, [obj.backgroundColour(1:3) 0], orect);
 				outrect = CenterRectOnPointd(wrect,center(1),center(2));
 				
-				vbl=Screen('Flip', w);
+				vbl=Screen('Flip', obj.win);
 				while 1
-					Screen('BlendFunction', w, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-					Screen('DrawDots', w, obj.xy, obj.dSize, obj.colours, center, obj.dotType);  % change 1 to 0 to draw square dots
-					Screen('DrawTexture', w, obj.maskTexture, [], outrect, [], [], [], [], 0);
-					%Screen('DrawTexture',obj.win,obj.maskTexture,myrect,myrect);
-					Screen('BlendFunction', w, obj.srcMode, obj.dstMode);
-					Screen('gluDisk',w,[1 0 1],center(1),center(2),2);
-					Screen('DrawingFinished', w); % Tell PTB that no  further drawing commands will follow before Screen('Flip')
+					if obj.mask==true
+						Screen('BlendFunction', obj.win, obj.msrcMode, obj.mdstMode);
+						Screen('DrawDots', obj.win, obj.xy, obj.dSize, obj.colours, center, obj.dotType);
+						Screen('DrawTexture', obj.win, obj.maskTexture, [], outrect, [], [], [], [], 0);
+						Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
+					else
+						Screen('DrawDots', obj.win, obj.xy, obj.dSize, obj.colours, center, obj.dotType);
+					end
+					Screen('gluDisk',obj.win,[1 0 1],center(1),center(2),2);
+					Screen('DrawingFinished', obj.win); % Tell PTB that no  further drawing commands will follow before Screen('Flip')
 					
 					[~, ~, buttons]=GetMouse(0);
 					if any(buttons) % break out of loop
@@ -295,7 +305,7 @@ classdef dotsStimulus < baseStimulus
 					obj.xy(fix)=obj.xy(fix)-(obj.size*obj.ppd);
 					fix=find(obj.xy < -(obj.size*obj.ppd)/2);
 					obj.xy(fix)=obj.xy(fix)+(obj.size*obj.ppd);
-					vbl=Screen('Flip', w);
+					vbl=Screen('Flip', obj.win);
 				end
 				
 				obj.reset;
