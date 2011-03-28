@@ -114,7 +114,7 @@ if isinf(radius)
 	gratingShader = LoadGLSLProgramFromFiles('BasicSineGratingShader', 1);
 else
 	% Load grating shader with circular aperture and smoothing support:
-	gratingShader = LoadGLSLProgramFromFiles({[p 'cosineaperture.vert.txt'], [p 'cosineaperture.frag.txt']}, 1);
+	gratingShader = LoadGLSLProgramFromFiles({[p 'smoothedaperture.vert.txt'], [p 'smoothedaperture.frag.txt']}, 1);
 end
 
 % Setup shader:
