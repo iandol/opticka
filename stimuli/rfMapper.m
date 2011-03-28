@@ -22,8 +22,8 @@ classdef rfMapper < barStimulus
 		winRect = []
 		buttons = []
 		rchar = ''
-		xClick = [0]
-		yClick = [0]
+		xClick = 0
+		yClick = 0
 		xyDots = [0;0]
 		comment = ''
 		showClicks = 0
@@ -34,7 +34,7 @@ classdef rfMapper < barStimulus
 		gratingTexture
 		sf
 		tf
-		
+		phase
 		colourIndex = 1
 		bgcolourIndex = 2
 		colourList = {[1 1 1];[0 0 0];[1 0 0];[0 1 0];[0 0 1];[1 1 0];[1 0 1];[0 1 1];[.5 .5 .5]}
@@ -136,11 +136,13 @@ classdef rfMapper < barStimulus
 					end
 					
 					% Draw the sprite at the new location.
-					switch obj.stimulus
-						case 'bar'
-							Screen('DrawTexture', obj.win, obj.texture, [], obj.dstRect, obj.angleOut,[],obj.alpha);
-						case 'grating'
-							
+					if obj.isVisible == true
+						switch obj.stimulus
+							case 'bar'
+								Screen('DrawTexture', obj.win, obj.texture, [], obj.dstRect, obj.angleOut,[],obj.alpha);
+							case 'grating'
+
+						end
 					end
 					
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
@@ -213,7 +215,12 @@ classdef rfMapper < barStimulus
 									case 'grating'
 										obj.stimulus = 'bar';
 								end
-								
+							case 'v'
+								if obj.isVisible == true
+									obj.hide;
+								else
+									obj.show;
+								end
 							case {'LeftArrow','left'}
 								obj.angleOut = obj.angleOut-5;
 							case {'RightArrow','right'}
@@ -276,7 +283,6 @@ classdef rfMapper < barStimulus
 						end
 					end
 					FlushEvents('keyDown');
-					
 					Screen('Flip', obj.win);
 				end
 				

@@ -78,7 +78,7 @@ function opxUISaveButton_Callback(hObject, eventdata, handles)
 if isappdata(0,'opx')
 	opx = getappdata(0,'opx');
 	if opx.isLooping == false
-		uisave(opx)
+		uisave('opx')
 	end
 end
 

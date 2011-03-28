@@ -22,8 +22,11 @@ classdef gratingStimulus < baseStimulus
 		sf = 1
 		%> temporal frequency
 		tf = 1
-		rotationMethod = 1
+		%> rotate the object (0) or the texture (1)?
+		rotationMethod = true
+		%> phase of grating
 		phase = 0
+		%> contrast of grating
 		contrast = 0.5
 		%> use a circular mask?
 		mask = true
@@ -241,14 +244,16 @@ classdef gratingStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			if obj.gabor==0
-				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
-					obj.angleOut, [], [], [], [], obj.rotateMode,...
-					[obj.driftPhase,obj.sfOut,obj.contrastOut, obj.sigmaOut]);
-			else
-				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
-					obj.angleOut, [], [], [], [], kPsychDontDoRotation,...
-					[obj.driftPhase, obj.sfOut, obj.spatialConstantOut, obj.contrastOut, obj.aspectRatioOut, 0, 0, 0]);
+			if obj.isVisible == true
+				if obj.gabor==0
+					Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
+						obj.angleOut, [], [], [], [], obj.rotateMode,...
+						[obj.driftPhase,obj.sfOut,obj.contrastOut, obj.sigmaOut]);
+				else
+					Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
+						obj.angleOut, [], [], [], [], kPsychDontDoRotation,...
+						[obj.driftPhase, obj.sfOut, obj.spatialConstantOut, obj.contrastOut, obj.aspectRatioOut, 0, 0, 0]);
+				end
 			end
 		end
 		

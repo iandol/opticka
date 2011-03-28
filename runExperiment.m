@@ -857,7 +857,7 @@ classdef (Sealed) runExperiment < handle
 		%> @return
 		% ===================================================================
 		function drawFixationPoint(obj)
-			Screen('gluDisk',obj.win,[1 0 1 1],obj.xCenter,obj.yCenter,3);
+			Screen('gluDisk',obj.win,[1 0 1 1],obj.xCenter,obj.yCenter,2);
 		end
 		
 		% ===================================================================
@@ -867,7 +867,7 @@ classdef (Sealed) runExperiment < handle
 		%> @return
 		% ===================================================================
 		function drawGrid(obj)
-			Screen('DrawDots',obj.win,obj.grid,1,[1 0 0 1],[obj.xCenter obj.yCenter],1);
+			Screen('DrawDots',obj.win,obj.grid,1,[1 0 1 1],[obj.xCenter obj.yCenter],1);
 		end
 		
 		% ===================================================================
