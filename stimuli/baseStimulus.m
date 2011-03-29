@@ -37,7 +37,7 @@ classdef baseStimulus < dynamicprops
 		%> Our texture pointer for texture-based stimuli
 		texture
 		%> true or false, whether to draw() this object
-      isVisible = true
+		isVisible = true
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)

@@ -38,8 +38,9 @@ classdef gratingStimulus < baseStimulus
 		motionAngle = 0
 		%> aspect ratio of the gabor
 		aspectRatio = 1
-		%> should we disable normalisation of the gabor?
+		%> should we disable normalisation of the gabor (generally YES)?
 		disableNorm = true
+		%> Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure
 		contrastMult = 0.5
 		%> a divisor for the size for the gaussian envelope for a gabor
 		spatialConstant = 6
@@ -49,8 +50,6 @@ classdef gratingStimulus < baseStimulus
 		useAlpha = false
 		%> use cosine (0) or hermite interpolation (1)
 		smoothMethod = true
-		%> scale is used when changing size as an independent variable to keep sf accurate
-		scale = 1
 		%> do we need to correct the phase to be relative to center not edge?
 		correctPhase = false
 		%> do we generate a square wave?
@@ -58,6 +57,9 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> scale is used when changing size as an independent variable to keep sf accurate
+		scale = 1
+		%> the phase amount we need to add for each frame of animation
 		phaseIncrement = 0
 	end
 	
@@ -66,12 +68,14 @@ classdef gratingStimulus < baseStimulus
 			'contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|' ... 
 			'disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod|' ...
 			'correctPhase|squareWave)$']
-		ignoreProperties = 'phaseIncrement|disableNorm|correctPhase|gabor|contrastMult|mask'
+		ignoreProperties = 'scale|phaseIncrement|disableNorm|correctPhase|gabor|contrastMult|mask'
 	end
 	
 	events
-		changeScale %better performance than dependent property
-		changePhaseIncrement %better performance than dependent property
+		%> triggered when changing size, so we can change sf etc to compensate
+		changeScale 
+		%> triggered when changing tf or drift direction
+		changePhaseIncrement 
 	end
 	
 	%=======================================================================
@@ -118,7 +122,11 @@ classdef gratingStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ==================================================================
 		function setup(obj,rE)
-
+			
+			obj.reset;
+			if isempty(obj.isVisible)
+				obj.show;
+			end
 			addlistener(obj,'changeScale',@obj.calculateScale);
 			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
 			

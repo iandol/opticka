@@ -66,6 +66,10 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function setup(obj,rE)
 			
+			if isempty(obj.isVisible)
+				obj.show;
+			end
+			
 			if exist('rE','var')
 				obj.ppd=rE.ppd;
 				obj.ifi=rE.screenVals.ifi;
@@ -97,6 +101,7 @@ classdef spotStimulus < baseStimulus
 			obj.doMotion = 0;
 			obj.doDrift = 0;
 			obj.doFlash = 0;
+			
 			if obj.speedOut > 0; obj.doMotion = 1; end
 			
 			if strcmp(obj.type,'flash')
