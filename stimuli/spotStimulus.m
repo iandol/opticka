@@ -11,7 +11,6 @@ classdef spotStimulus < baseStimulus
 		flashTime = [0.5 0.5]
 		flashOn = true
 		contrast = 1
-		backgroundColour = [0.5 0.5 0.5]
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = private)

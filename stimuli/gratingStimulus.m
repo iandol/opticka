@@ -108,8 +108,6 @@ classdef gratingStimulus < baseStimulus
 				end
 			end
 			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			addlistener(obj,'changeScale',@obj.calculateScale);
-			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
 			obj.salutation('constructor','Grating Stimulus initialisation complete');
 		end
 		
@@ -121,6 +119,9 @@ classdef gratingStimulus < baseStimulus
 		% ==================================================================
 		function setup(obj,rE)
 
+			addlistener(obj,'changeScale',@obj.calculateScale);
+			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
+			
 			obj.ppd=rE.ppd;
 			obj.ifi=rE.screenVals.ifi;
 			obj.xCenter=rE.xCenter;

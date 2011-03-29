@@ -2,7 +2,7 @@
 %> @brief baseStimulus is the superclass for opticka stimulus objects
 %>
 %> Superclass providing basic structure for all stimulus classes
-	%>
+%>
 % ========================================================================
 classdef baseStimulus < dynamicprops
 	%BASESTIMULUS Superclass providing basic structure for all stimulus

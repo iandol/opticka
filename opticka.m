@@ -29,7 +29,7 @@ classdef (Sealed) opticka < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedPropertiesBase='^(workingDir|verbose)$' %used to sanitise passed values on construction
+	allowedPropertiesBase='^(verbose)$' %used to sanitise passed values on construction
 	end
 	
 	events
@@ -96,25 +96,25 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-			%> @brief connectToOmniplex
+		%> @brief connectToOmniplex
 		%> Gets the settings from the UI and connects to omniplex
 		%> @param 
 		% ===================================================================
 		function connectToOmniplex(obj)
+			rPort = obj.gn(obj.h.OKOmniplexPort);
+			rAddress = obj.gs(obj.h.OKOmniplexIP);
+			status = obj.ping(rAddress);
+			if status > 0
+				set(obj.h.OKOmniplexStatus,'String','Omniplex: machine ping ERROR!')
+				errordlg('Cannot ping Omniplex machine, please ensure it is connected!!!')
+				error('Cannot ping Omniplex, please ensure it is connected!!!')
+			end
 			if isempty(obj.oc)
-				rPort = obj.gn(obj.h.OKOmniplexPort);
-				rAddress = obj.gs(obj.h.OKOmniplexIP);
-				status = obj.ping(rAddress);
-				if status > 0
-					set(obj.h.OKOmniplexStatus,'String','Omniplex: ping ERROR!')
-					error('Cannot ping Omniplex, please ensure it is connected!!!')
-				end
 				in = struct('verbosity',0,'rPort',rPort,'rAddress',rAddress,'protocol','tcp');
 				obj.oc = dataConnection(in);
 			else
 				obj.oc.rPort = obj.gn(obj.h.OKOmniplexPort);
 				obj.oc.rAddress = obj.gs(obj.h.OKOmniplexIP);
-				data=obj.oc.read(0);
 			end
 			if obj.oc.checkStatus < 1
 				loop = 1;
@@ -134,7 +134,7 @@ classdef (Sealed) opticka < handle
 					fprintf('\n{opticka said: %s}\n',in)
 					if regexpi(in,'(opened|ping)')
 						fprintf('\nWe can ping omniplex master on try: %d\n',loop)
-						set(obj.h.OKOmniplexStatus,'String','Omniplex: connected')
+						set(obj.h.OKOmniplexStatus,'String','Omniplex: connected via TCP')
 						break
 					else
 						fprintf('\nOmniplex master not responding, try: %d\n',loop)
@@ -148,7 +148,7 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief connectToOmniplex
+		%> @brief sendOmniplexStimulus
 		%> Gets the settings from the UI and connects to omniplex
 		%> @param 
 		% ===================================================================
@@ -586,7 +586,15 @@ classdef (Sealed) opticka < handle
 				obj.r.task.nVar(obj.r.task.nVars+1).name = obj.gs(obj.h.OKVariableName);
 				obj.r.task.nVar(obj.r.task.nVars+1).values = obj.gn(obj.h.OKVariableValues);
 				obj.r.task.nVar(obj.r.task.nVars+1).stimulus = obj.gn(obj.h.OKVariableStimuli);
-
+				obj.r.task.nVar(obj.r.task.nVars+1).stimulus = obj.gn(obj.h.OKVariableStimuli);
+				offset = obj.gn(obj.h.OKVariableOffset);
+				if isempty(offset)
+					obj.r.task.nVar(obj.r.task.nVars+1).offsetstimulus = [];
+					obj.r.task.nVar(obj.r.task.nVars+1).offsetvalue = [];
+				else
+					obj.r.task.nVar(obj.r.task.nVars+1).offsetstimulus = offset(1);
+					obj.r.task.nVar(obj.r.task.nVars+1).offsetvalue = offset(2);
+				end
 				obj.r.task.randomiseStimuli;
 				obj.store.nVars = obj.r.task.nVars;
 
@@ -744,6 +752,13 @@ classdef (Sealed) opticka < handle
 					obj.r.task.randomiseStimuli;
 				else
 					obj.r.task = tmp.r.task;
+					for i=1:obj.r.task.nVars
+						if ~isfield(obj.r.task.nVar(i),'offsetstimulus') %add these to older protocols that may not contain them
+							obj.r.task.nVar(i).offsetstimulus = [];
+							obj.r.task.nVar(i).offsetvalue = [];
+						end
+					end
+						
 				end
 				set(obj.h.OKtrialTime, 'String', num2str(obj.r.task.trialTime));
 				set(obj.h.OKRandomSeed, 'String', num2str(obj.r.task.randomSeed));

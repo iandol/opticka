@@ -377,12 +377,15 @@ function OKMenuPreferences_Callback(hObject, eventdata, handles)
 
 function OKPanelGratingtype_Callback(hObject, eventdata, handles)
 switch get(hObject,'Value')
-	case 1
+	case {1,2}
 		set(handles.OKPanelGratingaspectRatio,'Enable','off')
 		%set(handles.OKPanelGratingcontrastMult,'Enable','off')
 		set(handles.OKPanelGratingspatialConstant,'Enable','off')
 		set(handles.OKPanelGratingdisableNorm,'Enable','off')
 		set(handles.OKPanelGratingmask,'Enable','on')
+		set(handles.OKPanelGratingsigma,'Enable','on')
+		set(handles.OKPanelGratinguseAlpha,'Enable','on')
+		set(handles.OKPanelGratingsmoothMethod,'Enable','on')
 		set(handles.OKPanelGratingrotationMethod,'Enable','on')
 	otherwise
 		set(handles.OKPanelGratingaspectRatio,'Enable','on')
@@ -390,6 +393,9 @@ switch get(hObject,'Value')
 		set(handles.OKPanelGratingspatialConstant,'Enable','on')
 		set(handles.OKPanelGratingdisableNorm,'Enable','on')
 		set(handles.OKPanelGratingmask,'Enable','off')
+		set(handles.OKPanelGratingsigma,'Enable','off')
+		set(handles.OKPanelGratinguseAlpha,'Enable','off')
+		set(handles.OKPanelGratingsmoothMethod,'Enable','off')
 		set(handles.OKPanelGratingrotationMethod,'Enable','off')
 end
 
@@ -1148,7 +1154,7 @@ if isappdata(0,'o')
 	rAddress = get(handles.OKOmniplexIP,'String');
 	status = o.ping(rAddress);
 	if status > 0
-		set(obj.h.OKOmniplexStatus,'String','Omniplex: machine ping ERROR!')
+		set(o.h.OKOmniplexStatus,'String','Omniplex: machine ping ERROR!')
 	else
 		if isa(o.oc,'dataConnection') && o.oc.isOpen == 1
 			o.oc.write('--ping--');

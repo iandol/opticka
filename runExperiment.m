@@ -675,6 +675,15 @@ classdef (Sealed) runExperiment < handle
 				ix = obj.task.nVar(i).stimulus; %which stimulus
 				value=obj.task.outVars{thisTrial,i}(thisRun);
 				name=obj.task.nVar(i).name; %which parameter
+				offsetix = obj.task.nVar(i).offsetstimulus;
+				offsetvalue = obj.task.nVar(i).offsetvalue;
+				
+				if ~isempty(offsetix)
+					obj.stimulus{offsetix}.([name 'Out'])=value+offsetvalue;
+					if thisTrial ==1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
+						obj.stimulus{offsetix}.update;
+					end
+				end
 				
 				for j=1:length(ix) %loop through our stimuli references for this variable
 					obj.stimulus{ix(j)}.([name 'Out'])=value;
