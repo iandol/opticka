@@ -219,9 +219,25 @@ classdef parseOpxSpikes < handle
 				
 	end
 	
+	methods ( Static )
+		% ===================================================================
+		%> @brief Parse a time*** into bursts
+		%>
+		%> Prints messages dependent on verbosity
+		%> @param in the calling function
+		%> @param message the message that needs printing to command window
+		% ===================================================================
+		function out = parseBursts(in)
+			
+		end
+		
+	end
+	
 	%=======================================================================
 	methods ( Access = private ) % PRIVATE METHODS
 	%=======================================================================
+	
+	
 		% ===================================================================
 		%> @brief Prints messages dependent on verbosity
 		%>

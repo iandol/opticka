@@ -199,10 +199,13 @@ classdef opxOnline < handle
 										obj.totalRuns = obj.stimulus.task.nRuns;
 										obj.msconn.write('--nRuns--');
 										obj.msconn.write(uint32(obj.totalRuns));
+										obj.conn.write('--stimulusReceived--');
 									else
 										fprintf('We have a stimulus from opticka, but it is malformed!');
 										obj.stimulus = [];
+										obj.conn.write('--stimulusFailed--');
 									end
+									obj.initializePlot('stimulus')
 									break
 								end
 								tloop = tloop + 1;
@@ -621,6 +624,7 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function plotData(obj)
+			margins = 0.05;
 			cv = get(obj.h.opxUICell,'Value');
 			zval = get(obj.h.opxUISelect3,'Value');
 			fprintf('Plot data from cell: %d\n',cv)
@@ -643,8 +647,10 @@ classdef opxOnline < handle
 					for i = startP:endP
 						data = obj.data.unit{cv}.raw{i};
 						nt = obj.data.unit{cv}.trials{i};
-						subplot(obj.data.yLength,obj.data.xLength,pos,'Parent',obj.h.opxUIPanel)
-						hist(data,bins)
+						[n,t]=hist(data,bins);
+						n=(n/nt)*(1000/binWidth);
+						subplot_tight(obj.data.yLength,obj.data.xLength,pos,margins,'Parent',obj.h.opxUIPanel)
+						bar(t,n)
 						title(['Cell: ' num2str(cv) ' | Trials: ' num2str(nt)]);
 						axis([0 xmax 0 ymax]);
 						set(gca,'FontSize',7);
@@ -658,7 +664,7 @@ classdef opxOnline < handle
 					index = obj.data.thisIndex;
 					data = obj.data.unit{cv}.raw{index};
 					nt = obj.data.unit{1}.trials{index};
-					subplot(obj.data.yLength,obj.data.xLength,index-offset,'Parent',obj.h.opxUIPanel)
+					subplot_tight(obj.data.yLength,obj.data.xLength,index-offset,margins,'Parent',obj.h.opxUIPanel)
 					hist(data,bins)
 					title(['Cell: ' num2str(cv) ' | Run: ' num2str(thisRun) ' | Trials: ' num2str(nt)]);
 					axis([0 xmax 0 ymax]);
@@ -682,50 +688,65 @@ classdef opxOnline < handle
 		%>
 		%>
 		% ===================================================================
-		function initializePlot(obj)
+		function initializePlot(obj,type)
+			if ~exist('type','var')
+				type = 'all';
+			end
 			if isstruct(obj.h) && ~ishandle(obj.h.uihandle)
 				obj.initializeUI;
 			end
 			try
+				if strcmpi(type,'all')
+					setStimulusValues;
+					setCellValues;
+				elseif strcmpi(type,'stimulus')
+					setStimulusValues;
+				end
+				obj.replotFlag = 1;
+			end
+			
+			function setCellValues()
 				s=cellstr(num2str((1:obj.units.totalCells)'));
 				set(obj.h.opxUICell,'String', s);
-				set(obj.h.opxUIAnalysisMethod,'Value',2);
-				switch obj.stimulus.task.nVars
-					case 0
-						set(obj.h.opxUISelect1,'Enable','off')
-						set(obj.h.opxUISelect2,'Enable','off')
-						set(obj.h.opxUISelect3,'Enable','off')
-						set(obj.h.opxUISelect1,'String',' ')
-						set(obj.h.opxUISelect2,'String',' ')
-						set(obj.h.opxUISelect3,'String',' ')
-					case 1
-						set(obj.h.opxUISelect1,'Enable','on')
-						set(obj.h.opxUISelect2,'Enable','off')
-						set(obj.h.opxUISelect3,'Enable','off')
-						set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
-						set(obj.h.opxUISelect2,'String',' ')
-						set(obj.h.opxUISelect3,'String',' ')
-					case 2
-						set(obj.h.opxUISelect1,'Enable','on')
-						set(obj.h.opxUISelect2,'Enable','on')
-						set(obj.h.opxUISelect3,'Enable','off')
-						set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
-						set(obj.h.opxUISelect2,'String',num2str(obj.stimulus.task.nVar(2).values'))
-						set(obj.h.opxUISelect3,'String',' ')
-					case 3
-						set(obj.h.opxUISelect1,'Enable','on')
-						set(obj.h.opxUISelect2,'Enable','on')
-						set(obj.h.opxUISelect3,'Enable','on')
-						set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
-						set(obj.h.opxUISelect2,'String',num2str(obj.stimulus.task.nVar(2).values'))
-						set(obj.h.opxUISelect3,'String',num2str(obj.stimulus.task.nVar(3).values'))
+			end
+			
+			function setStimulusValues()
+				if isa(obj.stimulus,'runExperiment')
+					switch obj.stimulus.task.nVars
+						case 0
+							set(obj.h.opxUISelect1,'Enable','off')
+							set(obj.h.opxUISelect2,'Enable','off')
+							set(obj.h.opxUISelect3,'Enable','off')
+							set(obj.h.opxUISelect1,'String',' ')
+							set(obj.h.opxUISelect2,'String',' ')
+							set(obj.h.opxUISelect3,'String',' ')
+						case 1
+							set(obj.h.opxUISelect1,'Enable','on')
+							set(obj.h.opxUISelect2,'Enable','off')
+							set(obj.h.opxUISelect3,'Enable','off')
+							set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
+							set(obj.h.opxUISelect2,'String',' ')
+							set(obj.h.opxUISelect3,'String',' ')
+						case 2
+							set(obj.h.opxUISelect1,'Enable','on')
+							set(obj.h.opxUISelect2,'Enable','on')
+							set(obj.h.opxUISelect3,'Enable','off')
+							set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
+							set(obj.h.opxUISelect2,'String',num2str(obj.stimulus.task.nVar(2).values'))
+							set(obj.h.opxUISelect3,'String',' ')
+						case 3
+							set(obj.h.opxUISelect1,'Enable','on')
+							set(obj.h.opxUISelect2,'Enable','on')
+							set(obj.h.opxUISelect3,'Enable','on')
+							set(obj.h.opxUISelect1,'String',num2str(obj.stimulus.task.nVar(1).values'))
+							set(obj.h.opxUISelect2,'String',num2str(obj.stimulus.task.nVar(2).values'))
+							set(obj.h.opxUISelect3,'String',num2str(obj.stimulus.task.nVar(3).values'))
+					end
+					time=obj.stimulus.task.trialTime;
+					set(obj.h.opxUIEdit1,'String',num2str(time))
+					set(obj.h.opxUIEdit2,'String','10')
+					set(obj.h.opxUIEdit3,'String','50')
 				end
-				time=obj.stimulus.r.task.trialTime;
-				set(obj.h.opxUIEdit1,'String',num2str(time))
-				set(obj.h.opxUIEdit2,'String','10')
-				set(obj.h.opxUIEdit3,'String','50')
-				%subplot(obj.data.yLength,obj.data.xLength,1,'Parent',obj.h.opxUIPanel);
-				obj.replotFlag = 1;
 			end
 		end
 		
@@ -888,6 +909,9 @@ classdef opxOnline < handle
 			obj.h=guidata(uihandle);
 			obj.h.uihandle = uihandle;
 			setappdata(0,'opx',obj); %we stash our object in the root appdata store for retirieval from the UI
+			set(obj.h.opxUIEdit1,'String','2')
+			set(obj.h.opxUIEdit2,'String','10')
+			set(obj.h.opxUIEdit3,'String','50')
 		end
 		
 		

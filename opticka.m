@@ -167,6 +167,19 @@ classdef (Sealed) opticka < handle
 					obj.oc.writeVar('o',tmpobj);
 					if ~isempty(tLog);obj.r.restoreTimeLog(tLog);end
 					toc
+					loop = 1;
+				while loop < 10
+					in = obj.oc.read(0);
+					fprintf('\n{opticka said: %s}\n',in)
+					if regexpi(in,'(stimulusReceived)')
+						set(obj.h.OKOmniplexStatus,'String','Omniplex: connected+stimulus received')
+						break
+					elseif regexpi(in,'(stimulusFailed)')
+						set(obj.h.OKOmniplexStatus,'String','Omniplex: connected, stimulus ERROR!')
+					end
+					loop=loop+1;
+					pause(0.2);
+				end
 				end
 			end
 		end
