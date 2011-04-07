@@ -161,17 +161,10 @@ classdef opxOnline < handle
 				obj.conn.open;
 			end
 			
+			set(obj.h.opxUIInfoBox,'String','Waiting for Opticka to (re)connect to us...');
+			
 			while loop
 				
-				if ~rem(loop,10);
-					if isa(obj.stimulus,'runExperiment')
-						set(obj.h.opxUIInfoBox,'String',['We have stimulus, nRuns= ' num2str(obj.totalRuns) ' | waiting for go...'])
-					elseif obj.conn.checkStatus('conn') > 0
-						set(obj.h.opxUIInfoBox,'String','Opticka has connected to us, waiting for stimulus!...');
-					else
-						set(obj.h.opxUIInfoBox,'String','Waiting for Opticka to (re)connect to us...');
-					end
-				end
 				if ~rem(loop,40);fprintf('.');end
 				if ~rem(loop,400);fprintf('\n');fprintf('growl');obj.msconn.write('--master growls--');end
 				
@@ -192,16 +185,17 @@ classdef opxOnline < handle
 							while tloop < 10
 								pause(0.3);
 								if obj.conn.checkData
-									pause(0.3);
 									obj.stimulus=obj.conn.readVar;
 									if isa(obj.stimulus,'runExperiment')
-										fprintf('We have the stimulus from opticka, waiting for GO!');
 										obj.totalRuns = obj.stimulus.task.nRuns;
+										obj.conn.write('--stimulusReceived--');
 										obj.msconn.write('--nRuns--');
 										obj.msconn.write(uint32(obj.totalRuns));
-										obj.conn.write('--stimulusReceived--');
+										fprintf('We have the stimulus from opticka, waiting for GO!');
+										set(obj.h.opxUIInfoBox,'String',['We have stimulus, nRuns= ' num2str(obj.totalRuns) ' | waiting for go...'])
 									else
 										fprintf('We have a stimulus from opticka, but it is malformed!');
+										set(obj.h.opxUIInfoBox,'String',['We have stimulus, but it was malformed!'])
 										obj.stimulus = [];
 										obj.conn.write('--stimulusFailed--');
 									end
@@ -282,6 +276,7 @@ classdef opxOnline < handle
 					obj.conn.checkClient;
 					if obj.conn.conn > 0
 						fprintf('\nWe''ve opened a new connection to opticka...\n')
+						set(obj.h.opxUIInfoBox,'String','Opticka has connected to us, waiting for stimulus!...');
 						obj.conn.write('--opened--');
 						pause(0.2)
 					end
@@ -297,6 +292,7 @@ classdef opxOnline < handle
 			
 			switch runNext
 				case 'parseData'
+					set(obj.h.opxUIInfoBox,'String','Preparing to parse the online data...');
 					obj.parseData;
 				otherwise
 					fprintf('\nMaster is sleeping, use listenMaster to make me listen again...');
@@ -341,12 +337,15 @@ classdef opxOnline < handle
 						
 						case '--nRuns--'
 							tloop = 1;
+							obj.totalRuns = 0;
 							while tloop < 10
 								if obj.msconn.checkData
 									tRun = double(obj.msconn.read(0,'uint32'));
-									obj.totalRuns = tRun;
-									fprintf('\nMaster send us number of runs: %d\n',obj.totalRuns);
-									break
+									if tRun > 0 && tRun < 256
+										obj.totalRuns = tRun;
+										fprintf('\nMaster send us number of runs: %d\n',obj.totalRuns);
+										break
+									end
 								end
 								pause(0.1);
 								tloop = tloop + 1;
@@ -398,9 +397,8 @@ classdef opxOnline < handle
 							eval('exit');
 							
 						case '--GO!--'
-							fprintf('\nTime to run, yay!\n')
-							loop = 0;
 							if obj.totalRuns > 0
+								fprintf('\nTime to run, yay!\n')
 								obj.collectData;
 							end
 							
@@ -438,7 +436,8 @@ classdef opxOnline < handle
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief The main loop the master runs to load data saved by slave
+		%> and then plot it lazily
 		%>
 		%>
 		% ===================================================================
@@ -474,17 +473,18 @@ classdef opxOnline < handle
 				
 				if obj.msconn.checkData
 					data = obj.msconn.read(0);
-					fprintf('\n{message:%s}',data);
+					fprintf('\n{Slave message:%s}',data);
 					switch data
 						
 						case '--beforeRun--'
-							fprintf('\nSlave is about to run the main collection loop...');
 							load(obj.tmpFile);
 							obj.units = opx.units;
 							obj.parameters = opx.parameters;
 							obj.data=parseOpxSpikes;
 							obj.data.initialize(obj);
 							obj.initializePlot;
+							fprintf('\nSlave is about to run the main collection loop...');
+							set(obj.h.opxUIInfoBox,'String','Omniplex about to start data collection, slave waiting...');
 							clear opx
 							
 						case '--finishRun--'
@@ -502,6 +502,7 @@ classdef opxOnline < handle
 							obj.trial = opx.trial;
 							obj.data.parseNextRun(obj);
 							obj.plotData;
+							set(obj.h.opxUIInfoBox,'String',['The slave has completed run ' num2str(obj.nRuns)]);
 							clear opx
 							
 						case '--finishAll--'
@@ -538,7 +539,7 @@ classdef opxOnline < handle
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief Main slave loop to collect and save  spikes from the Onmiplex
 		%>
 		%>
 		% ===================================================================
@@ -624,9 +625,9 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function plotData(obj)
-			margins = 0.05;
 			cv = get(obj.h.opxUICell,'Value');
 			zval = get(obj.h.opxUISelect3,'Value');
+			method = get(obj.h.opxUIAnalysisMethod,'Value');
 			fprintf('Plot data from cell: %d\n',cv)
 			xmax = str2num(get(obj.h.opxUIEdit1,'String'));
 			ymax = str2num(get(obj.h.opxUIEdit2,'String'));
@@ -639,7 +640,10 @@ classdef opxOnline < handle
 			try
 				matrixSize = obj.data.matrixSize;
 				offset = matrixSize*(zval-1);
+				map = cell2mat(obj.data.unit{cv}.map); %our index
+				map = map';
 				if obj.replotFlag == 1 || (cv ~= obj.oldcv)
+					subplot(1,1,1,'Parent',obj.h.opxUIPanel)
 					pos = 1;
 					startP = 1 + offset;
 					endP = matrixSize + offset;
@@ -647,15 +651,18 @@ classdef opxOnline < handle
 					for i = startP:endP
 						data = obj.data.unit{cv}.raw{i};
 						nt = obj.data.unit{cv}.trials{i};
-						[n,t]=hist(data,bins);
-						n=(n/nt)*(1000/binWidth);
-						subplot_tight(obj.data.yLength,obj.data.xLength,pos,margins,'Parent',obj.h.opxUIPanel)
-						bar(t,n)
-						title(['Cell: ' num2str(cv) ' | Trials: ' num2str(nt)]);
-						axis([0 xmax 0 ymax]);
-						set(gca,'FontSize',7);
-						h = findobj(gca,'Type','patch');
-						set(h,'FaceColor',[0 0 0],'EdgeColor',[0.1 0.1 0.1]);
+						varlabel = [num2str(obj.data.unit{cv}.map{i}) ': ' obj.data.unit{cv}.label{i}];
+						mypos=find(map==pos);
+						if mypos > obj.data.xLength*obj.data.yLength;mypos = 1; end
+						selectPlot(obj.data.xLength,obj.data.yLength,mypos,'subplot');
+						switch method
+							case 1
+								plotPSTH()
+							case 2
+								plotCurve()
+							case 3
+								
+						end
 						pos = pos + 1;
 					end
 				else
@@ -664,29 +671,80 @@ classdef opxOnline < handle
 					index = obj.data.thisIndex;
 					data = obj.data.unit{cv}.raw{index};
 					nt = obj.data.unit{1}.trials{index};
-					subplot_tight(obj.data.yLength,obj.data.xLength,index-offset,margins,'Parent',obj.h.opxUIPanel)
-					hist(data,bins)
-					title(['Cell: ' num2str(cv) ' | Run: ' num2str(thisRun) ' | Trials: ' num2str(nt)]);
-					axis([0 xmax 0 ymax]);
-					set(gca,'FontSize',7);
-					h = findobj(gca,'Type','patch');
-					set(h,'FaceColor',[0 0 0],'EdgeColor',[0.3 0.1 0.1])
+					varlabel = [num2str(obj.data.unit{cv}.map{index}) ': ' obj.data.unit{cv}.label{index}];
+					selectPlot(obj.data.xLength,obj.data.yLength,index-offset,'subplot');
+					switch method
+						case 1
+							plotPSTH(thisRun)
+						case 2
+							plotCurve()
+						case 3
+							
+					end
 				end
 			catch ME
 				obj.error = ME;
-				fprintf('Plot error!\n')
-				fprintf('Error message: %s\n',obj.error.message);
+				fprintf('Plot Error message: %s\n',obj.error.message);
 				fprintf('Line: %d ',obj.error.stack.line);
 			end
 			drawnow;
 			obj.replotFlag = 0;
 			obj.oldcv=cv;
+			
+			% ===================================================================
+			%> @brief Plots PSTH
+			%>
+			% ===================================================================
+			function selectPlot(inx,iny,inpos,method)
+				margins=0.06;
+				if ~exist('method','var')
+					method = 'subplot';
+				end
+				switch method
+					case 'subplot'
+						subplot(iny,inx,inpos,'Parent',obj.h.opxUIPanel)
+					case 'subplot_tight'
+						subplot_tight(iny,inx,inpos,margins,'Parent',obj.h.opxUIPanel)
+					case 'subaxis'
+						
+				end
+				
+			end
+			
+			% ===================================================================
+			%> @brief Plots PSTH
+			%>
+			% ===================================================================
+			function plotPSTH(inRun)
+				[n,t]=hist(data,bins);
+				n=convertToHz(n);
+				bar(t,n)
+				title(['Cell: ' num2str(cv) ' | Trials: ' num2str(nt) ' | Var: ' varlabel],'FontSize',7);
+				axis([0 xmax 0 ymax]);
+				set(gca,'FontSize',6);
+				h = findobj(gca,'Type','patch');
+				if exist('inRun','var')
+					set(h,'FaceColor',[0 0 0],'EdgeColor',[0.3 0 0]);
+				else
+					set(h,'FaceColor',[0 0 0],'EdgeColor',[0 0 0]);
+				end
+				
+			end
+			
+			% ===================================================================
+			%> @brief Converts to spikes per second
+			%>
+			% ===================================================================
+			function out = convertToHz(inn)
+				out=(inn/nt)*(1000/binWidth);
+			end
 		end
 		
 		% ===================================================================
-		%> @brief
-		%>
-		%>
+		%> @brief Initialize the Plot before data collection starts
+		%>	This sets up the plot UI with the cell (type='all') and/or stimulus
+		%>	(type='stimulus') parameters.
+		%> @param type Configure all or just the stimulus parameter
 		% ===================================================================
 		function initializePlot(obj,type)
 			if ~exist('type','var')

@@ -4,6 +4,8 @@ classdef parseOpxSpikes < handle
 	
 	properties
 		stimulus
+	end
+	properties (SetAccess = private, GetAccess = public)
 		sValues %stimulus list
 		sMap %stimulus index
 		sIndex %stimulus number sent to be strobed.
@@ -110,8 +112,14 @@ classdef parseOpxSpikes < handle
 					obj.unit{i}.trials = raw;
 					[obj.unit{i}.trials{:}]=deal(zeros);
 					obj.unit{i}.map = raw;
+					obj.unit{i}.label = raw;
 					for k = 1:(size(raw,1)*size(raw,2))
 						obj.unit{i}.map{k} = k;
+						iidx=find(obj.sIndex == k);
+						iidx=iidx(1);
+						str=num2str(obj.sValues(iidx,:))
+						str=regexprep(str,'\s+','|');
+						obj.unit{i}.label{k} = str;
 					end
 				end
 			
