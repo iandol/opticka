@@ -29,6 +29,7 @@ classdef parseOpxSpikes < handle
 		zLength
 		unit
 		error
+		initializeDate
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -61,7 +62,6 @@ classdef parseOpxSpikes < handle
 		function initialize(obj,opx)
 			
 			obj.thisRun = 0;
-			
 			if isa(opx,'opxOnline')
 				obj.units = opx.units;
 				obj.parameters = opx.parameters;
@@ -113,15 +113,20 @@ classdef parseOpxSpikes < handle
 					[obj.unit{i}.trials{:}]=deal(zeros);
 					obj.unit{i}.map = raw;
 					obj.unit{i}.label = raw;
-					for k = 1:(size(raw,1)*size(raw,2))
-						obj.unit{i}.map{k} = k;
-						iidx=find(obj.sIndex == k);
-						iidx=iidx(1);
-						str=num2str(obj.sValues(iidx,:))
+					for k = 1:(obj.nDisp) %for each stimulus
+						iidx=find(obj.sIndex == k); %get the index of this stimulus
+						iidx=iidx(1); %only need first one
+						str=num2str(obj.sValues(iidx,:));
 						str=regexprep(str,'\s+','|');
-						obj.unit{i}.label{k} = str;
+						idx = obj.sMap(iidx,:);
+						if length(idx)<2;idx(2)=1;end
+						if length(idx)<3;idx(3)=1;end
+						obj.unit{i}.label{idx(2),idx(1),idx(3)} = str;
+						obj.unit{i}.map{idx(2),idx(1),idx(3)} = k; %make a map
 					end
 				end
+				
+				obj.initializeDate = datestr(now);
 			
 			end
 		end
@@ -170,11 +175,10 @@ classdef parseOpxSpikes < handle
 			obj.ts.x = x;
 			obj.ts.y = y;
 			obj.ts.z = z;
-			fprintf('\nRUN: %d = x: %d | y: %d | z: %d > ',num,x,y,z);
-			fprintf('map: %d',obj.sMap(num,:));
-			fprintf('\n')
+			fprintf('ParseRun %d = x: %d | y: %d | z: %d\n',num,x,y,z);
 					
 			for j=1:obj.units.totalCells
+				obj.unit{j}.trial{num}.idx = [num obj.sIndex(num,:) obj.sValues(num,:) obj.sMap(num,:)];
 				obj.unit{j}.trial{num}.raw=raw;
 				obj.unit{j}.trial{num}.startTime=startTime;
 				obj.unit{j}.trial{num}.endTime=endTime;

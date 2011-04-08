@@ -34,9 +34,9 @@ classdef opxOnline < handle
 		spikes %hold the sorted spikes
 		nRuns = 0
 		totalRuns = 0
-		trial = struct()
-		parameters = struct()
-		units = struct()
+		trial = []
+		parameters = []
+		units = []
 		stimulus
 		tmpFile
 		data
@@ -620,28 +620,33 @@ classdef opxOnline < handle
 		end
 		
 		% ===================================================================
-		%> @brief
-		%>
+		%> @brief plotData is the main plotting function
+		%> This takes our parseOpxSpikes data structure which is collected with
+		%> parseData and plots it, either for all points (replotFlag==1) or just
+		%> for the last trial that ran during a collection loop
 		%>
 		% ===================================================================
 		function plotData(obj)
+			
 			cv = get(obj.h.opxUICell,'Value');
 			zval = get(obj.h.opxUISelect3,'Value');
 			method = get(obj.h.opxUIAnalysisMethod,'Value');
-			fprintf('Plot data from cell: %d\n',cv)
+			fprintf('Plotting data from cell: %d\n',cv)
 			xmax = str2num(get(obj.h.opxUIEdit1,'String'));
 			ymax = str2num(get(obj.h.opxUIEdit2,'String'));
 			binWidth = str2num(get(obj.h.opxUIEdit3,'String'));
 			if isempty(binWidth);binWidth = 25;end
 			bins = round((obj.data.trialTime*1000) / binWidth);
 			if isempty(xmax);xmax=2;end
-			if isempty(ymax);ymax=10;end
+			if isempty(ymax);ymax=50;end
 			if isempty(zval);zval=1;end
+			
+			matrixSize = obj.data.matrixSize;
+			offset = matrixSize*(zval-1);
+			map = cell2mat(obj.data.unit{cv}.map(:,:,zval));  %maps our index to our display matrix
+			map = map'; %remember subplot indexes by rows have to transform matrix first
+			
 			try
-				matrixSize = obj.data.matrixSize;
-				offset = matrixSize*(zval-1);
-				map = cell2mat(obj.data.unit{cv}.map); %our index
-				map = map';
 				if obj.replotFlag == 1 || (cv ~= obj.oldcv)
 					subplot(1,1,1,'Parent',obj.h.opxUIPanel)
 					pos = 1;
@@ -649,12 +654,11 @@ classdef opxOnline < handle
 					endP = matrixSize + offset;
 					fprintf('Plotting all points...\n');
 					for i = startP:endP
-						data = obj.data.unit{cv}.raw{i};
-						nt = obj.data.unit{cv}.trials{i};
-						varlabel = [num2str(obj.data.unit{cv}.map{i}) ': ' obj.data.unit{cv}.label{i}];
-						mypos=find(map==pos);
-						if mypos > obj.data.xLength*obj.data.yLength;mypos = 1; end
-						selectPlot(obj.data.xLength,obj.data.yLength,mypos,'subplot');
+						[x,y,z]=selectIndex(map(pos));
+						data = obj.data.unit{cv}.raw{y,x,zval};
+						nt = obj.data.unit{cv}.trials{y,x,zval};
+						varlabel = [num2str(obj.data.unit{cv}.map{y,x,zval}) ': ' obj.data.unit{cv}.label{y,x,zval}];
+						selectPlot(obj.data.xLength,obj.data.yLength,pos,'subplot_tight');
 						switch method
 							case 1
 								plotPSTH()
@@ -665,21 +669,27 @@ classdef opxOnline < handle
 						end
 						pos = pos + 1;
 					end
-				else
+				else %single subplot
 					thisRun = obj.data.thisRun;
-					fprintf('Plotting run: %d\n',thisRun)
 					index = obj.data.thisIndex;
-					data = obj.data.unit{cv}.raw{index};
-					nt = obj.data.unit{1}.trials{index};
-					varlabel = [num2str(obj.data.unit{cv}.map{index}) ': ' obj.data.unit{cv}.label{index}];
-					selectPlot(obj.data.xLength,obj.data.yLength,index-offset,'subplot');
-					switch method
-						case 1
-							plotPSTH(thisRun)
-						case 2
-							plotCurve()
-						case 3
-							
+					[x,y,z]=selectIndex(thisRun);
+					if z == zval %our displayed z value is in the indexed position
+						fprintf('Plotting run: %d (x=%d y=%d z=%d)',thisRun,x,y,z)
+						plotIndex=find(map==index);
+						data = obj.data.unit{cv}.raw{y,x,z};
+						nt = obj.data.unit{1}.trials{y,x,z};
+						varlabel = [num2str(obj.data.unit{cv}.map{y,x,z}) ': ' obj.data.unit{cv}.label{y,x,z}];
+						selectPlot(obj.data.xLength,obj.data.yLength,plotIndex,'subplot_tight');
+						switch method
+							case 1
+								plotPSTH(thisRun)
+							case 2
+								plotCurve()
+							case 3
+
+						end
+					else
+						fprintf('Plot Not Visible: %d (x=%d y=%d z=%d)',thisRun,x,y,z)
 					end
 				end
 			catch ME
@@ -692,8 +702,30 @@ classdef opxOnline < handle
 			obj.oldcv=cv;
 			
 			% ===================================================================
-			%> @brief Plots PSTH
-			%>
+			%> @brief Plots PSTH (inline function of plotData)
+			% ===================================================================
+			function [x,y,z]=selectIndex(inIdx)
+				x = 1;
+				y = 1;
+				z = 1;
+				mypos=find(obj.data.sIndex==inIdx);
+				mypos=mypos(1);
+				switch obj.data.nVars
+					case 1
+						x=obj.data.sMap(mypos,1);
+					case 2
+						x=obj.data.sMap(mypos,1);
+						y=obj.data.sMap(mypos,2);
+					case 3
+						x=obj.data.sMap(mypos,1);
+						y=obj.data.sMap(mypos,2);
+						z=obj.data.sMap(mypos,3);
+				end
+			end
+			
+			
+			% ===================================================================
+			%> @brief Plots PSTH (inline function of plotData)
 			% ===================================================================
 			function selectPlot(inx,iny,inpos,method)
 				margins=0.06;
@@ -712,14 +744,13 @@ classdef opxOnline < handle
 			end
 			
 			% ===================================================================
-			%> @brief Plots PSTH
-			%>
+			%> @brief Plots PSTH (inline function of plotData)
 			% ===================================================================
 			function plotPSTH(inRun)
 				[n,t]=hist(data,bins);
 				n=convertToHz(n);
 				bar(t,n)
-				title(['Cell: ' num2str(cv) ' | Trials: ' num2str(nt) ' | Var: ' varlabel],'FontSize',7);
+				title(['Cell: ' num2str(cv) ' | Trials: ' num2str(nt) ' | Var: ' varlabel],'FontSize',8);
 				axis([0 xmax 0 ymax]);
 				set(gca,'FontSize',6);
 				h = findobj(gca,'Type','patch');
@@ -732,8 +763,7 @@ classdef opxOnline < handle
 			end
 			
 			% ===================================================================
-			%> @brief Converts to spikes per second
-			%>
+			%> @brief Converts to spikes per second (inline function of plotData)
 			% ===================================================================
 			function out = convertToHz(inn)
 				out=(inn/nt)*(1000/binWidth);
@@ -750,24 +780,34 @@ classdef opxOnline < handle
 			if ~exist('type','var')
 				type = 'all';
 			end
-			if isstruct(obj.h) && ~ishandle(obj.h.uihandle)
+			if ~isstruct(obj.h) || ~ishandle(obj.h.uihandle)
 				obj.initializeUI;
 			end
 			try
 				if strcmpi(type,'all')
-					setStimulusValues;
-					setCellValues;
+					setStimulusValues();
+					setCellValues();
 				elseif strcmpi(type,'stimulus')
-					setStimulusValues;
+					setStimulusValues();
 				end
 				obj.replotFlag = 1;
+			catch ME
+				obj.error = ME;
+				fprintf('Initialize Plot Error message: %s\n',obj.error.message);
+				fprintf('Line: %d ',obj.error.stack.line);
 			end
-			
+			% ===================================================================
+			%> @brief makes cell list for UI (inline function of initializePlot)
+			% ===================================================================
 			function setCellValues()
-				s=cellstr(num2str((1:obj.units.totalCells)'));
-				set(obj.h.opxUICell,'String', s);
+				if isstruct(obj.units)
+					s=cellstr(num2str((1:obj.units.totalCells)'));
+					set(obj.h.opxUICell,'String', s);
+				end
 			end
-			
+			% ===================================================================
+			%> @brief sets UI values for stimulus (inline function of initializePlot)
+			% ===================================================================
 			function setStimulusValues()
 				if isa(obj.stimulus,'runExperiment')
 					switch obj.stimulus.task.nVars
@@ -809,22 +849,30 @@ classdef opxOnline < handle
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief Saves a reduced set of our object as a structure
 		%>
 		%>
 		% ===================================================================
 		function saveData(obj)
-			opx.type = obj.type;
-			opx.nRuns = obj.nRuns;
-			opx.totalRuns = obj.totalRuns;
-			opx.spikes = obj.spikes;
-			opx.trial = obj.trial;
-			opx.units = obj.units;
-			opx.parameters = obj.parameters;
-			opx.stimulus = obj.stimulus;
-			opx.tmpFile = obj.tmpFile;
-			save(obj.tmpFile,'opx');
+			try
+				opx.type = obj.type;
+				opx.nRuns = obj.nRuns;
+				opx.totalRuns = obj.totalRuns;
+				opx.spikes = obj.spikes;
+				opx.trial = obj.trial;
+				opx.units = obj.units;
+				opx.parameters = obj.parameters;
+				opx.stimulus = obj.stimulus;
+				opx.tmpFile = obj.tmpFile;
+				save(obj.tmpFile,'opx');
+			catch ME
+				obj.error = ME;
+				fprintf('There was some error during data collection by slave!\n');
+				fprintf('Error message: %s\n',obj.error.message);
+				fprintf('Line: %d ',obj.error.stack.line);
+			end
 		end
+		
 		% ===================================================================
 		%> @brief
 		%>
@@ -837,6 +885,7 @@ classdef opxOnline < handle
 				status = 1;
 			end
 		end
+		
 		% ===================================================================
 		%> @brief
 		%>
@@ -850,7 +899,7 @@ classdef opxOnline < handle
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief CloseAll closes all possible connections
 		%>
 		%>
 		% ===================================================================
@@ -957,7 +1006,7 @@ classdef opxOnline < handle
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief InitializeUI opens the UI and sets appdata
 		%>
 		%>
 		% ===================================================================
@@ -968,7 +1017,7 @@ classdef opxOnline < handle
 			obj.h.uihandle = uihandle;
 			setappdata(0,'opx',obj); %we stash our object in the root appdata store for retirieval from the UI
 			set(obj.h.opxUIEdit1,'String','2')
-			set(obj.h.opxUIEdit2,'String','10')
+			set(obj.h.opxUIEdit2,'String','50')
 			set(obj.h.opxUIEdit3,'String','50')
 		end
 		
@@ -1070,9 +1119,11 @@ classdef opxOnline < handle
 		% ===================================================================
 		function delete(obj)
 			if obj.cleanup == 1
+				setappdata(0,'opx',[])
 				obj.salutation('opxOnline Delete Method','Cleaning up now...')
 				obj.closeAll;
 			else
+				setappdata(0,'opx',[])
 				obj.salutation('opxOnline Delete Method','Closing (no cleanup)...')
 			end
 		end

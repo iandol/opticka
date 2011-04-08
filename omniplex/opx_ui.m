@@ -91,8 +91,10 @@ function opxUICell_Callback(hObject, eventdata, handles)
 %        contents{get(hObject,'Value')} returns selected item from opxUICell
 if isappdata(0,'opx')
 	opx = getappdata(0,'opx');
-	opx.replotFlag = 1;
-	opx.plotData;
+	if strcmpi(class(opx.data),'parseOpxSpikes')
+		opx.replotFlag = 1;
+		opx.plotData;
+	end
 end
 % --- Executes on selection change in opxUIAnalysisMethod.
 function opxUIAnalysisMethod_Callback(hObject, eventdata, handles)
@@ -103,8 +105,10 @@ function opxUIAnalysisMethod_Callback(hObject, eventdata, handles)
 %        contents{get(hObject,'Value')} returns selected item from opxUIAnalysisMethod
 if isappdata(0,'opx')
 	opx = getappdata(0,'opx');
-	opx.replotFlag = 1;
-	opx.plotData;
+	if strcmpi(class(opx.data),'parseOpxSpikes')
+		opx.replotFlag = 1;
+		opx.plotData;
+	end
 end
 
 function opxUIEdit1_Callback(hObject, eventdata, handles)
@@ -155,8 +159,10 @@ function opxUISelect3_Callback(hObject, eventdata, handles)
 %        contents{get(hObject,'Value')} returns selected item from opxUISelect3
 if isappdata(0,'opx')
 	opx = getappdata(0,'opx');
-	opx.replotFlag = 1;
-	opx.plotData;
+	if strcmpi(class(opx.data),'parseOpxSpikes')
+		opx.replotFlag = 1;
+		opx.plotData;
+	end
 end
 
 % --- Executes on button press in opxUIReplot.
@@ -166,8 +172,10 @@ function opxUIReplot_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'opx')
 	opx = getappdata(0,'opx');
-	opx.replotFlag = 1;
-	opx.plotData;
+	if strcmpi(class(opx.data),'parseOpxSpikes')
+		opx.replotFlag = 1;
+		opx.plotData;
+	end
 end
 
 function opxUIInfoBox_Callback(hObject, eventdata, handles)
