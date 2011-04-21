@@ -842,7 +842,7 @@ classdef opxOnline < handle
 					end
 					time=obj.stimulus.task.trialTime;
 					set(obj.h.opxUIEdit1,'String',num2str(time))
-					set(obj.h.opxUIEdit2,'String','10')
+					set(obj.h.opxUIEdit2,'String','50')
 					set(obj.h.opxUIEdit3,'String','50')
 				end
 			end

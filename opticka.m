@@ -904,7 +904,10 @@ classdef (Sealed) opticka < handle
 			str = cell(obj.r.task.nVars,1);
 			for i=1:obj.r.task.nVars
 				str{i} = [obj.r.task.nVar(i).name ' on Stim: ' num2str(obj.r.task.nVar(i).stimulus) '|' num2str(obj.r.task.nVar(i).values)];
-				str{i}=regexprep(str{i},'(  )+',' ');
+				if obj.r.task.nVar(i).offsetstimulus > 0
+					str{i} =  [str{i} ' | Stim ' num2str(obj.r.task.nVar(i).offsetstimulus) ' offset:' num2str(obj.r.task.nVar(i).offsetvalue)];
+				end
+				str{i}=regexprep(str{i},'\s+',' ');
 			end
 			set(obj.h.OKVarList,'Value',1);
 			set(obj.h.OKVarList,'String',str);
