@@ -778,6 +778,8 @@ if isappdata(0,'o')
 	o.addVariable;
 	if o.r.task.nVars > 0
 		set(handles.OKDeleteVariable,'Enable','on');
+		set(handles.OKCopyVariable,'Enable','on');
+		set(handles.OKEditVariable,'Enable','on');
 	end
 end
 
@@ -788,6 +790,8 @@ if isappdata(0,'o')
 	o.deleteVariable;
 	if o.r.task.nVars < 1
 		set(handles.OKDeleteVariable,'Enable','off');
+		set(handles.OKCopyVariable,'Enable','off');
+		set(handles.OKEditVariable,'Enable','off');
 	end
 end
 

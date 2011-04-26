@@ -408,8 +408,8 @@ classdef (Sealed) opticka < handle
 		function deleteStimulus(obj)
 			n = length(obj.r.stimulus); %get what stimulus fields we have
 			if ~isempty(n)
-				get(obj.h.OKVarList,'Value');
-				obj.r.stimulus = obj.r.stimulus(1:n-1);
+				val=obj.gv(obj.h.OKStimList);
+				obj.r.stimulus(val) = [];
 				if isempty(obj.r.stimulus)
 					obj.r.stimulus={};
 				end
@@ -599,7 +599,6 @@ classdef (Sealed) opticka < handle
 				obj.r.task.nVar(obj.r.task.nVars+1).name = obj.gs(obj.h.OKVariableName);
 				obj.r.task.nVar(obj.r.task.nVars+1).values = obj.gn(obj.h.OKVariableValues);
 				obj.r.task.nVar(obj.r.task.nVars+1).stimulus = obj.gn(obj.h.OKVariableStimuli);
-				obj.r.task.nVar(obj.r.task.nVars+1).stimulus = obj.gn(obj.h.OKVariableStimuli);
 				offset = obj.gn(obj.h.OKVariableOffset);
 				if isempty(offset)
 					obj.r.task.nVar(obj.r.task.nVars+1).offsetstimulus = [];
@@ -625,25 +624,65 @@ classdef (Sealed) opticka < handle
 		
 		% ===================================================================
 		%> @brief deleteVariable
-		%> Gets the settings from th UI and updates our runExperiment object
+		%> Gets the settings from the UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
 		function deleteVariable(obj)
+			if isobject(obj.r.task)
+				val = obj.gv(obj.h.OKVarList);
+				if isempty(val);val=1;end %sometimes guide disables list, need workaround
+				if val <= length(obj.r.task.nVar);
+					obj.r.task.nVar(val)=[];
+					obj.r.task.nVars = length(obj.r.task.nVar);
+
+					if obj.r.task.nVars > 0
+						obj.r.task.randomiseStimuli;
+					end
+
+					if obj.r.task.nVars<0;obj.r.task.nVars=0;end
+					obj.store.nVars = obj.r.task.nVars;
+				end
+				obj.refreshVariableList;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief editVariable
+		%> Gets the settings from the UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
+		function editVariable(obj)
 			
 			if isobject(obj.r.task)
-				obj.r.task.nVars = obj.r.task.nVars - 1;
-				obj.store.nVars = obj.r.task.nVars;
-				obj.r.task.nVar=obj.r.task.nVar(1:obj.r.task.nVars);
-				if obj.r.task.nVars > 0
-					obj.r.task.randomiseStimuli;
-				end
+				val = obj.gv(obj.h.OKVarList);
+				set(obj.h.OKVariableName,'String', obj.r.task.nVar(val).name);
+				str = num2str(obj.r.task.nVar(val).values);
+				str = regexprep(str,'\s+',' ');
+				set(obj.h.OKVariableValues,'String', str);
+				str = num2str(obj.r.task.nVar(val).stimulus);
+				str = regexprep(str,'\s+',' ');
+				set(obj.h.OKVariableStimuli, 'String', str);
+				str=[num2str(obj.r.task.nVar(val).offsetstimulus) ';' num2str(obj.r.task.nVar(val).offsetvalue)];
+				set(obj.h.OKVariableOffset,'String',str);
+				obj.deleteVariable
 			end
 			
-			if obj.r.task.nVars<0;obj.r.task.nVars=0;end
-			if obj.store.nVars<0;obj.store.nVars=0;end
+		end
+		
+		% ===================================================================
+		%> @brief copyVariable
+		%> Gets the settings from the UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
+		function copyVariable(obj)
 			
-			obj.refreshVariableList;
-			
+			if isobject(obj.r.task)
+				val = obj.gv(obj.h.OKVarList);
+				obj.r.task.nVar(end+1)=obj.r.task.nVar(val);
+				obj.r.task.nVars = length(obj.r.task.nVar);
+				obj.store.nVars = obj.r.task.nVars;
+				obj.refreshVariableList;
+			end
 		end
 
 	end
@@ -787,12 +826,14 @@ classdef (Sealed) opticka < handle
 				end
 				clear tmp;
 				
-				obj.r.updatesList;				
+				obj.r.updatesList;
 				obj.refreshStimulusList;
 				obj.refreshVariableList;
 				
 				if obj.r.task.nVars > 0
 					set(obj.h.OKDeleteVariable,'Enable','on');
+					set(obj.h.OKCopyVariable,'Enable','on');
+					set(obj.h.OKEditVariable,'Enable','on');
 				end
 				if ~isempty(obj.r.stimulus)
 					set(obj.h.OKDeleteStimulus,'Enable','on');
@@ -901,6 +942,7 @@ classdef (Sealed) opticka < handle
 		%> @param 
 		% ===================================================================
 		function refreshVariableList(obj)
+			pos = get(obj.h.OKVarList, 'Value');
 			str = cell(obj.r.task.nVars,1);
 			for i=1:obj.r.task.nVars
 				str{i} = [obj.r.task.nVar(i).name ' on Stim: ' num2str(obj.r.task.nVar(i).stimulus) '|' num2str(obj.r.task.nVar(i).values)];
@@ -909,8 +951,14 @@ classdef (Sealed) opticka < handle
 				end
 				str{i}=regexprep(str{i},'\s+',' ');
 			end
-			set(obj.h.OKVarList,'Value',1);
 			set(obj.h.OKVarList,'String',str);
+			if pos > obj.r.task.nVars
+				pos = obj.r.task.nVars;
+			end
+			if isempty(pos) || pos <= 0
+				pos = 1;
+			end
+			set(obj.h.OKVarList,'Value',pos);
 		end
 		
 		% ===================================================================
