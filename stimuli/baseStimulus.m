@@ -1,13 +1,15 @@
 % ========================================================================
-%> @brief baseStimulus is the superclass for opticka stimulus objects
+%> @brief baseStimulus is the superclass for all opticka stimulus objects
 %>
-%> Superclass providing basic structure for all stimulus classes
+%> Superclass providing basic structure for all stimulus classes. This is a dynamic properties
+%> descendant, allowing for the temporary run variables used, which get appended "name"Out, i.e.
+%> speed is duplicated to a dymanic property called speedOut; it is the dynamic propertiy which is
+%> used during runtime, and whose values are converted from definition units like degrees to pixel
+%> values that PTB uses.
 %>
 % ========================================================================
 classdef baseStimulus < dynamicprops
-	%BASESTIMULUS Superclass providing basic structure for all stimulus
-	%classes
-	%   Detailed explanation to come
+	
 	properties
 		%> X Position in degrees relative to screen center
 		xPosition = 0
@@ -252,6 +254,7 @@ classdef baseStimulus < dynamicprops
 		%> @brief Converts properties to a structure
 		%>
 		%> Prints messages dependent on verbosity
+		%> @param obj this instance object
 		%> @param tmp is whether to use the temporary or permanent properties
 		%> @return out the structure
 		% ===================================================================
@@ -288,6 +291,7 @@ classdef baseStimulus < dynamicprops
 		%> @brief Prints messages dependent on verbosity
 		%>
 		%> Prints messages dependent on verbosity
+		%> @param obj this instance object
 		%> @param in the calling function
 		%> @param message the message that needs printing to command window
 		% ===================================================================

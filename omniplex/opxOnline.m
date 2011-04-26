@@ -341,7 +341,7 @@ classdef opxOnline < handle
 							while tloop < 10
 								if obj.msconn.checkData
 									tRun = double(obj.msconn.read(0,'uint32'));
-									if tRun > 0 && tRun < 256
+									if tRun > 0 && tRun < 10000
 										obj.totalRuns = tRun;
 										fprintf('\nMaster send us number of runs: %d\n',obj.totalRuns);
 										break
@@ -552,6 +552,8 @@ classdef opxOnline < handle
 			if status == -1
 				abort = 1;
 			end
+			figure;
+			ah=axes;
 			
 			obj.getParameters;
 			obj.getnUnits;
@@ -564,19 +566,18 @@ classdef opxOnline < handle
 			toc
 			try
 				while obj.nRuns <= obj.totalRuns && abort < 1
-					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1,2,3,4,5,6,7,8,9],0,0);
+					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1,2,3,4,5,6,7,8,9], [1], 0);
 					fprintf('\nWaiting for run: %i\n', obj.nRuns);
 					[rn, trial, spike, analog, last] = PL_TrialStatus(obj.opxConn, 3, obj.maxWait); %wait until end of trial
 					tic
-					fprintf('rn: %i tr: %i sp: %i al: %i lst: %i\n',rn, trial, spike, analog, last);
 					if last > 0
 						[obj.trial(obj.nRuns).ne, obj.trial(obj.nRuns).eventList]  = PL_TrialEvents(obj.opxConn, 0, 0);
 						[obj.trial(obj.nRuns).ns, obj.trial(obj.nRuns).spikeList]  = PL_TrialSpikes(obj.opxConn, 0, 0);
-						
+						[~, ~, analogList] = PL_TrialAnalogSamples(obj.opxConn, 0, 0);
+						size(analogList)
 						obj.saveData;
 						obj.msconn.write('--finishRun--');
 						obj.msconn.write(uint32(obj.nRuns));
-						
 						obj.nRuns = obj.nRuns+1;
 					end
 					if obj.msconn.checkData
@@ -595,6 +596,8 @@ classdef opxOnline < handle
 						break
 					end
 					toc
+					plot(ah,analogList);
+					fprintf('rn: %i tr: %i sp: %i al: %i lst: %i\n',rn, trial, spike, analog, last);
 				end
 				obj.saveData; %final save of data
 				if abort == 1
@@ -867,7 +870,7 @@ classdef opxOnline < handle
 				save(obj.tmpFile,'opx');
 			catch ME
 				obj.error = ME;
-				fprintf('There was some error during data collection by slave!\n');
+				fprintf('There was some error during data collection + save data by slave!\n');
 				fprintf('Error message: %s\n',obj.error.message);
 				fprintf('Line: %d ',obj.error.stack.line);
 			end
@@ -952,6 +955,7 @@ classdef opxOnline < handle
 		function getnUnits(obj)
 			if obj.opxConn>0
 				obj.units.raw = PL_GetNumUnits(obj.opxConn);
+				obj.units.raw = obj.units.raw(1:32); %workround plexon bug
 				obj.units.activeChs = find(obj.units.raw > 0);
 				obj.units.nCh = length(obj.units.activeChs);
 				obj.units.nCells = obj.units.raw(obj.units.raw > 0);

@@ -66,10 +66,10 @@ classdef textureStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Update an structure for runExperiment
+		%> @brief Update this stimulus object structure for runExperiment
 		%>
-		%> @param in runExperiment object for reference
-		%> @return stimulus structure.
+		%> @param obj this class instance
+		%> @param rE runExperiment object passed in
 		% ===================================================================
 		function out = update(obj,rE)
 			
