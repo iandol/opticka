@@ -57,11 +57,11 @@ foreach $my_fic (@listeFic)
     {
       $output=$output."$1///$3";
     }
-    if (($listeProperties == 1) && (/(^\s*end\s*)/))
+    if (($listeProperties == 1) && (/(^\s*\bend\b\s*)/))
     {
       $listeProperties = 0;
     }
-    if (($inAbstractMethodBlock == 1) && (/(^\s*end\s*)/))
+    if (($inAbstractMethodBlock == 1) && (/(^\s*\bend\b\s*)/))
     {
       $inAbstractMethodBlock = 0;
     }
@@ -86,12 +86,12 @@ foreach $my_fic (@listeFic)
         $output=$output.$typeProperties."Property ".$properties;
       }
     }
-    if (($listeEnumeration == 1) && (/(^\s*end\s*)/))
+    if (($listeEnumeration == 1) && (/(^\s*\bend\b\s*)/))
     {
       $listeEnumeration = 0;
       $output=$output."};";
     }
-    if (($listeEvents == 1) && (/(^\s*end\s*)/))
+    if (($listeEvents == 1) && (/(^\s*\bend\b\s*)/))
     {
       $listeEvents = 0;
       $output=$output."};";
@@ -165,7 +165,7 @@ foreach $my_fic (@listeFic)
       $output=$output.$ligne;
     }
     # inheritance for classes
-    if (/(^\s*classdef)\s*(\s*\([\{\}\?\w,=\s]+\s*\))?\s*([\w\d_]+)\s*<?\s*([\s\w\d_&]+)?(.*)/) 
+    if (/(^\s*classdef)\s*(\s*\([\{\}\?\w,=\s]+\s*\))?\s*([\w\d_]+)\s*<?\s*([\s\w\d._&]+)?(.*)/) 
     {
       $className = $3;
       $classInheritance = $4;

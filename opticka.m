@@ -1026,12 +1026,12 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief getstring
+		%> @brief gs (getstring)
 		%> 
-		%> @param 
+		%> @param inhandle handle to UI element
+		%> @param value
 		% ===================================================================
 		function outhandle = gs(obj,inhandle,value)
-		%quick alias to get string value
 			if exist('value','var')
 				s = get(inhandle,'String');
 				outhandle = s{value};
@@ -1041,9 +1041,9 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief getdouble
+		%> @brief gd (getdouble)
 		%> 
-		%> @param 
+		%> @param inhandle handle to UI element
 		% ===================================================================
 		function outhandle = gd(obj,inhandle)
 		%quick alias to get double value
@@ -1051,9 +1051,9 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief getnumber
+		%> @brief gn (getnumber)
 		%> 
-		%> @param 
+		%> @param inhandle handle to UI element
 		% ===================================================================
 		function outhandle = gn(obj,inhandle)
 		%quick alias to get number value
@@ -1061,9 +1061,9 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief getvalue
+		%> @brief gv (getvalue)
 		%> 
-		%> @param 
+		%> @param inhandle handle to UI element
 		% ===================================================================
 		function outhandle = gv(obj,inhandle)
 		%quick alias to get ui value
@@ -1071,7 +1071,7 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief saveobj
+		%> @brief saveobj Our custom save method to prepare object for safe saving
 		%> 
 		%> @param obj
 		% ===================================================================
@@ -1081,9 +1081,8 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief try to work around GUIDE OS X bugs
+		%> @brief fixUI Try to work around GUIDE OS X bugs
 		%> 
-		%> @param 
 		% ===================================================================
 		function fixUI(obj)
 			ch = findall(obj.h.uihandle);
@@ -1105,7 +1104,7 @@ classdef (Sealed) opticka < handle
 	%========================================================
 	
 		% ===================================================================
-		%> @brief ping a network address
+		%> @brief ping -- ping a network address
 		%>	We send a single packet and wait only 10ms to ensure we have a fast connection
 		%> @param rAddress remote address
 		% ===================================================================
