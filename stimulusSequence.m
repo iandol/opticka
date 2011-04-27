@@ -37,6 +37,7 @@ classdef stimulusSequence < dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		h
 		allowedPropertiesBase='^(randomise|nVars|nTrials|trialTime|isTime|itTime|realTime|randomSeed|fps)$'
 	end
 	
@@ -72,7 +73,7 @@ classdef stimulusSequence < dynamicprops
 		%> set up the random number generator
 		% ===================================================================
 		function initialiseRandom(obj)
-			
+			tic
 			if isempty(obj.randomSeed)
 				obj.randomSeed=GetSecs;
 			end
@@ -81,7 +82,7 @@ classdef stimulusSequence < dynamicprops
 			end
 			obj.taskStream = RandStream.create(obj.randomGenerator,'Seed',obj.randomSeed);
 			RandStream.setDefaultStream(obj.taskStream);
-			
+			toc
 		end
 		
 		% ===================================================================
@@ -100,7 +101,7 @@ classdef stimulusSequence < dynamicprops
 		%> Do the randomisation
 		% ===================================================================
 		function randomiseStimuli(obj)
-			
+			tic
 			obj.nVars=length(obj.nVar);
 			
 			obj.currentState=obj.taskStream.State;
@@ -116,6 +117,9 @@ classdef stimulusSequence < dynamicprops
 			if isempty(obj.minTrials)
 				obj.minTrials = 1;
 			end
+			if obj.minTrials > 254
+				warndlg('WARNING: You are exceeding the number of stimuli the Plexon can identify!')
+			end
 
 			% initialize cell array that will hold balanced variables
 			obj.outVars = cell(obj.nTrials, obj.nVars);
@@ -129,7 +133,11 @@ classdef stimulusSequence < dynamicprops
 			for i = 1:obj.nTrials
 				len1 = obj.minTrials;
 				len2 = 1;
-				[~, index] = sort(rand(obj.minTrials, 1));
+				if obj.randomise == true
+					[~, index] = sort(rand(obj.minTrials, 1));
+				else
+					index = (1:obj.minTrials)';
+				end
 				obj.outIndex = [obj.outIndex; index];
 				for f = 1:obj.nVars
 					len1 = len1 / nLevels(f);
@@ -140,9 +148,7 @@ classdef stimulusSequence < dynamicprops
 					% this is the critical line: it ensures there are enough repetitions
 					% of the current factor in the correct order
 					obj.outVars{i,f} = repmat(reshape(repmat(obj.nVar(f).values, len1, len2), obj.minTrials, 1), obj.nVars, 1);
-					if obj.randomise
-						obj.outVars{i,f} = obj.outVars{i,f}(index);
-					end
+					obj.outVars{i,f} = obj.outVars{i,f}(index);
 					len2 = len2 * nLevels(f);
 					mn=offset+1;
 					mx=i*obj.minTrials;
@@ -157,6 +163,7 @@ classdef stimulusSequence < dynamicprops
 					obj.outMap(gidx,f) = g;
 				end
 			end
+			toc
 		end
 		
 		% ===================================================================
@@ -178,6 +185,43 @@ classdef stimulusSequence < dynamicprops
 			nFrames = ceil(nSecs) * ceil(obj.fps); %be a bit generous in defining how many frames the task will take
 		end
 		
+		% ===================================================================
+		%> @brief Dependent property nFrames get method
+		%>
+		%> Dependent property nFrames get method
+		% ===================================================================
+		function showLog(obj)
+
+			obj.h = struct();
+			build_gui();
+			data = [obj.outValues obj.outIndex obj.outMap];
+			set(obj.h.uitable1,'Data',data)
+
+			function build_gui()
+				obj.h.figure1 = figure( ...
+					'Tag', 'SSLog', ...
+					'Units', 'normalized', ...
+					'Position', [0.1 0.1 0.2 0.5], ...
+					'Name', 'stimulusSequence Log', ...
+					'MenuBar', 'none', ...
+					'NumberTitle', 'off', ...
+					'Color', [0.94 0.94 0.94], ...
+					'Resize', 'on');
+				obj.h.uitable1 = uitable( ...
+					'Parent', obj.h.figure1, ...
+					'Tag', 'uitable1', ...
+					'UserData', zeros(1,0), ...
+					'Units', 'normalized', ...
+					'Position', [0 0 1 1], ...
+					'FontName', 'Helvetica', ...
+					'FontSize', 10, ...
+					'BackgroundColor', [0.96 0.96 0.96], ...
+					'ColumnEditable', [false,false], ...
+					'ColumnFormat', {'char' 'char' }, ...
+					'ColumnWidth', {'auto','auto'});
+			end
+		end
+
 		% ===================================================================
 		%> @brief Prints messages dependent on verbosity
 		%>

@@ -1,4 +1,4 @@
-function dpi=calibrateSize(theScreen,distance, mSize)
+function [dpi, dpc] = calibrateSize(theScreen,distance, mSize)
 % dpi=MeasureDpi([theScreen])
 % Helps the user to accurately measure the screen's dots per inch.
 %
@@ -16,8 +16,8 @@ function dpi=calibrateSize(theScreen,distance, mSize)
 %             both Mac and Windows
 % 11/6/06 dgp Updated from PTB-2 to PTB-3.
 
-if nargin>2 || nargout>1
-	error('Usage: dpc=calibrateSize(screen,distance)');
+if nargin>3 || nargout>2
+	error('Usage: [dpi,dpc]=calibrateSize(screen,distance,mSize)');
 end
 if nargin<1
 	theScreen=0;
@@ -52,7 +52,7 @@ try
 	distanceInches=distance*unitInches;
 	Screen('Preference', 'SkipSyncTests', 1);
 	Screen('Preference', 'VisualDebugLevel', 0);
-	[window,screenRect]=Screen('OpenWindow',theScreen, 128, [0 0 800 600]);
+	[window,screenRect]=Screen('OpenWindow',theScreen, 128);
 	white=WhiteIndex(window);
 	black=BlackIndex(window);
 	
@@ -133,11 +133,12 @@ try
 				objectPix=RectWidth(barRect);
 				dpi=objectPix/objectInches;
 				dpi=dpi*distanceInches/(distanceInches+thicknessInches);
+				dpc=dpi/2.54;
 				clear theText
 				if inches
 					theText{1}=sprintf('%.0f dots per inch.',dpi);
 				else
-					theText{1}=sprintf('%.0f dots per cm. (%.0f dots/inch.)',dpi/2.54,dpi);
+					theText{1}=sprintf('%.0f dots per cm. (%.0f dots/inch.)',dpc,dpi);
 				end
 				theText{2}='Click once to repeat; twice to exit. Use green square to check vertical CRT calibration.';
 				textRect=Screen('TextBounds',window,theText{2});

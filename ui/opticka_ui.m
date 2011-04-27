@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 27-Mar-2011 23:39:53
+% Last Modified by GUIDE v2.5 27-Apr-2011 16:16:58
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -149,6 +149,73 @@ if isappdata(0,'o')
 end
 close(gcf);
 
+% --------------------------------------------------------------------
+function OKMenuStimulusLog_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuStimulusLog (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.r.task.showLog;
+end
+
+% --------------------------------------------------------------------
+function OKMenuLogs_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuLogs (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuCheckIO_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuCheckIO (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuEditConfiguration_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuEditConfiguration (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuAllTimingLogs_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuAllTimingLogs (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.r.getTimeLog;
+end
+
+% --------------------------------------------------------------------
+function OKMenuMissedFrames_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuMissedFrames (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuCut_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuCut (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuCopy_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuCopy (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKMenuPaste_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuPaste (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
 
 % --- Executes on selection change in OKSelectScreen.
 function OKSelectScreen_Callback(hObject, eventdata, handles)
@@ -469,7 +536,7 @@ function OKMenuCalibrateSize_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 v=get(handles.OKSelectScreen,'Value');
 s=str2num(get(handles.OKMonitorDistance,'String')); %#ok<ST2NM>
-dpc=calibrateSize(v-1,s);
+[~,dpc]=calibrateSize(v-1,s);
 set(handles.OKPixelsPerCm,'String',num2str(dpc));
 
 
@@ -858,65 +925,6 @@ if isappdata(0,'o')
 	drawnow;
 end
 
-% --------------------------------------------------------------------
-function OKMenuLogs_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuLogs (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-% --------------------------------------------------------------------
-function OKMenuCheckIO_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuCheckIO (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-% --------------------------------------------------------------------
-function OKMenuEditConfiguration_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuEditConfiguration (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-% --------------------------------------------------------------------
-function OKMenuAllTimingLogs_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuAllTimingLogs (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isappdata(0,'o')
-	o = getappdata(0,'o');
-	o.r.getTimeLog;
-end
-
-% --------------------------------------------------------------------
-function OKMenuMissedFrames_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuMissedFrames (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-% --------------------------------------------------------------------
-function OKMenuCut_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuCut (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-% --------------------------------------------------------------------
-function OKMenuCopy_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuCopy (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-% --------------------------------------------------------------------
-function OKMenuPaste_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuPaste (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
 function OKRemoteIP_Callback(hObject, eventdata, handles)
 % hObject    handle to OKRemoteIP (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1084,12 +1092,6 @@ end
 
 % --- Executes on selection change in OKSettingsmovieType.
 function OKSettingsmovieType_Callback(hObject, eventdata, handles)
-% hObject    handle to OKSettingsmovieType (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-	% Hints: contents = cellstr(get(hObject,'String')) returns OKSettingsmovieType contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from OKSettingsmovieType
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.r.movieSettings.type=get(hObject,'Value');
@@ -1098,9 +1100,6 @@ end
 
 % --------------------------------------------------------------------
 function OKPanelTellOmniplex_ClickedCallback(hObject, eventdata, handles)
-% hObject    handle to OKPanelTellOmniplex (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	resp = questdlg('Is opxOnline running on the Omniplex machine?','Check OPX','No');
@@ -1112,9 +1111,6 @@ end
 
 % --------------------------------------------------------------------
 function OKPanelReconnectOmniplex_ClickedCallback(hObject, eventdata, handles)
-% hObject    handle to OKPanelReconnectOmniplex (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	if isa(o.oc,'dataConnection')
@@ -1125,9 +1121,6 @@ end
 
 % --------------------------------------------------------------------
 function OKPanelSendOmniplex_ClickedCallback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSendOmniplex (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	if isa(o.oc,'dataConnection')
@@ -1137,9 +1130,6 @@ end
 
 % --------------------------------------------------------------------
 function OKPanelDisconnectOmniplex_ClickedCallback(hObject, eventdata, handles)
-% hObject    handle to OKPanelDisconnectOmniplex (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	if isa(o.oc,'dataConnection')
@@ -1150,9 +1140,6 @@ end
 
 % --------------------------------------------------------------------
 function OKPanelPingOmniplex_ClickedCallback(hObject, eventdata, handles)
-% hObject    handle to OKPanelPingOmniplex (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	rAddress = get(handles.OKOmniplexIP,'String');

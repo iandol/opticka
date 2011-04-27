@@ -661,7 +661,7 @@ classdef opxOnline < handle
 						data = obj.data.unit{cv}.raw{y,x,zval};
 						nt = obj.data.unit{cv}.trials{y,x,zval};
 						varlabel = [num2str(obj.data.unit{cv}.map{y,x,zval}) ': ' obj.data.unit{cv}.label{y,x,zval}];
-						selectPlot(obj.data.xLength,obj.data.yLength,pos,'subplot_tight');
+						selectPlot(obj.data.xLength,obj.data.yLength,pos,'subplot');
 						switch method
 							case 1
 								plotPSTH()
@@ -675,14 +675,15 @@ classdef opxOnline < handle
 				else %single subplot
 					thisRun = obj.data.thisRun;
 					index = obj.data.thisIndex;
-					[x,y,z]=selectIndex(thisRun);
+					fprintf('DEBUG: %d / %d',thisRun,index)
+					[x,y,z]=selectIndex(index);
 					if z == zval %our displayed z value is in the indexed position
 						fprintf('Plotting run: %d (x=%d y=%d z=%d)',thisRun,x,y,z)
 						plotIndex=find(map==index);
 						data = obj.data.unit{cv}.raw{y,x,z};
 						nt = obj.data.unit{1}.trials{y,x,z};
 						varlabel = [num2str(obj.data.unit{cv}.map{y,x,z}) ': ' obj.data.unit{cv}.label{y,x,z}];
-						selectPlot(obj.data.xLength,obj.data.yLength,plotIndex,'subplot_tight');
+						selectPlot(obj.data.xLength,obj.data.yLength,plotIndex,'subplot');
 						switch method
 							case 1
 								plotPSTH(thisRun)
@@ -753,12 +754,12 @@ classdef opxOnline < handle
 				[n,t]=hist(data,bins);
 				n=convertToHz(n);
 				bar(t,n)
-				title(['Cell: ' num2str(cv) ' | Trials: ' num2str(nt) ' | Var: ' varlabel],'FontSize',8);
+				title(['Cell: ' num2str(cv) ' | Trials: ' num2str(nt) ' | Var: ' varlabel],'FontSize',6);
 				axis([0 xmax 0 ymax]);
 				set(gca,'FontSize',6);
 				h = findobj(gca,'Type','patch');
 				if exist('inRun','var')
-					set(h,'FaceColor',[0 0 0],'EdgeColor',[0.3 0 0]);
+					set(h,'FaceColor',[0.4 0 0],'EdgeColor',[0 0 0]);
 				else
 					set(h,'FaceColor',[0 0 0],'EdgeColor',[0 0 0]);
 				end

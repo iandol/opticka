@@ -787,13 +787,17 @@ classdef (Sealed) opticka < handle
 				list = obj.gs(obj.h.OKGLSrc);
 				val = obj.findValue(list,tmp.r.srcMode);
 				obj.r.srcMode = list{val};
+				set(obj.h.OKGLSrc,'Value',val);
+				
 				
 				list = obj.gs(obj.h.OKGLDst);
 				val = obj.findValue(list,tmp.r.dstMode);
 				obj.r.dstMode = list{val};
+				set(obj.h.OKGLDst,'Value',val);
 				
 				set(obj.h.OKOpenGLBlending,'Value', tmp.r.blend);
 				set(obj.h.OKAntiAliasing,'String', num2str(tmp.r.antiAlias));
+				set(obj.h.OKHideFlash,'Value', tmp.r.hideFlash);
 				string = num2str(tmp.r.backgroundColour);
 				string = regexprep(string,'\s+',' '); %collapse spaces
 				set(obj.h.OKbackgroundColour,'String',string);
@@ -826,9 +830,13 @@ classdef (Sealed) opticka < handle
 				end
 				clear tmp;
 				
+				obj.getScreenVals;
+				obj.getTaskVals;
 				obj.r.updatesList;
 				obj.refreshStimulusList;
 				obj.refreshVariableList;
+				obj.getScreenVals;
+				obj.getTaskVals
 				
 				if obj.r.task.nVars > 0
 					set(obj.h.OKDeleteVariable,'Enable','on');
