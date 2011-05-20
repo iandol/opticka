@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.501'
+		version='0.502'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection
@@ -29,7 +29,10 @@ classdef (Sealed) opticka < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-	allowedPropertiesBase='^(verbose)$' %used to sanitise passed values on construction
+		allowedPropertiesBase='^(verbose)$' %used to sanitise passed values on construction
+		uiPrefsList = {'OKOmniplexIP','OKPixelsPerCm','OKAntiAliasing'};
+		otherPrefsList = {};
+		mversion = 0
 	end
 	
 	events
@@ -61,6 +64,7 @@ classdef (Sealed) opticka < handle
 					end
 				end
 			end
+			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
 			obj.initialiseUI;
 		end
 		
@@ -80,7 +84,6 @@ classdef (Sealed) opticka < handle
 					obj.loadProtocol(vars);
 				case 'deleteProtocol'
 					obj.deleteProtocol
-					
 			end
 		end
 		
@@ -234,13 +237,13 @@ classdef (Sealed) opticka < handle
 				
 				obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
 				obj.store.newlook='javax.swing.plaf.metal.MetalLookAndFeel';
-				if ismac || ispc
+				if obj.mversion < 7.1 && (ismac || ispc)
 					javax.swing.UIManager.setLookAndFeel(obj.store.newlook);
 				end
 				uihandle=opticka_ui; %our GUI file
 				obj.h=guidata(uihandle);
 				obj.h.uihandle = uihandle;
-				if ismac || ispc
+				if obj.mversion < 7.1 && (ismac || ispc)
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
 				set(obj.h.OKPanelGrating,'Visible','off')
@@ -249,6 +252,7 @@ classdef (Sealed) opticka < handle
 				
 				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version])
 				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
+				obj.loadPrefs;
 				drawnow;
 				obj.getScreenVals;
 				obj.getTaskVals;
@@ -683,6 +687,62 @@ classdef (Sealed) opticka < handle
 				obj.store.nVars = obj.r.task.nVars;
 				obj.refreshVariableList;
 			end
+		end
+		
+		% ===================================================================
+		%> @brief loadPrefs Load prefs better left local to the machine
+		%> 
+		% ===================================================================
+		function loadPrefs(obj)
+			for i = 1:length(obj.uiPrefsList)
+				prfname = obj.uiPrefsList{i};
+				if ispref('opticka',prfname)
+					myhandle = obj.h.(prfname);
+					prf = getpref('opticka',prfname);
+					uiType = get(myhandle,'Style');
+					switch uiType
+						case 'edit'
+							if ischar(prf)
+								set(myhandle, 'String', prf);
+							else
+								set(myhandle, 'String', num2str(prf));
+							end
+						case 'checkbox'
+							if islogical(prf) || isdouble(prf)
+								set(myhandle, 'Value', prf);
+							end
+					end
+				end	
+			end
+			for i = 1:length(obj.otherPrefsList)
+				
+			end
+			
+		end
+		
+		% ===================================================================
+		%> @brief savePrefs Save prefs better left local to the machine
+		%> 
+		% ===================================================================
+		function savePrefs(obj)
+			for i = 1:length(obj.uiPrefsList)
+				prfname = obj.uiPrefsList{i};
+				myhandle = obj.h.(prfname);
+				uiType = get(myhandle,'Style');
+				switch uiType
+					case 'edit'
+						prf = get(myhandle, 'String');
+						setpref('opticka', prfname, prf);
+					case 'checkbox'
+						prf = get(mthandle, 'Value');
+						if ~islogical(prf); prf=logical(prf);end
+						setpref('opticka', prfname, prf);
+				end
+			end
+			for i = 1:length(obj.otherPrefsList)
+				
+			end
+			
 		end
 
 	end

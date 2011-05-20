@@ -495,7 +495,7 @@ classdef opxOnline < handle
 									fprintf('\nThe slave has completed run %d\n',obj.nRuns);
 									break
 								end
-								pause(0.1);
+								pause(0.05);
 								tloop = tloop + 1;
 							end
 							load(obj.tmpFile);
@@ -574,7 +574,6 @@ classdef opxOnline < handle
 						[obj.trial(obj.nRuns).ne, obj.trial(obj.nRuns).eventList]  = PL_TrialEvents(obj.opxConn, 0, 0);
 						[obj.trial(obj.nRuns).ns, obj.trial(obj.nRuns).spikeList]  = PL_TrialSpikes(obj.opxConn, 0, 0);
 						[~, ~, analogList] = PL_TrialAnalogSamples(obj.opxConn, 0, 0);
-						size(analogList)
 						obj.saveData;
 						obj.msconn.write('--finishRun--');
 						obj.msconn.write(uint32(obj.nRuns));
@@ -596,7 +595,7 @@ classdef opxOnline < handle
 						break
 					end
 					toc
-					plot(ah,analogList);
+					if exist('analogList','var');plot(ah,analogList);axis tight;title('Raw Analog Signal');end
 					fprintf('rn: %i tr: %i sp: %i al: %i lst: %i\n',rn, trial, spike, analog, last);
 				end
 				obj.saveData; %final save of data
@@ -632,6 +631,8 @@ classdef opxOnline < handle
 		function plotData(obj)
 			
 			cv = get(obj.h.opxUICell,'Value');
+			xval = get(obj.h.opxUISelect1,'Value');
+			yval = get(obj.h.opxUISelect2,'Value');
 			zval = get(obj.h.opxUISelect3,'Value');
 			method = get(obj.h.opxUIAnalysisMethod,'Value');
 			fprintf('Plotting data from cell: %d\n',cv)
@@ -650,35 +651,35 @@ classdef opxOnline < handle
 			map = map'; %remember subplot indexes by rows have to transform matrix first
 			
 			try
-				if obj.replotFlag == 1 || (cv ~= obj.oldcv)
+				if (obj.replotFlag == 1 || (cv ~= obj.oldcv) || method == 2)
 					subplot(1,1,1,'Parent',obj.h.opxUIPanel)
-					pos = 1;
-					startP = 1 + offset;
-					endP = matrixSize + offset;
-					fprintf('Plotting all points...\n');
-					for i = startP:endP
-						[x,y,z]=selectIndex(map(pos));
-						data = obj.data.unit{cv}.raw{y,x,zval};
-						nt = obj.data.unit{cv}.trials{y,x,zval};
-						varlabel = [num2str(obj.data.unit{cv}.map{y,x,zval}) ': ' obj.data.unit{cv}.label{y,x,zval}];
-						selectPlot(obj.data.xLength,obj.data.yLength,pos,'subplot');
-						switch method
-							case 1
+					switch method
+						case 1
+							pos = 1;
+							startP = 1 + offset;
+							endP = matrixSize + offset;
+							fprintf('Plotting all points...\n');
+							for i = startP:endP
+								[x,y,z]=selectIndex(map(pos));
+								data = obj.data.unit{cv}.raw{y,x,zval};
+								nt = obj.data.unit{cv}.trials{y,x,zval};
+								varlabel = [num2str(obj.data.unit{cv}.map{y,x,zval}) ': ' obj.data.unit{cv}.label{y,x,zval}];
+								selectPlot(obj.data.xLength,obj.data.yLength,pos,'subplot');
 								plotPSTH()
-							case 2
-								plotCurve()
-							case 3
-								
-						end
-						pos = pos + 1;
+								pos = pos + 1;
+							end
+						case 2
+							fprintf('Plotting Curve: (x=all y=%d z=%d)\n',yval,zval);
+							data = obj.data.unit{cv}.trialsums(yval,:,zval);
+							plotCurve();
 					end
 				else %single subplot
 					thisRun = obj.data.thisRun;
 					index = obj.data.thisIndex;
-					fprintf('DEBUG: %d / %d',thisRun,index)
+					fprintf('DEBUG: %d / %d\n',thisRun,index)
 					[x,y,z]=selectIndex(index);
 					if z == zval %our displayed z value is in the indexed position
-						fprintf('Plotting run: %d (x=%d y=%d z=%d)',thisRun,x,y,z)
+						fprintf('Plotting run: %d (x=%d y=%d z=%d)\n',thisRun,x,y,z)
 						plotIndex=find(map==index);
 						data = obj.data.unit{cv}.raw{y,x,z};
 						nt = obj.data.unit{1}.trials{y,x,z};
@@ -688,12 +689,12 @@ classdef opxOnline < handle
 							case 1
 								plotPSTH(thisRun)
 							case 2
-								plotCurve()
+								plotCurve(y,z)
 							case 3
 
 						end
 					else
-						fprintf('Plot Not Visible: %d (x=%d y=%d z=%d)',thisRun,x,y,z)
+						fprintf('Plot Not Visible: %d (x=%d y=%d z=%d)\n',thisRun,x,y,z)
 					end
 				end
 			catch ME
@@ -764,6 +765,19 @@ classdef opxOnline < handle
 					set(h,'FaceColor',[0 0 0],'EdgeColor',[0 0 0]);
 				end
 				
+			end
+			
+			% ===================================================================
+			%> @brief Plots Curve (inline function of plotData)
+			% ===================================================================
+			function plotCurve()
+				for ii = 1:length(data)
+					[mn(ii),er(ii)]=stderr(data{ii});
+				end
+				
+				areabar(obj.data.xValues',mn',er',[0.8 0.8 0.8],'k.-');
+				xlabel(obj.stimulus.task.nVar(1).name)
+				ylabel('Spikes / Stimulus');
 			end
 			
 			% ===================================================================

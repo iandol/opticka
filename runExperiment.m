@@ -492,7 +492,7 @@ classdef (Sealed) runExperiment < handle
 		%> @param
 		% ===================================================================
 		function deleteTimeLog(obj)
-			obj.timeLog = [];
+			%obj.timeLog = [];
 		end
 		
 		% ===================================================================

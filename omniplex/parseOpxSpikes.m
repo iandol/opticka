@@ -110,6 +110,7 @@ classdef parseOpxSpikes < handle
 					obj.unit{i}.raw = raw;
 					obj.unit{i}.trial = cell(obj.nRuns,1);
 					obj.unit{i}.trials = raw;
+					obj.unit{i}.trialsums = raw;
 					[obj.unit{i}.trials{:}]=deal(zeros);
 					obj.unit{i}.map = raw;
 					obj.unit{i}.label = raw;
@@ -175,7 +176,7 @@ classdef parseOpxSpikes < handle
 			obj.ts.x = x;
 			obj.ts.y = y;
 			obj.ts.z = z;
-			fprintf('ParseRun %d = x: %d | y: %d | z: %d\n',num,x,y,z);
+			fprintf('ParseRun %d = x: %d | y: %d | z: %d\n',num,obj.ts.x,obj.ts.y,obj.ts.z);
 					
 			for j=1:obj.units.totalCells
 				obj.unit{j}.trial{num}.idx = [num obj.sIndex(num,:) obj.sValues(num,:) obj.sMap(num,:)];
@@ -187,6 +188,7 @@ classdef parseOpxSpikes < handle
 				s = (s-startTime)./obj.parameters.timedivisor;
 				obj.unit{j}.trial{num}.spikes = s;
 				obj.unit{j}.trials{y,x,z}=obj.unit{j}.trials{y,x,z}+1;
+				obj.unit{j}.trialsums{y,x,z}(obj.unit{j}.trials{y,x,z})=length(s);
 				obj.unit{j}.raw{y,x,z} = sort([obj.unit{j}.raw{y,x,z}; obj.unit{j}.trial{num}.spikes]);
 			end
 			

@@ -144,6 +144,8 @@ function OKMenuQuit_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.savePrefs;
 	rmappdata(0,'o');
 	clear o;
 end
@@ -891,6 +893,7 @@ function OKToolbarRun_ClickedCallback(hObject, eventdata, handles)
 
 if isappdata(0,'o')
 	o = getappdata(0,'o');
+	pause(3);
 	if ~isempty(o.oc) && o.oc.isOpen == 1 && o.r.useLabJack == 1
 		o.oc.write('--GO!--');
 		pause(0.5);
