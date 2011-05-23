@@ -22,8 +22,15 @@ classdef spotStimulus < baseStimulus
 		flashBG = [0.5 0.5 0.5]
 		flashFG = [1 1 1]
 		currentColour = [1 1 1]
+		colourOutTemp = [1 1 1]
+		stopLoop = false
 		allowedProperties='^(type|flashTime|flashOn|contrast|backgroundColour)$'
 		ignoreProperties = 'flashSwitch|FlashOn';
+	end
+	
+	events
+		%> triggered when changing size, so we can change sf etc to compensate
+		changeColour
 	end
 	
 	%=======================================================================
@@ -70,6 +77,8 @@ classdef spotStimulus < baseStimulus
 				obj.show;
 			end
 			
+			addlistener(obj,'changeColour',@obj.computeColour);
+			
 			if exist('rE','var')
 				obj.ppd=rE.ppd;
 				obj.ifi=rE.screenVals.ifi;
@@ -86,7 +95,8 @@ classdef spotStimulus < baseStimulus
 					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
-					if strcmp(fn{j},'colour');p.GetMethod = @getcolourOut;end
+					if strcmp(fn{j},'colour');p.SetMethod = @setcolourOut;end
+					if strcmp(fn{j},'contrast');p.SetMethod = @setcontrastOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
@@ -97,15 +107,15 @@ classdef spotStimulus < baseStimulus
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
 			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
-			obj.doDots = 0;
-			obj.doMotion = 0;
-			obj.doDrift = 0;
-			obj.doFlash = 0;
+			obj.doDots = false;
+			obj.doMotion = false;
+			obj.doDrift = false;
+			obj.doFlash = false;
 			
-			if obj.speedOut > 0; obj.doMotion = 1; end
+			if obj.speedOut > 0; obj.doMotion = true; end
 			
 			if strcmp(obj.type,'flash')
-				obj.doFlash = 1;
+				obj.doFlash = true;
 				bg = [rE.backgroundColour(1:3) obj.alpha];
 				obj.setupFlash(bg);
 			end
@@ -136,7 +146,7 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			if obj.doFlash == 0
+			if obj.doFlash == false
 				Screen('gluDisk',obj.win,obj.colourOut,obj.xTmp,obj.yTmp,obj.sizeOut);
 			else
 				Screen('gluDisk',obj.win,obj.currentColour,obj.xTmp,obj.yTmp,obj.sizeOut);
@@ -150,11 +160,11 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			if obj.doMotion == 1
+			if obj.doMotion == true
 				obj.xTmp = obj.xTmp + obj.dX;
 				obj.yTmp = obj.yTmp + obj.dY;
 			end
-			if obj.doFlash == 1
+			if obj.doFlash == true
 				if obj.flashCounter <= obj.flashSwitch
 					obj.flashCounter=obj.flashCounter+1;
 				else
@@ -179,6 +189,8 @@ classdef spotStimulus < baseStimulus
 		function reset(obj)
 			obj.texture=[];
 			obj.removeTmpProperties;
+			delete(obj.findprop('xTmp'));
+			delete(obj.findprop('yTmp'));
 		end
 		
 		% ===================================================================
@@ -231,14 +243,39 @@ classdef spotStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief colourOut GET method
+		%> @brief colourOut SET method 
 		%>
 		% ===================================================================
-		function value = getcolourOut(obj)
-			if isempty(obj.findprop('contrastOut')) 
-				value = [(obj.colourOut(1:3) .* obj.contrast) obj.alpha];
-			else
-				value = [(obj.colourOut(1:3) .* obj.contrastOut) obj.alpha];
+		function setcolourOut(obj, value)
+			if length(value) == 1
+				value = [value value value];
+			end
+			obj.colourOutTemp = value;
+			obj.colourOut = value;
+			if obj.stopLoop == false;
+				notify(obj,'changeColour');
+			end
+		end
+		
+		% ===================================================================
+		%> @brief colourOut SET method 
+		%>
+		% ===================================================================
+		function setcontrastOut(obj, value)
+			obj.contrastOut = value;
+			notify(obj,'changeColour');
+		end
+		
+		% ===================================================================
+		%> @brief computeColour triggered event
+		%> Use an event to recalculate as get method is slower (called
+		%> many more times), than an event which is only called on update
+		% ===================================================================
+		function computeColour(obj,~,~)
+			if ~isempty(obj.findprop('contrastOut')) && ~isempty(obj.findprop('colourOut'))
+				obj.stopLoop = true;
+				obj.colourOut = [(obj.colourOutTemp(1:3) .* obj.contrastOut) obj.alpha];
+				obj.stopLoop = false;
 			end
 		end
 		
