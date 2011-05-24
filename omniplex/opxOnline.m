@@ -91,7 +91,7 @@ classdef opxOnline < handle
 				Screen('Preference', 'Verbosity', 0);
 				Screen('Preference', 'VisualDebugLevel',0);
 				obj.masterCommand = '!matlab -nodesktop -nosplash -r "opxRunMaster" &';
-				obj.slaveCommand = '!matlab -nodesktop -nosplash -nojvm -r "opxRunSlave" &';
+				obj.slaveCommand =  '!matlab -nodesktop -nosplash -r "opxRunSlave" &';
 			else
 				obj.masterCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -maci -r \"opxRunMaster\""'' -e ''end tell''';
 				obj.slaveCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -nojvm -maci -r \"opxRunSlave\""'' -e ''end tell''';
@@ -101,11 +101,11 @@ classdef opxOnline < handle
 				
 				case 'master'
 					
-					obj.initializeUI;					
-					obj.spawnSlave;
+                    obj.spawnSlave;
+					obj.initializeUI;
 					
 					if obj.isSlaveConnected == 0
-						warning('Sorry, slave process failed to initialize!!!')
+						%warning('Sorry, slave failed to initialize!!!')
 					end
 					
 					obj.initializeMaster;
@@ -265,6 +265,7 @@ classdef opxOnline < handle
 						obj.msconn.close;
 						pause(0.1)
 						obj.msconn.open;
+                        fprintf('\nWe may have disconnected, retrying: %i\n',checkS);
 						if obj.msconn.checkStatus == 6;
 							break
 						end
@@ -327,7 +328,7 @@ classdef opxOnline < handle
 			while loop
 				
 				if ~rem(loop,40);fprintf('.');end
-				if ~rem(loop,400);fprintf('\n');fprintf('quiver');obj.msconn.write('--abuse me do!--');end
+				if ~rem(loop,400);fprintf('\n');fprintf('quiver at %i',loop);obj.msconn.write('--abuse me do!--');end
 				
 				if obj.msconn.checkData
 					data = obj.msconn.read(0);
@@ -411,8 +412,9 @@ classdef opxOnline < handle
 					end
 				end
 				if obj.msconn.checkStatus('conn') < 1 %have we disconnected?
-					loop = 1;
-					while loop < 10
+					lloop = 1;
+					while lloop < 10
+                        fprintf('\nWe may have disconnected, retrying: %i\n',lloop);
 						for i = 1:length(obj.msconn.connList)
 							try %#ok<TRYNC>
 								pnet(obj.msconn.connList(i), 'close');
@@ -423,7 +425,7 @@ classdef opxOnline < handle
 							break
 						end
 						pause(0.1);
-						loop = loop + 1;
+						lloop = lloop + 1;
 					end
 				end
 				if obj.checkKeys
@@ -1092,26 +1094,7 @@ classdef opxOnline < handle
 				fprintf('Master can bark at slave...\n')
 			else
 				fprintf('Master cannot bark at slave...\n')
-			end
-			i=1;
-			while i
-				if i > 10
-					i=0;
-					break
-				end
-				obj.msconn.write('--hello--')
-				pause(0.1)
-				response = obj.msconn.read;
-				if iscell(response);response=response{1};end
-				if ~isempty(response) && ~isempty(regexpi(response, 'i bow'))
-					fprintf('Slave knows who is boss...\n')
-					obj.isSlaveConnected = 1;
-					obj.isMasterConnected = 1;
-					break
-				end
-				i=i+1;
-			end
-			
+            end
 		end
 		% ===================================================================
 		%> @brief
