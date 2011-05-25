@@ -30,13 +30,13 @@ classdef (Sealed) runExperiment < handle
 		screen = []
 		%> windowed: if 1 useful for debugging, but remember timing will be poor
 		windowed = 0
-		%>show command logs and a time log after stimlus presentation 1 = yes | 0 = no
+		%>show command logs and a time log after stimlus presentation 
 		verbose = false
-		%> hide the black flash as PTB tests it refresh timing, uses a gamma trick 1 = yes | 0 = no
+		%> hide the black flash as PTB tests it refresh timing, uses a gamma trick
 		hideFlash = false
-		%> change the parameters for poorer temporal fidelity during debugging 1 = yes | 0 = no
+		%> change the parameters for poorer temporal fidelity during debugging 
 		debug = false
-		%> shows the info text and position grid during stimulus presentation 1 = yes | 0 = no
+		%> shows the info text and position grid during stimulus presentation
 		visualDebug = true
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer = 1
@@ -48,7 +48,7 @@ classdef (Sealed) runExperiment < handle
 		screenXOffset = 0
 		%> shunt screen center by Y degrees
 		screenYOffset = 0
-		%> use OpenGL blending mode 1 = yes | 0 = no
+		%> use OpenGL blending mode
 		blend = false
 		%> GL_ONE %src mode
 		srcMode = 'GL_ONE'
@@ -65,7 +65,7 @@ classdef (Sealed) runExperiment < handle
 		lJack
 		%> settings for movie output
 		movieSettings = []
-		%> Choose the gamma correction table to use
+		%> gamma correction info saved as a calibrateLuminance object
 		gammaTable
 		%> this lets the UI leave commands
 		uiCommand = ''
@@ -166,7 +166,7 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		function run(obj)
 			
-			%initialise timeLog for this run (100,000 should be a 19min run)
+			%initialise timeLog for this run
 			obj.timeLog.date=clock;
 			obj.timeLog.startrun=GetSecs;
 			obj.timeLog.vbl=zeros(obj.task.nFrames,1);
@@ -175,10 +175,12 @@ classdef (Sealed) runExperiment < handle
 			obj.timeLog.miss=zeros(obj.task.nFrames,1);
 			obj.timeLog.stimTime=zeros(obj.task.nFrames,1);
 			
+			obj.screenVals.resetGamma = false;
 			%if obj.windowed(1)==0;HideCursor;end
 			
 			if obj.hideFlash==1 && obj.windowed(1)==0
 				obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.screenVals.gammaTable(128,:), 256, 1));
+				obj.screenVals.resetGamma = true;
 			end
 			
 			%-------Set up serial line and LabJack for this run...
@@ -234,8 +236,26 @@ classdef (Sealed) runExperiment < handle
 				
 				Priority(0);
 				
-				if obj.hideFlash==1
+				if obj.hideFlash==1 && isempty(obj.gammaTable)
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
+					obj.screenVals.resetGamma = false;
+				elseif isa(obj.gammaTable,'calibrateLuminance')
+					choice = obj.gammaTable.choice;
+					switch choice
+						case 1
+							obj.screenVals.resetGamma = true;
+							gTmp = repmat(obj.gammaTable.gammaTable1,1,3);
+							Screen('LoadNormalizedGammaTable', obj.screen, gTmp);
+							fprintf('\nSET GAMMA\n');
+						case 2
+							obj.screenVals.resetGamma = true;
+							gTmp = repmat(obj.gammaTable.gammaTable2,1,3);
+							Screen('LoadNormalizedGammaTable', obj.screen, gTmp);
+							fprintf('\nSET GAMMA\n');
+						otherwise
+							Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
+							obj.screenVals.resetGamma = false;
+					end
 				end
 				
 				AssertGLSL;
@@ -388,6 +408,10 @@ classdef (Sealed) runExperiment < handle
 				
 				obj.info = Screen('GetWindowInfo', obj.win);
 				
+				if obj.screenVals.resetGamma == true
+					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
+				end
+				
 				Screen('Close');
 				Screen('CloseAll');
 				
@@ -412,6 +436,10 @@ classdef (Sealed) runExperiment < handle
 			catch ME
 				
 				obj.lJack.setDIO([0,0,0]);
+				if obj.screenVals.resetGamma == true
+					fprintf('\nRESET GAMMA\n');
+					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
+				end
 				if obj.hideFlash == 1 || obj.windowed(1) ~= 1
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 				end
@@ -952,11 +980,12 @@ classdef (Sealed) runExperiment < handle
 			stimTime=obj.timeLog.stimTime(1:index);
 			
 			figure;
+			margin = 0.075;
 			
 			scnsize = get(0,'ScreenSize');
 			pos=get(gcf,'Position');
 			
-			subplot(3,1,1);
+			subplot_tight(3,1,1,margin);
 			plot(1:index-2,diff(vbl(2:end)),'ro:')
 			hold on
 			plot(1:index-2,diff(show(2:end)),'b--')
@@ -973,7 +1002,7 @@ classdef (Sealed) runExperiment < handle
 			ylabel('Time (milliseconds)');
 			hold off
 			
-			subplot(3,1,2)
+			subplot_tight(3,1,2,margin)
 			hold on
 			plot(show(2:index)-vbl(2:index),'r')
 			plot(show(2:index)-flip(2:index),'g')
@@ -984,7 +1013,7 @@ classdef (Sealed) runExperiment < handle
 			xlabel('Frame number');
 			ylabel('Time (milliseconds)');
 			
-			subplot(3,1,3)
+			subplot_tight(3,1,3,margin)
 			hold on
 			plot(miss,'r.-')
 			plot(stimTime/50,'k');

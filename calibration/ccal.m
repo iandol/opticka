@@ -190,6 +190,7 @@ function ccalmeasurenow_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 %cc=ColorCal2('GetRawData');
+persistent cMatrix
 vals=zeros(4,4);
 vals(1,1)=0;%cc.Xdata;
 vals(1,2)=0;%cc.Xzero;
@@ -201,7 +202,9 @@ vals(4,1)=0;%cc.Trigger;
 
 %set(gh('ccaltriggerlevel'),'String',num2str(cc.Trigger));
 
-cMatrix = ColorCal2('ReadColorMatrix');
+if ~exist('cMatrix','var') || isempty(cMatrix)
+	cMatrix = ColorCal2('ReadColorMatrix');
+end
 s = ColorCal2('MeasureXYZ');
 correctedValues = cMatrix(1:3,:) * [s.x s.y s.z]';
 X = correctedValues(1);

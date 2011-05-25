@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 27-Apr-2011 16:16:58
+% Last Modified by GUIDE v2.5 25-May-2011 09:27:00
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -161,6 +161,17 @@ if isappdata(0,'o')
 	o.r.task.showLog;
 end
 
+% --------------------------------------------------------------------
+function OKMenuShowGammaPlots_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuShowGammaPlots (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	if isa(o.r.gammaTable,'calibrateLuminance')
+		o.r.gammaTable.plot;
+	end
+end
 % --------------------------------------------------------------------
 function OKMenuLogs_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuLogs (see GCBO)
@@ -525,10 +536,11 @@ function OKMenuCalibrateLuminance_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 v=get(handles.OKSelectScreen,'Value');
-c = calibrateLuminance(9,v-1);
+inp = struct('screen',v-1,'save',true,'nMeasures',20);
+c = calibrateLuminance(inp);
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	o.router('deleteProtocol');
+	o.r.gammaTable = c;
 end
 
 % --------------------------------------------------------------------
@@ -1168,5 +1180,20 @@ if isappdata(0,'o')
 				pause(0.1);
 			end
 		end
+	end
+end
+
+% --- Executes on selection change in OKUseGamma.
+function OKUseGamma_Callback(hObject, eventdata, handles)
+% hObject    handle to OKUseGamma (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns OKUseGamma contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from OKUseGamma
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	if isa(o.r.gammaTable,'calibrateLuminance')
+		o.r.gammaTable.choice = get(hObject,'Value');
 	end
 end

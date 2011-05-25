@@ -8,22 +8,30 @@ classdef calibrateLuminance < handle
 	
 	properties
 		%> how much detail to show
-		verbosity = 0
+		verbosity = false
 		%> allows the constructor to run the open method immediately
-		runNow = 1
-		%> number of measures (default = 9)
-		nMeasures = 9
+		runNow = true
+		%> number of measures (default = 20)
+		nMeasures = 20
 		%> screen to calibrate
 		screen
 		%> select a fitting method for gammaTable2 (see obj.analysisMethods)
 		analysis = 1
 		%> use ColorCalII automatically
-		useCCal = 0
+		useCCal = true
 		%> comments to note about this calibration
 		comments
+		%> save back to opticka
+		save = false
+		%> which gamma table opticka selects (1 or 2)?
+		choice = 1
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		cMatrix
+		thisx
+		thisy
+		thisY
 		ramp
 		inputValues
 		rampNorm
@@ -45,6 +53,8 @@ classdef calibrateLuminance < handle
 	properties (SetAccess = private, GetAccess = private)
 		win
 		canAnalyze
+		p
+		plotHandle
 		allowedPropertiesBase='^(verbosity|runNow|screen|nMeasures)$'
 	end
 	
@@ -76,7 +86,13 @@ classdef calibrateLuminance < handle
 			if isempty(obj.screen)
 				obj.screen = max(Screen('Screens'));
 			end
-			if obj.runNow == 1
+			if obj.useCCal == true
+				obj.cMatrix = ColorCal2('ReadColorMatrix');
+				if isempty(obj.cMatrix)
+					obj.useCCal = false;
+				end
+			end
+			if obj.runNow == true
 				obj.run;
 			end
 		end
@@ -87,34 +103,46 @@ classdef calibrateLuminance < handle
 		%>
 		% ===================================================================
 		function run(obj)
-			input(sprintf(['When black screen appears, point photometer, \n' ...
-				'get reading in cd/m^2, input reading using numpad and press enter. \n' ...
-				'A screen of higher luminance will be shown. Repeat %d times. ' ...
-				'Press enter to start'], obj.nMeasures));
+			
+			if obj.useCCal == false
+				input(sprintf(['When black screen appears, point photometer, \n' ...
+					'get reading in cd/m^2, input reading using numpad and press enter. \n' ...
+					'A screen of higher luminance will be shown. Repeat %d times. ' ...
+					'Press enter to start'], obj.nMeasures));
+			end
 			
 			obj.initialClut = repmat([0:255]'/255,1,3); %#ok<NBRAK>
 			psychlasterror('reset');
 			
 			try
-				obj.win = Screen('OpenWindow', obj.screen, 0);
-				
-				[obj.oldClut, obj.dacBits,obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
+				Screen('Preference', 'SkipSyncTests', 1);
+				Screen('Preference', 'VisualDebugLevel', 0);
+				obj.win = Screen('OpenWindow', obj.screen, 0,[0 0 800 600]);
+				[obj.oldClut, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
 				BackupCluts;
-				Screen('LoadNormalizedGammaTable', obj.win, obj.initialClut );
+				Screen('LoadNormalizedGammaTable', obj.win, obj.initialClut);
 				
-				obj.inputValues = [];
 				obj.ramp = [0:256/(obj.nMeasures - 1):256]; %#ok<NBRAK>
 				obj.ramp(end) = 255;
+				obj.inputValues = zeros(1,length(obj.ramp));
+				a=1;
+				
 				for i = obj.ramp
 					Screen('FillRect',obj.win,i);
 					Screen('Flip',obj.win);
 					
-					% MK: Deprecated as not reliable: resp = input('Value?');
-					fprintf('Value? ');
-					beep
-					resp = GetNumber;
-					fprintf('\n');
-					obj.inputValues = [obj.inputValues resp];
+					if obj.useCCal == true
+						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
+						obj.inputValues(a) = obj.thisY;
+					else
+						% MK: Deprecated as not reliable: resp = input('Value?');
+						fprintf('Value? ');
+						beep
+						resp = GetNumber;
+						fprintf('\n');
+						obj.inputValues = [obj.inputValues resp];
+					end
+					a = a + 1;
 				end
 				
 				RestoreCluts;
@@ -128,6 +156,21 @@ classdef calibrateLuminance < handle
 			obj.canAnalyze = 1;
 			obj.analyze;
 			
+		end
+		
+		% ===================================================================
+		%> @brief useCCal
+		%>	run the main calibration loop
+		%>
+		% ===================================================================
+		function [x,y,Y] = getCCalxyY(obj)
+			s = ColorCal2('MeasureXYZ');
+			correctedValues = obj.cMatrix(1:3,:) * [s.x s.y s.z]';
+			X = correctedValues(1);
+			Y = correctedValues(2);
+			Z = correctedValues(3);
+			x = X / (X + Y + Z);
+			y = Y / (X + Y + Z);
 		end
 		
 		% ===================================================================
@@ -176,22 +219,42 @@ classdef calibrateLuminance < handle
 		%>
 		% ===================================================================
 		function plot(obj)
-			figure;
+			obj.plotHandle = figure;
+			obj.p = panel(obj.plotHandle,'defer');
 			scnsize = get(0,'ScreenSize');
 			pos=get(gcf,'Position');
 			
-			subplot(2,1,1);
+			obj.p.pack(3,1);
+			obj.p.margin = [15 20 5 15];
+			obj.p.fontsize = 12;
+			
+			obj.p(1,1).select();
+			plot(obj.ramp, obj.inputValues, 'k.-'); %#ok<NBRAK>
+			axis tight
+			xlabel('Indexed Values (0 - 255)');
+			ylabel('Luminance cd/m^2');
+			title(sprintf('Input / Output Raw Data', obj.displayGamma));
+			
+			obj.p(2,1).select();
 			plot(obj.rampNorm, obj.inputValuesNorm, '.', [0:255]/255, obj.firstFit, '--', [0:255]/255, obj.secondFit, '-.'); %#ok<NBRAK>
-			legend('Raw Data', 'Gamma model', obj.analysisMethods{obj.analysis});
+			xlabel('Normalised Luminance Input');
+			ylabel('Normalised Luminance Output');
+			legend('Raw Data', 'Gamma model', obj.analysisMethods{obj.analysis},'Location','NorthWest');
 			title(sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma));
 			
-			subplot(2,1,1);
+			obj.p(3,1).select();
 			plot(1:length(obj.gammaTable1),obj.gammaTable1,'k-',1:length(obj.gammaTable2),obj.gammaTable2,'r-')
-			legend('Gamma model', obj.analysisMethods{obj.analysis});
-			title('Plot of the actual output Gamma curves');
+			%axis([0 obj.inputValues(end) 0 1]);
+			axis tight
+			xlabel('Indexed Values')
+			ylabel('Normalised Luminance Output');
+			legend('Gamma model', obj.analysisMethods{obj.analysis},'Location','NorthWest');
+			title('Plot of output Gamma curves');
 			
 			newpos = [pos(1) 1 pos(3) scnsize(4)];
 			set(gcf,'Position',newpos);
+			
+			obj.p.refresh();
 			
 		end
 		
