@@ -12,19 +12,16 @@ classdef calibrateLuminance < handle
 		%> allows the constructor to run the open method immediately
 		runNow = true
 		%> number of measures (default = 20)
-		nMeasures = 20
+		nMeasures = 21
 		%> screen to calibrate
 		screen
-		%> select a fitting method for gammaTable2 (see obj.analysisMethods)
-		analysis = 1
 		%> use ColorCalII automatically
 		useCCal = true
 		%> comments to note about this calibration
 		comments
-		%> save back to opticka
-		save = false
-		%> which gamma table opticka selects (1 or 2)?
+		%> which gamma table opticka selects?
 		choice = 1
+		analysisMethods = {'pchipinterp';'smoothingspline';'cubicinterp';'splineinterp';'cubicspline'}
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -42,12 +39,9 @@ classdef calibrateLuminance < handle
 		lutSize
 		displayRange
 		displayBaseline
-		gammaTable1
-		gammaTable2
+		gammaTable
 		displayGamma
-		analysisMethods = {'splineinterp';'pchipinterp'}
-		firstFit
-		secondFit
+		modelFit
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -117,20 +111,28 @@ classdef calibrateLuminance < handle
 			try
 				Screen('Preference', 'SkipSyncTests', 1);
 				Screen('Preference', 'VisualDebugLevel', 0);
-				obj.win = Screen('OpenWindow', obj.screen, 0,[0 0 800 600]);
+				PsychImaging('PrepareConfiguration');
+				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
+				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
+				if obj.screen == 0
+					rec = [0 0 800 600];
+				else
+					rec = [];
+				end
+				obj.win = PsychImaging('OpenWindow', obj.screen, 0, rec);
 				[obj.oldClut, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
 				BackupCluts;
 				Screen('LoadNormalizedGammaTable', obj.win, obj.initialClut);
 				
-				obj.ramp = [0:256/(obj.nMeasures - 1):256]; %#ok<NBRAK>
-				obj.ramp(end) = 255;
+				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
+				obj.ramp(end) = 1;
 				obj.inputValues = zeros(1,length(obj.ramp));
 				a=1;
 				
 				for i = obj.ramp
 					Screen('FillRect',obj.win,i);
 					Screen('Flip',obj.win);
-					
 					if obj.useCCal == true
 						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
 						obj.inputValues(a) = obj.thisY;
@@ -186,7 +188,7 @@ classdef calibrateLuminance < handle
 				
 				%Normalize values
 				obj.inputValuesNorm = (obj.inputValues - obj.displayBaseline)/(max(obj.inputValues) - min(obj.inputValues));
-				obj.rampNorm = obj.ramp/255;
+				obj.rampNorm = obj.ramp;
 				
 				if ~exist('fittype'); %#ok<EXIST>
 					fprintf('This function needs fittype() for automatic fitting. This function is missing on your setup.\n');
@@ -194,22 +196,33 @@ classdef calibrateLuminance < handle
 				
 				%Gamma function fitting
 				g = fittype('x^g');
-				fittedmodel = fit(obj.rampNorm',obj.inputValuesNorm',g);
+				fo = fitoptions('Method','NonlinearLeastSquares',...
+					'Display','iter','MaxIter',1000,...
+					'Upper',3,'Lower',0,'StartPoint',1.5);
+				[fittedmodel, gof] = fit(obj.rampNorm',obj.inputValuesNorm',g,fo);
 				obj.displayGamma = fittedmodel.g;
-				obj.gammaTable1 = ((([0:255]'/255))).^(1/fittedmodel.g); %#ok<NBRAK>
+				obj.gammaTable{1} = ((([0:1/255:1]'))).^(1/fittedmodel.g);
 				
-				obj.firstFit = fittedmodel([0:255]/255); %#ok<NBRAK>
+				obj.modelFit{1}.method = 'Gamma';
+				obj.modelFit{1}.table = fittedmodel([0:1/255:1]);
+				obj.modelFit{1}.gof = gof;
 				
-				method = obj.analysisMethods{obj.analysis};
-				%Spline interp fitting
-				fittedmodel = fit(obj.rampNorm',obj.inputValuesNorm',method);
-				obj.secondFit = fittedmodel([0:255]/255); %#ok<NBRAK>
+				for i = 1:length(obj.analysisMethods)
+					
+					method = obj.analysisMethods{i};
+					%fo = fitoptions('Display','iter','MaxIter',1000);
+					[fittedmodel,gof] = fit(obj.rampNorm',obj.inputValuesNorm', method);
+					obj.modelFit{i+1}.method = method;
+					obj.modelFit{i+1}.table = fittedmodel([0:1/255:1]);
+					obj.modelFit{i+1}.gof = gof;
+					%Invert interpolation
+					[fittedmodel,gof] = fit(obj.inputValuesNorm',obj.rampNorm',method);
+					obj.gammaTable{i+1} = fittedmodel([0:1/255:1]); 
 				
-				%Invert interpolation
-				fittedmodel = fit(obj.inputValuesNorm',obj.rampNorm',method);
-				obj.gammaTable2 = fittedmodel([0:255]/255); %#ok<NBRAK>
+				end
 				
 				obj.plot;
+				
 			end
 		end
 		
@@ -229,26 +242,38 @@ classdef calibrateLuminance < handle
 			obj.p.fontsize = 12;
 			
 			obj.p(1,1).select();
-			plot(obj.ramp, obj.inputValues, 'k.-'); %#ok<NBRAK>
+			plot(obj.ramp, obj.inputValues, 'k.-');
 			axis tight
 			xlabel('Indexed Values (0 - 255)');
 			ylabel('Luminance cd/m^2');
-			title(sprintf('Input / Output Raw Data', obj.displayGamma));
+			title('Input -> Output Raw Data');
 			
 			obj.p(2,1).select();
-			plot(obj.rampNorm, obj.inputValuesNorm, '.', [0:255]/255, obj.firstFit, '--', [0:255]/255, obj.secondFit, '-.'); %#ok<NBRAK>
+			hold all
+				for i=1:length(obj.modelFit)
+					plot([0:1/255:1], obj.modelFit{i}.table);
+					legendtext{i} = obj.modelFit{i}.method;
+				end
+				plot(obj.rampNorm, obj.inputValuesNorm, 'r.')
+				legendtext{end+1} = 'Raw Data';
+			hold off
+			axis tight
 			xlabel('Normalised Luminance Input');
 			ylabel('Normalised Luminance Output');
-			legend('Raw Data', 'Gamma model', obj.analysisMethods{obj.analysis},'Location','NorthWest');
+			legend(legendtext,'Location','NorthWest');
 			title(sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma));
 			
 			obj.p(3,1).select();
-			plot(1:length(obj.gammaTable1),obj.gammaTable1,'k-',1:length(obj.gammaTable2),obj.gammaTable2,'r-')
-			%axis([0 obj.inputValues(end) 0 1]);
+			hold all
+			for i=1:length(obj.gammaTable)
+				plot(1:length(obj.gammaTable{i}),obj.gammaTable{i});
+				legendtext{i} = obj.modelFit{i}.method;
+			end
+			hold off
 			axis tight
 			xlabel('Indexed Values')
 			ylabel('Normalised Luminance Output');
-			legend('Gamma model', obj.analysisMethods{obj.analysis},'Location','NorthWest');
+			legend(legendtext,'Location','NorthWest');
 			title('Plot of output Gamma curves');
 			
 			newpos = [pos(1) 1 pos(3) scnsize(4)];
@@ -256,6 +281,16 @@ classdef calibrateLuminance < handle
 			
 			obj.p.refresh();
 			
+		end
+		
+		% ===================================================================
+		%> @brief zeroCalibration
+		%>
+		%>
+		% ===================================================================
+		function zeroCalibration(obj)
+			ColorCal2('ZeroCalibration');
+			helpdlg('Dark Calibration Done!');
 		end
 		
 		

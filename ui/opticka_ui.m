@@ -535,12 +535,35 @@ function OKMenuCalibrateLuminance_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuCalibrateLuminance (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-v=get(handles.OKSelectScreen,'Value');
-inp = struct('screen',v-1,'save',true,'nMeasures',20);
-c = calibrateLuminance(inp);
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	o.r.gammaTable = c;
+	v=get(handles.OKSelectScreen,'Value');
+	inp = struct('screen',v-1);
+	if isa(o.r.gammaTable,'calibrateLuminance')
+		o.r.gammaTable.run;
+	else
+		c = calibrateLuminance(inp);
+		o.r.gammaTable = c;
+	end
+	if get(handles.OKUseGamma,'Value') > length(['None'; 'Gamma'; o.r.gammaTable.analysisMethods])
+		set(handles.OKUseGamma,'Value',1)
+	end
+	set(handles.OKUseGamma,'String',['None'; 'Gamma'; o.r.gammaTable.analysisMethods]);
+end
+
+% --- Executes on selection change in OKUseGamma.
+function OKUseGamma_Callback(hObject, eventdata, handles)
+% hObject    handle to OKUseGamma (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns OKUseGamma contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from OKUseGamma
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	if isa(o.r.gammaTable,'calibrateLuminance')
+		o.r.gammaTable.choice = get(hObject,'Value')-1;
+	end
 end
 
 % --------------------------------------------------------------------
@@ -905,13 +928,12 @@ function OKToolbarRun_ClickedCallback(hObject, eventdata, handles)
 
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	pause(3);
 	if ~isempty(o.oc) && o.oc.isOpen == 1 && o.r.useLabJack == 1
 		o.oc.write('--GO!--');
 		pause(0.5);
 	end
-	o.r.uiCommand='run';
 	drawnow;
+	o.r.uiCommand='run';
 	o.r.run;
 end
 
@@ -922,7 +944,7 @@ function OKToolbarStop_ClickedCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	o.r.uiCommand='stop'
+	o.r.uiCommand='stop';
 	drawnow;
 end
 
@@ -1180,20 +1202,5 @@ if isappdata(0,'o')
 				pause(0.1);
 			end
 		end
-	end
-end
-
-% --- Executes on selection change in OKUseGamma.
-function OKUseGamma_Callback(hObject, eventdata, handles)
-% hObject    handle to OKUseGamma (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns OKUseGamma contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from OKUseGamma
-if isappdata(0,'o')
-	o = getappdata(0,'o');
-	if isa(o.r.gammaTable,'calibrateLuminance')
-		o.r.gammaTable.choice = get(hObject,'Value');
 	end
 end

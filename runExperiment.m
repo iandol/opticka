@@ -111,6 +111,7 @@ classdef (Sealed) runExperiment < handle
 		black = 0
 		%> white index
 		white = 1
+		%> properties allowed to be modified during construction
 		allowedPropertiesBase='^(pixelsPerCm|distance|screen|windowed|stimulus|task|serialPortName|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
 		%> serial port object opened
 		serialP
@@ -179,8 +180,14 @@ classdef (Sealed) runExperiment < handle
 			%if obj.windowed(1)==0;HideCursor;end
 			
 			if obj.hideFlash==1 && obj.windowed(1)==0
-				obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.screenVals.gammaTable(128,:), 256, 1));
-				obj.screenVals.resetGamma = true;
+				if isa(obj.gammaTable,'calibrateLuminance')
+					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.gammaTable.gammaTable2(128,:), 256, 3));
+					obj.screenVals.resetGamma = true;
+					
+				else
+					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.screenVals.gammaTable(128,:), 256, 1));
+					obj.screenVals.resetGamma = true;
+				end
 			end
 			
 			%-------Set up serial line and LabJack for this run...
@@ -239,23 +246,15 @@ classdef (Sealed) runExperiment < handle
 				if obj.hideFlash==1 && isempty(obj.gammaTable)
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 					obj.screenVals.resetGamma = false;
-				elseif isa(obj.gammaTable,'calibrateLuminance')
+				elseif isa(obj.gammaTable,'calibrateLuminance') && (obj.gammaTable.choice > 0)
 					choice = obj.gammaTable.choice;
-					switch choice
-						case 1
-							obj.screenVals.resetGamma = true;
-							gTmp = repmat(obj.gammaTable.gammaTable1,1,3);
-							Screen('LoadNormalizedGammaTable', obj.screen, gTmp);
-							fprintf('\nSET GAMMA\n');
-						case 2
-							obj.screenVals.resetGamma = true;
-							gTmp = repmat(obj.gammaTable.gammaTable2,1,3);
-							Screen('LoadNormalizedGammaTable', obj.screen, gTmp);
-							fprintf('\nSET GAMMA\n');
-						otherwise
-							Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
-							obj.screenVals.resetGamma = false;
-					end
+					obj.screenVals.resetGamma = true;
+					gTmp = repmat(obj.gammaTable.gammaTable{choice},1,3);
+					Screen('LoadNormalizedGammaTable', obj.screen, gTmp);
+					fprintf('\nSET GAMMA\n');
+				else
+					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
+					obj.screenVals.resetGamma = false;
 				end
 				
 				AssertGLSL;
@@ -396,6 +395,7 @@ classdef (Sealed) runExperiment < handle
 				Screen('Flip', obj.win);
 				obj.lJack.prepareStrobe(0,[],1);
 				obj.timeLog.afterDisplay=GetSecs;
+				Screen('Flip', obj.win);
 				WaitSecs(0.1);
 				obj.lJack.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				notify(obj,'endRun');
