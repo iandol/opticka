@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 25-May-2011 09:27:00
+% Last Modified by GUIDE v2.5 26-May-2011 19:10:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -311,6 +311,13 @@ end
 
 % --- Executes on button press in OKVerbose.
 function OKVerbose_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+% --- Executes on button press in OKlogFrames.
+function OKlogFrames_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.getScreenVals;
@@ -1204,3 +1211,4 @@ if isappdata(0,'o')
 		end
 	end
 end
+

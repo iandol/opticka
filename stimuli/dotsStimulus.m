@@ -150,6 +150,12 @@ classdef dotsStimulus < baseStimulus
 						obj.colours(:,i)=rand;
 					end
 					obj.colours(4,:)=obj.alpha;
+				case 'randomNBW'
+					obj.colours=zeros(4,obj.nDots);
+					for i = 1:obj.nDots
+						obj.colours(:,i)=randn;
+					end
+					obj.colours(4,:)=obj.alpha;
 				case 'binary'
 					obj.colours=zeros(4,obj.nDots);
 					rix = round(rand(obj.nDots,1)) > 0;

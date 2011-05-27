@@ -64,10 +64,17 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> as get methods are slow, we cache sf, then recalculate sf whenever
+		%> changeScale event is called
+		sfCache
+		%>to stop a loop between set method and an event
+		sfRecurse = 0
+		%> allowed properties passed to object upon construction
 		allowedProperties = ['^(sf|tf|method|angle|motionAngle|phase|rotationMethod|' ... 
 			'contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|' ... 
 			'disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod|' ...
 			'correctPhase|squareWave)$']
+		%>properties to not create transient copies of during setup phase
 		ignoreProperties = 'scale|phaseIncrement|disableNorm|correctPhase|gabor|contrastMult|mask'
 	end
 	
@@ -143,12 +150,12 @@ classdef gratingStimulus < baseStimulus
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
-					if strcmp(fn{j},'sf');p.SetMethod = @setsfOut;p.GetMethod = @getsfOut;end
-					if strcmp(fn{j},'tf');p.SetMethod = @settfOut;end
-					if strcmp(fn{j},'driftDirection');p.SetMethod = @setdriftDirectionOut;end
-					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
-					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
+					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
+					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
+					if strcmp(fn{j},'driftDirection');p.SetMethod = @set_driftDirectionOut;end
+					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
+					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
+					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
@@ -179,7 +186,6 @@ classdef gratingStimulus < baseStimulus
 			
 			if isempty(obj.findprop('phaseIncrement'));
 				p=obj.addprop('phaseIncrement');
-				p.Transient=true;p.GetMethod = @getphaseIncrement;p.Dependent = true;
 			end
 			
 			if isempty(obj.findprop('driftPhase'));p=obj.addprop('driftPhase');p.Transient=true;end
@@ -313,8 +319,8 @@ classdef gratingStimulus < baseStimulus
 			if obj.correctPhase > 0
 				ppd = obj.ppd;
 				size = (obj.sizeOut/2); %divide by 2 to get the 0 point
-				sf = (obj.sfOut/obj.scale)*obj.ppd;
-				md = size / (ppd/sf);
+				sfTmp = (obj.sfOut/obj.scale)*obj.ppd;
+				md = size / (ppd/sfTmp);
 				md=md-floor(md);
 				phase = (360*md);
 			end
@@ -330,34 +336,31 @@ classdef gratingStimulus < baseStimulus
 		%> @brief sfOut Set method
 		%>
 		% ===================================================================
-		function setsfOut(obj,value)
-			obj.sfOut = (value/obj.ppd);
+		function set_sfOut(obj,value)
+			if obj.sfRecurse == 0
+				obj.sfCache = (value/obj.ppd);
+				obj.sfOut = obj.sfCache * obj.scale;
+			else
+				obj.sfOut = value;
+				obj.sfRecurse = 0;
+			end
+			%fprintf('\nSET SFOut: %d | cachce: %d | in: %d\n', obj.sfOut, obj.sfCache, value);
 		end
 		
 		% ===================================================================
-		%> @brief sfOut Get method
-		%> Spatial frequency depends on whether the grating has been resized, so
-		%> we need to take this into account by using the scale value that is set
-		%> when sizeOut is changed
-		% ===================================================================
-		function sfOut = getsfOut(obj)
-			sfOut = obj.sfOut * obj.scale;
-		end
-		
-		% ===================================================================
-		%> @brief sfOut Set method
+		%> @brief tfOut Set method
 		%>
 		% ===================================================================
-		function settfOut(obj,value)
+		function set_tfOut(obj,value)
 			obj.tfOut = value;
 			notify(obj,'changePhaseIncrement');
 		end
 		
 		% ===================================================================
-		%> @brief sfOut Set method
+		%> @brief driftDirectionOut Set method
 		%>
 		% ===================================================================
-		function setdriftDirectionOut(obj,value)
+		function set_driftDirectionOut(obj,value)
 			obj.driftDirectionOut = value;
 			notify(obj,'changePhaseIncrement');
 		end
@@ -369,6 +372,10 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function calculateScale(obj,~,~)
 			obj.scale = obj.sizeOut/(obj.size*obj.ppd);
+			obj.sfRecurse = 1;
+			obj.sfOut = obj.sfCache * obj.scale;
+			obj.sfRecurse = 0;
+			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', obj.sfOut, obj.sfCache, obj.scale);
 			obj.spatialConstantOut=obj.sizeOut/obj.spatialConstant;
 		end
 		
@@ -393,7 +400,7 @@ classdef gratingStimulus < baseStimulus
 		%> we also need to change scale when sizeOut is changed, used for both
 		%setting sfOut and the dstRect properly
 		% ===================================================================
-		function setsizeOut(obj,value)
+		function set_sizeOut(obj,value)
 			obj.sizeOut = value*obj.ppd;
 			notify(obj,'changeScale');
 		end
@@ -402,7 +409,7 @@ classdef gratingStimulus < baseStimulus
 		%> @brief xPositionOut Set method
 		%>
 		% ===================================================================
-		function setxPositionOut(obj,value)
+		function set_xPositionOut(obj,value)
 			obj.xPositionOut = value*obj.ppd;
 			if ~isempty(obj.texture);obj.setRect;end
 		end
@@ -411,7 +418,7 @@ classdef gratingStimulus < baseStimulus
 		%> @brief yPositionOut Set method
 		%>
 		% ===================================================================
-		function setyPositionOut(obj,value)
+		function set_yPositionOut(obj,value)
 			obj.yPositionOut = value*obj.ppd;
 			if ~isempty(obj.texture);obj.setRect;end
 		end

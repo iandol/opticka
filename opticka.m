@@ -237,13 +237,13 @@ classdef (Sealed) opticka < handle
 				
 				obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
 				obj.store.newlook='javax.swing.plaf.metal.MetalLookAndFeel';
-				if obj.mversion < 7.1 && (ismac || ispc)
+				if obj.mversion < 7.12 && (ismac || ispc)
 					javax.swing.UIManager.setLookAndFeel(obj.store.newlook);
 				end
 				uihandle=opticka_ui; %our GUI file
 				obj.h=guidata(uihandle);
 				obj.h.uihandle = uihandle;
-				if obj.mversion < 7.1 && (ismac || ispc)
+				if obj.mversion < 7.12 && (ismac || ispc)
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
 				set(obj.h.OKPanelGrating,'Visible','off')
@@ -335,6 +335,7 @@ classdef (Sealed) opticka < handle
 				obj.r.windowed = s;
 			end
 			
+			obj.r.logFrames = logical(obj.gv(obj.h.OKlogFrames));
 			obj.r.hideFlash = logical(obj.gv(obj.h.OKHideFlash));
 			obj.r.antiAlias = obj.gd(obj.h.OKAntiAliasing);
 			obj.r.photoDiode = logical(obj.gv(obj.h.OKUsePhotoDiode));

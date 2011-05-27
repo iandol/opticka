@@ -60,7 +60,8 @@ classdef (Sealed) runExperiment < handle
 		photoDiode = false
 		%> name of serial port to send TTL out on, if set to 'dummy' then ignore
 		serialPortName = 'dummy'
-		useLabJack = 0
+		%> use LabJack for digital output?
+		useLabJack = false
 		%> LabJack object
 		lJack
 		%> settings for movie output
@@ -69,6 +70,8 @@ classdef (Sealed) runExperiment < handle
 		gammaTable
 		%> this lets the UI leave commands
 		uiCommand = ''
+		%> log all frame times, gets slow for > 1e6 frames
+		logFrames = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -166,24 +169,31 @@ classdef (Sealed) runExperiment < handle
 		%> @param obj required class object
 		% ===================================================================
 		function run(obj)
-			
 			%initialise timeLog for this run
+			obj.timeLog = [];
 			obj.timeLog.date=clock;
 			obj.timeLog.startrun=GetSecs;
-			obj.timeLog.vbl=zeros(obj.task.nFrames,1);
-			obj.timeLog.show=zeros(obj.task.nFrames,1);
-			obj.timeLog.flip=zeros(obj.task.nFrames,1);
-			obj.timeLog.miss=zeros(obj.task.nFrames,1);
-			obj.timeLog.stimTime=zeros(obj.task.nFrames,1);
+			if false == false %preallocating these makes opticka drop frames when nFrames ~ 1e6
+				obj.timeLog.vbl = 0;
+				obj.timeLog.show = 0;
+				obj.timeLog.flip = 0;
+				obj.timeLog.miss = 0;
+				obj.timeLog.stimTime = 0;
+			else
+				obj.timeLog.vbl=zeros(obj.task.nFrames,1);
+				obj.timeLog.show=zeros(obj.task.nFrames,1);
+				obj.timeLog.flip=zeros(obj.task.nFrames,1);
+				obj.timeLog.miss=zeros(obj.task.nFrames,1);
+				obj.timeLog.stimTime=zeros(obj.task.nFrames,1);
+			end
 			
 			obj.screenVals.resetGamma = false;
 			%if obj.windowed(1)==0;HideCursor;end
 			
 			if obj.hideFlash==1 && obj.windowed(1)==0
 				if isa(obj.gammaTable,'calibrateLuminance')
-					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.gammaTable.gammaTable2(128,:), 256, 3));
+					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.gammaTable.gammaTable{1}(128,:), 256, 3));
 					obj.screenVals.resetGamma = true;
-					
 				else
 					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.screenVals.gammaTable(128,:), 256, 1));
 					obj.screenVals.resetGamma = true;
@@ -251,7 +261,7 @@ classdef (Sealed) runExperiment < handle
 					obj.screenVals.resetGamma = true;
 					gTmp = repmat(obj.gammaTable.gammaTable{choice},1,3);
 					Screen('LoadNormalizedGammaTable', obj.screen, gTmp);
-					fprintf('\nSET GAMMA\n');
+					fprintf('\nSET GAMMA CORRECTION using: %s\n', obj.gammaTable.modelFit{choice}.method);
 				else
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 					obj.screenVals.resetGamma = false;
@@ -321,8 +331,12 @@ classdef (Sealed) runExperiment < handle
 				
 				obj.task.tick=1;
 				obj.timeLog.beforeDisplay=GetSecs;
-				obj.timeLog.stimTime(1) = 1;
-				[obj.timeLog.vbl(1),vbl.timeLog.show(1),obj.timeLog.flip(1),obj.timeLog.miss(1)] = Screen('Flip', obj.win);
+				if obj.logFrames == true
+					obj.timeLog.stimTime(1) = 1;
+					[obj.timeLog.vbl(1),vbl.timeLog.show(1),obj.timeLog.flip(1),obj.timeLog.miss(1)] = Screen('Flip', obj.win);
+				else
+					obj.timeLog.vbl = Screen('Flip', obj.win);
+				end
 				
 				while obj.task.thisTrial <= obj.task.nTrials
 					if obj.task.isBlank==1
@@ -356,25 +370,30 @@ classdef (Sealed) runExperiment < handle
 					obj.updateTask(); %update our task structure
 					
 					%======= Show it at next retrace: ========%
-					[obj.timeLog.vbl(obj.task.tick+1),obj.timeLog.show(obj.task.tick+1),obj.timeLog.flip(obj.task.tick+1),obj.timeLog.miss(obj.task.tick+1)] = Screen('Flip', obj.win, (obj.timeLog.vbl(obj.task.tick)+obj.screenVals.halfisi));
+					if obj.logFrames == true
+						[obj.timeLog.vbl(obj.task.tick+1),obj.timeLog.show(obj.task.tick+1),obj.timeLog.flip(obj.task.tick+1),obj.timeLog.miss(obj.task.tick+1)] = Screen('Flip', obj.win, (obj.timeLog.vbl(obj.task.tick)+obj.screenVals.halfisi));
+					else
+						obj.timeLog.vbl = Screen('Flip', obj.win, (obj.timeLog.vbl+obj.screenVals.halfisi));
+					end
 					%=========================================%
 					if obj.task.switched == 1 || obj.task.tick == 1
 						obj.lJack.strobeWord; %send our word out to the LabJack
 					end
 					
 					if obj.task.tick==1
-						obj.timeLog.startflip=obj.timeLog.vbl(obj.task.tick) + obj.screenVals.halfisi;
+						obj.timeLog.startflip=obj.timeLog.vbl(1) + obj.screenVals.halfisi;
 						obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
 					end
 					
-					if obj.task.isBlank==0
-						obj.timeLog.stimTime(obj.task.tick+1)=1+obj.task.switched;
-					else
-						obj.timeLog.stimTime(obj.task.tick+1)=0-obj.task.switched;
+					if obj.logFrames == true
+						if obj.task.isBlank==0
+							%obj.timeLog.stimTime(obj.task.tick+1)=1+obj.task.switched;
+						else
+							%obj.timeLog.stimTime(obj.task.tick+1)=0-obj.task.switched;
+						end
 					end
 					
 					obj.task.tick=obj.task.tick+1;
-					
 					
 					if obj.movieSettings.record == 1
 						if obj.task.isBlank==0 && obj.movieSettings.loop <= obj.movieSettings.nFrames
