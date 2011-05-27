@@ -211,10 +211,14 @@ classdef (Sealed) opticka < handle
 					obj.paths.temp=tempdir;
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);
-						end
+					end
 					obj.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
 					cd(obj.paths.protocols);
 					obj.paths.currentPath = pwd;
+					if ~exist(['~' filesep 'MatlabFiles' filesep 'Calibration'],'dir')
+						mkdir(['~' filesep 'MatlabFiles' filesep 'Calibration']);
+					end
+					obj.paths.calibration = ['~' filesep 'MatlabFiles' filesep 'Calibration'];
 					if ~exist([obj.paths.temp 'History'],'dir')
 						mkdir([obj.paths.temp 'History']);
 					end
@@ -229,6 +233,10 @@ classdef (Sealed) opticka < handle
 					obj.paths.protocols = ['c:\MatlabFiles\Protocols'];
 					cd(obj.paths.protocols);
 					obj.paths.currentPath = pwd;
+					if ~exist('c:\MatlabFiles\Calibration','dir')
+						mkdir('c:\MatlabFiles\Calibration')
+					end
+					obj.paths.calibration = ['c:\MatlabFiles\Calibration'];
 					if ~exist('c:\MatlabFiles\History','dir')
 						mkdir('c:\MatlabFiles\History')
 					end
@@ -250,12 +258,14 @@ classdef (Sealed) opticka < handle
 				drawnow;
 				set(obj.h.OKPanelGrating,'Visible','on')
 				
-				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version])
-				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
-				obj.loadPrefs;
+				set(obj.h.OKOptickaVersion,'String','Initialising GUI, please wait...');
+				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version]);
 				drawnow;
+				
+				obj.loadPrefs;
 				obj.getScreenVals;
 				obj.getTaskVals;
+				obj.loadCalibration;
 				obj.refreshProtocolsList;
 				addlistener(obj.r,'abortRun',@obj.abortRunEvent);
 				addlistener(obj.r,'endRun',@obj.endRunEvent);
@@ -276,6 +286,8 @@ classdef (Sealed) opticka < handle
 
 				set(obj.h.OKVarList,'String','');
 				set(obj.h.OKStimList,'String','');
+				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version]);
+				
 			catch ME
 				close(obj.h.uihandle);
 				if ismac || ispc
@@ -299,6 +311,7 @@ classdef (Sealed) opticka < handle
 		function getScreenVals(obj)
 			
 			if isempty(obj.r)
+				olds = get(obj.h.OKOptickaVersion,'String');
 				set(obj.h.OKOptickaVersion,'String','Initialising Stimulus object...')
 				drawnow
 				obj.r = runExperiment;
@@ -309,7 +322,7 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKSelectScreen,'String', s);
 				set(obj.h.OKSelectScreen, 'Value', obj.r.screen+1);
 				clear s;
-				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version])
+				set(obj.h.OKOptickaVersion,'String',olds)
 				drawnow
 			end
 			
@@ -687,6 +700,54 @@ classdef (Sealed) opticka < handle
 				obj.r.task.nVars = length(obj.r.task.nVar);
 				obj.store.nVars = obj.r.task.nVars;
 				obj.refreshVariableList;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief loadPrefs Load prefs better left local to the machine
+		%> 
+		% ===================================================================
+		function loadCalibration(obj)
+			d = dir(obj.paths.calibration);
+			for i = 1:length(d)
+				if isempty(regexp(d(i).name,'^\.+')) && d(i).isdir == false && d(i).bytes > 0
+					ftime(i) = d(i).datenum;
+				else
+					ftime(i) = 0;
+				end
+			end
+			if max(ftime) > 0
+				[~,idx]=max(ftime);
+				load([obj.paths.calibration filesep d(idx).name]);
+				if isa(tmp,'calibrateLuminance')
+					tmp.filename = [obj.paths.calibration filesep d(idx).name];
+					if isa(obj.r,'runExperiment')
+						obj.r.gammaTable = tmp;
+						set(obj.h.OKUseGamma,'String',['None'; 'Gamma'; obj.r.gammaTable.analysisMethods]);
+					end
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief loadPrefs Load prefs better left local to the machine
+		%> 
+		% ===================================================================
+		function saveCalibration(obj)
+			if isa(obj.r.gammaTable,'calibrateLuminance')
+				saveThis = true;
+				tmp = obj.r.gammaTable;
+				d = dir(obj.paths.calibration);
+				for i = 1:length(d)
+					if isempty(regexp(d(i).name,'^\.+')) && d(i).isdir == false && d(i).bytes > 0
+						if strcmp(d(i).name, tmp.filename)
+							saveThis = false;
+						end
+					end
+				end
+				if saveThis == true
+					save([obj.paths.calibration filesep 'calibration-' date],'tmp');
+				end
 			end
 		end
 		

@@ -382,14 +382,18 @@ classdef (Sealed) runExperiment < handle
 					
 					if obj.task.tick==1
 						obj.timeLog.startflip=obj.timeLog.vbl(1) + obj.screenVals.halfisi;
-						obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
+						if obj.logFrames == true
+							obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
+						else
+							obj.timeLog.start=obj.timeLog.vbl(1);
+						end
 					end
 					
 					if obj.logFrames == true
 						if obj.task.isBlank==0
-							%obj.timeLog.stimTime(obj.task.tick+1)=1+obj.task.switched;
+							obj.timeLog.stimTime(obj.task.tick+1)=1+obj.task.switched;
 						else
-							%obj.timeLog.stimTime(obj.task.tick+1)=0-obj.task.switched;
+							obj.timeLog.stimTime(obj.task.tick+1)=0-obj.task.switched;
 						end
 					end
 					

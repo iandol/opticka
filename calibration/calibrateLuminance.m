@@ -21,7 +21,10 @@ classdef calibrateLuminance < handle
 		comments
 		%> which gamma table opticka selects?
 		choice = 1
+		%> methods list to fit to raw luminance values
 		analysisMethods = {'pchipinterp';'smoothingspline';'cubicinterp';'splineinterp';'cubicspline'}
+		%> filename this was saved as
+		filename
 	end
 	
 	properties (SetAccess = private, GetAccess = public)

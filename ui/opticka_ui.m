@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 26-May-2011 19:10:10
+% Last Modified by GUIDE v2.5 27-May-2011 20:23:25
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -550,7 +550,9 @@ if isappdata(0,'o')
 		o.r.gammaTable.run;
 	else
 		c = calibrateLuminance(inp);
+		c.filename = [o.paths.calibration filesep 'Calibration-' date];
 		o.r.gammaTable = c;
+		o.saveCalibration;
 	end
 	if get(handles.OKUseGamma,'Value') > length(['None'; 'Gamma'; o.r.gammaTable.analysisMethods])
 		set(handles.OKUseGamma,'Value',1)
@@ -579,7 +581,7 @@ function OKMenuCalibrateSize_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 v=get(handles.OKSelectScreen,'Value');
-s=str2num(get(handles.OKMonitorDistance,'String')); %#ok<ST2NM>
+s=str2num(get(handles.OKMonitorDistance,'String')); 
 [~,dpc]=calibrateSize(v-1,s);
 set(handles.OKPixelsPerCm,'String',num2str(dpc));
 
@@ -994,24 +996,6 @@ if isappdata(0,'o')
 	o.getTaskVals;
 end
 
-% --- Executes on button press in OKUseServer.
-function OKUseServer_Callback(hObject, eventdata, handles)
-% hObject    handle to OKUseServer (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-% Hint: get(hObject,'Value') returns toggle state of OKUseServer
-if isappdata(0,'o')
-	o = getappdata(0,'o');
-	switch get(hObject,'Value')
-		case 1
-			set(handles.OKRemotePort,'Enable','on')
-			set(handles.OKRemoteIP,'Enable','on')
-		otherwise
-			set(handles.OKRemotePort,'Enable','off')
-			set(handles.OKRemoteIP,'Enable','off')
-	end
-end
-
 function OKPanelBarscale_Callback(hObject, eventdata, handles)
 % hObject    handle to OKPanelBarscale (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1070,16 +1054,11 @@ function OKPanelGratingcolourDialog_Callback(hObject, eventdata, handles)
 % hObject    handle to OKPanelGratingcolourDialog (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if isappdata(0,'o')
-	o = getappdata(0,'o');
-	cc = str2num(get(handles.OKPanelGratingcolour,'String'));
-	cc = uisetcolor(cc(1:3));
-	cc = num2str(cc);
-	cc = regexprep(cc,'\s+',' '); %collapse spaces
-	%if ismac;javax.swing.UIManager.setLookAndFeel('javax.swing.plaf.metal.MetalLookAndFeel');end
-	set(handles.OKPanelGratingcolour,'String',cc);
-	%if ismac;javax.swing.UIManager.setLookAndFeel(o.store.oldlook);end
-end
+cc = str2num(get(handles.OKPanelGratingcolour,'String'));
+cc = uisetcolor(cc(1:3));
+cc = num2str(cc);
+cc = regexprep(cc,'\s+',' '); %collapse spaces
+set(handles.OKPanelGratingcolour,'String',cc);
 
 
 % --------------------------------------------------------------------
@@ -1119,7 +1098,7 @@ function OKSettingsmovieFrames_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of OKSettingsmovieFrames as a double
 if isappdata(0,'o')
 	o = getappdata(0,'o');
-	o.r.movieSettings.nFrames=str2num(get(hObject,'String'));
+	o.r.movieSettings.nFrames=str2num(get(hObject,'String')); %#ok<*ST2NM>
 end
 
 % --- Executes on button press in OKSettingsmoviePrecision.
@@ -1211,4 +1190,3 @@ if isappdata(0,'o')
 		end
 	end
 end
-
