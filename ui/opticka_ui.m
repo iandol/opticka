@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 27-May-2011 20:23:25
+% Last Modified by GUIDE v2.5 29-May-2011 18:24:45
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -560,6 +560,36 @@ if isappdata(0,'o')
 	set(handles.OKUseGamma,'String',['None'; 'Gamma'; o.r.gammaTable.analysisMethods]);
 end
 
+% --------------------------------------------------------------------
+function OKMenuLoadGamma_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuLoadGamma (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	uiopen('~/MatlabFiles/Calibration')
+	if isa(tmp,'calibrateLuminance')
+		o.r.gammaTable = tmp;
+		clear tmp;
+		if get(handles.OKUseGamma,'Value') > length(['None'; 'Gamma'; o.r.gammaTable.analysisMethods])
+			set(handles.OKUseGamma,'Value',1)
+		end
+		set(handles.OKUseGamma,'String',['None'; 'Gamma'; o.r.gammaTable.analysisMethods]);
+	end
+end
+
+% --------------------------------------------------------------------
+function OKMenuSaveGamma_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuSaveGamma (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	if isa(o.r.gammaTable,'calibrateLuminance')
+		tmp=o.r.gammaTable;
+		uisave('tmp',[o.paths.calibration filesep 'Calibration-' date]);
+	end
+end
 % --- Executes on selection change in OKUseGamma.
 function OKUseGamma_Callback(hObject, eventdata, handles)
 % hObject    handle to OKUseGamma (see GCBO)
@@ -668,15 +698,15 @@ set(handles.OKVariableName,'String',string);
 
 switch string
 	case 'angle'
-		string = num2str([-90:45:90]);
+		string = num2str(-90:45:90);
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);
 	case 'motionAngle'
-		string = num2str([-90:45:90]);
+		string = num2str(-90:45:90);
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);
 	case 'phase'
-		string = num2str([0:22.5:180]);
+		string = num2str(0:22.5:180);
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);
 	case 'size'
@@ -684,7 +714,7 @@ switch string
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);
 	case 'contrast'
-		string = num2str([0:0.1:1]);
+		string = num2str(0:0.1:1);
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);
 	case 'sf'
@@ -696,11 +726,11 @@ switch string
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);
 	case 'xPosition'
-		string = num2str([-1:0.2:1]);
+		string = num2str(-1:0.2:1);
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);	
 	case 'yPosition'
-		string = num2str([-1:0.2:1]);
+		string = num2str(-1:0.2:1);
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);	
 end
@@ -1159,7 +1189,6 @@ if isappdata(0,'o')
 		o.disconnectOmniplex;
 	end
 end
-
 
 % --------------------------------------------------------------------
 function OKPanelPingOmniplex_ClickedCallback(hObject, eventdata, handles)

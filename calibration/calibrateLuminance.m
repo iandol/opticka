@@ -202,26 +202,26 @@ classdef calibrateLuminance < handle
 				fo = fitoptions('Method','NonlinearLeastSquares',...
 					'Display','iter','MaxIter',1000,...
 					'Upper',3,'Lower',0,'StartPoint',1.5);
-				[fittedmodel, gof] = fit(obj.rampNorm',obj.inputValuesNorm',g,fo);
+				[fittedmodel, gof, output] = fit(obj.rampNorm',obj.inputValuesNorm',g,fo);
 				obj.displayGamma = fittedmodel.g;
 				obj.gammaTable{1} = ((([0:1/255:1]'))).^(1/fittedmodel.g);
 				
 				obj.modelFit{1}.method = 'Gamma';
 				obj.modelFit{1}.table = fittedmodel([0:1/255:1]);
 				obj.modelFit{1}.gof = gof;
+				obj.modelFit{1}.output = output;
 				
-				for i = 1:length(obj.analysisMethods)
-					
+				for i = 1:length(obj.analysisMethods)					
 					method = obj.analysisMethods{i};
-					%fo = fitoptions('Display','iter','MaxIter',1000);
-					[fittedmodel,gof] = fit(obj.rampNorm',obj.inputValuesNorm', method);
+					%fo = fitoptions('MaxIter',1000);
+					[fittedmodel,gof,output] = fit(obj.rampNorm',obj.inputValuesNorm', method);
 					obj.modelFit{i+1}.method = method;
 					obj.modelFit{i+1}.table = fittedmodel([0:1/255:1]);
 					obj.modelFit{i+1}.gof = gof;
+					obj.modelFit{i+1}.output = output;
 					%Invert interpolation
 					[fittedmodel,gof] = fit(obj.inputValuesNorm',obj.rampNorm',method);
-					obj.gammaTable{i+1} = fittedmodel([0:1/255:1]); 
-				
+					obj.gammaTable{i+1} = fittedmodel([0:1/255:1]);
 				end
 				
 				obj.plot;
@@ -240,18 +240,18 @@ classdef calibrateLuminance < handle
 			scnsize = get(0,'ScreenSize');
 			pos=get(gcf,'Position');
 			
-			obj.p.pack(3,1);
+			obj.p.pack(2,2);
 			obj.p.margin = [15 20 5 15];
 			obj.p.fontsize = 12;
 			
 			obj.p(1,1).select();
 			plot(obj.ramp, obj.inputValues, 'k.-');
 			axis tight
-			xlabel('Indexed Values (0 - 255)');
+			xlabel('Indexed Values');
 			ylabel('Luminance cd/m^2');
 			title('Input -> Output Raw Data');
 			
-			obj.p(2,1).select();
+			obj.p(1,2).select();
 			hold all
 				for i=1:length(obj.modelFit)
 					plot([0:1/255:1], obj.modelFit{i}.table);
@@ -266,7 +266,8 @@ classdef calibrateLuminance < handle
 			legend(legendtext,'Location','NorthWest');
 			title(sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma));
 			
-			obj.p(3,1).select();
+			legendtext=[];
+			obj.p(2,1).select();
 			hold all
 			for i=1:length(obj.gammaTable)
 				plot(1:length(obj.gammaTable{i}),obj.gammaTable{i});
@@ -279,7 +280,20 @@ classdef calibrateLuminance < handle
 			legend(legendtext,'Location','NorthWest');
 			title('Plot of output Gamma curves');
 			
-			newpos = [pos(1) 1 pos(3) scnsize(4)];
+			obj.p(2,2).select();
+			hold all
+			for i=1:length(obj.gammaTable)
+				plot(obj.modelFit{i}.output.residuals);
+				legendtext{i} = obj.modelFit{i}.method;
+			end
+			hold off
+			axis tight
+			xlabel('Indexed Values')
+			ylabel('Residual Values');
+			legend(legendtext,'Location','Best');
+			title('Model Residuals');
+			
+			newpos = [scnsize(3)/2-scnsize(3)/3 1 scnsize(3)/1.5 scnsize(4)];
 			set(gcf,'Position',newpos);
 			
 			obj.p.refresh();
@@ -295,8 +309,7 @@ classdef calibrateLuminance < handle
 			ColorCal2('ZeroCalibration');
 			helpdlg('Dark Calibration Done!');
 		end
-		
-		
+
 	end
 	
 	%=======================================================================

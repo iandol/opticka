@@ -33,7 +33,7 @@ classdef gratingStimulus < baseStimulus
 		%> generate a gabor?
 		gabor = false
 		%> which direction to drift?
-		driftDirection=1
+		driftDirection = true
 		%> the angle which the direction of the grating patch is moving
 		motionAngle = 0
 		%> aspect ratio of the gabor
@@ -66,9 +66,9 @@ classdef gratingStimulus < baseStimulus
 	properties (SetAccess = private, GetAccess = private)
 		%> as get methods are slow, we cache sf, then recalculate sf whenever
 		%> changeScale event is called
-		sfCache
+		sfCache = []
 		%>to stop a loop between set method and an event
-		sfRecurse = 0
+		sfRecurse = false
 		%> allowed properties passed to object upon construction
 		allowedProperties = ['^(sf|tf|method|angle|motionAngle|phase|rotationMethod|' ... 
 			'contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|' ... 
@@ -166,13 +166,13 @@ classdef gratingStimulus < baseStimulus
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
 			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
 			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			obj.doDots = 0;
-			obj.doMotion = 0;
-			obj.doDrift = 0;
-			obj.doFlash = 0;
+			obj.doDots = false;
+			obj.doMotion = false;
+			obj.doDrift = false;
+			obj.doFlash = false;
 			
-			if obj.tf > 0;obj.doDrift = 1;end
-			if obj.speed > 0; obj.doMotion = 1;end
+			if obj.tf > 0;obj.doDrift = true;end
+			if obj.speed > 0; obj.doMotion = true;end
 			
 			if isempty(obj.findprop('rotateMode'));p=obj.addprop('rotateMode');p.Transient=true;end
 			if obj.rotationMethod==1
@@ -199,10 +199,10 @@ classdef gratingStimulus < baseStimulus
 			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
 			obj.res = [obj.gratingSize obj.gratingSize];
 			
-			if obj.mask>0
+			if obj.mask == true
 				obj.mask = floor((obj.ppd*obj.size)/2);
 			else
-				obj.mask = [];
+				obj.mask = false;
 			end
 			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
@@ -260,14 +260,15 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible == true
-				if obj.gabor==0
+				if obj.gabor == false
 					Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
 						obj.angleOut, [], [], [], [], obj.rotateMode,...
 						[obj.driftPhase,obj.sfOut,obj.contrastOut, obj.sigmaOut]);
 				else
+					%2 = kPsychDontDoRotation
 					Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
-						obj.angleOut, [], [], [], [], kPsychDontDoRotation,...
-						[obj.driftPhase, obj.sfOut, obj.spatialConstantOut, obj.contrastOut, obj.aspectRatioOut, 0, 0, 0]);
+						obj.angleOut, [], [], [], [], 2,...
+						[obj.driftPhase, obj.sfOut, obj.spatialConstantOut, obj.contrastOut, obj.aspectRatioOut, 0, 0, 0]); 
 				end
 			end
 		end
@@ -279,10 +280,10 @@ classdef gratingStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			if obj.doMotion == 1
+			if obj.doMotion == true
 				obj.mvRect=OffsetRect(obj.mvRect,obj.dX,obj.dY);
 			end
-			if obj.doDrift == 1
+			if obj.doDrift == true
 				obj.driftPhase = obj.driftPhase + obj.phaseIncrement;
 			end
 		end
@@ -295,6 +296,9 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function reset(obj)
 			obj.texture=[];
+			if obj.mask > 0
+				obj.mask = true;
+			end
 			obj.removeTmpProperties;
 		end
 		
@@ -337,12 +341,12 @@ classdef gratingStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_sfOut(obj,value)
-			if obj.sfRecurse == 0
+			if obj.sfRecurse == false
 				obj.sfCache = (value/obj.ppd);
 				obj.sfOut = obj.sfCache * obj.scale;
 			else
 				obj.sfOut = value;
-				obj.sfRecurse = 0;
+				obj.sfRecurse = false;
 			end
 			%fprintf('\nSET SFOut: %d | cachce: %d | in: %d\n', obj.sfOut, obj.sfCache, value);
 		end
@@ -372,9 +376,8 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function calculateScale(obj,~,~)
 			obj.scale = obj.sizeOut/(obj.size*obj.ppd);
-			obj.sfRecurse = 1;
+			obj.sfRecurse = true;
 			obj.sfOut = obj.sfCache * obj.scale;
-			obj.sfRecurse = 0;
 			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', obj.sfOut, obj.sfCache, obj.scale);
 			obj.spatialConstantOut=obj.sizeOut/obj.spatialConstant;
 		end
@@ -388,7 +391,7 @@ classdef gratingStimulus < baseStimulus
 			if ~isempty(obj.findprop('tfOut'))
 				obj.phaseIncrement = (obj.tfOut * 360) * obj.ifi;
 				if ~isempty(obj.findprop('driftDirectionOut'))
-					if obj.driftDirectionOut<1
+					if obj.driftDirectionOut == false
 						obj.phaseIncrement = -obj.phaseIncrement;
 					end
 				end

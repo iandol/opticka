@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.502'
+		version='0.511'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection
@@ -425,7 +425,7 @@ classdef (Sealed) opticka < handle
 		% ===================================================================
 		function deleteStimulus(obj)
 			n = length(obj.r.stimulus); %get what stimulus fields we have
-			if ~isempty(n)
+			if ~isempty(n) && n > 0
 				val=obj.gv(obj.h.OKStimList);
 				obj.r.stimulus(val) = [];
 				if isempty(obj.r.stimulus)
@@ -530,6 +530,7 @@ classdef (Sealed) opticka < handle
 			tmp.size = obj.gd(obj.h.OKPanelDotssize);
 			tmp.angle = obj.gd(obj.h.OKPanelDotsangle);
 			tmp.coherence = obj.gd(obj.h.OKPanelDotscoherence);
+			tmp.kill = obj.gd(obj.h.OKPanelDotskill);
 			tmp.nDots = obj.gd(obj.h.OKPanelDotsnDots);
 			tmp.dotSize = obj.gd(obj.h.OKPanelDotsdotSize);
 			tmp.speed = obj.gd(obj.h.OKPanelDotsspeed);

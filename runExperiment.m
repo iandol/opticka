@@ -570,6 +570,9 @@ classdef (Sealed) runExperiment < handle
 		%> @param
 		% ===================================================================
 		function updatesList(obj)
+			if isempty(obj.stimulus) || isstruct(obj.stimulus{1}) %stimuli should be class not structure, reset
+				obj.stimulus = [];
+			end
 			obj.sList.n = 0;
 			obj.sList.list = [];
 			obj.sList.index = [];
@@ -725,21 +728,21 @@ classdef (Sealed) runExperiment < handle
 			for i=1:obj.task.nVars
 				ix = obj.task.nVar(i).stimulus; %which stimulus
 				value=obj.task.outVars{thisTrial,i}(thisRun);
-				name=obj.task.nVar(i).name; %which parameter
+				name=[obj.task.nVar(i).name 'Out']; %which parameter
 				offsetix = obj.task.nVar(i).offsetstimulus;
 				offsetvalue = obj.task.nVar(i).offsetvalue;
 				
 				if ~isempty(offsetix)
-					obj.stimulus{offsetix}.([name 'Out'])=value+offsetvalue;
+					obj.stimulus{offsetix}.(name)=value+offsetvalue;
 					if thisTrial ==1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
 						obj.stimulus{offsetix}.update;
 					end
 				end
 				
-				for j=1:length(ix) %loop through our stimuli references for this variable
-					obj.stimulus{ix(j)}.([name 'Out'])=value;
-					if thisTrial ==1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
-						obj.stimulus{ix(j)}.update;
+				for j = ix %loop through our stimuli references for this variable
+					obj.stimulus{j}.(name)=value;
+					if thisTrial == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
+						obj.stimulus{j}.update;
 					end
 				end
 			end

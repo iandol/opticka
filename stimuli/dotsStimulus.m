@@ -10,7 +10,7 @@ classdef dotsStimulus < baseStimulus
 		colourType = 'randomBW'
 		dotSize  = 0.05  % width of dot (deg)
 		coherence = 0.5
-		kill      = 0.2 % fraction of dots to kill each frame  (limited lifetime)
+		kill      = 0.05 % fraction of dots to kill each frame  (limited lifetime)
 		dotType = 1
 		mask = true
 		maskColour = [0.5 0.5 0.5 0]
@@ -19,9 +19,14 @@ classdef dotsStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> row are x and y and columns are each dot
 		xy
+		%> delta x and y for each dot
 		dxdy
+		%> colour for each dot
 		colours
+		%> local frame counter, reset on each update
+		counter
 	end
 	properties (SetAccess = private, GetAccess = private)
 		fieldScale = 1.1
@@ -113,14 +118,15 @@ classdef dotsStimulus < baseStimulus
 				end
 			end
 			
+			
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
 			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
 			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			obj.doDots = [];
-			obj.doMotion = [];
-			obj.doDrift = [];
-			obj.doFlash = [];
+			obj.doDots = true;
+			obj.doMotion = false;
+			obj.doDrift = false;
+			obj.doFlash = false;
 			
 			if isempty(obj.findprop('xTmp'));p=obj.addprop('xTmp');p.Transient = true;end
 			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
@@ -166,12 +172,12 @@ classdef dotsStimulus < baseStimulus
 					obj.colours(4)=obj.alpha;
 			end
 			
-			obj.updateDots;
+			%obj.updateDots; runExperiment will call update
 			
 		end
 		
 		% ===================================================================
-		%> @brief Update the dots per frame and wrap dots that exceed the size
+		%> @brief Update the dots based on current variable settings
 		%>
 		% ===================================================================
 		function updateDots(obj)
@@ -179,7 +185,7 @@ classdef dotsStimulus < baseStimulus
 			obj.angles = ones(obj.nDots,1) .* obj.angleOut;
 			obj.rDots=obj.nDots-floor(obj.nDots*(obj.coherenceOut));
 			if obj.rDots>0
-				obj.angles(1:obj.rDots)= obj.r2d((2*pi).*rand(1,obj.rDots));
+				obj.angles(1:obj.rDots) = obj.r2d((2*pi).*rand(1,obj.rDots));
 				%obj.angles=flipud(obj.angles);
 				obj.angles = Shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
 			end
@@ -188,6 +194,7 @@ classdef dotsStimulus < baseStimulus
 			obj.xy = obj.xy - obj.sizeOut/2; %so we are centered for -xy to +xy
 			[obj.dxs, obj.dys] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
 			obj.dxdy=[obj.dxs';obj.dys'];
+			obj.counter = 1;
 		end
 		
 		% ===================================================================
@@ -233,6 +240,13 @@ classdef dotsStimulus < baseStimulus
 			obj.xy(fix) = obj.xy(fix) - obj.sizeOut;
 			fix = find(obj.xy < -obj.sizeOut/2);  %cull negative
 			obj.xy(fix) = obj.xy(fix) + obj.sizeOut;
+			if obj.killOut > 0 && obj.counter > 1
+				kidx = rand(obj.nDots,1) <  obj.killOut;
+				ks = length(find(kidx > 0));
+				obj.xy(:,kidx) = (obj.sizeOut .* rand(2,ks)) - obj.sizeOut/2;
+				%obj.colours(3,kidx) = ones(1,ks); 
+			end
+			obj.counter = obj.counter + 1;
 		end
 		
 		% ===================================================================
