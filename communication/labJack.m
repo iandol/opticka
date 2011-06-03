@@ -729,7 +729,7 @@ classdef labJack < handle
 	
 		%===============Destructor======================%
 		function delete(obj)
-			obj.salutation('DELETE Method','Cleaning up...')
+			obj.salutation('DELETE Method','labJack Cleaning up...')
 			obj.close;
 		end
 		

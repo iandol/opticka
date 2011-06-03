@@ -568,7 +568,7 @@ function OKMenuLoadGamma_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	uiopen('~/MatlabFiles/Calibration')
-	if isa(tmp,'calibrateLuminance')
+	if exist('tmp','var') && isa(tmp,'calibrateLuminance')
 		o.r.gammaTable = tmp;
 		clear tmp;
 		if get(handles.OKUseGamma,'Value') > length(['None'; 'Gamma'; o.r.gammaTable.analysisMethods])

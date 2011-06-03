@@ -110,7 +110,7 @@ classdef dotsStimulus < baseStimulus
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
 					if strcmp(fn{j},'dotSize');p.SetMethod = @setdotSizeOut;end
-				if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
+					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))

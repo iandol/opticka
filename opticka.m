@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.511'
+		version='0.512'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection

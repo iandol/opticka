@@ -210,7 +210,7 @@ classdef (Sealed) runExperiment < handle
 				strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
 			end
 			obj.lJack = labJack(strct);
-			obj.lJack.setDIO([2,0,0]);WaitSecs(0.01);obj.lJack.setDIO([0,0,0]); %Trigger the omniplex into paused mode
+			obj.lJack.setDIO([2,0,0]);WaitSecs(0.01);obj.lJack.setDIO([0,0,0]); %Trigger the omniplex (FIO1) into paused mode
 			%-----------------------------------------------------
 			
 			try
@@ -222,7 +222,7 @@ classdef (Sealed) runExperiment < handle
 				else
 					Screen('Preference', 'SkipSyncTests', 0);
 					Screen('Preference', 'VisualDebugLevel', 3);
-					Screen('Preference', 'Verbosity', 3); %errors and warnings
+					Screen('Preference', 'Verbosity', 4); %errors and warnings
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				end
 				
@@ -334,8 +334,10 @@ classdef (Sealed) runExperiment < handle
 				if obj.logFrames == true
 					obj.timeLog.stimTime(1) = 1;
 					[obj.timeLog.vbl(1),vbl.timeLog.show(1),obj.timeLog.flip(1),obj.timeLog.miss(1)] = Screen('Flip', obj.win);
+					obj.timeLog.startTime = obj.timeLog.vbl(1);
 				else
 					obj.timeLog.vbl = Screen('Flip', obj.win);
+					obj.timeLog.startTime = obj.timeLog.vbl;
 				end
 				
 				while obj.task.thisTrial <= obj.task.nTrials
@@ -383,9 +385,10 @@ classdef (Sealed) runExperiment < handle
 					if obj.task.tick==1
 						obj.timeLog.startflip=obj.timeLog.vbl(1) + obj.screenVals.halfisi;
 						if obj.logFrames == true
-							obj.timeLog.start=obj.timeLog.show(obj.task.tick+1);
+							obj.timeLog.startTime=obj.timeLog.show(obj.task.tick+1);
 						else
-							obj.timeLog.start=obj.timeLog.vbl(1);
+							obj.timeLog.startTime=obj.timeLog.vbl(1);
+							
 						end
 					end
 					
@@ -424,10 +427,10 @@ classdef (Sealed) runExperiment < handle
 				notify(obj,'endRun');
 				
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
-				obj.timeLog.deltaUntilDisplay=obj.timeLog.beforeDisplay-obj.timeLog.start;
+				obj.timeLog.deltaUntilDisplay=obj.timeLog.beforeDisplay-obj.timeLog.startTime;
 				obj.timeLog.deltaToFirstVBL=obj.timeLog.vbl(1)-obj.timeLog.beforeDisplay;
-				obj.timeLog.deltaStart=obj.timeLog.startflip-obj.timeLog.start;
-				obj.timeLog.deltaUpdateDiff = obj.timeLog.start-obj.task.startTime;
+				obj.timeLog.deltaStart=obj.timeLog.startflip-obj.timeLog.startTime;
+				%obj.timeLog.deltaUpdateDiff = obj.timeLog.start-obj.task.startTime;
 				
 				obj.info = Screen('GetWindowInfo', obj.win);
 				
@@ -940,9 +943,15 @@ classdef (Sealed) runExperiment < handle
 		%> @return
 		% ===================================================================
 		function infoText(obj)
-			t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
-				obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-				(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
+			if obj.logFrames == true
+				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
+					(obj.timeLog.vbl(obj.task.tick)-obj.timeLog.startTime),obj.task.tick);
+			else
+				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
+					(obj.timeLog.vbl-obj.timeLog.startTime),obj.task.tick);
+			end
 			for i=1:obj.task.nVars
 				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
 			end
@@ -991,8 +1000,8 @@ classdef (Sealed) runExperiment < handle
 		%> @return
 		% ===================================================================
 		function printLog(obj)
-			if ~isfield(obj.timeLog,'date')
-				warndlg('No timing data available')
+			if obj.logFrames == false || ~isfield(obj.timeLog,'date')
+				disp('No timing data available')
 				return
 			end
 			vbl=obj.timeLog.vbl(obj.timeLog.vbl>0)*1000;

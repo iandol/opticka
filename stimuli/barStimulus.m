@@ -21,7 +21,7 @@ classdef barStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(type|barWidth|barLength|angle|speed|contrast|scale|interpMethod)$';
+		allowedProperties='^(type|pixelScale|barWidth|barLength|angle|speed|contrast|scale|interpMethod)$';
 		ignoreProperties = 'interpMethod|matrix|rmatrix|pixelScale';
 	end
 	
@@ -146,13 +146,13 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function setup(obj,rE)
 			
+			obj.reset;
+			
 			obj.ppd=rE.ppd;
 			obj.ifi=rE.screenVals.ifi;
 			if isempty(obj.xCenter);obj.xCenter=rE.xCenter;end
 			if isempty(obj.yCenter);obj.yCenter=rE.yCenter;end
 			if isempty(obj.win);obj.win = rE.win;end
-			
-			obj.texture = []; %we need to reset this
 			
 			fn = fieldnames(barStimulus);
 			for j=1:length(fn)
@@ -171,19 +171,19 @@ classdef barStimulus < baseStimulus
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
 			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
 			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			obj.doDots = [];
-			obj.doMotion = [];
-			obj.doDrift = [];
-			obj.doFlash = [];
+			obj.doDots = false;
+			obj.doMotion = false;
+			obj.doDrift = false;
+			obj.doFlash = false;
 			
 			obj.constructMatrix(obj.ppd) %make our matrix
 			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
 			
 			if obj.speed>0 %we need to say this needs animating
-				obj.doMotion=1;
+				obj.doMotion=true;
  				%rE.task.stimIsMoving=[rE.task.stimIsMoving i];
 			else
-				obj.doMotion=0;
+				obj.doMotion=false;
 			end
 			
 			obj.setRect();
@@ -230,6 +230,8 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function reset(obj)
 			obj.texture=[];
+			obj.mvRect = [];
+			obj.dstRect = [];
 			obj.removeTmpProperties;
 		end
 		

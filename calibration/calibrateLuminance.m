@@ -18,7 +18,7 @@ classdef calibrateLuminance < handle
 		%> use ColorCalII automatically
 		useCCal = true
 		%> comments to note about this calibration
-		comments
+		comments = {''}
 		%> which gamma table opticka selects?
 		choice = 1
 		%> methods list to fit to raw luminance values
@@ -224,6 +224,19 @@ classdef calibrateLuminance < handle
 					obj.gammaTable{i+1} = fittedmodel([0:1/255:1]);
 				end
 				
+				ans = questdlg('Do you want to add comments to this calibration?');
+				if strcmpi(ans,'Yes')
+					if iscell(obj.comments)
+						cmts = obj.comments;
+					else
+						cmts = {obj.comments};
+					end
+					cmt = inputdlg('Please enter a description for this calibration run:','Gamma Calibration',10,cmts);
+					if ~isempty(cmt)
+						obj.comments = cmt{1};
+					end
+				end
+
 				obj.plot;
 				
 			end
@@ -293,9 +306,18 @@ classdef calibrateLuminance < handle
 			legend(legendtext,'Location','Best');
 			title('Model Residuals');
 			
+			if scnsize(3) > 2000
+				scnsize(3) = scnsize(3)/2;
+			end
 			newpos = [scnsize(3)/2-scnsize(3)/3 1 scnsize(3)/1.5 scnsize(4)];
 			set(gcf,'Position',newpos);
 			
+			if isempty(obj.comments)
+				t = obj.filename;
+			else
+				t = obj.comments;
+			end
+			obj.p.title(t);
 			obj.p.refresh();
 			
 		end
@@ -318,7 +340,6 @@ classdef calibrateLuminance < handle
 		
 		%===============Destructor======================%
 		function delete(obj)
-			obj.verbosity = 1;
 			obj.salutation('DELETE Method','Closing calibrateLuminance')
 		end
 		
