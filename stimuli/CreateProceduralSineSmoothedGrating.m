@@ -102,10 +102,6 @@ if nargin < 9 || isempty(method)
 	method = 0.0;
 end
 
-if nargin < 10 || isempty(shaderPath)
-	shaderPath = '';
-end
-
 p = mfilename('fullpath');
 p = [fileparts(p) filesep];
 

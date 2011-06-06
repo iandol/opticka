@@ -1,5 +1,5 @@
 /*
- * File: BasicSineGratingShader.frag.txt
+ * File: squareWaveShader.frag.txt
  * Shader for drawing of basic parameterized sine grating patches.
  *
  * (c) 2007 by Mario Kleiner, licensed under GPL.

@@ -71,7 +71,7 @@ classdef (Sealed) runExperiment < handle
 		%> this lets the UI leave commands
 		uiCommand = ''
 		%> log all frame times, gets slow for > 1e6 frames
-		logFrames = false
+		logFrames = true
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -173,7 +173,7 @@ classdef (Sealed) runExperiment < handle
 			obj.timeLog = [];
 			obj.timeLog.date=clock;
 			obj.timeLog.startrun=GetSecs;
-			if false == false %preallocating these makes opticka drop frames when nFrames ~ 1e6
+			if obj.logFrames == false %preallocating these makes opticka drop frames when nFrames ~ 1e6
 				obj.timeLog.vbl = 0;
 				obj.timeLog.show = 0;
 				obj.timeLog.flip = 0;
@@ -191,8 +191,8 @@ classdef (Sealed) runExperiment < handle
 			%if obj.windowed(1)==0;HideCursor;end
 			
 			if obj.hideFlash==1 && obj.windowed(1)==0
-				if isa(obj.gammaTable,'calibrateLuminance')
-					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.gammaTable.gammaTable{1}(128,:), 256, 3));
+				if isa(obj.gammaTable,'calibrateLuminance') && (obj.gammaTable.choice > 0)
+					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.gammaTable.gammaTable{obj.gammaTable.choice}(128,:), 256, 3));
 					obj.screenVals.resetGamma = true;
 				else
 					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.screenVals.gammaTable(128,:), 256, 1));
