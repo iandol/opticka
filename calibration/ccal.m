@@ -22,7 +22,7 @@ function varargout = ccal(varargin)
 
 % Edit the above text to modify the response to help ccal
 
-% Last Modified by GUIDE v2.5 09-Jul-2009 20:47:44
+% Last Modified by GUIDE v2.5 09-Jun-2011 17:36:02
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -225,3 +225,167 @@ function ccalledtrigger_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of ccalledtrigger
 ColorCal2('SetLEDFunction',get(hObject,'Value'));
+
+
+% --- Executes on button press in ccalplot.
+function ccalplot_Callback(hObject, eventdata, handles)
+% hObject    handle to ccalplot (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+persistent cMatrix
+persistent ccalHandle
+global ccalBreak
+ccalBreak = false;
+ccalHandle = [];
+maxScreen=max(Screen('Screens'));
+backgroundColour = [0 0 0];
+if get(handles.ccalDisplay,'Value') == 1
+	showStimulus = true;
+else
+	showStimulus = false;
+end
+
+if ~exist('cMatrix','var') || isempty(cMatrix)
+	cMatrix = ColorCal2('ReadColorMatrix');
+end
+if ~exist('ccalHandle','var') || isempty(ccalHandle)
+	figure;
+	ccalHandle = gca;
+	hold on
+	plot3(0,0,0,'o','MarkerFaceColor',[0 0 0],'MarkerEdgeColor',[0 0 0]);
+	plot3(0.2980,0.5323,3.57,'o','MarkerFaceColor',[0 1 0],'MarkerEdgeColor',[0 0 0]);
+	plot3(0.2787,0.5470,21.15,'o','MarkerFaceColor',[0 1 0],'MarkerEdgeColor',[1 0 0]);
+	plot3(0.2771,0.5471,38.4748,'o','MarkerFaceColor',[0 1 0],'MarkerEdgeColor',[1 0 1]);
+	xlabel('x')
+	ylabel('y')
+	zlabel('luminance')
+	view(45,45)
+	hold off
+end
+
+try
+	if showStimulus == true
+		rchar='';
+		FlushEvents;
+		ListenChar(2);
+		Screen('Preference', 'SkipSyncTests', 2);
+		Screen('Preference', 'VisualDebugLevel', 0);
+		Screen('Preference', 'Verbosity', 2);
+		Screen('Preference', 'SuppressAllWarnings', 0);
+		PsychImaging('PrepareConfiguration');
+		PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+		PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
+		[obj.win, obj.winRect] = PsychImaging('OpenWindow', maxScreen, backgroundColour);
+	end
+
+	while ccalBreak == false
+		s = ColorCal2('MeasureXYZ');
+		correctedValues = cMatrix(1:3,:) * [s.x s.y s.z]';
+		X = correctedValues(1);
+		Y = correctedValues(2);
+		Z = correctedValues(3);
+		x = X / (X + Y + Z);
+		y = Y / (X + Y + Z);
+		rgb = XYZToSRGBPrimary([X Y Z]');
+		fprintf('R: %g\tG: %g\tB: %g --> ',rgb(1),rgb(2),rgb(3))
+		rgb = rgb ./ 256;
+		rgb(rgb<0) = 0;
+		fprintf('R: %g\tG: %g\tB: %g\n',rgb(1),rgb(2),rgb(3))
+		rgb(rgb>1)=1;
+		axes(ccalHandle);
+		hold on
+		plot3(x,y,Y,'o','MarkerFaceColor',rgb,'MarkerEdgeColor',rgb);
+		hold off
+		axis tight
+		drawnow;
+		
+		if showStimulus == true
+			%draw background
+			Screen('FillRect',obj.win,backgroundColour,[]);
+			Screen('Flip', obj.win);
+
+			[keyIsDown, ~, keyCode] = KbCheck;
+			if keyIsDown == 1
+				obj.rchar = KbName(keyCode);
+				if iscell(obj.rchar);obj.rchar=obj.rchar{1};end
+				switch obj.rchar
+					case ',<'
+						if max(backgroundColour)>0.1
+							backgroundColour = backgroundColour .* 0.9;
+							backgroundColour(backgroundColour<0) = 0;
+						end
+					case '.>'
+						backgroundColour = backgroundColour .* 1.1;
+						backgroundColour(backgroundColour>1) = 1;
+					case 'r'
+						backgroundColour(1) = backgroundColour(1) + 0.05;
+						if backgroundColour(1) > 1
+							backgroundColour(1) = 1;
+						end
+						disp(backgroundColour);
+					case 'g'
+						backgroundColour(2) = backgroundColour(2) + 0.05;
+						if backgroundColour(2) > 1
+							backgroundColour(2) = 1;
+						end
+						disp(backgroundColour);
+					case 'b'
+						backgroundColour(3) = backgroundColour(3) + 0.05;
+						if backgroundColour(3) > 1
+							backgroundColour(3) = 1;
+						end
+						disp(backgroundColour);
+					case 'e'
+						backgroundColour(1) = backgroundColour(1) - 0.05;
+						if backgroundColour(1) < 0.02
+							backgroundColour(1) = 0;
+						end
+						disp(backgroundColour);
+					case 'f'
+						backgroundColour(2) = backgroundColour(2) - 0.05;
+						if backgroundColour(2) < 0.02
+							backgroundColour(2) = 0;
+						end
+						disp(backgroundColour);
+					case 'v'
+						backgroundColour(3) = backgroundColour(3) - 0.05;
+						if backgroundColour(3) < 0.02
+							backgroundColour(3) = 0;
+						end
+						disp(backgroundColour);
+				end
+			end
+		end	
+	end
+	if showStimulus == true
+		ListenChar(0);
+		ShowCursor;
+		Screen('CloseAll');
+	end
+catch ME
+	if showStimulus == true
+		ListenChar(0)
+		ShowCursor;
+		Screen('CloseAll');
+	end
+	psychrethrow(psychlasterror);
+	rethrow ME
+end
+
+
+% --- Executes on button press in ccalStop.
+function ccalStop_Callback(hObject, eventdata, handles)
+% hObject    handle to ccalStop (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global ccalBreak
+ccalBreak = true
+
+
+% --- Executes on button press in ccalDisplay.
+function ccalDisplay_Callback(hObject, eventdata, handles)
+% hObject    handle to ccalDisplay (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of ccalDisplay

@@ -285,20 +285,20 @@ classdef (Sealed) runExperiment < handle
 				
 				obj.initialiseTask; %set up our task structure for this run
 				
-				for j=1:obj.sList.n
+				parfor j=1:obj.sList.n
 					obj.stimulus{j}.setup(obj); %call setup and pass it the runExperiment object
-					if obj.stimulus{j}.doMotion == 1
-						obj.task.stimIsMoving=[obj.task.stimIsMoving j];
-					end
-					if obj.stimulus{j}.doDots == 1
-						obj.task.stimIsDots=[obj.task.stimIsDots j];
-					end
-					if obj.stimulus{j}.doDrift == 1
-						obj.task.stimIsDrifting=[obj.task.stimIsDrifting j];
-					end
-					if obj.stimulus{j}.doFlash == 1
-						obj.task.stimIsFlashing=[obj.task.stimIsFlashing j];
-					end
+% 					if obj.stimulus{j}.doMotion == 1
+% 						obj.task.stimIsMoving=[obj.task.stimIsMoving j];
+% 					end
+% 					if obj.stimulus{j}.doDots == 1
+% 						obj.task.stimIsDots=[obj.task.stimIsDots j];
+% 					end
+% 					if obj.stimulus{j}.doDrift == 1
+% 						obj.task.stimIsDrifting=[obj.task.stimIsDrifting j];
+% 					end
+% 					if obj.stimulus{j}.doFlash == 1
+% 						obj.task.stimIsFlashing=[obj.task.stimIsFlashing j];
+% 					end
 				end
 				
 				if obj.movieSettings.record == 1

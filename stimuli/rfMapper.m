@@ -110,7 +110,7 @@ classdef rfMapper < barStimulus
 				yOut = 0;
 				obj.rchar='';
 				FlushEvents;
-				HideCursor;
+				%HideCursor;
 				ListenChar(2);
 				
 				while isempty(regexpi(obj.rchar,'^esc'))
@@ -208,7 +208,7 @@ classdef rfMapper < barStimulus
 										obj.dstRect=ScaleRect(obj.dstRect,0.95,0.95);
 										obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
 								end
-							case 'g'
+							case 's'
 								switch obj.stimulus
 									case 'bar'
 										obj.stimulus = 'grating';
@@ -239,15 +239,57 @@ classdef rfMapper < barStimulus
 							case '.>'
 								obj.backgroundColour = obj.backgroundColour .* 1.1;
 								obj.backgroundColour(obj.backgroundColour>1) = 1;
+							case 'r'
+								obj.backgroundColour(1) = obj.backgroundColour(1) + 0.01;
+								if obj.backgroundColour(1) > 1
+									obj.backgroundColour(1) = 0;
+								end
+								WaitSecs(0.05);
+								disp(obj.backgroundColour);
+							case 'g'
+								obj.backgroundColour(2) = obj.backgroundColour(2) + 0.01;
+								if obj.backgroundColour(2) > 1
+									obj.backgroundColour(2) = 0;
+								end
+								WaitSecs(0.05);
+								disp(obj.backgroundColour);
+							case 'b'
+								obj.backgroundColour(3) = obj.backgroundColour(3) + 0.01;
+								if obj.backgroundColour(3) > 1
+									obj.backgroundColour(3) = 0;
+								end
+								WaitSecs(0.05);
+								disp(obj.backgroundColour);
+							case 'e'
+								obj.backgroundColour(1) = obj.backgroundColour(1) - 0.01;
+								if obj.backgroundColour(1) < 0.01
+									obj.backgroundColour(1) = 1;
+								end
+								WaitSecs(0.05);
+								disp(obj.backgroundColour);
+							case 'f'
+								obj.backgroundColour(2) = obj.backgroundColour(2) - 0.01;
+								if obj.backgroundColour(2) < 0.01
+									obj.backgroundColour(2) = 1;
+								end
+								WaitSecs(0.05);
+								disp(obj.backgroundColour);
+							case 'v'
+								obj.backgroundColour(3) = obj.backgroundColour(3) - 0.01;
+								if obj.backgroundColour(3) < 0.01
+									obj.backgroundColour(3) = 1;
+								end
+								WaitSecs(0.05);
+								disp(obj.backgroundColour);
 							case '1!'
 								obj.colourIndex = obj.colourIndex+1;
 								obj.setColours;
-								WaitSecs(0.03);
+								WaitSecs(0.05);
 								obj.regenerate;
 							case '2@'
 								obj.bgcolourIndex = obj.bgcolourIndex+1;
 								obj.setColours;
-								WaitSecs(0.02);
+								WaitSecs(0.05);
 								obj.regenerate;
 							case '3#'
 								switch obj.stimulus
