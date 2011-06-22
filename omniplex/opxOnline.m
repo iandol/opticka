@@ -7,7 +7,7 @@
 classdef opxOnline < handle
 	properties
 		type = 'launcher'
-		eventStart = 257 %257 is any strobed event
+		eventStart = 257 %> 257 is any strobed event
 		eventEnd = -255
 		maxWait = 6000
 		autoRun = 1
@@ -29,9 +29,9 @@ classdef opxOnline < handle
 	properties (SetAccess = private, GetAccess = public)
 		masterPort = 11111
 		slavePort = 11112
-		conn %listen connection
-		msconn %master slave connection
-		spikes %hold the sorted spikes
+		conn %> listen connection
+		msconn %> master slave connection
+		spikes %> hold the sorted spikes
 		nRuns = 0
 		totalRuns = 0
 		trial = []
@@ -41,6 +41,7 @@ classdef opxOnline < handle
 		tmpFile
 		data
 		error
+		dateStamp
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
@@ -48,7 +49,7 @@ classdef opxOnline < handle
 		opxConn %> connection to the omniplex
 		isSlaveConnected = 0
 		isMasterConnected = 0
-		h %GUI handles
+		h %> GUI handles
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -56,11 +57,13 @@ classdef opxOnline < handle
 		slaveCommand
 		masterCommand
 		oldcv = 0
+		%> our panel for plotting
+		p
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -82,6 +85,8 @@ classdef opxOnline < handle
 				end
 			end
 			
+			obj.dateStamp = datestr(clock);
+			
 			if strcmpi(obj.type,'master') || strcmpi(obj.type,'launcher')
 				obj.isSlave = 0;
 			end
@@ -101,7 +106,7 @@ classdef opxOnline < handle
 				
 				case 'master'
 					
-                    obj.spawnSlave;
+					obj.spawnSlave;
 					obj.initializeUI;
 					
 					if obj.isSlaveConnected == 0
@@ -265,7 +270,7 @@ classdef opxOnline < handle
 						obj.msconn.close;
 						pause(0.1)
 						obj.msconn.open;
-                        fprintf('\nWe may have disconnected, retrying: %i\n',checkS);
+						fprintf('\nWe may have disconnected, retrying: %i\n',checkS);
 						if obj.msconn.checkStatus == 6;
 							break
 						end
@@ -414,14 +419,14 @@ classdef opxOnline < handle
 				if obj.msconn.checkStatus('conn') < 1 %have we disconnected?
 					lloop = 1;
 					while lloop < 10
-                        fprintf('\nWe may have disconnected, retrying: %i\n',lloop);
+						fprintf('\nWe may have disconnected, retrying: %i\n',lloop);
 						for i = 1:length(obj.msconn.connList)
 							try %#ok<TRYNC>
 								pnet(obj.msconn.connList(i), 'close');
 							end
 						end
 						obj.msconn.open;
-						if obj.msconn.checkStatus ~= 0; 
+						if obj.msconn.checkStatus ~= 0;
 							break
 						end
 						pause(0.1);
@@ -434,7 +439,7 @@ classdef opxOnline < handle
 				pause(0.2);
 				loop = loop + 1;
 			end
-			fprintf('\nSlave is sleeping, use listenSlave to make me listen again...');		
+			fprintf('\nSlave is sleeping, use listenSlave to make me listen again...');
 		end
 		
 		% ===================================================================
@@ -464,7 +469,7 @@ classdef opxOnline < handle
 							obj.conn.write('--ping--');
 							obj.msconn.write('--ping--');
 							fprintf('\nOpticka pinged us, we ping opticka and slave!');
-
+							
 						case '--abort--'
 							obj.msconn.write('--abort--');
 							fprintf('\nOpticka asks us to abort, tell slave to stop too!');
@@ -624,6 +629,17 @@ classdef opxOnline < handle
 		end
 		
 		% ===================================================================
+		%> @brief plot is a shortcut function for commandline use
+		%>
+		% ===================================================================
+		function plot(obj)
+			if  ~isfield(obj.h,'uihandle') || ~ishandle(obj.h.uihandle)
+				obj.initializePlot;
+			end
+			obj.plotData;
+		end
+		
+		% ===================================================================
 		%> @brief plotData is the main plotting function
 		%> This takes our parseOpxSpikes data structure which is collected with
 		%> parseData and plots it, either for all points (replotFlag==1) or just
@@ -631,7 +647,6 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function plotData(obj)
-			
 			cv = get(obj.h.opxUICell,'Value');
 			xval = get(obj.h.opxUISelect1,'Value');
 			yval = get(obj.h.opxUISelect2,'Value');
@@ -651,6 +666,8 @@ classdef opxOnline < handle
 			offset = matrixSize*(zval-1);
 			map = cell2mat(obj.data.unit{cv}.map(:,:,zval));  %maps our index to our display matrix
 			map = map'; %remember subplot indexes by rows have to transform matrix first
+			
+			obj.p = panel(obj.h.opxUIPanel,'defer');
 			
 			try
 				if (obj.replotFlag == 1 || (cv ~= obj.oldcv) || method == 2)
@@ -693,7 +710,7 @@ classdef opxOnline < handle
 							case 2
 								plotCurve(y,z)
 							case 3
-
+								
 						end
 					else
 						fprintf('Plot Not Visible: %d (x=%d y=%d z=%d)\n',thisRun,x,y,z)
@@ -704,9 +721,31 @@ classdef opxOnline < handle
 				fprintf('Plot Error message: %s\n',obj.error.message);
 				fprintf('Line: %d ',obj.error.stack.line);
 			end
-			drawnow;
 			obj.replotFlag = 0;
 			obj.oldcv=cv;
+			
+			drawnow;
+			
+			% ===================================================================
+			%> @brief Plots PSTH (inline function of plotData)
+			% ===================================================================
+			function selectPlot(inx,iny,inpos,method)
+				margins=0.06;
+				if ~exist('method','var')
+					method = 'panel';
+				end
+				switch method
+					case 'panel'
+						obj.p(pos(1),pos(2)).select();
+					case 'subplot'
+						subplot(iny,inx,inpos,'Parent',obj.h.opxUIPanel)
+					case 'subplot_tight'
+						subplot_tight(iny,inx,inpos,margins,'Parent',obj.h.opxUIPanel)
+					case 'subaxis'
+						
+				end
+				
+			end
 			
 			% ===================================================================
 			%> @brief Plots PSTH (inline function of plotData)
@@ -729,27 +768,7 @@ classdef opxOnline < handle
 						z=obj.data.sMap(mypos,3);
 				end
 			end
-			
-			
-			% ===================================================================
-			%> @brief Plots PSTH (inline function of plotData)
-			% ===================================================================
-			function selectPlot(inx,iny,inpos,method)
-				margins=0.06;
-				if ~exist('method','var')
-					method = 'subplot';
-				end
-				switch method
-					case 'subplot'
-						subplot(iny,inx,inpos,'Parent',obj.h.opxUIPanel)
-					case 'subplot_tight'
-						subplot_tight(iny,inx,inpos,margins,'Parent',obj.h.opxUIPanel)
-					case 'subaxis'
-						
-				end
-				
-			end
-			
+
 			% ===================================================================
 			%> @brief Plots PSTH (inline function of plotData)
 			% ===================================================================
@@ -776,7 +795,6 @@ classdef opxOnline < handle
 				for ii = 1:length(data)
 					[mn(ii),er(ii)]=stderr(data{ii});
 				end
-				
 				areabar(obj.data.xValues',mn',er',[0.8 0.8 0.8],'k.-');
 				xlabel(obj.stimulus.task.nVar(1).name)
 				ylabel('Spikes / Stimulus');
@@ -791,6 +809,20 @@ classdef opxOnline < handle
 		end
 		
 		% ===================================================================
+		%> @brief plot is a shortcut function for commandline use
+		%>
+		% ===================================================================
+		function checkPlexonValues(obj)
+			status = obj.openPlexon;
+			if status == -1
+				abort = 1;
+			end
+			obj.getnUnits;
+			obj.initializePlot;
+			obj.closePlexon;
+		end
+		
+		% ===================================================================
 		%> @brief Initialize the Plot before data collection starts
 		%>	This sets up the plot UI with the cell (type='all') and/or stimulus
 		%>	(type='stimulus') parameters.
@@ -800,7 +832,7 @@ classdef opxOnline < handle
 			if ~exist('type','var')
 				type = 'all';
 			end
-			if ~isstruct(obj.h) || ~ishandle(obj.h.uihandle)
+			if ~isstruct(obj.h) || ~isfield(obj.h,'uihandle')  || ~ishandle(obj.h.uihandle)
 				obj.initializeUI;
 			end
 			try
@@ -903,6 +935,7 @@ classdef opxOnline < handle
 			obj.opxConn = PL_InitClient(0);
 			if obj.opxConn ~= 0
 				status = 1;
+				fprintf('\nPLEXON Client Connection open...\n');
 			end
 		end
 		
@@ -937,6 +970,22 @@ classdef opxOnline < handle
 	%=======================================================================
 	methods ( Access = private ) % PRIVATE METHODS
 	%=======================================================================
+	
+		% ===================================================================
+		%> @brief Destructor
+		%>
+		% ===================================================================
+		function delete(obj)
+			obj.verbosity = 1;
+			if obj.cleanup == 1
+				setappdata(0,'opx',[])
+				obj.salutation('opxOnline Delete Method','Cleaning up now...')
+				obj.closeAll;
+			else
+				setappdata(0,'opx',[])
+				obj.salutation('opxOnline Delete Method','Closing (no cleanup)...')
+			end
+		end
 		
 		% ===================================================================
 		%> @brief
@@ -1051,7 +1100,7 @@ classdef opxOnline < handle
 		function initializeMaster(obj)
 			fprintf('\nMaster is initializing, bow before my greatness...\n');
 			obj.conn=dataConnection(struct('verbosity',obj.verbosity, 'rPort', obj.rPort, ...
-				'lPort', obj.lPort, 'lAddress', obj.lAddress, 'rAddress', ... 
+				'lPort', obj.lPort, 'lAddress', obj.lAddress, 'rAddress', ...
 				obj.rAddress, 'protocol', 'tcp', 'autoOpen', 1, 'type', 'server'));
 			if obj.conn.isOpen == 1
 				fprintf('Master can listen for opticka...\n')
@@ -1072,8 +1121,8 @@ classdef opxOnline < handle
 		function initializeSlave(obj)
 			fprintf('\n===Slave is initializing, do with me what you will...===\n\n');
 			obj.msconn=dataConnection(struct('verbosity', obj.verbosity, 'rPort', obj.masterPort, ...
-					'lPort', obj.slavePort, 'rAddress', obj.lAddress, ... 
-					'protocol',	obj.protocol,'autoOpen',1));
+				'lPort', obj.slavePort, 'rAddress', obj.lAddress, ...
+				'protocol',	obj.protocol,'autoOpen',1));
 			if obj.msconn.isOpen == 1
 				fprintf('Slave has opened its ears...\n')
 			else
@@ -1094,7 +1143,7 @@ classdef opxOnline < handle
 				fprintf('Master can bark at slave...\n')
 			else
 				fprintf('Master cannot bark at slave...\n')
-            end
+			end
 		end
 		% ===================================================================
 		%> @brief
@@ -1111,22 +1160,6 @@ classdef opxOnline < handle
 				if regexpi(key,'^esc')
 					out=1;
 				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Destructor
-		%>
-		%>
-		% ===================================================================
-		function delete(obj)
-			if obj.cleanup == 1
-				setappdata(0,'opx',[])
-				obj.salutation('opxOnline Delete Method','Cleaning up now...')
-				obj.closeAll;
-			else
-				setappdata(0,'opx',[])
-				obj.salutation('opxOnline Delete Method','Closing (no cleanup)...')
 			end
 		end
 		

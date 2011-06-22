@@ -1014,7 +1014,7 @@ classdef (Sealed) opticka < handle
 		
 		% ===================================================================
 		%> @brief refreshStimulusList
-		%> refreshes the stimulus list in th UI after adding new stimulus
+		%> refreshes the stimulus list in the UI after add/remove new stimulus
 		%> @param 
 		% ===================================================================
 		function refreshStimulusList(obj)
@@ -1060,7 +1060,7 @@ classdef (Sealed) opticka < handle
 						str{i} = ['Spot ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c)];
 				end
 			end
-			if pos > length(str)
+			if isempty(pos) || pos > length(str)
 				pos = 1;
 			end
 			set(obj.h.OKStimList,'String', str);

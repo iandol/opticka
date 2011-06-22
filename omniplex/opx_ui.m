@@ -22,7 +22,7 @@ function varargout = opx_ui(varargin)
 
 % Edit the above text to modify the response to help opx_ui
 
-% Last Modified by GUIDE v2.5 22-Mar-2011 14:46:52
+% Last Modified by GUIDE v2.5 19-Jun-2011 08:33:27
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -149,6 +149,13 @@ function opxUISelect2_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUISelect2 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUISelect2
+if isappdata(0,'opx')
+	opx = getappdata(0,'opx');
+	if strcmpi(class(opx.data),'parseOpxSpikes')
+		opx.replotFlag = 1;
+		opx.plotData;
+	end
+end
 
 % --- Executes on selection change in opxUISelect3.
 function opxUISelect3_Callback(hObject, eventdata, handles)
@@ -184,3 +191,14 @@ function opxUIInfoBox_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'String') returns contents of opxUIInfoBox as text
 %        str2double(get(hObject,'String')) returns contents of opxUIInfoBox as a double
+
+
+% --- Executes on button press in opxUICheckPlexon.
+function opxUICheckPlexon_Callback(hObject, eventdata, handles)
+% hObject    handle to opxUICheckPlexon (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(0,'opx')
+	opx = getappdata(0,'opx');
+	opx.checkPlexonValues;
+end

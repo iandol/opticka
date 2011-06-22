@@ -110,7 +110,7 @@ classdef rfMapper < barStimulus
 				yOut = 0;
 				obj.rchar='';
 				FlushEvents;
-				%HideCursor;
+				HideCursor;
 				ListenChar(2);
 				
 				while isempty(regexpi(obj.rchar,'^esc'))
@@ -215,16 +215,17 @@ classdef rfMapper < barStimulus
 									case 'grating'
 										obj.stimulus = 'bar';
 								end
-							case 'v'
+							case 'x'
 								if obj.isVisible == true
 									obj.hide;
 								else
 									obj.show;
 								end
+								WaitSecs(0.05);
 							case {'LeftArrow','left'}
-								obj.angleOut = obj.angleOut-5;
+								obj.angleOut = obj.angleOut-3;
 							case {'RightArrow','right'}
-								obj.angleOut = obj.angleOut+5;
+								obj.angleOut = obj.angleOut+3;
 							case {'UpArrow','up'}
 								obj.alpha = obj.alpha * 1.1;
 								if obj.alpha > 1;obj.alpha = 1;end
@@ -333,6 +334,7 @@ classdef rfMapper < barStimulus
 				ListenChar(0)
 				ShowCursor;
 				Screen('CloseAll');
+				obj.drawMap;
 				
 			catch ME
 				obj.win=[];
@@ -385,11 +387,35 @@ classdef rfMapper < barStimulus
 				obj.textureIndex = 1;
 			end
 		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawMap(obj)
+			try
+				%obj.xClick = unique(obj.xClick);
+				%obj.yClick = unique(obj.yClick);
+				figure
+				plot(obj.xClick,obj.yClick,'k.')
+				xax = obj.winRect(3)/obj.ppd;
+				xax = xax - (xax/2);
+				yax = obj.winRect(4)/obj.ppd;
+				yax = yax - (yax/2);
+				axis([-xax xax -yax yax]);
+			catch ME
+				rethrow ME
+			end
+		end
+		
+		
 	end
 	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
-		%=======================================================================
+	%=======================================================================
 		% ===================================================================
 		%> @brief setColours
 		%>  sets the colours based on the current index
