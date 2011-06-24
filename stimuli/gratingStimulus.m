@@ -210,15 +210,15 @@ classdef gratingStimulus < baseStimulus
 			if obj.gabor==false
 				if obj.squareWave == true
 					obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
-						obj.res(2), obj.colour, obj.mask, obj.contrastMult);
+						obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
 				else
-					if obj.sigma > 0
+					if obj.sigmaOut > 0
 						obj.texture = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
-							obj.res(2), obj.colour, obj.mask, obj.contrastMult, obj.sigma, ...
+							obj.res(2), obj.colourOut, obj.mask, obj.contrastMult, obj.sigmaOut, ...
 							obj.useAlpha, obj.smoothMethod);
 					else
 						obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
-							obj.res(2), obj.colour, obj.mask, obj.contrastMult);
+							obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
 					end
 				end
 			else
@@ -228,7 +228,7 @@ classdef gratingStimulus < baseStimulus
 					nonSymmetric = 1;
 				end
 				obj.texture = CreateProceduralGabor(rE.win, obj.res(1),...
-					obj.res(2), nonSymmetric, obj.colour, obj.disableNorm,...
+					obj.res(2), nonSymmetric, obj.colourOut, obj.disableNorm,...
 					obj.contrastMult);
 			end
 			
@@ -263,7 +263,7 @@ classdef gratingStimulus < baseStimulus
 				if obj.gabor == false
 					Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
 						obj.angleOut, [], [], [], [], obj.rotateMode,...
-						[obj.driftPhase,obj.sfOut,obj.contrastOut, obj.sigmaOut]);
+						[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
 				else
 					%2 = kPsychDontDoRotation
 					Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
