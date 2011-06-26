@@ -22,10 +22,10 @@ function varargout = opx_ui(varargin)
 
 % Edit the above text to modify the response to help opx_ui
 
-% Last Modified by GUIDE v2.5 19-Jun-2011 08:33:27
+% Last Modified by GUIDE v2.5 26-Jun-2011 19:57:35
 
 % Begin initialization code - DO NOT EDIT
-gui_Singleton = 1;
+gui_Singleton = 0;
 gui_State = struct('gui_Name',       mfilename, ...
                    'gui_Singleton',  gui_Singleton, ...
                    'gui_OpeningFcn', @opx_ui_OpeningFcn, ...
@@ -75,8 +75,8 @@ function opxUISaveButton_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUISaveButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if isappdata(0,'opx')
-	opx = getappdata(0,'opx');
+if isappdata(0,['opx' num2str(handles.opxUIFigure)])
+	opx = getappdata(0,['opx' num2str(handles.opxUIFigure)]);
 	if opx.isLooping == false
 		uisave('opx')
 	end
@@ -89,8 +89,8 @@ function opxUICell_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUICell contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUICell
-if isappdata(0,'opx')
-	opx = getappdata(0,'opx');
+if isappdata(0,['opx' num2str(handles.opxUIFigure)])
+	opx = getappdata(0,['opx' num2str(handles.opxUIFigure)]);
 	if strcmpi(class(opx.data),'parseOpxSpikes')
 		opx.replotFlag = 1;
 		opx.plotData;
@@ -103,8 +103,8 @@ function opxUIAnalysisMethod_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUIAnalysisMethod contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUIAnalysisMethod
-if isappdata(0,'opx')
-	opx = getappdata(0,'opx');
+if isappdata(0,['opx' num2str(handles.opxUIFigure)])
+	opx = getappdata(0,['opx' num2str(handles.opxUIFigure)]);
 	if strcmpi(class(opx.data),'parseOpxSpikes')
 		opx.replotFlag = 1;
 		opx.plotData;
@@ -149,8 +149,8 @@ function opxUISelect2_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUISelect2 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUISelect2
-if isappdata(0,'opx')
-	opx = getappdata(0,'opx');
+if isappdata(0,['opx' num2str(handles.opxUIFigure)])
+	opx = getappdata(0,['opx' num2str(handles.opxUIFigure)]);
 	if strcmpi(class(opx.data),'parseOpxSpikes')
 		opx.replotFlag = 1;
 		opx.plotData;
@@ -164,8 +164,8 @@ function opxUISelect3_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: contents = cellstr(get(hObject,'String')) returns opxUISelect3 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from opxUISelect3
-if isappdata(0,'opx')
-	opx = getappdata(0,'opx');
+if isappdata(0,['opx' num2str(handles.opxUIFigure)])
+	opx = getappdata(0,['opx' num2str(handles.opxUIFigure)]);
 	if strcmpi(class(opx.data),'parseOpxSpikes')
 		opx.replotFlag = 1;
 		opx.plotData;
@@ -177,8 +177,8 @@ function opxUIReplot_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUIReplot (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if isappdata(0,'opx')
-	opx = getappdata(0,'opx');
+if isappdata(0,['opx' num2str(handles.opxUIFigure)])
+	opx = getappdata(0,['opx' num2str(handles.opxUIFigure)]);
 	if strcmpi(class(opx.data),'parseOpxSpikes')
 		opx.replotFlag = 1;
 		opx.plotData;
@@ -198,7 +198,7 @@ function opxUICheckPlexon_Callback(hObject, eventdata, handles)
 % hObject    handle to opxUICheckPlexon (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if isappdata(0,'opx')
-	opx = getappdata(0,'opx');
+if isappdata(0,['opx' num2str(handles.opxUIFigure)])
+	opx = getappdata(0,['opx' num2str(handles.opxUIFigure)]);
 	opx.checkPlexonValues;
 end

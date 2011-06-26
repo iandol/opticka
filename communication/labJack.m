@@ -8,7 +8,7 @@ classdef labJack < handle
 	
 	properties
 		%> what LabJack device to use; 3 = U3, 6 = U6
-		deviceID = 6
+		deviceID = 3
 		%> friendly name, setting this to 'null' will force silentMode=1
 		name='LabJack'
 		%> silentMode allows one to call methods without a working labJack
@@ -17,7 +17,7 @@ classdef labJack < handle
 		header = '/usr/local/include/labjackusb.h'
 		%> the library itself
 		library = '/usr/local/lib/liblabjackusb'
-		%> how much detail to show 
+		%> how much detail to show
 		verbosity = 0
 		%> allows the constructor to run the open method immediately
 		openNow = 1
@@ -65,7 +65,7 @@ classdef labJack < handle
 		fio6High = hex2dec(['21'; 'f8'; '03'; '00'; '24'; '01'; '00'; '0d'; '86'; '0b'; '86'; '00'])'
 		fio7High = hex2dec(['23'; 'f8'; '03'; '00'; '26'; '01'; '00'; '0d'; '87'; '0b'; '87'; '00'])'
 		fio0Low  = hex2dec(['94'; 'f8'; '03'; '00'; '98'; '00'; '00'; '0d'; '80'; '0b'; '00'; '00'])'
-		fio1Low  = hex2dec(['96'; 'f8'; '03'; '00'; '9a'; '00'; '00'; '0d'; '81'; '0b'; '01'; '00'])'  
+		fio1Low  = hex2dec(['96'; 'f8'; '03'; '00'; '9a'; '00'; '00'; '0d'; '81'; '0b'; '01'; '00'])'
 		fio4Low  = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])'
 		fio5Low  = hex2dec(['9e'; 'f8'; '03'; '00'; 'a2'; '00'; '00'; '0d'; '85'; '0b'; '05'; '00'])'
 		fio6Low  = hex2dec(['a0'; 'f8'; '03'; '00'; 'a4'; '00'; '00'; '0d'; '86'; '0b'; '06'; '00'])'
@@ -82,8 +82,8 @@ classdef labJack < handle
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
-	
+		%=======================================================================
+		
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -233,8 +233,8 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Turn LED ON
-		%>	
-		%>	
+		%>
+		%>
 		% ===================================================================
 		function ledON(obj)
 			if obj.silentMode == 0 && obj.vHandle == 1
@@ -242,11 +242,11 @@ classdef labJack < handle
 				%in = obj.rawRead(obj.inp,10);
 			end
 		end
-			
+		
 		% ===================================================================
 		%> @brief Turn LED OFF
-		%>	
-		%>	
+		%>
+		%>
 		% ===================================================================
 		function ledOFF(obj)
 			if obj.silentMode == 0 && obj.vHandle == 1
@@ -300,72 +300,74 @@ classdef labJack < handle
 		%>	SetDIO sets the direction/value for FIO, EIO and CIO as read or write
 		%>  if only value supplied, set all others to [255,255,255]
 		%>	@param value is binary identifier for 0-7 bit range
-        %>  @param mask is the mask to apply the command
+		%>  @param mask is the mask to apply the command
 		%>  @param valuedir binary identifier for input (0) or output (1)
 		%>  @param maskdir is the mask to apply the command
 		% ===================================================================
 		function setDIO(obj,value,mask,valuedir,maskdir)
+			if ~exist('value','var');fprintf('\nInput options: \n\t\tvalue, [mask], [value direction], [mask direction]\n\n');return;end
 			if ~exist('mask','var');mask=[255,255,255];end
 			if ~exist('valuedir','var');valuedir=[255,255,255];maskdir=valuedir;end
-            if obj.silentMode == 0 && obj.vHandle == 1
-                cmd=zeros(14,1);
-                cmd(2) = 248; %command byte for feedback command (f8 in hex)
-                cmd(3) = (length(cmd)-6)/2;
-                cmd(8) = 29; %IOType for PortDirWrite = 29
-                cmd(9:11) = maskdir;
-                cmd(12:14) = valuedir;
+			if obj.silentMode == 0 && obj.vHandle == 1
+				cmd=zeros(14,1);
+				cmd(2) = 248; %command byte for feedback command (f8 in hex)
+				cmd(3) = (length(cmd)-6)/2;
+				cmd(8) = 29; %IOType for PortDirWrite = 29
+				cmd(9:11) = maskdir;
+				cmd(12:14) = valuedir;
 				cmd(8) = 27; %IOType for PortStateWrite = 27
-                cmd(9:11) = mask;
-                cmd(12:14) = value;
-                
-                cmd = obj.checksum(cmd,'extended');
-                out = obj.rawWrite(cmd);
-                %in = obj.rawRead(obj.inp,10);
-            end
+				cmd(9:11) = mask;
+				cmd(12:14) = value;
+				
+				cmd = obj.checksum(cmd,'extended');
+				out = obj.rawWrite(cmd);
+				%in = obj.rawRead(obj.inp,10);
+			end
 		end
 		
-        % ===================================================================
+		% ===================================================================
 		%> @brief SetDIODirection
 		%>	SetDIO sets the direction for FIO, EIO and CIO as read or write
 		%>	@param value is binary identifier for 0-7 bit range
-        %>  @param mask is the mask to apply the command
+		%>  @param mask is the mask to apply the command
 		% ===================================================================
 		function setDIODirection(obj,value,mask)
+			if ~exist('value','var');fprintf('\nInput options: \n\t\tvalue, [mask]\n\n');return;end
 			if ~exist('mask','var');mask=[255,255,255];end
-            if obj.silentMode == 0 && obj.vHandle == 1
-                cmd=zeros(14,1);
-                cmd(2) = 248; %command byte for feedback command (f8 in hex)
-                cmd(3) = (length(cmd)-6)/2;
-                cmd(8) = 29; %IOType for PortDirWrite = 29
-                cmd(9:11) = mask;
-                cmd(12:14) = value;
-                
-                cmd = obj.checksum(cmd,'extended');
-                out = obj.rawWrite(cmd);
-                %in = obj.rawRead(obj.inp,10);
-            end
+			if obj.silentMode == 0 && obj.vHandle == 1
+				cmd=zeros(14,1);
+				cmd(2) = 248; %command byte for feedback command (f8 in hex)
+				cmd(3) = (length(cmd)-6)/2;
+				cmd(8) = 29; %IOType for PortDirWrite = 29
+				cmd(9:11) = mask;
+				cmd(12:14) = value;
+				
+				cmd = obj.checksum(cmd,'extended');
+				out = obj.rawWrite(cmd);
+				%in = obj.rawRead(obj.inp,10);
+			end
 		end
 		
 		% ===================================================================
 		%> @brief SetDIOValue
 		%>	SetDIO sets the value for FIO, EIO and CIO as HIGH or LOW
 		%>	@param value is binary identifier for 0-7 bit range
-        %>  @param mask is the mask to apply the command
+		%>  @param mask is the mask to apply the command
 		% ===================================================================
 		function setDIOValue(obj,value,mask)
 			if ~exist('mask','var');mask=[255,255,255];end
-            if obj.silentMode == 0 && obj.vHandle == 1
-                cmd=zeros(14,1);
-                cmd(2) = 248; %command byte for feedback command (f8 in hex)
-                cmd(3) = (length(cmd)-6)/2;
-                cmd(8) = 27; %IOType for PortStateWrite = 27
-                cmd(9:11) = mask;
-                cmd(12:14) = value;
-                
-                cmd = obj.checksum(cmd,'extended');
-                out = obj.rawWrite(cmd);
-                %in = obj.rawRead(obj.inp,10);
-            end
+			if obj.silentMode == 0 && obj.vHandle == 1
+				cmd=zeros(14,1);
+				cmd(2) = 248; %command byte for feedback command (f8 in hex)
+				cmd(3) = (length(cmd)-6)/2;
+				cmd(8) = 27; %IOType for PortStateWrite = 27
+				cmd(9:11) = mask;
+				cmd(12:14) = value;
+				
+				cmd = obj.checksum(cmd,'extended');
+				out = obj.rawWrite(cmd);
+				%in = obj.rawRead(obj.inp,10);
+			end
 		end
 		
 		% ===================================================================
@@ -376,14 +378,19 @@ classdef labJack < handle
 		%>  @param mask Which bits to mask
 		% ===================================================================
 		function prepareStrobe(obj,value,mask,sendNow)
+			v=value;
 			if obj.silentMode == 0 && obj.vHandle == 1
 				if length(value) == 1 %assume we need to make eio and cio from single value
 					if value>2047;value=2047;end %block anything bigger than 2^11(-1)
 					obj.comment = ['Original Value = ' num2str(value) ' | '];
-					[eio,cio]=obj.prepareWords(value); %construct our word split to eio and cio
-					value(1) = 0; %fio will be 0
-					value(2) = eio;
-					value(3) = cio;
+					[eio,cio]=obj.prepareWords(value,0); %construct our word split to eio and cio
+					ovalue(1) = 0; %fio will be 0
+					ovalue(2) = eio;
+					ovalue(3) = cio;
+					[eio2,cio2]=obj.prepareWords(value,1); %construct our word split to eio and cio
+					ovalue2(1) = 0; %fio will be 0
+					ovalue2(2) = eio2;
+					ovalue2(3) = cio2;
 					mask = [0,255,255]; %lock fio, allow all of eio and cio
 				elseif length(value) == 2 %assume fio isn't passed
 					value(2:3) = value;
@@ -391,69 +398,78 @@ classdef labJack < handle
 					mask(2:3) = mask;
 					mask(1) = 0; %fio will be 0
 				end
-				obj.comment = [obj.comment 'FIO EIO & CIO: ' num2str(value)];
-				cmd=zeros(24,1);
+				obj.comment = [obj.comment 'FIO EIO & CIO: ' num2str(0) ' ' num2str(eio2) ' ' num2str(cio2)];
+				cmd=zeros(30,1);
 				cmd(2) = 248; %command byte for feedback command (f8 in hex)
-				cmd(3) = (24-6)/2;
+				cmd(3) = (length(cmd)-6)/2;
 				cmd(8) = 27; %IOType for PortStateWrite (1b in hex)
 				cmd(9:11) = mask;
-				cmd(12:14) = value;
-				cmd(15) = 5; %IOType for waitshort is 5, waitlong is 6
-				cmd(16) = obj.strobeTime; %time to wait in unit multiples
-				cmd(17) = 27; %IOType for PortStateWrite (1b in hex)
-				cmd(18:20) = mask;
-				cmd(21:23) = 0;
-
+				cmd(12:14) = ovalue;
+				%cmd(15) = 5; %IOType for waitshort is 5, waitlong is 6
+				%cmd(16) = 1; %time to wait
+				cmd(15) = 27; %IOType for PortStateWrite (1b in hex)
+				cmd(16:18) = mask;
+				cmd(19:21) = ovalue2;
+				cmd(22) = 5; %IOType for waitshort is 5, waitlong is 6
+				cmd(23) = obj.strobeTime; %time to wait in unit multiples
+				cmd(24) = 27; %IOType for PortStateWrite (1b in hex)
+				cmd(25:27) = mask;
+				cmd(28:30) = 0;
+				
 				obj.command = obj.checksum(cmd,'extended');
 				if exist('sendNow','var')
 					obj.strobeWord;
 				end
-			end			
+			end
 		end
 		
 		% ===================================================================
 		%> @brief Send the Strobe command
-		%>	
-		%>	
+		%>
+		%>
 		% ===================================================================
 		function strobeWord(obj)
 			if ~isempty(obj.command)
-				out = obj.rawWrite(obj.command);
+				obj.rawWrite(obj.command);
 				%in = obj.rawRead(obj.inp,10);
 				obj.salutation('strobeWord', obj.comment);
 				obj.comment = '';
 				obj.command = [];
-% 				if in(6) > 0
-% 					obj.salutation('strobeWord',['Feedback error in IOType ' num2str(in(7))]);
-% 				end
+				% 				if in(6) > 0
+				% 					obj.salutation('strobeWord',['Feedback error in IOType ' num2str(in(7))]);
+				% 				end
 			end
 		end
 		
 		% ===================================================================
 		%> @brief Prepare Strobe Word split into EIO (8bit) and CIO (4bit)
-		%>	
+		%>
 		%>	@param value The value to be split into EIO and CIO
 		%>  @param shift The number of bits to shift (should be 1 for the
-		%>  moment). 2048 is the max # of variables with 2^11bits 
+		%>  moment). 2048 is the max # of variables with 2^11bits
 		%>  @return eio is an 8bit word value represented the LSB
 		%>  @return cio is a 4bit value where the 1st bit is 1 for strobe line 22
 		%>  and the rest is the 3bit remainder to combine with eio to make an
 		%>  11bit strobed word.
 		% ===================================================================
-		function [eio,cio] = prepareWords(obj,value)
+		function [eio,cio] = prepareWords(obj,value,strobeState)
+			if ~exist('strobeState','var')
+				strobeState = 1;
+			end
 			eio = bitand(value,255); %get eio easily ANDing with 255
 			msb = bitshift(value,-8); %our msb is bitshifted 8 bits
 			msb = bitshift(msb,1); %shift it across as cio0 is reserved;
-			cio = bitor(msb,1); %OR with 1 as cio0 is the strobe trigger and needs to be 1
+			cio = bitor(msb,strobeState); %OR with 1 as cio0 is the strobe trigger and needs to be 1
 		end
 		
 		% ===================================================================
 		%> @brief Set FIO4 to a value
-		%>	
+		%>
 		%>	@param val The value to be set
 		%> line which FIO to set
 		% ===================================================================
 		function setFIO(obj,val,line)
+			if ~exist('val','var');fprintf('\nInput options: \n\t\tvalue, [line]\n\n');return;end
 			if obj.silentMode == 0 && obj.vHandle == 1
 				if ~exist('line','var');line=0;end
 				myname = ['fio' num2str(line)];
@@ -478,7 +494,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Toggle FIO4 value
-		%>	
+		%>
 		%>
 		% ===================================================================
 		function toggleFIO(obj,line)
@@ -492,7 +508,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Set FIO4 to a value
-		%>	
+		%>
 		%>	@param val The value to be set
 		% ===================================================================
 		function setFIO4(obj,val)
@@ -516,7 +532,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Toggle FIO4 value
-		%>	
+		%>
 		%>
 		% ===================================================================
 		function toggleFIO4(obj)
@@ -528,7 +544,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Set FIO5 to a value
-		%>	
+		%>
 		%>	@param val The value to be set
 		% ===================================================================
 		function setFIO5(obj,val)
@@ -552,7 +568,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Toggle FIO5 value
-		%>	
+		%>
 		%>
 		% ===================================================================
 		function toggleFIO5(obj)
@@ -564,7 +580,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Set FIO6 to a value
-		%>	
+		%>
 		%>	@param val The value to be set
 		% ===================================================================
 		function setFIO6(obj,val)
@@ -588,7 +604,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Toggle FIO6 value
-		%>	
+		%>
 		%>
 		% ===================================================================
 		function toggleFIO6(obj)
@@ -600,7 +616,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Set FIO7 to a value
-		%>	
+		%>
 		%>	@param val The value to be set
 		% ===================================================================
 		function setFIO7(obj,val)
@@ -624,7 +640,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Toggle FIO7 value
-		%>	
+		%>
 		%>
 		% ===================================================================
 		function toggleFIO7(obj)
@@ -636,7 +652,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Reset the LabJack
-		%>	
+		%>
 		%> @param resetType whether to use a soft (1) or hard (2) reset
 		%> type
 		% ===================================================================
@@ -661,7 +677,7 @@ classdef labJack < handle
 		% ===================================================================
 		%> @brief checksum
 		%>	Calculate checksum for data packet
-		%>	
+		%>
 		% ===================================================================
 		function command = checksum(obj,command,type)
 			switch type
@@ -677,18 +693,18 @@ classdef labJack < handle
 	
 	%=======================================================================
 	methods ( Static ) % STATIC METHODS
-	%=======================================================================
-	
+		%=======================================================================
+		
 		% ===================================================================
 		%> @brief checksum8
 		%>	Calculate checksum for data packet
-		%>	
+		%>
 		% ===================================================================
 		function chk = checksum8(in)
-% 			if ischar(in) %hex input
-% 				in = hex2dec(in);
-% 				hexMode = 1;
-% 			end
+			% 			if ischar(in) %hex input
+			% 				in = hex2dec(in);
+			% 				hexMode = 1;
+			% 			end
 			in = sum(uint16(in));
 			quo = floor(in/2^8);
 			remd = rem(in,2^8);
@@ -696,9 +712,9 @@ classdef labJack < handle
 			quo = floor(in/2^8);
 			remd = rem(in,2^8);
 			chk = quo + remd;
-% 			if exist('hexMode','var')
-% 				chk = dec2hex(chk);
-% 			end
+			% 			if exist('hexMode','var')
+			% 				chk = dec2hex(chk);
+			% 			end
 		end
 		
 		% ===================================================================
@@ -707,17 +723,17 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function [lsb,msb] = checksum16(in)
-% 			if ischar(in) %hex input
-% 				in = hex2dec(in);
-% 				hexMode = 1;
-% 			end
+			% 			if ischar(in) %hex input
+			% 				in = hex2dec(in);
+			% 				hexMode = 1;
+			% 			end
 			in = sum(uint16(in));
-			lsb=bitand(in,255);
-			msb=bitshift(in,-8);
-% 			if exist('hexMode','var')
-% 				lsb = dec2hex(lsb);
-% 				msb = dec2hex(msb);
-% 			end
+			lsb = bitand(in,255);
+			msb = bitshift(in,-8);
+			% 			if exist('hexMode','var')
+			% 				lsb = dec2hex(lsb);
+			% 				msb = dec2hex(msb);
+			% 			end
 		end
 		
 	end % END STATIC METHODS
@@ -725,8 +741,8 @@ classdef labJack < handle
 	
 	%=======================================================================
 	methods ( Access = private ) % PRIVATE METHODS
-	%=======================================================================
-	
+		%=======================================================================
+		
 		%===============Destructor======================%
 		function delete(obj)
 			obj.salutation('DELETE Method','labJack Cleaning up...')

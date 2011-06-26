@@ -667,32 +667,40 @@ classdef opxOnline < handle
 			map = cell2mat(obj.data.unit{cv}.map(:,:,zval));  %maps our index to our display matrix
 			map = map'; %remember subplot indexes by rows have to transform matrix first
 			
-			obj.p = panel(obj.h.opxUIPanel,'defer');
-			
 			try
 				if (obj.replotFlag == 1 || (cv ~= obj.oldcv) || method == 2)
-					subplot(1,1,1,'Parent',obj.h.opxUIPanel)
+					%subplot(1,1,1,'Parent',obj.h.opxUIPanel)
+					obj.p = panel(obj.h.opxUIPanel,'defer');
 					switch method
 						case 1
+							obj.p.pack(obj.data.yLength, obj.data.xLength);
 							pos = 1;
 							startP = 1 + offset;
 							endP = matrixSize + offset;
-							fprintf('Plotting all points...\n');
+							fprintf('Plotting all points (offset: %i:%i)...\n', startP, endP);
 							for i = startP:endP
 								[x,y,z]=selectIndex(map(pos));
 								data = obj.data.unit{cv}.raw{y,x,zval};
 								nt = obj.data.unit{cv}.trials{y,x,zval};
 								varlabel = [num2str(obj.data.unit{cv}.map{y,x,zval}) ': ' obj.data.unit{cv}.label{y,x,zval}];
-								selectPlot(obj.data.xLength,obj.data.yLength,pos,'subplot');
+								obj.p(y,x).select();
+								%selectPlot(obj.data.xLength,obj.data.yLength,pos,'subplot');
 								plotPSTH()
 								pos = pos + 1;
 							end
+							obj.p.de.margin = 0;
+							obj.p.margin = [15 15 5 15];
+							obj.p.fontsize = 10;
+							obj.p.de.fontsize = 10;
+							obj.p.refresh();
 						case 2
 							fprintf('Plotting Curve: (x=all y=%d z=%d)\n',yval,zval);
 							data = obj.data.unit{cv}.trialsums(yval,:,zval);
 							plotCurve();
 					end
+					
 				else %single subplot
+					obj.p = panel(obj.h.opxUIPanel);
 					thisRun = obj.data.thisRun;
 					index = obj.data.thisIndex;
 					fprintf('DEBUG: %d / %d\n',thisRun,index)
@@ -719,33 +727,14 @@ classdef opxOnline < handle
 			catch ME
 				obj.error = ME;
 				fprintf('Plot Error message: %s\n',obj.error.message);
-				fprintf('Line: %d ',obj.error.stack.line);
+				fprintf('Line: %d \n',obj.error.stack.line);
 			end
 			obj.replotFlag = 0;
 			obj.oldcv=cv;
 			
-			drawnow;
+			set(obj.h.opxUIInfoBox,'String',['nRuns: ' num2str(obj.data.nRuns) ' | Created: ' obj.data.initializeDate]);
 			
-			% ===================================================================
-			%> @brief Plots PSTH (inline function of plotData)
-			% ===================================================================
-			function selectPlot(inx,iny,inpos,method)
-				margins=0.06;
-				if ~exist('method','var')
-					method = 'panel';
-				end
-				switch method
-					case 'panel'
-						obj.p(pos(1),pos(2)).select();
-					case 'subplot'
-						subplot(iny,inx,inpos,'Parent',obj.h.opxUIPanel)
-					case 'subplot_tight'
-						subplot_tight(iny,inx,inpos,margins,'Parent',obj.h.opxUIPanel)
-					case 'subaxis'
-						
-				end
-				
-			end
+			drawnow;
 			
 			% ===================================================================
 			%> @brief Plots PSTH (inline function of plotData)
@@ -776,7 +765,7 @@ classdef opxOnline < handle
 				[n,t]=hist(data,bins);
 				n=convertToHz(n);
 				bar(t,n)
-				title(['Cell: ' num2str(cv) ' | Trials: ' num2str(nt) ' | Var: ' varlabel],'FontSize',6);
+				text((xmax/30),ymax-(ymax/10),['Cell: ' num2str(cv) ' | Trials: ' num2str(nt) ' | Var: ' varlabel],'FontSize',10);
 				axis([0 xmax 0 ymax]);
 				set(gca,'FontSize',6);
 				h = findobj(gca,'Type','patch');
@@ -784,6 +773,12 @@ classdef opxOnline < handle
 					set(h,'FaceColor',[0.4 0 0],'EdgeColor',[0 0 0]);
 				else
 					set(h,'FaceColor',[0 0 0],'EdgeColor',[0 0 0]);
+				end
+				if x ~= 1 
+					set(gca,'YTick',[]);
+				end
+				if y ~= obj.data.yLength
+					set(gca,'XTick',[]);
 				end
 				
 			end
@@ -978,11 +973,14 @@ classdef opxOnline < handle
 		function delete(obj)
 			obj.verbosity = 1;
 			if obj.cleanup == 1
-				setappdata(0,'opx',[])
 				obj.salutation('opxOnline Delete Method','Cleaning up now...')
+				if isfield(obj.h,'uihandle') && ishandle(obj.h.uihandle)
+					close(obj.h.uihandle);
+				end
+				if isappdata(0,obj.h.uiname);rmappdata(0,obj.h.uiname);end
 				obj.closeAll;
 			else
-				setappdata(0,'opx',[])
+				rmappdata(0,'opx')
 				obj.salutation('opxOnline Delete Method','Closing (no cleanup)...')
 			end
 		end
@@ -1085,7 +1083,8 @@ classdef opxOnline < handle
 			uihandle=opx_ui; %our GUI file
 			obj.h=guidata(uihandle);
 			obj.h.uihandle = uihandle;
-			setappdata(0,'opx',obj); %we stash our object in the root appdata store for retirieval from the UI
+			obj.h.uiname = ['opx' num2str(uihandle)];
+			setappdata(0,obj.h.uiname,obj); %we stash our object in the root appdata store for retirieval from the UI
 			set(obj.h.opxUIEdit1,'String','2')
 			set(obj.h.opxUIEdit2,'String','50')
 			set(obj.h.opxUIEdit3,'String','50')
