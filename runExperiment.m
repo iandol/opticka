@@ -211,6 +211,7 @@ classdef (Sealed) runExperiment < handle
 			end
 			obj.lJack = labJack(strct);
 			obj.lJack.setDIO([2,0,0]);WaitSecs(0.01);obj.lJack.setDIO([0,0,0]); %Trigger the omniplex (FIO1) into paused mode
+			WaitSecs(0.5);
 			%-----------------------------------------------------
 			
 			try
@@ -340,6 +341,7 @@ classdef (Sealed) runExperiment < handle
 					obj.timeLog.startTime = obj.timeLog.vbl;
 				end
 				
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while obj.task.thisTrial <= obj.task.nTrials
 					if obj.task.isBlank==1
 						if obj.photoDiode==1
@@ -369,6 +371,7 @@ classdef (Sealed) runExperiment < handle
 					[~, ~, buttons]=GetMouse(obj.screen);
 					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
 					if strcmp(obj.uiCommand,'stop');break;end
+					
 					obj.updateTask(); %update our task structure
 					
 					%======= Show it at next retrace: ========%
@@ -422,7 +425,6 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack.prepareStrobe(0,[],1);
 				obj.timeLog.afterDisplay=GetSecs;
 				Screen('Flip', obj.win);
-				WaitSecs(0.1);
 				obj.lJack.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				notify(obj,'endRun');
 				
@@ -453,8 +455,6 @@ classdef (Sealed) runExperiment < handle
 				obj.win=[];
 				Priority(0);
 				ShowCursor;
-				%obj.serialP.close;
-				WaitSecs(0.5);
 				obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
 				obj.lJack.close;
 				obj.lJack=[];

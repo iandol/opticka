@@ -8,7 +8,7 @@ classdef opxOnline < handle
 	properties
 		type = 'launcher'
 		eventStart = 257 %> 257 is any strobed event
-		eventEnd = -255
+		eventEnd = -2047
 		maxWait = 6000
 		autoRun = 1
 		isSlave = 0
@@ -264,7 +264,7 @@ classdef opxOnline < handle
 					end
 				end
 				
-				if obj.msconn.checkStatus ~= 6 %are we a udp client?
+				if obj.msconn.checkStatus ~= 6 %are we a udp client, if not we try to reopen our connection
 					checkS = 1;
 					while checkS < 10
 						obj.msconn.close;
@@ -284,11 +284,10 @@ classdef opxOnline < handle
 						fprintf('\nWe''ve opened a new connection to opticka...\n')
 						set(obj.h.opxUIInfoBox,'String','Opticka has connected to us, waiting for stimulus!...');
 						obj.conn.write('--opened--');
-						pause(0.2)
 					end
 				end
 				
-				if obj.checkKeys
+				if obj.checkKeys %has someone pressed the escape key to break the loop?
 					obj.msconn.write('--quit--')
 					break
 				end
@@ -368,25 +367,25 @@ classdef opxOnline < handle
 						case '--tmpFile--'
 							tloop = 1;
 							while tloop < 10
-								pause(0.1);
 								if obj.msconn.checkData
 									obj.tmpFile = obj.msconn.read(0);
-									fprintf('\nThe master tells me tmpFile= %s\n',obj.tmpFile);
+									fprintf('\nMaster tells me tmpFile = %s\n',obj.tmpFile);
 									break
 								end
+								pause(0.1);
 								tloop = tloop + 1;
 							end
 							
 						case '--eval--'
 							tloop = 1;
 							while tloop < 10
-								pause(0.1);
 								if obj.msconn.checkData
 									command = obj.msconn.read(0);
 									fprintf('\nThe master tells us to eval= %s\n',command);
 									eval(command);
 									break
 								end
+								pause(0.1);
 								tloop = tloop + 1;
 							end
 							
@@ -416,7 +415,7 @@ classdef opxOnline < handle
 							fprintf('\nThe master has barked, but I understand not!...\n');
 					end
 				end
-				if obj.msconn.checkStatus('conn') < 1 %have we disconnected?
+				if obj.msconn.checkStatus('conn') < 1 %have we disconnected? if so, lets try and reopen connection
 					lloop = 1;
 					while lloop < 10
 						fprintf('\nWe may have disconnected, retrying: %i\n',lloop);
@@ -449,6 +448,7 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function parseData(obj)
+			obj.data=parseOpxSpikes;
 			loop = 1;
 			obj.isLooping = true;
 			abort = 0;
@@ -467,9 +467,8 @@ classdef opxOnline < handle
 						
 						case '--ping--'
 							obj.conn.write('--ping--');
-							obj.msconn.write('--ping--');
-							fprintf('\nOpticka pinged us, we ping opticka and slave!');
-							
+							%obj.msconn.write('--ping--'); %don't ping slave, it is busy
+							fprintf('\nOpticka pinged us, we ping opticka back!');
 						case '--abort--'
 							obj.msconn.write('--abort--');
 							fprintf('\nOpticka asks us to abort, tell slave to stop too!');
@@ -487,7 +486,6 @@ classdef opxOnline < handle
 							load(obj.tmpFile);
 							obj.units = opx.units;
 							obj.parameters = opx.parameters;
-							obj.data=parseOpxSpikes;
 							obj.data.initialize(obj);
 							obj.initializePlot;
 							fprintf('\nSlave is about to run the main collection loop...');
@@ -499,7 +497,7 @@ classdef opxOnline < handle
 							while tloop < 10
 								if obj.msconn.checkData
 									obj.nRuns = double(obj.msconn.read(0,'uint32'));
-									fprintf('\nThe slave has completed run %d\n',obj.nRuns);
+									fprintf('\nThe slave has completed run %d (tloop=%i)\n',obj.nRuns,tloop);
 									break
 								end
 								pause(0.05);
@@ -573,14 +571,14 @@ classdef opxOnline < handle
 			toc
 			try
 				while obj.nRuns <= obj.totalRuns && abort < 1
-					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1,2,3,4,5,6,7,8,9], [1], 0);
+					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1:12], 0, 0);
 					fprintf('\nWaiting for run: %i\n', obj.nRuns);
 					[rn, trial, spike, analog, last] = PL_TrialStatus(obj.opxConn, 3, obj.maxWait); %wait until end of trial
 					tic
 					if last > 0
 						[obj.trial(obj.nRuns).ne, obj.trial(obj.nRuns).eventList]  = PL_TrialEvents(obj.opxConn, 0, 0);
 						[obj.trial(obj.nRuns).ns, obj.trial(obj.nRuns).spikeList]  = PL_TrialSpikes(obj.opxConn, 0, 0);
-						[~, ~, analogList] = PL_TrialAnalogSamples(obj.opxConn, 0, 0);
+						%[~, ~, analogList] = PL_TrialAnalogSamples(obj.opxConn, 0, 0);
 						obj.saveData;
 						obj.msconn.write('--finishRun--');
 						obj.msconn.write(uint32(obj.nRuns));
@@ -602,16 +600,17 @@ classdef opxOnline < handle
 						break
 					end
 					toc
-					if exist('analogList','var');plot(ah,analogList);axis tight;title('Raw Analog Signal');end
+					%if exist('analogList','var');plot(ah,analogList);axis tight;title('Raw Analog Signal');end
 					fprintf('rn: %i tr: %i sp: %i al: %i lst: %i\n',rn, trial, spike, analog, last);
 				end
 				obj.saveData; %final save of data
 				if abort == 1
 					obj.msconn.write('--finishAbort--');
+					obj.msconn.write(uint32(obj.nRuns));
 				else
 					obj.msconn.write('--finishAll--');
+					obj.msconn.write(uint32(obj.nRuns));
 				end
-				obj.msconn.write(uint32(obj.nRuns));
 				% you need to call PL_Close(s) to close the connection
 				% with the Plexon server
 				obj.closePlexon;
@@ -654,7 +653,12 @@ classdef opxOnline < handle
 			method = get(obj.h.opxUIAnalysisMethod,'Value');
 			fprintf('Plotting data from cell: %d\n',cv)
 			xmax = str2num(get(obj.h.opxUIEdit1,'String'));
+			ymin = 0;
 			ymax = str2num(get(obj.h.opxUIEdit2,'String'));
+			if length(ymax) == 2
+				ymin = ymax(1);
+				ymax = ymax(2);
+			end
 			binWidth = str2num(get(obj.h.opxUIEdit3,'String'));
 			if isempty(binWidth);binWidth = 25;end
 			bins = round((obj.data.trialTime*1000) / binWidth);
@@ -667,10 +671,10 @@ classdef opxOnline < handle
 			map = cell2mat(obj.data.unit{cv}.map(:,:,zval));  %maps our index to our display matrix
 			map = map'; %remember subplot indexes by rows have to transform matrix first
 			
+			obj.p = panel(obj.h.opxUIPanel,'defer');
+			
 			try
 				if (obj.replotFlag == 1 || (cv ~= obj.oldcv) || method == 2)
-					%subplot(1,1,1,'Parent',obj.h.opxUIPanel)
-					obj.p = panel(obj.h.opxUIPanel,'defer');
 					switch method
 						case 1
 							obj.p.pack(obj.data.yLength, obj.data.xLength);
@@ -684,7 +688,6 @@ classdef opxOnline < handle
 								nt = obj.data.unit{cv}.trials{y,x,zval};
 								varlabel = [num2str(obj.data.unit{cv}.map{y,x,zval}) ': ' obj.data.unit{cv}.label{y,x,zval}];
 								obj.p(y,x).select();
-								%selectPlot(obj.data.xLength,obj.data.yLength,pos,'subplot');
 								plotPSTH()
 								pos = pos + 1;
 							end
@@ -694,32 +697,40 @@ classdef opxOnline < handle
 							obj.p.de.fontsize = 10;
 							obj.p.refresh();
 						case 2
+							obj.p.pack(1,1);
+							obj.p(1,1).select();
 							fprintf('Plotting Curve: (x=all y=%d z=%d)\n',yval,zval);
 							data = obj.data.unit{cv}.trialsums(yval,:,zval);
 							plotCurve();
 					end
 					
 				else %single subplot
-					obj.p = panel(obj.h.opxUIPanel);
 					thisRun = obj.data.thisRun;
 					index = obj.data.thisIndex;
-					fprintf('DEBUG: %d / %d\n',thisRun,index)
 					[x,y,z]=selectIndex(index);
 					if z == zval %our displayed z value is in the indexed position
 						fprintf('Plotting run: %d (x=%d y=%d z=%d)\n',thisRun,x,y,z)
 						plotIndex=find(map==index);
-						data = obj.data.unit{cv}.raw{y,x,z};
-						nt = obj.data.unit{1}.trials{y,x,z};
-						varlabel = [num2str(obj.data.unit{cv}.map{y,x,z}) ': ' obj.data.unit{cv}.label{y,x,z}];
-						selectPlot(obj.data.xLength,obj.data.yLength,plotIndex,'subplot');
 						switch method
 							case 1
+								if thisRun == 1;obj.p.pack(obj.data.yLength, obj.data.xLength);end
+								data = obj.data.unit{cv}.raw{y,x,z};
+								nt = obj.data.unit{1}.trials{y,x,z};
+								varlabel = [num2str(obj.data.unit{cv}.map{y,x,z}) ': ' obj.data.unit{cv}.label{y,x,z}];
+								obj.p(y,x).select();
 								plotPSTH(thisRun)
 							case 2
-								plotCurve(y,z)
+								obj.p.pack(1,1);
+								obj.p(1,1).select();
+								plotCurve()
 							case 3
 								
 						end
+						obj.p.de.margin = 0;
+						obj.p.margin = [15 15 5 15];
+						obj.p.fontsize = 10;
+						obj.p.de.fontsize = 10;
+						obj.p.refresh();
 					else
 						fprintf('Plot Not Visible: %d (x=%d y=%d z=%d)\n',thisRun,x,y,z)
 					end
@@ -765,9 +776,8 @@ classdef opxOnline < handle
 				[n,t]=hist(data,bins);
 				n=convertToHz(n);
 				bar(t,n)
-				text((xmax/30),ymax-(ymax/10),['Cell: ' num2str(cv) ' | Trials: ' num2str(nt) ' | Var: ' varlabel],'FontSize',10);
-				axis([0 xmax 0 ymax]);
-				set(gca,'FontSize',6);
+				text((xmax/30),ymax-(ymax/10),['Ch:' num2str(cv) ' | Trls:' num2str(nt) ' | Var: ' varlabel],'FontSize',9);
+				axis([0 xmax ymin ymax]);
 				h = findobj(gca,'Type','patch');
 				if exist('inRun','var')
 					set(h,'FaceColor',[0.4 0 0],'EdgeColor',[0 0 0]);
@@ -791,8 +801,9 @@ classdef opxOnline < handle
 					[mn(ii),er(ii)]=stderr(data{ii});
 				end
 				areabar(obj.data.xValues',mn',er',[0.8 0.8 0.8],'k.-');
-				xlabel(obj.stimulus.task.nVar(1).name)
-				ylabel('Spikes / Stimulus');
+				axis([-inf inf ymin ymax])
+				obj.p.xlabel(obj.stimulus.task.nVar(1).name)
+				obj.p.ylabel('Spikes / Stimulus');
 			end
 			
 			% ===================================================================
@@ -977,10 +988,14 @@ classdef opxOnline < handle
 				if isfield(obj.h,'uihandle') && ishandle(obj.h.uihandle)
 					close(obj.h.uihandle);
 				end
-				if isappdata(0,obj.h.uiname);rmappdata(0,obj.h.uiname);end
+				if isfield(obj.h,'uiname') && isappdata(0,obj.h.uiname)
+					rmappdata(0,obj.h.uiname)
+				end
 				obj.closeAll;
 			else
-				rmappdata(0,'opx')
+				if isfield(obj.h,'uiname') && isappdata(0,obj.h.uiname)
+					rmappdata(0,obj.h.uiname)
+				end
 				obj.salutation('opxOnline Delete Method','Closing (no cleanup)...')
 			end
 		end
@@ -1191,7 +1206,7 @@ classdef opxOnline < handle
 		% ===================================================================
 		function lobj=loadobj(in)
 			fprintf('Loading opxOnline object...\n')
-			in.cleanup=0;
+			in.cleanup=1;
 			if isa(in.conn,'dataConnection')
 				in.conn.cleanup=0;
 			end

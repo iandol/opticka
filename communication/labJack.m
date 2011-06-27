@@ -8,7 +8,7 @@ classdef labJack < handle
 	
 	properties
 		%> what LabJack device to use; 3 = U3, 6 = U6
-		deviceID = 3
+		deviceID = 6
 		%> friendly name, setting this to 'null' will force silentMode=1
 		name='LabJack'
 		%> silentMode allows one to call methods without a working labJack
@@ -378,26 +378,18 @@ classdef labJack < handle
 		%>  @param mask Which bits to mask
 		% ===================================================================
 		function prepareStrobe(obj,value,mask,sendNow)
-			v=value;
 			if obj.silentMode == 0 && obj.vHandle == 1
-				if length(value) == 1 %assume we need to make eio and cio from single value
-					if value>2047;value=2047;end %block anything bigger than 2^11(-1)
-					obj.comment = ['Original Value = ' num2str(value) ' | '];
-					[eio,cio]=obj.prepareWords(value,0); %construct our word split to eio and cio
-					ovalue(1) = 0; %fio will be 0
-					ovalue(2) = eio;
-					ovalue(3) = cio;
-					[eio2,cio2]=obj.prepareWords(value,1); %construct our word split to eio and cio
-					ovalue2(1) = 0; %fio will be 0
-					ovalue2(2) = eio2;
-					ovalue2(3) = cio2;
-					mask = [0,255,255]; %lock fio, allow all of eio and cio
-				elseif length(value) == 2 %assume fio isn't passed
-					value(2:3) = value;
-					value(1) = 0; %fio will be 0
-					mask(2:3) = mask;
-					mask(1) = 0; %fio will be 0
-				end
+				if value>2047;value=2047;end %block anything bigger than 2^11(-1)
+				obj.comment = ['Original Value = ' num2str(value) ' | '];
+				[eio,cio]=obj.prepareWords(value,0); %construct our word split to eio and cio, set strobe low
+				ovalue(1) = 0; %fio will be 0
+				ovalue(2) = eio;
+				ovalue(3) = cio;
+				[eio2,cio2]=obj.prepareWords(value,1); %construct our word split to eio and cio, set strobe high
+				ovalue2(1) = 0; %fio will be 0
+				ovalue2(2) = eio2;
+				ovalue2(3) = cio2;
+				mask = [0,255,255]; %lock fio, allow all of eio and cio
 				obj.comment = [obj.comment 'FIO EIO & CIO: ' num2str(0) ' ' num2str(eio2) ' ' num2str(cio2)];
 				cmd=zeros(30,1);
 				cmd(2) = 248; %command byte for feedback command (f8 in hex)

@@ -1,5 +1,5 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\..\..\..\Program Files\AutoIt3\Icons\au3.ico
+#AutoIt3Wrapper_Icon=..\..\..\..\Program Files (x86)\AutoIt3\Icons\au3.ico
 #AutoIt3Wrapper_Compression=4
 #AutoIt3Wrapper_Res_Fileversion=1.0.0.0
 #AutoIt3Wrapper_Run_Tidy=y
