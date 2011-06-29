@@ -286,20 +286,8 @@ classdef (Sealed) runExperiment < handle
 				
 				obj.initialiseTask; %set up our task structure for this run
 				
-				parfor j=1:obj.sList.n
+				for j=1:obj.sList.n %parfor doesn't seem to help here...
 					obj.stimulus{j}.setup(obj); %call setup and pass it the runExperiment object
-% 					if obj.stimulus{j}.doMotion == 1
-% 						obj.task.stimIsMoving=[obj.task.stimIsMoving j];
-% 					end
-% 					if obj.stimulus{j}.doDots == 1
-% 						obj.task.stimIsDots=[obj.task.stimIsDots j];
-% 					end
-% 					if obj.stimulus{j}.doDrift == 1
-% 						obj.task.stimIsDrifting=[obj.task.stimIsDrifting j];
-% 					end
-% 					if obj.stimulus{j}.doFlash == 1
-% 						obj.task.stimIsFlashing=[obj.task.stimIsFlashing j];
-% 					end
 				end
 				
 				if obj.movieSettings.record == 1
@@ -482,6 +470,7 @@ classdef (Sealed) runExperiment < handle
 				obj.win=[];
 				Priority(0);
 				ShowCursor;
+				matlabpool close
 				%obj.serialP.close;
 				obj.lJack.close;
 				obj.lJack=[];
@@ -776,7 +765,7 @@ classdef (Sealed) runExperiment < handle
 				
 				if obj.task.isBlank == 0 %not in an interstimulus time, need to update drift, motion and pulsation
 					
-					for i = 1:obj.sList.n
+					for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
 						obj.stimulus{i}.animate;
 					end
 					

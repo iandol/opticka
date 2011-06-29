@@ -711,7 +711,7 @@ classdef (Sealed) opticka < handle
 		function loadCalibration(obj)
 			d = dir(obj.paths.calibration);
 			for i = 1:length(d)
-				if isempty(regexp(d(i).name,'^\.+')) && d(i).isdir == false && d(i).bytes > 0
+				if isempty(regexp(d(i).name,'^\.+', 'once')) && d(i).isdir == false && d(i).bytes > 0
 					ftime(i) = d(i).datenum;
 				else
 					ftime(i) = 0;
@@ -724,7 +724,9 @@ classdef (Sealed) opticka < handle
 					tmp.filename = [obj.paths.calibration filesep d(idx).name];
 					if isa(obj.r,'runExperiment')
 						obj.r.gammaTable = tmp;
+						set(obj.h.OKUseGamma,'Value',1);
 						set(obj.h.OKUseGamma,'String',['None'; 'Gamma'; obj.r.gammaTable.analysisMethods]);
+						obj.r.gammaTable.choice = 1;
 					end
 				end
 			end

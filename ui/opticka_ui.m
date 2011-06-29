@@ -550,13 +550,12 @@ if isappdata(0,'o')
 		o.r.gammaTable.run;
 	else
 		c = calibrateLuminance(inp);
-		c.filename = [o.paths.calibration filesep 'Calibration-' date];
+		c.filename = [o.paths.calibration filesep 'Calibration-' date '-' o.r.gammaTable.comments];
 		o.r.gammaTable = c;
 		o.saveCalibration;
 	end
-	if get(handles.OKUseGamma,'Value') > length(['None'; 'Gamma'; o.r.gammaTable.analysisMethods])
-		set(handles.OKUseGamma,'Value',1)
-	end
+	set(handles.OKUseGamma,'Value',1)
+	o.r.gammaTable.choice = 0; 
 	set(handles.OKUseGamma,'String',['None'; 'Gamma'; o.r.gammaTable.analysisMethods]);
 end
 
@@ -572,7 +571,10 @@ if isappdata(0,'o')
 		o.r.gammaTable = tmp;
 		clear tmp;
 		if get(handles.OKUseGamma,'Value') > length(['None'; 'Gamma'; o.r.gammaTable.analysisMethods])
-			set(handles.OKUseGamma,'Value',1)
+			set(handles.OKUseGamma,'Value',1);
+			o.r.gammaTable.choice = 0; 
+		else
+			o.r.gammaTable.choice = get(handles.OKUseGamma,'Value')-1;
 		end
 		set(handles.OKUseGamma,'String',['None'; 'Gamma'; o.r.gammaTable.analysisMethods]);
 	end
@@ -587,7 +589,7 @@ if isappdata(0,'o')
 	o = getappdata(0,'o');
 	if isa(o.r.gammaTable,'calibrateLuminance')
 		tmp=o.r.gammaTable;
-		uisave('tmp',[o.paths.calibration filesep 'Calibration-' date]);
+		uisave('tmp',[o.paths.calibration filesep 'Calibration-' date '-' o.r.gammaTable.comments]);
 	end
 end
 % --- Executes on selection change in OKUseGamma.
