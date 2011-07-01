@@ -30,11 +30,11 @@ classdef (Sealed) runExperiment < handle
 		screen = []
 		%> windowed: if 1 useful for debugging, but remember timing will be poor
 		windowed = 0
-		%>show command logs and a time log after stimlus presentation 
+		%>show command logs and a time log after stimlus presentation
 		verbose = false
 		%> hide the black flash as PTB tests it refresh timing, uses a gamma trick
 		hideFlash = false
-		%> change the parameters for poorer temporal fidelity during debugging 
+		%> change the parameters for poorer temporal fidelity during debugging
 		debug = false
 		%> shows the info text and position grid during stimulus presentation
 		visualDebug = true
@@ -121,7 +121,7 @@ classdef (Sealed) runExperiment < handle
 		%> the window rectangle
 		winRect
 		%> the photoDiode rectangle
-		photoDiodeRect
+		photoDiodeRect = [0;0;50;50]
 		%> the values comuted to draw the 1deg dotted grid in debug mode
 		grid
 		%> the movie pointer
@@ -309,12 +309,8 @@ classdef (Sealed) runExperiment < handle
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				% Our main display loop
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				obj.lJack.setDIO([1,0,0],[1,0,0]) %this is RSTART, unpausing the omniplex
+				%--------------this is RSTART (FIO0->Pin 24), unpausing the omniplex
+				obj.lJack.setDIO([1,0,0],[1,0,0])
 				WaitSecs(0.2);
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				
@@ -329,6 +325,10 @@ classdef (Sealed) runExperiment < handle
 					obj.timeLog.startTime = obj.timeLog.vbl;
 				end
 				
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				% Our main display loop
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while obj.task.thisTrial <= obj.task.nTrials
 					if obj.task.isBlank==1
@@ -899,7 +899,7 @@ classdef (Sealed) runExperiment < handle
 			
 			obj.makeGrid;
 			
-			obj.photoDiodeRect(:,1)=[0 0 60 60]';
+			%obj.photoDiodeRect(:,1)=[0 0 50 50]';
 			
 			obj.updatesList;
 			

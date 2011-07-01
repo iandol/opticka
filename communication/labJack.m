@@ -379,7 +379,7 @@ classdef labJack < handle
 		% ===================================================================
 		function prepareStrobe(obj,value,mask,sendNow)
 			if obj.silentMode == 0 && obj.vHandle == 1
-				if value>2046;value=2046;end %block anything bigger than 2^11(-1), 2047 signifies OFF
+				if value>2047;value=2047;end %block anything bigger than 2^11(-1), 2047 signifies OFF
 				obj.comment = ['Original Value = ' num2str(value) ' | '];
 				[eio,cio]=obj.prepareWords(value,0); %construct our word split to eio and cio, set strobe low
 				ovalue(1) = 0; %fio will be 0

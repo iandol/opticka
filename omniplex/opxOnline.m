@@ -46,10 +46,14 @@ classdef opxOnline < handle
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
 		isLooping = false
-		opxConn %> connection to the omniplex
-		isSlaveConnected = 0
-		isMasterConnected = 0
-		h %> GUI handles
+		%> connection to the omniplex
+		opxConn 
+		isSlaveConnected = false
+		isMasterConnected = false
+		%> GUI handles
+		h
+		%> our panel for plotting
+		p
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -57,8 +61,8 @@ classdef opxOnline < handle
 		slaveCommand
 		masterCommand
 		oldcv = 0
-		%> our panel for plotting
-		p
+		%> should we respecify the matrix for plotting?
+		respecifyMatrix = false
 	end
 	
 	%=======================================================================
@@ -109,7 +113,7 @@ classdef opxOnline < handle
 					obj.spawnSlave;
 					obj.initializeUI;
 					
-					if obj.isSlaveConnected == 0
+					if obj.isSlaveConnected == false
 						%warning('Sorry, slave failed to initialize!!!')
 					end
 					
@@ -557,8 +561,8 @@ classdef opxOnline < handle
 			if status == -1
 				abort = 1;
 			end
-			figure;
-			ah=axes;
+			%figure;
+			%ah=axes;
 			
 			obj.getParameters;
 			obj.getnUnits;
@@ -579,7 +583,7 @@ classdef opxOnline < handle
 						[obj.trial(obj.nRuns).ne, obj.trial(obj.nRuns).eventList]  = PL_TrialEvents(obj.opxConn, 0, 0);
 						[obj.trial(obj.nRuns).ns, obj.trial(obj.nRuns).spikeList]  = PL_TrialSpikes(obj.opxConn, 0, 0);
 						%[~, ~, analogList] = PL_TrialAnalogSamples(obj.opxConn, 0, 0);
-						obj.saveData;
+						obj.saveData('spikes');
 						obj.msconn.write('--finishRun--');
 						obj.msconn.write(uint32(obj.nRuns));
 						obj.nRuns = obj.nRuns+1;
@@ -620,7 +624,7 @@ classdef opxOnline < handle
 				obj.error = ME;
 				fprintf('There was some error during data collection by slave!\n');
 				fprintf('Error message: %s\n',obj.error.message);
-				fprintf('Line: %d ',obj.error.stack.line);
+				for i=1:length(obj.error.stack);fprintf('%i --- %s\n',obj.error.stack(i).line,obj.error.stack(i).name);end
 				obj.nRuns = 0;
 				obj.closePlexon;
 				obj.listenSlave;
@@ -652,14 +656,19 @@ classdef opxOnline < handle
 			zval = get(obj.h.opxUISelect3,'Value');
 			method = get(obj.h.opxUIAnalysisMethod,'Value');
 			fprintf('Plotting data from cell: %d\n',cv)
+			xmin = 0;
 			xmax = str2num(get(obj.h.opxUIEdit1,'String'));
+			if length(xmax) == 2
+				xmin = xmax(1);
+				xmax = xmax(2);
+			end
 			ymin = 0;
 			ymax = str2num(get(obj.h.opxUIEdit2,'String'));
 			if length(ymax) == 2
 				ymin = ymax(1);
 				ymax = ymax(2);
 			end
-			binWidth = str2num(get(obj.h.opxUIEdit3,'String'));
+			binWidth = str2double(get(obj.h.opxUIEdit3,'String'));
 			if isempty(binWidth);binWidth = 25;end
 			bins = round((obj.data.trialTime*1000) / binWidth);
 			if isempty(xmax);xmax=2;end
@@ -671,10 +680,10 @@ classdef opxOnline < handle
 			map = cell2mat(obj.data.unit{cv}.map(:,:,zval));  %maps our index to our display matrix
 			map = map'; %remember subplot indexes by rows have to transform matrix first
 			
-			obj.p = panel(obj.h.opxUIPanel,'defer');
-			
 			try
-				if (obj.replotFlag == 1 || (cv ~= obj.oldcv) || method == 2)
+				if (obj.replotFlag == 1 || obj.respecifyMatrix == true || (cv ~= obj.oldcv) || method == 2)
+					if ~isempty(obj.p);delete(obj.p);obj.p=[];end
+					obj.p = panel(obj.h.opxUIPanel,'defer');
 					switch method
 						case 1
 							obj.p.pack(obj.data.yLength, obj.data.xLength);
@@ -691,18 +700,23 @@ classdef opxOnline < handle
 								plotPSTH()
 								pos = pos + 1;
 							end
-							obj.p.de.margin = 0;
-							obj.p.margin = [15 15 5 15];
-							obj.p.fontsize = 10;
-							obj.p.de.fontsize = 10;
-							obj.p.refresh();
+							obj.p.xlabel('Time (s)');
+							obj.p.ylabel('Instantaneous Firing Rate (Hz)');
+							obj.respecifyMatrix=false;
+							
 						case 2
 							obj.p.pack(1,1);
 							obj.p(1,1).select();
 							fprintf('Plotting Curve: (x=all y=%d z=%d)\n',yval,zval);
 							data = obj.data.unit{cv}.trialsums(yval,:,zval);
 							plotCurve();
+							obj.respecifyMatrix=true;
 					end
+					obj.p.de.margin = 0;
+					obj.p.margin = [15 15 5 15];
+					obj.p.fontsize = 10;
+					obj.p.de.fontsize = 10;
+					obj.p.refresh();
 					
 				else %single subplot
 					thisRun = obj.data.thisRun;
@@ -713,7 +727,6 @@ classdef opxOnline < handle
 						plotIndex=find(map==index);
 						switch method
 							case 1
-								if thisRun == 1;obj.p.pack(obj.data.yLength, obj.data.xLength);end
 								data = obj.data.unit{cv}.raw{y,x,z};
 								nt = obj.data.unit{1}.trials{y,x,z};
 								varlabel = [num2str(obj.data.unit{cv}.map{y,x,z}) ': ' obj.data.unit{cv}.label{y,x,z}];
@@ -737,15 +750,12 @@ classdef opxOnline < handle
 				end
 			catch ME
 				obj.error = ME;
-				fprintf('Plot Error message: %s\n',obj.error.message);
-				fprintf('Line: %d \n',obj.error.stack.line);
+				fprintf('Plot Error %s message: %s\n',obj.error.identifier,obj.error.message);
+				for i=1:length(obj.error.stack);fprintf('%i --- %s\n',obj.error.stack(i).line,obj.error.stack(i).name);end
 			end
 			obj.replotFlag = 0;
 			obj.oldcv=cv;
-			
 			set(obj.h.opxUIInfoBox,'String',['nRuns: ' num2str(obj.data.nRuns) ' | Created: ' obj.data.initializeDate]);
-			
-			drawnow;
 			
 			% ===================================================================
 			%> @brief Plots PSTH (inline function of plotData)
@@ -776,8 +786,9 @@ classdef opxOnline < handle
 				[n,t]=hist(data,bins);
 				n=convertToHz(n);
 				bar(t,n)
-				text((xmax/30),ymax-(ymax/10),['Ch:' num2str(cv) ' | Trls:' num2str(nt) ' | Var: ' varlabel],'FontSize',9);
-				axis([0 xmax ymin ymax]);
+				tt={['Ch:' num2str(cv) ' | Trls:' num2str(nt)];['Var: ' varlabel]};
+				text((xmax/30),ymax-(ymax/10),tt,'FontSize',8,'Color',[0.5 0.5 0.5]);
+				axis([xmin xmax ymin ymax]);
 				h = findobj(gca,'Type','patch');
 				if exist('inRun','var')
 					set(h,'FaceColor',[0.4 0 0],'EdgeColor',[0 0 0]);
@@ -785,12 +796,12 @@ classdef opxOnline < handle
 					set(h,'FaceColor',[0 0 0],'EdgeColor',[0 0 0]);
 				end
 				if x ~= 1 
-					set(gca,'YTick',[]);
+					set(gca,'YTickLabel',[]);
 				end
 				if y ~= obj.data.yLength
-					set(gca,'XTick',[]);
+					set(gca,'XTickLabel',[]);
 				end
-				
+				set(gca,'XGrid','off','YGrid','off','XMinorTick', 'on','YMinorTick','on','XColor',[0.4 0.4 0.4],'YColor',[0.4 0.4 0.4]);
 			end
 			
 			% ===================================================================
@@ -801,7 +812,11 @@ classdef opxOnline < handle
 					[mn(ii),er(ii)]=stderr(data{ii});
 				end
 				areabar(obj.data.xValues',mn',er',[0.8 0.8 0.8],'k.-');
-				axis([-inf inf ymin ymax])
+				set(gca,'XGrid','on','YGrid','on','XMinorTick', 'on','YMinorTick','on','XColor',[0.4 0.4 0.4],'YColor',[0.4 0.4 0.4]);
+				xmin=min(obj.data.xValues);
+				xmax=max(obj.data.xValues);
+				axis([xmin-(xmax/20) xmax+(xmax/20) ymin ymax])
+				box on
 				obj.p.xlabel(obj.stimulus.task.nVar(1).name)
 				obj.p.ylabel('Spikes / Stimulus');
 			end
@@ -848,11 +863,12 @@ classdef opxOnline < handle
 				elseif strcmpi(type,'stimulus')
 					setStimulusValues();
 				end
+				obj.p = panel(obj.h.opxUIPanel,'defer');
 				obj.replotFlag = 1;
 			catch ME
 				obj.error = ME;
 				fprintf('Initialize Plot Error message: %s\n',obj.error.message);
-				fprintf('Line: %d ',obj.error.stack.line);
+				for i=1:length(obj.error.stack);fprintf('%i --- %s\n',obj.error.stack(i).line,obj.error.stack(i).name);end
 			end
 			% ===================================================================
 			%> @brief makes cell list for UI (inline function of initializePlot)
@@ -911,23 +927,33 @@ classdef opxOnline < handle
 		%>
 		%>
 		% ===================================================================
-		function saveData(obj)
+		function saveData(obj,type)
+			if ~exist('type','var');type='all';end
 			try
-				opx.type = obj.type;
-				opx.nRuns = obj.nRuns;
-				opx.totalRuns = obj.totalRuns;
-				opx.spikes = obj.spikes;
-				opx.trial = obj.trial;
-				opx.units = obj.units;
-				opx.parameters = obj.parameters;
-				opx.stimulus = obj.stimulus;
-				opx.tmpFile = obj.tmpFile;
-				save(obj.tmpFile,'opx');
+				switch type
+					case 'spikes'
+						opx.type='spikesonly';
+						opx.nRuns = obj.nRuns;
+						opx.trial = obj.trial;
+						opx.tmpFile = obj.tmpFile;
+						save(obj.tmpFile,'opx');
+					otherwise
+						opx.type = obj.type;
+						opx.nRuns = obj.nRuns;
+						opx.totalRuns = obj.totalRuns;
+						opx.spikes = obj.spikes;
+						opx.trial = obj.trial;
+						opx.units = obj.units;
+						opx.parameters = obj.parameters;
+						opx.stimulus = obj.stimulus;
+						opx.tmpFile = obj.tmpFile;
+						save(obj.tmpFile,'opx');
+				end
 			catch ME
 				obj.error = ME;
 				fprintf('There was some error during data collection + save data by slave!\n');
 				fprintf('Error message: %s\n',obj.error.message);
-				fprintf('Line: %d ',obj.error.stack.line);
+				for i=1:length(obj.error.stack);fprintf('%i --- %s\n',obj.error.stack(i).line,obj.error.stack(i).name);end
 			end
 		end
 		
@@ -1075,6 +1101,7 @@ classdef opxOnline < handle
 						end
 					catch ME
 						obj.error = ME;
+						for i=1:length(obj.error.stack);fprintf('%i --- %s\n',obj.error.stack(i).line,obj.error.stack(i).name);end
 					end
 				case 'slave'
 					try
@@ -1084,6 +1111,7 @@ classdef opxOnline < handle
 						end
 					catch ME
 						obj.error = ME;
+						for i=1:length(obj.error.stack);fprintf('%i --- %s\n',obj.error.stack(i).line,obj.error.stack(i).name);end
 					end
 			end
 		end

@@ -22,7 +22,7 @@ function varargout = opx_ui(varargin)
 
 % Edit the above text to modify the response to help opx_ui
 
-% Last Modified by GUIDE v2.5 26-Jun-2011 19:57:35
+% Last Modified by GUIDE v2.5 01-Jul-2011 12:42:46
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -202,3 +202,29 @@ if isappdata(0,['opx' num2str(handles.opxUIFigure)])
 	opx = getappdata(0,['opx' num2str(handles.opxUIFigure)]);
 	opx.checkPlexonValues;
 end
+
+
+% --- Executes when user attempts to close opxUIFigure.
+function opxUIFigure_CloseRequestFcn(hObject, eventdata, handles)
+% hObject    handle to opxUIFigure (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: delete(hObject) closes the figure
+fprintf('\nCLOSE OPX UI...\n');
+if isappdata(0,['opx' num2str(handles.opxUIFigure)])
+	rmappdata(0,['opx' num2str(handles.opxUIFigure)]);
+end
+delete(hObject);
+
+
+% --- Executes during object deletion, before destroying properties.
+function opxUIFigure_DeleteFcn(hObject, eventdata, handles)
+% hObject    handle to opxUIFigure (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+fprintf('\nDELETE OPX UI...\n');
+if isappdata(0,['opx' num2str(handles.opxUIFigure)])
+	rmappdata(0,['opx' num2str(handles.opxUIFigure)]);
+end
+
