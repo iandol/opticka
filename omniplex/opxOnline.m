@@ -24,6 +24,8 @@ classdef opxOnline < handle
 		cleanup = 1
 		%> should we replot all data in the ui?
 		replotFlag = 0
+		%> struct containing several plot options
+		plotOptions
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -640,6 +642,7 @@ classdef opxOnline < handle
 				obj.initializePlot;
 			end
 			obj.plotData;
+			set(obj.h.opxUIInfoBox,'String',['nRuns: ' num2str(obj.data.nRuns) ' | Created: ' obj.data.initializeDate]);
 		end
 		
 		% ===================================================================
@@ -755,7 +758,6 @@ classdef opxOnline < handle
 			end
 			obj.replotFlag = 0;
 			obj.oldcv=cv;
-			set(obj.h.opxUIInfoBox,'String',['nRuns: ' num2str(obj.data.nRuns) ' | Created: ' obj.data.initializeDate]);
 			
 			% ===================================================================
 			%> @brief Plots PSTH (inline function of plotData)
@@ -791,7 +793,7 @@ classdef opxOnline < handle
 				axis([xmin xmax ymin ymax]);
 				h = findobj(gca,'Type','patch');
 				if exist('inRun','var')
-					set(h,'FaceColor',[0.4 0 0],'EdgeColor',[0 0 0]);
+					set(h,'FaceColor',[0.4 0 0],'EdgeColor',[0.4 0 0]);
 				else
 					set(h,'FaceColor',[0 0 0],'EdgeColor',[0 0 0]);
 				end
@@ -923,8 +925,8 @@ classdef opxOnline < handle
 		end
 		
 		% ===================================================================
-		%> @brief Saves a reduced set of our object as a structure
-		%>
+		%> @brief Saves a reduced set of our object as a structure, passing
+		%>		'spikes' reduces the data transmitted even further
 		%>
 		% ===================================================================
 		function saveData(obj,type)
@@ -937,6 +939,7 @@ classdef opxOnline < handle
 						opx.trial = obj.trial;
 						opx.tmpFile = obj.tmpFile;
 						save(obj.tmpFile,'opx');
+						fprintf('Spike data saved...\n')
 					otherwise
 						opx.type = obj.type;
 						opx.nRuns = obj.nRuns;
