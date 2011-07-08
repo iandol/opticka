@@ -98,9 +98,11 @@ classdef opxOnline < handle
 			end
 			
 			if ispc
-				Screen('Preference', 'SuppressAllWarnings',1);
-				Screen('Preference', 'Verbosity', 0);
-				Screen('Preference', 'VisualDebugLevel',0);
+				try
+					Screen('Preference', 'SuppressAllWarnings',1);
+					Screen('Preference', 'Verbosity', 0);
+					Screen('Preference', 'VisualDebugLevel',0);
+				end
 				obj.masterCommand = '!matlab -nodesktop -nosplash -r "opxRunMaster" &';
 				obj.slaveCommand =  '!matlab -nodesktop -nosplash -r "opxRunSlave" &';
 			else
@@ -477,7 +479,7 @@ classdef opxOnline < handle
 							fprintf('\nOpticka pinged us, we ping opticka back!');
 						case '--abort--'
 							obj.msconn.write('--abort--');
-							fprintf('\nOpticka asks us to abort, tell slave to stop too!');
+							fprintf('\n\nOpticka asks us to abort, tell slave to stop too!');
 							pause(0.3);
 							abort = 1;
 					end
@@ -511,6 +513,9 @@ classdef opxOnline < handle
 							end
 							load(obj.tmpFile);
 							obj.trial = opx.trial;
+							try
+							fprintf('We received %d spikes / %d events from slave...\n',opx.trial(end).ns,opx.trial(end).ne);
+							end
 							obj.data.parseNextRun(obj);
 							obj.plotData;
 							set(obj.h.opxUIInfoBox,'String',['The slave has completed run ' num2str(obj.nRuns)]);
@@ -585,6 +590,7 @@ classdef opxOnline < handle
 						[obj.trial(obj.nRuns).ne, obj.trial(obj.nRuns).eventList]  = PL_TrialEvents(obj.opxConn, 0, 0);
 						[obj.trial(obj.nRuns).ns, obj.trial(obj.nRuns).spikeList]  = PL_TrialSpikes(obj.opxConn, 0, 0);
 						%[~, ~, analogList] = PL_TrialAnalogSamples(obj.opxConn, 0, 0);
+						fprintf('\nWe received %d spikes and %d events\n',obj.trial(obj.nRuns).ns,obj.trial(obj.nRuns).ne)
 						obj.saveData('spikes');
 						obj.msconn.write('--finishRun--');
 						obj.msconn.write(uint32(obj.nRuns));
@@ -1082,7 +1088,7 @@ classdef opxOnline < handle
 						obj.units.list{i}(1:obj.units.nCells(i))=i;
 					end
 				end
-				obj.units.chlist = [obj.units.list{:}];
+				obj.units.chlist = [obj.units.activeChs];
 				obj.units.celllist=[obj.units.index{:}];
 			end
 		end

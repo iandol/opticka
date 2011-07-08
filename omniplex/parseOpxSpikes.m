@@ -140,6 +140,7 @@ classdef parseOpxSpikes < handle
 		function parseRun(obj,data,num)
 			
 			if isempty(data)
+				fprintf('\nparseOpxSpikes: DATA empty!');
 				return
 			end
 			
@@ -158,6 +159,7 @@ classdef parseOpxSpikes < handle
 			startTime = data.trial(num).eventList(1,1);
 			endTime = data.trial(num).eventList(end,1);
 			raw = data.trial(num).spikeList;
+			fprintf('parseOpxSpikes: %d spikes!\n', length(raw));
 			
 			x = 1;
 			y = 1;
@@ -176,20 +178,26 @@ classdef parseOpxSpikes < handle
 			obj.ts.x = x;
 			obj.ts.y = y;
 			obj.ts.z = z;
-			fprintf('ParseRun %d = x: %d | y: %d | z: %d\n',num,obj.ts.x,obj.ts.y,obj.ts.z);
-					
-			for j=1:obj.units.totalCells
-				obj.unit{j}.trial{num}.idx = [num obj.sIndex(num,:) obj.sValues(num,:) obj.sMap(num,:)];
-				obj.unit{j}.trial{num}.raw=raw;
-				obj.unit{j}.trial{num}.startTime=startTime;
-				obj.unit{j}.trial{num}.endTime=endTime;
-				s = raw(raw(:,2)==obj.units.chlist(j),:);
-				s = s(s(:,3)==obj.units.celllist(j));
-				s = (s-startTime)./obj.parameters.timedivisor;
-				obj.unit{j}.trial{num}.spikes = s;
-				obj.unit{j}.trials{y,x,z}=obj.unit{j}.trials{y,x,z}+1;
-				obj.unit{j}.trialsums{y,x,z}(obj.unit{j}.trials{y,x,z})=length(s);
-				obj.unit{j}.raw{y,x,z} = sort([obj.unit{j}.raw{y,x,z}; obj.unit{j}.trial{num}.spikes]);
+			fprintf('parseOpxSpikes: ParseRun %d = x: %d | y: %d | z: %d\n',num,obj.ts.x,obj.ts.y,obj.ts.z);
+			
+			for jj=1:obj.units.nCh
+				for j=1:obj.units.totalCells
+					obj.unit{j}.trial{num}.idx = [num obj.sIndex(num,:) obj.sValues(num,:) obj.sMap(num,:)];
+					obj.unit{j}.trial{num}.raw=raw;
+					obj.unit{j}.trial{num}.startTime=startTime;
+					obj.unit{j}.trial{num}.endTime=endTime;
+					fprintf('JJ = %d | J = %d',jj,j)
+					s = raw(raw(:,2)==obj.units.chlist(jj),:);
+					fprintf(' | S1 = %d',length(s));
+					s = s(s(:,3)==obj.units.celllist(j));
+					fprintf(' | S2 = %d',length(s));
+					s = (s-startTime)./obj.parameters.timedivisor;
+					fprintf(' | S3 = %d',length(s));
+					obj.unit{j}.trial{num}.spikes = s;
+					obj.unit{j}.trials{y,x,z}=obj.unit{j}.trials{y,x,z}+1;
+					obj.unit{j}.trialsums{y,x,z}(obj.unit{j}.trials{y,x,z})=length(s);
+					obj.unit{j}.raw{y,x,z} = sort([obj.unit{j}.raw{y,x,z}; obj.unit{j}.trial{num}.spikes]);
+				end
 			end
 			
 			obj.thisRun = num;
@@ -208,8 +216,10 @@ classdef parseOpxSpikes < handle
 				end
 				obj.parseRun(data,obj.thisRun+1);
 			catch ME
-				fprintf('parseRun error at: %d',obj.thisRun+1);
+				fprintf('parseRun error at: %d\n',obj.thisRun+1);
 				obj.error = ME;
+				fprintf('Plot Error %s message: %s\n',obj.error.identifier,obj.error.message);
+				for i=1:length(obj.error.stack);fprintf('%i --- %s\n',obj.error.stack(i).line,obj.error.stack(i).name);end
 			end
 		end
 		

@@ -200,7 +200,8 @@ function opxUICheckPlexon_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(0,['opx' num2str(handles.opxUIFigure)])
 	opx = getappdata(0,['opx' num2str(handles.opxUIFigure)]);
-	opx.checkPlexonValues;
+	%opx.checkPlexonValues;
+	printpreview(handles.opxUIFigure)
 end
 
 
