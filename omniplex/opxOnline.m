@@ -450,7 +450,7 @@ classdef opxOnline < handle
 		end
 		
 		% ===================================================================
-		%> @brief The main loop the master runs to load data saved by slave
+		%> @brief parseData -- The main loop the master runs to load data saved by slave
 		%> and then plot it lazily
 		%>
 		%>
@@ -460,6 +460,7 @@ classdef opxOnline < handle
 			loop = 1;
 			obj.isLooping = true;
 			abort = 0;
+			obj.nRuns = 0;
 			opx=[];
 			fprintf('\n\n===Parse Data Loop Starting===\n')
 			while loop
@@ -480,7 +481,7 @@ classdef opxOnline < handle
 						case '--abort--'
 							obj.msconn.write('--abort--');
 							fprintf('\n\nOpticka asks us to abort, tell slave to stop too!');
-							pause(0.3);
+							pause(0.1);
 							abort = 1;
 					end
 				end
@@ -501,22 +502,24 @@ classdef opxOnline < handle
 							clear opx
 							
 						case '--finishRun--'
-							tloop = 1;
-							while tloop < 10
-								if obj.msconn.checkData
-									obj.nRuns = double(obj.msconn.read(0,'uint32'));
-									fprintf('\nThe slave has completed run %d (tloop=%i)\n',obj.nRuns,tloop);
-									break
-								end
-								pause(0.05);
-								tloop = tloop + 1;
-							end
+% 							tloop = 1;
+% 							while tloop < 10
+% 								if obj.msconn.checkData
+% 									obj.nRuns = double(obj.msconn.read(0,'uint32'));
+% 									fprintf('\nThe slave has completed run %d (tloop=%i)\n',obj.nRuns,tloop);
+% 									break
+% 								end
+% 								tloop = tloop + 1;
+% 							end
 							load(obj.tmpFile);
 							obj.trial = opx.trial;
-							try
-							fprintf('We received %d spikes / %d events from slave...\n',opx.trial(end).ns,opx.trial(end).ne);
+							if opx.nRuns > obj.nRuns+1
+								fprintf('\nWe''ve lagged behind, lets parse from %d to %d runs...',obj.nRuns+1,opx.nRuns);
+								obj.data.parseRuns(obj,obj.nRuns+1,opx.nRuns);
+							else
+								obj.data.parseNextRun(obj);
 							end
-							obj.data.parseNextRun(obj);
+							obj.nRuns = opx.nRuns;
 							obj.plotData;
 							set(obj.h.opxUIInfoBox,'String',['The slave has completed run ' num2str(obj.nRuns)]);
 							clear opx
@@ -560,29 +563,23 @@ classdef opxOnline < handle
 		%>
 		% ===================================================================
 		function collectData(obj)
-			tic
 			abort=0;
-			obj.nRuns = 0;
-			
 			status = obj.openPlexon;
 			if status == -1
 				abort = 1;
 			end
-			%figure;
-			%ah=axes;
 			
 			obj.getParameters;
 			obj.getnUnits;
 			
 			obj.trial = struct;
-			obj.nRuns=1;
+			obj.nRuns = 1;
 			obj.saveData;
 			obj.msconn.write('--beforeRun--');
 			pause(0.1);
-			toc
 			try
 				while obj.nRuns <= obj.totalRuns && abort < 1
-					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1:12], 0, 0);
+					PL_TrialDefine(obj.opxConn, obj.eventStart, obj.eventEnd, 0, 0, 0, 0, [1:16], 0, 0);
 					fprintf('\nWaiting for run: %i\n', obj.nRuns);
 					[rn, trial, spike, analog, last] = PL_TrialStatus(obj.opxConn, 3, obj.maxWait); %wait until end of trial
 					tic
@@ -590,10 +587,10 @@ classdef opxOnline < handle
 						[obj.trial(obj.nRuns).ne, obj.trial(obj.nRuns).eventList]  = PL_TrialEvents(obj.opxConn, 0, 0);
 						[obj.trial(obj.nRuns).ns, obj.trial(obj.nRuns).spikeList]  = PL_TrialSpikes(obj.opxConn, 0, 0);
 						%[~, ~, analogList] = PL_TrialAnalogSamples(obj.opxConn, 0, 0);
-						fprintf('\nWe received %d spikes and %d events\n',obj.trial(obj.nRuns).ns,obj.trial(obj.nRuns).ne)
+						%fprintf('\nWe received %d spikes and %d events\n',obj.trial(obj.nRuns).ns,obj.trial(obj.nRuns).ne)
 						obj.saveData('spikes');
 						obj.msconn.write('--finishRun--');
-						obj.msconn.write(uint32(obj.nRuns));
+						%obj.msconn.write(uint32(obj.nRuns));
 						obj.nRuns = obj.nRuns+1;
 					end
 					if obj.msconn.checkData
@@ -603,9 +600,9 @@ classdef opxOnline < handle
 								fprintf('\nWe''ve been asked to abort\n')
 								abort = 1;
 								break
-							case '--ping--'
-								fprintf('\nMaster pinged, we ping back...\n')
-								obj.msconn.write('--ping--')
+% 							case '--ping--'
+% 								fprintf('\nMaster pinged, we ping back...\n')
+% 								obj.msconn.write('--ping--')
 						end
 					end
 					if obj.checkKeys
@@ -613,7 +610,7 @@ classdef opxOnline < handle
 					end
 					toc
 					%if exist('analogList','var');plot(ah,analogList);axis tight;title('Raw Analog Signal');end
-					fprintf('rn: %i tr: %i sp: %i al: %i lst: %i\n',rn, trial, spike, analog, last);
+					fprintf('run: %i trial: %i sp: %i al: %i lst: %i\n',rn, trial, spike, analog, last);
 				end
 				obj.saveData; %final save of data
 				if abort == 1
@@ -687,15 +684,17 @@ classdef opxOnline < handle
 			matrixSize = obj.data.matrixSize;
 			offset = matrixSize*(zval-1);
 			map = cell2mat(obj.data.unit{cv}.map(:,:,zval));  %maps our index to our display matrix
+			nrows = size(map,1);
+			ncols = size(map,2);
 			map = map'; %remember subplot indexes by rows have to transform matrix first
 			
 			try
 				if (obj.replotFlag == 1 || obj.respecifyMatrix == true || (cv ~= obj.oldcv) || method == 2)
 					if ~isempty(obj.p);delete(obj.p);obj.p=[];end
-					obj.p = panel(obj.h.opxUIPanel,'defer');
+					%obj.p = panel(obj.h.opxUIPanel,'defer');
 					switch method
 						case 1
-							obj.p.pack(obj.data.yLength, obj.data.xLength);
+							%obj.p.pack(obj.data.yLength, obj.data.xLength);
 							pos = 1;
 							startP = 1 + offset;
 							endP = matrixSize + offset;
@@ -705,27 +704,34 @@ classdef opxOnline < handle
 								data = obj.data.unit{cv}.raw{y,x,zval};
 								nt = obj.data.unit{cv}.trials{y,x,zval};
 								varlabel = [num2str(obj.data.unit{cv}.map{y,x,zval}) ': ' obj.data.unit{cv}.label{y,x,zval}];
-								obj.p(y,x).select();
+								%obj.p(y,x).select();
+								subplot(nrows,ncols,pos,'Parent',obj.h.opxUIPanel)
 								plotPSTH()
+								pp=get(gca,'Position');
+								perc=5;
+								set(gca,'Position',[pp(1) pp(2) pp(3)+(pp(3)/perc) pp(4)+(pp(4)/perc)])
 								pos = pos + 1;
 							end
-							obj.p.xlabel('Time (s)');
-							obj.p.ylabel('Instantaneous Firing Rate (Hz)');
+							%obj.p.xlabel('Time (s)');
+							%obj.p.ylabel('Instantaneous Firing Rate (Hz)');
 							obj.respecifyMatrix=false;
 							
 						case 2
-							obj.p.pack(1,1);
-							obj.p(1,1).select();
+							%obj.p.pack(1,1);
+							%obj.p(1,1).select();
+							subplot(1,1,1,'Parent',obj.h.opxUIPanel)
 							fprintf('Plotting Curve: (x=all y=%d z=%d)\n',yval,zval);
 							data = obj.data.unit{cv}.trialsums(yval,:,zval);
 							plotCurve();
+							%obj.p.xlabel(obj.stimulus.task.nVar(1).name)
+							%obj.p.ylabel('Spikes / Stimulus');
 							obj.respecifyMatrix=true;
 					end
-					obj.p.de.margin = 0;
-					obj.p.margin = [15 15 5 15];
-					obj.p.fontsize = 10;
-					obj.p.de.fontsize = 10;
-					obj.p.refresh();
+					%obj.p.de.margin = 0;
+					%obj.p.margin = [15 15 5 15];
+					%obj.p.fontsize = 10;
+					%obj.p.de.fontsize = 10;
+					%obj.p.refresh();
 					
 				else %single subplot
 					thisRun = obj.data.thisRun;
@@ -739,20 +745,21 @@ classdef opxOnline < handle
 								data = obj.data.unit{cv}.raw{y,x,z};
 								nt = obj.data.unit{1}.trials{y,x,z};
 								varlabel = [num2str(obj.data.unit{cv}.map{y,x,z}) ': ' obj.data.unit{cv}.label{y,x,z}];
-								obj.p(y,x).select();
+								%obj.p(y,x).select();
 								plotPSTH(thisRun)
 							case 2
-								obj.p.pack(1,1);
-								obj.p(1,1).select();
+								%obj.p.pack(1,1);
+								%obj.p(1,1).select();
+								subplot(1,1,1,'Parent',obj.h.opxUIPanel)
 								plotCurve()
 							case 3
 								
 						end
-						obj.p.de.margin = 0;
-						obj.p.margin = [15 15 5 15];
-						obj.p.fontsize = 10;
-						obj.p.de.fontsize = 10;
-						obj.p.refresh();
+						%obj.p.de.margin = 0;
+						%obj.p.margin = [15 15 5 15];
+						%obj.p.fontsize = 10;
+						%obj.p.de.fontsize = 10;
+						%obj.p.refresh();
 					else
 						fprintf('Plot Not Visible: %d (x=%d y=%d z=%d)\n',thisRun,x,y,z)
 					end
@@ -809,6 +816,7 @@ classdef opxOnline < handle
 				if y ~= obj.data.yLength
 					set(gca,'XTickLabel',[]);
 				end
+				set(gca,'XGrid','off','YGrid','off','XMinorTick', 'on','YMinorTick','on','XColor',[0.3 0.3 0.3],'YColor',[0.3 0.3 0.3]);
 				set(gca,'XGrid','off','YGrid','off','XMinorTick', 'on','YMinorTick','on','XColor',[0.4 0.4 0.4],'YColor',[0.4 0.4 0.4]);
 			end
 			
@@ -825,8 +833,6 @@ classdef opxOnline < handle
 				xmax=max(obj.data.xValues);
 				axis([xmin-(xmax/20) xmax+(xmax/20) ymin ymax])
 				box on
-				obj.p.xlabel(obj.stimulus.task.nVar(1).name)
-				obj.p.ylabel('Spikes / Stimulus');
 			end
 			
 			% ===================================================================

@@ -364,9 +364,9 @@ classdef (Sealed) runExperiment < handle
 					
 					%======= Show it at next retrace: ========%
 					if obj.logFrames == true
-						[obj.timeLog.vbl(obj.task.tick+1),obj.timeLog.show(obj.task.tick+1),obj.timeLog.flip(obj.task.tick+1),obj.timeLog.miss(obj.task.tick+1)] = Screen('Flip', obj.win, (obj.timeLog.vbl(obj.task.tick)+obj.screenVals.halfisi));
+						[obj.timeLog.vbl(obj.task.tick+1),obj.timeLog.show(obj.task.tick+1),obj.timeLog.flip(obj.task.tick+1),obj.timeLog.miss(obj.task.tick+1)] = Screen('Flip', obj.win, (obj.timeLog.vbl(obj.task.tick)+0.001));
 					else
-						obj.timeLog.vbl = Screen('Flip', obj.win, (obj.timeLog.vbl+obj.screenVals.halfisi));
+						obj.timeLog.vbl = Screen('Flip', obj.win, (obj.timeLog.vbl+0.001));
 					end
 					%=========================================%
 					if obj.task.switched == 1 || obj.task.tick == 1

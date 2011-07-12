@@ -22,7 +22,7 @@ function varargout = opx_ui(varargin)
 
 % Edit the above text to modify the response to help opx_ui
 
-% Last Modified by GUIDE v2.5 01-Jul-2011 12:42:46
+% Last Modified by GUIDE v2.5 11-Jul-2011 21:27:55
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -228,4 +228,3 @@ fprintf('\nDELETE OPX UI...\n');
 if isappdata(0,['opx' num2str(handles.opxUIFigure)])
 	rmappdata(0,['opx' num2str(handles.opxUIFigure)]);
 end
-

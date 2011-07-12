@@ -33,6 +33,7 @@ classdef parseOpxSpikes < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		hasParsed
 		allowedProperties='^(stimulus)$'
 	end
 	
@@ -77,6 +78,7 @@ classdef parseOpxSpikes < handle
 				obj.nVars = obj.stimulus.task.nVars;
 				obj.nTrials = obj.stimulus.task.nTrials;
 				obj.nRuns = obj.stimulus.task.nRuns;
+				obj.hasParsed = zeros(1, obj.nRuns);
 				obj.nDisp = obj.nRuns / obj.nTrials;
 				obj.trialTime = obj.stimulus.task.trialTime;
 				if obj.nVars == 0
@@ -143,9 +145,10 @@ classdef parseOpxSpikes < handle
 				fprintf('\nparseOpxSpikes: DATA empty!');
 				return
 			end
-			
-			if obj.thisRun > num
-				error('asked to analyse a value smaller than our current parsed run');
+
+			if obj.hasParsed(num) == 1
+				fprintf('\nparseOpxSpikes: Asked to parse already parsed data, lets skip this!');
+				return
 			end
 	
 			l=length(data.trial);
@@ -159,7 +162,6 @@ classdef parseOpxSpikes < handle
 			startTime = data.trial(num).eventList(1,1);
 			endTime = data.trial(num).eventList(end,1);
 			raw = data.trial(num).spikeList;
-			fprintf('parseOpxSpikes: %d spikes!\n', length(raw));
 			
 			x = 1;
 			y = 1;
@@ -178,7 +180,7 @@ classdef parseOpxSpikes < handle
 			obj.ts.x = x;
 			obj.ts.y = y;
 			obj.ts.z = z;
-			fprintf('parseOpxSpikes: ParseRun %d = x: %d | y: %d | z: %d\n',num,obj.ts.x,obj.ts.y,obj.ts.z);
+			fprintf('parseOpxSpikes: %d spikes for ParseRun %d = x: %d | y: %d | z: %d\n',length(raw),num,obj.ts.x,obj.ts.y,obj.ts.z);
 			
 			for jj=1:obj.units.nCh
 				for j=1:obj.units.totalCells
@@ -186,13 +188,9 @@ classdef parseOpxSpikes < handle
 					obj.unit{j}.trial{num}.raw=raw;
 					obj.unit{j}.trial{num}.startTime=startTime;
 					obj.unit{j}.trial{num}.endTime=endTime;
-					fprintf('JJ = %d | J = %d',jj,j)
 					s = raw(raw(:,2)==obj.units.chlist(jj),:);
-					fprintf(' | S1 = %d',length(s));
 					s = s(s(:,3)==obj.units.celllist(j));
-					fprintf(' | S2 = %d',length(s));
 					s = (s-startTime)./obj.parameters.timedivisor;
-					fprintf(' | S3 = %d',length(s));
 					obj.unit{j}.trial{num}.spikes = s;
 					obj.unit{j}.trials{y,x,z}=obj.unit{j}.trials{y,x,z}+1;
 					obj.unit{j}.trialsums{y,x,z}(obj.unit{j}.trials{y,x,z})=length(s);
@@ -200,6 +198,7 @@ classdef parseOpxSpikes < handle
 				end
 			end
 			
+			obj.hasParsed(num) = 1;
 			obj.thisRun = num;
 			
 		end
@@ -216,9 +215,30 @@ classdef parseOpxSpikes < handle
 				end
 				obj.parseRun(data,obj.thisRun+1);
 			catch ME
-				fprintf('parseRun error at: %d\n',obj.thisRun+1);
+				fprintf('parseOpxSpikes: parseRun error at: %d\n',obj.thisRun+1);
 				obj.error = ME;
-				fprintf('Plot Error %s message: %s\n',obj.error.identifier,obj.error.message);
+				fprintf('Error %s message: %s\n',obj.error.identifier,obj.error.message);
+				for i=1:length(obj.error.stack);fprintf('%i --- %s\n',obj.error.stack(i).line,obj.error.stack(i).name);end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%>
+		% ===================================================================
+		function parseRuns(obj,data,runlist)
+			try
+				if isempty(data)
+					return
+				end
+				for i = 1:length(runlist)
+					obj.parseRun(data,runlist(i));
+				end
+			catch ME
+				fprintf('parseOpxSpikes: parseRuns error at: %d\n',obj.thisRun+1);
+				obj.error = ME;
+				fprintf('Error %s message: %s\n',obj.error.identifier,obj.error.message);
 				for i=1:length(obj.error.stack);fprintf('%i --- %s\n',obj.error.stack(i).line,obj.error.stack(i).name);end
 			end
 		end
