@@ -22,7 +22,7 @@ function varargout = opx_opt_ui(varargin)
 
 % Edit the above text to modify the response to help opx_opt_ui
 
-% Last Modified by GUIDE v2.5 02-Jul-2011 13:15:16
+% Last Modified by GUIDE v2.5 12-Jul-2011 14:05:12
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -88,3 +88,13 @@ function opxOptChangePath_Callback(hObject, eventdata, handles)
 % hObject    handle to opxOptChangePath (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+d=uigetdir;
+set(handles.opxOptPath,'String','d');
+
+% --- Executes on button press in opxOptShowCellsforCurves.
+function opxOptShowCellsforCurves_Callback(hObject, eventdata, handles)
+% hObject    handle to opxOptShowCellsforCurves (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of opxOptShowCellsforCurves

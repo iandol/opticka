@@ -22,7 +22,7 @@ function varargout = opx_ui(varargin)
 
 % Edit the above text to modify the response to help opx_ui
 
-% Last Modified by GUIDE v2.5 11-Jul-2011 21:27:55
+% Last Modified by GUIDE v2.5 12-Jul-2011 14:13:34
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -228,3 +228,11 @@ fprintf('\nDELETE OPX UI...\n');
 if isappdata(0,['opx' num2str(handles.opxUIFigure)])
 	rmappdata(0,['opx' num2str(handles.opxUIFigure)]);
 end
+
+
+% --- Executes on button press in opxUIOptions.
+function opxUIOptions_Callback(hObject, eventdata, handles)
+% hObject    handle to opxUIOptions (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+opx_ui_opt

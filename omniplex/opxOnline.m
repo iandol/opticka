@@ -1,17 +1,18 @@
 % ========================================================================
-%> @brief LABJACK Connects and manages a LabJack U3-HV
-%>
-%> Connects and manages a LabJack U3-HV
+%> @brief opxOnline Provides an interface between Opticka and the Plexon
+%>	for online data display
+%> 
 %>
 % ========================================================================
 classdef opxOnline < handle
 	properties
+		%> type is either launcher, master or slave
 		type = 'launcher'
-		eventStart = 257 %> 257 is any strobed event
-		eventEnd = -2047
-		maxWait = 6000
+		eventStart = 257 % 257 is any strobed event
+		eventEnd = -2047 %-2047 is the maximum strobe number we can generate
+		%> time to wait between trials by the slave
+		maxWait = 6000 
 		autoRun = 1
-		isSlave = 0
 		protocol = 'udp'
 		rAddress = '127.0.0.1'
 		rPort = 8998
@@ -92,10 +93,6 @@ classdef opxOnline < handle
 			end
 			
 			obj.dateStamp = datestr(clock);
-			
-			if strcmpi(obj.type,'master') || strcmpi(obj.type,'launcher')
-				obj.isSlave = 0;
-			end
 			
 			if ispc
 				try
@@ -515,7 +512,7 @@ classdef opxOnline < handle
 							obj.trial = opx.trial;
 							if opx.nRuns > obj.nRuns+1
 								fprintf('\nWe''ve lagged behind, lets parse from %d to %d runs...',obj.nRuns+1,opx.nRuns);
-								obj.data.parseRuns(obj,obj.nRuns+1,opx.nRuns);
+								obj.data.parseRuns(obj,[obj.nRuns+1:opx.nRuns]);
 							else
 								obj.data.parseNextRun(obj);
 							end
@@ -746,6 +743,7 @@ classdef opxOnline < handle
 								nt = obj.data.unit{1}.trials{y,x,z};
 								varlabel = [num2str(obj.data.unit{cv}.map{y,x,z}) ': ' obj.data.unit{cv}.label{y,x,z}];
 								%obj.p(y,x).select();
+								subplot(nrows,ncols,plotIndex,'Parent',obj.h.opxUIPanel)
 								plotPSTH(thisRun)
 							case 2
 								%obj.p.pack(1,1);
