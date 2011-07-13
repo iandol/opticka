@@ -117,7 +117,7 @@ classdef stimulusSequence < dynamicprops
 			if isempty(obj.minTrials)
 				obj.minTrials = 1;
 			end
-			if obj.minTrials > 254
+			if obj.minTrials > 2046
 				warndlg('WARNING: You are exceeding the number of stimuli the Plexon can identify!')
 			end
 
