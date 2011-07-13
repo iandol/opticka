@@ -66,6 +66,7 @@ classdef opxOnline < handle
 		oldcv = 0
 		%> should we respecify the matrix for plotting?
 		respecifyMatrix = false
+		mversion
 	end
 	
 	%=======================================================================
@@ -93,6 +94,8 @@ classdef opxOnline < handle
 			end
 			
 			obj.dateStamp = datestr(clock);
+			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
+			fprintf('\n\nWelcome to opxOnline, running in Matlab %i\n\n',obj.mversion);
 			
 			if ispc
 				try
@@ -258,14 +261,14 @@ classdef opxOnline < handle
 				
 				if obj.msconn.checkData
 					fprintf('\n{slave message: ');
-					data = obj.msconn.read(0);
-					if iscell(data)
-						for i = 1:length(data)
-							fprintf('%s\t',data{i});
+					readdata = obj.msconn.read(0);
+					if iscell(readdata)
+						for i = 1:length(readdata)
+							fprintf('%s\t',readdata{i});
 						end
 						fprintf('}\n');
 					else
-						fprintf('%s}\n',data);
+						fprintf('%s}\n',readdata);
 					end
 				end
 				
@@ -337,13 +340,13 @@ classdef opxOnline < handle
 			while loop
 				
 				if ~rem(loop,40);fprintf('.');end
-				if ~rem(loop,400);fprintf('\n');fprintf('quiver at %i',loop);obj.msconn.write('--abuse me do!--');end
+				if ~rem(loop,400);fprintf('\n');fprintf('quiver at %i',loop);obj.msconn.write('--abuse me!--');end
 				
 				if obj.msconn.checkData
-					data = obj.msconn.read(0);
-					data = regexprep(data,'\n','');
-					fprintf('\n{message:%s}',data);
-					switch data
+					readdata = obj.msconn.read(0);
+					readdata = regexprep(readdata,'\n','');
+					fprintf('\n{message:%s}\n',readdata);
+					switch readdata
 						
 						case '--nRuns--'
 							tloop = 1;
@@ -466,10 +469,10 @@ classdef opxOnline < handle
 				if ~rem(loop,400);fprintf('\n');fprintf('ParseData:');end
 				
 				if obj.conn.checkData
-					data = obj.conn.read(0);
-					data = regexprep(data,'\n','');
-					fprintf('\n{opticka message:%s}',data);
-					switch data
+					readdata = obj.conn.read(0);
+					readdata = regexprep(readdata,'\n','');
+					fprintf('\n{opticka message:%s}\n',readdata);
+					switch readdata
 						
 						case '--ping--'
 							obj.conn.write('--ping--');
@@ -484,9 +487,9 @@ classdef opxOnline < handle
 				end
 				
 				if obj.msconn.checkData
-					data = obj.msconn.read(0);
-					fprintf('\n{Slave message:%s}',data);
-					switch data
+					readdata = obj.msconn.read(0);
+					fprintf('\n{Slave message:%s}\n',readdata);
+					switch readdata
 						
 						case '--beforeRun--'
 							load(obj.tmpFile);
@@ -499,6 +502,7 @@ classdef opxOnline < handle
 							clear opx
 							
 						case '--finishRun--'
+							dontPlot = false;
 % 							tloop = 1;
 % 							while tloop < 10
 % 								if obj.msconn.checkData
@@ -510,14 +514,21 @@ classdef opxOnline < handle
 % 							end
 							load(obj.tmpFile);
 							obj.trial = opx.trial;
+							tic
 							if opx.nRuns > obj.nRuns+1
-								fprintf('\nWe''ve lagged behind, lets parse from %d to %d runs...',obj.nRuns+1,opx.nRuns);
+								fprintf('We''ve lagged behind, lets parse from %d to %d runs...\n',obj.nRuns+1,opx.nRuns);
 								obj.data.parseRuns(obj,[obj.nRuns+1:opx.nRuns]);
-							else
+							elseif opx.nRuns == obj.nRuns+1
 								obj.data.parseNextRun(obj);
+							else
+								fprintf('\nWaiting for slave...\n')
+								dontPlot = true;
 							end
+							toc
 							obj.nRuns = opx.nRuns;
-							obj.plotData;
+							tic
+							if dontPlot == false; obj.plotData; end
+							toc
 							set(obj.h.opxUIInfoBox,'String',['The slave has completed run ' num2str(obj.nRuns)]);
 							clear opx
 							
@@ -658,7 +669,7 @@ classdef opxOnline < handle
 			yval = get(obj.h.opxUISelect2,'Value');
 			zval = get(obj.h.opxUISelect3,'Value');
 			method = get(obj.h.opxUIAnalysisMethod,'Value');
-			fprintf('Plotting data from cell: %d\n',cv)
+			fprintf('Plot using cell: %d -- ',cv)
 			xmin = 0;
 			xmax = str2num(get(obj.h.opxUIEdit1,'String'));
 			if length(xmax) == 2
@@ -704,9 +715,6 @@ classdef opxOnline < handle
 								%obj.p(y,x).select();
 								subplot(nrows,ncols,pos,'Parent',obj.h.opxUIPanel)
 								plotPSTH()
-								pp=get(gca,'Position');
-								perc=5;
-								set(gca,'Position',[pp(1) pp(2) pp(3)+(pp(3)/perc) pp(4)+(pp(4)/perc)])
 								pos = pos + 1;
 							end
 							%obj.p.xlabel('Time (s)');
@@ -802,12 +810,15 @@ classdef opxOnline < handle
 				tt={['Ch:' num2str(cv) ' | Trls:' num2str(nt)];['Var: ' varlabel]};
 				text((xmax/30),ymax-(ymax/10),tt,'FontSize',8,'Color',[0.5 0.5 0.5]);
 				axis([xmin xmax ymin ymax]);
-				h = findobj(gca,'Type','patch');
+				ph = findobj(gca,'Type','patch');
 				if exist('inRun','var')
-					set(h,'FaceColor',[0.4 0 0],'EdgeColor',[0.4 0 0]);
+					set(ph,'FaceColor',[0.4 0 0],'EdgeColor',[0.4 0 0]);
 				else
-					set(h,'FaceColor',[0 0 0],'EdgeColor',[0 0 0]);
+					set(ph,'FaceColor',[0 0 0],'EdgeColor',[0 0 0]);
 				end
+				pp=get(gca,'Position');
+				perc=5;
+				set(gca,'Position',[pp(1) pp(2) pp(3)+(pp(3)/perc) pp(4)+(pp(4)/perc)])
 				if x ~= 1 
 					set(gca,'YTickLabel',[]);
 				end

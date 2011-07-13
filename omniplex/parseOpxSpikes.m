@@ -30,10 +30,10 @@ classdef parseOpxSpikes < handle
 		unit
 		error
 		initializeDate
+		hasParsed
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		hasParsed
 		allowedProperties='^(stimulus)$'
 	end
 	
@@ -139,15 +139,24 @@ classdef parseOpxSpikes < handle
 		%>
 		%>
 		% ===================================================================
-		function parseRun(obj,data,num)
+		function parseRun(obj,data,num,force)
+			
+			if ~exist('force','var')
+				force = false;
+			end
 			
 			if isempty(data)
-				fprintf('\nparseOpxSpikes: DATA empty!');
+				fprintf('\nparseOpxSpikes: DATA empty!\n');
+				return
+			end
+			
+			if num > obj.nRuns || num < 1 || length(data.trial) < num
+				fprintf('\nparseOpxSpikes: Invalid run %d (l=%d)!\n',num,length(data.trial));
 				return
 			end
 
-			if obj.hasParsed(num) == 1
-				fprintf('\nparseOpxSpikes: Asked to parse already parsed data, lets skip this!');
+			if obj.hasParsed(num) == 1 && force == true
+				fprintf('\nparseOpxSpikes: Asked to parse already parsed data, lets skip this!\n');
 				return
 			end
 	
@@ -210,12 +219,12 @@ classdef parseOpxSpikes < handle
 		% ===================================================================
 		function parseNextRun(obj,data)
 			try
-				if isempty(data)
+				if isempty(data) || (obj.thisRun == obj.nRuns)
 					return
 				end
 				obj.parseRun(data,obj.thisRun+1);
 			catch ME
-				fprintf('parseOpxSpikes: parseRun error at: %d\n',obj.thisRun+1);
+				fprintf('parseOpxSpikes: parseRun error at run %d\n',obj.thisRun+1);
 				obj.error = ME;
 				fprintf('Error %s message: %s\n',obj.error.identifier,obj.error.message);
 				for i=1:length(obj.error.stack);fprintf('%i --- %s\n',obj.error.stack(i).line,obj.error.stack(i).name);end
