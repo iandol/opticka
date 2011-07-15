@@ -731,6 +731,9 @@ classdef opxOnline < handle
 							%obj.p.xlabel(obj.stimulus.task.nVar(1).name)
 							%obj.p.ylabel('Spikes / Stimulus');
 							obj.respecifyMatrix=true;
+							
+						case 3
+							
 					end
 					%obj.p.de.margin = 0;
 					%obj.p.margin = [15 15 5 15];
@@ -845,6 +848,13 @@ classdef opxOnline < handle
 			end
 			
 			% ===================================================================
+			%> @brief Plots Curve (inline function of plotData)
+			% ===================================================================
+			function plotDensity()
+				
+			end
+			
+			% ===================================================================
 			%> @brief Converts to spikes per second (inline function of plotData)
 			% ===================================================================
 			function out = convertToHz(inn)
@@ -886,7 +896,7 @@ classdef opxOnline < handle
 				elseif strcmpi(type,'stimulus')
 					setStimulusValues();
 				end
-				obj.p = panel(obj.h.opxUIPanel,'defer');
+				%obj.p = panel(obj.h.opxUIPanel,'defer');
 				obj.replotFlag = 1;
 			catch ME
 				obj.error = ME;

@@ -113,6 +113,8 @@ classdef parseOpxSpikes < handle
 					obj.unit{i}.trial = cell(obj.nRuns,1);
 					obj.unit{i}.trials = raw;
 					obj.unit{i}.trialsums = raw;
+					obj.unit{i}.matrix = raw;
+					obj.unit{i}.errormat = raw;
 					[obj.unit{i}.trials{:}]=deal(zeros);
 					obj.unit{i}.map = raw;
 					obj.unit{i}.label = raw;
@@ -203,6 +205,9 @@ classdef parseOpxSpikes < handle
 					obj.unit{j}.trial{num}.spikes = s;
 					obj.unit{j}.trials{y,x,z}=obj.unit{j}.trials{y,x,z}+1;
 					obj.unit{j}.trialsums{y,x,z}(obj.unit{j}.trials{y,x,z})=length(s);
+					[m,e]=stderr(obj.unit{j}.trialsums{y,x,z});
+					obj.unit{j}.matrix{y,x,z} = m;
+					obj.unit{j}.errormat{y,x,z} = e;
 					obj.unit{j}.raw{y,x,z} = sort([obj.unit{j}.raw{y,x,z}; obj.unit{j}.trial{num}.spikes]);
 				end
 			end
