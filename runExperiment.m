@@ -40,6 +40,8 @@ classdef (Sealed) runExperiment < handle
 		visualDebug = true
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer = 1
+		%>bitDepth of framebuffer
+		bitDepth = 'FloatingPoint32BitIfPossible'
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8 and 16
 		antiAlias = []
 		%> background of display during stimulus presentation
@@ -149,17 +151,7 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		function obj = runExperiment(args)
 			obj.timeLog.construct=GetSecs;
-			if nargin>0 && isstruct(args) %user passed some settings, we will parse through them and set them up
-				if nargin>0 && isstruct(args)
-					fnames = fieldnames(args); %find our argument names
-					for i=1:length(fnames);
-						if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
-							obj.salutation(fnames{i},'Configuring property in runExperiment constructor');
-							obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-						end
-					end
-				end
-			end
+			if exist('args','var');obj.set(args);end
 			obj.prepareScreen;
 		end
 		
@@ -173,19 +165,19 @@ classdef (Sealed) runExperiment < handle
 			obj.timeLog = [];
 			obj.timeLog.date=clock;
 			obj.timeLog.startrun=GetSecs;
-			if obj.logFrames == false %preallocating these makes opticka drop frames when nFrames ~ 1e6
+			%if obj.logFrames == false %preallocating these makes opticka drop frames when nFrames ~ 1e6
 				obj.timeLog.vbl = 0;
 				obj.timeLog.show = 0;
 				obj.timeLog.flip = 0;
 				obj.timeLog.miss = 0;
 				obj.timeLog.stimTime = 0;
-			else
-				obj.timeLog.vbl=zeros(obj.task.nFrames,1);
-				obj.timeLog.show=zeros(obj.task.nFrames,1);
-				obj.timeLog.flip=zeros(obj.task.nFrames,1);
-				obj.timeLog.miss=zeros(obj.task.nFrames,1);
-				obj.timeLog.stimTime=zeros(obj.task.nFrames,1);
-			end
+			%else
+			%	obj.timeLog.vbl=zeros(obj.task.nFrames,1);
+			%	obj.timeLog.show=zeros(obj.task.nFrames,1);
+			%	obj.timeLog.flip=zeros(obj.task.nFrames,1);
+			%	obj.timeLog.miss=zeros(obj.task.nFrames,1);
+			%	obj.timeLog.stimTime=zeros(obj.task.nFrames,1);
+			%end
 			
 			obj.screenVals.resetGamma = false;
 			%if obj.windowed(1)==0;HideCursor;end
@@ -211,7 +203,6 @@ classdef (Sealed) runExperiment < handle
 			end
 			obj.lJack = labJack(strct);
 			obj.lJack.setDIO([2,0,0]);WaitSecs(0.01);obj.lJack.setDIO([0,0,0]); %Trigger the omniplex (FIO1) into paused mode
-			WaitSecs(0.5);
 			%-----------------------------------------------------
 			
 			try
@@ -229,7 +220,9 @@ classdef (Sealed) runExperiment < handle
 				
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+				if ischar(obj.bitDepth) && ~strcmpi(obj.bitDepth,'8bit')
+					PsychImaging('AddTask', 'General', obj.bitDepth);
+				end
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 				
 				obj.timeLog.preOpenWindow=GetSecs;
@@ -311,18 +304,19 @@ classdef (Sealed) runExperiment < handle
 				
 				%--------------this is RSTART (FIO0->Pin 24), unpausing the omniplex
 				obj.lJack.setDIO([1,0,0],[1,0,0])
-				WaitSecs(0.2);
+				WaitSecs(0.5);
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				
 				obj.task.tick=1;
+				obj.task.switched = 1;
 				obj.timeLog.beforeDisplay=GetSecs;
+				obj.timeLog.startTime = 0;
+				vbl=Screen('Flip', obj.win);
 				if obj.logFrames == true
 					obj.timeLog.stimTime(1) = 1;
-					[obj.timeLog.vbl(1),vbl.timeLog.show(1),obj.timeLog.flip(1),obj.timeLog.miss(1)] = Screen('Flip', obj.win);
-					obj.timeLog.startTime = obj.timeLog.vbl(1);
+					obj.timeLog.vbl(1) = Screen('Flip', obj.win,vbl+0.001);
 				else
-					obj.timeLog.vbl = Screen('Flip', obj.win);
-					obj.timeLog.startTime = obj.timeLog.vbl;
+					obj.timeLog.vbl = Screen('Flip', obj.win,vbl+0.001);
 				end
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -362,25 +356,22 @@ classdef (Sealed) runExperiment < handle
 					
 					obj.updateTask(); %update our task structure
 					
-					%======= Show it at next retrace: ========%
+					%======= FLIP: Show it at correct retrace: ========%
 					if obj.logFrames == true
-						[obj.timeLog.vbl(obj.task.tick+1),obj.timeLog.show(obj.task.tick+1),obj.timeLog.flip(obj.task.tick+1),obj.timeLog.miss(obj.task.tick+1)] = Screen('Flip', obj.win, (obj.timeLog.vbl(obj.task.tick)+0.001));
+						nextvbl = obj.timeLog.vbl(end) + obj.screenVals.halfisi;
+						[obj.timeLog.vbl(obj.task.tick),obj.timeLog.show(obj.task.tick),obj.timeLog.flip(obj.task.tick),obj.timeLog.miss(obj.task.tick)] = Screen('Flip', obj.win, nextvbl);
 					else
-						obj.timeLog.vbl = Screen('Flip', obj.win, (obj.timeLog.vbl+0.001));
+						nextvbl = obj.timeLog.vbl + obj.screenVals.halfisi;
+						obj.timeLog.vbl = Screen('Flip', obj.win, nextvbl);
 					end
 					%=========================================%
-					if obj.task.switched == 1 || obj.task.tick == 1
+					if obj.task.switched == 1
 						obj.lJack.strobeWord; %send our word out to the LabJack
 					end
 					
 					if obj.task.tick==1
 						obj.timeLog.startflip=obj.timeLog.vbl(1) + obj.screenVals.halfisi;
-						if obj.logFrames == true
-							obj.timeLog.startTime=obj.timeLog.show(obj.task.tick+1);
-						else
-							obj.timeLog.startTime=obj.timeLog.vbl(1);
-							
-						end
+						obj.timeLog.startTime=obj.timeLog.vbl(1);
 					end
 					
 					if obj.logFrames == true
@@ -470,7 +461,6 @@ classdef (Sealed) runExperiment < handle
 				obj.win=[];
 				Priority(0);
 				ShowCursor;
-				matlabpool close
 				%obj.serialP.close;
 				obj.lJack.close;
 				obj.lJack=[];
@@ -747,8 +737,8 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		function updateTask(obj)
 			obj.task.timeNow = GetSecs;
-			if obj.task.tick==1 %first ever loop
-				obj.task.isBlank = 0;
+			if obj.task.tick==1 %first frame
+				obj.task.isBlank = false;
 				obj.task.startTime = obj.task.timeNow;
 				obj.task.switchTime = obj.task.trialTime; %first ever time is for the first trial
 				obj.task.switchTick = obj.task.trialTime*ceil(obj.screenVals.fps);
@@ -756,14 +746,15 @@ classdef (Sealed) runExperiment < handle
 			end
 			
 			%-------------------------------------------------------------------
-			if obj.task.realTime == 1 %we measure real time
+			if obj.task.realTime == true %we measure real time
 				trigger = obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime);
 			else %we measure frames, prone to error build-up
 				trigger = obj.task.tick <= obj.task.switchTick;
 			end
+			
 			if trigger
 				
-				if obj.task.isBlank == 0 %not in an interstimulus time, need to update drift, motion and pulsation
+				if obj.task.isBlank == false && obj.task.tick > 1 %not in an interstimulus time, need to update drift, motion and pulsation
 					
 					for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
 						obj.stimulus{i}.animate;
@@ -993,9 +984,9 @@ classdef (Sealed) runExperiment < handle
 				disp('No timing data available')
 				return
 			end
-			vbl=obj.timeLog.vbl(obj.timeLog.vbl>0)*1000;
-			show=obj.timeLog.show(obj.timeLog.show>0)*1000;
-			flip=obj.timeLog.flip(obj.timeLog.flip>0)*1000;
+			vbl=obj.timeLog.vbl*1000;
+			show=obj.timeLog.show*1000;
+			flip=obj.timeLog.flip*1000;
 			index=min([length(vbl) length(flip) length(show)]);
 			vbl=vbl(1:index);
 			show=show(1:index);
@@ -1004,16 +995,19 @@ classdef (Sealed) runExperiment < handle
 			stimTime=obj.timeLog.stimTime(1:index);
 			
 			figure;
-			margin = 0.075;
+			
+			p = panel('defer');
+			p.pack(3,1)
 			
 			scnsize = get(0,'ScreenSize');
 			pos=get(gcf,'Position');
 			
-			subplot_tight(3,1,1,margin);
-			plot(1:index-2,diff(vbl(2:end)),'ro:')
+			p(1,1).select();
+			plot(diff(vbl),'ro:')
 			hold on
-			plot(1:index-2,diff(show(2:end)),'b--')
-			plot(1:index-2,diff(flip(2:end)),'g-.')
+			plot(diff(show),'b--')
+			plot(diff(flip),'g-.')
+			hold off
 			legend('VBL','Show','Flip')
 			[m,e]=stderr(diff(vbl),'SE');
 			t=sprintf('VBL mean=%2.2f+-%2.2f s.e.', m, e);
@@ -1021,30 +1015,41 @@ classdef (Sealed) runExperiment < handle
 			t=[t sprintf(' | Show mean=%2.2f+-%2.2f', m, e)];
 			[m,e]=stderr(diff(flip),'SE');
 			t=[t sprintf(' | Flip mean=%2.2f+-%2.2f', m, e)];
-			title(t)
-			xlabel('Frame number (difference between frames)');
-			ylabel('Time (milliseconds)');
-			hold off
+			p(1,1).title(t)
+			p(1,1).xlabel('Frame number (difference between frames)');
+			p(1,1).ylabel('Time (milliseconds)');
 			
-			subplot_tight(3,1,2,margin)
+			
+			p(2,1).select();
 			hold on
-			plot(show(2:index)-vbl(2:index),'r')
-			plot(show(2:index)-flip(2:index),'g')
-			plot(vbl(2:index)-flip(2:index),'b')
-			plot(stimTime(2:index)*10,'k');
-			title('VBL - Flip time in ms')
-			legend('Show-VBL','Show-Flip','VBL-Flip')
-			xlabel('Frame number');
-			ylabel('Time (milliseconds)');
+			plot(show-vbl,'r')
+			plot(show-flip,'g')
+			plot(vbl-flip,'b')
+			plot(stimTime*2,'k');
+			hold off
+			legend('Show-VBL','Show-Flip','VBL-Flip');
+			[m,e]=stderr(show-vbl,'SE');
+			t=sprintf('Show-VBL=%2.2f+-%2.2f', m, e);
+			[m,e]=stderr(show-flip,'SE');
+			t=[t sprintf(' | Show-Flip=%2.2f+-%2.2f', m, e)];
+			[m,e]=stderr(vbl-flip,'SE');
+			t=[t sprintf(' | VBL-Flip=%2.2f+-%2.2f', m, e)];
+			p(2,1).title(t);
+			p(2,1).xlabel('Frame number');
+			p(2,1).ylabel('Time (milliseconds)');
 			
-			subplot_tight(3,1,3,margin)
+			p(3,1).select();
 			hold on
 			plot(miss,'r.-')
-			plot(stimTime/50,'k');
-			title('Missed frames')
+			plot(stimTime/100,'k');
+			hold off
+			p(3,1).title('Missed frames (> 0 means missed frame)');
+			p(3,1).xlabel('Frame number');
+			p(3,1).ylabel('Miss Value');
 			
 			newpos = [pos(1) 1 pos(3) scnsize(4)];
 			set(gcf,'Position',newpos);
+			p.refresh();
 			clear vbl show flip index miss stimTime
 		end
 		
@@ -1093,6 +1098,21 @@ classdef (Sealed) runExperiment < handle
 				obj.grid=horzcat(obj.grid,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
 			end
 			obj.grid=obj.grid.*obj.ppd;
+		end
+		
+		% ===================================================================
+		%> @brief Sets properties from a structure, ignores invalid properties
+		%>
+		%> @param args input structure
+		% ===================================================================
+		function set(obj,args)
+			fnames = fieldnames(args); %find our argument names
+			for i=1:length(fnames);
+				if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
+					obj.salutation(fnames{i},'Configuring setting');
+					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+				end
+			end
 		end
 		
 	end

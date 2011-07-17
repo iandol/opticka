@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.512'
+		version='0.515'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection
@@ -339,7 +339,16 @@ classdef (Sealed) opticka < handle
 			value = obj.gv(obj.h.OKGLDst);
 			obj.r.dstMode = obj.gs(obj.h.OKGLDst, value);
 			
+			value = obj.gv(obj.h.OKbitDepth);
+			obj.r.bitDepth = obj.gs(obj.h.OKbitDepth, value);
+			
+			
 			obj.r.blend = obj.gv(obj.h.OKOpenGLBlending);
+			
+			value = obj.gv(obj.h.OKUseGamma);
+			if isa(obj.r.gammaTable,'calibrateLuminance')
+				obj.r.gammaTable.choice = value - 1;
+			end
 			
 			s=str2num(get(obj.h.OKWindowSize,'String')); %#ok<ST2NM>
 			if isempty(s)
@@ -350,6 +359,9 @@ classdef (Sealed) opticka < handle
 			
 			obj.r.logFrames = logical(obj.gv(obj.h.OKlogFrames));
 			obj.r.hideFlash = logical(obj.gv(obj.h.OKHideFlash));
+			if strcmpi(obj.r.bitDepth,'8bit')
+				set(obj.h.OKAntiAliasing,'String','0');
+			end
 			obj.r.antiAlias = obj.gd(obj.h.OKAntiAliasing);
 			obj.r.photoDiode = logical(obj.gv(obj.h.OKUsePhotoDiode));
 			obj.r.movieSettings.record = obj.gv(obj.h.OKrecordMovie);

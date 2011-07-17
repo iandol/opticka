@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 15-Jul-2011 09:48:15
+% Last Modified by GUIDE v2.5 16-Jul-2011 20:10:00
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -283,7 +283,19 @@ if isappdata(0,'o')
 	o.getScreenVals;
 end
 
+function OKbitDepth_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
 function OKAntiAliasing_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.getScreenVals;
+end
+
+function OKUseGamma_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.getScreenVals;
@@ -590,20 +602,6 @@ if isappdata(0,'o')
 	if isa(o.r.gammaTable,'calibrateLuminance')
 		tmp=o.r.gammaTable;
 		uisave('tmp',[o.paths.calibration filesep 'Calibration-' date '-' o.r.gammaTable.comments]);
-	end
-end
-% --- Executes on selection change in OKUseGamma.
-function OKUseGamma_Callback(hObject, eventdata, handles)
-% hObject    handle to OKUseGamma (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns OKUseGamma contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from OKUseGamma
-if isappdata(0,'o')
-	o = getappdata(0,'o');
-	if isa(o.r.gammaTable,'calibrateLuminance')
-		o.r.gammaTable.choice = get(hObject,'Value')-1;
 	end
 end
 

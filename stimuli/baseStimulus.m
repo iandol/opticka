@@ -40,6 +40,8 @@ classdef baseStimulus < dynamicprops
 		texture
 		%> true or false, whether to draw() this object
 		isVisible = true
+		%> datestamp to initialise on setup
+		dateStamp
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)

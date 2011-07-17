@@ -8,8 +8,10 @@ classdef opxOnline < handle
 	properties
 		%> type is either launcher, master or slave
 		type = 'launcher'
-		eventStart = 257 % 257 is any strobed event
-		eventEnd = -2047 %-2047 is the maximum strobe number we can generate
+		%> event marker used by Plexon SDK; 257 is any strobed event
+		eventStart = 257 
+		%>event marker to denote trial end; 2047 is the maximum strobe number we can generate
+		eventEnd = -2047
 		%> time to wait between trials by the slave
 		maxWait = 6000 
 		autoRun = 1
@@ -30,28 +32,41 @@ classdef opxOnline < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> a dateStamp initialised on first construction
+		dateStamp
+		%> master UDP port
 		masterPort = 11111
+		%> slave UDP port
 		slavePort = 11112
-		conn %> listen connection
-		msconn %> master slave connection
-		spikes %> hold the sorted spikes
+		%> listen connection
+		conn 
+		%> master slave connection
+		msconn 
 		nRuns = 0
 		totalRuns = 0
+		%> structure with raw spike data generated from the Plexon trial-based API
 		trial = []
+		%> parameters of the Plexon connection
 		parameters = []
+		%> information about sorted units from the Plexon
 		units = []
+		%> the stimulus sent from the opticka display machine
 		stimulus
+		%> the temporary file used to store data files shared between master and slave
 		tmpFile
+		%> the raw data in trial parsed via the parseOpxSpikes class
 		data
+		%> the last error caught in try / catch statements
 		error
-		dateStamp
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
 		isLooping = false
 		%> connection to the omniplex
 		opxConn 
+		%> did we establish a slave connection
 		isSlaveConnected = false
+		%> did we establish a master connection
 		isMasterConnected = false
 		%> GUI handles
 		h
@@ -66,12 +81,13 @@ classdef opxOnline < handle
 		oldcv = 0
 		%> should we respecify the matrix for plotting?
 		respecifyMatrix = false
+		%> Matlab version
 		mversion
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -83,22 +99,17 @@ classdef opxOnline < handle
 		%> @return instance of class.
 		% ===================================================================
 		function obj = opxOnline(args)
+			
 			if nargin>0 && isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
-					if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in constructor');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					end
-				end
+				obj.set(args);
 			end
 			
 			obj.dateStamp = datestr(clock);
 			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
-			fprintf('\n\nWelcome to opxOnline, running in Matlab %i\n\n',obj.mversion);
+			fprintf('\n\nWelcome to opxOnline, running under Matlab %i\n\n',obj.mversion);
 			
 			if ispc
-				try
+				try %#ok<TRYNC>
 					Screen('Preference', 'SuppressAllWarnings',1);
 					Screen('Preference', 'Verbosity', 0);
 					Screen('Preference', 'VisualDebugLevel',0);
@@ -142,6 +153,9 @@ classdef opxOnline < handle
 				case 'launcher'
 					%we simply need to launch a new master and return
 					eval(obj.masterCommand);
+					
+				otherwise
+					return
 					
 			end
 		end
@@ -1255,6 +1269,21 @@ classdef opxOnline < handle
 					fprintf([message ' | ' in '\n']);
 				else
 					fprintf(['\nHello from ' obj.name ' | opxOnline\n\n']);
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Sets properties from a structure, ignores invalid properties
+		%>
+		%> @param args input structure
+		% ===================================================================
+		function set(obj,args)
+			fnames = fieldnames(args); %find our argument names
+			for i=1:length(fnames);
+				if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
+					obj.salutation(fnames{i},'Configuring setting in constructor');
+					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 				end
 			end
 		end

@@ -49,7 +49,7 @@ classdef dotsStimulus < baseStimulus
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -91,6 +91,8 @@ classdef dotsStimulus < baseStimulus
 		%> @return
 		% ===================================================================
 		function setup(obj,rE)
+			
+			obj.dateStamp = clock;
 			
 			if exist('rE','var')
 				obj.ppd=rE.ppd;
@@ -172,7 +174,7 @@ classdef dotsStimulus < baseStimulus
 					obj.colours(4)=obj.alpha;
 			end
 			
-			%obj.updateDots; runExperiment will call update
+			obj.updateDots; %runExperiment will call update
 			
 		end
 		
