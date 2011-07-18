@@ -70,7 +70,7 @@ classdef baseStimulus < dynamicprops
 		screen = 0
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase='family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible';
+		ignorePropertiesBase='family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)

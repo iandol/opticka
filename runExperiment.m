@@ -258,6 +258,7 @@ classdef (Sealed) runExperiment < handle
 					fprintf('\nSET GAMMA CORRECTION using: %s\n', obj.gammaTable.modelFit{choice}.method);
 				else
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
+					%obj.screenVals.oldCLUT = LoadIdentityClut(obj.win);
 					obj.screenVals.resetGamma = false;
 				end
 				
@@ -284,16 +285,16 @@ classdef (Sealed) runExperiment < handle
 				end
 				
 				if obj.movieSettings.record == 1
-					obj.movieSettings.size=CenterRect([0 0 obj.movieSettings.size(1) obj.movieSettings.size(2)],obj.winRect);
-					disp(num2str(obj.movieSettings.size));
+					obj.movieSettings.outsize=CenterRect([0 0 obj.movieSettings.size(1) obj.movieSettings.size(2)],obj.winRect);
+					disp(num2str(obj.movieSettings.outsize));
 					disp('---');
+					obj.movieSettings.loop=1;
 					switch obj.movieSettings.type
 						case 1
 							obj.moviePtr = Screen('CreateMovie', obj.win,...
-								['/Users/opticka/Desktop/test' num2str(round(rand(1,1, 'double')*1e8)) '.mov'],[],[], ...
+								['/Users/ian/Desktop/test' num2str(round(rand(1,1, 'double')*1e8)) '.mov'],[],[], ...
 								obj.screenVals.fps, 'EncodingQuality=1; CodecFOURCC=rle ');
 						case 2
-							obj.movieSettings.loop=1;
 							mimg = cell(obj.movieSettings.nFrames,1);
 					end
 				end
@@ -310,7 +311,7 @@ classdef (Sealed) runExperiment < handle
 				obj.task.tick=1;
 				obj.task.switched = 1;
 				obj.timeLog.beforeDisplay=GetSecs;
-				obj.timeLog.startTime = 0;
+
 				vbl=Screen('Flip', obj.win);
 				if obj.logFrames == true
 					obj.timeLog.stimTime(1) = 1;
@@ -318,6 +319,7 @@ classdef (Sealed) runExperiment < handle
 				else
 					obj.timeLog.vbl = Screen('Flip', obj.win,vbl+0.001);
 				end
+				obj.timeLog.startTime = obj.timeLog.vbl(1);
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -327,7 +329,7 @@ classdef (Sealed) runExperiment < handle
 				while obj.task.thisTrial <= obj.task.nTrials
 					if obj.task.isBlank==1
 						if obj.photoDiode==1
-							obj.drawPhotoDiodeSquare([0 0 0 0]);
+							obj.drawPhotoDiodeSquare([0 0 0 1]);
 						end
 					else
 						if ~isempty(obj.backgroundColour)
@@ -364,7 +366,7 @@ classdef (Sealed) runExperiment < handle
 						nextvbl = obj.timeLog.vbl + obj.screenVals.halfisi;
 						obj.timeLog.vbl = Screen('Flip', obj.win, nextvbl);
 					end
-					%=========================================%
+					%==================================================%
 					if obj.task.switched == 1
 						obj.lJack.strobeWord; %send our word out to the LabJack
 					end
@@ -376,9 +378,9 @@ classdef (Sealed) runExperiment < handle
 					
 					if obj.logFrames == true
 						if obj.task.isBlank==0
-							obj.timeLog.stimTime(obj.task.tick+1)=1+obj.task.switched;
+							obj.timeLog.stimTime(obj.task.tick)=1+obj.task.switched;
 						else
-							obj.timeLog.stimTime(obj.task.tick+1)=0-obj.task.switched;
+							obj.timeLog.stimTime(obj.task.tick)=0-obj.task.switched;
 						end
 					end
 					
@@ -388,11 +390,11 @@ classdef (Sealed) runExperiment < handle
 						if obj.task.isBlank==0 && obj.movieSettings.loop <= obj.movieSettings.nFrames
 							switch obj.movieSettings.type
 								case 1
-									Screen('AddFrameToMovie', obj.win, obj.movieSettings.size, 'frontBuffer', obj.movieSettings.quality, 3);
+									Screen('AddFrameToMovie', obj.win, obj.movieSettings.outsize, 'frontBuffer', obj.movieSettings.quality, 3);
 								case 2
-									mimg{obj.movieSettings.loop}=Screen('GetImage', obj.win, obj.movieSettings.size, 'frontBuffer', obj.movieSettings.quality, 3);
-									obj.movieSettings.loop=obj.movieSettings.loop+1;
+									mimg{obj.movieSettings.loop}=Screen('GetImage', obj.win, obj.movieSettings.outsize, 'frontBuffer', obj.movieSettings.quality, 3);
 							end
+							obj.movieSettings.loop=obj.movieSettings.loop+1;
 						end
 					end
 					
@@ -407,11 +409,10 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				notify(obj,'endRun');
 				
-				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay-obj.timeLog.beforeDisplay;
-				obj.timeLog.deltaUntilDisplay=obj.timeLog.beforeDisplay-obj.timeLog.startTime;
-				obj.timeLog.deltaToFirstVBL=obj.timeLog.vbl(1)-obj.timeLog.beforeDisplay;
+				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay - obj.timeLog.beforeDisplay;
+				obj.timeLog.deltaUntilDisplay=obj.timeLog.startTime - obj.timeLog.beforeDisplay;
+				obj.timeLog.deltaToFirstVBL=obj.timeLog.vbl(1) - obj.timeLog.beforeDisplay;
 				obj.timeLog.deltaStart=obj.timeLog.startflip-obj.timeLog.startTime;
-				%obj.timeLog.deltaUpdateDiff = obj.timeLog.start-obj.task.startTime;
 				
 				obj.info = Screen('GetWindowInfo', obj.win);
 				
@@ -754,10 +755,12 @@ classdef (Sealed) runExperiment < handle
 			
 			if trigger
 				
-				if obj.task.isBlank == false && obj.task.tick > 1 %not in an interstimulus time, need to update drift, motion and pulsation
+				if obj.task.isBlank == false %not in an interstimulus time, need to update drift, motion and pulsation
 					
-					for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
-						obj.stimulus{i}.animate;
+					if obj.task.tick > 1 %we dont need to animate the first frame
+						for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
+							obj.stimulus{i}.animate;
+						end
 					end
 					
 				else %blank stimulus, we don't need to update anything
@@ -923,10 +926,10 @@ classdef (Sealed) runExperiment < handle
 		%> @return
 		% ===================================================================
 		function infoText(obj)
-			if obj.logFrames == true
+			if obj.logFrames == true && obj.task.tick > 1
 				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-					(obj.timeLog.vbl(obj.task.tick)-obj.timeLog.startTime),obj.task.tick);
+					(obj.timeLog.vbl(obj.task.tick-1)-obj.timeLog.startTime),obj.task.tick);
 			else
 				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...

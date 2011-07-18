@@ -243,13 +243,13 @@ classdef gratingStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function update(obj)
-			obj.setRect();
 			if obj.correctPhase
 				ps=obj.calculatePhase;
 				obj.driftPhase=obj.phaseOut-ps;
 			else
 				obj.driftPhase=obj.phaseOut;
 			end
+			obj.setRect();
 		end
 		
 		% ===================================================================
@@ -444,6 +444,8 @@ classdef gratingStimulus < baseStimulus
 			else
 				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));
 			end
+			%fprintf('%i\t',obj.mvRect);
+			%fprintf(' -- %d %d\n',obj.xPositionOut,obj.yPositionOut);
 			obj.mvRect=obj.dstRect;
 		end
 		
