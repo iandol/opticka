@@ -163,14 +163,14 @@ classdef (Sealed) runExperiment < handle
 		function run(obj)
 			%initialise timeLog for this run
 			obj.timeLog = [];
-			obj.timeLog.date=clock;
-			obj.timeLog.startrun=GetSecs;
+			obj.timeLog.date = clock;
+			obj.timeLog.startrun = GetSecs;
 			%if obj.logFrames == false %preallocating these makes opticka drop frames when nFrames ~ 1e6
-				obj.timeLog.vbl = 0;
-				obj.timeLog.show = 0;
-				obj.timeLog.flip = 0;
-				obj.timeLog.miss = 0;
-				obj.timeLog.stimTime = 0;
+			obj.timeLog.vbl = 0;
+			obj.timeLog.show = 0;
+			obj.timeLog.flip = 0;
+			obj.timeLog.miss = 0;
+			obj.timeLog.stimTime = 0;
 			%else
 			%	obj.timeLog.vbl=zeros(obj.task.nFrames,1);
 			%	obj.timeLog.show=zeros(obj.task.nFrames,1);
@@ -180,9 +180,11 @@ classdef (Sealed) runExperiment < handle
 			%end
 			
 			obj.screenVals.resetGamma = false;
-			%if obj.windowed(1)==0;HideCursor;end
+			if obj.windowed(1)==0;HideCursor;end
 			
-			if obj.hideFlash==1 && obj.windowed(1)==0
+			% This is the trick Mario told us to "hide" th colour changes as PTB
+			% intialises -- we could use backgroundcolour here to be even better
+			if obj.hideFlash == true && obj.windowed(1) == 0
 				if isa(obj.gammaTable,'calibrateLuminance') && (obj.gammaTable.choice > 0)
 					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.gammaTable.gammaTable{obj.gammaTable.choice}(128,:), 256, 3));
 					obj.screenVals.resetGamma = true;
@@ -196,7 +198,7 @@ classdef (Sealed) runExperiment < handle
 			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
 			%obj.serialP.setDTR(0);
 			
-			if obj.useLabJack == 1
+			if obj.useLabJack == true
 				strct = struct('openNow',1,'name','default','verbosity',obj.verbose);
 			else
 				strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
@@ -205,8 +207,9 @@ classdef (Sealed) runExperiment < handle
 			obj.lJack.setDIO([2,0,0]);WaitSecs(0.01);obj.lJack.setDIO([0,0,0]); %Trigger the omniplex (FIO1) into paused mode
 			%-----------------------------------------------------
 			
+			%---------This is our main TRY CATCH experiment display loop
 			try
-				if obj.debug==1 || obj.windowed(1)>0
+				if obj.debug == true || obj.windowed(1)>0
 					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
 					Screen('Preference', 'Verbosity', 2);
@@ -223,7 +226,7 @@ classdef (Sealed) runExperiment < handle
 				if ischar(obj.bitDepth) && ~strcmpi(obj.bitDepth,'8bit')
 					PsychImaging('AddTask', 'General', obj.bitDepth);
 				end
-				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
+				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colourrange!
 				
 				obj.timeLog.preOpenWindow=GetSecs;
 				
@@ -238,16 +241,17 @@ classdef (Sealed) runExperiment < handle
 				obj.timeLog.deltaOpenWindow=(obj.timeLog.postOpenWindow-obj.timeLog.preOpenWindow)*1000;
 				
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
+				
 				%find our fps if not defined before
-				obj.screenVals.ifi=Screen('GetFlipInterval', obj.win);
+				obj.screenVals.ifi = Screen('GetFlipInterval', obj.win);
 				if obj.screenVals.fps==0
 					obj.screenVals.fps=round(1/obj.screenVals.ifi);
 				end
 				obj.screenVals.halfisi=obj.screenVals.ifi/2;
 				
-				Priority(0);
+				Priority(0); %be lazy for a while and let other things get done
 				
-				if obj.hideFlash==1 && isempty(obj.gammaTable)
+				if obj.hideFlash == true && isempty(obj.gammaTable)
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 					obj.screenVals.resetGamma = false;
 				elseif isa(obj.gammaTable,'calibrateLuminance') && (obj.gammaTable.choice > 0)
@@ -284,16 +288,23 @@ classdef (Sealed) runExperiment < handle
 					obj.stimulus{j}.setup(obj); %call setup and pass it the runExperiment object
 				end
 				
+				% Set up the movie settings
 				if obj.movieSettings.record == 1
-					obj.movieSettings.outsize=CenterRect([0 0 obj.movieSettings.size(1) obj.movieSettings.size(2)],obj.winRect);
+					obj.movieSettings.outsize=CenterRect([0 0 obj.movieSettings.size(1)+1 obj.movieSettings.size(2)+1],obj.winRect);
 					disp(num2str(obj.movieSettings.outsize));
 					disp('---');
 					obj.movieSettings.loop=1;
 					switch obj.movieSettings.type
 						case 1
+							if isempty(obj.movieSettings.codec)
+								settings = 'EncodingQuality=1';
+							else
+								settings = ['EncodingQuality=1; CodecFOURCC=' obj.movieSettings.codec];
+							end
 							obj.moviePtr = Screen('CreateMovie', obj.win,...
-								['/Users/ian/Desktop/test' num2str(round(rand(1,1, 'double')*1e8)) '.mov'],[],[], ...
-								obj.screenVals.fps, 'EncodingQuality=1; CodecFOURCC=rle ');
+								['/Users/ian/Desktop/test' num2str(round(rand(1,1, 'double')*1e8)) '.mov'],...
+								obj.movieSettings.size(1), obj.movieSettings.size(2), ...
+								obj.screenVals.fps, settings);
 						case 2
 							mimg = cell(obj.movieSettings.nFrames,1);
 					end
@@ -304,13 +315,15 @@ classdef (Sealed) runExperiment < handle
 				KbReleaseWait; %make sure keyboard keys are all released
 				
 				%--------------this is RSTART (FIO0->Pin 24), unpausing the omniplex
-				obj.lJack.setDIO([1,0,0],[1,0,0])
-				WaitSecs(0.5);
+				if obj.useLabJack == true
+					obj.lJack.setDIO([1,0,0],[1,0,0])
+					WaitSecs(0.5);
+				end
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				
-				obj.task.tick=1;
+				obj.task.tick = 1;
 				obj.task.switched = 1;
-				obj.timeLog.beforeDisplay=GetSecs;
+				obj.timeLog.beforeDisplay = GetSecs;
 
 				vbl=Screen('Flip', obj.win);
 				if obj.logFrames == true
@@ -327,8 +340,8 @@ classdef (Sealed) runExperiment < handle
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while obj.task.thisTrial <= obj.task.nTrials
-					if obj.task.isBlank==1
-						if obj.photoDiode==1
+					if obj.task.isBlank == true
+						if obj.photoDiode == true
 							obj.drawPhotoDiodeSquare([0 0 0 1]);
 						end
 					else
@@ -338,14 +351,14 @@ classdef (Sealed) runExperiment < handle
 						for j=1:obj.sList.n
 							obj.stimulus{j}.draw();
 						end
-						if obj.photoDiode==1
+						if obj.photoDiode == true
 							obj.drawPhotoDiodeSquare([1 1 1 1]);
 						end
-						if obj.fixationPoint==1
+						if obj.fixationPoint == true
 							obj.drawFixationPoint;
 						end
 					end
-					if obj.visualDebug==1
+					if obj.visualDebug == true
 						obj.drawGrid;
 						obj.infoText;
 					end
@@ -359,11 +372,10 @@ classdef (Sealed) runExperiment < handle
 					obj.updateTask(); %update our task structure
 					
 					%======= FLIP: Show it at correct retrace: ========%
+					nextvbl = obj.timeLog.vbl(end) + obj.screenVals.halfisi;
 					if obj.logFrames == true
-						nextvbl = obj.timeLog.vbl(end) + obj.screenVals.halfisi;
 						[obj.timeLog.vbl(obj.task.tick),obj.timeLog.show(obj.task.tick),obj.timeLog.flip(obj.task.tick),obj.timeLog.miss(obj.task.tick)] = Screen('Flip', obj.win, nextvbl);
 					else
-						nextvbl = obj.timeLog.vbl + obj.screenVals.halfisi;
 						obj.timeLog.vbl = Screen('Flip', obj.win, nextvbl);
 					end
 					%==================================================%
@@ -371,13 +383,12 @@ classdef (Sealed) runExperiment < handle
 						obj.lJack.strobeWord; %send our word out to the LabJack
 					end
 					
-					if obj.task.tick==1
-						obj.timeLog.startflip=obj.timeLog.vbl(1) + obj.screenVals.halfisi;
-						obj.timeLog.startTime=obj.timeLog.vbl(1);
+					if obj.task.tick == 1
+						obj.timeLog.startTime=obj.timeLog.vbl(1); %respecify this with actual stimulus vbl
 					end
 					
 					if obj.logFrames == true
-						if obj.task.isBlank==0
+						if obj.task.isBlank == false
 							obj.timeLog.stimTime(obj.task.tick)=1+obj.task.switched;
 						else
 							obj.timeLog.stimTime(obj.task.tick)=0-obj.task.switched;
@@ -386,14 +397,15 @@ classdef (Sealed) runExperiment < handle
 					
 					obj.task.tick=obj.task.tick+1;
 					
-					if obj.movieSettings.record == 1
-						if obj.task.isBlank==0 && obj.movieSettings.loop <= obj.movieSettings.nFrames
+					if obj.movieSettings.record == true
+						if obj.task.isBlank == false && obj.movieSettings.loop <= obj.movieSettings.nFrames
 							switch obj.movieSettings.type
 								case 1
 									Screen('AddFrameToMovie', obj.win, obj.movieSettings.outsize, 'frontBuffer', obj.movieSettings.quality, 3);
 								case 2
 									mimg{obj.movieSettings.loop}=Screen('GetImage', obj.win, obj.movieSettings.outsize, 'frontBuffer', obj.movieSettings.quality, 3);
 							end
+							fprintf('Movie: %i\n',obj.movieSettings.loop);
 							obj.movieSettings.loop=obj.movieSettings.loop+1;
 						end
 					end
@@ -412,7 +424,6 @@ classdef (Sealed) runExperiment < handle
 				obj.timeLog.deltaDispay=obj.timeLog.afterDisplay - obj.timeLog.beforeDisplay;
 				obj.timeLog.deltaUntilDisplay=obj.timeLog.startTime - obj.timeLog.beforeDisplay;
 				obj.timeLog.deltaToFirstVBL=obj.timeLog.vbl(1) - obj.timeLog.beforeDisplay;
-				obj.timeLog.deltaStart=obj.timeLog.startflip-obj.timeLog.startTime;
 				
 				obj.info = Screen('GetWindowInfo', obj.win);
 				
@@ -420,17 +431,20 @@ classdef (Sealed) runExperiment < handle
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 				end
 				
-				Screen('Close');
-				Screen('CloseAll');
-				
-				if obj.movieSettings.record == 1
+				if obj.movieSettings.record == 1 
 					switch obj.movieSettings.type
 						case 1
-							Screen('FinalizeMovie', obj.moviePtr);
+							if ~isempty(obj.moviePtr)
+								Screen('FinalizeMovie', obj.moviePtr);
+							end
 						case 2
 							save('~/Desktop/movie.mat','mimg');
 					end
+					obj.moviePtr = [];
 				end
+				
+				Screen('Close');
+				Screen('CloseAll');
 				
 				obj.win=[];
 				Priority(0);
@@ -446,16 +460,19 @@ classdef (Sealed) runExperiment < handle
 					fprintf('\nRESET GAMMA\n');
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 				end
-				if obj.hideFlash == 1 || obj.windowed(1) ~= 1
+				if obj.hideFlash == true || obj.windowed(1) ~= 1
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 				end
-				if obj.movieSettings.record == 1
+				if obj.movieSettings.record == true 
 					switch obj.movieSettings.type
 						case 1
-							Screen('FinalizeMovie', obj.moviePtr);
+							if ~isempty(obj.moviePtr)
+								Screen('FinalizeMovie', obj.moviePtr);
+							end
 						case 2
 							clear mimg;
 					end
+					obj.moviePtr = [];
 				end
 				Screen('Close');
 				Screen('CloseAll');
@@ -849,7 +866,8 @@ classdef (Sealed) runExperiment < handle
 			obj.movieSettings.size = [400 400];
 			obj.movieSettings.quality = 0;
 			obj.movieSettings.nFrames = 100;
-			obj.movieSettings.type = 2;
+			obj.movieSettings.type = 1;
+			obj.movieSettings.codec = 'rle ';
 			
 			%get the gammatable and dac information
 			[obj.screenVals.gammaTable,obj.screenVals.dacBits,obj.screenVals.lutSize]=Screen('ReadNormalizedGammaTable', obj.screen);

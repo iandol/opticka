@@ -24,14 +24,18 @@ classdef (Sealed) opticka < handle
 		version='0.515'
 		%> is this a remote instance?
 		remote = 0
-		%> omniplex connection
+		%> omniplex connection, via TCP
 		oc
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedPropertiesBase='^(verbose)$' %used to sanitise passed values on construction
-		uiPrefsList = {'OKOmniplexIP','OKPixelsPerCm','OKAntiAliasing'};
+		%> used to sanitise passed values on construction
+		allowedPropertiesBase='^(verbose)$' 
+		%> which UI settings should be saved locally to the machine?
+		uiPrefsList = {'OKOmniplexIP','OKPixelsPerCm','OKAntiAliasing','OKbitDepth'};
+		%> any other prefs to save?
 		otherPrefsList = {};
+		%> Matlab version number
 		mversion = 0
 	end
 	
@@ -251,6 +255,8 @@ classdef (Sealed) opticka < handle
 				uihandle=opticka_ui; %our GUI file
 				obj.h=guidata(uihandle);
 				obj.h.uihandle = uihandle;
+				set(obj.h.OKOptickaVersion,'String','Initialising GUI, please wait...');
+				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version]);
 				if obj.mversion < 7.12 && (ismac || ispc)
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
@@ -258,9 +264,6 @@ classdef (Sealed) opticka < handle
 				drawnow;
 				set(obj.h.OKPanelGrating,'Visible','on')
 				
-				set(obj.h.OKOptickaVersion,'String','Initialising GUI, please wait...');
-				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version]);
-				drawnow;
 				
 				obj.loadPrefs;
 				obj.getScreenVals;
@@ -312,7 +315,7 @@ classdef (Sealed) opticka < handle
 			
 			if isempty(obj.r)
 				olds = get(obj.h.OKOptickaVersion,'String');
-				set(obj.h.OKOptickaVersion,'String','Initialising Stimulus object...')
+				set(obj.h.OKOptickaVersion,'String','Initialising Stimulus and Task objects...')
 				drawnow
 				obj.r = runExperiment;
 				s=cell(obj.r.maxScreen+1,1);
@@ -323,7 +326,6 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKSelectScreen, 'Value', obj.r.screen+1);
 				clear s;
 				set(obj.h.OKOptickaVersion,'String',olds)
-				drawnow
 			end
 			
 			obj.r.screen = obj.gv(obj.h.OKSelectScreen)-1;
@@ -364,10 +366,10 @@ classdef (Sealed) opticka < handle
 			end
 			obj.r.antiAlias = obj.gd(obj.h.OKAntiAliasing);
 			obj.r.photoDiode = logical(obj.gv(obj.h.OKUsePhotoDiode));
-			obj.r.movieSettings.record = obj.gv(obj.h.OKrecordMovie);
+			obj.r.movieSettings.record = logical(obj.gv(obj.h.OKrecordMovie));
 			obj.r.verbose = logical(obj.gv(obj.h.OKVerbose));
 			obj.r.debug = logical(obj.gv(obj.h.OKDebug));
-			obj.r.visualDebug = obj.gv(obj.h.OKDebug);
+			obj.r.visualDebug = logical(obj.gv(obj.h.OKDebug));
 			obj.r.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
 			obj.r.fixationPoint = logical(obj.gv(obj.h.OKFixationSpot));
 			obj.r.useLabJack = logical(obj.gv(obj.h.OKuseLabJack));
@@ -754,7 +756,7 @@ classdef (Sealed) opticka < handle
 				tmp = obj.r.gammaTable;
 				d = dir(obj.paths.calibration);
 				for i = 1:length(d)
-					if isempty(regexp(d(i).name,'^\.+')) && d(i).isdir == false && d(i).bytes > 0
+					if isempty(regexp(d(i).name,'^\.+', 'once')) && d(i).isdir == false && d(i).bytes > 0
 						if strcmp(d(i).name, tmp.filename)
 							saveThis = false;
 						end
@@ -773,21 +775,27 @@ classdef (Sealed) opticka < handle
 		function loadPrefs(obj)
 			for i = 1:length(obj.uiPrefsList)
 				prfname = obj.uiPrefsList{i};
-				if ispref('opticka',prfname)
-					myhandle = obj.h.(prfname);
-					prf = getpref('opticka',prfname);
-					uiType = get(myhandle,'Style');
-					switch uiType
-						case 'edit'
-							if ischar(prf)
-								set(myhandle, 'String', prf);
-							else
-								set(myhandle, 'String', num2str(prf));
-							end
-						case 'checkbox'
-							if islogical(prf) || isdouble(prf)
-								set(myhandle, 'Value', prf);
-							end
+				if ispref('opticka',prfname) %pref exists
+					if isfield(obj.h, prfname) %ui widget exists
+						myhandle = obj.h.(prfname);
+						prf = getpref('opticka',prfname);
+						uiType = get(myhandle,'Style');
+						switch uiType
+							case 'edit'
+								if ischar(prf)
+									set(myhandle, 'String', prf);
+								else
+									set(myhandle, 'String', num2str(prf));
+								end
+							case 'checkbox'
+								if islogical(prf) || isnumeric(prf)
+									set(myhandle, 'Value', prf);
+								end
+							case 'popupmenu'
+								if isnumeric(prf)
+									set(myhandle, 'Value', prf);
+								end
+						end
 					end
 				end	
 			end
@@ -811,8 +819,11 @@ classdef (Sealed) opticka < handle
 						prf = get(myhandle, 'String');
 						setpref('opticka', prfname, prf);
 					case 'checkbox'
-						prf = get(mthandle, 'Value');
+						prf = get(myhandle, 'Value');
 						if ~islogical(prf); prf=logical(prf);end
+						setpref('opticka', prfname, prf);
+					case 'popupmenu'
+						prf = get(myhandle, 'Value');
 						setpref('opticka', prfname, prf);
 				end
 			end

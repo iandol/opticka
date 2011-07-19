@@ -82,7 +82,7 @@ classdef stimulusSequence < dynamicprops
 			end
 			obj.taskStream = RandStream.create(obj.randomGenerator,'Seed',obj.randomSeed);
 			RandStream.setDefaultStream(obj.taskStream);
-			toc
+			fprintf('Initialise Randomisation: ');toc
 		end
 		
 		% ===================================================================
@@ -163,7 +163,7 @@ classdef stimulusSequence < dynamicprops
 					obj.outMap(gidx,f) = g;
 				end
 			end
-			toc
+			fprintf('Randomise Stimuli: ');toc
 		end
 		
 		% ===================================================================

@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 16-Jul-2011 20:10:00
+% Last Modified by GUIDE v2.5 19-Jul-2011 12:29:28
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1104,52 +1104,35 @@ function OKPanelSpotflashOn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-
-
 function OKSettingsmovieSize_Callback(hObject, eventdata, handles)
-% hObject    handle to OKSettingsmovieSize (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKSettingsmovieSize as text
-%        str2double(get(hObject,'String')) returns contents of OKSettingsmovieSize as a double
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.r.movieSettings.size=str2num(get(hObject,'String'));
 end
 
-
 function OKSettingsmovieFrames_Callback(hObject, eventdata, handles)
-% hObject    handle to OKSettingsmovieFrames (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKSettingsmovieFrames as text
-%        str2double(get(hObject,'String')) returns contents of OKSettingsmovieFrames as a double
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.r.movieSettings.nFrames=str2num(get(hObject,'String')); %#ok<*ST2NM>
 end
 
-% --- Executes on button press in OKSettingsmoviePrecision.
 function OKSettingsmoviePrecision_Callback(hObject, eventdata, handles)
-% hObject    handle to OKSettingsmoviePrecision (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of OKSettingsmoviePrecision
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.r.movieSettings.quality=get(hObject,'Value');
 end
 
-% --- Executes on selection change in OKSettingsmovieType.
 function OKSettingsmovieType_Callback(hObject, eventdata, handles)
 if isappdata(0,'o')
 	o = getappdata(0,'o');
 	o.r.movieSettings.type=get(hObject,'Value');
 end
 
+function OKSettingsmovieCodec_Callback(hObject, eventdata, handles)
+if isappdata(0,'o')
+	o = getappdata(0,'o');
+	o.r.movieSettings.codec=get(hObject,'String');
+end
 
 % --------------------------------------------------------------------
 function OKPanelTellOmniplex_ClickedCallback(hObject, eventdata, handles)
