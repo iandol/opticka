@@ -290,10 +290,13 @@ classdef (Sealed) runExperiment < handle
 				
 				% Set up the movie settings
 				if obj.movieSettings.record == 1
-					obj.movieSettings.outsize=CenterRect([0 0 obj.movieSettings.size(1)+1 obj.movieSettings.size(2)+1],obj.winRect);
+					obj.movieSettings.outsize=CenterRect([0 0 obj.movieSettings.size(1) obj.movieSettings.size(2)],obj.winRect);
 					disp(num2str(obj.movieSettings.outsize));
 					disp('---');
 					obj.movieSettings.loop=1;
+					if ~exist('~/Desktop/Movie/','dir')
+						mkdir('~/Desktop/Movie/')
+					end
 					switch obj.movieSettings.type
 						case 1
 							if isempty(obj.movieSettings.codec)
@@ -302,11 +305,11 @@ classdef (Sealed) runExperiment < handle
 								settings = ['EncodingQuality=1; CodecFOURCC=' obj.movieSettings.codec];
 							end
 							obj.moviePtr = Screen('CreateMovie', obj.win,...
-								['/Users/ian/Desktop/test' num2str(round(rand(1,1, 'double')*1e8)) '.mov'],...
+								['/Users/ian/Desktop/Movie/Movie' datestr(clock) '.mov'],...
 								obj.movieSettings.size(1), obj.movieSettings.size(2), ...
 								obj.screenVals.fps, settings);
 						case 2
-							mimg = cell(obj.movieSettings.nFrames,1);
+							mimg = zeros(obj.movieSettings.size(2),obj.movieSettings.size(1),3,obj.movieSettings.nFrames);
 					end
 				end
 				
@@ -403,9 +406,8 @@ classdef (Sealed) runExperiment < handle
 								case 1
 									Screen('AddFrameToMovie', obj.win, obj.movieSettings.outsize, 'frontBuffer', obj.movieSettings.quality, 3);
 								case 2
-									mimg{obj.movieSettings.loop}=Screen('GetImage', obj.win, obj.movieSettings.outsize, 'frontBuffer', obj.movieSettings.quality, 3);
+									mimg(:,:,:,obj.movieSettings.loop)=Screen('GetImage', obj.win, obj.movieSettings.outsize, 'frontBuffer', obj.movieSettings.quality, 3);
 							end
-							fprintf('Movie: %i\n',obj.movieSettings.loop);
 							obj.movieSettings.loop=obj.movieSettings.loop+1;
 						end
 					end
@@ -438,7 +440,10 @@ classdef (Sealed) runExperiment < handle
 								Screen('FinalizeMovie', obj.moviePtr);
 							end
 						case 2
-							save('~/Desktop/movie.mat','mimg');
+							if ~exist('~/Desktop/Movie/','dir')
+								mkdir('~/Desktop/Movie/')
+							end
+							save(['~/Desktop/Movie/Movie' datestr(clock) '.mat'],'mimg');
 					end
 					obj.moviePtr = [];
 				end
@@ -452,6 +457,10 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
 				obj.lJack.close;
 				obj.lJack=[];
+				
+				if exist('implay','file')
+					implay(mimg);
+				end
 				
 			catch ME
 				
