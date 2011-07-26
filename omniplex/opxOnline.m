@@ -985,7 +985,7 @@ classdef opxOnline < handle
 						opx.tmpFile = obj.tmpFile;
 						save(obj.tmpFile,'opx');
 						fprintf('Spike data saved...\n')
-					otherwise
+					case 'reduced'
 						opx.type = obj.type;
 						opx.nRuns = obj.nRuns;
 						opx.totalRuns = obj.totalRuns;
@@ -996,6 +996,8 @@ classdef opxOnline < handle
 						opx.stimulus = obj.stimulus;
 						opx.tmpFile = obj.tmpFile;
 						save(obj.tmpFile,'opx');
+					otherwise
+						save(obj.tmpFile,'obj');
 				end
 			catch ME
 				obj.error = ME;
@@ -1293,7 +1295,6 @@ classdef opxOnline < handle
 		% ===================================================================
 		%> @brief load object method
 		%>
-		%>
 		% ===================================================================
 		function lobj=loadobj(in)
 			fprintf('Loading opxOnline object...\n')
@@ -1305,6 +1306,15 @@ classdef opxOnline < handle
 				in.msconn.cleanup=0;
 			end
 			lobj=in;
+		end
+		
+		% ===================================================================
+		%> @brief save object method
+		%>
+		% ===================================================================
+		function sobj=saveobj(in)
+			fprintf('Saving opxOnline object...\n')
+			sobj=in;
 		end
 	end
 end

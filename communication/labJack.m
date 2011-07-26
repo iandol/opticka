@@ -107,6 +107,8 @@ classdef labJack < handle
 			end
 			if ~isempty(regexp(obj.name,'null', 'once')) || ispc %we were deliberately passed null, means go into silent mode
 				obj.silentMode = 1;
+				obj.verbosity = 1;
+				obj.salutation('\n-- labJack running in silent mode...\n')
 				obj.verbosity = 0;
 			elseif obj.openNow==1
 				obj.open
@@ -373,9 +375,10 @@ classdef labJack < handle
 		% ===================================================================
 		%> @brief Prepare Strobe Word
 		%>	sets the strobe value for FIO, EIO and CIO
-		%>	@param value The value to be strobed, range is 1-4094 for 12bit
-		%>  as 0 and 4095 are reserved, or value can be 3 byte markers
+		%>	@param value The value to be strobed, range is 1-2046 for 12bit
+		%>  as 0 and 2047 are reserved, or value can be 3 byte markers
 		%>  @param mask Which bits to mask
+		%>  @param sendNow if true then sends the value immediately
 		% ===================================================================
 		function prepareStrobe(obj,value,mask,sendNow)
 			if obj.silentMode == 0 && obj.vHandle == 1
@@ -425,11 +428,11 @@ classdef labJack < handle
 				obj.rawWrite(obj.command);
 				%in = obj.rawRead(obj.inp,10);
 				obj.salutation('strobeWord', obj.comment);
-				obj.comment = '';
-				obj.command = [];
-				% 				if in(6) > 0
-				% 					obj.salutation('strobeWord',['Feedback error in IOType ' num2str(in(7))]);
-				% 				end
+				%obj.comment = '';
+				%obj.command = [];
+				% if in(6) > 0
+				% 	obj.salutation('strobeWord',['Feedback error in IOType ' num2str(in(7))]);
+				% end
 			end
 		end
 		
@@ -455,7 +458,7 @@ classdef labJack < handle
 		end
 		
 		% ===================================================================
-		%> @brief Set FIO4 to a value
+		%> @brief Set FIO to a value
 		%>
 		%>	@param val The value to be set
 		%> line which FIO to set

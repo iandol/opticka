@@ -204,6 +204,7 @@ classdef (Sealed) opticka < handle
 		% ===================================================================
 		function initialiseUI(obj)
 			
+			obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
 			try
 				obj.paths.whoami = mfilename;
 				obj.paths.whereami = fileparts(which(mfilename));
@@ -211,7 +212,24 @@ classdef (Sealed) opticka < handle
 
 				if ismac
 					obj.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -maci -r \"runServer\""'' -e ''end tell'''];
-
+					obj.paths.temp=tempdir;
+					if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
+						mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);
+					end
+					obj.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
+					cd(obj.paths.protocols);
+					obj.paths.currentPath = pwd;
+					if ~exist(['~' filesep 'MatlabFiles' filesep 'Calibration'],'dir')
+						mkdir(['~' filesep 'MatlabFiles' filesep 'Calibration']);
+					end
+					obj.paths.calibration = ['~' filesep 'MatlabFiles' filesep 'Calibration'];
+					if ~exist([obj.paths.temp 'History'],'dir')
+						mkdir([obj.paths.temp 'History']);
+					end
+					obj.paths.historypath=[obj.paths.temp 'History'];
+					
+				elseif isunix
+					obj.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
 					obj.paths.temp=tempdir;
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);
@@ -247,7 +265,6 @@ classdef (Sealed) opticka < handle
 					obj.paths.historypath=[obj.paths.temp 'History'];
 				end
 				
-				obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
 				obj.store.newlook='javax.swing.plaf.metal.MetalLookAndFeel';
 				if obj.mversion < 7.12 && (ismac || ispc)
 					javax.swing.UIManager.setLookAndFeel(obj.store.newlook);
@@ -1266,9 +1283,9 @@ classdef (Sealed) opticka < handle
 		%> @brief ping -- ping a network address
 		%>	We send a single packet and wait only 10ms to ensure we have a fast connection
 		%> @param rAddress remote address
+		%> @return status is 0 if ping succeded
 		% ===================================================================
 		function status = ping(rAddress)
-			
 			if ispc
 				cmd = 'ping -n 1 -w 10 ';
 			else

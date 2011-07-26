@@ -201,7 +201,15 @@ function opxUICheckPlexon_Callback(hObject, eventdata, handles)
 if isappdata(0,['opx' num2str(handles.opxUIFigure)])
 	opx = getappdata(0,['opx' num2str(handles.opxUIFigure)]);
 	%opx.checkPlexonValues;
-	printpreview(handles.opxUIFigure)
+	if ispc
+		printpreview(handles.opxUIFigure)
+	elseif ismac
+		if ~exist('~/MatlabFiles/Print/','dir')
+			mkdir('~/MatlabFiles/Print/')
+		end
+		print(handles.opxUIFigure, '-dpng', 'myPrint.png');
+	end
+		
 end
 
 

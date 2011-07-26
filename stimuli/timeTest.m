@@ -235,8 +235,9 @@ try
 	% an OpenGL Psychtoolbox
 	AssertOpenGL;
 	
-	l = labJack;
-	
+	lj = labJack(struct('verbosity',0));
+	lj.prepareStrobe(2000);
+	WaitSecs(1)
 	%my normal screen prep
 	Screen('Preference', 'SkipSyncTests', 0);
 	Screen('Preference', 'VisualDebugLevel', 3);
@@ -337,7 +338,12 @@ try
 		Screen('SelectStereoDrawBuffer', w, 0);
 		pos=mod(i, screenheight);
 		Screen('FillRect', w, mod(i, 255)/normalize, [pos+20 pos+20 pos+400 pos+400]);
-		Screen('FillRect', w, mod(i,2), [0 0 50 50]);
+		if mod(i,4) == 1
+			c = 1;
+		else
+			c = 0;
+		end
+		Screen('FillRect', w, c+0.2, [0 0 50 50]);
 		% Screen('FillRect', w, mod(i, 2)*255);
 		if (stereo>0)
 			% Show something for the right eye as well in stereo mode:
@@ -413,7 +419,7 @@ try
 		% interval. Small values << screen height are also ok,
 		% they just indicate either a slower machine or some types of flat-panels...
 		[ tvbl so(i) flipfin(i) missest(i) beampos(i)]=Screen('Flip', w, tdeadline, clearmode);
-		l.setFIO4(mod(i,2));
+		if c == 1; lj.strobeWord; end
 		% Record timestamp for later use:
 		ts(i) = tvbl;
 		
