@@ -2,24 +2,42 @@
 %> @brief calibrateLuminance manaul / automatic luminance calibration
 %>
 %> calibrateLuminance manaul / automatic luminance calibration
+%> To enter settings use a structure:
+%>
+%> >> mycal = calibrateLuminance(struct('nMeasures',25,'useCCal',true))
+%>
+%> calibrateLuminance will ask if you need to zero calibrate, you only need
+%> to do this after first plugging in the ColorCal. Then simply place the
+%> ColorCalII in front of the monitor and follow instructions. After doing
+%> nMeasures of luminance steps, it will fit the raw luminance values using a
+%> variety of methods and then plot these out to a figure (it will ask you for 
+%> comments to enter for the calibration, you should enter monitor type, 
+%> lighting conditions etc). You can then save mycal to disk for later use by
+%> your programs. To use in PTB, choose the preffered fit (1 is the gamma 
+%> function and the rest are the various model options listed in analysisMethods). 
+%> you need to expand the selected model fit to 3 columns before passing to
+%> LoadNormalizedGammaTable:
+%> 
+%> gTmp = repmat(mycal.gammaTable{choiceofmodel},1,3);
+%> Screen('LoadNormalizedGammaTable', theScreen, gTmp);
 %>
 % ========================================================================
 classdef calibrateLuminance < handle
 	
 	properties
-		%> how much detail to show
-		verbosity = false
+		%> how much detail to show on commandline
+		verbosity = 0
 		%> allows the constructor to run the open method immediately
 		runNow = true
 		%> number of measures (default = 20)
-		nMeasures = 21
+		nMeasures = 20
 		%> screen to calibrate
 		screen
 		%> use ColorCalII automatically
 		useCCal = true
 		%> comments to note about this calibration
 		comments = {''}
-		%> which gamma table opticka selects?
+		%> which gamma table should opticka select?
 		choice = 1
 		%> methods list to fit to raw luminance values
 		analysisMethods = {'pchipinterp';'smoothingspline';'cubicinterp';'splineinterp';'cubicspline'}
@@ -87,6 +105,14 @@ classdef calibrateLuminance < handle
 				obj.cMatrix = ColorCal2('ReadColorMatrix');
 				if isempty(obj.cMatrix)
 					obj.useCCal = false;
+				else
+					reply = input('Do you need to calibrate the ColorCalII first? Y/N (N): ','s');
+					if strcmpi(reply,'Y')
+						reply = input('*ZERO CALIBRATION* -- please cover the ColorCalII then press enter...','s');
+						if isempty(reply)
+							obj.zeroCalibration;
+						end
+					end
 				end
 			end
 			if obj.runNow == true
@@ -96,7 +122,7 @@ classdef calibrateLuminance < handle
 		
 		% ===================================================================
 		%> @brief run
-		%>	run the main calibration loop
+		%>	run the main calibration loop, uses the max # screen by default
 		%>
 		% ===================================================================
 		function run(obj)
@@ -106,6 +132,8 @@ classdef calibrateLuminance < handle
 					'get reading in cd/m^2, input reading using numpad and press enter. \n' ...
 					'A screen of higher luminance will be shown. Repeat %d times. ' ...
 					'Press enter to start'], obj.nMeasures));
+			else
+				input('Please place ColorCalII in front of monitor then press enter...');
 			end
 			
 			obj.initialClut = repmat([0:255]'/255,1,3); %#ok<NBRAK>
@@ -164,8 +192,8 @@ classdef calibrateLuminance < handle
 		end
 		
 		% ===================================================================
-		%> @brief useCCal
-		%>	run the main calibration loop
+		%> @brief getCCalxyY
+		%>	Uses the ColorCalII to return the current xyY values
 		%>
 		% ===================================================================
 		function [x,y,Y] = getCCalxyY(obj)
@@ -179,8 +207,8 @@ classdef calibrateLuminance < handle
 		end
 		
 		% ===================================================================
-		%> @brief run
-		%>	run the main calibration loop
+		%> @brief analyze
+		%>	once the raw data is collected, this analyzes (fits) the data
 		%>
 		% ===================================================================
 		function analyze(obj)
@@ -243,28 +271,30 @@ classdef calibrateLuminance < handle
 		end
 		
 		% ===================================================================
-		%> @brief run
-		%>	run the main calibration loop
+		%> @brief plot
+		%>	This plots the calibration results
 		%>
 		% ===================================================================
 		function plot(obj)
 			obj.plotHandle = figure;
-			obj.p = panel(obj.plotHandle,'defer');
+			%obj.p = panel(obj.plotHandle,'defer');
 			scnsize = get(0,'ScreenSize');
 			pos=get(gcf,'Position');
 			
-			obj.p.pack(2,2);
-			obj.p.margin = [15 20 5 15];
-			obj.p.fontsize = 12;
+			%obj.p.pack(2,2);
+			%obj.p.margin = [15 20 5 15];
+			%obj.p.fontsize = 12;
 			
-			obj.p(1,1).select();
+			%obj.p(1,1).select();
+			subplot(2,2,1)
 			plot(obj.ramp, obj.inputValues, 'k.-');
 			axis tight
 			xlabel('Indexed Values');
 			ylabel('Luminance cd/m^2');
 			title('Input -> Output Raw Data');
 			
-			obj.p(1,2).select();
+			%obj.p(1,2).select();
+			subplot(2,2,2)
 			hold all
 				for i=1:length(obj.modelFit)
 					plot([0:1/255:1], obj.modelFit{i}.table);
@@ -280,7 +310,8 @@ classdef calibrateLuminance < handle
 			title(sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma));
 			
 			legendtext=[];
-			obj.p(2,1).select();
+			subplot(2,2,3)
+			%obj.p(2,1).select();
 			hold all
 			for i=1:length(obj.gammaTable)
 				plot(1:length(obj.gammaTable{i}),obj.gammaTable{i});
@@ -293,7 +324,8 @@ classdef calibrateLuminance < handle
 			legend(legendtext,'Location','NorthWest');
 			title('Plot of output Gamma curves');
 			
-			obj.p(2,2).select();
+			subplot(2,2,4)
+			%obj.p(2,2).select();
 			hold all
 			for i=1:length(obj.gammaTable)
 				plot(obj.modelFit{i}.output.residuals);
@@ -317,19 +349,20 @@ classdef calibrateLuminance < handle
 			else
 				t = obj.comments;
 			end
-			obj.p.title(t);
-			obj.p.refresh();
+			%obj.p.title(t);
+			%obj.p.refresh();
 			
 		end
 		
 		% ===================================================================
 		%> @brief zeroCalibration
-		%>
+		%> This performs a zero calibration and only needs doing the first
+		%> time the ColorCalII is plugged in
 		%>
 		% ===================================================================
 		function zeroCalibration(obj)
 			ColorCal2('ZeroCalibration');
-			helpdlg('Dark Calibration Done!');
+			fprintf('\n-- Dark Calibration Done! --\n');
 		end
 
 	end
@@ -346,8 +379,6 @@ classdef calibrateLuminance < handle
 		% ===================================================================
 		%> @brief Converts properties to a structure
 		%>
-		%> Prints messages dependent on verbosity
-		%> @param tmp is whether to use the temporary or permanent properties
 		%> @return out the structure
 		% ===================================================================
 		function out=toStructure(obj)
