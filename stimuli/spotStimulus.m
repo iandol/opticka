@@ -92,11 +92,11 @@ classdef spotStimulus < baseStimulus
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
-					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
-					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
-					if strcmp(fn{j},'colour');p.SetMethod = @setcolourOut;end
-					if strcmp(fn{j},'contrast');p.SetMethod = @setcontrastOut;end
+					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
+					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
+					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
+					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
+					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
@@ -146,10 +146,12 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			if obj.doFlash == false
-				Screen('gluDisk',obj.win,obj.colourOut,obj.xTmp,obj.yTmp,obj.sizeOut);
-			else
-				Screen('gluDisk',obj.win,obj.currentColour,obj.xTmp,obj.yTmp,obj.sizeOut);
+			if obj.isVisible == true
+				if obj.doFlash == false
+					Screen('gluDisk',obj.win,obj.colourOut,obj.xTmp,obj.yTmp,obj.sizeOut);
+				else
+					Screen('gluDisk',obj.win,obj.currentColour,obj.xTmp,obj.yTmp,obj.sizeOut);
+				end
 			end
 		end
 
@@ -220,7 +222,7 @@ classdef spotStimulus < baseStimulus
 		%> @brief sizeOut Set method
 		%>
 		% ===================================================================
-		function setsizeOut(obj,value)
+		function set_sizeOut(obj,value)
 			obj.sizeOut = (value*obj.ppd) / 2; %divide by 2 to get diameter
 		end
 		
@@ -228,7 +230,7 @@ classdef spotStimulus < baseStimulus
 		%> @brief xPositionOut Set method
 		%>
 		% ===================================================================
-		function setxPositionOut(obj,value)
+		function set_xPositionOut(obj,value)
 			obj.xPositionOut = (value*obj.ppd) + obj.xCenter;
 			if ~isempty(obj.findprop('xTmp'));obj.computePosition;end
 		end
@@ -237,7 +239,7 @@ classdef spotStimulus < baseStimulus
 		%> @brief yPositionOut Set method
 		%>
 		% ===================================================================
-		function setyPositionOut(obj,value)
+		function set_yPositionOut(obj,value)
 			obj.yPositionOut = (value*obj.ppd) + obj.yCenter;
 			if ~isempty(obj.findprop('xTmp'));obj.computePosition;end
 		end
@@ -246,7 +248,7 @@ classdef spotStimulus < baseStimulus
 		%> @brief colourOut SET method 
 		%>
 		% ===================================================================
-		function setcolourOut(obj, value)
+		function set_colourOut(obj, value)
 			if length(value) == 1
 				value = [value value value];
 			end
@@ -258,10 +260,10 @@ classdef spotStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief colourOut SET method 
+		%> @brief contrastOut SET method 
 		%>
 		% ===================================================================
-		function setcontrastOut(obj, value)
+		function set_contrastOut(obj, value)
 			obj.contrastOut = value;
 			notify(obj,'changeColour');
 		end

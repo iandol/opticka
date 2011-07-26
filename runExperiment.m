@@ -458,7 +458,7 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack.close;
 				obj.lJack=[];
 				
-				if exist('implay','file')
+				if obj.movieSettings.record && exist('mimg','var') && exist('implay','file')
 					implay(mimg);
 				end
 				

@@ -25,4 +25,5 @@ void main()
 	/* values, add some constant color/alpha Offset, assign as final fragment */
 	/* output color: */
 	gl_FragColor = (baseColor * sv) + Offset;
+   gl_FragColor.a = sv;
 }

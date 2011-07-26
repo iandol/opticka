@@ -497,6 +497,9 @@ classdef (Sealed) opticka < handle
 			tmp.smoothMethod = obj.gv(obj.h.OKPanelGratingsmoothMethod);
 			tmp.correctPhase = obj.gv(obj.h.OKPanelGratingcorrectPhase);
 			
+			tmp.phaseReverseTime = obj.gd(obj.h.OKPanelGratingphaseReverseTime);
+			tmp.phaseOfReverse = obj.gd(obj.h.OKPanelGratingphaseOfReverse);
+			
 			obj.r.stimulus{obj.r.sList.n+1} = gratingStimulus(tmp);
 			
 			obj.r.updatesList;

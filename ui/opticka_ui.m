@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 19-Jul-2011 12:29:28
+% Last Modified by GUIDE v2.5 23-Jul-2011 19:59:04
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1202,3 +1202,19 @@ if isappdata(0,'o')
 		end
 	end
 end
+
+function OKPanelGratingphaseReverseTime_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelGratingphaseReverseTime (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKPanelGratingphaseReverseTime as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelGratingphaseReverseTime as a double
+
+function OKPanelGratingphaseOfReverse_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelGratingphaseOfReverse (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKPanelGratingphaseOfReverse as text
+%        str2double(get(hObject,'String')) returns contents of OKPanelGratingphaseOfReverse as a double

@@ -42,6 +42,8 @@ classdef baseStimulus < dynamicprops
 		isVisible = true
 		%> datestamp to initialise on setup
 		dateStamp
+		%> tick updates on each draw, resets on each update
+		tick = 1
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
@@ -70,7 +72,7 @@ classdef baseStimulus < dynamicprops
 		screen = 0
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase='family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp';
+		ignorePropertiesBase='family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|tick';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)

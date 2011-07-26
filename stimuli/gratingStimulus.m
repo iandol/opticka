@@ -54,6 +54,10 @@ classdef gratingStimulus < baseStimulus
 		correctPhase = false
 		%> do we generate a square wave?
 		squareWave = false
+		%> reverse phase of grating X times per second?
+		phaseReverseTime = 0
+		%> What phase to use for reverse?
+		phaseOfReverse = 180
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -73,9 +77,11 @@ classdef gratingStimulus < baseStimulus
 		allowedProperties = ['^(sf|tf|method|angle|motionAngle|phase|rotationMethod|' ... 
 			'contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|' ... 
 			'disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod|' ...
-			'correctPhase|squareWave)$']
+			'correctPhase|squareWave|phaseReverseTime|phaseOfReverse)$']
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = 'scale|phaseIncrement|disableNorm|correctPhase|gabor|contrastMult|mask'
+		%> how many frames between phase reverses
+		phaseCounter = 0
 	end
 	
 	events
@@ -207,7 +213,11 @@ classdef gratingStimulus < baseStimulus
 			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
 			
-			if obj.gabor==false
+			if obj.phaseReverseTime > 0
+				obj.phaseCounter = round(obj.phaseReverseTime / obj.ifi);
+			end
+			
+			if obj.gabor == false
 				if obj.squareWave == true
 					obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
 						obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
@@ -243,6 +253,7 @@ classdef gratingStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function update(obj)
+			obj.tick = 1;
 			if obj.correctPhase
 				ps=obj.calculatePhase;
 				obj.driftPhase=obj.phaseOut-ps;
@@ -270,6 +281,7 @@ classdef gratingStimulus < baseStimulus
 						obj.angleOut, [], [], [], [], 2,...
 						[obj.driftPhase, obj.sfOut, obj.spatialConstantOut, obj.contrastOut, obj.aspectRatioOut, 0, 0, 0]); 
 				end
+				obj.tick = obj.tick + 1;
 			end
 		end
 		
@@ -286,6 +298,9 @@ classdef gratingStimulus < baseStimulus
 			if obj.doDrift == true
 				obj.driftPhase = obj.driftPhase + obj.phaseIncrement;
 			end
+			if mod(obj.tick,obj.phaseCounter) == 0
+				obj.driftPhase = obj.driftPhase + obj.phaseOfReverse;
+			end
 		end
 		
 		% ===================================================================
@@ -295,6 +310,7 @@ classdef gratingStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function reset(obj)
+			obj.tick = 1;
 			obj.texture=[];
 			if obj.mask > 0
 				obj.mask = true;
