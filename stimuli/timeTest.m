@@ -108,17 +108,17 @@ function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchron
 %
 % EXAMPLES:
 %
-% VBLSyncTest(1000, 0, 0.6, 0, 0, 1, 0) -- Render 1000 consecutive frames,
+% timeTest(1000, 0, 0.6, 0, 0, 1, 0) -- Render 1000 consecutive frames,
 % flip at each retrace , pausing for 0.6 frame durations after each flip.
 % Clear the framebuffer after flip, don't use stereo output, but use the new
 % "DrawingFinished" command.
 %
-% VBLSyncTest(100, 10, 6, 1, 0, 1, 0) -- Render 100 frames,
+% timeTest(100, 10, 6, 1, 0, 1, 0) -- Render 100 frames,
 % flip only every 10th monitor refresh interval ("WaitBlanking" for 10 refresh intervals),
 % pause for 6 frame durations after each flip. Don't clear the framebuffer after
 % flip, don't use stereo output, but use the new "DrawingFinished" command.
 %
-% VBLSyncTest(100, 10, 6, 1, 1, 1, 0) -- Render 100 frames,
+% timeTest(100, 10, 6, 1, 1, 1, 0) -- Render 100 frames,
 % flip only every 10th monitor refresh interval ("WaitBlanking" for 10 refresh intervals),
 % pause for 6 frame durations after each flip. Don't clear the framebuffer after
 % flip, use stereo output via "frame-sequential stereo", use the new "DrawingFinished" command.
@@ -197,8 +197,6 @@ function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchron
 % Author: Mario Kleiner  (mario.kleiner at tuebingen.mpg.de)
 %
 
-%%% VBLSyncTest(1000, 0, 0.6, 0, 0, 1, 0)
-
 if nargin < 1
 	n = 600;
 end
@@ -220,7 +218,7 @@ if nargin < 5
 end
 
 if nargin < 6
-	flushpipe = 0;
+	flushpipe = 1;
 end
 
 if nargin < 7
@@ -338,7 +336,7 @@ try
 		Screen('SelectStereoDrawBuffer', w, 0);
 		pos=mod(i, screenheight);
 		Screen('FillRect', w, mod(i, 255)/normalize, [pos+20 pos+20 pos+400 pos+400]);
-		if mod(i,4) == 1
+		if mod(i,2) == 1
 			c = 1;
 		else
 			c = 0;
@@ -401,6 +399,8 @@ try
 			tdeadline=0;
 		end;
 		
+		if c == 1; lj.prepareStrobe(2000); end
+		
 		% Flip: The clearmode argument specifies if flip should clear the
 		% drawing buffer after flip (=0 - default), keep it "as is"
 		% for incremental drawing/updating of stims (=1) or don't do
@@ -445,7 +445,7 @@ try
 	figure;
 	subplot(2,2,1);
 	hold on;
-	plot((ts(2:n) - ts(1:n-1)) * 1000,'ko');
+	plot((ts(2:n) - ts(1:n-1)) * 1000,'k.');
 	ni=numifis;
 	if (numifis==0)
 		ni=1;
@@ -459,7 +459,7 @@ try
 	% milliseconds:
 	subplot(2,2,2);
 	hold on;
-	plot(missest*1000,'ko');
+	plot(missest*1000,'k.');
 	plot(zeros(1,n));
 	title('Estimate of missed deadlines in milliseconds (negative == no miss):');
 	hold off;
@@ -467,25 +467,25 @@ try
 	% Figure 4 shows difference in ms between finish of Flip and estimated
 	% start of VBL time:
 	subplot(2,2,3);
-	plot((flipfin - ts)*1000,'ko');
+	plot((flipfin - ts)*1000,'k.');
 	title('Time delta between start of VBL and return of Flip in milliseconds:');
 	
 	% Figure 5 shows difference in ms between finish of Flip and estimated
 	% stimulus-onset:
 	subplot(2,2,4);
-	plot((flipfin - so)*1000,'ko');
+	plot((flipfin - so)*1000,'k.');
 	title('Time delta between stimulus onset and return of Flip in milliseconds:');
 	
 	% Figure 2 shows the recorded beam positions:
 	figure
-	plot(beampos,'ko');
+	plot(beampos,'k.');
 	title('Rasterbeam position when timestamp was taken (in scanlines):');
 	
 	% Figure 6 shows duration of drawing commands when calling
 	% "DrawingFinished" in synchronous mode.
 	if synchronous==1
 		figure
-		plot(td*1000);
+		plot(td*1000,'k.');
 		title('Total duration of all drawing commands in milliseconds:');
 	end;
 	

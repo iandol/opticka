@@ -180,7 +180,7 @@ classdef (Sealed) runExperiment < handle
 			%end
 			
 			obj.screenVals.resetGamma = false;
-			if obj.windowed(1)==0;HideCursor;end
+			%if obj.windowed(1)==0 && obj.debug == false;HideCursor;end
 			
 			% This is the trick Mario told us to "hide" th colour changes as PTB
 			% intialises -- we could use backgroundcolour here to be even better
@@ -204,7 +204,6 @@ classdef (Sealed) runExperiment < handle
 				strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
 			end
 			obj.lJack = labJack(strct);
-			obj.lJack.setDIO([2,0,0]);WaitSecs(0.01);obj.lJack.setDIO([0,0,0]); %Trigger the omniplex (FIO1) into paused mode
 			%-----------------------------------------------------
 			
 			%---------This is our main TRY CATCH experiment display loop
@@ -268,6 +267,8 @@ classdef (Sealed) runExperiment < handle
 				
 				AssertGLSL;
 				
+				obj.lJack.setDIO([2,0,0]);WaitSecs(0.01);obj.lJack.setDIO([0,0,0]); %Trigger the omniplex (FIO1) into paused mode
+				
 				% Enable alpha blending.
 				if obj.blend==1
 					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
@@ -317,18 +318,20 @@ classdef (Sealed) runExperiment < handle
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				
+				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				%--------------this is RSTART (FIO0->Pin 24), unpausing the omniplex
 				if obj.useLabJack == true
 					obj.lJack.setDIO([1,0,0],[1,0,0])
-					WaitSecs(0.5);
+					WaitSecs(0.2);
 				end
-				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				
 				obj.task.tick = 1;
 				obj.task.switched = 1;
 				obj.timeLog.beforeDisplay = GetSecs;
-
+				
+				obj.drawPhotoDiodeSquare([0 0 0 1]);
 				vbl=Screen('Flip', obj.win);
+				obj.drawPhotoDiodeSquare([0 0 0 1]);
 				if obj.logFrames == true
 					obj.timeLog.stimTime(1) = 1;
 					obj.timeLog.vbl(1) = Screen('Flip', obj.win,vbl+0.001);
@@ -336,7 +339,7 @@ classdef (Sealed) runExperiment < handle
 					obj.timeLog.vbl = Screen('Flip', obj.win,vbl+0.001);
 				end
 				obj.timeLog.startTime = obj.timeLog.vbl(1);
-				
+
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				% Our main display loop
@@ -371,7 +374,7 @@ classdef (Sealed) runExperiment < handle
 					[~, ~, buttons]=GetMouse(obj.screen);
 					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
 					if strcmp(obj.uiCommand,'stop');break;end
-					
+						
 					obj.updateTask(); %update our task structure
 					
 					%======= FLIP: Show it at correct retrace: ========%
@@ -382,7 +385,7 @@ classdef (Sealed) runExperiment < handle
 						obj.timeLog.vbl = Screen('Flip', obj.win, nextvbl);
 					end
 					%==================================================%
-					if obj.task.switched == 1
+					if obj.task.strobeThisFrame == true
 						obj.lJack.strobeWord; %send our word out to the LabJack
 					end
 					
@@ -416,10 +419,9 @@ classdef (Sealed) runExperiment < handle
 				
 				%---------------------------------------------Finished display loop
 				obj.drawBackground;
-				Screen('Flip', obj.win);
-				obj.lJack.prepareStrobe(0,[],1);
-				obj.timeLog.afterDisplay=GetSecs;
-				Screen('Flip', obj.win);
+				vbl=Screen('Flip', obj.win);
+				%obj.lJack.prepareStrobe(2047,[],1);
+				obj.timeLog.afterDisplay=vbl;
 				obj.lJack.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				notify(obj,'endRun');
 				
@@ -511,7 +513,7 @@ classdef (Sealed) runExperiment < handle
 			end
 			obj.distance = value;
 			obj.makeGrid;
-			obj.salutation(['set distance: ' num2str(obj.distance) '|ppd: ' num2str(obj.ppd)],'Custom set method')
+			%obj.salutation(['set distance: ' num2str(obj.distance) '|ppd: ' num2str(obj.ppd)],'Custom set method')
 		end
 		
 		% ===================================================================
@@ -525,7 +527,7 @@ classdef (Sealed) runExperiment < handle
 			end
 			obj.pixelsPerCm = value;
 			obj.makeGrid;
-			obj.salutation(['set pixelsPerCm: ' num2str(obj.pixelsPerCm) '|ppd: ' num2str(obj.ppd)],'Custom set method')
+			%obj.salutation(['set pixelsPerCm: ' num2str(obj.pixelsPerCm) '|ppd: ' num2str(obj.ppd)],'Custom set method')
 		end
 		
 		% ===================================================================
@@ -665,12 +667,22 @@ classdef (Sealed) runExperiment < handle
 			if isempty(obj.task.findprop('isBlank'))
 				obj.task.addprop('isBlank'); %add new dynamic property
 			end
-			obj.task.isBlank=0;
+			obj.task.isBlank = false;
 			
 			if isempty(obj.task.findprop('switched'))
 				obj.task.addprop('switched'); %add new dynamic property
 			end
-			obj.task.switched=0;
+			obj.task.switched = false;
+			
+			if isempty(obj.task.findprop('strobeThisFrame'))
+				obj.task.addprop('strobeThisFrame'); %add new dynamic property
+			end
+			obj.task.strobeThisFrame = false;
+			
+			if isempty(obj.task.findprop('doUpdate'))
+				obj.task.addprop('doUpdate'); %add new dynamic property
+			end
+			obj.task.doUpdate = false;
 			
 			if isempty(obj.task.findprop('startTime'))
 				obj.task.addprop('startTime'); %add new dynamic property
@@ -760,7 +772,7 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		%> @brief updateTask
 		%> Updates the stimulus run state; update the stimulus values for the
-		%> current trial and increments the switchTime timer
+		%> current trial and increments the switchTime and switchTick timer
 		% ===================================================================
 		function updateTask(obj)
 			obj.task.timeNow = GetSecs;
@@ -770,53 +782,77 @@ classdef (Sealed) runExperiment < handle
 				obj.task.switchTime = obj.task.trialTime; %first ever time is for the first trial
 				obj.task.switchTick = obj.task.trialTime*ceil(obj.screenVals.fps);
 				obj.lJack.prepareStrobe(obj.task.outIndex(obj.task.totalRuns));
+				obj.task.strobeThisFrame = true;
 			end
 			
 			%-------------------------------------------------------------------
 			if obj.task.realTime == true %we measure real time
 				trigger = obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime);
 			else %we measure frames, prone to error build-up
-				trigger = obj.task.tick <= obj.task.switchTick;
+				trigger = obj.task.tick < obj.task.switchTick;
 			end
 			
-			if trigger
-				
-				if obj.task.isBlank == false %not in an interstimulus time, need to update drift, motion and pulsation
-					
+			if trigger == true
+
+				if obj.task.isBlank == false %showing stimulus, need to call animate for each stimulus
+					% because the update happens before the flip, but the drawing of the update happens
+					% only in the next loop, we have to send the strobe one loop after we set switched
+					% to true
+					if obj.task.switched == true; 
+						obj.task.strobeThisFrame = true;
+					else
+						obj.task.strobeThisFrame = false;
+					end
 					if obj.task.tick > 1 %we dont need to animate the first frame
 						for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
 							obj.stimulus{i}.animate;
 						end
 					end
 					
-				else %blank stimulus, we don't need to update anything
-					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
-						mT=obj.task.thisTrial+1;
-						mR = 1;
-					else
-						mT=obj.task.thisTrial;
-						mR = obj.task.thisRun + 1;
+				else %this is a blank stimulus
+					%this causes the update of the stimuli, which may take more than one refresh, to
+					%occur during the second blank flip, thus we don't lose any timing.
+					if obj.task.switched == false && obj.task.strobeThisFrame == true
+						obj.task.doUpdate = true;
 					end
-					% now update our stimuli, we do it in the blank as less
+					% because the update happens before the flip, but the drawing of the update happens
+					% only in the next loop, we have to send the strobe one loop after we set switched
+					% to true
+					if obj.task.switched == true; 
+						obj.task.strobeThisFrame = true;
+					else
+						obj.task.strobeThisFrame = false;
+					end
+					% now update our stimuli, we do it after the first blank as less
 					% critical timingwise
-					if obj.task.switched == 1
-						obj.uiCommand;
+					if obj.task.doUpdate == true
+						tic
+						if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
+							mT=obj.task.thisTrial+1;
+							mR = 1;
+						else
+							mT=obj.task.thisTrial;
+							mR = obj.task.thisRun + 1;
+						end
+						%obj.uiCommand;
 						obj.updateVars(mT,mR);
 						for i = 1:obj.sList.n
 							obj.stimulus{i}.update;
 						end
+						obj.task.doUpdate = false;
+						fprintf('Stimulus update: ');toc;
 					end
 					
 				end
-				obj.task.switched = 0;
+				obj.task.switched = false;
 				
 				%-------------------------------------------------------------------
 			else %need to switch to next trial or blank
-				obj.task.switched = 1;
-				if obj.task.isBlank == 0 %we come from showing a stimulus
+				obj.task.switched = true;
+				if obj.task.isBlank == false %we come from showing a stimulus
 					
 					%obj.logMe('IntoBlank');
-					obj.task.isBlank = 1;
+					obj.task.isBlank = true;
 					
 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we within a trial block or not? we add the required time to our switch timer
 						obj.task.switchTime=obj.task.switchTime+obj.task.itTime;
@@ -835,7 +871,7 @@ classdef (Sealed) runExperiment < handle
 					if obj.task.thisTrial <= obj.task.nTrials
 						obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
 						obj.task.switchTick=obj.task.switchTick+(obj.task.trialTime*round(obj.screenVals.fps)); %update our timer
-						obj.task.isBlank = 0;
+						obj.task.isBlank = false;
 						obj.task.totalRuns = obj.task.totalRuns + 1;
 						if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
 							obj.task.thisTrial=obj.task.thisTrial+1;
@@ -910,6 +946,7 @@ classdef (Sealed) runExperiment < handle
 			obj.ptb=Screen('version');
 			
 			obj.timeLog.prepTime=GetSecs-obj.timeLog.construct;
+			a=zeros(20,1);
 			for i=1:20
 				a(i)=GetSecs;
 			end
