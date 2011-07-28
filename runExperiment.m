@@ -295,18 +295,25 @@ classdef (Sealed) runExperiment < handle
 					disp(num2str(obj.movieSettings.outsize));
 					disp('---');
 					obj.movieSettings.loop=1;
-					if ~exist('~/Desktop/Movie/','dir')
-						mkdir('~/Desktop/Movie/')
+					if ismac || isunix
+						oldp = cd('~');
+						homep = pwd;
+						cd(oldp);
+					else
+						homep = 'c:';
+					end
+					if ~exist([homep '/MatlabFiles/Movie/'],'dir')
+						mkdir([homep '/MatlabFiles/Movie/'])
 					end
 					switch obj.movieSettings.type
 						case 1
-							if isempty(obj.movieSettings.codec)
+							if ispc || isunix || isempty(obj.movieSettings.codec)
 								settings = 'EncodingQuality=1';
 							else
 								settings = ['EncodingQuality=1; CodecFOURCC=' obj.movieSettings.codec];
 							end
 							obj.moviePtr = Screen('CreateMovie', obj.win,...
-								['/Users/ian/Desktop/Movie/Movie' datestr(clock) '.mov'],...
+								[homep '/MatlabFiles/Movie/Movie' datestr(clock) '.mov'],...
 								obj.movieSettings.size(1), obj.movieSettings.size(2), ...
 								obj.screenVals.fps, settings);
 						case 2
