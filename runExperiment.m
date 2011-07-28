@@ -803,10 +803,9 @@ classdef (Sealed) runExperiment < handle
 					else
 						obj.task.strobeThisFrame = false;
 					end
-					if obj.task.tick > 1 %we dont need to animate the first frame
-						for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
-							obj.stimulus{i}.animate;
-						end
+					
+					for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
+						obj.stimulus{i}.animate;
 					end
 					
 				else %this is a blank stimulus

@@ -25,8 +25,6 @@ classdef dotsStimulus < baseStimulus
 		dxdy
 		%> colour for each dot
 		colours
-		%> local frame counter, reset on each update
-		counter
 	end
 	properties (SetAccess = private, GetAccess = private)
 		fieldScale = 1.1
@@ -196,7 +194,7 @@ classdef dotsStimulus < baseStimulus
 			obj.xy = obj.xy - obj.sizeOut/2; %so we are centered for -xy to +xy
 			[obj.dxs, obj.dys] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
 			obj.dxdy=[obj.dxs';obj.dys'];
-			obj.counter = 1;
+			obj.tick = 1;
 		end
 		
 		% ===================================================================
@@ -242,13 +240,15 @@ classdef dotsStimulus < baseStimulus
 			obj.xy(fix) = obj.xy(fix) - obj.sizeOut;
 			fix = find(obj.xy < -obj.sizeOut/2);  %cull negative
 			obj.xy(fix) = obj.xy(fix) + obj.sizeOut;
-			if obj.killOut > 0 && obj.counter > 1
+% 			obj.xy(obj.xy > obj.sizeOut/2) = obj.xy(obj.xy > obj.sizeOut/2) - obj.sizeOut; % this is not faster
+% 			obj.xy(obj.xy < -obj.sizeOut/2) = obj.xy(obj.xy < -obj.sizeOut/2) + obj.sizeOut; % this is not faster
+			if obj.killOut > 0 && obj.tick > 1
 				kidx = rand(obj.nDots,1) <  obj.killOut;
 				ks = length(find(kidx > 0));
 				obj.xy(:,kidx) = (obj.sizeOut .* rand(2,ks)) - obj.sizeOut/2;
 				%obj.colours(3,kidx) = ones(1,ks); 
 			end
-			obj.counter = obj.counter + 1;
+			obj.tick = obj.tick + 1;
 		end
 		
 		% ===================================================================
