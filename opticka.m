@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.515'
+		version='0.516'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection, via TCP
@@ -150,7 +150,7 @@ classdef (Sealed) opticka < handle
 					loop=loop+1;
 					pause(0.2);
 				end
-				drawnow;
+				%drawnow;
 			end
 		end
 		
@@ -271,14 +271,16 @@ classdef (Sealed) opticka < handle
 				end
 				uihandle=opticka_ui; %our GUI file
 				obj.h=guidata(uihandle);
-				obj.h.uihandle = uihandle;
+				obj.h.uihandle = uihandle; %save handle in a less cryptically names field
+				guidata(uihandle,obj.h); %save back this change
+				setappdata(obj.h.uihandle,'o',obj); %we stash our object in the root appdata store for retirieval from the UI
 				set(obj.h.OKOptickaVersion,'String','Initialising GUI, please wait...');
 				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version]);
 				if obj.mversion < 7.12 && (ismac || ispc)
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
 				set(obj.h.OKPanelGrating,'Visible','off')
-				drawnow;
+				%drawnow;
 				set(obj.h.OKPanelGrating,'Visible','on')
 				
 				
@@ -290,8 +292,6 @@ classdef (Sealed) opticka < handle
 				addlistener(obj.r,'abortRun',@obj.abortRunEvent);
 				addlistener(obj.r,'endRun',@obj.endRunEvent);
 				addlistener(obj.r,'runInfo',@obj.runInfoEvent);
-
-				setappdata(0,'o',obj); %we stash our object in the root appdata store for retirieval from the UI
 
 				obj.store.nVars = 0;
 				obj.store.visibleStimulus = 'grating'; %our default shown stimulus
@@ -313,8 +313,8 @@ classdef (Sealed) opticka < handle
 				if ismac || ispc
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
-				if isappdata(0,'o')
-					rmappdata(0,'o');
+				if isappdata(obj.h.uihandle,'o')
+					rmappdata(obj.h.uihandle,'o');
 					clear o;
 				end
 				errordlg('Problem initialising Opticka, please check errors on the commandline')
@@ -333,7 +333,7 @@ classdef (Sealed) opticka < handle
 			if isempty(obj.r)
 				olds = get(obj.h.OKOptickaVersion,'String');
 				set(obj.h.OKOptickaVersion,'String','Initialising Stimulus and Task objects...')
-				drawnow
+				%drawnow
 				obj.r = runExperiment;
 				s=cell(obj.r.maxScreen+1,1);
 				for i=0:obj.r.maxScreen
