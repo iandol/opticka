@@ -29,6 +29,8 @@ classdef opxOnline < handle
 		replotFlag = 0
 		%> struct containing several plot options
 		plotOptions
+		%> the directory to save completed runs
+		saveDirectory = 'E:\PlexonData\'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -101,7 +103,7 @@ classdef opxOnline < handle
 		function obj = opxOnline(args)
 			
 			if nargin>0 && isstruct(args)
-				obj.set(args);
+				obj.parseArgs(args);
 			end
 			
 			obj.dateStamp = datestr(clock);
@@ -218,16 +220,25 @@ classdef opxOnline < handle
 										obj.conn.write('--stimulusReceived--');
 										obj.msconn.write('--nRuns--');
 										obj.msconn.write(uint32(obj.totalRuns));
-										fprintf('We have the stimulus from opticka, waiting for GO!');
-										set(obj.h.opxUIInfoBox,'String',['We have stimulus, nRuns= ' num2str(obj.totalRuns) ' | waiting for go...'])
+										fprintf('We have the stimulus from opticka, waiting for GO!\n');
+										try
+											obj.initializePlot('stimulus')
+											t=obj.describeStimulus;
+											[s1,s2]=size(t);
+											[tt{2:s1+1}] = t{1:s1};
+											tt{1} = ['We have stimulus, nRuns= ' num2str(obj.totalRuns) ' | waiting for go...\n'];
+											for i = 1:length(tt)
+												fprintf(tt{i});
+											end
+											set(obj.h.opxUIInfoBox,'String',tt)
+										end
+										break
 									else
 										fprintf('We have a stimulus from opticka, but it is malformed!');
 										set(obj.h.opxUIInfoBox,'String',['We have stimulus, but it was malformed!'])
 										obj.stimulus = [];
 										obj.conn.write('--stimulusFailed--');
 									end
-									obj.initializePlot('stimulus')
-									break
 								end
 								tloop = tloop + 1;
 							end
@@ -551,7 +562,28 @@ classdef opxOnline < handle
 							obj.trial = opx.trial;
 							obj.plotData
 							loop = 0;
-							pause(0.2)
+							tloop = 1;
+							while tloop < 10
+								pause(0.1);
+								if obj.conn.checkData
+									tdata = obj.conn.read(0);
+									if strcmpi(tdata,'--finalStimulus--')
+										pause(0.5);
+										tstim=obj.conn.readVar;
+										if isa(obj.stimulus,'runExperiment')
+											obj.conn.write('--stimulusReceived--');
+											obj.stimulus = tstim;
+											fprintf('We have the stimulus from opticka after %i loops, lets save it!',tloop);
+										else
+											fprintf('We have a stimulus from opticka, but it is malformed!');
+											set(obj.h.opxUIInfoBox,'String','We have stimulus, but it was malformed!')
+											obj.conn.write('--stimulusFailed--');
+										end
+									end
+								end
+								tloop = tloop + 1;
+							end
+							save(obj.saveDirectory,'obj');
 							save(obj.tmpFile,'obj');
 							pause(0.2)
 							abort = 1;
@@ -1280,7 +1312,7 @@ classdef opxOnline < handle
 		%>
 		%> @param args input structure
 		% ===================================================================
-		function set(obj,args)
+		function parseArgs(obj,args)
 			fnames = fieldnames(args); %find our argument names
 			for i=1:length(fnames);
 				if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
@@ -1289,6 +1321,30 @@ classdef opxOnline < handle
 				end
 			end
 		end
+		
+		% ===================================================================
+		%> @brief describeStimulus Simply returns a text string with the
+		%>   info about the stimulus
+		%>
+		%> @return t a string with the info
+		% ===================================================================
+		function t = describeStimulus(obj)
+			t='';
+			if ~isempty(obj.stimulus)
+				a = 1;
+				s=obj.stimulus;
+				for i = 1:length(s.stimulus)
+					t{a} = ['Stimulus ' num2str(i) ': ' s.stimulus{i}.family];
+					a = a + 1;
+				end
+				for i = 1: s.task.nVars
+					t{a} = ['Variable ' num2str(i) ': ' s.task.nVar(i).name];
+					a = a + 1;
+				end
+			end
+		end
+		
+		
 	end
 	
 	methods (Static)

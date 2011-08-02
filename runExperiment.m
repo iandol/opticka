@@ -336,9 +336,10 @@ classdef (Sealed) runExperiment < handle
 				obj.task.switched = 1;
 				obj.timeLog.beforeDisplay = GetSecs;
 				
-				obj.drawPhotoDiodeSquare([0 0 0 1]);
+				
+				if obj.photoDiode == true;obj.drawPhotoDiodeSquare([0 0 0 1]);end
 				vbl=Screen('Flip', obj.win);
-				obj.drawPhotoDiodeSquare([0 0 0 1]);
+				if obj.photoDiode == true;obj.drawPhotoDiodeSquare([0 0 0 1]);end
 				if obj.logFrames == true
 					obj.timeLog.stimTime(1) = 1;
 					obj.timeLog.vbl(1) = Screen('Flip', obj.win,vbl+0.001);
@@ -378,9 +379,10 @@ classdef (Sealed) runExperiment < handle
 					
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
-					[~, ~, buttons]=GetMouse(obj.screen);
-					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
-					if strcmp(obj.uiCommand,'stop');break;end
+					%[~, ~, buttons]=GetMouse(obj.screen);
+					%if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
+					%if strcmp(obj.uiCommand,'stop');break;end
+					if KbCheck;notify(obj,'abortRun');break;end;
 						
 					obj.updateTask(); %update our task structure
 					
@@ -462,7 +464,7 @@ classdef (Sealed) runExperiment < handle
 				
 				obj.win=[];
 				Priority(0);
-				ShowCursor;
+				%ShowCursor;
 				obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
 				obj.lJack.close;
 				obj.lJack=[];
@@ -496,7 +498,7 @@ classdef (Sealed) runExperiment < handle
 				Screen('CloseAll');
 				obj.win=[];
 				Priority(0);
-				ShowCursor;
+				%ShowCursor;
 				%obj.serialP.close;
 				obj.lJack.close;
 				obj.lJack=[];
@@ -811,9 +813,11 @@ classdef (Sealed) runExperiment < handle
 						obj.task.strobeThisFrame = false;
 					end
 					
+					%if obj.verbose==true;tic;end
 					for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
 						obj.stimulus{i}.animate;
 					end
+					%if obj.verbose==true;fprintf('\nStimuli animation: %g seconds',toc);end
 					
 				else %this is a blank stimulus
 					%this causes the update of the stimuli, which may take more than one refresh, to
@@ -832,7 +836,7 @@ classdef (Sealed) runExperiment < handle
 					% now update our stimuli, we do it after the first blank as less
 					% critical timingwise
 					if obj.task.doUpdate == true
-						tic
+						%if obj.verbose==true;tic;end
 						if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
 							mT=obj.task.thisTrial+1;
 							mR = 1;
@@ -846,7 +850,7 @@ classdef (Sealed) runExperiment < handle
 							obj.stimulus{i}.update;
 						end
 						obj.task.doUpdate = false;
-						fprintf('Stimulus update: ');toc;
+						%if obj.verbose==true;fprintf('\nStimuli update: %g seconds',toc);end
 					end
 					
 				end

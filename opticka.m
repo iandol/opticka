@@ -159,25 +159,32 @@ classdef (Sealed) opticka < handle
 		%> Gets the settings from the UI and connects to omniplex
 		%> @param 
 		% ===================================================================
-		function sendOmniplexStimulus(obj)
+		function sendOmniplexStimulus(obj,sendLog)
+			if ~exist('sendLog','var')
+				sendLog = false;
+			end
 			if obj.oc.checkStatus > 0
 				%flush read buffer
 				data=obj.oc.read('all');
 				tLog=[];
 				if obj.oc.checkStatus > 0 %check again to make sure we are still open
-					tic
 					obj.oc.write('--readStimulus--');
 					pause(0.25);
-					if ~isempty(obj.r.timeLog);tLog = obj.r.timeLog;end
-					obj.r.deleteTimeLog; %so we don't send too much data over TCP
+					tic
+					if sendLog == false
+						if ~isempty(obj.r.timeLog);tLog = obj.r.timeLog;end
+						obj.r.deleteTimeLog; %so we don't send too much data over TCP
+					end
 					tmpobj=obj.r;
 					obj.oc.writeVar('o',tmpobj);
-					if ~isempty(tLog);obj.r.restoreTimeLog(tLog);end
-					toc
+					if sendLog == false
+						if ~isempty(tLog);obj.r.restoreTimeLog(tLog);end
+					end
+					fprintf('>>>Opticka: It took %g seconds to write and send stimulus to Omniplex machine\n',toc);
 					loop = 1;
 				while loop < 10
 					in = obj.oc.read(0);
-					fprintf('\n{opticka said: %s}\n',in)
+					fprintf('\n{omniplex said: %s}\n',in)
 					if regexpi(in,'(stimulusReceived)')
 						set(obj.h.OKOmniplexStatus,'String','Omniplex: connected+stimulus received')
 						break
@@ -309,13 +316,13 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version]);
 				
 			catch ME
-				close(obj.h.uihandle);
-				if ismac || ispc
-					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
-				end
 				if isappdata(obj.h.uihandle,'o')
 					rmappdata(obj.h.uihandle,'o');
 					clear o;
+				end
+				close(obj.h.uihandle);
+				if ismac || ispc
+					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
 				errordlg('Problem initialising Opticka, please check errors on the commandline')
 				rethrow(ME)
