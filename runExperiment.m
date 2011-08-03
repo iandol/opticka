@@ -379,10 +379,10 @@ classdef (Sealed) runExperiment < handle
 					
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
-					%[~, ~, buttons]=GetMouse(obj.screen);
-					%if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
-					%if strcmp(obj.uiCommand,'stop');break;end
-					if KbCheck;notify(obj,'abortRun');break;end;
+					[~, ~, buttons]=GetMouse(obj.screen);
+					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
+					if strcmp(obj.uiCommand,'stop');break;end
+					%if KbCheck;notify(obj,'abortRun');break;end;
 						
 					obj.updateTask(); %update our task structure
 					
@@ -464,7 +464,7 @@ classdef (Sealed) runExperiment < handle
 				
 				obj.win=[];
 				Priority(0);
-				%ShowCursor;
+				ShowCursor;
 				obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
 				obj.lJack.close;
 				obj.lJack=[];
@@ -498,7 +498,7 @@ classdef (Sealed) runExperiment < handle
 				Screen('CloseAll');
 				obj.win=[];
 				Priority(0);
-				%ShowCursor;
+				ShowCursor;
 				%obj.serialP.close;
 				obj.lJack.close;
 				obj.lJack=[];
