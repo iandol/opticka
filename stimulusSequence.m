@@ -75,14 +75,14 @@ classdef stimulusSequence < dynamicprops
 		function initialiseRandom(obj)
 			tic
 			if isempty(obj.randomSeed)
-				obj.randomSeed=GetSecs;
+				obj.randomSeed=round(rand*sum(clock));
 			end
 			if isempty(obj.oldStream)
 				obj.oldStream = RandStream.getDefaultStream;
 			end
 			obj.taskStream = RandStream.create(obj.randomGenerator,'Seed',obj.randomSeed);
 			RandStream.setDefaultStream(obj.taskStream);
-			fprintf('Initialise Randomisation: ');toc
+			fprintf('>>>stimulusSequence: Initialise Randomisation: %g seconds\n',toc);
 		end
 		
 		% ===================================================================
@@ -163,7 +163,7 @@ classdef stimulusSequence < dynamicprops
 					obj.outMap(gidx,f) = g;
 				end
 			end
-			fprintf('Randomise Stimuli: ');toc
+			fprintf('>>>stimulusSequence: Randomise Stimuli: %g seconds\n',toc);
 		end
 		
 		% ===================================================================
@@ -235,9 +235,9 @@ classdef stimulusSequence < dynamicprops
 					in = 'random user';
 				end
 				if exist('message','var')
-					fprintf([message ' | ' in '\n']);
+					fprintf(['>>>stimulusSequence: ' message ' | ' in '\n']);
 				else
-					fprintf(['\nstimulusSequence, ' in '\n\n']);
+					fprintf(['>>>stimulusSequence: ' in '\n']);
 				end
 			end
 		end

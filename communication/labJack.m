@@ -12,15 +12,15 @@ classdef labJack < handle
 		%> friendly name, setting this to 'null' will force silentMode=1
 		name='LabJack'
 		%> silentMode allows one to call methods without a working labJack
-		silentMode = 0
+		silentMode = false
 		%> header needed by loadlib
 		header = '/usr/local/include/labjackusb.h'
 		%> the library itself
 		library = '/usr/local/lib/liblabjackusb'
 		%> how much detail to show
-		verbosity = 0
+		verbosity = false
 		%> allows the constructor to run the open method immediately
-		openNow = 1
+		openNow = true
 		%> strobeTime is time of strobe in unit multiples of 127uS 8 ~=1ms
 		strobeTime = 16
 	end
@@ -35,7 +35,7 @@ classdef labJack < handle
 		%> handle to the opened device itself
 		handle = []
 		%> on succesful open set this to 1
-		isOpen = 0
+		isOpen = false
 		%> an input buffer, currently unused.
 		inp = []
 		%> FIO0 state
@@ -106,11 +106,11 @@ classdef labJack < handle
 				end
 			end
 			if ~isempty(regexp(obj.name,'null', 'once')) || ispc %we were deliberately passed null, means go into silent mode
-				obj.silentMode = 1;
-				obj.verbosity = 1;
-				obj.salutation('\n-- labJack running in silent mode...\n')
-				obj.verbosity = 0;
-			elseif obj.openNow==1
+				obj.silentMode = true;
+				obj.verbosity = true;
+				obj.salutation('CONSTRUCTOR Method','labJack running in silent mode...')
+				obj.verbosity = false;
+			elseif obj.openNow == true
 				obj.open
 			end
 		end
@@ -121,12 +121,12 @@ classdef labJack < handle
 		%> Open the LabJack device
 		% ===================================================================
 		function open(obj)
-			if obj.silentMode==0
+			if obj.silentMode == false
 				if ~libisloaded('liblabjackusb')
 					try
 						loadlibrary(obj.library,obj.header);
 					catch
-						obj.silentMode = 1;
+						obj.silentMode = true;
 						obj.verbosity = 0;
 						return
 					end
@@ -137,22 +137,22 @@ classdef labJack < handle
 				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',1,0,obj.deviceID);
 				obj.validHandle;
 				if obj.vHandle
-					obj.isOpen = 1;
+					obj.isOpen = true;
 					obj.salutation('open method','LabJack succesfully opened...');
 					none=[0,0,0];
 					obj.setDIO(none); %set all our DIO to output LOW
 					%obj.prepareStrobe([239,255,255],[239,255,255],1); %initialise a strobe out on all DIO
 				else
 					obj.salutation('open method','LabJack open failed, going into silent mode');
-					obj.isOpen = 0;
+					obj.isOpen = false;
 					obj.handle = [];
 					obj.silentMode = 1; %we switch into silent mode just in case someone tries to use the object
 				end
 			else
-				obj.isOpen = 0;
+				obj.isOpen = false;
 				obj.handle = [];
 				obj.vHandle = 0;
-				obj.silentMode = 1; %double make sure it is set to 1 exactly
+				obj.silentMode = true; %double make sure it is set to 1 exactly
 			end
 		end
 		
@@ -162,12 +162,12 @@ classdef labJack < handle
 		%>	//Closes the handle of a LabJack USB device.
 		% ===================================================================
 		function close(obj)
-			if ~isempty(obj.handle) && obj.silentMode==0
+			if ~isempty(obj.handle) && obj.silentMode == false
 				obj.validHandle; %double-check we still have valid handle
 				if obj.vHandle && ~isempty(obj.handle)
 					calllib('liblabjackusb','LJUSB_CloseDevice',obj.handle);
 				end
-				obj.isOpen = 0;
+				obj.isOpen = false;
 				obj.handle=[];
 				obj.vHandle = 0;
 				obj.salutation('close method',['Closed handle: ' num2str(obj.vHandle)]);
@@ -182,7 +182,7 @@ classdef labJack < handle
 		%>	//Is handle valid.
 		% ===================================================================
 		function validHandle(obj)
-			if obj.silentMode == 0
+			if obj.silentMode == false
 				if ~isempty(obj.handle)
 					obj.vHandle = calllib('liblabjackusb','LJUSB_IsHandleValid',obj.handle);
 					if obj.vHandle
@@ -192,7 +192,7 @@ classdef labJack < handle
 					end
 				else
 					obj.vHandle = 0;
-					obj.isOpen = 0;
+					obj.isOpen = false;
 					obj.handle = [];
 					obj.salutation('validHandle Method','INVALID Handle');
 				end
@@ -239,7 +239,7 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function ledON(obj)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				obj.rawWrite(obj.ledIsON);
 				%in = obj.rawRead(obj.inp,10);
 			end
@@ -251,7 +251,7 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function ledOFF(obj)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				obj.rawWrite(obj.ledIsOFF);
 				%in = obj.rawRead(obj.inp,10);
 			end
@@ -310,7 +310,7 @@ classdef labJack < handle
 			if ~exist('value','var');fprintf('\nInput options: \n\t\tvalue, [mask], [value direction], [mask direction]\n\n');return;end
 			if ~exist('mask','var');mask=[255,255,255];end
 			if ~exist('valuedir','var');valuedir=[255,255,255];maskdir=valuedir;end
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				cmd=zeros(14,1);
 				cmd(2) = 248; %command byte for feedback command (f8 in hex)
 				cmd(3) = (length(cmd)-6)/2;
@@ -336,7 +336,7 @@ classdef labJack < handle
 		function setDIODirection(obj,value,mask)
 			if ~exist('value','var');fprintf('\nInput options: \n\t\tvalue, [mask]\n\n');return;end
 			if ~exist('mask','var');mask=[255,255,255];end
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				cmd=zeros(14,1);
 				cmd(2) = 248; %command byte for feedback command (f8 in hex)
 				cmd(3) = (length(cmd)-6)/2;
@@ -358,7 +358,7 @@ classdef labJack < handle
 		% ===================================================================
 		function setDIOValue(obj,value,mask)
 			if ~exist('mask','var');mask=[255,255,255];end
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				cmd=zeros(14,1);
 				cmd(2) = 248; %command byte for feedback command (f8 in hex)
 				cmd(3) = (length(cmd)-6)/2;
@@ -381,7 +381,7 @@ classdef labJack < handle
 		%>  @param sendNow if true then sends the value immediately
 		% ===================================================================
 		function prepareStrobe(obj,value,mask,sendNow)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				if value>2047;value=2047;end %block anything bigger than 2^11(-1), 2047 signifies OFF
 				obj.comment = ['Original Value = ' num2str(value) ' | '];
 				[eio,cio]=obj.prepareWords(value,0); %construct our word split to eio and cio, set strobe low
@@ -465,7 +465,7 @@ classdef labJack < handle
 		% ===================================================================
 		function setFIO(obj,val,line)
 			if ~exist('val','var');fprintf('\nInput options: \n\t\tvalue, [line]\n\n');return;end
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				if ~exist('line','var');line=0;end
 				myname = ['fio' num2str(line)];
 				cmdHigh = [myname 'High'];
@@ -493,7 +493,7 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function toggleFIO(obj,line)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				if ~exist('line','var');line=0;end
 				myname = ['fio' num2str(line)];
 				obj.(myname)=abs(obj.(myname)-1);
@@ -507,7 +507,7 @@ classdef labJack < handle
 		%>	@param val The value to be set
 		% ===================================================================
 		function setFIO4(obj,val)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				if ~exist('val','var')
 					val = abs(obj.fio4-1);
 				end
@@ -531,7 +531,7 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function toggleFIO4(obj)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				obj.fio4=abs(obj.fio4-1);
 				obj.setFIO4(obj.fio4);
 			end
@@ -543,7 +543,7 @@ classdef labJack < handle
 		%>	@param val The value to be set
 		% ===================================================================
 		function setFIO5(obj,val)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				if ~exist('val','var')
 					val = abs(obj.fio5-1);
 				end
@@ -567,7 +567,7 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function toggleFIO5(obj)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				obj.fio5=abs(obj.fio5-1);
 				obj.setFIO5(obj.fio5);
 			end
@@ -579,7 +579,7 @@ classdef labJack < handle
 		%>	@param val The value to be set
 		% ===================================================================
 		function setFIO6(obj,val)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				if ~exist('val','var')
 					val = abs(obj.fio5-1);
 				end
@@ -603,7 +603,7 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function toggleFIO6(obj)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				obj.fio6=abs(obj.fio6-1);
 				obj.setFIO6(obj.fio6);
 			end
@@ -615,7 +615,7 @@ classdef labJack < handle
 		%>	@param val The value to be set
 		% ===================================================================
 		function setFIO7(obj,val)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				if ~exist('val','var')
 					val = abs(obj.fio7-1);
 				end
@@ -639,7 +639,7 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function toggleFIO7(obj)
-			if obj.silentMode == 0 && obj.vHandle == 1
+			if obj.silentMode == false && obj.vHandle == 1
 				obj.fio7=abs(obj.fio7-1);
 				obj.setFIO7(obj.fio7);
 			end
@@ -751,9 +751,9 @@ classdef labJack < handle
 					in = 'General Message';
 				end
 				if exist('message','var')
-					fprintf([message ' | ' in '\n']);
+					fprintf(['>>>labJack: ' message ' | ' in '\n']);
 				else
-					fprintf(['\nHello from ' obj.name ' | labJack\n\n']);
+					fprintf(['>>>labJack: ' in '\n']);
 				end
 			end
 		end

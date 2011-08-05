@@ -37,15 +37,24 @@ s.nSegments = 1;
 s.trialTime = 2;
 s.isTime = 0.25;
 s.itTime=1;
+
 s.nVar(1).name = 'angle';
 s.nVar(1).stimulus = [1 3 7];
 s.nVar(1).values = [0 45 90];
+s.nVar(1).offsetstimulus = [];
+s.nVar(1).offsetvalue = [];
+
 s.nVar(2).name = 'contrast';
 s.nVar(2).stimulus = [2 3];
 s.nVar(2).values = [0.025 0.1];
+s.nVar(2).offsetstimulus = [];
+s.nVar(2).offsetvalue = [];
+
 s.nVar(3).name = 'xPosition';
 s.nVar(3).stimulus = [2 8];
 s.nVar(3).values = [-3 3];
+s.nVar(3).offsetstimulus = [];
+s.nVar(3).offsetvalue = [];
 
 %we call the routine to randomise trials in a block structure
 s.randomiseStimuli;
