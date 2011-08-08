@@ -110,7 +110,9 @@ classdef textureStimulus < baseStimulus
 				obj.matrix = ones(obj.size*obj.ppd,obj.size*obj.ppd,3);
 			end
 			
-			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
+			obj.matrix(:,:,4) = obj.alpha .* 255;
+			
+			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1);
 			
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end

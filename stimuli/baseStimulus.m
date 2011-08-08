@@ -318,9 +318,9 @@ classdef baseStimulus < dynamicprops
 					in = 'undefined';
 				end
 				if exist('message','var')
-					fprintf(['>>>' obj.family ': ' message ' | ' in '\n']);
+					fprintf(['---> ' obj.family ': ' message ' | ' in '\n']);
 				else
-					fprintf(['>>>' obj.family ': ' in '\n']);
+					fprintf(['---> ' obj.family ': ' in '\n']);
 				end
 			end
 		end
