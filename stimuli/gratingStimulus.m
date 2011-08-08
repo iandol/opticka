@@ -16,13 +16,15 @@
 classdef gratingStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
+		%> stimulus family
 		family = 'grating'
+		%> family type
 		type = 'procedural'
 		%> spatial frequency
 		sf = 1
 		%> temporal frequency
 		tf = 1
-		%> rotate the object (0) or the texture (1)?
+		%> rotate the object (0/false) or the texture (1/true)?
 		rotationMethod = true
 		%> phase of grating
 		phase = 0
@@ -32,13 +34,13 @@ classdef gratingStimulus < baseStimulus
 		mask = true
 		%> generate a gabor?
 		gabor = false
-		%> which direction to drift?
+		%> default direction to drift?
 		driftDirection = true
 		%> the angle which the direction of the grating patch is moving
 		motionAngle = 0
 		%> aspect ratio of the gabor
 		aspectRatio = 1
-		%> should we disable normalisation of the gabor (generally YES)?
+		%> should we disable normalisation of the gabor (generally TRUE)?
 		disableNorm = true
 		%> Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure
 		contrastMult = 0.5
@@ -67,17 +69,22 @@ classdef gratingStimulus < baseStimulus
 		phaseIncrement = 0
 	end
 	
+	properties (SetAccess = protected, GetAccess = protected)
+		blah = 'blahblah'
+	end
+	
 	properties (SetAccess = private, GetAccess = private)
+		foo = 'foofoo'
 		%> as get methods are slow, we cache sf, then recalculate sf whenever
 		%> changeScale event is called
 		sfCache = []
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['^(sf|tf|method|angle|motionAngle|phase|rotationMethod|' ... 
+		allowedProperties = ['sf|tf|method|angle|motionAngle|phase|rotationMethod|' ... 
 			'contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|' ... 
 			'disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod|' ...
-			'correctPhase|squareWave|phaseReverseTime|phaseOfReverse)$']
+			'correctPhase|squareWave|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = 'scale|phaseIncrement|disableNorm|correctPhase|gabor|contrastMult|mask'
 		%> how many frames between phase reverses
@@ -109,38 +116,38 @@ classdef gratingStimulus < baseStimulus
 			if nargin == 0
 				args.family = 'grating';
 			end
+			
 			obj=obj@baseStimulus(args); %we call the superclass constructor first
-			%check we are a grating
-			if ~strcmp(obj.family,'grating')
-				error('Sorry, you are trying to call a gratingStimulus with a family other than grating');
-			end
-			%start to build our parameters
+			
 			if nargin>0 && isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
-					if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in gratingStimulus constructor');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					end
-				end
+				obj.parseArgs(args, obj.allowedProperties);
 			end
+			
 			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			obj.salutation('constructor','Grating Stimulus initialisation complete');
+			obj.salutation('constructor method','Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
-		%> @brief Generate an structure for runExperiment
+		%> @brief Setup this object in preperation for use
+		%> When displaying a stimulus object, the main properties that are to be
+		%> modified are copied into cache copies of the property, both to convert from 
+		%> visual description (c/d, Hz, degrees) to
+		%> computer metrics, and to be animated and modified as independant
+		%> variables. So xPosition is copied to xPositionOut and converyed from
+		%> degrees to pixels. The animation and drawing functions use these modified
+		%> properties, and when they are updated, for example to change to a new
+		%> xPosition, internal methods ensure reconversion and update any dependent
+		%> properties. This method initialises the object for display.
 		%>
-		%> @param in runExperiment object for reference
-		%> @return stimulus structure.
-		% ==================================================================
+		%> @param rE runExperiment object for reference
+		% ===================================================================
 		function setup(obj,rE)
 			
-			obj.reset;
+			obj.reset; %reset it back to its initial state
 			if isempty(obj.isVisible)
 				obj.show;
 			end
-			addlistener(obj,'changeScale',@obj.calculateScale);
+			addlistener(obj,'changeScale',@obj.calculateScale); %use an event to keep scale accurate
 			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
 			
 			obj.ppd=rE.ppd;
@@ -247,10 +254,8 @@ classdef gratingStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Update an structure for runExperiment
+		%> @brief Update this stimulus object for display
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function update(obj)
 			obj.tick = 1;
@@ -264,10 +269,9 @@ classdef gratingStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Draw an structure for runExperiment
+		%> @brief Draw this stimulus object for display
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
+		%> 
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible == true
@@ -286,10 +290,8 @@ classdef gratingStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Animate an structure for runExperiment
+		%> @brief Animate this object for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
 			if obj.doMotion == true

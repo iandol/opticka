@@ -617,6 +617,31 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
+		%> @brief addSpot
+		%> Gets the settings from th UI and updates our runExperiment object
+		%> @param 
+		% ===================================================================
+		function addTexture(obj)
+			tmp = struct;
+			tmp.xPosition = obj.gd(obj.h.OKPanelTexturexPosition);
+			tmp.yPosition = obj.gd(obj.h.OKPanelTextureyPosition);
+			%tmp.size = obj.gd(obj.h.OKPanelSpotsize);
+			tmp.angle = obj.gd(obj.h.OKPanelTextureangle);
+			tmp.speed = obj.gd(obj.h.OKPanelTexturespeed);
+			tmp.contrast = obj.gd(obj.h.OKPanelTexturecontrast);
+			%tmp.alpha = obj.gd(obj.h.OKPanelSpotalpha);
+			tmp.startPosition = obj.gd(obj.h.OKPanelTexturestartPosition);
+			%v = obj.gv(obj.h.OKPanelTexturetype);
+			%tmp.type = obj.gs(obj.h.OKPanelTexturetype,v);
+			tmp.fileName = obj.gs(obj.h.OKPanelTexturefileName);
+			
+			obj.r.stimulus{obj.r.sList.n+1} = textureStimulus(tmp);
+			
+			obj.r.updatesList;
+			obj.refreshStimulusList;
+		end
+		
+		% ===================================================================
 		%> @brief editStimulus
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
@@ -1110,6 +1135,14 @@ classdef (Sealed) opticka < handle
 						sz=s.size;
 						c=s.contrast;
 						str{i} = ['Spot ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c)];
+					case 'texture'
+						x=s.xPosition;
+						y=s.yPosition;
+						sz=s.size;
+						c=s.contrast;
+						str{i} = ['Texture ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c)];
+					otherwise
+						str{i} = ['Undefined stimulus type'];
 				end
 			end
 			if isempty(pos) || pos > length(str)

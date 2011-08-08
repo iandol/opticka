@@ -63,21 +63,13 @@ classdef dotsStimulus < baseStimulus
 			if nargin == 0
 				args.family = 'dots';
 			end
+			
 			obj=obj@baseStimulus(args); %we call the superclass constructor first
-			%check we are a grating
-			if ~strcmpi(obj.family,'dots')
-				error('Sorry, you are trying to call a dotsStimulus with a family other than dots');
-			end
-			%start to build our parameters
+
 			if nargin>0 && isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
-					if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in dotsStimulus constructor');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					end
-				end
+				obj.parseArgs(args, obj.allowedProperties);
 			end
+			
 			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
 			obj.salutation('constructor','Dots Stimulus initialisation complete');
 		end
@@ -108,10 +100,10 @@ classdef dotsStimulus < baseStimulus
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
-					if strcmp(fn{j},'size');p.SetMethod = @setsizeOut;end
-					if strcmp(fn{j},'dotSize');p.SetMethod = @setdotSizeOut;end
-					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
+					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
+					if strcmp(fn{j},'dotSize');p.SetMethod = @set_dotSizeOut;end
+					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
+					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
@@ -194,6 +186,9 @@ classdef dotsStimulus < baseStimulus
 			obj.xy = obj.xy - obj.sizeOut/2; %so we are centered for -xy to +xy
 			[obj.dxs, obj.dys] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
 			obj.dxdy=[obj.dxs';obj.dys'];
+			if obj.mask == true
+				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xPositionOut,obj.yPositionOut);
+			end
 			obj.tick = 1;
 		end
 		
@@ -342,34 +337,17 @@ classdef dotsStimulus < baseStimulus
 			end
 		end
 	end
-	
-	
 	%---END PUBLIC METHODS---%
 	
-	methods ( Access = private ) %----------PRIVATE METHODS---------%
-		% ===================================================================
-		%> @brief sfOut Set method
-		%>
-		% ===================================================================
-		function setcoherenceOut(obj,value)
-			obj.coherenceOut = value;
-			obj.updateDots;
-		end
+	%=======================================================================
+	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	%=======================================================================
 		
 		% ===================================================================
-		%> @brief sfOut Set method
+		%> @brief sizeOut Set method
 		%>
 		% ===================================================================
-		function setangleOut(obj,value)
-			obj.coherenceOut = value;
-			obj.updateDots;
-		end
-		
-		% ===================================================================
-		%> @brief sfOut Set method
-		%>
-		% ===================================================================
-		function setsizeOut(obj,value)
+		function set_sizeOut(obj,value)
 			obj.sizeOut = value * obj.ppd;
 			if obj.mask == 1
 				obj.fieldSize = obj.sizeOut * obj.fieldScale; %for masking!
@@ -379,10 +357,10 @@ classdef dotsStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief sfOut Set method
+		%> @brief dotSizeOut Set method
 		%>
 		% ===================================================================
-		function setdotSizeOut(obj,value)
+		function set_dotSizeOut(obj,value)
 			obj.dotSizeOut = value * obj.ppd;
 		end
 		
@@ -390,7 +368,7 @@ classdef dotsStimulus < baseStimulus
 		%> @brief xPositionOut Set method
 		%>
 		% ===================================================================
-		function setxPositionOut(obj,value)
+		function set_xPositionOut(obj,value)
 			obj.xPositionOut = obj.xCenter + (value * obj.ppd);
 		end
 		
@@ -398,7 +376,7 @@ classdef dotsStimulus < baseStimulus
 		%> @brief yPositionOut Set method
 		%>
 		% ===================================================================
-		function setyPositionOut(obj,value)
+		function set_yPositionOut(obj,value)
 			obj.yPositionOut = obj.yCenter + (value * obj.ppd);
 		end
 	end

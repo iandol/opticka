@@ -43,99 +43,15 @@ classdef barStimulus < baseStimulus
 			if nargin == 0
 				args.family = 'bar';
 			end
+			
 			obj=obj@baseStimulus(args); %we call the superclass constructor first
+			
 			if nargin>0 && isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
-					if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in barStimulus constructor');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					end
-				end
-			end
-			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			obj.salutation('constructor','Bar Stimulus initialisation complete');
-		end
-		
-		% ===================================================================
-		%> @brief Generate an structure for runExperiment
-		%>
-		%> @param ppd use the passed pixels per degree to make a RGBA matrix of
-		%> the correct dimensions
-		%> @return
-		% ===================================================================
-		function constructMatrix(obj,ppd)
-			if ~exist('ppd','var');ppd=obj.ppd;end
-			obj.matrix=[]; %reset the matrix
-			if length(obj.colour) == 3
-				obj.colour(4) = obj.alpha;
+				obj.parseArgs(args, obj.allowedProperties);
 			end
 			
-			try
-				bwpixels = round(obj.barWidth*ppd);
-				blpixels = round(obj.barLength*ppd);
-				if rem(bwpixels,2);bwpixels=bwpixels+1;end
-				if rem(blpixels,2);blpixels=blpixels+1;end
-				bwscale = (bwpixels/obj.scale)+1;
-				blscale = (blpixels/obj.scale)+1;
-
-				tmat = ones(blscale,bwscale,4); %allocate the size correctly
-				tmat(:,:,1)=ones(blscale,bwscale)*obj.colour(1);
-				tmat(:,:,2)=ones(blscale,bwscale)*obj.colour(2);
-				tmat(:,:,3)=ones(blscale,bwscale)*obj.colour(3);
-				tmat(:,:,4)=ones(blscale,bwscale)*obj.colour(4);
-				rmat=ones(blscale,bwscale);
-				switch obj.type
-					case 'random'
-						rmat=rand(blscale,bwscale);
-						for i=1:3
-							tmat(:,:,i)=tmat(:,:,i).*rmat;
-						end
-						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
-					case 'randomColour'
-						for i=1:3
-							rmat=rand(blscale,bwscale);
-							tmat(:,:,i)=tmat(:,:,i).*rmat;
-						end
-						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
-					case 'randomN'
-						rmat=randn(blscale,bwscale);
-						for i=1:3
-							tmat(:,:,i)=tmat(:,:,i).*rmat;
-						end
-						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
-					case 'randomBW'
-						rmat=rand(blscale,bwscale);
-						rmat(rmat < 0.5) = 0;
-						rmat(rmat >= 0.5) = 1;
-						for i=1:3
-							tmat(:,:,i)=tmat(:,:,i).*rmat;
-						end
-						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
-					otherwise
-						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
-				end
-				aw=0:obj.scale:bwpixels;
-				al=0:obj.scale:blpixels;
-				[a,b]=meshgrid(aw,al);
-				[A,B]=meshgrid(0:bwpixels,0:blpixels);
-				for i=1:4
-					outmat(:,:,i) = interp2(a,b,tmat(:,:,i),A,B,obj.interpMethod);
-				end
-				obj.matrix = outmat(1:blpixels,1:bwpixels,:);
-				obj.rmatrix = rmat;
-			catch
-				bwpixels = round(obj.barWidth*ppd);
-				blpixels = round(obj.barLength*ppd);
-				tmat = ones(blpixels,bwpixels,4); %allocate the size correctly
-				tmat(:,:,1)=ones(blpixels,bwpixels)*obj.colour(1);
-				tmat(:,:,2)=ones(blpixels,bwpixels)*obj.colour(2);
-				tmat(:,:,3)=ones(blpixels,bwpixels)*obj.colour(3);
-				tmat(:,:,4)=ones(blpixels,bwpixels)*obj.colour(4);
-				rmat=ones(blpixels,bwpixels);
-				obj.matrix=tmat;
-				obj.rmatrix=rmat;
-			end
+			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
+			obj.salutation('constructor','Bar Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
@@ -159,8 +75,8 @@ classdef barStimulus < baseStimulus
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
-					if strcmp(fn{j},'xPosition');p.SetMethod = @setxPositionOut;end
-					if strcmp(fn{j},'yPosition');p.SetMethod = @setyPositionOut;end
+					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
+					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
@@ -236,6 +152,87 @@ classdef barStimulus < baseStimulus
 		end
 		
 		% ===================================================================
+		%> @brief constructMatrix makes the texture matrix to fill the bar with
+		%>
+		%> @param ppd use the passed pixels per degree to make a RGBA matrix of
+		%> the correct dimensions
+		% ===================================================================
+		function constructMatrix(obj,ppd)
+			if ~exist('ppd','var');ppd=obj.ppd;end
+			obj.matrix=[]; %reset the matrix
+			if length(obj.colour) == 3
+				obj.colour(4) = obj.alpha;
+			end
+			
+			try
+				bwpixels = round(obj.barWidth*ppd);
+				blpixels = round(obj.barLength*ppd);
+				if rem(bwpixels,2);bwpixels=bwpixels+1;end
+				if rem(blpixels,2);blpixels=blpixels+1;end
+				bwscale = (bwpixels/obj.scale)+1;
+				blscale = (blpixels/obj.scale)+1;
+
+				tmat = ones(blscale,bwscale,4); %allocate the size correctly
+				tmat(:,:,1)=ones(blscale,bwscale)*obj.colour(1);
+				tmat(:,:,2)=ones(blscale,bwscale)*obj.colour(2);
+				tmat(:,:,3)=ones(blscale,bwscale)*obj.colour(3);
+				tmat(:,:,4)=ones(blscale,bwscale)*obj.colour(4);
+				rmat=ones(blscale,bwscale);
+				switch obj.type
+					case 'random'
+						rmat=rand(blscale,bwscale);
+						for i=1:3
+							tmat(:,:,i)=tmat(:,:,i).*rmat;
+						end
+						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+					case 'randomColour'
+						for i=1:3
+							rmat=rand(blscale,bwscale);
+							tmat(:,:,i)=tmat(:,:,i).*rmat;
+						end
+						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+					case 'randomN'
+						rmat=randn(blscale,bwscale);
+						for i=1:3
+							tmat(:,:,i)=tmat(:,:,i).*rmat;
+						end
+						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+					case 'randomBW'
+						rmat=rand(blscale,bwscale);
+						rmat(rmat < 0.5) = 0;
+						rmat(rmat >= 0.5) = 1;
+						for i=1:3
+							tmat(:,:,i)=tmat(:,:,i).*rmat;
+						end
+						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+					otherwise
+						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
+				end
+				aw=0:obj.scale:bwpixels;
+				al=0:obj.scale:blpixels;
+				[a,b]=meshgrid(aw,al);
+				[A,B]=meshgrid(0:bwpixels,0:blpixels);
+				for i=1:4
+					outmat(:,:,i) = interp2(a,b,tmat(:,:,i),A,B,obj.interpMethod);
+				end
+				obj.matrix = outmat(1:blpixels,1:bwpixels,:);
+				obj.rmatrix = rmat;
+			catch
+				bwpixels = round(obj.barWidth*ppd);
+				blpixels = round(obj.barLength*ppd);
+				tmat = ones(blpixels,bwpixels,4); %allocate the size correctly
+				tmat(:,:,1)=ones(blpixels,bwpixels)*obj.colour(1);
+				tmat(:,:,2)=ones(blpixels,bwpixels)*obj.colour(2);
+				tmat(:,:,3)=ones(blpixels,bwpixels)*obj.colour(3);
+				tmat(:,:,4)=ones(blpixels,bwpixels)*obj.colour(4);
+				rmat=ones(blpixels,bwpixels);
+				obj.matrix=tmat;
+				obj.rmatrix=rmat;
+			end
+		end
+		
+		
+		% ===================================================================
 		%> @brief barLength set method
 		%>
 		%> @param length of bar
@@ -270,7 +267,7 @@ classdef barStimulus < baseStimulus
 		%> @brief xPositionOut Set method
 		%>
 		% ===================================================================
-		function setxPositionOut(obj,value)
+		function set_xPositionOut(obj,value)
 			obj.xPositionOut = value*obj.ppd;
 			if ~isempty(obj.texture);obj.setRect;end
 		end
@@ -279,7 +276,7 @@ classdef barStimulus < baseStimulus
 		%> @brief yPositionOut Set method
 		%>
 		% ===================================================================
-		function setyPositionOut(obj,value)
+		function set_yPositionOut(obj,value)
 			obj.yPositionOut = value*obj.ppd;
 			if ~isempty(obj.texture);obj.setRect;end
 		end

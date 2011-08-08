@@ -41,7 +41,7 @@ classdef (Sealed) runExperiment < handle
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer = 1
 		%>bitDepth of framebuffer
-		bitDepth = 'FloatingPoint32BitIfPossible'
+		bitDepth = '8bit'
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8 and 16
 		antiAlias = []
 		%> background of display during stimulus presentation
@@ -1138,14 +1138,14 @@ classdef (Sealed) runExperiment < handle
 		%> @param message the message that needs printing to command window
 		% ===================================================================
 		function salutation(obj,in,message)
-			if obj.verbose==1
+			if obj.verbose==true
 				if ~exist('in','var')
-					in = 'random user';
+					in = 'undefined';
 				end
 				if exist('message','var')
-					fprintf([message ' | ' in '\n']);
+					fprintf(['>>>runExperiment: ' message ' | ' in '\n']);
 				else
-					fprintf(['\nHello from ' obj.screen ' stimulus, ' in '\n\n']);
+					fprintf(['>>>runExperiment: ' in '\n']);
 				end
 			end
 		end

@@ -56,6 +56,7 @@ classdef baseStimulus < dynamicprops
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+		blahB = 'blahblah BASE'
 		%> pixels per degree (calculated in runExperiment)
 		ppd = 44
 		%> Inter frame interval (calculated in runExperiment)
@@ -76,7 +77,9 @@ classdef baseStimulus < dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedPropertiesBase='^(xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed)$'
+		foo = 'foofoo BASE'
+		fooB = 'foofoo BASE'
+		allowedProperties='xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed'
 	end
 	
 	%=======================================================================
@@ -93,17 +96,11 @@ classdef baseStimulus < dynamicprops
 		%> @return instance of class.
 		% ===================================================================
 		function obj = baseStimulus(args)
+			
 			if nargin>0 && isstruct(args)
-				if nargin>0 && isstruct(args)
-					fnames = fieldnames(args); %find our argument names
-					for i=1:length(fnames);
-						if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
-							obj.salutation(fnames{i},'Configuring setting in baseStimulus constructor');
-							obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-						end
-					end
-				end
+				obj.parseArgs(args, obj.allowedProperties);
 			end
+			
 		end 
 	
 		% ===================================================================
@@ -257,7 +254,7 @@ classdef baseStimulus < dynamicprops
 		% ===================================================================
 		%> @brief Converts properties to a structure
 		%>
-		%> Prints messages dependent on verbosity
+		%> 
 		%> @param obj this instance object
 		%> @param tmp is whether to use the temporary or permanent properties
 		%> @return out the structure
@@ -292,6 +289,22 @@ classdef baseStimulus < dynamicprops
 		end
 		
 		% ===================================================================
+		%> @brief Sets properties from a structure, ignores invalid properties
+		%>
+		%> @param args input structure
+		% ===================================================================
+		function parseArgs(obj, args, allowedProperties)
+			allowedProperties = ['^(' allowedProperties ')$'];
+			fnames = fieldnames(args); %find our argument names
+			for i=1:length(fnames);
+				if regexp(fnames{i},allowedProperties) %only set if allowed property
+					obj.salutation(fnames{i},'Configuring setting in constructor');
+					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+				end
+			end
+		end
+		
+		% ===================================================================
 		%> @brief Prints messages dependent on verbosity
 		%>
 		%> Prints messages dependent on verbosity
@@ -305,9 +318,9 @@ classdef baseStimulus < dynamicprops
 					in = 'undefined';
 				end
 				if exist('message','var')
-					fprintf([message ' | ' in '\n']);
+					fprintf(['>>>' obj.family ': ' message ' | ' in '\n']);
 				else
-					fprintf(['\n' obj.family ' stimulus, ' in '\n']);
+					fprintf(['>>>' obj.family ': ' in '\n']);
 				end
 			end
 		end

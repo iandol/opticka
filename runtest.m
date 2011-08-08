@@ -1,5 +1,4 @@
 %make sure we start in a clean environment, not essential
-Screen('CloseAll')
 clear stim s r
 
 %These set up the stimuli, values in degrees, cycles/deg, deg/s etc.
@@ -62,5 +61,7 @@ s.randomiseStimuli;
 %% ss is the object which interfaces with the screen and runs our
 %% experiment
 r=runExperiment(struct('distance',57.3,'pixelsPerCm',44,'blend',0,...
-	'stimulus',{stim},'task',s,'windowed',0,'antiAlias',0,'debug',1,'hideFlash',0,'verbose',1));
+	'stimulus',{stim},'task',s,'windowed',1,'antiAlias',0,...
+	'debug',1,'bitDepth','8bit','hideFlash',0,'verbose',1));
+%Screen('CloseAll')
 %r.run

@@ -143,15 +143,17 @@ classdef labJack < handle
 					obj.setDIO(none); %set all our DIO to output LOW
 					%obj.prepareStrobe([239,255,255],[239,255,255],1); %initialise a strobe out on all DIO
 				else
-					obj.salutation('open method','LabJack open failed, going into silent mode');
+					obj.salutation('open method','LabJack didn''t open, going into silent mode');
 					obj.isOpen = false;
 					obj.handle = [];
+					obj.verbosity = false;
 					obj.silentMode = 1; %we switch into silent mode just in case someone tries to use the object
 				end
 			else
 				obj.isOpen = false;
 				obj.handle = [];
 				obj.vHandle = 0;
+				obj.verbosity = false;
 				obj.silentMode = true; %double make sure it is set to 1 exactly
 			end
 		end
@@ -170,9 +172,9 @@ classdef labJack < handle
 				obj.isOpen = false;
 				obj.handle=[];
 				obj.vHandle = 0;
-				obj.salutation('close method',['Closed handle: ' num2str(obj.vHandle)]);
+				obj.salutation('CLOSE method',['Closed handle: ' num2str(obj.vHandle)]);
 			else
-				obj.salutation('close method',['No handle to close: ' num2str(obj.vHandle)]);
+				obj.salutation('CLOSE method',['No handle to close: ' num2str(obj.vHandle)]);
 			end
 		end
 		

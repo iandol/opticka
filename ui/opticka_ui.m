@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 23-Jul-2011 19:59:04
+% Last Modified by GUIDE v2.5 08-Aug-2011 03:31:47
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -420,6 +420,7 @@ function OKMenuDots_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 %set(handles.OKPanelNoise,'Visible','off')
+set(handles.OKPanelTexture,'Visible','off')
 set(handles.OKPanelGrating,'Visible','off')
 set(handles.OKPanelBar,'Visible','off')
 set(handles.OKPanelSpot,'Visible','off')
@@ -434,6 +435,7 @@ function OKMenuBar_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuBar (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+set(handles.OKPanelTexture,'Visible','off')
 set(handles.OKPanelGrating,'Visible','off')
 set(handles.OKPanelSpot,'Visible','off')
 set(handles.OKPanelBar,'Visible','on')
@@ -448,6 +450,7 @@ function OKMenuGrating_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuGrating (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+set(handles.OKPanelTexture,'Visible','off')
 set(handles.OKPanelDots,'Visible','off')
 set(handles.OKPanelSpot,'Visible','off')
 set(handles.OKPanelBar,'Visible','off')
@@ -462,6 +465,7 @@ function OKMenuSpot_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuSpot (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+set(handles.OKPanelTexture,'Visible','off')
 set(handles.OKPanelGrating,'Visible','off')
 set(handles.OKPanelBar,'Visible','off')
 set(handles.OKPanelDots,'Visible','off')
@@ -471,9 +475,27 @@ if isappdata(handles.output,'o')
 	o.store.visibleStimulus='spot';
 end
 
+% --------------------------------------------------------------------
+function OKMenuTexture_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuTexture (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.OKPanelTexture,'Visible','on')
+set(handles.OKPanelGrating,'Visible','off')
+set(handles.OKPanelBar,'Visible','off')
+set(handles.OKPanelDots,'Visible','off')
+set(handles.OKPanelSpot,'Visible','off')
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.store.visibleStimulus='texture';
+end
+
+
+% --------------------------------------------------------------------
 function OKMenuPreferences_Callback(hObject, eventdata, handles)
 
 
+% --------------------------------------------------------------------
 function OKPanelGratingtype_Callback(hObject, eventdata, handles)
 switch get(hObject,'Value')
 	case {1,2}
@@ -802,6 +824,8 @@ if isappdata(handles.output,'o')
 			o.addDots;
 		case 'spot'
 			o.addSpot;
+		case 'texture'
+			o.addTexture;
 	end
 	if ~isempty(o.r.stimulus)
 		set(handles.OKDeleteStimulus,'Enable','on');
@@ -1218,3 +1242,20 @@ function OKPanelGratingphaseOfReverse_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of OKPanelGratingphaseOfReverse as text
 %        str2double(get(hObject,'String')) returns contents of OKPanelGratingphaseOfReverse as a double
+
+
+% --- Executes on button press in OKPanelTextureGetFile.
+function OKPanelTextureGetFile_Callback(hObject, eventdata, handles)
+% hObject    handle to OKPanelTextureGetFile (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	[filename, pathname] = uigetfile('*.jpg', 'Select a MATLAB code file');
+	if isequal(filename,0)
+	   disp('User selected Cancel')
+	else
+	   disp(['User selected', fullfile(pathname, filename)])
+	   set(handles.OKPanelTexturefileName, 'String', fullfile(pathname, filename));
+	end
+end

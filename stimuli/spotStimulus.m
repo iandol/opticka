@@ -51,18 +51,15 @@ classdef spotStimulus < baseStimulus
 			if nargin == 0
 				args.family = 'spot';
 			end
+			
 			obj=obj@baseStimulus(args); %we call the superclass constructor first
+			
 			if nargin>0 && isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
-					if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in spotStimulus constructor');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					end
-				end
+				obj.parseArgs(args, obj.allowedProperties);
 			end
+			
 			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			obj.salutation('constructor','Spot Stimulus initialisation complete');
+			obj.salutation('constructor','Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
