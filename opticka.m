@@ -30,7 +30,7 @@ classdef (Sealed) opticka < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> used to sanitise passed values on construction
-		allowedPropertiesBase='^(verbose)$' 
+		allowedProperties='verbose' 
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList = {'OKOmniplexIP','OKPixelsPerCm','OKAntiAliasing','OKbitDepth'};
 		%> any other prefs to save?
@@ -57,17 +57,11 @@ classdef (Sealed) opticka < handle
 		%> @return instance of opticka class.
 		% ===================================================================
 		function obj = opticka(args)
+			
 			if nargin>0 && isstruct(args)
-				if nargin>0 && isstruct(args)
-					fnames = fieldnames(args); %find our argument names
-					for i=1:length(fnames);
-						if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
-							obj.salutation(fnames{i},'Configuring setting in baseStimulus constructor');
-							obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-						end
-					end
-				end
+				obj.parseArgs(args, obj.allowedProperties);
 			end
+			
 			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
 			obj.initialiseUI;
 		end
@@ -1189,9 +1183,9 @@ classdef (Sealed) opticka < handle
 					in = 'undefined';
 				end
 				if exist('message','var')
-					fprintf([message ' | ' in '\n']);
+					fprintf(['---> Opticka: ' message ' | ' in '\n']);
 				else
-					fprintf(['\n' obj.family ' stimulus, ' in '\n']);
+					fprintf(['---> Opticka: ' in '\n']);
 				end
 			end
 		end
@@ -1309,6 +1303,22 @@ classdef (Sealed) opticka < handle
 				end
 				if isprop(ch(k),'FontName')
 					set(ch(k),'FontName','verdana');
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Sets properties from a structure, ignores invalid properties
+		%>
+		%> @param args input structure
+		% ===================================================================
+		function parseArgs(obj, args, allowedProperties)
+			allowedProperties = ['^(' allowedProperties ')$'];
+			fnames = fieldnames(args); %find our argument names
+			for i=1:length(fnames);
+				if regexp(fnames{i},allowedProperties) %only set if allowed property
+					obj.salutation(fnames{i},'Configuring setting in constructor');
+					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 				end
 			end
 		end

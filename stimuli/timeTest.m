@@ -258,14 +258,14 @@ try
 	PsychImaging('PrepareConfiguration');
 	PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 	% FloatingPoint16Bit FloatingPoint32Bit 
-	PsychImaging('AddTask', 'General', 'FloatingPoint32Bit');
+	%PsychImaging('AddTask', 'General', 'FloatingPoint32Bit');
 	PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 	normalize=255;
 	
 	% Open double-buffered window: Optionally enable stereo output if
 	% stereo == 1.
 	%w=Screen('OpenWindow',screenNumber, 0,[],32,2, stereo);
-	w=PsychImaging('OpenWindow',screenNumber, 0,[],32,2, stereo);
+	w=PsychImaging('OpenWindow',screenNumber, 0,[],[],2, stereo);
 	
 	% Clear screen to black background color: If in stereo mode, we only
 	% clear the left-eye buffer...
@@ -399,6 +399,7 @@ try
 			tdeadline=0;
 		end;
 		
+		%add in a bit of work into the loop
 		if c == 1; lj.prepareStrobe(2000); end
 		
 		% Flip: The clearmode argument specifies if flip should clear the
