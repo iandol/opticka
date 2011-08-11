@@ -91,7 +91,7 @@ classdef gratingStimulus < baseStimulus
 		phaseCounter = 0
 	end
 	
-	events
+	events (ListenAccess = 'private', NotifyAccess = 'private')
 		%> triggered when changing size, so we can change sf etc to compensate
 		changeScale 
 		%> triggered when changing tf or drift direction

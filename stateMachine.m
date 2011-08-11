@@ -3,17 +3,36 @@ classdef stateMachine < handle
 	%   Detailed explanation goes here
 	
 	properties
-		stateList
-		
+		%>our main state list
+		stateList = []
+		enterFunction
+		exitFunction
+		beforeFunction
+		afterFunction
+		transitionFunction
+		verbose = true
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		currentState
 		currentTick
+		currentTime
+		nextTick
+		nextTime
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
-		
+		%> field names of allStates struct array, defining state behaviors
+		stateFields = {'name', 'next', 'time',	'entry', 'within', 'withinTime', 'exit'}
+		%> default values of allStates struct array fields
+		stateDefaults = {'', '', 0, {}, {}, 0, {}}
+	end
+	
+	events
+		enterState
+		exitState
+		beforeState
+		afterState
 	end
 	
 	%=======================================================================
@@ -32,6 +51,63 @@ classdef stateMachine < handle
 		function obj = stateMachine(args)
 			
 		end
+		
+		function addStates(obj,in)
+			sz = size(in);
+         allStateIndexes = zeros(1,sz(1)-1);
+            for ii = 2:sz(1)
+                newState = cell2struct(in(ii,:), in(1,:), 2);
+                allStateIndexes(ii-1) = obj.addState(newState);
+            end
+		end
+		
+		function addState(obj,in)
+			allowedFields = cat(2, self.stateFields, ...
+                self.sharedEntryFevalableNames, ...
+                self.sharedExitFevalableNames);
+            allowedDefaults = cat(2, self.stateDefaults, ...
+                cell(size(self.sharedEntryFevalableNames)), ...
+                cell(size(self.sharedExitFevalableNames)));
+            
+            % pick stateInfo fields that match allowed fields
+            infoFields = fieldnames(stateInfo);
+            infoValues = struct2cell(stateInfo);
+            [validFields, validIndices, defaultIndices] = ...
+                intersect(infoFields, allowedFields);
+            
+            % merge valid stateInfo and defaults into new struct
+            mergedValues = allowedDefaults;
+            mergedValues(defaultIndices) = infoValues(validIndices);
+            newState = cell2struct(mergedValues, allowedFields, 2);
+            
+            % append the new state to allStates
+            %   add to lookup table
+            if isempty(self.allStates)
+                allStateIndex = 1;
+                self.allStates = newState;
+            else
+                [isState, allStateIndex] = self.isStateName(newState.name);
+                if ~isState
+                    allStateIndex = length(self.allStates) + 1;
+                end
+                self.allStates(allStateIndex) = newState;
+            end
+            self.stateNameToIndex(newState.name) = allStateIndex;
+		end
+		
+		function editState(obj,stateName,varin)
+			
+		end
+		
+		function getState(obj, stateName)
+			
+		end
+		
+		function run(obj,in)
+			
+		end
+		
+		
 	end
 	
 	%=======================================================================
@@ -90,9 +166,9 @@ classdef stateMachine < handle
 					in = 'undefined';
 				end
 				if exist('message','var')
-					fprintf(['---> ' obj.family ': ' message ' | ' in '\n']);
+					fprintf(['---> stateMachine: ' message ' | ' in '\n']);
 				else
-					fprintf(['---> ' obj.family ': ' in '\n']);
+					fprintf(['---> stateMachine: ' in '\n']);
 				end
 			end
 		end
