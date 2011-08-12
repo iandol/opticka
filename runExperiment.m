@@ -329,13 +329,21 @@ classdef (Sealed) runExperiment < handle
 				%--------------this is RSTART (FIO0->Pin 24), unpausing the omniplex
 				if obj.useLabJack == true
 					obj.lJack.setDIO([1,0,0],[1,0,0])
-					WaitSecs(0.2);
 				end
 				
 				obj.task.tick = 1;
 				obj.task.switched = 1;
 				obj.timeLog.beforeDisplay = GetSecs;
 				
+				for i = 1:obj.screenVals.fps
+					for j=1:obj.sList.n
+						obj.stimulus{j}.draw();
+					end
+					obj.drawBackground;
+					obj.drawFixationPoint;
+					Screen('DrawingFinished', obj.win);
+					Screen('Flip', obj.win, []);
+				end
 				
 				if obj.photoDiode == true;obj.drawPhotoDiodeSquare([0 0 0 1]);end
 				vbl=Screen('Flip', obj.win);

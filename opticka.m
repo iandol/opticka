@@ -1122,7 +1122,9 @@ classdef (Sealed) opticka < handle
 						sz=s.size;
 						a=s.angle;
 						c=s.coherence;
-						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c)];
+						nd=s.nDots;
+						sp=s.speed;
+						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' nd=' num2str(nd) ' sp=' num2str(sp)];
 					case 'spot'
 						x=s.xPosition;
 						y=s.yPosition;

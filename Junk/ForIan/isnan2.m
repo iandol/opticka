@@ -1,1 +1,0 @@
-function x = isnan2(a)% CELL/ISNAN returns 0 because a cell is not a NaN%% 		x = isnan(a) returns 0 becuse a cell array is not a NaN%% MC 98x = 0;

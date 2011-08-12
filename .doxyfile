@@ -31,7 +31,7 @@ PROJECT_NAME           = "Opticka"
 # This could be handy for archiving the generated documentation or
 # if some version control system is used.
 
-PROJECT_NUMBER         = 0.501
+PROJECT_NUMBER         = 0.516
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute)
 # base path where the generated documentation will be put.
@@ -692,7 +692,7 @@ INPUT_FILTER           =
 # info on how filters are used. If FILTER_PATTERNS is empty, INPUT_FILTER
 # is applied to all files.
 
-FILTER_PATTERNS        = *.m="~/Code/opticka/Junk/m2cpp.pl"
+FILTER_PATTERNS        = *.m="~/Code/opticka/tools/m2cpp.pl"
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER) will be used to filter the input files when producing source
