@@ -666,6 +666,11 @@ classdef (Sealed) runExperiment < handle
 			end
 			obj.task.tick=0;
 			
+			if isempty(obj.task.findprop('blankTick'))
+				obj.task.addprop('blankTick'); %add new dynamic property
+			end
+			obj.task.blankTick=0;
+			
 			if isempty(obj.task.findprop('thisRun'))
 				obj.task.addprop('thisRun'); %add new dynamic property
 			end
@@ -777,10 +782,16 @@ classdef (Sealed) runExperiment < handle
 					end
 				end
 				
-				for j = ix %loop through our stimuli references for this variable
-					obj.stimulus{j}.(name)=value;
-					if thisTrial == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
-						obj.stimulus{j}.update;
+				if obj.task.blankTick > 2 && obj.task.blankTick <= obj.sList.n + 2
+% 						obj.stimulus{j}.(name)=value;
+				else
+					for j = ix %loop through our stimuli references for this variable
+						if obj.verbose==true;tic;end
+						obj.stimulus{j}.(name)=value;
+						if thisTrial == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
+							obj.stimulus{j}.update;
+						end
+						if obj.verbose==true;fprintf('\nVariable assign %i: %g seconds',j,toc);end
 					end
 				end
 			end
@@ -828,6 +839,7 @@ classdef (Sealed) runExperiment < handle
 					%if obj.verbose==true;fprintf('\nStimuli animation: %g seconds',toc);end
 					
 				else %this is a blank stimulus
+					obj.task.blankTick = obj.task.blankTick + 1;
 					%this causes the update of the stimuli, which may take more than one refresh, to
 					%occur during the second blank flip, thus we don't lose any timing.
 					if obj.task.switched == false && obj.task.strobeThisFrame == true
@@ -844,7 +856,6 @@ classdef (Sealed) runExperiment < handle
 					% now update our stimuli, we do it after the first blank as less
 					% critical timingwise
 					if obj.task.doUpdate == true
-						%if obj.verbose==true;tic;end
 						if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
 							mT=obj.task.thisTrial+1;
 							mR = 1;
@@ -853,12 +864,21 @@ classdef (Sealed) runExperiment < handle
 							mR = obj.task.thisRun + 1;
 						end
 						%obj.uiCommand;
+						if obj.verbose==true;tic;end
 						obj.updateVars(mT,mR);
-						for i = 1:obj.sList.n
-							obj.stimulus{i}.update;
-						end
-						obj.task.doUpdate = false;
-						%if obj.verbose==true;fprintf('\nStimuli update: %g seconds',toc);end
+% 						for i = 1:obj.sList.n
+% 							obj.stimulus{i}.update;
+% 						end
+								obj.task.doUpdate = false;
+									if obj.verbose==true;fprintf('\nVariable update: %g seconds',toc);end
+					end
+					
+					%this dispatches each stimulus update on a new blank frame to
+					%reduce overhead.
+					if obj.task.blankTick > 2 && obj.task.blankTick <= obj.sList.n + 2
+						if obj.verbose==true;tic;end
+						obj.stimulus{obj.task.blankTick-2}.update;
+						if obj.verbose==true;fprintf('\nStimuli update: %g seconds',toc);end
 					end
 					
 				end
@@ -868,9 +888,9 @@ classdef (Sealed) runExperiment < handle
 			else %need to switch to next trial or blank
 				obj.task.switched = true;
 				if obj.task.isBlank == false %we come from showing a stimulus
-					
 					%obj.logMe('IntoBlank');
 					obj.task.isBlank = true;
+					obj.task.blankTick = 0;
 					
 					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we within a trial block or not? we add the required time to our switch timer
 						obj.task.switchTime=obj.task.switchTime+obj.task.itTime;
