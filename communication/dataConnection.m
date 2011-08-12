@@ -1,8 +1,29 @@
 % ========================================================================
 %> @brief dataConnection Connects and manages a socket connection
 %>
-%> Connects and manages TCP/UDP Communication
+%> Connects and manages TCP/UDP Communication. We allow both TCP and UDP
+%> connections, and can choose to be a client or server in TCP mode. To use
+%> at its simplest in UDP mode, both clients on the same machine:
 %>
+%> %OPEN CLIENT 1
+%> >> d1=dataConnection('rPort',4321,'lPort',1234,'protocol','udp','autoOpen',1)
+%> %OPEN CLIENT 2
+%> >> d2=dataConnection('rPort',1234,'lPort',4321,'protocol','udp','autoOpen',1)
+%> >> d1.write('my command')
+%> >> data = d2.read()
+%> >> d2.write('my response')
+%> >> response = d1.read()
+%> >> d1.close();
+%> >> d2.close();
+%>
+%> Please read through the other public methods:
+%>  * close() closes connection
+%>  * checkData() check if there is data sent from remote object available to read
+%>  * checkClient() if you are a TCP server, check if a client tries to connect
+%>  * readVar() & writeVar() reads structures and objects over the wire
+%> There is also an autoServer mode, where the object opens a TCP server
+%> and responds to commands, allowing you to send data and EVAL commands on a
+%> remote machine...
 % ========================================================================
 classdef dataConnection < handle
 	%dataConnection Allows send/recieve over Ethernet
@@ -10,27 +31,43 @@ classdef dataConnection < handle
 	%   and clients in Matlab
 	
 	properties
+		%> Whether this object is a 'client' or 'server' (TCP), normally UDP
+		%> objects will always be clients
 		type = 'client'
+		%> protocol = 'tcp' | 'udp'
 		protocol = 'tcp'
+		%> the local port to open
 		lPort = 1111
+		%> the remote port to open
 		rPort = 5678
+		%> the local address to open
 		lAddress = '127.0.0.1'
+		%> the remote address to open
 		rAddress = '127.0.0.1'
+		%> do we try to open the connection on construction
 		autoOpen = 0
+		%> the data to send to the remote object
 		dataOut = []
+		%> the format the data is required
 		dataType = 'string'
+		%> verbosity
 		verbosity = 1
 		autoRead = 1
+		%> this is a mode where the object sits in a loop and can be
+		%> controlled by a remote matlab instance, which passes commands the
+		%> server can 'eval'
 		autoServer = 0
 		readTimeOut = 0.1
 		writeTimeOut = 0.1
 		%> sometimes we shouldn't cleanup connections on delete, e.g. when we pass this
 		%> object to another matlab instance as we will close the wrong connections!!!
-		cleanup = 1 
+		cleanup = 1
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> data received
 		dataIn = []
+		%> length of data in bytes
 		dataLength
 	end
 	
@@ -60,16 +97,9 @@ classdef dataConnection < handle
 		%>
 		%> Configures input structure to assign properties
 		% ===================================================================
-		function obj = dataConnection(args)
-			if nargin>0 && isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
-					if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in constructor');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					end
-				end
-			end
+		function obj = dataConnection(varargin)
+			
+			obj.parseArgs(varargin);
 			if obj.autoServer == 1
 				obj.type='server';
 				obj.protocol='tcp';
@@ -114,7 +144,7 @@ classdef dataConnection < handle
 								pnet(obj.rconn ,'setwritetimeout', obj.writeTimeOut);
 								pnet(obj.rconn ,'setreadtimeout', obj.readTimeOut);
 								if obj.rconn < 0
-									fprintf('\n%s cannot create TCP server (status: %d)',mfilename,obj.rconn);
+									fprintf('---> %s cannot create TCP server (status: %d)',mfilename,obj.rconn);
 									pause(0.1);
 									if loop == 2 %see if we have rogue connetions
 										for i = 1:length(obj.rconnList)
@@ -146,10 +176,10 @@ classdef dataConnection < handle
 							while loop < 5
 								obj.conn=pnet('tcpconnect',obj.rAddress,obj.rPort);
 								if obj.conn == -1
-									fprintf('CAN NOT CONNECT TO HOST: %s PORT: %d\nRETRY....',obj.rAddress,obj.rPort);
+									fprintf('---> CAN NOT CONNECT TO HOST: %s PORT: %d\nRETRY....',obj.rAddress,obj.rPort);
 									pause(1);
 								else
-									fprintf('CONNECTED TO HOST: %s PORT: %d !\n',obj.rAddress,obj.rPort);
+									fprintf('---> CONNECTED TO HOST: %s PORT: %d !\n',obj.rAddress,obj.rPort);
 									break
 								end
 							end
@@ -161,14 +191,14 @@ classdef dataConnection < handle
 								obj.status = pnet(obj.conn,'status');
 								if obj.status < 1
 									obj.close('conn')
-									warning('%s cannot connect to remote TCP host (status: %d)',mfilename,obj.status);
+									warning('---> %s cannot connect to remote TCP host (status: %d)',mfilename,obj.status);
 								else
 									obj.isOpen = 1;
 									obj.connList = [obj.connList obj.conn];
 									obj.connList = unique(obj.connList);
 								end
 							else
-								sprintf('%s cannot open TCP socket (%d)', ...
+								sprintf('---> %s cannot open TCP socket (%d)', ...
 									mfilename, obj.conn);
 								obj.isOpen = 0;
 								obj.conn = -1;
@@ -184,7 +214,6 @@ classdef dataConnection < handle
 		%>
 		%> Close the ethernet connection
 		% ===================================================================
-		% Close the given pnet socket.
 		function status = close(obj,type,force)
 			
 			if ~exist('type','var')
@@ -258,7 +287,6 @@ classdef dataConnection < handle
 		%>
 		%> Close all connections
 		% ===================================================================
-		% Close all pnet sockets.
 		function status = closeAll(obj)
 			obj.status = 0;
 			obj.conn = -1;
@@ -276,10 +304,11 @@ classdef dataConnection < handle
 		% ===================================================================
 		%> @brief Check if there is data non-destructively
 		%>
-		%> Check if there is data non-destructively
+		%> Check if there is data non-destructively, i.e. attempt to read
+		%> from the given pnet socket without consuming available data
+		%>
+		%> @return hasData (logical)
 		% ===================================================================
-		% Attempt to read from the given pnet socket without consuming
-		% available data.
 		function hasData = checkData(obj)
 			obj.hasData = 0;
 			switch obj.protocol
@@ -303,9 +332,10 @@ classdef dataConnection < handle
 		end
 		
 		% ===================================================================
-		%> @brief Read any avalable data from the given pnet socket.
+		%> @brief Read a single line of data
 		%>
-		%> Read any avalable data from the given pnet socket.
+		%> Read a single line of data from the connection
+		%> @return data read from connection
 		% ===================================================================
 		% Read any avalable data from the given pnet socket.
 		function data = readline(obj)
@@ -318,7 +348,7 @@ classdef dataConnection < handle
 					if nBytes > 0
 						data = pnet(obj.conn, 'readline', nBytes, 'noblock');
 					end
-				%============================TCP
+					%============================TCP
 				case 'tcp'
 					data = pnet(obj.conn, 'readline', 1024,' noblock');
 			end
@@ -329,8 +359,13 @@ classdef dataConnection < handle
 		%> @brief Read any avalable data from the given pnet socket.
 		%>
 		%> Read any avalable data from the given pnet socket.
+		%>
+		%> @param all (optional, logical) whether to read as much data as is present or
+		%>  only one item
+		%> @param (optional) dataType the type of data to read in
+		%> @param (optional) size is size in bytes to read
+		%> @return data the data returned from the connection
 		% ===================================================================
-		% Read any avalable data from the given pnet socket.
 		function data = read(obj,all,dataType,size)
 			
 			if ~exist('all','var')
@@ -394,7 +429,7 @@ classdef dataConnection < handle
 					end
 					obj.dataIn = data;
 					
-				%============================TCP
+					%============================TCP
 				case 'tcp'
 					if ~exist('size','var');size=256000;end
 					while loop > 0
@@ -418,11 +453,12 @@ classdef dataConnection < handle
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief Write data to the given pnet socket.
 		%>
-		%>
+		%> @param data to write to connection
+		%> @param formatted (0[default]|1) whether to send data raw (0) or as a formatted string (1)
+		%> @param sendPacket (0|1[default]) for UDP connections actually send the packet or wait to fill buffer with another call first
 		% ===================================================================
-		% Write data to the given pnet socket.
 		function write(obj, data, formatted, sendPacket)
 			
 			if ~exist('data','var')
@@ -457,11 +493,10 @@ classdef dataConnection < handle
 		end
 		
 		% ===================================================================
-		%> @brief Read any avalable data from the given pnet socket.
+		%> @brief Read any avalable variable from the given pnet socket.
 		%>
-		%> Read any avalable data from the given pnet socket.
+		%> Read any avalable variable from the given pnet socket.
 		% ===================================================================
-		% Read any avalable data from the given pnet socket.
 		function data = readVar(obj)
 			pnet(obj.conn ,'setreadtimeout', 5);
 			data = obj.getVar;
@@ -487,7 +522,7 @@ classdef dataConnection < handle
 		% ===================================================================
 		function isClient = checkClient(obj)
 			isClient = 0;
-			if strcmpi(obj.type,'server') 
+			if strcmpi(obj.type,'server')
 				try
 					obj.conn=pnet(obj.rconn,'tcplisten');
 					if obj.conn > -1
@@ -625,9 +660,12 @@ classdef dataConnection < handle
 		end
 		
 		% ===================================================================
-		%> @brief Send command to remote server
+		%> @brief Send command to a remote dataConnection server
 		%>
-		%> Send command to remote server
+		%> Send command to remote dataConnection server. Commands can be
+		%> 'echo', 'put', 'get' and 'eval'
+		%>
+		%> @param varargin can be
 		% ===================================================================
 		function varargout = sendCommand(obj,varargin)
 			if obj.conn < 0
@@ -835,11 +873,11 @@ classdef dataConnection < handle
 								pnet(obj.conn,'Write',uint32(size(VAR)));
 								pnet(obj.conn,'Write',VAR);
 							otherwise
-								tmpfile=[tempname,'.mat']
+								tmpfile=[tempname,'.mat'];
 								try
 									save(tmpfile,'VAR');
 									filedata=dir(tmpfile);
-									dataLength = filedata.bytes
+									dataLength = filedata.bytes;
 									pnet(obj.conn,'printf','\n--matfile--\n');
 									pnet(obj.conn,'Write',uint32(filedata.bytes));
 									pnet(obj.conn,'WriteFromFile',tmpfile);
@@ -926,7 +964,7 @@ classdef dataConnection < handle
 		end
 		
 		% ===================================================================
-		%> @brief Destructor
+		%> @brief Object Destructor
 		%>
 		%>
 		% ===================================================================
@@ -952,14 +990,42 @@ classdef dataConnection < handle
 					in = 'General Message';
 				end
 				if exist('message','var')
-					fprintf([message ' | ' in '\n']);
+					fprintf(['--> dataConnection: ' message ' | ' in '\n']);
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Sets properties from a structure, ignores invalid properties
+		%>
+		%> @param varargin input structure
+		% ===================================================================
+		function parseArgs(obj,varargin)
+			if iscell(varargin) && length(varargin) == 1 %cell data is wrapped in passed cell
+				varargin = varargin{1}; %unwrap
+			end
+			if iscell(varargin) &&	~mod(length(varargin),2) %is cell even, suggesting name:value pairs
+				myStruct = struct();
+				for i = 1:2:length(varargin)-1
+					myStruct.(varargin{i}) = varargin{i+1};
+				end
+			else
+				myStruct = varargin;
+			end
+			if nargin>0 && isstruct(myStruct)
+				fnames = fieldnames(myStruct); %find our argument names
+				for i=1:length(fnames);
+					if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
+						obj.salutation(fnames{i},'Configuring setting in constructor');
+						obj.(fnames{i})=myStruct.(fnames{i}); %we set up the properies from the arguments as a structure
+					end
 				end
 			end
 		end
 	end
 	
 	methods (Static)
-	% ===================================================================
+		% ===================================================================
 		%> @brief load object method
 		%>
 		%> we have to make sure we don't load a saved object with connection
@@ -978,4 +1044,3 @@ classdef dataConnection < handle
 		end
 	end
 end
-

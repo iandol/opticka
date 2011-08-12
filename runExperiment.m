@@ -325,7 +325,8 @@ classdef (Sealed) runExperiment < handle
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				
-				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
+				%bump our priority to maximum allowed
+				Priority(MaxPriority(obj.win)); 
 				%--------------this is RSTART (FIO0->Pin 24), unpausing the omniplex
 				if obj.useLabJack == true
 					obj.lJack.setDIO([1,0,0],[1,0,0])
@@ -335,27 +336,28 @@ classdef (Sealed) runExperiment < handle
 				obj.task.switched = 1;
 				obj.timeLog.beforeDisplay = GetSecs;
 				
+				% lets draw 1 seonds worth of the stimuli we will be using
+				% covered by a blank. this lets us prime the GPU with the sorts
+				% of stimuli it will be using and this does appear to minimise
+				% some of the frames lost on first presentation for very complex
+				% stimuli using 32bit computation buffers...
+				vbl = 0;
 				for i = 1:obj.screenVals.fps
 					for j=1:obj.sList.n
 						obj.stimulus{j}.draw();
 					end
 					obj.drawBackground;
 					obj.drawFixationPoint;
+					if obj.photoDiode == true;obj.drawPhotoDiodeSquare([0 0 0 1]);end
 					Screen('DrawingFinished', obj.win);
-					Screen('Flip', obj.win, []);
+					vbl = Screen('Flip', obj.win, vbl+0.001);
 				end
-				
-				if obj.photoDiode == true;obj.drawPhotoDiodeSquare([0 0 0 1]);end
-				vbl=Screen('Flip', obj.win);
-				if obj.photoDiode == true;obj.drawPhotoDiodeSquare([0 0 0 1]);end
 				if obj.logFrames == true
 					obj.timeLog.stimTime(1) = 1;
-					obj.timeLog.vbl(1) = Screen('Flip', obj.win,vbl+0.001);
-				else
-					obj.timeLog.vbl = Screen('Flip', obj.win,vbl+0.001);
 				end
+				obj.timeLog.vbl(1) = vbl;
 				obj.timeLog.startTime = obj.timeLog.vbl(1);
-
+				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				% Our main display loop
