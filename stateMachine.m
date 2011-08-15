@@ -4,7 +4,7 @@ classdef stateMachine < handle
 	
 	properties
 		%>our main state list
-		stateList = []
+		stateList = struct([])
 		enterFunction
 		exitFunction
 		beforeFunction
@@ -19,6 +19,7 @@ classdef stateMachine < handle
 		currentTime
 		nextTick
 		nextTime
+		stateListIndex
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
@@ -37,8 +38,8 @@ classdef stateMachine < handle
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
-	
+		%=======================================================================
+		
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -48,61 +49,84 @@ classdef stateMachine < handle
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = stateMachine(args)
+		function obj = stateMachine(varargin)
+			%initialise the statelist index
+			obj.stateListIndex = containers.Map('a', 1, 'uniformValues', false);
+         obj.stateListIndex.remove(obj.stateListIndex.keys);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function addStates(obj,newState)
+			sz = size(newState);
+			allStateIndexes = zeros(1,sz(1)-1);
+			for ii = 2:sz(1)
+				newState = cell2struct(newState(ii,:), newState(1,:), 2);
+				allStateIndexes(ii-1) = obj.addState(newState);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function addState(obj,stateInfo)
+			allowedFields = obj.stateFields;
+			allowedDefaults = obj.stateDefaults;
 			
+			% pick stateInfo fields that match allowed fields
+			infoFields = fieldnames(stateInfo);
+			infoValues = struct2cell(stateInfo);
+			[validFields, validIndices, defaultIndices] = ...
+				intersect(infoFields, allowedFields);
+			
+			% merge valid stateInfo and defaults into new struct
+			mergedValues = allowedDefaults;
+			mergedValues(defaultIndices) = infoValues(validIndices);
+			newState = cell2struct(mergedValues, allowedFields, 2);
+			
+			% append the new state to allStates
+			%   add to lookup table
+			if isempty(obj.stateList)
+				allStateIndex = 1;
+				obj.stateList = newState;
+			else
+				[isState, allStateIndex] = obj.isStateName(newState.name);
+				if ~isState
+					allStateIndex = length(obj.allStates) + 1;
+				end
+				obj.allStates(allStateIndex) = newState;
+			end
+			obj.stateNameToIndex(newState.name) = allStateIndex;
 		end
 		
-		function addStates(obj,in)
-			sz = size(in);
-         allStateIndexes = zeros(1,sz(1)-1);
-            for ii = 2:sz(1)
-                newState = cell2struct(in(ii,:), in(1,:), 2);
-                allStateIndexes(ii-1) = obj.addState(newState);
-            end
-		end
-		
-		function addState(obj,in)
-			allowedFields = cat(2, self.stateFields, ...
-                self.sharedEntryFevalableNames, ...
-                self.sharedExitFevalableNames);
-            allowedDefaults = cat(2, self.stateDefaults, ...
-                cell(size(self.sharedEntryFevalableNames)), ...
-                cell(size(self.sharedExitFevalableNames)));
-            
-            % pick stateInfo fields that match allowed fields
-            infoFields = fieldnames(stateInfo);
-            infoValues = struct2cell(stateInfo);
-            [validFields, validIndices, defaultIndices] = ...
-                intersect(infoFields, allowedFields);
-            
-            % merge valid stateInfo and defaults into new struct
-            mergedValues = allowedDefaults;
-            mergedValues(defaultIndices) = infoValues(validIndices);
-            newState = cell2struct(mergedValues, allowedFields, 2);
-            
-            % append the new state to allStates
-            %   add to lookup table
-            if isempty(self.allStates)
-                allStateIndex = 1;
-                self.allStates = newState;
-            else
-                [isState, allStateIndex] = self.isStateName(newState.name);
-                if ~isState
-                    allStateIndex = length(self.allStates) + 1;
-                end
-                self.allStates(allStateIndex) = newState;
-            end
-            self.stateNameToIndex(newState.name) = allStateIndex;
-		end
-		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
 		function editState(obj,stateName,varin)
 			
 		end
 		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
 		function getState(obj, stateName)
 			
 		end
 		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
 		function run(obj,in)
 			
 		end
@@ -112,12 +136,12 @@ classdef stateMachine < handle
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
-	%=======================================================================
-	
+		%=======================================================================
+		
 		% ===================================================================
 		%> @brief Converts properties to a structure
 		%>
-		%> 
+		%>
 		%> @param obj this instance object
 		%> @param tmp is whether to use the temporary or permanent properties
 		%> @return out the structure
