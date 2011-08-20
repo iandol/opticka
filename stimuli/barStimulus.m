@@ -38,16 +38,16 @@ classdef barStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of opticka class.
 		% ===================================================================
-		function obj = barStimulus(args) 
+		function obj = barStimulus(varargin) 
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
 				args.family = 'bar';
 			end
 			
-			obj=obj@baseStimulus(args); %we call the superclass constructor first
+			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
 			
-			if nargin>0 && isstruct(args)
-				obj.parseArgs(args, obj.allowedProperties);
+			if nargin>0
+				obj.parseArgs(varargin, obj.allowedProperties);
 			end
 			
 			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];

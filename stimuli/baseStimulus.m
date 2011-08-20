@@ -56,7 +56,6 @@ classdef baseStimulus < dynamicprops
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
-		blahB = 'blahblah BASE'
 		%> pixels per degree (calculated in runExperiment)
 		ppd = 44
 		%> Inter frame interval (calculated in runExperiment)
@@ -77,8 +76,6 @@ classdef baseStimulus < dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		foo = 'foofoo BASE'
-		fooB = 'foofoo BASE'
 		allowedProperties='xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed'
 	end
 	
@@ -95,10 +92,10 @@ classdef baseStimulus < dynamicprops
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = baseStimulus(args)
+		function obj = baseStimulus(varargin)
 			
-			if nargin>0 && isstruct(args)
-				obj.parseArgs(args, obj.allowedProperties);
+			if nargin>0
+				obj.parseArgs(varargin, obj.allowedProperties);
 			end
 			
 		end 
@@ -289,19 +286,38 @@ classdef baseStimulus < dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief Sets properties from a structure, ignores invalid properties
+		%> @brief Sets properties from a structure or normal arguments,
+		%> ignores invalid properties
 		%>
 		%> @param args input structure
+		%> @param allowedProperties properties possible to set on construction
 		% ===================================================================
 		function parseArgs(obj, args, allowedProperties)
 			allowedProperties = ['^(' allowedProperties ')$'];
-			fnames = fieldnames(args); %find our argument names
-			for i=1:length(fnames);
-				if regexp(fnames{i},allowedProperties) %only set if allowed property
-					obj.salutation(fnames{i},'Configuring setting in constructor');
-					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+			
+			while iscell(args) && length(args) == 1
+				args = args{1};
+			end
+			
+			if iscell(args)
+				if mod(length(args),2) == 1 % odd
+					args = args(1:end-1); %remove last arg
+				end
+				odd = logical(mod(1:length(args),2));
+				even = logical(abs(odd-1));
+				args = cell2struct(args(even),args(odd),2);
+			end
+			
+			if isstruct(args)
+				fnames = fieldnames(args); %find our argument names
+				for i=1:length(fnames);
+					if regexp(fnames{i},allowedProperties) %only set if allowed property
+						obj.salutation(fnames{i},'Configuring setting in constructor');
+						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+					end
 				end
 			end
+			
 		end
 		
 		% ===================================================================

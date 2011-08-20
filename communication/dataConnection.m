@@ -52,16 +52,17 @@ classdef dataConnection < handle
 		dataType = 'string'
 		%> verbosity
 		verbosity = 1
-		autoRead = 1
 		%> this is a mode where the object sits in a loop and can be
 		%> controlled by a remote matlab instance, which passes commands the
 		%> server can 'eval'
-		autoServer = 0
+		autoServer = false
+		%> default read timeout
 		readTimeOut = 0.1
+		%> default write timeout
 		writeTimeOut = 0.1
 		%> sometimes we shouldn't cleanup connections on delete, e.g. when we pass this
 		%> object to another matlab instance as we will close the wrong connections!!!
-		cleanup = 1
+		cleanup = true
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -76,15 +77,17 @@ classdef dataConnection < handle
 		rconnList = []
 		conn = -1
 		rconn = -1
-		hasData = 0
-		isOpen = 0
+		%> is there data available?
+		hasData = false
+		%> is this connection open?
+		isOpen = false
 		status = -1
 		statusMessage = ''
 		error
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(type|protocol|lPort|rPort|lAddress|rAddress|autoOpen|dataType|verbosity|autoRead|autoServer|readTimeOut|writeTimeOut|cleanup)$'
+		allowedProperties='^(type|protocol|lPort|rPort|lAddress|rAddress|autoOpen|dataType|verbosity|autoServer|readTimeOut|writeTimeOut|cleanup)$'
 		remoteCmd = '--remote--'
 		breakCmd = '--break--'
 		busyCmd = '--busy--'
@@ -100,11 +103,11 @@ classdef dataConnection < handle
 		function obj = dataConnection(varargin)
 			
 			obj.parseArgs(varargin);
-			if obj.autoServer == 1
+			if obj.autoServer == true
 				obj.type='server';
 				obj.protocol='tcp';
 				obj.startServer;
-			elseif obj.autoOpen == 1
+			elseif obj.autoOpen == true
 				obj.open;
 			end
 		end
@@ -123,13 +126,13 @@ classdef dataConnection < handle
 					if obj.conn >= 0
 						pnet(obj.conn ,'setwritetimeout', obj.writeTimeOut);
 						pnet(obj.conn ,'setreadtimeout', obj.readTimeOut);
-						obj.isOpen = 1;
+						obj.isOpen = true;
 						obj.connList = [obj.connList obj.conn];
 						obj.connList = unique(obj.connList);
 					else
 						sprintf('%s cannot open UDP socket (%d)', ...
 							mfilename, obj.conn);
-						obj.isOpen = 0;
+						obj.isOpen = false;
 						obj.conn = -1;
 					end
 					conn = obj.conn;
@@ -160,7 +163,7 @@ classdef dataConnection < handle
 										end
 									end
 								else
-									obj.isOpen = 1;
+									obj.isOpen = true;
 									obj.rconnList = [obj.rconnList obj.rconn];
 									obj.rconnList = unique(obj.rconnList);
 									obj.checkStatus('rconn')
@@ -193,14 +196,14 @@ classdef dataConnection < handle
 									obj.close('conn')
 									warning('---> %s cannot connect to remote TCP host (status: %d)',mfilename,obj.status);
 								else
-									obj.isOpen = 1;
+									obj.isOpen = true;
 									obj.connList = [obj.connList obj.conn];
 									obj.connList = unique(obj.connList);
 								end
 							else
 								sprintf('---> %s cannot open TCP socket (%d)', ...
 									mfilename, obj.conn);
-								obj.isOpen = 0;
+								obj.isOpen = false;
 								obj.conn = -1;
 							end
 							conn = obj.conn;
@@ -220,10 +223,10 @@ classdef dataConnection < handle
 				type = 'conn';
 			end
 			if ~exist('force','var')
-				force = 1;
+				force = true;
 			end
 			if ischar(force)
-				force = 1;
+				force = true;
 			end
 			
 			status = 0;
@@ -233,7 +236,7 @@ classdef dataConnection < handle
 				case 'conn'
 					try
 						obj.salutation('close Method','Trying to close PNet conn connection...')
-						if force == 1
+						if force == true
 							for i = 1:length(obj.connList)
 								try
 									pnet(obj.connList(i), 'close');
@@ -245,7 +248,8 @@ classdef dataConnection < handle
 						else
 							obj.status = pnet(obj.conn,'status');
 							if obj.status <=0;
-								obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
+								obj.isOpen = false;
+								obj.salutation('close Method','Connection appears closed...');
 							else
 								try %#ok<TRYNC>
 									pnet(obj.conn, 'close');
@@ -258,7 +262,7 @@ classdef dataConnection < handle
 				case 'rconn'
 					try
 						obj.salutation('close Method','Trying to close PNet rconn connection...')
-						if force == 1
+						if force == true
 							for i = 1:length(obj.rconnList)
 								try
 									pnet(obj.rconnList(i), 'close');
@@ -270,7 +274,8 @@ classdef dataConnection < handle
 						else
 							obj.status = pnet(obj.rconn,'status');
 							if obj.status <=0;
-								obj.isOpen = 0;obj.salutation('close Method','Connection appears closed...');
+								obj.isOpen = false;
+								obj.salutation('close Method','Connection appears closed...');
 							else
 								try %#ok<TRYNC>
 									pnet(obj.rconn, 'close');
@@ -310,7 +315,7 @@ classdef dataConnection < handle
 		%> @return hasData (logical)
 		% ===================================================================
 		function hasData = checkData(obj)
-			obj.hasData = 0;
+			obj.hasData = false;
 			switch obj.protocol
 				
 				case 'udp'
@@ -318,13 +323,13 @@ classdef dataConnection < handle
 					if isempty(data)
 						obj.hasData = pnet(obj.conn, 'readpacket') > 0;
 					else
-						obj.hasData = 1;
+						obj.hasData = true;
 					end
 					
 				case 'tcp'
 					data = pnet(obj.conn, 'read', 1024, obj.dataType, 'noblock', 'view');
 					if ~isempty(data)
-						obj.hasData = 1;
+						obj.hasData = true;
 					end
 					
 			end
@@ -465,26 +470,26 @@ classdef dataConnection < handle
 				data = obj.dataOut;
 			end
 			if ~exist('formatted','var')
-				formatted = 0;
+				formatted = false;
 			end
 			if ~exist('sendPacket','var')
-				sendPacket = 1;
+				sendPacket = true;
 			end
 			
 			switch obj.protocol
 				
 				%============================UDP
 				case 'udp'
-					if formatted == 0
+					if formatted == false
 						pnet(obj.conn, 'write', data);
 					else
 						pnet(obj.conn, 'printf', data);
 					end
 					if sendPacket;pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);end
 					
-					%============================TCP
+				%============================TCP
 				case 'tcp'
-					if formatted == 0
+					if formatted == false
 						pnet(obj.conn, 'write', data);
 					else
 						pnet(obj.conn, 'printf', data);
@@ -521,7 +526,7 @@ classdef dataConnection < handle
 		%> Check status
 		% ===================================================================
 		function isClient = checkClient(obj)
-			isClient = 0;
+			isClient = false;
 			if strcmpi(obj.type,'server')
 				try
 					obj.conn=pnet(obj.rconn,'tcplisten');
@@ -533,16 +538,16 @@ classdef dataConnection < handle
 						obj.rPort = rport;
 						obj.rAddress = rhost;
 						obj.isOpen = 2;
-						isClient = 1;
+						isClient = true;
 					else
 						obj.conn = -1;
-						obj.isOpen = 1;
+						obj.isOpen = false;
 						obj.salutation('No client available')
 					end
 					
 				catch
 					obj.conn = -1;
-					obj.isOpen = 1;
+					obj.isOpen = false;
 					obj.salutation('Couldn''t find client connection');
 				end
 			end
@@ -573,7 +578,7 @@ classdef dataConnection < handle
 					conn = 'rconn';
 				end
 				obj.status = pnet(obj.(conn),'status');
-				if obj.status <=0;obj.(conn) = -1; obj.isOpen = 0;obj.salutation('status Method','Connection appears closed...');end
+				if obj.status <=0;obj.(conn) = -1; obj.isOpen = false;obj.salutation('checkStatus Method','Connection appears closed...');end
 				switch obj.status
 					case -1
 						obj.statusMessage = 'STATUS_NOTFOUND';
@@ -598,13 +603,13 @@ classdef dataConnection < handle
 					case 19
 						obj.statusMessage = 'STATUS_UDP_SERVER_CONNECT';
 				end
-				obj.salutation(obj.statusMessage,'CheckStatus')
+				obj.salutation(obj.statusMessage,'checkStatus')
 				status = obj.status;
 			catch
 				obj.status = -1;
 				status = obj.status;
 				obj.(conn) = -1;
-				obj.isOpen = 0;
+				obj.isOpen = false;
 				fprintf('Couldn''t check status\n')
 			end
 		end
@@ -969,7 +974,7 @@ classdef dataConnection < handle
 		%>
 		% ===================================================================
 		function delete(obj)
-			if obj.cleanup == 1
+			if obj.cleanup == true
 				obj.salutation('dataConnection delete Method','Cleaning up now...')
 				obj.close;
 			else
@@ -1001,23 +1006,23 @@ classdef dataConnection < handle
 		%> @param varargin input structure
 		% ===================================================================
 		function parseArgs(obj,varargin)
-			if iscell(varargin) && length(varargin) == 1 %cell data is wrapped in passed cell
+			while iscell(varargin) && length(varargin) == 1 %cell data is wrapped in passed cell
 				varargin = varargin{1}; %unwrap
 			end
-			if iscell(varargin) &&	~mod(length(varargin),2) %is cell even, suggesting name:value pairs
-				myStruct = struct();
-				for i = 1:2:length(varargin)-1
-					myStruct.(varargin{i}) = varargin{i+1};
+			if iscell(varargin)
+				if mod(length(varargin),2) == 1 % odd
+					varargin = varargin(1:end-1); %remove last arg
 				end
-			else
-				myStruct = varargin;
+				odd = logical(mod(1:length(varargin),2));
+				even = logical(abs(odd-1));
+				varargin = cell2struct(varargin(even),varargin(odd),2);
 			end
-			if nargin>0 && isstruct(myStruct)
-				fnames = fieldnames(myStruct); %find our argument names
+			if nargin>0 && isstruct(varargin)
+				fnames = fieldnames(varargin); %find our argument names
 				for i=1:length(fnames);
 					if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
 						obj.salutation(fnames{i},'Configuring setting in constructor');
-						obj.(fnames{i})=myStruct.(fnames{i}); %we set up the properies from the arguments as a structure
+						obj.(fnames{i})=varargin.(fnames{i}); %we set up the properies from the arguments as a structure
 					end
 				end
 			end

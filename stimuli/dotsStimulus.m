@@ -58,16 +58,16 @@ classdef dotsStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = dotsStimulus(args)
+		function obj = dotsStimulus(varargin)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
 				args.family = 'dots';
 			end
 			
-			obj=obj@baseStimulus(args); %we call the superclass constructor first
+			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
 
-			if nargin>0 && isstruct(args)
-				obj.parseArgs(args, obj.allowedProperties);
+			if nargin>0
+				obj.parseArgs(varargin, obj.allowedProperties);
 			end
 			
 			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];

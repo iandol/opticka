@@ -77,7 +77,7 @@ classdef opxOnline < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(type|eventStart|eventEnd|protocol|rPort|rAddress|verbosity|cleanup)$'
+		allowedProperties='type|eventStart|eventEnd|protocol|rPort|rAddress|verbosity|cleanup'
 		slaveCommand
 		masterCommand
 		oldcv = 0
@@ -102,7 +102,7 @@ classdef opxOnline < handle
 		% ===================================================================
 		function obj = opxOnline(args)
 			
-			if nargin>0 && isstruct(args)
+			if nargin>0
 				obj.parseArgs(args);
 			end
 			
@@ -1313,9 +1313,21 @@ classdef opxOnline < handle
 		%> @param args input structure
 		% ===================================================================
 		function parseArgs(obj,args)
+			allowedProperties = ['^(' obj.allowedProperties ')$'];
+			while iscell(args) && length(args) == 1
+				args = args{1};
+			end
+			if iscell(args)
+				if mod(length(args),2) == 1 % odd
+					args = args(1:end-1); %remove last arg
+				end
+				odd = logical(mod(1:length(args),2));
+				even = logical(abs(odd-1));
+				args = cell2struct(args(even),args(odd),2);
+			end
 			fnames = fieldnames(args); %find our argument names
 			for i=1:length(fnames);
-				if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
+				if regexp(fnames{i},allowedProperties) %only set if allowed property
 					obj.salutation(fnames{i},'Configuring setting in constructor');
 					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 				end

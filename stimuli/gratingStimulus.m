@@ -69,12 +69,7 @@ classdef gratingStimulus < baseStimulus
 		phaseIncrement = 0
 	end
 	
-	properties (SetAccess = protected, GetAccess = protected)
-		blah = 'blahblah'
-	end
-	
 	properties (SetAccess = private, GetAccess = private)
-		foo = 'foofoo'
 		%> as get methods are slow, we cache sf, then recalculate sf whenever
 		%> changeScale event is called
 		sfCache = []
@@ -111,16 +106,16 @@ classdef gratingStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = gratingStimulus(args)
+		function obj = gratingStimulus(varargin)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
-				args.family = 'grating';
+				varargin.family = 'grating';
 			end
 			
-			obj=obj@baseStimulus(args); %we call the superclass constructor first
+			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
 			
-			if nargin>0 && isstruct(args)
-				obj.parseArgs(args, obj.allowedProperties);
+			if nargin>0
+				obj.parseArgs(varargin, obj.allowedProperties);
 			end
 			
 			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];

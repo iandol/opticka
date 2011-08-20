@@ -58,7 +58,7 @@ classdef (Sealed) opticka < handle
 		% ===================================================================
 		function obj = opticka(args)
 			
-			if nargin>0 && isstruct(args)
+			if nargin>0
 				obj.parseArgs(args, obj.allowedProperties);
 			end
 			
@@ -336,34 +336,34 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKOptickaVersion,'String','Initialising Stimulus and Task objects...')
 				%drawnow
 				obj.r = runExperiment;
-				s=cell(obj.r.maxScreen+1,1);
-				for i=0:obj.r.maxScreen
+				s=cell(obj.r.screen.maxScreen+1,1);
+				for i=0:obj.r.screen.maxScreen
 					s{i+1} = num2str(i);
 				end
 				set(obj.h.OKSelectScreen,'String', s);
-				set(obj.h.OKSelectScreen, 'Value', obj.r.screen+1);
+				set(obj.h.OKSelectScreen, 'Value', obj.r.screen.screen+1);
 				clear s;
 				set(obj.h.OKOptickaVersion,'String',olds)
 			end
 			
-			obj.r.screen = obj.gv(obj.h.OKSelectScreen)-1;
+			obj.r.screen.screen = obj.gv(obj.h.OKSelectScreen)-1;
 			
-			obj.r.distance = obj.gd(obj.h.OKMonitorDistance);
-			obj.r.pixelsPerCm = obj.gd(obj.h.OKPixelsPerCm);
-			obj.r.screenXOffset = obj.gd(obj.h.OKXCenter);
-			obj.r.screenYOffset = obj.gd(obj.h.OKYCenter);
+			obj.r.screen.distance = obj.gd(obj.h.OKMonitorDistance);
+			obj.r.screen.pixelsPerCm = obj.gd(obj.h.OKPixelsPerCm);
+			obj.r.screen.screenXOffset = obj.gd(obj.h.OKXCenter);
+			obj.r.screen.screenYOffset = obj.gd(obj.h.OKYCenter);
 			
 			value = obj.gv(obj.h.OKGLSrc);
-			obj.r.srcMode = obj.gs(obj.h.OKGLSrc, value);
+			obj.r.screen.srcMode = obj.gs(obj.h.OKGLSrc, value);
 			
 			value = obj.gv(obj.h.OKGLDst);
-			obj.r.dstMode = obj.gs(obj.h.OKGLDst, value);
+			obj.r.screen.dstMode = obj.gs(obj.h.OKGLDst, value);
 			
 			value = obj.gv(obj.h.OKbitDepth);
-			obj.r.bitDepth = obj.gs(obj.h.OKbitDepth, value);
+			obj.r.screen.bitDepth = obj.gs(obj.h.OKbitDepth, value);
 			
 			
-			obj.r.blend = obj.gv(obj.h.OKOpenGLBlending);
+			obj.r.screen.blend = obj.gv(obj.h.OKOpenGLBlending);
 			
 			value = obj.gv(obj.h.OKUseGamma);
 			if isa(obj.r.gammaTable,'calibrateLuminance')
@@ -372,24 +372,24 @@ classdef (Sealed) opticka < handle
 			
 			s=str2num(get(obj.h.OKWindowSize,'String')); %#ok<ST2NM>
 			if isempty(s)
-				obj.r.windowed = 0;
+				obj.r.screen.windowed = 0;
 			else
-				obj.r.windowed = s;
+				obj.r.screen.windowed = s;
 			end
 			
 			obj.r.logFrames = logical(obj.gv(obj.h.OKlogFrames));
-			obj.r.hideFlash = logical(obj.gv(obj.h.OKHideFlash));
-			if strcmpi(obj.r.bitDepth,'8bit')
+			obj.r.screen.hideFlash = logical(obj.gv(obj.h.OKHideFlash));
+			if strcmpi(obj.r.screen.bitDepth,'8bit')
 				set(obj.h.OKAntiAliasing,'String','0');
 			end
-			obj.r.antiAlias = obj.gd(obj.h.OKAntiAliasing);
-			obj.r.photoDiode = logical(obj.gv(obj.h.OKUsePhotoDiode));
-			obj.r.movieSettings.record = logical(obj.gv(obj.h.OKrecordMovie));
-			obj.r.verbose = logical(obj.gv(obj.h.OKVerbose));
-			obj.r.debug = logical(obj.gv(obj.h.OKDebug));
-			obj.r.visualDebug = logical(obj.gv(obj.h.OKDebug));
-			obj.r.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
-			obj.r.fixationPoint = logical(obj.gv(obj.h.OKFixationSpot));
+			obj.r.screen.antiAlias = obj.gd(obj.h.OKAntiAliasing);
+			obj.r.screen.photoDiode = logical(obj.gv(obj.h.OKUsePhotoDiode));
+			obj.r.screen.movieSettings.record = logical(obj.gv(obj.h.OKrecordMovie));
+			obj.r.screen.verbose = logical(obj.gv(obj.h.OKVerbose));
+			obj.r.screen.debug = logical(obj.gv(obj.h.OKDebug));
+			obj.r.screen.visualDebug = logical(obj.gv(obj.h.OKDebug));
+			obj.r.screen.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
+			obj.r.screen.fixationPoint = logical(obj.gv(obj.h.OKFixationSpot));
 			obj.r.useLabJack = logical(obj.gv(obj.h.OKuseLabJack));
 			obj.r.serialPortName = obj.gs(obj.h.OKSerialPortName);
 			
@@ -974,28 +974,28 @@ classdef (Sealed) opticka < handle
 			if exist('tmp','var') && isa(tmp,'opticka')
 				
 				%copy screen parameters
-				
-				set(obj.h.OKXCenter,'String', num2str(tmp.r.screenXOffset));
-				set(obj.h.OKYCenter,'String', num2str(tmp.r.screenYOffset));
-				
-				list = obj.gs(obj.h.OKGLSrc);
-				val = obj.findValue(list,tmp.r.srcMode);
-				obj.r.srcMode = list{val};
-				set(obj.h.OKGLSrc,'Value',val);
-				
-				
-				list = obj.gs(obj.h.OKGLDst);
-				val = obj.findValue(list,tmp.r.dstMode);
-				obj.r.dstMode = list{val};
-				set(obj.h.OKGLDst,'Value',val);
-				
-				set(obj.h.OKOpenGLBlending,'Value', tmp.r.blend);
-				set(obj.h.OKAntiAliasing,'String', num2str(tmp.r.antiAlias));
-				set(obj.h.OKHideFlash,'Value', tmp.r.hideFlash);
-				string = num2str(tmp.r.backgroundColour);
-				string = regexprep(string,'\s+',' '); %collapse spaces
-				set(obj.h.OKbackgroundColour,'String',string);
-				
+				if isa(tmp.r.screen,'screenManager')
+					set(obj.h.OKXCenter,'String', num2str(tmp.r.screen.screenXOffset));
+					set(obj.h.OKYCenter,'String', num2str(tmp.r.screen.screenYOffset));
+					
+					list = obj.gs(obj.h.OKGLSrc);
+					val = obj.findValue(list,tmp.r.screen.srcMode);
+					obj.r.srcMode = list{val};
+					set(obj.h.OKGLSrc,'Value',val);
+					
+					
+					list = obj.gs(obj.h.OKGLDst);
+					val = obj.findValue(list,tmp.r.screen.dstMode);
+					obj.r.dstMode = list{val};
+					set(obj.h.OKGLDst,'Value',val);
+					
+					set(obj.h.OKOpenGLBlending,'Value', tmp.r.screen.blend);
+					set(obj.h.OKAntiAliasing,'String', num2str(tmp.r.screen.antiAlias));
+					set(obj.h.OKHideFlash,'Value', tmp.r.screen.hideFlash);
+					string = num2str(tmp.r.screen.backgroundColour);
+					string = regexprep(string,'\s+',' '); %collapse spaces
+					set(obj.h.OKbackgroundColour,'String',string);
+				end
 				%copy task parameters
 				if isempty(tmp.r.task)
 					obj.r.task = stimulusSequence;
@@ -1316,6 +1316,17 @@ classdef (Sealed) opticka < handle
 		% ===================================================================
 		function parseArgs(obj, args, allowedProperties)
 			allowedProperties = ['^(' allowedProperties ')$'];
+			while iscell(args) && length(args) == 1
+				args = args{1};
+			end
+			if iscell(args)
+				if mod(length(args),2) == 1 % odd
+					args = args(1:end-1); %remove last arg
+				end
+				odd = logical(mod(1:length(args),2));
+				even = logical(abs(odd-1));
+				args = cell2struct(args(even),args(odd),2);
+			end
 			fnames = fieldnames(args); %find our argument names
 			for i=1:length(fnames);
 				if regexp(fnames{i},allowedProperties) %only set if allowed property
