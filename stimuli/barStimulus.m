@@ -7,7 +7,7 @@ classdef barStimulus < baseStimulus
 		type = 'solid'
 		pixelScale = 1 %scale up the texture in the bar
 		barWidth = 1
-		barLength = 2
+		barLength = 4
 		contrast = []
 		scale = 1
 		interpMethod = 'nearest'
@@ -41,7 +41,10 @@ classdef barStimulus < baseStimulus
 		function obj = barStimulus(varargin) 
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
-				args.family = 'bar';
+				varargin.family = 'bar';
+				varargin.colour = [1 1 1];
+				varargin.speed = 2;
+				varargin.startPosition = -2;
 			end
 			
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first

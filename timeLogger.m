@@ -10,7 +10,7 @@ classdef timeLogger < dynamicprops
 		flip = 0
 		miss = 0
 		stimTime = 0
-		construct = 0
+		startTime = 0
 		screen = struct
 	end
 	
@@ -27,7 +27,7 @@ classdef timeLogger < dynamicprops
 		%> @return
 		% ===================================================================
 		function printLog(obj)
-			if obj.logFrames == false || ~isfield(obj.timeLog,'date')
+			if length(obj.vbl) == 2
 				disp('No timing data available')
 				return
 			end

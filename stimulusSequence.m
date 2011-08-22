@@ -1,15 +1,18 @@
 classdef stimulusSequence < dynamicprops
 	properties
-		randomise = 1
+		%> whether to randomise (true) or run sequentially (false)
+		randomise = true
+		%> number of independant variables
 		nVars = 0
+		%> structure holding each independant variable
 		nVar
-		nTrials = 5
-		nTrial
+		%> number of repeat blocks to present
+		nBlocks = 1
 		trialTime = 2
 		nSegments = 1
 		nSegment
 		isTime = 1 %inter stimulus time
-		itTime = 2 %inter trial time
+		itTime = 2 %inter block time
 		isStimulus %what do we show in the blank?
 		verbose = 0
 		realTime = 1
@@ -21,7 +24,7 @@ classdef stimulusSequence < dynamicprops
 	properties (SetAccess = private, GetAccess = public)
 		oldStream
 		taskStream
-		minTrials
+		minBlocks
 		currentState
 		states
 		nstates = 1
@@ -38,7 +41,7 @@ classdef stimulusSequence < dynamicprops
 	
 	properties (SetAccess = private, GetAccess = private)
 		h
-		allowedPropertiesBase='^(randomise|nVars|nTrials|trialTime|isTime|itTime|realTime|randomSeed|fps)$'
+		allowedProperties='^(randomise|nVars|nBlocks|trialTime|isTime|itTime|realTime|randomSeed|fps)$'
 	end
 	
 	methods
@@ -51,18 +54,9 @@ classdef stimulusSequence < dynamicprops
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function obj = stimulusSequence(args) 
-			if nargin>0 && isstruct(args)
-				%if isfield(args,'family');obj.family=args.family;end
-				if nargin>0 && isstruct(args)
-					fnames = fieldnames(args); %find our argument names
-					for i=1:length(fnames);
-						if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
-							obj.salutation(fnames{i});
-							obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-						end
-					end
-				end
+		function obj = stimulusSequence(varargin) 
+			if nargin > 0
+				obj.parseArgs(varargin,obj.allowedProperties)
 			end
 			obj.initialiseRandom();
 		end
@@ -113,16 +107,16 @@ classdef stimulusSequence < dynamicprops
 				nLevels(f) = length(obj.nVar(f).values);
 			end
 			
-			obj.minTrials = prod(nLevels);
-			if isempty(obj.minTrials)
-				obj.minTrials = 1;
+			obj.minBlocks = prod(nLevels);
+			if isempty(obj.minBlocks)
+				obj.minBlocks = 1;
 			end
-			if obj.minTrials > 2046
+			if obj.minBlocks > 2046
 				warndlg('WARNING: You are exceeding the number of stimuli the Plexon can identify!')
 			end
 
 			% initialize cell array that will hold balanced variables
-			obj.outVars = cell(obj.nTrials, obj.nVars);
+			obj.outVars = cell(obj.nBlocks, obj.nVars);
 			obj.outValues = [];
 			obj.outIndex = [];
 
@@ -130,13 +124,13 @@ classdef stimulusSequence < dynamicprops
 			% generates enough repetitions of each factor, ensuring a balanced design,
 			% and randomizes them
 			offset=0;
-			for i = 1:obj.nTrials
-				len1 = obj.minTrials;
+			for i = 1:obj.nBlocks
+				len1 = obj.minBlocks;
 				len2 = 1;
 				if obj.randomise == true
-					[~, index] = sort(rand(obj.minTrials, 1));
+					[~, index] = sort(rand(obj.minBlocks, 1));
 				else
-					index = (1:obj.minTrials)';
+					index = (1:obj.minBlocks)';
 				end
 				obj.outIndex = [obj.outIndex; index];
 				for f = 1:obj.nVars
@@ -147,14 +141,14 @@ classdef stimulusSequence < dynamicprops
 					end
 					% this is the critical line: it ensures there are enough repetitions
 					% of the current factor in the correct order
-					obj.outVars{i,f} = repmat(reshape(repmat(obj.nVar(f).values, len1, len2), obj.minTrials, 1), obj.nVars, 1);
+					obj.outVars{i,f} = repmat(reshape(repmat(obj.nVar(f).values, len1, len2), obj.minBlocks, 1), obj.nVars, 1);
 					obj.outVars{i,f} = obj.outVars{i,f}(index);
 					len2 = len2 * nLevels(f);
 					mn=offset+1;
-					mx=i*obj.minTrials;
+					mx=i*obj.minBlocks;
 					obj.outValues(mn:mx,f)=obj.outVars{i,f};
 				end
-				offset=offset+obj.minTrials;
+				offset=offset+obj.minBlocks;
 			end
 			obj.outMap=zeros(size(obj.outValues));
 			for f = 1:obj.nVars
@@ -172,7 +166,7 @@ classdef stimulusSequence < dynamicprops
 		%> Dependent property nruns get method
 		% ===================================================================
 		function nRuns = get.nRuns(obj)
-			nRuns = obj.minTrials*obj.nTrials;
+			nRuns = obj.minBlocks*obj.nBlocks;
 		end
 		
 		% ===================================================================
@@ -181,7 +175,7 @@ classdef stimulusSequence < dynamicprops
 		%> Dependent property nFrames get method
 		% ===================================================================
 		function nFrames = get.nFrames(obj)
-			nSecs = (obj.nRuns * obj.trialTime) + (obj.minTrials-1 * obj.isTime) + (obj.nTrials-1 * obj.itTime);
+			nSecs = (obj.nRuns * obj.trialTime) + (obj.minBlocks-1 * obj.isTime) + (obj.nBlocks-1 * obj.itTime);
 			nFrames = ceil(nSecs) * ceil(obj.fps); %be a bit generous in defining how many frames the task will take
 		end
 		
@@ -241,5 +235,33 @@ classdef stimulusSequence < dynamicprops
 				end
 			end
 		end
+		
+		% ===================================================================
+		%> @brief Sets properties from a structure, ignores invalid properties
+		%>
+		%> @param args input structure
+		% ===================================================================
+		function parseArgs(obj, args, allowedProperties)
+			allowedProperties = ['^(' allowedProperties ')$'];
+			while iscell(args) && length(args) == 1
+				args = args{1};
+			end
+			if iscell(args)
+				if mod(length(args),2) == 1 % odd
+					args = args(1:end-1); %remove last arg
+				end
+				odd = logical(mod(1:length(args),2));
+				even = logical(abs(odd-1));
+				args = cell2struct(args(even),args(odd),2);
+			end
+			fnames = fieldnames(args); %find our argument names
+			for i=1:length(fnames);
+				if regexp(fnames{i},allowedProperties) %only set if allowed property
+					obj.salutation(fnames{i},'Configuring setting in constructor');
+					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+				end
+			end
+		end
+		
 	end
 end

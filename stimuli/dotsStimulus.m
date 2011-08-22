@@ -6,11 +6,11 @@ classdef dotsStimulus < baseStimulus
 		family = 'dots'
 		type = 'simple'
 		density = 35;
-		nDots = 100 % number of dots
+		nDots = 1000 % number of dots
 		colourType = 'randomBW'
 		dotSize  = 0.05  % width of dot (deg)
 		coherence = 0.5
-		kill      = 0.05 % fraction of dots to kill each frame  (limited lifetime)
+		kill      = 0 % fraction of dots to kill each frame  (limited lifetime)
 		dotType = 1
 		mask = true
 		maskColour = [0.5 0.5 0.5 0]
@@ -42,7 +42,7 @@ classdef dotsStimulus < baseStimulus
 		dxs
 		dys
 		allowedProperties='^(msrcMode|mdstMode|type|nDots|dotSize|colourType|coherence|dotType|kill|mask)$';
-		ignoreProperties='xy|dxdy|colours|mask|maskTexture|colourType'
+		ignoreProperties='xy|dxdy|colours|mask|maskTexture|maskColour|colourType|msrcMode|mdstMode'
 	end
 	
 	%=======================================================================
@@ -61,11 +61,12 @@ classdef dotsStimulus < baseStimulus
 		function obj = dotsStimulus(varargin)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
-				args.family = 'dots';
+				varargin.family = 'dots';
+				varargin.speed = 2;
 			end
 			
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
-
+			
 			if nargin>0
 				obj.parseArgs(varargin, obj.allowedProperties);
 			end
@@ -95,7 +96,7 @@ classdef dotsStimulus < baseStimulus
 				obj.backgroundColour = rE.backgroundColour;
 			end
 			
-			fn = fieldnames(dotsStimulus);
+			fn = properties('dotsStimulus');
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
@@ -263,12 +264,12 @@ classdef dotsStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Reset an structure for runExperiment
+		%> @brief Test method to play with dot generation
 		%>
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function run(obj)
+		function runTest(obj)
 			
 			try
 				obj.xCenter=0;

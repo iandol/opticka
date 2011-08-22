@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.516'
+		version='0.601'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection, via TCP
@@ -283,6 +283,7 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKPanelGrating,'Visible','off')
 				%drawnow;
 				set(obj.h.OKPanelGrating,'Visible','on')
+				drawnow;
 				
 				
 				obj.loadPrefs;
@@ -362,7 +363,6 @@ classdef (Sealed) opticka < handle
 			value = obj.gv(obj.h.OKbitDepth);
 			obj.r.screen.bitDepth = obj.gs(obj.h.OKbitDepth, value);
 			
-			
 			obj.r.screen.blend = obj.gv(obj.h.OKOpenGLBlending);
 			
 			value = obj.gv(obj.h.OKUseGamma);
@@ -385,7 +385,8 @@ classdef (Sealed) opticka < handle
 			obj.r.screen.antiAlias = obj.gd(obj.h.OKAntiAliasing);
 			obj.r.screen.photoDiode = logical(obj.gv(obj.h.OKUsePhotoDiode));
 			obj.r.screen.movieSettings.record = logical(obj.gv(obj.h.OKrecordMovie));
-			obj.r.screen.verbose = logical(obj.gv(obj.h.OKVerbose));
+			obj.r.verbose = logical(obj.gv(obj.h.OKVerbose));
+			obj.r.screen.verbose = obj.r.verbose;
 			obj.r.screen.debug = logical(obj.gv(obj.h.OKDebug));
 			obj.r.screen.visualDebug = logical(obj.gv(obj.h.OKDebug));
 			obj.r.screen.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
@@ -412,7 +413,7 @@ classdef (Sealed) opticka < handle
 			obj.r.task.itTime = obj.gd(obj.h.OKitTime);
 			obj.r.task.randomise = obj.gv(obj.h.OKRandomise);
 			obj.r.task.isTime = obj.gd(obj.h.OKisTime);
-			obj.r.task.nTrials = obj.gd(obj.h.OKnTrials);
+			obj.r.task.nBlocks = obj.gd(obj.h.OKnBlocks);
 			obj.r.task.realTime = obj.gv(obj.h.OKrealTime);
 			obj.r.task.initialiseRandom;
 			obj.r.task.randomiseStimuli;
@@ -980,13 +981,13 @@ classdef (Sealed) opticka < handle
 					
 					list = obj.gs(obj.h.OKGLSrc);
 					val = obj.findValue(list,tmp.r.screen.srcMode);
-					obj.r.srcMode = list{val};
+					obj.r.screen.srcMode = list{val};
 					set(obj.h.OKGLSrc,'Value',val);
 					
 					
 					list = obj.gs(obj.h.OKGLDst);
 					val = obj.findValue(list,tmp.r.screen.dstMode);
-					obj.r.dstMode = list{val};
+					obj.r.screen.dstMode = list{val};
 					set(obj.h.OKGLDst,'Value',val);
 					
 					set(obj.h.OKOpenGLBlending,'Value', tmp.r.screen.blend);
@@ -1014,7 +1015,7 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKRandomSeed, 'String', num2str(obj.r.task.randomSeed));
 				set(obj.h.OKitTime,'String',num2str(obj.r.task.itTime));
 				set(obj.h.OKisTime,'String',num2str(obj.r.task.isTime));
-				set(obj.h.OKnTrials,'String',num2str(obj.r.task.nTrials));
+				set(obj.h.OKnBlocks,'String',num2str(obj.r.task.nBlocks));
 				
 				if iscell(tmp.r.stimulus);
 					obj.r.stimulus = tmp.r.stimulus;

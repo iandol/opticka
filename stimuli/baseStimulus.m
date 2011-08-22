@@ -69,7 +69,7 @@ classdef baseStimulus < dynamicprops
 		%> window to attach to
 		win = []
 		%>screen to use
-		screen = 0
+		screen = []
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
 		ignorePropertiesBase='family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|tick';
@@ -183,6 +183,34 @@ classdef baseStimulus < dynamicprops
 		function hide(obj)
 			obj.isVisible = false;
 		end
+		
+		% ===================================================================
+		%> @brief Run Stimulus in a window to preview
+		%>
+		% ===================================================================
+		function run(obj)
+			s = screenManager('screen',0,'bitDepth','8bit','debug',true); %use a temporary screenManager object
+			s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
+			s.open(); %open PTB screen
+			obj.setup(s); %setup our stimulus object
+			obj.draw(); %draw stimulus
+			Screen('Flip',s.win);
+			WaitSecs(1);
+			for i = 1:(s.screenVals.fps*2) %should be 2 seconds worth of flips
+				obj.draw(); %draw stimulus
+				s.drawGrid(); %draw +-5 degree dot grid
+				s.drawFixationPoint(); %centre spot
+				Screen('DrawingFinished', s.win); %tell PTB to draw
+				obj.animate(); %animate stimulus, will be seen on next draw
+				Screen('Flip',s.win); %flip the buffer ASAP, timing is unimportant
+			end
+			WaitSecs(1);
+			Screen('Flip',s.win);
+			s.close(); %close screen
+			clear s; %clear it
+			obj.reset(); %reset our stimulus ready for use again
+		end
+		
 		
 	end %---END PUBLIC METHODS---%
 	

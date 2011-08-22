@@ -14,12 +14,13 @@ classdef screenManager < handle
 		%> change the parameters for poorer temporal fidelity during debugging
 		debug = false
 		%> shows the info text and position grid during stimulus presentation
-		visualDebug = true
+		visualDebug = false
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer = 1
 		%>bitDepth of framebuffer
 		bitDepth = '8bit'
-		%> multisampling sent to the graphics card, try values []=disabled, 4, 8 and 16
+		%> multisampling sent to the graphics card, try values []=disabled, 4, 8
+		%> and 16 -- essential for textures to stop aliasing
 		antiAlias = []
 		%> background of display during stimulus presentation
 		backgroundColour = [0.5 0.5 0.5 0]
@@ -35,7 +36,7 @@ classdef screenManager < handle
 		srcMode = 'GL_ONE'
 		%> GL_ONE % dst mode
 		dstMode = 'GL_ZERO'
-		%> show a fixation spot?
+		%> show a centered spot?
 		fixationPoint = false
 		%> show a white square to trigger a photodiode attached to screen
 		photoDiode = false
@@ -43,8 +44,9 @@ classdef screenManager < handle
 		gammaTable
 		%> settings for movie output
 		movieSettings = []
-		%> gamma tables and the like
+		%> useful screen info and initial gamma tables and the like
 		screenVals
+		%> verbosity
 		verbose = true
 	end
 	
@@ -90,7 +92,9 @@ classdef screenManager < handle
 		%> @return instance of the class.
 		% ===================================================================
 		function obj = screenManager(varargin)
-			if nargin>0;obj.set(varargin);end
+			if nargin>0
+				obj.parseArgs(varargin);
+			end
 			obj.prepareScreen;
 		end
 		
@@ -102,12 +106,22 @@ classdef screenManager < handle
 		% ===================================================================
 		function screenVals = prepareScreen(obj)
 			
+			try
+				AssertOpenGL;
+			catch ME
+				errordlg('OpenGL capable graphics is required for Opticka!');
+				error('OpenGL is required for Opticka!');
+			end
+			
 			obj.maxScreen=max(Screen('Screens'));
 			
+			%by default choose the (largest number) screen
 			if isempty(obj.screen) || obj.screen > obj.maxScreen
 				obj.screen = obj.maxScreen;
 			end
 			
+			% initialise our movie settings
+			obj.movieSettings.loop = Inf;
 			obj.movieSettings.record = 0;
 			obj.movieSettings.size = [400 400];
 			obj.movieSettings.quality = 0;
@@ -119,26 +133,24 @@ classdef screenManager < handle
 			[obj.screenVals.gammaTable,obj.screenVals.dacBits,obj.screenVals.lutSize]=Screen('ReadNormalizedGammaTable', obj.screen);
 			
 			%get screen dimensions
-			rect=Screen('Rect',obj.screen);
-			obj.screenVals.width=rect(3);
-			obj.screenVals.height=rect(4);
+			[obj.screenVals.width, obj.screenVals.height] = Screen('WindowSize',obj.screen);
+			obj.winRect = Screen('Rect',obj.screen);
 			
+			obj.screenVals.resetGamma = false;
+			
+			%this is just a rough initial setting, it will be recalculated when we
+			%open the screen before showing stimuli.
 			obj.screenVals.fps=Screen('FrameRate',obj.screen);
-			if obj.screenVals.fps == 0;obj.screenVals.fps = 60;end
+			if obj.screenVals.fps == 0
+				obj.screenVals.fps = 60;
+			end
 			obj.screenVals.ifi=1/obj.screenVals.fps;
 			
-			%make sure we load up and test the serial port
-			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1));
-			%obj.serialP.toggleDTRLine;
-			%obj.serialP.close;
-			
-			try
-				AssertOpenGL;
-			catch ME
-				error('OpenGL is required for Opticka!');
-			end
-			
 			Screen('Preference', 'TextRenderer', 0); %fast text renderer
+			
+			if obj.debug == true
+				obj.visualDebug = true;
+			end
 			
 			obj.makeGrid;
 			
@@ -150,13 +162,20 @@ classdef screenManager < handle
 		% ===================================================================
 		%> @brief prepare the Screen values on the local machine
 		%>
-		%> @param
-		%> @return
+		%> @param debug, whether we show debug status, called from runExperiment
+		%> @param tL timLog object to add timing info on screen construction
+		%> @return screenVals basic info on the screen
 		% ===================================================================
-		function screenVals = initialiseScreen(obj,debug,tL)
-			
+		function screenVals = open(obj,debug,tL)
+			if ~exist('debug','var')
+				debug = true;
+			end
+			if ~exist('tL','var')
+				tL = struct;
+			end
 			try
 				obj.screenVals.resetGamma = false;
+				
 				obj.hideScreenFlash;
 				
 				if debug == true || obj.windowed(1)>0
@@ -180,20 +199,27 @@ classdef screenManager < handle
 				end
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colourrange!
 				
-				if obj.windowed(1)==0
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', s.screen, s.backgroundColour,[], [], s.doubleBuffer+1,[],obj.antiAlias);
-				else
-					if length(obj.windowed)==1;obj.windowed=[800 600];end
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', s.screen, s.backgroundColour,[1 1 s.windowed(1)+1 obj.windowed(2)+1], [], obj.doubleBuffer+1,[],obj.antiAlias);
+				if isempty(obj.windowed) || length(obj.windowed) == 1 %fullscreen
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
+				else %windowed
+					if length(obj.windowed)==1
+						obj.windowed=[1 1 801 601]
+					elseif length(obj.windowed) == 2
+						obj.windowed = [1 1 obj.windowed(1)+1 obj.windowed(2)+1]
+					end
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,obj.windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
 				
 				tL.screen.postOpenWindow=GetSecs;
 				tL.screen.deltaOpenWindow=(tL.screen.postOpenWindow-tL.screen.preOpenWindow)*1000;
 				
+				obj.screenVals.win = obj.win; %make a copy
+				
 				try
 					AssertGLSL;
 				catch ME
-					error('OpenGL is required for Opticka!');
+					obj.close();
+					error('GLSL Shading support is required for Opticka!');
 				end
 				
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
@@ -237,9 +263,10 @@ classdef screenManager < handle
 				screenVals = obj.screenVals;
 				
 			catch ME
+				obj.close();
 				obj.screenVals = [];
 				screenVals = obj.screenVals;
-				rethrow ME
+				rethrow(ME)
 			end
 			
 		end
@@ -253,24 +280,26 @@ classdef screenManager < handle
 		function hideScreenFlash(obj)
 			% This is the trick Mario told us to "hide" the colour changes as PTB
 			% intialises -- we could use backgroundcolour here to be even better
-			if obj.hideFlash == true && obj.windowed(1) == 0
+			if obj.hideFlash == true && length(obj.windowed) == 1 && obj.windowed(1) == 0
 				if isa(obj.gammaTable,'calibrateLuminance') && (obj.gammaTable.choice > 0)
 					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.gammaTable.gammaTable{obj.gammaTable.choice}(128,:), 256, 3));
 					obj.screenVals.resetGamma = true;
 				else
-					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.screenVals.gammaTable(128,:), 256, 1));
+					%table = repmat(obj.screenVals.gammaTable(128,:), 256, 1); %use midpoint in system gamma table
+					table = repmat(obj.backgroundColour(:,1:3), 256, 1);
+					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, table);
 					obj.screenVals.resetGamma = true;
 				end
 			end
 		end
 		
 		% ===================================================================
-		%> @brief prepare the Screen values on the local machine
+		%> @brief close the screen when finished or on error
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function closeScreen(obj)
+		function close(obj)
 			Screen('Close');
 			Screen('CloseAll');
 			obj.win=[];
@@ -445,43 +474,6 @@ classdef screenManager < handle
 		end
 		
 		% ===================================================================
-		%> @brief infoText - draws text about frame to screen
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function infoText(obj)
-			if obj.logFrames == true && obj.task.tick > 1
-				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
-					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-					(obj.timeLog.vbl(obj.task.tick-1)-obj.timeLog.startTime),obj.task.tick);
-			else
-				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
-					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-					(obj.timeLog.vbl-obj.timeLog.startTime),obj.task.tick);
-			end
-			for i=1:obj.task.nVars
-				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
-			end
-			Screen('DrawText',obj.win,t,50,1,[1 1 1 1],[0 0 0 1]);
-		end
-		
-		% ===================================================================
-		%> @brief infoText - draws text about frame to screen
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function infoTextUI(obj)
-			t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
-				obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-				(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
-			for i=1:obj.task.nVars
-				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
-			end
-		end
-		
-		% ===================================================================
 		%> @brief Configure grating specific variables
 		%>
 		%> @param i
@@ -527,7 +519,7 @@ classdef screenManager < handle
 		%>
 		%> @param args input structure
 		% ===================================================================
-		function set(obj,args)
+		function parseArgs(obj,args)
 			while iscell(args) && length(args) == 1
 				args = args{1};
 			end
@@ -566,6 +558,15 @@ classdef screenManager < handle
 					fprintf(['>>>screenManager: ' in '\n']);
 				end
 			end
+		end
+		
+		% ===================================================================
+		%> @brief Delete method
+		%>
+		% ===================================================================
+		function delete(obj)
+			obj.close();
+			obj.salutation('Delete method','Screen object has been closed...');
 		end
 		
 	end

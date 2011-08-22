@@ -37,10 +37,12 @@ classdef (Sealed) runExperiment < handle
 		lJack
 		%> gamma correction info saved as a calibrateLuminance object
 		gammaTable
-		%> this lets the UI leave commands
+		%> this lets the UI leave commands to runExperiment
 		uiCommand = ''
 		%> log all frame times, gets slow for > 1e6 frames
 		logFrames = true
+		%> structure to pass to screenManager on initialisation
+		screenSettings = struct()
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -61,7 +63,7 @@ classdef (Sealed) runExperiment < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='^(stimulus|task|screen|visualDebug|useLabJack|logFrames|serialPortName|debug|verbose)$'
+		allowedProperties='^(stimulus|task|screen|visualDebug|useLabJack|logFrames|serialPortName|debug|verbose|screenSettings)$'
 		%> serial port object opened
 		serialP
 	end
@@ -85,8 +87,8 @@ classdef (Sealed) runExperiment < handle
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function obj = runExperiment(args)
-			if exist('args','var');obj.set(args);end
+		function obj = runExperiment(varargin)
+			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
 			obj.initialiseScreen;
 		end
 		
@@ -98,43 +100,35 @@ classdef (Sealed) runExperiment < handle
 		function run(obj)
 			%initialise timeLog for this run
 			obj.timeLog = timeLogger;
-			%if obj.logFrames == false %preallocating these makes opticka drop frames when nFrames ~ 1e6
-			%else
-			%	obj.timeLog.vbl=zeros(obj.task.nFrames,1);
-			%	obj.timeLog.show=zeros(obj.task.nFrames,1);
-			%	obj.timeLog.flip=zeros(obj.task.nFrames,1);
-			%	obj.timeLog.miss=zeros(obj.task.nFrames,1);
-			%	obj.timeLog.stimTime=zeros(obj.task.nFrames,1);
-			%end
+			tL = obj.timeLog;
 			
-			%make a handle to the screemManager
+			%make a handle to the screenManager
 			s = obj.screen;
 			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
 			
 			%-------Set up serial line and LabJack for this run...
 			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
 			%obj.serialP.setDTR(0);
-			
 			if obj.useLabJack == true
 				strct = struct('openNow',1,'name','default','verbosity',obj.verbose);
 			else
 				strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
 			end
 			obj.lJack = labJack(strct);
-			%-----------------------------------------------------
+			%-----------------------------------------------------------
 			
-			%---------This is our main TRY CATCH experiment display loop
-			try
-				
-				obj.screenVals = s.initialiseScreen(obj.debug,obj.timeLog);
+			%-----------------------------------------------------------
+			try%======This is our main TRY CATCH experiment display loop
+			%-----------------------------------------------------------	
+				obj.screenVals = s.open(obj.debug,obj.timeLog);
 				
 				%Trigger the omniplex (TTL on FIO1) into paused mode
-				obj.lJack.setDIO([2,0,0]);WaitSecs(0.001);obj.lJack.setDIO([0,0,0]); 
+				obj.lJack.setDIO([2,0,0]);WaitSecs(0.001);obj.lJack.setDIO([0,0,0]);
 				
 				obj.initialiseTask; %set up our task structure for this run
 				
 				for j=1:obj.sList.n %parfor doesn't seem to help here...
-					obj.stimulus{j}.setup(obj); %call setup and pass it the runExperiment object
+					obj.stimulus{j}.setup(s); %call setup and pass it the screen object
 				end
 				
 				obj.updateVars; %set the variables for the very first run;
@@ -142,7 +136,7 @@ classdef (Sealed) runExperiment < handle
 				KbReleaseWait; %make sure keyboard keys are all released
 				
 				%bump our priority to maximum allowed
-				Priority(MaxPriority(s.win)); 
+				Priority(MaxPriority(s.win));
 				%--------------this is RSTART (Set HIGH FIO0->Pin 24), unpausing the omniplex
 				if obj.useLabJack == true
 					obj.lJack.setDIO([1,0,0],[1,0,0])
@@ -179,7 +173,7 @@ classdef (Sealed) runExperiment < handle
 				% Our main display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				while obj.task.thisTrial <= obj.task.nTrials
+				while obj.task.thisTrial <= obj.task.nBlocks
 					if obj.task.isBlank == true
 						if s.photoDiode == true
 							s.drawPhotoDiodeSquare([0 0 0 1]);
@@ -200,7 +194,7 @@ classdef (Sealed) runExperiment < handle
 					end
 					if s.visualDebug == true
 						s.drawGrid;
-						s.infoText;
+						obj.infoText;
 					end
 					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
@@ -209,7 +203,7 @@ classdef (Sealed) runExperiment < handle
 					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
 					if strcmp(obj.uiCommand,'stop');break;end
 					%if KbCheck;notify(obj,'abortRun');break;end;
-						
+					
 					obj.updateTask(); %update our task structure
 					
 					%======= FLIP: Show it at correct retrace: ========%
@@ -243,26 +237,25 @@ classdef (Sealed) runExperiment < handle
 					obj.task.tick=obj.task.tick+1;
 					
 				end
+				%=================================================Finished display loop
 				
-				%---------------------------------------------Finished display loop
-				obj.drawBackground;
+				s.drawBackground;
 				vbl=Screen('Flip', s.win);
-				%obj.lJack.prepareStrobe(2047,[],1);
 				tL.screen.afterDisplay=vbl;
 				obj.lJack.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				notify(obj,'endRun');
 				
 				tL.screen.deltaDispay=tL.screen.afterDisplay - tL.screen.beforeDisplay;
-				tL.screen.deltaUntilDisplay=tL.screen.startTime - tL.screen.beforeDisplay;
+				tL.screen.deltaUntilDisplay=tL.startTime - tL.screen.beforeDisplay;
 				tL.screen.deltaToFirstVBL=tL.vbl(1) - tL.screen.beforeDisplay;
 				
-				obj.info = Screen('GetWindowInfo', s.win);
+				s.screenVals.info = Screen('GetWindowInfo', s.win);
 				
 				s.resetScreenGamma();
 				
 				s.finaliseMovie(false);
 				
-				s.closeScreen();
+				s.close();
 				
 				obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
 				obj.lJack.close;
@@ -278,7 +271,7 @@ classdef (Sealed) runExperiment < handle
 				
 				s.finaliseMovie(true);
 				
-				s.closeScreen();
+				s.close();
 				
 				%obj.serialP.close;
 				obj.lJack.close;
@@ -300,8 +293,13 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		function initialiseScreen(obj)
 			
+			if obj.debug == true %let screen inherit debug settings
+				obj.screenSettings.debug = true;
+				obj.screenSettings.visualDebug = true;
+			end
+			
 			obj.timeLog = timeLogger;
-			obj.screen = screenManager;
+			obj.screen = screenManager(obj.screenSettings);
 			
 			obj.screen.movieSettings.record = 0;
 			obj.screen.movieSettings.size = [400 400];
@@ -315,11 +313,17 @@ classdef (Sealed) runExperiment < handle
 			obj.lJack.close;
 			obj.lJack=[];
 			
+			if iscell(obj.stimulus)
+				while iscell(obj.stimulus) && length(obj.stimulus) == 1
+					obj.stimulus = obj.stimulus{1};
+				end
+			end
+			
 			obj.computer=Screen('computer');
 			obj.ptb=Screen('version');
 			
 			obj.updatesList;
-
+			
 			a=zeros(20,1);
 			for i=1:20
 				a(i)=GetSecs;
@@ -417,7 +421,7 @@ classdef (Sealed) runExperiment < handle
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief InitialiseTask
@@ -428,7 +432,7 @@ classdef (Sealed) runExperiment < handle
 			
 			if isempty(obj.task) %we have no task setup, so we generate one.
 				obj.task=stimulusSequence;
-				obj.task.nTrials=1;
+				obj.task.nBlocks=1;
 				obj.task.nSegments = 1;
 				obj.task.trialTime = 2;
 				obj.task.randomiseStimuli;
@@ -541,7 +545,7 @@ classdef (Sealed) runExperiment < handle
 				thisRun=obj.task.thisRun;
 			end
 			
-			if thisTrial > obj.task.nTrials
+			if thisTrial > obj.task.nBlocks
 				return %we've reached the end of the experiment, no need to update anything!
 			end
 			
@@ -561,7 +565,7 @@ classdef (Sealed) runExperiment < handle
 				end
 				
 				if obj.task.blankTick > 2 && obj.task.blankTick <= obj.sList.n + 2
-% 						obj.stimulus{j}.(name)=value;
+					% 						obj.stimulus{j}.(name)=value;
 				else
 					for j = ix %loop through our stimuli references for this variable
 						if obj.verbose==true;tic;end
@@ -599,12 +603,12 @@ classdef (Sealed) runExperiment < handle
 			end
 			
 			if trigger == true
-
+				
 				if obj.task.isBlank == false %showing stimulus, need to call animate for each stimulus
 					% because the update happens before the flip, but the drawing of the update happens
 					% only in the next loop, we have to send the strobe one loop after we set switched
 					% to true
-					if obj.task.switched == true; 
+					if obj.task.switched == true;
 						obj.task.strobeThisFrame = true;
 					else
 						obj.task.strobeThisFrame = false;
@@ -626,7 +630,7 @@ classdef (Sealed) runExperiment < handle
 					% because the update happens before the flip, but the drawing of the update happens
 					% only in the next loop, we have to send the strobe one loop after we set switched
 					% to true
-					if obj.task.switched == true; 
+					if obj.task.switched == true;
 						obj.task.strobeThisFrame = true;
 					else
 						obj.task.strobeThisFrame = false;
@@ -634,7 +638,7 @@ classdef (Sealed) runExperiment < handle
 					% now update our stimuli, we do it after the first blank as less
 					% critical timingwise
 					if obj.task.doUpdate == true
-						if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
+						if ~mod(obj.task.thisRun,obj.task.minBlocks) %are we rolling over into a new trial?
 							mT=obj.task.thisTrial+1;
 							mR = 1;
 						else
@@ -644,11 +648,11 @@ classdef (Sealed) runExperiment < handle
 						%obj.uiCommand;
 						if obj.verbose==true;tic;end
 						obj.updateVars(mT,mR);
-% 						for i = 1:obj.sList.n
-% 							obj.stimulus{i}.update;
-% 						end
-								obj.task.doUpdate = false;
-									if obj.verbose==true;fprintf('\nVariable update: %g seconds',toc);end
+						% 						for i = 1:obj.sList.n
+						% 							obj.stimulus{i}.update;
+						% 						end
+						obj.task.doUpdate = false;
+						if obj.verbose==true;fprintf('\nVariable update: %g seconds',toc);end
 					end
 					
 					%this dispatches each stimulus update on a new blank frame to
@@ -670,7 +674,7 @@ classdef (Sealed) runExperiment < handle
 					obj.task.isBlank = true;
 					obj.task.blankTick = 0;
 					
-					if ~mod(obj.task.thisRun,obj.task.minTrials) %are we within a trial block or not? we add the required time to our switch timer
+					if ~mod(obj.task.thisRun,obj.task.minBlocks) %are we within a trial block or not? we add the required time to our switch timer
 						obj.task.switchTime=obj.task.switchTime+obj.task.itTime;
 						obj.task.switchTick=obj.task.switchTick+(obj.task.itTime*ceil(obj.screenVals.fps));
 					else
@@ -684,12 +688,12 @@ classdef (Sealed) runExperiment < handle
 				else %we have to show the new run on the next flip
 					
 					%obj.logMe('IntoTrial');
-					if obj.task.thisTrial <= obj.task.nTrials
+					if obj.task.thisTrial <= obj.task.nBlocks
 						obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
 						obj.task.switchTick=obj.task.switchTick+(obj.task.trialTime*round(obj.screenVals.fps)); %update our timer
 						obj.task.isBlank = false;
 						obj.task.totalRuns = obj.task.totalRuns + 1;
-						if ~mod(obj.task.thisRun,obj.task.minTrials) %are we rolling over into a new trial?
+						if ~mod(obj.task.thisRun,obj.task.minBlocks) %are we rolling over into a new trial?
 							obj.task.thisTrial=obj.task.thisTrial+1;
 							obj.task.thisRun = 1;
 						else
@@ -701,11 +705,48 @@ classdef (Sealed) runExperiment < handle
 							
 						end
 					else
-						obj.task.thisTrial = obj.task.nTrials + 1;
+						obj.task.thisTrial = obj.task.nBlocks + 1;
 					end
 					%obj.logMe('OutaTrial');
 					
 				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief infoText - draws text about frame to screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function infoText(obj)
+			if obj.logFrames == true && obj.task.tick > 1
+				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
+					(obj.timeLog.vbl(obj.task.tick-1)-obj.timeLog.startTime),obj.task.tick);
+			else
+				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
+					(obj.timeLog.vbl-obj.timeLog.startTime),obj.task.tick);
+			end
+			for i=1:obj.task.nVars
+				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
+			end
+			Screen('DrawText',obj.screen.win,t,50,1,[1 1 1 1],[0 0 0 1]);
+		end
+		
+		% ===================================================================
+		%> @brief infoText - draws text about frame to screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function t = infoTextUI(obj)
+			t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+				obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
+				(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
+			for i=1:obj.task.nVars
+				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
 			end
 		end
 		
@@ -749,7 +790,7 @@ classdef (Sealed) runExperiment < handle
 		%>
 		%> @param args input structure
 		% ===================================================================
-		function set(obj,args)
+		function parseArgs(obj, args, allowedProperties)
 			while iscell(args) && length(args) == 1
 				args = args{1};
 			end
@@ -763,7 +804,7 @@ classdef (Sealed) runExperiment < handle
 			end
 			fnames = fieldnames(args); %find our argument names
 			for i=1:length(fnames);
-				if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
+				if regexp(fnames{i}, allowedProperties) %only set if allowed property
 					obj.salutation(fnames{i},'Configuring setting');
 					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 				end
@@ -772,11 +813,15 @@ classdef (Sealed) runExperiment < handle
 		
 	end
 	
-	methods (Static)
+	%=======================================================================
+	methods (Static) %------------------STATIC METHODS
+	%=======================================================================
+	
 		function lobj=loadobj(in)
-			fprintf('Loading runExperiment object...\n');	
+			fprintf('\n>>> Loading runExperiment object...\n');
 			lobj = in;
 		end
+		
 	end
 	
 end

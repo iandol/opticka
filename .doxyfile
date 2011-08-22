@@ -1,4 +1,4 @@
-# Doxyfile 1.7.2
+# Doxyfile 1.7.4
 
 # This file describes the settings to be used by the documentation system
 # doxygen (www.doxygen.org) for a project.
@@ -31,14 +31,27 @@ PROJECT_NAME           = "Opticka"
 # This could be handy for archiving the generated documentation or
 # if some version control system is used.
 
-PROJECT_NUMBER         = 0.516
+PROJECT_NUMBER         = 0.601
+
+# Using the PROJECT_BRIEF tag one can provide an optional one line description
+# for a project that appears at the top of each page and should give viewer
+# a quick idea about the purpose of the project. Keep the description short.
+
+PROJECT_BRIEF          = "Opticka is a Visual Stimulus System for Electrophysiology"
+
+# With the PROJECT_LOGO tag one can specify an logo or icon that is
+# included in the documentation. The maximum height of the logo should not
+# exceed 55 pixels and the maximum width should not exceed 200 pixels.
+# Doxygen will copy the logo to the output directory.
+
+PROJECT_LOGO           =
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute)
 # base path where the generated documentation will be put.
 # If a relative path is entered, it will be relative to the location
 # where doxygen was started. If left blank the current directory will be used.
 
-OUTPUT_DIRECTORY       = html
+OUTPUT_DIRECTORY       =
 
 # If the CREATE_SUBDIRS tag is set to YES, then doxygen will create
 # 4096 sub-directories (in 2 levels) under the output directory of each output
@@ -273,6 +286,13 @@ DISTRIBUTE_GROUP_DOC   = NO
 
 SUBGROUPING            = YES
 
+# When the INLINE_GROUPED_CLASSES tag is set to YES, classes, structs and
+# unions are shown inside the group in which they are included (e.g. using
+# @ingroup) instead of on a separate page (for HTML and Man pages) or
+# section (for LaTeX and RTF).
+
+INLINE_GROUPED_CLASSES = NO
+
 # When TYPEDEF_HIDES_STRUCT is enabled, a typedef of a struct, union, or enum
 # is documented as struct, union, or enum with the name of the typedef. So
 # typedef struct TypeS {} TypeT, will appear in the documentation as a struct
@@ -447,6 +467,16 @@ SORT_GROUP_NAMES       = NO
 # alphabetical list.
 
 SORT_BY_SCOPE_NAME     = NO
+
+# If the STRICT_PROTO_MATCHING option is enabled and doxygen fails to
+# do proper type resolution of all parameters of a function it will reject a
+# match between the prototype and the implementation of a member function even
+# if there is only one candidate or it is obvious which candidate to choose
+# by doing a simple string match. By disabling STRICT_PROTO_MATCHING doxygen
+# will still accept a match between prototype and implementation in such cases.
+
+STRICT_PROTO_MATCHING  = NO
+
 
 # The GENERATE_TODOLIST tag can be used to enable (YES) or
 # disable (NO) the todo list. This list is created by putting \todo
@@ -700,6 +730,15 @@ FILTER_PATTERNS        = *.m="~/Code/opticka/tools/m2cpp.pl"
 
 FILTER_SOURCE_FILES    = NO
 
+# The FILTER_SOURCE_PATTERNS tag can be used to specify source filters per file
+# pattern. A pattern will override the setting for FILTER_PATTERN (if any)
+# and it is also possible to disable source filtering for a specific pattern
+# using *.ext= (so without naming a filter). This option only has effect when
+# FILTER_SOURCE_FILES is enabled.
+
+FILTER_SOURCE_PATTERNS =
+
+
 #---------------------------------------------------------------------------
 # configuration options related to source browsing
 #---------------------------------------------------------------------------
@@ -764,7 +803,7 @@ VERBATIM_HEADERS       = YES
 # of all compounds will be generated. Enable this if the project
 # contains a lot of classes, structs, unions or interfaces.
 
-ALPHABETICAL_INDEX     = NO
+ALPHABETICAL_INDEX     = YES
 
 # If the alphabetical index is enabled (see ALPHABETICAL_INDEX) then
 # the COLS_IN_ALPHA_INDEX tag can be used to specify the number of columns
@@ -1501,16 +1540,16 @@ HAVE_DOT               = YES
 
 DOT_NUM_THREADS        = 0
 
-# By default doxygen will write a font called FreeSans.ttf to the output
-# directory and reference it in all dot files that doxygen generates. This
-# font does not include all possible unicode characters however, so when you need
-# these (or just want a differently looking font) you can specify the font name
-# using DOT_FONTNAME. You need need to make sure dot is able to find the font,
+# By default doxygen will write a font called Helvetica to the output
+# directory and reference it in all dot files that doxygen generates.
+# When you want a differently looking font you can specify the font name
+# using DOT_FONTNAME. You need to make sure dot is able to find the font,
 # which can be done by putting it in a standard location or by setting the
 # DOTFONTPATH environment variable or by setting DOT_FONTPATH to the directory
 # containing the font.
 
-DOT_FONTNAME           = Arial.ttf
+DOT_FONTNAME           = Helvetica
+
 
 # The DOT_FONTSIZE tag can be used to set the size of the font of dot graphs.
 # The default size is 10pt.
@@ -1597,7 +1636,7 @@ GRAPHICAL_HIERARCHY    = YES
 DIRECTORY_GRAPH        = YES
 
 # The DOT_IMAGE_FORMAT tag can be used to set the image format of the images
-# generated by dot. Possible values are png, jpg, or gif.
+# generated by dot. Possible values are svg, png, jpg, or gif.
 # If left blank png will be used.
 
 DOT_IMAGE_FORMAT       = png

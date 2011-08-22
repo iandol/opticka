@@ -49,7 +49,8 @@ classdef spotStimulus < baseStimulus
 		function obj = spotStimulus(varargin) 
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
-				args.family = 'spot';
+				varargin.family = 'spot';
+				varargin.colour = [1 1 1];
 			end
 			
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
