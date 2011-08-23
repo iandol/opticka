@@ -345,6 +345,36 @@ classdef gratingStimulus < baseStimulus
 		
 	end %---END PUBLIC METHODS---%
 	
+	
+	%=======================================================================
+	methods ( Access = protected ) %-------PROTECTED METHODS-----%
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief setRect
+		%> setRect makes the PsychRect based on the texture and screen values
+		%> this is modified over parent method as gratings have slightly different
+		%> requirements.
+		% ===================================================================
+		function setRect(obj)
+			if isempty(obj.findprop('motionAngleOut'));
+				[sx sy]=pol2cart(obj.d2r(obj.motionAngle),obj.startPosition);
+			else
+				[sx sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
+			end
+			obj.dstRect=Screen('Rect',obj.texture);
+			obj.dstRect=ScaleRect(obj.dstRect,obj.scale,obj.scale);
+			obj.dstRect=CenterRectOnPoint(obj.dstRect,obj.xCenter,obj.yCenter);
+			if isempty(obj.findprop('xPositionOut'));
+				obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
+			else
+				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));
+			end
+			obj.mvRect=obj.dstRect;
+		end
+	
+	end %---END PROTECTED METHODS---%
+	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
@@ -437,29 +467,6 @@ classdef gratingStimulus < baseStimulus
 		function set_yPositionOut(obj,value)
 			obj.yPositionOut = value*obj.ppd;
 			if ~isempty(obj.texture);obj.setRect;end
-		end
-		
-		% ===================================================================
-		%> @brief setRect
-		%>  setRect makes the PsychRect based on the texture and screen values
-		% ===================================================================
-		function setRect(obj)
-			if isempty(obj.findprop('motionAngleOut'));
-				[sx sy]=pol2cart(obj.d2r(obj.motionAngle),obj.startPosition);
-			else
-				[sx sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
-			end
-			obj.dstRect=Screen('Rect',obj.texture);
-			obj.dstRect=ScaleRect(obj.dstRect,obj.scale,obj.scale);
-			obj.dstRect=CenterRectOnPoint(obj.dstRect,obj.xCenter,obj.yCenter);
-			if isempty(obj.findprop('xPositionOut'));
-				obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
-			else
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));
-			end
-			%fprintf('%i\t',obj.mvRect);
-			%fprintf(' -- %d %d\n',obj.xPositionOut,obj.yPositionOut);
-			obj.mvRect=obj.dstRect;
 		end
 		
 	end

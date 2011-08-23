@@ -18,17 +18,19 @@
 classdef (Sealed) runExperiment < handle
 	
 	properties
-		stimulus
-		%> the stimulusSequence object(s) for the task
-		task
-		%> screen manager object
-		screen
 		%>show command logs and a time log after stimlus presentation
 		verbose = false
 		%> change the parameters for poorer temporal fidelity during debugging
 		debug = false
 		%> shows the info text and position grid during stimulus presentation
 		visualDebug = true
+		%> a cell group of stimulus objects, TODO: use a stimulusManager class to
+		%> hold these
+		stimulus
+		%> the stimulusSequence object(s) for the task
+		task
+		%> screen manager object
+		screen
 		%> name of serial port to send TTL out on, if set to 'dummy' then ignore
 		serialPortName = 'dummy'
 		%> use LabJack for digital output?
@@ -819,6 +821,18 @@ classdef (Sealed) runExperiment < handle
 	
 		function lobj=loadobj(in)
 			fprintf('\n>>> Loading runExperiment object...\n');
+			if ~isobject(in.screen) %this is an old object, pre screenManager
+				in.screen = screenManager();
+				in.screen.srcMode = in.srcMode;
+				in.screen.windowed = in.windowed;
+				in.screen.dstMode = in.dstMode;
+				in.screen.blend = in.blend;
+				in.screen.hideFlash = in.hideFlash;
+				in.screen.movieSettings = in.movieSettings;
+			end
+			if ~isobject(in.timeLog)
+				in.timeLog = timeLogger;
+			end
 			lobj = in;
 		end
 		

@@ -624,7 +624,7 @@ classdef (Sealed) opticka < handle
 			tmp.angle = obj.gd(obj.h.OKPanelTextureangle);
 			tmp.speed = obj.gd(obj.h.OKPanelTexturespeed);
 			tmp.contrast = obj.gd(obj.h.OKPanelTexturecontrast);
-			%tmp.alpha = obj.gd(obj.h.OKPanelSpotalpha);
+			tmp.alpha = obj.gd(obj.h.OKPanelTexturealpha);
 			tmp.startPosition = obj.gd(obj.h.OKPanelTexturestartPosition);
 			%v = obj.gv(obj.h.OKPanelTexturetype);
 			%tmp.type = obj.gs(obj.h.OKPanelTexturetype,v);
@@ -974,6 +974,14 @@ classdef (Sealed) opticka < handle
 			
 			if exist('tmp','var') && isa(tmp,'opticka')
 				
+				if iscell(tmp.r.stimulus);
+					obj.r.stimulus = tmp.r.stimulus;
+				else
+					clear tmp;
+					errordlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
+					error('No stimulus found in protocol!!!');
+				end
+				
 				%copy screen parameters
 				if isa(tmp.r.screen,'screenManager')
 					set(obj.h.OKXCenter,'String', num2str(tmp.r.screen.screenXOffset));
@@ -1017,14 +1025,6 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKisTime,'String',num2str(obj.r.task.isTime));
 				set(obj.h.OKnBlocks,'String',num2str(obj.r.task.nBlocks));
 				
-				if iscell(tmp.r.stimulus);
-					obj.r.stimulus = tmp.r.stimulus;
-				else
-					errordlg('Sorry, this protocol is not compatible with current opticka, please remake');
-					obj.r.stimulus={};
-				end
-				clear tmp;
-				
 				obj.getScreenVals;
 				obj.getTaskVals;
 				obj.r.updatesList;
@@ -1043,6 +1043,7 @@ classdef (Sealed) opticka < handle
 					set(obj.h.OKModifyStimulus,'Enable','on');
 					set(obj.h.OKStimulusUp,'Enable','on');
 					set(obj.h.OKStimulusDown,'Enable','on');
+					set(obj.h.OKStimulusRun,'Enable','on');
 				end
 				
 			end

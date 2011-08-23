@@ -22,7 +22,7 @@ classdef labJack < handle
 		%> allows the constructor to run the open method immediately
 		openNow = true
 		%> strobeTime is time of strobe in unit multiples of 127uS 8 ~=1ms
-		strobeTime = 16
+		strobeTime = 4
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -75,7 +75,7 @@ classdef labJack < handle
 		%> Is our handle a valid one?
 		vHandle = 0
 		%> what properties are allowed to be passed on construction
-		allowedPropertiesBase='^(name|silentMode|verbosity|openNow|header|library)$'
+		allowedProperties='deviceID|name|silentMode|verbosity|openNow|header|library|strobeTime'
 		%>document what our strobed word is actually setting
 		comment = ''
 	end
@@ -93,17 +93,9 @@ classdef labJack < handle
 		%> parsed.
 		%> @return instance of labJack class.
 		% ===================================================================
-		function obj = labJack(args)
-			if nargin>0 && isstruct(args)
-				if nargin>0 && isstruct(args)
-					fnames = fieldnames(args); %find our argument names
-					for i=1:length(fnames);
-						if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
-							obj.salutation(fnames{i},'Configuring property in LabJack constructor');
-							obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-						end
-					end
-				end
+		function obj = labJack(varargin)
+			if nargin>0 
+				obj.parseArgs(varargin,obj.allowedProperties);
 			end
 			if ~isempty(regexp(obj.name,'null', 'once')) || ispc %we were deliberately passed null, means go into silent mode
 				obj.silentMode = true;
@@ -125,7 +117,7 @@ classdef labJack < handle
 				if ~libisloaded('liblabjackusb')
 					try
 						loadlibrary(obj.library,obj.header);
-					catch
+					catch %#ok<CTCH>
 						obj.silentMode = true;
 						obj.verbosity = 0;
 						return
@@ -134,25 +126,33 @@ classdef labJack < handle
 				obj.functions = libfunctions('liblabjackusb', '-full'); %store our raw lib functions
 				obj.version =  calllib('liblabjackusb','LJUSB_GetLibraryVersion');
 				obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',obj.deviceID);
+				if obj.devCount == 0
+					obj.salutation('open method','No LabJack devices found, going into silent mode');
+					obj.isOpen = false;
+					obj.handle = [];
+					obj.vHandle = false;
+					obj.verbosity = false;
+					obj.silentMode = true; %we switch into silent mode just in case someone tries to use the object
+					return
+				end
 				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',1,0,obj.deviceID);
 				obj.validHandle;
 				if obj.vHandle
 					obj.isOpen = true;
 					obj.salutation('open method','LabJack succesfully opened...');
 					none=[0,0,0];
-					obj.setDIO(none); %set all our DIO to output LOW
-					%obj.prepareStrobe([239,255,255],[239,255,255],1); %initialise a strobe out on all DIO
+					obj.setDIO(none); %Sink all our DIO to output LOW
 				else
 					obj.salutation('open method','LabJack didn''t open, going into silent mode');
 					obj.isOpen = false;
 					obj.handle = [];
 					obj.verbosity = false;
-					obj.silentMode = 1; %we switch into silent mode just in case someone tries to use the object
+					obj.silentMode = true; %we switch into silent mode just in case someone tries to use the object
 				end
 			else
 				obj.isOpen = false;
 				obj.handle = [];
-				obj.vHandle = 0;
+				obj.vHandle = false;
 				obj.verbosity = false;
 				obj.silentMode = true; %double make sure it is set to 1 exactly
 			end
@@ -193,7 +193,7 @@ classdef labJack < handle
 						obj.salutation('validHandle Method','INVALID Handle');
 					end
 				else
-					obj.vHandle = 0;
+					obj.vHandle = false;
 					obj.isOpen = false;
 					obj.handle = [];
 					obj.salutation('validHandle Method','INVALID Handle');
@@ -303,15 +303,15 @@ classdef labJack < handle
 		%> @brief SetDIO
 		%>	SetDIO sets the direction/value for FIO, EIO and CIO as read or write
 		%>  if only value supplied, set all others to [255,255,255]
-		%>	@param value is binary identifier for 0-7 bit range
+		%>  @param value is binary identifier for 0-7 bit range
 		%>  @param mask is the mask to apply the command
-		%>  @param valuedir binary identifier for input (0) or output (1)
-		%>  @param maskdir is the mask to apply the command
+		%>  @param valuedir binary identifier for input (0) or output (1) default=[255, 255, 255]
+		%>  @param maskdir is the mask to apply the command. default=[255, 255,255]
 		% ===================================================================
 		function setDIO(obj,value,mask,valuedir,maskdir)
 			if ~exist('value','var');fprintf('\nInput options: \n\t\tvalue, [mask], [value direction], [mask direction]\n\n');return;end
-			if ~exist('mask','var');mask=[255,255,255];end
-			if ~exist('valuedir','var');valuedir=[255,255,255];maskdir=valuedir;end
+			if ~exist('mask','var');mask=[255,255,255];end %all DIO by default
+			if ~exist('valuedir','var');valuedir=[255,255,255];maskdir=valuedir;end %all DIO set to output
 			if obj.silentMode == false && obj.vHandle == 1
 				cmd=zeros(14,1);
 				cmd(2) = 248; %command byte for feedback command (f8 in hex)
@@ -376,15 +376,23 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief Prepare Strobe Word
-		%>	sets the strobe value for FIO, EIO and CIO
-		%>	@param value The value to be strobed, range is 1-2046 for 12bit
-		%>  as 0 and 2047 are reserved, or value can be 3 byte markers
+		%>	Sets the strobe value for EIO (8bits) and CIO (4bits) which are
+		%> accesible via the DB15 using a single cable. This avoids using FIO, which
+		%> can therefore be used for addtional control TTLs (FIO0 and FIO1 are used
+		%> for START/STOP and pause/unpause of the Plexon Omniplex in Opticka for
+		%> example.
+		%>
+		%>	@param value The value to be strobed, range is 0-2047 for 11bits
+		%>  In Opticka, 0 and 2047 are reserved. Value can be 3 byte markers for
+		%>  FIO (which is ignored), EIO and CIO respectively. CIO0 is used as the
+		%>  strobe line, which leaves EIO0-7 and CIO1-3 for value data.
 		%>  @param mask Which bits to mask
 		%>  @param sendNow if true then sends the value immediately
 		% ===================================================================
 		function prepareStrobe(obj,value,mask,sendNow)
 			if obj.silentMode == false && obj.vHandle == 1
-				if value>2047;value=2047;end %block anything bigger than 2^11(-1), 2047 signifies OFF
+				if value>2047;value=2047;end %block anything bigger than 2^11
+				if value<0; value = 0; end %block anything smaller than 0
 				obj.comment = ['Original Value = ' num2str(value) ' | '];
 				[eio,cio]=obj.prepareWords(value,0); %construct our word split to eio and cio, set strobe low
 				ovalue(1) = 0; %fio will be 0
@@ -396,19 +404,22 @@ classdef labJack < handle
 				ovalue2(3) = cio2;
 				mask = [0,255,255]; %lock fio, allow all of eio and cio
 				obj.comment = [obj.comment 'FIO EIO & CIO: ' num2str(0) ' ' num2str(eio2) ' ' num2str(cio2)];
+				
 				cmd=zeros(30,1);
 				cmd(2) = 248; %command byte for feedback command (f8 in hex)
 				cmd(3) = (length(cmd)-6)/2;
+				
 				cmd(8) = 27; %IOType for PortStateWrite (1b in hex)
 				cmd(9:11) = mask;
-				cmd(12:14) = ovalue;
-				%cmd(15) = 5; %IOType for waitshort is 5, waitlong is 6
-				%cmd(16) = 1; %time to wait
+				cmd(12:14) = ovalue; %This is our strobe number but with strobe line set low, th
+				
 				cmd(15) = 27; %IOType for PortStateWrite (1b in hex)
 				cmd(16:18) = mask;
-				cmd(19:21) = ovalue2;
+				cmd(19:21) = ovalue2; %The same value but now set strobe high, all our values should be readable
+				
 				cmd(22) = 5; %IOType for waitshort is 5, waitlong is 6
-				cmd(23) = obj.strobeTime; %time to wait in unit multiples
+				cmd(23) = obj.strobeTime; %time to wait in unit multiples, this is the time the strobe
+				
 				cmd(24) = 27; %IOType for PortStateWrite (1b in hex)
 				cmd(25:27) = mask;
 				cmd(28:30) = 0;
@@ -439,11 +450,10 @@ classdef labJack < handle
 		end
 		
 		% ===================================================================
-		%> @brief Prepare Strobe Word split into EIO (8bit) and CIO (4bit)
+		%> @brief Prepare Strobe Word split into EIO (8bit) and CIO (3bit). 0-2047
+		%>  %is the max # of variables with 2^11bits.
 		%>
-		%>	@param value The value to be split into EIO and CIO
-		%>  @param shift The number of bits to shift (should be 1 for the
-		%>  moment). 2048 is the max # of variables with 2^11bits
+		%>	 @param value The value to be split into EIO and CIO 
 		%>  @return eio is an 8bit word value represented the LSB
 		%>  @return cio is a 4bit value where the 1st bit is 1 for strobe line 22
 		%>  and the rest is the 3bit remainder to combine with eio to make an
@@ -490,7 +500,7 @@ classdef labJack < handle
 		end
 		
 		% ===================================================================
-		%> @brief Toggle FIO4 value
+		%> @brief Toggle FIO value
 		%>
 		%>
 		% ===================================================================
@@ -738,7 +748,7 @@ classdef labJack < handle
 	
 	%=======================================================================
 	methods ( Access = private ) % PRIVATE METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		%===============Destructor======================%
 		function delete(obj)
@@ -756,6 +766,33 @@ classdef labJack < handle
 					fprintf(['>>>labJack: ' message ' | ' in '\n']);
 				else
 					fprintf(['>>>labJack: ' in '\n']);
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Sets properties from a structure or varargin cell, ignores invalid properties
+		%>
+		%> @param args input structure
+		% ===================================================================
+		function parseArgs(obj, args, allowedProperties)
+			allowedProperties = ['^(' allowedProperties ')$'];
+			while iscell(args) && length(args) == 1
+				args = args{1};
+			end
+			if iscell(args)
+				if mod(length(args),2) == 1 % odd
+					args = args(1:end-1); %remove last arg
+				end
+				odd = logical(mod(1:length(args),2));
+				even = logical(abs(odd-1));
+				args = cell2struct(args(even),args(odd),2);
+			end
+			fnames = fieldnames(args); %find our argument names
+			for i=1:length(fnames);
+				if regexp(fnames{i},allowedProperties) %only set if allowed property
+					obj.salutation(fnames{i},'Configuring setting in constructor');
+					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 				end
 			end
 		end

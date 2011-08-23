@@ -308,20 +308,4 @@ classdef spotStimulus < baseStimulus
 			end
 			obj.flashCounter = 1;
 		end
-		
-		% ===================================================================
-		%> @brief compute xTmp and yTmp
-		%>
-		% ===================================================================
-		function computePosition(obj)
-			if isempty(obj.findprop('angleOut'));
-				[dx dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
-			else
-				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);
-			end
-			obj.xTmp = obj.xPositionOut + (dx * obj.ppd); 
-			obj.yTmp = obj.yPositionOut + (dy * obj.ppd);
-		end
-			
-	end
 end

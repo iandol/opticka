@@ -7,7 +7,7 @@
 classdef textureStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		family = 'texture'
-		type = 'simple'
+		type = 'picture'
 		contrast = 1
 		scale = 1
 		interpMethod = 'nearest'
@@ -33,22 +33,29 @@ classdef textureStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Class constructor
 		%>
-		%> More detailed description of what the constructor does.
+		%> This parses any input values and initialises the object.
 		%>
-		%> @param args are passed as a structure of properties which is
-		%> parsed.
+		%> @param varargin are passed as a list of parametoer or a structure 
+		%> of properties which is parsed.
+		%>
 		%> @return instance of opticka class.
 		% ===================================================================
-		function obj = textureStimulus(args)
-			%Initialise for superclass, stops a noargs error
+		function obj = textureStimulus(varargin)
+			%Initialise for superclass
 			if nargin == 0
-				args.family = 'texture';
+				varargin.family = 'texture';
 			end
 			
-			obj=obj@baseStimulus(args); %we call the superclass constructor first
+			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
 			
-			if nargin>0 && isstruct(args)
-				obj.parseArgs(args, obj.allowedProperties);
+			if nargin>0
+				obj.parseArgs(varargin, obj.allowedProperties);
+			end
+			
+			if isempty(obj.fileName)
+				p = mfilename('fullpath');
+				p = fileparts(p);
+				obj.fileName = [p filesep 'Bosch.jpeg'];
 			end
 			
 			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
@@ -67,9 +74,9 @@ classdef textureStimulus < baseStimulus
 		%> xPosition, internal methods ensure reconversion and update any dependent
 		%> properties. This method initialises the object for display.
 		%>
-		%> @param rE runExperiment object for reference
+		%> @param sM screenManager object for reference
 		% ===================================================================
-		function setup(obj,rE,in)
+		function setup(obj,sM,in)
 			
 			obj.reset;
 			
@@ -81,11 +88,11 @@ classdef textureStimulus < baseStimulus
 				obj.show;
 			end
 			
-			obj.ppd=rE.ppd;
-			obj.ifi=rE.screenVals.ifi;
-			obj.xCenter=rE.xCenter;
-			obj.yCenter=rE.yCenter;
-			obj.win=rE.win;
+			obj.ppd=sM.ppd;
+			obj.ifi=sM.screenVals.ifi;
+			obj.xCenter=sM.xCenter;
+			obj.yCenter=sM.yCenter;
+			obj.win=sM.win;
 			
 			obj.texture = []; %we need to reset this
 
@@ -125,7 +132,7 @@ classdef textureStimulus < baseStimulus
 			
 			if obj.speed>0 %we need to say this needs animating
 				obj.doMotion=true;
- 				%rE.task.stimIsMoving=[rE.task.stimIsMoving i];
+ 				%sM.task.stimIsMoving=[sM.task.stimIsMoving i];
 			else
 				obj.doMotion=false;
 			end
@@ -135,7 +142,7 @@ classdef textureStimulus < baseStimulus
 		end
 
 		% ===================================================================
-		%> @brief Update this stimulus object structure for runExperiment
+		%> @brief Update this stimulus object structure for screenManager
 		%>
 		% ===================================================================
 		function update(obj)
@@ -144,20 +151,16 @@ classdef textureStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Draw an structure for runExperiment
+		%> @brief Draw this stimulus object
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
 			Screen('DrawTexture',obj.win,obj.texture,[],obj.mvRect,obj.angleOut);
 		end
 		
 		% ===================================================================
-		%> @brief Animate an structure for runExperiment
+		%> @brief Animate an structure for screenManager
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
 			if obj.doMotion == 1
@@ -167,10 +170,8 @@ classdef textureStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Reset an structure for runExperiment
+		%> @brief Reset an structure for screenManager
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return
 		% ===================================================================
 		function reset(obj)
 			obj.texture=[];
@@ -199,26 +200,6 @@ classdef textureStimulus < baseStimulus
 		function set_yPositionOut(obj,value)
 			obj.yPositionOut = value*obj.ppd;
 			if ~isempty(obj.texture);obj.setRect;end
-		end
-		
-		% ===================================================================
-		%> @brief setRect
-		%>  setRect makes the PsychRect based on the texture and screen values
-		% ===================================================================
-		function setRect(obj)
-			if isempty(obj.findprop('angleOut'));
-				[dx dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
-			else
-				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
-			end
-			obj.dstRect=Screen('Rect',obj.texture);
-			obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
-			if isempty(obj.findprop('xPositionOut'));
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
-			else
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
-			end
-			obj.mvRect=obj.dstRect;
 		end
 	end
 end

@@ -81,8 +81,8 @@ classdef baseStimulus < dynamicprops
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
-	
+		%=======================================================================
+		
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -98,8 +98,8 @@ classdef baseStimulus < dynamicprops
 				obj.parseArgs(varargin, obj.allowedProperties);
 			end
 			
-		end 
-	
+		end
+		
 		% ===================================================================
 		%> @brief colour Get method
 		%>
@@ -194,6 +194,8 @@ classdef baseStimulus < dynamicprops
 			s.open(); %open PTB screen
 			obj.setup(s); %setup our stimulus object
 			obj.draw(); %draw stimulus
+			s.drawGrid(); %draw +-5 degree dot grid
+			s.drawFixationPoint(); %centre spot
 			Screen('Flip',s.win);
 			WaitSecs(1);
 			for i = 1:(s.screenVals.fps*2) %should be 2 seconds worth of flips
@@ -216,7 +218,7 @@ classdef baseStimulus < dynamicprops
 	
 	%=======================================================================
 	methods (Abstract)%------------------ABSTRACT METHODS
-	%=======================================================================
+		%=======================================================================
 		%> initialise the stimulus
 		out = setup(runObject)
 		%> update the stimulus
@@ -226,13 +228,13 @@ classdef baseStimulus < dynamicprops
 		%> animate the settings
 		out = animate(runObject)
 		%> reset to default values
-		out = reset(runObject) 
+		out = reset(runObject)
 	end %---END ABSTRACT METHODS---%
 	
 	%=======================================================================
 	methods ( Static ) %----------STATIC METHODS
-	%=======================================================================
-	
+		%=======================================================================
+		
 		% ===================================================================
 		%> @brief degrees2radians
 		%>
@@ -274,12 +276,48 @@ classdef baseStimulus < dynamicprops
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
-	%=======================================================================
-	
+		%=======================================================================
+		
+		
+		% ===================================================================
+		%> @brief setRect
+		%>  setRect makes the PsychRect based on the texture and screen values
+		% ===================================================================
+		function setRect(obj)
+			if isempty(obj.findprop('angleOut'));
+				[dx dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+			else
+				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
+			end
+			obj.dstRect=Screen('Rect',obj.texture);
+			obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
+			if isempty(obj.findprop('xPositionOut'));
+				obj.dstRect=OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
+			else
+				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
+			end
+			obj.mvRect=obj.dstRect;
+		end
+		
+		
+		% ===================================================================
+		%> @brief compute xTmp and yTmp
+		%>
+		% ===================================================================
+		function computePosition(obj)
+			if isempty(obj.findprop('angleOut'));
+				[dx dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+			else
+				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);
+			end
+			obj.xTmp = obj.xPositionOut + (dx * obj.ppd);
+			obj.yTmp = obj.yPositionOut + (dy * obj.ppd);
+		end
+		
 		% ===================================================================
 		%> @brief Converts properties to a structure
 		%>
-		%> 
+		%>
 		%> @param obj this instance object
 		%> @param tmp is whether to use the temporary or permanent properties
 		%> @return out the structure
@@ -300,7 +338,7 @@ classdef baseStimulus < dynamicprops
 		
 		% ===================================================================
 		%> @brief Finds and removes transient properties
-		%> 
+		%>
 		%> @param obj
 		%> @return
 		% ===================================================================

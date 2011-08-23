@@ -283,25 +283,5 @@ classdef barStimulus < baseStimulus
 			obj.yPositionOut = value*obj.ppd;
 			if ~isempty(obj.texture);obj.setRect;end
 		end
-		
-		% ===================================================================
-		%> @brief setRect
-		%>  setRect makes the PsychRect based on the texture and screen values
-		% ===================================================================
-		function setRect(obj)
-			if isempty(obj.findprop('angleOut'));
-				[dx dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
-			else
-				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
-			end
-			obj.dstRect=Screen('Rect',obj.texture);
-			obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
-			if isempty(obj.findprop('xPositionOut'));
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
-			else
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
-			end
-			obj.mvRect=obj.dstRect;
-		end
 	end
 end
