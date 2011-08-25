@@ -263,6 +263,11 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack.close;
 				obj.lJack=[];
 				
+				tL.calculateMisses;
+				if tL.nMissed > 0
+					fprintf('\n>>> >>> >>> There were %i MISSED FRAMES <<< <<< <<<\n',tL.nMissed);
+				end
+				
 				s.playMovie();
 				
 			catch ME
@@ -417,6 +422,21 @@ classdef (Sealed) runExperiment < handle
 					end
 				end
 			end
+		end
+		
+		function rebuild(obj,in)
+			obj.stimulus = in.stimulus;
+			obj.task = in.task;
+			obj.timeLog = in.timeLog;
+			obj.verbose = in.verbose;
+			obj.debug = in.debug;
+			obj.computer = in.computer;
+			obj.ptb = in.ptb;
+			obj.screenVals = in.screenVals;
+			obj.gammaTable = in.gammaTable;
+			obj.screenSettings = in.screenSettings;
+			obj.useLabJack = in.useLabJack;
+			obj.lJack = in.lJack;
 		end
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
@@ -821,16 +841,20 @@ classdef (Sealed) runExperiment < handle
 	
 		function lobj=loadobj(in)
 			fprintf('\n>>> Loading runExperiment object...\n');
-			if ~isobject(in.screen) %this is an old object, pre screenManager
-				in.screen = screenManager();
-				in.screen.srcMode = in.srcMode;
-				in.screen.windowed = in.windowed;
-				in.screen.dstMode = in.dstMode;
-				in.screen.blend = in.blend;
-				in.screen.hideFlash = in.hideFlash;
-				in.screen.movieSettings = in.movieSettings;
+			if ~isa(in,'runExperiment')
+				lobj = runExperiment;
+				lobj.rebuild(in);
 			end
-			if ~isobject(in.timeLog)
+			if ~isa(lobj.screen,'screenManager') %this is an old object, pre screenManager
+				lobj.screen = screenManager();
+				lobj.screen.srcMode = in.srcMode;
+				lobj.screen.windowed = in.windowed;
+				lobj.screen.dstMode = in.dstMode;
+				lobj.screen.blend = in.blend;
+				lobj.screen.hideFlash = in.hideFlash;
+				lobj.screen.movieSettings = in.movieSettings;
+			end
+			if ~isa(in.timeLog)
 				in.timeLog = timeLogger;
 			end
 			lobj = in;

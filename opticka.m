@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.601'
+		version='0.611'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection, via TCP
@@ -992,11 +992,15 @@ classdef (Sealed) opticka < handle
 					obj.r.screen.srcMode = list{val};
 					set(obj.h.OKGLSrc,'Value',val);
 					
-					
 					list = obj.gs(obj.h.OKGLDst);
 					val = obj.findValue(list,tmp.r.screen.dstMode);
 					obj.r.screen.dstMode = list{val};
 					set(obj.h.OKGLDst,'Value',val);
+					
+					list = obj.gs(obj.h.OKbitDepth);
+					val = obj.findValue(list,tmp.r.screen.bitDepth);
+					obj.r.screen.bitDepth = list{val};
+					set(obj.h.OKbitDepth,'Value',val);
 					
 					set(obj.h.OKOpenGLBlending,'Value', tmp.r.screen.blend);
 					set(obj.h.OKAntiAliasing,'String', num2str(tmp.r.screen.antiAlias));
@@ -1017,8 +1021,8 @@ classdef (Sealed) opticka < handle
 							obj.r.task.nVar(i).offsetvalue = [];
 						end
 					end
-						
 				end
+				
 				set(obj.h.OKtrialTime, 'String', num2str(obj.r.task.trialTime));
 				set(obj.h.OKRandomSeed, 'String', num2str(obj.r.task.randomSeed));
 				set(obj.h.OKitTime,'String',num2str(obj.r.task.itTime));
@@ -1138,7 +1142,9 @@ classdef (Sealed) opticka < handle
 						y=s.yPosition;
 						sz=s.size;
 						c=s.contrast;
-						str{i} = ['Texture ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c)];
+						sp=s.speed;
+						p=s.fileName;
+						str{i} = ['Texture ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
 					otherwise
 						str{i} = ['Undefined stimulus type'];
 				end
@@ -1202,7 +1208,7 @@ classdef (Sealed) opticka < handle
 		function value = findValue(obj,list,entry)
 			value = 1;
 			for i=1:length(list)
-				if regexp(list{i},entry)
+				if regexpi(list{i},entry)
 					value = i;
 					return
 				end
@@ -1357,6 +1363,11 @@ classdef (Sealed) opticka < handle
 				cmd = 'ping -c 1 -W 10 ';
 			end
 			[status,~]=system([cmd rAddress]);
+		end
+		
+		function lobj=loadobj(in)
+			fprintf('\n>>> Loading opticka object...\n');
+			lobj = in;
 		end
 	end
 	

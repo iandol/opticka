@@ -14,10 +14,27 @@ classdef timeLogger < dynamicprops
 		screen = struct
 	end
 	
+	properties (SetAccess = private, GetAccess = public)
+		missImportant
+		nMissed
+	end
+	
 	methods
 		function obj=timeLogger
 			obj.screen.construct = GetSecs;
 			obj.date = clock;
+		end
+		
+		function calculateMisses(obj)
+			index=min([length(obj.vbl) length(obj.flip) length(obj.show)]);
+			miss=obj.miss(1:index);
+			stimTime=obj.stimTime(1:index);
+			
+			obj.missImportant = miss;
+			obj.missImportant(obj.missImportant <= 0) = -inf;
+			obj.missImportant(stimTime < 1) = -inf;
+			obj.missImportant(1) = -inf; %ignore first frame
+			obj.nMissed = length(find(obj.missImportant > 0));
 		end
 		
 		% ===================================================================

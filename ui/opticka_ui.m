@@ -144,10 +144,15 @@ function OKMenuQuit_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	o.savePrefs;
-	rmappdata(handles.output,'o');
-	clear o;
+	try
+		o = getappdata(handles.output,'o');
+		o.savePrefs;
+		rmappdata(handles.output,'o');
+		clear o;
+	catch ME
+		fprintf('>>> Optick failed to clearr all data on close...');
+		rethrow ME
+	end
 end
 close(gcf);
 
