@@ -23,8 +23,8 @@ stim{6}=gratingStimulus('sf',1,'contrast',0.5,'colour',[0.6 0.4 0.4 0.5],'tf',1,
 stim{7}=barStimulus('type','solid','barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
 	'yPosition',0,'startPosition',-4,'colour',[1 1 0 1]);
 
-stim{8}=dotsStimulus('nDots',200,'speed',1,'coherence',0.1,'xPosition',4,...
-	'yPosition',-4,'colour',[1 1 1 1],'dotSize',0.1,'colorType','randomBW');
+stim{8}=dotsStimulus('nDots',200,'speed',1,'coherence',0.5,'xPosition',4,...
+	'yPosition',-6,'colour',[1 1 1],'dotSize',0.1,'colorType','randomBW');
 
 stim{9}=spotStimulus('speed',2,'xPosition',4,...
 	'yPosition',4,'colour',[1 1 0 1],'size',1);
@@ -59,12 +59,12 @@ s.nVar(3).offsetvalue = [];
 s.randomiseStimuli;
 
 %define the options to open the PTB screen with
-screenSettings = struct('distance', 57.3, 'pixelsPerCm', 44, 'blend', false,...
+screenSettings = struct('distance', 57.3, 'pixelsPerCm', 44, 'blend', true,...
 	'windowed', 0, 'antiAlias', 0, 'bitDepth', '8bit', 'hideFlash', true);
 
 %% r is the object which interfaces with the screen and runs our
 %% experiment
 r=runExperiment('stimulus', stim, 'task', s, 'screenSettings', screenSettings,...
-	'debug', false, 'verbose', false);
+	'debug', false, 'verbose', true);
 Screen('CloseAll')
 r.run

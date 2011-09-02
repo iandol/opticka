@@ -6,20 +6,31 @@
 classdef spotStimulus < baseStimulus
 
    properties %--------------------PUBLIC PROPERTIES----------%
+		%> stimulus family
 		family = 'spot'
+		%> type can be "simple" or "flash"
 		type = 'simple'
+		%> time to flash on and off in seconds
 		flashTime = [0.5 0.5]
+		%> is the ON flash the first flash we see?
 		flashOn = true
+		%> contrast is actually a multiplier to the stimulus colour, not
+		%> formally defined contrast in this case
 		contrast = 1
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = private)
+		%> a dependant property to track when to switch from ON to OFF of
+		%flash.
 		flashSwitch
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> internal counter
 		flashCounter = 1
+		%> the OFF colour of the flash, usually this is set to the screen background
 		flashBG = [0.5 0.5 0.5]
+		%> ON flash colour, reset on setup
 		flashFG = [1 1 1]
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
@@ -66,10 +77,9 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Setup an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return
+		%> @param sM handle to the current screenManager object
 		% ===================================================================
-		function setup(obj,rE)
+		function setup(obj,sM)
 			
 			if isempty(obj.isVisible)
 				obj.show;
@@ -77,12 +87,12 @@ classdef spotStimulus < baseStimulus
 			
 			addlistener(obj,'changeColour',@obj.computeColour);
 			
-			if exist('rE','var')
-				obj.ppd=rE.ppd;
-				obj.ifi=rE.screenVals.ifi;
-				obj.xCenter=rE.xCenter;
-				obj.yCenter=rE.yCenter;
-				obj.win=rE.win;
+			if exist('sM','var')
+				obj.ppd=sM.ppd;
+				obj.ifi=sM.screenVals.ifi;
+				obj.xCenter=sM.xCenter;
+				obj.yCenter=sM.yCenter;
+				obj.win=sM.win;
 			end
 
 			fn = fieldnames(spotStimulus);
@@ -114,7 +124,7 @@ classdef spotStimulus < baseStimulus
 			
 			if strcmp(obj.type,'flash')
 				obj.doFlash = true;
-				bg = [rE.backgroundColour(1:3) obj.alpha];
+				bg = [sM.backgroundColour(1:3) obj.alpha];
 				obj.setupFlash(bg);
 			end
 
@@ -140,7 +150,7 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Draw an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
+		%> @param sM runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
@@ -156,7 +166,7 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Animate an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
+		%> @param sM runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
@@ -183,7 +193,7 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Reset an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
+		%> @param sM runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
 		function reset(obj)
@@ -308,4 +318,5 @@ classdef spotStimulus < baseStimulus
 			end
 			obj.flashCounter = 1;
 		end
+	end
 end
