@@ -48,6 +48,8 @@ classdef screenManager < handle
 		screenVals
 		%> verbosity
 		verbose = true
+		%> level of PTB verbosity
+		verbosityLevel = 4
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -186,7 +188,7 @@ classdef screenManager < handle
 				else
 					Screen('Preference', 'SkipSyncTests', 0);
 					Screen('Preference', 'VisualDebugLevel', 3);
-					Screen('Preference', 'Verbosity', 10); %errors and warnings
+					Screen('Preference', 'Verbosity', obj.verbosityLevel); %errors and warnings
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				end
 				

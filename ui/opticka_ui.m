@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 21-Aug-2011 20:15:02
+% Last Modified by GUIDE v2.5 22-Sep-2011 11:37:06
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1277,5 +1277,21 @@ if isappdata(handles.output,'o')
 	else
 	   disp(['User selected', fullfile(pathname, filename)])
 	   set(handles.OKPanelTexturefileName, 'String', fullfile(pathname, filename));
+	end
+end
+
+
+
+function OKverbosityLevel_Callback(hObject, eventdata, handles)
+% hObject    handle to OKverbosityLevel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKverbosityLevel as text
+%        str2double(get(hObject,'String')) returns contents of OKverbosityLevel as a double
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	if isa(o.r.screen,'screenManager')
+		o.r.screen.verbosityLevel = str2double(get(hObject,'String'));
 	end
 end
