@@ -88,19 +88,23 @@ classdef rfMapper < barStimulus
 				Screen('Preference', 'Verbosity', 2);
 				Screen('Preference', 'SuppressAllWarnings', 0);
 				PsychImaging('PrepareConfiguration');
-				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+				%PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
-				[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
-				
+				if isempty(obj.screen.windowed) || length(obj.screen.windowed) ~= 2
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen.screen, obj.screen.backgroundColour,[], [], obj.screen.doubleBuffer+1,[],obj.screen.antiAlias);
+				elseif length(obj.screen.windowed)==2
+					windowed = [1 1 obj.screen.windowed(1)+1 obj.screen.windowed(2)+1];
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen.screen, obj.screen.backgroundColour,windowed);
+				end
 				[obj.xCenter, obj.yCenter] = RectCenter(obj.winRect);
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				
-				obj.setup(rE);
+				obj.setup(obj.screen);
 				AssertGLSL;
 				
 				% Enable alpha blending.
-				if obj.blend==1
-					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
+				if obj.screen.blend==1
+					Screen('BlendFunction', obj.win, obj.screen.srcMode, obj.screen.dstMode);
 				end
 				
 				obj.buttons = [0 0 0]; % When the user clicks the mouse, 'buttons' becomes nonzero.
@@ -110,13 +114,13 @@ classdef rfMapper < barStimulus
 				yOut = 0;
 				obj.rchar='';
 				FlushEvents;
-				HideCursor;
+				%HideCursor;
 				ListenChar(2);
 				
 				while isempty(regexpi(obj.rchar,'^esc'))
 					
 					%draw background
-					Screen('FillRect',obj.win,obj.backgroundColour,[]);
+					Screen('FillRect',obj.win,obj.screen.backgroundColour,[]);
 					
 					%draw text
 					t=sprintf('Buttons: %i\t',obj.buttons);
@@ -147,7 +151,7 @@ classdef rfMapper < barStimulus
 					
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
-					[mX, mY, obj.buttons] = GetMouse(obj.screen);
+					[mX, mY, obj.buttons] = GetMouse(obj.screen.screen);
 					xOut = (mX - obj.xCenter)/obj.ppd;
 					yOut = (mY - obj.yCenter)/obj.ppd;
 					if obj.buttons(2) == 1
@@ -344,8 +348,8 @@ classdef rfMapper < barStimulus
 				% return the user to the familiar MATLAB prompt.
 				ShowCursor;
 				Screen('CloseAll');
-				psychrethrow(psychlasterror);
-				rethrow ME
+				%psychrethrow(psychlasterror);
+				rethrow(ME);
 			end
 		end
 		
