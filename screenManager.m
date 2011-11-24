@@ -205,15 +205,33 @@ classdef screenManager < handle
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				else %windowed
 					if length(obj.windowed)==1
-						obj.windowed=[1 1 801 601]
+						obj.windowed=[1 1 801 601];
 					elseif length(obj.windowed) == 2
-						obj.windowed = [1 1 obj.windowed(1)+1 obj.windowed(2)+1]
+						obj.windowed = [1 1 obj.windowed(1)+1 obj.windowed(2)+1];
 					end
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,obj.windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
 				
 				tL.screen.postOpenWindow=GetSecs;
 				tL.screen.deltaOpenWindow=(tL.screen.postOpenWindow-tL.screen.preOpenWindow)*1000;
+				
+				a = zeros(1000,1);
+				b = a;
+				for ii = 1: 1000
+					winfo=Screen('Getwindowinfo', obj.win);
+					a(ii) = winfo.VBLCount;
+					b(ii) = winfo.LastVBLTime;
+				end
+				figure;
+				plot(diff(a),'ko');
+				hold on
+				plot(diff(b),'r-.');
+				hold off
+				title(['a: ' num2str(mean(a)) ' | b: ' num2str(mean(b))]);
+				assignin('base','a',a);
+				assignin('base','b',b);
+				drawnow;
+				
 				
 				obj.screenVals.win = obj.win; %make a copy
 				
@@ -242,7 +260,7 @@ classdef screenManager < handle
 					obj.screenVals.resetGamma = true;
 					gTmp = repmat(obj.gammaTable.gammaTable{choice},1,3);
 					Screen('LoadNormalizedGammaTable', obj.screen, gTmp);
-					fprintf('\nSET GAMMA CORRECTION using: %s\n', obj.gammaTable.modelFit{choice}.method);
+					fprintf('\n---> screenManager: SET GAMMA CORRECTION using: %s\n', obj.gammaTable.modelFit{choice}.method);
 				else
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 					%obj.screenVals.oldCLUT = LoadIdentityClut(obj.win);
@@ -421,7 +439,7 @@ classdef screenManager < handle
 		% ===================================================================
 		function resetScreenGamma(obj)
 			if obj.screenVals.resetGamma == true || obj.hideFlash == true || obj.windowed(1) ~= 1
-				fprintf('\n---> RESET GAMMA TABLES\n');
+				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 				Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 			end
 		end
@@ -555,9 +573,9 @@ classdef screenManager < handle
 					in = 'undefined';
 				end
 				if exist('message','var')
-					fprintf(['>>>screenManager: ' message ' | ' in '\n']);
+					fprintf(['---> screenManager: ' message ' | ' in '\n']);
 				else
-					fprintf(['>>>screenManager: ' in '\n']);
+					fprintf(['---> screenManager: ' in '\n']);
 				end
 			end
 		end

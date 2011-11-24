@@ -1221,7 +1221,7 @@ classdef (Sealed) opticka < handle
 		%> @param 
 		% ===================================================================
 		function value = abortRunEvent(obj,src,evtdata)
-			fprintf('abortRun triggered!!!\n')
+			fprintf('---> Opticka: abortRun triggered!!!\n')
 			if isa(obj.oc,'dataConnection') && obj.oc.isOpen == 1
 				obj.oc.write('--abort--');
 			end
@@ -1233,7 +1233,7 @@ classdef (Sealed) opticka < handle
 		%> @param 
 		% ===================================================================
 		function value = endRunEvent(obj,src,evtdata)
-			fprintf('endRun triggered!!!\n')
+			fprintf('---> Opticka: endRun triggered!!!\n')
 		end
 		
 		% ===================================================================
@@ -1242,7 +1242,7 @@ classdef (Sealed) opticka < handle
 		%> @param 
 		% ===================================================================
 		function value = runInfoEvent(obj,src,evtdata)
-			fprintf('runInfo triggered!!!\n')
+			fprintf('---> Opticka: runInfo triggered!!!\n')
 		end
 		
 		% ===================================================================

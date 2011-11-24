@@ -763,9 +763,9 @@ classdef labJack < handle
 					in = 'General Message';
 				end
 				if exist('message','var')
-					fprintf(['>>>labJack: ' message ' | ' in '\n']);
+					fprintf(['---> labJack: ' message ' | ' in '\n']);
 				else
-					fprintf(['>>>labJack: ' in '\n']);
+					fprintf(['---> labJack: ' in '\n']);
 				end
 			end
 		end
