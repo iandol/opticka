@@ -1,6 +1,6 @@
 classdef screenManager < handle
-	%UNTITLED2 Summary of this class goes here
-	%   Detailed explanation goes here
+	%screenManager Manages a Screen object
+	%   screenManager manages PTB screen objects for opticka
 	
 	properties
 		%> MBP 1440x900 is 33.2x20.6cm so approx 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
@@ -160,7 +160,6 @@ classdef screenManager < handle
 			
 		end
 		
-		
 		% ===================================================================
 		%> @brief prepare the Screen values on the local machine
 		%>
@@ -214,24 +213,6 @@ classdef screenManager < handle
 				
 				tL.screen.postOpenWindow=GetSecs;
 				tL.screen.deltaOpenWindow=(tL.screen.postOpenWindow-tL.screen.preOpenWindow)*1000;
-				
-				a = zeros(1000,1);
-				b = a;
-				for ii = 1: 1000
-					winfo=Screen('Getwindowinfo', obj.win);
-					a(ii) = winfo.VBLCount;
-					b(ii) = winfo.LastVBLTime;
-				end
-				figure;
-				plot(diff(a),'ko');
-				hold on
-				plot(diff(b),'r-.');
-				hold off
-				title(['a: ' num2str(mean(a)) ' | b: ' num2str(mean(b))]);
-				assignin('base','a',a);
-				assignin('base','b',b);
-				drawnow;
-				
 				
 				obj.screenVals.win = obj.win; %make a copy
 				

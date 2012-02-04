@@ -239,7 +239,7 @@ try
 	%my normal screen prep
 	Screen('Preference', 'SkipSyncTests', 0);
 	Screen('Preference', 'VisualDebugLevel', 3);
-	Screen('Preference', 'Verbosity', 4); %errors and warnings
+	Screen('Preference', 'Verbosity', 10); %errors and warnings
 	Screen('Preference', 'SuppressAllWarnings', 0);
 	
 	% Get the list of Screens and choose the one with the highest screen number.
@@ -327,6 +327,9 @@ try
 	% emulation:
 	tvbl=Screen('Flip', w);
 	
+	a = zeros(n,1);
+	b = a;
+	
 	% Test-loop: Collects n samples.
 	for i=1:n
 		% Draw some simple stim for next frame of animation: We draw a
@@ -348,6 +351,10 @@ try
 			Screen('SelectStereoDrawBuffer', w, 1);
 			Screen('FillRect', w, mod(i, 255)/normalize, [pos+40 pos+20 pos+420 pos+400]);
 		end;
+		
+		winfo=Screen('Getwindowinfo', w);
+		a(i) = winfo.VBLCount;
+		b(i) = winfo.LastVBLTime;
 		
 		if flushpipe==1
 			% Give a hint to PTB that no further drawing commands will
@@ -495,6 +502,19 @@ try
 		plot((tSecondary - so) * 1000);
 		title('Time delta in milliseconds between stimulus onset according to DWM and stimulus onset according to Flip:');
 		fprintf('Average discrepancy between DWM and beamposition timestamping is %f msecs, stddev = %f msecs.\n', mean((tSecondary - so) * 1000), std((tSecondary - so) * 1000));
+	end
+	
+	if max(a) >= 0
+		figure;
+		plot(diff(a),'ko');
+		hold on
+		plot(diff(b),'r-.');
+		hold off
+		set(gca,'YScale','log')
+		title(['GETWINDOWINFO: VBLCount: ' num2str(mean(a)) ' | LastVBLTime: ' num2str(mean(b))]);
+		assignin('base','a',a);
+		assignin('base','b',b);
+		drawnow;
 	end
 	
 	% Count and output number of missed flip on VBL deadlines:
