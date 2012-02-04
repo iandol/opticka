@@ -8,30 +8,45 @@ classdef stimulusSequence < dynamicprops
 		nVar
 		%> number of repeat blocks to present
 		nBlocks = 1
+		%> time of the stiumulus shown
 		trialTime = 2
-		nSegments = 1
-		nSegment
-		isTime = 1 %inter stimulus time
-		itTime = 2 %inter block time
-		isStimulus %what do we show in the blank?
-		verbose = 0
-		realTime = 1
+		%> inter stimulus time
+		isTime = 1 
+		%> inter block time
+		itTime = 2
+		%> what do we show in the blank?
+		isStimulus
+		%> verbose or not
+		verbose = true
+		%> do we fillow real time or just number of ticks to get to a known time
+		realTime = true
+		%> random seed value, we can use this to set the RNG to a known state
 		randomSeed
-		randomGenerator='mt19937ar' %mersenne twister default
-		fps = 60 %used for dynamically estimating total number of frames
+		%> mersenne twister default
+		randomGenerator='mt19937ar' 
+		%> used for dynamically estimating total number of frames
+		fps = 60 
+		%> will be used when we extend each trial to have sub-segments
+		nSegments = 1 
+		%> segment info
+		nSegment
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> structure of variable values
+		outValues 
+		%> variable values wrapped in trial cell
+		outVars 
+		%> the unique identifier for each stimulus
+		outIndex 
+		%> mapping the stimulus to the number as a X Y and Z etc position for display
+		outMap 
 		oldStream
 		taskStream
 		minBlocks
 		currentState
 		states
 		nstates = 1
-		outValues %structure of variable values
-		outVars %variable values wrapped in trial cell
-		outIndex %the unique identifier for each stimulus
-		outMap %mapping the stimulus to the number as a X Y and Z etc position for display
 	end
 	
 	properties (Dependent = true,  SetAccess = private)
@@ -48,9 +63,9 @@ classdef stimulusSequence < dynamicprops
 		% ===================================================================
 		%> @brief Class constructor
 		%>
-		%> More detailed description of what the constructor does.
+		%> Send any parameters to parseArgs.
 		%>
-		%> @param args are passed as a structure of properties which is
+		%> @param varargin are passed as a structure of properties which is
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
@@ -76,7 +91,7 @@ classdef stimulusSequence < dynamicprops
 			end
 			obj.taskStream = RandStream.create(obj.randomGenerator,'Seed',obj.randomSeed);
 			RandStream.setDefaultStream(obj.taskStream);
-			fprintf('>>>stimulusSequence: Initialise Randomisation: %g seconds\n',toc);
+			obj.salutation(sprintf('Initialise Randomisation: %g seconds',toc));
 		end
 		
 		% ===================================================================
@@ -153,11 +168,11 @@ classdef stimulusSequence < dynamicprops
 			obj.outMap=zeros(size(obj.outValues));
 			for f = 1:obj.nVars
 				for g = 1:length(obj.nVar(f).values)
-					gidx = find(obj.outValues(:,f) == obj.nVar(f).values(g));
+					gidx = obj.outValues(:,f) == obj.nVar(f).values(g);
 					obj.outMap(gidx,f) = g;
 				end
 			end
-			fprintf('>>>stimulusSequence: Randomise Stimuli: %g seconds\n',toc);
+			obj.salutation(sprintf('Randomise Stimuli: %g seconds\n',toc));
 		end
 		
 		% ===================================================================
@@ -180,9 +195,9 @@ classdef stimulusSequence < dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief Dependent property nFrames get method
+		%> @brief showLog
 		%>
-		%> Dependent property nFrames get method
+		%> Generates a table with the randomised stimulus values
 		% ===================================================================
 		function showLog(obj)
 
@@ -215,6 +230,12 @@ classdef stimulusSequence < dynamicprops
 					'ColumnWidth', {'auto','auto'});
 			end
 		end
+		
+	end % END STATIC METHODS
+	
+	%=======================================================================
+	methods ( Access = private ) % PRIVATE METHODS
+	%=======================================================================
 
 		% ===================================================================
 		%> @brief Prints messages dependent on verbosity
@@ -229,9 +250,9 @@ classdef stimulusSequence < dynamicprops
 					in = 'random user';
 				end
 				if exist('message','var')
-					fprintf(['>>>stimulusSequence: ' message ' | ' in '\n']);
+					fprintf(['---> stimulusSequence: ' message ' | ' in '\n']);
 				else
-					fprintf(['>>>stimulusSequence: ' in '\n']);
+					fprintf(['---> stimulusSequence: ' in '\n']);
 				end
 			end
 		end

@@ -1,24 +1,24 @@
 % ========================================================================
-%> @brief LABJACK Connects and manages a LabJack U3-HV
+%> @brief LABJACK Connects and manages a LabJack U3 / U6
 %>
-%> Connects and manages a LabJack U3-HV
+%> Connects and manages a LabJack U3 / U6
 %>
 % ========================================================================
 classdef labJack < handle
 	
 	properties
+		name='LabJack'
+		%> silentMode allows one to call methods without a working labJack
 		%> what LabJack device to use; 3 = U3, 6 = U6
 		deviceID = 6
 		%> friendly name, setting this to 'null' will force silentMode=1
-		name='LabJack'
-		%> silentMode allows one to call methods without a working labJack
 		silentMode = false
 		%> header needed by loadlib
 		header = '/usr/local/include/labjackusb.h'
 		%> the library itself
 		library = '/usr/local/lib/liblabjackusb'
 		%> how much detail to show
-		verbosity = false
+		verbose = false
 		%> allows the constructor to run the open method immediately
 		openNow = true
 		%> strobeTime is time of strobe in unit multiples of 127uS 8 ~=1ms
@@ -75,7 +75,7 @@ classdef labJack < handle
 		%> Is our handle a valid one?
 		vHandle = 0
 		%> what properties are allowed to be passed on construction
-		allowedProperties='deviceID|name|silentMode|verbosity|openNow|header|library|strobeTime'
+		allowedProperties='deviceID|name|silentMode|verbose|openNow|header|library|strobeTime'
 		%>document what our strobed word is actually setting
 		comment = ''
 	end
@@ -97,11 +97,11 @@ classdef labJack < handle
 			if nargin>0 
 				obj.parseArgs(varargin,obj.allowedProperties);
 			end
-			if ~isempty(regexp(obj.name,'null', 'once')) || ispc %we were deliberately passed null, means go into silent mode
+			if strcmpi(obj.name, 'null') || ispc %we were deliberately passed null, means go into silent mode
 				obj.silentMode = true;
-				obj.verbosity = true;
+				obj.verbose = true;
 				obj.salutation('CONSTRUCTOR Method','labJack running in silent mode...')
-				obj.verbosity = false;
+				obj.verbose = false;
 			elseif obj.openNow == true
 				obj.open
 			end
@@ -119,7 +119,7 @@ classdef labJack < handle
 						loadlibrary(obj.library,obj.header);
 					catch %#ok<CTCH>
 						obj.silentMode = true;
-						obj.verbosity = 0;
+						obj.verbose = true;
 						return
 					end
 				end
@@ -131,7 +131,7 @@ classdef labJack < handle
 					obj.isOpen = false;
 					obj.handle = [];
 					obj.vHandle = false;
-					obj.verbosity = false;
+					obj.verbose = false;
 					obj.silentMode = true; %we switch into silent mode just in case someone tries to use the object
 					return
 				end
@@ -146,14 +146,14 @@ classdef labJack < handle
 					obj.salutation('open method','LabJack didn''t open, going into silent mode');
 					obj.isOpen = false;
 					obj.handle = [];
-					obj.verbosity = false;
+					obj.verbose = false;
 					obj.silentMode = true; %we switch into silent mode just in case someone tries to use the object
 				end
 			else
 				obj.isOpen = false;
 				obj.handle = [];
 				obj.vHandle = false;
-				obj.verbosity = false;
+				obj.verbose = false;
 				obj.silentMode = true; %double make sure it is set to 1 exactly
 			end
 		end
@@ -758,7 +758,7 @@ classdef labJack < handle
 		
 		%===========Salutation==========%
 		function salutation(obj,in,message)
-			if obj.verbosity > 0
+			if obj.verbose > 0
 				if ~exist('in','var')
 					in = 'General Message';
 				end
