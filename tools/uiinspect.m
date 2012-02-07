@@ -6,9 +6,9 @@ function hFig = uiinspect(obj, fig)
 %
 % Description:
 %    UIINSPECT(OBJ) inspects an object handle (e.g., Java, COM, Handle
-%    Graphics, Matlab class etc.) and displays inspection results in a
-%    Matlab figure window with all the relevant object methods (as can be
-%    displayed via Matlab's methodsview function), properties (as can be
+%    Graphics, Matlab class, Dot-Net etc.) and displays inspection results
+%    in a Matlab figure window with all the relevant object methods (as can
+%    be displayed via Matlab's methodsview function), properties (as can be
 %    displayed via Matlab's inspect function), static fields and callbacks.
 %    UIINSPECT also displays properties that are not normally displayed
 %    with Matlab's inspect function. Property meta-data such as type,
@@ -61,6 +61,9 @@ function hFig = uiinspect(obj, fig)
 %    Please send to Yair Altman (altmany at gmail dot com)
 %
 % Change log:
+%    2011-12-09: Fixed Matlab R2011b crash when inspecting COM object
+%    2011-06-14: Fixed problems with the Value field of the "Other properties" table for static fields
+%    2011-03-22: Fixed display of non-static Java class fields; fixed display of some cases of Java class names; minor fixes for Matlab class properties
 %    2011-03-03: Fixed several issues in the Value field of the "Other properties" table
 %    2011-02-28: Removed R2010b warning messages; minor fix for Dot-Net classes
 %    2010-11-02: Minor fixes for callbacks table; fixed online docpage for Swing classes
@@ -91,7 +94,7 @@ function hFig = uiinspect(obj, fig)
 % referenced and attributed as such. The original author maintains the right to be solely associated with this work.
 
 % Programmed by Yair M. Altman: altmany(at)gmail.com
-% $Revision: 1.19 $  $Date: 2011/03/03 10:24:53 $
+% $Revision: 1.22 $  $Date: 2011/12/09 00:13:47 $
 
   try
       % Arg check
@@ -613,6 +616,27 @@ function mc = getMetaClass(obj)
 	  end
 %end  % getMetaClass
 
+%% Load a Java class name
+function loadedClass = loadClass(className)
+  try
+      loadedClass = java.lang.Class.forName(className);
+  catch
+      try
+          classLoader = com.mathworks.jmi.ClassLoaderManager.getClassLoaderManager;
+          loadedClass = classLoader.loadClass(className);
+      catch
+          % One more attempt - maybe the last sub-segment is an internal class:
+          if isempty(strfind(className,'$'))
+              obj = regexprep(className,'\.([^.]+$)','\$$1');
+              loadedClass = loadClass(obj);
+          else
+              loadedClass = [];
+          end
+      end
+  end
+%end  % loadClass
+
+
 %% Get properties table data
 function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(obj, showMetaData, showInspectedPropsFlag, inspectorTable, cbInspected)
       try
@@ -636,7 +660,8 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
           % Add static class fields, if available
           try
               if ischar(obj)
-                  fields = java.lang.Class.forName(obj).getFields;
+                  objClass = loadClass(obj);
+                  fields = objClass.getFields;
                   fieldsData = cellfun(@(c)char(toString(c)),cell(fields),'un',0);
                   fieldNames = cellfun(@(c)char(toString(c.getName)),cell(fields),'un',0);
               else
@@ -724,7 +749,18 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
                           propsData{idx,5} = [prefix sp.AccessFlags.PublicSet];
                           propsData{idx,6} = [prefix sp.Visible];
                           if ~strcmp(propName,'FactoryValue')
-                              propsData{idx,7} = [prefix charizeData(get(sp,'FactoryValue'))];  % sp.FactoryValue fails...
+                              %propsData{idx,7} = [prefix charizeData(get(sp,'FactoryValue'))];  % sp.FactoryValue fails...
+                              try
+                                  factoryValue = '';
+                                  factoryValue = charizeData(sp.FactoryValue);
+                              catch
+                                  % Prevent a Matlab crash on R2011b
+                                  V = sscanf(version, '%d.', 2);
+                                  if V(1) <= 7 && V(2) < 13
+                                      factoryValue = charizeData(get(sp,'FactoryValue'));
+                                  end
+                              end
+                              propsData{idx,7} = [prefix factoryValue];
                           else
                               propsData{idx,7} = '';  % otherwise Matlab crashes...
                           end
@@ -736,13 +772,17 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
                               % Trap warning about unused/deprecated properties
                               s = warning('off','all');
                               lastwarn('');
-                              value = get(obj, sp.Name);
+                              try
+                                  value = javaMethod(['get' sp.Name],obj);
+                              catch
+                                  value = get(obj, sp.Name);
+                              end
                               strToIgnore = 'Possible deprecated use of get on a Java object';
                               if ~strncmpi(strToIgnore,lastwarn,length(strToIgnore))
                                   disp(lastwarn);
                               end
                               warning(s);
-                              value = charizeData(value);
+                              value = regexprep(charizeData(value),'</?a[^>]*>','');  % strip hyperlinks
                               if ~isempty(value) && any(strfind(value,'>'))
                                   propsData{idx,3} = ['<html>' value];
                               else
@@ -790,14 +830,18 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
 						  end
 						  if strcmpi(mp.GetAccess,'public')
 							  try
-								  value = obj.(propName);
-                                  value = charizeData(value);
+                                  try
+                                      value = obj.(propName);
+                                  catch
+                                      value = eval([obj '.' propName]);
+                                  end
+                                  value = regexprep(charizeData(value),'</?a[^>]*>','');  % strip hyperlinks
                                   if ~isempty(value) && any(strfind(value,'>'))
                                       propsData{idx,3} = ['<html>' value];
                                   else
                                       propsData{idx,3} = value;
                                   end
-							  catch
+                              catch
 								  errMsg = regexprep(lasterr, {char(10),'Error using ==> get.Java exception occurred:..'}, {' ',''});
 								  propsData{idx,3} = [errorPrefix errMsg];
 								  propsData{idx,1} = strrep(propsData{idx,1},propName,[errorPrefix propName]);
@@ -810,7 +854,11 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
 						  propsData{idx,1} = propName;
 						  [propsData{idx,2:7}] = deal('???');
 						  try
-							  propsData{idx,3} = charizeData(get(obj,propName));
+                              try
+                                  propsData{idx,3} = charizeData(obj.(propName));
+                              catch
+                                  propsData{idx,3} = charizeData(get(obj,propName));
+                              end
 						  catch
 							  try
 								  if ~ischar(obj)
@@ -832,8 +880,33 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
 										  propsData{idx,3} = [staticFinalPrefix propsData{idx,3}];
 									  end
 								  end
-							  catch
-								  % never mind..
+                              catch
+                                  try
+                                      % Try using Java reflection
+                                      for fieldIdx = 1 : length(fields)  % might have been resorted above
+                                          if strcmp(fields(fieldIdx).getName.char,propName)
+                                              propsData{idx,2} = fields(fieldIdx).toString.char;
+                                              propsData{idx,2} = regexprep(propsData{idx,2},[' [^ ]*' propName '$'],'');
+                                              isFinal  = ~isempty(strfind(propsData{idx,2},'final'));
+                                              isPublic = ~isempty(strfind(propsData{idx,2},'public'));
+                                              if isPublic
+                                                  propsData{idx,4} = 'on';
+                                                  propsData{idx,6} = 'on';
+                                              else
+                                                  propsData{idx,4} = 'off';
+                                                  propsData{idx,6} = 'off';
+                                              end
+                                              if isPublic && ~isFinal
+                                                  propsData{idx,5} = 'on';
+                                              else
+                                                  propsData{idx,5} = 'off';
+                                              end
+                                              break;
+                                          end
+                                      end
+                                  catch
+                                      % never mind..
+                                  end
 							  end
 						  end
 					  end
