@@ -1,6 +1,7 @@
 classdef stateMachine < handle
-	%UNTITLED Summary of this class goes here
-	%   Detailed explanation goes here
+	%>UNFINISHED Work in progress
+	%>   Will be a stateMachine object when finished, with a set of states
+	%>   and transitions. Running will traverse state list.
 	
 	properties
 		%>our main state list
