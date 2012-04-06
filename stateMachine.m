@@ -46,7 +46,9 @@ classdef stateMachine < handle
 		runStart
 		%> called at run end
 		runFinish
+		%> entering state
 		enterState
+		%> exiting state
 		exitState
 		beforeState
 		afterState

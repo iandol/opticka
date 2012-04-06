@@ -67,14 +67,15 @@ classdef textureStimulus < baseStimulus
 		%> When displaying a stimulus object, the main properties that are to be
 		%> modified are copied into cache copies of the property, both to convert from 
 		%> visual description (c/d, Hz, degrees) to
-		%> computer metrics, and to be animated and modified as independant
-		%> variables. So xPosition is copied to xPositionOut and converyed from
+		%> computer metrics; and to be animated and modified as independant
+		%> variables. So xPosition is copied to xPositionOut and converted from
 		%> degrees to pixels. The animation and drawing functions use these modified
 		%> properties, and when they are updated, for example to change to a new
 		%> xPosition, internal methods ensure reconversion and update any dependent
-		%> properties. This method initialises the object for display.
+		%> properties. This method initialises the object in preperation for display.
 		%>
 		%> @param sM screenManager object for reference
+		%> @param in matrix for conversion to a PTB texture
 		% ===================================================================
 		function setup(obj,sM,in)
 			
@@ -114,12 +115,13 @@ classdef textureStimulus < baseStimulus
 			elseif ~isempty(obj.fileName) && exist(obj.fileName,'file')
 				obj.matrix = imread(obj.fileName);
 			else
-				obj.matrix = ones(obj.size*obj.ppd,obj.size*obj.ppd,3);
+				obj.matrix = uint8(ones(obj.size*obj.ppd,obj.size*obj.ppd,3)); %white texture
 			end
 			
-			obj.matrix(:,:,4) = obj.alpha .* 255;
+			obj.matrix(:,:,4) = obj.alpha .* 1;
 			
-			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1);
+			specialFlags = 4; %optimization for uint8 textures. 0 is default
+			obj.texture = Screen('MakeTexture', obj.win, obj.matrix, 1, specialFlags);
 			
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
