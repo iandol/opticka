@@ -86,7 +86,7 @@ classdef gratingStimulus < baseStimulus
 		phaseCounter = 0
 	end
 	
-	events (ListenAccess = 'private', NotifyAccess = 'private')
+	events (ListenAccess = 'private', NotifyAccess = 'private') %only this class can access these
 		%> triggered when changing size, so we can change sf etc to compensate
 		changeScale 
 		%> triggered when changing tf or drift direction
@@ -233,7 +233,7 @@ classdef gratingStimulus < baseStimulus
 							obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
 					end
 				end
-			else
+			else % this is a gabor
 				if obj.aspectRatio == 1
 					nonSymmetric = 0;
 				else

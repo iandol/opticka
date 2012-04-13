@@ -346,14 +346,13 @@ classdef dataConnection < handle
 		function data = readline(obj)
 			data = [];
 			switch obj.protocol
-				
 				%============================UDP
 				case 'udp'
 					nBytes = pnet(obj.conn, 'readpacket');
 					if nBytes > 0
 						data = pnet(obj.conn, 'readline', nBytes, 'noblock');
 					end
-					%============================TCP
+				%============================TCP
 				case 'tcp'
 					data = pnet(obj.conn, 'readline', 1024,' noblock');
 			end
@@ -388,7 +387,6 @@ classdef dataConnection < handle
 			olddataType=obj.dataType;
 			
 			switch obj.protocol
-				
 				%============================UDP
 				case 'udp'
 					if ~exist('size','var');size=65536;end
@@ -433,8 +431,7 @@ classdef dataConnection < handle
 						data = data{1};
 					end
 					obj.dataIn = data;
-					
-					%============================TCP
+				%============================TCP
 				case 'tcp'
 					if ~exist('size','var');size=256000;end
 					while loop > 0
@@ -477,7 +474,6 @@ classdef dataConnection < handle
 			end
 			
 			switch obj.protocol
-				
 				%============================UDP
 				case 'udp'
 					if formatted == false
@@ -498,7 +494,7 @@ classdef dataConnection < handle
 		end
 		
 		% ===================================================================
-		%> @brief Read any avalable variable from the given pnet socket.
+		%> @brief Read any available variable from the given pnet socket.
 		%>
 		%> Read any avalable variable from the given pnet socket.
 		% ===================================================================
@@ -544,7 +540,6 @@ classdef dataConnection < handle
 						obj.isOpen = false;
 						obj.salutation('No client available')
 					end
-					
 				catch
 					obj.conn = -1;
 					obj.isOpen = false;
@@ -602,11 +597,14 @@ classdef dataConnection < handle
 						obj.statusMessage = 'STATUS_UDP_CLIENT_CONNECT';
 					case 19
 						obj.statusMessage = 'STATUS_UDP_SERVER_CONNECT';
+					otherwise
+						obj.statusMessage = 'UNDEFINED';
 				end
 				obj.salutation(obj.statusMessage,'checkStatus')
 				status = obj.status;
-			catch
+			catch %#ok<CTCH>
 				obj.status = -1;
+				obj.statusMessage = 'UNKNOWN';
 				status = obj.status;
 				obj.(conn) = -1;
 				obj.isOpen = false;
@@ -645,7 +643,7 @@ classdef dataConnection < handle
 						[obj.rAddress,obj.rPort]=pnet(obj.rconn,'gethost');
 						fprintf('START SERVING NEW CONNECTION FROM IP %d.%d.%d.%d port:%d\n\n',obj.rAddress,obj.rPort);
 						obj.serverLoop;
-					catch
+					catch %#ok<*CTCH>
 						disp 'Server loop initialisation failed';
 					end
 				end

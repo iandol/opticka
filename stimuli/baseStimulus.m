@@ -207,7 +207,9 @@ classdef baseStimulus < dynamicprops
 				Screen('Flip',s.win); %flip the buffer ASAP, timing is unimportant
 			end
 			WaitSecs(1);
+			s.drawGrid(); %draw +-5 degree dot grid
 			Screen('Flip',s.win);
+			WaitSecs(0.25);
 			s.close(); %close screen
 			clear s; %clear it
 			obj.reset(); %reset our stimulus ready for use again

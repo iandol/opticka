@@ -9,23 +9,30 @@ classdef seditor < handle
 		cprop
 		ckind
 		otherstimuli
+		mversion
+		optickahandle = 0
 	end
 	
 	methods
-		function obj = seditor(stimin)
+		function obj = seditor(stimin, ohandlein)
 			if exist('stimin','var')
 				obj.stim = stimin;
 				obj.stim.reset; %remove temporary/transient properties
 			end
+			if exist('ohandlein','var')
+				obj.optickahandle = ohandlein;
+			end
+			
+			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
 			obj.handles = struct();
 			oldlook=javax.swing.UIManager.getLookAndFeel;
 			newlook='javax.swing.plaf.metal.MetalLookAndFeel';
-			if ismac || ispc
+			if obj.mversion < 7.12 && (ismac || ispc)
 				javax.swing.UIManager.setLookAndFeel(newlook);
 			end
 			obj.buildgui;
 			drawnow;
-			if ismac || ispc
+			if obj.mversion < 7.12 && (ismac || ispc)
 				javax.swing.UIManager.setLookAndFeel(oldlook);
 			end
 			if ~isempty(obj.stim)
@@ -60,6 +67,17 @@ classdef seditor < handle
 				'FontSize', 10, ...
 				'String', 'OK', ...
 				'Callback', @obj.StimEditorOK_Callback);
+			
+			obj.handles.StimEditorChange = uicontrol( ...
+				'Parent', obj.handles.figure1, ...
+				'Tag', 'StimEditorChange', ...
+				'Style', 'pushbutton', ...
+				'Units', 'pixels', ...
+				'Position', [5 5 50 25], ...
+				'FontName', 'Helvetica', ...
+				'FontSize', 10, ...
+				'String', 'Change', ...
+				'Callback', @obj.StimEditorEdit_Callback);
 			
 			% --- EDIT TEXTS -------------------------------------
 			obj.handles.StimEditorEdit = uicontrol( ...
@@ -121,7 +139,8 @@ classdef seditor < handle
 		
 		%% ---------------------------------------------------------------------------
 		function StimEditorEdit_Callback(obj,hObject,evendata) %#ok<INUSD>
-			s=get(hObject,'String');
+			
+			s=get(obj.handles.StimEditorEdit,'String');
 			
 			switch obj.ckind
 				case 'number'
@@ -141,8 +160,8 @@ classdef seditor < handle
 					obj.stim.(obj.cprop) = s;
 			end
 			
-			if isappdata(0,'o') %check opticka is running
-				o = getappdata(0,'o');
+			if isappdata(obj.optickahandle,'o') %check opticka is running
+				o = getappdata(obj.optickahandle,'o');
 				if ~isempty(obj.otherstimuli) %check if other stimuli are tagged to edit too
 					for i=1:length(obj.otherstimuli)
 						if ~isempty(findprop(o.r.stimulus{obj.otherstimuli(i)},obj.cprop)) %check it has this porperty

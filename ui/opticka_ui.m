@@ -953,7 +953,7 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
 	if v > 0;
-		seditor(o.r.stimulus{v});
+		seditor(o.r.stimulus{v}, handles.output);
 	end
 	
 end

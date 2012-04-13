@@ -1,5 +1,5 @@
 % ========================================================================
-%> @brief runExperiment is the main Experiment object; Inherits from Handle
+%> @brief runExperiment is the main Experiment manager; Inherits from Handle
 %>
 %>RUNEXPERIMENT The main class which accepts a task and stimulus object
 %>and runs the stimuli based on the task object passed. The class
@@ -127,12 +127,13 @@ classdef (Sealed) runExperiment < handle
 				%Trigger the omniplex (TTL on FIO1) into paused mode
 				obj.lJack.setDIO([2,0,0]);WaitSecs(0.001);obj.lJack.setDIO([0,0,0]);
 				
-				obj.initialiseTask; %set up our task structure for this run
+				obj.initialiseTask; %set up our task structure 
 				
 				for j=1:obj.sList.n %parfor doesn't seem to help here...
 					obj.stimulus{j}.setup(s); %call setup and pass it the screen object
 				end
 				
+				obj.salutation('Initial variable setup predisplay...')
 				obj.updateVars; %set the variables for the very first run;
 				
 				KbReleaseWait; %make sure keyboard keys are all released
@@ -148,11 +149,12 @@ classdef (Sealed) runExperiment < handle
 				obj.task.switched = 1;
 				tL.screen.beforeDisplay = GetSecs;
 				
-				% lets draw 1 seonds worth of the stimuli we will be using
+				% lets draw 1 seconds worth of the stimuli we will be using
 				% covered by a blank. this lets us prime the GPU with the sorts
 				% of stimuli it will be using and this does appear to minimise
 				% some of the frames lost on first presentation for very complex
 				% stimuli using 32bit computation buffers...
+				obj.salutation('Warming up GPU...')
 				vbl = 0;
 				for i = 1:s.screenVals.fps
 					for j=1:obj.sList.n
@@ -167,6 +169,7 @@ classdef (Sealed) runExperiment < handle
 				if obj.logFrames == true
 					tL.screen.stimTime(1) = 1;
 				end
+				obj.salutation('TASK Starting...')
 				tL.vbl(1) = vbl;
 				tL.startTime = tL.vbl(1);
 				
@@ -265,7 +268,7 @@ classdef (Sealed) runExperiment < handle
 				
 				tL.calculateMisses;
 				if tL.nMissed > 0
-					fprintf('\n>>> >>> >>> There were %i MISSED FRAMES <<< <<< <<<\n',tL.nMissed);
+					fprintf('\n!!!>>> >>> >>> There were %i MISSED FRAMES <<< <<< <<<!!!\n',tL.nMissed);
 				end
 				
 				s.playMovie();
@@ -306,7 +309,9 @@ classdef (Sealed) runExperiment < handle
 			end
 			
 			obj.timeLog = timeLogger;
-			obj.screen = screenManager(obj.screenSettings);
+			if isempty(obj.screen)
+				obj.screen = screenManager(obj.screenSettings);
+			end
 			
 			obj.screen.movieSettings.record = 0;
 			obj.screen.movieSettings.size = [400 400];
@@ -595,7 +600,7 @@ classdef (Sealed) runExperiment < handle
 						if thisTrial == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
 							obj.stimulus{j}.update;
 						end
-						if obj.verbose==true;fprintf('\nVariable assign %i: %g seconds',j,toc);end
+						if obj.verbose==true;fprintf('->updateVars() trial/run %i/%i: Variable %i set=%g ms\n',thisTrial,thisRun,j,toc*1000);end
 					end
 				end
 			end
@@ -674,7 +679,7 @@ classdef (Sealed) runExperiment < handle
 						% 							obj.stimulus{i}.update;
 						% 						end
 						obj.task.doUpdate = false;
-						if obj.verbose==true;fprintf('\nVariable update: %g seconds',toc);end
+						if obj.verbose==true;fprintf('->updateTask() trial/run %i/%i: TOTAL var update=%g ms\n',mT,mR,toc*1000);end
 					end
 					
 					%this dispatches each stimulus update on a new blank frame to
@@ -682,7 +687,7 @@ classdef (Sealed) runExperiment < handle
 					if obj.task.blankTick > 2 && obj.task.blankTick <= obj.sList.n + 2
 						if obj.verbose==true;tic;end
 						obj.stimulus{obj.task.blankTick-2}.update;
-						if obj.verbose==true;fprintf('\nStimuli update: %g seconds',toc);end
+						if obj.verbose==true;fprintf('->updateTask() Blank-frame %i: stimulus %i update=%g ms\n',obj.task.blankTick,obj.task.blankTick-2,toc*1000);end
 					end
 					
 				end
@@ -697,8 +702,8 @@ classdef (Sealed) runExperiment < handle
 					obj.task.blankTick = 0;
 					
 					if ~mod(obj.task.thisRun,obj.task.minBlocks) %are we within a trial block or not? we add the required time to our switch timer
-						obj.task.switchTime=obj.task.switchTime+obj.task.itTime;
-						obj.task.switchTick=obj.task.switchTick+(obj.task.itTime*ceil(obj.screenVals.fps));
+						obj.task.switchTime=obj.task.switchTime+obj.task.ibTime;
+						obj.task.switchTick=obj.task.switchTick+(obj.task.ibTime*ceil(obj.screenVals.fps));
 					else
 						obj.task.switchTime=obj.task.switchTime+obj.task.isTime;
 						obj.task.switchTick=obj.task.switchTick+(obj.task.isTime*ceil(obj.screenVals.fps));

@@ -185,6 +185,36 @@ classdef textureStimulus < baseStimulus
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================
+	methods ( Access = protected ) %-------PROTECTED METHODS-----%
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief setRect
+		%>  setRect makes the PsychRect based on the texture and screen values
+		%>  This is overridden from parent class so we can scale texture
+		%>  using the size value
+		% ===================================================================
+		function setRect(obj)
+			if isempty(obj.findprop('angleOut'));
+				[dx dy] = pol2cart(obj.d2r(obj.angle),obj.startPosition);
+			else
+				[dx dy] = pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
+			end
+			obj.dstRect = Screen('Rect',obj.texture);
+			obj.dstRect = ScaleRect(obj.dstRect, obj.size, obj.size);
+			obj.dstRect = CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
+			if isempty(obj.findprop('xPositionOut'));
+				obj.dstRect = OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
+			else
+				obj.dstRect = OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
+			end
+			obj.mvRect = obj.dstRect;
+		end
+		
+	end
+	
+	
+	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
 		%> @brief xPositionOut Set method

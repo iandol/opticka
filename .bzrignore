@@ -2,6 +2,8 @@
 *~
 *.tmp
 html*
+debug.txt
 Junk
+makeDocs
 .DS_Store
 .idea

@@ -8,12 +8,12 @@ classdef stimulusSequence < dynamicprops
 		nVar
 		%> number of repeat blocks to present
 		nBlocks = 1
-		%> time of the stiumulus shown
+		%> time stimulus trial is shown
 		trialTime = 2
-		%> inter stimulus time
+		%> inter stimulus trial time
 		isTime = 1 
 		%> inter block time
-		itTime = 2
+		ibTime = 2
 		%> what do we show in the blank?
 		isStimulus
 		%> verbose or not
@@ -40,23 +40,32 @@ classdef stimulusSequence < dynamicprops
 		%> the unique identifier for each stimulus
 		outIndex 
 		%> mapping the stimulus to the number as a X Y and Z etc position for display
-		outMap 
+		outMap
+		%> old random number stream
 		oldStream
+		%> current random number stream
 		taskStream
+		%> minimum number of blocks
 		minBlocks
+		%> current random stream state
 		currentState
+		%> reserved for future use of multiple random stream states
 		states
+		%> reserved for future use of multiple random stream states
 		nstates = 1
 	end
 	
 	properties (Dependent = true,  SetAccess = private)
+		%> number of blocks, need to rename!
 		nRuns
+		%> estimate of the total number of frames this task will occupy,
+		%> requires accurate fps 
 		nFrames
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		h
-		allowedProperties='^(randomise|nVars|nBlocks|trialTime|isTime|itTime|realTime|randomSeed|fps)$'
+		allowedProperties='^(randomise|nVars|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps)$'
 	end
 	
 	methods
@@ -190,7 +199,7 @@ classdef stimulusSequence < dynamicprops
 		%> Dependent property nFrames get method
 		% ===================================================================
 		function nFrames = get.nFrames(obj)
-			nSecs = (obj.nRuns * obj.trialTime) + (obj.minBlocks-1 * obj.isTime) + (obj.nBlocks-1 * obj.itTime);
+			nSecs = (obj.nRuns * obj.trialTime) + (obj.minBlocks-1 * obj.isTime) + (obj.nBlocks-1 * obj.ibTime);
 			nFrames = ceil(nSecs) * ceil(obj.fps); %be a bit generous in defining how many frames the task will take
 		end
 		
@@ -204,7 +213,19 @@ classdef stimulusSequence < dynamicprops
 			obj.h = struct();
 			build_gui();
 			data = [obj.outValues obj.outIndex obj.outMap];
+			for ii = 1:obj.nVars
+				cnames{ii} = obj.nVar(ii).name;
+			end
+			cnames{end+1} = 'outIndex';
+			cnames{end+1} = 'Var1Index';
+			cnames{end+1} = 'Var2Index';
+			cnames{end+1} = 'Var3Index';
+			
 			set(obj.h.uitable1,'Data',data)
+			set(obj.h.uitable1,'ColumnName',cnames);
+			set(obj.h.uitable1,'ColumnWidth',{60});
+			set(obj.h.uitable1,'FontName','FixedWidth')
+			set(obj.h.uitable1,'RowStriping','on')
 
 			function build_gui()
 				obj.h.figure1 = figure( ...
@@ -219,15 +240,14 @@ classdef stimulusSequence < dynamicprops
 				obj.h.uitable1 = uitable( ...
 					'Parent', obj.h.figure1, ...
 					'Tag', 'uitable1', ...
-					'UserData', zeros(1,0), ...
 					'Units', 'normalized', ...
 					'Position', [0 0 1 1], ...
 					'FontName', 'Helvetica', ...
 					'FontSize', 10, ...
-					'BackgroundColor', [0.96 0.96 0.96], ...
+					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
 					'ColumnEditable', [false,false], ...
-					'ColumnFormat', {'char' 'char' }, ...
-					'ColumnWidth', {'auto','auto'});
+					'ColumnFormat', {'char'}, ...
+					'ColumnWidth', {'auto'});
 			end
 		end
 		

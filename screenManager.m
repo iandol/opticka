@@ -72,10 +72,10 @@ classdef screenManager < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='^(pixelsPerCm|distance|screen|windowed|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
+		allowedProperties='^(bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
 		%> the photoDiode rectangle
 		photoDiodeRect = [0;0;50;50]
-		%> the values comuted to draw the 1deg dotted grid in debug mode
+		%> the values computed to draw the 1deg dotted grid in debug mode
 		grid
 		%> the movie pointer
 		moviePtr = []
@@ -129,7 +129,7 @@ classdef screenManager < handle
 			obj.movieSettings.quality = 0;
 			obj.movieSettings.nFrames = 100;
 			obj.movieSettings.type = 1;
-			obj.movieSettings.codec = 'rle ';
+			obj.movieSettings.codec = 'rle '; %space is important for 'rle '
 			
 			%get the gammatable and dac information
 			[obj.screenVals.gammaTable,obj.screenVals.dacBits,obj.screenVals.lutSize]=Screen('ReadNormalizedGammaTable', obj.screen);
