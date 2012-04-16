@@ -1,6 +1,7 @@
 classdef timeLogger < dynamicprops
-	%TIMELOG Summary of this class goes here
-	%   Detailed explanation goes here
+	%TIMELOG Simple class used to store the timing data from an experiment
+	%   timeLogger stores timing data for a run and optionally graphs the
+	%   result.
 	
 	properties
 		date = 0
@@ -122,6 +123,17 @@ classdef timeLogger < dynamicprops
 			p.refresh();
 			clear vbl show flip index miss stimTime
 		end
+	end %---END PUBLIC METHODS---%
+	
+	%=======================================================================
+	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	%=======================================================================
+	function [avg,err] = stderr(obj,data)
+		
+		avg=mean(data);
+		err=nanstd(data);
+		error=sqrt(err.^2/length(data));  
+		
 	end
 	
 end

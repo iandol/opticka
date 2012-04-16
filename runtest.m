@@ -30,25 +30,25 @@ clear myStim myTask myScreen rExp
 % into the stimulus class. You can also pass these in as a structure if you prefer. 
 % If you do not pass any properties, default values will be used without problems.
 
-%%%
+%%
 % The first six stimuli are gratings / gabors of varying kinds.
-myStim{1}=gratingStimulus('sf',1,'contrast',0.6,'size',1,'tf',0,'gabor',0,...
-	'mask',1,'verbose',0);
+myStim{1}=gratingStimulus('sf',1,'contrast',0.5,'size',1,'tf',0,'angle',30,...
+	'gabor', 0, 'mask', 1);
 
-myStim{2}=gratingStimulus('sf',1,'contrast',0.5,'size',3,'angle',45,'xPosition',-2,...
+myStim{2}=gratingStimulus('sf',3,'contrast',0.5,'tf',1,'size',3,'xPosition',-3,...
+	'yPosition',-3,'gabor',1,'mask',0);
+
+myStim{3}=gratingStimulus('sf',1,'contrast',0.5,'size',3,'angle',45,'xPosition',-2,...
 	'yPosition',2,'gabor',0,'mask',1,'speed',2);
 
-myStim{3}=gratingStimulus('sf',3,'contrast',0.6,'tf',1,'colour',[0.5 0.5 0.5 1],'size',3,'xPosition',-2,...
-	'yPosition',-4,'gabor',1,'mask',0);
+myStim{4}=gratingStimulus('sf',1,'contrast',0.5,'tf',0,'size',2,'xPosition',-3,...
+	'yPosition',-3,'gabor',0,'mask',1,'speed',2);
 
-myStim{4}=gratingStimulus('sf',1,'contrast',0.6,'tf',0,'size',1,'xPosition',-3,...
-	'yPosition',3,'gabor',0,'mask',0,'speed',2);
-
-myStim{5}=gratingStimulus('sf',1,'contrast',0.4,'colour',[0.6 0.3 0.3 1],'tf',0.1,...
+myStim{5}=gratingStimulus('sf',1,'contrast',0.25,'colour',[0.6 0.3 0.3],'tf',0.1,...
 	'size',2,'xPosition',3,'yPosition',0,'gabor',0,'mask',0);
 
-myStim{6}=gratingStimulus('sf',1,'contrast',0.5,'colour',[0.6 0.4 0.4 0.5],'tf',1,...
-	'driftDirection',-1,'size',2,'xPosition',4,'yPosition',4,'gabor',0,'mask',1);
+myStim{6}=gratingStimulus('sf',1,'contrast',0.5,'colour',[0.4 0.4 0.6],'tf',1,...
+	'driftDirection',-1,'size',2,'xPosition',4,'yPosition',-4,'gabor',0,'mask',1);
 
 %%
 % A simple bar: bars can be solid in colour or have random texture. This
@@ -59,7 +59,7 @@ myStim{6}=gratingStimulus('sf',1,'contrast',0.5,'colour',[0.6 0.4 0.4 0.5],'tf',
 % will change the angle of this stimulus the geometry is calculated for you
 % automatically!
 myStim{7}=barStimulus('type','solid','barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
-	'yPosition',0,'startPosition',-4,'colour',[1 1 0 1]);
+	'yPosition',0,'startPosition',-4,'colour',[.7 .7 .7]);
 
 %%
 % coherent dot stimulus; 200 dots moving at 1deg/s with coherence set to 0.5
@@ -68,8 +68,8 @@ myStim{8}=dotsStimulus('nDots',200,'speed',1,'coherence',0.5,'xPosition',4,...
 
 %%
 % a simple circular spot, spots can also flash if needed
-myStim{9}=spotStimulus('speed',2,'xPosition',4,...
-	'yPosition',4,'colour',[1 1 0 1],'size',1);
+myStim{9}=spotStimulus('speed',2,'xPosition',4,'type','flash',...
+	'yPosition',4,'colour',[1 1 0],'size',1,'flashTime',[0.2 0.2]);
 
 %%
 % a texture stimulus, by default this loads a picture from the opticka
@@ -104,7 +104,7 @@ myTask.nVar(1).offsetvalue = [];
 % selected from values of 0.025 and 0.1
 myTask.nVar(2).name = 'contrast';
 myTask.nVar(2).stimulus = [2 3];
-myTask.nVar(2).values = [0.025 0.1];
+myTask.nVar(2).values = [0.1 0.4];
 myTask.nVar(2).offsetstimulus = [];
 myTask.nVar(2).offsetvalue = [];
 

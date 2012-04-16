@@ -210,7 +210,7 @@ classdef gratingStimulus < baseStimulus
 			if obj.mask == true
 				obj.mask = floor((obj.ppd*obj.size)/2);
 			else
-				obj.mask = false;
+				obj.mask = [];
 			end
 			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
