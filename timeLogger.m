@@ -1,6 +1,6 @@
 classdef timeLogger < dynamicprops
 	%TIMELOG Simple class used to store the timing data from an experiment
-	%   timeLogger stores timing data for a run and optionally graphs the
+	%   timeLogger stores timing data for a taskrun and optionally graphs the
 	%   result.
 	
 	properties
@@ -13,6 +13,7 @@ classdef timeLogger < dynamicprops
 		stimTime = 0
 		startTime = 0
 		screen = struct
+		timeFunction = @GetSecs
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -21,11 +22,23 @@ classdef timeLogger < dynamicprops
 	end
 	
 	methods
+		% ===================================================================
+		%> @brief Constructor
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function obj=timeLogger
-			obj.screen.construct = GetSecs;
+			obj.screen.construct = obj.timeFunction();
 			obj.date = clock;
 		end
 		
+		% ===================================================================
+		%> @brief calculate genuine missed stim frames
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function calculateMisses(obj)
 			index=min([length(obj.vbl) length(obj.flip) length(obj.show)]);
 			miss=obj.miss(1:index);
@@ -79,11 +92,11 @@ classdef timeLogger < dynamicprops
 			plot(diff(flip),'g-.')
 			hold off
 			legend('VBL','Show','Flip')
-			[m,e]=stderr(diff(vbl),'SE');
+			[m,e]=obj.stderr(diff(vbl));
 			t=sprintf('VBL mean=%2.2f+-%2.2f s.e.', m, e);
-			[m,e]=stderr(diff(show),'SE');
+			[m,e]=obj.stderr(diff(show));
 			t=[t sprintf(' | Show mean=%2.2f+-%2.2f', m, e)];
-			[m,e]=stderr(diff(flip),'SE');
+			[m,e]=obj.stderr(diff(flip));
 			t=[t sprintf(' | Flip mean=%2.2f+-%2.2f', m, e)];
 			p(1,1).title(t)
 			p(1,1).xlabel('Frame number (difference between frames)');
@@ -98,11 +111,11 @@ classdef timeLogger < dynamicprops
 			plot(stimTime*2,'k');
 			hold off
 			legend('Show-VBL','Show-Flip','VBL-Flip');
-			[m,e]=stderr(show-vbl,'SE');
+			[m,e]=obj.stderr(show-vbl);
 			t=sprintf('Show-VBL=%2.2f+-%2.2f', m, e);
-			[m,e]=stderr(show-flip,'SE');
+			[m,e]=obj.stderr(show-flip);
 			t=[t sprintf(' | Show-Flip=%2.2f+-%2.2f', m, e)];
-			[m,e]=stderr(vbl-flip,'SE');
+			[m,e]=obj.stderr(vbl-flip);
 			t=[t sprintf(' | VBL-Flip=%2.2f+-%2.2f', m, e)];
 			p(2,1).title(t);
 			p(2,1).xlabel('Frame number');
@@ -128,12 +141,12 @@ classdef timeLogger < dynamicprops
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-	function [avg,err] = stderr(obj,data)
-		
-		avg=mean(data);
-		err=nanstd(data);
-		error=sqrt(err.^2/length(data));  
-		
+		function [avg,err] = stderr(obj,data)
+			avg=mean(data);
+			err=std(data);
+			err=sqrt(err.^2/length(data)); 
+		end
+	
 	end
 	
 end

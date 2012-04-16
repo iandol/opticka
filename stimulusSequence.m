@@ -5,7 +5,7 @@ classdef stimulusSequence < dynamicprops
 		%> number of independant variables
 		nVars = 0
 		%> structure holding each independant variable
-		nVar
+		nVar = []
 		%> number of repeat blocks to present
 		nBlocks = 1
 		%> time stimulus trial is shown
@@ -119,7 +119,7 @@ classdef stimulusSequence < dynamicprops
 		%> Do the randomisation
 		% ===================================================================
 		function randomiseStimuli(obj)
-			tic
+			if obj.verbose==true;tic;end
 			obj.nVars=length(obj.nVar);
 			
 			obj.currentState=obj.taskStream.State;
@@ -181,8 +181,51 @@ classdef stimulusSequence < dynamicprops
 					obj.outMap(gidx,f) = g;
 				end
 			end
-			obj.salutation(sprintf('Randomise Stimuli: %g seconds\n',toc));
+			if obj.verbose==true;obj.salutation(sprintf('Randomise Stimuli: %g seconds\n',toc));end
 		end
+		
+		% ===================================================================
+		%> @brief validate the stimulusSequence is ok
+		%>
+		%> Check we have a minimal task structure
+		% ===================================================================
+		function validate(obj)
+			
+			if obj.nVars == 0
+				obj.nVar(1).name
+			
+			end
+		
+		end
+		
+		% ===================================================================
+		%> @brief set method for the nVar structure
+		%>
+		%> Check we have a minimal nVar structure and deals new values
+		%> appropriately.
+		% ===================================================================
+		function set.nVar(obj,invalue)
+			varTemplate = struct('name','','stimulus',0,'values',[],'offsetstimulus',[],'offsetvalue',[]);
+			if ~exist('invalue','var')
+				invalue = [];
+			end
+			if isempty(obj.nVar) || isempty(invalue)
+				obj.nVar = varTemplate;
+			elseif isstruct(obj.nVar) && isempty(fieldnames(obj.nVar))
+				obj.nVar = varTemplate;
+			end
+			if ~isempty(invalue) && isstruct(invalue)
+				idx = length(invalue);
+				invalue = invalue(idx);
+				fn = fieldnames(invalue);
+				for i = 1:length(fn)
+					if isfield(obj.nVar(1), fn{i}) && ~isempty(invalue.(fn{i}));
+						obj.nVar(idx).(fn{i}) = invalue.(fn{i});
+					end
+				end
+			end
+		end
+		
 		
 		% ===================================================================
 		%> @brief Dependent property nRuns get method

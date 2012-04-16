@@ -9,8 +9,8 @@
 %>  Stimulus must be a stimulus class, i.e. gratingStimulus and friends,
 %>  so for example:
 %>
-%>  gs.g=gratingStimulus(struct('mask',1,'sf',1));
-%>  ss=runExperiment(struct('stimulus',gs,'windowed',1));
+%>  gs{1}=gratingStimulus('mask',1,'sf',1);
+%>  ss=runExperiment('stimulus',gs);
 %>  ss.run;
 %>
 %>	will run a minimal experiment showing a 1c/d circularly masked grating
@@ -309,8 +309,13 @@ classdef (Sealed) runExperiment < handle
 			end
 			
 			obj.timeLog = timeLogger;
+			
 			if isempty(obj.screen)
 				obj.screen = screenManager(obj.screenSettings);
+			end
+			
+			if isempty(obj.task)
+				obj.task = stimulusSequence();
 			end
 			
 			obj.screen.movieSettings.record = 0;
@@ -325,7 +330,7 @@ classdef (Sealed) runExperiment < handle
 			obj.lJack.close;
 			obj.lJack=[];
 			
-			if iscell(obj.stimulus)
+			if iscell(obj.stimulus) && length(obj.stimulus) > 1
 				while iscell(obj.stimulus) && length(obj.stimulus) == 1
 					obj.stimulus = obj.stimulus{1};
 				end
