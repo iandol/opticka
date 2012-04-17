@@ -173,8 +173,8 @@ function OKMenuShowGammaPlots_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	if isa(o.r.gammaTable,'calibrateLuminance')
-		o.r.gammaTable.plot;
+	if isa(o.r.screen.gammaTable,'calibrateLuminance')
+		o.r.screen.gammaTable.plot;
 	end
 end
 % --------------------------------------------------------------------
@@ -585,17 +585,17 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v=get(handles.OKSelectScreen,'Value');
 	inp = struct('screen',v-1);
-	if isa(o.r.gammaTable,'calibrateLuminance')
-		o.r.gammaTable.run;
+	if isa(o.r.screen.gammaTable,'calibrateLuminance')
+		o.r.screen.gammaTable.run;
 	else
 		c = calibrateLuminance(inp);
-		c.filename = [o.paths.calibration filesep 'Calibration-' date '-' o.r.gammaTable.comments];
-		o.r.gammaTable = c;
+		c.filename = [o.paths.calibration filesep 'Calibration-' date '-' o.r.screen.gammaTable.comments];
+		o.r.screen.gammaTable = c;
 		o.saveCalibration;
 	end
 	set(handles.OKUseGamma,'Value',1)
-	o.r.gammaTable.choice = 0; 
-	set(handles.OKUseGamma,'String',['None'; 'Gamma'; o.r.gammaTable.analysisMethods]);
+	o.r.screen.gammaTable.choice = 0; 
+	set(handles.OKUseGamma,'String',['None'; 'Gamma'; o.r.screen.gammaTable.analysisMethods]);
 end
 
 % --------------------------------------------------------------------
@@ -607,15 +607,15 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	uiopen('~/MatlabFiles/Calibration')
 	if exist('tmp','var') && isa(tmp,'calibrateLuminance')
-		o.r.gammaTable = tmp;
+		o.r.screen.gammaTable = tmp;
 		clear tmp;
-		if get(handles.OKUseGamma,'Value') > length(['None'; 'Gamma'; o.r.gammaTable.analysisMethods])
+		if get(handles.OKUseGamma,'Value') > length(['None'; 'Gamma'; o.r.screen.gammaTable.analysisMethods])
 			set(handles.OKUseGamma,'Value',1);
-			o.r.gammaTable.choice = 0; 
+			o.r.screen.gammaTable.choice = 0; 
 		else
-			o.r.gammaTable.choice = get(handles.OKUseGamma,'Value')-1;
+			o.r.screen.gammaTable.choice = get(handles.OKUseGamma,'Value')-1;
 		end
-		set(handles.OKUseGamma,'String',['None'; 'Gamma'; o.r.gammaTable.analysisMethods]);
+		set(handles.OKUseGamma,'String',['None'; 'Gamma'; o.r.screen.gammaTable.analysisMethods]);
 	end
 end
 
@@ -626,9 +626,9 @@ function OKMenuSaveGamma_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	if isa(o.r.gammaTable,'calibrateLuminance')
-		tmp=o.r.gammaTable;
-		uisave('tmp',[o.paths.calibration filesep 'Calibration-' date '-' o.r.gammaTable.comments]);
+	if isa(o.r.screen.gammaTable,'calibrateLuminance')
+		tmp=o.r.screen.gammaTable;
+		uisave('tmp',[o.paths.calibration filesep 'Calibration-' date '-' o.r.screen.gammaTable.comments]);
 	end
 end
 

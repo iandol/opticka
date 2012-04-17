@@ -66,6 +66,9 @@ classdef stimulusSequence < dynamicprops
 	properties (SetAccess = private, GetAccess = private)
 		h
 		allowedProperties='^(randomise|nVars|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps)$'
+		isLoading = []
+		loadProperties = {'randomise','nVars','nVar','nBlocks','trialTime','isTime','ibTime','isStimulus','verbose',...
+			'realTime','randomSeed','randomGenerator','nSegments','nSegment'}
 	end
 	
 	methods
@@ -83,6 +86,7 @@ classdef stimulusSequence < dynamicprops
 				obj.parseArgs(varargin,obj.allowedProperties)
 			end
 			obj.initialiseRandom();
+			obj.isLoading = false;
 		end
 		
 		% ===================================================================
@@ -192,8 +196,7 @@ classdef stimulusSequence < dynamicprops
 		function validate(obj)
 			
 			if obj.nVars == 0
-				obj.nVar(1).name
-			
+				
 			end
 		
 		end
@@ -205,9 +208,16 @@ classdef stimulusSequence < dynamicprops
 		%> appropriately.
 		% ===================================================================
 		function set.nVar(obj,invalue)
+			if isempty(obj.isLoading) %this stops set being called unexpectedly
+				return;
+			end
 			varTemplate = struct('name','','stimulus',0,'values',[],'offsetstimulus',[],'offsetvalue',[]);
 			if ~exist('invalue','var')
 				invalue = [];
+			end
+			if obj.isLoading == true && isstruct(invalue)
+				obj.nVar = invalue;
+				return;
 			end
 			if isempty(obj.nVar) || isempty(invalue)
 				obj.nVar = varTemplate;
@@ -225,7 +235,6 @@ classdef stimulusSequence < dynamicprops
 				end
 			end
 		end
-		
 		
 		% ===================================================================
 		%> @brief Dependent property nRuns get method
@@ -348,4 +357,38 @@ classdef stimulusSequence < dynamicprops
 		end
 		
 	end
+	
+	%=======================================================================
+	methods (Static) %------------------STATIC METHODS
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief loadobj handler
+		%>
+		%> The problem is we use set.nVar to allow robust setting of
+		%> variables, but set.nVar also gets called on loading and will mangle
+		%> older saved protocols during load. We need to specify we are loading
+		%> and use a conditional in set.nVar to do the right thing.
+		% ===================================================================
+		function lobj=loadobj(in)
+			fprintf('\n>>> Loading stimulusSequence object...\n');
+			if ~isa(in,'stimulusSequence') && isstruct(in)
+				lobj = stimulusSequence;
+				lobj.isLoading = true;
+				fni = fieldnames(in);
+				fn = intersect(lobj.loadProperties,fni);
+				for i=1:length(fn)
+					lobj.(fn{i}) = in.(fn{i});
+				end
+			elseif isa(in,'stimulusSequence')
+				in.currentState = [];
+				in.oldStream = [];
+				in.taskStream = [];
+				lobj = in;
+			end
+			obj.isLoading = false;
+		end
+		
+	end
+	
 end

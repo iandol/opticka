@@ -337,6 +337,7 @@ classdef (Sealed) opticka < handle
 				set(obj.h.OKOptickaVersion,'String','Initialising Stimulus and Task objects...')
 				%drawnow
 				obj.r = runExperiment;
+				obj.r.initialise(); % set up the runExperiment object
 				s=cell(obj.r.screen.maxScreen+1,1);
 				for i=0:obj.r.screen.maxScreen
 					s{i+1} = num2str(i);
@@ -366,8 +367,8 @@ classdef (Sealed) opticka < handle
 			obj.r.screen.blend = obj.gv(obj.h.OKOpenGLBlending);
 			
 			value = obj.gv(obj.h.OKUseGamma);
-			if isa(obj.r.gammaTable,'calibrateLuminance')
-				obj.r.gammaTable.choice = value - 1;
+			if isa(obj.r.screen.gammaTable,'calibrateLuminance')
+				obj.r.screen.gammaTable.choice = value - 1;
 			end
 			
 			s=str2num(get(obj.h.OKWindowSize,'String')); %#ok<ST2NM>
@@ -783,11 +784,11 @@ classdef (Sealed) opticka < handle
 				load([obj.paths.calibration filesep d(idx).name]);
 				if isa(tmp,'calibrateLuminance')
 					tmp.filename = [obj.paths.calibration filesep d(idx).name];
-					if isa(obj.r,'runExperiment')
-						obj.r.gammaTable = tmp;
+					if isa(obj.r,'runExperiment') && isa(obj.r.screen,'screenManager')
+						obj.r.screen.gammaTable = tmp;
 						set(obj.h.OKUseGamma,'Value',1);
-						set(obj.h.OKUseGamma,'String',['None'; 'Gamma'; obj.r.gammaTable.analysisMethods]);
-						obj.r.gammaTable.choice = 1;
+						set(obj.h.OKUseGamma,'String',['None'; 'Gamma'; obj.r.screen.gammaTable.analysisMethods]);
+						obj.r.screen.gammaTable.choice = 1;
 					end
 				end
 			end
@@ -798,9 +799,9 @@ classdef (Sealed) opticka < handle
 		%> 
 		% ===================================================================
 		function saveCalibration(obj)
-			if isa(obj.r.gammaTable,'calibrateLuminance')
+			if isa(obj.r.screen.gammaTable,'calibrateLuminance')
 				saveThis = true;
-				tmp = obj.r.gammaTable;
+				tmp = obj.r.screen.gammaTable;
 				d = dir(obj.paths.calibration);
 				for i = 1:length(d)
 					if isempty(regexp(d(i).name,'^\.+', 'once')) && d(i).isdir == false && d(i).bytes > 0

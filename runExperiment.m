@@ -37,7 +37,7 @@ classdef (Sealed) runExperiment < handle
 		useLabJack = false
 		%> LabJack object
 		lJack
-		%> gamma correction info saved as a calibrateLuminance object
+		%> LEGACY gamma correction; screenManager handles this...
 		gammaTable
 		%> this lets the UI leave commands to runExperiment
 		uiCommand = ''
@@ -61,6 +61,8 @@ classdef (Sealed) runExperiment < handle
 		sList
 		%> info on the current run
 		currentInfo
+		%> previous info populated during load of saved object
+		previousInfo = struct()
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -91,7 +93,6 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		function obj = runExperiment(varargin)
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
-			obj.initialiseScreen;
 		end
 		
 		% ===================================================================
@@ -301,8 +302,10 @@ classdef (Sealed) runExperiment < handle
 		%> @param
 		%> @return
 		% ===================================================================
-		function initialiseScreen(obj)
-			
+		function initialise(obj,config)
+			if ~exist('config','var')
+				config = '';
+			end
 			if obj.debug == true %let screen inherit debug settings
 				obj.screenSettings.debug = true;
 				obj.screenSettings.visualDebug = true;
@@ -310,11 +313,11 @@ classdef (Sealed) runExperiment < handle
 			
 			obj.timeLog = timeLogger;
 			
-			if isempty(obj.screen)
+			if isempty(regexpi('noscreen',config)) && isempty(obj.screen)
 				obj.screen = screenManager(obj.screenSettings);
 			end
 			
-			if isempty(obj.task)
+			if isempty(regexpi('notask',config)) && isempty(obj.task)
 				obj.task = stimulusSequence();
 			end
 			
@@ -348,7 +351,7 @@ classdef (Sealed) runExperiment < handle
 			obj.timeLog.screen.deltaGetSecs=mean(diff(a))*1000; %what overhead does GetSecs have in milliseconds?
 			WaitSecs(0.01); %preload function
 			
-			obj.screenVals = obj.screen.prepareScreen;
+			obj.screenVals = obj.screen.screenVals;
 			
 			obj.timeLog.screen.prepTime=GetSecs-obj.timeLog.screen.construct;
 			
@@ -433,22 +436,6 @@ classdef (Sealed) runExperiment < handle
 				end
 			end
 		end
-		
-		function rebuild(obj,in)
-			obj.stimulus = in.stimulus;
-			obj.task = in.task;
-			obj.timeLog = in.timeLog;
-			obj.verbose = in.verbose;
-			obj.debug = in.debug;
-			obj.computer = in.computer;
-			obj.ptb = in.ptb;
-			obj.screenVals = in.screenVals;
-			obj.gammaTable = in.gammaTable;
-			obj.screenSettings = in.screenSettings;
-			obj.useLabJack = in.useLabJack;
-			obj.lJack = in.lJack;
-		end
-		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
@@ -846,28 +833,65 @@ classdef (Sealed) runExperiment < handle
 	end
 	
 	%=======================================================================
-	methods (Static) %------------------STATIC METHODS
+	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
 	
 		function lobj=loadobj(in)
 			fprintf('\n>>> Loading runExperiment object...\n');
-			if ~isa(in,'runExperiment')
-				lobj = runExperiment;
-				lobj.rebuild(in);
+			lobj = runExperiment;
+			if isa(in,'runExperiment')
+				isObject = true;
+			else
+				isObject = false;
 			end
-			if ~isa(lobj.screen,'screenManager') %this is an old object, pre screenManager
-				lobj.screen = screenManager();
-				lobj.screen.srcMode = in.srcMode;
-				lobj.screen.windowed = in.windowed;
-				lobj.screen.dstMode = in.dstMode;
-				lobj.screen.blend = in.blend;
-				lobj.screen.hideFlash = in.hideFlash;
-				lobj.screen.movieSettings = in.movieSettings;
+			lobj.initialise('notask');
+			lobj = rebuild(lobj, in, isObject);
+			
+			function obj = rebuild(obj,in,inObject)
+				try
+					if inObject == true
+						obj.stimulus = in.stimulus;
+					elseif isfield('in','stimulus')
+						obj.stimulus = in.stimulus;
+					end
+					if isa(in.task,'stimulusSequence')
+						obj.task = in.task;
+						obj.previousInfo.task = in.task;
+					else
+						obj.previousInfo.task = in.task;
+					end
+					if inObject == true || isfield('in','verbose')
+						obj.verbose = in.verbose;
+					end
+					if inObject == true || isfield('in','debug')
+						obj.debug = in.debug;
+					end
+					if inObject == true || isfield('in','useLabJack')
+						obj.useLabJack = in.useLabJack;
+					end
+					if inObject == true || isfield('in','timeLog')
+						in.previousInfo.timeLog = in.timeLog;
+					end
+				end
+				try
+					if ~isa(in.screen,'screenManager') %this is an old object, pre screenManager
+						lobj.screen = screenManager();
+						lobj.screen.srcMode = in.srcMode;
+						lobj.screen.windowed = in.windowed;
+						lobj.screen.dstMode = in.dstMode;
+						lobj.screen.blend = in.blend;
+						lobj.screen.hideFlash = in.hideFlash;
+						lobj.screen.movieSettings = in.movieSettings;
+					end
+				end
+				try
+					obj.previousInfo.computer = in.computer;
+					obj.previousInfo.ptb = in.ptb;
+					obj.previousInfo.screenVals = in.screenVals;
+					obj.previousInfo.gammaTable = in.gammaTable;
+					obj.previousInfo.screenSettings = in.screenSettings;
+				end
 			end
-			if ~isa(in.timeLog)
-				in.timeLog = timeLogger;
-			end
-			lobj = in;
 		end
 		
 	end
