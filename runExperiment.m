@@ -18,12 +18,6 @@
 classdef (Sealed) runExperiment < handle
 	
 	properties
-		%>show command logs and a time log after stimlus presentation
-		verbose = false
-		%> change the parameters for poorer temporal fidelity during debugging
-		debug = false
-		%> shows the info text and position grid during stimulus presentation
-		visualDebug = true
 		%> a cell group of stimulus objects, TODO: use a stimulusManager class to
 		%> hold these
 		stimulus
@@ -45,6 +39,12 @@ classdef (Sealed) runExperiment < handle
 		logFrames = true
 		%> structure to pass to screenManager on initialisation
 		screenSettings = struct()
+		%>show command logs and a time log after stimlus presentation
+		verbose = false
+		%> change the parameters for poorer temporal fidelity during debugging
+		debug = false
+		%> shows the info text and position grid during stimulus presentation
+		visualDebug = true
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -179,7 +179,7 @@ classdef (Sealed) runExperiment < handle
 				% Our main display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				while obj.task.thisTrial <= obj.task.nBlocks
+				while obj.task.thisBlock <= obj.task.nBlocks
 					if obj.task.isBlank == true
 						if s.photoDiode == true
 							s.drawPhotoDiodeSquare([0 0 0 1]);
@@ -436,6 +436,21 @@ classdef (Sealed) runExperiment < handle
 				end
 			end
 		end
+		
+		% ===================================================================
+		%> @brief set.verbose
+		%>
+		%> Let us cascase verbosity to other classes
+		% ===================================================================
+		function set.verbose(obj,value)
+			obj.verbose = value;
+			if isa(obj.task,'stimulusSequence')
+				obj.task.verbose = value;
+			end
+			if isa(obj.screen,'screenManager')
+				obj.screen.verbose = value;
+			end
+		end
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
@@ -448,137 +463,45 @@ classdef (Sealed) runExperiment < handle
 		%> @param
 		% ===================================================================
 		function initialiseTask(obj)
-			
 			if isempty(obj.task) %we have no task setup, so we generate one.
 				obj.task=stimulusSequence;
-				obj.task.nBlocks=1;
-				obj.task.nSegments = 1;
-				obj.task.trialTime = 2;
-				obj.task.randomiseStimuli;
 			end
 			%find out how many stimuli there are, wrapped in the obj.stimulus
 			%structure
-			obj.updatesList;
-			
-			%Set up the task structures needed
-			
-			if isempty(obj.task.findprop('tick'))
-				obj.task.addprop('tick'); %add new dynamic property
-			end
-			obj.task.tick=0;
-			
-			if isempty(obj.task.findprop('blankTick'))
-				obj.task.addprop('blankTick'); %add new dynamic property
-			end
-			obj.task.blankTick=0;
-			
-			if isempty(obj.task.findprop('thisRun'))
-				obj.task.addprop('thisRun'); %add new dynamic property
-			end
-			obj.task.thisRun=1;
-			
-			if isempty(obj.task.findprop('thisTrial'))
-				obj.task.addprop('thisTrial'); %add new dynamic property
-			end
-			obj.task.thisTrial=1;
-			
-			if isempty(obj.task.findprop('totalRuns'))
-				obj.task.addprop('totalRuns'); %add new dynamic property
-			end
-			obj.task.totalRuns=1;
-			
-			if isempty(obj.task.findprop('isBlank'))
-				obj.task.addprop('isBlank'); %add new dynamic property
-			end
-			obj.task.isBlank = false;
-			
-			if isempty(obj.task.findprop('switched'))
-				obj.task.addprop('switched'); %add new dynamic property
-			end
-			obj.task.switched = false;
-			
-			if isempty(obj.task.findprop('strobeThisFrame'))
-				obj.task.addprop('strobeThisFrame'); %add new dynamic property
-			end
-			obj.task.strobeThisFrame = false;
-			
-			if isempty(obj.task.findprop('doUpdate'))
-				obj.task.addprop('doUpdate'); %add new dynamic property
-			end
-			obj.task.doUpdate = false;
-			
-			if isempty(obj.task.findprop('startTime'))
-				obj.task.addprop('startTime'); %add new dynamic property
-			end
-			obj.task.startTime=0;
-			
-			if isempty(obj.task.findprop('switchTime'))
-				obj.task.addprop('switchTime'); %add new dynamic property
-			end
-			obj.task.switchTime=0;
-			
-			if isempty(obj.task.findprop('switchTick'))
-				obj.task.addprop('switchTick'); %add new dynamic property
-			end
-			obj.task.switchTick=0;
-			
-			if isempty(obj.task.findprop('timeNow'))
-				obj.task.addprop('timeNow'); %add new dynamic property
-			end
-			obj.task.timeNow=0;
-			
-			if isempty(obj.task.findprop('stimIsDrifting'))
-				obj.task.addprop('stimIsDrifting'); %add new dynamic property
-			end
-			obj.task.stimIsDrifting=[];
-			
-			if isempty(obj.task.findprop('stimIsMoving'))
-				obj.task.addprop('stimIsMoving'); %add new dynamic property
-			end
-			obj.task.stimIsMoving=[];
-			
-			if isempty(obj.task.findprop('stimIsDots'))
-				obj.task.addprop('stimIsDots'); %add new dynamic property
-			end
-			obj.task.stimIsDots=[];
-			
-			if isempty(obj.task.findprop('stimIsFlashing'))
-				obj.task.addprop('stimIsFlashing'); %add new dynamic property
-			end
-			obj.task.stimIsFlashing=[];
-			
+			obj.updatesList();
+			obj.task.initialiseTask();
 		end
 		
 		% ===================================================================
 		%> @brief updateVars
 		%> Updates the stimulus objects with the current variable set
-		%> @param thisTrial is the current trial
+		%> @param thisBlock is the current trial
 		%> @param thisRun is the current run
 		% ===================================================================
-		function updateVars(obj,thisTrial,thisRun)
+		function updateVars(obj,thisBlock,thisRun)
 			
 			%As we change variables in the blank, we optionally send the
 			%values for the next stimulus
-			if ~exist('thisTrial','var') || ~exist('thisRun','var')
-				thisTrial=obj.task.thisTrial;
+			if ~exist('thisBlock','var') || ~exist('thisRun','var')
+				thisBlock=obj.task.thisBlock;
 				thisRun=obj.task.thisRun;
 			end
 			
-			if thisTrial > obj.task.nBlocks
+			if thisBlock > obj.task.nBlocks
 				return %we've reached the end of the experiment, no need to update anything!
 			end
 			
 			%start looping through out variables
 			for i=1:obj.task.nVars
 				ix = obj.task.nVar(i).stimulus; %which stimulus
-				value=obj.task.outVars{thisTrial,i}(thisRun);
+				value=obj.task.outVars{thisBlock,i}(thisRun);
 				name=[obj.task.nVar(i).name 'Out']; %which parameter
 				offsetix = obj.task.nVar(i).offsetstimulus;
 				offsetvalue = obj.task.nVar(i).offsetvalue;
 				
 				if ~isempty(offsetix)
 					obj.stimulus{offsetix}.(name)=value+offsetvalue;
-					if thisTrial ==1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
+					if thisBlock ==1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
 						obj.stimulus{offsetix}.update;
 					end
 				end
@@ -589,10 +512,10 @@ classdef (Sealed) runExperiment < handle
 					for j = ix %loop through our stimuli references for this variable
 						if obj.verbose==true;tic;end
 						obj.stimulus{j}.(name)=value;
-						if thisTrial == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
+						if thisBlock == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
 							obj.stimulus{j}.update;
 						end
-						if obj.verbose==true;fprintf('->updateVars() trial/run %i/%i: Variable %i set=%g ms\n',thisTrial,thisRun,j,toc*1000);end
+						if obj.verbose==true;fprintf('->updateVars() trial/run %i/%i: Variable %i set=%g ms\n',thisBlock,thisRun,j,toc*1000);end
 					end
 				end
 			end
@@ -658,10 +581,10 @@ classdef (Sealed) runExperiment < handle
 					% critical timingwise
 					if obj.task.doUpdate == true
 						if ~mod(obj.task.thisRun,obj.task.minBlocks) %are we rolling over into a new trial?
-							mT=obj.task.thisTrial+1;
+							mT=obj.task.thisBlock+1;
 							mR = 1;
 						else
-							mT=obj.task.thisTrial;
+							mT=obj.task.thisBlock;
 							mR = obj.task.thisRun + 1;
 						end
 						%obj.uiCommand;
@@ -707,13 +630,13 @@ classdef (Sealed) runExperiment < handle
 				else %we have to show the new run on the next flip
 					
 					%obj.logMe('IntoTrial');
-					if obj.task.thisTrial <= obj.task.nBlocks
+					if obj.task.thisBlock <= obj.task.nBlocks
 						obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
 						obj.task.switchTick=obj.task.switchTick+(obj.task.trialTime*round(obj.screenVals.fps)); %update our timer
 						obj.task.isBlank = false;
 						obj.task.totalRuns = obj.task.totalRuns + 1;
 						if ~mod(obj.task.thisRun,obj.task.minBlocks) %are we rolling over into a new trial?
-							obj.task.thisTrial=obj.task.thisTrial+1;
+							obj.task.thisBlock=obj.task.thisBlock+1;
 							obj.task.thisRun = 1;
 						else
 							obj.task.thisRun = obj.task.thisRun + 1;
@@ -724,7 +647,7 @@ classdef (Sealed) runExperiment < handle
 							
 						end
 					else
-						obj.task.thisTrial = obj.task.nBlocks + 1;
+						obj.task.thisBlock = obj.task.nBlocks + 1;
 					end
 					%obj.logMe('OutaTrial');
 					
@@ -740,16 +663,16 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		function infoText(obj)
 			if obj.logFrames == true && obj.task.tick > 1
-				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
 					(obj.timeLog.vbl(obj.task.tick-1)-obj.timeLog.startTime),obj.task.tick);
 			else
-				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
 					(obj.timeLog.vbl-obj.timeLog.startTime),obj.task.tick);
 			end
 			for i=1:obj.task.nVars
-				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
+				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))];
 			end
 			Screen('DrawText',obj.screen.win,t,50,1,[1 1 1 1],[0 0 0 1]);
 		end
@@ -761,11 +684,11 @@ classdef (Sealed) runExperiment < handle
 		%> @return
 		% ===================================================================
 		function t = infoTextUI(obj)
-			t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisTrial,...
+			t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
 				obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
 				(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
 			for i=1:obj.task.nVars
-				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisTrial,i}(obj.task.thisRun))];
+				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))];
 			end
 		end
 		
@@ -782,9 +705,9 @@ classdef (Sealed) runExperiment < handle
 					in = 'undefined';
 				end
 				if exist('message','var')
-					fprintf(['>>>runExperiment: ' message ' | ' in '\n']);
+					fprintf(['---> runExperiment: ' message ' | ' in '\n']);
 				else
-					fprintf(['>>>runExperiment: ' in '\n']);
+					fprintf(['---> runExperiment: ' in '\n']);
 				end
 			end
 		end
@@ -800,7 +723,7 @@ classdef (Sealed) runExperiment < handle
 				if ~exist('tag','var')
 					tag='#';
 				end
-				fprintf('%s -- T: %i | R: %i [%i] | B: %i | Tick: %i | Time: %5.8g\n',tag,obj.task.thisTrial,obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
+				fprintf('%s -- T: %i | R: %i [%i] | B: %i | Tick: %i | Time: %5.8g\n',tag,obj.task.thisBlock,obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
 			end
 		end
 		
@@ -837,22 +760,22 @@ classdef (Sealed) runExperiment < handle
 	%=======================================================================
 	
 		function lobj=loadobj(in)
-			fprintf('\n>>> Loading runExperiment object...\n');
 			lobj = runExperiment;
 			if isa(in,'runExperiment')
+				fprintf('---> Loading runExperiment object...\n');
 				isObject = true;
 			else
+				fprintf('---> Loading runExperiment structure...\n');
 				isObject = false;
 			end
 			lobj.initialise('notask');
 			lobj = rebuild(lobj, in, isObject);
-			
 			function obj = rebuild(obj,in,inObject)
-				try
-					if inObject == true
+				try %#ok<*TRYNC>
+					if inObject == true || isfield(in,'stimulus')
 						obj.stimulus = in.stimulus;
-					elseif isfield('in','stimulus')
-						obj.stimulus = in.stimulus;
+					else 
+						obj.stimulus = cell(1);
 					end
 					if isa(in.task,'stimulusSequence')
 						obj.task = in.task;
@@ -876,12 +799,19 @@ classdef (Sealed) runExperiment < handle
 				try
 					if ~isa(in.screen,'screenManager') %this is an old object, pre screenManager
 						lobj.screen = screenManager();
+						lobj.screen.backgroundColour = in.backgroundColour;
+						lobj.screen.screenXOffset = in.screenXOffset;
+						lobj.screen.screenYOffset = in.screenYOffset;
+						lobj.screen.antiAlias = in.antiAlias;
 						lobj.screen.srcMode = in.srcMode;
 						lobj.screen.windowed = in.windowed;
 						lobj.screen.dstMode = in.dstMode;
 						lobj.screen.blend = in.blend;
 						lobj.screen.hideFlash = in.hideFlash;
 						lobj.screen.movieSettings = in.movieSettings;
+					else
+						in.screen.verbose = false; %no printout
+						in.screen = []; %force close any old screenManager instance;
 					end
 				end
 				try

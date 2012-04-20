@@ -172,8 +172,8 @@ classdef barStimulus < baseStimulus
 				blpixels = round(obj.barLength*ppd);
 				if rem(bwpixels,2);bwpixels=bwpixels+1;end
 				if rem(blpixels,2);blpixels=blpixels+1;end
-				bwscale = (bwpixels/obj.scale)+1;
-				blscale = (blpixels/obj.scale)+1;
+				bwscale = round(bwpixels/obj.scale)+1;
+				blscale = round(blpixels/obj.scale)+1;
 
 				tmat = ones(blscale,bwscale,4); %allocate the size correctly
 				tmat(:,:,1)=ones(blscale,bwscale)*obj.colour(1);

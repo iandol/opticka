@@ -2,8 +2,6 @@ classdef stimulusSequence < dynamicprops
 	properties
 		%> whether to randomise (true) or run sequentially (false)
 		randomise = true
-		%> number of independant variables
-		nVars = 0
 		%> structure holding each independant variable
 		nVar = []
 		%> number of repeat blocks to present
@@ -16,9 +14,7 @@ classdef stimulusSequence < dynamicprops
 		ibTime = 2
 		%> what do we show in the blank?
 		isStimulus
-		%> verbose or not
-		verbose = true
-		%> do we fillow real time or just number of ticks to get to a known time
+		%> do we follow real time or just number of ticks to get to a known time
 		realTime = true
 		%> random seed value, we can use this to set the RNG to a known state
 		randomSeed
@@ -30,6 +26,8 @@ classdef stimulusSequence < dynamicprops
 		nSegments = 1 
 		%> segment info
 		nSegment
+		%> verbose or not
+		verbose = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -41,18 +39,21 @@ classdef stimulusSequence < dynamicprops
 		outIndex 
 		%> mapping the stimulus to the number as a X Y and Z etc position for display
 		outMap
-		%> old random number stream
-		oldStream
-		%> current random number stream
-		taskStream
 		%> minimum number of blocks
 		minBlocks
-		%> current random stream state
-		currentState
 		%> reserved for future use of multiple random stream states
 		states
 		%> reserved for future use of multiple random stream states
 		nstates = 1
+	end
+	
+	properties (SetAccess = private, GetAccess = public, Transient = true)
+		%> old random number stream
+		oldStream
+		%> current random number stream
+		taskStream
+		%> current random stream state
+		currentState
 	end
 	
 	properties (Dependent = true,  SetAccess = private)
@@ -61,14 +62,31 @@ classdef stimulusSequence < dynamicprops
 		%> estimate of the total number of frames this task will occupy,
 		%> requires accurate fps 
 		nFrames
+		%> number of independant variables
+		nVars = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> handles from obj.showLog
 		h
-		allowedProperties='^(randomise|nVars|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps)$'
+		%> properties allowed during initial construction
+		allowedProperties='^(randomise|nVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps)$'
+		%> used to handle problems with dependant property nVar: the problem is
+		%> that set.nVar gets called before static loadobj, and therefore we need
+		%> to handle this differently. Initially set to empty, set to true when
+		%> running loadobj() and false when not loading object.
 		isLoading = []
-		loadProperties = {'randomise','nVars','nVar','nBlocks','trialTime','isTime','ibTime','isStimulus','verbose',...
+		%> properties used by loadobj when a structure is passed during load.
+		%> this stops loading old randstreams etc.
+		loadProperties = {'randomise','nVar','nBlocks','trialTime','isTime','ibTime','isStimulus','verbose',...
 			'realTime','randomSeed','randomGenerator','nSegments','nSegment'}
+		%> Matlab version number
+		mversion = 0
+		%Set up the task structures needed
+		taskProperties = {'tick',0,'blankTick',0,'thisRun',1,'thisBlock',1,'totalRuns',1,'isBlank',false,...
+				'switched',false,'strobeThisFrame',false,'doUpdate',false,'startTime',0,'switchTime',0,...
+				'switchTick',0,'timeNow',0,'stimIsDrifting',[],'stimIsMoving',[],...
+				'stimIsDots',[],'stimIsFlashing',[]}
 	end
 	
 	methods
@@ -85,6 +103,7 @@ classdef stimulusSequence < dynamicprops
 			if nargin > 0
 				obj.parseArgs(varargin,obj.allowedProperties)
 			end
+			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
 			obj.initialiseRandom();
 			obj.isLoading = false;
 		end
@@ -95,7 +114,7 @@ classdef stimulusSequence < dynamicprops
 		%> set up the random number generator
 		% ===================================================================
 		function initialiseRandom(obj)
-			tic
+			if obj.verbose==true;tic;end
 			if isempty(obj.randomSeed)
 				obj.randomSeed=round(rand*sum(clock));
 			end
@@ -104,7 +123,7 @@ classdef stimulusSequence < dynamicprops
 			end
 			obj.taskStream = RandStream.create(obj.randomGenerator,'Seed',obj.randomSeed);
 			RandStream.setDefaultStream(obj.taskStream);
-			obj.salutation(sprintf('Initialise Randomisation: %g seconds',toc));
+			if obj.verbose==true;obj.salutation(sprintf('Initialise Randomisation: %g milliseconds',toc/1000));end
 		end
 		
 		% ===================================================================
@@ -123,69 +142,85 @@ classdef stimulusSequence < dynamicprops
 		%> Do the randomisation
 		% ===================================================================
 		function randomiseStimuli(obj)
-			if obj.verbose==true;tic;end
-			obj.nVars=length(obj.nVar);
-			
-			obj.currentState=obj.taskStream.State;
-			%obj.states(obj.nstates) = obj.currentState;
-			%obj.nstates = obj.nstates + 1;
-			
-			nLevels = zeros(obj.nVars, 1);
-			for f = 1:obj.nVars
-				nLevels(f) = length(obj.nVar(f).values);
-			end
-			
-			obj.minBlocks = prod(nLevels);
-			if isempty(obj.minBlocks)
-				obj.minBlocks = 1;
-			end
-			if obj.minBlocks > 2046
-				warndlg('WARNING: You are exceeding the number of stimuli the Plexon can identify!')
-			end
+			if obj.nVars > 0 %no need unless we have some variables
+				if obj.verbose==true;tic;end
+				obj.currentState=obj.taskStream.State;
+				%obj.states(obj.nstates) = obj.currentState;
+				%obj.nstates = obj.nstates + 1;
 
-			% initialize cell array that will hold balanced variables
-			obj.outVars = cell(obj.nBlocks, obj.nVars);
-			obj.outValues = [];
-			obj.outIndex = [];
-
-			% the following initializes and runs the main loop in the function, which
-			% generates enough repetitions of each factor, ensuring a balanced design,
-			% and randomizes them
-			offset=0;
-			for i = 1:obj.nBlocks
-				len1 = obj.minBlocks;
-				len2 = 1;
-				if obj.randomise == true
-					[~, index] = sort(rand(obj.minBlocks, 1));
-				else
-					index = (1:obj.minBlocks)';
-				end
-				obj.outIndex = [obj.outIndex; index];
+				nLevels = zeros(obj.nVars, 1);
 				for f = 1:obj.nVars
-					len1 = len1 / nLevels(f);
-					if size(obj.nVar(f).values, 1) ~= 1
-						% ensure that factor levels are arranged in one row
-						obj.nVar(f).values = reshape(obj.nVar(f).values, 1, numel(obj.nVar(1).values));
-					end
-					% this is the critical line: it ensures there are enough repetitions
-					% of the current factor in the correct order
-					obj.outVars{i,f} = repmat(reshape(repmat(obj.nVar(f).values, len1, len2), obj.minBlocks, 1), obj.nVars, 1);
-					obj.outVars{i,f} = obj.outVars{i,f}(index);
-					len2 = len2 * nLevels(f);
-					mn=offset+1;
-					mx=i*obj.minBlocks;
-					obj.outValues(mn:mx,f)=obj.outVars{i,f};
+					nLevels(f) = length(obj.nVar(f).values);
 				end
-				offset=offset+obj.minBlocks;
-			end
-			obj.outMap=zeros(size(obj.outValues));
-			for f = 1:obj.nVars
-				for g = 1:length(obj.nVar(f).values)
-					gidx = obj.outValues(:,f) == obj.nVar(f).values(g);
-					obj.outMap(gidx,f) = g;
+
+				obj.minBlocks = prod(nLevels);
+				if isempty(obj.minBlocks)
+					obj.minBlocks = 1;
+				end
+				if obj.minBlocks > 2046
+					warndlg('WARNING: You are exceeding the number of stimuli the Plexon can identify!')
+				end
+
+				% initialize cell array that will hold balanced variables
+				obj.outVars = cell(obj.nBlocks, obj.nVars);
+				obj.outValues = [];
+				obj.outIndex = [];
+
+				% the following initializes and runs the main loop in the function, which
+				% generates enough repetitions of each factor, ensuring a balanced design,
+				% and randomizes them
+				offset=0;
+				for i = 1:obj.nBlocks
+					len1 = obj.minBlocks;
+					len2 = 1;
+					if obj.randomise == true
+						[~, index] = sort(rand(obj.minBlocks, 1));
+					else
+						index = (1:obj.minBlocks)';
+					end
+					obj.outIndex = [obj.outIndex; index];
+					for f = 1:obj.nVars
+						len1 = len1 / nLevels(f);
+						if size(obj.nVar(f).values, 1) ~= 1
+							% ensure that factor levels are arranged in one row
+							obj.nVar(f).values = reshape(obj.nVar(f).values, 1, numel(obj.nVar(1).values));
+						end
+						% this is the critical line: it ensures there are enough repetitions
+						% of the current factor in the correct order
+						obj.outVars{i,f} = repmat(reshape(repmat(obj.nVar(f).values, len1, len2), obj.minBlocks, 1), obj.nVars, 1);
+						obj.outVars{i,f} = obj.outVars{i,f}(index);
+						len2 = len2 * nLevels(f);
+						mn=offset+1;
+						mx=i*obj.minBlocks;
+						obj.outValues(mn:mx,f)=obj.outVars{i,f};
+					end
+					offset=offset+obj.minBlocks;
+				end
+				obj.outMap=zeros(size(obj.outValues));
+				for f = 1:obj.nVars
+					for g = 1:length(obj.nVar(f).values)
+						gidx = obj.outValues(:,f) == obj.nVar(f).values(g);
+						obj.outMap(gidx,f) = g;
+					end
 				end
 			end
 			if obj.verbose==true;obj.salutation(sprintf('Randomise Stimuli: %g seconds\n',toc));end
+		end
+		
+		% ===================================================================
+		%> @brief Initialise the properties used to track the run
+		%>
+		%> Initialise the properties used to track the run. These are dynamic
+		%> props and are set to be transient so they are not saved.
+		% ===================================================================
+		function initialiseTask(obj)
+			for i = 1:2:length(obj.taskProperties)
+				if isempty(obj.findprop(obj.taskProperties{i}))
+					p=obj.addprop(obj.taskProperties{i}); %add new dynamic property
+					p.Transient = true;
+				end
+				obj.(obj.taskProperties{i})=obj.taskProperties{i+1}; %#ok<*MCNPR>
+			end
 		end
 		
 		% ===================================================================
@@ -209,6 +244,7 @@ classdef stimulusSequence < dynamicprops
 		% ===================================================================
 		function set.nVar(obj,invalue)
 			if isempty(obj.isLoading) %this stops set being called unexpectedly
+				obj.nVar = invalue;
 				return;
 			end
 			varTemplate = struct('name','','stimulus',0,'values',[],'offsetstimulus',[],'offsetvalue',[]);
@@ -217,6 +253,10 @@ classdef stimulusSequence < dynamicprops
 			end
 			if obj.isLoading == true && isstruct(invalue)
 				obj.nVar = invalue;
+				if ~isfield(obj.nVar,'offsetstimulus') || ~isfield(obj.nVar,'offsetvalue') %add to old versions of nVar
+					obj.nVar(1).offsetstimulus = [];
+					obj.nVar(1).offsetvalue = [];
+				end
 				return;
 			end
 			if isempty(obj.nVar) || isempty(invalue)
@@ -234,6 +274,15 @@ classdef stimulusSequence < dynamicprops
 					end
 				end
 			end
+		end
+		
+		% ===================================================================
+		%> @brief Dependent property nRuns get method
+		%>
+		%> Dependent property nruns get method
+		% ===================================================================
+		function nVars = get.nVars(obj)
+			nVars = length(obj.nVar);
 		end
 		
 		% ===================================================================
@@ -265,6 +314,10 @@ classdef stimulusSequence < dynamicprops
 			obj.h = struct();
 			build_gui();
 			data = [obj.outValues obj.outIndex obj.outMap];
+			if isempty(data)
+				data = 'No variables!';
+			end
+			cnames = cell(obj.nVars,1);
 			for ii = 1:obj.nVars
 				cnames{ii} = obj.nVar(ii).name;
 			end
@@ -293,7 +346,18 @@ classdef stimulusSequence < dynamicprops
 					'Parent', obj.h.figure1, ...
 					'Tag', 'uitable1', ...
 					'Units', 'normalized', ...
-					'Position', [0 0 1 1], ...
+					'Position', [0 0 1 0.9], ...
+					'FontName', 'Helvetica', ...
+					'FontSize', 10, ...
+					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
+					'ColumnEditable', [false,false], ...
+					'ColumnFormat', {'char'}, ...
+					'ColumnWidth', {'auto'});
+				obj.h.uitable2 = uitable( ...
+					'Parent', obj.h.figure1, ...
+					'Tag', 'uitable1', ...
+					'Units', 'normalized', ...
+					'Position', [0 0.9 1 0.1], ...
 					'FontName', 'Helvetica', ...
 					'FontSize', 10, ...
 					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
@@ -371,8 +435,8 @@ classdef stimulusSequence < dynamicprops
 		%> and use a conditional in set.nVar to do the right thing.
 		% ===================================================================
 		function lobj=loadobj(in)
-			fprintf('\n>>> Loading stimulusSequence object...\n');
 			if ~isa(in,'stimulusSequence') && isstruct(in)
+				fprintf('---> Loading stimulusSequence structure...\n');
 				lobj = stimulusSequence;
 				lobj.isLoading = true;
 				fni = fieldnames(in);
@@ -381,12 +445,13 @@ classdef stimulusSequence < dynamicprops
 					lobj.(fn{i}) = in.(fn{i});
 				end
 			elseif isa(in,'stimulusSequence')
-				in.currentState = [];
+				fprintf('---> Loading stimulusSequence object...\n');
+				in.currentState = []; %lets strip the old random streams
 				in.oldStream = [];
 				in.taskStream = [];
 				lobj = in;
 			end
-			obj.isLoading = false;
+			lobj.isLoading = false;
 		end
 		
 	end

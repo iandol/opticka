@@ -550,7 +550,7 @@ classdef screenManager < handle
 		% ===================================================================
 		function salutation(obj,in,message)
 			if obj.verbose==true
-				if ~exist('in','var')
+				if ~exist('in','var') || isempty(in)
 					in = 'undefined';
 				end
 				if exist('message','var')
@@ -567,7 +567,7 @@ classdef screenManager < handle
 		% ===================================================================
 		function delete(obj)
 			obj.close();
-			obj.salutation('Delete method','Screen object has been closed...');
+			obj.salutation('DELETE method','Screen object has been closed/reset...');
 		end
 		
 	end

@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.612'
+		version='0.613'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection, via TCP
@@ -416,7 +416,7 @@ classdef (Sealed) opticka < handle
 			obj.r.task.isTime = obj.gd(obj.h.OKisTime);
 			obj.r.task.nBlocks = obj.gd(obj.h.OKnBlocks);
 			obj.r.task.realTime = obj.gv(obj.h.OKrealTime);
-			obj.r.task.initialiseRandom;
+			if isempty(obj.r.task.taskStream); obj.r.task.initialiseRandom; end
 			obj.r.task.randomiseStimuli;
 			
 		end
@@ -672,21 +672,19 @@ classdef (Sealed) opticka < handle
 		% ===================================================================
 		function addVariable(obj)
 			
-			if isempty(obj.r.task.nVars);obj.r.task.nVars=0;end
 			revertN = obj.r.task.nVars;
 			
 			try
-			
-				obj.r.task.nVar(obj.r.task.nVars+1).name = obj.gs(obj.h.OKVariableName);
-				obj.r.task.nVar(obj.r.task.nVars+1).values = obj.gn(obj.h.OKVariableValues);
-				obj.r.task.nVar(obj.r.task.nVars+1).stimulus = obj.gn(obj.h.OKVariableStimuli);
+				obj.r.task.nVar(revertN+1).name = obj.gs(obj.h.OKVariableName);
+				obj.r.task.nVar(revertN+1).values = obj.gn(obj.h.OKVariableValues);
+				obj.r.task.nVar(revertN+1).stimulus = obj.gn(obj.h.OKVariableStimuli);
 				offset = obj.gn(obj.h.OKVariableOffset);
 				if isempty(offset)
-					obj.r.task.nVar(obj.r.task.nVars+1).offsetstimulus = [];
-					obj.r.task.nVar(obj.r.task.nVars+1).offsetvalue = [];
+					obj.r.task.nVar(revertN+1).offsetstimulus = [];
+					obj.r.task.nVar(revertN+1).offsetvalue = [];
 				else
-					obj.r.task.nVar(obj.r.task.nVars+1).offsetstimulus = offset(1);
-					obj.r.task.nVar(obj.r.task.nVars+1).offsetvalue = offset(2);
+					obj.r.task.nVar(revertN+1).offsetstimulus = offset(1);
+					obj.r.task.nVar(revertN+1).offsetvalue = offset(2);
 				end
 				obj.r.task.randomiseStimuli;
 				obj.store.nVars = obj.r.task.nVars;
@@ -694,11 +692,7 @@ classdef (Sealed) opticka < handle
 				obj.refreshVariableList;
 			
 			catch ME
-				
-				obj.r.task.nVars = revertN;
-				obj.r.task.nVars = obj.r.task.nVars(1:revertN);
-				rethrow ME;
-				
+				rethrow(ME);
 			end
 			
 		end
@@ -714,13 +708,10 @@ classdef (Sealed) opticka < handle
 				if isempty(val);val=1;end %sometimes guide disables list, need workaround
 				if val <= length(obj.r.task.nVar);
 					obj.r.task.nVar(val)=[];
-					obj.r.task.nVars = length(obj.r.task.nVar);
 
 					if obj.r.task.nVars > 0
 						obj.r.task.randomiseStimuli;
 					end
-
-					if obj.r.task.nVars<0;obj.r.task.nVars=0;end
 					obj.store.nVars = obj.r.task.nVars;
 				end
 				obj.refreshVariableList;
@@ -760,7 +751,6 @@ classdef (Sealed) opticka < handle
 			if isobject(obj.r.task)
 				val = obj.gv(obj.h.OKVarList);
 				obj.r.task.nVar(end+1)=obj.r.task.nVar(val);
-				obj.r.task.nVars = length(obj.r.task.nVar);
 				obj.store.nVars = obj.r.task.nVars;
 				obj.refreshVariableList;
 			end
@@ -1165,10 +1155,11 @@ classdef (Sealed) opticka < handle
 		function refreshVariableList(obj)
 			pos = get(obj.h.OKVarList, 'Value');
 			str = cell(obj.r.task.nVars,1);
+			V = obj.r.task.nVar;
 			for i=1:obj.r.task.nVars
-				str{i} = [obj.r.task.nVar(i).name ' on Stim: ' num2str(obj.r.task.nVar(i).stimulus) '|' num2str(obj.r.task.nVar(i).values)];
-				if obj.r.task.nVar(i).offsetstimulus > 0
-					str{i} =  [str{i} ' | Stim ' num2str(obj.r.task.nVar(i).offsetstimulus) ' offset:' num2str(obj.r.task.nVar(i).offsetvalue)];
+				str{i} = [V(i).name ' on Stim: ' num2str(V(i).stimulus) '|' num2str(V(i).values)];
+				if isfield(V, 'offsetstimulus') && ~isempty(V(i).offsetstimulus)
+					str{i} =  [str{i} ' | Stim ' num2str(V(i).offsetstimulus) ' offset:' num2str(V(i).offsetvalue)];
 				end
 				str{i}=regexprep(str{i},'\s+',' ');
 			end
