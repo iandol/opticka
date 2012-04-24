@@ -86,8 +86,8 @@ classdef timeLogger < dynamicprops
 			pos=get(gcf,'Position');
 			
 			p(1,1).select();
-			plot(diff(vbl),'ro:')
 			hold on
+			plot(diff(vbl),'ro:')
 			plot(diff(show),'b--')
 			plot(diff(flip),'g-.')
 			hold off
@@ -104,13 +104,25 @@ classdef timeLogger < dynamicprops
 			
 			
 			p(2,1).select();
+			x = 1:length(show);
 			hold on
-			plot(show-vbl,'r')
-			plot(show-flip,'g')
-			plot(vbl-flip,'b')
-			plot(stimTime*2,'k');
+			plot(x,show-vbl,'r')
+			plot(x,show-flip,'g')
+			plot(x,vbl-flip,'b')
+			plot(x,stimTime-0.5,'k')
+			legend('Show-VBL','Show-Flip','VBL-Flip','Simulus ON/OFF');
 			hold off
-			legend('Show-VBL','Show-Flip','VBL-Flip');
+% 			ax1=gca;
+% 			ax2 = axes('Position',get(ax1,'Position'),...
+% 				'XAxisLocation','top',...
+% 				'YAxisLocation','right',...
+% 				'Color','none',...
+% 				'XColor','k','YColor','k');
+% 			hl2 = line(x,stimTime,'Color','k','Parent',ax2);
+% 			set(ax2,'YLim',[-1 2])
+% 			set(ax2,'YTick',[-1 0 1 2])
+% 			set(ax2,'YTickLabel',{'','BLANK','STIMULUS',''})
+% 			linkprop([ax1 ax2],'Position');
 			[m,e]=obj.stderr(show-vbl);
 			t=sprintf('Show-VBL=%2.2f+-%2.2f', m, e);
 			[m,e]=obj.stderr(show-flip);
@@ -140,13 +152,13 @@ classdef timeLogger < dynamicprops
 	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
+		%=======================================================================
 		function [avg,err] = stderr(obj,data)
 			avg=mean(data);
 			err=std(data);
-			err=sqrt(err.^2/length(data)); 
+			err=sqrt(err.^2/length(data));
 		end
-	
+		
 	end
 	
 end
