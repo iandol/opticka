@@ -139,7 +139,7 @@ classdef textureStimulus < baseStimulus
 				obj.doMotion=false;
 			end
 			
-			obj.setRect();
+			setRect(obj);
 			
 		end
 
@@ -148,7 +148,7 @@ classdef textureStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
-			obj.setRect();
+			setRect(obj);
 			obj.tick = 1;
 		end
 		
@@ -166,7 +166,7 @@ classdef textureStimulus < baseStimulus
 		% ===================================================================
 		function animate(obj)
 			if obj.doMotion == 1
-				obj.mvRect=OffsetRect(obj.mvRect,obj.dX,obj.dY);
+				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
 			end
 			obj.tick = obj.tick + 1;
 		end
@@ -209,6 +209,7 @@ classdef textureStimulus < baseStimulus
 				obj.dstRect = OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
 			end
 			obj.mvRect = obj.dstRect;
+			setAnimationDelta(obj);
 		end
 		
 	end

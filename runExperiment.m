@@ -515,7 +515,7 @@ classdef (Sealed) runExperiment < handle
 						if thisBlock == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
 							obj.stimulus{j}.update;
 						end
-						if obj.verbose==true;fprintf('->updateVars() trial/run %i/%i: Variable %i set=%g ms\n',thisBlock,thisRun,j,toc*1000);end
+						if obj.verbose==true;fprintf('->updateVars() trial/run %i/%i: Variable %i %s set=%g ms\n',thisBlock,thisRun,j,name,toc*1000);end
 					end
 				end
 			end

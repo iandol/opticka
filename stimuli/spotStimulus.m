@@ -130,8 +130,8 @@ classdef spotStimulus < baseStimulus
 
 			if isempty(obj.findprop('xTmp'));p=obj.addprop('xTmp');p.Transient = true;end
 			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
-			obj.computePosition;
-			
+			computePosition(obj);
+			setAnimationDelta(obj);
 		end
 		
 		% ===================================================================
@@ -141,7 +141,8 @@ classdef spotStimulus < baseStimulus
 		%> @return 
 		% ===================================================================
 		function update(obj)
-			obj.computePosition;
+			computePosition(obj);
+			setAnimationDelta(obj);
 			if obj.doFlash
 				obj.resetFlash;
 			end
@@ -171,8 +172,8 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function animate(obj)
 			if obj.doMotion == true
-				obj.xTmp = obj.xTmp + obj.dX;
-				obj.yTmp = obj.yTmp + obj.dY;
+				obj.xTmp = obj.xTmp + obj.dX_;
+				obj.yTmp = obj.yTmp + obj.dY_;
 			end
 			if obj.doFlash == true
 				if obj.flashCounter <= obj.flashSwitch

@@ -290,7 +290,7 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function animate(obj)
 			if obj.doMotion == true
-				obj.mvRect=OffsetRect(obj.mvRect,obj.dX,obj.dY);
+				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
 			end
 			if obj.doDrift == true
 				obj.driftPhase = obj.driftPhase + obj.phaseIncrement;
@@ -371,6 +371,7 @@ classdef gratingStimulus < baseStimulus
 				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));
 			end
 			obj.mvRect=obj.dstRect;
+			obj.setAnimationDelta();
 		end
 	
 	end %---END PROTECTED METHODS---%

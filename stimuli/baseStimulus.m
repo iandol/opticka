@@ -56,6 +56,9 @@ classdef baseStimulus < dynamicprops
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+		delta_
+		dX_
+		dY_
 		%> pixels per degree (calculated in runExperiment)
 		ppd = 44
 		%> Inter frame interval (calculated in runExperiment)
@@ -220,7 +223,7 @@ classdef baseStimulus < dynamicprops
 	
 	%=======================================================================
 	methods (Abstract)%------------------ABSTRACT METHODS
-		%=======================================================================
+	%=======================================================================
 		%> initialise the stimulus
 		out = setup(runObject)
 		%> update the stimulus
@@ -235,7 +238,7 @@ classdef baseStimulus < dynamicprops
 	
 	%=======================================================================
 	methods ( Static ) %----------STATIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief degrees2radians
@@ -299,8 +302,22 @@ classdef baseStimulus < dynamicprops
 				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
 			end
 			obj.mvRect=obj.dstRect;
+			obj.setAnimationDelta();
 		end
 		
+		% ===================================================================
+		%> @brief setAnimationDelta
+		%> setAnimationDelta for performance we can't use get methods for dX dY and
+		%> delta during animation, so we have to cache these properties to private copies so that
+		%> when we call the animate method, it uses the cached versions not the
+		%> public versions. This method simply copies the properties to their cached
+		%> equivalents.
+		% ===================================================================
+		function setAnimationDelta(obj)
+			obj.delta_ = obj.delta;
+			obj.dX_ = obj.dX;
+			obj.dY_ = obj.dY;
+		end
 		
 		% ===================================================================
 		%> @brief compute xTmp and yTmp

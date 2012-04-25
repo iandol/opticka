@@ -137,7 +137,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function animate(obj)
 			if obj.doMotion == 1
-				obj.mvRect=OffsetRect(obj.mvRect,obj.dX,obj.dY);
+				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
 			end
 		end
 		
