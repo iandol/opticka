@@ -58,6 +58,8 @@ classdef screenManager < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> do we have a working PTB, if not go into a silent mode
+		isPTB = false
 		%> the handle returned by opening a PTB window
 		win
 		%> the window rectangle
@@ -97,6 +99,18 @@ classdef screenManager < handle
 			if nargin>0
 				obj.parseArgs(varargin);
 			end
+			if strcmpi(computer,'MACI64')
+				obj.isPTB = false;
+				obj.salutation('64bit Matlab not currently supported by PTB!')
+			else
+				try
+					AssertOpenGL
+					obj.isPTB = true;
+				catch %#ok<*CTCH>
+					obj.isPTB = false;
+					obj.salutation('OpenGL support needed by PTB!')
+				end
+			end
 			obj.prepareScreen;
 		end
 		
@@ -107,14 +121,18 @@ classdef screenManager < handle
 		%> @return
 		% ===================================================================
 		function screenVals = prepareScreen(obj)
-			
-			try
-				AssertOpenGL;
-			catch ME
-				errordlg('OpenGL capable graphics is required for Opticka!');
-				error('OpenGL is required for Opticka!');
+			if obj.isPTB == false
+				obj.maxScreen = 0;
+				obj.screen = 0;
+				obj.screenVals.resetGamma = false;
+				obj.screenVals.fps = 60;
+				obj.screenVals.ifi = 1/60;
+				obj.screenVals.width = 0;
+				obj.screenVals.height = 0;
+				obj.makeGrid;
+				screenVals = obj.screenVals;				
+				return
 			end
-			
 			obj.maxScreen=max(Screen('Screens'));
 			
 			%by default choose the (largest number) screen
@@ -168,6 +186,10 @@ classdef screenManager < handle
 		%> @return screenVals basic info on the screen
 		% ===================================================================
 		function screenVals = open(obj,debug,tL)
+			if obj.isPTB == false
+				screenVals = obj.screenVals;
+				return;
+			end
 			if ~exist('debug','var')
 				debug = true;
 			end
@@ -301,11 +323,13 @@ classdef screenManager < handle
 		%> @return
 		% ===================================================================
 		function close(obj)
-			Screen('Close');
-			Screen('CloseAll');
-			obj.win=[];
-			Priority(0);
-			ShowCursor;
+			if obj.isPTB == true
+				Screen('Close');
+				Screen('CloseAll');
+				obj.win=[];
+				Priority(0);
+				ShowCursor;
+			end
 		end
 		
 		% ===================================================================
@@ -404,7 +428,7 @@ classdef screenManager < handle
 		% ===================================================================
 		function playMovie(obj)
 			if obj.movieSettings.record == 1  && obj.movieSettings.type == 2 && exist('implay','file') && ~isempty(obj.movieSettings.movieFile)
-				try
+				try %#ok<TRYNC>
 					mimg = load(obj.movieSettings.movieFile);
 					implay(mimg);
 					clear mimg
@@ -436,7 +460,7 @@ classdef screenManager < handle
 				value = 57.3;
 			end
 			obj.distance = value;
-			obj.makeGrid;
+			obj.makeGrid();
 			%obj.salutation(['set distance: ' num2str(obj.distance) '|ppd: ' num2str(obj.ppd)],'Custom set method')
 		end
 		
@@ -450,7 +474,7 @@ classdef screenManager < handle
 				value = 44;
 			end
 			obj.pixelsPerCm = value;
-			obj.makeGrid;
+			obj.makeGrid();
 			%obj.salutation(['set pixelsPerCm: ' num2str(obj.pixelsPerCm) '|ppd: ' num2str(obj.ppd)],'Custom set method')
 		end
 		
@@ -496,14 +520,14 @@ classdef screenManager < handle
 		
 		% ===================================================================
 		%> @brief Makes a 5x5 1deg dot grid for debug mode
-		%>
+		%> This is always updated on setting distance or pixelsPerCm 
 		% ===================================================================
 		function makeGrid(obj)
 			obj.grid=[];
 			for i=-5:5
 				obj.grid=horzcat(obj.grid,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
 			end
-			obj.grid=obj.grid.*obj.ppd;
+			obj.grid=obj.grid.*obj.ppd; %we use ppd so we can cache ppd_ for elsewhere
 		end
 		
 		% ===================================================================

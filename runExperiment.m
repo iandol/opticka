@@ -102,6 +102,10 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		function run(obj)
 			%initialise timeLog for this run
+			if obj.screen.isPTB == false
+				errordlg('There is no working PTB available!')
+				error('There is no working PTB available!')
+			end
 			obj.timeLog = timeLogger;
 			tL = obj.timeLog;
 			
@@ -297,9 +301,9 @@ classdef (Sealed) runExperiment < handle
 		end
 		
 		% ===================================================================
-		%> @brief prepare the Screen values on the local machine
+		%> @brief prepare the object for the local machine
 		%>
-		%> @param
+		%> @param config allows excluding screen / task initialisation
 		%> @return
 		% ===================================================================
 		function initialise(obj,config)
@@ -328,32 +332,35 @@ classdef (Sealed) runExperiment < handle
 			obj.screen.movieSettings.type = 1;
 			obj.screen.movieSettings.codec = 'rle ';
 			
-			obj.lJack = labJack(struct('name','labJack','openNow',1,'verbosity',1));
-			obj.lJack.prepareStrobe(0,[0,255,255],1);
-			obj.lJack.close;
-			obj.lJack=[];
+% 			obj.lJack = labJack(struct('name','labJack','openNow',1,'verbosity',1));
+% 			obj.lJack.prepareStrobe(0,[0,255,255],1);
+% 			obj.lJack.close;
+% 			obj.lJack=[];
 			
+			%small fix to stop nested cells causing problems
 			if iscell(obj.stimulus) && length(obj.stimulus) > 1
 				while iscell(obj.stimulus) && length(obj.stimulus) == 1
 					obj.stimulus = obj.stimulus{1};
 				end
 			end
 			
-			obj.computer=Screen('computer');
-			obj.ptb=Screen('version');
+			if obj.screen.isPTB == true
+				obj.computer=Screen('computer');
+				obj.ptb=Screen('version');
+			end
 			
 			obj.updatesList;
 			
-			a=zeros(20,1);
-			for i=1:20
-				a(i)=GetSecs;
-			end
-			obj.timeLog.screen.deltaGetSecs=mean(diff(a))*1000; %what overhead does GetSecs have in milliseconds?
-			WaitSecs(0.01); %preload function
+% 			a=zeros(20,1);
+% 			for i=1:20
+% 				a(i)=GetSecs;
+% 			end
+% 			obj.timeLog.screen.deltaGetSecs=mean(diff(a))*1000; %what overhead does GetSecs have in milliseconds?
+% 			WaitSecs(0.01); %preload function
 			
 			obj.screenVals = obj.screen.screenVals;
 			
-			obj.timeLog.screen.prepTime=GetSecs-obj.timeLog.screen.construct;
+			obj.timeLog.screen.prepTime=obj.timeLog.timeFunction()-obj.timeLog.screen.construct;
 			
 		end
 		
@@ -758,7 +765,12 @@ classdef (Sealed) runExperiment < handle
 	%=======================================================================
 	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
-	
+		% ===================================================================
+		%> @brief loadobj
+		%> To be backwards compatible to older saved protocols, we have to parse 
+		%> structures / objects specifically during object load
+		%> @param in input object/structure
+		% ===================================================================
 		function lobj=loadobj(in)
 			lobj = runExperiment;
 			if isa(in,'runExperiment')

@@ -84,8 +84,8 @@ myStim{10}=textureStimulus('speed',2,'xPosition',-6,...
 % a set of blocks. A trial is an individual stimulus presentation. This
 % example has three different variables changing over 3*2*2 values (12 unique trials) which is
 % then repeated over 2 blocks for 24 trials in total
-myTask = stimulusSequence;
-myTask.nBlocks = 2;
+myTask = stimulusSequence; %new stimulusSequence object instance
+myTask.nBlocks = 2; %number of blocks
 myTask.trialTime = 2; %time of stimulus display: 2 seconds
 myTask.isTime = 0.25; %inter trial time: 0.25 seconds
 myTask.ibTime=1; %inter block time: 1 second
@@ -123,7 +123,7 @@ myTask.nVar(3).offsetstimulus = [10];
 myTask.nVar(3).offsetvalue = [1];
 
 %% Randomisation
-% We call the routine to randomise the trials in a block structure
+% We call the method to randomise the trials in a block structure
 myTask.randomiseStimuli();
 
 %% Visual Trial List
@@ -154,7 +154,7 @@ Screen('CloseAll')
 %%
 % run our experiment, to exit early, press the right (OS X) or middle (Win/Linux) mouse
 % button
-rExp.run()
+rExp.run();
 
 %%
 % Note after this is run, because 'verbose' property of runExperient was

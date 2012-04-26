@@ -316,7 +316,7 @@ classdef (Sealed) opticka < handle
 					clear o;
 				end
 				close(obj.h.uihandle);
-				if ismac || ispc
+				if obj.mversion < 7.12 && (ismac || ispc)
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
 				errordlg('Problem initialising Opticka, please check errors on the commandline')
@@ -386,8 +386,8 @@ classdef (Sealed) opticka < handle
 			obj.r.screen.antiAlias = obj.gd(obj.h.OKAntiAliasing);
 			obj.r.screen.photoDiode = logical(obj.gv(obj.h.OKUsePhotoDiode));
 			obj.r.screen.movieSettings.record = logical(obj.gv(obj.h.OKrecordMovie));
-			obj.r.verbose = logical(obj.gv(obj.h.OKVerbose));
-			obj.r.screen.verbose = obj.r.verbose;
+			obj.r.verbose = logical(obj.gv(obj.h.OKVerbose)); %set method
+			obj.verbose = obj.r.verbose;
 			obj.r.screen.debug = logical(obj.gv(obj.h.OKDebug));
 			obj.r.screen.visualDebug = logical(obj.gv(obj.h.OKDebug));
 			obj.r.screen.backgroundColour = obj.gn(obj.h.OKbackgroundColour);

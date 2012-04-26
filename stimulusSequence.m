@@ -67,6 +67,8 @@ classdef stimulusSequence < dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> cache value for nVars
+		nVars_
 		%> handles from obj.showLog
 		h
 		%> properties allowed during initial construction
@@ -119,10 +121,18 @@ classdef stimulusSequence < dynamicprops
 				obj.randomSeed=round(rand*sum(clock));
 			end
 			if isempty(obj.oldStream)
-				obj.oldStream = RandStream.getDefaultStream;
+				if obj.mversion > 7.11
+					obj.oldStream = RandStream.getGlobalStream;
+				else
+					obj.oldStream = RandStream.getDefaultStream;
+				end
 			end
 			obj.taskStream = RandStream.create(obj.randomGenerator,'Seed',obj.randomSeed);
-			RandStream.setDefaultStream(obj.taskStream);
+			if obj.mversion > 7.11
+				RandStream.setGlobalStream(obj.taskStream);
+			else
+				RandStream.setDefaultStream(obj.taskStream);
+			end
 			if obj.verbose==true;obj.salutation(sprintf('Initialise Randomisation: %g milliseconds',toc/1000));end
 		end
 		
@@ -133,7 +143,11 @@ classdef stimulusSequence < dynamicprops
 		% ===================================================================
 		function resetRandom(obj)
 			obj.randomSeed=[];
-			RandStream.setDefaultStream(obj.oldStream);
+			if obj.mversion > 7.11
+				RandStream.setDefaultStream(obj.oldStream);
+			else
+				RandStream.setDefaultStream(obj.oldStream);
+			end
 		end
 		
 		% ===================================================================
@@ -162,7 +176,7 @@ classdef stimulusSequence < dynamicprops
 				end
 
 				% initialize cell array that will hold balanced variables
-				obj.outVars = cell(obj.nBlocks, obj.nVars);
+				obj.outVars = cell(obj.nBlocks, obj.nVars_);
 				obj.outValues = [];
 				obj.outIndex = [];
 
@@ -187,7 +201,7 @@ classdef stimulusSequence < dynamicprops
 						end
 						% this is the critical line: it ensures there are enough repetitions
 						% of the current factor in the correct order
-						obj.outVars{i,f} = repmat(reshape(repmat(obj.nVar(f).values, len1, len2), obj.minBlocks, 1), obj.nVars, 1);
+						obj.outVars{i,f} = repmat(reshape(repmat(obj.nVar(f).values, len1, len2), obj.minBlocks, 1), obj.nVars_, 1);
 						obj.outVars{i,f} = obj.outVars{i,f}(index);
 						len2 = len2 * nLevels(f);
 						mn=offset+1;
@@ -197,14 +211,14 @@ classdef stimulusSequence < dynamicprops
 					offset=offset+obj.minBlocks;
 				end
 				obj.outMap=zeros(size(obj.outValues));
-				for f = 1:obj.nVars
+				for f = 1:obj.nVars_
 					for g = 1:length(obj.nVar(f).values)
 						gidx = obj.outValues(:,f) == obj.nVar(f).values(g);
 						obj.outMap(gidx,f) = g;
 					end
 				end
+				if obj.verbose==true;obj.salutation(sprintf('Randomise Stimuli: %g seconds\n',toc));end
 			end
-			if obj.verbose==true;obj.salutation(sprintf('Randomise Stimuli: %g seconds\n',toc));end
 		end
 		
 		% ===================================================================
@@ -282,7 +296,11 @@ classdef stimulusSequence < dynamicprops
 		%> Dependent property nruns get method
 		% ===================================================================
 		function nVars = get.nVars(obj)
-			nVars = length(obj.nVar);
+			nVars = 0;
+			if length(obj.nVar) > 0 && ~isempty(obj.nVar(1).name) %#ok<ISMT>
+				nVars = length(obj.nVar);
+			end
+			obj.nVars_ = nVars;
 		end
 		
 		% ===================================================================

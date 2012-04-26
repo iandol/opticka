@@ -29,6 +29,9 @@ classdef timeLogger < dynamicprops
 		%> @return
 		% ===================================================================
 		function obj=timeLogger
+			if ~exist('GetSecs','file')
+				obj.timeFunction = @now;
+			end
 			obj.screen.construct = obj.timeFunction();
 			obj.date = clock;
 		end
