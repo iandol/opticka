@@ -137,8 +137,13 @@ myTask.showLog();
 % blending etc. hideFlash uses a trick from Mario to set the CLUT to the
 % task background colour so you don't see the black flash on PTB screen
 % initialisation.
-myScreen = screenManager('distance', 57.3, 'pixelsPerCm', 44, 'blend', true,...
-	'windowed', 0, 'antiAlias', 0, 'bitDepth', '8bit', 'hideFlash', true);
+myScreen = screenManager('distance', 57.3,...
+	'pixelsPerCm', 44,...
+	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
+	'windowed', 0,...
+	'antiAlias', 8,... %can be set to 4 or 8x oversampling with no dropped frames on OS X ATI 5870
+	'bitDepth', 'FloatingPoint32bit',... %try 8bit, FloatingPoint16bit FloatingPoint32bit
+	'hideFlash', true); %mario's gamma trick
 
 %% Setup runExperiment Object
 % We now pass our stimulus screen and sequence objects to the

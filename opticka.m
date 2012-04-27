@@ -1127,7 +1127,8 @@ classdef (Sealed) opticka < handle
 						y=s.yPosition;
 						sz=s.size;
 						c=s.contrast;
-						str{i} = ['Spot ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c)];
+						a=s.angle;
+						str{i} = ['Spot ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' ang=' num2str(a)];
 					case 'texture'
 						x=s.xPosition;
 						y=s.yPosition;

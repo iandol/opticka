@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 22-Sep-2011 11:37:06
+% Last Modified by GUIDE v2.5 27-Apr-2012 10:51:03
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;

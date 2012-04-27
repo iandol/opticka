@@ -124,7 +124,7 @@ classdef spotStimulus < baseStimulus
 			
 			if strcmp(obj.type,'flash')
 				obj.doFlash = true;
-				bg = [sM.backgroundColour(1:3) obj.alpha];
+				bg = [sM.backgroundColour(1:3) 0]; %make sure alpha is 0
 				obj.setupFlash(bg);
 			end
 
