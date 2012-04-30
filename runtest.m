@@ -13,13 +13,17 @@
 % opticka in the command window), which is a visual manager of the objects
 % introduced here. The UI also controls other functions such as
 % calibration, protocol loading/saving and communication with
-% neurophysiological equipment via LabJack and ethernet.
+% neurophysiological equipment via LabJack and ethernet. There is also an
+% independent receptive field mapper (rfMapper) that uses mouse control to probe
+% receptive fields and generate drawn hand maps.
+%
 % The source of this file can be found at:
 % <http://bazaar.launchpad.net/~iandol/opticka/master/view/head:/runtest.m>
 
 %% Initial clear up of previous runs
 % Make sure we start in a clean environment, not essential
 clear myStim myTask myScreen rExp
+sca
 
 %% Stimulus Initialisation
 % These set up the 10 different stimuli. Please note that values are in
@@ -36,7 +40,7 @@ myStim{1}=gratingStimulus('sf',1,'contrast',0.5,'size',1,'tf',0,'angle',30,...
 	'gabor', 0, 'mask', 1);
 
 myStim{2}=gratingStimulus('sf',3,'contrast',0.5,'tf',1,'size',3,'xPosition',-3,...
-	'yPosition',-3,'gabor',1,'mask',0);
+	'yPosition',-4,'gabor',1,'mask',0);
 
 myStim{3}=gratingStimulus('sf',1,'contrast',0.5,'size',3,'angle',45,'xPosition',-2,...
 	'yPosition',2,'gabor',0,'mask',1,'speed',2);
@@ -51,9 +55,10 @@ myStim{6}=gratingStimulus('sf',1,'contrast',0.5,'colour',[0.4 0.4 0.6],'tf',1,..
 	'driftDirection',-1,'size',2,'xPosition',4,'yPosition',-4,'gabor',0,'mask',1);
 
 %%
-% A simple bar: bars can be solid in colour or have random texture. This
-% is an opaque solid yellow bar moving at 4deg/s. Notice the startPosition
-% is -4; this means start -4 degrees "behind" start X and Y position, as
+% A simple bar: bars can be solid in colour or have random texture 
+% (try setting 'type' to 'random'). This is an opaque solid yellow bar 
+% moving at 4deg/s. Notice the startPosition is -4; 
+% this means start -4 degrees "behind" start X and Y position, as
 % the stimulus is displayed for 2 seconds the bar therefore traverses
 % 4degrees behind then 4 degrees past the X and Y position. Also note as we
 % will change the angle of this stimulus the geometry is calculated for you
@@ -140,9 +145,9 @@ myTask.showLog();
 myScreen = screenManager('distance', 57.3,...
 	'pixelsPerCm', 44,...
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
-	'windowed', 0,...
-	'antiAlias', 8,... %can be set to 4 or 8x oversampling with no dropped frames on OS X ATI 5870
-	'bitDepth', 'FloatingPoint32bit',... %try 8bit, FloatingPoint16bit FloatingPoint32bit
+	'windowed', 0,... %set to a widthxheight for debugging i.e. [800 600]; set to 0 for fullscreen
+	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on OS X ATI 5870
+	'bitDepth', '8bit',... %try 8bit, FloatingPoint16bit FloatingPoint32bit
 	'hideFlash', true); %mario's gamma trick
 
 %% Setup runExperiment Object
@@ -151,10 +156,6 @@ myScreen = screenManager('distance', 57.3,...
 % runs the task.
 rExp = runExperiment('stimulus', myStim, 'task', myTask, 'screen', myScreen,...
 	'debug', false, 'verbose', true);
-
-%%
-% previous screens should have closed automatically, but just in case!
-Screen('CloseAll')
 
 %%
 % run our experiment, to exit early, press the right (OS X) or middle (Win/Linux) mouse

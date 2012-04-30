@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 27-Apr-2012 10:51:03
+% Last Modified by GUIDE v2.5 30-Apr-2012 17:00:51
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -838,8 +838,8 @@ if isappdata(handles.output,'o')
 		set(handles.OKStimulusUp,'Enable','on');
 		set(handles.OKStimulusDown,'Enable','on');
 		set(handles.OKStimulusRun,'Enable','on');
+		set(handles.OKStimulusRunBenchmark,'Enable','on');
 	end
-		
 end
 
 % --- Executes on button press in OKDeleteStimulus.
@@ -856,6 +856,7 @@ if isappdata(handles.output,'o')
 		set(handles.OKStimulusUp,'Enable','off');
 		set(handles.OKStimulusDown,'Enable','off');
 		set(handles.OKStimulusRun,'Enable','off');
+		set(handles.OKStimulusRunBenchmark,'Enable','off');
 	end
 end
 
@@ -922,6 +923,19 @@ if isappdata(handles.output,'o')
 	v = get(handles.OKStimList,'Value');
 	if v > 0 && isobject(o.r.stimulus{v})
 		o.r.stimulus{v}.run();
+	end
+end
+
+% --- Executes on button press in OKStimulusRunBenchmark.
+function OKStimulusRunBenchmark_Callback(hObject, eventdata, handles)
+% hObject    handle to OKStimulusRunBenchmark (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	v = get(handles.OKStimList,'Value');
+	if v > 0 && isobject(o.r.stimulus{v})
+		o.r.stimulus{v}.run(true);
 	end
 end
 
@@ -1279,8 +1293,6 @@ if isappdata(handles.output,'o')
 	   set(handles.OKPanelTexturefileName, 'String', fullfile(pathname, filename));
 	end
 end
-
-
 
 function OKverbosityLevel_Callback(hObject, eventdata, handles)
 % hObject    handle to OKverbosityLevel (see GCBO)

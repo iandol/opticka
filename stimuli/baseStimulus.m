@@ -18,13 +18,13 @@ classdef baseStimulus < dynamicprops
 		%> Size in degrees
 		size = 2
 		%> Colour as a 0-1 range RGBA
-		colour = [0.5 0.5 0.5]
+		colour = [0.5 0.5 0.5 1]
 		%> Alpha as a 0-1 range
 		alpha = 1
 		%> Do we print details to the commandline?
-		verbose=false
+		verbose = false
 		%> For moving stimuli do we start "before" our initial position?
-		startPosition=0
+		startPosition = 0
 		%> speed in degs/s
 		speed = 0
 		%> angle in degrees
@@ -42,7 +42,7 @@ classdef baseStimulus < dynamicprops
 		isVisible = true
 		%> datestamp to initialise on setup
 		dateStamp
-		%> tick updates on each draw, resets on each update
+		%> tick updates +1 on each draw, resets on each update
 		tick = 1
 	end
 	
@@ -56,8 +56,11 @@ classdef baseStimulus < dynamicprops
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+		%> delta cache
 		delta_
+		%> dX cache
 		dX_
+		%> dY cache
 		dY_
 		%> pixels per degree (calculated in runExperiment)
 		ppd = 44
@@ -108,12 +111,15 @@ classdef baseStimulus < dynamicprops
 		%>
 		% ===================================================================
 		function value = get.colour(obj)
-			if length(obj.colour) == 1
-				value = [obj.colour obj.colour obj.colour];
-			elseif length(obj.colour) == 3
+			len=length(obj.colour);
+			if len == 4
+				value = obj.colour;
+			elseif len == 3
 				value = [obj.colour obj.alpha];
+			elseif len == 1
+				value = [obj.colour obj.colour obj.colour obj.alpha];
 			else
-				value = [obj.colour];
+				value = [1 1 1 obj.alpha];				
 			end
 		end
 		
@@ -191,8 +197,11 @@ classdef baseStimulus < dynamicprops
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
-		function run(obj)
-			s = screenManager('screen',0,'bitDepth','8bit','debug',true); %use a temporary screenManager object
+		function run(obj,benchmark)
+			if ~exist('benchmark','var')
+				benchmark=false;
+			end
+			s = screenManager('blend',true,'screen',0,'bitDepth','8bit','debug',false); %use a temporary screenManager object
 			s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
 			s.open(); %open PTB screen
 			obj.setup(s); %setup our stimulus object
@@ -201,20 +210,29 @@ classdef baseStimulus < dynamicprops
 			s.drawFixationPoint(); %centre spot
 			Screen('Flip',s.win);
 			WaitSecs(1);
+			if benchmark; b=GetSecs; end
 			for i = 1:(s.screenVals.fps*2) %should be 2 seconds worth of flips
 				obj.draw(); %draw stimulus
 				s.drawGrid(); %draw +-5 degree dot grid
 				s.drawFixationPoint(); %centre spot
 				Screen('DrawingFinished', s.win); %tell PTB to draw
 				obj.animate(); %animate stimulus, will be seen on next draw
-				Screen('Flip',s.win); %flip the buffer ASAP, timing is unimportant
+				if benchmark
+					Screen('Flip',s.win,0,2,2);
+				else
+					Screen('Flip',s.win); %flip the buffer
+				end
 			end
+			if benchmark; bb=GetSecs; end
 			WaitSecs(1);
-			s.drawGrid(); %draw +-5 degree dot grid
 			Screen('Flip',s.win);
 			WaitSecs(0.25);
+			if benchmark
+				fps = (s.screenVals.fps*2) / (bb-b);
+				fprintf('\n------> SPEED = %g fps\n', fps);
+			end
 			s.close(); %close screen
-			clear s; %clear it
+			clear s fps benchmark; %clear it
 			obj.reset(); %reset our stimulus ready for use again
 		end
 		

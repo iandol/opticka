@@ -21,7 +21,7 @@ classdef (Sealed) opticka < handle
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.613'
+		version='0.614'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection, via TCP
@@ -568,12 +568,13 @@ classdef (Sealed) opticka < handle
 			tmp.angle = obj.gd(obj.h.OKPanelDotsangle);
 			tmp.coherence = obj.gd(obj.h.OKPanelDotscoherence);
 			tmp.kill = obj.gd(obj.h.OKPanelDotskill);
-			tmp.nDots = obj.gd(obj.h.OKPanelDotsnDots);
+			tmp.density = obj.gd(obj.h.OKPanelDotsnDots);
 			tmp.dotSize = obj.gd(obj.h.OKPanelDotsdotSize);
 			tmp.speed = obj.gd(obj.h.OKPanelDotsspeed);
 			tmp.colour = obj.gn(obj.h.OKPanelDotscolour);
 			tmp.alpha = obj.gd(obj.h.OKPanelDotsalpha);
 			tmp.maskColour = obj.gn(obj.h.OKPanelDotsmaskColour);
+			tmp.maskSmoothing = obj.gn(obj.h.OKPanelDotsmaskSmoothing);
 			tmp.mask = logical(obj.gv(obj.h.OKPanelDotsmask));
 			tmp.dotType = obj.gv(obj.h.OKPanelDotsdotType)-1;
 			v = obj.gv(obj.h.OKPanelDotscolourType);
@@ -1359,7 +1360,7 @@ classdef (Sealed) opticka < handle
 		end
 		
 		function lobj=loadobj(in)
-			fprintf('\n>>> Loading opticka object...\n');
+			fprintf('\n---> Loading opticka object...\n');
 			lobj = in;
 		end
 	end

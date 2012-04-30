@@ -5,17 +5,24 @@ classdef dotsStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		family = 'dots'
 		type = 'simple'
-		density = 35;
-		nDots = 1000 % number of dots
+		density = 100
 		colourType = 'randomBW'
 		dotSize  = 0.05  % width of dot (deg)
 		coherence = 0.5
 		kill      = 0 % fraction of dots to kill each frame  (limited lifetime)
 		dotType = 1
 		mask = true
-		maskColour = [0.5 0.5 0.5 0]
+		maskColour = []
+		%> smooth the alpha edge of the mask by this number of pixels, 0 is
+		%> off
+		maskSmoothing = 5
 		msrcMode = 'GL_SRC_ALPHA'
 		mdstMode = 'GL_ONE_MINUS_SRC_ALPHA'
+	end
+	
+	properties (Dependent = true, SetAccess = private, GetAccess = public)
+		%> number of dots
+		nDots
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -27,13 +34,13 @@ classdef dotsStimulus < baseStimulus
 		colours
 	end
 	properties (SetAccess = private, GetAccess = private)
+		nDots_
 		fieldScale = 1.1
 		fieldSize
 		maskTexture
 		maskRect
 		srcMode = 'GL_ONE'
 		dstMode = 'GL_ZERO'
-		antiAlias = 0
 		rDots
 		nDotsMax = 5000
 		angles
@@ -41,7 +48,9 @@ classdef dotsStimulus < baseStimulus
 		fps = 60
 		dxs
 		dys
-		allowedProperties='^(msrcMode|mdstMode|type|nDots|dotSize|colourType|coherence|dotType|kill|mask)$';
+		kernel = []
+		shader = 0
+		allowedProperties='msrcMode|mdstMode|type|density|nDots|dotSize|colourType|coherence|dotType|kill|mask|maskSmoothing|maskColour';
 		ignoreProperties='xy|dxdy|colours|mask|maskTexture|maskColour|colourType|msrcMode|mdstMode'
 	end
 	
@@ -81,6 +90,17 @@ classdef dotsStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return
 		% ===================================================================
+		function value = get.nDots(obj)
+			obj.nDots_ = obj.density * obj.size^2;
+			value = obj.nDots_;
+		end
+		
+		% ===================================================================
+		%> @brief Setup an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return
+		% ===================================================================
 		function setup(obj,rE)
 			
 			obj.dateStamp = clock;
@@ -105,6 +125,7 @@ classdef dotsStimulus < baseStimulus
 					if strcmp(fn{j},'dotSize');p.SetMethod = @set_dotSizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
+					if strcmp(fn{j},'density');p.SetMethod = @set_densityOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
@@ -127,13 +148,25 @@ classdef dotsStimulus < baseStimulus
 			obj.yTmp = obj.yPositionOut;
 			
 			%build the mask
-			wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
-			mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
-			mrect = CenterRect(mrect,wrect);
-			bg = [obj.backgroundColour(1:3) 1];
-			obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, bg, wrect);
-			Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
-			obj.maskRect = CenterRectOnPointd(wrect,obj.xPositionOut,obj.yPositionOut);
+			if obj.mask == true
+				if isempty(obj.maskColour)
+					obj.maskColour = obj.backgroundColour;
+				end
+				wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
+				mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
+				mrect = CenterRect(mrect,wrect);
+				bg = [obj.backgroundColour(1:3) 1];
+				obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, bg, wrect);
+				Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
+				obj.maskRect = CenterRectOnPointd(wrect,obj.xPositionOut,obj.yPositionOut);
+				if obj.maskSmoothing > 0
+					obj.kernel = fspecial('gaussian',obj.maskSmoothing, 5);
+					obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 1, 2);
+				else
+					obj.kernel = [];
+					obj.shader = 0;
+				end
+			end
 			
 			%make our dot colours
 			switch obj.colourType
@@ -170,30 +203,6 @@ classdef dotsStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Update the dots based on current variable settings
-		%>
-		% ===================================================================
-		function updateDots(obj)
-			%sort out our angles and percent incoherent
-			obj.angles = ones(obj.nDots,1) .* obj.angleOut;
-			obj.rDots=obj.nDots-floor(obj.nDots*(obj.coherenceOut));
-			if obj.rDots>0
-				obj.angles(1:obj.rDots) = obj.r2d((2*pi).*rand(1,obj.rDots));
-				%obj.angles=flipud(obj.angles);
-				obj.angles = Shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
-			end
-			%calculate positions and vector offsets
-			obj.xy = obj.sizeOut .* rand(2,obj.nDots);
-			obj.xy = obj.xy - obj.sizeOut/2; %so we are centered for -xy to +xy
-			[obj.dxs, obj.dys] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
-			obj.dxdy=[obj.dxs';obj.dys'];
-			if obj.mask == true
-				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xPositionOut,obj.yPositionOut);
-			end
-			obj.tick = 1;
-		end
-		
-		% ===================================================================
 		%> @brief Update an structure for runExperiment
 		%>
 		%> @param rE runExperiment object for reference
@@ -215,7 +224,7 @@ classdef dotsStimulus < baseStimulus
 					Screen('BlendFunction', obj.win, obj.msrcMode, obj.mdstMode);
 					Screen('DrawDots', obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
 						[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
-					Screen('DrawTexture', obj.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], 0);
+					Screen('DrawTexture', obj.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
 					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
 				else
 					Screen('DrawDots',obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
@@ -264,6 +273,17 @@ classdef dotsStimulus < baseStimulus
 		end
 		
 		% ===================================================================
+		%> @brief density set method
+		%>
+		%> We need to update nDots if density is changed but don't want it
+		%> dependent yet 
+		% ===================================================================
+		function set.density(obj,value)
+			obj.density = value;
+			obj.nDots = value * obj.size^2; %#ok<*MCSUP>
+		end
+		
+		% ===================================================================
 		%> @brief Test method to play with dot generation
 		%>
 		%> @param rE runExperiment object for reference
@@ -272,6 +292,7 @@ classdef dotsStimulus < baseStimulus
 		function runTest(obj)
 			
 			try
+				antiAlias = 0;
 				obj.xCenter=0;
 				obj.yCenter=0;
 				obj.backgroundColour = [0.5 0.5 0.5];
@@ -282,7 +303,7 @@ classdef dotsStimulus < baseStimulus
 				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
-				[obj.win, rect]=PsychImaging('OpenWindow', 0, obj.backgroundColour, [1 1 801 601], [], 2,[],obj.antiAlias);
+				[obj.win, rect]=PsychImaging('OpenWindow', 0, obj.backgroundColour, [1 1 801 601], [], 2,[],antiAlias);
 				[center(1), center(2)] = RectCenter(rect);
 				
 				obj.setup;
@@ -293,20 +314,30 @@ classdef dotsStimulus < baseStimulus
 					obj.fps=1/obj.ifi;
 				end;
 				
-				wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
-				%wrect = CenterRectOnPointd(wrect,center(1),center(2));
-				orect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
-				orect = CenterRect(orect,wrect);
-					obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, [obj.backgroundColour(1:3) 1], wrect);
-				Screen('FillOval', obj.maskTexture, [obj.backgroundColour(1:3) 0], orect);
-				outrect = CenterRectOnPointd(wrect,center(1),center(2));
+				%build the mask
+				if obj.mask == true
+					wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
+					mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
+					mrect = CenterRect(mrect,wrect);
+					bg = [obj.backgroundColour(1:3) 1];
+					obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, bg, wrect);
+					Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
+					obj.maskRect = CenterRectOnPointd(wrect,center(1),center(2));
+					if obj.maskSmoothing > 0
+						obj.kernel = fspecial('disk',obj.maskSmoothing);
+						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 1, 2);
+					else
+						obj.kernel = [];
+						obj.shader = 0;
+					end
+				end
 				
 				vbl=Screen('Flip', obj.win);
 				while 1
 					if obj.mask==true
 						Screen('BlendFunction', obj.win, obj.msrcMode, obj.mdstMode);
 						Screen('DrawDots', obj.win, obj.xy, obj.dSize, obj.colours, center, obj.dotType);
-						Screen('DrawTexture', obj.win, obj.maskTexture, [], outrect, [], [], [], [], 0);
+						Screen('DrawTexture', obj.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
 						Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
 					else
 						Screen('DrawDots', obj.win, obj.xy, obj.dSize, obj.colours, center, obj.dotType);
@@ -345,6 +376,30 @@ classdef dotsStimulus < baseStimulus
 	%=======================================================================
 		
 		% ===================================================================
+		%> @brief Update the dots based on current variable settings
+		%>
+		% ===================================================================
+		function updateDots(obj)
+			%sort out our angles and percent incoherent
+			obj.angles = ones(obj.nDots,1) .* obj.angleOut;
+			obj.rDots=obj.nDots-floor(obj.nDots*(obj.coherenceOut));
+			if obj.rDots>0
+				obj.angles(1:obj.rDots) = obj.r2d((2*pi).*rand(1,obj.rDots));
+				%obj.angles=flipud(obj.angles);
+				obj.angles = Shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
+			end
+			%calculate positions and vector offsets
+			obj.xy = obj.sizeOut .* rand(2,obj.nDots);
+			obj.xy = obj.xy - obj.sizeOut/2; %so we are centered for -xy to +xy
+			[obj.dxs, obj.dys] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
+			obj.dxdy=[obj.dxs';obj.dys'];
+			if obj.mask == true
+				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xPositionOut,obj.yPositionOut);
+			end
+			obj.tick = 1;
+		end
+		
+		% ===================================================================
 		%> @brief sizeOut Set method
 		%>
 		% ===================================================================
@@ -363,6 +418,15 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function set_dotSizeOut(obj,value)
 			obj.dotSizeOut = value * obj.ppd;
+		end
+		
+		% ===================================================================
+		%> @brief density Set method
+		%>
+		% ===================================================================
+		function set_densityOut(obj,value)
+			obj.density = value;
+			obj.nDots = value * obj.size^2;
 		end
 		
 		% ===================================================================
