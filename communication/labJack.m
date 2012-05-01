@@ -136,13 +136,26 @@ classdef labJack < handle
 				obj.version =  calllib('liblabjackusb','LJUSB_GetLibraryVersion');
 				obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',obj.deviceID);
 				if obj.devCount == 0
-					obj.salutation('open method','No LabJack devices found, going into silent mode');
-					obj.isOpen = false;
-					obj.handle = [];
-					obj.vHandle = false;
-					obj.verbose = false;
-					obj.silentMode = true; %we switch into silent mode just in case someone tries to use the object
-					return
+					if obj.deviceID == 3 %lets try a U6
+						obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',6);
+						if obj.devCount > 0
+							obj.deviceID = 6;
+						end
+					elseif obj.deviceID == 6 %lets try a U3
+						obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',3);
+						if obj.devCount > 0
+							obj.deviceID = 3;
+						end
+					end
+					if obj.devCount == 0
+						obj.salutation('open method','No LabJack devices found, going into silent mode');
+						obj.isOpen = false;
+						obj.handle = [];
+						obj.vHandle = false;
+						obj.verbose = false;
+						obj.silentMode = true; %we switch into silent mode just in case someone tries to use the object
+						return
+					end
 				end
 				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',1,0,obj.deviceID);
 				obj.validHandle;

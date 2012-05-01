@@ -1040,6 +1040,7 @@ classdef (Sealed) opticka < handle
 					set(obj.h.OKStimulusUp,'Enable','on');
 					set(obj.h.OKStimulusDown,'Enable','on');
 					set(obj.h.OKStimulusRun,'Enable','on');
+					set(obj.h.OKStimulusRunBenchmark,'Enable','on');
 				end
 				
 			end

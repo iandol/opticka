@@ -90,17 +90,6 @@ classdef dotsStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return
 		% ===================================================================
-		function value = get.nDots(obj)
-			obj.nDots_ = obj.density * obj.size^2;
-			value = obj.nDots_;
-		end
-		
-		% ===================================================================
-		%> @brief Setup an structure for runExperiment
-		%>
-		%> @param rE runExperiment object for reference
-		%> @return
-		% ===================================================================
 		function setup(obj,rE)
 			
 			obj.dateStamp = clock;
@@ -160,8 +149,17 @@ classdef dotsStimulus < baseStimulus
 				Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
 				obj.maskRect = CenterRectOnPointd(wrect,obj.xPositionOut,obj.yPositionOut);
 				if obj.maskSmoothing > 0
-					obj.kernel = fspecial('gaussian',obj.maskSmoothing, 5);
-					obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 1, 2);
+					if exist('fspecial','file')
+						obj.kernel = fspecial('gaussian',obj.maskSmoothing, 5);
+						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
+					else
+						p = mfilename('fullpath');
+						p = fileparts(p);
+						ktmp = load([p filesep 'gaussian52kernel.mat']); %'gaussian73kernel.mat''disk5kernel.mat'
+						obj.kernel = ktmp.kernel;
+						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
+						obj.salutation('No fspecial, had to use precompiled kernel');
+					end
 				else
 					obj.kernel = [];
 					obj.shader = 0;
@@ -280,7 +278,18 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function set.density(obj,value)
 			obj.density = value;
-			obj.nDots = value * obj.size^2; %#ok<*MCSUP>
+			obj.nDots;
+		end
+		
+		% ===================================================================
+		%> @brief Setup an structure for runExperiment
+		%>
+		%> @param rE runExperiment object for reference
+		%> @return
+		% ===================================================================
+		function value = get.nDots(obj)
+			obj.nDots_ = obj.density * obj.size^2;
+			value = obj.nDots_;
 		end
 		
 		% ===================================================================
@@ -290,7 +299,6 @@ classdef dotsStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function runTest(obj)
-			
 			try
 				antiAlias = 0;
 				obj.xCenter=0;
@@ -305,15 +313,12 @@ classdef dotsStimulus < baseStimulus
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 				[obj.win, rect]=PsychImaging('OpenWindow', 0, obj.backgroundColour, [1 1 801 601], [], 2,[],antiAlias);
 				[center(1), center(2)] = RectCenter(rect);
-				
-				obj.setup;
-				
+				obj.setup();
 				obj.fps=Screen('FrameRate',obj.win);      % frames per second
 				obj.ifi=Screen('GetFlipInterval', obj.win);
 				if obj.fps==0
 					obj.fps=1/obj.ifi;
 				end;
-				
 				%build the mask
 				if obj.mask == true
 					wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
@@ -323,7 +328,7 @@ classdef dotsStimulus < baseStimulus
 					obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, bg, wrect);
 					Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
 					obj.maskRect = CenterRectOnPointd(wrect,center(1),center(2));
-					if obj.maskSmoothing > 0
+					if obj.maskSmoothing > 0 && exist('fspecial','file')
 						obj.kernel = fspecial('disk',obj.maskSmoothing);
 						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 1, 2);
 					else
@@ -331,7 +336,6 @@ classdef dotsStimulus < baseStimulus
 						obj.shader = 0;
 					end
 				end
-				
 				vbl=Screen('Flip', obj.win);
 				while 1
 					if obj.mask==true
@@ -349,11 +353,7 @@ classdef dotsStimulus < baseStimulus
 					if any(buttons) % break out of loop
 						break;
 					end;
-					obj.xy=obj.xy+obj.dxdy;
-					fix=find(obj.xy > ((obj.size*obj.ppd)/2));
-					obj.xy(fix)=obj.xy(fix)-(obj.size*obj.ppd);
-					fix=find(obj.xy < -(obj.size*obj.ppd)/2);
-					obj.xy(fix)=obj.xy(fix)+(obj.size*obj.ppd);
+					obj.animate();
 					vbl=Screen('Flip', obj.win);
 				end
 				
@@ -425,8 +425,7 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_densityOut(obj,value)
-			obj.density = value;
-			obj.nDots = value * obj.size^2;
+			obj.densityOut = value;
 		end
 		
 		% ===================================================================
