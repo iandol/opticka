@@ -45,6 +45,8 @@ classdef (Sealed) runExperiment < handle
 		debug = false
 		%> shows the info text and position grid during stimulus presentation
 		visualDebug = true
+		%> flip as fast as possible?
+		benchmark = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -67,7 +69,7 @@ classdef (Sealed) runExperiment < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='^(stimulus|task|screen|visualDebug|useLabJack|logFrames|serialPortName|debug|verbose|screenSettings)$'
+		allowedProperties='^(stimulus|task|screen|visualDebug|useLabJack|logFrames|serialPortName|debug|verbose|screenSettings|benchmark)$'
 		%> serial port object opened
 		serialP
 	end
@@ -139,7 +141,7 @@ classdef (Sealed) runExperiment < handle
 				end
 				
 				obj.salutation('Initial variable setup predisplay...')
-				obj.updateVars; %set the variables for the very first run;
+				obj.updateVars(1,1); %set the variables for the very first run;
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				
@@ -220,6 +222,8 @@ classdef (Sealed) runExperiment < handle
 					nextvbl = tL.vbl(end) + obj.screenVals.halfisi;
 					if obj.logFrames == true
 						[tL.vbl(obj.task.tick),tL.show(obj.task.tick),tL.flip(obj.task.tick),tL.miss(obj.task.tick)] = Screen('Flip', s.win, nextvbl);
+					elseif obj.benchmark == true
+						tL.vbl = Screen('Flip', s.win, 0, 2, 2);
 					else
 						tL.vbl = Screen('Flip', s.win, nextvbl);
 					end
@@ -229,7 +233,9 @@ classdef (Sealed) runExperiment < handle
 					end
 					
 					if obj.task.tick == 1
-						tL.startTime=tL.vbl(1); %respecify this with actual stimulus vbl
+						if obj.benchmark == false
+							tL.startTime=tL.vbl(1); %respecify this with actual stimulus vbl
+						end
 					end
 					
 					if obj.logFrames == true
@@ -258,6 +264,10 @@ classdef (Sealed) runExperiment < handle
 				tL.screen.deltaDispay=tL.screen.afterDisplay - tL.screen.beforeDisplay;
 				tL.screen.deltaUntilDisplay=tL.startTime - tL.screen.beforeDisplay;
 				tL.screen.deltaToFirstVBL=tL.vbl(1) - tL.screen.beforeDisplay;
+				if obj.benchmark == true
+					tL.screen.benchmark = obj.task.tick / (tL.screen.afterDisplay - tL.startTime);
+					fprintf('\n---> BENCHMARK FPS = %g\n', tL.screen.benchmark);
+				end
 				
 				s.screenVals.info = Screen('GetWindowInfo', s.win);
 				
@@ -487,42 +497,38 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		function updateVars(obj,thisBlock,thisRun)
 			
-			%As we change variables in the blank, we optionally send the
-			%values for the next stimulus
-			if ~exist('thisBlock','var') || ~exist('thisRun','var')
-				thisBlock=obj.task.thisBlock;
-				thisRun=obj.task.thisRun;
-			end
-			
 			if thisBlock > obj.task.nBlocks
 				return %we've reached the end of the experiment, no need to update anything!
 			end
 			
 			%start looping through out variables
 			for i=1:obj.task.nVars
-				ix = obj.task.nVar(i).stimulus; %which stimulus
+				ix = []; valueList = []; oValueList = [];
+				ix = obj.task.nVar(i).stimulus; %which stimuli
 				value=obj.task.outVars{thisBlock,i}(thisRun);
+				valueList(1,1:size(ix,2)) = value;
 				name=[obj.task.nVar(i).name 'Out']; %which parameter
 				offsetix = obj.task.nVar(i).offsetstimulus;
 				offsetvalue = obj.task.nVar(i).offsetvalue;
 				
 				if ~isempty(offsetix)
-					obj.stimulus{offsetix}.(name)=value+offsetvalue;
-					if thisBlock ==1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
-						obj.stimulus{offsetix}.update;
-					end
+					ix = [ix offsetix];
+					ovalueList(1,1:size(offsetix,2)) = offsetvalue;
+					valueList = [valueList ovalueList];
 				end
 				
 				if obj.task.blankTick > 2 && obj.task.blankTick <= obj.sList.n + 2
-					% 						obj.stimulus{j}.(name)=value;
+					%obj.stimulus{j}.(name)=value;
 				else
+					a = 1;
 					for j = ix %loop through our stimuli references for this variable
 						if obj.verbose==true;tic;end
-						obj.stimulus{j}.(name)=value;
+						obj.stimulus{j}.(name)=valueList(a);
 						if thisBlock == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
 							obj.stimulus{j}.update;
 						end
-						if obj.verbose==true;fprintf('->updateVars() trial/run %i/%i: Variable %i %s set=%g ms\n',thisBlock,thisRun,j,name,toc*1000);end
+						if obj.verbose==true;fprintf('->updateVars() block/trial %i/%i: Variable:%i %s = %g | Stimulus %g -> %g ms\n',thisBlock,thisRun,i,name,valueList(a),j,toc*1000);end
+						a = a + 1;
 					end
 				end
 			end
@@ -595,13 +601,11 @@ classdef (Sealed) runExperiment < handle
 							mR = obj.task.thisRun + 1;
 						end
 						%obj.uiCommand;
-						if obj.verbose==true;tic;end
 						obj.updateVars(mT,mR);
-						% 						for i = 1:obj.sList.n
-						% 							obj.stimulus{i}.update;
-						% 						end
+% 						for i = 1:obj.sList.n
+% 							obj.stimulus{i}.update;
+% 						end
 						obj.task.doUpdate = false;
-						if obj.verbose==true;fprintf('->updateTask() trial/run %i/%i: TOTAL var update=%g ms\n',mT,mR,toc*1000);end
 					end
 					
 					%this dispatches each stimulus update on a new blank frame to
@@ -609,7 +613,7 @@ classdef (Sealed) runExperiment < handle
 					if obj.task.blankTick > 2 && obj.task.blankTick <= obj.sList.n + 2
 						if obj.verbose==true;tic;end
 						obj.stimulus{obj.task.blankTick-2}.update;
-						if obj.verbose==true;fprintf('->updateTask() Blank-frame %i: stimulus %i update=%g ms\n',obj.task.blankTick,obj.task.blankTick-2,toc*1000);end
+						if obj.verbose==true;fprintf('->updateTask() Blank-frame %i: stimulus %i update = %g ms\n',obj.task.blankTick,obj.task.blankTick-2,toc*1000);end
 					end
 					
 				end

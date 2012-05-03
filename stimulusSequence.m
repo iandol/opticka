@@ -36,7 +36,7 @@ classdef stimulusSequence < dynamicprops
 		%> variable values wrapped in trial cell
 		outVars 
 		%> the unique identifier for each stimulus
-		outIndex 
+		outIndex = 1
 		%> mapping the stimulus to the number as a X Y and Z etc position for display
 		outMap
 		%> minimum number of blocks
@@ -218,6 +218,8 @@ classdef stimulusSequence < dynamicprops
 					end
 				end
 				if obj.verbose==true;obj.salutation(sprintf('Randomise Stimuli: %g seconds\n',toc));end
+			else
+				obj.outIndex = 1; %there is only one stimulus, no variables
 			end
 		end
 		
@@ -245,7 +247,7 @@ classdef stimulusSequence < dynamicprops
 		function validate(obj)
 			
 			if obj.nVars == 0
-				
+				obj.outIndex = 1; %there is only one stimulus, no variables
 			end
 		
 		end
@@ -265,7 +267,7 @@ classdef stimulusSequence < dynamicprops
 			if ~exist('invalue','var')
 				invalue = [];
 			end
-			if obj.isLoading == true && isstruct(invalue)
+			if obj.isLoading == true && isstruct(invalue) %#ok<*MCSUP>
 				obj.nVar = invalue;
 				if ~isfield(obj.nVar,'offsetstimulus') || ~isfield(obj.nVar,'offsetvalue') %add to old versions of nVar
 					obj.nVar(1).offsetstimulus = [];
@@ -328,7 +330,6 @@ classdef stimulusSequence < dynamicprops
 		%> Generates a table with the randomised stimulus values
 		% ===================================================================
 		function showLog(obj)
-
 			obj.h = struct();
 			build_gui();
 			data = [obj.outValues obj.outIndex obj.outMap];

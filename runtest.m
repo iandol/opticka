@@ -68,7 +68,7 @@ myStim{7}=barStimulus('type','solid','barWidth',1,'barLength',4,'speed',4,'xPosi
 
 %%
 % coherent dot stimulus; 200 dots moving at 1deg/s with coherence set to 0.5
-myStim{8}=dotsStimulus('nDots',200,'speed',1,'coherence',0.5,'xPosition',4,...
+myStim{8}=dotsStimulus('density',50,'speed',1,'coherence',0.5,'xPosition',4,...
 	'yPosition',-6,'colour',[1 1 1],'dotSize',0.1,'colorType','randomBW');
 
 %%
@@ -148,6 +148,8 @@ myScreen = screenManager('distance', 57.3,...
 	'windowed', 0,... %set to a widthxheight for debugging i.e. [800 600]; set to 0 for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on OS X ATI 5870
 	'bitDepth', '8bit',... %try 8bit, FloatingPoint16bit FloatingPoint32bit
+	'logFrames', 'true',... %every screen flip is logged for full missed frame accounting.
+	'benchmark', 'false',... %when true flip as fast as possible, turn logFrames off to work
 	'hideFlash', true); %mario's gamma trick
 
 %% Setup runExperiment Object

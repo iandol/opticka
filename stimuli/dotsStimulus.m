@@ -15,7 +15,7 @@ classdef dotsStimulus < baseStimulus
 		maskColour = []
 		%> smooth the alpha edge of the mask by this number of pixels, 0 is
 		%> off
-		maskSmoothing = 5
+		maskSmoothing = 0
 		msrcMode = 'GL_SRC_ALPHA'
 		mdstMode = 'GL_ONE_MINUS_SRC_ALPHA'
 	end

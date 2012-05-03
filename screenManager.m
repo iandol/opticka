@@ -100,16 +100,14 @@ classdef screenManager < handle
 				obj.parseArgs(varargin);
 			end
 			if strcmpi(computer,'MACI64')
+				obj.salutation('64bit OS X PTB currently experimentally supported!')
+			end
+			try
+				AssertOpenGL
+				obj.isPTB = true;
+			catch %#ok<*CTCH>
 				obj.isPTB = false;
-				obj.salutation('64bit Matlab not currently supported by PTB!')
-			else
-				try
-					AssertOpenGL
-					obj.isPTB = true;
-				catch %#ok<*CTCH>
-					obj.isPTB = false;
-					obj.salutation('OpenGL support needed by PTB!')
-				end
+				obj.salutation('OpenGL support needed by PTB!')
 			end
 			obj.prepareScreen;
 		end
