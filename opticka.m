@@ -212,7 +212,7 @@ classdef (Sealed) opticka < handle
 				obj.paths.startServer = [obj.paths.whereami filesep 'udpserver' filesep 'launchDataConnection'];
 
 				if ismac
-					obj.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -maci -r \"runServer\""'' -e ''end tell'''];
+					obj.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -r \"runServer\""'' -e ''end tell'''];
 					obj.paths.temp=tempdir;
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);

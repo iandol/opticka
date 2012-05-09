@@ -655,7 +655,6 @@ classdef dataConnection < handle
 					obj.rconn = -1;
 					break
 				end
-				
 			end
 			
 			obj.close;

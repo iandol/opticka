@@ -1165,31 +1165,31 @@ function OKPanelSpotflashOn_Callback(hObject, eventdata, handles)
 function OKSettingsmovieSize_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.r.movieSettings.size=str2num(get(hObject,'String'));
+	o.r.screen.movieSettings.size=str2num(get(hObject,'String'));
 end
 
 function OKSettingsmovieFrames_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.r.movieSettings.nFrames=str2num(get(hObject,'String')); %#ok<*ST2NM>
+	o.r.screen.movieSettings.nFrames=str2num(get(hObject,'String')); %#ok<*ST2NM>
 end
 
 function OKSettingsmoviePrecision_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.r.movieSettings.quality=get(hObject,'Value');
+	o.r.screen.movieSettings.quality=get(hObject,'Value');
 end
 
 function OKSettingsmovieType_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.r.movieSettings.type=get(hObject,'Value');
+	o.r.screen.movieSettings.type=get(hObject,'Value');
 end
 
 function OKSettingsmovieCodec_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.r.movieSettings.codec=get(hObject,'String');
+	o.r.screen.movieSettings.codec=get(hObject,'String');
 end
 
 % --------------------------------------------------------------------
@@ -1201,7 +1201,6 @@ if isappdata(handles.output,'o')
 		o.connectToOmniplex
 	end
 end
-
 
 % --------------------------------------------------------------------
 function OKPanelReconnectOmniplex_ClickedCallback(hObject, eventdata, handles)

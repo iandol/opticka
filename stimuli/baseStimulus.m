@@ -198,25 +198,32 @@ classdef baseStimulus < dynamicprops
 		%>
 		% ===================================================================
 		function run(obj,benchmark)
+			runtime = 2; %seconds to run
 			if ~exist('benchmark','var')
 				benchmark=false;
 			end
-			s = screenManager('blend',true,'screen',0,'bitDepth','8bit','debug',false); %use a temporary screenManager object
-			s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
-			s.open(); %open PTB screen
-			obj.setup(s); %setup our stimulus object
-			obj.draw(); %draw stimulus
-			s.drawGrid(); %draw +-5 degree dot grid
-			s.drawFixationPoint(); %centre spot
+			s = screenManager('blend',false,'screen',0,...
+				'bitDepth','8bit','debug',false,'verbose',false,...
+				'backgroundColour',[0.5 0.5 0.5 1]); %use a temporary screenManager object
+			if benchmark
+				s.windowed = [];
+			else
+				s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
+			end
+			open(s); %open PTB screen
+			setup(obj,s); %setup our stimulus object
+			draw(obj); %draw stimulus
+			drawGrid(s); %draw +-5 degree dot grid
+			drawFixationPoint(s); %centre spot
 			Screen('Flip',s.win);
 			WaitSecs(1);
 			if benchmark; b=GetSecs; end
-			for i = 1:(s.screenVals.fps*2) %should be 2 seconds worth of flips
-				obj.draw(); %draw stimulus
-				s.drawGrid(); %draw +-5 degree dot grid
-				s.drawFixationPoint(); %centre spot
-				Screen('DrawingFinished', s.win); %tell PTB to draw
-				obj.animate(); %animate stimulus, will be seen on next draw
+			for i = 1:(s.screenVals.fps*runtime) %should be 2 seconds worth of flips
+				draw(obj); %draw stimulus
+				drawGrid(s); %draw +-5 degree dot grid
+				drawFixationPoint(s); %centre spot
+				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
+				animate(obj); %animate stimulus, will be seen on next draw
 				if benchmark
 					Screen('Flip',s.win,0,2,2);
 				else
@@ -228,12 +235,12 @@ classdef baseStimulus < dynamicprops
 			Screen('Flip',s.win);
 			WaitSecs(0.25);
 			if benchmark
-				fps = (s.screenVals.fps*2) / (bb-b);
+				fps = (s.screenVals.fps*runtime) / (bb-b);
 				fprintf('\n------> SPEED = %g fps\n', fps);
 			end
-			s.close(); %close screen
-			clear s fps benchmark; %clear it
-			obj.reset(); %reset our stimulus ready for use again
+			close(s); %close screen
+			clear s fps benchmark runtime b bb i; %clear up a bit
+			reset(obj); %reset our stimulus ready for use again
 		end
 		
 		

@@ -74,7 +74,7 @@ classdef screenManager < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='^(bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColor|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
+		allowedProperties='^(bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
 		%> the photoDiode rectangle
 		photoDiodeRect = [0;0;50;50]
 		%> the values computed to draw the 1deg dotted grid in debug mode
