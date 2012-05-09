@@ -25,14 +25,10 @@ classdef (Sealed) runExperiment < handle
 		task
 		%> screen manager object
 		screen
-		%> name of serial port to send TTL out on, if set to 'dummy' then ignore
-		serialPortName = 'dummy'
 		%> use LabJack for digital output?
 		useLabJack = false
 		%> LabJack object
 		lJack
-		%> LEGACY gamma correction; screenManager handles this...
-		gammaTable
 		%> this lets the UI leave commands to runExperiment
 		uiCommand = ''
 		%> log all frame times, gets slow for > 1e6 frames
@@ -70,8 +66,6 @@ classdef (Sealed) runExperiment < handle
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
 		allowedProperties='^(stimulus|task|screen|visualDebug|useLabJack|logFrames|serialPortName|debug|verbose|screenSettings|benchmark)$'
-		%> serial port object opened
-		serialP
 	end
 	
 	events
@@ -541,6 +535,7 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		function updateTask(obj)
 			obj.task.timeNow = GetSecs;
+			obj.task.strobeThisFrame = false;
 			if obj.task.tick==1 %first frame
 				obj.task.isBlank = false;
 				obj.task.startTime = obj.task.timeNow;
@@ -565,21 +560,19 @@ classdef (Sealed) runExperiment < handle
 					% to true
 					if obj.task.switched == true;
 						obj.task.strobeThisFrame = true;
-					else
-						obj.task.strobeThisFrame = false;
 					end
 					
 					%if obj.verbose==true;tic;end
 					for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
 						obj.stimulus{i}.animate;
 					end
-					%if obj.verbose==true;fprintf('\nStimuli animation: %g seconds',toc);end
+					%if obj.verbose==true;fprintf('\nStimuli animation: %g ms',toc*1000);end
 					
 				else %this is a blank stimulus
 					obj.task.blankTick = obj.task.blankTick + 1;
 					%this causes the update of the stimuli, which may take more than one refresh, to
 					%occur during the second blank flip, thus we don't lose any timing.
-					if obj.task.switched == false && obj.task.strobeThisFrame == true
+					if obj.task.blankTick == 2
 						obj.task.doUpdate = true;
 					end
 					% because the update happens before the flip, but the drawing of the update happens
@@ -587,8 +580,6 @@ classdef (Sealed) runExperiment < handle
 					% to true
 					if obj.task.switched == true;
 						obj.task.strobeThisFrame = true;
-					else
-						obj.task.strobeThisFrame = false;
 					end
 					% now update our stimuli, we do it after the first blank as less
 					% critical timingwise
@@ -600,14 +591,9 @@ classdef (Sealed) runExperiment < handle
 							mT=obj.task.thisBlock;
 							mR = obj.task.thisRun + 1;
 						end
-						%obj.uiCommand;
 						obj.updateVars(mT,mR);
-% 						for i = 1:obj.sList.n
-% 							obj.stimulus{i}.update;
-% 						end
 						obj.task.doUpdate = false;
 					end
-					
 					%this dispatches each stimulus update on a new blank frame to
 					%reduce overhead.
 					if obj.task.blankTick > 2 && obj.task.blankTick <= obj.sList.n + 2
@@ -734,7 +720,7 @@ classdef (Sealed) runExperiment < handle
 				if ~exist('tag','var')
 					tag='#';
 				end
-				fprintf('%s -- T: %i | R: %i [%i] | B: %i | Tick: %i | Time: %5.8g\n',tag,obj.task.thisBlock,obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
+				fprintf('%s -- B: %i | T: %i [%i] | TT: %i | Tick: %i | Time: %5.8g\n',tag,obj.task.thisBlock,obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
 			end
 		end
 		

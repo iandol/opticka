@@ -50,7 +50,7 @@ classdef timeLogger < dynamicprops
 			obj.missImportant = miss;
 			obj.missImportant(obj.missImportant <= 0) = -inf;
 			obj.missImportant(stimTime < 1) = -inf;
-			obj.missImportant(1) = -inf; %ignore first frame
+			obj.missImportant(1:2) = -inf; %ignore first frame
 			obj.nMissed = length(find(obj.missImportant > 0));
 		end
 		
@@ -75,10 +75,8 @@ classdef timeLogger < dynamicprops
 			miss=obj.miss(1:index);
 			stimTime=obj.stimTime(1:index);
 			
-			missImportant = miss;
-			missImportant(missImportant <= 0) = -inf;
-			missImportant(stimTime < 1) = -inf;
-			nMiss = length(find(missImportant > 0));
+			calculateMisses(obj)
+			
 			
 			figure;
 			
@@ -139,10 +137,10 @@ classdef timeLogger < dynamicprops
 			p(3,1).select();
 			hold on
 			plot(miss,'k.-');
-			plot(missImportant,'ro','MarkerFaceColor',[1 0 0]);
+			plot(obj.missImportant,'ro','MarkerFaceColor',[1 0 0]);
 			plot(stimTime/100,'k');
 			hold off
-			p(3,1).title(['Missed frames = ' num2str(nMiss) ' (RED > 0 means missed frame)']);
+			p(3,1).title(['Missed frames = ' num2str(obj.nMissed) ' (RED > 0 means missed frame)']);
 			p(3,1).xlabel('Frame number');
 			p(3,1).ylabel('Miss Value');
 			

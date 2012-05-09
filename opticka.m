@@ -393,7 +393,6 @@ classdef (Sealed) opticka < handle
 			obj.r.screen.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
 			obj.r.screen.fixationPoint = logical(obj.gv(obj.h.OKFixationSpot));
 			obj.r.useLabJack = logical(obj.gv(obj.h.OKuseLabJack));
-			obj.r.serialPortName = obj.gs(obj.h.OKSerialPortName);
 			
 		end
 		
@@ -640,7 +639,7 @@ classdef (Sealed) opticka < handle
 		
 		% ===================================================================
 		%> @brief editStimulus
-		%> Gets the settings from th UI and updates our runExperiment object
+		%> Gets the settings from the UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
 		function editStimulus(obj)
@@ -1037,6 +1036,7 @@ classdef (Sealed) opticka < handle
 				if ~isempty(obj.r.stimulus)
 					set(obj.h.OKDeleteStimulus,'Enable','on');
 					set(obj.h.OKModifyStimulus,'Enable','on');
+					set(obj.h.OKInspectStimulus,'Enable','on');
 					set(obj.h.OKStimulusUp,'Enable','on');
 					set(obj.h.OKStimulusDown,'Enable','on');
 					set(obj.h.OKStimulusRun,'Enable','on');
@@ -1121,9 +1121,11 @@ classdef (Sealed) opticka < handle
 						sz=s.size;
 						a=s.angle;
 						c=s.coherence;
-						nd=s.nDots;
+						dn=s.density;
 						sp=s.speed;
-						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' nd=' num2str(nd) ' sp=' num2str(sp)];
+						k=s.kill;
+						ct=s.colourType;
+						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn) ' sp=' num2str(sp) ' k=' num2str(k) ' ct=' ct];
 					case 'spot'
 						x=s.xPosition;
 						y=s.yPosition;

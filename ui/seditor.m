@@ -1,6 +1,5 @@
 classdef seditor < handle
-	%SEDITOR edits values from a stimulus class passed to it
-	%   Detailed explanation goes here
+	%SEDITOR GUI to edit values from a stimulus class passed to it from opticka
 	
 	properties
 		handles
@@ -17,7 +16,7 @@ classdef seditor < handle
 		function obj = seditor(stimin, ohandlein)
 			if exist('stimin','var')
 				obj.stim = stimin;
-				obj.stim.reset; %remove temporary/transient properties
+				obj.stim.reset(); %remove temporary/transient properties
 			end
 			if exist('ohandlein','var')
 				obj.optickahandle = ohandlein;
@@ -30,7 +29,7 @@ classdef seditor < handle
 			if obj.mversion < 7.12 && (ismac || ispc)
 				javax.swing.UIManager.setLookAndFeel(newlook);
 			end
-			obj.buildgui;
+			obj.buildGUI();
 			drawnow;
 			if obj.mversion < 7.12 && (ismac || ispc)
 				javax.swing.UIManager.setLookAndFeel(oldlook);
@@ -42,7 +41,7 @@ classdef seditor < handle
 			obj.StimEditorPropertyList_Callback;
 		end
 		
-		function buildgui(obj)
+		function buildGUI(obj)
 			% Creation of all uicontrols
 			
 			% --- FIGURE -------------------------------------
@@ -88,6 +87,7 @@ classdef seditor < handle
 				'Position', [15 72 251 44], ...
 				'FontName', 'Helvetica', ...
 				'FontSize', 14, ...
+				'TooltipString', 'Enter a number, logical or string depending on type here', ...
 				'BackgroundColor', [1 1 1], ...
 				'String', '0', ...
 				'Callback', @obj.StimEditorEdit_Callback);
@@ -99,8 +99,8 @@ classdef seditor < handle
 				'Units', 'pixels', ...
 				'Position', [15 45 251 20], ...
 				'FontName', 'Helvetica', ...
-				'FontSize', 10, ...
-				'TooltipString', 'Put a list of other stimuli in the list to try to edit', ...
+				'FontSize', 11, ...
+				'TooltipString', 'Put a range of other stimuli in the list to modify', ...
 				'BackgroundColor', [0.97 0.97 0.97], ...
 				'String', '', ...
 				'Callback', @obj.StimEditorStimList_Callback);
@@ -139,9 +139,7 @@ classdef seditor < handle
 		
 		%% ---------------------------------------------------------------------------
 		function StimEditorEdit_Callback(obj,hObject,evendata) %#ok<INUSD>
-			
 			s=get(obj.handles.StimEditorEdit,'String');
-			
 			switch obj.ckind
 				case 'number'
 					s=str2num(s);
@@ -159,6 +157,7 @@ classdef seditor < handle
 				case 'string'
 					obj.stim.(obj.cprop) = s;
 			end
+			fprintf('\n->Modify %s : %g',obj.cprop,s)
 			
 			if isappdata(obj.optickahandle,'o') %check opticka is running
 				o = getappdata(obj.optickahandle,'o');
@@ -166,9 +165,11 @@ classdef seditor < handle
 					for i=1:length(obj.otherstimuli)
 						if ~isempty(findprop(o.r.stimulus{obj.otherstimuli(i)},obj.cprop)) %check it has this porperty
 							o.r.stimulus{obj.otherstimuli(i)}.(obj.cprop) = s;
+							fprintf(' | +stim%g',obj.otherstimuli(i))
 						end
 					end
 				end
+				fprintf('\n');
 				o.modifyStimulus; %flush the opticka UI and do what's needed
 			end
 		end

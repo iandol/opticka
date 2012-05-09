@@ -101,8 +101,6 @@ myTask.ibTime=1; %inter block time: 1 second
 myTask.nVar(1).name = 'angle';
 myTask.nVar(1).stimulus = [1 3 7 10];
 myTask.nVar(1).values = [0 45 90];
-myTask.nVar(1).offsetstimulus = [];
-myTask.nVar(1).offsetvalue = [];
 
 %% Variable 2
 % Our second variable is contrast, applied to stimulus 2 and 3, randomly
@@ -110,8 +108,6 @@ myTask.nVar(1).offsetvalue = [];
 myTask.nVar(2).name = 'contrast';
 myTask.nVar(2).stimulus = [2 3];
 myTask.nVar(2).values = [0.1 0.4];
-myTask.nVar(2).offsetstimulus = [];
-myTask.nVar(2).offsetvalue = [];
 
 %% Variable 3
 % Our third variable is X position, applied to stimulus 2 and 8, randomly
@@ -129,11 +125,11 @@ myTask.nVar(3).offsetvalue = [1];
 
 %% Randomisation
 % We call the method to randomise the trials in a block structure
-myTask.randomiseStimuli();
+randomiseStimuli(myTask);
 
 %% Visual Trial List
 % Lets print out a log of the stimulus properties for every trial
-myTask.showLog();
+showLog(myTask);
 
 %% Setup screenManager Object
 % we initialise the object with parameter options to open the PTB screen
@@ -156,13 +152,16 @@ myScreen = screenManager('distance', 57.3,...
 % We now pass our stimulus screen and sequence objects to the
 % runExperiment class. runExperinet contains the run class that actually
 % runs the task.
-rExp = runExperiment('stimulus', myStim, 'task', myTask, 'screen', myScreen,...
-	'debug', false, 'verbose', true);
+rExp = runExperiment('stimulus', myStim,...
+	'task', myTask,...
+	'screen', myScreen,...
+	'debug', false,...
+	'verbose', true);
 
 %%
 % run our experiment, to exit early, press the right (OS X) or middle (Win/Linux) mouse
 % button
-rExp.run();
+run(rExp);
 
 %%
 % Note after this is run, because 'verbose' property of runExperient was

@@ -149,8 +149,11 @@ classdef dotsStimulus < baseStimulus
 				Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
 				obj.maskRect = CenterRectOnPointd(wrect,obj.xPositionOut,obj.yPositionOut);
 				if obj.maskSmoothing > 0
+					if ~rem(obj.maskSmoothing, 2)
+						obj.maskSmoothing = obj.maskSmoothing + 1;
+					end
 					if exist('fspecial','file')
-						obj.kernel = fspecial('gaussian',obj.maskSmoothing, 5);
+						obj.kernel = fspecial('gaussian',obj.maskSmoothing,obj.maskSmoothing);
 						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
 					else
 						p = mfilename('fullpath');
