@@ -9,7 +9,10 @@ classdef screenManager < handle
 		distance = 57.3
 		%> hide the black flash as PTB tests it refresh timing, uses a gamma trick
 		hideFlash = false
-		%> windowed: if 1 useful for debugging, but remember timing will be poor
+		%> windowed: when 0 use fullscreen; set to 1 and it is windowed 800x600pixels or you
+		%> can add in a window width and height to specify windowed size. Remember
+		%> that windowed presentation shouldn't be used for experimental
+		%> presentation due to poor timing accounting...
 		windowed = 0
 		%> change the parameters for poorer temporal fidelity during debugging
 		debug = false
@@ -23,7 +26,7 @@ classdef screenManager < handle
 		%> and 16 -- essential for textures to stop aliasing
 		antiAlias = []
 		%> background of display during stimulus presentation
-		backgroundColour = [0.5 0.5 0.5 0]
+		backgroundColour = [0.5 0.5 0.5 1]
 		%> shunt screen center by X degrees
 		screenXOffset = 0
 		%> shunt screen center by Y degrees
@@ -99,12 +102,14 @@ classdef screenManager < handle
 			if nargin>0
 				obj.parseArgs(varargin);
 			end
-			if strcmpi(computer,'MACI64')
-				obj.salutation('64bit OS X PTB currently experimentally supported!')
-			end
 			try
 				AssertOpenGL
 				obj.isPTB = true;
+				if strcmpi(computer,'MACI64')
+					obj.salutation('64bit OS X PTB currently experimentally supported!')
+				else
+					bj.salutation('PTB currently supported!')
+				end
 			catch %#ok<*CTCH>
 				obj.isPTB = false;
 				obj.salutation('OpenGL support needed by PTB!')
@@ -249,9 +254,14 @@ classdef screenManager < handle
 				if obj.screenVals.fps==0
 					obj.screenVals.fps=round(1/obj.screenVals.ifi);
 				end
-				obj.screenVals.halfisi=obj.screenVals.ifi/2;
-				Priority(0); %be lazy for a while and let other things get done
-				
+				if isempty(obj.windowed) || length(obj.windowed) == 1 %fullscreen
+					obj.screenVals.halfisi=obj.screenVals.ifi/2;
+				else
+					% windowed presentation doesn't handle the preferred method
+					% of specifying lastvbl+halfisi properly so we set halfisi to 0 which
+					% effectively makes flip occur ASAP.
+					obj.screenVals.halfisi = 0;
+				end
 				
 				if obj.hideFlash == true && isempty(obj.gammaTable)
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
@@ -267,6 +277,8 @@ classdef screenManager < handle
 					%obj.screenVals.oldCLUT = LoadIdentityClut(obj.win);
 					obj.screenVals.resetGamma = false;
 				end
+				
+				Priority(0); %be lazy for a while and let other things get done
 				
 				% Enable alpha blending.
 				if obj.blend==1
