@@ -44,7 +44,7 @@ classdef stimulusSequence < dynamicprops
 		%> reserved for future use of multiple random stream states
 		states
 		%> reserved for future use of multiple random stream states
-		nstates = 1
+		nStates = 1
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
@@ -82,13 +82,16 @@ classdef stimulusSequence < dynamicprops
 		%> this stops loading old randstreams etc.
 		loadProperties = {'randomise','nVar','nBlocks','trialTime','isTime','ibTime','isStimulus','verbose',...
 			'realTime','randomSeed','randomGenerator','nSegments','nSegment'}
-		%> Matlab version number
-		mversion = 0
 		%Set up the task structures needed
 		taskProperties = {'tick',0,'blankTick',0,'thisRun',1,'thisBlock',1,'totalRuns',1,'isBlank',false,...
 				'switched',false,'strobeThisFrame',false,'doUpdate',false,'startTime',0,'switchTime',0,...
 				'switchTick',0,'timeNow',0,'stimIsDrifting',[],'stimIsMoving',[],...
 				'stimIsDots',[],'stimIsFlashing',[]}
+	end
+	
+	properties (SetAccess = private, GetAccess = private, Transient = true)
+		%> Matlab version number
+		mversion = 0
 	end
 	
 	methods

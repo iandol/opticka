@@ -7,14 +7,15 @@ classdef screenManager < handle
 		pixelsPerCm = 44
 		%> distance of subject from CRT -- rad2ang(2*(atan((0.5*1cm)/57.3cm))) equals 1deg
 		distance = 57.3
-		%> hide the black flash as PTB tests it refresh timing, uses a gamma trick
+		%> hide the black flash as PTB tests its refresh timing, uses a gamma
+		%> trick from Mario
 		hideFlash = false
 		%> windowed: when 0 use fullscreen; set to 1 and it is windowed 800x600pixels or you
 		%> can add in a window width and height to specify windowed size. Remember
 		%> that windowed presentation shouldn't be used for experimental
 		%> presentation due to poor timing accounting...
 		windowed = 0
-		%> change the parameters for poorer temporal fidelity during debugging
+		%> change the debug parameters for poorer temporal fidelity during debugging
 		debug = false
 		%> shows the info text and position grid during stimulus presentation
 		visualDebug = false
@@ -23,15 +24,15 @@ classdef screenManager < handle
 		%>bitDepth of framebuffer
 		bitDepth = '8bit'
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8
-		%> and 16 -- essential for textures to stop aliasing
+		%> and 16 -- useful for textures to stop aliasing
 		antiAlias = []
-		%> background of display during stimulus presentation
+		%> background RGBA of display during stimulus presentation
 		backgroundColour = [0.5 0.5 0.5 1]
 		%> shunt screen center by X degrees
 		screenXOffset = 0
 		%> shunt screen center by Y degrees
 		screenYOffset = 0
-		%> the monitor to use
+		%> the monitor to use,
 		screen = []
 		%> use OpenGL blending mode
 		blend = false
@@ -51,12 +52,12 @@ classdef screenManager < handle
 		screenVals
 		%> verbosity
 		verbose = true
-		%> level of PTB verbosity
+		%> level of PTB verbosity, set to 10 for full PTB logging
 		verbosityLevel = 4
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
-		%> dependent property calculated from distance and pixelsPerCm
+		%> dependent pixels per degree property calculated from distance and pixelsPerCm
 		ppd
 	end
 	
@@ -108,7 +109,7 @@ classdef screenManager < handle
 				if strcmpi(computer,'MACI64')
 					obj.salutation('64bit OS X PTB currently experimentally supported!')
 				else
-					bj.salutation('PTB currently supported!')
+					obj.salutation('PTB currently supported!')
 				end
 			catch %#ok<*CTCH>
 				obj.isPTB = false;

@@ -1,23 +1,29 @@
 #!/bin/zsh
 # This script builds the documentation
 
-MATLAB='/Applications/MATLAB_R2010a.app/bin/matlab'
+MATLAB='/Applications/MATLAB_R2012a.app/bin/matlab'
 if [ -f $MATLAB ]; then
-	$MATLAB -nodesktop -nosplash -maci -r "publish('runtest.m');pause(2);exit"
+	$MATLAB -nodesktop -nosplash -r "publish('runtest.m');pause(2);exit"
 fi
 
 # We scrape the version number from the main opticka file
 VER=$(grep -o -E -e "version='[0-9\.]+'" opticka.m | grep -o -E -e "[0-9\.]+")
-echo; echo "Opticka version = $VAR"
+echo; echo "---> Opticka version = $VER"; echo
+sleep 1
 # and then edit the Doxygen file
-sed -i "s/^\(PROJECT_NUMBER\)[ ]*=.*/\1 = $VER/g" .doxyfile
-echo; echo "Edited .doxyfile"
-
+/usr/local/bin/sed -i -e "s/^\(PROJECT_NUMBER\)[ ]*=.*/\1 = $VER/g" .doxyfile
+if [ $? -eq 0 ]; then
+	echo; echo "---> Edited .doxyfile"; echo
+else
+	echo; echo "---> Edit .doxyfile FAILED"; echo
+fi
+sleep 2
+echo; echo "---> Will run DOXYGEN"; echo
 doxygen .doxyfile
-echo; echo "Ran doxygen"
+echo; echo "---> Ran doxygen"
 open html/index.html
 open html/runtest.html
-echo; echo "FINISHED!"
+echo; echo "---> FINISHED!"
 rm .doxyfilee
 rm debug.txt
 exit 0

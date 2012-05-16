@@ -15,7 +15,7 @@ classdef labJack < handle
 		name='LabJack'
 		%> what LabJack device to use; 3 = U3, 6 = U6
 		deviceID = 6
-		%> silentMode allows one to call methods without a working labJack
+		%> silentMode allows one to call methods without a labJack connected
 		silentMode = false
 		%> header needed by loadlib
 		header = '/usr/local/include/labjackusb.h'
@@ -46,6 +46,10 @@ classdef labJack < handle
 		fio0 = 0
 		%> FIO1 state
 		fio1 = 0
+		%> FIO2 state
+		fio2 = 0
+		%> FIO2 state
+		fio3 = 0
 		%> FIO4 state
 		fio4 = 0
 		%> FIO5 state
@@ -68,18 +72,22 @@ classdef labJack < handle
 		%>able to tell a difference when benchmarking them.
 		fio0High = hex2dec(['15'; 'f8'; '03'; '00'; '18'; '01'; '00'; '0d'; '80'; '0b'; '80'; '00'])'
 		fio1High = hex2dec(['17'; 'f8'; '03'; '00'; '1a'; '01'; '00'; '0d'; '81'; '0b'; '81'; '00'])'
+		fio2High = hex2dec(['19'; 'f8'; '03'; '00'; '1c'; '01'; '00'; '0d'; '82'; '0b'; '82'; '00'])'
+		fio3High = hex2dec(['1b'; 'f8'; '03'; '00'; '1e'; '01'; '00'; '0d'; '83'; '0b'; '83'; '00'])'
 		fio4High = hex2dec(['1d'; 'f8'; '03'; '00'; '20'; '01'; '00'; '0d'; '84'; '0b'; '84'; '00'])'
 		fio5High = hex2dec(['1f'; 'f8'; '03'; '00'; '22'; '01'; '00'; '0d'; '85'; '0b'; '85'; '00'])'
 		fio6High = hex2dec(['21'; 'f8'; '03'; '00'; '24'; '01'; '00'; '0d'; '86'; '0b'; '86'; '00'])'
 		fio7High = hex2dec(['23'; 'f8'; '03'; '00'; '26'; '01'; '00'; '0d'; '87'; '0b'; '87'; '00'])'
 		fio0Low  = hex2dec(['94'; 'f8'; '03'; '00'; '98'; '00'; '00'; '0d'; '80'; '0b'; '00'; '00'])'
 		fio1Low  = hex2dec(['96'; 'f8'; '03'; '00'; '9a'; '00'; '00'; '0d'; '81'; '0b'; '01'; '00'])'
+		fio2Low  = hex2dec(['98'; 'f8'; '03'; '00'; '9c'; '00'; '00'; '0d'; '82'; '0b'; '02'; '00'])'
+		fio3Low  = hex2dec(['9a'; 'f8'; '03'; '00'; '9e'; '00'; '00'; '0d'; '83'; '0b'; '03'; '00'])'
 		fio4Low  = hex2dec(['9c'; 'f8'; '03'; '00'; 'a0'; '00'; '00'; '0d'; '84'; '0b'; '04'; '00'])'
 		fio5Low  = hex2dec(['9e'; 'f8'; '03'; '00'; 'a2'; '00'; '00'; '0d'; '85'; '0b'; '05'; '00'])'
 		fio6Low  = hex2dec(['a0'; 'f8'; '03'; '00'; 'a4'; '00'; '00'; '0d'; '86'; '0b'; '06'; '00'])'
 		fio7Low  = hex2dec(['a2'; 'f8'; '03'; '00'; 'a6'; '00'; '00'; '0d'; '87'; '0b'; '07'; '00'])'
-		ledIsON  = hex2dec(['05'; 'f8'; '02'; '00'; '0a'; '00'; '00'; '09'; '01'; '00'])' %only works on U3?
-		ledIsOFF = hex2dec(['04'; 'f8'; '02'; '00'; '09'; '00'; '00'; '09'; '00'; '00'])' %only works on U3?
+		ledIsON  = hex2dec(['05'; 'f8'; '02'; '00'; '0a'; '00'; '00'; '09'; '01'; '00'])' %only works on U3
+		ledIsOFF = hex2dec(['04'; 'f8'; '02'; '00'; '09'; '00'; '00'; '09'; '00'; '00'])' %only works on U3
 		%> Is our handle a valid one?
 		vHandle = 0
 		%> what properties are allowed to be passed on construction
@@ -90,12 +98,12 @@ classdef labJack < handle
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
 		%>
-		%> We use parseArgs to parse allowed properties on construction and also 
+		%> We use parseArgs to parse allowed properties on construction and also
 		%> switch into silent mode and/or auto open the labjack connection.
 		%>
 		%> @param varargin are passed as a structure of properties which is
@@ -103,7 +111,7 @@ classdef labJack < handle
 		%> @return instance of labJack class.
 		% ===================================================================
 		function obj = labJack(varargin)
-			if nargin>0 
+			if nargin>0
 				obj.parseArgs(varargin,obj.allowedProperties);
 			end
 			if strcmpi(obj.name, 'null') || ispc %we were deliberately passed null, means go into silent mode
@@ -114,6 +122,7 @@ classdef labJack < handle
 			elseif obj.openNow == true
 				obj.open
 			end
+			%obj.inp=zeros(10,1);
 		end
 		
 		% ===================================================================
@@ -122,19 +131,38 @@ classdef labJack < handle
 		%> Open the LabJack device
 		% ===================================================================
 		function open(obj)
-			if obj.silentMode == false 
-				if ~libisloaded('liblabjackusb')
-					try
+			if obj.silentMode == false
+				if ismac == true || isunix == true
+					if ~libisloaded('liblabjackusb')
+						try
+							loadlibrary(obj.library,obj.header);
+						catch %#ok<CTCH>
+							obj.silentMode = true;
+							obj.verbose = true;
+							return
+						end
+					end
+					obj.functionList = libfunctions('liblabjackusb', '-full'); %store our raw lib functions
+					obj.version =  calllib('liblabjackusb','LJUSB_GetLibraryVersion');
+					obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',obj.deviceID);
+				else
+					obj.library = 'labjackud';
+					obj.header = 'C:\progra~1\LabJack\drivers\labjackud.h';
+					if (libisloaded('labjackud') || (libisloaded('labjackud_doublePtr')))
+						% Libraries already loaded
+					else
 						loadlibrary(obj.library,obj.header);
-					catch %#ok<CTCH>
-						obj.silentMode = true;
-						obj.verbose = true;
-						return
+						loadlibrary labjackud labjackud_doublePtr.h alias labjackud_doublePtr
+						% If you wish to view a list of the available LabJack UD functions
+						% and their associated Output Values and Input Arguments, uncomment out
+						% the appropriate line of code below. 
+						%libfunctionsview labjackud % Use this in version 7.0 and newer
+						%libfunctionsview labjackud_doublePtr % Use this in version 7.0+
+						%libmethodsview labjackud % Use this in version 6.5
+						%libmethodsview labjackud_doublePtr % Use this in version 6.5
 					end
 				end
-				obj.functionList = libfunctions('liblabjackusb', '-full'); %store our raw lib functions
-				obj.version =  calllib('liblabjackusb','LJUSB_GetLibraryVersion');
-				obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',obj.deviceID);
+				
 				if obj.devCount == 0
 					if obj.deviceID == 3 %lets try a U6
 						obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',6);
@@ -289,7 +317,7 @@ classdef labJack < handle
 		function waitShort(obj,time)
 			time=ceil(time/0.128);
 			cmd=zeros(10,1);
-			%obj.inp=zeros(10,1);
+			obj.inp=zeros(10,1);
 			cmd(2) = 248; %hex2dec('f8'); %feedback
 			cmd(3) = 2; %number of bytes in packet
 			cmd(8) = 5; %IOType for waitshort is 5
@@ -297,7 +325,7 @@ classdef labJack < handle
 			
 			obj.command = obj.checksum(cmd,'extended');
 			
-			out = obj.rawWrite(obj.command);
+			%out = obj.rawWrite(obj.command);
 			%in = obj.rawRead(obj.inp,10);
 		end
 		
@@ -476,7 +504,7 @@ classdef labJack < handle
 		%> @brief Prepare Strobe Word split into EIO (8bit) and CIO (3bit). 0-2047
 		%>  %is the max # of variables with 2^11bits.
 		%>
-		%>	 @param value The value to be split into EIO and CIO 
+		%>	 @param value The value to be split into EIO and CIO
 		%>  @return eio is an 8bit word value represented the LSB
 		%>  @return cio is a 4bit value where the 1st bit is 1 for strobe line 22
 		%>  and the rest is the 3bit remainder to combine with eio to make an
@@ -540,175 +568,6 @@ classdef labJack < handle
 				myname = ['fio' num2str(line)];
 				obj.(myname)=abs(obj.(myname)-1);
 				obj.setFIO(obj.(myname),line);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Set FIO4 to a value
-		%>
-		%> Note this uses the pregenerated raw commands, so only works with
-		%> the FIO bits seen in properties above. Us SetDIO and a mask for a
-		%> robust way to control any digital I/O
-		%>
-		%>	@param val The value to be set
-		% ===================================================================
-		function setFIO4(obj,val)
-			if obj.silentMode == false && obj.vHandle == 1
-				if ~exist('val','var')
-					val = abs(obj.fio4-1);
-				end
-				if val == 1
-					out = obj.rawWrite(obj.fio4High);
-					%in  = obj.rawRead(obj.inp,10);
-					obj.fio4 = 1;
-					obj.salutation('SETFIO4','FIO4 is HIGH')
-				else
-					out = obj.rawWrite(obj.fio4Low);
-					%in  = obj.rawRead(obj.inp,10);
-					obj.fio4 = 0;
-					obj.salutation('SETFIO4','FIO4 is LOW')
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Toggle FIO4 value
-		%>
-		%> Note this uses the pregenerated raw commands, so only works with
-		%> the FIO bits seen in properties above. Us SetDIO and a mask for a
-		%> robust way to control any digital I/O
-		%>
-		% ===================================================================
-		function toggleFIO4(obj)
-			if obj.silentMode == false && obj.vHandle == 1
-				obj.fio4=abs(obj.fio4-1);
-				obj.setFIO4(obj.fio4);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Set FIO5 to a value
-		%>
-		%> Note this uses the pregenerated raw commands, so only works with
-		%> the FIO bits seen in properties above. Us SetDIO and a mask for a
-		%> robust way to control any digital I/O
-		%>	@param val The value to be set
-		% ===================================================================
-		function setFIO5(obj,val)
-			if obj.silentMode == false && obj.vHandle == 1
-				if ~exist('val','var')
-					val = abs(obj.fio5-1);
-				end
-				if val == 1
-					out = obj.rawWrite(obj.fio5High);
-					%in  = obj.rawRead(obj.inp,10);
-					obj.fio5 = 1;
-					obj.salutation('SETFIO5','FIO5 is HIGH')
-				else
-					out = obj.rawWrite(obj.fio5Low);
-					%in  = obj.rawRead(obj.inp,10);
-					obj.fio5 = 0;
-					obj.salutation('SETFIO5','FIO5 is LOW')
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Toggle FIO5 value
-		%>
-		%> Note this uses the pregenerated raw commands, so only works with
-		%> the FIO bits seen in properties above. Us SetDIO and a mask for a
-		%> robust way to control any digital I/O
-		%>
-		% ===================================================================
-		function toggleFIO5(obj)
-			if obj.silentMode == false && obj.vHandle == 1
-				obj.fio5=abs(obj.fio5-1);
-				obj.setFIO5(obj.fio5);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Set FIO6 to a value
-		%>
-		%> Note this uses the pregenerated raw commands, so only works with
-		%> the FIO bits seen in properties above. Us SetDIO and a mask for a
-		%> robust way to control any digital I/O
-		%>	@param val The value to be set
-		% ===================================================================
-		function setFIO6(obj,val)
-			if obj.silentMode == false && obj.vHandle == 1
-				if ~exist('val','var')
-					val = abs(obj.fio5-1);
-				end
-				if val == 1
-					out = obj.rawWrite(obj.fio6High);
-					%in  = obj.rawRead(obj.inp,10);
-					obj.fio6 = 1;
-					obj.salutation('SETFIO6','FIO6 is HIGH')
-				else
-					out = obj.rawWrite(obj.fio6Low);
-					%in  = obj.rawRead(obj.inp,10);
-					obj.fio6 = 0;
-					obj.salutation('SETFIO6','FIO6 is LOW')
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Toggle FIO6 value
-		%>
-		%> Note this uses the pregenerated raw commands, so only works with
-		%> the FIO bits seen in properties above. Us SetDIO and a mask for a
-		%> robust way to control any digital I/O
-		%>
-		% ===================================================================
-		function toggleFIO6(obj)
-			if obj.silentMode == false && obj.vHandle == 1
-				obj.fio6=abs(obj.fio6-1);
-				obj.setFIO6(obj.fio6);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Set FIO7 to a value
-		%>
-		%> Note this uses the pregenerated raw commands, so only works with
-		%> the FIO bits seen in properties above. Us SetDIO and a mask for a
-		%> robust way to control any digital I/O
-		%>	@param val The value to be set
-		% ===================================================================
-		function setFIO7(obj,val)
-			if obj.silentMode == false && obj.vHandle == 1
-				if ~exist('val','var')
-					val = abs(obj.fio7-1);
-				end
-				if val == 1
-					out = obj.rawWrite(obj.fio7High);
-					%in  = obj.rawRead(obj.inp,10);
-					obj.fio7 = 1;
-					obj.salutation('SETFIO7','FIO7 is HIGH')
-				else
-					out = obj.rawWrite(obj.fio7Low);
-					%in  = obj.rawRead(obj.inp,10);
-					obj.fio7 = 0;
-					obj.salutation('SETFIO7','FIO7 is LOW')
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Toggle FIO7 value
-		%>
-		%> Note this uses the pregenerated raw commands, so only works with
-		%> the FIO bits seen in properties above. Us SetDIO and a mask for a
-		%> robust way to control any digital I/O
-		%>
-		% ===================================================================
-		function toggleFIO7(obj)
-			if obj.silentMode == false && obj.vHandle == 1
-				obj.fio7=abs(obj.fio7-1);
-				obj.setFIO7(obj.fio7);
 			end
 		end
 		
@@ -808,7 +667,7 @@ classdef labJack < handle
 	
 	%=======================================================================
 	methods ( Access = private ) % PRIVATE METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief delete is the object Destructor

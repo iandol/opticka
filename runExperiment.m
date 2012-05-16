@@ -4,14 +4,14 @@
 %>RUNEXPERIMENT The main class which accepts a task and stimulus object
 %>and runs the stimuli based on the task object passed. The class
 %>controls the fundamental configuration of the screen (calibration, size
-%>etc.), and manages communication to the DAQ system using TTL pulses out
-%>and communication over a UDP client<->server socket.
+%>etc. via screenManager), and manages communication to the DAQ system using TTL pulses out
+%>and communication over a UDP client<->server socket (via dataConnection).
 %>  Stimulus must be a stimulus class, i.e. gratingStimulus and friends,
 %>  so for example:
 %>
-%>  gs{1}=gratingStimulus('mask',1,'sf',1);
-%>  ss=runExperiment('stimulus',gs);
-%>  ss.run;
+%>  myStim{1}=gratingStimulus('mask',1,'sf',1);
+%>  myExp=runExperiment('stimulus',myStim);
+%>  run(myExp);
 %>
 %>	will run a minimal experiment showing a 1c/d circularly masked grating
 % ========================================================================
@@ -97,11 +97,15 @@ classdef (Sealed) runExperiment < handle
 		%> @param obj required class object
 		% ===================================================================
 		function run(obj)
-			%initialise timeLog for this run
+			if isempty(obj.screen) || isempty(obj.task)
+				obj.initialise;
+			end
 			if obj.screen.isPTB == false
 				errordlg('There is no working PTB available!')
 				error('There is no working PTB available!')
 			end
+			
+			%initialise timeLog for this run
 			obj.timeLog = timeLogger;
 			tL = obj.timeLog;
 			
