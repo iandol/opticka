@@ -246,8 +246,8 @@ classdef dotsStimulus < baseStimulus
 			obj.xy(fix) = obj.xy(fix) - obj.sizeOut;
 			fix = find(obj.xy < -obj.sizeOut/2);  %cull negative
 			obj.xy(fix) = obj.xy(fix) + obj.sizeOut;
-% 			obj.xy(obj.xy > obj.sizeOut/2) = obj.xy(obj.xy > obj.sizeOut/2) - obj.sizeOut; % this is not faster
-% 			obj.xy(obj.xy < -obj.sizeOut/2) = obj.xy(obj.xy < -obj.sizeOut/2) + obj.sizeOut; % this is not faster
+			%obj.xy(obj.xy > obj.sizeOut/2) = obj.xy(obj.xy > obj.sizeOut/2) - obj.sizeOut; % this is not faster
+			%obj.xy(obj.xy < -obj.sizeOut/2) = obj.xy(obj.xy < -obj.sizeOut/2) + obj.sizeOut; % this is not faster
 			if obj.killOut > 0 && obj.tick > 1
 				kidx = rand(obj.nDots,1) <  obj.killOut;
 				ks = length(find(kidx > 0));

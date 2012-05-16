@@ -27,7 +27,7 @@ classdef screenManager < handle
 		%> and 16 -- useful for textures to stop aliasing
 		antiAlias = []
 		%> background RGBA of display during stimulus presentation
-		backgroundColour = [0.5 0.5 0.5 1]
+		backgroundColour = [0.5 0.5 0.5 0]
 		%> shunt screen center by X degrees
 		screenXOffset = 0
 		%> shunt screen center by Y degrees

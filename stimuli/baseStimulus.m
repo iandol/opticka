@@ -18,7 +18,7 @@ classdef baseStimulus < dynamicprops
 		%> Size in degrees
 		size = 2
 		%> Colour as a 0-1 range RGBA
-		colour = [0.5 0.5 0.5 1]
+		colour = [0.5 0.5 0.5]
 		%> Alpha as a 0-1 range
 		alpha = 1
 		%> Do we print details to the commandline?
@@ -108,7 +108,7 @@ classdef baseStimulus < dynamicprops
 		
 		% ===================================================================
 		%> @brief colour Get method
-		%>
+		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
 		% ===================================================================
 		function value = get.colour(obj)
 			len=length(obj.colour);
@@ -125,7 +125,7 @@ classdef baseStimulus < dynamicprops
 		
 		% ===================================================================
 		%> @brief delta Get method
-		%>
+		%> delta is the normalised number of pixels per frame to move a stimulus
 		% ===================================================================
 		function value = get.delta(obj)
 			if isempty(obj.findprop('speedOut'));
@@ -137,7 +137,7 @@ classdef baseStimulus < dynamicprops
 		
 		% ===================================================================
 		%> @brief dX Get method
-		%>
+		%> X position increment for a given delta and angle
 		% ===================================================================
 		function value = get.dX(obj)
 			switch obj.family
@@ -158,7 +158,7 @@ classdef baseStimulus < dynamicprops
 		
 		% ===================================================================
 		%> @brief dY Get method
-		%>
+		%> Y position increment for a given delta and angle
 		% ===================================================================
 		function value = get.dY(obj)
 			switch obj.family
@@ -202,12 +202,13 @@ classdef baseStimulus < dynamicprops
 			if ~exist('benchmark','var')
 				benchmark=false;
 			end
-			s = screenManager('blend',false,'screen',0,...
-				'bitDepth','8bit','debug',false,'verbose',false,...
-				'backgroundColour',[0.5 0.5 0.5 1]); %use a temporary screenManager object
+			s = screenManager('verbose',false,'blend',false,'screen',0,...
+				'bitDepth','8bit','debug',false,...
+				'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
 			if benchmark
 				s.windowed = [];
 			else
+				%s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2];
 				s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
 			end
 			open(s); %open PTB screen
