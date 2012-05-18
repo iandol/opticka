@@ -379,6 +379,7 @@ classdef (Sealed) opticka < handle
 			end
 			
 			obj.r.logFrames = logical(obj.gv(obj.h.OKlogFrames));
+			obj.r.benchmark = logical(obj.gv(obj.h.OKbenchmark));
 			obj.r.screen.hideFlash = logical(obj.gv(obj.h.OKHideFlash));
 			if strcmpi(obj.r.screen.bitDepth,'8bit')
 				set(obj.h.OKAntiAliasing,'String','0');

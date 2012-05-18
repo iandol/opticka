@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 30-Apr-2012 17:00:51
+% Last Modified by GUIDE v2.5 16-May-2012 21:23:53
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1304,5 +1304,22 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	if isa(o.r.screen,'screenManager')
 		o.r.screen.verbosityLevel = str2double(get(hObject,'String'));
+	end
+end
+
+
+% --- Executes on button press in OKbenchmark.
+function OKbenchmark_Callback(hObject, eventdata, handles)
+% hObject    handle to OKbenchmark (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% Hint: get(hObject,'Value') returns toggle state of OKbenchmark
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	if isa(o.r.screen,'screenManager')
+		if get(hObject,'Value') == 1
+			set(handles.OKlogFrames,'Value',0)
+		end
+		o.getScreenVals;
 	end
 end

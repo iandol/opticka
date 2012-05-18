@@ -25,7 +25,7 @@ classdef labJack < handle
 		verbose = false
 		%> allows the constructor to run the open method immediately
 		openNow = true
-		%> strobeTime is time of strobe in unit multiples of 127uS: 8 units ~=1ms
+		%> strobeTime is time of strobe in unit multiples of 127ÂµS: 8 units ~=1ms
 		strobeTime = 4
 	end
 	
@@ -40,7 +40,7 @@ classdef labJack < handle
 		handle = []
 		%> have we successfully opend the labjack?
 		isOpen = false
-		%> an input buffer, currently unused.
+		%> an input buffer
 		inp = []
 		%> FIO0 state
 		fio0 = 0
@@ -122,7 +122,7 @@ classdef labJack < handle
 			elseif obj.openNow == true
 				obj.open
 			end
-			%obj.inp=zeros(10,1);
+			obj.inp=zeros(10,1);
 		end
 		
 		% ===================================================================
@@ -293,7 +293,7 @@ classdef labJack < handle
 		function ledON(obj)
 			if obj.silentMode == false && obj.vHandle == 1
 				obj.rawWrite(obj.ledIsON);
-				%in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(obj.inp,10);
 			end
 		end
 		
@@ -305,13 +305,13 @@ classdef labJack < handle
 		function ledOFF(obj)
 			if obj.silentMode == false && obj.vHandle == 1
 				obj.rawWrite(obj.ledIsOFF);
-				%in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(obj.inp,10);
 			end
 		end
 		
 		% ===================================================================
 		%> @brief WaitShort
-		%>	LabJack Wait in multiples of 128µs
+		%>	LabJack Wait in multiples of 128ï¿½s
 		%>	@param time time in ms; remember 0.128ms is the atomic minimum
 		% ===================================================================
 		function waitShort(obj,time)
@@ -325,8 +325,8 @@ classdef labJack < handle
 			
 			obj.command = obj.checksum(cmd,'extended');
 			
-			%out = obj.rawWrite(obj.command);
-			%in = obj.rawRead(obj.inp,10);
+			out = obj.rawWrite(obj.command);
+			in = obj.rawRead(obj.inp,10);
 		end
 		
 		% ===================================================================
@@ -346,7 +346,41 @@ classdef labJack < handle
 			obj.command = obj.checksum(cmd,'extended');
 			
 			out = obj.rawWrite(obj.command);
-			%in = obj.rawRead(obj.inp,10);
+			in = obj.rawRead(obj.inp,10);
+		end
+		
+		% ===================================================================
+		%> @brief variableTTL
+		%>	LabJack Wait in multiples of 32ms
+		%>  @param line 0-7=FIO, 8-15=EIO, or 16-19=CIO
+		%>	@param time time in ms
+		% ===================================================================
+		function variableTTL(obj,line,time)
+			if ~exist('time','var')||~exist('line','var');fprintf('\nvariableTTL Input options: \n\t\tline (single value FIO0-7 or bitmask), time (in ms)\n\n');return;end
+			time=ceil(time/0.128);
+			
+			if obj.silentMode == false && obj.vHandle == 1
+				cmd=zeros(30,1);
+				cmd(2) = 248; %command byte for feedback command (f8 in hex)
+				cmd(3) = (length(cmd)-6)/2;
+
+				cmd(8) = 13; %BitDirWrite: IOType=13
+				cmd(9) = line;
+				cmd(10) = 1; %1 = output
+
+				cmd(11) = 11; %IBitStateWrite: IOType=11
+				cmd(12) = line;
+				cmd(13) = 1;
+
+				cmd(14) = 5; %IOType for waitshort is 5, waitlong is 6
+				cmd(23) = time; %time to wait in unit multiples, this is the time of the strobe
+
+				cmd(24) = 27; %IOType for PortStateWrite (1b in hex)
+				cmd(25:27) = mask;
+				cmd(28:30) = 0;
+
+				obj.command = obj.checksum(cmd,'extended');
+			end
 		end
 		
 		% ===================================================================
@@ -372,10 +406,10 @@ classdef labJack < handle
 				cmd(8) = 27; %IOType for PortStateWrite = 27
 				cmd(9:11) = mask;
 				cmd(12:14) = value;
-				
+	
 				cmd = obj.checksum(cmd,'extended');
 				out = obj.rawWrite(cmd);
-				%in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(obj.inp,10);
 			end
 		end
 		
@@ -398,7 +432,7 @@ classdef labJack < handle
 				
 				cmd = obj.checksum(cmd,'extended');
 				out = obj.rawWrite(cmd);
-				%in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(obj.inp,10);
 			end
 		end
 		
@@ -421,7 +455,7 @@ classdef labJack < handle
 				
 				cmd = obj.checksum(cmd,'extended');
 				out = obj.rawWrite(cmd);
-				%in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(obj.inp,10);
 			end
 		end
 		
@@ -490,7 +524,7 @@ classdef labJack < handle
 		function strobeWord(obj)
 			if ~isempty(obj.command)
 				obj.rawWrite(obj.command);
-				%in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(obj.inp,10);
 				obj.salutation('strobeWord', obj.comment);
 				%obj.comment = '';
 				%obj.command = [];
