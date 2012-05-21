@@ -103,6 +103,8 @@ classdef dotsStimulus < baseStimulus
 				obj.srcMode=rE.srcMode;
 				obj.dstMode=rE.dstMode;
 				obj.backgroundColour = rE.backgroundColour;
+			else
+				obj.mask = false; %we can't open offscreen windows to make the mask
 			end
 			
 			fn = properties('dotsStimulus');

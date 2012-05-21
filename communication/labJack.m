@@ -25,7 +25,7 @@ classdef labJack < handle
 		verbose = false
 		%> allows the constructor to run the open method immediately
 		openNow = true
-		%> strobeTime is time of strobe in unit multiples of 127µS: 8 units ~=1ms
+		%> strobeTime is time of strobe in unit multiples of 128�S: 8 units ~=1ms
 		strobeTime = 4
 	end
 	
@@ -350,12 +350,12 @@ classdef labJack < handle
 		end
 		
 		% ===================================================================
-		%> @brief variableTTL
-		%>	LabJack Wait in multiples of 32ms
+		%> @brieftimedTTL
+		%>	LabJack Wait in multiples of 128�s
 		%>  @param line 0-7=FIO, 8-15=EIO, or 16-19=CIO
 		%>	@param time time in ms
 		% ===================================================================
-		function variableTTL(obj,line,time)
+		function timedTTL(obj,line,time)
 			if ~exist('time','var')||~exist('line','var');fprintf('\nvariableTTL Input options: \n\t\tline (single value FIO0-7 or bitmask), time (in ms)\n\n');return;end
 			time=ceil(time/0.128);
 			
@@ -373,13 +373,15 @@ classdef labJack < handle
 				cmd(13) = 1;
 
 				cmd(14) = 5; %IOType for waitshort is 5, waitlong is 6
-				cmd(23) = time; %time to wait in unit multiples, this is the time of the strobe
+				cmd(15) = time; %time to wait in unit multiples, this is the time of the strobe
 
-				cmd(24) = 27; %IOType for PortStateWrite (1b in hex)
-				cmd(25:27) = mask;
-				cmd(28:30) = 0;
-
+				cmd(16) = 11; %IBitStateWrite: IOType=11
+				cmd(17) = line;
+				cmd(18) = 1;
+				
 				obj.command = obj.checksum(cmd,'extended');
+				out = obj.rawWrite(cmd);
+				in = obj.rawRead(obj.inp,10);
 			end
 		end
 		

@@ -1,7 +1,8 @@
+% ========================================================================
+%> ndots Newsome style dots
+%> UNFINISHED
+% ========================================================================
 classdef ndotsStimulus < baseStimulus
-	%ndots Newsome style dots
-	%
-	
 	properties
 		family = 'ndots'
 		type = 'simple'
@@ -12,7 +13,7 @@ classdef ndotsStimulus < baseStimulus
 		% anti-aliasing)
 		shape = 1
 		% percentage of dots that carry the intended motion signal
-		coherence = 0.75
+		coherence = 1
 		% density of dots in the kinetogram (dots per degree-visual-angle^2
 		% per second)
 		density = 200
@@ -20,6 +21,7 @@ classdef ndotsStimulus < baseStimulus
 		% direction (the pdf).  If directionWeights is incomplete, defaults
 		% to equal weights.
 		directionWeights = 1
+		% diameter
 		diameter = 5
 		% fraction of diameter that determines the width of the field of
 		% moving dots.  When fieldScale > 1, some dots will be hidden
@@ -28,19 +30,19 @@ classdef ndotsStimulus < baseStimulus
 		% width of angular error to add to each dot's motion (degrees)
 		drunkenWalk = 0
 		% number disjoint sets of dots to interleave frame-by-frame
-		interleaving = 3
+		interleaving = 1
 		% how to move coherent dots: as one rigid unit (true), or each dot
 		% independently (false)
-		isMovingAsHerd = false
+		isMovingAsHerd = true
 		% how to move non-coherent dots: by replotting from scratch (true),
 		% or by local increments (false)
-		isFlickering = true
+		isFlickering = false
 		% how to move dots near the edges: by wrapping to the other side
 		% (true), or by replotting from scratch (false)
 		isWrapping = true
 		% how to pick coherent dots: favoring recently non-coherent dots
 		% (true), or indiscriminately (false)
-		isLimitedLifetime = true
+		isLimitedLifetime = false
 		% show mask or not?
 		mask = true
 		%mask GL modes
@@ -298,7 +300,7 @@ classdef ndotsStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			obj.computeNextFrame();
+			computeNextFrame(obj);
 			obj.tick = obj.tick + 1;
 		end
 		
@@ -314,8 +316,14 @@ classdef ndotsStimulus < baseStimulus
 		
 	end%---END PUBLIC METHODS---%
 	
-	methods ( Access = private ) %----------PRIVATE METHODS---------%
-		% Compute dot positions for the next frame of animation.
+	%=======================================================================
+	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	%=======================================================================
+		
+		% ===================================================================
+		%> @brief Compute dot positions for the next frame of animation.
+		%>
+		% ===================================================================
 		function computeNextFrame(obj)
 			% cache some properties as local variables because it's faster
 			nFrames = obj.interleaving;
