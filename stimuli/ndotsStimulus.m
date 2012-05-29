@@ -13,7 +13,7 @@ classdef ndotsStimulus < baseStimulus
 		% anti-aliasing)
 		shape = 1
 		% percentage of dots that carry the intended motion signal
-		coherence = 1
+		coherence = 0.5
 		% density of dots in the kinetogram (dots per degree-visual-angle^2
 		% per second)
 		density = 200
@@ -30,7 +30,7 @@ classdef ndotsStimulus < baseStimulus
 		% width of angular error to add to each dot's motion (degrees)
 		drunkenWalk = 0
 		% number disjoint sets of dots to interleave frame-by-frame
-		interleaving = 1
+		interleaving = 3
 		% how to move coherent dots: as one rigid unit (true), or each dot
 		% independently (false)
 		isMovingAsHerd = true
@@ -44,7 +44,7 @@ classdef ndotsStimulus < baseStimulus
 		% (true), or indiscriminately (false)
 		isLimitedLifetime = false
 		% show mask or not?
-		mask = true
+		mask = false
 		%mask GL modes
 		msrcMode = 'GL_SRC_ALPHA'
 		mdstMode = 'GL_ONE_MINUS_SRC_ALPHA'

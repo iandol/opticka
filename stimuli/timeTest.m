@@ -406,7 +406,7 @@ try
 			tdeadline=0;
 		end;
 		
-		%add in a bit of work into the loop
+		%add in a bit of I/O work into the loop
 		if c == 1; lj.prepareStrobe(2000); end
 		
 		% Flip: The clearmode argument specifies if flip should clear the
@@ -451,9 +451,9 @@ try
 	% Figure 1 shows time deltas between successive flips in milliseconds:
 	% This should equal the product numifis * ifi:
 	figure;
-	subplot(2,2,1);
+	subplot(2,3,1);
 	hold on;
-	plot((ts(2:n) - ts(1:n-1)) * 1000,'k.');
+	plot((ts(2:n) - ts(1:n-1)) * 1000,'k.','MarkerSize',8);
 	ni=numifis;
 	if (numifis==0)
 		ni=1;
@@ -465,57 +465,48 @@ try
 	
 	% Figure 3 shows estimated size of presentation deadline-miss in
 	% milliseconds:
-	subplot(2,2,2);
+	subplot(2,3,2);
 	hold on;
-	plot(missest*1000,'k.');
+	plot(missest*1000,'k.','MarkerSize',8);
 	plot(zeros(1,n));
 	title('Estimate of missed deadlines in milliseconds (negative == no miss):');
 	hold off;
 	
 	% Figure 4 shows difference in ms between finish of Flip and estimated
 	% start of VBL time:
-	subplot(2,2,3);
-	plot((flipfin - ts)*1000,'k.');
+	subplot(2,3,3);
+	plot((flipfin - ts)*1000,'k.','MarkerSize',8);
 	title('Time delta between start of VBL and return of Flip in milliseconds:');
 	
 	% Figure 5 shows difference in ms between finish of Flip and estimated
 	% stimulus-onset:
-	subplot(2,2,4);
-	plot((flipfin - so)*1000,'k.');
+	subplot(2,3,4);
+	plot((flipfin - so)*1000,'k.','MarkerSize',8);
 	title('Time delta between stimulus onset and return of Flip in milliseconds:');
 	
 	% Figure 2 shows the recorded beam positions:
-	figure
-	plot(beampos,'k.');
+	subplot(2,3,5);
+	plot(beampos,'k.','MarkerSize',8);
 	title('Rasterbeam position when timestamp was taken (in scanlines):');
 	
-	% Figure 6 shows duration of drawing commands when calling
+	if max(a) >= 0
+		subplot(2,3,6);
+		ax = plotyy(1:length(a), a, 1:length(b), b);
+		axis tight
+		%set(ax,'YScale','log')
+		title(['GETWINDOWINFO: Max VBLCount: ' num2str(max(a)) ' | Mean LastVBLTime: ' num2str(mean(diff(b)))]);
+		assignin('base','a',a);
+		assignin('base','b',b);
+		drawnow;
+	end
+	
+	% Figure shows duration of drawing commands when calling
 	% "DrawingFinished" in synchronous mode.
 	if synchronous==1
 		figure
 		plot(td*1000,'k.');
 		title('Total duration of all drawing commands in milliseconds:');
 	end;
-	
-	if IsWin && (tSecondary(1)>0 && tSecondary(2)>0)
-		figure;
-		plot((tSecondary - so) * 1000);
-		title('Time delta in milliseconds between stimulus onset according to DWM and stimulus onset according to Flip:');
-		fprintf('Average discrepancy between DWM and beamposition timestamping is %f msecs, stddev = %f msecs.\n', mean((tSecondary - so) * 1000), std((tSecondary - so) * 1000));
-	end
-	
-	if max(a) >= 0
-		figure;
-		plot(diff(a),'ko');
-		hold on
-		plot(diff(b),'r-.');
-		hold off
-		set(gca,'YScale','log')
-		title(['GETWINDOWINFO: VBLCount: ' num2str(mean(a)) ' | LastVBLTime: ' num2str(mean(b))]);
-		assignin('base','a',a);
-		assignin('base','b',b);
-		drawnow;
-	end
 	
 	% Count and output number of missed flip on VBL deadlines:
 	numbermisses=0;

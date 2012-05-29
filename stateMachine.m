@@ -32,13 +32,14 @@ classdef stateMachine < handle
 		stateListIndex
 		%> true or false, whether this object is currently busy running
 		isRunning = false;
-	end
-	
-	properties (SetAccess = protected, GetAccess = protected)
 		%> field names of allStates struct array, defining state behaviors
 		stateFields = {'name', 'next', 'time',	'entry', 'within', 'withinTime', 'exit'}
 		%> default values of allStates struct array fields
 		stateDefaults = {'', '', 0, {}, {}, 0, {}}
+	end
+	
+	properties (SetAccess = protected, GetAccess = protected)
+		
 	end
 	
 	events
@@ -71,6 +72,25 @@ classdef stateMachine < handle
 			%initialise the statelist index
 			obj.stateListIndex = containers.Map('a', 1, 'uniformValues', false);
 			obj.stateListIndex.remove(obj.stateListIndex.keys);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function initialise(obj)
+			if isempty(obj.stateList)
+				statesInfo = { ...
+				'name'      'next'   'time'     'entry'     'within'; ...
+				'begin'     'middle'  1			doBegin     {}; ...
+				'middle'    'end'     1			doMiddle    askInput; ...
+				'end'       ''        1         doEnd,      {}; ...
+				};
+				obj.stateList = 
+			obj.startTime = obj.clockFunction();
+			obj.currentTime = obj.startTime;
+			obj.currentTick = 1;
 		end
 		
 		% ===================================================================

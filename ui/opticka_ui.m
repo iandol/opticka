@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 16-May-2012 21:23:53
+% Last Modified by GUIDE v2.5 28-May-2012 12:31:58
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -337,7 +337,12 @@ end
 function OKlogFrames_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.getScreenVals;
+	if isa(o.r.screen,'screenManager')
+		if get(hObject,'Value') == 1
+			set(handles.OKbenchmark,'Value',0)
+		end
+		o.getScreenVals;
+	end
 end
 
 % --- Executes on button press in OKOpenGLBlending.

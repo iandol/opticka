@@ -58,10 +58,10 @@ classdef stimulusSequence < dynamicprops
 	
 	properties (Dependent = true,  SetAccess = private)
 		%> number of blocks, need to rename!
-		nRuns
+		nRuns 
 		%> estimate of the total number of frames this task will occupy,
 		%> requires accurate fps 
-		nFrames
+		nFrames 
 		%> number of independant variables
 		nVars = 0
 	end
@@ -473,6 +473,7 @@ classdef stimulusSequence < dynamicprops
 				in.taskStream = [];
 				lobj = in;
 			end
+			lobj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
 			lobj.isLoading = false;
 		end
 		
