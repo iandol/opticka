@@ -81,13 +81,17 @@ classdef stateMachine < handle
 		% ===================================================================
 		function initialise(obj)
 			if isempty(obj.stateList)
+				doBegin = {@disp, 'Hello'};
+				doMiddle = {@disp, 'Wow!!!'};
+				doEnd = {@disp, 'Oh bye!'};
 				statesInfo = { ...
-				'name'      'next'   'time'     'entry'     'within'; ...
-				'begin'     'middle'  1			doBegin     {}; ...
-				'middle'    'end'     1			doMiddle    askInput; ...
-				'end'       ''        1         doEnd,      {}; ...
-				};
-				obj.stateList = 
+					'name'      'next'   'time'     'entry'     'within'; ...
+					'begin'     'middle'  1			doBegin     {}; ...
+					'middle'    'end'     1			doMiddle    {}; ...
+					'end'       ''        1         doEnd,      {}; ...
+					};
+				addStates(obj,statesInfo);
+			end
 			obj.startTime = obj.clockFunction();
 			obj.currentTime = obj.startTime;
 			obj.currentTick = 1;
@@ -180,9 +184,9 @@ classdef stateMachine < handle
 		% ===================================================================
 		function runBriefly(obj)
 			% poll for state timeout
-			tt = feval(obj.clockFunction);
-			%fprintf('This Time: %g | Next Time: %g\n',tt, obj.nextTimeOut);
-			if tt >= obj.nextTimeOut
+			obj.currentTime = feval(obj.clockFunction);
+			%fprintf('---> This Time: %g | Next Time: %g\n',tt, obj.nextTimeOut);
+			if obj.currentTime >= obj.nextTimeOut
 				nextName = obj.stateList(obj.currentIndex).next;
 				if isempty(nextName)
 					obj.exitCurrentState;
@@ -204,8 +208,8 @@ classdef stateMachine < handle
 			obj.startTime = feval(obj.clockFunction);
 			obj.isRunning = true;
 			obj.currentTick = 1;
-         obj.finalTime = [];
-         obj.enterStateAtIndex(1);
+			obj.finalTime = [];
+			obj.enterStateAtIndex(1);
 		end
 		
 		% ===================================================================
@@ -218,11 +222,8 @@ classdef stateMachine < handle
 			obj.finalTime = feval(obj.clockFunction) - obj.startTime;
 			obj.finalTick = obj.currentTick;
 			obj.isRunning = false;
-			
-			fprintf('Total time to do state traversal: %g secs \n', obj.finalTime);
-			fprintf('Loops: %i thus %g ms per loop\n',obj.finalTick, (obj.finalTime/obj.finalTick)*1000);
-
-			
+			fprintf('\n--->>> Total time to do state traversal: %g secs \n', obj.finalTime);
+			fprintf('--->>> Loops: %i thus %g ms per loop\n',obj.finalTick, (obj.finalTime/obj.finalTick)*1000);
 		end
 		
 		% ===================================================================
@@ -277,8 +278,10 @@ classdef stateMachine < handle
 				obj.currentEntryFunction = thisState.entry;
 				obj.currentEntryTime = feval(obj.clockFunction);
 				obj.nextTimeOut = obj.currentEntryTime + thisState.time;
-				obj.salutation(['Entering state: ' thisState.name '...'])
-				feval(thisState.entry{:});
+				obj.salutation(['Entering state: ' thisState.name ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs'])
+				if ~isempty(thisState.entry)
+					feval(thisState.entry{:});
+				end
 			else
 				obj.isRunning = false;
 			end
@@ -293,16 +296,11 @@ classdef stateMachine < handle
 		function transitionToStateWithName(obj, nextName)
 			nextIndex = obj.stateListIndex(nextName);
 			obj.exitCurrentState;
-			% 			if ~isempty(obj.transitionFevalable)
-			% 				inserted = cell(1, numel(obj.transitionFevalable) + 1);
-			% 				inserted(1) = obj.transitionFevalable(1);
-			% 				inserted{2} = obj.allStates([obj.currentIndex, nextIndex]);
-			% 				inserted(3:end) = obj.transitionFevalable(2:end);
-			% 				obj.logFeval(obj.transitionString, inserted)
-			% 			end
-			obj.salutation('Transitioning...')
+			obj.salutation(['Transitioning @ ' num2str(obj.currentTime-obj.startTime) 'secs'])
+			if ~isempty(obj.transitionFunction)
+				feval(obj.transitionFunction{:});
+			end
 			obj.enterStateAtIndex(nextIndex);
-			
 		end
 		
 		% ===================================================================
@@ -316,9 +314,10 @@ classdef stateMachine < handle
 			obj.currentEntryFunction  = {};
 			obj.currentEntryTime = [];
 			obj.nextTimeOut = [];
-			obj.salutation(['Exiting ' thisState.name '...']);
-			feval(thisState.exit{:})
-			
+			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(obj.currentTime-obj.startTime) 'secs']);
+			if ~isempty(thisState.exit)
+				feval(thisState.exit{:})
+			end
 		end
 		
 		% ===================================================================

@@ -202,14 +202,14 @@ classdef baseStimulus < dynamicprops
 			if ~exist('benchmark','var')
 				benchmark=false;
 			end
-			s = screenManager('verbose',false,'blend',false,'screen',0,...
+			s = screenManager('verbose',false,'blend',true,'screen',0,...
 				'bitDepth','8bit','debug',false,...
 				'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
 			if benchmark
 				s.windowed = [];
 			else
-				%s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2];
-				s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
+				s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2];
+				%s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
 			end
 			open(s); %open PTB screen
 			setup(obj,s); %setup our stimulus object
