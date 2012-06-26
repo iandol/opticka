@@ -1,33 +1,33 @@
 classdef dotsStimulus < baseStimulus
-	%> DOTSSTIMULUS single coherent dots stimulus, inherits from baseStimulus
-	%>   dotsStimulus shows a 
+	%> DOTSSTIMULUS simple variable coherence dots stimulus, inherits from baseStimulus
+	%>   
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> dot type, only simple supported at present
-		type = 'simple'
+		type		= 'simple'
 		%> dots per degree
-		density = 100
+		density		= 100
 		%> how to colour the dots: random, randomN, randomBW, randomNBW, binary
-		colourType = 'randomBW'
+		colourType	= 'randomBW'
 		%> width of dot (deg)
-		dotSize  = 0.05
+		dotSize		= 0.05
 		%> dot coherence from 0 - 1
-		coherence = 0.5
+		coherence	= 0.5
 		%> fraction of dots to kill each frame  (limited lifetime)
-		kill      = 0
+		kill		= 0
 		%> dottype passed to PTB, 0=fast, 1=anti-aliased, 2=high quality
 		%> anti-aliased
-		dotType = 1
+		dotType		= 1
 		%> whether to use a circular mask or not
-		mask = true
+		mask		= true
 		%> colour of the mask, empty sets mask colour to = background of screen
-		maskColour = []
+		maskColour	= []
 		%> smooth the alpha edge of the mask by this number of pixels, 0 is
 		%> off
 		maskSmoothing = 0
 		%> mask OpenGL blend modes
-		msrcMode = 'GL_SRC_ALPHA'
-		mdstMode = 'GL_ONE_MINUS_SRC_ALPHA'
+		msrcMode	= 'GL_SRC_ALPHA'
+		mdstMode	= 'GL_ONE_MINUS_SRC_ALPHA'
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
@@ -105,24 +105,24 @@ classdef dotsStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Setup an structure for runExperiment
+		%> @brief Setup the stimulus object 
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return
+		%> @param sM screenManager object for reference
 		% ===================================================================
-		function setup(obj,rE)
+		function setup(obj,sM)
 			
 			obj.dateStamp = clock;
 			
-			if exist('rE','var')
-				obj.ppd=rE.ppd;
-				obj.ifi=rE.screenVals.ifi;
-				obj.xCenter=rE.xCenter;
-				obj.yCenter=rE.yCenter;
-				obj.win=rE.win;
-				obj.srcMode=rE.srcMode;
-				obj.dstMode=rE.dstMode;
-				obj.backgroundColour = rE.backgroundColour;
+			if exist('sM','var')
+				obj.ppd=sM.ppd;
+				obj.ifi=sM.screenVals.ifi;
+				obj.xCenter=sM.xCenter;
+				obj.yCenter=sM.yCenter;
+				obj.win=sM.win;
+				obj.srcMode=sM.srcMode;
+				obj.dstMode=sM.dstMode;
+				obj.backgroundColour = sM.backgroundColour; 
+				clear sM;
 			else
 				obj.mask = false; %we can't open offscreen windows to make the mask
 			end
@@ -142,7 +142,6 @@ classdef dotsStimulus < baseStimulus
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
-			
 			
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
@@ -226,9 +225,9 @@ classdef dotsStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Update an structure for runExperiment
-		%>
-		%> @param rE runExperiment object for reference
+		%> @brief Update object
+		%>  We update the object once per trial (if we change parameters
+		%>  for example)
 		% ===================================================================
 		function update(obj)
 			obj.updateDots;
@@ -237,7 +236,6 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Draw our stimulus structure
 		%>
-		%> @param rE runExperiment object for reference
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible == true
@@ -255,10 +253,8 @@ classdef dotsStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Animate an structure for runExperiment
+		%> @brief Animate this object by one frame
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
 			obj.xy = obj.xy + obj.dxdy; %increment position
@@ -278,10 +274,8 @@ classdef dotsStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Reset an structure for runExperiment
+		%> @brief reset the object, deleting the temporary .Out properties
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function reset(obj)
 			obj.removeTmpProperties;
@@ -305,10 +299,9 @@ classdef dotsStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Setup an structure for runExperiment
+		%> @brief nDots is dependant property, this get method also caches
+		%> the value in obj.nDots_ for
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return
 		% ===================================================================
 		function value = get.nDots(obj)
 			obj.nDots_ = obj.density * obj.size^2;
@@ -352,7 +345,7 @@ classdef dotsStimulus < baseStimulus
 		function set_sizeOut(obj,value)
 			obj.sizeOut = value * obj.ppd;
 			if obj.mask == 1
-				obj.fieldSize = obj.sizeOut * obj.fieldScale; %for masking!
+				obj.fieldSize = (obj.sizeOut * obj.fieldScale) ; %for masking!
 			else
 				obj.fieldSize = obj.sizeOut;
 			end

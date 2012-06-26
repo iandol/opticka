@@ -102,6 +102,7 @@ classdef stateMachine < handle
 		%> @param
 		%> @return
 		% ===================================================================
+
 		function newStateIndexes = addStates(obj,newStates)
 			sz = size(newStates);
 			newStateIndexes = zeros(1,sz(1)-1);
@@ -130,6 +131,15 @@ classdef stateMachine < handle
 			mergedValues = allowedDefaults;
 			mergedValues(defaultIndices) = infoValues(validIndices);
 			newState = cell2struct(mergedValues, allowedFields, 2);
+			if isempty(newState.entry)
+				newState.entry = {@disp, 'Entering'};
+			end
+			if isempty(newState.within)
+				newState.within = {@disp, 'Within'};
+			end
+			if isempty(newState.exit)
+				newState.exit = {@disp, 'Bye'};
+			end
 			
 			% append the new state to allStates
 			%   add to lookup table

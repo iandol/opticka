@@ -11,7 +11,7 @@ classdef ndotsStimulus < baseStimulus
 		% the shape for all dots (integer, where 0 means filled square, 1
 		% means filled circle, and 2 means filled circle with high-quality
 		% anti-aliasing)
-		shape = 1
+		shape = 2
 		% percentage of dots that carry the intended motion signal
 		coherence = 0.5
 		% density of dots in the kinetogram (dots per degree-visual-angle^2
@@ -178,6 +178,39 @@ classdef ndotsStimulus < baseStimulus
 			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
 			obj.xTmp = obj.xPositionOut; %xTmp and yTmp are temporary position stores.
 			obj.yTmp = obj.yPositionOut;
+
+			%build the mask
+			if obj.mask == true
+				if isempty(obj.maskColour)
+					obj.maskColour = obj.backgroundColour;
+				end
+				wrect = SetRect(0, 0, obj.fieldSize+obj.dotSizeOut, obj.fieldSize+obj.dotSizeOut);
+				mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
+				mrect = CenterRect(mrect,wrect);
+				bg = [obj.backgroundColour(1:3) 1];
+				obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, bg, wrect);
+				Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
+				obj.maskRect = CenterRectOnPointd(wrect,obj.xPositionOut,obj.yPositionOut);
+				if obj.maskSmoothing > 0
+					if ~rem(obj.maskSmoothing, 2)
+						obj.maskSmoothing = obj.maskSmoothing + 1;
+					end
+					if exist('fspecial','file')
+						obj.kernel = fspecial('gaussian',obj.maskSmoothing,obj.maskSmoothing);
+						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
+					else
+						p = mfilename('fullpath');
+						p = fileparts(p);
+						ktmp = load([p filesep 'gaussian52kernel.mat']); %'gaussian73kernel.mat''disk5kernel.mat'
+						obj.kernel = ktmp.kernel;
+						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
+						obj.salutation('No fspecial, had to use precompiled kernel');
+					end
+				else
+					obj.kernel = [];
+					obj.shader = 0;
+				end
+			end
 			
 			obj.initialiseDots();
 			obj.computeNextFrame();
@@ -213,7 +246,7 @@ classdef ndotsStimulus < baseStimulus
 						obj.colour, ...
 						obj.pixelOrigin, ...
 						obj.shape);
-					Screen('DrawTexture', obj.win, obj.maskTexture, obj.maskSourceRect, obj.maskDestinationRect);
+					Screen('DrawTexture', obj.win, obj.maskTexture, [], obj.maskRect);
 					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
 				else
 					Screen('DrawDots', ...
@@ -286,58 +319,9 @@ classdef ndotsStimulus < baseStimulus
 			obj.pixelOrigin(2) = obj.winRect(4)/2 ...
 				- (obj.yPosition * obj.ppd) - fieldPixels/2;
 			
-			obj.maskSourceRect = [0 0, maskPixels, maskPixels];
-			obj.maskDestinationRect = obj.maskSourceRect ...
-				+ obj.pixelOrigin([1 2 1 2]) - obj.dotSize/2;
-			
-			%build the mask
-			if obj.mask == true
-				if isempty(obj.maskColour)
-					obj.maskColour = obj.backgroundColour;
-				end
-				wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
-				mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
-				mrect = CenterRect(mrect,wrect);
-				bg = [obj.backgroundColour(1:3) 1];
-				obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, bg, wrect);
-				Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
-				obj.maskRect = CenterRectOnPointd(wrect,obj.xPositionOut,obj.yPositionOut);
-				if obj.maskSmoothing > 0
-					if ~rem(obj.maskSmoothing, 2)
-						obj.maskSmoothing = obj.maskSmoothing + 1;
-					end
-					if exist('fspecial','file')
-						obj.kernel = fspecial('gaussian',obj.maskSmoothing,obj.maskSmoothing);
-						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
-					else
-						p = mfilename('fullpath');
-						p = fileparts(p);
-						ktmp = load([p filesep 'gaussian52kernel.mat']); %'gaussian73kernel.mat''disk5kernel.mat'
-						obj.kernel = ktmp.kernel;
-						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
-						obj.salutation('No fspecial, had to use precompiled kernel');
-					end
-				else
-					obj.kernel = [];
-					obj.shader = 0;
-				end
-			end
-			
-			% build a Psychtoolbox Screen texture to mask the dots
-			%   a large rectangle for the entire dots field
-			%   with a hole in the middle for the dots viewing aperture
-			%center = exp(linspace(-1, 1, maskPixels).^2);
-			%field = center'*center;
-			%threshold = center(marginPixels);
-			%aperture = field > threshold;
-			%mask = zeros(maskPixels, maskPixels, 4);
-			%mask(:,:,1) = obj.backgroundColour(1);
-			%mask(:,:,2) = obj.backgroundColour(2);
-			%mask(:,:,3) = obj.backgroundColour(3);
-			%mask(:,:,4) = aperture.*1;
-			%obj.maskTexture = Screen('MakeTexture', ...
-			%	obj.win, ...
-			%	mask);
+% 			obj.maskSourceRect = [0 0, maskPixels, maskPixels];
+% 			obj.maskDestinationRect = obj.maskSourceRect ...
+% 				+ obj.pixelOrigin([1 2 1 2]) - obj.dotSize/2;
 			
 			% build a lookup table to pick weighted directions from a
 			% uniform random variable.
@@ -356,6 +340,10 @@ classdef ndotsStimulus < baseStimulus
 			
 			% pick random start positions for all dots
 			obj.normalizedXY = rand(2, obj.nDots);
+			
+			if obj.mask == true
+				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xPositionOut,obj.yPositionOut);
+			end
 		end
 
 		% ===================================================================
