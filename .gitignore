@@ -1,0 +1,9 @@
+*.asv
+*~
+*.tmp
+html*
+debug.txt
+Junk
+.DS_Store
+.idea
+.bzrignore
