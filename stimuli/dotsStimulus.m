@@ -1,21 +1,31 @@
 classdef dotsStimulus < baseStimulus
-	%DOTSSTIMULUS single coherent dots stimulus, inherits from baseStimulus
-	%   The current properties are:
+	%> DOTSSTIMULUS single coherent dots stimulus, inherits from baseStimulus
+	%>   dotsStimulus shows a 
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		family = 'dots'
+		%> dot type, only simple supported at present
 		type = 'simple'
+		%> dots per degree
 		density = 100
+		%> how to colour the dots: random, randomN, randomBW, randomNBW, binary
 		colourType = 'randomBW'
-		dotSize  = 0.05  % width of dot (deg)
+		%> width of dot (deg)
+		dotSize  = 0.05
+		%> dot coherence from 0 - 1
 		coherence = 0.5
-		kill      = 0 % fraction of dots to kill each frame  (limited lifetime)
+		%> fraction of dots to kill each frame  (limited lifetime)
+		kill      = 0
+		%> dottype passed to PTB, 0=fast, 1=anti-aliased, 2=high quality
+		%> anti-aliased
 		dotType = 1
+		%> whether to use a circular mask or not
 		mask = true
+		%> colour of the mask, empty sets mask colour to = background of screen
 		maskColour = []
 		%> smooth the alpha edge of the mask by this number of pixels, 0 is
 		%> off
 		maskSmoothing = 0
+		%> mask OpenGL blend modes
 		msrcMode = 'GL_SRC_ALPHA'
 		mdstMode = 'GL_ONE_MINUS_SRC_ALPHA'
 	end
@@ -26,6 +36,8 @@ classdef dotsStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> stimulus family
+		family = 'dots'
 		%> row are x and y and columns are each dot
 		xy
 		%> delta x and y for each dot
@@ -35,23 +47,31 @@ classdef dotsStimulus < baseStimulus
 	end
 	properties (SetAccess = private, GetAccess = private)
 		nDots_
+		%> we must scale the dots lager than the mask by this factor
 		fieldScale = 1.1
+		%> resultant size of the dotfield after scaling
 		fieldSize
+		%> this holds the mask texture
 		maskTexture
+		%> the stimulus rect of the mask
 		maskRect
+		%> screen drawing mode, inherited from screenManager object on setup
 		srcMode = 'GL_ONE'
 		dstMode = 'GL_ZERO'
+		%> rDots used in coherence calculation
 		rDots
-		nDotsMax = 5000
+		%> angles used in coherence calculation
 		angles
-		dSize
-		fps = 60
+		%> used during updateDots calculations
 		dxs
 		dys
+		%> the smoothing kernel for the mask
 		kernel = []
 		shader = 0
-		allowedProperties='msrcMode|mdstMode|type|density|nDots|dotSize|colourType|coherence|dotType|kill|mask|maskSmoothing|maskColour';
-		ignoreProperties='xy|dxdy|colours|mask|maskTexture|maskColour|colourType|msrcMode|mdstMode'
+		%> regexes for object management during construction
+		allowedProperties='msrcMode|mdstMode|type|density|dotSize|colourType|coherence|dotType|kill|mask|maskSmoothing|maskColour';
+		%> regexes for object management during setup
+		ignoreProperties='family|xy|dxdy|colours|mask|maskTexture|maskColour|colourType|msrcMode|mdstMode'
 	end
 	
 	%=======================================================================
@@ -209,17 +229,15 @@ classdef dotsStimulus < baseStimulus
 		%> @brief Update an structure for runExperiment
 		%>
 		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function update(obj)
 			obj.updateDots;
 		end
 		
 		% ===================================================================
-		%> @brief Draw an structure for runExperiment
+		%> @brief Draw our stimulus structure
 		%>
 		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible == true
@@ -297,84 +315,7 @@ classdef dotsStimulus < baseStimulus
 			value = obj.nDots_;
 		end
 		
-		% ===================================================================
-		%> @brief Test method to play with dot generation
-		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
-		% ===================================================================
-		function runTest(obj)
-			try
-				antiAlias = 0;
-				obj.xCenter=0;
-				obj.yCenter=0;
-				obj.backgroundColour = [0.5 0.5 0.5];
-				obj.dSize = obj.dotSize * obj.ppd;
-				Screen('Preference', 'SkipSyncTests', 2);
-				Screen('Preference', 'VisualDebugLevel', 0);
-				PsychImaging('PrepareConfiguration');
-				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
-				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
-				[obj.win, rect]=PsychImaging('OpenWindow', 0, obj.backgroundColour, [1 1 801 601], [], 2,[],antiAlias);
-				[center(1), center(2)] = RectCenter(rect);
-				obj.setup();
-				obj.fps=Screen('FrameRate',obj.win);      % frames per second
-				obj.ifi=Screen('GetFlipInterval', obj.win);
-				if obj.fps==0
-					obj.fps=1/obj.ifi;
-				end;
-				%build the mask
-				if obj.mask == true
-					wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
-					mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
-					mrect = CenterRect(mrect,wrect);
-					bg = [obj.backgroundColour(1:3) 1];
-					obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, bg, wrect);
-					Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
-					obj.maskRect = CenterRectOnPointd(wrect,center(1),center(2));
-					if obj.maskSmoothing > 0 && exist('fspecial','file')
-						obj.kernel = fspecial('disk',obj.maskSmoothing);
-						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 1, 2);
-					else
-						obj.kernel = [];
-						obj.shader = 0;
-					end
-				end
-				vbl=Screen('Flip', obj.win);
-				while 1
-					if obj.mask==true
-						Screen('BlendFunction', obj.win, obj.msrcMode, obj.mdstMode);
-						Screen('DrawDots', obj.win, obj.xy, obj.dSize, obj.colours, center, obj.dotType);
-						Screen('DrawTexture', obj.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
-						Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
-					else
-						Screen('DrawDots', obj.win, obj.xy, obj.dSize, obj.colours, center, obj.dotType);
-					end
-					Screen('gluDisk',obj.win,[1 0 1],center(1),center(2),2);
-					Screen('DrawingFinished', obj.win); % Tell PTB that no  further drawing commands will follow before Screen('Flip')
-					
-					[~, ~, buttons]=GetMouse(0);
-					if any(buttons) % break out of loop
-						break;
-					end;
-					obj.animate();
-					vbl=Screen('Flip', obj.win);
-				end
-				
-				obj.reset;
-				Priority(0);
-				Screen('CloseAll');
-				
-			catch ME
-				obj.reset;
-				Priority(0);
-				Screen('CloseAll');
-				rethrow(ME)
-			end
-		end
-	end
-	%---END PUBLIC METHODS---%
+	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
