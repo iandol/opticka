@@ -4,90 +4,91 @@
 % ========================================================================
 classdef ndotsStimulus < baseStimulus
 	properties
-		family = 'ndots'
+		%> dot type, only simple supported at present
 		type = 'simple'
-		% the size of dots in the kinetogram (pixels)
+		%> the size of dots in the kinetogram (pixels)
 		dotSize = 3
-		% the shape for all dots (integer, where 0 means filled square, 1
-		% means filled circle, and 2 means filled circle with high-quality
-		% anti-aliasing)
-		shape = 2
-		% percentage of dots that carry the intended motion signal
+		%> type of dot (integer, where 0 means filled square, 1
+		%> means filled circle, and 2 means filled circle with high-quality
+		%> anti-aliasing)
+		dotType = 2
+		%> percentage of dots that carry the intended motion signal
 		coherence = 0.5
-		% density of dots in the kinetogram (dots per degree-visual-angle^2
-		% per second)
+		%> density of dots in the kinetogram (dots per degree-visual-angle^2
+		%> per second)
 		density = 200
-		% when angle is an array, the relative frequency of each
-		% angle (the pdf).  If directionWeights is incomplete, defaults
-		% to equal weights.
+		%> when angle is an array, the relative frequency of each
+		%> angle (the pdf).  If directionWeights is incomplete, defaults
+		%> to equal weights.
 		directionWeights = 1
-		% width of angular error to add to each dot's motion (degrees)
+		%> width of angular error to add to each dot's motion (degrees)
 		drunkenWalk = 0
-		% number disjoint sets of dots to interleave frame-by-frame
+		%> number disjoint sets of dots to interleave frame-by-frame
 		interleaving = 3
-		% how to move coherent dots: as one rigid unit (true), or each dot
-		% independently (false)
+		%> how to move coherent dots: as one rigid unit (true), or each dot
+		%> independently (false)
 		isMovingAsHerd = true
-		% how to move non-coherent dots: by replotting from scratch (true),
-		% or by local increments (false)
+		%> how to move non-coherent dots: by replotting from scratch (true),
+		%> or by local increments (false)
 		isFlickering = false
-		% how to move dots near the edges: by wrapping to the other side
-		% (true), or by replotting from scratch (false)
+		%> how to move dots near the edges: by wrapping to the other side
+		%> (true), or by replotting from scratch (false)
 		isWrapping = true
-		% how to pick coherent dots: favoring recently non-coherent dots
-		% (true), or indiscriminately (false)
+		%> how to pick coherent dots: favoring recently non-coherent dots
+		%> (true), or indiscriminately (false)
 		isLimitedLifetime = true
-		% show mask or not?
+		%> show mask or not?
 		mask = true
-		%mask GL modes
+		%> mask GL modes
 		msrcMode = 'GL_SRC_ALPHA'
 		mdstMode = 'GL_ONE_MINUS_SRC_ALPHA'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		% fraction of diameter that determines the width of the field of
-		% moving dots.  When fieldScale > 1, some dots will be hidden
-		% behind the aperture.
-		fieldScale = 1.1
-		% number of dots in the kinetogram, includes all interleaving
-		% frames.
+		%> number of dots in the kinetogram, includes all interleaving
+		%> frames.
 		nDots
-		% 2xn matrix of dot x and y coordinates, (normalized units, from
-		% top-left of kinetogram)
+		family = 'ndots'
+		%> 2xn matrix of dot x and y coordinates, (normalized units, from
+		%> top-left of kinetogram)
 		normalizedXY
-		% scale factor from kinetogram normalized units to pixels
+		%> scale factor from kinetogram normalized units to pixels
 		pixelScale
-		% 2xn matrix of dot x and y coordinates, (pixels, from top-left of
-		% kinetogram)
+		%> 2xn matrix of dot x and y coordinates, (pixels, from top-left of
+		%> kinetogram)
 		pixelXY
-		% center of the kinetogram (pixels, from the top-left of the
-		% window)
+		%> center of the kinetogram (pixels, from the top-left of the
+		%> window)
 		pixelOrigin
-		% lookup table to pick random dot direction by directionWeights
+		%> lookup table to pick random dot direction by directionWeights
 		directionCDFInverse
-		% resolution of directionCDFInverse
+		%> resolution of directionCDFInverse
 		directionCDFSize = 1e3
-		% counter to keep track of interleaving frames
+		%> counter to keep track of interleaving frames
 		frameNumber = 0
-		% logical array to select dots for a frame
+		%> logical array to select dots for a frame
 		frameSelector
-		% count of how many consecutive frames each dot has moved
-		% coherently
+		%> count of how many consecutive frames each dot has moved
+		%> coherently
 		dotLifetimes
-		% radial step size for dots moving by local increments (normalized
-		% units)
+		%> radial step size for dots moving by local increments (normalized
+		%> units)
 		deltaR
-		winRect
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		% Psychtoolbox Screen texture index for the dot field aperture mask
+		winRect
+		%> fraction of diameter that determines the width of the field of
+		%> moving dots.  When fieldScale > 1, some dots will be hidden
+		%> behind the aperture.
+		fieldScale = 1.1
+		%> Psychtoolbox Screen texture index for the dot field aperture mask
 		maskTexture
-		% [x,y,x2,y2] rect, where to draw the dot field aperture mask,
-		% (pixels, from the top-left of the window)
+		%> [x,y,x2,y2] rect, where to draw the dot field aperture mask,
+		%> (pixels, from the top-left of the window)
 		maskDestinationRect
-		% [x,y,x2,y2] rect, spanning the entire dot field aperture mask,
-		% (pixels, from the top-left of the window)
+		%> [x,y,x2,y2] rect, spanning the entire dot field aperture mask,
+		%> (pixels, from the top-left of the window)
 		maskSourceRect
 		maskColour
 		maskRect
@@ -133,7 +134,6 @@ classdef ndotsStimulus < baseStimulus
 		%> @brief Setup an structure for runExperiment
 		%>
 		%> @param rE runExperiment object for reference
-		%> @return
 		% ===================================================================
 		function setup(obj,rE)
 			
@@ -220,8 +220,6 @@ classdef ndotsStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Update an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function update(obj)
 			obj.initialiseDots();
@@ -232,8 +230,6 @@ classdef ndotsStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Draw an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible == true
@@ -263,8 +259,6 @@ classdef ndotsStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Animate an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
 			computeNextFrame(obj);
@@ -274,8 +268,6 @@ classdef ndotsStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Reset an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function reset(obj)
 			obj.removeTmpProperties;
@@ -288,10 +280,8 @@ classdef ndotsStimulus < baseStimulus
 	%=======================================================================
 	
 		% ===================================================================
-		%> @brief Setup an structure for runExperiment
+		%> @brief initialise dot positions
 		%>
-		%> @param
-		%> @return
 		% ===================================================================
 		%-------------------Set up our dot matrices----------------------%
 		function initialiseDots(obj)

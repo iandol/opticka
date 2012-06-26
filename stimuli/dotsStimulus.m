@@ -15,8 +15,9 @@ classdef dotsStimulus < baseStimulus
 		coherence	= 0.5
 		%> fraction of dots to kill each frame  (limited lifetime)
 		kill		= 0
-		%> dottype passed to PTB, 0=fast, 1=anti-aliased, 2=high quality
-		%> anti-aliased
+		%> type of dot (integer, where 0 means filled square, 1
+		%> means filled circle, and 2 means filled circle with high-quality
+		%> anti-aliasing)
 		dotType		= 1
 		%> whether to use a circular mask or not
 		mask		= true
