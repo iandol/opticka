@@ -347,7 +347,7 @@ footer a:hover {
 @media only screen and (max-width: 959px) {}
 
 /* Tablet Portrait size to standard 960 (devices and browsers) */
-@media only screen and (min-width: 800px) and (max-width: 959px) {
+@media only screen and (min-width: 800px) and (max-width: 900px) {
   .inner {
     width: 94%;
     margin: 0 auto;
@@ -363,9 +363,6 @@ footer a:hover {
   #downloads {
     margin-bottom: 25px;
   }
-  #download-zip, #download-tar-gz {
-    display: none;
-  }
   .inner {
     width: 94%;
     margin: 0 auto;
@@ -373,7 +370,15 @@ footer a:hover {
 }
 
 /* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
-@media only screen and (min-width: 480px) and (max-width: 767px) {}
+@media only screen and (min-width: 480px) and (max-width: 799px) {
+	#download-tar-gz {
+    display: none;
+	}
+}
 
 /* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
-@media only screen and (max-width: 479px) {}
+@media only screen and (max-width: 479px) {
+	#download-zip, #download-tar-gz {
+    display: none;
+  }	
+}
