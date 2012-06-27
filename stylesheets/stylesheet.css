@@ -347,10 +347,15 @@ footer a:hover {
 @media only screen and (max-width: 959px) {}
 
 /* Tablet Portrait size to standard 960 (devices and browsers) */
-@media only screen and (min-width: 768px) and (max-width: 959px) {}
+@media only screen and (min-width: 800px) and (max-width: 959px) {
+  .inner {
+    width: 94%;
+    margin: 0 auto;
+  }	
+}
 
 /* All Mobile Sizes (devices and browser) */
-@media only screen and (max-width: 767px) {
+@media only screen and (max-width: 800px) {
   header {
     padding-top: 10px;
     padding-bottom: 10px;
