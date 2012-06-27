@@ -1,6 +1,7 @@
 % ========================================================================
-%> ndots Newsome style dots
-%> UNFINISHED
+%> @brief ndotsStimulus limited lifetime coherence dots stimulus
+%>
+%> 
 % ========================================================================
 classdef ndotsStimulus < baseStimulus
 	properties

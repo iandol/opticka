@@ -1,11 +1,12 @@
+% ========================================================================
+%> @brief barStimulus single bar stimulus, inherits from baseStimulus
+% ========================================================================
 classdef barStimulus < baseStimulus
-%BARSTIMULUS single bar stimulus, inherits from baseStimulus
-%   The current properties are:
 
    properties %--------------------PUBLIC PROPERTIES----------%
-		family = 'bar'
 		type = 'solid'
-		pixelScale = 1 %scale up the texture in the bar
+		%> scale up the texture in the bar
+		pixelScale = 1 
 		barWidth = 1
 		barLength = 4
 		contrast = []
@@ -14,6 +15,7 @@ classdef barStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		family = 'bar'
 		%> computed matrix for the bar
 		matrix
 		%> random matrix used for texture generation

@@ -1,7 +1,10 @@
+% ========================================================================
+%> @brief dotsStimulus simple variable coherence dots stimulus, inherits from baseStimulus
+%>
+%> 
+% ========================================================================
 classdef dotsStimulus < baseStimulus
-	%> DOTSSTIMULUS simple variable coherence dots stimulus, inherits from baseStimulus
-	%>   
-	
+
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> dot type, only simple supported at present
 		type		= 'simple'
