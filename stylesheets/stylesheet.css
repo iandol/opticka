@@ -74,9 +74,9 @@ header h1 {
   font-size: 48px;
   color: #303030;
   line-height: 1.2;
-  background: transparent url(../images/opticka.png) left 0% no-repeat;
+  /* background: transparent url(../images/opticka.png) left 0% no-repeat;
   padding: 0 0 0 110px;
-  line-height: 2
+  line-height: 2 */
 }
 
 header h2 {
