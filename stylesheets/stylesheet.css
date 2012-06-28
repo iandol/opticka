@@ -69,7 +69,8 @@ header {
 }
 
 header h1 {
-  background: transparent url(../images/opticka.png) 20px 50% no-repeat;
+  background: transparent url(../images/opticka.png) 0px 25% no-repeat;
+  padding-left: 50px;
   font-family: 'Chivo', 'Quicksand', 'Helvetica Neue', Helvetica, Arial, serif; font-weight: 900;
   letter-spacing: -1px;
   font-size: 48px;
