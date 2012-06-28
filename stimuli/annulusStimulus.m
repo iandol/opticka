@@ -1,7 +1,10 @@
+% ========================================================================
+%> @brief annulusStimulus TODO
+%>
+%> 
+% ========================================================================
 classdef annulusStimulus < baseStimulus
-%ANNULUSSTIMULUS Summary of this class goes here
-%   Detailed explanation goes here
-    
+ 
     properties
 		method='procedural'
         sf1=0.01

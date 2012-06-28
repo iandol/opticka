@@ -1,5 +1,5 @@
+%> SEDITOR GUI to manually edit values from a stimulus class passed to it from opticka
 classdef seditor < handle
-	%SEDITOR GUI to edit values from a stimulus class passed to it from opticka
 	
 	properties
 		handles
@@ -176,7 +176,9 @@ classdef seditor < handle
 		
 		%% ---------------------------------------------------------------------------
 		function StimEditorStimList_Callback(obj,hObject,evendata) %#ok<INUSD>
-			obj.otherstimuli = str2num(get(hObject,'String'));
+			ts = get(hObject,'String');
+			ts = regexprep(ts,'-',':');
+			obj.otherstimuli = str2num(ts);
 		end
 		
 		%% ---------------------------------------------------------------------------

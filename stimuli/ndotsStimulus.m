@@ -1,93 +1,95 @@
 % ========================================================================
-%> ndots Newsome style dots
-%> UNFINISHED
+%> @brief ndotsStimulus limited lifetime coherence dots stimulus
+%>
+%> 
 % ========================================================================
 classdef ndotsStimulus < baseStimulus
 	properties
-		family = 'ndots'
+		%> dot type, only simple supported at present
 		type = 'simple'
-		% the size of dots in the kinetogram (pixels)
+		%> the size of dots in the kinetogram (pixels)
 		dotSize = 3
-		% the shape for all dots (integer, where 0 means filled square, 1
-		% means filled circle, and 2 means filled circle with high-quality
-		% anti-aliasing)
-		shape = 1
-		% percentage of dots that carry the intended motion signal
+		%> type of dot (integer, where 0 means filled square, 1
+		%> means filled circle, and 2 means filled circle with high-quality
+		%> anti-aliasing)
+		dotType = 2
+		%> percentage of dots that carry the intended motion signal
 		coherence = 0.5
-		% density of dots in the kinetogram (dots per degree-visual-angle^2
-		% per second)
+		%> density of dots in the kinetogram (dots per degree-visual-angle^2
+		%> per second)
 		density = 200
-		% when angle is an array, the relative frequency of each
-		% angle (the pdf).  If directionWeights is incomplete, defaults
-		% to equal weights.
+		%> when angle is an array, the relative frequency of each
+		%> angle (the pdf).  If directionWeights is incomplete, defaults
+		%> to equal weights.
 		directionWeights = 1
-		% width of angular error to add to each dot's motion (degrees)
+		%> width of angular error to add to each dot's motion (degrees)
 		drunkenWalk = 0
-		% number disjoint sets of dots to interleave frame-by-frame
+		%> number disjoint sets of dots to interleave frame-by-frame
 		interleaving = 3
-		% how to move coherent dots: as one rigid unit (true), or each dot
-		% independently (false)
+		%> how to move coherent dots: as one rigid unit (true), or each dot
+		%> independently (false)
 		isMovingAsHerd = true
-		% how to move non-coherent dots: by replotting from scratch (true),
-		% or by local increments (false)
+		%> how to move non-coherent dots: by replotting from scratch (true),
+		%> or by local increments (false)
 		isFlickering = false
-		% how to move dots near the edges: by wrapping to the other side
-		% (true), or by replotting from scratch (false)
+		%> how to move dots near the edges: by wrapping to the other side
+		%> (true), or by replotting from scratch (false)
 		isWrapping = true
-		% how to pick coherent dots: favoring recently non-coherent dots
-		% (true), or indiscriminately (false)
+		%> how to pick coherent dots: favoring recently non-coherent dots
+		%> (true), or indiscriminately (false)
 		isLimitedLifetime = true
-		% show mask or not?
+		%> show mask or not?
 		mask = true
-		%mask GL modes
+		%> mask GL modes
 		msrcMode = 'GL_SRC_ALPHA'
 		mdstMode = 'GL_ONE_MINUS_SRC_ALPHA'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		% fraction of diameter that determines the width of the field of
-		% moving dots.  When fieldScale > 1, some dots will be hidden
-		% behind the aperture.
-		fieldScale = 1.1
-		% number of dots in the kinetogram, includes all interleaving
-		% frames.
+		%> number of dots in the kinetogram, includes all interleaving
+		%> frames.
 		nDots
-		% 2xn matrix of dot x and y coordinates, (normalized units, from
-		% top-left of kinetogram)
+		family = 'ndots'
+		%> 2xn matrix of dot x and y coordinates, (normalized units, from
+		%> top-left of kinetogram)
 		normalizedXY
-		% scale factor from kinetogram normalized units to pixels
+		%> scale factor from kinetogram normalized units to pixels
 		pixelScale
-		% 2xn matrix of dot x and y coordinates, (pixels, from top-left of
-		% kinetogram)
+		%> 2xn matrix of dot x and y coordinates, (pixels, from top-left of
+		%> kinetogram)
 		pixelXY
-		% center of the kinetogram (pixels, from the top-left of the
-		% window)
+		%> center of the kinetogram (pixels, from the top-left of the
+		%> window)
 		pixelOrigin
-		% lookup table to pick random dot direction by directionWeights
+		%> lookup table to pick random dot direction by directionWeights
 		directionCDFInverse
-		% resolution of directionCDFInverse
+		%> resolution of directionCDFInverse
 		directionCDFSize = 1e3
-		% counter to keep track of interleaving frames
+		%> counter to keep track of interleaving frames
 		frameNumber = 0
-		% logical array to select dots for a frame
+		%> logical array to select dots for a frame
 		frameSelector
-		% count of how many consecutive frames each dot has moved
-		% coherently
+		%> count of how many consecutive frames each dot has moved
+		%> coherently
 		dotLifetimes
-		% radial step size for dots moving by local increments (normalized
-		% units)
+		%> radial step size for dots moving by local increments (normalized
+		%> units)
 		deltaR
-		winRect
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		% Psychtoolbox Screen texture index for the dot field aperture mask
+		winRect
+		%> fraction of diameter that determines the width of the field of
+		%> moving dots.  When fieldScale > 1, some dots will be hidden
+		%> behind the aperture.
+		fieldScale = 1.1
+		%> Psychtoolbox Screen texture index for the dot field aperture mask
 		maskTexture
-		% [x,y,x2,y2] rect, where to draw the dot field aperture mask,
-		% (pixels, from the top-left of the window)
+		%> [x,y,x2,y2] rect, where to draw the dot field aperture mask,
+		%> (pixels, from the top-left of the window)
 		maskDestinationRect
-		% [x,y,x2,y2] rect, spanning the entire dot field aperture mask,
-		% (pixels, from the top-left of the window)
+		%> [x,y,x2,y2] rect, spanning the entire dot field aperture mask,
+		%> (pixels, from the top-left of the window)
 		maskSourceRect
 		maskColour
 		maskRect
@@ -133,7 +135,6 @@ classdef ndotsStimulus < baseStimulus
 		%> @brief Setup an structure for runExperiment
 		%>
 		%> @param rE runExperiment object for reference
-		%> @return
 		% ===================================================================
 		function setup(obj,rE)
 			
@@ -178,124 +179,13 @@ classdef ndotsStimulus < baseStimulus
 			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
 			obj.xTmp = obj.xPositionOut; %xTmp and yTmp are temporary position stores.
 			obj.yTmp = obj.yPositionOut;
-			
-			obj.initialiseDots();
-			obj.computeNextFrame();
-			
-		end
-		
-		% ===================================================================
-		%> @brief Update an structure for runExperiment
-		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
-		% ===================================================================
-		function update(obj)
-			obj.initialiseDots();
-			obj.computeNextFrame();
-			obj.tick = 1;
-		end
-		
-		% ===================================================================
-		%> @brief Draw an structure for runExperiment
-		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
-		% ===================================================================
-		function draw(obj)
-			if obj.isVisible == true
-				if obj.mask == true
-					Screen('BlendFunction', obj.win, obj.msrcMode, obj.mdstMode);
-					Screen('DrawDots', ...
-						obj.win, ...
-						obj.pixelXY(:,obj.frameSelector), ...
-						obj.dotSize, ...
-						obj.colour, ...
-						obj.pixelOrigin, ...
-						obj.shape);
-					Screen('DrawTexture', obj.win, obj.maskTexture, obj.maskSourceRect, obj.maskDestinationRect);
-					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
-				else
-					Screen('DrawDots', ...
-						obj.win, ...
-						obj.pixelXY(:,obj.frameSelector), ...
-						obj.dotSize, ...
-						obj.colour, ...
-						obj.pixelOrigin, ...
-						obj.shape);
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Animate an structure for runExperiment
-		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
-		% ===================================================================
-		function animate(obj)
-			computeNextFrame(obj);
-			obj.tick = obj.tick + 1;
-		end
-		
-		% ===================================================================
-		%> @brief Reset an structure for runExperiment
-		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
-		% ===================================================================
-		function reset(obj)
-			obj.removeTmpProperties;
-		end
-		
-	end%---END PUBLIC METHODS---%
-	
-	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
-	
-		% ===================================================================
-		%> @brief Setup an structure for runExperiment
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		%-------------------Set up our dot matrices----------------------%
-		function initialiseDots(obj)
-			fr=round(1/obj.ifi);
-			% size the dot field and the aperture circle
-			fieldWidth = obj.size*obj.fieldScale;
-			marginWidth = (obj.fieldScale - 1) * obj.size / 2;
-			fieldPixels = ceil(fieldWidth * obj.ppd);
-			maskPixels = fieldPixels + obj.dotSize;
-			marginPixels = ceil(marginWidth * obj.ppd);
-			
-			% count dots
-			obj.nDots = ceil(obj.density * fieldWidth^2 / fr);
-			obj.frameSelector = false(1, obj.nDots);
-			obj.dotLifetimes = zeros(1, obj.nDots);
-			
-			% account for speed as step per interleaved frame
-			obj.deltaR = obj.speed / obj.size ...
-				* (obj.interleaving / fr);
-			
-			% account for pixel real estate
-			obj.pixelScale = fieldPixels;
-			obj.pixelOrigin(1) = obj.winRect(3)/2 ...
-				+ (obj.xPosition * obj.ppd) - fieldPixels/2;
-			obj.pixelOrigin(2) = obj.winRect(4)/2 ...
-				- (obj.yPosition * obj.ppd) - fieldPixels/2;
-			
-			obj.maskSourceRect = [0 0, maskPixels, maskPixels];
-			obj.maskDestinationRect = obj.maskSourceRect ...
-				+ obj.pixelOrigin([1 2 1 2]) - obj.dotSize/2;
-			
+
 			%build the mask
 			if obj.mask == true
 				if isempty(obj.maskColour)
 					obj.maskColour = obj.backgroundColour;
 				end
-				wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
+				wrect = SetRect(0, 0, obj.fieldSize+obj.dotSizeOut, obj.fieldSize+obj.dotSizeOut);
 				mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
 				mrect = CenterRect(mrect,wrect);
 				bg = [obj.backgroundColour(1:3) 1];
@@ -323,21 +213,106 @@ classdef ndotsStimulus < baseStimulus
 				end
 			end
 			
-			% build a Psychtoolbox Screen texture to mask the dots
-			%   a large rectangle for the entire dots field
-			%   with a hole in the middle for the dots viewing aperture
-			%center = exp(linspace(-1, 1, maskPixels).^2);
-			%field = center'*center;
-			%threshold = center(marginPixels);
-			%aperture = field > threshold;
-			%mask = zeros(maskPixels, maskPixels, 4);
-			%mask(:,:,1) = obj.backgroundColour(1);
-			%mask(:,:,2) = obj.backgroundColour(2);
-			%mask(:,:,3) = obj.backgroundColour(3);
-			%mask(:,:,4) = aperture.*1;
-			%obj.maskTexture = Screen('MakeTexture', ...
-			%	obj.win, ...
-			%	mask);
+			obj.initialiseDots();
+			obj.computeNextFrame();
+			
+		end
+		
+		% ===================================================================
+		%> @brief Update an structure for runExperiment
+		%>
+		% ===================================================================
+		function update(obj)
+			obj.initialiseDots();
+			obj.computeNextFrame();
+			obj.tick = 1;
+		end
+		
+		% ===================================================================
+		%> @brief Draw an structure for runExperiment
+		%>
+		% ===================================================================
+		function draw(obj)
+			if obj.isVisible == true
+				if obj.mask == true
+					Screen('BlendFunction', obj.win, obj.msrcMode, obj.mdstMode);
+					Screen('DrawDots', ...
+						obj.win, ...
+						obj.pixelXY(:,obj.frameSelector), ...
+						obj.dotSize, ...
+						obj.colour, ...
+						obj.pixelOrigin, ...
+						obj.shape);
+					Screen('DrawTexture', obj.win, obj.maskTexture, [], obj.maskRect);
+					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
+				else
+					Screen('DrawDots', ...
+						obj.win, ...
+						obj.pixelXY(:,obj.frameSelector), ...
+						obj.dotSize, ...
+						obj.colour, ...
+						obj.pixelOrigin, ...
+						obj.shape);
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Animate an structure for runExperiment
+		%>
+		% ===================================================================
+		function animate(obj)
+			computeNextFrame(obj);
+			obj.tick = obj.tick + 1;
+		end
+		
+		% ===================================================================
+		%> @brief Reset an structure for runExperiment
+		%>
+		% ===================================================================
+		function reset(obj)
+			obj.removeTmpProperties;
+		end
+		
+	end%---END PUBLIC METHODS---%
+	
+	%=======================================================================
+	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief initialise dot positions
+		%>
+		% ===================================================================
+		%-------------------Set up our dot matrices----------------------%
+		function initialiseDots(obj)
+			fr=round(1/obj.ifi);
+			% size the dot field and the aperture circle
+			fieldWidth = obj.size*obj.fieldScale;
+			marginWidth = (obj.fieldScale - 1) * obj.size / 2;
+			fieldPixels = ceil(fieldWidth * obj.ppd);
+			maskPixels = fieldPixels + obj.dotSize;
+			marginPixels = ceil(marginWidth * obj.ppd);
+			
+			% count dots
+			obj.nDots = ceil(obj.density * fieldWidth^2 / fr);
+			obj.frameSelector = false(1, obj.nDots);
+			obj.dotLifetimes = zeros(1, obj.nDots);
+			
+			% account for speed as step per interleaved frame
+			obj.deltaR = obj.speed / obj.size ...
+				* (obj.interleaving / fr);
+			
+			% account for pixel real estate
+			obj.pixelScale = fieldPixels;
+			obj.pixelOrigin(1) = obj.winRect(3)/2 ...
+				+ (obj.xPosition * obj.ppd) - fieldPixels/2;
+			obj.pixelOrigin(2) = obj.winRect(4)/2 ...
+				- (obj.yPosition * obj.ppd) - fieldPixels/2;
+			
+% 			obj.maskSourceRect = [0 0, maskPixels, maskPixels];
+% 			obj.maskDestinationRect = obj.maskSourceRect ...
+% 				+ obj.pixelOrigin([1 2 1 2]) - obj.dotSize/2;
 			
 			% build a lookup table to pick weighted directions from a
 			% uniform random variable.
@@ -356,6 +331,10 @@ classdef ndotsStimulus < baseStimulus
 			
 			% pick random start positions for all dots
 			obj.normalizedXY = rand(2, obj.nDots);
+			
+			if obj.mask == true
+				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xPositionOut,obj.yPositionOut);
+			end
 		end
 
 		% ===================================================================

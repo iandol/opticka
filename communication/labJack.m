@@ -137,6 +137,7 @@ classdef labJack < handle
 						try
 							loadlibrary(obj.library,obj.header);
 						catch %#ok<CTCH>
+							obj.version = 'Library Loading FAILED';
 							obj.silentMode = true;
 							obj.verbose = true;
 							return
@@ -177,6 +178,7 @@ classdef labJack < handle
 					end
 					if obj.devCount == 0
 						obj.salutation('open method','No LabJack devices found, going into silent mode');
+						obj.version = 'device discovery FAILED';
 						obj.isOpen = false;
 						obj.handle = [];
 						obj.vHandle = false;
@@ -194,6 +196,7 @@ classdef labJack < handle
 					obj.setDIO(none); %Sink all our DIO to output LOW
 				else
 					obj.salutation('open method','LabJack didn''t open, going into silent mode');
+					obj.version = 'device opening FAILED';
 					obj.isOpen = false;
 					obj.handle = [];
 					obj.verbose = false;
