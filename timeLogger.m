@@ -136,6 +136,7 @@ classdef timeLogger < dynamicprops
 			
 			p(3,1).select();
 			hold on
+			miss(miss > 0.1) = 0.1;
 			plot(miss,'k.-');
 			plot(obj.missImportant,'ro','MarkerFaceColor',[1 0 0]);
 			plot(stimTime/100,'k');

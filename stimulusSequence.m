@@ -108,7 +108,7 @@ classdef stimulusSequence < dynamicprops
 			if nargin > 0
 				obj.parseArgs(varargin,obj.allowedProperties)
 			end
-			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
+			obj.mversion = str2double(regexp(version,'(?<ver>^\d+\.\d+)','match','once'));
 			obj.initialiseRandom();
 			obj.isLoading = false;
 		end

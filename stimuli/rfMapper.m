@@ -1,7 +1,13 @@
 % ========================================================================
-%> @brief single bar stimulus, inherits from baseStimulus
-%> SPOTSTIMULUS single bar stimulus, inherits from baseStimulus
-%>   The current properties are:
+%> @brief receptive field mapper
+%> rfMapper is a mouse driven receptive field mapper, using various keyboard
+%> commands to change the stimulus and and ability to record where the mouse is
+%> (i.e. draw) in screen co-ordinates to save as a hand map image for storage. It is
+%> based on barStimulus, and you can change length + width (l & k on keyboard) and texture of the
+%> bar (space), and angle (arrow keys), and colour of the bar and background
+%> (numeric keys). Right/middle mouse draws the current position, you can urn on and off 
+%> visualising drawing mode with ; and use ' to reset the drawn positions. See the
+%> run method for better description of what the keyboard commands do.
 % ========================================================================
 classdef rfMapper < barStimulus
 	

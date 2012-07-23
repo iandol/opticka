@@ -69,7 +69,7 @@ myStim{7}=barStimulus('type','solid','barWidth',1,'barLength',4,'speed',4,'xPosi
 %%
 % coherent dot stimulus; 200 dots moving at 1deg/s with coherence set to 0.5
 myStim{8}=dotsStimulus('density',50,'speed',1,'coherence',0.5,'xPosition',4,...
-	'yPosition',-6,'colour',[1 1 1],'dotSize',0.1,'colorType','randomBW');
+	'yPosition',6,'colour',[1 1 1],'dotSize',0.1,'colorType','randomBW');
 
 %%
 % a simple circular spot, spots can also flash if needed
