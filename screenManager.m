@@ -205,6 +205,9 @@ classdef screenManager < handle
 				
 				obj.hideScreenFlash;
 				
+				%Screen('Preference', 'VBLTimestampingMode', 2);
+				%Screen('Preference', 'VBLEndlineOverride', 1066);
+				
 				if debug == true || obj.windowed(1)>0
 					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
