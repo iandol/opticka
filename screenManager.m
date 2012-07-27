@@ -207,12 +207,14 @@ classdef screenManager < handle
 				obj.screenVals.resetGamma = false;
 				
 				obj.hideScreenFlash;
-				
+		
 				%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 				Screen('Preference', 'VBLTimestampingMode', 1);
 				%force screentohead mapping
 				Screen('Preference','ScreenToHead',0,0,3);
 				Screen('Preference','ScreenToHead',1,1,4);
+				%override VTOTAL?
+				%Screen('Preference', 'VBLEndlineOverride', 1066);
 				
 				if debug == true || obj.windowed(1)>0
 					Screen('Preference', 'SkipSyncTests', 2);

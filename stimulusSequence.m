@@ -120,6 +120,9 @@ classdef stimulusSequence < dynamicprops
 		% ===================================================================
 		function initialiseRandom(obj)
 			if obj.verbose==true;tic;end
+			if isnan(obj.mversion)
+				obj.mversion = str2double(regexp(version,'(?<ver>^\d+\.\d+)','match','once'));
+			end
 			if isempty(obj.randomSeed)
 				obj.randomSeed=round(rand*sum(clock));
 			end
@@ -127,14 +130,14 @@ classdef stimulusSequence < dynamicprops
 				if obj.mversion > 7.11
 					obj.oldStream = RandStream.getGlobalStream;
 				else
-					obj.oldStream = RandStream.getDefaultStream;
+					obj.oldStream = RandStream.getDefaultStream; %#ok<*GETRS>
 				end
 			end
 			obj.taskStream = RandStream.create(obj.randomGenerator,'Seed',obj.randomSeed);
 			if obj.mversion > 7.11
 				RandStream.setGlobalStream(obj.taskStream);
 			else
-				RandStream.setDefaultStream(obj.taskStream);
+				RandStream.setDefaultStream(obj.taskStream); %#ok<*SETRS>
 			end
 			if obj.verbose==true;obj.salutation(sprintf('Initialise Randomisation: %g milliseconds',toc/1000));end
 		end
@@ -147,7 +150,7 @@ classdef stimulusSequence < dynamicprops
 		function resetRandom(obj)
 			obj.randomSeed=[];
 			if obj.mversion > 7.11
-				RandStream.setDefaultStream(obj.oldStream);
+				RandStream.setGlobalStream(obj.oldStream);
 			else
 				RandStream.setDefaultStream(obj.oldStream);
 			end
@@ -220,7 +223,7 @@ classdef stimulusSequence < dynamicprops
 						obj.outMap(gidx,f) = g;
 					end
 				end
-				if obj.verbose==true;obj.salutation(sprintf('Randomise Stimuli: %g seconds\n',toc));end
+				if obj.verbose==true;obj.salutation(sprintf('Randomise Stimuli: %g ms\n',toc*1000));end
 			else
 				obj.outIndex = 1; %there is only one stimulus, no variables
 			end
