@@ -1,7 +1,7 @@
 % ========================================================================
 %> @brief ndotsStimulus limited lifetime coherence dots stimulus
 %>
-%> 
+%>
 % ========================================================================
 classdef ndotsStimulus < baseStimulus
 	properties
@@ -179,7 +179,7 @@ classdef ndotsStimulus < baseStimulus
 			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
 			obj.xTmp = obj.xPositionOut; %xTmp and yTmp are temporary position stores.
 			obj.yTmp = obj.yPositionOut;
-
+			
 			%build the mask
 			if obj.mask == true
 				if isempty(obj.maskColour)
@@ -242,7 +242,7 @@ classdef ndotsStimulus < baseStimulus
 						obj.dotSize, ...
 						obj.colour, ...
 						obj.pixelOrigin, ...
-						obj.shape);
+						obj.dotType);
 					Screen('DrawTexture', obj.win, obj.maskTexture, [], obj.maskRect);
 					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
 				else
@@ -278,8 +278,8 @@ classdef ndotsStimulus < baseStimulus
 	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
-	
+		%=======================================================================
+		
 		% ===================================================================
 		%> @brief initialise dot positions
 		%>
@@ -310,9 +310,9 @@ classdef ndotsStimulus < baseStimulus
 			obj.pixelOrigin(2) = obj.winRect(4)/2 ...
 				- (obj.yPosition * obj.ppd) - fieldPixels/2;
 			
-% 			obj.maskSourceRect = [0 0, maskPixels, maskPixels];
-% 			obj.maskDestinationRect = obj.maskSourceRect ...
-% 				+ obj.pixelOrigin([1 2 1 2]) - obj.dotSize/2;
+			% 			obj.maskSourceRect = [0 0, maskPixels, maskPixels];
+			% 			obj.maskDestinationRect = obj.maskSourceRect ...
+			% 				+ obj.pixelOrigin([1 2 1 2]) - obj.dotSize/2;
 			
 			% build a lookup table to pick weighted directions from a
 			% uniform random variable.
@@ -336,7 +336,7 @@ classdef ndotsStimulus < baseStimulus
 				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xPositionOut,obj.yPositionOut);
 			end
 		end
-
+		
 		% ===================================================================
 		%> @brief Compute dot positions for the next frame of animation.
 		%>
@@ -486,7 +486,7 @@ classdef ndotsStimulus < baseStimulus
 		function set_yPositionOut(obj,value)
 			obj.yPositionOut = obj.yCenter + (value * obj.ppd);
 		end
-
+		
 	end
 	
 	
