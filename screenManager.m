@@ -11,8 +11,8 @@ classdef screenManager < handle
 		%> trick from Mario
 		hideFlash = false
 		%> windowed: when 0 use fullscreen; set to 1 and it is windowed 800x600pixels or you
-		%> can add in a window width and height to specify windowed size. Remember
-		%> that windowed presentation shouldn't be used for experimental
+		%> can add in a window width and height i.e. [800 600] to specify windowed size. Remember
+		%> that windowed presentation should never be used for real experimental
 		%> presentation due to poor timing accounting...
 		windowed = 0
 		%> change the debug parameters for poorer temporal fidelity during debugging
@@ -24,7 +24,8 @@ classdef screenManager < handle
 		%>bitDepth of framebuffer
 		bitDepth = '8bit'
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8
-		%> and 16 -- useful for textures to stop aliasing
+		%> and 16 -- useful for textures to minimise aliasing, but this
+		%> does provide extra work for the GPU
 		antiAlias = []
 		%> background RGBA of display during stimulus presentation
 		backgroundColour = [0.5 0.5 0.5 0]
@@ -32,7 +33,7 @@ classdef screenManager < handle
 		screenXOffset = 0
 		%> shunt screen center by Y degrees
 		screenYOffset = 0
-		%> the monitor to use,
+		%> the monitor to use, 0 is a the main display
 		screen = []
 		%> use OpenGL blending mode
 		blend = false
@@ -40,9 +41,12 @@ classdef screenManager < handle
 		srcMode = 'GL_ONE'
 		%> GL_ONE % dst mode
 		dstMode = 'GL_ZERO'
-		%> show a centered spot?
+		%> show a 0,0 centered spot?
 		fixationPoint = false
-		%> show a white square to trigger a photodiode attached to screen
+		%> show a white square in the top-left corner to trigger a
+		%> photodiode attached to screen. This is only displayed when the
+		%> stimulus is shown, not during the blank and can therefore be used
+		%> for timing validation
 		photoDiode = false
 		%> gamma correction info saved as a calibrateLuminance object
 		gammaTable
@@ -79,7 +83,7 @@ classdef screenManager < handle
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
 		allowedProperties='^(bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
-		%> the photoDiode rectangle
+		%> the photoDiode rectangle in pixel values
 		photoDiodeRect = [0;0;50;50]
 		%> the values computed to draw the 1deg dotted grid in debug mode
 		grid
@@ -93,10 +97,9 @@ classdef screenManager < handle
 		% ===================================================================
 		%> @brief Class constructor
 		%>
-		%> More detailed description of what the constructor does.
+		%> screenManager constructor
 		%>
-		%> @param args are passed as a structure of properties which is
-		%> parsed.
+		%> @param varargin can be simple name value pairs, a structure or cell array
 		%> @return instance of the class.
 		% ===================================================================
 		function obj = screenManager(varargin)
@@ -107,7 +110,7 @@ classdef screenManager < handle
 				AssertOpenGL
 				obj.isPTB = true;
 				if strcmpi(computer,'MACI64')
-					obj.salutation('64bit OS X PTB currently experimentally supported!')
+					obj.salutation('64bit OS X PTB currently supported!')
 				else
 					obj.salutation('PTB currently supported!')
 				end
@@ -121,8 +124,8 @@ classdef screenManager < handle
 		% ===================================================================
 		%> @brief prepare the Screen values on the local machine
 		%>
-		%> @param
-		%> @return
+		%> @param obj object
+		%> @return screenVals structure of screen values
 		% ===================================================================
 		function screenVals = prepareScreen(obj)
 			if obj.isPTB == false
@@ -172,18 +175,18 @@ classdef screenManager < handle
 			
 			Screen('Preference', 'TextRenderer', 0); %fast text renderer
 			
-			if obj.debug == true
+			if obj.debug == true %we yoke these together but can then be overridden
 				obj.visualDebug = true;
 			end
 			
-			obj.makeGrid;
+			obj.makeGrid; %our debug size grid
 			
 			screenVals = obj.screenVals;
 			
 		end
 		
 		% ===================================================================
-		%> @brief prepare the Screen values on the local machine
+		%> @brief open a screen with object defined settings
 		%>
 		%> @param debug, whether we show debug status, called from runExperiment
 		%> @param tL timLog object to add timing info on screen construction
@@ -205,6 +208,12 @@ classdef screenManager < handle
 				
 				obj.hideScreenFlash;
 				
+				%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
+				Screen('Preference', 'VBLTimestampingMode', 1);
+				%force screentohead mapping
+				Screen('Preference','ScreenToHead',0,0,3);
+				Screen('Preference','ScreenToHead',1,1,4);
+				
 				if debug == true || obj.windowed(1)>0
 					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
@@ -224,15 +233,15 @@ classdef screenManager < handle
 				if ischar(obj.bitDepth) && ~strcmpi(obj.bitDepth,'8bit')
 					PsychImaging('AddTask', 'General', obj.bitDepth);
 				end
-				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colourrange!
+				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
 				
-				if isempty(obj.windowed) || length(obj.windowed) == 1 %fullscreen
+				if isempty(obj.windowed) || (length(obj.windowed)==1 && obj.windowed == 0) %fullscreen
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				else %windowed
-					if length(obj.windowed)==1
-						obj.windowed=[1 1 801 601];
-					elseif length(obj.windowed) == 2
+					if length(obj.windowed) == 2
 						obj.windowed = [1 1 obj.windowed(1)+1 obj.windowed(2)+1];
+					else
+						obj.windowed=[1 1 801 601];
 					end
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,obj.windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
@@ -244,7 +253,7 @@ classdef screenManager < handle
 				
 				try
 					AssertGLSL;
-				catch ME
+				catch
 					obj.close();
 					error('GLSL Shading support is required for Opticka!');
 				end
@@ -300,7 +309,7 @@ classdef screenManager < handle
 			catch ME
 				obj.close();
 				obj.screenVals = [];
-				screenVals = obj.screenVals;
+				screenVals = obj.screenVals; %#ok<NASGU>
 				rethrow(ME)
 			end
 			
@@ -345,7 +354,7 @@ classdef screenManager < handle
 		end
 		
 		% ===================================================================
-		%> @brief prepare the Screen values on the local machine
+		%> @brief prepare the recording of stimulus frames
 		%>
 		%> @param
 		%> @return
@@ -387,7 +396,7 @@ classdef screenManager < handle
 		end
 		
 		% ===================================================================
-		%> @brief prepare the Screen values on the local machine
+		%> @brief add current frame to recorded stimulus movie
 		%>
 		%> @param
 		%> @return
@@ -408,7 +417,7 @@ classdef screenManager < handle
 		
 		
 		% ===================================================================
-		%> @brief prepare the Screen values on the local machine
+		%> @brief finish stimulus recording
 		%>
 		%> @param
 		%> @return
@@ -433,7 +442,7 @@ classdef screenManager < handle
 		end
 		
 		% ===================================================================
-		%> @brief prepare the Screen values on the local machine
+		%> @brief play back the recorded stimulus
 		%>
 		%> @param
 		%> @return
@@ -449,7 +458,7 @@ classdef screenManager < handle
 		end
 		
 		% ===================================================================
-		%> @brief prepare the Screen values on the local machine
+		%> @brief reset the gamma table
 		%>
 		%> @param
 		%> @return
@@ -491,9 +500,9 @@ classdef screenManager < handle
 		end
 		
 		% ===================================================================
-		%> @brief Configure grating specific variables
+		%> @brief draw small spot centered on the screen
 		%>
-		%> @param i
+		%> @param
 		%> @return
 		% ===================================================================
 		function drawFixationPoint(obj)
@@ -501,9 +510,9 @@ classdef screenManager < handle
 		end
 		
 		% ===================================================================
-		%> @brief Configure grating specific variables
+		%> @brief draw a 5x5 1deg dot grid for visual debugging
 		%>
-		%> @param i
+		%> @param
 		%> @return
 		% ===================================================================
 		function drawGrid(obj)
@@ -511,9 +520,9 @@ classdef screenManager < handle
 		end
 		
 		% ===================================================================
-		%> @brief Configure grating specific variables
+		%> @brief draw a white square in top-left of screen to trigger photodiode
 		%>
-		%> @param i
+		%> @param colour colour of square
 		%> @return
 		% ===================================================================
 		function drawPhotoDiodeSquare(obj,colour)
@@ -554,13 +563,13 @@ classdef screenManager < handle
 		% ===================================================================
 		%> @brief Sets properties from a structure, ignores invalid properties
 		%>
-		%> @param args input structure
+		%> @param args input cell/structure
 		% ===================================================================
 		function parseArgs(obj,args)
-			while iscell(args) && length(args) == 1
+			while iscell(args) && length(args) == 1 %deal with nested cell arrays
 				args = args{1};
 			end
-			if iscell(args)
+			if iscell(args) %convert a cell to structure
 				if mod(length(args),2) == 1 % odd
 					args = args(1:end-1); %remove last arg
 				end

@@ -11,7 +11,7 @@ VER=$(grep -o -E -e "version='[0-9\.]+'" opticka.m | grep -o -E -e "[0-9\.]+")
 echo; echo "---> Opticka version = $VER"; echo
 sleep 1
 # and then edit the Doxygen file
-/usr/local/bin/sed -i -e "s/^\(PROJECT_NUMBER\)[ ]*=.*/\1 = $VER/g" .doxyfile
+sed -i -e "s/^\(PROJECT_NUMBER\)[ ]*=.*/\1 = $VER/g" .doxyfile
 if [ $? -eq 0 ]; then
 	echo; echo "---> Edited .doxyfile"; echo
 else
@@ -25,5 +25,6 @@ open html/index.html
 open html/runtest.html
 echo; echo "---> FINISHED!"
 rm .doxyfilee
+rm .doxyfile-e
 rm debug.txt
 exit 0

@@ -282,7 +282,10 @@ classdef labJack < handle
 		%> @param count
 		% ===================================================================
 		function in = rawRead(obj,bytein,count)
-			if ~exist('count','var')
+			if ~exist('bytein','var')
+				bytein = zeros(10,1);
+			end
+			if ~exist('count','var') || count > length(bytein)
 				count = length(bytein);
 			end
 			in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, bytein, count);
@@ -296,7 +299,7 @@ classdef labJack < handle
 		function ledON(obj)
 			if obj.silentMode == false && obj.vHandle == 1
 				obj.rawWrite(obj.ledIsON);
-				in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
@@ -308,7 +311,7 @@ classdef labJack < handle
 		function ledOFF(obj)
 			if obj.silentMode == false && obj.vHandle == 1
 				obj.rawWrite(obj.ledIsOFF);
-				in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
@@ -329,7 +332,7 @@ classdef labJack < handle
 			obj.command = obj.checksum(cmd,'extended');
 			
 			out = obj.rawWrite(obj.command);
-			in = obj.rawRead(obj.inp,10);
+			in = obj.rawRead(zeros(1,10),10);
 		end
 		
 		% ===================================================================
@@ -349,7 +352,7 @@ classdef labJack < handle
 			obj.command = obj.checksum(cmd,'extended');
 			
 			out = obj.rawWrite(obj.command);
-			in = obj.rawRead(obj.inp,10);
+			in = obj.rawRead(zeros(1,10),10);
 		end
 		
 		% ===================================================================
@@ -384,7 +387,7 @@ classdef labJack < handle
 				
 				obj.command = obj.checksum(cmd,'extended');
 				out = obj.rawWrite(cmd);
-				in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
@@ -414,7 +417,7 @@ classdef labJack < handle
 	
 				cmd = obj.checksum(cmd,'extended');
 				out = obj.rawWrite(cmd);
-				in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
@@ -437,7 +440,7 @@ classdef labJack < handle
 				
 				cmd = obj.checksum(cmd,'extended');
 				out = obj.rawWrite(cmd);
-				in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
@@ -460,7 +463,7 @@ classdef labJack < handle
 				
 				cmd = obj.checksum(cmd,'extended');
 				out = obj.rawWrite(cmd);
-				in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
@@ -529,7 +532,7 @@ classdef labJack < handle
 		function strobeWord(obj)
 			if ~isempty(obj.command)
 				obj.rawWrite(obj.command);
-				in = obj.rawRead(obj.inp,10);
+				in = obj.rawRead(zeros(1,10),10);
 				obj.salutation('strobeWord', obj.comment);
 				%obj.comment = '';
 				%obj.command = [];
@@ -581,12 +584,12 @@ classdef labJack < handle
 				end
 				if val == 1
 					out = obj.rawWrite(obj.(cmdHigh));
-					%in  = obj.rawRead(obj.inp,10);
+					in  = obj.rawRead(zeros(1,10),10);
 					obj.(myname) = 1;
 					obj.salutation('SETFIO',[myname ' is HIGH'])
 				else
 					out = obj.rawWrite(obj.(cmdLow));
-					%in  = obj.rawRead(obj.inp,10);
+					in  = obj.rawRead(zeros(1,10),10);
 					obj.(myname) = 0;
 					obj.salutation('SETFIO',[myname ' is LOW'])
 				end
