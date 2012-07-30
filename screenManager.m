@@ -295,7 +295,7 @@ classdef screenManager < handle
 				% Enable alpha blending.
 				if obj.blend==1
 					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
-					fprintf('\n---> screenManager: OpenGL blending set to %s | %s\n', obj.srcMode, obj.dstMode);
+					fprintf('\n---> screenManager: Initial OpenGL blending set to %s | %s\n', obj.srcMode, obj.dstMode);
 				end
 				
 				%get the center of our screen, along with user defined offsets

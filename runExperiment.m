@@ -27,17 +27,15 @@ classdef (Sealed) runExperiment < handle
 		screen
 		%> use LabJack for digital output?
 		useLabJack = false
-		%> LabJack object
-		lJack
 		%> this lets the UI leave commands to runExperiment
 		uiCommand = ''
 		%> log all frame times, gets slow for > 1e6 frames
 		logFrames = true
 		%> structure to pass to screenManager on initialisation
 		screenSettings = struct()
-		%>show command logs and a time log after stimlus presentation
+		%>show command window logging and a time log after stimlus presentation
 		verbose = false
-		%> change the parameters for poorer temporal fidelity during debugging
+		%> change the parameters for poorer temporal fidelity for debugging
 		debug = false
 		%> shows the info text and position grid during stimulus presentation
 		visualDebug = true
@@ -59,13 +57,15 @@ classdef (Sealed) runExperiment < handle
 		sList
 		%> info on the current run
 		currentInfo
-		%> previous info populated during load of saved object
+		%> previous info populated during load of a saved object
 		previousInfo = struct()
+		%> LabJack object
+		lJack
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='^(stimulus|task|screen|visualDebug|useLabJack|logFrames|serialPortName|debug|verbose|screenSettings|benchmark)$'
+		allowedProperties='^(stimulus|task|screen|visualDebug|useLabJack|logFrames|debug|verbose|screenSettings|benchmark)$'
 	end
 	
 	events

@@ -42,6 +42,8 @@ classdef labJack < handle
 		isOpen = false
 		%> an input buffer
 		inp = []
+		%> output bugger, normally number of bytes written
+		outp = []
 		%> FIO0 state
 		fio0 = 0
 		%> FIO1 state
@@ -65,6 +67,10 @@ classdef labJack < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		% WaitShort time quantum is 64microseconds for U6 and 128microseconds for U3
+		timeShort = 64e-6 
+		% WaitLong time quantum is 16ms for U6 and 32ms for U3
+		timeLong  = 16e-3
 		%>raw commands ,you can use labjackPython to find/verify these. These
 		%>are easy ways to control the I/O, but this object also includes
 		%>SetDIO which calculates the command denovo and can control CIO EIO
@@ -164,20 +170,20 @@ classdef labJack < handle
 					end
 				end
 				
-				if obj.devCount == 0
-					if obj.deviceID == 3 %lets try a U6
+				if obj.devCount == 0 %no device was found with input deviceID, lets scan for another device
+					if obj.deviceID == 3 %we tried a U3, now lets try a U6
 						obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',6);
-						if obj.devCount > 0
+						if obj.devCount > 0 %yup it's a U6
 							obj.deviceID = 6;
 						end
-					elseif obj.deviceID == 6 %lets try a U3
+					elseif obj.deviceID == 6 %we tried a U6, now lets try a U3
 						obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',3);
 						if obj.devCount > 0
 							obj.deviceID = 3;
 						end
 					end
 					if obj.devCount == 0
-						obj.salutation('open method','No LabJack devices found, going into silent mode');
+						obj.salutation('open method','No LabJack U3 or U6 devices found, going into silent mode');
 						obj.version = 'device discovery FAILED';
 						obj.isOpen = false;
 						obj.handle = [];
@@ -190,8 +196,13 @@ classdef labJack < handle
 				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',1,0,obj.deviceID);
 				obj.validHandle;
 				if obj.vHandle
+					if obj.deviceID == 3
+						obj.timeShort = 128e-6;
+						obj.timeLong = 32e-3;
+					end
 					obj.isOpen = true;
 					obj.salutation('open method','LabJack succesfully opened...');
+					obj.salutation('open method',sprintf('Device U%g - Time Quantum short/long = %g secs / %g secs',obj.deviceID,obj.timeShort,obj.timeLong));
 					none=[0,0,0];
 					obj.setDIO(none); %Sink all our DIO to output LOW
 				else
@@ -298,8 +309,8 @@ classdef labJack < handle
 		% ===================================================================
 		function ledON(obj)
 			if obj.silentMode == false && obj.vHandle == 1
-				obj.rawWrite(obj.ledIsON);
-				in = obj.rawRead(zeros(1,10),10);
+				obj.outp = obj.rawWrite(obj.ledIsON);
+				obj.inp = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
@@ -310,84 +321,100 @@ classdef labJack < handle
 		% ===================================================================
 		function ledOFF(obj)
 			if obj.silentMode == false && obj.vHandle == 1
-				obj.rawWrite(obj.ledIsOFF);
-				in = obj.rawRead(zeros(1,10),10);
+				obj.outp = obj.rawWrite(obj.ledIsOFF);
+				obj.inp = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
 		% ===================================================================
 		%> @brief WaitShort
-		%>	LabJack Wait in multiples of 128�s
-		%>	@param time time in ms; remember 0.128ms is the atomic minimum
+		%>	LabJack Wait in multiples of 64/128microseconds
+		%>	@param time time in ms; remember 64/128microseconds is the atomic minimum
 		% ===================================================================
 		function waitShort(obj,time)
-			time=ceil(time/0.128);
-			cmd=zeros(10,1);
-			obj.inp=zeros(10,1);
-			cmd(2) = 248; %hex2dec('f8'); %feedback
-			cmd(3) = 2; %number of bytes in packet
-			cmd(8) = 5; %IOType for waitshort is 5
-			cmd(9) = time;
-			
-			obj.command = obj.checksum(cmd,'extended');
-			
-			out = obj.rawWrite(obj.command);
-			in = obj.rawRead(zeros(1,10),10);
+			if obj.silentMode == false && obj.vHandle == 1
+				time = time / 1000; %convert to seconds
+				time=ceil(time/obj.timeLong);
+				if time > 255
+					time = 255; %truncate to maximum time delay allowed
+				end
+
+				cmd=zeros(10,1);
+				cmd(2) = 248; %hex2dec('f8'); %feedback
+				cmd(3) = 2; %number of bytes in packet
+				cmd(8) = 5; %IOType for waitshort is 5
+				cmd(9) = time;
+
+				obj.command = obj.checksum(cmd,'extended');
+
+				obj.outp = obj.rawWrite(obj.command);
+				obj.inp = obj.rawRead(zeros(1,10),10);
+			end
 		end
 		
 		% ===================================================================
 		%> @brief WaitLong
-		%>	LabJack Wait in multiples of 32ms
-		%>	@param time time in ms, remember 32ms is the atomic minimum
+		%>	LabJack Wait in multiples of 16/32ms
+		%>	@param time time in ms, remember 16/32ms is the atomic minimum
 		% ===================================================================
 		function waitLong(obj,time)
-			time=ceil(time/32);
-			cmd=zeros(10,1);
-			%obj.inp=zeros(10,1);
-			cmd(2) = 248; %hex2dec('f8'); %feedback
-			cmd(3) = 2; %number of bytes in packet
-			cmd(8) = 6; %IOType for waitlong is 6
-			cmd(9) = time;
-			
-			obj.command = obj.checksum(cmd,'extended');
-			
-			out = obj.rawWrite(obj.command);
-			in = obj.rawRead(zeros(1,10),10);
+			if obj.silentMode == false && obj.vHandle == 1
+				time = time / 1000; %convert to seconds
+				time=ceil(time/obj.timeLong);
+				if time > 255
+					time = 255; %truncate to maximum time delay allowed
+				end
+				
+				cmd=zeros(10,1);
+				cmd(2) = 248; %hex2dec('f8'); %feedback
+				cmd(3) = 2; %number of bytes in packet
+				cmd(8) = 6; %IOType for waitlong is 6
+				cmd(9) = time;
+
+				obj.command = obj.checksum(cmd,'extended');
+
+				obj.outp = obj.rawWrite(obj.command);
+				obj.inp = obj.rawRead(zeros(1,10),10);
+			end
 		end
 		
 		% ===================================================================
-		%> @brieftimedTTL
-		%>	LabJack Wait in multiples of 128�s
+		%> @brief timedTTL Send a TTL with a defined time of pulse
+		%>	
 		%>  @param line 0-7=FIO, 8-15=EIO, or 16-19=CIO
 		%>	@param time time in ms
 		% ===================================================================
 		function timedTTL(obj,line,time)
-			if ~exist('time','var')||~exist('line','var');fprintf('\nvariableTTL Input options: \n\t\tline (single value FIO0-7 or bitmask), time (in ms)\n\n');return;end
-			time=ceil(time/0.128);
-			
+			if ~exist('time','var')||~exist('line','var');fprintf('\ntimedTTL Input options: \n\t\tline (single value 0-7=FIO, 8-15=EIO, or 16-19=CIO), time (in ms)\n\n');return;end
 			if obj.silentMode == false && obj.vHandle == 1
-				cmd=zeros(30,1);
+				time = time / 1000; %convert to seconds
+				if time > obj.timeLong
+					time=ceil(time/obj.timeLong);
+					iotype = 6;
+				else
+					time=ceil(time/obj.timeShort);
+					iotype = 5;
+				end
+				if time > 255
+					time = 255; %truncate to maximum time delay allowed
+				end
+
+				cmd=zeros(14,1);
 				cmd(2) = 248; %command byte for feedback command (f8 in hex)
 				cmd(3) = (length(cmd)-6)/2;
 
-				cmd(8) = 13; %BitDirWrite: IOType=13
-				cmd(9) = line;
-				cmd(10) = 1; %1 = output
+				cmd(8) = 11; %BitStateWrite: IOType=11
+				cmd(9) = line+128; %add 128 as bit 7 sets value high
 
-				cmd(11) = 11; %IBitStateWrite: IOType=11
-				cmd(12) = line;
-				cmd(13) = 1;
+				cmd(10) = iotype; %IOType for waitshort is 5, waitlong is 6
+				cmd(11) = time; %time to wait in unit multiples, this is the time of the strobe
 
-				cmd(14) = 5; %IOType for waitshort is 5, waitlong is 6
-				cmd(15) = time; %time to wait in unit multiples, this is the time of the strobe
-
-				cmd(16) = 11; %IBitStateWrite: IOType=11
-				cmd(17) = line;
-				cmd(18) = 1;
+				cmd(12) = 11; %BitStateWrite: IOType=11
+				cmd(13) = line;
 				
 				obj.command = obj.checksum(cmd,'extended');
-				out = obj.rawWrite(cmd);
-				in = obj.rawRead(zeros(1,10),10);
+				obj.outp = obj.rawWrite(obj.command);
+				obj.inp = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
@@ -416,8 +443,8 @@ classdef labJack < handle
 				cmd(12:14) = value;
 	
 				cmd = obj.checksum(cmd,'extended');
-				out = obj.rawWrite(cmd);
-				in = obj.rawRead(zeros(1,10),10);
+				obj.outp = obj.rawWrite(cmd);
+				obj.inp = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
