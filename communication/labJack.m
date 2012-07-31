@@ -194,9 +194,9 @@ classdef labJack < handle
 					end
 				end
 				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',1,0,obj.deviceID);
-				obj.validHandle;
-				if obj.vHandle
-					if obj.deviceID == 3
+				if obj.validHandle();
+					obj.version = calllib('liblabjackusb','LJUSB_GetDeviceDescriptorReleaseNumber',obj.handle);
+					if obj.deviceID == 3 %respecify the time quantum for the U3
 						obj.timeShort = 128e-6;
 						obj.timeLong = 32e-3;
 					end
@@ -206,7 +206,7 @@ classdef labJack < handle
 					none=[0,0,0];
 					obj.setDIO(none); %Sink all our DIO to output LOW
 				else
-					obj.salutation('open method','LabJack didn''t open, going into silent mode');
+					obj.salutation('open method','LabJack failed to open, going into silent mode');
 					obj.version = 'device opening FAILED';
 					obj.isOpen = false;
 					obj.handle = [];
@@ -228,15 +228,14 @@ classdef labJack < handle
 		%>	//Closes the handle of a LabJack USB device.
 		% ===================================================================
 		function close(obj)
-			if ~isempty(obj.handle) && obj.silentMode == false
-				obj.validHandle; %double-check we still have valid handle
-				if obj.vHandle && ~isempty(obj.handle)
+			if ~isempty(obj.handle) 
+				if obj.validHandle() == true %double-check we still have valid handle
 					calllib('liblabjackusb','LJUSB_CloseDevice',obj.handle);
 				end
-				obj.salutation('CLOSE method',['Closed handle: ' num2str(obj.vHandle)]);
+				obj.salutation('CLOSE method','LabJack Handle has been closed');
 				obj.isOpen = false;
 				obj.handle=[];
-				obj.vHandle = 0;
+				obj.vHandle = false;
 			else
 				obj.salutation('CLOSE method','No handle to close');
 			end
@@ -247,22 +246,24 @@ classdef labJack < handle
 		%>	bool LJUSB_IsHandleValid(HANDLE hDevice);
 		%>	//Is handle valid.
 		% ===================================================================
-		function validHandle(obj)
+		function vHandle = validHandle(obj)
+			obj.vHandle = false;
 			if obj.silentMode == false
 				if ~isempty(obj.handle)
 					obj.vHandle = calllib('liblabjackusb','LJUSB_IsHandleValid',obj.handle);
 					if obj.vHandle
-						obj.salutation('validHandle Method','Handle (connection to labjack) is VALID');
+						obj.salutation('validHandle Method',sprintf('Handle to LabJack U%g is VALID',obj.deviceID));
 					else
-						obj.salutation('validHandle Method','Handle (connection to labjack) is INVALID');
+						obj.salutation('validHandle Method',sprintf('Handle to LabJack U%g is INVALID',obj.deviceID));
 					end
 				else
 					obj.vHandle = false;
 					obj.isOpen = false;
 					obj.handle = [];
-					obj.salutation('validHandle Method','Handle (connection to labjack) is INVALID');
+					obj.salutation('validHandle Method','Handle to LabJack is INVALID (empty handle)');
 				end
 			end
+			vHandle = obj.vHandle;
 		end
 		
 		% ===================================================================
@@ -381,40 +382,85 @@ classdef labJack < handle
 		% ===================================================================
 		%> @brief timedTTL Send a TTL with a defined time of pulse
 		%>	
+		%> Note that there is a maximum time to the TTL pulse which is 8.16secs
+		%> for the U3 and 4.08secs for the U6; we can extend that time by
+		%> adding more feedback commands in the command packet but this
+		%> shouldn't be needed anyway. Any time longer than this will be
+		%> truncated to the maximum allowable time.
+		%>
 		%>  @param line 0-7=FIO, 8-15=EIO, or 16-19=CIO
 		%>	@param time time in ms
 		% ===================================================================
 		function timedTTL(obj,line,time)
-			if ~exist('time','var')||~exist('line','var');fprintf('\ntimedTTL Input options: \n\t\tline (single value 0-7=FIO, 8-15=EIO, or 16-19=CIO), time (in ms)\n\n');return;end
+			if ~exist('line','var') || ~exist('time','var');fprintf('\ntimedTTL Input options: \n\t\tline (single value 0-7=FIO, 8-15=EIO, or 16-19=CIO), time (in ms)\n\n');return;end
 			if obj.silentMode == false && obj.vHandle == 1
 				time = time / 1000; %convert to seconds
-				if time > obj.timeLong
-					time=ceil(time/obj.timeLong);
-					iotype = 6;
+				time1 = 0;
+				time2 = 0;
+				if time >= obj.timeLong %we need to use greater resolution for fine timing
+					
+					time1 = floor(time/obj.timeLong);
+					if time1 > 255 %truncate to maximum time delay allowed
+						time1 = 255; %truncate to maximum time delay allowed
+					elseif time1 < 1 %truncate to minimum
+						time1 = 1;
+					end
+					
+					time2 = time - (time1 * obj.timeLong);
+					time2 = round(time2/obj.timeShort);
+					if time2 > 255 %truncate to maximum time delay allowed
+						time2 = 255; %truncate to maximum time delay allowed
+					elseif time2 < 0 %truncate to minimum
+						time2 = 0;
+					end
+					
+					otime = (time1 * obj.timeLong) + (time2 * obj.timeShort);
+					
+					cmd=zeros(16,1);
+					cmd(2) = 248; %command byte for feedback command (f8 in hex)
+					cmd(3) = (length(cmd)-6)/2;
+
+					cmd(8) = 11; %BitStateWrite: IOType=11
+					cmd(9) = line+128; %add 128 as bit 7 sets value high
+
+					cmd(10) = 6; %IOType for waitshort is 5, waitlong is 6
+					cmd(11) = time1; %time to wait in unit multiples
+					
+					cmd(12) = 5; %IOType for waitshort is 5, waitlong is 6
+					cmd(13) = time2; %time to wait in unit multiples
+
+					cmd(14) = 11; %BitStateWrite: IOType=11
+					cmd(15) = line; %bit to set low
+					
 				else
-					time=ceil(time/obj.timeShort);
+					time2=ceil(time/obj.timeShort);
+					if time2 > 255 %truncate to maximum time delay allowed
+						time2 = 255; %truncate to maximum time delay allowed
+					end
 					iotype = 5;
+					
+					otime = time2 * obj.timeShort;
+					
+					cmd=zeros(14,1);
+					cmd(2) = 248; %command byte for feedback command (f8 in hex)
+					cmd(3) = (length(cmd)-6)/2;
+
+					cmd(8) = 11; %BitStateWrite: IOType=11
+					cmd(9) = line+128; %add 128 as bit 7 sets value high
+
+					cmd(10) = iotype; %IOType for waitshort is 5, waitlong is 6
+					cmd(11) = time2; %time to wait in unit multiples, this is the time of the strobe
+
+					cmd(12) = 11; %BitStateWrite: IOType=11
+					cmd(13) = line;
+					
+					
 				end
-				if time > 255
-					time = 255; %truncate to maximum time delay allowed
-				end
-
-				cmd=zeros(14,1);
-				cmd(2) = 248; %command byte for feedback command (f8 in hex)
-				cmd(3) = (length(cmd)-6)/2;
-
-				cmd(8) = 11; %BitStateWrite: IOType=11
-				cmd(9) = line+128; %add 128 as bit 7 sets value high
-
-				cmd(10) = iotype; %IOType for waitshort is 5, waitlong is 6
-				cmd(11) = time; %time to wait in unit multiples, this is the time of the strobe
-
-				cmd(12) = 11; %BitStateWrite: IOType=11
-				cmd(13) = line;
 				
 				obj.command = obj.checksum(cmd,'extended');
 				obj.outp = obj.rawWrite(obj.command);
-				obj.inp = obj.rawRead(zeros(1,10),10);
+				%obj.inp = obj.rawRead(zeros(1,10),10);
+				obj.salutation('timedTTL method',sprintf('T1:%g T2:%g output time = %g secs', time1, time2, otime))
 			end
 		end
 		
@@ -744,7 +790,7 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function delete(obj)
-			obj.salutation('DELETE Method','labJack Cleaning up...')
+			obj.salutation('DELETE Method','labJack object Cleaning up...')
 			obj.close;
 		end
 		

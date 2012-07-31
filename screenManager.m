@@ -189,8 +189,8 @@ classdef screenManager < handle
 		%> @brief open a screen with object defined settings
 		%>
 		%> @param debug, whether we show debug status, called from runExperiment
-		%> @param tL timLog object to add timing info on screen construction
-		%> @return screenVals basic info on the screen
+		%> @param tL timeLog object to add timing info on screen construction
+		%> @return screenVals structure of basic info from the opened screen
 		% ===================================================================
 		function screenVals = open(obj,debug,tL)
 			if obj.isPTB == false
@@ -198,7 +198,7 @@ classdef screenManager < handle
 				return;
 			end
 			if ~exist('debug','var')
-				debug = true;
+				debug = obj.debug;
 			end
 			if ~exist('tL','var')
 				tL = struct;
@@ -206,13 +206,15 @@ classdef screenManager < handle
 			try
 				obj.screenVals.resetGamma = false;
 				
-				obj.hideScreenFlash;
+				obj.hideScreenFlash();
 		
 				%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 				Screen('Preference', 'VBLTimestampingMode', 1);
 				%force screentohead mapping
-				Screen('Preference','ScreenToHead',0,0,3);
-				Screen('Preference','ScreenToHead',1,1,4);
+				if obj.maxScreen == 1
+					Screen('Preference','ScreenToHead',0,0,3);
+					Screen('Preference','ScreenToHead',1,1,4);
+				end
 				%override VTOTAL?
 				%Screen('Preference', 'VBLEndlineOverride', 1066);
 				
