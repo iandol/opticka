@@ -142,11 +142,11 @@ classdef labJack < handle
 					if ~libisloaded('liblabjackusb')
 						try
 							loadlibrary(obj.library,obj.header);
-						catch %#ok<CTCH>
-							obj.version = 'Library Loading FAILED';
+						catch ME
+							obj.version = ['Library LOAD FAIL: ' ME.message];
 							obj.silentMode = true;
 							obj.verbose = true;
-							return
+							return;
 						end
 					end
 					obj.functionList = libfunctions('liblabjackusb', '-full'); %store our raw lib functions
@@ -382,17 +382,19 @@ classdef labJack < handle
 		% ===================================================================
 		%> @brief timedTTL Send a TTL with a defined time of pulse
 		%>	
-		%> Note that there is a maximum time to the TTL pulse which is 8.16secs
-		%> for the U3 and 4.08secs for the U6; we can extend that time by
+		%> Note that there is a maximum time to the TTL pulse which is ~8.16secs
+		%> for the U3 and ~4.08secs for the U6; we can extend that time by
 		%> adding more feedback commands in the command packet but this
 		%> shouldn't be needed anyway. Any time longer than this will be
 		%> truncated to the maximum allowable time.
 		%>
 		%>  @param line 0-7=FIO, 8-15=EIO, or 16-19=CIO
 		%>	@param time time in ms
+		%>  @param sync optinal logical flag whether to use blocking (true) command
 		% ===================================================================
-		function timedTTL(obj,line,time)
+		function timedTTL(obj,line,time,sync)
 			if ~exist('line','var') || ~exist('time','var');fprintf('\ntimedTTL Input options: \n\t\tline (single value 0-7=FIO, 8-15=EIO, or 16-19=CIO), time (in ms)\n\n');return;end
+			if ~exist('sync','var'); sync = false; end
 			if obj.silentMode == false && obj.vHandle == 1
 				time = time / 1000; %convert to seconds
 				time1 = 0;
@@ -459,7 +461,7 @@ classdef labJack < handle
 				
 				obj.command = obj.checksum(cmd,'extended');
 				obj.outp = obj.rawWrite(obj.command);
-				%obj.inp = obj.rawRead(zeros(1,10),10);
+				if sync; obj.inp = obj.rawRead(zeros(1,10),10); end
 				obj.salutation('timedTTL method',sprintf('T1:%g T2:%g output time = %g secs', time1, time2, otime))
 			end
 		end
