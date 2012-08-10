@@ -1,8 +1,8 @@
 % ======================================================================
 %> @brief Opticka stimulus generator class
 %>
-%> Opticka is a stimulus generator based on Psychophysics toolbox
-%>
+%> Opticka is an object oriented stimulus generator based on Psychophysics toolbox
+%> See http://iandol.github.com/opticka/ for more details
 % ======================================================================
 classdef (Sealed) opticka < handle
 		
@@ -16,12 +16,14 @@ classdef (Sealed) opticka < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> history of display objects
+		history
 		%> storage of various paths
 		paths
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		version='0.621'
+		optickaVersion='0.701'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection, via TCP
@@ -30,7 +32,7 @@ classdef (Sealed) opticka < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> used to sanitise passed values on construction
-		allowedProperties='verbose' 
+		allowedPropertiesConstructor='verbose' 
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList = {'OKOmniplexIP','OKPixelsPerCm','OKAntiAliasing','OKbitDepth'};
 		%> any other prefs to save?
@@ -59,7 +61,7 @@ classdef (Sealed) opticka < handle
 		function obj = opticka(args)
 			
 			if nargin>0
-				obj.parseArgs(args, obj.allowedProperties);
+				obj.parseArgs(args, obj.allowedPropertiesConstructor);
 			end
 			
 			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
@@ -276,7 +278,7 @@ classdef (Sealed) opticka < handle
 				guidata(uihandle,obj.h); %save back this change
 				setappdata(obj.h.uihandle,'o',obj); %we stash our object in the root appdata store for retirieval from the UI
 				set(obj.h.OKOptickaVersion,'String','Initialising GUI, please wait...');
-				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.version]);
+				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.optickaVersion]);
 				if obj.mversion < 7.12 && (ismac || ispc)
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
@@ -308,7 +310,7 @@ classdef (Sealed) opticka < handle
 
 				set(obj.h.OKVarList,'String','');
 				set(obj.h.OKStimList,'String','');
-				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.version]);
+				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.optickaVersion]);
 				
 			catch ME
 				if isappdata(obj.h.uihandle,'o')
@@ -1045,7 +1047,7 @@ classdef (Sealed) opticka < handle
 				end
 				
 			end
-			
+			obj.refreshProtocolsList;
 		end
 		
 		% ======================================================================
@@ -1364,7 +1366,7 @@ classdef (Sealed) opticka < handle
 		end
 		
 		function lobj=loadobj(in)
-			fprintf('\n---> Loading opticka object...\n');
+			fprintf('\n---> Opticka static loadobj: Loading opticka object...\n');
 			lobj = in;
 		end
 	end

@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 28-May-2012 12:31:58
+% Last Modified by GUIDE v2.5 10-Aug-2012 15:50:21
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1326,5 +1326,18 @@ if isappdata(handles.output,'o')
 			set(handles.OKlogFrames,'Value',0)
 		end
 		o.getScreenVals;
+	end
+end
+
+
+% --------------------------------------------------------------------
+function OKStartTrainingSession_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to OKStartTrainingSession (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	if isa(o.r,'runExperiment')
+		o.r.runTrainingSession();
 	end
 end

@@ -13,6 +13,7 @@ classdef timeLogger < dynamicprops
 		stimTime = 0
 		startTime = 0
 		screen = struct
+		training = struct
 		timeFunction = @GetSecs
 	end
 	

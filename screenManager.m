@@ -212,8 +212,8 @@ classdef screenManager < handle
 				Screen('Preference', 'VBLTimestampingMode', 1);
 				%force screentohead mapping
 				if obj.maxScreen == 1
-					Screen('Preference','ScreenToHead',0,0,3);
-					Screen('Preference','ScreenToHead',1,1,4);
+					%Screen('Preference','ScreenToHead',0,0,3);
+					%Screen('Preference','ScreenToHead',1,1,4);
 				end
 				%override VTOTAL?
 				%Screen('Preference', 'VBLEndlineOverride', 1066);

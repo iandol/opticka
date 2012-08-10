@@ -143,10 +143,11 @@ classdef labJack < handle
 						try
 							loadlibrary(obj.library,obj.header);
 						catch ME
-							obj.version = ['Library LOAD FAIL: ' ME.message];
+							obj.salutation('open method',['Loading the exodriver library failed: ' ME.message]);
+							obj.version = ['Library Load FAILED: ' ME.message];
 							obj.silentMode = true;
 							obj.verbose = true;
-							return;
+							return
 						end
 					end
 					obj.functionList = libfunctions('liblabjackusb', '-full'); %store our raw lib functions
@@ -254,13 +255,13 @@ classdef labJack < handle
 					if obj.vHandle
 						obj.salutation('validHandle Method',sprintf('Handle to LabJack U%g is VALID',obj.deviceID));
 					else
-						obj.salutation('validHandle Method',sprintf('Handle to LabJack U%g is INVALID',obj.deviceID));
+						obj.salutation('validHandle Method',sprintf('Handle to LabJack U%g is INVALID',obj.deviceID),true);
 					end
 				else
 					obj.vHandle = false;
 					obj.isOpen = false;
 					obj.handle = [];
-					obj.salutation('validHandle Method','Handle to LabJack is INVALID (empty handle)');
+					obj.salutation('validHandle Method','Handle to LabJack is INVALID (empty handle)',true);
 				end
 			end
 			vHandle = obj.vHandle;
@@ -801,8 +802,11 @@ classdef labJack < handle
 		%>	log message to command window, dependent on verbosity
 		%>
 		% ===================================================================
-		function salutation(obj,in,message)
-			if obj.verbose ~= false
+		function salutation(obj,in,message,verbose)
+			if ~exist('verbose','var')
+				verbose = obj.verbose;
+			end
+			if verbose ~= false
 				if ~exist('in','var')
 					in = 'General Message';
 				end

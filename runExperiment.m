@@ -52,6 +52,8 @@ classdef (Sealed) runExperiment < handle
 		screenVals
 		%> log times during display
 		timeLog
+		%> training log
+		trainingLog
 		%> for heterogenous stimuli, we need a way to index into the stimulus so
 		%> we don't waste time doing this on each iteration
 		sList
@@ -117,11 +119,11 @@ classdef (Sealed) runExperiment < handle
 			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
 			%obj.serialP.setDTR(0);
 			if obj.useLabJack == true
-				strct = struct('openNow',1,'name','default','verbosity',obj.verbose);
+				obj.lJack = labJack('verbose',obj.verbose,'openNow',1,'name','runinstance');
 			else
-				strct = struct('openNow',0,'name','null','verbosity',0,'silentMode',1);
+				obj.lJack = labJack('verbose',false,'openNow',0,'name','null','silentMode',1);
 			end
-			obj.lJack = labJack(strct);
+			
 			%-----------------------------------------------------------
 			
 			%-----------------------------------------------------------
@@ -306,6 +308,106 @@ classdef (Sealed) runExperiment < handle
 			if obj.verbose==1
 				tL.printLog;
 			end
+		end
+		
+		% ===================================================================
+		%> @brief The main run loop
+		%>
+		%> @param obj required class object
+		% ===================================================================
+		function runTrainingSession(obj)
+			if isempty(obj.screen) || isempty(obj.task)
+				obj.initialise;
+			end
+			if obj.screen.isPTB == false
+				errordlg('There is no working PTB available!')
+				error('There is no working PTB available!')
+			end
+			
+			t.tick = 1;
+			t.display = 1;
+			
+			%initialise timeLog for this run
+			obj.trainingLog = timeLogger;
+			tL = obj.trainingLog;
+			
+			%make a handle to the screenManager
+			s = obj.screen;
+			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
+			
+			obj.lJack = labJack('name','training','verbose',obj.verbose);
+			
+			%-----------------------------------------------------------
+			try%======This is our main TRY CATCH experiment display loop
+			%-----------------------------------------------------------	
+				obj.screenVals = s.open(obj.debug,obj.timeLog);
+				
+				%obj.initialiseTask; %set up our task structure 
+				
+				for j=1:obj.sList.n %parfor doesn't seem to help here...
+					obj.stimulus{j}.setup(s); %call setup and pass it the screen object
+				end
+				
+				obj.salutation('Initial variable setup predisplay...')
+				
+				KbReleaseWait; %make sure keyboard keys are all released
+				
+				%bump our priority to maximum allowed
+				Priority(MaxPriority(s.win));
+				
+				tL.screen.beforeDisplay = GetSecs;
+				
+				obj.salutation('TASK Starting...')
+				vbl = Screen('Flip', s.win);
+				tL.vbl(1) = vbl;
+				tL.startTime = vbl;
+				
+				stopTraining = false;
+				
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				% Our main display loop
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				while stopTraining == false
+	
+					if ~isempty(s.backgroundColour)
+						s.drawBackground;
+					end
+					for j=1:obj.sList.n
+						obj.stimulus{j}.draw();
+					end
+					if s.photoDiode == true
+						s.drawPhotoDiodeSquare([1 1 1 1]);
+					end
+					if s.fixationPoint == true
+						s.drawFixationPoint;
+					end
+					if s.visualDebug == true
+						s.drawGrid;
+						obj.infoText;
+					end
+					
+					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
+					
+				
+			catch ME
+				
+				obj.lJack.setDIO([0,0,0]);
+				
+				s.resetScreenGamma();
+				
+				s.finaliseMovie(true);
+				
+				s.close();
+				
+				%obj.serialP.close;
+				obj.lJack.close;
+				obj.lJack=[];
+				rethrow(ME)
+				
+			end
+			
 		end
 		
 		% ===================================================================
