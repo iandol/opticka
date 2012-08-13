@@ -63,6 +63,8 @@ classdef (Sealed) runExperiment < handle
 		previousInfo = struct()
 		%> LabJack object
 		lJack
+		%> stateMachine
+		sm
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -331,6 +333,8 @@ classdef (Sealed) runExperiment < handle
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog;
 			
+			obj.sm = stateMachine();
+			
 			%make a handle to the screenManager
 			s = obj.screen;
 			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
@@ -342,7 +346,7 @@ classdef (Sealed) runExperiment < handle
 			%-----------------------------------------------------------	
 				obj.screenVals = s.open(obj.debug,obj.timeLog);
 				
-				%obj.initialiseTask; %set up our task structure 
+				obj.initialiseTask; %set up our task structure 
 				
 				for j=1:obj.sList.n %parfor doesn't seem to help here...
 					obj.stimulus{j}.setup(s); %call setup and pass it the screen object
@@ -352,12 +356,24 @@ classdef (Sealed) runExperiment < handle
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				
+				ListenChar(2);
+				
 				%bump our priority to maximum allowed
 				Priority(MaxPriority(s.win));
 				
 				tL.screen.beforeDisplay = GetSecs;
 				
 				obj.salutation('TASK Starting...')
+				
+				index = 1;
+				maxindex = length(obj.task.nVar(1).values);
+				if ~isempty(obj.task.nVar(1))
+					name = [obj.task.nVar(1).name 'Out'];
+					value = obj.task.nVar(1).values(index);
+					obj.stimulus{1}.(name) = value;
+					obj.stimulus{1}.update;
+				end
+				
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
@@ -377,12 +393,6 @@ classdef (Sealed) runExperiment < handle
 					for j=1:obj.sList.n
 						obj.stimulus{j}.draw();
 					end
-					if s.photoDiode == true
-						s.drawPhotoDiodeSquare([1 1 1 1]);
-					end
-					if s.fixationPoint == true
-						s.drawFixationPoint;
-					end
 					if s.visualDebug == true
 						s.drawGrid;
 						obj.infoText;
@@ -390,18 +400,63 @@ classdef (Sealed) runExperiment < handle
 					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
+					for j=1:obj.sList.n
+						obj.stimulus{j}.animate();
+					end
+					
+					[keyIsDown, ~, keyCode] = KbCheck;
+					if keyIsDown == 1
+						rchar = KbName(keyCode);
+						if iscell(rchar);rchar=rchar{1};end
+						switch rchar
+							case 'q' %quit
+								stopTraining = true;
+							case {'LeftArrow','left'}
+								if index > 1 && maxindex >= index
+									index = index - 1;
+									value = obj.task.nVar(1).values(index);
+									obj.stimulus{1}.(name) = value;
+									obj.stimulus{1}.update;
+								end
+							case {'RightArrow','right'}
+								if index < maxindex 
+									index = index + 1;
+									value = obj.task.nVar(1).values(index);
+									obj.stimulus{1}.(name) = value;
+									obj.stimulus{1}.update;
+								else
+									index = maxindex;
+								end
+								
+							case {'UpArrow','up'}
+								stopTraining = true;
+							case {'DownArrow','down'}
+								stopTraining = true;
+							case ',<'
+								stopTraining = true;
+							case '.>'
+								stopTraining = true;
+							case '1!'
+								stopTraining = true;
+						end
+					end
+					
+					FlushEvents('keyDown');
+					
+					Screen('Flip', s.win);
+					
+				end
+				
+				Priority(0);
+				ListenChar(0)
+				ShowCursor;
+				s.close();
+				obj.lJack.close;
+				obj.lJack=[];
 				
 			catch ME
 				
-				obj.lJack.setDIO([0,0,0]);
-				
-				s.resetScreenGamma();
-				
-				s.finaliseMovie(true);
-				
 				s.close();
-				
-				%obj.serialP.close;
 				obj.lJack.close;
 				obj.lJack=[];
 				rethrow(ME)
