@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 10-Aug-2012 15:50:21
+% Last Modified by GUIDE v2.5 14-Aug-2012 18:06:46
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -92,69 +92,6 @@ function OKMenuTools_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% --------------------------------------------------------------------
-function OKMenuNewProtocol_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuNewProtocol (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	o.r=[];
-	set(handles.OKPanelDots,'Visible','off')
-	set(handles.OKPanelSpot,'Visible','off')
-	set(handles.OKPanelBar,'Visible','off')
-	%set(handles.OKPanelPlaid,'Visible','off')
-	set(handles.OKPanelGrating,'Visible','on')
-	o.store.visibleStimulus='grating';
-	o.store.gratingN = 0;
-	o.store.barN = 0;
-	o.store.dotsN = 0;
-	o.store.spotN = 0;
-	o.store.plaidN = 0;
-	o.store.noiseN = 0;
-	o.clearStimulusList;
-	o.clearVariableList;
-	o.getScreenVals;
-	o.getTaskVals;
-end
-
-% --------------------------------------------------------------------
-function OKMenuOpen_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuOpen (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	o.router('loadProtocol','1');
-end
-
-% --------------------------------------------------------------------
-function OKMenuSave_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuSave (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	o.router('saveProtocol');
-end
-
-% --------------------------------------------------------------------
-function OKMenuQuit_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuQuit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isappdata(handles.output,'o')
-	try
-		o = getappdata(handles.output,'o');
-		o.savePrefs;
-		rmappdata(handles.output,'o');
-		clear o;
-	catch ME
-		fprintf('>>> Optick failed to clearr all data on close...');
-		rethrow ME
-	end
-end
-close(gcf);
 
 % --------------------------------------------------------------------
 function OKMenuStimulusLog_Callback(hObject, eventdata, handles)
@@ -787,33 +724,6 @@ set(handles.OKVariableValues,'String',string);
 % --- Executes on button press in OKVariablesLog.
 function OKVariablesLog_Callback(hObject, eventdata, handles) %#ok<*INUSD>
 
-
-% --------------------------------------------------------------------
-function OKToolbarInitialise_ClickedCallback(hObject, eventdata, handles) %#ok<*DEFNU>
-% hObject    handle to OKToolbarInitialise (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	o.r=[];
-	set(handles.OKPanelDots,'Visible','off')
-	set(handles.OKPanelSpot,'Visible','off')
-	set(handles.OKPanelBar,'Visible','off')
-	%set(handles.OKPanelPlaid,'Visible','off')
-	set(handles.OKPanelGrating,'Visible','on')
-	o.store.visibleStimulus='grating';
-	o.store.gratingN = 0;
-	o.store.barN = 0;
-	o.store.dotsN = 0;
-	o.store.spotN = 0;
-	o.store.plaidN = 0;
-	o.store.noiseN = 0;
-	o.clearStimulusList;
-	o.clearVariableList;
-	o.getScreenVals;
-	o.getTaskVals;
-end
-
 % --- Executes on selection change in OKStimList.
 function OKStimList_Callback(hObject, eventdata, handles)
 
@@ -1340,4 +1250,142 @@ if isappdata(handles.output,'o')
 	if isa(o.r,'runExperiment')
 		o.r.runTrainingSession();
 	end
+end
+
+
+% --- Executes on button press in OKOmniplexEnable.
+function OKOmniplexEnable_Callback(hObject, eventdata, handles)
+% hObject    handle to OKOmniplexEnable (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% Hint: get(hObject,'Value') returns toggle state of OKOmniplexEnable
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	if get(hObject,'Value') < 1
+		set(handles.OKOmniplexIP,'Enable','off');
+		set(handles.OKOmniplexPort,'Enable','off');
+		set(handles.OKPanelTellOmniplex,'Enable','off');
+		set(handles.OKPanelReconnectOmniplex,'Enable','off');
+		set(handles.OKPanelSendOmniplex,'Enable','off');
+		set(handles.OKPanelPingOmniplex,'Enable','off');
+		set(handles.OKPanelDisconnectOmniplex,'Enable','off');
+	else
+		set(handles.OKOmniplexIP,'Enable','on');
+		set(handles.OKOmniplexPort,'Enable','on');
+		set(handles.OKPanelTellOmniplex,'Enable','on');
+		set(handles.OKPanelReconnectOmniplex,'Enable','on');
+		set(handles.OKPanelSendOmniplex,'Enable','on');
+		set(handles.OKPanelPingOmniplex,'Enable','on');
+		set(handles.OKPanelDisconnectOmniplex,'Enable','on');
+	end
+end
+
+% --------------------------------------------------------------------
+function OKMenuOpen_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuOpen (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.router('loadProtocol','1');
+end
+
+% --------------------------------------------------------------------
+function OKMenuSave_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuSave (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.router('saveProtocol');
+end
+
+% --------------------------------------------------------------------
+function OKMenuQuit_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuQuit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	try
+		o = getappdata(handles.output,'o');
+		o.savePrefs;
+		rmappdata(handles.output,'o');
+		clear o;
+	catch ME
+		fprintf('>>> Opticka failed to clear all data on close...');
+		rethrow ME
+	end
+end
+close(gcf);
+
+% --------------------------------------------------------------------
+function OKMenuNewProtocol_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuNewProtocol (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.r = [];
+	set(handles.OKPanelDots,'Visible','off')
+	set(handles.OKPanelSpot,'Visible','off')
+	set(handles.OKPanelBar,'Visible','off')
+	%set(handles.OKPanelPlaid,'Visible','off')
+	set(handles.OKPanelGrating,'Visible','on')
+	o.store.visibleStimulus='grating';
+	o.store.gratingN = 0;
+	o.store.barN = 0;
+	o.store.dotsN = 0;
+	o.store.spotN = 0;
+	o.store.plaidN = 0;
+	o.store.noiseN = 0;
+	o.clearStimulusList;
+	o.clearVariableList;
+	o.getScreenVals;
+	o.getTaskVals;
+end
+
+% --------------------------------------------------------------------
+function OKToolbarInitialise_ClickedCallback(hObject, eventdata, handles) %#ok<*DEFNU>
+% hObject    handle to OKToolbarInitialise (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.r=[];
+	set(handles.OKPanelDots,'Visible','off')
+	set(handles.OKPanelSpot,'Visible','off')
+	set(handles.OKPanelBar,'Visible','off')
+	%set(handles.OKPanelPlaid,'Visible','off')
+	set(handles.OKPanelGrating,'Visible','on')
+	o.store.visibleStimulus='grating';
+	o.store.gratingN = 0;
+	o.store.barN = 0;
+	o.store.dotsN = 0;
+	o.store.spotN = 0;
+	o.store.plaidN = 0;
+	o.store.noiseN = 0;
+	o.clearStimulusList;
+	o.clearVariableList;
+	o.getScreenVals;
+	o.getTaskVals;
+end
+
+% --------------------------------------------------------------------
+function OKToolbarOpen_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to OKToolbarOpen (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.router('loadProtocol','1');
+end
+
+% --------------------------------------------------------------------
+function OKToolbarSave_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to OKToolbarSave (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.router('saveProtocol');
 end

@@ -379,6 +379,7 @@ classdef (Sealed) runExperiment < handle
 				tL.startTime = vbl;
 				
 				stopTraining = false;
+				keyHold = 1; %a small loop to stop oversensitive key
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -412,26 +413,35 @@ classdef (Sealed) runExperiment < handle
 							case 'q' %quit
 								stopTraining = true;
 							case {'LeftArrow','left'}
-								if index > 1 && maxindex >= index
-									index = index - 1;
-									value = obj.task.nVar(1).values(index);
-									obj.stimulus{1}.(name) = value;
-									obj.stimulus{1}.update;
+								fprintf('tick: %g', t.tick)
+								if t.tick > keyHold
+									if index > 1 && maxindex >= index
+										fprintf(' yay: %g\n', t.tick)
+										index = index - 1;
+										value = obj.task.nVar(1).values(index);
+										obj.stimulus{1}.(name) = value;
+										obj.stimulus{1}.update;
+										keyHold = t.tick + 4;
+									end
 								end
 							case {'RightArrow','right'}
-								if index < maxindex 
-									index = index + 1;
-									value = obj.task.nVar(1).values(index);
-									obj.stimulus{1}.(name) = value;
-									obj.stimulus{1}.update;
-								else
-									index = maxindex;
+								fprintf('tick: %g\n', t.tick)
+								if t.tick > keyHold
+									if index < maxindex 
+										fprintf(' yay: %g\n', t.tick)
+										index = index + 1;
+										value = obj.task.nVar(1).values(index);
+										obj.stimulus{1}.(name) = value;
+										obj.stimulus{1}.update;
+										keyHold = t.tick + 4;
+									else
+										index = maxindex;
 								end
-								
+								end
 							case {'UpArrow','up'}
-								stopTraining = true;
+								obj.lJack.timedTTL(0,100);
 							case {'DownArrow','down'}
-								stopTraining = true;
+								obj.lJack.timedTTL(0,200);
 							case ',<'
 								stopTraining = true;
 							case '.>'
@@ -444,6 +454,7 @@ classdef (Sealed) runExperiment < handle
 					FlushEvents('keyDown');
 					
 					Screen('Flip', s.win);
+					t.tick = t.tick+1;
 					
 				end
 				
@@ -925,10 +936,10 @@ classdef (Sealed) runExperiment < handle
 		function lobj=loadobj(in)
 			lobj = runExperiment;
 			if isa(in,'runExperiment')
-				fprintf('---> Loading runExperiment object...\n');
+				fprintf('---> runExperiment: Loading object...\n');
 				isObject = true;
 			else
-				fprintf('---> Loading runExperiment structure...\n');
+				fprintf('---> runExperiment: Loading legacy structure...\n');
 				isObject = false;
 			end
 			lobj.initialise('notask');
@@ -956,7 +967,7 @@ classdef (Sealed) runExperiment < handle
 						obj.useLabJack = in.useLabJack;
 					end
 					if inObject == true || isfield('in','timeLog')
-						in.previousInfo.timeLog = in.timeLog;
+						obj.previousInfo.timeLog = in.timeLog;
 					end
 				end
 				try
@@ -981,7 +992,6 @@ classdef (Sealed) runExperiment < handle
 					obj.previousInfo.computer = in.computer;
 					obj.previousInfo.ptb = in.ptb;
 					obj.previousInfo.screenVals = in.screenVals;
-					obj.previousInfo.gammaTable = in.gammaTable;
 					obj.previousInfo.screenSettings = in.screenSettings;
 				end
 			end

@@ -233,14 +233,9 @@ try
 	% an OpenGL Psychtoolbox
 	AssertOpenGL;
 	
-	lj = labJack(struct('verbosity',0));
+	lj = labJack('verbose',0);
 	lj.prepareStrobe(2000);
 	WaitSecs(1)
-	%my normal screen prep
-	Screen('Preference', 'SkipSyncTests', 0);
-	Screen('Preference', 'VisualDebugLevel', 3);
-	Screen('Preference', 'Verbosity', 10); %errors and warnings
-	Screen('Preference', 'SuppressAllWarnings', 0);
 	
 	% Get the list of Screens and choose the one with the highest screen number.
 	% Screen 0 is, by definition, the display with the menu bar. Often when
@@ -250,6 +245,20 @@ try
 	screens=Screen('Screens');
 	screenNumber=max(screens);
 	screensize=Screen('Rect', screenNumber);
+	%my normal screen prep
+	%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
+	Screen('Preference', 'VBLTimestampingMode', 1);
+	%force screentohead mapping
+	if screenNumber == 1
+		Screen('Preference','ScreenToHead',0,0,3);
+		Screen('Preference','ScreenToHead',1,1,4);
+	end
+	%override VTOTAL?
+	%Screen('Preference', 'VBLEndlineOverride', 1066);
+	Screen('Preference', 'SkipSyncTests', 0);
+	Screen('Preference', 'VisualDebugLevel', 3);
+	Screen('Preference', 'Verbosity', 10); %errors and warnings
+	Screen('Preference', 'SuppressAllWarnings', 0);
 	
 	% Query size of screen:
 	screenheight=screensize(4);
@@ -486,7 +495,7 @@ try
 	
 	% Figure 2 shows the recorded beam positions:
 	subplot(2,3,5);
-	plot(beampos,'k.','MarkerSize',8);
+	plot(beampos,'k-','MarkerSize',8);
 	title('Rasterbeam position when timestamp was taken (in scanlines):');
 	
 	if max(a) >= 0
