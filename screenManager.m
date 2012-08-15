@@ -218,7 +218,7 @@ classdef screenManager < handle
 				%override VTOTAL?
 				%Screen('Preference', 'VBLEndlineOverride', 1066);
 				
-				if debug == true || obj.windowed(1)>0
+				if debug == true || ~isempty(obj.windowed)
 					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
 					Screen('Preference', 'Verbosity', 2);
@@ -501,6 +501,26 @@ classdef screenManager < handle
 			obj.pixelsPerCm = value;
 			obj.makeGrid();
 			%obj.salutation(['set pixelsPerCm: ' num2str(obj.pixelsPerCm) '|ppd: ' num2str(obj.ppd)],'Custom set method')
+		end
+		
+		% ===================================================================
+		%> @brief draw small spot centered on the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawGreenSpot(obj)
+			Screen('gluDisk',obj.win,[0 1 0 1],obj.xCenter,obj.yCenter,10);
+		end
+		
+		% ===================================================================
+		%> @brief draw small spot centered on the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawRedSpot(obj)
+			Screen('gluDisk',obj.win,[1 0 0 1],obj.xCenter,obj.yCenter,10);
 		end
 		
 		% ===================================================================

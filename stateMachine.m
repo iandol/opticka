@@ -8,12 +8,15 @@ classdef stateMachine < handle
 		stateList = struct([])
 		%> timedelta for time > ticks calculation, assume 60Hz
 		timeDelta = 0.0167
+		realTime = false
 		verbose = true
 		clockFunction = @GetSecs
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
+		totalTick
 		currentState
+		currentName
 		currentIndex
 		currentTick
 		currentTime
@@ -28,12 +31,14 @@ classdef stateMachine < handle
 		finalTick
 		%> Index with name and index number for each state
 		stateListIndex
+		%> Index with tick timer values
+		stateListTicks
 		%> true or false, whether this object is currently busy running
 		isRunning = false;
 		%> field names of allStates struct array, defining state behaviors
 		stateFields = {'name', 'next', 'entryFcn', 'withinFcn', 'time', 'exitFcn'}
 		%> default values of allStates struct array fields
-		stateDefaults = {'', '', {}, {}, 0, {}}
+		stateDefaults = {'', '', {}, {}, 1, {}}
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
@@ -55,7 +60,7 @@ classdef stateMachine < handle
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -68,8 +73,11 @@ classdef stateMachine < handle
 		% ===================================================================
 		function obj = stateMachine(varargin)
 			%initialise the statelist index
+			obj.stateList = struct([])
 			obj.stateListIndex = containers.Map('a', 1, 'uniformValues', false);
 			obj.stateListIndex.remove(obj.stateListIndex.keys);
+			obj.stateListTicks = containers.Map('a', 1, 'uniformValues', false);
+			obj.stateListTicks.remove(obj.stateListTicks.keys);
 		end
 		
 		% ===================================================================
@@ -92,9 +100,6 @@ classdef stateMachine < handle
 					};
 				addStates(obj,statesInfo);
 			end
-			obj.startTime = obj.clockFunction();
-			obj.currentTime = obj.startTime;
-			obj.currentTick = 1;
 		end
 		
 		% ===================================================================
@@ -133,15 +138,15 @@ classdef stateMachine < handle
 			newState = cell2struct(mergedValues, allowedFields, 2);
 			
 			%assign defaults
-			if isempty(newState.entryFcn)
-				newState.entry = {@disp, 'Entering'};
-			end
-			if isempty(newState.withinFcn)
-				newState.within = {@disp, 'Within'};
-			end
-			if isempty(newState.exitFcn)
-				newState.exit = {@disp, 'Bye'};
-			end
+% 			if isempty(newState.entryFcn)
+% 				newState.entryFcn = {@disp, 'Entering'};
+% 			end
+% 			if isempty(newState.withinFcn)
+% 				newState.withinFcn = {@disp, 'Within'};
+% 			end
+% 			if isempty(newState.exitFcn)
+% 				newState.exitFcn = {@disp, 'Bye'};
+% 			end
 			
 			% append the new state to allStates
 			%   add to lookup table
@@ -156,6 +161,7 @@ classdef stateMachine < handle
 				obj.stateList(newStateIndex) = newState;
 			end
 			obj.stateListIndex(newState.name) = newStateIndex;
+			obj.stateListTicks(newState.name) = round(newState.time / obj.timeDelta);
 		end
 		
 		% ===================================================================
@@ -181,24 +187,15 @@ classdef stateMachine < handle
 		%> @param
 		%> @return
 		% ===================================================================
-		function run(obj)
-			obj.start;
-			while obj.isRunning
-				obj.runBriefly;
+		function update(obj)
+			trigger = false;
+			if obj.realTime == false
+				trigger = obj.currentTick >= obj.nextTickOut;
+			else
+				obj.currentTime = feval(obj.clockFunction);
+				trigger = obj.currentTime >= obj.nextTimeOut;
 			end
-			obj.finish;
-		end
-		
-		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
-		% ===================================================================
-		function runBriefly(obj)
-			% poll for state timeout
-			obj.currentTime = feval(obj.clockFunction);
-			%fprintf('---> This Time: %g | Next Time: %g\n',tt, obj.nextTimeOut);
-			if obj.currentTime >= obj.nextTimeOut
+			if trigger == true
 				nextName = obj.stateList(obj.currentIndex).next;
 				if isempty(nextName)
 					obj.exitCurrentState;
@@ -208,11 +205,28 @@ classdef stateMachine < handle
 				end
 			else
 				if ~isempty(obj.currentWithinFcn)
-					feval(obj.currentWithinFcn{:});
+					if size(obj.currentWithinFcn,1) == 1 %single class
+						feval(obj.currentWithinFcn{:});
+					else
+						for i = 1:size(obj.currentWithinFcn,1) %nested class
+							feval(obj.currentWithinFcn{i}{:});
+						end
+					end
 				end
 			end
 			obj.currentTick = obj.currentTick + 1;
-			WaitSecs(obj.timeDelta);
+			obj.totalTick = obj.totalTick + 1;
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function forceTransition(obj,stateName)
+			if isStateName(obj,stateName)
+				transitionToStateWithName(obj, stateName)
+			end
 		end
 		
 		% ===================================================================
@@ -223,7 +237,9 @@ classdef stateMachine < handle
 		function start(obj)
 			obj.notify('runStart');
 			obj.startTime = feval(obj.clockFunction);
+			obj.currentTime = obj.startTime;
 			obj.isRunning = true;
+			obj.totalTick = 1;
 			obj.currentTick = 1;
 			obj.finalTime = [];
 			obj.enterStateAtIndex(1);
@@ -248,8 +264,12 @@ classdef stateMachine < handle
 		%> @param
 		%> @return
 		% ===================================================================
-		function tick = returnTick(obj)
-			tick = obj.currentTick;
+		function run(obj)
+			obj.start;
+			while obj.isRunning
+				obj.runBriefly;
+			end
+			obj.finish;
 		end
 		
 		% ===================================================================
@@ -257,8 +277,35 @@ classdef stateMachine < handle
 		%> @param
 		%> @return
 		% ===================================================================
-		function name = returnCurrentName(obj)
-			name = obj.currentState.name;
+		function runBriefly(obj)
+			trigger = false;
+			if obj.realTime == false
+				trigger = obj.currentTick >= obj.nextTickOut;
+			else
+				obj.currentTime = feval(obj.clockFunction);
+				trigger = obj.currentTime >= obj.nextTimeOut;
+			end
+			if trigger == true
+				nextName = obj.stateList(obj.currentIndex).next;
+				if isempty(nextName)
+					obj.exitCurrentState;
+					obj.finish;
+				else
+					obj.transitionToStateWithName(nextName);
+				end
+			else
+				if ~isempty(obj.currentWithinFcn)
+					if size(obj.currentWithinFcn,1) == 1 %single class
+						feval(obj.currentWithinFcn{:});
+					else
+						for i = 1:size(obj.currentWithinFcn,1) %nested class
+							feval(obj.currentWithinFcn{i}{:});
+						end
+					end
+				end
+			end
+			obj.currentTick = obj.currentTick + 1;
+			obj.totalTick = obj.totalTick + 1;
 		end
 		
 		% ===================================================================
@@ -266,40 +313,14 @@ classdef stateMachine < handle
 		%> @param
 		%> @return
 		% ===================================================================
-		function [isState, allStateIndex] = isStateName(obj, stateName)
+		function [isState, index] = isStateName(obj, stateName)
 			isState = obj.stateListIndex.isKey(stateName);
 			if isState
-				allStateIndex = obj.stateListIndex(stateName);
+				index = obj.stateListIndex(stateName);
 			else
-				allStateIndex = [];
+				index = [];
 			end
 		end
-		
-		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
-		% ===================================================================
-		function update(obj)
-			obj.currentTime = feval(obj.clockFunction);
-			%fprintf('---> This Time: %g | Next Time: %g\n',tt, obj.nextTimeOut);
-			if obj.currentTime >= obj.nextTimeOut
-				nextName = obj.stateList(obj.currentIndex).next;
-				if isempty(nextName)
-					obj.exitCurrentState;
-					obj.isRunning = false;
-				else
-					obj.transitionToStateWithName(nextName);
-				end
-			else
-				if ~isempty(obj.currentWithinFcn)
-					feval(obj.currentWithinFcn{:});
-				end
-			end
-			obj.currentTick = obj.currentTick + 1;
-			WaitSecs(obj.timeDelta);
-		end
-		
 		
 	end
 	
@@ -317,14 +338,23 @@ classdef stateMachine < handle
 			obj.currentIndex = thisIndex;
 			if length(obj.stateList) >= thisIndex
 				thisState = obj.stateList(obj.currentIndex);
+				obj.currentTick = 1;
 				obj.currentState = thisState;
+				obj.currentName = thisState.name;
 				obj.currentEntryFcn = thisState.entryFcn;
 				obj.currentEntryTime = feval(obj.clockFunction);
 				obj.currentWithinFcn = thisState.withinFcn;
 				obj.nextTimeOut = obj.currentEntryTime + thisState.time;
+				obj.nextTickOut = obj.stateListTicks(thisState.name);
 				obj.salutation(['Entering state: ' thisState.name ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs'])
 				if ~isempty(thisState.entryFcn)
-					feval(thisState.entryFcn{:});
+					if size(thisState.entryFcn,1) == 1 %single class
+						feval(thisState.entryFcn{:});
+					else
+						for i = 1:size(thisState.entryFcn,1) %nested class
+							feval(thisState.entryFcn{i}{:});
+						end
+					end
 				end
 			else
 				obj.isRunning = false;
@@ -358,9 +388,15 @@ classdef stateMachine < handle
 			obj.currentEntryFcn = {};
 			obj.currentEntryTime = [];
 			obj.nextTimeOut = [];
-			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(obj.currentTime-obj.startTime) 'secs']);
+			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(feval(obj.clockFunction)-obj.startTime) 'secs']);
 			if ~isempty(thisState.exitFcn)
-				feval(thisState.exitFcn{:})
+				if size(thisState.exitFcn, 1) == 1 %single class
+						feval(thisState.exitFcn{:});
+					else
+						for i = 1:size(thisState.exitFcn, 1) %nested class
+							feval(thisState.exitFcn{i}{:});
+						end
+					end
 			end
 		end
 		

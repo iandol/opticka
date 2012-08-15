@@ -334,7 +334,7 @@ classdef (Sealed) runExperiment < handle
 			tL = obj.trainingLog;
 			
 			obj.sm = stateMachine();
-			
+	
 			%make a handle to the screenManager
 			s = obj.screen;
 			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
@@ -346,24 +346,31 @@ classdef (Sealed) runExperiment < handle
 			%-----------------------------------------------------------	
 				obj.screenVals = s.open(obj.debug,obj.timeLog);
 				
-				obj.initialiseTask; %set up our task structure 
+				ms = metaStimulus();
+				ms.stimuli = obj.stimulus;
+				ms.screen = s;
+				ms.setup();
 				
-				for j=1:obj.sList.n %parfor doesn't seem to help here...
-					obj.stimulus{j}.setup(s); %call setup and pass it the screen object
-				end
+				blankFcn = {@drawBackground, s};
+				stimFcn = {@draw, ms};
+				stimEntry = {@update, ms};
+				correctFcn = {{@draw, ms}; {@drawGreenSpot, s}};
+				incorrectFcn = {{@draw, ms}; {@drawRedSpot, s}};
 				
-				obj.salutation('Initial variable setup predisplay...')
+				statesInfo = { ...
+					'name'      'next'		'time'  'entryFcn'	'withinFcn'		'exitFcn'; ...
+					'preblank'  'stimulus'  1		[]			blankFcn		[]; ...
+					'stimulus'  'correct'   2		stimEntry	stimFcn			[]; ...
+					'correct'	'preblank'  0.25    []			correctFcn		[]; ...
+					'incorrect' 'preblank'	0.25    []			incorrectFcn	[]; ...
+				};
+				addStates(obj.sm, statesInfo);
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				
 				ListenChar(2);
-				
-				%bump our priority to maximum allowed
-				Priority(MaxPriority(s.win));
+				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
 				tL.screen.beforeDisplay = GetSecs;
-				
-				obj.salutation('TASK Starting...')
 				
 				index = 1;
 				maxindex = length(obj.task.nVar(1).values);
@@ -374,12 +381,15 @@ classdef (Sealed) runExperiment < handle
 					obj.stimulus{1}.update;
 				end
 				
+				stopTraining = false;
+				keyHold = 1; %a small loop to stop oversensitive key
+				
+				obj.salutation('TASK Starting...')
+				
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
-				
-				stopTraining = false;
-				keyHold = 1; %a small loop to stop oversensitive key
+				start(obj.sm); %ignite the stateMachine!
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -388,12 +398,8 @@ classdef (Sealed) runExperiment < handle
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while stopTraining == false
 	
-					if ~isempty(s.backgroundColour)
-						s.drawBackground;
-					end
-					for j=1:obj.sList.n
-						obj.stimulus{j}.draw();
-					end
+					update(obj.sm);
+					
 					if s.visualDebug == true
 						s.drawGrid;
 						obj.infoText;
@@ -401,11 +407,9 @@ classdef (Sealed) runExperiment < handle
 					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
-					for j=1:obj.sList.n
-						obj.stimulus{j}.animate();
-					end
+					ms.animate();
 					
-					[keyIsDown, ~, keyCode] = KbCheck;
+					[keyIsDown, ~, keyCode] = KbCheck(-1);
 					if keyIsDown == 1
 						rchar = KbName(keyCode);
 						if iscell(rchar);rchar=rchar{1};end
@@ -441,7 +445,12 @@ classdef (Sealed) runExperiment < handle
 							case {'UpArrow','up'}
 								obj.lJack.timedTTL(0,100);
 							case {'DownArrow','down'}
+								
+							case 'z'
 								obj.lJack.timedTTL(0,200);
+								forceTransition(obj.sm, 'correct');
+							case 'x'
+								forceTransition(obj.sm, 'incorrect');
 							case ',<'
 								stopTraining = true;
 							case '.>'
@@ -452,6 +461,8 @@ classdef (Sealed) runExperiment < handle
 					end
 					
 					FlushEvents('keyDown');
+					[~, ~, buttons]=GetMouse(s.screen);
+					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
 					
 					Screen('Flip', s.win);
 					t.tick = t.tick+1;
