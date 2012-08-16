@@ -509,8 +509,11 @@ classdef screenManager < handle
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawGreenSpot(obj)
-			Screen('gluDisk',obj.win,[0 1 0 1],obj.xCenter,obj.yCenter,10);
+		function drawGreenSpot(obj,size)
+			if ~exist('size','var')
+				size = 10;
+			end
+			Screen('gluDisk',obj.win,[0 1 0 1],obj.xCenter,obj.yCenter,size);
 		end
 		
 		% ===================================================================
@@ -519,8 +522,11 @@ classdef screenManager < handle
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawRedSpot(obj)
-			Screen('gluDisk',obj.win,[1 0 0 1],obj.xCenter,obj.yCenter,10);
+		function drawRedSpot(obj,size)
+			if ~exist('size','var')
+				size = 10;
+			end
+			Screen('gluDisk',obj.win,[1 0 0 1],obj.xCenter,obj.yCenter,size);
 		end
 		
 		% ===================================================================

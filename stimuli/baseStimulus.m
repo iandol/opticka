@@ -1,4 +1,4 @@
-	% ========================================================================
+% ========================================================================
 %> @brief baseStimulus is the superclass for all opticka stimulus objects
 %>
 %> Superclass providing basic structure for all stimulus classes. This is a dynamic properties

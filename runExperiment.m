@@ -64,7 +64,7 @@ classdef (Sealed) runExperiment < handle
 		%> LabJack object
 		lJack
 		%> stateMachine
-		sm
+		stateMachine
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -326,14 +326,9 @@ classdef (Sealed) runExperiment < handle
 				error('There is no working PTB available!')
 			end
 			
-			t.tick = 1;
-			t.display = 1;
-			
 			%initialise timeLog for this run
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog;
-			
-			obj.sm = stateMachine();
 	
 			%make a handle to the screenManager
 			s = obj.screen;
@@ -346,31 +341,33 @@ classdef (Sealed) runExperiment < handle
 			%-----------------------------------------------------------	
 				obj.screenVals = s.open(obj.debug,obj.timeLog);
 				
-				ms = metaStimulus();
+				ms = metaStimulus(); %this wraps single or multiple stimuli and handles the baseStimulus abstract methods
 				ms.stimuli = obj.stimulus;
 				ms.screen = s;
-				ms.setup();
+				ms.setup(); %run setup() for each stimulus
 				
-				blankFcn = {@drawBackground, s};
+				blankFcn = {{@drawBackground, s};{@drawFixationPoint, s}};
 				stimFcn = {@draw, ms};
 				stimEntry = {@update, ms};
 				correctFcn = {{@draw, ms}; {@drawGreenSpot, s}};
-				incorrectFcn = {{@draw, ms}; {@drawRedSpot, s}};
+				incorrectFcn = {{@drawBackground, s}; {@drawRedSpot, s}};
 				
+				obj.stateMachine = stateMachine();
+				sm = obj.stateMachine;
+				sm.timeDelta = obj.screenVals.ifi;
 				statesInfo = { ...
 					'name'      'next'		'time'  'entryFcn'	'withinFcn'		'exitFcn'; ...
-					'preblank'  'stimulus'  1		[]			blankFcn		[]; ...
-					'stimulus'  'correct'   2		stimEntry	stimFcn			[]; ...
-					'correct'	'preblank'  0.25    []			correctFcn		[]; ...
+					'preblank'  'stimulus'  2		[]			blankFcn		[]; ...
+					'stimulus'  'incorrect'	2		stimEntry	stimFcn			[]; ...
 					'incorrect' 'preblank'	0.25    []			incorrectFcn	[]; ...
+					'correct'	'preblank'  0.25    stimEntry	correctFcn		[]; ...
+					'pause'		'preblank'	inf		[]			[]				[]; ...
 				};
-				addStates(obj.sm, statesInfo);
+				addStates(sm, statesInfo);
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(2);
+				ListenChar(2); %capture keystrokes
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
-				
-				tL.screen.beforeDisplay = GetSecs;
 				
 				index = 1;
 				maxindex = length(obj.task.nVar(1).values);
@@ -382,14 +379,16 @@ classdef (Sealed) runExperiment < handle
 				end
 				
 				stopTraining = false;
-				keyHold = 1; %a small loop to stop oversensitive key
+				keyHold = 1; %a small loop to stop overeager key presses
+				totalTicks = 1; % a tick counter
+				pauseToggle = 1;
 				
-				obj.salutation('TASK Starting...')
+				tL.screen.beforeDisplay = GetSecs;
 				
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
-				start(obj.sm); %ignite the stateMachine!
+				start(sm); %ignite the stateMachine!
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -398,7 +397,7 @@ classdef (Sealed) runExperiment < handle
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while stopTraining == false
 	
-					update(obj.sm);
+					update(sm);
 					
 					if s.visualDebug == true
 						s.drawGrid;
@@ -406,8 +405,6 @@ classdef (Sealed) runExperiment < handle
 					end
 					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
-					
-					ms.animate();
 					
 					[keyIsDown, ~, keyCode] = KbCheck(-1);
 					if keyIsDown == 1
@@ -417,40 +414,51 @@ classdef (Sealed) runExperiment < handle
 							case 'q' %quit
 								stopTraining = true;
 							case {'LeftArrow','left'}
-								fprintf('tick: %g', t.tick)
-								if t.tick > keyHold
+								if strcmpi(sm.currentName,'stimulus') && totalTicks > keyHold
 									if index > 1 && maxindex >= index
-										fprintf(' yay: %g\n', t.tick)
 										index = index - 1;
 										value = obj.task.nVar(1).values(index);
 										obj.stimulus{1}.(name) = value;
 										obj.stimulus{1}.update;
-										keyHold = t.tick + 4;
+										keyHold = totalTicks + 5;
 									end
 								end
 							case {'RightArrow','right'}
-								fprintf('tick: %g\n', t.tick)
-								if t.tick > keyHold
+								if strcmpi(sm.currentName,'stimulus') && totalTicks > keyHold
 									if index < maxindex 
-										fprintf(' yay: %g\n', t.tick)
 										index = index + 1;
 										value = obj.task.nVar(1).values(index);
 										obj.stimulus{1}.(name) = value;
 										obj.stimulus{1}.update;
-										keyHold = t.tick + 4;
+										keyHold = totalTicks + 5;
 									else
 										index = maxindex;
-								end
+									end
 								end
 							case {'UpArrow','up'}
 								obj.lJack.timedTTL(0,100);
 							case {'DownArrow','down'}
 								
 							case 'z'
-								obj.lJack.timedTTL(0,200);
-								forceTransition(obj.sm, 'correct');
+								if strcmpi(sm.currentName,'stimulus')
+									obj.lJack.timedTTL(0,200);
+									forceTransition(sm, 'correct');
+								end
 							case 'x'
-								forceTransition(obj.sm, 'incorrect');
+								if strcmpi(sm.currentName,'stimulus')
+									forceTransition(sm, 'incorrect');
+								end
+							case 'p'
+								if totalTicks > keyHold
+									if rem(pauseToggle,2)==1
+										forceTransition(sm, 'pause');
+										pauseToggle = pauseToggle + 1;
+									else
+										forceTransition(sm, 'preblank');
+										pauseToggle = pauseToggle + 1;
+									end
+									keyHold = totalTicks + 5;
+								end
 							case ',<'
 								stopTraining = true;
 							case '.>'
@@ -460,15 +468,17 @@ classdef (Sealed) runExperiment < handle
 						end
 					end
 					
+					if strcmpi(sm.currentName,'stimulus')
+						animate(ms);
+					end
+					
 					FlushEvents('keyDown');
-					[~, ~, buttons]=GetMouse(s.screen);
-					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
 					
 					Screen('Flip', s.win);
-					t.tick = t.tick+1;
+					totalTicks = totalTicks+1;
 					
 				end
-				
+				obj.salutation(sprintf('Total ticks: %g -- stateMachine ticks: %g',totalTicks,sm.totalTicks));
 				Priority(0);
 				ListenChar(0)
 				ShowCursor;
@@ -477,7 +487,9 @@ classdef (Sealed) runExperiment < handle
 				obj.lJack=[];
 				
 			catch ME
-				
+				Priority(0);
+				ListenChar(0)
+				ShowCursor;
 				s.close();
 				obj.lJack.close;
 				obj.lJack=[];
