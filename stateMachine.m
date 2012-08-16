@@ -120,29 +120,6 @@ classdef stateMachine < handle
 		%> @param
 		%> @return
 		% ===================================================================
-		function runDemo(obj)
-			if isempty(obj.stateList)
-				beginFcn = {@disp, 'begin state says Hello!'};
-				middleFcn = {@disp, 'middle function says Hello!'};
-				endFcn = {@disp, 'end state says, Oh bye!'};
-				withinFcn = {{@fprintf, '.'};{@fprintf, '\t'}};
-				exitfcn = {{@fprintf, '-END'};{@fprintf, '\n'}};
-				statesInfo = { ...
-					'name'      'next'   'time'     'entryFcn'	'withinFcn'		'exitFcn'; ...
-					'begin'     'middle'  1			beginFcn		withinFcn		exitfcn; ...
-					'middle'    'end'     1			middleFcn		withinFcn		exitfcn; ...
-					'end'       ''        1         endFcn			withinFcn		exitfcn; ...
-					};
-				addStates(obj,statesInfo);
-			end
-			run(obj);
-		end
-		
-		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
-		% ===================================================================
 
 		function newStateIndexes = addStates(obj,newStates)
 			sz = size(newStates);
@@ -246,7 +223,10 @@ classdef stateMachine < handle
 		function forceTransition(obj,stateName)
 			if obj.isRunning == true
 				if isStateName(obj,stateName)
+					obj.salutation('forceTransition method',['stateMachine forced to: ' stateName])
 					transitionToStateWithName(obj, stateName)
+				else
+					obj.salutation('forceTransition method',['state: ' stateName ' not found...'])
 				end
 			else
 				obj.salutation('forceTransition method','stateMachine has not been started yet')
@@ -298,11 +278,12 @@ classdef stateMachine < handle
 		% ===================================================================
 		function run(obj)
 			if obj.isRunning == false
-				obj.start;
+				start(obj);
 				while obj.isRunning
-					obj.update;
+					update(obj);
+					WaitSecs(obj.timeDelta);
 				end
-				obj.finish;
+				finish(obj);
 			else
 				obj.salutation('run method','stateMachine already running...')
 			end
@@ -321,6 +302,34 @@ classdef stateMachine < handle
 				index = [];
 			end
 		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function runDemo(obj)
+			obj.verbose = false;
+			obj.realTime = false;
+			beginFcn = {@disp, 'enter state: begin -- Hello!'};
+			middleFcn = {@disp, 'enter state: middle -- Hello!'};
+			endFcn = {@disp, 'enter state: end -- see you soon!'};
+			withinFcn = {{@fprintf, '.'};{@fprintf, ' '}};
+			exitfcn = {{@fprintf, '-exit state'};{@fprintf, '\n'}};
+			statesInfo = { ...
+				'name'      'next'   'time'     'entryFcn'	'withinFcn'		'exitFcn'; ...
+				'begin'     'middle'  1			beginFcn		withinFcn		exitfcn; ...
+				'middle'    'end'     1			middleFcn		withinFcn		exitfcn; ...
+				'end'       ''        1         endFcn			withinFcn		exitfcn; ...
+				};
+			addStates(obj,statesInfo);
+			disp('>--------------------------------------------------')
+			disp(' The demo will run the following 3 states settings:')
+			statesInfo
+			disp('>--------------------------------------------------')
+			run(obj);
+		end
+		
 		
 	end
 	
@@ -347,7 +356,7 @@ classdef stateMachine < handle
 				obj.currentWithinFcn = thisState.withinFcn;
 				obj.nextTimeOut = obj.currentEntryTime + thisState.time;
 				obj.nextTickOut = obj.stateListTicks(thisState.name);
-				obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs'])
+				obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'])
 				if ~isempty(thisState.entryFcn)
 					if size(thisState.entryFcn,1) == 1 %single class
 						feval(thisState.entryFcn{:});
@@ -372,7 +381,7 @@ classdef stateMachine < handle
 		function transitionToStateWithName(obj, nextName)
 			nextIndex = obj.stateListIndex(nextName);
 			obj.exitCurrentState;
-			obj.salutation(['Transition @ ' num2str(feval(obj.clockFunction)-obj.startTime) 'secs'])
+			obj.salutation(['Transition @ ' num2str(feval(obj.clockFunction)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'])
  			if ~isempty(obj.transitionFcn)
  				feval(obj.transitionFcn{:});
  			end
@@ -389,7 +398,7 @@ classdef stateMachine < handle
 			obj.currentEntryFcn = {};
 			obj.currentEntryTime = [];
 			obj.nextTimeOut = [];
-			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(feval(obj.clockFunction)-obj.startTime) 'secs']);
+			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(feval(obj.clockFunction)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks']);
 			if ~isempty(thisState.exitFcn)
 				if size(thisState.exitFcn, 1) == 1 %single class
 					feval(thisState.exitFcn{:});

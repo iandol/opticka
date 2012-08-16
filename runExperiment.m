@@ -27,7 +27,7 @@ classdef (Sealed) runExperiment < handle
 		screen
 		%> use LabJack for digital output?
 		useLabJack = false
-		%> this lets the UI leave commands to runExperiment
+		%> this lets the opticka UI leave commands to runExperiment
 		uiCommand = ''
 		%> log all frame times, gets slow for > 1e6 frames
 		logFrames = true
@@ -65,6 +65,8 @@ classdef (Sealed) runExperiment < handle
 		lJack
 		%> stateMachine
 		stateMachine
+		%> metaStimulus is a multi-stim manager
+		metaStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -313,7 +315,8 @@ classdef (Sealed) runExperiment < handle
 		end
 		
 		% ===================================================================
-		%> @brief The main run loop
+		%> @brief runTrainingSession runs a simple keyboard driven training
+		%> session
 		%>
 		%> @param obj required class object
 		% ===================================================================
@@ -328,33 +331,37 @@ classdef (Sealed) runExperiment < handle
 			
 			%initialise timeLog for this run
 			obj.trainingLog = timeLogger;
-			tL = obj.trainingLog;
-	
-			%make a handle to the screenManager
-			s = obj.screen;
-			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
+			tL = obj.trainingLog; %short handle to log
 			
+			%a throwaway structure to hold various parameters
+			tS = struct();
+	
+			%make a short handle to the screenManager
+			s = obj.screen;
+			
+			% open our labJack if present
 			obj.lJack = labJack('name','training','verbose',obj.verbose);
 			
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
-			%-----------------------------------------------------------	
-				obj.screenVals = s.open(obj.debug,obj.timeLog);
+			%-----------------------------------------------------------
+				%open the PTB screen
+				obj.screenVals = s.open(obj.debug,tL);
 				
-				ms = metaStimulus(); %this wraps single or multiple stimuli and handles the baseStimulus abstract methods
-				ms.stimuli = obj.stimulus;
-				ms.screen = s;
-				ms.setup(); %run setup() for each stimulus
+				%this wraps single or multiple stimuli and handles the baseStimulus abstract methods
+				obj.metaStimulus = metaStimulus(); 
+				obj.metaStimulus.stimuli = obj.stimulus;
+				obj.metaStimulus.screen = s;
+				obj.metaStimulus.setup(); %run setup() for each stimulus
 				
 				blankFcn = {{@drawBackground, s};{@drawFixationPoint, s}};
-				stimFcn = {@draw, ms};
-				stimEntry = {@update, ms};
-				correctFcn = {{@draw, ms}; {@drawGreenSpot, s}};
+				stimFcn = {@draw, obj.metaStimulus};
+				stimEntry = {@update, obj.metaStimulus};
+				correctFcn = {{@draw, obj.metaStimulus}; {@drawGreenSpot, s}};
 				incorrectFcn = {{@drawBackground, s}; {@drawRedSpot, s}};
 				
-				obj.stateMachine = stateMachine();
-				sm = obj.stateMachine;
-				sm.timeDelta = obj.screenVals.ifi;
+				obj.stateMachine = stateMachine(); %#ok<*CPROP>
+				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 				statesInfo = { ...
 					'name'      'next'		'time'  'entryFcn'	'withinFcn'		'exitFcn'; ...
 					'preblank'  'stimulus'  2		[]			blankFcn		[]; ...
@@ -363,128 +370,81 @@ classdef (Sealed) runExperiment < handle
 					'correct'	'preblank'  0.25    stimEntry	correctFcn		[]; ...
 					'pause'		'preblank'	inf		[]			[]				[]; ...
 				};
-				addStates(sm, statesInfo);
+				addStates(obj.stateMachine, statesInfo);
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
-				index = 1;
-				maxindex = length(obj.task.nVar(1).values);
+				tS.index = 1;
+				tS.maxindex = length(obj.task.nVar(1).values);
+				if obj.task.nVars > 1
+					tS.index2 = 1;
+					tS.maxindex2 = length(obj.task.nVar(2).values);
+				end
 				if ~isempty(obj.task.nVar(1))
 					name = [obj.task.nVar(1).name 'Out'];
-					value = obj.task.nVar(1).values(index);
+					value = obj.task.nVar(1).values(tS.index);
 					obj.stimulus{1}.(name) = value;
 					obj.stimulus{1}.update;
 				end
 				
-				stopTraining = false;
-				keyHold = 1; %a small loop to stop overeager key presses
-				totalTicks = 1; % a tick counter
-				pauseToggle = 1;
+				tS.stopTraining = false;
+				tS.keyHold = 1; %a small loop to stop overeager key presses
+				tS.totalTicks = 1; % a tick counter
+				tS.pauseToggle = 1;
 				
 				tL.screen.beforeDisplay = GetSecs;
 				
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
-				start(sm); %ignite the stateMachine!
+				
+				start(obj.stateMachine); %ignite the stateMachine!
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				% Our main display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				while stopTraining == false
-	
-					update(sm);
+				while tS.stopTraining == false
 					
+					% run the stateMachine one tick forward
+					update(obj.stateMachine);
+					
+					% do we draw visual debug info too?
 					if s.visualDebug == true
 						s.drawGrid;
-						obj.infoText;
 					end
 					
-					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
+					% Tell PTB that no further drawing commands will follow before Screen('Flip')
+					Screen('DrawingFinished', s.win); 
 					
-					[keyIsDown, ~, keyCode] = KbCheck(-1);
-					if keyIsDown == 1
-						rchar = KbName(keyCode);
-						if iscell(rchar);rchar=rchar{1};end
-						switch rchar
-							case 'q' %quit
-								stopTraining = true;
-							case {'LeftArrow','left'}
-								if strcmpi(sm.currentName,'stimulus') && totalTicks > keyHold
-									if index > 1 && maxindex >= index
-										index = index - 1;
-										value = obj.task.nVar(1).values(index);
-										obj.stimulus{1}.(name) = value;
-										obj.stimulus{1}.update;
-										keyHold = totalTicks + 5;
-									end
-								end
-							case {'RightArrow','right'}
-								if strcmpi(sm.currentName,'stimulus') && totalTicks > keyHold
-									if index < maxindex 
-										index = index + 1;
-										value = obj.task.nVar(1).values(index);
-										obj.stimulus{1}.(name) = value;
-										obj.stimulus{1}.update;
-										keyHold = totalTicks + 5;
-									else
-										index = maxindex;
-									end
-								end
-							case {'UpArrow','up'}
-								obj.lJack.timedTTL(0,100);
-							case {'DownArrow','down'}
-								
-							case 'z'
-								if strcmpi(sm.currentName,'stimulus')
-									obj.lJack.timedTTL(0,200);
-									forceTransition(sm, 'correct');
-								end
-							case 'x'
-								if strcmpi(sm.currentName,'stimulus')
-									forceTransition(sm, 'incorrect');
-								end
-							case 'p'
-								if totalTicks > keyHold
-									if rem(pauseToggle,2)==1
-										forceTransition(sm, 'pause');
-										pauseToggle = pauseToggle + 1;
-									else
-										forceTransition(sm, 'preblank');
-										pauseToggle = pauseToggle + 1;
-									end
-									keyHold = totalTicks + 5;
-								end
-							case ',<'
-								stopTraining = true;
-							case '.>'
-								stopTraining = true;
-							case '1!'
-								stopTraining = true;
-						end
+					%check keyboard for commands
+					tS = obj.checkTrainingKeys(tS);
+					
+					%if the statemachine is in stimulus state, then animate
+					%the stimuli
+					if strcmpi(obj.stateMachine.currentName,'stimulus')
+						animate(obj.metaStimulus);
 					end
 					
-					if strcmpi(sm.currentName,'stimulus')
-						animate(ms);
-					end
-					
+					%throw away any other keystrokes
 					FlushEvents('keyDown');
 					
+					%lazy flip, timing is not critical here
 					Screen('Flip', s.win);
-					totalTicks = totalTicks+1;
+					tS.totalTicks = tS.totalTicks + 1;
 					
 				end
-				obj.salutation(sprintf('Total ticks: %g -- stateMachine ticks: %g',totalTicks,sm.totalTicks));
+				obj.salutation(sprintf('Total ticks: %g -- stateMachine ticks: %g',tS.totalTicks,obj.stateMachine.totalTicks));
 				Priority(0);
 				ListenChar(0)
 				ShowCursor;
 				s.close();
 				obj.lJack.close;
 				obj.lJack=[];
+				clear tL s tS
 				
 			catch ME
 				Priority(0);
@@ -493,6 +453,7 @@ classdef (Sealed) runExperiment < handle
 				s.close();
 				obj.lJack.close;
 				obj.lJack=[];
+				clear tL s tS
 				rethrow(ME)
 				
 			end
@@ -579,7 +540,7 @@ classdef (Sealed) runExperiment < handle
 		%> @param
 		% ===================================================================
 		function deleteTimeLog(obj)
-			%obj.timeLog = [];
+			obj.timeLog = [];
 		end
 		
 		% ===================================================================
@@ -657,7 +618,8 @@ classdef (Sealed) runExperiment < handle
 				obj.screen.verbose = value;
 			end
 		end
-	end%-------------------------END PUBLIC METHODS--------------------------------%
+	end
+	%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
@@ -944,6 +906,99 @@ classdef (Sealed) runExperiment < handle
 				end
 			end
 		end
+		
+		% ===================================================================
+		%> @brief manage keypresses during training loop
+		%>
+		%> @param args input structure
+		% ===================================================================
+		function tS = checkTrainingKeys(obj,tS)
+			%now lets check whether any keyboard commands are pressed...
+			[keyIsDown, ~, keyCode] = KbCheck(-1);
+			if keyIsDown == 1
+				rchar = KbName(keyCode);
+				if iscell(rchar);rchar=rchar{1};end
+				switch rchar
+					case 'q' %quit
+						tS.stopTraining = true;
+					case {'LeftArrow','left'} %previous variable 1 value
+						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
+							if tS.index > 1 && tS.maxindex >= tS.index
+								tS.index = tS.index - 1;
+								name = [obj.task.nVar(1).name 'Out'];
+								value = obj.task.nVar(1).values(tS.index);
+								obj.stimulus{1}.(name) = value;
+								obj.stimulus{1}.update;
+								tS.keyHold = tS.totalTicks + 5;
+							end
+						end
+					case {'RightArrow','right'} %next variable 1 value
+						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
+							if tS.index < tS.maxindex 
+								tS.index = tS.index + 1;
+								name = [obj.task.nVar(1).name 'Out'];
+								value = obj.task.nVar(1).values(tS.index);
+								obj.stimulus{1}.(name) = value;
+								obj.stimulus{1}.update;
+								tS.keyHold = tS.totalTicks + 5;
+							else
+								tS.index = tS.maxindex;
+							end
+						end
+					case ',<'
+						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
+							if obj.task.nVars > 1 && tS.index2 > 1 && tS.maxindex2 >= tS.index2
+								tS.index2 = tS.index2 - 1;
+								name = [obj.task.nVar(2).name 'Out'];
+								value = obj.task.nVar(2).values(tS.index2);
+								obj.stimulus{1}.(name) = value;
+								obj.stimulus{1}.update;
+								tS.keyHold = tS.totalTicks + 5;
+							end
+						end
+					case '.>'
+						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
+							if obj.task.nVars > 1 && tS.index2 < tS.maxindex2
+								tS.index2 = tS.index2 + 1;
+								name = [obj.task.nVar(2).name 'Out'];
+								value = obj.task.nVar(2).values(tS.index2);
+								obj.stimulus{1}.(name) = value;
+								obj.stimulus{1}.update;
+								tS.keyHold = tS.totalTicks + 5;
+							else
+								tS.index = tS.maxindex;
+							end
+						end
+					case {'UpArrow','up'} %give a reward at any time
+						obj.lJack.timedTTL(0,100);
+					case {'DownArrow','down'}
+
+					case 'z' % mark trial as correct
+						if strcmpi(obj.stateMachine.currentName,'stimulus')
+							obj.lJack.timedTTL(0,200);
+							forceTransition(obj.stateMachine, 'correct');
+						end
+					case 'x' % mark trial as incorrect
+						if strcmpi(obj.stateMachine.currentName,'stimulus')
+							forceTransition(obj.stateMachine, 'incorrect');
+						end
+					case 'p' %pause the display
+						if tS.totalTicks > tS.keyHold
+							if rem(tS.pauseToggle,2)==1
+								forceTransition(obj.stateMachine, 'pause');
+								tS.pauseToggle = tS.pauseToggle + 1;
+							else
+								forceTransition(obj.stateMachine, 'preblank');
+								tS.pauseToggle = tS.pauseToggle + 1;
+							end
+							tS.keyHold = tS.totalTicks + 5;
+						end
+					case '1!'
+						tS.stopTraining = true;
+				end
+			end
+		end
+		
 		
 	end
 	

@@ -18,12 +18,12 @@ classdef metaStimulus < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'stimuli|screen'
+		allowedProperties = 'stimuli|screen|verbose'
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -39,7 +39,7 @@ classdef metaStimulus < handle
 				varargin.family = 'meta';
 			end
 			
-			if nargin>0 
+			if nargin>0
 				obj.parseArgs(args);
 			end
 		end
@@ -47,67 +47,87 @@ classdef metaStimulus < handle
 		% ===================================================================
 		%> @brief setup wrapper
 		%>
-		%> @param 
-		%> @return 
+		%> @param
+		%> @return
 		% ===================================================================
-		function setup(obj)
-			for i = 1:obj.n
-				setup(obj.stimuli{i},obj.screen);
+		function setup(obj,choice)
+			if ~exist('choice','var')
+				for i = 1:obj.n
+					setup(obj.stimuli{i},obj.screen);
+				end
+			else
+				setup(obj.stimuli{choice},obj.screen);
 			end
 		end
 		
 		% ===================================================================
 		%> @brief update wrapper
 		%>
-		%> @param 
-		%> @return 
+		%> @param
+		%> @return
 		% ===================================================================
-		function update(obj)
-			for i = 1:obj.n
-				update(obj.stimuli{i});
+		function update(obj,choice)
+			if ~exist('choice','var')
+				for i = 1:obj.n
+					update(obj.stimuli{i});
+				end
+			else
+				update(obj.stimuli{choice});
 			end
 		end
 		
 		% ===================================================================
 		%> @brief draw wrapper
 		%>
-		%> @param 
-		%> @return 
+		%> @param
+		%> @return
 		% ===================================================================
-		function draw(obj)
-			for i = 1:obj.n
-				draw(obj.stimuli{i});
+		function draw(obj,choice)
+			if ~exist('choice','var')
+				for i = 1:obj.n
+					draw(obj.stimuli{i});
+				end
+			else
+				draw(obj.stimuli{choice});
 			end
 		end
 		
 		% ===================================================================
 		%> @brief animate wrapper
 		%>
-		%> @param 
-		%> @return 
+		%> @param
+		%> @return
 		% ===================================================================
-		function animate(obj)
-			for i = 1:obj.n
-				animate(obj.stimuli{i});
+		function animate(obj,choice)
+			if ~exist('choice','var')
+				for i = 1:obj.n
+					animate(obj.stimuli{i});
+				end
+			else
+				animate(obj.stimuli{choice});
 			end
 		end
 		
 		% ===================================================================
 		%> @brief reset wrapper
 		%>
-		%> @param 
-		%> @return 
+		%> @param
+		%> @return
 		% ===================================================================
-		function reset(obj)
-			for i = 1:obj.n
-				reset(obj.stimuli{i});
+		function reset(obj,choice)
+			if ~exist('choice','var')
+				for i = 1:obj.n
+					reset(obj.stimuli{i});
+				end
+			else
+				reset(obj.stimuli{choice});
 			end
 		end
 		
 		% ===================================================================
 		%> @brief get n dependent methos
-		%> @param 
-		%> @return n number of stimuli 
+		%> @param
+		%> @return n number of stimuli
 		% ===================================================================
 		function n = get.n(obj)
 			n = length(obj.stimuli);
@@ -117,8 +137,8 @@ classdef metaStimulus < handle
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
-	%=======================================================================
-	
+		%=======================================================================
+		
 		% ===================================================================
 		%> @brief Sets properties from a structure or normal arguments,
 		%> ignores invalid properties
