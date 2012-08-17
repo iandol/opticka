@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 14-Aug-2012 18:06:46
+% Last Modified by GUIDE v2.5 17-Aug-2012 13:12:07
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1388,4 +1388,15 @@ function OKToolbarSave_ClickedCallback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.router('saveProtocol');
+end
+
+
+% --------------------------------------------------------------------
+function OKMenuStateInfo_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuStateInfo (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.router('LoadStateInfo');
 end

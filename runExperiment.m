@@ -25,6 +25,8 @@ classdef (Sealed) runExperiment < handle
 		task
 		%> screen manager object
 		screen
+		%> file to define the stateMachine state info
+		stateInfoFile = ''
 		%> use LabJack for digital output?
 		useLabJack = false
 		%> this lets the opticka UI leave commands to runExperiment
@@ -44,6 +46,8 @@ classdef (Sealed) runExperiment < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> state machine control cell array
+		stateInfo = {}
 		%> general computer info
 		computer
 		%> PTB info
@@ -354,23 +358,33 @@ classdef (Sealed) runExperiment < handle
 				obj.metaStimulus.screen = s;
 				obj.metaStimulus.setup(); %run setup() for each stimulus
 				
-				blankFcn = {{@drawBackground, s};{@drawFixationPoint, s}};
-				stimFcn = {@draw, obj.metaStimulus};
-				stimEntry = {@update, obj.metaStimulus};
-				correctFcn = {{@draw, obj.metaStimulus}; {@drawGreenSpot, s}};
-				incorrectFcn = {{@drawBackground, s}; {@drawRedSpot, s}};
-				
 				obj.stateMachine = stateMachine(); %#ok<*CPROP>
 				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
-				statesInfo = { ...
-					'name'      'next'		'time'  'entryFcn'	'withinFcn'		'exitFcn'; ...
-					'preblank'  'stimulus'  2		[]			blankFcn		[]; ...
-					'stimulus'  'incorrect'	2		stimEntry	stimFcn			[]; ...
-					'incorrect' 'preblank'	0.25    []			incorrectFcn	[]; ...
-					'correct'	'preblank'  0.25    stimEntry	correctFcn		[]; ...
-					'pause'		'preblank'	inf		[]			[]				[]; ...
-				};
-				addStates(obj.stateMachine, statesInfo);
+				if isempty(obj.stateInfoFile)
+					
+					blankFcn = {{@drawBackground, s};{@drawFixationPoint, s}};
+					stimFcn = {@draw, obj.metaStimulus};
+					stimEntry = {@update, obj.metaStimulus};
+					correctFcn = {{@draw, obj.metaStimulus}; {@drawGreenSpot, s}};
+					incorrectFcn = {{@drawBackground, s}; {@drawRedSpot, s}};
+					
+					obj.stateInfo = { ...
+						'name'      'next'		'time'  'entryFcn'	'withinFcn'		'exitFcn'; ...
+						'preblank'  'stimulus'  2		[]			blankFcn		[]; ...
+						'stimulus'  'incorrect'	3		stimEntry	stimFcn			[]; ...
+						'incorrect' 'preblank'	0.75    []			incorrectFcn	[]; ...
+						'correct'	'preblank'  1.5		stimEntry	correctFcn		[]; ...
+						'pause'		'preblank'	inf		[]			[]				[]; ...
+					};
+				
+					clear blankFcn stimFcn stimEntry correctFcn incorrectFcn
+				
+				elseif ischar(obj.stateInfoFile)
+					cd(fileparts(obj.stateInfoFile))
+					run(obj.stateInfoFile)
+					obj.stateInfo = stateInfoTmp;
+				end
+				addStates(obj.stateMachine, obj.stateInfo);
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
@@ -381,12 +395,6 @@ classdef (Sealed) runExperiment < handle
 				if obj.task.nVars > 1
 					tS.index2 = 1;
 					tS.maxindex2 = length(obj.task.nVar(2).values);
-				end
-				if ~isempty(obj.task.nVar(1))
-					name = [obj.task.nVar(1).name 'Out'];
-					value = obj.task.nVar(1).values(tS.index);
-					obj.stimulus{1}.(name) = value;
-					obj.stimulus{1}.update;
 				end
 				
 				tS.stopTraining = false;
@@ -968,6 +976,14 @@ classdef (Sealed) runExperiment < handle
 							else
 								tS.index = tS.maxindex;
 							end
+						end
+					case 'r'
+						if tS.totalTicks > tS.keyHold
+							newColour = rand(1,3);
+							fprintf('Color: %g\n',newColour);
+							obj.stimulus{1}.colourOut = newColour;
+							obj.stimulus{1}.update;
+							tS.keyHold = tS.totalTicks + 5;
 						end
 					case {'UpArrow','up'} %give a reward at any time
 						obj.lJack.timedTTL(0,100);

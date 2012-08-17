@@ -7,26 +7,36 @@
 %> universal builds of these:
 %>     bash$ brew install libusb exodriver --universal
 %> For linux, see instructions on the labjack site.
+%> With the exodriver installed, you create a new labJack object and you
+%> can then dend figital I/O commands and strobed words. labJack ises a 12bit
+%> word across EIO and CIO, using CIO0 as the strobe bit so one has a
+%> resultant 11bits of values in the strobed word. For example:
+%>
+%> >> lj = labJack('verbose',true) %open labJack verbosely
+%> >> lj.toggleFIO(1) %toggle FIO1 between low and high
+%> >> lj.timedTTL(3,200) % send a 200ms timed TTL pulse on FIO3
 % ========================================================================
 classdef labJack < handle
 	
 	properties
-		%> friendly name, setting this to 'null' will force silentMode=1
+		%> friendly object name, setting this to 'null' will force silentMode=1
 		name='LabJack'
 		%> what LabJack device to use; 3 = U3, 6 = U6
 		deviceID = 6
-		%> silentMode allows one to call methods without a labJack connected
+		%> silentMode allows one to gracefully fail methods without a labJack connected
 		silentMode = false
 		%> header needed by loadlib
 		header = '/usr/local/include/labjackusb.h'
 		%> the library itself
 		library = '/usr/local/lib/liblabjackusb'
-		%> how much detail to show
+		%> do we log everything to the command window?
 		verbose = false
-		%> allows the constructor to run the open method immediately
+		%> allows the constructor to run the open method immediately (default)
 		openNow = true
-		%> strobeTime is time of strobe in unit multiples of 128�S: 8 units ~=1ms
-		strobeTime = 4
+		%> strobeTime is time of strobe in unit multiples of timeShort: 16
+		%> units ~=1ms on a U6 where timeShort is 64e-6 .If you use a U3
+		%> this needs to be 8 for a 1ms pulse...
+		strobeTime = 16
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -38,11 +48,11 @@ classdef labJack < handle
 		devCount
 		%> handle to the opened device itself
 		handle = []
-		%> have we successfully opend the labjack?
+		%> have we successfully opened the labjack?
 		isOpen = false
 		%> an input buffer
 		inp = []
-		%> output bugger, normally number of bytes written
+		%> output buffer, normally the number of bytes written
 		outp = []
 		%> FIO0 state
 		fio0 = 0
@@ -63,12 +73,12 @@ classdef labJack < handle
 		%> LED state, which is controllable only on the U3
 		led = 1
 		%> The raw strobed word command generated with prepareStrobe, sent with strobeWord
-		command = []
+		strobeCommand = []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		% WaitShort time quantum is 64microseconds for U6 and 128microseconds for U3
-		timeShort = 64e-6 
+		timeShort = 64e-6
 		% WaitLong time quantum is 16ms for U6 and 32ms for U3
 		timeLong  = 16e-3
 		%>raw commands ,you can use labjackPython to find/verify these. These
@@ -94,17 +104,18 @@ classdef labJack < handle
 		fio7Low  = hex2dec(['a2'; 'f8'; '03'; '00'; 'a6'; '00'; '00'; '0d'; '87'; '0b'; '07'; '00'])'
 		ledIsON  = hex2dec(['05'; 'f8'; '02'; '00'; '0a'; '00'; '00'; '09'; '01'; '00'])' %only works on U3
 		ledIsOFF = hex2dec(['04'; 'f8'; '02'; '00'; '09'; '00'; '00'; '09'; '00'; '00'])' %only works on U3
-		%> Is our handle a valid one?
+		%> Is our handle a valid one, this is a cache so we save a bit of
+		%> time on calling the method each time
 		vHandle = 0
 		%> what properties are allowed to be passed on construction
 		allowedProperties='deviceID|name|silentMode|verbose|openNow|header|library|strobeTime'
 		%>document what our strobed word is actually setting, shown to user if verbose = true
-		comment = ''
+		strobeComment = ''
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -128,7 +139,7 @@ classdef labJack < handle
 			elseif obj.openNow == true
 				obj.open
 			end
-			obj.inp=zeros(10,1);
+			
 		end
 		
 		% ===================================================================
@@ -153,7 +164,7 @@ classdef labJack < handle
 					obj.functionList = libfunctions('liblabjackusb', '-full'); %store our raw lib functions
 					obj.version =  calllib('liblabjackusb','LJUSB_GetLibraryVersion');
 					obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',obj.deviceID);
-				else
+				else %incomplete PC support, basically need to add PC equivalents of rawRead and rawWrite
 					obj.library = 'labjackud';
 					obj.header = 'C:\progra~1\LabJack\drivers\labjackud.h';
 					if (libisloaded('labjackud') || (libisloaded('labjackud_doublePtr')))
@@ -163,14 +174,14 @@ classdef labJack < handle
 						loadlibrary labjackud labjackud_doublePtr.h alias labjackud_doublePtr
 						% If you wish to view a list of the available LabJack UD functions
 						% and their associated Output Values and Input Arguments, uncomment out
-						% the appropriate line of code below. 
+						% the appropriate line of code below.
 						%libfunctionsview labjackud % Use this in version 7.0 and newer
 						%libfunctionsview labjackud_doublePtr % Use this in version 7.0+
 						%libmethodsview labjackud % Use this in version 6.5
 						%libmethodsview labjackud_doublePtr % Use this in version 6.5
 					end
 				end
-				
+				obj.inp=zeros(10,1);
 				if obj.devCount == 0 %no device was found with input deviceID, lets scan for another device
 					if obj.deviceID == 3 %we tried a U3, now lets try a U6
 						obj.devCount = calllib('liblabjackusb','LJUSB_GetDevCount',6);
@@ -229,7 +240,7 @@ classdef labJack < handle
 		%>	//Closes the handle of a LabJack USB device.
 		% ===================================================================
 		function close(obj)
-			if ~isempty(obj.handle) 
+			if ~isempty(obj.handle)
 				if obj.validHandle() == true %double-check we still have valid handle
 					calllib('liblabjackusb','LJUSB_CloseDevice',obj.handle);
 				end
@@ -238,7 +249,7 @@ classdef labJack < handle
 				obj.handle=[];
 				obj.vHandle = false;
 			else
-				obj.salutation('CLOSE method','No handle to close');
+				obj.salutation('CLOSE method','No handle to close...');
 			end
 		end
 		
@@ -248,7 +259,7 @@ classdef labJack < handle
 		%>	//Is handle valid.
 		% ===================================================================
 		function vHandle = validHandle(obj)
-			obj.vHandle = false;
+			obj.vHandle = false; %our cached value
 			if obj.silentMode == false
 				if ~isempty(obj.handle)
 					obj.vHandle = calllib('liblabjackusb','LJUSB_IsHandleValid',obj.handle);
@@ -305,30 +316,6 @@ classdef labJack < handle
 		end
 		
 		% ===================================================================
-		%> @brief Turn LED ON
-		%>
-		%> I think this only works on the U3
-		% ===================================================================
-		function ledON(obj)
-			if obj.silentMode == false && obj.vHandle == 1
-				obj.outp = obj.rawWrite(obj.ledIsON);
-				obj.inp = obj.rawRead(zeros(1,10),10);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Turn LED OFF
-		%>
-		%> I think this only works on the U3
-		% ===================================================================
-		function ledOFF(obj)
-			if obj.silentMode == false && obj.vHandle == 1
-				obj.outp = obj.rawWrite(obj.ledIsOFF);
-				obj.inp = obj.rawRead(zeros(1,10),10);
-			end
-		end
-		
-		% ===================================================================
 		%> @brief WaitShort
 		%>	LabJack Wait in multiples of 64/128microseconds
 		%>	@param time time in ms; remember 64/128microseconds is the atomic minimum
@@ -340,15 +327,15 @@ classdef labJack < handle
 				if time > 255
 					time = 255; %truncate to maximum time delay allowed
 				end
-
+				
 				cmd=zeros(10,1);
 				cmd(2) = 248; %hex2dec('f8'); %feedback
 				cmd(3) = 2; %number of bytes in packet
 				cmd(8) = 5; %IOType for waitshort is 5
 				cmd(9) = time;
-
+				
 				obj.command = obj.checksum(cmd,'extended');
-
+				
 				obj.outp = obj.rawWrite(obj.command);
 				obj.inp = obj.rawRead(zeros(1,10),10);
 			end
@@ -372,9 +359,9 @@ classdef labJack < handle
 				cmd(3) = 2; %number of bytes in packet
 				cmd(8) = 6; %IOType for waitlong is 6
 				cmd(9) = time;
-
+				
 				obj.command = obj.checksum(cmd,'extended');
-
+				
 				obj.outp = obj.rawWrite(obj.command);
 				obj.inp = obj.rawRead(zeros(1,10),10);
 			end
@@ -382,7 +369,7 @@ classdef labJack < handle
 		
 		% ===================================================================
 		%> @brief timedTTL Send a TTL with a defined time of pulse
-		%>	
+		%>
 		%> Note that there is a maximum time to the TTL pulse which is ~8.16secs
 		%> for the U3 and ~4.08secs for the U6; we can extend that time by
 		%> adding more feedback commands in the command packet but this
@@ -422,20 +409,21 @@ classdef labJack < handle
 					cmd=zeros(16,1);
 					cmd(2) = 248; %command byte for feedback command (f8 in hex)
 					cmd(3) = (length(cmd)-6)/2;
-
+					
 					cmd(8) = 11; %BitStateWrite: IOType=11
 					cmd(9) = line+128; %add 128 as bit 7 sets value high
-
+					
 					cmd(10) = 6; %IOType for waitshort is 5, waitlong is 6
 					cmd(11) = time1; %time to wait in unit multiples
 					
 					cmd(12) = 5; %IOType for waitshort is 5, waitlong is 6
 					cmd(13) = time2; %time to wait in unit multiples
-
+					
 					cmd(14) = 11; %BitStateWrite: IOType=11
 					cmd(15) = line; %bit to set low
 					
 				else
+					
 					time2=ceil(time/obj.timeShort);
 					if time2 > 255 %truncate to maximum time delay allowed
 						time2 = 255; %truncate to maximum time delay allowed
@@ -447,21 +435,20 @@ classdef labJack < handle
 					cmd=zeros(14,1);
 					cmd(2) = 248; %command byte for feedback command (f8 in hex)
 					cmd(3) = (length(cmd)-6)/2;
-
+					
 					cmd(8) = 11; %BitStateWrite: IOType=11
 					cmd(9) = line+128; %add 128 as bit 7 sets value high
-
+					
 					cmd(10) = iotype; %IOType for waitshort is 5, waitlong is 6
 					cmd(11) = time2; %time to wait in unit multiples, this is the time of the strobe
-
+					
 					cmd(12) = 11; %BitStateWrite: IOType=11
 					cmd(13) = line;
 					
-					
 				end
 				
-				obj.command = obj.checksum(cmd,'extended');
-				obj.outp = obj.rawWrite(obj.command);
+				command = obj.checksum(cmd,'extended');
+				obj.outp = obj.rawWrite(command);
 				if sync; obj.inp = obj.rawRead(zeros(1,10),10); end
 				obj.salutation('timedTTL method',sprintf('T1:%g T2:%g output time = %g secs', time1, time2, otime))
 			end
@@ -490,7 +477,7 @@ classdef labJack < handle
 				cmd(8) = 27; %IOType for PortStateWrite = 27
 				cmd(9:11) = mask;
 				cmd(12:14) = value;
-	
+				
 				cmd = obj.checksum(cmd,'extended');
 				obj.outp = obj.rawWrite(cmd);
 				obj.inp = obj.rawRead(zeros(1,10),10);
@@ -515,8 +502,8 @@ classdef labJack < handle
 				cmd(12:14) = value;
 				
 				cmd = obj.checksum(cmd,'extended');
-				out = obj.rawWrite(cmd);
-				in = obj.rawRead(zeros(1,10),10);
+				obj.outpout = obj.rawWrite(cmd);
+				obj.inp = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
@@ -538,8 +525,8 @@ classdef labJack < handle
 				cmd(12:14) = value;
 				
 				cmd = obj.checksum(cmd,'extended');
-				out = obj.rawWrite(cmd);
-				in = obj.rawRead(zeros(1,10),10);
+				obj.outp = obj.rawWrite(cmd);
+				obj.inp = obj.rawRead(zeros(1,10),10);
 			end
 		end
 		
@@ -562,7 +549,7 @@ classdef labJack < handle
 			if obj.silentMode == false && obj.vHandle == 1
 				if value>2047;value=2047;end %block anything bigger than 2^11
 				if value<0; value = 0; end %block anything smaller than 0
-				obj.comment = ['Original Value = ' num2str(value) ' | '];
+				obj.strobeComment = ['Original Value = ' num2str(value) ' | '];
 				[eio,cio]=obj.prepareWords(value,0); %construct our word split to eio and cio, set strobe low
 				ovalue(1) = 0; %fio will be 0
 				ovalue(2) = eio;
@@ -572,7 +559,7 @@ classdef labJack < handle
 				ovalue2(2) = eio2;
 				ovalue2(3) = cio2;
 				mask = [0,255,255]; %lock fio, allow all of eio and cio
-				obj.comment = [obj.comment 'FIO EIO & CIO: ' num2str(0) ' ' num2str(eio2) ' ' num2str(cio2)];
+				obj.strobeComment = [obj.strobeComment 'FIO EIO & CIO: ' num2str(0) ' ' num2str(eio2) ' ' num2str(cio2)];
 				
 				cmd=zeros(30,1);
 				cmd(2) = 248; %command byte for feedback command (f8 in hex)
@@ -593,7 +580,7 @@ classdef labJack < handle
 				cmd(25:27) = mask;
 				cmd(28:30) = 0;
 				
-				obj.command = obj.checksum(cmd,'extended');
+				obj.strobeCommand = obj.checksum(cmd,'extended');
 				if exist('sendNow','var')
 					obj.strobeWord;
 				end
@@ -606,15 +593,13 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function strobeWord(obj)
-			if ~isempty(obj.command)
-				obj.rawWrite(obj.command);
-				in = obj.rawRead(zeros(1,10),10);
-				obj.salutation('strobeWord', obj.comment);
-				%obj.comment = '';
-				%obj.command = [];
-				% if in(6) > 0
-				% 	obj.salutation('strobeWord',['Feedback error in IOType ' num2str(in(7))]);
-				% end
+			if ~isempty(obj.strobeCommand)
+				obj.rawWrite(obj.strobeCommand);
+				obj.inp = obj.rawRead(zeros(1,10),10);
+				obj.salutation('strobeWord', obj.strobeComment);
+% 				if obj.inp(6) > 0
+% 					obj.salutation('strobeWord',['Feedback error in IOType ' num2str(obj.inp(7))]);
+% 				end
 			end
 		end
 		
@@ -690,6 +675,31 @@ classdef labJack < handle
 		end
 		
 		% ===================================================================
+		%> @brief Turn LED ON
+		%>
+		%> I think this only works on the U3
+		% ===================================================================
+		function ledON(obj)
+			if obj.silentMode == false && obj.vHandle == 1
+				obj.outp = obj.rawWrite(obj.ledIsON);
+				obj.inp = obj.rawRead(zeros(1,10),10);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Turn LED OFF
+		%>
+		%> I think this only works on the U3
+		% ===================================================================
+		function ledOFF(obj)
+			if obj.silentMode == false && obj.vHandle == 1
+				obj.outp = obj.rawWrite(obj.ledIsOFF);
+				obj.inp = obj.rawRead(zeros(1,10),10);
+			end
+		end
+		
+		
+		% ===================================================================
 		%> @brief Reset the LabJack
 		%>
 		%> @param resetType whether to use a soft (1) or hard (2) reset
@@ -737,7 +747,7 @@ classdef labJack < handle
 	
 	%=======================================================================
 	methods ( Static ) % STATIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief checksum8
@@ -745,10 +755,6 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function chk = checksum8(in)
-			% 			if ischar(in) %hex input
-			% 				in = hex2dec(in);
-			% 				hexMode = 1;
-			% 			end
 			in = sum(uint16(in));
 			quo = floor(in/2^8);
 			remd = rem(in,2^8);
@@ -756,9 +762,6 @@ classdef labJack < handle
 			quo = floor(in/2^8);
 			remd = rem(in,2^8);
 			chk = quo + remd;
-			% 			if exist('hexMode','var')
-			% 				chk = dec2hex(chk);
-			% 			end
 		end
 		
 		% ===================================================================
@@ -767,17 +770,9 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function [lsb,msb] = checksum16(in)
-			% 			if ischar(in) %hex input
-			% 				in = hex2dec(in);
-			% 				hexMode = 1;
-			% 			end
 			in = sum(uint16(in));
 			lsb = bitand(in,255);
 			msb = bitshift(in,-8);
-			% 			if exist('hexMode','var')
-			% 				lsb = dec2hex(lsb);
-			% 				msb = dec2hex(msb);
-			% 			end
 		end
 		
 	end % END STATIC METHODS
@@ -785,7 +780,7 @@ classdef labJack < handle
 	
 	%=======================================================================
 	methods ( Access = private ) % PRIVATE METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief delete is the object Destructor

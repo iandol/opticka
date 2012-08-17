@@ -79,11 +79,13 @@ classdef (Sealed) opticka < handle
 			end
 			switch in
 				case 'saveProtocol'
-					obj.saveProtocol;
+					obj.saveProtocol();
 				case 'loadProtocol'
 					obj.loadProtocol(vars);
 				case 'deleteProtocol'
-					obj.deleteProtocol
+					obj.deleteProtocol()
+				case 'LoadStateInfo'
+					obj.loadStateInfo();
 			end
 		end
 		
@@ -936,6 +938,21 @@ classdef (Sealed) opticka < handle
 			uisave('tmp','new protocol');
 			cd(obj.paths.currentPath);
 			obj.refreshProtocolsList;
+			
+		end
+		
+		% ===================================================================
+		%> @brief Load State Info 
+		%> Save Protocol
+		%> @param 
+		% ===================================================================
+		function loadStateInfo(obj)
+			
+			obj.paths.currentPath = pwd;
+			cd(obj.paths.protocols);
+			[fname,fpath] = uigetfile({'.m'});
+			obj.paths.stateInfoFile = [fpath fname];
+			obj.r.stateInfoFile = obj.paths.stateInfoFile;
 			
 		end
 		
