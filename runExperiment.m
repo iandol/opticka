@@ -358,15 +358,15 @@ classdef (Sealed) runExperiment < handle
 				obj.metaStimulus.screen = s;
 				obj.metaStimulus.setup(); %run setup() for each stimulus
 				
-				obj.stateMachine = stateMachine(); %#ok<*CPROP>
+				obj.stateMachine = stateMachine('verbose',true); %#ok<*CPROP>
 				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 				if isempty(obj.stateInfoFile)
 					
-					blankFcn = {{@drawBackground, s};{@drawFixationPoint, s}};
+					blankFcn = {{@drawBackground, obj.screen};{@drawFixationPoint, obj.screen}};
 					stimFcn = {@draw, obj.metaStimulus};
 					stimEntry = {@update, obj.metaStimulus};
-					correctFcn = {{@draw, obj.metaStimulus}; {@drawGreenSpot, s}};
-					incorrectFcn = {{@drawBackground, s}; {@drawRedSpot, s}};
+					correctFcn = {{@draw, obj.metaStimulus}; {@drawGreenSpot, obj.screen}};
+					incorrectFcn = {{@drawBackground, obj.screen}; {@drawRedSpot, obj.screen}};
 					
 					obj.stateInfo = { ...
 						'name'      'next'		'time'  'entryFcn'	'withinFcn'		'exitFcn'; ...
@@ -619,7 +619,7 @@ classdef (Sealed) runExperiment < handle
 		% ===================================================================
 		function set.verbose(obj,value)
 			obj.verbose = value;
-			if isa(obj.task,'stimulusSequence')
+			if isa(obj.task,'stimulusSequence') %#ok<*MCSUP>
 				obj.task.verbose = value;
 			end
 			if isa(obj.screen,'screenManager')
@@ -980,7 +980,6 @@ classdef (Sealed) runExperiment < handle
 					case 'r'
 						if tS.totalTicks > tS.keyHold
 							newColour = rand(1,3);
-							fprintf('Color: %g\n',newColour);
 							obj.stimulus{1}.colourOut = newColour;
 							obj.stimulus{1}.update;
 							tS.keyHold = tS.totalTicks + 5;

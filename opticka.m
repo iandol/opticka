@@ -288,8 +288,7 @@ classdef (Sealed) opticka < handle
 				%drawnow;
 				set(obj.h.OKPanelGrating,'Visible','on')
 				drawnow;
-				
-				
+					
 				obj.loadPrefs;
 				obj.getScreenVals;
 				obj.getTaskVals;
@@ -298,6 +297,11 @@ classdef (Sealed) opticka < handle
 				addlistener(obj.r,'abortRun',@obj.abortRunEvent);
 				addlistener(obj.r,'endRun',@obj.endRunEvent);
 				addlistener(obj.r,'runInfo',@obj.runInfoEvent);
+				
+				if exist([obj.paths.protocols filesep 'DefaultStateInfo.m'],'file')
+					obj.paths.stateInfoFile = [obj.paths.protocols filesep 'DefaultStateInfo.m'];
+					obj.r.stateInfoFile = obj.paths.stateInfoFile;
+				end
 
 				obj.store.nVars = 0;
 				obj.store.visibleStimulus = 'grating'; %our default shown stimulus
