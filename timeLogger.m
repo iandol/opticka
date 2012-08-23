@@ -4,16 +4,18 @@ classdef timeLogger < optickaCore
 	%   result.
 	
 	properties
-		screen = struct
-		training = struct
-		timer = @GetSecs
-		vbl = 0
-		show = 0
-		flip = 0
-		miss = 0
-		stimTime = 0
-		startTime = 0
-		startRun = 0
+		screenLog	= struct()
+		runLog		= struct()
+		trainingLog	= struct()
+		timer		= @GetSecs
+		vbl			= 0
+		show		= 0
+		flip		= 0
+		miss		= 0
+		stimTime	= 0
+		startTime	= 0
+		startRun	= 0
+		verbose		= true
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -21,18 +23,29 @@ classdef timeLogger < optickaCore
 		nMissed
 	end
 	
+	properties (SetAccess = private, GetAccess = private)
+		%> allowed properties passed to object upon construction
+		allowedProperties = 'timer'
+	end
+	
 	methods
 		% ===================================================================
 		%> @brief Constructor
 		%>
-		%> @param
+		%> @param varargin
 		%> @return
 		% ===================================================================
-		function obj=timeLogger
+		function obj=timeLogger(varargin)
+			
+			if nargin == 0; varargin.name = 'timeLog';end
+			obj=obj@optickaCore(varargin); %superclass constructor
+			if nargin>0; obj.parseArgs(varargin,obj.allowedProperties); end
+			if isempty(obj.name);obj.name = 'timeLog'; end
+			
 			if ~exist('GetSecs','file')
 				obj.timer = @now;
 			end
-			obj.screen.constructLog = obj.timer();
+			obj.screenLog.construct = obj.timer();
 		end
 		
 		
@@ -61,7 +74,7 @@ classdef timeLogger < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function printLog(obj)
+		function printRunLog(obj)
 			if length(obj.vbl) <= 2
 				disp('No timing data available...')
 				return

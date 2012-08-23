@@ -1,7 +1,16 @@
-Opticka Stimulus Generator is an object oriented GUI driven framework for the Psychophysics toolbox, allowing randomised interleaved presentation of stimuli. It is designed to work on OS X, Windows (currently no digital I/O) or Linux, and interfaces via strobed words and ethernet with a Plexon Omniplex for recording neurophysiological data. The various classes can also be used without the need to run the GUI, and stimuli provide a unified interface (setup, animate,draw, update)  to integrate into standard PTB routines.
+Opticka Stimulus Generator is an object oriented GUI driven framework for the [Psychophysics toolbox (PTB)](http://psychtoolbox.org/wikka.php?wakka=HomePage), allowing randomised interleaved presentation of stimuli. It is designed to work on OS X, Windows (currently no digital I/O) or Linux, and interfaces via strobed words and ethernet with a Plexon Omniplex for recording neurophysiological data.  
+The various classes can also be used without the need to run the GUI (see [runtest.m](http://144.82.131.18/optickadocs/runtest.html) for an example), and stimuli provide a unified interface (setup, animate, draw, update, reset) to integrate into standard PTB routines. The various object methods take care of all the background geometry and normalization, meaning stimuli are much easier to use than "raw" PTB.
+![screenshot](http://i49.tinypic.com/5yhwcp.png)
+Quick Documentation
+===================
+runtest.m is a self-documenting minimal toy example showing mini experiment with 10 different stimuli. Read the Matlab-generated HTML for runtest.m here: [runtest.m Report](http://144.82.131.18/optickadocs/runtest.html)
+There is also auto-generated class documentation here: [Opticka Class Docs](http://144.82.131.18/optickadocs/inherits.html), however this is only as good as the comments in the code, which are far from ideal...
 
-![screenshot](http://i42.tinypic.com/10ypeua.png)
+Install Instructions
+====================
+Opticka prefers the latest Psychophysics Toolbox (V3.0.10) and at least Matlab 2010a. It has been tested and is mostly used on 64bit OS X 10.7.x & Matlab 2012a. You can simply download the .ZIP from Github, and add the contents/subdirectories to Matlab path. Or if you have git installed, clone this Github repo and add to Matlab path.
 
+Opticka should currently be working both on OS X, Linux and Windows, though the LabJack control of the Omniplex currently only works under OS X and Linux (only a few days work to make it work under windows, if need be). I'm not really testing under Windows/Linux as much as in OS X. Linux is the preferred OS for PTB according the Mario Kleiner at the moment, but problems with our Eyelink Libraries keep us on OS X for the moment.
 Features
 =========
  * Values are always given in eye-relevant co-ordinates (degrees etc.) that are internally calculated based on screen geometry/distance

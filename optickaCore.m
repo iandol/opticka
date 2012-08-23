@@ -1,17 +1,21 @@
 % ========================================================================
-%> @brief metaStimulus light wrapper for opticka stimuli
+%> @brief optickaCore 
 %> METASTIMULUS a collection of stimuli, wrapped in one structure
 % ========================================================================
 classdef optickaCore < handle
 	
-	properties %--------------------PUBLIC PROPERTIES----------%
-		%> stimulus family
+	properties 
+		%> object name
 		name = ''
-		%> verbose logging
-		verbose = true
+	end
+	
+	properties (Abstract = true)
+		%> verbose logging, subclasses must assign this
+		verbose
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> clock() dateStamp set on construction
 		dateStamp
 	end
 	
@@ -93,8 +97,11 @@ classdef optickaCore < handle
 		%> @param in the calling function
 		%> @param message the message that needs printing to command window
 		% ===================================================================
-		function salutation(obj,in,message)
-			if obj.verbose==true
+		function salutation(obj,in,message,override)
+			if ~exist('override','var')
+					override = false;
+				end
+			if obj.verbose==true || override == true
 				if ~exist('in','var')
 					in = 'undefined';
 				end

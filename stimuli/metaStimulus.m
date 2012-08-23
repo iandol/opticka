@@ -7,22 +7,27 @@ classdef metaStimulus < optickaCore
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> stimulus family
 		family = 'meta'
+		%>cell array of stimuli to manage
 		stimuli = {}
+		%> screenManager handle
 		screen
+		%>
+		verbose = true
 	end
 	
 	properties (SetAccess = private, Dependent = true)
+		%> n number of stimuli managed by metaStimulus
 		n
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'stimuli|screen|verbose'
+		allowedProperties = 'verbose|stimuli|screen|family'
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -33,16 +38,11 @@ classdef metaStimulus < optickaCore
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = metaStimulus(args)
-			if nargin == 0
-				args.family = 'meta';
-			end
-			
-			obj=obj@optickaCore(args);
-			
-			if nargin>0
-				obj.parseArgs(args);
-			end
+		function obj = metaStimulus(varargin)
+			if nargin == 0; varargin.name = 'metaStimulus';end
+			obj=obj@optickaCore(varargin); %superclass constructor
+			if nargin>0; obj.parseArgs(varargin,obj.allowedProperties); end
+			if isempty(obj.name);obj.name = 'metaStimulus'; end
 		end
 		
 		% ===================================================================

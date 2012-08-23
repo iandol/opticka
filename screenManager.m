@@ -230,7 +230,7 @@ classdef screenManager < handle
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				end
 				
-				tL.screen.preOpenWindow=GetSecs;
+				tL.screenLog.preOpenWindow=GetSecs;
 				
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
@@ -250,8 +250,8 @@ classdef screenManager < handle
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,obj.windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
 				
-				tL.screen.postOpenWindow=GetSecs;
-				tL.screen.deltaOpenWindow=(tL.screen.postOpenWindow-tL.screen.preOpenWindow)*1000;
+				tL.screenLog.postOpenWindow=GetSecs;
+				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
 				
 				obj.screenVals.win = obj.win; %make a copy
 				
@@ -468,7 +468,7 @@ classdef screenManager < handle
 		%> @return
 		% ===================================================================
 		function resetScreenGamma(obj)
-			if obj.screenVals.resetGamma == true || obj.hideFlash == true || obj.windowed(1) ~= 1
+			if obj.hideFlash == true || obj.windowed(1) ~= 1 || (~isempty(obj.screenVals) && obj.screenVals.resetGamma == true)
 				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 				Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 			end

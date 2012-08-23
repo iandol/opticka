@@ -15,7 +15,7 @@
 %>
 %>	will run a minimal experiment showing a 1c/d circularly masked grating
 % ========================================================================
-classdef (Sealed) runExperiment < handle
+classdef runExperiment < optickaCore
 	
 	properties
 		%> a cell group of stimulus objects, TODO: use a stimulusManager class to
@@ -35,14 +35,14 @@ classdef (Sealed) runExperiment < handle
 		logFrames = true
 		%> structure to pass to screenManager on initialisation
 		screenSettings = struct()
-		%>show command window logging and a time log after stimlus presentation
-		verbose = false
 		%> change the parameters for poorer temporal fidelity for debugging
 		debug = false
 		%> shows the info text and position grid during stimulus presentation
 		visualDebug = true
 		%> flip as fast as possible?
 		benchmark = false
+		%> verbose logging?
+		verbose = true
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -75,7 +75,7 @@ classdef (Sealed) runExperiment < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='^(stimulus|task|screen|visualDebug|useLabJack|logFrames|debug|verbose|screenSettings|benchmark)$'
+		allowedProperties='stimulus|task|screen|visualDebug|useLabJack|logFrames|debug|verbose|screenSettings|benchmark'
 	end
 	
 	events
@@ -98,6 +98,8 @@ classdef (Sealed) runExperiment < handle
 		%> @return instance of the class.
 		% ===================================================================
 		function obj = runExperiment(varargin)
+			if nargin == 0; varargin.name = 'metaStimulus';end
+			obj=obj@optickaCore(varargin); %superclass constructor
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
 		end
 		
@@ -116,6 +118,7 @@ classdef (Sealed) runExperiment < handle
 			end
 			
 			%initialise timeLog for this run
+			obj.previousInfo.timeLog = obj.timeLog;
 			obj.timeLog = timeLogger;
 			tL = obj.timeLog;
 			
@@ -139,14 +142,15 @@ classdef (Sealed) runExperiment < handle
 			%-----------------------------------------------------------	
 				obj.screenVals = s.open(obj.debug,obj.timeLog);
 				
+				%the metastimulus wraps our stimulus cell array
+				obj.metaStimulus = metaStimulus('stimuli',obj.stimulus,'screen',s,'verbose',obj.verbose);
+				
 				%Trigger the omniplex (TTL on FIO1) into paused mode
 				obj.lJack.setDIO([2,0,0]);WaitSecs(0.001);obj.lJack.setDIO([0,0,0]);
 				
 				obj.initialiseTask; %set up our task structure 
 				
-				for j=1:obj.sList.n %parfor doesn't seem to help here...
-					obj.stimulus{j}.setup(s); %call setup and pass it the screen object
-				end
+				setup(obj.metaStimulus);
 				
 				obj.salutation('Initial variable setup predisplay...')
 				obj.updateVars(1,1); %set the variables for the very first run;
@@ -162,7 +166,7 @@ classdef (Sealed) runExperiment < handle
 				
 				obj.task.tick = 1;
 				obj.task.switched = 1;
-				tL.screen.beforeDisplay = GetSecs;
+				tL.screenLog.beforeDisplay = GetSecs();
 				
 				% lets draw 1 seconds worth of the stimuli we will be using
 				% covered by a blank. this lets us prime the GPU with the sorts
@@ -172,9 +176,7 @@ classdef (Sealed) runExperiment < handle
 				obj.salutation('Warming up GPU...')
 				vbl = 0;
 				for i = 1:s.screenVals.fps
-					for j=1:obj.sList.n
-						obj.stimulus{j}.draw();
-					end
+					draw(obj.metaStimulus);
 					s.drawBackground;
 					s.drawFixationPoint;
 					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
@@ -182,7 +184,7 @@ classdef (Sealed) runExperiment < handle
 					vbl = Screen('Flip', s.win, vbl+0.001);
 				end
 				if obj.logFrames == true
-					tL.screen.stimTime(1) = 1;
+					tL.screenLog.stimTime(1) = 1;
 				end
 				obj.salutation('TASK Starting...')
 				tL.vbl(1) = vbl;
@@ -202,9 +204,9 @@ classdef (Sealed) runExperiment < handle
 						if ~isempty(s.backgroundColour)
 							s.drawBackground;
 						end
-						for j=1:obj.sList.n
-							obj.stimulus{j}.draw();
-						end
+						
+						draw(obj.metaStimulus);
+						
 						if s.photoDiode == true
 							s.drawPhotoDiodeSquare([1 1 1 1]);
 						end
@@ -265,16 +267,16 @@ classdef (Sealed) runExperiment < handle
 				
 				s.drawBackground;
 				vbl=Screen('Flip', s.win);
-				tL.screen.afterDisplay=vbl;
+				tL.screenLog.afterDisplay=vbl;
 				obj.lJack.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				notify(obj,'endRun');
 				
-				tL.screen.deltaDispay=tL.screen.afterDisplay - tL.screen.beforeDisplay;
-				tL.screen.deltaUntilDisplay=tL.startTime - tL.screen.beforeDisplay;
-				tL.screen.deltaToFirstVBL=tL.vbl(1) - tL.screen.beforeDisplay;
+				tL.screenLog.deltaDispay=tL.screenLog.afterDisplay - tL.screenLog.beforeDisplay;
+				tL.screenLog.deltaUntilDisplay=tL.startTime - tL.screenLog.beforeDisplay;
+				tL.screenLog.deltaToFirstVBL=tL.vbl(1) - tL.screenLog.beforeDisplay;
 				if obj.benchmark == true
-					tL.screen.benchmark = obj.task.tick / (tL.screen.afterDisplay - tL.startTime);
-					fprintf('\n---> BENCHMARK FPS = %g\n', tL.screen.benchmark);
+					tL.screenLog.benchmark = obj.task.tick / (tL.screenLog.afterDisplay - tL.startTime);
+					fprintf('\n---> BENCHMARK FPS = %g\n', tL.screenLog.benchmark);
 				end
 				
 				s.screenVals.info = Screen('GetWindowInfo', s.win);
@@ -314,7 +316,7 @@ classdef (Sealed) runExperiment < handle
 			end
 			
 			if obj.verbose==1
-				tL.printLog;
+				tL.printRunLog;
 			end
 		end
 		
@@ -396,13 +398,19 @@ classdef (Sealed) runExperiment < handle
 					tS.index2 = 1;
 					tS.maxindex2 = length(obj.task.nVar(2).values);
 				end
+				if ~isempty(obj.task.nVar(1))
+					name = [obj.task.nVar(1).name 'Out'];
+					value = obj.task.nVar(1).values(tS.index);
+					obj.stimulus{1}.(name) = value;
+					obj.stimulus{1}.update;
+				end
 				
 				tS.stopTraining = false;
 				tS.keyHold = 1; %a small loop to stop overeager key presses
 				tS.totalTicks = 1; % a tick counter
 				tS.pauseToggle = 1;
 				
-				tL.screen.beforeDisplay = GetSecs;
+				tL.screenLog.beforeDisplay = GetSecs;
 				
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
@@ -483,7 +491,7 @@ classdef (Sealed) runExperiment < handle
 				obj.screenSettings.visualDebug = true;
 			end
 			
-			obj.timeLog = timeLogger;
+			obj.timeLog = timeLogger();
 			
 			if isempty(regexpi('noscreen',config)) && isempty(obj.screen)
 				obj.screen = screenManager(obj.screenSettings);
@@ -528,7 +536,7 @@ classdef (Sealed) runExperiment < handle
 			
 			obj.screenVals = obj.screen.screenVals;
 			
-			obj.timeLog.screen.prepTime=obj.timeLog.timeFunction()-obj.timeLog.screen.construct;
+			obj.timeLog.screenLog.prepTime=obj.timeLog.timer()-obj.timeLog.screenLog.construct;
 			
 		end
 		
@@ -539,7 +547,7 @@ classdef (Sealed) runExperiment < handle
 		%> @param
 		% ===================================================================
 		function getTimeLog(obj)
-			obj.timeLog.printLog;
+			obj.timeLog.printRunLog;
 		end
 		
 		% ===================================================================
@@ -727,11 +735,12 @@ classdef (Sealed) runExperiment < handle
 						obj.task.strobeThisFrame = true;
 					end
 					
-					%if obj.verbose==true;tic;end
-					for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
-						obj.stimulus{i}.animate;
-					end
-					%if obj.verbose==true;fprintf('\nStimuli animation: %g ms',toc*1000);end
+					if obj.verbose==true;tic;end
+% 					for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
+% 						obj.stimulus{i}.animate;
+% 					end
+					animate(obj.metaStimulus);
+					if obj.verbose==true;fprintf('\n>>>Stimuli animation: %g ms',toc*1000);end
 					
 				else %this is a blank stimulus
 					obj.task.blankTick = obj.task.blankTick + 1;
@@ -855,26 +864,6 @@ classdef (Sealed) runExperiment < handle
 		end
 		
 		% ===================================================================
-		%> @brief Prints messages dependent on verbosity
-		%>
-		%> Prints messages dependent on verbosity
-		%> @param in the calling function
-		%> @param message the message that needs printing to command window
-		% ===================================================================
-		function salutation(obj,in,message)
-			if obj.verbose==true
-				if ~exist('in','var')
-					in = 'undefined';
-				end
-				if exist('message','var')
-					fprintf(['---> runExperiment: ' message ' | ' in '\n']);
-				else
-					fprintf(['---> runExperiment: ' in '\n']);
-				end
-			end
-		end
-		
-		% ===================================================================
 		%> @brief Logs the run loop parameters along with a calling tag
 		%>
 		%> Logs the run loop parameters along with a calling tag
@@ -886,32 +875,6 @@ classdef (Sealed) runExperiment < handle
 					tag='#';
 				end
 				fprintf('%s -- B: %i | T: %i [%i] | TT: %i | Tick: %i | Time: %5.8g\n',tag,obj.task.thisBlock,obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Sets properties from a structure, ignores invalid properties
-		%>
-		%> @param args input structure
-		% ===================================================================
-		function parseArgs(obj, args, allowedProperties)
-			while iscell(args) && length(args) == 1
-				args = args{1};
-			end
-			if iscell(args)
-				if mod(length(args),2) == 1 % odd
-					args = args(1:end-1); %remove last arg
-				end
-				odd = logical(mod(1:length(args),2));
-				even = logical(abs(odd-1));
-				args = cell2struct(args(even),args(odd),2);
-			end
-			fnames = fieldnames(args); %find our argument names
-			for i=1:length(fnames);
-				if regexp(fnames{i}, allowedProperties) %only set if allowed property
-					obj.salutation(fnames{i},'Configuring setting');
-					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-				end
 			end
 		end
 		
@@ -970,6 +933,7 @@ classdef (Sealed) runExperiment < handle
 								tS.index2 = tS.index2 + 1;
 								name = [obj.task.nVar(2).name 'Out'];
 								value = obj.task.nVar(2).values(tS.index2);
+
 								obj.stimulus{1}.(name) = value;
 								obj.stimulus{1}.update;
 								tS.keyHold = tS.totalTicks + 5;

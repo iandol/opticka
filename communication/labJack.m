@@ -207,7 +207,7 @@ classdef labJack < handle
 				end
 				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',1,0,obj.deviceID);
 				if obj.validHandle();
-					obj.version = calllib('liblabjackusb','LJUSB_GetDeviceDescriptorReleaseNumber',obj.handle);
+					%obj.version = calllib('liblabjackusb','LJUSB_GetDeviceDescriptorReleaseNumber',obj.handle);
 					if obj.deviceID == 3 %respecify the time quantum for the U3
 						obj.timeShort = 128e-6;
 						obj.timeLong = 32e-3;
@@ -719,8 +719,8 @@ classdef labJack < handle
 			
 			obj.command = obj.checksum(cmd,'normal');
 			
-			%out = obj.rawWrite(cmd);
-			%in  = obj.rawRead(obj.inp,4);
+			obj.outp = obj.rawWrite(cmd);
+			obj.inp  = obj.rawRead(zeros(4,1));
 		end
 		
 		% ===================================================================
