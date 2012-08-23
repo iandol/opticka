@@ -2,12 +2,11 @@
 %> @brief metaStimulus light wrapper for opticka stimuli
 %> METASTIMULUS a collection of stimuli, wrapped in one structure
 % ========================================================================
-classdef metaStimulus < handle
+classdef metaStimulus < optickaCore
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> stimulus family
 		family = 'meta'
-		verbose = true
 		stimuli = {}
 		screen
 	end
@@ -23,7 +22,7 @@ classdef metaStimulus < handle
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -36,11 +35,32 @@ classdef metaStimulus < handle
 		% ===================================================================
 		function obj = metaStimulus(args)
 			if nargin == 0
-				varargin.family = 'meta';
+				args.family = 'meta';
 			end
+			
+			obj=obj@optickaCore(args);
 			
 			if nargin>0
 				obj.parseArgs(args);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief subsref allow {} to call stimuli cell array
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function sref = subsref(obj,s)
+			switch s(1).type
+				% Use the built-in subsref for dot notation
+				case '.'
+					sref = builtin('subsref',obj,s);
+				case '()'
+					sref = builtin('subsref',obj,s);
+				case '{}'
+					sref = builtin('subsref',obj.stimuli,s);
+					%error('MYDataClass:subsref','Not a supported subscripted reference')
 			end
 		end
 		
@@ -137,62 +157,7 @@ classdef metaStimulus < handle
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
-		%=======================================================================
+	%=======================================================================
 		
-		% ===================================================================
-		%> @brief Sets properties from a structure or normal arguments,
-		%> ignores invalid properties
-		%>
-		%> @param args input structure
-		%> @param allowedProperties properties possible to set on construction
-		% ===================================================================
-		function parseArgs(obj, args, allowedProperties)
-			allowedProperties = ['^(' allowedProperties ')$'];
-			
-			while iscell(args) && length(args) == 1
-				args = args{1};
-			end
-			
-			if iscell(args)
-				if mod(length(args),2) == 1 % odd
-					args = args(1:end-1); %remove last arg
-				end
-				odd = logical(mod(1:length(args),2));
-				even = logical(abs(odd-1));
-				args = cell2struct(args(even),args(odd),2);
-			end
-			
-			if isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
-					if regexp(fnames{i},allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in constructor');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					end
-				end
-			end
-			
-		end
-		
-		% ===================================================================
-		%> @brief Prints messages dependent on verbosity
-		%>
-		%> Prints messages dependent on verbosity
-		%> @param obj this instance object
-		%> @param in the calling function
-		%> @param message the message that needs printing to command window
-		% ===================================================================
-		function salutation(obj,in,message)
-			if obj.verbose==true
-				if ~exist('in','var')
-					in = 'undefined';
-				end
-				if exist('message','var')
-					fprintf(['---> ' obj.family ': ' message ' | ' in '\n']);
-				else
-					fprintf(['---> ' obj.family ': ' in '\n']);
-				end
-			end
-		end
 	end
 end

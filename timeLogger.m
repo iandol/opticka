@@ -1,20 +1,19 @@
-classdef timeLogger < dynamicprops
+classdef timeLogger < optickaCore
 	%TIMELOG Simple class used to store the timing data from an experiment
 	%   timeLogger stores timing data for a taskrun and optionally graphs the
 	%   result.
 	
 	properties
-		date = 0
-		startRun = 0
+		screen = struct
+		training = struct
+		timer = @GetSecs
 		vbl = 0
 		show = 0
 		flip = 0
 		miss = 0
 		stimTime = 0
 		startTime = 0
-		screen = struct
-		training = struct
-		timeFunction = @GetSecs
+		startRun = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -31,11 +30,12 @@ classdef timeLogger < dynamicprops
 		% ===================================================================
 		function obj=timeLogger
 			if ~exist('GetSecs','file')
-				obj.timeFunction = @now;
+				obj.timer = @now;
 			end
-			obj.screen.construct = obj.timeFunction();
-			obj.date = clock;
+			obj.screen.constructLog = obj.timer();
 		end
+		
+		
 		
 		% ===================================================================
 		%> @brief calculate genuine missed stim frames
@@ -45,7 +45,7 @@ classdef timeLogger < dynamicprops
 		% ===================================================================
 		function calculateMisses(obj)
 			index=min([length(obj.vbl) length(obj.flip) length(obj.show)]);
-			miss=obj.miss(1:index);
+			miss=obj.miss(1:index); %#ok<*PROP>
 			stimTime=obj.stimTime(1:index);
 			
 			obj.missImportant = miss;
@@ -62,8 +62,8 @@ classdef timeLogger < dynamicprops
 		%> @return
 		% ===================================================================
 		function printLog(obj)
-			if length(obj.vbl) == 2
-				disp('No timing data available')
+			if length(obj.vbl) <= 2
+				disp('No timing data available...')
 				return
 			end
 			vbl=obj.vbl*1000;
@@ -77,7 +77,6 @@ classdef timeLogger < dynamicprops
 			stimTime=obj.stimTime(1:index);
 			
 			calculateMisses(obj)
-			
 			
 			figure;
 			

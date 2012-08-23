@@ -5,7 +5,9 @@
 %be present.
 disp('================>> Loading state info file <<================')
 
+%obj.screen is the screenManager the opens the PTB screen
 blankFcn = {{@drawBackground, obj.screen};{@drawFixationPoint, obj.screen}};
+%obj.metaStimulus is the stimuli loaded into opticka
 stimFcn = {@draw, obj.metaStimulus};
 stimEntry = {@update, obj.metaStimulus};
 correctFcn = {{@draw, obj.metaStimulus}; {@drawGreenSpot, obj.screen}};
