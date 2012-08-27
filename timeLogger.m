@@ -36,20 +36,16 @@ classdef timeLogger < optickaCore
 		%> @return
 		% ===================================================================
 		function obj=timeLogger(varargin)
-			
 			if nargin == 0; varargin.name = 'timeLog';end
-			obj=obj@optickaCore(varargin); %superclass constructor
 			if nargin>0; obj.parseArgs(varargin,obj.allowedProperties); end
 			if isempty(obj.name);obj.name = 'timeLog'; end
-			
 			if ~exist('GetSecs','file')
 				obj.timer = @now;
 			end
 			obj.screenLog.construct = obj.timer();
 		end
 		
-		
-		
+
 		% ===================================================================
 		%> @brief calculate genuine missed stim frames
 		%>

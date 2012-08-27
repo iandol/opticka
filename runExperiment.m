@@ -55,7 +55,7 @@ classdef runExperiment < optickaCore
 		%> gamma tables and the like
 		screenVals
 		%> log times during display
-		timeLog
+		runLog
 		%> training log
 		trainingLog
 		%> for heterogenous stimuli, we need a way to index into the stimulus so
@@ -117,10 +117,10 @@ classdef runExperiment < optickaCore
 				error('There is no working PTB available!')
 			end
 			
-			%initialise timeLog for this run
-			obj.previousInfo.timeLog = obj.timeLog;
-			obj.timeLog = timeLogger;
-			tL = obj.timeLog;
+			%initialise runLog for this run
+			obj.previousInfo.runLog = obj.runLog;
+			obj.runLog = timeLogger();
+			tL = obj.runLog;
 			
 			%make a handle to the screenManager
 			s = obj.screen;
@@ -140,7 +140,7 @@ classdef runExperiment < optickaCore
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------	
-				obj.screenVals = s.open(obj.debug,obj.timeLog);
+				obj.screenVals = s.open(obj.debug,obj.runLog);
 				
 				%the metastimulus wraps our stimulus cell array
 				obj.metaStimulus = metaStimulus('stimuli',obj.stimulus,'screen',s,'verbose',obj.verbose);
@@ -335,7 +335,7 @@ classdef runExperiment < optickaCore
 				error('There is no working PTB available!')
 			end
 			
-			%initialise timeLog for this run
+			%initialise runLog for this run
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog; %short handle to log
 			
@@ -491,7 +491,7 @@ classdef runExperiment < optickaCore
 				obj.screenSettings.visualDebug = true;
 			end
 			
-			obj.timeLog = timeLogger();
+			obj.runLog = timeLogger();
 			
 			if isempty(regexpi('noscreen',config)) && isempty(obj.screen)
 				obj.screen = screenManager(obj.screenSettings);
@@ -531,23 +531,32 @@ classdef runExperiment < optickaCore
 % 			for i=1:20
 % 				a(i)=GetSecs;
 % 			end
-% 			obj.timeLog.screen.deltaGetSecs=mean(diff(a))*1000; %what overhead does GetSecs have in milliseconds?
+% 			obj.runLog.screen.deltaGetSecs=mean(diff(a))*1000; %what overhead does GetSecs have in milliseconds?
 % 			WaitSecs(0.01); %preload function
 			
 			obj.screenVals = obj.screen.screenVals;
 			
-			obj.timeLog.screenLog.prepTime=obj.timeLog.timer()-obj.timeLog.screenLog.construct;
+			obj.runLog.screenLog.prepTime=obj.runLog.timer()-obj.runLog.screenLog.construct;
 			
 		end
 		
 		
 		% ===================================================================
-		%> @brief getTimeLog Prints out the frame time plots from a run
+		%> @brief getrunLog Prints out the frame time plots from a run
 		%>
 		%> @param
 		% ===================================================================
-		function getTimeLog(obj)
-			obj.timeLog.printRunLog;
+		function getRunLog(obj)
+			obj.runLog.printRunLog;
+		end
+		
+		% ===================================================================
+		%> @brief getrunLog Prints out the frame time plots from a run
+		%>
+		%> @param
+		% ===================================================================
+		function deleteRunLog(obj)
+			obj.runLog = [];
 		end
 		
 		% ===================================================================
@@ -555,17 +564,8 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function deleteTimeLog(obj)
-			obj.timeLog = [];
-		end
-		
-		% ===================================================================
-		%> @brief getTimeLog Prints out the frame time plots from a run
-		%>
-		%> @param
-		% ===================================================================
-		function restoreTimeLog(obj,tLog)
-			if isstruct(tLog);obj.timeLog = tLog;end
+		function restoreRunLog(obj,tLog)
+			if isstruct(tLog);obj.runLog = tLog;end
 		end
 		
 		% ===================================================================
@@ -836,11 +836,11 @@ classdef runExperiment < optickaCore
 			if obj.logFrames == true && obj.task.tick > 1
 				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-					(obj.timeLog.vbl(obj.task.tick-1)-obj.timeLog.startTime),obj.task.tick);
+					(obj.runLog.vbl(obj.task.tick-1)-obj.runLog.startTime),obj.task.tick);
 			else
 				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-					(obj.timeLog.vbl-obj.timeLog.startTime),obj.task.tick);
+					(obj.runLog.vbl-obj.runLog.startTime),obj.task.tick);
 			end
 			for i=1:obj.task.nVars
 				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))];
@@ -857,7 +857,7 @@ classdef runExperiment < optickaCore
 		function t = infoTextUI(obj)
 			t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
 				obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-				(obj.timeLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
+				(obj.runLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
 			for i=1:obj.task.nVars
 				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))];
 			end
@@ -1023,8 +1023,8 @@ classdef runExperiment < optickaCore
 					if inObject == true || isfield('in','useLabJack')
 						obj.useLabJack = in.useLabJack;
 					end
-					if inObject == true || isfield('in','timeLog')
-						obj.previousInfo.timeLog = in.timeLog;
+					if inObject == true || isfield('in','runLog')
+						obj.previousInfo.runLog = in.runLog;
 					end
 				end
 				try

@@ -1,4 +1,4 @@
-classdef screenManager < handle
+classdef screenManager < optickaCore
 	%screenManager Manages a Screen object
 	%   screenManager manages PTB screen objects for opticka
 	
@@ -82,7 +82,7 @@ classdef screenManager < handle
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='^(bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash)$'
+		allowedProperties='bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect = [0;0;50;50]
 		%> the values computed to draw the 1deg dotted grid in debug mode
@@ -104,7 +104,7 @@ classdef screenManager < handle
 		% ===================================================================
 		function obj = screenManager(varargin)
 			if nargin>0
-				obj.parseArgs(varargin);
+				obj.parseArgs(varargin,obj.allowedProperties);
 			end
 			try
 				AssertOpenGL
@@ -247,7 +247,7 @@ classdef screenManager < handle
 					else
 						obj.windowed=[1 1 801 601];
 					end
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,obj.windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,obj.windowed, [], obj.doubleBuffer+1,[],obj.antiAlias,[],kPsychGUIWindow);
 				end
 				
 				tL.screenLog.postOpenWindow=GetSecs;
@@ -588,52 +588,6 @@ classdef screenManager < handle
 		% ===================================================================
 		function ppd = get.ppd(obj)
 			ppd=round(obj.pixelsPerCm*(obj.distance/57.3)); %set the pixels per degree
-		end
-		
-		% ===================================================================
-		%> @brief Sets properties from a structure, ignores invalid properties
-		%>
-		%> @param args input cell/structure
-		% ===================================================================
-		function parseArgs(obj,args)
-			while iscell(args) && length(args) == 1 %deal with nested cell arrays
-				args = args{1};
-			end
-			if iscell(args) %convert a cell to structure
-				if mod(length(args),2) == 1 % odd
-					args = args(1:end-1); %remove last arg
-				end
-				odd = logical(mod(1:length(args),2));
-				even = logical(abs(odd-1));
-				args = cell2struct(args(even),args(odd),2);
-			end
-			fnames = fieldnames(args); %find our argument names
-			for i=1:length(fnames);
-				if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
-					obj.salutation(fnames{i},'Configuring setting');
-					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Prints messages dependent on verbosity
-		%>
-		%> Prints messages dependent on verbosity
-		%> @param in the calling function
-		%> @param message the message that needs printing to command window
-		% ===================================================================
-		function salutation(obj,in,message)
-			if obj.verbose==true
-				if ~exist('in','var') || isempty(in)
-					in = 'undefined';
-				end
-				if exist('message','var')
-					fprintf(['---> screenManager: ' message ' | ' in '\n']);
-				else
-					fprintf(['---> screenManager: ' in '\n']);
-				end
-			end
 		end
 		
 		% ===================================================================

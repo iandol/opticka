@@ -17,10 +17,19 @@ classdef optickaCore < handle
 	properties (SetAccess = private, GetAccess = public)
 		%> clock() dateStamp set on construction
 		dateStamp
+		%> universal ID
+		uuid
 	end
 	
 	properties (SetAccess = private, Dependent = true)
 		
+	end
+	
+	properties (SetAccess = protected, GetAccess = protected)
+		%> matlab version we are running on
+		mversion
+		%> class name
+		className
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -43,8 +52,25 @@ classdef optickaCore < handle
 		% ===================================================================
 		function obj = optickaCore(args)
 			obj.dateStamp = clock();
+			obj.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
+			%obj.uuid = char(java.util.UUID.randomUUID); %128bit uuid;
 			if nargin>0
 				obj.parseArgs(args,obj.allowedProperties);
+			end
+			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
+			obj.className = class(obj);
+		end
+		
+		% ===================================================================
+		%> @brief concatenate the name with a uuid at get.
+		%> @param
+		%> @return
+		% ===================================================================
+		function name = get.name(obj)
+			if isempty(obj.name)
+				name = [obj.className '#' obj.uuid];
+			else
+				name = [obj.name ' <' obj.className '#' obj.uuid '>'];
 			end
 		end
 		
@@ -81,8 +107,10 @@ classdef optickaCore < handle
 				fnames = fieldnames(args); %find our argument names
 				for i=1:length(fnames);
 					if regexp(fnames{i},allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in constructor');
+						obj.salutation(fnames{i},'Constructor parsing input argument');
 						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+					else
+						obj.salutation(fnames{i},'Constructor parsing: invalid input');
 					end
 				end
 			end
@@ -99,16 +127,16 @@ classdef optickaCore < handle
 		% ===================================================================
 		function salutation(obj,in,message,override)
 			if ~exist('override','var')
-					override = false;
-				end
+				override = false;
+			end
 			if obj.verbose==true || override == true
 				if ~exist('in','var')
 					in = 'undefined';
 				end
 				if exist('message','var')
-					fprintf(['---> ' obj.name ': ' message ' | ' in '\n']);
+					fprintf(['---> ' obj.className ': ' message ' | ' in '\n']);
 				else
-					fprintf(['---> ' obj.name ': ' in '\n']);
+					fprintf(['---> ' obj.className ': ' in '\n']);
 				end
 			end
 		end

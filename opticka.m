@@ -4,8 +4,8 @@
 %> Opticka is an object oriented stimulus generator based on Psychophysics toolbox
 %> See http://iandol.github.com/opticka/ for more details
 % ======================================================================
-classdef (Sealed) opticka < handle
-		
+classdef opticka < optickaCore
+	
 	properties
 		%> this is the main runExperiment object
 		r 
@@ -37,8 +37,6 @@ classdef (Sealed) opticka < handle
 		uiPrefsList = {'OKOmniplexIP','OKPixelsPerCm','OKAntiAliasing','OKbitDepth'};
 		%> any other prefs to save?
 		otherPrefsList = {};
-		%> Matlab version number
-		mversion = 0
 	end
 	
 	events
@@ -64,7 +62,6 @@ classdef (Sealed) opticka < handle
 				obj.parseArgs(args, obj.allowedPropertiesConstructor);
 			end
 			
-			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
 			obj.initialiseUI;
 		end
 		
@@ -1203,25 +1200,6 @@ classdef (Sealed) opticka < handle
 		end
 		
 		% ===================================================================
-		%> @brief fprintf Wrapper function
-		%> fprintf Wrapper function
-		%> @param in -- Calling function
-		%> @param message -- message to print
-		% ===================================================================
-		function salutation(obj,in,message)
-			if obj.verbose==1
-				if ~exist('in','var')
-					in = 'undefined';
-				end
-				if exist('message','var')
-					fprintf(['---> Opticka: ' message ' | ' in '\n']);
-				else
-					fprintf(['---> Opticka: ' in '\n']);
-				end
-			end
-		end
-		
-		% ===================================================================
 		%> @brief find the value in a cell string list
 		%> 
 		%> @param 
@@ -1334,33 +1312,6 @@ classdef (Sealed) opticka < handle
 				end
 				if isprop(ch(k),'FontName')
 					set(ch(k),'FontName','verdana');
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Sets properties from a structure, ignores invalid properties
-		%>
-		%> @param args input structure
-		% ===================================================================
-		function parseArgs(obj, args, allowedProperties)
-			allowedProperties = ['^(' allowedProperties ')$'];
-			while iscell(args) && length(args) == 1
-				args = args{1};
-			end
-			if iscell(args)
-				if mod(length(args),2) == 1 % odd
-					args = args(1:end-1); %remove last arg
-				end
-				odd = logical(mod(1:length(args),2));
-				even = logical(abs(odd-1));
-				args = cell2struct(args(even),args(odd),2);
-			end
-			fnames = fieldnames(args); %find our argument names
-			for i=1:length(fnames);
-				if regexp(fnames{i},allowedProperties) %only set if allowed property
-					obj.salutation(fnames{i},'Configuring setting in constructor');
-					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 				end
 			end
 		end
