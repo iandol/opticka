@@ -282,7 +282,7 @@ classdef opticka < optickaCore
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
 				set(obj.h.OKPanelGrating,'Visible','off')
-				%drawnow;
+				drawnow;
 				set(obj.h.OKPanelGrating,'Visible','on')
 				drawnow;
 					
@@ -298,7 +298,22 @@ classdef opticka < optickaCore
 				if exist([obj.paths.protocols filesep 'DefaultStateInfo.m'],'file')
 					obj.paths.stateInfoFile = [obj.paths.protocols filesep 'DefaultStateInfo.m'];
 					obj.r.stateInfoFile = obj.paths.stateInfoFile;
+				else
+					obj.paths.stateInfoFile = [obj.paths.whereami filesep 'DefaultStateInfo.m'];
+					obj.r.stateInfoFile = obj.paths.stateInfoFile;
 				end
+				
+				fid = fopen(obj.r.stateInfoFile);
+				tline = fgetl(fid);
+				i=1;
+				while ischar(tline)
+					o.store.statetext{i} = tline;
+					tline = fgetl(fid);
+					i=i+1;
+				end
+				fclose(fid);
+				set(obj.h.OKTrainingText,'String',o.store.statetext);
+				
 
 				obj.store.nVars = 0;
 				obj.store.visibleStimulus = 'grating'; %our default shown stimulus

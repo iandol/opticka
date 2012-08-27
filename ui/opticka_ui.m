@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 17-Aug-2012 13:12:07
+% Last Modified by GUIDE v2.5 27-Aug-2012 16:29:20
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -704,14 +704,6 @@ switch string
 		set(handles.OKVariableValues,'String',string);	
 end
 
-function OKToolbarToggleGlobal_OnCallback(hObject, eventdata, handles)
-set(handles.OKPanelProtocols,'Visible','off')
-set(handles.OKPanelGlobal,'Visible','on')
-
-
-function OKToolbarToggleGlobal_OffCallback(hObject, eventdata, handles) %#ok<*INUSL>
-set(handles.OKPanelProtocols,'Visible','on')
-set(handles.OKPanelGlobal,'Visible','off')
 
 
 % --- Executes on button press in OKVariablesLinear.
@@ -1399,4 +1391,111 @@ function OKMenuStateInfo_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.router('LoadStateInfo');
+end
+
+% --- Executes on button press in OKLoadStateButton.
+function OKLoadStateButton_Callback(hObject, eventdata, handles)
+% hObject    handle to OKLoadStateButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.router('LoadStateInfo');
+end
+
+function OKTrainingName_Callback(hObject, eventdata, handles)
+% hObject    handle to OKTrainingName (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKTrainingName as text
+%        str2double(get(hObject,'String')) returns contents of OKTrainingName as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function OKTrainingName_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to OKTrainingName (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function OKTrainingRewardSize_Callback(hObject, eventdata, handles)
+% hObject    handle to OKTrainingRewardSize (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKTrainingRewardSize as text
+%        str2double(get(hObject,'String')) returns contents of OKTrainingRewardSize as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function OKTrainingRewardSize_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to OKTrainingRewardSize (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --------------------------------------------------------------------
+function OKToggleUI_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to OKToggleUI (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if strcmp(get(handles.OKPanelGlobal,'Visible'),'on')
+	
+	set(handles.OKPanelGlobal,'Visible','off');
+	set(handles.OKPanelProtocols,'Visible','on');
+	set(handles.OKPanelTraining,'Visible','off');
+	
+elseif strcmp(get(handles.OKPanelProtocols,'Visible'),'on')
+	
+	set(handles.OKPanelProtocols,'Visible','off')
+	set(handles.OKPanelGlobal,'Visible','off')
+	set(handles.OKPanelTraining,'Visible','on')
+	
+else
+	
+	set(handles.OKPanelProtocols,'Visible','off')
+	set(handles.OKPanelGlobal,'Visible','on')
+	set(handles.OKPanelTraining,'Visible','off')
+	
+end
+
+% --- Executes on button press in OKEditStateFileButon.
+function OKEditStateFileButon_Callback(hObject, eventdata, handles)
+% hObject    handle to OKEditStateFileButon (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+
+function OKTrainingResearcherName_Callback(hObject, eventdata, handles)
+% hObject    handle to OKTrainingResearcherName (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of OKTrainingResearcherName as text
+%        str2double(get(hObject,'String')) returns contents of OKTrainingResearcherName as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function OKTrainingResearcherName_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to OKTrainingResearcherName (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
 end

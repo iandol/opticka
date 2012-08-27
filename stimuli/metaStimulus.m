@@ -45,24 +45,24 @@ classdef metaStimulus < optickaCore
 			if isempty(obj.name);obj.name = 'metaStimulus'; end
 		end
 		
-		% ===================================================================
-		%> @brief subsref allow {} to call stimuli cell array
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function sref = subsref(obj,s)
-			switch s(1).type
-				% Use the built-in subsref for dot notation
-				case '.'
-					sref = builtin('subsref',obj,s);
-				case '()'
-					sref = builtin('subsref',obj,s);
-				case '{}'
-					sref = builtin('subsref',obj.stimuli,s);
-					%error('MYDataClass:subsref','Not a supported subscripted reference')
-			end
-		end
+% 		% ===================================================================
+% 		%> @brief subsref allow {} to call stimuli cell array
+% 		%>
+% 		%> @param
+% 		%> @return
+% 		% ===================================================================
+% 		function varargout = subsref(obj,s)
+% 			switch s(1).type
+% 				% Use the built-in subsref for dot notation
+% 				case '.'
+% 					varargout = builtin('subsref',obj,s);
+% 				case '()'
+% 					varargout = builtin('subsref',obj,s);
+% 				case '{}'
+% 					varargout = builtin('subsref',obj.stimuli,s);
+% 					%error('MYDataClass:subsref','Not a supported subscripted reference')
+% 			end
+% 		end
 		
 		% ===================================================================
 		%> @brief setup wrapper
