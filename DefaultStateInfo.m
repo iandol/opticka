@@ -5,18 +5,16 @@
 %be present.
 disp('================>> Loading state info file <<================')
 
-%obj.screen is the screenManager the opens the PTB screen
-blankFcn = {{@drawBackground, obj.screen};{@drawFixationPoint, obj.screen}};
-%obj.metaStimulus is the stimuli loaded into opticka
-stimFcn = {@draw, obj.metaStimulus};
-stimEntry = {@update, obj.metaStimulus};
-correctFcn = {{@draw, obj.metaStimulus}; {@drawGreenSpot, obj.screen}};
-incorrectFcn = {{@drawBackground, obj.screen}; {@drawRedSpot, obj.screen}};
+prestimulusFcn = { @()drawBackground(obj.screen) ; @()drawFixationPoint(obj.screen) }; %obj.screen is the screenManager the opens the PTB screen
+stimFcn = @() draw(obj.metaStimulus); %obj.metaStimulus is the stimuli loaded into opticka
+stimEntry = @() update(obj.metaStimulus);
+correctFcn = { @() draw(obj.metaStimulus) ; @() drawGreenSpot(obj.screen) };
+incorrectFcn = { @() drawBackground(obj.screen) ; @() drawRedSpot(obj.screen) };
 
 stateInfoTmp = { ...
 	'name'      'next'		'time'  'entryFcn'	'withinFcn'		'exitFcn'; ...
 	'pause'		'preblank'	inf		[]			[]				[]; ...
-	'preblank'  'stimulus'  2		[]			blankFcn		[]; ...
+	'prestimulus' 'stimulus'  2		[]			prestimulusFcn	[]; ...
 	'stimulus'  'incorrect'	3		stimEntry	stimFcn			[]; ...
 	'incorrect' 'preblank'	0.75    []			incorrectFcn	[]; ...
 	'correct'	'preblank'  1.5		stimEntry	correctFcn		[]; ...
@@ -24,4 +22,4 @@ stateInfoTmp = { ...
 
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')
-clear blankFcn stimFcn stimEntry correctFcn incorrectFcn
+clear preblankFcn stimFcn stimEntry correctFcn incorrectFcn
