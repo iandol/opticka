@@ -15,11 +15,9 @@ classdef opticka < optickaCore
 		store
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		%> history of display objects
 		history
-		%> storage of various paths
-		paths
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number

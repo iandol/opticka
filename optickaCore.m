@@ -14,11 +14,13 @@ classdef optickaCore < handle
 		verbose
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		%> clock() dateStamp set on construction
 		dateStamp
 		%> universal ID
 		uuid
+		%> storage of various paths
+		paths = struct()
 	end
 	
 	properties (SetAccess = private, Dependent = true)
@@ -51,6 +53,7 @@ classdef optickaCore < handle
 		%> @return instance of class.
 		% ===================================================================
 		function obj = optickaCore(args)
+			obj.className = class(obj);
 			obj.dateStamp = clock();
 			obj.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
 			%obj.uuid = char(java.util.UUID.randomUUID); %128bit uuid;
@@ -58,7 +61,8 @@ classdef optickaCore < handle
 				obj.parseArgs(args,obj.allowedProperties);
 			end
 			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
-			obj.className = class(obj);
+			obj.paths.whoami = mfilename;
+			obj.paths.whereami = fileparts(which(mfilename));
 		end
 		
 		% ===================================================================

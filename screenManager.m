@@ -68,6 +68,8 @@ classdef screenManager < optickaCore
 	properties (SetAccess = private, GetAccess = public)
 		%> do we have a working PTB, if not go into a silent mode
 		isPTB = false
+		%> is a PTB currently open?
+		isOpen = false
 		%> the handle returned by opening a PTB window
 		win
 		%> the window rectangle
@@ -253,6 +255,7 @@ classdef screenManager < optickaCore
 				tL.screenLog.postOpenWindow=GetSecs;
 				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
 				
+				obj.isOpen = true;
 				obj.screenVals.win = obj.win; %make a copy
 				
 				try
@@ -352,8 +355,11 @@ classdef screenManager < optickaCore
 				Screen('Close');
 				Screen('CloseAll');
 				obj.win=[];
+				obj.isOpen = false;
 				Priority(0);
+				ListenChar(0);
 				ShowCursor;
+				sca;
 			end
 		end
 		
