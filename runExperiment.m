@@ -385,7 +385,7 @@ classdef runExperiment < optickaCore
 				addStates(obj.stateMachine, obj.stateInfo);
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(2); %capture keystrokes
+				ListenChar(1); %capture keystrokes
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
 				tS.index = 1;
@@ -708,7 +708,7 @@ classdef runExperiment < optickaCore
 % 						obj.stimuli{i}.animate;
 % 					end
 					animate(obj.stimuli);
-					if obj.verbose==true;fprintf('\n=-> updateTask() Stimuli animation: %g ms',toc*1000);end
+					if obj.verbose==true;fprintf('=-> updateTask() Stimuli animation: %g ms\n',toc*1000);end
 					
 				else %this is a blank stimulus
 					obj.task.blankTick = obj.task.blankTick + 1;

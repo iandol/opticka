@@ -66,6 +66,7 @@ classdef metaStimulus < optickaCore
 			if ~exist('choice','var')
 				for i = 1:obj.n
 					setup(obj.stimuli{i},obj.screen);
+					%obj.stimuli{i}.setup(obj.screen);
 				end
 			elseif choice > 0 && choice <= obj.n
 				setup(obj.stimuli{choice},obj.screen);
@@ -187,15 +188,19 @@ classdef metaStimulus < optickaCore
 		%> @return out any output
 		% ===================================================================
 		function obj = subsasgn(obj,s,val)
+			sout = [];
 			switch s(1).type
 				% Use the built-in subsref for dot notation
 				case '.'
 					obj = builtin('subsasgn',obj,s,val);
 				case '()'
-					error([obj.name ':subsasgn'],'Not a supported subscripted reference')
-					%[varargout{1:nargout}] = builtin('subsref',obj,s);
-				case '{}'
+					%error([obj.name ':subsasgn'],'Not a supported subscripted reference')
 					sout = builtin('subsasgn',obj.stimuli,s,val);
+					if ~isempty(sout)
+						obj.stimuli = sout;
+					end
+				case '{}'
+					[sout{1:nargout}] = builtin('subsasgn',obj.stimuli,s,val);
 					if ~isempty(sout)
 						obj.stimuli = sout;
 					end
