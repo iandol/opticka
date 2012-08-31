@@ -272,6 +272,7 @@ classdef opticka < optickaCore
 					javax.swing.UIManager.setLookAndFeel(obj.store.newlook);
 				end
 				uihandle=opticka_ui; %our GUI file
+				obj.centerGUI(uihandle);
 				obj.h=guidata(uihandle);
 				obj.h.uihandle = uihandle; %save handle in a less cryptically names field
 				guidata(uihandle,obj.h); %save back this change
@@ -966,17 +967,17 @@ classdef opticka < optickaCore
 		% ===================================================================
 		%> @brief Load Protocol
 		%> Load Protocol
-		%> @param uiload do we show a uiload dialog?
+		%> @param ui do we show a uiload dialog?
 		% ===================================================================
 		function loadProtocol(obj,ui)
 			
 			file = [];
 			
 			if ~exist('ui','var') || isempty(ui)
-				ui=0;
+				ui = false;
 			end
 			
-			if ui == 0
+			if ui == false
 				v = obj.gv(obj.h.OKProtocolsList);
 				file = obj.gs(obj.h.OKProtocolsList,v);
 			end
@@ -1360,6 +1361,19 @@ classdef opticka < optickaCore
 		function lobj=loadobj(in)
 			fprintf('\n---> Opticka static loadobj: Loading opticka object...\n');
 			lobj = in;
+		end
+		
+		function centerGUI(uihandle)
+			pos=get(uihandle,'Position');
+			size=[pos(3) pos(4)];
+			scr=get(0,'ScreenSize');
+			width=scr(3);
+			height=scr(4);
+			x=(width/2)-(size(1)/2);
+			y=(height/2)-((size(2)+40)/2);
+			if x < 1; x=0; end
+			if y < 1; y=0; end
+			set(uihandle,'Position',[x y size(1) size(2)]);
 		end
 	end
 	

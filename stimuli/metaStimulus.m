@@ -188,7 +188,6 @@ classdef metaStimulus < optickaCore
 		%> @return out any output
 		% ===================================================================
 		function obj = subsasgn(obj,s,val)
-			sout = [];
 			switch s(1).type
 				% Use the built-in subsref for dot notation
 				case '.'
@@ -200,8 +199,11 @@ classdef metaStimulus < optickaCore
 						obj.stimuli = sout;
 					end
 				case '{}'
-					[sout{1:nargout}] = builtin('subsasgn',obj.stimuli,s,val);
+					sout = builtin('subsasgn',obj.stimuli,s,val);
 					if ~isempty(sout)
+						if max(size(sout)) == 1
+							sout = sout{1};
+						end
 						obj.stimuli = sout;
 					end
 			end

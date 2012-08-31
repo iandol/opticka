@@ -52,13 +52,13 @@ classdef optickaCore < handle
 		% ===================================================================
 		function obj = optickaCore(args)
 			obj.dateStamp = clock();
+			obj.className = class(obj);
 			obj.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
 			%obj.uuid = char(java.util.UUID.randomUUID); %128bit uuid;
 			if nargin>0
 				obj.parseArgs(args,obj.allowedProperties);
 			end
 			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
-			obj.className = class(obj);
 		end
 		
 		% ===================================================================

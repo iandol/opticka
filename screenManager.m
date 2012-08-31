@@ -596,7 +596,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function delete(obj)
 			obj.close();
-			obj.salutation('DELETE method','Screen object has been closed/reset...');
+			obj.salutation('DELETE method',['Screen object ' obj.name ' has been closed/reset...']);
 		end
 		
 	end
