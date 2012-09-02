@@ -1,6 +1,6 @@
 % ========================================================================
 %> @brief optickaCore 
-%> METASTIMULUS a collection of stimuli, wrapped in one structure
+%> optickaCore baseclass derived from handle
 % ========================================================================
 classdef optickaCore < handle
 	
