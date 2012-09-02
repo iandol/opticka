@@ -35,6 +35,13 @@ sca
 % If you do not pass any properties, default values will be used without problems.
 
 %%
+% First we create a stimulus manager that collects and handles groups of
+% stimuli as if they were a single 'thing', so for example when you use the
+% draw method on a stimulus manager, it tells each of its child stimuli to
+% draw in turn
+myStim = metaStimulus();
+
+%%
 % The first six stimuli are gratings / gabors of varying kinds.
 myStim{1}=gratingStimulus('sf',1,'contrast',0.5,'size',1,'tf',0,'angle',30,...
 	'gabor', 0, 'mask', 1);
@@ -152,11 +159,11 @@ myScreen = screenManager('distance', 57.3,...
 % We now pass our stimulus screen and sequence objects to the
 % runExperiment class. runExperinet contains the run class that actually
 % runs the task.
-rExp = runExperiment('stimulus', myStim,...
+rExp = runExperiment('stimuli', myStim,...
 	'task', myTask,...
 	'screen', myScreen,...
 	'debug', false,...
-	'verbose', true);
+	'verbose', false);
 
 %%
 % run our experiment, to exit early, press the right (OS X) or middle (Win/Linux) mouse
