@@ -726,7 +726,6 @@ function OKAddStimulus_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.r.updatesList; %initialise it.
 	switch o.store.visibleStimulus
 		case 'grating'
 			o.addGrating;
@@ -797,7 +796,6 @@ if isappdata(handles.output,'o')
 		idx2(value+1) = idx2(value+1)-1;
 		o.r.stimuli(idx) = o.r.stimuli(idx2);
 		set(handles.OKStimList,'Value',value+1);
-		o.r.updatesList;
 		o.modifyStimulus;
 	end
 end
@@ -815,7 +813,6 @@ if isappdata(handles.output,'o')
 		idx2(value-1) = idx2(value-1)+1;
 		o.r.stimuli(idx) = o.r.stimuli(idx2);
 		set(handles.OKStimList,'Value',value-1);
-		o.r.updatesList;
 		o.modifyStimulus;
 	end
 end

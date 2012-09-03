@@ -68,6 +68,9 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> used to select single stimulus in training
+		stimList = []
+		thisStim = []
 		%> properties allowed to be modified during construction
 		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|logFrames|debug|verbose|screenSettings|benchmark'
 	end
@@ -92,8 +95,9 @@ classdef runExperiment < optickaCore
 		%> @return instance of the class.
 		% ===================================================================
 		function obj = runExperiment(varargin)
-			if nargin == 0; varargin.name = 'metaStimulus';end
+			if nargin == 0; varargin.name = 'metaStimulus'; end
 			obj=obj@optickaCore(varargin); %superclass constructor
+			obj.paths.whereami = fileparts(which(mfilename));
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
 		end
 		
@@ -375,7 +379,9 @@ classdef runExperiment < optickaCore
 						'correct'		'prestimulus'	1.5		stimEntry	correctFcn		[]; ...
 						'pause'			'prestimulus'	inf		[]			[]				[]; ...
 					};
-				
+					
+					obj.trainingSingleStimulus = false;
+					
 					clear blankFcn stimFcn stimEntry correctFcn incorrectFcn
 				
 				elseif ischar(obj.stateInfoFile)
@@ -911,6 +917,26 @@ classdef runExperiment < optickaCore
 								tS.index = tS.maxindex;
 							end
 						end
+					case '=+'
+						if tS.totalTicks > tS.keyHold
+							if ~isempty(obj.stimList)
+								if obj.thisStim < max(obj.stimList)
+									obj.thisStim = obj.thisStim + 1;
+									obj.stimuli.choice = obj.thisStim;
+								end
+							end
+							tS.keyHold = tS.totalTicks + 5;
+						end
+					case '-_'
+						if tS.totalTicks > tS.keyHold
+							if ~isempty(obj.stimList)
+								if obj.thisStim > 1
+									obj.thisStim = obj.thisStim - 1;
+									obj.stimuli.choice = obj.thisStim;
+								end
+							end
+							tS.keyHold = tS.totalTicks + 5;
+						end
 					case 'r'
 						if tS.totalTicks > tS.keyHold
 							newColour = rand(1,3);
@@ -921,13 +947,16 @@ classdef runExperiment < optickaCore
 					case {'UpArrow','up'} %give a reward at any time
 						obj.lJack.timedTTL(0,100);
 					case {'DownArrow','down'}
-
+						obj.lJack.timedTTL(0,500);
 					case 'z' % mark trial as correct
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
-							obj.lJack.timedTTL(0,200);
-							forceTransition(obj.stateMachine, 'correct');
+							forceTransition(obj.stateMachine, 'correct1');
 						end
 					case 'x' % mark trial as incorrect
+						if strcmpi(obj.stateMachine.currentName,'stimulus')
+							forceTransition(obj.stateMachine, 'correct2');
+						end
+					case 'c'
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
 							forceTransition(obj.stateMachine, 'incorrect');
 						end

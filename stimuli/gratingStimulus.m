@@ -16,8 +16,6 @@
 classdef gratingStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		%> stimulus family
-		family = 'grating'
 		%> family type
 		type = 'procedural'
 		%> spatial frequency
@@ -63,6 +61,8 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> stimulus family
+		family = 'grating'
 		%> scale is used when changing size as an independent variable to keep sf accurate
 		scale = 1
 		%> the phase amount we need to add for each frame of animation

@@ -18,20 +18,20 @@ classdef optickaCore < handle
 		%> clock() dateStamp set on construction
 		dateStamp
 		%> universal ID
-		uuid
+		uuid = 0
 		%> storage of various paths
 		paths = struct()
 	end
 	
 	properties (SetAccess = private, Dependent = true)
-		
+		fullName = ''
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
 		%> matlab version we are running on
-		mversion
+		mversion = 0
 		%> class name
-		className
+		className = ''
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -70,7 +70,7 @@ classdef optickaCore < handle
 		%> @param
 		%> @return
 		% ===================================================================
-		function name = get.name(obj)
+		function name = get.fullName(obj)
 			if isempty(obj.name)
 				name = [obj.className '#' obj.uuid];
 			else

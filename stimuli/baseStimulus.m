@@ -10,7 +10,7 @@
 % ========================================================================
 classdef baseStimulus < optickaCore & dynamicprops
 	
-	properties (Abstract = true)
+	properties (Abstract = true, SetAccess = private)
 		%> the stimulus family
 		family
 	end
@@ -248,18 +248,24 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief Run Stimulus in a window to preview
+		%> @brief make a GUI properties panel for this object
 		%>
 		% ===================================================================
-		function a = makePanel(obj)
+		function handles = makePanel(obj,parent)
 			
-			f = figure('Tag','gFig');
-			a = uiextras.BoxPanel('Title',obj.name);
-			b = uiextras.HBoxFlex('Parent', a);
-			c = uiextras.Grid('Parent',b);
-			d = uiextras.Grid('Parent',b);
-			e = uiextras.VButtonBox('Parent',b);
-			idx = {'c','d','e'};
+			if ~exist('parent','var')
+				parent = figure('Tag','gFig');
+			end
+			
+			handles.root = uiextras.BoxPanel('Parent',parent,'Title',obj.fullName,'TitleColor',[0.8 0.7 0.6]);
+			handles.hbox = uiextras.HBoxFlex('Parent', handles.root);
+			handles.grid1 = uiextras.Grid('Parent', handles.hbox);
+			handles.grid2 = uiextras.Grid('Parent', handles.hbox);
+			handles.grid3 = uiextras.VButtonBox('Parent',handles.hbox);
+			
+			
+			
+			idx = {'handles.grid1','handles.grid2','handles.grid3'};
 			pr = findAttributesandType(obj,'SetAccess','public','notlogical');
 			pr = sort(pr);
 			lp = ceil(length(pr)/2);
@@ -275,14 +281,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 						val = obj.(pr{cur});
 						if ischar(val)
 							val = regexprep(val,'\s+',' ');
-							uicontrol('Style','edit',...
+							handles.([pr{cur} '_char']) = uicontrol('Style','edit',...
 								'Parent',eval(idx{i}),...
 								'Tag',['panel' pr{cur}],...
 								'String',val);
 						elseif isnumeric(val)
 							val = num2str(val);
 							val = regexprep(val,'\s+',' ');
-							uicontrol('Style','edit',...
+							handles.([pr{cur} '_num']) = uicontrol('Style','edit',...
 								'Parent',eval(idx{i}),...
 								'Tag',['panel' pr{cur}],...
 								'String',val,...
@@ -310,7 +316,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			end
 			for j = 1:lp2
 				if j < length(pr2)
-					uicontrol('Style','checkbox',...
+					handles.([pr2{j} '_bool']) = uicontrol('Style','checkbox',...
 								'Parent',eval(idx{end}),...
 								'Tag',['panel' pr2{j}],...
 								'String',pr2{j});

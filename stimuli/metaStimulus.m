@@ -12,8 +12,10 @@ classdef metaStimulus < optickaCore
 		stimuli = {}
 		%> screenManager handle
 		screen
-		%>
+		%> verbose?
 		verbose = true
+		%> choose only 1 stimulus
+		choice = []
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -63,13 +65,8 @@ classdef metaStimulus < optickaCore
 		%> @return
 		% ===================================================================
 		function setup(obj,choice)
-			if ~exist('choice','var')
-				for i = 1:obj.n
-					setup(obj.stimuli{i},obj.screen);
-					%obj.stimuli{i}.setup(obj.screen);
-				end
-			elseif choice > 0 && choice <= obj.n
-				setup(obj.stimuli{choice},obj.screen);
+			for i = 1:obj.n
+				setup(obj.stimuli{i},obj.screen);
 			end
 		end
 		
@@ -80,12 +77,20 @@ classdef metaStimulus < optickaCore
 		%> @return
 		% ===================================================================
 		function update(obj,choice)
-			if ~exist('choice','var')
+			if exist('choice','var') %user forces a single stimulus
+				
+				update(obj.stimuli{choice});
+				
+			elseif ~isempty(obj.choice) %object forces a single stimulus
+				
+				update(obj.stimuli{obj.choice});
+				
+			else
+		
 				for i = 1:obj.n
 					update(obj.stimuli{i});
 				end
-			elseif choice > 0 && choice <= obj.n
-				update(obj.stimuli{choice});
+				
 			end
 		end
 		
@@ -96,12 +101,20 @@ classdef metaStimulus < optickaCore
 		%> @return
 		% ===================================================================
 		function draw(obj,choice)
-			if ~exist('choice','var')
+			if exist('choice','var') %user forces a single stimulus
+				
+				draw(obj.stimuli{choice});
+				
+			elseif ~isempty(obj.choice) %object forces a single stimulus
+				
+				draw(obj.stimuli{obj.choice});
+				
+			else
+				
 				for i = 1:obj.n
 					draw(obj.stimuli{i});
 				end
-			elseif choice > 0 && choice <= obj.n
-				draw(obj.stimuli{choice});
+				
 			end
 		end
 		
@@ -112,12 +125,26 @@ classdef metaStimulus < optickaCore
 		%> @return
 		% ===================================================================
 		function animate(obj,choice)
-			if ~exist('choice','var')
-				for i = 1:obj.n
-					animate(obj.stimuli{i});
-				end
-			elseif choice > 0 && choice <= obj.n
+			if exist('choice','var') %user forces a single stimulus
+				
 				animate(obj.stimuli{choice});
+				
+			elseif ~isempty(obj.choice) %object forces a single stimulus
+				
+				animate(obj.stimuli{obj.choice});
+				
+			else
+				
+				if isempty(obj.index)
+					for i = 1:obj.n
+						animate(obj.stimuli{i});
+					end
+				else
+					for i = 1:length(obj.index)
+						animate(obj.stimuli{obj.index(i)});
+					end
+				end
+				
 			end
 		end
 		
@@ -128,13 +155,11 @@ classdef metaStimulus < optickaCore
 		%> @return
 		% ===================================================================
 		function reset(obj,choice)
-			if ~exist('choice','var')
-				for i = 1:obj.n
-					reset(obj.stimuli{i});
-				end
-			elseif choice > 0 && choice <= obj.n
-				reset(obj.stimuli{choice});
+
+			for i = 1:obj.n
+				reset(obj.stimuli{i});
 			end
+			
 		end
 		
 		% ===================================================================
@@ -152,6 +177,7 @@ classdef metaStimulus < optickaCore
 				error([obj.name ':set stimuli | not a cell array or baseStimulus']);
 			end
 		end
+		
 		
 		% ===================================================================
 		%> @brief get n dependent methos
