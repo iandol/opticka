@@ -8,7 +8,12 @@
 %> values that PTB uses.
 %>
 % ========================================================================
-classdef baseStimulus < dynamicprops
+classdef baseStimulus < optickaCore & dynamicprops
+	
+	properties (Abstract = true)
+		%> the stimulus family
+		family
+	end
 	
 	properties
 		%> X Position in degrees relative to screen center
@@ -40,8 +45,6 @@ classdef baseStimulus < dynamicprops
 		texture
 		%> true or false, whether to draw() this object
 		isVisible = true
-		%> datestamp to initialise on setup
-		dateStamp
 		%> tick updates +1 on each draw, resets on each update
 		tick = 1
 	end
@@ -78,7 +81,7 @@ classdef baseStimulus < dynamicprops
 		screen = []
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase='family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|tick';
+		ignorePropertiesBase='name|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|tick';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -242,6 +245,78 @@ classdef baseStimulus < dynamicprops
 			close(s); %close screen
 			clear s fps benchmark runtime b bb i; %clear up a bit
 			reset(obj); %reset our stimulus ready for use again
+		end
+		
+		% ===================================================================
+		%> @brief Run Stimulus in a window to preview
+		%>
+		% ===================================================================
+		function a = makePanel(obj)
+			
+			f = figure('Tag','gFig');
+			a = uiextras.BoxPanel('Title',obj.name);
+			b = uiextras.HBoxFlex('Parent', a);
+			c = uiextras.Grid('Parent',b);
+			d = uiextras.Grid('Parent',b);
+			e = uiextras.VButtonBox('Parent',b);
+			idx = {'c','d','e'};
+			pr = findAttributesandType(obj,'SetAccess','public','notlogical');
+			pr = sort(pr);
+			lp = ceil(length(pr)/2);
+			
+			pr2 = findAttributesandType(obj,'SetAccess','public','logical');
+			pr2 = sort(pr2);
+			lp2 = length(pr2);
+
+			for i = 1:2
+				for j = 1:lp
+					cur = lp*(i-1)+j;
+					if cur <= length(pr);
+						val = obj.(pr{cur});
+						if ischar(val)
+							val = regexprep(val,'\s+',' ');
+							uicontrol('Style','edit',...
+								'Parent',eval(idx{i}),...
+								'Tag',['panel' pr{cur}],...
+								'String',val);
+						elseif isnumeric(val)
+							val = num2str(val);
+							val = regexprep(val,'\s+',' ');
+							uicontrol('Style','edit',...
+								'Parent',eval(idx{i}),...
+								'Tag',['panel' pr{cur}],...
+								'String',val,...
+								'FontName','Menlo');
+						else
+							uiextras.Empty('Parent',eval(idx{i}));
+						end
+					else
+						uiextras.Empty('Parent',eval(idx{i}));
+					end
+				end
+				for j = 1:lp
+					cur = lp*(i-1)+j;
+					if cur <= length(pr);
+						uicontrol('Style','text',...
+							'Parent',eval(idx{i}),...
+							'HorizontalAlignment','left',...
+							'String',pr{cur},...
+							'FontName','Georgia');
+					else
+						uiextras.Empty('Parent',eval(idx{i}));
+					end
+				end
+				eval([idx{i} '.ColumnSizes = [-1,-1]']);
+			end
+			for j = 1:lp2
+				if j < length(pr2)
+					uicontrol('Style','checkbox',...
+								'Parent',eval(idx{end}),...
+								'Tag',['panel' pr2{j}],...
+								'String',pr2{j});
+				end
+			end
+			
 		end
 		
 		

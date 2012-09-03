@@ -69,6 +69,14 @@ classdef gratingStimulus < baseStimulus
 		phaseIncrement = 0
 	end
 	
+	properties (SetAccess = protected, GetAccess = protected)
+		%>
+		exposedProperties={'sf','tf','method','angle','motionAngle','phase','rotationMethod',... 
+			'contrast','mask','gabor','driftDirection','speed','startPosition','aspectRatio',... 
+			'disableNorm','contrastMult','spatialConstant','sigma','useAlpha','smoothMethod',...
+			'correctPhase','squareWave','phaseReverseTime','phaseOfReverse'};
+	end
+	
 	properties (SetAccess = private, GetAccess = private)
 		%> as get methods are slow, we cache sf, then recalculate sf whenever
 		%> changeScale event is called

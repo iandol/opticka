@@ -47,7 +47,7 @@ classdef MousePointerHandler < handle
         
         function register( obj, widget, pointer )
             % We need to be sure to remove the entry if it dies
-            if isHGUsingMATLABClasses()
+            if uiextras.isHGUsingMATLABClasses()
                 % New style
                 l = event.listener( widget, 'ObjectBeingDestroyed', @obj.onWidgetBeingDestroyedEvent );
             else
