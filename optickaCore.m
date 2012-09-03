@@ -27,16 +27,19 @@ classdef optickaCore < handle
 		fullName = ''
 	end
 	
-	properties (SetAccess = protected, GetAccess = protected)
-		%> matlab version we are running on
+	properties (SetAccess = protected, GetAccess = protected, Transient = true)
+		%> Matlab version number, this is transient so it is not saved
 		mversion = 0
+	end
+	
+	properties (SetAccess = protected, GetAccess = protected)
 		%> class name
 		className = ''
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'name|verbose'
+		allowedProperties = 'name'
 	end
 	
 	%=======================================================================
@@ -58,7 +61,7 @@ classdef optickaCore < handle
 			obj.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
 			%obj.uuid = char(java.util.UUID.randomUUID); %128bit uuid;
 			if nargin>0
-				obj.parseArgs(args,obj.allowedProperties);
+				%obj.parseArgs(args,obj.allowedProperties);
 			end
 			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
 			obj.paths.whatami = obj.className;
@@ -237,9 +240,9 @@ classdef optickaCore < handle
 					in = 'undefined';
 				end
 				if exist('message','var')
-					fprintf(['---> ' obj.className ': ' message ' | ' in '\n']);
+					fprintf(['---> ' obj.fullName ': ' message ' | ' in '\n']);
 				else
-					fprintf(['---> ' obj.className ': ' in '\n']);
+					fprintf(['---> ' obj.fullName ': ' in '\n']);
 				end
 			end
 		end

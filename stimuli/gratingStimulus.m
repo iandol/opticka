@@ -61,7 +61,7 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		%> stimulus family
+		%stimulus family
 		family = 'grating'
 		%> scale is used when changing size as an independent variable to keep sf accurate
 		scale = 1
@@ -89,7 +89,7 @@ classdef gratingStimulus < baseStimulus
 			'disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod|' ...
 			'correctPhase|squareWave|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'scale|phaseIncrement|disableNorm|correctPhase|gabor|contrastMult|mask'
+		ignoreProperties = 'name|scale|phaseIncrement|disableNorm|correctPhase|gabor|contrastMult|mask'
 		%> how many frames between phase reverses
 		phaseCounter = 0
 	end

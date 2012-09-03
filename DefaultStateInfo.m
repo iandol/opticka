@@ -36,4 +36,4 @@ stateInfoTmp = { ...
 
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')
-clear preblankFcn stimFcn stimEntry correctFcn incorrectFcn
+clear singleStimulus preblankFcn stimFcn stimEntry correctFcn incorrectFcn

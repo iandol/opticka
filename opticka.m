@@ -21,7 +21,7 @@ classdef opticka < optickaCore
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		optickaVersion='0.711'
+		optickaVersion='0.721'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection, via TCP
@@ -30,7 +30,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> used to sanitise passed values on construction
-		allowedPropertiesConstructor='verbose' 
+			allowedProperties='verbose' 
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList = {'OKOmniplexIP','OKPixelsPerCm','OKAntiAliasing','OKbitDepth'};
 		%> any other prefs to save?
@@ -57,7 +57,7 @@ classdef opticka < optickaCore
 		function obj = opticka(args)
 			
 			if nargin>0
-				obj.parseArgs(args, obj.allowedPropertiesConstructor);
+				obj.parseArgs(args, obj.allowedProperties);
 			end
 			
 			obj.initialiseUI;
@@ -532,7 +532,6 @@ classdef opticka < optickaCore
 			
 			obj.r.stimuli{obj.r.stimuli.n+1} = gratingStimulus(tmp);
 			
-			obj.r.updatesList;
 			obj.refreshStimulusList;
 		end
 		
@@ -561,7 +560,6 @@ classdef opticka < optickaCore
 			
 			obj.r.stimuli{obj.r.stimuli.n+1} = barStimulus(tmp);
 			
-			obj.r.updatesList;
 			obj.refreshStimulusList;			
 		end
 		
@@ -592,7 +590,6 @@ classdef opticka < optickaCore
 			
 			obj.r.stimuli{obj.r.stimuli.n+1} = dotsStimulus(tmp);
 			
-			obj.r.updatesList;
 			obj.refreshStimulusList;
 		end
 		
@@ -619,7 +616,6 @@ classdef opticka < optickaCore
 			
 			obj.r.stimuli{obj.r.stimuli.n+1} = spotStimulus(tmp);
 			
-			obj.r.updatesList;
 			obj.refreshStimulusList;
 		end
 		
@@ -644,7 +640,6 @@ classdef opticka < optickaCore
 			
 			obj.r.stimuli{obj.r.stimuli.n+1} = textureStimulus(tmp);
 			
-			obj.r.updatesList;
 			obj.refreshStimulusList;
 		end
 		
@@ -1354,11 +1349,6 @@ classdef opticka < optickaCore
 				cmd = 'ping -c 1 -W 10 ';
 			end
 			[status,~]=system([cmd rAddress]);
-		end
-		
-		function lobj=loadobj(in)
-			fprintf('\n---> Opticka static loadobj: Loading opticka object...\n');
-			lobj = in;
 		end
 		
 		function centerGUI(uihandle)

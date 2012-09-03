@@ -67,10 +67,13 @@ classdef runExperiment < optickaCore
 		stateMachine
 	end
 	
-	properties (SetAccess = private, GetAccess = private)
+	properties (Hidden = true)
 		%> used to select single stimulus in training
 		stimList = []
 		thisStim = []
+	end
+	
+	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
 		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|logFrames|debug|verbose|screenSettings|benchmark'
 	end
@@ -379,9 +382,7 @@ classdef runExperiment < optickaCore
 						'correct'		'prestimulus'	1.5		stimEntry	correctFcn		[]; ...
 						'pause'			'prestimulus'	inf		[]			[]				[]; ...
 					};
-					
-					obj.trainingSingleStimulus = false;
-					
+				
 					clear blankFcn stimFcn stimEntry correctFcn incorrectFcn
 				
 				elseif ischar(obj.stateInfoFile)

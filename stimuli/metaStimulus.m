@@ -6,8 +6,6 @@ classdef metaStimulus < optickaCore
 	
 	%--------------------PUBLIC PROPERTIES----------%
 	properties 
-		%> stimulus family
-		family = 'meta'
 		%>cell array of stimuli to manage
 		stimuli = {}
 		%> screenManager handle
@@ -26,6 +24,8 @@ classdef metaStimulus < optickaCore
 	
 	%--------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = public) 
+		%> stimulus family
+		family = 'meta'
 		%> for heterogenous stimuli, we need a way to index into the stimulus so
 		%> we don't waste time doing this on each iteration
 		sList
@@ -53,9 +53,8 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function obj = metaStimulus(varargin)
 			if nargin == 0; varargin.name = 'metaStimulus';end
-			obj=obj@optickaCore(varargin); %superclass constructor
+			%obj=obj@optickaCore(varargin); %superclass constructor
 			if nargin>0; obj.parseArgs(varargin,obj.allowedProperties); end
-			if isempty(obj.name);obj.name = 'metaStimulus'; end
 		end
 		
 		% ===================================================================
@@ -135,14 +134,8 @@ classdef metaStimulus < optickaCore
 				
 			else
 				
-				if isempty(obj.index)
-					for i = 1:obj.n
-						animate(obj.stimuli{i});
-					end
-				else
-					for i = 1:length(obj.index)
-						animate(obj.stimuli{obj.index(i)});
-					end
+				for i = 1:obj.n
+					animate(obj.stimuli{i});
 				end
 				
 			end
@@ -174,7 +167,7 @@ classdef metaStimulus < optickaCore
 			elseif isa(in,'baseStimulus') %we are a single opticka stimulus
 				obj.stimuli = {in};
 			else
-				error([obj.name ':set stimuli | not a cell array or baseStimulus']);
+				error([obj.name ':set stimuli | not a cell array or baseStimulus child']);
 			end
 		end
 		

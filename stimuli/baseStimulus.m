@@ -254,7 +254,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function handles = makePanel(obj,parent)
 			
 			if ~exist('parent','var')
-				parent = figure('Tag','gFig');
+				parent = figure('Tag','gFig',...
+					'Name', [obj.fullName 'Properties'], ...
+					'MenuBar', 'none', ...
+					'NumberTitle', 'off');
 			end
 			
 			handles.root = uiextras.BoxPanel('Parent',parent,'Title',obj.fullName,'TitleColor',[0.8 0.7 0.6]);
@@ -262,7 +265,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 			handles.grid1 = uiextras.Grid('Parent', handles.hbox);
 			handles.grid2 = uiextras.Grid('Parent', handles.hbox);
 			handles.grid3 = uiextras.VButtonBox('Parent',handles.hbox);
-			
 			
 			
 			idx = {'handles.grid1','handles.grid2','handles.grid3'};
@@ -477,60 +479,5 @@ classdef baseStimulus < optickaCore & dynamicprops
 			end
 		end
 		
-		% ===================================================================
-		%> @brief Sets properties from a structure or normal arguments,
-		%> ignores invalid properties
-		%>
-		%> @param args input structure
-		%> @param allowedProperties properties possible to set on construction
-		% ===================================================================
-		function parseArgs(obj, args, allowedProperties)
-			allowedProperties = ['^(' allowedProperties ')$'];
-			
-			while iscell(args) && length(args) == 1
-				args = args{1};
-			end
-			
-			if iscell(args)
-				if mod(length(args),2) == 1 % odd
-					args = args(1:end-1); %remove last arg
-				end
-				odd = logical(mod(1:length(args),2));
-				even = logical(abs(odd-1));
-				args = cell2struct(args(even),args(odd),2);
-			end
-			
-			if isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
-					if regexp(fnames{i},allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in constructor');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					end
-				end
-			end
-			
-		end
-		
-		% ===================================================================
-		%> @brief Prints messages dependent on verbosity
-		%>
-		%> Prints messages dependent on verbosity
-		%> @param obj this instance object
-		%> @param in the calling function
-		%> @param message the message that needs printing to command window
-		% ===================================================================
-		function salutation(obj,in,message)
-			if obj.verbose==true
-				if ~exist('in','var')
-					in = 'undefined';
-				end
-				if exist('message','var')
-					fprintf(['---> ' obj.family ': ' message ' | ' in '\n']);
-				else
-					fprintf(['---> ' obj.family ': ' in '\n']);
-				end
-			end
-		end
 	end%---END PRIVATE METHODS---%
 end
