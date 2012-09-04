@@ -498,6 +498,10 @@ classdef runExperiment < optickaCore
 			
 			obj.runLog = timeLogger();
 			
+			if isempty(obj.stimuli) || ~isa(obj.stimuli,'metaStimulus')
+				obj.stimuli = metaStimulus();
+			end
+			
 			if isempty(regexpi('noscreen',config)) && isempty(obj.screen)
 				obj.screen = screenManager(obj.screenSettings);
 			end

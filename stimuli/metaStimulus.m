@@ -166,6 +166,8 @@ classdef metaStimulus < optickaCore
 				obj.stimuli = in;
 			elseif isa(in,'baseStimulus') %we are a single opticka stimulus
 				obj.stimuli = {in};
+			elseif isempty(in)
+				obj.stimuli = {[]};
 			else
 				error([obj.name ':set stimuli | not a cell array or baseStimulus child']);
 			end
@@ -193,8 +195,8 @@ classdef metaStimulus < optickaCore
 				case '.'
 					[varargout{1:nargout}] = builtin('subsref',obj,s);
 				case '()'
-					error([obj.name ':subsref'],'Not a supported subscripted reference')
-					%[varargout{1:nargout}] = builtin('subsref',obj,s);
+					%error([obj.name ':subsref'],'Not a supported subscripted reference')
+					[varargout{1:nargout}] = builtin('subsref',obj.stimuli,s);
 				case '{}'
 					[varargout{1:nargout}] = builtin('subsref',obj.stimuli,s);
 			end
@@ -216,6 +218,8 @@ classdef metaStimulus < optickaCore
 					sout = builtin('subsasgn',obj.stimuli,s,val);
 					if ~isempty(sout)
 						obj.stimuli = sout;
+					else
+						obj.stimuli = {};
 					end
 				case '{}'
 					sout = builtin('subsasgn',obj.stimuli,s,val);
@@ -224,6 +228,8 @@ classdef metaStimulus < optickaCore
 							sout = sout{1};
 						end
 						obj.stimuli = sout;
+					else
+						obj.stimuli = {};
 					end
 			end
 		end

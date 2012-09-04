@@ -355,8 +355,8 @@ classdef opticka < optickaCore
 				olds = get(obj.h.OKOptickaVersion,'String');
 				set(obj.h.OKOptickaVersion,'String','Initialising Stimulus and Task objects...')
 				%drawnow
-				obj.r = runExperiment;
-				obj.r.initialise(); % set up the runExperiment object
+				obj.r = runExperiment();
+				initialise(obj.r); % set up the runExperiment object
 				s=cell(obj.r.screen.maxScreen+1,1);
 				for i=0:obj.r.screen.maxScreen
 					s{i+1} = num2str(i);
@@ -678,6 +678,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function addVariable(obj)
 			
+			validate(obj.r.task);
 			revertN = obj.r.task.nVars;
 			
 			try
@@ -710,11 +711,13 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function deleteVariable(obj)
 			if isobject(obj.r.task)
+				nV = obj.r.task.nVar;
 				val = obj.gv(obj.h.OKVarList);
 				if isempty(val);val=1;end %sometimes guide disables list, need workaround
 				if val <= length(obj.r.task.nVar);
-					obj.r.task.nVar(val)=[];
-
+					nV(val)=[];
+					obj.r.task.nVar = [];
+					obj.r.task.nVar = nV;
 					if obj.r.task.nVars > 0
 						obj.r.task.randomiseStimuli;
 					end

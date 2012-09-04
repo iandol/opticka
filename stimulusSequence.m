@@ -248,6 +248,22 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		% ===================================================================
 		function validate(obj)
 			
+			vin = obj.nVar;
+			vout = vin;
+			obj.nVar = [];
+			shift = 0;
+			
+			for i = 1:length(vin)
+				if isempty(vin(i).name)
+					vout(i + shift) = [];
+					shift = shift-1;
+				end
+			end
+			
+			obj.nVar = vout;
+			
+			clear vin vout shift
+			
 			if obj.nVars == 0
 				obj.outIndex = 1; %there is only one stimulus, no variables
 			end
@@ -261,7 +277,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> appropriately.
 		% ===================================================================
 		function set.nVar(obj,invalue)
-			if isempty(obj.isLoading) %this stops set being called unexpectedly
+			if obj.isLoading == false %this stops set being called unexpectedly
 				obj.nVar = invalue;
 				return;
 			end
