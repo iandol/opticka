@@ -8,7 +8,12 @@
 %> values that PTB uses.
 %>
 % ========================================================================
-classdef baseStimulus < dynamicprops
+classdef baseStimulus < optickaCore & dynamicprops
+	
+	properties (Abstract = true, SetAccess = private)
+		%> the stimulus family
+		family
+	end
 	
 	properties
 		%> X Position in degrees relative to screen center
@@ -40,8 +45,6 @@ classdef baseStimulus < dynamicprops
 		texture
 		%> true or false, whether to draw() this object
 		isVisible = true
-		%> datestamp to initialise on setup
-		dateStamp
 		%> tick updates +1 on each draw, resets on each update
 		tick = 1
 	end
@@ -78,7 +81,7 @@ classdef baseStimulus < dynamicprops
 		screen = []
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase='family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|tick';
+		ignorePropertiesBase='name|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|tick';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -244,6 +247,86 @@ classdef baseStimulus < dynamicprops
 			reset(obj); %reset our stimulus ready for use again
 		end
 		
+		% ===================================================================
+		%> @brief make a GUI properties panel for this object
+		%>
+		% ===================================================================
+		function handles = makePanel(obj,parent)
+			
+			if ~exist('parent','var')
+				parent = figure('Tag','gFig',...
+					'Name', [obj.fullName 'Properties'], ...
+					'MenuBar', 'none', ...
+					'NumberTitle', 'off');
+			end
+			
+			handles.root = uiextras.BoxPanel('Parent',parent,'Title',obj.fullName,'TitleColor',[0.8 0.7 0.6]);
+			handles.hbox = uiextras.HBoxFlex('Parent', handles.root);
+			handles.grid1 = uiextras.Grid('Parent', handles.hbox);
+			handles.grid2 = uiextras.Grid('Parent', handles.hbox);
+			handles.grid3 = uiextras.VButtonBox('Parent',handles.hbox);
+			
+			
+			idx = {'handles.grid1','handles.grid2','handles.grid3'};
+			pr = findAttributesandType(obj,'SetAccess','public','notlogical');
+			pr = sort(pr);
+			lp = ceil(length(pr)/2);
+			
+			pr2 = findAttributesandType(obj,'SetAccess','public','logical');
+			pr2 = sort(pr2);
+			lp2 = length(pr2);
+
+			for i = 1:2
+				for j = 1:lp
+					cur = lp*(i-1)+j;
+					if cur <= length(pr);
+						val = obj.(pr{cur});
+						if ischar(val)
+							val = regexprep(val,'\s+',' ');
+							handles.([pr{cur} '_char']) = uicontrol('Style','edit',...
+								'Parent',eval(idx{i}),...
+								'Tag',['panel' pr{cur}],...
+								'String',val);
+						elseif isnumeric(val)
+							val = num2str(val);
+							val = regexprep(val,'\s+',' ');
+							handles.([pr{cur} '_num']) = uicontrol('Style','edit',...
+								'Parent',eval(idx{i}),...
+								'Tag',['panel' pr{cur}],...
+								'String',val,...
+								'FontName','Menlo');
+						else
+							uiextras.Empty('Parent',eval(idx{i}));
+						end
+					else
+						uiextras.Empty('Parent',eval(idx{i}));
+					end
+				end
+				for j = 1:lp
+					cur = lp*(i-1)+j;
+					if cur <= length(pr);
+						uicontrol('Style','text',...
+							'Parent',eval(idx{i}),...
+							'HorizontalAlignment','left',...
+							'String',pr{cur},...
+							'FontName','Georgia');
+					else
+						uiextras.Empty('Parent',eval(idx{i}));
+					end
+				end
+				eval([idx{i} '.ColumnSizes = [-1,-1]']);
+			end
+			for j = 1:lp2
+				if j < length(pr2)
+					handles.([pr2{j} '_bool']) = uicontrol('Style','checkbox',...
+								'Parent',eval(idx{end}),...
+								'Tag',['panel' pr2{j}],...
+								'String',pr2{j});
+				end
+			end
+			
+		end
+		
 		
 	end %---END PUBLIC METHODS---%
 	
@@ -396,60 +479,5 @@ classdef baseStimulus < dynamicprops
 			end
 		end
 		
-		% ===================================================================
-		%> @brief Sets properties from a structure or normal arguments,
-		%> ignores invalid properties
-		%>
-		%> @param args input structure
-		%> @param allowedProperties properties possible to set on construction
-		% ===================================================================
-		function parseArgs(obj, args, allowedProperties)
-			allowedProperties = ['^(' allowedProperties ')$'];
-			
-			while iscell(args) && length(args) == 1
-				args = args{1};
-			end
-			
-			if iscell(args)
-				if mod(length(args),2) == 1 % odd
-					args = args(1:end-1); %remove last arg
-				end
-				odd = logical(mod(1:length(args),2));
-				even = logical(abs(odd-1));
-				args = cell2struct(args(even),args(odd),2);
-			end
-			
-			if isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
-					if regexp(fnames{i},allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in constructor');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					end
-				end
-			end
-			
-		end
-		
-		% ===================================================================
-		%> @brief Prints messages dependent on verbosity
-		%>
-		%> Prints messages dependent on verbosity
-		%> @param obj this instance object
-		%> @param in the calling function
-		%> @param message the message that needs printing to command window
-		% ===================================================================
-		function salutation(obj,in,message)
-			if obj.verbose==true
-				if ~exist('in','var')
-					in = 'undefined';
-				end
-				if exist('message','var')
-					fprintf(['---> ' obj.family ': ' message ' | ' in '\n']);
-				else
-					fprintf(['---> ' obj.family ': ' in '\n']);
-				end
-			end
-		end
 	end%---END PRIVATE METHODS---%
 end

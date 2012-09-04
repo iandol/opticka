@@ -6,7 +6,6 @@
 % ========================================================================	
 classdef textureStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		family = 'texture'
 		type = 'picture'
 		contrast = 1
 		scale = 1
@@ -16,6 +15,7 @@ classdef textureStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		family = 'texture'
 		matrix
 	end
 	

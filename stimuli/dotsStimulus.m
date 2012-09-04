@@ -75,7 +75,7 @@ classdef dotsStimulus < baseStimulus
 		%> regexes for object management during construction
 		allowedProperties='msrcMode|mdstMode|type|density|dotSize|colourType|coherence|dotType|kill|mask|maskSmoothing|maskColour';
 		%> regexes for object management during setup
-		ignoreProperties='family|xy|dxdy|colours|mask|maskTexture|maskColour|colourType|msrcMode|mdstMode'
+		ignoreProperties='name|family|xy|dxdy|colours|mask|maskTexture|maskColour|colourType|msrcMode|mdstMode'
 	end
 	
 	%=======================================================================

@@ -15,15 +15,13 @@ classdef opticka < optickaCore
 		store
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		%> history of display objects
 		history
-		%> storage of various paths
-		paths
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		optickaVersion='0.711'
+		optickaVersion='0.721'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection, via TCP
@@ -32,7 +30,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> used to sanitise passed values on construction
-		allowedPropertiesConstructor='verbose' 
+			allowedProperties='verbose' 
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList = {'OKOmniplexIP','OKPixelsPerCm','OKAntiAliasing','OKbitDepth'};
 		%> any other prefs to save?
@@ -59,7 +57,7 @@ classdef opticka < optickaCore
 		function obj = opticka(args)
 			
 			if nargin>0
-				obj.parseArgs(args, obj.allowedPropertiesConstructor);
+				obj.parseArgs(args, obj.allowedProperties);
 			end
 			
 			obj.initialiseUI;
@@ -272,6 +270,7 @@ classdef opticka < optickaCore
 					javax.swing.UIManager.setLookAndFeel(obj.store.newlook);
 				end
 				uihandle=opticka_ui; %our GUI file
+				obj.centerGUI(uihandle);
 				obj.h=guidata(uihandle);
 				obj.h.uihandle = uihandle; %save handle in a less cryptically names field
 				guidata(uihandle,obj.h); %save back this change
@@ -448,9 +447,8 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function clearStimulusList(obj)
 			if ~isempty(obj.r)
-				if ~isempty(obj.r.stimulus)
-					obj.r.stimulus = {};
-					obj.r.updatesList();
+				if ~isempty(obj.r.stimuli)
+					obj.r.stimuli = metaStimulus();
 				end
 			end
 			set(obj.h.OKStimList,'Value',1);
@@ -466,7 +464,7 @@ classdef opticka < optickaCore
 			if ~isempty(obj.r)
 				if ~isempty(obj.r.task)
 					obj.r.task = [];
-					end
+				end
 			end
 			set(obj.h.OKVarList,'Value',1);
 			set(obj.h.OKVarList,'String','');
@@ -478,19 +476,11 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function deleteStimulus(obj)
-			n = length(obj.r.stimulus); %get what stimulus fields we have
-			if ~isempty(n) && n > 0
+			if ~isempty(obj.r.stimuli.n) && obj.r.stimuli.n > 0
 				val=obj.gv(obj.h.OKStimList);
-				obj.r.stimulus(val) = [];
-				if isempty(obj.r.stimulus)
-					obj.r.stimulus={};
-				end
-				
-				obj.r.updatesList;
-				
+				obj.r.stimuli(val) = [];
 				obj.refreshStimulusList;
 			else
-				obj.r.updatesList;
 				set(obj.h.OKStimList,'Value',1);
 				set(obj.h.OKStimList,'String','');
 			end
@@ -540,9 +530,8 @@ classdef opticka < optickaCore
 			tmp.phaseReverseTime = obj.gd(obj.h.OKPanelGratingphaseReverseTime);
 			tmp.phaseOfReverse = obj.gd(obj.h.OKPanelGratingphaseOfReverse);
 			
-			obj.r.stimulus{obj.r.sList.n+1} = gratingStimulus(tmp);
+			obj.r.stimuli{obj.r.stimuli.n+1} = gratingStimulus(tmp);
 			
-			obj.r.updatesList;
 			obj.refreshStimulusList;
 		end
 		
@@ -569,9 +558,8 @@ classdef opticka < optickaCore
 			tmp.alpha = obj.gd(obj.h.OKPanelBaralpha);
 			tmp.speed = obj.gd(obj.h.OKPanelBarspeed);
 			
-			obj.r.stimulus{obj.r.sList.n+1} = barStimulus(tmp);
+			obj.r.stimuli{obj.r.stimuli.n+1} = barStimulus(tmp);
 			
-			obj.r.updatesList;
 			obj.refreshStimulusList;			
 		end
 		
@@ -600,9 +588,8 @@ classdef opticka < optickaCore
 			v = obj.gv(obj.h.OKPanelDotscolourType);
 			tmp.colourType = obj.gs(obj.h.OKPanelDotscolourType,v);
 			
-			obj.r.stimulus{obj.r.sList.n+1} = dotsStimulus(tmp);
+			obj.r.stimuli{obj.r.stimuli.n+1} = dotsStimulus(tmp);
 			
-			obj.r.updatesList;
 			obj.refreshStimulusList;
 		end
 		
@@ -627,9 +614,8 @@ classdef opticka < optickaCore
 			tmp.type = obj.gs(obj.h.OKPanelSpottype,v);
 			tmp.flashOn = logical(obj.gv(obj.h.OKPanelSpotflashOn));
 			
-			obj.r.stimulus{obj.r.sList.n+1} = spotStimulus(tmp);
+			obj.r.stimuli{obj.r.stimuli.n+1} = spotStimulus(tmp);
 			
-			obj.r.updatesList;
 			obj.refreshStimulusList;
 		end
 		
@@ -652,9 +638,8 @@ classdef opticka < optickaCore
 			%tmp.type = obj.gs(obj.h.OKPanelTexturetype,v);
 			tmp.fileName = obj.gs(obj.h.OKPanelTexturefileName);
 			
-			obj.r.stimulus{obj.r.sList.n+1} = textureStimulus(tmp);
+			obj.r.stimuli{obj.r.stimuli.n+1} = textureStimulus(tmp);
 			
-			obj.r.updatesList;
 			obj.refreshStimulusList;
 		end
 		
@@ -665,7 +650,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function editStimulus(obj)
 			v=obj.gv(obj.h.OKStimList);
-			family=obj.r.stimulus{v}.family;
+			family=obj.r.stimuli{v}.family;
 			switch family
 				case 'grating'
 					fragment = 'OKPanelGrating';
@@ -975,17 +960,17 @@ classdef opticka < optickaCore
 		% ===================================================================
 		%> @brief Load Protocol
 		%> Load Protocol
-		%> @param uiload do we show a uiload dialog?
+		%> @param ui do we show a uiload dialog?
 		% ===================================================================
 		function loadProtocol(obj,ui)
 			
 			file = [];
 			
 			if ~exist('ui','var') || isempty(ui)
-				ui=0;
+				ui = false;
 			end
 			
-			if ui == 0
+			if ui == false
 				v = obj.gv(obj.h.OKProtocolsList);
 				file = obj.gs(obj.h.OKProtocolsList,v);
 			end
@@ -1000,9 +985,24 @@ classdef opticka < optickaCore
 			end
 			
 			if exist('tmp','var') && isa(tmp,'opticka')
-				
-				if iscell(tmp.r.stimulus);
-					obj.r.stimulus = tmp.r.stimulus;
+				if isprop(tmp.r,'stimuli')
+					if isa(tmp.r.stimuli,'metaStimulus')
+						obj.r.stimuli = tmp.r.stimuli;
+					elseif iscell(tmp.r.stimuli)
+						obj.r.stimuli = metaStimulus();
+						obj.r.stimuli.stimuli = tmp.r.stimuli;
+					else
+						clear tmp;
+						errordlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
+						error('No stimulus found in protocol!!!');
+					end
+				elseif isprop(tmp.r,'stimulus')
+					if iscell(tmp.r.stimulus)
+						obj.r.stimuli = metaStimulus();
+						obj.r.stimuli.stimuli = tmp.r.stimulus;
+					elseif isa(tmp.r.stimulus,'metaStimulus')
+						obj.r.stimuli = tmp.r.stimulus;
+					end
 				else
 					clear tmp;
 					errordlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
@@ -1058,7 +1058,6 @@ classdef opticka < optickaCore
 				
 				obj.getScreenVals;
 				obj.getTaskVals;
-				obj.r.updatesList;
 				obj.refreshStimulusList;
 				obj.refreshVariableList;
 				obj.getScreenVals;
@@ -1069,7 +1068,7 @@ classdef opticka < optickaCore
 					set(obj.h.OKCopyVariable,'Enable','on');
 					set(obj.h.OKEditVariable,'Enable','on');
 				end
-				if ~isempty(obj.r.stimulus)
+				if obj.r.stimuli.n > 0
 					set(obj.h.OKDeleteStimulus,'Enable','on');
 					set(obj.h.OKModifyStimulus,'Enable','on');
 					set(obj.h.OKInspectStimulus,'Enable','on');
@@ -1125,9 +1124,9 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function refreshStimulusList(obj)
 			pos = get(obj.h.OKStimList, 'Value');
-			str = cell(obj.r.sList.n,1);
-			for i=1:obj.r.sList.n
-				s = obj.r.stimulus{i};
+			str = cell(obj.r.stimuli.n,1);
+			for i=1:obj.r.stimuli.n
+				s = obj.r.stimuli{i};
 				switch s.family
 					case 'grating'
 						if s.gabor == 0
@@ -1352,9 +1351,17 @@ classdef opticka < optickaCore
 			[status,~]=system([cmd rAddress]);
 		end
 		
-		function lobj=loadobj(in)
-			fprintf('\n---> Opticka static loadobj: Loading opticka object...\n');
-			lobj = in;
+		function centerGUI(uihandle)
+			pos=get(uihandle,'Position');
+			size=[pos(3) pos(4)];
+			scr=get(0,'ScreenSize');
+			width=scr(3);
+			height=scr(4);
+			x=(width/2)-(size(1)/2);
+			y=(height/2)-((size(2)+40)/2);
+			if x < 1; x=0; end
+			if y < 1; y=0; end
+			set(uihandle,'Position',[x y size(1) size(2)]);
 		end
 	end
 	

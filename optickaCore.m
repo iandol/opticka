@@ -1,6 +1,6 @@
 % ========================================================================
 %> @brief optickaCore 
-%> METASTIMULUS a collection of stimuli, wrapped in one structure
+%> optickaCore baseclass derived from handle
 % ========================================================================
 classdef optickaCore < handle
 	
@@ -14,27 +14,32 @@ classdef optickaCore < handle
 		verbose
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		%> clock() dateStamp set on construction
 		dateStamp
 		%> universal ID
-		uuid
+		uuid = 0
+		%> storage of various paths
+		paths = struct()
 	end
 	
 	properties (SetAccess = private, Dependent = true)
-		
+		fullName = ''
+	end
+	
+	properties (SetAccess = protected, GetAccess = protected, Transient = true)
+		%> Matlab version number, this is transient so it is not saved
+		mversion = 0
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
-		%> matlab version we are running on
-		mversion
 		%> class name
-		className
+		className = ''
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'name|verbose'
+		allowedProperties = 'name'
 	end
 	
 	%=======================================================================
@@ -51,14 +56,16 @@ classdef optickaCore < handle
 		%> @return instance of class.
 		% ===================================================================
 		function obj = optickaCore(args)
+			obj.className = class(obj);
 			obj.dateStamp = clock();
 			obj.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
 			%obj.uuid = char(java.util.UUID.randomUUID); %128bit uuid;
 			if nargin>0
-				obj.parseArgs(args,obj.allowedProperties);
+				%obj.parseArgs(args,obj.allowedProperties);
 			end
 			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
-			obj.className = class(obj);
+			obj.paths.whatami = obj.className;
+			obj.paths.root = fileparts(which(mfilename));
 		end
 		
 		% ===================================================================
@@ -66,12 +73,111 @@ classdef optickaCore < handle
 		%> @param
 		%> @return
 		% ===================================================================
-		function name = get.name(obj)
+		function name = get.fullName(obj)
 			if isempty(obj.name)
 				name = [obj.className '#' obj.uuid];
 			else
 				name = [obj.name ' <' obj.className '#' obj.uuid '>'];
 			end
+		end
+		
+		% ===================================================================
+		%> @brief concatenate the name with a uuid at get.
+		%> @param
+		%> @return
+		% ===================================================================
+		function list = findAttributes(obj, attrName, aName)
+		   % Determine if first input is object or class name
+		   if ischar(obj)
+			  mc = meta.class.fromName(obj);
+		   elseif isobject(obj)
+			  mc = metaclass(obj);
+		   end
+
+		   % Initial size and preallocate
+		   ii = 0; nProps = length(mc.PropertyList);
+		   cl_array = cell(1,nProps);
+
+		   % For each property, check the value of the queried attribute
+		   for  c = 1:nProps
+
+			  % Get a meta.property object from the meta.class object
+			  mp = mc.PropertyList(c); 
+
+			  % Determine if the specified attribute is valid on this object
+			  if isempty (findprop(mp,attrName))
+				 error('Not a valid attribute name')
+			  end
+			  attrValue = mp.(attrName);
+
+			  % If the attribute is set or has the specified value,
+			  % save its name in cell array
+			  if attrValue
+				 if islogical(attrValue) || strcmp(aName,attrValue)
+					ii = ii + 1;
+					cl_array(ii) = {mp.Name}; 
+				 end
+			  end
+		   end
+		   % Return used portion of array
+		   list = cl_array(1:ii);
+		end
+		
+		% ===================================================================
+		%> @brief concatenate the name with a uuid at get.
+		%> @param
+		%> @return
+		% ===================================================================
+		function list = findAttributesandType(obj, attrName, aName, type)
+		   % Determine if first input is object or class name
+		   if ischar(obj)
+			  mc = meta.class.fromName(obj);
+		   elseif isobject(obj)
+			  mc = metaclass(obj);
+		   end
+
+		   % Initial size and preallocate
+		   ii = 0; nProps = length(mc.PropertyList);
+		   cl_array = cell(1,nProps);
+
+		   % For each property, check the value of the queried attribute
+		   for  c = 1:nProps
+
+			  % Get a meta.property object from the meta.class object
+			  mp = mc.PropertyList(c); 
+
+			  % Determine if the specified attribute is valid on this object
+			  if isempty (findprop(mp,attrName))
+				 error('Not a valid attribute name')
+			  end
+			  attrValue = mp.(attrName);
+
+			  % If the attribute is set or has the specified value,
+			  % save its name in cell array
+			  if attrValue
+				 if islogical(attrValue) || strcmp(aName,attrValue)
+					 val = obj.(mp.Name);
+					 if islogical(val) && strcmpi(type,'logical')
+						 ii = ii + 1;
+						 cl_array(ii) = {mp.Name};
+					 elseif ~islogical(val) && strcmpi(type,'notlogical')
+						 ii = ii + 1;
+						 cl_array(ii) = {mp.Name};
+					 elseif ischar(val) && strcmpi(type,'string')
+						 ii = ii + 1;
+						 cl_array(ii) = {mp.Name};
+					elseif isnumeric(val) && strcmpi(type,'number')
+						ii = ii + 1;
+						cl_array(ii) = {mp.Name};
+					 elseif strcmpi(type,'any')
+						 ii = ii + 1;
+						cl_array(ii) = {mp.Name};
+					 end
+				 end
+			  end
+		   end
+		   % Return used portion of array
+		   list = cl_array(1:ii);
 		end
 		
 	end
@@ -134,11 +240,14 @@ classdef optickaCore < handle
 					in = 'undefined';
 				end
 				if exist('message','var')
-					fprintf(['---> ' obj.className ': ' message ' | ' in '\n']);
+					fprintf(['---> ' obj.fullName ': ' message ' | ' in '\n']);
 				else
-					fprintf(['---> ' obj.className ': ' in '\n']);
+					fprintf(['---> ' obj.fullName ': ' in '\n']);
 				end
 			end
 		end
+		
+		
+		
 	end
 end

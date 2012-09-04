@@ -726,7 +726,6 @@ function OKAddStimulus_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.r.updatesList; %initialise it.
 	switch o.store.visibleStimulus
 		case 'grating'
 			o.addGrating;
@@ -739,7 +738,7 @@ if isappdata(handles.output,'o')
 		case 'texture'
 			o.addTexture;
 	end
-	if ~isempty(o.r.stimulus)
+	if ~isempty(o.r.stimuli)
 		set(handles.OKDeleteStimulus,'Enable','on');
 		set(handles.OKModifyStimulus,'Enable','on');
 		set(handles.OKStimulusUp,'Enable','on');
@@ -757,7 +756,7 @@ function OKDeleteStimulus_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.deleteStimulus;
-	if isempty(o.r.stimulus)
+	if isempty(o.r.stimuli)
 		set(handles.OKDeleteStimulus,'Enable','off');
 		set(handles.OKModifyStimulus,'Enable','off');
 		set(handles.OKStimulusUp,'Enable','off');
@@ -789,15 +788,14 @@ function OKStimulusDown_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	value = get(handles.OKStimList,'Value'); %where are we in the stimulus list
-	slength = length(o.r.stimulus);
+	slength = length(o.r.stimuli);
 	if value < slength
 		idx = 1:slength;
 		idx2 = idx;
 		idx2(value) = idx2(value)+1;
 		idx2(value+1) = idx2(value+1)-1;
-		o.r.stimulus(idx) = o.r.stimulus(idx2);
+		o.r.stimuli(idx) = o.r.stimuli(idx2);
 		set(handles.OKStimList,'Value',value+1);
-		o.r.updatesList;
 		o.modifyStimulus;
 	end
 end
@@ -807,15 +805,14 @@ function OKStimulusUp_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	value = get(handles.OKStimList,'Value'); %where are we in the stimulus list
-	slength = length(o.r.stimulus);
+	slength = length(o.r.stimuli);
 	if value > 1
 		idx = 1:slength;
 		idx2 = idx;
 		idx2(value) = idx2(value)-1;
 		idx2(value-1) = idx2(value-1)+1;
-		o.r.stimulus(idx) = o.r.stimulus(idx2);
+		o.r.stimuli(idx) = o.r.stimuli(idx2);
 		set(handles.OKStimList,'Value',value-1);
-		o.r.updatesList;
 		o.modifyStimulus;
 	end
 end
@@ -828,8 +825,8 @@ function OKStimulusRun_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
-	if v > 0 && isobject(o.r.stimulus{v})
-		o.r.stimulus{v}.run();
+	if v > 0 && isobject(o.r.stimuli{v})
+		run(o.r.stimuli{v});
 	end
 end
 
@@ -841,8 +838,8 @@ function OKStimulusRunBenchmark_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
-	if v > 0 && isobject(o.r.stimulus{v})
-		o.r.stimulus{v}.run(true);
+	if v > 0 && isobject(o.r.stimuli{v})
+		run(o.r.stimuli{v}, true);
 	end
 end
 
@@ -853,7 +850,7 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
 	if v > 0;
-		uiinspect(o.r.stimulus{v});
+		uiinspect(o.r.stimuli{v});
 	end
 end
 
@@ -874,7 +871,7 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
 	if v > 0;
-		seditor(o.r.stimulus{v}, handles.output);
+		seditor(o.r.stimuli{v}, handles.output);
 	end
 	
 end

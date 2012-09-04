@@ -1,4 +1,4 @@
-classdef stimulusSequence < dynamicprops
+classdef stimulusSequence < optickaCore & dynamicprops
 	properties
 		%> whether to randomise (true) or run sequentially (false)
 		randomise = true
@@ -72,7 +72,7 @@ classdef stimulusSequence < dynamicprops
 		%> handles from obj.showLog
 		h
 		%> properties allowed during initial construction
-		allowedProperties='^(randomise|nVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps)$'
+		allowedProperties='randomise|nVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'
 		%> used to handle problems with dependant property nVar: the problem is
 		%> that set.nVar gets called before static loadobj, and therefore we need
 		%> to handle this differently. Initially set to empty, set to true when
@@ -89,10 +89,6 @@ classdef stimulusSequence < dynamicprops
 				'stimIsDots',[],'stimIsFlashing',[]}
 	end
 	
-	properties (SetAccess = private, GetAccess = private, Transient = true)
-		%> Matlab version number
-		mversion = 0
-	end
 	
 	methods
 		% ===================================================================
@@ -398,52 +394,6 @@ classdef stimulusSequence < dynamicprops
 	methods ( Access = private ) % PRIVATE METHODS
 	%=======================================================================
 
-		% ===================================================================
-		%> @brief Prints messages dependent on verbosity
-		%>
-		%> Prints messages dependent on verbosity
-		%> @param in the calling function
-		%> @param message the message that needs printing to command window
-		% ===================================================================
-		function salutation(obj,in,message)
-			if obj.verbose==1
-				if ~exist('in','var')
-					in = 'random user';
-				end
-				if exist('message','var')
-					fprintf(['---> stimulusSequence: ' message ' | ' in '\n']);
-				else
-					fprintf(['---> stimulusSequence: ' in '\n']);
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Sets properties from a structure, ignores invalid properties
-		%>
-		%> @param args input structure
-		% ===================================================================
-		function parseArgs(obj, args, allowedProperties)
-			allowedProperties = ['^(' allowedProperties ')$'];
-			while iscell(args) && length(args) == 1
-				args = args{1};
-			end
-			if iscell(args)
-				if mod(length(args),2) == 1 % odd
-					args = args(1:end-1); %remove last arg
-				end
-				odd = logical(mod(1:length(args),2));
-				even = logical(abs(odd-1));
-				args = cell2struct(args(even),args(odd),2);
-			end
-			fnames = fieldnames(args); %find our argument names
-			for i=1:length(fnames);
-				if regexp(fnames{i},allowedProperties) %only set if allowed property
-					obj.salutation(fnames{i},'Configuring setting in constructor');
-					obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-				end
-			end
-		end
 		
 	end
 	

@@ -18,9 +18,8 @@
 classdef runExperiment < optickaCore
 	
 	properties
-		%> a cell group of stimulus objects, TODO: use a stimulusManager class to
-		%> hold these
-		stimulus
+		%> a metaStimulus class holding our stimulus objects
+		stimuli
 		%> the stimulusSequence object(s) for the task
 		task
 		%> screen manager object
@@ -58,9 +57,6 @@ classdef runExperiment < optickaCore
 		runLog
 		%> training log
 		trainingLog
-		%> for heterogenous stimuli, we need a way to index into the stimulus so
-		%> we don't waste time doing this on each iteration
-		sList
 		%> info on the current run
 		currentInfo
 		%> previous info populated during load of a saved object
@@ -69,13 +65,17 @@ classdef runExperiment < optickaCore
 		lJack
 		%> stateMachine
 		stateMachine
-		%> metaStimulus is a multi-stim manager
-		metaStimulus
+	end
+	
+	properties (Hidden = true)
+		%> used to select single stimulus in training
+		stimList = []
+		thisStim = []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='stimulus|task|screen|visualDebug|useLabJack|logFrames|debug|verbose|screenSettings|benchmark'
+		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|logFrames|debug|verbose|screenSettings|benchmark'
 	end
 	
 	events
@@ -98,8 +98,9 @@ classdef runExperiment < optickaCore
 		%> @return instance of the class.
 		% ===================================================================
 		function obj = runExperiment(varargin)
-			if nargin == 0; varargin.name = 'metaStimulus';end
+			if nargin == 0; varargin.name = 'metaStimulus'; end
 			obj=obj@optickaCore(varargin); %superclass constructor
+			obj.paths.whereami = fileparts(which(mfilename));
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
 		end
 		
@@ -111,6 +112,9 @@ classdef runExperiment < optickaCore
 		function run(obj)
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
+			end
+			if isempty(obj.stimuli) || obj.stimuli.n < 1
+				error('No stimuli present!!!')
 			end
 			if obj.screen.isPTB == false
 				errordlg('There is no working PTB available!')
@@ -143,14 +147,15 @@ classdef runExperiment < optickaCore
 				obj.screenVals = s.open(obj.debug,obj.runLog);
 				
 				%the metastimulus wraps our stimulus cell array
-				obj.metaStimulus = metaStimulus('stimuli',obj.stimulus,'screen',s,'verbose',obj.verbose);
+				obj.stimuli.screen = s;
+				obj.stimuli.verbose = obj.verbose;
 				
 				%Trigger the omniplex (TTL on FIO1) into paused mode
 				obj.lJack.setDIO([2,0,0]);WaitSecs(0.001);obj.lJack.setDIO([0,0,0]);
 				
 				obj.initialiseTask; %set up our task structure 
 				
-				setup(obj.metaStimulus);
+				setup(obj.stimuli);
 				
 				obj.salutation('Initial variable setup predisplay...')
 				obj.updateVars(1,1); %set the variables for the very first run;
@@ -176,7 +181,7 @@ classdef runExperiment < optickaCore
 				obj.salutation('Warming up GPU...')
 				vbl = 0;
 				for i = 1:s.screenVals.fps
-					draw(obj.metaStimulus);
+					draw(obj.stimuli);
 					s.drawBackground;
 					s.drawFixationPoint;
 					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
@@ -205,7 +210,7 @@ classdef runExperiment < optickaCore
 							s.drawBackground;
 						end
 						
-						draw(obj.metaStimulus);
+						draw(obj.stimuli);
 						
 						if s.photoDiode == true
 							s.drawPhotoDiodeSquare([1 1 1 1]);
@@ -335,6 +340,7 @@ classdef runExperiment < optickaCore
 				error('There is no working PTB available!')
 			end
 			
+			topsDataLog.flushAllData();
 			%initialise runLog for this run
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog; %short handle to log
@@ -354,29 +360,27 @@ classdef runExperiment < optickaCore
 				%open the PTB screen
 				obj.screenVals = s.open(obj.debug,tL);
 				
-				%this wraps single or multiple stimuli and handles the baseStimulus abstract methods
-				obj.metaStimulus = metaStimulus(); 
-				obj.metaStimulus.stimuli = obj.stimulus;
-				obj.metaStimulus.screen = s;
-				obj.metaStimulus.setup(); %run setup() for each stimulus
+				obj.stimuli.screen = s;
+				obj.stimuli.verbose = obj.verbose;
+				setup(obj.stimuli); %run setup() for each stimulus
 				
 				obj.stateMachine = stateMachine('verbose',true); %#ok<*CPROP>
 				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 				if isempty(obj.stateInfoFile)
 					
 					blankFcn = {{@drawBackground, obj.screen};{@drawFixationPoint, obj.screen}};
-					stimFcn = {@draw, obj.metaStimulus};
-					stimEntry = {@update, obj.metaStimulus};
-					correctFcn = {{@draw, obj.metaStimulus}; {@drawGreenSpot, obj.screen}};
+					stimFcn = {@draw, obj.stimuli};
+					stimEntry = {@update, obj.stimuli};
+					correctFcn = {{@draw, obj.stimuli}; {@drawGreenSpot, obj.screen}};
 					incorrectFcn = {{@drawBackground, obj.screen}; {@drawRedSpot, obj.screen}};
 					
 					obj.stateInfo = { ...
-						'name'      'next'		'time'  'entryFcn'	'withinFcn'		'exitFcn'; ...
-						'preblank'  'stimulus'  2		[]			blankFcn		[]; ...
-						'stimulus'  'incorrect'	3		stimEntry	stimFcn			[]; ...
-						'incorrect' 'preblank'	0.75    []			incorrectFcn	[]; ...
-						'correct'	'preblank'  1.5		stimEntry	correctFcn		[]; ...
-						'pause'		'preblank'	inf		[]			[]				[]; ...
+						'name'			'next'			'time'  'entryFcn'	'withinFcn'		'exitFcn'; ...
+						'prestimulus'	'stimulus'		2		[]			blankFcn		[]; ...
+						'stimulus'		'incorrect'		3		stimEntry	stimFcn			[]; ...
+						'incorrect'		'prestimulus'	0.75	[]			incorrectFcn	[]; ...
+						'correct'		'prestimulus'	1.5		stimEntry	correctFcn		[]; ...
+						'pause'			'prestimulus'	inf		[]			[]				[]; ...
 					};
 				
 					clear blankFcn stimFcn stimEntry correctFcn incorrectFcn
@@ -389,7 +393,7 @@ classdef runExperiment < optickaCore
 				addStates(obj.stateMachine, obj.stateInfo);
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(2); %capture keystrokes
+				ListenChar(1); %capture keystrokes
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
 				tS.index = 1;
@@ -401,8 +405,8 @@ classdef runExperiment < optickaCore
 				if ~isempty(obj.task.nVar(1))
 					name = [obj.task.nVar(1).name 'Out'];
 					value = obj.task.nVar(1).values(tS.index);
-					obj.stimulus{1}.(name) = value;
-					obj.stimulus{1}.update;
+					obj.stimuli{1}.(name) = value;
+					update(obj.stimuli{1});
 				end
 				
 				tS.stopTraining = false;
@@ -442,7 +446,7 @@ classdef runExperiment < optickaCore
 					%if the statemachine is in stimulus state, then animate
 					%the stimuli
 					if strcmpi(obj.stateMachine.currentName,'stimulus')
-						animate(obj.metaStimulus);
+						animate(obj.stimuli);
 					end
 					
 					%throw away any other keystrokes
@@ -458,6 +462,7 @@ classdef runExperiment < optickaCore
 				ListenChar(0)
 				ShowCursor;
 				s.close();
+				topsDataLog.gui();
 				obj.lJack.close;
 				obj.lJack=[];
 				clear tL s tS
@@ -513,19 +518,17 @@ classdef runExperiment < optickaCore
 % 			obj.lJack.close;
 % 			obj.lJack=[];
 			
-			%small fix to stop nested cells causing problems
-			if iscell(obj.stimulus) && length(obj.stimulus) > 1
-				while iscell(obj.stimulus) && length(obj.stimulus) == 1
-					obj.stimulus = obj.stimulus{1};
-				end
-			end
+% 			%small fix to stop nested cells causing problems
+% 			if iscell(obj.stimuli) && length(obj.stimuli) > 1
+% 				while iscell(obj.stimuli) && length(obj.stimuli) == 1
+% 					obj.stimuli = obj.stimuli{1};
+% 				end
+% 			end
 			
 			if obj.screen.isPTB == true
 				obj.computer=Screen('computer');
 				obj.ptb=Screen('version');
 			end
-			
-			obj.updatesList;
 			
 % 			a=zeros(20,1);
 % 			for i=1:20
@@ -578,49 +581,6 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief updatesList
-		%> Updates the list of stimuli current in the object
-		%> @param
-		% ===================================================================
-		function updatesList(obj)
-			if isempty(obj.stimulus) || isstruct(obj.stimulus{1}) %stimuli should be class not structure, reset
-				obj.stimulus = [];
-			end
-			obj.sList.n = 0;
-			obj.sList.list = [];
-			obj.sList.index = [];
-			obj.sList.gN = 0;
-			obj.sList.bN = 0;
-			obj.sList.dN = 0;
-			obj.sList.sN = 0;
-			obj.sList.uN = 0;
-			if ~isempty(obj.stimulus)
-				sn=length(obj.stimulus);
-				obj.sList.n=sn;
-				for i=1:sn
-					obj.sList.index = [obj.sList.index i];
-					switch obj.stimulus{i}.family
-						case 'grating'
-							obj.sList.list = [obj.sList.list 'g'];
-							obj.sList.gN = obj.sList.gN + 1;
-						case 'bar'
-							obj.sList.list = [obj.sList.list 'b'];
-							obj.sList.bN = obj.sList.bN + 1;
-						case 'dots'
-							obj.sList.list = [obj.sList.list 'd'];
-							obj.sList.dN = obj.sList.dN + 1;
-						case 'spot'
-							obj.sList.list = [obj.sList.list 's'];
-							obj.sList.sN = obj.sList.sN + 1;
-						otherwise
-							obj.sList.list = [obj.sList.list 'u'];
-							obj.sList.uN = obj.sList.uN + 1;
-					end
-				end
-			end
-		end
-		
-		% ===================================================================
 		%> @brief set.verbose
 		%>
 		%> Let us cascase verbosity to other classes
@@ -632,6 +592,24 @@ classdef runExperiment < optickaCore
 			end
 			if isa(obj.screen,'screenManager')
 				obj.screen.verbose = value;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief set.stimuli
+		%>
+		%> Migrate to use a metaStimulus object to manage stimulus objects
+		% ===================================================================
+		function set.stimuli(obj,in)
+			if isempty(obj.stimuli) || ~isa(obj.stimuli,'metaStimulus')
+				obj.stimuli = metaStimulus();
+			end
+			if isa(in,'metaStimulus')
+				obj.stimuli = in;
+			elseif isa(in,'baseStimulus')
+				obj.stimuli{1} = in;
+			elseif iscell(in)
+				obj.stimuli.stimuli = in;
 			end
 		end
 	end
@@ -650,9 +628,8 @@ classdef runExperiment < optickaCore
 			if isempty(obj.task) %we have no task setup, so we generate one.
 				obj.task=stimulusSequence;
 			end
-			%find out how many stimuli there are, wrapped in the obj.stimulus
+			%find out how many stimuli there are, wrapped in the obj.stimuli
 			%structure
-			obj.updatesList();
 			obj.task.initialiseTask();
 		end
 		
@@ -684,17 +661,17 @@ classdef runExperiment < optickaCore
 					valueList = [valueList ovalueList];
 				end
 				
-				if obj.task.blankTick > 2 && obj.task.blankTick <= obj.sList.n + 2
-					%obj.stimulus{j}.(name)=value;
+				if obj.task.blankTick > 2 && obj.task.blankTick <= obj.stimuli.n + 2
+					%obj.stimuli{j}.(name)=value;
 				else
 					a = 1;
 					for j = ix %loop through our stimuli references for this variable
 						if obj.verbose==true;tic;end
-						obj.stimulus{j}.(name)=valueList(a);
+						obj.stimuli{j}.(name)=valueList(a);
 						if thisBlock == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
-							obj.stimulus{j}.update;
+							update(obj.stimuli, j);
 						end
-						if obj.verbose==true;fprintf('->updateVars() block/trial %i/%i: Variable:%i %s = %g | Stimulus %g -> %g ms\n',thisBlock,thisRun,i,name,valueList(a),j,toc*1000);end
+						if obj.verbose==true;fprintf('=-> updateVars() block/trial %i/%i: Variable:%i %s = %g | Stimulus %g -> %g ms\n',thisBlock,thisRun,i,name,valueList(a),j,toc*1000);end
 						a = a + 1;
 					end
 				end
@@ -736,11 +713,11 @@ classdef runExperiment < optickaCore
 					end
 					
 					if obj.verbose==true;tic;end
-% 					for i = 1:obj.sList.n %parfor appears faster here for 6 stimuli at least
-% 						obj.stimulus{i}.animate;
+% 					for i = 1:obj.stimuli.n %parfor appears faster here for 6 stimuli at least
+% 						obj.stimuli{i}.animate;
 % 					end
-					animate(obj.metaStimulus);
-					if obj.verbose==true;fprintf('\n>>>Stimuli animation: %g ms',toc*1000);end
+					animate(obj.stimuli);
+					if obj.verbose==true;fprintf('=-> updateTask() Stimuli animation: %g ms\n',toc*1000);end
 					
 				else %this is a blank stimulus
 					obj.task.blankTick = obj.task.blankTick + 1;
@@ -770,10 +747,10 @@ classdef runExperiment < optickaCore
 					end
 					%this dispatches each stimulus update on a new blank frame to
 					%reduce overhead.
-					if obj.task.blankTick > 2 && obj.task.blankTick <= obj.sList.n + 2
+					if obj.task.blankTick > 2 && obj.task.blankTick <= obj.stimuli.n + 2
 						if obj.verbose==true;tic;end
-						obj.stimulus{obj.task.blankTick-2}.update;
-						if obj.verbose==true;fprintf('->updateTask() Blank-frame %i: stimulus %i update = %g ms\n',obj.task.blankTick,obj.task.blankTick-2,toc*1000);end
+						update(obj.stimuli, obj.task.blankTick-2);
+						if obj.verbose==true;fprintf('=-> updateTask() Blank-frame %i: stimulus %i update = %g ms\n',obj.task.blankTick,obj.task.blankTick-2,toc*1000);end
 					end
 					
 				end
@@ -898,8 +875,8 @@ classdef runExperiment < optickaCore
 								tS.index = tS.index - 1;
 								name = [obj.task.nVar(1).name 'Out'];
 								value = obj.task.nVar(1).values(tS.index);
-								obj.stimulus{1}.(name) = value;
-								obj.stimulus{1}.update;
+								obj.stimuli{1}.(name) = value;
+								update(obj.stimuli{1});
 								tS.keyHold = tS.totalTicks + 5;
 							end
 						end
@@ -909,8 +886,8 @@ classdef runExperiment < optickaCore
 								tS.index = tS.index + 1;
 								name = [obj.task.nVar(1).name 'Out'];
 								value = obj.task.nVar(1).values(tS.index);
-								obj.stimulus{1}.(name) = value;
-								obj.stimulus{1}.update;
+								obj.stimuli{1}.(name) = value;
+								update(obj.stimuli{1});
 								tS.keyHold = tS.totalTicks + 5;
 							else
 								tS.index = tS.maxindex;
@@ -922,8 +899,8 @@ classdef runExperiment < optickaCore
 								tS.index2 = tS.index2 - 1;
 								name = [obj.task.nVar(2).name 'Out'];
 								value = obj.task.nVar(2).values(tS.index2);
-								obj.stimulus{1}.(name) = value;
-								obj.stimulus{1}.update;
+								obj.stimuli{1}.(name) = value;
+								update(obj.stimuli{1});
 								tS.keyHold = tS.totalTicks + 5;
 							end
 						end
@@ -934,30 +911,53 @@ classdef runExperiment < optickaCore
 								name = [obj.task.nVar(2).name 'Out'];
 								value = obj.task.nVar(2).values(tS.index2);
 
-								obj.stimulus{1}.(name) = value;
-								obj.stimulus{1}.update;
+								obj.stimuli{1}.(name) = value;
+								update(obj.stimuli{1});
 								tS.keyHold = tS.totalTicks + 5;
 							else
 								tS.index = tS.maxindex;
 							end
 						end
+					case '=+'
+						if tS.totalTicks > tS.keyHold
+							if ~isempty(obj.stimList)
+								if obj.thisStim < max(obj.stimList)
+									obj.thisStim = obj.thisStim + 1;
+									obj.stimuli.choice = obj.thisStim;
+								end
+							end
+							tS.keyHold = tS.totalTicks + 5;
+						end
+					case '-_'
+						if tS.totalTicks > tS.keyHold
+							if ~isempty(obj.stimList)
+								if obj.thisStim > 1
+									obj.thisStim = obj.thisStim - 1;
+									obj.stimuli.choice = obj.thisStim;
+								end
+							end
+							tS.keyHold = tS.totalTicks + 5;
+						end
 					case 'r'
 						if tS.totalTicks > tS.keyHold
 							newColour = rand(1,3);
-							obj.stimulus{1}.colourOut = newColour;
-							obj.stimulus{1}.update;
+							obj.stimuli{1}.colourOut = newColour;
+							update(obj.stimuli{1});
 							tS.keyHold = tS.totalTicks + 5;
 						end
 					case {'UpArrow','up'} %give a reward at any time
 						obj.lJack.timedTTL(0,100);
 					case {'DownArrow','down'}
-
+						obj.lJack.timedTTL(0,500);
 					case 'z' % mark trial as correct
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
-							obj.lJack.timedTTL(0,200);
-							forceTransition(obj.stateMachine, 'correct');
+							forceTransition(obj.stateMachine, 'correct1');
 						end
 					case 'x' % mark trial as incorrect
+						if strcmpi(obj.stateMachine.currentName,'stimulus')
+							forceTransition(obj.stateMachine, 'correct2');
+						end
+					case 'c'
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
 							forceTransition(obj.stateMachine, 'incorrect');
 						end
@@ -967,7 +967,7 @@ classdef runExperiment < optickaCore
 								forceTransition(obj.stateMachine, 'pause');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							else
-								forceTransition(obj.stateMachine, 'preblank');
+								forceTransition(obj.stateMachine, 'prestimulus');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							end
 							tS.keyHold = tS.totalTicks + 5;
@@ -1004,27 +1004,37 @@ classdef runExperiment < optickaCore
 			function obj = rebuild(obj,in,inObject)
 				try %#ok<*TRYNC>
 					if inObject == true || isfield(in,'stimulus')
-						obj.stimulus = in.stimulus;
+						if iscell(in.stimulus)
+							lobj.stimuli = metaStimulus();
+							lobj.stimuli.stimuli = in.stimulus;
+						elseif isa(in.stimulus,'metaStimulus')
+							obj.stimuli = in.stimulus;
+						elseif isa(in.stimulus,'baseStimulus')
+							lobj.stimuli{1} = in.stimulus;
+						else
+							fprintf('\t---> runExperiment LOAD: no stimuli found...\n');
+						end
 					else 
-						obj.stimulus = cell(1);
+						lobj.stimuli = metaStimulus();
+						fprintf('\t---> runExperiment LOAD: legacy stimuli not found...\n');
 					end
 					if isa(in.task,'stimulusSequence')
-						obj.task = in.task;
-						obj.previousInfo.task = in.task;
+						lobj.task = in.task;
+						lobj.previousInfo.task = in.task;
 					else
-						obj.previousInfo.task = in.task;
+						lobj.previousInfo.task = in.task;
 					end
 					if inObject == true || isfield('in','verbose')
-						obj.verbose = in.verbose;
+						lobj.verbose = in.verbose;
 					end
 					if inObject == true || isfield('in','debug')
-						obj.debug = in.debug;
+						lobj.debug = in.debug;
 					end
 					if inObject == true || isfield('in','useLabJack')
-						obj.useLabJack = in.useLabJack;
+						lobj.useLabJack = in.useLabJack;
 					end
 					if inObject == true || isfield('in','runLog')
-						obj.previousInfo.runLog = in.runLog;
+						lobj.previousInfo.runLog = in.runLog;
 					end
 				end
 				try
@@ -1046,10 +1056,10 @@ classdef runExperiment < optickaCore
 					end
 				end
 				try
-					obj.previousInfo.computer = in.computer;
-					obj.previousInfo.ptb = in.ptb;
-					obj.previousInfo.screenVals = in.screenVals;
-					obj.previousInfo.screenSettings = in.screenSettings;
+					lobj.previousInfo.computer = in.computer;
+					lobj.previousInfo.ptb = in.ptb;
+					lobj.previousInfo.screenVals = in.screenVals;
+					lobj.previousInfo.screenSettings = in.screenSettings;
 				end
 			end
 		end

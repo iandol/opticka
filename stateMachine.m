@@ -240,13 +240,11 @@ classdef stateMachine < optickaCore
 					end
 				end
 	
-				if ~isempty(obj.currentWithinFcn)
-					if size(obj.currentWithinFcn,1) == 1 %single class
-						feval(obj.currentWithinFcn{:});
-					else
-						for i = 1:size(obj.currentWithinFcn,1) %nested class
-							feval(obj.currentWithinFcn{i}{:});
-						end
+				if isa(obj.currentWithinFcn,'function_handle') %function handle, lets feval it
+					feval(obj.currentWithinFcn);
+				elseif iscell(obj.currentWithinFcn)
+					for i = 1:size(obj.currentWithinFcn,1) %nested class
+						feval(obj.currentWithinFcn{i});
 					end
 				end
 				
@@ -364,11 +362,11 @@ classdef stateMachine < optickaCore
 		function runDemo(obj)
 			obj.verbose = true;
 			obj.realTime = false;
-			beginFcn = {@disp, 'enter state: begin -- Hello!'};
-			middleFcn = {@disp, 'enter state: middle -- Hello!'};
-			endFcn = {@disp, 'enter state: end -- see you soon!'};
-			withinFcn = {{@printCurrentTick, obj};{@fprintf, ' '}};
-			exitfcn = {{@fprintf, '-exit state'};{@fprintf, '\n'}};
+			beginFcn = @()disp('enter state: begin -- Hello!');
+			middleFcn = @()disp('enter state: middle -- Hello!');
+			endFcn = @()disp('enter state: end -- see you soon!');
+			withinFcn = { @()printCurrentTick(obj); @()fprintf(' ') };
+			exitfcn = { @()fprintf('-exit state'); @()fprintf('\n') };
 			statesInfo = { ...
 				'name'      'next'   'time'     'entryFcn'	'withinFcn'		'exitFcn'; ...
 				'begin'     'middle'  1			beginFcn		withinFcn		exitfcn; ...
@@ -411,15 +409,21 @@ classdef stateMachine < optickaCore
 				obj.nextTimeOut = obj.currentEntryTime + thisState.time;
 				obj.nextTickOut = obj.stateListTicks(thisState.name);
 				obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'])
-				if ~isempty(thisState.entryFcn)
-					if size(thisState.entryFcn,1) == 1 %single class
-						feval(thisState.entryFcn{:});
-					else
-						for i = 1:size(thisState.entryFcn,1) %nested class
-							feval(thisState.entryFcn{i}{:});
-						end
+				
+				if isa(thisState.entryFcn,'function_handle') %function handle, lets feval it
+					feval(thisState.entryFcn);
+				elseif iscell(thisState.entryFcn) %nested class of function handles
+					for i = 1:size(thisState.entryFcn,1) 
+						feval(thisState.entryFcn{i});
 					end
 				end
+				
+				data.currentTick = obj.currentTick;
+				data.nextTick = obj.nextTickOut;
+				group = [obj.currentName ':enter:' obj.name];
+				tic;
+				topsDataLog.logDataInGroup(data, group);
+	
 			else
 				obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length');
 				obj.finish();
@@ -436,9 +440,11 @@ classdef stateMachine < optickaCore
 			nextIndex = obj.stateListIndex(nextName);
 			obj.exitCurrentState();
 			obj.salutation(['Transition @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'])
- 			if ~isempty(obj.transitionFcn)
- 				feval(obj.transitionFcn{:});
- 			end
+ 			
+			if isa(obj.transitionFcn,'function_handle') %function handle, lets feval it
+ 				feval(obj.transitionFcn);
+			end
+			
 			obj.enterStateAtIndex(nextIndex);
 		end
 		
@@ -453,15 +459,20 @@ classdef stateMachine < optickaCore
 			obj.currentEntryTime = [];
 			obj.nextTickOut = [];
 			obj.nextTimeOut = [];
-			if ~isempty(thisState.exitFcn)
-				if size(thisState.exitFcn, 1) == 1 %single class
-					feval(thisState.exitFcn{:});
-				else
-					for i = 1:size(thisState.exitFcn, 1) %nested class
-						feval(thisState.exitFcn{i}{:});
-					end
+			
+			if isa(thisState.exitFcn,'function_handle') %function handle, lets feval it
+				feval(thisState.exitFcn);
+			elseif iscell(thisState.exitFcn) %nested class of function handles
+				for i = 1:size(thisState.exitFcn, 1) %nested class
+					feval(thisState.exitFcn{i});
 				end
 			end
+			
+			data.currentTick = obj.currentTick;
+			data.nextTick = obj.nextTickOut;
+			group = [obj.currentName ':exit:' obj.name];
+			topsDataLog.logDataInGroup(data, group);
+			
 			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs | ' num2str(obj.currentTick) '/' num2str(obj.totalTicks) 'ticks']);
 		end
 		
@@ -479,62 +490,7 @@ classdef stateMachine < optickaCore
 				out.(fn{j}) = obj.(fn{j});
 			end
 		end
-		
-		% ===================================================================
-		%> @brief Sets properties from a structure or normal arguments,
-		%> ignores invalid properties
-		%>
-		%> @param args input structure
-		%> @param allowedProperties properties possible to set on construction
-		% ===================================================================
-		function parseArgs(obj, args, allowedProperties)
-			allowedProperties = ['^(' allowedProperties ')$'];
-			
-			while iscell(args) && length(args) == 1
-				args = args{1};
-			end
-			
-			if iscell(args)
-				if mod(length(args),2) == 1 % odd
-					args = args(1:end-1); %remove last arg
-				end
-				odd = logical(mod(1:length(args),2));
-				even = logical(abs(odd-1));
-				args = cell2struct(args(even),args(odd),2);
-			end
-			
-			if isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
-					if regexp(fnames{i},allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in constructor');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					end
-				end
-			end
-			
-		end
-		
-		% ===================================================================
-		%> @brief Prints messages dependent on verbosity
-		%>
-		%> Prints messages dependent on verbosity
-		%> @param obj this instance object
-		%> @param in the calling function
-		%> @param message the message that needs printing to command window
-		% ===================================================================
-		function salutation(obj,in,message)
-			if obj.verbose==true
-				if ~exist('in','var')
-					in = 'undefined';
-				end
-				if exist('message','var')
-					fprintf(['---> stateMachine: ' message ' | ' in '\n']);
-				else
-					fprintf(['---> stateMachine: ' in '\n']);
-				end
-			end
-		end
+
 	end
 end
 
