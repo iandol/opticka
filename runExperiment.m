@@ -405,8 +405,13 @@ classdef runExperiment < optickaCore
 				if ~isempty(obj.task.nVar(1))
 					name = [obj.task.nVar(1).name 'Out'];
 					value = obj.task.nVar(1).values(tS.index);
-					obj.stimuli{1}.(name) = value;
-					update(obj.stimuli{1});
+					if isempty(obj.thisStim)
+						obj.stimuli{1}.(name) = value;
+						update(obj.stimuli{1});
+					else
+						obj.stimuli{obj.thisStim}.(name) = value;
+						update(obj.stimuli{obj.thisStim});
+					end
 				end
 				
 				tS.stopTraining = false;
@@ -616,8 +621,18 @@ classdef runExperiment < optickaCore
 				obj.stimuli.stimuli = in;
 			end
 		end
+	end%-------------------------END PUBLIC METHODS--------------------------------%
+	
+	%=======================================================================
+	methods (Hidden = true) %------------------HIDDEN METHODS
+	%=======================================================================
+		function randomiseTrainingList(obj)
+			if ~isempty(obj.thisStim)
+				obj.thisStim = randi(length(obj.stimList));
+				obj.stimuli.choice = obj.thisStim;
+			end
+		end
 	end
-	%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
@@ -879,8 +894,13 @@ classdef runExperiment < optickaCore
 								tS.index = tS.index - 1;
 								name = [obj.task.nVar(1).name 'Out'];
 								value = obj.task.nVar(1).values(tS.index);
-								obj.stimuli{1}.(name) = value;
-								update(obj.stimuli{1});
+								if isempty(obj.thisStim)
+									obj.stimuli{1}.(name) = value;
+									update(obj.stimuli{1});
+								else
+									obj.stimuli{obj.thisStim}.(name) = value;
+									update(obj.stimuli{obj.thisStim});
+								end
 								tS.keyHold = tS.totalTicks + 5;
 							end
 						end
@@ -890,8 +910,13 @@ classdef runExperiment < optickaCore
 								tS.index = tS.index + 1;
 								name = [obj.task.nVar(1).name 'Out'];
 								value = obj.task.nVar(1).values(tS.index);
-								obj.stimuli{1}.(name) = value;
-								update(obj.stimuli{1});
+								if isempty(obj.thisStim)
+									obj.stimuli{1}.(name) = value;
+									update(obj.stimuli{1});
+								else
+									obj.stimuli{obj.thisStim}.(name) = value;
+									update(obj.stimuli{obj.thisStim});
+								end
 								tS.keyHold = tS.totalTicks + 5;
 							else
 								tS.index = tS.maxindex;
@@ -903,8 +928,13 @@ classdef runExperiment < optickaCore
 								tS.index2 = tS.index2 - 1;
 								name = [obj.task.nVar(2).name 'Out'];
 								value = obj.task.nVar(2).values(tS.index2);
-								obj.stimuli{1}.(name) = value;
-								update(obj.stimuli{1});
+								if isempty(obj.thisStim)
+									obj.stimuli{1}.(name) = value;
+									update(obj.stimuli{1});
+								else
+									obj.stimuli{obj.thisStim}.(name) = value;
+									update(obj.stimuli{obj.thisStim});
+								end
 								tS.keyHold = tS.totalTicks + 5;
 							end
 						end
@@ -914,9 +944,13 @@ classdef runExperiment < optickaCore
 								tS.index2 = tS.index2 + 1;
 								name = [obj.task.nVar(2).name 'Out'];
 								value = obj.task.nVar(2).values(tS.index2);
-
-								obj.stimuli{1}.(name) = value;
-								update(obj.stimuli{1});
+								if isempty(obj.thisStim)
+									obj.stimuli{1}.(name) = value;
+									update(obj.stimuli{1});
+								else
+									obj.stimuli{obj.thisStim}.(name) = value;
+									update(obj.stimuli{obj.thisStim});
+								end
 								tS.keyHold = tS.totalTicks + 5;
 							else
 								tS.index = tS.maxindex;
@@ -967,7 +1001,7 @@ classdef runExperiment < optickaCore
 						end
 					case 'p' %pause the display
 						if tS.totalTicks > tS.keyHold
-							if rem(tS.pauseToggle,2)==1
+							if rem(tS.pauseToggle,2)==0
 								forceTransition(obj.stateMachine, 'pause');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							else
@@ -1007,20 +1041,29 @@ classdef runExperiment < optickaCore
 			lobj = rebuild(lobj, in, isObject);
 			function obj = rebuild(obj,in,inObject)
 				try %#ok<*TRYNC>
-					if inObject == true || isfield(in,'stimulus')
-						if iscell(in.stimulus)
-							lobj.stimuli = metaStimulus();
-							lobj.stimuli.stimuli = in.stimulus;
-						elseif isa(in.stimulus,'metaStimulus')
-							obj.stimuli = in.stimulus;
-						elseif isa(in.stimulus,'baseStimulus')
-							lobj.stimuli{1} = in.stimulus;
-						else
-							fprintf('\t---> runExperiment LOAD: no stimuli found...\n');
+					if inObject == true 
+						if isfield(in,'stimulus')
+							if iscell(in.stimulus)
+								lobj.stimuli = metaStimulus();
+								lobj.stimuli.stimuli = in.stimulus;
+								fprintf('\t---> runExperiment LOAD: Legacy Stimuli loading...\n');
+							elseif isa(in.stimulus,'metaStimulus')
+								obj.stimuli = in.stimulus;
+								fprintf('\t---> runExperiment LOAD: Stimuli using new metaStimulus object...\n');
+							elseif isa(in.stimulus,'baseStimulus')
+								lobj.stimuli{1} = in.stimulus;
+							else
+								fprintf('\t---> runExperiment LOAD: no stimuli found!!!\n');
+							end
+						elseif isfield(in,'stimuli')
+							if isa(in.stimuli,'metaStimulus')
+								lobj.stimuli = in.stimuli;
+								fprintf('\t---> runExperiment LOAD: Stimuli using new metaStimulus object...\n');
+							else
+								lobj.stimuli = metaStimulus();
+								fprintf('\t---> runExperiment LOAD: legacy stimuli not found...\n');
+							end
 						end
-					else 
-						lobj.stimuli = metaStimulus();
-						fprintf('\t---> runExperiment LOAD: legacy stimuli not found...\n');
 					end
 					if isa(in.task,'stimulusSequence')
 						lobj.task = in.task;

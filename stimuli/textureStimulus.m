@@ -48,6 +48,8 @@ classdef textureStimulus < baseStimulus
 			
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
 			
+			obj.size = 1;
+			
 			if nargin>0
 				obj.parseArgs(varargin, obj.allowedProperties);
 			end

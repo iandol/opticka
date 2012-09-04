@@ -916,6 +916,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function deleteProtocol(obj)
+
 			v = obj.gv(obj.h.OKProtocolsList);
 			file = obj.gs(obj.h.OKProtocolsList,v);
 			obj.paths.currentPath = pwd;

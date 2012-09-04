@@ -5,6 +5,7 @@
 %be present.
 disp('================>> Loading state info file <<================')
 
+% do we want to present a single stimulus at a time?
 singleStimulus = true;
 
 if singleStimulus == true
@@ -14,16 +15,17 @@ else
 	obj.stimList = [];
 	obj.thisStim = [];
 end
+obj.stimuli.choice = obj.thisStim;
 
+%these are our functions that will execute as the stateMachine runs
 prestimulusFcn = { @()drawBackground(obj.screen) ; @()drawFixationPoint(obj.screen) }; %obj.screen is the screenManager the opens the PTB screen
 stimFcn = @() draw(obj.stimuli); %obj.stimuli is the stimuli loaded into opticka
-stimEntry = @() update(obj.stimuli);
+stimEntry = {@() update(obj.stimuli); @() randomiseTrainingList(obj)};
 correct1Fcn = { @() timedTTL(obj.lJack,0,100); @() draw(obj.stimuli) ; @() drawGreenSpot(obj.screen) };
 correct2Fcn = { @() timedTTL(obj.lJack,0,500); @() draw(obj.stimuli) ; @() drawGreenSpot(obj.screen) };
 incorrectFcn = { @() drawBackground(obj.screen) ; @() drawRedSpot(obj.screen) };
 
-singleStimulus = true;
-
+%specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 	'name'      'next'			'time'  'entryFcn'	'withinFcn'		'exitFcn'; ...
 	'pause'		'prestimulus'	inf		[]			[]				[]; ...
@@ -36,4 +38,4 @@ stateInfoTmp = { ...
 
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')
-clear singleStimulus preblankFcn stimFcn stimEntry correctFcn incorrectFcn
+clear singleStimulus preblankFcn stimFcn stimEntry correct1Fcn correct2Fcn incorrectFcn

@@ -234,52 +234,5 @@ classdef metaStimulus < optickaCore
 			end
 		end
 		
-		% ===================================================================
-		%> @brief updatesList
-		%> Updates the list of stimuli current in the object
-		%> @param
-		% ===================================================================
-		function updatesList(obj)
-			obj.sList.n = 0;
-			obj.sList.list = [];
-			obj.sList.index = [];
-			obj.sList.gN = 0;
-			obj.sList.bN = 0;
-			obj.sList.dN = 0;
-			obj.sList.sN = 0;
-			obj.sList.uN = 0;
-			if ~isempty(obj.stimuli)
-				obj.sList.n=obj.n;
-				for i=1:obj.n
-					obj.sList.index = [obj.sList.index i];
-					switch obj.stimuli{i}.family
-						case 'grating'
-							obj.sList.list = [obj.sList.list 'g'];
-							obj.sList.gN = obj.sList.gN + 1;
-						case 'bar'
-							obj.sList.list = [obj.sList.list 'b'];
-							obj.sList.bN = obj.sList.bN + 1;
-						case 'dots'
-							obj.sList.list = [obj.sList.list 'd'];
-							obj.sList.dN = obj.sList.dN + 1;
-						case 'spot'
-							obj.sList.list = [obj.sList.list 's'];
-							obj.sList.sN = obj.sList.sN + 1;
-						otherwise
-							obj.sList.list = [obj.sList.list 'u'];
-							obj.sList.uN = obj.sList.uN + 1;
-					end
-				end
-			end
-		end
-		
-		
-		
-	end
-	
-	%=======================================================================
-	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
-	%=======================================================================
-		
 	end
 end

@@ -176,8 +176,8 @@ classdef seditor < handle
 				o = getappdata(obj.optickahandle,'o');
 				if ~isempty(obj.otherstimuli) %check if other stimuli are tagged to edit too
 					for i=1:length(obj.otherstimuli)
-						if ~isempty(findprop(o.r.stimulus{obj.otherstimuli(i)},obj.cprop)) %check it has this porperty
-							o.r.stimulus{obj.otherstimuli(i)}.(obj.cprop) = s;
+						if ~isempty(findprop(o.r.stimuli{obj.otherstimuli(i)},obj.cprop)) %check it has this porperty
+							o.r.stimuli{obj.otherstimuli(i)}.(obj.cprop) = s;
 							fprintf(' | +stim%g',obj.otherstimuli(i))
 						end
 					end
