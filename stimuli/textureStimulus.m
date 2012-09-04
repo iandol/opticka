@@ -115,7 +115,7 @@ classdef textureStimulus < baseStimulus
 			if ~isempty(in)
 				obj.matrix = in;
 			elseif ~isempty(obj.fileName) && exist(obj.fileName,'file')
-				[obj.matrix, map, alpha] = imread(obj.fileName);
+				[obj.matrix, ~, alpha] = imread(obj.fileName);
 			else
 				obj.matrix = uint8(ones(obj.size*obj.ppd,obj.size*obj.ppd,3)); %white texture
 			end
@@ -123,7 +123,7 @@ classdef textureStimulus < baseStimulus
 			obj.matrix = obj.matrix .* obj.contrast;
 			
 			if isempty(alpha)
-				obj.matrix(:,:,4) = obj.alpha .* 1;
+				obj.matrix(:,:,4) = obj.alpha .* 255;
 			else
 				obj.matrix(:,:,4) = alpha .* obj.alpha;
 			end

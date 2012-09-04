@@ -285,11 +285,11 @@ classdef opticka < optickaCore
 				set(obj.h.OKPanelGrating,'Visible','on')
 				drawnow;
 					
-				obj.loadPrefs;
-				obj.getScreenVals;
-				obj.getTaskVals;
-				obj.loadCalibration;
-				obj.refreshProtocolsList;
+				obj.loadPrefs();
+				obj.getScreenVals();
+				obj.getTaskVals();
+				obj.loadCalibration();
+				obj.refreshProtocolsList();
 				addlistener(obj.r,'abortRun',@obj.abortRunEvent);
 				addlistener(obj.r,'endRun',@obj.endRunEvent);
 				addlistener(obj.r,'runInfo',@obj.runInfoEvent);
@@ -302,18 +302,8 @@ classdef opticka < optickaCore
 					obj.r.stateInfoFile = obj.paths.stateInfoFile;
 				end
 				
-				fid = fopen(obj.r.stateInfoFile);
-				tline = fgetl(fid);
-				i=1;
-				while ischar(tline)
-					o.store.statetext{i} = tline;
-					tline = fgetl(fid);
-					i=i+1;
-				end
-				fclose(fid);
-				set(obj.h.OKTrainingText,'String',o.store.statetext);
+				obj.getStateInfo();
 				
-
 				obj.store.nVars = 0;
 				obj.store.visibleStimulus = 'grating'; %our default shown stimulus
 				obj.store.stimN = 0;
@@ -438,6 +428,21 @@ classdef opticka < optickaCore
 			if isempty(obj.r.task.taskStream); obj.r.task.initialiseRandom; end
 			obj.r.task.randomiseStimuli;
 			
+		end
+		
+		function getStateInfo(obj)
+			if exist(obj.r.stateInfoFile,'file')
+				fid = fopen(obj.r.stateInfoFile);
+				tline = fgetl(fid);
+				i=1;
+				while ischar(tline)
+					o.store.statetext{i} = tline;
+					tline = fgetl(fid);
+					i=i+1;
+				end
+				fclose(fid);
+				set(obj.h.OKTrainingText,'String',o.store.statetext);
+			end
 		end
 		
 		% ===================================================================

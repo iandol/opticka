@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 27-Aug-2012 16:29:20
+% Last Modified by GUIDE v2.5 04-Sep-2012 18:01:26
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -784,11 +784,11 @@ if isappdata(handles.output,'o')
 end
 
 % --- Executes on button press in OKStimulusDown.
-function OKStimulusDown_Callback(hObject, eventdata, handles)
+function OKStimulusDown_Callback(hObject, eventdata, handles) %#ok<*INUSL>
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	value = get(handles.OKStimList,'Value'); %where are we in the stimulus list
-	slength = length(o.r.stimuli);
+	slength = o.r.stimuli.n;
 	if value < slength
 		idx = 1:slength;
 		idx2 = idx;
@@ -805,7 +805,7 @@ function OKStimulusUp_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	value = get(handles.OKStimList,'Value'); %where are we in the stimulus list
-	slength = length(o.r.stimuli);
+	slength = o.r.stimuli.n;
 	if value > 1
 		idx = 1:slength;
 		idx2 = idx;
@@ -1186,16 +1186,15 @@ function OKPanelTextureGetFile_Callback(hObject, eventdata, handles)
 % hObject    handle to OKPanelTextureGetFile (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	[filename, pathname] = uigetfile('*.jpg', 'Select a MATLAB code file');
-	if isequal(filename,0)
-	   disp('User selected Cancel')
-	else
-	   disp(['User selected', fullfile(pathname, filename)])
-	   set(handles.OKPanelTexturefileName, 'String', fullfile(pathname, filename));
-	end
+
+[filename, pathname] = uigetfile({'*.png;*.jpg;*.tif','Picture files'}, 'Select a Picture file');
+if isequal(filename,0)
+   %disp('User selected Cancel')
+else
+   %disp(['User selected', fullfile(pathname, filename)])
+   set(handles.OKPanelTexturefileName, 'String', fullfile(pathname, filename));
 end
+
 
 function OKverbosityLevel_Callback(hObject, eventdata, handles)
 % hObject    handle to OKverbosityLevel (see GCBO)
@@ -1473,8 +1472,13 @@ function OKEditStateFileButon_Callback(hObject, eventdata, handles)
 % hObject    handle to OKEditStateFileButon (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	if exist(o.r.stateInfoFile,'file')
+		edit(o.r.stateInfoFile);
+	end
+	o.getStateInfo();
+end
 
 function OKTrainingResearcherName_Callback(hObject, eventdata, handles)
 % hObject    handle to OKTrainingResearcherName (see GCBO)
@@ -1485,14 +1489,12 @@ function OKTrainingResearcherName_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of OKTrainingResearcherName as a double
 
 
-% --- Executes during object creation, after setting all properties.
-function OKTrainingResearcherName_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKTrainingResearcherName (see GCBO)
+% --- Executes on button press in OKRefreshStateInfo.
+function OKRefreshStateInfo_Callback(hObject, eventdata, handles)
+% hObject    handle to OKRefreshStateInfo (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.getStateInfo();
 end

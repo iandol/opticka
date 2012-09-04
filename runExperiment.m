@@ -621,18 +621,14 @@ classdef runExperiment < optickaCore
 				obj.stimuli.stimuli = in;
 			end
 		end
-	end%-------------------------END PUBLIC METHODS--------------------------------%
-	
-	%=======================================================================
-	methods (Hidden = true) %------------------HIDDEN METHODS
-	%=======================================================================
+		
 		function randomiseTrainingList(obj)
 			if ~isempty(obj.thisStim)
 				obj.thisStim = randi(length(obj.stimList));
 				obj.stimuli.choice = obj.thisStim;
 			end
 		end
-	end
+	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
