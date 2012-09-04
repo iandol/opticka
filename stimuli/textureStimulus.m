@@ -112,20 +112,21 @@ classdef textureStimulus < baseStimulus
 				end
 			end
 			
+			ialpha = [];
 			if ~isempty(in)
 				obj.matrix = in;
 			elseif ~isempty(obj.fileName) && exist(obj.fileName,'file')
-				[obj.matrix, ~, alpha] = imread(obj.fileName);
+				[obj.matrix, ~, ialpha] = imread(obj.fileName);
 			else
 				obj.matrix = uint8(ones(obj.size*obj.ppd,obj.size*obj.ppd,3)); %white texture
 			end
 			
 			obj.matrix = obj.matrix .* obj.contrast;
 			
-			if isempty(alpha)
+			if isempty(ialpha)
 				obj.matrix(:,:,4) = obj.alpha .* 255;
 			else
-				obj.matrix(:,:,4) = alpha .* obj.alpha;
+				obj.matrix(:,:,4) = ialpha;
 			end
 			
 			specialFlags = 4; %optimization for uint8 textures. 0 is default

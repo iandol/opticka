@@ -393,8 +393,7 @@ classdef runExperiment < optickaCore
 				addStates(obj.stateMachine, obj.stateInfo);
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(1); %capture keystrokes
-				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+				ListenChar(2); %capture keystrokes
 				
 				tS.index = 1;
 				tS.maxindex = length(obj.task.nVar(1).values);
@@ -421,6 +420,7 @@ classdef runExperiment < optickaCore
 				
 				tL.screenLog.beforeDisplay = GetSecs;
 				
+				%Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
@@ -513,6 +513,13 @@ classdef runExperiment < optickaCore
 			
 			if isempty(regexpi('notask',config)) && isempty(obj.task)
 				obj.task = stimulusSequence();
+			end
+			
+			if isempty(obj.stateInfoFile)
+				if exist([obj.paths.root filesep 'DefaultStateInfo.m'],'file')
+					obj.paths.stateInfoFile = [obj.paths.root filesep 'DefaultStateInfo.m'];
+					obj.stateInfoFile = obj.paths.stateInfoFile;
+				end
 			end
 			
 			obj.screen.movieSettings.record = 0;
@@ -982,7 +989,7 @@ classdef runExperiment < optickaCore
 					case {'UpArrow','up'} %give a reward at any time
 						obj.lJack.timedTTL(0,100);
 					case {'DownArrow','down'}
-						obj.lJack.timedTTL(0,500);
+						obj.lJack.timedTTL(0,1000);
 					case 'z' % mark trial as correct
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
 							forceTransition(obj.stateMachine, 'correct1');
@@ -1027,38 +1034,52 @@ classdef runExperiment < optickaCore
 		function lobj=loadobj(in)
 			lobj = runExperiment;
 			if isa(in,'runExperiment')
-				fprintf('---> runExperiment: Loading object...\n');
+				name = '';
+				if isprop(lobj,'fullName')
+					name = [name lobj.fullName];
+				end
+				if isprop(in,'fullName')
+					name = [name ' < ' in.fullName];
+				end
+				fprintf('---> runExperiment loadobj %s: Loading object...\n',name);
 				isObject = true;
 			else
-				fprintf('---> runExperiment: Loading legacy structure...\n');
+				name = '';
+				if isprop(lobj,'fullName')
+					name = [name lobj.fullName];
+				end
+				fprintf('---> runExperiment loadobj %s: Loading legacy structure...\n',name);
 				isObject = false;
 			end
 			lobj.initialise('notask');
 			lobj = rebuild(lobj, in, isObject);
 			function obj = rebuild(obj,in,inObject)
 				try %#ok<*TRYNC>
-					if inObject == true 
-						if isfield(in,'stimulus')
-							if iscell(in.stimulus)
-								lobj.stimuli = metaStimulus();
-								lobj.stimuli.stimuli = in.stimulus;
-								fprintf('\t---> runExperiment LOAD: Legacy Stimuli loading...\n');
-							elseif isa(in.stimulus,'metaStimulus')
-								obj.stimuli = in.stimulus;
-								fprintf('\t---> runExperiment LOAD: Stimuli using new metaStimulus object...\n');
-							elseif isa(in.stimulus,'baseStimulus')
-								lobj.stimuli{1} = in.stimulus;
-							else
-								fprintf('\t---> runExperiment LOAD: no stimuli found!!!\n');
-							end
-						elseif isfield(in,'stimuli')
-							if isa(in.stimuli,'metaStimulus')
-								lobj.stimuli = in.stimuli;
-								fprintf('\t---> runExperiment LOAD: Stimuli using new metaStimulus object...\n');
-							else
-								lobj.stimuli = metaStimulus();
-								fprintf('\t---> runExperiment LOAD: legacy stimuli not found...\n');
-							end
+					if isfield(in,'stimulus') || isprop(in,'stimulus')
+						if iscell(in.stimulus)
+							lobj.stimuli = metaStimulus();
+							lobj.stimuli.stimuli = in.stimulus;
+							fprintf('\t---> runExperiment LOAD: Legacy Stimuli loading...\n');
+						elseif isa(in.stimulus,'metaStimulus')
+							obj.stimuli = in.stimulus;
+							fprintf('\t---> runExperiment LOAD: Stimuli using new metaStimulus object...\n');
+						elseif isa(in.stimulus,'baseStimulus')
+							lobj.stimuli{1} = in.stimulus;
+						else
+							fprintf('\t---> runExperiment LOAD: no stimuli found!!!\n');
+						end
+					elseif isprop(in,'stimuli')
+						if isa(in.stimuli,'metaStimulus')
+							lobj.stimuli = in.stimuli;
+							fprintf('\t---> runExperiment LOAD: Stimuli using new metaStimulus object...\n');
+						else
+							lobj.stimuli = metaStimulus();
+							fprintf('\t---> runExperiment LOAD: legacy stimuli not found...\n');
+						end
+					end
+					if isprop(in,'stateInfoFile')
+						if exist(in.stateInfoFile,'file')
+							lobj.stateInfoFile = in.stateInfoFile;
 						end
 					end
 					if isa(in.task,'stimulusSequence')

@@ -155,6 +155,10 @@ classdef metaStimulus < optickaCore
 			
 		end
 		
+		function printChoice(obj)
+			fprintf('%s current choice is: %g\n',obj.fullName,obj.choice)
+		end
+		
 		% ===================================================================
 		%> @brief set stimuli sanity checker
 		%> @param
