@@ -468,6 +468,7 @@ classdef runExperiment < optickaCore
 				ShowCursor;
 				s.close();
 				topsDataLog.gui();
+				figure(obj.screenSettings.optickahandle)
 				obj.lJack.close;
 				obj.lJack=[];
 				clear tL s tS
