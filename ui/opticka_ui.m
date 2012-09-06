@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 04-Sep-2012 18:01:26
+% Last Modified by GUIDE v2.5 05-Sep-2012 11:30:16
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1006,22 +1006,6 @@ function OKPanelBarinterpMethod_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns OKPanelBarinterpMethod contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from OKPanelBarinterpMethod
 
-
-% --------------------------------------------------------------------
-function OKRFMapper_ClickedCallback(hObject, eventdata, handles)
-% hObject    handle to OKRFMapper (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	o.store.rfLog = [];
-	rf=rfMapper;
-	rf.run(o.r);
-	o.store.rfLog = rf;
-	clear rf;
-end
-
-
 % --------------------------------------------------------------------
 function OKToolbarToggleRemote_OnCallback(hObject, eventdata, handles)
 % hObject    handle to OKToolbarToggleRemote (see GCBO)
@@ -1236,6 +1220,7 @@ function OKStartTrainingSession_ClickedCallback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	if isa(o.r,'runExperiment')
+		o.r.screenSettings.optickahandle = handles.output;
 		o.r.runTrainingSession();
 	end
 end
@@ -1498,3 +1483,44 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.getStateInfo();
 end
+
+% --------------------------------------------------------------------
+function OKRFMapper_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to OKRFMapper (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.store.rfLog = [];
+	rf=rfMapper;
+	rf.run(o.r);
+	o.store.rfLog = rf;
+	clear rf;
+end
+
+% --------------------------------------------------------------------
+function OKRunRFMapper_Callback(hObject, eventdata, handles)
+% hObject    handle to OKRunRFMapper (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.store.rfLog = [];
+	rf=rfMapper;
+	rf.run(o.r);
+	o.store.rfLog = rf;
+	clear rf;
+end
+
+% --------------------------------------------------------------------
+function OKRunTrainingSession_Callback(hObject, eventdata, handles)
+% hObject    handle to OKRunTrainingSession (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function OKRunExperiment_Callback(hObject, eventdata, handles)
+% hObject    handle to OKRunExperiment (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
