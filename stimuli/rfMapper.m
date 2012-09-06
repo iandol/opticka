@@ -446,6 +446,9 @@ classdef rfMapper < barStimulus
 				yax = obj.winRect(4)/obj.ppd;
 				yax = yax - (yax/2);
 				axis([-xax xax -yax yax]);
+				title('Marked Positions during RF Mapping')
+				xlabel('X Position (degs)')
+				ylabel('Y Position (degs)');
 			catch ME
 				rethrow ME
 			end
