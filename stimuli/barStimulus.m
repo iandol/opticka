@@ -14,7 +14,7 @@ classdef barStimulus < baseStimulus
 		interpMethod = 'nearest'
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		family = 'bar'
 		%> computed matrix for the bar
 		matrix

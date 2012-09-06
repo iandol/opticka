@@ -14,7 +14,7 @@ classdef textureStimulus < baseStimulus
 		pixelScale = 1 %scale up the texture in the bar
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		family = 'texture'
 		matrix
 	end
@@ -124,12 +124,12 @@ classdef textureStimulus < baseStimulus
 			obj.matrix = obj.matrix .* obj.contrast;
 			
 			if isempty(ialpha)
-				obj.matrix(:,:,4) = obj.alpha .* 255;
+				obj.matrix(:,:,4) = uint8(obj.alpha .* 255);
 			else
 				obj.matrix(:,:,4) = ialpha;
 			end
 			
-			specialFlags = 4; %optimization for uint8 textures. 0 is default
+			specialFlags = 0; %4 is optimization for uint8 textures. 0 is default
 			obj.texture = Screen('MakeTexture', obj.win, obj.matrix, 1, specialFlags);
 			
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end

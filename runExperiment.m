@@ -883,6 +883,8 @@ classdef runExperiment < optickaCore
 		%> @param args input structure
 		% ===================================================================
 		function tS = checkTrainingKeys(obj,tS)
+			%frame increment to stop keys being too sensitive
+			fInc = 6;
 			%now lets check whether any keyboard commands are pressed...
 			[keyIsDown, ~, keyCode] = KbCheck(-1);
 			if keyIsDown == 1
@@ -904,8 +906,10 @@ classdef runExperiment < optickaCore
 									obj.stimuli{obj.thisStim}.(name) = value;
 									update(obj.stimuli{obj.thisStim});
 								end
-								tS.keyHold = tS.totalTicks + 5;
+							else
+								
 							end
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case {'RightArrow','right'} %next variable 1 value
 						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
@@ -920,7 +924,7 @@ classdef runExperiment < optickaCore
 									obj.stimuli{obj.thisStim}.(name) = value;
 									update(obj.stimuli{obj.thisStim});
 								end
-								tS.keyHold = tS.totalTicks + 5;
+								tS.keyHold = tS.totalTicks + fInc;
 							else
 								tS.index = tS.maxindex;
 							end
@@ -938,7 +942,7 @@ classdef runExperiment < optickaCore
 									obj.stimuli{obj.thisStim}.(name) = value;
 									update(obj.stimuli{obj.thisStim});
 								end
-								tS.keyHold = tS.totalTicks + 5;
+								tS.keyHold = tS.totalTicks + fInc;
 							end
 						end
 					case '.>'
@@ -954,7 +958,7 @@ classdef runExperiment < optickaCore
 									obj.stimuli{obj.thisStim}.(name) = value;
 									update(obj.stimuli{obj.thisStim});
 								end
-								tS.keyHold = tS.totalTicks + 5;
+								tS.keyHold = tS.totalTicks + fInc;
 							else
 								tS.index = tS.maxindex;
 							end
@@ -967,7 +971,7 @@ classdef runExperiment < optickaCore
 									obj.stimuli.choice = obj.thisStim;
 								end
 							end
-							tS.keyHold = tS.totalTicks + 5;
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '-_'
 						if tS.totalTicks > tS.keyHold
@@ -977,19 +981,19 @@ classdef runExperiment < optickaCore
 									obj.stimuli.choice = obj.thisStim;
 								end
 							end
-							tS.keyHold = tS.totalTicks + 5;
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case 'r'
 						if tS.totalTicks > tS.keyHold
 							newColour = rand(1,3);
 							obj.stimuli{1}.colourOut = newColour;
 							update(obj.stimuli{1});
-							tS.keyHold = tS.totalTicks + 5;
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case {'UpArrow','up'} %give a reward at any time
-						obj.lJack.timedTTL(0,100);
+						timedTTL(obj.lJack,0,100);
 					case {'DownArrow','down'}
-						obj.lJack.timedTTL(0,1000);
+						timedTTL(obj.lJack,0,1000);
 					case 'z' % mark trial as correct
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
 							forceTransition(obj.stateMachine, 'correct1');
@@ -1011,7 +1015,7 @@ classdef runExperiment < optickaCore
 								forceTransition(obj.stateMachine, 'prestimulus');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							end
-							tS.keyHold = tS.totalTicks + 5;
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '1!'
 						tS.stopTraining = true;

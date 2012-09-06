@@ -10,7 +10,7 @@
 % ========================================================================
 classdef baseStimulus < optickaCore & dynamicprops
 	
-	properties (Abstract = true, SetAccess = private)
+	properties (Abstract = true, SetAccess = protected)
 		%> the stimulus family
 		family
 	end

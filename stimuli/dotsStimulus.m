@@ -39,7 +39,7 @@ classdef dotsStimulus < baseStimulus
 		nDots
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		%> stimulus family
 		family = 'dots'
 		%> row are x and y and columns are each dot
@@ -49,6 +49,7 @@ classdef dotsStimulus < baseStimulus
 		%> colour for each dot
 		colours
 	end
+	
 	properties (SetAccess = private, GetAccess = private)
 		nDots_
 		%> we must scale the dots lager than the mask by this factor

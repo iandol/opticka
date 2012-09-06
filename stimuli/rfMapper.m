@@ -77,7 +77,7 @@ classdef rfMapper < barStimulus
 					end
 				end
 			end
-			obj.backgroundColour = [ 0 0 0 0];
+			obj.backgroundColour = [0 0 0 0];
 			obj.family = 'rfmapper';
 			obj.salutation('constructor','rfMapper initialisation complete');
 		end
@@ -94,17 +94,14 @@ classdef rfMapper < barStimulus
 				Screen('Preference', 'Verbosity', 2);
 				Screen('Preference', 'SuppressAllWarnings', 0);
 				PsychImaging('PrepareConfiguration');
-				%PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 				if isempty(obj.screen.windowed) || length(obj.screen.windowed) ~= 2
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen.screen, obj.screen.backgroundColour,[], [], obj.screen.doubleBuffer+1,[],obj.screen.antiAlias);
 				elseif length(obj.screen.windowed)==2
 					windowed = [1 1 obj.screen.windowed(1)+1 obj.screen.windowed(2)+1];
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen.screen, obj.screen.backgroundColour,windowed);
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen.screen, obj.screen.backgroundColour,windowed,[], obj.screen.doubleBuffer+1,[],obj.screen.antiAlias,[],kPsychGUIWindow);
 				end
 				[obj.xCenter, obj.yCenter] = RectCenter(obj.winRect);
-				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
-				
 				obj.setup(obj.screen);
 				AssertGLSL;
 				
@@ -119,33 +116,37 @@ classdef rfMapper < barStimulus
 				xOut = 0;
 				yOut = 0;
 				obj.rchar='';
+				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				FlushEvents;
-				%HideCursor;
+				HideCursor;
 				ListenChar(2);
+				obj.tick = 1;
+				Finc = 6;
+				keyHold = 1;
 				
 				while isempty(regexpi(obj.rchar,'^esc'))
 					
 					%draw background
-					Screen('FillRect',obj.win,obj.screen.backgroundColour,[]);
+					Screen('FillRect',obj.win,obj.backgroundColour,[]);
 					
 					%draw text
 					t=sprintf('Buttons: %i\t',obj.buttons);
 					t=[t sprintf(' | X = %2.3g| Y = %2.3g',xOut,yOut)];
-					if ischar(obj.rchar);t=[t sprintf('| Char: %s',obj.rchar)];end
+					if ischar(obj.rchar); t=[t sprintf('| Char: %s',obj.rchar)]; end
 					t=[t sprintf('Scale = %2.2g',obj.scale)];
+					t=[t sprintf(' | Texture = %g',obj.textureIndex)];
 					Screen('DrawText', obj.win, t, 0, 0, [1 1 0]);
 					
 					%draw central spot
 					sColour = obj.backgroundColour./2;
 					if max(sColour)==0;sColour=[0.5 0.5 0.5 1];end
-					Screen('gluDisk',obj.win,sColour,obj.xCenter,obj.yCenter,2);
 					
 					%draw clicked points
 					if obj.showClicks == 1
 						Screen('DrawDots',obj.win,obj.xyDots,2,sColour,[obj.xCenter obj.yCenter],1);
 					end
 					
-					% Draw the sprite at the new location.
+					% Draw at the new location.
 					if obj.isVisible == true
 						switch obj.stimulus
 							case 'bar'
@@ -154,6 +155,8 @@ classdef rfMapper < barStimulus
 
 						end
 					end
+					
+					Screen('gluDisk',obj.win,sColour,obj.xCenter,obj.yCenter,2);
 					
 					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
@@ -221,17 +224,19 @@ classdef rfMapper < barStimulus
 							case 's'
 								switch obj.stimulus
 									case 'bar'
-										obj.stimulus = 'grating';
+										%obj.stimulus = 'grating';
 									case 'grating'
-										obj.stimulus = 'bar';
+										%obj.stimulus = 'bar';
 								end
 							case 'x'
-								if obj.isVisible == true
-									obj.hide;
-								else
-									obj.show;
+								if obj.tick > keyHold
+									if obj.isVisible == true
+										obj.hide;
+									else
+										obj.show;
+									end
+									keyHold = obj.tick + Finc;
 								end
-								WaitSecs(0.05);
 							case {'LeftArrow','left'}
 								obj.angleOut = obj.angleOut-3;
 							case {'RightArrow','right'}
@@ -251,92 +256,118 @@ classdef rfMapper < barStimulus
 								obj.backgroundColour = obj.backgroundColour .* 1.1;
 								obj.backgroundColour(obj.backgroundColour>1) = 1;
 							case 'r'
-								obj.backgroundColour(1) = obj.backgroundColour(1) + 0.01;
-								if obj.backgroundColour(1) > 1
-									obj.backgroundColour(1) = 0;
+								if obj.tick > keyHold
+									obj.backgroundColour(1) = obj.backgroundColour(1) + 0.01;
+									if obj.backgroundColour(1) > 1
+										obj.backgroundColour(1) = 0;
+									end
+									keyHold = obj.tick + Finc;
 								end
-								WaitSecs(0.05);
-								disp(obj.backgroundColour);
+								
 							case 'g'
+								if obj.tick > keyHold
 								obj.backgroundColour(2) = obj.backgroundColour(2) + 0.01;
 								if obj.backgroundColour(2) > 1
 									obj.backgroundColour(2) = 0;
 								end
-								WaitSecs(0.05);
-								disp(obj.backgroundColour);
+								keyHold = obj.tick + Finc;
+								end
 							case 'b'
+								if obj.tick > keyHold
 								obj.backgroundColour(3) = obj.backgroundColour(3) + 0.01;
 								if obj.backgroundColour(3) > 1
 									obj.backgroundColour(3) = 0;
 								end
-								WaitSecs(0.05);
-								disp(obj.backgroundColour);
+								keyHold = obj.tick + Finc;
+								end
 							case 'e'
+								if obj.tick > keyHold
 								obj.backgroundColour(1) = obj.backgroundColour(1) - 0.01;
 								if obj.backgroundColour(1) < 0.01
 									obj.backgroundColour(1) = 1;
 								end
-								WaitSecs(0.05);
-								disp(obj.backgroundColour);
+								keyHold = obj.tick + Finc;
+								end
 							case 'f'
+								if obj.tick > keyHold
 								obj.backgroundColour(2) = obj.backgroundColour(2) - 0.01;
 								if obj.backgroundColour(2) < 0.01
 									obj.backgroundColour(2) = 1;
 								end
-								WaitSecs(0.05);
-								disp(obj.backgroundColour);
+								keyHold = obj.tick + Finc;
+								end
 							case 'v'
+								if obj.tick > keyHold
 								obj.backgroundColour(3) = obj.backgroundColour(3) - 0.01;
 								if obj.backgroundColour(3) < 0.01
 									obj.backgroundColour(3) = 1;
 								end
-								WaitSecs(0.05);
-								disp(obj.backgroundColour);
+								keyHold = obj.tick + Finc;
+								end
 							case '1!'
+								if obj.tick > keyHold
 								obj.colourIndex = obj.colourIndex+1;
 								obj.setColours;
-								WaitSecs(0.05);
 								obj.regenerate;
+								keyHold = obj.tick + Finc;
+								end
 							case '2@'
+								if obj.tick > keyHold
 								obj.bgcolourIndex = obj.bgcolourIndex+1;
 								obj.setColours;
 								WaitSecs(0.05);
 								obj.regenerate;
+								keyHold = obj.tick + Finc;
+								end
 							case '3#'
+								if obj.tick > keyHold
 								switch obj.stimulus
 									case 'bar'
 										obj.scale = obj.scale * 1.1;
 										if obj.scale > 8;obj.scale = 8;end
 								end
+								keyHold = obj.tick + Finc;
+								end
 							case '4$'
+								if obj.tick > keyHold
 								switch obj.stimulus
 									case 'bar'
 										obj.scale = obj.scale * 0.9;
 										if obj.scale <1;obj.scale = 1;end
 								end
+								keyHold = obj.tick + Finc;
+								end
 							case 'space'
+								if obj.tick > keyHold
 								switch obj.stimulus
 									case 'bar'
 										obj.textureIndex = obj.textureIndex + 1;
 										obj.barWidth = obj.dstRect(3)/obj.ppd;
 										obj.barLength = obj.dstRect(4)/obj.ppd;
 										obj.type = obj.textureList{obj.textureIndex};
-										WaitSecs(0.1);
 										obj.regenerate;
 									case 'grating'
 										
 								end
+								keyHold = obj.tick + Finc;
+								end
 							case {';:',';'}
+								if obj.tick > keyHold
 								obj.showClicks = ~obj.showClicks;
-								WaitSecs(0.1);
+								keyHold = obj.tick + Finc;
+								end
 							case {'''"',''''}
 								obj.xClick = 0;
 								obj.yClick = 0;
 								obj.xyDots = vertcat((obj.xClick.*obj.ppd),(obj.yClick*obj.ppd));
 						end
 					end
+					
 					FlushEvents('keyDown');
+					
 					Screen('Flip', obj.win);
+					
+					obj.tick = obj.tick + 1;
 				end
 				
 				obj.win=[];
@@ -367,7 +398,7 @@ classdef rfMapper < barStimulus
 		% ===================================================================
 		function set.colourIndex(obj,value)
 			obj.colourIndex = value;
-			if obj.colourIndex > length(obj.colourList)
+			if obj.colourIndex > length(obj.colourList) %#ok<*MCSUP>
 				obj.colourIndex = 1;
 			end
 		end

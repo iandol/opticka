@@ -60,7 +60,7 @@ classdef gratingStimulus < baseStimulus
 		phaseOfReverse = 180
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		%stimulus family
 		family = 'grating'
 		%> scale is used when changing size as an independent variable to keep sf accurate

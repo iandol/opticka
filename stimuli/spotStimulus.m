@@ -4,10 +4,8 @@
 %>   The current properties are:
 % ========================================================================
 classdef spotStimulus < baseStimulus
-
-   properties %--------------------PUBLIC PROPERTIES----------%
-		%> stimulus family
-		family = 'spot'
+	
+	properties %--------------------PUBLIC PROPERTIES----------%
 		%> type can be "simple" or "flash"
 		type = 'simple'
 		%> time to flash on and off in seconds
@@ -17,6 +15,11 @@ classdef spotStimulus < baseStimulus
 		%> contrast is actually a multiplier to the stimulus colour, not
 		%> formally defined contrast in this case
 		contrast = 1
+	end
+	
+	properties (SetAccess = protected, GetAccess = public)
+		%> stimulus family
+		family = 'spot'
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = private)
@@ -46,8 +49,8 @@ classdef spotStimulus < baseStimulus
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
-	
+		%=======================================================================
+		
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -57,7 +60,7 @@ classdef spotStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function obj = spotStimulus(varargin) 
+		function obj = spotStimulus(varargin)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
 				varargin.family = 'spot';
@@ -94,7 +97,7 @@ classdef spotStimulus < baseStimulus
 				obj.yCenter=sM.yCenter;
 				obj.win=sM.win;
 			end
-
+			
 			fn = fieldnames(spotStimulus);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
@@ -127,7 +130,7 @@ classdef spotStimulus < baseStimulus
 				bg = [sM.backgroundColour(1:3) 0]; %make sure alpha is 0
 				obj.setupFlash(bg);
 			end
-
+			
 			if isempty(obj.findprop('xTmp'));p=obj.addprop('xTmp');p.Transient = true;end
 			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
 			computePosition(obj);
@@ -137,8 +140,8 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Update a structure for runExperiment
 		%>
-		%> @param 
-		%> @return 
+		%> @param
+		%> @return
 		% ===================================================================
 		function update(obj)
 			computePosition(obj);
@@ -163,7 +166,7 @@ classdef spotStimulus < baseStimulus
 				end
 			end
 		end
-
+		
 		% ===================================================================
 		%> @brief Animate an structure for runExperiment
 		%>
@@ -226,7 +229,7 @@ classdef spotStimulus < baseStimulus
 	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
+		%=======================================================================
 		% ===================================================================
 		%> @brief sizeOut Set method
 		%>
@@ -243,7 +246,7 @@ classdef spotStimulus < baseStimulus
 			obj.xPositionOut = (value*obj.ppd) + obj.xCenter;
 			if ~isempty(obj.findprop('xTmp'));obj.computePosition;end
 		end
-
+		
 		% ===================================================================
 		%> @brief yPositionOut Set method
 		%>
@@ -254,7 +257,7 @@ classdef spotStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief colourOut SET method 
+		%> @brief colourOut SET method
 		%>
 		% ===================================================================
 		function set_colourOut(obj, value)
@@ -269,7 +272,7 @@ classdef spotStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief contrastOut SET method 
+		%> @brief contrastOut SET method
 		%>
 		% ===================================================================
 		function set_contrastOut(obj, value)
