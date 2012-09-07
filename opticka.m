@@ -30,7 +30,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> used to sanitise passed values on construction
-			allowedProperties='verbose' 
+		allowedProperties='verbose' 
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList = {'OKOmniplexIP','OKPixelsPerCm','OKAntiAliasing','OKbitDepth'};
 		%> any other prefs to save?

@@ -171,8 +171,11 @@ rExp = runExperiment('stimuli', myStim,...
 run(rExp);
 
 %%
-% Note after this is run, because 'verbose' property of runExperient was
-% true we automatically will get a graphical timing plot of every frame and whether any frames
+% Plot a timing log of every frame against the stimulus on/off times:
+getRunLog(rExp);
+
+%%
+% The image above is a graphical timing plot of every frame and whether any frames
 % were dropped during stimulus presentation. This will not consider
 % dropped frames during the GPU warming or inter trial time as dropped as the display is
 % blank and we are using absolute time values for our trial transitions.
