@@ -1,6 +1,6 @@
-Opticka Stimulus Generator {#mainpage}
+Opticka Stimulus Generator			{#mainpage}
 ==========================
-[TOC] Opticka Stimulus Generator is an object oriented GUI driven framework for the [Psychophysics toolbox (PTB)](http://psychtoolbox.org/wikka.php?wakka=HomePage), allowing randomised interleaved presentation of stimuli. It is designed to work on OS X, Windows (currently no digital I/O) or Linux, and interfaces via strobed words and ethernet with a Plexon Omniplex for recording neurophysiological data.  
+Opticka Stimulus Generator is an object oriented GUI driven framework for the [Psychophysics toolbox (PTB)](http://psychtoolbox.org/wikka.php?wakka=HomePage), allowing randomised interleaved presentation of stimuli. It is designed to work on OS X, Windows (currently no digital I/O) or Linux, and interfaces via strobed words and ethernet with a Plexon Omniplex for recording neurophysiological data.  
 The various classes can also be used without the need to run the GUI (see [runtest.m](http://144.82.131.18/optickadocs/runtest.html) for an example), and stimuli provide a unified interface (setup, animate, draw, update, reset) to integrate into standard PTB routines. The various object methods take care of all the background geometry and normalization, meaning stimuli are much easier to use than "raw" PTB.
 ![screenshot](http://i49.tinypic.com/5yhwcp.png)
 Quick Documentation
