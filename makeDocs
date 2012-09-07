@@ -1,6 +1,8 @@
 #!/bin/zsh
 # This script builds the documentation
 
+rm -rf html/
+
 MATLAB='/Applications/MATLAB_R2012a.app/bin/matlab'
 if [ -f $MATLAB ]; then
 	$MATLAB -nodesktop -nosplash -r "publish('runtest.m');pause(2);exit"
