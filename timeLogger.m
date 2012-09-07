@@ -45,25 +45,6 @@ classdef timeLogger < optickaCore
 			obj.screenLog.construct = obj.timer();
 		end
 		
-
-		% ===================================================================
-		%> @brief calculate genuine missed stim frames
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function calculateMisses(obj)
-			index=min([length(obj.vbl) length(obj.flip) length(obj.show)]);
-			miss=obj.miss(1:index); %#ok<*PROP>
-			stimTime=obj.stimTime(1:index);
-			
-			obj.missImportant = miss;
-			obj.missImportant(obj.missImportant <= 0) = -inf;
-			obj.missImportant(stimTime < 1) = -inf;
-			obj.missImportant(1:2) = -inf; %ignore first frame
-			obj.nMissed = length(find(obj.missImportant > 0));
-		end
-		
 		% ===================================================================
 		%> @brief print Log of the frame timings
 		%>
@@ -163,7 +144,31 @@ classdef timeLogger < optickaCore
 	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
-		%=======================================================================
+	%=======================================================================
+		% ===================================================================
+		%> @brief calculate genuine missed stim frames
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function calculateMisses(obj)
+			index=min([length(obj.vbl) length(obj.flip) length(obj.show)]);
+			miss=obj.miss(1:index); %#ok<*PROP>
+			stimTime=obj.stimTime(1:index);
+			
+			obj.missImportant = miss;
+			obj.missImportant(obj.missImportant <= 0) = -inf;
+			obj.missImportant(stimTime < 1) = -inf;
+			obj.missImportant(1:2) = -inf; %ignore first frame
+			obj.nMissed = length(find(obj.missImportant > 0));
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function [avg,err] = stderr(obj,data)
 			avg=mean(data);
 			err=std(data);
