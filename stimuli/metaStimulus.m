@@ -1,18 +1,24 @@
 % ========================================================================
-%> @brief metaStimulus light wrapper for opticka stimuli
-%> METASTIMULUS a collection of stimuli, wrapped in one structure
+%> @brief metaStimulus is a  wrapper for opticka stimuli
+%> METASTIMULUS a collection of stimuli, wrapped in one structure. It
+%> allows you to reat a group of heterogenous stimuli as if it is a single
+%> stimulus, so for example animate(metaStimulus) will run the animate method
+%> for all stimuli in the group without having to call it for each stimulus.
+%> You can also pick individual stimuli by using cell indexing of this
+%> object. So for example metaStimulus{2} actually calls
+%> metaStimulus.stimuli{2}.
 % ========================================================================
 classdef metaStimulus < optickaCore
 	
 	%--------------------PUBLIC PROPERTIES----------%
 	properties 
-		%>cell array of stimuli to manage
+		%>cell array of opticka stimuli to manage
 		stimuli = {}
 		%> screenManager handle
 		screen
 		%> verbose?
 		verbose = true
-		%> choose only 1 stimulus
+		%> choice allows to call only 1 stimulus in the group
 		choice = []
 	end
 	
@@ -47,13 +53,12 @@ classdef metaStimulus < optickaCore
 		%>
 		%> More detailed description of what the constructor does.
 		%>
-		%> @param args are passed as a structure of properties which is
+		%> @param varargin are passed as a structure of properties which is
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
 		function obj = metaStimulus(varargin)
 			if nargin == 0; varargin.name = 'metaStimulus';end
-			%obj=obj@optickaCore(varargin); %superclass constructor
 			if nargin>0; obj.parseArgs(varargin,obj.allowedProperties); end
 		end
 		
@@ -63,7 +68,7 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function setup(obj,choice)
+		function setup(obj)
 			for i = 1:obj.n
 				setup(obj.stimuli{i},obj.screen);
 			end
@@ -72,7 +77,7 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		%> @brief update wrapper
 		%>
-		%> @param
+		%> @param choice override a single choice
 		%> @return
 		% ===================================================================
 		function update(obj,choice)
@@ -96,7 +101,7 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		%> @brief draw wrapper
 		%>
-		%> @param
+		%> @param choice override a single choice
 		%> @return
 		% ===================================================================
 		function draw(obj,choice)
@@ -120,7 +125,7 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		%> @brief animate wrapper
 		%>
-		%> @param
+		%> @param choice allow a single selected stimulus
 		%> @return
 		% ===================================================================
 		function animate(obj,choice)
@@ -147,7 +152,7 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function reset(obj,choice)
+		function reset(obj)
 
 			for i = 1:obj.n
 				reset(obj.stimuli{i});
@@ -161,17 +166,17 @@ classdef metaStimulus < optickaCore
 		
 		% ===================================================================
 		%> @brief set stimuli sanity checker
-		%> @param
+		%> @param in a stimuli group
 		%> @return 
 		% ===================================================================
 		function set.stimuli(obj,in)
-			if iscell(in)
+			if iscell(in) % a cell array of stimuli
 				obj.stimuli = [];
 				obj.stimuli = in;
 			elseif isa(in,'baseStimulus') %we are a single opticka stimulus
 				obj.stimuli = {in};
 			elseif isempty(in)
-				obj.stimuli = {[]};
+				obj.stimuli = {};
 			else
 				error([obj.name ':set stimuli | not a cell array or baseStimulus child']);
 			end
@@ -188,10 +193,10 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief subsref allow {} to call stimuli cell array
+		%> @brief subsref allow {} to call stimuli cell array directly
 		%>
 		%> @param  s is the subsref struct
-		%> @return out any output
+		%> @return varargout any output for the reference
 		% ===================================================================
 		function varargout = subsref(obj,s)
 			switch s(1).type
@@ -207,10 +212,11 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief subsref allow {} to call stimuli cell array
+		%> @brief subsasgn allow {} to assign to the stimuli cell array
 		%>
 		%> @param  s is the subsref struct
-		%> @return out any output
+		%> @param val is the value to assign
+		%> @return obj object
 		% ===================================================================
 		function obj = subsasgn(obj,s,val)
 			switch s(1).type

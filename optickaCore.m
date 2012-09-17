@@ -1,19 +1,22 @@
 % ========================================================================
-%> @brief optickaCore 
-%> optickaCore baseclass derived from handle
+%> @brief optickaCore base class inherited by many other opticka classes.
+%> optickaCore is itself derived from handle
 % ========================================================================
 classdef optickaCore < handle
 	
+	%--------------------PUBLIC PROPERTIES----------%
 	properties 
 		%> object name
 		name = ''
 	end
 	
+	%--------------------ABSTRACT PROPERTIES----------%
 	properties (Abstract = true)
-		%> verbose logging, subclasses must assign this
+		%> verbose logging, subclasses must assign this. This is normally true/false
 		verbose
 	end
 	
+	%--------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> clock() dateStamp set on construction
 		dateStamp
@@ -23,20 +26,25 @@ classdef optickaCore < handle
 		paths = struct()
 	end
 	
+	%--------------------DEPENDENT PROPERTIES----------%
 	properties (SetAccess = private, Dependent = true)
+		%> The fullName is the object name combined with its uuid and class name
 		fullName = ''
 	end
 	
+	%--------------------TRANSIENT PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected, Transient = true)
 		%> Matlab version number, this is transient so it is not saved
 		mversion = 0
 	end
 	
+	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected)
 		%> class name
 		className = ''
 	end
 	
+	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
 		allowedProperties = 'name'
@@ -61,7 +69,7 @@ classdef optickaCore < handle
 			obj.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
 			%obj.uuid = char(java.util.UUID.randomUUID); %128bit uuid;
 			if nargin>0
-				%obj.parseArgs(args,obj.allowedProperties);
+				obj.parseArgs(args,obj.allowedProperties);
 			end
 			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
 			obj.paths.whatami = obj.className;
@@ -82,11 +90,13 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
-		%> @brief concatenate the name with a uuid at get.
-		%> @param
-		%> @return
+		%> @brief find properties of object with specific attributes, for
+		%> example all properties whose GetAcccess attribute is public
+		%> @param attrName attribute name, i.e. GetAccess, Transient
+		%> @param attrValue value of that attribute, i.e. public, true
+		%> @return list of properties that match that attribute
 		% ===================================================================
-		function list = findAttributes(obj, attrName, aName)
+		function list = findAttributes(obj, attrName, attrValue)
 		   % Determine if first input is object or class name
 		   if ischar(obj)
 			  mc = meta.class.fromName(obj);
@@ -108,12 +118,12 @@ classdef optickaCore < handle
 			  if isempty (findprop(mp,attrName))
 				 error('Not a valid attribute name')
 			  end
-			  attrValue = mp.(attrName);
+			  thisValue = mp.(attrName);
 
 			  % If the attribute is set or has the specified value,
 			  % save its name in cell array
 			  if attrValue
-				 if islogical(attrValue) || strcmp(aName,attrValue)
+				 if islogical(attrValue) || strcmp(attrValue,thisValue)
 					ii = ii + 1;
 					cl_array(ii) = {mp.Name}; 
 				 end
@@ -124,11 +134,15 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
-		%> @brief concatenate the name with a uuid at get.
-		%> @param
-		%> @return
+		%> @brief find properties of object with specific attributes, for
+		%> example all properties whose GetAcccess attribute is public and
+		%> type is logical
+		%> @param attrName attribute name, i.e. GetAccess, Transient
+		%> @param attrValue value of that attribute, i.e. public, true
+		%> @param type logical, notlogical, string or number
+		%> @return list of properties that match that attribute
 		% ===================================================================
-		function list = findAttributesandType(obj, attrName, aName, type)
+		function list = findAttributesandType(obj, attrName, attrValue, type)
 		   % Determine if first input is object or class name
 		   if ischar(obj)
 			  mc = meta.class.fromName(obj);
@@ -150,12 +164,12 @@ classdef optickaCore < handle
 			  if isempty (findprop(mp,attrName))
 				 error('Not a valid attribute name')
 			  end
-			  attrValue = mp.(attrName);
+			  thisValue = mp.(attrName);
 
 			  % If the attribute is set or has the specified value,
 			  % save its name in cell array
 			  if attrValue
-				 if islogical(attrValue) || strcmp(aName,attrValue)
+				 if islogical(attrValue) || strcmp(attrValue,thisValue)
 					 val = obj.(mp.Name);
 					 if islogical(val) && strcmpi(type,'logical')
 						 ii = ii + 1;

@@ -28,7 +28,10 @@ classdef timeLogger < optickaCore
 		allowedProperties = 'timer'
 	end
 	
-	methods
+	%=======================================================================
+	methods %------------------PUBLIC METHODS
+	%=======================================================================
+
 		% ===================================================================
 		%> @brief Constructor
 		%>
@@ -140,11 +143,7 @@ classdef timeLogger < optickaCore
 			p.refresh();
 			clear vbl show flip index miss stimTime
 		end
-	end %---END PUBLIC METHODS---%
-	
-	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
+		
 		% ===================================================================
 		%> @brief calculate genuine missed stim frames
 		%>
@@ -162,6 +161,11 @@ classdef timeLogger < optickaCore
 			obj.missImportant(1:2) = -inf; %ignore first frame
 			obj.nMissed = length(find(obj.missImportant > 0));
 		end
+	end %---END PUBLIC METHODS---%
+	
+	%=======================================================================
+	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief 

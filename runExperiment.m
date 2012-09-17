@@ -98,7 +98,7 @@ classdef runExperiment < optickaCore
 		%> @return instance of the class.
 		% ===================================================================
 		function obj = runExperiment(varargin)
-			if nargin == 0; varargin.name = 'metaStimulus'; end
+			if nargin == 0; varargin.name = 'runExperiment'; end
 			obj=obj@optickaCore(varargin); %superclass constructor
 			obj.paths.whereami = fileparts(which(mfilename));
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
@@ -304,8 +304,11 @@ classdef runExperiment < optickaCore
 				s.playMovie();
 				
 			catch ME
-				
-				obj.lJack.setDIO([0,0,0]);
+				if ~isempty(obj.lJack) && isa(obj.lJack,'labJack')
+					obj.lJack.setDIO([0,0,0]);
+					obj.lJack.close;
+					obj.lJack=[];
+				end
 				
 				s.resetScreenGamma();
 				
@@ -313,9 +316,6 @@ classdef runExperiment < optickaCore
 				
 				s.close();
 				
-				%obj.serialP.close;
-				obj.lJack.close;
-				obj.lJack=[];
 				rethrow(ME)
 				
 			end

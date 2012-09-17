@@ -1,6 +1,12 @@
+% ========================================================================
+%> @brief screenManager Manages a Screen object
+%> screenManager manages PTB screen settings for opticka. You can set many
+%> properties of this class to control PTB screens, and use it to open and
+%> close the screen based on those properties. It also manages movie
+%> recording of the stimulus and some basic drawing commands like fixation
+%> spots and the hide flash trick from Mario.
+% ========================================================================
 classdef screenManager < optickaCore
-	%screenManager Manages a Screen object
-	%   screenManager manages PTB screen objects for opticka
 	
 	properties
 		%> MBP 1440x900 is 33.2x20.6cm so approx 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
@@ -160,6 +166,7 @@ classdef screenManager < optickaCore
 			
 			%get the gammatable and dac information
 			[obj.screenVals.gammaTable,obj.screenVals.dacBits,obj.screenVals.lutSize]=Screen('ReadNormalizedGammaTable', obj.screen);
+			obj.screenVals.originalGammaTable = obj.screenVals.gammaTable;
 			
 			%get screen dimensions
 			[obj.screenVals.width, obj.screenVals.height] = Screen('WindowSize',obj.screen);
@@ -220,7 +227,7 @@ classdef screenManager < optickaCore
 				%override VTOTAL?
 				%Screen('Preference', 'VBLEndlineOverride', 1066);
 				
-				if debug == true || ~isempty(obj.windowed)
+				if debug == true || (length(obj.windowed)==1 && obj.windowed ~= 0)
 					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
 					Screen('Preference', 'Verbosity', 2);
@@ -236,11 +243,10 @@ classdef screenManager < optickaCore
 				
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
+				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
 				if ischar(obj.bitDepth) && ~strcmpi(obj.bitDepth,'8bit')
 					PsychImaging('AddTask', 'General', obj.bitDepth);
 				end
-				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
-				
 				if isempty(obj.windowed) || (length(obj.windowed)==1 && obj.windowed == 0) %fullscreen
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				else %windowed
@@ -255,15 +261,15 @@ classdef screenManager < optickaCore
 				tL.screenLog.postOpenWindow=GetSecs;
 				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
 				
-				obj.isOpen = true;
-				obj.screenVals.win = obj.win; %make a copy
-				
 				try
 					AssertGLSL;
 				catch
 					obj.close();
 					error('GLSL Shading support is required for Opticka!');
 				end
+				
+				obj.isOpen = true;
+				obj.screenVals.win = obj.win; %make a copy
 				
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				%find our fps if not defined before
@@ -474,7 +480,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function resetScreenGamma(obj)
-			if obj.hideFlash == true || obj.windowed(1) ~= 1 || (~isempty(obj.screenVals) && obj.screenVals.resetGamma == true)
+			if obj.hideFlash == true || obj.windowed(1) ~= 1 || (~isempty(obj.screenVals) && obj.screenVals.resetGamma == true && ~isempty(obj.screenVals.gammaTable))
 				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 				Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 			end

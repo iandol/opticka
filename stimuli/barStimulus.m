@@ -7,10 +7,15 @@ classdef barStimulus < baseStimulus
 		type = 'solid'
 		%> scale up the texture in the bar
 		pixelScale = 1 
+		%> width of bar
 		barWidth = 1
+		%> length of bar
 		barLength = 4
+		%> contrast multiplier
 		contrast = []
+		%> texture scale
 		scale = 1
+		%> texture interpolation
 		interpMethod = 'nearest'
 	end
 	
@@ -23,7 +28,7 @@ classdef barStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='^(type|pixelScale|barWidth|barLength|angle|speed|contrast|scale|interpMethod)$';
+		allowedProperties='type|pixelScale|barWidth|barLength|angle|speed|contrast|scale|interpMethod';
 		ignoreProperties = 'interpMethod|matrix|rmatrix|pixelScale';
 	end
 	
