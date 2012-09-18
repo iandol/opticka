@@ -49,7 +49,7 @@ classdef rfMapper < barStimulus
 		colourList = {[1 1 1];[0 0 0];[1 0 0];[0 1 0];[0 0 1];[1 1 0];[1 0 1];[0 1 1];[.5 .5 .5]}
 		textureIndex = 1
 		textureList = {'simple','random','randomColour','randomN','randomBW'};
-		allowedProperties='^(type|screen|blend|antiAlias)$'
+		allowedProperties='type|screen|blend|antiAlias'
 	end
 	
 	%=======================================================================
@@ -65,21 +65,18 @@ classdef rfMapper < barStimulus
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function obj = rfMapper(args)
+		function obj = rfMapper(varargin)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
-				args.family = 'rfmapper';
+				varargin.family = 'rfMapper';
 			end
-			obj=obj@barStimulus(args); %we call the superclass constructor first
-			if nargin>0 && isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
-					if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Configuring setting in rfMapper constructor');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					end
-				end
+			
+			obj=obj@barStimulus(varargin); %we call the superclass constructor first
+			
+			if nargin>0
+				obj.parseArgs(varargin, obj.allowedProperties);
 			end
+			
 			obj.backgroundColour = [0 0 0 0];
 			obj.family = 'rfmapper';
 			obj.salutation('constructor','rfMapper initialisation complete');
@@ -166,18 +163,14 @@ classdef rfMapper < barStimulus
 					xOut = (mX - obj.xCenter)/obj.ppd;
 					yOut = (mY - obj.yCenter)/obj.ppd;
 					if obj.buttons(2) == 1
-						tic
 						obj.xClick = [obj.xClick xOut];
 						obj.yClick = [obj.yClick yOut];
 						obj.dStartTick = obj.dEndTick;
 						obj.dEndTick = length(obj.xClick);
 						updateFigure(obj);
-						fprintf('Fig update: %g\n',toc)
 					end
 					
-					tic
 					checkKeys(obj,mX,mY,keyHold,Finc);
-					fprintf('Key update: %g\n',toc)
 					
 					obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
 					
@@ -258,7 +251,7 @@ classdef rfMapper < barStimulus
 				%obj.xClick = unique(obj.xClick);
 				%obj.yClick = unique(obj.yClick);
 				obj.fhandle = figure;
-				plot(obj.xClick,obj.yClick,'k-.')
+				plot(obj.xClick,obj.yClick,'k.-.')
 				xax = obj.winRect(3)/obj.ppd;
 				xax = xax - (xax/2);
 				yax = obj.winRect(4)/obj.ppd;
@@ -279,7 +272,7 @@ classdef rfMapper < barStimulus
 		%> @return
 		% ===================================================================
 		function updateFigure(obj)
-			plot(obj.xClick(obj.dStartTick:end), obj.yClick(obj.dStartTick:end), 'r-.');
+			plot(obj.xClick(obj.dStartTick:end), obj.yClick(obj.dStartTick:end), 'r-o');
 		end
 		
 		% ===================================================================

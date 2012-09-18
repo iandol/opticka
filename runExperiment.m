@@ -442,7 +442,7 @@ classdef runExperiment < optickaCore
 						s.drawGrid;
 					end
 					
-					% Tell PTB that no further drawing commands will follow before Screen('Flip')
+						% Tell PTB that no further drawing commands will follow before Screen('Flip')
 					Screen('DrawingFinished', s.win); 
 					
 					%check keyboard for commands
@@ -529,31 +529,12 @@ classdef runExperiment < optickaCore
 			obj.screen.movieSettings.nFrames = 100;
 			obj.screen.movieSettings.type = 1;
 			obj.screen.movieSettings.codec = 'rle ';
-			
-% 			obj.lJack = labJack(struct('name','labJack','openNow',1,'verbosity',1));
-% 			obj.lJack.prepareStrobe(0,[0,255,255],1);
-% 			obj.lJack.close;
-% 			obj.lJack=[];
-			
-% 			%small fix to stop nested cells causing problems
-% 			if iscell(obj.stimuli) && length(obj.stimuli) > 1
-% 				while iscell(obj.stimuli) && length(obj.stimuli) == 1
-% 					obj.stimuli = obj.stimuli{1};
-% 				end
-% 			end
-			
+				
 			if obj.screen.isPTB == true
 				obj.computer=Screen('computer');
 				obj.ptb=Screen('version');
 			end
-			
-% 			a=zeros(20,1);
-% 			for i=1:20
-% 				a(i)=GetSecs;
-% 			end
-% 			obj.runLog.screen.deltaGetSecs=mean(diff(a))*1000; %what overhead does GetSecs have in milliseconds?
-% 			WaitSecs(0.01); %preload function
-			
+		
 			obj.screenVals = obj.screen.screenVals;
 			
 			obj.runLog.screenLog.prepTime=obj.runLog.timer()-obj.runLog.screenLog.construct;
@@ -995,15 +976,15 @@ classdef runExperiment < optickaCore
 						timedTTL(obj.lJack,0,100);
 					case {'DownArrow','down'}
 						timedTTL(obj.lJack,0,1000);
-					case 'z' % mark trial as correct
+					case 'z' % mark trial as correct1
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
 							forceTransition(obj.stateMachine, 'correct1');
 						end
-					case 'x' % mark trial as incorrect
+					case 'x' % mark trial as correct2
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
 							forceTransition(obj.stateMachine, 'correct2');
 						end
-					case 'c'
+					case 'c' %mark trial incorrect
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
 							forceTransition(obj.stateMachine, 'incorrect');
 						end
