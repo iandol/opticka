@@ -340,7 +340,9 @@ classdef runExperiment < optickaCore
 				error('There is no working PTB available!')
 			end
 			
-			topsDataLog.flushAllData();
+			if exist('topsDataLog','file')
+				topsDataLog.flushAllData();
+			end
 			%initialise runLog for this run
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog; %short handle to log
@@ -467,7 +469,9 @@ classdef runExperiment < optickaCore
 				ListenChar(0)
 				ShowCursor;
 				s.close();
-				topsDataLog.gui();
+				if exist('topsDataLog','file')
+					topsDataLog.gui();
+				end
 				figure(obj.screenSettings.optickahandle)
 				obj.lJack.close;
 				obj.lJack=[];
@@ -475,7 +479,10 @@ classdef runExperiment < optickaCore
 				
 			catch ME
 				Priority(0);
-				ListenChar(0)
+				ListenChar(0);
+				if exist('topsDataLog','file')
+					topsDataLog.flushAllData();
+				end
 				ShowCursor;
 				s.close();
 				obj.lJack.close;
