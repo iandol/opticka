@@ -102,7 +102,7 @@ classdef timeLogger < optickaCore
 			hold on
 			plot(x,show-vbl,'r')
 			plot(x,show-flip,'g')
-			plot(x,vbl-flip,'b')
+			plot(x,vbl-flip,'b-.')
 			plot(x,stimTime-0.5,'k')
 			legend('Show-VBL','Show-Flip','VBL-Flip','Simulus ON/OFF');
 			hold off

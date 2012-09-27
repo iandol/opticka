@@ -5,7 +5,7 @@
 classdef optickaCore < handle
 	
 	%--------------------PUBLIC PROPERTIES----------%
-	properties 
+	properties
 		%> object name
 		name = ''
 	end
@@ -52,7 +52,7 @@ classdef optickaCore < handle
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -79,7 +79,7 @@ classdef optickaCore < handle
 		% ===================================================================
 		%> @brief concatenate the name with a uuid at get.
 		%> @param
-		%> @return
+		%> @return name the concatenated name
 		% ===================================================================
 		function name = get.fullName(obj)
 			if isempty(obj.name)
@@ -97,40 +97,50 @@ classdef optickaCore < handle
 		%> @return list of properties that match that attribute
 		% ===================================================================
 		function list = findAttributes(obj, attrName, attrValue)
-		   % Determine if first input is object or class name
-		   if ischar(obj)
-			  mc = meta.class.fromName(obj);
-		   elseif isobject(obj)
-			  mc = metaclass(obj);
-		   end
-
-		   % Initial size and preallocate
-		   ii = 0; nProps = length(mc.PropertyList);
-		   cl_array = cell(1,nProps);
-
-		   % For each property, check the value of the queried attribute
-		   for  c = 1:nProps
-
-			  % Get a meta.property object from the meta.class object
-			  mp = mc.PropertyList(c); 
-
-			  % Determine if the specified attribute is valid on this object
-			  if isempty (findprop(mp,attrName))
-				 error('Not a valid attribute name')
-			  end
-			  thisValue = mp.(attrName);
-
-			  % If the attribute is set or has the specified value,
-			  % save its name in cell array
-			  if attrValue
-				 if islogical(attrValue) || strcmp(attrValue,thisValue)
-					ii = ii + 1;
-					cl_array(ii) = {mp.Name}; 
-				 end
-			  end
-		   end
-		   % Return used portion of array
-		   list = cl_array(1:ii);
+			% Determine if first input is object or class name
+			if ischar(obj)
+				mc = meta.class.fromName(obj);
+			elseif isobject(obj)
+				mc = metaclass(obj);
+			end
+			
+			% Initial size and preallocate
+			ii = 0; nProps = length(mc.PropertyList);
+			cl_array = cell(1,nProps);
+			
+			% For each property, check the value of the queried attribute
+			for  c = 1:nProps
+				
+				% Get a meta.property object from the meta.class object
+				mp = mc.PropertyList(c);
+				
+				% Determine if the specified attribute is valid on this object
+				if isempty (findprop(mp,attrName))
+					error('Not a valid attribute name')
+				end
+				thisValue = mp.(attrName);
+				
+				% If the attribute is set or has the specified value,
+				% save its name in cell array
+				if ischar(attrValue)
+					if strcmpi(attrValue,thisValue)
+						ii = ii + 1;
+						cl_array(ii) = {mp.Name};
+					end
+				elseif islogical(attrValue)
+					if thisValue == attrValue
+						ii = ii + 1;
+						cl_array(ii) = {mp.Name};
+					end
+				elseif isempty(attrValue)
+					if isempty(thisValue)
+						ii = ii + 1;
+						cl_array(ii) = {mp.Name};
+					end
+				end
+			end
+			% Return used portion of array
+			list = cl_array(1:ii)';
 		end
 		
 		% ===================================================================
@@ -143,62 +153,62 @@ classdef optickaCore < handle
 		%> @return list of properties that match that attribute
 		% ===================================================================
 		function list = findAttributesandType(obj, attrName, attrValue, type)
-		   % Determine if first input is object or class name
-		   if ischar(obj)
-			  mc = meta.class.fromName(obj);
-		   elseif isobject(obj)
-			  mc = metaclass(obj);
-		   end
-
-		   % Initial size and preallocate
-		   ii = 0; nProps = length(mc.PropertyList);
-		   cl_array = cell(1,nProps);
-
-		   % For each property, check the value of the queried attribute
-		   for  c = 1:nProps
-
-			  % Get a meta.property object from the meta.class object
-			  mp = mc.PropertyList(c); 
-
-			  % Determine if the specified attribute is valid on this object
-			  if isempty (findprop(mp,attrName))
-				 error('Not a valid attribute name')
-			  end
-			  thisValue = mp.(attrName);
-
-			  % If the attribute is set or has the specified value,
-			  % save its name in cell array
-			  if attrValue
-				 if islogical(attrValue) || strcmp(attrValue,thisValue)
-					 val = obj.(mp.Name);
-					 if islogical(val) && strcmpi(type,'logical')
-						 ii = ii + 1;
-						 cl_array(ii) = {mp.Name};
-					 elseif ~islogical(val) && strcmpi(type,'notlogical')
-						 ii = ii + 1;
-						 cl_array(ii) = {mp.Name};
-					 elseif ischar(val) && strcmpi(type,'string')
-						 ii = ii + 1;
-						 cl_array(ii) = {mp.Name};
-					elseif isnumeric(val) && strcmpi(type,'number')
-						ii = ii + 1;
-						cl_array(ii) = {mp.Name};
-					 elseif strcmpi(type,'any')
-						 ii = ii + 1;
-						cl_array(ii) = {mp.Name};
-					 end
-				 end
-			  end
-		   end
-		   % Return used portion of array
-		   list = cl_array(1:ii);
+			% Determine if first input is object or class name
+			if ischar(obj)
+				mc = meta.class.fromName(obj);
+			elseif isobject(obj)
+				mc = metaclass(obj);
+			end
+			
+			% Initial size and preallocate
+			ii = 0; nProps = length(mc.PropertyList);
+			cl_array = cell(1,nProps);
+			
+			% For each property, check the value of the queried attribute
+			for  c = 1:nProps
+				
+				% Get a meta.property object from the meta.class object
+				mp = mc.PropertyList(c);
+				
+				% Determine if the specified attribute is valid on this object
+				if isempty (findprop(mp,attrName))
+					error('Not a valid attribute name')
+				end
+				thisValue = mp.(attrName);
+				
+				% If the attribute is set or has the specified value,
+				% save its name in cell array
+				if attrValue
+					if islogical(attrValue) || strcmp(attrValue,thisValue)
+						val = obj.(mp.Name);
+						if islogical(val) && strcmpi(type,'logical')
+							ii = ii + 1;
+							cl_array(ii) = {mp.Name};
+						elseif ~islogical(val) && strcmpi(type,'notlogical')
+							ii = ii + 1;
+							cl_array(ii) = {mp.Name};
+						elseif ischar(val) && strcmpi(type,'string')
+							ii = ii + 1;
+							cl_array(ii) = {mp.Name};
+						elseif isnumeric(val) && strcmpi(type,'number')
+							ii = ii + 1;
+							cl_array(ii) = {mp.Name};
+						elseif strcmpi(type,'any')
+							ii = ii + 1;
+							cl_array(ii) = {mp.Name};
+						end
+					end
+				end
+			end
+			% Return used portion of array
+			list = cl_array(1:ii);
 		end
 		
 	end
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief Sets properties from a structure or normal arguments,

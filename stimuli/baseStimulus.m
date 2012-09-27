@@ -49,6 +49,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		tick = 1
 	end
 	
+	properties (SetAccess = protected, GetAccess = public, Transient = true)
+		%> handles for the GUI
+		handles
+	end
+	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
 		%> What our per-frame motion delta is
 		delta
@@ -81,10 +86,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		screen = []
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase='name|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|tick';
+		ignorePropertiesBase='name|fullName|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|paths|uuid|tick';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> properties allowed to be passed on construction
 		allowedProperties='xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed'
 	end
 	
@@ -253,6 +259,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function handles = makePanel(obj,parent)
 			
+			if ~isempty(obj.handles) && isa(obj.handles.root,'uiextras.BoxPanel')
+				fprintf('---> Panel already open for %s\n', obj.fullName);
+				return
+			end
+			
 			if ~exist('parent','var')
 				parent = figure('Tag','gFig',...
 					'Name', [obj.fullName 'Properties'], ...
@@ -260,14 +271,17 @@ classdef baseStimulus < optickaCore & dynamicprops
 					'NumberTitle', 'off');
 			end
 			
-			handles.root = uiextras.BoxPanel('Parent',parent,'Title',obj.fullName,'TitleColor',[0.8 0.7 0.6]);
+			handles.parent = parent;
+			handles.root = uiextras.BoxPanel('Parent',parent,...
+				'Title',obj.fullName,...
+				'TitleColor',[0.8 0.7 0.6]);
 			handles.hbox = uiextras.HBoxFlex('Parent', handles.root);
 			handles.grid1 = uiextras.Grid('Parent', handles.hbox);
 			handles.grid2 = uiextras.Grid('Parent', handles.hbox);
 			handles.grid3 = uiextras.VButtonBox('Parent',handles.hbox);
 			
-			
 			idx = {'handles.grid1','handles.grid2','handles.grid3'};
+			
 			pr = findAttributesandType(obj,'SetAccess','public','notlogical');
 			pr = sort(pr);
 			lp = ceil(length(pr)/2);
@@ -324,7 +338,75 @@ classdef baseStimulus < optickaCore & dynamicprops
 								'String',pr2{j});
 				end
 			end
+			obj.handles = handles;
+		end
+		
+		% ===================================================================
+		%> @brief read values from a GUI properties panel for this object
+		%>
+		% ===================================================================
+		function readPanel(obj)
+			if isempty(obj.handles)
+				return
+			end
+				
+			pList = findAttributes(obj,'SetAccess','public'); %our public properties
+			handleList = fieldnames(obj.handles); %the handle name list
+			handleListMod = regexprep(handleList,'_.+$',''); %we remove the suffix so names are equivalent
 			
+			outList = intersect(pList,handleListMod);
+			
+			for i=1:length(outList)
+				hidx = strcmpi(handleListMod,outList{i});
+				handleNameOut = handleListMod{hidx};
+				handleName = handleList{hidx};
+				handleType = regexprep(handleName,'^.+_','');
+				while iscell(handleType);handleType=handleType{1};end
+				switch handleType
+					case 'bool'
+						obj.(handleNameOut) = logical(get(obj.handles.(handleName),'Value'));
+					case 'num'
+						obj.(handleNameOut) = str2num(get(obj.handles.(handleName),'String')); %#ok<ST2NM>
+					case 'char'
+						obj.(handleNameOut) = get(obj.handles.(handleName),'String');
+				end
+			end
+		end
+			
+		% ===================================================================
+		%> @brief read values from a GUI properties panel for this object
+		%>
+		% ===================================================================
+		function showPanel(obj)
+			if isempty(obj.handles)
+				return
+			end
+			set(obj.handles.root,'Enable','on');
+		end
+		
+		% ===================================================================
+		%> @brief read values from a GUI properties panel for this object
+		%>
+		% ===================================================================
+		function hidePanel(obj)
+			if isempty(obj.handles)
+				return
+			end
+			set(obj.handles.root,'Enable','off');
+		end
+		
+		% ===================================================================
+		%> @brief read values from a GUI properties panel for this object
+		%>
+		% ===================================================================
+		function closePanel(obj)
+			if isempty(obj.handles)
+				return
+			end
+			if ~isempty(obj.handles.root)
+				delete(obj.handles.root);
+			end
+			obj.handles = [];
 		end
 		
 		
@@ -399,9 +481,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function setRect(obj)
 			if isempty(obj.findprop('angleOut'));
-				[dx dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+				[dx, dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
 			else
-				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
+				[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
 			end
 			obj.dstRect=Screen('Rect',obj.texture);
 			obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
@@ -434,9 +516,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function computePosition(obj)
 			if isempty(obj.findprop('angleOut'));
-				[dx dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+				[dx, dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
 			else
-				[dx dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);
+				[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);
 			end
 			obj.xTmp = obj.xPositionOut + (dx * obj.ppd);
 			obj.yTmp = obj.yPositionOut + (dy * obj.ppd);

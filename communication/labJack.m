@@ -74,6 +74,16 @@ classdef labJack < handle
 		led = 1
 		%> The raw strobed word command generated with prepareStrobe, sent with strobeWord
 		strobeCommand = []
+		%> universal ID
+		uuid = 0
+		%> clock() dateStamp set on construction
+		dateStamp
+	end
+	
+	%--------------------DEPENDENT PROPERTIES----------%
+	properties (SetAccess = private, Dependent = true)
+		%> The fullName is the object name combined with its uuid and class name
+		fullName = ''
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -111,6 +121,8 @@ classdef labJack < handle
 		allowedProperties='deviceID|name|silentMode|verbose|openNow|header|library|strobeTime'
 		%>document what our strobed word is actually setting, shown to user if verbose = true
 		strobeComment = ''
+		%> class name
+		className = ''
 	end
 	
 	%=======================================================================
@@ -128,6 +140,9 @@ classdef labJack < handle
 		%> @return instance of labJack class.
 		% ===================================================================
 		function obj = labJack(varargin)
+			obj.className = class(obj);
+			obj.dateStamp = clock();
+			obj.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
 			if nargin>0
 				obj.parseArgs(varargin,obj.allowedProperties);
 			end
@@ -740,6 +755,19 @@ classdef labJack < handle
 				case 'extended'
 					[command(5),command(6)] = obj.checksum16(command(7:end));
 					command(1) = obj.checksum8(command(2:6));
+			end
+		end
+		
+		% ===================================================================
+		%> @brief concatenate the name with a uuid at get.
+		%> @param
+		%> @return name the concatenated name
+		% ===================================================================
+		function name = get.fullName(obj)
+			if isempty(obj.name)
+				name = [obj.className '#' obj.uuid];
+			else
+				name = [obj.name ' <' obj.className '#' obj.uuid '>'];
 			end
 		end
 		
