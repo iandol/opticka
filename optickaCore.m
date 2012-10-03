@@ -96,7 +96,7 @@ classdef optickaCore < handle
 		%> @param attrValue value of that attribute, i.e. public, true
 		%> @return list of properties that match that attribute
 		% ===================================================================
-		function list = findAttributes(obj, attrName, attrValue)
+		function [list, mplist] = findAttributes(obj, attrName, attrValue)
 			% Determine if first input is object or class name
 			if ischar(obj)
 				mc = meta.class.fromName(obj);
@@ -107,6 +107,7 @@ classdef optickaCore < handle
 			% Initial size and preallocate
 			ii = 0; nProps = length(mc.PropertyList);
 			cl_array = cell(1,nProps);
+			mp_array = cell(1,nProps);
 			
 			% For each property, check the value of the queried attribute
 			for  c = 1:nProps
@@ -126,21 +127,25 @@ classdef optickaCore < handle
 					if strcmpi(attrValue,thisValue)
 						ii = ii + 1;
 						cl_array(ii) = {mp.Name};
+						mp_array{ii} = mp;
 					end
 				elseif islogical(attrValue)
 					if thisValue == attrValue
 						ii = ii + 1;
 						cl_array(ii) = {mp.Name};
+						mp_array{ii} = mp;
 					end
 				elseif isempty(attrValue)
 					if isempty(thisValue)
 						ii = ii + 1;
 						cl_array(ii) = {mp.Name};
+						mp_array(ii) = mp;
 					end
 				end
 			end
 			% Return used portion of array
 			list = cl_array(1:ii)';
+			mplist = mp_array(1:ii)';
 		end
 		
 		% ===================================================================
@@ -203,6 +208,53 @@ classdef optickaCore < handle
 			% Return used portion of array
 			list = cl_array(1:ii);
 		end
+		
+		% ===================================================================
+		%> @brief Use this syntax to make a deep copy of an object OBJ, 
+		%> i.e. OBJ_OUT has the same field values, but will not behave as a handle-copy of OBJ anymore.
+		%> 
+		%> @return obj_out  cloned object
+		% ===================================================================
+		function obj_out = clone(obj)
+            meta = metaclass(obj);
+            obj_out = feval(class(obj));
+            for i = 1:length(meta.Properties)
+                prop = meta.Properties{i};
+                if strcmpi(prop.SetAccess,'Public') && ~(prop.Dependent || prop.Constant) && ~(isempty(obj.(prop.Name)) && isempty(obj_out.(prop.Name)))
+                    if isobject(obj.(prop.Name)) && isa(obj.(prop.Name),'optickaCore')
+                        obj_out.(prop.Name) = obj.(prop.Name).clone;
+					else
+                        try
+                            obj_out.(prop.Name) = obj.(prop.Name);
+                        catch %#ok<CTCH>
+                            warning('optickaCore:clone', 'Problem copying property "%s"',prop.Name)
+                        end
+                    end
+				end
+            end
+            
+            % Check lower levels ...
+            props_child = {meta.PropertyList.Name};
+            
+            CheckSuperclasses(meta)
+            
+            % This function is called recursively ...
+            function CheckSuperclasses(List)
+                for ii=1:length(List.SuperclassList(:))
+                    if ~isempty(List.SuperclassList(ii).SuperclassList)
+                        CheckSuperclasses(List.SuperclassList(ii))
+                    end
+                    for jj=1:length(List.SuperclassList(ii).PropertyList(:))
+                        prop_super = List.SuperclassList(ii).PropertyList(jj).Name;
+                        if ~strcmp(prop_super, props_child)
+                            obj_out.(prop_super) = obj.(prop_super);
+                        end
+                    end
+                end
+			end
+			obj_out.dateStamp = clock();
+			obj_out.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
+        end
 		
 	end
 	

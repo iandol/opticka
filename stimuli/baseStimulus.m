@@ -91,7 +91,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be passed on construction
-		allowedProperties='xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed'
+		allowedProperties='name|xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed'
+	end
+	
+	events
+		%> triggered when reading from a UI panel
+		readPanelUpdate
 	end
 	
 	%=======================================================================
@@ -274,8 +279,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 			handles.parent = parent;
 			handles.root = uiextras.BoxPanel('Parent',parent,...
 				'Title',obj.fullName,...
-				'TitleColor',[0.8 0.7 0.6]);
-			handles.hbox = uiextras.HBoxFlex('Parent', handles.root);
+				'TitleColor',[0.8 0.78 0.75]);
+			handles.hbox = uiextras.HBox('Parent', handles.root);
 			handles.grid1 = uiextras.Grid('Parent', handles.hbox);
 			handles.grid2 = uiextras.Grid('Parent', handles.hbox);
 			handles.grid3 = uiextras.VButtonBox('Parent',handles.hbox);
@@ -296,11 +301,30 @@ classdef baseStimulus < optickaCore & dynamicprops
 					if cur <= length(pr);
 						val = obj.(pr{cur});
 						if ischar(val)
-							val = regexprep(val,'\s+',' ');
-							handles.([pr{cur} '_char']) = uicontrol('Style','edit',...
-								'Parent',eval(idx{i}),...
-								'Tag',['panel' pr{cur}],...
-								'String',val);
+							if isprop(obj,[pr{cur} 'List'])
+								if strcmp(obj.([pr{cur} 'List']),'filerequestor')
+									val = regexprep(val,'\s+',' ');
+									handles.([pr{cur} '_char']) = uicontrol('Style','edit',...
+										'Parent',eval(idx{i}),...
+										'Tag',['panel' pr{cur}],...
+										'String',val);
+								else
+									txt=obj.([pr{cur} 'List']);
+									fidx = strcmpi(txt,obj.(pr{cur}));
+									fidx = find(fidx > 0);
+									handles.([pr{cur} '_list']) = uicontrol('Style','popupmenu',...
+										'Parent',eval(idx{i}),...
+										'Tag',['panel' pr{cur} 'List'],...
+										'String',txt,...
+										'Value',fidx);
+								end
+							else
+								val = regexprep(val,'\s+',' ');
+								handles.([pr{cur} '_char']) = uicontrol('Style','edit',...
+									'Parent',eval(idx{i}),...
+									'Tag',['panel' pr{cur}],...
+									'String',val);
+							end
 						elseif isnumeric(val)
 							val = num2str(val);
 							val = regexprep(val,'\s+',' ');
@@ -316,37 +340,60 @@ classdef baseStimulus < optickaCore & dynamicprops
 						uiextras.Empty('Parent',eval(idx{i}));
 					end
 				end
+				
 				for j = 1:lp
 					cur = lp*(i-1)+j;
 					if cur <= length(pr);
-						uicontrol('Style','text',...
+						if isprop(obj,[pr{cur} 'List'])
+							if strcmp(obj.([pr{cur} 'List']),'filerequestor')
+								uicontrol('Style','pushbutton',...
+								'Parent',eval(idx{i}),...
+								'HorizontalAlignment','left',...
+								'String','Select file...',...
+								'FontName','Georgia');
+							else
+								uicontrol('Style','text',...
+								'Parent',eval(idx{i}),...
+								'HorizontalAlignment','left',...
+								'String',pr{cur},...
+								'FontName','Georgia');
+							end
+						else
+							uicontrol('Style','text',...
 							'Parent',eval(idx{i}),...
 							'HorizontalAlignment','left',...
 							'String',pr{cur},...
 							'FontName','Georgia');
+						end
 					else
 						uiextras.Empty('Parent',eval(idx{i}));
 					end
 				end
-				eval([idx{i} '.ColumnSizes = [-1,-1]']);
+				eval([idx{i} '.ColumnSizes = [-1,-1];']);
 			end
 			for j = 1:lp2
 				if j < length(pr2)
 					handles.([pr2{j} '_bool']) = uicontrol('Style','checkbox',...
-								'Parent',eval(idx{end}),...
-								'Tag',['panel' pr2{j}],...
-								'String',pr2{j});
+						'Parent',eval(idx{end}),...
+						'Tag',['panel' pr2{j}],...
+						'String',pr2{j});
 				end
 			end
+			handles.readButton = uicontrol('Style','pushbutton',...
+				'Parent',eval(idx{end}),...
+				'Tag','readButton',...
+				'Callback',@obj.readPanel,...
+				'String','Update');
 			obj.handles = handles;
+			
 		end
 		
 		% ===================================================================
 		%> @brief read values from a GUI properties panel for this object
 		%>
 		% ===================================================================
-		function readPanel(obj)
-			if isempty(obj.handles)
+		function readPanel(obj,varargin)
+			if isempty(obj.handles) || ~isa(obj.handles.root,'uiextras.BoxPanel')
 				return
 			end
 				
@@ -363,6 +410,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 				handleType = regexprep(handleName,'^.+_','');
 				while iscell(handleType);handleType=handleType{1};end
 				switch handleType
+					case 'list'
+						str = get(obj.handles.(handleName),'String');
+						v = get(obj.handles.(handleName),'Value');
+						obj.(handleNameOut) = str{v};
 					case 'bool'
 						obj.(handleNameOut) = logical(get(obj.handles.(handleName),'Value'));
 					case 'num'
@@ -371,6 +422,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 						obj.(handleNameOut) = get(obj.handles.(handleName),'String');
 				end
 			end
+			notify(obj,'readPanelUpdate');
 		end
 			
 		% ===================================================================
@@ -382,6 +434,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				return
 			end
 			set(obj.handles.root,'Enable','on');
+			set(obj.handles.root,'Visible','on');
 		end
 		
 		% ===================================================================
@@ -393,6 +446,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				return
 			end
 			set(obj.handles.root,'Enable','off');
+			set(obj.handles.root,'Visible','off');
 		end
 		
 		% ===================================================================
@@ -404,6 +458,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				return
 			end
 			if ~isempty(obj.handles.root)
+				readPanel(obj);
 				delete(obj.handles.root);
 			end
 			obj.handles = [];

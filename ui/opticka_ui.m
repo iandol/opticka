@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 05-Sep-2012 11:30:16
+% Last Modified by GUIDE v2.5 02-Oct-2012 13:45:30
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -350,9 +350,11 @@ function OKMenuNoiseTexture_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuNoiseTexture (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-set(handles.OKPanelDots,'Visible','off')
-set(handles.OKPanelGrating,'Visible','off')
-set(handles.OKPanelNoise,'Visible','on')
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.store.visibleStimulus='dots';
+	
+end
 
 % --------------------------------------------------------------------
 function OKMenuLineTexture_Callback(hObject, eventdata, handles)
@@ -366,15 +368,39 @@ function OKMenuDots_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuSpot (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-%set(handles.OKPanelNoise,'Visible','off')
-set(handles.OKPanelTexture,'Visible','off')
-set(handles.OKPanelGrating,'Visible','off')
-set(handles.OKPanelBar,'Visible','off')
-set(handles.OKPanelSpot,'Visible','off')
-set(handles.OKPanelDots,'Visible','on')
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.store.visibleStimulus='dots';
+	
+	if isfield(o.store,'visibleStimulus');
+		o.store.visibleStimulus.closePanel();
+		o.store = rmfield(o.store,'visibleStimulus');
+	end
+	
+	if ~isfield(o.store,'dotsStimulus')
+		o.store.visibleStimulus=dotsStimulus('name','Coherent Dots Stimulus');
+	end
+	o.store.visibleStimulus = o.store.dotsStimulus;
+	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+end
+
+% --------------------------------------------------------------------
+function OKMenuNDots_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuNDots (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	
+	if isfield(o.store,'visibleStimulus');
+		o.store.visibleStimulus.closePanel();
+		o.store = rmfield(o.store,'visibleStimulus');
+	end
+	
+	if ~isfield(o.store,'ndotsStimulus')
+		o.store.ndotsStimulus=ndotsStimulus('name','Newsome Dots Stimulus');
+	end
+	o.store.visibleStimulus = o.store.ndotsStimulus;
+	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
 end
 
 % --------------------------------------------------------------------
@@ -382,14 +408,19 @@ function OKMenuBar_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuBar (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-set(handles.OKPanelTexture,'Visible','off')
-set(handles.OKPanelGrating,'Visible','off')
-set(handles.OKPanelSpot,'Visible','off')
-set(handles.OKPanelBar,'Visible','on')
-set(handles.OKPanelDots,'Visible','off')
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.store.visibleStimulus='bar';
+	
+	if isfield(o.store,'visibleStimulus');
+		o.store.visibleStimulus.closePanel();
+		o.store = rmfield(o.store,'visibleStimulus');
+	end
+	
+	if ~isfield(o.store,'barStimulus')
+		o.store.barStimulus=barStimulus('name','Bar Stimulus');
+	end
+	o.store.visibleStimulus = o.store.barStimulus;
+	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
 end
 
 % --------------------------------------------------------------------
@@ -397,14 +428,19 @@ function OKMenuGrating_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuGrating (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-set(handles.OKPanelTexture,'Visible','off')
-set(handles.OKPanelDots,'Visible','off')
-set(handles.OKPanelSpot,'Visible','off')
-set(handles.OKPanelBar,'Visible','off')
-set(handles.OKPanelGrating,'Visible','on')
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.store.visibleStimulus='grating';
+	
+	if isfield(o.store,'visibleStimulus');
+		o.store.visibleStimulus.closePanel();
+		o.store = rmfield(o.store,'visibleStimulus');
+	end
+	
+	if ~isfield(o.store,'gratingStimulus')
+		o.store.gratingStimulus=gratingStimulus('name','Grating Stimulus');
+	end
+	o.store.visibleStimulus = o.store.gratingStimulus;
+	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
 end
 
 % --------------------------------------------------------------------
@@ -412,14 +448,20 @@ function OKMenuSpot_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuSpot (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-set(handles.OKPanelTexture,'Visible','off')
-set(handles.OKPanelGrating,'Visible','off')
-set(handles.OKPanelBar,'Visible','off')
-set(handles.OKPanelDots,'Visible','off')
-set(handles.OKPanelSpot,'Visible','on')
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.store.visibleStimulus='spot';
+	
+	if isfield(o.store,'visibleStimulus');
+		o.store.visibleStimulus.closePanel();
+		o.store = rmfield(o.store,'visibleStimulus');
+	end
+	
+	if ~isfield(o.store,'spotStimulus')
+		o.store.spotStimulus=spotStimulus('name','Spot Stimulus');
+	end
+	o.store.visibleStimulus = o.store.spotStimulus;
+	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+	
 end
 
 % --------------------------------------------------------------------
@@ -427,14 +469,20 @@ function OKMenuTexture_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuTexture (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-set(handles.OKPanelTexture,'Visible','on')
-set(handles.OKPanelGrating,'Visible','off')
-set(handles.OKPanelBar,'Visible','off')
-set(handles.OKPanelDots,'Visible','off')
-set(handles.OKPanelSpot,'Visible','off')
+
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.store.visibleStimulus='texture';
+	
+	if isfield(o.store,'visibleStimulus');
+		o.store.visibleStimulus.closePanel();
+		o.store = rmfield(o.store,'visibleStimulus');
+	end
+	
+	if ~isfield(o.store,'textureStimulus')
+		o.store.textureStimulus=textureStimulus('name','Picture / Texture Stimulus');
+	end
+	o.store.visibleStimulus = o.store.textureStimulus;
+	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
 end
 
 
@@ -442,37 +490,7 @@ end
 function OKMenuPreferences_Callback(hObject, eventdata, handles)
 
 
-% --------------------------------------------------------------------
-function OKPanelGratingtype_Callback(hObject, eventdata, handles)
-switch get(hObject,'Value')
-	case {1,2}
-		set(handles.OKPanelGratingaspectRatio,'Enable','off')
-		%set(handles.OKPanelGratingcontrastMult,'Enable','off')
-		set(handles.OKPanelGratingspatialConstant,'Enable','off')
-		set(handles.OKPanelGratingdisableNorm,'Enable','off')
-		set(handles.OKPanelGratingmask,'Enable','on')
-		set(handles.OKPanelGratingsigma,'Enable','on')
-		set(handles.OKPanelGratinguseAlpha,'Enable','on')
-		set(handles.OKPanelGratingsmoothMethod,'Enable','on')
-		set(handles.OKPanelGratingrotationMethod,'Enable','on')
-	otherwise
-		set(handles.OKPanelGratingaspectRatio,'Enable','on')
-		%set(handles.OKPanelGratingcontrastMult,'Enable','on')
-		set(handles.OKPanelGratingspatialConstant,'Enable','on')
-		set(handles.OKPanelGratingdisableNorm,'Enable','on')
-		set(handles.OKPanelGratingmask,'Enable','off')
-		set(handles.OKPanelGratingsigma,'Enable','off')
-		set(handles.OKPanelGratinguseAlpha,'Enable','off')
-		set(handles.OKPanelGratingsmoothMethod,'Enable','off')
-		set(handles.OKPanelGratingrotationMethod,'Enable','off')
-end
-
-
-
 function OKProtocolsList_Callback(hObject, eventdata, handles)
-
-
-function pushbutton22_Callback(hObject, eventdata, handles)
 
 
 function OKHistoryList_Callback(hObject, eventdata, handles)
@@ -726,21 +744,13 @@ function OKAddStimulus_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	switch o.store.visibleStimulus
-		case 'grating'
-			o.addGrating;
-		case 'bar'
-			o.addBar;
-		case 'dots'
-			o.addDots;
-		case 'spot'
-			o.addSpot;
-		case 'texture'
-			o.addTexture;
-	end
-	if ~isempty(o.r.stimuli)
+	o.r.stimuli{o.r.stimuli.n+1} = o.store.visibleStimulus.clone();
+	o.addStimulus;
+	if o.r.stimuli.n > 0
 		set(handles.OKDeleteStimulus,'Enable','on');
 		set(handles.OKModifyStimulus,'Enable','on');
+		set(handles.OKEditStimulus,'Enable','on');
+		set(handles.OKCopyStimulus,'Enable','on');
 		set(handles.OKStimulusUp,'Enable','on');
 		set(handles.OKStimulusDown,'Enable','on');
 		set(handles.OKStimulusRun,'Enable','on');
@@ -756,9 +766,11 @@ function OKDeleteStimulus_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.deleteStimulus;
-	if isempty(o.r.stimuli)
+	if o.r.stimuli.n == 0
 		set(handles.OKDeleteStimulus,'Enable','off');
 		set(handles.OKModifyStimulus,'Enable','off');
+		set(handles.OKEditStimulus,'Enable','off');
+		set(handles.OKCopyStimulus,'Enable','off');
 		set(handles.OKStimulusUp,'Enable','off');
 		set(handles.OKStimulusDown,'Enable','off');
 		set(handles.OKStimulusRun,'Enable','off');
@@ -773,7 +785,9 @@ function OKCopyStimulus_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.copyStimulus;
+	v = get(handles.OKStimList,'Value');
+	o.r.stimuli{o.r.stimuli.n+1} = o.r.stimuli{v}.clone;
+	o.addStimulus;
 end
 
 % --- Executes on button press in OKEditStimulus.
@@ -988,24 +1002,6 @@ if isappdata(handles.output,'o')
 	o.getTaskVals;
 end
 
-function OKPanelBarscale_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarscale (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelBarscale as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelBarscale as a double
-
-
-% --- Executes on selection change in OKPanelBarinterpMethod.
-function OKPanelBarinterpMethod_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelBarinterpMethod (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns OKPanelBarinterpMethod contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from OKPanelBarinterpMethod
-
 % --------------------------------------------------------------------
 function OKToolbarToggleRemote_OnCallback(hObject, eventdata, handles)
 % hObject    handle to OKToolbarToggleRemote (see GCBO)
@@ -1025,30 +1021,12 @@ function OKMenumanageCode_Callback(hObject, eventdata, handles)
 manageCode
 
 
-% --- Executes on button press in OKPanelGratingcolourDialog.
-function OKPanelGratingcolourDialog_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingcolourDialog (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-cc = str2num(get(handles.OKPanelGratingcolour,'String'));
-cc = uisetcolor(cc(1:3));
-cc = num2str(cc);
-cc = regexprep(cc,'\s+',' '); %collapse spaces
-set(handles.OKPanelGratingcolour,'String',cc);
-
-
 % --------------------------------------------------------------------
 function OKMenurfMapperLog_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenurfMapperLog (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-
-% --- Executes on button press in OKPanelSpotflashOn.
-function OKPanelSpotflashOn_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelSpotflashOn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
 function OKSettingsmovieSize_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
@@ -1146,37 +1124,6 @@ if isappdata(handles.output,'o')
 			end
 		end
 	end
-end
-
-function OKPanelGratingphaseReverseTime_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingphaseReverseTime (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingphaseReverseTime as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingphaseReverseTime as a double
-
-function OKPanelGratingphaseOfReverse_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelGratingphaseOfReverse (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKPanelGratingphaseOfReverse as text
-%        str2double(get(hObject,'String')) returns contents of OKPanelGratingphaseOfReverse as a double
-
-
-% --- Executes on button press in OKPanelTextureGetFile.
-function OKPanelTextureGetFile_Callback(hObject, eventdata, handles)
-% hObject    handle to OKPanelTextureGetFile (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-[filename, pathname] = uigetfile({'*.png;*.jpg;*.tif','Picture files'}, 'Select a Picture file');
-if isequal(filename,0)
-   %disp('User selected Cancel')
-else
-   %disp(['User selected', fullfile(pathname, filename)])
-   set(handles.OKPanelTexturefileName, 'String', fullfile(pathname, filename));
 end
 
 
@@ -1299,18 +1246,7 @@ function OKMenuNewProtocol_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.r = [];
-	set(handles.OKPanelDots,'Visible','off')
-	set(handles.OKPanelSpot,'Visible','off')
-	set(handles.OKPanelBar,'Visible','off')
-	%set(handles.OKPanelPlaid,'Visible','off')
-	set(handles.OKPanelGrating,'Visible','on')
-	o.store.visibleStimulus='grating';
-	o.store.gratingN = 0;
-	o.store.barN = 0;
-	o.store.dotsN = 0;
-	o.store.spotN = 0;
-	o.store.plaidN = 0;
-	o.store.noiseN = 0;
+	o.store.visibleStimulus=[];
 	o.clearStimulusList;
 	o.clearVariableList;
 	o.getScreenVals;
@@ -1325,18 +1261,7 @@ function OKToolbarInitialise_ClickedCallback(hObject, eventdata, handles) %#ok<*
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.r=[];
-	set(handles.OKPanelDots,'Visible','off')
-	set(handles.OKPanelSpot,'Visible','off')
-	set(handles.OKPanelBar,'Visible','off')
-	%set(handles.OKPanelPlaid,'Visible','off')
-	set(handles.OKPanelGrating,'Visible','on')
-	o.store.visibleStimulus='grating';
-	o.store.gratingN = 0;
-	o.store.barN = 0;
-	o.store.dotsN = 0;
-	o.store.spotN = 0;
-	o.store.plaidN = 0;
-	o.store.noiseN = 0;
+	o.store.visibleStimulus=[];
 	o.clearStimulusList;
 	o.clearVariableList;
 	o.getScreenVals;

@@ -27,6 +27,11 @@ classdef barStimulus < baseStimulus
 		rmatrix
 	end
 	
+	properties (SetAccess = private, GetAccess = public, Hidden = true)
+		typeList = {'solid','random','randomColour','randomN','randomBW'}
+		interpMethodList = {'nearest','linear','spline','cubic'}
+	end
+	
 	properties (SetAccess = private, GetAccess = private)
 		allowedProperties='type|pixelScale|barWidth|barLength|angle|speed|contrast|scale|interpMethod';
 		ignoreProperties = 'interpMethod|matrix|rmatrix|pixelScale';

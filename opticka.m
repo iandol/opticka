@@ -280,9 +280,7 @@ classdef opticka < optickaCore
 				if obj.mversion < 7.12 && (ismac || ispc)
 					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
 				end
-				set(obj.h.OKPanelGrating,'Visible','off')
-				drawnow;
-				set(obj.h.OKPanelGrating,'Visible','on')
+
 				drawnow;
 					
 				obj.loadPrefs();
@@ -305,15 +303,6 @@ classdef opticka < optickaCore
 				obj.getStateInfo();
 				
 				obj.store.nVars = 0;
-				obj.store.visibleStimulus = 'grating'; %our default shown stimulus
-				obj.store.stimN = 0;
-				obj.store.stimList = '';
-				obj.store.gratingN = 0;
-				obj.store.barN = 0;
-				obj.store.dotsN = 0;
-				obj.store.spotN = 0;
-				obj.store.plaidN = 0;
-				obj.store.noiseN = 0;
 
 				set(obj.h.OKVarList,'String','');
 				set(obj.h.OKStimList,'String','');
@@ -430,6 +419,11 @@ classdef opticka < optickaCore
 			
 		end
 		
+		% ===================================================================
+		%> @brief getStateInfo Load the training state info file into the UI
+		%> 
+		%> @param 
+		% ===================================================================
 		function getStateInfo(obj)
 			if exist(obj.r.stateInfoFile,'file')
 				fid = fopen(obj.r.stateInfoFile);
@@ -492,159 +486,11 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief addGrating
-		%> 
-		%> @param 
-		% ===================================================================
-		function addGrating(obj)
-			tmp = struct;
-			
-			tmp.gabor = 0;
-			tmp.squareWave = 0;
-			switch obj.gv(obj.h.OKPanelGratingtype)
-				case 2
-					tmp.squareWave = 1;
-				case 3
-					tmp.gabor = 1;
-			end
-			tmp.xPosition = obj.gd(obj.h.OKPanelGratingxPosition);
-			tmp.yPosition = obj.gd(obj.h.OKPanelGratingyPosition);
-			tmp.size = obj.gd(obj.h.OKPanelGratingsize);
-			tmp.sf = obj.gd(obj.h.OKPanelGratingsf);
-			tmp.tf = obj.gd(obj.h.OKPanelGratingtf);
-			tmp.contrast = obj.gd(obj.h.OKPanelGratingcontrast);
-			tmp.phase = obj.gd(obj.h.OKPanelGratingphase);
-			tmp.speed = obj.gd(obj.h.OKPanelGratingspeed);
-			tmp.angle = obj.gd(obj.h.OKPanelGratingangle);
-			tmp.motionAngle = obj.gd(obj.h.OKPanelGratingmotionAngle);
-			tmp.startPosition = obj.gd(obj.h.OKPanelGratingstartPosition);
-			tmp.aspectRatio = obj.gd(obj.h.OKPanelGratingaspectRatio);
-			tmp.contrastMult = obj.gd(obj.h.OKPanelGratingcontrastMult);
-			tmp.driftDirection = obj.gv(obj.h.OKPanelGratingdriftDirection);
-			tmp.colour = obj.gn(obj.h.OKPanelGratingcolour);
-			tmp.alpha = obj.gd(obj.h.OKPanelGratingalpha);
-			tmp.rotationMethod = obj.gv(obj.h.OKPanelGratingrotationMethod);
-			tmp.mask = obj.gv(obj.h.OKPanelGratingmask);
-			tmp.disableNorm = obj.gv(obj.h.OKPanelGratingdisableNorm);
-			tmp.spatialConstant = obj.gn(obj.h.OKPanelGratingspatialConstant);
-			tmp.sigma = obj.gn(obj.h.OKPanelGratingsigma);
-			tmp.useAlpha = obj.gv(obj.h.OKPanelGratinguseAlpha);
-			tmp.smoothMethod = obj.gv(obj.h.OKPanelGratingsmoothMethod);
-			tmp.correctPhase = obj.gv(obj.h.OKPanelGratingcorrectPhase);
-			
-			tmp.phaseReverseTime = obj.gd(obj.h.OKPanelGratingphaseReverseTime);
-			tmp.phaseOfReverse = obj.gd(obj.h.OKPanelGratingphaseOfReverse);
-			
-			obj.r.stimuli{obj.r.stimuli.n+1} = gratingStimulus(tmp);
-			
-			obj.refreshStimulusList;
-		end
-		
-		% ===================================================================
-		%> @brief addBar
-		%> Add bar stimulus
-		%> @param 
-		% ===================================================================
-		function addBar(obj)
-			tmp = struct;
-			tmp.angle = obj.gd(obj.h.OKPanelBarangle);
-			tmp.xPosition = obj.gd(obj.h.OKPanelBarxPosition);
-			tmp.yPosition = obj.gd(obj.h.OKPanelBaryPosition);
-			tmp.barLength = obj.gd(obj.h.OKPanelBarbarLength);
-			tmp.barWidth = obj.gd(obj.h.OKPanelBarbarWidth);
-			tmp.contrast = obj.gd(obj.h.OKPanelBarcontrast);
-			tmp.scale = obj.gd(obj.h.OKPanelBarscale);
-			v = obj.gv(obj.h.OKPanelBartype);
-			tmp.type = obj.gs(obj.h.OKPanelBartype,v);
-			v = obj.gv(obj.h.OKPanelBarinterpMethod);
-			tmp.interpMethod = obj.gs(obj.h.OKPanelBarinterpMethod,v);
-			tmp.startPosition = obj.gd(obj.h.OKPanelBarstartPosition);
-			tmp.colour = obj.gn(obj.h.OKPanelBarcolour);
-			tmp.alpha = obj.gd(obj.h.OKPanelBaralpha);
-			tmp.speed = obj.gd(obj.h.OKPanelBarspeed);
-			
-			obj.r.stimuli{obj.r.stimuli.n+1} = barStimulus(tmp);
-			
-			obj.refreshStimulusList;			
-		end
-		
-		% ===================================================================
-		%> @brief addDots
+		%> @brief editStimulus
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function addDots(obj)
-			tmp = struct;
-			tmp.xPosition = obj.gd(obj.h.OKPanelDotsxPosition);
-			tmp.yPosition = obj.gd(obj.h.OKPanelDotsyPosition);
-			tmp.size = obj.gd(obj.h.OKPanelDotssize);
-			tmp.angle = obj.gd(obj.h.OKPanelDotsangle);
-			tmp.coherence = obj.gd(obj.h.OKPanelDotscoherence);
-			tmp.kill = obj.gd(obj.h.OKPanelDotskill);
-			tmp.density = obj.gd(obj.h.OKPanelDotsnDots);
-			tmp.dotSize = obj.gd(obj.h.OKPanelDotsdotSize);
-			tmp.speed = obj.gd(obj.h.OKPanelDotsspeed);
-			tmp.colour = obj.gn(obj.h.OKPanelDotscolour);
-			tmp.alpha = obj.gd(obj.h.OKPanelDotsalpha);
-			tmp.maskColour = obj.gn(obj.h.OKPanelDotsmaskColour);
-			tmp.maskSmoothing = obj.gn(obj.h.OKPanelDotsmaskSmoothing);
-			tmp.mask = logical(obj.gv(obj.h.OKPanelDotsmask));
-			tmp.dotType = obj.gv(obj.h.OKPanelDotsdotType)-1;
-			v = obj.gv(obj.h.OKPanelDotscolourType);
-			tmp.colourType = obj.gs(obj.h.OKPanelDotscolourType,v);
-			
-			obj.r.stimuli{obj.r.stimuli.n+1} = dotsStimulus(tmp);
-			
-			obj.refreshStimulusList;
-		end
-		
-		% ===================================================================
-		%> @brief addSpot
-		%> Gets the settings from th UI and updates our runExperiment object
-		%> @param 
-		% ===================================================================
-		function addSpot(obj)
-			tmp = struct;
-			tmp.xPosition = obj.gd(obj.h.OKPanelSpotxPosition);
-			tmp.yPosition = obj.gd(obj.h.OKPanelSpotyPosition);
-			tmp.size = obj.gd(obj.h.OKPanelSpotsize);
-			tmp.angle = obj.gd(obj.h.OKPanelSpotangle);
-			tmp.speed = obj.gd(obj.h.OKPanelSpotspeed);
-			tmp.contrast = obj.gd(obj.h.OKPanelSpotcontrast);
-			tmp.colour = obj.gn(obj.h.OKPanelSpotcolour);
-			tmp.flashTime = obj.gn(obj.h.OKPanelSpotflashTime);
-			tmp.alpha = obj.gd(obj.h.OKPanelSpotalpha);
-			tmp.startPosition = obj.gd(obj.h.OKPanelSpotstartPosition);
-			v = obj.gv(obj.h.OKPanelSpottype);
-			tmp.type = obj.gs(obj.h.OKPanelSpottype,v);
-			tmp.flashOn = logical(obj.gv(obj.h.OKPanelSpotflashOn));
-			
-			obj.r.stimuli{obj.r.stimuli.n+1} = spotStimulus(tmp);
-			
-			obj.refreshStimulusList;
-		end
-		
-		% ===================================================================
-		%> @brief addSpot
-		%> Gets the settings from th UI and updates our runExperiment object
-		%> @param 
-		% ===================================================================
-		function addTexture(obj)
-			tmp = struct;
-			tmp.xPosition = obj.gd(obj.h.OKPanelTexturexPosition);
-			tmp.yPosition = obj.gd(obj.h.OKPanelTextureyPosition);
-			%tmp.size = obj.gd(obj.h.OKPanelSpotsize);
-			tmp.angle = obj.gd(obj.h.OKPanelTextureangle);
-			tmp.speed = obj.gd(obj.h.OKPanelTexturespeed);
-			tmp.contrast = obj.gd(obj.h.OKPanelTexturecontrast);
-			tmp.alpha = obj.gd(obj.h.OKPanelTexturealpha);
-			tmp.startPosition = obj.gd(obj.h.OKPanelTexturestartPosition);
-			%v = obj.gv(obj.h.OKPanelTexturetype);
-			%tmp.type = obj.gs(obj.h.OKPanelTexturetype,v);
-			tmp.fileName = obj.gs(obj.h.OKPanelTexturefileName);
-			
-			obj.r.stimuli{obj.r.stimuli.n+1} = textureStimulus(tmp);
-			
+		function addStimulus(obj)
 			obj.refreshStimulusList;
 		end
 		
@@ -654,17 +500,19 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function editStimulus(obj)
-			v=obj.gv(obj.h.OKStimList);
-			family=obj.r.stimuli{v}.family;
-			switch family
-				case 'grating'
-					fragment = 'OKPanelGrating';
-				case 'spot'
-					fragment = 'OKPanelSpot';
-				otherwise 
-					fragment = 'OKPanelSpot';
+			if obj.r.stimuli.n > 0
+				v = get(obj.h.OKStimList,'Value');
+				if v <= obj.r.stimuli.n;
+					if isfield(obj.store,'visibleStimulus');
+						obj.store.visibleStimulus.closePanel();
+						obj.store = rmfield(obj.store,'visibleStimulus');
+					end
+					closePanel(obj.r.stimuli{v});
+					makePanel(obj.r.stimuli{v},obj.h.OKPanelStimulus);
+					addlistener(obj.r.stimuli{v},'readPanelUpdate',@obj.addStimulus);
+				end
+				
 			end
-			out = obj.dealUItoStructure(fragment);
 		end
 		
 		% ===================================================================

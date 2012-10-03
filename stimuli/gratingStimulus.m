@@ -69,6 +69,10 @@ classdef gratingStimulus < baseStimulus
 		phaseIncrement = 0
 	end
 	
+	properties (SetAccess = private, GetAccess = public, Hidden = true)
+		typeList = {'procedural'}
+	end
+	
 	properties (SetAccess = protected, GetAccess = protected)
 		%>
 		exposedProperties={'sf','tf','method','angle','motionAngle','phase','rotationMethod',... 

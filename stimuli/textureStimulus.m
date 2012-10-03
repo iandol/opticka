@@ -11,12 +11,19 @@ classdef textureStimulus < baseStimulus
 		scale = 1
 		interpMethod = 'nearest'
 		fileName = []
-		pixelScale = 1 %scale up the texture in the bar
+		%>scale up the texture in the bar
+		pixelScale = 1 
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		family = 'texture'
 		matrix
+	end
+	
+	properties (SetAccess = private, GetAccess = public, Hidden = true)
+		typeList = {'picture'}
+		fileNameList = 'filerequestor';
+		interpMethodList = {'nearest','linear','spline','cubic'}
 	end
 	
 	properties (SetAccess = private, GetAccess = private)

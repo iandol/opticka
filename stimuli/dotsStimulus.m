@@ -50,6 +50,15 @@ classdef dotsStimulus < baseStimulus
 		colours
 	end
 	
+	properties (SetAccess = private, GetAccess = public, Hidden = true)
+		typeList = {'simple'}
+		colourTypeList = {'randomBW','random','randomN','randomNBW','binary'}
+		msrcModeList = {'GL_ZERO','GL_ONE','GL_DST_COLOR','GL_ONE_MINUS_DST_COLOR',...
+			'GL_SRC_ALPHA','GL_ONE_MINUS_SRC_ALPHA'}
+		mdstModeList = {'GL_ZERO','GL_ONE','GL_DST_COLOR','GL_ONE_MINUS_DST_COLOR',...
+			'GL_SRC_ALPHA','GL_ONE_MINUS_SRC_ALPHA'}
+	end
+	
 	properties (SetAccess = private, GetAccess = private)
 		nDots_
 		%> we must scale the dots lager than the mask by this factor
