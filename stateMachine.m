@@ -13,6 +13,9 @@
 %> To run a demo, try the following:
 %> >> sm = stateMachine
 %> >> runDemo(sm);
+%>
+%> To see how to run the stateMacine from a PTB loop, see
+%> runExperiment.runTrainingSession()
 % ========================================================================
 classdef stateMachine < optickaCore
 	
@@ -22,15 +25,15 @@ classdef stateMachine < optickaCore
 		%> timedelta for time > ticks calculation, assume 60Hz by default
 		%> but set to correct IFI of display before use
 		timeDelta = 0.0167
-		%> use real time to ticks to mark state time
+		%> use real time (true) or ticks (false) to mark state time
 		realTime = false
-		%> verbose or not
+		%> verbose?
 		verbose = true
 		%> clock function to use
 		clockFcn = @GetSecs
 		%> pause function
 		waitFcn = @WaitSecs
-		%> transition function run between during transitions
+		%> transition function run globally between transitions
 		transitionFcn = {}
 		%> log group name
 		logName 
@@ -83,7 +86,7 @@ classdef stateMachine < optickaCore
 		%> default values of allStates struct array fields
 		stateDefaults = {'', '', {}, {}, 1, {}}
 		%> properties allowed during construction
-		allowedProperties = 'name|realTime|verbose|clockFcn|waitFcn|timeDelta'
+		allowedProperties = 'name|realTime|verbose|clockFcn|waitFcn|timeDelta|transitionFcn'
 	end
 	
 	events
@@ -123,7 +126,7 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Add a new state to the state machine.
+		%> @brief Add new states to the state machine.
         %> @param newStates a cell array with information defining a state.
 		%> @return newStateIndexes indexes to newly added states
 		% ===================================================================
@@ -137,9 +140,9 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
+		%> @brief add a single State to the state machine
+		%> @param newState a state structure
+		%> @return newStateIndex an index to the state position in the state list
 		% ===================================================================
 		function newStateIndex =  addState(obj,newState)
 			allowedFields = obj.stateFields;
@@ -205,9 +208,9 @@ classdef stateMachine < optickaCore
         end
 		
 		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
+		%> @brief getState retrieve a named state from the state list
+		%> @param stateName name of a particular state
+		%> @return state the individual state
 		% ===================================================================
 		function state = getState(obj, stateName)
 			if isStateName(obj,stateName)
@@ -216,9 +219,9 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
+		%> @brief update the state machine, normally run via an external loop like PTB
+		%> 
+		%> 
 		% ===================================================================
 		function update(obj)
 			if obj.isRunning == true
@@ -256,9 +259,9 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
+		%> @brief forceTransition force the state machine into a new named state
+		%> @param stateName name of the state to transition to
+		%> 
 		% ===================================================================
 		function forceTransition(obj,stateName)
 			if obj.isRunning == true
@@ -274,9 +277,9 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
+		%> @brief start the state machine
+		%> 
+		%> 
 		% ===================================================================
 		function start(obj)
 			if obj.isRunning == false
@@ -294,9 +297,9 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
+		%> @brief finish stop the state machine
+		%> 
+		%> 
 		% ===================================================================
 		function finish(obj)
 			if obj.isFinishing == true
@@ -313,9 +316,9 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
+		%> @brief run automomously run the state machine
+		%> 
+		%> 
 		% ===================================================================
 		function run(obj)
 			if obj.isRunning == false
@@ -333,8 +336,9 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> @brief Check whether a string is the name of a state.
-		%> @param
-		%> @return
+		%> @param stateName state name
+		%> @return isState logical
+		%> @return index position in the state list
 		% ===================================================================
 		function [isState, index] = isStateName(obj, stateName)
 			isState = obj.stateListIndex.isKey(stateName);
@@ -346,18 +350,18 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
-		%> @param
-		%> @return
+		%> @brief printcurrentTick fprints current tick to command window
+		%> 
+		%> 
 		% ===================================================================
 		function printCurrentTick(obj)
 			fprintf('%g:%g',obj.currentTick,obj.totalTicks)
 		end
 		
 		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
+		%> @brief runDemo runs a sample state machine session
+		%> 
+		%> 
 		% ===================================================================
 		function runDemo(obj)
 			obj.verbose = true;
@@ -387,10 +391,10 @@ classdef stateMachine < optickaCore
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
-		%> @brief reset all the current* properties for the given state
+		%> @brief enters a particular state
 		%> @param
 		%> @return
 		% ===================================================================
@@ -431,7 +435,7 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief transition to a named state
 		%> @param
 		%> @return
 		% ===================================================================
