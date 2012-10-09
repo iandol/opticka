@@ -396,7 +396,7 @@ classdef labJack < handle
 		%>  @param sync optinal logical flag whether to use blocking (true) command
 		% ===================================================================
 		function timedTTL(obj,line,time,sync)
-			if ~exist('line','var') || ~exist('time','var');fprintf('\ntimedTTL Input options: \n\t\tline (single value 0-7=FIO, 8-15=EIO, or 16-19=CIO), time (in ms)\n\n');return;end
+			if ~exist('line','var') || ~exist('time','var');fprintf('\ntimedTTL Input options: \n\tline (single value 0-7=FIO, 8-15=EIO, or 16-19=CIO), time (in ms), \n\t[sync] (optional setting to block [true] or not [default, false])\n\n');return;end
 			if ~exist('sync','var'); sync = false; end
 			if obj.silentMode == false && obj.vHandle == 1
 				time = time / 1000; %convert to seconds
@@ -479,7 +479,7 @@ classdef labJack < handle
 		%>  @param maskdir is the mask to apply the command. default=[255, 255,255]
 		% ===================================================================
 		function setDIO(obj,value,mask,valuedir,maskdir)
-			if ~exist('value','var');fprintf('\nsetDIO Input options: \n\t\tvalue, [mask], [value direction], [mask direction]\n\n');return;end
+			if ~exist('value','var');fprintf('\nsetDIO Input options: \n\tvalue, [mask], [value direction], [mask direction]\n\n');return;end
 			if ~exist('mask','var');mask=[255,255,255];end %all DIO by default
 			if ~exist('valuedir','var');valuedir=[255,255,255];maskdir=valuedir;end %all DIO set to output
 			if obj.silentMode == false && obj.vHandle == 1

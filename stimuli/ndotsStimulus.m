@@ -45,10 +45,11 @@ classdef ndotsStimulus < baseStimulus
 		mdstMode = 'GL_ONE_MINUS_SRC_ALPHA'
 	end
 	
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		%> number of dots in the kinetogram, includes all interleaving
 		%> frames.
 		nDots
+		%> family of stimulus
 		family = 'ndots'
 		%> 2xn matrix of dot x and y coordinates, (normalized units, from
 		%> top-left of kinetogram)

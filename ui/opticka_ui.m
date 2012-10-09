@@ -377,7 +377,7 @@ if isappdata(handles.output,'o')
 	end
 	
 	if ~isfield(o.store,'dotsStimulus')
-		o.store.visibleStimulus=dotsStimulus('name','Coherent Dots Stimulus');
+		o.store.dotsStimulus=dotsStimulus('name','Coherent Dots Stimulus');
 	end
 	o.store.visibleStimulus = o.store.dotsStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
@@ -744,7 +744,9 @@ function OKAddStimulus_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
+	o.store.visibleStimulus.readPanel();
 	o.r.stimuli{o.r.stimuli.n+1} = o.store.visibleStimulus.clone();
+	o.r.stimuli{o.r.stimuli.n}.name = ['Stimulus #' num2str(o.r.stimuli.n)];
 	o.addStimulus;
 	if o.r.stimuli.n > 0
 		set(handles.OKDeleteStimulus,'Enable','on');
@@ -787,6 +789,7 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
 	o.r.stimuli{o.r.stimuli.n+1} = o.r.stimuli{v}.clone;
+	o.r.stimuli{o.r.stimuli.n}.name = ['Stimulus #' num2str(o.r.stimuli.n)];
 	o.addStimulus;
 end
 

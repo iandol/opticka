@@ -476,8 +476,13 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function deleteStimulus(obj)
 			if ~isempty(obj.r.stimuli.n) && obj.r.stimuli.n > 0
-				val=obj.gv(obj.h.OKStimList);
-				obj.r.stimuli(val) = [];
+				v=obj.gv(obj.h.OKStimList);
+				if isfield(obj.store,'visibleStimulus');
+					if strcmp(obj.store.visibleStimulus.uuid,obj.r.stimuli{v}.uuid)
+						closePanel(obj.r.stimuli{v})
+					end
+				end
+				obj.r.stimuli(v) = [];
 				obj.refreshStimulusList;
 			else
 				set(obj.h.OKStimList,'Value',1);
@@ -486,14 +491,35 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief editStimulus
-		%> Gets the settings from th UI and updates our runExperiment object
+		%> @brief addStimulus
+		%> Run when we've added a new stimulus
 		%> @param 
 		% ===================================================================
 		function addStimulus(obj)
+			if isfield(obj.store,'evnt') %delete our previous event
+				delete(obj.store.evnt);
+				obj.store = rmfield(obj.store,'evnt');
+			end
+			obj.store.evnt = addlistener(obj.r.stimuli{end},'readPanelUpdate',@obj.readPanel);
+			if isfield(obj.store,'visibleStimulus');
+				obj.store.visibleStimulus.closePanel();
+			end
+			makePanel(obj.r.stimuli{end},obj.h.OKPanelStimulus);
+			obj.store.visibleStimulus = obj.r.stimuli{end};
 			obj.refreshStimulusList;
+			set(obj.h.OKStimList,'Value',obj.r.stimuli.n);
 		end
 		
+		% ===================================================================
+		%> @brief readPanel
+		%> 
+		%> @param 
+		% ===================================================================
+		function readPanel(obj,src,evnt)
+			obj.salutation(['---> ' obj.fullName '@readPanel triggered by: ' src.fullName '...']);
+			obj.refreshStimulusList;
+		end
+		 
 		% ===================================================================
 		%> @brief editStimulus
 		%> Gets the settings from the UI and updates our runExperiment object
@@ -503,13 +529,18 @@ classdef opticka < optickaCore
 			if obj.r.stimuli.n > 0
 				v = get(obj.h.OKStimList,'Value');
 				if v <= obj.r.stimuli.n;
+					if isfield(obj.store,'evnt')
+						delete(obj.store.evnt);
+						obj.store = rmfield(obj.store,'evnt');
+					end
 					if isfield(obj.store,'visibleStimulus');
 						obj.store.visibleStimulus.closePanel();
 						obj.store = rmfield(obj.store,'visibleStimulus');
 					end
 					closePanel(obj.r.stimuli{v});
 					makePanel(obj.r.stimuli{v},obj.h.OKPanelStimulus);
-					addlistener(obj.r.stimuli{v},'readPanelUpdate',@obj.addStimulus);
+					obj.store.evnt = addlistener(obj.r.stimuli{v},'readPanelUpdate',@obj.readPanel);
+					obj.store.visibleStimulus = obj.r.stimuli{v};
 				end
 				
 			end
@@ -1018,6 +1049,14 @@ classdef opticka < optickaCore
 						k=s.kill;
 						ct=s.colourType;
 						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn) ' sp=' num2str(sp) ' k=' num2str(k) ' ct=' ct];
+					case 'ndots'
+						x=s.xPosition;
+						y=s.yPosition;
+						sz=s.size;
+						a=s.angle;
+						c=s.coherence;
+						dn=s.density;
+						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn)];
 					case 'spot'
 						x=s.xPosition;
 						y=s.yPosition;

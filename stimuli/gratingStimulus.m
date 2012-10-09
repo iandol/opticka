@@ -93,7 +93,7 @@ classdef gratingStimulus < baseStimulus
 			'disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod|' ...
 			'correctPhase|squareWave|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'name|scale|phaseIncrement|disableNorm|correctPhase|gabor|contrastMult|mask'
+		ignoreProperties = 'name|scale|phaseIncrement|disableNorm|correctPhase|gabor|squareWave|contrastMult|mask'
 		%> how many frames between phase reverses
 		phaseCounter = 0
 	end
@@ -164,6 +164,10 @@ classdef gratingStimulus < baseStimulus
 			obj.win=rE.win;
 
 			obj.texture = []; %we need to reset this
+			
+			if obj.gabor == true && obj.squareWave == true %clarify this precedence here
+				obj.squareWave = false;
+			end
 
 			fn = fieldnames(gratingStimulus);
 			for j=1:length(fn)

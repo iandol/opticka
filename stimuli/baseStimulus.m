@@ -95,7 +95,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 	end
 	
 	events
-		%> triggered when reading from a UI panel
+		%> triggered when reading from a UI panel,
 		readPanelUpdate
 	end
 	
