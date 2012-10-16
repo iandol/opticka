@@ -23,16 +23,27 @@ classdef labJack < handle
 		name='LabJack'
 		%> what LabJack device to use; 3 = U3, 6 = U6
 		deviceID = 6
+		%> if more than one labJack connected, which one to open?
+		device = 1
 		%> silentMode allows one to gracefully fail methods without a labJack connected
 		silentMode = false
 		%> header needed by loadlib
 		header = '/usr/local/include/labjackusb.h'
 		%> the library itself
 		library = '/usr/local/lib/liblabjackusb'
+		%> how long to wait to read or write to the LabJack in
+		%> milliseconds, 0 = infinity
+		timeOut = 0
 		%> do we log everything to the command window?
 		verbose = false
 		%> allows the constructor to run the open method immediately (default)
 		openNow = true
+		%> whether we read the response (true) or not (false) to commands we send. 
+		%> The LabJack usually requires that we read the response and do a
+		%> soft reset if no response is read, but it does allow us to not
+		%> have to wait till we get a response, thus can speed methods like
+		%> timedTTL up.
+		readResponse = true
 		%> strobeTime is time of strobe in unit multiples of timeShort: 16
 		%> units ~=1ms on a U6 where timeShort is 64e-6 .If you use a U3
 		%> this needs to be 8 for a 1ms pulse...
@@ -73,14 +84,13 @@ classdef labJack < handle
 		%> LED state, which is controllable only on the U3
 		led = 1
 		%> The raw strobed word command generated with prepareStrobe, sent with strobeWord
-		strobeCommand = []
+		command = []
 		%> universal ID
 		uuid = 0
 		%> clock() dateStamp set on construction
-		dateStamp
+		dateStamp = []
 	end
 	
-	%--------------------DEPENDENT PROPERTIES----------%
 	properties (SetAccess = private, Dependent = true)
 		%> The fullName is the object name combined with its uuid and class name
 		fullName = ''
@@ -118,11 +128,13 @@ classdef labJack < handle
 		%> time on calling the method each time
 		vHandle = 0
 		%> what properties are allowed to be passed on construction
-		allowedProperties='deviceID|name|silentMode|verbose|openNow|header|library|strobeTime'
+		allowedProperties='timeOut|device|readResponse|deviceID|name|silentMode|verbose|openNow|header|library|strobeTime'
 		%>document what our strobed word is actually setting, shown to user if verbose = true
 		strobeComment = ''
 		%> class name
 		className = ''
+		%> timedTTL cache
+		timedTTLCache = []
 	end
 	
 	%=======================================================================
@@ -163,7 +175,7 @@ classdef labJack < handle
 		%> Open the LabJack device
 		% ===================================================================
 		function open(obj)
-			if obj.silentMode == false
+			if obj.silentMode == false || isempty(obj.handle)
 				if ismac == true || isunix == true
 					if ~libisloaded('liblabjackusb')
 						try
@@ -220,7 +232,7 @@ classdef labJack < handle
 						return
 					end
 				end
-				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',1,0,obj.deviceID);
+				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',obj.device,0,obj.deviceID);
 				if obj.validHandle();
 					%obj.version = calllib('liblabjackusb','LJUSB_GetDeviceDescriptorReleaseNumber',obj.handle);
 					if obj.deviceID == 3 %respecify the time quantum for the U3
@@ -241,6 +253,7 @@ classdef labJack < handle
 					obj.silentMode = true; %we switch into silent mode just in case someone tries to use the object
 				end
 			else %silentmode is ~false
+				obj.close();
 				obj.isOpen = false;
 				obj.handle = [];
 				obj.vHandle = false;
@@ -305,7 +318,8 @@ classdef labJack < handle
 		%> @param byte The raw hex encoded command packet to send
 		% ===================================================================
 		function out = rawWrite(obj,byte)
-			out = calllib('liblabjackusb', 'LJUSB_Write', obj.handle, byte, length(byte));
+			out = calllib('liblabjackusb', 'LJUSB_WriteTO', obj.handle, byte, length(byte), obj.timeOut);
+			if out == 0;	obj.salutation('rawWrite','ERROR WRITING!',true); end
 		end
 		
 		% ===================================================================
@@ -327,7 +341,8 @@ classdef labJack < handle
 			if ~exist('count','var') || count > length(bytein)
 				count = length(bytein);
 			end
-			in =  calllib('liblabjackusb', 'LJUSB_Read', obj.handle, bytein, count);
+			in =  calllib('liblabjackusb', 'LJUSB_ReadTO', obj.handle, bytein, count, obj.timeOut);
+			if in == 0; obj.salutation('rawRead','ERROR READING!',true); end
 		end
 		
 		% ===================================================================
@@ -352,7 +367,7 @@ classdef labJack < handle
 				obj.command = obj.checksum(cmd,'extended');
 				
 				obj.outp = obj.rawWrite(obj.command);
-				obj.inp = obj.rawRead(zeros(1,10),10);
+				if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
 			end
 		end
 		
@@ -378,7 +393,7 @@ classdef labJack < handle
 				obj.command = obj.checksum(cmd,'extended');
 				
 				obj.outp = obj.rawWrite(obj.command);
-				obj.inp = obj.rawRead(zeros(1,10),10);
+				if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
 			end
 		end
 		
@@ -395,9 +410,17 @@ classdef labJack < handle
 		%>	@param time time in ms
 		%>  @param sync optinal logical flag whether to use blocking (true) command
 		% ===================================================================
-		function timedTTL(obj,line,time,sync)
-			if ~exist('line','var') || ~exist('time','var');fprintf('\ntimedTTL Input options: \n\tline (single value 0-7=FIO, 8-15=EIO, or 16-19=CIO), time (in ms), \n\t[sync] (optional setting to block [true] or not [default, false])\n\n');return;end
-			if ~exist('sync','var'); sync = false; end
+		function timedTTL(obj,line,time)
+			if (~exist('line','var') || ~exist('time','var'));
+				if ~isempty(obj.timedTTLCache)
+					obj.outp = obj.rawWrite(obj.timedTTLCache);
+					if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
+					obj.salutation('timedTTL method','Cached Command used')
+				else
+					fprintf('\ntimedTTL Input options: \n\tline (single value 0-7=FIO, 8-15=EIO, or 16-19=CIO), time (in ms)\n\n');
+				end
+				return
+			end
 			if obj.silentMode == false && obj.vHandle == 1
 				time = time / 1000; %convert to seconds
 				time1 = 0;
@@ -462,10 +485,11 @@ classdef labJack < handle
 					
 				end
 				
-				command = obj.checksum(cmd,'extended');
-				obj.outp = obj.rawWrite(command);
-				if sync; obj.inp = obj.rawRead(zeros(1,10),10); end
-				obj.salutation('timedTTL method',sprintf('T1:%g T2:%g output time = %g secs', time1, time2, otime))
+				obj.command = obj.checksum(cmd,'extended');
+				obj.timedTTLCache = obj.command;
+				obj.outp = obj.rawWrite(obj.command);
+				if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
+				obj.salutation('timedTTL method',sprintf('Tlong:%g Tshort:%g output time = %g ms', time1, time2, otime*1000))
 			end
 		end
 		
@@ -493,9 +517,9 @@ classdef labJack < handle
 				cmd(9:11) = mask;
 				cmd(12:14) = value;
 				
-				cmd = obj.checksum(cmd,'extended');
-				obj.outp = obj.rawWrite(cmd);
-				obj.inp = obj.rawRead(zeros(1,10),10);
+				obj.command = obj.checksum(cmd,'extended');
+				obj.outp = obj.rawWrite(obj.command);
+				if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
 			end
 		end
 		
@@ -516,9 +540,9 @@ classdef labJack < handle
 				cmd(9:11) = mask;
 				cmd(12:14) = value;
 				
-				cmd = obj.checksum(cmd,'extended');
-				obj.outpout = obj.rawWrite(cmd);
-				obj.inp = obj.rawRead(zeros(1,10),10);
+				obj.command = obj.checksum(cmd,'extended');
+				obj.outp = obj.rawWrite(obj.command);
+				if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
 			end
 		end
 		
@@ -539,9 +563,9 @@ classdef labJack < handle
 				cmd(9:11) = mask;
 				cmd(12:14) = value;
 				
-				cmd = obj.checksum(cmd,'extended');
-				obj.outp = obj.rawWrite(cmd);
-				obj.inp = obj.rawRead(zeros(1,10),10);
+				obj.command = obj.checksum(cmd,'extended');
+				obj.outp = obj.rawWrite(obj.command);
+				if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
 			end
 		end
 		
@@ -595,7 +619,7 @@ classdef labJack < handle
 				cmd(25:27) = mask;
 				cmd(28:30) = 0;
 				
-				obj.strobeCommand = obj.checksum(cmd,'extended');
+				obj.command = obj.checksum(cmd,'extended');
 				if exist('sendNow','var')
 					obj.strobeWord;
 				end
@@ -608,34 +632,14 @@ classdef labJack < handle
 		%>
 		% ===================================================================
 		function strobeWord(obj)
-			if ~isempty(obj.strobeCommand)
-				obj.rawWrite(obj.strobeCommand);
-				obj.inp = obj.rawRead(zeros(1,10),10);
-				obj.salutation('strobeWord', obj.strobeComment);
+			if ~isempty(obj.command)
+				obj.rawWrite(obj.command);
+				if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
+				%obj.salutation('strobeWord', obj.strobeComment);
 % 				if obj.inp(6) > 0
 % 					obj.salutation('strobeWord',['Feedback error in IOType ' num2str(obj.inp(7))]);
 % 				end
 			end
-		end
-		
-		% ===================================================================
-		%> @brief Prepare Strobe Word split into EIO (8bit) and CIO (3bit). 0-2047
-		%>  %is the max # of variables with 2^11bits.
-		%>
-		%>	 @param value The value to be split into EIO and CIO
-		%>  @return eio is an 8bit word value represented the LSB
-		%>  @return cio is a 4bit value where the 1st bit is 1 for strobe line 22
-		%>  and the rest is the 3bit remainder to combine with eio to make an
-		%>  11bit strobed word.
-		% ===================================================================
-		function [eio,cio] = prepareWords(obj,value,strobeState)
-			if ~exist('strobeState','var')
-				strobeState = 1;
-			end
-			eio = bitand(value,255); %get eio easily ANDing with 255
-			msb = bitshift(value,-8); %our msb is bitshifted 8 bits
-			msb = bitshift(msb,1); %shift it across as cio0 is reserved;
-			cio = bitor(msb,strobeState); %OR with 1 as cio0 is the strobe trigger and needs to be 1
 		end
 		
 		% ===================================================================
@@ -659,13 +663,13 @@ classdef labJack < handle
 					val = abs(obj.(myname)-1);
 				end
 				if val == 1
-					out = obj.rawWrite(obj.(cmdHigh));
-					in  = obj.rawRead(zeros(1,10),10);
+					obj.outp = obj.rawWrite(obj.(cmdHigh));
+					if obj.readResponse; obj.inp  = obj.rawRead(zeros(1,10),10); end
 					obj.(myname) = 1;
 					obj.salutation('SETFIO',[myname ' is HIGH'])
 				else
-					out = obj.rawWrite(obj.(cmdLow));
-					in  = obj.rawRead(zeros(1,10),10);
+					obj.outp = obj.rawWrite(obj.(cmdLow));
+					if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
 					obj.(myname) = 0;
 					obj.salutation('SETFIO',[myname ' is LOW'])
 				end
@@ -697,7 +701,7 @@ classdef labJack < handle
 		function ledON(obj)
 			if obj.silentMode == false && obj.vHandle == 1
 				obj.outp = obj.rawWrite(obj.ledIsON);
-				obj.inp = obj.rawRead(zeros(1,10),10);
+				if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
 			end
 		end
 		
@@ -709,7 +713,7 @@ classdef labJack < handle
 		function ledOFF(obj)
 			if obj.silentMode == false && obj.vHandle == 1
 				obj.outp = obj.rawWrite(obj.ledIsOFF);
-				obj.inp = obj.rawRead(zeros(1,10),10);
+				if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
 			end
 		end
 		
@@ -735,7 +739,7 @@ classdef labJack < handle
 			obj.command = obj.checksum(cmd,'normal');
 			
 			obj.outp = obj.rawWrite(cmd);
-			obj.inp  = obj.rawRead(zeros(4,1));
+			if obj.readResponse; obj.inp  = obj.rawRead(zeros(4,1)); end
 		end
 		
 		% ===================================================================
@@ -801,6 +805,26 @@ classdef labJack < handle
 			in = sum(uint16(in));
 			lsb = bitand(in,255);
 			msb = bitshift(in,-8);
+		end
+		
+		% ===================================================================
+		%> @brief Prepare Strobe Word split into EIO (8bit) and CIO (3bit). 0-2047
+		%>  %is the max # of variables with 2^11bits.
+		%>
+		%>	 @param value The value to be split into EIO and CIO
+		%>  @return eio is an 8bit word value represented the LSB
+		%>  @return cio is a 4bit value where the 1st bit is 1 for strobe line 22
+		%>  and the rest is the 3bit remainder to combine with eio to make an
+		%>  11bit strobed word.
+		% ===================================================================
+		function [eio,cio] = prepareWords(value,strobeState)
+			if ~exist('strobeState','var')
+				strobeState = 1;
+			end
+			eio = bitand(value,255); %get eio easily ANDing with 255
+			msb = bitshift(value,-8); %our msb is bitshifted 8 bits
+			msb = bitshift(msb,1); %shift it across as cio0 is reserved;
+			cio = bitor(msb,strobeState); %OR with 1 as cio0 is the strobe trigger and needs to be 1
 		end
 		
 	end % END STATIC METHODS
