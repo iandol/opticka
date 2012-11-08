@@ -958,6 +958,7 @@ classdef opticka < optickaCore
 				end
 				if obj.r.stimuli.n > 0
 					set(obj.h.OKDeleteStimulus,'Enable','on');
+					set(obj.h.OKEditStimulus,'Enable','on');
 					set(obj.h.OKModifyStimulus,'Enable','on');
 					set(obj.h.OKInspectStimulus,'Enable','on');
 					set(obj.h.OKStimulusUp,'Enable','on');
@@ -1155,51 +1156,6 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief gs (getstring)
-		%> 
-		%> @param inhandle handle to UI element
-		%> @param value
-		% ===================================================================
-		function outhandle = gs(obj,inhandle,value)
-			if exist('value','var')
-				s = get(inhandle,'String');
-				outhandle = s{value};
-			else
-				outhandle = get(inhandle,'String');
-			end
-		end
-		
-		% ===================================================================
-		%> @brief gd (getdouble)
-		%> 
-		%> @param inhandle handle to UI element
-		% ===================================================================
-		function outhandle = gd(obj,inhandle)
-		%quick alias to get double value
-			outhandle = str2double(get(inhandle,'String'));
-		end
-		
-		% ===================================================================
-		%> @brief gn (getnumber)
-		%> 
-		%> @param inhandle handle to UI element
-		% ===================================================================
-		function outhandle = gn(obj,inhandle)
-		%quick alias to get number value
-			outhandle = str2num(get(inhandle,'String'));
-		end
-		
-		% ===================================================================
-		%> @brief gv (getvalue)
-		%> 
-		%> @param inhandle handle to UI element
-		% ===================================================================
-		function outhandle = gv(obj,inhandle)
-		%quick alias to get ui value
-			outhandle = get(inhandle,'Value');
-		end
-		
-		% ===================================================================
 		%> @brief saveobj Our custom save method to prepare object for safe saving
 		%> 
 		%> @param obj
@@ -1247,6 +1203,56 @@ classdef opticka < optickaCore
 			[status,~]=system([cmd rAddress]);
 		end
 		
+		% ===================================================================
+		%> @brief gs (getstring)
+		%> 
+		%> @param inhandle handle to UI element
+		%> @param value
+		% ===================================================================
+		function outhandle = gs(inhandle,value)
+			if exist('value','var')
+				s = get(inhandle,'String');
+				outhandle = s{value};
+			else
+				outhandle = get(inhandle,'String');
+			end
+		end
+		
+		% ===================================================================
+		%> @brief gd (getdouble)
+		%> 
+		%> @param inhandle handle to UI element
+		% ===================================================================
+		function outhandle = gd(inhandle)
+		%quick alias to get double value
+			outhandle = str2double(get(inhandle,'String'));
+		end
+		
+		% ===================================================================
+		%> @brief gn (getnumber)
+		%> 
+		%> @param inhandle handle to UI element
+		% ===================================================================
+		function outhandle = gn(inhandle)
+		%quick alias to get number value
+			outhandle = str2num(get(inhandle,'String')); %#ok<ST2NM>
+		end
+		
+		% ===================================================================
+		%> @brief gv (getvalue)
+		%> 
+		%> @param inhandle handle to UI element
+		% ===================================================================
+		function outhandle = gv(inhandle)
+		%quick alias to get ui value
+			outhandle = get(inhandle,'Value');
+		end
+		
+		% ===================================================================
+		%> @brief move GUI to center of screen
+		%> 
+		%> @param inhandle handle to UI element
+		% ===================================================================
 		function centerGUI(uihandle)
 			pos=get(uihandle,'Position');
 			size=[pos(3) pos(4)];
@@ -1261,4 +1267,4 @@ classdef opticka < optickaCore
 		end
 	end
 	
-	end
+end
