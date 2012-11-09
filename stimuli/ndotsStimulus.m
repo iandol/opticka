@@ -25,7 +25,7 @@ classdef ndotsStimulus < baseStimulus
 		%> width of angular error to add to each dot's motion (degrees)
 		drunkenWalk = 0
 		%> number disjoint sets of dots to interleave frame-by-frame
-		interleaving = 3
+		interleaving = 1
 		%> how to move coherent dots: as one rigid unit (true), or each dot
 		%> independently (false)
 		isMovingAsHerd = true
@@ -43,6 +43,17 @@ classdef ndotsStimulus < baseStimulus
 		%> mask GL modes
 		msrcMode = 'GL_SRC_ALPHA'
 		mdstMode = 'GL_ONE_MINUS_SRC_ALPHA'
+	end
+	
+	properties (SetAccess = private, GetAccess = public, Hidden = true)
+		%> allows makePanel method to offer a UI menu of settings
+		typeList = {'simple'}
+		%> allows makePanel method to offer a UI menu of settings
+		msrcModeList = {'GL_ZERO','GL_ONE','GL_DST_COLOR','GL_ONE_MINUS_DST_COLOR',...
+			'GL_SRC_ALPHA','GL_ONE_MINUS_SRC_ALPHA'}
+		%> allows makePanel method to offer a UI menu of settings
+		mdstModeList = {'GL_ZERO','GL_ONE','GL_DST_COLOR','GL_ONE_MINUS_DST_COLOR',...
+			'GL_SRC_ALPHA','GL_ONE_MINUS_SRC_ALPHA'}
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -100,7 +111,7 @@ classdef ndotsStimulus < baseStimulus
 		shader = 0
 		srcMode = 'GL_ONE'
 		dstMode = 'GL_ZERO'
-		allowedProperties='^(type|speed|density|dotSize|angle|coherence|shape|kill)$';
+		allowedProperties='msrcMode|mdstMode|directionWeights|mask|isMovingAsHerd|isWrapping|isLimitedLifetime|dotType|speed|density|dotSize|angle|coherence|density|interleaving|drunkenWalk';
 		ignoreProperties='msrcMode|mdstMode|pixelXY|pixelOrigin|deltaR|frameNumber|frameSelector|dotLifetimes|nDots|normalizedXY|pixelScale|maskTexture|maskDestinationRect|maskSourceRect'
 	end
 	
@@ -253,7 +264,7 @@ classdef ndotsStimulus < baseStimulus
 						obj.dotSize, ...
 						obj.colour, ...
 						obj.pixelOrigin, ...
-						obj.shape);
+						obj.dotType);
 				end
 			end
 		end

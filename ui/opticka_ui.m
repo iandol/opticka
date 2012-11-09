@@ -142,7 +142,7 @@ function OKMenuAllTimingLogs_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.r.getTimeLog;
+	o.r.getRunLog;
 end
 
 % --------------------------------------------------------------------

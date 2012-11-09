@@ -51,15 +51,20 @@ classdef dotsStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
+		%> allows makePanel method to offer a UI menu of settings
 		typeList = {'simple'}
+		%> allows makePanel method to offer a UI menu of settings
 		colourTypeList = {'randomBW','random','randomN','randomNBW','binary'}
+		%> allows makePanel method to offer a UI menu of settings
 		msrcModeList = {'GL_ZERO','GL_ONE','GL_DST_COLOR','GL_ONE_MINUS_DST_COLOR',...
 			'GL_SRC_ALPHA','GL_ONE_MINUS_SRC_ALPHA'}
+		%> allows makePanel method to offer a UI menu of settings
 		mdstModeList = {'GL_ZERO','GL_ONE','GL_DST_COLOR','GL_ONE_MINUS_DST_COLOR',...
 			'GL_SRC_ALPHA','GL_ONE_MINUS_SRC_ALPHA'}
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%nDots cache
 		nDots_
 		%> we must scale the dots lager than the mask by this factor
 		fieldScale = 1.1
