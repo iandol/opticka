@@ -36,7 +36,11 @@ classdef stateMachine < optickaCore
 		%> transition function run globally between transitions
 		transitionFcn = {}
 		%> log group name
-		logName 
+		logName
+		%>forceTransition allows an external or internal trigger, for
+		%>example from the eyetracker. If this is a name of a state it will
+		%>transition to that state, or next state if non-empty
+		forceTransition = ''
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
