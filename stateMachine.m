@@ -34,13 +34,9 @@ classdef stateMachine < optickaCore
 		%> pause function
 		waitFcn = @WaitSecs
 		%> transition function run globally between transitions
-		transitionFcn = {}
+		globalTransitionFcn = {}
 		%> log group name
 		logName
-		%>forceTransition allows an external or internal trigger, for
-		%>example from the eyetracker. If this is a name of a state it will
-		%>transition to that state, or next state if non-empty
-		forceTransition = ''
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -68,6 +64,8 @@ classdef stateMachine < optickaCore
 		currentEntryFcn
 		%> current within function
 		currentWithinFcn
+		%> current transition function
+		currentTransitionFcn
 		%> current exit function
 		currentExitFcn
 		%> number of ticks before next transition realTime = false
@@ -86,9 +84,9 @@ classdef stateMachine < optickaCore
 		%> should we run the finish function
 		isFinishing = false
 		%> field names of allStates struct array, defining state behaviors
-		stateFields = {'name', 'next', 'entryFcn', 'withinFcn', 'time', 'exitFcn'}
+		stateFields = {'name', 'next', 'entryFcn', 'withinFcn', 'time', 'transitionFcn','exitFcn'}
 		%> default values of allStates struct array fields
-		stateDefaults = {'', '', {}, {}, 1, {}}
+		stateDefaults = {'', '', {}, {}, 1, {}, {}}
 		%> properties allowed during construction
 		allowedProperties = 'name|realTime|verbose|clockFcn|waitFcn|timeDelta|transitionFcn'
 	end
@@ -255,6 +253,19 @@ classdef stateMachine < optickaCore
 					end
 				end
 				
+				tname='';
+				if isa(obj.currentTransitionFcn,'function_handle') %function handle, lets feval it
+					tname = feval(obj.currentTransitionFcn);
+				elseif iscell(obj.currentTransitionFcn)
+					for i = 1:size(obj.currentTransitionFcn,1) %nested class
+						tname = feval(obj.currentTransitionFcn{i});
+					end
+				end
+				
+				if isStateName(obj,tname)
+					obj.transitionToStateWithName(tname);
+				end
+				
 				obj.currentTick = obj.currentTick + 1;
 				obj.totalTicks = obj.totalTicks + 1;
 			else
@@ -374,12 +385,13 @@ classdef stateMachine < optickaCore
 			middleFcn = @()disp('enter state: middle -- Hello!');
 			endFcn = @()disp('enter state: end -- see you soon!');
 			withinFcn = { @()printCurrentTick(obj); @()fprintf(' ') };
+			transitionFcn = @()sprintf('no');
 			exitfcn = { @()fprintf('-exit state'); @()fprintf('\n') };
 			statesInfo = { ...
-				'name'      'next'   'time'     'entryFcn'	'withinFcn'		'exitFcn'; ...
-				'begin'     'middle'  1			beginFcn		withinFcn		exitfcn; ...
-				'middle'    'end'     1			middleFcn		withinFcn		exitfcn; ...
-				'end'       ''        1         endFcn			withinFcn		exitfcn; ...
+				'name'      'next'   'time'     'entryFcn'	'withinFcn'		'transitionFcn'	'exitFcn'; ...
+				'begin'     'middle'  1			beginFcn		withinFcn	transitionFcn	exitfcn; ...
+				'middle'    'end'     1			middleFcn		withinFcn	transitionFcn	exitfcn; ...
+				'end'       ''        1         endFcn			withinFcn	transitionFcn	exitfcn; ...
 				};
 			addStates(obj,statesInfo);
 			disp('>--------------------------------------------------')
@@ -414,6 +426,7 @@ classdef stateMachine < optickaCore
 				obj.currentName = thisState.name;
 				obj.currentEntryFcn = thisState.entryFcn;
 				obj.currentWithinFcn = thisState.withinFcn;
+				obj.currentTransitionFcn = thisState.transitionFcn;
 				obj.nextTimeOut = obj.currentEntryTime + thisState.time;
 				obj.nextTickOut = obj.stateListTicks(thisState.name);
 				obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'])
@@ -449,8 +462,8 @@ classdef stateMachine < optickaCore
 			obj.exitCurrentState();
 			obj.salutation(['Transition @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'])
  			
-			if isa(obj.transitionFcn,'function_handle') %function handle, lets feval it
- 				feval(obj.transitionFcn);
+			if isa(obj.globalTransitionFcn,'function_handle') %function handle, lets feval it
+ 				feval(obj.globalTransitionFcn);
 			end
 			
 			obj.enterStateAtIndex(nextIndex);

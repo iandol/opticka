@@ -3,7 +3,7 @@ classdef eyelinkManager < optickaCore
 	%   Detailed explanation goes here
 	
 	properties
-		screen
+		screen = []
 		defaults = struct()
 		isDummy = false
 		enableCallbacks = false
@@ -11,18 +11,20 @@ classdef eyelinkManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		version
+		x = []
+		y = []
+		version = ''
 		silentMode = false
 		isConnected = false
 		isRecording = false
 		eyeUsed = -1
-		currentEvent
-		error
+		currentEvent = []
+		error = []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'name|verbose|isDummy'
+		allowedProperties = 'name|verbose|isDummy|enableCallbacks'
 	end
 	
 	methods
@@ -76,11 +78,31 @@ classdef eyelinkManager < optickaCore
 		function setup(obj)
 			if obj.isConnected
 				% Calibrate the eye tracker
-				EyelinkDoTrackerSetup(obj.defaults);
+				trackerSetup(obj);
+				%driftCorrection(obj);
+				checkEye(obj);
 				
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function trackerSetup(obj)
+			if obj.isConnected
+				% do a final check of calibration using driftcorrection
+				EyelinkDoTrackerSetup(obj.defaults);
+			end
+		end
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function driftCorrection(obj)
+			if obj.isConnected
 				% do a final check of calibration using driftcorrection
 				EyelinkDoDriftCorrection(obj.defaults);
-				obj.checkEye();
 			end
 		end
 		
@@ -91,6 +113,8 @@ classdef eyelinkManager < optickaCore
 		function error = checkRecording(obj)
 			if obj.isConnected
 				error=Eyelink('CheckRecording');
+			else
+				error = -100;
 			end
 		end
 		
@@ -99,11 +123,16 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function eyeUsed = checkEye(obj)
-			obj.eyeUsed = Eyelink('EyeAvailable'); % get eye that's tracked
-			if obj.eyeUsed == obj.defaults.BINOCULAR; % if both eyes are tracked
-				obj.eyeUsed = obj.defaults.LEFT_EYE; % use left eye
+			if obj.isConnected
+				obj.eyeUsed = Eyelink('EyeAvailable'); % get eye that's tracked
+				if obj.eyeUsed == obj.defaults.BINOCULAR; % if both eyes are tracked
+					obj.eyeUsed = obj.defaults.LEFT_EYE; % use left eye
+				end
+				eyeUsed = obj.eyeUsed;
+			else
+				obj.eyeUsed = -1;
+				eyeUsed = obj.eyeUsed;
 			end
-			eyeUsed = obj.eyeUsed;
 		end
 		
 		% ===================================================================
@@ -116,21 +145,21 @@ classdef eyelinkManager < optickaCore
 				obj.isRecording = false;
 				Eyelink('CloseFile');
 				try
-					obj.salutation('Receiving data file ''%s''\n', 'demo.edf' );
+					obj.salutation('Close Method',sprintf('Receiving data file %s', 'demo.edf'));
 					status=Eyelink('ReceiveFile');
 					if status > 0
-						obj.salutation('ReceiveFile status %d\n', status);
+						obj.salutation('Close Method',sprintf('ReceiveFile status %d', status));
 					end
 					if 2==exist('demo.edf', 'file')
-						obj.salutation('Data file ''%s'' can be found in ''%s''\n', 'demo.edf', pwd );
+						obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', 'demo.edf', pwd));
 					end
 				catch ME
-					obj.salutation('Problem receiving data file ''%s''\n', 'demo.edf' );
+					obj.salutation('Close Method',sprintf('Problem receiving data file ''%s''', 'demo.edf'));
 					rethrow(ME);
 				end
 				Eyelink('Shutdown');
 			catch ME
-				obj.salutation('--> Couldn''t stop recording...\n')
+				obj.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
 				obj.isRecording = false;
 				Eyelink('Shutdown');
 				obj.error = ME;
@@ -139,6 +168,7 @@ classdef eyelinkManager < optickaCore
 			obj.isConnected = false;
 			obj.isDummy = false;
 			obj.isRecording = false;
+			obj.eyeUsed = -1;
 			obj.screen = [];
 		end
 		
@@ -183,6 +213,8 @@ classdef eyelinkManager < optickaCore
 					if keyCode(stopkey); break;	end;
 					
 					draw(o);
+					drawGrid(s);
+					drawFixationPoint(s);
 					
 					evt = getSample(obj);
 					
