@@ -65,6 +65,8 @@ classdef runExperiment < optickaCore
 		lJack
 		%> stateMachine
 		stateMachine
+		%> eyelink manager object
+		eyeLink
 	end
 	
 	properties (Hidden = true)
@@ -351,7 +353,8 @@ classdef runExperiment < optickaCore
 			tS = struct();
 	
 			%make a short handle to the screenManager
-			s = obj.screen;
+			s = obj.screen; 
+			obj.stimuli.screen = [];
 			
 			% open our labJack if present
 			obj.lJack = labJack('name','training','verbose',obj.verbose);
@@ -365,6 +368,11 @@ classdef runExperiment < optickaCore
 				obj.stimuli.screen = s;
 				obj.stimuli.verbose = obj.verbose;
 				setup(obj.stimuli); %run setup() for each stimulus
+				
+				% set up the eyelink interface
+				obj.eyeLink = eyelinkManager();
+				initialise(obj.eyeLink, s);
+				setup(obj.eyeLink);
 				
 				obj.stateMachine = stateMachine('verbose',true); %#ok<*CPROP>
 				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
@@ -420,6 +428,8 @@ classdef runExperiment < optickaCore
 				tS.totalTicks = 1; % a tick counter
 				tS.pauseToggle = 1;
 				
+				startRecording(obj.eyeLink);
+				
 				tL.screenLog.beforeDisplay = GetSecs;
 				
 				%Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
@@ -444,8 +454,11 @@ classdef runExperiment < optickaCore
 						s.drawGrid;
 					end
 					
-						% Tell PTB that no further drawing commands will follow before Screen('Flip')
+					% Tell PTB that no further drawing commands will follow before Screen('Flip')
 					Screen('DrawingFinished', s.win); 
+					
+					%check eye position
+					getSample(obj.eyeLink);
 					
 					%check keyboard for commands
 					tS = obj.checkTrainingKeys(tS);
@@ -468,7 +481,9 @@ classdef runExperiment < optickaCore
 				Priority(0);
 				ListenChar(0)
 				ShowCursor;
-				s.close();
+				close(s);
+				close(obj.eyeLink);
+				obj.eyeLink = [];
 				if exist('topsDataLog','file')
 					topsDataLog.gui();
 				end
@@ -484,7 +499,8 @@ classdef runExperiment < optickaCore
 					topsDataLog.flushAllData();
 				end
 				ShowCursor;
-				s.close();
+				close(s);
+				close(obj.eyeLink);
 				obj.lJack.close;
 				obj.lJack=[];
 				clear tL s tS
@@ -618,6 +634,11 @@ classdef runExperiment < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief randomiseTrainingList
+		%>
+		%> For single stimulus presentation, randomise stimulus choice
+		% ===================================================================
 		function randomiseTrainingList(obj)
 			if ~isempty(obj.thisStim)
 				obj.thisStim = randi(length(obj.stimList));

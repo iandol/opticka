@@ -27,7 +27,7 @@ classdef stateMachine < optickaCore
 		timeDelta = 0.0167
 		%> use real time (true) or ticks (false) to mark state time
 		realTime = false
-		%> verbose?
+		%> verbose logging to command window?
 		verbose = true
 		%> clock function to use
 		clockFcn = @GetSecs
@@ -386,17 +386,20 @@ classdef stateMachine < optickaCore
 		function runDemo(obj)
 			obj.verbose = true;
 			obj.realTime = false;
-			beginFcn = @()disp('enter state: begin -- Hello!');
-			middleFcn = @()disp('enter state: middle -- Hello!');
-			endFcn = @()disp('enter state: end -- see you soon!');
+			beginFcn = @()disp('::enter state: begin -- Hello there!');
+			middleFcn = @()disp('::enter state: middle -- Still here?');
+			surpriseFcn = @()disp('::SURPRISE!!!');
+			endFcn = @()disp('::enter state: end -- See you soon!');
 			withinFcn = { @()printCurrentTick(obj); @()fprintf(' ') };
 			transitionFcn = @()sprintf('false');
-			exitfcn = { @()fprintf('-exit state'); @()fprintf('\n') };
+			transitionFcn2 = @()sprintf('surprise');
+			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
 			statesInfo = { ...
-			'name'		'next'   'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'; ...
-			'begin'		'middle'  1		beginFcn	withinFcn	transitionFcn	exitfcn; ...
-			'middle'	'end'     1		middleFcn	withinFcn	transitionFcn	exitfcn; ...
-			'end'		''        1     endFcn		withinFcn	transitionFcn	exitfcn; ...
+			'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'; ...
+			'begin'		'middle'	1		beginFcn	withinFcn	transitionFcn	exitFcn; ...
+			'middle'	'end'		1		middleFcn	withinFcn	transitionFcn2	exitFcn; ...
+			'end'		''			1		endFcn		withinFcn	transitionFcn	exitFcn; ...
+			'surprise'	'end'		1		surpriseFcn	withinFcn	[]				exitFcn; ...
 			};
 			addStates(obj,statesInfo);
 			disp('>--------------------------------------------------')
