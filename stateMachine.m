@@ -81,6 +81,8 @@ classdef stateMachine < optickaCore
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+		%> is tops data logger present?
+		isTops = false
 		%> should we run the finish function
 		isFinishing = false
 		%> field names of allStates struct array, defining state behaviors
@@ -118,12 +120,15 @@ classdef stateMachine < optickaCore
 		function obj = stateMachine(varargin)
 			%initialise the statelist index
 			obj.stateList = struct([]);
-			obj.stateListIndex = containers.Map('a', 1, 'uniformValues', false);
-			obj.stateListIndex.remove(obj.stateListIndex.keys);
-			obj.stateListTicks = containers.Map('a', 1, 'uniformValues', false);
-			obj.stateListTicks.remove(obj.stateListTicks.keys);
+			obj.stateListIndex = containers.Map('uniformValues', false);
+			obj.stateListTicks = containers.Map('uniformValues', false);
+			%parse any inputs
 			if nargin>0
 				parseArgs(obj, varargin, obj.allowedProperties);
+			end
+			%can we use tower of psych data logger?
+			if exist('topsDataLog','file')
+				obj.isTops = true;
 			end
 		end
 		
@@ -253,7 +258,7 @@ classdef stateMachine < optickaCore
 					end
 				end
 				
-				tname='';
+				tname = '';
 				if isa(obj.currentTransitionFcn,'function_handle') %function handle, lets feval it
 					tname = feval(obj.currentTransitionFcn);
 				elseif iscell(obj.currentTransitionFcn)
@@ -262,7 +267,7 @@ classdef stateMachine < optickaCore
 					end
 				end
 				
-				if isStateName(obj,tname)
+				if ischar(tname) && isStateName(obj,tname)
 					obj.transitionToStateWithName(tname);
 				end
 				
@@ -385,14 +390,14 @@ classdef stateMachine < optickaCore
 			middleFcn = @()disp('enter state: middle -- Hello!');
 			endFcn = @()disp('enter state: end -- see you soon!');
 			withinFcn = { @()printCurrentTick(obj); @()fprintf(' ') };
-			transitionFcn = @()sprintf('no');
+			transitionFcn = @()sprintf('false');
 			exitfcn = { @()fprintf('-exit state'); @()fprintf('\n') };
 			statesInfo = { ...
-				'name'      'next'   'time'     'entryFcn'	'withinFcn'		'transitionFcn'	'exitFcn'; ...
-				'begin'     'middle'  1			beginFcn		withinFcn	transitionFcn	exitfcn; ...
-				'middle'    'end'     1			middleFcn		withinFcn	transitionFcn	exitfcn; ...
-				'end'       ''        1         endFcn			withinFcn	transitionFcn	exitfcn; ...
-				};
+			'name'		'next'   'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'; ...
+			'begin'		'middle'  1		beginFcn	withinFcn	transitionFcn	exitfcn; ...
+			'middle'	'end'     1		middleFcn	withinFcn	transitionFcn	exitfcn; ...
+			'end'		''        1     endFcn		withinFcn	transitionFcn	exitfcn; ...
+			};
 			addStates(obj,statesInfo);
 			disp('>--------------------------------------------------')
 			disp(' The demo will run the following states settings:  ')
@@ -414,7 +419,6 @@ classdef stateMachine < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		%
 		function enterStateAtIndex(obj, thisIndex)
 			obj.currentIndex = thisIndex;
 			if length(obj.stateList) >= thisIndex
@@ -439,11 +443,13 @@ classdef stateMachine < optickaCore
 					end
 				end
 				
-				data.currentTick = obj.currentTick;
-				data.nextTick = obj.nextTickOut;
-				group = [obj.currentName ':enter:' obj.name];
-				tic;
-				topsDataLog.logDataInGroup(data, group);
+				if obj.isTops
+					data.currentTick = obj.currentTick;
+					data.nextTick = obj.nextTickOut;
+					group = [obj.currentName ':enter:' obj.name];
+					tic;
+					topsDataLog.logDataInGroup(data, group);
+				end
 	
 			else
 				obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length');
@@ -489,10 +495,12 @@ classdef stateMachine < optickaCore
 				end
 			end
 			
-			data.currentTick = obj.currentTick;
-			data.nextTick = obj.nextTickOut;
-			group = [obj.currentName ':exit:' obj.name];
-			topsDataLog.logDataInGroup(data, group);
+			if obj.isTops
+				data.currentTick = obj.currentTick;
+				data.nextTick = obj.nextTickOut;
+				group = [obj.currentName ':exit:' obj.name];
+				topsDataLog.logDataInGroup(data, group);
+			end
 			
 			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs | ' num2str(obj.currentTick) '/' num2str(obj.totalTicks) 'ticks']);
 		end
