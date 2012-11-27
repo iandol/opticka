@@ -47,7 +47,7 @@ classdef eyelinkManager < optickaCore
 			obj.defaults = EyelinkInitDefaults();
 			try
 				Eyelink('GetTrackerVersion');
-			catch
+			catch %#ok<CTCH>
 				obj.isDummy = true;
 			end
 		end
@@ -257,6 +257,13 @@ classdef eyelinkManager < optickaCore
 					obj.y = obj.currentEvent.gy(obj.eyeUsed+1);
 					obj.pupil = obj.currentEvent.pa(obj.eyeUsed+1);
 				end
+			elseif obj.isDummy
+				[obj.x, obj.y] = GetMouse([]);
+				obj.pupil = 1000;
+				obj.currentEvent.gx = obj.x;
+				obj.currentEvent.gy = obj.y;
+				obj.currentEvent.pa = obj.pupil;
+				obj.currentEvent.time = GetSecs*1000;
 			end
 			evt = obj.currentEvent;
 		end
@@ -316,7 +323,8 @@ classdef eyelinkManager < optickaCore
 			try
 				s = screenManager();
 				o = dotsStimulus();
-				s.screen = 1;
+				%s.windowed = [800 600];
+				%s.screen = 1;
 				open(s);
 				setup(o,s);
 				
