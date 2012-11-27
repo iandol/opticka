@@ -1,23 +1,36 @@
 classdef eyelinkManager < optickaCore
-	%UNTITLED Summary of this class goes here
-	%   Detailed explanation goes here
 	
 	properties
+		%the PTB screen to work on, passed in during initialise
 		screen = []
+		% eyetracker defaults structure
 		defaults = struct()
+		% start eyetracker in dummy mode?
 		isDummy = false
+		% use callbacks, currently not working...
 		enableCallbacks = false
+		% do we record and retrieve eyetracker EDF file?
 		recordData = false;
+		% name of eyetracker EDF file
+		saveFile = 'myData.edf'
+		% do we log messages to the command window?
 		verbose = true
+		% fixation X position in degrees
 		fixationX = 0
+		% fixation Y position in degrees
 		fixationY = 0
+		% fixation radius in degrees
 		fixationRadius = 1
+		% fixation time in seconds
 		fixationTime = 1
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		% Gaze X position in degrees
 		x = []
+		% Gaze Y position in degrees
 		y = []
+		% pupil size
 		pupil = []
 		silentMode = false
 		isConnected = false
@@ -45,16 +58,16 @@ classdef eyelinkManager < optickaCore
 				obj.parseArgs(varargin,obj.allowedProperties);
 			end
 			obj.defaults = EyelinkInitDefaults();
-			try
-				Eyelink('GetTrackerVersion');
+			try % is eyelink interface working
+				Eyelink('GetTrackerVersion'); 
 			catch %#ok<CTCH>
-				obj.isDummy = true;
+				obj.isDummy = true; 
 			end
 		end
 		
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief isFixated tests for fixation
 		%>
 		% ===================================================================
 		function fixated = isFixated(obj)
@@ -75,7 +88,8 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief testFixation returns input yes or no strings based on
+		%> fixation state, useful for using via stateMachine
 		%>
 		% ===================================================================
 		function out = testFixation(obj, yesString, noString)
@@ -104,23 +118,21 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function resetFixation(obj)
-			obj.salutation(sprintf('Fixation Time was: %g',obj.fixLength),'resetFixation');
 			obj.fixStartTime = 0;
 			obj.fixLength = 0;
-			obj.salutation(sprintf('Fixation Time now: %g',obj.fixLength),'resetFixation');
-		end
+			end
 				
 		% ===================================================================
 		%> @brief 
 		%>
 		% ===================================================================
 		function initialise(obj,sM)
-			if exist('sM','var')
-				obj.screen=sM;
-			else
+			if ~exist('sM','var')
 				warning('Cannot initialise without a PTB screen')
 				return
 			end
+			
+			obj.screen = sM;
 			
 			[result,dummy] = EyelinkInit(obj.isDummy,1);
 			
@@ -128,15 +140,30 @@ classdef eyelinkManager < optickaCore
 			obj.isDummy = logical(dummy);
 			if obj.screen.isOpen == true
 				obj.defaults = EyelinkInitDefaults(obj.screen.win);
+				obj.defaults.backgroundcolour = obj.screen.backgroundColour;
 			end
+			
+			obj.defaults.calibrationtargetcolour = [1 0 0];
+			obj.defaults.calibrationtargetsize= 1;
+			obj.defaults.calibrationtargetwidth=0.5;
+			
+			EyelinkUpdateDefaults(obj.defaults);
+			
 			[~, obj.version] = Eyelink('GetTrackerVersion');
-			obj.salutation(['Running on a ' obj.version]);
+			obj.salutation(['Initialise Method', 'Running on a ' obj.version]);
 			Eyelink('Command', 'link_sample_data = LEFT,RIGHT,GAZE,AREA');
 			
-			% open file to record data to
-			if obj.isConnected == true && obj.recordData == true
-				Eyelink('Openfile', 'demo.edf');
-				obj.isRecording = true;
+			% try to open file to record data to
+			if obj.isConnected && obj.recordData
+				err = Eyelink('Openfile', obj.saveFile);
+				if err ~= 0 
+					obj.salutation('Initialise Method', 'Cannot setup data file, aborting data recording');
+					obj.isRecording = false;
+				else
+					Eyelink('command', ['add_file_preamble_text ''Recorded by:' obj.fullName ' tracker''']);
+   
+					obj.isRecording = true;
+				end
 			end
 			
 		end
@@ -147,11 +174,9 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function setup(obj)
 			if obj.isConnected
-				% Calibrate the eye tracker
-				trackerSetup(obj);
+				trackerSetup(obj); % Calibrate the eye tracker
 				%driftCorrection(obj);
 				checkEye(obj);
-				
 			end
 		end
 		
@@ -161,7 +186,6 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function trackerSetup(obj)
 			if obj.isConnected
-				% do a final check of calibration using driftcorrection
 				EyelinkDoTrackerSetup(obj.defaults);
 			end
 		end
@@ -171,7 +195,6 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function driftCorrection(obj)
 			if obj.isConnected
-				% do a final check of calibration using driftcorrection
 				EyelinkDoDriftCorrection(obj.defaults);
 			end
 		end
@@ -213,26 +236,24 @@ classdef eyelinkManager < optickaCore
 			try
 				if obj.isRecording == true
 					Eyelink('StopRecording');
-					obj.isRecording = false;
 					Eyelink('CloseFile');
 					try
-						obj.salutation('Close Method',sprintf('Receiving data file %s', 'demo.edf'));
+						obj.salutation('Close Method',sprintf('Receiving data file %s', obj.saveFile));
 						status=Eyelink('ReceiveFile');
 						if status > 0
 							obj.salutation('Close Method',sprintf('ReceiveFile status %d', status));
 						end
-						if 2==exist('demo.edf', 'file')
-							obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', 'demo.edf', pwd));
+						if 2==exist(obj.saveFile, 'file')
+							obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', obj.saveFile, pwd));
 						end
 					catch ME
-						obj.salutation('Close Method',sprintf('Problem receiving data file ''%s''', 'demo.edf'));
+						obj.salutation('Close Method',sprintf('Problem receiving data file ''%s''', obj.saveFile));
 						disp(ME.message);
 					end
 				end
 				Eyelink('Shutdown');
 			catch ME
 				obj.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
-				obj.isRecording = false;
 				Eyelink('Shutdown');
 				obj.error = ME;
 				obj.salutation(ME.message);
@@ -258,7 +279,11 @@ classdef eyelinkManager < optickaCore
 					obj.pupil = obj.currentEvent.pa(obj.eyeUsed+1);
 				end
 			elseif obj.isDummy
-				[obj.x, obj.y] = GetMouse([]);
+				if obj.screen.isOpen
+					[obj.x, obj.y] = GetMouse(obj.screen.win);
+				else
+					[obj.x, obj.y] = GetMouse([]);
+				end
 				obj.pupil = 1000;
 				obj.currentEvent.gx = obj.x;
 				obj.currentEvent.gy = obj.y;
