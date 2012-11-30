@@ -74,8 +74,6 @@ classdef stateMachine < optickaCore
 		nextTimeOut
 		%> Index with name and index number for each state
 		stateListIndex
-		%> Index with tick timer values
-		stateListTicks
 		%> true or false, whether this object is currently busy running
 		isRunning = false
 	end
@@ -121,7 +119,6 @@ classdef stateMachine < optickaCore
 			%initialise the statelist index
 			obj.stateList = struct([]);
 			obj.stateListIndex = containers.Map('uniformValues', false);
-			obj.stateListTicks = containers.Map('uniformValues', false);
 			%parse any inputs
 			if nargin>0
 				parseArgs(obj, varargin, obj.allowedProperties);
@@ -178,7 +175,6 @@ classdef stateMachine < optickaCore
 				obj.stateList(newStateIndex) = newState;
 			end
 			obj.stateListIndex(newState.name) = newStateIndex;
-			obj.stateListTicks(newState.name) = round(newState.time / obj.timeDelta);
 		end
 		
 		% ===================================================================
@@ -396,10 +392,10 @@ classdef stateMachine < optickaCore
 			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
 			statesInfo = { ...
 			'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'; ...
-			'begin'		'middle'	1		beginFcn	withinFcn	transitionFcn	exitFcn; ...
-			'middle'	'end'		1		middleFcn	withinFcn	transitionFcn2	exitFcn; ...
-			'end'		''			1		endFcn		withinFcn	transitionFcn	exitFcn; ...
-			'surprise'	'end'		1		surpriseFcn	withinFcn	[]				exitFcn; ...
+			'begin'		'middle'	[1 2]	beginFcn	withinFcn	transitionFcn	exitFcn; ...
+			'middle'	'end'		[1 2]	middleFcn	withinFcn	transitionFcn2	exitFcn; ...
+			'end'		''			[1 2]	endFcn		withinFcn	transitionFcn	exitFcn; ...
+			'surprise'	'end'		[1 2]	surpriseFcn	withinFcn	[]				exitFcn; ...
 			};
 			addStates(obj,statesInfo);
 			disp('>--------------------------------------------------')
@@ -434,8 +430,15 @@ classdef stateMachine < optickaCore
 				obj.currentEntryFcn = thisState.entryFcn;
 				obj.currentWithinFcn = thisState.withinFcn;
 				obj.currentTransitionFcn = thisState.transitionFcn;
-				obj.nextTimeOut = obj.currentEntryTime + thisState.time;
-				obj.nextTickOut = obj.stateListTicks(thisState.name);
+				
+				if length(thisState.time) == 1
+					obj.nextTimeOut = obj.currentEntryTime + thisState.time;
+				else
+					thisState.time = randi([thisState.time(1), thisState.time(2)]);
+					obj.nextTimeOut = obj.currentEntryTime + thisState.time;
+				end
+				obj.nextTickOut = round(thisState.time / obj.timeDelta);
+				
 				obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'])
 				
 				if isa(thisState.entryFcn,'function_handle') %function handle, lets feval it
@@ -449,8 +452,8 @@ classdef stateMachine < optickaCore
 				if obj.isTops
 					data.currentTick = obj.currentTick;
 					data.nextTick = obj.nextTickOut;
+					data.thisState = thisState;
 					group = [obj.currentName ':enter:' obj.name];
-					tic;
 					topsDataLog.logDataInGroup(data, group);
 				end
 	

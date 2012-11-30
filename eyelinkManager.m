@@ -23,6 +23,9 @@ classdef eyelinkManager < optickaCore
 		fixationRadius = 1
 		% fixation time in seconds
 		fixationTime = 1
+		%> calibration style
+		calibrationStyle = 'HV5'
+		
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -139,6 +142,8 @@ classdef eyelinkManager < optickaCore
 			obj.isConnected = logical(result);
 			obj.isDummy = logical(dummy);
 			if obj.screen.isOpen == true
+				rect=obj.screen.winRect;
+				Eyelink('Command', 'screen_pixel_coords = %d %d %d %d',rect(1),rect(2),rect(3)-1,rect(4)-1);
 				obj.defaults = EyelinkInitDefaults(obj.screen.win);
 				obj.defaults.backgroundcolour = obj.screen.backgroundColour;
 			end
@@ -153,6 +158,7 @@ classdef eyelinkManager < optickaCore
 			obj.salutation(['Initialise Method', 'Running on a ' obj.version]);
 			Eyelink('Command', 'link_sample_data = LEFT,RIGHT,GAZE,AREA');
 			
+			
 			% try to open file to record data to
 			if obj.isConnected && obj.recordData
 				err = Eyelink('Openfile', obj.saveFile);
@@ -161,7 +167,6 @@ classdef eyelinkManager < optickaCore
 					obj.isRecording = false;
 				else
 					Eyelink('command', ['add_file_preamble_text ''Recorded by:' obj.fullName ' tracker''']);
-   
 					obj.isRecording = true;
 				end
 			end
@@ -186,6 +191,7 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function trackerSetup(obj)
 			if obj.isConnected
+				Eyelink('Command','calibration_type = %s', obj.calibrationStyle);
 				EyelinkDoTrackerSetup(obj.defaults);
 			end
 		end
@@ -349,7 +355,7 @@ classdef eyelinkManager < optickaCore
 				s = screenManager();
 				o = dotsStimulus();
 				%s.windowed = [800 600];
-				%s.screen = 1;
+				s.screen = 1;
 				open(s);
 				setup(o,s);
 				
@@ -358,6 +364,7 @@ classdef eyelinkManager < optickaCore
 				setup(obj);
 			
 				startRecording(obj);
+				Eyelink('Command','record_status_message ''DEMO running''');
 				WaitSecs(0.1);
 				while 1
 					err = checkRecording(obj);
@@ -365,7 +372,7 @@ classdef eyelinkManager < optickaCore
 						
 					[~, ~, keyCode] = KbCheck;
 					if keyCode(stopkey); break;	end;
-					
+
 					draw(o);
 					drawGrid(s);
 					drawFixationPoint(s);
@@ -384,6 +391,7 @@ classdef eyelinkManager < optickaCore
 						end
 						if obj.fixLength > obj.fixationTime
 							Screen('DrawText', s.win, 'FIX', x, y);
+							Eyelink('Command','record_status_message ''DEMO running + fixated''');
 						end
 					end
 					
