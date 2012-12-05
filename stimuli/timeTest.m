@@ -235,7 +235,7 @@ try
 	
 	lj = labJack('verbose',0);
 	lj.prepareStrobe(2000);
-	WaitSecs(1)
+	WaitSecs(0.01)
 	
 	% Get the list of Screens and choose the one with the highest screen number.
 	% Screen 0 is, by definition, the display with the menu bar. Often when
@@ -244,10 +244,11 @@ try
 	% a best guess about where you want the stimulus displayed.
 	screens=Screen('Screens');
 	screenNumber=max(screens);
+	if screenNumber==2; screenNumber = 1; end
 	screensize=Screen('Rect', screenNumber);
 	%my normal screen prep
 	%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
-	Screen('Preference', 'VBLTimestampingMode', 1);
+	Screen('Preference', 'VBLTimestampingMode', 2);
 	%force screentohead mapping
 	if screenNumber == 1
 		Screen('Preference','ScreenToHead',0,0,3);
@@ -267,7 +268,7 @@ try
 	PsychImaging('PrepareConfiguration');
 	PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 	% FloatingPoint16Bit FloatingPoint32Bit 
-	%PsychImaging('AddTask', 'General', 'FloatingPoint32Bit');
+	PsychImaging('AddTask', 'General', 'FloatingPoint32Bit');
 	PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 	normalize=255;
 	
