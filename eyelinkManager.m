@@ -48,15 +48,13 @@ classdef eyelinkManager < optickaCore
 		error = []
 		fixStartTime = 0
 		fixLength = 0
+		%> previous message sent to eyelink
+		previousMessage = ''
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
 		allowedProperties = 'name|verbose|isDummy|enableCallbacks'
-		%> message to send to eyelink
-		newMessage
-		%> previous message sent to eyelink
-		previousMessage
 	end
 	
 	methods
@@ -348,7 +346,7 @@ classdef eyelinkManager < optickaCore
 					obj.y = obj.currentSample.gy(obj.eyeUsed+1);
 					obj.pupil = obj.currentSample.pa(obj.eyeUsed+1);
 				end
-			elseif obj.isDummy
+			elseif obj.isDummy %lets use a mouse to simulate the eye signal
 				if obj.screen.isOpen
 					[obj.x, obj.y] = GetMouse(obj.screen.win);
 				else
@@ -394,6 +392,16 @@ classdef eyelinkManager < optickaCore
 		%> @brief 
 		%>
 		% ===================================================================
+		function statusMessage(obj,message)
+			if ~strcmpi(message,obj.previousMessage) && obj.isConnected
+				obj.previousMessage = message;
+				Eyelink('Command',['record_status_message ''' message '''']);
+			end
+		end
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
 		function runDemo(obj)
 			stopkey=KbName('space');
 			try
@@ -409,7 +417,8 @@ classdef eyelinkManager < optickaCore
 				setup(obj);
 			
 				startRecording(obj);
-				Eyelink('Command','record_status_message ''DEMO running''');
+				obj.statusMessage('DEMO Running');
+				
 				WaitSecs(0.1);
 				while 1
 					err = checkRecording(obj);
@@ -436,9 +445,9 @@ classdef eyelinkManager < optickaCore
 						end
 						if obj.fixLength > obj.fixationTime
 							Screen('DrawText', s.win, 'FIX', x, y);
-							Eyelink('Command','record_status_message ''DEMO running + fixated''');
+							obj.statusMessage('DEMO running + fixated');
 						else
-							Eyelink('Command','record_status_message ''DEMO running''');
+							obj.statusMessage('DEMO running');
 						end
 					end
 					
