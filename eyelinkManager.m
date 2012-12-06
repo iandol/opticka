@@ -76,72 +76,6 @@ classdef eyelinkManager < optickaCore
 			end
 		end
 		
-		
-		% ===================================================================
-		%> @brief isFixated tests for fixation
-		%>
-		% ===================================================================
-		function fixated = isFixated(obj)
-			fixated = false;
-			obj.fixLength = 0;
-			if obj.isConnected && ~isempty(obj.currentSample)
-				d = (obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2;
-				if d < (obj.fixationRadius);
-					if obj.fixStartTime == 0
-						obj.fixStartTime = obj.currentSample.time;
-					end
-					obj.fixLength = (obj.currentSample.time - obj.fixStartTime) / 1000;
-					fixated = true;
-				else
-					obj.fixStartTime = 0;
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief testFixation returns input yes or no strings based on
-		%> fixation state, useful for using via stateMachine
-		%>
-		% ===================================================================
-		function out = testFixation(obj, yesString, noString)
-			if obj.isFixated
-				out = yesString;
-			else
-				out = noString;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function out = testFixationTime(obj, yesString, noString)
-			if obj.isFixated && (obj.fixLength > obj.fixationTime)
-				obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TEST');
-				out = yesString;
-			else
-				out = noString;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function resetFixation(obj)
-			obj.fixStartTime = 0;
-			obj.fixLength = 0;
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function connected = checkConnection(obj)
-			obj.isConnected = logical(Eyelink('IsConnected'));
-			connected = obj.isConnected;
-		end
-				
 		% ===================================================================
 		%> @brief 
 		%>
@@ -182,9 +116,9 @@ classdef eyelinkManager < optickaCore
 			
 			[~, obj.version] = Eyelink('GetTrackerVersion');
 			obj.salutation(['Initialise Method', 'Running on a ' obj.version]);
-			Eyelink('Command', 'link_sample_data = LEFT,RIGHT,GAZE,AREA');			
+			Eyelink('Command', 'link_sample_data = LEFT,RIGHT,GAZE,AREA');
 			% try to open file to record data to
-			if obj.isConnected && obj.recordData 
+			if obj.isConnected && obj.recordData
 				err = Eyelink('Openfile', obj.saveFile);
 				if err ~= 0 
 					obj.salutation('Initialise Method', 'Cannot setup data file, aborting data recording');
@@ -207,6 +141,24 @@ classdef eyelinkManager < optickaCore
 				%driftCorrection(obj);
 				checkEye(obj);
 			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function resetFixation(obj)
+			obj.fixStartTime = 0;
+			obj.fixLength = 0;
+		end
+				
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function connected = checkConnection(obj)
+			obj.isConnected = logical(Eyelink('IsConnected'));
+			connected = obj.isConnected;
 		end
 		
 		% ===================================================================
@@ -237,7 +189,7 @@ classdef eyelinkManager < optickaCore
 					Eyelink('Command','key_function 0 ''remote_cal_target 0''');
 					Eyelink('Command','key_function q ''remote_cal_complete''');
 				else 
-					Eyelink('Verbosity',2);
+					Eyelink('Verbosity',6);
 					Eyelink('Command','remote_cal_enable = 0');
 				end
 				EyelinkDoTrackerSetup(obj.defaults);
@@ -245,6 +197,19 @@ classdef eyelinkManager < optickaCore
 				obj.salutation('SETUP',out);
 			end
 		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function startRecording(obj)
+			if obj.isConnected
+				Eyelink('StartRecording');
+				checkEye(obj);
+				Eyelink('Message', 'SYNCTIME');
+			end
+		end
+		
 		% ===================================================================
 		%> @brief 
 		%>
@@ -266,6 +231,55 @@ classdef eyelinkManager < optickaCore
 				error = -1;
 			end
 		end
+		
+		
+		% ===================================================================
+		%> @brief isFixated tests for fixation
+		%>
+		% ===================================================================
+		function fixated = isFixated(obj)
+			fixated = false;
+			obj.fixLength = 0;
+			if obj.isConnected && ~isempty(obj.currentSample)
+				d = (obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2;
+				if d < (obj.fixationRadius);
+					if obj.fixStartTime == 0
+						obj.fixStartTime = obj.currentSample.time;
+					end
+					obj.fixLength = (obj.currentSample.time - obj.fixStartTime) / 1000;
+					fixated = true;
+				else
+					obj.fixStartTime = 0;
+				end
+			end
+		end
+			
+		% ===================================================================
+		%> @brief testFixation returns input yes or no strings based on
+		%> fixation state, useful for using via stateMachine
+		%>
+		% ===================================================================
+		function out = testFixation(obj, yesString, noString)
+			if obj.isFixated
+				out = yesString;
+			else
+				out = noString;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function out = testFixationTime(obj, yesString, noString)
+			if obj.isFixated && (obj.fixLength > obj.fixationTime)
+				obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TEST');
+				out = yesString;
+			else
+				out = noString;
+			end
+		end
+			
 		
 		% ===================================================================
 		%> @brief 
@@ -354,7 +368,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function evt = getEvent(obj)
-			
+		
 		end
 		
 		% ===================================================================
@@ -380,17 +394,6 @@ classdef eyelinkManager < optickaCore
 		%> @brief 
 		%>
 		% ===================================================================
-		function startRecording(obj)
-			if obj.isConnected
-				Eyelink('StartRecording');
-				checkEye(obj);
-				Eyelink('Message', 'SYNCTIME');
-			end
-		end
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
 		function runDemo(obj)
 			stopkey=KbName('space');
 			try
@@ -410,11 +413,11 @@ classdef eyelinkManager < optickaCore
 				WaitSecs(0.1);
 				while 1
 					err = checkRecording(obj);
- 					if(err~=0); break; end;
+					if(err~=0); break; end;
 						
 					[~, ~, keyCode] = KbCheck;
 					if keyCode(stopkey); break;	end;
-
+					
 					draw(o);
 					drawGrid(s);
 					drawFixationPoint(s);
