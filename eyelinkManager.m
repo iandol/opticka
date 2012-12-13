@@ -93,9 +93,10 @@ classdef eyelinkManager < optickaCore
 			else
 				[~,dummy] = EyelinkInit(obj.isDummy,0);
 			end
+			obj.isDummy = logical(dummy);
 			
 			obj.checkConnection();
-			obj.isDummy = logical(dummy);
+			
 			if obj.screen.isOpen == true
 				rect=obj.screen.winRect;
 				Eyelink('Command', 'screen_pixel_coords = %d %d %d %d',rect(1),rect(2),rect(3)-1,rect(4)-1);
@@ -106,11 +107,12 @@ classdef eyelinkManager < optickaCore
 				obj.defaults.backgroundcolour = obj.screen.backgroundColour;
 			end
 			
-			obj.defaults.calibrationtargetcolour = [1 0 0];
-			obj.defaults.calibrationtargetsize= 1;
-			obj.defaults.calibrationtargetwidth=0.5;
-			
-			EyelinkUpdateDefaults(obj.defaults);
+			obj.defaults.calibrationtargetcolour = [1 1 0];
+			obj.defaults.calibrationtargetsize= 5;
+			obj.defaults.calibrationtargetwidth=5;
+			obj.defaults.waitformodereadytime=500;
+
+			obj.updateDefaults();
 			
 			[~, obj.version] = Eyelink('GetTrackerVersion');
 			obj.salutation(['Initialise Method', 'Running on a ' obj.version]);
@@ -127,6 +129,14 @@ classdef eyelinkManager < optickaCore
 				end
 			end
 			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function updateDefaults(obj)
+			EyelinkUpdateDefaults(obj.defaults);
 		end
 		
 		% ===================================================================

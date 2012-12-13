@@ -376,6 +376,8 @@ if isappdata(handles.output,'o')
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
 	
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
+	
 	if ~isfield(o.store,'dotsStimulus')
 		o.store.dotsStimulus=dotsStimulus('name','Coherent Dots Stimulus');
 	end
@@ -395,6 +397,8 @@ if isappdata(handles.output,'o')
 		o.store.visibleStimulus.closePanel();
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
+	
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
 	
 	if ~isfield(o.store,'ndotsStimulus')
 		o.store.ndotsStimulus=ndotsStimulus('name','Newsome Dots Stimulus');
@@ -416,6 +420,8 @@ if isappdata(handles.output,'o')
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
 	
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
+	
 	if ~isfield(o.store,'barStimulus')
 		o.store.barStimulus=barStimulus('name','Bar Stimulus');
 	end
@@ -436,6 +442,8 @@ if isappdata(handles.output,'o')
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
 	
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
+	
 	if ~isfield(o.store,'gratingStimulus')
 		o.store.gratingStimulus=gratingStimulus('name','Grating Stimulus');
 	end
@@ -455,6 +463,8 @@ if isappdata(handles.output,'o')
 		o.store.visibleStimulus.closePanel();
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
+	
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
 	
 	if ~isfield(o.store,'spotStimulus')
 		o.store.spotStimulus=spotStimulus('name','Spot Stimulus');
@@ -477,6 +487,8 @@ if isappdata(handles.output,'o')
 		o.store.visibleStimulus.closePanel();
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
+	
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
 	
 	if ~isfield(o.store,'textureStimulus')
 		o.store.textureStimulus=textureStimulus('name','Picture / Texture Stimulus');
