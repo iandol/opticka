@@ -28,10 +28,6 @@ classdef gaborStimulus < baseStimulus
 		phase = 0
 		%> contrast of grating
 		contrast = 0.5
-		%> use a circular mask?
-		mask = true
-		%> generate a gabor?
-		gabor = false
 		%> default direction to drift?
 		driftDirection = true
 		%> the angle which the direction of the grating patch is moving
@@ -44,16 +40,8 @@ classdef gaborStimulus < baseStimulus
 		contrastMult = 0.5
 		%> a divisor for the size for the gaussian envelope for a gabor
 		spatialConstant = 6
-		%> cosine smoothing sigma in pixels for circular masked gratings
-		sigma = 0.0
-		%> use colour or alpha channel for smoothing?
-		useAlpha = false
-		%> use cosine (0) or hermite interpolation (1)
-		smoothMethod = true
 		%> do we need to correct the phase to be relative to center not edge?
 		correctPhase = false
-		%> do we generate a square wave?
-		squareWave = false
 		%> reverse phase of grating X times per second?
 		phaseReverseTime = 0
 		%> What phase to use for reverse?
@@ -62,7 +50,7 @@ classdef gaborStimulus < baseStimulus
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%stimulus family
-		family = 'grating'
+		family = 'gabor'
 		%> scale is used when changing size as an independent variable to keep sf accurate
 		scale = 1
 		%> the phase amount we need to add for each frame of animation
@@ -76,9 +64,9 @@ classdef gaborStimulus < baseStimulus
 	properties (SetAccess = protected, GetAccess = protected)
 		%>
 		exposedProperties={'sf','tf','method','angle','motionAngle','phase','rotationMethod',... 
-			'contrast','mask','gabor','driftDirection','speed','startPosition','aspectRatio',... 
-			'disableNorm','contrastMult','spatialConstant','sigma','useAlpha','smoothMethod',...
-			'correctPhase','squareWave','phaseReverseTime','phaseOfReverse'};
+			'contrast','driftDirection','speed','startPosition','aspectRatio',... 
+			'disableNorm','contrastMult','spatialConstant',...
+			'correctPhase','phaseReverseTime','phaseOfReverse'};
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -89,9 +77,9 @@ classdef gaborStimulus < baseStimulus
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
 		allowedProperties = ['sf|tf|method|angle|motionAngle|phase|rotationMethod|' ... 
-			'contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|' ... 
-			'disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod|' ...
-			'correctPhase|squareWave|phaseReverseTime|phaseOfReverse']
+			'contrast|driftDirection|speed|startPosition|aspectRatio|' ... 
+			'disableNorm|contrastMult|spatialConstant|' ...
+			'correctPhase|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = 'name|scale|phaseIncrement|disableNorm|correctPhase|gabor|squareWave|contrastMult|mask'
 		%> how many frames between phase reverses
@@ -121,7 +109,7 @@ classdef gaborStimulus < baseStimulus
 		function obj = gaborStimulus(varargin)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
-				varargin.family = 'grating';
+				varargin.family = 'gabor';
 			end
 			
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
@@ -164,12 +152,8 @@ classdef gaborStimulus < baseStimulus
 			obj.win=rE.win;
 
 			obj.texture = []; %we need to reset this
-			
-			if obj.gabor == true && obj.squareWave == true %clarify this precedence here
-				obj.squareWave = false;
-			end
 
-			fn = fieldnames(gratingStimulus);
+			fn = fieldnames(gaborStimulus);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
@@ -223,42 +207,20 @@ classdef gaborStimulus < baseStimulus
 			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
 			obj.res = [obj.gratingSize obj.gratingSize];
 			
-			if obj.mask == true
-				obj.mask = floor((obj.ppd*obj.size)/2);
-			else
-				obj.mask = [];
-			end
-			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
 			
 			if obj.phaseReverseTime > 0
 				obj.phaseCounter = round(obj.phaseReverseTime / obj.ifi);
 			end
 			
-			if obj.gabor == false
-				if obj.squareWave == true
-					obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
-						obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
-				else
-					if obj.sigmaOut > 0
-						obj.texture = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
-							obj.res(2), obj.colourOut, obj.mask, obj.contrastMult, obj.sigmaOut, ...
-							obj.useAlpha, obj.smoothMethod);
-					else
-						obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
-							obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
-					end
-				end
-			else % this is a gabor
-				if obj.aspectRatio == 1
-					nonSymmetric = 0;
-				else
-					nonSymmetric = 1;
-				end
-				obj.texture = CreateProceduralGabor(rE.win, obj.res(1),...
-					obj.res(2), nonSymmetric, obj.colourOut, obj.disableNorm,...
-					obj.contrastMult);
+			if obj.aspectRatio == 1
+				nonSymmetric = 0;
+			else
+				nonSymmetric = 1;
 			end
+			obj.texture = CreateProceduralGabor(rE.win, obj.res(1),...
+				obj.res(2), nonSymmetric, obj.colourOut, obj.disableNorm,...
+				obj.contrastMult);
 			
 			obj.setRect();
 			
@@ -286,16 +248,10 @@ classdef gaborStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible == true
-				if obj.gabor == false
-					Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
-						obj.angleOut, [], [], [], [], obj.rotateMode,...
-						[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
-				else
-					%2 = kPsychDontDoRotation
-					Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
-						obj.angleOut, [], [], [], [], 2,...
-						[obj.driftPhase, obj.sfOut, obj.spatialConstantOut, obj.contrastOut, obj.aspectRatioOut, 0, 0, 0]); 
-				end
+				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
+					obj.angleOut, [], [], [], [], 2,...
+					[obj.driftPhase, obj.sfOut, obj.spatialConstantOut,...
+					obj.contrastOut, obj.aspectRatioOut, 0, 0, 0]); 
 				obj.tick = obj.tick + 1;
 			end
 		end

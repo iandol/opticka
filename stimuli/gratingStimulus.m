@@ -30,20 +30,12 @@ classdef gratingStimulus < baseStimulus
 		contrast = 0.5
 		%> use a circular mask?
 		mask = true
-		%> generate a gabor?
-		gabor = false
 		%> default direction to drift?
 		driftDirection = true
 		%> the angle which the direction of the grating patch is moving
 		motionAngle = 0
-		%> aspect ratio of the gabor
-		aspectRatio = 1
-		%> should we disable normalisation of the gabor (generally TRUE)?
-		disableNorm = true
 		%> Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure
 		contrastMult = 0.5
-		%> a divisor for the size for the gaussian envelope for a gabor
-		spatialConstant = 6
 		%> cosine smoothing sigma in pixels for circular masked gratings
 		sigma = 0.0
 		%> use colour or alpha channel for smoothing?
@@ -76,8 +68,8 @@ classdef gratingStimulus < baseStimulus
 	properties (SetAccess = protected, GetAccess = protected)
 		%>
 		exposedProperties={'sf','tf','method','angle','motionAngle','phase','rotationMethod',... 
-			'contrast','mask','gabor','driftDirection','speed','startPosition','aspectRatio',... 
-			'disableNorm','contrastMult','spatialConstant','sigma','useAlpha','smoothMethod',...
+			'contrast','mask','driftDirection','speed','startPosition',... 
+			'sigma','useAlpha','smoothMethod',...
 			'correctPhase','squareWave','phaseReverseTime','phaseOfReverse'};
 	end
 	
@@ -164,10 +156,6 @@ classdef gratingStimulus < baseStimulus
 			obj.win=rE.win;
 
 			obj.texture = []; %we need to reset this
-			
-			if obj.gabor == true && obj.squareWave == true %clarify this precedence here
-				obj.squareWave = false;
-			end
 
 			fn = fieldnames(gratingStimulus);
 			for j=1:length(fn)
@@ -235,29 +223,18 @@ classdef gratingStimulus < baseStimulus
 				obj.phaseCounter = round(obj.phaseReverseTime / obj.ifi);
 			end
 			
-			if obj.gabor == false
-				if obj.squareWave == true
-					obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
+			if obj.squareWave == true
+				obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
+					obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
+			else
+				if obj.sigmaOut > 0
+					obj.texture = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
+						obj.res(2), obj.colourOut, obj.mask, obj.contrastMult, obj.sigmaOut, ...
+						obj.useAlpha, obj.smoothMethod);
+				else
+					obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
 						obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
-				else
-					if obj.sigmaOut > 0
-						obj.texture = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
-							obj.res(2), obj.colourOut, obj.mask, obj.contrastMult, obj.sigmaOut, ...
-							obj.useAlpha, obj.smoothMethod);
-					else
-						obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
-							obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
-					end
 				end
-			else % this is a gabor
-				if obj.aspectRatio == 1
-					nonSymmetric = 0;
-				else
-					nonSymmetric = 1;
-				end
-				obj.texture = CreateProceduralGabor(rE.win, obj.res(1),...
-					obj.res(2), nonSymmetric, obj.colourOut, obj.disableNorm,...
-					obj.contrastMult);
 			end
 			
 			obj.setRect();
@@ -286,16 +263,9 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible == true
-				if obj.gabor == false
-					Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
-						obj.angleOut, [], [], [], [], obj.rotateMode,...
-						[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
-				else
-					%2 = kPsychDontDoRotation
-					Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
-						obj.angleOut, [], [], [], [], 2,...
-						[obj.driftPhase, obj.sfOut, obj.spatialConstantOut, obj.contrastOut, obj.aspectRatioOut, 0, 0, 0]); 
-				end
+				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
+					obj.angleOut, [], [], [], [], obj.rotateMode,...
+					[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
 				obj.tick = obj.tick + 1;
 			end
 		end
@@ -439,7 +409,6 @@ classdef gratingStimulus < baseStimulus
 			obj.sfRecurse = true;
 			obj.sfOut = obj.sfCache * obj.scale;
 			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', obj.sfOut, obj.sfCache, obj.scale);
-			obj.spatialConstantOut=obj.sizeOut/obj.spatialConstant;
 		end
 		
 		% ===================================================================
