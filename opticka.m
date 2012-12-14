@@ -1018,12 +1018,7 @@ classdef opticka < optickaCore
 				s = obj.r.stimuli{i};
 				switch s.family
 					case 'grating'
-						if s.gabor == 0
-							name = 'Grating ';
-						else
-							name = 'Gabor ';
-						end
-						tstr = [name num2str(i) ':'];
+						tstr = ['grating' num2str(i) ':'];
 						tstr = [tstr ' x=' num2str(s.xPosition)];
 						tstr = [tstr ' y=' num2str(s.yPosition)];
 						tstr = [tstr ' c=' num2str(s.contrast)];
@@ -1033,6 +1028,17 @@ classdef opticka < optickaCore
 						tstr = [tstr ' tf=' num2str(s.tf)];
 						tstr = [tstr ' p=' num2str(s.phase)];
 						tstr = [tstr ' sg=' num2str(s.sigma)];
+						str{i} = tstr;
+					case 'gabor'
+						tstr = ['gabor' num2str(i) ':'];
+						tstr = [tstr ' x=' num2str(s.xPosition)];
+						tstr = [tstr ' y=' num2str(s.yPosition)];
+						tstr = [tstr ' c=' num2str(s.contrast)];
+						tstr = [tstr ' a=' num2str(s.angle)];
+						tstr = [tstr ' sz=' num2str(s.size)];
+						tstr = [tstr ' sf=' num2str(s.sf)];
+						tstr = [tstr ' tf=' num2str(s.tf)];
+						tstr = [tstr ' p=' num2str(s.phase)];
 						str{i} = tstr;
 					case 'bar'
 						x=s.xPosition;
@@ -1074,7 +1080,10 @@ classdef opticka < optickaCore
 						p=s.fileName;
 						str{i} = ['Texture ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
 					otherwise
-						str{i} = ['Undefined stimulus type'];
+						x=s.xPosition;
+						y=s.yPosition;
+						a=s.angle;
+						str{i} = ['Unknown StimType ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
 				end
 			end
 			if isempty(pos) || pos > length(str)

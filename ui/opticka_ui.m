@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 02-Oct-2012 13:45:30
+% Last Modified by GUIDE v2.5 14-Dec-2012 13:36:50
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -448,6 +448,28 @@ if isappdata(handles.output,'o')
 		o.store.gratingStimulus=gratingStimulus('name','Grating Stimulus');
 	end
 	o.store.visibleStimulus = o.store.gratingStimulus;
+	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+end
+
+% --------------------------------------------------------------------
+function OKMenuGabor_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuGabor (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	
+	if isfield(o.store,'visibleStimulus');
+		o.store.visibleStimulus.closePanel();
+		o.store = rmfield(o.store,'visibleStimulus');
+	end
+	
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
+	
+	if ~isfield(o.store,'gratingStimulus')
+		o.store.gaborStimulus=gaborStimulus('name','Gabor Stimulus');
+	end
+	o.store.visibleStimulus = o.store.gaborStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
 end
 

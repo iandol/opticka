@@ -28,16 +28,16 @@ classdef gaborStimulus < baseStimulus
 		phase = 0
 		%> contrast of grating
 		contrast = 0.5
-		%> default direction to drift?
-		driftDirection = true
+		%> reverse the drift direction?
+		driftDirection = false
 		%> the angle which the direction of the grating patch is moving
 		motionAngle = 0
+		%> Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure
+		contrastMult = 0.5
 		%> aspect ratio of the gabor
 		aspectRatio = 1
 		%> should we disable normalisation of the gabor (generally TRUE)?
 		disableNorm = true
-		%> Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure
-		contrastMult = 0.5
 		%> a divisor for the size for the gaussian envelope for a gabor
 		spatialConstant = 6
 		%> do we need to correct the phase to be relative to center not edge?
@@ -63,10 +63,10 @@ classdef gaborStimulus < baseStimulus
 	
 	properties (SetAccess = protected, GetAccess = protected)
 		%>
-		exposedProperties={'sf','tf','method','angle','motionAngle','phase','rotationMethod',... 
-			'contrast','driftDirection','speed','startPosition','aspectRatio',... 
-			'disableNorm','contrastMult','spatialConstant',...
-			'correctPhase','phaseReverseTime','phaseOfReverse'};
+% 		exposedProperties={'sf','tf','method','angle','motionAngle','phase','rotationMethod',... 
+% 			'contrast','driftDirection','speed','startPosition','aspectRatio',... 
+% 			'disableNorm','contrastMult','spatialConstant',...
+% 			'correctPhase','phaseReverseTime','phaseOfReverse'};
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -281,9 +281,6 @@ classdef gaborStimulus < baseStimulus
 		function reset(obj)
 			obj.tick = 1;
 			obj.texture=[];
-			if obj.mask > 0
-				obj.mask = true;
-			end
 			obj.removeTmpProperties;
 		end
 		

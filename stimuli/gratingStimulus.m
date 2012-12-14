@@ -11,13 +11,12 @@
 %>   phase = phase of grating
 %>   contrast = contrast from 0 - 1
 %>   mask = use circular mask (1) or not (0)
-%>   gabor = use a gabor rather than grating
 % ========================================================================
 classdef gratingStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> family type
-		type = 'procedural'
+		type = 'sinusoid'
 		%> spatial frequency
 		sf = 1
 		%> temporal frequency
@@ -30,26 +29,24 @@ classdef gratingStimulus < baseStimulus
 		contrast = 0.5
 		%> use a circular mask?
 		mask = true
-		%> default direction to drift?
-		driftDirection = true
+		%> reverse the drift direction?
+		driftDirection = false
 		%> the angle which the direction of the grating patch is moving
 		motionAngle = 0
 		%> Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure
 		contrastMult = 0.5
+		%> do we need to correct the phase to be relative to center not edge?
+		correctPhase = false
+		%> reverse phase of grating X times per second?
+		phaseReverseTime = 0
+		%> What phase to use for reverse?
+		phaseOfReverse = 180
 		%> cosine smoothing sigma in pixels for circular masked gratings
 		sigma = 0.0
 		%> use colour or alpha channel for smoothing?
 		useAlpha = false
 		%> use cosine (0) or hermite interpolation (1)
 		smoothMethod = true
-		%> do we need to correct the phase to be relative to center not edge?
-		correctPhase = false
-		%> do we generate a square wave?
-		squareWave = false
-		%> reverse phase of grating X times per second?
-		phaseReverseTime = 0
-		%> What phase to use for reverse?
-		phaseOfReverse = 180
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -62,15 +59,15 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
-		typeList = {'procedural'}
+		typeList = {'sinusoid';'square'}
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
 		%>
-		exposedProperties={'sf','tf','method','angle','motionAngle','phase','rotationMethod',... 
-			'contrast','mask','driftDirection','speed','startPosition',... 
-			'sigma','useAlpha','smoothMethod',...
-			'correctPhase','squareWave','phaseReverseTime','phaseOfReverse'};
+% 		exposedProperties={'sf','tf','angle','motionAngle','phase','rotationMethod',... 
+% 			'contrast','mask','driftDirection','speed','startPosition',... 
+% 			'sigma','useAlpha','smoothMethod',...
+% 			'correctPhase','phaseReverseTime','phaseOfReverse'};
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -80,14 +77,18 @@ classdef gratingStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['sf|tf|method|angle|motionAngle|phase|rotationMethod|' ... 
-			'contrast|mask|gabor|driftDirection|speed|startPosition|aspectRatio|' ... 
-			'disableNorm|contrastMult|spatialConstant|sigma|useAlpha|smoothMethod|' ...
-			'correctPhase|squareWave|phaseReverseTime|phaseOfReverse']
+		allowedProperties = ['sf|tf|angle|motionAngle|phase|rotationMethod|' ... 
+			'contrast|mask|driftDirection|speed|startPosition|aspectRatio|' ... 
+			'contrastMult|sigma|useAlpha|smoothMethod|' ...
+			'correctPhase|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'name|scale|phaseIncrement|disableNorm|correctPhase|gabor|squareWave|contrastMult|mask'
+		ignoreProperties = 'name|type|scale|phaseIncrement|correctPhase|contrastMult|mask'
 		%> how many frames between phase reverses
 		phaseCounter = 0
+		%> do we generate a square wave?
+		squareWave = false
+		%> do we generate a square wave?
+		gabor = false
 	end
 	
 	events (ListenAccess = 'private', NotifyAccess = 'private') %only this class can access these
@@ -223,7 +224,7 @@ classdef gratingStimulus < baseStimulus
 				obj.phaseCounter = round(obj.phaseReverseTime / obj.ifi);
 			end
 			
-			if obj.squareWave == true
+			if strcmpi(obj.type,'square')
 				obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
 					obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
 			else

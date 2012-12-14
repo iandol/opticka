@@ -186,21 +186,23 @@ classdef optickaCore < handle
 				if attrValue
 					if islogical(attrValue) || strcmp(attrValue,thisValue)
 						val = obj.(mp.Name);
-						if islogical(val) && strcmpi(type,'logical')
-							ii = ii + 1;
-							cl_array(ii) = {mp.Name};
-						elseif ~islogical(val) && strcmpi(type,'notlogical')
-							ii = ii + 1;
-							cl_array(ii) = {mp.Name};
-						elseif ischar(val) && strcmpi(type,'string')
-							ii = ii + 1;
-							cl_array(ii) = {mp.Name};
-						elseif isnumeric(val) && strcmpi(type,'number')
-							ii = ii + 1;
-							cl_array(ii) = {mp.Name};
-						elseif strcmpi(type,'any')
-							ii = ii + 1;
-							cl_array(ii) = {mp.Name};
+						if exist('val','var')
+							if islogical(val) && strcmpi(type,'logical')
+								ii = ii + 1;
+								cl_array(ii) = {mp.Name};
+							elseif ~islogical(val) && strcmpi(type,'notlogical')
+								ii = ii + 1;
+								cl_array(ii) = {mp.Name};
+							elseif ischar(val) && strcmpi(type,'string')
+								ii = ii + 1;
+								cl_array(ii) = {mp.Name};
+							elseif isnumeric(val) && strcmpi(type,'number')
+								ii = ii + 1;
+								cl_array(ii) = {mp.Name};
+							elseif strcmpi(type,'any')
+								ii = ii + 1;
+								cl_array(ii) = {mp.Name};
+							end
 						end
 					end
 				end
