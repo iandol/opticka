@@ -1,12 +1,15 @@
 % ========================================================================
 %> @brief metaStimulus is a  wrapper for opticka stimuli
 %> METASTIMULUS a collection of stimuli, wrapped in one structure. It
-%> allows you to reat a group of heterogenous stimuli as if it is a single
+%> allows you to treat a group of heterogenous stimuli as if it is a single
 %> stimulus, so for example animate(metaStimulus) will run the animate method
 %> for all stimuli in the group without having to call it for each stimulus.
 %> You can also pick individual stimuli by using cell indexing of this
 %> object. So for example metaStimulus{2} actually calls
 %> metaStimulus.stimuli{2}.
+%> You can also pass a mask stimulus set, and when you toggle showMask, the
+%> mask stimuli will be drawn instead of the stimuli themselves, the timing
+%> is left to the calling function.
 % ========================================================================
 classdef metaStimulus < optickaCore
 	
@@ -14,10 +17,14 @@ classdef metaStimulus < optickaCore
 	properties 
 		%>cell array of opticka stimuli to manage
 		stimuli = {}
+		%> do we draw the mask stimuli instead?
+		showMask = false
+		%>mask stimuli
+		maskStimuli = {}
 		%> screenManager handle
 		screen
 		%> verbose?
-		verbose = true
+		verbose = false
 		%> choice allows to call only 1 stimulus in the group
 		choice = []
 	end
@@ -26,22 +33,20 @@ classdef metaStimulus < optickaCore
 	properties (SetAccess = private, Dependent = true) 
 		%> n number of stimuli managed by metaStimulus
 		n
+		%> n number of mask stimuli
+		nMask
 	end
 	
 	%--------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = public) 
 		%> stimulus family
 		family = 'meta'
-		%> for heterogenous stimuli, we need a way to index into the stimulus so
-		%> we don't waste time doing this on each iteration
-		sList
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private) 
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'verbose|stimuli|screen|family'
-		
+		allowedProperties = 'showMask|maskStimuli|verbose|stimuli|screen|choice'
 	end
 	
 	%=======================================================================
@@ -69,8 +74,15 @@ classdef metaStimulus < optickaCore
 		%> @return
 		% ===================================================================
 		function setup(obj)
-			for i = 1:obj.n
-				setup(obj.stimuli{i},obj.screen);
+			if isa(obj.screen,'screenManager')
+				for i = 1:obj.n
+					setup(obj.stimuli{i},obj.screen);
+				end
+				for i = 1:obj.nMask
+					setup(obj.maskStimuli{i},obj.screen);
+				end
+			else
+				error('metaStimulus setup: no screenManager has been provided!!!')
 			end
 		end
 		
@@ -88,6 +100,12 @@ classdef metaStimulus < optickaCore
 			elseif ~isempty(obj.choice) %object forces a single stimulus
 				
 				update(obj.stimuli{obj.choice});
+				
+			elseif obj.showMask == true && obj.nMask > 0 %draw mask instead
+				
+				for i = 1:obj.nMask
+					update(obj.maskStimuli{i});
+				end
 				
 			else
 		
@@ -113,6 +131,12 @@ classdef metaStimulus < optickaCore
 				
 				draw(obj.stimuli{obj.choice});
 				
+			elseif obj.showMask == true && obj.nMask > 0 %draw mask instead
+				
+				for i = 1:obj.nMask
+					draw(obj.maskStimuli{i});
+				end
+				
 			else
 				
 				for i = 1:obj.n
@@ -137,6 +161,12 @@ classdef metaStimulus < optickaCore
 				
 				animate(obj.stimuli{obj.choice});
 				
+			elseif obj.showMask == true && obj.nMask > 0 %draw mask instead
+				
+				for i = 1:obj.nMask
+					animate(obj.maskStimuli{i});
+				end
+				
 			else
 				
 				for i = 1:obj.n
@@ -157,12 +187,41 @@ classdef metaStimulus < optickaCore
 			for i = 1:obj.n
 				reset(obj.stimuli{i});
 			end
+				
+			for i = 1:obj.nMask
+				reset(obj.maskStimuli{i});
+			end
 			
 		end
 		
+		% ===================================================================
+		%> @brief print current choice if only single stimulus drawn
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function printChoice(obj)
 			fprintf('%s current choice is: %g\n',obj.fullName,obj.choice)
 		end
+		
+		% ===================================================================
+		%> @brief get n dependent method
+		%> @param
+		%> @return n number of stimuli
+		% ===================================================================
+		function n = get.n(obj)
+			n = length(obj.stimuli);
+		end
+		
+		% ===================================================================
+		%> @brief get nMask dependent method
+		%> @param
+		%> @return nMask number of mask stimuli
+		% ===================================================================
+		function nMask = get.nMask(obj)
+			nMask = length(obj.maskStimuli);
+		end
+		
 		
 		% ===================================================================
 		%> @brief set stimuli sanity checker
@@ -180,16 +239,6 @@ classdef metaStimulus < optickaCore
 			else
 				error([obj.name ':set stimuli | not a cell array or baseStimulus child']);
 			end
-		end
-		
-		
-		% ===================================================================
-		%> @brief get n dependent methos
-		%> @param
-		%> @return n number of stimuli
-		% ===================================================================
-		function n = get.n(obj)
-			n = length(obj.stimuli);
 		end
 		
 		% ===================================================================

@@ -376,13 +376,15 @@ if isappdata(handles.output,'o')
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
 	
-	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
 	
 	if ~isfield(o.store,'dotsStimulus')
 		o.store.dotsStimulus=dotsStimulus('name','Coherent Dots Stimulus');
 	end
 	o.store.visibleStimulus = o.store.dotsStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+	
+	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
 
 % --------------------------------------------------------------------
@@ -398,13 +400,15 @@ if isappdata(handles.output,'o')
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
 	
-	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
 	
 	if ~isfield(o.store,'ndotsStimulus')
 		o.store.ndotsStimulus=ndotsStimulus('name','Newsome Dots Stimulus');
 	end
 	o.store.visibleStimulus = o.store.ndotsStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+	
+	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
 
 % --------------------------------------------------------------------
@@ -420,13 +424,15 @@ if isappdata(handles.output,'o')
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
 	
-	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
 	
 	if ~isfield(o.store,'barStimulus')
 		o.store.barStimulus=barStimulus('name','Bar Stimulus');
 	end
 	o.store.visibleStimulus = o.store.barStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+	
+	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
 
 % --------------------------------------------------------------------
@@ -442,13 +448,15 @@ if isappdata(handles.output,'o')
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
 	
-	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
 	
 	if ~isfield(o.store,'gratingStimulus')
 		o.store.gratingStimulus=gratingStimulus('name','Grating Stimulus');
 	end
 	o.store.visibleStimulus = o.store.gratingStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+	
+	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
 
 % --------------------------------------------------------------------
@@ -464,13 +472,15 @@ if isappdata(handles.output,'o')
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
 	
-	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
 	
-	if ~isfield(o.store,'gratingStimulus')
+	if ~isfield(o.store,'gaborStimulus')
 		o.store.gaborStimulus=gaborStimulus('name','Gabor Stimulus');
 	end
 	o.store.visibleStimulus = o.store.gaborStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+	
+	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
 
 % --------------------------------------------------------------------
@@ -486,7 +496,7 @@ if isappdata(handles.output,'o')
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
 	
-	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
 	
 	if ~isfield(o.store,'spotStimulus')
 		o.store.spotStimulus=spotStimulus('name','Spot Stimulus');
@@ -494,6 +504,7 @@ if isappdata(handles.output,'o')
 	o.store.visibleStimulus = o.store.spotStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
 	
+	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
 
 % --------------------------------------------------------------------
@@ -510,7 +521,7 @@ if isappdata(handles.output,'o')
 		o.store = rmfield(o.store,'visibleStimulus');
 	end
 	
-	set(handles.OKPanelStimulusText,'String','Loading Stimulus...')
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
 	
 	if ~isfield(o.store,'textureStimulus')
 		o.store.textureStimulus=textureStimulus('name','Picture / Texture Stimulus');
