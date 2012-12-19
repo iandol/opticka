@@ -314,8 +314,8 @@ classdef screenManager < optickaCore
 				obj.xCenter=obj.xCenter+(obj.screenXOffset*obj.ppd);
 				obj.yCenter=obj.yCenter+(obj.screenYOffset*obj.ppd);
 				
-				obj.screenVals.black = BlackIndex(obj.win);
-				obj.screenVals.white = WhiteIndex(obj.win);
+				obj.screenVals.black = 0;
+ 				obj.screenVals.white = 1;
 				
 				screenVals = obj.screenVals;
 				

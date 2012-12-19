@@ -28,7 +28,7 @@ classdef eyelinkManager < optickaCore
 		% use callbacks, currently not working...
 		enableCallbacks = true
 		%> calibration callback
-		callback = ''
+		callback = 'eyelinkCallback'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -413,7 +413,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function runDemo(obj)
-			stopkey=KbName('space');
+			stopkey=KbName('ESCAPE');
 			try
 				s = screenManager();
 				o = dotsStimulus();
@@ -422,7 +422,7 @@ classdef eyelinkManager < optickaCore
 				open(s);
 				setup(o,s);
 				
-				ListenChar(1); 
+				ListenChar(2); 
 				initialise(obj,s);
 				setup(obj);
 			
@@ -430,7 +430,7 @@ classdef eyelinkManager < optickaCore
 				obj.statusMessage('DEMO Running');
 				
 				WaitSecs(0.1);
-				while 1
+ 				while 1
 					err = checkRecording(obj);
 					if(err~=0); break; end;
 						
@@ -446,7 +446,7 @@ classdef eyelinkManager < optickaCore
 					if ~isempty(obj.currentSample)
 						x = obj.toPixels(obj.x,'x');
 						y = obj.toPixels(obj.y,'y');
-						txt = sprintf('Press SPACE to finish \n X = %g / %g | Y = %g / %g \n FIXATION = %g', x, obj.x, y, obj.y, obj.fixLength);
+						txt = sprintf('Press ESC to finish \n X = %g / %g | Y = %g / %g \n FIXATION = %g', x, obj.x, y, obj.y, obj.fixLength);
 						Screen('DrawText', s.win, txt, 10, 10);
 						if obj.isFixated
 							Screen('DrawDots', s.win, [x y], 8, [1 1 1], [], 2);
