@@ -39,7 +39,7 @@ function rc = eyelinkCallback(callArgs, msg)
 % Cached texture handle for eyelink texture:
 persistent eyelinktex;
 % add by NJ
-global dw dh offscreen;
+global dw dh offscreen lj;
 
 % Cached window handle for target onscreen window:
 persistent eyewin;
@@ -154,7 +154,9 @@ switch eyecmd
     case 2
         % Eyelink Keyboard query:
         [rc, el] = EyelinkGetKey(el);
-		rc
+		if rc == 32 && isa(lj,'labJack') && lj.isOpen == true
+			lj.timedTTL(0,100);
+		end
         if verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key!\n'); end
     case 3
         % Alert message:
@@ -468,15 +470,21 @@ if doBeep==1
 end
 
 function EyelinkDrawCalibrationTarget(eyewin, el, calxy)
-[width, heigth]=Screen('WindowSize', eyewin);
-size=round(el.calibrationtargetsize/100*width);
-inset=round(el.calibrationtargetwidth/100*width);
-insetSize = size-2*inset;
-if insetSize < 1
-    insetSize = 1;
+try
+	[width, heigth]=Screen('WindowSize', eyewin);
+	size=round(el.calibrationtargetsize/100*width);
+	inset=round(el.calibrationtargetwidth/100*width);
+	insetSize = size-2*inset;
+	if insetSize < 1
+		insetSize = 1;
+	end
+	if size <= 64
+		Screen('DrawDots', eyewin, calxy, size, el.calibrationtargetcolour, [], 1);
+		Screen('DrawDots', eyewin, calxy, insetSize, el.backgroundcolour, [], 1);
+	else
+		Screen('FillOval', eyewin, el.calibrationtargetcolour, [calxy(1)-size/2 calxy(2)-size/2 calxy(1)+size/2 calxy(2)+size/2], size+2);
+		Screen('FillOval', eyewin, [1 0 1], [calxy(1)-inset/2 calxy(2)-inset/2 calxy(1)+inset/2 calxy(2)+inset/2], inset+2);
+	end
+catch ME
+	ple(ME)
 end
-Screen('DrawDots', eyewin, calxy, size, el.calibrationtargetcolour, [], 1);
-Screen('DrawDots', eyewin, calxy, insetSize, el.backgroundcolour, [], 1);
-% comment above between the 2 %% and un comment below for larger targets on different resolutions
-%Screen('FillOval', eyewin, el.calibrationtargetcolour, [calxy(1)-size/2 calxy(2)-size/2 calxy(1)+size/2 calxy(2)+size/2], size+2);
-%Screen('FillOval', eyewin, el.backgroundcolour, [calxy(1)-inset/2 calxy(2)-inset/2 calxy(1)+inset/2 calxy(2)+inset/2], inset+2);

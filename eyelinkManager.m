@@ -29,6 +29,8 @@ classdef eyelinkManager < optickaCore
 		enableCallbacks = true
 		%> calibration callback
 		callback = 'eyelinkCallback'
+		%> eyelink defaults modifiers
+		modify = struct()
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -72,6 +74,10 @@ classdef eyelinkManager < optickaCore
 			catch %#ok<CTCH>
 				obj.isDummy = true; 
 			end
+			obj.modify.calibrationtargetcolour = [1 1 0];
+			obj.modify.calibrationtargetsize = 5;
+			obj.modify.calibrationtargetwidth = 3;
+			obj.modify.waitformodereadytime = 500;
 		end
 		
 		% ===================================================================
@@ -107,10 +113,13 @@ classdef eyelinkManager < optickaCore
 				obj.defaults.backgroundcolour = obj.screen.backgroundColour;
 			end
 			
-			obj.defaults.calibrationtargetcolour = [1 1 0];
-			obj.defaults.calibrationtargetsize= 5;
-			obj.defaults.calibrationtargetwidth=5;
-			obj.defaults.waitformodereadytime=500;
+			%structure of eyelink modifiers
+			fn = fieldnames(obj.modify);
+			for i = 1:length(fn)
+				if isfield(obj.defaults,fn{i})
+					obj.defaults.(fn{i}) = obj.modify.(fn{i});
+				end
+			end
 
 			obj.updateDefaults();
 			
@@ -201,7 +210,7 @@ classdef eyelinkManager < optickaCore
 					Eyelink('Command','remote_cal_enable = 0');
 				end
 				EyelinkDoTrackerSetup(obj.defaults);
-				[r,out] = Eyelink('CalMessage');
+				[~,out] = Eyelink('CalMessage');
 				obj.salutation('SETUP',out);
 			end
 		end
