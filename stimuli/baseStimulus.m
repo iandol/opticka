@@ -126,14 +126,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function value = get.colour(obj)
 			len=length(obj.colour);
-			if len == 4
-				value = obj.colour;
-			elseif len == 3
-				value = [obj.colour obj.alpha];
+			if len == 4 || len == 3
+				value = [obj.colour(1:3) obj.alpha];
 			elseif len == 1
 				value = [obj.colour obj.colour obj.colour obj.alpha];
 			else
-				value = [1 1 1 obj.alpha];				
+				if isa(obj,'gaborStimulus') || isa(obj,'gratingStimulus')
+					value = [];
+				else
+					value = [1 1 1 obj.alpha];
+				end
 			end
 		end
 		

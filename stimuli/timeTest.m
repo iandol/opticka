@@ -258,7 +258,7 @@ try
 	%Screen('Preference', 'VBLEndlineOverride', 1066);
 	Screen('Preference', 'SkipSyncTests', 0);
 	Screen('Preference', 'VisualDebugLevel', 3);
-	Screen('Preference', 'Verbosity', 10); %errors and warnings
+	Screen('Preference', 'Verbosity', 4); %errors and warnings
 	Screen('Preference', 'SuppressAllWarnings', 0);
 	
 	% Query size of screen:

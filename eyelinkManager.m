@@ -183,7 +183,7 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command','val_repeat_first_target = YES');
 				Eyelink('Command','validation_online_fixup  = NO');
 				if obj.remoteCalibration
-					Eyelink('Verbosity',6);
+					Eyelink('Verbosity',4);
 					Eyelink('Command','remote_cal_enable = 1');
 					Eyelink('Command','key_function 1 ''remote_cal_target 1''');
 					Eyelink('Command','key_function 2 ''remote_cal_target 2''');
@@ -195,7 +195,7 @@ classdef eyelinkManager < optickaCore
 					Eyelink('Command','key_function 8 ''remote_cal_target 8''');
 					Eyelink('Command','key_function 9 ''remote_cal_target 9''');
 					Eyelink('Command','key_function 0 ''remote_cal_target 0''');
-					Eyelink('Command','key_function q ''remote_cal_complete''');
+					Eyelink('Command','key_function z ''remote_cal_complete''');
 				else 
 					Eyelink('Verbosity',6);
 					Eyelink('Command','remote_cal_enable = 0');

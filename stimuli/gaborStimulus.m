@@ -138,10 +138,11 @@ classdef gaborStimulus < baseStimulus
 		% ===================================================================
 		function setup(obj,rE)
 			
-			obj.reset; %reset it back to its initial state
+			obj.reset(); %reset it back to its initial state
 			if isempty(obj.isVisible)
-				obj.show;
+				obj.show();
 			end
+			
 			addlistener(obj,'changeScale',@obj.calculateScale); %use an event to keep scale accurate
 			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
 			
