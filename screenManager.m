@@ -114,6 +114,8 @@ classdef screenManager < optickaCore
 		%> @return instance of the class.
 		% ===================================================================
 		function obj = screenManager(varargin)
+			if nargin == 0; varargin.name = ''; end
+			obj=obj@optickaCore(varargin); %superclass constructor
 			if nargin>0
 				obj.parseArgs(varargin,obj.allowedProperties);
 			end
