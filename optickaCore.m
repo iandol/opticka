@@ -293,8 +293,6 @@ classdef optickaCore < handle
 					if regexp(fnames{i},allowedProperties) %only set if allowed property
 						obj.salutation(fnames{i},'Constructor parsing input argument');
 						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-					else
-						obj.salutation(fnames{i},'Constructor parsing: invalid input');
 					end
 				end
 			end

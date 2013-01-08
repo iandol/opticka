@@ -248,7 +248,7 @@ try
 	screensize=Screen('Rect', screenNumber);
 	%my normal screen prep
 	%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
-	Screen('Preference', 'VBLTimestampingMode', 2);
+	Screen('Preference', 'VBLTimestampingMode', 1);
 	%force screentohead mapping
 	if screenNumber == 1
 		Screen('Preference','ScreenToHead',0,0,3);
@@ -258,7 +258,7 @@ try
 	%Screen('Preference', 'VBLEndlineOverride', 1066);
 	Screen('Preference', 'SkipSyncTests', 0);
 	Screen('Preference', 'VisualDebugLevel', 3);
-	Screen('Preference', 'Verbosity', 4); %errors and warnings
+	Screen('Preference', 'Verbosity', 10); %errors and warnings
 	Screen('Preference', 'SuppressAllWarnings', 0);
 	
 	% Query size of screen:

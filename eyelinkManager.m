@@ -40,23 +40,22 @@ classdef eyelinkManager < optickaCore
 		y = []
 		%> pupil size
 		pupil = []
-		silentMode = false
 		isConnected = false
 		isRecording = false
 		eyeUsed = -1
 		currentSample = []
 		currentEvent = []
 		version = ''
+	end
+	
+	properties (SetAccess = private, GetAccess = private)
 		error = []
 		fixStartTime = 0
 		fixLength = 0
 		%> previous message sent to eyelink
 		previousMessage = ''
-	end
-	
-	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'name|verbose|isDummy|enableCallbacks'
+		allowedProperties = 'calibrationStyle|enableCallbacks|callback|name|verbose|isDummy|remoteCalibration'
 	end
 	
 	methods
@@ -78,6 +77,8 @@ classdef eyelinkManager < optickaCore
 			obj.modify.calibrationtargetsize = 5;
 			obj.modify.calibrationtargetwidth = 3;
 			obj.modify.waitformodereadytime = 500;
+			obj.modify.displayCalResults = 1;
+			obj.modify.targetbeep = 0;
 		end
 		
 		% ===================================================================
@@ -105,7 +106,7 @@ classdef eyelinkManager < optickaCore
 			
 			if obj.screen.isOpen == true
 				rect=obj.screen.winRect;
-				Eyelink('Command', 'screen_pixel_coords = %d %d %d %d',rect(1),rect(2),rect(3)-1,rect(4)-1);
+				Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3)-1,rect(4)-1);
 				obj.defaults = EyelinkInitDefaults(obj.screen.win);
 				if exist(obj.callback,'file')
 					obj.defaults.callback = obj.callback;
@@ -125,7 +126,7 @@ classdef eyelinkManager < optickaCore
 			
 			[~, obj.version] = Eyelink('GetTrackerVersion');
 			obj.salutation(['Initialise Method', 'Running on a ' obj.version]);
-			Eyelink('Command', 'link_sample_data = LEFT,RIGHT,GAZE,AREA');
+			
 			% try to open file to record data to
 			if obj.isConnected && obj.recordData
 				err = Eyelink('Openfile', obj.saveFile);
@@ -133,11 +134,19 @@ classdef eyelinkManager < optickaCore
 					obj.salutation('Initialise Method', 'Cannot setup data file, aborting data recording');
 					obj.isRecording = false;
 				else
-					Eyelink('command', ['add_file_preamble_text ''Recorded by:' obj.fullName ' tracker''']);
+					Eyelink('Command', ['add_file_preamble_text ''Recorded by:' obj.fullName ' tracker''']);
 					obj.isRecording = true;
 				end
 			end
 			
+			Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld',rect(1),rect(2),rect(3)-1,rect(4)-1);
+			Eyelink('Command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
+			Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
+			Eyelink('Command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
+			Eyelink('Command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,AREA,GAZERES,STATUS');
+			
+			%Eyelink('Command', 'use_ellipse_fitter = no');
+			%Eyelink('Command', 'sample_rate = %d',1000);
 		end
 		
 		% ===================================================================
@@ -193,6 +202,7 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command','validation_online_fixup  = NO');
 				if obj.remoteCalibration
 					Eyelink('Verbosity',4);
+					Eyelink('Command', 'generate_default_targets = NO');
 					Eyelink('Command','remote_cal_enable = 1');
 					Eyelink('Command','key_function 1 ''remote_cal_target 1''');
 					Eyelink('Command','key_function 2 ''remote_cal_target 2''');
@@ -207,6 +217,7 @@ classdef eyelinkManager < optickaCore
 					Eyelink('Command','key_function z ''remote_cal_complete''');
 				else 
 					Eyelink('Verbosity',6);
+					Eyelink('Command', 'generate_default_targets = YES');
 					Eyelink('Command','remote_cal_enable = 0');
 				end
 				EyelinkDoTrackerSetup(obj.defaults);
@@ -457,7 +468,7 @@ classdef eyelinkManager < optickaCore
 					getSample(obj);
 					
 					if ~isempty(obj.currentSample)
-						x = obj.toPixels(obj.x,'x');
+						x = obj.toPixels(obj.x,'x'); %#ok<*PROP>
 						y = obj.toPixels(obj.y,'y');
 						txt = sprintf('Press ESC to finish \n X = %g / %g | Y = %g / %g \n FIXATION = %g', x, obj.x, y, obj.y, obj.fixLength);
 						Screen('DrawText', s.win, txt, 10, 10);
