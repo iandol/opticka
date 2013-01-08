@@ -27,8 +27,13 @@ classdef screenManager < optickaCore
 		visualDebug = false
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer = 1
-		%>bitDepth of framebuffer
+		%> bitDepth of framebuffer
 		bitDepth = '8bit'
+		%> use operating system native beamposition queries, better false if
+		%> kernel driver installed on OS x
+		nativeBeamPosition = false
+		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
+		timestampingMode = 1
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8
 		%> and 16 -- useful for textures to minimise aliasing, but this
 		%> does provide extra work for the GPU
@@ -47,8 +52,6 @@ classdef screenManager < optickaCore
 		srcMode = 'GL_ONE'
 		%> GL_ONE % dst mode
 		dstMode = 'GL_ZERO'
-		%> show a 0,0 centered spot?
-		fixationPoint = false
 		%> show a white square in the top-left corner to trigger a
 		%> photodiode attached to screen. This is only displayed when the
 		%> stimulus is shown, not during the blank and can therefore be used
@@ -90,7 +93,7 @@ classdef screenManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|fixationPoint|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
+		allowedProperties='bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect = [0;0;50;50]
 		%> the values computed to draw the 1deg dotted grid in debug mode
@@ -216,9 +219,19 @@ classdef screenManager < optickaCore
 				obj.screenVals.resetGamma = false;
 				
 				obj.hideScreenFlash();
-		
+				
+				%override native beam position queries?
+				if obj.nativeBeamPosition == false
+					v = bitor(2^16, Screen('Preference','ConserveVRAM'));
+					Screen('Preference','ConserveVRAM', v);
+					fprintf('---> screenManager: ConserveVRAM set at %g\n',v);
+				else
+					v = bitxor(2^16, Screen('Preference','ConserveVRAM'));
+					Screen('Preference','ConserveVRAM', v);
+					fprintf('---> screenManager: ConserveVRAM set at %g\n',v);
+				end
 				%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
-				Screen('Preference', 'VBLTimestampingMode', 1);
+				Screen('Preference', 'VBLTimestampingMode', obj.timestampingMode);
 				%force screentohead mapping
 				if obj.maxScreen == 1
 					Screen('Preference','ScreenToHead',0,0,3);
@@ -321,8 +334,8 @@ classdef screenManager < optickaCore
 				
 			catch ME
 				obj.close();
-				obj.screenVals = [];
-				screenVals = obj.screenVals; %#ok<NASGU>
+				screenVals = obj.prepareScreen();
+				ple(ME)
 				rethrow(ME)
 			end
 			

@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 14-Dec-2012 13:36:50
+% Last Modified by GUIDE v2.5 06-Jan-2013 20:00:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -309,7 +309,7 @@ if isappdata(handles.output,'o')
 	o.getScreenVals;
 end
 
-function OKFixationSpot_Callback(hObject, eventdata, handles)
+function OKNativeBeamPosition_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.getScreenVals;

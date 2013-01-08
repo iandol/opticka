@@ -217,9 +217,6 @@ classdef runExperiment < optickaCore
 						if s.photoDiode == true
 							s.drawPhotoDiodeSquare([1 1 1 1]);
 						end
-						if s.fixationPoint == true
-							s.drawFixationPoint;
-						end
 					end
 					if s.visualDebug == true
 						s.drawGrid;
@@ -317,7 +314,7 @@ classdef runExperiment < optickaCore
 				s.finaliseMovie(true);
 				
 				s.close();
-				
+
 				rethrow(ME)
 				
 			end
