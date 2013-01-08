@@ -223,7 +223,6 @@ classdef eyelinkManager < optickaCore
 			if obj.isConnected
 				Eyelink('StartRecording');
 				checkEye(obj);
-				Eyelink('Message', 'SYNCTIME');
 			end
 		end
 		
@@ -248,8 +247,7 @@ classdef eyelinkManager < optickaCore
 				error = -1;
 			end
 		end
-		
-		
+				
 		% ===================================================================
 		%> @brief isFixated tests for fixation
 		%>
@@ -296,7 +294,8 @@ classdef eyelinkManager < optickaCore
 				out = noString;
 			end
 		end
-			
+		
+		
 		
 		% ===================================================================
 		%> @brief 
@@ -435,10 +434,15 @@ classdef eyelinkManager < optickaCore
 				initialise(obj,s);
 				setup(obj);
 			
-				startRecording(obj);
-				obj.statusMessage('DEMO Running');
 				
+				
+				obj.statusMessage('DEMO Running');
+				Eyelink('Command', 'set_idle_mode');
+				obj.trackerDrawFixation()
+				
+				startRecording(obj);
 				WaitSecs(0.1);
+				Eyelink('Message', 'SYNCTIME');
  				while 1
 					err = checkRecording(obj);
 					if(err~=0); break; end;
@@ -465,6 +469,7 @@ classdef eyelinkManager < optickaCore
 						if obj.fixLength > obj.fixationTime
 							Screen('DrawText', s.win, 'FIX', x, y);
 							obj.statusMessage('DEMO running + fixated');
+							obj.trackerDraw();
 						else
 							obj.statusMessage('DEMO running');
 						end
@@ -494,6 +499,43 @@ classdef eyelinkManager < optickaCore
 			end
 			
 		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function trackerDraw(obj)
+			if obj.isConnected 
+				Eyelink('Command', 'set_idle_mode');
+				Eyelink('Command',['clear_screen ' num2str(randi(15))]);
+				Eyelink('Command','draw_cross 200 200 5')
+				Eyelink('StartRecording');
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function trackerDrawFixation(obj)
+			if obj.isConnected && currentMode(obj) == 1
+				Eyelink('Command','clear_screen 0');
+				Eyelink('command', 'draw_box %d %d %d %d 15', );
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function mode = currentMode(obj)
+			if obj.isConnected
+				mode = Eyelink('CurrentMode');
+			else
+				mode = -1;
+			end
+		end
+		
 		
 		% ===================================================================
 		%> @brief 
