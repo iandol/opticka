@@ -47,6 +47,8 @@ classdef gratingStimulus < baseStimulus
 		useAlpha = false
 		%> use cosine (0) or hermite interpolation (1)
 		smoothMethod = true
+		%> aspect ratio of the grating
+		aspectRatio = 1;
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -63,14 +65,6 @@ classdef gratingStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
-		%>
-% 		exposedProperties={'sf','tf','angle','motionAngle','phase','rotationMethod',... 
-% 			'contrast','mask','driftDirection','speed','startPosition',... 
-% 			'sigma','useAlpha','smoothMethod',...
-% 			'correctPhase','phaseReverseTime','phaseOfReverse'};
-	end
-	
-	properties (SetAccess = private, GetAccess = private)
 		%> as get methods are slow, we cache sf, then recalculate sf whenever
 		%> changeScale event is called
 		sfCache = []
@@ -91,7 +85,7 @@ classdef gratingStimulus < baseStimulus
 		gabor = false
 	end
 	
-	events (ListenAccess = 'private', NotifyAccess = 'private') %only this class can access these
+	events (ListenAccess = 'protected', NotifyAccess = 'protected') %only this class can access these
 		%> triggered when changing size, so we can change sf etc to compensate
 		changeScale 
 		%> triggered when changing tf or drift direction
@@ -162,7 +156,7 @@ classdef gratingStimulus < baseStimulus
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
-					p.Transient = true;%p.Hidden = true;
+					p.Transient = true;p.Hidden = true;
 					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
 					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
 					if strcmp(fn{j},'driftDirection');p.SetMethod = @set_driftDirectionOut;end
@@ -187,7 +181,7 @@ classdef gratingStimulus < baseStimulus
 			if obj.tf > 0;obj.doDrift = true;end
 			if obj.speed > 0; obj.doMotion = true;end
 			
-			if isempty(obj.findprop('rotateMode'));p=obj.addprop('rotateMode');p.Transient=true;end
+			if isempty(obj.findprop('rotateMode'));p=obj.addprop('rotateMode');p.Transient=true;p.Hidden=true;end
 			if obj.rotationMethod==1
 				obj.rotateMode = kPsychUseTextureMatrixForRotation;
 			else
@@ -210,7 +204,11 @@ classdef gratingStimulus < baseStimulus
 			end
 			
 			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
-			obj.res = [obj.gratingSize obj.gratingSize];
+			if obj.aspectRatio < 1
+				obj.res = [obj.gratingSize*obj.aspectRatio obj.gratingSize];
+			else
+				obj.res = [obj.gratingSize obj.gratingSize*obj.aspectRatio];
+			end
 			
 			if obj.mask == true
 				obj.mask = floor((obj.ppd*obj.size)/2);
@@ -360,12 +358,6 @@ classdef gratingStimulus < baseStimulus
 			obj.mvRect=obj.dstRect;
 			obj.setAnimationDelta();
 		end
-	
-	end %---END PROTECTED METHODS---%
-	
-	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
 		
 		% ===================================================================
 		%> @brief sfOut Set method

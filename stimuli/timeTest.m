@@ -244,15 +244,16 @@ try
 	% a best guess about where you want the stimulus displayed.
 	screens=Screen('Screens');
 	screenNumber=max(screens);
+	%screenNumber = 1;
 	if screenNumber==2; screenNumber = 1; end
 	screensize=Screen('Rect', screenNumber);
 	%my normal screen prep
 	%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
-	Screen('Preference', 'VBLTimestampingMode', 1);
+	%Screen('Preference', 'VBLTimestampingMode', 1);
 	%force screentohead mapping
 	if screenNumber == 1
-		Screen('Preference','ScreenToHead',0,0,3);
-		Screen('Preference','ScreenToHead',1,1,4);
+% 		Screen('Preference','ScreenToHead',0,0,3);
+% 		Screen('Preference','ScreenToHead',1,1,4);
 	end
 	%override VTOTAL?
 	%Screen('Preference', 'VBLEndlineOverride', 1066);
@@ -469,7 +470,8 @@ try
 		ni=1;
 	end;
 	plot(ones(1,n)*ifi*ni*1000);
-	title('Delta between successive Flips in milliseconds:');
+	title('Delta between successive Flips');
+	ylabel('Time (ms)');
 	hold off
 	
 	
@@ -479,21 +481,23 @@ try
 	hold on;
 	plot(missest*1000,'k.','MarkerSize',8);
 	plot(zeros(1,n));
-	title('Estimate of missed deadlines in milliseconds (negative == no miss):');
+	title('Estimate of missed deadlines (+ == miss):');
+	ylabel('Time (ms)');
 	hold off;
 	
 	% Figure 4 shows difference in ms between finish of Flip and estimated
 	% start of VBL time:
 	subplot(2,3,3);
 	plot((flipfin - ts)*1000,'k.','MarkerSize',8);
-	title('Time delta between start of VBL and return of Flip in milliseconds:');
+	title('Delta between start of VBL and return of Flip:');
+	ylabel('Time (ms)');
 	
 	% Figure 5 shows difference in ms between finish of Flip and estimated
 	% stimulus-onset:
 	subplot(2,3,4);
 	plot((flipfin - so)*1000,'k.','MarkerSize',8);
-	title('Time delta between stimulus onset and return of Flip in milliseconds:');
-	
+	title('Delta between stimulus onset and return of Flip:');
+	ylabel('Time (ms)');
 	% Figure 2 shows the recorded beam positions:
 	subplot(2,3,5);
 	plot(beampos,'k-','MarkerSize',8);
