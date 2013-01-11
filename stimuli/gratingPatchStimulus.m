@@ -16,6 +16,8 @@ classdef gratingPatchStimulus < gratingStimulus
 		contrast2 = 0.5
 		%>
 		aspectRatio2 = 2
+		%> Position of inducer?
+		inducerPosition = 2
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -52,14 +54,12 @@ classdef gratingPatchStimulus < gratingStimulus
 		%> @return instance of class.
 		% ===================================================================
 		function obj = gratingPatchStimulus(varargin)
-			%Initialise for superclass, stops a noargs error
 			if nargin == 0
-				varargin.family = 'gratingpatch';
+				varargin.family = ''; %Initialise for superclass, stops a noargs error
 			end
 			
 			obj=obj@gratingStimulus(varargin); %we call the superclass constructor first
-			
-			obj.family = 'gratingpatch';
+			obj.family = 'gratingpatch'; %override superclass family name
 			
 			if nargin>0
 				obj.parseArgs(varargin, obj.allowedProperties);
@@ -75,12 +75,24 @@ classdef gratingPatchStimulus < gratingStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible == true
-				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
+				
+				scale = obj.aspectRatio2;
+				dstRect = obj.mvRect;
+				dstRect(4) = dstRect(4)+(obj.sizeOut*scale);
+				dstRect2 = AlignRect(dstRect,obj.mvRect,'top');
+				dstRect2 = AdjoinRect(dstRect2,obj.mvRect,obj.inducerPosition);
+				
+				o=[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut];
+				o2 = [obj.driftPhase, obj.sfOut, obj.contrast2, obj.sigmaOut];
+				%o(3) = o(3)/2;
+				o2(2) = o2(2)*scale;
+				
+				r = [dstRect2',obj.mvRect'];
+				o = [o2', o'];
+				
+				Screen('DrawTextures', obj.win, obj.texture, [], r,...
 					obj.angleOut, [], [], [], [], obj.rotateMode,...
-					[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
-				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect+50,...
-					obj.angleOut+90, [], [], [], [], obj.rotateMode,...
-					[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
+					o);
 				obj.tick = obj.tick + 1;
 			end
 		end

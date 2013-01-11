@@ -156,19 +156,18 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> X position increment for a given delta and angle
 		% ===================================================================
 		function value = get.dX(obj)
-			switch obj.family
-				case 'grating'
-					if isempty(obj.findprop('motionAngleOut'));
-						[value,~]=obj.updatePosition(obj.delta,obj.motionAngle);
-					else
-						[value,~]=obj.updatePosition(obj.delta,obj.motionAngleOut);
-					end
-				otherwise
-					if isempty(obj.findprop('angleOut'));
-						[value,~]=obj.updatePosition(obj.delta,obj.angle);
-					else
-						[value,~]=obj.updatePosition(obj.delta,obj.angleOut);
-					end
+			if ~isempty(obj.findprop('motionAngle'))
+				if isempty(obj.findprop('motionAngleOut'));
+					[value,~]=obj.updatePosition(obj.delta,obj.motionAngle);
+				else
+					[value,~]=obj.updatePosition(obj.delta,obj.motionAngleOut);
+				end
+			else
+				if isempty(obj.findprop('angleOut'));
+					[value,~]=obj.updatePosition(obj.delta,obj.angle);
+				else
+					[value,~]=obj.updatePosition(obj.delta,obj.angleOut);
+				end
 			end
 		end
 		
@@ -177,19 +176,18 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> Y position increment for a given delta and angle
 		% ===================================================================
 		function value = get.dY(obj)
-			switch obj.family
-				case 'grating'
-					if isempty(obj.findprop('motionAngleOut'));
-						[~,value]=obj.updatePosition(obj.delta,obj.motionAngle);
-					else
-						[~,value]=obj.updatePosition(obj.delta,obj.motionAngleOut);
-					end
-				otherwise
-					if isempty(obj.findprop('angleOut'));
-						[~,value]=obj.updatePosition(obj.delta,obj.angle);
-					else
-						[~,value]=obj.updatePosition(obj.delta,obj.angleOut);
-					end
+			if ~isempty(obj.findprop('motionAngle'))
+				if isempty(obj.findprop('motionAngleOut'));
+					[~,value]=obj.updatePosition(obj.delta,obj.motionAngle);
+				else
+					[~,value]=obj.updatePosition(obj.delta,obj.motionAngleOut);
+				end
+			else
+				if isempty(obj.findprop('angleOut'));
+					[~,value]=obj.updatePosition(obj.delta,obj.angle);
+				else
+					[~,value]=obj.updatePosition(obj.delta,obj.angleOut);
+				end
 			end
 		end
 		
@@ -213,11 +211,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
-		function run(obj,benchmark)
-			runtime = 2; %seconds to run
-			if ~exist('benchmark','var')
+		function run(obj,benchmark,runtime)
+			if ~exist('benchmark','var') || isempty(benchmark)
 				benchmark=false;
 			end
+			if ~exist('runtime','var') || isempty(runtime)
+				runtime = 2; %seconds to run
+			end
+			
 			s = screenManager('verbose',false,'blend',true,'screen',0,...
 				'bitDepth','8bit','debug',false,...
 				'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
@@ -538,7 +539,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 	%=======================================================================
 	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
 	%=======================================================================
-		
 		
 		% ===================================================================
 		%> @brief setRect
