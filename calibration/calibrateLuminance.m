@@ -164,6 +164,7 @@ classdef calibrateLuminance < handle
 				for i = obj.ramp
 					Screen('FillRect',obj.win,i);
 					Screen('Flip',obj.win);
+					WaitSecs(0.5);
 					if obj.useCCal == true
 						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
 						obj.inputValues(a) = obj.thisY;
@@ -187,7 +188,67 @@ classdef calibrateLuminance < handle
 			end
 			
 			obj.canAnalyze = 1;
-			obj.analyze;
+			analyze(obj);
+			test(obj);
+			
+		end
+		
+		% ===================================================================
+		%> @brief analyze
+		%>	once the raw data is collected, this analyzes (fits) the data
+		%>
+		% ===================================================================
+		function test(obj)
+			try
+				Screen('Preference', 'SkipSyncTests', 1);
+				Screen('Preference', 'VisualDebugLevel', 0);
+				PsychImaging('PrepareConfiguration');
+				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
+				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
+				if obj.screen == 0
+					rec = [0 0 800 600];
+				else
+					rec = [];
+				end
+				obj.win = PsychImaging('OpenWindow', obj.screen, 0, rec);
+				[obj.oldClut, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
+				BackupCluts;
+				gTmp = repmat(obj.gammaTable{obj.choice},1,3);
+				Screen('LoadNormalizedGammaTable', obj.win, gTmp);
+				
+				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
+				obj.ramp(end) = 1;
+				obj.inputValues = zeros(1,length(obj.ramp));
+				a=1;
+				
+				for i = obj.ramp
+					Screen('FillRect',obj.win,i);
+					Screen('Flip',obj.win);
+					WaitSecs(0.5);
+					if obj.useCCal == true
+						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
+						obj.inputValues(a) = obj.thisY;
+					else
+						% MK: Deprecated as not reliable: resp = input('Value?');
+						fprintf('Value? ');
+						beep
+						resp = GetNumber;
+						fprintf('\n');
+						obj.inputValues = [obj.inputValues resp];
+					end
+					a = a + 1;
+				end
+				
+				RestoreCluts;
+				Screen('CloseAll');
+			catch %#ok<CTCH>
+				RestoreCluts;
+				Screen('CloseAll');
+				psychrethrow(psychlasterror);
+			end
+			
+			plot(obj);
 			
 		end
 		
@@ -248,7 +309,9 @@ classdef calibrateLuminance < handle
 					obj.modelFit{i+1}.gof = gof;
 					obj.modelFit{i+1}.output = output;
 					%Invert interpolation
-					[fittedmodel,gof] = fit(obj.inputValuesNorm',obj.rampNorm',method);
+					x = obj.inputValuesNorm;
+					x = obj.makeUnique(x);
+					[fittedmodel,gof] = fit(x',obj.rampNorm',method);
 					obj.gammaTable{i+1} = fittedmodel([0:1/255:1]);
 				end
 				
@@ -385,6 +448,20 @@ classdef calibrateLuminance < handle
 			fn = fieldnames(obj);
 			for j=1:length(fn)
 				out.(fn{j}) = obj.(fn{j});
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Converts properties to a structure
+		%>
+		%> @return out the structure
+		% ===================================================================
+		function x = makeUnique(obj,x)
+			for i = 1:length(x)
+				idx = find(x==x(i));
+				if length(idx) > 1
+					x(i) = x(i) - rand/1e5;
+				end
 			end
 		end
 		
