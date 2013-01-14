@@ -70,15 +70,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dX_
 		%> dY cache
 		dY_
-		%> pixels per degree (calculated in runExperiment)
+		%> pixels per degree (normally inhereted from screenManager)
 		ppd = 44
-		%> Inter frame interval (calculated in runExperiment)
+		%> Inter frame interval (normally inhereted from screenManager)
 		ifi = 0.0167
-		%> computed X center (calculated in runExperiment)
+		%> computed X center (normally inhereted from screenManager)
 		xCenter = []
-		%> computed Y center (calculated in runExperiment)
+		%> computed Y center (normally inhereted from screenManager)
 		yCenter = []
-		%> background colour (calculated in runExperiment)
+		%> background colour (normally inhereted from screenManager)
 		backgroundColour = [0.5 0.5 0.5 0]
 		%> window to attach to
 		win = []

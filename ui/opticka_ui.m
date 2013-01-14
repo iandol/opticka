@@ -772,12 +772,27 @@ end
 % --- Executes on button press in OKVariablesLinear.
 function OKVariablesLinear_Callback(hObject, eventdata, handles)
 values = str2num(get(handles.OKVariableValues,'String'));
-string = num2str(values);
-string = regexprep(string,'\s+',' '); %collapse spaces
+if length(values) == 3
+	values=linspace(values(1),values(2),values(3));
+	string = num2str(values);
+else
+	string = num2str(values);
+	string = regexprep(string,'\s+',' '); %collapse spaces
+end
 set(handles.OKVariableValues,'String',string);
 
 % --- Executes on button press in OKVariablesLog.
 function OKVariablesLog_Callback(hObject, eventdata, handles) %#ok<*INUSD>
+values = str2num(get(handles.OKVariableValues,'String'));
+if length(values) == 3
+	values=logspace(log10(values(1)),log10(values(2)),values(3));
+	string = num2str(values);
+	string = regexprep(string,'\s+',' '); %collapse spaces
+	set(handles.OKVariableValues,'String',string);
+else
+	warndlg('Please enter a minimum, maximum and number of values');
+end
+
 
 % --- Executes on selection change in OKStimList.
 function OKStimList_Callback(hObject, eventdata, handles)

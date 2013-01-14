@@ -12,7 +12,7 @@
 %>   contrast = contrast from 0 - 1
 %>   mask = use circular mask (1) or not (0)
 % ========================================================================
-classdef gratingStimulus < baseStimulus
+classdef targetInducerStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> family type
@@ -21,19 +21,27 @@ classdef gratingStimulus < baseStimulus
 		sf = 1
 		%> temporal frequency
 		tf = 1
+		%>inducer height multiplier
+		inducerHeight = 6
+		%> inducer position
+		inducerPosition = RectTop
 		%> rotate the object (0/false) or the texture (1/true)?
 		rotationMethod = true
 		%> phase of grating
 		phase = 0
+		%> phase offset between target and inducer
+		phaseOffset = 0
 		%> contrast of grating
 		contrast = 0.5
+		%> contrast of inducer
+		inducerContrast = 0.5
 		%> use a circular mask?
-		mask = true
+		mask = false
 		%> reverse the drift direction?
 		driftDirection = false
 		%> the angle which the direction of the grating patch is moving
 		motionAngle = 0
-		%> Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure
+		%> Contrast Multiplier, 0.5 gives "standard" 0-1 contrast range
 		contrastMult = 0.5
 		%> do we need to correct the phase to be relative to center not edge?
 		correctPhase = false
@@ -53,7 +61,7 @@ classdef gratingStimulus < baseStimulus
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%stimulus family
-		family = 'grating'
+		family = 'targetInducer'
 		%> scale is used when changing size as an independent variable to keep sf accurate
 		scale = 1
 		%> the phase amount we need to add for each frame of animation
@@ -71,8 +79,9 @@ classdef gratingStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['sf|tf|angle|motionAngle|phase|rotationMethod|' ... 
-			'contrast|mask|driftDirection|speed|startPosition|aspectRatio|' ... 
+		allowedProperties = ['sf|tf|sfi|tfi|angle|motionAngle|phase|phasei|rotationMethod|' ...
+			'inducerHeight|inducerPosition|inducerContrast|phaseOffset' ...
+			'contrast|contrasti|mask|driftDirection|speed|startPosition|aspectRatio|' ... 
 			'contrastMult|sigma|useAlpha|smoothMethod|' ...
 			'correctPhase|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
@@ -105,10 +114,10 @@ classdef gratingStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = gratingStimulus(varargin)
+		function obj = targetInducerStimulus(varargin)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
-				varargin.family = 'grating';
+				varargin.family = 'targetInducer';
 			end
 			
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
@@ -152,11 +161,11 @@ classdef gratingStimulus < baseStimulus
 
 			obj.texture = []; %we need to reset this
 
-			fn = fieldnames(gratingStimulus);
+			fn = fieldnames(obj);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
-					p.Transient = true;p.Hidden = true;
+					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
 					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
 					if strcmp(fn{j},'driftDirection');p.SetMethod = @set_driftDirectionOut;end
@@ -188,7 +197,7 @@ classdef gratingStimulus < baseStimulus
 				obj.rotateMode = [];
 			end
 			
-			if isempty(obj.findprop('gratingSize'));p=obj.addprop('gratingSize');p.Transient=true;end
+			if isempty(obj.findprop('gratingSize'));p=obj.addprop('gratingSize');p.Transient=true;p.Hidden=true;end
 			obj.gratingSize = round(obj.ppd*obj.size);
 			
 			if isempty(obj.findprop('phaseIncrement'));
@@ -207,7 +216,7 @@ classdef gratingStimulus < baseStimulus
 			if obj.aspectRatio < 1
 				obj.res = round([obj.gratingSize*obj.aspectRatio obj.gratingSize]);
 			else
-				obj.res = round([obj.gratingSize obj.gratingSize*obj.aspectRatio]);
+				obj.res = round([obj.gratingSize*obj.aspectRatio obj.gratingSize]);
 			end
 			
 			if obj.mask == true
@@ -223,16 +232,23 @@ classdef gratingStimulus < baseStimulus
 			end
 			
 			if strcmpi(obj.type,'square')
-				obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
+				obj.texture{1} = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
 					obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
+				obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
+					obj.res(2)*obj.inducerHeight, obj.colourOut, obj.mask, obj.contrastMult);
 			else
 				if obj.sigmaOut > 0
-					obj.texture = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
+					obj.texture{1} = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
 						obj.res(2), obj.colourOut, obj.mask, obj.contrastMult, obj.sigmaOut, ...
 						obj.useAlpha, obj.smoothMethod);
+					obj.texture{2} = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
+						obj.res(2)*obj.inducerHeight, obj.colourOut, obj.mask, obj.contrastMult, obj.sigmaOut, ...
+						obj.useAlpha, obj.smoothMethod);
 				else
-					obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
+					obj.texture{1} = CreateProceduralSineGrating(obj.win, obj.res(1),...
 						obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
+					obj.texture{2} = CreateProceduralSineGrating(obj.win, obj.res(1),...
+						obj.res(2)*obj.inducerHeight, obj.colourOut, obj.mask, obj.contrastMult);
 				end
 			end
 			
@@ -262,9 +278,17 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible == true
-				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
+				
+				dstRect = Screen('Rect',obj.texture{2});
+				dstRect = AlignRect(dstRect, obj.mvRect, 'left');
+				dstRect = AdjoinRect(dstRect, obj.mvRect, obj.inducerPosition);
+				
+				Screen('DrawTexture', obj.win, obj.texture{1}, [], obj.mvRect,...
 					obj.angleOut, [], [], [], [], obj.rotateMode,...
 					[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
+				Screen('DrawTexture', obj.win, obj.texture{2}, [], dstRect,...
+					obj.angleOut, [], [], [], [], obj.rotateMode,...
+					[obj.driftPhase+obj.phaseOffset, obj.sfOut, obj.contrastiOut, obj.sigmaOut]);
 				obj.tick = obj.tick + 1;
 			end
 		end
@@ -347,7 +371,7 @@ classdef gratingStimulus < baseStimulus
 			else
 				[sx sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
 			end
-			obj.dstRect=Screen('Rect',obj.texture);
+			obj.dstRect=Screen('Rect',obj.texture{1});
 			obj.dstRect=ScaleRect(obj.dstRect,obj.scale,obj.scale);
 			obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
 			if isempty(obj.findprop('xPositionOut'));
