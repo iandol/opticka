@@ -69,18 +69,14 @@ header {
 }
 
 header h1 {
-  font-family: 'Chivo', 'Quicksand', 'Helvetica Neue', Helvetica, Arial, serif; font-weight: 900;
+  font-family: 'Chivo', 'Helvetica Neue', Helvetica, Arial, serif; font-weight: 900;
   letter-spacing: -1px;
   font-size: 48px;
   color: #303030;
   line-height: 1.2;
-  /* background: transparent url(../images/opticka.png) left 0% no-repeat;
-  padding: 0 0 0 110px;
-  line-height: 2 */
 }
 
 header h2 {
-  font-family: 'Chivo', 'Quicksand', 'Helvetica Neue', Helvetica, Arial, serif; font-weight: 900;
   letter-spacing: -1px;
   font-size: 24px;
   color: #aaa;
@@ -88,15 +84,13 @@ header h2 {
   line-height: 1.3;
 }
 
-h1, h2 {font-family: 'Quicksand', 'Chivo', Helvetica, sans-serif;color: #606060;}
-
 #container {
   background: transparent url(../images/highlight-bg.jpg) 50% 0 no-repeat;
   min-height: 595px;
 }
 
 .inner {
-  width: 900px;
+  width: 620px;
   margin: 0 auto;
 }
 
@@ -214,7 +208,7 @@ hr {
   background: transparent url('../images/hr.png') 50% 0 no-repeat;
 }
 
-b, strong {
+strong {
   font-weight: bold;
 }
 
@@ -350,21 +344,19 @@ footer a:hover {
 @media only screen and (max-width: 959px) {}
 
 /* Tablet Portrait size to standard 960 (devices and browsers) */
-@media only screen and (min-width: 800px) and (max-width: 900px) {
-  .inner {
-    width: 94%;
-    margin: 0 auto;
-  }	
-}
+@media only screen and (min-width: 768px) and (max-width: 959px) {}
 
 /* All Mobile Sizes (devices and browser) */
-@media only screen and (max-width: 800px) {
+@media only screen and (max-width: 767px) {
   header {
     padding-top: 10px;
     padding-bottom: 10px;
   }
   #downloads {
     margin-bottom: 25px;
+  }
+  #download-zip, #download-tar-gz {
+    display: none;
   }
   .inner {
     width: 94%;
@@ -373,15 +365,7 @@ footer a:hover {
 }
 
 /* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
-@media only screen and (min-width: 480px) and (max-width: 799px) {
-	#download-tar-gz {
-    display: none;
-	}
-}
+@media only screen and (min-width: 480px) and (max-width: 767px) {}
 
 /* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
-@media only screen and (max-width: 479px) {
-	#download-zip, #download-tar-gz {
-    display: none;
-  }	
-}
+@media only screen and (max-width: 479px) {}
