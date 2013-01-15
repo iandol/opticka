@@ -1,0 +1,7 @@
+<map id="rfMapper" name="rfMapper">
+<area shape="rect" id="node2" href="$classbar_stimulus.html" title="barStimulus single bar stimulus, inherits from baseStimulus" alt="" coords="377,854,468,882"/>
+<area shape="rect" id="node4" href="$classbase_stimulus.html" title="baseStimulus is the superclass for all opticka stimulus objects" alt="" coords="219,701,320,729"/>
+<area shape="rect" id="node6" href="$classopticka_core.html" title="optickaCore base class inherited by many other opticka classes. optickaCore is itself derived from ha..." alt="" coords="34,301,125,329"/>
+<area shape="rect" id="node8" href="$classhandle.html" title="handle" alt="" coords="5,6,67,34"/>
+<area shape="rect" id="node12" href="$classdynamicprops.html" title="dynamicprops" alt="" coords="281,301,385,329"/>
+</map>

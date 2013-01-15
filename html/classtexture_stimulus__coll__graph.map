@@ -1,0 +1,6 @@
+<map id="textureStimulus" name="textureStimulus">
+<area shape="rect" id="node2" href="$classbase_stimulus.html" title="baseStimulus is the superclass for all opticka stimulus objects" alt="" coords="145,627,247,655"/>
+<area shape="rect" id="node4" href="$classopticka_core.html" title="optickaCore base class inherited by many other opticka classes. optickaCore is itself derived from ha..." alt="" coords="336,301,428,329"/>
+<area shape="rect" id="node6" href="$classhandle.html" title="handle" alt="" coords="352,6,413,34"/>
+<area shape="rect" id="node10" href="$classdynamicprops.html" title="dynamicprops" alt="" coords="208,301,312,329"/>
+</map>

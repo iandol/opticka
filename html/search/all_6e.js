@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['n',['n',['../classmeta_stimulus.html#ad2883f27a71e389743e5af3730e5f478',1,'metaStimulus::n()'],['../classmeta_stimulus.html#a7c572e1dfbfe0a4164308721dae41cce',1,'metaStimulus::n(in obj)']]],
+  ['name',['name',['../classlab_jack.html#ab826ca7a5bc2794c7fd244c6e48257cb',1,'labJack::name()'],['../classsend_serial.html#a0d559ffcaeabff9c29abbf65bb27272c',1,'sendSerial::name()'],['../classopticka_core.html#afc4a23f508cc6df90a0e7de22512b9d3',1,'optickaCore::name()']]],
+  ['nblocks',['nBlocks',['../classstimulus_sequence.html#a7e08a1219c836ca08cb74ce9e87b93d5',1,'stimulusSequence']]],
+  ['ndisp',['nDisp',['../classparse_opx_spikes.html#a9c33d5d1923a997314df6a898e7b3dab',1,'parseOpxSpikes']]],
+  ['ndots',['nDots',['../classdots_stimulus.html#a4afcea31b1e39b812fa2e872ee2d122e',1,'dotsStimulus::nDots()'],['../classndots_stimulus.html#abd0837142f14f49b76c4f8027aa15b95',1,'ndotsStimulus::nDots()'],['../classdots_stimulus.html#ac1619b8543444e0df02df6910c537c5c',1,'dotsStimulus::nDots()']]],
+  ['ndots_5f',['nDots_',['../classdots_stimulus.html#abe08954e65035b224fdbb20650bfb8b7',1,'dotsStimulus']]],
+  ['ndotsstimulus',['ndotsStimulus',['../classndots_stimulus.html',1,'ndotsStimulus'],['../classndots_stimulus.html#a89b782e2dd6a1d86704e9ff45aa1d66c',1,'ndotsStimulus::ndotsStimulus()']]],
+  ['ndotsstimulus_2em',['ndotsStimulus.m',['../ndots_stimulus_8m.html',1,'']]],
+  ['nexttickout',['nextTickOut',['../classstate_machine.html#a338c7ac4b5216086eb13aa2523f8074a',1,'stateMachine']]],
+  ['nexttimeout',['nextTimeOut',['../classstate_machine.html#a37fd5c0d21bbaee1321d6dcec4f8144f',1,'stateMachine']]],
+  ['nframes',['nFrames',['../classstimulus_sequence.html#a3db76f3df269ab38d80e15dd2f1ae25e',1,'stimulusSequence::nFrames()'],['../classstimulus_sequence.html#abcf14544576aa4c04a46dacaf4040a4b',1,'stimulusSequence::nFrames(in obj)']]],
+  ['nmeasures',['nMeasures',['../classcalibrate_luminance.html#ad3183de5653d3ae47099c533fa5efe98',1,'calibrateLuminance']]],
+  ['nmissed',['nMissed',['../classtime_logger.html#ae753310c9c2ee769129aa2cc166d1f64',1,'timeLogger']]],
+  ['normalizedxy',['normalizedXY',['../classndots_stimulus.html#a8cccd1806afadbc74ec869af1a71db29',1,'ndotsStimulus']]],
+  ['nruns',['nRuns',['../classopx_online.html#a5060f1a16ea6c5f62f25e99d56a96e20',1,'opxOnline::nRuns()'],['../classparse_opx_spikes.html#a47b3988848f08735174b75e423d6f77f',1,'parseOpxSpikes::nRuns()'],['../classstimulus_sequence.html#a94cf1e59d798bfc153fd5ddc06e2635c',1,'stimulusSequence::nRuns()'],['../classstimulus_sequence.html#a4e625834ed07e83a0f915f93ee45af5b',1,'stimulusSequence::nRuns(in obj)']]],
+  ['nsegment',['nSegment',['../classstimulus_sequence.html#a21fc976988741d8b3026c53bf8dc331c',1,'stimulusSequence']]],
+  ['nsegments',['nSegments',['../classstimulus_sequence.html#ab55040d4162f272c13631778d8b6134a',1,'stimulusSequence']]],
+  ['nstates',['nStates',['../classstimulus_sequence.html#aeddea4450220f953f000105183b8722d',1,'stimulusSequence']]],
+  ['ntrials',['nTrials',['../classparse_opx_spikes.html#ac69785d52460c2eefdeb045d676d16e6',1,'parseOpxSpikes']]],
+  ['nvar',['nVar',['../classstimulus_sequence.html#a049c150c9c923d5708142e3a3499d996',1,'stimulusSequence::nVar()'],['../classstimulus_sequence.html#a78583e92ecedbb9fdf6364f4062cc3f7',1,'stimulusSequence::nVar(in obj, in invalue)']]],
+  ['nvars',['nVars',['../classparse_opx_spikes.html#ac32f8192ba220c97ecd73725a308bd52',1,'parseOpxSpikes::nVars()'],['../classstimulus_sequence.html#a90a650903376b8a94f7ae5ca87baf5d4',1,'stimulusSequence::nVars()'],['../classstimulus_sequence.html#a798750289d8302bd033aa23faa8ceb89',1,'stimulusSequence::nVars(in obj)']]],
+  ['nvars_5f',['nVars_',['../classstimulus_sequence.html#a4381d107ec917d402ab1a1071898df54',1,'stimulusSequence']]]
+];

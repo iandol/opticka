@@ -1,0 +1,28 @@
+var searchData=
+[
+  ['p',['p',['../classcalibrate_luminance.html#afa473dc904a2ffd0f06dac891f6a0635',1,'calibrateLuminance::p()'],['../classopx_online.html#ad5e2510f405a731f49cfaa94c7184b9d',1,'opxOnline::p()']]],
+  ['parameters',['parameters',['../classopx_online.html#a75722d655e4cab8ca0a810a360331b76',1,'opxOnline::parameters()'],['../classparse_opx_spikes.html#a1c68d435d18dd752119048d2fa6309a1',1,'parseOpxSpikes::parameters()']]],
+  ['paths',['paths',['../classopticka_core.html#ad9489ce2da58865a8df65de63db239cf',1,'optickaCore']]],
+  ['phase',['phase',['../classgrating_stimulus.html#ac6d7089c6f9cba80ab3ae55eb0414886',1,'gratingStimulus::phase()'],['../classrf_mapper.html#ae71ef44465fc414b2bbbadbe530868b3',1,'rfMapper::phase()']]],
+  ['phase1',['phase1',['../classannulus_stimulus.html#a3b585bd2b077b14ab2628d303dc2cd1a',1,'annulusStimulus']]],
+  ['phase2',['phase2',['../classannulus_stimulus.html#a66d0ae175570d621994f192db7627cda',1,'annulusStimulus']]],
+  ['phasecounter',['phaseCounter',['../classgrating_stimulus.html#ac728df3e77b134b39b74880889eaaf81',1,'gratingStimulus']]],
+  ['phaseincrement',['phaseIncrement',['../classgrating_stimulus.html#aaf0f17fb0a1bf0f54f67e97dad111937',1,'gratingStimulus']]],
+  ['phaseofreverse',['phaseOfReverse',['../classgrating_stimulus.html#a27fa2dd542a57836e3a0b3413a55eac1',1,'gratingStimulus']]],
+  ['phasereversetime',['phaseReverseTime',['../classgrating_stimulus.html#ab14c5d6157504aa9d1bafa9c0f36a312',1,'gratingStimulus']]],
+  ['photodiode',['photoDiode',['../classscreen_manager.html#ac3ffd775b28b5e547f2b44f0679f7a66',1,'screenManager']]],
+  ['photodioderect',['photoDiodeRect',['../classscreen_manager.html#ab2042c5c334f686b5c2c787a99d077a0',1,'screenManager']]],
+  ['pixelorigin',['pixelOrigin',['../classndots_stimulus.html#a0d6398e9252d1872a63dac18b48f378c',1,'ndotsStimulus']]],
+  ['pixelscale',['pixelScale',['../classbar_stimulus.html#a7238ecc472f3075720dad6acbb5688e8',1,'barStimulus::pixelScale()'],['../classndots_stimulus.html#a6ff42be88a1e3975c14caf3f2d2b7e09',1,'ndotsStimulus::pixelScale()'],['../classtexture_stimulus.html#a09e95af813a5861dd14ffe1ff93f9ce6',1,'textureStimulus::pixelScale()']]],
+  ['pixelspercm',['pixelsPerCm',['../classscreen_manager.html#aa44cca7144dea6c871497a87a6d162a3',1,'screenManager']]],
+  ['pixelxy',['pixelXY',['../classndots_stimulus.html#af0c1a2d6e94f99d25f37e413aba0fb30',1,'ndotsStimulus']]],
+  ['plothandle',['plotHandle',['../classcalibrate_luminance.html#a9385c5bab37df11ee6e056f9982308cb',1,'calibrateLuminance']]],
+  ['plotoptions',['plotOptions',['../classopx_online.html#a2d9556caaaf80ff40ef9be2e2c3a446f',1,'opxOnline']]],
+  ['polltime',['pollTime',['../classopx_online.html#afe9930fdab3fe6f5a93ec2938cea8777',1,'opxOnline']]],
+  ['porthandle',['portHandle',['../classsend_serial.html#a0ea4c87ee6a417c3dd8c3ae6803a664e',1,'sendSerial']]],
+  ['ppd',['ppd',['../classscreen_manager.html#a4121fa2e9f8f8b89862cf8bdc6c113b8',1,'screenManager::ppd()'],['../classbase_stimulus.html#a3a3bbf55c2559d8b227edb7884f532c0',1,'baseStimulus::ppd()']]],
+  ['previousinfo',['previousInfo',['../classrun_experiment.html#ad01aaa303e8b3550498a8ced576d0e04',1,'runExperiment']]],
+  ['procedural',['procedural',['../classplaid_stimulus.html#a19689c3451909077ab92d294c122759f',1,'plaidStimulus']]],
+  ['protocol',['protocol',['../classdata_connection.html#ad56319e90389c7e2d5592169ba23db75',1,'dataConnection::protocol()'],['../classopx_online.html#a13d0ec5813c030901ca2d6258fff5a5a',1,'opxOnline::protocol()']]],
+  ['ptb',['ptb',['../classrun_experiment.html#a372e4e78a8061d1207d46c6876be9f32',1,'runExperiment']]]
+];

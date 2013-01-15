@@ -1,0 +1,13 @@
+<map id="dynamicprops" name="dynamicprops">
+<area shape="rect" id="node3" href="$classbase_stimulus.html" title="baseStimulus is the superclass for all opticka stimulus objects" alt="" coords="172,187,273,215"/>
+<area shape="rect" id="node23" href="$classstimulus_sequence.html" title="stimulusSequence" alt="" coords="158,239,288,267"/>
+<area shape="rect" id="node5" href="$classannulus_stimulus.html" title="annulusStimulus TODO" alt="" coords="336,5,456,33"/>
+<area shape="rect" id="node7" href="$classbar_stimulus.html" title="barStimulus single bar stimulus, inherits from baseStimulus" alt="" coords="350,57,442,85"/>
+<area shape="rect" id="node11" href="$classdots_stimulus.html" title="dotsStimulus simple variable coherence dots stimulus, inherits from baseStimulus" alt="" coords="347,109,445,137"/>
+<area shape="rect" id="node13" href="$classgrating_stimulus.html" title="single grating stimulus, inherits from baseStimulus GRATINGSTIMULUS single grating stimulus..." alt="" coords="339,161,453,189"/>
+<area shape="rect" id="node15" href="$classndots_stimulus.html" title="ndotsStimulus limited lifetime coherence dots stimulus" alt="" coords="343,213,449,241"/>
+<area shape="rect" id="node17" href="$classplaid_stimulus.html" title="plaidStimulus TODO" alt="" coords="346,265,446,293"/>
+<area shape="rect" id="node19" href="$classspot_stimulus.html" title="single bar stimulus, inherits from baseStimulus SPOTSTIMULUS single bar stimulus, inherits from baseS..." alt="" coords="347,317,445,345"/>
+<area shape="rect" id="node21" href="$classtexture_stimulus.html" title="textureStimulus is the superclass for texture based stimulus objects" alt="" coords="339,369,453,397"/>
+<area shape="rect" id="node9" href="$classrf_mapper.html" title="receptive field mapper rfMapper is a mouse driven receptive field mapper, using various keyboard comm..." alt="" coords="504,57,579,85"/>
+</map>
