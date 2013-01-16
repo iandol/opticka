@@ -222,30 +222,30 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief update the state machine, normally run via an external loop like PTB
+		%> @brief update the state machine, normally run via an external loop
 		%> 
 		%> 
 		% ===================================================================
 		function update(obj)
 			if obj.isRunning == true
-				if obj.realTime == false
+				if obj.realTime == false %are we running on time or ticks?
 					trigger = obj.currentTick >= obj.nextTickOut;
 				else
 					obj.currentTime = feval(obj.clockFcn);
 					trigger = obj.currentTime >= obj.nextTimeOut;
 				end
-				if trigger == true
+				if trigger == true %we have exceeded the time (real|ticks), so time to transition or exit
 					nextName = obj.stateList(obj.currentIndex).next;
-					if isempty(nextName)
+					if isempty(nextName) %no next state, exit the statemachine
 						obj.exitCurrentState;
 						obj.isRunning = false;
 						obj.isFinishing = true;
-						return
 					else
 						obj.transitionToStateWithName(nextName);
 					end
+					return
 				end
-	
+				
 				if isa(obj.currentWithinFcn,'function_handle') %function handle, lets feval it
 					feval(obj.currentWithinFcn);
 				elseif iscell(obj.currentWithinFcn)
@@ -254,21 +254,26 @@ classdef stateMachine < optickaCore
 					end
 				end
 				
+				%transition function works by returning the name of the
+				%next state when its criteria are met, so for example check
+				%that the eye is fixated for the fixation time, returning
+				%an empty string nutil that is met, then return the name of
+				%a state to transition to.
 				tname = '';
 				if isa(obj.currentTransitionFcn,'function_handle') %function handle, lets feval it
 					tname = feval(obj.currentTransitionFcn);
-				elseif iscell(obj.currentTransitionFcn)
-					for i = 1:size(obj.currentTransitionFcn,1) %nested class
-						tname = feval(obj.currentTransitionFcn{i});
-					end
 				end
-				
-				if ischar(tname) && isStateName(obj,tname)
+				if ischar(tname) && isStateName(obj,tname) % a valid name was returned, time to transition
 					obj.transitionToStateWithName(tname);
+					return
 				end
 				
+				%TODO lets assume to update a tick here, we may miss a tick on
+				%the tranition above, not sure of the implications of
+				%updating ticks before or after? 
 				obj.currentTick = obj.currentTick + 1;
 				obj.totalTicks = obj.totalTicks + 1;
+
 			else
 				obj.salutation('update method','stateMachine has not been started yet')
 			end
@@ -284,6 +289,7 @@ classdef stateMachine < optickaCore
 				if isStateName(obj,stateName)
 					obj.salutation('forceTransition method',['stateMachine forced to: ' stateName])
 					transitionToStateWithName(obj, stateName)
+					return
 				else
 					obj.salutation('forceTransition method',['state: ' stateName ' not found...'])
 				end

@@ -28,6 +28,8 @@ classdef runExperiment < optickaCore
 		stateInfoFile = ''
 		%> use LabJack for digital output?
 		useLabJack = false
+		%> use eyelink?
+		useEyeLink = false
 		%> this lets the opticka UI leave commands to runExperiment
 		uiCommand = ''
 		%> log all frame times, gets slow for > 1e6 frames
@@ -367,9 +369,11 @@ classdef runExperiment < optickaCore
 				setup(obj.stimuli); %run setup() for each stimulus
 				
 				% set up the eyelink interface
-				obj.eyeLink = eyelinkManager();
-				initialise(obj.eyeLink, s);
-				setup(obj.eyeLink);
+				if obj.useEyeLink
+					obj.eyeLink = eyelinkManager();
+					initialise(obj.eyeLink, s);
+					setup(obj.eyeLink);
+				end
 				
 				obj.stateMachine = stateMachine('verbose',true); %#ok<*CPROP>
 				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
@@ -426,7 +430,7 @@ classdef runExperiment < optickaCore
 				tS.totalTicks = 1; % a tick counter
 				tS.pauseToggle = 1;
 				
-				%startRecording(obj.eyeLink);
+				if obj.useEyeLink; startRecording(obj.eyeLink); end
 				
 				tL.screenLog.beforeDisplay = GetSecs;
 				
@@ -456,7 +460,7 @@ classdef runExperiment < optickaCore
 					Screen('DrawingFinished', s.win); 
 					
 					%check eye position
-					%getSample(obj.eyeLink);
+					if obj.useEyeLink; getSample(obj.eyeLink); end
 					
 					%check keyboard for commands
 					tS = obj.checkTrainingKeys(tS);
@@ -1065,6 +1069,7 @@ classdef runExperiment < optickaCore
 			end
 			lobj.initialise('notask');
 			lobj = rebuild(lobj, in, isObject);
+			
 			function obj = rebuild(obj,in,inObject)
 				try %#ok<*TRYNC>
 					if isfield(in,'stimulus') || isprop(in,'stimulus')

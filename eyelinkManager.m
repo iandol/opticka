@@ -78,7 +78,7 @@ classdef eyelinkManager < optickaCore
 			obj.modify.calibrationtargetcolour = [1 1 0];
 			obj.modify.calibrationtargetsize = 5;
 			obj.modify.calibrationtargetwidth = 3;
-			obj.modify.waitformodereadytime = 500;
+			%obj.modify.waitformodereadytime = 500;
 			obj.modify.displayCalResults = 1;
 			obj.modify.targetbeep = 0;
 			obj.modify.devicenumber = -1;

@@ -154,8 +154,14 @@ switch eyecmd
     case 2
         % Eyelink Keyboard query:
         [rc, el] = EyelinkGetKey(el);
-		if rc == 32 && isa(lj,'labJack') && lj.isOpen == true
-			lj.timedTTL(0,400);
+		if rc > 0; fprintf('--->>> EYELINKCALLBACK:2 Key: %g\n',rc);end 
+		if rc == 32 
+			clearScreen=1;
+			needsupdate = 1;
+			calxy=[];
+			if isa(lj,'labJack') && lj.isOpen == true
+				lj.timedTTL(0,400);
+			end
 		end
         if verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
     case 3
