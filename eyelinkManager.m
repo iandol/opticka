@@ -79,6 +79,7 @@ classdef eyelinkManager < optickaCore
 			obj.modify.waitformodereadytime = 500;
 			obj.modify.displayCalResults = 1;
 			obj.modify.targetbeep = 0;
+			obj.modify.devicenumber = -1;
 		end
 		
 		% ===================================================================
@@ -202,7 +203,7 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command','validation_online_fixup  = NO');
 				if obj.remoteCalibration
 					Eyelink('Verbosity',4);
-					Eyelink('Command', 'generate_default_targets = NO');
+					Eyelink('Command', 'generate_default_targets = YES');
 					Eyelink('Command','remote_cal_enable = 1');
 					Eyelink('Command','key_function 1 ''remote_cal_target 1''');
 					Eyelink('Command','key_function 2 ''remote_cal_target 2''');
@@ -458,7 +459,8 @@ classdef eyelinkManager < optickaCore
 					err = checkRecording(obj);
 					if(err~=0); break; end;
 						
-					[~, ~, keyCode] = KbCheck;
+					[~, ~, keyCode] = KbCheck(-1);
+					if max(keyCode) > 0;fprintf('===> Key press: %s\n',KbName(keyCode));end
 					if keyCode(stopkey); break;	end;
 					
 					draw(o);
@@ -531,7 +533,7 @@ classdef eyelinkManager < optickaCore
 		function trackerDrawFixation(obj)
 			if obj.isConnected && currentMode(obj) == 1
 				Eyelink('Command','clear_screen 0');
-				Eyelink('command', 'draw_box %d %d %d %d 15', );
+				%Eyelink('command', 'draw_box %d %d %d %d 15', );
 			end
 		end
 		

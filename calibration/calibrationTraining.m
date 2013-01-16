@@ -15,8 +15,8 @@ classdef calibrationTraining < optickaCore
 				lj = labJack('verbose',true,'name','calibTrain');
 			end
 			obj.eM = eyelinkManager('name','calibTrain');
-			obj.eM.calibrationStyle = 'HV9';
-			%runDemo(obj.eM)
+			obj.eM.calibrationStyle = 'HV5';
+			runDemo(obj.eM)
 		end
 		
 		function run(obj)
@@ -25,6 +25,7 @@ classdef calibrationTraining < optickaCore
 				obj.eM.modify.calibrationtargetsize = 5;
 				obj.eM.modify.calibrationtargetwidth = 3;
 				obj.eM.modify.waitformodereadytime = 500;
+				obj.eM.modify.devicenumber = -1;
 				runDemo(obj.eM)
 			end
 		end

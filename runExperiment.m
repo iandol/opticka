@@ -394,6 +394,7 @@ classdef runExperiment < optickaCore
 				
 				elseif ischar(obj.stateInfoFile)
 					cd(fileparts(obj.stateInfoFile))
+					obj.stateInfoFile = regexprep(obj.stateInfoFile,'\s+','\\ ');
 					run(obj.stateInfoFile)
 					obj.stateInfo = stateInfoTmp;
 				end
@@ -425,7 +426,7 @@ classdef runExperiment < optickaCore
 				tS.totalTicks = 1; % a tick counter
 				tS.pauseToggle = 1;
 				
-				startRecording(obj.eyeLink);
+				%startRecording(obj.eyeLink);
 				
 				tL.screenLog.beforeDisplay = GetSecs;
 				
@@ -455,7 +456,7 @@ classdef runExperiment < optickaCore
 					Screen('DrawingFinished', s.win); 
 					
 					%check eye position
-					getSample(obj.eyeLink);
+					%getSample(obj.eyeLink);
 					
 					%check keyboard for commands
 					tS = obj.checkTrainingKeys(tS);

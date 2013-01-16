@@ -155,9 +155,9 @@ switch eyecmd
         % Eyelink Keyboard query:
         [rc, el] = EyelinkGetKey(el);
 		if rc == 32 && isa(lj,'labJack') && lj.isOpen == true
-			lj.timedTTL(0,100);
+			lj.timedTTL(0,400);
 		end
-        if verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key!\n'); end
+        if verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
     case 3
         % Alert message:
 		fprintf('--->>> EYELINKCALLBACK:3 Eyelink Alert: %s.\n', msg);
