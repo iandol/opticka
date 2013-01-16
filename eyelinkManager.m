@@ -31,6 +31,8 @@ classdef eyelinkManager < optickaCore
 		callback = 'eyelinkCallback'
 		%> eyelink defaults modifiers
 		modify = struct()
+		%> stimulus positions to draw on screen
+		stimulusPositions = []
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -330,43 +332,6 @@ classdef eyelinkManager < optickaCore
 		%> @brief 
 		%>
 		% ===================================================================
-		function close(obj)
-			try
-				if obj.isRecording == true
-					Eyelink('StopRecording');
-					Eyelink('CloseFile');
-					try
-						obj.salutation('Close Method',sprintf('Receiving data file %s', obj.saveFile));
-						status=Eyelink('ReceiveFile');
-						if status > 0
-							obj.salutation('Close Method',sprintf('ReceiveFile status %d', status));
-						end
-						if 2==exist(obj.saveFile, 'file')
-							obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', obj.saveFile, pwd));
-						end
-					catch ME
-						obj.salutation('Close Method',sprintf('Problem receiving data file ''%s''', obj.saveFile));
-						disp(ME.message);
-					end
-				end
-				Eyelink('Shutdown');
-			catch ME
-				obj.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
-				Eyelink('Shutdown');
-				obj.error = ME;
-				obj.salutation(ME.message);
-			end
-			obj.isConnected = false;
-			obj.isDummy = false;
-			obj.isRecording = false;
-			obj.eyeUsed = -1;
-			obj.screen = [];
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
 		function evt = getSample(obj)
 			obj.currentSample = [];
 			if obj.isConnected && Eyelink('NewFloatSampleAvailable') > 0
@@ -428,6 +393,44 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command',['record_status_message ''' message '''']);
 			end
 		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function close(obj)
+			try
+				if obj.isRecording == true
+					Eyelink('StopRecording');
+					Eyelink('CloseFile');
+					try
+						obj.salutation('Close Method',sprintf('Receiving data file %s', obj.saveFile));
+						status=Eyelink('ReceiveFile');
+						if status > 0
+							obj.salutation('Close Method',sprintf('ReceiveFile status %d', status));
+						end
+						if 2==exist(obj.saveFile, 'file')
+							obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', obj.saveFile, pwd));
+						end
+					catch ME
+						obj.salutation('Close Method',sprintf('Problem receiving data file ''%s''', obj.saveFile));
+						disp(ME.message);
+					end
+				end
+				Eyelink('Shutdown');
+			catch ME
+				obj.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
+				Eyelink('Shutdown');
+				obj.error = ME;
+				obj.salutation(ME.message);
+			end
+			obj.isConnected = false;
+			obj.isDummy = false;
+			obj.isRecording = false;
+			obj.eyeUsed = -1;
+			obj.screen = [];
+		end
+		
 		% ===================================================================
 		%> @brief 
 		%>
@@ -446,8 +449,6 @@ classdef eyelinkManager < optickaCore
 				initialise(obj,s);
 				setup(obj);
 			
-				
-				
 				obj.statusMessage('DEMO Running');
 				Eyelink('Command', 'set_idle_mode');
 				obj.trackerDrawFixation()
@@ -455,6 +456,7 @@ classdef eyelinkManager < optickaCore
 				startRecording(obj);
 				WaitSecs(0.1);
 				Eyelink('Message', 'SYNCTIME');
+				vbl=Screen('Flip',s.win);
  				while 1
 					err = checkRecording(obj);
 					if(err~=0); break; end;
@@ -482,7 +484,6 @@ classdef eyelinkManager < optickaCore
 						if obj.fixLength > obj.fixationTime
 							Screen('DrawText', s.win, 'FIX', x, y);
 							obj.statusMessage('DEMO running + fixated');
-							obj.trackerDraw();
 						else
 							obj.statusMessage('DEMO running');
 						end
@@ -492,7 +493,7 @@ classdef eyelinkManager < optickaCore
 					
 					animate(o);
 					
-					Screen('Flip',s.win);
+					vbl=Screen('Flip',s.win, vbl+(s.screenVals.ifi * 0.5));
 					
 				end
 				ListenChar(0);
@@ -517,11 +518,12 @@ classdef eyelinkManager < optickaCore
 		%> @brief 
 		%>
 		% ===================================================================
-		function trackerDraw(obj)
+		function trackerDrawStimuli(obj)
 			if obj.isConnected 
 				Eyelink('Command', 'set_idle_mode');
-				Eyelink('Command',['clear_screen ' num2str(randi(15))]);
-				Eyelink('Command','draw_cross 200 200 5')
+				Eyelink('Command','clear_screen 0');
+				Eyelink('Command','draw_cross 200 200 5');
+				Eyelink('Command', 'draw_box %d %d %d %d 15', 10, 10, 100, 100);
 				Eyelink('StartRecording');
 			end
 		end
@@ -533,7 +535,7 @@ classdef eyelinkManager < optickaCore
 		function trackerDrawFixation(obj)
 			if obj.isConnected && currentMode(obj) == 1
 				Eyelink('Command','clear_screen 0');
-				%Eyelink('command', 'draw_box %d %d %d %d 15', );
+				Eyelink('Command', 'draw_box %d %d %d %d 15', 10, 10, 100, 100);
 			end
 		end
 		
