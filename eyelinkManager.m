@@ -1,3 +1,8 @@
+% ========================================================================
+%> @brief eyelinkManager wraps around the eyelink toolbox functions
+%> offering a simpler interface
+%>
+% ========================================================================
 classdef eyelinkManager < optickaCore
 	
 	properties
@@ -21,13 +26,16 @@ classdef eyelinkManager < optickaCore
 		fixationRadius = 1
 		% fixation time in seconds
 		fixationTime = 1
+		%> tracker update speed (Hz), should be 250 500 1000 2000
+		sampleRate = 250
 		%> calibration style
 		calibrationStyle = 'HV5'
 		%> use manual remote calibration
 		remoteCalibration = true
-		% use callbacks, currently not working...
+		% use callbacks
 		enableCallbacks = true
-		%> calibration callback
+		%> cutom calibration callback (enables better handling of
+		%> calibration)
 		callback = 'eyelinkCallback'
 		%> eyelink defaults modifiers
 		modify = struct()
@@ -42,17 +50,25 @@ classdef eyelinkManager < optickaCore
 		y = []
 		%> pupil size
 		pupil = []
+		% are we connected to eyelink?
 		isConnected = false
+		% are we recording to an EDF file?
 		isRecording = false
+		% which eye is the tracker using?
 		eyeUsed = -1
+		%current sample taken from eyelink
 		currentSample = []
+		%current event taken from eyelink
 		currentEvent = []
+		%version of eyelink
 		version = ''
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		error = []
+		%the first timestamp fixation was true
 		fixStartTime = 0
+		%how long have we been fixated?
 		fixLength = 0
 		%> previous message sent to eyelink
 		previousMessage = ''
@@ -78,14 +94,15 @@ classdef eyelinkManager < optickaCore
 			obj.modify.calibrationtargetcolour = [1 1 0];
 			obj.modify.calibrationtargetsize = 5;
 			obj.modify.calibrationtargetwidth = 3;
-			%obj.modify.waitformodereadytime = 500;
+			obj.modify.waitformodereadytime = 500;
 			obj.modify.displayCalResults = 1;
 			obj.modify.targetbeep = 0;
 			obj.modify.devicenumber = -1;
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief initialise the eyelink, setting up the proper settings
+		%> and opening the EDF file if isRecording = true
 		%>
 		% ===================================================================
 		function initialise(obj,sM)
@@ -149,7 +166,7 @@ classdef eyelinkManager < optickaCore
 			Eyelink('Command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,AREA,GAZERES,STATUS');
 			
 			%Eyelink('Command', 'use_ellipse_fitter = no');
-			%Eyelink('Command', 'sample_rate = %d',1000);
+			Eyelink('Command', 'sample_rate = %d',obj.sampleRate);
 		end
 		
 		% ===================================================================
@@ -191,11 +208,12 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief sets up the calibration and validation
 		%>
 		% ===================================================================
 		function trackerSetup(obj)
 			if obj.isConnected
+				Eyelink('Verbosity',4);
 				Eyelink('Command','calibration_type = %s', obj.calibrationStyle);
 				Eyelink('Command','normal_click_dcorr = ON');
 				Eyelink('Command','randomize_calibration_order = NO');
@@ -204,7 +222,6 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command','val_repeat_first_target = YES');
 				Eyelink('Command','validation_online_fixup  = NO');
 				if obj.remoteCalibration
-					Eyelink('Verbosity',4);
 					Eyelink('Command', 'generate_default_targets = YES');
 					Eyelink('Command','remote_cal_enable = 1');
 					Eyelink('Command','key_function 1 ''remote_cal_target 1''');
@@ -217,9 +234,8 @@ classdef eyelinkManager < optickaCore
 					Eyelink('Command','key_function 8 ''remote_cal_target 8''');
 					Eyelink('Command','key_function 9 ''remote_cal_target 9''');
 					Eyelink('Command','key_function 0 ''remote_cal_target 0''');
-					Eyelink('Command','key_function z ''remote_cal_complete''');
+					Eyelink('Command','key_function q ''remote_cal_complete''');
 				else 
-					Eyelink('Verbosity',6);
 					Eyelink('Command', 'generate_default_targets = YES');
 					Eyelink('Command','remote_cal_enable = 0');
 				end
@@ -230,7 +246,7 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief wrapper for StartRecording
 		%>
 		% ===================================================================
 		function startRecording(obj)
@@ -241,7 +257,7 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief wrapper for EyelinkDoDriftCorrection
 		%>
 		% ===================================================================
 		function driftCorrection(obj)
@@ -251,7 +267,7 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief wrpper for CheckRecording
 		%>
 		% ===================================================================
 		function error = checkRecording(obj)
@@ -261,75 +277,10 @@ classdef eyelinkManager < optickaCore
 				error = -1;
 			end
 		end
-				
-		% ===================================================================
-		%> @brief isFixated tests for fixation
-		%>
-		% ===================================================================
-		function fixated = isFixated(obj)
-			fixated = false;
-			obj.fixLength = 0;
-			if obj.isConnected && ~isempty(obj.currentSample)
-				d = (obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2;
-				if d < (obj.fixationRadius);
-					if obj.fixStartTime == 0
-						obj.fixStartTime = obj.currentSample.time;
-					end
-					obj.fixLength = (obj.currentSample.time - obj.fixStartTime) / 1000;
-					fixated = true;
-				else
-					obj.fixStartTime = 0;
-				end
-			end
-		end
-			
-		% ===================================================================
-		%> @brief testFixation returns input yes or no strings based on
-		%> fixation state, useful for using via stateMachine
-		%>
-		% ===================================================================
-		function out = testFixation(obj, yesString, noString)
-			if obj.isFixated
-				out = yesString;
-			else
-				out = noString;
-			end
-		end
 		
 		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function out = testFixationTime(obj, yesString, noString)
-			if obj.isFixated && (obj.fixLength > obj.fixationTime)
-				obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TEST');
-				out = yesString;
-			else
-				out = noString;
-			end
-		end
-		
-		
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function eyeUsed = checkEye(obj)
-			if obj.isConnected
-				obj.eyeUsed = Eyelink('EyeAvailable'); % get eye that's tracked
-				if obj.eyeUsed == obj.defaults.BINOCULAR; % if both eyes are tracked
-					obj.eyeUsed = obj.defaults.LEFT_EYE; % use left eye
-				end
-				eyeUsed = obj.eyeUsed;
-			else
-				obj.eyeUsed = -1;
-				eyeUsed = obj.eyeUsed;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief 
+		%> @brief get a sample from the tracker, if dummymode=true then use
+		%> the mouse as an eye signal
 		%>
 		% ===================================================================
 		function evt = getSample(obj)
@@ -364,8 +315,76 @@ classdef eyelinkManager < optickaCore
 		
 		end
 		
+				
 		% ===================================================================
-		%> @brief 
+		%> @brief isFixated tests for fixation and updates the fixLength time
+		%>
+		% ===================================================================
+		function fixated = isFixated(obj)
+			fixated = false;
+			obj.fixLength = 0;
+			if obj.isConnected && ~isempty(obj.currentSample)
+				r = (obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2;
+				if r < (obj.fixationRadius);
+					if obj.fixStartTime == 0
+						obj.fixStartTime = obj.currentSample.time;
+					end
+					obj.fixLength = (obj.currentSample.time - obj.fixStartTime) / 1000;
+					fixated = true;
+				else
+					obj.fixStartTime = 0;
+				end
+			end
+		end
+			
+		% ===================================================================
+		%> @brief testFixation returns input yes or no strings based on
+		%> fixation state, useful for using via stateMachine
+		%>
+		% ===================================================================
+		function out = testFixation(obj, yesString, noString)
+			if obj.isFixated
+				out = yesString;
+			else
+				out = noString;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Checks if we've maintained fixation for correct time, if
+		%> true return yesString, if not return noString. This allows an
+		%> external code to quickly select a string based on this.
+		%>
+		% ===================================================================
+		function out = testFixationTime(obj, yesString, noString)
+			if obj.isFixated && (obj.fixLength > obj.fixationTime)
+				obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TEST');
+				out = yesString;
+			else
+				out = noString;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief checks which eye is available, force left eye if
+		%> binocular is enabled
+		%>
+		% ===================================================================
+		function eyeUsed = checkEye(obj)
+			if obj.isConnected
+				obj.eyeUsed = Eyelink('EyeAvailable'); % get eye that's tracked
+				if obj.eyeUsed == obj.defaults.BINOCULAR; % if both eyes are tracked
+					obj.eyeUsed = obj.defaults.LEFT_EYE; % use left eye
+				end
+				eyeUsed = obj.eyeUsed;
+			else
+				obj.eyeUsed = -1;
+				eyeUsed = obj.eyeUsed;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief draw the current eye position on the PTB display
 		%>
 		% ===================================================================
 		function drawPosition(obj)
@@ -374,17 +393,18 @@ classdef eyelinkManager < optickaCore
 				y = obj.toPixels(obj.y,'y');
 				if obj.isFixated
 					Screen('DrawDots', obj.screen.win, [x y], 4, [1 1 1 1], [], 1);
+					if obj.fixLength > obj.fixationTime
+						Screen('DrawText', obj.screen.win, 'FIX', x, y);
+					end	
 				else
 					Screen('DrawDots', obj.screen.win, [x y], 4, [1 0.5 1 1], [], 1);
-				end
-				if obj.fixLength > obj.fixationTime
-					Screen('DrawText', obj.screen.win, 'FIX', x, y);
-				end		
+				end	
 			end
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief displays status message on tracker, only sets it if
+		%> message is not the previous message, so loop safe.
 		%>
 		% ===================================================================
 		function statusMessage(obj,message)
@@ -395,7 +415,8 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief close the eyelink and cleanup, send EDF file if recording
+		%> is enabled
 		%>
 		% ===================================================================
 		function close(obj)
@@ -432,7 +453,58 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief draw the stimuli boxes on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawStimuli(obj)
+			if obj.isConnected && currentMode(obj) == 1
+				
+			end
+		end
+		
+		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawFixation(obj)
+			if obj.isConnected && currentMode(obj) == 1
+				
+				Eyelink('Command','clear_screen 0');
+				Eyelink('Command', 'draw_box %d %d %d %d 15', 10, 10, 100, 100);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief check what mode the eyelink is in
+		%>
+		% ===================================================================
+		function mode = currentMode(obj)
+			if obj.isConnected
+				mode = Eyelink('CurrentMode');
+			else
+				mode = -1;
+			end
+		end
+		
+		
+		% ===================================================================
+		%> @brief automagically turn pixels to degrees
+		%>
+		% ===================================================================
+		function set.x(obj,in)
+			obj.x = toDegrees(obj,in,'x');
+		end
+		
+		% ===================================================================
+		%> @brief automagically turn pixels to degrees
+		%>
+		% ===================================================================
+		function set.y(obj,in)
+			obj.y = toDegrees(obj,in,'y');
+		end
+		
+		% ===================================================================
+		%> @brief runs a demo of the eyelink, tests this class
 		%>
 		% ===================================================================
 		function runDemo(obj)
@@ -442,14 +514,14 @@ classdef eyelinkManager < optickaCore
 				o = dotsStimulus();
 				%s.windowed = [800 600];
 				s.screen = 1;
-				open(s);
-				setup(o,s);
+				open(s); %open out screen
+				setup(o,s); %setup our stimulus with open screen
 				
 				ListenChar(2); 
-				initialise(obj,s);
-				setup(obj);
+				initialise(obj,s); %initialise eyelink with our screen
+				setup(obj); %setup eyelink
 			
-				obj.statusMessage('DEMO Running');
+				obj.statusMessage('DEMO Running'); %
 				Eyelink('Command', 'set_idle_mode');
 				obj.trackerDrawFixation()
 				
@@ -512,60 +584,6 @@ classdef eyelinkManager < optickaCore
 				rethrow(ME);
 			end
 			
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function trackerDrawStimuli(obj)
-			if obj.isConnected 
-				Eyelink('Command', 'set_idle_mode');
-				Eyelink('Command','clear_screen 0');
-				Eyelink('Command','draw_cross 200 200 5');
-				Eyelink('Command', 'draw_box %d %d %d %d 15', 10, 10, 100, 100);
-				Eyelink('StartRecording');
-			end
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function trackerDrawFixation(obj)
-			if obj.isConnected && currentMode(obj) == 1
-				Eyelink('Command','clear_screen 0');
-				Eyelink('Command', 'draw_box %d %d %d %d 15', 10, 10, 100, 100);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function mode = currentMode(obj)
-			if obj.isConnected
-				mode = Eyelink('CurrentMode');
-			else
-				mode = -1;
-			end
-		end
-		
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function set.x(obj,in)
-			obj.x = toDegrees(obj,in,'x');
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		% ===================================================================
-		function set.y(obj,in)
-			obj.y = toDegrees(obj,in,'y');
 		end
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
