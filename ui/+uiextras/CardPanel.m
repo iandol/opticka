@@ -140,6 +140,8 @@ classdef CardPanel < uiextras.Container
                 
                 % And put the selected one on view
                 obj.repositionChild( C(obj.SelectedChild), contentPos );
+                % Hack: to fix problems with axes, give them a wiggle
+                iWiggleAxes(C(obj.SelectedChild));
             end
         end % showSelectedChild
         
@@ -171,3 +173,14 @@ classdef CardPanel < uiextras.Container
     end % protected methods
     
 end % classdef
+
+function iWiggleAxes(parent)
+% Helper to give any axes inside the specified parent a "wiggle" (i.e.
+% resize then resize back again).
+ax = findall(parent, 'type', 'axes');
+for ii=1:numel(ax)
+    propname = get(ax(ii),'ActivePositionProperty');
+    set(ax(ii),propname, get(ax(ii), propname)+[0 0 1 0]);
+    set(ax(ii),propname, get(ax(ii), propname)-[0 0 1 0]);
+end
+end

@@ -59,7 +59,7 @@ classdef Container < hgsetget
             %   may only be called by child classes.
             
             % Check that we're using the right graphics version
-            if uiextras.isHGUsingMATLABClasses()
+            if isHGUsingMATLABClasses()
                 error( 'GUILayout:WrongHGVersion', 'Trying to run using double-handle MATLAB graphics against the new graphics system. Please re-install.' );
             end
             
@@ -324,29 +324,27 @@ classdef Container < hgsetget
         
         function repositionChild( obj, child, position )
             %repositionChild  adjust the position and visibility of a child
+
+            % First determine whether to use "Position" or "OuterPosition"
+            if isprop( child, 'ActivePositionProperty' )
+                propname = get( child, 'ActivePositionProperty' );
+            else
+                propname = 'Position';
+            end
             if position(3)<=0 || position(4)<=0
                 % Not enough space, so move offscreen instead
-                set( child, 'Position', [-100 -100 10 10] );
+                position = [-100 -100 10 10];
+            end
+            % Now set the position in pixels, changing the units first if
+            % necessary
+            oldunits = get( child, 'Units' );
+            if strcmpi( oldunits, 'Pixels' )
+                set( child, propname, position );
             else
-                % There's space, so make sure visibility is on
-                % First determine whether to use "Position" or "OuterPosition"
-                if isprop( child, 'ActivePositionProperty' )
-                    propname = get( child, 'ActivePositionProperty' );
-                else
-                    propname = 'Position';
-                end
-                
-                % Now set the position in pixels, changing the units first if
-                % necessary
-                oldunits = get( child, 'Units' );
-                if strcmpi( oldunits, 'Pixels' )
-                    set( child, propname, position );
-                else
-                    % Other units, so switch to pixels before setting
-                    set( child, 'Units', 'pixels' );
-                    set( child, propname, position );
-                    set( child, 'Units', oldunits );
-                end
+                % Other units, so switch to pixels before setting
+                set( child, 'Units', 'pixels' );
+                set( child, propname, position );
+                set( child, 'Units', oldunits );
             end
         end % repositionChild
         
@@ -425,7 +423,7 @@ classdef Container < hgsetget
             %onChildAddedEvent  Callback that fires when a child is added to a container.
             
             % Find child in Children
-            child = eventData.Child;
+            child = double(eventData.Child);
             if ismember( child, obj.Children_ )
                 return % not *really* being added
             end

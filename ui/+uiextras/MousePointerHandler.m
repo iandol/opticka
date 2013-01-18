@@ -6,6 +6,10 @@ classdef MousePointerHandler < handle
     %   stored in the MousePointerHandler app-data of the figure so that
     %   functions can listen in for scroll-events.
     %
+    %   Note that when registering you can supply the name of a standard
+    %   MATLAB pointer image (e.g. 'timer', 'fleur' etc.) or can supply
+    %   a custom image. See the 'register' method for details.
+    %
     %   Examples:
     %   >> f = figure();
     %   >> u = uicontrol();
@@ -27,11 +31,13 @@ classdef MousePointerHandler < handle
         OldPointer
         Parent
         List
+        
     end % private properties
     
     methods
         
         function obj = MousePointerHandler(fig)
+            
             % Check that a mouse-pointer-handler is not already there
             if ~isa( fig, 'figure' )
                 fig = ancestor( fig, 'figure' );
@@ -43,11 +49,32 @@ classdef MousePointerHandler < handle
                 setappdata(fig,'MousePointerHandler',obj);
                 obj.Parent = fig;
             end
+            
         end % MousePointerHandler
         
-        function register( obj, widget, pointer )
+        function register( obj, widget, pointer, cdata, hotspot )
+            %REGISTER  Register a pointer to use when over the supplied widget
+            %
+            %   handler.register(widget, pointer) register using a built-in
+            %   MATLAB pointer.
+            %
+            %   handler.register(widget, name, cdata, hotspot) register a
+            %   custom image and hotspot.
+            if nargin > 3
+                pointerShapeCData = cdata;
+                if nargin > 4
+                    pointerShapeHotSpot = hotspot;
+                else
+                    % Default to [1 1]
+                    pointerShapeHotSpot = [1 1];
+                end
+            else
+                pointerShapeCData = [];
+                pointerShapeHotSpot = [];
+            end
+            
             % We need to be sure to remove the entry if it dies
-            if uiextras.isHGUsingMATLABClasses()
+            if isHGUsingMATLABClasses()
                 % New style
                 l = event.listener( widget, 'ObjectBeingDestroyed', @obj.onWidgetBeingDestroyedEvent );
             else
@@ -57,11 +84,24 @@ classdef MousePointerHandler < handle
             entry = struct( ...
                 'Widget', widget, ...
                 'Pointer', pointer, ...
+                'PointerShapeCData', pointerShapeCData, ...
+                'PointerShapeHotSpot', pointerShapeHotSpot, ...
                 'Listener', l );
+            
+            % Update obj.List
             if isempty(obj.List)
+                % Create obj.List from entry if empty
                 obj.List = entry;
             else
-                obj.List(end+1,1) = entry;
+                % Make sure we don't put the same widget in the list twice
+                matches = (widget == [obj.List.Widget]);
+                if any(matches)
+                    % Update obj.List if there is a match
+                    obj.List(matches,1) = entry;
+                else
+                    % Otherwise, append
+                    obj.List(end+1,1) = entry;
+                end
             end
         end % register
         
@@ -103,7 +143,8 @@ classdef MousePointerHandler < handle
                             && currpos(2) >= widgetpos(2) ...
                             && currpos(2) < widgetpos(2)+widgetpos(4)
                         % Inside
-                        obj.enterWidget( obj.List(ii).Widget, widgetpos, obj.List(ii).Pointer )
+                        obj.enterWidget( obj.List(ii).Widget, widgetpos, obj.List(ii).Pointer, ...
+                            obj.List(ii).PointerShapeCData, obj.List(ii).PointerShapeHotSpot)
                         break; % we don't need to carry on looking
                     end
                 catch err %#ok<NASGU>
@@ -122,20 +163,21 @@ classdef MousePointerHandler < handle
             end
         end % onWidgetBeingDestroyedEvent
         
-        function enterWidget( obj, widget, pixpos, pointer )
+        function enterWidget( obj, widget, pixpos, pointer, pointerShapeCData, pointerShapeHotSpot )
             % Mouse has moved onto a widget
             obj.CurrentObjectPosition = pixpos;
             obj.CurrentObject = widget;
             obj.OldPointer = get( obj.Parent, 'Pointer' );
             set( obj.Parent, 'Pointer', pointer );
-            %fprintf( 'Enter widget ''%s''\n', get( widget, 'Tag' ) );
+            % For custom pointers, supply the CData and HotSpot information
+            if strcmpi(pointer,'custom')
+                set( obj.Parent, 'PointerShapeCData', pointerShapeCData, ...
+                    'PointerShapeHotSpot', pointerShapeHotSpot);
+            end
         end % enterWidget
         
         function leaveWidget( obj )
             % Mouse has moved off a widget
-            %if ~isempty( obj.CurrentObject )
-            %    fprintf( 'Leave widget ''%s''\n', get( obj.CurrentObject, 'Tag' ) );
-            %end
             obj.CurrentObjectPosition = [];
             obj.CurrentObject = [];
             set( obj.Parent, 'Pointer', obj.OldPointer );

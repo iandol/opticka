@@ -72,7 +72,7 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (Hidden = true)
-		%> used to select single stimulus in training
+		%> used to select single stimulus in training run
 		stimList = []
 		thisStim = []
 	end
@@ -512,6 +512,174 @@ classdef runExperiment < optickaCore
 			
 		end
 		
+		% ===================================================================
+		%> @brief runTrainingSession runs a simple keyboard driven training
+		%> session
+		%>
+		%> @param obj required class object
+		% ===================================================================
+		function runFixationSession(obj)
+			if isempty(obj.screen) || isempty(obj.task)
+				obj.initialise;
+			end
+			if obj.screen.isPTB == false
+				errordlg('There is no working PTB available!')
+				error('There is no working PTB available!')
+			end
+			
+			if exist('topsDataLog','file')
+				topsDataLog.flushAllData();
+			end
+			%initialise runLog for this run
+			obj.trainingLog = timeLogger;
+			tL = obj.trainingLog; %short handle to log
+			
+			%a throwaway structure to hold various parameters
+			tS = struct();
+	
+			%make a short handle to the screenManager
+			s = obj.screen; 
+			obj.stimuli.screen = [];
+			
+			%-----------------------------------------------------------
+			try%======This is our main TRY CATCH experiment display loop
+			%-----------------------------------------------------------
+				%open the PTB screen
+				obj.screenVals = s.open(obj.debug,tL);
+				
+				obj.stimuli.screen = s;
+				obj.stimuli.verbose = obj.verbose;
+				setup(obj.stimuli); %run setup() for each stimulus
+				
+				% open our labJack if present
+				obj.lJack = labJack('name','fixation','verbose', obj.verbose);
+			
+				% set up the eyelink interface
+				if obj.useEyeLink
+					obj.eyeLink = eyelinkManager();
+					initialise(obj.eyeLink, s);
+					setup(obj.eyeLink);
+				end
+				
+				obj.stateMachine = stateMachine('name','fixationtraining','verbose',obj.verbose); %#ok<*CPROP>
+				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
+				if isempty(obj.stateInfoFile)
+					error('Please specify a fixation state info file...')
+				elseif ischar(obj.stateInfoFile)
+					cd(fileparts(obj.stateInfoFile))
+					obj.stateInfoFile = regexprep(obj.stateInfoFile,'\s+','\\ ');
+					run(obj.stateInfoFile)
+					obj.stateInfo = stateInfoTmp;
+				end
+				addStates(obj.stateMachine, obj.stateInfo);
+				
+				KbReleaseWait; %make sure keyboard keys are all released
+				ListenChar(2); %capture keystrokes
+				
+				tS.index = 1;
+				tS.maxindex = length(obj.task.nVar(1).values);
+				if obj.task.nVars > 1
+					tS.index2 = 1;
+					tS.maxindex2 = length(obj.task.nVar(2).values);
+				end
+				if ~isempty(obj.task.nVar(1))
+					name = [obj.task.nVar(1).name 'Out'];
+					value = obj.task.nVar(1).values(tS.index);
+					if isempty(obj.thisStim)
+						obj.stimuli{1}.(name) = value;
+						update(obj.stimuli{1});
+					else
+						obj.stimuli{obj.thisStim}.(name) = value;
+						update(obj.stimuli{obj.thisStim});
+					end
+				end
+				
+				tS.stopTraining = false;
+				tS.keyHold = 1; %a small loop to stop overeager key presses
+				tS.totalTicks = 1; % a tick counter
+				tS.pauseToggle = 1;
+				
+				if obj.useEyeLink; startRecording(obj.eyeLink); end
+				
+				tL.screenLog.beforeDisplay = GetSecs;
+				
+				%Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+				vbl = Screen('Flip', s.win);
+				tL.vbl(1) = vbl;
+				tL.startTime = vbl;
+				
+				start(obj.stateMachine); %ignite the stateMachine!
+				
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				% Our main display loop
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				while tS.stopTraining == false
+					
+					% run the stateMachine one tick forward
+					update(obj.stateMachine);
+					
+					% do we draw visual debug info too?
+					if s.visualDebug == true
+						s.drawGrid;
+					end
+					
+					% Tell PTB that no further drawing commands will follow before Screen('Flip')
+					Screen('DrawingFinished', s.win); 
+					
+					%check eye position
+					if obj.useEyeLink; getSample(obj.eyeLink); end
+					
+					%check keyboard for commands
+					tS = obj.checkFixationKeys(tS);
+					
+					%if the statemachine is in stimulus state, then animate
+					%the stimuli
+					if strcmpi(obj.stateMachine.currentName,'stimulus')
+						animate(obj.stimuli);
+					end
+					
+					%throw away any other keystrokes
+					FlushEvents('keyDown');
+					
+					%flip
+					tL.vbl(end+1) = Screen('Flip', s.win,tL.vbl(end) + s.screenVals.halfisi);
+					tS.totalTicks = tS.totalTicks + 1;
+					
+				end
+				obj.salutation(sprintf('Total ticks: %g -- stateMachine ticks: %g',tS.totalTicks,obj.stateMachine.totalTicks));
+				Priority(0);
+				ListenChar(0)
+				ShowCursor;
+				close(s);
+				close(obj.eyeLink);
+				obj.eyeLink = [];
+				if exist('topsDataLog','file')
+					topsDataLog.gui();
+				end
+				figure(obj.screenSettings.optickahandle)
+				obj.lJack.close;
+				obj.lJack=[];
+				clear tL s tS
+				
+			catch ME
+				Priority(0);
+				ListenChar(0);
+				if exist('topsDataLog','file')
+					topsDataLog.flushAllData();
+				end
+				ShowCursor;
+				close(s);
+				close(obj.eyeLink);
+				obj.lJack.close;
+				obj.lJack=[];
+				clear tL s tS
+				rethrow(ME)
+				
+			end
+			
+		end
 		% ===================================================================
 		%> @brief prepare the object for the local machine
 		%>
@@ -1035,6 +1203,151 @@ classdef runExperiment < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief manage keypresses during fixation loop
+		%>
+		%> @param args input structure
+		% ===================================================================
+		function tS = checkFixationKeys(obj,tS)
+			%frame increment to stop keys being too sensitive
+			fInc = 6;
+			%now lets check whether any keyboard commands are pressed...
+			[keyIsDown, ~, keyCode] = KbCheck(-1);
+			if keyIsDown == 1
+				rchar = KbName(keyCode);
+				if iscell(rchar);rchar=rchar{1};end
+				switch rchar
+					case 'q' %quit
+						tS.stopTraining = true;
+					case {'LeftArrow','left'} %previous variable 1 value
+						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
+							if tS.index > 1 && tS.maxindex >= tS.index
+								tS.index = tS.index - 1;
+								name = [obj.task.nVar(1).name 'Out'];
+								value = obj.task.nVar(1).values(tS.index);
+								if isempty(obj.thisStim)
+									obj.stimuli{1}.(name) = value;
+									update(obj.stimuli{1});
+								else
+									obj.stimuli{obj.thisStim}.(name) = value;
+									update(obj.stimuli{obj.thisStim});
+								end
+							else
+								
+							end
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case {'RightArrow','right'} %next variable 1 value
+						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
+							if tS.index < tS.maxindex 
+								tS.index = tS.index + 1;
+								name = [obj.task.nVar(1).name 'Out'];
+								value = obj.task.nVar(1).values(tS.index);
+								if isempty(obj.thisStim)
+									obj.stimuli{1}.(name) = value;
+									update(obj.stimuli{1});
+								else
+									obj.stimuli{obj.thisStim}.(name) = value;
+									update(obj.stimuli{obj.thisStim});
+								end
+								tS.keyHold = tS.totalTicks + fInc;
+							else
+								tS.index = tS.maxindex;
+							end
+						end
+					case ',<'
+						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
+							if obj.task.nVars > 1 && tS.index2 > 1 && tS.maxindex2 >= tS.index2
+								tS.index2 = tS.index2 - 1;
+								name = [obj.task.nVar(2).name 'Out'];
+								value = obj.task.nVar(2).values(tS.index2);
+								if isempty(obj.thisStim)
+									obj.stimuli{1}.(name) = value;
+									update(obj.stimuli{1});
+								else
+									obj.stimuli{obj.thisStim}.(name) = value;
+									update(obj.stimuli{obj.thisStim});
+								end
+								tS.keyHold = tS.totalTicks + fInc;
+							end
+						end
+					case '.>'
+						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
+							if obj.task.nVars > 1 && tS.index2 < tS.maxindex2
+								tS.index2 = tS.index2 + 1;
+								name = [obj.task.nVar(2).name 'Out'];
+								value = obj.task.nVar(2).values(tS.index2);
+								if isempty(obj.thisStim)
+									obj.stimuli{1}.(name) = value;
+									update(obj.stimuli{1});
+								else
+									obj.stimuli{obj.thisStim}.(name) = value;
+									update(obj.stimuli{obj.thisStim});
+								end
+								tS.keyHold = tS.totalTicks + fInc;
+							else
+								tS.index = tS.maxindex;
+							end
+						end
+					case '=+'
+						if tS.totalTicks > tS.keyHold
+							if ~isempty(obj.stimList)
+								if obj.thisStim < max(obj.stimList)
+									obj.thisStim = obj.thisStim + 1;
+									obj.stimuli.choice = obj.thisStim;
+								end
+							end
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case '-_'
+						if tS.totalTicks > tS.keyHold
+							if ~isempty(obj.stimList)
+								if obj.thisStim > 1
+									obj.thisStim = obj.thisStim - 1;
+									obj.stimuli.choice = obj.thisStim;
+								end
+							end
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case 'r'
+						if tS.totalTicks > tS.keyHold
+							newColour = rand(1,3);
+							obj.stimuli{1}.colourOut = newColour;
+							update(obj.stimuli{1});
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case {'UpArrow','up'} %give a reward at any time
+						timedTTL(obj.lJack,0,100);
+					case {'DownArrow','down'}
+						timedTTL(obj.lJack,0,1000);
+					case 'z' % mark trial as correct1
+						if strcmpi(obj.stateMachine.currentName,'stimulus')
+							forceTransition(obj.stateMachine, 'correct1');
+						end
+					case 'x' % mark trial as correct2
+						if strcmpi(obj.stateMachine.currentName,'stimulus')
+							forceTransition(obj.stateMachine, 'correct2');
+						end
+					case 'c' %mark trial incorrect
+						if strcmpi(obj.stateMachine.currentName,'stimulus')
+							forceTransition(obj.stateMachine, 'incorrect');
+						end
+					case 'p' %pause the display
+						if tS.totalTicks > tS.keyHold
+							if rem(tS.pauseToggle,2)==0
+								forceTransition(obj.stateMachine, 'pause');
+								tS.pauseToggle = tS.pauseToggle + 1;
+							else
+								forceTransition(obj.stateMachine, 'prestimulus');
+								tS.pauseToggle = tS.pauseToggle + 1;
+							end
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case '1!'
+						tS.stopTraining = true;
+				end
+			end
+		end
 		
 	end
 	

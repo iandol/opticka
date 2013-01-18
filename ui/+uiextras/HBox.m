@@ -55,7 +55,6 @@ classdef HBox < uiextras.Box
         
         function [widths,heights] = redraw( obj )
             %REDRAW  Redraw container contents.
-            
             % Get container width and height
             totalPosition = ceil( getpixelposition( obj.UIContainer ) );
             totalWidth = totalPosition(3);

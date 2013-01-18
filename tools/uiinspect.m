@@ -61,6 +61,7 @@ function hFig = uiinspect(obj, fig)
 %    Please send to Yair Altman (altmany at gmail dot com)
 %
 % Change log:
+%    2012-01-16: Fixes for R2012a
 %    2011-12-09: Fixed Matlab R2011b crash when inspecting COM object
 %    2011-06-14: Fixed problems with the Value field of the "Other properties" table for static fields
 %    2011-03-22: Fixed display of non-static Java class fields; fixed display of some cases of Java class names; minor fixes for Matlab class properties
@@ -94,7 +95,7 @@ function hFig = uiinspect(obj, fig)
 % referenced and attributed as such. The original author maintains the right to be solely associated with this work.
 
 % Programmed by Yair M. Altman: altmany(at)gmail.com
-% $Revision: 1.22 $  $Date: 2011/12/09 00:13:47 $
+% $Revision: 1.23 $  $Date: 2012/01/11 01:48:22 $
 
   try
       % Arg check
@@ -451,7 +452,11 @@ function [propsPane, inspectorTable] = getPropsPane(obj)
       objProps = updateObjTooltip(obj, classNameLabel);  %#ok unused
       propsPane = JPanel(BorderLayout);
       oldWarn = warning('off','MATLAB:hg:JavaSetHGProperty');
-      set(propsPane, 'UserData',classNameLabel);
+      try
+          set(propsPane, 'userdata',classNameLabel);
+      catch
+          setappdata(propsPane, 'userdata',classNameLabel);
+      end
       warning(oldWarn);
       propsPane.add(classNameLabel, BorderLayout.NORTH);
       % TODO: Maybe uncomment the following - in the meantime it's unused (java properties are un-groupable)
@@ -1051,7 +1056,11 @@ function [callbacksPanel, callbacksTable] = getCbsPane(obj, stripStdCbsFlag)
           % Otherwise, use a standard Swing JTable (keep the headers to enable resizing)
           callbacksTable = JTable(cbData,cbHeaders);
       end
-      set(callbacksTable, 'userdata',obj);
+      try
+          set(callbacksTable, 'userdata',obj);
+      catch
+          setappdata(callbacksTable, 'userdata',obj);
+      end
       if iscom(obj)
           cbToolTipText = 'Callbacks may be ''string'' or @funcHandle';
       else
@@ -1071,9 +1080,9 @@ function [callbacksPanel, callbacksTable] = getCbsPane(obj, stripStdCbsFlag)
       hModel = handle(callbacksTable.getModel, 'CallbackProperties');
       set(hModel, 'TableChangedCallback',@tbCallbacksChanged);
       try
-          set(callbacksTable.getModel,'UserData',obj);
+          set(callbacksTable.getModel,'userdata',obj);
       catch
-          setappdata(hModel,'UserData',obj);
+          setappdata(hModel,'userdata',obj);
       end
       try
           cbScrollPane = callbacksPane; %JScrollPane(callbacksPane);
@@ -2036,13 +2045,8 @@ function methodsTable = getMethodsTable(methodsObj, methodsPanel)
 
       % Set meta-data for the Extra checkbox callback
       methodsObj.tableObj = b;
-      set(hcbExtra, 'ActionPerformedCallback',@updateMethodsTable);
+      set(hcbExtra, 'ActionPerformedCallback',{@updateMethodsTable,methodsObj});
       set(cbExtra,  'tooltip','Also show qualifiers, interrupts & inheritance');
-      try
-          set(cbExtra, 'userdata',methodsObj);
-      catch
-          setappdata(hcbExtra,'userdata',methodsObj);
-      end
       
       % Return the scrollpane
       methodsTable = scroll;
@@ -2064,7 +2068,7 @@ function [othersPane, propsNum] = getChildrenPane(obj, inspectorTable, propsPane
       else
           try
               oldWarn = warning('off','MATLAB:hg:JavaSetHGProperty');
-              classNameLabel = get(propsPane, 'UserData');
+              classNameLabel = get(propsPane, 'userdata');
               othersLabel.setToolTipText(classNameLabel.getToolTipText);
           catch
               % never mind...
@@ -2131,9 +2135,9 @@ function [othersPane, propsNum] = getChildrenPane(obj, inspectorTable, propsPane
       hModel = handle(propsTable.getModel, 'CallbackProperties');
       set(hModel, 'TableChangedCallback',@tbPropChanged);
       try
-          set(propsTable.getModel, 'UserData',ud);
+          set(propsTable.getModel, 'userdata',ud);
       catch
-          setappdata(hModel,'UserData',ud);
+          setappdata(hModel,'userdata',ud);
       end
       scrollPane = JScrollPane(propsTable);
       scrollPane.setVerticalScrollBarPolicy(scrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -2143,25 +2147,19 @@ function [othersPane, propsNum] = getChildrenPane(obj, inspectorTable, propsPane
       % Preserve persistent info in the propsTable's userdata
       if ~isempty(cbMetaData)
           hcbMetaData = handle(cbMetaData,'CallbackProperties');
-          set(hcbMetaData, 'ActionPerformedCallback',@updatePropsTable);
+          set(hcbMetaData, 'ActionPerformedCallback',{@updatePropsTable,propsTable});
           set(cbMetaData,  'tooltip','Also show property meta-data (type, visibility, get/set availability, etc.)');
-          try
-              set(cbMetaData,'userdata',propsTable);
-          catch
-              setappdata(hcbMetaData,'userdata',propsTable);
-          end
       end
       if ~isempty(cbInspectable)
           hcbInspectable = handle(cbInspectable,'CallbackProperties');
-          set(hcbInspectable, 'ActionPerformedCallback',@updatePropsTable);
+          set(hcbInspectable, 'ActionPerformedCallback',{@updatePropsTable,propsTable});
           set(cbInspectable,  'tooltip','Also show inspectable properties (displayed in the table above)');
-          try
-              set(cbInspectable, 'userdata',propsTable);
-          catch
-              setappdata(hcbInspectable,'userdata',propsTable);
-          end
       end
-      set(propsTable, 'userdata',ud);
+      try
+          set(propsTable, 'userdata',ud);
+      catch
+          setappdata(propsTable, 'userdata',ud);
+      end
 %end  % getChildrenPane
 
 %% "dbstop if error" causes inspect.m to croak due to a bug - so workaround by temporarily disabling this dbstop
@@ -2210,7 +2208,7 @@ function cbHideStdCbs_Callback(src, evd, varargin)
         [cbData, cbHeaders] = getCbsData(obj, evd.getSource.isSelected);
         callbacksTableModel = javax.swing.table.DefaultTableModel(cbData,cbHeaders);
         set(handle(callbacksTableModel,'CallbackProperties'), 'TableChangedCallback',@tbCallbacksChanged);
-        set(callbacksTableModel, 'UserData',handle(obj,'CallbackProperties'));
+        set(callbacksTableModel, 'userdata',handle(obj,'CallbackProperties'));
         callbacksTable.setModel(callbacksTableModel)
         try
             % Try to auto-resize the columns
@@ -2227,13 +2225,15 @@ function cbHideStdCbs_Callback(src, evd, varargin)
 %end  % cbHideStdCbs_Callback
 
 %% Update the methods table following a checkbox modification
-function updateMethodsTable(src, evd, varargin)  %#ok partially unused
+function updateMethodsTable(src, evd, methodsObj, varargin)  %#ok partially unused
     try
         % Update callbacks table data according to the modified checkbox state
-        try
-            methodsObj = get(src,'userdata');
-        catch
-            methodsObj = getappdata(src,'userdata');
+        if nargin < 3
+            try
+                methodsObj = get(src,'userdata');
+            catch
+                methodsObj = getappdata(src,'userdata');
+            end
         end
         data = methodsObj.methods(methodsObj.sortIdx,:);
         headers = methodsObj.headers;
@@ -2269,15 +2269,21 @@ function updateMethodsTable(src, evd, varargin)  %#ok partially unused
 %end  % updateMethodsTable
 
 %% Update the properties table following a checkbox modification
-function updatePropsTable(src, evd, varargin)  %#ok partially unused
+function updatePropsTable(src, evd, propsTable, varargin)  %#ok partially unused
     try
         % Update callbacks table data according to the modified checkbox state
-        try
-            propsTable = get(src,'userdata');
-        catch
-            propsTable = getappdata(src,'userdata');
+        if nargin < 3
+            try
+                propsTable = get(src,'userdata');
+            catch
+                propsTable = getappdata(src,'userdata');
+            end
         end
-        ud = get(propsTable, 'userdata');
+        try
+            ud = get(propsTable, 'userdata');
+        catch
+            ud = getappdata(propsTable, 'userdata');
+        end
         obj = ud.obj;
         inspectorTable = ud.inspectorTable;
         oldData = {};
@@ -2308,9 +2314,9 @@ function updatePropsTable(src, evd, varargin)  %#ok partially unused
             hpropsTableModel = handle(propsTableModel,'CallbackProperties');
             set(hpropsTableModel, 'TableChangedCallback',@tbPropChanged);
             try
-                set(propsTableModel, 'UserData',ud);
+                set(propsTableModel, 'userdata',ud);
             catch
-                setappdata(hpropsTableModel, 'UserData',ud);
+                setappdata(hpropsTableModel, 'userdata',ud);
             end
             propsTable.setModel(propsTableModel)
             try
@@ -2372,7 +2378,7 @@ function tbCallbacksChanged(src, evd)
             try
                 object = get(src,'userdata');
             catch
-                object = getappdata(src,'UserData');
+                object = getappdata(src,'userdata');
             end
             cbName = strtrim(table.getValueAt(modifiedRowIdx,0));
             try
