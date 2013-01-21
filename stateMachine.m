@@ -262,6 +262,8 @@ classdef stateMachine < optickaCore
 				tname = '';
 				if isa(obj.currentTransitionFcn,'function_handle') %function handle, lets feval it
 					tname = feval(obj.currentTransitionFcn);
+					[tname, tnamer] = strtok(tname,' ');
+					fprintf('FEVAL IS: %s %s\n', tname, tnamer);
 				end
 				if ischar(tname) && isStateName(obj,tname) % a valid name was returned, time to transition
 					obj.transitionToStateWithName(tname);

@@ -346,6 +346,8 @@ classdef opticka < optickaCore
 				set(obj.h.OKOptickaVersion,'String',olds)
 			end
 			
+			obj.r.screenSettings.optickahandle = obj.h.uihandle;
+			
 			obj.r.screen.screen = obj.gv(obj.h.OKSelectScreen)-1;
 			
 			obj.r.screen.distance = obj.gd(obj.h.OKMonitorDistance);

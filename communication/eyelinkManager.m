@@ -6,26 +6,28 @@
 classdef eyelinkManager < optickaCore
 	
 	properties
-		%the PTB screen to work on, passed in during initialise
+		%> the PTB screen to work on, passed in during initialise
 		screen = []
-		% eyetracker defaults structure
+		%> eyetracker defaults structure
 		defaults = struct()
-		% start eyetracker in dummy mode?
+		%> start eyetracker in dummy mode?
 		isDummy = false
-		% do we record and retrieve eyetracker EDF file?
+		%> do we record and retrieve eyetracker EDF file?
 		recordData = false;
-		% name of eyetracker EDF file
+		%> name of eyetracker EDF file
 		saveFile = 'myData.edf'
-		% do we log messages to the command window?
+		%> do we log messages to the command window?
 		verbose = true
-		% fixation X position in degrees
+		%> fixation X position in degrees
 		fixationX = 0
-		% fixation Y position in degrees
+		%> fixation Y position in degrees
 		fixationY = 0
-		% fixation radius in degrees
+		%> fixation radius in degrees
 		fixationRadius = 1
-		% fixation time in seconds
+		%> fixation time in seconds
 		fixationTime = 1
+		%> time to initiate fixation in seconds
+		fixationInitTime = 0.25
 		%> tracker update speed (Hz), should be 250 500 1000 2000
 		sampleRate = 250
 		%> calibration style
@@ -70,10 +72,14 @@ classdef eyelinkManager < optickaCore
 		fixStartTime = 0
 		%how long have we been fixated?
 		fixLength = 0
+		%> Initiate fixation time
+		fixInitStartTime = 0
+		%> Initiate fixation length
+		fixInitLength = 0
 		%> previous message sent to eyelink
 		previousMessage = ''
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'calibrationStyle|enableCallbacks|callback|name|verbose|isDummy|remoteCalibration'
+		allowedProperties = 'fixationX|fixationY|fixationRadius|fixationTime|fixationInitTime|sampleRate|calibrationStyle|enableCallbacks|callback|name|verbose|isDummy|remoteCalibration'
 	end
 	
 	methods
@@ -196,6 +202,8 @@ classdef eyelinkManager < optickaCore
 		function resetFixation(obj)
 			obj.fixStartTime = 0;
 			obj.fixLength = 0;
+			obj.fixInitStartTime = 0;
+			obj.fixInitLength = 0;
 		end
 				
 		% ===================================================================
@@ -319,20 +327,42 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		%> @brief isFixated tests for fixation and updates the fixLength time
 		%>
+		%> @return fixated boolean if we are fixated
+		%> @return fixtime boolean if we're fixed for fixation time
+		%> @return searching boolean for if we are still searching for fixation
 		% ===================================================================
-		function fixated = isFixated(obj)
+		function [fixated, fixtime, searching] = isFixated(obj)
 			fixated = false;
-			obj.fixLength = 0;
+			fixtime = false;
+			searching = true;
 			if obj.isConnected && ~isempty(obj.currentSample)
 				r = (obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2;
 				if r < (obj.fixationRadius);
+					obj.fixInitStartTime = 0;
+					obj.fixInitLength = 0;
+					searching = false;
 					if obj.fixStartTime == 0
 						obj.fixStartTime = obj.currentSample.time;
 					end
 					obj.fixLength = (obj.currentSample.time - obj.fixStartTime) / 1000;
+					if obj.fixLength > obj.fixationTime
+						fixtime = true;
+					end
 					fixated = true;
+					return
 				else
 					obj.fixStartTime = 0;
+					obj.fixLength = 0;
+					if obj.fixInitStartTime == 0
+						obj.fixInitStartTime = obj.currentSample.time;
+					end
+					obj.fixInitLength = GetSecs - obj.fixInitStartTime;
+					if obj.fixInitLength <= obj.fixationInitTime
+						searching = true;
+					else
+						searching = false;
+					end
+					return
 				end
 			end
 		end
@@ -342,7 +372,7 @@ classdef eyelinkManager < optickaCore
 		%> fixation state, useful for using via stateMachine
 		%>
 		% ===================================================================
-		function out = testFixation(obj, yesString, noString)
+		function out = testIsFixated(obj, yesString, noString)
 			if obj.isFixated
 				out = yesString;
 			else
@@ -356,12 +386,36 @@ classdef eyelinkManager < optickaCore
 		%> external code to quickly select a string based on this.
 		%>
 		% ===================================================================
-		function out = testFixationTime(obj, yesString, noString)
-			if obj.isFixated && (obj.fixLength > obj.fixationTime)
+		function out = testIsFixatedTime(obj, yesString, noString)
+			[fix,fixtime] = obj.isFixated();
+			if fix && fixtime
 				obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TEST');
 				out = yesString;
 			else
 				out = noString;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Checks if we're looking for fixation a set time
+		%>
+		% ===================================================================
+		function out = testSearchHoldFixation(obj, yesString, noString)
+			[fix, fixtime, searching] = obj.isFixated();
+			if searching
+				out = ['searching ' num2str(obj.fixInitLength)];
+				return
+			elseif fix
+				if fixtime
+					out = [yesString ' ' num2str(obj.fixLength)];
+					return
+				else
+					out = ['fixing ' num2str(obj.fixLength)];
+					return
+				end
+			else
+				out = noString;
+				return
 			end
 		end
 		

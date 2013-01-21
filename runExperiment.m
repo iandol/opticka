@@ -59,6 +59,8 @@ classdef runExperiment < optickaCore
 		runLog
 		%> training log
 		trainingLog
+		%> behavioural log
+		behaviouralRecord
 		%> info on the current run
 		currentInfo
 		%> previous info populated during load of a saved object
@@ -104,7 +106,6 @@ classdef runExperiment < optickaCore
 		function obj = runExperiment(varargin)
 			if nargin == 0; varargin.name = 'runExperiment'; end
 			obj=obj@optickaCore(varargin); %superclass constructor
-			obj.paths.whereami = fileparts(which(mfilename));
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
 		end
 		
@@ -513,7 +514,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief runTrainingSession runs a simple keyboard driven training
+		%> @brief runFixationSession runs a simple keyboard driven training
 		%> session
 		%>
 		%> @param obj required class object
@@ -533,6 +534,9 @@ classdef runExperiment < optickaCore
 			%initialise runLog for this run
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog; %short handle to log
+			
+			obj.behaviouralRecord = behaviouralRecord();
+			bR = obj.behaviouralRecord;
 			
 			%a throwaway structure to hold various parameters
 			tS = struct();
@@ -554,11 +558,10 @@ classdef runExperiment < optickaCore
 				% open our labJack if present
 				obj.lJack = labJack('name','fixation','verbose', obj.verbose);
 			
-				% set up the eyelink interface
+				% open the eyelink interface
+				obj.useEyeLink = true;
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
-					initialise(obj.eyeLink, s);
-					setup(obj.eyeLink);
 				end
 				
 				obj.stateMachine = stateMachine('name','fixationtraining','verbose',obj.verbose); %#ok<*CPROP>
@@ -573,24 +576,32 @@ classdef runExperiment < optickaCore
 				end
 				addStates(obj.stateMachine, obj.stateInfo);
 				
+				%initialise eyelink
+				if obj.useEyeLink
+					initialise(obj.eyeLink, s);
+					setup(obj.eyeLink);
+				end
+				
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
 				
 				tS.index = 1;
-				tS.maxindex = length(obj.task.nVar(1).values);
-				if obj.task.nVars > 1
-					tS.index2 = 1;
-					tS.maxindex2 = length(obj.task.nVar(2).values);
-				end
-				if ~isempty(obj.task.nVar(1))
-					name = [obj.task.nVar(1).name 'Out'];
-					value = obj.task.nVar(1).values(tS.index);
-					if isempty(obj.thisStim)
-						obj.stimuli{1}.(name) = value;
-						update(obj.stimuli{1});
-					else
-						obj.stimuli{obj.thisStim}.(name) = value;
-						update(obj.stimuli{obj.thisStim});
+				if obj.task.nVars > 0
+					tS.maxindex = length(obj.task.nVar(1).values);
+					if obj.task.nVars > 1
+						tS.index2 = 1;
+						tS.maxindex2 = length(obj.task.nVar(2).values);
+					end
+					if ~isempty(obj.task.nVar(1))
+						name = [obj.task.nVar(1).name 'Out'];
+						value = obj.task.nVar(1).values(tS.index);
+						if isempty(obj.thisStim)
+							obj.stimuli{1}.(name) = value;
+							update(obj.stimuli{1});
+						else
+							obj.stimuli{obj.thisStim}.(name) = value;
+							update(obj.stimuli{obj.thisStim});
+						end
 					end
 				end
 				
@@ -607,6 +618,9 @@ classdef runExperiment < optickaCore
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
+				
+				%check eye position
+				if obj.useEyeLink; getSample(obj.eyeLink); end
 				
 				start(obj.stateMachine); %ignite the stateMachine!
 				
@@ -1220,102 +1234,19 @@ classdef runExperiment < optickaCore
 					case 'q' %quit
 						tS.stopTraining = true;
 					case {'LeftArrow','left'} %previous variable 1 value
-						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
-							if tS.index > 1 && tS.maxindex >= tS.index
-								tS.index = tS.index - 1;
-								name = [obj.task.nVar(1).name 'Out'];
-								value = obj.task.nVar(1).values(tS.index);
-								if isempty(obj.thisStim)
-									obj.stimuli{1}.(name) = value;
-									update(obj.stimuli{1});
-								else
-									obj.stimuli{obj.thisStim}.(name) = value;
-									update(obj.stimuli{obj.thisStim});
-								end
-							else
-								
-							end
-							tS.keyHold = tS.totalTicks + fInc;
-						end
+						
 					case {'RightArrow','right'} %next variable 1 value
-						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
-							if tS.index < tS.maxindex 
-								tS.index = tS.index + 1;
-								name = [obj.task.nVar(1).name 'Out'];
-								value = obj.task.nVar(1).values(tS.index);
-								if isempty(obj.thisStim)
-									obj.stimuli{1}.(name) = value;
-									update(obj.stimuli{1});
-								else
-									obj.stimuli{obj.thisStim}.(name) = value;
-									update(obj.stimuli{obj.thisStim});
-								end
-								tS.keyHold = tS.totalTicks + fInc;
-							else
-								tS.index = tS.maxindex;
-							end
-						end
+						
 					case ',<'
-						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
-							if obj.task.nVars > 1 && tS.index2 > 1 && tS.maxindex2 >= tS.index2
-								tS.index2 = tS.index2 - 1;
-								name = [obj.task.nVar(2).name 'Out'];
-								value = obj.task.nVar(2).values(tS.index2);
-								if isempty(obj.thisStim)
-									obj.stimuli{1}.(name) = value;
-									update(obj.stimuli{1});
-								else
-									obj.stimuli{obj.thisStim}.(name) = value;
-									update(obj.stimuli{obj.thisStim});
-								end
-								tS.keyHold = tS.totalTicks + fInc;
-							end
-						end
+						
 					case '.>'
-						if strcmpi(obj.stateMachine.currentName,'stimulus') && tS.totalTicks > tS.keyHold
-							if obj.task.nVars > 1 && tS.index2 < tS.maxindex2
-								tS.index2 = tS.index2 + 1;
-								name = [obj.task.nVar(2).name 'Out'];
-								value = obj.task.nVar(2).values(tS.index2);
-								if isempty(obj.thisStim)
-									obj.stimuli{1}.(name) = value;
-									update(obj.stimuli{1});
-								else
-									obj.stimuli{obj.thisStim}.(name) = value;
-									update(obj.stimuli{obj.thisStim});
-								end
-								tS.keyHold = tS.totalTicks + fInc;
-							else
-								tS.index = tS.maxindex;
-							end
-						end
+						
 					case '=+'
-						if tS.totalTicks > tS.keyHold
-							if ~isempty(obj.stimList)
-								if obj.thisStim < max(obj.stimList)
-									obj.thisStim = obj.thisStim + 1;
-									obj.stimuli.choice = obj.thisStim;
-								end
-							end
-							tS.keyHold = tS.totalTicks + fInc;
-						end
+						
 					case '-_'
-						if tS.totalTicks > tS.keyHold
-							if ~isempty(obj.stimList)
-								if obj.thisStim > 1
-									obj.thisStim = obj.thisStim - 1;
-									obj.stimuli.choice = obj.thisStim;
-								end
-							end
-							tS.keyHold = tS.totalTicks + fInc;
-						end
+						
 					case 'r'
-						if tS.totalTicks > tS.keyHold
-							newColour = rand(1,3);
-							obj.stimuli{1}.colourOut = newColour;
-							update(obj.stimuli{1});
-							tS.keyHold = tS.totalTicks + fInc;
-						end
+						
 					case {'UpArrow','up'} %give a reward at any time
 						timedTTL(obj.lJack,0,100);
 					case {'DownArrow','down'}
@@ -1344,7 +1275,7 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '1!'
-						tS.stopTraining = true;
+						
 				end
 			end
 		end

@@ -48,6 +48,8 @@ classdef optickaCore < handle
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
 		allowedProperties = 'name'
+		%> cached full name
+		fullName_ = ''
 	end
 	
 	%=======================================================================
@@ -74,6 +76,8 @@ classdef optickaCore < handle
 			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
 			obj.paths.whatami = obj.className;
 			obj.paths.root = fileparts(which(mfilename));
+			obj.paths.whereami = obj.paths.root;
+			obj.fullName_ = obj.fullName; %cache fullName
 		end
 		
 		% ===================================================================
@@ -317,9 +321,9 @@ classdef optickaCore < handle
 					in = 'undefined';
 				end
 				if exist('message','var')
-					fprintf(['---> ' obj.fullName ': ' message ' | ' in '\n']);
+					fprintf(['---> ' obj.fullName_ ': ' message ' | ' in '\n']);
 				else
-					fprintf(['---> ' obj.fullName ': ' in '\n']);
+					fprintf(['---> ' obj.fullName_ ': ' in '\n']);
 				end
 			end
 		end

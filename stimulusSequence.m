@@ -1,3 +1,10 @@
+% ========================================================================
+%> @brief stimulusSequence a method of constanst variable manager
+%> 
+%> This class takes a series of visual variables (contrast, angle etc) with 
+%> a set of values and randomly interleves them into a pseudorandom variable 
+%> list each of which has a unique index number
+% ========================================================================
 classdef stimulusSequence < optickaCore & dynamicprops
 	properties
 		%> whether to randomise (true) or run sequentially (false)
@@ -104,7 +111,6 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			if nargin > 0
 				obj.parseArgs(varargin,obj.allowedProperties)
 			end
-			obj.mversion = str2double(regexp(version,'(?<ver>^\d+\.\d+)','match','once'));
 			obj.initialiseRandom();
 			obj.isLoading = false;
 		end
@@ -311,9 +317,9 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief Dependent property nRuns get method
+		%> @brief Dependent property nVars get method
 		%>
-		%> Dependent property nruns get method
+		%> Dependent property nVars get method
 		% ===================================================================
 		function nVars = get.nVars(obj)
 			nVars = 0;
