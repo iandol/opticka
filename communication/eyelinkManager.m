@@ -64,18 +64,22 @@ classdef eyelinkManager < optickaCore
 		currentEvent = []
 		%version of eyelink
 		version = ''
-	end
-	
-	properties (SetAccess = private, GetAccess = private)
-		error = []
-		%the first timestamp fixation was true
-		fixStartTime = 0
+		%> Initiate fixation length
+		fixInitLength = 0
 		%how long have we been fixated?
 		fixLength = 0
 		%> Initiate fixation time
 		fixInitStartTime = 0
-		%> Initiate fixation length
-		fixInitLength = 0
+		%the first timestamp fixation was true
+		fixStartTime = 0
+		%> total time searching and holding fixation
+		fixInitTotal = 0
+		%> total time searching and holding fixation
+		fixTotal = 0
+	end
+	
+	properties (SetAccess = private, GetAccess = private)
+		error = []
 		%> previous message sent to eyelink
 		previousMessage = ''
 		%> allowed properties passed to object upon construction
@@ -204,6 +208,7 @@ classdef eyelinkManager < optickaCore
 			obj.fixLength = 0;
 			obj.fixInitStartTime = 0;
 			obj.fixInitLength = 0;
+			obj.fixInitTotal = 0;
 		end
 				
 		% ===================================================================
@@ -336,11 +341,11 @@ classdef eyelinkManager < optickaCore
 			fixtime = false;
 			searching = true;
 			if obj.isConnected && ~isempty(obj.currentSample)
+				if obj.fixInitTotal == 0
+					obj.fixInitTotal = obj.currentSample.time;
+				end
 				r = (obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2;
 				if r < (obj.fixationRadius);
-					obj.fixInitStartTime = 0;
-					obj.fixInitLength = 0;
-					searching = false;
 					if obj.fixStartTime == 0
 						obj.fixStartTime = obj.currentSample.time;
 					end
@@ -348,20 +353,25 @@ classdef eyelinkManager < optickaCore
 					if obj.fixLength > obj.fixationTime
 						fixtime = true;
 					end
+					obj.fixInitStartTime = 0;
+					obj.fixInitLength = 0;
+					searching = false;
 					fixated = true;
+					obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
 					return
 				else
-					obj.fixStartTime = 0;
-					obj.fixLength = 0;
 					if obj.fixInitStartTime == 0
 						obj.fixInitStartTime = obj.currentSample.time;
 					end
-					obj.fixInitLength = GetSecs - obj.fixInitStartTime;
+					obj.fixInitLength = (obj.currentSample.time - obj.fixInitStartTime) / 1000;
 					if obj.fixInitLength <= obj.fixationInitTime
 						searching = true;
 					else
 						searching = false;
 					end
+					obj.fixStartTime = 0;
+					obj.fixLength = 0;
+					obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
 					return
 				end
 			end
@@ -565,6 +575,7 @@ classdef eyelinkManager < optickaCore
 			stopkey=KbName('ESCAPE');
 			try
 				s = screenManager();
+				s.backgroundColour = [1 1 1 0];
 				o = dotsStimulus();
 				%s.windowed = [800 600];
 				s.screen = 1;

@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 06-Jan-2013 20:00:10
+% Last Modified by GUIDE v2.5 21-Jan-2013 11:31:23
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1221,21 +1221,6 @@ if isappdata(handles.output,'o')
 	end
 end
 
-
-% --------------------------------------------------------------------
-function OKStartTrainingSession_ClickedCallback(hObject, eventdata, handles)
-% hObject    handle to OKStartTrainingSession (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	if isa(o.r,'runExperiment')
-		o.r.screenSettings.optickahandle = handles.output;
-		o.r.runTrainingSession();
-	end
-end
-
-
 % --- Executes on button press in OKOmniplexEnable.
 function OKOmniplexEnable_Callback(hObject, eventdata, handles)
 % hObject    handle to OKOmniplexEnable (see GCBO)
@@ -1512,3 +1497,30 @@ function OKRunExperiment_Callback(hObject, eventdata, handles)
 % hObject    handle to OKRunExperiment (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+% --------------------------------------------------------------------
+function OKStartTrainingSession_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to OKStartTrainingSession (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	if isa(o.r,'runExperiment')
+		o.r.screenSettings.optickahandle = handles.output;
+		o.r.runTrainingSession();
+	end
+end
+
+
+% --------------------------------------------------------------------
+function OKStartFixationSession_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to OKStartFixationSession (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	if isa(o.r,'runExperiment')
+		o.r.screenSettings.optickahandle = handles.output;
+		o.r.runFixationSession();
+	end
+end

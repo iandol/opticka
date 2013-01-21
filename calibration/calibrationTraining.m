@@ -20,7 +20,7 @@ classdef calibrationTraining < optickaCore
 		
 		function run(obj)
 			if isa(obj.eM,'eyelinkManager')
-				obj.eM.calibrationStyle = 'HV9';
+				obj.eM.calibrationStyle = 'HV5';
 				obj.eM.modify.calibrationtargetcolour = [1 1 0];
 				obj.eM.modify.calibrationtargetsize = 5;
 				obj.eM.modify.calibrationtargetwidth = 3;

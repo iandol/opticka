@@ -538,8 +538,9 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawGreenSpot(obj,size)
 			if ~exist('size','var')
-				size = 10;
+				size = 1;
 			end
+			size = size * obj.ppd;
 			Screen('gluDisk',obj.win,[0 1 0 1],obj.xCenter,obj.yCenter,size);
 		end
 		
@@ -553,6 +554,7 @@ classdef screenManager < optickaCore
 			if ~exist('size','var')
 				size = 10;
 			end
+			size = size * obj.ppd;
 			Screen('gluDisk',obj.win,[1 0 0 1],obj.xCenter,obj.yCenter,size);
 		end
 		

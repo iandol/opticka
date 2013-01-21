@@ -159,6 +159,7 @@ switch eyecmd
 			clearScreen=1;
 			needsupdate = 1;
 			calxy=[];
+			lj
 			if isa(lj,'labJack') && lj.isOpen == true
 				lj.timedTTL(0,400);
 			end

@@ -50,7 +50,7 @@ classdef stateMachine < optickaCore
 		finalTick
 		%> current state
 		currentState
-		%> current state namer
+		%> current state name
 		currentName
 		%> current state index
 		currentIndex
@@ -76,6 +76,8 @@ classdef stateMachine < optickaCore
 		stateListIndex
 		%> true or false, whether this object is currently busy running
 		isRunning = false
+		%> previous state information
+		previous = [];
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
@@ -263,7 +265,6 @@ classdef stateMachine < optickaCore
 				if isa(obj.currentTransitionFcn,'function_handle') %function handle, lets feval it
 					tname = feval(obj.currentTransitionFcn);
 					[tname, tnamer] = strtok(tname,' ');
-					fprintf('FEVAL IS: %s %s\n', tname, tnamer);
 				end
 				if ischar(tname) && isStateName(obj,tname) % a valid name was returned, time to transition
 					obj.transitionToStateWithName(tname);
@@ -496,6 +497,7 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function exitCurrentState(obj)
 			thisState = obj.stateList(obj.currentIndex);
+			storeCurrentStateInfo(obj);
 			obj.currentEntryFcn = {};
 			obj.currentEntryTime = [];
 			obj.nextTickOut = [];
@@ -517,6 +519,19 @@ classdef stateMachine < optickaCore
 			end
 			
 			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs | ' num2str(obj.currentTick) '/' num2str(obj.totalTicks) 'ticks']);
+		end
+		
+		% ===================================================================
+		%> @brief clear current properties but leave currentIndex so it's checkable
+		%> @param
+		%> @return
+		% ===================================================================
+		function storeCurrentStateInfo(obj)
+			obj.previous.name = obj.currentName;
+			obj.previous.state = obj.currentState;
+			obj.previous.tick = obj.currentTick;
+			obj.previous.time = obj.currentTime;
+			obj.previous.entryTime = obj.currentEntryTime;
 		end
 		
 		% ===================================================================

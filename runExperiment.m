@@ -535,7 +535,7 @@ classdef runExperiment < optickaCore
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog; %short handle to log
 			
-			obj.behaviouralRecord = behaviouralRecord();
+			obj.behaviouralRecord = behaviouralRecord('name','Fixation Training');
 			bR = obj.behaviouralRecord;
 			
 			%a throwaway structure to hold various parameters
@@ -556,7 +556,9 @@ classdef runExperiment < optickaCore
 				setup(obj.stimuli); %run setup() for each stimulus
 				
 				% open our labJack if present
-				obj.lJack = labJack('name','fixation','verbose', obj.verbose);
+				obj.lJack = labJack('name','fixation','readResponse', false,'verbose', obj.verbose);
+				global lj;
+				lj = obj.lJack;
 			
 				% open the eyelink interface
 				obj.useEyeLink = true;
@@ -582,9 +584,11 @@ classdef runExperiment < optickaCore
 					setup(obj.eyeLink);
 				end
 				
+				createPlot(obj.behaviouralRecord, obj.eyeLink);
+				
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
-				
+								
 				tS.index = 1;
 				if obj.task.nVars > 0
 					tS.maxindex = length(obj.task.nVar(1).values);
@@ -669,6 +673,7 @@ classdef runExperiment < optickaCore
 				close(s);
 				close(obj.eyeLink);
 				obj.eyeLink = [];
+				%obj.behaviouralRecord = [];
 				if exist('topsDataLog','file')
 					topsDataLog.gui();
 				end
@@ -686,6 +691,8 @@ classdef runExperiment < optickaCore
 				ShowCursor;
 				close(s);
 				close(obj.eyeLink);
+				obj.eyeLink = [];
+				obj.behaviouralRecord = [];
 				obj.lJack.close;
 				obj.lJack=[];
 				clear tL s tS
@@ -1234,11 +1241,22 @@ classdef runExperiment < optickaCore
 					case 'q' %quit
 						tS.stopTraining = true;
 					case {'LeftArrow','left'} %previous variable 1 value
-						
+						if tS.totalTicks > tS.keyHold
+							obj.stimuli{1}.sizeOut = obj.stimuli{1}.size - 0.1;
+							if obj.stimuli{1}.sizeOut < 5
+								obj.stimuli{1}.sizeOut = 0.1;
+							end
+							fprintf('===>>> Stimulus Size: %g\n',obj.stimuli{1}.sizeOut)
+							tS.keyHold = tS.totalTicks + fInc;
+						end
 					case {'RightArrow','right'} %next variable 1 value
-						
+						if tS.totalTicks > tS.keyHold
+							obj.stimuli{1}.sizeOut = obj.stimuli{1}.size + 0.1;
+							fprintf('===>>> Stimulus Size: %g\n',obj.stimuli{1}.sizeOut)
+							tS.keyHold = tS.totalTicks + fInc;
+						end
 					case ',<'
-						
+						forceTransition(obj.stateMachine, 'calibrate');
 					case '.>'
 						
 					case '=+'
@@ -1251,17 +1269,50 @@ classdef runExperiment < optickaCore
 						timedTTL(obj.lJack,0,100);
 					case {'DownArrow','down'}
 						timedTTL(obj.lJack,0,1000);
-					case 'z' % mark trial as correct1
-						if strcmpi(obj.stateMachine.currentName,'stimulus')
-							forceTransition(obj.stateMachine, 'correct1');
+					case 'z' 
+						if tS.totalTicks > tS.keyHold
+							obj.eyeLink.fixationInitTime = obj.eyeLink.fixationInitTime - 0.1;
+							if obj.eyeLink.fixationInitTime < 0.01
+								obj.eyeLink.fixationInitTime = 0.01;
+							end
+							fprintf('===>>> FIXATION INIT TIME: %g\n',obj.eyeLink.fixationInitTime)
+							tS.keyHold = tS.totalTicks + fInc;
 						end
-					case 'x' % mark trial as correct2
-						if strcmpi(obj.stateMachine.currentName,'stimulus')
-							forceTransition(obj.stateMachine, 'correct2');
+					case 'x' 
+						if tS.totalTicks > tS.keyHold
+							obj.eyeLink.fixationInitTime = obj.eyeLink.fixationInitTime + 0.1;
+							fprintf('===>>> FIXATION INIT TIME: %g\n',obj.eyeLink.fixationInitTime)
+							tS.keyHold = tS.totalTicks + fInc;
 						end
-					case 'c' %mark trial incorrect
-						if strcmpi(obj.stateMachine.currentName,'stimulus')
-							forceTransition(obj.stateMachine, 'incorrect');
+					case 'c' 
+						if tS.totalTicks > tS.keyHold
+							obj.eyeLink.fixationTime = obj.eyeLink.fixationTime - 0.1;
+							if obj.eyeLink.fixationTime < 0.01
+								obj.eyeLink.fixationTime = 0.01;
+							end
+							fprintf('===>>> FIXATION TIME: %g\n',obj.eyeLink.fixationTime)
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case 'v'
+						if tS.totalTicks > tS.keyHold
+							obj.eyeLink.fixationTime = obj.eyeLink.fixationTime + 0.1;
+							fprintf('===>>> FIXATION TIME: %g\n',obj.eyeLink.fixationTime)
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case 'b'
+						if tS.totalTicks > tS.keyHold
+							obj.eyeLink.fixationRadius = obj.eyeLink.fixationRadius - 0.25;
+							if obj.eyeLink.fixationRadius < 0.1
+								obj.eyeLink.fixationRadius = 0.1;
+							end
+							fprintf('===>>> FIXATION RADIUS: %g\n',obj.eyeLink.fixationRadius)
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case 'n'
+						if tS.totalTicks > tS.keyHold
+							obj.eyeLink.fixationRadius = obj.eyeLink.fixationRadius + 0.25;
+							fprintf('===>>> FIXATION RADIUS: %g\n',obj.eyeLink.fixationRadius)
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case 'p' %pause the display
 						if tS.totalTicks > tS.keyHold

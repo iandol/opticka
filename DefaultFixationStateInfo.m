@@ -15,47 +15,76 @@ else
 end
 obj.stimuli.choice = obj.thisStim;
 
+rewardTime = 400;
+
+obj.eyeLink.remoteCalibration = true;
+obj.eyeLink.calibrationStyle = 'HV5';
+obj.eyeLink.recordData = false;
+obj.eyeLink.modify.calibrationtargetcolour = [1 1 0];
+obj.eyeLink.modify.calibrationtargetsize = 3;
+obj.eyeLink.modify.calibrationtargetwidth = 3;
+obj.eyeLink.modify.waitformodereadytime = 500;
+obj.eyeLink.modify.devicenumber = -1;
+
 obj.eyeLink.fixationX = 0;
 obj.eyeLink.fixationX = 0;
-obj.eyeLink.fixationTime = 0.1;
-obj.eyeLink.fixationRadius = 2;
+obj.eyeLink.fixationTime = 0.6;
+obj.eyeLink.fixationRadius = 1.5;
 obj.eyeLink.fixationInitTime = 1;
 
-Beeper();
+%===these are our functions that will execute as the stateMachine runs
 
-%these are our functions that will execute as the stateMachine runs
+%prestim entry
+psEntryFcn = { @()resetFixation(obj.eyeLink); @()randomiseTrainingList(obj) };
+
 %prestimulus blank
 prestimulusFcn = @()drawBackground(obj.screen);
+
 %what to run when we enter the stim presentation state
-stimEntryFcn = { @()update(obj.stimuli); @()resetFixation(obj.eyeLink); };
+stimEntryFcn = @()update(obj.stimuli);
+
 %what to run when we are showing stimuli
 stimFcn = @()draw(obj.stimuli); %obj.stimuli is the stimuli loaded into opticka
+
 %test we are maintaining fixation
 maintainFixFcn = @()testSearchHoldFixation(obj.eyeLink,'correct','breakfix');
+
 %as we exit stim presentation state
-stimExitFcn = { @()printChoice(obj.stimuli); @()resetFixation(obj.eyeLink) };
+stimExitFcn = [];
+
 %if the subject is correct (small reward)
-correctEntry = { @()draw(obj.stimuli); @()timedTTL(obj.lJack,0,400); @()Beeper; };
+correctEntryFcn = { @()draw(obj.stimuli); @()timedTTL(obj.lJack,0,rewardTime); ... 
+	@()updatePlot(obj.behaviouralRecord,obj.eyeLink,obj.stateMachine) };
+
 %correct stimulus
-correctWithin = @()draw(obj.stimuli);
+correctFcn = { @()drawBackground(obj.screen); @()drawGreenSpot(obj.screen,1) };
+
 %when we exit the correct state
-correctExit = @()randomiseTrainingList(obj);
+correctExitFcn = [];
+
+%break entry
+breakEntryFcn = @()updatePlot(obj.behaviouralRecord,obj.eyeLink,obj.stateMachine);
+
 %our incorrect stimulus
-incorrectFcn = @()drawBackground(obj.screen);
+breakFcn =  @()drawBackground(obj.screen);
+
+%calibration function
+calibrateFcn = @()trackerSetup(obj.eyeLink);
 
 disp('================>> Loading state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'prestimulus'	inf		[]				[]				[]				[]; ...
-'prestimulus' 'stimulus'	5		[]				prestimulusFcn	[]				[]; ...
+'prestimulus' 'stimulus'	1		psEntryFcn		prestimulusFcn	[]				[]; ...
 'stimulus'  'breakfix'		3		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
-'breakfix'	'prestimulus'	1.5		[]				incorrectFcn	[]				[]; ...
-'correct'	'prestimulus'	1.5		correctEntry	correctWithin	[]				correctExit; ...
+'breakfix'	'prestimulus'	1.5		breakEntryFcn	breakFcn		[]				[]; ...
+'correct'	'prestimulus'	1.5		correctEntryFcn	correctFcn		[]				correctExitFcn; ...
+'calibrate' 'prestimulus'	0.5		calibrateFcn	[]				[]				[]; ...
 };
 
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')
-clear initFixFcn maintainFixFcn prestimulusFcn singleStimulus ...
-	preblankFcn stimFcn stimEntry correct1Fcn correct2Fcn ...
-	incorrectFcn
+clear maintainFixFcn prestimulusFcn singleStimulus ...
+	prestimulusFcn stimFcn stimEntryFcn stimExitfcn correctEntry correctWithin correctExit ...
+	incorrectFcn calibrateFcn
