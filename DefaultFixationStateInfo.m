@@ -1,47 +1,37 @@
 %Fixation Training state configuration file 
-%This controls a stateMachine instance, switching between these states and 
-%executing functions. This will be run in the scope of the calling
-%runFixationSession function and thus obj.screen and friends will be
-%available at run time.
 
-% do we want to present a single stimulus at a time?
-singleStimulus = true;
-if singleStimulus == true
-	obj.stimList = 1:obj.stimuli.n;
-	obj.thisStim = 1;
-else
-	obj.stimList = [];
-	obj.thisStim = [];
-end
-obj.stimuli.choice = obj.thisStim;
+rewardTime = 300; %TTL time in milliseconds
 
-rewardTime = 400;
-
-obj.eyeLink.remoteCalibration = true;
-obj.eyeLink.calibrationStyle = 'HV5';
-obj.eyeLink.recordData = false;
+obj.eyeLink.remoteCalibration = true; %manual calibration
+obj.eyeLink.calibrationStyle = 'HV5'; % 5 point calibration
+obj.eyeLink.recordData = false; % don't save EDF file
 obj.eyeLink.modify.calibrationtargetcolour = [1 1 0];
 obj.eyeLink.modify.calibrationtargetsize = 3;
 obj.eyeLink.modify.calibrationtargetwidth = 3;
 obj.eyeLink.modify.waitformodereadytime = 500;
-obj.eyeLink.modify.devicenumber = -1;
+obj.eyeLink.modify.devicenumber = -1; % -1 = use any keyboard
 
 obj.eyeLink.fixationX = 0;
 obj.eyeLink.fixationX = 0;
-obj.eyeLink.fixationTime = 0.6;
 obj.eyeLink.fixationRadius = 1.5;
-obj.eyeLink.fixationInitTime = 1;
+obj.eyeLink.fixationInitTime = 1.0;
+obj.eyeLink.fixationTime = 1.0;
 
 %===these are our functions that will execute as the stateMachine runs
 
+%pause entry
+pauseEntryFcn = @()setOffline(obj.eyeLink);
+
 %prestim entry
-psEntryFcn = { @()resetFixation(obj.eyeLink); @()setOffline(obj.eyeLink); ...
-	@()trackerDrawFixation(obj.eyeLink) };
+psEntryFcn = { @()setOffline(obj.eyeLink); ...
+	@()trackerDrawFixation(obj.eyeLink); ...
+	@()resetFixation(obj.eyeLink); ...
+	@()update(obj.stimuli); };
 
 %prestimulus blank
 prestimulusFcn = @()drawBackground(obj.screen);
 
-psExitFcn = { @()update(obj.stimuli); @()startRecording(obj.eyeLink); @()statusMessage(obj.eyeLink,'Showing Stimulus...') };
+psExitFcn = { @()startRecording(obj.eyeLink); @()statusMessage(obj.eyeLink,'Showing Fixation Spot...') };
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = [];
@@ -56,7 +46,7 @@ maintainFixFcn = @()testSearchHoldFixation(obj.eyeLink,'correct','breakfix');
 stimExitFcn = [];
 
 %if the subject is correct (small reward)
-correctEntryFcn = { @()draw(obj.stimuli); @()timedTTL(obj.lJack,0,rewardTime); ... 
+correctEntryFcn = { @()timedTTL(obj.lJack,0,rewardTime); ... 
 	@()updatePlot(obj.behaviouralRecord,obj.eyeLink,obj.stateMachine); ...
 	@()statusMessage(obj.eyeLink,'Correct! :-)')};
 
@@ -80,10 +70,10 @@ disp('================>> Loading state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
-'pause'		'prestimulus'	inf		[]				[]				[]				[]; ...
-'prestimulus' 'stimulus'	1		psEntryFcn		prestimulusFcn	[]				psExitFcn; ...
+'pause'		'prestimulus'	inf		pauseEntryFcn	[]				[]				[]; ...
+'prestimulus' 'stimulus'	0.75	psEntryFcn		prestimulusFcn	[]				psExitFcn; ...
 'stimulus'  'breakfix'		3		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
-'breakfix'	'prestimulus'	1.5		breakEntryFcn	breakFcn		[]				[]; ...
+'breakfix'	'prestimulus'	2.0		breakEntryFcn	breakFcn		[]				[]; ...
 'correct'	'prestimulus'	1.5		correctEntryFcn	correctFcn		[]				correctExitFcn; ...
 'calibrate' 'prestimulus'	0.5		calibrateFcn	[]				[]				[]; ...
 };

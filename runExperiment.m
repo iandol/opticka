@@ -584,10 +584,10 @@ classdef runExperiment < optickaCore
 					setup(obj.eyeLink);
 				end
 				
-				createPlot(obj.behaviouralRecord, obj.eyeLink);
-				
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
+				
+				createPlot(obj.behaviouralRecord, obj.eyeLink);
 								
 				tS.index = 1;
 				if obj.task.nVars > 0
@@ -650,7 +650,9 @@ classdef runExperiment < optickaCore
 					if obj.useEyeLink; getSample(obj.eyeLink); end
 					
 					%check keyboard for commands
-					tS = obj.checkFixationKeys(tS);
+					if ~strcmpi(obj.stateMachine.currentName,'calibrate')
+						tS = obj.checkFixationKeys(tS);
+					end
 					
 					%if the statemachine is in stimulus state, then animate
 					%the stimuli
@@ -1242,16 +1244,16 @@ classdef runExperiment < optickaCore
 						tS.stopTraining = true;
 					case {'LeftArrow','left'} %previous variable 1 value
 						if tS.totalTicks > tS.keyHold
-							obj.stimuli{1}.sizeOut = obj.stimuli{1}.size - 0.1;
-							if obj.stimuli{1}.sizeOut < 5
-								obj.stimuli{1}.sizeOut = 0.1;
+							obj.stimuli{1}.sizeOut = obj.stimuli{1}.sizeOut - 0.1;
+							if obj.stimuli{1}.sizeOut < 2
+								obj.stimuli{1}.sizeOut = 2;
 							end
 							fprintf('===>>> Stimulus Size: %g\n',obj.stimuli{1}.sizeOut)
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case {'RightArrow','right'} %next variable 1 value
 						if tS.totalTicks > tS.keyHold
-							obj.stimuli{1}.sizeOut = obj.stimuli{1}.size + 0.1;
+							obj.stimuli{1}.sizeOut = obj.stimuli{1}.sizeOut + 0.1;
 							fprintf('===>>> Stimulus Size: %g\n',obj.stimuli{1}.sizeOut)
 							tS.keyHold = tS.totalTicks + fInc;
 						end
@@ -1301,7 +1303,7 @@ classdef runExperiment < optickaCore
 						end
 					case 'b'
 						if tS.totalTicks > tS.keyHold
-							obj.eyeLink.fixationRadius = obj.eyeLink.fixationRadius - 0.25;
+							obj.eyeLink.fixationRadius = obj.eyeLink.fixationRadius - 0.1;
 							if obj.eyeLink.fixationRadius < 0.1
 								obj.eyeLink.fixationRadius = 0.1;
 							end
@@ -1310,7 +1312,7 @@ classdef runExperiment < optickaCore
 						end
 					case 'n'
 						if tS.totalTicks > tS.keyHold
-							obj.eyeLink.fixationRadius = obj.eyeLink.fixationRadius + 0.25;
+							obj.eyeLink.fixationRadius = obj.eyeLink.fixationRadius + 0.1;
 							fprintf('===>>> FIXATION RADIUS: %g\n',obj.eyeLink.fixationRadius)
 							tS.keyHold = tS.totalTicks + fInc;
 						end

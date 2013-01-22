@@ -899,6 +899,16 @@ classdef opticka < optickaCore
 					error('No stimulus found in protocol!!!');
 				end
 				
+				%copy rE parameters
+				if isa(tmp.r,'runExperiment')
+					if isprop(obj.r,'stateInfoFile') && isprop(tmp.r,'stateInfoFile')
+						obj.r.stateInfoFile = tmp.r.stateInfoFile;
+						obj.getStateInfo();
+					end
+					obj.r.useLabJack = tmp.r.useLabJack;
+					set(obj.h.OKuseLabJack,'Value',obj.r.useLabJack)
+				end
+				
 				%copy screen parameters
 				if isa(tmp.r.screen,'screenManager')
 					set(obj.h.OKXCenter,'String', num2str(tmp.r.screen.screenXOffset));
@@ -951,7 +961,7 @@ classdef opticka < optickaCore
 				obj.refreshStimulusList;
 				obj.refreshVariableList;
 				obj.getScreenVals;
-				obj.getTaskVals
+				obj.getTaskVals;
 				
 				if obj.r.task.nVars > 0
 					set(obj.h.OKDeleteVariable,'Enable','on');
@@ -967,6 +977,7 @@ classdef opticka < optickaCore
 					set(obj.h.OKStimulusDown,'Enable','on');
 					set(obj.h.OKStimulusRun,'Enable','on');
 					set(obj.h.OKStimulusRunBenchmark,'Enable','on');
+					obj.editStimulus;
 				end
 				
 			end

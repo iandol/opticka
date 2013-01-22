@@ -1336,27 +1336,6 @@ if isappdata(handles.output,'o')
 	o.router('saveProtocol');
 end
 
-
-% --------------------------------------------------------------------
-function OKMenuStateInfo_Callback(hObject, eventdata, handles)
-% hObject    handle to OKMenuStateInfo (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	o.router('LoadStateInfo');
-end
-
-% --- Executes on button press in OKLoadStateButton.
-function OKLoadStateButton_Callback(hObject, eventdata, handles)
-% hObject    handle to OKLoadStateButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	o.router('LoadStateInfo');
-end
-
 function OKTrainingName_Callback(hObject, eventdata, handles)
 % hObject    handle to OKTrainingName (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1416,6 +1395,10 @@ elseif strcmp(get(handles.OKPanelProtocols,'Visible'),'on')
 	set(handles.OKPanelProtocols,'Visible','off')
 	set(handles.OKPanelGlobal,'Visible','off')
 	set(handles.OKPanelTraining,'Visible','on')
+	if isappdata(handles.output,'o')
+		o = getappdata(handles.output,'o');
+		o.getStateInfo();
+	end
 	
 else
 	
@@ -1446,6 +1429,27 @@ function OKTrainingResearcherName_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of OKTrainingResearcherName as text
 %        str2double(get(hObject,'String')) returns contents of OKTrainingResearcherName as a double
 
+% --------------------------------------------------------------------
+function OKMenuStateInfo_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuStateInfo (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.router('LoadStateInfo');
+	o.getStateInfo();
+end
+
+% --- Executes on button press in OKLoadStateButton.
+function OKLoadStateButton_Callback(hObject, eventdata, handles)
+% hObject    handle to OKLoadStateButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.router('LoadStateInfo');
+	o.getStateInfo();
+end
 
 % --- Executes on button press in OKRefreshStateInfo.
 function OKRefreshStateInfo_Callback(hObject, eventdata, handles)

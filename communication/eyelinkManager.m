@@ -79,6 +79,7 @@ classdef eyelinkManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		fixN = 0
 		error = []
 		%> previous message sent to eyelink
 		previousMessage = ''
@@ -209,6 +210,7 @@ classdef eyelinkManager < optickaCore
 			obj.fixInitStartTime = 0;
 			obj.fixInitLength = 0;
 			obj.fixInitTotal = 0;
+			obj.fixN = 0;
 		end
 				
 		% ===================================================================
@@ -346,6 +348,11 @@ classdef eyelinkManager < optickaCore
 				end
 				r = (obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2;
 				if r < (obj.fixationRadius);
+					if obj.fixN == 0 || obj.fixN == 1
+						obj.fixN = 1;
+					elseif obj.fixN == -50
+						obj.fixN = 2;
+					end
 					if obj.fixStartTime == 0
 						obj.fixStartTime = obj.currentSample.time;
 					end
@@ -360,6 +367,11 @@ classdef eyelinkManager < optickaCore
 					obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
 					return
 				else
+					if obj.fixN == 1
+						obj.fixN = -50; %first chance
+					elseif obj.fixN == 2
+						obj.fixN = -100; %no more chances
+					end
 					if obj.fixInitStartTime == 0
 						obj.fixInitStartTime = obj.currentSample.time;
 					end
@@ -415,7 +427,7 @@ classdef eyelinkManager < optickaCore
 			if searching
 				out = ['searching ' num2str(obj.fixInitLength)];
 				return
-			elseif fix
+			elseif fix && ~(obj.fixN == -100)
 				if fixtime
 					out = [yesString ' ' num2str(obj.fixLength)];
 					return
@@ -424,6 +436,7 @@ classdef eyelinkManager < optickaCore
 					return
 				end
 			else
+				
 				out = noString;
 				return
 			end
@@ -475,7 +488,6 @@ classdef eyelinkManager < optickaCore
 			if ~strcmpi(message,obj.previousMessage) && obj.isConnected
 				obj.previousMessage = message;
 				Eyelink('Command',['record_status_message ''' message '''']);
-				fprintf('STATUS MESSAGE: %s\n',message);
 			end
 		end
 		
@@ -534,11 +546,12 @@ classdef eyelinkManager < optickaCore
 		function trackerDrawFixation(obj)
 			if obj.isConnected
 				size = (obj.fixationRadius * 2) * obj.screen.ppd;
-				rect = [0 0 size size];
-				rect = CenterRectOnPointd(rect, obj.screen.xCenter, obj.screen.yCenter);
-				Eyelink('Command','clear_screen 0');
+				rect = [0 0 size-5 size-5];
+				x = obj.screen.xCenter + (obj.fixationX * obj.screen.ppd);
+				y = obj.screen.yCenter + (obj.fixationY * obj.screen.ppd);
+				rect = round(CenterRectOnPoint(rect, x, y));
+				Eyelink('Command','clear_screen 1');
 				Eyelink('Command', 'draw_box %d %d %d %d 15', rect(1), rect(2), rect(3), rect(4));
-				fprintf('COMM: draw_box %d %d %d %d 15\n', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
 		
@@ -561,7 +574,6 @@ classdef eyelinkManager < optickaCore
 		function setOffline(obj)
 			if obj.isConnected && currentMode(obj) ~= 1
 				Eyelink('Command', 'set_idle_mode');
-				fprintf('SET IDLE\n')
 			end
 		end
 		
