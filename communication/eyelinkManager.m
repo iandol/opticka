@@ -475,6 +475,7 @@ classdef eyelinkManager < optickaCore
 			if ~strcmpi(message,obj.previousMessage) && obj.isConnected
 				obj.previousMessage = message;
 				Eyelink('Command',['record_status_message ''' message '''']);
+				fprintf('STATUS MESSAGE: %s\n',message);
 			end
 		end
 		
@@ -531,10 +532,13 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawFixation(obj)
-			if obj.isConnected && currentMode(obj) == 1
-				
+			if obj.isConnected
+				size = (obj.fixationRadius * 2) * obj.screen.ppd;
+				rect = [0 0 size size];
+				rect = CenterRectOnPointd(rect, obj.screen.xCenter, obj.screen.yCenter);
 				Eyelink('Command','clear_screen 0');
-				Eyelink('Command', 'draw_box %d %d %d %d 15', 10, 10, 100, 100);
+				Eyelink('Command', 'draw_box %d %d %d %d 15', rect(1), rect(2), rect(3), rect(4));
+				fprintf('COMM: draw_box %d %d %d %d 15\n', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
 		
@@ -547,6 +551,17 @@ classdef eyelinkManager < optickaCore
 				mode = Eyelink('CurrentMode');
 			else
 				mode = -1;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief set into offline / idle mode
+		%>
+		% ===================================================================
+		function setOffline(obj)
+			if obj.isConnected && currentMode(obj) ~= 1
+				Eyelink('Command', 'set_idle_mode');
+				fprintf('SET IDLE\n')
 			end
 		end
 		

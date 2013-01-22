@@ -445,7 +445,7 @@ classdef Container < hgsetget
             
             % We also need to ignore legends as they are positioned by
             % their associated axes.
-            if isa( child, 'axes' ) && strcmpi( get( child, 'Tag' ), 'legend' )
+            if isa( eventData.Child, 'axes' ) && strcmpi( get( child, 'Tag' ), 'legend' )
                 return;
             end
             

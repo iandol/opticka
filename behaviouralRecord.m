@@ -15,6 +15,9 @@ classdef behaviouralRecord < optickaCore
 	
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
+		radius
+		time
+		inittime
 		%> allowed properties passed to object upon construction
 		allowedProperties = 'verbose'
 	end
@@ -49,7 +52,7 @@ classdef behaviouralRecord < optickaCore
 			t{end+1} = ' ';
 			t{end+1} = ['INIT TIME = ' num2str(eL.fixationInitTime)];
 			
-			obj.h.root = figure;
+			obj.h.root = figure('NumberTitle', 'off', 'Toolbar', 'none','Menubar','none');
 			obj.h.panel = uiextras.BoxPanel('Parent',obj.h.root,...
 				'Title',obj.fullName,...
 				'TitleColor',[0.8 0.79 0.78],...
@@ -68,7 +71,9 @@ classdef behaviouralRecord < optickaCore
 			obj.h.axis1 = axes('Parent', obj.h.hbox,'Units','pixels');
 			obj.h.axis2 = axes('Parent', obj.h.hbox,'Units','pixels');
 			axis([obj.h.axis1 obj.h.axis2], 'square');
-			figpos([],[800 800])
+			figpos([],[900 900]);
+			set(obj.h.vbox,'Sizes',[-3 -1])
+			set(obj.h.hbox,'Sizes',[-2 -1])
 			obj.values = [];
 			obj.rt = [];
 			plot(obj.h.axis1, 1, 0,'ko');
@@ -79,22 +84,23 @@ classdef behaviouralRecord < optickaCore
 			ylabel(obj.h.axis1, 'Yes / No')
 			ylabel(obj.h.axis2, 'Number #')
 			title(obj.h.axis1,'Success (1) / Fail (0)')
-			title(obj.h.axis2,'Reaction Times')
+			title(obj.h.axis2,'Response Times')
 			ylim(obj.h.axis1,[-0.5 1.5])
 			hn = findobj(obj.h.axis2,'Type','patch');
 			set(hn,'FaceColor','k','EdgeColor','w');
 		end
 		
 		function updatePlot(obj, eL, sM)
+			tic
 			t = {'INFORMATION:'};
 			t{end+1} = ' ';
-			t{end+1} = ['RADIUS = ' num2str(eL.fixationRadius)];
+			t{end+1} = ['RADIUS (red) = ' num2str(eL.fixationRadius) ' °'];
 			t{end+1} = ' ';
-			t{end+1} = ['TIME = ' num2str(eL.fixationTime)];
+			t{end+1} = ['MAINTAIN FIXATION TIME (green) = ' num2str(eL.fixationTime) ' secs'];
 			t{end+1} = ' ';
-			t{end+1} = ['INIT TIME = ' num2str(eL.fixationInitTime)];
+			t{end+1} = ['INITIATE FIXATION TIME (blue) = ' num2str(eL.fixationInitTime) ' secs'];
 			t{end+1} = ' ';
-			t{end+1} = ['Reaction Time = ' num2str(eL.fixTotal)];
+			t{end+1} = ['Last Total Response Time = ' num2str(eL.fixTotal) ' secs'];
 			set(obj.h.info,'String', t')
 			if strcmpi(sM.currentName,'correct')
 				obj.values(end+1) = 1;
@@ -104,7 +110,16 @@ classdef behaviouralRecord < optickaCore
 			elseif strcmpi(sM.currentName,'breakfix')
 				obj.values(end+1) = 0;
 			end
-			plot(obj.h.axis1, 1:length(obj.values), obj.values,'ko');
+			obj.radius(end+1) = eL.fixationRadius;
+			obj.time(end+1) = eL.fixationTime;
+			obj.inittime(end+1) = eL.fixationInitTime;
+			if length(obj.values) > 1; hold(obj.h.axis1,'on'); end
+			plot(obj.h.axis1, 1:length(obj.values), obj.values,'k.-','MarkerSize',12);
+			plot(obj.h.axis1, 1:length(obj.values), obj.radius,'rd','MarkerSize',10);
+			plot(obj.h.axis1, 1:length(obj.values), obj.time,'gd','MarkerSize',10);
+			plot(obj.h.axis1, 1:length(obj.values), obj.inittime,'bd','MarkerSize',10);
+			legend(obj.h.axis1,'yes/no','radius','fixTime','initTime');
+			hold(obj.h.axis1,'off')
 			hist(obj.h.axis2, obj.rt, 0:0.1:2);
 			axis(obj.h.axis2, 'tight');
 			xlabel(obj.h.axis1, 'Run Number')
@@ -112,10 +127,11 @@ classdef behaviouralRecord < optickaCore
 			ylabel(obj.h.axis1, 'Yes / No')
 			ylabel(obj.h.axis2, 'Number #')
 			title(obj.h.axis1,'Success (1) / Fail (0)')
-			title(obj.h.axis2,'Reaction Times')
-			ylim(obj.h.axis1,[-0.5 1.5])
+			title(obj.h.axis2,'Response Times')
+			ylim(obj.h.axis1,[-0.1 1.6])
 			hn = findobj(obj.h.axis2,'Type','patch');
-			set(hn,'FaceColor','k','EdgeColor','w');
+			set(hn,'FaceColor','k','EdgeColor','k');
+			fprintf('Time to draw graph: %g ms\n',toc*1000)
 		end
 		
 	end

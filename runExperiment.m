@@ -1256,15 +1256,15 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case ',<'
-						forceTransition(obj.stateMachine, 'calibrate');
+						
 					case '.>'
 						
 					case '=+'
 						
 					case '-_'
 						
-					case 'r'
-						
+					case 'm'
+						forceTransition(obj.stateMachine, 'calibrate');
 					case {'UpArrow','up'} %give a reward at any time
 						timedTTL(obj.lJack,0,100);
 					case {'DownArrow','down'}

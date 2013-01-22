@@ -35,13 +35,16 @@ obj.eyeLink.fixationInitTime = 1;
 %===these are our functions that will execute as the stateMachine runs
 
 %prestim entry
-psEntryFcn = { @()resetFixation(obj.eyeLink); @()randomiseTrainingList(obj) };
+psEntryFcn = { @()resetFixation(obj.eyeLink); @()setOffline(obj.eyeLink); ...
+	@()trackerDrawFixation(obj.eyeLink) };
 
 %prestimulus blank
 prestimulusFcn = @()drawBackground(obj.screen);
 
+psExitFcn = { @()update(obj.stimuli); @()startRecording(obj.eyeLink); @()statusMessage(obj.eyeLink,'Showing Stimulus...') };
+
 %what to run when we enter the stim presentation state
-stimEntryFcn = @()update(obj.stimuli);
+stimEntryFcn = [];
 
 %what to run when we are showing stimuli
 stimFcn = @()draw(obj.stimuli); %obj.stimuli is the stimuli loaded into opticka
@@ -54,7 +57,8 @@ stimExitFcn = [];
 
 %if the subject is correct (small reward)
 correctEntryFcn = { @()draw(obj.stimuli); @()timedTTL(obj.lJack,0,rewardTime); ... 
-	@()updatePlot(obj.behaviouralRecord,obj.eyeLink,obj.stateMachine) };
+	@()updatePlot(obj.behaviouralRecord,obj.eyeLink,obj.stateMachine); ...
+	@()statusMessage(obj.eyeLink,'Correct! :-)')};
 
 %correct stimulus
 correctFcn = { @()drawBackground(obj.screen); @()drawGreenSpot(obj.screen,1) };
@@ -63,7 +67,8 @@ correctFcn = { @()drawBackground(obj.screen); @()drawGreenSpot(obj.screen,1) };
 correctExitFcn = [];
 
 %break entry
-breakEntryFcn = @()updatePlot(obj.behaviouralRecord,obj.eyeLink,obj.stateMachine);
+breakEntryFcn = { @()updatePlot(obj.behaviouralRecord,obj.eyeLink,obj.stateMachine); ...
+	@()statusMessage(obj.eyeLink,'Broke Fixation :-(') };
 
 %our incorrect stimulus
 breakFcn =  @()drawBackground(obj.screen);
@@ -76,7 +81,7 @@ disp('================>> Loading state info file <<================')
 stateInfoTmp = { ...
 'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'prestimulus'	inf		[]				[]				[]				[]; ...
-'prestimulus' 'stimulus'	1		psEntryFcn		prestimulusFcn	[]				[]; ...
+'prestimulus' 'stimulus'	1		psEntryFcn		prestimulusFcn	[]				psExitFcn; ...
 'stimulus'  'breakfix'		3		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'breakfix'	'prestimulus'	1.5		breakEntryFcn	breakFcn		[]				[]; ...
 'correct'	'prestimulus'	1.5		correctEntryFcn	correctFcn		[]				correctExitFcn; ...
