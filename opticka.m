@@ -21,7 +21,7 @@ classdef opticka < optickaCore
 		%> all of the handles to th opticka_ui GUI
 		h
 		%> version number
-		optickaVersion='0.721'
+		optickaVersion='0.751'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection, via TCP
