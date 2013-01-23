@@ -26,6 +26,8 @@ classdef eyelinkManager < optickaCore
 		fixationRadius = 1
 		%> fixation time in seconds
 		fixationTime = 1
+		%> only allow 1 entry to fixation window?
+		strictFixation = true
 		%> time to initiate fixation in seconds
 		fixationInitTime = 0.25
 		%> tracker update speed (Hz), should be 250 500 1000 2000
@@ -348,10 +350,8 @@ classdef eyelinkManager < optickaCore
 				end
 				r = (obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2;
 				if r < (obj.fixationRadius);
-					if obj.fixN == 0 || obj.fixN == 1
+					if obj.fixN == 0 
 						obj.fixN = 1;
-					elseif obj.fixN == -50
-						obj.fixN = 2;
 					end
 					if obj.fixStartTime == 0
 						obj.fixStartTime = obj.currentSample.time;
@@ -367,10 +367,8 @@ classdef eyelinkManager < optickaCore
 					obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
 					return
 				else
-					if obj.fixN == 1
-						obj.fixN = -50; %first chance
-					elseif obj.fixN == 2
-						obj.fixN = -100; %no more chances
+					if obj.fixN == 1 
+						obj.fixN = -100;
 					end
 					if obj.fixInitStartTime == 0
 						obj.fixInitStartTime = obj.currentSample.time;
@@ -425,18 +423,27 @@ classdef eyelinkManager < optickaCore
 		function out = testSearchHoldFixation(obj, yesString, noString)
 			[fix, fixtime, searching] = obj.isFixated();
 			if searching
-				out = ['searching ' num2str(obj.fixInitLength)];
-				return
-			elseif fix && ~(obj.fixN == -100)
-				if fixtime
-					out = [yesString ' ' num2str(obj.fixLength)];
+				if (obj.strictFixation==true && (obj.fixN == 0)) || obj.strictFixation==false
+					out = ['searching ' num2str(obj.fixInitLength)];
 					return
 				else
-					out = ['fixing ' num2str(obj.fixLength)];
+					out = noString;
+					return
+				end
+			elseif fix
+				if (obj.strictFixation==true && ~(obj.fixN == -100)) || obj.strictFixation==false
+					if fixtime
+						out = [yesString ' ' num2str(obj.fixLength)];
+						return
+					else
+						out = ['fixing ' num2str(obj.fixLength)];
+						return
+					end
+				else
+					out = noString;
 					return
 				end
 			else
-				
 				out = noString;
 				return
 			end

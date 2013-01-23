@@ -103,9 +103,8 @@ classdef behaviouralRecord < optickaCore
 			set(obj.h.axis3,'XTickLabel', {'all';'newest'})
 			plot(obj.h.axis4, 1, 0,'ko-');
 			
-			for i = 1:4
-				set(obj.h.(['axis' num2str(i)]),'Box','on');
-			end
+			set([obj.h.axis1 obj.h.axis2 obj.h.axis3 obj.h.axis4], ...
+				'Box','on','XGrid','on','YGrid','on','ZGrid','on');
 			axis([obj.h.axis2 obj.h.axis3 obj.h.axis4], 'tight');
 			
 			xlabel(obj.h.axis1, 'Run Number')
@@ -125,7 +124,6 @@ classdef behaviouralRecord < optickaCore
 		end
 		
 		function updatePlot(obj, eL, sM)
-			tic
 			if obj.tick == 1
 				obj.startTime = clock;
 			end
@@ -177,6 +175,9 @@ classdef behaviouralRecord < optickaCore
 			axis(obj.h.axis4, 'tight');
 			ylim(obj.h.axis4,[0 100])
 			
+			set([obj.h.axis1 obj.h.axis2 obj.h.axis3 obj.h.axis4], ...
+				'Box','on','XGrid','on','YGrid','on','ZGrid','on');
+			
 			xlabel(obj.h.axis1, 'Run Number')
 			xlabel(obj.h.axis2, 'Time')
 			xlabel(obj.h.axis3, 'Group')
@@ -206,7 +207,6 @@ classdef behaviouralRecord < optickaCore
 			set(obj.h.info,'String', t')
 			
 			obj.tick = obj.tick + 1;
-			fprintf('Time to draw graph: %g ms\n',toc*1000)
 		end
 		
 	end

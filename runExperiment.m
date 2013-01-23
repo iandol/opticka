@@ -520,6 +520,7 @@ classdef runExperiment < optickaCore
 		%> @param obj required class object
 		% ===================================================================
 		function runFixationSession(obj)
+			global lj
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -557,7 +558,6 @@ classdef runExperiment < optickaCore
 				
 				% open our labJack if present
 				obj.lJack = labJack('name','fixation','readResponse', false,'verbose', obj.verbose);
-				global lj;
 				lj = obj.lJack;
 			
 				% open the eyelink interface
@@ -566,7 +566,7 @@ classdef runExperiment < optickaCore
 					obj.eyeLink = eyelinkManager();
 				end
 				
-				obj.stateMachine = stateMachine('name','fixationtraining','verbose',obj.verbose); %#ok<*CPROP>
+				obj.stateMachine = stateMachine('realTime',true,'name','fixationtraining','verbose',obj.verbose); %#ok<*CPROP>
 				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 				if isempty(obj.stateInfoFile)
 					error('Please specify a fixation state info file...')
@@ -679,10 +679,10 @@ classdef runExperiment < optickaCore
 				if exist('topsDataLog','file')
 					topsDataLog.gui();
 				end
-				figure(obj.screenSettings.optickahandle)
+				%figure(obj.screenSettings.optickahandle)
 				obj.lJack.close;
 				obj.lJack=[];
-				clear tL s tS
+				clear tL s tS bR lj
 				
 			catch ME
 				Priority(0);
@@ -697,7 +697,7 @@ classdef runExperiment < optickaCore
 				obj.behaviouralRecord = [];
 				obj.lJack.close;
 				obj.lJack=[];
-				clear tL s tS
+				clear tL s tS bR lj
 				rethrow(ME)
 				
 			end

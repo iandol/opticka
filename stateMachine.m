@@ -443,7 +443,7 @@ classdef stateMachine < optickaCore
 				if length(thisState.time) == 1
 					obj.nextTimeOut = obj.currentEntryTime + thisState.time;
 				else
-					thisState.time = randi([thisState.time(1)*1000, thisState.time(2)*1000]) / 1000;
+					thisState.time = randi([thisState.time(1)*1e3, thisState.time(2)*1e3]) / 1e3;
 					obj.nextTimeOut = obj.currentEntryTime + thisState.time;
 				end
 				obj.nextTickOut = round(thisState.time / obj.timeDelta);
@@ -510,7 +510,8 @@ classdef stateMachine < optickaCore
 					feval(thisState.exitFcn{i});
 				end
 			end
-			
+			tnow=feval(obj.clockFcn);
+			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(tnow-obj.startTime) 's | ' num2str(tnow-obj.previous.entryTime) 's | ' num2str(obj.currentTick) '/' num2str(obj.totalTicks) 'ticks']);
 			if obj.isTops
 				data.currentTick = obj.currentTick;
 				data.nextTick = obj.nextTickOut;
@@ -518,7 +519,6 @@ classdef stateMachine < optickaCore
 				topsDataLog.logDataInGroup(data, group);
 			end
 			
-			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs | ' num2str(obj.currentTick) '/' num2str(obj.totalTicks) 'ticks']);
 		end
 		
 		% ===================================================================
