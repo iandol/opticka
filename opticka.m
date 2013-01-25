@@ -1287,6 +1287,17 @@ classdef opticka < optickaCore
 			if y < 1; y=0; end
 			set(uihandle,'Position',[x y size(1) size(2)]);
 		end
+		
+		% ===================================================================
+		%> @brief loadobj
+		%> To be backwards compatible to older saved protocols, we have to parse 
+		%> structures / objects specifically during object load
+		%> @param in input object/structure
+		% ===================================================================
+% 		function lobj=loadobj(in)
+% 			fprintf('---> opticka loadobj: RUNNING...\n')
+% 			lobj = in;
+% 		end
 	end
 	
 end

@@ -3,7 +3,7 @@
 rewardTime = 300; %TTL time in milliseconds
 
 obj.eyeLink.remoteCalibration = true; %manual calibration
-obj.eyeLink.calibrationStyle = 'HV5'; % 5 point calibration
+obj.eyeLink.calibrationStyle = 'HV9'; % 5 point calibration
 obj.eyeLink.recordData = false; % don't save EDF file
 obj.eyeLink.modify.calibrationtargetcolour = [1 1 0];
 obj.eyeLink.modify.calibrationtargetsize = 3;

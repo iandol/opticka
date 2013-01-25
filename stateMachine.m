@@ -127,7 +127,7 @@ classdef stateMachine < optickaCore
 			end
 			%can we use tower of psych data logger?
 			if exist('topsDataLog','file')
-				obj.isTops = true;
+				obj.isTops = false;
 			end
 		end
 		

@@ -46,6 +46,14 @@ classdef runExperiment < optickaCore
 		verbose = true
 	end
 	
+	properties (Hidden = true)
+		%> our old structure
+		stimulus
+		%> used to select single stimulus in training run
+		stimList = []
+		thisStim = []
+	end
+	
 	properties (SetAccess = private, GetAccess = public)
 		%> state machine control cell array
 		stateInfo = {}
@@ -71,12 +79,6 @@ classdef runExperiment < optickaCore
 		stateMachine
 		%> eyelink manager object
 		eyeLink
-	end
-	
-	properties (Hidden = true)
-		%> used to select single stimulus in training run
-		stimList = []
-		thisStim = []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -720,7 +722,7 @@ classdef runExperiment < optickaCore
 			
 			obj.runLog = timeLogger();
 			
-			if isempty(obj.stimuli) || ~isa(obj.stimuli,'metaStimulus')
+			if isempty(regexpi('nostimuli',config)) && (isempty(obj.stimuli) || ~isa(obj.stimuli,'metaStimulus'))
 				obj.stimuli = metaStimulus();
 			end
 			
@@ -1349,22 +1351,22 @@ classdef runExperiment < optickaCore
 			if isa(in,'runExperiment')
 				name = '';
 				if isprop(lobj,'fullName')
-					name = [name lobj.fullName];
+					name = [name 'NEW:' lobj.fullName];
 				end
 				if isprop(in,'fullName')
-					name = [name ' < ' in.fullName];
+					name = [name ' <-- OLD:' in.fullName];
 				end
-				fprintf('---> runExperiment loadobj %s: Loading object...\n',name);
+				fprintf('---> runExperiment loadobj: %s\n',name);
 				isObject = true;
 			else
 				name = '';
 				if isprop(lobj,'fullName')
-					name = [name lobj.fullName];
+					name = [name 'NEW:' lobj.fullName];
 				end
 				fprintf('---> runExperiment loadobj %s: Loading legacy structure...\n',name);
 				isObject = false;
 			end
-			lobj.initialise('notask');
+			lobj.initialise('notask noscreen nostimuli');
 			lobj = rebuild(lobj, in, isObject);
 			
 			function obj = rebuild(obj,in,inObject)
@@ -1378,6 +1380,7 @@ classdef runExperiment < optickaCore
 							obj.stimuli = in.stimulus;
 							fprintf('\t---> runExperiment LOAD: Stimuli using new metaStimulus object...\n');
 						elseif isa(in.stimulus,'baseStimulus')
+							lobj.stimuli = metaStimulus();
 							lobj.stimuli{1} = in.stimulus;
 						else
 							fprintf('\t---> runExperiment LOAD: no stimuli found!!!\n');
@@ -1391,16 +1394,21 @@ classdef runExperiment < optickaCore
 							fprintf('\t---> runExperiment LOAD: legacy stimuli not found...\n');
 						end
 					end
+					fprintf('\t---> runExperiment loadobj: ');
 					if isprop(in,'stateInfoFile')
 						if exist(in.stateInfoFile,'file')
 							lobj.stateInfoFile = in.stateInfoFile;
+							fprintf('stateInfoFile assigned');
 						end
 					end
 					if isa(in.task,'stimulusSequence')
 						lobj.task = in.task;
 						lobj.previousInfo.task = in.task;
+						fprintf(' | new stimulusSequence');
 					else
+						lobj.task = stimulusSequence();
 						lobj.previousInfo.task = in.task;
+						fprintf(' | inherited stimulusSequence');
 					end
 					if inObject == true || isfield('in','verbose')
 						lobj.verbose = in.verbose;
@@ -1428,9 +1436,12 @@ classdef runExperiment < optickaCore
 						lobj.screen.blend = in.blend;
 						lobj.screen.hideFlash = in.hideFlash;
 						lobj.screen.movieSettings = in.movieSettings;
+						fprintf(' | new screenManager');
 					else
+						lobj.screen = in.screen;
 						in.screen.verbose = false; %no printout
 						in.screen = []; %force close any old screenManager instance;
+						fprintf(' | inherited screenManager');
 					end
 				end
 				try
@@ -1439,6 +1450,7 @@ classdef runExperiment < optickaCore
 					lobj.previousInfo.screenVals = in.screenVals;
 					lobj.previousInfo.screenSettings = in.screenSettings;
 				end
+				fprintf('\n');
 			end
 		end
 		
