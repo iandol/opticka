@@ -72,18 +72,18 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		%> @brief Generate an structure for runExperiment
 		%>
-		%> @param rE runExperiment object for reference
+		%> @param sM screenManager object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function setup(obj,rE)
+		function setup(obj,sM)
 			
 			obj.reset;
 			
-			obj.ppd=rE.ppd;
-			obj.ifi=rE.screenVals.ifi;
-			if isempty(obj.xCenter);obj.xCenter=rE.xCenter;end
-			if isempty(obj.yCenter);obj.yCenter=rE.yCenter;end
-			if isempty(obj.win);obj.win = rE.win;end
+			obj.ppd=sM.ppd;
+			obj.ifi=sM.screenVals.ifi;
+			if isempty(obj.xCenter);obj.xCenter=sM.xCenter;end
+			if isempty(obj.yCenter);obj.yCenter=sM.yCenter;end
+			if isempty(obj.win);obj.win = sM.win;end
 			
 			fn = fieldnames(barStimulus);
 			for j=1:length(fn)
@@ -164,6 +164,9 @@ classdef barStimulus < baseStimulus
 			obj.mvRect = [];
 			obj.dstRect = [];
 			obj.removeTmpProperties;
+			obj.win = [];
+			obj.xCenter = [];
+			obj.yCenter = [];
 		end
 		
 		% ===================================================================

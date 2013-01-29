@@ -1347,8 +1347,8 @@ classdef runExperiment < optickaCore
 		%> @param in input object/structure
 		% ===================================================================
 		function lobj=loadobj(in)
-			lobj = runExperiment;
 			if isa(in,'runExperiment')
+				lobj = in;
 				name = '';
 				if isprop(lobj,'fullName')
 					name = [name 'NEW:' lobj.fullName];
@@ -1358,40 +1358,35 @@ classdef runExperiment < optickaCore
 				end
 				fprintf('---> runExperiment loadobj: %s\n',name);
 				isObject = true;
+				return
 			else
+				lobj = runExperiment;
 				name = '';
 				if isprop(lobj,'fullName')
 					name = [name 'NEW:' lobj.fullName];
 				end
 				fprintf('---> runExperiment loadobj %s: Loading legacy structure...\n',name);
 				isObject = false;
+				lobj.initialise('notask noscreen nostimuli');
+				lobj = rebuild(lobj, in, isObject);
 			end
-			lobj.initialise('notask noscreen nostimuli');
-			lobj = rebuild(lobj, in, isObject);
+			
 			
 			function obj = rebuild(obj,in,inObject)
 				try %#ok<*TRYNC>
-					if isfield(in,'stimulus') || isprop(in,'stimulus')
-						if iscell(in.stimulus)
+					if isprop(in,'stimuli') && isa(in.stimuli,'metaStimulus')
+						lobj.stimuli = in.stimuli;
+						fprintf('\t---> runExperiment LOAD: Stimuli using new metaStimulus object...\n');
+					elseif isfield(in,'stimulus') || isprop(in,'stimulus')
+						if iscell(in.stimulus) && isa(in.stimulus{1},'baseStimulus')
 							lobj.stimuli = metaStimulus();
 							lobj.stimuli.stimuli = in.stimulus;
 							fprintf('\t---> runExperiment LOAD: Legacy Stimuli loading...\n');
 						elseif isa(in.stimulus,'metaStimulus')
 							obj.stimuli = in.stimulus;
 							fprintf('\t---> runExperiment LOAD: Stimuli using new metaStimulus object...\n');
-						elseif isa(in.stimulus,'baseStimulus')
-							lobj.stimuli = metaStimulus();
-							lobj.stimuli{1} = in.stimulus;
 						else
 							fprintf('\t---> runExperiment LOAD: no stimuli found!!!\n');
-						end
-					elseif isprop(in,'stimuli')
-						if isa(in.stimuli,'metaStimulus')
-							lobj.stimuli = in.stimuli;
-							fprintf('\t---> runExperiment LOAD: Stimuli using new metaStimulus object...\n');
-						else
-							lobj.stimuli = metaStimulus();
-							fprintf('\t---> runExperiment LOAD: legacy stimuli not found...\n');
 						end
 					end
 					fprintf('\t---> runExperiment loadobj: ');

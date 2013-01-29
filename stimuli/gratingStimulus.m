@@ -133,9 +133,9 @@ classdef gratingStimulus < baseStimulus
 		%> xPosition, internal methods ensure reconversion and update any dependent
 		%> properties. This method initialises the object for display.
 		%>
-		%> @param rE runExperiment object for reference
+		%> @param sM screenManager object for reference
 		% ===================================================================
-		function setup(obj,rE)
+		function setup(obj,sM)
 			
 			obj.reset; %reset it back to its initial state
 			if isempty(obj.isVisible)
@@ -144,11 +144,11 @@ classdef gratingStimulus < baseStimulus
 			addlistener(obj,'changeScale',@obj.calculateScale); %use an event to keep scale accurate
 			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
 			
-			obj.ppd=rE.ppd;
-			obj.ifi=rE.screenVals.ifi;
-			obj.xCenter=rE.xCenter;
-			obj.yCenter=rE.yCenter;
-			obj.win=rE.win;
+			obj.ppd=sM.ppd;
+			obj.ifi=sM.screenVals.ifi;
+			obj.xCenter=sM.xCenter;
+			obj.yCenter=sM.yCenter;
+			obj.win=sM.win;
 
 			obj.texture = []; %we need to reset this
 

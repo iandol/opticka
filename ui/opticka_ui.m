@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 21-Jan-2013 11:31:23
+% Last Modified by GUIDE v2.5 29-Jan-2013 11:50:07
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -793,9 +793,12 @@ else
 	warndlg('Please enter a minimum, maximum and number of values');
 end
 
-
 % --- Executes on selection change in OKStimList.
 function OKStimList_Callback(hObject, eventdata, handles)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.editStimulus;
+end
 
 % --- Executes on button press in OKAddStimulus.
 function OKAddStimulus_Callback(hObject, eventdata, handles)
@@ -817,6 +820,7 @@ if isappdata(handles.output,'o')
 		set(handles.OKStimulusDown,'Enable','on');
 		set(handles.OKStimulusRun,'Enable','on');
 		set(handles.OKStimulusRunBenchmark,'Enable','on');
+		set(handles.OKStimulusRunAll,'Enable','on');
 	end
 end
 
@@ -837,6 +841,7 @@ if isappdata(handles.output,'o')
 		set(handles.OKStimulusDown,'Enable','off');
 		set(handles.OKStimulusRun,'Enable','off');
 		set(handles.OKStimulusRunBenchmark,'Enable','off');
+		set(handles.OKStimulusRunAll,'Enable','off');
 	end
 end
 
@@ -919,6 +924,23 @@ if isappdata(handles.output,'o')
 		run(o.r.stimuli{v}, true);
 	end
 end
+
+% --- Executes on button press in OKStimulusRunAll.
+function OKStimulusRunAll_Callback(hObject, eventdata, handles)
+% hObject    handle to OKStimulusRunAll (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	if isa(o.r.stimuli,'metaStimulus') && o.r.stimuli.n > 0
+		if isa(o.r.screen,'screenManager')
+			run(o.r.stimuli, [], [], o.r.screen);
+		else
+			run(o.r.stimuli);
+		end
+	end
+end
+
 
 
 % --- Executes on button press in OKInspectStimulus.

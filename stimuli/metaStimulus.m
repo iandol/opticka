@@ -73,13 +73,20 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function setup(obj)
-			if isa(obj.screen,'screenManager')
+		function setup(obj,s)
+			if ~exist('s','var') || ~isa(s,'screenManager')
+				if isa(obj.screen,'screenManager')
+					s = obj.screen;
+				else
+					s = [];
+				end
+			end	
+			if isa(s,'screenManager')
 				for i = 1:obj.n
-					setup(obj.stimuli{i},obj.screen);
+					setup(obj.stimuli{i},s);
 				end
 				for i = 1:obj.nMask
-					setup(obj.maskStimuli{i},obj.screen);
+					setup(obj.maskStimuli{i},s);
 				end
 			else
 				error('metaStimulus setup: no screenManager has been provided!!!')
@@ -192,6 +199,89 @@ classdef metaStimulus < optickaCore
 				reset(obj.maskStimuli{i});
 			end
 			
+		end
+		
+		% ===================================================================
+		%> @brief Shorthand to set isVisible=true.
+		%>
+		% ===================================================================
+		function show(obj)
+			for i = 1:obj.n
+				obj.stimuli{i}.isVisible = true;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Shorthand to set isVisible=false.
+		%>
+		% ===================================================================
+		function hide(obj)
+			for i = 1:obj.n
+				obj.stimuli{i}.isVisible = true;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Run Stimulus in a window to preview
+		%>
+		% ===================================================================
+		function run(obj,benchmark,runtime,s)
+			if ~exist('benchmark','var') || isempty(benchmark)
+				benchmark=false;
+			end
+			if ~exist('runtime','var') || isempty(runtime)
+				runtime = 2; %seconds to run
+			end
+			if ~exist('s','var') || ~isa(s,'screenManager')
+				s = screenManager('verbose',false,'blend',true,'screen',0,...
+				'bitDepth','8bit','debug',false,...
+				'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+			end
+			
+			oldwindowed = s.windowed;
+			if benchmark
+				s.windowed = [];
+			else
+				%s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2];
+				%s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
+			end
+			open(s); %open PTB screen
+			s.windowed = oldwindowed;
+			setup(obj,s); %setup our stimulus object
+			draw(obj); %draw stimulus
+			drawGrid(s); %draw +-5 degree dot grid
+			drawFixationPoint(s); %centre spot
+			if benchmark; 
+				Screen('DrawText', s.win, 'Benchmark, screen will not update properly, see FPS on command window at end.', 5,5,[0 0 0]);
+			else
+				Screen('DrawText', s.win, 'Stimulus unanimated for 1 second, animated for 2, then unanimated for a final second...', 5,5,[0 0 0]);
+			end
+			Screen('Flip',s.win);
+			WaitSecs(1);
+			if benchmark; b=GetSecs; end
+			for i = 1:(s.screenVals.fps*runtime) %should be 2 seconds worth of flips
+				draw(obj); %draw stimulus
+				drawGrid(s); %draw +-5 degree dot grid
+				drawFixationPoint(s); %centre spot
+				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
+				animate(obj); %animate stimulus, will be seen on next draw
+				if benchmark
+					Screen('Flip',s.win,0,2,2);
+				else
+					Screen('Flip',s.win); %flip the buffer
+				end
+			end
+			if benchmark; bb=GetSecs; end
+			WaitSecs(1);
+			Screen('Flip',s.win);
+			WaitSecs(0.25);
+			if benchmark
+				fps = (s.screenVals.fps*runtime) / (bb-b);
+				fprintf('\n------> SPEED = %g fps\n', fps);
+			end
+			close(s); %close screen
+			clear s fps benchmark runtime b bb i; %clear up a bit
+			reset(obj); %reset our stimulus ready for use again
 		end
 		
 		% ===================================================================

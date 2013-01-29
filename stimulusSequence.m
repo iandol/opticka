@@ -121,8 +121,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> set up the random number generator
 		% ===================================================================
 		function initialiseRandom(obj)
-			if obj.verbose==true;tic;end
-			if isnan(obj.mversion)
+			if isnan(obj.mversion) || obj.mversion == 0
 				obj.mversion = str2double(regexp(version,'(?<ver>^\d+\.\d+)','match','once'));
 			end
 			if isempty(obj.randomSeed)
@@ -141,7 +140,6 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			else
 				RandStream.setDefaultStream(obj.taskStream); %#ok<*SETRS>
 			end
-			if obj.verbose==true;obj.salutation(sprintf('Initialise Randomisation: %g milliseconds',toc/1000));end
 		end
 		
 		% ===================================================================
@@ -172,7 +170,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 
 				nLevels = zeros(obj.nVars, 1);
 				for f = 1:obj.nVars
-					nLevels(f) = length(obj.nVar(f).values);
+					nLevels(f) = size(obj.nVar(f).values,1);
 				end
 
 				obj.minBlocks = prod(nLevels);

@@ -74,7 +74,7 @@ classdef optickaCore < handle
 			if nargin>0
 				obj.parseArgs(args,obj.allowedProperties);
 			end
-			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
+			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
 			obj.paths.whatami = obj.className;
 			obj.paths.root = fileparts(which(mfilename));
 			obj.paths.whereami = obj.paths.root;
