@@ -910,6 +910,7 @@ if isappdata(handles.output,'o')
 	if v > 0 && isobject(o.r.stimuli{v})
 		run(o.r.stimuli{v});
 	end
+	set(handles.OKStimulusRunAll,'Enable','on');
 end
 
 % --- Executes on button press in OKStimulusRunBenchmark.
@@ -933,6 +934,7 @@ function OKStimulusRunAll_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	if isa(o.r.stimuli,'metaStimulus') && o.r.stimuli.n > 0
+		o.r.stimuli.choice = [];
 		if isa(o.r.screen,'screenManager')
 			run(o.r.stimuli, [], [], o.r.screen);
 		else
