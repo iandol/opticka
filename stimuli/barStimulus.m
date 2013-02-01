@@ -12,11 +12,13 @@ classdef barStimulus < baseStimulus
 		%> length of bar
 		barLength = 4
 		%> contrast multiplier
-		contrast = []
+		contrast = 1
 		%> texture scale
 		scale = 1
 		%> texture interpolation
 		interpMethod = 'nearest'
+		%>
+		textureAspect = 1
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -77,7 +79,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function setup(obj,sM)
 			
-			obj.reset;
+			reset(obj);
 			
 			obj.ppd=sM.ppd;
 			obj.ifi=sM.screenVals.ifi;
@@ -107,9 +109,10 @@ classdef barStimulus < baseStimulus
 			obj.doDrift = false;
 			obj.doFlash = false;
 			
+			tic
 			obj.constructMatrix(obj.ppd) %make our matrix
 			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
-			
+			fprintf('--->>> BAR Texture  took: %g ms',toc*1000);
 			if obj.speed>0 %we need to say this needs animating
 				obj.doMotion=true;
  				%rE.task.stimIsMoving=[rE.task.stimIsMoving i];
@@ -128,6 +131,14 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function update(obj)
+			obj.tick = 1;
+			obj.constructMatrix(obj.ppd) %make our matrix
+			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
+			if max(obj.delayTimeOut) > 0
+				if length(obj.delayTimeOut) == 2
+					obj.delayTicks = round(randi(obj.delayTimeOut(1)*1000,obj.delayTimeOut(1)*1000)/obj.ifi);
+				end
+			end
 			obj.setRect();
 		end
 		
@@ -138,7 +149,10 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			Screen('DrawTexture',obj.win,obj.texture,[],obj.mvRect,obj.angleOut);
+			if obj.tick > obj.delayTicks
+				Screen('DrawTexture',obj.win,obj.texture,[],obj.mvRect,obj.angleOut);
+			end
+			obj.tick = obj.tick + 1;
 		end
 		
 		% ===================================================================
@@ -167,6 +181,7 @@ classdef barStimulus < baseStimulus
 			obj.win = [];
 			obj.xCenter = [];
 			obj.yCenter = [];
+			obj.tick = 1;
 		end
 		
 		% ===================================================================
@@ -178,9 +193,6 @@ classdef barStimulus < baseStimulus
 		function constructMatrix(obj,ppd)
 			if ~exist('ppd','var');ppd=obj.ppd;end
 			obj.matrix=[]; %reset the matrix
-			if length(obj.colour) == 3
-				obj.colour(4) = obj.alpha;
-			end
 			
 			try
 				bwpixels = round(obj.barWidth*ppd);
@@ -191,10 +203,6 @@ classdef barStimulus < baseStimulus
 				blscale = round(blpixels/obj.scale)+1;
 
 				tmat = ones(blscale,bwscale,4); %allocate the size correctly
-				tmat(:,:,1)=ones(blscale,bwscale)*obj.colour(1);
-				tmat(:,:,2)=ones(blscale,bwscale)*obj.colour(2);
-				tmat(:,:,3)=ones(blscale,bwscale)*obj.colour(3);
-				tmat(:,:,4)=ones(blscale,bwscale)*obj.colour(4);
 				rmat=ones(blscale,bwscale);
 				switch obj.type
 					case 'random'
@@ -224,6 +232,9 @@ classdef barStimulus < baseStimulus
 						end
 						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
 					otherwise
+						tmat(:,:,1)=ones(blscale,bwscale) * (obj.colour(1) * obj.contrastOut);
+						tmat(:,:,2)=ones(blscale,bwscale) * (obj.colour(2) * obj.contrastOut);
+						tmat(:,:,3)=ones(blscale,bwscale) * (obj.colour(3) * obj.contrastOut);
 						tmat(:,:,4)=ones(blscale,bwscale)*obj.alpha;
 				end
 				aw=0:obj.scale:bwpixels;

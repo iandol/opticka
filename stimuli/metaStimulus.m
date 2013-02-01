@@ -27,7 +27,7 @@ classdef metaStimulus < optickaCore
 		verbose = false
 		%> choice allows to call only 1 stimulus in the group
 		choice = []
-		%>
+		%> randomisation table to apply to a stimulus
 		stimulusTable = []
 	end
 	
@@ -211,6 +211,7 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function randomise(obj,choice)
 			if ~isempty(obj.stimulusTable)
+				logs = ['--->>> RANDOMISE Stimulus:' num2str(choice) ': '];
 				for i = 1:length(obj.stimulusTable)
 					
 					name = obj.stimulusTable(i).name;
@@ -226,11 +227,14 @@ classdef metaStimulus < optickaCore
 					if strcmpi(name,'xyPosition')
 						obj.stimuli{choice}.xPositionOut = values(1);
 						obj.stimuli{choice}.yPositionOut = values(2);
+						logs = [logs ' X & Y'];
 					elseif isprop(obj.stimuli{choice}, [name 'Out'])
 						obj.stimuli{choice}.([name 'Out']) = values;
+						logs = [logs ' | ' name 'Out:' num2str(values)];
 					end
 			
 				end
+				fprintf([logs '\n']);
 			end
 		end
 		

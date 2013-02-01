@@ -679,7 +679,7 @@ classdef runExperiment < optickaCore
 				obj.eyeLink = [];
 				%obj.behaviouralRecord = [];
 				if exist('topsDataLog','file')
-					topsDataLog.gui();
+					%topsDataLog.gui();
 				end
 				%figure(obj.screenSettings.optickahandle)
 				obj.lJack.close;
@@ -1242,37 +1242,48 @@ classdef runExperiment < optickaCore
 				rchar = KbName(keyCode);
 				if iscell(rchar);rchar=rchar{1};end
 				switch rchar
+					case {'UpArrow','up'} %give a reward at any time
+						timedTTL(obj.lJack,0,400);
+					case {'DownArrow','down'}
+						timedTTL(obj.lJack,0,1000);
 					case 'q' %quit
 						tS.stopTraining = true;
-					case {'LeftArrow','left'} %previous variable 1 value
-						if tS.totalTicks > tS.keyHold
-							obj.stimuli{1}.sizeOut = obj.stimuli{1}.sizeOut - 0.1;
-							if obj.stimuli{1}.sizeOut < 2
-								obj.stimuli{1}.sizeOut = 2;
-							end
-							fprintf('===>>> Stimulus Size: %g\n',obj.stimuli{1}.sizeOut)
-							tS.keyHold = tS.totalTicks + fInc;
-						end
-					case {'RightArrow','right'} %next variable 1 value
-						if tS.totalTicks > tS.keyHold
-							obj.stimuli{1}.sizeOut = obj.stimuli{1}.sizeOut + 0.1;
-							fprintf('===>>> Stimulus Size: %g\n',obj.stimuli{1}.sizeOut)
-							tS.keyHold = tS.totalTicks + fInc;
-						end
+% 					case {'LeftArrow','left'} %previous variable 1 value
+% 						if tS.totalTicks > tS.keyHold
+% 							obj.stimuli{1}.sizeOut = obj.stimuli{1}.sizeOut - 0.1;
+% 							if obj.stimuli{1}.sizeOut < 2
+% 								obj.stimuli{1}.sizeOut = 2;
+% 							end
+% 							fprintf('===>>> Stimulus Size: %g\n',obj.stimuli{1}.sizeOut)
+% 							tS.keyHold = tS.totalTicks + fInc;
+% 						end
+% 					case {'RightArrow','right'} %next variable 1 value
+% 						if tS.totalTicks > tS.keyHold
+% 							obj.stimuli{1}.sizeOut = obj.stimuli{1}.sizeOut + 0.1;
+% 							fprintf('===>>> Stimulus Size: %g\n',obj.stimuli{1}.sizeOut)
+% 							tS.keyHold = tS.totalTicks + fInc;
+% 						end
 					case ',<'
-						
+						if tS.totalTicks > tS.keyHold
+							obj.stimuli{2}.contrastOut = obj.stimuli{2}.contrastOut - 0.005;
+							if obj.stimuli{2}.contrastOut <= 0
+								obj.stimuli{2}.contrastOut = 0;
+							end
+							fprintf('===>>> Stimulus Contrast: %g\n',obj.stimuli{2}.contrastOut)
+							tS.keyHold = tS.totalTicks + fInc;
+						end
 					case '.>'
-						
+						if tS.totalTicks > tS.keyHold
+							obj.stimuli{2}.contrastOut = obj.stimuli{2}.contrastOut + 0.005;
+							fprintf('===>>> Stimulus Contrast: %g\n',obj.stimuli{2}.contrastOut)
+							tS.keyHold = tS.totalTicks + fInc;
+						end
 					case '=+'
 						
 					case '-_'
 						
 					case 'm'
 						forceTransition(obj.stateMachine, 'calibrate');
-					case {'UpArrow','up'} %give a reward at any time
-						timedTTL(obj.lJack,0,100);
-					case {'DownArrow','down'}
-						timedTTL(obj.lJack,0,1000);
 					case 'z' 
 						if tS.totalTicks > tS.keyHold
 							obj.eyeLink.fixationInitTime = obj.eyeLink.fixationInitTime - 0.1;

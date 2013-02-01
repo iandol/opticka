@@ -190,7 +190,6 @@ classdef behaviouralRecord < optickaCore
 			title(obj.h.axis2,['Response Times (mean: ' num2str(mean(obj.rt)) ')'])
 			title(obj.h.axis3,'Hit (blue) / Miss (red)')
 			title(obj.h.axis4,'Average (n=10) Hit / Miss %')
-			ylim(obj.h.axis1,[-0.1 1.6])
 			hn = findobj(obj.h.axis2,'Type','patch');
 			set(hn,'FaceColor','k','EdgeColor','k');
 			

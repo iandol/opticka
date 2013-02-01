@@ -249,6 +249,7 @@ classdef dotsStimulus < baseStimulus
 		%>  for example)
 		% ===================================================================
 		function update(obj)
+			obj.tick = 1;
 			obj.updateDots;
 		end
 		
@@ -268,6 +269,7 @@ classdef dotsStimulus < baseStimulus
 					Screen('DrawDots',obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
 						[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
 				end
+				obj.tick = obj.tick + 1;
 			end
 		end
 		
@@ -289,7 +291,6 @@ classdef dotsStimulus < baseStimulus
 				obj.xy(:,kidx) = (obj.sizeOut .* rand(2,ks)) - obj.sizeOut/2;
 				%obj.colours(3,kidx) = ones(1,ks); 
 			end
-			obj.tick = obj.tick + 1;
 		end
 		
 		% ===================================================================
@@ -304,6 +305,7 @@ classdef dotsStimulus < baseStimulus
 			obj.dys = [];
 			obj.dxdy = [];
 			obj.colours = [];
+			obj.tick = 1;
 		end
 		
 		% ===================================================================
@@ -354,7 +356,6 @@ classdef dotsStimulus < baseStimulus
 			if obj.mask == true
 				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xPositionOut,obj.yPositionOut);
 			end
-			obj.tick = 1;
 		end
 		
 		% ===================================================================

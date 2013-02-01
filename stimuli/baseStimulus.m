@@ -34,6 +34,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		speed = 0
 		%> angle in degrees
 		angle = 0
+		%> delay to display
+		delayTime = 0
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -64,6 +66,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+		%> delay ticks to wait until display
+		delayTicks = 0
 		%> delta cache
 		delta_
 		%> dX cache
