@@ -78,11 +78,11 @@ classdef stateMachine < optickaCore
 		isRunning = false
 		%> previous state information
 		previous = [];
+		%> is tops data logger present?
+		isTops = false
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
-		%> is tops data logger present?
-		isTops = false
 		%> should we run the finish function
 		isFinishing = false
 		%> field names of allStates struct array, defining state behaviors
@@ -126,9 +126,9 @@ classdef stateMachine < optickaCore
 				parseArgs(obj, varargin, obj.allowedProperties);
 			end
 			%can we use tower of psych data logger?
-			if exist('topsDataLog','file')
-				obj.isTops = false;
-			end
+% 			if exist('topsDataLog','file')
+% 				obj.isTops = false;
+% 			end
 		end
 		
 		% ===================================================================
@@ -458,13 +458,13 @@ classdef stateMachine < optickaCore
 					end
 				end
 				
-				if obj.isTops
-					data.currentTick = obj.currentTick;
-					data.nextTick = obj.nextTickOut;
-					data.thisState = thisState;
-					group = [obj.currentName ':enter:' obj.name];
-					topsDataLog.logDataInGroup(data, group);
-				end
+% 				if obj.isTops
+% 					data.currentTick = obj.currentTick;
+% 					data.nextTick = obj.nextTickOut;
+% 					data.thisState = thisState;
+% 					group = [obj.currentName ':enter:' obj.name];
+% 					topsDataLog.logDataInGroup(data, group);
+% 				end
 	
 			else
 				obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length');
@@ -512,12 +512,13 @@ classdef stateMachine < optickaCore
 			end
 			tnow=feval(obj.clockFcn);
 			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(tnow-obj.startTime) 's | ' num2str(tnow-obj.previous.entryTime) 's | ' num2str(obj.currentTick) '/' num2str(obj.totalTicks) 'ticks']);
-			if obj.isTops
-				data.currentTick = obj.currentTick;
-				data.nextTick = obj.nextTickOut;
-				group = [obj.currentName ':exit:' obj.name];
-				topsDataLog.logDataInGroup(data, group);
-			end
+
+% 			if obj.isTops
+% 				data.currentTick = obj.currentTick;
+% 				data.nextTick = obj.nextTickOut;
+% 				group = [obj.currentName ':exit:' obj.name];
+% 				topsDataLog.logDataInGroup(data, group);
+% 			end
 			
 		end
 		
@@ -549,6 +550,20 @@ classdef stateMachine < optickaCore
 			end
 		end
 
+	end
+	
+	%=======================================================================
+	methods (Static) %------------------STATIC METHODS
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief loadobj handler
+		%>
+		% ===================================================================
+		function lobj=loadobj(in)
+			lobj = in;
+		end
+		
 	end
 end
 

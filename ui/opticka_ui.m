@@ -383,6 +383,7 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.dotsStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+	set(handles.OKAddStimulus,'Enable','yes');
 	
 	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
@@ -407,7 +408,7 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.ndotsStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	
+	set(handles.OKAddStimulus,'Enable','yes');
 	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
 
@@ -431,7 +432,7 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.barStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	
+	set(handles.OKAddStimulus,'Enable','yes');
 	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
 
@@ -455,7 +456,7 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.gratingStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	
+	set(handles.OKAddStimulus,'Enable','yes');
 	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
 
@@ -479,7 +480,7 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.gaborStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	
+	set(handles.OKAddStimulus,'Enable','yes');
 	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
 
@@ -503,7 +504,7 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.spotStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	
+	set(handles.OKAddStimulus,'Enable','yes');
 	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
 end
 
@@ -528,6 +529,7 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.textureStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+	set(handles.OKAddStimulus,'Enable','yes');
 end
 
 
@@ -793,13 +795,6 @@ else
 	warndlg('Please enter a minimum, maximum and number of values');
 end
 
-% --- Executes on selection change in OKStimList.
-function OKStimList_Callback(hObject, eventdata, handles)
-if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	o.editStimulus;
-end
-
 % --- Executes on button press in OKAddStimulus.
 function OKAddStimulus_Callback(hObject, eventdata, handles)
 % hObject    handle to OKAddStimulus (see GCBO)
@@ -807,20 +802,23 @@ function OKAddStimulus_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.store.visibleStimulus.readPanel();
-	o.r.stimuli{o.r.stimuli.n+1} = o.store.visibleStimulus.clone();
-	o.r.stimuli{o.r.stimuli.n}.name = ['Stimulus #' num2str(o.r.stimuli.n)];
-	o.addStimulus;
-	if o.r.stimuli.n > 0
-		set(handles.OKDeleteStimulus,'Enable','on');
-		set(handles.OKModifyStimulus,'Enable','on');
-		set(handles.OKEditStimulus,'Enable','on');
-		set(handles.OKCopyStimulus,'Enable','on');
-		set(handles.OKStimulusUp,'Enable','on');
-		set(handles.OKStimulusDown,'Enable','on');
-		set(handles.OKStimulusRun,'Enable','on');
-		set(handles.OKStimulusRunBenchmark,'Enable','on');
-		set(handles.OKStimulusRunAll,'Enable','on');
+	if isfield(o.store,'visibleStimulus')
+		o.store.visibleStimulus.readPanel();
+		o.r.stimuli{o.r.stimuli.n+1} = o.store.visibleStimulus.clone();
+		o.r.stimuli{o.r.stimuli.n}.name = 'Stimulus';
+		o.addStimulus;
+		if o.r.stimuli.n > 0
+			set(handles.OKAddStimulus,'Enable','on');
+			set(handles.OKDeleteStimulus,'Enable','on');
+			set(handles.OKModifyStimulus,'Enable','on');
+			set(handles.OKEditStimulus,'Enable','on');
+			set(handles.OKCopyStimulus,'Enable','on');
+			set(handles.OKStimulusUp,'Enable','on');
+			set(handles.OKStimulusDown,'Enable','on');
+			set(handles.OKStimulusRun,'Enable','on');
+			set(handles.OKStimulusRunBenchmark,'Enable','on');
+			set(handles.OKStimulusRunAll,'Enable','on');
+		end
 	end
 end
 
@@ -833,6 +831,7 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.deleteStimulus;
 	if o.r.stimuli.n == 0
+		set(handles.OKAddStimulus,'Enable','off');
 		set(handles.OKDeleteStimulus,'Enable','off');
 		set(handles.OKModifyStimulus,'Enable','off');
 		set(handles.OKEditStimulus,'Enable','off');
@@ -860,6 +859,13 @@ end
 
 % --- Executes on button press in OKEditStimulus.
 function OKEditStimulus_Callback(hObject, eventdata, handles)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.editStimulus;
+end
+
+% --- Executes on selection change in OKStimList.
+function OKStimList_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.editStimulus;
@@ -1318,7 +1324,10 @@ function OKMenuNewProtocol_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.r = [];
+	o.store.evnt = [];
+	o.store = rmfield(o.store,'evnt');
 	o.store.visibleStimulus=[];
+	o.store = rmfield(o.store,'visibleStimulus');
 	o.clearStimulusList;
 	o.clearVariableList;
 	o.getScreenVals;
@@ -1332,8 +1341,11 @@ function OKToolbarInitialise_ClickedCallback(hObject, eventdata, handles) %#ok<*
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.r=[];
+	o.r = [];
+	o.store.evnt = [];
+	o.store = rmfield(o.store,'evnt');
 	o.store.visibleStimulus=[];
+	o.store = rmfield(o.store,'visibleStimulus');
 	o.clearStimulusList;
 	o.clearVariableList;
 	o.getScreenVals;
@@ -1381,27 +1393,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-
-function OKTrainingRewardSize_Callback(hObject, eventdata, handles)
-% hObject    handle to OKTrainingRewardSize (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of OKTrainingRewardSize as text
-%        str2double(get(hObject,'String')) returns contents of OKTrainingRewardSize as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function OKTrainingRewardSize_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to OKTrainingRewardSize (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
 
 % --------------------------------------------------------------------
 function OKToggleUI_ClickedCallback(hObject, eventdata, handles)

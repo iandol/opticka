@@ -8,33 +8,35 @@ classdef opticka < optickaCore
 	
 	properties
 		%> this is the main runExperiment object
-		r 
+		r = []
 		%> run in verbose mode?
-		verbose
+		verbose = false
+	end
+	
+	properties (SetAccess = public, GetAccess = public, Transient = true)
 		%> general store for misc properties
-		store
+		store = struct()
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
+		%> version number
+		optickaVersion = '0.761'
 		%> history of display objects
 		history
-		%> all of the handles to th opticka_ui GUI
-		h
-		%> version number
-		optickaVersion='0.751'
 		%> is this a remote instance?
 		remote = 0
 		%> omniplex connection, via TCP
 		oc
+		%> all of the handles to the opticka_ui GUI
+		h = []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> used to sanitise passed values on construction
 		allowedProperties='verbose' 
 		%> which UI settings should be saved locally to the machine?
-		uiPrefsList = {'OKOmniplexIP','OKPixelsPerCm','OKAntiAliasing','OKbitDepth'};
-		%> any other prefs to save?
-		otherPrefsList = {};
+		uiPrefsList = {'OKOmniplexIP','OKMonitorDistance','OKPixelsPerCm',...
+			'OKbackgroundColour','OKAntiAliasing','OKbitDepth'};
 	end
 	
 	events
@@ -54,12 +56,12 @@ classdef opticka < optickaCore
 		%> parsed.
 		%> @return instance of opticka class.
 		% ===================================================================
-		function obj = opticka(args)
-			
+		function obj = opticka(varargin)
+			if nargin == 0; varargin.name = 'opticka'; end
+			obj=obj@optickaCore(varargin); %superclass constructor
 			if nargin>0
-				obj.parseArgs(args, obj.allowedProperties);
+				obj.parseArgs(varargin, obj.allowedProperties);
 			end
-			
 			obj.initialiseUI;
 		end
 		
@@ -301,8 +303,6 @@ classdef opticka < optickaCore
 				end
 				
 				obj.getStateInfo();
-				
-				obj.store.nVars = 0;
 
 				set(obj.h.OKVarList,'String','');
 				set(obj.h.OKStimList,'String','');
@@ -406,7 +406,9 @@ classdef opticka < optickaCore
 			if isempty(obj.r.task)
 				obj.r.task = stimulusSequence;
 			end
-			obj.r.task.fps = obj.r.screenVals.fps;
+			if isfield(obj.r.screenVals,'fps')
+				obj.r.task.fps = obj.r.screenVals.fps;
+			end
 			obj.r.task.trialTime = obj.gd(obj.h.OKtrialTime);
 			obj.r.task.randomSeed = obj.gn(obj.h.OKRandomSeed);
 			v = obj.gv(obj.h.OKrandomGenerator);
@@ -451,6 +453,9 @@ classdef opticka < optickaCore
 				if ~isempty(obj.r.stimuli)
 					obj.r.stimuli = metaStimulus();
 				end
+			end
+			if isfield(obj.store,'visibleStimulus');
+					closePanel(obj.r.stimuli{v})
 			end
 			set(obj.h.OKStimList,'Value',1);
 			set(obj.h.OKStimList,'String','');			
@@ -518,7 +523,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function readPanel(obj,src,evnt)
-			obj.salutation(['---> ' obj.fullName '@readPanel triggered by: ' src.fullName '...']);
+			obj.salutation('readPanel',[obj.fullName ' triggered by: ' src.fullName],true);
 			obj.refreshStimulusList;
 		end
 		 
@@ -535,7 +540,7 @@ classdef opticka < optickaCore
 						delete(obj.store.evnt);
 						obj.store = rmfield(obj.store,'evnt');
 					end
-					if isfield(obj.store,'visibleStimulus');
+					if isfield(obj.store,'visibleStimulus') && isa(obj.store.visibleStimulus,'baseStimulus')
 						obj.store.visibleStimulus.closePanel();
 						obj.store = rmfield(obj.store,'visibleStimulus');
 					end
@@ -580,7 +585,6 @@ classdef opticka < optickaCore
 					obj.r.task.nVar(revertN+1).offsetvalue = offset(2);
 				end
 				obj.r.task.randomiseStimuli;
-				obj.store.nVars = obj.r.task.nVars;
 
 				obj.refreshVariableList;
 			
@@ -607,7 +611,6 @@ classdef opticka < optickaCore
 					if obj.r.task.nVars > 0
 						obj.r.task.randomiseStimuli;
 					end
-					obj.store.nVars = obj.r.task.nVars;
 				end
 				obj.refreshVariableList;
 			end
@@ -642,11 +645,9 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function copyVariable(obj)
-			
 			if isobject(obj.r.task)
 				val = obj.gv(obj.h.OKVarList);
 				obj.r.task.nVar(end+1)=obj.r.task.nVar(val);
-				obj.store.nVars = obj.r.task.nVars;
 				obj.refreshVariableList;
 			end
 		end
@@ -725,17 +726,14 @@ classdef opticka < optickaCore
 									set(myhandle, 'Value', prf);
 								end
 							case 'popupmenu'
-								if isnumeric(prf)
+								str = get(myhandle,'String');
+								if isnumeric(prf) && prf <= length(str)
 									set(myhandle, 'Value', prf);
 								end
 						end
 					end
 				end	
 			end
-			for i = 1:length(obj.otherPrefsList)
-				
-			end
-			
 		end
 		
 		% ===================================================================
@@ -760,10 +758,6 @@ classdef opticka < optickaCore
 						setpref('opticka', prfname, prf);
 				end
 			end
-			for i = 1:length(obj.otherPrefsList)
-				
-			end
-			
 		end
 
 	end
@@ -824,7 +818,12 @@ classdef opticka < optickaCore
 			
 			obj.paths.currentPath = pwd;
 			cd(obj.paths.protocols);
-			tmp = obj;
+			tmp = clone(obj);
+			if isfield(tmp.store,'evnt') %delete our previous event
+ 				delete(tmp.store.evnt);
+ 				tmp.store.evnt = [];
+ 				tmp.store = rmfield(tmp.store,'evnt');
+ 			end
 			tmp.store.oldlook = [];
 			uisave('tmp','new protocol');
 			cd(obj.paths.currentPath);
@@ -845,6 +844,15 @@ classdef opticka < optickaCore
 			obj.paths.stateInfoFile = [fpath fname];
 			obj.r.stateInfoFile = obj.paths.stateInfoFile;
 			
+		end
+		
+		% ===================================================================
+		%> @brief Load State Info 
+		%> Save Protocol
+		%> @param 
+		% ===================================================================
+		function delete(obj)
+			fprintf('***DESTUCTOR OPTICKA %s CALLED***\n',obj.fullName)
 		end
 		
 		% ===================================================================
@@ -883,7 +891,7 @@ classdef opticka < optickaCore
 						obj.r.stimuli.stimuli = tmp.r.stimuli;
 					else
 						clear tmp;
-						errordlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
+						warndlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
 						error('No stimulus found in protocol!!!');
 					end
 				elseif isprop(tmp.r,'stimulus')
@@ -895,7 +903,7 @@ classdef opticka < optickaCore
 					end
 				else
 					clear tmp;
-					errordlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
+					warndlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
 					error('No stimulus found in protocol!!!');
 				end
 				
@@ -935,6 +943,8 @@ classdef opticka < optickaCore
 					string = num2str(tmp.r.screen.backgroundColour);
 					string = regexprep(string,'\s+',' '); %collapse spaces
 					set(obj.h.OKbackgroundColour,'String',string);
+				else
+					obj.salutation('No screenManager settings loaded!','',true);
 				end
 				%copy task parameters
 				if isempty(tmp.r.task)
@@ -977,11 +987,15 @@ classdef opticka < optickaCore
 					set(obj.h.OKStimulusDown,'Enable','on');
 					set(obj.h.OKStimulusRun,'Enable','on');
 					set(obj.h.OKStimulusRunBenchmark,'Enable','on');
+					set(obj.h.OKStimulusRunAll,'Enable','on');
 					obj.editStimulus;
 				end
 				
 			end
 			obj.refreshProtocolsList;
+			o = getappdata(obj.h.output,'o');
+			fprintf('***>>>UI set from %s to %s\n',o.fullName,obj.fullName)
+			setappdata(obj.h.output,'o',obj)
 		end
 		
 		% ======================================================================
@@ -1178,16 +1192,6 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief saveobj Our custom save method to prepare object for safe saving
-		%> 
-		%> @param obj
-		% ===================================================================
-		function obj = saveobj(obj)
-			obj.store.oldlook=[]; %need to remove this as java objects not supported for save in matlab
-			obj.oc = [];
-		end
-		
-		% ===================================================================
 		%> @brief fixUI Try to work around GUIDE OS X bugs
 		%> 
 		% ===================================================================
@@ -1204,12 +1208,53 @@ classdef opticka < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief saveobj Our custom save method to prepare object for safe saving
+		%> 
+		%> @param obj
+		% ===================================================================
+% 		function sobj = saveobj(obj)
+% 			sobj = obj;
+% 			if isfield(sobj.store,'evnt') %delete our previous event
+% 				delete(sobj.store.evnt);
+% 				sobj.store.evnt = [];
+% 				sobj.store = rmfield(sobj.store,'evnt');
+% 			end
+% 			fn = fieldnames(sobj.store);
+% 			for i=1:length(fn)
+% 				if isa(sobj.store.(fn{i}),'baseStimulus')
+% 					delete(sobj.store.(fn{i}));
+% 					sobj.store.(fn{i}) = [];
+% 					sobj.store = rmfield(sobj.store,fn{i});
+% 				end
+% 			end
+% 			sobj.store.oldlook=[]; %need to remove this as java objects not supported for save in matlab
+% 			sobj.oc = [];
+% 		end
+		
 	end
 	
 	%========================================================
 	methods ( Static ) %----------Static METHODS
 	%========================================================
 	
+		% ===================================================================
+		%> @brief loadobj
+		%> To be backwards compatible to older saved protocols, we have to parse 
+		%> structures / objects specifically during object load
+		%> @param in input object/structure
+		% ===================================================================
+		function lobj=loadobj(in)
+			if isa(in,'opticka')
+				fprintf('---> opticka loadobj: RUNNING...\n')
+				lobj = in;
+			else
+				fprintf('---> opticka loadobj: REBUILDING...\n')
+				lobj = opticka();
+				lobj.r = in.r;
+			end	
+		end
+		
 		% ===================================================================
 		%> @brief ping -- ping a network address
 		%>	We send a single packet and wait only 10ms to ensure we have a fast connection
@@ -1288,16 +1333,6 @@ classdef opticka < optickaCore
 			set(uihandle,'Position',[x y size(1) size(2)]);
 		end
 		
-		% ===================================================================
-		%> @brief loadobj
-		%> To be backwards compatible to older saved protocols, we have to parse 
-		%> structures / objects specifically during object load
-		%> @param in input object/structure
-		% ===================================================================
-% 		function lobj=loadobj(in)
-% 			fprintf('---> opticka loadobj: RUNNING...\n')
-% 			lobj = in;
-% 		end
 	end
 	
 end

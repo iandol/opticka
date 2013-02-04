@@ -316,7 +316,7 @@ classdef optickaCore < handle
 			if ~exist('override','var')
 				override = false;
 			end
-			if obj.verbose==true || override == true
+			if ~isempty(obj.verbose==true) && (obj.verbose==true || override == true)
 				if ~exist('in','var')
 					in = 'undefined';
 				end

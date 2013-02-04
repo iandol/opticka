@@ -170,7 +170,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 
 				nLevels = zeros(obj.nVars, 1);
 				for f = 1:obj.nVars
-					nLevels(f) = size(obj.nVar(f).values,1);
+					nLevels(f) = length(obj.nVar(f).values);
 				end
 
 				obj.minBlocks = prod(nLevels);
@@ -421,33 +421,35 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	methods (Static) %------------------STATIC METHODS
 	%=======================================================================
 	
-% 		% ===================================================================
-% 		%> @brief loadobj handler
-% 		%>
-% 		%> The problem is we use set.nVar to allow robust setting of
-% 		%> variables, but set.nVar also gets called on loading and will mangle
-% 		%> older saved protocols during load. We need to specify we are loading
-% 		%> and use a conditional in set.nVar to do the right thing.
-% 		% ===================================================================
-% 		function lobj=loadobj(in)
-% 			if ~isa(in,'stimulusSequence') && isstruct(in)
-% 				fprintf('---> Loading stimulusSequence structure...\n');
-% 				lobj = stimulusSequence;
-% 				lobj.isLoading = true;
-% 				fni = fieldnames(in);
-% 				fn = intersect(lobj.loadProperties,fni);
-% 				for i=1:length(fn)
-% 					lobj.(fn{i}) = in.(fn{i});
-% 				end
-% 			elseif isa(in,'stimulusSequence')
-% 				fprintf('---> Loading stimulusSequence object...\n');
-% 				in.currentState = []; %lets strip the old random streams
-% 				in.oldStream = [];
-% 				in.taskStream = [];
-% 				lobj = in;
-% 			end
-% 			lobj.isLoading = false;
-% 		end
+		% ===================================================================
+		%> @brief loadobj handler
+		%>
+		%> The problem is we use set.nVar to allow robust setting of
+		%> variables, but set.nVar also gets called on loading and will mangle
+		%> older saved protocols during load. We need to specify we are loading
+		%> and use a conditional in set.nVar to do the right thing.
+		% ===================================================================
+		function lobj=loadobj(in)
+			if ~isa(in,'stimulusSequence') && isstruct(in)
+				fprintf('---> Rebuilding stimulusSequence structure...\n');
+				lobj = stimulusSequence;
+				lobj.isLoading = true;
+				fni = fieldnames(in);
+				fn = intersect(lobj.loadProperties,fni);
+				for i=1:length(fn)
+					lobj.(fn{i}) = in.(fn{i});
+				end
+			elseif isa(in,'stimulusSequence')
+				fprintf('---> Loading stimulusSequence object...\n');
+				in.currentState = []; %lets strip the old random streams
+				in.oldStream = [];
+				in.taskStream = [];
+				lobj = in;
+			else
+				fprintf('---> Loading stimulusSequence FAILED...\n');
+			end
+			lobj.isLoading = false;
+		end
 		
 	end
 	
