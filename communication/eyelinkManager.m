@@ -41,7 +41,7 @@ classdef eyelinkManager < optickaCore
 		%> cutom calibration callback (enables better handling of
 		%> calibration)
 		callback = 'eyelinkCallback'
-		%> eyelink defaults modifiers
+		%> eyelink defaults modifiers as a struct()
 		modify = struct()
 		%> stimulus positions to draw on screen
 		stimulusPositions = []
@@ -392,7 +392,7 @@ classdef eyelinkManager < optickaCore
 		%> fixation state, useful for using via stateMachine
 		%>
 		% ===================================================================
-		function out = testIsFixated(obj, yesString, noString)
+		function out = testWithinFixationWindow(obj, yesString, noString)
 			if obj.isFixated
 				out = yesString;
 			else
@@ -406,7 +406,7 @@ classdef eyelinkManager < optickaCore
 		%> external code to quickly select a string based on this.
 		%>
 		% ===================================================================
-		function out = testIsFixatedTime(obj, yesString, noString)
+		function out = testFixationTime(obj, yesString, noString)
 			[fix,fixtime] = obj.isFixated();
 			if fix && fixtime
 				obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TEST');
@@ -471,7 +471,7 @@ classdef eyelinkManager < optickaCore
 		%> @brief draw the current eye position on the PTB display
 		%>
 		% ===================================================================
-		function drawPosition(obj)
+		function drawEyePosition(obj)
 			if obj.isConnected && obj.screen.isOpen && ~isempty(obj.x) && ~isempty(obj.y)
 				x = obj.toPixels(obj.x,'x');
 				y = obj.toPixels(obj.y,'y');
@@ -557,7 +557,7 @@ classdef eyelinkManager < optickaCore
 				x = obj.screen.xCenter + (obj.fixationX * obj.screen.ppd);
 				y = obj.screen.yCenter + (obj.fixationY * obj.screen.ppd);
 				rect = round(CenterRectOnPoint(rect, x, y));
-				Eyelink('Command','clear_screen 1');
+				Eyelink('Command','clear_screen 2');
 				Eyelink('Command', 'draw_box %d %d %d %d 15', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
@@ -579,7 +579,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function setOffline(obj)
-			if obj.isConnected && currentMode(obj) ~= 1
+			if obj.isConnected 
 				Eyelink('Command', 'set_idle_mode');
 			end
 		end

@@ -1,6 +1,6 @@
 % ========================================================================
-%> @brief optickaCore base class inherited by many other opticka classes.
-%> optickaCore is itself derived from handle
+%> @brief Create and update behavioural record.
+%> 
 % ========================================================================
 classdef behaviouralRecord < optickaCore
 	
@@ -48,6 +48,11 @@ classdef behaviouralRecord < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> 
+		% ===================================================================
 		function createPlot(obj, eL)
 			obj.tick = 1;
 			obj.date = datestr(now);
@@ -123,6 +128,11 @@ classdef behaviouralRecord < optickaCore
 			set(hn,'FaceColor','k','EdgeColor','k');
 		end
 		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> 
+		% ===================================================================
 		function updatePlot(obj, eL, sM)
 			if obj.tick == 1
 				obj.startTime = clock;
