@@ -154,17 +154,15 @@ switch eyecmd
     case 2
         % Eyelink Keyboard query:
         [rc, el] = EyelinkGetKey(el);
-		if rc > 0; fprintf('--->>> EYELINKCALLBACK:2 Key: %g\n',rc);end 
 		if rc == 32 
-			clearScreen=1;
+			clearScreen = 1;
 			needsupdate = 1;
-			calxy=[];
-			lj
-			if isa(lj,'labJack') && lj.isOpen == true
+			calxy = [];
+			if isa(lj,'labJack')
 				lj.timedTTL(0,400);
 			end
 		end
-        if verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
+        if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
     case 3
         % Alert message:
 		fprintf('--->>> EYELINKCALLBACK:3 Eyelink Alert: %s.\n', msg);
@@ -481,13 +479,17 @@ try
 	[width, heigth]=Screen('WindowSize', eyewin);
 	size=round(el.calibrationtargetsize/100*width);
 	inset=round(el.calibrationtargetwidth/100*width);
-	insetSize = size-2*inset;
+	insetSize = floor(size-2*inset);
 	if insetSize < 1
 		insetSize = 1;
+		fprintf('FIX %g %g %g\n',size,inset,insetSize);
+	else
+		fprintf('NOFIX %g %g %g\n',size,inset,insetSize);
 	end
+	
 	if size <= 64
 		Screen('DrawDots', eyewin, calxy, size, el.calibrationtargetcolour, [], 1);
-		Screen('DrawDots', eyewin, calxy, insetSize, el.backgroundcolour, [], 1);
+		Screen('DrawDots', eyewin, calxy, insetSize, [1 0 1], [], 1);
 	else
 		Screen('FillOval', eyewin, el.calibrationtargetcolour, [calxy(1)-size/2 calxy(2)-size/2 calxy(1)+size/2 calxy(2)+size/2], size+2);
 		Screen('FillOval', eyewin, [1 0 1], [calxy(1)-inset/2 calxy(2)-inset/2 calxy(1)+inset/2 calxy(2)+inset/2], inset+2);

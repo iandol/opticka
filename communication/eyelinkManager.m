@@ -553,12 +553,14 @@ classdef eyelinkManager < optickaCore
 		function trackerDrawFixation(obj)
 			if obj.isConnected
 				size = (obj.fixationRadius * 2) * obj.screen.ppd;
-				rect = [0 0 size-5 size-5];
+				mod = round(size/10);
+				if mod < 0; mod = 0; end
+				rect = [0 0 size-mod size-mod];
 				x = obj.screen.xCenter + (obj.fixationX * obj.screen.ppd);
 				y = obj.screen.yCenter + (obj.fixationY * obj.screen.ppd);
 				rect = round(CenterRectOnPoint(rect, x, y));
-				Eyelink('Command','clear_screen 2');
-				Eyelink('Command', 'draw_box %d %d %d %d 15', rect(1), rect(2), rect(3), rect(4));
+				Eyelink('Command','clear_screen 0');
+				Eyelink('Command', 'draw_box %d %d %d %d 14', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
 		

@@ -20,7 +20,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion = '0.761'
+		optickaVersion = '0.762'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -523,7 +523,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function readPanel(obj,src,evnt)
-			obj.salutation('readPanel',[obj.fullName ' triggered by: ' src.fullName],true);
+			obj.salutation('readPanel',['Triggered by: ' src.fullName],true);
 			obj.refreshStimulusList;
 		end
 		 
