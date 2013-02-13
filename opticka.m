@@ -167,13 +167,13 @@ classdef opticka < optickaCore
 					pause(0.25);
 					tic
 					if sendLog == false
-						if ~isempty(obj.r.timeLog);tLog = obj.r.timeLog;end
-						obj.r.deleteTimeLog; %so we don't send too much data over TCP
+						if ~isempty(obj.r.runLog);tLog = obj.r.runLog;end
+						obj.r.deleteRunLog; %so we don't send too much data over TCP
 					end
 					tmpobj=obj.r;
 					obj.oc.writeVar('o',tmpobj);
 					if sendLog == false
-						if ~isempty(tLog);obj.r.restoreTimeLog(tLog);end
+						if ~isempty(tLog);obj.r.restoreRunLog(tLog);end
 					end
 					fprintf('>>>Opticka: It took %g seconds to write and send stimulus to Omniplex machine\n',toc);
 					loop = 1;
@@ -855,7 +855,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function delete(obj)
-			fprintf('***DESTUCTOR OPTICKA %s CALLED***\n',obj.fullName)
+			fprintf('---> %s DESTRUCTOR CALLED <---\n',obj.fullName)
 		end
 		
 		% ===================================================================
@@ -1250,10 +1250,10 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function lobj=loadobj(in)
 			if isa(in,'opticka')
-				fprintf('---> opticka loadobj: RUNNING...\n')
+				fprintf('---> opticka loadobj: Assigning object...\n')
 				lobj = in;
 			else
-				fprintf('---> opticka loadobj: REBUILDING...\n')
+				fprintf('---> opticka loadobj: Recreating object from structure...\n')
 				lobj = opticka();
 				lobj.r = in.r;
 			end	

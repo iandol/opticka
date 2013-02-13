@@ -107,7 +107,7 @@ classdef opxOnline < handle
 			end
 			
 			obj.dateStamp = datestr(clock);
-			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d\d)','match','once'));
+			obj.mversion = str2double(regexpi(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
 			fprintf('\n\nWelcome to opxOnline, running under Matlab %i\n\n',obj.mversion);
 			
 			if ispc
@@ -119,8 +119,8 @@ classdef opxOnline < handle
 				obj.masterCommand = '!matlab -nodesktop -nosplash -r "opxRunMaster" &';
 				obj.slaveCommand =  '!matlab -nodesktop -nosplash -r "opxRunSlave" &';
 			else
-				obj.masterCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -maci -r \"opxRunMaster\""'' -e ''end tell''';
-				obj.slaveCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -nojvm -maci -r \"opxRunSlave\""'' -e ''end tell''';
+				obj.masterCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -r \"opxRunMaster\""'' -e ''end tell''';
+				obj.slaveCommand = '!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -nosplash -nojvm -r \"opxRunSlave\""'' -e ''end tell''';
 			end
 			
 			switch obj.type
