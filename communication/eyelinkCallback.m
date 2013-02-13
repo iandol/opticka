@@ -480,6 +480,7 @@ try
 	size=round(el.calibrationtargetsize/100*width);
 	inset=round(el.calibrationtargetwidth/100*width);
 	insetSize = floor(size-2*inset);
+	insetSize = 2;
 	if insetSize < 1
 		insetSize = 1;
 		fprintf('FIX %g %g %g\n',size,inset,insetSize);
@@ -488,7 +489,7 @@ try
 	end
 	
 	if size <= 64
-		Screen('DrawDots', eyewin, calxy, size, el.calibrationtargetcolour, [], 1);
+		Screen('DrawDots', eyewin, calxy, 60, el.calibrationtargetcolour, [], 1);
 		Screen('DrawDots', eyewin, calxy, insetSize, [1 0 1], [], 1);
 	else
 		Screen('FillOval', eyewin, el.calibrationtargetcolour, [calxy(1)-size/2 calxy(2)-size/2 calxy(1)+size/2 calxy(2)+size/2], size+2);
