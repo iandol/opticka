@@ -20,7 +20,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion = '0.762'
+		optickaVersion = '0.765'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -503,18 +503,19 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function addStimulus(obj)
+			obj.refreshStimulusList;
+			nidx = obj.r.stimuli.n;
+			set(obj.h.OKStimList,'Value',nidx);
 			if isfield(obj.store,'evnt') %delete our previous event
 				delete(obj.store.evnt);
 				obj.store = rmfield(obj.store,'evnt');
 			end
-			obj.store.evnt = addlistener(obj.r.stimuli{end},'readPanelUpdate',@obj.readPanel);
+			obj.store.evnt = addlistener(obj.r.stimuli{nidx},'readPanelUpdate',@obj.readPanel);
 			if isfield(obj.store,'visibleStimulus');
 				obj.store.visibleStimulus.closePanel();
 			end
-			makePanel(obj.r.stimuli{end},obj.h.OKPanelStimulus);
-			obj.store.visibleStimulus = obj.r.stimuli{end};
-			obj.refreshStimulusList;
-			set(obj.h.OKStimList,'Value',obj.r.stimuli.n);
+			makePanel(obj.r.stimuli{nidx},obj.h.OKPanelStimulus);
+			obj.store.visibleStimulus = obj.r.stimuli{nidx};
 		end
 		
 		% ===================================================================
@@ -533,9 +534,10 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function editStimulus(obj)
+			tic
 			if obj.r.stimuli.n > 0
 				v = get(obj.h.OKStimList,'Value');
-				if v <= obj.r.stimuli.n;
+				if v <= obj.r.stimuli.n && ~strcmpi(obj.r.stimuli{v}.uuid,obj.store.visibleStimulus.uuid)
 					if isfield(obj.store,'evnt')
 						delete(obj.store.evnt);
 						obj.store = rmfield(obj.store,'evnt');
@@ -548,9 +550,10 @@ classdef opticka < optickaCore
 					makePanel(obj.r.stimuli{v},obj.h.OKPanelStimulus);
 					obj.store.evnt = addlistener(obj.r.stimuli{v},'readPanelUpdate',@obj.readPanel);
 					obj.store.visibleStimulus = obj.r.stimuli{v};
+					obj.refreshStimulusList;
 				end
-				
 			end
+			fprintf('Stim Edit took: %g ms\n',toc*1000)
 		end
 		
 		% ===================================================================
@@ -1045,7 +1048,7 @@ classdef opticka < optickaCore
 				s = obj.r.stimuli{i};
 				switch s.family
 					case 'grating'
-						tstr = ['grating' num2str(i) ':'];
+						if isempty(s.name);tstr = ['grating' num2str(i) ':'];else;tstr = [s.name ':'];end
 						tstr = [tstr ' x=' num2str(s.xPosition)];
 						tstr = [tstr ' y=' num2str(s.yPosition)];
 						tstr = [tstr ' c=' num2str(s.contrast)];
@@ -1057,7 +1060,7 @@ classdef opticka < optickaCore
 						tstr = [tstr ' sg=' num2str(s.sigma)];
 						str{i} = tstr;
 					case 'gabor'
-						tstr = ['gabor' num2str(i) ':'];
+						if isempty(s.name);tstr = ['gabor' num2str(i) ':'];else;tstr = [s.name ':'];end
 						tstr = [tstr ' x=' num2str(s.xPosition)];
 						tstr = [tstr ' y=' num2str(s.yPosition)];
 						tstr = [tstr ' c=' num2str(s.contrast)];
@@ -1068,10 +1071,11 @@ classdef opticka < optickaCore
 						tstr = [tstr ' p=' num2str(s.phase)];
 						str{i} = tstr;
 					case 'bar'
+						
 						x=s.xPosition;
 						y=s.yPosition;
 						a=s.angle;
-						str{i} = ['Bar ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
+						str{i} = [s.name ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
 					case 'dots'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1082,7 +1086,7 @@ classdef opticka < optickaCore
 						sp=s.speed;
 						k=s.kill;
 						ct=s.colourType;
-						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn) ' sp=' num2str(sp) ' k=' num2str(k) ' ct=' ct];
+						str{i} = [s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn) ' sp=' num2str(sp) ' k=' num2str(k) ' ct=' ct];
 					case 'ndots'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1090,14 +1094,14 @@ classdef opticka < optickaCore
 						a=s.angle;
 						c=s.coherence;
 						dn=s.density;
-						str{i} = ['Dots ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn)];
+						str{i} = [s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn)];
 					case 'spot'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
 						c=s.contrast;
 						a=s.angle;
-						str{i} = ['Spot ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' ang=' num2str(a)];
+						str{i} = [s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' ang=' num2str(a)];
 					case 'texture'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1105,7 +1109,7 @@ classdef opticka < optickaCore
 						c=s.contrast;
 						sp=s.speed;
 						p=s.fileName;
-						str{i} = ['Texture ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
+						str{i} = [s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
 					otherwise
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1261,13 +1265,17 @@ classdef opticka < optickaCore
 		%> @param rAddress remote address
 		%> @return status is 0 if ping succeded
 		% ===================================================================
-		function status = ping(rAddress)
+		function [status, result] = ping(rAddress)
+			if ~exist('rAddress','var')
+				fprintf('status=opticka.ping(''IP'') = pings an IP address passed as a string\n')
+				return
+			end
 			if ispc
 				cmd = 'ping -n 1 -w 10 ';
 			else
 				cmd = 'ping -c 1 -W 10 ';
 			end
-			[status,~]=system([cmd rAddress]);
+			[status,result]=system([cmd rAddress]);
 		end
 		
 		% ===================================================================

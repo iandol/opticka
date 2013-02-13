@@ -10,7 +10,7 @@ classdef textureStimulus < baseStimulus
 		contrast = 1
 		scale = 1
 		interpMethod = 'nearest'
-		fileName = []
+		fileName = ''
 		%>scale up the texture in the bar
 		pixelScale = 1 
 	end

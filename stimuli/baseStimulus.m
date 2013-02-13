@@ -288,6 +288,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 					'NumberTitle', 'off');
 			end
 			
+			bgcolor = [0.3 0.3 0.3];
+			
 			handles.parent = parent;
 			handles.root = uiextras.BoxPanel('Parent',parent,...
 				'Title',obj.fullName,...
@@ -296,11 +298,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 				'FontWeight','normal',...
 				'Padding',0,...
 				'TitleColor',[0.78 0.75 0.7],...
-				'BackgroundColor',[0.83 0.83 0.83]);
+				'BackgroundColor',bgcolor);
 			handles.hbox = uiextras.HBox('Parent', handles.root,'Padding',0,'Spacing',0);
 			handles.grid1 = uiextras.Grid('Parent', handles.hbox,'Padding',0,'Spacing',0);
 			handles.grid2 = uiextras.Grid('Parent', handles.hbox,'Padding',0,'Spacing',0);
 			handles.grid3 = uiextras.VButtonBox('Parent',handles.hbox,'Padding',0,'Spacing',0);
+			set(handles.hbox,'Sizes', [-2 -2 -1]);
 			
 			idx = {'handles.grid1','handles.grid2','handles.grid3'};
 			
@@ -373,6 +376,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 								'HorizontalAlignment','left',...
 								'String','Select file...',...
 								'FontName','Helvetica',...
+								'Tag',[pr{cur} '_button'],...
+								'Callback',@obj.selectFilePanel,...
 								'FontSize', 10);
 							else
 								uicontrol('Style','text',...
@@ -394,11 +399,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 						uiextras.Empty('Parent',eval(idx{i}));
 					end
 				end
-				eval([idx{i} '.ColumnSizes = [-2,-1];']);
+				set(eval(idx{i}),'ColumnSizes',[-1.5 -1]);
+				%eval([idx{i} '.ColumnSizes = [-1.2,-1];']);
 			end
 			for j = 1:lp2
 				val = obj.(pr2{j});
-				if j < length(pr2)
+				if j <= length(pr2)
 					handles.([pr2{j} '_bool']) = uicontrol('Style','checkbox',...
 						'Parent',eval(idx{end}),...
 						'Tag',['panel' pr2{j}],...
@@ -415,6 +421,24 @@ classdef baseStimulus < optickaCore & dynamicprops
 				'String','Update');
 			obj.handles = handles;
 			
+		end
+		
+		% ===================================================================
+		%> @brief read values from a GUI properties panel for this object
+		%>
+		% ===================================================================
+		function selectFilePanel(obj,varargin)
+			if nargin > 0
+				hin = varargin{1};
+				if ishandle(hin)
+					[f,p] = uigetfile('*.*','Select File:');
+					re = regexp(get(hin,'Tag'),'(.+)_button','tokens','once');
+					hout = obj.handles.([re{1} '_char']);
+					if ishandle(hout)
+						set(hout,'String', [p f]);
+					end
+				end
+			end
 		end
 		
 		% ===================================================================
@@ -445,6 +469,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 						obj.(handleNameOut) = str{v};
 					case 'bool'
 						obj.(handleNameOut) = logical(get(obj.handles.(handleName),'Value'));
+						if isempty(obj.(handleNameOut))
+							obj.(handleNameOut) = false;
+						end
 					case 'num'
 						obj.(handleNameOut) = str2num(get(obj.handles.(handleName),'String')); %#ok<ST2NM>
 					case 'char'

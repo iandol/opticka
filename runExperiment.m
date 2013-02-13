@@ -9,8 +9,10 @@
 %>  Stimulus must be a stimulus class, i.e. gratingStimulus and friends,
 %>  so for example:
 %>
-%>  myStim{1}=gratingStimulus('mask',1,'sf',1);
-%>  myExp=runExperiment('stimulus',myStim);
+%>  gStim = gratingStimulus('mask',1,'sf',1);
+%>  myStim = metaStimulus;
+%>  myStim{1} = gStim;
+%>  myExp = runExperiment('stimuli',myStim);
 %>  run(myExp);
 %>
 %>	will run a minimal experiment showing a 1c/d circularly masked grating
@@ -26,12 +28,18 @@ classdef runExperiment < optickaCore
 		screen
 		%> file to define the stateMachine state info
 		stateInfoFile = ''
+		%> key manager 
+		keyManager = ''
 		%> use LabJack for digital output?
 		useLabJack = false
+		%> use dataPixx for digital I/O
+		useDataPixx = false
 		%> use eyelink?
 		useEyeLink = false
 		%> this lets the opticka UI leave commands to runExperiment
 		uiCommand = ''
+		%> do we flip or not?
+		doFlip = true
 		%> log all frame times, gets slow for > 1e6 frames
 		logFrames = true
 		%> structure to pass to screenManager on initialisation
@@ -44,6 +52,10 @@ classdef runExperiment < optickaCore
 		benchmark = false
 		%> verbose logging?
 		verbose = true
+		%> strobed word value
+		strobeValue = []
+		%> send strobe on next flip?
+		sendStrobe = false
 	end
 	
 	properties (Hidden = true)
@@ -79,6 +91,8 @@ classdef runExperiment < optickaCore
 		stateMachine
 		%> eyelink manager object
 		eyeLink
+		%> data pixx control
+		dPixx
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -247,8 +261,9 @@ classdef runExperiment < optickaCore
 						tL.vbl = Screen('Flip', s.win, nextvbl);
 					end
 					%==================================================%
-					if obj.task.strobeThisFrame == true
+					if obj.sendStrobe == true
 						obj.lJack.strobeWord; %send our word out to the LabJack
+						obj.sendStrobe = false;
 					end
 					
 					if obj.task.tick == 1
@@ -371,13 +386,6 @@ classdef runExperiment < optickaCore
 				obj.stimuli.verbose = obj.verbose;
 				setup(obj.stimuli); %run setup() for each stimulus
 				
-				% set up the eyelink interface
-				if obj.useEyeLink
-					obj.eyeLink = eyelinkManager();
-					initialise(obj.eyeLink, s);
-					setup(obj.eyeLink);
-				end
-				
 				obj.stateMachine = stateMachine('verbose',true); %#ok<*CPROP>
 				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 				if isempty(obj.stateInfoFile)
@@ -409,6 +417,13 @@ classdef runExperiment < optickaCore
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
+				
+				% set up the eyelink interface
+				if obj.useEyeLink
+					obj.eyeLink = eyelinkManager();
+					initialise(obj.eyeLink, s);
+					setup(obj.eyeLink);
+				end
 				
 				tS.index = 1;
 				tS.maxindex = length(obj.task.nVar(1).values);
@@ -477,8 +492,27 @@ classdef runExperiment < optickaCore
 					%throw away any other keystrokes
 					FlushEvents('keyDown');
 					
-					%lazy flip, timing is not critical here
-					Screen('Flip', s.win);
+					%======= FLIP: Show it at correct retrace: ========%
+					if obj.doFlip
+						nextvbl = tL.vbl(end) + obj.screenVals.halfisi;
+						if obj.logFrames == true
+							[tL.vbl(tS.totalTicks),tL.show(tS.totalTicks),tL.flip(tS.totalTicks),tL.miss(tS.totalTicks)] = Screen('Flip', s.win, nextvbl);
+						elseif obj.benchmark == true
+							tL.vbl = Screen('Flip', s.win, 0, 2, 2);
+						else
+							tL.vbl = Screen('Flip', s.win, nextvbl);
+						end
+					end
+					%==================================================%
+					
+					if obj.logFrames == true
+						if strcmpi(obj.stateMachine.currentName,'stimulus')
+							tL.stimTime(tS.totalTicks)=1;
+						else
+							tL.stimTime(tS.totalTicks)=0;
+						end
+					end
+					
 					tS.totalTicks = tS.totalTicks + 1;
 					
 				end
@@ -720,8 +754,6 @@ classdef runExperiment < optickaCore
 				obj.screenSettings.visualDebug = true;
 			end
 			
-			obj.runLog = timeLogger();
-			
 			if isempty(regexpi('nostimuli',config)) && (isempty(obj.stimuli) || ~isa(obj.stimuli,'metaStimulus'))
 				obj.stimuli = metaStimulus();
 			end
@@ -755,7 +787,9 @@ classdef runExperiment < optickaCore
 		
 			obj.screenVals = obj.screen.screenVals;
 			
-			obj.runLog.screenLog.prepTime=obj.runLog.timer()-obj.runLog.screenLog.construct;
+			if isa(obj.runLog,'timeLogger')
+				obj.runLog.screenLog.prepTime=obj.runLog.timer()-obj.runLog.screenLog.construct;
+			end
 			
 		end
 		
@@ -802,12 +836,23 @@ classdef runExperiment < optickaCore
 		%> Let us cascase verbosity to other classes
 		% ===================================================================
 		function set.verbose(obj,value)
+			obj.salutation('Verbose cascaded');
+			value = logical(value);
 			obj.verbose = value;
 			if isa(obj.task,'stimulusSequence') %#ok<*MCSUP>
 				obj.task.verbose = value;
 			end
 			if isa(obj.screen,'screenManager')
 				obj.screen.verbose = value;
+			end
+			if isa(obj.stateMachine,'stateMachine')
+				obj.stateMachine.verbose = value;
+			end
+			if isa(obj.eyeLink,'eyelinkManager')
+				obj.eyeLink.verbose = value;
+			end
+			if isa(obj.lJack,'labJack')
+				obj.lJack.verbose = value;
 			end
 		end
 		
@@ -840,6 +885,24 @@ classdef runExperiment < optickaCore
 				obj.stimuli.choice = obj.thisStim;
 			end
 		end
+		
+		% ===================================================================
+		%> @brief set strobe value
+		%>
+		%> 
+		% ===================================================================
+		function setStrobeValue(obj, value)
+			if obj.useDataPixx == true
+				valueStrobe = bitor(value, 2^15);
+				strobe = [value, valueStrobe, 0];
+				bufferAddress = 8e6;
+				Datapixx('WriteDoutBuffer', strobe, bufferAddress);
+				Datapixx('SetDoutSchedule', 0, 1000, length(strobe), bufferAddress, length(strobe));
+			elseif isa(obj.lJack,'labJack') && obj.lJack.isOpen == true
+				prepareStrobe(obj.lJack, value)
+			end
+		end
+		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
@@ -912,14 +975,14 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function updateTask(obj)
 			obj.task.timeNow = GetSecs;
-			obj.task.strobeThisFrame = false;
+			obj.sendStrobe = false;
 			if obj.task.tick==1 %first frame
 				obj.task.isBlank = false;
 				obj.task.startTime = obj.task.timeNow;
 				obj.task.switchTime = obj.task.trialTime; %first ever time is for the first trial
 				obj.task.switchTick = obj.task.trialTime*ceil(obj.screenVals.fps);
 				obj.lJack.prepareStrobe(obj.task.outIndex(obj.task.totalRuns));
-				obj.task.strobeThisFrame = true;
+				obj.sendStrobe = true;
 			end
 			
 			%-------------------------------------------------------------------
@@ -936,15 +999,15 @@ classdef runExperiment < optickaCore
 					% only in the next loop, we have to send the strobe one loop after we set switched
 					% to true
 					if obj.task.switched == true;
-						obj.task.strobeThisFrame = true;
+						obj.sendStrobe = true;
 					end
 					
-					if obj.verbose==true;tic;end
+					%if obj.verbose==true;tic;end
 % 					for i = 1:obj.stimuli.n %parfor appears faster here for 6 stimuli at least
 % 						obj.stimuli{i}.animate;
 % 					end
 					animate(obj.stimuli);
-					if obj.verbose==true;fprintf('=-> updateTask() Stimuli animation: %g ms\n',toc*1000);end
+					%if obj.verbose==true;fprintf('=-> updateTask() Stimuli animation: %g ms\n',toc*1000);end
 					
 				else %this is a blank stimulus
 					obj.task.blankTick = obj.task.blankTick + 1;
@@ -957,7 +1020,7 @@ classdef runExperiment < optickaCore
 					% only in the next loop, we have to send the strobe one loop after we set switched
 					% to true
 					if obj.task.switched == true;
-						obj.task.strobeThisFrame = true;
+						obj.sendStrobe = true;
 					end
 					% now update our stimuli, we do it after the first blank as less
 					% critical timingwise
@@ -975,9 +1038,9 @@ classdef runExperiment < optickaCore
 					%this dispatches each stimulus update on a new blank frame to
 					%reduce overhead.
 					if obj.task.blankTick > 2 && obj.task.blankTick <= obj.stimuli.n + 2
-						if obj.verbose==true;tic;end
+						%if obj.verbose==true;tic;end
 						update(obj.stimuli, obj.task.blankTick-2);
-						if obj.verbose==true;fprintf('=-> updateTask() Blank-frame %i: stimulus %i update = %g ms\n',obj.task.blankTick,obj.task.blankTick-2,toc*1000);end
+						%if obj.verbose==true;fprintf('=-> updateTask() Blank-frame %i: stimulus %i update = %g ms\n',obj.task.blankTick,obj.task.blankTick-2,toc*1000);end
 					end
 					
 				end
@@ -1003,7 +1066,7 @@ classdef runExperiment < optickaCore
 					%obj.logMe('OutaBlank');
 					
 				else %we have to show the new run on the next flip
-					
+
 					%obj.logMe('IntoTrial');
 					if obj.task.thisBlock <= obj.task.nBlocks
 						obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
@@ -1025,7 +1088,6 @@ classdef runExperiment < optickaCore
 						obj.task.thisBlock = obj.task.nBlocks + 1;
 					end
 					%obj.logMe('OutaTrial');
-					
 				end
 			end
 		end

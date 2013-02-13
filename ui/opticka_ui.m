@@ -383,9 +383,8 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.dotsStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	set(handles.OKAddStimulus,'Enable','yes');
-	
-	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
+	set(handles.OKAddStimulus,'Enable','on');
+	set(handles.OKPanelStimulusText,'String','')
 end
 
 % --------------------------------------------------------------------
@@ -408,8 +407,8 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.ndotsStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	set(handles.OKAddStimulus,'Enable','yes');
-	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
+	set(handles.OKAddStimulus,'Enable','on');
+	set(handles.OKPanelStimulusText,'String','')
 end
 
 % --------------------------------------------------------------------
@@ -432,8 +431,8 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.barStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	set(handles.OKAddStimulus,'Enable','yes');
-	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
+	set(handles.OKAddStimulus,'Enable','on');
+	set(handles.OKPanelStimulusText,'String','')
 end
 
 % --------------------------------------------------------------------
@@ -456,8 +455,8 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.gratingStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	set(handles.OKAddStimulus,'Enable','yes');
-	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
+	set(handles.OKAddStimulus,'Enable','on');
+	set(handles.OKPanelStimulusText,'String','')
 end
 
 % --------------------------------------------------------------------
@@ -479,9 +478,9 @@ if isappdata(handles.output,'o')
 		o.store.gaborStimulus=gaborStimulus('name','Gabor Stimulus');
 	end
 	o.store.visibleStimulus = o.store.gaborStimulus;
+	set(handles.OKPanelStimulusText,'String','')
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	set(handles.OKAddStimulus,'Enable','yes');
-	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
+	set(handles.OKAddStimulus,'Enable','on');
 end
 
 % --------------------------------------------------------------------
@@ -490,6 +489,7 @@ function OKMenuSpot_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
+	
 	o = getappdata(handles.output,'o');
 	
 	if isfield(o.store,'visibleStimulus');
@@ -503,9 +503,9 @@ if isappdata(handles.output,'o')
 		o.store.spotStimulus=spotStimulus('name','Spot Stimulus');
 	end
 	o.store.visibleStimulus = o.store.spotStimulus;
+	set(handles.OKPanelStimulusText,'String','')
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	set(handles.OKAddStimulus,'Enable','yes');
-	set(handles.OKPanelStimulusText,'String','Stimulus Panel')
+	set(handles.OKAddStimulus,'Enable','on');
 end
 
 % --------------------------------------------------------------------
@@ -529,7 +529,8 @@ if isappdata(handles.output,'o')
 	end
 	o.store.visibleStimulus = o.store.textureStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
-	set(handles.OKAddStimulus,'Enable','yes');
+	set(handles.OKAddStimulus,'Enable','on');
+	set(handles.OKPanelStimulusText,'String','')
 end
 
 
@@ -805,13 +806,12 @@ if isappdata(handles.output,'o')
 	if isfield(o.store,'visibleStimulus')
 		o.store.visibleStimulus.readPanel();
 		o.r.stimuli{o.r.stimuli.n+1} = o.store.visibleStimulus.clone();
-		o.r.stimuli{o.r.stimuli.n}.name = 'Stimulus';
+		%o.r.stimuli{o.r.stimuli.n}.name = 'Stimulus';
 		o.addStimulus;
 		if o.r.stimuli.n > 0
 			set(handles.OKAddStimulus,'Enable','on');
 			set(handles.OKDeleteStimulus,'Enable','on');
 			set(handles.OKModifyStimulus,'Enable','on');
-			set(handles.OKEditStimulus,'Enable','on');
 			set(handles.OKCopyStimulus,'Enable','on');
 			set(handles.OKStimulusUp,'Enable','on');
 			set(handles.OKStimulusDown,'Enable','on');
@@ -834,7 +834,6 @@ if isappdata(handles.output,'o')
 		set(handles.OKAddStimulus,'Enable','off');
 		set(handles.OKDeleteStimulus,'Enable','off');
 		set(handles.OKModifyStimulus,'Enable','off');
-		set(handles.OKEditStimulus,'Enable','off');
 		set(handles.OKCopyStimulus,'Enable','off');
 		set(handles.OKStimulusUp,'Enable','off');
 		set(handles.OKStimulusDown,'Enable','off');
@@ -855,13 +854,6 @@ if isappdata(handles.output,'o')
 	o.r.stimuli{o.r.stimuli.n+1} = o.r.stimuli{v}.clone;
 	o.r.stimuli{o.r.stimuli.n}.name = ['Stimulus #' num2str(o.r.stimuli.n)];
 	o.addStimulus;
-end
-
-% --- Executes on button press in OKEditStimulus.
-function OKEditStimulus_Callback(hObject, eventdata, handles)
-if isappdata(handles.output,'o')
-	o = getappdata(handles.output,'o');
-	o.editStimulus;
 end
 
 % --- Executes on selection change in OKStimList.

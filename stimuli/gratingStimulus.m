@@ -83,6 +83,8 @@ classdef gratingStimulus < baseStimulus
 		squareWave = false
 		%> do we generate a square wave?
 		gabor = false
+		%> mask value
+		maskValue
 	end
 	
 	events (ListenAccess = 'protected', NotifyAccess = 'protected') %only this class can access these
@@ -211,9 +213,9 @@ classdef gratingStimulus < baseStimulus
 			end
 			
 			if obj.mask == true
-				obj.mask = floor((obj.ppd*obj.size)/2);
+				obj.maskValue = floor((obj.ppd*obj.size)/2);
 			else
-				obj.mask = [];
+				obj.maskValue = [];
 			end
 			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
@@ -224,15 +226,15 @@ classdef gratingStimulus < baseStimulus
 			
 			if strcmpi(obj.type,'square')
 				obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
-					obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
+					obj.res(2), obj.colourOut, obj.maskValue, obj.contrastMult);
 			else
 				if obj.sigmaOut > 0
 					obj.texture = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
-						obj.res(2), obj.colourOut, obj.mask, obj.contrastMult, obj.sigmaOut, ...
+						obj.res(2), obj.colourOut, obj.maskValue, obj.contrastMult, obj.sigmaOut, ...
 						obj.useAlpha, obj.smoothMethod);
 				else
 					obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
-						obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
+						obj.res(2), obj.colourOut, obj.maskValue, obj.contrastMult);
 				end
 			end
 			
@@ -294,9 +296,7 @@ classdef gratingStimulus < baseStimulus
 		function reset(obj)
 			obj.tick = 1;
 			obj.texture=[];
-			if obj.mask > 0
-				obj.mask = true;
-			end
+			obj.maskValue = [];
 			obj.removeTmpProperties;
 		end
 		

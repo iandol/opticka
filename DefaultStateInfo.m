@@ -16,17 +16,20 @@ else
 end
 obj.stimuli.choice = obj.thisStim;
 
+obj.useEyeLink = true;
+
 %these are our functions that will execute as the stateMachine runs
 %prestimulus blank
-prestimulusFcn = { @()drawBackground(obj.screen); ...
-	@()drawFixationPoint(obj.screen); ...
-	@()drawPosition(obj.eyeLink) }; 
+preFcn = { @()drawBackground(obj.screen); ...
+	@()drawFixationPoint(obj.screen) }; 
 %reset the fixation time values
 preEntryFcn = @()resetFixation(obj.eyeLink);
+%exit prestimulus
+preExit = @()update(obj.stimuli);
 %what to run when we are showing stimuli
-stimFcn = @()draw(obj.stimuli); %obj.stimuli is the stimuli loaded into opticka
+stimFcn = {@()draw(obj.stimuli); @()drawEyePosition(obj.eyeLink) }; %obj.stimuli is the stimuli loaded into opticka
 %what to run when we enter the stim presentation state
-stimEntryFcn = @()update(obj.stimuli);
+stimEntryFcn = [];
 %as we exit stim presentation state
 stimExitFcn = { @()printChoice(obj.stimuli); @()resetFixation(obj.eyeLink) };
 %if the subject is correct (small reward)
@@ -34,13 +37,13 @@ correctEntry1 = @()timedTTL(obj.lJack,0,100);
 %if the subject is correct (big reward)
 correctEntry2 = @()timedTTL(obj.lJack,0,500);
 %correct stimulus
-correctWithin = { @()draw(obj.stimuli); @()drawGreenSpot(obj.screen,20) };
+correctWithin = { @()draw(obj.stimuli); @()drawGreenSpot(obj.screen,1) };
 %when we exit the correct state
-correctExit = { @()randomiseTrainingList(obj); @()WaitSecs(1) };
+correctExit = { @()randomiseTrainingList(obj); };
 %our incorrect stimulus
-incorrectFcn = { @()drawBackground(obj.screen) ; @()drawRedSpot(obj.screen,20) };
+incorrectFcn = { @()drawBackground(obj.screen) ; @()drawRedSpot(obj.screen,1) };
 %test we are maintaining fixation
-maintainFixFcn = @()testFixation(obj.eyeLink,'','breakfix');
+maintainFixFcn = @()testWithinFixationWindow(obj.eyeLink,'','breakfix');
 %test we are fixated for a certain length of time
 initFixFcn = @()testFixationTime(obj.eyeLink,'stimulus','');
 
@@ -48,7 +51,7 @@ initFixFcn = @()testFixationTime(obj.eyeLink,'stimulus','');
 stateInfoTmp = { ...
 'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'prestimulus'	inf		[]				[]				[]				[]; ...
-'prestimulus' 'incorrect'	20		[]				prestimulusFcn	initFixFcn		[]; ...
+'prestimulus' 'incorrect'	3		[]				preFcn			initFixFcn		[]; ...
 'stimulus'  'correct1'		3		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'incorrect' 'prestimulus'	1	    []				incorrectFcn	[]				[]; ...
 'breakfix'	'prestimulus'	1		[]				incorrectFcn	[]				[]; ...

@@ -90,7 +90,7 @@ classdef stateMachine < optickaCore
 		%> default values of allStates struct array fields
 		stateDefaults = {'', '', {}, {}, 1, {}, {}}
 		%> properties allowed during construction
-		allowedProperties = 'name|realTime|verbose|clockFcn|waitFcn|timeDelta|transitionFcn'
+		allowedProperties = 'name|realTime|verbose|clockFcn|waitFcn|timeDelta|globalTransitionFcn'
 	end
 	
 	events
