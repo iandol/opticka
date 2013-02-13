@@ -33,7 +33,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> used to sanitise passed values on construction
-		allowedProperties='verbose' 
+		allowedProperties='verbose'
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList = {'OKOmniplexIP','OKMonitorDistance','OKPixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth'};
@@ -768,30 +768,6 @@ classdef opticka < optickaCore
 	%========================================================
 	methods ( Access = private ) %----------PRIVATE METHODS
 	%========================================================
-	
-		% ===================================================================
-		%> @brief 
-		%> 
-		%> @param 
-		%> @return
-		% ===================================================================
-		function out = dealUItoStructure(obj,fragment)
-			if ~exist('fragment','var')
-				fragment = 'OKPanelGrating';
-			end
-			tt=fieldnames(obj.h);
-			a=1;
-			out=[];
-			for i=1:length(tt)
-				[ii,oo]=regexp(tt{i},fragment);
-				l=length(tt{i});
-				if ~isempty(ii) && oo < l
-					out(a).name=tt{i}(ii:end);
-					out(a).fragment=tt{i}(oo:end);
-					a=a+1;
-				end
-			end
-		end
 		
 		% ===================================================================
 		%> @brief Delete Protocol
@@ -799,7 +775,6 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function deleteProtocol(obj)
-
 			v = obj.gv(obj.h.OKProtocolsList);
 			file = obj.gs(obj.h.OKProtocolsList,v);
 			obj.paths.currentPath = pwd;
@@ -818,7 +793,6 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function saveProtocol(obj)
-			
 			obj.paths.currentPath = pwd;
 			cd(obj.paths.protocols);
 			tmp = clone(obj);
@@ -831,7 +805,6 @@ classdef opticka < optickaCore
 			uisave('tmp','new protocol');
 			cd(obj.paths.currentPath);
 			obj.refreshProtocolsList;
-			
 		end
 		
 		% ===================================================================
@@ -840,13 +813,11 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function loadStateInfo(obj)
-			
 			obj.paths.currentPath = pwd;
 			cd(obj.paths.protocols);
 			[fname,fpath] = uigetfile({'.m'});
 			obj.paths.stateInfoFile = [fpath fname];
 			obj.r.stateInfoFile = obj.paths.stateInfoFile;
-			
 		end
 		
 		% ===================================================================
