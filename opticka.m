@@ -534,10 +534,18 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function editStimulus(obj)
-			tic
 			if obj.r.stimuli.n > 0
-				v = get(obj.h.OKStimList,'Value');
-				if v <= obj.r.stimuli.n && ~strcmpi(obj.r.stimuli{v}.uuid,obj.store.visibleStimulus.uuid)
+				skip = false;
+				if ~isfield(obj.store,'visibleStimulus') || ~isa(obj.store.visibleStimulus,'baseStimulus')
+					v = 1;
+					obj.store.visibleStimulus = obj.r.stimuli{1};
+				else
+					v = get(obj.h.OKStimList,'Value');
+					if strcmpi(obj.r.stimuli{v}.uuid,obj.store.visibleStimulus.uuid)
+						skip = false;
+					end
+				end
+				if v <= obj.r.stimuli.n && skip == false
 					if isfield(obj.store,'evnt')
 						delete(obj.store.evnt);
 						obj.store = rmfield(obj.store,'evnt');
@@ -553,7 +561,6 @@ classdef opticka < optickaCore
 					obj.refreshStimulusList;
 				end
 			end
-			fprintf('Stim Edit took: %g ms\n',toc*1000)
 		end
 		
 		% ===================================================================
@@ -805,6 +812,10 @@ classdef opticka < optickaCore
 			uisave('tmp','new protocol');
 			cd(obj.paths.currentPath);
 			obj.refreshProtocolsList;
+			obj.refreshStimulusList;
+			obj.refreshVariableList;
+			obj.getScreenVals;
+			obj.getTaskVals;
 		end
 		
 		% ===================================================================
@@ -954,7 +965,6 @@ classdef opticka < optickaCore
 				end
 				if obj.r.stimuli.n > 0
 					set(obj.h.OKDeleteStimulus,'Enable','on');
-					set(obj.h.OKEditStimulus,'Enable','on');
 					set(obj.h.OKModifyStimulus,'Enable','on');
 					set(obj.h.OKInspectStimulus,'Enable','on');
 					set(obj.h.OKStimulusUp,'Enable','on');
