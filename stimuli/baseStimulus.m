@@ -34,8 +34,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 		speed = 0
 		%> angle in degrees
 		angle = 0
-		%> delay to display
+		%> delay time to display, can set upper and lower range for random interval
 		delayTime = 0
+		%> override X and Y position with mouse input?
+		mouseOverride = false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -43,8 +45,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dstRect
 		%> Our screen rectangle position in PTB format
 		mvRect
-		%> Our texture pointer for texture-based stimuli
-		texture
 		%> true or false, whether to draw() this object
 		isVisible = true
 		%> tick updates +1 on each draw, resets on each update
@@ -52,6 +52,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
+		%> Our texture pointer for texture-based stimuli
+		texture
 		%> handles for the GUI
 		handles
 	end
@@ -66,8 +68,26 @@ classdef baseStimulus < optickaCore & dynamicprops
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+		%> computed X position for stimuli that don't use rects
+		xOut = 0
+		%> computed Y position for stimuli that don't use rects
+		yOut = 0
+		%> screen width inherited from screenManager
+		screenWidth = inf
+		%> screen height inherited from screenManager
+		screenHeight = inf
+		%> the tick at which last mouse position was checked
+		mouseTick = 0
+		%> is mouse position within screen co-ordinates?
+		mouseValid = false
+		%> mouse X position
+		mouseX = 0
+		%> mouse Y position
+		mouseY = 0
 		%> delay ticks to wait until display
 		delayTicks = 0
+		%>are we setting up?
+		inSetup = false
 		%> delta cache
 		delta_
 		%> dX cache
@@ -95,7 +115,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be passed on construction
-		allowedProperties='name|xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed'
+		allowedProperties='xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed'
 	end
 	
 	events
@@ -118,9 +138,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function obj = baseStimulus(varargin)
 			
-			if nargin>0
-				obj.parseArgs(varargin, obj.allowedProperties);
-			end
+			if nargin == 0; varargin.name = 'baseStimulus'; end
+			obj=obj@optickaCore(varargin); %superclass constructor
+			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
 			
 		end
 		
@@ -212,6 +232,42 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		%> @brief we reset the various tick counters for our stimulus
+		%>
+		% ===================================================================
+		function resetTicks(obj)
+			if max(obj.delayTime) > 0
+				if length(obj.delayTime) == 1
+					obj.delayTicks = round(obj.delayTime/obj.ifi);
+				elseif length(obj.delayTime) == 2
+					time = randi([obj.delayTime(1)*1000 obj.delayTime(2)*1000])/1000;
+					obj.delayTicks = round(time/obj.ifi);
+				end
+			else
+				obj.delayTicks = 0;
+			end
+			obj.tick = 1; obj.mouseTick = 0;
+		end
+		
+		% ===================================================================
+		%> @brief get mouse position
+		%> we make sure this is only called once per animation tick to
+		%> improve performance and ensure all stimuli that are following
+		%> mouse position have consistent X and Y per frame update
+		% ===================================================================
+		function getMousePosition(obj)
+			if obj.tick > obj.mouseTick
+				[obj.mouseX,obj.mouseY] = GetMouse(obj.win);
+				if obj.mouseX > obj.screenWidth || obj.mouseY > obj.screenHeight
+					obj.mouseValid = false;
+				else
+					obj.mouseValid = true;
+				end
+				obj.mouseTick = obj.tick;
+			end
+		end
+		
+		% ===================================================================
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
@@ -288,7 +344,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 					'NumberTitle', 'off');
 			end
 			
-			bgcolor = [0.3 0.3 0.3];
+			bgcolor = [0.85 0.85 0.85];
+			bgcoloredit = [0.87 0.87 0.87];
 			
 			handles.parent = parent;
 			handles.root = uiextras.BoxPanel('Parent',parent,...
@@ -297,12 +354,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 				'FontSize',11,...
 				'FontWeight','normal',...
 				'Padding',0,...
-				'TitleColor',[0.78 0.75 0.7],...
+				'TitleColor',[0.8 0.78 0.76],...
 				'BackgroundColor',bgcolor);
-			handles.hbox = uiextras.HBox('Parent', handles.root,'Padding',0,'Spacing',0);
-			handles.grid1 = uiextras.Grid('Parent', handles.hbox,'Padding',0,'Spacing',0);
-			handles.grid2 = uiextras.Grid('Parent', handles.hbox,'Padding',0,'Spacing',0);
-			handles.grid3 = uiextras.VButtonBox('Parent',handles.hbox,'Padding',0,'Spacing',0);
+			handles.hbox = uiextras.HBox('Parent', handles.root,'Padding',0,'Spacing',0,'BackgroundColor',bgcolor);
+			handles.grid1 = uiextras.Grid('Parent', handles.hbox,'Padding',0,'Spacing',0,'BackgroundColor',bgcolor);
+			handles.grid2 = uiextras.Grid('Parent', handles.hbox,'Padding',0,'Spacing',0,'BackgroundColor',bgcolor);
+			handles.grid3 = uiextras.VButtonBox('Parent',handles.hbox,'Padding',0,'Spacing',0,'BackgroundColor',bgcolor);
 			set(handles.hbox,'Sizes', [-2 -2 -1]);
 			
 			idx = {'handles.grid1','handles.grid2','handles.grid3'};
@@ -329,7 +386,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 										'Tag',['panel' pr{cur}],...
 										'Callback',@obj.readPanel,...
 										'String',val,...
-										'FontName','Menlo');
+										'FontName','Menlo',...
+										'BackgroundColor',bgcoloredit);
 								else
 									txt=obj.([pr{cur} 'List']);
 									fidx = strcmpi(txt,obj.(pr{cur}));
@@ -339,7 +397,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 										'Tag',['panel' pr{cur} 'List'],...
 										'String',txt,...
 										'Callback',@obj.readPanel,...
-										'Value',fidx);
+										'Value',fidx,...
+										'BackgroundColor',bgcolor);
 								end
 							else
 								val = regexprep(val,'\s+',' ');
@@ -347,7 +406,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 									'Parent',eval(idx{i}),...
 									'Tag',['panel' pr{cur}],...
 									'Callback',@obj.readPanel,...
-									'String',val);
+									'String',val,...
+									'BackgroundColor',bgcoloredit);
 							end
 						elseif isnumeric(val)
 							val = num2str(val);
@@ -357,12 +417,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 								'Tag',['panel' pr{cur}],...
 								'String',val,...
 								'Callback',@obj.readPanel,...
-								'FontName','Menlo');
+								'FontName','Menlo',...
+								'BackgroundColor',bgcoloredit);
 						else
-							uiextras.Empty('Parent',eval(idx{i}));
+							uiextras.Empty('Parent',eval(idx{i}),'BackgroundColor',bgcolor);
 						end
 					else
-						uiextras.Empty('Parent',eval(idx{i}));
+						uiextras.Empty('Parent',eval(idx{i}),'BackgroundColor',bgcolor);
 					end
 				end
 				
@@ -385,7 +446,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 								'HorizontalAlignment','left',...
 								'String',pr{cur},...
 								'FontName','Helvetica',...
-								'FontSize', 10);
+								'FontSize', 10,...
+								'BackgroundColor',bgcolor);
 							end
 						else
 							uicontrol('Style','text',...
@@ -393,14 +455,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 							'HorizontalAlignment','left',...
 							'String',pr{cur},...
 							'FontName','Helvetica',...
-							'FontSize', 10);
+							'FontSize', 10,...
+							'BackgroundColor',bgcolor);
 						end
 					else
-						uiextras.Empty('Parent',eval(idx{i}));
+						uiextras.Empty('Parent',eval(idx{i}),...
+							'BackgroundColor',bgcolor);
 					end
 				end
-				set(eval(idx{i}),'ColumnSizes',[-1.5 -1]);
-				%eval([idx{i} '.ColumnSizes = [-1.2,-1];']);
+				set(eval(idx{i}),'ColumnSizes',[-2 -1]);
 			end
 			for j = 1:lp2
 				val = obj.(pr2{j});
@@ -411,7 +474,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 						'String',pr2{j},...
 						'FontName','Verdana',...
 						'FontSize', 10,...
-						'Value',val);
+						'Value',val,...
+						'BackgroundColor',bgcolor);
 				end
 			end
 			handles.readButton = uicontrol('Style','pushbutton',...
@@ -621,7 +685,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief compute xTmp and yTmp
+		%> @brief compute xOut and yOut
 		%>
 		% ===================================================================
 		function computePosition(obj)
@@ -630,8 +694,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 			else
 				[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);
 			end
-			obj.xTmp = obj.xPositionOut + (dx * obj.ppd);
-			obj.yTmp = obj.yPositionOut + (dy * obj.ppd);
+			obj.xOut = obj.xPositionOut + (dx * obj.ppd);
+			obj.yOut = obj.yPositionOut + (dy * obj.ppd);
 		end
 		
 		% ===================================================================

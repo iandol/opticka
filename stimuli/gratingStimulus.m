@@ -1,4 +1,3 @@
-
 % ========================================================================
 %> @brief single grating stimulus, inherits from baseStimulus
 %> GRATINGSTIMULUS single grating stimulus, inherits from baseStimulus
@@ -140,6 +139,7 @@ classdef gratingStimulus < baseStimulus
 		function setup(obj,sM)
 			
 			obj.reset; %reset it back to its initial state
+			obj.inSetup = true;
 			if isempty(obj.isVisible)
 				obj.show;
 			end
@@ -151,6 +151,8 @@ classdef gratingStimulus < baseStimulus
 			obj.xCenter=sM.xCenter;
 			obj.yCenter=sM.yCenter;
 			obj.win=sM.win;
+			obj.screenWidth = sM.screenVals.width;
+			obj.screenHeight = sM.screenVals.height;
 
 			obj.texture = []; %we need to reset this
 
@@ -238,6 +240,8 @@ classdef gratingStimulus < baseStimulus
 				end
 			end
 			
+			obj.inSetup = false;
+			
 			obj.setRect();
 			
 		end
@@ -247,7 +251,7 @@ classdef gratingStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
-			obj.tick = 1;
+			obj.tick = 1; obj.mouseTick = 0;
 			if obj.correctPhase
 				ps=obj.calculatePhase;
 				obj.driftPhase=obj.phaseOut-ps;
@@ -263,7 +267,7 @@ classdef gratingStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible == true
+			if obj.isVisible == true && obj.tick > obj.delayTicks
 				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
 					obj.angleOut, [], [], [], [], obj.rotateMode,...
 					[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
@@ -276,6 +280,10 @@ classdef gratingStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(obj)
+			if obj.mouseOverride && obj.mouseValid
+				getMousePosition(obj);
+				obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+			end
 			if obj.doMotion == true
 				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
 			end
@@ -294,7 +302,7 @@ classdef gratingStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function reset(obj)
-			obj.tick = 1;
+			obj.tick = 1; obj.mouseTick = 0;
 			obj.texture=[];
 			obj.maskValue = [];
 			obj.removeTmpProperties;

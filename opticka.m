@@ -62,7 +62,9 @@ classdef opticka < optickaCore
 			if nargin>0
 				obj.parseArgs(varargin, obj.allowedProperties);
 			end
-			obj.initialiseUI;
+			if obj.cloning == false
+				obj.initialiseUI;
+			end
 		end
 		
 		% ===================================================================
@@ -769,7 +771,7 @@ classdef opticka < optickaCore
 				end
 			end
 		end
-
+		
 	end
 	
 	%========================================================
@@ -811,11 +813,11 @@ classdef opticka < optickaCore
 			tmp.store.oldlook = [];
 			uisave('tmp','new protocol');
 			cd(obj.paths.currentPath);
-			obj.refreshProtocolsList;
 			obj.refreshStimulusList;
 			obj.refreshVariableList;
-			obj.getScreenVals;
-			obj.getTaskVals;
+			obj.refreshProtocolsList;
+% 			obj.getScreenVals;
+% 			obj.getTaskVals;
 		end
 		
 		% ===================================================================

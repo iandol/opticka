@@ -80,9 +80,12 @@ classdef barStimulus < baseStimulus
 		function setup(obj,sM)
 			
 			reset(obj);
+			obj.inSetup = true;
 			
 			obj.ppd=sM.ppd;
 			obj.ifi=sM.screenVals.ifi;
+			obj.screenWidth = sM.screenVals.width;
+			obj.screenHeight = sM.screenVals.height;
 			if isempty(obj.xCenter);obj.xCenter=sM.xCenter;end
 			if isempty(obj.yCenter);obj.yCenter=sM.yCenter;end
 			if isempty(obj.win);obj.win = sM.win;end
@@ -120,6 +123,8 @@ classdef barStimulus < baseStimulus
 				obj.doMotion=false;
 			end
 			
+			obj.inSetup = false;
+			
 			obj.setRect();
 			
 		end
@@ -131,7 +136,7 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function update(obj)
-			obj.tick = 1;
+			obj.tick = 1; obj.mouseTick = 0;
 			obj.constructMatrix(obj.ppd) %make our matrix
 			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
 			if max(obj.delayTimeOut) > 0
@@ -149,7 +154,7 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			if obj.tick > obj.delayTicks
+			if obj.isVisible == true && obj.tick > obj.delayTicks
 				Screen('DrawTexture',obj.win,obj.texture,[],obj.mvRect,obj.angleOut);
 			end
 			obj.tick = obj.tick + 1;
@@ -162,6 +167,10 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
+			if obj.mouseOverride && obj.mouseValid
+				getMousePosition(obj);
+				obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+			end
 			if obj.doMotion == 1
 				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
 			end
@@ -181,7 +190,7 @@ classdef barStimulus < baseStimulus
 			obj.win = [];
 			obj.xCenter = [];
 			obj.yCenter = [];
-			obj.tick = 1;
+			obj.tick = 1; obj.mouseTick = 0;
 		end
 		
 		% ===================================================================
@@ -298,7 +307,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function set_xPositionOut(obj,value)
 			obj.xPositionOut = value*obj.ppd;
-			if ~isempty(obj.texture);obj.setRect;end
+			if ~obj.inSetup; obj.setRect; end
 		end
 		
 		% ===================================================================
@@ -307,7 +316,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function set_yPositionOut(obj,value)
 			obj.yPositionOut = value*obj.ppd;
-			if ~isempty(obj.texture);obj.setRect;end
+			if ~obj.inSetup; obj.setRect; end
 		end
 	end
 end

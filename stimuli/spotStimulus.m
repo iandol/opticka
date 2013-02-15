@@ -88,6 +88,9 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function setup(obj,sM)
 			
+			reset(obj);
+			obj.inSetup = true;
+			
 			if isempty(obj.isVisible)
 				obj.show;
 			end
@@ -99,6 +102,8 @@ classdef spotStimulus < baseStimulus
 				obj.ifi=sM.screenVals.ifi;
 				obj.xCenter=sM.xCenter;
 				obj.yCenter=sM.yCenter;
+				obj.screenWidth = sM.screenVals.width;
+				obj.screenHeight = sM.screenVals.height;
 				obj.win=sM.win;
 			end
 			
@@ -135,8 +140,8 @@ classdef spotStimulus < baseStimulus
 				obj.setupFlash(bg);
 			end
 			
-			if isempty(obj.findprop('xTmp'));p=obj.addprop('xTmp');p.Transient = true;end
-			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
+			obj.inSetup = false;
+			
 			computePosition(obj);
 			setAnimationDelta(obj);
 		end
@@ -148,7 +153,10 @@ classdef spotStimulus < baseStimulus
 		%> @return
 		% ===================================================================
 		function update(obj)
-			computePosition(obj);
+			obj.tick = 1; obj.mouseTick = 0;
+			if ~obj.mouseOverride
+				computePosition(obj);
+			end
 			setAnimationDelta(obj);
 			if obj.doFlash
 				obj.resetFlash;
@@ -162,12 +170,13 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible == true
+			if obj.isVisible == true && obj.tick > obj.delayTicks
 				if obj.doFlash == false
-					Screen('gluDisk',obj.win,obj.colourOut,obj.xTmp,obj.yTmp,obj.sizeOut);
+					Screen('gluDisk',obj.win,obj.colourOut,obj.xOut,obj.yOut,obj.sizeOut);
 				else
-					Screen('gluDisk',obj.win,obj.currentColour,obj.xTmp,obj.yTmp,obj.sizeOut);
+					Screen('gluDisk',obj.win,obj.currentColour,obj.xOut,obj.yOut,obj.sizeOut);
 				end
+				obj.tick = obj.tick + 1;
 			end
 		end
 		
@@ -178,9 +187,14 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
+			if obj.mouseOverride && obj.mouseValid
+				getMousePosition(obj);
+				obj.xOut = obj.mouseX;
+				obj.yOut = obj.mouseY;
+			end
 			if obj.doMotion == true
-				obj.xTmp = obj.xTmp + obj.dX_;
-				obj.yTmp = obj.yTmp + obj.dY_;
+				obj.xOut = obj.xOut + obj.dX_;
+				obj.yOut = obj.yOut + obj.dY_;
 			end
 			if obj.doFlash == true
 				if obj.flashCounter <= obj.flashSwitch
@@ -205,10 +219,9 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function reset(obj)
+			obj.tick = 1; obj.mouseTick = 0;
 			obj.texture=[];
 			obj.removeTmpProperties;
-			delete(obj.findprop('xTmp'));
-			delete(obj.findprop('yTmp'));
 		end
 		
 		% ===================================================================
@@ -248,7 +261,7 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function set_xPositionOut(obj,value)
 			obj.xPositionOut = (value*obj.ppd) + obj.xCenter;
-			if ~isempty(obj.findprop('xTmp'));obj.computePosition;end
+			if ~obj.inSetup; obj.computePosition; end
 		end
 		
 		% ===================================================================
@@ -257,7 +270,7 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function set_yPositionOut(obj,value)
 			obj.yPositionOut = (value*obj.ppd) + obj.yCenter;
-			if ~isempty(obj.findprop('xTmp'));obj.computePosition;end
+			if ~obj.inSetup; obj.computePosition; end
 		end
 		
 		% ===================================================================

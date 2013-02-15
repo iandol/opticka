@@ -33,7 +33,7 @@ classdef runExperiment < optickaCore
 		%> use LabJack for digital output?
 		useLabJack = false
 		%> use dataPixx for digital I/O
-		useDataPixx = false
+		useDataPixx = true
 		%> use eyelink?
 		useEyeLink = false
 		%> this lets the opticka UI leave commands to runExperiment
@@ -97,7 +97,7 @@ classdef runExperiment < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|logFrames|debug|verbose|screenSettings|benchmark'
+		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|useDataPixx|logFrames|debug|verbose|screenSettings|benchmark'
 	end
 	
 	events
@@ -154,10 +154,22 @@ classdef runExperiment < optickaCore
 			%-------Set up serial line and LabJack for this run...
 			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
 			%obj.serialP.setDTR(0);
-			if obj.useLabJack == true
+			if obj.useDataPixx
+				if isa(obj.dPixx,'dPixxManager')
+					io = obj.dPixx;
+					open(obj.dPixx)
+				else
+					obj.dPixx = dataPixxManager('name','runinstance');
+					open(obj.dPixx)
+					obj.useLabjack = false;
+				end
+				obj.lJack = labJack('verbose',false,'openNow',0,'name','null','silentMode',1);
+			elseif obj.useLabJack == true
 				obj.lJack = labJack('verbose',obj.verbose,'openNow',1,'name','runinstance');
+				io = obj.lJack;
 			else
 				obj.lJack = labJack('verbose',false,'openNow',0,'name','null','silentMode',1);
+				io = obj.lJack;
 			end
 			
 			%-----------------------------------------------------------
@@ -171,8 +183,13 @@ classdef runExperiment < optickaCore
 				obj.stimuli.screen = s;
 				obj.stimuli.verbose = obj.verbose;
 				
-				%Trigger the omniplex (TTL on FIO1) into paused mode
-				obj.lJack.setDIO([2,0,0]);WaitSecs(0.001);obj.lJack.setDIO([0,0,0]);
+				if obj.useDataPixx
+					io.setLine(7,1);WaitSecs(0.001);io.setLine(7,0)
+				else
+					%Trigger the omniplex (TTL on FIO1) into paused mode
+					io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
+				end
+				WaitSecs(0.1);
 				
 				obj.initialiseTask; %set up our task structure 
 				
@@ -185,9 +202,11 @@ classdef runExperiment < optickaCore
 				
 				%bump our priority to maximum allowed
 				Priority(MaxPriority(s.win));
-				%--------------this is RSTART (Set HIGH FIO0->Pin 24), unpausing the omniplex
-				if obj.useLabJack == true
-					obj.lJack.setDIO([1,0,0],[1,0,0])
+				%--------------this is RSTART 
+				if obj.useDataPixx 
+					io.rstart();
+				else
+					io.setDIO([1,0,0],[1,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 				end
 				
 				obj.task.tick = 1;
@@ -251,6 +270,10 @@ classdef runExperiment < optickaCore
 					
 					obj.updateTask(); %update our task structure
 					
+					if obj.useDataPixx && obj.sendStrobe == true
+						io.triggerStrobe(); %send our word; datapixx syncs to next vertical trace
+						obj.sendStrobe = false;
+					end
 					%======= FLIP: Show it at correct retrace: ========%
 					nextvbl = tL.vbl(end) + obj.screenVals.halfisi;
 					if obj.logFrames == true
@@ -261,7 +284,7 @@ classdef runExperiment < optickaCore
 						tL.vbl = Screen('Flip', s.win, nextvbl);
 					end
 					%==================================================%
-					if obj.sendStrobe == true
+					if obj.useLabJack && obj.sendStrobe == true
 						obj.lJack.strobeWord; %send our word out to the LabJack
 						obj.sendStrobe = false;
 					end
@@ -292,7 +315,11 @@ classdef runExperiment < optickaCore
 				s.drawBackground;
 				vbl=Screen('Flip', s.win);
 				tL.screenLog.afterDisplay=vbl;
-				obj.lJack.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
+				if obj.useDataPixx
+					io.rstop();
+				else
+					io.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
+				end
 				notify(obj,'endRun');
 				
 				tL.screenLog.deltaDispay=tL.screenLog.afterDisplay - tL.screenLog.beforeDisplay;
@@ -311,9 +338,14 @@ classdef runExperiment < optickaCore
 				
 				s.close();
 				
-				obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
-				obj.lJack.close;
-				obj.lJack=[];
+				if obj.useDataPixx
+					io.setLine(7,1);WaitSecs(0.001);io.setLine(7,0)
+					close(io);
+				else
+					obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
+					obj.lJack.close;
+					obj.lJack=[];
+				end
 				
 				tL.calculateMisses;
 				if tL.nMissed > 0
@@ -323,6 +355,9 @@ classdef runExperiment < optickaCore
 				s.playMovie();
 				
 			catch ME
+				if isa(obj.dPixx,'dPixxManager') && obj.dPixx.isOpen
+					close(obj.dPixx)
+				end
 				if ~isempty(obj.lJack) && isa(obj.lJack,'labJack')
 					obj.lJack.setDIO([0,0,0]);
 					obj.lJack.close;
@@ -766,6 +801,11 @@ classdef runExperiment < optickaCore
 				obj.task = stimulusSequence();
 			end
 			
+			if obj.useDataPixx == true
+				obj.useLabJack = false;
+				obj.dPixx = dPixxManager();
+			end
+			
 			if isempty(obj.stateInfoFile)
 				if exist([obj.paths.root filesep 'DefaultStateInfo.m'],'file')
 					obj.paths.stateInfoFile = [obj.paths.root filesep 'DefaultStateInfo.m'];
@@ -892,12 +932,8 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 		function setStrobeValue(obj, value)
-			if obj.useDataPixx == true
-				valueStrobe = bitor(value, 2^15);
-				strobe = [value, valueStrobe, 0];
-				bufferAddress = 8e6;
-				Datapixx('WriteDoutBuffer', strobe, bufferAddress);
-				Datapixx('SetDoutSchedule', 0, 1000, length(strobe), bufferAddress, length(strobe));
+			if obj.useDataPixx == true && obj.dPixx.isOpen == true
+				prepareStrobe(obj.dPixx, value);			
 			elseif isa(obj.lJack,'labJack') && obj.lJack.isOpen == true
 				prepareStrobe(obj.lJack, value)
 			end
@@ -981,7 +1017,7 @@ classdef runExperiment < optickaCore
 				obj.task.startTime = obj.task.timeNow;
 				obj.task.switchTime = obj.task.trialTime; %first ever time is for the first trial
 				obj.task.switchTick = obj.task.trialTime*ceil(obj.screenVals.fps);
-				obj.lJack.prepareStrobe(obj.task.outIndex(obj.task.totalRuns));
+				setStrobeValue(obj,obj.task.outIndex(obj.task.totalRuns));
 				obj.sendStrobe = true;
 			end
 			
@@ -1062,7 +1098,7 @@ classdef runExperiment < optickaCore
 						obj.task.switchTick=obj.task.switchTick+(obj.task.isTime*ceil(obj.screenVals.fps));
 					end
 					
-					obj.lJack.prepareStrobe(2047); %get the strobe word to signify stimulus OFF ready
+					setStrobeValue(obj,32767);%get the strobe word to signify stimulus OFF ready
 					%obj.logMe('OutaBlank');
 					
 				else %we have to show the new run on the next flip
@@ -1080,7 +1116,7 @@ classdef runExperiment < optickaCore
 							obj.task.thisRun = obj.task.thisRun + 1;
 						end
 						if obj.task.totalRuns <= length(obj.task.outIndex)
-							obj.lJack.prepareStrobe(obj.task.outIndex(obj.task.totalRuns)); %get the strobe word ready
+							setStrobeValue(obj,obj.task.outIndex(obj.task.totalRuns)); %get the strobe word ready
 						else
 							
 						end

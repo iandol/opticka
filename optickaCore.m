@@ -16,7 +16,13 @@ classdef optickaCore < handle
 		verbose
 	end
 	
-	%--------------------VISIBLE PROPERTIES----------%
+	%--------------------HIDDEN PROPERTIES------------%
+	properties (SetAccess = protected, Hidden = true)
+		%> are we cloning this from another object
+		cloning = false
+	end
+	
+	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> clock() dateStamp set on construction
 		dateStamp
@@ -47,7 +53,7 @@ classdef optickaCore < handle
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'name'
+		allowedProperties = 'name|cloning'
 		%> cached full name
 		fullName_ = ''
 	end
@@ -223,7 +229,7 @@ classdef optickaCore < handle
 		% ===================================================================
 		function obj_out = clone(obj)
             meta = metaclass(obj);
-            obj_out = feval(class(obj));
+            obj_out = feval(class(obj),'cloning',true);
             for i = 1:length(meta.Properties)
                 prop = meta.Properties{i};
                 if strcmpi(prop.SetAccess,'Public') && ~(prop.Dependent || prop.Constant) && ~(isempty(obj.(prop.Name)) && isempty(obj_out.(prop.Name)))
@@ -258,8 +264,8 @@ classdef optickaCore < handle
                     end
                 end
 			end
-			obj_out.dateStamp = clock();
-			obj_out.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
+			%obj_out.dateStamp = clock();
+			%obj_out.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
         end
 		
 	end
@@ -294,7 +300,7 @@ classdef optickaCore < handle
 			if isstruct(args)
 				fnames = fieldnames(args); %find our argument names
 				for i=1:length(fnames);
-					if regexp(fnames{i},allowedProperties) %only set if allowed property
+					if regexpi(fnames{i},allowedProperties) %only set if allowed property
 						obj.salutation(fnames{i},'Constructor parsing input argument');
 						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 					end
