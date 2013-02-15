@@ -4,12 +4,13 @@ classdef dPixxManager < optickaCore
 	
 	properties
 		verbose = true
-		strobeLine = 15
+		strobeLine = 16
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		nBits = 0
 		isOpen = false
+		silentMode = false
 	end
 	
 	methods
@@ -20,19 +21,25 @@ classdef dPixxManager < optickaCore
 		end
 		
 		function open(obj)
-			tic
-			% Open Datapixx, and stop any schedules which might already be running
-			Datapixx('Open');
-			obj.nBits = Datapixx('GetDinNumBits');
-			Datapixx('StopAllSchedules');
-			Datapixx('RegWrRd');    % Synchronize Datapixx registers to local register cache
-			fprintf('open = %g ms\n',toc*1000);
-			obj.isOpen = true;
+			try
+				% Open Datapixx, and stop any schedules which might already be running
+				Datapixx('Open');
+				obj.nBits = Datapixx('GetDinNumBits');
+				Datapixx('StopAllSchedules');
+				Datapixx('RegWrRd');    % Synchronize Datapixx registers to local register cache
+				obj.silentMode = false;
+				obj.isOpen = true;
+			catch %#ok<CTCH>
+				obj.salutation('open method','DataPixx not connected, switching into silent mode',true);
+				obj.silentMode = true;
+				obj.isOpen = false;
+			end
 		end
 		
 		function close(obj)
 			if obj.isOpen
-				Datapixx('Close')
+				obj.salutation('close method','Closing DataPixx...');
+				Datapixx('Close');				
 				obj.isOpen = false;
 			end
 		end
@@ -51,8 +58,8 @@ classdef dPixxManager < optickaCore
 		
 		function prepareStrobe(obj,value)
 			if obj.isOpen
-				if value > 32767;value = 32767;end
-				valueStrobe = bitor(value, 2^15);
+				if value > 32767; value = 32767; end
+				valueStrobe = bitor(value, 2^(obj.strobeLine-1));
 				strobe = [value valueStrobe, 0];
 				bufferAddress = 8e6;
 				Datapixx('WriteDoutBuffer', strobe, bufferAddress);
@@ -95,22 +102,6 @@ classdef dPixxManager < optickaCore
 				else
 					Datapixx('SetDoutValues', val, mask);
 					Datapixx('RegWr');
-				end
-			end
-		end
-		
-		function findStrobe(obj)
-			if obj.isOpen
-				a = 1;
-				for i=1:7
-					fprintf('%g Strobe %g: %s (%g)\n',i,a,dec2bin(a),length(dec2bin(a)));
-					Datapixx('SetDoutValues', bitshift(a,2^16), bitshift(a,2^16));
-					Datapixx('RegWrRd');
-					WaitSecs(0.01);
-					Datapixx('SetDoutValues', 0, bitshift(a,2^16));
-					Datapixx('RegWrRd');
-					WaitSecs(1);
-					a = a * 2;
 				end
 			end
 		end
