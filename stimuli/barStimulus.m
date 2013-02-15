@@ -136,7 +136,7 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function update(obj)
-			obj.tick = 1; obj.mouseTick = 0;
+			resetTicks(obj);
 			obj.constructMatrix(obj.ppd) %make our matrix
 			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
 			if max(obj.delayTimeOut) > 0
@@ -167,9 +167,13 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			if obj.mouseOverride && obj.mouseValid
+			if obj.mouseOverride
 				getMousePosition(obj);
-				obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+				if obj.mouseValid
+					obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+				end
+			else
+				
 			end
 			if obj.doMotion == 1
 				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);

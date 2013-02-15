@@ -694,6 +694,8 @@ classdef runExperiment < optickaCore
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
 				
+				HideCursor;
+				
 				%check eye position
 				if obj.useEyeLink; getSample(obj.eyeLink); end
 				
