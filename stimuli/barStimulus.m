@@ -112,19 +112,15 @@ classdef barStimulus < baseStimulus
 			obj.doDrift = false;
 			obj.doFlash = false;
 			
-			tic
 			obj.constructMatrix(obj.ppd) %make our matrix
 			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
-			fprintf('--->>> BAR Texture  took: %g ms',toc*1000);
 			if obj.speed>0 %we need to say this needs animating
 				obj.doMotion=true;
- 				%rE.task.stimIsMoving=[rE.task.stimIsMoving i];
 			else
 				obj.doMotion=false;
 			end
 			
 			obj.inSetup = false;
-			
 			obj.setRect();
 			
 		end
@@ -139,11 +135,6 @@ classdef barStimulus < baseStimulus
 			resetTicks(obj);
 			obj.constructMatrix(obj.ppd) %make our matrix
 			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
-			if max(obj.delayTimeOut) > 0
-				if length(obj.delayTimeOut) == 2
-					obj.delayTicks = round(randi(obj.delayTimeOut(1)*1000,obj.delayTimeOut(1)*1000)/obj.ifi);
-				end
-			end
 			obj.setRect();
 		end
 		
@@ -154,7 +145,7 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible == true && obj.tick > obj.delayTicks
+			if obj.isVisible && (obj.tick > obj.delayTicks)
 				Screen('DrawTexture',obj.win,obj.texture,[],obj.mvRect,obj.angleOut);
 			end
 			obj.tick = obj.tick + 1;
@@ -173,7 +164,6 @@ classdef barStimulus < baseStimulus
 					obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
 				end
 			else
-				
 			end
 			if obj.doMotion == 1
 				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
@@ -194,7 +184,7 @@ classdef barStimulus < baseStimulus
 			obj.win = [];
 			obj.xCenter = [];
 			obj.yCenter = [];
-			obj.tick = 1; obj.mouseTick = 0;
+			resetTicks(obj);
 		end
 		
 		% ===================================================================
@@ -259,7 +249,7 @@ classdef barStimulus < baseStimulus
 				end
 				obj.matrix = outmat(1:blpixels,1:bwpixels,:);
 				obj.rmatrix = rmat;
-			catch
+			catch %#ok<CTCH>
 				bwpixels = round(obj.barWidth*ppd);
 				blpixels = round(obj.barLength*ppd);
 				tmat = ones(blpixels,bwpixels,4); %allocate the size correctly

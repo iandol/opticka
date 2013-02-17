@@ -48,15 +48,9 @@ classdef textureStimulus < baseStimulus
 		%> @return instance of opticka class.
 		% ===================================================================
 		function obj = textureStimulus(varargin)
-			%Initialise for superclass
-			if nargin == 0
-				varargin.family = 'texture';
-			end
-			
+			if nargin == 0;varargin.family = 'texture';end
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
-			
 			obj.size = 1;
-			
 			if nargin>0
 				obj.parseArgs(varargin, obj.allowedProperties);
 			end
@@ -88,7 +82,11 @@ classdef textureStimulus < baseStimulus
 		% ===================================================================
 		function setup(obj,sM,in)
 			
-			obj.reset;
+			reset(obj);
+			obj.inSetup = true;
+			if isempty(obj.isVisible)
+				obj.show;
+			end
 			
 			if ~exist('in','var')
 				in = [];
@@ -102,6 +100,8 @@ classdef textureStimulus < baseStimulus
 			obj.ifi=sM.screenVals.ifi;
 			obj.xCenter=sM.xCenter;
 			obj.yCenter=sM.yCenter;
+			obj.screenWidth = sM.screenVals.width;
+			obj.screenHeight = sM.screenVals.height;
 			obj.win=sM.win;
 			
 			obj.texture = []; %we need to reset this
@@ -155,6 +155,8 @@ classdef textureStimulus < baseStimulus
 				obj.doMotion=false;
 			end
 			
+			obj.inSetup = false;
+			
 			setRect(obj);
 			
 		end
@@ -164,8 +166,8 @@ classdef textureStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
+			resetTicks(obj);
 			setRect(obj);
-			obj.tick = 1;
 		end
 		
 		% ===================================================================
@@ -173,7 +175,10 @@ classdef textureStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function draw(obj)
-			Screen('DrawTexture',obj.win,obj.texture,[],obj.mvRect,obj.angleOut);
+			if obj.isVisible == true && obj.tick > obj.delayTicks
+				Screen('DrawTexture',obj.win,obj.texture,[],obj.mvRect,obj.angleOut);
+				obj.tick = obj.tick + 1;
+			end
 		end
 		
 		% ===================================================================
@@ -181,10 +186,16 @@ classdef textureStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(obj)
+			if obj.mouseOverride
+				getMousePosition(obj);
+				if obj.mouseValid
+					obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+				end
+			end
 			if obj.doMotion == 1
 				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
 			end
-			obj.tick = obj.tick + 1;
+			
 		end
 		
 		% ===================================================================
@@ -192,6 +203,7 @@ classdef textureStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function reset(obj)
+			resetTicks(obj);
 			obj.texture=[];
 			obj.mvRect = [];
 			obj.dstRect = [];
@@ -239,7 +251,7 @@ classdef textureStimulus < baseStimulus
 		% ===================================================================
 		function set_xPositionOut(obj,value)
 			obj.xPositionOut = value*obj.ppd;
-			if ~isempty(obj.texture);obj.setRect;end
+			if ~obj.inSetup;obj.setRect;end
 		end
 		
 		% ===================================================================
@@ -248,7 +260,7 @@ classdef textureStimulus < baseStimulus
 		% ===================================================================
 		function set_yPositionOut(obj,value)
 			obj.yPositionOut = value*obj.ppd;
-			if ~isempty(obj.texture);obj.setRect;end
+			if ~obj.inSetup;obj.setRect;end
 		end
 	end
 end

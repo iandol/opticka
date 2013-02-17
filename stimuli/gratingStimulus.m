@@ -241,7 +241,6 @@ classdef gratingStimulus < baseStimulus
 			end
 			
 			obj.inSetup = false;
-			
 			obj.setRect();
 			
 		end
@@ -251,7 +250,7 @@ classdef gratingStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
-			obj.tick = 1; obj.mouseTick = 0;
+			resetTicks(obj);
 			if obj.correctPhase
 				ps=obj.calculatePhase;
 				obj.driftPhase=obj.phaseOut-ps;
@@ -280,9 +279,11 @@ classdef gratingStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(obj)
-			if obj.mouseOverride && obj.mouseValid
+			if obj.mouseOverride
 				getMousePosition(obj);
-				obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+				if obj.mouseValid
+					obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+				end
 			end
 			if obj.doMotion == true
 				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
@@ -302,7 +303,7 @@ classdef gratingStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function reset(obj)
-			obj.tick = 1; obj.mouseTick = 0;
+			resetTicks(obj);
 			obj.texture=[];
 			obj.maskValue = [];
 			obj.removeTmpProperties;
@@ -350,18 +351,24 @@ classdef gratingStimulus < baseStimulus
 		%> requirements.
 		% ===================================================================
 		function setRect(obj)
-			if isempty(obj.findprop('motionAngleOut'));
-				[sx sy]=pol2cart(obj.d2r(obj.motionAngle),obj.startPosition);
-			else
-				[sx sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
-			end
 			obj.dstRect=Screen('Rect',obj.texture);
 			obj.dstRect=ScaleRect(obj.dstRect,obj.scale,obj.scale);
-			obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
-			if isempty(obj.findprop('xPositionOut'));
-				obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
+			if obj.mouseOverride
+				if obj.mouseValid
+					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
+				end
 			else
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));
+				if isempty(obj.findprop('motionAngleOut'));
+					[sx sy]=pol2cart(obj.d2r(obj.motionAngle),obj.startPosition);
+				else
+					[sx sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
+				end
+				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
+				if isempty(obj.findprop('xPositionOut'));
+					obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
+				else
+					obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));
+				end
 			end
 			obj.mvRect=obj.dstRect;
 			obj.setAnimationDelta();

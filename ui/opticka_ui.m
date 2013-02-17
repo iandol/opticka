@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 29-Jan-2013 11:50:07
+% Last Modified by GUIDE v2.5 17-Feb-2013 02:42:51
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -256,10 +256,23 @@ if isappdata(handles.output,'o')
 	o.getScreenVals;
 end
 
+% --- Executes on button press in OKuseDataPixx.
+function OKuseDataPixx_Callback(hObject, eventdata, handles)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	if get(hObject,'Value') == 1 && get(handles.OKuseDataPixx,'Value') == 1
+		set(handles.OKuseLabJack,'Value', 0)
+	end
+	o.getScreenVals;
+end
+
 % --- Executes on button press in OKuseLabJack.
 function OKuseLabJack_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
+	if get(hObject,'Value') == 1 && get(handles.OKuseDataPixx,'Value') == 1
+		set(handles.OKuseDataPixx,'Value', 0)
+	end
 	o.getScreenVals;
 end
 

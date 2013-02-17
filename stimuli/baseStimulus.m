@@ -246,7 +246,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 			else
 				obj.delayTicks = 0;
 			end
-			obj.tick = 1; obj.mouseTick = 0;
+			if obj.mouseOverride
+				getMousePosition(obj);
+				if obj.mouseValid
+					obj.mouseTick = 1;
+				else
+					obj.mouseTick = 0;
+				end
+			end
+			obj.tick = 1; 
 		end
 		
 		% ===================================================================
@@ -256,11 +264,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> mouse position have consistent X and Y per frame update
 		% ===================================================================
 		function getMousePosition(obj)
+			obj.mouseValid = false;
 			if obj.tick > obj.mouseTick
 				[obj.mouseX,obj.mouseY] = GetMouse(obj.win);
-				if obj.mouseX > obj.screenWidth || obj.mouseY > obj.screenHeight
-					obj.mouseValid = false;
-				else
+				if obj.mouseX <= obj.screenWidth || obj.mouseY <= obj.screenHeight
 					obj.mouseValid = true;
 				end
 				obj.mouseTick = obj.tick;
@@ -537,7 +544,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 							obj.(handleNameOut) = false;
 						end
 					case 'num'
-						obj.(handleNameOut) = str2num(get(obj.handles.(handleName),'String')); %#ok<ST2NM>
+						val = get(obj.handles.(handleName),'String');
+						if strcmpi(val,'true') %convert to logical
+							obj.(handleNameOut) = true;
+						elseif strcmpi(val,'false') %convert to logical
+							obj.(handleNameOut) = true;
+						else
+							obj.(handleNameOut) = str2num(val); %#ok<ST2NM>
+						end
 					case 'char'
 						obj.(handleNameOut) = get(obj.handles.(handleName),'String');
 				end
