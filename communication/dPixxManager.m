@@ -5,17 +5,18 @@ classdef dPixxManager < optickaCore
 	properties
 		verbose = true
 		strobeLine = 16
+		%> silentMode allows one to gracefully fail methods without a labJack connected
+		silentMode = false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		nBits = 0
 		isOpen = false
-		silentMode = false
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='verbose|strobeLine'
+		allowedProperties='silentMode|verbose|strobeLine'
 	end
 	
 	methods
@@ -26,18 +27,20 @@ classdef dPixxManager < optickaCore
 		end
 		
 		function open(obj)
-			try
-				% Open Datapixx, and stop any schedules which might already be running
-				Datapixx('Open');
-				obj.nBits = Datapixx('GetDinNumBits');
-				Datapixx('StopAllSchedules');
-				Datapixx('RegWrRd');    % Synchronize Datapixx registers to local register cache
-				obj.silentMode = false;
-				obj.isOpen = true;
-			catch %#ok<CTCH>
-				obj.salutation('open method','DataPixx not connected, switching into silent mode',true);
-				obj.silentMode = true;
-				obj.isOpen = false;
+			obj.isOpen = false;
+			if obj.silentMode == false
+				try
+					Datapixx('Open'); % Open Datapixx, and stop any schedules which might already be running
+					obj.nBits = Datapixx('GetDinNumBits');
+					Datapixx('StopAllSchedules');
+					Datapixx('RegWrRd');    % Synchronize Datapixx registers to local register cache
+					obj.silentMode = false;
+					obj.isOpen = true;
+				catch %#ok<CTCH>
+					obj.salutation('open method','DataPixx not opening, switching into silent mode',true);
+					obj.silentMode = true;
+					obj.isOpen = false;
+				end
 			end
 		end
 		
@@ -82,12 +85,14 @@ classdef dPixxManager < optickaCore
 		function rstart(obj)
 			if obj.isOpen
 				setLine(obj,8,1);
+				fprintf('>>>RSTART sent to Plexon!\n')
 			end
 		end
 		
 		function rstop(obj)
 			if obj.isOpen
 				setLine(obj,8,0);
+				fprintf('>>>RSTOP sent to Plexon!\n')
 			end
 		end
 		
@@ -104,6 +109,7 @@ classdef dPixxManager < optickaCore
 				Datapixx('RegWr');
 				Datapixx('SetDoutValues', val, mask);
 				Datapixx('RegWr');
+				WaitSecs(0.001);
 				Datapixx('SetDoutValues', 0, mask);
 				Datapixx('RegWr');
 			end

@@ -18,7 +18,7 @@ obj.stimuli.choice = obj.thisStim;
 
 %------------------------Eyelink setup--------------------------
 obj.useEyeLink = true;
-rewardTime = 200; %TTL time in milliseconds
+rewardTime = 100; %TTL time in milliseconds
 
 obj.eyeLink.sampleRate = 250;
 obj.eyeLink.remoteCalibration = true; %manual calibration
@@ -39,74 +39,86 @@ obj.eyeLink.strictFixation = true;
 
 %----------------------State Machine States-------------------------
 %these are our functions that will execute as the stateMachine runs
+% io = datapixx (digital I/O to plexon)
+% s = screenManager
+% sm = State Machine
+% lj = LabJack (reward trigger to Crist reward system)
+
+%pause entry
+pauseEntryFcn =  { @()disableFlip(obj); @()setOffline(el); @()rstop(io) }; %lets pause the plexon!
+
+%pause exit
+pauseExitFcn = @()rstart(io); %lets unpause the plexon!
 
 %reset the fixation time values
-preEntryFcn = {@()setOffline(obj.eyeLink); ...
-	@()trackerDrawFixation(obj.eyeLink); ...
-	@()resetFixation(obj.eyeLink); ...
+blankEntryFcn = { @()disableFlip(obj); ...
+	@()setOffline(el); ...
+	@()trackerDrawFixation(el); ...
+	@()resetFixation(el); ...
 	@()update(obj.stimuli); 
 	@()setStrobeValue(obj, 300); };
 
 %prestimulus blank
-preFcn = []; 
+blankFcn = []; 
 
 %exit prestimulus
-preExit = { @()update(obj.stimuli); ...
-	@()statusMessage(obj.eyeLink,'Showing Fixation Spot...'); ...
-	@()startRecording(obj.eyeLink) };
+blankExitFcn = { @()update(obj.stimuli); ...
+	@()statusMessage(el,'Showing Fixation Spot...'); ...
+	@()startRecording(el) };
 
 %setup our fixate function before stimulus presentation
-fixEntryFcn = @()updateFixationValues(obj.eyeLink, 0.6, 0.2, 1.25, true);
+fixEntryFcn = { @()enableFlip(obj); @()updateFixationValues(el, 0, 0, 0.7, 0.3, 1.25, false) };
 
 % draw fixate stimulus
-fixFcn = @()drawRedSpot(obj.screen,1);
+fixFcn = @()drawRedSpot(s, 0.5); %1 = size of red spot
 
-fixExitFcn = @()updateFixationValues(obj.eyeLink, 0.6, 2, 1.25, true);
+fixExitFcn = @()updateFixationValues(el, 0, 0, 0.6, 2, 1.25, true);
 
 %test we are fixated for a certain length of time
-initFixFcn = @()testSearchHoldFixation(obj.eyeLink,'stimulus','');
-
-%what to run when we are showing stimuli; obj.stimuli is the stimuli loaded into opticka
-stimFcn = { @()draw(obj.stimuli); @()drawRedSpot(obj.screen,1); @()drawEyePosition(obj.eyeLink) }; 
+initFixFcn = @()testSearchHoldFixation(el,'stimulus','');
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = @()doStrobe(obj,true);
+
+%what to run when we are showing stimuli; obj.stimuli is the stimuli loaded into opticka
+stimFcn = { @()draw(obj.stimuli); }; 
 
 %as we exit stim presentation state
 stimExitFcn = { @()setStrobeValue(obj,inf); @()doStrobe(obj,true) };
 
 %test we are maintaining fixation
-maintainFixFcn = @()testWithinFixationWindow(obj.eyeLink,'yes','breakfix');
+maintainFixFcn = @()testWithinFixationWindow(el,'yes','breakfix');
 
 %if the subject is correct 
-correctEntry = { @()timedTTL(obj.lJack,0,rewardTime); ...
+correctEntry = { @()timedTTL(lj,0,rewardTime); ...
 	@()updatePlot(obj.behaviouralRecord,obj.eyeLink,obj.stateMachine); ...
-	@()statusMessage(obj.eyeLink,'Correct! :-)') };
+	@()statusMessage(el,'Correct! :-)') };
 
 %correct stimulus
-correctWithin = { @()drawGreenSpot(obj.screen,1) };
+correctWithin = { @()drawGreenSpot(s,1) };
 
 %when we exit the correct state
 correctExit = { @()randomiseTrainingList(obj); };
 
 %break entry
-breakEntryFcn = { @()updatePlot(obj.behaviouralRecord,obj.eyeLink,obj.stateMachine); ...
-	@()statusMessage(obj.eyeLink,'Broke Fixation :-(') };
+breakEntryFcn = { @()sendTTL(io,6); @()disableFlip(obj); ...
+	@()updatePlot(obj.behaviouralRecord,obj.eyeLink,obj.stateMachine); ...
+	@()statusMessage(el,'Broke Fixation :-(') };
 
 %our incorrect stimulus
-incorrectFcn = [];
+breakFcn = [];
 
 %calibration function
-calibrateFcn = @()trackerSetup(obj.eyeLink);
+calibrateFcn = { @()setOffline(el); @()rstop(io); @()trackerSetup(el) };
 
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
-'pause'		'blank'			inf		[]				[]				[]				[]; ...
-'blank'		'fixate'		0.5		preEntryFcn		preFcn			[]				preExit; ...
-'fixate'	'breakfix'		1		fixEntryFcn		fixFcn			initFixFcn		[]; ...
+'pause'		'blank'			inf		pauseEntryFcn	[]				[]				[]; ...
+'blank'		'fixate'		0.5		blankEntryFcn	blankFcn		[]				blankExitFcn; ...
+'fixate'	'breakfix'		1		fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
 'stimulus'  'correct'		2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
-'breakfix'	'blank'			1		breakEntryFcn	incorrectFcn	[]				[]; ...
+'breakfix'	'blank'			1		breakEntryFcn	breakFcn		[]				[]; ...
 'correct'	'blank'			0.5		correctEntry	correctWithin	[]				correctExit; ...
 'calibrate' 'pause'			0.5		calibrateFcn	[]				[]				[]; ...
 };

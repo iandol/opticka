@@ -192,7 +192,7 @@ classdef runExperiment < optickaCore
 				obj.stimuli.verbose = obj.verbose;
 				
 				if obj.useDataPixx
-					io.setLine(7,1);WaitSecs(0.001);io.setLine(7,0)
+					io.sendTTL(7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
 				elseif obj.useLabJack
 					%Trigger the omniplex (TTL on FIO1) into paused mode
 					io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
@@ -216,10 +216,11 @@ classdef runExperiment < optickaCore
 				
 				%bump our priority to maximum allowed
 				Priority(MaxPriority(s.win));
-				%--------------this is RSTART 
+				
+				%--------------this is RSTART (unpauses Plexon)
 				if obj.useDataPixx 
 					io.rstart();
-				elseif obj.useLabjack
+				elseif obj.useLabJack
 					io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 				end
 				
@@ -365,7 +366,7 @@ classdef runExperiment < optickaCore
 				s.close();
 				
 				if obj.useDataPixx
-					io.setLine(7,1);WaitSecs(0.001);io.setLine(7,0)
+					io.sendTTL(7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
 					close(io);
 				else
 					obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
@@ -442,26 +443,23 @@ classdef runExperiment < optickaCore
 			%-------Set up Digital I/O for this run...
 			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
 			%obj.serialP.setDTR(0);
-			if obj.useDataPixx
-				if isa(obj.dPixx,'dPixxManager')
-					open(obj.dPixx)
-					io = obj.dPixx;
-				else
-					obj.dPixx = dPixxManager('name','runinstance');
-					open(obj.dPixx)
-					io = obj.dPixx;
-					obj.useLabJack = false;
-				end
-				if obj.useEyeLink
-					obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
-				end
-			elseif obj.useLabJack 
-				obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
-				io = obj.lJack;
+			if isa(obj.dPixx,'dPixxManager')
+				io = obj.dPixx;
 			else
-				obj.lJack = labJack('verbose',false,'openNow',0,'name','null','silentMode',1);
-				io = obj.lJack;
+				obj.dPixx = dPixxManager('name','runinstance');
+				io = obj.dPixx;
 			end
+			
+			if obj.useDataPixx
+				io.silentMode = false;
+				io.name = 'runinstance';
+				open(io);
+			else
+				io.silentMode = true;
+				io.name = 'runinstance';
+				open(io);
+			end
+			obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
 			lj = obj.lJack;
 			
 			%-----------------------------------------------------------
@@ -478,34 +476,37 @@ classdef runExperiment < optickaCore
 				obj.useEyeLink = true;
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
+					el = obj.eyeLink;
 				end
 				
-				obj.stateMachine = stateMachine('verbose',true); %#ok<*CPROP>
-				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 				if isempty(obj.stateInfoFile)
-					
-				
+					error('Please load a State Info file...')
 				elseif ischar(obj.stateInfoFile)
+					obj.stateMachine = stateMachine('verbose', obj.verbose,'realTime', true); 
+					obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 					cd(fileparts(obj.stateInfoFile))
 					obj.stateInfoFile = regexprep(obj.stateInfoFile,'\s+','\\ ');
 					run(obj.stateInfoFile)
 					obj.stateInfo = stateInfoTmp;
 				end
 				addStates(obj.stateMachine, obj.stateInfo);
+				sm = obj.stateMachine;
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(1); %capture keystrokes
+				ListenChar(2); %capture keystrokes
 				
 				% set up the eyelink interface
 				if obj.useEyeLink
-					initialise(obj.eyeLink, s);
-					setup(obj.eyeLink);
+					initialise(el, s);
+					setup(el);
 				end
 				
-				createPlot(obj.behaviouralRecord, obj.eyeLink);
+				createPlot(obj.behaviouralRecord, el);
 				
 				if obj.useDataPixx 
-					io.setLine(7,0);io.setLine(7,1);WaitSecs(0.001);io.setLine(7,0)
+					rstop(io); %make sure this is set low first
+					sendTTL(io, 7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
+					WaitSecs(0.1);
 				end
 				
 				tS.index = 1;
@@ -532,10 +533,10 @@ classdef runExperiment < optickaCore
 				tS.pauseToggle = 1;
 				
 				if obj.useDataPixx 
-					io.rstart();
+					rstart(io);
 				end
 				
-				if obj.useEyeLink; startRecording(obj.eyeLink); end
+				if obj.useEyeLink; startRecording(el); end
 				
 				tL.screenLog.beforeDisplay = GetSecs;
 				
@@ -544,7 +545,7 @@ classdef runExperiment < optickaCore
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
 				
-				start(obj.stateMachine); %ignite the stateMachine!
+				start(sm); %ignite the stateMachine!
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -554,18 +555,28 @@ classdef runExperiment < optickaCore
 				while tS.stopTraining == false
 					
 					% run the stateMachine one tick forward
-					update(obj.stateMachine);
+					update(sm);
 					
 					% do we draw visual debug info too?
 					if s.visualDebug == true
 						s.drawGrid;
 					end
 					
+					if strcmpi(sm.currentName,'stimulus')
+						if s.photoDiode == true
+							s.drawPhotoDiodeSquare([1 1 1 1]);
+						end
+					else 
+						if s.photoDiode == true
+							s.drawPhotoDiodeSquare([0 0 0 1]);
+						end
+					end
+					
 					% Tell PTB that no further drawing commands will follow before Screen('Flip')
 					Screen('DrawingFinished', s.win); 
 					
 					%check eye position
-					if obj.useEyeLink; getSample(obj.eyeLink); end
+					if obj.useEyeLink; getSample(el); end
 					
 					%check keyboard for commands
 					tS = obj.checkTrainingKeys(tS);
@@ -582,7 +593,7 @@ classdef runExperiment < optickaCore
 					end
 					
 					if obj.useDataPixx && obj.sendStrobe
-						io.triggerStrobe(); %send our word; datapixx syncs to next vertical trace
+						triggerStrobe(io); %send our word; datapixx syncs to next vertical trace
 						obj.sendStrobe = false;
 					end
 					%======= FLIP: Show it at correct retrace: ========%
@@ -603,32 +614,38 @@ classdef runExperiment < optickaCore
 				obj.salutation(sprintf('Total ticks: %g -- stateMachine ticks: %g',tS.totalTicks,obj.stateMachine.totalTicks),'TRAIN',true);
 				
 				if obj.useDataPixx
-					io.rstop();
+					rstop(io); %pause plexon
+				end
+				
+				if obj.useDataPixx
+					sendTTL(io, 7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
+					close(io);
 				end
 				
 				Priority(0);
 				ListenChar(0)
 				ShowCursor;
 				close(s);
-				close(obj.eyeLink);
+				close(el);
 				obj.eyeLink = [];
-				figure(obj.screenSettings.optickahandle)
-				obj.lJack.close;
+				%figure(obj.screenSettings.optickahandle)
+				close(lj);
 				obj.lJack=[];
-				clear tL s tS
+				clear tL s io el tS
 				
 			catch ME
+				if obj.useDataPixx
+					rstop(io); %pause plexon
+					close(io);
+				end
 				Priority(0);
 				ListenChar(0);
-				if exist('topsDataLog','file')
-					topsDataLog.flushAllData();
-				end
 				ShowCursor;
 				close(s);
 				close(obj.eyeLink);
-				obj.lJack.close;
+				close(lj);
 				obj.lJack=[];
-				clear tL s tS
+				clear tL s io el tS
 				rethrow(ME)
 				
 			end
@@ -1008,7 +1025,24 @@ classdef runExperiment < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief enable screen flip
+		%>
+		%> 
+		% ===================================================================
+		function enableFlip(obj)
+			obj.doFlip = true;
+		end
 		
+		% ===================================================================
+		%> @brief disable screen flip
+		%>
+		%> 
+		% ===================================================================
+		function disableFlip(obj)
+			obj.doFlip = false;
+		end
+
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
@@ -1363,6 +1397,8 @@ classdef runExperiment < optickaCore
 							update(obj.stimuli{1});
 							tS.keyHold = tS.totalTicks + fInc;
 						end
+					case 'm'
+						forceTransition(obj.stateMachine, 'calibrate');
 					case {'UpArrow','up'} %give a reward at any time
 						timedTTL(obj.lJack,0,100);
 					case {'DownArrow','down'}
@@ -1371,11 +1407,7 @@ classdef runExperiment < optickaCore
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
 							forceTransition(obj.stateMachine, 'correct');
 						end
-					case 'x' % mark trial as correct2
-						if strcmpi(obj.stateMachine.currentName,'stimulus')
-							forceTransition(obj.stateMachine, 'correct');
-						end
-					case 'c' %mark trial incorrect
+					case 'x' %mark trial incorrect
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
 							forceTransition(obj.stateMachine, 'incorrect');
 						end
@@ -1392,6 +1424,16 @@ classdef runExperiment < optickaCore
 						end
 					case '1!'
 						tS.stopTraining = true;
+					case 's'
+						if tS.totalTicks > tS.keyHold
+							ShowCursor;
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case 'd'
+						if tS.totalTicks > tS.keyHold
+							HideCursor;
+							tS.keyHold = tS.totalTicks + fInc;
+						end
 				end
 			end
 		end
@@ -1506,6 +1548,16 @@ classdef runExperiment < optickaCore
 								forceTransition(obj.stateMachine, 'prestimulus');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							end
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case 's'
+						if tS.totalTicks > tS.keyHold
+							ShowCursor;
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case 'd'
+						if tS.totalTicks > tS.keyHold
+							HideCursor;
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '1!'

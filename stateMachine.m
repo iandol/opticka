@@ -125,10 +125,6 @@ classdef stateMachine < optickaCore
 			if nargin>0
 				parseArgs(obj, varargin, obj.allowedProperties);
 			end
-			%can we use tower of psych data logger?
-% 			if exist('topsDataLog','file')
-% 				obj.isTops = false;
-% 			end
 		end
 		
 		% ===================================================================
@@ -249,6 +245,7 @@ classdef stateMachine < optickaCore
 					return
 				end
 				
+				%if obj.verbose; tic; end
 				if isa(obj.currentWithinFcn,'function_handle') %function handle, lets feval it
 					feval(obj.currentWithinFcn);
 				elseif iscell(obj.currentWithinFcn)
@@ -256,6 +253,7 @@ classdef stateMachine < optickaCore
 						feval(obj.currentWithinFcn{i});
 					end
 				end
+				%if obj.verbose; fprintf('>>>%s FEVAL WITHIN took: %g ms\n',obj.fullName,toc*1000); end
 				
 				%transition function works by returning the name of the
 				%next state when its criteria are met, so for example check
@@ -309,6 +307,7 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function start(obj)
 			if obj.isRunning == false
+				if obj.timeDelta == 0; obj.realTime = true; end %stops a divide by zero infinite loop
 				obj.notify('runStart');
 				obj.isRunning = true;
 				obj.isFinishing = false;
@@ -453,6 +452,7 @@ classdef stateMachine < optickaCore
 				
 				obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false)
 				
+				if obj.verbose; tic; end
 				if isa(thisState.entryFcn,'function_handle') %function handle, lets feval it
 					feval(thisState.entryFcn);
 				elseif iscell(thisState.entryFcn) %nested class of function handles
@@ -460,14 +460,7 @@ classdef stateMachine < optickaCore
 						feval(thisState.entryFcn{i});
 					end
 				end
-				
-% 				if obj.isTops
-% 					data.currentTick = obj.currentTick;
-% 					data.nextTick = obj.nextTickOut;
-% 					data.thisState = thisState;
-% 					group = [obj.currentName ':enter:' obj.name];
-% 					topsDataLog.logDataInGroup(data, group);
-% 				end
+				if obj.verbose; fprintf('>>>%s FEVAL ENTER took: %g ms\n',obj.fullName,toc*1000); end
 	
 			else
 				obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length',false);
@@ -506,6 +499,7 @@ classdef stateMachine < optickaCore
 			obj.nextTickOut = [];
 			obj.nextTimeOut = [];
 			
+			if obj.verbose; tic; end
 			if isa(thisState.exitFcn,'function_handle') %function handle, lets feval it
 				feval(thisState.exitFcn);
 			elseif iscell(thisState.exitFcn) %nested class of function handles
@@ -513,15 +507,9 @@ classdef stateMachine < optickaCore
 					feval(thisState.exitFcn{i});
 				end
 			end
+			if obj.verbose; fprintf('>>>%s FEVAL EXIT took: %g ms\n',obj.fullName,toc*1000); end
 			tnow=feval(obj.clockFcn);
 			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(tnow-obj.startTime) 's | ' num2str(tnow-obj.previous.entryTime) 's | ' num2str(obj.currentTick) '/' num2str(obj.totalTicks) 'ticks'],'',false);
-
-% 			if obj.isTops
-% 				data.currentTick = obj.currentTick;
-% 				data.nextTick = obj.nextTickOut;
-% 				group = [obj.currentName ':exit:' obj.name];
-% 				topsDataLog.logDataInGroup(data, group);
-% 			end
 			
 		end
 		

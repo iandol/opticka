@@ -267,10 +267,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 			obj.mouseValid = false;
 			if obj.tick > obj.mouseTick
 				[obj.mouseX,obj.mouseY] = GetMouse(obj.win);
-				if obj.mouseX <= obj.screenWidth || obj.mouseY <= obj.screenHeight
+				if obj.mouseX <= obj.screenWidth && obj.mouseY <= obj.screenHeight
 					obj.mouseValid = true;
 				end
 				obj.mouseTick = obj.tick;
+				%fprintf('**TICK %g PASSED > valid = %g | x: %g %g  y: %g %g\n',obj.mouseTick,obj.mouseValid,obj.mouseX,obj.screenWidth,obj.mouseY,obj.screenHeight);
 			end
 		end
 		
