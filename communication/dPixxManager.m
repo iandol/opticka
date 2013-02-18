@@ -13,6 +13,11 @@ classdef dPixxManager < optickaCore
 		silentMode = false
 	end
 	
+	properties (SetAccess = private, GetAccess = private)
+		%> properties allowed to be modified during construction
+		allowedProperties='verbose|strobeLine'
+	end
+	
 	methods
 		function obj = dPixxManager(varargin)
 			if nargin == 0; varargin.name = 'dataPixx Manager'; end
@@ -86,6 +91,23 @@ classdef dPixxManager < optickaCore
 			end
 		end
 		
+		function sendTTL(obj,line)
+			if obj.isOpen
+				if line > 8 || line < 1
+					fprintf('1-7 lines are available on dataPixx only!\n')
+					return
+				end
+				line = 2^(line-1);
+				val = bitshift(line,16);
+				mask = bitshift(line,16);
+				Datapixx('SetDoutValues', 0, mask);
+				Datapixx('RegWr');
+				Datapixx('SetDoutValues', val, mask);
+				Datapixx('RegWr');
+				Datapixx('SetDoutValues', 0, mask);
+				Datapixx('RegWr');
+			end
+		end
 		
 		function setLine(obj,line,value)
 			if obj.isOpen

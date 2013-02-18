@@ -1,16 +1,6 @@
-
 % ========================================================================
 %> @brief single grating stimulus, inherits from baseStimulus
-%> GRATINGSTIMULUS single grating stimulus, inherits from baseStimulus
-%>   The current properties are:
-%>   sf = spatial frequency in degrees
-%>   tf = temporal frequency
-%>   angle = angle in degrees
-%>   rotationMethod = do we rotate the grating texture (1) or the patch
-%>   itself (0)
-%>   phase = phase of grating
-%>   contrast = contrast from 0 - 1
-%>   mask = use circular mask (1) or not (0)
+%>
 % ========================================================================
 classdef targetInducerStimulus < baseStimulus
 	
@@ -81,7 +71,7 @@ classdef targetInducerStimulus < baseStimulus
 		%> allowed properties passed to object upon construction
 		allowedProperties = ['sf|tf|sfi|tfi|angle|motionAngle|phase|phasei|rotationMethod|' ...
 			'inducerHeight|inducerPosition|inducerContrast|phaseOffset' ...
-			'contrast|contrasti|mask|driftDirection|speed|startPosition|aspectRatio|' ... 
+			'contrast|mask|driftDirection|speed|startPosition|aspectRatio|' ... 
 			'contrastMult|sigma|useAlpha|smoothMethod|' ...
 			'correctPhase|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
@@ -92,6 +82,8 @@ classdef targetInducerStimulus < baseStimulus
 		squareWave = false
 		%> do we generate a square wave?
 		gabor = false
+		%> mask value
+		maskValue
 	end
 	
 	events (ListenAccess = 'protected', NotifyAccess = 'protected') %only this class can access these
@@ -144,20 +136,23 @@ classdef targetInducerStimulus < baseStimulus
 		%>
 		%> @param rE runExperiment object for reference
 		% ===================================================================
-		function setup(obj,rE)
+		function setup(obj,sM)
 			
 			obj.reset; %reset it back to its initial state
+			obj.inSetup = true;
 			if isempty(obj.isVisible)
 				obj.show;
 			end
 			addlistener(obj,'changeScale',@obj.calculateScale); %use an event to keep scale accurate
 			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
 			
-			obj.ppd=rE.ppd;
-			obj.ifi=rE.screenVals.ifi;
-			obj.xCenter=rE.xCenter;
-			obj.yCenter=rE.yCenter;
-			obj.win=rE.win;
+			obj.ppd=sM.ppd;
+			obj.ifi=sM.screenVals.ifi;
+			obj.xCenter=sM.xCenter;
+			obj.yCenter=sM.yCenter;
+			obj.win=sM.win;
+			obj.screenWidth = sM.screenVals.width;
+			obj.screenHeight = sM.screenVals.height;
 
 			obj.texture = []; %we need to reset this
 
@@ -220,9 +215,9 @@ classdef targetInducerStimulus < baseStimulus
 			end
 			
 			if obj.mask == true
-				obj.mask = floor((obj.ppd*obj.size)/2);
+				obj.maskValue = floor((obj.ppd*obj.size)/2);
 			else
-				obj.mask = [];
+				obj.maskValue = [];
 			end
 			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
@@ -252,6 +247,7 @@ classdef targetInducerStimulus < baseStimulus
 				end
 			end
 			
+			obj.inSetup = false;
 			obj.setRect();
 			
 		end
@@ -261,7 +257,7 @@ classdef targetInducerStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
-			obj.tick = 1;
+			resetTicks(obj);
 			if obj.correctPhase
 				ps=obj.calculatePhase;
 				obj.driftPhase=obj.phaseOut-ps;
@@ -277,7 +273,7 @@ classdef targetInducerStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible == true
+			if obj.isVisible == true && obj.tick > obj.delayTicks
 				
 				dstRect = Screen('Rect',obj.texture{2});
 				dstRect = AlignRect(dstRect, obj.mvRect, 'left');
@@ -288,7 +284,7 @@ classdef targetInducerStimulus < baseStimulus
 					[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
 				Screen('DrawTexture', obj.win, obj.texture{2}, [], dstRect,...
 					obj.angleOut, [], [], [], [], obj.rotateMode,...
-					[obj.driftPhase+obj.phaseOffset, obj.sfOut, obj.contrastiOut, obj.sigmaOut]);
+					[obj.driftPhase+obj.phaseOffset, obj.sfOut, obj.inducerContrastOut, obj.sigmaOut]);
 				obj.tick = obj.tick + 1;
 			end
 		end
@@ -298,6 +294,12 @@ classdef targetInducerStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(obj)
+			if obj.mouseOverride
+				getMousePosition(obj);
+				if obj.mouseValid
+					obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+				end
+			end
 			if obj.doMotion == true
 				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
 			end
@@ -316,11 +318,12 @@ classdef targetInducerStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function reset(obj)
-			obj.tick = 1;
+			resetTicks(obj);
 			obj.texture=[];
 			if obj.mask > 0
 				obj.mask = true;
 			end
+			obj.maskValue = [];
 			obj.removeTmpProperties;
 		end
 		

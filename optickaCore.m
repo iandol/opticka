@@ -319,22 +319,15 @@ classdef optickaCore < handle
 		%> @param override force logging if true even if verbose is false
 		% ===================================================================
 		function salutation(obj,in,message,override)
-			if ~exist('override','var')
-				override = false;
-			end
-			if ~isempty(obj.verbose==true) && (obj.verbose==true || override == true)
-				if ~exist('in','var')
-					in = 'undefined';
-				end
-				if exist('message','var')
-					fprintf(['---> ' obj.fullName_ ': ' message ' | ' in '\n']);
-				else
+			if ~exist('override','var');override = false;end
+			if obj.verbose==true || override == true
+				if ~exist('message','var')
 					fprintf(['---> ' obj.fullName_ ': ' in '\n']);
+				else
+					fprintf(['---> ' obj.fullName_ ': ' message ' | ' in '\n']);
 				end
 			end
 		end
-		
-		
-		
+
 	end
 end

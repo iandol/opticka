@@ -305,6 +305,9 @@ classdef gratingStimulus < baseStimulus
 		function reset(obj)
 			resetTicks(obj);
 			obj.texture=[];
+			if obj.mask > 0
+				obj.mask = true;
+			end
 			obj.maskValue = [];
 			obj.removeTmpProperties;
 		end

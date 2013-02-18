@@ -332,7 +332,17 @@ classdef eyelinkManager < optickaCore
 		
 		end
 		
-				
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function updateFixationValues(obj,inittime,fixtime,radius,strict)
+			obj.fixationTime = fixtime;
+			obj.fixationInitTime = inittime;
+			obj.fixationRadius = radius;
+			obj.strictFixation = strict;
+		end
+		
 		% ===================================================================
 		%> @brief isFixated tests for fixation and updates the fixLength time
 		%>

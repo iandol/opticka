@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 17-Feb-2013 02:42:51
+% Last Modified by GUIDE v2.5 17-Feb-2013 21:45:07
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -276,6 +276,14 @@ if isappdata(handles.output,'o')
 	o.getScreenVals;
 end
 
+% --- Executes on button press in OKuseEyeLink.
+function OKuseEyeLink_Callback(hObject, eventdata, handles)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	o.getScreenVals;
+end
+
+
 % --- Executes on button press in OKVerbose.
 function OKVerbose_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
@@ -375,6 +383,29 @@ function OKMenuLineTexture_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+% --------------------------------------------------------------------
+function OKMenuTargetInducer_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuSpot (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	
+	if isfield(o.store,'visibleStimulus');
+		o.store.visibleStimulus.closePanel();
+		o.store = rmfield(o.store,'visibleStimulus');
+	end
+	
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
+	
+	if ~isfield(o.store,'targetInducerStimulus')
+		o.store.targetInducerStimulus=targetInducerStimulus('name','Target-Inducer Stimulus');
+	end
+	o.store.visibleStimulus = o.store.targetInducerStimulus;
+	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+	set(handles.OKAddStimulus,'Enable','on');
+	set(handles.OKPanelStimulusText,'String','')
+end
 
 % --------------------------------------------------------------------
 function OKMenuDots_Callback(hObject, eventdata, handles)

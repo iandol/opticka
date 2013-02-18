@@ -396,6 +396,8 @@ classdef opticka < optickaCore
 			obj.r.screen.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
 			obj.r.screen.nativeBeamPosition = logical(obj.gv(obj.h.OKNativeBeamPosition));
 			obj.r.useLabJack = logical(obj.gv(obj.h.OKuseLabJack));
+			obj.r.useDataPixx = logical(obj.gv(obj.h.OKuseDataPixx));
+			obj.r.useEyeLink = logical(obj.gv(obj.h.OKuseEyeLink));
 			
 		end
 		

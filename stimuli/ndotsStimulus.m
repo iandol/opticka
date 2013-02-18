@@ -148,19 +148,27 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		%> @param rE runExperiment object for reference
 		% ===================================================================
-		function setup(obj,rE)
+		function setup(obj,sM)
 			
-			if exist('rE','var')
-				obj.ppd=rE.ppd;
-				obj.ifi=rE.screenVals.ifi;
-				obj.xCenter=rE.xCenter;
-				obj.yCenter=rE.yCenter;
-				obj.win=rE.win;
-				obj.winRect = rE.winRect;
-				obj.srcMode=rE.srcMode;
-				obj.dstMode=rE.dstMode;
-				obj.backgroundColour = rE.backgroundColour;
-				clear rE
+			obj.reset; %reset it back to its initial state
+			obj.inSetup = true;
+			if isempty(obj.isVisible)
+				obj.show;
+			end
+			
+			if exist('sM','var')
+				obj.ppd=sM.ppd;
+				obj.ifi=sM.screenVals.ifi;
+				obj.xCenter=sM.xCenter;
+				obj.yCenter=sM.yCenter;
+				obj.screenWidth = sM.screenVals.width;
+				obj.screenHeight = sM.screenVals.height;
+				obj.win=sM.win;
+				obj.winRect = sM.winRect;
+				obj.srcMode=sM.srcMode;
+				obj.dstMode=sM.dstMode;
+				obj.backgroundColour = sM.backgroundColour;
+				clear sM
 			end
 			
 			fn = fieldnames(ndotsStimulus);
@@ -225,6 +233,7 @@ classdef ndotsStimulus < baseStimulus
 				end
 			end
 			
+			obj.inSetup = false;
 			obj.initialiseDots();
 			obj.computeNextFrame();
 			
@@ -237,7 +246,7 @@ classdef ndotsStimulus < baseStimulus
 		function update(obj)
 			obj.initialiseDots();
 			obj.computeNextFrame();
-			obj.tick = 1;
+			resetTicks(obj);
 		end
 		
 		% ===================================================================
@@ -245,7 +254,7 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible == true
+			if obj.isVisible == true && obj.tick > obj.delayTicks
 				if obj.mask == true
 					Screen('BlendFunction', obj.win, obj.msrcMode, obj.mdstMode);
 					Screen('DrawDots', ...
@@ -266,6 +275,7 @@ classdef ndotsStimulus < baseStimulus
 						obj.pixelOrigin, ...
 						obj.dotType);
 				end
+				obj.tick = obj.tick + 1;
 			end
 		end
 		
@@ -274,8 +284,9 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(obj)
-			computeNextFrame(obj);
-			obj.tick = obj.tick + 1;
+			if obj.isVisible == true && obj.tick > obj.delayTicks
+				computeNextFrame(obj);
+			end
 		end
 		
 		% ===================================================================
@@ -283,6 +294,7 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function reset(obj)
+			resetTicks(obj);
 			obj.removeTmpProperties;
 		end
 		

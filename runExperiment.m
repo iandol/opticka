@@ -6,6 +6,7 @@
 %>controls the fundamental configuration of the screen (calibration, size
 %>etc. via screenManager), and manages communication to the DAQ system using TTL pulses out
 %>and communication over a UDP client<->server socket (via dataConnection).
+%>
 %>  Stimulus must be a stimulus class, i.e. gratingStimulus and friends,
 %>  so for example:
 %>
@@ -28,30 +29,28 @@ classdef runExperiment < optickaCore
 		screen
 		%> file to define the stateMachine state info
 		stateInfoFile = ''
-		%> key manager 
-		keyManager = ''
-		%> use LabJack for digital output?
-		useLabJack = false
 		%> use dataPixx for digital I/O
-		useDataPixx = true
+		useDataPixx = false
+		%> use LabJack for digital I/O
+		useLabJack = false
 		%> use eyelink?
 		useEyeLink = false
+		%> key manager 
+		keyManager 
 		%> this lets the opticka UI leave commands to runExperiment
 		uiCommand = ''
 		%> do we flip or not?
 		doFlip = true
 		%> log all frame times, gets slow for > 1e6 frames
 		logFrames = true
-		%> structure to pass to screenManager on initialisation
-		screenSettings = struct()
-		%> change the parameters for poorer temporal fidelity for debugging
+		%> enable debugging? (poorer temporal fidelity)
 		debug = false
 		%> shows the info text and position grid during stimulus presentation
-		visualDebug = true
+		visualDebug = false
 		%> flip as fast as possible?
 		benchmark = false
 		%> verbose logging?
-		verbose = true
+		verbose = false
 		%> strobed word value
 		strobeValue = []
 		%> send strobe on next flip?
@@ -59,10 +58,14 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (Hidden = true)
-		%> our old structure
+		%> structure for screenManager on initialisation and info from opticka
+		screenSettings = struct()
+		%> our old stimulus structure used to be a simple cell, now use
+		%> stimuli
 		stimulus
-		%> used to select single stimulus in training run
+		%> used to select single stimulus in training mode
 		stimList = []
+		%> which stimulus is selected?
 		thisStim = []
 	end
 	
@@ -131,6 +134,7 @@ classdef runExperiment < optickaCore
 		%> @param obj required class object
 		% ===================================================================
 		function run(obj)
+			global lj
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -151,26 +155,30 @@ classdef runExperiment < optickaCore
 			s = obj.screen;
 			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
 			
-			%-------Set up serial line and LabJack for this run...
+			%-------Set up Digital I/O for this run...
 			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
 			%obj.serialP.setDTR(0);
 			if obj.useDataPixx
 				if isa(obj.dPixx,'dPixxManager')
+					open(obj.dPixx)
 					io = obj.dPixx;
-					open(obj.dPixx)
 				else
-					obj.dPixx = dataPixxManager('name','runinstance');
+					obj.dPixx = dPixxManager('name','runinstance');
 					open(obj.dPixx)
-					obj.useLabjack = false;
+					io = obj.dPixx;
+					obj.useLabJack = false;
 				end
-				obj.lJack = labJack('verbose',false,'openNow',0,'name','null','silentMode',1);
-			elseif obj.useLabJack == true
-				obj.lJack = labJack('verbose',obj.verbose,'openNow',1,'name','runinstance');
+				if obj.useEyeLink
+					obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
+				end
+			elseif obj.useLabJack 
+				obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
 				io = obj.lJack;
 			else
 				obj.lJack = labJack('verbose',false,'openNow',0,'name','null','silentMode',1);
 				io = obj.lJack;
 			end
+			lj = obj.lJack;
 			
 			%-----------------------------------------------------------
 			
@@ -185,11 +193,17 @@ classdef runExperiment < optickaCore
 				
 				if obj.useDataPixx
 					io.setLine(7,1);WaitSecs(0.001);io.setLine(7,0)
-				else
+				elseif obj.useLabJack
 					%Trigger the omniplex (TTL on FIO1) into paused mode
 					io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
 				end
-				WaitSecs(0.1);
+
+				% set up the eyelink interface
+				if obj.useEyeLink
+					obj.eyeLink = eyelinkManager();
+					initialise(obj.eyeLink, s);
+					setup(obj.eyeLink);
+				end
 				
 				obj.initialiseTask; %set up our task structure 
 				
@@ -205,13 +219,15 @@ classdef runExperiment < optickaCore
 				%--------------this is RSTART 
 				if obj.useDataPixx 
 					io.rstart();
-				else
-					io.setDIO([1,0,0],[1,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
+				elseif obj.useLabjack
+					io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 				end
 				
 				obj.task.tick = 1;
 				obj.task.switched = 1;
 				tL.screenLog.beforeDisplay = GetSecs();
+				
+				if obj.useEyeLink; startRecording(obj.eyeLink); end
 				
 				% lets draw 1 seconds worth of the stimuli we will be using
 				% covered by a blank. this lets us prime the GPU with the sorts
@@ -261,6 +277,8 @@ classdef runExperiment < optickaCore
 						obj.infoText;
 					end
 					
+					if obj.useEyeLink;drawEyePosition(obj.eyeLink);end
+					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
 					[~, ~, buttons]=GetMouse(s.screen);
@@ -268,9 +286,12 @@ classdef runExperiment < optickaCore
 					if strcmp(obj.uiCommand,'stop');break;end
 					%if KbCheck;notify(obj,'abortRun');break;end;
 					
+					%check eye position
+					if obj.useEyeLink; getSample(obj.eyeLink); end
+					
 					obj.updateTask(); %update our task structure
 					
-					if obj.useDataPixx && obj.sendStrobe == true
+					if obj.useDataPixx && obj.sendStrobe
 						io.triggerStrobe(); %send our word; datapixx syncs to next vertical trace
 						obj.sendStrobe = false;
 					end
@@ -284,7 +305,7 @@ classdef runExperiment < optickaCore
 						tL.vbl = Screen('Flip', s.win, nextvbl);
 					end
 					%==================================================%
-					if obj.useLabJack && obj.sendStrobe == true
+					if obj.useLabJack && obj.sendStrobe
 						obj.lJack.strobeWord; %send our word out to the LabJack
 						obj.sendStrobe = false;
 					end
@@ -334,6 +355,11 @@ classdef runExperiment < optickaCore
 				
 				s.resetScreenGamma();
 				
+				if obj.useEyeLink
+					close(obj.eyeLink);
+					obj.eyeLink = [];
+				end
+				
 				s.finaliseMovie(false);
 				
 				s.close();
@@ -355,6 +381,10 @@ classdef runExperiment < optickaCore
 				s.playMovie();
 				
 			catch ME
+				if obj.useEyeLink
+					close(obj.eyeLink);
+					obj.eyeLink = [];
+				end
 				if isa(obj.dPixx,'dPixxManager') && obj.dPixx.isOpen
 					close(obj.dPixx)
 				end
@@ -386,6 +416,7 @@ classdef runExperiment < optickaCore
 		%> @param obj required class object
 		% ===================================================================
 		function runTrainingSession(obj)
+			global lj
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -394,12 +425,12 @@ classdef runExperiment < optickaCore
 				error('There is no working PTB available!')
 			end
 			
-			if exist('topsDataLog','file')
-				topsDataLog.flushAllData();
-			end
 			%initialise runLog for this run
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog; %short handle to log
+			
+			obj.behaviouralRecord = behaviouralRecord('name','Training');
+			bR = obj.behaviouralRecord;
 			
 			%a throwaway structure to hold various parameters
 			tS = struct();
@@ -408,8 +439,30 @@ classdef runExperiment < optickaCore
 			s = obj.screen; 
 			obj.stimuli.screen = [];
 			
-			% open our labJack if present
-			obj.lJack = labJack('name','training','verbose',obj.verbose);
+			%-------Set up Digital I/O for this run...
+			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
+			%obj.serialP.setDTR(0);
+			if obj.useDataPixx
+				if isa(obj.dPixx,'dPixxManager')
+					open(obj.dPixx)
+					io = obj.dPixx;
+				else
+					obj.dPixx = dPixxManager('name','runinstance');
+					open(obj.dPixx)
+					io = obj.dPixx;
+					obj.useLabJack = false;
+				end
+				if obj.useEyeLink
+					obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
+				end
+			elseif obj.useLabJack 
+				obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
+				io = obj.lJack;
+			else
+				obj.lJack = labJack('verbose',false,'openNow',0,'name','null','silentMode',1);
+				io = obj.lJack;
+			end
+			lj = obj.lJack;
 			
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
@@ -421,26 +474,16 @@ classdef runExperiment < optickaCore
 				obj.stimuli.verbose = obj.verbose;
 				setup(obj.stimuli); %run setup() for each stimulus
 				
+				% open the eyelink interface
+				obj.useEyeLink = true;
+				if obj.useEyeLink
+					obj.eyeLink = eyelinkManager();
+				end
+				
 				obj.stateMachine = stateMachine('verbose',true); %#ok<*CPROP>
 				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 				if isempty(obj.stateInfoFile)
 					
-					blankFcn = {{@drawBackground, obj.screen};{@drawFixationPoint, obj.screen}};
-					stimFcn = {@draw, obj.stimuli};
-					stimEntry = {@update, obj.stimuli};
-					correctFcn = {{@draw, obj.stimuli}; {@drawGreenSpot, obj.screen}};
-					incorrectFcn = {{@drawBackground, obj.screen}; {@drawRedSpot, obj.screen}};
-					
-					obj.stateInfo = { ...
-						'name'			'next'			'time'  'entryFcn'	'withinFcn'		'exitFcn'; ...
-						'prestimulus'	'stimulus'		2		[]			blankFcn		[]; ...
-						'stimulus'		'incorrect'		3		stimEntry	stimFcn			[]; ...
-						'incorrect'		'prestimulus'	0.75	[]			incorrectFcn	[]; ...
-						'correct'		'prestimulus'	1.5		stimEntry	correctFcn		[]; ...
-						'pause'			'prestimulus'	inf		[]			[]				[]; ...
-					};
-				
-					clear blankFcn stimFcn stimEntry correctFcn incorrectFcn
 				
 				elseif ischar(obj.stateInfoFile)
 					cd(fileparts(obj.stateInfoFile))
@@ -451,13 +494,18 @@ classdef runExperiment < optickaCore
 				addStates(obj.stateMachine, obj.stateInfo);
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(2); %capture keystrokes
+				ListenChar(1); %capture keystrokes
 				
 				% set up the eyelink interface
 				if obj.useEyeLink
-					obj.eyeLink = eyelinkManager();
 					initialise(obj.eyeLink, s);
 					setup(obj.eyeLink);
+				end
+				
+				createPlot(obj.behaviouralRecord, obj.eyeLink);
+				
+				if obj.useDataPixx 
+					io.setLine(7,0);io.setLine(7,1);WaitSecs(0.001);io.setLine(7,0)
 				end
 				
 				tS.index = 1;
@@ -482,6 +530,10 @@ classdef runExperiment < optickaCore
 				tS.keyHold = 1; %a small loop to stop overeager key presses
 				tS.totalTicks = 1; % a tick counter
 				tS.pauseToggle = 1;
+				
+				if obj.useDataPixx 
+					io.rstart();
+				end
 				
 				if obj.useEyeLink; startRecording(obj.eyeLink); end
 				
@@ -517,16 +569,22 @@ classdef runExperiment < optickaCore
 					
 					%check keyboard for commands
 					tS = obj.checkTrainingKeys(tS);
+					%throw away any other keystrokes
+					FlushEvents('keyDown');
 					
 					%if the statemachine is in stimulus state, then animate
 					%the stimuli
 					if strcmpi(obj.stateMachine.currentName,'stimulus')
 						animate(obj.stimuli);
+						tL.stimTime(tS.totalTicks)=1;
+					else
+						tL.stimTime(tS.totalTicks)=0;
 					end
 					
-					%throw away any other keystrokes
-					FlushEvents('keyDown');
-					
+					if obj.useDataPixx && obj.sendStrobe
+						io.triggerStrobe(); %send our word; datapixx syncs to next vertical trace
+						obj.sendStrobe = false;
+					end
 					%======= FLIP: Show it at correct retrace: ========%
 					if obj.doFlip
 						nextvbl = tL.vbl(end) + obj.screenVals.halfisi;
@@ -539,28 +597,21 @@ classdef runExperiment < optickaCore
 						end
 					end
 					%==================================================%
-					
-					if obj.logFrames == true
-						if strcmpi(obj.stateMachine.currentName,'stimulus')
-							tL.stimTime(tS.totalTicks)=1;
-						else
-							tL.stimTime(tS.totalTicks)=0;
-						end
-					end
-					
 					tS.totalTicks = tS.totalTicks + 1;
 					
 				end
-				obj.salutation(sprintf('Total ticks: %g -- stateMachine ticks: %g',tS.totalTicks,obj.stateMachine.totalTicks));
+				obj.salutation(sprintf('Total ticks: %g -- stateMachine ticks: %g',tS.totalTicks,obj.stateMachine.totalTicks),'TRAIN',true);
+				
+				if obj.useDataPixx
+					io.rstop();
+				end
+				
 				Priority(0);
 				ListenChar(0)
 				ShowCursor;
 				close(s);
 				close(obj.eyeLink);
 				obj.eyeLink = [];
-				if exist('topsDataLog','file')
-					topsDataLog.gui();
-				end
 				figure(obj.screenSettings.optickahandle)
 				obj.lJack.close;
 				obj.lJack=[];
@@ -600,9 +651,6 @@ classdef runExperiment < optickaCore
 				error('There is no working PTB available!')
 			end
 			
-			if exist('topsDataLog','file')
-				topsDataLog.flushAllData();
-			end
 			%initialise runLog for this run
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog; %short handle to log
@@ -835,14 +883,17 @@ classdef runExperiment < optickaCore
 			
 		end
 		
-		
 		% ===================================================================
 		%> @brief getrunLog Prints out the frame time plots from a run
 		%>
 		%> @param
 		% ===================================================================
 		function getRunLog(obj)
-			obj.runLog.printRunLog;
+			if isa(obj.runLog,'timeLogger')
+				obj.runLog.printRunLog;
+			elseif isa(obj.trainingLog,'timeLogger')
+				obj.trainingLog.printRunLog;
+			end
 		end
 		
 		% ===================================================================
@@ -851,7 +902,12 @@ classdef runExperiment < optickaCore
 		%> @param
 		% ===================================================================
 		function deleteRunLog(obj)
-			obj.runLog = [];
+			if isa(obj.runLog,'timeLogger')
+				obj.runLog = [];
+			end
+			if isa(obj.trainingLog,'timeLogger')
+				obj.trainingLog = [];
+			end
 		end
 		
 		% ===================================================================
@@ -934,12 +990,24 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 		function setStrobeValue(obj, value)
-			if obj.useDataPixx == true && obj.dPixx.isOpen == true
+			if obj.useDataPixx == true
 				prepareStrobe(obj.dPixx, value);			
 			elseif isa(obj.lJack,'labJack') && obj.lJack.isOpen == true
 				prepareStrobe(obj.lJack, value)
 			end
 		end
+		
+		% ===================================================================
+		%> @brief set strobe on next flip
+		%>
+		%> 
+		% ===================================================================
+		function doStrobe(obj, value)
+			if value == true
+				obj.sendStrobe = true;
+			end
+		end
+		
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
@@ -1301,11 +1369,11 @@ classdef runExperiment < optickaCore
 						timedTTL(obj.lJack,0,1000);
 					case 'z' % mark trial as correct1
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
-							forceTransition(obj.stateMachine, 'correct1');
+							forceTransition(obj.stateMachine, 'correct');
 						end
 					case 'x' % mark trial as correct2
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
-							forceTransition(obj.stateMachine, 'correct2');
+							forceTransition(obj.stateMachine, 'correct');
 						end
 					case 'c' %mark trial incorrect
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
@@ -1317,7 +1385,7 @@ classdef runExperiment < optickaCore
 								forceTransition(obj.stateMachine, 'pause');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							else
-								forceTransition(obj.stateMachine, 'prestimulus');
+								forceTransition(obj.stateMachine, 'blank');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							end
 							tS.keyHold = tS.totalTicks + fInc;

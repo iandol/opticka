@@ -67,7 +67,7 @@ classdef dotsStimulus < baseStimulus
 		%nDots cache
 		nDots_
 		%> we must scale the dots lager than the mask by this factor
-		fieldScale = 1.1
+		fieldScale = 1.15
 		%> resultant size of the dotfield after scaling
 		fieldSize
 		%> this holds the mask texture
@@ -110,6 +110,7 @@ classdef dotsStimulus < baseStimulus
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
 				varargin.family = 'dots';
+				varargin.colour = [1 1 1 1];
 				varargin.speed = 2;
 			end
 			
@@ -130,13 +131,19 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function setup(obj,sM)
 			
-			obj.dateStamp = clock;
+			obj.reset; %reset it back to its initial state
+			obj.inSetup = true;
+			if isempty(obj.isVisible)
+				obj.show;
+			end
 			
 			if exist('sM','var')
 				obj.ppd=sM.ppd;
 				obj.ifi=sM.screenVals.ifi;
 				obj.xCenter=sM.xCenter;
 				obj.yCenter=sM.yCenter;
+				obj.screenWidth = sM.screenVals.width;
+				obj.screenHeight = sM.screenVals.height;
 				obj.win=sM.win;
 				obj.srcMode=sM.srcMode;
 				obj.dstMode=sM.dstMode;
@@ -239,6 +246,7 @@ classdef dotsStimulus < baseStimulus
 					obj.colours(4)=obj.alpha;
 			end
 			
+			obj.inSetup = false;
 			obj.updateDots; %runExperiment will call update
 			
 		end
@@ -249,7 +257,7 @@ classdef dotsStimulus < baseStimulus
 		%>  for example)
 		% ===================================================================
 		function update(obj)
-			obj.tick = 1;
+			resetTicks(obj);
 			obj.updateDots;
 		end
 		
@@ -258,7 +266,7 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible == true
+			if obj.isVisible == true && obj.tick > obj.delayTicks
 				if obj.mask == true
 					Screen('BlendFunction', obj.win, obj.msrcMode, obj.mdstMode);
 					Screen('DrawDots', obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
@@ -278,18 +286,20 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(obj)
-			obj.xy = obj.xy + obj.dxdy; %increment position
-			fix = find(obj.xy > obj.sizeOut/2); %cull positive
-			obj.xy(fix) = obj.xy(fix) - obj.sizeOut;
-			fix = find(obj.xy < -obj.sizeOut/2);  %cull negative
-			obj.xy(fix) = obj.xy(fix) + obj.sizeOut;
-			%obj.xy(obj.xy > obj.sizeOut/2) = obj.xy(obj.xy > obj.sizeOut/2) - obj.sizeOut; % this is not faster
-			%obj.xy(obj.xy < -obj.sizeOut/2) = obj.xy(obj.xy < -obj.sizeOut/2) + obj.sizeOut; % this is not faster
-			if obj.killOut > 0 && obj.tick > 1
-				kidx = rand(obj.nDots,1) <  obj.killOut;
-				ks = length(find(kidx > 0));
-				obj.xy(:,kidx) = (obj.sizeOut .* rand(2,ks)) - obj.sizeOut/2;
-				%obj.colours(3,kidx) = ones(1,ks); 
+			if obj.isVisible == true && obj.tick > obj.delayTicks
+				obj.xy = obj.xy + obj.dxdy; %increment position
+				fix = find(obj.xy > obj.sizeOut/2); %cull positive
+				obj.xy(fix) = obj.xy(fix) - obj.sizeOut;
+				fix = find(obj.xy < -obj.sizeOut/2);  %cull negative
+				obj.xy(fix) = obj.xy(fix) + obj.sizeOut;
+				%obj.xy(obj.xy > obj.sizeOut/2) = obj.xy(obj.xy > obj.sizeOut/2) - obj.sizeOut; % this is not faster
+				%obj.xy(obj.xy < -obj.sizeOut/2) = obj.xy(obj.xy < -obj.sizeOut/2) + obj.sizeOut; % this is not faster
+				if obj.killOut > 0 && obj.tick > 1
+					kidx = rand(obj.nDots,1) <  obj.killOut;
+					ks = length(find(kidx > 0));
+					obj.xy(:,kidx) = (obj.sizeOut .* rand(2,ks)) - obj.sizeOut/2;
+					%obj.colours(3,kidx) = ones(1,ks); 
+				end
 			end
 		end
 		
@@ -305,7 +315,7 @@ classdef dotsStimulus < baseStimulus
 			obj.dys = [];
 			obj.dxdy = [];
 			obj.colours = [];
-			obj.tick = 1;
+			resetTicks(obj);
 		end
 		
 		% ===================================================================
@@ -385,6 +395,7 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function set_densityOut(obj,value)
 			obj.densityOut = value;
+			obj.nDots; %remake our cache
 		end
 		
 		% ===================================================================
