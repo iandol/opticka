@@ -356,10 +356,8 @@ classdef gratingStimulus < baseStimulus
 		function setRect(obj)
 			obj.dstRect=Screen('Rect',obj.texture);
 			obj.dstRect=ScaleRect(obj.dstRect,obj.scale,obj.scale);
-			if obj.mouseOverride
-				if obj.mouseValid
+			if obj.mouseOverride && obj.mouseValid
 					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
-				end
 			else
 				if isempty(obj.findprop('motionAngleOut'));
 					[sx sy]=pol2cart(obj.d2r(obj.motionAngle),obj.startPosition);

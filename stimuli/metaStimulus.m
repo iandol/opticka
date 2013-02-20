@@ -209,11 +209,12 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function randomise(obj,choice)
+		function randomise(obj)
 			if ~isempty(obj.stimulusTable)
-				logs = ['--->>> RANDOMISE Stimulus:' num2str(choice) ': '];
+				logs = '--->>> RANDOMISE Stimulus:';
 				for i = 1:length(obj.stimulusTable)
 					
+					stims = obj.stimulusTable(i).stimuli;
 					name = obj.stimulusTable(i).name;
 					[r,c] = size(obj.stimulusTable(i).values);
 					if r > 1 && c > 1
@@ -224,13 +225,15 @@ classdef metaStimulus < optickaCore
 						values = obj.stimulusTable(i).values(1,randi(c));
 					end
 					
-					if strcmpi(name,'xyPosition')
-						obj.stimuli{choice}.xPositionOut = values(1);
-						obj.stimuli{choice}.yPositionOut = values(2);
-						logs = [logs ' X & Y'];
-					elseif isprop(obj.stimuli{choice}, [name 'Out'])
-						obj.stimuli{choice}.([name 'Out']) = values;
-						logs = [logs ' | ' name 'Out:' num2str(values)];
+					for j=1:length(stims)
+						if strcmpi(name,'xyPosition')
+							obj.stimuli{stims(j)}.xPositionOut = values(1);
+							obj.stimuli{stims(j)}.yPositionOut = values(2);
+							logs = [logs num2str(stims(i)) ': X & Y' ];
+						elseif isprop(obj.stimuli{stims(j)}, [name 'Out'])
+							obj.stimuli{stims(j)}.([name 'Out']) = values;
+							logs = [logs ' | ' name 'Out:' num2str(values)];
+						end
 					end
 			
 				end
