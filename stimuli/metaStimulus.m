@@ -216,26 +216,29 @@ classdef metaStimulus < optickaCore
 					
 					stims = obj.stimulusTable(i).stimuli;
 					name = obj.stimulusTable(i).name;
-					[r,c] = size(obj.stimulusTable(i).values);
-					if r > 1 && c > 1
-						values = obj.stimulusTable(i).values(randi(r),:);
-					elseif r > 1
-						values = obj.stimulusTable(i).values(randi(r),1);
-					else
-						values = obj.stimulusTable(i).values(1,randi(c));
-					end
-					
-					for j=1:length(stims)
-						if strcmpi(name,'xyPosition')
-							obj.stimuli{stims(j)}.xPositionOut = values(1);
-							obj.stimuli{stims(j)}.yPositionOut = values(2);
-							logs = [logs num2str(stims(i)) ': X & Y' ];
-						elseif isprop(obj.stimuli{stims(j)}, [name 'Out'])
-							obj.stimuli{stims(j)}.([name 'Out']) = values;
-							logs = [logs ' | ' name 'Out:' num2str(values)];
+					if ~isempty(stims) && ~isempty(name)
+	
+						[r,c] = size(obj.stimulusTable(i).values);
+						if r > 1 && c > 1
+							values = obj.stimulusTable(i).values(randi(r),:);
+						elseif r > 1
+							values = obj.stimulusTable(i).values(randi(r),1);
+						else
+							values = obj.stimulusTable(i).values(1,randi(c));
 						end
+
+						for j=1:length(stims)
+							if strcmpi(name,'xyPosition')
+								obj.stimuli{stims(j)}.xPositionOut = values(1);
+								obj.stimuli{stims(j)}.yPositionOut = values(2);
+								logs = [logs num2str(stims(i)) ': X & Y' ];
+							elseif isprop(obj.stimuli{stims(j)}, [name 'Out'])
+								obj.stimuli{stims(j)}.([name 'Out']) = values;
+								logs = [logs ' | ' name 'Out:' num2str(values)];
+							end
+						end
+					
 					end
-			
 				end
 				fprintf([logs '\n']);
 			end

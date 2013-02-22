@@ -25,14 +25,14 @@ obj.eyeLink.remoteCalibration = true; %manual calibration
 obj.eyeLink.calibrationStyle = 'HV9'; % 5 point calibration
 obj.eyeLink.recordData = false; % don't save EDF file
 obj.eyeLink.modify.calibrationtargetcolour = [1 1 0];
-obj.eyeLink.modify.calibrationtargetsize = 5;
-obj.eyeLink.modify.calibrationtargetwidth = 0.1;
+obj.eyeLink.modify.calibrationtargetsize = 1;
+obj.eyeLink.modify.calibrationtargetwidth = 0.01;
 obj.eyeLink.modify.waitformodereadytime = 500;
-obj.eyeLink.modify.devicenumber = -1; % -1==use any keyboard
+obj.eyeLink.modify.devicenumber = -1; % -1 == use any keyboard
 
 obj.eyeLink.fixationX = 0;
 obj.eyeLink.fixationY = 0;
-obj.eyeLink.fixationRadius = 1.25;
+obj.eyeLink.fixationRadius = 1;
 obj.eyeLink.fixationInitTime = 0.6;
 obj.eyeLink.fixationTime = 2.0;
 obj.eyeLink.strictFixation = true;

@@ -159,7 +159,7 @@ switch eyecmd
 			needsupdate = 1;
 			calxy = [];
 			if isa(lj,'labJack')
-				lj.timedTTL(0,400);
+				lj.timedTTL(0,100);
 			end
 		end
         if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
@@ -486,7 +486,7 @@ try
 	
 	if size <= 64
 		Screen('DrawDots', eyewin, calxy, size, el.calibrationtargetcolour, [], 1);
-		Screen('DrawDots', eyewin, calxy, insetSize, [1 0 1], [], 1);
+		Screen('DrawDots', eyewin, calxy, 3, [1 0 1], [], 1);
 	else
 		Screen('FillOval', eyewin, el.calibrationtargetcolour, [calxy(1)-size/2 calxy(2)-size/2 calxy(1)+size/2 calxy(2)+size/2], size+2);
 		Screen('FillOval', eyewin, [1 0 1], [calxy(1)-inset/2 calxy(2)-inset/2 calxy(1)+inset/2 calxy(2)+inset/2], inset+2);
