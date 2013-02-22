@@ -29,6 +29,8 @@ classdef metaStimulus < optickaCore
 		choice = []
 		%> randomisation table to apply to a stimulus
 		stimulusTable = []
+		%> control table
+		controlTable = []
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%

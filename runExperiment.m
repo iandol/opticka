@@ -1458,21 +1458,48 @@ classdef runExperiment < optickaCore
 						timedTTL(obj.lJack,0,1000);
 					case 'q' %quit
 						tS.stopTraining = true;
-% 					case {'LeftArrow','left'} %previous variable 1 value
-% 						if tS.totalTicks > tS.keyHold
-% 							obj.stimuli{1}.sizeOut = obj.stimuli{1}.sizeOut - 0.1;
-% 							if obj.stimuli{1}.sizeOut < 2
-% 								obj.stimuli{1}.sizeOut = 2;
-% 							end
-% 							fprintf('===>>> Stimulus Size: %g\n',obj.stimuli{1}.sizeOut)
-% 							tS.keyHold = tS.totalTicks + fInc;
-% 						end
-% 					case {'RightArrow','right'} %next variable 1 value
-% 						if tS.totalTicks > tS.keyHold
-% 							obj.stimuli{1}.sizeOut = obj.stimuli{1}.sizeOut + 0.1;
-% 							fprintf('===>>> Stimulus Size: %g\n',obj.stimuli{1}.sizeOut)
-% 							tS.keyHold = tS.totalTicks + fInc;
-% 						end
+					case {'LeftArrow','left'} %previous variable 1 value
+						if tS.totalTicks > tS.keyHold
+							if ~isempty(obj.stimuli.controlTable.variable)
+								var = obj.stimuli.controlTable.variable;
+								delta = obj.stimuli.controlTable.delta;
+								stims = obj.stimuli.controlTable.stimuli;
+								limits = obj.stimuli.controlTable.limits;
+								for i = 1:length(stims)
+									val = obj.stimuli{stims(i)}.([var 'Out']) - delta;
+									if val < limits(1)
+										val = limits(1);
+									end
+									if length(val) > 1
+										val = val(1);
+									end
+									obj.stimuli{stims(i)}.([var 'Out']) = val;
+									fprintf('===>>> Stimulus %g %s: %g\n',stims(i),var,val)
+								end
+							end
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case {'RightArrow','right'} %next variable 1 value
+						if tS.totalTicks > tS.keyHold
+							if ~isempty(obj.stimuli.controlTable.variable)
+								var = obj.stimuli.controlTable.variable;
+								delta = obj.stimuli.controlTable.delta;
+								stims = obj.stimuli.controlTable.stimuli;
+								limits = obj.stimuli.controlTable.limits;
+								for i = 1:length(stims)
+									val = obj.stimuli{stims(i)}.([var 'Out']) + delta;
+									if val > limits(2)
+										val = limits(2);
+									end
+									if length(val) > 1
+										val = val(1);
+									end
+									obj.stimuli{stims(i)}.([var 'Out']) = val;
+									fprintf('===>>> Stimulus %g %s: %g\n',stims(i),var,val)
+								end
+							end
+							tS.keyHold = tS.totalTicks + fInc;
+						end
 					case ',<'
 						if tS.totalTicks > tS.keyHold
 							obj.stimuli{2}.contrastOut = obj.stimuli{2}.contrastOut - 0.005;
