@@ -18,10 +18,17 @@ obj.eyeLink.fixationInitTime = 1.0;
 obj.eyeLink.fixationTime = 1.0;
 obj.eyeLink.strictFixation = true;
 
-obj.stimuli.controlTable.variable = 'angle';
-obj.stimuli.controlTable.delta = '15';
-obj.stimuli.controlTable.stimuli = [2];
-obj.stimuli.controlTable.limits = [0 360];
+obj.stimuli.controlTable(1).variable = 'angle';
+obj.stimuli.controlTable(1).delta = '15';
+obj.stimuli.controlTable(1).stimuli = [1 2];
+obj.stimuli.controlTable(1).limits = [0 360];
+obj.stimuli.controlTable(2).variable = 'size';
+obj.stimuli.controlTable(2).delta = '2';
+obj.stimuli.controlTable(2).stimuli = [1 2];
+obj.stimuli.controlTable(2).limits = [1 20];
+
+obj.stimuli.stimulusSets = {[1 3],[2 3],[1 2 3]};
+obj.stimuli.setChoice = 1;
 
 %these are our functions that will execute as the stateMachine runs,
 %this be in the scope of the runExperiemnt object.

@@ -29,8 +29,12 @@ classdef metaStimulus < optickaCore
 		choice = []
 		%> randomisation table to apply to a stimulus
 		stimulusTable = []
-		%> control table
+		%> control table for keyboard changes
 		controlTable = []
+		%> show subsets of stimuli?
+		stimulusSets = []
+		%>
+		setChoice = 0;
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -265,6 +269,23 @@ classdef metaStimulus < optickaCore
 				obj.stimuli{i}.isVisible = true;
 			end
 		end
+		
+		% ===================================================================
+		%> @brief Shorthand to set isVisible=true.
+		%>
+		% ===================================================================
+		function showSet(obj)
+			if ~isempty(obj.stimulusSets) && obj.setChoice > 0
+				sets = obj.stimulusSets(obj.setChoice);
+				for i = 1:obj.n
+					obj.stimuli{i}.isVisible = false;
+				end
+				for i = 1:length(sets)
+					obj.stimuli{sets(i)}.isVisible = true;
+				end
+			end
+		end
+		
 		
 		% ===================================================================
 		%> @brief Run Stimulus in a window to preview

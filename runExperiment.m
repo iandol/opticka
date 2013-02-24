@@ -1403,7 +1403,7 @@ classdef runExperiment < optickaCore
 						timedTTL(obj.lJack,0,100);
 					case {'DownArrow','down'}
 						timedTTL(obj.lJack,0,1000);
-					case 'z' % mark trial as correct1
+					case 'z' % mark trial as correct
 						if strcmpi(obj.stateMachine.currentName,'stimulus')
 							forceTransition(obj.stateMachine, 'correct');
 						end
@@ -1452,19 +1452,40 @@ classdef runExperiment < optickaCore
 				rchar = KbName(keyCode);
 				if iscell(rchar);rchar=rchar{1};end
 				switch rchar
-					case {'UpArrow','up'} %give a reward at any time
-						timedTTL(obj.lJack,0,400);
-					case {'DownArrow','down'}
-						timedTTL(obj.lJack,0,1000);
 					case 'q' %quit
 						tS.stopTraining = true;
+					case {'UpArrow','up'} %give a reward at any time
+						if tS.totalTicks > tS.keyHold
+							if ~isempty(obj.stimuli.controlTable)
+								maxl = length(obj.stimuli.controlTable);
+								choice = obj.stimuli.choice;
+								if choice > 0 && choice < maxl
+									obj.stimuli.choice = obj.stimuli.choice + 1;
+								end
+							end
+						end
+					case {'DownArrow','down'}
+						if tS.totalTicks > tS.keyHold
+							if ~isempty(obj.stimuli.controlTable)
+								maxl = length(obj.stimuli.controlTable);
+								choice = obj.stimuli.choice;
+								if choice > 0 && choice <= maxl
+									obj.stimuli.choice = obj.stimuli.choice - 1;
+								end
+							end
+						end
+					
 					case {'LeftArrow','left'} %previous variable 1 value
 						if tS.totalTicks > tS.keyHold
 							if ~isempty(obj.stimuli.controlTable.variable)
-								var = obj.stimuli.controlTable.variable;
-								delta = obj.stimuli.controlTable.delta;
-								stims = obj.stimuli.controlTable.stimuli;
-								limits = obj.stimuli.controlTable.limits;
+								choice = obj.stimuli.choice;
+								if isempty(choice)
+									choice = 1;
+								end
+								var = obj.stimuli.controlTable(choice).variable;
+								delta = obj.stimuli.controlTable(choice).delta;
+								stims = obj.stimuli.controlTable(choice).stimuli;
+								limits = obj.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
 									val = obj.stimuli{stims(i)}.([var 'Out']) - delta;
 									if val < limits(1)
@@ -1502,17 +1523,22 @@ classdef runExperiment < optickaCore
 						end
 					case ',<'
 						if tS.totalTicks > tS.keyHold
-							obj.stimuli{2}.contrastOut = obj.stimuli{2}.contrastOut - 0.005;
-							if obj.stimuli{2}.contrastOut <= 0
-								obj.stimuli{2}.contrastOut = 0;
+							choice = obj.stimuli.setChoice;
+							sets = obj.stimuli.stimulusSets{choice};
+							if choice > 2
+								obj.stimuli.setChoice = obj.stimuli.setChoice - 1;
 							end
-							fprintf('===>>> Stimulus Contrast: %g\n',obj.stimuli{2}.contrastOut)
+							obj.stimuli.showSet();
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '.>'
 						if tS.totalTicks > tS.keyHold
-							obj.stimuli{2}.contrastOut = obj.stimuli{2}.contrastOut + 0.005;
-							fprintf('===>>> Stimulus Contrast: %g\n',obj.stimuli{2}.contrastOut)
+							choice = obj.stimuli.setChoice;
+							sets = obj.stimuli.stimulusSets{choice};
+							if choice > 2 && choice < length(sets)
+								obj.stimuli.setChoice = obj.stimuli.setChoice + 1;
+							end
+							obj.stimuli.showSet();
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '=+'
