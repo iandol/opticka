@@ -29,6 +29,8 @@ classdef metaStimulus < optickaCore
 		choice = []
 		%> randomisation table to apply to a stimulus
 		stimulusTable = []
+		%> choice for table
+		tableChoice = [];
 		%> control table for keyboard changes
 		controlTable = []
 		%> show subsets of stimuli?
@@ -237,7 +239,7 @@ classdef metaStimulus < optickaCore
 							if strcmpi(name,'xyPosition')
 								obj.stimuli{stims(j)}.xPositionOut = values(1);
 								obj.stimuli{stims(j)}.yPositionOut = values(2);
-								logs = [logs num2str(stims(i)) ': X & Y' ];
+								logs = [logs 'XY: ' num2str(stims(i)) ];
 							elseif isprop(obj.stimuli{stims(j)}, [name 'Out'])
 								obj.stimuli{stims(j)}.([name 'Out']) = values;
 								logs = [logs ' | ' name 'Out:' num2str(values)];
@@ -256,8 +258,17 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function show(obj)
 			for i = 1:obj.n
-				obj.stimuli{i}.isVisible = true;
+				show(obj.stimuli{i});
 			end
+		end
+		
+		function flashScreen(obj)
+			Screen('FillRect',s.win,[0.3 0.3 0.3 1],[]);
+			Screen('flip',s.win)
+			WaitSecs(0.25);
+			Screen('FillRect',s.win,[1 1 1 1],[]);
+			Screen('flip',s.win)
+			WaitSecs(0.25);
 		end
 		
 		% ===================================================================
@@ -266,7 +277,7 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function hide(obj)
 			for i = 1:obj.n
-				obj.stimuli{i}.isVisible = true;
+				hide(obj.stimuli{i});
 			end
 		end
 		
@@ -276,12 +287,12 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function showSet(obj)
 			if ~isempty(obj.stimulusSets) && obj.setChoice > 0
-				sets = obj.stimulusSets(obj.setChoice);
-				for i = 1:obj.n
-					obj.stimuli{i}.isVisible = false;
-				end
-				for i = 1:length(sets)
-					obj.stimuli{sets(i)}.isVisible = true;
+				sets = obj.stimulusSets{obj.setChoice};
+				if max(sets) < obj.n
+					hide(obj.stimuli)
+					for i = 1:length(sets)
+						show(obj.stimuli{sets(i)});
+					end
 				end
 			end
 		end

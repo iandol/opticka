@@ -18,6 +18,18 @@ obj.eyeLink.fixationInitTime = 1.0;
 obj.eyeLink.fixationTime = 1.0;
 obj.eyeLink.strictFixation = true;
 
+obj.stimuli.choice = [];
+in(1).name = 'xyPosition';
+in(1).values = [8 8; 8 -8; -8 8; -8 -8];
+in(1).stimuli = [1];
+%in(2).name = 'angle';
+%in(2).values = [0 22.5 45 67.5 90];
+%in(2).stimuli = [2];
+%in(2).name = 'contrast';
+%in(2).values = [0.2 0.8];
+%in(2).stimuli = [2];
+obj.stimuli.stimulusTable = in;
+
 obj.stimuli.controlTable(1).variable = 'angle';
 obj.stimuli.controlTable(1).delta = '15';
 obj.stimuli.controlTable(1).stimuli = [1 2];
@@ -39,13 +51,14 @@ pauseEntryFcn = @()setOffline(obj.eyeLink);
 %prestim entry
 psEntryFcn = { @()setOffline(obj.eyeLink); ...
 	@()trackerDrawFixation(obj.eyeLink); ...
-	@()resetFixation(obj.eyeLink); ...
-	@()update(obj.stimuli); };
+	@()resetFixation(obj.eyeLink) };
 
 %prestimulus blank
 prestimulusFcn = @()drawBackground(obj.screen);
 
-psExitFcn = { @()startRecording(obj.eyeLink); @()statusMessage(obj.eyeLink,'Showing Fixation Spot...') };
+psExitFcn = { @()update(obj.stimuli); ...
+	@()startRecording(obj.eyeLink); ...
+	@()statusMessage(obj.eyeLink,'Showing Fixation Spot...') };
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = [];
@@ -85,7 +98,7 @@ disp('================>> Loading state info file <<================')
 stateInfoTmp = { ...
 'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'prestimulus'	inf		pauseEntryFcn	[]				[]				[]; ...
-'prestimulus' 'stimulus'	4		psEntryFcn		prestimulusFcn	[]				psExitFcn; ...
+'prestimulus' 'stimulus'	1		psEntryFcn		prestimulusFcn	[]				psExitFcn; ...
 'stimulus'  'breakfix'		3		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'breakfix'	'prestimulus'	0.5		breakEntryFcn	breakFcn		[]				[]; ...
 'correct'	'prestimulus'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn; ...

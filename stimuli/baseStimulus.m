@@ -221,6 +221,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function show(obj)
 			obj.isVisible = true;
+			fprintf('--->>> %s is shown\n',obj.fullName);
 		end
 		
 		% ===================================================================
@@ -229,6 +230,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function hide(obj)
 			obj.isVisible = false;
+			fprintf('--->>> %s is hidden\n',obj.fullName);
 		end
 		
 		% ===================================================================
@@ -669,17 +671,21 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>  setRect makes the PsychRect based on the texture and screen values
 		% ===================================================================
 		function setRect(obj)
-			if isempty(obj.findprop('angleOut'));
-				[dx, dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
-			else
-				[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
-			end
 			obj.dstRect=Screen('Rect',obj.texture);
-			obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
-			if isempty(obj.findprop('xPositionOut'));
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
+			if obj.mouseOverride && obj.mouseValid
+					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
 			else
-				obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
+				if isempty(obj.findprop('angleOut'));
+					[dx, dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+				else
+					[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
+				end
+				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
+				if isempty(obj.findprop('xPositionOut'));
+					obj.dstRect=OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
+				else
+					obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
+				end
 			end
 			obj.mvRect=obj.dstRect;
 			obj.setAnimationDelta();

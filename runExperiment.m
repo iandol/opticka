@@ -703,7 +703,7 @@ classdef runExperiment < optickaCore
 				end
 				
 				obj.stateMachine = stateMachine('realTime',true,'name','fixationtraining','verbose',obj.verbose); %#ok<*CPROP>
-				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
+				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the spcreen IFI
 				if isempty(obj.stateInfoFile)
 					error('Please specify a fixation state info file...')
 				elseif ischar(obj.stateInfoFile)
@@ -1458,27 +1458,33 @@ classdef runExperiment < optickaCore
 						if tS.totalTicks > tS.keyHold
 							if ~isempty(obj.stimuli.controlTable)
 								maxl = length(obj.stimuli.controlTable);
-								choice = obj.stimuli.choice;
-								if choice > 0 && choice < maxl
-									obj.stimuli.choice = obj.stimuli.choice + 1;
+								if isempty(obj.stimuli.tableChoice) && maxl > 0
+									obj.stimuli.tableChoice = 1;
 								end
+								if (obj.stimuli.tableChoice > 0) && (obj.stimuli.tableChoice < maxl)
+									obj.stimuli.tableChoice = obj.stimuli.tableChoice + 1;
+								end
+								fprintf('===>>> Control table is %g\n',obj.stimuli.tableChoice)
 							end
 						end
 					case {'DownArrow','down'}
 						if tS.totalTicks > tS.keyHold
 							if ~isempty(obj.stimuli.controlTable)
 								maxl = length(obj.stimuli.controlTable);
-								choice = obj.stimuli.choice;
-								if choice > 0 && choice <= maxl
-									obj.stimuli.choice = obj.stimuli.choice - 1;
+								if isempty(obj.stimuli.tableChoice) && maxl > 0
+									obj.stimuli.tableChoice = 1;
 								end
+								if (obj.stimuli.tableChoice > 1) && (obj.stimuli.tableChoice <= maxl)
+									obj.stimuli.tableChoice = obj.stimuli.tableChoice - 1;
+								end
+								fprintf('===>>> Control table is %g\n',obj.stimuli.tableChoice)
 							end
 						end
 					
 					case {'LeftArrow','left'} %previous variable 1 value
 						if tS.totalTicks > tS.keyHold
 							if ~isempty(obj.stimuli.controlTable.variable)
-								choice = obj.stimuli.choice;
+								choice = obj.stimuli.tableChoice;
 								if isempty(choice)
 									choice = 1;
 								end
@@ -1503,10 +1509,14 @@ classdef runExperiment < optickaCore
 					case {'RightArrow','right'} %next variable 1 value
 						if tS.totalTicks > tS.keyHold
 							if ~isempty(obj.stimuli.controlTable.variable)
-								var = obj.stimuli.controlTable.variable;
-								delta = obj.stimuli.controlTable.delta;
-								stims = obj.stimuli.controlTable.stimuli;
-								limits = obj.stimuli.controlTable.limits;
+								choice = obj.stimuli.tableChoice;
+								if isempty(choice)
+									choice = 1;
+								end
+								var = obj.stimuli.controlTable(choice).variable;
+								delta = obj.stimuli.controlTable(choice).delta;
+								stims = obj.stimuli.controlTable(choice).stimuli;
+								limits = obj.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
 									val = obj.stimuli{stims(i)}.([var 'Out']) + delta;
 									if val > limits(2)
