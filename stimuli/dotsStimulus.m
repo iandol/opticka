@@ -138,6 +138,7 @@ classdef dotsStimulus < baseStimulus
 			end
 			
 			if exist('sM','var')
+				obj.sM = sM;
 				obj.ppd=sM.ppd;
 				obj.ifi=sM.screenVals.ifi;
 				obj.xCenter=sM.xCenter;
@@ -257,6 +258,8 @@ classdef dotsStimulus < baseStimulus
 		%>  for example)
 		% ===================================================================
 		function update(obj)
+			obj.xCenter=obj.sM.xCenter;
+			obj.yCenter=obj.sM.yCenter;
 			resetTicks(obj);
 			obj.updateDots;
 		end

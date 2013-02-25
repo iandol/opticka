@@ -136,7 +136,7 @@ classdef gaborStimulus < baseStimulus
 		%>
 		%> @param rE runExperiment object for reference
 		% ===================================================================
-		function setup(obj,rE)
+		function setup(obj,sM)
 			
 			obj.reset(); %reset it back to its initial state
 			obj.inSetup = true;
@@ -146,11 +146,12 @@ classdef gaborStimulus < baseStimulus
 			addlistener(obj,'changeScale',@obj.calculateScale); %use an event to keep scale accurate
 			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
 			
-			obj.ppd=rE.ppd;
-			obj.ifi=rE.screenVals.ifi;
-			obj.xCenter=rE.xCenter;
-			obj.yCenter=rE.yCenter;
-			obj.win=rE.win;
+			obj.sM = sM;
+			obj.ppd=sM.ppd;
+			obj.ifi=sM.screenVals.ifi;
+			obj.xCenter=sM.xCenter;
+			obj.yCenter=sM.yCenter;
+			obj.win=sM.win;
 			obj.screenWidth = sM.screenVals.width;
 			obj.screenHeight = sM.screenVals.height;
 
@@ -235,6 +236,8 @@ classdef gaborStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
+			obj.xCenter=obj.sM.xCenter;
+			obj.yCenter=obj.sM.yCenter;
 			resetTicks(obj);
 			if obj.correctPhase
 				ps=obj.calculatePhase;

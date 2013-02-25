@@ -82,6 +82,7 @@ classdef barStimulus < baseStimulus
 			reset(obj);
 			obj.inSetup = true;
 			
+			obj.sM = sM;
 			obj.ppd=sM.ppd;
 			obj.ifi=sM.screenVals.ifi;
 			obj.screenWidth = sM.screenVals.width;
@@ -133,6 +134,8 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function update(obj)
 			resetTicks(obj);
+			obj.xCenter=obj.sM.xCenter;
+			obj.yCenter=obj.sM.yCenter;
 			obj.constructMatrix(obj.ppd) %make our matrix
 			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
 			obj.setRect();

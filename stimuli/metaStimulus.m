@@ -30,13 +30,15 @@ classdef metaStimulus < optickaCore
 		%> randomisation table to apply to a stimulus
 		stimulusTable = []
 		%> choice for table
-		tableChoice = [];
+		tableChoice = []
 		%> control table for keyboard changes
 		controlTable = []
 		%> show subsets of stimuli?
 		stimulusSets = []
 		%>
 		setChoice = 0;
+		%>
+		flashRate = 0.25
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -219,7 +221,7 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function randomise(obj)
 			if ~isempty(obj.stimulusTable)
-				logs = '--->>> RANDOMISE Stimulus:';
+				logs = '--->>> RANDOMISE Stimulus: ';
 				for i = 1:length(obj.stimulusTable)
 					
 					stims = obj.stimulusTable(i).stimuli;
@@ -239,7 +241,7 @@ classdef metaStimulus < optickaCore
 							if strcmpi(name,'xyPosition')
 								obj.stimuli{stims(j)}.xPositionOut = values(1);
 								obj.stimuli{stims(j)}.yPositionOut = values(2);
-								logs = [logs 'XY: ' num2str(stims(i)) ];
+								logs = [logs 'XY: ' num2str(stims(j)) ];
 							elseif isprop(obj.stimuli{stims(j)}, [name 'Out'])
 								obj.stimuli{stims(j)}.([name 'Out']) = values;
 								logs = [logs ' | ' name 'Out:' num2str(values)];
@@ -248,7 +250,7 @@ classdef metaStimulus < optickaCore
 					
 					end
 				end
-				fprintf([logs '\n']);
+				obj.salutation(logs);
 			end
 		end
 		
@@ -261,16 +263,7 @@ classdef metaStimulus < optickaCore
 				show(obj.stimuli{i});
 			end
 		end
-		
-		function flashScreen(obj)
-			Screen('FillRect',s.win,[0.3 0.3 0.3 1],[]);
-			Screen('flip',s.win)
-			WaitSecs(0.25);
-			Screen('FillRect',s.win,[1 1 1 1],[]);
-			Screen('flip',s.win)
-			WaitSecs(0.25);
-		end
-		
+				
 		% ===================================================================
 		%> @brief Shorthand to set isVisible=false.
 		%>
@@ -288,12 +281,27 @@ classdef metaStimulus < optickaCore
 		function showSet(obj)
 			if ~isempty(obj.stimulusSets) && obj.setChoice > 0
 				sets = obj.stimulusSets{obj.setChoice};
-				if max(sets) < obj.n
-					hide(obj.stimuli)
+				if max(sets) <= obj.n
+					hide(obj)
 					for i = 1:length(sets)
 						show(obj.stimuli{sets(i)});
 					end
 				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Shorthand to set isVisible=true.
+		%>
+		% ===================================================================
+		function flashScreen(obj)
+			while ~KbCheck()
+				Screen('FillRect',obj.screen.win,[0.3 0.3 0.3 1],[]);
+				Screen('flip',obj.screen.win);
+				pause(0.25);
+				Screen('FillRect',obj.screen.win,[1 1 1 1],[]);
+				Screen('flip',obj.screen.win);
+				pause(0.25);
 			end
 		end
 		
@@ -327,7 +335,7 @@ classdef metaStimulus < optickaCore
 			setup(obj,s); %setup our stimulus object
 			draw(obj); %draw stimulus
 			drawGrid(s); %draw +-5 degree dot grid
-			drawFixationPoint(s); %centre spot
+			drawScreenCenter(s); %centre spot
 			if benchmark; 
 				Screen('DrawText', s.win, 'Benchmark, screen will not update properly, see FPS on command window at end.', 5,5,[0 0 0]);
 			else
@@ -339,7 +347,7 @@ classdef metaStimulus < optickaCore
 			for i = 1:(s.screenVals.fps*runtime) %should be 2 seconds worth of flips
 				draw(obj); %draw stimulus
 				drawGrid(s); %draw +-5 degree dot grid
-				drawFixationPoint(s); %centre spot
+				drawScreenCenter(s); %centre spot
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				animate(obj); %animate stimulus, will be seen on next draw
 				if benchmark

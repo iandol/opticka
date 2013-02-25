@@ -97,6 +97,7 @@ classdef spotStimulus < baseStimulus
 			addlistener(obj,'changeColour',@obj.computeColour);
 			
 			if exist('sM','var')
+				obj.sM = sM;
 				obj.ppd=sM.ppd;
 				obj.ifi=sM.screenVals.ifi;
 				obj.xCenter=sM.xCenter;
@@ -152,8 +153,10 @@ classdef spotStimulus < baseStimulus
 		%> @return
 		% ===================================================================
 		function update(obj)
+			obj.xCenter=obj.sM.xCenter;
+			obj.yCenter=obj.sM.yCenter;
 			resetTicks(obj);
-			if ~obj.mouseOverride
+			if ~obj.mouseOverride && ~obj.mouseValid
 				computePosition(obj);
 			end
 			setAnimationDelta(obj);
@@ -261,7 +264,7 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_xPositionOut(obj,value)
-			obj.xPositionOut = (value*obj.ppd) + obj.xCenter;
+			obj.xPositionOut = value * obj.ppd;
 			if ~obj.inSetup; obj.computePosition; end
 		end
 		
@@ -270,7 +273,7 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_yPositionOut(obj,value)
-			obj.yPositionOut = (value*obj.ppd) + obj.yCenter;
+			obj.yPositionOut = value * obj.ppd;
 			if ~obj.inSetup; obj.computePosition; end
 		end
 		

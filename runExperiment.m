@@ -201,8 +201,9 @@ classdef runExperiment < optickaCore
 				% set up the eyelink interface
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
-					initialise(obj.eyeLink, s);
-					setup(obj.eyeLink);
+					el = obj.eyeLink;
+					initialise(el, s);
+					setup(el);
 				end
 				
 				obj.initialiseTask; %set up our task structure 
@@ -228,7 +229,7 @@ classdef runExperiment < optickaCore
 				obj.task.switched = 1;
 				tL.screenLog.beforeDisplay = GetSecs();
 				
-				if obj.useEyeLink; startRecording(obj.eyeLink); end
+				if obj.useEyeLink; startRecording(el); end
 				
 				% lets draw 1 seconds worth of the stimuli we will be using
 				% covered by a blank. this lets us prime the GPU with the sorts
@@ -240,7 +241,7 @@ classdef runExperiment < optickaCore
 				for i = 1:s.screenVals.fps
 					draw(obj.stimuli);
 					s.drawBackground;
-					s.drawFixationPoint;
+					s.drawScreenCenter;
 					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
 					Screen('DrawingFinished', s.win);
 					vbl = Screen('Flip', s.win, vbl+0.001);
@@ -284,7 +285,7 @@ classdef runExperiment < optickaCore
 					
 					[~, ~, buttons]=GetMouse(s.screen);
 					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
-					if strcmp(obj.uiCommand,'stop');break;end
+					if strcmpi(obj.uiCommand,'stop');break;end
 					%if KbCheck;notify(obj,'abortRun');break;end;
 					
 					%check eye position
@@ -417,7 +418,7 @@ classdef runExperiment < optickaCore
 		%> @param obj required class object
 		% ===================================================================
 		function runTrainingSession(obj)
-			global lj
+			global lj %eyelink calibration needs access to labjack for reward
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -482,15 +483,16 @@ classdef runExperiment < optickaCore
 				if isempty(obj.stateInfoFile)
 					error('Please load a State Info file...')
 				elseif ischar(obj.stateInfoFile)
-					obj.stateMachine = stateMachine('verbose', obj.verbose,'realTime', true); 
-					obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
+					obj.stateMachine = stateMachine('verbose', obj.verbose,'realTime', true);
+					sm = obj.stateMachine;
+					sm.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 					cd(fileparts(obj.stateInfoFile))
 					obj.stateInfoFile = regexprep(obj.stateInfoFile,'\s+','\\ ');
 					run(obj.stateInfoFile)
 					obj.stateInfo = stateInfoTmp;
 				end
-				addStates(obj.stateMachine, obj.stateInfo);
-				sm = obj.stateMachine;
+				addStates(sm, obj.stateInfo);
+				
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
@@ -501,7 +503,7 @@ classdef runExperiment < optickaCore
 					setup(el);
 				end
 				
-				createPlot(obj.behaviouralRecord, el);
+				createPlot(bR, el);
 				
 				if obj.useDataPixx 
 					rstop(io); %make sure this is set low first
@@ -700,10 +702,12 @@ classdef runExperiment < optickaCore
 				obj.useEyeLink = true;
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
+					el = obj.eyeLink;
 				end
 				
 				obj.stateMachine = stateMachine('realTime',true,'name','fixationtraining','verbose',obj.verbose); %#ok<*CPROP>
-				obj.stateMachine.timeDelta = obj.screenVals.ifi; %tell it the spcreen IFI
+				sm = obj.stateMachine;
+				sm.timeDelta = obj.screenVals.ifi; %tell it the spcreen IFI
 				if isempty(obj.stateInfoFile)
 					error('Please specify a fixation state info file...')
 				elseif ischar(obj.stateInfoFile)
@@ -712,18 +716,18 @@ classdef runExperiment < optickaCore
 					run(obj.stateInfoFile)
 					obj.stateInfo = stateInfoTmp;
 				end
-				addStates(obj.stateMachine, obj.stateInfo);
+				addStates(sm, obj.stateInfo);
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
 				
 				%initialise eyelink
 				if obj.useEyeLink
-					initialise(obj.eyeLink, s);
-					setup(obj.eyeLink);
+					initialise(el, s);
+					setup(el);
 				end
 				
-				createPlot(obj.behaviouralRecord, obj.eyeLink);
+				createPlot(bR, el);
 								
 				tS.index = 1;
 				if obj.task.nVars > 0
@@ -750,7 +754,7 @@ classdef runExperiment < optickaCore
 				tS.totalTicks = 1; % a tick counter
 				tS.pauseToggle = 1;
 				
-				if obj.useEyeLink; startRecording(obj.eyeLink); end
+				if obj.useEyeLink; startRecording(el); end
 				
 				tL.screenLog.beforeDisplay = GetSecs;
 				
@@ -760,11 +764,11 @@ classdef runExperiment < optickaCore
 				tL.startTime = vbl;
 				
 				HideCursor;
+				warning off
+				%check initial eye position
+				if obj.useEyeLink; getSample(el); end
 				
-				%check eye position
-				if obj.useEyeLink; getSample(obj.eyeLink); end
-				
-				start(obj.stateMachine); %ignite the stateMachine!
+				start(sm); %ignite the stateMachine!
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -774,7 +778,7 @@ classdef runExperiment < optickaCore
 				while tS.stopTraining == false
 					
 					% run the stateMachine one tick forward
-					update(obj.stateMachine);
+					update(sm);
 					
 					% do we draw visual debug info too?
 					if s.visualDebug == true
@@ -785,16 +789,16 @@ classdef runExperiment < optickaCore
 					Screen('DrawingFinished', s.win); 
 					
 					%check eye position
-					if obj.useEyeLink; getSample(obj.eyeLink); end
+					if obj.useEyeLink; getSample(el); end
 					
 					%check keyboard for commands
-					if ~strcmpi(obj.stateMachine.currentName,'calibrate')
+					if ~strcmpi(sm.currentName,'calibrate')
 						tS = obj.checkFixationKeys(tS);
 					end
 					
 					%if the statemachine is in stimulus state, then animate
 					%the stimuli
-					if strcmpi(obj.stateMachine.currentName,'stimulus')
+					if strcmpi(sm.currentName,'stimulus')
 						animate(obj.stimuli);
 					end
 					
@@ -810,24 +814,20 @@ classdef runExperiment < optickaCore
 				Priority(0);
 				ListenChar(0)
 				ShowCursor;
+				warning on
 				close(s);
-				close(obj.eyeLink);
+				close(el);
 				obj.eyeLink = [];
 				%obj.behaviouralRecord = [];
-				if exist('topsDataLog','file')
-					%topsDataLog.gui();
-				end
 				%figure(obj.screenSettings.optickahandle)
 				obj.lJack.close;
 				obj.lJack=[];
 				clear tL s tS bR lj
 				
 			catch ME
+				warning on
 				Priority(0);
 				ListenChar(0);
-				if exist('topsDataLog','file')
-					topsDataLog.flushAllData();
-				end
 				ShowCursor;
 				close(s);
 				close(obj.eyeLink);
@@ -943,6 +943,23 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function refreshScreen(obj)
 			obj.screenVals = obj.screen.prepareScreen();
+		end
+		
+		% ===================================================================
+		%> @brief when running allow keyboard override, so we can edit things
+		%>
+		%> @param
+		% ===================================================================
+		function keyOverride(obj)
+			KbReleaseWait; %make sure keyboard keys are all released
+			ListenChar(0); %capture keystrokes
+			ii = 0;
+			while ii == 0
+				[~,~,b] = GetMouse;
+				ii = b(2);
+				pause(0.1);
+			end
+			ListenChar(2); %capture keystrokes
 		end
 		
 		% ===================================================================
@@ -1493,7 +1510,12 @@ classdef runExperiment < optickaCore
 								stims = obj.stimuli.controlTable(choice).stimuli;
 								limits = obj.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
-									val = obj.stimuli{stims(i)}.([var 'Out']) - delta;
+									if strcmpi(var,'size')
+										val = obj.stimuli{stims(i)}.([var 'Out']) / obj.stimuli{stims(i)}.ppd;
+									else
+										val = obj.stimuli{stims(i)}.([var 'Out']);
+									end
+									val = val - delta;
 									if val < limits(1)
 										val = limits(1);
 									end
@@ -1518,7 +1540,12 @@ classdef runExperiment < optickaCore
 								stims = obj.stimuli.controlTable(choice).stimuli;
 								limits = obj.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
-									val = obj.stimuli{stims(i)}.([var 'Out']) + delta;
+									if strcmpi(var,'size')
+										val = obj.stimuli{stims(i)}.([var 'Out']) / obj.stimuli{stims(i)}.ppd;
+									else
+										val = obj.stimuli{stims(i)}.([var 'Out']);
+									end
+									val = val + delta;
 									if val > limits(2)
 										val = limits(2);
 									end
@@ -1533,30 +1560,49 @@ classdef runExperiment < optickaCore
 						end
 					case ',<'
 						if tS.totalTicks > tS.keyHold
-							choice = obj.stimuli.setChoice;
-							sets = obj.stimuli.stimulusSets{choice};
-							if choice > 2
-								obj.stimuli.setChoice = obj.stimuli.setChoice - 1;
+							if obj.stimuli.setChoice > 1
+								obj.stimuli.setChoice = round(obj.stimuli.setChoice - 1);
+								obj.stimuli.showSet();
 							end
-							obj.stimuli.showSet();
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '.>'
 						if tS.totalTicks > tS.keyHold
-							choice = obj.stimuli.setChoice;
-							sets = obj.stimuli.stimulusSets{choice};
-							if choice > 2 && choice < length(sets)
+							if obj.stimuli.setChoice < length(obj.stimuli.stimulusSets)
 								obj.stimuli.setChoice = obj.stimuli.setChoice + 1;
+								obj.stimuli.showSet();
 							end
-							obj.stimuli.showSet();
 							tS.keyHold = tS.totalTicks + fInc;
 						end
+					case 'r'
+						timedTTL(obj.lJack,0,1000);
 					case '=+'
-						
+						if tS.totalTicks > tS.keyHold
+							obj.screen.screenXOffset = obj.screen.screenXOffset + 1;
+							fprintf('>>Screen Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
+							tS.keyHold = tS.totalTicks + fInc;
+						end
 					case '-_'
-						
+						if tS.totalTicks > tS.keyHold
+							obj.screen.screenXOffset = obj.screen.screenXOffset - 1;
+							fprintf('>>Screen Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
+							tS.keyHold = tS.totalTicks + fInc;
+						end
 					case 'm'
-						forceTransition(obj.stateMachine, 'calibrate');
+						if tS.totalTicks > tS.keyHold
+							forceTransition(obj.stateMachine, 'calibrate');
+							tS.keyHold = tS.totalTicks + fInc;
+						end						
+					case 'f'
+						if tS.totalTicks > tS.keyHold
+							forceTransition(obj.stateMachine, 'flash');
+							tS.keyHold = tS.totalTicks + fInc;	
+						end						
+					case 'o'
+						if tS.totalTicks > tS.keyHold
+							forceTransition(obj.stateMachine, 'override');
+							tS.keyHold = tS.totalTicks + fInc;
+						end						
 					case 'z' 
 						if tS.totalTicks > tS.keyHold
 							obj.eyeLink.fixationInitTime = obj.eyeLink.fixationInitTime - 0.1;

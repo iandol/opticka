@@ -17,7 +17,7 @@ classdef eyelinkManager < optickaCore
 		%> name of eyetracker EDF file
 		saveFile = 'myData.edf'
 		%> do we log messages to the command window?
-		verbose = true
+		verbose = false
 		%> fixation X position in degrees
 		fixationX = 0
 		%> fixation Y position in degrees
@@ -421,7 +421,7 @@ classdef eyelinkManager < optickaCore
 		function out = testFixationTime(obj, yesString, noString)
 			[fix,fixtime] = obj.isFixated();
 			if fix && fixtime
-				obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TEST');
+				obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TESTFIXTIME');
 				out = yesString;
 			else
 				out = noString;
@@ -440,25 +440,28 @@ classdef eyelinkManager < optickaCore
 					return
 				else
 					out = noString;
+					obj.salutation('',sprintf('SEARCH FAIL: %s\n',out),true)
 					return
 				end
 			elseif fix
 				if (obj.strictFixation==true && ~(obj.fixN == -100)) || obj.strictFixation==false
 					if fixtime
 						out = [yesString ' ' num2str(obj.fixLength)];
-						return
 					else
 						out = ['fixing ' num2str(obj.fixLength)];
-						return
 					end
+					return
 				else
 					out = noString;
+					obj.salutation('',sprintf('FIX FAIL: %s\n',out),true)
 					return
 				end
 			else
 				out = noString;
+				obj.salutation('',sprintf('OTHER FAIL: %s\n',out),true)
 				return
 			end
+			
 		end
 		
 		% ===================================================================
@@ -488,12 +491,12 @@ classdef eyelinkManager < optickaCore
 				x = obj.toPixels(obj.x,'x');
 				y = obj.toPixels(obj.y,'y');
 				if obj.isFixated
-					Screen('DrawDots', obj.screen.win, [x y], 4, [1 1 1 1], [], 1);
+					Screen('DrawDots', obj.screen.win, [x y], 4, [0.4 0 0.4], [], 1);
 					if obj.fixLength > obj.fixationTime
-						Screen('DrawText', obj.screen.win, 'FIX', x, y);
+						Screen('DrawText', obj.screen.win, 'FIX', x, y, [0.4 0 0.4]);
 					end	
 				else
-					Screen('DrawDots', obj.screen.win, [x y], 4, [1 0.5 1 1], [], 1);
+					Screen('DrawDots', obj.screen.win, [x y], 4, [0.4 0.4 0.4 1], [], 1);
 				end	
 			end
 		end
@@ -652,7 +655,7 @@ classdef eyelinkManager < optickaCore
 					
 					draw(o);
 					drawGrid(s);
-					drawFixationPoint(s);
+					drawScreenCenter(s);
 					
 					getSample(obj);
 					

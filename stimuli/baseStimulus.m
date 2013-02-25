@@ -38,6 +38,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		delayTime = 0
 		%> override X and Y position with mouse input?
 		mouseOverride = false
+		%> true or false, whether to draw() this object
+		isVisible = true
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -45,10 +47,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dstRect
 		%> Our screen rectangle position in PTB format
 		mvRect
-		%> true or false, whether to draw() this object
-		isVisible = true
 		%> tick updates +1 on each draw, resets on each update
 		tick = 1
+		%> pixels per degree (normally inhereted from screenManager)
+		ppd = 44
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -56,6 +58,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		texture
 		%> handles for the GUI
 		handles
+		%> our screen manager
+		sM
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
@@ -94,8 +98,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dX_
 		%> dY cache
 		dY_
-		%> pixels per degree (normally inhereted from screenManager)
-		ppd = 44
 		%> Inter frame interval (normally inhereted from screenManager)
 		ifi = 0.0167
 		%> computed X center (normally inhereted from screenManager)
@@ -234,6 +236,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		%> @brief Shorthand to set isVisible=false.
+		%>
+		% ===================================================================
+		function updateCenter(obj)
+			
+		end
+		
+		
+		
+		% ===================================================================
 		%> @brief we reset the various tick counters for our stimulus
 		%>
 		% ===================================================================
@@ -302,7 +314,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			setup(obj,s); %setup our stimulus object
 			draw(obj); %draw stimulus
 			drawGrid(s); %draw +-5 degree dot grid
-			drawFixationPoint(s); %centre spot
+			drawScreenCenter(s); %centre spot
 			if benchmark; 
 				Screen('DrawText', s.win, 'Benchmark, screen will not update properly, see FPS on command window at end.', 5,5,[0 0 0]);
 			else
@@ -314,7 +326,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			for i = 1:(s.screenVals.fps*runtime) %should be 2 seconds worth of flips
 				draw(obj); %draw stimulus
 				drawGrid(s); %draw +-5 degree dot grid
-				drawFixationPoint(s); %centre spot
+				drawScreenCenter(s); %centre spot
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				animate(obj); %animate stimulus, will be seen on next draw
 				if benchmark
@@ -715,8 +727,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 			else
 				[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);
 			end
-			obj.xOut = obj.xPositionOut + (dx * obj.ppd);
-			obj.yOut = obj.yPositionOut + (dy * obj.ppd);
+			obj.xOut = obj.xPositionOut + (dx * obj.ppd) + obj.xCenter;
+			obj.yOut = obj.yPositionOut + (dy * obj.ppd) + obj.yCenter;
 		end
 		
 		% ===================================================================

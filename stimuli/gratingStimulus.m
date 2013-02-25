@@ -146,6 +146,7 @@ classdef gratingStimulus < baseStimulus
 			addlistener(obj,'changeScale',@obj.calculateScale); %use an event to keep scale accurate
 			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
 			
+			obj.sM = sM;
 			obj.ppd=sM.ppd;
 			obj.ifi=sM.screenVals.ifi;
 			obj.xCenter=sM.xCenter;
@@ -250,6 +251,8 @@ classdef gratingStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
+			obj.xCenter=obj.sM.xCenter;
+			obj.yCenter=obj.sM.yCenter;
 			resetTicks(obj);
 			if obj.correctPhase
 				ps=obj.calculatePhase;

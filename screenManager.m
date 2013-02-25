@@ -102,6 +102,10 @@ classdef screenManager < optickaCore
 		moviePtr = []
 		%> movie mat structure
 		movieMat = []
+		%screen flash logic
+		flashInterval = 20
+		flashTick = 0
+		flashOn = 1
 	end
 	
 	methods
@@ -324,11 +328,6 @@ classdef screenManager < optickaCore
 					fprintf('\n---> screenManager: Initial OpenGL blending set to %s | %s\n', obj.srcMode, obj.dstMode);
 				end
 				
-				%get the center of our screen, along with user defined offsets
-				[obj.xCenter, obj.yCenter] = RectCenter(obj.winRect);
-				obj.xCenter=obj.xCenter+(obj.screenXOffset*obj.ppd);
-				obj.yCenter=obj.yCenter+(obj.screenYOffset*obj.ppd);
-				
 				obj.screenVals.black = 0;
  				obj.screenVals.white = 1;
 				
@@ -531,6 +530,47 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief Set method for pixelsPerCm
+		%>
+		%> @param
+		% ===================================================================
+		function set.screenXOffset(obj,value)
+			obj.screenXOffset = value;
+			obj.updateCenter();
+			
+		end
+		
+		% ===================================================================
+		%> @brief Set method for pixelsPerCm
+		%>
+		%> @param
+		% ===================================================================
+		function set.screenYOffset(obj,value)
+			obj.screenYOffset = value;
+			obj.updateCenter();
+		end
+		
+		% ===================================================================
+		%> @brief Flash the screen
+		%>
+		%> @param
+		% ===================================================================
+		function flashScreen(obj,interval)
+			
+			int = round(interval / obj.screenVals.ifi);
+			
+			if mod(obj.flashTick,int) == 0
+				obj.flashOn = not(obj.flashOn);
+			end
+			if obj.FlashOn == 0
+				Screen('FillRect',obj.win,[0 0 0 1]);
+			else
+				Screen('FillRect',obj.win,[1 1 1 1]);
+			end
+		end
+		
+		
+		% ===================================================================
 		%> @brief draw small spot centered on the screen
 		%>
 		%> @param
@@ -564,7 +604,7 @@ classdef screenManager < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawFixationPoint(obj)
+		function drawScreenCenter(obj)
 			Screen('gluDisk',obj.win,[1 0 1 1],obj.xCenter,obj.yCenter,2);
 		end
 		
@@ -598,17 +638,6 @@ classdef screenManager < optickaCore
 			Screen('FillRect',obj.win,obj.backgroundColour,[]);
 		end
 		
-		% ===================================================================
-		%> @brief Makes a 5x5 1deg dot grid for debug mode
-		%> This is always updated on setting distance or pixelsPerCm 
-		% ===================================================================
-		function makeGrid(obj)
-			obj.grid=[];
-			for i=-5:5
-				obj.grid=horzcat(obj.grid,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
-			end
-			obj.grid=obj.grid.*obj.ppd; %we use ppd so we can cache ppd_ for elsewhere
-		end
 		
 		% ===================================================================
 		%> @brief Get method for ppd (a dependent property)
@@ -628,6 +657,35 @@ classdef screenManager < optickaCore
 			obj.salutation('DELETE method',['Screen object ' obj.fullName ' has been closed/reset...']);
 		end
 		
+	end
+		
+	%=======================================================================
+	methods (Access = private) %------------------PRIVATE METHODS
+	%=======================================================================
+		% ===================================================================
+		%> @brief Makes a 5x5 1deg dot grid for debug mode
+		%> This is always updated on setting distance or pixelsPerCm 
+		% ===================================================================
+		function makeGrid(obj)
+			obj.grid=[];
+			for i=-5:5
+				obj.grid=horzcat(obj.grid,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
+			end
+			obj.grid=obj.grid.*obj.ppd; %we use ppd so we can cache ppd_ for elsewhere
+		end
+		
+		% ===================================================================
+		%> @brief Set method for pixelsPerCm
+		%>
+		%> @param
+		% ===================================================================
+		function updateCenter(obj)
+			%get the center of our screen, along with user defined offsets
+			[obj.xCenter, obj.yCenter] = RectCenter(obj.winRect);
+			obj.xCenter=obj.xCenter+(obj.screenXOffset*obj.ppd);
+			obj.yCenter=obj.yCenter+(obj.screenYOffset*obj.ppd);
+		end
+	
 	end
 	
 end
