@@ -49,6 +49,9 @@ function hFig = uiinspect(obj, fig)
 %    uiinspect('meta.class')                      % a Matlab class name
 %    uiinspect(System.Diagnostics.Process.GetCurrentProcess)   % a .Net object
 %
+% Technical explanation & details:
+%    http://undocumentedmatlab.com/blog/uiinspect/
+%
 % Known issues/limitations:
 %    - Fix: some fields generate a Java Exception, or a Matlab warning
 %    - other future enhancements may be found in the TODO list below
@@ -61,6 +64,7 @@ function hFig = uiinspect(obj, fig)
 %    Please send to Yair Altman (altmany at gmail dot com)
 %
 % Change log:
+%    2013-01-23: Prevented intermittent crash reported for uiinspect(0); auto-expanded callbacks table if only one category; added hidden properties to the properties tooltip; updated FEX link in help; updated javadoc hyperlinks; fixed callbacks table
 %    2012-01-16: Fixes for R2012a
 %    2011-12-09: Fixed Matlab R2011b crash when inspecting COM object
 %    2011-06-14: Fixed problems with the Value field of the "Other properties" table for static fields
@@ -86,7 +90,7 @@ function hFig = uiinspect(obj, fig)
 %    2009-03-14: Fixed string property value displayed; fixed display of Java classes added to the dynamic classpath; fixed display of classname static fields value; updated list of standard callbacks
 %    2009-03-05: Fixed single property edge-case; fixed prop name case sensitivity problem; fixed properties tooltip; accept class names; added display of class interfaces & static fields
 %    2008-01-25: Fixes for many edge-cases
-%    2007-12-08: First version posted on <a href="http://www.mathworks.com/matlabcentral/fileexchange/loadAuthor.do?objectType=author&mfx=1&objectId=1096533#">MathWorks File Exchange</a>
+%    2007-12-08: First version posted on <a href="http://www.mathworks.com/matlabcentral/fileexchange/17935-uiinspect">MathWorks File Exchange</a>
 %
 % See also:
 %    ishandle, iscom, inspect, methodsview, FindJObj (on the File Exchange)
@@ -95,7 +99,7 @@ function hFig = uiinspect(obj, fig)
 % referenced and attributed as such. The original author maintains the right to be solely associated with this work.
 
 % Programmed by Yair M. Altman: altmany(at)gmail.com
-% $Revision: 1.23 $  $Date: 2012/01/11 01:48:22 $
+% $Revision: 1.24 $  $Date: 2012/01/23 05:07:50 $
 
   try
       % Arg check
@@ -1015,6 +1019,12 @@ function [callbacksPanel, callbacksTable] = getCbsPane(obj, stripStdCbsFlag)
           try
               list = getTreeData(cbData);  %#ok
               model = eval('com.jidesoft.grid.PropertyTableModel(list);');  %#ok prevent JIDE alert by run-time (not load-time) evaluation
+
+              % Auto-expand if only one category
+              if model.getRowCount==1   % length(model.getCategories)==1 fails for some unknown reason...
+                  model.expandFirstLevel;
+              end
+
               %callbacksTable = eval('com.jidesoft.grid.TreeTable(model);');  %#ok prevent JIDE alert by run-time (not load-time) evaluation
               callbacksTable = eval('com.jidesoft.grid.PropertyTable(model);');  %#ok prevent JIDE alert by run-time (not load-time) evaluation
 
@@ -1042,7 +1052,7 @@ function [callbacksPanel, callbacksTable] = getCbsPane(obj, stripStdCbsFlag)
           callbacksTopPanel.setLayout(BoxLayout(callbacksTopPanel, BoxLayout.LINE_AXIS));
           callbacksTopPanel.add(callbacksLabel);
           hgHandleFlag = 0;  try  hgHandleFlag = ishghandle(obj);  catch,  end  %#ok
-          %{
+          % {
           if ~hgHandleFlag && ~iscom(obj)
               jcb = JCheckBox('Hide standard callbacks', stripStdCbsFlag);
               set(handle(jcb,'CallbackProperties'), 'ActionPerformedCallback',@cbHideStdCbs_Callback);
@@ -1050,7 +1060,7 @@ function [callbacksPanel, callbacksTable] = getCbsPane(obj, stripStdCbsFlag)
               callbacksTopPanel.add(Box.createHorizontalGlue);
               callbacksTopPanel.add(jcb);
           end
-          %}
+          % }
           callbacksPanel.add(callbacksTopPanel, BorderLayout.NORTH);
       catch
           % Otherwise, use a standard Swing JTable (keep the headers to enable resizing)
@@ -1077,12 +1087,17 @@ function [callbacksPanel, callbacksTable] = getCbsPane(obj, stripStdCbsFlag)
       if ~cbTableEnabled && callbacksTable.getColumnModel.getColumnCount>1
           callbacksTable.getColumnModel.getColumn(1).setCellEditor(cbNameCellEditor);
       end
-      hModel = handle(callbacksTable.getModel, 'CallbackProperties');
-      set(hModel, 'TableChangedCallback',@tbCallbacksChanged);
       try
-          set(callbacksTable.getModel,'userdata',obj);
+          pause(0.05);  % prevent intermittent crash reported for uiinspect(0)
+          hModel = handle(callbacksTable.getModel, 'CallbackProperties');
+          set(hModel, 'TableChangedCallback',@tbCallbacksChanged);
+          try
+              set(callbacksTable.getModel,'userdata',obj);  % set(hModel,'userdata',obj) croacks for some unknown reason...
+          catch
+              setappdata(hModel,'userdata',obj);
+          end
       catch
-          setappdata(hModel,'userdata',obj);
+          % ignore - odd...
       end
       try
           cbScrollPane = callbacksPane; %JScrollPane(callbacksPane);
@@ -1201,15 +1216,15 @@ function [methodsPane, hgFlag] = getMethodsPane(methodsObj, obj)
 			  else
 				  switch com.mathworks.util.PlatformInfo.getVersion  % JVM version
 					  case com.mathworks.util.PlatformInfo.VERSION_13
-						  prefix = 'j2se/1.3';
+						  prefix = 'javase/1.3';    % old: 'j2se/1.3';
 					  case com.mathworks.util.PlatformInfo.VERSION_14
-						  prefix = 'j2se/1.4.2';
+						  prefix = 'javase/1.4.2';  % old: 'j2se/1.4.2';
 					  case com.mathworks.util.PlatformInfo.VERSION_15
-						  prefix = 'j2se/1.5.0';
+						  prefix = 'javase/1.5.0';  % old: 'j2se/1.5.0';
 					  otherwise %case com.mathworks.util.PlatformInfo.VERSION_16
 						  prefix = 'javase/6';
                   end
-                  domain = 'http://java.sun.com'; %download.oracle.com';  % old: java.sun.com
+                  domain = 'http://docs.oracle.com'; %download.oracle.com';  % old: java.sun.com
 				  url = [domain '/' prefix '/docs/api/' strrep(hyperlink,'.','/') '.html']; % TODO: treat classNames with internal '.'
 				  targetStr = ['web(''' url ''')'];
 			  end
@@ -2206,7 +2221,17 @@ function cbHideStdCbs_Callback(src, evd, varargin)
         callbacksTable = get(src,'userdata');
         obj = get(callbacksTable, 'userdata');
         [cbData, cbHeaders] = getCbsData(obj, evd.getSource.isSelected);
-        callbacksTableModel = javax.swing.table.DefaultTableModel(cbData,cbHeaders);
+        try
+              list = getTreeData(cbData);  %#ok
+              callbacksTableModel = eval('com.jidesoft.grid.PropertyTableModel(list);');  %#ok prevent JIDE alert by run-time (not load-time) evaluation
+
+              % Auto-expand if only one category
+              if callbacksTableModel.getRowCount==1   % length(callbacksTableModel.getCategories)==1 fails for some unknown reason...
+                  callbacksTableModel.expandFirstLevel;
+              end
+        catch
+            callbacksTableModel = javax.swing.table.DefaultTableModel(cbData,cbHeaders);
+        end
         set(handle(callbacksTableModel,'CallbackProperties'), 'TableChangedCallback',@tbCallbacksChanged);
         set(callbacksTableModel, 'userdata',handle(obj,'CallbackProperties'));
         callbacksTable.setModel(callbacksTableModel)
@@ -2386,7 +2411,7 @@ function tbCallbacksChanged(src, evd)
                 if ~isempty(cbValue) && ismember(cbValue(1),'{[@''')
                     cbValue = eval(cbValue);
                 end
-                if (~ischar(cbValue) && ~isa(cbValue, 'function_handle') && (iscom(object(1)) || iscell(cbValue)))
+                if (~ischar(cbValue) && ~isa(cbValue, 'function_handle') && (~iscell(cbValue) || iscom(object(1))))
                     revertCbTableModification(table, modifiedRowIdx, modifiedColIdx, cbName, object, '');
                 else
                     for objIdx = 1 : length(object)
@@ -2473,6 +2498,9 @@ function tbMousePressed(src, evd)
         tableObj = evd.getComponent;  % =src.java
         selectedRowIdx    = tableObj.getSelectedRow;
         selectedColumnIdx = tableObj.getSelectedColumn;
+        if selectedRowIdx<0 || selectedColumnIdx<0
+            return;  % sanity check - prevents error message in case of right-click on unselected table
+        end
         cellData = char(tableObj.getValueAt(selectedRowIdx,selectedColumnIdx));
         [a,b,c,d,e] = regexp(cellData,'">([^<]*)</a>');  %#ok a-d are unused
         classes = unique([e{:}]);
@@ -2575,11 +2603,15 @@ function dataFieldsStr = getPropsHtml(obj, dataFields)
     try
         % Get a text representation of the fieldnames & values
         undefinedStr = '';
+        hiddenStr = '';
         dataFieldsStr = '';  % just in case the following croaks...
         if isempty(dataFields)
             return;
         end
+        oldVal = get(0,'HideUndocumented');
+        set(0,'HideUndocumented','off');
         dataFieldsStr = evalc('disp(dataFields)');
+        set(0,'HideUndocumented',oldVal);
         if dataFieldsStr(end)==char(10),  dataFieldsStr=dataFieldsStr(1:end-1);  end
 
         % Strip out callbacks
@@ -2603,11 +2635,14 @@ function dataFieldsStr = getPropsHtml(obj, dataFields)
         for fieldIdx = 1 : length(fieldNames)
             thisFieldName = fieldNames{fieldIdx};
             try
-                accessFlags = get(findprop(obj,thisFieldName),'AccessFlags');
+                hProp = findprop(obj,thisFieldName);
+                accessFlags = get(hProp,'AccessFlags');
+                visible = get(hProp,'Visible');
             catch
                 accessFlags = [];
+                visible = 'on';
             end
-            if isfield(accessFlags,'PublicSet') && strcmp(accessFlags.PublicSet,'on')
+            if isfield(accessFlags,'PublicSet') && strcmpi(accessFlags.PublicSet,'on')
                 % Bolden read/write fields
                 thisFieldFormat = ['<b>' thisFieldName '<b>:$2'];
             elseif ~isfield(accessFlags,'PublicSet')
@@ -2616,7 +2651,12 @@ function dataFieldsStr = getPropsHtml(obj, dataFields)
                 undefinedStr = ', <font color="blue">undefined</font>';
             else % PublicSet=='off'
                 % Gray-out & italicize any read-only fields
-                thisFieldFormat = ['<font color="#C0C0C0"><i>' thisFieldName '</i></font>:<font color="#C0C0C0"><i>$2<i></font>'];
+                thisFieldFormat = ['<font color="#C0C0C0">' thisFieldName '</font>:<font color="#C0C0C0">$2</font>'];
+            end
+            if strcmpi(visible,'off')
+                %thisFieldFormat = ['<i>' thisFieldFormat '</i>']; %#ok<AGROW>
+                thisFieldFormat = regexprep(thisFieldFormat, '(.*):(.*)', '<i>$1:<i>$2');
+                hiddenStr = ', <i>hidden</i>';
             end
             dataFieldsStr = regexprep(dataFieldsStr, ['([\s\n])' thisFieldName ':([^\n]*)'], ['$1' thisFieldFormat]);
         end
@@ -2632,7 +2672,7 @@ function dataFieldsStr = getPropsHtml(obj, dataFields)
         % Method 2: 2x2-column <table>
         dataFieldsStr = regexprep(dataFieldsStr, '^\s*([^:]+:)([^\n]*)\n^\s*([^:]+:)([^\n]*)$', '<tr><td>&nbsp;$1</td><td>&nbsp;$2</td><td>&nbsp;&nbsp;&nbsp;&nbsp;$3</td><td>&nbsp;$4&nbsp;</td></tr>', 'lineanchors');
         dataFieldsStr = regexprep(dataFieldsStr, '^[^<]\s*([^:]+:)([^\n]*)$', '<tr><td>&nbsp;$1</td><td>&nbsp;$2</td><td>&nbsp;</td><td>&nbsp;</td></tr>', 'lineanchors');
-        dataFieldsStr = ['(<b>modifiable</b>' undefinedStr ' &amp; <font color="#C0C0C0"><i>read-only</i></font> fields)<p>&nbsp;&nbsp;<table cellpadding="0" cellspacing="0">' dataFieldsStr '</table>'];
+        dataFieldsStr = ['(<b>modifiable</b>' undefinedStr hiddenStr ' &amp; <font color="#C0C0C0">read-only</font> fields)<p>&nbsp;&nbsp;<table cellpadding="0" cellspacing="0">' dataFieldsStr '</table>'];
     catch
         % never mind - bail out (Maybe matlab 6 that does not support regexprep?)
         disp(lasterr);  rethrow(lasterror)
@@ -2821,5 +2861,7 @@ function dispError
 % - Enh: link property objects to another uiinspect window for these objects
 % - Enh: display object children (& link to them) - COM/Java
 % - Enh: find a way to merge the other-properties table into the inspector table
+% - Enh: find a way to use the inspector without disabling dbstop if error
 % - Fix: some fields generate a Java Exception from: com.mathworks.mlwidgets.inspector.PropertyRootNode$PropertyListener$1$1.run
-% - Fix: In HG tree view, sometimes the currently-inspected handle is not selected
+% - Fix: using the "Hide standard callbacks" checkbox sometimes issues Java Exceptions on the console
+% - Fix: In HG tree view, sometimes the currently-inspected handle is not automatically selected

@@ -764,7 +764,7 @@ classdef runExperiment < optickaCore
 				tL.startTime = vbl;
 				
 				HideCursor;
-				warning off
+				%warning('off')
 				%check initial eye position
 				if obj.useEyeLink; getSample(el); end
 				
@@ -814,7 +814,7 @@ classdef runExperiment < optickaCore
 				Priority(0);
 				ListenChar(0)
 				ShowCursor;
-				warning on
+				warning('on')
 				close(s);
 				close(el);
 				obj.eyeLink = [];
@@ -822,10 +822,10 @@ classdef runExperiment < optickaCore
 				%figure(obj.screenSettings.optickahandle)
 				obj.lJack.close;
 				obj.lJack=[];
-				clear tL s tS bR lj
+				clear tL s tS bR lj el
 				
 			catch ME
-				warning on
+				warning('on')
 				Priority(0);
 				ListenChar(0);
 				ShowCursor;
@@ -835,7 +835,7 @@ classdef runExperiment < optickaCore
 				obj.behaviouralRecord = [];
 				obj.lJack.close;
 				obj.lJack=[];
-				clear tL s tS bR lj
+				clear tL s tS bR lj el
 				rethrow(ME)
 				
 			end
@@ -953,13 +953,14 @@ classdef runExperiment < optickaCore
 		function keyOverride(obj)
 			KbReleaseWait; %make sure keyboard keys are all released
 			ListenChar(0); %capture keystrokes
+			ShowCursor;
 			ii = 0;
-			while ii == 0
-				[~,~,b] = GetMouse;
-				ii = b(2);
-				pause(0.1);
-			end
+			dbstop in clear
+			uiinspect(obj)
+			clear ii
+			dbclear in clear
 			ListenChar(2); %capture keystrokes
+			HideCursor;
 		end
 		
 		% ===================================================================
@@ -1579,13 +1580,42 @@ classdef runExperiment < optickaCore
 					case '=+'
 						if tS.totalTicks > tS.keyHold
 							obj.screen.screenXOffset = obj.screen.screenXOffset + 1;
-							fprintf('>>Screen Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
+							fprintf('>>Screen X Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '-_'
 						if tS.totalTicks > tS.keyHold
 							obj.screen.screenXOffset = obj.screen.screenXOffset - 1;
-							fprintf('>>Screen Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
+							fprintf('>>Screen X Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case '[{'
+						if tS.totalTicks > tS.keyHold
+							obj.screen.screenYOffset = obj.screen.screenYOffset - 1;
+							fprintf('>>Screen Y Center: %g deg / %g pixels\n',obj.screen.screenYOffset,obj.screen.yCenter);
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case ']}'
+						if tS.totalTicks > tS.keyHold
+							obj.screen.screenYOffset = obj.screen.screenYOffset + 1;
+							fprintf('>>Screen Y Center: %g deg / %g pixels\n',obj.screen.screenYOffset,obj.screen.yCenter);
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case 'k'
+						if tS.totalTicks > tS.keyHold
+							t = obj.stateMachine.stateList(2).time;
+							t = t - 0.5;
+							if t >= 0.5
+								obj.stateMachine.stateList(2).time
+							end
+							fprintf('>>Decrease %s time: %g\n',obj.stateMachine.stateList(2).name, obj.stateMachine.stateList(2).time);
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case 'l'
+						if tS.totalTicks > tS.keyHold
+							t = obj.stateMachine.stateList(2).time;
+							t = t + 0.5;
+							fprintf('>>Increase %s time: %g\n',obj.stateMachine.stateList(2).name, obj.stateMachine.stateList(2).time);
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case 'm'
@@ -1673,6 +1703,32 @@ classdef runExperiment < optickaCore
 						
 				end
 			end
+%  q		=		quit
+%  UP		=		next control table
+%  DOWN	=		previous control table
+%  LEFT	=		increase value
+%  RIGHT	=		decrease value
+%  <,		=		previous stimulus set
+%  >.		= 		next stimulus set
+%  =+		=		Screen center LEFT
+%  -_		=		Screen center RIGHT
+%  [{		=		Screen Center UP
+%  ]}		=		Screen Center DOWN
+%  k		=		Increase Prestimulus Time
+%  l		=		Decrease Prestimulus Time
+%  r		=		1000ms reward
+%  m		=		calibrate
+%  f		=		flash screen
+%  o		=		override mode (causes debug state)
+%  z		=		DEC fix init time
+%  x		=		INC fix init time
+%  c		=		DEC fix time
+%  v		=		INC fix time
+%  b		=		DEC fix radius
+%  n		=		INC fix radius
+%  p		=		PAUSE
+%  s		=		Show mouse cursor
+%  d		=		Hide mouse cursor
 		end
 		
 	end
