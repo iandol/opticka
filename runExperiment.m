@@ -1433,9 +1433,11 @@ classdef runExperiment < optickaCore
 						if tS.totalTicks > tS.keyHold
 							if rem(tS.pauseToggle,2)==0
 								forceTransition(obj.stateMachine, 'pause');
+								fprintf('--->>> PAUSE ENGAGED!\n');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							else
-								forceTransition(obj.stateMachine, 'blank');
+								forceTransition(obj.stateMachine, 'prestimulus');
+								fprintf('--->>> PAUSE ENDED!\n');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							end
 							tS.keyHold = tS.totalTicks + fInc;
