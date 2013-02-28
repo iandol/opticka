@@ -1518,7 +1518,7 @@ classdef runExperiment < optickaCore
 									end
 									val = val - delta;
 									if val < limits(1)
-										val = limits(1);
+										val = limits(2);
 									end
 									if length(val) > 1
 										val = val(1);
@@ -1548,7 +1548,7 @@ classdef runExperiment < optickaCore
 									end
 									val = val + delta;
 									if val > limits(2)
-										val = limits(2);
+										val = limits(1);
 									end
 									if length(val) > 1
 										val = val(1);
@@ -1603,19 +1603,33 @@ classdef runExperiment < optickaCore
 						end
 					case 'k'
 						if tS.totalTicks > tS.keyHold
-							t = obj.stateMachine.stateList(2).time;
-							t = t - 0.5;
-							if t >= 0.5
-								obj.stateMachine.stateList(2).time
+							stateName = 'prestimulus';
+							[isState, index] = isStateName(obj.stateMachine,stateName);
+							if isState
+								t = obj.stateMachine.getState(stateName);
+								if isfield(t,'time')
+									tout = t.time - 0.25;
+									if min(tout) >= 0.1
+										obj.stateMachine.editStateByName(stateName,'time',tout);
+										fprintf('>>Decrease %s time: %g:%g\n',t.name, min(tout),max(tout));
+									end
+								end
 							end
-							fprintf('>>Decrease %s time: %g\n',obj.stateMachine.stateList(2).name, obj.stateMachine.stateList(2).time);
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case 'l'
 						if tS.totalTicks > tS.keyHold
-							t = obj.stateMachine.stateList(2).time;
-							t = t + 0.5;
-							fprintf('>>Increase %s time: %g\n',obj.stateMachine.stateList(2).name, obj.stateMachine.stateList(2).time);
+							stateName = 'prestimulus';
+							[isState, index] = isStateName(obj.stateMachine,stateName);
+							if isState
+								t = obj.stateMachine.getState(stateName);
+								if isfield(t,'time')
+									tout = t.time + 0.25;
+									obj.stateMachine.editStateByName(stateName,'time',tout);
+									fprintf('>>Increase %s time: %g:%g\n',t.name, min(tout),max(tout));
+								end
+								
+							end
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case 'm'

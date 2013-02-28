@@ -14,8 +14,6 @@ classdef Container < hgsetget
     %             uiextras.Grid
     
     %   Copyright 2009-2010 The MathWorks, Inc.
-    %   $Revision: 367 $
-    %   $Date: 2011-02-10 16:25:22 +0000 (Thu, 10 Feb 2011) $
     
     properties
         DeleteFcn       % function to call when the layout is being deleted [function handle]
@@ -445,7 +443,8 @@ classdef Container < hgsetget
             
             % We also need to ignore legends as they are positioned by
             % their associated axes.
-            if isa( eventData.Child, 'axes' ) && strcmpi( get( child, 'Tag' ), 'legend' )
+            if isa( eventData.Child, 'axes' ) ...
+                    && strcmpi( get( child, 'Tag' ), 'legend' )
                 return;
             end
             
@@ -485,6 +484,10 @@ classdef Container < hgsetget
         function onChildBeingDestroyedEvent( obj, source, eventData ) %#ok<INUSD>
             %onChildBeingDestroyedEvent  Callback that fires when a container child is destroyed.
             
+            % Guard against comparing HG objects with doubles (the
+            % Children_ array contains doubles).
+            source = double(source);
+
             % Find child in Children
             [dummy, loc] = ismember( source, obj.Children_ ); %#ok<ASGLU>
             

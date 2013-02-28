@@ -19,8 +19,8 @@ classdef MousePointerHandler < handle
     %   See also: uiextras.ScrollWheelEvent
     
     %   Copyright 2008-2010 The MathWorks Ltd.
-    %   $Revision: 372 $   
-    %   $Date: 2011-04-04 09:36:14 +0100 (Mon, 04 Apr 2011) $
+    %   $Revision: 374 $   
+    %   $Date: 2012-12-20 09:18:15 +0000 (Thu, 20 Dec 2012) $
     
     properties( SetAccess = private, GetAccess = public )
         CurrentObject

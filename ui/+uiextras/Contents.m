@@ -24,3 +24,5 @@
 %   VBox                - VBox  Arrange elements vertically in a single column
 %   VBoxFlex            - VBoxFlex  A dynamically resizable vertical layout
 %   VButtonBox          - VButtonBox  Arrange buttons vertically in a single column
+
+%   Copyright 2013 The MathWorks, Inc.

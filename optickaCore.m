@@ -314,14 +314,14 @@ classdef optickaCore < handle
 		%>
 		%> Prints messages dependent on verbosity
 		%> @param obj this instance object
-		%> @param in the calling function or a message
+		%> @param in the calling function or main info
 		%> @param message additional message that needs printing to command window
 		%> @param override force logging if true even if verbose is false
 		% ===================================================================
 		function salutation(obj,in,message,override)
 			if ~exist('override','var');override = false;end
 			if obj.verbose==true || override == true
-				if ~exist('message','var')
+				if ~exist('message','var') || isempty(message)
 					fprintf(['---> ' obj.fullName_ ': ' in '\n']);
 				else
 					fprintf(['---> ' obj.fullName_ ': ' message ' | ' in '\n']);

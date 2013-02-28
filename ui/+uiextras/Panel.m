@@ -29,8 +29,8 @@ classdef Panel < uiextras.CardPanel & uiextras.DecoratedPanel
     %             uiextras.HBox
     
     %   Copyright 2009-2010 The MathWorks, Inc.
-    %   $Revision: 357 $
-    %   $Date: 2010-11-08 08:19:10 +0000 (Mon, 08 Nov 2010) $
+    %   $Revision: 373 $
+    %   $Date: 2011-07-14 13:24:10 +0100 (Thu, 14 Jul 2011) $
     
     properties( Dependent = true )
         BorderType      % Type of border around the uipanel area  [none|etchedin|etchedout|beveledin|beveledout|line]

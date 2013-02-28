@@ -440,7 +440,7 @@ classdef eyelinkManager < optickaCore
 					return
 				else
 					out = noString;
-					obj.salutation('',sprintf('SEARCH FAIL: %s\n',out),true)
+					fprintf('--->Eyelink STRICT SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);
 					return
 				end
 			elseif fix
@@ -453,13 +453,15 @@ classdef eyelinkManager < optickaCore
 					return
 				else
 					out = noString;
-					obj.salutation('',sprintf('FIX FAIL: %s\n',out),true)
+					fprintf('--->Eyelink FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching)
 					return
 				end
-			else
+			elseif searching == false
 				out = noString;
-				obj.salutation('',sprintf('OTHER FAIL: %s\n',out),true)
+				fprintf('--->Eyelink SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching)
 				return
+			else
+				out = '';
 			end
 			
 		end

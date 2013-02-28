@@ -25,8 +25,8 @@ classdef CardPanel < uiextras.Container
     %             uiextras.TabPanel
     
     %   Copyright 2009-2010 The MathWorks, Inc.
-    %   $Revision: 335 $
-    %   $Date: 2010-09-01 08:13:54 +0100 (Wed, 01 Sep 2010) $
+    %   $Revision: 374 $
+    %   $Date: 2012-12-20 09:18:15 +0000 (Thu, 20 Dec 2012) $
     
     
     properties

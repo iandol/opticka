@@ -555,21 +555,23 @@ classdef screenManager < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function flashScreen(obj,interval)
-			
-			int = round(interval / obj.screenVals.ifi);
-			
-			while ~KbCheck
-				if mod(obj.flashTick,int) == 0
-					obj.flashOn = not(obj.flashOn);
-					obj.flashTick = 0;
+		function flashScreen(obj,interval)			
+			if obj.isOpen			
+				int = round(interval / obj.screenVals.ifi);
+				KbReleaseWait;
+				while ~KbCheck
+					if mod(obj.flashTick,int) == 0
+						obj.flashOn = not(obj.flashOn);
+						obj.flashTick = 0;
+					end
+					if obj.flashOn == 0
+						Screen('FillRect',obj.win,[0 0 0 1]);
+					else
+						Screen('FillRect',obj.win,[1 1 1 1]);
+					end
+					Screen('Flip',obj.win);
+					obj.flashTick = obj.flashTick + 1;
 				end
-				if obj.flashOn == 0
-					Screen('FillRect',obj.win,[0 0 0 1]);
-				else
-					Screen('FillRect',obj.win,[1 1 1 1]);
-				end
-				obj.flashTick = obj.flashTick + 1;
 			end
 		end
 		

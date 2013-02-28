@@ -244,7 +244,7 @@ classdef metaStimulus < optickaCore
 								logs = [logs 'XY: ' num2str(stims(j)) ];
 							elseif isprop(obj.stimuli{stims(j)}, [name 'Out'])
 								obj.stimuli{stims(j)}.([name 'Out']) = values;
-								logs = [logs ' | ' name 'Out:' num2str(values)];
+								logs = [logs ' || ' name 'Out: ' num2str(values)];
 							end
 						end
 					
