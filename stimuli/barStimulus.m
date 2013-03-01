@@ -201,8 +201,16 @@ classdef barStimulus < baseStimulus
 			obj.matrix=[]; %reset the matrix
 			
 			try
-				bwpixels = round(obj.barWidth*ppd);
-				blpixels = round(obj.barLength*ppd);
+				if isempty(obj.findprop('barWidthOut'));
+					bwpixels = round(obj.barWidth*ppd);
+				else
+					bwpixels = round(obj.barWidthOut*ppd);
+				end
+				if isempty(obj.findprop('barLengthOut'));
+					blpixels = round(obj.barLength*ppd);
+				else
+					blpixels = round(obj.barLengthOut*ppd);
+				end
 				if rem(bwpixels,2);bwpixels=bwpixels+1;end
 				if rem(blpixels,2);blpixels=blpixels+1;end
 				bwscale = round(bwpixels/obj.scale)+1;
@@ -253,8 +261,16 @@ classdef barStimulus < baseStimulus
 				obj.matrix = outmat(1:blpixels,1:bwpixels,:);
 				obj.rmatrix = rmat;
 			catch %#ok<CTCH>
-				bwpixels = round(obj.barWidth*ppd);
-				blpixels = round(obj.barLength*ppd);
+				if isempty(obj.findprop('barWidthOut'));
+					bwpixels = round(obj.barWidth*ppd);
+				else
+					bwpixels = round(obj.barWidthOut*ppd);
+				end
+				if isempty(obj.findprop('barLengthOut'));
+					blpixels = round(obj.barLength*ppd);
+				else
+					blpixels = round(obj.barLengthOut*ppd);
+				end
 				tmat = ones(blpixels,bwpixels,4); %allocate the size correctly
 				tmat(:,:,1)=ones(blpixels,bwpixels)*obj.colour(1);
 				tmat(:,:,2)=ones(blpixels,bwpixels)*obj.colour(2);

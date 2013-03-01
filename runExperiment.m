@@ -1486,6 +1486,7 @@ classdef runExperiment < optickaCore
 								end
 								fprintf('===>>> Control table is %g\n',obj.stimuli.tableChoice)
 							end
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case {'DownArrow','down'}
 						if tS.totalTicks > tS.keyHold
@@ -1499,6 +1500,7 @@ classdef runExperiment < optickaCore
 								end
 								fprintf('===>>> Control table is %g\n',obj.stimuli.tableChoice)
 							end
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					
 					case {'LeftArrow','left'} %previous variable 1 value
