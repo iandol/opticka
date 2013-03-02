@@ -15,6 +15,8 @@ classdef spotStimulus < baseStimulus
 		%> contrast is actually a multiplier to the stimulus colour, not
 		%> formally defined contrast in this case
 		contrast = 1
+		%>
+		flashColour = []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -132,11 +134,19 @@ classdef spotStimulus < baseStimulus
 			obj.doDrift = false;
 			obj.doFlash = false;
 			
+			if ~isempty(obj.flashColour)
+				obj.flashBG = obj.flashColour;
+			end
+			
 			if obj.speedOut > 0; obj.doMotion = true; end
 			
 			if strcmp(obj.type,'flash')
 				obj.doFlash = true;
-				bg = [sM.backgroundColour(1:3) 0]; %make sure alpha is 0
+				if ~isempty(obj.flashColour)
+					bg = [obj.flashColour 1];
+				else
+					bg = [sM.backgroundColour(1:3) 0]; %make sure alpha is 0
+				end
 				obj.setupFlash(bg);
 			end
 			

@@ -84,9 +84,9 @@ classdef screenManager < optickaCore
 		%> the window rectangle
 		winRect
 		%> computed X center
-		xCenter
+		xCenter = 0
 		%> computed Y center
-		yCenter
+		yCenter = 0
 		%> set automatically on construction
 		maxScreen
 	end
@@ -180,6 +180,7 @@ classdef screenManager < optickaCore
 			%get screen dimensions
 			[obj.screenVals.width, obj.screenVals.height] = Screen('WindowSize',obj.screen);
 			obj.winRect = Screen('Rect',obj.screen);
+			updateCenter(obj);
 			
 			obj.screenVals.resetGamma = false;
 			
@@ -304,6 +305,11 @@ classdef screenManager < optickaCore
 					% effectively makes flip occur ASAP.
 					obj.screenVals.halfisi = 0;
 				end
+				
+				%get screen dimensions
+				[obj.screenVals.width, obj.screenVals.height] = Screen('WindowSize',obj.win);
+				obj.winRect = Screen('Rect',obj.win);
+				updateCenter(obj);
 				
 				if obj.hideFlash == true && isempty(obj.gammaTable)
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
@@ -559,7 +565,7 @@ classdef screenManager < optickaCore
 			if obj.isOpen			
 				int = round(interval / obj.screenVals.ifi);
 				KbReleaseWait;
-				while ~KbCheck
+				while ~KbCheck(-1)
 					if mod(obj.flashTick,int) == 0
 						obj.flashOn = not(obj.flashOn);
 						obj.flashTick = 0;
