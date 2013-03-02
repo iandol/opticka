@@ -147,13 +147,7 @@ classdef gratingStimulus < baseStimulus
 			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
 			
 			obj.sM = sM;
-			obj.ppd=sM.ppd;
-			obj.ifi=sM.screenVals.ifi;
-			obj.xCenter=sM.xCenter;
-			obj.yCenter=sM.yCenter;
-			obj.win=sM.win;
-			obj.screenWidth = sM.screenVals.width;
-			obj.screenHeight = sM.screenVals.height;
+			obj.ppd=sM.ppd;			
 
 			obj.texture = []; %we need to reset this
 
@@ -224,19 +218,19 @@ classdef gratingStimulus < baseStimulus
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
 			
 			if obj.phaseReverseTime > 0
-				obj.phaseCounter = round(obj.phaseReverseTime / obj.ifi);
+				obj.phaseCounter = round(obj.phaseReverseTime / obj.sM.screenVals.ifi);
 			end
 			
 			if strcmpi(obj.type,'square')
-				obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
+				obj.texture = CreateProceduralSineSquareGrating(obj.sM.win, obj.res(1),...
 					obj.res(2), obj.colourOut, obj.maskValue, obj.contrastMult);
 			else
 				if obj.sigmaOut > 0
-					obj.texture = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
+					obj.texture = CreateProceduralSineSmoothedGrating(obj.sM.win, obj.res(1), ...
 						obj.res(2), obj.colourOut, obj.maskValue, obj.contrastMult, obj.sigmaOut, ...
 						obj.useAlpha, obj.smoothMethod);
 				else
-					obj.texture = CreateProceduralSineGrating(obj.win, obj.res(1),...
+					obj.texture = CreateProceduralSineGrating(obj.sM.win, obj.res(1),...
 						obj.res(2), obj.colourOut, obj.maskValue, obj.contrastMult);
 				end
 			end
@@ -251,8 +245,6 @@ classdef gratingStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
-			obj.xCenter=obj.sM.xCenter;
-			obj.yCenter=obj.sM.yCenter;
 			resetTicks(obj);
 			if obj.correctPhase
 				ps=obj.calculatePhase;
@@ -270,7 +262,7 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible == true && obj.tick > obj.delayTicks
-				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
+				Screen('DrawTexture', obj.sM.win, obj.texture, [],obj.mvRect,...
 					obj.angleOut, [], [], [], [], obj.rotateMode,...
 					[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
 				obj.tick = obj.tick + 1;
@@ -367,7 +359,7 @@ classdef gratingStimulus < baseStimulus
 				else
 					[sx sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
 				end
-				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
+				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
 				if isempty(obj.findprop('xPositionOut'));
 					obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
 				else
@@ -430,7 +422,7 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function calculatePhaseIncrement(obj,~,~)
 			if ~isempty(obj.findprop('tfOut'))
-				obj.phaseIncrement = (obj.tfOut * 360) * obj.ifi;
+				obj.phaseIncrement = (obj.tfOut * 360) * obj.sM.screenVals.ifi;
 				if ~isempty(obj.findprop('driftDirectionOut'))
 					if obj.driftDirectionOut == false
 						obj.phaseIncrement = -obj.phaseIncrement;

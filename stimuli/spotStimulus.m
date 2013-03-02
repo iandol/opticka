@@ -44,7 +44,7 @@ classdef spotStimulus < baseStimulus
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
 		stopLoop = false
-		allowedProperties='^(type|flashTime|flashOn|contrast|backgroundColour)$'
+		allowedProperties='type|flashTime|flashOn|flashColour|contrast'
 		ignoreProperties = 'flashSwitch|FlashOn';
 	end
 	
@@ -98,16 +98,8 @@ classdef spotStimulus < baseStimulus
 			
 			addlistener(obj,'changeColour',@obj.computeColour);
 			
-			if exist('sM','var')
-				obj.sM = sM;
-				obj.ppd=sM.ppd;
-				obj.ifi=sM.screenVals.ifi;
-				obj.xCenter=sM.xCenter;
-				obj.yCenter=sM.yCenter;
-				obj.screenWidth = sM.screenVals.width;
-				obj.screenHeight = sM.screenVals.height;
-				obj.win=sM.win;
-			end
+			obj.sM = sM;
+			obj.ppd=sM.ppd;
 			
 			fn = fieldnames(spotStimulus);
 			for j=1:length(fn)
@@ -145,7 +137,7 @@ classdef spotStimulus < baseStimulus
 				if ~isempty(obj.flashColour)
 					bg = [obj.flashColour 1];
 				else
-					bg = [sM.backgroundColour(1:3) 0]; %make sure alpha is 0
+					bg = [obj.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
 				end
 				obj.setupFlash(bg);
 			end
@@ -163,8 +155,8 @@ classdef spotStimulus < baseStimulus
 		%> @return
 		% ===================================================================
 		function update(obj)
-			obj.xCenter=obj.sM.xCenter;
-			obj.yCenter=obj.sM.yCenter;
+			obj.sM.xCenter=obj.sM.xCenter;
+			obj.sM.yCenter=obj.sM.yCenter;
 			resetTicks(obj);
 			if ~obj.mouseOverride && ~obj.mouseValid
 				computePosition(obj);
@@ -184,9 +176,9 @@ classdef spotStimulus < baseStimulus
 		function draw(obj)
 			if obj.isVisible && (obj.tick > obj.delayTicks)
 				if obj.doFlash == false
-					Screen('gluDisk',obj.win,obj.colourOut,obj.xOut,obj.yOut,obj.sizeOut);
+					Screen('gluDisk',obj.sM.win,obj.colourOut,obj.xOut,obj.yOut,obj.sizeOut);
 				else
-					Screen('gluDisk',obj.win,obj.currentColour,obj.xOut,obj.yOut,obj.sizeOut);
+					Screen('gluDisk',obj.sM.win,obj.currentColour,obj.xOut,obj.yOut,obj.sizeOut);
 				end
 				obj.tick = obj.tick + 1;
 			end
@@ -249,9 +241,9 @@ classdef spotStimulus < baseStimulus
 				trigger = obj.flashOnOut;
 			end
 			if trigger
-				flashSwitch = round(obj.flashTime(1) / obj.ifi);
+				flashSwitch = round(obj.flashTime(1) / obj.sM.screenVals.ifi);
 			else
-				flashSwitch = round(obj.flashTime(2) / obj.ifi);
+				flashSwitch = round(obj.flashTime(2) / obj.sM.screenVals.ifi);
 			end
 		end
 		

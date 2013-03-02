@@ -97,6 +97,7 @@ classdef optickaCore < handle
 			else
 				name = [obj.name ' <' obj.className '#' obj.uuid '>'];
 			end
+			obj.fullName_ = name; %update our cached version
 		end
 		
 		% ===================================================================
@@ -264,18 +265,16 @@ classdef optickaCore < handle
                     end
                 end
 			end
-			%obj_out.dateStamp = clock();
-			%obj_out.uuid = num2str(dec2hex(floor((now - floor(now))*1e10)));
         end
 		
 	end
 	
 	%=======================================================================
-	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
+	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 		%=======================================================================
 		
 		% ===================================================================
-		%> @brief Sets properties from a structure or normal arguments,
+		%> @brief Sets properties from a structure or normal arguments pairs,
 		%> ignores invalid properties
 		%>
 		%> @param args input structure

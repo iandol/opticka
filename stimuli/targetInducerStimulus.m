@@ -1,5 +1,5 @@
 % ========================================================================
-%> @brief single grating stimulus, inherits from baseStimulus
+%> @brief target inducer stimulus, inherits from baseStimulus
 %>
 % ========================================================================
 classdef targetInducerStimulus < baseStimulus
@@ -146,13 +146,8 @@ classdef targetInducerStimulus < baseStimulus
 			addlistener(obj,'changeScale',@obj.calculateScale); %use an event to keep scale accurate
 			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
 			
+			obj.sM = sM;
 			obj.ppd=sM.ppd;
-			obj.ifi=sM.screenVals.ifi;
-			obj.xCenter=sM.xCenter;
-			obj.yCenter=sM.yCenter;
-			obj.win=sM.win;
-			obj.screenWidth = sM.screenVals.width;
-			obj.screenHeight = sM.screenVals.height;
 
 			obj.texture = []; %we need to reset this
 
@@ -223,26 +218,26 @@ classdef targetInducerStimulus < baseStimulus
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
 			
 			if obj.phaseReverseTime > 0
-				obj.phaseCounter = round(obj.phaseReverseTime / obj.ifi);
+				obj.phaseCounter = round(obj.phaseReverseTime / obj.sM.screenVals.ifi);
 			end
 			
 			if strcmpi(obj.type,'square')
-				obj.texture{1} = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
+				obj.texture{1} = CreateProceduralSineSquareGrating(obj.sM.win, obj.res(1),...
 					obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
-				obj.texture = CreateProceduralSineSquareGrating(obj.win, obj.res(1),...
+				obj.texture = CreateProceduralSineSquareGrating(obj.sM.win, obj.res(1),...
 					obj.res(2)*obj.inducerHeight, obj.colourOut, obj.mask, obj.contrastMult);
 			else
 				if obj.sigmaOut > 0
-					obj.texture{1} = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
+					obj.texture{1} = CreateProceduralSineSmoothedGrating(obj.sM.win, obj.res(1), ...
 						obj.res(2), obj.colourOut, obj.mask, obj.contrastMult, obj.sigmaOut, ...
 						obj.useAlpha, obj.smoothMethod);
-					obj.texture{2} = CreateProceduralSineSmoothedGrating(obj.win, obj.res(1), ...
+					obj.texture{2} = CreateProceduralSineSmoothedGrating(obj.sM.win, obj.res(1), ...
 						obj.res(2)*obj.inducerHeight, obj.colourOut, obj.mask, obj.contrastMult, obj.sigmaOut, ...
 						obj.useAlpha, obj.smoothMethod);
 				else
-					obj.texture{1} = CreateProceduralSineGrating(obj.win, obj.res(1),...
+					obj.texture{1} = CreateProceduralSineGrating(obj.sM.win, obj.res(1),...
 						obj.res(2), obj.colourOut, obj.mask, obj.contrastMult);
-					obj.texture{2} = CreateProceduralSineGrating(obj.win, obj.res(1),...
+					obj.texture{2} = CreateProceduralSineGrating(obj.sM.win, obj.res(1),...
 						obj.res(2)*obj.inducerHeight, obj.colourOut, obj.mask, obj.contrastMult);
 				end
 			end
@@ -279,10 +274,10 @@ classdef targetInducerStimulus < baseStimulus
 				dstRect = AlignRect(dstRect, obj.mvRect, 'left');
 				dstRect = AdjoinRect(dstRect, obj.mvRect, obj.inducerPosition);
 				
-				Screen('DrawTexture', obj.win, obj.texture{1}, [], obj.mvRect,...
+				Screen('DrawTexture', obj.sM.win, obj.texture{1}, [], obj.mvRect,...
 					obj.angleOut, [], [], [], [], obj.rotateMode,...
 					[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
-				Screen('DrawTexture', obj.win, obj.texture{2}, [], dstRect,...
+				Screen('DrawTexture', obj.sM.win, obj.texture{2}, [], dstRect,...
 					obj.angleOut, [], [], [], [], obj.rotateMode,...
 					[obj.driftPhase+obj.phaseOffset, obj.sfOut, obj.inducerContrastOut, obj.sigmaOut]);
 				obj.tick = obj.tick + 1;
@@ -376,7 +371,7 @@ classdef targetInducerStimulus < baseStimulus
 			end
 			obj.dstRect=Screen('Rect',obj.texture{1});
 			obj.dstRect=ScaleRect(obj.dstRect,obj.scale,obj.scale);
-			obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
+			obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
 			if isempty(obj.findprop('xPositionOut'));
 				obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
 			else
@@ -438,7 +433,7 @@ classdef targetInducerStimulus < baseStimulus
 		% ===================================================================
 		function calculatePhaseIncrement(obj,~,~)
 			if ~isempty(obj.findprop('tfOut'))
-				obj.phaseIncrement = (obj.tfOut * 360) * obj.ifi;
+				obj.phaseIncrement = (obj.tfOut * 360) * obj.sM.screenVals.ifi;
 				if ~isempty(obj.findprop('driftDirectionOut'))
 					if obj.driftDirectionOut == false
 						obj.phaseIncrement = -obj.phaseIncrement;

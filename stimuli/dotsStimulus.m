@@ -74,9 +74,6 @@ classdef dotsStimulus < baseStimulus
 		maskTexture
 		%> the stimulus rect of the mask
 		maskRect
-		%> screen drawing mode, inherited from screenManager object on setup
-		srcMode = 'GL_ONE'
-		dstMode = 'GL_ZERO'
 		%> rDots used in coherence calculation
 		rDots
 		%> angles used in coherence calculation
@@ -137,22 +134,8 @@ classdef dotsStimulus < baseStimulus
 				obj.show;
 			end
 			
-			if exist('sM','var')
-				obj.sM = sM;
-				obj.ppd=sM.ppd;
-				obj.ifi=sM.screenVals.ifi;
-				obj.xCenter=sM.xCenter;
-				obj.yCenter=sM.yCenter;
-				obj.screenWidth = sM.screenVals.width;
-				obj.screenHeight = sM.screenVals.height;
-				obj.win=sM.win;
-				obj.srcMode=sM.srcMode;
-				obj.dstMode=sM.dstMode;
-				obj.backgroundColour = sM.backgroundColour; 
-				clear sM;
-			else
-				obj.mask = false; %we can't open offscreen windows to make the mask
-			end
+			obj.sM = sM;
+			obj.ppd=sM.ppd;
 			
 			fn = properties('dotsStimulus');
 			for j=1:length(fn)
@@ -187,13 +170,13 @@ classdef dotsStimulus < baseStimulus
 			%build the mask
 			if obj.mask == true
 				if isempty(obj.maskColour)
-					obj.maskColour = obj.backgroundColour;
+					obj.maskColour = obj.sM.backgroundColour;
 				end
 				wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
 				mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
 				mrect = CenterRect(mrect,wrect);
-				bg = [obj.backgroundColour(1:3) 1];
-				obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, bg, wrect);
+				bg = [obj.sM.backgroundColour(1:3) 1];
+				obj.maskTexture = Screen('OpenOffscreenwindow', obj.sM.win, bg, wrect);
 				Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
 				obj.maskRect = CenterRectOnPointd(wrect,obj.xPositionOut,obj.yPositionOut);
 				if obj.maskSmoothing > 0
@@ -258,8 +241,6 @@ classdef dotsStimulus < baseStimulus
 		%>  for example)
 		% ===================================================================
 		function update(obj)
-			obj.xCenter=obj.sM.xCenter;
-			obj.yCenter=obj.sM.yCenter;
 			resetTicks(obj);
 			obj.updateDots;
 		end
@@ -271,13 +252,13 @@ classdef dotsStimulus < baseStimulus
 		function draw(obj)
 			if obj.isVisible == true && obj.tick > obj.delayTicks
 				if obj.mask == true
-					Screen('BlendFunction', obj.win, obj.msrcMode, obj.mdstMode);
-					Screen('DrawDots', obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
+					Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
+					Screen('DrawDots', obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,...
 						[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
-					Screen('DrawTexture', obj.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
-					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
+					Screen('DrawTexture', obj.sM.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
+					Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
 				else
-					Screen('DrawDots',obj.win,obj.xy,obj.dotSizeOut,obj.colours,...
+					Screen('DrawDots',obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,...
 						[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
 				end
 				obj.tick = obj.tick + 1;
@@ -406,7 +387,7 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_xPositionOut(obj,value)
-			obj.xPositionOut = obj.xCenter + (value * obj.ppd);
+			obj.xPositionOut = obj.sM.xCenter + (value * obj.ppd);
 		end
 		
 		% ===================================================================
@@ -414,7 +395,7 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_yPositionOut(obj,value)
-			obj.yPositionOut = obj.yCenter + (value * obj.ppd);
+			obj.yPositionOut = obj.sM.yCenter + (value * obj.ppd);
 		end
 	end
 end

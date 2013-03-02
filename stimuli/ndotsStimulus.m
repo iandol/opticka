@@ -156,21 +156,8 @@ classdef ndotsStimulus < baseStimulus
 				obj.show;
 			end
 			
-			if exist('sM','var')
-				obj.sM = sM;
-				obj.ppd=sM.ppd;
-				obj.ifi=sM.screenVals.ifi;
-				obj.xCenter=sM.xCenter;
-				obj.yCenter=sM.yCenter;
-				obj.screenWidth = sM.screenVals.width;
-				obj.screenHeight = sM.screenVals.height;
-				obj.win=sM.win;
-				obj.winRect = sM.winRect;
-				obj.srcMode=sM.srcMode;
-				obj.dstMode=sM.dstMode;
-				obj.backgroundColour = sM.backgroundColour;
-				clear sM
-			end
+			obj.sM = sM;
+			obj.ppd=sM.ppd;
 			
 			fn = fieldnames(ndotsStimulus);
 			for j=1:length(fn)
@@ -204,13 +191,13 @@ classdef ndotsStimulus < baseStimulus
 			%build the mask
 			if obj.mask == true
 				if isempty(obj.maskColour)
-					obj.maskColour = obj.backgroundColour;
+					obj.maskColour = obj.sM.backgroundColour;
 				end
 				wrect = SetRect(0, 0, obj.fieldSize+obj.dotSizeOut, obj.fieldSize+obj.dotSizeOut);
 				mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
 				mrect = CenterRect(mrect,wrect);
-				bg = [obj.backgroundColour(1:3) 1];
-				obj.maskTexture = Screen('OpenOffscreenwindow', obj.win, bg, wrect);
+				bg = [obj.sM.backgroundColour(1:3) 1];
+				obj.maskTexture = Screen('OpenOffscreenwindow', obj.sM.win, bg, wrect);
 				Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
 				obj.maskRect = CenterRectOnPointd(wrect,obj.xPositionOut,obj.yPositionOut);
 				if obj.maskSmoothing > 0
@@ -245,8 +232,6 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
-			obj.xCenter=obj.sM.xCenter;
-			obj.yCenter=obj.sM.yCenter;
 			obj.initialiseDots();
 			obj.computeNextFrame();
 			resetTicks(obj);
@@ -259,19 +244,19 @@ classdef ndotsStimulus < baseStimulus
 		function draw(obj)
 			if obj.isVisible == true && obj.tick > obj.delayTicks
 				if obj.mask == true
-					Screen('BlendFunction', obj.win, obj.msrcMode, obj.mdstMode);
+					Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
 					Screen('DrawDots', ...
-						obj.win, ...
+						obj.sM.win, ...
 						obj.pixelXY(:,obj.frameSelector), ...
 						obj.dotSize, ...
 						obj.colour, ...
 						obj.pixelOrigin, ...
 						obj.dotType);
-					Screen('DrawTexture', obj.win, obj.maskTexture, [], obj.maskRect);
-					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
+					Screen('DrawTexture', obj.sM.win, obj.maskTexture, [], obj.maskRect);
+					Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
 				else
 					Screen('DrawDots', ...
-						obj.win, ...
+						obj.sM.win, ...
 						obj.pixelXY(:,obj.frameSelector), ...
 						obj.dotSize, ...
 						obj.colour, ...
@@ -313,7 +298,7 @@ classdef ndotsStimulus < baseStimulus
 		% ===================================================================
 		%-------------------Set up our dot matrices----------------------%
 		function initialiseDots(obj)
-			fr=round(1/obj.ifi);
+			fr=round(1/obj.sM.screenVals.ifi);
 			% size the dot field and the aperture circle
 			fieldWidth = obj.size*obj.fieldScale;
 			marginWidth = (obj.fieldScale - 1) * obj.size / 2;
@@ -332,9 +317,9 @@ classdef ndotsStimulus < baseStimulus
 			
 			% account for pixel real estate
 			obj.pixelScale = fieldPixels;
-			obj.pixelOrigin(1) = obj.winRect(3)/2 ...
+			obj.pixelOrigin(1) = obj.sM.winRect(3)/2 ...
 				+ (obj.xPosition * obj.ppd) - fieldPixels/2;
-			obj.pixelOrigin(2) = obj.winRect(4)/2 ...
+			obj.pixelOrigin(2) = obj.sM.winRect(4)/2 ...
 				- (obj.yPosition * obj.ppd) - fieldPixels/2;
 			
 			% 			obj.maskSourceRect = [0 0, maskPixels, maskPixels];

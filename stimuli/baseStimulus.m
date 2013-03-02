@@ -76,10 +76,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		xOut = 0
 		%> computed Y position for stimuli that don't use rects
 		yOut = 0
-		%> screen width inherited from screenManager
-		screenWidth = inf
-		%> screen height inherited from screenManager
-		screenHeight = inf
 		%> the tick at which last mouse position was checked
 		mouseTick = 0
 		%> is mouse position within screen co-ordinates?
@@ -98,18 +94,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dX_
 		%> dY cache
 		dY_
-		%> Inter frame interval (normally inhereted from screenManager)
-		ifi = 0.0167
-		%> computed X center (normally inhereted from screenManager)
-		xCenter = []
-		%> computed Y center (normally inhereted from screenManager)
-		yCenter = []
-		%> background colour (normally inhereted from screenManager)
-		backgroundColour = [0.5 0.5 0.5 0]
-		%> window to attach to
-		win = []
-		%>screen to use
-		screen = []
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
 		ignorePropertiesBase='name|fullName|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|paths|uuid|tick';
@@ -131,19 +115,20 @@ classdef baseStimulus < optickaCore & dynamicprops
 		
 		% ===================================================================
 		%> @brief Class constructor
+		
 		%>
-		%> More detailed description of what the constructor does.
-		%>
-		%> @param args are passed as a structure of properties which is
+		%> @param varargin are passed as a structure / cell of properties which is
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
 		function obj = baseStimulus(varargin)
-			
 			if nargin == 0; varargin.name = 'baseStimulus'; end
 			obj=obj@optickaCore(varargin); %superclass constructor
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
-			
+			if isempty(obj.sM)
+				obj.sM = screenManager('name','default screen');
+				obj.ppd = obj.sM.ppd;
+			end
 		end
 		
 		% ===================================================================
@@ -171,9 +156,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function value = get.delta(obj)
 			if isempty(obj.findprop('speedOut'));
-				value = (obj.speed * obj.ppd) * obj.ifi;
+				value = (obj.speed * obj.sM.ppd) * obj.sM.screenVals.ifi;
 			else
-				value = (obj.speedOut * obj.ppd) * obj.ifi;
+				value = (obj.speedOut * obj.ppd) * obj.sM.screenVals.ifi;
 			end
 		end
 		
@@ -223,7 +208,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function show(obj)
 			obj.isVisible = true;
-			fprintf('--->>> %s is shown\n',obj.fullName);
 		end
 		
 		% ===================================================================
@@ -232,18 +216,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function hide(obj)
 			obj.isVisible = false;
-			fprintf('--->>> %s is hidden\n',obj.fullName);
 		end
-		
-		% ===================================================================
-		%> @brief Shorthand to set isVisible=false.
-		%>
-		% ===================================================================
-		function updateCenter(obj)
-			
-		end
-		
-		
 		
 		% ===================================================================
 		%> @brief we reset the various tick counters for our stimulus
@@ -252,10 +225,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function resetTicks(obj)
 			if max(obj.delayTime) > 0
 				if length(obj.delayTime) == 1
-					obj.delayTicks = round(obj.delayTime/obj.ifi);
+					obj.delayTicks = round(obj.delayTime/obj.sM.screenVals.ifi);
 				elseif length(obj.delayTime) == 2
 					time = randi([obj.delayTime(1)*1000 obj.delayTime(2)*1000])/1000;
-					obj.delayTicks = round(time/obj.ifi);
+					obj.delayTicks = round(time/obj.sM.screenVals.ifi);
 				end
 			else
 				obj.delayTicks = 0;
@@ -276,12 +249,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> we make sure this is only called once per animation tick to
 		%> improve performance and ensure all stimuli that are following
 		%> mouse position have consistent X and Y per frame update
+		%> This sets mouseX and mouseY and mouseValid if mouse is within
+		%> PTB screen (useful for mouse override positioning for stimuli)
 		% ===================================================================
 		function getMousePosition(obj)
 			obj.mouseValid = false;
 			if obj.tick > obj.mouseTick
 				[obj.mouseX,obj.mouseY] = GetMouse(obj.win);
-				if obj.mouseX <= obj.screenWidth && obj.mouseY <= obj.screenHeight
+				if obj.mouseX <= obj.sM.screenVals.width && obj.mouseY <= obj.sM.screenVals.height
 					obj.mouseValid = true;
 				end
 				obj.mouseTick = obj.tick;
@@ -692,7 +667,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				else
 					[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
 				end
-				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
+				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
 				if isempty(obj.findprop('xPositionOut'));
 					obj.dstRect=OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
 				else
@@ -727,8 +702,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 			else
 				[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);
 			end
-			obj.xOut = obj.xPositionOut + (dx * obj.ppd) + obj.xCenter;
-			obj.yOut = obj.yPositionOut + (dy * obj.ppd) + obj.yCenter;
+			obj.xOut = obj.xPositionOut + (dx * obj.ppd) + obj.sM.xCenter;
+			obj.yOut = obj.yPositionOut + (dy * obj.ppd) + obj.sM.yCenter;
 		end
 		
 		% ===================================================================

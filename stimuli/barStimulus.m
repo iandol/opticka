@@ -84,12 +84,6 @@ classdef barStimulus < baseStimulus
 			
 			obj.sM = sM;
 			obj.ppd=sM.ppd;
-			obj.ifi=sM.screenVals.ifi;
-			obj.screenWidth = sM.screenVals.width;
-			obj.screenHeight = sM.screenVals.height;
-			if isempty(obj.xCenter);obj.xCenter=sM.xCenter;end
-			if isempty(obj.yCenter);obj.yCenter=sM.yCenter;end
-			if isempty(obj.win);obj.win = sM.win;end
 			
 			fn = fieldnames(barStimulus);
 			for j=1:length(fn)
@@ -114,7 +108,7 @@ classdef barStimulus < baseStimulus
 			obj.doFlash = false;
 			
 			obj.constructMatrix(obj.ppd) %make our matrix
-			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
+			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
 			if obj.speed>0 %we need to say this needs animating
 				obj.doMotion=true;
 			else
@@ -134,10 +128,8 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function update(obj)
 			resetTicks(obj);
-			obj.xCenter=obj.sM.xCenter;
-			obj.yCenter=obj.sM.yCenter;
 			obj.constructMatrix(obj.ppd) %make our matrix
-			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
+			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
 			obj.setRect();
 		end
 		
@@ -149,7 +141,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible && (obj.tick > obj.delayTicks)
-				Screen('DrawTexture',obj.win,obj.texture,[],obj.mvRect,obj.angleOut);
+				Screen('DrawTexture',obj.sM.win,obj.texture,[],obj.mvRect,obj.angleOut);
 			end
 			obj.tick = obj.tick + 1;
 		end
@@ -184,7 +176,7 @@ classdef barStimulus < baseStimulus
 			obj.mvRect = [];
 			obj.dstRect = [];
 			obj.removeTmpProperties;
-			obj.win = [];
+			obj.sM.win = [];
 			obj.xCenter = [];
 			obj.yCenter = [];
 			resetTicks(obj);

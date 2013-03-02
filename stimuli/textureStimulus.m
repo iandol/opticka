@@ -98,12 +98,12 @@ classdef textureStimulus < baseStimulus
 			
 			obj.sM = sM;
 			obj.ppd=sM.ppd;
-			obj.ifi=sM.screenVals.ifi;
-			obj.xCenter=sM.xCenter;
-			obj.yCenter=sM.yCenter;
+			obj.sM.screenVals.ifi=sM.screenVals.ifi;
+			obj.sM.xCenter=sM.xCenter;
+			obj.sM.yCenter=sM.yCenter;
 			obj.screenWidth = sM.screenVals.width;
 			obj.screenHeight = sM.screenVals.height;
-			obj.win=sM.win;
+			obj.sM.win=sM.win;
 			
 			obj.texture = []; %we need to reset this
 
@@ -138,7 +138,7 @@ classdef textureStimulus < baseStimulus
 			end
 			
 			specialFlags = 0; %4 is optimization for uint8 textures. 0 is default
-			obj.texture = Screen('MakeTexture', obj.win, obj.matrix, 1, specialFlags);
+			obj.texture = Screen('MakeTexture', obj.sM.win, obj.matrix, 1, specialFlags);
 			
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
@@ -167,8 +167,8 @@ classdef textureStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
-			obj.xCenter=obj.sM.xCenter;
-			obj.yCenter=obj.sM.yCenter;			
+			obj.sM.xCenter=obj.sM.xCenter;
+			obj.sM.yCenter=obj.sM.yCenter;			
 			resetTicks(obj);
 			setRect(obj);
 		end
@@ -179,7 +179,7 @@ classdef textureStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible == true && obj.tick > obj.delayTicks
-				Screen('DrawTexture',obj.win,obj.texture,[],obj.mvRect,obj.angleOut);
+				Screen('DrawTexture',obj.sM.win,obj.texture,[],obj.mvRect,obj.angleOut);
 				obj.tick = obj.tick + 1;
 			end
 		end
@@ -233,7 +233,7 @@ classdef textureStimulus < baseStimulus
 			end
 			obj.dstRect = Screen('Rect',obj.texture);
 			obj.dstRect = ScaleRect(obj.dstRect, obj.sizeOut, obj.sizeOut);
-			obj.dstRect = CenterRectOnPointd(obj.dstRect,obj.xCenter,obj.yCenter);
+			obj.dstRect = CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
 			if isempty(obj.findprop('xPositionOut'));
 				obj.dstRect = OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
 			else
