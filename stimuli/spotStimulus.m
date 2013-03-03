@@ -12,11 +12,11 @@ classdef spotStimulus < baseStimulus
 		flashTime = [0.5 0.5]
 		%> is the ON flash the first flash we see?
 		flashOn = true
-		%> contrast is actually a multiplier to the stimulus colour, not
+		%> contrast is realy a multiplier to the stimulus colour, not
 		%> formally defined contrast in this case
 		contrast = 1
-		%>
-		flashColour = []
+		%> colour for flash, empty to inherit from screen background with 0 alpha
+		flashOffColour = []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -44,7 +44,7 @@ classdef spotStimulus < baseStimulus
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
 		stopLoop = false
-		allowedProperties='type|flashTime|flashOn|flashColour|contrast'
+		allowedProperties='type|flashTime|flashOn|flashOffColour|contrast'
 		ignoreProperties = 'flashSwitch|FlashOn';
 	end
 	
@@ -68,12 +68,10 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function obj = spotStimulus(varargin)
 			%Initialise for superclass, stops a noargs error
-			if nargin == 0
-				varargin.family = 'spot';
-				varargin.colour = [1 1 1];
-			end
+			if nargin == 0; varargin.family = 'spot'; end
 			
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
+			obj.colour = [1 1 1];
 			
 			if nargin>0
 				obj.parseArgs(varargin, obj.allowedProperties);
@@ -98,6 +96,7 @@ classdef spotStimulus < baseStimulus
 			
 			addlistener(obj,'changeColour',@obj.computeColour);
 			
+			obj.sM = [];
 			obj.sM = sM;
 			obj.ppd=sM.ppd;
 			
@@ -126,20 +125,16 @@ classdef spotStimulus < baseStimulus
 			obj.doDrift = false;
 			obj.doFlash = false;
 			
-			if ~isempty(obj.flashColour)
-				obj.flashBG = obj.flashColour;
-			end
-			
 			if obj.speedOut > 0; obj.doMotion = true; end
 			
-			if strcmp(obj.type,'flash')
+			if strcmpi(obj.type,'flash')
 				obj.doFlash = true;
-				if ~isempty(obj.flashColour)
-					bg = [obj.flashColour 1];
+				if ~isempty(obj.flashOffColour)
+					obj.flashBG = [obj.flashOffColour(1:3) 0];
 				else
-					bg = [obj.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
+					obj.flashBG = [obj.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
 				end
-				obj.setupFlash(bg);
+				setupFlash(obj);
 			end
 			
 			obj.inSetup = false;
@@ -155,12 +150,8 @@ classdef spotStimulus < baseStimulus
 		%> @return
 		% ===================================================================
 		function update(obj)
-			obj.sM.xCenter=obj.sM.xCenter;
-			obj.sM.yCenter=obj.sM.yCenter;
 			resetTicks(obj);
-			if ~obj.mouseOverride && ~obj.mouseValid
-				computePosition(obj);
-			end
+			computePosition(obj);
 			setAnimationDelta(obj);
 			if obj.doFlash
 				obj.resetFlash;
@@ -174,11 +165,11 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible && (obj.tick > obj.delayTicks)
+			if obj.isVisible && obj.tick >= obj.delayTicks
 				if obj.doFlash == false
-					Screen('gluDisk',obj.sM.win,obj.colourOut,obj.xOut,obj.yOut,obj.sizeOut);
+					Screen('gluDisk',obj.sM.win,obj.colourOut,obj.xOut,obj.yOut,obj.sizeOut/2);
 				else
-					Screen('gluDisk',obj.sM.win,obj.currentColour,obj.xOut,obj.yOut,obj.sizeOut);
+					Screen('gluDisk',obj.sM.win,obj.currentColour,obj.xOut,obj.yOut,obj.sizeOut/2);
 				end
 				obj.tick = obj.tick + 1;
 			end
@@ -191,28 +182,30 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			if obj.mouseOverride
-				getMousePosition(obj);
-				if obj.mouseValid
-					obj.xOut = obj.mouseX;
-					obj.yOut = obj.mouseY;
+			if obj.isVisible && obj.tick >= obj.delayTicks
+				if obj.mouseOverride
+					getMousePosition(obj);
+					if obj.mouseValid
+						obj.xOut = obj.mouseX;
+						obj.yOut = obj.mouseY;
+					end
 				end
-			end
-			if obj.doMotion == true
-				obj.xOut = obj.xOut + obj.dX_;
-				obj.yOut = obj.yOut + obj.dY_;
-			end
-			if obj.doFlash == true
-				if obj.flashCounter <= obj.flashSwitch
-					obj.flashCounter=obj.flashCounter+1;
-				else
-					obj.flashCounter = 1;
-					obj.flashOnOut = ~obj.flashOnOut;
-					if obj.flashOnOut == true
-						obj.currentColour = obj.flashFG;
+				if obj.doMotion == true
+					obj.xOut = obj.xOut + obj.dX_;
+					obj.yOut = obj.yOut + obj.dY_;
+				end
+				if obj.doFlash == true
+					if obj.flashCounter <= obj.flashSwitch
+						obj.flashCounter=obj.flashCounter+1;
 					else
-						obj.currentColour = obj.flashBG;
-						%fprintf('Current: %s | %s\n',num2str(obj.colourOut), num2str(obj.flashOnOut));
+						obj.flashCounter = 1;
+						obj.flashOnOut = ~obj.flashOnOut;
+						if obj.flashOnOut == true
+							obj.currentColour = obj.flashFG;
+						else
+							obj.currentColour = obj.flashBG;
+							%fprintf('Current: %s | %s\n',num2str(obj.colourOut), num2str(obj.flashOnOut));
+						end
 					end
 				end
 			end
@@ -258,25 +251,7 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_sizeOut(obj,value)
-			obj.sizeOut = (value*obj.ppd) / 2; %divide by 2 to get diameter
-		end
-		
-		% ===================================================================
-		%> @brief xPositionOut Set method
-		%>
-		% ===================================================================
-		function set_xPositionOut(obj,value)
-			obj.xPositionOut = value * obj.ppd;
-			if ~obj.inSetup; obj.computePosition; end
-		end
-		
-		% ===================================================================
-		%> @brief yPositionOut Set method
-		%>
-		% ===================================================================
-		function set_yPositionOut(obj,value)
-			obj.yPositionOut = value * obj.ppd;
-			if ~obj.inSetup; obj.computePosition; end
+			obj.sizeOut = value * obj.ppd; %divide by 2 to get diameter
 		end
 		
 		% ===================================================================
@@ -320,9 +295,8 @@ classdef spotStimulus < baseStimulus
 		%> @brief setupFlash
 		%>
 		% ===================================================================
-		function setupFlash(obj,bg)
+		function setupFlash(obj)
 			obj.flashFG = obj.colourOut;
-			obj.flashBG = bg;
 			obj.flashCounter = 1;
 			if obj.flashOnOut == true
 				obj.currentColour = obj.flashFG;

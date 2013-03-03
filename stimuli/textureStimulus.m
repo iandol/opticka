@@ -8,7 +8,6 @@ classdef textureStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		type = 'picture'
 		contrast = 1
-		scale = 1
 		interpMethod = 'nearest'
 		fileName = ''
 		%>scale up the texture in the bar
@@ -16,6 +15,8 @@ classdef textureStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
+		%> scale is set by size
+		scale = 1
 		family = 'texture'
 		matrix
 	end
@@ -50,12 +51,12 @@ classdef textureStimulus < baseStimulus
 		function obj = textureStimulus(varargin)
 			if nargin == 0;varargin.family = 'texture';end
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
-			obj.size = 1;
+			obj.size = 1; %override default
 			if nargin>0
 				obj.parseArgs(varargin, obj.allowedProperties);
 			end
 			
-			if isempty(obj.fileName)
+			if isempty(obj.fileName) %use our default
 				p = mfilename('fullpath');
 				p = fileparts(p);
 				obj.fileName = [p filesep 'Bosch.jpeg'];
@@ -98,12 +99,6 @@ classdef textureStimulus < baseStimulus
 			
 			obj.sM = sM;
 			obj.ppd=sM.ppd;
-			obj.sM.screenVals.ifi=sM.screenVals.ifi;
-			obj.sM.xCenter=sM.xCenter;
-			obj.sM.yCenter=sM.yCenter;
-			obj.screenWidth = sM.screenVals.width;
-			obj.screenHeight = sM.screenVals.height;
-			obj.sM.win=sM.win;
 			
 			obj.texture = []; %we need to reset this
 
@@ -156,8 +151,11 @@ classdef textureStimulus < baseStimulus
 				obj.doMotion=false;
 			end
 			
+			obj.scale = obj.sizeOut;
+			
 			obj.inSetup = false;
 			
+			computePosition(obj);
 			setRect(obj);
 			
 		end
@@ -167,9 +165,9 @@ classdef textureStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
-			obj.sM.xCenter=obj.sM.xCenter;
-			obj.sM.yCenter=obj.sM.yCenter;			
+			obj.scale = obj.sizeOut;
 			resetTicks(obj);
+			computePosition(obj);
 			setRect(obj);
 		end
 		
@@ -178,7 +176,7 @@ classdef textureStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible == true && obj.tick > obj.delayTicks
+			if obj.isVisible && obj.tick >= obj.delayTicks
 				Screen('DrawTexture',obj.sM.win,obj.texture,[],obj.mvRect,obj.angleOut);
 				obj.tick = obj.tick + 1;
 			end
@@ -189,16 +187,17 @@ classdef textureStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(obj)
-			if obj.mouseOverride
-				getMousePosition(obj);
-				if obj.mouseValid
-					obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+			if obj.isVisible && obj.tick >= obj.delayTicks
+				if obj.mouseOverride
+					getMousePosition(obj);
+					if obj.mouseValid
+						obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+					end
+				end
+				if obj.doMotion == 1
+					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
 				end
 			end
-			if obj.doMotion == 1
-				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
-			end
-			
 		end
 		
 		% ===================================================================
@@ -208,6 +207,7 @@ classdef textureStimulus < baseStimulus
 		function reset(obj)
 			resetTicks(obj);
 			obj.texture=[];
+			obj.scale = 1;
 			obj.mvRect = [];
 			obj.dstRect = [];
 			obj.removeTmpProperties;
@@ -226,21 +226,9 @@ classdef textureStimulus < baseStimulus
 		%>  using the size value
 		% ===================================================================
 		function setRect(obj)
-			if isempty(obj.findprop('angleOut'));
-				[dx dy] = pol2cart(obj.d2r(obj.angle),obj.startPosition);
-			else
-				[dx dy] = pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
-			end
-			obj.dstRect = Screen('Rect',obj.texture);
-			obj.dstRect = ScaleRect(obj.dstRect, obj.sizeOut, obj.sizeOut);
-			obj.dstRect = CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
-			if isempty(obj.findprop('xPositionOut'));
-				obj.dstRect = OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
-			else
-				obj.dstRect = OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
-			end
+			setRect@baseStimulus(obj) %call our superclass version first
+			obj.dstRect = ScaleRect(obj.dstRect, obj.scale, obj.scale);
 			obj.mvRect = obj.dstRect;
-			setAnimationDelta(obj);
 		end
 		
 	end
@@ -249,21 +237,6 @@ classdef textureStimulus < baseStimulus
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-		%> @brief xPositionOut Set method
-		%>
-		% ===================================================================
-		function set_xPositionOut(obj,value)
-			obj.xPositionOut = value*obj.ppd;
-			if ~obj.inSetup;obj.setRect;end
-		end
 		
-		% ===================================================================
-		%> @brief yPositionOut Set method
-		%>
-		% ===================================================================
-		function set_yPositionOut(obj,value)
-			obj.yPositionOut = value*obj.ppd;
-			if ~obj.inSetup;obj.setRect;end
-		end
 	end
 end

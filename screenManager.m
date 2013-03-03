@@ -3,7 +3,7 @@
 %> screenManager manages PTB screen settings for opticka. You can set many
 %> properties of this class to control PTB screens, and use it to open and
 %> close the screen based on those properties. It also manages movie
-%> recording of the stimulus and some basic drawing commands like fixation
+%> recording of the screen buffer and some basic drawing commands like grids,
 %> spots and the hide flash trick from Mario.
 % ========================================================================
 classdef screenManager < optickaCore
@@ -632,7 +632,7 @@ classdef screenManager < optickaCore
 		
 		% ===================================================================
 		%> @brief draw a white square in top-left of screen to trigger photodiode
-		%>
+		%> 
 		%> @param colour colour of square
 		%> @return
 		% ===================================================================
@@ -665,8 +665,10 @@ classdef screenManager < optickaCore
 		%>
 		% ===================================================================
 		function delete(obj)
-			obj.close();
-			obj.salutation('DELETE method',['Screen object ' obj.fullName ' has been closed/reset...']);
+			if obj.isOpen
+				obj.close();
+				obj.salutation('DELETE method','Screen closed');
+			end
 		end
 		
 	end
@@ -680,8 +682,9 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function makeGrid(obj)
 			obj.grid=[];
-			for i=-5:5
-				obj.grid=horzcat(obj.grid,[-5 -4 -3 -2 -1 0 1 2 3 4 5;i i i i i i i i i i i]);
+			rnge=-10:10;
+			for i=rnge
+				obj.grid=horzcat(obj.grid,[rnge;ones(1,length(rnge))*i]);
 			end
 			obj.grid=obj.grid.*obj.ppd; %we use ppd so we can cache ppd_ for elsewhere
 		end

@@ -254,7 +254,7 @@ classdef gaborStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible && (obj.tick > obj.delayTicks)
+			if obj.isVisible && obj.tick >= obj.delayTicks
 				Screen('DrawTexture', obj.win, obj.texture, [],obj.mvRect,...
 					obj.angleOut, [], [], [], [], 2,...
 					[obj.driftPhase, obj.sfOut, obj.spatialConstantOut,...
@@ -268,20 +268,22 @@ classdef gaborStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(obj)
-			if obj.mouseOverride
-				getMousePosition(obj);
-				if obj.mouseValid
-					obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+			if obj.isVisible && obj.tick >= obj.delayTicks
+				if obj.mouseOverride
+					getMousePosition(obj);
+					if obj.mouseValid
+						obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+					end
 				end
-			end
-			if obj.doMotion == true
-				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
-			end
-			if obj.doDrift == true
-				obj.driftPhase = obj.driftPhase + obj.phaseIncrement;
-			end
-			if mod(obj.tick,obj.phaseCounter) == 0
-				obj.driftPhase = obj.driftPhase + obj.phaseOfReverse;
+				if obj.doMotion == true
+					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
+				end
+				if obj.doDrift == true
+					obj.driftPhase = obj.driftPhase + obj.phaseIncrement;
+				end
+				if mod(obj.tick,obj.phaseCounter) == 0
+					obj.driftPhase = obj.driftPhase + obj.phaseOfReverse;
+				end
 			end
 		end
 		

@@ -764,7 +764,7 @@ classdef runExperiment < optickaCore
 				tL.startTime = vbl;
 				
 				HideCursor;
-				%warning('off')
+				warning('off')
 				%check initial eye position
 				if obj.useEyeLink; getSample(el); end
 				
@@ -1484,7 +1484,9 @@ classdef runExperiment < optickaCore
 								if (obj.stimuli.tableChoice > 0) && (obj.stimuli.tableChoice < maxl)
 									obj.stimuli.tableChoice = obj.stimuli.tableChoice + 1;
 								end
-								fprintf('===>>> Control table is %g\n',obj.stimuli.tableChoice)
+								var=obj.stimuli.controlTable(obj.stimuli.tableChoice).variable;
+								delta=obj.stimuli.controlTable(obj.stimuli.tableChoice).delta;
+								fprintf('===>>> Set Control table %g - %s : %g\n',obj.stimuli.tableChoice,var,delta)
 							end
 							tS.keyHold = tS.totalTicks + fInc;
 						end
@@ -1498,7 +1500,9 @@ classdef runExperiment < optickaCore
 								if (obj.stimuli.tableChoice > 1) && (obj.stimuli.tableChoice <= maxl)
 									obj.stimuli.tableChoice = obj.stimuli.tableChoice - 1;
 								end
-								fprintf('===>>> Control table is %g\n',obj.stimuli.tableChoice)
+								var=obj.stimuli.controlTable(obj.stimuli.tableChoice).variable;
+								delta=obj.stimuli.controlTable(obj.stimuli.tableChoice).delta;
+								fprintf('===>>> Set Control table %g - %s : %g\n',obj.stimuli.tableChoice,var,delta)
 							end
 							tS.keyHold = tS.totalTicks + fInc;
 						end
@@ -1516,11 +1520,11 @@ classdef runExperiment < optickaCore
 								limits = obj.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
 									if strcmpi(var,'size')
-										val = obj.stimuli{stims(i)}.([var 'Out']) / obj.stimuli{stims(i)}.ppd;
+										oval = obj.stimuli{stims(i)}.([var 'Out']) / obj.stimuli{stims(i)}.ppd;
 									else
-										val = obj.stimuli{stims(i)}.([var 'Out']);
+										oval = obj.stimuli{stims(i)}.([var 'Out']);
 									end
-									val = val - delta;
+									val = oval - delta;
 									if val < limits(1)
 										val = limits(2);
 									end
@@ -1528,7 +1532,7 @@ classdef runExperiment < optickaCore
 										val = val(1);
 									end
 									obj.stimuli{stims(i)}.([var 'Out']) = val;
-									fprintf('===>>> Stimulus %g %s: %g\n',stims(i),var,val)
+									fprintf('===>>> Stimulus#%g--%s: %g (%g)\n',stims(i),var,val,oval)
 								end
 							end
 							tS.keyHold = tS.totalTicks + fInc;
@@ -1546,11 +1550,11 @@ classdef runExperiment < optickaCore
 								limits = obj.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
 									if strcmpi(var,'size')
-										val = obj.stimuli{stims(i)}.([var 'Out']) / obj.stimuli{stims(i)}.ppd;
+										oval = obj.stimuli{stims(i)}.([var 'Out']) / obj.stimuli{stims(i)}.ppd;
 									else
-										val = obj.stimuli{stims(i)}.([var 'Out']);
+										oval = obj.stimuli{stims(i)}.([var 'Out']);
 									end
-									val = val + delta;
+									val = oval + delta;
 									if val > limits(2)
 										val = limits(1);
 									end
@@ -1558,7 +1562,7 @@ classdef runExperiment < optickaCore
 										val = val(1);
 									end
 									obj.stimuli{stims(i)}.([var 'Out']) = val;
-									fprintf('===>>> Stimulus %g %s: %g\n',stims(i),var,val)
+									fprintf('===>>> Stimulus#%g--%s: %g (%g)\n',stims(i),var,val,oval)
 								end
 							end
 							tS.keyHold = tS.totalTicks + fInc;

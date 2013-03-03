@@ -54,14 +54,12 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function obj = barStimulus(varargin) 
 			%Initialise for superclass, stops a noargs error
-			if nargin == 0
-				varargin.family = 'bar';
-				varargin.colour = [1 1 1];
-				varargin.speed = 2;
-				varargin.startPosition = -2;
-			end
+			if nargin == 0;varargin.family = 'bar';end
 			
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
+			obj.colour = [1 1 1];
+			obj.speed = 2;
+			obj.startPosition = -2;
 			
 			if nargin>0
 				obj.parseArgs(varargin, obj.allowedProperties);
@@ -92,6 +90,7 @@ classdef barStimulus < baseStimulus
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
+					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
@@ -107,7 +106,7 @@ classdef barStimulus < baseStimulus
 			obj.doDrift = false;
 			obj.doFlash = false;
 			
-			obj.constructMatrix(obj.ppd) %make our matrix
+			constructMatrix(obj) %make our matrix
 			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
 			if obj.speed>0 %we need to say this needs animating
 				obj.doMotion=true;
@@ -116,7 +115,8 @@ classdef barStimulus < baseStimulus
 			end
 			
 			obj.inSetup = false;
-			obj.setRect();
+			computePosition(obj);
+			setRect(obj);
 			
 		end
 		
@@ -128,8 +128,9 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function update(obj)
 			resetTicks(obj);
-			obj.constructMatrix(obj.ppd) %make our matrix
+			constructMatrix(obj) %make our matrix
 			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
+			computePosition(obj);
 			obj.setRect();
 		end
 		
@@ -140,7 +141,7 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible && (obj.tick > obj.delayTicks)
+			if obj.isVisible && obj.tick >= obj.delayTicks
 				Screen('DrawTexture',obj.sM.win,obj.texture,[],obj.mvRect,obj.angleOut);
 			end
 			obj.tick = obj.tick + 1;
@@ -153,15 +154,17 @@ classdef barStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			if obj.mouseOverride
-				getMousePosition(obj);
-				if obj.mouseValid
-					obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+			if obj.isVisible && obj.tick >= obj.delayTicks
+				if obj.mouseOverride
+					getMousePosition(obj);
+					if obj.mouseValid
+						obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+					end
+				else
 				end
-			else
-			end
-			if obj.doMotion == 1
-				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
+				if obj.doMotion == 1
+					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
+				end
 			end
 		end
 		
@@ -176,9 +179,6 @@ classdef barStimulus < baseStimulus
 			obj.mvRect = [];
 			obj.dstRect = [];
 			obj.removeTmpProperties;
-			obj.sM.win = [];
-			obj.xCenter = [];
-			obj.yCenter = [];
 			resetTicks(obj);
 		end
 		
@@ -188,20 +188,18 @@ classdef barStimulus < baseStimulus
 		%> @param ppd use the passed pixels per degree to make a RGBA matrix of
 		%> the correct dimensions
 		% ===================================================================
-		function constructMatrix(obj,ppd)
-			if ~exist('ppd','var');ppd=obj.ppd;end
-			obj.matrix=[]; %reset the matrix
-			
+		function constructMatrix(obj)
+			obj.matrix=[]; %reset the matrix			
 			try
 				if isempty(obj.findprop('barWidthOut'));
-					bwpixels = round(obj.barWidth*ppd);
+					bwpixels = round(obj.barWidth*obj.ppd);
 				else
-					bwpixels = round(obj.barWidthOut*ppd);
+					bwpixels = round(obj.barWidthOut*obj.ppd);
 				end
 				if isempty(obj.findprop('barLengthOut'));
-					blpixels = round(obj.barLength*ppd);
+					blpixels = round(obj.barLength*obj.ppd);
 				else
-					blpixels = round(obj.barLengthOut*ppd);
+					blpixels = round(obj.barLengthOut*obj.ppd);
 				end
 				if rem(bwpixels,2);bwpixels=bwpixels+1;end
 				if rem(blpixels,2);blpixels=blpixels+1;end
@@ -254,14 +252,14 @@ classdef barStimulus < baseStimulus
 				obj.rmatrix = rmat;
 			catch %#ok<CTCH>
 				if isempty(obj.findprop('barWidthOut'));
-					bwpixels = round(obj.barWidth*ppd);
+					bwpixels = round(obj.barWidth*obj.ppd);
 				else
-					bwpixels = round(obj.barWidthOut*ppd);
+					bwpixels = round(obj.barWidthOut*obj.ppd);
 				end
 				if isempty(obj.findprop('barLengthOut'));
-					blpixels = round(obj.barLength*ppd);
+					blpixels = round(obj.barLength*obj.ppd);
 				else
-					blpixels = round(obj.barLengthOut*ppd);
+					blpixels = round(obj.barLengthOut*obj.ppd);
 				end
 				tmat = ones(blpixels,bwpixels,4); %allocate the size correctly
 				tmat(:,:,1)=ones(blpixels,bwpixels)*obj.colour(1);
@@ -283,7 +281,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function set.barLength(obj,value)
 			if ~(value > 0)
-				value = 0.2;
+				value = 0.5;
 			end
 			obj.barLength = value;
 		end
@@ -306,22 +304,17 @@ classdef barStimulus < baseStimulus
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-		% ===================================================================
-		%> @brief xPositionOut Set method
-		%>
-		% ===================================================================
-		function set_xPositionOut(obj,value)
-			obj.xPositionOut = value*obj.ppd;
-			if ~obj.inSetup; obj.setRect; end
+	
+	% ===================================================================
+	%> @brief sizeOut Set method
+	%>
+	% ===================================================================
+	function set_sizeOut(obj,value)
+		obj.sizeOut = (value*obj.ppd); %divide by 2 to get diameter
+		if ~obj.inSetup
+			obj.barLengthOut = obj.sizeOut;
 		end
-		
-		% ===================================================================
-		%> @brief yPositionOut Set method
-		%>
-		% ===================================================================
-		function set_yPositionOut(obj,value)
-			obj.yPositionOut = value*obj.ppd;
-			if ~obj.inSetup; obj.setRect; end
-		end
+	end
+	
 	end
 end

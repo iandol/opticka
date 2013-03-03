@@ -138,10 +138,10 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function setup(obj,sM)
 			
-			obj.reset; %reset it back to its initial state
+			reset(obj); %reset it back to its initial state
 			obj.inSetup = true;
 			if isempty(obj.isVisible)
-				obj.show;
+				show(obj);
 			end
 			addlistener(obj,'changeScale',@obj.calculateScale); %use an event to keep scale accurate
 			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
@@ -236,7 +236,8 @@ classdef gratingStimulus < baseStimulus
 			end
 			
 			obj.inSetup = false;
-			obj.setRect();
+			computePosition(obj);
+			setRect(obj);
 			
 		end
 		
@@ -252,7 +253,8 @@ classdef gratingStimulus < baseStimulus
 			else
 				obj.driftPhase=obj.phaseOut;
 			end
-			obj.setRect();
+			computePosition(obj);
+			setRect(obj);
 		end
 		
 		% ===================================================================
@@ -261,7 +263,7 @@ classdef gratingStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible == true && obj.tick > obj.delayTicks
+			if obj.isVisible && obj.tick >= obj.delayTicks
 				Screen('DrawTexture', obj.sM.win, obj.texture, [],obj.mvRect,...
 					obj.angleOut, [], [], [], [], obj.rotateMode,...
 					[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
@@ -274,20 +276,22 @@ classdef gratingStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(obj)
-			if obj.mouseOverride
-				getMousePosition(obj);
-				if obj.mouseValid
-					obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+			if obj.isVisible && obj.tick >= obj.delayTicks
+				if obj.mouseOverride
+					getMousePosition(obj);
+					if obj.mouseValid
+						obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+					end
 				end
-			end
-			if obj.doMotion == true
-				obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
-			end
-			if obj.doDrift == true
-				obj.driftPhase = obj.driftPhase + obj.phaseIncrement;
-			end
-			if mod(obj.tick,obj.phaseCounter) == 0
-				obj.driftPhase = obj.driftPhase + obj.phaseOfReverse;
+				if obj.doMotion == true
+					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
+				end
+				if obj.doDrift == true
+					obj.driftPhase = obj.driftPhase + obj.phaseIncrement;
+				end
+				if mod(obj.tick,obj.phaseCounter) == 0
+					obj.driftPhase = obj.driftPhase + obj.phaseOfReverse;
+				end
 			end
 		end
 		
@@ -439,24 +443,6 @@ classdef gratingStimulus < baseStimulus
 		function set_sizeOut(obj,value)
 			obj.sizeOut = value*obj.ppd;
 			notify(obj,'changeScale');
-		end
-		
-		% ===================================================================
-		%> @brief xPositionOut Set method
-		%>
-		% ===================================================================
-		function set_xPositionOut(obj,value)
-			obj.xPositionOut = value*obj.ppd;
-			if ~isempty(obj.texture);obj.setRect;end
-		end
-		
-		% ===================================================================
-		%> @brief yPositionOut Set method
-		%>
-		% ===================================================================
-		function set_yPositionOut(obj,value)
-			obj.yPositionOut = value*obj.ppd;
-			if ~isempty(obj.texture);obj.setRect;end
 		end
 		
 	end

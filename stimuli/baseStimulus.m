@@ -76,8 +76,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		xOut = 0
 		%> computed Y position for stimuli that don't use rects
 		yOut = 0
-		%> the tick at which last mouse position was checked
-		mouseTick = 0
 		%> is mouse position within screen co-ordinates?
 		mouseValid = false
 		%> mouse X position
@@ -96,7 +94,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dY_
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase='name|fullName|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|paths|uuid|tick';
+		ignorePropertiesBase='handles|ppd|sM|name|fullName|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|paths|uuid|tick';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -125,8 +123,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if nargin == 0; varargin.name = 'baseStimulus'; end
 			obj=obj@optickaCore(varargin); %superclass constructor
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
-			if isempty(obj.sM)
-				obj.sM = screenManager('name','default screen');
+			if isempty(obj.sM) %add a default screenManager, overwritten on setup
+				obj.sM = screenManager('name','default');
 				obj.ppd = obj.sM.ppd;
 			end
 		end
@@ -138,14 +136,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function value = get.colour(obj)
 			len=length(obj.colour);
 			if len == 4 || len == 3
-				value = [obj.colour(1:3) obj.alpha];
+				value = [obj.colour(1:3) obj.alpha]; %force our alpha to override
 			elseif len == 1
-				value = [obj.colour obj.colour obj.colour obj.alpha];
+				value = [obj.colour obj.colour obj.colour obj.alpha]; %construct RGBA
 			else
 				if isa(obj,'gaborStimulus') || isa(obj,'gratingStimulus')
-					value = [];
+					value = []; %return no colour to procedural gratings
 				else
-					value = [1 1 1 obj.alpha];
+					value = [1 1 1 obj.alpha]; %return white for everything else
 				end
 			end
 		end
@@ -156,7 +154,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function value = get.delta(obj)
 			if isempty(obj.findprop('speedOut'));
-				value = (obj.speed * obj.sM.ppd) * obj.sM.screenVals.ifi;
+				value = (obj.speed * obj.ppd) * obj.sM.screenVals.ifi;
 			else
 				value = (obj.speedOut * obj.ppd) * obj.sM.screenVals.ifi;
 			end
@@ -223,7 +221,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function resetTicks(obj)
-			if max(obj.delayTime) > 0
+			global mouseTick %shared across all stimuli
+			if max(obj.delayTime) > 0 %delay display a number of frames 
 				if length(obj.delayTime) == 1
 					obj.delayTicks = round(obj.delayTime/obj.sM.screenVals.ifi);
 				elseif length(obj.delayTime) == 2
@@ -233,15 +232,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 			else
 				obj.delayTicks = 0;
 			end
+			mouseTick = 1;
 			if obj.mouseOverride
 				getMousePosition(obj);
-				if obj.mouseValid
-					obj.mouseTick = 1;
-				else
-					obj.mouseTick = 0;
-				end
 			end
-			obj.tick = 1; 
+			obj.tick = 0; 
 		end
 		
 		% ===================================================================
@@ -253,14 +248,18 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> PTB screen (useful for mouse override positioning for stimuli)
 		% ===================================================================
 		function getMousePosition(obj)
+			global mouseTick
 			obj.mouseValid = false;
-			if obj.tick > obj.mouseTick
-				[obj.mouseX,obj.mouseY] = GetMouse(obj.win);
-				if obj.mouseX <= obj.sM.screenVals.width && obj.mouseY <= obj.sM.screenVals.height
-					obj.mouseValid = true;
+			if obj.tick > mouseTick
+				if isa(obj.sM,'screenManager') && obj.sM.isOpen
+					[obj.mouseX,obj.mouseY] = GetMouse(obj.sM.win);
+					if obj.mouseX <= obj.sM.screenVals.width && obj.mouseY <= obj.sM.screenVals.height
+						obj.mouseValid = true;
+					end
+				else
+					[obj.mouseX,obj.mouseY] = GetMouse;
 				end
-				obj.mouseTick = obj.tick;
-				%fprintf('**TICK %g PASSED > valid = %g | x: %g %g  y: %g %g\n',obj.mouseTick,obj.mouseValid,obj.mouseX,obj.screenWidth,obj.mouseY,obj.screenHeight);
+				mouseTick = obj.tick; %set global so no other object with same tick number can call this again
 			end
 		end
 		
@@ -269,58 +268,67 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function run(obj,benchmark,runtime)
-			if ~exist('benchmark','var') || isempty(benchmark)
-				benchmark=false;
-			end
-			if ~exist('runtime','var') || isempty(runtime)
-				runtime = 2; %seconds to run
-			end
-			
-			s = screenManager('verbose',false,'blend',true,'screen',0,...
-				'bitDepth','8bit','debug',false,...
-				'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
-			if benchmark
-				s.windowed = [];
-			else
-				s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2];
-				%s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
-			end
-			open(s); %open PTB screen
-			setup(obj,s); %setup our stimulus object
-			draw(obj); %draw stimulus
-			drawGrid(s); %draw +-5 degree dot grid
-			drawScreenCenter(s); %centre spot
-			if benchmark; 
-				Screen('DrawText', s.win, 'Benchmark, screen will not update properly, see FPS on command window at end.', 5,5,[0 0 0]);
-			else
-				Screen('DrawText', s.win, 'Stimulus unanimated for 1 second, animated for 2, then unanimated for a final second...', 5,5,[0 0 0]);
-			end
-			Screen('Flip',s.win);
-			WaitSecs(1);
-			if benchmark; b=GetSecs; end
-			for i = 1:(s.screenVals.fps*runtime) %should be 2 seconds worth of flips
+			try
+				if ~exist('benchmark','var') || isempty(benchmark)
+					benchmark=false;
+				end
+				if ~exist('runtime','var') || isempty(runtime)
+					runtime = 2; %seconds to run
+				end
+
+				s = screenManager('verbose',false,'blend',true,'screen',0,...
+					'bitDepth','8bit','debug',false,...
+					'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+				if benchmark
+					s.windowed = [];
+				else
+					s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2];
+					%s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
+				end
+				open(s); %open PTB screen
+				setup(obj,s); %setup our stimulus object
 				draw(obj); %draw stimulus
 				drawGrid(s); %draw +-5 degree dot grid
 				drawScreenCenter(s); %centre spot
-				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
-				animate(obj); %animate stimulus, will be seen on next draw
-				if benchmark
-					Screen('Flip',s.win,0,2,2);
+				if benchmark; 
+					Screen('DrawText', s.win, 'Benchmark, screen will not update properly, see FPS on command window at end.', 5,5,[0 0 0]);
 				else
-					Screen('Flip',s.win); %flip the buffer
+					Screen('DrawText', s.win, 'Stimulus unanimated for 1 second, animated for 2, then unanimated for a final second...', 5,5,[0 0 0]);
 				end
+				Screen('Flip',s.win);
+				WaitSecs(1);
+				if benchmark; b=GetSecs; end
+				for i = 1:(s.screenVals.fps*runtime) %should be 2 seconds worth of flips
+					draw(obj); %draw stimulus
+					drawGrid(s); %draw +-5 degree dot grid
+					drawScreenCenter(s); %centre spot
+					Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
+					animate(obj); %animate stimulus, will be seen on next draw
+					if benchmark
+						Screen('Flip',s.win,0,2,2);
+					else
+						Screen('Flip',s.win); %flip the buffer
+					end
+				end
+				if benchmark; bb=GetSecs; end
+				WaitSecs(1);
+				Screen('Flip',s.win);
+				WaitSecs(0.25);
+				if benchmark
+					fps = (s.screenVals.fps*runtime) / (bb-b);
+					fprintf('\n------> SPEED = %g fps\n', fps);
+				end
+				close(s); %close screen
+				clear s fps benchmark runtime b bb i; %clear up a bit
+				reset(obj); %reset our stimulus ready for use again
+			catch ME
+				if exist('s','var')
+					close(s);
+				end
+				clear s fps benchmark runtime b bb i; %clear up a bit
+				reset(obj); %reset our stimulus ready for use again
+				rethrow(ME)				
 			end
-			if benchmark; bb=GetSecs; end
-			WaitSecs(1);
-			Screen('Flip',s.win);
-			WaitSecs(0.25);
-			if benchmark
-				fps = (s.screenVals.fps*runtime) / (bb-b);
-				fprintf('\n------> SPEED = %g fps\n', fps);
-			end
-			close(s); %close screen
-			clear s fps benchmark runtime b bb i; %clear up a bit
-			reset(obj); %reset our stimulus ready for use again
 		end
 		
 		% ===================================================================
@@ -643,8 +651,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function [dX dY] = updatePosition(delta,angle)
 			dX = delta .* cos(baseStimulus.d2r(angle));
 			dY = delta .* sin(baseStimulus.d2r(angle));
-			%if abs(dX) < 1e-6; dX = 0; end
-			%if abs(dY) < 1e-6; dY = 0; end
 		end
 		
 	end%---END STATIC METHODS---%
@@ -655,32 +661,25 @@ classdef baseStimulus < optickaCore & dynamicprops
 		
 		% ===================================================================
 		%> @brief setRect
-		%>  setRect makes the PsychRect based on the texture and screen values
+		%> setRect makes the PsychRect based on the texture and screen
+		%> values, you should call computePosition() first to get xOut and
+		%> yOut
 		% ===================================================================
 		function setRect(obj)
-			obj.dstRect=Screen('Rect',obj.texture);
-			if obj.mouseOverride && obj.mouseValid
+			if ~isempty(obj.texture)
+				obj.dstRect=Screen('Rect',obj.texture);
+				if obj.mouseOverride && obj.mouseValid
 					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
-			else
-				if isempty(obj.findprop('angleOut'));
-					[dx, dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
 				else
-					[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
+					obj.dstRect=CenterRectOnPointd(obj.dstRect, obj.xOut, obj.yOut);
 				end
-				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
-				if isempty(obj.findprop('xPositionOut'));
-					obj.dstRect=OffsetRect(obj.dstRect,obj.xPosition*obj.ppd,obj.yPosition*obj.ppd);
-				else
-					obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(dx*obj.ppd),obj.yPositionOut+(dy*obj.ppd));
-				end
+				obj.mvRect=obj.dstRect;
 			end
-			obj.mvRect=obj.dstRect;
-			obj.setAnimationDelta();
 		end
 		
 		% ===================================================================
 		%> @brief setAnimationDelta
-		%> setAnimationDelta for performance we can't use get methods for dX dY and
+		%> setAnimationDelta for performance better not to use get methods for dX dY and
 		%> delta during animation, so we have to cache these properties to private copies so that
 		%> when we call the animate method, it uses the cached versions not the
 		%> public versions. This method simply copies the properties to their cached
@@ -697,13 +696,36 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function computePosition(obj)
-			if isempty(obj.findprop('angleOut'));
-				[dx, dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+			if obj.mouseOverride && obj.mouseValid
+				obj.xOut = obj.mouseX; obj.yOut = obj.mouseY;
 			else
-				[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);
+				if isempty(obj.findprop('angleOut'));
+					[dx, dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+				else
+					[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);
+				end
+				obj.xOut = obj.xPositionOut + (dx * obj.ppd) + obj.sM.xCenter;
+				obj.yOut = obj.yPositionOut + (dy * obj.ppd) + obj.sM.yCenter;
 			end
-			obj.xOut = obj.xPositionOut + (dx * obj.ppd) + obj.sM.xCenter;
-			obj.yOut = obj.yPositionOut + (dy * obj.ppd) + obj.sM.yCenter;
+			setAnimationDelta(obj);
+		end
+		
+		% ===================================================================
+		%> @brief xPositionOut Set method
+		%>
+		% ===================================================================
+		function set_xPositionOut(obj,value)
+			obj.xPositionOut = value*obj.ppd;
+			if ~obj.inSetup; obj.setRect; end
+		end
+		
+		% ===================================================================
+		%> @brief yPositionOut Set method
+		%>
+		% ===================================================================
+		function set_yPositionOut(obj,value)
+			obj.yPositionOut = value*obj.ppd;
+			if ~obj.inSetup; obj.setRect; end
 		end
 		
 		% ===================================================================

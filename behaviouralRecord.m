@@ -144,6 +144,8 @@ classdef behaviouralRecord < optickaCore
 				end
 			elseif strcmpi(sM.currentName,'breakfix')
 				obj.values(end+1) = 0;
+			else
+				obj.values(end+1) = 0;
 			end
 			
 			hitn = sum(obj.values);

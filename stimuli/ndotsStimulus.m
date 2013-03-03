@@ -183,10 +183,7 @@ classdef ndotsStimulus < baseStimulus
 			obj.doDrift = [];
 			obj.doFlash = [];
 			
-			if isempty(obj.findprop('xTmp'));p=obj.addprop('xTmp');p.Transient = true;end
-			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
-			obj.xTmp = obj.xPositionOut; %xTmp and yTmp are temporary position stores.
-			obj.yTmp = obj.yPositionOut;
+			computePosition(obj); %do it now so we can give mask a position
 			
 			%build the mask
 			if obj.mask == true
@@ -199,7 +196,7 @@ classdef ndotsStimulus < baseStimulus
 				bg = [obj.sM.backgroundColour(1:3) 1];
 				obj.maskTexture = Screen('OpenOffscreenwindow', obj.sM.win, bg, wrect);
 				Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
-				obj.maskRect = CenterRectOnPointd(wrect,obj.xPositionOut,obj.yPositionOut);
+				obj.maskRect = CenterRectOnPointd(wrect,obj.xOut,obj.yOut);
 				if obj.maskSmoothing > 0
 					if ~rem(obj.maskSmoothing, 2)
 						obj.maskSmoothing = obj.maskSmoothing + 1;
@@ -222,8 +219,8 @@ classdef ndotsStimulus < baseStimulus
 			end
 			
 			obj.inSetup = false;
-			obj.initialiseDots();
-			obj.computeNextFrame();
+			initialiseDots(obj);
+			computeNextFrame(obj);
 			
 		end
 		
@@ -232,8 +229,9 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(obj)
-			obj.initialiseDots();
-			obj.computeNextFrame();
+			computePosition(obj);
+			initialiseDots(obj);
+			computeNextFrame(obj);
 			resetTicks(obj);
 		end
 		
@@ -242,7 +240,7 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible == true && obj.tick > obj.delayTicks
+			if obj.isVisible && obj.tick >= obj.delayTicks
 				if obj.mask == true
 					Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
 					Screen('DrawDots', ...
@@ -317,10 +315,8 @@ classdef ndotsStimulus < baseStimulus
 			
 			% account for pixel real estate
 			obj.pixelScale = fieldPixels;
-			obj.pixelOrigin(1) = obj.sM.winRect(3)/2 ...
-				+ (obj.xPosition * obj.ppd) - fieldPixels/2;
-			obj.pixelOrigin(2) = obj.sM.winRect(4)/2 ...
-				- (obj.yPosition * obj.ppd) - fieldPixels/2;
+			obj.pixelOrigin(1) = obj.sM.xCenter + obj.xPositionOut - fieldPixels/2;
+			obj.pixelOrigin(2) = obj.sM.yCenter	- obj.yPositionOut - fieldPixels/2;
 			
 			% 			obj.maskSourceRect = [0 0, maskPixels, maskPixels];
 			% 			obj.maskDestinationRect = obj.maskSourceRect ...
@@ -345,7 +341,7 @@ classdef ndotsStimulus < baseStimulus
 			obj.normalizedXY = rand(2, obj.nDots);
 			
 			if obj.mask == true
-				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xPositionOut,obj.yPositionOut);
+				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xOut,obj.yOut);
 			end
 		end
 		
@@ -481,22 +477,6 @@ classdef ndotsStimulus < baseStimulus
 		% ===================================================================
 		function set_dotSizeOut(obj,value)
 			obj.dotSizeOut = value * obj.ppd;
-		end
-		
-		% ===================================================================
-		%> @brief xPositionOut Set method
-		%>
-		% ===================================================================
-		function set_xPositionOut(obj,value)
-			obj.xPositionOut = obj.xCenter + (value * obj.ppd);
-		end
-		
-		% ===================================================================
-		%> @brief yPositionOut Set method
-		%>
-		% ===================================================================
-		function set_yPositionOut(obj,value)
-			obj.yPositionOut = obj.yCenter + (value * obj.ppd);
 		end
 		
 	end

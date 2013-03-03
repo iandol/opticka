@@ -162,11 +162,6 @@ classdef dotsStimulus < baseStimulus
 			obj.doDrift = false;
 			obj.doFlash = false;
 			
-			if isempty(obj.findprop('xTmp'));p=obj.addprop('xTmp');p.Transient = true;end
-			if isempty(obj.findprop('yTmp'));p=obj.addprop('yTmp');p.Transient = true;end
-			obj.xTmp = obj.xPositionOut; %xTmp and yTmp are temporary position stores.
-			obj.yTmp = obj.yPositionOut;
-			
 			%build the mask
 			if obj.mask == true
 				if isempty(obj.maskColour)
@@ -189,7 +184,7 @@ classdef dotsStimulus < baseStimulus
 					else
 						p = mfilename('fullpath');
 						p = fileparts(p);
-						ktmp = load([p filesep 'gaussian52kernel.mat']); %'gaussian73kernel.mat''disk5kernel.mat'
+						ktmp = load([p filesep 'gaussian52kernel.mat']); %'gaussian73kernel.mat' 'disk5kernel.mat'
 						obj.kernel = ktmp.kernel;
 						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
 						obj.salutation('No fspecial, had to use precompiled kernel');
@@ -231,7 +226,8 @@ classdef dotsStimulus < baseStimulus
 			end
 			
 			obj.inSetup = false;
-			obj.updateDots; %runExperiment will call update
+			computePosition(obj);
+			updateDots(obj);
 			
 		end
 		
@@ -242,7 +238,8 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function update(obj)
 			resetTicks(obj);
-			obj.updateDots;
+			computePosition(obj);
+			updateDots(obj);
 		end
 		
 		% ===================================================================
@@ -250,16 +247,16 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible == true && obj.tick > obj.delayTicks
+			if obj.isVisible && obj.tick >= obj.delayTicks
 				if obj.mask == true
 					Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
 					Screen('DrawDots', obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,...
-						[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
+						[obj.xOut obj.yOut],obj.dotTypeOut);
 					Screen('DrawTexture', obj.sM.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
 					Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
 				else
 					Screen('DrawDots',obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,...
-						[obj.xPositionOut obj.yPositionOut],obj.dotTypeOut);
+						[obj.xOut obj.yOut],obj.dotTypeOut);
 				end
 				obj.tick = obj.tick + 1;
 			end
@@ -348,7 +345,7 @@ classdef dotsStimulus < baseStimulus
 			[obj.dxs, obj.dys] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
 			obj.dxdy=[obj.dxs';obj.dys'];
 			if obj.mask == true
-				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xPositionOut,obj.yPositionOut);
+				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xOut,obj.yOut);
 			end
 		end
 		
@@ -381,21 +378,6 @@ classdef dotsStimulus < baseStimulus
 			obj.densityOut = value;
 			obj.nDots; %remake our cache
 		end
-		
-		% ===================================================================
-		%> @brief xPositionOut Set method
-		%>
-		% ===================================================================
-		function set_xPositionOut(obj,value)
-			obj.xPositionOut = obj.sM.xCenter + (value * obj.ppd);
-		end
-		
-		% ===================================================================
-		%> @brief yPositionOut Set method
-		%>
-		% ===================================================================
-		function set_yPositionOut(obj,value)
-			obj.yPositionOut = obj.sM.yCenter + (value * obj.ppd);
-		end
+
 	end
 end
