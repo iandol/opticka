@@ -304,7 +304,7 @@ classdef opticka < optickaCore
 					obj.r.stateInfoFile = obj.paths.stateInfoFile;
 				end
 				
-				obj.getStateInfo();
+				getStateInfo(obj);
 
 				set(obj.h.OKVarList,'String','');
 				set(obj.h.OKStimList,'String','');
@@ -327,7 +327,7 @@ classdef opticka < optickaCore
 		
 		% ===================================================================
 		%> @brief getScreenVals
-		%> Gets the settings from th UI and updates our runExperiment object
+		%> Gets the settings from the UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
 		function getScreenVals(obj)
@@ -1034,7 +1034,7 @@ classdef opticka < optickaCore
 				s = obj.r.stimuli{i};
 				switch s.family
 					case 'grating'
-						if isempty(s.name);tstr = ['grating' num2str(i) ':'];else;tstr = [s.name ':'];end
+						tstr = [num2str(i) '.' s.name ': '];
 						tstr = [tstr ' x=' num2str(s.xPosition)];
 						tstr = [tstr ' y=' num2str(s.yPosition)];
 						tstr = [tstr ' c=' num2str(s.contrast)];
@@ -1046,7 +1046,7 @@ classdef opticka < optickaCore
 						tstr = [tstr ' sg=' num2str(s.sigma)];
 						str{i} = tstr;
 					case 'gabor'
-						if isempty(s.name);tstr = ['gabor' num2str(i) ':'];else;tstr = [s.name ':'];end
+						tstr = [num2str(i) '.' s.name ': '];
 						tstr = [tstr ' x=' num2str(s.xPosition)];
 						tstr = [tstr ' y=' num2str(s.yPosition)];
 						tstr = [tstr ' c=' num2str(s.contrast)];
@@ -1057,11 +1057,10 @@ classdef opticka < optickaCore
 						tstr = [tstr ' p=' num2str(s.phase)];
 						str{i} = tstr;
 					case 'bar'
-						
 						x=s.xPosition;
 						y=s.yPosition;
 						a=s.angle;
-						str{i} = [s.name ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
+						str{i} = [num2str(i) '.' s.name ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
 					case 'dots'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1072,7 +1071,7 @@ classdef opticka < optickaCore
 						sp=s.speed;
 						k=s.kill;
 						ct=s.colourType;
-						str{i} = [s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn) ' sp=' num2str(sp) ' k=' num2str(k) ' ct=' ct];
+						str{i} = [num2str(i) '.' s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn) ' sp=' num2str(sp) ' k=' num2str(k) ' ct=' ct];
 					case 'ndots'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1080,14 +1079,14 @@ classdef opticka < optickaCore
 						a=s.angle;
 						c=s.coherence;
 						dn=s.density;
-						str{i} = [s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn)];
+						str{i} = [num2str(i) '.' s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn)];
 					case 'spot'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
 						c=s.contrast;
 						a=s.angle;
-						str{i} = [s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' ang=' num2str(a)];
+						str{i} = [num2str(i) '.' s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' ang=' num2str(a)];
 					case 'texture'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1095,12 +1094,12 @@ classdef opticka < optickaCore
 						c=s.contrast;
 						sp=s.speed;
 						p=s.fileName;
-						str{i} = [s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
+						str{i} = [num2str(i) '.' s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
 					otherwise
 						x=s.xPosition;
 						y=s.yPosition;
 						a=s.angle;
-						str{i} = ['Unknown StimType ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
+						str{i} = [num2str(i) '.UnknownType: ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
 				end
 			end
 			if isempty(pos) || pos > length(str)
@@ -1111,7 +1110,7 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief getstring
+		%> @brief Refresh the Variable list in the UI
 		%> 
 		%> @param 
 		% ===================================================================
@@ -1152,7 +1151,7 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief find the value in a cell string list
+		%> @brief Event triggered on abort
 		%> 
 		%> @param 
 		% ===================================================================
@@ -1164,7 +1163,7 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief find the value in a cell string list
+		%> @brief Event trigger on end
 		%> 
 		%> @param 
 		% ===================================================================
@@ -1173,7 +1172,7 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief find the value in a cell string list
+		%> @brief Event triggered on get info
 		%> 
 		%> @param 
 		% ===================================================================

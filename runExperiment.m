@@ -1517,6 +1517,8 @@ classdef runExperiment < optickaCore
 								var = obj.stimuli.controlTable(choice).variable;
 								delta = obj.stimuli.controlTable(choice).delta;
 								stims = obj.stimuli.controlTable(choice).stimuli;
+								thisstim = obj.stimuli.stimulusSets{obj.stimuli.setChoice}; %what stimulus is visible?
+								stims = intersect(stims,thisstim); %only change the visible stimulus
 								limits = obj.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
 									if strcmpi(var,'size')
@@ -1547,6 +1549,8 @@ classdef runExperiment < optickaCore
 								var = obj.stimuli.controlTable(choice).variable;
 								delta = obj.stimuli.controlTable(choice).delta;
 								stims = obj.stimuli.controlTable(choice).stimuli;
+								thisstim = obj.stimuli.stimulusSets{obj.stimuli.setChoice}; %what stimulus is visible?
+								stims = intersect(stims,thisstim); %only change the visible stimulus
 								limits = obj.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
 									if strcmpi(var,'size')
@@ -1573,6 +1577,7 @@ classdef runExperiment < optickaCore
 								obj.stimuli.setChoice = round(obj.stimuli.setChoice - 1);
 								obj.stimuli.showSet();
 							end
+							fprintf('===>>> Stimulus Set: #%g | Stimuli: %s\n',obj.stimuli.setChoice, num2str(obj.stimuli.stimulusSets{obj.stimuli.setChoice}))
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '.>'
@@ -1581,6 +1586,7 @@ classdef runExperiment < optickaCore
 								obj.stimuli.setChoice = obj.stimuli.setChoice + 1;
 								obj.stimuli.showSet();
 							end
+							fprintf('===>>> Stimulus Set: #%g | Stimuli: %s\n',obj.stimuli.setChoice, num2str(obj.stimuli.stimulusSets{obj.stimuli.setChoice}))
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case 'r'
@@ -1588,25 +1594,25 @@ classdef runExperiment < optickaCore
 					case '=+'
 						if tS.totalTicks > tS.keyHold
 							obj.screen.screenXOffset = obj.screen.screenXOffset + 1;
-							fprintf('>>Screen X Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
+							fprintf('===>>> Screen X Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '-_'
 						if tS.totalTicks > tS.keyHold
 							obj.screen.screenXOffset = obj.screen.screenXOffset - 1;
-							fprintf('>>Screen X Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
+							fprintf('===>>> Screen X Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '[{'
 						if tS.totalTicks > tS.keyHold
 							obj.screen.screenYOffset = obj.screen.screenYOffset - 1;
-							fprintf('>>Screen Y Center: %g deg / %g pixels\n',obj.screen.screenYOffset,obj.screen.yCenter);
+							fprintf('===>>> Screen Y Center: %g deg / %g pixels\n',obj.screen.screenYOffset,obj.screen.yCenter);
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case ']}'
 						if tS.totalTicks > tS.keyHold
 							obj.screen.screenYOffset = obj.screen.screenYOffset + 1;
-							fprintf('>>Screen Y Center: %g deg / %g pixels\n',obj.screen.screenYOffset,obj.screen.yCenter);
+							fprintf('===>>> Screen Y Center: %g deg / %g pixels\n',obj.screen.screenYOffset,obj.screen.yCenter);
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case 'k'
@@ -1619,7 +1625,7 @@ classdef runExperiment < optickaCore
 									tout = t.time - 0.25;
 									if min(tout) >= 0.1
 										obj.stateMachine.editStateByName(stateName,'time',tout);
-										fprintf('>>Decrease %s time: %g:%g\n',t.name, min(tout),max(tout));
+										fprintf('===>>> Decrease %s time: %g:%g\n',t.name, min(tout),max(tout));
 									end
 								end
 							end
@@ -1634,7 +1640,7 @@ classdef runExperiment < optickaCore
 								if isfield(t,'time')
 									tout = t.time + 0.25;
 									obj.stateMachine.editStateByName(stateName,'time',tout);
-									fprintf('>>Increase %s time: %g:%g\n',t.name, min(tout),max(tout));
+									fprintf('===>>> Increase %s time: %g:%g\n',t.name, min(tout),max(tout));
 								end
 								
 							end
@@ -1642,19 +1648,36 @@ classdef runExperiment < optickaCore
 						end
 					case 'm'
 						if tS.totalTicks > tS.keyHold
-							forceTransition(obj.stateMachine, 'calibrate');
+							fprintf('===>>> Calibrate ENGAGED!\n');
+							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
 							tS.keyHold = tS.totalTicks + fInc;
+							forceTransition(obj.stateMachine, 'calibrate');	
+							return
 						end						
 					case 'f'
 						if tS.totalTicks > tS.keyHold
+							fprintf('===>>> Flash ENGAGED!\n');
+							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
+							tS.keyHold = tS.totalTicks + fInc;
 							forceTransition(obj.stateMachine, 'flash');
-							tS.keyHold = tS.totalTicks + fInc;	
+							return
 						end						
 					case 'o'
 						if tS.totalTicks > tS.keyHold
-							forceTransition(obj.stateMachine, 'override');
+							fprintf('===>>> Override ENGAGED!\n');
+							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
 							tS.keyHold = tS.totalTicks + fInc;
-						end						
+							forceTransition(obj.stateMachine, 'override');
+							return
+						end	
+					case 'g'
+						if tS.totalTicks > tS.keyHold
+							fprintf('===>>> grid ENGAGED!\n');
+							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
+							tS.keyHold = tS.totalTicks + fInc;
+							forceTransition(obj.stateMachine, 'showgrid');
+							return
+						end		
 					case 'z' 
 						if tS.totalTicks > tS.keyHold
 							obj.eyeLink.fixationInitTime = obj.eyeLink.fixationInitTime - 0.1;
@@ -1704,11 +1727,11 @@ classdef runExperiment < optickaCore
 						if tS.totalTicks > tS.keyHold
 							if rem(tS.pauseToggle,2)==0
 								forceTransition(obj.stateMachine, 'pause');
-								fprintf('--->>> PAUSE ENGAGED!\n');
+								fprintf('===>>> PAUSE ENGAGED!\n');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							else
 								forceTransition(obj.stateMachine, 'prestimulus');
-								fprintf('--->>> PAUSE OFF!\n');
+								fprintf('===>>> PAUSE OFF!\n');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							end
 							tS.keyHold = tS.totalTicks + fInc;

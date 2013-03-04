@@ -129,6 +129,7 @@ classdef barStimulus < baseStimulus
 		function update(obj)
 			resetTicks(obj);
 			constructMatrix(obj) %make our matrix
+			try;Screen('Close',obj.texture);end
 			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
 			computePosition(obj);
 			obj.setRect();
@@ -175,6 +176,12 @@ classdef barStimulus < baseStimulus
 		%> @return
 		% ===================================================================
 		function reset(obj)
+			try
+				Screen('Close',obj.texture)
+			catch ME
+				ple(ME)
+				rethrow(ME)
+			end
 			obj.texture=[];
 			obj.mvRect = [];
 			obj.dstRect = [];

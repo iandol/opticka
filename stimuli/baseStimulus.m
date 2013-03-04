@@ -5,7 +5,7 @@
 %> descendant, allowing for the temporary run variables used, which get appended "name"Out, i.e.
 %> speed is duplicated to a dymanic property called speedOut; it is the dynamic propertiy which is
 %> used during runtime, and whose values are converted from definition units like degrees to pixel
-%> values that PTB uses.
+%> values that PTB uses. The transient copies are generated on setup and removed on reset.
 %>
 % ========================================================================
 classdef baseStimulus < optickaCore & dynamicprops
