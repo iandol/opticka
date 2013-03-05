@@ -1527,11 +1527,11 @@ classdef runExperiment < optickaCore
 										oval = obj.stimuli{stims(i)}.([var 'Out']);
 									end
 									val = oval - delta;
-									if val < limits(1)
-										val = limits(2);
+									if min(val) < limits(1)
+										val(val < limits(1)) = limits(2);
 									end
-									if length(val) > 1
-										val = val(1);
+									if length(val) > length(oval)
+										val = val(1:length(oval));
 									end
 									obj.stimuli{stims(i)}.([var 'Out']) = val;
 									fprintf('===>>> Stimulus#%g--%s: %g (%g)\n',stims(i),var,val,oval)
@@ -1559,11 +1559,11 @@ classdef runExperiment < optickaCore
 										oval = obj.stimuli{stims(i)}.([var 'Out']);
 									end
 									val = oval + delta;
-									if val > limits(2)
-										val = limits(1);
+									if max(val) > limits(2)
+										val(val > limits(2)) = limits(1);
 									end
-									if length(val) > 1
-										val = val(1);
+									if length(val) > length(oval)
+										val = val(1:length(oval));
 									end
 									obj.stimuli{stims(i)}.([var 'Out']) = val;
 									fprintf('===>>> Stimulus#%g--%s: %g (%g)\n',stims(i),var,val,oval)

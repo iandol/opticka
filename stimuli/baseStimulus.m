@@ -269,6 +269,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function run(obj,benchmark,runtime)
 			try
+				warning off
 				if ~exist('benchmark','var') || isempty(benchmark)
 					benchmark=false;
 				end
@@ -321,10 +322,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 				close(s); %close screen
 				clear s fps benchmark runtime b bb i; %clear up a bit
 				reset(obj); %reset our stimulus ready for use again
+				warning on
 			catch ME
 				if exist('s','var')
 					close(s);
 				end
+				warning on
 				clear s fps benchmark runtime b bb i; %clear up a bit
 				reset(obj); %reset our stimulus ready for use again
 				rethrow(ME)				
@@ -558,7 +561,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 			
 		% ===================================================================
-		%> @brief read values from a GUI properties panel for this object
+		%> @brief show GUI properties panel for this object
 		%>
 		% ===================================================================
 		function showPanel(obj)
@@ -570,7 +573,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief read values from a GUI properties panel for this object
+		%> @brief hide GUI properties panel for this object
 		%>
 		% ===================================================================
 		function hidePanel(obj)
@@ -582,7 +585,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief read values from a GUI properties panel for this object
+		%> @brief close GUI panel for this object
 		%>
 		% ===================================================================
 		function closePanel(obj)

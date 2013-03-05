@@ -35,7 +35,7 @@ classdef opticka < optickaCore
 		%> used to sanitise passed values on construction
 		allowedProperties='verbose'
 		%> which UI settings should be saved locally to the machine?
-		uiPrefsList = {'OKOmniplexIP','OKMonitorDistance','OKPixelsPerCm',...
+		uiPrefsList = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth'};
 	end
 	
@@ -353,9 +353,9 @@ classdef opticka < optickaCore
 			obj.r.screen.screen = obj.gv(obj.h.OKSelectScreen)-1;
 			
 			obj.r.screen.distance = obj.gd(obj.h.OKMonitorDistance);
-			obj.r.screen.pixelsPerCm = obj.gd(obj.h.OKPixelsPerCm);
-			obj.r.screen.screenXOffset = obj.gd(obj.h.OKXCenter);
-			obj.r.screen.screenYOffset = obj.gd(obj.h.OKYCenter);
+			obj.r.screen.pixelsPerCm = obj.gd(obj.h.OKpixelsPerCm);
+			obj.r.screen.screenXOffset = obj.gd(obj.h.OKscreenXOffset);
+			obj.r.screen.screenYOffset = obj.gd(obj.h.OKscreenYOffset);
 			
 			value = obj.gv(obj.h.OKGLSrc);
 			obj.r.screen.srcMode = obj.gs(obj.h.OKGLSrc, value);
@@ -444,6 +444,7 @@ classdef opticka < optickaCore
 				end
 				fclose(fid);
 				set(obj.h.OKTrainingText,'String',o.store.statetext);
+				set(obj.h.OKTrainingFileName,'String',obj.r.stateInfoFile);
 			end
 		end
 		
@@ -458,9 +459,19 @@ classdef opticka < optickaCore
 					obj.r.stimuli = metaStimulus();
 				end
 			end
-			if isfield(obj.store,'visibleStimulus');
-					closePanel(obj.r.stimuli{v})
+			fn = fieldnames(obj.store);
+			for i = 1:length(fn)
+				if isa(fn{i},'baseStimulus')
+					closePanel(obj.r.stimuli{i})
+				end
 			end
+			ch = get(obj.h.OKPanelStimulus,'Children');
+			for i = 1:length(ch)
+				if strcmpi(get(ch(i),'Type'),'uipanel')
+					delete(ch(i))
+				end
+			end
+			set(obj.h.OKPanelStimulusText,'String','Stimulus Properties here...')
 			set(obj.h.OKStimList,'Value',1);
 			set(obj.h.OKStimList,'String','');			
 		end
@@ -908,8 +919,10 @@ classdef opticka < optickaCore
 				
 				%copy screen parameters
 				if isa(tmp.r.screen,'screenManager')
-					set(obj.h.OKXCenter,'String', num2str(tmp.r.screen.screenXOffset));
-					set(obj.h.OKYCenter,'String', num2str(tmp.r.screen.screenYOffset));
+					set(obj.h.OKscreenXOffset,'String', num2str(tmp.r.screen.screenXOffset));
+					set(obj.h.OKscreenYOffset,'String', num2str(tmp.r.screen.screenYOffset));
+					
+					set(obj.h.OKNativeBeamPosition,'Value', tmp.r.screen.nativeBeamPosition);
 					
 					list = obj.gs(obj.h.OKGLSrc);
 					val = obj.findValue(list,tmp.r.screen.srcMode);
@@ -1032,9 +1045,14 @@ classdef opticka < optickaCore
 			str = cell(obj.r.stimuli.n,1);
 			for i=1:obj.r.stimuli.n
 				s = obj.r.stimuli{i};
+				if isempty(s.name)
+					name = s.family;
+				else
+					name = s.name;
+				end
 				switch s.family
 					case 'grating'
-						tstr = [num2str(i) '.' s.name ': '];
+						tstr = [num2str(i) '.' name ': '];
 						tstr = [tstr ' x=' num2str(s.xPosition)];
 						tstr = [tstr ' y=' num2str(s.yPosition)];
 						tstr = [tstr ' c=' num2str(s.contrast)];
@@ -1046,7 +1064,7 @@ classdef opticka < optickaCore
 						tstr = [tstr ' sg=' num2str(s.sigma)];
 						str{i} = tstr;
 					case 'gabor'
-						tstr = [num2str(i) '.' s.name ': '];
+						tstr = [num2str(i) '.' name ': '];
 						tstr = [tstr ' x=' num2str(s.xPosition)];
 						tstr = [tstr ' y=' num2str(s.yPosition)];
 						tstr = [tstr ' c=' num2str(s.contrast)];
@@ -1060,7 +1078,7 @@ classdef opticka < optickaCore
 						x=s.xPosition;
 						y=s.yPosition;
 						a=s.angle;
-						str{i} = [num2str(i) '.' s.name ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
+						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
 					case 'dots'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1071,7 +1089,7 @@ classdef opticka < optickaCore
 						sp=s.speed;
 						k=s.kill;
 						ct=s.colourType;
-						str{i} = [num2str(i) '.' s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn) ' sp=' num2str(sp) ' k=' num2str(k) ' ct=' ct];
+						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn) ' sp=' num2str(sp) ' k=' num2str(k) ' ct=' ct];
 					case 'ndots'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1079,14 +1097,14 @@ classdef opticka < optickaCore
 						a=s.angle;
 						c=s.coherence;
 						dn=s.density;
-						str{i} = [num2str(i) '.' s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn)];
+						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' ang=' num2str(a) ' coh=' num2str(c) ' dn=' num2str(dn)];
 					case 'spot'
 						x=s.xPosition;
 						y=s.yPosition;
 						sz=s.size;
 						c=s.contrast;
 						a=s.angle;
-						str{i} = [num2str(i) '.' s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' ang=' num2str(a)];
+						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' ang=' num2str(a)];
 					case 'texture'
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1094,12 +1112,12 @@ classdef opticka < optickaCore
 						c=s.contrast;
 						sp=s.speed;
 						p=s.fileName;
-						str{i} = [num2str(i) '.' s.name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
+						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
 					otherwise
 						x=s.xPosition;
 						y=s.yPosition;
 						a=s.angle;
-						str{i} = [num2str(i) '.UnknownType: ' num2str(i) ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
+						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
 				end
 			end
 			if isempty(pos) || pos > length(str)

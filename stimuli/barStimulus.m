@@ -180,7 +180,6 @@ classdef barStimulus < baseStimulus
 				Screen('Close',obj.texture)
 			catch ME
 				ple(ME)
-				rethrow(ME)
 			end
 			obj.texture=[];
 			obj.mvRect = [];

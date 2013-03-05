@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 17-Feb-2013 21:45:07
+% Last Modified by GUIDE v2.5 05-Mar-2013 11:21:37
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -187,20 +187,20 @@ if isappdata(handles.output,'o')
 end
 
 
-function OKPixelsPerCm_Callback(hObject, eventdata, handles)
+function OKpixelsPerCm_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.getScreenVals;
 end
 
 
-function OKXCenter_Callback(hObject, eventdata, handles)
+function OKscreenXOffset_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.getScreenVals;
 end
 
-function OKYCenter_Callback(hObject, eventdata, handles)
+function OKscreenYOffset_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	o.getScreenVals;
@@ -692,7 +692,7 @@ function OKMenuCalibrateSize_Callback(hObject, eventdata, handles)
 v=get(handles.OKSelectScreen,'Value');
 s=str2num(get(handles.OKMonitorDistance,'String')); 
 [~,dpc]=calibrateSize(v-1,s);
-set(handles.OKPixelsPerCm,'String',num2str(dpc));
+set(handles.OKpixelsPerCm,'String',num2str(dpc));
 
 
 function OKitTime_Callback(hObject, eventdata, handles)

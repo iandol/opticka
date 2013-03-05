@@ -543,7 +543,6 @@ classdef screenManager < optickaCore
 		function set.screenXOffset(obj,value)
 			obj.screenXOffset = value;
 			obj.updateCenter();
-			
 		end
 		
 		% ===================================================================
@@ -578,6 +577,8 @@ classdef screenManager < optickaCore
 					Screen('Flip',obj.win);
 					obj.flashTick = obj.flashTick + 1;
 				end
+				drawBackground(obj);
+				Screen('Flip',obj.win);
 			end
 		end
 		
@@ -657,7 +658,7 @@ classdef screenManager < optickaCore
 		%> @param
 		% ===================================================================
 		function ppd = get.ppd(obj)
-			ppd=round(obj.pixelsPerCm*(obj.distance/57.3)); %set the pixels per degree
+			ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
 		end
 		
 		% ===================================================================
@@ -677,16 +678,16 @@ classdef screenManager < optickaCore
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
 		% ===================================================================
-		%> @brief Makes a 5x5 1deg dot grid for debug mode
+		%> @brief Makes a 15x15 1deg dot grid for debug mode
 		%> This is always updated on setting distance or pixelsPerCm 
 		% ===================================================================
 		function makeGrid(obj)
-			obj.grid=[];
-			rnge=-10:10;
+			obj.grid = [];
+			rnge = -15:15;
 			for i=rnge
-				obj.grid=horzcat(obj.grid,[rnge;ones(1,length(rnge))*i]);
+				obj.grid = horzcat(obj.grid, [rnge;ones(1,length(rnge))*i]);
 			end
-			obj.grid=obj.grid.*obj.ppd; %we use ppd so we can cache ppd_ for elsewhere
+			obj.grid = obj.grid .* obj.ppd; %we use ppd so we can cache ppd_ for elsewhere
 		end
 		
 		% ===================================================================
@@ -695,10 +696,12 @@ classdef screenManager < optickaCore
 		%> @param
 		% ===================================================================
 		function updateCenter(obj)
-			%get the center of our screen, along with user defined offsets
-			[obj.xCenter, obj.yCenter] = RectCenter(obj.winRect);
-			obj.xCenter=obj.xCenter+(obj.screenXOffset*obj.ppd);
-			obj.yCenter=obj.yCenter+(obj.screenYOffset*obj.ppd);
+			if length(obj.winRect) == 4
+				%get the center of our screen, along with user defined offsets
+				[obj.xCenter, obj.yCenter] = RectCenter(obj.winRect);
+				obj.xCenter = obj.xCenter + (obj.screenXOffset * obj.ppd);
+				obj.yCenter = obj.yCenter + (obj.screenYOffset * obj.ppd);
+			end
 		end
 	
 	end
