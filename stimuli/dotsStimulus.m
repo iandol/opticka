@@ -137,7 +137,7 @@ classdef dotsStimulus < baseStimulus
 			obj.sM = sM;
 			obj.ppd=sM.ppd;
 			
-			fn = properties('dotsStimulus');
+			fn = sort(properties('dotsStimulus'));
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
@@ -198,31 +198,31 @@ classdef dotsStimulus < baseStimulus
 			%make our dot colours
 			switch obj.colourType
 				case 'random'
-					obj.colours = rand(4,obj.nDots);
-					obj.colours(4,:) = obj.alpha;
+					obj.colours = rand(4,obj.nDotsOut);
+					obj.colours(4,:) = obj.alphaOut;
 				case 'randomN'
-					obj.colours = randn(4,obj.nDots);
-					obj.colours(4,:) = obj.alpha;
+					obj.colours = randn(4,obj.nDotsOut);
+					obj.colours(4,:) = obj.alphaOut;
 				case 'randomBW'
-					obj.colours=zeros(4,obj.nDots);
-					for i = 1:obj.nDots
+					obj.colours=zeros(4,obj.nDotsOut);
+					for i = 1:obj.nDotsOut
 						obj.colours(:,i)=rand;
 					end
-					obj.colours(4,:)=obj.alpha;
+					obj.colours(4,:)=obj.alphaOut;
 				case 'randomNBW'
-					obj.colours=zeros(4,obj.nDots);
-					for i = 1:obj.nDots
+					obj.colours=zeros(4,obj.nDotsOut);
+					for i = 1:obj.nDotsOut
 						obj.colours(:,i)=randn;
 					end
-					obj.colours(4,:)=obj.alpha;
+					obj.colours(4,:)=obj.alphaOut;
 				case 'binary'
-					obj.colours=zeros(4,obj.nDots);
-					rix = round(rand(obj.nDots,1)) > 0;
+					obj.colours=zeros(4,obj.nDotsOut);
+					rix = round(rand(obj.nDotsOut,1)) > 0;
 					obj.colours(:,rix) = 1;
-					obj.colours(4,:)=obj.alpha; %set the alpha level
+					obj.colours(4,:)=obj.alphaOut; %set the alpha level
 				otherwise
 					obj.colours=obj.colour;
-					obj.colours(4)=obj.alpha;
+					obj.colours(4)=obj.alphaOut;
 			end
 			
 			obj.inSetup = false;

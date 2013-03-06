@@ -336,13 +336,15 @@ classdef eyelinkManager < optickaCore
 		%> @brief 
 		%>
 		% ===================================================================
-		function updateFixationValues(obj,x,y,inittime,fixtime,radius,strict)
-			if nargin > 0 && ~isempty(x); obj.fixationX = x; end
-			if nargin > 1 && ~isempty(y); obj.fixationX = y; end
-			if nargin > 2; obj.fixationTime = fixtime; end
+		function updateFixationValues(obj,x,y,inittime,fixtime,radius,strict)			
+			if nargin > 1 && ~isempty(x); obj.fixationX = x; end
+			if nargin > 2 && ~isempty(y); obj.fixationY = y; end
 			if nargin > 3; obj.fixationInitTime = inittime; end
-			if nargin > 4; obj.fixationRadius = radius; end
-			if nargin > 5; obj.strictFixation = strict; end
+			if nargin > 4; obj.fixationTime = fixtime; end
+			if nargin > 5; obj.fixationRadius = radius; end
+			if nargin > 6; obj.strictFixation = strict; end
+%  			fprintf('===> Fix: x=%g y=%g it=%g t=%g r=%g strict=%g\n', obj.fixationX, obj.fixationY, ...
+%  				obj.fixationInitTime, obj.fixationTime, obj.fixationRadius, obj.strictFixation);
 		end
 		
 		% ===================================================================
@@ -440,7 +442,7 @@ classdef eyelinkManager < optickaCore
 					return
 				else
 					out = noString;
-					fprintf('--->Eyelink STRICT SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);
+					%fprintf('--->Eyelink STRICT SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);
 					return
 				end
 			elseif fix
@@ -453,12 +455,12 @@ classdef eyelinkManager < optickaCore
 					return
 				else
 					out = noString;
-					fprintf('--->Eyelink FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching)
+					%fprintf('--->Eyelink FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching)
 					return
 				end
 			elseif searching == false
 				out = noString;
-				fprintf('--->Eyelink SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching)
+				%fprintf('--->Eyelink SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching)
 				return
 			else
 				out = '';
@@ -558,7 +560,15 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawStimuli(obj)
-			if obj.isConnected && currentMode(obj) == 1
+			if obj.isConnected
+				for i = 1:length(obj.stimulusPositions)
+					size = 1 * obj.screen.ppd;
+					rect = [0 0 size size];
+					x = obj.screen.xCenter + (obj.stimulusPositions(i).x * obj.screen.ppd);
+					y = obj.screen.yCenter + (obj.stimulusPositions(i).y * obj.screen.ppd);
+					rect = round(CenterRectOnPoint(rect, x, y));
+					Eyelink('Command', 'draw_box %d %d %d %d 12', rect(1), rect(2), rect(3), rect(4));
+				end
 				
 			end
 		end

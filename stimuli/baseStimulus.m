@@ -122,7 +122,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function obj = baseStimulus(varargin)
 			if nargin == 0; varargin.name = 'baseStimulus'; end
 			obj=obj@optickaCore(varargin); %superclass constructor
+			
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
+			
 			if isempty(obj.sM) %add a default screenManager, overwritten on setup
 				obj.sM = screenManager('name','default');
 				obj.ppd = obj.sM.ppd;
@@ -709,6 +711,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				obj.xOut = obj.xPositionOut + (dx * obj.ppd) + obj.sM.xCenter;
 				obj.yOut = obj.yPositionOut + (dy * obj.ppd) + obj.sM.yCenter;
+				%fprintf('---> %s X = %g / %g / %g | Y = %g / %g / %g\n',obj.fullName, obj.xOut, obj.xPositionOut, dx, obj.yOut, obj.yPositionOut, dy);
 			end
 			setAnimationDelta(obj);
 		end

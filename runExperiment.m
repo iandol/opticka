@@ -714,10 +714,6 @@ classdef runExperiment < optickaCore
 				obj.stimuli.verbose = obj.verbose;
 				setup(obj.stimuli); %run setup() for each stimulus
 				
-				% open our labJack if present
-				obj.lJack = labJack('name','fixation','readResponse', false,'verbose', obj.verbose);
-				lj = obj.lJack;
-			
 				% open the eyelink interface
 				obj.useEyeLink = true;
 				if obj.useEyeLink
@@ -748,40 +744,15 @@ classdef runExperiment < optickaCore
 				end
 				
 				createPlot(bR, el);
-								
-				tS.index = 1;
-				if obj.task.nVars > 0
-					tS.maxindex = length(obj.task.nVar(1).values);
-					if obj.task.nVars > 1
-						tS.index2 = 1;
-						tS.maxindex2 = length(obj.task.nVar(2).values);
-					end
-					if ~isempty(obj.task.nVar(1))
-						name = [obj.task.nVar(1).name 'Out'];
-						value = obj.task.nVar(1).values(tS.index);
-						if isempty(obj.thisStim)
-							obj.stimuli{1}.(name) = value;
-							update(obj.stimuli{1});
-						else
-							obj.stimuli{obj.thisStim}.(name) = value;
-							update(obj.stimuli{obj.thisStim});
-						end
-					end
-				end
 				
 				tS.stopTraining = false;
 				tS.keyHold = 1; %a small loop to stop overeager key presses
 				tS.totalTicks = 1; % a tick counter
 				tS.pauseToggle = 1;
 				
-				if obj.useEyeLink; startRecording(el); end
+				%if obj.useEyeLink; startRecording(el); end
 				
 				tL.screenLog.beforeDisplay = GetSecs;
-				
-				%Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
-				vbl = Screen('Flip', s.win);
-				tL.vbl(1) = vbl;
-				tL.startTime = vbl;
 				
 				HideCursor;
 				warning('off')
@@ -789,6 +760,11 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink; getSample(el); end
 				
 				start(sm); %ignite the stateMachine!
+				
+				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+				vbl = Screen('Flip', s.win);
+				tL.vbl(1) = vbl;
+				tL.startTime = vbl;
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -800,33 +776,34 @@ classdef runExperiment < optickaCore
 					% run the stateMachine one tick forward
 					update(sm);
 					
-					% do we draw visual debug info too?
-					if s.visualDebug == true
-						s.drawGrid;
-					end
-					
-					% Tell PTB that no further drawing commands will follow before Screen('Flip')
-					Screen('DrawingFinished', s.win); 
-					
-					%check eye position
+					%------check eye position
 					if obj.useEyeLink; getSample(el); end
 					
-					%check keyboard for commands
+					%------check keyboard for commands
 					if ~strcmpi(sm.currentName,'calibrate')
 						tS = obj.checkFixationKeys(tS);
+						FlushEvents('keyDown'); %throw away any other keystrokes
 					end
 					
-					%if the statemachine is in stimulus state, then animate
-					%the stimuli
-					if strcmpi(sm.currentName,'stimulus')
+					if strcmpi(obj.stateMachine.currentName,'stimulus')
 						animate(obj.stimuli);
+						tL.stimTime(tS.totalTicks)=1;
+					else
+						tL.stimTime(tS.totalTicks)=0;
 					end
 					
-					%throw away any other keystrokes
-					FlushEvents('keyDown');
-					
-					%flip
-					tL.vbl(end+1) = Screen('Flip', s.win,tL.vbl(end) + s.screenVals.halfisi);
+					%======= FLIP: Show it at correct retrace: ========%
+					if obj.doFlip
+						nextvbl = tL.vbl(end) + obj.screenVals.halfisi;
+						if obj.logFrames == true
+							[tL.vbl(tS.totalTicks),tL.show(tS.totalTicks),tL.flip(tS.totalTicks),tL.miss(tS.totalTicks)] = Screen('Flip', s.win, nextvbl);
+						elseif obj.benchmark == true
+							tL.vbl = Screen('Flip', s.win, 0, 2, 2);
+						else
+							tL.vbl = Screen('Flip', s.win, nextvbl);
+						end
+					end
+					%==================================================%
 					tS.totalTicks = tS.totalTicks + 1;
 					
 				end
@@ -838,8 +815,6 @@ classdef runExperiment < optickaCore
 				close(s);
 				close(el);
 				obj.eyeLink = [];
-				%obj.behaviouralRecord = [];
-				%figure(obj.screenSettings.optickahandle)
 				obj.lJack.close;
 				obj.lJack=[];
 				clear tL s tS bR lj el
@@ -971,7 +946,19 @@ classdef runExperiment < optickaCore
 		%> @param
 		% ===================================================================
 		function updateFixationTarget(obj)
-			updateFixationValues(obj.eyeLink, obj.stimuli.lastXPosition, obj.stimuli.lastXPosition)
+			updateFixationValues(obj.eyeLink, obj.stimuli.lastXPosition, obj.stimuli.lastYPosition)
+			obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
+			obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
+		end
+		
+		% ===================================================================
+		%> @brief updates eyelink with stimuli random position
+		%>
+		%> @param
+		% ===================================================================
+		function updateStimFixTarget(obj)
+			obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
+			obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
 		end
 		
 		% ===================================================================
@@ -1759,7 +1746,7 @@ classdef runExperiment < optickaCore
 								fprintf('===>>> PAUSE ENGAGED!\n');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							else
-								forceTransition(obj.stateMachine, 'prestimulus');
+								forceTransition(obj.stateMachine, 'blank');
 								fprintf('===>>> PAUSE OFF!\n');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							end

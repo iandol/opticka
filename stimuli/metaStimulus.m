@@ -246,10 +246,10 @@ classdef metaStimulus < optickaCore
 
 						for j=1:length(stims)
 							if strcmpi(name,'xyPosition')
-								obj.lastXPosition = values(1);
-								obj.lastYPosition = values(2);
 								obj.stimuli{stims(j)}.xPositionOut = values(1);
 								obj.stimuli{stims(j)}.yPositionOut = values(2);
+								obj.lastXPosition = values(1);
+								obj.lastYPosition = values(2);
 								logs = [logs 'XY: ' num2str(stims(j)) ];
 							elseif isprop(obj.stimuli{stims(j)}, [name 'Out'])
 								obj.stimuli{stims(j)}.([name 'Out']) = values;

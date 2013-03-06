@@ -66,6 +66,11 @@ classdef barStimulus < baseStimulus
 				obj.parseArgs(varargin, obj.allowedProperties);
 			end
 			
+			if obj.size > 0
+				obj.barLength = obj.size;
+				obj.barWidth = obj.size;
+			end
+			
 			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
 			obj.salutation('constructor','Bar Stimulus initialisation complete');
 		end

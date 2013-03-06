@@ -460,7 +460,7 @@ classdef stateMachine < optickaCore
 						feval(thisState.entryFcn{i});
 					end
 				end
-				if obj.verbose; fprintf('>>>%s FEVAL ENTER took: %g ms\n',obj.fullName,toc*1000); end
+				if obj.verbose; fprintf('---> %s FEVAL on %s ENTER took: %g ms\n',obj.fullName,thisState.name,toc*1000); end
 	
 			else
 				obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length',false);
@@ -507,7 +507,7 @@ classdef stateMachine < optickaCore
 					feval(thisState.exitFcn{i});
 				end
 			end
-			if obj.verbose; fprintf('>>>%s FEVAL EXIT took: %g ms\n',obj.fullName,toc*1000); end
+			if obj.verbose; fprintf('---> %s FEVAL on %s EXIT took: %g ms\n',obj.fullName,thisState.name,toc*1000); end
 			tnow=feval(obj.clockFcn);
 			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(tnow-obj.startTime) 's | ' num2str(tnow-obj.previous.entryTime) 's | ' num2str(obj.currentTick) '/' num2str(obj.totalTicks) 'ticks'],'',false);
 			

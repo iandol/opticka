@@ -555,6 +555,16 @@ classdef screenManager < optickaCore
 			obj.updateCenter();
 		end
 		
+		
+		% ===================================================================
+		%> @brief Screen('DrawingFinished')
+		%>
+		%> @param
+		% ===================================================================
+		function finishDrawing(obj)
+			Screen('DrawingFinished', obj.win); 
+		end
+		
 		% ===================================================================
 		%> @brief Flash the screen
 		%>
@@ -582,6 +592,19 @@ classdef screenManager < optickaCore
 			end
 		end
 		
+		
+		% ===================================================================
+		%> @brief draw small spot centered on the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawSpot(obj,size,colour)
+			if nargin < 3; colour = [1 1 1 1]; end
+			if nargin < 2; size = 1; end
+			size = size/2 * obj.ppd;
+			Screen('gluDisk',obj.win,colour,obj.xCenter,obj.yCenter,size);
+		end
 		
 		% ===================================================================
 		%> @brief draw small spot centered on the screen
