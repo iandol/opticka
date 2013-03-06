@@ -442,8 +442,6 @@ classdef runExperiment < optickaCore
 			obj.stimuli.screen = [];
 			
 			%-------Set up Digital I/O for this run...
-			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
-			%obj.serialP.setDTR(0);
 			if isa(obj.dPixx,'dPixxManager')
 				io = obj.dPixx;
 			else
@@ -683,6 +681,28 @@ classdef runExperiment < optickaCore
 			%make a short handle to the screenManager
 			s = obj.screen; 
 			obj.stimuli.screen = [];
+			
+			%-------Set up Digital I/O for this run...
+			if isa(obj.dPixx,'dPixxManager')
+				io = obj.dPixx;
+			else
+				obj.dPixx = dPixxManager('name','runinstance','verbose',obj.verbose);
+				io = obj.dPixx;
+			end
+			
+			if obj.useDataPixx
+				io.silentMode = false;
+				io.verbose = obj.verbose;
+				io.name = 'runinstance';
+				open(io);
+			else
+				io.silentMode = true;
+				io.verbose = false;
+				io.name = 'silentruninstance';
+				open(io);
+			end
+			obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
+			lj = obj.lJack;
 			
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
@@ -943,6 +963,15 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function refreshScreen(obj)
 			obj.screenVals = obj.screen.prepareScreen();
+		end
+		
+		% ===================================================================
+		%> @brief updates eyelink with stimuli random position
+		%>
+		%> @param
+		% ===================================================================
+		function updateFixationTarget(obj)
+			updateFixationValues(obj.eyeLink, obj.stimuli.lastXPosition, obj.stimuli.lastXPosition)
 		end
 		
 		% ===================================================================

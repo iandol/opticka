@@ -57,6 +57,7 @@ classdef barStimulus < baseStimulus
 			if nargin == 0;varargin.family = 'bar';end
 			
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
+			obj.size = 0;
 			obj.colour = [1 1 1];
 			obj.speed = 2;
 			obj.startPosition = -2;
@@ -129,7 +130,7 @@ classdef barStimulus < baseStimulus
 		function update(obj)
 			resetTicks(obj);
 			constructMatrix(obj) %make our matrix
-			try;Screen('Close',obj.texture);end
+			
 			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
 			computePosition(obj);
 			obj.setRect();
@@ -176,11 +177,6 @@ classdef barStimulus < baseStimulus
 		%> @return
 		% ===================================================================
 		function reset(obj)
-			try
-				Screen('Close',obj.texture)
-			catch ME
-				ple(ME)
-			end
 			obj.texture=[];
 			obj.mvRect = [];
 			obj.dstRect = [];
@@ -316,9 +312,10 @@ classdef barStimulus < baseStimulus
 	%>
 	% ===================================================================
 	function set_sizeOut(obj,value)
-		obj.sizeOut = (value*obj.ppd); %divide by 2 to get diameter
+		obj.sizeOut = (value*obj.ppd);
 		if ~obj.inSetup
 			obj.barLengthOut = obj.sizeOut;
+			obj.barWidthOut = obj.sizeOut;
 		end
 	end
 	

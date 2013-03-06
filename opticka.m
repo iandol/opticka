@@ -433,7 +433,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function getStateInfo(obj)
-			if exist(obj.r.stateInfoFile,'file')
+			if ischar(obj.r.stateInfoFile) && exist(obj.r.stateInfoFile,'file')
 				fid = fopen(obj.r.stateInfoFile);
 				tline = fgetl(fid);
 				i=1;

@@ -1,5 +1,4 @@
-%DEFAULT Fixation Training state configuration file
-% This gets loaded by opticka via runExperiment class
+%DEFAULT Fixation Training state configuration file, this gets loaded by opticka via runExperiment class
 
 %------------General Settings-----------------
 rewardTime = 200; %TTL time in milliseconds
@@ -25,34 +24,37 @@ el.strictFixation = true; % Force that once we are in Fix window, can't leave
 obj.stimuli.choice = [];
 in(1).name = 'xyPosition';
 in(1).values = [8 8; 8 -8; -8 8; -8 -8];
-in(1).stimuli = [1 2];
+in(1).stimuli = [1 3];
 in(2).name = 'angle';
-in(2).values = [0 22.5 45 67.5 90];
-in(2).stimuli = [1 2];
-in(3).name = 'contrast';
-in(3).values = [0.2 0.8];
-in(3).stimuli = [2];
+in(2).values = [0 180];
+in(2).stimuli = [1 3];
+% in(3).name = 'contrast';
+% in(3).values = [0.2 0.8];
+% in(3).stimuli = [2];
 obj.stimuli.stimulusTable = in;
 
 % allows using arrow keys to control this table during the main loop
 % ideal for mapping receptive fields
-obj.stimuli.controlTable(1).variable = 'angle';
-obj.stimuli.controlTable(1).delta = 15;
-obj.stimuli.controlTable(1).stimuli = [1 2];
-obj.stimuli.controlTable(1).limits = [0 360];
-obj.stimuli.controlTable(2).variable = 'size';
-obj.stimuli.controlTable(2).delta = 1;
-obj.stimuli.controlTable(2).stimuli = [1 2];
-obj.stimuli.controlTable(2).limits = [1 60];
-obj.stimuli.controlTable(3).variable = 'barLength';
-obj.stimuli.controlTable(3).delta = 0.5;
-obj.stimuli.controlTable(3).stimuli = [2];
-obj.stimuli.controlTable(3).limits = [1 30];
+n=1;
+obj.stimuli.controlTable(n).variable = 'angle';
+obj.stimuli.controlTable(n).delta = 15;
+obj.stimuli.controlTable(n).stimuli = [1 2];
+obj.stimuli.controlTable(n).limits = [0 360];
+n=n+1;
+obj.stimuli.controlTable(n).variable = 'size';
+obj.stimuli.controlTable(n).delta = 1;
+obj.stimuli.controlTable(n).stimuli = [1 2];
+obj.stimuli.controlTable(n).limits = [1 60];
+n=n+1;
+obj.stimuli.controlTable(n).variable = 'barLength';
+obj.stimuli.controlTable(n).delta = 0.5;
+obj.stimuli.controlTable(n).stimuli = [2];
+obj.stimuli.controlTable(n).limits = [1 30];
 obj.stimuli.tableChoice = 1;
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
-obj.stimuli.stimulusSets = {[1 2 3],[3],[1 3]};
+obj.stimuli.stimulusSets = {[1 2 3],[1 2],[1 3]};
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
@@ -71,19 +73,27 @@ showSet(obj.stimuli);
 %pause entry
 pauseEntryFcn = @()setOffline(el);
 
-%pause entry
-psEntryFcn = { @()setOffline(el); ... %set eyelink offline
+%fixate entry
+fixEntryFcn = { @()resetFixation(el); ... %reset our fixation variables
+	@()updateFixationValues(el, 0, 0, 0.5, 0.5); ...
+	@()setOffline(el); ... %set eyelink offline
 	@()trackerDrawFixation(el); ... %draw fixation window on eyelink computer
-	@()resetFixation(el); ... %reset our fixation variables
-	@()randomise(obj.stimuli) }; %randomise our stimuli
+	@()randomise(obj.stimuli); ... %randomise our stimuli
+	@()statusMessage(el,'Running Trial...'); ... %status text on the eyelink
+	@()startRecording(el); ...
+	@()draw(obj.stimuli) }; 
 
-%pause within
-psFcn = @()drawBackground(s); %draw background only
+%fix within
+fixFcn = @()disableFlip(obj); 
+
+%test we are fixated for a certain length of time
+initFixFcn = @()testSearchHoldFixation(el,'stimulus','');
 
 %
-psExitFcn = { @()update(obj.stimuli); ... %update our stimuli ready for display
-	@()statusMessage(el,'Showing Fixation Spot...'); ... %status text on the eyelink
-	@()startRecording(el) }; %start it recording this trial
+fixExitFcn = { @()updateFixationTarget(obj); ... 
+	@()updateFixationValues(el, [], [], 0.5, 0.3, 5); ...
+	@()update(obj.stimuli); ... %update our stimuli ready for display
+	}; %start it recording this trial
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = [];
@@ -103,7 +113,7 @@ correctEntryFcn = { @()timedTTL(lj,0,rewardTime); ... % labjack sends a TTL to C
 	@()statusMessage(el,'Correct! :-)')}; %status message on eyelink
 
 %correct stimulus
-correctFcn = { @()drawBackground(s); @()drawGreenSpot(s,1) };
+correctFcn = { @()draw(obj.stimuli); @()drawGreenSpot(s,1) };
 
 %when we exit the correct state
 correctExitFcn = [];
@@ -116,7 +126,7 @@ breakEntryFcn = { @()updatePlot(bR, el, sm); ... %update our behavioural plot
 breakFcn =  @()drawBackground(s);
 
 %calibration function
-calibrateFcn = @()trackerSetup(el); %enter tracker calibrate/validate setup mode
+calibrateFcn = { @()setOffline(el); @()trackerSetup(el) }; %enter tracker calibrate/validate setup mode
 
 overrideFcn = @()keyOverride(obj); %a special mode which enters a matlab debug state so we can manually edit object values
 
@@ -129,16 +139,16 @@ gridFcn = @()drawGrid(s);
 disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
-'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
-'pause'		'prestimulus'	inf		pauseEntryFcn	[]				[]				[]; ...
-'prestimulus' 'stimulus'	[0.5 1]	psEntryFcn		psFcn			[]				psExitFcn; ...
-'stimulus'  'breakfix'		4		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
-'breakfix'	'prestimulus'	0.5		breakEntryFcn	breakFcn		[]				[]; ...
-'correct'	'prestimulus'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn; ...
-'calibrate' 'prestimulus'	0.5		calibrateFcn	[]				[]				[]; ...
-'override'	'prestimulus'	0.5		overrideFcn		[]				[]				[]; ...
-'flash'		'prestimulus'	0.5		flashFcn		[]				[]				[]; ...
-'showgrid'	'pause'			1		[]				gridFcn			[]				[]; ...
+'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
+'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				[]; ...
+'fixate'	'breakfix'	[0.5 1]	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
+'stimulus'  'incorrect'	2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
+'breakfix'	'fixate'	0.5		breakEntryFcn	breakFcn		[]				[]; ...
+'correct'	'fixate'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn; ...
+'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[]; ...
+'override'	'pause'		0.5		overrideFcn		[]				[]				[]; ...
+'flash'		'pause'		0.5		flashFcn		[]				[]				[]; ...
+'showgrid'	'pause'		1		[]				gridFcn			[]				[]; ...
 };
 
 disp(stateInfoTmp)

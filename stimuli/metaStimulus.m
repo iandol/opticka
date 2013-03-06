@@ -55,6 +55,13 @@ classdef metaStimulus < optickaCore
 		family = 'meta'
 	end
 	
+	%--------------------VISIBLE PROPERTIES----------%
+	properties (SetAccess = private, GetAccess = public, Transient = true); 
+		%> stimulus family
+		lastXPosition = 0
+		lastYPosition = 0
+	end
+	
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private) 
 		%> allowed properties passed to object upon construction
@@ -239,6 +246,8 @@ classdef metaStimulus < optickaCore
 
 						for j=1:length(stims)
 							if strcmpi(name,'xyPosition')
+								obj.lastXPosition = values(1);
+								obj.lastYPosition = values(2);
 								obj.stimuli{stims(j)}.xPositionOut = values(1);
 								obj.stimuli{stims(j)}.yPositionOut = values(2);
 								logs = [logs 'XY: ' num2str(stims(j)) ];
@@ -272,6 +281,22 @@ classdef metaStimulus < optickaCore
 			for i = 1:obj.n
 				hide(obj.stimuli{i});
 			end
+		end
+		
+		% ===================================================================
+		%> @brief Shorthand to set isVisible=true.
+		%>
+		% ===================================================================
+		function x = getLastX(obj)
+			x = obj.lastXPosition;
+		end
+		
+		% ===================================================================
+		%> @brief Shorthand to set isVisible=true.
+		%>
+		% ===================================================================
+		function y = getLastY(obj)
+			y = obj.lastYPosition;
 		end
 		
 		% ===================================================================

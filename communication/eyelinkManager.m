@@ -337,12 +337,12 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function updateFixationValues(obj,x,y,inittime,fixtime,radius,strict)
-			obj.fixationX = x;
-			obj.fixationY = y;
-			obj.fixationTime = fixtime;
-			obj.fixationInitTime = inittime;
-			obj.fixationRadius = radius;
-			obj.strictFixation = strict;
+			if nargin > 0 && ~isempty(x); obj.fixationX = x; end
+			if nargin > 1 && ~isempty(y); obj.fixationX = y; end
+			if nargin > 2; obj.fixationTime = fixtime; end
+			if nargin > 3; obj.fixationInitTime = inittime; end
+			if nargin > 4; obj.fixationRadius = radius; end
+			if nargin > 5; obj.strictFixation = strict; end
 		end
 		
 		% ===================================================================
