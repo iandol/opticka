@@ -3,23 +3,23 @@
 %------------General Settings-----------------
 rewardTime = 200; %TTL time in milliseconds
 
-el.name = 'figure-ground';
-el.isDummy = false; %use dummy or real eyelink?
-el.sampleRate = 250;
-el.remoteCalibration = true; % manual calibration?
-el.calibrationStyle = 'HV9'; % calibration style
-el.recordData = false; % save EDF file?
-el.modify.calibrationtargetcolour = [1 1 0];
-el.modify.calibrationtargetsize = 1;
-el.modify.calibrationtargetwidth = 0.01;
-el.modify.waitformodereadytime = 500;
-el.modify.devicenumber = -1; % -1 = use any keyboard
-el.fixationX = 0; % X position on screen in degrees
-el.fixationY = 0; % Y position on screen in degrees
-el.fixationRadius = 1.5; % Fixation Radius in degrees
-el.fixationInitTime = 1.0; % Time to enter fixation window
-el.fixationTime = 1.0; % Time to hold within fixation window
-el.strictFixation = true; % Force that once we are in Fix window, can't leave
+eL.name = 'figure-ground';
+eL.isDummy = true; %use dummy or real eyelink?
+eL.sampleRate = 250;
+eL.remoteCalibration = true; % manual calibration?
+eL.calibrationStyle = 'HV9'; % calibration style
+eL.recordData = false; % save EDF file?
+eL.modify.calibrationtargetcolour = [1 1 0];
+eL.modify.calibrationtargetsize = 1;
+eL.modify.calibrationtargetwidth = 0.01;
+eL.modify.waitformodereadytime = 500;
+eL.modify.devicenumber = -1; % -1 = use any keyboard
+eL.fixationX = 0; % X position on screen in degrees
+eL.fixationY = 0; % Y position on screen in degrees
+eL.fixationRadius = 1.5; % Fixation Radius in degrees
+eL.fixationInitTime = 1.0; % Time to enter fixation window
+eL.fixationTime = 1.0; % Time to hold within fixation window
+eL.strictFixation = true; % Force that once we are in Fix window, can't leave
 
 %randomise stimulus variables during run?
 obj.stimuli.choice = [];
@@ -33,25 +33,28 @@ in(1).stimuli = [2 3];
 % in(3).values = [0.2 0.8];
 % in(3).stimuli = [2];
 obj.stimuli.stimulusTable = in;
+clear in
 
 % allows using arrow keys to control this table during the main loop
 % ideal for mapping receptive fields
-n=1;
-obj.stimuli.controlTable(n).variable = 'angle';
-obj.stimuli.controlTable(n).delta = 15;
-obj.stimuli.controlTable(n).stimuli = [1 2];
-obj.stimuli.controlTable(n).limits = [0 360];
-n=n+1;
-obj.stimuli.controlTable(n).variable = 'size';
-obj.stimuli.controlTable(n).delta = 1;
-obj.stimuli.controlTable(n).stimuli = [1 2];
-obj.stimuli.controlTable(n).limits = [1 60];
-n=n+1;
-obj.stimuli.controlTable(n).variable = 'barLength';
-obj.stimuli.controlTable(n).delta = 0.5;
-obj.stimuli.controlTable(n).stimuli = [2];
-obj.stimuli.controlTable(n).limits = [1 30];
+n = 1;
+in(n).variable = 'angle';
+in(n).delta = 15;
+in(n).stimuli = [1 2];
+in(n).limits = [0 360];
+n = n + 1;
+in(n).variable = 'size';
+in(n).delta = 1;
+in(n).stimuli = [1 2];
+in(n).limits = [1 60];
+n = n + 1;
+in(n).variable = 'barLength';
+in(n).delta = 0.5;
+in(n).stimuli = [2];
+in(n).limits = [1 30];
+obj.stimuli.controlTable = in;
 obj.stimuli.tableChoice = 1;
+clear in
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
@@ -62,9 +65,9 @@ showSet(obj.stimuli);
 %----------------------State Machine States-------------------------
 % io = datapixx (digital I/O to plexon)
 % s = screenManager
-% sm = State Machine
-% el = eyelink manager
-% lj = LabJack (reward trigger to Crist reward system)
+% sM = State Machine
+% eL = eyelink manager
+% lJ = LabJack (reward trigger to Crist reward system)
 % bR = behavioural record plot
 % obj.stimuli = our list of stimuli
 %
@@ -72,18 +75,20 @@ showSet(obj.stimuli);
 % in the scope of the runExperiemnt object.
 
 %pause entry
-pauseEntryFcn = @()setOffline(el);
+pauseEntryFcn = @()setOffline(eL);
 
 %fixate entry
-fixEntryFcn = { @()setOffline(el); ... %set eyelink offline
+fixEntryFcn = { @()setOffline(eL); ... %set eyelink offline
 	@()randomise(obj.stimuli); ... %randomise our stimuli
 	@()updateStimFixTarget(obj); ...
-	@()resetFixation(el); ... %reset our fixation variables
-	@()updateFixationValues(el, 0, 0, 0.6, 0.4, 1, true); ...
-	@()trackerDrawFixation(el); ... %draw fixation window on eyelink computer
-	@()trackerDrawStimuli(el); ... %draw location of stimulus
-	@()statusMessage(el,'Initiate Fixation...'); ... %status text on the eyelink
-	@()startRecording(el); ...
+	@()resetFixation(eL); ... %reset our fixation variables
+	@()updateFixationValues(eL, 0, 0, 0.6, 0.4, 1, true); ...
+	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
+	@()trackerDrawStimuli(eL); ... %draw location of stimulus
+	@()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
+	@()startRecording(eL); ...
+	@()edit(obj.stimuli,4,'contrastOut',1); ...
+	@()edit(obj.stimuli,4,'colourOut',[1 1 0]); ...
 	@()show(obj.stimuli{4}); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()draw(obj.stimuli) }; 
@@ -92,29 +97,30 @@ fixEntryFcn = { @()setOffline(el); ... %set eyelink offline
 fixFcn = @()draw(obj.stimuli); 
 
 %test we are fixated for a certain length of time
-initFixFcn = @()testSearchHoldFixation(el,'stimulus','breakfix');
+initFixFcn = @()testSearchHoldFixation(eL,'stimulus','breakfix');
 
 %exit fixation
 fixExitFcn = { @()updateFixationTarget(obj); ... %use our stimuli values for next fix X and Y
-	@()updateFixationValues(el, [], [], 1, 0.3, 10, false); ... %set a generous radius
-	@()statusMessage(el,'Show Stimulus...')}; %start it recording this trial
+	@()updateFixationValues(eL, [], [], 1, 0.3, 10, false); ... %set a generous radius
+	@()statusMessage(eL,'Show Stimulus...'); ...
+	@()edit(obj.stimuli,4,'contrastOut',0.5) }; 
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = [];
 
 %what to run when we are showing stimuli
-stimFcn = @()draw(obj.stimuli); %draw each stimulus to screen
+stimFcn =  { @()draw(obj.stimuli); @()finishDrawing(s); @()animate(obj.stimuli) };%draw each stimulus to screen
 
 %test we are maintaining fixation
-maintainFixFcn = @()testSearchHoldFixation(el,'correct','');
+maintainFixFcn = @()testSearchHoldFixation(eL,'correct','');
 
 %as we exit stim presentation state
 stimExitFcn = @()hide(obj.stimuli{4});
 
 %if the subject is correct (small reward)
-correctEntryFcn = { @()timedTTL(lj,0,rewardTime); ... % labjack sends a TTL to Crist reward system
-	@()updatePlot(bR, el, sm); ... %update our behavioural plot
-	@()statusMessage(el,'Correct! :-)')}; %status message on eyelink
+correctEntryFcn = { @()timedTTL(lJ,0,rewardTime); ... % labjack sends a TTL to Crist reward system
+	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
+	@()statusMessage(eL,'Correct! :-)')}; %status message on eyelink
 
 %correct stimulus
 correctFcn = { @()draw(obj.stimuli); @()drawGreenSpot(s,1) };
@@ -123,23 +129,23 @@ correctFcn = { @()draw(obj.stimuli); @()drawGreenSpot(s,1) };
 correctExitFcn = [];
 
 %break entry
-incEntryFcn = { @()updatePlot(bR, el, sm); ... %update our behavioural plot
-	@()statusMessage(el,'Incorrect :-('); ... %status message on eyelink
+incEntryFcn = { @()updatePlot(bR, eL, sM); ... %update our behavioural plot
+	@()statusMessage(eL,'Incorrect :-('); ... %status message on eyelink
 	@()hide(obj.stimuli{4}) }; 
 
 %our incorrect stimulus
 incFcn =  @()draw(obj.stimuli);
 
 %break entry
-breakEntryFcn = { @()updatePlot(bR, el, sm); ... %update our behavioural plot
-	@()statusMessage(el,'Broke Fixation :-('); ...%status message on eyelink
+breakEntryFcn = { @()updatePlot(bR, eL, sM); ... %update our behavioural plot
+	@()statusMessage(eL,'Broke Fixation :-('); ...%status message on eyelink
 	@()hide(obj.stimuli{4}) };
 
 %our incorrect stimulus
 breakFcn =  @()draw(obj.stimuli);
 
 %calibration function
-calibrateFcn = { @()setOffline(el); @()trackerSetup(el) }; %enter tracker calibrate/validate setup mode
+calibrateFcn = { @()setOffline(eL); @()trackerSetup(eL) }; %enter tracker calibrate/validate setup mode
 
 %debug override
 overrideFcn = @()keyOverride(obj); %a special mode which enters a matlab debug state so we can manually edit object values

@@ -950,7 +950,7 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
 	if v > 0 && isobject(o.r.stimuli{v})
-		run(o.r.stimuli{v});
+		run(o.r.stimuli{v}, false, [], o.r.screen);
 	end
 	set(handles.OKStimulusRunAll,'Enable','on');
 end
@@ -963,8 +963,8 @@ function OKStimulusRunBenchmark_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
-	if v > 0 && isobject(o.r.stimuli{v})
-		run(o.r.stimuli{v}, true);
+	if v > 0 && isa(o.r.stimuli{v},'baseStimulus')
+		run(o.r.stimuli{v}, true, [], o.r.screen);
 	end
 end
 

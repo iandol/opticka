@@ -284,7 +284,18 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Shorthand to set isVisible=true.
+		%> @brief Edit -- fast change a particular value.
+		%>
+		% ===================================================================
+		function edit(obj, stims, var, value)
+			for i = 1:length(stims)
+				obj.stimuli{stims(i)}.(var) = value;
+			end
+		end
+		
+		
+		% ===================================================================
+		%> @brief Return the last randomised XY position
 		%>
 		% ===================================================================
 		function x = getLastX(obj)
@@ -292,7 +303,7 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Shorthand to set isVisible=true.
+		%> @brief Return the last randomised XY position
 		%>
 		% ===================================================================
 		function y = getLastY(obj)
@@ -300,7 +311,7 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Shorthand to set isVisible=true.
+		%> @brief Toggle show/hide for particular sets of stimuli
 		%>
 		% ===================================================================
 		function showSet(obj)
@@ -314,22 +325,6 @@ classdef metaStimulus < optickaCore
 				end
 			end
 		end
-		
-		% ===================================================================
-		%> @brief Shorthand to set isVisible=true.
-		%>
-		% ===================================================================
-		function flashScreen(obj)
-			while ~KbCheck()
-				Screen('FillRect',obj.screen.win,[0.3 0.3 0.3 1],[]);
-				Screen('flip',obj.screen.win);
-				pause(0.25);
-				Screen('FillRect',obj.screen.win,[1 1 1 1],[]);
-				Screen('flip',obj.screen.win);
-				pause(0.25);
-			end
-		end
-		
 		
 		% ===================================================================
 		%> @brief Run Stimulus in a window to preview

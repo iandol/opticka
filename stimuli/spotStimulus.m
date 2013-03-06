@@ -260,13 +260,11 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function set_colourOut(obj, value)
 			if length(value) == 1
-				value = [value value value];
+				value = [value value value obj.alphaOut];
 			end
 			obj.colourOutTemp = value;
 			obj.colourOut = value;
-			if obj.stopLoop == false;
-				notify(obj,'changeColour');
-			end
+			if obj.stopLoop == false; notify(obj,'changeColour'); end
 		end
 		
 		% ===================================================================

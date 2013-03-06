@@ -269,7 +269,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
-		function run(obj,benchmark,runtime)
+		function run(obj,benchmark,runtime,s)
 			try
 				warning off
 				if ~exist('benchmark','var') || isempty(benchmark)
@@ -278,10 +278,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if ~exist('runtime','var') || isempty(runtime)
 					runtime = 2; %seconds to run
 				end
-
-				s = screenManager('verbose',false,'blend',true,'screen',0,...
-					'bitDepth','8bit','debug',false,...
-					'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+				if ~exist('s','var') || ~isa(s,'screenManager')
+					s = screenManager('verbose',false,'blend',true,'screen',0,...
+						'bitDepth','8bit','debug',false,...
+						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+				end
+				oldwindowed = s.windowed;
 				if benchmark
 					s.windowed = [];
 				else
@@ -321,6 +323,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 					fps = (s.screenVals.fps*runtime) / (bb-b);
 					fprintf('\n------> SPEED = %g fps\n', fps);
 				end
+				s.windowed = oldwindowed;
 				close(s); %close screen
 				clear s fps benchmark runtime b bb i; %clear up a bit
 				reset(obj); %reset our stimulus ready for use again
