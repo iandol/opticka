@@ -1,5 +1,12 @@
 %DEFAULT Fixation Training state configuration file, this gets loaded by opticka via runExperiment class
-
+% io = datapixx (digital I/O to plexon)
+% s = screenManager
+% sM = State Machine
+% eL = eyelink manager
+% lJ = LabJack (reward trigger to Crist reward system)
+% bR = behavioural record plot
+% obj.stimuli = our list of stimuli
+%
 %------------General Settings-----------------
 rewardTime = 200; %TTL time in milliseconds
 
@@ -63,14 +70,6 @@ obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
 %----------------------State Machine States-------------------------
-% io = datapixx (digital I/O to plexon)
-% s = screenManager
-% sM = State Machine
-% eL = eyelink manager
-% lJ = LabJack (reward trigger to Crist reward system)
-% bR = behavioural record plot
-% obj.stimuli = our list of stimuli
-%
 % these are our functions that will execute as the stateMachine runs,
 % in the scope of the runExperiemnt object.
 
@@ -81,8 +80,7 @@ pauseEntryFcn = @()setOffline(eL);
 fixEntryFcn = { @()setOffline(eL); ... %set eyelink offline
 	@()randomise(obj.stimuli); ... %randomise our stimuli
 	@()updateStimFixTarget(obj); ...
-	@()resetFixation(eL); ... %reset our fixation variables
-	@()updateFixationValues(eL, 0, 0, 0.6, 0.4, 1, true); ...
+	@()updateFixationValues(eL, 0, 0, [0.5 1], 0.5, 1, true); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus
 	@()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
@@ -101,9 +99,9 @@ initFixFcn = @()testSearchHoldFixation(eL,'stimulus','breakfix');
 
 %exit fixation
 fixExitFcn = { @()updateFixationTarget(obj); ... %use our stimuli values for next fix X and Y
-	@()updateFixationValues(eL, [], [], 1, 0.3, 10, false); ... %set a generous radius
+	@()updateFixationValues(eL, [], [], 1, 0.5, 12, false); ... %set a generous radius
 	@()statusMessage(eL,'Show Stimulus...'); ...
-	@()edit(obj.stimuli,4,'contrastOut',0.5) }; 
+	@()edit(obj.stimuli,4,'colourOut',[0.7 0.7 0.4]) }; 
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = [];
@@ -162,7 +160,7 @@ disp('================>> Building state info file <<================')
 stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				[]; ...
-'fixate'	'stimulus'	[1 2]	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
+'fixate'	'stimulus'	1.5 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
 'stimulus'  'incorrect'	2		[]				stimFcn			maintainFixFcn	[]; ...
 'incorrect'	'fixate'	2		incEntryFcn		incFcn				[]				[]; ...
 'breakfix'	'fixate'	2		breakEntryFcn	breakFcn		[]				[]; ...

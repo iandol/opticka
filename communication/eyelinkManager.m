@@ -336,15 +336,28 @@ classdef eyelinkManager < optickaCore
 		%> @brief 
 		%>
 		% ===================================================================
-		function updateFixationValues(obj,x,y,inittime,fixtime,radius,strict)			
+		function updateFixationValues(obj,x,y,inittime,fixtime,radius,strict)
+			resetFixation(obj)
 			if nargin > 1 && ~isempty(x); obj.fixationX = x; end
 			if nargin > 2 && ~isempty(y); obj.fixationY = y; end
-			if nargin > 3; obj.fixationInitTime = inittime; end
-			if nargin > 4; obj.fixationTime = fixtime; end
-			if nargin > 5; obj.fixationRadius = radius; end
-			if nargin > 6; obj.strictFixation = strict; end
-%  			fprintf('===> Fix: x=%g y=%g it=%g t=%g r=%g strict=%g\n', obj.fixationX, obj.fixationY, ...
-%  				obj.fixationInitTime, obj.fixationTime, obj.fixationRadius, obj.strictFixation);
+			if nargin > 3 && ~isempty(inittime);
+				if length(inittime) == 2
+					obj.fixationInitTime = randi(inittime*1000)/1000;
+				elseif length(inittime)==1
+					obj.fixationInitTime = inittime;
+				end
+			end
+			if nargin > 4 && ~isempty(fixtime)
+				if length(fixtime) == 2
+					obj.fixationTime = randi(fixtime*1000)/1000; 
+				elseif length(fixtime) == 1
+					obj.fixationTime = fixtime;
+				end
+			end
+			if nargin > 5 && ~isempty(radius); obj.fixationRadius = radius; end
+			if nargin > 6 && ~isempty(strict); obj.strictFixation = strict; end
+  			fprintf('===> Fix: x=%g y=%g it=%g t=%g r=%g strict=%g\n', obj.fixationX, obj.fixationY, ...
+  				obj.fixationInitTime, obj.fixationTime, obj.fixationRadius, obj.strictFixation);
 		end
 		
 		% ===================================================================
