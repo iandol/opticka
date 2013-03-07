@@ -735,7 +735,7 @@ classdef runExperiment < optickaCore
 				addStates(sM, obj.stateInfo);
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(1); %capture keystrokes
+				ListenChar(2); %capture keystrokes
 				
 				%initialise eyelink
 				if obj.useEyeLink

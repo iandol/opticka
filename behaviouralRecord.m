@@ -9,8 +9,9 @@ classdef behaviouralRecord < optickaCore
 		%> verbosity
 		verbose = true
 		h = []
-		values = []
-		rt = []
+		response = []
+		rt1 = []
+		rt2 = []
 		date = []
 	end
 	
@@ -98,8 +99,9 @@ classdef behaviouralRecord < optickaCore
 			set(obj.h.hbox,'Sizes',[-2 -1])
 			set(obj.h.vbox2,'Sizes',[-2 -1])
 			set(obj.h.vbox3,'Sizes',[-2 -1])
-			obj.values = [];
-			obj.rt = [];
+			obj.response = [];
+			obj.rt1 = [];
+			obj.rt2 = [];
 
 			plot(obj.h.axis1, 1, 0,'ko');
 			hist(obj.h.axis2, 0, 0:0.1:2);
@@ -138,25 +140,25 @@ classdef behaviouralRecord < optickaCore
 				obj.startTime = clock;
 			end
 			if strcmpi(sM.currentName,'correct')
-				obj.values(end+1) = 1;
-				if eL.fixTotal > 0
-					obj.rt(end+1) = eL.fixTotal;
-				end
+				obj.response(end+1) = 1;
+				obj.rt1(end+1) = sM.log(end).time;
+				obj.rt2(end+1) = eL.fixInitLength;
 			elseif strcmpi(sM.currentName,'breakfix')
-				obj.values(end+1) = 0;
+				obj.response(end+1) = -1;
 			else
-				obj.values(end+1) = 0;
+				obj.response(end+1) = 0;
 			end
 			
-			hitn = sum(obj.values);
-			totaln = length(obj.values);
+			hitn = length( obj.response(obj.response > 0) );
+			breakn = length( obj.response(obj.response < 0) );
+			totaln = length(obj.response);
 			missn = totaln - hitn;
 			
 			hitmiss = 100 * (hitn / totaln);
-			if length(obj.values) < 10
+			if length(obj.response) < 10
 				average = 100 * (hitn / totaln);
 			else
-				average = 100 * (sum(obj.values(end-9:end)) / length(obj.values(end-9:end)));
+				average = 100 * (sum(obj.response(end-9:end)) / length(obj.response(end-9:end)));
 			end
 			obj.averages(end+1) = average;
 			hits = [hitmiss 100-hitmiss; average 100-average];
@@ -166,15 +168,17 @@ classdef behaviouralRecord < optickaCore
 			obj.time(end+1) = eL.fixationTime;
 			obj.inittime(end+1) = eL.fixationInitTime;
 			set(obj.h.axis1,'NextPlot','replacechildren')
-			plot(obj.h.axis1, 1:length(obj.values), obj.values,'k.-','MarkerSize',12);
+			plot(obj.h.axis1, 1:length(obj.response), obj.response,'k.-','MarkerSize',12);
 			set(obj.h.axis1,'NextPlot','add')
-			plot(obj.h.axis1, 1:length(obj.values), obj.radius,'rd','MarkerSize',10);
-			plot(obj.h.axis1, 1:length(obj.values), obj.inittime,'gd','MarkerSize',10);
-			plot(obj.h.axis1, 1:length(obj.values), obj.time,'bd','MarkerSize',10);
+			plot(obj.h.axis1, 1:length(obj.response), obj.radius,'rd','MarkerSize',10);
+			plot(obj.h.axis1, 1:length(obj.response), obj.inittime,'gd','MarkerSize',10);
+			plot(obj.h.axis1, 1:length(obj.response), obj.time,'bd','MarkerSize',10);
 			axis(obj.h.axis1, 'tight');
 			%axis 2
-			hist(obj.h.axis2, obj.rt, 0:0.2:2);
-			axis(obj.h.axis2, 'tight');
+			if length(obj.rt1) > 0
+				hist(obj.h.axis2, [obj.rt1' obj.rt2'], 0:0.2:2);
+				axis(obj.h.axis2, 'tight');
+			end
 			
 			%axis 3
 			bar(obj.h.axis3,hits,'stacked')
@@ -198,12 +202,12 @@ classdef behaviouralRecord < optickaCore
 			ylabel(obj.h.axis2, 'Number #')
 			ylabel(obj.h.axis3, '% success')
 			ylabel(obj.h.axis4, '% success')
-			title(obj.h.axis1,['Success (' num2str(hitn) ') / Fail (' num2str(missn) ')'])
-			title(obj.h.axis2,['Response Times (mean: ' num2str(mean(obj.rt)) ')'])
+			title(obj.h.axis1,['Success (' num2str(hitn) ') / Fail (' num2str(missn) ' > break=' num2str(breakn) ')'])
+			title(obj.h.axis2,['Response Times (init: ' num2str(mean(obj.rt2)) ' | all: ' num2str(mean(obj.rt1)) ')'])
 			title(obj.h.axis3,'Hit (blue) / Miss (red)')
 			title(obj.h.axis4,'Average (n=10) Hit / Miss %')
 			hn = findobj(obj.h.axis2,'Type','patch');
-			set(hn,'FaceColor','k','EdgeColor','k');
+			%set(hn,'FaceColor','k','EdgeColor','k');
 			
 			t = {['INFORMATION @ ' obj.date]};
 			t{end+1} = ' ';
@@ -211,13 +215,15 @@ classdef behaviouralRecord < optickaCore
 			t{end+1} = ['INITIATE FIXATION TIME (green) z|x = ' num2str(eL.fixationInitTime) ' secs'];
 			t{end+1} = ['MAINTAIN FIXATION TIME (blue) c|v = ' num2str(eL.fixationTime) ' secs'];
 			t{end+1} = ' ';
-			t{end+1} = ['Last Total Response Time = ' num2str(eL.fixTotal) ' secs'];
+			if length(obj.rt1) > 0;t{end+1} = ['Last Init Time = ' num2str(obj.rt2(end)) 'secs | Init+Fix = ' num2str(obj.rt1(end)) 'secs'];end
 			t{end+1} = ['Overall | Latest (n=10) Hit Rate = ' num2str(hitmiss) ' | ' num2str(average)];
 			t{end+1} = ['Run time = ' num2str(etime(clock,obj.startTime)/60) 'mins'];
-			t{end+1} = ['Estimated Volume at 300ms TTL = ' num2str(0.22*sum(obj.values)) 'mls'];
+			t{end+1} = ['Estimated Volume at 300ms TTL = ' num2str(0.22*sum(obj.response)) 'mls'];
 			set(obj.h.info,'String', t')
 			
 			obj.tick = obj.tick + 1;
+			
+			pause(0.01)
 		end
 		
 	end

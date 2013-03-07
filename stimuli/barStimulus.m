@@ -19,6 +19,8 @@ classdef barStimulus < baseStimulus
 		interpMethod = 'nearest'
 		%>
 		textureAspect = 1
+		%> modulate the colour
+		modulateColour = []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -149,7 +151,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible && obj.tick >= obj.delayTicks
-				Screen('DrawTexture',obj.sM.win,obj.texture,[],obj.mvRect,obj.angleOut);
+				Screen('DrawTexture',obj.sM.win, obj.texture,[ ], obj.mvRect, obj.angleOut, [], [], obj.modulateColourOut);
 			end
 			obj.tick = obj.tick + 1;
 		end

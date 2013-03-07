@@ -106,6 +106,10 @@ classdef screenManager < optickaCore
 		flashInterval = 20
 		flashTick = 0
 		flashOn = 1
+		% timed spot logic
+		timedSpotTime = 0
+		timedSpotTick = 0
+		timedSpotNextTick = 0
 	end
 	
 	methods
@@ -592,7 +596,6 @@ classdef screenManager < optickaCore
 			end
 		end
 		
-		
 		% ===================================================================
 		%> @brief draw small spot centered on the screen
 		%>
@@ -604,6 +607,34 @@ classdef screenManager < optickaCore
 			if nargin < 2; size = 1; end
 			size = size/2 * obj.ppd;
 			Screen('gluDisk',obj.win,colour,obj.xCenter,obj.yCenter,size);
+		end
+		
+		% ===================================================================
+		%> @brief draw small spot centered on the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawTimedSpot(obj,size,colour,time,reset)
+			if nargin < 5; reset = false; end
+			if nargin < 4; time = 0.2; end
+			if nargin < 3; colour = [1 1 1 1]; end
+			if nargin < 2; size = 1; end
+			if reset == true
+				if length(time) == 2
+					obj.timedSpotTime = randi(time*1000)/1000;
+				else
+					obj.timedSpotTime = time;
+				end
+				obj.timedSpotNextTick = round(obj.timedSpotTime / obj.screenVals.ifi);
+				obj.timedSpotTick = 1;
+				return
+			end
+			if obj.timedSpotTick <= obj.timedSpotNextTick
+				size = size/2 * obj.ppd;
+				Screen('gluDisk',obj.win,colour,obj.xCenter,obj.yCenter,size);
+			end
+			obj.timedSpotTick = obj.timedSpotTick + 1;
 		end
 		
 		% ===================================================================

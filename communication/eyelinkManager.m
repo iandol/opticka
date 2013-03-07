@@ -333,13 +333,25 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief Function interface to update the fixation parameters
 		%>
 		% ===================================================================
 		function updateFixationValues(obj,x,y,inittime,fixtime,radius,strict)
 			resetFixation(obj)
-			if nargin > 1 && ~isempty(x); obj.fixationX = x; end
-			if nargin > 2 && ~isempty(y); obj.fixationY = y; end
+			if nargin > 1 && ~isempty(x)
+				if isinf(x)
+					obj.fixationX = obj.screen.screenXOffset;
+				else
+					obj.fixationX = x;
+				end
+			end
+			if nargin > 2 && ~isempty(y)
+				if isinf(y)
+					obj.fixationY = obj.screen.screenYOffset;
+				else
+					obj.fixationY = y;
+				end
+			end
 			if nargin > 3 && ~isempty(inittime);
 				if length(inittime) == 2
 					obj.fixationInitTime = randi(inittime*1000)/1000;
@@ -356,8 +368,6 @@ classdef eyelinkManager < optickaCore
 			end
 			if nargin > 5 && ~isempty(radius); obj.fixationRadius = radius; end
 			if nargin > 6 && ~isempty(strict); obj.strictFixation = strict; end
-  			fprintf('===> Fix: x=%g y=%g it=%g t=%g r=%g strict=%g\n', obj.fixationX, obj.fixationY, ...
-  				obj.fixationInitTime, obj.fixationTime, obj.fixationRadius, obj.strictFixation);
 		end
 		
 		% ===================================================================
@@ -376,6 +386,7 @@ classdef eyelinkManager < optickaCore
 					obj.fixInitTotal = obj.currentSample.time;
 				end
 				r = (obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2;
+				%fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
 				if r < (obj.fixationRadius);
 					if obj.fixN == 0 
 						obj.fixN = 1;
@@ -388,7 +399,6 @@ classdef eyelinkManager < optickaCore
 						fixtime = true;
 					end
 					obj.fixInitStartTime = 0;
-					obj.fixInitLength = 0;
 					searching = false;
 					fixated = true;
 					obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
@@ -652,7 +662,7 @@ classdef eyelinkManager < optickaCore
 			try
 				s = screenManager();
 				s.backgroundColour = [1 1 1 0];
-				o = dotsStimulus();
+				o = dotsStimulus('size',2);
 				%s.windowed = [800 600];
 				s.screen = 1;
 				open(s); %open out screen
@@ -675,7 +685,6 @@ classdef eyelinkManager < optickaCore
 					if(err~=0); break; end;
 						
 					[~, ~, keyCode] = KbCheck(-1);
-					if max(keyCode) > 0;fprintf('===> Key press: %s\n',KbName(keyCode));end
 					if keyCode(stopkey); break;	end;
 					
 					draw(o);
@@ -689,17 +698,7 @@ classdef eyelinkManager < optickaCore
 						y = obj.toPixels(obj.y,'y');
 						txt = sprintf('Press ESC to finish \n X = %g / %g | Y = %g / %g \n FIXATION = %g', x, obj.x, y, obj.y, obj.fixLength);
 						Screen('DrawText', s.win, txt, 10, 10);
-						if obj.isFixated
-							Screen('DrawDots', s.win, [x y], 8, [1 1 1], [], 2);
-						else
-							Screen('DrawDots', s.win, [x y], 4, rand(3,1), [], 2)
-						end
-						if obj.fixLength > obj.fixationTime
-							Screen('DrawText', s.win, 'FIX', x, y);
-							obj.statusMessage('DEMO running + fixated');
-						else
-							obj.statusMessage('DEMO running');
-						end
+						drawEyePosition(obj);
 					end
 					
 					Screen('DrawingFinished', s.win); 

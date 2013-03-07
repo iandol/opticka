@@ -293,7 +293,6 @@ classdef metaStimulus < optickaCore
 			end
 		end
 		
-		
 		% ===================================================================
 		%> @brief Return the last randomised XY position
 		%>
