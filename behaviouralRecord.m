@@ -141,7 +141,7 @@ classdef behaviouralRecord < optickaCore
 			end
 			if strcmpi(sM.currentName,'correct')
 				obj.response(end+1) = 1;
-				obj.rt1(end+1) = sM.log(end).time;
+				obj.rt1(end+1) = sM.log(end).totalTime;
 				obj.rt2(end+1) = eL.fixInitLength;
 			elseif strcmpi(sM.currentName,'breakfix')
 				obj.response(end+1) = -1;
@@ -158,7 +158,8 @@ classdef behaviouralRecord < optickaCore
 			if length(obj.response) < 10
 				average = 100 * (hitn / totaln);
 			else
-				average = 100 * (sum(obj.response(end-9:end)) / length(obj.response(end-9:end)));
+				lastn = obj.response(end-9:end);				
+				average = (length(lastn(lastn > 0)) / length(lastn)) * 100;
 			end
 			obj.averages(end+1) = average;
 			hits = [hitmiss 100-hitmiss; average 100-average];

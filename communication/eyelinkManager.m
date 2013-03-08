@@ -518,12 +518,12 @@ classdef eyelinkManager < optickaCore
 				x = obj.toPixels(obj.x,'x');
 				y = obj.toPixels(obj.y,'y');
 				if obj.isFixated
-					Screen('DrawDots', obj.screen.win, [x y], 4, [0.4 0 0.4], [], 1);
+					Screen('DrawDots', obj.screen.win, [x y], 8, [1 0.8 1 1], [], 1);
 					if obj.fixLength > obj.fixationTime
-						Screen('DrawText', obj.screen.win, 'FIX', x, y, [0.4 0 0.4]);
+						Screen('DrawText', obj.screen.win, 'FIX', x, y, [1 1 1]);
 					end	
 				else
-					Screen('DrawDots', obj.screen.win, [x y], 4, [0.4 0.4 0.4 1], [], 1);
+					Screen('DrawDots', obj.screen.win, [x y], 4, [1 0.5 1 1], [], 1);
 				end	
 			end
 		end
