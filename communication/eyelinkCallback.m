@@ -39,7 +39,7 @@ function rc = eyelinkCallback(callArgs, msg)
 % Cached texture handle for eyelink texture:
 persistent eyelinktex;
 % add by NJ
-global dw dh offscreen lj;
+global dw dh offscreen lJ;
 
 % Cached window handle for target onscreen window:
 persistent eyewin;
@@ -158,9 +158,9 @@ switch eyecmd
 			clearScreen = 1;
 			needsupdate = 1;
 			calxy = [];
-% 			if isa(lj,'labJack')
-% 				lj.timedTTL(0,100);
-% 			end
+			if isa(lJ,'labJack')
+				lJ.timedTTL(0,100);
+			end
 		end
         if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
     case 3

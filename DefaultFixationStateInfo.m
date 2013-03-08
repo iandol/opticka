@@ -10,15 +10,15 @@
 %------------General Settings-----------------
 rewardTime = 200; %TTL time in milliseconds
 
-luminancePedestal = [0.7 0.7 0.7];
-fixX = 1;
-fixY = 1;
-firstFixInit = 1;
+luminancePedestal = [0.6 0.6 0.6];
+fixX = 0;
+fixY = 0;
+firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
 firstFixRadius = 2;
 
 eL.name = 'figure-ground';
-eL.isDummy = true; %use dummy or real eyelink?
+eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
@@ -30,13 +30,13 @@ eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 = use any keyboard
 
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
-eL.updateFixationValues(1, 1, 0.6, 2, 1.5, true);
+eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
 
 %randomise stimulus variables every trial?
 obj.stimuli.choice = [];
 n = 1;
 in(n).name = 'xyPosition';
-in(n).values = [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
+in(n).values = [10 10; 10 -10; -10 10; -10 -10; -10 0; 10 0];
 in(n).stimuli = [2 3];
 obj.stimuli.stimulusTable = in;
 clear in
@@ -87,15 +87,14 @@ fixEntryFcn = { @()setOffline(eL); ... %set eyelink offline
 
 %fix within
 fixFcn = { @()draw(obj.stimuli); ... %draw stimuli but no animation yet
-	@()drawGrid(s); ...
-	@()drawEyePosition(eL) };
+	};
 
 %test we are fixated for a certain length of time
 initFixFcn = @()testSearchHoldFixation(eL,'stimulus','breakfix');
 
 %exit fixation phase
 fixExitFcn = { @()updateFixationTarget(obj); ... %use our stimuli values for next fix X and Y
-	@()updateFixationValues(eL, [], [], 2, 2, 2, false); ... %set a generous radius and time
+	@()updateFixationValues(eL, [], [], 2, 0.2, 20, false); ... %set a generous radius and time
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edit(obj.stimuli,4,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
 	@()edit(obj.stimuli,2,'modulateColourOut',luminancePedestal); ... %pump up background
@@ -106,23 +105,20 @@ stimEntryFcn = [];
 
 %what to run when we are showing stimuli
 stimFcn =  { @()draw(obj.stimuli); ...
-	@()drawEyePosition(eL); ...
-	@()drawGrid(s); ...
 	@()finishDrawing(s); ...
 	@()animate(obj.stimuli) };%draw each stimulus to screen
 
 %test we are maintaining fixation
-maintainFixFcn = @()testSearchHoldFixation(eL,'correct','');
+maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
 
 %as we exit stim presentation state
-stimExitFcn = @()hide(obj.stimuli{4});
+stimExitFcn = [];
 
 %if the subject is correct (small reward)
 correctEntryFcn = { @()timedTTL(lJ,0,rewardTime); ... % labjack sends a TTL to Crist reward system
+	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
-	@()hide(obj.stimuli{4}); ...
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
-	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
 	@()randomise(obj.stimuli); ... %randomise our stimuli
 	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
@@ -133,10 +129,12 @@ correctEntryFcn = { @()timedTTL(lJ,0,rewardTime); ... % labjack sends a TTL to C
 	};
 
 %correct stimulus
-correctFcn = { @()draw(obj.stimuli); @()drawTimedSpot(s, 0.5, [0 1 0 1]) };
+correctFcn = { @()draw(obj.stimuli); 
+	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
+	};
 
 %when we exit the correct state
-correctExitFcn = [];
+correctExitFcn = @()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
 
 %incorrect entry
 incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eyelink
@@ -192,7 +190,7 @@ stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				[]; ...
 'fixate'	'incorrect'	2	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
-'stimulus'  'incorrect'	5		[]				stimFcn			maintainFixFcn	[]; ...
+'stimulus'  'incorrect'	2		[]				stimFcn			maintainFixFcn	[]; ...
 'incorrect'	'fixate'	1		incEntryFcn		incFcn			[]				incExitFcn; ...
 'breakfix'	'fixate'	2		breakEntryFcn	breakFcn		[]				incExitFcn; ...
 'correct'	'fixate'	1		correctEntryFcn	correctFcn		[]				correctExitFcn; ...

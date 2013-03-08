@@ -816,6 +816,8 @@ classdef runExperiment < optickaCore
 				obj.eyeLink = [];
 				obj.lJack.close;
 				obj.lJack=[];
+				assignin('base', ['bR' bR.uuid], bR)
+				assignin('base', ['tL' tL.uuid], tL)
 				clear tL s tS bR lJ eL				
 			catch ME
 				warning('on') %#ok<WNON>

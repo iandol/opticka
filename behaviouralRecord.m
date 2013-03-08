@@ -164,6 +164,8 @@ classdef behaviouralRecord < optickaCore
 			obj.averages(end+1) = average;
 			hits = [hitmiss 100-hitmiss; average 100-average];
 			
+			
+			
 			%axis 1
 			obj.radius(end+1) = eL.fixationRadius;
 			obj.time(end+1) = eL.fixationTime;
@@ -204,7 +206,7 @@ classdef behaviouralRecord < optickaCore
 			ylabel(obj.h.axis3, '% success')
 			ylabel(obj.h.axis4, '% success')
 			title(obj.h.axis1,['Success (' num2str(hitn) ') / Fail (' num2str(missn) ' > break=' num2str(breakn) ')'])
-			title(obj.h.axis2,['Response Times (init: ' num2str(mean(obj.rt2)) ' | all: ' num2str(mean(obj.rt1)) ')'])
+			title(obj.h.axis2,['Response Times (mean init: ' num2str(mean(obj.rt2)) ' | mean init+fix: ' num2str(mean(obj.rt1)) ')'])
 			title(obj.h.axis3,'Hit (blue) / Miss (red)')
 			title(obj.h.axis4,'Average (n=10) Hit / Miss %')
 			hn = findobj(obj.h.axis2,'Type','patch');
@@ -216,7 +218,7 @@ classdef behaviouralRecord < optickaCore
 			t{end+1} = ['INITIATE FIXATION TIME (green) z|x = ' num2str(eL.fixationInitTime) ' secs'];
 			t{end+1} = ['MAINTAIN FIXATION TIME (blue) c|v = ' num2str(eL.fixationTime) ' secs'];
 			t{end+1} = ' ';
-			if length(obj.rt1) > 0;t{end+1} = ['Last Init Time = ' num2str(obj.rt2(end)) 'secs | Init+Fix = ' num2str(obj.rt1(end)) 'secs'];end
+			if length(obj.rt1) > 0;t{end+1} = ['Last/Mean Init Time = ' num2str(obj.rt2(end)) ' / ' num2str(mean(obj.rt2)) 'secs | Last/Mean Init+Fix = ' num2str(obj.rt1(end)) ' / ' num2str(mean(obj.rt1)) 'secs'];end
 			t{end+1} = ['Overall | Latest (n=10) Hit Rate = ' num2str(hitmiss) ' | ' num2str(average)];
 			t{end+1} = ['Run time = ' num2str(etime(clock,obj.startTime)/60) 'mins'];
 			t{end+1} = ['Estimated Volume at 300ms TTL = ' num2str(0.22*sum(obj.response)) 'mls'];
@@ -224,7 +226,7 @@ classdef behaviouralRecord < optickaCore
 			
 			obj.tick = obj.tick + 1;
 			
-			pause(0.01)
+			pause(1e-3);
 		end
 		
 	end
