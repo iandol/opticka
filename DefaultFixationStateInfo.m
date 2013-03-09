@@ -15,7 +15,11 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
-firstFixRadius = 2;
+firstFixRadius = 1.4;
+
+targetFixInit = 0.5;
+targetFixTime = 0.3;
+targetRadius = 15;
 
 eL.name = 'figure-ground';
 eL.isDummy = false; %use dummy or real eyelink?
@@ -38,6 +42,13 @@ n = 1;
 in(n).name = 'xyPosition';
 in(n).values = [10 10; 10 -10; -10 10; -10 -10; -10 0; 10 0];
 in(n).stimuli = [2 3];
+in(n).offset = [3; 180];
+n = n + 1;
+in(n).name = 'angle';
+in(n).values = [0 180];
+in(n).stimuli = [1];
+in(n).offset = [3; 180];
+
 obj.stimuli.stimulusTable = in;
 clear in
 
@@ -76,6 +87,8 @@ showSet(obj.stimuli);
 %pause entry
 pauseEntryFcn = @()setOffline(eL); %set eyelink offline
 
+prefixFcn = @()draw(obj.stimuli); ... %draw stimuli but no animation yet
+
 %fixate entry
 fixEntryFcn = { @()setOffline(eL); ... %set eyelink offline
 	@()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
@@ -86,7 +99,8 @@ fixEntryFcn = { @()setOffline(eL); ... %set eyelink offline
 	}; 
 
 %fix within
-fixFcn = { @()draw(obj.stimuli); ... %draw stimuli but no animation yet
+fixFcn = { @()draw(obj.stimuli); ... %draw stimuli but no animation yet	@()drawEyePosition(eL); ...
+	@()finishDrawing(s); ...
 	};
 
 %test we are fixated for a certain length of time
@@ -94,7 +108,7 @@ initFixFcn = @()testSearchHoldFixation(eL,'stimulus','breakfix');
 
 %exit fixation phase
 fixExitFcn = { @()updateFixationTarget(obj); ... %use our stimuli values for next fix X and Y
-	@()updateFixationValues(eL, [], [], 2, 0.2, 20, false); ... %set a generous radius and time
+	@()updateFixationValues(eL, [], [], targetFixInit, targetFixTime, targetRadius, true); ... %set target fix window
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edit(obj.stimuli,4,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
 	@()edit(obj.stimuli,2,'modulateColourOut',luminancePedestal); ... %pump up background
@@ -104,7 +118,7 @@ fixExitFcn = { @()updateFixationTarget(obj); ... %use our stimuli values for nex
 stimEntryFcn = [];
 
 %what to run when we are showing stimuli
-stimFcn =  { @()draw(obj.stimuli); ...
+stimFcn =  { @()draw(obj.stimuli); ...	@()drawEyePosition(eL); ...
 	@()finishDrawing(s); ...
 	@()animate(obj.stimuli) };%draw each stimulus to screen
 
@@ -118,14 +132,13 @@ stimExitFcn = [];
 correctEntryFcn = { @()timedTTL(lJ,0,rewardTime); ... % labjack sends a TTL to Crist reward system
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
-	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 	@()randomise(obj.stimuli); ... %randomise our stimuli
 	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
 	@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
-	@()update(obj.stimuli); ... %update our stimuli ready for display
+	@()hide(obj.stimuli{4}); ...
 	};
 
 %correct stimulus
@@ -134,8 +147,10 @@ correctFcn = { @()draw(obj.stimuli);
 	};
 
 %when we exit the correct state
-correctExitFcn = @()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
-
+correctExitFcn = { @()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
+	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
+	@()update(obj.stimuli); ... %update our stimuli ready for display
+	};
 %incorrect entry
 incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eyelink
 	@()randomise(obj.stimuli); ... %randomise our stimuli
@@ -145,15 +160,15 @@ incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eye
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
 	@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
 	@()hide(obj.stimuli{4}); ...
-	@()update(obj.stimuli); ... %update our stimuli ready for display
-	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 	}; 
 
 %our incorrect stimulus
 incFcn =  @()draw(obj.stimuli);
 
 %incorrect / break exit
-incExitFcn = [];
+incExitFcn = { @()updatePlot(bR, eL, sM); ... %update our behavioural plot;
+	@()update(obj.stimuli); ... %update our stimuli ready for display
+	};
 
 %break entry
 breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message on eyelink
@@ -165,11 +180,7 @@ breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message 
 	@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
 	@()hide(obj.stimuli{4}); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display
-	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 	};
-
-%our incorrect stimulus
-breakFcn =  @()draw(obj.stimuli);
 
 %calibration function
 calibrateFcn = { @()setOffline(eL); @()trackerSetup(eL) }; %enter tracker calibrate/validate setup mode
@@ -189,11 +200,12 @@ disp('================>> Building state info file <<================')
 stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				[]; ...
-'fixate'	'incorrect'	2	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
+'prefix'	'fixate'	0.2		[]				prefixFcn		[]				[]; ...
+'fixate'	'incorrect'	1.4	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
 'stimulus'  'incorrect'	2		[]				stimFcn			maintainFixFcn	[]; ...
-'incorrect'	'fixate'	1		incEntryFcn		incFcn			[]				incExitFcn; ...
-'breakfix'	'fixate'	2		breakEntryFcn	breakFcn		[]				incExitFcn; ...
-'correct'	'fixate'	1		correctEntryFcn	correctFcn		[]				correctExitFcn; ...
+'incorrect'	'prefix'	2		incEntryFcn		incFcn			[]				incExitFcn; ...
+'breakfix'	'prefix'	2		breakEntryFcn	incFcn			[]				incExitFcn; ...
+'correct'	'prefix'	1		correctEntryFcn	correctFcn		[]				correctExitFcn; ...
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[]; ...
 'override'	'pause'		0.5		overrideFcn		[]				[]				[]; ...
 'flash'		'pause'		0.5		flashFcn		[]				[]				[]; ...
@@ -202,5 +214,6 @@ stateInfoTmp = { ...
 
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')
-clear maintainFixFcn psFcn stimFcn stimEntryFcn stimExitfcn correctEntry correctWithin correctExit ...
-	incorrectFcn calibrateFcn
+clear pauseEntryFcn fixEntryFcn fixFcn initFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
+	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
+	calibrateFcn overrideFcn flashFcn gridFcn

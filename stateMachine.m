@@ -52,6 +52,8 @@ classdef stateMachine < optickaCore
 		currentState
 		%> current state name
 		currentName
+		%> current state uuid
+		currentUUID
 		%> current state index
 		currentIndex
 		%> ticks within the current state
@@ -442,6 +444,7 @@ classdef stateMachine < optickaCore
 				obj.currentTick = 1;
 				obj.currentState = thisState;
 				obj.currentName = thisState.name;
+				obj.currentUUID = num2str(dec2hex(floor((now - floor(now))*1e10)));
 				obj.currentEntryFcn = thisState.entryFcn;
 				obj.currentWithinFcn = thisState.withinFcn;
 				obj.currentTransitionFcn = thisState.transitionFcn;

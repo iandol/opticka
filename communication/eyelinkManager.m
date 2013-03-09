@@ -523,7 +523,7 @@ classdef eyelinkManager < optickaCore
 						Screen('DrawText', obj.screen.win, 'FIX', x, y, [1 1 1]);
 					end	
 				else
-					Screen('DrawDots', obj.screen.win, [x y], 4, [1 0.5 1 1], [], 1);
+					Screen('DrawDots', obj.screen.win, [x y], 4, [1 0.5 0 1], [], 1);
 				end	
 			end
 		end
@@ -551,16 +551,16 @@ classdef eyelinkManager < optickaCore
 					Eyelink('StopRecording');
 					Eyelink('CloseFile');
 					try
-						obj.salutation('Close Method',sprintf('Receiving data file %s', obj.saveFile));
+						obj.salutation('Close Method',sprintf('Receiving data file %s', obj.saveFile),true);
 						status=Eyelink('ReceiveFile');
 						if status > 0
 							obj.salutation('Close Method',sprintf('ReceiveFile status %d', status));
 						end
 						if 2==exist(obj.saveFile, 'file')
-							obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', obj.saveFile, pwd));
+							obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', obj.saveFile, pwd),true);
 						end
 					catch ME
-						obj.salutation('Close Method',sprintf('Problem receiving data file ''%s''', obj.saveFile));
+						obj.salutation('Close Method',sprintf('Problem receiving data file ''%s''', obj.saveFile),true);
 						disp(ME.message);
 					end
 				end

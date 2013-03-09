@@ -55,6 +55,8 @@ classdef runExperiment < optickaCore
 		strobeValue = []
 		%> send strobe on next flip?
 		sendStrobe = false
+		%> directory to save all data in?
+		saveDirectory = '~/MatlabFiles/SavedData/'
 	end
 	
 	properties (Hidden = true)
@@ -96,6 +98,8 @@ classdef runExperiment < optickaCore
 		eyeLink
 		%> data pixx control
 		dPixx
+		%> save prefix generated from clock time
+		savePrefix
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -202,6 +206,7 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
+					eL.saveFile = [obj.saveDirectory obj.savePrefix 'RUN.edf'];
 					initialise(eL, s);
 					setup(eL);
 				end
@@ -476,6 +481,7 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
+					eL.saveFile = [obj.saveDirectory obj.savePrefix 'FIX.edf'];
 				end
 				
 				if isempty(obj.stateInfoFile)
@@ -719,6 +725,7 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
+					eL.saveFile = [obj.saveDirectory filesep obj.savePrefix 'FIX.edf'];
 				end
 				
 				obj.stateMachine = stateMachine('realTime',true,'name','fixationtraining','verbose',obj.verbose); %#ok<*CPROP>
@@ -749,6 +756,7 @@ classdef runExperiment < optickaCore
 				tS.keyHold = 1; %a small loop to stop overeager key presses
 				tS.totalTicks = 1; % a tick counter
 				tS.pauseToggle = 1;
+				tS.eyePos = [];
 				
 				%if obj.useEyeLink; startRecording(eL); end
 				
@@ -777,10 +785,20 @@ classdef runExperiment < optickaCore
 					update(sM);
 					
 					%------check eye position
-					if obj.useEyeLink; getSample(eL); end
+					if obj.useEyeLink; 
+						getSample(eL); 
+						if strcmpi(sM.currentName,'stimulus')
+							uuid = ['E' sM.currentUUID];
+							if isfield(tS.eyePos,uuid)
+								tS.eyePos.(uuid).x(end+1) = eL.x;								tS.eyePos.(uuid).y(end+1) = eL.y;
+							else
+								tS.eyePos.(uuid).x = eL.x;								tS.eyePos.(uuid).y = eL.y;
+							end
+						end
+					end
 					
 					%------check keyboard for commands
-					if ~strcmpi(sM.currentName,'calibrate') && ~strcmpi(obj.stateMachine.currentName,'stimulus')
+					if ~strcmpi(sM.currentName,'calibrate') && ~strcmpi(sM.currentName,'stimulus')
 						tS = obj.checkFixationKeys(tS);
 					end
 					
@@ -808,7 +826,7 @@ classdef runExperiment < optickaCore
 				end
 				Priority(0);
 				ListenChar(0)
-				obj.salutation(sprintf('Total ticks: %g | stateMachine ticks: %g',tS.totalTicks,obj.stateMachine.totalTicks));
+				obj.salutation(sprintf('Total ticks: %g | stateMachine ticks: %g', tS.totalTicks, sM.totalTicks));
 				ShowCursor;
 				warning('on') %#ok<WNON>
 				close(s);
@@ -818,6 +836,7 @@ classdef runExperiment < optickaCore
 				obj.lJack=[];
 				assignin('base', ['bR' bR.uuid], bR)
 				assignin('base', ['tL' tL.uuid], tL)
+				assignin('base', ['tS' obj.uuid], tS)
 				clear tL s tS bR lJ eL				
 			catch ME
 				warning('on') %#ok<WNON>
@@ -1021,6 +1040,19 @@ classdef runExperiment < optickaCore
 			elseif iscell(in)
 				obj.stimuli.stimuli = in;
 			end
+		end
+		
+		% ===================================================================
+		%> @brief Initialise Save Dir
+		%>
+		%> For single stimulus presentation, randomise stimulus choice
+		% ===================================================================
+		function initialiseSave(obj,path)
+			obj.saveDirectory = path;
+			c = fix(clock);
+			c = num2str(c(1:5));
+			c = regexprep(c,' +','-');
+			obj.savePrefix = c;
 		end
 		
 		% ===================================================================
@@ -1807,6 +1839,18 @@ classdef runExperiment < optickaCore
 	%=======================================================================
 	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
+	
+		function plotEyeLogs(tS)
+			tS = tS.eyePos;
+			fn = fieldnames(tS);
+			figure
+			for i = 1:length(fn)
+				hold on
+				plot(tS.(fn(i)).x, tS.(fn(i)).y)
+				hold off
+			end
+		end
+		
 		% ===================================================================
 		%> @brief loadobj
 		%> To be backwards compatible to older saved protocols, we have to parse 

@@ -217,20 +217,28 @@ classdef opticka < optickaCore
 				if ismac
 					obj.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -r \"runServer\""'' -e ''end tell'''];
 					obj.paths.temp=tempdir;
+					
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);
 					end
 					obj.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
 					cd(obj.paths.protocols);
 					obj.paths.currentPath = pwd;
+					
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'Calibration'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'Calibration']);
 					end
 					obj.paths.calibration = ['~' filesep 'MatlabFiles' filesep 'Calibration'];
+					
 					if ~exist([obj.paths.temp 'History'],'dir')
 						mkdir([obj.paths.temp 'History']);
 					end
 					obj.paths.historypath=[obj.paths.temp 'History'];
+					
+					if ~exist(['~' filesep 'MatlabFiles' filesep 'SavedData'],'dir')
+						mkdir(['~' filesep 'MatlabFiles' filesep 'SavedData']);
+					end
+					obj.paths.savedData = ['~' filesep 'MatlabFiles' filesep 'SavedData'];
 					
 				elseif isunix
 					obj.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
@@ -249,24 +257,34 @@ classdef opticka < optickaCore
 						mkdir([obj.paths.temp 'History']);
 					end
 					obj.paths.historypath=[obj.paths.temp 'History'];
+					
+					if ~exist(['~' filesep 'MatlabFiles' filesep 'SavedData'],'dir')
+						mkdir(['~' filesep 'MatlabFiles' filesep 'SavedData']);
+					end
+					obj.paths.savedData = ['~' filesep 'MatlabFiles' filesep 'SavedData'];
 				
 				elseif ispc
 					obj.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
 					obj.paths.temp=tempdir;
 					if ~exist('c:\MatlabFiles\Protocols','dir')
-						mkdir('c:\MatlabFiles\Protocols')
+						mkdir('c:\MatlabFiles\Protocols\')
 					end
 					obj.paths.protocols = ['c:\MatlabFiles\Protocols'];
 					cd(obj.paths.protocols);
 					obj.paths.currentPath = pwd;
 					if ~exist('c:\MatlabFiles\Calibration','dir')
-						mkdir('c:\MatlabFiles\Calibration')
+						mkdir('c:\MatlabFiles\Calibration\')
 					end
 					obj.paths.calibration = ['c:\MatlabFiles\Calibration'];
 					if ~exist('c:\MatlabFiles\History','dir')
-						mkdir('c:\MatlabFiles\History')
+						mkdir('c:\MatlabFiles\History\')
 					end
 					obj.paths.historypath=[obj.paths.temp 'History'];
+					
+					if ~exist(['c:\MatlabFiles\SavedData'],'dir')
+						mkdir(['c:\MatlabFiles\SavedData']);
+					end
+					obj.paths.savedData = ['c:\MatlabFiles\SavedData\'];
 				end
 				
 				obj.store.newlook='javax.swing.plaf.metal.MetalLookAndFeel';

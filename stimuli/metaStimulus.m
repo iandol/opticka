@@ -233,6 +233,8 @@ classdef metaStimulus < optickaCore
 					
 					stims = obj.stimulusTable(i).stimuli;
 					name = obj.stimulusTable(i).name;
+					offset = obj.stimulusTable(i).offset;
+					
 					if ~isempty(stims) && ~isempty(name)
 	
 						[r,c] = size(obj.stimulusTable(i).values);
@@ -254,6 +256,10 @@ classdef metaStimulus < optickaCore
 							elseif isprop(obj.stimuli{stims(j)}, [name 'Out'])
 								obj.stimuli{stims(j)}.([name 'Out']) = values;
 								logs = [logs ' || ' name 'Out: ' num2str(values)];
+								if ~isempty(offset)
+									obj.stimuli{offset(1)}.([name 'Out']) = values + offset(2);
+									logs = [logs ' || OFFSET' name 'Out: ' num2str(values + offset(2))];
+								end
 							end
 						end
 					
