@@ -53,6 +53,7 @@ classdef metaStimulus < optickaCore
 	properties (SetAccess = private, GetAccess = public) 
 		%> stimulus family
 		family = 'meta'
+		updateLog = []
 	end
 	
 	%--------------------VISIBLE PROPERTIES----------%
@@ -119,6 +120,7 @@ classdef metaStimulus < optickaCore
 		%> @return
 		% ===================================================================
 		function update(obj,choice)
+			tic
 			if exist('choice','var') %user forces a single stimulus
 				
 				update(obj.stimuli{choice});
@@ -140,6 +142,7 @@ classdef metaStimulus < optickaCore
 				end
 				
 			end
+			obj.updateLog = [obj.updateLog toc*1000];
 		end
 		
 		% ===================================================================

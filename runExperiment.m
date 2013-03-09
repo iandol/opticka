@@ -790,9 +790,11 @@ classdef runExperiment < optickaCore
 						if strcmpi(sM.currentName,'stimulus')
 							uuid = ['E' sM.currentUUID];
 							if isfield(tS.eyePos,uuid)
-								tS.eyePos.(uuid).x(end+1) = eL.x;								tS.eyePos.(uuid).y(end+1) = eL.y;
+								tS.eyePos.(uuid).x(end+1) = eL.x;								
+								tS.eyePos.(uuid).y(end+1) = eL.y;
 							else
-								tS.eyePos.(uuid).x = eL.x;								tS.eyePos.(uuid).y = eL.y;
+								tS.eyePos.(uuid).x = eL.x;								
+								tS.eyePos.(uuid).y = eL.y;
 							end
 						end
 					end
@@ -834,8 +836,8 @@ classdef runExperiment < optickaCore
 				obj.eyeLink = [];
 				obj.lJack.close;
 				obj.lJack=[];
-				assignin('base', ['bR' bR.uuid], bR)
-				assignin('base', ['tL' tL.uuid], tL)
+				assignin('base', ['bR' obj.uuid], bR)
+				assignin('base', ['tL' obj.uuid], tL)
 				assignin('base', ['tS' obj.uuid], tS)
 				clear tL s tS bR lJ eL				
 			catch ME
@@ -1844,9 +1846,12 @@ classdef runExperiment < optickaCore
 			tS = tS.eyePos;
 			fn = fieldnames(tS);
 			figure
-			for i = 1:length(fn)
+			for i = 1:20
+				x = tS.(fn{i}).x;
+				y = tS.(fn{i}).y;
 				hold on
-				plot(tS.(fn(i)).x, tS.(fn(i)).y)
+				c = rand(1,3);
+				plot(x, y,'k-o','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c)
 				hold off
 			end
 		end

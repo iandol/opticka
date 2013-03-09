@@ -136,6 +136,7 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function updatePlot(obj, eL, sM)
+			tick
 			if obj.tick == 1
 				obj.startTime = clock;
 			end
@@ -225,8 +226,9 @@ classdef behaviouralRecord < optickaCore
 			set(obj.h.info,'String', t')
 			
 			obj.tick = obj.tick + 1;
-			
 			pause(1e-3);
+			fprintf('Graph draw too: %g ms\n',toc*1000)
+			
 		end
 		
 	end
