@@ -84,8 +84,9 @@ classdef timeLogger < optickaCore
 			plot(diff(vbl),'ro:')
 			plot(diff(show),'b--')
 			plot(diff(flip),'g-.')
+			plot(stimTime(2:end)*100,'k-')
 			hold off
-			legend('VBL','Show','Flip')
+			legend('VBL','Show','Flip','Stim ON')
 			[m,e]=obj.stderr(diff(vbl));
 			t=sprintf('VBL mean=%2.2f+-%2.2f s.e.', m, e);
 			[m,e]=obj.stderr(diff(show));
@@ -129,7 +130,7 @@ classdef timeLogger < optickaCore
 			
 			p(3,1).select();
 			hold on
-			miss(miss > 0.1) = 0.1;
+			miss(miss > 0.05) = 0.05;
 			plot(miss,'k.-');
 			plot(obj.missImportant,'ro','MarkerFaceColor',[1 0 0]);
 			plot(stimTime/100,'k');

@@ -1844,17 +1844,43 @@ classdef runExperiment < optickaCore
 	%=======================================================================
 	
 		function plotEyeLogs(tS)
+			ifi = 0.013;
 			tS = tS.eyePos;
 			fn = fieldnames(tS);
-			figure
-			for i = 1:20
+			figure;
+			for i = 1:length(fn)
 				x = tS.(fn{i}).x;
 				y = tS.(fn{i}).y;
-				hold on
-				c = rand(1,3);
-				plot(x, y,'k-o','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c)
-				hold off
+				if (max(x) < 16 && min(x) > -16) && (max(y) < 16 && min(y) > -16) && mean(x(1:10)) < 0.1 && mean(y(1:10)) < 0.1
+					c = rand(1,3);
+					subplot(2,1,1)
+					hold on
+					plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					hold off
+					
+					subplot(2,1,2)
+					t = 0:ifi:(ifi*length(x));
+					t = t(1:length(x));
+					hold on
+					plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					hold off
+					grid on
+					box on
+				end
 			end
+			subplot(2,1,1)
+			grid on
+			box on
+			title('X vs. Y Eye Position in Degrees')
+			xlabel('X Degrees')
+			ylabel('Y Degrees')
+			subplot(2,1,2)
+			grid on
+			box on
+			title('X and Y Position vs. time')
+			xlabel('Time (s)')
+			ylabel('Degrees')
 		end
 		
 		% ===================================================================

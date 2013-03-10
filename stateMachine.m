@@ -459,7 +459,7 @@ classdef stateMachine < optickaCore
 				
 				%obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false)
 				
-				%tic;
+				tic;
 				if isa(thisState.entryFcn,'function_handle') %function handle, lets feval it
 					feval(thisState.entryFcn);
 				elseif iscell(thisState.entryFcn) %nested class of function handles
@@ -467,7 +467,7 @@ classdef stateMachine < optickaCore
 						feval(thisState.entryFcn{i});
 					end
 				end
-				%obj.fevalTime.enter = toc*1000;
+				obj.fevalTime.enter = toc*1000;
 	
 			else
 				obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length',false);
@@ -501,7 +501,7 @@ classdef stateMachine < optickaCore
 		function exitCurrentState(obj)
 			thisState = obj.stateList(obj.currentIndex);
 			
-			%tic;
+			tic;
 			if iscell(thisState.exitFcn) %nested class of function handles	
 				for i = 1:size(thisState.exitFcn, 1) %nested class
 					feval(thisState.exitFcn{i});
@@ -509,7 +509,7 @@ classdef stateMachine < optickaCore
 			elseif isa(thisState.exitFcn,'function_handle') %function handle, lets feval it
 				feval(thisState.exitFcn);
 			end
-			%obj.fevalTime.exit = toc*1000;
+			obj.fevalTime.exit = toc*1000;
 			
 			storeCurrentStateInfo(obj);
 			
