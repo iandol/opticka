@@ -839,7 +839,8 @@ classdef runExperiment < optickaCore
 				assignin('base', ['bR' obj.uuid], bR)
 				assignin('base', ['tL' obj.uuid], tL)
 				assignin('base', ['tS' obj.uuid], tS)
-				clear tL s tS bR lJ eL				
+				assignin('base', ['sM' obj.uuid], sM)
+				clear tL s tS bR lJ eL io sM			
 			catch ME
 				warning('on') %#ok<WNON>
 				Priority(0);

@@ -136,7 +136,7 @@ classdef behaviouralRecord < optickaCore
 		%> 
 		% ===================================================================
 		function updatePlot(obj, eL, sM)
-			tick
+			%tick
 			if obj.tick == 1
 				obj.startTime = clock;
 			end
@@ -215,7 +215,7 @@ classdef behaviouralRecord < optickaCore
 			
 			t = {['INFORMATION @ ' obj.date]};
 			t{end+1} = ' ';
-			t{end+1} = ['RADIUS (red) b|n = ' num2str(eL.fixationRadius) ' °'];
+			t{end+1} = ['RADIUS (red) b|n = ' num2str(eL.fixationRadius) ' ï¾°'];
 			t{end+1} = ['INITIATE FIXATION TIME (green) z|x = ' num2str(eL.fixationInitTime) ' secs'];
 			t{end+1} = ['MAINTAIN FIXATION TIME (blue) c|v = ' num2str(eL.fixationTime) ' secs'];
 			t{end+1} = ' ';
@@ -227,7 +227,7 @@ classdef behaviouralRecord < optickaCore
 			
 			obj.tick = obj.tick + 1;
 			pause(1e-3);
-			fprintf('Graph draw too: %g ms\n',toc*1000)
+			%fprintf('Graph draw took: %g ms\n',toc*1000)
 			
 		end
 		

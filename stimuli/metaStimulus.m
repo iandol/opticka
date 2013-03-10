@@ -120,7 +120,7 @@ classdef metaStimulus < optickaCore
 		%> @return
 		% ===================================================================
 		function update(obj,choice)
-			tic
+			%tic
 			if exist('choice','var') %user forces a single stimulus
 				
 				update(obj.stimuli{choice});
@@ -142,7 +142,7 @@ classdef metaStimulus < optickaCore
 				end
 				
 			end
-			obj.updateLog = [obj.updateLog toc*1000];
+			%obj.updateLog = [obj.updateLog toc*1000];
 		end
 		
 		% ===================================================================

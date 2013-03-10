@@ -15,10 +15,10 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
-firstFixRadius = 1.4;
+firstFixRadius = 1.3;
 
 targetFixInit = 0.5;
-targetFixTime = 0.3;
+targetFixTime = [0.3 0.6];
 targetRadius = 15;
 
 eL.name = 'figure-ground';
@@ -90,8 +90,7 @@ pauseEntryFcn = @()setOffline(eL); %set eyelink offline
 prefixFcn = @()draw(obj.stimuli); ... %draw stimuli but no animation yet
 
 %fixate entry
-fixEntryFcn = { @()setOffline(eL); ... %set eyelink offline
-	@()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
+fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
 	@()startRecording(eL); ... %fire up eyelink
 	@()edit(obj.stimuli,4,'colourOut',[1 1 0]); ...
 	@()show(obj.stimuli{4}); ...
@@ -129,16 +128,13 @@ maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
 stimExitFcn = [];
 
 %if the subject is correct (small reward)
-correctEntryFcn = { @()timedTTL(lJ,0,rewardTime); ... % labjack sends a TTL to Crist reward system
+correctEntryFcn = { @()tic; ...
+	@()timedTTL(lJ,0,rewardTime); ... % labjack sends a TTL to Crist reward system
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
-	@()randomise(obj.stimuli); ... %randomise our stimuli
-	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
-	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
-	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
-	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
 	@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
 	@()hide(obj.stimuli{4}); ...
+	@()toc; ...
 	};
 
 %correct stimulus
@@ -148,16 +144,17 @@ correctFcn = { @()draw(obj.stimuli);
 
 %when we exit the correct state
 correctExitFcn = { @()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
-	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
-	@()update(obj.stimuli); ... %update our stimuli ready for display
-	};
-%incorrect entry
-incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eyelink
 	@()randomise(obj.stimuli); ... %randomise our stimuli
 	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
+	@()setOffline(eL); ... %set eyelink offline
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
+	@()update(obj.stimuli); ... %update our stimuli ready for display
+	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
+	};
+%incorrect entry
+incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eyelink
 	@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
 	@()hide(obj.stimuli{4}); ...
 	}; 
@@ -166,20 +163,20 @@ incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eye
 incFcn =  @()draw(obj.stimuli);
 
 %incorrect / break exit
-incExitFcn = { @()updatePlot(bR, eL, sM); ... %update our behavioural plot;
+incExitFcn = { @()randomise(obj.stimuli); ... %randomise our stimuli
+	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
+	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
+	@()setOffline(eL); ... %set eyelink offline
+	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
+	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
 	@()update(obj.stimuli); ... %update our stimuli ready for display
+	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
 	};
 
 %break entry
 breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message on eyelink
-	@()randomise(obj.stimuli); ... %randomise our stimuli
-	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
-	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true); ...
-	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
-	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
 	@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
 	@()hide(obj.stimuli{4}); ...
-	@()update(obj.stimuli); ... %update our stimuli ready for display
 	};
 
 %calibration function
@@ -200,12 +197,12 @@ disp('================>> Building state info file <<================')
 stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				[]; ...
-'prefix'	'fixate'	0.2		[]				prefixFcn		[]				[]; ...
+'prefix'	'fixate'	0.75	[]				prefixFcn		[]				[]; ...
 'fixate'	'incorrect'	1.4	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
-'stimulus'  'incorrect'	2		[]				stimFcn			maintainFixFcn	[]; ...
-'incorrect'	'prefix'	2		incEntryFcn		incFcn			[]				incExitFcn; ...
-'breakfix'	'prefix'	2		breakEntryFcn	incFcn			[]				incExitFcn; ...
-'correct'	'prefix'	1		correctEntryFcn	correctFcn		[]				correctExitFcn; ...
+'stimulus'  'incorrect'	1.5		[]				stimFcn			maintainFixFcn	[]; ...
+'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			[]				incExitFcn; ...
+'breakfix'	'prefix'	1.25	breakEntryFcn	incFcn			[]				incExitFcn; ...
+'correct'	'prefix'	0.25	correctEntryFcn	correctFcn		[]				correctExitFcn; ...
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[]; ...
 'override'	'pause'		0.5		overrideFcn		[]				[]				[]; ...
 'flash'		'pause'		0.5		flashFcn		[]				[]				[]; ...

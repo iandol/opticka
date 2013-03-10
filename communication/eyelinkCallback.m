@@ -158,9 +158,9 @@ switch eyecmd
 			clearScreen = 1;
 			needsupdate = 1;
 			calxy = [];
-			if isa(lJ,'labJack')
-				lJ.timedTTL(0,100);
-			end
+			%if isa(lJ,'labJack')
+			%	lJ.timedTTL(0,100);
+			%end
 		end
         if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
     case 3
