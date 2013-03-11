@@ -541,6 +541,17 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief send message to store in EDF data
+		%> 
+		%>
+		% ===================================================================
+		function edfMessage(obj, message)
+			if obj.isConnected
+				Eyelink('Message', message );
+			end
+		end
+		
+		% ===================================================================
 		%> @brief close the eyelink and cleanup, send EDF file if recording
 		%> is enabled
 		%>
@@ -627,6 +638,18 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief Sync time message for EDF file
+		%>
+		% ===================================================================
+		function syncTime(obj)
+			if obj.isConnected
+				Eyelink('Message', 'SYNCTIME');		%zero-plot time for EDFVIEW
+			end
+		end
+		
+		
+		
+		% ===================================================================
 		%> @brief set into offline / idle mode
 		%>
 		% ===================================================================
@@ -660,6 +683,10 @@ classdef eyelinkManager < optickaCore
 		function runDemo(obj)
 			stopkey=KbName('ESCAPE');
 			nextKey=KbName('SPACE');
+			obj.recordData = true;
+			path = uigetdir;
+			cd(path);
+			obj.saveFile = ['11032013.EDF'];			
 			try
 				s = screenManager();
 				s.backgroundColour = [0.5 0.5 0.5 0];
@@ -678,12 +705,15 @@ classdef eyelinkManager < optickaCore
 				trackerDrawFixation(obj)
 				
 				xx = 0;
+				a = 1;
 				
  				while xx == 0
 					yy = 0;
 					startRecording(obj);
+					edfMessage(obj,'START');
 					WaitSecs(0.1);
-					Eyelink('Message', 'SYNCTIME');
+					edfMessage(obj,['TRIALID ' num2str(a)]);
+					syncTime(obj);
 					vbl=Screen('Flip',s.win);
 					while yy == 0
 						err = checkRecording(obj);
@@ -713,6 +743,7 @@ classdef eyelinkManager < optickaCore
 
 						vbl=Screen('Flip',s.win, vbl+(s.screenVals.ifi * 0.5));
 					end
+					edfMessage(obj,'TRIAL_RESULT 1')
 					setOffline(obj); %Eyelink('Command', 'set_idle_mode');
 					obj.fixationX = randi([-12 12]);
 					obj.fixationY = randi([-12 12]);
@@ -723,8 +754,8 @@ classdef eyelinkManager < optickaCore
 					statusMessage(obj,sprintf('X Pos = %g | Y Pos = %g | Radius = %g',obj.fixationX,obj.fixationY,obj.fixationRadius));
 					trackerDrawFixation(obj)
 					update(o);
-					WaitSecs(0.1)
-					
+					WaitSecs(0.3)
+					a=a+1;
 				end
 				ListenChar(0);
 				close(s);

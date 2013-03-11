@@ -139,6 +139,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function run(obj)
 			global lJ
+			initialiseSaveFile(obj)
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -206,7 +207,7 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
-					eL.saveFile = [obj.saveDirectory obj.savePrefix 'RUN.edf'];
+					eL.saveFile = [obj.paths.savedData pathsep obj.savePrefix 'RUN.edf'];
 					initialise(eL, s);
 					setup(eL);
 				end
@@ -424,7 +425,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function runTrainingSession(obj)
 			global lJ %eyelink calibration needs access to labjack for reward
-			initialiseSave(obj)
+			initialiseSaveFile(obj)
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -667,7 +668,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function runFixationSession(obj)
 			global lJ
-			initialiseSave(obj)
+			initialiseSaveFile(obj)
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -727,7 +728,7 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
-					eL.saveFile = [obj.saveDirectory filesep obj.savePrefix 'FIX.edf'];
+					eL.saveFile = 'fix.edf'; %[obj.saveDirectory filesep obj.savePrefix 'FIX.edf'];
 				end
 				
 				obj.stateMachine = stateMachine('realTime',true,'name','fixationtraining','verbose',obj.verbose); %#ok<*CPROP>
@@ -1058,11 +1059,11 @@ classdef runExperiment < optickaCore
 		%>
 		%> For single stimulus presentation, randomise stimulus choice
 		% ===================================================================
-		function initialiseSave(obj,path)
+		function initialiseSaveFile(obj,path)
 			if ~exist('path','var')
-				path = obj.saveDirectory;
+				path = obj.paths.savedData;
 			else
-				obj.saveDirectory = path;
+				obj.paths.savedData = path;
 			end
 			c = fix(clock);
 			c = num2str(c(1:5));

@@ -1416,7 +1416,13 @@ function OKToolbarDefinePath_ClickedCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	o.router('saveProtocol');
+	path = uigetdir;
+	if ischar(path) && exist(path,'dir')
+		initialiseSave(o, path);
+		if isa(o.r,'runExperiment');
+			initialiseSave(o.r, path);
+		end
+	end
 end
 
 
@@ -1578,7 +1584,6 @@ if isappdata(handles.output,'o')
 		runTrainingSession(o.r);
 	end
 end
-
 
 % --------------------------------------------------------------------
 function OKStartFixationSession_ClickedCallback(hObject, eventdata, handles)

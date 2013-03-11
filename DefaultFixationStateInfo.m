@@ -17,7 +17,7 @@ firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
 firstFixRadius = 1.3;
 
-targetFixInit = 0.5;
+targetFixInit = 1;
 targetFixTime = [0.3 0.6];
 targetRadius = 4;
 
@@ -26,7 +26,7 @@ eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
-eL.recordData = false; % save EDF file?
+eL.recordData = true; % save EDF file?
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 1;
 eL.modify.calibrationtargetwidth = 0.01;
@@ -42,7 +42,7 @@ n = 1;
 in(n).name = 'xyPosition';
 in(n).values = [10 10; 10 -10; -10 10; -10 -10; -10 0; 10 0];
 in(n).stimuli = [2 3];
-in(n).offset = [3; 180];
+in(n).offset = [];
 n = n + 1;
 in(n).name = 'angle';
 in(n).values = [0 180];
@@ -95,6 +95,8 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	@()startRecording(eL); ... %fire up eyelink
 	@()edit(obj.stimuli,4,'colourOut',[1 1 0]); ...
 	@()show(obj.stimuli{4}); ...
+	@()edfMessage(eL,['TRIALID ' num2str(randi([1 8]))]); ...
+	@()syncTime(eL); ... %EDF sync message
 	@()draw(obj.stimuli); ... %draw them
 	}; 
 
@@ -111,7 +113,6 @@ fixExitFcn = { @()updateFixationTarget(obj); ... %use our stimuli values for nex
 	@()updateFixationValues(eL, [], [], targetFixInit, targetFixTime, targetRadius, true); ... %set target fix window
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edit(obj.stimuli,4,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
-	%@()edit(obj.stimuli,2,'modulateColourOut',luminancePedestal); ... %pump up background
 	}; 
 
 %what to run when we enter the stim presentation state
@@ -120,7 +121,8 @@ stimEntryFcn = [];
 %what to run when we are showing stimuli
 stimFcn =  { @()draw(obj.stimuli); ...	@()drawEyePosition(eL); ...
 	@()finishDrawing(s); ...
-	@()animate(obj.stimuli) };%draw each stimulus to screen
+	@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
+	};
 
 %test we are maintaining fixation
 maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
@@ -129,13 +131,11 @@ maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
 stimExitFcn = [];
 
 %if the subject is correct (small reward)
-correctEntryFcn = { @()tic; ...
-	@()timedTTL(lJ,0,rewardTime); ... % labjack sends a TTL to Crist reward system
+correctEntryFcn = { @()timedTTL(lJ,0,rewardTime); ... % labjack sends a TTL to Crist reward system
+	@()edfMessage(eL,['TRIAL_RESULT 1']); ...
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
-	%@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
 	@()hide(obj.stimuli{4}); ...
-	@()toc; ...
 	};
 
 %correct stimulus
@@ -156,7 +156,7 @@ correctExitFcn = { @()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset th
 	};
 %incorrect entry
 incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eyelink
-	%@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
+	@()edfMessage(eL,['TRIAL_RESULT 0']); ...
 	@()hide(obj.stimuli{4}); ...
 	}; 
 
@@ -177,7 +177,7 @@ incExitFcn = { @()randomise(obj.stimuli); ... %randomise our stimuli
 
 %break entry
 breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message on eyelink
-	%@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
+	@()edfMessage(eL,['TRIAL_RESULT -1']); ...
 	@()hide(obj.stimuli{4}); ...
 	};
 

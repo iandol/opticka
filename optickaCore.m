@@ -84,6 +84,7 @@ classdef optickaCore < handle
 			obj.paths.whatami = obj.className;
 			obj.paths.root = fileparts(which(mfilename));
 			obj.paths.whereami = obj.paths.root;
+			obj.paths.savedData = '~/MatlabFiles/';
 		end
 		
 		% ===================================================================
@@ -98,6 +99,18 @@ classdef optickaCore < handle
 				name = [obj.name ' <' obj.className '#' obj.uuid '>'];
 			end
 			obj.fullName_ = name; %update our cached version
+		end
+		
+		% ===================================================================
+		%> @brief initialise save directory path
+		%>
+		%> @param path path to save
+		%> 
+		% ===================================================================
+		function initialiseSave(obj,path)
+			if exist('path','var') && exist(path,'dir')
+				obj.paths.savedData = path;
+			end
 		end
 		
 		% ===================================================================
