@@ -424,6 +424,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function runTrainingSession(obj)
 			global lJ %eyelink calibration needs access to labjack for reward
+			initialiseSave(obj)
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -666,6 +667,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function runFixationSession(obj)
 			global lJ
+			initialiseSave(obj)
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -796,6 +798,10 @@ classdef runExperiment < optickaCore
 								tS.eyePos.(uuid).x = eL.x;								
 								tS.eyePos.(uuid).y = eL.y;
 							end
+						elseif strcmpi(sM.currentName,'correct')
+							uuid = ['CC' sM.currentUUID];
+							tS.eyePos.(uuid).x = 1;
+							tS.eyePos.(uuid).y = 1;
 						end
 					end
 					
@@ -836,10 +842,11 @@ classdef runExperiment < optickaCore
 				obj.eyeLink = [];
 				obj.lJack.close;
 				obj.lJack=[];
-				assignin('base', ['bR' obj.uuid], bR)
-				assignin('base', ['tL' obj.uuid], tL)
-				assignin('base', ['tS' obj.uuid], tS)
-				assignin('base', ['sM' obj.uuid], sM)
+				assignin('base', ['bR'], bR)
+				assignin('base', ['tL'], tL)
+				assignin('base', ['tS'], tS)
+				assignin('base', ['sM'], sM)
+				save(['TrainLog-' obj.savePrefix '.mat'],'obj','bR','tL','tS','sM')
 				clear tL s tS bR lJ eL io sM			
 			catch ME
 				warning('on') %#ok<WNON>
@@ -852,7 +859,7 @@ classdef runExperiment < optickaCore
 				obj.behaviouralRecord = [];
 				obj.lJack.close;
 				obj.lJack=[];
-				clear tL s tS bR lJ eL
+				clear tL s tS bR lJ eL io sM
 				rethrow(ME)
 				
 			end
@@ -971,6 +978,7 @@ classdef runExperiment < optickaCore
 			updateFixationValues(obj.eyeLink, obj.stimuli.lastXPosition, obj.stimuli.lastYPosition)
 			obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
 			obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
+			obj.eyeLink.stimulusPositions(1).size = 1;
 		end
 		
 		% ===================================================================
@@ -1051,7 +1059,11 @@ classdef runExperiment < optickaCore
 		%> For single stimulus presentation, randomise stimulus choice
 		% ===================================================================
 		function initialiseSave(obj,path)
-			obj.saveDirectory = path;
+			if ~exist('path','var')
+				path = obj.saveDirectory;
+			else
+				obj.saveDirectory = path;
+			end
 			c = fix(clock);
 			c = num2str(c(1:5));
 			c = regexprep(c,' +','-');
@@ -1848,25 +1860,27 @@ classdef runExperiment < optickaCore
 			tS = tS.eyePos;
 			fn = fieldnames(tS);
 			figure;
-			for i = 1:length(fn)
-				x = tS.(fn{i}).x;
-				y = tS.(fn{i}).y;
-				if (max(x) < 16 && min(x) > -16) && (max(y) < 16 && min(y) > -16) && mean(x(1:10)) < 0.1 && mean(y(1:10)) < 0.1
-					c = rand(1,3);
-					subplot(2,1,1)
-					hold on
-					plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-					hold off
-					
-					subplot(2,1,2)
-					t = 0:ifi:(ifi*length(x));
-					t = t(1:length(x));
-					hold on
-					plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-					plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-					hold off
-					grid on
-					box on
+			for i = 1:length(fn)-1
+				if regexpi(fn{i+1},'^CC')
+					x = tS.(fn{i}).x;
+					y = tS.(fn{i}).y;
+					if (max(x) < 16 && min(x) > -16) && (max(y) < 16 && min(y) > -16) && mean(x(1:10)) < 0.1 && mean(y(1:10)) < 0.1
+						c = rand(1,3);
+						subplot(2,1,1)
+						hold on
+						plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+						hold off
+
+						subplot(2,1,2)
+						t = 0:ifi:(ifi*length(x));
+						t = t(1:length(x));
+						hold on
+						plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+						plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+						hold off
+						grid on
+						box on
+					end
 				end
 			end
 			subplot(2,1,1)

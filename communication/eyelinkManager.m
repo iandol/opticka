@@ -385,7 +385,7 @@ classdef eyelinkManager < optickaCore
 				if obj.fixInitTotal == 0
 					obj.fixInitTotal = obj.currentSample.time;
 				end
-				r = (obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2;
+				r = sqrt((obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2);
 				%fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
 				if r < (obj.fixationRadius);
 					if obj.fixN == 0 
@@ -518,7 +518,7 @@ classdef eyelinkManager < optickaCore
 				x = obj.toPixels(obj.x,'x');
 				y = obj.toPixels(obj.y,'y');
 				if obj.isFixated
-					Screen('DrawDots', obj.screen.win, [x y], 8, [1 0.8 1 1], [], 1);
+					Screen('DrawDots', obj.screen.win, [x y], 8, [1 0.5 1 1], [], 1);
 					if obj.fixLength > obj.fixationTime
 						Screen('DrawText', obj.screen.win, 'FIX', x, y, [1 1 1]);
 					end	
@@ -585,10 +585,10 @@ classdef eyelinkManager < optickaCore
 		function trackerDrawStimuli(obj)
 			if obj.isConnected
 				for i = 1:length(obj.stimulusPositions)
-					size = 1 * obj.screen.ppd;
-					rect = [0 0 size size];
 					x = obj.screen.xCenter + (obj.stimulusPositions(i).x * obj.screen.ppd);
 					y = obj.screen.yCenter + (obj.stimulusPositions(i).y * obj.screen.ppd);
+					size = obj.stimulusPositions(i).size * obj.screen.ppd;
+					rect = [0 0 size size];
 					rect = round(CenterRectOnPoint(rect, x, y));
 					Eyelink('Command', 'draw_box %d %d %d %d 12', rect(1), rect(2), rect(3), rect(4));
 				end
@@ -659,10 +659,11 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function runDemo(obj)
 			stopkey=KbName('ESCAPE');
+			nextKey=KbName('SPACE');
 			try
 				s = screenManager();
-				s.backgroundColour = [1 1 1 0];
-				o = dotsStimulus('size',2);
+				s.backgroundColour = [0.5 0.5 0.5 0];
+				o = dotsStimulus('size',obj.fixationRadius*2,'speed',2,'mask',false,'density',30);
 				%s.windowed = [800 600];
 				s.screen = 1;
 				open(s); %open out screen
@@ -673,44 +674,62 @@ classdef eyelinkManager < optickaCore
 				setup(obj); %setup eyelink
 			
 				obj.statusMessage('DEMO Running'); %
-				Eyelink('Command', 'set_idle_mode');
-				obj.trackerDrawFixation()
+				setOffline(obj); %Eyelink('Command', 'set_idle_mode');
+				trackerDrawFixation(obj)
 				
-				startRecording(obj);
-				WaitSecs(0.1);
-				Eyelink('Message', 'SYNCTIME');
-				vbl=Screen('Flip',s.win);
- 				while 1
-					err = checkRecording(obj);
-					if(err~=0); break; end;
-						
-					[~, ~, keyCode] = KbCheck(-1);
-					if keyCode(stopkey); break;	end;
-					
-					draw(o);
-					drawGrid(s);
-					drawScreenCenter(s);
-					
-					getSample(obj);
-					
-					if ~isempty(obj.currentSample)
-						x = obj.toPixels(obj.x,'x'); %#ok<*PROP>
-						y = obj.toPixels(obj.y,'y');
-						txt = sprintf('Press ESC to finish \n X = %g / %g | Y = %g / %g \n FIXATION = %g', x, obj.x, y, obj.y, obj.fixLength);
-						Screen('DrawText', s.win, txt, 10, 10);
-						drawEyePosition(obj);
+				xx = 0;
+				
+ 				while xx == 0
+					yy = 0;
+					startRecording(obj);
+					WaitSecs(0.1);
+					Eyelink('Message', 'SYNCTIME');
+					vbl=Screen('Flip',s.win);
+					while yy == 0
+						err = checkRecording(obj);
+						if(err~=0); xx = 1; break; end;
+
+						[~, ~, keyCode] = KbCheck(-1);
+						if keyCode(stopkey); xx = 1; break;	end;
+						if keyCode(nextKey); yy = 1; break; end
+
+						draw(o);
+						drawGrid(s);
+						drawScreenCenter(s);
+
+						getSample(obj);
+
+						if ~isempty(obj.currentSample)
+							x = obj.toPixels(obj.x,'x'); %#ok<*PROP>
+							y = obj.toPixels(obj.y,'y');
+							txt = sprintf('Press ESC to finish \n X = %g / %g | Y = %g / %g \n RADIUS = %g | FIXATION = %g', x, obj.x, y, obj.y, obj.fixationRadius, obj.fixLength);
+							Screen('DrawText', s.win, txt, 10, 10);
+							drawEyePosition(obj);
+						end
+
+						Screen('DrawingFinished', s.win); 
+
+						animate(o);
+
+						vbl=Screen('Flip',s.win, vbl+(s.screenVals.ifi * 0.5));
 					end
-					
-					Screen('DrawingFinished', s.win); 
-					
-					animate(o);
-					
-					vbl=Screen('Flip',s.win, vbl+(s.screenVals.ifi * 0.5));
+					setOffline(obj); %Eyelink('Command', 'set_idle_mode');
+					obj.fixationX = randi([-12 12]);
+					obj.fixationY = randi([-12 12]);
+					obj.fixationRadius = randi([1 6]);
+					o.sizeOut = obj.fixationRadius*2;
+					o.xPositionOut = obj.fixationX;
+					o.yPositionOut = obj.fixationY;
+					statusMessage(obj,sprintf('X Pos = %g | Y Pos = %g | Radius = %g',obj.fixationX,obj.fixationY,obj.fixationRadius));
+					trackerDrawFixation(obj)
+					update(o);
+					WaitSecs(0.1)
 					
 				end
 				ListenChar(0);
 				close(s);
 				close(obj);
+				clear s o
 				
 			catch ME
 				ListenChar(0);
@@ -719,6 +738,7 @@ classdef eyelinkManager < optickaCore
 				close(s);
 				sca;
 				close(obj);
+				clear s o
 				obj.error = ME;
 				obj.salutation(ME.message);
 				rethrow(ME);

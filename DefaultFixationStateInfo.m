@@ -10,7 +10,7 @@
 %------------General Settings-----------------
 rewardTime = 200; %TTL time in milliseconds
 
-luminancePedestal = [0.6 0.6 0.6];
+luminancePedestal = [0.5 0.5 0.5];
 fixX = 0;
 fixY = 0;
 firstFixInit = 0.6;
@@ -19,7 +19,7 @@ firstFixRadius = 1.3;
 
 targetFixInit = 0.5;
 targetFixTime = [0.3 0.6];
-targetRadius = 15;
+targetRadius = 4;
 
 eL.name = 'figure-ground';
 eL.isDummy = false; %use dummy or real eyelink?
@@ -91,6 +91,7 @@ prefixFcn = @()draw(obj.stimuli); ... %draw stimuli but no animation yet
 
 %fixate entry
 fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
+	@()resetFixation(eL); ...
 	@()startRecording(eL); ... %fire up eyelink
 	@()edit(obj.stimuli,4,'colourOut',[1 1 0]); ...
 	@()show(obj.stimuli{4}); ...
@@ -110,7 +111,7 @@ fixExitFcn = { @()updateFixationTarget(obj); ... %use our stimuli values for nex
 	@()updateFixationValues(eL, [], [], targetFixInit, targetFixTime, targetRadius, true); ... %set target fix window
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edit(obj.stimuli,4,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
-	@()edit(obj.stimuli,2,'modulateColourOut',luminancePedestal); ... %pump up background
+	%@()edit(obj.stimuli,2,'modulateColourOut',luminancePedestal); ... %pump up background
 	}; 
 
 %what to run when we enter the stim presentation state
@@ -132,7 +133,7 @@ correctEntryFcn = { @()tic; ...
 	@()timedTTL(lJ,0,rewardTime); ... % labjack sends a TTL to Crist reward system
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
-	@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
+	%@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
 	@()hide(obj.stimuli{4}); ...
 	@()toc; ...
 	};
@@ -145,17 +146,17 @@ correctFcn = { @()draw(obj.stimuli);
 %when we exit the correct state
 correctExitFcn = { @()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
 	@()randomise(obj.stimuli); ... %randomise our stimuli
+	@()update(obj.stimuli); ... %update our stimuli ready for display
+	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
-	@()update(obj.stimuli); ... %update our stimuli ready for display
-	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 	};
 %incorrect entry
 incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eyelink
-	@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
+	%@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
 	@()hide(obj.stimuli{4}); ...
 	}; 
 
@@ -164,18 +165,19 @@ incFcn =  @()draw(obj.stimuli);
 
 %incorrect / break exit
 incExitFcn = { @()randomise(obj.stimuli); ... %randomise our stimuli
+	@()update(obj.stimuli); ... %update our stimuli ready for display
+	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
 	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
-	@()update(obj.stimuli); ... %update our stimuli ready for display
-	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
 	};
+
 
 %break entry
 breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message on eyelink
-	@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
+	%@()edit(obj.stimuli,2,'modulateColourOut',s.backgroundColour); ... %pump down background
 	@()hide(obj.stimuli{4}); ...
 	};
 
