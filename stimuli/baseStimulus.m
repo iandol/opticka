@@ -126,7 +126,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
 			
 			if isempty(obj.sM) %add a default screenManager, overwritten on setup
-				obj.sM = screenManager('name','default');
+				obj.sM = screenManager('verbose',false,'name','default');
 				obj.ppd = obj.sM.ppd;
 			end
 		end

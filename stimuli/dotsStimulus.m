@@ -54,7 +54,7 @@ classdef dotsStimulus < baseStimulus
 		%> allows makePanel method to offer a UI menu of settings
 		typeList = {'simple'}
 		%> allows makePanel method to offer a UI menu of settings
-		colourTypeList = {'randomBW','random','randomN','randomNBW','binary'}
+		colourTypeList = {'randomBW','simple','random','randomN','randomNBW','binary'}
 		%> allows makePanel method to offer a UI menu of settings
 		msrcModeList = {'GL_ZERO','GL_ONE','GL_DST_COLOR','GL_ONE_MINUS_DST_COLOR',...
 			'GL_SRC_ALPHA','GL_ONE_MINUS_SRC_ALPHA'}
@@ -197,6 +197,9 @@ classdef dotsStimulus < baseStimulus
 			
 			%make our dot colours
 			switch obj.colourType
+				case 'simple'
+					obj.colours = repmat(obj.colourOut',1,obj.nDotsOut);
+					obj.colours(4,:) = obj.alphaOut;
 				case 'random'
 					obj.colours = rand(4,obj.nDotsOut);
 					obj.colours(4,:) = obj.alphaOut;
@@ -268,6 +271,13 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function animate(obj)
 			if obj.isVisible == true && obj.tick > obj.delayTicks
+				if obj.mouseOverride
+					getMousePosition(obj);
+					if obj.mouseValid
+						obj.xOut = obj.mouseX;
+						obj.yOut = obj.mouseY;
+					end
+				end
 				obj.xy = obj.xy + obj.dxdy; %increment position
 				fix = find(obj.xy > obj.sizeOut/2); %cull positive
 				obj.xy(fix) = obj.xy(fix) - obj.sizeOut;
@@ -307,7 +317,7 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function set.density(obj,value)
 			obj.density = value;
-			obj.nDots;
+			obj.nDots; %#ok<MCSUP>
 		end
 		
 		% ===================================================================
@@ -316,7 +326,11 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function value = get.nDots(obj)
-			obj.nDots_ = obj.density * obj.size^2;
+			if ~obj.inSetup && isprop(obj,'sizeOut')
+				obj.nDots_ = obj.densityOut * (obj.sizeOut/obj.ppd)^2;
+			else
+				obj.nDots_ = obj.density * obj.size^2;
+			end
 			value = obj.nDots_;
 		end
 		
@@ -360,6 +374,7 @@ classdef dotsStimulus < baseStimulus
 			else
 				obj.fieldSize = obj.sizeOut;
 			end
+			obj.nDots; %remake our cache
 		end
 		
 		% ===================================================================

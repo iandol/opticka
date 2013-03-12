@@ -200,7 +200,7 @@ overrideFcn = @()keyOverride(obj); %a special mode which enters a matlab debug s
 flashFcn = @()flashScreen(s, 0.25); % fullscreen flash mode for visual background activity detection
 
 %show 1deg size grid
-gridFcn = @()drawGrid(s);
+gridFcn = { @()drawGrid(s); @()drawScreenCenter(s) };
 
 %----------------------State Machine Table-------------------------
 disp('================>> Building state info file <<================')

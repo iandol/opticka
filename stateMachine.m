@@ -482,15 +482,19 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		% call transitionFevalable before exiting last and entering next state
 		function transitionToStateWithName(obj, nextName)
-			nextIndex = obj.stateListIndex(nextName);
-			obj.exitCurrentState();
-			%obj.salutation(['Transition @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false)
- 			
-			if isa(obj.globalTransitionFcn,'function_handle') %function handle, lets feval it
- 				feval(obj.globalTransitionFcn);
+			[isState, index] = isStateName(obj, nextName);
+			if isState
+				exitCurrentState(obj);
+%				if isa(obj.globalTransitionFcn,'function_handle') %function handle, lets feval it
+%					feval(obj.globalTransitionFcn);
+%				end
+				%obj.salutation(['Transition @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false)
+				enterStateAtIndex(obj, index);
+			else
+				obj.salutation('transitionToStateWithName method', 'ERROR, default to return to first state!!!\n',true)
+				enterStateAtIndex(obj, 1);
 			end
-			
-			obj.enterStateAtIndex(nextIndex);
+				
 		end
 		
 		% ===================================================================

@@ -236,6 +236,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> props and are set to be transient so they are not saved.
 		% ===================================================================
 		function initialiseTask(obj)
+			resetTask(obj);
 			for i = 1:2:length(obj.taskProperties)
 				if isempty(obj.findprop(obj.taskProperties{i}))
 					p=obj.addprop(obj.taskProperties{i}); %add new dynamic property
@@ -243,7 +244,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				end
 				obj.(obj.taskProperties{i})=obj.taskProperties{i+1}; %#ok<*MCNPR>
 			end
-		end
+		end		
 		
 		% ===================================================================
 		%> @brief validate the stimulusSequence is ok
@@ -413,8 +414,20 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	%=======================================================================
 	methods ( Access = private ) %------PRIVATE METHODS
 	%=======================================================================
-
-		
+	
+		% ===================================================================
+		%> @brief reset transienttask properties
+		%>
+		%> 
+		% ===================================================================
+		function resetTask(obj)
+			for i = 1:2:length(obj.taskProperties)
+				p = obj.findprop(obj.taskProperties{i});
+				if ~isempty(p)
+					delete(p);
+				end
+			end
+		end		
 	end
 	
 	%=======================================================================

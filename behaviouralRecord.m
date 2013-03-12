@@ -183,7 +183,7 @@ classdef behaviouralRecord < optickaCore
 			
 			%axis 3
 			bar(obj.h.axis3,hits,'stacked')
-			set(obj.h.axis3,'XTickLabel', {'all';'newest';'breakabort'})
+			set(obj.h.axis3,'XTickLabel', {'all';'newest';'break/abort'})
 			axis(obj.h.axis3, 'tight');
 			ylim(obj.h.axis3,[0 100])
 			
@@ -205,7 +205,7 @@ classdef behaviouralRecord < optickaCore
 			ylabel(obj.h.axis4, '% success')
 			title(obj.h.axis1,['Success (' num2str(hitn) ') / Fail (all=' num2str(missn) ' | break=' num2str(breakn) ' | abort=' num2str(missn-breakn) ')'])
 			title(obj.h.axis2,['Response Times (mean init: ' num2str(mean(obj.rt2)) ' | mean init+fix: ' num2str(mean(obj.rt1)) ')'])
-			title(obj.h.axis3,'Hit (blue) / Miss (red) / Break/Abort')
+			title(obj.h.axis3,'Hit (blue) / Miss (red) / Break (blue) / Abort (red)')
 			title(obj.h.axis4,'Average (n=10) Hit / Miss %')
 			hn = findobj(obj.h.axis2,'Type','patch');
 			%set(hn,'FaceColor','k','EdgeColor','k');
