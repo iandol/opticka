@@ -15,18 +15,18 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
-firstFixRadius = 1.3;
+firstFixRadius = 1.25;
 
-targetFixInit = 1;
+targetFixInit = 0.5;
 targetFixTime = [0.3 0.6];
-targetRadius = 4;
+targetRadius = 2;
 
 eL.name = 'figure-ground';
 eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
-eL.recordData = true; % save EDF file?
+eL.recordData = false; % save EDF file?
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 1;
 eL.modify.calibrationtargetwidth = 0.01;
@@ -40,7 +40,7 @@ eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, 
 obj.stimuli.choice = [];
 n = 1;
 in(n).name = 'xyPosition';
-in(n).values = [10 10; 10 -10; -10 10; -10 -10; -10 0; 10 0];
+in(n).values = [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
 in(n).stimuli = [2 3];
 in(n).offset = [];
 n = n + 1;
@@ -92,10 +92,12 @@ prefixFcn = @()draw(obj.stimuli); ... %draw stimuli but no animation yet
 %fixate entry
 fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
 	@()resetFixation(eL); ...
-	@()startRecording(eL); ... %fire up eyelink
+	@()setOffline(eL); ... %make sure offline before start recording
 	@()edit(obj.stimuli,4,'colourOut',[1 1 0]); ...
 	@()show(obj.stimuli{4}); ...
+	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
 	@()edfMessage(eL,['TRIALID ' num2str(randi([1 8]))]); ...
+	@()startRecording(eL); ... %fire up eyelink
 	@()syncTime(eL); ... %EDF sync message
 	@()draw(obj.stimuli); ... %draw them
 	}; 
@@ -106,13 +108,14 @@ fixFcn = { @()draw(obj.stimuli); ... %draw stimuli but no animation yet	@()drawE
 	};
 
 %test we are fixated for a certain length of time
-initFixFcn = @()testSearchHoldFixation(eL,'stimulus','breakfix');
+initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 
 %exit fixation phase
 fixExitFcn = { @()updateFixationTarget(obj); ... %use our stimuli values for next fix X and Y
 	@()updateFixationValues(eL, [], [], targetFixInit, targetFixTime, targetRadius, true); ... %set target fix window
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edit(obj.stimuli,4,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
+	@()edfMessage(eL,'END_FIX'); ...
 	}; 
 
 %what to run when we enter the stim presentation state
@@ -132,9 +135,11 @@ stimExitFcn = [];
 
 %if the subject is correct (small reward)
 correctEntryFcn = { @()timedTTL(lJ,0,rewardTime); ... % labjack sends a TTL to Crist reward system
-	@()edfMessage(eL,['TRIAL_RESULT 1']); ...
-	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
+	@()edfMessage(eL,'END_RT'); ...
+	@()stopRecording(eL); ...
+	@()edfMessage(eL,'TRIAL_RESULT 1'); ...
+	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()hide(obj.stimuli{4}); ...
 	};
 
@@ -144,19 +149,22 @@ correctFcn = { @()draw(obj.stimuli);
 	};
 
 %when we exit the correct state
-correctExitFcn = { @()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
+correctExitFcn = { 
+	@()setOffline(eL); ... %set eyelink offline
 	@()randomise(obj.stimuli); ... %randomise our stimuli
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
-	@()setOffline(eL); ... %set eyelink offline
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
+	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
 	};
 %incorrect entry
 incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eyelink
-	@()edfMessage(eL,['TRIAL_RESULT 0']); ...
+	@()edfMessage(eL,'END_RT'); ...
+	@()stopRecording(eL); ...
+	@()edfMessage(eL,'TRIAL_RESULT 0'); ...
 	@()hide(obj.stimuli{4}); ...
 	}; 
 
@@ -164,20 +172,21 @@ incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eye
 incFcn =  @()draw(obj.stimuli);
 
 %incorrect / break exit
-incExitFcn = { @()randomise(obj.stimuli); ... %randomise our stimuli
+incExitFcn = { @()setOffline(eL); ... %set eyelink offline
+	@()randomise(obj.stimuli); ... %randomise our stimuli
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
 	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
-	@()setOffline(eL); ... %set eyelink offline
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
 	};
 
-
 %break entry
 breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message on eyelink
-	@()edfMessage(eL,['TRIAL_RESULT -1']); ...
+	@()edfMessage(eL,'END_RT'); ...
+	@()stopRecording(eL); ...
+	@()edfMessage(eL,'TRIAL_RESULT -1'); ...
 	@()hide(obj.stimuli{4}); ...
 	};
 

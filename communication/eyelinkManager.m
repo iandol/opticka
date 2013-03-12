@@ -81,6 +81,7 @@ classdef eyelinkManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		tempFile = 'MYDATA.edf'
 		fixN = 0
 		error = []
 		%> previous message sent to eyelink
@@ -111,6 +112,7 @@ classdef eyelinkManager < optickaCore
 			obj.modify.displayCalResults = 1;
 			obj.modify.targetbeep = 0;
 			obj.modify.devicenumber = -1;
+			obj.tempFile = [tempdir 'MYDATA.edf'];
 		end
 		
 		% ===================================================================
@@ -162,7 +164,7 @@ classdef eyelinkManager < optickaCore
 			
 			% try to open file to record data to
 			if obj.isConnected && obj.recordData
-				err = Eyelink('Openfile', obj.saveFile);
+				err = Eyelink('Openfile', obj.tempFile);
 				if err ~= 0 
 					obj.salutation('Initialise Method', 'Cannot setup data file, aborting data recording');
 					obj.isRecording = false;
@@ -272,6 +274,17 @@ classdef eyelinkManager < optickaCore
 				checkEye(obj);
 			end
 		end
+		
+		% ===================================================================
+		%> @brief wrapper for StopRecording
+		%>
+		% ===================================================================
+		function stopRecording(obj)
+			if obj.isConnected
+				Eyelink('StopRecording');
+			end
+		end
+		
 		
 		% ===================================================================
 		%> @brief wrapper for EyelinkDoDriftCorrection
@@ -562,16 +575,20 @@ classdef eyelinkManager < optickaCore
 					Eyelink('StopRecording');
 					Eyelink('CloseFile');
 					try
-						obj.salutation('Close Method',sprintf('Receiving data file %s', obj.saveFile),true);
+						obj.salutation('Close Method',sprintf('Receiving data file %s', obj.tempFile),true);
 						status=Eyelink('ReceiveFile');
 						if status > 0
 							obj.salutation('Close Method',sprintf('ReceiveFile status %d', status));
 						end
-						if 2==exist(obj.saveFile, 'file')
-							obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', obj.saveFile, pwd),true);
+						if 2==exist(obj.tempFile, 'file')
+							obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', obj.tempFile, pwd),true);
+							status = copyfile(obj.tempFile, obj.saveFile,'f');
+							if status == 1
+								obj.salutation('Close Method',sprintf('Data file copied to ''%s''', obj.saveFile),true);
+							end
 						end
 					catch ME
-						obj.salutation('Close Method',sprintf('Problem receiving data file ''%s''', obj.saveFile),true);
+						obj.salutation('Close Method',sprintf('Problem receiving data file ''%s''', obj.tempFile),true);
 						disp(ME.message);
 					end
 				end
@@ -683,10 +700,7 @@ classdef eyelinkManager < optickaCore
 		function runDemo(obj)
 			stopkey=KbName('ESCAPE');
 			nextKey=KbName('SPACE');
-			obj.recordData = true;
-			path = uigetdir;
-			cd(path);
-			obj.saveFile = ['11032013.EDF'];			
+			obj.recordData = true;	
 			try
 				s = screenManager();
 				s.backgroundColour = [0.5 0.5 0.5 0];
@@ -709,10 +723,11 @@ classdef eyelinkManager < optickaCore
 				
  				while xx == 0
 					yy = 0;
-					startRecording(obj);
-					edfMessage(obj,'START');
-					WaitSecs(0.1);
+					b = 1;
+					edfMessage(obj,'V_RT MESSAGE END_FIX END_RT');
 					edfMessage(obj,['TRIALID ' num2str(a)]);
+					startRecording(obj);
+					WaitSecs(0.1);
 					syncTime(obj);
 					vbl=Screen('Flip',s.win);
 					while yy == 0
@@ -722,6 +737,8 @@ classdef eyelinkManager < optickaCore
 						[~, ~, keyCode] = KbCheck(-1);
 						if keyCode(stopkey); xx = 1; break;	end;
 						if keyCode(nextKey); yy = 1; break; end
+						
+						if b == 30; edfMessage(obj,'END_FIX');end
 
 						draw(o);
 						drawGrid(s);
@@ -742,15 +759,18 @@ classdef eyelinkManager < optickaCore
 						animate(o);
 
 						vbl=Screen('Flip',s.win, vbl+(s.screenVals.ifi * 0.5));
+						b=b+1;
 					end
+					edfMessage(obj,'END_RT');
+					stopRecording(obj)
 					edfMessage(obj,'TRIAL_RESULT 1')
-					setOffline(obj); %Eyelink('Command', 'set_idle_mode');
 					obj.fixationX = randi([-12 12]);
 					obj.fixationY = randi([-12 12]);
 					obj.fixationRadius = randi([1 6]);
 					o.sizeOut = obj.fixationRadius*2;
 					o.xPositionOut = obj.fixationX;
 					o.yPositionOut = obj.fixationY;
+					setOffline(obj); %Eyelink('Command', 'set_idle_mode');
 					statusMessage(obj,sprintf('X Pos = %g | Y Pos = %g | Radius = %g',obj.fixationX,obj.fixationY,obj.fixationRadius));
 					trackerDrawFixation(obj)
 					update(o);

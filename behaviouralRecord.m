@@ -154,6 +154,7 @@ classdef behaviouralRecord < optickaCore
 			missn = totaln - hitn;
 			
 			hitmiss = 100 * (hitn / totaln);
+			breakmiss = 100 * (breakn / missn);
 			if length(obj.response) < 10
 				average = 100 * (hitn / totaln);
 			else
@@ -161,7 +162,7 @@ classdef behaviouralRecord < optickaCore
 				average = (length(lastn(lastn > 0)) / length(lastn)) * 100;
 			end
 			obj.averages(end+1) = average;
-			hits = [hitmiss 100-hitmiss; average 100-average];
+			hits = [hitmiss 100-hitmiss; average 100-average; breakmiss 100-breakmiss];
 			
 			%axis 1
 			obj.radius(end+1) = eL.fixationRadius;
@@ -182,7 +183,7 @@ classdef behaviouralRecord < optickaCore
 			
 			%axis 3
 			bar(obj.h.axis3,hits,'stacked')
-			set(obj.h.axis3,'XTickLabel', {'all';'newest'})
+			set(obj.h.axis3,'XTickLabel', {'all';'newest';'breakabort'})
 			axis(obj.h.axis3, 'tight');
 			ylim(obj.h.axis3,[0 100])
 			
@@ -202,9 +203,9 @@ classdef behaviouralRecord < optickaCore
 			ylabel(obj.h.axis2, 'Number #')
 			ylabel(obj.h.axis3, '% success')
 			ylabel(obj.h.axis4, '% success')
-			title(obj.h.axis1,['Success (' num2str(hitn) ') / Fail (' num2str(missn) ' > break=' num2str(breakn) ')'])
+			title(obj.h.axis1,['Success (' num2str(hitn) ') / Fail (all=' num2str(missn) ' | break=' num2str(breakn) ' | abort=' num2str(missn-breakn) ')'])
 			title(obj.h.axis2,['Response Times (mean init: ' num2str(mean(obj.rt2)) ' | mean init+fix: ' num2str(mean(obj.rt1)) ')'])
-			title(obj.h.axis3,'Hit (blue) / Miss (red)')
+			title(obj.h.axis3,'Hit (blue) / Miss (red) / Break/Abort')
 			title(obj.h.axis4,'Average (n=10) Hit / Miss %')
 			hn = findobj(obj.h.axis2,'Type','patch');
 			%set(hn,'FaceColor','k','EdgeColor','k');
@@ -220,7 +221,7 @@ classdef behaviouralRecord < optickaCore
 			end
 			t{end+1} = ['Overall | Latest (n=10) Hit Rate = ' num2str(hitmiss) ' | ' num2str(average)];
 			t{end+1} = ['Run time = ' num2str(etime(clock,obj.startTime)/60) 'mins'];
-			t{end+1} = ['Estimated Volume at 300ms TTL = ' num2str(0.22*sum(obj.response)) 'mls'];
+			t{end+1} = ['Estimated Volume at 300ms TTL = ' num2str(0.2*hitn) 'mls'];
 			set(obj.h.info,'String', t')
 			
 			obj.tick = obj.tick + 1;

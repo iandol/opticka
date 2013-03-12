@@ -728,7 +728,7 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
-					eL.saveFile = 'fix.edf'; %[obj.saveDirectory filesep obj.savePrefix 'FIX.edf'];
+					eL.saveFile = 'myData.edf'; %[obj.paths.savedData filesep obj.savePrefix 'FIX.edf'];
 				end
 				
 				obj.stateMachine = stateMachine('realTime',true,'name','fixationtraining','verbose',obj.verbose); %#ok<*CPROP>
@@ -847,7 +847,7 @@ classdef runExperiment < optickaCore
 				assignin('base', ['tL'], tL)
 				assignin('base', ['tS'], tS)
 				assignin('base', ['sM'], sM)
-				save(['TrainLog-' obj.savePrefix '.mat'],'obj','bR','tL','tS','sM')
+				save([obj.paths.savedData filesep 'TrainLog-' obj.savePrefix '.mat'],'obj','bR','tL','tS','sM')
 				clear tL s tS bR lJ eL io sM			
 			catch ME
 				warning('on') %#ok<WNON>
