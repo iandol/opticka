@@ -108,6 +108,7 @@ classdef runExperiment < optickaCore
 		lastXPosition = 0
 		lastYPosition = 0
 		lastSize = 1
+		lastIndex = 0
 		%> properties allowed to be modified during construction
 		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|useDataPixx|logFrames|debug|verbose|screenSettings|benchmark'
 	end
@@ -742,8 +743,10 @@ classdef runExperiment < optickaCore
 				t.tick = 1;
 				t.switched = 1;
 				t.totalRuns = 1;
-				updateVariables(obj, t.totalRuns); % set to first variable
-				updateFixationTarget(obj, useTask);
+				if useTask == true
+					updateVariables(obj, t.totalRuns, true); % set to first variable
+					updateFixationTarget(obj, useTask);
+				end
 				tS.stopTraining = false; %break while loop
 				tS.keyHold = 1; %a small loop to stop overeager key presses
 				tS.totalTicks = 1; % a tick counter
@@ -755,9 +758,7 @@ classdef runExperiment < optickaCore
 				%check initial eye position
 				if obj.useEyeLink; getSample(eL); end
 				
-				if obj.useDataPixx 
-					rstart(io);
-				end
+				%if obj.useDataPixx; rstart(io); end
 				
 				tL.screenLog.beforeDisplay = GetSecs;
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
@@ -806,7 +807,7 @@ classdef runExperiment < optickaCore
 					end
 					
 					%------Check keyboard for commands
-					if ~strcmpi(sM.currentName,'calibrate') && ~strcmpi(sM.currentName,'stimulus')
+					if ~strcmpi(sM.currentName,'calibrate') %&& ~strcmpi(sM.currentName,'stimulus')
 						tS = obj.checkFixationKeys(tS);
 					end
 					
@@ -818,7 +819,7 @@ classdef runExperiment < optickaCore
 					end
 					
 					%------Tell DataPixx to send strobe on next screen flip
-					if obj.useDataPixx && obj.sendStrobe
+					if obj.useDataPixx && obj.sendStrobe						
 						triggerStrobe(io); %send our word; datapixx syncs to next vertical trace
 						obj.sendStrobe = false;
 					end
@@ -845,9 +846,7 @@ classdef runExperiment < optickaCore
 				
 				if obj.useDataPixx
 					rstop(io); %pause plexon
-				end
-				
-				if obj.useDataPixx
+					WaitSecs(0.1)
 					sendTTL(io, 7); % we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
 					close(io);
 				end
@@ -1007,6 +1006,7 @@ classdef runExperiment < optickaCore
 				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
 				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
+				fprintf('LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
 			end
 		end
 		
@@ -1179,48 +1179,57 @@ classdef runExperiment < optickaCore
 		%> Updates the stimulus objects with the current variable set
 		%> @param index a single value
 		% ===================================================================
-		function updateVariables(obj,index)
+		function updateVariables(obj,index,override)
 			if ~exist('index','var')
 				index = obj.task.totalRuns;
 			end
-			if rem(index, obj.task.minBlocks) == 0
-				thisBlock = (index / obj.task.minBlocks);
-				thisRun = obj.task.minBlocks;
-			else
-				thisBlock = floor(index / obj.task.minBlocks) + 1;
-				thisRun = mod(index, obj.task.minBlocks);
+			if ~exist('override','var')
+				override = false;
 			end
-			fprintf('i#%g - b#%g - r#%g | ',index,thisBlock,thisRun)
-			for i=1:obj.task.nVars
-				ix = []; valueList = []; oValueList = []; %#ok<NASGU>
-				ix = obj.task.nVar(i).stimulus; %which stimuli
-				value=obj.task.outVars{thisBlock,i}(thisRun);
-				valueList(1,1:size(ix,2)) = value;
-				name=[obj.task.nVar(i).name 'Out']; %which parameter
-				if regexpi(name,'xPositionOut','once')
-					obj.lastXPosition = value;
-				elseif regexpi(name,'yPositionOut','once')
-					obj.lastYPosition = value;
-				elseif regexpi(name,'sizeOut','once')
-					obj.lastSize = value;
-				end
-				offsetix = obj.task.nVar(i).offsetstimulus;
-				offsetvalue = obj.task.nVar(i).offsetvalue;
-				
-				if ~isempty(offsetix)
-					ix = [ix offsetix];
-					ovalueList(1,1:size(offsetix,2)) = value+offsetvalue;
-					valueList = [valueList ovalueList];
-				end
-				
-				a = 1;
-				for j = ix %loop through our stimuli references for this variable
-					fprintf('Stimulus %g @ %g: %s = %g ',j,index,name,valueList(a));
-					obj.stimuli{j}.(name)=valueList(a);
-					a = a + 1;
-				end
+			if obj.useDataPixx == true
+				setStrobeValue(obj, obj.task.outIndex(index));
 			end
-			fprintf('LASTX:%g LASTY:%g\n',obj.lastXPosition,obj.lastYPosition);
+			if (index > obj.lastIndex) || override == true
+				if rem(index, obj.task.minBlocks) == 0
+					thisBlock = (index / obj.task.minBlocks);
+					thisRun = obj.task.minBlocks;
+				else
+					thisBlock = floor(index / obj.task.minBlocks) + 1;
+					thisRun = mod(index, obj.task.minBlocks);
+				end
+				fprintf('Index#%g|Block#%g|Run#%g = ',index,thisBlock,thisRun)
+				for i=1:obj.task.nVars
+					ix = []; valueList = []; oValueList = []; %#ok<NASGU>
+					ix = obj.task.nVar(i).stimulus; %which stimuli
+					value=obj.task.outVars{thisBlock,i}(thisRun);
+					valueList(1,1:size(ix,2)) = value;
+					name=[obj.task.nVar(i).name 'Out']; %which parameter
+					if regexpi(name,'xPositionOut','once')
+						obj.lastXPosition = value;
+					elseif regexpi(name,'yPositionOut','once')
+						obj.lastYPosition = value;
+					elseif regexpi(name,'sizeOut','once')
+						obj.lastSize = value;
+					end
+					offsetix = obj.task.nVar(i).offsetstimulus;
+					offsetvalue = obj.task.nVar(i).offsetvalue;
+
+					if ~isempty(offsetix)
+						ix = [ix offsetix];
+						ovalueList(1,1:size(offsetix,2)) = value+offsetvalue;
+						valueList = [valueList ovalueList];
+					end
+
+					a = 1;
+					for j = ix %loop through our stimuli references for this variable
+						fprintf('S%g @ %g: %s = %g ',j,index,name,valueList(a));
+						obj.stimuli{j}.(name)=valueList(a);
+						a = a + 1;
+					end
+				end
+				fprintf('LASTX:%g LASTY:%g\n',obj.lastXPosition,obj.lastYPosition);
+				obj.lastIndex = index;
+			end
 		end
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%

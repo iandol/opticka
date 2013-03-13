@@ -1,6 +1,7 @@
 %RF Mapping state configuration file
 %------------General Settings-----------------
 rewardTime = 200; %TTL time in milliseconds
+useTask = false;
 
 eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;

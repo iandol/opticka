@@ -72,6 +72,7 @@ classdef dPixxManager < optickaCore
 				bufferAddress = 8e6;
 				Datapixx('WriteDoutBuffer', strobe, bufferAddress);
 				Datapixx('SetDoutSchedule', 0, [1e5,1], length(strobe), bufferAddress, length(strobe));
+				fprintf('>>>STROBE Value %g prepared!\n',value);
 			end
 		end
 		
@@ -79,6 +80,7 @@ classdef dPixxManager < optickaCore
 			if obj.isOpen
 				Datapixx('StartDoutSchedule');
 				Datapixx('RegWrVideoSync');
+				%fprintf('>>>STROBE sent to Plexon!\n');
 			end
 		end
 		

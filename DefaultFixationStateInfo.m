@@ -9,6 +9,7 @@
 %
 %------------General Settings-----------------
 rewardTime = 200; %TTL time in milliseconds
+useTask = false;
 
 luminancePedestal = [0.5 0.5 0.5];
 fixX = 0;

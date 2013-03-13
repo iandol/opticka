@@ -23,7 +23,7 @@ targetFixTime = [0.3 0.6];
 targetRadius = 2;
 
 eL.name = 'figure-ground';
-eL.isDummy = true; %use dummy or real eyelink?
+eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
@@ -86,13 +86,19 @@ showSet(obj.stimuli);
 % in the scope of the runExperiemnt object.
 
 %pause entry
-pauseEntryFcn = { 
+pauseEntryFcn = { @()rstop(io); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
+	%@()updateStimFixTarget(obj,useTask); ... %this takes the randomised X and Y so we can send to eyetracker
+	%@()updateFixationTarget(obj,useTask); ... %use our stimuli values for next fix X and Y
 	};
 
-prefixFcn = @()draw(obj.stimuli); ... %draw stimuli but no animation yet
+%pause exit
+pauseExitFcn = { @()rstart(io) };%lets unpause the plexon!...
+
+prefixFcn = { @()draw(obj.stimuli); ... %draw stimuli but no animation yet
+	};
 
 %fixate entry
 fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
@@ -124,7 +130,7 @@ fixExitFcn = { @()updateFixationTarget(obj,useTask); ... %use our stimuli values
 	}; 
 
 %what to run when we enter the stim presentation state
-stimEntryFcn = [];
+stimEntryFcn = @()doStrobe(obj,true);
 
 %what to run when we are showing stimuli
 stimFcn =  { @()draw(obj.stimuli); ...	@()drawEyePosition(eL); ...
@@ -136,10 +142,11 @@ stimFcn =  { @()draw(obj.stimuli); ...	@()drawEyePosition(eL); ...
 maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
 
 %as we exit stim presentation state
-stimExitFcn = [];
+stimExitFcn = { @()setStrobeValue(obj,inf); @()doStrobe(obj,true) };
 
 %if the subject is correct (small reward)
 correctEntryFcn = { @()timedTTL(lJ,0,rewardTime); ... % labjack sends a TTL to Crist reward system
+	@()sendTTL(io,4); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
 	@()edfMessage(eL,'END_RT'); ...
 	@()stopRecording(eL); ...
@@ -157,7 +164,7 @@ correctFcn = { @()draw(obj.stimuli);
 correctExitFcn = {
 	@()setOffline(eL); ... %set eyelink offline
 	@()updateTaskIndex(obj); ... %+1 to totalRuns
-	@()updateVariables(obj); ... %randomise our stimuli
+	@()updateVariables(obj); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 	@()updateStimFixTarget(obj,useTask); ... %this takes the randomised X and Y so we can send to eyetracker
@@ -168,6 +175,7 @@ correctExitFcn = {
 	};
 %incorrect entry
 incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eyelink
+	@()sendTTL(io,6); ...
 	@()edfMessage(eL,'END_RT'); ...
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ...
@@ -180,6 +188,7 @@ incFcn =  @()draw(obj.stimuli);
 %incorrect / break exit
 incExitFcn = { 
 	@()setOffline(eL); ... %set eyelink offline
+	@()updateVariables(obj); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
 	@()updateStimFixTarget(obj,useTask); ... %this takes the randomised X and Y so we can send to eyetracker
@@ -190,6 +199,7 @@ incExitFcn = {
 
 %break entry
 breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message on eyelink
+	@()sendTTL(io,5);
 	@()edfMessage(eL,'END_RT'); ...
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -1'); ...
@@ -197,7 +207,7 @@ breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message 
 	};
 
 %calibration function
-calibrateFcn = { @()setOffline(eL); @()trackerSetup(eL) }; %enter tracker calibrate/validate setup mode
+calibrateFcn = { @()setOffline(eL); @()rstop(io); @()trackerSetup(eL) }; %enter tracker calibrate/validate setup mode
 
 %debug override
 overrideFcn = @()keyOverride(obj); %a special mode which enters a matlab debug state so we can manually edit object values
@@ -213,10 +223,10 @@ disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
-'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				[]; ...
+'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
 'prefix'	'fixate'	0.75	[]				prefixFcn		[]				[]; ...
 'fixate'	'incorrect'	1.4	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
-'stimulus'  'incorrect'	1.5		[]				stimFcn			maintainFixFcn	[]; ...
+'stimulus'  'incorrect'	1.5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			[]				incExitFcn; ...
 'breakfix'	'prefix'	1.25	breakEntryFcn	incFcn			[]				incExitFcn; ...
 'correct'	'prefix'	0.25	correctEntryFcn	correctFcn		[]				correctExitFcn; ...
