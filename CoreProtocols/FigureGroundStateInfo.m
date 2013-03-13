@@ -9,6 +9,7 @@
 %
 %------------General Settings-----------------
 rewardTime = 200; %TTL time in milliseconds
+useTask = true;
 
 luminancePedestal = [0.5 0.5 0.5];
 fixX = 0;
@@ -22,7 +23,7 @@ targetFixTime = [0.3 0.6];
 targetRadius = 2;
 
 eL.name = 'figure-ground';
-eL.isDummy = false; %use dummy or real eyelink?
+eL.isDummy = true; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
@@ -76,7 +77,7 @@ clear in
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
-obj.stimuli.stimulusSets = {[1 2 3 4],[1 2 4],[1 3 4]};
+obj.stimuli.stimulusSets = {[1 2 3 4]};
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
@@ -85,7 +86,11 @@ showSet(obj.stimuli);
 % in the scope of the runExperiemnt object.
 
 %pause entry
-pauseEntryFcn = @()setOffline(eL); %set eyelink offline
+pauseEntryFcn = { 
+	@()setOffline(eL); ... %set eyelink offline
+	@()stopRecording(eL); ...
+	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
+	};
 
 prefixFcn = @()draw(obj.stimuli); ... %draw stimuli but no animation yet
 
@@ -100,7 +105,7 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	@()startRecording(eL); ... %fire up eyelink
 	@()syncTime(eL); ... %EDF sync message
 	@()draw(obj.stimuli); ... %draw them
-	}; 
+	};
 
 %fix within
 fixFcn = { @()draw(obj.stimuli); ... %draw stimuli but no animation yet	@()drawEyePosition(eL); ...
@@ -111,7 +116,7 @@ fixFcn = { @()draw(obj.stimuli); ... %draw stimuli but no animation yet	@()drawE
 initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 
 %exit fixation phase
-fixExitFcn = { @()updateFixationTarget(obj); ... %use our stimuli values for next fix X and Y
+fixExitFcn = { @()updateFixationTarget(obj,useTask); ... %use our stimuli values for next fix X and Y
 	@()updateFixationValues(eL, [], [], targetFixInit, targetFixTime, targetRadius, true); ... %set target fix window
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edit(obj.stimuli,4,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
@@ -149,12 +154,13 @@ correctFcn = { @()draw(obj.stimuli);
 	};
 
 %when we exit the correct state
-correctExitFcn = { 
+correctExitFcn = {
 	@()setOffline(eL); ... %set eyelink offline
+	@()updateTaskIndex(obj); ... %+1 to totalRuns
 	@()updateVariables(obj); ... %randomise our stimuli
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
-	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
+	@()updateStimFixTarget(obj,useTask); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
@@ -172,11 +178,11 @@ incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eye
 incFcn =  @()draw(obj.stimuli);
 
 %incorrect / break exit
-incExitFcn = { @()setOffline(eL); ... %set eyelink offline
-	@()randomise(obj.stimuli); ... %randomise our stimuli
+incExitFcn = { 
+	@()setOffline(eL); ... %set eyelink offline
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
-	@()updateStimFixTarget(obj); ... %this takes the randomised X and Y so we can send to eyetracker
+	@()updateStimFixTarget(obj,useTask); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink

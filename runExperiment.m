@@ -105,9 +105,9 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		lastXPosition
-		lastYPosition
-		lastSize
+		lastXPosition = 0
+		lastYPosition = 0
+		lastSize = 1
 		%> properties allowed to be modified during construction
 		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|useDataPixx|logFrames|debug|verbose|screenSettings|benchmark'
 	end
@@ -665,14 +665,13 @@ classdef runExperiment < optickaCore
 			s = obj.screen; 
 			obj.stimuli.screen = [];
 			
+			%initialise task
 			t = obj.task;
-			resetTask(t);
 			initialiseTask(t);
-			
 			
 			%-------Set up Digital I/O for this run...
 			if isa(obj.dPixx,'dPixxManager')
-				io = obj.dPixx;
+				io = obj.dPixx; io.name = ['Fix' obj.savePrefix];
 			else
 				obj.dPixx = dPixxManager('verbose',obj.verbose,'name',['Fix' obj.savePrefix]);
 				io = obj.dPixx;
@@ -742,7 +741,9 @@ classdef runExperiment < optickaCore
 				
 				t.tick = 1;
 				t.switched = 1;
-				updateVariables(obj,1); % set to first variable
+				t.totalRuns = 1;
+				updateVariables(obj, t.totalRuns); % set to first variable
+				updateFixationTarget(obj, useTask);
 				tS.stopTraining = false; %break while loop
 				tS.keyHold = 1; %a small loop to stop overeager key presses
 				tS.totalTicks = 1; % a tick counter
@@ -750,7 +751,7 @@ classdef runExperiment < optickaCore
 				tS.eyePos = []; %locally record eye position
 				
 				HideCursor;
-				warning('off');
+				warning('off'); %#ok<*WNOFF>
 				%check initial eye position
 				if obj.useEyeLink; getSample(eL); end
 				
@@ -782,10 +783,19 @@ classdef runExperiment < optickaCore
 						if strcmpi(sM.currentName,'stimulus')
 							uuid = ['E' sM.currentUUID];
 							if isfield(tS.eyePos,uuid)
-								tS.eyePos.(uuid).x(end+1) = eL.x;								
+								tS.eyePos.(uuid).x(end+1) = eL.x;
 								tS.eyePos.(uuid).y(end+1) = eL.y;
 							else
-								tS.eyePos.(uuid).x = eL.x;								
+								tS.eyePos.(uuid).x = eL.x;
+								tS.eyePos.(uuid).y = eL.y;
+							end
+						elseif strcmpi(sM.currentName,'fixate')
+							uuid = ['F' sM.currentUUID];
+							if isfield(tS.eyePos,uuid)
+								tS.eyePos.(uuid).x(end+1) = eL.x;
+								tS.eyePos.(uuid).y(end+1) = eL.y;
+							else
+								tS.eyePos.(uuid).x = eL.x;
 								tS.eyePos.(uuid).y = eL.y;
 							end
 						elseif strcmpi(sM.currentName,'correct')
@@ -993,10 +1003,10 @@ classdef runExperiment < optickaCore
 				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
 				obj.eyeLink.stimulusPositions(1).size = 1;
 			else
-				updateFixationValues(obj.eyeLink, obj.stimuli.lastXPosition, obj.stimuli.lastYPosition)
-				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
-				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
-				obj.eyeLink.stimulusPositions(1).size = 1;
+				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition)
+				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
+				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
+				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
 			end
 		end
 		
@@ -1005,9 +1015,16 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function updateStimFixTarget(obj)
-			obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
-			obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
+		function updateStimFixTarget(obj,useTask)
+			if ~exist('useTask','var');	useTask = false; end
+			if useTask == false
+				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
+				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
+			else
+				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
+				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
+				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
+			end
 		end
 		
 		% ===================================================================
@@ -1143,25 +1160,39 @@ classdef runExperiment < optickaCore
 			obj.doFlip = false;
 		end
 		
+		
 		% ===================================================================
-		%> @brief updateVars
+		%> @brief update task run index
+		%>
+		%> 
+		% ===================================================================
+		function updateTaskIndex(obj)
+			if obj.task.totalRuns < obj.task.nRuns
+				obj.task.totalRuns = obj.task.totalRuns + 1;
+			else
+				obj.currentInfo.stopTraining = true;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief updateVariables
 		%> Updates the stimulus objects with the current variable set
-		%> @param thisBlock is the current trial
-		%> @param thisRun is the current run
+		%> @param index a single value
 		% ===================================================================
 		function updateVariables(obj,index)
-			if isempty(index)
-				index = 1;
+			if ~exist('index','var')
+				index = obj.task.totalRuns;
 			end
 			if rem(index, obj.task.minBlocks) == 0
-				thisBlock = (index / obj.task.minBlocks) + 1;
-				thisRun = 1;
+				thisBlock = (index / obj.task.minBlocks);
+				thisRun = obj.task.minBlocks;
 			else
 				thisBlock = floor(index / obj.task.minBlocks) + 1;
 				thisRun = mod(index, obj.task.minBlocks);
 			end
+			fprintf('i#%g - b#%g - r#%g | ',index,thisBlock,thisRun)
 			for i=1:obj.task.nVars
-				ix = []; valueList = []; oValueList = [];
+				ix = []; valueList = []; oValueList = []; %#ok<NASGU>
 				ix = obj.task.nVar(i).stimulus; %which stimuli
 				value=obj.task.outVars{thisBlock,i}(thisRun);
 				valueList(1,1:size(ix,2)) = value;
@@ -1184,12 +1215,12 @@ classdef runExperiment < optickaCore
 				
 				a = 1;
 				for j = ix %loop through our stimuli references for this variable
-					%fprintf('Stimulus %g : %s = %g\n',j,name,valueList(a));
+					fprintf('Stimulus %g @ %g: %s = %g ',j,index,name,valueList(a));
 					obj.stimuli{j}.(name)=valueList(a);
 					a = a + 1;
 				end
 			end
-			
+			fprintf('LASTX:%g LASTY:%g\n',obj.lastXPosition,obj.lastYPosition);
 		end
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
@@ -1226,7 +1257,7 @@ classdef runExperiment < optickaCore
 			
 			%start looping through out variables
 			for i=1:obj.task.nVars
-				ix = []; valueList = []; oValueList = [];
+				ix = []; valueList = []; oValueList = []; %#ok<NASGU>
 				ix = obj.task.nVar(i).stimulus; %which stimuli
 				value=obj.task.outVars{thisBlock,i}(thisRun);
 				valueList(1,1:size(ix,2)) = value;
