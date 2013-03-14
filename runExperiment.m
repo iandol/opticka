@@ -1968,41 +1968,84 @@ classdef runExperiment < optickaCore
 			tS = tS.eyePos;
 			fn = fieldnames(tS);
 			figure;
+			a = 1;
+			stdex = [];
+			stdey = [];
+			early = [];
 			for i = 1:length(fn)-1
 				if regexpi(fn{i+1},'^CC')
 					x = tS.(fn{i}).x;
 					y = tS.(fn{i}).y;
-					if (max(x) < 16 && min(x) > -16) && (max(y) < 16 && min(y) > -16) && mean(x(1:10)) < 0.1 && mean(y(1:10)) < 0.1
+					if (max(x) < 16 && min(x) > -16) && (max(y) < 16 && min(y) > -16) && mean(abs(x(1:10))) < 1 && mean(abs(y(1:10))) < 1
 						c = rand(1,3);
-						subplot(2,1,1)
+						subplot(2,2,1)
 						hold on
 						plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 						hold off
 
-						subplot(2,1,2)
+						subplot(2,2,2)
 						t = 0:ifi:(ifi*length(x));
 						t = t(1:length(x));
 						hold on
 						plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 						plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 						hold off
-						grid on
-						box on
+						
+						subplot(2,2,3)
+						hold on
+						plot(mean(x(1:10)), mean(y(1:10)),'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+						stdex = [stdex std(x(1:10))];
+						stdey = [stdey std(y(1:10))];
+						hold off
+						
+						subplot(2,2,4)
+						hold on
+						plot3(mean(x(1:10)), mean(y(1:10)),a,'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+						hold off
+						
+						if mean(x(14:16)) > 5 || mean(y(14:16)) > 5
+							early(a) = 1;
+						else
+							early(a) = 0;
+						end
+						
+						a = a + 1;
+						
 					end
 				end
 			end
-			subplot(2,1,1)
+			
+			subplot(2,2,1)
 			grid on
 			box on
+			axis square
 			title('X vs. Y Eye Position in Degrees')
 			xlabel('X Degrees')
 			ylabel('Y Degrees')
-			subplot(2,1,2)
+			
+			subplot(2,2,2)
 			grid on
 			box on
-			title('X and Y Position vs. time')
+			title(sprintf('X and Y Position vs. time | Early = %g / %g', sum(early),length(early)))
 			xlabel('Time (s)')
 			ylabel('Degrees')
+			
+			subplot(2,2,3)
+			grid on
+			box on
+			axis square
+			title(sprintf('Average X vs. Y Position for first 150ms STDX: %g | STDY: %g',mean(stdex),mean(stdey)))
+			xlabel('X Degrees')
+			ylabel('Y Degrees')
+			
+			subplot(2,2,4)
+			grid on
+			box on
+			axis square
+			title('Average X vs. Y Position for first 150ms Over Time')
+			xlabel('X Degrees')
+			ylabel('Y Degrees')
+			zlabel('Trial')
 		end
 		
 		% ===================================================================
