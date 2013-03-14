@@ -18,16 +18,16 @@ firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
 firstFixRadius = 1.25;
 
-targetFixInit = 0.5;
+targetFixInit = 0.75;
 targetFixTime = [0.3 0.6];
-targetRadius = 2;
+targetRadius = 4;
 
 eL.name = 'figure-ground';
 eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
-eL.recordData = false; % save EDF file?
+eL.recordData = true; % save EDF file?
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 1;
 eL.modify.calibrationtargetwidth = 0.01;
@@ -107,7 +107,7 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	@()edit(obj.stimuli,4,'colourOut',[1 1 0]); ...
 	@()show(obj.stimuli{4}); ...
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
-	@()edfMessage(eL,['TRIALID ' num2str(randi([1 8]))]); ...
+	@()edfMessage(eL,['TRIALID ' getTaskIndex(obj)]); ...
 	@()startRecording(eL); ... %fire up eyelink
 	@()syncTime(eL); ... %EDF sync message
 	@()draw(obj.stimuli); ... %draw them
@@ -134,7 +134,7 @@ stimEntryFcn = @()doStrobe(obj,true);
 
 %what to run when we are showing stimuli
 stimFcn =  { @()draw(obj.stimuli); ...	@()drawEyePosition(eL); ...
-	@()finishDrawing(s); ...
+	%@()finishDrawing(s); ...
 	@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
 	};
 

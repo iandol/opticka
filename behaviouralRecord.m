@@ -63,7 +63,7 @@ classdef behaviouralRecord < optickaCore
 				eL.fixationInitTime = 1;
 			end
 			t = {['INFORMATION @ ' obj.date]};
-			t{end+1} = ' ';
+			%t{end+1} = ['RUN:' obj.comment];
 			t{end+1} = ['RADIUS = ' num2str(eL.fixationRadius)];
 			t{end+1} = ' ';
 			t{end+1} = ['TIME = ' num2str(eL.fixationTime)];

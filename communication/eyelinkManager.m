@@ -112,7 +112,7 @@ classdef eyelinkManager < optickaCore
 			obj.modify.displayCalResults = 1;
 			obj.modify.targetbeep = 0;
 			obj.modify.devicenumber = -1;
-			obj.tempFile = [tempdir 'MYDATA.edf'];
+			obj.tempFile = 'MYDATA.edf';
 		end
 		
 		% ===================================================================
@@ -562,6 +562,7 @@ classdef eyelinkManager < optickaCore
 		function edfMessage(obj, message)
 			if obj.isConnected
 				Eyelink('Message', message );
+				%fprintf('EDF Message: %s\n',message);
 			end
 		end
 		
@@ -593,13 +594,13 @@ classdef eyelinkManager < optickaCore
 						disp(ME.message);
 					end
 				end
-				Eyelink('Shutdown');
 			catch ME
 				obj.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
 				Eyelink('Shutdown');
 				obj.error = ME;
 				obj.salutation(ME.message);
 			end
+			Eyelink('Shutdown');
 			obj.isConnected = false;
 			obj.isDummy = false;
 			obj.isRecording = false;

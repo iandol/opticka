@@ -8,6 +8,8 @@ classdef optickaCore < handle
 	properties
 		%> object name
 		name = ''
+		%> comment
+		comment = ''
 	end
 	
 	%--------------------ABSTRACT PROPERTIES----------%

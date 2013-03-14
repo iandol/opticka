@@ -643,7 +643,9 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function runFixationSession(obj)
 			global lJ %eyelink calibration needs access to labjack for reward
+			obj.comment = '';
 			initialiseSaveFile(obj)
+			obj.name = obj.savePrefix;
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -707,7 +709,7 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
-					eL.saveFile = [obj.paths.savedData obj.savePrefix 'FIX.edf'];
+					eL.saveFile = [obj.paths.savedData filesep obj.savePrefix 'FIX.edf'];
 				end
 				
 				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',['Fix' obj.savePrefix]); 
@@ -722,6 +724,16 @@ classdef runExperiment < optickaCore
 					obj.stateInfo = stateInfoTmp;
 					addStates(sM, obj.stateInfo);
 				end
+				
+				comment = inputdlg('Initial Comment for this Run?',['Run Comment for ' obj.name]);
+				comment = comment{1};
+				obj.comment = [obj.name ':' comment];
+				bR.comment = obj.comment;
+				eL.comment = obj.comment;
+				sM.comment = obj.comment;
+				io.comment = obj.comment;
+				tL.comment = obj.comment;
+				tS.comment = obj.comment;
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
@@ -853,6 +865,17 @@ classdef runExperiment < optickaCore
 				
 				ShowCursor;
 				warning('on'); %#ok<WNON>
+				
+				comment = inputdlg('Initial Comment for this Run?','Run Comment');
+				comment = comment{1};
+				obj.comment = [obj.comment ' | Final Comment: ' comment];
+				bR.comment = obj.comment;
+				eL.comment = obj.comment;
+				sM.comment = obj.comment;
+				io.comment = obj.comment;
+				tL.comment = obj.comment;
+				tS.comment = obj.comment;
+				
 				close(s);
 				close(eL);
 				obj.eyeLink = [];
@@ -955,38 +978,6 @@ classdef runExperiment < optickaCore
 			elseif isa(obj.trainingLog,'timeLogger')
 				obj.trainingLog.printRunLog;
 			end
-		end
-		
-		% ===================================================================
-		%> @brief getrunLog Prints out the frame time plots from a run
-		%>
-		%> @param
-		% ===================================================================
-		function deleteRunLog(obj)
-			if isa(obj.runLog,'timeLogger')
-				obj.runLog = [];
-			end
-			if isa(obj.trainingLog,'timeLogger')
-				obj.trainingLog = [];
-			end
-		end
-		
-		% ===================================================================
-		%> @brief getTimeLog Prints out the frame time plots from a run
-		%>
-		%> @param
-		% ===================================================================
-		function restoreRunLog(obj,tLog)
-			if isstruct(tLog);obj.runLog = tLog;end
-		end
-		
-		% ===================================================================
-		%> @brief refresh the screen values stored in the object
-		%>
-		%> @param
-		% ===================================================================
-		function refreshScreen(obj)
-			obj.screenVals = obj.screen.prepareScreen();
 		end
 		
 		% ===================================================================
@@ -1175,6 +1166,20 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief get task run index
+		%>
+		%> 
+		% ===================================================================
+		function trial = getTaskIndex(obj, index)
+			if ~exist('index','var') && isprop(obj.task,'totalRuns')
+					index = obj.task.totalRuns;	
+					trial = obj.task.outIndex(index);
+					return
+			end
+			trial = -1;
+		end
+		
+		% ===================================================================
 		%> @brief updateVariables
 		%> Updates the stimulus objects with the current variable set
 		%> @param index a single value
@@ -1231,6 +1236,39 @@ classdef runExperiment < optickaCore
 				obj.lastIndex = index;
 			end
 		end
+		
+		% ===================================================================
+		%> @brief getrunLog Prints out the frame time plots from a run
+		%>
+		%> @param
+		% ===================================================================
+		function deleteRunLog(obj)
+			if isa(obj.runLog,'timeLogger')
+				obj.runLog = [];
+			end
+			if isa(obj.trainingLog,'timeLogger')
+				obj.trainingLog = [];
+			end
+		end
+		
+		% ===================================================================
+		%> @brief getTimeLog Prints out the frame time plots from a run
+		%>
+		%> @param
+		% ===================================================================
+		function restoreRunLog(obj,tLog)
+			if isstruct(tLog);obj.runLog = tLog;end
+		end
+		
+		% ===================================================================
+		%> @brief refresh the screen values stored in the object
+		%>
+		%> @param
+		% ===================================================================
+		function refreshScreen(obj)
+			obj.screenVals = obj.screen.prepareScreen();
+		end
+		
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
@@ -1788,7 +1826,7 @@ classdef runExperiment < optickaCore
 						end
 					case 'k'
 						if tS.totalTicks > tS.keyHold
-							stateName = 'prestimulus';
+							stateName = 'blank';
 							[isState, index] = isStateName(obj.stateMachine,stateName);
 							if isState
 								t = obj.stateMachine.getState(stateName);
@@ -1804,7 +1842,7 @@ classdef runExperiment < optickaCore
 						end
 					case 'l'
 						if tS.totalTicks > tS.keyHold
-							stateName = 'prestimulus';
+							stateName = 'blank';
 							[isState, index] = isStateName(obj.stateMachine,stateName);
 							if isState
 								t = obj.stateMachine.getState(stateName);
