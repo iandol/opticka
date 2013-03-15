@@ -13,6 +13,7 @@ classdef behaviouralRecord < optickaCore
 		rt1 = []
 		rt2 = []
 		date = []
+		info = ''
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
@@ -63,7 +64,7 @@ classdef behaviouralRecord < optickaCore
 				eL.fixationInitTime = 1;
 			end
 			t = {['INFORMATION @ ' obj.date]};
-			%t{end+1} = ['RUN:' obj.comment];
+			t{end+1} = ['RUN = ' obj.comment];
 			t{end+1} = ['RADIUS = ' num2str(eL.fixationRadius)];
 			t{end+1} = ' ';
 			t{end+1} = ['TIME = ' num2str(eL.fixationTime)];
@@ -211,7 +212,8 @@ classdef behaviouralRecord < optickaCore
 			%set(hn,'FaceColor','k','EdgeColor','k');
 			
 			t = {['INFORMATION @ ' obj.date]};
-			t{end+1} = ' ';
+			t{end+1} = ['RUN:' obj.comment];
+			t{end+1} = ['INFO:' obj.info];
 			t{end+1} = ['RADIUS (red) b|n = ' num2str(eL.fixationRadius) 'deg'];
 			t{end+1} = ['INITIATE FIXATION TIME (green) z|x = ' num2str(eL.fixationInitTime) ' secs'];
 			t{end+1} = ['MAINTAIN FIXATION TIME (blue) c|v = ' num2str(eL.fixationTime) ' secs'];

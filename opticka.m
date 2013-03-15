@@ -451,8 +451,8 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function getStateInfo(obj)
-			if ischar(obj.r.stateInfoFile) && exist(obj.r.stateInfoFile,'file')
-				fid = fopen(obj.r.stateInfoFile);
+			if ischar(obj.r.paths.stateInfoFile) && exist(obj.r.paths.stateInfoFile,'file')
+				fid = fopen(obj.r.paths.stateInfoFile);
 				tline = fgetl(fid);
 				i=1;
 				while ischar(tline)
@@ -462,7 +462,7 @@ classdef opticka < optickaCore
 				end
 				fclose(fid);
 				set(obj.h.OKTrainingText,'String',o.store.statetext);
-				set(obj.h.OKTrainingFileName,'String',obj.r.stateInfoFile);
+				set(obj.h.OKTrainingFileName,'String',obj.r.paths.stateInfoFile);
 			end
 		end
 		
@@ -859,9 +859,9 @@ classdef opticka < optickaCore
 		function loadStateInfo(obj)
 			obj.paths.currentPath = pwd;
 			cd(obj.paths.protocols);
-			[fname,fpath] = uigetfile({'.m'});
+			[fname,fpath] = uigetfile({'.m'},'Load State Info file (.m)');
 			obj.paths.stateInfoFile = [fpath fname];
-			obj.r.stateInfoFile = obj.paths.stateInfoFile;
+			obj.r.paths.stateInfoFile = obj.paths.stateInfoFile;
 		end
 		
 		% ===================================================================
@@ -869,9 +869,9 @@ classdef opticka < optickaCore
 		%> Save Protocol
 		%> @param 
 		% ===================================================================
-		function delete(obj)
-			fprintf('---> %s DESTRUCTOR CALLED <---\n',obj.fullName)
-		end
+		%function delete(obj)
+			%fprintf('---> %s DESTRUCTOR CALLED <---\n',obj.fullName)
+		%end
 		
 		% ===================================================================
 		%> @brief Load Protocol
@@ -895,10 +895,16 @@ classdef opticka < optickaCore
 			cd(obj.paths.protocols);
 			
 			if isempty(file)
-				uiload;
+				[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)');
+				if file == 0
+					return
+				end
+				cd(p)
+				load(file)
 			else
 				load(file);
 			end
+			obj.comment = ['Protocol: ' file];
 			
 			if exist('tmp','var') && isa(tmp,'opticka')
 				if isprop(tmp.r,'stimuli')
@@ -927,12 +933,23 @@ classdef opticka < optickaCore
 				
 				%copy rE parameters
 				if isa(tmp.r,'runExperiment')
-					if isprop(obj.r,'stateInfoFile') && isprop(tmp.r,'stateInfoFile')
-						obj.r.stateInfoFile = tmp.r.stateInfoFile;
+					obj.r.name = [obj.r.name obj.comment];
+					if isfield(tmp.r.paths,'stateInfoFile')
+						obj.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
+						obj.getStateInfo();
+					elseif isprop(obj.r,'stateInfoFile') && isprop(tmp.r,'stateInfoFile')
+						obj.r.paths.stateInfoFile = tmp.r.stateInfoFile;
+						if ~exist(obj.r.paths.stateInfoFile,'file')
+							obj.r.paths.stateInfoFile=regexprep(tmp.r.stateInfoFile,'(.+)(.Code.opticka.+)','~$2','ignorecase','once');
+						end							
 						obj.getStateInfo();
 					end
 					obj.r.useLabJack = tmp.r.useLabJack;
 					set(obj.h.OKuseLabJack,'Value',obj.r.useLabJack)
+					obj.r.useDataPixx = tmp.r.useDataPixx;
+					set(obj.h.OKuseDataPixx,'Value',obj.r.useDataPixx)
+					obj.r.useEyeLink = tmp.r.useEyeLink;
+					set(obj.h.OKuseEyeLink,'Value',obj.r.useEyeLink)
 				end
 				
 				%copy screen parameters

@@ -1484,8 +1484,8 @@ function OKEditStateFileButon_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	if exist(o.r.stateInfoFile,'file')
-		edit(o.r.stateInfoFile);
+	if exist(o.r.paths.stateInfoFile,'file')
+		edit(o.r.paths.stateInfoFile);
 	end
 	o.getStateInfo();
 end

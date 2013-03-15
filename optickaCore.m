@@ -86,7 +86,8 @@ classdef optickaCore < handle
 			obj.paths.whatami = obj.className;
 			obj.paths.root = fileparts(which(mfilename));
 			obj.paths.whereami = obj.paths.root;
-			obj.paths.savedData = '~/MatlabFiles/';
+			obj.paths.savedData = '~/MatlabFiles/savedData/';
+			obj.paths.stateInfoFile = '';
 		end
 		
 		% ===================================================================
@@ -96,11 +97,11 @@ classdef optickaCore < handle
 		% ===================================================================
 		function name = get.fullName(obj)
 			if isempty(obj.name)
-				name = [obj.className '#' obj.uuid];
+				obj.fullName_ = [obj.className '#' obj.uuid];
 			else
-				name = [obj.name ' <' obj.className '#' obj.uuid '>'];
+				obj.fullName_ = [obj.name ' <' obj.className '#' obj.uuid '>'];
 			end
-			obj.fullName_ = name; %update our cached version
+			name = obj.fullName_;
 		end
 		
 		% ===================================================================

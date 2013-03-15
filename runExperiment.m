@@ -27,8 +27,6 @@ classdef runExperiment < optickaCore
 		task
 		%> screen manager object
 		screen
-		%> file to define the stateMachine state info
-		stateInfoFile = ''
 		%> use dataPixx for digital I/O
 		useDataPixx = false
 		%> use LabJack for digital I/O
@@ -55,8 +53,6 @@ classdef runExperiment < optickaCore
 		strobeValue = []
 		%> send strobe on next flip?
 		sendStrobe = false
-		%> directory to save all data in?
-		saveDirectory = '~/MatlabFiles/SavedData/'
 	end
 	
 	properties (Hidden = true)
@@ -69,6 +65,8 @@ classdef runExperiment < optickaCore
 		stimList = []
 		%> which stimulus is selected?
 		thisStim = []
+		%> file to define the stateMachine state info
+		stateInfoFile = ''
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -495,12 +493,12 @@ classdef runExperiment < optickaCore
 				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',['Task' obj.savePrefix]); 
 				sM = obj.stateMachine;
 				sM.timeDelta = obj.screenVals.ifi; %tell it the spcreen IFI
-				if isempty(obj.stateInfoFile)
+				if isempty(obj.paths.stateInfoFile)
 					error('Please load a State Info file...')
-				elseif ischar(obj.stateInfoFile)
-					cd(fileparts(obj.stateInfoFile))
-					obj.stateInfoFile = regexprep(obj.stateInfoFile,'\s+','\\ ');
-					run(obj.stateInfoFile)
+				elseif ischar(obj.paths.stateInfoFile)
+					cd(fileparts(obj.paths.stateInfoFile))
+					obj.paths.stateInfoFile = regexprep(obj.paths.stateInfoFile,'\s+','\\ ');
+					run(obj.paths.stateInfoFile)
 					obj.stateInfo = stateInfoTmp;
 					addStates(sM, obj.stateInfo);
 				end
@@ -663,6 +661,11 @@ classdef runExperiment < optickaCore
 			
 			%a throwaway structure to hold various parameters
 			tS = struct();
+			tS.useTask = false;
+			tS.checkKeysDuringStimulus = true;
+			tS.recordEyePosition = false;
+			tS.askForComments = false;
+			tS.saveData = true;
 	
 			%make a short handle to the screenManager
 			s = obj.screen; 
@@ -715,25 +718,27 @@ classdef runExperiment < optickaCore
 				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',['Fix' obj.savePrefix]); 
 				sM = obj.stateMachine;
 				sM.timeDelta = obj.screenVals.ifi; %tell it the spcreen IFI
-				if isempty(obj.stateInfoFile)
+				if isempty(obj.paths.stateInfoFile)
 					error('Please specify a fixation state info file...')
-				elseif ischar(obj.stateInfoFile)
-					cd(fileparts(obj.stateInfoFile))
-					obj.stateInfoFile = regexprep(obj.stateInfoFile,'\s+','\\ ');
-					run(obj.stateInfoFile)
+				elseif ischar(obj.paths.stateInfoFile)
+					cd(fileparts(obj.paths.stateInfoFile))
+					obj.paths.stateInfoFile = regexprep(obj.paths.stateInfoFile,'\s+','\\ ');
+					run(obj.paths.stateInfoFile)
 					obj.stateInfo = stateInfoTmp;
 					addStates(sM, obj.stateInfo);
 				end
 				
-				comment = inputdlg('Initial Comment for this Run?',['Run Comment for ' obj.name]);
-				comment = comment{1};
-				obj.comment = [obj.name ':' comment];
-				bR.comment = obj.comment;
-				eL.comment = obj.comment;
-				sM.comment = obj.comment;
-				io.comment = obj.comment;
-				tL.comment = obj.comment;
-				tS.comment = obj.comment;
+				if tS.askForComments
+					comment = inputdlg('Initial Comment for this Run?',['Run Comment for ' obj.name]);
+					comment = comment{1};
+					obj.comment = [obj.name ':' comment];
+					bR.comment = obj.comment;
+					eL.comment = obj.comment;
+					sM.comment = obj.comment;
+					io.comment = obj.comment;
+					tL.comment = obj.comment;
+					tS.comment = obj.comment;
+				end
 				
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
@@ -755,9 +760,9 @@ classdef runExperiment < optickaCore
 				t.tick = 1;
 				t.switched = 1;
 				t.totalRuns = 1;
-				if useTask == true
-					updateVariables(obj, t.totalRuns, true); % set to first variable
-					updateFixationTarget(obj, useTask);
+				if tS.useTask == true
+					updateVariables(obj, t.totalRuns, true, false); % set to first variable
+					updateFixationTarget(obj, tS.useTask);
 				end
 				tS.stopTraining = false; %break while loop
 				tS.keyHold = 1; %a small loop to stop overeager key presses
@@ -793,33 +798,35 @@ classdef runExperiment < optickaCore
 					%------check eye position
 					if obj.useEyeLink; 
 						getSample(eL); 
-						if strcmpi(sM.currentName,'stimulus')
-							uuid = ['E' sM.currentUUID];
-							if isfield(tS.eyePos,uuid)
-								tS.eyePos.(uuid).x(end+1) = eL.x;
-								tS.eyePos.(uuid).y(end+1) = eL.y;
-							else
-								tS.eyePos.(uuid).x = eL.x;
-								tS.eyePos.(uuid).y = eL.y;
+						if tS.recordEyePosition == true
+							if strcmpi(sM.currentName,'stimulus')
+								uuid = ['E' sM.currentUUID];
+								if isfield(tS.eyePos,uuid)
+									tS.eyePos.(uuid).x(end+1) = eL.x;
+									tS.eyePos.(uuid).y(end+1) = eL.y;
+								else
+									tS.eyePos.(uuid).x = eL.x;
+									tS.eyePos.(uuid).y = eL.y;
+								end
+							elseif strcmpi(sM.currentName,'fixate')
+								uuid = ['F' sM.currentUUID];
+								if isfield(tS.eyePos,uuid)
+									tS.eyePos.(uuid).x(end+1) = eL.x;
+									tS.eyePos.(uuid).y(end+1) = eL.y;
+								else
+									tS.eyePos.(uuid).x = eL.x;
+									tS.eyePos.(uuid).y = eL.y;
+								end
+							elseif strcmpi(sM.currentName,'correct')
+								uuid = ['CC' sM.currentUUID];
+								tS.eyePos.(uuid).x = 1;
+								tS.eyePos.(uuid).y = 1;
 							end
-						elseif strcmpi(sM.currentName,'fixate')
-							uuid = ['F' sM.currentUUID];
-							if isfield(tS.eyePos,uuid)
-								tS.eyePos.(uuid).x(end+1) = eL.x;
-								tS.eyePos.(uuid).y(end+1) = eL.y;
-							else
-								tS.eyePos.(uuid).x = eL.x;
-								tS.eyePos.(uuid).y = eL.y;
-							end
-						elseif strcmpi(sM.currentName,'correct')
-							uuid = ['CC' sM.currentUUID];
-							tS.eyePos.(uuid).x = 1;
-							tS.eyePos.(uuid).y = 1;
 						end
 					end
 					
 					%------Check keyboard for commands
-					if ~strcmpi(sM.currentName,'calibrate') %&& ~strcmpi(sM.currentName,'stimulus')
+					if ~strcmpi(sM.currentName,'calibrate') || (~strcmpi(sM.currentName,'stimulus') || tS.checkKeysDuringStimulus == true)
 						tS = obj.checkFixationKeys(tS);
 					end
 					
@@ -852,6 +859,8 @@ classdef runExperiment < optickaCore
 					tS.totalTicks = tS.totalTicks + 1;
 					
 				end
+				drawBackground(s);
+				Screen('Flip', s.win);
 				Priority(0);
 				ListenChar(0);
 				obj.salutation(sprintf('Total ticks: %g | stateMachine ticks: %g', tS.totalTicks, sM.totalTicks));
@@ -866,26 +875,30 @@ classdef runExperiment < optickaCore
 				ShowCursor;
 				warning('on'); %#ok<WNON>
 				
-				comment = inputdlg('Initial Comment for this Run?','Run Comment');
-				comment = comment{1};
-				obj.comment = [obj.comment ' | Final Comment: ' comment];
-				bR.comment = obj.comment;
-				eL.comment = obj.comment;
-				sM.comment = obj.comment;
-				io.comment = obj.comment;
-				tL.comment = obj.comment;
-				tS.comment = obj.comment;
+				if tS.askForComments
+					comment = inputdlg('Final Comment for this Run?','Run Comment');
+					comment = comment{1};
+					obj.comment = [obj.comment ' | Final Comment: ' comment];
+					bR.comment = obj.comment;
+					eL.comment = obj.comment;
+					sM.comment = obj.comment;
+					io.comment = obj.comment;
+					tL.comment = obj.comment;
+					tS.comment = obj.comment;
+				end
 				
 				close(s);
 				close(eL);
 				obj.eyeLink = [];
 				close(lJ);
 				obj.lJack=[];
-				assignin('base', 'bR', bR)
-				assignin('base', 'tL', tL)
-				assignin('base', 'tS', tS)
-				assignin('base', 'sM', sM)
-				save([obj.paths.savedData filesep 'TrainLog-' obj.savePrefix '.mat'],'obj','bR','tL','tS','sM')
+				if tS.saveData
+					assignin('base', 'bR', bR)
+					assignin('base', 'tL', tL)
+					assignin('base', 'tS', tS)
+					assignin('base', 'sM', sM)
+					save([obj.paths.savedData filesep 'TrainLog-' obj.savePrefix '.mat'],'obj','bR','tL','tS','sM')
+				end
 				clear tL s tS bR lJ eL io sM			
 			catch ME
 				if obj.useDataPixx
@@ -940,10 +953,9 @@ classdef runExperiment < optickaCore
 				obj.dPixx = dPixxManager();
 			end
 			
-			if isempty(obj.stateInfoFile)
+			if ~isfield(obj.paths,'stateInfoFile') || isempty(obj.paths.stateInfoFile)
 				if exist([obj.paths.root filesep 'DefaultStateInfo.m'],'file')
 					obj.paths.stateInfoFile = [obj.paths.root filesep 'DefaultStateInfo.m'];
-					obj.stateInfoFile = obj.paths.stateInfoFile;
 				end
 			end
 			
@@ -985,24 +997,24 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function updateFixationTarget(obj,useTask)
+		function updateFixationTarget(obj, useTask)
 			if ~exist('useTask','var');	useTask = false; end
 			if useTask == false
 				updateFixationValues(obj.eyeLink, obj.stimuli.lastXPosition, obj.stimuli.lastYPosition)
 				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
-				obj.eyeLink.stimulusPositions(1).size = 1;
+				obj.eyeLink.stimulusPositions(1).size = 3;
 			else
 				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition)
 				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
 				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
-				fprintf('LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
+				%fprintf('LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
 			end
 		end
 		
 		% ===================================================================
-		%> @brief updates eyelink with stimuli random position
+		%> @brief updates eyelink with stimuli positions
 		%>
 		%> @param
 		% ===================================================================
@@ -1011,6 +1023,7 @@ classdef runExperiment < optickaCore
 			if useTask == false
 				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
+				obj.eyeLink.stimulusPositions(1).size = 3;
 			else
 				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
@@ -1172,9 +1185,9 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function trial = getTaskIndex(obj, index)
 			if ~exist('index','var') && isprop(obj.task,'totalRuns')
-					index = obj.task.totalRuns;	
-					trial = obj.task.outIndex(index);
-					return
+				index = obj.task.totalRuns;	
+				trial = obj.task.outIndex(index);
+				return
 			end
 			trial = -1;
 		end
@@ -1184,11 +1197,17 @@ classdef runExperiment < optickaCore
 		%> Updates the stimulus objects with the current variable set
 		%> @param index a single value
 		% ===================================================================
-		function updateVariables(obj,index,override)
-			if ~exist('index','var')
+		function updateVariables(obj,index,override,update)
+			if ~exist('update','var') || isempty(update)
+				update = false;
+			end
+			if update == true
+				updateTaskIndex(obj); %do this before getting index
+			end
+			if ~exist('index','var') || isempty(index)
 				index = obj.task.totalRuns;
 			end
-			if ~exist('override','var')
+			if ~exist('override','var') || isempty(override)
 				override = false;
 			end
 			if obj.useDataPixx == true
@@ -1202,7 +1221,7 @@ classdef runExperiment < optickaCore
 					thisBlock = floor(index / obj.task.minBlocks) + 1;
 					thisRun = mod(index, obj.task.minBlocks);
 				end
-				fprintf('Index#%g|Block#%g|Run#%g = ',index,thisBlock,thisRun)
+				t = sprintf('Index#%g|Block#%g|Run#%g = ',index,thisBlock,thisRun);
 				for i=1:obj.task.nVars
 					ix = []; valueList = []; oValueList = []; %#ok<NASGU>
 					ix = obj.task.nVar(i).stimulus; %which stimuli
@@ -1227,12 +1246,12 @@ classdef runExperiment < optickaCore
 
 					a = 1;
 					for j = ix %loop through our stimuli references for this variable
-						fprintf('S%g @ %g: %s = %g ',j,index,name,valueList(a));
+						t = [t sprintf('S%g: %s = %g ',j,name,valueList(a))];
 						obj.stimuli{j}.(name)=valueList(a);
 						a = a + 1;
 					end
 				end
-				fprintf('LASTX:%g LASTY:%g\n',obj.lastXPosition,obj.lastYPosition);
+				obj.behaviouralRecord.info = t;
 				obj.lastIndex = index;
 			end
 		end
@@ -2122,7 +2141,7 @@ classdef runExperiment < optickaCore
 			function obj = rebuild(obj,in,inObject)
 				fprintf('------> ');
 				try %#ok<*TRYNC>
-					if isprop(in,'stimuli') && isa(in.stimuli,'metaStimulus')
+					if (isprop(in,'stimuli') || isfield(in,'stimuli')) && isa(in.stimuli,'metaStimulus')
 						if ~strcmpi(in.stimuli.uuid,lobj.stimuli.uuid)
 							lobj.stimuli = in.stimuli;
 							fprintf('Stimuli = metaStimulus object loaded | ');
@@ -2141,9 +2160,14 @@ classdef runExperiment < optickaCore
 							fprintf('NO STIMULI!!! | ');
 						end
 					end
-					if isprop(in,'stateInfoFile') && ~strcmpi(in.stateInfoFile, lobj.stateInfoFile)
+					if isfield(in.paths,'stateInfoFile') 
+						if exist(in.paths.stateInfoFile,'file')
+							lobj.paths.stateInfoFile = in.paths.stateInfoFile;
+							fprintf('stateInfoFile assigned');
+						end
+					elseif isprop(in,'stateInfoFile') || isfield(in,'stateInfoFile')
 						if exist(in.stateInfoFile,'file')
-							lobj.stateInfoFile = in.stateInfoFile;
+							lobj.paths.stateInfoFile = in.stateInfoFile;
 							fprintf('stateInfoFile assigned');
 						end
 					end
