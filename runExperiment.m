@@ -495,12 +495,18 @@ classdef runExperiment < optickaCore
 				sM.timeDelta = obj.screenVals.ifi; %tell it the spcreen IFI
 				if isempty(obj.paths.stateInfoFile)
 					error('Please load a State Info file...')
-				elseif ischar(obj.paths.stateInfoFile)
-					cd(fileparts(obj.paths.stateInfoFile))
-					obj.paths.stateInfoFile = regexprep(obj.paths.stateInfoFile,'\s+','\\ ');
-					run(obj.paths.stateInfoFile)
+				end
+				if ~exist(obj.stateInfoFile,'file')
+					obj.stateInfoFile = regexprep(obj.stateInfoFile,'(.+)(.code.opticka.+)','\~$2','once','ignorecase');
+				end	
+				if exist(obj.stateInfoFile,'file')
+					cd(fileparts(obj.stateInfoFile))
+					obj.stateInfoFile = regexprep(obj.stateInfoFile,'\s+','\\ ');
+					run(obj.stateInfoFile)
 					obj.stateInfo = stateInfoTmp;
 					addStates(sM, obj.stateInfo);
+				else
+					error('Please load a Valid State Info file...')
 				end
 				
 				KbReleaseWait; %make sure keyboard keys are all released

@@ -62,7 +62,7 @@ classdef optickaCore < handle
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -86,8 +86,14 @@ classdef optickaCore < handle
 			obj.paths.whatami = obj.className;
 			obj.paths.root = fileparts(which(mfilename));
 			obj.paths.whereami = obj.paths.root;
-			obj.paths.savedData = '~/MatlabFiles/savedData/';
 			obj.paths.stateInfoFile = '';
+			if ismac || isunix
+				[~, obj.paths.home] = system('echo $HOME');
+				obj.paths.home = regexprep(obj.paths.home,'\n','');
+			else
+				obj.paths.home = 'c:\';
+			end
+			obj.paths.savedData = [obj.paths.home filesep 'MatlabFiles' filesep];
 		end
 		
 		% ===================================================================
