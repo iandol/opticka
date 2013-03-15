@@ -584,7 +584,7 @@ classdef eyelinkManager < optickaCore
 						end
 						if 2==exist(obj.tempFile, 'file')
 							obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', obj.tempFile, pwd),true);
-							status = copyfile(obj.tempFile, obj.saveFile,'f');
+							status = movefile(obj.tempFile, obj.saveFile,'f');
 							if status == 1
 								obj.salutation('Close Method',sprintf('Data file copied to ''%s''', obj.saveFile),true);
 							end

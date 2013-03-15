@@ -234,9 +234,9 @@ classdef spotStimulus < baseStimulus
 				trigger = obj.flashOnOut;
 			end
 			if trigger
-				flashSwitch = round(obj.flashTime(1) / obj.sM.screenVals.ifi);
+				flashSwitch = round(obj.flashTimeOut(1) / obj.sM.screenVals.ifi);
 			else
-				flashSwitch = round(obj.flashTime(2) / obj.sM.screenVals.ifi);
+				flashSwitch = round(obj.flashTimeOut(2) / obj.sM.screenVals.ifi);
 			end
 		end
 		

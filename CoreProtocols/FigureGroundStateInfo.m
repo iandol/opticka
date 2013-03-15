@@ -24,16 +24,16 @@ firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
 firstFixRadius = 1.25;
 
-targetFixInit = 0.75;
+targetFixInit = 0.5;
 targetFixTime = [0.3 0.6];
-targetRadius = 4;
+targetRadius = 3;
 
 eL.name = 'figure-ground';
-eL.isDummy = true; %use dummy or real eyelink?
+if tS.saveData == true; eL.recordData = true; end% save EDF file?
+eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
-eL.recordData = true; % save EDF file?
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 1;
 eL.modify.calibrationtargetwidth = 0.01;
@@ -185,7 +185,7 @@ calibrateFcn = { @()setOffline(eL); @()rstop(io); @()trackerSetup(eL) }; %enter 
 overrideFcn = @()keyOverride(obj); %a special mode which enters a matlab debug state so we can manually edit object values
 
 %screenflash
-flashFcn = @()flashScreen(s, 0.25); % fullscreen flash mode for visual background activity detection
+flashFcn = @()flashScreen(s, 0.2); % fullscreen flash mode for visual background activity detection
 
 %show 1deg size grid
 gridFcn = @()drawGrid(s);

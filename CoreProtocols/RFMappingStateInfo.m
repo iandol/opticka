@@ -1,31 +1,40 @@
 %RF Mapping state configuration file
 %------------General Settings-----------------
-rewardTime = 200; %TTL time in milliseconds
-useTask = false;
+tS.rewardTime = 200; %TTL time in milliseconds
+tS.useTask = false;
+tS.checkKeysDuringStimulus = true;
+tS.recordEyePosition = false;
+tS.askForComments = false;
+tS.saveData = false;
 
+obj.useDataPixx = false;
+
+fixX = 0;
+fixY = 0;
+firstFixInit = 0.75;
+firstFixTime = 2.5;
+firstFixRadius = 1.5;
+
+if tS.saveData == true; eL.recordData = true; end% save EDF file?
 eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV9'; % calibration style
-eL.recordData = false; % don't save EDF fileo
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 1;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
-eL.fixationX = 0;
-eL.fixationY = 0;
-eL.fixationRadius = 1.5;
-eL.fixationInitTime = 1.0;
-eL.fixationTime = 2.0;
-eL.strictFixation = true;
+
+% X, Y, FixInitTime, FixTime, Radius, StrictFix
+eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
 
 %randomise stimulus variables every trial?
 obj.stimuli.choice = [];
 n = 1;
 in(n).name = 'xyPosition';
 in(n).values = [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
-in(n).stimuli = [2 3];
+in(n).stimuli = [2 3 4 5 6 7 8 9];
 in(n).offset = [];
 obj.stimuli.stimulusTable = in;
 
@@ -34,7 +43,7 @@ obj.stimuli.tableChoice = 1;
 n=1;
 obj.stimuli.controlTable(n).variable = 'angle';
 obj.stimuli.controlTable(n).delta = 15;
-obj.stimuli.controlTable(n).stimuli = [6 7 8];
+obj.stimuli.controlTable(n).stimuli = [6 7 8 9];
 obj.stimuli.controlTable(n).limits = [0 360];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'size';
@@ -48,14 +57,14 @@ obj.stimuli.controlTable(n).stimuli = [1 2 3 4 5];
 obj.stimuli.controlTable(n).limits = [0.1 1];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'tf';
-obj.stimuli.controlTable(n).delta = 1;
+obj.stimuli.controlTable(n).delta = 0.1;
 obj.stimuli.controlTable(n).stimuli = [6 7];
-obj.stimuli.controlTable(n).limits = [0 8];
+obj.stimuli.controlTable(n).limits = [0 6];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'sf';
-obj.stimuli.controlTable(n).delta = 1;
+obj.stimuli.controlTable(n).delta = 0.1;
 obj.stimuli.controlTable(n).stimuli = [6 7];
-obj.stimuli.controlTable(n).limits = [0 8];
+obj.stimuli.controlTable(n).limits = [0.1 6];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'barLength';
 obj.stimuli.controlTable(n).delta = 0.5;
@@ -115,7 +124,7 @@ maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
 stimExitFcn = [];
 
 %if the subject is correct (small reward)
-correctEntryFcn = { @()timedTTL(lJ,0,rewardTime); ... 
+correctEntryFcn = { @()timedTTL(lJ,0,tS.rewardTime); ... 
 	@()updatePlot(bR, eL, sM); ...
 	@()statusMessage(eL,'Correct! :-)')};
 
@@ -140,7 +149,7 @@ breakFcn =  @()drawBackground(s);
 calibrateFcn = @()trackerSetup(eL);
 
 %flash function
-flashFcn = @()flashScreen(s,0.25);
+flashFcn = @()flashScreen(s,0.2);
 
 % allow override
 overrideFcn = @()keyOverride(obj);
