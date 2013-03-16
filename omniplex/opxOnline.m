@@ -9,9 +9,9 @@ classdef opxOnline < handle
 		%> type is either launcher, master or slave
 		type = 'launcher'
 		%> event marker used by Plexon SDK; 257 is any strobed event
-		eventStart = 257 
+		eventStart = 257
 		%>event marker to denote trial end; 2047 is the maximum strobe number we can generate
-		eventEnd = -2047
+		eventEnd = -32767
 		%> time to wait between trials by the slave
 		maxWait = 6000 
 		autoRun = 1
@@ -1345,12 +1345,12 @@ classdef opxOnline < handle
 			if ~isempty(obj.stimulus)
 				a = 1;
 				s=obj.stimulus;
-				for i = 1:length(s.stimulus)
-					t{a} = ['Stimulus ' num2str(i) ': ' s.stimulus{i}.family];
+				for i = 1:s.stimuli.n
+					t{a} = ['Stimulus' num2str(i) ': ' s.stimuli{i}.family];
 					a = a + 1;
 				end
-				for i = 1: s.task.nVars
-					t{a} = ['Variable ' num2str(i) ': ' s.task.nVar(i).name];
+				for i = 1: s.task.nVar
+					t{a} = ['Variable' num2str(i) ': ' s.task.nVar(i).name];
 					a = a + 1;
 				end
 			end
