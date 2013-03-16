@@ -834,7 +834,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function saveProtocol(obj)
 			obj.paths.currentPath = pwd;
-			cd(obj.paths.protocols);
+			cd([obj.paths.root filesep 'CoreProtocols']); %cd(obj.paths.protocols);
 			tmp = clone(obj);
 			if isfield(tmp.store,'evnt') %delete our previous event
  				delete(tmp.store.evnt);
@@ -847,8 +847,6 @@ classdef opticka < optickaCore
 			obj.refreshStimulusList;
 			obj.refreshVariableList;
 			obj.refreshProtocolsList;
-% 			obj.getScreenVals;
-% 			obj.getTaskVals;
 		end
 		
 		% ===================================================================
@@ -892,8 +890,8 @@ classdef opticka < optickaCore
 			end
 			
 			obj.paths.currentPath = pwd;
-			cd(obj.paths.protocols);
-			
+			%cd(obj.paths.protocols);
+			cd([obj.paths.root filesep 'CoreProtocols'])
 			if isempty(file)
 				[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)');
 				if file == 0
