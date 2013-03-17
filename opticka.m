@@ -451,7 +451,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function getStateInfo(obj)
-			if ischar(obj.r.paths.stateInfoFile) && exist(obj.r.paths.stateInfoFile,'file')
+			if ~isempty(obj.r.paths.stateInfoFile) && exist(obj.r.paths.stateInfoFile,'file')
 				fid = fopen(obj.r.paths.stateInfoFile);
 				tline = fgetl(fid);
 				i=1;
@@ -462,7 +462,10 @@ classdef opticka < optickaCore
 				end
 				fclose(fid);
 				set(obj.h.OKTrainingText,'String',o.store.statetext);
-				set(obj.h.OKTrainingFileName,'String',obj.r.paths.stateInfoFile);
+				set(obj.h.OKTrainingFileName,'String',['FileName:' obj.r.paths.stateInfoFile]);
+			else
+				set(obj.h.OKTrainingText,'String','');
+				set(obj.h.OKTrainingFileName,'String','No File Specified...');
 			end
 		end
 		
@@ -835,18 +838,23 @@ classdef opticka < optickaCore
 		function saveProtocol(obj)
 			obj.paths.currentPath = pwd;
 			cd([obj.paths.root filesep 'CoreProtocols']); %cd(obj.paths.protocols);
-			tmp = clone(obj);
-			if isfield(tmp.store,'evnt') %delete our previous event
- 				delete(tmp.store.evnt);
- 				tmp.store.evnt = [];
- 				tmp.store = rmfield(tmp.store,'evnt');
- 			end
-			tmp.store.oldlook = [];
-			uisave('tmp','new protocol');
+			[f,p] = uiputfile('*.mat','Save Opticka Protocol','Protocol.mat');
+			if f ~= 0
+				cd(p);
+				tmp = clone(obj);
+				tmp.r.paths.stateInfoFile = obj.r.paths.stateInfoFile;
+				if isfield(tmp.store,'evnt') %delete our previous event
+					delete(tmp.store.evnt);
+					tmp.store.evnt = [];
+					tmp.store = rmfield(tmp.store,'evnt');
+				end
+				tmp.store.oldlook = [];
+				save(f,'tmp');
+				obj.refreshStimulusList;
+				obj.refreshVariableList;
+				obj.refreshProtocolsList;
+			end
 			cd(obj.paths.currentPath);
-			obj.refreshStimulusList;
-			obj.refreshVariableList;
-			obj.refreshProtocolsList;
 		end
 		
 		% ===================================================================
@@ -903,6 +911,7 @@ classdef opticka < optickaCore
 				load(file);
 			end
 			obj.comment = ['Protocol: ' file];
+			obj.r.comment = obj.comment;
 			
 			if exist('tmp','var') && isa(tmp,'opticka')
 				if isprop(tmp.r,'stimuli')
@@ -1029,7 +1038,7 @@ classdef opticka < optickaCore
 			end
 			obj.refreshProtocolsList;
 			o = getappdata(obj.h.output,'o');
-			fprintf('***>>>UI set from %s to %s\n',o.fullName,obj.fullName)
+			salutation(obj,sprintf('GUI routed from %s to %s\n',o.fullName,obj.fullName));
 			setappdata(obj.h.output,'o',obj)
 		end
 		

@@ -647,7 +647,10 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function runFixationSession(obj)
 			global lJ %eyelink calibration needs access to labjack for reward
-			obj.comment = '';
+			if isempty(regexpi(obj.comment, '^Protocol','once'))
+				obj.comment = '';
+			end
+			
 			initialiseSaveFile(obj)
 			obj.name = obj.savePrefix;
 			if isempty(obj.screen) || isempty(obj.task)
@@ -725,7 +728,7 @@ classdef runExperiment < optickaCore
 				sM = obj.stateMachine;
 				sM.timeDelta = obj.screenVals.ifi; %tell it the spcreen IFI
 				if isempty(obj.paths.stateInfoFile)
-					error('Please specify a fixation state info file...')
+					errordlg('Please specify a valid State Machine file...')
 				elseif ischar(obj.paths.stateInfoFile)
 					cd(fileparts(obj.paths.stateInfoFile))
 					obj.paths.stateInfoFile = regexprep(obj.paths.stateInfoFile,'\s+','\\ ');

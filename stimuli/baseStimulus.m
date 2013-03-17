@@ -94,7 +94,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dY_
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase='handles|ppd|sM|name|fullName|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|paths|uuid|tick';
+		ignorePropertiesBase='handles|ppd|sM|name|comment|fullName|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|paths|uuid|tick';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)

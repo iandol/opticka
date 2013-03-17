@@ -1581,6 +1581,9 @@ if isappdata(handles.output,'o')
 	if isa(o.r,'runExperiment')
 		o.r.screenSettings.optickahandle = handles.output;
 		initialiseSave(o.r, o.paths.savedData)
+		if ~isempty(regexp(o.comment, '^Protocol','once'))
+			o.r.comment = o.comment;
+		end
 		runTrainingSession(o.r);
 	end
 end
@@ -1595,6 +1598,9 @@ if isappdata(handles.output,'o')
 	if isa(o.r,'runExperiment')
 		o.r.screenSettings.optickahandle = handles.output;
 		initialiseSave(o.r, o.paths.savedData)
+		if ~isempty(regexp(o.comment, '^Protocol', 'once'))
+			o.r.comment = o.comment;
+		end
 		runFixationSession(o.r);
 	end
 end

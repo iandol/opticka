@@ -15,6 +15,8 @@ tS.recordEyePosition = true;
 tS.askForComments = true;
 tS.saveData = true;
 
+obj.useDataPixx = true;
+
 %obj.lastSize = obj.stimuli{3}.size;
 
 luminancePedestal = [0.5 0.5 0.5];
@@ -26,7 +28,7 @@ firstFixRadius = 1.25;
 
 targetFixInit = 0.5;
 targetFixTime = [0.3 0.6];
-targetRadius = 3;
+targetRadius = 1.5;
 
 eL.name = 'figure-ground';
 if tS.saveData == true; eL.recordData = true; end% save EDF file?

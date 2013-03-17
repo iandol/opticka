@@ -290,7 +290,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function set.barLength(obj,value)
 			if ~(value > 0)
-				value = 0.5;
+				value = 0.25;
 			end
 			obj.barLength = value;
 		end
@@ -303,7 +303,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function set.barWidth(obj,value)
 			if ~(value > 0)
-				value = 0.1;
+				value = 0.05;
 			end
 			obj.barWidth = value;
 		end
