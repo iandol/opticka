@@ -1031,6 +1031,7 @@ classdef opticka < optickaCore
 					set(obj.h.OKStimulusRun,'Enable','on');
 					set(obj.h.OKStimulusRunBenchmark,'Enable','on');
 					set(obj.h.OKStimulusRunAll,'Enable','on');
+					set(obj.h.OKStimulusRunAllBenchmark,'Enable','on');
 					obj.store.visibleStimulus.uuid='';
 					obj.editStimulus;
 				end

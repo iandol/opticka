@@ -64,7 +64,7 @@ classdef screenManager < optickaCore
 		%> useful screen info and initial gamma tables and the like
 		screenVals
 		%> verbosity
-		verbose = true
+		verbose = false
 		%> level of PTB verbosity, set to 10 for full PTB logging
 		verbosityLevel = 4
 	end

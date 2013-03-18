@@ -195,39 +195,6 @@ classdef dotsStimulus < baseStimulus
 				end
 			end
 			
-			%make our dot colours
-			switch obj.colourType
-				case 'simple'
-					obj.colours = repmat(obj.colourOut',1,obj.nDotsOut);
-					obj.colours(4,:) = obj.alphaOut;
-				case 'random'
-					obj.colours = rand(4,obj.nDotsOut);
-					obj.colours(4,:) = obj.alphaOut;
-				case 'randomN'
-					obj.colours = randn(4,obj.nDotsOut);
-					obj.colours(4,:) = obj.alphaOut;
-				case 'randomBW'
-					obj.colours=zeros(4,obj.nDotsOut);
-					for i = 1:obj.nDotsOut
-						obj.colours(:,i)=rand;
-					end
-					obj.colours(4,:)=obj.alphaOut;
-				case 'randomNBW'
-					obj.colours=zeros(4,obj.nDotsOut);
-					for i = 1:obj.nDotsOut
-						obj.colours(:,i)=randn;
-					end
-					obj.colours(4,:)=obj.alphaOut;
-				case 'binary'
-					obj.colours=zeros(4,obj.nDotsOut);
-					rix = round(rand(obj.nDotsOut,1)) > 0;
-					obj.colours(:,rix) = 1;
-					obj.colours(4,:)=obj.alphaOut; %set the alpha level
-				otherwise
-					obj.colours=obj.colour;
-					obj.colours(4)=obj.alphaOut;
-			end
-			
 			obj.inSetup = false;
 			computePosition(obj);
 			updateDots(obj);
@@ -251,6 +218,7 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible && obj.tick >= obj.delayTicks
+				try
 				if obj.mask == true
 					Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
 					Screen('DrawDots', obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,...
@@ -262,6 +230,9 @@ classdef dotsStimulus < baseStimulus
 						[obj.xOut obj.yOut],obj.dotTypeOut);
 				end
 				obj.tick = obj.tick + 1;
+				catch ME
+					ple(ME)
+				end
 			end
 		end
 		
@@ -345,21 +316,60 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function updateDots(obj)
+			makeColours(obj)
 			%sort out our angles and percent incoherent
-			obj.angles = ones(obj.nDots,1) .* obj.angleOut;
-			obj.rDots=obj.nDots-floor(obj.nDots*(obj.coherenceOut));
+			obj.angles = ones(obj.nDots_,1) .* obj.angleOut;
+			obj.rDots=obj.nDots_-floor(obj.nDots_*(obj.coherenceOut));
 			if obj.rDots>0
 				obj.angles(1:obj.rDots) = obj.r2d((2*pi).*rand(1,obj.rDots));
 				%obj.angles=flipud(obj.angles);
 				obj.angles = Shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
 			end
 			%calculate positions and vector offsets
-			obj.xy = obj.sizeOut .* rand(2,obj.nDots);
+			obj.xy = obj.sizeOut .* rand(2,obj.nDots_);
 			obj.xy = obj.xy - obj.sizeOut/2; %so we are centered for -xy to +xy
 			[obj.dxs, obj.dys] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
 			obj.dxdy=[obj.dxs';obj.dys'];
 			if obj.mask == true
 				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xOut,obj.yOut);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Make colour matrix for dots
+		%>
+		% ===================================================================
+		function makeColours(obj)
+			switch obj.colourType
+				case 'simple'
+					obj.colours = repmat(obj.colourOut',1,obj.nDots_);
+					obj.colours(4,:) = obj.alphaOut;
+				case 'random'
+					obj.colours = rand(4,obj.nDots_);
+					obj.colours(4,:) = obj.alphaOut;
+				case 'randomN'
+					obj.colours = randn(4,obj.nDots_);
+					obj.colours(4,:) = obj.alphaOut;
+				case 'randomBW'
+					obj.colours=zeros(4,obj.nDots_);
+					for i = 1:obj.nDots_
+						obj.colours(:,i)=rand;
+					end
+					obj.colours(4,:)=obj.alphaOut;
+				case 'randomNBW'
+					obj.colours=zeros(4,obj.nDots_);
+					for i = 1:obj.nDots_
+						obj.colours(:,i)=randn;
+					end
+					obj.colours(4,:)=obj.alphaOut;
+				case 'binary'
+					obj.colours=zeros(4,obj.nDots_);
+					rix = round(rand(obj.nDots_,1)) > 0;
+					obj.colours(:,rix) = 1;
+					obj.colours(4,:)=obj.alphaOut; %set the alpha level
+				otherwise
+					obj.colours = repmat(obj.colourOut',1,obj.nDots_);
+					obj.colours(4,:) = obj.alphaOut;
 			end
 		end
 		

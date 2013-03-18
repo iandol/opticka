@@ -374,8 +374,10 @@ classdef metaStimulus < optickaCore
 			if benchmark; b=GetSecs; end
 			for i = 1:(s.screenVals.fps*runtime) %should be 2 seconds worth of flips
 				draw(obj); %draw stimulus
-				drawGrid(s); %draw +-5 degree dot grid
-				drawScreenCenter(s); %centre spot
+				if ~benchmark;
+					drawGrid(s); %draw +-5 degree dot grid
+					drawScreenCenter(s); %centre spot
+				end
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				animate(obj); %animate stimulus, will be seen on next draw
 				if benchmark

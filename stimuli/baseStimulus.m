@@ -99,7 +99,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be passed on construction
-		allowedProperties='xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed'
+		allowedProperties='xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed|delayTime|mouseOverride|isVisible'
 	end
 	
 	events

@@ -16,7 +16,7 @@ firstFixTime = 2.5;
 firstFixRadius = 1.5;
 
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
-eL.isDummy = false; %use dummy or real eyelink?
+eL.isDummy = true; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV9'; % calibration style
@@ -48,7 +48,7 @@ obj.stimuli.controlTable(n).limits = [0 360];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'size';
 obj.stimuli.controlTable(n).delta = 0.5;
-obj.stimuli.controlTable(n).stimuli = [2 3 4 5 6 7 8 9];
+obj.stimuli.controlTable(n).stimuli = [2 3 4 5 6 7 8 9 10];
 obj.stimuli.controlTable(n).limits = [0.5 20];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'flashTime';
