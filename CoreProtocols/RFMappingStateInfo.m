@@ -1,4 +1,4 @@
-%RF Mapping state configuration file
+%=====RF Mapping state configuration file=====
 %------------General Settings-----------------
 tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = false;
@@ -7,16 +7,16 @@ tS.recordEyePosition = false;
 tS.askForComments = false;
 tS.saveData = false;
 
-obj.useDataPixx = false;
+obj.useDataPixx = false; %make sure we don't trigger the plexon
 
+%------------Eyelink Settings----------------
 fixX = 0;
 fixY = 0;
 firstFixInit = 0.75;
 firstFixTime = 2.5;
 firstFixRadius = 1.5;
-
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
-eL.isDummy = true; %use dummy or real eyelink?
+eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV9'; % calibration style
@@ -25,11 +25,10 @@ eL.modify.calibrationtargetsize = 1;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
-
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
 
-%randomise stimulus variables every trial?
+%-------randomise stimulus variables every trial?
 obj.stimuli.choice = [];
 n = 1;
 in(n).name = 'xyPosition';
@@ -38,7 +37,7 @@ in(n).stimuli = [2 3 4 5 6 7 8 9];
 in(n).offset = [];
 obj.stimuli.stimulusTable = in;
 
-%allows using arrow keys to control this table
+%--------allows using arrow keys to control this table during presentation
 obj.stimuli.tableChoice = 1;
 n=1;
 obj.stimuli.controlTable(n).variable = 'angle';
@@ -76,21 +75,21 @@ obj.stimuli.controlTable(n).delta = 0.1;
 obj.stimuli.controlTable(n).stimuli = [7 8];
 obj.stimuli.controlTable(n).limits = [0.1 6];
 
-%this allows us to enable subsets from our stimulus list
+%------this allows us to enable subsets from our stimulus list
 obj.stimuli.stimulusSets = {[11], [2 11], [3 11], [4 11], [5 11], [6 11], [7 11], [8 11], [9 11], [10 11]};
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
-%----------------------State Machine States-------------------------
+%-------------------State Machine Control Functions------------------
+% these are our functions that will execute as the stateMachine runs,
+% in the scope of the runExperiemnt object.
 % io = datapixx (digital I/O to plexon)
 % s = screenManager
 % sM = State Machine
 % eL = eyelink manager
 % lJ = LabJack (reward trigger to Crist reward system)
 % bR = behavioural record plot
-% these are our functions that will execute as the stateMachine runs,
-% in the scope of the runExperiemnt object.
-
+%--------------------------------------------------------------------
 %pause entry
 pauseEntryFcn = @()setOffline(eL);
 
@@ -173,7 +172,6 @@ stateInfoTmp = { ...
 'override'	'pause'			0.5		[]				overrideFcn		[]				[]; ...
 'showgrid'	'pause'			1		[]				gridFcn			[]				[]; ...
 };
-
 disp(stateInfoTmp)
 disp('================>> Building state info file <<================')
 clear maintainFixFcn prestimulusFcn singleStimulus ...

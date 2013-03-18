@@ -283,8 +283,7 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		%> @brief density set method
 		%>
-		%> We need to update nDots if density is changed but don't want it
-		%> dependent yet 
+		%> We need to update nDots if density is changed 
 		% ===================================================================
 		function set.density(obj,value)
 			obj.density = value;
@@ -293,7 +292,7 @@ classdef dotsStimulus < baseStimulus
 		
 		% ===================================================================
 		%> @brief nDots is dependant property, this get method also caches
-		%> the value in obj.nDots_ for
+		%> the value in obj.nDots_ fo speed
 		%>
 		% ===================================================================
 		function value = get.nDots(obj)

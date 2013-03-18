@@ -291,7 +291,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			if ~exist('invalue','var')
 				invalue = [];
 			end
-			if (~isempty(obj.isLoading) && obj.isLoading == true) && isstruct(invalue) %#ok<*MCSUP>
+			if obj.isLoading == true && isstruct(invalue) %#ok<*MCSUP>
 				obj.nVar = invalue;
 				if ~isfield(obj.nVar,'offsetstimulus') || ~isfield(obj.nVar,'offsetvalue') %add to old versions of nVar
 					obj.nVar(1).offsetstimulus = [];
@@ -418,7 +418,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	
 		% ===================================================================
 		%> @brief reset transienttask properties
-		%>
+		%> 
 		%> 
 		% ===================================================================
 		function resetTask(obj)

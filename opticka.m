@@ -940,7 +940,11 @@ classdef opticka < optickaCore
 				
 				%copy rE parameters
 				if isa(tmp.r,'runExperiment')
-					obj.r.name = [obj.r.name obj.comment];
+					if strcmpi(obj.r.name,'runExperiment')
+						obj.r.name = [obj.comment];
+					else
+						obj.r.name = [obj.r.name ':' obj.comment];
+					end
 					if isfield(tmp.r.paths,'stateInfoFile')
 						obj.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
 						obj.getStateInfo();
