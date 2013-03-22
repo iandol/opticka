@@ -56,7 +56,7 @@ obj.stimuli.tableChoice = 1;
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
-obj.stimuli.stimulusSets = {[1 2 3 4]};
+obj.stimuli.stimulusSets = {[1,5],[1 2 3 4 5]};
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 

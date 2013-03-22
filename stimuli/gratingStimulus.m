@@ -339,6 +339,17 @@ classdef gratingStimulus < baseStimulus
 			end
 		end
 		
+		% ===================================================================
+		%> @brief sfOut Pseudo Get method
+		%>
+		% ===================================================================
+		function sf = getsfOut(obj)
+			sf = 0;
+			if ~isempty(obj.sfCache)
+				sf = obj.sfCache * obj.ppd;
+			end
+		end
+		
 	end %---END PUBLIC METHODS---%
 	
 	
