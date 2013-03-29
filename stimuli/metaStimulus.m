@@ -125,9 +125,9 @@ classdef metaStimulus < optickaCore
 				
 				update(obj.stimuli{choice});
 				
-			elseif ~isempty(obj.choice) %object forces a single stimulus
-				
-				update(obj.stimuli{obj.choice});
+% 			elseif ~isempty(obj.choice) %object forces a single stimulus
+% 				
+% 				update(obj.stimuli{obj.choice});
 				
 			elseif obj.showMask == true && obj.nMask > 0 %draw mask instead
 				
@@ -156,9 +156,9 @@ classdef metaStimulus < optickaCore
 				
 				draw(obj.stimuli{choice});
 				
-			elseif ~isempty(obj.choice) %object forces a single stimulus
-				
-				draw(obj.stimuli{obj.choice});
+% 			elseif ~isempty(obj.choice) %object forces a single stimulus
+% 				
+% 				draw(obj.stimuli{obj.choice});
 				
 			elseif obj.showMask == true && obj.nMask > 0 %draw mask instead
 				
@@ -186,9 +186,9 @@ classdef metaStimulus < optickaCore
 				
 				animate(obj.stimuli{choice});
 				
-			elseif ~isempty(obj.choice) %object forces a single stimulus
-				
-				animate(obj.stimuli{obj.choice});
+% 			elseif ~isempty(obj.choice) %object forces a single stimulus
+% 				
+% 				animate(obj.stimuli{obj.choice});
 				
 			elseif obj.showMask == true && obj.nMask > 0 %draw mask instead
 				

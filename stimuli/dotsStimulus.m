@@ -50,11 +50,11 @@ classdef dotsStimulus < baseStimulus
 		colours
 	end
 	
-	properties (SetAccess = private, GetAccess = public, Hidden = true)
+	properties (SetAccess = private, GetAccess = public, Hidden = true, Transient = true)
 		%> allows makePanel method to offer a UI menu of settings
 		typeList = {'simple'}
 		%> allows makePanel method to offer a UI menu of settings
-		colourTypeList = {'randomBW','simple','random','randomN','randomNBW','binary'}
+		colourTypeList = {'simple','randomBW','randomNBW','random','randomN','binary'}
 		%> allows makePanel method to offer a UI menu of settings
 		msrcModeList = {'GL_ZERO','GL_ONE','GL_DST_COLOR','GL_ONE_MINUS_DST_COLOR',...
 			'GL_SRC_ALPHA','GL_ONE_MINUS_SRC_ALPHA'}
@@ -226,8 +226,7 @@ classdef dotsStimulus < baseStimulus
 					Screen('DrawTexture', obj.sM.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
 					Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
 				else
-					Screen('DrawDots',obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,...
-						[obj.xOut obj.yOut],obj.dotTypeOut);
+					Screen('DrawDots',obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,[obj.xOut obj.yOut],obj.dotTypeOut);
 				end
 				obj.tick = obj.tick + 1;
 				catch ME
@@ -250,12 +249,13 @@ classdef dotsStimulus < baseStimulus
 					end
 				end
 				obj.xy = obj.xy + obj.dxdy; %increment position
-				fix = find(obj.xy > obj.sizeOut/2); %cull positive
+				sz = obj.sizeOut/2;
+				fix = find(obj.xy > sz); %cull positive
 				obj.xy(fix) = obj.xy(fix) - obj.sizeOut;
-				fix = find(obj.xy < -obj.sizeOut/2);  %cull negative
+				fix = find(obj.xy < -sz);  %cull negative
 				obj.xy(fix) = obj.xy(fix) + obj.sizeOut;
-				%obj.xy(obj.xy > obj.sizeOut/2) = obj.xy(obj.xy > obj.sizeOut/2) - obj.sizeOut; % this is not faster
-				%obj.xy(obj.xy < -obj.sizeOut/2) = obj.xy(obj.xy < -obj.sizeOut/2) + obj.sizeOut; % this is not faster
+				%obj.xy(obj.xy > sz) = obj.xy(obj.xy > sz) - obj.sizeOut; % this is not faster
+				%obj.xy(obj.xy < -sz) = obj.xy(obj.xy < -sz) + obj.sizeOut; % this is not faster
 				if obj.killOut > 0 && obj.tick > 1
 					kidx = rand(obj.nDots,1) <  obj.killOut;
 					ks = length(find(kidx > 0));
