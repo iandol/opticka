@@ -35,6 +35,8 @@ classdef calibrateLuminance < handle
 		screen
 		%> use ColorCalII automatically
 		useCCal = true
+		%> use i1Pro?
+		useI1Pro = true
 		%> comments to note about this calibration
 		comments = {''}
 		%> which gamma table should opticka select?
@@ -52,6 +54,12 @@ classdef calibrateLuminance < handle
 		thisY
 		ramp
 		inputValues
+		inputValuesI1
+		inputValuesTest
+		inputValuesI1Test
+		spectrum
+		spectrumTest
+		wavelengths = [380:10:730]
 		rampNorm
 		inputValuesNorm
 		initialClut
@@ -66,6 +74,8 @@ classdef calibrateLuminance < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		isTested
+		isAnalysed
 		win
 		canAnalyze
 		p
@@ -84,7 +94,7 @@ classdef calibrateLuminance < handle
 		%>
 		%> @param args are passed as a structure of properties which is
 		%> parsed.
-		%> @return instance of labJack class.
+		%> @return instance of class.
 		% ===================================================================
 		function obj = calibrateLuminance(args)
 			if nargin>0 && isstruct(args)
@@ -92,7 +102,7 @@ classdef calibrateLuminance < handle
 					fnames = fieldnames(args); %find our argument names
 					for i=1:length(fnames);
 						if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
-							obj.salutation(fnames{i},'Configuring property in LabJack constructor');
+							obj.salutation(fnames{i},'Configuring property constructor');
 							obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 						end
 					end
@@ -115,6 +125,19 @@ classdef calibrateLuminance < handle
 					end
 				end
 			end
+			if I1('IsConnected') == 0
+				obj.useI1Pro = false;
+				fprintf('---> Couldn''t connect to I1Pro!!!\n');
+			end
+			if obj.useI1Pro == true
+				fprintf('Place i1 onto its white calibration tile, then press i1 button to continue:\n');
+				while I1('KeyPressed') == 0
+					WaitSecs(0.01);
+				end
+				fprintf('Calibrating ... ');
+				I1('Calibrate');
+				fprintf('FINISHED\n');
+			end
 			if obj.runNow == true
 				obj.run;
 			end
@@ -132,6 +155,11 @@ classdef calibrateLuminance < handle
 					'get reading in cd/m^2, input reading using numpad and press enter. \n' ...
 					'A screen of higher luminance will be shown. Repeat %d times. ' ...
 					'Press enter to start'], obj.nMeasures));
+			elseif obj.useI1Pro == true && obj.useCCal == true
+				fprintf('\nPlace i1 and Cal over light source, then press i1 button to measure: ');
+				while I1('KeyPressed') == 0
+					WaitSecs(0.01);
+				end
 			else
 				input('Please place ColorCalII in front of monitor then press enter...');
 			end
@@ -159,15 +187,18 @@ classdef calibrateLuminance < handle
 				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
 				obj.ramp(end) = 1;
 				obj.inputValues = zeros(1,length(obj.ramp));
+				obj.inputValuesI1 = zeros(1,length(obj.ramp));
+				obj.spectrum = zeros(36,length(obj.ramp));
 				a=1;
 				
 				for i = obj.ramp
 					Screen('FillRect',obj.win,i);
 					Screen('Flip',obj.win);
-					WaitSecs(0.5);
+					WaitSecs(0.25);
 					if obj.useCCal == true
 						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
 						obj.inputValues(a) = obj.thisY;
+						fprintf('---> Checking value: %g = %g cd/m2\n', i, obj.inputValues(a));
 					else
 						% MK: Deprecated as not reliable: resp = input('Value?');
 						fprintf('Value? ');
@@ -175,6 +206,13 @@ classdef calibrateLuminance < handle
 						resp = GetNumber;
 						fprintf('\n');
 						obj.inputValues = [obj.inputValues resp];
+					end
+					if obj.useI1Pro == true
+						I1('TriggerMeasurement');
+						Lxy = I1('GetTriStimulus');
+						obj.inputValuesI1(a) = Lxy(1);
+						sp = I1('GetSpectrum')';
+						obj.spectrum(:,a) = sp;
 					end
 					a = a + 1;
 				end
@@ -200,12 +238,22 @@ classdef calibrateLuminance < handle
 		% ===================================================================
 		function test(obj)
 			try
+				reply = input('Set 0 for PsychImaging or a number for the standard correction: ');
+				if reply == 0
+					doPipeline = true;
+				else
+					doPipeline = false;
+					obj.choice = reply;
+				end
 				Screen('Preference', 'SkipSyncTests', 1);
 				Screen('Preference', 'VisualDebugLevel', 0);
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
+				if doPipeline == true
+					PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'SimpleGamma');
+				end
 				if obj.screen == 0
 					rec = [0 0 800 600];
 				else
@@ -214,12 +262,16 @@ classdef calibrateLuminance < handle
 				obj.win = PsychImaging('OpenWindow', obj.screen, 0, rec);
 				[obj.oldClut, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
 				BackupCluts;
-				gTmp = repmat(obj.gammaTable{obj.choice},1,3);
-				Screen('LoadNormalizedGammaTable', obj.win, gTmp);
+				if doPipeline == true
+					PsychColorCorrection('SetEncodingGamma', obj.win, 1/obj.displayGamma);
+				else
+					gTmp = repmat(obj.gammaTable{obj.choice},1,3);
+					Screen('LoadNormalizedGammaTable', obj.win, gTmp);
+				end
 				
 				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
 				obj.ramp(end) = 1;
-				obj.inputValues = zeros(1,length(obj.ramp));
+				obj.inputValuesTest = zeros(1,length(obj.ramp));
 				a=1;
 				
 				for i = obj.ramp
@@ -228,14 +280,15 @@ classdef calibrateLuminance < handle
 					WaitSecs(0.5);
 					if obj.useCCal == true
 						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
-						obj.inputValues(a) = obj.thisY;
+						obj.inputValuesTest(a) = obj.thisY;
+						fprintf('---> Testing value: %g = %g cd/m2\n', i, obj.inputValues(a));
 					else
 						% MK: Deprecated as not reliable: resp = input('Value?');
 						fprintf('Value? ');
 						beep
 						resp = GetNumber;
 						fprintf('\n');
-						obj.inputValues = [obj.inputValues resp];
+						obj.inputValuesTest = [obj.inputValuesTest resp];
 					end
 					a = a + 1;
 				end
@@ -248,6 +301,7 @@ classdef calibrateLuminance < handle
 				psychrethrow(psychlasterror);
 			end
 			
+			obj.isTested = true;
 			plot(obj);
 			
 		end
@@ -327,8 +381,9 @@ classdef calibrateLuminance < handle
 						obj.comments = cmt{1};
 					end
 				end
-
-				obj.plot;
+				
+				obj.isAnalysed = true;
+				plot(obj);
 				
 			end
 		end
@@ -351,6 +406,18 @@ classdef calibrateLuminance < handle
 			%obj.p(1,1).select();
 			subplot(2,2,1)
 			plot(obj.ramp, obj.inputValues, 'k.-');
+			if max(obj.inputValuesTest) > 0
+				hold on
+				plot(obj.ramp, obj.inputValues, 'r.-');
+				hold off
+				legend('Original','Corrected')
+			end
+			if max(obj.inputValuesI1) > 0
+				hold on
+				plot(obj.ramp, obj.inputValuesI1, 'b.-');
+				hold off
+				legend('Original','Corrected','I1Pro')
+			end
 			axis tight
 			xlabel('Indexed Values');
 			ylabel('Luminance cd/m^2');

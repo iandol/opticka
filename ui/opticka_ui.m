@@ -641,8 +641,8 @@ if isappdata(handles.output,'o')
 		o.r.screen.gammaTable.run;
 	else
 		c = calibrateLuminance(inp);
-		c.filename = [o.paths.calibration filesep 'Calibration-' date '-' o.r.screen.gammaTable.comments];
 		o.r.screen.gammaTable = c;
+		c.filename = [o.paths.calibration filesep 'Cal-' date '-' c.comments];
 		o.saveCalibration;
 	end
 	set(handles.OKUseGamma,'Value',1)
@@ -997,7 +997,7 @@ if isappdata(handles.output,'o')
 	if isa(o.r.stimuli,'metaStimulus') && o.r.stimuli.n > 0
 		o.r.stimuli.choice = [];
 		if isa(o.r.screen,'screenManager')
-			run(o.r.stimuli, true, [], o.r.screen);
+			run(o.r.stimuli, true, 5, o.r.screen);
 		else
 			run(o.r.stimuli, true);
 		end
