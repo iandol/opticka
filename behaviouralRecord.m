@@ -95,7 +95,7 @@ classdef behaviouralRecord < optickaCore
 			obj.h.axis2 = axes('Parent', obj.h.vbox3,'Units','pixels');
 			obj.h.axis3 = axes('Parent', obj.h.vbox3,'Units','pixels');
 			axis([obj.h.axis1 obj.h.axis2 obj.h.axis3 obj.h.axis4], 'square');
-			figpos([],[900 900]);
+			opticka.resizeFigure([],[900 900]);
 			set(obj.h.vbox,'Sizes',[-3 -1])
 			set(obj.h.hbox,'Sizes',[-2 -1])
 			set(obj.h.vbox2,'Sizes',[-2 -1])

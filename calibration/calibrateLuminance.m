@@ -37,12 +37,13 @@ classdef calibrateLuminance < handle
 		useCCal = true
 		%> use i1Pro?
 		useI1Pro = true
+		preferI1Pro = true
 		%> comments to note about this calibration
 		comments = {''}
 		%> which gamma table should opticka select?
 		choice = 1
 		%> methods list to fit to raw luminance values
-		analysisMethods = {'pchipinterp';'smoothingspline';'cubicinterp';'splineinterp';'cubicspline'}
+		analysisMethods = {'pchipinterp';'smoothingspline';'cubicinterp';'splineinterp'}
 		%> filename this was saved as
 		filename
 	end
@@ -59,7 +60,7 @@ classdef calibrateLuminance < handle
 		inputValuesI1Test
 		spectrum
 		spectrumTest
-		wavelengths = [380:10:730]
+		wavelengths = 380:10:730
 		rampNorm
 		inputValuesNorm
 		initialClut
@@ -111,25 +112,28 @@ classdef calibrateLuminance < handle
 			if isempty(obj.screen)
 				obj.screen = max(Screen('Screens'));
 			end
-			if obj.useCCal == true
-				obj.cMatrix = ColorCal2('ReadColorMatrix');
-				if isempty(obj.cMatrix)
-					obj.useCCal = false;
-				else
-					reply = input('Do you need to calibrate the ColorCalII first? Y/N (N): ','s');
-					if strcmpi(reply,'Y')
-						reply = input('*ZERO CALIBRATION* -- please cover the ColorCalII then press enter...','s');
-						if isempty(reply)
-							obj.zeroCalibration;
-						end
-					end
-				end
-			end
 			if I1('IsConnected') == 0
 				obj.useI1Pro = false;
 				fprintf('---> Couldn''t connect to I1Pro!!!\n');
 			end
+			if obj.runNow == true
+				obj.calibrate;
+				obj.run;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief calibrate
+		%>	run the main calibration loop, uses the max # screen by default
+		%>
+		% ===================================================================
+		function calibrate(obj)
 			if obj.useI1Pro == true
+				if I1('IsConnected') == 0
+					obj.useI1Pro = false;
+					fprintf('---> Couldn''t connect to I1Pro!!!\n');
+					return
+				end
 				fprintf('Place i1 onto its white calibration tile, then press i1 button to continue:\n');
 				while I1('KeyPressed') == 0
 					WaitSecs(0.01);
@@ -138,8 +142,13 @@ classdef calibrateLuminance < handle
 				I1('Calibrate');
 				fprintf('FINISHED\n');
 			end
-			if obj.runNow == true
-				obj.run;
+			if obj.useCCal == true
+				obj.cMatrix = ColorCal2('ReadColorMatrix');
+				if isempty(obj.cMatrix)
+					obj.useCCal = false;
+				else
+					obj.zeroCalibration;
+				end
 			end
 		end
 		
@@ -149,7 +158,17 @@ classdef calibrateLuminance < handle
 		%>
 		% ===================================================================
 		function run(obj)
+			obj.inputValues = [];
+			obj.inputValuesI1 = [];
+			obj.inputValuesTest = [];
+			obj.inputValuesI1Test = [];
+			obj.spectrum = [];
+			obj.spectrumTest = [];
 			
+			reply = input('Do you need to calibrate sensors (Y/N)?...','s');
+			if strcmpi(reply,'y')
+				calibrate(obj)
+			end
 			if obj.useCCal == false
 				input(sprintf(['When black screen appears, point photometer, \n' ...
 					'get reading in cd/m^2, input reading using numpad and press enter. \n' ...
@@ -182,7 +201,7 @@ classdef calibrateLuminance < handle
 				obj.win = PsychImaging('OpenWindow', obj.screen, 0, rec);
 				[obj.oldClut, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
 				BackupCluts;
-				Screen('LoadNormalizedGammaTable', obj.win, obj.initialClut);
+				%Screen('LoadNormalizedGammaTable', obj.win, obj.initialClut);
 				
 				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
 				obj.ramp(end) = 1;
@@ -198,7 +217,6 @@ classdef calibrateLuminance < handle
 					if obj.useCCal == true
 						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
 						obj.inputValues(a) = obj.thisY;
-						fprintf('---> Checking value: %g = %g cd/m2\n', i, obj.inputValues(a));
 					else
 						% MK: Deprecated as not reliable: resp = input('Value?');
 						fprintf('Value? ');
@@ -214,6 +232,7 @@ classdef calibrateLuminance < handle
 						sp = I1('GetSpectrum')';
 						obj.spectrum(:,a) = sp;
 					end
+					fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValues(a), obj.inputValuesI1(a));
 					a = a + 1;
 				end
 				
@@ -265,6 +284,7 @@ classdef calibrateLuminance < handle
 				if doPipeline == true
 					PsychColorCorrection('SetEncodingGamma', obj.win, 1/obj.displayGamma);
 				else
+					fprintf('LOAD GammaTable Model: %g\n',obj.choice)
 					gTmp = repmat(obj.gammaTable{obj.choice},1,3);
 					Screen('LoadNormalizedGammaTable', obj.win, gTmp);
 				end
@@ -272,6 +292,8 @@ classdef calibrateLuminance < handle
 				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
 				obj.ramp(end) = 1;
 				obj.inputValuesTest = zeros(1,length(obj.ramp));
+				obj.inputValuesI1Test = zeros(1,length(obj.ramp));
+				obj.spectrumTest = zeros(36,length(obj.ramp));
 				a=1;
 				
 				for i = obj.ramp
@@ -281,7 +303,6 @@ classdef calibrateLuminance < handle
 					if obj.useCCal == true
 						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
 						obj.inputValuesTest(a) = obj.thisY;
-						fprintf('---> Testing value: %g = %g cd/m2\n', i, obj.inputValues(a));
 					else
 						% MK: Deprecated as not reliable: resp = input('Value?');
 						fprintf('Value? ');
@@ -290,6 +311,14 @@ classdef calibrateLuminance < handle
 						fprintf('\n');
 						obj.inputValuesTest = [obj.inputValuesTest resp];
 					end
+					if obj.useI1Pro == true
+						I1('TriggerMeasurement');
+						Lxy = I1('GetTriStimulus');
+						obj.inputValuesI1Test(a) = Lxy(1);
+						sp = I1('GetSpectrum')';
+						obj.spectrumTest(:,a) = sp;
+					end
+					fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValuesTest(a), obj.inputValuesI1Test(a));
 					a = a + 1;
 				end
 				
@@ -329,11 +358,17 @@ classdef calibrateLuminance < handle
 		function analyze(obj)
 			if obj.canAnalyze == 1
 				
-				obj.displayRange = (max(obj.inputValues) - min(obj.inputValues));
-				obj.displayBaseline = min(obj.inputValues);
+				if obj.preferI1Pro == true
+					inputValues = obj.inputValuesI1;
+				else
+					inputValues = obj.inputValues;
+				end
+				
+				obj.displayRange = (max(inputValues) - min(inputValues));
+				obj.displayBaseline = min(inputValues);
 				
 				%Normalize values
-				obj.inputValuesNorm = (obj.inputValues - obj.displayBaseline)/(max(obj.inputValues) - min(obj.inputValues));
+				obj.inputValuesNorm = (inputValues - obj.displayBaseline)/(max(inputValues) - min(inputValues));
 				obj.rampNorm = obj.ramp;
 				
 				if ~exist('fittype'); %#ok<EXIST>
@@ -395,36 +430,43 @@ classdef calibrateLuminance < handle
 		% ===================================================================
 		function plot(obj)
 			obj.plotHandle = figure;
-			%obj.p = panel(obj.plotHandle,'defer');
+			obj.p = panel(obj.plotHandle,'defer');
 			scnsize = get(0,'ScreenSize');
 			pos=get(gcf,'Position');
 			
-			%obj.p.pack(2,2);
-			%obj.p.margin = [15 20 5 15];
-			%obj.p.fontsize = 12;
+			obj.p.pack(2,2);
+			obj.p.margin = [15 20 5 15];
+			obj.p.fontsize = 12;
 			
-			%obj.p(1,1).select();
-			subplot(2,2,1)
+			obj.p(1,1).select();
+			%subplot(2,2,1)
 			plot(obj.ramp, obj.inputValues, 'k.-');
-			if max(obj.inputValuesTest) > 0
-				hold on
-				plot(obj.ramp, obj.inputValues, 'r.-');
-				hold off
-				legend('Original','Corrected')
-			end
+			legend('CCal')
 			if max(obj.inputValuesI1) > 0
 				hold on
 				plot(obj.ramp, obj.inputValuesI1, 'b.-');
 				hold off
-				legend('Original','Corrected','I1Pro')
+				legend('CCal','I1Pro')
+			end
+			if max(obj.inputValuesTest) > 0
+				hold on
+				plot(obj.ramp, obj.inputValuesTest, 'r.-');
+				hold off
+				legend('CCal','CCalCorrected')
+			end
+			if max(obj.inputValuesI1Test) > 0
+				hold on
+				plot(obj.ramp, obj.inputValuesI1Test, 'g.-');
+				hold off
+				legend('CCal','I1Pro','CCalCorrected','I1ProCorrected')
 			end
 			axis tight
 			xlabel('Indexed Values');
 			ylabel('Luminance cd/m^2');
 			title('Input -> Output Raw Data');
 			
-			%obj.p(1,2).select();
-			subplot(2,2,2)
+			obj.p(1,2).select();
+			%subplot(2,2,2)
 			hold all
 				for i=1:length(obj.modelFit)
 					plot([0:1/255:1], obj.modelFit{i}.table);
@@ -440,8 +482,8 @@ classdef calibrateLuminance < handle
 			title(sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma));
 			
 			legendtext=[];
-			subplot(2,2,3)
-			%obj.p(2,1).select();
+			%subplot(2,2,3)
+			obj.p(2,1).select();
 			hold all
 			for i=1:length(obj.gammaTable)
 				plot(1:length(obj.gammaTable{i}),obj.gammaTable{i});
@@ -454,8 +496,8 @@ classdef calibrateLuminance < handle
 			legend(legendtext,'Location','NorthWest');
 			title('Plot of output Gamma curves');
 			
-			subplot(2,2,4)
-			%obj.p(2,2).select();
+			%subplot(2,2,4)
+			obj.p(2,2).select();
 			hold all
 			for i=1:length(obj.gammaTable)
 				plot(obj.modelFit{i}.output.residuals);
@@ -479,8 +521,21 @@ classdef calibrateLuminance < handle
 			else
 				t = obj.comments;
 			end
-			%obj.p.title(t);
-			%obj.p.refresh();
+			
+			if ~isempty(obj.spectrum)
+				figure
+				surf(obj.ramp,obj.wavelengths,obj.spectrum);
+				title('Original Spectrum')
+				axis tight
+			end
+			if ~isempty(obj.spectrumTest)
+				figure
+				surf(obj.ramp,obj.wavelengths,obj.spectrumTest);
+				title('Corrected Spectrum')
+				axis tight
+			end
+			obj.p.title(t);
+			obj.p.refresh();
 			
 		end
 		
@@ -491,8 +546,11 @@ classdef calibrateLuminance < handle
 		%>
 		% ===================================================================
 		function zeroCalibration(obj)
-			ColorCal2('ZeroCalibration');
-			fprintf('\n-- Dark Calibration Done! --\n');
+			reply = input('*ZERO CALIBRATION* -- please cover the ColorCalII then press enter...','s');
+			if isempty(reply)
+				ColorCal2('ZeroCalibration');
+				fprintf('\n-- Dark Calibration Done! --\n');
+			end
 		end
 
 	end

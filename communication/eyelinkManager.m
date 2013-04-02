@@ -475,7 +475,7 @@ classdef eyelinkManager < optickaCore
 			[fix, fixtime, searching] = obj.isFixated();
 			if searching
 				if (obj.strictFixation==true && (obj.fixN == 0)) || obj.strictFixation==false
-					out = ['searching ' num2str(obj.fixInitLength)];
+					out = 'searching';
 					return
 				else
 					out = noString;
@@ -485,9 +485,9 @@ classdef eyelinkManager < optickaCore
 			elseif fix
 				if (obj.strictFixation==true && ~(obj.fixN == -100)) || obj.strictFixation==false
 					if fixtime
-						out = [yesString ' ' num2str(obj.fixLength)];
+						out = yesString;
 					else
-						out = ['fixing ' num2str(obj.fixLength)];
+						out = 'fixing';
 					end
 					return
 				else

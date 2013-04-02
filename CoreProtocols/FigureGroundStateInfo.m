@@ -16,7 +16,6 @@ tS.askForComments = true;
 tS.saveData = true;
 
 obj.useDataPixx = true;
-
 %obj.lastSize = obj.stimuli{3}.size;
 
 luminancePedestal = [0.5 0.5 0.5];

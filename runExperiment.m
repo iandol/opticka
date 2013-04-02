@@ -560,6 +560,8 @@ classdef runExperiment < optickaCore
 				tS.pauseToggle = 1; %toggle pause/unpause
 				tS.eyePos = []; %locally record eye position
 				
+				%profile clear; profile on;
+				
 				HideCursor;
 				warning('off'); %#ok<*WNOFF>
 				%check initial eye position
@@ -662,6 +664,7 @@ classdef runExperiment < optickaCore
 					close(io);
 				end
 				
+				%profile off; profile report; profile clear
 				ShowCursor;
 				warning('on'); %#ok<WNON>
 				
@@ -695,6 +698,7 @@ classdef runExperiment < optickaCore
 					rstop(io); %pause plexon
 					close(io); %close io
 				end
+				%profile off; profile clear
 				warning('on') %#ok<WNON>
 				Priority(0);
 				ListenChar(0);
