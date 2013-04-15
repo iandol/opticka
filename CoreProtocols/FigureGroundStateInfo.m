@@ -23,11 +23,11 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
-firstFixRadius = 1.25;
+firstFixRadius = 1.2;
 
 targetFixInit = 0.5;
 targetFixTime = [0.3 0.6];
-targetRadius = 1.5;
+targetRadius = 2;
 
 eL.name = 'figure-ground';
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
@@ -156,7 +156,7 @@ incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eye
 	}; 
 
 %our incorrect stimulus
-incFcn =  @()draw(obj.stimuli);
+incFcn = @()draw(obj.stimuli);
 
 %incorrect / break exit
 incExitFcn = { 

@@ -149,6 +149,49 @@
 % 24/07/12
 % Release Version 2.6
 % ############################################################
+%
+% 22/09/12
+% Added demopanelH, which illustrates how to do insets. Kudos
+% to Ann Hickox for the idea.
+%
+% 20/03/13
+% Added panel.plot() to work around poor rendering of dashed
+% lines, etc. Added demopanelI to illustrate its use.
+%
+% 20/03/13
+% Renamed setCallback to addCallback, so we can have more
+% than one. Added "userdata" argument to addCallback(), and
+% "event" field (and "userdata" field) to "data" passed when
+% callback is fired.
+%
+% ############################################################
+% 21/03/13
+% Release Version 2.7
+% ############################################################
+%
+% 21/03/13
+% Fixed bug in panel.plot() which did not handle solid lines
+% correctly.
+%
+% 12/04/13
+% Added back setCallback() with appropriate semantics, for
+% the use of legacy code (or, really, future code, these
+% semantics might be useful to someone). Also added the
+% function clearCallbacks().
+%
+% 12/04/13
+% Removed panel.plot() because it just seemed to be too hard
+% to manage. Instead, we'll let the user plot things in the
+% usual way, but during export (when things are well under
+% our control), we'll fix up any dashed lines that the user
+% has requested using the call fixdash(). Thus, we apply the
+% fix only where it's needed, when printing to an image
+% file, and save all the faffing with resize callbacks.
+%
+% ############################################################
+% 12/04/13
+% Release Version 2.8
+% ############################################################
 
 
 
@@ -172,7 +215,11 @@ classdef (Sealed = true) panel < handle
 		PANEL_TYPE_UNCOMMITTED = 0;
 		PANEL_TYPE_PARENT = 1;
 		PANEL_TYPE_OBJECT = 2;
-
+		
+	end
+	
+	properties (Constant = true)
+		
 		RENDER_MODE_NORMAL = 0;
 		RENDER_MODE_PREPRINT = 1;
 		RENDER_MODE_POSTPRINT = 2;
@@ -397,6 +444,10 @@ classdef (Sealed = true) panel < handle
 		% panel type
 		m_panelType
 		
+		% fixdash lines
+		m_fixdash
+		m_fixdash_restore
+		
 		% associated managed graphics object (usually, an axis)
 		h_object
 		
@@ -406,8 +457,7 @@ classdef (Sealed = true) panel < handle
 		% children (only a parent panel has non-empty, here)
 		m_children
 		
-		% callback (if set, this function is called after a
-		% resize)
+		% callback (any functions listed in this cell array are called when events occur)
 		m_callback
 		
 		% local properties (actual properties is this overlaid on inherited/default properties)
@@ -536,6 +586,12 @@ classdef (Sealed = true) panel < handle
 				
 			end
 			
+			% no callbacks
+			p.m_callback = {};
+			
+			% no fixdash
+			p.m_fixdash = {};
+			
 			% debug output
 			panel.debugmsg('creating new panel...');
 			
@@ -605,8 +661,8 @@ classdef (Sealed = true) panel < handle
 			if p.isRoot()
 				
 				% lay in callbacks
-				addCallback(p.h_figure, 'CloseRequestFcn', @panel.closeCallback);
-				addCallback(p.h_parent, 'ResizeFcn', @panel.resizeCallback);
+				addHandleCallback(p.h_figure, 'CloseRequestFcn', @panel.closeCallback);
+				addHandleCallback(p.h_parent, 'ResizeFcn', @panel.resizeCallback);
 				
 				% register for callbacks
 				if add
@@ -925,6 +981,90 @@ classdef (Sealed = true) panel < handle
 					set(h_axes, 'nextplot', 'replacechildren');
 				otherwise
 					error('panel:InvalidArgument', 'argument to hold() must be ''on'', ''off'', or boolean');
+			end
+			
+		end
+		
+		function fixdash(p, hs, linestyle)
+			
+			% pass dashed lines to be fixed up during export
+			%
+			% p.fixdash(h, linestyle)
+			%   add the lines specified as handles in "h" to the
+			%   list of lines to be "fixed up" during export.
+			%   panel will attempt to get the lines to look right
+			%   during export to all formats where they would
+			%   usually get mussed up. see demopanelI for an
+			%   example of how it works.
+			%
+			%   the above is the usual usage of fixdash(), but
+			%   you can get more control over linestyle by
+			%   specifying the additional argument, "linestyle".
+			%   if "linestyle" is supplied, it is used as the
+			%   linestyle; if not, the current linestyle of the
+			%   line (-, --, -., :) is used. "linestyle" can
+			%   either be a text string or a series of numbers, as
+			%   described below.
+			%
+			%     '-' solid
+			%     '--' dashed, equal to [2 0.75]
+			%     '-.' dash-dot, equal to [2 0.75 0.5 0.75]
+			%     ':', '.' dotted, equal to [0.5 0.5]
+			%
+			%   a number series should be 1xN, where N is a
+			%   multiple of 2, as in the examples above, and
+			%   specifies the lengths of any number of dash
+			%   components that are used before being repeated.
+			%   for instance, '-.' generates a 2 unit segment
+			%   (dash), a 0.75 unit gap, then a 0.5 unit segment
+			%   (dot) and a final 0.75 unit gap. at present, the
+			%   units are always millimetres. this system is
+			%   extensible, so that the following examples are
+			%   also valid:
+			%
+			%     '--..' dash-dash-dot-dot
+			%     '-..-.' dash-dot-dot-dash-dot
+			%     [2 1 4 1 6 1] 2 dash, 4 dash, 6 dash
+
+			% default
+			if nargin < 3
+				linestyle = [];
+			end
+			
+			% bubble up to root
+			if ~p.isRoot()
+				p.m_root.fixdash(hs, linestyle);
+				return
+			end
+			
+			% for each passed handle
+			for h = (hs(:)')
+				
+				% check it's still a handle
+				if ~ishandle(h)
+					continue
+				end
+				
+				% check it's a line
+				if ~isequal(get(h, 'type'), 'line')
+					continue
+				end
+				
+				% update if in list
+				found = false;
+				for i = 1:length(p.m_fixdash)
+					if h == p.m_fixdash{i}.h
+						p.m_fixdash{i}.linestyle = linestyle;
+						found = true;
+						break
+					end
+				end
+				
+				% else add to list
+				if ~found
+					p.m_fixdash{end+1} = struct('h', h, 'linestyle', linestyle);
+				end
+				
 			end
 			
 		end
@@ -1474,12 +1614,23 @@ classdef (Sealed = true) panel < handle
 					
 			end
 			
+			% do fixdash (not for SVG, since plot2svg does a nice
+			% job of dashed lines without our meddling...)
+			if ~isequal(pars.fmt, 'svg')
+				p.do_fixdash(context);
+			end
+			
 			% do the export
 			switch pars.fmt
 				case 'svg'
 					plot2svg(print_filename, p.h_figure);
 				otherwise
 					print(p.h_figure, '-loose', ['-d' pars.fmt], ['-r' int2str(pars.write_dpi)], print_filename)
+			end
+
+			% undo fixdash
+			if ~isequal(pars.fmt, 'svg')
+				p.do_fixdash([]);
 			end
 			
 			% set on-screen figure size back to what it was, if it
@@ -1537,24 +1688,60 @@ classdef (Sealed = true) panel < handle
 			end
 			
 		end
+
+		function clearCallbacks(p)
+			
+			% clear all callback functions for the panel
+			%
+			% p.clearCallbacks()
+			p.m_callback = {};
+			
+		end
 		
-		function setCallback(p, func)
+		function setCallback(p, func, userdata)
+			
+			% set the callback function for the panel
+			%
+			% p.setCallback(myCallbackFunction, userdata)
+			%
+			% NB: this function clears all current callbacks, then
+			%   calls addCallback(myCallbackFunction, userdata).
+			p.clearCallbacks();
+			p.addCallback(func, userdata);
+			
+		end
+		
+		function addCallback(p, func, userdata)
 			
 			% attach a callback function to the resize event
 			%
-			% p.setCallback(myCallbackFunction)
+			% p.addCallback(myCallbackFunction, userdata)
 			%   register myCallbackFunction() to be called when
 			%   the panel is updated (usually, resized).
 			%   myCallbackFunction() should accept one argument,
-			%   "data", which will have a field "panel" containing
-			%   a reference to the panel. this object can be
-			%   queried for the axis, position, etc.
+			%   "data", which will have the following fields.
+			%
+			% "userdata": the userdata passed to this function, if
+			%     any was supplied, else empty.
+			%
+			% "panel": a reference to the panel on which the
+			%     callback was set. this object can be queried in
+			%     the usual way.
+			%
+			% "event": name of event (currently only
+			%	    "render-complete").
+			%
+			% "context": the rendering context for the panel.
 			
 			invalid = ~isscalar(func) || ~isa(func, 'function_handle');
 			if invalid
 				error('panel:InvalidArgument', 'argument to callback() must be a function handle');
 			end
-			p.m_callback = func;
+			if nargin == 2
+				p.m_callback{end+1} = {func []};
+			else
+				p.m_callback{end+1} = {func userdata};
+			end
 			
 		end
 		
@@ -2282,6 +2469,9 @@ classdef (Sealed = true) panel < handle
 				case 'figure'
 					out = p.h_figure;
 					
+				case 'packpos'
+					out = p.packpos;
+					
 				case 'axis'
 					if p.isObject()
 						out = p.getAllManagedAxes();
@@ -2332,7 +2522,7 @@ classdef (Sealed = true) panel < handle
 					refs = refs(2:end);
 					
 				case { ...
-						'setCallback' ...
+						'addCallback' 'setCallback' 'clearCallbacks' ...
 						'xlabel' 'ylabel' 'zlabel' 'title' 'hold' ...
 						'refresh' 'export' ...
 						'pack' 'repack' ...
@@ -2349,7 +2539,7 @@ classdef (Sealed = true) panel < handle
 					return
 					
 				case { ...
-						'select' ...
+						'select' 'fixdash' ...
 						}
 					
 					% validate
@@ -2713,6 +2903,28 @@ classdef (Sealed = true) panel < handle
 			
 		end
 		
+		function fireCallbacks(p, event)
+		
+			% for each attached callback
+			for c = 1:length(p.m_callback)
+				
+				% extract
+				callback = p.m_callback{c};
+				func = callback{1};
+				userdata = callback{2};
+				
+				% fire
+				data = [];
+				data.panel = p;
+				data.event = event;
+				data.context = p.m_context;
+				data.userdata = userdata;
+				func(data);
+				
+			end
+				
+		end
+		
 	end
 	
 	
@@ -2762,6 +2974,55 @@ classdef (Sealed = true) panel < handle
 	end
 		
 	methods (Access = private)
+		
+		function do_fixdash(p, context)
+			
+			% if context is [], this is _after_ the render for
+			% export, so we need to restore
+			if isempty(context)
+				
+				% restore lines we changed to their original state
+				for r = 1:length(p.m_fixdash_restore)
+					
+					% get
+					restore = p.m_fixdash_restore{r};
+					
+					% if empty, no change was made
+					if ~isempty(restore)
+						set(restore.h_line, ...
+							'xdata', restore.xdata, 'ydata', restore.ydata);
+						delete([restore.h_supp restore.h_mark]);
+					end
+					
+				end
+				
+			else
+				
+% 				% get handles to objects that still exist
+% 				h_lines = p.m_fixdash(ishandle(p.m_fixdash));
+				
+				% no restores
+				p.m_fixdash_restore = {};
+				
+				% for each line
+				for i = 1:length(p.m_fixdash)
+					
+					% get
+					fix = p.m_fixdash{i};
+					
+					% final check
+					if ~ishandle(fix.h) || ~isequal(get(fix.h, 'type'), 'line')
+						continue
+					end
+					
+					% apply dashstyle
+					p.m_fixdash_restore{end+1} = dashstyle_line(fix, context);
+
+				end
+				
+			end
+
+		end
 
 		function p = renderAll(p, varargin)
 			
@@ -3083,11 +3344,7 @@ classdef (Sealed = true) panel < handle
 			
 			% callbacks
 			for pi = 1:length(pp)
-				if ~isempty(pp{pi}.m_callback)
-					data = [];
-					data.panel = pp{pi};
-					pp{pi}.m_callback(data);
-				end
+				fireCallbacks(pp{pi}, 'render-complete');
 			end
 			
 		end
@@ -3894,6 +4151,10 @@ classdef (Sealed = true) panel < handle
 			% call delete on all children of the global workspace,
 			% to recover from bugs that leave us with uncloseable
 			% figures. call this as "panel.panic()".
+			%
+			% NB: if you have to call panic(), something has gone
+			% wrong. if you are able to reproduce the problem,
+			% please contact me to report the bug.
 			delete(allchild(0));
 			
 		end
@@ -3933,7 +4194,7 @@ classdef (Sealed = true) panel < handle
 				if ~panel.isDebug()
 					% in production code, must mlock() file at this point,
 					% to avoid persistent variables being cleared by user
-					if strcmp(getenv('USERDOMAIN'), 'MITCH-HOME')
+					if strcmp(getenv('USERDOMAIN'), 'BERGEN')
 						% do nothing
 					else
 						mlock
@@ -4213,12 +4474,207 @@ end
 
 
 
-
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % HELPERS
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function restore = dashstyle_line(fix, context)
+
+% get axis size in mm
+h_line = fix.h;
+h_axis = get(h_line, 'parent');
+u = get(h_axis, 'units');
+set(h_axis, 'units', 'norm');
+pos = get(h_axis, 'position');
+set(h_axis, 'units', u);
+axis_in_mm = pos(3:4) .* context.size_in_mm;
+
+% recover data
+xdata = get(h_line, 'xdata');
+ydata = get(h_line, 'ydata');
+zdata = get(h_line, 'zdata');
+linestyle = get(h_line, 'linestyle');
+marker = get(h_line, 'marker');
+
+% empty restore
+restore = [];
+
+% do not handle 3D
+if ~isempty(zdata)
+	warning('panel:NoFixdash3D', 'panel cannot fixdash() a 3D line - no action taken');
+	return
+end
+
+% get range of axis
+ax = axis(h_axis);
+
+% get scale in each dimension (mm per unit)
+sc = axis_in_mm ./ (ax([2 4]) - ax([1 3]));
+
+% create empty line
+data = NaN;
+
+% override linestyle
+if ~isempty(fix.linestyle)
+	linestyle = fix.linestyle;
+end
+
+% transcribe linestyle
+linestyle = dashstyle_parse_linestyle(linestyle);
+if isempty(linestyle)
+	return
+end
+
+% scale
+scale = 1;
+dashes = linestyle * scale;
+
+% store for restore
+restore.h_line = h_line;
+restore.xdata = xdata;
+restore.ydata = ydata;
+
+% create another, separate, line to overlay on the original
+% line and render the fixed-up dashes.
+restore.h_supp = copyobj(h_line, h_axis);
+
+% if the original line has markers, we'll have to create yet
+% another separate line instance to represent them, because
+% they shouldn't be "dashed", as it were. note that we don't
+% currently attempt to get the z-order right for these
+% new lines.
+if ~isequal(marker, 'none')
+	restore.h_mark = copyobj(h_line, h_axis);
+	set(restore.h_mark, 'linestyle', 'none');
+	set(restore.h_supp, 'marker', 'none');
+else
+	restore.h_mark = [];
+end
+
+% hide the original line. this line remains in existence so
+% that if there is a legend, it doesn't get messed up.
+set(h_line, 'xdata', NaN, 'ydata', NaN);
+
+% extract pattern length
+patlen = sum(dashes);
+
+% position within pattern is initially zero
+pos = 0;
+
+% linedata
+line_xy = complex(xdata, ydata);
+
+% for each line segment
+while length(line_xy) > 1
+	
+	% get line segment
+	xy = line_xy(1:2);
+	line_xy = line_xy(2:end);
+	
+	% any NaNs, and we're outta here
+	if any(isnan(xy))
+		continue
+	end
+	
+	% get start etc.
+	O = xy(1);
+	V = xy(2) - xy(1);
+	
+	% get mm length of this line segment
+	d = sqrt(sum(([real(V) imag(V)] .* sc) .^ 2));
+	
+	% and mm unit vector
+	U = V / d;
+	
+	% generate a long-enough pattern for this segment
+	n = ceil((pos + d) / patlen);
+	pat = [0 cumsum(repmat(dashes, [1 n]))] - pos;
+	pos = d - (pat(end) - patlen);
+	pat = [pat(1:2:end-1); pat(2:2:end)];
+	
+	% trim spurious segments
+	pat = pat(:, any(pat >= 0) & any(pat <= d));
+	
+	% skip if that's it
+	if isempty(pat)
+		continue
+	end
+	
+	% and reduce ones that are oversized
+	pat(1) = max(pat(1), 0);
+	pat(end) = min(pat(end), d);
+
+	% finally, add these segments to the line data
+	seg = [O + pat * U; NaN(1, size(pat, 2))];
+	data = [data seg(:).'];
+	
+end
+
+% update line
+set(restore.h_supp, 'xdata', real(data), 'ydata', imag(data), ...
+	'linestyle', '-');
+
+end
+
+
+function linestyle = dashstyle_parse_linestyle(linestyle)
+
+if isequal(linestyle, 'none') || isequal(linestyle, '-')
+	linestyle = [];
+	return
+end
+
+while 1
+
+	% if numbers
+	if isnumeric(linestyle)
+		if ~isa(linestyle, 'double') || ~isrow(linestyle) || mod(length(linestyle), 2) ~= 0
+			break
+		end
+		% no need to parse
+		return
+	end
+
+	% else, must be char
+	if ~ischar(linestyle) || ~isrow(linestyle)
+		break
+	end
+	
+	% translate matlab non-standard codes into codes we can
+	% easily parse
+	switch linestyle
+		case ':'
+			linestyle = '.';
+		case '--'
+			linestyle = '-';
+	end
+	
+	% must be only - and .
+	if any(linestyle ~= '.' & linestyle ~= '-')
+		break
+	end
+	
+	% transcribe
+	c = linestyle;
+	linestyle = [];
+	for l = c
+		switch l
+			case '-'
+				linestyle = [linestyle 2 0.75];
+			case '.'
+				linestyle = [linestyle 0.5 0.75];
+		end
+	end
+	return
+
+end
+
+warning('panel:BadFixdashLinestyle', 'unusable linestyle in fixdash()');
+linestyle = [];
+
+end
 
 
 
@@ -4288,7 +4744,7 @@ end
 
 end
 
-function addCallback(h, name, func)
+function addHandleCallback(h, name, func)
 
 % % get current list of callbacks
 % callbacks = get(h, name);

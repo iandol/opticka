@@ -5,7 +5,7 @@ classdef dPixxManager < optickaCore
 	properties
 		verbose = true
 		strobeLine = 16
-		%> silentMode allows one to gracefully fail methods without a labJack connected
+		%> silentMode allows one to gracefully fail methods without a dataPixx connected
 		silentMode = false
 	end
 	
@@ -46,7 +46,7 @@ classdef dPixxManager < optickaCore
 		
 		function close(obj)
 			if obj.isOpen
-				obj.salutation('close method','Closing DataPixx...');
+				obj.salutation('close method','Closing DataPixx...',true);
 				Datapixx('Close');				
 				obj.isOpen = false;
 			end
@@ -72,7 +72,7 @@ classdef dPixxManager < optickaCore
 				bufferAddress = 8e6;
 				Datapixx('WriteDoutBuffer', strobe, bufferAddress);
 				Datapixx('SetDoutSchedule', 0, [1e5,1], length(strobe), bufferAddress, length(strobe));
-				fprintf('>>>STROBE Value %g prepared!\n',value);
+				if obj.verbose; fprintf('>>>STROBE Value %g prepared!\n',value); end
 			end
 		end
 		
@@ -87,21 +87,21 @@ classdef dPixxManager < optickaCore
 		function rstart(obj)
 			if obj.isOpen
 				setLine(obj,8,1);
-				fprintf('>>>RSTART sent to Plexon!\n')
+				if obj.verbose; fprintf('>>>RSTART sent to Plexon!\n'); end
 			end
 		end
 		
 		function rstop(obj)
 			if obj.isOpen
 				setLine(obj,8,0);
-				fprintf('>>>RSTOP sent to Plexon!\n')
+				if obj.verbose; fprintf('>>>RSTOP sent to Plexon!\n'); end
 			end
 		end
 		
 		function sendTTL(obj,line)
 			if obj.isOpen
 				if line > 8 || line < 1
-					fprintf('1-7 lines are available on dataPixx only!\n')
+					fprintf('1-8 lines (pins 17-24) are available on dataPixx only!\n')
 					return
 				end
 				line = 2^(line-1);
@@ -120,7 +120,7 @@ classdef dPixxManager < optickaCore
 		function setLine(obj,line,value)
 			if obj.isOpen
 				if line > 8 || line < 1
-					fprintf('1-7 lines are available on dataPixx only!\n')
+					fprintf('1-8 lines (pins 17-24) are available on dataPixx only!\n')
 					return
 				end
 				line = 2^(line-1);

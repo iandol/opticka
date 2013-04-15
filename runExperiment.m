@@ -519,7 +519,7 @@ classdef runExperiment < optickaCore
 				end
 				
 				if tS.askForComments
-					comment = inputdlg('Initial Comment for this Run?',['Run Comment for ' obj.name]);
+					comment = inputdlg({'CHECK: ARM PLEXON!!! Initial Comment for this Run?'},['Run Comment for ' obj.name]);
 					comment = comment{1};
 					obj.comment = [obj.name ':' comment];
 					bR.comment = obj.comment;
