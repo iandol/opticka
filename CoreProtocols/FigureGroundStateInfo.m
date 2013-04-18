@@ -6,6 +6,7 @@
 % lJ = LabJack (reward trigger to Crist reward system)
 % bR = behavioural record plot
 % obj.stimuli = our list of stimuli
+% tS = general simple struct to hold variables for this run
 %
 %------------General Settings-----------------
 tS.rewardTime = 200; %TTL time in milliseconds
@@ -23,7 +24,7 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
-firstFixRadius = 1.2;
+firstFixRadius = 1.3;
 
 targetFixInit = 0.5;
 targetFixTime = [0.3 0.6];
@@ -82,7 +83,7 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	@()edit(obj.stimuli,4,'colourOut',[1 1 0]); ...
 	@()show(obj.stimuli{4}); ...
 	%@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
-	@()edfMessage(eL,['TRIALID ' getTaskIndex(obj)]); ...
+	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(obj))]); ...
 	@()startRecording(eL); ... %fire up eyelink
 	@()syncTime(eL); ... %EDF sync message
 	@()draw(obj.stimuli); ... %draw stimulus

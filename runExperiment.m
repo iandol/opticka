@@ -981,6 +981,7 @@ classdef runExperiment < optickaCore
 			if ~exist('index','var') && isprop(obj.task,'totalRuns')
 				index = obj.task.totalRuns;	
 				trial = obj.task.outIndex(index);
+				%fprintf('GOT TRIAL NUMBER = %g \n',trial)
 				return
 			end
 			trial = -1;
