@@ -1388,7 +1388,7 @@ classdef runExperiment < optickaCore
 								stims = intersect(stims,thisstim); %only change the visible stimulus
 								limits = obj.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
-									if strcmpi(var,'size')
+									if strcmpi(var,'size') || strcmpi(var,'dotSize')
 										oval = obj.stimuli{stims(i)}.([var 'Out']) / obj.stimuli{stims(i)}.ppd;
 									elseif strcmpi(var,'sf')
 										oval = obj.stimuli{stims(i)}.getsfOut;
@@ -1398,6 +1398,8 @@ classdef runExperiment < optickaCore
 									val = oval - delta;
 									if min(val) < limits(1)
 										val(val < limits(1)) = limits(2);
+									elseif max(val) > limits(2)
+										val(val > limits(2)) = limits(1);
 									end
 									if length(val) > length(oval)
 										val = val(1:length(oval));
@@ -1422,7 +1424,7 @@ classdef runExperiment < optickaCore
 								stims = intersect(stims,thisstim); %only change the visible stimulus
 								limits = obj.stimuli.controlTable(choice).limits;
 								for i = 1:length(stims)
-									if strcmpi(var,'size')
+									if strcmpi(var,'size') || strcmpi(var,'dotSize')
 										oval = obj.stimuli{stims(i)}.([var 'Out']) / obj.stimuli{stims(i)}.ppd;
 									elseif strcmpi(var,'sf')
 										oval = obj.stimuli{stims(i)}.getsfOut;
@@ -1430,7 +1432,9 @@ classdef runExperiment < optickaCore
 										oval = obj.stimuli{stims(i)}.([var 'Out']);
 									end
 									val = oval + delta;
-									if max(val) > limits(2)
+									if min(val) < limits(1)
+										val(val < limits(1)) = limits(2);
+									elseif max(val) > limits(2)
 										val(val > limits(2)) = limits(1);
 									end
 									if length(val) > length(oval)

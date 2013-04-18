@@ -10,13 +10,15 @@ tS.saveData = false;
 obj.useDataPixx = false; %make sure we don't trigger the plexon
 
 %------------Eyelink Settings----------------
+eL.isDummy = false; %use dummy or real eyelink?
 fixX = 0;
 fixY = 0;
 firstFixInit = 0.75;
 firstFixTime = 2.5;
 firstFixRadius = 1.5;
+% X, Y, FixInitTime, FixTime, Radius, StrictFix
+eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
-eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV9'; % calibration style
@@ -25,8 +27,6 @@ eL.modify.calibrationtargetsize = 1;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
-% X, Y, FixInitTime, FixTime, Radius, StrictFix
-eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
 
 %-------randomise stimulus variables every trial?
 obj.stimuli.choice = [];
@@ -74,6 +74,21 @@ obj.stimuli.controlTable(n).variable = 'sf';
 obj.stimuli.controlTable(n).delta = 0.1;
 obj.stimuli.controlTable(n).stimuli = [7 8];
 obj.stimuli.controlTable(n).limits = [0.1 6];
+n=n+1;
+obj.stimuli.controlTable(n).variable = 'speed';
+obj.stimuli.controlTable(n).delta = 0.5;
+obj.stimuli.controlTable(n).stimuli = [7 8 10];
+obj.stimuli.controlTable(n).limits = [0.5 8.5];
+n=n+1;
+obj.stimuli.controlTable(n).variable = 'density';
+obj.stimuli.controlTable(n).delta = 5;
+obj.stimuli.controlTable(n).stimuli = [10];
+obj.stimuli.controlTable(n).limits = [1 151];
+n=n+1;
+obj.stimuli.controlTable(n).variable = 'dotSize';
+obj.stimuli.controlTable(n).delta = 0.01;
+obj.stimuli.controlTable(n).stimuli = [10];
+obj.stimuli.controlTable(n).limits = [0.04 0.51];
 
 %------this allows us to enable subsets from our stimulus list
 obj.stimuli.stimulusSets = {[11], [2 11], [3 11], [4 11], [5 11], [6 11], [7 11], [8 11], [9 11], [10 11]};
