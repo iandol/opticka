@@ -1,6 +1,6 @@
 %=====RF Mapping state configuration file=====
 %------------General Settings-----------------
-tS.rewardTime = 200; %TTL time in milliseconds
+tS.rewardTime = 160; %TTL time in milliseconds
 tS.useTask = false;
 tS.checkKeysDuringStimulus = true;
 tS.recordEyePosition = false;
@@ -47,7 +47,7 @@ obj.stimuli.controlTable(n).limits = [0 360];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'size';
 obj.stimuli.controlTable(n).delta = 0.5;
-obj.stimuli.controlTable(n).stimuli = [2 3 4 5 6 7 8 9 10];
+obj.stimuli.controlTable(n).stimuli = [2 3 4 5 6 7 8 10];
 obj.stimuli.controlTable(n).limits = [0.5 20];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'flashTime';
