@@ -34,9 +34,10 @@ classdef calibrateLuminance < handle
 		%> screen to calibrate
 		screen
 		%> use ColorCalII automatically
-		useCCal = true
+		useCCal = false
 		%> use i1Pro?
 		useI1Pro = true
+		%> choose I1Pro over CCal if both connected?
 		preferI1Pro = true
 		%> comments to note about this calibration
 		comments = {''}
@@ -169,7 +170,7 @@ classdef calibrateLuminance < handle
 			if strcmpi(reply,'y')
 				calibrate(obj)
 			end
-			if obj.useCCal == false
+			if obj.useCCal == false && obj.useI1Pro == false
 				input(sprintf(['When black screen appears, point photometer, \n' ...
 					'get reading in cd/m^2, input reading using numpad and press enter. \n' ...
 					'A screen of higher luminance will be shown. Repeat %d times. ' ...
@@ -179,8 +180,8 @@ classdef calibrateLuminance < handle
 				while I1('KeyPressed') == 0
 					WaitSecs(0.01);
 				end
-			else
-				input('Please place ColorCalII in front of monitor then press enter...');
+			elseif obj.useI1Pro == true && obj.useCCal == false
+				input('Please place i1Pro in front of monitor then press enter...');
 			end
 			
 			obj.initialClut = repmat([0:255]'/255,1,3); %#ok<NBRAK>
@@ -217,18 +218,19 @@ classdef calibrateLuminance < handle
 					if obj.useCCal == true
 						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
 						obj.inputValues(a) = obj.thisY;
-					else
-						% MK: Deprecated as not reliable: resp = input('Value?');
-						fprintf('Value? ');
-						beep
-						resp = GetNumber;
-						fprintf('\n');
-						obj.inputValues = [obj.inputValues resp];
+% 					else
+% 						% MK: Deprecated as not reliable: resp = input('Value?');
+% 						fprintf('Value? ');
+% 						beep
+% 						resp = GetNumber;
+% 						fprintf('\n');
+% 						obj.inputValues = [obj.inputValues resp];
 					end
 					if obj.useI1Pro == true
 						I1('TriggerMeasurement');
 						Lxy = I1('GetTriStimulus');
 						obj.inputValuesI1(a) = Lxy(1);
+						obj.inputValues(a) = obj.inputValuesI1(a);
 						sp = I1('GetSpectrum')';
 						obj.spectrum(:,a) = sp;
 					end
@@ -283,6 +285,7 @@ classdef calibrateLuminance < handle
 				BackupCluts;
 				if doPipeline == true
 					PsychColorCorrection('SetEncodingGamma', obj.win, 1/obj.displayGamma);
+					fprintf('LOAD SetEncodingGamma using PsychColorCorrection to: %g\n',1/obj.displayGamma)
 				else
 					fprintf('LOAD GammaTable Model: %g\n',obj.choice)
 					gTmp = repmat(obj.gammaTable{obj.choice},1,3);
@@ -303,18 +306,19 @@ classdef calibrateLuminance < handle
 					if obj.useCCal == true
 						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
 						obj.inputValuesTest(a) = obj.thisY;
-					else
-						% MK: Deprecated as not reliable: resp = input('Value?');
-						fprintf('Value? ');
-						beep
-						resp = GetNumber;
-						fprintf('\n');
-						obj.inputValuesTest = [obj.inputValuesTest resp];
+% 					else
+% 						% MK: Deprecated as not reliable: resp = input('Value?');
+% 						fprintf('Value? ');
+% 						beep
+% 						resp = GetNumber;
+% 						fprintf('\n');
+% 						obj.inputValuesTest = [obj.inputValuesTest resp];
 					end
 					if obj.useI1Pro == true
 						I1('TriggerMeasurement');
 						Lxy = I1('GetTriStimulus');
 						obj.inputValuesI1Test(a) = Lxy(1);
+						obj.inputValuesTest(a) = obj.inputValuesI1Test(a);
 						sp = I1('GetSpectrum')';
 						obj.spectrumTest(:,a) = sp;
 					end
@@ -434,12 +438,11 @@ classdef calibrateLuminance < handle
 			scnsize = get(0,'ScreenSize');
 			pos=get(gcf,'Position');
 			
-			obj.p.pack(2,2);
-			obj.p.margin = [15 20 5 15];
+			obj.p.pack(2,3);
+			obj.p.margin = [15 20 10 15];
 			obj.p.fontsize = 12;
 			
 			obj.p(1,1).select();
-			%subplot(2,2,1)
 			plot(obj.ramp, obj.inputValues, 'k.-');
 			legend('CCal')
 			if max(obj.inputValuesI1) > 0
@@ -466,7 +469,6 @@ classdef calibrateLuminance < handle
 			title('Input -> Output Raw Data');
 			
 			obj.p(1,2).select();
-			%subplot(2,2,2)
 			hold all
 				for i=1:length(obj.modelFit)
 					plot([0:1/255:1], obj.modelFit{i}.table);
@@ -482,7 +484,6 @@ classdef calibrateLuminance < handle
 			title(sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma));
 			
 			legendtext=[];
-			%subplot(2,2,3)
 			obj.p(2,1).select();
 			hold all
 			for i=1:length(obj.gammaTable)
@@ -496,7 +497,6 @@ classdef calibrateLuminance < handle
 			legend(legendtext,'Location','NorthWest');
 			title('Plot of output Gamma curves');
 			
-			%subplot(2,2,4)
 			obj.p(2,2).select();
 			hold all
 			for i=1:length(obj.gammaTable)
@@ -523,15 +523,19 @@ classdef calibrateLuminance < handle
 			end
 			
 			if ~isempty(obj.spectrum)
-				figure
+				obj.p(1,3).select();
 				surf(obj.ramp,obj.wavelengths,obj.spectrum);
 				title('Original Spectrum')
+				xlabel('Indexed Values')
+				ylabel('Wavelengths');
 				axis tight
 			end
 			if ~isempty(obj.spectrumTest)
-				figure
+				obj.p(2,3).select();
 				surf(obj.ramp,obj.wavelengths,obj.spectrumTest);
 				title('Corrected Spectrum')
+				xlabel('Indexed Values')
+				ylabel('Wavelengths');
 				axis tight
 			end
 			obj.p.title(t);
