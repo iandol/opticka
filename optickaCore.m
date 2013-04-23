@@ -7,9 +7,9 @@ classdef optickaCore < handle
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		%> object name
-		name = ''
+		name@char = ''
 		%> comment
-		comment = ''
+		comment@char = ''
 	end
 	
 	%--------------------ABSTRACT PROPERTIES----------%
@@ -21,7 +21,7 @@ classdef optickaCore < handle
 	%--------------------HIDDEN PROPERTIES------------%
 	properties (SetAccess = protected, Hidden = true)
 		%> are we cloning this from another object
-		cloning = false
+		cloning@logical = false
 	end
 	
 	%--------------------VISIBLE PROPERTIES-----------%
@@ -29,35 +29,35 @@ classdef optickaCore < handle
 		%> clock() dateStamp set on construction
 		dateStamp
 		%> universal ID
-		uuid = 0
+		uuid@char
 		%> storage of various paths
-		paths = struct()
+		paths@struct = struct()
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%
 	properties (SetAccess = private, Dependent = true)
 		%> The fullName is the object name combined with its uuid and class name
-		fullName = ''
+		fullName@char = ''
 	end
 	
 	%--------------------TRANSIENT PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected, Transient = true)
 		%> Matlab version number, this is transient so it is not saved
-		mversion = 0
+		mversion@double = 0
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected)
 		%> class name
-		className = ''
+		className@char = ''
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'name|cloning'
+		allowedProperties@char = 'name|cloning'
 		%> cached full name
-		fullName_ = ''
+		fullName_@char = ''
 	end
 	
 	%=======================================================================
