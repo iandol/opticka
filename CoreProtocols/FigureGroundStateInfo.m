@@ -24,7 +24,7 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
-firstFixRadius = 1.5;
+firstFixRadius = 1.25;
 
 targetFixInit = 0.5;
 targetFixTime = [0.3 0.6];
