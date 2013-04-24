@@ -10,9 +10,12 @@ classdef plxReader < optickaCore
 	properties (SetAccess = private, GetAccess = public)
 		file@char
 		dir@char
+		eventList@struct
+		strobeList@struct
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		oldDir
 		%> allowed properties passed to object upon construction
 		allowedProperties@char = 'verbose'
 	end
@@ -35,9 +38,9 @@ classdef plxReader < optickaCore
 		end
 		
 		function sd = parseToSD(obj)
-			olddir = pwd;
+			obj.oldDir = pwd;
 			cd(obj.dir);
-			
+			obj.getStrobes;
 		end
 
 	end %---END PUBLIC METHODS---%
@@ -45,6 +48,26 @@ classdef plxReader < optickaCore
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
+		
+		function getStrobes(obj)
+			[a,b,c]=plx_event_ts(obj.file,257);
+			if a > 0
+				obj.strobeList.n = a;
+				obj.strobeList.times = b;
+				obj.strobeList.values = c;
+				obj.strobeList.unique = unique(c);
+				for i = 1:length(obj.strobeList.unique)-1
+					name = ['var' num2str(i)];
+					idx = find(obj.strobeList.values == obj.strobeList.unique(i));
+					idxend = idx+1;
+					obj.strobeList.(name).index = idx;
+					obj.strobeList.(name).timesStart = obj.strobeList.times(idx);
+					obj.strobeList.(name).timesEnd = obj.strobeList.times(idxend);
+				end
+			else
+				obj.strobeList = struct();
+			end
+		end
 		
 		% ===================================================================
 		%> @brief 
