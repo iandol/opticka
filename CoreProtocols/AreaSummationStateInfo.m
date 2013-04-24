@@ -24,11 +24,11 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
-firstFixRadius = 1.25;
+firstFixRadius = 1;
 
 targetFixInit = 0.5;
 targetFixTime = [0.3 0.6];
-targetRadius = 1.75;
+targetRadius = 1.5;
 
 eL.name = 'figure-ground';
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
