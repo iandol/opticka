@@ -140,15 +140,21 @@ classdef behaviouralRecord < optickaCore
 			if obj.tick == 1
 				obj.startTime = clock;
 			end
-			if strcmpi(sM.currentName,'correct')
-				obj.response(end+1) = 1;
-				obj.rt1(end+1) = sM.log(end).totalTime;
-				obj.rt2(end+1) = eL.fixInitLength;
-			elseif strcmpi(sM.currentName,'breakfix')
-				obj.response(end+1) = -1;
-			else
-				obj.response(end+1) = 0;
+			if exist('eL','var') && exist('sM','var')
+				if strcmpi(sM.currentName,'correct')
+					obj.response(end+1) = 1;
+					obj.rt1(end+1) = sM.log(end).totalTime;
+					obj.rt2(end+1) = eL.fixInitLength;
+				elseif strcmpi(sM.currentName,'breakfix')
+					obj.response(end+1) = -1;
+				else
+					obj.response(end+1) = 0;
+				end
+				obj.radius(end+1) = eL.fixationRadius;
+				obj.time(end+1) = eL.fixationTime;
+				obj.inittime(end+1) = eL.fixationInitTime;
 			end
+			
 			hitn = length( obj.response(obj.response > 0) );
 			breakn = length( obj.response(obj.response < 0) );
 			totaln = length(obj.response);
@@ -166,9 +172,6 @@ classdef behaviouralRecord < optickaCore
 			hits = [hitmiss 100-hitmiss; average 100-average; breakmiss 100-breakmiss];
 			
 			%axis 1
-			obj.radius(end+1) = eL.fixationRadius;
-			obj.time(end+1) = eL.fixationTime;
-			obj.inittime(end+1) = eL.fixationInitTime;
 			set(obj.h.axis1,'NextPlot','replacechildren')
 			plot(obj.h.axis1, 1:length(obj.response), obj.response,'k.-','MarkerSize',12);
 			set(obj.h.axis1,'NextPlot','add')
@@ -214,9 +217,9 @@ classdef behaviouralRecord < optickaCore
 			t = {['INFORMATION @ ' obj.date]};
 			t{end+1} = ['RUN:' obj.comment];
 			t{end+1} = ['INFO:' obj.info];
-			t{end+1} = ['RADIUS (red) b|n = ' num2str(eL.fixationRadius) 'deg'];
-			t{end+1} = ['INITIATE FIXATION TIME (green) z|x = ' num2str(eL.fixationInitTime) ' secs'];
-			t{end+1} = ['MAINTAIN FIXATION TIME (blue) c|v = ' num2str(eL.fixationTime) ' secs'];
+			t{end+1} = ['RADIUS (red) b|n = ' num2str(obj.radius(end)) 'deg'];
+			t{end+1} = ['INITIATE FIXATION TIME (green) z|x = ' num2str(obj.inittime(end)) ' secs'];
+			t{end+1} = ['MAINTAIN FIXATION TIME (blue) c|v = ' num2str(obj.time(end)) ' secs'];
 			t{end+1} = ' ';
 			if ~isempty(obj.rt1)
 				t{end+1} = ['Last/Mean Init Time = ' num2str(obj.rt2(end)) ' / ' num2str(mean(obj.rt2)) 'secs | Last/Mean Init+Fix = ' num2str(obj.rt1(end)) ' / ' num2str(mean(obj.rt1)) 'secs'];
@@ -229,6 +232,11 @@ classdef behaviouralRecord < optickaCore
 			obj.tick = obj.tick + 1;
 			drawnow;
 			
+		end
+		
+		function drawPlot(obj)
+			createPlot(obj);
+			updatePlot(obj);
 		end
 		
 	end
