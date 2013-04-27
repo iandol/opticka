@@ -100,9 +100,6 @@ classdef behaviouralRecord < optickaCore
 			set(obj.h.hbox,'Sizes',[-2 -1])
 			set(obj.h.vbox2,'Sizes',[-2 -1])
 			set(obj.h.vbox3,'Sizes',[-2 -1])
-			obj.response = [];
-			obj.rt1 = [];
-			obj.rt2 = [];
 
 			plot(obj.h.axis1, 1, 0,'ko');
 			hist(obj.h.axis2, 0, 0:0.1:2);
@@ -234,7 +231,7 @@ classdef behaviouralRecord < optickaCore
 			
 		end
 		
-		function drawPlot(obj)
+		function plotPerformance(obj)
 			createPlot(obj);
 			updatePlot(obj);
 		end

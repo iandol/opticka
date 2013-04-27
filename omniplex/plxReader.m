@@ -49,6 +49,7 @@ classdef plxReader < optickaCore
 			obj.oldDir = pwd;
 			cd(obj.dir);
 			generateInfo(obj)
+			getSpikes(obj);
 			getStrobes(obj);
 			disp(obj.info)
 			sd = obj.strobeList;
@@ -60,57 +61,6 @@ classdef plxReader < optickaCore
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function getStrobes(obj)
-			tic
-			[a,b,c] = plx_event_ts(obj.file,257);
-			[a19,b19] = plx_event_ts(obj.file,19);
-			[a20,b20] = plx_event_ts(obj.file,20);
-			[a21,b21] = plx_event_ts(obj.file,21);
-			[a22,b22] = plx_event_ts(obj.file,22);
-			[d,e] = plx_event_names(obj.file);
-			[f,g] = plx_event_chanmap(obj.file);
-			if a > 0
-				obj.strobeList = struct();
-				obj.strobeList(1).n = a;
-				obj.strobeList.startFix = b19;
-				obj.strobeList.correct = b20;
-				obj.strobeList.breakFix = b21;
-				obj.strobeList.incorrect = b22;
-				obj.strobeList.times = b;
-				obj.strobeList.values = c;
-				obj.strobeList.unique = unique(c);
-				obj.strobeList.nVars = length(obj.strobeList.unique)-1;
-				for i = 1:obj.strobeList.nVars
-					obj.strobeList.vars(i).name = obj.strobeList.unique(i);
-					idx = find(obj.strobeList.values == obj.strobeList.unique(i));
-					idxend = idx+1;
-					while (length(idx) > length(idxend)) %prune incomplete trials
-						idx = idx(1:end-1);
-					end
-					obj.strobeList.vars(i).nRepeats = length(idx);
-					obj.strobeList.vars(i).index = idx;
-					obj.strobeList.vars(i).t1 = obj.strobeList.times(idx);
-					obj.strobeList.vars(i).t2 = obj.strobeList.times(idxend);
-					obj.strobeList.vars(i).tDelta = obj.strobeList.vars(i).t2 - obj.strobeList.vars(i).t1;
-					obj.strobeList.vars(i).tMax = max(obj.strobeList.vars(i).tDelta);
-					
-					for nr = 1:obj.strobeList.vars(i).nRepeats
-						if 
-					end
-					
-				end
-			else
-				obj.strobeList = struct();
-			end
-			fprintf('Loading all events took %s seconds\n',toc)
-		end
 		
 		% ===================================================================
 		%> @brief 
@@ -165,7 +115,98 @@ classdef plxReader < optickaCore
 			obj.info{end+1} = ['Channel list : ' num2str(obj.tsList.chMap)];
 			obj.info{end+1} = ['Unit list (0=unsorted) : ' num2str(obj.tsList.unitMap)];
 			obj.tsList.ts = cell(obj.tsList.nUnit, obj.tsList.nCh); obj.tsList.tsN = obj.tsList.ts;
-			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function getStrobes(obj)
+			tic
+			[a,b,c] = plx_event_ts(obj.file,257);
+			[a19,b19] = plx_event_ts(obj.file,19);
+			[a20,b20] = plx_event_ts(obj.file,20);
+			[a21,b21] = plx_event_ts(obj.file,21);
+			[a22,b22] = plx_event_ts(obj.file,22);
+			[d,e] = plx_event_names(obj.file);
+			[f,g] = plx_event_chanmap(obj.file);
+			if a > 0
+				obj.strobeList = struct();
+				obj.strobeList(1).n = a;
+				obj.strobeList.startFix = b19;
+				obj.strobeList.correct = b20;
+				obj.strobeList.breakFix = b21;
+				obj.strobeList.incorrect = b22;
+				obj.strobeList.times = b;
+				obj.strobeList.values = c;
+				obj.strobeList.unique = unique(c);
+				obj.strobeList.nVars = length(obj.strobeList.unique)-1;
+				for i = 1:obj.strobeList.nVars
+					obj.strobeList.vars(i).name = obj.strobeList.unique(i);
+					idx = find(obj.strobeList.values == obj.strobeList.unique(i));
+					idxend = idx+1;
+					while (length(idx) > length(idxend)) %prune incomplete trials
+						idx = idx(1:end-1);
+					end
+					obj.strobeList.vars(i).nRepeats = length(idx);
+					obj.strobeList.vars(i).index = idx;
+					obj.strobeList.vars(i).t1 = obj.strobeList.times(idx);
+					obj.strobeList.vars(i).t2 = obj.strobeList.times(idxend);
+					obj.strobeList.vars(i).tDelta = obj.strobeList.vars(i).t2 - obj.strobeList.vars(i).t1;
+					obj.strobeList.vars(i).tMax = max(obj.strobeList.vars(i).tDelta);
+					for nr = 1:obj.strobeList.vars(i).nRepeats
+						tend = obj.strobeList.vars(i).t2(nr);
+						tc = obj.strobeList.correct > tend-0.1 & obj.strobeList.correct < tend+0.1;
+						tb = obj.strobeList.breakFix > tend-0.1 & obj.strobeList.breakFix < tend+0.1;
+						ti = obj.strobeList.incorrect > tend-0.1 & obj.strobeList.incorrect < tend+0.1;
+						if max(tc) == 1
+							obj.strobeList.vars(i).responseIndex(nr,1) = true;
+							obj.strobeList.vars(i).responseIndex(nr,2) = false;
+							obj.strobeList.vars(i).responseIndex(nr,3) = false;
+						elseif max(tb) == 1
+							obj.strobeList.vars(i).responseIndex(nr,1) = false;
+							obj.strobeList.vars(i).responseIndex(nr,2) = true;
+							obj.strobeList.vars(i).responseIndex(nr,3) = false;
+						elseif max(ti) == 1
+							obj.strobeList.vars(i).responseIndex(nr,1) = false;
+							obj.strobeList.vars(i).responseIndex(nr,2) = false;
+							obj.strobeList.vars(i).responseIndex(nr,3) = true;
+						else
+							error('Problem Finding Correct Strobes!!!!! plxReader')
+						end
+					end
+					obj.strobeList.vars(i).nCorrect = sum(obj.strobeList.vars(i).responseIndex(:,1));
+					obj.strobeList.vars(i).nBreakFix = sum(obj.strobeList.vars(i).responseIndex(:,2));
+					obj.strobeList.vars(i).nIncorrect = sum(obj.strobeList.vars(i).responseIndex(:,3));
+					
+					obj.strobeList.vars(i).t1correct = obj.strobeList.vars(i).t1(obj.strobeList.vars(i).responseIndex(:,1));
+					obj.strobeList.vars(i).t2correct = obj.strobeList.vars(i).t2(obj.strobeList.vars(i).responseIndex(:,1));
+					obj.strobeList.vars(i).tDeltacorrect = obj.strobeList.vars(i).tDelta(obj.strobeList.vars(i).responseIndex(:,1));
+					
+					obj.strobeList.vars(i).t1breakfix = obj.strobeList.vars(i).t1(obj.strobeList.vars(i).responseIndex(:,2));
+					obj.strobeList.vars(i).t2breakfix = obj.strobeList.vars(i).t2(obj.strobeList.vars(i).responseIndex(:,2));
+					obj.strobeList.vars(i).tDeltabreakfix = obj.strobeList.vars(i).tDelta(obj.strobeList.vars(i).responseIndex(:,2));
+					
+					obj.strobeList.vars(i).t1incorrect = obj.strobeList.vars(i).t1(obj.strobeList.vars(i).responseIndex(:,3));
+					obj.strobeList.vars(i).t2incorrect = obj.strobeList.vars(i).t2(obj.strobeList.vars(i).responseIndex(:,3));
+					obj.strobeList.vars(i).tDeltaincorrect = obj.strobeList.vars(i).tDelta(obj.strobeList.vars(i).responseIndex(:,3));
+					
+				end
+			else
+				obj.strobeList = struct();
+			end
+			fprintf('Loading all events took %s seconds\n',toc)
+		end
+		
+		% ===================================================================
+		%> @brief 
+			%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function getSpikes(obj)
 			tic
 			for ich = 1:obj.tsList.nCh
 				for iunit = 1:obj.tsList.nUnit
@@ -173,7 +214,16 @@ classdef plxReader < optickaCore
 				end
 			end
 			fprintf('Loading all spikes took %s seconds\n',toc)
-
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function makeSpikeTrains(obj)
+			
 		end
 		
 	end
