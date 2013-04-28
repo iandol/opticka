@@ -389,18 +389,12 @@ classdef plxReader < optickaCore
 			meta.comments = rE.comment;
 			meta.date = rE.savePrefix;
 			meta.numvars = rE.task.nVars;
-			meta.var{1}.title = 'X position';
-			meta.var{1}.nvalues = 2;
-			meta.var{1}.values = [-6 6];
-			meta.var{1}.range = 2;
-			meta.var{2}.title = 'Y position';
-			meta.var{2}.nvalues = 2;
-			meta.var{2}.values = [-6 6];
-			meta.var{2}.range = 2;
-			meta.var{3}.title = 'Angle';
-			meta.var{3}.nvalues = 2;
-			meta.var{3}.values = [0 180];
-			meta.var{3}.range = 2;
+			for i=1:rE.task.nVars
+				meta.var{i}.title = rE.task.nVar(i).name;
+				meta.var{i}.nvalues = length(rE.task.nVar(i).values);
+				meta.var{i}.values = rE.task.nVar(i).values;
+				meta.var{i}.range = length(rE.task.nVar(i).values);
+			end
 			meta.repeats = rE.task.nBlocks;
 			meta.cycles = 1;
 			meta.modtime = 500;
