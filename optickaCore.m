@@ -27,11 +27,11 @@ classdef optickaCore < handle
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> clock() dateStamp set on construction
-		dateStamp
+		dateStamp@double
 		%> universal ID
 		uuid@char
 		%> storage of various paths
-		paths@struct = struct()
+		paths@struct
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -83,7 +83,7 @@ classdef optickaCore < handle
 				obj.parseArgs(args,obj.allowedProperties);
 			end
 			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
-			obj.paths.whatami = obj.className;
+			obj.paths(1).whatami = obj.className;
 			obj.paths.root = fileparts(which(mfilename));
 			obj.paths.whereami = obj.paths.root;
 			if ~isfield(obj.paths, 'stateInfoFile')

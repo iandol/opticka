@@ -25,8 +25,8 @@ classdef CardPanel < uiextras.Container
     %             uiextras.TabPanel
     
     %   Copyright 2009-2010 The MathWorks, Inc.
-    %   $Revision: 374 $
-    %   $Date: 2012-12-20 09:18:15 +0000 (Thu, 20 Dec 2012) $
+    %   $Revision: 380 $
+    %   $Date: 2013-02-27 10:29:08 +0000 (Wed, 27 Feb 2013) $
     
     
     properties
@@ -48,10 +48,10 @@ classdef CardPanel < uiextras.Container
             % First step is to create the parent class. We pass the
             % arguments (if any) just incase the parent needs setting
             obj = obj@uiextras.Container( varargin{:} );
-                        
+            
             % Set some defaults
             obj.setPropertyFromDefault( 'Padding' );
-
+            
             % Set user-supplied property values (only if this is the leaf class)
             if nargin>0 && isequal( class( obj ), 'uiextras.CardPanel' )
                 set( obj, varargin{:} );
@@ -62,7 +62,7 @@ classdef CardPanel < uiextras.Container
     end % public methods
     
     methods
-
+        
         function value = get.SelectedChild( obj )
             value = obj.SelectedChild_;
         end % get.SelectedChild
@@ -100,7 +100,7 @@ classdef CardPanel < uiextras.Container
             obj.Padding = value;
             obj.redraw();
         end % set.Padding
-                
+        
     end % accessor methods
     
     methods ( Access = protected )
@@ -178,9 +178,21 @@ function iWiggleAxes(parent)
 % Helper to give any axes inside the specified parent a "wiggle" (i.e.
 % resize then resize back again).
 ax = findall(parent, 'type', 'axes');
+% Be careful to ignore legends and colorbars
+
 for ii=1:numel(ax)
-    propname = get(ax(ii),'ActivePositionProperty');
-    set(ax(ii),propname, get(ax(ii), propname)+[0 0 1 0]);
-    set(ax(ii),propname, get(ax(ii), propname)-[0 0 1 0]);
+    if ~isLegendOrColorbar(ax(ii))
+        propname = get(ax(ii),'ActivePositionProperty');
+        set(ax(ii),propname, get(ax(ii), propname)+[0 0 1 0]);
+        set(ax(ii),propname, get(ax(ii), propname)-[0 0 1 0]);
+    end
 end
 end
+
+function result = isLegendOrColorbar( child )
+% Determine whether an object is a legend or colorbar
+child = handle(child);
+result = (isa( child, 'axes' ) ...
+    && ismember(lower(get( child, 'Tag' )), {'legend', 'colorbar'}) );
+end % isLegendOrColorbar
+

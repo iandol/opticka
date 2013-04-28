@@ -233,17 +233,18 @@ classdef BoxPanel < uiextras.CardPanel & uiextras.DecoratedPanel
         end % get.DockFcn
         
         function set.TitleColor( obj, value )
-            if isfield( obj.HGWidgets_, 'TitleText' )
-                set( obj.HGWidgets_.TitleText, 'BackgroundColor', value );
-            end
-            if isfield( obj.HGWidgets_, 'TitlePanel' )
-                set( obj.HGWidgets_.TitlePanel, 'BackgroundColor', value );
-            end
-            if isfield( obj.HGWidgets_, 'HelpButton' )
-                set( obj.HGWidgets_.HelpButton, 'BackgroundColor', value );
-            end
-            if isfield( obj.HGWidgets_, 'CloseButton' )
-                set( obj.HGWidgets_.CloseButton, 'BackgroundColor', value );
+            widgets = {
+                'TitleText'
+                'TitlePanel'
+                'HelpButton'
+                'CloseButton'
+                'MinimizeButton'
+                'DockButton'
+                };
+            for ww=1:numel(widgets)
+                if isfield( obj.HGWidgets_, widgets{ww} )
+                    set( obj.HGWidgets_.(widgets{ww}), 'BackgroundColor', value );
+                end
             end
         end % set.TitleColor
         
