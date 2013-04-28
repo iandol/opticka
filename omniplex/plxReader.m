@@ -24,7 +24,7 @@ classdef plxReader < optickaCore
 	properties (SetAccess = private, GetAccess = private)
 		oldDir@char
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'file|matfile|dir|verbose'
+		allowedProperties@char = 'startOffset|file|matfile|dir|verbose'
 	end
 	
 	%=======================================================================
@@ -62,12 +62,30 @@ classdef plxReader < optickaCore
 			obj.paths.oldDir = pwd;
 			cd(obj.dir);
 			[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.dir);
-			generateInfo(obj)
+			generateInfo(obj);
 			getSpikes(obj);
 			getStrobes(obj);
 			parseSpikes(obj);
-			disp(obj.info);
+			%disp(obj.info);
 			%cd(obj.paths.oldDir);
+		end
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function reparse(obj)
+			obj.paths.oldDir = pwd;
+			cd(obj.dir);
+			%[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.dir);
+			generateInfo(obj);
+			%getSpikes(obj);
+			%getStrobes(obj);
+			parseSpikes(obj);
+			%disp(obj.info);
+			%cd(obj.paths.oldDir);
+			reparseInfo(obj);
 		end
 		
 		% ===================================================================
@@ -83,7 +101,7 @@ classdef plxReader < optickaCore
 				raw = obj.tsList.tsParse{firstunit};
 			end
 			raw = raw.var{var};
-			x.name = ['PLXVariable.' num2str(var)];
+			x.name = ['PLXVar.' num2str(var)];
 			x.raw = raw;
 			x.totaltrials = obj.strobeList.minRuns;
 			x.nummods = 1;
@@ -121,16 +139,16 @@ classdef plxReader < optickaCore
 				NPW, PreThresh, SpikePeakV, SpikeADResBits,...
 				SlowPeakV, SlowADResBits, Duration, DateTime] = plx_information(obj.file);
 			obj.info = {};
-			obj.info{1} = sprintf('Opened Behavioural File Name : %s', obj.matfile);
-			obj.info{end+1} = sprintf('Comment : %s', obj.meta.comments);
-			obj.info{end+1} = sprintf('Opened PLX File Name : %s', OpenedFileName);
-			obj.info{end+1} = sprintf(['Version : ' num2str(Version)]);
-			obj.info{end+1} = sprintf(['Frequency : ' num2str(Freq)]);
-			obj.info{end+1} = sprintf(['Comment : ' Comment]);
-			obj.info{end+1} = sprintf(['Date/Time : ' DateTime]);
-			obj.info{end+1} = sprintf(['Duration : ' num2str(Duration)]);
-			obj.info{end+1} = sprintf(['Num Pts Per Wave : ' num2str(NPW)]);
-			obj.info{end+1} = sprintf(['Num Pts Pre-Threshold : ' num2str(PreThresh)]);
+			obj.info{1} = sprintf('PLX File : %s', OpenedFileName);
+			obj.info{end+1} = sprintf('Behavioural File : %s', obj.matfile);
+			obj.info{end+1} = sprintf('Behavioural File Comment : %s', obj.meta.comments);
+			obj.info{end+1} = sprintf('Plexon File Comment : %s', Comment);
+			obj.info{end+1} = sprintf('Version : %g', Version);
+			obj.info{end+1} = sprintf('Frequency : %g Hz', Freq);
+			obj.info{end+1} = sprintf('Plexon Date/Time : %s', num2str(DateTime));
+			obj.info{end+1} = sprintf('Duration : %g seconds', Duration);
+			obj.info{end+1} = sprintf('Num Pts Per Wave : %g', NPW);
+			obj.info{end+1} = sprintf('Num Pts Pre-Threshold : %g', PreThresh);
 			% some of the information is only filled if the plx file version is >102
 			if ( Version > 102 )
 				if ( Trodalness < 2 )
@@ -161,10 +179,10 @@ classdef plxReader < optickaCore
 		function getStrobes(obj)
 			tic
 			[a,b,c] = plx_event_ts(obj.file,257);
-			[a19,b19] = plx_event_ts(obj.file,19);
-			[a20,b20] = plx_event_ts(obj.file,20);
-			[a21,b21] = plx_event_ts(obj.file,21);
-			[a22,b22] = plx_event_ts(obj.file,22);
+			[~,b19] = plx_event_ts(obj.file,19);
+			[~,b20] = plx_event_ts(obj.file,20);
+			[~,b21] = plx_event_ts(obj.file,21);
+			[~,b22] = plx_event_ts(obj.file,22);
 			[d,e] = plx_event_names(obj.file);
 			[f,g] = plx_event_chanmap(obj.file);
 			if a > 0
@@ -262,13 +280,13 @@ classdef plxReader < optickaCore
 				end
 				
 				obj.info{end+1} = sprintf('Number of Variables : %g', obj.strobeList.nVars);
-				obj.info{end+1} = sprintf('Total number of Correct Trials :  %g', length(obj.strobeList.correct));
-				obj.info{end+1} = sprintf('Total number of BreakFix Trials :  %g', length(obj.strobeList.breakFix));
-				obj.info{end+1} = sprintf('Total number of Incorrect Trials :  %g', length(obj.strobeList.incorrect));
-				obj.info{end+1} = sprintf('Smallest Number of Trials :  %g', obj.strobeList.minRuns);
-				obj.info{end+1} = sprintf('Largest Number of Trials :  %g', obj.strobeList.maxRuns);
-				obj.info{end+1} = sprintf('Smallest Trial Time (all/correct):  %g/%g s', obj.strobeList.tMin,obj.strobeList.tMinCorrect);
-				obj.info{end+1} = sprintf('Largest Trial Time (all/correct):  %g/%g s', obj.strobeList.tMax,obj.strobeList.tMaxCorrect);
+				obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.strobeList.correct));
+				obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.strobeList.breakFix));
+				obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.strobeList.incorrect));
+				obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.strobeList.minRuns);
+				obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.strobeList.maxRuns);
+				obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.strobeList.tMin,obj.strobeList.tMinCorrect);
+				obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.strobeList.tMax,obj.strobeList.tMaxCorrect);
 				
 				obj.meta.modtime = floor(obj.strobeList.tMaxCorrect * 10000);
 				obj.meta.trialtime = floor(obj.strobeList.tMaxCorrect * 10000);
@@ -339,6 +357,9 @@ classdef plxReader < optickaCore
 					end					
 				end
 			end
+			if obj.startOffset ~= 0
+				obj.info{end+1} = sprintf('START OFFSET ACTIVE : %g', obj.startOffset);
+			end
 			fprintf('Parsing all spikes took %s seconds\n',toc)
 		end
 		
@@ -393,7 +414,28 @@ classdef plxReader < optickaCore
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-	
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function reparseInfo(obj)
+			
+			obj.info{end+1} = sprintf('Number of Variables : %g', obj.strobeList.nVars);
+			obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.strobeList.correct));
+			obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.strobeList.breakFix));
+			obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.strobeList.incorrect));
+			obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.strobeList.minRuns);
+			obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.strobeList.maxRuns);
+			obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.strobeList.tMin,obj.strobeList.tMinCorrect);
+			obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.strobeList.tMax,obj.strobeList.tMaxCorrect);
+			obj.info{end+1} = ['Number of Active channels : ' num2str(obj.tsList.nCh)];
+			obj.info{end+1} = ['Number of Active units : ' num2str(obj.tsList.nUnit)];
+			obj.info{end+1} = ['Channel list : ' num2str(obj.tsList.chMap)];
+			obj.info{end+1} = ['Unit list (0=unsorted) : ' num2str(obj.tsList.unitMap)];
+
+		end
 	end
 	
 end
