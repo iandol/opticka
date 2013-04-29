@@ -67,6 +67,8 @@ classdef runExperiment < optickaCore
 		thisStim = []
 		%> file to define the stateMachine state info
 		stateInfoFile = ''
+		%> tS is the runtime settings structure, saved here as a backup
+		tS
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -680,17 +682,18 @@ classdef runExperiment < optickaCore
 					tS.comment = obj.comment;
 				end
 				
+				obj.tS = tS; %copy our tS structure for backup
+				
 				close(s);
 				close(eL);
 				obj.eyeLink = [];
 				close(lJ);
 				obj.lJack=[];
 				if tS.saveData
-					assignin('base', 'bR', bR)
-					assignin('base', 'tL', tL)
-					assignin('base', 'tS', tS)
-					assignin('base', 'sM', sM)
-					save([obj.paths.savedData filesep 'TrainLog-' obj.savePrefix '.mat'],'obj','bR','tL','tS','sM')
+					rE = obj;
+					assignin('base', 'rE', obj);
+					assignin('base', 'tS', tS);
+					save([obj.paths.savedData filesep 'TrainLog-' obj.savePrefix '.mat'],'rE','bR','tL','tS','sM')
 				end
 				clear tL s tS bR lJ eL io sM			
 			catch ME

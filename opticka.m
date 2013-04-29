@@ -10,7 +10,7 @@ classdef opticka < optickaCore
 		%> this is the main runExperiment object
 		r = []
 		%> run in verbose mode?
-		verbose@logical = false
+		verbose = false
 	end
 	
 	properties (SetAccess = public, GetAccess = public, Transient = true)

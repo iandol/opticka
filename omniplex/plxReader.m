@@ -19,6 +19,7 @@ classdef plxReader < optickaCore
 		strobeList@struct
 		meta@struct
 		rE
+		tS
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -99,6 +100,9 @@ classdef plxReader < optickaCore
 				raw = obj.tsList.tsParse{obj.cellmap(firstunit)};
 			else
 				raw = obj.tsList.tsParse{firstunit};
+			end
+			if var > length(raw.var)
+				errordlg('This Plexon File seems to be Incomplete, check filesize...')
 			end
 			raw = raw.var{var};
 			x.name = ['PLXVar.' num2str(var)];
@@ -384,6 +388,7 @@ classdef plxReader < optickaCore
 			tic
 			load(fn);
 			rE = obj;
+			if exist('tS','var'); rE.tS = tS; end
 			meta.filename = [pn fn];
 			meta.protocol = 'Figure Ground';
 			meta.description = 'Figure Ground';
