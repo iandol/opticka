@@ -97,8 +97,10 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function x = exportToRawSpikes(obj, var, firstunit, StartTrial, EndTrial, trialtime, modtime, cuttime)
 			if ~isempty(obj.cellmap)
+				fprintf('Extracting Cell %g from %g PLX unit\n', firstunit, obj.cellmap(firstunit));
 				raw = obj.tsList.tsParse{obj.cellmap(firstunit)};
 			else
+				fprintf('Extracting Cell %g from %g PLX unit\n', firstunit, firstunit);
 				raw = obj.tsList.tsParse{firstunit};
 			end
 			if var > length(raw.var)
@@ -146,7 +148,9 @@ classdef plxReader < optickaCore
 			obj.info = {};
 			obj.info{1} = sprintf('PLX File : %s', OpenedFileName);
 			obj.info{end+1} = sprintf('Behavioural File : %s', obj.matfile);
+			obj.info{end+1} = ' ';
 			obj.info{end+1} = sprintf('Behavioural File Comment : %s', obj.meta.comments);
+			obj.info{end+1} = ' ';
 			obj.info{end+1} = sprintf('Plexon File Comment : %s', Comment);
 			obj.info{end+1} = sprintf('Version : %g', Version);
 			obj.info{end+1} = sprintf('Frequency : %g Hz', Freq);
@@ -171,6 +175,27 @@ classdef plxReader < optickaCore
 				obj.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', SlowPeakV);
 				obj.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', SlowADResBits);
 			end
+			obj.info{end+1} = ' ';
+			if isa(obj.rE,'runExperiment')
+				rE = obj.rE; %#ok<*PROP>
+				obj.info{end+1} = sprintf('# of Stimulus Variables : %g', rE.task.nVars);
+				obj.info{end+1} = sprintf('Total # of Variable Values: %g', rE.task.minBlocks);
+				obj.info{end+1} = sprintf('Random Seed : %g', rE.task.randomSeed);
+				names = '';
+				vals = '';
+				for i = 1:rE.task.nVars
+					names = [names ' | ' rE.task.nVar(i).name];
+					vals = [vals ' | ' num2str(rE.task.nVar(i).values)];
+				end
+				obj.info{end+1} = sprintf('Variable Names : %s', names);
+				obj.info{end+1} = sprintf('Variable Values : %s', vals);
+				names = '';
+				for i = 1:rE.stimuli.n
+					names = [names ' | ' rE.stimuli{i}.name ':' rE.stimuli{i}.family];
+				end
+				obj.info{end+1} = sprintf('Stimulus Names : %s', names);
+			end
+			obj.info{end+1} = ' ';
 			obj.info = obj.info';
 			obj.meta.info = obj.info;
 		end
@@ -284,7 +309,7 @@ classdef plxReader < optickaCore
 					
 				end
 				
-				obj.info{end+1} = sprintf('Number of Variables : %g', obj.strobeList.nVars);
+				obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.strobeList.nVars);
 				obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.strobeList.correct));
 				obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.strobeList.breakFix));
 				obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.strobeList.incorrect));
@@ -316,24 +341,56 @@ classdef plxReader < optickaCore
 		function getSpikes(obj)
 			tic
 			[tscounts, wfcounts, evcounts, slowcounts] = plx_info(obj.file,1);
+			[~,chnames] = plx_chan_names(obj.file);
+			[~,chmap]=plx_chanmap(obj.file)
+			chnames = cellstr(chnames);
 			[nunits1, nchannels1] = size( tscounts );
 			obj.tsList = struct();
-			obj.tsList(1).chMap = find(sum(tscounts) > 0);
-			obj.tsList(1).chMap = obj.tsList(1).chMap - 1; %fix the index as plx_info add 1 to channels
-			obj.tsList.unitMap = find(sum(tscounts,2) > 0);
-			obj.tsList(1).unitMap = obj.tsList(1).unitMap' - 1; %fix the index as plx_info add 1 to channels
+			[a,b]=ind2sub(size(tscounts),find(tscounts>0)); %finds row and columns of nonzero values
+			obj.tsList(1).chMap = unique(b)';
+			for i = 1:length(obj.tsList.chMap)
+				obj.tsList.unitMap(i).units = find(tscounts(:,obj.tsList.chMap(i))>0)';
+				obj.tsList.unitMap(i).n = length(obj.tsList.unitMap(i).units);
+				obj.tsList.unitMap(i).counts = tscounts(obj.tsList.unitMap(i).units,obj.tsList.chMap(i))';
+				obj.tsList.unitMap(i).units = obj.tsList.unitMap(i).units - 1; %fix the index as plxuses 0 as unsorted
+			end
+			obj.tsList.chMap = obj.tsList(1).chMap - 1; %fix the index as plx_info add 1 to channels
+			obj.tsList.chIndex = obj.tsList.chMap; %fucking pain channel number is different to ch index!!!
+			obj.tsList.chMap = chmap(obj.tsList(1).chMap); %set proper ch number
 			obj.tsList.nCh = length(obj.tsList.chMap);
-			obj.tsList.nUnit = length(obj.tsList.unitMap);
+			obj.tsList.nUnits = length(b);
+			namelist = '';
+			a = 1;
+			list = 'Uabcdefghijklmnopqrstuvwxyz';
+			for ich = 1:obj.tsList.nCh
+				name = chnames{obj.tsList.chIndex(ich)};
+				unitN = obj.tsList.unitMap(ich).n;
+				for iunit = 1:unitN
+					t = '';
+					t = [num2str(a) ':' name list(iunit) '=' num2str(obj.tsList.unitMap(ich).counts(iunit))];
+					names{a} = t;
+					namelist = [namelist ' ' t];
+					a=a+1;
+				end
+			end
 			obj.info{end+1} = ['Number of Active channels : ' num2str(obj.tsList.nCh)];
-			obj.info{end+1} = ['Number of Active units : ' num2str(obj.tsList.nUnit)];
+			obj.info{end+1} = ['Number of Active units : ' num2str(obj.tsList.nUnits)];
 			obj.info{end+1} = ['Channel list : ' num2str(obj.tsList.chMap)];
-			obj.info{end+1} = ['Unit list (0=unsorted) : ' num2str(obj.tsList.unitMap)];
-			obj.tsList.ts = cell(obj.tsList.nUnit, obj.tsList.nCh); 
+			for i=1:obj.tsList.nCh
+				obj.info{end+1} = ['Channel ' num2str(obj.tsList.chMap(i)) ' unit list (0=unsorted) : ' num2str(obj.tsList.unitMap(i).units)];
+			end
+			obj.info{end+1} = ['Ch/Unit Names : ' namelist];
+			obj.tsList.ts = cell(obj.tsList.nUnits, 1); 
 			obj.tsList.tsN = obj.tsList.ts;
 			obj.tsList.tsParse = obj.tsList.ts;
+			a = 1;
 			for ich = 1:obj.tsList.nCh
-				for iunit = 1:obj.tsList.nUnit
-					[obj.tsList.tsN{iunit,ich}, obj.tsList.ts{iunit,ich}] = plx_ts(obj.file, obj.tsList.chMap(ich) , obj.tsList.unitMap(iunit) );
+				unitN = obj.tsList.unitMap(ich).n;
+				ch = obj.tsList.chMap(ich);
+				for iunit = 1:unitN
+					unit = obj.tsList.unitMap(ich).units(iunit);
+					[obj.tsList.tsN{a}, obj.tsList.ts{a}] = plx_ts(obj.file, ch , unit);
+					a = a+1;
 				end
 			end
 			fprintf('Loading all spikes took %s seconds\n',toc)
@@ -348,7 +405,7 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function parseSpikes(obj)
 			tic
-			for ps = 1:(obj.tsList.nCh * obj.tsList.nUnit)
+			for ps = 1:obj.tsList.nUnits
 				spikes = obj.tsList.ts{ps};
 				obj.tsList.tsParse{ps}.var = cell(obj.strobeList.nVars,1);
 				for nv = 1:obj.strobeList.nVars
@@ -422,7 +479,7 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function reparseInfo(obj)
 			
-			obj.info{end+1} = sprintf('Number of Variables : %g', obj.strobeList.nVars);
+			obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.strobeList.nVars);
 			obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.strobeList.correct));
 			obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.strobeList.breakFix));
 			obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.strobeList.incorrect));
@@ -436,6 +493,7 @@ classdef plxReader < optickaCore
 			obj.info{end+1} = ['Unit list (0=unsorted) : ' num2str(obj.tsList.unitMap)];
 
 		end
+		
 	end
 	
 end
