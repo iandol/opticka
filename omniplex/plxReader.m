@@ -96,10 +96,10 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function x = exportToRawSpikes(obj, var, firstunit, StartTrial, EndTrial, trialtime, modtime, cuttime)
 			if ~isempty(obj.cellmap)
-				fprintf('Extracting Cell %g from %g PLX unit\n', firstunit, obj.cellmap(firstunit));
+				fprintf('Extracting Cell %g from PLX unit %g\n', firstunit, obj.cellmap(firstunit));
 				raw = obj.tsList.tsParse{obj.cellmap(firstunit)};
 			else
-				fprintf('Extracting Cell %g from %g PLX unit\n', firstunit, firstunit);
+				fprintf('Extracting Cell %g from PLX unit %g \n', firstunit, firstunit);
 				raw = obj.tsList.tsParse{firstunit};
 			end
 			if var > length(raw.var)
@@ -414,7 +414,7 @@ classdef plxReader < optickaCore
 				for iunit = 1:unitN
 					t = '';
 					t = [num2str(a) ':' name list(iunit) '=' num2str(obj.tsList.unitMap(ich).counts(iunit))];
-					names{a} = t;
+					obj.tsList.names{a} = t;
 					namelist = [namelist ' ' t];
 					a=a+1;
 				end
