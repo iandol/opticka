@@ -4,12 +4,12 @@ classdef plxReader < optickaCore
 	%   result.
 	
 	properties
-		verbose	= true
 		file@char
 		dir@char
 		matfile@char
 		cellmap@double
 		startOffset@double = 0
+		verbose	= true
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -19,13 +19,12 @@ classdef plxReader < optickaCore
 		strobeList@struct
 		meta@struct
 		rE
-		tS
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		oldDir@char
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'startOffset|file|matfile|dir|verbose'
+		allowedProperties@char = 'startOffset|cellmap|file|matfile|dir|verbose'
 	end
 	
 	%=======================================================================
@@ -135,7 +134,54 @@ classdef plxReader < optickaCore
 			x.tDelta = obj.strobeList.vars(var).tDeltacorrect;
 		end
 		
+	end %---END PUBLIC METHODS---%
+	
+	%=======================================================================
+	methods ( Static = true) %-------STATIC METHODS-----%
+	%=======================================================================
+	
 		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function [meta, rE] = loadMat(fn,pn)
+			if isempty(fn)
+				[fn, pn] = uigetfile('*.mat','Load Behaviour MAT File');
+				cd(pn);
+			end
+			tic
+			load(fn);
+			rE = obj;
+			if exist('tS','var'); rE.tS = tS; end
+			meta.filename = [pn fn];
+			meta.protocol = 'Figure Ground';
+			meta.description = 'Figure Ground';
+			meta.comments = rE.comment;
+			meta.date = rE.savePrefix;
+			meta.numvars = rE.task.nVars;
+			for i=1:rE.task.nVars
+				meta.var{i}.title = rE.task.nVar(i).name;
+				meta.var{i}.nvalues = length(rE.task.nVar(i).values);
+				meta.var{i}.values = rE.task.nVar(i).values;
+				meta.var{i}.range = length(rE.task.nVar(i).values);
+			end
+			meta.repeats = rE.task.nBlocks;
+			meta.cycles = 1;
+			meta.modtime = 500;
+			meta.trialtime = 500;
+			meta.matrix = [];
+			fprintf('Parsing Behavioural files took %s seconds\n',toc)
+		end
+	end
+	
+	
+	%=======================================================================
+	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	%=======================================================================
+	
+				% ===================================================================
 		%> @brief 
 		%>
 		%> @param
@@ -425,52 +471,6 @@ classdef plxReader < optickaCore
 			fprintf('Parsing all spikes took %s seconds\n',toc)
 		end
 		
-	end %---END PUBLIC METHODS---%
-	
-	%=======================================================================
-	methods ( Static = true) %-------STATIC METHODS-----%
-	%=======================================================================
-	
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function [meta, rE] = loadMat(fn,pn)
-			if isempty(fn)
-				[fn, pn] = uigetfile('*.mat','Load Behaviour MAT File');
-				cd(pn);
-			end
-			tic
-			load(fn);
-			rE = obj;
-			if exist('tS','var'); rE.tS = tS; end
-			meta.filename = [pn fn];
-			meta.protocol = 'Figure Ground';
-			meta.description = 'Figure Ground';
-			meta.comments = rE.comment;
-			meta.date = rE.savePrefix;
-			meta.numvars = rE.task.nVars;
-			for i=1:rE.task.nVars
-				meta.var{i}.title = rE.task.nVar(i).name;
-				meta.var{i}.nvalues = length(rE.task.nVar(i).values);
-				meta.var{i}.values = rE.task.nVar(i).values;
-				meta.var{i}.range = length(rE.task.nVar(i).values);
-			end
-			meta.repeats = rE.task.nBlocks;
-			meta.cycles = 1;
-			meta.modtime = 500;
-			meta.trialtime = 500;
-			meta.matrix = [];
-			fprintf('Parsing Behavioural files took %s seconds\n',toc)
-		end
-	end
-	
-	
-	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
 		% ===================================================================
 		%> @brief 
 		%>
