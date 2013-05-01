@@ -255,6 +255,16 @@ classdef plxReader < optickaCore
 		function getStrobes(obj)
 			tic
 			[a,b,c] = plx_event_ts(obj.file,257);
+			idx = find(c < 1);
+			if ~isempty(idx)
+				c(idx)=[];
+				b(idx) = [];
+			end
+			idx = find(c > obj.rE.task.minBlocks & c < 32700);
+			if ~isempty(idx)
+				c(idx)=[];
+				b(idx) = [];
+			end
 			[~,b19] = plx_event_ts(obj.file,19);
 			[~,b20] = plx_event_ts(obj.file,20);
 			[~,b21] = plx_event_ts(obj.file,21);
@@ -388,7 +398,7 @@ classdef plxReader < optickaCore
 			tic
 			[tscounts, wfcounts, evcounts, slowcounts] = plx_info(obj.file,1);
 			[~,chnames] = plx_chan_names(obj.file);
-			[~,chmap]=plx_chanmap(obj.file)
+			[~,chmap]=plx_chanmap(obj.file);
 			chnames = cellstr(chnames);
 			[nunits1, nchannels1] = size( tscounts );
 			obj.tsList = struct();
