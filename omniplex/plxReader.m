@@ -131,7 +131,7 @@ classdef plxReader < optickaCore
 				a=a+1;
 			end
 			x.isPLX = true;
-			x.tDelta = obj.strobeList.vars(var).tDeltacorrect;
+			x.tDelta = obj.strobeList.vars(var).tDeltacorrect(x.starttrial:x.endtrial);
 		end
 		
 	end %---END PUBLIC METHODS---%
