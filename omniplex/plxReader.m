@@ -106,7 +106,9 @@ classdef plxReader < optickaCore
 				errordlg('This Plexon File seems to be Incomplete, check filesize...')
 			end
 			raw = raw.var{var};
-			x.name = ['PLXVar.' num2str(var)];
+			v = num2str(obj.meta.matrix(var,:));
+			v = regexprep(v,'\s+',' ');
+			x.name = ['PLXVar' num2str(var) '--' v];
 			x.raw = raw;
 			x.totaltrials = obj.strobeList.minRuns;
 			x.nummods = 1;
@@ -132,6 +134,7 @@ classdef plxReader < optickaCore
 			end
 			x.isPLX = true;
 			x.tDelta = obj.strobeList.vars(var).tDeltacorrect(x.starttrial:x.endtrial);
+			x.startOffset = obj.startOffset;
 		end
 		
 	end %---END PUBLIC METHODS---%

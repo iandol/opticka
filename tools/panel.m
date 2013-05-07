@@ -192,8 +192,43 @@
 % 12/04/13
 % Release Version 2.8
 % ############################################################
-
-
+%
+% 13/04/13
+% Changed panel.export() to infer image format from file
+% extension, in the case that it is not explicitly specified
+% and the passed filename has an extension.
+%
+% 03/05/13
+% Changed term "render", where misused, to "layout", so as
+% not to confuse users of the help/docs. Changed name of
+% callback event from "render-complete" to "layout-updated",
+% is the only functional effect.
+%
+% 03/05/13
+% Added argument to panel constructor so that units can be
+% set there, rather than through a separate call to the
+% "units" property.
+%
+% 03/05/13
+% Added set descriptor "family" to go with "children" and
+% "descendants". This one should be of particular use for
+% the construct p.fa.margin = 0.
+%
+% 03/05/13
+% Updated demopanel9 to be a walkthrough of how to set
+% margins. Will be useful to point users at this if they ask
+% "how do I do margins?".
+%
+% 03/05/13
+% Added panel.version().
+%
+% 03/05/13
+% Added page size "LNCS" to export.
+%
+% ############################################################
+% 03/05/13
+% Release Version 2.9
+% ############################################################
 
 classdef (Sealed = true) panel < handle
 	
@@ -220,9 +255,9 @@ classdef (Sealed = true) panel < handle
 	
 	properties (Constant = true)
 		
-		RENDER_MODE_NORMAL = 0;
-		RENDER_MODE_PREPRINT = 1;
-		RENDER_MODE_POSTPRINT = 2;
+		LAYOUT_MODE_NORMAL = 0;
+		LAYOUT_MODE_PREPRINT = 1;
+		LAYOUT_MODE_POSTPRINT = 2;
 		
 	end
 	
@@ -283,11 +318,11 @@ classdef (Sealed = true) panel < handle
 		
 		% the panel's margin vector in the form [left bottom right top]
 		%
-		% the margin is key to the layout process. layout
-		% renders all objects as large as possible whilst not
-		% violating margin constraints. margins are respected
-		% between objects and between an object and the edges of
-		% the figure.
+		% the margin is key to the layout process. the layout
+		% algorithm makes all objects as large as possible
+		% whilst not violating margin constraints. margins are
+		% respected between objects and between an object and
+		% the edges of the figure.
 		%
 		% access: read/write
 		% default: [12 10 2 2] (mm)
@@ -385,7 +420,7 @@ classdef (Sealed = true) panel < handle
 		%   h = p.ch.axis;
 		%   p.ch.margin = 3;
 		%
-		% see also: descendants
+		% see also: descendants, family
 		children
 		
 		% access properties of panel's descendants
@@ -409,8 +444,31 @@ classdef (Sealed = true) panel < handle
 		%   h = p.de.axis;
 		%   p.de.margin = 3;
 		%
-		% see also: children
+		% see also: children, family
 		descendants
+		
+		% access properties of panel's family
+		%
+		% if the panel is a parent panel, "family" gives access
+		% to some properties of its family (self, children,
+		% grandchildren, etc.). "family" can be abbreviated
+		% "fa". properties that can be accessed are as follows.
+		%
+		% axis: read-only, returns an array
+		% object: read-only, returns an array
+		%
+		% margin: write-only
+		% fontname: write-only
+		% fontsize: write-only
+		% fontweight: write-only
+		% align: write-only
+		%
+		% EXAMPLE:
+		%   h = p.fa.axis;
+		%   p.fa.margin = 3;
+		%
+		% see also: children, descendants
+		family
 		
 	end
 	
@@ -470,13 +528,15 @@ classdef (Sealed = true) panel < handle
 		% private state information used during various processing
 		state
 		
-		% rendering context for this panel
+		% layout context for this panel
 		%
-		% this is the most recent rendering context passed to
-		% the PANEL - if it is asked to renderPanel() again,
-		% without being passed a new context, it uses this one.
-		% thus, we can re-render some things about a child
-		% without having to re-render the whole tree.
+		% this is the layout context for the panel. this is
+		% computed in the function recomputeLayout(), and used
+		% to reposition the panel in applyLayout(). storage of
+		% this data means that we can call applyLayout() to
+		% layout only a branch of the panel tree without having
+		% to recompute the whole thing. however, I don't know
+		% how efficient this system is, might need some work.
 		m_context
 		
 	end
@@ -496,34 +556,54 @@ classdef (Sealed = true) panel < handle
 			% create a new panel
 			%
 			% p = panel(...)
-			%   create a new panel. initially, the panel is an
-			%   "uncommitted panel". calling pack() or select() on
-			%   the panel will commit it as a "parent panel" or an
-			%   "object panel", respectively. the following
-			%   arguments may be passed, in any order.
+			%   create a new panel. optional arguments listed
+			%   below can be supplied in any order. if "h_parent"
+			%   is not supplied, it is set to gcf - that is, the
+			%   panel fills the current figure.
+			%
+			%   initially, the panel is an "uncommitted panel".
+			%   calling pack() or select() on the panel will
+			%   commit it as a "parent panel" or an "object
+			%   panel", respectively. the following arguments may
+			%   be passed, in any order.
 			%
 			% h_parent
 			%   a handle to a graphics object that will act as the
 			%   parent of the new panel. this is usually a figure
 			%   handle, but may be a handle to any graphics
 			%   object, in principle. currently, an error is
-			%   raised unless it's a figure or a uipanel.
+			%   raised unless it's a figure or a uipanel - if you
+			%   want to try other object types, edit the code
+			%   above where the error is raised, and let me know
+			%   if you have positive results so I can update
+			%   panel to allow other object types.
 			%
 			% 'add'
-			%   existing panels attached to the figure should not
+			%   existing panels attached to the figure will not
 			%   be destroyed before the new one is created.
 			%
 			% 'defer'
-			%   the panel should be created with render()ing
-			%   deferred; it will not be rendered until you call
-			%   refresh() or export() on the panel. if you create
-			%   a complex layout, this will improve performance.
+			%   the panel will be created with layout disabled.
+			%   the layout computations take a little while when
+			%   large numbers of panels are involved, and are
+			%   re-run every time you add a panel or change a
+			%   margin, by default. this is tedious if you are
+			%   preparing a complex layout; pass 'defer', and
+			%   layout will not be computed at all until you call
+			%   refresh() or export() on the root panel.
 			%
 			% 'no-manage-font'
-			%   by default, the panel will manage fonts of titles
+			%   by default, a panel will manage fonts of titles
 			%   and axis labels. this prevents the user from
 			%   setting individual fonts on those items. pass this
 			%   flag to disable font management for this panel.
+			%
+			% 'mm', 'cm', 'in', 'pt'
+			%   by default, panel uses mm as the unit of
+			%   communication with the user over margin sizes.
+			%   pass any of these to change this (you can achieve
+			%   the same effect after creating a panel by setting
+			%   the property "units").
 			%
 			% see also: panel (overview), pack(), select()
 
@@ -537,6 +617,7 @@ classdef (Sealed = true) panel < handle
 			% default condition
 			passed_h_parent = [];
 			add = false;
+			set_units = [];
 			
 			% default state
 			p.state = [];
@@ -566,6 +647,10 @@ classdef (Sealed = true) panel < handle
 							
 						case 'no-manage-font'
 							p.state.manage_font = 0;
+							continue;
+							
+						case {'mm' 'cm' 'in' 'pt'}
+							set_units = arg;
 							continue;
 							
 						otherwise
@@ -656,6 +741,11 @@ classdef (Sealed = true) panel < handle
 			p.packdim = 2;
 			p.m_panelType = p.PANEL_TYPE_UNCOMMITTED;
 			p.prop = panel.getPropertyInitialState();
+
+			% set units
+			if ~isempty(set_units)
+				p.setPropertyValue('units', set_units);
+			end
 			
 			% if we are root
 			if p.isRoot()
@@ -942,18 +1032,32 @@ classdef (Sealed = true) panel < handle
 			% set the hold on/off state of the associated axis
 			% 
 			% p.hold('on' / 'off')
-			%   behaves just like the matlab "hold on", "hold off"
-			%   command. however, matlab's "hold off" sets the
-			%   axis state to a state that is unsuitable for
-			%   panel, so you should use this function provided by
-			%   panel instead, if you want your panel properties
-			%   (e.g. fontname) to be rendered correctly.
+			%   you can use matlab's "hold" function with plots in
+			%   panel, just like any other plot. there is,
+			%   however, a very minor gotcha that is somewhat
+			%   unlikely to ever come up, but for completeness
+			%   this is the problem and the solutions:
 			%
-			%   NB: if you prefer you can use the Matlab "hold"
-			%   command, and call refresh() on the root panel when
-			%   you've finished setting properties to cause fonts
-			%   to render correctly.
-
+			% if you create a panel "p", change its font using
+			% panel, e.g. "p.fontname = 'Courier New'", then call
+			% "hold on", then "hold off", then plot into it, the
+			% font is not respected. this situation is unlikely to
+			% arise because there's usually no reason to call
+			% "hold off" on a plot. however, there are three
+			% solutions to get round it, if it does:
+			%
+			%   a) call p.refresh() when you're finished, to
+			%   update all fonts to managed values.
+			%
+			%   b) if you're going to call p.export() anyway,
+			%   fonts will get updated when you do.
+			%
+			%   c) if for some reason you can't do (a) OR (b) (I
+			%   can't think why), you can use the hold() function
+			%   provided by panel instead of that provided by
+			%   Matlab. this will not affect your fonts. for
+			%   example, call "p(2).hold('on')".
+			
 			% because the matlab "hold off" command sets an axis's
 			% nextplot state to "replace", we lose control over
 			% the axis properties (such as fontname). we set
@@ -1097,28 +1201,32 @@ classdef (Sealed = true) panel < handle
 			
 			% to export the root panel to an image file
 			%
-			% p.export(...)
+			% p.export(filename, ...)
 			%
 			% export the figure containing panel "p" to an image
-			% file. you must supply at least the filename to
-			% export to (you can, optionally, omit the file
-			% extension). further arguments must be option
-			% strings starting with the '-' character. "p" should
-			% be the root panel (the first panel that was
-			% created).
+			% file. you must supply the filename of this output
+			% file, with or without a file extension. any further
+			% arguments must be option strings starting with the
+			% dash ("-") character. "p" should be the root panel.
+			%
+			% if the filename does not include an extension, the
+			% appropriate extension will be added. if it does, the
+			% output format will be inferred from it, unless
+			% overridden by the "-o" option, described below.
 			%
 			% if you are targeting a print publication, you may
 			% find it easiest to size your output using the "paper
-			% model". if you prefer, you can use the "explicit
-			% sizing model", instead. these two sizing models are
-			% described below. underneath these are listed the
-			% options unrelated to sizing (which apply regardless
-			% of which sizing model you use).
+			% sizing model" (below). if you prefer, you can use
+			% the "direct sizing model", instead. these two
+			% sizing models are described below. underneath these
+			% are listed the options unrelated to sizing (which
+			% apply regardless of which sizing model you use).
 			%
 			% NB: if you pass 'defer' to the constructor, calling
 			% export() both exports the panel and releases the
 			% defer mode. future changes to properties (e.g.
-			% margins) will be rendered immediately.
+			% margins) will cause immediate recomputation of the
+			% layout.
 			%
 			%
 			%
@@ -1128,7 +1236,7 @@ classdef (Sealed = true) panel < handle
 			% target as a region of a piece of paper, and the
 			% actual size in millimeters is calculated for you.
 			% this is usually very convenient, but if you find it
-			% unsuitable, the explicit sizing model (next section)
+			% unsuitable, the direct sizing model (next section)
 			% is provided as an alternative.
 			%
 			% to specify the region, you specify the type (size)
@@ -1138,8 +1246,11 @@ classdef (Sealed = true) panel < handle
 			% can be left as defaults.
 			%
 			% -pX
-			%   X is the paper type, A2-A6, letter (default is
-			%   A4).
+			%   X is the paper type, A2-A6 or letter (default is
+			%   A4). NB: you can also specify paper type LNCS
+			%   (Lecture Notes in Computer Science), using
+			%   "-pLNCS". If you do this, the margins are also
+			%   adjusted to match LNCS format.
 			%
 			% -l
 			%   specify landscape mode (default is portrait).
@@ -1188,19 +1299,19 @@ classdef (Sealed = true) panel < handle
 			%
 			%
 			%
-			% EXPLICIT SIZING MODEL:
+			% DIRECT SIZING MODEL:
 			%
 			% these two options override any output of the paper
 			% model, so you can override just one, or both (in
 			% which case all paper model options are ignored).
 			%
 			% -wX
-			%   X is explicit width in mm (default is to use the
-			%   width produced by the paper model).
+			%   X is width in mm (default is to use the width
+			%   produced by the paper model).
 			%
 			% -hX
-			%   X is explicit height in mm (default is to use the
-			%   height produced by the paper model).
+			%   X is height in mm (default is to use the height
+			%   produced by the paper model).
 			%
 			%
 			%
@@ -1229,7 +1340,7 @@ classdef (Sealed = true) panel < handle
 			%   the specified DPI, and then reduced in size to the
 			%   specified DPI by averaging. thus, the hard edges
 			%   produced by the renderer are smoothed - the effect
-			%   is much like "anti-aliasing".
+			%   is somewhat like "anti-aliasing".
 			%
 			% NB: the DPI setting might be expected to have no
 			% effect on vector formats. this is true for SVG, but
@@ -1251,7 +1362,9 @@ classdef (Sealed = true) panel < handle
 			%   the "eps"/"ps" devices, use "-oeps!"/"-ops!". you
 			%   may also specify "svg", if you have the tool
 			%   "plot2svg" on your path (available at Matlab
-			%   Central File Exchange).
+			%   Central File Exchange). the default output format
+			%   is inferred from the file extension, or "png" if
+			%   the passed filename has no extension.
 			%
 			%
 			%
@@ -1278,11 +1391,14 @@ classdef (Sealed = true) panel < handle
 				error('panel:ExportWhenNotRoot', 'cannot export() this panel - it is not the root panel');
 			end
 			
+			% used below
+			default_margin = 20;
+			
 			% parameters
 			pars = [];
 			pars.filename = '';
-			pars.fmt = 'png';
-			pars.ext = 'png';
+			pars.fmt = '';
+			pars.ext = '';
 			pars.dpi = [];
 			pars.smooth = 1;
 			pars.paper = 'A4';
@@ -1290,7 +1406,7 @@ classdef (Sealed = true) panel < handle
 			pars.fill = -1.618;
 			pars.cols = 1;
 			pars.intercolumnspacing = 5;
-			pars.margin = 20;
+			pars.margin = default_margin;
 			pars.sideways = false;
 			pars.width = 0;
 			pars.height = 0;
@@ -1335,7 +1451,7 @@ classdef (Sealed = true) panel < handle
 				switch key
 
 					case 'p'
-						pars.paper = validate_par(val, arg, {'A2' 'A3' 'A4' 'A5' 'A6' 'letter'});
+						pars.paper = validate_par(val, arg, {'A2' 'A3' 'A4' 'A5' 'A6' 'letter' 'LNCS'});
 
 					case 'l'
 						pars.landscape = true;
@@ -1428,8 +1544,7 @@ classdef (Sealed = true) panel < handle
 							};
 						validate_par(val, arg, fmts(:, 1)');
 						index = isin(fmts(:, 1), val);
-						pars.fmt = fmts{index, 2};
-						pars.ext = fmts{index, 3};
+						pars.fmt = fmts(index, 2:3);
 
 					otherwise
 						error('panel:InvalidArgument', ...
@@ -1438,6 +1553,34 @@ classdef (Sealed = true) panel < handle
 				end
 				
 			end
+			
+			% if not specified, infer format from filename
+			if isempty(pars.fmt)
+				[path, base, ext] = fileparts(pars.filename);
+				if ~isempty(ext)
+					ext = ext(2:end);
+				end
+				switch ext
+					case {'tif' 'tiff'}
+						pars.fmt = {'tiff' 'tif'};
+					case {'jpg' 'jpeg'}
+						pars.fmt = {'jpeg' 'jpg'};
+					case 'eps'
+						pars.fmt = {'epsc2' 'eps'};
+					case {'png' 'pdf' 'svg'}
+						pars.fmt = {ext ext};
+					case ''
+						pars.fmt = {'png' 'png'};
+					otherwise
+						warning('panel:CannotInferImageFormat', ...
+							['unable to infer image format from file extension "' ext '" (PNG assumed)']);
+						pars.fmt = {'png' 'png'};
+				end
+			end
+			
+			% extract
+			pars.ext = pars.fmt{2};
+			pars.fmt = pars.fmt{1};
 			
 			% extract
 			is_bitmap = ismember(pars.fmt, {'png' 'jpeg' 'tiff'});
@@ -1486,6 +1629,12 @@ classdef (Sealed = true) panel < handle
 				case 'A5', sz = [148 210];
 				case 'A6', sz = [105 148];
 				case 'letter', sz = [216 279];
+				case 'LNCS', sz = [152 235];
+					% if margin is still at default, set it to LNCS
+					% margin size
+					if isequal(pars.margin, default_margin)
+						pars.margin = [15 22 15 20];
+					end
 				otherwise
 					error(['unrecognised paper size "' pars.paper '"'])
 			end
@@ -1548,22 +1697,22 @@ classdef (Sealed = true) panel < handle
 			disp(msg);
 			
 			% if we are in defer state, we need to do a clean
-			% render first so that axes get positioned so that
+			% recompute first so that axes get positioned so that
 			% axis ticks get set correctly (if they are in
-			% automatic mode), since the RENDER_MODE_PREPRINT
-			% render will store the tick states.
+			% automatic mode), since the LAYOUT_MODE_PREPRINT
+			% recompute will store the tick states.
 			if p.state.defer
 				p.state.defer = 0;
-				p.renderAll();
+				p.recomputeLayout();
 			end
 
-			% enable rendering
+			% turn off defer, if it is on
 			p.state.defer = 0;
 			
-			% do a pre-print render
+			% do a pre-print layout
 			context.size_in_mm = sz;
-			context.mode = panel.RENDER_MODE_PREPRINT;
-			p.renderAll(context);
+			context.mode = panel.LAYOUT_MODE_PREPRINT;
+			p.recomputeLayout(context);
 			
 			% need also to disable the warning that we should set
 			% PaperPositionMode to auto during this operation -
@@ -1579,12 +1728,12 @@ classdef (Sealed = true) panel < handle
 				print_filename = pars.filename;
 			end
 
-			% disable rendering so we don't get automatic
-			% rendering during any figure resize operations.
+			% disable layout so it doesn't get computed during any
+			% figure resize operations that occur during printing.
 			p.state.defer = 1;
 			
 			% set size of figure now. it's important we do this
-			% after the pre-print render, because in SVG export
+			% after the pre-print layout, because in SVG export
 			% mode the on-screen figure size is changed and that
 			% would otherwise affect ticks and limits.
 			switch pars.fmt
@@ -1641,16 +1790,17 @@ classdef (Sealed = true) panel < handle
 					set(p.h_figure, 'Position', svg_pos);
 			end
 			
-			% enable rendering
+			% enable layout again (it was disabled, above, during
+			% printing).
 			p.state.defer = 0;
 			
 			% enable warnings
 			warning(w);
 			
-			% do a post-print render
+			% do a post-print layout
 			context.size_in_mm = [];
-			context.mode = panel.RENDER_MODE_POSTPRINT;
-			p.renderAll(context);
+			context.mode = panel.LAYOUT_MODE_POSTPRINT;
+			p.recomputeLayout(context);
 			
 			% handle smoothing
 			if pars.smooth > 1
@@ -1713,13 +1863,15 @@ classdef (Sealed = true) panel < handle
 		
 		function addCallback(p, func, userdata)
 			
-			% attach a callback function to the resize event
+			% attach a callback function to receive panel events
 			%
 			% p.addCallback(myCallbackFunction, userdata)
 			%   register myCallbackFunction() to be called when
-			%   the panel is updated (usually, resized).
-			%   myCallbackFunction() should accept one argument,
-			%   "data", which will have the following fields.
+			%   events occur on the panel. at present, the only
+			%   event is "layout-updated", which usually occurs
+			%   after the figure is resized. myCallbackFunction()
+			%   should accept one argument, "data", which will
+			%   have the following fields.
 			%
 			% "userdata": the userdata passed to this function, if
 			%     any was supplied, else empty.
@@ -1729,9 +1881,16 @@ classdef (Sealed = true) panel < handle
 			%     the usual way.
 			%
 			% "event": name of event (currently only
-			%	    "render-complete").
+			%	    "layout-updated").
 			%
-			% "context": the rendering context for the panel.
+			% "context": the layout context for the panel. this
+			%	    includes a field "size_in_mm" which is the
+			%	    physical size of the rendering surface (screen
+			%	    real estate, or image file) and "rect" which is
+			%	    the relative size of the rectangle within that
+			%	    occupied by the panel which is the context of
+			%	    the callback (in [left, bottom, width, height]
+			%	    format).
 			
 			invalid = ~isscalar(func) || ~isa(func, 'function_handle');
 			if invalid
@@ -1833,8 +1992,8 @@ classdef (Sealed = true) panel < handle
 			% update the packpos
 			p.packpos = packpos;
 			
-			% and renderAll
-			p.renderAll();
+			% and recomputeLayout
+			p.recomputeLayout();
 			
 		end
 		
@@ -1868,7 +2027,7 @@ classdef (Sealed = true) panel < handle
 			%   panels packed alongside. the sum of the vector
 			%   (apart from any -1 entries) should not come to
 			%   more than 1, or a warning will be generated during
-			%   rendering. an example would be [1/4 1/4 -1], to
+			%   laying out. an example would be [1/4 1/4 -1], to
 			%   pack 3 panels, at 25, 25 and 50% relative sizes.
 			%   though, NB, you can use percentages instead of
 			%   fractions if you prefer, in which case they should
@@ -1922,7 +2081,7 @@ classdef (Sealed = true) panel < handle
 			end
 			
 			% state
-			norender = false;
+			recursive = false;
 			absolute = false;
 			
 			% handle arguments one by one
@@ -1943,8 +2102,8 @@ classdef (Sealed = true) panel < handle
 							p.packdim = 1;
 						case 'v'
 							p.packdim = 2;
-						case 'norender'
-							norender = true;
+						case 'recursive'
+							recursive = true;
 						otherwise
 							error('panel:InvalidArgument', ['pack() did not recognise the argument "' arg '"']);
 					end
@@ -1960,7 +2119,7 @@ classdef (Sealed = true) panel < handle
 						end
 						
 						% treat as "number of panels to pack"
-						p.pack('norender', -ones(1, arg), varargin{:});
+						p.pack('recursive', -ones(1, arg), varargin{:});
 						
 						% and we're done
 						break
@@ -2010,7 +2169,7 @@ classdef (Sealed = true) panel < handle
 							
 							% recurse
 							if ~isempty(varargin)
-								child.pack('norender', varargin{:});
+								child.pack('recursive', varargin{:});
 							end
 							
 						else
@@ -2058,7 +2217,7 @@ classdef (Sealed = true) panel < handle
 								if ~isempty(varargin)
 									subpackdim = flipdim(p.packdim);
 									edges = 'hv';
-									child.pack('norender', edges(subpackdim), varargin{:});
+									child.pack('recursive', edges(subpackdim), varargin{:});
 								end
 								
 							end
@@ -2078,12 +2237,12 @@ classdef (Sealed = true) panel < handle
 				
 			end
 			
-			% this must generate a renderAll(), since the addition
-			% of new panels may affect the layout. any recursive
-			% call passes 'norender', so that only the root call
-			% actually bothers doing a render.
-			if ~norender
-				p.renderAll();
+			% this must generate a recomputeLayout(), since the
+			% addition of new panels may affect the layout. any
+			% recursive call passes 'recursive', so that only the
+			% root call actually bothers doing a layout.
+			if ~recursive
+				p.recomputeLayout();
 			end
 			
 		end
@@ -2212,23 +2371,23 @@ classdef (Sealed = true) panel < handle
 				h_out = p.h_object;
 			end
 			
-			% this must generate a renderPanel(), since the axis
+			% this must generate a applyLayout(), since the axis
 			% will need positioning appropriately
 			if newObject
 				% 09/03/12 mitch
 				% if there isn't a context yet, we'll have to
-				% renderAll(), in fact, to generate a context first.
+				% recomputeLayout(), in fact, to generate a context first.
 				% this will happen, for instance, if a single panel
 				% is generated in a window that was already open
 				% (no resize event will fire, and since pack() is
-				% not called, it will not call renderAll() either).
+				% not called, it will not call recomputeLayout() either).
 				% nonetheless, we have to reposition this object, so
-				% this forces us to renderAll() now and generate
+				% this forces us to recomputeLayout() now and generate
 				% that context we need.
 				if isempty(p.m_context)
-					p.renderAll();
+					p.recomputeLayout();
 				else
-					p.renderPanel();
+					p.applyLayout();
 				end
 			end
 			
@@ -2387,7 +2546,8 @@ classdef (Sealed = true) panel < handle
 							panel.error('InvalidIndexing');
 					end
 					
-					% avoid re-rendering whilst setting descendant properties
+					% avoid computing layout whilst setting descendant
+					% properties
 					p.defer();
 					
 					% recurse
@@ -2404,9 +2564,14 @@ classdef (Sealed = true) panel < handle
 									subsasgn(cs{c}, refs(2:end), value);
 								end
 							end
+						case {'family' 'fa'}
+							cs = p.getPanels('*');
+							for c = 1:length(cs)
+								subsasgn(cs{c}, refs(2:end), value);
+							end
 					end
 					
-					% release for rendering
+					% release for laying out
 					p.undefer();
 
 					% mark for appropriate updates
@@ -2422,12 +2587,12 @@ classdef (Sealed = true) panel < handle
 	
 			end
 			
-			% update rendering
+			% update layout as necessary
 			switch refs(1).subs
 				case {'fontname' 'fontsize' 'fontweight'}
-					p.renderPanel('recurse');
+					p.applyLayout('recurse');
 				case {'margin' 'marginleft' 'marginbottom' 'marginright' 'margintop' 'align'}
-					p.renderAll();
+					p.recomputeLayout();
 			end
 
 		end
@@ -2488,38 +2653,49 @@ classdef (Sealed = true) panel < handle
 						out = [];
 					end
 					
- 				case {'ch' 'children' 'de' 'descendants'}
+ 				case {'ch' 'children' 'de' 'descendants' 'fa' 'family'}
 					
-					% validate
-					if length(refs) < 2 || ~strcmp(refs(2).type, '.')
-						panel.error('InvalidIndexing');
-					end
-					
-					% validate
-					switch refs(2).subs
-						case {'axis' 'object'}
-						otherwise
-							panel.error('InvalidIndexing');
-					end
-					
-					% handle
-					out = [];
-					if strcmp(refs(1).subs(1:2), 'ch')
-						cs = p.m_children;
-						for c = 1:length(cs)
-							out = cat(2, out, subsref(cs(c), refs(2)));
-						end
-					else
-						cs = p.getPanels('*');
-						for c = 1:length(cs)
-							if cs{c} ~= p
-								out = cat(2, out, subsref(cs{c}, refs(2)));
+					% get the set
+					switch refs(1).subs
+						case {'children' 'ch'}
+							out = p.m_children;
+						case {'descendants' 'de'}
+							out = p.getPanels('*');
+							for c = 1:length(out)
+								if out{c} == p
+									out = out([1:c-1 c+1:end]);
+									break
+								end
 							end
-						end
+						case {'family' 'fa'}
+							out = p.getPanels('*');
 					end
 					
-					% we've used two
-					refs = refs(2:end);
+					% we handle a special case of deeper reference
+					% here, because we are abusing matlab's syntax to
+					% do it. other cases (non-abusing) will be handled
+					% recursively, as usual. this is when we go:
+					%
+					% p.ch.axis
+					%
+					% which isn't syntactically sound since p.ch is a
+					% cell array (and potentially a non-singular one
+					% at that). we re-interpret this to mean
+					% [p.ch{1}.axis p.ch{2}.axis ...], as follows.
+					if length(refs) > 1 && isequal(refs(2).type, '.')
+						switch refs(2).subs
+							case {'axis' 'object'}
+								pp = out;
+								out = [];
+								for i = 1:length(pp)
+									out = cat(2, out, subsref(pp{i}, refs(2)));
+								end
+								refs = refs(2:end); % used up!
+							otherwise
+								% give an informative error message
+								panel.error('InvalidIndexing');
+						end
+					end
 					
 				case { ...
 						'addCallback' 'setCallback' 'clearCallbacks' ...
@@ -2821,7 +2997,7 @@ classdef (Sealed = true) panel < handle
 						axis(p.h_object, [0 1 0 1]);
 						
 						% refresh this axis position
-						p.renderPanel();
+						p.applyLayout();
 						
 					end
 					
@@ -2938,21 +3114,22 @@ classdef (Sealed = true) panel < handle
 	
 	
 		
-	%% ---- RENDER METHODS ----
+	%% ---- LAYOUT METHODS ----
 	
 	methods
 
 		function refresh(p)
 			
-			% re-render all panels
+			% recompute layout of all panels
 			%
 			% p.refresh()
-			%   re-render the panel from scratch.
+			%   recompute the layout of all panels from scratch.
 			%
 			% NB: if you pass 'defer' to the constructor, calling
-			% refresh() both renders the panel and releases the
-			% defer mode. future changes to properties (e.g.
-			% margins) will be rendered immediately.
+			% refresh() both recomputes the layout and releases
+			% the defer mode. future changes to properties (e.g.
+			% margins) will cause immediate recomputation of the
+			% layout, so only call refresh() when you're done.
 			
 			% bubble up to root
 			if ~p.isRoot()
@@ -2966,8 +3143,8 @@ classdef (Sealed = true) panel < handle
 			% debug output
 			panel.debugmsg(['refresh "' p.state.name '"...']);
 			
-			% call renderAll
-			p.renderAll();
+			% call recomputeLayout
+			p.recomputeLayout();
 			
 		end
 		
@@ -2977,7 +3154,7 @@ classdef (Sealed = true) panel < handle
 		
 		function do_fixdash(p, context)
 			
-			% if context is [], this is _after_ the render for
+			% if context is [], this is _after_ the layout for
 			% export, so we need to restore
 			if isempty(context)
 				
@@ -3024,15 +3201,17 @@ classdef (Sealed = true) panel < handle
 
 		end
 
-		function p = renderAll(p, varargin)
+		function p = recomputeLayout(p, varargin)
 			
-			% this function renders everything from scratch. it
-			% starts by calculating the sizes of everything (using
-			% linprog), then starts a recursive renderPanel().
+			% this function recomputes the layout from scratch.
+			% this means calculating the sizes of the root panel
+			% and all descendant panels (using linprog). after
+			% this is completed, the function calls applyLayout to
+			% effect the new layout.
 			
 			% bubble up to root
 			if ~p.isRoot()
-				p.m_root.renderAll(varargin{:});
+				p.m_root.recomputeLayout(varargin{:});
 				return
 			end
 			
@@ -3042,10 +3221,10 @@ classdef (Sealed = true) panel < handle
 			end
 
 			% debug output
-			panel.debugmsg(['renderAll "' p.state.name '"...']);
+			panel.debugmsg(['recomputeLayout "' p.state.name '"...']);
 			
 			% once we reach the root, we need to create the
-			% rendering context, as follows
+			% layout context, as follows
 			if nargin == 2
 				
 				% supplied
@@ -3055,7 +3234,7 @@ classdef (Sealed = true) panel < handle
 				
 				% not supplied (use figure window)
 				context = [];
-				context.mode = panel.RENDER_MODE_NORMAL;
+				context.mode = panel.LAYOUT_MODE_NORMAL;
 				context.size_in_mm = [];
 				
 			end
@@ -3279,12 +3458,18 @@ classdef (Sealed = true) panel < handle
 	
 			end
 			
-			% now we can begin rendering into that context
-			p.renderPanel('recurse');
+			% having computed the layout, we now apply it,
+			% starting at the root panel.
+			p.applyLayout('recurse');
 			
 		end
 		
-		function renderPanel(p, varargin)
+		function applyLayout(p, varargin)
+			
+			% this function applies the layout that is stored in
+			% each panel objects "m_context" member, and fixes up
+			% the position of any associated objects (such as axis
+			% group labels).
 			
 			% skip if disabled
 			if p.isdefer()
@@ -3292,7 +3477,7 @@ classdef (Sealed = true) panel < handle
 			end
 			
 			% debug output
-			panel.debugmsg(['renderPanel "' p.state.name '"...']);
+			panel.debugmsg(['applyLayout "' p.state.name '"...']);
 			
 			% defaults
 			recurse = false;
@@ -3321,30 +3506,32 @@ classdef (Sealed = true) panel < handle
 				pp = {p};
 			end
 			
-			% who do we have to split the render cycle into two?
+			% why do we have to split the applyLayout() operation
+			% into two?
+			%
 			% because the "group labels" are positioned with
 			% respect to the axes in their group depending on
 			% whether those axes have tick labels, and what those
 			% tick labels are. if those tick labels are in
-			% automatic mode (as they usually are), we don't know
-			% this until those axes have been positioned. since an
-			% axis group may contain many of these nested deep, we
-			% have to position all axes (cycle 1) first, then
-			% (cycle 2) position any group labels.
+			% automatic mode (as they usually are), they may
+			% change when those axes are positioned. since an axis
+			% group may contain many of these nested deep, we have
+			% to position all axes (step 1) first, then (step 2)
+			% position any group labels.
 			
-			% render cycle 1
+			% step 1
 			for pi = 1:length(pp)
-				pp{pi}.renderPanel1();
+				pp{pi}.applyLayout1();
 			end
 			
-			% render cycle 2
+			% step 2
 			for pi = 1:length(pp)
-				pp{pi}.renderPanel2();
+				pp{pi}.applyLayout2();
 			end
 			
 			% callbacks
 			for pi = 1:length(pp)
-				fireCallbacks(pp{pi}, 'render-complete');
+				fireCallbacks(pp{pi}, 'layout-updated');
 			end
 			
 		end
@@ -3363,7 +3550,7 @@ classdef (Sealed = true) panel < handle
 			
 		end
 		
-		function renderPanel1(p)
+		function applyLayout1(p)
 			
 			% if no context yet, skip this call
 			if isempty(p.m_context)
@@ -3376,14 +3563,14 @@ classdef (Sealed = true) panel < handle
 			end
 
 			% debug output
-			panel.debugmsg(['renderPanel1 "' p.state.name '"...']);
+			panel.debugmsg(['applyLayout1 "' p.state.name '"...']);
 			
-			% handle RENDER_MODE
+			% handle LAYOUT_MODE
 			switch p.m_context.mode
 
-				case panel.RENDER_MODE_PREPRINT
+				case panel.LAYOUT_MODE_PREPRINT
 
-					% if in RENDER_MODE_PREPRINT, store current axis
+					% if in LAYOUT_MODE_PREPRINT, store current axis
 					% layout (ticks and ticklabels) and lock them into
 					% manual mode so they don't get changed during the
 					% print operation
@@ -3392,9 +3579,9 @@ classdef (Sealed = true) panel < handle
 						p.state.store{n} = storeAxisState(h_axes(n));
 					end
 
-				case panel.RENDER_MODE_POSTPRINT
+				case panel.LAYOUT_MODE_POSTPRINT
 
-					% if in RENDER_MODE_POSTPRINT, restore axis
+					% if in LAYOUT_MODE_POSTPRINT, restore axis
 					% layout, leaving it as it was before we ran
 					% export
 					h_axes = p.getAllManagedAxes();
@@ -3478,7 +3665,7 @@ classdef (Sealed = true) panel < handle
 
 		end
 			
-		function renderPanel2(p)
+		function applyLayout2(p)
 			
 			% if no context yet, skip this call
 			if isempty(p.m_context)
@@ -3506,7 +3693,7 @@ classdef (Sealed = true) panel < handle
 			end
 
 			% debug output
-			panel.debugmsg(['renderPanel2 "' p.state.name '"...']);
+			panel.debugmsg(['applyLayout2 "' p.state.name '"...']);
 			
 			% matlab moves x/ylabels around depending on
 			% whether the axis in question has any x/yticks,
@@ -4146,6 +4333,30 @@ classdef (Sealed = true) panel < handle
 			
 		end
 		
+		function version()
+			
+			% report the version of panel that is active
+			%
+			% panel.version()
+			
+			fid = fopen(which('panel'));
+			tag = '% Release Version';
+			ltag = length(tag);
+			tagline = 'Unable to determine Release Version';
+			while 1
+				line = fgetl(fid);
+				if ~ischar(line)
+					break
+				end
+				if length(line) > ltag && strcmp(line(1:ltag), tag)
+					tagline = line(3:end);
+				end
+			end
+			fclose(fid);
+			disp(tagline)
+			
+		end
+		
 		function panic()
 			
 			% call delete on all children of the global workspace,
@@ -4417,7 +4628,7 @@ classdef (Sealed = true) panel < handle
 					argument_h_parent = data;
 					for r = 1:length(registeredPanels)
 						if registeredPanels(r).h_parent == argument_h_parent
-							registeredPanels(r).renderAll();
+							registeredPanels(r).recomputeLayout();
 						end
 					end
 					
@@ -5272,7 +5483,7 @@ else
 % 	
 % 	T = etime(c2, c1);
 % 	if T > 1 && isempty(have_warned)
-% 		disp(['Panel warning: rendering is slow because optimization toolbox is not installed.']);
+% 		disp(['Panel warning: layout computation is slow because optimization toolbox is not installed.']);
 % 		have_warned = true;
 % 	end
 
