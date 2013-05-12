@@ -1675,6 +1675,8 @@ classdef runExperiment < optickaCore
 			tS = tS.eyePos;
 			fn = fieldnames(tS);
 			figure;
+			set(gcf,'Color',[1 1 1]);
+			figpos(1,[1200 1200]);
 			a = 1;
 			stdex = [];
 			stdey = [];

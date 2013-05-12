@@ -72,7 +72,7 @@ classdef timeLogger < optickaCore
 			calculateMisses(obj)
 			
 			figure;
-			
+			set(gcf,'Color',[1 1 1]);
 			p = panel('defer');
 			p.pack(3,1)
 			
