@@ -8,7 +8,7 @@ classdef opticka < optickaCore
 	
 	properties
 		%> this is the main runExperiment object
-		r = []
+		r@runExperiment
 		%> run in verbose mode?
 		verbose = false
 	end
@@ -20,7 +20,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion@char = '0.850'
+		optickaVersion@char = '0.900'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -28,7 +28,7 @@ classdef opticka < optickaCore
 		%> omniplex connection, via TCP
 		oc
 		%> all of the handles to the opticka_ui GUI
-		h@struct = []
+		h@struct
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
