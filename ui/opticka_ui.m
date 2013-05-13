@@ -22,7 +22,7 @@ function varargout = opticka_ui(varargin)
 
 % Edit the above text to modify the response to help opticka_ui
 
-% Last Modified by GUIDE v2.5 17-Mar-2013 23:09:13
+% Last Modified by GUIDE v2.5 13-May-2013 08:21:14
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -863,6 +863,7 @@ if isappdata(handles.output,'o')
 			set(handles.OKStimulusRunBenchmark,'Enable','on');
 			set(handles.OKStimulusRunAll,'Enable','on');
 			set(handles.OKStimulusRunAllBenchmark,'Enable','on');
+			set(handles.OKStimulusRunSingle,'Enable','on');
 		end
 	end
 end
@@ -885,7 +886,8 @@ if isappdata(handles.output,'o')
 		set(handles.OKStimulusRun,'Enable','off');
 		set(handles.OKStimulusRunBenchmark,'Enable','off');
 		set(handles.OKStimulusRunAll,'Enable','off');
-		set(handles.OKStimulusRunAllBenchmark,'Enable','on');
+		set(handles.OKStimulusRunAllBenchmark,'Enable','off');
+		set(handles.OKStimulusRunSingle,'Enable','off');
 	end
 end
 
@@ -1004,6 +1006,18 @@ if isappdata(handles.output,'o')
 	end
 end
 
+% --- Executes on button press in OKStimulusRunSingle.
+function OKStimulusRunSingle_Callback(hObject, eventdata, handles)
+% hObject    handle to OKStimulusRunSingle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	if isa(o.r.stimuli,'metaStimulus') && o.r.stimuli.n > 0
+		o.r.stimuli.choice = [];
+		runSingle(o.r.stimuli, o.r.screen);
+	end
+end
 
 
 % --- Executes on button press in OKInspectStimulus.

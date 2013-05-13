@@ -399,6 +399,94 @@ classdef metaStimulus < optickaCore
 			reset(obj); %reset our stimulus ready for use again
 		end
 		
+		
+		% ===================================================================
+		%> @brief Run Stimulus in a window to preview
+		%>
+		% ===================================================================
+		function runSingle(obj,s,eL,runtime)
+			if ~exist('eL','var') || ~isa(eL,'eyelinkManager')
+				eL = eyelinkManager();
+			end
+			if ~exist('s','var') || ~isa(s,'screenManager')
+				s = screenManager('verbose',false,'blend',true,'screen',0,...
+				'bitDepth','8bit','debug',false,...
+				'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+			end
+			if ~exist('runtime','var') || isempty(runtime)
+				runtime = 2; %seconds to run
+			end
+			
+			
+			try
+				lJ = labJack('name','runSingle','readResponse', false,'verbose',false);
+				open(s); %open PTB screen
+				setup(obj,s); %setup our stimulus object
+
+				fixX = 0;
+				fixY = 0;
+				firstFixInit = 0.5;
+				firstFixTime = 1;
+				firstFixRadius = 1.25;
+				eL.isDummy = true; %use dummy or real eyelink?
+				eL.recordData = false;
+				eL.sampleRate = 250;
+				eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
+
+				initialise(eL,s); %initialise eyelink with our screen
+				setup(eL); %setup eyelink
+
+				eL.statusMessage('SINGLE TRIAL RUNNING'); %
+				setOffline(eL); 
+				trackerDrawFixation(eL)
+
+				breakString = 'ok';
+				breakloop = false;
+				a=1;
+				WaitSecs(1);
+				startRecording(eL);
+				WaitSecs(0.1);
+				syncTime(eL);
+				vbl=Screen('Flip',s.win);
+
+				while breakloop == false
+					draw(obj); %draw stimulus
+					Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
+
+					getSample(eL);
+					breakString = testSearchHoldFixation(eL,'yes','no');
+
+					if strcmpi(breakString,'yes') 
+						timedTTL(lJ,0,200);
+						breakloop = true;
+						break;
+					elseif strcmpi(breakString,'no')
+						breakloop = true;
+						break;
+					end
+
+					animate(obj); %animate stimulus, will be seen on next draw
+
+					Screen('Flip',s.win); %flip the buffer
+				end
+				Screen('Flip',s.win);Screen('Flip',s.win);
+				stopRecording(eL)
+				WaitSecs(1);
+				close(s); %close screen
+				close(eL);
+				close(lJ)
+				reset(obj); %reset our stimulus ready for use again
+			catch ME
+				ListenChar(0);
+				Eyelink('Shutdown');
+				close(s);
+				close(eL);
+				close(lJ);
+				reset(obj); %reset our stimulus ready for use again
+				rethrow(ME);
+			end
+			
+		end
 		% ===================================================================
 		%> @brief print current choice if only single stimulus drawn
 		%>

@@ -453,7 +453,7 @@ classdef runExperiment < optickaCore
 			
 			%a throwaway structure to hold various parameters
 			tS = struct();
-			tS.useTask = false;
+			tS.useTask = false; %#ok<*PROP>
 			tS.checkKeysDuringStimulus = true;
 			tS.recordEyePosition = false;
 			tS.askForComments = false;
@@ -492,13 +492,6 @@ classdef runExperiment < optickaCore
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------
-				%open the PTB screen
-				obj.screenVals = s.open(obj.debug,tL);
-				
-				obj.stimuli.screen = s;
-				obj.stimuli.verbose = obj.verbose;
-				setup(obj.stimuli); %run setup() for each stimulus
-				
 				% open the eyelink interface
 				obj.useEyeLink = true;
 				if obj.useEyeLink
@@ -532,6 +525,13 @@ classdef runExperiment < optickaCore
 					tS.comment = obj.comment;
 				end
 				
+				%open the PTB screen
+				obj.screenVals = s.open(obj.debug,tL);
+				
+				obj.stimuli.screen = s;
+				obj.stimuli.verbose = obj.verbose;
+				setup(obj.stimuli); %run setup() for each stimulus
+				
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
 				
@@ -540,6 +540,10 @@ classdef runExperiment < optickaCore
 					initialise(eL, s);
 					setup(eL);
 				end
+				
+				%premptive save in case of crash or error
+				rE = obj;
+				save([tempdir filesep 'Simba-' obj.savePrefix '.mat'],'rE','tS');
 				
 				createPlot(bR, eL);
 				
@@ -670,6 +674,12 @@ classdef runExperiment < optickaCore
 				ShowCursor;
 				warning('on'); %#ok<WNON>
 				
+				close(s);
+				close(eL);
+				obj.eyeLink = [];
+				close(lJ);
+				obj.lJack=[];
+				
 				if tS.askForComments
 					comment = inputdlg('Final Comment for this Run?','Run Comment');
 					comment = comment{1};
@@ -684,16 +694,11 @@ classdef runExperiment < optickaCore
 				
 				obj.tS = tS; %copy our tS structure for backup
 				
-				close(s);
-				close(eL);
-				obj.eyeLink = [];
-				close(lJ);
-				obj.lJack=[];
 				if tS.saveData
 					rE = obj;
 					assignin('base', 'rE', obj);
 					assignin('base', 'tS', tS);
-					save([obj.paths.savedData filesep 'TrainLog-' obj.savePrefix '.mat'],'rE','bR','tL','tS','sM')
+					save([obj.paths.savedData filesep 'Simba-' obj.savePrefix '.mat'],'rE','bR','tL','tS','sM')
 				end
 				clear tL s tS bR lJ eL io sM			
 			catch ME
