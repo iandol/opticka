@@ -14,21 +14,22 @@ tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
 tS.askForComments = true;
-tS.saveData = false;
+tS.saveData = false; %*** save behavioural and eye movement data? ***
+obj.useDataPixx = true; %*** drive plexon to collect data? ***
 tS.name = 'area-summation';
-obj.useDataPixx = true;
-%obj.lastSize = obj.stimuli{3}.size;
 
 fixX = 0;
 fixY = 0;
-firstFixInit = 0.5;
+obj.lastXPosition = fixX;
+obj.lastYPosition = fixY;
+firstFixInit = 2;
 firstFixTime = 0.25;
 firstFixRadius = 1;
 stimulusFixTime = 1;
 
+eL.isDummy = false; %*** use dummy or real eyelink? ***
 eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
-eL.isDummy = true; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
@@ -61,7 +62,8 @@ showSet(obj.stimuli);
 % in the scope of the runExperiemnt object.
 
 %pause entry
-pauseEntryFcn = { @()rstop(io); ...
+pauseEntryFcn = { @()hide(obj.stimuli); ...
+	@()rstop(io); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
@@ -75,7 +77,7 @@ prefixFcn = []; %@()draw(obj.stimuli);
 %fixate entry
 fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
 	@()sendTTL(io,3); ...
-	@()updateFixationValues(eL,[],[],[],firstFixTime); %reset 
+	@()updateFixationValues(eL,fixX,fixY,[],firstFixTime); %reset 
 	@()setOffline(eL); ... %make sure offline before start recording
 	@()show(obj.stimuli{2}); ...
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
@@ -86,7 +88,7 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	};
 
 %fix within
-fixFcn = {@()enableFlip(obj); @()draw(obj.stimuli); ... %draw stimulus
+fixFcn = {@()draw(obj.stimuli); ... %draw stimulus
 	};
 
 %test we are fixated for a certain length of time
@@ -121,8 +123,8 @@ correctEntryFcn = { @()timedTTL(lJ,0,tS.rewardTime); ... % labjack sends a TTL t
 	@()edfMessage(eL,'END_RT'); ...
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT 1'); ...
-	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()hide(obj.stimuli); ...
+	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	};
 
 %correct stimulus

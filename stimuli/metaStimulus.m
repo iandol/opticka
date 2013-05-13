@@ -417,7 +417,6 @@ classdef metaStimulus < optickaCore
 				runtime = 2; %seconds to run
 			end
 			
-			
 			try
 				lJ = labJack('name','runSingle','readResponse', false,'verbose',false);
 				open(s); %open PTB screen
@@ -426,15 +425,15 @@ classdef metaStimulus < optickaCore
 				fixX = 0;
 				fixY = 0;
 				firstFixInit = 0.5;
-				firstFixTime = 1;
+				firstFixTime = 2;
 				firstFixRadius = 1.25;
-				eL.isDummy = true; %use dummy or real eyelink?
+				eL.isDummy = false; %use dummy or real eyelink?
 				eL.recordData = false;
 				eL.sampleRate = 250;
 				eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
 
 				initialise(eL,s); %initialise eyelink with our screen
-				setup(eL); %setup eyelink
+				%setup(eL); %setup eyelink
 
 				eL.statusMessage('SINGLE TRIAL RUNNING'); %
 				setOffline(eL); 
@@ -443,12 +442,10 @@ classdef metaStimulus < optickaCore
 				breakString = 'ok';
 				breakloop = false;
 				a=1;
-				WaitSecs(1);
 				startRecording(eL);
-				WaitSecs(0.1);
+				WaitSecs(1);
 				syncTime(eL);
-				vbl=Screen('Flip',s.win);
-
+				Screen('Flip',s.win);
 				while breakloop == false
 					draw(obj); %draw stimulus
 					Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
@@ -470,8 +467,8 @@ classdef metaStimulus < optickaCore
 					Screen('Flip',s.win); %flip the buffer
 				end
 				Screen('Flip',s.win);Screen('Flip',s.win);
-				stopRecording(eL)
 				WaitSecs(1);
+				stopRecording(eL)
 				close(s); %close screen
 				close(eL);
 				close(lJ)

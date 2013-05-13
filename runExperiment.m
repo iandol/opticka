@@ -69,6 +69,10 @@ classdef runExperiment < optickaCore
 		stateInfoFile = ''
 		%> tS is the runtime settings structure, saved here as a backup
 		tS
+		lastXPosition = 0
+		lastYPosition = 0
+		lastSize = 1
+		lastIndex = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -105,10 +109,6 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		lastXPosition = 0
-		lastYPosition = 0
-		lastSize = 1
-		lastIndex = 0
 		%> properties allowed to be modified during construction
 		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|useDataPixx|logFrames|debug|verbose|screenSettings|benchmark'
 	end
