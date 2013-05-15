@@ -229,6 +229,31 @@
 % 03/05/13
 % Release Version 2.9
 % ############################################################
+%
+% 10/05/13
+% Removed linprog solution in favour of recursive
+% computation. This should speed things up for people who
+% don't have the optimisation toolbox.
+%
+% 10/05/13
+% Added support for panels of fixed physical size. See new
+% documentation for panel/pack().
+%
+% 10/05/13
+% Added support for packing into panels packed in absolute
+% mode, which wasn't previously possible.
+%
+% 10/05/13
+% Removed advertisement for 'defer' flag, since I suspect
+% it's no longer needed now we've moved away from LP. There
+% may be some optimisation required before this is true -
+% defer still functions as before, it's just not advertised.
+%
+% ############################################################
+% 10/05/13
+% Release Version 2.10
+% ############################################################
+
 
 classdef (Sealed = true) panel < handle
 	
@@ -285,27 +310,6 @@ classdef (Sealed = true) panel < handle
 		% default: normal
 		fontweight
 		
-		% boolean indicating whether this panel aligns its children
-		%
-		% if align is true, this parent panel will force its
-		% children to be aligned on their outer edges. if not,
-		% this alignment will only happen if they share the same
-		% margin values. align can usually be left at false, but
-		% may need to be set to true for particular panels in
-		% some layouts where mixed margins are used.
-		%
-		% NB: it's possible that there are no circumstances
-		% where you would need this, so don't use it unless you
-		% feel you have to. if you come up with a scenario in
-		% which you definitely do need it, please let me know so
-		% that i can add a demo.
-		%
-		% access: read/write
-		% default: false
-		%
-		% see also: margin
-		align
-		
 		% the units that are used when reading/writing margins
 		%
 		% units can be set to any of 'mm', 'cm', 'in' or 'pt'.
@@ -319,15 +323,16 @@ classdef (Sealed = true) panel < handle
 		% the panel's margin vector in the form [left bottom right top]
 		%
 		% the margin is key to the layout process. the layout
-		% algorithm makes all objects as large as possible
-		% whilst not violating margin constraints. margins are
-		% respected between objects and between an object and
-		% the edges of the figure.
+		% algorithm makes all panels as large as possible whilst
+		% not violating margin constraints. margins are
+		% respected between panels within their parent and
+		% between the root panel and the edges of the canvas
+		% (figure or image file).
 		%
 		% access: read/write
 		% default: [12 10 2 2] (mm)
 		%
-		% see also: align, marginleft, marginbottom, marginright, margintop
+		% see also: marginleft, marginbottom, marginright, margintop
 		margin
 		
 		% one element of the margin vector
@@ -414,7 +419,6 @@ classdef (Sealed = true) panel < handle
 		% fontname: write-only
 		% fontsize: write-only
 		% fontweight: write-only
-		% align: write-only
 		%
 		% EXAMPLE:
 		%   h = p.ch.axis;
@@ -438,7 +442,6 @@ classdef (Sealed = true) panel < handle
 		% fontname: write-only
 		% fontsize: write-only
 		% fontweight: write-only
-		% align: write-only
 		%
 		% EXAMPLE:
 		%   h = p.de.axis;
@@ -461,7 +464,6 @@ classdef (Sealed = true) panel < handle
 		% fontname: write-only
 		% fontsize: write-only
 		% fontweight: write-only
-		% align: write-only
 		%
 		% EXAMPLE:
 		%   h = p.fa.axis;
@@ -486,12 +488,13 @@ classdef (Sealed = true) panel < handle
 		% this is always the root panel associated with this
 		m_root
 		
-		% packing position within parent
+		% packing specifier
 		%
-		% empty:            relative positioning mode (stretch)
-		% scalar fraction:  relative positioning mode
-		% 1x4 dimension:    absolute positioning mode
-		packpos
+		% empty:              relative positioning mode (stretch)
+		% scalar fraction:    relative positioning mode
+		% scalar percentage:  relative positioning mode
+		% 1x4 dimension:      absolute positioning mode
+		packspec
 		
 		% packing dimension of children
 		%
@@ -556,13 +559,13 @@ classdef (Sealed = true) panel < handle
 			% create a new panel
 			%
 			% p = panel(...)
-			%   create a new panel. optional arguments listed
+			%   create a new root panel. optional arguments listed
 			%   below can be supplied in any order. if "h_parent"
 			%   is not supplied, it is set to gcf - that is, the
 			%   panel fills the current figure.
 			%
-			%   initially, the panel is an "uncommitted panel".
-			%   calling pack() or select() on the panel will
+			%   initially, the root panel is an "uncommitted
+			%   panel". calling pack() or select() on it will
 			%   commit it as a "parent panel" or an "object
 			%   panel", respectively. the following arguments may
 			%   be passed, in any order.
@@ -574,23 +577,17 @@ classdef (Sealed = true) panel < handle
 			%   object, in principle. currently, an error is
 			%   raised unless it's a figure or a uipanel - if you
 			%   want to try other object types, edit the code
-			%   above where the error is raised, and let me know
-			%   if you have positive results so I can update
-			%   panel to allow other object types.
+			%   where the error is raised, and let me know if you
+			%   have positive results so I can update panel to
+			%   allow other object types.
 			%
 			% 'add'
-			%   existing panels attached to the figure will not
-			%   be destroyed before the new one is created.
-			%
-			% 'defer'
-			%   the panel will be created with layout disabled.
-			%   the layout computations take a little while when
-			%   large numbers of panels are involved, and are
-			%   re-run every time you add a panel or change a
-			%   margin, by default. this is tedious if you are
-			%   preparing a complex layout; pass 'defer', and
-			%   layout will not be computed at all until you call
-			%   refresh() or export() on the root panel.
+			%   usually, when you attach a new root panel to a
+			%   figure, any existing attached root panels are
+			%   first deleted to make way for it. if you pass this
+			%   argument, this is not done, so that you can attach
+			%   more than one root panel to the same figure. see
+			%   demopanelE for an example of this use.
 			%
 			% 'no-manage-font'
 			%   by default, a panel will manage fonts of titles
@@ -613,7 +610,20 @@ classdef (Sealed = true) panel < handle
 			%   can also be a handle to an existing panel. this is
 			%   used internally when pack()ing child panels into a
 			%   parent panel.
-			
+			%
+			% 'defer'
+			%   THIS IS NO LONGER ADVERTISED since we replaced the
+			%   LP solution with a procedural solution, but still
+			%   functions as before, to provide legacy support.
+			%   the panel will be created with layout disabled.
+			%   the layout computations take a little while when
+			%   large numbers of panels are involved, and are
+			%   re-run every time you add a panel or change a
+			%   margin, by default. this is tedious if you are
+			%   preparing a complex layout; pass 'defer', and
+			%   layout will not be computed at all until you call
+			%   refresh() or export() on the root panel.
+
 			% default condition
 			passed_h_parent = [];
 			add = false;
@@ -737,7 +747,7 @@ classdef (Sealed = true) panel < handle
 			end
 			
 			% default state
-			p.packpos = [];
+			p.packspec = [];
 			p.packdim = 2;
 			p.m_panelType = p.PANEL_TYPE_UNCOMMITTED;
 			p.prop = panel.getPropertyInitialState();
@@ -876,10 +886,20 @@ classdef (Sealed = true) panel < handle
 			if p.isRoot()
 				pp = ['attached to Figure ' num2str(p.h_figure)];
 			else
-				if isempty(p.packpos)
+				if isempty(p.packspec)
 					pp = 'stretch';
+				elseif iscell(p.packspec)
+					units = p.getPropertyValue('units');
+					val = panel.resolveUnits({p.packspec{1} 'mm'}, units);
+					pp = sprintf('%.1f%s', val, units);
+				elseif isscalar(p.packspec)
+					if p.packspec > 1
+						pp = sprintf('%.0f%%', p.packspec);
+					else
+						pp = sprintf('%.3f', p.packspec);
+					end
 				else
-					pp = sprintf('%.3f ', p.packpos);
+					pp = sprintf('%.3f ', p.packspec);
 					pp = pp(1:end-1);
 				end
 			end
@@ -1002,30 +1022,6 @@ classdef (Sealed = true) panel < handle
 			end
 			
 		end
-		
-% 		function p = xlabels(p, text)
-% 			
-% 			if p.isParent()
-% 				for c = 1:length(p.m_children)
-% 					p.m_children(c).xlabels(text);
-% 				end
-% 			elseif p.isObject()
-% 				p.xlabel(text);
-% 			end
-% 			
-% 		end
-% 		
-% 		function p = ylabels(p, text)
-% 			
-% 			if p.isParent()
-% 				for c = 1:length(p.m_children)
-% 					p.m_children(c).ylabels(text);
-% 				end
-% 			elseif p.isObject()
-% 				p.ylabel(text);
-% 			end
-% 			
-% 		end
 		
 		function hold(p, state)
 			
@@ -1222,12 +1218,6 @@ classdef (Sealed = true) panel < handle
 			% are listed the options unrelated to sizing (which
 			% apply regardless of which sizing model you use).
 			%
-			% NB: if you pass 'defer' to the constructor, calling
-			% export() both exports the panel and releases the
-			% defer mode. future changes to properties (e.g.
-			% margins) will cause immediate recomputation of the
-			% layout.
-			%
 			%
 			%
 			% PAPER SIZING MODEL:
@@ -1385,6 +1375,14 @@ classdef (Sealed = true) panel < handle
 			% margins and inter-column space, we might use this:
 			%
 			% p.export('myfig', '-pletter', '-c2', '-as', '-rp');
+
+			% LEGACY
+			%
+			% NB: if you pass 'defer' to the constructor, calling
+			% export() both exports the panel and releases the
+			% defer mode. future changes to properties (e.g.
+			% margins) will cause immediate recomputation of the
+			% layout.
 			
 			% check
 			if ~p.isRoot()
@@ -1703,15 +1701,16 @@ classdef (Sealed = true) panel < handle
 			% recompute will store the tick states.
 			if p.state.defer
 				p.state.defer = 0;
-				p.recomputeLayout();
+				p.recomputeLayout([]);
 			end
 
 			% turn off defer, if it is on
 			p.state.defer = 0;
 			
 			% do a pre-print layout
-			context.size_in_mm = sz;
 			context.mode = panel.LAYOUT_MODE_PREPRINT;
+			context.size_in_mm = sz;
+			context.rect = [0 0 1 1];
 			p.recomputeLayout(context);
 			
 			% need also to disable the warning that we should set
@@ -1798,8 +1797,9 @@ classdef (Sealed = true) panel < handle
 			warning(w);
 			
 			% do a post-print layout
-			context.size_in_mm = [];
 			context.mode = panel.LAYOUT_MODE_POSTPRINT;
+			context.size_in_mm = [];
+			context.rect = [0 0 1 1];
 			p.recomputeLayout(context);
 			
 			% handle smoothing
@@ -1946,54 +1946,43 @@ classdef (Sealed = true) panel < handle
 			
 		end
 		
-		function repack(p, packpos)
+		function repack(p, packspec)
 			
-			% set a new packing position for an existing panel
+			% change the packing specifier for an existing panel
 			%
-			% p.repack(packpos)
-			%   packpos can be anything you would pass to pack().
-			%   however, a panel cannot have its positioning mode
-			%   changed by repack, so if you originally packed the
-			%   panel in relative mode, packpos must be a scalar,
-			%   or if you originally packed the panel in absolute
-			%   mode, packpos must be a 1x4 row vector.
+			% p.repack(packspec)
+			%   repack() is a convenience function provided to
+			%   allow easy development of a layout from the
+			%   command prompt. packspec can be any packing
+			%   specifier accepted by pack().
+			%
+			% see also: pack()
 			
-			% must match current packing mode if there is more
-			% than one panel packed (if not, it's free for all)
+			% deny repack() on root
 			if p.isRoot()
 				
-				% root can only accept absolute positioning
-				if ~isofsize(packpos, [1 4])
-					error('panel:InvalidArgument', 'root panel can only use absolute positioning mode');
-				end
-				
-			else
-				
-				% do we have siblings?
-				nsiblings = numel(p.parent.m_children);
-				
-				% check
-				if nsiblings > 1
-					if isofsize(packpos, [1 4])
-						if ~isofsize(p.packpos, [1 4])
-							error('panel:InvalidArgument', 'repack() cannot change the packing mode - this panel''s siblings use relative positioning');
-						end
-					elseif (isscalar(packpos) && (packpos == -1 || (packpos > 0 && packpos <= 100)))
-						if ~isscalar(p.packpos) && ~isempty(p.packpos)
-							error('panel:InvalidArgument', 'repack() cannot change the packing mode - this panel''s siblings use absolute positioning');
-						end
-					else
-						error('panel:InvalidArgument', 'repack() only accepts -1 (stretch), positive scalar <= 1 (relative positioning), or 1x4 (absolute positioning)');
-					end
-				end
+				% let's deny this. I'm not sure it makes anyway. you
+				% could always pack into root with a panel with
+				% absolute positioning, so let's deny first, and
+				% allow later if we're sure it's a good idea.
+				error('panel:InvalidArgument', 'root panel cannot be repack()ed');
 				
 			end
 			
-			% update the packpos
-			p.packpos = packpos;
+			% validate
+			validate_packspec(packspec);
+			
+			% handle units
+			if iscell(packspec)
+				units = p.getPropertyValue('units');
+				packspec{1} = panel.resolveUnits({packspec{1} units}, 'mm');
+			end
+			
+			% update the packspec
+			p.packspec = packspec;
 			
 			% and recomputeLayout
-			p.recomputeLayout();
+			p.recomputeLayout([]);
 			
 		end
 		
@@ -2002,37 +1991,134 @@ classdef (Sealed = true) panel < handle
 			% add (pack) child panel(s) into an existing panel
 			%
 			% p.pack(...)
-			%   add children to the panel "p" and, in doing so,
-			%   commit the panel as a "parent panel" (if it is not
-			%   already committed). after this, it can no longer
-			%   be associated with an object (though it can still
-			%   have xlabel/ylabel and title). newly created child
-			%   panels begin as "uncommitted panels". pack can be
-			%   followed by any number of arguments, drawn from
-			%   the following. 
+			%   add children to the panel "p". if p is currently
+			%   uncommitted, it is committed by this call to be a
+			%   "parent panel". if p is already committed as an
+			%   "object panel" (a panel that manages graphics
+			%   objects), an error is raised, since panels must be
+			%   either parent or object panels, and cannot be
+			%   both. new (child) panels are created by this call;
+			%   these are created as "uncommitted panels", ready
+			%   to be pack()ed or select()ed themselves. if the
+			%   parent "p" already has children, the additional
+			%   children are appended.
+			%
+			% NB: the interface to pack() was changed at release
+			%   2.10 to add support for panels of fixed physical
+			%   size. the interface offered at 2.9 and earlier is
+			%   still available (see LEGACY, below) but should not
+			%   be used in future.
+			%
+			% PACKING MODES
+			%
+			% (i) Fixed Size (relative mode)
+			%
+			%   panels in this mode have a fixed physical size
+			%   along the packing dimension of their parent (such
+			%   as 20mm, or 2in). these panels share their
+			%   parent's size in the other dimension.
+			%
+			% (ii) Fractional Size (relative mode)
+			%
+			%   panels in this mode have a size along the packing
+			%   dimension of their parent that is a fraction of
+			%   their parent's size (such as 1/2 or 1/3). these
+			%   panels share their parent's size in the other
+			%   dimension. also can be specified as a percentage.
+			%
+			% (iii) Stretchable (relative mode)
+			%
+			%   panels in this mode are 'stretchable'; space
+			%   remaining after non-stretchable panels in relative
+			%   mode have been sized is shared out among their
+			%   stretchable siblings.
+			%
+			% (iv) Fractional size (absolute mode)
+			%
+			%   panels packed in this mode hover over their parent
+			%   at whatever location is specified. they do not
+			%   contribute to the layout computations of their
+			%   siblings packed in relative mode, as for objects
+			%   with the position:absolute property in CSS.
+			%
+			% ARGUMENTS
 			%
 			% 'h'/'v'
-			%   switch to horizontal or vertical packing
-			%   direction.
+			%   switch "p" to pack in the horizontal or vertical
+			%   packing dimension for relative packing mode
+			%   (default is vertical).
 			%
-			% small integer (1 to 32)
-			%   pack this many panels along the packing direction.
+			% {a, b, c, ...}
+			%   (i.e. a cell row vector). pack panels into "p"
+			%   with 'packing specifiers' a, b, c, etc. the
+			%   packing specifiers can be any of the following:
 			%
-			% 1xN row vector (without 'abs')
-			%   pack N new panels along the packing dimension,
-			%   with the relative size of each given by the
-			%   elements of the vector. -1 can be passed for any
-			%   elements to mark those panel as 'stretchable', so
-			%   that they fill available space left over by other
-			%   panels packed alongside. the sum of the vector
-			%   (apart from any -1 entries) should not come to
-			%   more than 1, or a warning will be generated during
-			%   laying out. an example would be [1/4 1/4 -1], to
-			%   pack 3 panels, at 25, 25 and 50% relative sizes.
-			%   though, NB, you can use percentages instead of
-			%   fractions if you prefer, in which case they should
-			%   not sum to over 100. so that same pack() would be
-			%   [25 25 -1].
+			%   [] : pack into parent in relative mode with
+			%     'stretchable' size.
+			%
+			%   scalar between 0 and 1 : pack into parent in
+			%     relative mode at the specified fractional size.
+			%
+			%   scalar between 1 and 100 : pack into parent in
+			%     relative mode at the specified percentage size.
+			%
+			%   {d} : pack into parent in relative mode at a fixed
+			%     size of d units, where the units are the current
+			%     units for "p". NB: if only a single panel is to
+			%     be packed, in this mode, the argument would,
+			%     thus, be {{d}} (i.e. two nested cells).
+			%
+			%   [l b w h] : pack into parent in absolute mode at
+			%			the specified location. [l b w h] are the [left
+			%			bottom width height] as fractions of the parent
+			%			size.
+			%
+			% SHORTCUTS
+			%
+			% ** a small scalar integer, N, (1 to 32) is expanded
+			%    to {[], [], ... []}, with N entries. that is, it
+			%    means pack N panels in relative mode
+			%    (stretchable) and share the available space
+			%    between them.
+			%
+			% ** the call to pack() is recursive, so following a
+			%    cell array argument, an additional cell array
+			%    argument will be used to generate a separate call
+			%    to pack() on each of the children created by the
+			%    first. hence the call:
+			%
+			%      p.pack({[] []}, {[] []})
+			%
+			%    will create a 2x2 grid of panels that share the
+			%    space of their parent, "p". since the argument
+			%    "2" expands to {[] []} (see above), the same grid
+			%    can be created using:
+			%
+			%      p.pack(2, 2)
+			%
+			%    which is a common idiom in the demos. NB: on
+			%    recursion, the packing dimension is flipped
+			%    automatically, so that the grid is properly
+			%    formed.
+			%
+			% ** if no arguments are passed at all, a single
+			%    argument {[]} is assumed, so that a single
+			%    additional panel is packed into the parent in
+			%    relative packing mode and with stretchable size.
+			%
+			% see also: panel (overview), panel/panel(), select()
+			%
+			% LEGACY (edit panel.m to see LEGACY support
+			% information for releases prior to 2.10).
+
+			% LEGACY
+			%
+			%  releases of panel prior to 2.10 did not support
+			%  panels of fixed physical size, and therefore had
+			%  developed a different argument form to that used in
+			%  2.10 and beyond. specifically, the following
+			%  additional arguments are accepted, for legacy
+			%  support:
 			%
 			% 'abs'
 			%   the next argument will be an absolute position, as
@@ -2040,209 +2126,181 @@ classdef (Sealed = true) panel < handle
 			%   positioning mode, in general, since this does not
 			%   take advantage of panel's automatic layout.
 			%   however, on occasion, you may need to take manual
-			%   control of the position of one or more panels.
+			%   control of the position of one or more panels. see
+			%   demopanelH for an example.
+			%
+			% 1xN row vector (without 'abs')
+			%   pack N new panels along the packing dimension in
+			%   relative mode, with the relative size of each
+			%   given by the elements of the vector. -1 can be
+			%   passed for any elements to mark those panel as
+			%   'stretchable', so that they fill available space
+			%   left over by other panels packed alongside. the
+			%   sum of the vector (apart from any -1 entries)
+			%   should not come to more than 1, or a warning will
+			%   be generated during laying out. an example would
+			%   be [1/4 1/4 -1], to pack 3 panels, at 25, 25 and
+			%   50% relative sizes. though, NB, you can use
+			%   percentages instead of fractions if you prefer, in
+			%   which case they should not sum to over 100. so
+			%   that same pack() would be [25 25 -1].
 			%
 			% 1x4 row vector (after 'abs')
 			%   pack 1 new panel using absolute positioning. the
 			%   argument indicates the [left bottom width height]
-			%   of the new panel, in normalised coordinates.
-			%   panels using absolute positioning mode are ignored
-			%   for the sake of layout, much like items using
+			%   of the new panel, in normalised coordinates, as a
+			%   fraction of its parent's position. panels using
+			%   absolute positioning mode are ignored for the sake
+			%   of layout, much like items using
 			%   'position:absolute' in CSS.
-			%
-			% see also: panel (overview), panel/panel(), select()
+			
+			% handle legacy, parse arguments from varargin into args
+			args = {};
+			while ~isempty(varargin)
+				
+				% peel
+				arg = varargin{1};
+				varargin = varargin(2:end);
+				
+				% handle shortcut (small integer) on current interface
+				if isa(arg, 'double') && isscalar(arg) && round(arg) == arg && arg >= 1 && arg <= 32
+					arg = cell(1, arg);
+				end
+					
+				% handle current interface - note that the argument
+				% "recursive" is private and not advertised to the
+				% user.
+				if isequal(arg, 'h') || isequal(arg, 'v') || (iscell(arg) && isrow(arg)) || isequal(arg, 'recursive')
+					args{end+1} = arg;
+					continue
+				end
+				
+				% report (DEBUG)
+				panel.debugmsg('use of LEGACY interface to pack()', 1);
+				
+				% handle legacy case
+				if isequal(arg, 'abs')
+					if length(varargin) ~= 1 || ~isnumeric(varargin{1}) || ~isofsize(varargin{1}, [1 4])
+						error('panel:LegacyAbsNotFollowedBy1x4', 'the argument "abs" on the legacy interface should be followed by a [1x4] row vector');
+					end
+					abs = varargin{1};
+					varargin = varargin(2:end);
+					args{end+1} = {abs};
+					continue
+				end
+				
+				% handle legacy case
+				if isa(arg, 'double') && isrow(arg)
+					arg_ = {};
+					for a = 1:length(arg)
+						aa = arg(a);
+						if isequal(aa, -1)
+							arg_{end+1} = [];
+						else
+							arg_{end+1} = aa;
+						end
+					end
+					args{end+1} = arg_;
+					continue
+				end
+				
+				% unrecognised argument
+				error('panel:InvalidArgument', 'argument to pack() not recognised');
+				
+			end
 			
 			% check m_panelType
 			if p.isObject()
-				error('panel:PackWhenObjectPanel', 'cannot pack() into this panel - it is already committed as an object panel');
-			end
-			
-			% check abs mode
-			%
-			% we don't currently support packing children into an
-			% abs panel. there's no fundamental reason why we
-			% can't, it's just that abs panels aren't currently
-			% included in the sizing process, so we can't apply
-			% the appropriate constraints on their children. we
-			% should add this in future (TODO). there are two
-			% distinct ways of approaching it. probably the first
-			% is preferred, to just bring the edges of an abs
-			% panel into the linprog process. the alternative is
-			% to do a separate linprog process within the abs
-			% panel, probably much hairier.
-			if isofsize(p.packpos, [1 4])
-				error('panel:PackWhenAbsPanel', 'cannot pack() into this panel - it uses absolute positioning mode');
+				error('panel:PackWhenObjectPanel', ...
+					'cannot pack() into this panel - it is already committed as an object panel');
 			end
 			
 			% if no arguments, simulate an argument of [], to pack
-			% a single panel with unspecified size
-			if isempty(varargin)
-				varargin = {[]};
+			% a single panel of stretchable size
+			if isempty(args)
+				args = {{[]}};
 			end
 			
 			% state
 			recursive = false;
-			absolute = false;
 			
 			% handle arguments one by one
-			while ~isempty(varargin)
+			while ~isempty(args) && ischar(args{1})
 				
 				% extract
-				arg = varargin{1};
-				varargin = varargin(2:end);
+				arg = args{1};
+				args = args(2:end);
 				
-				% is char?
-				if ischar(arg)
-					
-					% handle string arguments
-					switch arg
-						case {'abs' 'absolute'}
-							absolute = true;
-						case 'h'
-							p.packdim = 1;
-						case 'v'
-							p.packdim = 2;
-						case 'recursive'
-							recursive = true;
-						otherwise
-							error('panel:InvalidArgument', ['pack() did not recognise the argument "' arg '"']);
-					end
-					
-				else
-					
-					% handle numeric arguments
-					if isnumeric(arg) && isscalar(arg) && arg >= 1 && arg <= 32 && arg == round(arg)
-						
-						% error if absolute
-						if absolute
-							error('panel:InvalidArgument', 'after "abs", pack() expects a [1x4] numeric argument to specify the absolute position');
-						end
-						
-						% treat as "number of panels to pack"
-						p.pack('recursive', -ones(1, arg), varargin{:});
-						
-						% and we're done
-						break
-						
-					elseif isfloat(arg)
-						
-						% if [] is the argument, convert to -1 (stretchy)
-						if isempty(arg)
-							arg = -1;
-						end
-						
-						% handle absolute
-						if absolute
-							
-							% error if absolute
-							if ~isofsize(arg, [1 4])
-								error('panel:InvalidArgument', 'after "abs", pack() expects a [1x4] numeric argument to specify the absolute position');
-							end
-							
-							% error if non-positive width or height
-							if any(arg(3:4) <= 0)
-								error('panel:InvalidArgument', 'absolute position must have non-zero width and height');
-							end
-							
-							% error if any panels are already packed
-							for c = 1:length(p.m_children)
-								if ~isofsize(p.m_children(c).packpos, [1 4])
-									error('panel:IllegalPack', 'all panels pack()ed into a single parent panel must use the same positioning mode (relative or absolute)');
-								end
-							end
-							
-							% commit as parent
-							p.commitAsParent();
-
-							% create
-							child = panel(p);
-							
-							% store passed packpos
-							child.packpos = arg;
-							
-							% store
-							if isempty(p.m_children)
-								p.m_children = child;
-							else
-								p.m_children(end+1) = child;
-							end
-							
-							% recurse
-							if ~isempty(varargin)
-								child.pack('recursive', varargin{:});
-							end
-							
-						else
-							
-							% error if not in range
-							if size(arg, 1) ~= 1
-								error('panel:InvalidArgument', 'argument to pack() must be a row vector');
-							end
-							
-							% error if not in range
-							if ~all(arg == -1 | (arg > 0 & arg <= 100)) || any(isnan(arg))
-								error('panel:InvalidArgument', 'argument to pack() must contain only -1 (stretch) and non-zero values no larger than 100');
-							end
-							
-							% error if any panels are already absolute
-							for c = 1:length(p.m_children)
-								if isofsize(p.m_children(c).packpos, [1 4])
-									error('panel:IllegalPack', 'all panels pack()ed into a single parent panel must use the same positioning mode (relative or absolute)');
-								end
-							end
-							
-							% treat as "widths of panels to pack"
-							for i = 1:length(arg)
-								
-								% commit as parent
-								p.commitAsParent();
-
-								% create
-								child = panel(p);
-								
-								% store passed packpos
-								child.packpos = arg(i);
-								if child.packpos == -1
-									child.packpos = [];
-								end
-								
-								% store
-								if isempty(p.m_children)
-									p.m_children = child;
-								else
-									p.m_children(end+1) = child;
-								end
-								
-								% recurse
-								if ~isempty(varargin)
-									subpackdim = flipdim(p.packdim);
-									edges = 'hv';
-									child.pack('recursive', edges(subpackdim), varargin{:});
-								end
-								
-							end
-							
-						end
-						
-						% and we're done
-						break
-						
-					else
-						
-						error('panel:InvalidArgument', 'invalid numerical argument passed to pack()');
-						
-					end
-					
+				% handle string arguments
+				switch arg
+					case 'h'
+						p.packdim = 1;
+					case 'v'
+						p.packdim = 2;
+					case 'recursive'
+						recursive = true;
+					otherwise
+						error('panel:InvalidArgument', ['pack() did not recognise the argument "' arg '"']);
 				end
-				
+					
 			end
 			
+			% if no more arguments that's weird but not bad
+			if isempty(args)
+				return
+			end
+			
+			% next argument now must be a cell
+			arg = args{1};
+			args = args(2:end);
+			if ~iscell(arg)
+				panel.error('InternalError');
+			end
+
+			% commit as parent
+			p.commitAsParent();				
+
+			% for each element
+			for i = 1:length(arg)
+
+				% get packspec
+				packspec = arg{i};
+
+				% validate
+				validate_packspec(packspec);
+				
+				% handle units
+				if iscell(packspec)
+					units = p.getPropertyValue('units');
+					packspec{1} = panel.resolveUnits({packspec{1} units}, 'mm');
+				end
+
+				% create a child
+				child = panel(p);
+				child.packspec = packspec;
+
+				% store it in the parent
+				if isempty(p.m_children)
+					p.m_children = child;
+				else
+					p.m_children(end+1) = child;
+				end
+
+				% recurse (further argumens are passed on)
+				if ~isempty(args)
+					child_packdim = flippackdim(p.packdim);
+					edges = 'hv';
+					child.pack('recursive', edges(child_packdim), args{:});
+				end
+
+			end
+				
 			% this must generate a recomputeLayout(), since the
 			% addition of new panels may affect the layout. any
 			% recursive call passes 'recursive', so that only the
 			% root call actually bothers doing a layout.
 			if ~recursive
-				p.recomputeLayout();
+				p.recomputeLayout([]);
 			end
 			
 		end
@@ -2257,8 +2315,8 @@ classdef (Sealed = true) panel < handle
 			%   committed, this will involve first committing it
 			%   as an "object panel". if a list of objects ("h")
 			%   is passed, these are the objects associated with
-			%   the panel. if not, a new axis is created by the
-			%   panel.
+			%   the panel; if not, a new axis is created by the
+			%   panel when this function is called.
 			%
 			%   if the object list includes axes, then the "object
 			%   panel" is also known as an "axis panel". in this
@@ -2385,7 +2443,7 @@ classdef (Sealed = true) panel < handle
 				% this forces us to recomputeLayout() now and generate
 				% that context we need.
 				if isempty(p.m_context)
-					p.recomputeLayout();
+					p.recomputeLayout([]);
 				else
 					p.applyLayout();
 				end
@@ -2541,7 +2599,7 @@ classdef (Sealed = true) panel < handle
 					% validate
 					switch refs(2).subs
 						case {'fontname' 'fontsize' 'fontweight'}
-						case {'margin' 'marginleft' 'marginbottom' 'marginright' 'margintop' 'align'}
+						case {'margin' 'marginleft' 'marginbottom' 'marginright' 'margintop'}
 						otherwise
 							panel.error('InvalidIndexing');
 					end
@@ -2591,8 +2649,8 @@ classdef (Sealed = true) panel < handle
 			switch refs(1).subs
 				case {'fontname' 'fontsize' 'fontweight'}
 					p.applyLayout('recurse');
-				case {'margin' 'marginleft' 'marginbottom' 'marginright' 'margintop' 'align'}
-					p.recomputeLayout();
+				case {'margin' 'marginleft' 'marginbottom' 'marginright' 'margintop'}
+					p.recomputeLayout([]);
 			end
 
 		end
@@ -2622,7 +2680,7 @@ classdef (Sealed = true) panel < handle
 				case { ...
 						'fontname' 'fontsize' 'fontweight' ...
 						'margin' 'marginleft' 'marginbottom' 'marginright' 'margintop' ...
- 						'units'  'align' ...
+ 						'units' ...
 						}
 
 					% delegate this property get
@@ -2634,8 +2692,8 @@ classdef (Sealed = true) panel < handle
 				case 'figure'
 					out = p.h_figure;
 					
-				case 'packpos'
-					out = p.packpos;
+				case 'packspec'
+					out = p.packspec;
 					
 				case 'axis'
 					if p.isObject()
@@ -2789,34 +2847,6 @@ classdef (Sealed = true) panel < handle
 			
 		end
 
-		function packing_size = autoPack(p)
-			
-			packing_size = [];
-			for c = 1:length(p.m_children)
-				pos = p.m_children(c).packpos;
-				if isempty(pos)
-					pos = -1;
-				end
-				if numel(pos) == 4
-					% this is an absolute positioning mode panel, so
-					% we just return empty which means don't do
-					% relative sizing
-					packing_size = [];
-					return
-				end
-				packing_size(c) = pos;
-			end
-			used = sum(packing_size(packing_size ~= -1));
-			if used > 1 & used <= 100
-				% interpret as percentages
-				used = used / 100;
-				packing_size(packing_size ~= -1) = packing_size(packing_size ~= -1) / 100;
-			end
-			over = 1 - used;
-			packing_size(packing_size == -1) = over / length(packing_size(packing_size == -1));
-			
-		end
-		
 		function cs = getPanels(p, panelTypes, edgespec, all)
 			
 			% return all the panels that match the specification.
@@ -2837,7 +2867,7 @@ classdef (Sealed = true) panel < handle
 			
 			% do not include any that use absolute positioning -
 			% they stand outside of the sizing model
-			skip = (numel(p.packpos) == 4) && ~any(panelTypes == '*');
+			skip = (numel(p.packspec) == 4) && ~any(panelTypes == '*');
 			
 			if p.isParent()
 				
@@ -3124,6 +3154,10 @@ classdef (Sealed = true) panel < handle
 			%
 			% p.refresh()
 			%   recompute the layout of all panels from scratch.
+			%   this should not usually be required, and is
+			%   provided primarily for legacy support.
+			
+			% LEGACY
 			%
 			% NB: if you pass 'defer' to the constructor, calling
 			% refresh() both recomputes the layout and releases
@@ -3144,7 +3178,7 @@ classdef (Sealed = true) panel < handle
 			panel.debugmsg(['refresh "' p.state.name '"...']);
 			
 			% call recomputeLayout
-			p.recomputeLayout();
+			p.recomputeLayout([]);
 			
 		end
 		
@@ -3201,88 +3235,82 @@ classdef (Sealed = true) panel < handle
 
 		end
 
-		function p = recomputeLayout(p, varargin)
+		function p = recomputeLayout(p, context)
 			
 			% this function recomputes the layout from scratch.
 			% this means calculating the sizes of the root panel
-			% and all descendant panels (using linprog). after
-			% this is completed, the function calls applyLayout to
-			% effect the new layout.
+			% and all descendant panels. after this is completed,
+			% the function calls applyLayout to effect the new
+			% layout.
 			
-			% bubble up to root
+			% if not root, bubble up to root
 			if ~p.isRoot()
-				p.m_root.recomputeLayout(varargin{:});
+				p.m_root.recomputeLayout(context);
 				return
 			end
 			
-			% skip if disabled
+			% if in defer mode, do not compute layout
 			if p.isdefer()
 				return
 			end
-
-			% debug output
-			panel.debugmsg(['recomputeLayout "' p.state.name '"...']);
 			
-			% once we reach the root, we need to create the
-			% layout context, as follows
-			if nargin == 2
-				
-				% supplied
-				context = varargin{1};
-				
-			else
-				
-				% not supplied (use figure window)
-				context = [];
+			% if no context supplied (e.g. on resize events), use
+			% the figure window (a context is supplied if
+			% exporting to an image file).
+			if isempty(context)
 				context.mode = panel.LAYOUT_MODE_NORMAL;
 				context.size_in_mm = [];
-				
-			end
+				context.rect = [0 0 1 1];
+			end				
 			
-			% but root itself may have a packpos
-			if ~isempty(p.packpos)
-				if isscalar(p.packpos)
-					% this should never happen, because it should be
-					% caught when the packpos is set in repack()
-					warning('panel:RootPanelCannotUseRelativeMode', 'the root panel uses relative positioning mode - this is ignored');
-				else
-					context.rect = p.packpos;
-				end
-			end
-			
-			% get context (whole parent) size in its units
-			pp = get(p.h_figure, 'position');
-			context_size = pp(3:4);
-			
-			% defaults, in case this fails for any reason
-			screen_size = [1280 1024];
-			if ismac
-				screen_dpi = 72;
-			else
-				screen_dpi = 96;
-			end
-				
-			% get screen DPI
-			try
-				local_screen_dpi = get(0, 'ScreenPixelsPerInch');
-				if ~isempty(local_screen_dpi)
-					screen_dpi = local_screen_dpi;
-				end
-			end
-			
-			% get screen size
-			try
-				local_screen_size = get(0, 'ScreenSize');
-				if ~isempty(local_screen_size)
-					screen_size = local_screen_size;
-				end
-			end
+			% debug output
+			panel.debugmsg(['recomputeLayout "' p.state.name '"...']);
+
+% 			% root may have a packspec of its own
+% 			if ~isempty(p.packspec)
+% 				if isscalar(p.packspec)
+% 					% this should never happen, because it should be
+% 					% caught when the packspec is set in repack()
+% 					warning('panel:RootPanelCannotUseRelativeMode', 'the root panel uses relative positioning mode - this is ignored');
+% 				else
+% 					context.rect = p.packspec;
+% 				end
+% 			end
 			
 			% if not given a context size, use the size on screen
+			% of the parent figure
 			if isempty(context.size_in_mm)
 				
+				% get context (whole parent) size in its units
+				pp = get(p.h_figure, 'position');
+				context_size = pp(3:4);
+
+				% defaults, in case this fails for any reason
+				screen_size = [1280 1024];
+				if ismac
+					screen_dpi = 72;
+				else
+					screen_dpi = 96;
+				end
+
+				% get screen DPI
+				try
+					local_screen_dpi = get(0, 'ScreenPixelsPerInch');
+					if ~isempty(local_screen_dpi)
+						screen_dpi = local_screen_dpi;
+					end
+				end
+
+				% get screen size
+				try
+					local_screen_size = get(0, 'ScreenSize');
+					if ~isempty(local_screen_size)
+						screen_size = local_screen_size;
+					end
+				end
+				
 				% get figure width and height on screen
-				switch get(p.h_figure,'Units')
+				switch get(p.h_figure, 'Units')
 					
 					case 'points'
 						points_per_inch = 72;
@@ -3315,152 +3343,208 @@ classdef (Sealed = true) panel < handle
 			% that's the figure size, now we need the size of our
 			% parent, if it's not the figure too
 			if p.h_parent ~= p.h_figure
+				units = get(p.h_parent, 'units');
+				set(p.h_parent, 'units', 'normalized');
 				pos = get(p.h_parent, 'position');
+				set(p.h_parent, 'units', units);
 				context.size_in_mm = context.size_in_mm .* pos(3:4);
 			end
 			
+			% for the root, we apply the margins here, since it's
+			% a special case because there's always exactly one of
+			% it
+			margin = p.getPropertyValue('margin', 'mm');
+			m = margin([1 3]) / context.size_in_mm(1);
+			context.rect = context.rect + [m(1) 0 -sum(m) 0];
+			m = margin([2 4]) / context.size_in_mm(2);
+			context.rect = context.rect + [0 m(1) 0 -sum(m)];
 			
+			% now, recurse
+			p.recurseComputeLayout(context);
 			
-			% LINEAR PROGRAMMING APPROACH TO LAYOUT
-			%
-			% parent panels represent constraints, whereas object
-			% panels are the subjects of constraints. uncommitted
-			% panels, for the sake of sizing, behave like object
-			% panels (it's just that they won't actually display
-			% anything in the rectangle sized up for them).
-			%
-			% we go through first and get all the constraints
-			% placed by all the parent panels of the layout. we
-			% then maximize the size of all panels subject to
-			% those constraints.
-			%
-			% but before we do that, we have to index all the
-			% non-parent panels so that we can refer to them by
-			% index in the parameters of the linear programming
-			% operation.
-			%
-			% CONSTRAINT TYPES:
-			%
-			% constraint 1: margin constraints
-			%   each margin element must be respected. an object
-			%   must have clear space around itself of the amount
-			%   specified by its margin. these are inequality
-			%   constraints.
-			%
-			% constraint 2: relative size constraints
-			%   when we pack() panels, we ask them to be of
-			%   certain sizes relative to one another. these are
-			%   equality constraints.
-			%
-			% constraint 3: alignment constraints
-			%   if two panels are packed alongside, then the axes
-			%   within them on their outside edges, perpendicular
-			%   to the packing dimension, must align. these are
-			%   equality constraints.
-			
-			
-% 			t0 = clock();
-% 			t_linprog = 0;
-% 			r_linprog = [];
-			
-			% index all sizeable panels (keep references to them
-			% as well so that we can give them their rect when
-			% we've finished computing the layout). numPanels is the
-			% number of these panels. numVars is twice this,
-			% because, for each dimension, there are two variables
-			% to find.
-			allPanels = p.getPanels('*');
-			
-			% separate sizeables from those with absolute
-			% positioning mode
-			abs_mode = logical([]);
-			for i = 1:length(allPanels)
-				if isofsize(allPanels{i}.packpos, [1 4])
-					abs_mode(i) = true;
-				else
-					abs_mode(i) = false;
-				end
+			% clear h_showAxis when we recompute the layout
+			if ~isempty(p.h_showAxis)
+				delete(p.h_showAxis);
+				p.h_showAxis = [];
 			end
-			absPanels = allPanels(abs_mode);
-			allPanels = allPanels(~abs_mode);
-			
-			% index the sizeable ones
-			numPanels = length(allPanels);
-			numVars = numPanels * 2;
-			for i = 1:numPanels
-				allPanels{i}.state.index = i;
-			end
-			
-			% create LP problem
-			lp = linprog_create(numVars);
-			p.state.lp = repmat(lp, 1, 2);
-			p.state.lp(1).size_in_mm = context.size_in_mm(1);
-			p.state.lp(2).size_in_mm = context.size_in_mm(2);
-			
-			% add constraints
-			p.addConstraints(p, [1 1]);
-			p.addConstraintsFigureEdge();
-			
-			% add maximization
-			for dim = 1:2
-				for n = 1:numPanels
-					i2 = n * 2;
-					i1 = i2 - 1;
-					p.state.lp(dim) = linprog_addmaxim(p.state.lp(dim), i1, i2);
-				end
-			end
-			
-			% data for panels
-			xxyy = [];
-			
-			% solve lp problems
-			p.state.lp(1) = linprog_solve(p.state.lp(1));
-			p.state.lp(2) = linprog_solve(p.state.lp(2));
-			opt_success = ~isempty(p.state.lp(1).x) && ~isempty(p.state.lp(2).x);
-			
-			% if successful
-			if opt_success
-			
-				% distribute solution amongst panels
-				for dim = 1:2
-					xxyy(:, dim*2+[-1 0]) = reshape(p.state.lp(dim).x, 2, numPanels)' / context.size_in_mm(dim);
-				end
 
-				% because we pack top-bottom (zero to one), but the
-				% actual object positions in matlab are +ve is upwards,
-				% we have to flip the y data, here.
-				yy = xxyy(:, [3 4]);
-				yy = fliplr(1 - yy);
-				xxyy(:, [3 4]) = yy;
-
-				% pass context to each panel
-				for n = 1:numPanels
-					context.rect = [xxyy(n, [1 3]) xxyy(n, [2 4])-xxyy(n, [1 3])];
-					allPanels{n}.m_context = context;
-				end
-
-				% pass context to abs panels
-				for n = 1:length(absPanels)
-					context.rect = [];
-					absPanels{n}.m_context = context;
-				end
-
-				% clear h_showAxis
-				if ~isempty(p.h_showAxis)
-					delete(p.h_showAxis);
-					p.h_showAxis = [];
-				end
-
-	% 			% timing report
-	% 			tf = clock();
-	% 			t_total = etime(tf, t0);
-	%  			disp(['LINPROG: ' sprintf('%dms (%dms)', round([t_total*1000 t_linprog*1000])), ' constraints ' r_linprog]);
-	
-			end
-			
 			% having computed the layout, we now apply it,
 			% starting at the root panel.
 			p.applyLayout('recurse');
+			
+		end
+		
+		function recurseComputeLayout(p, context)
+			
+			% store context
+			p.m_context = context;
+			
+			% if no children, do nothing further
+			if isempty(p.m_children)
+				return
+			end
+			
+			% else, we're going to recompute the layout for our
+			% children
+			margins = [];
+			
+			% get size to pack into
+			mm_canvas = context.size_in_mm(p.packdim);
+			mm_context = mm_canvas * context.rect(2+p.packdim);
+			
+			% get list of children that are packed relative - we
+			% do this because the computation only handles these
+			% relative children; absolute packed children are
+			% ignored through the computation, and are just packed
+			% as specified when the time comes.
+			rel_list = [];
+			
+			% for each child
+			for i = 1:length(p.m_children)
+
+				% get child
+				c = p.m_children(i);			
+			
+				% is it packed abs?
+				if isofsize(c.packspec, [1 4])
+					continue
+				end
+				
+				% if not, it's packed relative, so add to list
+				rel_list(end+1) = i;
+				
+			end
+				
+			% array of actual sizes as fraction of parent (note we
+			% only represent the rel_list).
+			zz = zeros(1, length(rel_list));
+			sz_phys = zz;
+			sz_frac = zz;
+			i_stretch = zz;
+			
+			% for each child that is packed relative
+			for i = 1:length(rel_list)
+
+				% get child
+				c = p.m_children(rel_list(i));
+
+				% get internal margin
+				margin = c.getPropertyValue('margin', 'mm');
+				if p.packdim == 2
+					margin = margin([2 4]);
+					margin = fliplr(margin); % doclink FLIP_PACKDIM_2 - same reason, here!
+				else
+					margin = margin([1 3]);
+				end
+				margins(i:i+1, i) = margin';
+				
+				% subtract fixed size packspec from packing size
+				if iscell(c.packspec)
+					% NB: fixed size is always _stored_ in mm!
+					sz_phys(i) = c.packspec{1};
+				end
+				
+				% get relative packing sizes
+				if isnumeric(c.packspec) && isscalar(c.packspec)
+					% NB: relative size is a scalar numeric
+					sz_frac(i) = c.packspec;
+					% convert perc to frac
+					if sz_frac(i) > 1
+						sz_frac(i) = sz_frac(i) / 100;
+					end
+				end
+				
+				% get stretch packing size
+				if isempty(c.packspec)
+					% NB: these will be filled later
+					i_stretch(i) = 1;
+				end
+				
+				% else, it's an abs packing size, and we can ignore
+				% it for this phase of layout
+				
+			end
+			
+			% finalise internal margins (that is, the margin at
+			% each boundary between two adjacent relative packed
+			% panels is the maximum of the margins specified by
+			% each of the pair).
+			margins = max(margins, [], 2);
+			margins = margins(2:end-1)';
+			
+			% subtract internal margins to give available space
+			% for objects (in mm)
+			mm_objects = mm_context - sum(margins);
+			
+			% now, subtract physically sized objects to give
+			% available space to share out amongst panels that
+			% specify their size as a fraction.
+			mm_share = mm_objects - sum(sz_phys);
+			
+			% and now stretch items can be given their actual
+			% fractional size, since we now know who they are
+			% sharing space with.
+			sz_frac(find(i_stretch)) = (1 - sum(sz_frac)) / sum(i_stretch);
+			
+			% and we can now get the real physical size of all the
+			% fractionally-sized panels in mm.
+			sz_frac = sz_frac * mm_share;
+			
+			% finally, we've got the physical boundaries of
+			% everything; let's just tidy that up.
+			sz = [[sz_phys + sz_frac]; margins 0];
+			sz = sz(1:end-1);
+			
+			% and let's normalise the physical boundaries, because
+			% we're actually going to specify them to matlab in
+			% normalised form, even though we computed them in mm.
+			if ~isempty(sz)
+				
+				% do it
+				sz_norm = reshape([0 cumsum(sz / mm_context)]', 2, [])';
+			
+				% for packdim 2, we pack from the top, whereas
+				% matlab's position property packs from the bottom, so
+				% we have to flip these. doclink FLIP_PACKDIM_2.
+				if p.packdim == 2
+					sz_norm = fliplr(1 - sz_norm);
+				end
+				
+			end
+			
+			% recurse
+			for i = 1:length(p.m_children)
+				
+				% get child
+ 				c = p.m_children(i);
+				
+				% handle abs packed panels
+				if isofsize(c.packspec, [1 4])
+					
+					% child context
+					child_context = context;
+					rect = child_context.rect;
+					rect([1 3]) = c.packspec([1 3]) * rect(3) + [rect(1) 0];
+					rect([2 4]) = c.packspec([2 4]) * rect(4) + [rect(2) 0];
+					child_context.rect = rect;
+
+				else
+				
+					% child context
+					child_context = context;
+					rr = sz_norm(1, :);
+					sz_norm = sz_norm(2:end, :); % sz_norm has only as many entries as there are rel-packed panels
+					ri = p.packdim + [0 2];
+					a = child_context.rect(ri(1));
+					b = child_context.rect(ri(2));
+					child_context.rect(ri) = [a+rr(1)*b diff(rr)*b];
+					
+				end
+				
+				% recurse
+ 				c.recurseComputeLayout(child_context);
+				
+			end
 			
 		end
 		
@@ -3543,7 +3627,7 @@ classdef (Sealed = true) panel < handle
 			
 			% if empty, must be absolute position
 			if isempty(r)
-				r = p.packpos;
+				r = p.packspec;
 				pp = getObjectPosition(p.parent);
 				r = panel.getRectangleOfRectangle(pp, r);
 			end
@@ -3794,370 +3878,6 @@ classdef (Sealed = true) panel < handle
 	
 	
 	
-	
-	
-	
-	
-	%% ---- CONSTRAINT METHODS ----
-	
-	methods (Access = private)
-
-		function addConstraint_Alignment(p, placer, p1, p2, edgespec)
-			
-			% "placer" is the calling panel, being some parent panel,
-			% and is placing a constraint between "p1" and "p2",
-			% that their edges, specified by edgespec, must be
-			% aligned.
-% 			nc = rpad(int2str(size(p.state.lin(1).A, 1)+size(p.state.lin(2).A, 1)+1), 4);
-% 			disp([nc 'ALIGN   ' lpad(placer.state.name) ' --- ' ...
-% 				lpad(p1.state.name) ' : ' rpad(p2.state.name) ...
-% 				'align on edge ' edgestr(edgespec) ...
-% 				]);
-			
-			% add
-			dim = edgespec(1);
-			p1 = p1.state.index;
-			p2 = p2.state.index;
-			i1 = (p1-1) * 2 + edgespec(2);
-			i2 = (p2-1) * 2 + edgespec(2);
-			p.state.lp(dim) = linprog_equality(p.state.lp(dim), i1, i2);
-			
-		end
-		
-		function addConstraint_RelativeSize(p, placer, p1, p2, dim, ratio)
-			
-			% "placer" is the calling panel, being some parent panel,
-			% and is placing a constraint between "f1/f2" and "o1/o2",
-			% that they have the specified size "ratio" along the
-			% specified "dim"ension.
-% 			nc = rpad(int2str(size(p.state.lin(1).A, 1)+size(p.state.lin(2).A, 1)+1), 4);
-% 			disp([nc 'RELSIZE ' lpad(placer.state.name) ' --- ' ...
-% 				lpad(p1.state.name) ' : ' rpad(p2.state.name) ...
-% 				sprintf('%i  %.3f', dim, ratio) ...
-% 				]);
-			
-			% add
-			p1 = p1.state.index;
-			p2 = p2.state.index;
-			i1 = p1*2-1;
-			i2 = p1*2;
-			i3 = p2*2-1;
-			i4 = p2*2;
-			p.state.lp(dim) = linprog_addrelsize(p.state.lp(dim), i1, i2, i3, i4, ratio);
-			
-		end
-		
-		function addConstraint_EdgeMargin(p, placer, dim, p1, e1, p2, e2, margin)
-			
-			% "placer" is the calling panel, being some parent panel,
-			% and is placing a constraint between the edges p1/e1
-			% and p2/e2, with at least the specified margin
-			% between the edges. e1 and e1 are edgespec's. either
-			% p1 or p2 can be empty, in which case the figure is
-			% assumed to be that side of the constraint.
-% 			if isempty(p1) p1name = 'figure'; else p1name = p1.state.name; end
-% 			if isempty(p2) p2name = 'figure'; else p2name = p2.state.name; end
-% 			nc = rpad(int2str(size(p.state.lin(1).A, 1)+size(p.state.lin(2).A, 1)+1), 4);
-% 			disp([nc 'EDGE    ' lpad(placer.state.name) ' --- ' ...
-% 				lpad([p1name ' ' edgestr([dim e1])]) ' : ' rpad([p2name ' ' edgestr([dim e2])]) ...
-% 				sprintf('[margin = %i]', margin) ...
-% 				]);
-			
-			% add
-			if isempty(p1)
-				i1 = {0};
-			else
- 				p1 = p1.state.index;
-				i1 = (p1-1) * 2 + e1;
-			end
-			if isempty(p2)
-				i2 = {p.state.lp(dim).size_in_mm};
-			else
- 				p2 = p2.state.index;
-				i2 = (p2-1) * 2 + e2;
-			end
-			p.state.lp(dim) = linprog_addmargin(p.state.lp(dim), i1, i2, margin);
-
-			
-		end
-		
-		function addConstraintsFigureEdge(p)
-			
-			% ---- FIGURE EDGE CONSTRAINTS ----
-
-			% here, we only use the top-level margin for this. an
-			% alternative is to use the margin of each individual
-			% panel (see below), but this seems to be unhelpful in
-			% making layouts. doing it this way is part of the
-			% general policy of "margins apply only at the level
-			% that they are set" - thus, the margin setting only
-			% of the top-level container (the root panel) is
-			% applied wrt the figure edge.
-			margin = p.getPropertyValue('margin', 'mm');
-			
-			% for each dim
-			for dim = 1:2
-				
-				% for each edge
-				for edge = 1:2
-					
-					% get all children on edge
-					cs = p.getPanels('s', [dim edge], true);
-
-					% place margins with figure edges
-					for c = 1:length(cs)
-						ch = cs{c};
-						
-						% use the margin of each individual panel
-% 						margin = ch.getPropertyValue('margin', 'mm');
-
-						% extract the margin for the appropriate edge
-						m = margin(edgeindex([dim edge]));
-						
-						if edge == 1
-							p.addConstraint_EdgeMargin(p, dim, [], 2, ch, 1, m);
-						else
-							p.addConstraint_EdgeMargin(p, dim, ch, 2, [], 1,  m);
-						end
-					end
-					
-				end
-
-			end
-			
-		end
-		
-		function addConstraints(p, root, xy)
-			
-			% parameters
-			packdim = p.packdim;
-			
-			% as part of the policy of "margins apply only at the
-			% level that they are set", we take the margins only
-			% of the parent containers when applying margins.
-			
-			% ---- MARGIN CONSTRAINTS ----
-			
-			% only multi-child parents place internal margin constraints
-			if p.isParent() && length(p.m_children) > 1
-				
-				% for each child pair
-				for c = 1:(length(p.m_children)-1)
-					
-					% extract local pair of children, left then right
-					% (or top then bottom)
-					p1 = p.m_children(c);
-					p2 = p.m_children(c+1);
-					
-					% and get the appropriate margins from them
-					m1 = p1.getPropertyValue('margin', 'mm');
-					m2 = p2.getPropertyValue('margin', 'mm');
-					m1 = m1(edgeindex([packdim 2]));
-					m2 = m2(edgeindex([packdim 1]));
-					
-					% get all children on the appropriate edge of each
-					% of them
-					p1c = p1.getPanels('s', [packdim 2], true);
-					p2c = p2.getPanels('s', [packdim 1], true);
-					
-					% for each pair, get the maximum margin between
-					% them (they each specify a margin) and apply that
-					for i1 = 1:length(p1c)
-						for i2 = 1:length(p2c)
-							
-							% get individual children
-							c1 = p1c{i1};
-							c2 = p2c{i2};
-							
-% 							% this alternative model uses the margins of
-% 							% the individual children, not just of the
-% 							% packing parents
-% 	 						m1 = c1.getPropertyValue('margin', 'mm');
-% 	 						m2 = c2.getPropertyValue('margin', 'mm');
-% 							m1 = m1(edgeindex([packdim 2]));
-% 							m2 = m2(edgeindex([packdim 1]));
-							
-							% both margins give a constraint - the tighter
-							% constraint is given simply by the larger margin
-							m = max(m1, m2);
-							
-							% apply the margin
-		 					root.addConstraint_EdgeMargin(p, packdim, c1, 2, c2, 1, m);
-							
-						end
-					end
-					
-				end
-				
-			end
-			
-			
-			
-			% ---- ALIGNMENT CONSTRAINTS ----
-			
-			if p.isParent() && p.getPropertyValue('align')
-				
-				% align on opposite to packdim
-				aligndim = flipdim(packdim);
-				
-				% collect items on extreme edges
- 				e1 = {};
-				e2 = {};
-				
-				% for each child, get items on edge
-				for c = 1:length(p.m_children)
-
-					% get extreme edges
-					ch = p.m_children(c);
-					e1 = cat(2, e1, ch.getPanels('p', [aligndim 1], true));
-					e2 = cat(2, e2, ch.getPanels('p', [aligndim 2], true));
-
-				end
-				
-				% for each, align with the first
-				for e = 2:length(e1)
-					root.addConstraint_Alignment(p, e1{1}, e1{e}, [aligndim 1]);
-				end
-				
-				% for each, align with the first
-				for e = 2:length(e2)
-					root.addConstraint_Alignment(p, e2{1}, e2{e}, [aligndim 2]);
-				end
-
-			end
-			
-			
-			
-			% ---- CONTAINMENT CONSTRAINTS ----
-			
-			if p.isParent()
-				
-				% for each dim
-				for containdim = 1:2
-					
-					% in packing dim, contain first and last
-					if containdim == packdim
-						
-						% get extreme edges of first and last
-						o1 = p.m_children(1).getPanels('s', [containdim 1], false);
-						o2 = p.m_children(end).getPanels('s', [containdim 2], false);
-
-						% add a constraint for the edge
-						if ~isempty(o1)
-							root.addConstraint_EdgeMargin(p, containdim, p, 1, o1{1}, 1, 0);
-						end
-						
-						% add a constraint for each edge
-						if ~isempty(o2)
-							root.addConstraint_EdgeMargin(p, containdim, o2{1}, 2, p, 2, 0);
-						end
-						
-					else
-						
-						% across packing-dim, contain all
-						for c = 1:length(p.m_children)
-
-							% get extreme edges of child
-							ch = p.m_children(c);
-							o1 = ch.getPanels('s', [containdim 1], false);
-							o2 = ch.getPanels('s', [containdim 2], false);
-
-							% add a constraint for the edge
-							if ~isempty(o1)
-								root.addConstraint_EdgeMargin(p, containdim, p, 1, o1{1}, 1, 0);
-							end
-							
-							% add a constraint for the edge
-							if ~isempty(o2)
-								root.addConstraint_EdgeMargin(p, containdim, o2{1}, 2, p, 2, 0);
-							end
-
-						end
-						
-					end
-					
-				end
-				
-			end
-			
-			
-			
-			% ---- SIZING CONSTRAINTS ----
-			
-			if p.isParent()
-
-				% auto-pack to get the size of stretch panels
-				packing_size = p.autoPack();
-				
-				% if that returned empty, this panel contains
-				% absolute positioning mode panels, and we can skip
-				% it
-				if ~isempty(packing_size)
-
-					% between the first and each other, place a relative
-					% size relationship. we size against the object edges
-					% that are exposed by each child. if the child is an
-					% object, this will just be the two edges of its object;
-					% if the child is a parent, this will be the edges
-					% of its two extreme object panel children,
-					% grandchildren, etc.
-
-					% get first child
-					ch = p.m_children(1);
-
-					% for each other child
-					for c = 2:length(p.m_children)
-
-						% get other child
-						och = p.m_children(c);
-
-						% add a sizing constraint for the child
-						d = packing_size(c) / packing_size(1);
-						root.addConstraint_RelativeSize(p, ch, och, packdim, d);
-
-					end
-
-				end
-				
-			end
-			
-			
-			
-			% ---- RECURSE ----
-			
-			if p.isParent()
-				
-				% recurse
-				for c = 1:length(p.m_children)
-					
-					if isempty(packing_size)
-						
-						% absolute packing
-						xy_ = panel.getRectangleOfRectangle([0 0 xy], p.m_children(c).packpos);
-						p.m_children(c).addConstraints(root, xy_(3:4));
-						
-					else
-						
-						% relative packing
-						xy_ = xy;
-						xy_(packdim) = xy_(2) * packing_size(c);
-						p.m_children(c).addConstraints(root, xy_);
-					
-					end
-					
-				end
-				
-			end
-			
-		end
-
-	end
-	
-	
-	
-	
-	
-	
 	%% ---- PROPERTY METHODS ----
 	
 	methods (Access = private)
@@ -4224,9 +3944,6 @@ classdef (Sealed = true) panel < handle
 					invalid = ~( (isdimension(value)) || isempty(value) );
 				case {'marginleft' 'marginbottom' 'marginright' 'margintop'}
 					invalid = ~isscalardimension(value);
-				case 'align'
-					invalid = ~( (isscalar(value) && (isnumeric(value) || islogical(value))) || isempty(value) );
-					value = logical(value);
 				otherwise
 					error('panel:UnrecognisedProperty', ['unrecognised property "' key '"']);
 			end
@@ -4300,7 +4017,8 @@ classdef (Sealed = true) panel < handle
 			defprop.margin = {[15 15 5 5] 'mm'};
 			
 			% not inherited properties
-			defprop.align = false;
+			% CURRENTLY, NONE!
+% 			defprop.align = false;
 			
 		end
 		
@@ -4406,7 +4124,7 @@ classdef (Sealed = true) panel < handle
 					% in production code, must mlock() file at this point,
 					% to avoid persistent variables being cleared by user
 					if strcmp(getenv('USERDOMAIN'), 'BERGEN')
-						% do nothing
+						% my machine, do nothing
 					else
 						mlock
 					end
@@ -4419,11 +4137,19 @@ classdef (Sealed = true) panel < handle
 			
 		end
 		
-		function debugmsg(msg)
+		function debugmsg(msg, focus)
+			
+			% focus can be supplied to force only focussed
+			% messages to be shown
+			if nargin < 2
+				focus = 1;
+			end
 			
 			% display, if in debug mode
-			if panel.isDebug()
-				disp(msg);
+			if focus
+				if panel.isDebug()
+					disp(msg);
+				end
 			end
 			
 		end
@@ -4628,7 +4354,7 @@ classdef (Sealed = true) panel < handle
 					argument_h_parent = data;
 					for r = 1:length(registeredPanels)
 						if registeredPanels(r).h_parent == argument_h_parent
-							registeredPanels(r).recomputeLayout();
+							registeredPanels(r).recomputeLayout([]);
 						end
 					end
 					
@@ -4904,7 +4630,7 @@ index = 0;
 
 end
 
-function dim = flipdim(dim)
+function dim = flippackdim(dim)
 
 % this function, used between arguments in a recursive call,
 % causes the dim to be switched with each recurse, so that
@@ -5295,534 +5021,48 @@ b = ishandle(h) && strcmp(get(h, 'type'), 'axes');
 
 end
 
+function validate_packspec(packspec)
 
-
-
-
-
-%% LINPROG PROBLEM
-%
-% NB: This could really replace the functions above
-%
-% addConstraint_Alignment
-% addConstraint_RelativeSize
-% addConstraint_EdgeMargin
-%
-% in a later version, so long as everything is working
-% correctly then we can get rid of all lines with the old
-% implementation tag "lin" in them.
-		
-function lp = linprog_create(N)
-
-lp = [];
-lp.N = N;
-lp.A = zeros(0, N);
-lp.b = [];
-lp.c = [];
-lp.x = [];
-lp.xo = [];
-
-% collect constraints
-lp.margins = {};
-lp.relsizes = {};
-
-end
-
-function lp = linprog_addrelsize(lp, i1, i2, i3, i4, relsize)
-
-% set (x(i4) - x(i3)) - (relsize * (x(i2) - x(i1))) = 0
-
-% store
-lp.relsizes{end+1} = [i1 i2 i3 i4 relsize];
-
-end
-
-function lp = linprog_processrelsizes(lp)
-
-for m = 1:length(lp.relsizes)
-
-	relsize = lp.relsizes{m};
-	i1 = relsize(1);
-	i2 = relsize(2);
-	i3 = relsize(3);
-	i4 = relsize(4);
-	relsize = relsize(5);
-	
-	row = size(lp.A, 1) + 1;
-	lp.A(row, i4) = 1;
-	lp.A(row, i3) = -1;
-	lp.A(row, i2) = -relsize;
-	lp.A(row, i1) = relsize;
-	lp.b(row, 1) = 0;
-
-end
-
-end
-
-function lp = linprog_addmaxim(lp, i1, i2)
-
-% maximise x(i2) - x(i1)
-
-if (length(lp.c) >= i1 && lp.c(i1)) || (length(lp.c) >= i2 && lp.c(i2))
-	error('assumption that maxims are only introduced once has broken');
-end
-
-lp.c(i2, 1) = 1;
-lp.c(i1, 1) = -1;
-
-end
-
-function lp = linprog_addmargin(lp, i1, i2, margin)
-
-% set x(i2) - x(i1) >= margin
-
-% for convenience of the caller, we allow these to build up
-% one by one into this cell array.
-%
-% for efficiency of constructing the A matrix, we actually
-% don't modify the A and b and c matrix until at the end, in
-% linprog_processmargins, avoiding lots of spurious copies
-% of a large lp object.
-lp.margins{end+1} = {i1 i2 margin};
-
-end
-
-function lp = linprog_processmargins(lp)
-
-% number of margins we will add
-N = length(lp.margins);
-
-% count up indices
-row = size(lp.A, 1);
-i3 = size(lp.A, 2);
-
-% pre-allocate expanded A array
-sz = size(lp.A) + N;
-lp.A(sz(1), sz(2)) = 0;
-
-% for each margin
-for m = 1:length(lp.margins)
-	
-	% extract
-	margin = lp.margins{m};
-	i1 = margin{1};
-	i2 = margin{2};
-	margin = margin{3};
-
-	% introduce a slack variable
-	i3 = i3 + 1;
-	row = row + 1;
-
-	% then x(i2) - x(i1) - x(i3) = margin
-	bval = margin;
-
-	% if i1 or i2 is a cell, it's a constant, so treat it thus
-	if iscell(i2)
-		bval = bval - i2{1};
-		i2 = [];
-	end
-	if iscell(i1)
-		bval = bval + i1{1};
-		i1 = [];
+	% stretchable
+	if isempty(packspec)
+		return
 	end
 
-	% add the constraint
-	lp.b(row, 1) = bval;
-	lp.A(row, i3) = -1;
-	lp.A(row, i2) = 1;
-	lp.A(row, i1) = -1;
+	% scalar
+	if isa(packspec, 'double') && isscalar(packspec)
 
-	% augment c
-	lp.c(i3, 1) = 0;
-
-end
-
-end
-
-function lp = linprog_equality(lp, i1, i2)
-
-% set x(i2) - x(i1) = 0
-
-row = size(lp.A, 1) + 1;
-lp.A(row, i2) = 1;
-lp.A(row, i1) = -1;
-lp.b(row, 1) = 0;
-
-end
-
-function lp = linprog_solve(lp)
-
-lp = linprog_processrelsizes(lp);
-lp = linprog_processmargins(lp);
-
-persistent have_opt_toolbox have_warned
-if isempty(have_opt_toolbox)
-	have_opt_toolbox = ~isempty(which('linprog'));
-end
-
-if have_opt_toolbox
-
-	% find using linprog() (Optimization Toolbox)
-	NN = size(lp.A, 2);
-	opt = optimset('Display', 'off');
-	x = linprog(-lp.c, -eye(NN), zeros(NN, 1), lp.A, lp.b, [], [], [], opt);
-	
-else
-	
-% 	c1 = clock();
-	
-	% make sure all constraints have non-negative b
-	f = find(lp.b < 0);
-	lp.A(f, :) = -lp.A(f, :);
-	lp.b(f) = -lp.b(f);
-	
-	% find using Jeff Stuart's implementation
-	x = js_linprog_stub(lp.A, lp.b, lp.c');
-	
-% 	c2 = clock();
-% 	
-% 	T = etime(c2, c1);
-% 	if T > 1 && isempty(have_warned)
-% 		disp(['Panel warning: layout computation is slow because optimization toolbox is not installed.']);
-% 		have_warned = true;
-% 	end
-
-end
-
-if isempty(x)
-	lp.x = [];
-else
-	lp.x = x(1:lp.N);
-	if any(isnan(lp.x))
-		% something wrong - let's give up rather than bother the
-		% user
-% 		error('some NaNs in lp.x');
-		lp.x = [];
-	end
-end
-
-end
-
-
-
-
-
-
-
-%% LINPROG SOLVER
-%
-% this LP solver is due to Jeff Stuart (was at USM). i
-% incorporated it here in version 2.1 so that users no
-% longer need the Optimization Toolbox to run this. thanks
-% to "Daniel" at Matlab Central for pointing out this
-% problem.
-
-
-
-function x = js_linprog_stub(A, b, c)
-
-% this is a stub written by ben mitch to interface the LP
-% problem that panel has to solve with Jeff Stuart's code
-% for solving an LP problem in standard form. i've hacked
-% Jeff's code around to remove all the messaging and what
-% have you, and to simply raise an error if something goes
-% awry, on the grounds that the LP problem solved by panel
-% either works, or does not have a feasible solution (which
-% means we can't do the resizing according to the user's
-% constraints at the current window size).
-
-
-try
-
-	[zmax,PHIiter,PHIIiter,xbasic,ibasic] = js_linprog(A,b,c);
-
-	x = NaN(size(A, 2), 1);
-	x(ibasic) = xbasic;
-	
-catch err
-	
- 	switch err.identifier
-		
-		case 'panel:InfeasibleLP'
-			% no solution - figure window too small, probably
-			x = [];
+		% fraction
+		if packspec > 0 && packspec <= 1
 			return
-			
-		otherwise
-			rethrow(err);
-			
-	end
-	
-end
-
-end
-
-
-
-
-function [zmax,PHIiter,PHIIiter,xbasic,ibasic] = js_linprog(A,b,c);
-%
-%LINPROG uses the two phase simplex method to solve the linear
-%program maximize cx subject to the constraints Ax = b and x >= 0 ,
-%where A is m x n , rank(A) = m , and b >= 0 .    The output vector
-%is [zmax,PHIiter,PHIIiter,xbasic,ibasic], where zmax is the maximal
-%objective value, PHIiter and PHIIiter are the phase I and phase II
-%iteration counts, respectively, where xbasic is the vector of basic
-%x variables at optimality, and where ibasic is the indices of the
-%optimal basis columns in A (and hence the indices for the entries
-%in xbasic).  LINPROG detects infeasibility and unboundedness, and
-%provides appropriate output messages in such cases.  LINPROG also
-%contains a heuristic check for cycling, terminating the algorithm
-%when m Phase II iterations occur without a change in the objective
-%value.  See also PHASEI and PHASEII.
-%
-%Written for MATLAB version 5.0
-%
-%Written by Jeff Stuart, Department of Mathematics,
-%University of Southern Mississippi, Hattiesburg, MS 39406.
-%December, 1993.  Revised, October, 1997.
-%jeffrey.stuart@usm.edu
-%
-[m,n]=size(A);
-if max(size(b) ~=[m 1]);
-	disp('The dimensions of b do not match the dimensions of A.')
-	return
-end
-if min(b) < 0;
-	disp('The RHS vector b must be nonnegative.')
-	return
-end
-if max(size(c) ~=[1 n]);
-	disp('The dimensions of c do not match the dimensions of A.')
-	return
-end
-if rank(A) ~=m;
-	disp('A does not have full row rank.')
-	return
-end
-PHIiter=0;
-PHIIiter=0;
-tol=eps;
-xbasic=zeros(1,n);
-[wmax,ibasic,PHIiter]=js_linprog_phase1(A,b);
-if wmax < -tol
-	error('panel:InfeasibleLP', 'LP is infeasible');
-	%      disp('The original LP is infeasible.  Infeasibility was')
-	%      disp('detected during Phase I.  The total number of phase')
-	%      disp('one iterations performed was: '), disp(PHIiter)
-else
-% 	disp('Phase I completed.  Original LP is feasible.')
-% 	disp('The total number of Phase I iterations was: '),disp(PHIiter)
-% 	disp('Starting Phase II.')
-	[zmax,xbasic,ibasic,ienter,PHIIiter,PCOL,OPTEST,CYCTEST]=js_linprog_phase2(A,b,c,ibasic);
-	xbasic=xbasic';
-% 	if CYCTEST==1;
-% 		return
-% 	end
-% 	if OPTEST == 0;
-% 		disp('The orginal LP is unbounded. An unbounded ray was')
-% 		disp('detected during Phase II.  The output objective')
-% 		disp('value is for the last basic solution found.')
-% 		disp('The number of Phase II iterations was: '),disp(PHIIiter)
-% 		disp('Last objective value is '),disp(zmax)
-% 		disp('The last basic solution, xbasic is '),disp(xbasic)
-% 		disp('The column indices for the last basis: '),disp(ibasic)
-% 		disp('The index of the unbounded entering variable: '),disp(ienter)
-% 		disp('The unbounded ray column is: '),disp(PCOL)
-% 	else
-% 		disp('The original LP has an optimal solution.')
-% 		disp('The number of Phase II iterations was: '),disp(PHIIiter)
-% 		disp('The optimal objective value is '),disp(zmax)
-% 		disp('The indices for the basic columns: '),disp(ibasic)
-% 		disp('The optimal, basic solution is '),disp(xbasic)
-% 	end
-end
-
-end
-
-
-
-
-
-
-
-
-
-function [wmax,ibasic,PHIiter] = js_linprog_phase1(A,b)
-%PHASEI performs Phase I of the simplex method on the constraints
-%Ax = b and x >= 0 (where A is m x n, rank(A) = m , and b >= 0)
-%to determine whether there is a feasible point.  The function
-%output is wmax, the artificial objective value; ibasic, the
-%indices of the basic variables at optimality; and PHIiter, the
-%number of Phase I iterations performed.  If  wmax < 0 ,then the
-%original LP is infeasible.  If wmax = 0 , the original LP is
-%feasible, and ibasic is the index set for a feasible basis.
-%To allow for round-off error, the tests are  wmax < -tol  for
-%infeasibility, and  wmax >= -tol  for feasibility, where "tol"
-% is a preset tolerance (see the initialization value in the fourth
-%line below).  At the expense of additional computation, an adaptive
-%choice for "tol" based on A and b could be selected.
-%
-%See also PHASEII and LINPROG.
-%Written for MATLAB version 5.0 .
-%Written by Jeff Stuart, Department of Mathematics, University of
-%Southern Mississippi, Hattiesburg, MS 39406.  October, 1997.
-%jeff.stuart@usm.edu
-
-[m,n]=size(A);
-A=[A,eye(m)];
-PHIiter=0;
-tol=0.0000001;
-ztol=0.0000001;
-X=zeros(1,n+m);
-J=[zeros(1,n),ones(1,m)];
-c=-J;
-K=[1:n+m];
-J=logical(J);
-ibasic=K(J);
-inon=K(~J);
-B=eye(m);
-xbasic=b;
-w=-sum(xbasic);
-X(ibasic)=b;
-Cred= ones(1,m)*A(:,inon);
-loop =1;
-while loop ==1;
-	if max(Cred) > ztol ;
-		PHIiter=PHIiter + 1;
-		[Maxcost,j]=max(Cred);
-		ienter=inon(j);
-		PCOL=B\A(:,ienter);
-		J(ienter)=1;
-		TESTROWS=find(PCOL > ztol);
-		TESTCOL=PCOL(TESTROWS);
-		[minrat,j]=min(xbasic(TESTROWS)./TESTCOL);
-		iexit=ibasic(TESTROWS(j));
-		J(iexit)=0;
-		if minrat > 0;
-			xbasic=xbasic - minrat*PCOL;
 		end
-		X(ibasic)=xbasic;
-		X(ienter)=minrat;
-		X(iexit)=0;
-		w=w + Maxcost*minrat;
-		ibasic=K(J);
-		inon=K(~J);
-		B=A(:,ibasic);
-		xbasic=X(ibasic)';
-		Cred=c(inon) - (c(ibasic)/B)*A(:,inon);
-	elseif Cred <= ztol;
-		loop = 0;
-	end
-end
-wmax=-sum(X(n+1:n+m));
-if wmax >= -tol;
-	X=X(1:n);
-	last=ibasic(m);
-	K=K(1:last);
-	ibasic=K(J(1:last));
-	while last > n;
-		J=J(1:last);
-		K=[1:last];
-		inon=K(~J);
-		B=A(:,ibasic);
-		inon=inon(inon <= n);
-		j=find(([zeros(1,m-1),1]/B)*A(:,inon));
-		ienter=inon(j(1));
-		J(ienter)=1;
-		J(last)=0;
-		ibasic=K(J);
-		last=ibasic(m);
-		PHIiter=PHIiter+1;
-	end
-end
 
-end
-
-
-
-
-function [z,xbasic,ibasic,ienter,iter,PCOL,OPTEST,CYCTEST] = js_linprog_phase2(A,b,c,ibasic);
-%PHASEII performs phase II of the simplex method starting with the basic
-%columns specified by the vector ibasic.
-%
-%See also PHASEI and LINPROG.
-%Written for Matlab version 5.0.
-%
-%Written by Jeff Stuart, Department of Mathematics, University of Southern Mississippi,
-%Hattiesburg, MS 39406. October, 1993. Revised October, 1997.
-%jeffrey.stuart@usm.edu
-
-[m,n]=size(A);
-PCOL=[];
-ienter=[];
-iter=0;
-cycle=0;
-CYCTEST=0;
-X=zeros(1,n);
-J=X;
-J(ibasic)=ones(1,m);
-K=[1:n];
-inon=K(~J);
-B=A(:,ibasic);
-xbasic=B\b;
-z=c(ibasic)*xbasic;
-OPTEST=0;
-if m<n;
-	X(ibasic)=xbasic;
-	Cred=c(inon) - (c(ibasic)/B)*A(:,inon);
-	OPTEST=1;
-	loop =1;
-	while loop ==1;
-		if max(Cred) > 0;
-			iter=iter + 1;
-			[Maxcost,j]=max(Cred);
-			ienter=inon(j);
-			PCOL=B\A(:,ienter);
-			if PCOL <= 0 , OPTEST = 0;
-				loop = 0;
-			else
-				J(ienter)=1;
-				TESTROWS=find(PCOL > 0);
-				TESTCOL=PCOL(TESTROWS);
-				[minrat,j]=min(xbasic(TESTROWS)./TESTCOL);
-				if minrat <=0, cycle = cycle+1;
-					if cycle > m;
-						error('panel:ExcessiveCycling', 'excessive cycling');
-% 						disp('Algorithm terminated due to excessive cycling.')
-% 						disp('Restart algorithm from phase II using a perturbed')
-% 						disp(' RHS vector b and the current basis.')
-% 						disp(ibasic)
-% 						CYCTEST=1;
-% 						break
-					end
-				else
-					cycle = 0;
-				end
-				iexit=ibasic(TESTROWS(j));
-				J(iexit)=0;
-				xbasic=xbasic - minrat*PCOL;
-				X(ibasic)=xbasic;
-				X(ienter)=minrat;
-				X(iexit)=0;
-				z=z + Maxcost*minrat;
-				J=logical(J);
-				ibasic=K(J);
-				inon=K(~J);
-				B=A(:,ibasic);
-				xbasic=X(ibasic)';
-				Cred=c(inon) - (c(ibasic)/B)*A(:,inon);
-			end
-		else
-			loop = 0;
+		% percentage
+		if packspec > 1 && packspec <= 100
+			return
 		end
+
 	end
-end
+
+	% fixed
+	if iscell(packspec) && isscalar(packspec)
+
+		% delve
+		d = packspec{1};
+		if isa(d, 'double') && isscalar(d) && d > 0
+			return
+		end
+
+	end
+
+	% abs
+	if isa(packspec, 'double') && isofsize(packspec, [1 4]) && all(packspec(3:4)>0)
+		return
+	end
+
+	% otherwise, bad form
+	error('panel:BadPackingSpecifier', 'the packing specifier was not valid - see help panel/pack');
 
 end
-
-
-
 
 
 

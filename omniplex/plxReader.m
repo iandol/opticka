@@ -156,8 +156,13 @@ classdef plxReader < optickaCore
 			end
 			tic
 			load(fn);
-			rE = obj;
-			if exist('tS','var'); rE.tS = tS; end
+			if ~exist('rE','var') && exist('obj','var')
+				rE = obj;
+			end
+			if ~isa(rE,'runExperiment')
+				error('The behavioural file doesn''t contain a runExperiment object!!!');
+			end
+			if isempty(rE.tS) && exist('tS','var'); rE.tS = tS; end
 			meta.filename = [pn fn];
 			meta.protocol = 'Figure Ground';
 			meta.description = 'Figure Ground';
