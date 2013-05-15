@@ -8,7 +8,7 @@ classdef opticka < optickaCore
 	
 	properties
 		%> this is the main runExperiment object
-		r@runExperiment
+		r
 		%> run in verbose mode?
 		verbose = false
 	end

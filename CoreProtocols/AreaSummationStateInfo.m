@@ -14,7 +14,7 @@ tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
 tS.askForComments = true;
-tS.saveData = false; %*** save behavioural and eye movement data? ***
+tS.saveData = true; %*** save behavioural and eye movement data? ***
 obj.useDataPixx = true; %*** drive plexon to collect data? ***
 tS.name = 'area-summation';
 
@@ -22,8 +22,8 @@ fixX = 0;
 fixY = 0;
 obj.lastXPosition = fixX;
 obj.lastYPosition = fixY;
-firstFixInit = 2;
-firstFixTime = 0.25;
+firstFixInit = 1;
+firstFixTime = 0.4;
 firstFixRadius = 1;
 stimulusFixTime = 1;
 

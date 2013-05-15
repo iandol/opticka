@@ -424,7 +424,7 @@ classdef metaStimulus < optickaCore
 
 				fixX = 0;
 				fixY = 0;
-				firstFixInit = 0.5;
+				firstFixInit = 2;
 				firstFixTime = 2;
 				firstFixRadius = 1.25;
 				eL.isDummy = false; %use dummy or real eyelink?
