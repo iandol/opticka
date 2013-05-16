@@ -108,7 +108,7 @@ classdef plxReader < optickaCore
 			raw = raw.var{var};
 			v = num2str(obj.meta.matrix(var,:));
 			v = regexprep(v,'\s+',' ');
-			x.name = ['PLXVar' num2str(var) '--' v];
+			x.name = ['PLX#' num2str(var) '|' v];
 			x.raw = raw;
 			x.totaltrials = obj.strobeList.minRuns;
 			x.nummods = 1;
@@ -273,6 +273,11 @@ classdef plxReader < optickaCore
 				c(idx)=[];
 				b(idx) = [];
 			end
+			if c(end) < 32700 %prune a trial at the end if it is not a stopstrobe!
+				a = a - 1;
+				c(end)=[];
+				b(end) = [];
+			end
 			[~,b19] = plx_event_ts(obj.file,19);
 			[~,b20] = plx_event_ts(obj.file,20);
 			[~,b21] = plx_event_ts(obj.file,21);
@@ -313,9 +318,9 @@ classdef plxReader < optickaCore
 					
 					for nr = 1:obj.strobeList.vars(i).nRepeats
 						tend = obj.strobeList.vars(i).t2(nr);
-						tc = obj.strobeList.correct > tend-0.1 & obj.strobeList.correct < tend+0.1;
-						tb = obj.strobeList.breakFix > tend-0.1 & obj.strobeList.breakFix < tend+0.1;
-						ti = obj.strobeList.incorrect > tend-0.1 & obj.strobeList.incorrect < tend+0.1;
+						tc = obj.strobeList.correct > tend-0.2 & obj.strobeList.correct < tend+0.2;
+						tb = obj.strobeList.breakFix > tend-0.2 & obj.strobeList.breakFix < tend+0.2;
+						ti = obj.strobeList.incorrect > tend-0.2 & obj.strobeList.incorrect < tend+0.2;
 						if max(tc) == 1
 							obj.strobeList.vars(i).responseIndex(nr,1) = true;
 							obj.strobeList.vars(i).responseIndex(nr,2) = false;
