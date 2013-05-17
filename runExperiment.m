@@ -497,7 +497,7 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
-					eL.saveFile = [obj.paths.savedData filesep obj.savePrefix 'FIX.edf'];
+					eL.saveFile = [obj.paths.savedData filesep 'Simba-' obj.savePrefix 'FIX.edf'];
 				end
 				
 				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',['Fix' obj.savePrefix]); 
@@ -619,6 +619,10 @@ classdef runExperiment < optickaCore
 								uuid = ['CC' sM.currentUUID];
 								tS.eyePos.(uuid).x = 1;
 								tS.eyePos.(uuid).y = 1;
+							elseif strcmpi(sM.currentName,'breakfix')
+								uuid = ['BF' sM.currentUUID];
+								tS.eyePos.(uuid).x = 1;
+								tS.eyePos.(uuid).y = 1;
 							end
 						end
 					end
@@ -700,7 +704,7 @@ classdef runExperiment < optickaCore
 					assignin('base', 'tS', tS);
 					save([obj.paths.savedData filesep 'Simba-' obj.savePrefix '.mat'],'rE','bR','tL','tS','sM')
 				end
-				clear tL s tS bR lJ eL io sM			
+				clear rE tL s tS bR lJ eL io sM			
 			catch ME
 				if obj.useDataPixx
 					rstop(io); %pause plexon

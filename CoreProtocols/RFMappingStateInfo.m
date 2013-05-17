@@ -5,7 +5,7 @@ tS.useTask = false;
 tS.checkKeysDuringStimulus = true;
 tS.recordEyePosition = false;
 tS.askForComments = false;
-tS.saveData = false;
+tS.saveData = false; %we don't want to save any data
 
 obj.useDataPixx = false; %make sure we don't trigger the plexon
 

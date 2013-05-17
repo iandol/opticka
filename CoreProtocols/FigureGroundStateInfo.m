@@ -28,7 +28,7 @@ firstFixRadius = 1;
 
 targetFixInit = 0.5;
 targetFixTime = [0.3 0.6];
-targetRadius = 1.5;
+targetRadius = 2.5;
 
 eL.name = 'figure-ground';
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
@@ -85,6 +85,7 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	@()show(obj.stimuli{4}); ...
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
 	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(obj))]); ...
+	@()edfMessage(eL,['UUID ' UUID(sM)]); ...
 	@()startRecording(eL); ... %fire up eyelink
 	@()syncTime(eL); ... %EDF sync message
 	@()draw(obj.stimuli); ... %draw stimulus

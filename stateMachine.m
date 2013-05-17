@@ -392,6 +392,15 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief UUID function to return current UUID via a method
+		%> 
+		%> 
+		% ===================================================================
+		function uuid = UUID(obj)
+			uuid = obj.currentUUID;
+		end
+		
+		% ===================================================================
 		%> @brief runDemo runs a sample state machine session
 		%> 
 		%> 
