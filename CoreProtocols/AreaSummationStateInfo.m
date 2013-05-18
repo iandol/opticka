@@ -16,7 +16,7 @@ tS.recordEyePosition = true;
 tS.askForComments = true;
 tS.saveData = true; %*** save behavioural and eye movement data? ***
 obj.useDataPixx = true; %*** drive plexon to collect data? ***
-tS.name = 'area-summation';
+tS.name = 'area-summation-dots';
 
 fixX = 0;
 fixY = 0;
@@ -25,7 +25,7 @@ obj.lastYPosition = fixY;
 firstFixInit = 1;
 firstFixTime = 0.4;
 firstFixRadius = 1;
-stimulusFixTime = 1;
+stimulusFixTime = 0.75;
 
 eL.isDummy = false; %*** use dummy or real eyelink? ***
 eL.name = tS.name;

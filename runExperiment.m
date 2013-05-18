@@ -497,7 +497,7 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
-					eL.saveFile = [obj.paths.savedData filesep 'Simba-' obj.savePrefix 'FIX.edf'];
+					eL.saveFile = [obj.paths.savedData filesep 'Simba-' obj.savePrefix '.edf'];
 				end
 				
 				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',['Fix' obj.savePrefix]); 
