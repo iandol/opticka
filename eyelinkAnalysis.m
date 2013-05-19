@@ -8,11 +8,12 @@ classdef eyelinkAnalysis < optickaCore
 	properties
 		file@char = ''
 		dir@char = ''
+		verbose = true
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
 		%> raw data
-		raw@struct = []
+		raw@struct
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -34,6 +35,9 @@ classdef eyelinkAnalysis < optickaCore
 			if isempty(obj.file) || isempty(obj.dir)
 				[obj.file, obj.dir] = uigetfile('*.edf','Load EDF File:');
 			end	
+			if ~isempty(obj.file)
+				load(obj);
+			end
 		end
 		
 		% ===================================================================
@@ -43,7 +47,12 @@ classdef eyelinkAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function load(obj)
-			
+			if ~isempty(obj.file)
+				oldpath = pwd;
+				cd(obj.dir)
+				obj.raw = edfmex(obj.file);
+				cd(oldpath)
+			end
 		end
 		
 		

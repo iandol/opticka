@@ -15,20 +15,18 @@ tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
 tS.askForComments = true;
 tS.saveData = true;
-
 obj.useDataPixx = true;
-%obj.lastSize = obj.stimuli{3}.size;
 
 luminancePedestal = [0.5 0.5 0.5];
 fixX = 0;
 fixY = 0;
 firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
-firstFixRadius = 1.25;
+firstFixRadius = 1;
 
 targetFixInit = 0.5;
 targetFixTime = [0.3 0.6];
-targetRadius = 1.5;
+targetRadius = 2;
 
 eL.name = 'figure-ground';
 if tS.saveData == true; eL.recordData = true; end% save EDF file?

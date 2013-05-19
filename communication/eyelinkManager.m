@@ -139,6 +139,9 @@ classdef eyelinkManager < optickaCore
 			
 			obj.checkConnection();
 			
+			%to calculate velocity measurenments etc.
+			Eyelink('Command', ['screen_distance = ' num2str(obj.screen.distance*10)]);
+			
 			if obj.screen.isOpen == true
 				rect=obj.screen.winRect;
 				Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3)-1,rect(4)-1);

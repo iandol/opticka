@@ -1,6 +1,6 @@
 %=====RF Mapping state configuration file=====
 %------------General Settings-----------------
-tS.rewardTime = 140; %TTL time in milliseconds
+tS.rewardTime = 125; %TTL time in milliseconds
 tS.useTask = false;
 tS.checkKeysDuringStimulus = true;
 tS.recordEyePosition = false;
@@ -15,7 +15,7 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 0.75;
 firstFixTime = 2.5;
-firstFixRadius = 1.5;
+firstFixRadius = 1.2;
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
