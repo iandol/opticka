@@ -26,7 +26,7 @@ firstFixRadius = 1;
 
 targetFixInit = 0.5;
 targetFixTime = [0.3 0.6];
-targetRadius = 2;
+targetRadius = 1.6;
 
 eL.name = 'figure-ground';
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
@@ -76,7 +76,7 @@ prefixFcn = @()draw(obj.stimuli);
 
 %fixate entry
 fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
-	@()sendTTL(io,3); ...
+	@()enableFlip(obj); 
 	@()resetFixation(eL); ...
 	@()setOffline(eL); ... %make sure offline before start recording
 	@()edit(obj.stimuli,4,'colourOut',[1 1 0]); ...
@@ -85,12 +85,13 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(obj))]); ...
 	@()edfMessage(eL,['UUID ' UUID(sM)]); ...
 	@()startRecording(eL); ... %fire up eyelink
+	@()sendTTL(io,3); ...
 	@()syncTime(eL); ... %EDF sync message
 	@()draw(obj.stimuli); ... %draw stimulus
 	};
 
 %fix within
-fixFcn = {@()enableFlip(obj); @()draw(obj.stimuli); ... %draw stimulus
+fixFcn = {@()draw(obj.stimuli); ... %draw stimulus
 	};
 
 %test we are fixated for a certain length of time

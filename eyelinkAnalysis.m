@@ -14,12 +14,13 @@ classdef eyelinkAnalysis < optickaCore
 	properties (SetAccess = private, GetAccess = public)
 		%> raw data
 		raw@struct
+		%inidividual trials
+		trials@struct
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'file|dir'
+		allowedProperties@char = 'file|dir|verbose'
 	end
 	
 	methods
@@ -53,6 +54,53 @@ classdef eyelinkAnalysis < optickaCore
 				obj.raw = edfmex(obj.file);
 				cd(oldpath)
 			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parse(obj)
+			isTrial = false;
+			tri = 1;
+			obj.trials = struct;
+			for i = 1:length(obj.raw.FEVENT)
+				evt = obj.raw.FEVENT(i);
+				id = regexpi(evt.message,'^TRIALID (?<ID>\d+)','names');
+				
+				if ~isempty(id)  && ~isempty(id.ID)
+					isTrial = true;
+					obj.trials(tri).id = id.ID;
+					obj.trials(tri).time = evt.time;
+					obj.trials(tri).sttime = evt.sttime;
+				end
+				
+				if isTrial == true
+					
+					uuid = regexpi(evt.message,'^UUID (?<UUID>\d+)','names');
+					if ~isempty(uuid) && ~isempty(uuid.UUID)
+						obj.trials(tri).uuid = uuid.UUID;
+					end
+					
+					id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>\d+)','names');
+					if ~isempty(id) && ~isempty(id.ID)
+						obj.trials(tri).entime = evt.sttime;
+						obj.trials(tri).result = id.ID;
+						if id.ID == 1
+							obj.trials(tri).correct = true;
+						else
+							obj.trials(tri).correct = false;
+						end
+						obj.trials(tri).deltaT = obj.trials(tri).entime - obj.trials(tri).sttime;
+						isTrial = false;
+						tri = tri + 1;
+					end
+				end
+				
+			end
+			
 		end
 		
 		
