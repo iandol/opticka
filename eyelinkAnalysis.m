@@ -63,44 +63,74 @@ classdef eyelinkAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function parse(obj)
+			tic
 			isTrial = false;
 			tri = 1;
 			obj.trials = struct;
 			for i = 1:length(obj.raw.FEVENT)
+				isMessage = false;
 				evt = obj.raw.FEVENT(i);
-				id = regexpi(evt.message,'^TRIALID (?<ID>\d+)','names');
 				
-				if ~isempty(id)  && ~isempty(id.ID)
-					isTrial = true;
-					obj.trials(tri).id = id.ID;
-					obj.trials(tri).time = evt.time;
-					obj.trials(tri).sttime = evt.sttime;
+				if strcmpi(evt.codestring,'MESSAGEEVENT')
+					isMessage = true;
+				end
+				if isMessage && ~isTrial
+					id = regexpi(evt.message,'^TRIALID (?<ID>\d+)','names');
+					if ~isempty(id)  && ~isempty(id.ID)
+						isTrial = true;
+						obj.trials(tri).id = id.ID;
+						obj.trials(tri).time = evt.time;
+						obj.trials(tri).sttime = evt.sttime;
+					end
 				end
 				
-				if isTrial == true
+				if isTrial
 					
-					uuid = regexpi(evt.message,'^UUID (?<UUID>\d+)','names');
-					if ~isempty(uuid) && ~isempty(uuid.UUID)
-						obj.trials(tri).uuid = uuid.UUID;
+					if strcmpi(evt.codestring,'STARTSAMPLES')
+						obj.trials(tri).startsampletime = evt.sttime;
 					end
 					
-					id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>\d+)','names');
-					if ~isempty(id) && ~isempty(id.ID)
-						obj.trials(tri).entime = evt.sttime;
-						obj.trials(tri).result = id.ID;
-						if id.ID == 1
-							obj.trials(tri).correct = true;
-						else
-							obj.trials(tri).correct = false;
+					if strcmpi(evt.codestring,'STARTFIX')
+						obj.trials(tri).startfixtime = evt.sttime;
+					end
+					
+					if isMessage
+						uuid = regexpi(evt.message,'^UUID (?<UUID>\d+)','names');
+						if ~isempty(uuid) && ~isempty(uuid.UUID)
+							obj.trials(tri).uuid = uuid.UUID;
 						end
-						obj.trials(tri).deltaT = obj.trials(tri).entime - obj.trials(tri).sttime;
-						isTrial = false;
-						tri = tri + 1;
+						
+						endfix = regexpi(evt.message,'^END_FIX','names');
+						if ~isempty(endfix)
+							obj.trials(tri).rtstarttime = evt.sttime;
+						end
+						
+						endfix = regexpi(evt.message,'^END_RT','names');
+						if ~isempty(endfix)
+							obj.trials(tri).rtendtime = evt.sttime;
+							if isfield(obj.trials,'rtstarttime')
+								obj.trials(tri).rttime = obj.trials(tri).rtendtime - obj.trials(tri).rtstarttime;
+							end
+						end						
+						
+						id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>\d+)','names');
+						if ~isempty(id) && ~isempty(id.ID)
+							obj.trials(tri).entime = evt.sttime;
+							obj.trials(tri).result = str2num(id.ID);
+							if obj.trials(tri).result == 1
+								obj.trials(tri).correct = true;
+							else
+								obj.trials(tri).correct = false;
+							end
+							obj.trials(tri).deltaT = obj.trials(tri).entime - obj.trials(tri).sttime;
+							isTrial = false;
+							tri = tri + 1;
+						end
 					end
 				end
 				
 			end
-			
+			fprintf('Parsing EDF Trials took %g ms\n',toc*1000);
 		end
 		
 		
