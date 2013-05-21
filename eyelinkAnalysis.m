@@ -16,6 +16,8 @@ classdef eyelinkAnalysis < optickaCore
 		raw@struct
 		%inidividual trials
 		trials@struct
+		FSAMPLE
+		FEVENT
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -53,6 +55,8 @@ classdef eyelinkAnalysis < optickaCore
 				cd(obj.dir)
 				obj.raw = edfmex(obj.file);
 				cd(oldpath)
+				obj.FEVENT = obj.raw.FEVENT;
+				obj.FSAMPLE = obj.raw.FSAMPLE;
 			end
 		end
 		

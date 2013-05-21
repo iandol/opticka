@@ -29,8 +29,8 @@ classdef calibrateLuminance < handle
 		verbosity = 0
 		%> allows the constructor to run the open method immediately
 		runNow = true
-		%> number of measures (default = 20)
-		nMeasures = 20
+		%> number of measures (default = 30)
+		nMeasures = 30
 		%> screen to calibrate
 		screen
 		%> use ColorCalII automatically
@@ -73,6 +73,7 @@ classdef calibrateLuminance < handle
 		gammaTable
 		displayGamma
 		modelFit
+		testColour = false
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -206,36 +207,52 @@ classdef calibrateLuminance < handle
 				
 				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
 				obj.ramp(end) = 1;
-				obj.inputValues = zeros(1,length(obj.ramp));
-				obj.inputValuesI1 = zeros(1,length(obj.ramp));
-				obj.spectrum = zeros(36,length(obj.ramp));
-				a=1;
 				
-				for i = obj.ramp
-					Screen('FillRect',obj.win,i);
-					Screen('Flip',obj.win);
-					WaitSecs(0.25);
-					if obj.useCCal == true
-						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
-						obj.inputValues(a) = obj.thisY;
-% 					else
-% 						% MK: Deprecated as not reliable: resp = input('Value?');
-% 						fprintf('Value? ');
-% 						beep
-% 						resp = GetNumber;
-% 						fprintf('\n');
-% 						obj.inputValues = [obj.inputValues resp];
+				obj.inputValues(1).in = zeros(1,length(obj.ramp));
+				obj.inputValues(2).in = obj.inputValues(1).in; obj.inputValues(3).in = obj.inputValues(1).in; obj.inputValues(4).in = obj.inputValues(1).in;
+				
+				obj.inputValuesI1(1).in = zeros(1,length(obj.ramp));
+				obj.inputValuesI1(2).in = obj.inputValuesI1(1).in; obj.inputValuesI1(3).in = obj.inputValuesI1(1).in; obj.inputValuesI1(4).in = obj.inputValuesI1(1).in;
+				
+				obj.spectrum(1).in = zeros(36,length(obj.ramp));
+				obj.spectrum(2).in = obj.spectrum(1).in; obj.spectrum(3).in = obj.spectrum(1).in; obj.spectrum(4).in = obj.spectrum(1).in;
+				obj.testColour = true;
+				
+				for col = 1:4
+					vals = obj.ramp';
+					valsl = length(vals);
+					cout = zeros(valsl,3);
+					if col == 1
+						cout(:,1) = vals;
+						cout(:,2) = vals;
+						cout(:,3) = vals;
+					elseif col == 2
+						cout(:,1) = vals;
+					elseif col == 3
+						cout(:,2) = vals;
+					elseif col == 4
+						cout(:,3) = vals;
 					end
-					if obj.useI1Pro == true
-						I1('TriggerMeasurement');
-						Lxy = I1('GetTriStimulus');
-						obj.inputValuesI1(a) = Lxy(1);
-						obj.inputValues(a) = obj.inputValuesI1(a);
-						sp = I1('GetSpectrum')';
-						obj.spectrum(:,a) = sp;
+					a=1;
+					for i = 1:valsl
+						Screen('FillRect',obj.win,cout(i,:));
+						Screen('Flip',obj.win);
+						WaitSecs(0.25);
+						if obj.useCCal == true
+							[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
+							obj.inputValues(col).in(a) = obj.thisY;
+						end
+						if obj.useI1Pro == true
+							I1('TriggerMeasurement');
+							Lxy = I1('GetTriStimulus');
+							obj.inputValuesI1(col).in(a) = Lxy(1);
+							%obj.inputValues(col).in(a) = obj.inputValuesI1(col).in(a);
+							sp = I1('GetSpectrum')';
+							obj.spectrum(col).in(:,a) = sp;
+						end
+						fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValues(col).in(a), obj.inputValuesI1(col).in(a));
+						a = a + 1;
 					end
-					fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValues(a), obj.inputValuesI1(a));
-					a = a + 1;
 				end
 				
 				RestoreCluts;
@@ -294,36 +311,51 @@ classdef calibrateLuminance < handle
 				
 				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
 				obj.ramp(end) = 1;
-				obj.inputValuesTest = zeros(1,length(obj.ramp));
-				obj.inputValuesI1Test = zeros(1,length(obj.ramp));
-				obj.spectrumTest = zeros(36,length(obj.ramp));
-				a=1;
 				
-				for i = obj.ramp
-					Screen('FillRect',obj.win,i);
-					Screen('Flip',obj.win);
-					WaitSecs(0.5);
-					if obj.useCCal == true
-						[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
-						obj.inputValuesTest(a) = obj.thisY;
-% 					else
-% 						% MK: Deprecated as not reliable: resp = input('Value?');
-% 						fprintf('Value? ');
-% 						beep
-% 						resp = GetNumber;
-% 						fprintf('\n');
-% 						obj.inputValuesTest = [obj.inputValuesTest resp];
+				obj.inputValuesTest(1).in = zeros(1,length(obj.ramp));
+				obj.inputValuesTest(2).in = obj.inputValuesTest(1).in; obj.inputValuesTest(3).in = obj.inputValuesTest(1).in; obj.inputValuesTest(4).in = obj.inputValuesTest(1).in;
+
+				obj.inputValuesI1Test(1).in = zeros(1,length(obj.ramp));
+				obj.inputValuesI1Test(2).in = obj.inputValuesI1Test(1).in; obj.inputValuesI1Test(3).in = obj.inputValuesI1Test(1).in; obj.inputValuesI1Test(4).in = obj.inputValuesI1Test(1).in;
+				
+				obj.spectrumTest(1).in = zeros(36,length(obj.ramp));
+				obj.spectrumTest(2).in = obj.spectrumTest(1).in; obj.spectrumTest(3).in = obj.spectrumTest(1).in; obj.spectrumTest(4).in = obj.spectrumTest(1).in;
+
+				for col = 1:4
+					vals = obj.ramp';
+					valsl = length(vals);
+					cout = zeros(valsl,3);
+					if col == 1
+						cout(:,1) = vals;
+						cout(:,2) = vals;
+						cout(:,3) = vals;
+					elseif col == 2
+						cout(:,1) = vals;
+					elseif col == 3
+						cout(:,2) = vals;
+					elseif col == 4
+						cout(:,3) = vals;
 					end
-					if obj.useI1Pro == true
-						I1('TriggerMeasurement');
-						Lxy = I1('GetTriStimulus');
-						obj.inputValuesI1Test(a) = Lxy(1);
-						obj.inputValuesTest(a) = obj.inputValuesI1Test(a);
-						sp = I1('GetSpectrum')';
-						obj.spectrumTest(:,a) = sp;
+					a=1;
+					for i = 1:valsl
+						Screen('FillRect',obj.win,cout(i,:));
+						Screen('Flip',obj.win);
+						WaitSecs(0.1);
+						if obj.useCCal == true
+							[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
+							obj.inputValuesTest(col).in(a) = obj.thisY;
+						end
+						if obj.useI1Pro == true
+							I1('TriggerMeasurement');
+							Lxy = I1('GetTriStimulus');
+							obj.inputValuesI1Test(col).in(a) = Lxy(1);
+							%obj.inputValuesTest(col).in(a) = obj.inputValuesI1Test(col).in(a);
+							sp = I1('GetSpectrum')';
+							obj.spectrumTest(col).in(:,a) = sp;
+						end
+						fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValuesTest(a), obj.inputValuesI1Test(a));
+						a = a + 1;
 					end
-					fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValuesTest(a), obj.inputValuesI1Test(a));
-					a = a + 1;
 				end
 				
 				RestoreCluts;
@@ -361,69 +393,83 @@ classdef calibrateLuminance < handle
 		% ===================================================================
 		function analyze(obj)
 			if obj.canAnalyze == 1
-				
-				if obj.preferI1Pro == true
-					inputValues = obj.inputValuesI1;
+				if isstruct(obj.inputValuesI1)
+					ii = length(obj.inputValuesI1);
 				else
-					inputValues = obj.inputValues;
+					ii = 1;
 				end
-				
-				obj.displayRange = (max(inputValues) - min(inputValues));
-				obj.displayBaseline = min(inputValues);
-				
-				%Normalize values
-				obj.inputValuesNorm = (inputValues - obj.displayBaseline)/(max(inputValues) - min(inputValues));
-				obj.rampNorm = obj.ramp;
-				
-				if ~exist('fittype'); %#ok<EXIST>
-					fprintf('This function needs fittype() for automatic fitting. This function is missing on your setup.\n');
-				end
-				
-				%Gamma function fitting
-				g = fittype('x^g');
-				fo = fitoptions('Method','NonlinearLeastSquares',...
-					'Display','iter','MaxIter',1000,...
-					'Upper',3,'Lower',0,'StartPoint',1.5);
-				[fittedmodel, gof, output] = fit(obj.rampNorm',obj.inputValuesNorm',g,fo);
-				obj.displayGamma = fittedmodel.g;
-				obj.gammaTable{1} = ((([0:1/255:1]'))).^(1/fittedmodel.g);
-				
-				obj.modelFit{1}.method = 'Gamma';
-				obj.modelFit{1}.table = fittedmodel([0:1/255:1]);
-				obj.modelFit{1}.gof = gof;
-				obj.modelFit{1}.output = output;
-				
-				for i = 1:length(obj.analysisMethods)					
-					method = obj.analysisMethods{i};
-					%fo = fitoptions('MaxIter',1000);
-					[fittedmodel,gof,output] = fit(obj.rampNorm',obj.inputValuesNorm', method);
-					obj.modelFit{i+1}.method = method;
-					obj.modelFit{i+1}.table = fittedmodel([0:1/255:1]);
-					obj.modelFit{i+1}.gof = gof;
-					obj.modelFit{i+1}.output = output;
-					%Invert interpolation
-					x = obj.inputValuesNorm;
-					x = obj.makeUnique(x);
-					[fittedmodel,gof] = fit(x',obj.rampNorm',method);
-					obj.gammaTable{i+1} = fittedmodel([0:1/255:1]);
-				end
-				
-				ans = questdlg('Do you want to add comments to this calibration?');
-				if strcmpi(ans,'Yes')
-					if iscell(obj.comments)
-						cmts = obj.comments;
+				for loop = 1:ii
+					if obj.preferI1Pro == true
+						if isstruct(obj.inputValuesI1)
+							inputValues = obj.inputValuesI1(loop).in;
+						else
+							inputValues = obj.inputValuesI1;
+						end
 					else
-						cmts = {obj.comments};
+						if isstruct(obj.inputValues)
+							inputValues = obj.inputValues(loop).in;
+						else
+							inputValues = obj.inputValues;
+						end
 					end
-					cmt = inputdlg('Please enter a description for this calibration run:','Gamma Calibration',10,cmts);
-					if ~isempty(cmt)
-						obj.comments = cmt{1};
+
+					obj.displayRange = (max(inputValues) - min(inputValues));
+					obj.displayBaseline = min(inputValues);
+
+					%Normalize values
+					obj.inputValuesNorm(loop).in = (inputValues - obj.displayBaseline)/(max(inputValues) - min(inputValues));
+					obj.rampNorm(loop).in = obj.ramp;
+					inputValuesNorm = obj.inputValuesNorm(loop).in; %#ok<*NASGU>
+					rampNorm = obj.rampNorm(loop).in;
+					
+					if ~exist('fittype'); %#ok<EXIST>
+						fprintf('This function needs fittype() for automatic fitting. This function is missing on your setup.\n');
 					end
+
+					%Gamma function fitting
+					g = fittype('x^g');
+					fo = fitoptions('Method','NonlinearLeastSquares',...
+						'Display','iter','MaxIter',1000,...
+						'Upper',3,'Lower',0,'StartPoint',1.5);
+					[fittedmodel, gof, output] = fit(rampNorm',inputValuesNorm',g,fo);
+					obj.displayGamma = fittedmodel.g;
+					obj.gammaTable{1,loop} = ((([0:1/255:1]'))).^(1/fittedmodel.g);
+
+					obj.modelFit{1,loop}.method = 'Gamma';
+					obj.modelFit{1,loop}.table = fittedmodel([0:1/255:1]);
+					obj.modelFit{1,loop}.gof = gof;
+					obj.modelFit{1,loop}.output = output;
+
+					for i = 1:length(obj.analysisMethods)					
+						method = obj.analysisMethods{i};
+						%fo = fitoptions('MaxIter',1000);
+						[fittedmodel,gof,output] = fit(rampNorm',inputValuesNorm', method);
+						obj.modelFit{i+1,loop}.method = method;
+						obj.modelFit{i+1,loop}.table = fittedmodel([0:1/255:1]);
+						obj.modelFit{i+1,loop}.gof = gof;
+						obj.modelFit{i+1,loop}.output = output;
+						%Invert interpolation
+						x = inputValuesNorm;
+						x = obj.makeUnique(x);
+						[fittedmodel,gof] = fit(x',rampNorm',method);
+						obj.gammaTable{i+1,loop} = fittedmodel([0:1/255:1]);
+					end
+
 				end
-				
+				ans = questdlg('Do you want to add comments to this calibration?');
+					if strcmpi(ans,'Yes')
+						if iscell(obj.comments)
+							cmts = obj.comments;
+						else
+							cmts = {obj.comments};
+						end
+						cmt = inputdlg('Please enter a description for this calibration run:','Gamma Calibration',10,cmts);
+						if ~isempty(cmt)
+							obj.comments = cmt{1};
+						end
+					end
 				obj.isAnalysed = true;
 				plot(obj);
-				
 			end
 		end
 		
@@ -433,88 +479,121 @@ classdef calibrateLuminance < handle
 		%>
 		% ===================================================================
 		function plot(obj)
+
 			obj.plotHandle = figure;
-			obj.p = panel(obj.plotHandle,'defer');
-			scnsize = get(0,'ScreenSize');
-			pos=get(gcf,'Position');
+			figpos(1,[1200 1200]);
+			obj.p = panel(obj.plotHandle);
 			
 			obj.p.pack(2,3);
 			obj.p.margin = [15 20 10 15];
 			obj.p.fontsize = 12;
 			
 			obj.p(1,1).select();
-			plot(obj.ramp, obj.inputValues, 'k.-');
-			legend('CCal')
-			if max(obj.inputValuesI1) > 0
-				hold on
-				plot(obj.ramp, obj.inputValuesI1, 'b.-');
-				hold off
-				legend('CCal','I1Pro')
-			end
-			if max(obj.inputValuesTest) > 0
-				hold on
-				plot(obj.ramp, obj.inputValuesTest, 'r.-');
-				hold off
-				legend('CCal','CCalCorrected')
-			end
-			if max(obj.inputValuesI1Test) > 0
-				hold on
-				plot(obj.ramp, obj.inputValuesI1Test, 'g.-');
-				hold off
-				legend('CCal','I1Pro','CCalCorrected','I1ProCorrected')
-			end
-			axis tight
-			xlabel('Indexed Values');
-			ylabel('Luminance cd/m^2');
-			title('Input -> Output Raw Data');
 			
-			obj.p(1,2).select();
-			hold all
-				for i=1:length(obj.modelFit)
-					plot([0:1/255:1], obj.modelFit{i}.table);
+			if isstruct(obj.inputValuesI1)
+				if obj.useI1Pro == true
+					inputValues = obj.inputValuesI1; %#ok<*PROP>
+					inputTest = obj.inputValuesI1Test;
+				else
+					inputValues = obj.inputValuesI1;
+					inputTest = obj.inputValuesTest;
+				end
+				plot(obj.ramp, inputValues(1).in, 'k.-',obj.ramp, inputValues(2).in, 'r.-',obj.ramp, inputValues(3).in, 'g.-',obj.ramp, inputValues(4).in, 'b.-');
+				legend('Luminance','Red','Green','Blue')
+				if ~isempty(inputTest)
+					obj.p(1,1).hold('on')
+					plot(obj.ramp, inputTest(1).in, 'ko-',obj.ramp, inputTest(2).in, 'ro-',obj.ramp, inputTest(3).in, 'go-',obj.ramp, inputTest(1).in, 'bo-');
+					obj.p(1,1).hold('off')
+					legend('CCal','I1Pro','CCalCorrected','I1ProCorrected')
+				end
+				axis tight
+				xlabel('Indexed Values');
+				ylabel('Luminance cd/m^2');
+				title('Input -> Output Raw Data');
+			else %legacy plot
+				plot(obj.ramp, obj.inputValues, 'k.-');
+				legend('CCal')
+				if max(obj.inputValuesI1) > 0
+					obj.p(1,1).hold('on')
+					plot(obj.ramp, obj.inputValuesI1, 'b.-');
+					obj.p(1,1).hold('on')
+					legend('CCal','I1Pro')
+				end
+				if max(obj.inputValuesTest) > 0
+					obj.p(1,1).hold('on')
+					plot(obj.ramp, obj.inputValuesTest, 'r.-');
+					obj.p(1,1).hold('on')
+					legend('CCal','CCalCorrected')
+				end
+				if max(obj.inputValuesI1Test) > 0
+					obj.p(1,1).hold('on')
+					plot(obj.ramp, obj.inputValuesI1Test, 'g.-');
+					obj.p(1,1).hold('on')
+					legend('CCal','I1Pro','CCalCorrected','I1ProCorrected')
+				end
+				axis tight
+				xlabel('Indexed Values');
+				ylabel('Luminance cd/m^2');
+				title('Input -> Output Raw Data');
+			end
+			
+			
+			if isstruct(obj.inputValuesI1)
+				ii = length(obj.inputValuesI1);
+			else
+				ii = 1;
+			end
+			for loop = 1:ii
+				if isstruct(obj.inputValuesI1)
+					rampNorm = obj.rampNorm(loop).in;
+					inputValsNorm = obj.inputValuesNorm(loop).in;
+				else
+					rampNorm = obj.rampNorm;
+					inputValuesNorm = obj.inputValuesNorm;
+				end
+				obj.p(1,2).select();
+				obj.p(1,2).hold('on');
+				legendtext = cell(1);
+				for i=1:size(obj.modelFit,1)
+					plot([0:1/255:1], obj.modelFit{i,loop}.table);
+					legendtext{i} = obj.modelFit{i,loop}.method;
+				end
+				plot(rampNorm, inputValuesNorm)
+				legendtext{end+1} = 'Raw Data';
+				obj.p(1,2).hold('off')
+				axis tight
+				xlabel('Normalised Luminance Input');
+				ylabel('Normalised Luminance Output');
+				legend(legendtext,'Location','NorthWest');
+				title(sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma));
+
+				legendtext=cell();
+				obj.p(2,1).select();
+				obj.p(2,1).hold('on');
+				for i=1:size(obj.gammaTable,1)
+					plot(1:length(obj.gammaTable{i,loop}),obj.gammaTable{i,loop});
 					legendtext{i} = obj.modelFit{i}.method;
 				end
-				plot(obj.rampNorm, obj.inputValuesNorm, 'r.')
-				legendtext{end+1} = 'Raw Data';
-			hold off
-			axis tight
-			xlabel('Normalised Luminance Input');
-			ylabel('Normalised Luminance Output');
-			legend(legendtext,'Location','NorthWest');
-			title(sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma));
-			
-			legendtext=[];
-			obj.p(2,1).select();
-			hold all
-			for i=1:length(obj.gammaTable)
-				plot(1:length(obj.gammaTable{i}),obj.gammaTable{i});
-				legendtext{i} = obj.modelFit{i}.method;
+				obj.p(2,1).hold('off');
+				axis tight
+				xlabel('Indexed Values')
+				ylabel('Normalised Luminance Output');
+				legend(legendtext,'Location','NorthWest');
+				title('Plot of output Gamma curves');
+
+				obj.p(2,2).select();
+				obj.p(2,2).hold('on');
+				for i=1:size(obj.gammaTable,1)
+					plot(obj.modelFit{i,loop}.output.residuals);
+					legendtext{i} = obj.modelFit{i}.method;
+				end
+				obj.p(2,2).hold('off');
+				axis tight
+				xlabel('Indexed Values')
+				ylabel('Residual Values');
+				legend(legendtext,'Location','Best');
+				title('Model Residuals');
 			end
-			hold off
-			axis tight
-			xlabel('Indexed Values')
-			ylabel('Normalised Luminance Output');
-			legend(legendtext,'Location','NorthWest');
-			title('Plot of output Gamma curves');
-			
-			obj.p(2,2).select();
-			hold all
-			for i=1:length(obj.gammaTable)
-				plot(obj.modelFit{i}.output.residuals);
-				legendtext{i} = obj.modelFit{i}.method;
-			end
-			hold off
-			axis tight
-			xlabel('Indexed Values')
-			ylabel('Residual Values');
-			legend(legendtext,'Location','Best');
-			title('Model Residuals');
-			
-			if scnsize(3) > 2000
-				scnsize(3) = scnsize(3)/2;
-			end
-			newpos = [scnsize(3)/2-scnsize(3)/3 1 scnsize(3)/1.5 scnsize(4)];
-			set(gcf,'Position',newpos);
 			
 			if isempty(obj.comments)
 				t = obj.filename;
@@ -522,22 +601,31 @@ classdef calibrateLuminance < handle
 				t = obj.comments;
 			end
 			
-			if ~isempty(obj.spectrum)
+			if isstruct(obj.inputValuesI1)
+				spectrum = obj.spectrum(loop).in;
+				spectrumTest = obj.spectrumTest(loop).in;
+			else
+				spectrum = obj.spectrum;
+				spectrumTest = obj.spectrumTest;
+			end
+				
+			if ~isempty(spectrum)
 				obj.p(1,3).select();
-				surf(obj.ramp,obj.wavelengths,obj.spectrum);
+				surf(obj.ramp,obj.wavelengths,spectrum);
 				title('Original Spectrum')
 				xlabel('Indexed Values')
 				ylabel('Wavelengths');
 				axis tight
 			end
-			if ~isempty(obj.spectrumTest)
+			if ~isempty(spectrumTest)
 				obj.p(2,3).select();
-				surf(obj.ramp,obj.wavelengths,obj.spectrumTest);
+				surf(obj.ramp,obj.wavelengths,spectrumTest);
 				title('Corrected Spectrum')
 				xlabel('Indexed Values')
 				ylabel('Wavelengths');
 				axis tight
 			end
+		
 			obj.p.title(t);
 			obj.p.refresh();
 			
