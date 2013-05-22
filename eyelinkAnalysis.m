@@ -16,8 +16,10 @@ classdef eyelinkAnalysis < optickaCore
 		raw@struct
 		%inidividual trials
 		trials@struct
-		FSAMPLE
-		FEVENT
+		FSAMPLE@struct
+		FEVENT@struct
+		cidx@double = [];
+		display@double
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -71,6 +73,8 @@ classdef eyelinkAnalysis < optickaCore
 			isTrial = false;
 			tri = 1;
 			obj.trials = struct;
+			obj.cidx = [];
+	
 			for i = 1:length(obj.raw.FEVENT)
 				isMessage = false;
 				evt = obj.raw.FEVENT(i);
@@ -79,23 +83,50 @@ classdef eyelinkAnalysis < optickaCore
 					isMessage = true;
 				end
 				if isMessage && ~isTrial
+					
+					xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
+					if ~isempty(xy)  && ~isempty(xy.x)
+						obj.display = [str2num(xy.x)+1 str2num(xy.y)+1];
+					end
+					
 					id = regexpi(evt.message,'^TRIALID (?<ID>\d+)','names');
 					if ~isempty(id)  && ~isempty(id.ID)
 						isTrial = true;
-						obj.trials(tri).id = id.ID;
-						obj.trials(tri).time = evt.time;
-						obj.trials(tri).sttime = evt.sttime;
+						obj.trials(tri).id = str2num(id.ID);
+						obj.trials(tri).time = double(evt.time);
+						obj.trials(tri).sttime = double(evt.sttime);
 					end
 				end
 				
 				if isTrial
 					
 					if strcmpi(evt.codestring,'STARTSAMPLES')
-						obj.trials(tri).startsampletime = evt.sttime;
+						obj.trials(tri).startsampletime = double(evt.sttime);
 					end
 					
 					if strcmpi(evt.codestring,'STARTFIX')
-						obj.trials(tri).startfixtime = evt.sttime;
+						obj.trials(tri).startfixtime = double(evt.sttime);
+					end
+					
+					if strcmpi(evt.codestring,'ENDSAMPLES')
+						obj.trials(tri).endsampletime = double(evt.sttime);
+						
+						obj.trials(tri).times = double(obj.raw.FSAMPLE.time( ...
+							obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
+							obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime));
+						obj.trials(tri).times = obj.trials(tri).times - obj.trials(tri).rtstarttime;
+						obj.trials(tri).gx = obj.raw.FSAMPLE.gx(1, ...
+							obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
+							obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime);
+						obj.trials(tri).gy = obj.raw.FSAMPLE.gy(1, ...
+							obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
+							obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime);
+						obj.trials(tri).hx = obj.raw.FSAMPLE.hx(1, ...
+							obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
+							obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime);
+						obj.trials(tri).hy = obj.raw.FSAMPLE.hy(1, ...
+							obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
+							obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime);
 					end
 					
 					if isMessage
@@ -106,23 +137,24 @@ classdef eyelinkAnalysis < optickaCore
 						
 						endfix = regexpi(evt.message,'^END_FIX','names');
 						if ~isempty(endfix)
-							obj.trials(tri).rtstarttime = evt.sttime;
+							obj.trials(tri).rtstarttime = double(evt.sttime);
 						end
 						
 						endfix = regexpi(evt.message,'^END_RT','names');
 						if ~isempty(endfix)
-							obj.trials(tri).rtendtime = evt.sttime;
+							obj.trials(tri).rtendtime = double(evt.sttime);
 							if isfield(obj.trials,'rtstarttime')
 								obj.trials(tri).rttime = obj.trials(tri).rtendtime - obj.trials(tri).rtstarttime;
 							end
-						end						
+						end		
 						
 						id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>\d+)','names');
 						if ~isempty(id) && ~isempty(id.ID)
-							obj.trials(tri).entime = evt.sttime;
+							obj.trials(tri).entime = double(evt.sttime);
 							obj.trials(tri).result = str2num(id.ID);
 							if obj.trials(tri).result == 1
 								obj.trials(tri).correct = true;
+								obj.cidx = [obj.cidx tri];
 							else
 								obj.trials(tri).correct = false;
 							end
@@ -135,6 +167,25 @@ classdef eyelinkAnalysis < optickaCore
 				
 			end
 			fprintf('Parsing EDF Trials took %g ms\n',toc*1000);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function plot(obj)
+			figure
+			hold on
+			for i = obj.cidx
+				tr = obj.trials(i);
+				c = rand(1,3);
+				plot(tr.gx, tr.gy,'Color',c);
+			end
+			axis([0 1280 0 1024])
+			hold off
+			title('Test');
 		end
 		
 		
