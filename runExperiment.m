@@ -1683,43 +1683,41 @@ classdef runExperiment < optickaCore
 			ifi = 0.013;
 			tS = tS.eyePos;
 			fn = fieldnames(tS);
-			figure;
+			h=figure;
 			set(gcf,'Color',[1 1 1]);
 			figpos(1,[1200 1200]);
+			p = panel(h);
+			p.pack(2,2);
 			a = 1;
 			stdex = [];
 			stdey = [];
 			early = [];
 			for i = 1:length(fn)-1
-				if regexpi(fn{i+1},'^CC')
+				if ~isempty(regexpi(fn{i},'^E')) && ~isempty(regexpi(fn{i+1},'^CC'))
 					x = tS.(fn{i}).x;
 					y = tS.(fn{i}).y;
-					if (max(x) < 16 && min(x) > -16) && (max(y) < 16 && min(y) > -16) && mean(abs(x(1:10))) < 1 && mean(abs(y(1:10))) < 1
+					%if a < Inf%(max(x) < 16 && min(x) > -16) && (max(y) < 16 && min(y) > -16) && mean(abs(x(1:10))) < 1 && mean(abs(y(1:10))) < 1
 						c = rand(1,3);
-						subplot(2,2,1)
-						hold on
+						p(1,1).select();
+						p(1,1).hold('on')
 						plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-						hold off
 
-						subplot(2,2,2)
+						p(1,2).select();
+						p(1,2).hold('on');
 						t = 0:ifi:(ifi*length(x));
 						t = t(1:length(x));
-						hold on
 						plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 						plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-						hold off
 						
-						subplot(2,2,3)
-						hold on
+						p(2,1).select();
+						p(2,1).hold('on');
 						plot(mean(x(1:10)), mean(y(1:10)),'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 						stdex = [stdex std(x(1:10))];
 						stdey = [stdey std(y(1:10))];
-						hold off
 						
-						subplot(2,2,4)
-						hold on
+						p(2,2).select();
+						p(2,2).hold('on');
 						plot3(mean(x(1:10)), mean(y(1:10)),a,'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-						hold off
 						
 						if mean(x(14:16)) > 5 || mean(y(14:16)) > 5
 							early(a) = 1;
@@ -1729,11 +1727,11 @@ classdef runExperiment < optickaCore
 						
 						a = a + 1;
 						
-					end
+					%end
 				end
 			end
 			
-			subplot(2,2,1)
+			p(1,1).select();
 			grid on
 			box on
 			axis square
@@ -1741,14 +1739,14 @@ classdef runExperiment < optickaCore
 			xlabel('X Degrees')
 			ylabel('Y Degrees')
 			
-			subplot(2,2,2)
+			p(1,2).select();
 			grid on
 			box on
 			title(sprintf('X and Y Position vs. time | Early = %g / %g', sum(early),length(early)))
 			xlabel('Time (s)')
 			ylabel('Degrees')
 			
-			subplot(2,2,3)
+			p(2,1).select();
 			grid on
 			box on
 			axis square
@@ -1756,7 +1754,7 @@ classdef runExperiment < optickaCore
 			xlabel('X Degrees')
 			ylabel('Y Degrees')
 			
-			subplot(2,2,4)
+			p(2,2).select();
 			grid on
 			box on
 			axis square

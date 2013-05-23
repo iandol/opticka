@@ -7,6 +7,7 @@ classdef plxReader < optickaCore
 		file@char
 		dir@char
 		matfile@char
+		edffile@char
 		cellmap@double
 		startOffset@double = 0
 		verbose	= true
@@ -18,7 +19,8 @@ classdef plxReader < optickaCore
 		tsList@struct
 		strobeList@struct
 		meta@struct
-		rE
+		rE@runExperiment
+		eA@eyelinkAnalysis
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -43,12 +45,14 @@ classdef plxReader < optickaCore
 			if isempty(obj.name);obj.name = 'plxReader'; end
 			if isempty(obj.file) || isempty(obj.dir)
 				[obj.file, obj.dir] = uigetfile('*.plx','Load Plexon File');
-			end
-			if isempty(obj.matfile)
 				obj.paths.oldDir = pwd;
 				cd(obj.dir);
+			end
+			if isempty(obj.matfile)
 				[obj.matfile, ~] = uigetfile('*.mat','Load Behaviour MAT File');
-				%cd(obj.paths.oldDir);
+			end
+			if isempty(obj.edffile)
+				[obj.edffile, ~] = uigetfile('*.edf','Load Eyelink EDF File');
 			end
 		end
 		
@@ -62,6 +66,7 @@ classdef plxReader < optickaCore
 			obj.paths.oldDir = pwd;
 			cd(obj.dir);
 			[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.dir);
+			loadEDF(obj);
 			generateInfo(obj);
 			getSpikes(obj);
 			getStrobes(obj);
@@ -189,7 +194,25 @@ classdef plxReader < optickaCore
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
 	
-				% ===================================================================
+	
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function loadEDF(obj)
+			if exist(obj.edffile,'file')
+				
+				in = struct('file',obj.edffile);
+				obj.eA = eyelinkAnalysis(in);
+				load(obj.eA);
+				parse(obj.eA);				
+				
+			end
+		end
+			
+		% ===================================================================
 		%> @brief 
 		%>
 		%> @param
