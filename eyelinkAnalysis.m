@@ -44,9 +44,6 @@ classdef eyelinkAnalysis < optickaCore
 			if isempty(obj.file) || isempty(obj.dir)
 				[obj.file, obj.dir] = uigetfile('*.edf','Load EDF File:');
 			end	
-			if ~isempty(obj.file)
-				load(obj);
-			end
 		end
 		
 		% ===================================================================
@@ -261,7 +258,7 @@ classdef eyelinkAnalysis < optickaCore
 			p(1,2).select();
 			grid on
 			box on
-			axis([-200 600 0 500])
+			axis([-200 500 0 500])
 			title(sprintf('X and Y Position vs. time | Early = %g / %g', sum(early),length(early)))
 			xlabel('Time (s)')
 			ylabel('Pixels')

@@ -71,8 +71,6 @@ classdef plxReader < optickaCore
 			getSpikes(obj);
 			getStrobes(obj);
 			parseSpikes(obj);
-			%disp(obj.info);
-			%cd(obj.paths.oldDir);
 		end
 		% ===================================================================
 		%> @brief 
@@ -203,12 +201,10 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function loadEDF(obj)
 			if exist(obj.edffile,'file')
-				
-				in = struct('file',obj.edffile);
+				in = struct('file',obj.edffile,'dir',obj.dir);
 				obj.eA = eyelinkAnalysis(in);
 				load(obj.eA);
 				parse(obj.eA);				
-				
 			end
 		end
 			
