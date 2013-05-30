@@ -22,6 +22,7 @@ classdef eyelinkAnalysis < optickaCore
 		FSAMPLE@struct
 		FEVENT@struct
 		cidx@double
+		cSaccTimes@double
 		display@double
 		devlist@double
 	end
@@ -75,6 +76,7 @@ classdef eyelinkAnalysis < optickaCore
 			tri = 1;
 			obj.trials = struct;
 			obj.cidx = [];
+			obj.cSaccTimes = [];
 	
 			for i = 1:length(obj.raw.FEVENT)
 				isMessage = false;
@@ -98,6 +100,9 @@ classdef eyelinkAnalysis < optickaCore
 							obj.trials(tri).id = str2num(id.ID);
 							obj.trials(tri).time = double(evt.time);
 							obj.trials(tri).sttime = double(evt.sttime);
+							obj.trials(tri).fixations = [];
+							obj.trials(tri).saccades = [];
+							obj.trials(tri).saccadeTimes = [];
 							break
 						end
 					end
@@ -109,8 +114,74 @@ classdef eyelinkAnalysis < optickaCore
 							break
 						end
 
-						if strcmpi(evt.codestring,'STARTFIX')
-							obj.trials(tri).startfixtime = double(evt.sttime);
+						if strcmpi(evt.codestring,'ENDFIX')
+							if isempty(obj.trials(tri).fixations)
+								fix = 1;
+							else
+								fix = length(obj.trials(tri).fixations)+1;
+							end
+							if isfield(obj.trials(tri),'rtstarttime') & ~isempty(obj.trials(tri).rtstarttime)
+								fixa.rt = true;
+								rel = obj.trials(tri).rtstarttime;
+							else
+								fixa.rt = false;
+								rel = obj.trials(tri).sttime;
+							end
+							fixa.sttime = double(evt.sttime);
+							fixa.entime = double(evt.entime);
+							fixa.time = fixa.sttime - rel;
+							fixa.length = fixa.entime - fixa.sttime;
+							fixa.rel = rel;
+							fixa.gstx = evt.gstx;
+							fixa.gsty = evt.gsty;
+							fixa.genx = evt.genx;
+							fixa.geny = evt.geny;
+							fixa.x = evt.gavx;
+							fixa.y = evt.gavy;
+							
+							if fix == 1
+								obj.trials(tri).fixations = fixa;
+							else
+								obj.trials(tri).fixations(fix) = fixa;
+							end
+							obj.trials(tri).nfix = fix;
+							break
+						end
+
+						if strcmpi(evt.codestring,'ENDSACC')
+							if isempty(obj.trials(tri).saccades)
+								fix = 1;
+							else
+								fix = length(obj.trials(tri).saccades)+1;
+							end
+							if isfield(obj.trials(tri),'rtstarttime') & ~isempty(obj.trials(tri).rtstarttime)
+								sacc.rt = true;
+								rel = obj.trials(tri).rtstarttime;
+							else
+								sacc.rt = false;
+								rel = obj.trials(tri).sttime;
+							end
+							sacc.sttime = double(evt.sttime);
+							sacc.entime = double(evt.entime);
+							sacc.time = sacc.sttime - rel;
+							sacc.length = sacc.entime - sacc.sttime;
+							sacc.rel = rel;
+							sacc.gstx = evt.gstx;
+							sacc.gsty = evt.gsty;
+							sacc.genx = evt.genx;
+							sacc.geny = evt.geny;
+							sacc.x = sacc.genx - sacc.gstx;
+							sacc.y = sacc.geny - sacc.gsty;
+							
+							if fix == 1
+								obj.trials(tri).saccades = sacc;
+							else
+								obj.trials(tri).saccades(fix) = sacc;
+							end
+							obj.trials(tri).nsacc = fix;
+							if sacc.rt == true
+								obj.trials(tri).saccadeTimes = [obj.trials(tri).saccadeTimes sacc.time];
+							end
 							break
 						end
 
@@ -168,6 +239,11 @@ classdef eyelinkAnalysis < optickaCore
 									obj.trials(tri).correct = true;
 									obj.cidx = [obj.cidx tri];
 									obj.triallist(tri) = obj.trials(tri).id;
+									if ~isempty(obj.trials(tri).saccadeTimes)
+										obj.cSaccTimes = [obj.cSaccTimes obj.trials(tri).saccadeTimes(1)];
+									else
+										obj.cSaccTimes = [obj.cSaccTimes -Inf];
+									end
 								else
 									obj.trials(tri).correct = false;
 									obj.triallist(tri) = -obj.trials(tri).id;
@@ -180,8 +256,9 @@ classdef eyelinkAnalysis < optickaCore
 						end
 					end
 					break
-				end	
+				end	%WHILE 1
 			end
+			
 			fprintf('Parsing EDF Trials took %g ms\n',toc*1000);
 		end
 		
@@ -208,12 +285,12 @@ classdef eyelinkAnalysis < optickaCore
 				1.0000 0 0;...
 				0 0.7500 0.7500;...
 				0.7500 0 0.7500;...
-				0.7500 0.7500 0;...
+				1 0.7500 0;...
 				0.2500 0.2500 0.2500;...
 				0 0.2500 0.7500;...
 				0 0 0;...
-				0 0.8000 1.0000;...
-				1.0000 0.8000 0;...
+				0 0.6000 1.0000;...
+				1.0000 0.5000 0.25;...
 				0.6000 0 0.3000;...
 				1 0 1;...
 				1 0.5 0.5];
