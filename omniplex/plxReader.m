@@ -138,6 +138,7 @@ classdef plxReader < optickaCore
 			x.isPLX = true;
 			x.tDelta = obj.strobeList.vars(var).tDeltacorrect(x.starttrial:x.endtrial);
 			x.startOffset = obj.startOffset;
+			
 		end
 		
 	end %---END PUBLIC METHODS---%
@@ -200,12 +201,14 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function loadEDF(obj)
+			tic
 			if exist(obj.edffile,'file')
 				in = struct('file',obj.edffile,'dir',obj.dir);
 				obj.eA = eyelinkAnalysis(in);
 				load(obj.eA);
 				parse(obj.eA);				
 			end
+			fprintf('Parsing Eyelink EDF file took %s seconds\n',toc)
 		end
 			
 		% ===================================================================
