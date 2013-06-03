@@ -82,9 +82,10 @@ classdef plxReader < optickaCore
 			obj.paths.oldDir = pwd;
 			cd(obj.dir);
 			%[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.dir);
+			%loadEDF(obj);
 			generateInfo(obj);
 			%getSpikes(obj);
-			%getStrobes(obj);
+			getStrobes(obj);
 			parseSpikes(obj);
 			%disp(obj.info);
 			%cd(obj.paths.oldDir);
@@ -159,6 +160,7 @@ classdef plxReader < optickaCore
 				cd(pn);
 			end
 			tic
+			cd(pn);
 			load(fn);
 			if ~exist('rE','var') && exist('obj','var')
 				rE = obj;
@@ -184,7 +186,7 @@ classdef plxReader < optickaCore
 			meta.modtime = 500;
 			meta.trialtime = 500;
 			meta.matrix = [];
-			fprintf('Parsing Behavioural files took %s seconds\n',toc)
+			fprintf('Parsing Behavioural files took %g ms\n',round(toc*1000))
 		end
 	end
 	
@@ -201,14 +203,12 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function loadEDF(obj)
-			tic
 			if exist(obj.edffile,'file')
 				in = struct('file',obj.edffile,'dir',obj.dir);
 				obj.eA = eyelinkAnalysis(in);
 				load(obj.eA);
 				parse(obj.eA);				
 			end
-			fprintf('Parsing Eyelink EDF file took %s seconds\n',toc)
 		end
 			
 		% ===================================================================
@@ -315,6 +315,8 @@ classdef plxReader < optickaCore
 				obj.strobeList.incorrect = b22;
 				obj.strobeList.times = b;
 				obj.strobeList.values = c;
+				obj.strobeList.varOrder = obj.strobeList.values(obj.strobeList.values<32000);
+				obj.strobeList.varOrderCorrect = zeros(length(obj.strobeList.correct),1);
 				obj.strobeList.unique = unique(c);
 				obj.strobeList.nVars = length(obj.strobeList.unique)-1;
 				obj.strobeList.minRuns = Inf;
@@ -347,6 +349,7 @@ classdef plxReader < optickaCore
 							obj.strobeList.vars(i).responseIndex(nr,1) = true;
 							obj.strobeList.vars(i).responseIndex(nr,2) = false;
 							obj.strobeList.vars(i).responseIndex(nr,3) = false;
+							obj.strobeList.varOrderCorrect(tc==1) = i; %build the correct trial list
 						elseif max(tb) == 1
 							obj.strobeList.vars(i).responseIndex(nr,1) = false;
 							obj.strobeList.vars(i).responseIndex(nr,2) = true;
@@ -376,7 +379,6 @@ classdef plxReader < optickaCore
 					if obj.strobeList.tMax < obj.strobeList.vars(i).tMax
 						obj.strobeList.tMax = obj.strobeList.vars(i).tMax;
 					end
-					
 					
 					obj.strobeList.vars(i).t1correct = obj.strobeList.vars(i).t1(obj.strobeList.vars(i).responseIndex(:,1));
 					obj.strobeList.vars(i).t2correct = obj.strobeList.vars(i).t2(obj.strobeList.vars(i).responseIndex(:,1));
@@ -420,7 +422,7 @@ classdef plxReader < optickaCore
 			else
 				obj.strobeList = struct();
 			end
-			fprintf('Loading all events took %s seconds\n',toc)
+			fprintf('Loading all strobes/events took %g ms\n',round(toc*1000))
 		end
 		
 		% ===================================================================
@@ -484,7 +486,7 @@ classdef plxReader < optickaCore
 					a = a+1;
 				end
 			end
-			fprintf('Loading all spikes took %s seconds\n',toc)
+			fprintf('Loading all spikes took %g ms\n',round(toc*1000))
 		end
 		
 		
@@ -513,7 +515,7 @@ classdef plxReader < optickaCore
 			if obj.startOffset ~= 0
 				obj.info{end+1} = sprintf('START OFFSET ACTIVE : %g', obj.startOffset);
 			end
-			fprintf('Parsing all spikes took %s seconds\n',toc)
+			fprintf('Parsing all spikes took %g ms\n',round(toc*1000))
 		end
 		
 		% ===================================================================

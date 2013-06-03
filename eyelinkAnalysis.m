@@ -58,6 +58,7 @@ classdef eyelinkAnalysis < optickaCore
 				oldpath = pwd;
 				cd(obj.dir)
 				obj.raw = edfmex(obj.file);
+				fprintf('\n');
 				cd(oldpath)
 				obj.FEVENT = obj.raw.FEVENT;
 				obj.FSAMPLE = obj.raw.FSAMPLE;
@@ -87,6 +88,10 @@ classdef eyelinkAnalysis < optickaCore
 						isMessage = true;
 					end
 					if isMessage && ~isTrial
+						no = regexpi(evt.message,'^(?<NO>!cal|Validate|Reccfg|elclcfg)','names'); %ignore these first
+						if ~isempty(no)  && ~isempty(no.NO)
+							break
+						end
 
 						xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
 						if ~isempty(xy)  && ~isempty(xy.x)
@@ -94,12 +99,16 @@ classdef eyelinkAnalysis < optickaCore
 							break
 						end
 
-						id = regexpi(evt.message,'^TRIALID (?<ID>\d+)','names');
-						if ~isempty(id)  && ~isempty(id.ID)
+						id = regexpi(evt.message,'^(?<TAG>TRIALID) (?<ID>\d?)','names');
+						if ~isempty(id) && ~isempty(id.TAG)
+							if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
+								id.ID = '1010';
+							end
 							isTrial = true;
-							obj.trials(tri).id = str2num(id.ID);
+							obj.trials(tri).id = str2double(id.ID);
 							obj.trials(tri).time = double(evt.time);
 							obj.trials(tri).sttime = double(evt.sttime);
+							obj.trials(tri).rtstarttime = double(evt.sttime);
 							obj.trials(tri).fixations = [];
 							obj.trials(tri).saccades = [];
 							obj.trials(tri).saccadeTimes = [];
@@ -259,7 +268,7 @@ classdef eyelinkAnalysis < optickaCore
 				end	%WHILE 1
 			end
 			
-			fprintf('Parsing EDF Trials took %g ms\n',toc*1000);
+			fprintf('Parsing EDF Trials took %g ms\n',round(toc*1000));
 		end
 		
 		% ===================================================================
@@ -297,8 +306,11 @@ classdef eyelinkAnalysis < optickaCore
 	
 			for i = obj.cidx
 				tr = obj.trials(i);
-				%c = rand(1,3);
-				c = map(tr.id,:);
+				if tr.id == 1010 %early edf files were broken, 1010 signifies this
+					c = rand(1,3);
+				else
+					c = map(tr.id,:);
+				end
 				
 				t = tr.times;
 				idx = find((t >= -400) & (t <= 800));
