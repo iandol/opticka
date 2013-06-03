@@ -100,10 +100,10 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function x = exportToRawSpikes(obj, var, firstunit, StartTrial, EndTrial, trialtime, modtime, cuttime)
 			if ~isempty(obj.cellmap)
-				fprintf('Extracting Cell %g from PLX unit %g\n', firstunit, obj.cellmap(firstunit));
+				fprintf('Extracting Var=%g for Cell %g from PLX unit %g\n', var, firstunit, obj.cellmap(firstunit));
 				raw = obj.tsList.tsParse{obj.cellmap(firstunit)};
 			else
-				fprintf('Extracting Cell %g from PLX unit %g \n', firstunit, firstunit);
+				fprintf('Extracting Var=%g for Cell %g from PLX unit %g \n', var, firstunit, firstunit);
 				raw = obj.tsList.tsParse{firstunit};
 			end
 			if var > length(raw.var)
@@ -155,10 +155,6 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function [meta, rE] = loadMat(fn,pn)
-			if isempty(fn)
-				[fn, pn] = uigetfile('*.mat','Load Behaviour MAT File');
-				cd(pn);
-			end
 			tic
 			cd(pn);
 			load(fn);
@@ -170,8 +166,8 @@ classdef plxReader < optickaCore
 			end
 			if isempty(rE.tS) && exist('tS','var'); rE.tS = tS; end
 			meta.filename = [pn fn];
-			meta.protocol = 'Figure Ground';
-			meta.description = 'Figure Ground';
+			meta.protocol = 'FigureGround';
+			meta.description = 'FigureGround';
 			meta.comments = rE.comment;
 			meta.date = rE.savePrefix;
 			meta.numvars = rE.task.nVars;
@@ -204,8 +200,13 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function loadEDF(obj)
 			if exist(obj.edffile,'file')
-				in = struct('file',obj.edffile,'dir',obj.dir);
-				obj.eA = eyelinkAnalysis(in);
+				if ~isempty(obj.eA) && isa(obj.eA,'eyelinkAnalysis')
+					obj.eA.file = obj.edffile;
+					obj.eA.dir = obj.dir;
+				else
+					in = struct('file',obj.edffile,'dir',obj.dir);
+					obj.eA = eyelinkAnalysis(in);
+				end
 				load(obj.eA);
 				parse(obj.eA);				
 			end
@@ -325,6 +326,13 @@ classdef plxReader < optickaCore
 				obj.strobeList.tMax = 0;
 				obj.strobeList.tMinCorrect = Inf;
 				obj.strobeList.tMaxCorrect = 0;
+				
+				if isa(obj.eA,'eyelinkAnalysis') && length(obj.eA.cidx) == length(obj.strobeList.correct)
+					eA = obj.eA;
+				else
+					eA = [];
+				end
+				
 				for i = 1:obj.strobeList.nVars
 					obj.strobeList.vars(i).name = obj.strobeList.unique(i);
 					idx = find(obj.strobeList.values == obj.strobeList.unique(i));
@@ -339,7 +347,11 @@ classdef plxReader < optickaCore
 					obj.strobeList.vars(i).tDelta = obj.strobeList.vars(i).t2 - obj.strobeList.vars(i).t1;
 					obj.strobeList.vars(i).tMin = min(obj.strobeList.vars(i).tDelta);
 					obj.strobeList.vars(i).tMax = max(obj.strobeList.vars(i).tDelta);
+					if~isempty(eA)
 					
+						
+						
+					end					
 					for nr = 1:obj.strobeList.vars(i).nRepeats
 						tend = obj.strobeList.vars(i).t2(nr);
 						tc = obj.strobeList.correct > tend-0.2 & obj.strobeList.correct < tend+0.2;
@@ -410,6 +422,7 @@ classdef plxReader < optickaCore
 				obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.strobeList.maxRuns);
 				obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.strobeList.tMin,obj.strobeList.tMinCorrect);
 				obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.strobeList.tMax,obj.strobeList.tMaxCorrect);
+				
 				
 				obj.meta.modtime = floor(obj.strobeList.tMaxCorrect * 10000);
 				obj.meta.trialtime = floor(obj.strobeList.tMaxCorrect * 10000);

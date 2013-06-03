@@ -8,9 +8,12 @@ classdef eyelinkAnalysis < optickaCore
 	properties
 		file@char = ''
 		dir@char = ''
-		verbose = true
+		verbose = false
 		pixelsPerCm@double = 32
 		distance@double = 57.3
+		rtStartMessage@char = 'END_FIX'
+		rtEndMessage@char = 'END_RT'
+		varList@double = []
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -18,13 +21,12 @@ classdef eyelinkAnalysis < optickaCore
 		raw@struct
 		%inidividual trials
 		trials@struct
-		triallist@double
-		FSAMPLE@struct
-		FEVENT@struct
+		trialList@double
 		cidx@double
 		cSaccTimes@double
 		display@double
-		devlist@double
+		devList@double
+		vars
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -54,15 +56,15 @@ classdef eyelinkAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function load(obj)
+			tic
 			if ~isempty(obj.file)
 				oldpath = pwd;
 				cd(obj.dir)
 				obj.raw = edfmex(obj.file);
 				fprintf('\n');
 				cd(oldpath)
-				obj.FEVENT = obj.raw.FEVENT;
-				obj.FSAMPLE = obj.raw.FSAMPLE;
 			end
+			fprintf('Loading EDF Files took %g ms\n',round(toc*1000));
 		end
 		
 		% ===================================================================
@@ -92,6 +94,13 @@ classdef eyelinkAnalysis < optickaCore
 						if ~isempty(no)  && ~isempty(no.NO)
 							break
 						end
+						
+						rt = regexpi(evt.message,'^(?<d>V_RT MESSAGE) (?<a>\w+) (?<b>\w+)','names');
+						if ~isempty(rt) && ~isempty(rt.a) && ~isempty(rt.b)
+							obj.rtStartMessage = rt.a;
+							obj.rtEndMessage = rt.b;
+							break
+						end
 
 						xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
 						if ~isempty(xy)  && ~isempty(xy.x)
@@ -108,10 +117,12 @@ classdef eyelinkAnalysis < optickaCore
 							obj.trials(tri).id = str2double(id.ID);
 							obj.trials(tri).time = double(evt.time);
 							obj.trials(tri).sttime = double(evt.sttime);
+							obj.trials(tri).rt = false;
 							obj.trials(tri).rtstarttime = double(evt.sttime);
 							obj.trials(tri).fixations = [];
 							obj.trials(tri).saccades = [];
 							obj.trials(tri).saccadeTimes = [];
+							obj.trials(tri).rttime = [];
 							break
 						end
 					end
@@ -129,12 +140,12 @@ classdef eyelinkAnalysis < optickaCore
 							else
 								fix = length(obj.trials(tri).fixations)+1;
 							end
-							if isfield(obj.trials(tri),'rtstarttime') & ~isempty(obj.trials(tri).rtstarttime)
-								fixa.rt = true;
+							if obj.trials(tri).rt == true
 								rel = obj.trials(tri).rtstarttime;
+								fixa.rt = true;
 							else
-								fixa.rt = false;
 								rel = obj.trials(tri).sttime;
+								fixa.rt = false;
 							end
 							fixa.sttime = double(evt.sttime);
 							fixa.entime = double(evt.entime);
@@ -163,12 +174,12 @@ classdef eyelinkAnalysis < optickaCore
 							else
 								fix = length(obj.trials(tri).saccades)+1;
 							end
-							if isfield(obj.trials(tri),'rtstarttime') & ~isempty(obj.trials(tri).rtstarttime)
-								sacc.rt = true;
+							if obj.trials(tri).rt == true
 								rel = obj.trials(tri).rtstarttime;
+								sacc.rt = true;
 							else
-								sacc.rt = false;
 								rel = obj.trials(tri).sttime;
+								sacc.rt = false;
 							end
 							sacc.sttime = double(evt.sttime);
 							sacc.entime = double(evt.entime);
@@ -225,13 +236,27 @@ classdef eyelinkAnalysis < optickaCore
 								break
 							end
 
-							endfix = regexpi(evt.message,'^END_FIX','names');
+							endfix = regexpi(evt.message,['^' obj.rtStartMessage],'names');
 							if ~isempty(endfix)
 								obj.trials(tri).rtstarttime = double(evt.sttime);
+								obj.trials(tri).rt = true;
+								if ~isempty(obj.trials(tri).fixations)
+									for lf = 1 : length(obj.trials(tri).fixations)
+										obj.trials(tri).fixations(lf).time = obj.trials(tri).fixations(lf).sttime - obj.trials(tri).rtstarttime;
+										obj.trials(tri).fixations(lf).rt = true;
+									end
+								end
+								if ~isempty(obj.trials(tri).saccades)
+									for lf = 1 : length(obj.trials(tri).saccades)
+										obj.trials(tri).saccades(lf).time = obj.trials(tri).saccades(lf).sttime - obj.trials(tri).rtstarttime;
+										obj.trials(tri).saccades(lf).rt = true;
+										obj.trials(tri).saccadeTimes(lf) = obj.trials(tri).saccades(lf).time;
+									end
+								end
 								break
 							end
 
-							endrt = regexpi(evt.message,'^END_RT','names');
+							endrt = regexpi(evt.message,['^' obj.rtEndMessage],'names');
 							if ~isempty(endrt)
 								obj.trials(tri).rtendtime = double(evt.sttime);
 								if isfield(obj.trials,'rtstarttime')
@@ -247,15 +272,21 @@ classdef eyelinkAnalysis < optickaCore
 								if obj.trials(tri).result == 1
 									obj.trials(tri).correct = true;
 									obj.cidx = [obj.cidx tri];
-									obj.triallist(tri) = obj.trials(tri).id;
+									obj.trialList(tri) = obj.trials(tri).id;
 									if ~isempty(obj.trials(tri).saccadeTimes)
-										obj.cSaccTimes = [obj.cSaccTimes obj.trials(tri).saccadeTimes(1)];
+										sT = obj.trials(tri).saccadeTimes;
+										if max(sT(sT>0)) > 0
+											sT = min(sT(sT>0)); %shortest RT after END_FIX
+										else
+											sT = sT(1); %simply the first time
+										end
+										obj.cSaccTimes = [obj.cSaccTimes sT];
 									else
 										obj.cSaccTimes = [obj.cSaccTimes -Inf];
 									end
 								else
 									obj.trials(tri).correct = false;
-									obj.triallist(tri) = -obj.trials(tri).id;
+									obj.trialList(tri) = -obj.trials(tri).id;
 								end
 								obj.trials(tri).deltaT = obj.trials(tri).entime - obj.trials(tri).sttime;
 								isTrial = false;
@@ -267,6 +298,8 @@ classdef eyelinkAnalysis < optickaCore
 					break
 				end	%WHILE 1
 			end
+			
+			parseAsVars(obj);
 			
 			fprintf('Parsing EDF Trials took %g ms\n',round(toc*1000));
 		end
@@ -319,7 +352,7 @@ classdef eyelinkAnalysis < optickaCore
 				y = tr.gy(idx);
 				
 				if min(x) < -2000 || max(x) > 2000 || min(y) < -2000 || max(y) > 2000
-					obj.devlist = [obj.devlist i];
+					obj.devList = [obj.devList i];
 					x(x<0) = -2000;
 					x(x>2000) = 2000;
 					y(y<0) = -2000;
@@ -381,6 +414,49 @@ classdef eyelinkAnalysis < optickaCore
 			xlabel('X Pixels')
 			ylabel('Y Pixels')
 			zlabel('Trial')
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parseAsVars(obj)
+			
+			obj.vars = struct();
+			if ~isempty(obj.varList)
+				varList = obj.varList; %#ok<*PROP>
+			else
+				varList = obj.trialList(obj.cidx);
+			end
+			if length(varList) ~= length(obj.cidx)
+				return
+			end
+			
+			obj.vars(1).name = '';
+			obj.vars(1).id = [];
+			obj.vars(1).idx = [];
+			obj.vars(1).trial = [];
+			obj.vars(1).sTime = [];
+			obj.vars(1).sT = [];
+
+			for i = 1:length(varList)
+				var = varList(i);
+				idx = obj.cidx(i);
+				trial = obj.trials(idx);
+				
+				sT = trial.saccadeTimes(trial.saccadeTimes > 0);
+				sT = min(sT);
+				
+				obj.vars(var).name = '';
+				obj.vars(var).trial = [obj.vars(var).trial; trial];
+				obj.vars(var).idx = idx;
+				obj.vars(var).id = [obj.vars(var).id var];
+				obj.vars(var).sTime = [obj.vars(var).sTime obj.cSaccTimes(i)];
+				obj.vars(var).sT = [obj.vars(var).sT sT];
+			end
+			
 		end
 		
 		
