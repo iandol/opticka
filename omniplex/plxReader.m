@@ -517,11 +517,14 @@ classdef plxReader < optickaCore
 				for nv = 1:obj.strobeList.nVars
 					var = obj.strobeList.vars(nv);
 					obj.tsList.tsParse{ps}.var{nv}.run = struct();
+					obj.tsList.tsParse{ps}.var{nv}.name = var.name;
 					for nc = 1:var.nCorrect
 						idx =  spikes >= var.t1correct(nc)+obj.startOffset & spikes <= var.t2correct(nc);
 						obj.tsList.tsParse{ps}.var{nv}.run(nc).basetime = var.t1correct(nc) + obj.startOffset;
 						obj.tsList.tsParse{ps}.var{nv}.run(nc).modtimes = var.t1correct(nc) + obj.startOffset;
 						obj.tsList.tsParse{ps}.var{nv}.run(nc).spikes = spikes(idx);
+						obj.tsList.tsParse{ps}.var{nv}.run(nc).name = var.name;
+						obj.tsList.tsParse{ps}.var{nv}.run(nc).tDelta = var.tDeltacorrect(nc);
 					end					
 				end
 			end

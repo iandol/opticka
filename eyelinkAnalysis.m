@@ -440,6 +440,7 @@ classdef eyelinkAnalysis < optickaCore
 			obj.vars(1).trial = [];
 			obj.vars(1).sTime = [];
 			obj.vars(1).sT = [];
+			obj.vars(1).uuid = {};
 
 			for i = 1:length(varList)
 				var = varList(i);
@@ -451,13 +452,29 @@ classdef eyelinkAnalysis < optickaCore
 				
 				obj.vars(var).name = '';
 				obj.vars(var).trial = [obj.vars(var).trial; trial];
-				obj.vars(var).idx = idx;
+				obj.vars(var).idx = [obj.vars(var).idx idx];
+				obj.vars(var).uuid = [obj.vars(var).uuid, trial.uuid];
 				obj.vars(var).id = [obj.vars(var).id var];
 				obj.vars(var).sTime = [obj.vars(var).sTime obj.cSaccTimes(i)];
 				obj.vars(var).sT = [obj.vars(var).sT sT];
 			end
 			
 		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function spikeCorrelation(obj)
+			global data
+			
+			[e,vals] = finderror(data);
+			
+			
+		end
+		
 		
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
