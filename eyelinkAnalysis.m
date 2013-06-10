@@ -27,6 +27,7 @@ classdef eyelinkAnalysis < optickaCore
 		display@double
 		devList@double
 		vars
+		needOverride = false;
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -77,16 +78,17 @@ classdef eyelinkAnalysis < optickaCore
 			tic
 			isTrial = false;
 			tri = 1;
-			obj.trials = struct;
+			obj.trials = struct();
 			obj.cidx = [];
 			obj.cSaccTimes = [];
+			obj.trialList = [];
 	
 			for i = 1:length(obj.raw.FEVENT)
 				isMessage = false;
 				evt = obj.raw.FEVENT(i);
 				
 				while 1 %this while is what our breaks break out of
-					if strcmpi(evt.codestring,'MESSAGEEVENT')
+						if strcmpi(evt.codestring,'MESSAGEEVENT')
 						isMessage = true;
 					end
 					if isMessage && ~isTrial
@@ -123,6 +125,7 @@ classdef eyelinkAnalysis < optickaCore
 							obj.trials(tri).saccades = [];
 							obj.trials(tri).saccadeTimes = [];
 							obj.trials(tri).rttime = [];
+							obj.trials(tri).uuid = [];
 							break
 						end
 					end
@@ -299,6 +302,13 @@ classdef eyelinkAnalysis < optickaCore
 				end	%WHILE 1
 			end
 			
+			if max(abs(obj.trialList)) == 1010 && min(abs(obj.trialList)) == 1010
+				obj.needOverride = true;
+				fprintf('---> TRIAL NAME BUG OVERRIDE IN PLACE!');
+			else 
+				obj.needOverride = false;
+			end
+			
 			parseAsVars(obj);
 			
 			fprintf('Parsing EDF Trials took %g ms\n',round(toc*1000));
@@ -416,7 +426,7 @@ classdef eyelinkAnalysis < optickaCore
 			zlabel('Trial')
 		end
 		
-		% ===================================================================
+			% ===================================================================
 		%> @brief 
 		%>
 		%> @param
@@ -425,12 +435,17 @@ classdef eyelinkAnalysis < optickaCore
 		function parseAsVars(obj)
 			
 			obj.vars = struct();
-			if ~isempty(obj.varList)
+			if ~isempty(obj.varList) && obj.needOverride == true
 				varList = obj.varList; %#ok<*PROP>
 			else
 				varList = obj.trialList(obj.cidx);
+				if ~isempty(setdiff(obj.trialList(obj.cidx)', obj.varList))
+					fprintf('---> TRIAL NAMES DIFFERENT!');
+					return
+				end
 			end
 			if length(varList) ~= length(obj.cidx)
+				fprintf('---> TRIAL NAME BUG FIX FAILED!');
 				return
 			end
 			
@@ -450,7 +465,7 @@ classdef eyelinkAnalysis < optickaCore
 				sT = trial.saccadeTimes(trial.saccadeTimes > 0);
 				sT = min(sT);
 				
-				obj.vars(var).name = '';
+				obj.vars(var).name = num2str(var);
 				obj.vars(var).trial = [obj.vars(var).trial; trial];
 				obj.vars(var).idx = [obj.vars(var).idx idx];
 				obj.vars(var).uuid = [obj.vars(var).uuid, trial.uuid];

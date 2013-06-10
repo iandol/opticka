@@ -66,11 +66,11 @@ classdef plxReader < optickaCore
 			obj.paths.oldDir = pwd;
 			cd(obj.dir);
 			[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.dir);
-			loadEDF(obj);
 			generateInfo(obj);
 			getSpikes(obj);
 			getStrobes(obj);
 			parseSpikes(obj);
+			loadEDF(obj);
 		end
 		% ===================================================================
 		%> @brief 
@@ -207,6 +207,7 @@ classdef plxReader < optickaCore
 					in = struct('file',obj.edffile,'dir',obj.dir);
 					obj.eA = eyelinkAnalysis(in);
 				end
+				obj.eA.varList = obj.strobeList.varOrderCorrect;
 				load(obj.eA);
 				parse(obj.eA);				
 			end
@@ -327,12 +328,6 @@ classdef plxReader < optickaCore
 				obj.strobeList.tMinCorrect = Inf;
 				obj.strobeList.tMaxCorrect = 0;
 				
-				if isa(obj.eA,'eyelinkAnalysis') && length(obj.eA.cidx) == length(obj.strobeList.correct)
-					eA = obj.eA;
-				else
-					eA = [];
-				end
-				
 				for i = 1:obj.strobeList.nVars
 					obj.strobeList.vars(i).name = obj.strobeList.unique(i);
 					idx = find(obj.strobeList.values == obj.strobeList.unique(i));
@@ -346,12 +341,7 @@ classdef plxReader < optickaCore
 					obj.strobeList.vars(i).t2 = obj.strobeList.times(idxend);
 					obj.strobeList.vars(i).tDelta = obj.strobeList.vars(i).t2 - obj.strobeList.vars(i).t1;
 					obj.strobeList.vars(i).tMin = min(obj.strobeList.vars(i).tDelta);
-					obj.strobeList.vars(i).tMax = max(obj.strobeList.vars(i).tDelta);
-					if~isempty(eA)
-					
-						
-						
-					end					
+					obj.strobeList.vars(i).tMax = max(obj.strobeList.vars(i).tDelta);				
 					for nr = 1:obj.strobeList.vars(i).nRepeats
 						tend = obj.strobeList.vars(i).t2(nr);
 						tc = obj.strobeList.correct > tend-0.2 & obj.strobeList.correct < tend+0.2;
