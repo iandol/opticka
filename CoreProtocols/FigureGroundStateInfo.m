@@ -13,8 +13,8 @@ tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
-tS.askForComments = true;
-tS.saveData = true;
+tS.askForComments = false;
+tS.saveData = false;
 obj.useDataPixx = true;
 
 luminancePedestal = [0.5 0.5 0.5];
@@ -24,9 +24,9 @@ firstFixInit = 0.6;
 firstFixTime = [0.4 0.7];
 firstFixRadius = 1;
 
-targetFixInit = 0.5;
-targetFixTime = [0.3 0.6];
-targetRadius = 1.6;
+targetFixInit = 0.7;
+targetFixTime = [0.5 0.9];
+targetRadius = 2;
 
 eL.name = 'figure-ground';
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
@@ -200,7 +200,7 @@ disp('================>> Building state info file <<================')
 stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
-'prefix'	'fixate'	0.75	[]				prefixFcn		[]				[]; ...
+'prefix'	'fixate'	1.75	[]				prefixFcn		[]				[]; ...
 'fixate'	'incorrect'	1.4	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
 'stimulus'  'incorrect'	1.5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			[]				incExitFcn; ...

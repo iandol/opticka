@@ -14,6 +14,7 @@ classdef eyelinkAnalysis < optickaCore
 		rtStartMessage@char = 'END_FIX'
 		rtEndMessage@char = 'END_RT'
 		varList@double = []
+		rtLimits@double =[]
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -304,7 +305,7 @@ classdef eyelinkAnalysis < optickaCore
 			
 			if max(abs(obj.trialList)) == 1010 && min(abs(obj.trialList)) == 1010
 				obj.needOverride = true;
-				fprintf('---> TRIAL NAME BUG OVERRIDE IN PLACE!');
+				fprintf('---> TRIAL NAME BUG OVERRIDE IN PLACE!\n');
 			else 
 				obj.needOverride = false;
 			end
@@ -440,12 +441,13 @@ classdef eyelinkAnalysis < optickaCore
 			else
 				varList = obj.trialList(obj.cidx);
 				if ~isempty(setdiff(obj.trialList(obj.cidx)', obj.varList))
-					fprintf('---> TRIAL NAMES DIFFERENT!');
+					fprintf('---> TRIAL NAMES DIFFERENT!\n');
 					return
 				end
 			end
 			if length(varList) ~= length(obj.cidx)
-				fprintf('---> TRIAL NAME BUG FIX FAILED!');
+				fprintf('---> TRIAL NAME BUG FIX FAILED!\n');
+				warndlg('TRIAL NAME BUG FIX FAILED DURING SACCADE PASRSING')
 				return
 			end
 			
