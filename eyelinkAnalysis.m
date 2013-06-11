@@ -111,7 +111,7 @@ classdef eyelinkAnalysis < optickaCore
 							break
 						end
 
-						id = regexpi(evt.message,'^(?<TAG>TRIALID) (?<ID>\d?)','names');
+						id = regexpi(evt.message,'^(?<TAG>TRIALID)(\s*)(?<ID>\d*)','names');
 						if ~isempty(id) && ~isempty(id.TAG)
 							if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
 								id.ID = '1010';
