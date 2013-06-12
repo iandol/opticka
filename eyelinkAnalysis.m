@@ -13,12 +13,13 @@ classdef eyelinkAnalysis < optickaCore
 		distance@double = 57.3
 		rtStartMessage@char = 'END_FIX'
 		rtEndMessage@char = 'END_RT'
-		varList@double = []
-		rtLimits@double =[]
+		varList@double 
+		rtLimits@double 
+		rtDivision@double 
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		%> raw data
+		%raw data
 		raw@struct
 		%inidividual trials
 		trials@struct
