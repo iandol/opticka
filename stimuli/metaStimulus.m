@@ -456,9 +456,11 @@ classdef metaStimulus < optickaCore
 					if strcmpi(breakString,'yes') 
 						timedTTL(lJ,0,200);
 						breakloop = true;
+						fprintf('metaStimulus: CORRECT');
 						break;
 					elseif strcmpi(breakString,'no')
 						breakloop = true;
+						fprintf('metaStimulus: INCORRECT');
 						break;
 					end
 

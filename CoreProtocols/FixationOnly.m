@@ -16,8 +16,8 @@ eL.modify.devicenumber = -1; % -1==use any keyboard
 eL.fixationX = 0;
 eL.fixationY = 0;
 eL.fixationRadius = 2;
-eL.fixationInitTime = 2.0;
-eL.fixationTime = 3.0;
+eL.fixationInitTime = 1.0;
+eL.fixationTime = 0.5;
 eL.strictFixation = true;
 
 %randomise stimulus variables every trial?

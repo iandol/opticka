@@ -1,4 +1,4 @@
-%FIGURE GROUND state configuration file, this gets loaded by opticka via runExperiment class
+% 2 FIGURE GROUND state configuration file, this gets loaded by opticka via runExperiment class
 % io = datapixx (digital I/O to plexon)
 % s = screenManager
 % sM = State Machine
@@ -13,8 +13,8 @@ tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
-tS.askForComments = true;
-tS.saveData = true;
+tS.askForComments = false;
+tS.saveData = false;
 obj.useDataPixx = true;
 
 luminancePedestal = [0.5 0.5 0.5];
@@ -28,10 +28,10 @@ targetFixInit = 0.7;
 targetFixTime = [0.5 0.9];
 targetRadius = 2;
 
-eL.name = 'figure-ground';
+eL.name = 'two-figure-ground';
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
 eL.isDummy = false; %use dummy or real eyelink?
-eL.sampleRate = 250;
+eL.sampleRate = 500;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
@@ -54,7 +54,7 @@ obj.stimuli.tableChoice = 1;
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
-obj.stimuli.stimulusSets = {[1,5],[1 2 3 4 5]};
+obj.stimuli.stimulusSets = {[1,6],[1 2 3 4 5 6]};
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
@@ -79,8 +79,8 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	@()enableFlip(obj); 
 	@()resetFixation(eL); ...
 	@()setOffline(eL); ... %make sure offline before start recording
-	@()edit(obj.stimuli,4,'colourOut',[1 1 0]); ...
-	@()show(obj.stimuli); ...
+	@()edit(obj.stimuli,6,'colourOut',[1 1 0]); ...
+	@()show(obj.stimuli{6}); ...
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
 	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(obj))]); ...
 	@()edfMessage(eL,['UUID ' UUID(sM)]); ...
@@ -102,7 +102,7 @@ fixExitFcn = { @()animate(obj.stimuli); ... % animate stimuli for subsequent dra
 	@()updateFixationTarget(obj,tS.useTask); ... %use our stimuli values for next fix X and Y
 	@()updateFixationValues(eL, [], [], targetFixInit, targetFixTime, targetRadius, true); ... %set target fix window
 	@()statusMessage(eL,'Show Stimulus...'); ...
-	@()edit(obj.stimuli,4,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
+	@()edit(obj.stimuli,6,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
 	@()edfMessage(eL,'END_FIX'); ...
 	}; 
 
@@ -155,7 +155,7 @@ incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eye
 	@()edfMessage(eL,'END_RT'); ...
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ...
-	@()hide(obj.stimuli{4}); ...
+	@()hide(obj.stimuli{6}); ...
 	}; 
 
 %our incorrect stimulus
@@ -179,7 +179,7 @@ breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message 
 	@()edfMessage(eL,'END_RT'); ...
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -1'); ...
-	@()hide(obj.stimuli{4}); ...
+	@()hide(obj.stimuli{6}); ...
 	};
 
 %calibration function
