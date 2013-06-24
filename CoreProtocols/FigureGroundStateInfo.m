@@ -21,10 +21,10 @@ luminancePedestal = [0.5 0.5 0.5];
 fixX = 0;
 fixY = 0;
 firstFixInit = 0.6;
-firstFixTime = [0.4 0.7];
+firstFixTime = [0.5 0.7];
 firstFixRadius = 1;
 
-targetFixInit = 0.7;
+targetFixInit = 0.5;
 targetFixTime = [0.5 0.9];
 targetRadius = 2;
 

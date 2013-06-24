@@ -1,6 +1,6 @@
 %=====RF Mapping state configuration file=====
 %------------General Settings-----------------
-tS.rewardTime = 120; %TTL time in milliseconds
+tS.rewardTime = 170; %TTL time in milliseconds
 tS.useTask = false;
 tS.checkKeysDuringStimulus = true;
 tS.recordEyePosition = false;
@@ -164,7 +164,7 @@ calibrateFcn = @()trackerSetup(eL);
 flashFcn = @()flashScreen(s,0.2);
 
 % allow override
-overrideFcn = @()keyOverride(obj);
+overrideFcn = @()keyOverride(obj,tS);
 
 %show 1deg size grid
 gridFcn = @()drawGrid(s);

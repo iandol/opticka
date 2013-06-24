@@ -353,7 +353,7 @@ classdef calibrateLuminance < handle
 							sp = I1('GetSpectrum')';
 							obj.spectrumTest(col).in(:,a) = sp;
 						end
-						fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValuesTest(a), obj.inputValuesI1Test(a));
+						fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValuesI1Test(col).in(a), obj.inputValuesI1Test(col).in(a));
 						a = a + 1;
 					end
 				end
@@ -393,6 +393,7 @@ classdef calibrateLuminance < handle
 		% ===================================================================
 		function analyze(obj)
 			if obj.canAnalyze == 1
+				obj.inputValuesNorm = struct('in',[]); obj.rampNorm = struct('in',[]);
 				if isstruct(obj.inputValuesI1)
 					ii = length(obj.inputValuesI1);
 				else
@@ -488,6 +489,11 @@ classdef calibrateLuminance < handle
 			obj.p.margin = [15 20 10 15];
 			obj.p.fontsize = 12;
 			
+			if isstruct(obj.inputValuesI1)
+				obj.p(1,3).pack(2,2);
+				obj.p(2,3).pack(2,2);
+			end
+			
 			obj.p(1,1).select();
 			
 			if isstruct(obj.inputValuesI1)
@@ -546,7 +552,7 @@ classdef calibrateLuminance < handle
 			for loop = 1:ii
 				if isstruct(obj.inputValuesI1)
 					rampNorm = obj.rampNorm(loop).in;
-					inputValsNorm = obj.inputValuesNorm(loop).in;
+					inputValuesNorm = obj.inputValuesNorm(loop).in;
 				else
 					rampNorm = obj.rampNorm;
 					inputValuesNorm = obj.inputValuesNorm;
@@ -567,7 +573,7 @@ classdef calibrateLuminance < handle
 				legend(legendtext,'Location','NorthWest');
 				title(sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma));
 
-				legendtext=cell();
+				legendtext={};
 				obj.p(2,1).select();
 				obj.p(2,1).hold('on');
 				for i=1:size(obj.gammaTable,1)
@@ -602,15 +608,24 @@ classdef calibrateLuminance < handle
 			end
 			
 			if isstruct(obj.inputValuesI1)
+				
 				spectrum = obj.spectrum(loop).in;
-				spectrumTest = obj.spectrumTest(loop).in;
+				if ~isempty(obj.spectrumTest)
+					spectrumTest = obj.spectrumTest(loop).in;
+				else
+					spectrumTest = [];
+				end
 			else
 				spectrum = obj.spectrum;
 				spectrumTest = obj.spectrumTest;
 			end
 				
 			if ~isempty(spectrum)
-				obj.p(1,3).select();
+				if isstruct(obj.inputValuesI1)
+					
+				else
+					obj.p(1,3).select();
+				end
 				surf(obj.ramp,obj.wavelengths,spectrum);
 				title('Original Spectrum')
 				xlabel('Indexed Values')

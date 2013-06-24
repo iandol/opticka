@@ -467,6 +467,16 @@ classdef runExperiment < optickaCore
 			t = obj.task;
 			initialiseTask(t);
 			
+			%try to open eyeOccluder
+			tS.eO = eyeOccluder;
+			if tS.eO.isOpen == true
+				pause(0.1);
+				tS.eO.bothEyesOpen;
+			else
+				tS.eO = [];
+				tS=rmfield(tS,'eO');
+			end
+			
 			%-------Set up Digital I/O for this run...
 			if isa(obj.dPixx,'dPixxManager')
 				io = obj.dPixx; io.name = ['Fix' obj.savePrefix];
@@ -678,6 +688,11 @@ classdef runExperiment < optickaCore
 				ShowCursor;
 				warning('on'); %#ok<WNON>
 				
+				if isfield(tS,'eO')
+					close(tS.eO)
+					tS.eO=[];
+				end
+				
 				close(s);
 				close(eL);
 				obj.eyeLink = [];
@@ -712,6 +727,10 @@ classdef runExperiment < optickaCore
 				end
 				%profile off; profile clear
 				warning('on') %#ok<WNON>
+				if isfield(tS,'eO')
+					close(tS.eO)
+					tS.eO=[];
+				end
 				Priority(0);
 				ListenChar(0);
 				ShowCursor;
@@ -842,7 +861,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function keyOverride(obj)
+		function keyOverride(obj,tS)
 			KbReleaseWait; %make sure keyboard keys are all released
 			ListenChar(0); %capture keystrokes
 			ShowCursor;
@@ -1642,6 +1661,24 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '1!'
+						if tS.totalTicks > tS.keyHold
+							if isfield(tS,'eO') && tS.eO.isOpen == true
+								bothEyesOpen(tS.eO)
+							end
+							tS.keyHold = tS.totalTicks + fInc;
+						end
+					case '2@'
+						if isfield(tS,'eO') && tS.eO.isOpen == true
+							bothEyesClosed(tS.eO)
+						end
+					case '3#'
+						if isfield(tS,'eO') && tS.eO.isOpen == true
+							leftEyeClosed(tS.eO)
+						end
+					case '4$'
+						if isfield(tS,'eO') && tS.eO.isOpen == true
+							rightEyeClosed(tS.eO)
+						end				
 						
 				end
 			end
@@ -1671,6 +1708,10 @@ classdef runExperiment < optickaCore
 %  p		=		PAUSE
 %  s		=		Show mouse cursor
 %  d		=		Hide mouse cursor
+%  1		=		Both eyes open
+%  2		=		Both eyes closed
+%  3		=		Left eye open
+%  4		=		Right eye open
 		end
 		
 	end
