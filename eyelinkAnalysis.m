@@ -373,7 +373,7 @@ classdef eyelinkAnalysis < optickaCore
 					doplot = false;
 				end
 				
-				if doplot
+				if doplot == true
 					t = tr.times;
 					idx = find((t >= -400) & (t <= 800));
 					t=t(idx);
@@ -418,10 +418,12 @@ classdef eyelinkAnalysis < optickaCore
 				end
 			end
 			
+			display = obj.display / ppd;
+			
 			p(1,1).select();
 			grid on
 			box on
-			axis([-obj.display(1)/2 obj.display(1)/2 -obj.display(2)/2 obj.display(2)/2])
+			axis([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2])
 			axis square
 			title('X vs. Y Eye Position in Degrees')
 			xlabel('X Pixels')
@@ -430,7 +432,7 @@ classdef eyelinkAnalysis < optickaCore
 			p(1,2).select();
 			grid on
 			box on
-			axis([-200 500 0 500])
+			axis([-200 500 0 inf])
 			title(sprintf('X and Y Position vs. time | Early = %g / %g', sum(early),length(early)))
 			xlabel('Time (s)')
 			ylabel('Pixels')
