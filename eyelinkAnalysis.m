@@ -322,15 +322,24 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plot(obj)
+		function plot(obj,select)
+			
+			if ~exist('select','var');
+				select = [];
+			end
 			h=figure;
 			set(gcf,'Color',[1 1 1]);
-			figpos(1,[1200 1200])
+			figpos(1,[1200 1200]);
 			p = panel(h);
+			p.margin = [13 10 2 2];
+			p.margintop = 20;
+			p.fontsize = 12;
 			p.pack(2,2);
 			
 			a = 1;
 			stdex = [];
+			meanx = [];
+			meany = [];
 			stdey = [];
 			early = 0;
 			
@@ -357,40 +366,53 @@ classdef eyelinkAnalysis < optickaCore
 					c = map(tr.id,:);
 				end
 				
-				t = tr.times;
-				idx = find((t >= -400) & (t <= 800));
-				t=t(idx);
-				x = tr.gx(idx);
-				y = tr.gy(idx);
-				
-				if min(x) < -2000 || max(x) > 2000 || min(y) < -2000 || max(y) > 2000
-					obj.devList = [obj.devList i];
-					x(x<0) = -2000;
-					x(x>2000) = 2000;
-					y(y<0) = -2000;
-					y(y>2000) = 2000;
+				if isempty(select) || ~isempty(intersect(select,tr.id));
+					doplot= true;
+				else
+					doplot = false;
 				end
 				
-				p(1,1).select();
-				
-				p(1,1).hold('on')
-				plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-				
-				p(1,2).select();
-				p(1,2).hold('on');
-				plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-				plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+				if doplot
+					t = tr.times;
+					idx = find((t >= -400) & (t <= 800));
+					t=t(idx);
+					x = tr.gx(idx);
+					y = tr.gy(idx);
 
-				p(2,1).select();
-				p(2,1).hold('on');
-				plot(mean(x(1:10)), mean(y(1:10)),'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-				stdex = [stdex std(x(1:10))];
-				stdey = [stdey std(y(1:10))];
+					if min(x) < -2000 || max(x) > 2000 || min(y) < -2000 || max(y) > 2000
+						obj.devList = [obj.devList i];
+						x(x<0) = -2000;
+						x(x>2000) = 2000;
+						y(y<0) = -2000;
+						y(y>2000) = 2000;
+					end
 
-				p(2,2).select();
-				p(2,2).hold('on');
-				plot3(mean(x(1:10)), mean(y(1:10)),a,'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-				a = a + 1;
+					p(1,1).select();
+
+					p(1,1).hold('on')
+					plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+
+					p(1,2).select();
+					p(1,2).hold('on');
+					plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+
+					idxt = find(t>0 & t < 100);
+
+					meanx = [meanx mean(x(idxt))];
+					meany = [meany mean(y(idxt))];
+					stdex = [stdex std(x(idxt))];
+					stdey = [stdey std(y(idxt))];
+
+					p(2,1).select();
+					p(2,1).hold('on');
+					plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+
+					p(2,2).select();
+					p(2,2).hold('on');
+					plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					a = a + 1;
+				end
 			end
 			
 			p(1,1).select();
@@ -414,7 +436,7 @@ classdef eyelinkAnalysis < optickaCore
 			grid on
 			box on
 			axis square
-			title(sprintf('Average X vs. Y Position for first 150ms STDX: %g | STDY: %g',mean(stdex),mean(stdey)))
+			title(sprintf('X vs. Y first 100ms X AV/STD: %g/%g | Y AV/STD: %g/%g',mean(meanx),mean(stdex),mean(meany),mean(stdey)))
 			xlabel('X Pixels')
 			ylabel('Y Pixels')
 			
@@ -422,6 +444,7 @@ classdef eyelinkAnalysis < optickaCore
 			grid on
 			box on
 			axis square
+			view(47,15)
 			title('Average X vs. Y Position for first 150ms Over Time')
 			xlabel('X Pixels')
 			ylabel('Y Pixels')

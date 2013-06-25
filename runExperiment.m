@@ -1898,6 +1898,8 @@ classdef runExperiment < optickaCore
 				try
 					if ~isa(in.screen,'screenManager') %this is an old object, pre screenManager
 						lobj.screen = screenManager();
+						lobj.screen.distance = in.distance;
+						lobj.screen.pixelsPerCm = in.pixelsPerCm;
 						lobj.screen.backgroundColour = in.backgroundColour;
 						lobj.screen.screenXOffset = in.screenXOffset;
 						lobj.screen.screenYOffset = in.screenYOffset;
@@ -1909,11 +1911,13 @@ classdef runExperiment < optickaCore
 						lobj.screen.hideFlash = in.hideFlash;
 						lobj.screen.movieSettings = in.movieSettings;
 						fprintf(' | regenerated screenManager');
-					else
+					elseif ~strcmpi(in.screen.uuid,lobj.screen.uuid)
 						lobj.screen = in.screen;
 						in.screen.verbose = false; %no printout
-						in.screen = []; %force close any old screenManager instance;
+						%in.screen = []; %force close any old screenManager instance;
 						fprintf(' | inherited screenManager');
+					else
+						fprintf(' | loaded screenManager');
 					end
 				end
 				try

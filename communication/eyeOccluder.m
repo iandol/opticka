@@ -4,7 +4,7 @@ classdef eyeOccluder < optickaCore
 	
 	properties
 		verbose = true
-		address@char = '/dev/tty.usbmodem5d11'
+		address@char = '/dev/tty.usbmodemfa231'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
