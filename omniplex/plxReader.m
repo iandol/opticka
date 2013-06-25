@@ -207,6 +207,10 @@ classdef plxReader < optickaCore
 					in = struct('file',obj.edffile,'dir',obj.dir);
 					obj.eA = eyelinkAnalysis(in);
 				end
+				if isa(obj.rE.screen,'screenManager')
+					obj.eA.pixelsPerCm = obj.rE.screen.pixelsPerCm;
+					obj.eA.distance = obj.rE.screen.distance;
+				end
 				obj.eA.varList = obj.strobeList.varOrderCorrect;
 				load(obj.eA);
 				parse(obj.eA);				

@@ -84,6 +84,7 @@ classdef eyelinkAnalysis < optickaCore
 			obj.cidx = [];
 			obj.cSaccTimes = [];
 			obj.trialList = [];
+			ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
 	
 			for i = 1:length(obj.raw.FEVENT)
 				isMessage = false;
@@ -335,7 +336,7 @@ classdef eyelinkAnalysis < optickaCore
 			p.margintop = 20;
 			p.fontsize = 12;
 			p.pack(2,2);
-			
+			ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
 			a = 1;
 			stdex = [];
 			meanx = [];
@@ -378,13 +379,15 @@ classdef eyelinkAnalysis < optickaCore
 					t=t(idx);
 					x = tr.gx(idx);
 					y = tr.gy(idx);
+					x = x / ppd;
+					y = y / ppd;
 
-					if min(x) < -2000 || max(x) > 2000 || min(y) < -2000 || max(y) > 2000
+					if min(x) < -65 || max(x) > 65 || min(y) < -65 || max(y) > 65
 						obj.devList = [obj.devList i];
-						x(x<0) = -2000;
-						x(x>2000) = 2000;
-						y(y<0) = -2000;
-						y(y>2000) = 2000;
+						x(x<0) = -65;
+						x(x>2000) = 65;
+						y(y<0) = -65;
+						y(y>2000) = 65;
 					end
 
 					p(1,1).select();
