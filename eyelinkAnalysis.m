@@ -336,7 +336,11 @@ classdef eyelinkAnalysis < optickaCore
 			p.margintop = 20;
 			p.fontsize = 12;
 			p.pack(2,2);
-			ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
+			if obj.distance == 57.3
+				ppd = round( obj.pixelsPerCm * (67 / 57.3)); %set the pixels per degree
+			else
+				ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
+			end
 			a = 1;
 			stdex = [];
 			meanx = [];
@@ -409,11 +413,11 @@ classdef eyelinkAnalysis < optickaCore
 
 					p(2,1).select();
 					p(2,1).hold('on');
-					plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 
 					p(2,2).select();
 					p(2,2).hold('on');
-					plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 					a = a + 1;
 				end
 			end
@@ -426,8 +430,8 @@ classdef eyelinkAnalysis < optickaCore
 			axis([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2])
 			axis square
 			title('X vs. Y Eye Position in Degrees')
-			xlabel('X Pixels')
-			ylabel('Y Pixels')
+			xlabel('X Degrees')
+			ylabel('Y Degrees')
 			
 			p(1,2).select();
 			grid on
@@ -435,15 +439,15 @@ classdef eyelinkAnalysis < optickaCore
 			axis([-200 500 0 inf])
 			title(sprintf('X and Y Position vs. time | Early = %g / %g', sum(early),length(early)))
 			xlabel('Time (s)')
-			ylabel('Pixels')
+			ylabel('Degrees')
 			
 			p(2,1).select();
 			grid on
 			box on
 			axis square
 			title(sprintf('X vs. Y first 100ms X AV/STD: %g/%g | Y AV/STD: %g/%g',mean(meanx),mean(stdex),mean(meany),mean(stdey)))
-			xlabel('X Pixels')
-			ylabel('Y Pixels')
+			xlabel('X Degrees')
+			ylabel('Y Degrees')
 			
 			p(2,2).select();
 			grid on
@@ -451,8 +455,8 @@ classdef eyelinkAnalysis < optickaCore
 			axis square
 			view(47,15)
 			title('Average X vs. Y Position for first 150ms Over Time')
-			xlabel('X Pixels')
-			ylabel('Y Pixels')
+			xlabel('X Degrees')
+			ylabel('Y Degrees')
 			zlabel('Trial')
 		end
 		
