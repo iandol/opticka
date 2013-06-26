@@ -437,6 +437,7 @@ classdef eyelinkAnalysis < optickaCore
 			grid on
 			box on
 			axis([-200 500 0 inf])
+			text(-170,6,['ABS Mean/SD 100ms: X=' num2str(mean(abs(meanx))) ' / '  num2str(mean(abs(stdex))) '| Y=' num2str(mean(abs(meany))) ' / '  num2str(mean(abs(stdey)))]);
 			title(sprintf('X and Y Position vs. time | Early = %g / %g', sum(early),length(early)))
 			xlabel('Time (s)')
 			ylabel('Degrees')
