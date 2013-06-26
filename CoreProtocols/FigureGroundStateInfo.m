@@ -26,7 +26,7 @@ firstFixRadius = 1;
 
 targetFixInit = 0.5;
 targetFixTime = [0.5 0.9];
-targetRadius = 2;
+targetRadius = 2.1;
 
 eL.name = 'figure-ground';
 if tS.saveData == true; eL.recordData = true; end% save EDF file?

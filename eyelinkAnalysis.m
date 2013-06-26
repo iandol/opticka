@@ -402,7 +402,7 @@ classdef eyelinkAnalysis < optickaCore
 					p(1,2).select();
 					p(1,2).hold('on');
 					plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-					plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					plot(t,abs(y),'k-s','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 
 					idxt = find(t>0 & t < 100);
 
@@ -437,8 +437,9 @@ classdef eyelinkAnalysis < optickaCore
 			grid on
 			box on
 			axis([-200 500 0 inf])
-			text(-170,6,['ABS Mean/SD 100ms: X=' num2str(mean(abs(meanx))) ' / '  num2str(mean(abs(stdex))) '| Y=' num2str(mean(abs(meany))) ' / '  num2str(mean(abs(stdey)))]);
-			title(sprintf('X and Y Position vs. time | Early = %g / %g', sum(early),length(early)))
+			t=['ABS Mean/SD 100ms: X=' num2str(mean(abs(meanx))) ' / '  num2str(mean(abs(stdex))) ...
+				'| Y=' num2str(mean(abs(meany))) ' / '  num2str(mean(abs(stdey)))];
+			title(sprintf('X and Y Position vs. time | %s', t));
 			xlabel('Time (s)')
 			ylabel('Degrees')
 			
