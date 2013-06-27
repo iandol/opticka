@@ -13,9 +13,9 @@ classdef eyelinkAnalysis < optickaCore
 		distance@double = 57.3
 		rtStartMessage@char = 'END_FIX'
 		rtEndMessage@char = 'END_RT'
-		varList@double 
-		rtLimits@double 
-		rtDivision@double 
+		varList@double
+		rtLimits@double
+		rtDivision@double
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -39,7 +39,7 @@ classdef eyelinkAnalysis < optickaCore
 	
 	methods
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		% ===================================================================
 		function obj = eyelinkAnalysis(varargin)
@@ -49,11 +49,11 @@ classdef eyelinkAnalysis < optickaCore
 			end
 			if isempty(obj.file) || isempty(obj.dir)
 				[obj.file, obj.dir] = uigetfile('*.edf','Load EDF File:');
-			end	
+			end
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -71,7 +71,7 @@ classdef eyelinkAnalysis < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -85,61 +85,63 @@ classdef eyelinkAnalysis < optickaCore
 			obj.cSaccTimes = [];
 			obj.trialList = [];
 			ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
-	
+			
 			for i = 1:length(obj.raw.FEVENT)
 				isMessage = false;
 				evt = obj.raw.FEVENT(i);
 				
-				while 1 %this while is what our breaks break out of
-						if strcmpi(evt.codestring,'MESSAGEEVENT')
-						isMessage = true;
+				if strcmpi(evt.codestring,'MESSAGEEVENT')
+					isMessage = true;
+				end
+				
+				if isMessage && ~isTrial
+					no = regexpi(evt.message,'^(?<NO>!cal|Validate|Reccfg|elclcfg)','names'); %ignore these first
+					if ~isempty(no)  && ~isempty(no.NO)
+						continue
 					end
-					if isMessage && ~isTrial
-						no = regexpi(evt.message,'^(?<NO>!cal|Validate|Reccfg|elclcfg)','names'); %ignore these first
-						if ~isempty(no)  && ~isempty(no.NO)
-							break
+					
+					rt = regexpi(evt.message,'^(?<d>V_RT MESSAGE) (?<a>\w+) (?<b>\w+)','names');
+					if ~isempty(rt) && ~isempty(rt.a) && ~isempty(rt.b)
+						obj.rtStartMessage = rt.a;
+						obj.rtEndMessage = rt.b;
+						continue
+					end
+					
+					xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
+					if ~isempty(xy)  && ~isempty(xy.x)
+						obj.display = [str2num(xy.x)+1 str2num(xy.y)+1];
+						continue
+					end
+					
+					id = regexpi(evt.message,'^(?<TAG>TRIALID)(\s*)(?<ID>\d*)','names');
+					if ~isempty(id) && ~isempty(id.TAG)
+						if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
+							id.ID = '1010';
 						end
+						isTrial = true;
+						obj.trials(tri).id = str2double(id.ID);
+						obj.trials(tri).time = double(evt.time);
+						obj.trials(tri).sttime = double(evt.sttime);
+						obj.trials(tri).rt = false;
+						obj.trials(tri).rtstarttime = double(evt.sttime);
+						obj.trials(tri).fixations = [];
+						obj.trials(tri).saccades = [];
+						obj.trials(tri).saccadeTimes = [];
+						obj.trials(tri).rttime = [];
+						obj.trials(tri).uuid = [];
+						continue
+					end
+				end
+				
+				if isTrial
+					
+					if ~isMessage
 						
-						rt = regexpi(evt.message,'^(?<d>V_RT MESSAGE) (?<a>\w+) (?<b>\w+)','names');
-						if ~isempty(rt) && ~isempty(rt.a) && ~isempty(rt.b)
-							obj.rtStartMessage = rt.a;
-							obj.rtEndMessage = rt.b;
-							break
-						end
-
-						xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
-						if ~isempty(xy)  && ~isempty(xy.x)
-							obj.display = [str2num(xy.x)+1 str2num(xy.y)+1];
-							break
-						end
-
-						id = regexpi(evt.message,'^(?<TAG>TRIALID)(\s*)(?<ID>\d*)','names');
-						if ~isempty(id) && ~isempty(id.TAG)
-							if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
-								id.ID = '1010';
-							end
-							isTrial = true;
-							obj.trials(tri).id = str2double(id.ID);
-							obj.trials(tri).time = double(evt.time);
-							obj.trials(tri).sttime = double(evt.sttime);
-							obj.trials(tri).rt = false;
-							obj.trials(tri).rtstarttime = double(evt.sttime);
-							obj.trials(tri).fixations = [];
-							obj.trials(tri).saccades = [];
-							obj.trials(tri).saccadeTimes = [];
-							obj.trials(tri).rttime = [];
-							obj.trials(tri).uuid = [];
-							break
-						end
-					end
-
-					if isTrial 
-
 						if strcmpi(evt.codestring,'STARTSAMPLES')
 							obj.trials(tri).startsampletime = double(evt.sttime);
-							break
+							continue
 						end
-
+						
 						if strcmpi(evt.codestring,'ENDFIX')
 							if isempty(obj.trials(tri).fixations)
 								fix = 1;
@@ -171,9 +173,9 @@ classdef eyelinkAnalysis < optickaCore
 								obj.trials(tri).fixations(fix) = fixa;
 							end
 							obj.trials(tri).nfix = fix;
-							break
+							continue
 						end
-
+						
 						if strcmpi(evt.codestring,'ENDSACC')
 							if isempty(obj.trials(tri).saccades)
 								fix = 1;
@@ -208,12 +210,12 @@ classdef eyelinkAnalysis < optickaCore
 							if sacc.rt == true
 								obj.trials(tri).saccadeTimes = [obj.trials(tri).saccadeTimes sacc.time];
 							end
-							break
+							continue
 						end
-
+						
 						if strcmpi(evt.codestring,'ENDSAMPLES')
 							obj.trials(tri).endsampletime = double(evt.sttime);
-
+							
 							obj.trials(tri).times = double(obj.raw.FSAMPLE.time( ...
 								obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
 								obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime));
@@ -232,83 +234,81 @@ classdef eyelinkAnalysis < optickaCore
 							obj.trials(tri).hy = obj.raw.FSAMPLE.hy(1, ...
 								obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
 								obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime);
-							break
+							continue
 						end
-
-						if isMessage
-							uuid = regexpi(evt.message,'^UUID (?<UUID>[\w]+)','names');
-							if ~isempty(uuid) && ~isempty(uuid.UUID)
-								obj.trials(tri).uuid = uuid.UUID;
-								break
+						
+					else
+						uuid = regexpi(evt.message,'^UUID (?<UUID>[\w]+)','names');
+						if ~isempty(uuid) && ~isempty(uuid.UUID)
+							obj.trials(tri).uuid = uuid.UUID;
+							continue
+						end
+						
+						endfix = regexpi(evt.message,['^' obj.rtStartMessage],'names');
+						if ~isempty(endfix)
+							obj.trials(tri).rtstarttime = double(evt.sttime);
+							obj.trials(tri).rt = true;
+							if ~isempty(obj.trials(tri).fixations)
+								for lf = 1 : length(obj.trials(tri).fixations)
+									obj.trials(tri).fixations(lf).time = obj.trials(tri).fixations(lf).sttime - obj.trials(tri).rtstarttime;
+									obj.trials(tri).fixations(lf).rt = true;
+								end
 							end
-
-							endfix = regexpi(evt.message,['^' obj.rtStartMessage],'names');
-							if ~isempty(endfix)
-								obj.trials(tri).rtstarttime = double(evt.sttime);
-								obj.trials(tri).rt = true;
-								if ~isempty(obj.trials(tri).fixations)
-									for lf = 1 : length(obj.trials(tri).fixations)
-										obj.trials(tri).fixations(lf).time = obj.trials(tri).fixations(lf).sttime - obj.trials(tri).rtstarttime;
-										obj.trials(tri).fixations(lf).rt = true;
-									end
+							if ~isempty(obj.trials(tri).saccades)
+								for lf = 1 : length(obj.trials(tri).saccades)
+									obj.trials(tri).saccades(lf).time = obj.trials(tri).saccades(lf).sttime - obj.trials(tri).rtstarttime;
+									obj.trials(tri).saccades(lf).rt = true;
+									obj.trials(tri).saccadeTimes(lf) = obj.trials(tri).saccades(lf).time;
 								end
-								if ~isempty(obj.trials(tri).saccades)
-									for lf = 1 : length(obj.trials(tri).saccades)
-										obj.trials(tri).saccades(lf).time = obj.trials(tri).saccades(lf).sttime - obj.trials(tri).rtstarttime;
-										obj.trials(tri).saccades(lf).rt = true;
-										obj.trials(tri).saccadeTimes(lf) = obj.trials(tri).saccades(lf).time;
-									end
-								end
-								break
 							end
-
-							endrt = regexpi(evt.message,['^' obj.rtEndMessage],'names');
-							if ~isempty(endrt)
-								obj.trials(tri).rtendtime = double(evt.sttime);
-								if isfield(obj.trials,'rtstarttime')
-									obj.trials(tri).rttime = obj.trials(tri).rtendtime - obj.trials(tri).rtstarttime;
-								end
-								break
-							end		
-
-							id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>\d+)','names');
-							if ~isempty(id) && ~isempty(id.ID)
-								obj.trials(tri).entime = double(evt.sttime);
-								obj.trials(tri).result = str2num(id.ID);
-								if obj.trials(tri).result == 1
-									obj.trials(tri).correct = true;
-									obj.cidx = [obj.cidx tri];
-									obj.trialList(tri) = obj.trials(tri).id;
-									if ~isempty(obj.trials(tri).saccadeTimes)
-										sT = obj.trials(tri).saccadeTimes;
-										if max(sT(sT>0)) > 0
-											sT = min(sT(sT>0)); %shortest RT after END_FIX
-										else
-											sT = sT(1); %simply the first time
-										end
-										obj.cSaccTimes = [obj.cSaccTimes sT];
+							continue
+						end
+						
+						endrt = regexpi(evt.message,['^' obj.rtEndMessage],'names');
+						if ~isempty(endrt)
+							obj.trials(tri).rtendtime = double(evt.sttime);
+							if isfield(obj.trials,'rtstarttime')
+								obj.trials(tri).rttime = obj.trials(tri).rtendtime - obj.trials(tri).rtstarttime;
+							end
+							continue
+						end
+						
+						id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>\d+)','names');
+						if ~isempty(id) && ~isempty(id.ID)
+							obj.trials(tri).entime = double(evt.sttime);
+							obj.trials(tri).result = str2num(id.ID);
+							if obj.trials(tri).result == 1
+								obj.trials(tri).correct = true;
+								obj.cidx = [obj.cidx tri];
+								obj.trialList(tri) = obj.trials(tri).id;
+								if ~isempty(obj.trials(tri).saccadeTimes)
+									sT = obj.trials(tri).saccadeTimes;
+									if max(sT(sT>0)) > 0
+										sT = min(sT(sT>0)); %shortest RT after END_FIX
 									else
-										obj.cSaccTimes = [obj.cSaccTimes -Inf];
+										sT = sT(1); %simply the first time
 									end
+									obj.cSaccTimes = [obj.cSaccTimes sT];
 								else
-									obj.trials(tri).correct = false;
-									obj.trialList(tri) = -obj.trials(tri).id;
+									obj.cSaccTimes = [obj.cSaccTimes -Inf];
 								end
-								obj.trials(tri).deltaT = obj.trials(tri).entime - obj.trials(tri).sttime;
-								isTrial = false;
-								tri = tri + 1;
-								break
+							else
+								obj.trials(tri).correct = false;
+								obj.trialList(tri) = -obj.trials(tri).id;
 							end
+							obj.trials(tri).deltaT = obj.trials(tri).entime - obj.trials(tri).sttime;
+							isTrial = false;
+							tri = tri + 1;
+							continue
 						end
 					end
-					break
-				end	%WHILE 1
+				end
 			end
 			
 			if max(abs(obj.trialList)) == 1010 && min(abs(obj.trialList)) == 1010
 				obj.needOverride = true;
 				fprintf('---> TRIAL NAME BUG OVERRIDE IN PLACE!\n');
-			else 
+			else
 				obj.needOverride = false;
 			end
 			
@@ -318,7 +318,7 @@ classdef eyelinkAnalysis < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -332,8 +332,7 @@ classdef eyelinkAnalysis < optickaCore
 			set(gcf,'Color',[1 1 1]);
 			figpos(1,[1200 1200]);
 			p = panel(h);
-			p.margin = [13 10 2 2];
-			p.margintop = 20;
+			p.margintop = 15;
 			p.fontsize = 12;
 			p.pack(2,2);
 			if obj.distance == 57.3
@@ -362,7 +361,7 @@ classdef eyelinkAnalysis < optickaCore
 				0.6000 0 0.3000;...
 				1 0 1;...
 				1 0.5 0.5];
-	
+			
 			for i = obj.cidx
 				tr = obj.trials(i);
 				if tr.id == 1010 %early edf files were broken, 1010 signifies this
@@ -385,7 +384,7 @@ classdef eyelinkAnalysis < optickaCore
 					y = tr.gy(idx);
 					x = x / ppd;
 					y = y / ppd;
-
+					
 					if min(x) < -65 || max(x) > 65 || min(y) < -65 || max(y) > 65
 						obj.devList = [obj.devList i];
 						x(x<0) = -65;
@@ -393,28 +392,28 @@ classdef eyelinkAnalysis < optickaCore
 						y(y<0) = -65;
 						y(y>2000) = 65;
 					end
-
+					
 					p(1,1).select();
-
+					
 					p(1,1).hold('on')
 					plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-
+					
 					p(1,2).select();
 					p(1,2).hold('on');
 					plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 					plot(t,abs(y),'k-s','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-
+					
 					idxt = find(t>0 & t < 100);
-
+					
 					meanx = [meanx mean(x(idxt))];
 					meany = [meany mean(y(idxt))];
 					stdex = [stdex std(x(idxt))];
 					stdey = [stdey std(y(idxt))];
-
+					
 					p(2,1).select();
 					p(2,1).hold('on');
 					plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-
+					
 					p(2,2).select();
 					p(2,2).hold('on');
 					plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
@@ -428,42 +427,47 @@ classdef eyelinkAnalysis < optickaCore
 			grid on
 			box on
 			axis([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2])
-			axis square
-			title('X vs. Y Eye Position in Degrees')
-			xlabel('X Degrees')
-			ylabel('Y Degrees')
+			%axis square
+			title(p(1,1),'X vs. Y Eye Position in Degrees')
+			xlabel(p(1,1),'X Degrees')
+			ylabel(p(1,1),'Y Degrees')
 			
 			p(1,2).select();
 			grid on
 			box on
 			axis([-200 500 0 inf])
-			t=['ABS Mean/SD 100ms: X=' num2str(mean(abs(meanx))) ' / '  num2str(mean(abs(stdex))) ...
-				'| Y=' num2str(mean(abs(meany))) ' / '  num2str(mean(abs(stdey)))];
-			title(sprintf('X and Y Position vs. time | %s', t));
-			xlabel('Time (s)')
-			ylabel('Degrees')
+			t=sprintf('ABS Mean/SD 100ms: X=%.2g / %.2g | Y=%.2g / %.2g', mean(abs(meanx)), mean(abs(stdex)), ...
+				mean(abs(meany)), mean(abs(stdey)));
+			h=title(sprintf('X & Y Position vs. Time\n%s', t));
+			set(h,'BackgroundColor',[1 1 1]);
+			xlabel(p(1,2),'Time (s)')
+			ylabel(p(1,2),'Degrees')
 			
 			p(2,1).select();
 			grid on
 			box on
-			axis square
-			title(sprintf('X vs. Y first 100ms X AV/STD: %g/%g | Y AV/STD: %g/%g',mean(meanx),mean(stdex),mean(meany),mean(stdey)))
-			xlabel('X Degrees')
-			ylabel('Y Degrees')
+			%axis square
+			h=title(sprintf('X & Y First 100ms Average: \nX AV/STD: %.2g/%.2g | Y AV/STD: %.2g/%.2g', ... 
+				mean(meanx),mean(stdex),mean(meany),mean(stdey)));			
+			set(h,'BackgroundColor',[1 1 1]);
+			xlabel(p(2,1),'X Degrees')
+			ylabel(p(2,1),'Y Degrees')
 			
 			p(2,2).select();
 			grid on
 			box on
-			axis square
+			%axis square
 			view(47,15)
-			title('Average X vs. Y Position for first 150ms Over Time')
-			xlabel('X Degrees')
-			ylabel('Y Degrees')
-			zlabel('Trial')
+			title(p(2,2),'Average X vs. Y Position for first 150ms Over Time')
+			xlabel(p(2,2),'X Degrees')
+			ylabel(p(2,2),'Y Degrees')
+			zlabel(p(2,2),'Trial')
+			
+			p(2).margintop = 20;
 		end
 		
-			% ===================================================================
-		%> @brief 
+		% ===================================================================
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -493,7 +497,7 @@ classdef eyelinkAnalysis < optickaCore
 			obj.vars(1).sTime = [];
 			obj.vars(1).sT = [];
 			obj.vars(1).uuid = {};
-
+			
 			for i = 1:length(varList)
 				var = varList(i);
 				idx = obj.cidx(i);
@@ -514,7 +518,7 @@ classdef eyelinkAnalysis < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -533,7 +537,7 @@ classdef eyelinkAnalysis < optickaCore
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		
 		
