@@ -307,7 +307,7 @@ classdef eyelinkAnalysis < optickaCore
 			
 			if max(abs(obj.trialList)) == 1010 && min(abs(obj.trialList)) == 1010
 				obj.needOverride = true;
-				fprintf('---> TRIAL NAME BUG OVERRIDE IN PLACE!\n');
+				obj.salutation('','---> TRIAL NAME BUG OVERRIDE IN PLACE!\n',true);
 			else
 				obj.needOverride = false;
 			end
@@ -345,6 +345,11 @@ classdef eyelinkAnalysis < optickaCore
 			meanx = [];
 			meany = [];
 			stdey = [];
+			xvals = [];
+			yvals = [];
+			tvals = [];
+			medx = [];
+			medy = [];
 			early = 0;
 			
 			map = [0 0 1.0000;...
@@ -405,8 +410,14 @@ classdef eyelinkAnalysis < optickaCore
 					
 					idxt = find(t>0 & t < 100);
 					
+					tvals{a} = t(idxt);
+					xvals{a} = x(idxt);
+					yvals{a} = y(idxt);
+					
 					meanx = [meanx mean(x(idxt))];
 					meany = [meany mean(y(idxt))];
+					medx = [medx median(x(idxt))];
+					medy = [medy median(y(idxt))];
 					stdex = [stdex std(x(idxt))];
 					stdey = [stdey std(y(idxt))];
 					
@@ -438,7 +449,9 @@ classdef eyelinkAnalysis < optickaCore
 			axis([-200 500 0 inf])
 			t=sprintf('ABS Mean/SD 100ms: X=%.2g / %.2g | Y=%.2g / %.2g', mean(abs(meanx)), mean(abs(stdex)), ...
 				mean(abs(meany)), mean(abs(stdey)));
-			h=title(sprintf('X & Y Position vs. Time\n%s', t));
+			t2 = sprintf('ABS Median/SD 100ms: X=%.2g / %.2g | Y=%.2g / %.2g', median(abs(medx)), median(abs(stdex)), ...
+				median(abs(medy)), median(abs(stdey)));
+			h=title(sprintf('X & Y Position vs. Time\n%s\n%s', t,t2));
 			set(h,'BackgroundColor',[1 1 1]);
 			xlabel(p(1,2),'Time (s)')
 			ylabel(p(1,2),'Degrees')
@@ -447,8 +460,8 @@ classdef eyelinkAnalysis < optickaCore
 			grid on
 			box on
 			%axis square
-			h=title(sprintf('X & Y First 100ms Average: \nX AV/STD: %.2g/%.2g | Y AV/STD: %.2g/%.2g', ... 
-				mean(meanx),mean(stdex),mean(meany),mean(stdey)));			
+			h=title(sprintf('X & Y First 100ms MD/MN/STD: \nX : %.2g / %.2g / %.2g | Y : %.2g / %.2g / %.2g', ... 
+				mean(meanx), median(medx),mean(stdex),mean(meany),median(medy),mean(stdey)));			
 			set(h,'BackgroundColor',[1 1 1]);
 			xlabel(p(2,1),'X Degrees')
 			ylabel(p(2,1),'Y Degrees')
@@ -464,6 +477,9 @@ classdef eyelinkAnalysis < optickaCore
 			zlabel(p(2,2),'Trial')
 			
 			p(2).margintop = 20;
+			
+			assignin('base','xvals',xvals)
+			assignin('base','yvals',yvals)
 		end
 		
 		% ===================================================================
@@ -480,12 +496,12 @@ classdef eyelinkAnalysis < optickaCore
 			else
 				varList = obj.trialList(obj.cidx);
 				if ~isempty(setdiff(obj.trialList(obj.cidx)', obj.varList))
-					fprintf('---> TRIAL NAMES DIFFERENT!\n');
+					obj.salutation('TRIAL NAMES DIFFERENT!','',true);
 					return
 				end
 			end
 			if length(varList) ~= length(obj.cidx)
-				fprintf('---> TRIAL NAME BUG FIX FAILED!\n');
+				obj.salutation('TRIAL NAME BUG FIX FAILED!','',true);
 				warndlg('TRIAL NAME BUG FIX FAILED DURING SACCADE PASRSING')
 				return
 			end
