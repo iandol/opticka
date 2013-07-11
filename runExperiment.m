@@ -430,6 +430,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function runTask(obj)
 			global lJ %eyelink calibration needs access to labjack for reward
+			global tS
 			if isempty(regexpi(obj.comment, '^Protocol','once'))
 				obj.comment = '';
 			end
@@ -468,7 +469,9 @@ classdef runExperiment < optickaCore
 			initialiseTask(t);
 			
 			%try to open eyeOccluder
-			tS.eO = eyeOccluder;
+			if ~isfield(tS,'eO') || ~isa(tS.eO,'eyeOccluder')
+				tS.eO = eyeOccluder;
+			end
 			if tS.eO.isOpen == true
 				pause(0.1);
 				tS.eO.bothEyesOpen;

@@ -1,6 +1,6 @@
 %=====RF Mapping state configuration file=====
 %------------General Settings-----------------
-tS.rewardTime = 170; %TTL time in milliseconds
+tS.rewardTime = 120; %TTL time in milliseconds
 tS.useTask = false;
 tS.checkKeysDuringStimulus = true;
 tS.recordEyePosition = false;
@@ -15,7 +15,8 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 0.75;
 firstFixTime = 2.5;
-firstFixRadius = 1.2;
+firstFixRadius = 1;
+
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
@@ -23,7 +24,7 @@ eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV9'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 1;
+eL.modify.calibrationtargetsize = 0.7;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
