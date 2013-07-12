@@ -1667,21 +1667,38 @@ classdef runExperiment < optickaCore
 						if tS.totalTicks > tS.keyHold
 							if isfield(tS,'eO') && tS.eO.isOpen == true
 								bothEyesOpen(tS.eO)
+								Eyelink('Command','binocular_enabled = NO')
+								Eyelink('Command','active_eye = LEFT')
 							end
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '2@'
-						if isfield(tS,'eO') && tS.eO.isOpen == true
-							bothEyesClosed(tS.eO)
+						if tS.totalTicks > tS.keyHold
+							if isfield(tS,'eO') && tS.eO.isOpen == true
+								bothEyesClosed(tS.eO)
+								Eyelink('Command','binocular_enabled = NO')
+								Eyelink('Command','active_eye = LEFT')
+							end
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '3#'
-						if isfield(tS,'eO') && tS.eO.isOpen == true
-							leftEyeClosed(tS.eO)
+						if tS.totalTicks > tS.keyHold
+							if isfield(tS,'eO') && tS.eO.isOpen == true
+								leftEyeClosed(tS.eO)
+								Eyelink('Command','binocular_enabled = NO')
+								Eyelink('Command','active_eye = RIGHT')
+							end
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '4$'
-						if isfield(tS,'eO') && tS.eO.isOpen == true
-							rightEyeClosed(tS.eO)
-						end				
+						if tS.totalTicks > tS.keyHold
+							if isfield(tS,'eO') && tS.eO.isOpen == true
+								rightEyeClosed(tS.eO)
+								Eyelink('Command','binocular_enabled = NO')
+								Eyelink('Command','active_eye = LEFT')
+							end		
+							tS.keyHold = tS.totalTicks + fInc;
+						end
 						
 				end
 			end
