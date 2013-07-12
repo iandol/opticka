@@ -1,5 +1,5 @@
 function [n,gains] = plx_chan_gains(filename)
-% plx_chan_gains(filename): Read channel gains from .plx file
+% plx_chan_gains(filename): read channel gains from .plx or .pl2 file
 %
 % [gains] = plx_chan_gains(filename)
 %
@@ -10,15 +10,23 @@ function [n,gains] = plx_chan_gains(filename)
 %  gains - array of total gains
 %   n - number of channels
 
-if nargin < 1
-    error 'Expected 1 input argument';
+if nargin ~= 1
+    error 'expected 1 input argument';
 end
-if (isempty(filename))
-   [fname, pathname] = uigetfile('*.plx', 'Select a Plexon .plx file');
-   if isequal(fname,0)
-     error 'No file was selected'
-   end
-   filename = fullfile(pathname, fname);
+
+[ filename, isPl2 ] = internalPL2ResolveFilenamePlx( filename );
+if isPl2 == 1
+    pl2 = PL2GetFileIndex(filename);
+    n = numel(pl2.SpikeChannels);
+    if n > 0
+        gains = zeros(n,1);
+        for i=1:n
+            gains(i,1) = pl2.SpikeChannels{i}.TotalGain;
+        end
+    end
+    return;
 end
 
 [n,gains] = mexPlex(8, filename);
+
+end

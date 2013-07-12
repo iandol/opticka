@@ -5,10 +5,10 @@ function [errCode] = ddt_write_v(filename, nch, npoints, freq, d)
 %
 % INPUT:
 %   filename - if empty string, will use File Open dialog
-%	nch - number of channels
+%    nch - number of channels
 %   npoints - number of data points per channel
-%	freq - data frequency in Hz
-%	d - [nch npoints] data array (in mV)
+%    freq - data frequency in Hz
+%    d - [nch npoints] data array (in mV)
 %
 % OUTPUT:
 %   errCode - error code: 1 for success, 0 for failure

@@ -1,5 +1,5 @@
 function [n] = plx_close(filename)
-% plx_close(filename): Close the .plx file
+% plx_close(filename): close the .plx file
 %
 % [n] = plx_close(filename)
 %

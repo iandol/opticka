@@ -1,7 +1,8 @@
-function  [n,adchans] = plx_ad_chanmap(filename)
-% plx_ad_chanmap(filename) -- return map of raw continuous channel numbers for each channel
+function  [n, adchans] = plx_ad_chanmap(filename)
+% plx_ad_chanmap(filename): return map of raw continuous channel numbers for each channel
+%            for the specified .plx or .pl2 file
 %
-% [n,adchans] = plx_ad_chanmap(filename)
+% [n, adchans] = plx_ad_chanmap(filename)
 %
 % INPUT:
 %   filename - if empty string, will use File Open dialog
@@ -23,15 +24,21 @@ function  [n,adchans] = plx_ad_chanmap(filename)
 % the second channel, use
 %   [adfreq, n, ts, fn, ad] = plx_ad(filename, adchans[2])
 
-if nargin < 1
+n = 0;
+adchans = -1;
+
+if nargin ~= 1
     error 'Expected 1 input argument';
 end
-if (isempty(filename))
-   [fname, pathname] = uigetfile('*.plx', 'Select a Plexon .plx file');
-   if isequal(fname,0)
-     error 'No file was selected'
-   end
-   filename = fullfile(pathname, fname);
+
+[ filename, isPl2 ] = internalPL2ResolveFilenamePlx( filename );
+if isPl2 == 1
+    pl2 = PL2GetFileIndex(filename);
+    n = numel(pl2.AnalogChannels);
+    adchans = 0:(n-1);
+    return;
 end
 
-[n,adchans] = mexPlex(27,filename);
+[n, adchans] = mexPlex(27,filename);
+
+end

@@ -1,5 +1,5 @@
 function [n,names] = plx_adchan_names(filename)
-% plx_adchan_names(filename): Read name for each a/d channel from a .plx file
+% plx_adchan_names(filename): gets the names of a/d channels in a .plx or .pl2 file
 %
 % [n,names] = plx_adchan_names(filename)
 %
@@ -10,15 +10,25 @@ function [n,names] = plx_adchan_names(filename)
 %   names - array of a/d channel name strings
 %   n - number of channels
 
-if nargin < 1
-    error 'Expected 1 input argument';
+if nargin ~= 1
+    error 'expected 1 input argument';
 end
-if (isempty(filename))
-   [fname, pathname] = uigetfile('*.plx', 'Select a Plexon .plx file');
-   if isequal(fname,0)
-     error 'No file was selected'
-   end
-   filename = fullfile(pathname, fname);
+
+[ filename, isPl2 ] = internalPL2ResolveFilenamePlx( filename );
+if isPl2 == 1
+    pl2 = PL2GetFileIndex(filename);
+    n = numel(pl2.AnalogChannels);
+    for i=1:numel(pl2.AnalogChannels)
+        if i == 1
+            names = pl2.AnalogChannels{i}.Name;
+        else
+            names = char(names, pl2.AnalogChannels{i}.Name);
+        end
+    end
+    names = internalPL2TrimNames(names);
+    return;
 end
 
 [n,names] = mexPlex(15, filename);
+
+end

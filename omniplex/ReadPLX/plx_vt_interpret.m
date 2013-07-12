@@ -15,16 +15,16 @@ function [nCoords, nDim, nVTMode, c] = plx_vt_interpret(ts, sv);
 %             nDim = 5 for LED_12, LED_23, LED_13
 %             nDim = 7 for LED_123
 %   nVTMode - VT mode:
-%			  0 = UNKNOWN
-%			  1 = CENTROID                // 1 set of coordinates, no motion
-%			  2 = CENTROID_WITH_MOTION    // 1 set of coordinates, with motion
-%			  3 = LED_1                   // 1 set of coordinates
-%			  4 = LED_2                  
-%			  5 = LED_3
-%			  6 = LED_12                  // 2 sets of coordinates
-%			  7 = LED_13
-%			  8 = LED_23
-%			  9 = LED_123                 // 3 sets of coordinates
+%              0 = UNKNOWN
+%              1 = CENTROID                // 1 set of coordinates, no motion
+%              2 = CENTROID_WITH_MOTION    // 1 set of coordinates, with motion
+%              3 = LED_1                   // 1 set of coordinates
+%              4 = LED_2                  
+%              5 = LED_3
+%              6 = LED_12                  // 2 sets of coordinates
+%              7 = LED_13
+%              8 = LED_23
+%              9 = LED_123                 // 3 sets of coordinates
 %   c       - nCoords by nDim matrix of produced coordinates
 %             c(:, 1) - timestamp
 %             c(:, 2) - x1

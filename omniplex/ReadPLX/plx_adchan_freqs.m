@@ -1,7 +1,7 @@
-function [n,freqs] = plx_adchan_freqs(filename)
-% plx_adchan_freq(filename): Read the per-channel frequencies for analog channels from a .plx file
+function [n, freqs] = plx_adchan_freqs(filename)
+% plx_adchan_freq(filename): read the per-channel frequencies for analog channels from a .plx or .pl2 file
 %
-% [n,freqs] = plx_adchan_freq(filename)
+% [n, freqs] = plx_adchan_freq(filename)
 %
 % INPUT:
 %   filename - if empty string, will use File Open dialog
@@ -10,15 +10,23 @@ function [n,freqs] = plx_adchan_freqs(filename)
 %   freqs - array of frequencies
 %   n - number of channels
 
-if nargin < 1
-    error 'Expected 1 input argument';
+if nargin ~= 1
+    error 'expected 1 input argument';
 end
-if (isempty(filename))
-   [fname, pathname] = uigetfile('*.plx', 'Select a Plexon .plx file');
-   if isequal(fname,0)
-     error 'No file was selected'
-   end
-   filename = fullfile(pathname, fname);
+
+[ filename, isPl2 ] = internalPL2ResolveFilenamePlx( filename );
+if isPl2 == 1
+    pl2 = PL2GetFileIndex(filename);
+    n = numel(pl2.AnalogChannels);
+    if n > 0
+        freqs = zeros(n,1);
+        for i=1:n
+            freqs(i,1) = pl2.AnalogChannels{i}.SamplesPerSecond;
+        end
+    end
+    return;
 end
 
 [n,freqs] = mexPlex(12, filename);
+
+end

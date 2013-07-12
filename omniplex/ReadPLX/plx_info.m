@@ -1,5 +1,5 @@
 function  [tscounts, wfcounts, evcounts, contcounts] = plx_info(filename, fullread)
-% plx_info(filename, fullread) -- read and display .plx file info
+% plx_info(filename, fullread) -- read and display .plx or .pl2 file info
 %
 % [tscounts, wfcounts, evcounts, contcounts] = plx_info(filename, fullread)
 %
@@ -7,6 +7,7 @@ function  [tscounts, wfcounts, evcounts, contcounts] = plx_info(filename, fullre
 %   filename - if empty string, will use File Open dialog
 %   fullread - if 0, reads only the file header
 %              if 1, reads the entire file
+%               for .pl2 files, this parameter is ignored
 %
 % OUTPUT:
 %   tscounts - 2-dimensional array of timestamp counts for each unit
@@ -36,15 +37,37 @@ function  [tscounts, wfcounts, evcounts, contcounts] = plx_info(filename, fullre
 % and continuous (slow) channels. 
 % The counts for slow channel 0 is at contcounts(1)
 
-if nargin < 2
-    error 'Expected 2 input arguments';
+tscounts = [];
+wfcounts = [];
+evcounts = [];
+contcounts = [];
+
+if nargin ~= 2
+    error 'expected 2 input arguments';
 end
-if (isempty(filename))
-   [fname, pathname] = uigetfile('*.plx', 'Select a Plexon .plx file');
-   if isequal(fname,0)
-     error 'No file was selected'
-   end
-   filename = fullfile(pathname, fname);
+
+[ filename, isPl2 ] = internalPL2ResolveFilenamePlx( filename );
+if isPl2 == 1
+    pl2 = PL2GetFileIndex(filename);
+    numSpikeChannels = numel(pl2.SpikeChannels);
+    % pl2 files support up to 256 units, but we limit to 
+    % 26 sorted plus 1 unsorted to be compatible with plx_info
+    tscounts = zeros(27,numSpikeChannels+1);
+    for i=1:numSpikeChannels
+        tscounts(:,i+1) = pl2.SpikeChannels{i}.UnitCounts(1:27);
+    end
+    wfcounts = tscounts;
+
+    numAnalogChannels = numel(pl2.AnalogChannels);
+    contcounts = zeros(1,numAnalogChannels);
+    for i=1:numAnalogChannels
+        contcounts(1,i) = pl2.AnalogChannels{i}.NumValues;
+    end
+
+    evcounts = pl2.EventCounts;
+    return
 end
 
 [tscounts, wfcounts, evcounts, contcounts] = mexPlex(4, filename, fullread);
+
+end

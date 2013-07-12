@@ -1,5 +1,5 @@
 function  [n,dspchans] = plx_chanmap(filename)
-% plx_chanmap(filename) -- return map of raw DSP channel numbers for each channel
+% plx_chanmap(filename): return map of raw DSP channel numbers for each channel
 %
 % [n,dspchans] = plx_chanmap(filename)
 %
@@ -23,15 +23,18 @@ function  [n,dspchans] = plx_chanmap(filename)
 % the second channel, use
 %   [n,ts] = plx_ts(filename, dspchans[2], 4 );
 
-if nargin < 1
-    error 'Expected 1 input argument';
+if nargin ~= 1
+    error 'expected 1 input argument';
 end
-if (isempty(filename))
-   [fname, pathname] = uigetfile('*.plx', 'Select a Plexon .plx file');
-   if isequal(fname,0)
-     error 'No file was selected'
-   end
-   filename = fullfile(pathname, fname);
+
+[ filename, isPl2 ] = internalPL2ResolveFilenamePlx( filename );
+if isPl2 == 1
+    pl2 = PL2GetFileIndex(filename);
+    n = numel(pl2.SpikeChannels);
+    dspchans = 1:n;
+    return;
 end
 
 [n,dspchans] = mexPlex(26, filename);
+
+end
