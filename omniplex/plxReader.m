@@ -44,7 +44,7 @@ classdef plxReader < optickaCore
 			if nargin>0; obj.parseArgs(varargin,obj.allowedProperties); end
 			if isempty(obj.name);obj.name = 'plxReader'; end
 			if isempty(obj.file) || isempty(obj.dir)
-				[obj.file, obj.dir] = uigetfile('*.plx','Load Plexon File');
+				[obj.file, obj.dir] = uigetfile({'*.plx;*.pl2';'PlexonFiles'},'Load Plexon File');
 				obj.paths.oldDir = pwd;
 				cd(obj.dir);
 			end
