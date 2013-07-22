@@ -69,6 +69,7 @@ classdef runExperiment < optickaCore
 		stateInfoFile = ''
 		%> tS is the runtime settings structure, saved here as a backup
 		tS
+		%>
 		lastXPosition = 0
 		lastYPosition = 0
 		lastSize = 1
@@ -883,9 +884,9 @@ classdef runExperiment < optickaCore
 		%> Let us cascase verbosity to other classes
 		% ===================================================================
 		function set.verbose(obj,value)
-			obj.salutation('Verbose cascaded');
 			value = logical(value);
 			obj.verbose = value;
+			obj.salutation('Verbose cascaded...');
 			if isa(obj.task,'stimulusSequence') %#ok<*MCSUP>
 				obj.task.verbose = value;
 			end
@@ -900,6 +901,9 @@ classdef runExperiment < optickaCore
 			end
 			if isa(obj.lJack,'labJack')
 				obj.lJack.verbose = value;
+			end
+			if isa(obj.dPixx,'dPixxManager')
+				obj.dPixx.verbose = value;
 			end
 		end
 		

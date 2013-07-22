@@ -436,7 +436,7 @@ classdef opticka < optickaCore
 			v = obj.gv(obj.h.OKrandomGenerator);
 			obj.r.task.randomGenerator = obj.gs(obj.h.OKrandomGenerator,v);
 			obj.r.task.ibTime = obj.gd(obj.h.OKitTime);
-			obj.r.task.randomise = obj.gv(obj.h.OKRandomise);
+			obj.r.task.randomise = logical(obj.gv(obj.h.OKRandomise));
 			obj.r.task.isTime = obj.gd(obj.h.OKisTime);
 			obj.r.task.nBlocks = obj.gd(obj.h.OKnBlocks);
 			obj.r.task.realTime = obj.gv(obj.h.OKrealTime);

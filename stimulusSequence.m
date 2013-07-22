@@ -8,11 +8,11 @@
 classdef stimulusSequence < optickaCore & dynamicprops
 	properties
 		%> whether to randomise (true) or run sequentially (false)
-		randomise = true
+		randomise@logical = true
 		%> structure holding each independant variable
-		nVar = []
+		nVar@struct
 		%> number of repeat blocks to present
-		nBlocks = 1
+		nBlocks@double = 1
 		%> time stimulus trial is shown
 		trialTime = 2
 		%> inter stimulus trial time
