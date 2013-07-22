@@ -1847,6 +1847,7 @@ classdef runExperiment < optickaCore
 				end
 				fprintf('---> runExperiment loadobj: %s\n',name);
 				isObject = true;
+				setPaths(lobj);
 				lobj = rebuild(lobj, in, isObject);
 				return
 			else
@@ -1888,6 +1889,13 @@ classdef runExperiment < optickaCore
 						if exist(in.paths.stateInfoFile,'file')
 							lobj.paths.stateInfoFile = in.paths.stateInfoFile;
 							fprintf('stateInfoFile assigned');
+						else
+							tp = in.paths.stateInfoFile;
+							tp = regexprep(tp,'(^/\w+/\w+)',lobj.paths.home);
+							if exist(tp,'file')
+								lobj.paths.stateInfoFile = tp;
+								fprintf('stateInfoFile rebuilt');
+							end
 						end
 					elseif isprop(in,'stateInfoFile') || isfield(in,'stateInfoFile')
 						if exist(in.stateInfoFile,'file')
