@@ -83,19 +83,7 @@ classdef optickaCore < handle
 				obj.parseArgs(args,obj.allowedProperties);
 			end
 			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
-			obj.paths(1).whatami = obj.className;
-			obj.paths.root = fileparts(which(mfilename));
-			obj.paths.whereami = obj.paths.root;
-			if ~isfield(obj.paths, 'stateInfoFile')
-				obj.paths.stateInfoFile = '';
-			end;
-			if ismac || isunix
-				[~, obj.paths.home] = system('echo $HOME');
-				obj.paths.home = regexprep(obj.paths.home,'\n','');
-			else
-				obj.paths.home = 'c:';
-			end
-			obj.paths.savedData = [obj.paths.home filesep 'MatlabFiles' filesep 'SavedData'];
+			setPaths(obj)
 		end
 		
 		% ===================================================================
@@ -296,6 +284,27 @@ classdef optickaCore < handle
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 		%=======================================================================
+		
+		% ===================================================================
+		%> @brief set paths for object
+		%>
+		%> @param 
+		% ===================================================================
+		function setPaths(obj)
+			obj.paths(1).whatami = obj.className;
+			obj.paths.root = fileparts(which(mfilename));
+			obj.paths.whereami = obj.paths.root;
+			if ~isfield(obj.paths, 'stateInfoFile')
+				obj.paths.stateInfoFile = '';
+			end
+			if ismac || isunix
+				[~, obj.paths.home] = system('echo $HOME');
+				obj.paths.home = regexprep(obj.paths.home,'\n','');
+			else
+				obj.paths.home = 'c:';
+			end
+			obj.paths.savedData = [obj.paths.home filesep 'MatlabFiles' filesep 'SavedData'];
+		end
 		
 		% ===================================================================
 		%> @brief Sets properties from a structure or normal arguments pairs,

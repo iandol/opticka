@@ -1671,17 +1671,26 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '2@'
-						if isfield(tS,'eO') && tS.eO.isOpen == true
-							bothEyesClosed(tS.eO)
+						if tS.totalTicks > tS.keyHold
+							if isfield(tS,'eO') && tS.eO.isOpen == true
+								bothEyesClosed(tS.eO)
+							end
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '3#'
-						if isfield(tS,'eO') && tS.eO.isOpen == true
-							leftEyeClosed(tS.eO)
+						if tS.totalTicks > tS.keyHold
+							if isfield(tS,'eO') && tS.eO.isOpen == true
+								leftEyeClosed(tS.eO)
+							end
+							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case '4$'
-						if isfield(tS,'eO') && tS.eO.isOpen == true
-							rightEyeClosed(tS.eO)
-						end				
+						if tS.totalTicks > tS.keyHold
+							if isfield(tS,'eO') && tS.eO.isOpen == true
+								rightEyeClosed(tS.eO)
+							end		
+							tS.keyHold = tS.totalTicks + fInc;
+						end
 						
 				end
 			end
@@ -1826,6 +1835,7 @@ classdef runExperiment < optickaCore
 				end
 				fprintf('---> runExperiment loadobj: %s\n',name);
 				isObject = true;
+				setPaths(lobj);
 				lobj = rebuild(lobj, in, isObject);
 				return
 			else
@@ -1867,6 +1877,13 @@ classdef runExperiment < optickaCore
 						if exist(in.paths.stateInfoFile,'file')
 							lobj.paths.stateInfoFile = in.paths.stateInfoFile;
 							fprintf('stateInfoFile assigned');
+						else
+							tp = in.paths.stateInfoFile;
+							tp = regexprep(tp,'(^/\w+/\w+)',lobj.paths.home);
+							if exist(tp,'file')
+								lobj.paths.stateInfoFile = tp;
+								fprintf('stateInfoFile rebuilt');
+							end
 						end
 					elseif isprop(in,'stateInfoFile') || isfield(in,'stateInfoFile')
 						if exist(in.stateInfoFile,'file')
