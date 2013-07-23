@@ -14,6 +14,8 @@ classdef behaviouralRecord < optickaCore
 		rt2 = []
 		date = []
 		info = ''
+		rewardTime = 100;
+		rewardVolume = 0.1;
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
@@ -223,7 +225,7 @@ classdef behaviouralRecord < optickaCore
 			end
 			t{end+1} = ['Overall | Latest (n=10) Hit Rate = ' num2str(hitmiss) ' | ' num2str(average)];
 			t{end+1} = ['Run time = ' num2str(etime(clock,obj.startTime)/60) 'mins'];
-			t{end+1} = ['Estimated Volume at 300ms TTL = ' num2str(0.2*hitn) 'mls'];
+			t{end+1} = sprintf('Estimated Volume at %gms TTL = %g mls', obj.rewardTime, obj.rewardVolume*hitn);
 			set(obj.h.info,'String', t')
 			
 			obj.tick = obj.tick + 1;

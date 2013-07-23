@@ -1,6 +1,6 @@
 %=====RF Mapping state configuration file=====
 %------------General Settings-----------------
-tS.rewardTime = 120; %TTL time in milliseconds
+tS.rewardTime = 110; %TTL time in milliseconds
 tS.useTask = false;
 tS.checkKeysDuringStimulus = true;
 tS.recordEyePosition = false;

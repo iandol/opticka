@@ -10,6 +10,8 @@ classdef eyelinkManager < optickaCore
 		screen = []
 		%> eyetracker defaults structure
 		defaults = struct()
+		%> IP address of host
+		IP = '10.1.1.1'
 		%> start eyetracker in dummy mode?
 		isDummy = false
 		%> do we record and retrieve eyetracker EDF file?
@@ -100,6 +102,10 @@ classdef eyelinkManager < optickaCore
 				obj.parseArgs(varargin,obj.allowedProperties);
 			end
 			obj.defaults = EyelinkInitDefaults();
+			ret = Eyelink('SetAddress', obj.IP);
+			if ret ~= 0
+				warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+			end
 			try % is eyelink interface working
 				Eyelink('GetTrackerVersion'); 
 			catch %#ok<CTCH>
@@ -127,6 +133,11 @@ classdef eyelinkManager < optickaCore
 			end
 			
 			obj.screen = sM;
+			
+			ret = Eyelink('SetAddress', obj.IP);
+			if ret ~= 0
+				warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+			end
 			
 			if ~isempty(obj.callback) && obj.enableCallbacks
 				[~,dummy] = EyelinkInit(obj.isDummy,obj.callback);

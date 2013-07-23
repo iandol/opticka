@@ -509,7 +509,7 @@ classdef runExperiment < optickaCore
 				% open the eyelink interface
 				obj.useEyeLink = true;
 				if obj.useEyeLink
-					obj.eyeLink = eyelinkManager();
+					obj.eyeLink = eyelinkManager('IP','10.1.1.1');
 					eL = obj.eyeLink;
 					eL.saveFile = [obj.paths.savedData filesep 'Simba-' obj.savePrefix '.edf'];
 				end
@@ -525,6 +525,10 @@ classdef runExperiment < optickaCore
 					run(obj.paths.stateInfoFile)
 					obj.stateInfo = stateInfoTmp;
 					addStates(sM, obj.stateInfo);
+				end
+				
+				if isfield(tS,'rewardTime')
+					bR.rewardTime = tS.rewardTime;
 				end
 				
 				if tS.askForComments
@@ -1680,8 +1684,8 @@ classdef runExperiment < optickaCore
 						if tS.totalTicks > tS.keyHold
 							if isfield(tS,'eO') && tS.eO.isOpen == true
 								bothEyesClosed(tS.eO)
-								Eyelink('Command','binocular_enabled = NO')
-								Eyelink('Command','active_eye = LEFT')
+								Eyelink('Command','binocular_enabled = NO');
+								Eyelink('Command','active_eye = LEFT');
 							end
 							tS.keyHold = tS.totalTicks + fInc;
 						end
@@ -1689,8 +1693,8 @@ classdef runExperiment < optickaCore
 						if tS.totalTicks > tS.keyHold
 							if isfield(tS,'eO') && tS.eO.isOpen == true
 								leftEyeClosed(tS.eO)
-								Eyelink('Command','binocular_enabled = NO')
-								Eyelink('Command','active_eye = RIGHT')
+								Eyelink('Command','binocular_enabled = NO');
+								Eyelink('Command','active_eye = RIGHT');
 							end
 							tS.keyHold = tS.totalTicks + fInc;
 						end
@@ -1698,8 +1702,8 @@ classdef runExperiment < optickaCore
 						if tS.totalTicks > tS.keyHold
 							if isfield(tS,'eO') && tS.eO.isOpen == true
 								rightEyeClosed(tS.eO)
-								Eyelink('Command','binocular_enabled = NO')
-								Eyelink('Command','active_eye = LEFT')
+								Eyelink('Command','binocular_enabled = NO');
+								Eyelink('Command','active_eye = LEFT');
 							end		
 							tS.keyHold = tS.totalTicks + fInc;
 						end
