@@ -159,7 +159,7 @@ switch eyecmd
 			needsupdate = 1;
 			calxy = [];
 			if isa(lJ,'labJack')
-				lJ.timedTTL(0,100);
+				lJ.timedTTL(0,200);
 			end
 		end
         if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
