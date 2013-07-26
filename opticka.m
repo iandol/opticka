@@ -613,11 +613,9 @@ classdef opticka < optickaCore
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function addVariable(obj)
-			
+		function addVariable(obj)		
 			validate(obj.r.task);
 			revertN = obj.r.task.nVars;
-			
 			try
 				obj.r.task.nVar(revertN+1).name = obj.gs(obj.h.OKVariableName);
 				obj.r.task.nVar(revertN+1).values = obj.gn(obj.h.OKVariableValues);
@@ -635,9 +633,9 @@ classdef opticka < optickaCore
 				obj.refreshVariableList;
 			
 			catch ME
+				getReport(ME)
 				rethrow(ME);
 			end
-			
 		end
 		
 		% ===================================================================
@@ -866,7 +864,7 @@ classdef opticka < optickaCore
 			obj.paths.currentPath = pwd;
 			cd(obj.paths.protocols);
 			[fname,fpath] = uigetfile({'.m'},'Load State Info file (.m)');
-			if ~isempty(fname) || fname == 0
+			if ~ischar(fname) || isempty(fname)
 				disp('No file selected...')
 				return
 			end

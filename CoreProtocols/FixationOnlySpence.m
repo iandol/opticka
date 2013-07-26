@@ -1,4 +1,4 @@
-%RF Mapping state configuration file
+%SPENCE FIXATION ONLY state configuration file
 %------------General Settings-----------------
 rewardTime = 500; %TTL time in milliseconds
 useTask = false;
@@ -6,7 +6,7 @@ useTask = false;
 eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
-eL.calibrationStyle = 'HV9'; % calibration style
+eL.calibrationStyle = 'HV5'; % calibration style
 eL.recordData = false; % don't save EDF fileo
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 4;
@@ -15,8 +15,8 @@ eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
 eL.fixationX = 0;
 eL.fixationY = 0;
-eL.fixationRadius = 2;
-eL.fixationInitTime = 1.0;
+eL.fixationRadius = 4;
+eL.fixationInitTime = 1.5;
 eL.fixationTime = 0.5;
 eL.strictFixation = false;
 

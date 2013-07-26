@@ -12,7 +12,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> structure holding each independant variable
 		nVar
 		%> number of repeat blocks to present
-		nBlocks@double = 1
+		nBlocks = 1
 		%> time stimulus trial is shown
 		trialTime = 2
 		%> inter stimulus trial time
