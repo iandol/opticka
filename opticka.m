@@ -20,7 +20,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion@char = '0.900'
+		optickaVersion@char = '0.950'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -451,7 +451,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function getStateInfo(obj)
-			if ~isempty(obj.r.paths.stateInfoFile) && exist(obj.r.paths.stateInfoFile,'file')
+			if ~isempty(obj.r.paths.stateInfoFile) && ischar(obj.r.paths.stateInfoFile) && exist(obj.r.paths.stateInfoFile,'file')
 				fid = fopen(obj.r.paths.stateInfoFile);
 				tline = fgetl(fid);
 				i=1;
@@ -866,6 +866,10 @@ classdef opticka < optickaCore
 			obj.paths.currentPath = pwd;
 			cd(obj.paths.protocols);
 			[fname,fpath] = uigetfile({'.m'},'Load State Info file (.m)');
+			if ~isempty(fname) || fname == 0
+				disp('No file selected...')
+				return
+			end
 			obj.paths.stateInfoFile = [fpath fname];
 			obj.r.paths.stateInfoFile = obj.paths.stateInfoFile;
 		end

@@ -26,7 +26,7 @@ firstFixRadius = 1;
 
 targetFixInit = 0.5;
 targetFixTime = [0.5 0.9];
-targetRadius = 2.1;
+targetRadius = 2;
 
 eL.name = 'figure-ground';
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
@@ -35,7 +35,7 @@ eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 1;
+eL.modify.calibrationtargetsize = 0.6;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 = use any keyboard
