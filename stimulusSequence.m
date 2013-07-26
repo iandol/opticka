@@ -10,7 +10,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> whether to randomise (true) or run sequentially (false)
 		randomise = true
 		%> structure holding each independant variable
-		nVar
+		nVar = []
 		%> number of repeat blocks to present
 		nBlocks = 1
 		%> time stimulus trial is shown
@@ -184,7 +184,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 
 				% initialize cell array that will hold balanced variables
 				obj.outVars = cell(obj.nBlocks, obj.nVars_);
-				obj.outValues = [];
+				obj.outValues = cell(obj.nBlocks*obj.minBlocks, obj.nVars_);
 				obj.outIndex = [];
 
 				% the following initializes and runs the main loop in the function, which
@@ -213,15 +213,27 @@ classdef stimulusSequence < optickaCore & dynamicprops
 						len2 = len2 * nLevels(f);
 						mn=offset+1;
 						mx=i*obj.minBlocks;
-						obj.outValues(mn:mx,f)=obj.outVars{i,f};
+						idxm = mn:mx;
+						for j = 1:length(idxm)
+							obj.outValues{idxm(j),f}=obj.outVars{i,f}(j);
+						end
 					end
 					offset=offset+obj.minBlocks;
 				end
 				obj.outMap=zeros(size(obj.outValues));
 				for f = 1:obj.nVars_
 					for g = 1:length(obj.nVar(f).values)
-						gidx = obj.outValues(:,f) == obj.nVar(f).values(g);
-						obj.outMap(gidx,f) = g;
+						for hh = 1:length(obj.outValues(:,f))
+							if iscell(obj.nVar(f).values(g))
+								if min(obj.outValues{hh,f}{:} == obj.nVar(f).values{g}) == 1;
+									obj.outMap(hh,f) = g;
+								end
+							else
+								if obj.outValues{hh,f} == obj.nVar(f).values(g);
+									obj.outMap(hh,f) = g;
+								end
+							end
+						end
 					end
 				end
 				if obj.verbose==true;obj.salutation(sprintf('Randomise Stimuli: %g ms\n',toc*1000));end
