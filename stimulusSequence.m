@@ -362,7 +362,12 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		function showLog(obj)
 			obj.h = struct();
 			build_gui();
-			data = [obj.outValues obj.outIndex obj.outMap];
+			if iscell(obj.outValues);
+				outvals = obj.cellStruct(obj.outValues);
+				data = [outvals obj.outIndex obj.outMap];
+			else
+				data = [obj.outValues obj.outIndex obj.outMap];
+			end
 			if isempty(data)
 				data = 'No variables!';
 			end
@@ -421,7 +426,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	%=======================================================================
 	methods ( Access = private ) %------PRIVATE METHODS
 	%=======================================================================
-	
+			
 		% ===================================================================
 		%> @brief reset transienttask properties
 		%> 
@@ -434,13 +439,29 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					delete(p);
 				end
 			end
-		end		
+		end	
+		
+		
 	end
 	
 	%=======================================================================
 	methods (Static) %------------------STATIC METHODS
 	%=======================================================================
-	
+		
+		% ===================================================================
+		%> @brief reset transienttask properties
+		%> 
+		%> 
+		% ===================================================================
+		function out=cellStruct(in)
+			out = [];
+			if iscell(in)
+				for i = 1:size(in,2)
+					out = [out, [in{:,i}]'];
+				end
+			end
+		end
+		
 		% ===================================================================
 		%> @brief loadobj handler
 		%>
