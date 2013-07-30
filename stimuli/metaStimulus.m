@@ -53,6 +53,9 @@ classdef metaStimulus < optickaCore
 	properties (SetAccess = private, GetAccess = public) 
 		%> stimulus family
 		family = 'meta'
+		%> structure holing positions for each stimulus
+		stimulusPositions = []
+		%> used for optional logging for update times
 		updateLog = []
 	end
 	
@@ -316,6 +319,30 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function y = getLastY(obj)
 			y = obj.lastYPosition;
+		end
+		
+		% ===================================================================
+		%> @brief Return the stimulus positions
+		%>
+		% ===================================================================
+		function out = getStimulusPositions(obj)
+			a=1;
+			out = [];
+			obj.stimulusPositions = out;
+			for i = 1:obj.n
+				if obj.stimuli{i}.isVisible == true
+					if isfield(obj.stimuli{i},'sizeOut')
+						obj.stimulusPositions(a).x = obj.stimuli{i}.xPositionOut;
+						obj.stimulusPositions(a).y = obj.stimuli{i}.yPositionOut;
+						obj.stimulusPositions(a).size = obj.stimuli{i}.sizeOut;
+					else
+						
+					end
+				end
+			end
+			if ~isempty(obj.stimulusPositions)
+				out = obj.stimulusPositions;
+			end
 		end
 		
 		% ===================================================================

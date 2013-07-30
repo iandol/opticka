@@ -626,8 +626,11 @@ classdef eyelinkManager < optickaCore
 		%> @brief draw the stimuli boxes on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawStimuli(obj)
+		function trackerDrawStimuli(obj, ts)
 			if obj.isConnected
+				if exist('ts','var') && isstruct(ts)
+					obj.stimulusPositions = ts;
+				end
 				for i = 1:length(obj.stimulusPositions)
 					x = obj.screen.xCenter + (obj.stimulusPositions(i).x * obj.screen.ppd);
 					y = obj.screen.yCenter + (obj.stimulusPositions(i).y * obj.screen.ppd);
