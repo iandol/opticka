@@ -395,7 +395,7 @@ classdef eyelinkManager < optickaCore
 			end
 			if nargin > 5 && ~isempty(radius); obj.fixationRadius = radius; end
 			if nargin > 6 && ~isempty(strict); obj.strictFixation = strict; end
-			%fprintf('Set Fix: X=%g | Y=%g | IT=%g | FT=%g | R=%g\n', obj.fixationX, obj.fixationY, obj.fixationInitTime, obj.fixationTime, obj.fixationRadius);
+			fprintf('Set Fix: X=%g | Y=%g | IT=%g | FT=%g | R=%g\n', obj.fixationX, obj.fixationY, obj.fixationInitTime, obj.fixationTime, obj.fixationRadius);
 		end
 		
 		% ===================================================================
@@ -638,7 +638,7 @@ classdef eyelinkManager < optickaCore
 					if isempty(size); size = 1 * obj.screen.ppd; end
 					rect = [0 0 size size];
 					rect = round(CenterRectOnPoint(rect, x, y));
-					Eyelink('Command', 'draw_box %d %d %d %d 12', rect(1), rect(2), rect(3), rect(4));
+					Eyelink('Command', 'draw_box %d %d %d %d 11', rect(1), rect(2), rect(3), rect(4));
 				end
 				
 			end
