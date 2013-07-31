@@ -632,13 +632,14 @@ classdef eyelinkManager < optickaCore
 					obj.stimulusPositions = ts;
 				end
 				for i = 1:length(obj.stimulusPositions)
-					x = obj.screen.xCenter + (obj.stimulusPositions(i).x * obj.screen.ppd);
-					y = obj.screen.yCenter + (obj.stimulusPositions(i).y * obj.screen.ppd);
+					x = toPixels(obj, obj.stimulusPositions(i).x, 'x');
+					y = toPixels(obj, obj.stimulusPositions(i).y, 'y');
 					size = obj.stimulusPositions(i).size * obj.screen.ppd;
 					if isempty(size); size = 1 * obj.screen.ppd; end
 					rect = [0 0 size size];
 					rect = round(CenterRectOnPoint(rect, x, y));
 					Eyelink('Command', 'draw_box %d %d %d %d 11', rect(1), rect(2), rect(3), rect(4));
+					fprintf('draw_box %d %d %d %d 11\n', rect(1), rect(2), rect(3), rect(4));
 				end
 				
 			end
@@ -651,14 +652,13 @@ classdef eyelinkManager < optickaCore
 		function trackerDrawFixation(obj)
 			if obj.isConnected
 				size = (obj.fixationRadius * 2) * obj.screen.ppd;
-				mod = round(size/10);
-				if mod < 0; mod = 0; end
-				rect = [0 0 size-mod size-mod];
-				x = obj.screen.xCenter + (obj.fixationX * obj.screen.ppd);
-				y = obj.screen.yCenter + (obj.fixationY * obj.screen.ppd);
+				rect = [0 0 size size];
+				x = toPixels(obj, obj.fixationX, 'x');
+				y = toPixels(obj, obj.fixationY, 'y');
 				rect = round(CenterRectOnPoint(rect, x, y));
 				Eyelink('Command','clear_screen 0');
 				Eyelink('Command', 'draw_box %d %d %d %d 14', rect(1), rect(2), rect(3), rect(4));
+				fprintf('draw_fix_box %d %d %d %d 14\n', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
 		

@@ -837,12 +837,13 @@ classdef runExperiment < optickaCore
 				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
 				obj.eyeLink.stimulusPositions(1).size = 3;
+				fprintf('LASTX: %g | LASTY: %g\n',obj.stimuli.lastXPosition,obj.stimuli.lastYPosition)
 			else
 				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition)
 				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
 				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
-				%fprintf('LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
+				fprintf('LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
 			end
 		end
 		
@@ -857,10 +858,12 @@ classdef runExperiment < optickaCore
 				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
 				obj.eyeLink.stimulusPositions(1).size = 3;
+				fprintf('LASTX: %g | LASTY: %g\n',obj.stimuli.lastXPosition,obj.stimuli.lastYPosition)
 			else
 				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
 				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
+				fprintf('LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
 			end
 		end
 		
@@ -1020,13 +1023,13 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 		function trial = getTaskIndex(obj, index)
+			trial = -1;
 			if ~exist('index','var') && isprop(obj.task,'totalRuns')
 				index = obj.task.totalRuns;	
 				trial = obj.task.outIndex(index);
-				%fprintf('GOT TRIAL NUMBER = %g \n',trial)
+				fprintf('GOT TRIAL NUMBER = %g \n',trial)
 				return
 			end
-			trial = -1;
 		end
 		
 		% ===================================================================
