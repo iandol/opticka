@@ -9,7 +9,7 @@
 % tS = general simple struct to hold variables for this run
 %
 %------------General Settings-----------------
-tS.rewardTime = 160; %TTL time in milliseconds
+tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
@@ -34,7 +34,7 @@ eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 1;
+eL.modify.calibrationtargetsize = 0.5;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 = use any keyboard

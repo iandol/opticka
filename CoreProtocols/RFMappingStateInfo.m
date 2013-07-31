@@ -1,12 +1,11 @@
 %=====RF Mapping state configuration file=====
 %------------General Settings-----------------
-tS.rewardTime = 100; %TTL time in milliseconds
+tS.rewardTime = 125; %TTL time in milliseconds
 tS.useTask = false;
 tS.checkKeysDuringStimulus = true;
 tS.recordEyePosition = false;
 tS.askForComments = false;
 tS.saveData = false; %we don't want to save any data
-
 obj.useDataPixx = false; %make sure we don't trigger the plexon
 
 %------------Eyelink Settings----------------
@@ -14,8 +13,8 @@ eL.isDummy = false; %use dummy or real eyelink?
 fixX = 0;
 fixY = 0;
 firstFixInit = 0.75;
-firstFixTime = 2.5;
-firstFixRadius = 1;
+firstFixTime = 2;
+firstFixRadius = 1.2;
 
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
@@ -24,7 +23,7 @@ eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV9'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 0.6;
+eL.modify.calibrationtargetsize = 0.5;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
@@ -49,7 +48,7 @@ n=n+1;
 obj.stimuli.controlTable(n).variable = 'size';
 obj.stimuli.controlTable(n).delta = 0.5;
 obj.stimuli.controlTable(n).stimuli = [2 3 4 5 6 7 8 10];
-obj.stimuli.controlTable(n).limits = [0.5 20];
+obj.stimuli.controlTable(n).limits = [0.25 20];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'flashTime';
 obj.stimuli.controlTable(n).delta = 0.1;
