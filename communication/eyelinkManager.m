@@ -632,9 +632,9 @@ classdef eyelinkManager < optickaCore
 					obj.stimulusPositions = ts;
 				end
 				for i = 1:length(obj.stimulusPositions)
-					x = toPixels(obj, obj.stimulusPositions(i).x, 'x');
-					y = toPixels(obj, obj.stimulusPositions(i).y, 'y');
-					size = obj.stimulusPositions(i).size * obj.screen.ppd;
+					x = obj.stimulusPositions(i).x + obj.screen.xCenter;
+					y = obj.stimulusPositions(i).y + obj.screen.yCenter;
+					size = obj.stimulusPositions(i).size;
 					if isempty(size); size = 1 * obj.screen.ppd; end
 					rect = [0 0 size size];
 					rect = round(CenterRectOnPoint(rect, x, y));
