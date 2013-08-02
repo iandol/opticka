@@ -1,6 +1,6 @@
 %=====RF Mapping state configuration file=====
 %------------General Settings-----------------
-tS.rewardTime = 125; %TTL time in milliseconds
+tS.rewardTime = 120; %TTL time in milliseconds
 tS.useTask = false;
 tS.checkKeysDuringStimulus = true;
 tS.recordEyePosition = false;
@@ -13,8 +13,8 @@ eL.isDummy = false; %use dummy or real eyelink?
 fixX = 0;
 fixY = 0;
 firstFixInit = 0.75;
-firstFixTime = 2;
-firstFixRadius = 1.2;
+firstFixTime = 2.5;
+firstFixRadius = 1;
 
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
@@ -46,7 +46,7 @@ obj.stimuli.controlTable(n).stimuli = [6 7 8 9 10];
 obj.stimuli.controlTable(n).limits = [0 360];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'size';
-obj.stimuli.controlTable(n).delta = 0.5;
+obj.stimuli.controlTable(n).delta = 0.25;
 obj.stimuli.controlTable(n).stimuli = [2 3 4 5 6 7 8 10];
 obj.stimuli.controlTable(n).limits = [0.25 20];
 n=n+1;
@@ -56,14 +56,14 @@ obj.stimuli.controlTable(n).stimuli = [1 2 3 4 5 6];
 obj.stimuli.controlTable(n).limits = [0.1 1];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'barLength';
-obj.stimuli.controlTable(n).delta = 0.5;
+obj.stimuli.controlTable(n).delta = 1;
 obj.stimuli.controlTable(n).stimuli = [9];
-obj.stimuli.controlTable(n).limits = [0.5 20];
+obj.stimuli.controlTable(n).limits = [0.5 15];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'barWidth';
-obj.stimuli.controlTable(n).delta = 0.5;
+obj.stimuli.controlTable(n).delta = 0.25;
 obj.stimuli.controlTable(n).stimuli = [9];
-obj.stimuli.controlTable(n).limits = [0.2 10];
+obj.stimuli.controlTable(n).limits = [0.25 8.25];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'tf';
 obj.stimuli.controlTable(n).delta = 0.1;
