@@ -335,7 +335,7 @@ classdef metaStimulus < optickaCore
 						obj.stimulusPositions(a).x = obj.stimuli{i}.xPositionOut;
 						obj.stimulusPositions(a).y = obj.stimuli{i}.yPositionOut;
 						obj.stimulusPositions(a).size = obj.stimuli{i}.sizeOut;
-						fprintf('X: %.2g Y: %.2g Size: %.2g\n',obj.stimulusPositions(a).x,obj.stimulusPositions(a).y,obj.stimulusPositions(a).size);
+						fprintf('Stim%i = X: %.2g Y: %.2g Size: %.2g\n',i, obj.stimulusPositions(a).x,obj.stimulusPositions(a).y,obj.stimulusPositions(a).size);
 					else
 						
 					end

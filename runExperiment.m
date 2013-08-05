@@ -510,7 +510,7 @@ classdef runExperiment < optickaCore
 				% open the eyelink interface
 				obj.useEyeLink = true;
 				if obj.useEyeLink
-					obj.eyeLink = eyelinkManager('IP','10.1.1.1');
+					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
 					eL.saveFile = [obj.paths.savedData filesep 'Simba-' obj.savePrefix '.edf'];
 				end
