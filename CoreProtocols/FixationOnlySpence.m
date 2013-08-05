@@ -1,7 +1,13 @@
 %SPENCE FIXATION ONLY state configuration file
 %------------General Settings-----------------
-rewardTime = 500; %TTL time in milliseconds
 useTask = false;
+tS.rewardTime = 500; %TTL time in milliseconds
+tS.useTask = false;
+tS.checkKeysDuringStimulus = true;
+tS.recordEyePosition = false;
+tS.askForComments = false;
+tS.saveData = false; %we don't want to save any data
+obj.useDataPixx = false; %make sure we don't trigger the plexon
 
 eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
@@ -13,9 +19,10 @@ eL.modify.calibrationtargetsize = 4;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
+
 eL.fixationX = 0;
 eL.fixationY = 0;
-eL.fixationRadius = 4;
+eL.fixationRadius = 7;
 eL.fixationInitTime = 1.5;
 eL.fixationTime = 0.5;
 eL.strictFixation = false;
@@ -32,10 +39,10 @@ obj.stimuli.stimulusTable = in;
 %allows using arrow keys to control this table
 obj.stimuli.tableChoice = 1;
 n=1;
-obj.stimuli.controlTable(n).variable = 'angle';
-obj.stimuli.controlTable(n).delta = 15;
-obj.stimuli.controlTable(n).stimuli = [6 7 8];
-obj.stimuli.controlTable(n).limits = [0 360];
+obj.stimuli.controlTable(n).variable = 'size';
+obj.stimuli.controlTable(n).delta = 1;
+obj.stimuli.controlTable(n).stimuli = 1;
+obj.stimuli.controlTable(n).limits = [0.25 20];
 
 %this allows us to enable subsets from our stimulus list
 obj.stimuli.stimulusSets = {[1],[1]};
@@ -59,6 +66,7 @@ pauseEntryFcn = @()setOffline(eL);
 psEntryFcn = { @()setOffline(eL); ...
 	@()trackerDrawFixation(eL); ...
 	@()resetFixation(eL); ...
+	@()startRecording(eL)
 	};
 
 %prestimulus blank
@@ -67,13 +75,14 @@ prestimulusFcn = @()drawBackground(s);
 %exiting prestimulus state
 psExitFcn = { @()update(obj.stimuli); ...
 	@()statusMessage(eL,'Showing Fixation Spot...'); ...
-	@()startRecording(eL) };
+	 };
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = [];
 
 %what to run when we are showing stimuli
-stimFcn = { @()draw(obj.stimuli); ...	@()drawEyePosition(eL); ...
+stimFcn = { @()draw(obj.stimuli); ... 
+	%@()drawEyePosition(eL); ...
 	@()finishDrawing(s); ...
 	@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
 	};
@@ -85,7 +94,7 @@ maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
 stimExitFcn = [];
 
 %if the subject is correct (small reward)
-correctEntryFcn = { @()timedTTL(lJ,0,rewardTime); ... 
+correctEntryFcn = { @()timedTTL(lJ,0,tS.rewardTime); ... 
 	@()updatePlot(bR, eL, sM); ...
 	@()statusMessage(eL,'Correct! :-)')};
 
@@ -124,10 +133,10 @@ disp('================>> Building state info file <<================')
 stateInfoTmp = { ...
 'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'blank'			[inf] 	pauseEntryFcn	[]				[]				[]; ...
-'blank'		'stimulus'		0.5		psEntryFcn		prestimulusFcn	[]				psExitFcn; ...
+'blank'		'stimulus'		[2 6]	psEntryFcn		prestimulusFcn	[]				psExitFcn; ...
 'stimulus'  'incorrect'		4		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'incorrect'	'blank'			1		incorrectFcn	breakFcn		[]				[]; ...
-'breakfix'	'blank'			4		breakEntryFcn	breakFcn		[]				[]; ...
+'breakfix'	'blank'			2		breakEntryFcn	breakFcn		[]				[]; ...
 'correct'	'blank'			1		correctEntryFcn	correctFcn		[]				correctExitFcn; ...
 'calibrate' 'pause'			0.5		calibrateFcn	[]				[]				[]; ...
 'flash'		'pause'			0.5		[]				flashFcn		[]				[]; ...

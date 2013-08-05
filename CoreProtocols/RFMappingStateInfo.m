@@ -1,12 +1,11 @@
 %=====RF Mapping state configuration file=====
 %------------General Settings-----------------
-tS.rewardTime = 100; %TTL time in milliseconds
+tS.rewardTime = 120; %TTL time in milliseconds
 tS.useTask = false;
 tS.checkKeysDuringStimulus = true;
 tS.recordEyePosition = false;
 tS.askForComments = false;
 tS.saveData = false; %we don't want to save any data
-
 obj.useDataPixx = false; %make sure we don't trigger the plexon
 
 %------------Eyelink Settings----------------
@@ -24,7 +23,7 @@ eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV9'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 0.6;
+eL.modify.calibrationtargetsize = 0.5;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
@@ -47,9 +46,9 @@ obj.stimuli.controlTable(n).stimuli = [6 7 8 9 10];
 obj.stimuli.controlTable(n).limits = [0 360];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'size';
-obj.stimuli.controlTable(n).delta = 0.5;
+obj.stimuli.controlTable(n).delta = 0.25;
 obj.stimuli.controlTable(n).stimuli = [2 3 4 5 6 7 8 10];
-obj.stimuli.controlTable(n).limits = [0.5 20];
+obj.stimuli.controlTable(n).limits = [0.25 20];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'flashTime';
 obj.stimuli.controlTable(n).delta = 0.1;
@@ -57,14 +56,14 @@ obj.stimuli.controlTable(n).stimuli = [1 2 3 4 5 6];
 obj.stimuli.controlTable(n).limits = [0.1 1];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'barLength';
-obj.stimuli.controlTable(n).delta = 0.5;
+obj.stimuli.controlTable(n).delta = 1;
 obj.stimuli.controlTable(n).stimuli = [9];
-obj.stimuli.controlTable(n).limits = [0.5 20];
+obj.stimuli.controlTable(n).limits = [0.5 15];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'barWidth';
-obj.stimuli.controlTable(n).delta = 0.5;
+obj.stimuli.controlTable(n).delta = 0.25;
 obj.stimuli.controlTable(n).stimuli = [9];
-obj.stimuli.controlTable(n).limits = [0.2 10];
+obj.stimuli.controlTable(n).limits = [0.25 8.25];
 n=n+1;
 obj.stimuli.controlTable(n).variable = 'tf';
 obj.stimuli.controlTable(n).delta = 0.1;
