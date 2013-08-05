@@ -674,11 +674,12 @@ classdef runExperiment < optickaCore
 						else
 							tL.vbl = Screen('Flip', s.win, nextvbl);
 						end
+						
+						tS.totalTicks = tS.totalTicks + 1;
+				
 					end
 					%==================================================%
 					
-					tS.totalTicks = tS.totalTicks + 1;
-				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				end %=========================END OF MAIN LOOP===================
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
