@@ -599,7 +599,7 @@ classdef runExperiment < optickaCore
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
-				sM.verbose = true;
+				
 				start(sM); %ignite the stateMachine!
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1096,7 +1096,7 @@ classdef runExperiment < optickaCore
 					if ~isempty(offsetix)
 						ix = [ix offsetix];
 						[ovalueList{1,1:size(offsetix,2)}] = deal(value+offsetvalue);
-						valueList = [valueList{:} {ovalueList}];
+						valueList = [valueList{:} ovalueList];
 					end
 
 					a = 1;

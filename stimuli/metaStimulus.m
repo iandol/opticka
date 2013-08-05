@@ -331,7 +331,7 @@ classdef metaStimulus < optickaCore
 			obj.stimulusPositions = out;
 			for i = 1:obj.n
 				if obj.stimuli{i}.isVisible == true
-					if isfield(obj.stimuli{i},'sizeOut')
+					if isprop(obj.stimuli{i},'sizeOut')
 						obj.stimulusPositions(a).x = obj.stimuli{i}.xPositionOut;
 						obj.stimulusPositions(a).y = obj.stimuli{i}.yPositionOut;
 						obj.stimulusPositions(a).size = obj.stimuli{i}.sizeOut;
