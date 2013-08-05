@@ -275,7 +275,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			shift = 0;
 			
 			for i = 1:length(vin)
-				if isempty(vin(i).name)
+				if isempty(vin(i).name) || isempty(vin(i).values) || isempty(vin(i).stimulus)
 					vout(i + shift) = [];
 					shift = shift-1;
 				end

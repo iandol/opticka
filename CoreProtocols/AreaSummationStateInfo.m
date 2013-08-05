@@ -13,9 +13,10 @@ tS.rewardTime = 160; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
-tS.askForComments = true;
-tS.saveData = true; %*** save behavioural and eye movement data? ***
-obj.useDataPixx = true; %*** drive plexon to collect data? ***
+tS.askForComments = false;
+tS.saveData = false; %*** save behavioural and eye movement data? ***
+obj.useDataPixx = false; %*** drive plexon to collect data? ***
+tS.dummyEyelink = true; 
 tS.name = 'area-summation-dots';
 
 fixX = 0;
@@ -27,14 +28,14 @@ firstFixTime = 0.4;
 firstFixRadius = 1;
 stimulusFixTime = 0.75;
 
-eL.isDummy = false; %*** use dummy or real eyelink? ***
+eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 1;
+eL.modify.calibrationtargetsize = 0.5;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 = use any keyboard
@@ -67,11 +68,13 @@ pauseEntryFcn = { @()hide(obj.stimuli); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
+	@()disableFlip(obj); ...
 	};
 
 %pause exit
 pauseExitFcn = @()rstart(io);%lets unpause the plexon!...
 
+prefixEntryFcn = { @()enableFlip(obj); };
 prefixFcn = []; %@()draw(obj.stimuli);
 
 %fixate entry
@@ -137,8 +140,9 @@ correctExitFcn = {
 	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
+	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
-	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
+	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
 	};
 %incorrect entry
@@ -189,8 +193,8 @@ disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
-'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
-'prefix'	'fixate'	0.75	[]				prefixFcn		[]				[]; ...
+'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
+'prefix'	'fixate'	0.75	prefixEntryFcn	prefixFcn		[]				[]; ...
 'fixate'	'incorrect'	1	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
 'stimulus'  'incorrect'	2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			[]				incExitFcn; ...

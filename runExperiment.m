@@ -455,11 +455,12 @@ classdef runExperiment < optickaCore
 			
 			%a throwaway structure to hold various parameters
 			tS = struct();
-			tS.useTask = false; %#ok<*PROP>
-			tS.checkKeysDuringStimulus = true;
+			tS.useTask = false;
+			tS.checkKeysDuringStimulus = false;
 			tS.recordEyePosition = false;
 			tS.askForComments = false;
-			tS.saveData = true;
+			tS.saveData = false;
+			tS.dummyEyelink = false;
 	
 			%make a short handle to the screenManager
 			s = obj.screen; 
@@ -551,7 +552,7 @@ classdef runExperiment < optickaCore
 				setup(obj.stimuli); %run setup() for each stimulus
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(2); %capture keystrokes
+				ListenChar(1); %capture keystrokes
 				
 				% set up the eyelink interface
 				if obj.useEyeLink
@@ -598,9 +599,9 @@ classdef runExperiment < optickaCore
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
-				
+				sM.verbose = true;
 				start(sM); %ignite the stateMachine!
-				
+
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				% Our main display loop
@@ -646,12 +647,12 @@ classdef runExperiment < optickaCore
 					end
 					
 					%------Check keyboard for commands
-					if ~strcmpi(sM.currentName,'calibrate') || (~strcmpi(sM.currentName,'stimulus') || tS.checkKeysDuringStimulus == true)
+					if ~strcmpi(sM.currentName,'stimulus') || (tS.checkKeysDuringStimulus == true && strcmpi(sM.currentName,'stimulus'))
 						tS = obj.checkFixationKeys(tS);
 					end
 					
 					%------Log stim / no stim condition to log
-					if strcmpi(obj.stateMachine.currentName,'stimulus')
+					if strcmpi(sM.currentName,'stimulus')
 						tL.stimTime(tS.totalTicks)=1;
 					else
 						tL.stimTime(tS.totalTicks)=0;
@@ -677,8 +678,11 @@ classdef runExperiment < optickaCore
 					%==================================================%
 					
 					tS.totalTicks = tS.totalTicks + 1;
-					
-				end
+				
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				end %=========================END OF MAIN LOOP===================
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				
 				drawBackground(s);
 				Screen('Flip', s.win);
 				Priority(0);
@@ -837,13 +841,13 @@ classdef runExperiment < optickaCore
 				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
 				obj.eyeLink.stimulusPositions(1).size = 3;
-				fprintf('LASTX: %g | LASTY: %g\n',obj.stimuli.lastXPosition,obj.stimuli.lastYPosition)
+				fprintf('updateFixationTarget false LASTX: %g | LASTY: %g\n',obj.stimuli.lastXPosition,obj.stimuli.lastYPosition)
 			else
 				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition)
 				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
 				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
-				fprintf('LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
+				fprintf('updateFixationTarget true LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
 			end
 		end
 		
@@ -858,12 +862,12 @@ classdef runExperiment < optickaCore
 				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
 				obj.eyeLink.stimulusPositions(1).size = 3;
-				fprintf('LASTX: %g | LASTY: %g\n',obj.stimuli.lastXPosition,obj.stimuli.lastYPosition)
+				fprintf('updateStimFixTarget false LASTX: %g | LASTY: %g\n',obj.stimuli.lastXPosition,obj.stimuli.lastYPosition)
 			else
 				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
 				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
 				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
-				fprintf('LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
+				fprintf('updateStimFixTarget true LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
 			end
 		end
 		
@@ -1063,31 +1067,47 @@ classdef runExperiment < optickaCore
 				end
 				t = sprintf('Index#%g|Block#%g|Run#%g = ',index,thisBlock,thisRun);
 				for i=1:obj.task.nVars
-					ix = []; valueList = []; oValueList = []; %#ok<NASGU>
+					ix = []; valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
+					doXY = false;
 					ix = obj.task.nVar(i).stimulus; %which stimuli
 					value=obj.task.outVars{thisBlock,i}(thisRun);
-					valueList(1,1:size(ix,2)) = value;
-					name=[obj.task.nVar(i).name 'Out']; %which parameter
-					if regexpi(name,'xPositionOut','once')
-						obj.lastXPosition = value;
-					elseif regexpi(name,'yPositionOut','once')
-						obj.lastYPosition = value;
-					elseif regexpi(name,'sizeOut','once')
-						obj.lastSize = value;
+					if iscell(value)
+						value = value{1};
 					end
+					[valueList{1,1:size(ix,2)}] = deal(value);
+					name=[obj.task.nVar(i).name 'Out']; %which parameter
+					
+					if regexpi(name,'^xyPositionOut','once')
+						doXY = true;
+						obj.lastXPosition = value(1);
+						obj.lastYPosition = value(2);
+					elseif regexpi(name,'^xPositionOut','once')
+						obj.lastXPosition = value;
+					elseif regexpi(name,'^yPositionOut','once')
+						obj.lastYPosition = value;
+					elseif regexpi(name,'^sizeOut','once')
+						obj.lastSize = value;
+					
+					end
+					
 					offsetix = obj.task.nVar(i).offsetstimulus;
 					offsetvalue = obj.task.nVar(i).offsetvalue;
 
 					if ~isempty(offsetix)
 						ix = [ix offsetix];
-						ovalueList(1,1:size(offsetix,2)) = value+offsetvalue;
-						valueList = [valueList ovalueList];
+						[ovalueList{1,1:size(offsetix,2)}] = deal(value+offsetvalue);
+						valueList = [valueList{:} {ovalueList}];
 					end
 
 					a = 1;
 					for j = ix %loop through our stimuli references for this variable
-						t = [t sprintf('S%g: %s = %g ',j,name,valueList(a))];
-						obj.stimuli{j}.(name)=valueList(a);
+						t = [t sprintf('S%g: %s = %s ',j,name,num2str(valueList{a}))];
+						if ~doXY
+							obj.stimuli{j}.(name)=valueList{a};
+						else
+							obj.stimuli{j}.xPositionOut=valueList{a}(1);
+							obj.stimuli{j}.yPositionOut=valueList{a}(2);
+						end
 						a = a + 1;
 					end
 				end
@@ -1645,23 +1665,14 @@ classdef runExperiment < optickaCore
 						end
 					case 'p' %pause the display
 						if tS.totalTicks > tS.keyHold
-							if rem(tS.pauseToggle,2)==0
+							if strcmpi(obj.stateMachine.currentState.name,'pause')
+								forceTransition(obj.stateMachine, obj.stateMachine.currentState.next);
+								fprintf('===>>> PAUSE OFF!\n');
+							else
 								forceTransition(obj.stateMachine, 'pause');
 								fprintf('===>>> PAUSE ENGAGED!\n');
 								tS.pauseToggle = tS.pauseToggle + 1;
-							else
-								if isStateName(obj.stateMachine,'fixate')
-									forceTransition(obj.stateMachine, 'fixate');
-									fprintf('===>>> PAUSE OFF!\n');
-								elseif isStateName(obj.stateMachine,'blank')
-									forceTransition(obj.stateMachine, 'blank');
-									fprintf('===>>> PAUSE OFF!\n');
-								else
-									forceTransition(obj.stateMachine, 'prestimulus');
-									fprintf('===>>> PAUSE OFF!\n');
-								end
-								tS.pauseToggle = tS.pauseToggle + 1;
-							end
+							end 
 							tS.keyHold = tS.totalTicks + fInc;
 						end
 					case 's'

@@ -12,12 +12,16 @@
 tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
-tS.recordEyePosition = true;
+tS.recordEyePosition = false;
 tS.askForComments = false;
-tS.saveData = false;
-obj.useDataPixx = false;
+tS.saveData = false; %*** save behavioural and eye movement data? ***
+obj.useDataPixx = false; %*** drive plexon to collect data? ***
+tS.dummyEyelink = true; 
+tS.name = 'figure-ground';
 
 luminancePedestal = [0.5 0.5 0.5];
+obj.lastXPosition = fixX;
+obj.lastYPosition = fixY;
 fixX = 0;
 fixY = 0;
 firstFixInit = 0.6;
@@ -28,9 +32,9 @@ targetFixInit = 0.5;
 targetFixTime = [0.5 0.9];
 targetRadius = 2;
 
-eL.name = 'figure-ground';
+eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
+eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
-eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
@@ -67,12 +71,14 @@ pauseEntryFcn = { @()rstop(io); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
-	};
+	@()disableFlip(obj); ...
+	}; 
 
 %pause exit
-pauseExitFcn = @()rstart(io);%lets unpause the plexon!...
+pauseExitFcn = { @()rstart(io) };%lets unpause the plexon!
 
-prefixFcn = @()draw(obj.stimuli);
+prefixEntryFcn = { @()enableFlip(obj); };
+prefixFcn = { @()draw(obj.stimuli) };
 
 %fixate entry
 fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
@@ -91,7 +97,7 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	};
 
 %fix within
-fixFcn = {@()draw(obj.stimuli); ... %draw stimulus
+fixFcn = { @()draw(obj.stimuli); ... %draw stimulus
 	};
 
 %test we are fixated for a certain length of time
@@ -196,13 +202,15 @@ flashFcn = @()flashScreen(s, 0.2); % fullscreen flash mode for visual background
 %show 1deg size grid
 gridFcn = @()drawGrid(s);
 
+sM.skipExitStates = {'fixate','incorrect|breakfix'};
+
 %----------------------State Machine Table-------------------------
 disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
-'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
-'prefix'	'fixate'	1.75	[]				prefixFcn		[]				[]; ...
+'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
+'prefix'	'fixate'	1.75	prefixEntryFcn	prefixFcn		[]				[]; ...
 'fixate'	'incorrect'	1.4	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
 'stimulus'  'incorrect'	1.5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			[]				incExitFcn; ...

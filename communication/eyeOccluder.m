@@ -19,7 +19,7 @@ classdef eyeOccluder < optickaCore
 				obj.parseArgs(varargin,obj.allowedProperties);
 			end
 			obj.name = 'eyeOccluder';
-			open(obj)
+			open(obj);
 		end
 		
 		function open(obj)
@@ -35,15 +35,16 @@ classdef eyeOccluder < optickaCore
 						break
 					catch
 						obj.salutation(['Can''t open USB serial object: ' obj.serialLink.Port]);
-						obj.isOpen = false;
+						close(obj);
+						return
 					end
 				end
+				bothEyesOpen(obj)
 			end
-			bothEyesOpen(obj)
 		end
 		
 		function close(obj)
-			try
+			try %#ok<TRYNC>
 				fclose(obj.serialLink);
 			end
 			obj.isOpen = false;
@@ -75,6 +76,10 @@ classdef eyeOccluder < optickaCore
 				obj.salutation('Right Eye closed!','',1);
 				fprintf(obj.serialLink,'A');
 			end
+		end
+		
+		function delete(obj)
+			close(obj);
 		end
 			
 		
