@@ -13,9 +13,9 @@ tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
-tS.askForComments = false;
-tS.saveData = false; %*** save behavioural and eye movement data? ***
-obj.useDataPixx = false; %*** drive plexon to collect data? ***
+tS.askForComments = true;
+tS.saveData = true; %*** save behavioural and eye movement data? ***
+obj.useDataPixx = true; %*** drive plexon to collect data? ***
 tS.dummyEyelink = false; 
 tS.name = 'figure-ground';
 
@@ -30,7 +30,7 @@ obj.lastYPosition = fixY;
 
 targetFixInit = 0.5;
 targetFixTime = [0.5 0.9];
-targetRadius = 2;
+targetRadius = 1.6;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;
@@ -154,7 +154,6 @@ correctExitFcn = {
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 	%@()updateStimFixTarget(obj,tS.useTask); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
-	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
