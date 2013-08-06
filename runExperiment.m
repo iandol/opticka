@@ -847,26 +847,6 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief updates eyelink with stimuli positions
-		%>
-		%> @param
-		% ===================================================================
-		function updateStimFixTarget(obj,useTask)
-			if ~exist('useTask','var');	useTask = false; end
-			if useTask == false
-				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
-				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
-				obj.eyeLink.stimulusPositions(1).size = 3;
-				fprintf('updateStimFixTarget false LASTX: %g | LASTY: %g\n',obj.stimuli.lastXPosition,obj.stimuli.lastYPosition)
-			else
-				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
-				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
-				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
-				fprintf('updateStimFixTarget true LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
-			end
-		end
-		
-		% ===================================================================
 		%> @brief when running allow keyboard override, so we can edit things
 		%>
 		%> @param

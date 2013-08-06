@@ -308,15 +308,13 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Return the stimulus positions
+		%> @brief Return the stimulus fixation position
 		%>
 		% ===================================================================
 		function [x,y] = getFixationPositions(obj)
 			x = 0; y = 0;
 			if ~isempty(obj.fixationChoice)
-				x = obj.stimuli{obj.fixationChoice}.xPositionOut;
-				y = obj.stimuli{obj.fixationChoice}.yPositionOut;
-				xy = toDegrees(obj,[x y]);
+				xy = toDegrees(obj,[obj.stimuli{obj.fixationChoice}.xPositionOut obj.stimuli{obj.fixationChoice}.yPositionOut]);
 				x = xy(1); y = xy(2);
 				obj.lastXPosition = x;
 				obj.lastYPosition = y;

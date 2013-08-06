@@ -1,4 +1,4 @@
-% ========================================================================
+	% ========================================================================
 %> @brief eyelinkManager wraps around the eyelink toolbox functions
 %> offering a simpler interface
 %>
