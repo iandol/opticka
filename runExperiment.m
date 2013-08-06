@@ -552,7 +552,7 @@ classdef runExperiment < optickaCore
 				setup(obj.stimuli); %run setup() for each stimulus
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(1); %capture keystrokes
+				ListenChar(2); %capture keystrokes
 				
 				% set up the eyelink interface
 				if obj.useEyeLink
@@ -839,11 +839,9 @@ classdef runExperiment < optickaCore
 			if ~exist('useTask','var');	useTask = false; end
 			if useTask == false
 				updateFixationValues(obj.eyeLink, obj.stimuli.lastXPosition, obj.stimuli.lastYPosition)
-				fprintf('updateFixationTarget false LASTX: %g | LASTY: %g\n',obj.stimuli.lastXPosition,obj.stimuli.lastYPosition)
 			else
 				[obj.lastXPosition,obj.lastYPosition] = getFixationPositions(obj.stimuli);
 				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition);
-				fprintf('updateFixationTarget true LASTX: %g | LASTY: %g\n',x,y)
 			end
 		end
 		

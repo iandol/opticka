@@ -833,13 +833,19 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function out = toDegrees(obj,in,axis)
+			if ~exist('axis','var');axis='';end
 			switch axis
 				case 'x'
 					out = (in - obj.screen.xCenter) / obj.screen.ppd;
 				case 'y'
 					out = (in - obj.screen.yCenter) / obj.screen.ppd;
 				otherwise
-					out = 0;
+					if length(in)==2
+						out(1) = (in(1) - obj.screen.xCenter) / obj.screen.ppd;
+						out(2) = (in(2) - obj.screen.yCenter) / obj.screen.ppd;
+					else
+						out = 0;
+					end
 			end
 		end
 		
@@ -848,13 +854,19 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function out = toPixels(obj,in,axis)
+			if ~exist('axis','var');axis='';end
 			switch axis
 				case 'x'
 					out = (in * obj.screen.ppd) + obj.screen.xCenter;
 				case 'y'
 					out = (in * obj.screen.ppd) + obj.screen.yCenter;
 				otherwise
-					out = 0;
+					if length(in)==2
+						out(1) = (in(1) * obj.screen.ppd) + obj.screen.xCenter;
+						out(2) = (in(2) * obj.screen.ppd) + obj.screen.yCenter;
+					else
+						out = 0;
+					end
 			end
 		end
 		

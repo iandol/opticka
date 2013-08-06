@@ -316,6 +316,8 @@ classdef metaStimulus < optickaCore
 			if ~isempty(obj.fixationChoice)
 				x = obj.stimuli{obj.fixationChoice}.xPositionOut;
 				y = obj.stimuli{obj.fixationChoice}.yPositionOut;
+				xy = toDegrees(obj,[x y]);
+				x = xy(1); y = xy(2);
 				obj.lastXPosition = x;
 				obj.lastYPosition = y;
 			end
@@ -612,6 +614,53 @@ classdef metaStimulus < optickaCore
 						obj.stimuli = sout;
 					else
 						obj.stimuli = {};
+					end
+			end
+		end
+	end%-------------------------END PUBLIC METHODS--------------------------------%
+	
+	%=======================================================================
+	methods (Access = private) %------------------PRIVATE METHODS
+	%=======================================================================
+		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function out = toDegrees(obj,in,axis)
+			if ~exist('axis','var');axis='';end
+			switch axis
+				case 'x'
+					out = (in - obj.screen.xCenter) / obj.screen.ppd;
+				case 'y'
+					out = (in - obj.screen.yCenter) / obj.screen.ppd;
+				otherwise
+					if length(in)==2
+						out(1) = (in(1) - obj.screen.xCenter) / obj.screen.ppd;
+						out(2) = (in(2) - obj.screen.yCenter) / obj.screen.ppd;
+					else
+						out = 0;
+					end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function out = toPixels(obj,in,axis)
+			if ~exist('axis','var');axis='';end
+			switch axis
+				case 'x'
+					out = (in * obj.screen.ppd) + obj.screen.xCenter;
+				case 'y'
+					out = (in * obj.screen.ppd) + obj.screen.yCenter;
+				otherwise
+					if length(in)==2
+						out(1) = (in(1) * obj.screen.ppd) + obj.screen.xCenter;
+						out(2) = (in(2) * obj.screen.ppd) + obj.screen.yCenter;
+					else
+						out = 0;
 					end
 			end
 		end

@@ -8,7 +8,7 @@ classdef eyeOccluder < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		serialLink@serial
+		serialLink
 		isOpen = false
 	end
 	
@@ -80,6 +80,7 @@ classdef eyeOccluder < optickaCore
 		
 		function delete(obj)
 			close(obj);
+			obj.serialLink = [];
 		end
 			
 		
