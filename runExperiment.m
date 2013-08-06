@@ -839,16 +839,11 @@ classdef runExperiment < optickaCore
 			if ~exist('useTask','var');	useTask = false; end
 			if useTask == false
 				updateFixationValues(obj.eyeLink, obj.stimuli.lastXPosition, obj.stimuli.lastYPosition)
-				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
-				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
-				obj.eyeLink.stimulusPositions(1).size = 3;
 				fprintf('updateFixationTarget false LASTX: %g | LASTY: %g\n',obj.stimuli.lastXPosition,obj.stimuli.lastYPosition)
 			else
-				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition)
-				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
-				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
-				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
-				fprintf('updateFixationTarget true LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
+				[obj.lastXPosition,obj.lastYPosition] = getFixationPositions(obj.stimuli);
+				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition);
+				fprintf('updateFixationTarget true LASTX: %g | LASTY: %g\n',x,y)
 			end
 		end
 		

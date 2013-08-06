@@ -62,6 +62,9 @@ obj.stimuli.stimulusSets = {[1,5],[1 2 3 4 5]};
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
+%which stimulus in the list is used for a fixation target?
+obj.stimuli.fixationChoice = 3;
+
 %----------------------State Machine States-------------------------
 % these are our functions that will execute as the stateMachine runs,
 % in the scope of the runExperiemnt object.
@@ -149,7 +152,7 @@ correctExitFcn = {
 	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
-	@()updateStimFixTarget(obj,tS.useTask); ... %this takes the randomised X and Y so we can send to eyetracker
+	%@()updateStimFixTarget(obj,tS.useTask); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
@@ -174,7 +177,7 @@ incExitFcn = {
 	@()updateVariables(obj,[],[],false); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
-	@()updateStimFixTarget(obj,tS.useTask); ... %this takes the randomised X and Y so we can send to eyetracker
+	%@()updateStimFixTarget(obj,tS.useTask); ... %this takes the randomised X and Y so we can send to eyetracker
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer

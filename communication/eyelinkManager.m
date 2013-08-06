@@ -638,8 +638,13 @@ classdef eyelinkManager < optickaCore
 					if isempty(size); size = 1 * obj.screen.ppd; end
 					rect = [0 0 size size];
 					rect = round(CenterRectOnPoint(rect, x, y));
-					Eyelink('Command', 'draw_box %d %d %d %d 11', rect(1), rect(2), rect(3), rect(4));
-					fprintf('draw_box %d %d %d %d 11\n', rect(1), rect(2), rect(3), rect(4));
+					if obj.stimulusPositions(i).selected == true
+						Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
+						fprintf('draw_box %d %d %d %d 10\n', rect(1), rect(2), rect(3), rect(4));
+					else
+						Eyelink('Command', 'draw_box %d %d %d %d 11', rect(1), rect(2), rect(3), rect(4));
+						fprintf('draw_box %d %d %d %d 11\n', rect(1), rect(2), rect(3), rect(4));
+					end
 				end
 				
 			end

@@ -27,6 +27,8 @@ classdef metaStimulus < optickaCore
 		verbose = false
 		%> choice allows to call only 1 stimulus in the group
 		choice = []
+		%>which of the stimuli should fixation follow?
+		fixationChoice = []
 		%> randomisation table to apply to a stimulus
 		stimulusTable = []
 		%> choice for table
@@ -306,19 +308,17 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Return the last randomised XY position
+		%> @brief Return the stimulus positions
 		%>
 		% ===================================================================
-		function x = getLastX(obj)
-			x = obj.lastXPosition;
-		end
-		
-		% ===================================================================
-		%> @brief Return the last randomised XY position
-		%>
-		% ===================================================================
-		function y = getLastY(obj)
-			y = obj.lastYPosition;
+		function [x,y] = getFixationPositions(obj)
+			x = 0; y = 0;
+			if ~isempty(obj.fixationChoice)
+				x = obj.stimuli{obj.fixationChoice}.xPositionOut;
+				y = obj.stimuli{obj.fixationChoice}.yPositionOut;
+				obj.lastXPosition = x;
+				obj.lastYPosition = y;
+			end
 		end
 		
 		% ===================================================================
@@ -335,9 +335,12 @@ classdef metaStimulus < optickaCore
 						obj.stimulusPositions(a).x = obj.stimuli{i}.xPositionOut;
 						obj.stimulusPositions(a).y = obj.stimuli{i}.yPositionOut;
 						obj.stimulusPositions(a).size = obj.stimuli{i}.sizeOut;
+						if obj.fixationChoice == i 
+							obj.stimulusPositions(a).selected = true;
+						else
+							obj.stimulusPositions(a).selected = false;
+						end
 						fprintf('Stim%i = X: %.2g Y: %.2g Size: %.2g\n',i, obj.stimulusPositions(a).x,obj.stimulusPositions(a).y,obj.stimulusPositions(a).size);
-					else
-						
 					end
 				end
 			end
