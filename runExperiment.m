@@ -591,7 +591,7 @@ classdef runExperiment < optickaCore
 				HideCursor;
 				warning('off'); %#ok<*WNOFF>
 				%check initial eye position
-				if obj.useEyeLink; getSampleq(eL); end
+				if obj.useEyeLink; getSample(eL); end
 				
 				%if obj.useDataPixx; rstart(io); end
 				
@@ -1006,7 +1006,7 @@ classdef runExperiment < optickaCore
 			if ~exist('index','var') && isprop(obj.task,'totalRuns')
 				index = obj.task.totalRuns;	
 				trial = obj.task.outIndex(index);
-				fprintf('GOT TRIAL NUMBER = %g \n',trial)
+				%fprintf('getTaskIndex: GOT TRIAL NUMBER = %g \n',trial)
 				return
 			end
 		end

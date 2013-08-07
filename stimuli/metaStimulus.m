@@ -314,8 +314,8 @@ classdef metaStimulus < optickaCore
 		function [x,y] = getFixationPositions(obj)
 			x = 0; y = 0;
 			if ~isempty(obj.fixationChoice)
-				xy = toDegrees(obj,[obj.stimuli{obj.fixationChoice}.xPositionOut obj.stimuli{obj.fixationChoice}.yPositionOut]);
-				x = xy(1); y = xy(2);
+				x = obj.stimuli{obj.fixationChoice}.xPositionOut / obj.screen.ppd;
+				y = obj.stimuli{obj.fixationChoice}.yPositionOut / obj.screen.ppd;
 				obj.lastXPosition = x;
 				obj.lastYPosition = y;
 			end
@@ -340,7 +340,7 @@ classdef metaStimulus < optickaCore
 						else
 							obj.stimulusPositions(a).selected = false;
 						end
-						fprintf('Stim%i = X: %.2g Y: %.2g Size: %.2g\n',i, obj.stimulusPositions(a).x,obj.stimulusPositions(a).y,obj.stimulusPositions(a).size);
+						fprintf('Stim%i = X: %.2f Y: %.2f Size: %.2f\n',i, obj.stimulusPositions(a).x,obj.stimulusPositions(a).y,obj.stimulusPositions(a).size);
 					end
 				end
 			end
@@ -621,47 +621,6 @@ classdef metaStimulus < optickaCore
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
 		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function out = toDegrees(obj,in,axis)
-			if ~exist('axis','var');axis='';end
-			switch axis
-				case 'x'
-					out = (obj.screen.xCenter + in) / obj.screen.ppd;
-				case 'y'
-					out = (obj.screen.yCenter+ in) / obj.screen.ppd;
-				otherwise
-					if length(in)==2
-						out(1) = (obj.screen.xCenter + in(1)) / obj.screen.ppd;
-						out(2) = (obj.screen.yCenter + in(2)) / obj.screen.ppd;
-					else
-						out = 0;
-					end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function out = toPixels(obj,in,axis)
-			if ~exist('axis','var');axis='';end
-			switch axis
-				case 'x'
-					out = (in * obj.screen.ppd) + obj.screen.xCenter;
-				case 'y'
-					out = (in * obj.screen.ppd) + obj.screen.yCenter;
-				otherwise
-					if length(in)==2
-						out(1) = (in(1) * obj.screen.ppd) + obj.screen.xCenter;
-						out(2) = (in(2) * obj.screen.ppd) + obj.screen.yCenter;
-					else
-						out = 0;
-					end
-			end
-		end
 		
 	end
 end
