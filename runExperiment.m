@@ -552,7 +552,7 @@ classdef runExperiment < optickaCore
 				setup(obj.stimuli); %run setup() for each stimulus
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(2); %capture keystrokes
+				ListenChar(1); %capture keystrokes
 				
 				% set up the eyelink interface
 				if obj.useEyeLink
@@ -591,7 +591,7 @@ classdef runExperiment < optickaCore
 				HideCursor;
 				warning('off'); %#ok<*WNOFF>
 				%check initial eye position
-				if obj.useEyeLink; getSample(eL); end
+				if obj.useEyeLink; getSampleq(eL); end
 				
 				%if obj.useDataPixx; rstart(io); end
 				

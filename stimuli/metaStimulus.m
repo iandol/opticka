@@ -309,7 +309,7 @@ classdef metaStimulus < optickaCore
 		
 		% ===================================================================
 		%> @brief Return the stimulus fixation position
-		%>
+		%>s
 		% ===================================================================
 		function [x,y] = getFixationPositions(obj)
 			x = 0; y = 0;
@@ -629,13 +629,13 @@ classdef metaStimulus < optickaCore
 			if ~exist('axis','var');axis='';end
 			switch axis
 				case 'x'
-					out = (in - obj.screen.xCenter) / obj.screen.ppd;
+					out = (obj.screen.xCenter + in) / obj.screen.ppd;
 				case 'y'
-					out = (in - obj.screen.yCenter) / obj.screen.ppd;
+					out = (obj.screen.yCenter+ in) / obj.screen.ppd;
 				otherwise
 					if length(in)==2
-						out(1) = (in(1) - obj.screen.xCenter) / obj.screen.ppd;
-						out(2) = (in(2) - obj.screen.yCenter) / obj.screen.ppd;
+						out(1) = (obj.screen.xCenter + in(1)) / obj.screen.ppd;
+						out(2) = (obj.screen.yCenter + in(2)) / obj.screen.ppd;
 					else
 						out = 0;
 					end

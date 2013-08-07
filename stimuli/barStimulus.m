@@ -89,7 +89,7 @@ classdef barStimulus < baseStimulus
 			obj.inSetup = true;
 			
 			obj.sM = sM;
-			obj.ppd=sM.ppd;
+			obj.ppd = sM.ppd;
 			
 			fn = fieldnames(barStimulus);
 			for j=1:length(fn)
