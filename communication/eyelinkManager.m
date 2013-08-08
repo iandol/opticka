@@ -1,4 +1,4 @@
-	% ========================================================================
+% ========================================================================
 %> @brief eyelinkManager wraps around the eyelink toolbox functions
 %> offering a simpler interface
 %>
@@ -20,9 +20,9 @@ classdef eyelinkManager < optickaCore
 		saveFile = 'myData.edf'
 		%> do we log messages to the command window?
 		verbose = false
-		%> fixation X position in degrees
+		%> fixation X position(s) in degrees
 		fixationX = 0
-		%> fixation Y position in degrees
+		%> fixation Y position(s) in degrees
 		fixationY = 0
 		%> fixation radius in degrees
 		fixationRadius = 1
@@ -85,6 +85,7 @@ classdef eyelinkManager < optickaCore
 	properties (SetAccess = private, GetAccess = private)
 		tempFile = 'MYDATA.edf'
 		fixN = 0
+		fixSelection = []
 		error = []
 		%> previous message sent to eyelink
 		previousMessage = ''
@@ -229,6 +230,7 @@ classdef eyelinkManager < optickaCore
 			obj.fixInitLength = 0;
 			obj.fixInitTotal = 0;
 			obj.fixN = 0;
+			obj.fixSelection = 0;
 		end
 				
 		% ===================================================================
@@ -364,7 +366,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function updateFixationValues(obj,x,y,inittime,fixtime,radius,strict)
-			tic
+			%tic
 			resetFixation(obj)
 			if nargin > 1 && ~isempty(x)
 				if isinf(x)
@@ -412,31 +414,36 @@ classdef eyelinkManager < optickaCore
 		%> @return searching boolean for if we are still searching for fixation
 		% ===================================================================
 		function [fixated, fixtime, searching] = isFixated(obj)
-			fixated = false;
-			fixtime = false;
-			searching = true;
+			fixated = false; fixtime = false; searching = true;
 			if obj.isConnected && ~isempty(obj.currentSample)
 				if obj.fixInitTotal == 0
 					obj.fixInitTotal = obj.currentSample.time;
 				end
-				r = sqrt((obj.x - obj.fixationX).^2 + (obj.y - obj.fixationY).^2);
-				%fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
-				if any(r < obj.fixationRadius);
+				r = sqrt((obj.x - obj.fixationX).^2 + (obj.y - obj.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
+				idx = find(r < obj.fixationRadius);
+				if any(idx);
 					if obj.fixN == 0 
 						obj.fixN = 1;
+						obj.fixSelection = idx(1);
 					end
-					if obj.fixStartTime == 0
-						obj.fixStartTime = obj.currentSample.time;
+					if obj.fixSelection == idx(1);
+						if obj.fixStartTime == 0
+							obj.fixStartTime = obj.currentSample.time;
+						end
+						obj.fixLength = (obj.currentSample.time - obj.fixStartTime) / 1000;
+						if obj.fixLength > obj.fixationTime
+							fixtime = true;
+						end
+						obj.fixInitStartTime = 0;
+						searching = false;
+						fixated = true;
+						obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
+						return
+					else
+						fixated = false;
+						fixtime = false;
+						searching = false;
 					end
-					obj.fixLength = (obj.currentSample.time - obj.fixStartTime) / 1000;
-					if obj.fixLength > obj.fixationTime
-						fixtime = true;
-					end
-					obj.fixInitStartTime = 0;
-					searching = false;
-					fixated = true;
-					obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
-					return
 				else
 					if obj.fixN == 1 
 						obj.fixN = -100;
@@ -464,7 +471,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function out = testWithinFixationWindow(obj, yesString, noString)
-			if obj.isFixated
+			if isFixated(obj)
 				out = yesString;
 			else
 				out = noString;
@@ -478,18 +485,23 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function out = testFixationTime(obj, yesString, noString)
-			[fix,fixtime] = obj.isFixated();
+			[fix,fixtime] = isFixated(obj);
 			if fix && fixtime
-				%obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TESTFIXTIME');
-				out = yesString;
+				out = yesString; %obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TESTFIXTIME');
 			else
 				out = noString;
 			end
 		end
 		
 		% ===================================================================
-		%> @brief Checks if we're looking for fixation a set time
+		%> @brief Checks if we're looking for fixation a set time. Input is
+		%> 2 strings, either one is returned depending on success or
+		%> failure, 'searching' may also be returned meaning the fixation
+		%> window hasn't been entered yet...
 		%>
+		%> @param yesString if this function succeeds return this string
+		%> @param noString if this function fails return this string
+		%> @return out the output string which is 'searching' if fixation is still being initiated, or yes or no string.
 		% ===================================================================
 		function out = testSearchHoldFixation(obj, yesString, noString)
 			[fix, fixtime, searching] = obj.isFixated();
@@ -646,11 +658,9 @@ classdef eyelinkManager < optickaCore
 					rect = round(CenterRectOnPoint(rect, x, y));
 					if obj.stimulusPositions(i).selected == true
 						Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
-						%Eyelink('Command', 'draw_cross %d %d', x, y);
-						%fprintf('draw_box * %d %d %d %d 10\n', rect(1), rect(2), rect(3), rect(4));
+						
 					else
 						Eyelink('Command', 'draw_box %d %d %d %d 11', rect(1), rect(2), rect(3), rect(4));
-						%fprintf('draw_box %d %d %d %d 11\n', rect(1), rect(2), rect(3), rect(4));
 					end
 				end
 				
@@ -668,9 +678,7 @@ classdef eyelinkManager < optickaCore
 				x = toPixels(obj, obj.fixationX, 'x');
 				y = toPixels(obj, obj.fixationY, 'y');
 				rect = round(CenterRectOnPoint(rect, x, y));
-				Eyelink('Command','clear_screen 0');
 				Eyelink('Command', 'draw_box %d %d %d %d 14', rect(1), rect(2), rect(3), rect(4));
-				%fprintf('draw_fix_box %d %d %d %d 14\n', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
 		
