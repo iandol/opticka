@@ -577,7 +577,7 @@ classdef runExperiment < optickaCore
 				t.totalRuns = 1;
 				if tS.useTask == true
 					updateVariables(obj, t.totalRuns, true, false); % set to first variable
-					updateFixationTarget(obj, tS.useTask);
+					updateFixationTarget(obj, true);
 				end
 				tS.stopTraining = false; %break while loop
 				tS.keyTicks = 0; %tick counter for reducing sensitivity of keyboard
@@ -836,13 +836,13 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function updateFixationTarget(obj, useTask)
+		function updateFixationTarget(obj, useTask, varargin)
 			if ~exist('useTask','var');	useTask = false; end
 			if useTask == false
 				updateFixationValues(obj.eyeLink, obj.stimuli.lastXPosition, obj.stimuli.lastYPosition)
 			else
 				[obj.lastXPosition,obj.lastYPosition] = getFixationPositions(obj.stimuli);
-				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition);
+				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition, varargin);
 			end
 		end
 		

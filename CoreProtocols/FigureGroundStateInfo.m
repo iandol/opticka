@@ -108,7 +108,7 @@ initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 
 %exit fixation phase
 fixExitFcn = { @()animate(obj.stimuli); ... % animate stimuli for subsequent draw
-	@()updateFixationTarget(obj,tS.useTask); ... %use our stimuli values for next fix X and Y
+	@()updateFixationTarget(obj, tS.useTask, targetFixInit, targetFixTime, targetRadius, true); ... %use our stimuli values for next fix X and Y
 	@()updateFixationValues(eL, [], [], targetFixInit, targetFixTime, targetRadius, true); ... %set target fix window
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edit(obj.stimuli,4,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
