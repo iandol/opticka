@@ -314,10 +314,12 @@ classdef metaStimulus < optickaCore
 		function [x,y] = getFixationPositions(obj)
 			x = 0; y = 0;
 			if ~isempty(obj.fixationChoice)
-				x = obj.stimuli{obj.fixationChoice}.xPositionOut / obj.screen.ppd;
-				y = obj.stimuli{obj.fixationChoice}.yPositionOut / obj.screen.ppd;
-				obj.lastXPosition = x;
-				obj.lastYPosition = y;
+				for i=1:length(obj.fixationChoice)
+					x(i) = obj.stimuli{obj.fixationChoice(i)}.xPositionOut / obj.screen.ppd;
+					y(i) = obj.stimuli{obj.fixationChoice(i)}.yPositionOut / obj.screen.ppd;
+					obj.lastXPosition = x;
+					obj.lastYPosition = y;
+				end
 			end
 		end
 		
@@ -335,12 +337,13 @@ classdef metaStimulus < optickaCore
 						obj.stimulusPositions(a).x = obj.stimuli{i}.xPositionOut;
 						obj.stimulusPositions(a).y = obj.stimuli{i}.yPositionOut;
 						obj.stimulusPositions(a).size = obj.stimuli{i}.sizeOut;
-						if obj.fixationChoice == i 
+						if any(obj.fixationChoice == i) 
 							obj.stimulusPositions(a).selected = true;
 						else
 							obj.stimulusPositions(a).selected = false;
 						end
-						fprintf('Stim%i = X: %.2f Y: %.2f Size: %.2f\n',i, obj.stimulusPositions(a).x,obj.stimulusPositions(a).y,obj.stimulusPositions(a).size);
+						%fprintf('Stim%i = X: %.2f Y: %.2f Size: %.2f\n',i, obj.stimulusPositions(a).x,obj.stimulusPositions(a).y,obj.stimulusPositions(a).size);
+						a = a + 1;
 					end
 				end
 			end

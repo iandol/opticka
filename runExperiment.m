@@ -552,7 +552,7 @@ classdef runExperiment < optickaCore
 				setup(obj.stimuli); %run setup() for each stimulus
 				
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(1); %capture keystrokes
+				ListenChar(2); %capture keystrokes
 				
 				% set up the eyelink interface
 				if obj.useEyeLink
@@ -577,7 +577,7 @@ classdef runExperiment < optickaCore
 				t.totalRuns = 1;
 				if tS.useTask == true
 					updateVariables(obj, t.totalRuns, true, false); % set to first variable
-					updateFixationTarget(obj, true);
+					%updateFixationTarget(obj, true);
 				end
 				tS.stopTraining = false; %break while loop
 				tS.keyTicks = 0; %tick counter for reducing sensitivity of keyboard
@@ -1006,7 +1006,7 @@ classdef runExperiment < optickaCore
 			if ~exist('index','var') && isprop(obj.task,'totalRuns')
 				index = obj.task.totalRuns;	
 				trial = obj.task.outIndex(index);
-				%fprintf('getTaskIndex: GOT TRIAL NUMBER = %g \n',trial)
+				fprintf('getTaskIndex: GOT TRIAL NUMBER = %g \n',trial)
 				return
 			end
 		end

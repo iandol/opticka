@@ -364,6 +364,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function updateFixationValues(obj,x,y,inittime,fixtime,radius,strict)
+			tic
 			resetFixation(obj)
 			if nargin > 1 && ~isempty(x)
 				if isinf(x)
@@ -380,7 +381,12 @@ classdef eyelinkManager < optickaCore
 				end
 			end
 			if nargin > 3 && ~isempty(inittime);
-				if length(inittime) == 2
+				if iscell(inittime) && length(inittime)==4
+					obj.fixationInitTime = inittime{1};
+					obj.fixationTime = inittime{2};
+					obj.fixationRadius = inittime{3};
+					obj.strictFixation = inittime{4};
+				elseif length(inittime) == 2
 					obj.fixationInitTime = randi(inittime*1000)/1000;
 				elseif length(inittime)==1
 					obj.fixationInitTime = inittime;
@@ -395,7 +401,7 @@ classdef eyelinkManager < optickaCore
 			end
 			if nargin > 5 && ~isempty(radius); obj.fixationRadius = radius; end
 			if nargin > 6 && ~isempty(strict); obj.strictFixation = strict; end
-			fprintf('updateFixationValues Set Fix: X=%g | Y=%g | IT=%g | FT=%g | R=%g\n', obj.fixationX, obj.fixationY, obj.fixationInitTime, obj.fixationTime, obj.fixationRadius);
+			%fprintf('updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g time=%g\n', obj.fixationX, obj.fixationY, num2str(obj.fixationInitTime), num2str(obj.fixationTime), obj.fixationRadius,toc*1000);
 		end
 		
 		% ===================================================================
@@ -413,9 +419,9 @@ classdef eyelinkManager < optickaCore
 				if obj.fixInitTotal == 0
 					obj.fixInitTotal = obj.currentSample.time;
 				end
-				r = sqrt((obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2);
+				r = sqrt((obj.x - obj.fixationX).^2 + (obj.y - obj.fixationY).^2);
 				%fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
-				if r < (obj.fixationRadius);
+				if any(r < obj.fixationRadius);
 					if obj.fixN == 0 
 						obj.fixN = 1;
 					end
@@ -640,10 +646,11 @@ classdef eyelinkManager < optickaCore
 					rect = round(CenterRectOnPoint(rect, x, y));
 					if obj.stimulusPositions(i).selected == true
 						Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
-						fprintf('draw_box %d %d %d %d 10\n', rect(1), rect(2), rect(3), rect(4));
+						%Eyelink('Command', 'draw_cross %d %d', x, y);
+						%fprintf('draw_box * %d %d %d %d 10\n', rect(1), rect(2), rect(3), rect(4));
 					else
 						Eyelink('Command', 'draw_box %d %d %d %d 11', rect(1), rect(2), rect(3), rect(4));
-						fprintf('draw_box %d %d %d %d 11\n', rect(1), rect(2), rect(3), rect(4));
+						%fprintf('draw_box %d %d %d %d 11\n', rect(1), rect(2), rect(3), rect(4));
 					end
 				end
 				
@@ -663,7 +670,7 @@ classdef eyelinkManager < optickaCore
 				rect = round(CenterRectOnPoint(rect, x, y));
 				Eyelink('Command','clear_screen 0');
 				Eyelink('Command', 'draw_box %d %d %d %d 14', rect(1), rect(2), rect(3), rect(4));
-				fprintf('draw_fix_box %d %d %d %d 14\n', rect(1), rect(2), rect(3), rect(4));
+				%fprintf('draw_fix_box %d %d %d %d 14\n', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
 		

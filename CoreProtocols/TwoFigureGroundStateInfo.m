@@ -13,9 +13,9 @@ tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
-tS.askForComments = false;
-tS.saveData = false; %*** save behavioural and eye movement data? ***
-obj.useDataPixx = false; %*** drive plexon to collect data? ***
+tS.askForComments = true;
+tS.saveData = true; %*** save behavioural and eye movement data? ***
+obj.useDataPixx = true; %*** drive plexon to collect data? ***
 tS.dummyEyelink = false; 
 tS.name = 'two-figure-ground';
 
@@ -30,7 +30,7 @@ obj.lastYPosition = fixY;
 
 targetFixInit = 0.7;
 targetFixTime = [0.5 0.9];
-targetRadius = 2;
+targetRadius = 1.25;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;
@@ -58,12 +58,12 @@ obj.stimuli.tableChoice = 1;
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
-obj.stimuli.stimulusSets = {[1,6],[1 2 3 4 5 6]};
+obj.stimuli.stimulusSets = {[1 2 3 4 5 6]};
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
 %which stimulus in the list is used for a fixation target?
-obj.stimuli.fixationChoice = 3;
+obj.stimuli.fixationChoice = [3 5];
 
 %----------------------State Machine States-------------------------
 % these are our functions that will execute as the stateMachine runs,
@@ -89,7 +89,7 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	@()resetFixation(eL); ...
 	@()setOffline(eL); ... %make sure offline before start recording
 	@()edit(obj.stimuli,6,'colourOut',[1 1 0]); ...
-	@()show(obj.stimuli{6}); ...
+	@()show(obj.stimuli); ...
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
 	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(obj))]); ...
 	@()edfMessage(eL,['UUID ' UUID(sM)]); ...
@@ -135,7 +135,6 @@ correctEntryFcn = { @()timedTTL(lJ,0,tS.rewardTime); ... % labjack sends a TTL t
 	@()edfMessage(eL,'END_RT'); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
-	@()hide(obj.stimuli{4}); ...
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT 1'); ...
 	};
@@ -163,7 +162,6 @@ incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eye
 	@()edfMessage(eL,'END_RT'); ...
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ...
-	@()hide(obj.stimuli{6}); ...
 	}; 
 
 %our incorrect stimulus
@@ -188,7 +186,6 @@ breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message 
 	@()edfMessage(eL,'END_RT'); ...
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -1'); ...
-	@()hide(obj.stimuli{6}); ...
 	};
 
 %calibration function

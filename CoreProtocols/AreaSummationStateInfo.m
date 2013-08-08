@@ -13,10 +13,10 @@ tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
-tS.askForComments = false;
-tS.saveData = false; %*** save behavioural and eye movement data? ***
-obj.useDataPixx = false; %*** drive plexon to collect data? ***
-tS.dummyEyelink = true; 
+tS.askForComments = true;
+tS.saveData = true; %*** save behavioural and eye movement data? ***
+obj.useDataPixx = true; %*** drive plexon to collect data? ***
+tS.dummyEyelink = false; 
 tS.name = 'area-summation-dots';
 
 fixX = 0;
@@ -24,7 +24,7 @@ fixY = 0;
 obj.lastXPosition = fixX;
 obj.lastYPosition = fixY;
 firstFixInit = 1;
-firstFixTime = 0.4;
+firstFixTime = 0.5;
 firstFixRadius = 1;
 stimulusFixTime = 0.75;
 
