@@ -318,11 +318,12 @@ classdef dotsStimulus < baseStimulus
 			makeColours(obj)
 			%sort out our angles and percent incoherent
 			obj.angles = ones(obj.nDots_,1) .* obj.angleOut;
+			if obj.coherenceOut < 0.01; obj.coherenceOut = 0; end
 			obj.rDots=obj.nDots_-floor(obj.nDots_*(obj.coherenceOut));
 			if obj.rDots>0
 				obj.angles(1:obj.rDots) = obj.r2d((2*pi).*rand(1,obj.rDots));
 				%obj.angles=flipud(obj.angles);
-				obj.angles = Shuffle(obj.angles); %if we don't shuffle them, all coherent dots show on top!
+				obj.angles = Shuffle(obj.angles(1:obj.nDots_)); %if we don't shuffle them, all coherent dots show on top!
 			end
 			%calculate positions and vector offsets
 			obj.xy = obj.sizeOut .* rand(2,obj.nDots_);
