@@ -656,7 +656,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief updatePosition returns dX and dY given an angle and delta
 		%>
 		% ===================================================================
-		function [dX dY] = updatePosition(delta,angle)
+		function [dX, dY] = updatePosition(delta,angle)
 			dX = delta .* cos(baseStimulus.d2r(angle));
 			dY = delta .* sin(baseStimulus.d2r(angle));
 		end

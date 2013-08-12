@@ -228,11 +228,11 @@ classdef dotsStimulus < baseStimulus
 				else
 					Screen('DrawDots',obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,[obj.xOut obj.yOut],obj.dotTypeOut);
 				end
-				obj.tick = obj.tick + 1;
 				catch ME
 					ple(ME)
 				end
 			end
+			obj.tick = obj.tick + 1;
 		end
 		
 		% ===================================================================

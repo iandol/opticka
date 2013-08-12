@@ -16,7 +16,7 @@ classdef apparentMotionStimulus < baseStimulus
 		%> spacing
 		barSpacing = 3;
 		%> time on and gap
-		timing = [0.1 0.5]
+		timing = [0.2 0.1]
 		%> contrast multiplier
 		contrast = 1
 		%> texture scale
@@ -35,6 +35,13 @@ classdef apparentMotionStimulus < baseStimulus
 		matrix
 		%> random matrix used for texture generation
 		rmatrix
+		%> for each bar the position
+		mvRects
+		%> frame timings for bars
+		frameTimes
+		%> which tick stage are we in?
+		stage
+		nextTick
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
@@ -60,11 +67,11 @@ classdef apparentMotionStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of opticka class.
 		% ===================================================================
-		function obj = barStimulus(varargin) 
+		function obj = apparentMotionStimulus(varargin) 
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0;varargin.family = 'apparentMotion';end
 			
-			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
+			obj = obj@baseStimulus(varargin); %we call the superclass constructor first
 			obj.size = 0;
 			obj.colour = [1 1 1];
 			obj.speed = 0;
@@ -129,6 +136,9 @@ classdef apparentMotionStimulus < baseStimulus
 			end
 			
 			obj.inSetup = false;
+			makeTiming(obj);
+			obj.isVisible = true;
+			obj.nextTick = obj.frameTimes(1);
 			computePosition(obj);
 			setRect(obj);
 			
@@ -142,8 +152,9 @@ classdef apparentMotionStimulus < baseStimulus
 		% ===================================================================
 		function update(obj)
 			resetTicks(obj);
+			obj.stage = 1;
+			obj.nextTick = obj.frameTimes(1);
 			constructMatrix(obj) %make our matrix
-			
 			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
 			computePosition(obj);
 			obj.setRect();
@@ -169,13 +180,22 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
-				if obj.mouseOverride
-					getMousePosition(obj);
-					if obj.mouseValid
-						obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+			if obj.tick >= obj.delayTicks
+				if obj.tick > obj.nextTick && obj.stage <= obj.nBars*2
+					obj.stage = obj.stage+1;
+					if rem(obj.stage,2)==0
+						obj.nextTick = obj.nextTick + obj.frameTimes(2);
+						obj.isVisible = false;
+					else
+						obj.nextTick = obj.nextTick + obj.frameTimes(1);
+						if ceil(obj.stage/2) <= length(obj.mvRects)
+							obj.mvRect = obj.mvRects{ceil(obj.stage/2)};
+							obj.isVisible = true;
+						else
+							obj.isVisible = false;
+						end
+						
 					end
-				else
 				end
 				if obj.doMotion == 1
 					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
@@ -191,9 +211,13 @@ classdef apparentMotionStimulus < baseStimulus
 		% ===================================================================
 		function reset(obj)
 			obj.texture=[];
+			obj.stage = 1;
+			obj.nextTick = 0;
+			obj.frameTimes = [];
 			obj.mvRect = [];
+			obj.mvRects = [];
 			obj.dstRect = [];
-			obj.removeTmpProperties;
+			removeTmpProperties(obj);
 			resetTicks(obj);
 		end
 		
@@ -317,20 +341,48 @@ classdef apparentMotionStimulus < baseStimulus
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
 	%=======================================================================
 	
-	% ===================================================================
-	%> @brief sizeOut Set method
-	%>
-	% ===================================================================
-	function set_sizeOut(obj,value)
-		obj.sizeOut = (value*obj.ppd);
-		if ~obj.inSetup
-			obj.barLengthOut = obj.sizeOut;
-			obj.barWidthOut = obj.sizeOut;
+		% ===================================================================
+		%> @brief setRect
+		%> setRect makes the PsychRect based on the texture and screen
+		%> values, you should call computePosition() first to get xOut and
+		%> yOut
+		% ===================================================================
+		function setRect(obj)
+			if ~isempty(obj.texture)
+				obj.dstRect=Screen('Rect',obj.texture);
+				pos = 0:obj.barSpacing:obj.barSpacing*(obj.nBars-1);
+				pos = pos - ((obj.barSpacing*obj.nBars)/2-(obj.barSpacing/2));
+				pos = pos * obj.ppd;
+				pos = pos + obj.sM.xCenter;
+				for i = 1:obj.nBars;
+					obj.mvRects{i} = CenterRectOnPointd(obj.dstRect, pos(i), obj.yOut);
+				end
+				obj.mvRect=obj.mvRects{1};
+			end
 		end
-	end
+		
+		% ===================================================================
+		%> @brief sizeOut Set method
+		%>
+		% ===================================================================
+		function makeTiming(obj)
+			obj.frameTimes = round(obj.timing/obj.sM.screenVals.ifi);
+		end
+
+		% ===================================================================
+		%> @brief sizeOut Set method
+		%>
+		% ===================================================================
+		function set_sizeOut(obj,value)
+			obj.sizeOut = (value*obj.ppd);
+			if ~obj.inSetup
+				obj.barLengthOut = obj.sizeOut;
+				obj.barWidthOut = obj.sizeOut;
+			end
+		end
 	
 	end
 end
