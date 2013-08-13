@@ -614,7 +614,7 @@ classdef runExperiment < optickaCore
 					update(sM);
 					
 					%------check eye position
-					if obj.useEyeLink; 
+					if obj.useEyeLink;
 						getSample(eL);
 						if tS.recordEyePosition == true
 							if strcmpi(sM.currentName,'stimulus')

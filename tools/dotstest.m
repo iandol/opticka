@@ -2,6 +2,7 @@ function dotstest()
 
 runtime = 1.6;
 
+%-----dots stimulus
 n = dotsStimulus();
 n.size = 2;
 n.speed = 2;
@@ -15,6 +16,7 @@ n.delayTime = 0.5;
 n.offTime = 0.75;
 n.mask = true;
 
+%-----apparent motion stimulus
 a = apparentMotionStimulus();
 a.barWidth = 0.75;
 a.nBars = 6;
@@ -22,10 +24,12 @@ a.timing = [0.1 0.1];
 a.barSpacing = 4;
 a.direction = 'right';
 
+%-----combine them into a single meta stimulus
 stim = metaStimulus();
 stim{1} = n;
 stim{2} = a;
 
+%-----open the PTB screen
 s = screenManager('verbose',false,'blend',true,'screen',0,...
 	'bitDepth','8bit','debug',true,...
 	'windowed',[1200 800],'backgroundColour',[0.2 0.2 0.2 0]); %use a temporary screenManager object
@@ -34,9 +38,9 @@ setup(stim,s); %setup our stimulus object
 %drawGrid(s); %draw +-5 degree dot grid
 %drawScreenCenter(s); %centre spot
 
-%Set up up/down procedure:
+%-----Set up up/down procedure:
 up = 1;                     %increase after 1 wrong
-down = 3;                   %decrease after 3 consecutive right
+down = 2;                   %decrease after 3 consecutive right
 StepSizeDown = 0.05;        
 StepSizeUp = 0.1;
 stopcriterion = 'reversals';   
@@ -54,11 +58,36 @@ UDINCONGRUENT = PAL_AMUD_setupUD(UDINCONGRUENT,'StepSizeDown',StepSizeDown,'Step
     StepSizeUp,'stopcriterion',stopcriterion,'stoprule',stoprule, ...
     'startvalue',startvalue,'xMin',xMin);
 
-WaitSecs(0.1)
+%-----setup eyelink
+fixX = 0;
+fixY = 0;
+firstFixInit = 0.6;
+firstFixTime = [0.5 0.7];
+firstFixRadius = 1;
+targetFixInit = 0.5;
+targetFixTime = [0.5 0.9];
+targetRadius = 1.6;
+eL = eyelinkManager();
+eL.isDummy = true; %use dummy or real eyelink?
+eL.name = 'apparent-motion test';
+eL.recordData = false; %save EDF file
+eL.sampleRate = 250;
+eL.remoteCalibration = true; % manual calibration?
+eL.calibrationStyle = 'HV5'; % calibration style
+eL.modify.calibrationtargetcolour = [1 1 0];
+eL.modify.calibrationtargetsize = 0.5;
+eL.modify.calibrationtargetwidth = 0.01;
+eL.modify.waitformodereadytime = 500;
+eL.modify.devicenumber = -1; % -1 = use any keyboard
+% X, Y, FixInitTime, FixTime, Radius, StrictFix
+updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
+initialise(eL, s);
+setup(eL);
+
 
 try
 	breakloop = false;
-
+	getSample(eL);
 	vbl = Screen('Flip',s.win);
 	Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 
@@ -92,7 +121,7 @@ try
 		else
 			stim{1}.coherenceOut = UDINCONGRUENT.xCurrent;
 			st=UDINCONGRUENT.stop;
-			rev = UDINCONGRUENT.reversal;
+			rev = UDINCONGRUENT.reversal; up = UDINCONGRUENT.u; down = UDINCONGRUENT.d;
 			x=length(UDINCONGRUENT.x);
 		end
 		update(stim);
@@ -106,12 +135,15 @@ try
 		while GetSecs <= vbls+runtime
 			draw(stim); %draw stimulus
 			drawSpot(s,0.1,[1 1 0]);
+			getSample(eL);
+			drawEyePosition(eL);
 			Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 			animate(stim); %animate stimulus, will be seen on next draw
 			vbl = Screen('Flip',s.win); %flip the buffer
 		end	
 		vbl = Screen('Flip',s.win);
-
+		
+		
 		keyIsDown = false;
 		response = [];
 		while ~keyIsDown
@@ -160,7 +192,8 @@ try
 	WaitSecs(1);
 	Priority(0); ListenChar(0); ShowCursor;
 	close(s); %close screen
-	reset(n); %reset our stimulus ready for use again
+	close(eL);
+	reset(stim); %reset our stimulus ready for use again
 
 	%Threshold estimate as mean of all but the first three reversal points
 	Mean = PAL_AMUD_analyzeUD(UDCONGRUENT, 'trials', 10);
@@ -195,9 +228,10 @@ try
 
 catch ME
 	Priority(0); ListenChar(0); ShowCursor;
-	reset(n);
+	reset(stim);
 	close(s); %close screen
-	ple(ME)
+	close(eL);
+	ple(ME);
 end
 end
 
