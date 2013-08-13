@@ -41,7 +41,7 @@ classdef dotsStimulus < baseStimulus
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> stimulus family
-		family = 'dots'
+		family		= 'dots'
 		%> row are x and y and columns are each dot
 		xy
 		%> delta x and y for each dot
@@ -67,7 +67,7 @@ classdef dotsStimulus < baseStimulus
 		%nDots cache
 		nDots_
 		%> we must scale the dots lager than the mask by this factor
-		fieldScale = 1.15
+		fieldScale	= 1.15
 		%> resultant size of the dotfield after scaling
 		fieldSize
 		%> this holds the mask texture
@@ -82,8 +82,8 @@ classdef dotsStimulus < baseStimulus
 		dxs
 		dys
 		%> the smoothing kernel for the mask
-		kernel = []
-		shader = 0
+		kernel		= []
+		shader		= 0
 		%> regexes for object management during construction
 		allowedProperties='msrcMode|mdstMode|type|density|dotSize|colourType|coherence|dotType|kill|mask|maskSmoothing|maskColour';
 		%> regexes for object management during setup
@@ -217,7 +217,7 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
+			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
 				try
 				if obj.mask == true
 					Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
@@ -240,7 +240,7 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(obj)
-			if obj.isVisible == true && obj.tick > obj.delayTicks
+			if obj.isVisible == true && obj.tick > obj.delayTicks && obj.tick < obj.offTicks
 				if obj.mouseOverride
 					getMousePosition(obj);
 					if obj.mouseValid

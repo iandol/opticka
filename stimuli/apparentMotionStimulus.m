@@ -17,6 +17,8 @@ classdef apparentMotionStimulus < baseStimulus
 		barSpacing = 3;
 		%> time on and gap
 		timing = [0.2 0.1]
+		%> direction of apparent motion
+		direction = 'right'
 		%> contrast multiplier
 		contrast = 1
 		%> texture scale
@@ -167,7 +169,7 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
+			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
 				Screen('DrawTexture',obj.sM.win, obj.texture,[ ], obj.mvRect, obj.angleOut, [], [], obj.modulateColourOut);
 			end
 			obj.tick = obj.tick + 1;
@@ -180,7 +182,7 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			if obj.tick >= obj.delayTicks
+			if obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
 				if obj.tick > obj.nextTick && obj.stage <= obj.nBars*2
 					obj.stage = obj.stage+1;
 					if rem(obj.stage,2)==0
@@ -357,6 +359,9 @@ classdef apparentMotionStimulus < baseStimulus
 				pos = pos - ((obj.barSpacing*obj.nBars)/2-(obj.barSpacing/2));
 				pos = pos * obj.ppd;
 				pos = pos + obj.sM.xCenter;
+				if strcmpi(obj.direction,'left')
+					pos = fliplr(pos);
+				end
 				for i = 1:obj.nBars;
 					obj.mvRects{i} = CenterRectOnPointd(obj.dstRect, pos(i), obj.yOut);
 				end

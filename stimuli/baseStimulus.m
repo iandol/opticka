@@ -36,6 +36,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		angle = 0
 		%> delay time to display, can set upper and lower range for random interval
 		delayTime = 0
+		%> time to turn stimulus off
+		offTime = Inf
 		%> override X and Y position with mouse input?
 		mouseOverride = false
 		%> true or false, whether to draw() this object
@@ -84,6 +86,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		mouseY = 0
 		%> delay ticks to wait until display
 		delayTicks = 0
+		%> ticks before stimulus turns off
+		offTicks = Inf
 		%>are we setting up?
 		inSetup = false
 		%> delta cache
@@ -233,6 +237,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 			else
 				obj.delayTicks = 0;
+			end
+			if min(obj.offTime) < Inf %delay display a number of frames 
+				if length(obj.offTime) == 1
+					obj.offTicks = round(obj.offTime/obj.sM.screenVals.ifi);
+				elseif length(obj.offTime) == 2
+					time = randi([obj.offTime(1)*1000 obj.offTime(2)*1000])/1000;
+					obj.offTicks = round(time/obj.sM.screenVals.ifi);
+				end
+			else
+				obj.offTicks = Inf;
 			end
 			mouseTick = 1;
 			if obj.mouseOverride
