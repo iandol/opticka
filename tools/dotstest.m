@@ -34,7 +34,7 @@ stimuli{2} = a;
 %-----open the PTB screen
 s = screenManager('verbose',false,'blend',true,'screen',0,...
 	'bitDepth','8bit','debug',true,...
-	'windowed',[],'backgroundColour',[0.2 0.2 0.2 0]); %use a temporary screenManager object
+	'windowed',[1200 800],'backgroundColour',[0.2 0.2 0.2 0]); %use a temporary screenManager object
 screenVals = open(s); %open PTB screen
 setup(stimuli,s); %setup our stimulus object
 %drawGrid(s); %draw +-5 degree dot grid
@@ -43,7 +43,7 @@ setup(stimuli,s); %setup our stimulus object
 %-----Set up up/down procedure:
 up = 1;                     %increase after 1 wrong
 down = 2;                   %decrease after 3 consecutive right
-StepSizeDown = 0.05;        
+StepSizeDown = 0.1;        
 StepSizeUp = 0.1;
 stopcriterion = 'reversals';   
 stoprule = 3;
@@ -132,7 +132,7 @@ try
 			x=length(UDINCONGRUENT.x);
 		end
 		update(stimuli);
-		fprintf('---> Angle: %i / %s | Coh: %.2g  | N: %i | U/D: %i/%i |Stop: %i / %i | ',angleToggle,dirToggle,n.coherenceOut,x,up,down,st,rev);
+		fprintf('---> Angle: %i / %s | Coh: %.2g  | N: %i | U/D: %i/%i |Stop/Rev: %i / %i | ',angleToggle,dirToggle,n.coherenceOut,x,up,down,st,rev);
 
 		%-----draw initial fixation spot
 		drawSpot(s,0.1,[1 1 0]);
@@ -153,7 +153,20 @@ try
 		
 		%-----get our response
 		if useEyeLink == true;
+			if angleToggle == 180
+				drawSpot(s,0.1,[1 1 0],-10,0);
+				updateFixationValues(eL, -10, 0, targetFixInit, targetFixTime, 5, true); ... %set target fix window
+			else
+				drawSpot(s,0.1,[1 1 0],10,0);
+				updateFixationValues(eL, 10, 0, targetFixInit, targetFixTime, 5, true); ... %set target fix window
+			end
+			vbl = Screen('Flip',s.win);
 			
+			fixated = '';
+			while ~strcmpi(fixated,'fix')
+				getSample(eL);
+				fixated=testSearchHoldFixation(eL,'fix','breakfix');
+			end
 		else
 			keyIsDown = false;
 			response = [];
@@ -163,13 +176,13 @@ try
 					rchar = KbName(keyCode);
 					if iscell(rchar);rchar=rchar{1};end
 					switch rchar
-						case {'LeftArrow','left'} %previous variable 1 value
+						case {'LeftArrow','left'} 
 							if angleToggle == 180
 								response = 1;
 							else
 								response = 0;
 							end
-						case {'RightArrow','right'} %next variable 1 value
+						case {'RightArrow','right'} 
 							if angleToggle == 0
 								response = 1;
 							else
@@ -206,6 +219,7 @@ try
 	Screen('Flip',s.win);
 	Priority(0); ListenChar(0); ShowCursor;
 	close(s); %close screen
+
 	if useEyeLink == true; close(eL); end
 	reset(stimuli); %reset our stimulus ready for use again
 	clear stim eL s
