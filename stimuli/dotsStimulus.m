@@ -319,6 +319,7 @@ classdef dotsStimulus < baseStimulus
 			%sort out our angles and percent incoherent
 			obj.angles = ones(obj.nDots_,1) .* obj.angleOut;
 			if obj.coherenceOut < 0.01; obj.coherenceOut = 0; end
+			fprintf('\n--->coherenceOUT = %g\n',obj.coherenceOut);
 			obj.rDots=obj.nDots_-floor(obj.nDots_*(obj.coherenceOut));
 			if obj.rDots>0
 				obj.angles(1:obj.rDots) = obj.r2d((2*pi).*rand(1,obj.rDots));

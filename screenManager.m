@@ -607,10 +607,16 @@ classdef screenManager < optickaCore
 			if nargin < 4; x = []; end
 			if nargin < 3; colour = [1 1 1 1]; end
 			if nargin < 2; size = 1; end
-			if isempty(x); x = obj.xCenter; end
-			if isempty(y); y = obj.xCenter; end
-			x = obj.xCenter - (x * obj.ppd);
-			y = obj.yCenter - (y * obj.ppd);
+			if isempty(x); 
+                x = obj.xCenter; 
+            else
+                x = obj.xCenter - (x * obj.ppd);
+            end
+			if isempty(y); 
+                y = obj.yCenter; 
+            else
+                y = obj.yCenter - (y * obj.ppd);
+            end
 			size = size/2 * obj.ppd;
 			Screen('gluDisk',obj.win,colour,x,y,size);
 		end

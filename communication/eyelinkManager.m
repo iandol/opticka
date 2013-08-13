@@ -90,7 +90,7 @@ classdef eyelinkManager < optickaCore
 		%> previous message sent to eyelink
 		previousMessage = ''
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'fixationX|fixationY|fixationRadius|fixationTime|fixationInitTime|sampleRate|calibrationStyle|enableCallbacks|callback|name|verbose|isDummy|remoteCalibration'
+		allowedProperties = 'IP|fixationX|fixationY|fixationRadius|fixationTime|fixationInitTime|sampleRate|calibrationStyle|enableCallbacks|callback|name|verbose|isDummy|remoteCalibration'
 	end
 	
 	methods
@@ -103,10 +103,12 @@ classdef eyelinkManager < optickaCore
 				obj.parseArgs(varargin,obj.allowedProperties);
 			end
 			obj.defaults = EyelinkInitDefaults();
-			ret = Eyelink('SetAddress', obj.IP);
-			if ret ~= 0
-				warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
-			end
+            if ~isempty(obj.IP)
+                ret = Eyelink('SetAddress', obj.IP);
+                if ret ~= 0
+                    warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+                end
+            end
 			try % is eyelink interface working
 				Eyelink('GetTrackerVersion'); 
 			catch %#ok<CTCH>
@@ -135,10 +137,12 @@ classdef eyelinkManager < optickaCore
 			
 			obj.screen = sM;
 			
-			ret = Eyelink('SetAddress', obj.IP);
-			if ret ~= 0
-				warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
-			end
+            if ~isempty(obj.IP)
+                ret = Eyelink('SetAddress', obj.IP);
+                if ret ~= 0
+                    warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+                end
+            end
 			
 			if ~isempty(obj.callback) && obj.enableCallbacks
 				[~,dummy] = EyelinkInit(obj.isDummy,obj.callback);
@@ -638,6 +642,16 @@ classdef eyelinkManager < optickaCore
 			obj.isRecording = false;
 			obj.eyeUsed = -1;
 			obj.screen = [];
+		end
+		
+		% ===================================================================
+		%> @brief draw the stimuli boxes on the tracker display
+		%>
+		% ===================================================================
+		function trackerClearScreen(obj)
+			if obj.isConnected
+				Eyelink('Command', 'clear_screen 0');
+			end
 		end
 		
 		% ===================================================================

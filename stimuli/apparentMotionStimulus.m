@@ -52,7 +52,7 @@ classdef apparentMotionStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='type|pixelScale|barWidth|barLength|angle|speed|contrast|scale|interpMethod';
+		allowedProperties='direction|type|pixelScale|barWidth|barLength|angle|speed|contrast|scale|interpMethod';
 		ignoreProperties = 'interpMethod|matrix|rmatrix|pixelScale';
 	end
 	
@@ -106,7 +106,7 @@ classdef apparentMotionStimulus < baseStimulus
 			obj.sM = sM;
 			obj.ppd=sM.ppd;
 			
-			fn = fieldnames(barStimulus);
+			fn = fieldnames(apparentMotionStimulus);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexpi(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
@@ -359,7 +359,7 @@ classdef apparentMotionStimulus < baseStimulus
 				pos = pos - ((obj.barSpacing*obj.nBars)/2-(obj.barSpacing/2));
 				pos = pos * obj.ppd;
 				pos = pos + obj.sM.xCenter;
-				if strcmpi(obj.direction,'left')
+				if strcmpi(obj.directionOut,'left')
 					pos = fliplr(pos);
 				end
 				for i = 1:obj.nBars;
