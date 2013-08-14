@@ -43,6 +43,7 @@ classdef apparentMotionStimulus < baseStimulus
 		frameTimes
 		%> which tick stage are we in?
 		stage
+		%> the next tick to run the next stage
 		nextTick
 	end
 	
@@ -52,7 +53,8 @@ classdef apparentMotionStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='direction|type|pixelScale|barWidth|barLength|angle|speed|contrast|scale|interpMethod';
+		firstDraw = false
+		allowedProperties='barSpacing|nBars|timing|direction|type|pixelScale|barWidth|barLength|angle|speed|contrast|scale|interpMethod';
 		ignoreProperties = 'interpMethod|matrix|rmatrix|pixelScale';
 	end
 	
@@ -156,6 +158,7 @@ classdef apparentMotionStimulus < baseStimulus
 			resetTicks(obj);
 			obj.stage = 1;
 			obj.nextTick = obj.frameTimes(1);
+			obj.firstDraw = false;
 			constructMatrix(obj) %make our matrix
 			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
 			computePosition(obj);
@@ -171,6 +174,11 @@ classdef apparentMotionStimulus < baseStimulus
 		function draw(obj)
 			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
 				Screen('DrawTexture',obj.sM.win, obj.texture,[ ], obj.mvRect, obj.angleOut, [], [], obj.modulateColourOut);
+				if obj.firstDraw == false;
+					fprintf('===> DRAW DELAY %i at TICK: %i\n', obj.nextTick, obj.tick);
+					obj.nextTick = obj.nextTick + obj.tick;
+				end
+				obj.firstDraw = true;
 			end
 			obj.tick = obj.tick + 1;
 		end
@@ -198,6 +206,7 @@ classdef apparentMotionStimulus < baseStimulus
 						end
 						
 					end
+					fprintf('TICK=%i STAGE: %i NEXTTICK: %i VISIBLE: %i\n',obj.stage,obj.nextTick,obj.isVisible)
 				end
 				if obj.doMotion == 1
 					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
@@ -358,7 +367,7 @@ classdef apparentMotionStimulus < baseStimulus
 				pos = 0:obj.barSpacing:obj.barSpacing*(obj.nBars-1);
 				pos = pos - ((obj.barSpacing*obj.nBars)/2-(obj.barSpacing/2));
 				pos = pos * obj.ppd;
-				pos = pos + obj.sM.xCenter;
+				pos = pos + obj.xOut;
 				if strcmpi(obj.directionOut,'left')
 					pos = fliplr(pos);
 				end

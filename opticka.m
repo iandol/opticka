@@ -264,27 +264,29 @@ classdef opticka < optickaCore
 					obj.paths.savedData = ['~' filesep 'MatlabFiles' filesep 'SavedData'];
 				
 				elseif ispc
+					%root = 'c:\MatlabFiles';
+					root = 'c:\Users\Guest\MatlabFiles\';
 					obj.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
 					obj.paths.temp=tempdir;
-					if ~exist('c:\MatlabFiles\Protocols','dir')
-						mkdir('c:\MatlabFiles\Protocols\')
+					if ~exist([root 'Protocols'],'dir')
+						mkdir([root 'Protocols'])
 					end
-					obj.paths.protocols = ['c:\MatlabFiles\Protocols'];
+					obj.paths.protocols = [root 'Protocols'];
 					cd(obj.paths.protocols);
 					obj.paths.currentPath = pwd;
-					if ~exist('c:\MatlabFiles\Calibration','dir')
-						mkdir('c:\MatlabFiles\Calibration\')
+					if ~exist([root 'Calibration'],'dir')
+						mkdir([root 'Calibration'])
 					end
-					obj.paths.calibration = ['c:\MatlabFiles\Calibration'];
-					if ~exist('c:\MatlabFiles\History','dir')
-						mkdir('c:\MatlabFiles\History\')
+					obj.paths.calibration = [root 'Calibration'];
+					if ~exist([root 'History'],'dir')
+						mkdir([root 'History']);
 					end
-					obj.paths.historypath=[obj.paths.temp 'History'];
+					obj.paths.historypath=[root 'History'];
 					
-					if ~exist(['c:\MatlabFiles\SavedData'],'dir')
-						mkdir(['c:\MatlabFiles\SavedData']);
+					if ~exist([root 'SavedData'],'dir')
+						mkdir([root 'SavedData']);
 					end
-					obj.paths.savedData = ['c:\MatlabFiles\SavedData\'];
+					obj.paths.savedData = [root 'SavedData'];
 				end
 				
 				obj.store.newlook='javax.swing.plaf.metal.MetalLookAndFeel';
@@ -329,7 +331,7 @@ classdef opticka < optickaCore
 				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.optickaVersion]);
 				
 			catch ME
-				if isappdata(obj.h.uihandle,'o')
+				if  isfield(obj.h,'uihandle') && ~isempty(obj.h.uihandle) && isappdata(obj.h.uihandle,'o')
 					rmappdata(obj.h.uihandle,'o');
 					clear o;
 				end

@@ -417,20 +417,20 @@ classdef eyelinkManager < optickaCore
 		%> @return fixtime boolean if we're fixed for fixation time
 		%> @return searching boolean for if we are still searching for fixation
 		% ===================================================================
-		function [fixated, fixtime, searching] = isFixated(obj)
-			fixated = false; fixtime = false; searching = true;
+		function [fixated, fixtime, searching, window] = isFixated(obj)
+			fixated = false; fixtime = false; searching = true; window = [];
 			if obj.isConnected && ~isempty(obj.currentSample)
 				if obj.fixInitTotal == 0
 					obj.fixInitTotal = obj.currentSample.time;
 				end
 				r = sqrt((obj.x - obj.fixationX).^2 + (obj.y - obj.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
-				idx = find(r < obj.fixationRadius);
-				if any(idx);
+				window = find(r < obj.fixationRadius);
+				if any(window);
 					if obj.fixN == 0 
 						obj.fixN = 1;
-						obj.fixSelection = idx(1);
+						obj.fixSelection = window(1);
 					end
-					if obj.fixSelection == idx(1);
+					if obj.fixSelection == window(1);
 						if obj.fixStartTime == 0
 							obj.fixStartTime = obj.currentSample.time;
 						end
@@ -474,7 +474,7 @@ classdef eyelinkManager < optickaCore
 		%> fixation state, useful for using via stateMachine
 		%>
 		% ===================================================================
-		function out = testWithinFixationWindow(obj, yesString, noString)
+		function out = testWithinFixationWindow(obj, yesString, noString, window)
 			if isFixated(obj)
 				out = yesString;
 			else
@@ -507,8 +507,8 @@ classdef eyelinkManager < optickaCore
 		%> @param noString if this function fails return this string
 		%> @return out the output string which is 'searching' if fixation is still being initiated, or yes or no string.
 		% ===================================================================
-		function out = testSearchHoldFixation(obj, yesString, noString)
-			[fix, fixtime, searching] = obj.isFixated();
+		function [out, window] = testSearchHoldFixation(obj, yesString, noString)
+			[fix, fixtime, searching, window] = obj.isFixated();
 			if searching
 				if (obj.strictFixation==true && (obj.fixN == 0)) || obj.strictFixation==false
 					out = 'searching';
