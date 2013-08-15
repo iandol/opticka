@@ -1,5 +1,5 @@
 % ========================================================================
-%> @brief runExperiment is the main Experiment manager; Inherits from Handle
+%> @brief runExperiment is the main Experiment manager; Inherits from optickaCore
 %>
 %>RUNEXPERIMENT The main class which accepts a task and stimulus object
 %>and runs the stimuli based on the task object passed. The class
@@ -7,7 +7,7 @@
 %>etc. via screenManager), and manages communication to the DAQ system using TTL pulses out
 %>and communication over a UDP client<->server socket (via dataConnection).
 %>
-%>  Stimulus must be a stimulus class, i.e. gratingStimulus and friends,
+%>  stimuli must be metaStimulus class managing gratingStimulus and friends,
 %>  so for example:
 %>
 %>  gStim = gratingStimulus('mask',1,'sf',1);
@@ -142,11 +142,17 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		%> @brief The main run loop
 		%>
+		%> run uses built-in loop for experiment control and runs a
+		%> methods-of-constants experiment with the settings passed to it (stimuli,task
+		%> and screen). This is different to the runTask method as it doesn't
+		%> use a stateMachine for experimental logic, just a minimal
+		%> trial+block loop.
+		%>
 		%> @param obj required class object
 		% ===================================================================
 		function run(obj)
 			global lJ
-			initialiseSaveFile(obj)
+			initialiseSaveFile(obj) %get a sensible default name
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -157,16 +163,16 @@ classdef runExperiment < optickaCore
 				errordlg('There is no working PTB available!')
 				error('There is no working PTB available!')
 			end
-			
+
 			%initialise runLog for this run
 			obj.previousInfo.runLog = obj.runLog;
-			obj.runLog = timeLogger();
+				obj.runLog = timeLogger();
 			tL = obj.runLog;
-			
-			%make a handle to the screenManager
+
+			%make a handle to the screenManager, so lazy!
 			s = obj.screen;
 			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
-			
+
 			%-------Set up Digital I/O for this run...
 			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
 			%obj.serialP.setDTR(0);
@@ -191,9 +197,9 @@ classdef runExperiment < optickaCore
 				io = obj.lJack;
 			end
 			lJ = obj.lJack;
-			
+
 			%-----------------------------------------------------------
-			
+
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------	
@@ -425,7 +431,7 @@ classdef runExperiment < optickaCore
 		end
 	
 		% ===================================================================
-		%> @brief runTask runs a state machine driven task
+		%> @brief runTask runs a state machine driven task.
 		%>
 		%> @param obj required class object
 		% ===================================================================
@@ -453,7 +459,7 @@ classdef runExperiment < optickaCore
 			obj.behaviouralRecord = behaviouralRecord('name',['Fix' obj.savePrefix]); %#ok<*CPROP>
 			bR = obj.behaviouralRecord;
 			
-			%a throwaway structure to hold various parameters
+			%------a throwaway structure to hold various parameters
 			tS = struct();
 			tS.useTask = false; %#ok<*PROP>
 			tS.checkKeysDuringStimulus = true;
@@ -461,15 +467,15 @@ classdef runExperiment < optickaCore
 			tS.askForComments = false;
 			tS.saveData = true;
 	
-			%make a short handle to the screenManager
+			%------make a short handle to the screenManager
 			s = obj.screen; 
 			obj.stimuli.screen = [];
 			
-			%initialise task
+			%------initialise task
 			t = obj.task;
 			initialiseTask(t);
 			
-			%try to open eyeOccluder
+			%-----try to open eyeOccluder
 			if ~isfield(tS,'eO') || ~isa(tS.eO,'eyeOccluder')
 				tS.eO = eyeOccluder;
 			end
@@ -506,7 +512,7 @@ classdef runExperiment < optickaCore
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------
-				% open the eyelink interface
+				%-----open the eyelink interface
 				obj.useEyeLink = true;
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager('IP','10.1.1.1');
@@ -543,7 +549,7 @@ classdef runExperiment < optickaCore
 					tS.comment = obj.comment;
 				end
 				
-				%open the PTB screen
+				%------open the PTB screen
 				obj.screenVals = s.open(obj.debug,tL);
 				
 				obj.stimuli.screen = s;
@@ -553,13 +559,13 @@ classdef runExperiment < optickaCore
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
 				
-				% set up the eyelink interface
+				%-----set up the eyelink interface
 				if obj.useEyeLink
 					initialise(eL, s);
 					setup(eL);
 				end
 				
-				%premptive save in case of crash or error
+				%-----premptive save in case of crash or error
 				rE = obj;
 				save([tempdir filesep 'Simba-' obj.savePrefix '.mat'],'rE','tS');
 				
@@ -752,7 +758,7 @@ classdef runExperiment < optickaCore
 				rethrow(ME)
 				
 			end
-			
+
 		end
 		% ===================================================================
 		%> @brief prepare the object for the local machine
