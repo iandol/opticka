@@ -1,10 +1,15 @@
 function dotstest()
 
+name = 'AM Ian Dots';
+c = sprintf(' %i',fix(clock()));
+c = regexprep(c,' ','_');
+name = [name c];
 runtime = 1.0;
-useEyeLink = true;
+useEyeLink = false;
 
 %-----dots stimulus
 n = dotsStimulus();
+n.name = name;
 n.size = 3;
 n.speed = 4;
 n.dotType = 2; %high quality dots
@@ -20,12 +25,15 @@ n.mask = true;
 
 %-----apparent motion stimulus
 a = apparentMotionStimulus();
+a.name = name;
 a.yPosition = 0;
+a.barLength = 6;
 a.barWidth = 0.5;
 a.nBars = 10;
 a.timing = [0.1 0.02];
 a.barSpacing = 4;
-%a.delayTimeq = 0.48;
+%a.delayTime = 0.48;
+%a.offTime = 0.62;
 a.direction = 'right'; %initial direction of AM stimulus
 
 %-----combine them into a single meta stimulus
@@ -35,7 +43,7 @@ stimuli{2} = a;
 
 %-----open the PTB screens
 s = screenManager('verbose',false,'blend',true,'screen',0,...
-	'bitDepth','8bit','debug',false,'antiAlias',0,'nativeBeamPosition',1, ...
+	'bitDepth','8bit','debug',true,'antiAlias',0,'nativeBeamPosition',0, ...
 	'windowed',[],'backgroundColour',[0.3 0.3 0.3 0]); %use a temporary screenManager object
 screenVals = open(s); %open PTB screen
 setup(stimuli,s); %setup our stimulus object
@@ -67,7 +75,7 @@ if useEyeLink == true;
 	eL.modify.devicenumber = -1; % -1 = use any keyboard
 	% X, Y, FixInitTime, FixTime, Radius, StrictFix
 	updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, strictFixation);
-	initialise(eL, s);
+	initialise(qeL, s);
 	setup(eL);
 end
 
@@ -156,14 +164,15 @@ try %our main experimental try catch loop
 			x=length(UDINCONGRUENT.x);
 		end
 		update(stimuli);
-		fprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | U/D: %i/%i |Stop/Rev: %i/%i \n',angleToggle,dirToggle,stimuli{1}.coherenceOut,cc,x,up,down,st,rev);
+		t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | U/D: %i/%i |Stop/Rev: %i/%i \n',angleToggle,dirToggle,stimuli{1}.coherenceOut,cc,x,up,down,st,rev);
+		disp(t);
 		
 		%-----fire up eyelink
 		if useEyeLink == true
 			edfMessage(eL,['TRIALID ' num2str(loop)]); ...
 			startRecording(eL);
 			syncTime(eL);
-			statusMessage(eL,'Initiate Fixation...')
+			statusMessage(eL,['t' ' FIX'])
 			WaitSecs(0.1);
 		end
 		
@@ -178,13 +187,13 @@ try %our main experimental try catch loop
 			end
 		else
 			drawSpot(s,0.1,[1 1 0]);
-			Waitsecs(0.5);
+			WaitSecs(0.5);
 			fixated = 'fix';
 		end
 		
 		%------Our main stimulus drawing loop
 		if strcmpi(fixated,'fix') %initial fixation held
-			if useEyeLink == true;statusMessage(eL,'Show Stimulus...');end
+			if useEyeLink == true;statusMessage(eL,[t 'Show Stimulus...']);end
 			drawSpot(s,0.1,[1 1 0]);
 			vbls = Screen('Flip',s.win); %flip the buffer
 			while GetSecs <= vbls+runtime
@@ -210,7 +219,7 @@ try %our main experimental try catch loop
 					error('toggleerror');
 				end
 
-				statusMessage(eL,'Get Response...')
+				statusMessage(eL,[t 'Get Response...'])
 				updateFixationValues(eL, [-10 10], [0 0], targetFixInit, targetFixTime, targetRadius, strictFixation); ... %set target fix window
 	
 				fixated = '';
@@ -237,14 +246,14 @@ try %our main experimental try catch loop
 				setOffline(eL);
 			
 			end
-			
 			%-----check keyboard
 			if useEyeLink == true
 				t = GetSecs+1;
 			else
-				t = GetSecs+10;
+				t = GetSecs+5;
 			end
-			while GetSecs <= t
+			breakloopkey = false;
+			while ~breakloopkey
 				[keyIsDown, ~, keyCode] = KbCheck(-1);
 				if keyIsDown == 1
 					rchar = KbName(keyCode);
@@ -256,21 +265,24 @@ try %our main experimental try catch loop
 							else
 								response = 0;
 							end
+							breakloopkey = true;
 						case {'RightArrow','right'}
 							if angleToggle == 0
 								response = 1;
 							else
 								response = 0;
 							end
+							breakloopkey = true;
 						case {'q'}
 							fprintf('\nQUIT!\n');
 							breakloop = true;
+							breakloopkey = true;
 						otherwise
 							
 					end
 				end
+				if t<=GetSecs; breakloopkey = true; end
 			end
-			
 			%-----Update the staircase
 			if congruence == true
 				if UDCONGRUENT.stop ~= 1 && ~isempty(response)
@@ -304,18 +316,31 @@ try %our main experimental try catch loop
 	
 	if useEyeLink == true; close(eL); end
 	reset(stimuli); %reset our stimulus ready for use again
-	clear stim eL s
+	
+	%-----Save Data
+	dat(1).name = name;
+	dat.useEyeLink = useEyeLink;
+	dat.runtime = runtime;
+	dat(1).sc(1).name='UDCONGRUENT';
+	dat(1).sc(1).data=UDCONGRUENT;
+	dat(1).sc(2).name='UDINCONGRUENT';
+	dat(1).sc(2).data=UDINCONGRUENT;
+	if useEyeLink == true;dat(1).eL = eL;end
+	dat(1).screen = s;
+	dat(1).stimuli = stimuli;
+	assignin('base','dat',dat);
+	uisave('dat',[name '.mat']);
+	
+	clear s stimuli eL dat;
 	
 	%----------------Threshold estimates
-	assignin('base','UDCONGRUENT',UDCONGRUENT)
-	assignin('base','UDINCONGRUENT',UDINCONGRUENT)
-	Mean = PAL_AMUD_analyzeUD(UDCONGRUENT, 'trials', 10);
+	Mean1 = PAL_AMUD_analyzeUD(UDCONGRUENT, 'trials', 10);
 	message = sprintf('\rThreshold CONGRUENT estimate of last 10 trials');
-	message = strcat(message,sprintf(': %6.4f', Mean));
+	message = strcat(message,sprintf(': %6.4f', Mean1));
 	disp(message);
-	Mean = PAL_AMUD_analyzeUD(UDINCONGRUENT, 'trials', 10);
+	Mean2 = PAL_AMUD_analyzeUD(UDINCONGRUENT, 'trials', 10);
 	message = sprintf('\rThreshold INCONGRUENT estimate of last 10 trials');
-	message = strcat(message,sprintf(': %6.4f', Mean));
+	message = strcat(message,sprintf(': %6.4f', Mean2));
 	disp(message);
 	
 	%--------------Plots
@@ -329,7 +354,7 @@ try %our main experimental try catch loop
 	plot(t(UDCONGRUENT.response == 1),UDCONGRUENT.x(UDCONGRUENT.response == 1),'ko', 'MarkerFaceColor','k');
 	plot(t(UDCONGRUENT.response == 0),UDCONGRUENT.x(UDCONGRUENT.response == 0),'ko', 'MarkerFaceColor','w');
 	set(gca,'FontSize',16);
-	title('CONGRUENT')
+	title(['CONGRUENT = ' num2str(Mean1)])
 	axis([0 max(t)+1 min(UDCONGRUENT.x)-(max(UDCONGRUENT.x)-min(UDCONGRUENT.x))/10 max(UDCONGRUENT.x)+(max(UDCONGRUENT.x)-min(UDCONGRUENT.x))/10]);
 	t = 1:length(UDINCONGRUENT.x);
 	p(2,1).select();
@@ -338,16 +363,17 @@ try %our main experimental try catch loop
 	plot(t(UDINCONGRUENT.response == 1),UDINCONGRUENT.x(UDINCONGRUENT.response == 1),'ko', 'MarkerFaceColor','k');
 	plot(t(UDINCONGRUENT.response == 0),UDINCONGRUENT.x(UDINCONGRUENT.response == 0),'ko', 'MarkerFaceColor','w');
 	set(gca,'FontSize',16);
-	title('INCONGRUENT')
+	title(['INCONGRUENT = ' num2str(Mean2)])
 	axis([0 max(t)+1 min(UDINCONGRUENT.x)-(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10 max(UDINCONGRUENT.x)+(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10]);
-	
+	p.export([name '.png']);
 
 catch ME
+	ple(ME)
 	Priority(0); ListenChar(0); ShowCursor;
 	reset(stimuli);
 	close(s); %close screen
 	if useEyeLink == true; close(eL); end
-	clear stim eL s
+	clear stimuli eL s
 	rethrow(ME);
 end
 end

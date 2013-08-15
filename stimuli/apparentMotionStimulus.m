@@ -174,11 +174,6 @@ classdef apparentMotionStimulus < baseStimulus
 		function draw(obj)
 			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
 				Screen('DrawTexture',obj.sM.win, obj.texture,[ ], obj.mvRect, obj.angleOut, [], [], obj.modulateColourOut);
-				if obj.firstDraw == false;
-					fprintf('===> DRAW DELAY %i at TICK: %i\n', obj.nextTick, obj.tick);
-					obj.nextTick = obj.nextTick + obj.tick;
-				end
-				obj.firstDraw = true;
 			end
 			obj.tick = obj.tick + 1;
 		end
@@ -190,23 +185,24 @@ classdef apparentMotionStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function animate(obj)
-			if obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
+			if obj.tick < obj.delayTicks; obj.isVisible = false; end
+			if obj.tick < obj.offTicks
 				if obj.tick > obj.nextTick && obj.stage <= obj.nBars*2
 					obj.stage = obj.stage+1;
 					if rem(obj.stage,2)==0
 						obj.nextTick = obj.nextTick + obj.frameTimes(2);
-						obj.isVisible = false;
+						if obj.tick >= obj.delayTicks;obj.isVisible = false;end
 					else
 						obj.nextTick = obj.nextTick + obj.frameTimes(1);
 						if ceil(obj.stage/2) <= length(obj.mvRects)
 							obj.mvRect = obj.mvRects{ceil(obj.stage/2)};
-							obj.isVisible = true;
+							if obj.tick >= obj.delayTicks;obj.isVisible = true;end
 						else
-							obj.isVisible = false;
+							if obj.tick >= obj.delayTicks;obj.isVisible = false;end
 						end
 						
 					end
-					fprintf('TICK=%i STAGE: %i NEXTTICK: %i VISIBLE: %i\n',obj.stage,obj.nextTick,obj.isVisible)
+					%fprintf('TICK=%i STAGE: %i NEXTTICK: %i VISIBLE: %i\n',obj.tick,obj.stage,obj.nextTick,obj.isVisible)
 				end
 				if obj.doMotion == 1
 					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
