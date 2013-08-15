@@ -27,6 +27,8 @@ classdef metaStimulus < optickaCore
 		verbose = false
 		%> choice allows to call only 1 stimulus in the group
 		choice = []
+		%>which of the stimuli should fixation follow?
+		fixationChoice = []
 		%> randomisation table to apply to a stimulus
 		stimulusTable = []
 		%> choice for table
@@ -53,6 +55,9 @@ classdef metaStimulus < optickaCore
 	properties (SetAccess = private, GetAccess = public) 
 		%> stimulus family
 		family = 'meta'
+		%> structure holing positions for each stimulus
+		stimulusPositions = []
+		%> used for optional logging for update times
 		updateLog = []
 	end
 	
@@ -303,19 +308,48 @@ classdef metaStimulus < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Return the last randomised XY position
-		%>
+		%> @brief Return the stimulus fixation position
+		%>s
 		% ===================================================================
-		function x = getLastX(obj)
-			x = obj.lastXPosition;
+		function [x,y] = getFixationPositions(obj)
+			x = 0; y = 0;
+			if ~isempty(obj.fixationChoice)
+				for i=1:length(obj.fixationChoice)
+					x(i) = obj.stimuli{obj.fixationChoice(i)}.xPositionOut / obj.screen.ppd;
+					y(i) = obj.stimuli{obj.fixationChoice(i)}.yPositionOut / obj.screen.ppd;
+					obj.lastXPosition = x;
+					obj.lastYPosition = y;
+				end
+			end
 		end
 		
 		% ===================================================================
-		%> @brief Return the last randomised XY position
+		%> @brief Return the stimulus positions
 		%>
 		% ===================================================================
-		function y = getLastY(obj)
-			y = obj.lastYPosition;
+		function out = getStimulusPositions(obj)
+			a=1;
+			out = [];
+			obj.stimulusPositions = out;
+			for i = 1:obj.n
+				if obj.stimuli{i}.isVisible == true
+					if isprop(obj.stimuli{i},'sizeOut')
+						obj.stimulusPositions(a).x = obj.stimuli{i}.xPositionOut;
+						obj.stimulusPositions(a).y = obj.stimuli{i}.yPositionOut;
+						obj.stimulusPositions(a).size = obj.stimuli{i}.sizeOut;
+						if any(obj.fixationChoice == i) 
+							obj.stimulusPositions(a).selected = true;
+						else
+							obj.stimulusPositions(a).selected = false;
+						end
+						%fprintf('Stim%i = X: %.2f Y: %.2f Size: %.2f\n',i, obj.stimulusPositions(a).x,obj.stimulusPositions(a).y,obj.stimulusPositions(a).size);
+						a = a + 1;
+					end
+				end
+			end
+			if ~isempty(obj.stimulusPositions)
+				out = obj.stimulusPositions;
+			end
 		end
 		
 		% ===================================================================
@@ -346,7 +380,7 @@ classdef metaStimulus < optickaCore
 				runtime = 2; %seconds to run
 			end
 			if ~exist('s','var') || ~isa(s,'screenManager')
-				s = screenManager('verbose',false,'blend',true,'screen',0,...
+				s = screenManager('verbose',false,'blend',true,'screen',1,...
 				'bitDepth','8bit','debug',false,...
 				'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
 			end
@@ -584,6 +618,12 @@ classdef metaStimulus < optickaCore
 					end
 			end
 		end
+	end%-------------------------END PUBLIC METHODS--------------------------------%
+	
+	%=======================================================================
+	methods (Access = private) %------------------PRIVATE METHODS
+	%=======================================================================
+		
 		
 	end
 end

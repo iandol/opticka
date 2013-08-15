@@ -28,7 +28,7 @@ classdef stateMachine < optickaCore
 		%> use real time (true) or ticks (false) to mark state time
 		realTime = false
 		%> verbose logging to command window?
-		verbose = true
+		verbose = false
 		%> clock function to use
 		clockFcn = @GetSecs
 		%> pause function
@@ -37,6 +37,9 @@ classdef stateMachine < optickaCore
 		globalTransitionFcn = {}
 		%> log group name
 		logName
+		%> state to tranisition to to skip the previous state's exit
+		%> functions
+		skipExitStates = ''
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -92,9 +95,9 @@ classdef stateMachine < optickaCore
 		%> should we run the finish function
 		isFinishing = false
 		%> field names of allStates struct array, defining state behaviors
-		stateFields = {'name', 'next', 'entryFcn', 'withinFcn', 'time', 'transitionFcn','exitFcn'}
+		stateFields = {'name', 'next', 'entryFcn', 'withinFcn', 'time', 'transitionFcn','exitFcn', 'skipExitFcn'}
 		%> default values of allStates struct array fields
-		stateDefaults = {'', '', {}, {}, 1, {}, {}}
+		stateDefaults = {'', '', {}, {}, 1, {}, {}, false}
 		%> properties allowed during construction
 		allowedProperties = 'name|realTime|verbose|clockFcn|waitFcn|timeDelta|globalTransitionFcn'
 	end
@@ -232,6 +235,7 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function update(obj)
 			if obj.isRunning == true
+				
 				if obj.realTime == true %are we running on time or ticks?
 					obj.currentTime = feval(obj.clockFcn);
 					trigger = obj.currentTime >= obj.nextTimeOut;
@@ -251,27 +255,27 @@ classdef stateMachine < optickaCore
 					return
 				end
 				
+				%transition function works by returning the name of the
+				%next state when its criteria are met, so for example check
+				%that the eye is fixated for the fixation time, returning
+				%an empty string until that is met, then return the name of
+				%a state to transition to.
+				if ~isempty(obj.currentTransitionFcn) && isa(obj.currentTransitionFcn,'function_handle') %function handle, lets feval it
+					tname = feval(obj.currentTransitionFcn);
+					[tname, ~] = strtok(tname,' ');
+					if ischar(tname) && isStateName(obj,tname) % a valid name was returned, time to transition
+						obj.transitionToStateWithName(tname);
+						return
+					end
+				end
+				
+				%run our within state functions
 				if isa(obj.currentWithinFcn,'function_handle') %function handle, lets feval it
 					feval(obj.currentWithinFcn);
 				elseif iscell(obj.currentWithinFcn)
 					for i = 1:size(obj.currentWithinFcn,1) %nested class
 						feval(obj.currentWithinFcn{i});
 					end
-				end
-				
-				%transition function works by returning the name of the
-				%next state when its criteria are met, so for example check
-				%that the eye is fixated for the fixation time, returning
-				%an empty string until that is met, then return the name of
-				%a state to transition to.
-				tname = '';
-				if isa(obj.currentTransitionFcn,'function_handle') %function handle, lets feval it
-					tname = feval(obj.currentTransitionFcn);
-					[tname, ~] = strtok(tname,' ');
-				end
-				if ischar(tname) && isStateName(obj,tname) % a valid name was returned, time to transition
-					obj.transitionToStateWithName(tname);
-					return
 				end
 				
 				%TODO lets assume to update a tick here, we may miss a tick on
@@ -387,6 +391,20 @@ classdef stateMachine < optickaCore
 		%> 
 		%> 
 		% ===================================================================
+		function evalExitFcn(obj,value)
+			if obj.isRunning == true
+				obj.currentState.skipExitFcn = value;
+				if value
+					fprintf('SKIP EXIT STATE!!!\n')
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief printcurrentTick fprints current tick to command window
+		%> 
+		%> 
+		% ===================================================================
 		function printCurrentTick(obj)
 			fprintf('%g:%g',obj.currentTick,obj.totalTicks)
 		end
@@ -451,12 +469,12 @@ classdef stateMachine < optickaCore
 				thisState = obj.stateList(obj.currentIndex);
 				obj.currentEntryTime = feval(obj.clockFcn);
 				obj.currentTick = 1;
-				obj.currentState = thisState;
 				obj.currentName = thisState.name;
 				obj.currentUUID = num2str(dec2hex(floor((now - floor(now))*1e10)));
 				obj.currentEntryFcn = thisState.entryFcn;
 				obj.currentWithinFcn = thisState.withinFcn;
 				obj.currentTransitionFcn = thisState.transitionFcn;
+				obj.currentState = thisState;
 				
 				if length(thisState.time) == 1
 					obj.nextTimeOut = obj.currentEntryTime + thisState.time;
@@ -466,9 +484,9 @@ classdef stateMachine < optickaCore
 				end
 				obj.nextTickOut = round(thisState.time / obj.timeDelta);
 				
-				%obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false)
+				obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false)
 				
-				tic;
+				%tic;
 				if isa(thisState.entryFcn,'function_handle') %function handle, lets feval it
 					feval(thisState.entryFcn);
 				elseif iscell(thisState.entryFcn) %nested class of function handles
@@ -476,7 +494,7 @@ classdef stateMachine < optickaCore
 						feval(thisState.entryFcn{i});
 					end
 				end
-				obj.fevalTime.enter = toc*1000;
+				%obj.fevalTime.enter = toc*1000;
 	
 			else
 				obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length',false);
@@ -493,11 +511,18 @@ classdef stateMachine < optickaCore
 		function transitionToStateWithName(obj, nextName)
 			[isState, index] = isStateName(obj, nextName);
 			if isState
+				if iscell(obj.skipExitStates)
+					for i=1:size(obj.skipExitStates,1)
+						if ~isempty(regexpi(obj.currentName,obj.skipExitStates{i,1})) && ~isempty(regexpi(nextName,obj.skipExitStates{i,2}));
+							obj.currentState.skipExitFcn = true;
+						end
+					end
+				end
 				exitCurrentState(obj);
 %				if isa(obj.globalTransitionFcn,'function_handle') %function handle, lets feval it
 %					feval(obj.globalTransitionFcn);
 %				end
-				%obj.salutation(['Transition @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false)
+				obj.salutation(['Transition @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false)
 				enterStateAtIndex(obj, index);
 			else
 				obj.salutation('transitionToStateWithName method', 'ERROR, default to return to first state!!!\n',true)
@@ -512,17 +537,18 @@ classdef stateMachine < optickaCore
 		%> @return
 		% ===================================================================
 		function exitCurrentState(obj)
-			thisState = obj.stateList(obj.currentIndex);
-			
-			tic;
-			if iscell(thisState.exitFcn) %nested class of function handles	
-				for i = 1:size(thisState.exitFcn, 1) %nested class
-					feval(thisState.exitFcn{i});
+			thisState = obj.currentState;
+			%tic;
+			if thisState.skipExitFcn == false
+				if iscell(thisState.exitFcn) %nested class of function handles	
+					for i = 1:size(thisState.exitFcn, 1) %nested class
+						feval(thisState.exitFcn{i});
+					end
+				elseif isa(thisState.exitFcn,'function_handle') %function handle, lets feval it
+					feval(thisState.exitFcn);
 				end
-			elseif isa(thisState.exitFcn,'function_handle') %function handle, lets feval it
-				feval(thisState.exitFcn);
 			end
-			obj.fevalTime.exit = toc*1000;
+			%obj.fevalTime.exit = toc*1000;
 			
 			storeCurrentStateInfo(obj);
 			
@@ -531,7 +557,7 @@ classdef stateMachine < optickaCore
 			obj.nextTickOut = [];
 			obj.nextTimeOut = [];
 			
-			%obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(obj.log(end).tnow) 's | ' num2str(obj.log(end).totalTimeToNow) 's | ' num2str(obj.log(end).tick) '/' num2str(obj.totalTicks) 'ticks'],'',false);
+			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(obj.log(end).tnow) 's | ' num2str(obj.log(end).totalTimeToNow) 's | ' num2str(obj.log(end).tick) '/' num2str(obj.totalTicks) 'ticks'],'',false);
 		end
 		
 		% ===================================================================
@@ -591,6 +617,11 @@ classdef stateMachine < optickaCore
 % 		function lobj=loadobj(in)
 % 			lobj = in;
 % 		end
+
+		% ===================================================================
+		%> @brief plot timing logs
+		%>
+		% ===================================================================
 		function plotLogs(log)
 			for i = 1:length(log)
 				

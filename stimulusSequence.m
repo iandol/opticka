@@ -10,7 +10,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> whether to randomise (true) or run sequentially (false)
 		randomise = true
 		%> structure holding each independant variable
-		nVar = []
+		nVar
 		%> number of repeat blocks to present
 		nBlocks = 1
 		%> time stimulus trial is shown
@@ -90,6 +90,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		loadProperties = {'randomise','nVar','nBlocks','trialTime','isTime','ibTime','isStimulus','verbose',...
 			'realTime','randomSeed','randomGenerator','nSegments','nSegment','outValues','outVars', ...
             'outIndex', 'outMap', 'minBlocks','states','nState','name'}
+		%> nVar template and default values
+		varTemplate = struct('name','','stimulus',0,'values',[],'offsetstimulus',[],'offsetvalue',[])
 		%Set up the task structures needed
 		taskProperties = {'tick',0,'blankTick',0,'thisRun',1,'thisBlock',1,'totalRuns',1,'isBlank',false,...
 				'switched',false,'strobeThisFrame',false,'doUpdate',false,'startTime',0,'switchTime',0,...
@@ -109,9 +111,10 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> @return instance of the class.
 		% ===================================================================
 		function obj = stimulusSequence(varargin) 
-			if nargin > 0
-				obj.parseArgs(varargin,obj.allowedProperties)
-			end
+			if nargin == 0; varargin.name = 'stimulusSequence'; end
+			obj=obj@optickaCore(varargin); %superclass constructor
+			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
+			obj.nVar = obj.varTemplate;
 			obj.initialiseRandom();
 			obj.isLoading = false;
 		end
@@ -272,7 +275,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			shift = 0;
 			
 			for i = 1:length(vin)
-				if isempty(vin(i).name)
+				if isempty(vin(i).name) || isempty(vin(i).values) || isempty(vin(i).stimulus)
 					vout(i + shift) = [];
 					shift = shift-1;
 				end
@@ -295,35 +298,26 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> appropriately.
 		% ===================================================================
 		function set.nVar(obj,invalue)
-			if obj.isLoading == false %this stops set being called unexpectedly
-				obj.nVar = invalue;
-				return;
-			end
-			varTemplate = struct('name','','stimulus',0,'values',[],'offsetstimulus',[],'offsetvalue',[]);
 			if ~exist('invalue','var')
-				invalue = [];
+				return
 			end
-			if obj.isLoading == true && isstruct(invalue) %#ok<*MCSUP>
-				obj.nVar = invalue;
-				if ~isfield(obj.nVar,'offsetstimulus') || ~isfield(obj.nVar,'offsetvalue') %add to old versions of nVar
-					obj.nVar(1).offsetstimulus = [];
-					obj.nVar(1).offsetvalue = [];
-				end
-				return;
-			end
-			if isempty(obj.nVar) || isempty(invalue)
-				obj.nVar = varTemplate;
-			elseif isstruct(obj.nVar) && isempty(fieldnames(obj.nVar))
-				obj.nVar = varTemplate;
+			if isempty(obj.nVar) || isempty(invalue) || length(fieldnames(obj.nVar)) ~= length(fieldnames(obj.varTemplate))
+				obj.nVar = obj.varTemplate;
 			end
 			if ~isempty(invalue) && isstruct(invalue)
 				idx = length(invalue);
-				invalue = invalue(idx);
 				fn = fieldnames(invalue);
-				for i = 1:length(fn)
-					if isfield(obj.nVar(1), fn{i}) && ~isempty(invalue.(fn{i}));
-						obj.nVar(idx).(fn{i}) = invalue.(fn{i});
+				fnTemplate = fieldnames(obj.varTemplate); %#ok<*MCSUP>
+				fnOut = intersect(fn,fnTemplate);
+				for ii = 1:idx
+					for i = 1:length(fnOut)
+						if ~isempty(invalue(ii).(fn{i}));
+							obj.nVar(ii).(fn{i}) = invalue(ii).(fn{i});
+						end
 					end
+%  					if isempty(obj.nVar(idx).(fnTemplate{1})) || obj.nVar(idx).(fnTemplate{2}) == 0 || isempty(obj.nVar(idx).(fnTemplate{3}))
+%  						fprintf('---> Variable %g is not properly formed!!!\n',idx);
+%  					end
 				end
 			end
 		end
@@ -368,7 +362,12 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		function showLog(obj)
 			obj.h = struct();
 			build_gui();
-			data = [obj.outValues obj.outIndex obj.outMap];
+			if iscell(obj.outValues);
+				outvals = obj.cellStruct(obj.outValues);
+				data = [outvals obj.outIndex obj.outMap];
+			else
+				data = [obj.outValues obj.outIndex obj.outMap];
+			end
 			if isempty(data)
 				data = 'No variables!';
 			end
@@ -427,7 +426,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	%=======================================================================
 	methods ( Access = private ) %------PRIVATE METHODS
 	%=======================================================================
-	
+			
 		% ===================================================================
 		%> @brief reset transienttask properties
 		%> 
@@ -440,13 +439,29 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					delete(p);
 				end
 			end
-		end		
+		end	
+		
+		
 	end
 	
 	%=======================================================================
 	methods (Static) %------------------STATIC METHODS
 	%=======================================================================
-	
+		
+		% ===================================================================
+		%> @brief reset transienttask properties
+		%> 
+		%> 
+		% ===================================================================
+		function out=cellStruct(in)
+			out = [];
+			if iscell(in)
+				for i = 1:size(in,2)
+					out = [out, [in{:,i}]'];
+				end
+			end
+		end
+		
 		% ===================================================================
 		%> @brief loadobj handler
 		%>

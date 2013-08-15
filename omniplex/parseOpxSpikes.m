@@ -72,7 +72,7 @@ classdef parseOpxSpikes < handle
 			
 			if isa(opx.stimulus,'runExperiment')
 				obj.stimulus = opx.stimulus;
-				obj.sValues = obj.stimulus.task.outValues;
+				obj.sValues = obj.stimulus.task.cellStruct(obj.stimulus.task.outValues);
 				obj.sMap = obj.stimulus.task.outMap;
 				obj.sIndex = obj.stimulus.task.outIndex;
 				obj.nVars = obj.stimulus.task.nVars;

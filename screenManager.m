@@ -602,11 +602,23 @@ classdef screenManager < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawSpot(obj,size,colour)
+		function drawSpot(obj,size,colour,x,y)
+			if nargin < 5; y = []; end
+			if nargin < 4; x = []; end
 			if nargin < 3; colour = [1 1 1 1]; end
 			if nargin < 2; size = 1; end
+			if isempty(x); 
+                x = obj.xCenter; 
+            else
+                x = obj.xCenter - (x * obj.ppd);
+            end
+			if isempty(y); 
+                y = obj.yCenter; 
+            else
+                y = obj.yCenter - (y * obj.ppd);
+            end
 			size = size/2 * obj.ppd;
-			Screen('gluDisk',obj.win,colour,obj.xCenter,obj.yCenter,size);
+			Screen('gluDisk',obj.win,colour,x,y,size);
 		end
 		
 		% ===================================================================

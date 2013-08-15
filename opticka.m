@@ -20,7 +20,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion@char = '0.950'
+		optickaVersion@char = '0.980'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -264,27 +264,29 @@ classdef opticka < optickaCore
 					obj.paths.savedData = ['~' filesep 'MatlabFiles' filesep 'SavedData'];
 				
 				elseif ispc
+					%root = 'c:\MatlabFiles';
+					root = 'c:\Users\Guest\MatlabFiles\';
 					obj.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
 					obj.paths.temp=tempdir;
-					if ~exist('c:\MatlabFiles\Protocols','dir')
-						mkdir('c:\MatlabFiles\Protocols\')
+					if ~exist([root 'Protocols'],'dir')
+						mkdir([root 'Protocols'])
 					end
-					obj.paths.protocols = ['c:\MatlabFiles\Protocols'];
+					obj.paths.protocols = [root 'Protocols'];
 					cd(obj.paths.protocols);
 					obj.paths.currentPath = pwd;
-					if ~exist('c:\MatlabFiles\Calibration','dir')
-						mkdir('c:\MatlabFiles\Calibration\')
+					if ~exist([root 'Calibration'],'dir')
+						mkdir([root 'Calibration'])
 					end
-					obj.paths.calibration = ['c:\MatlabFiles\Calibration'];
-					if ~exist('c:\MatlabFiles\History','dir')
-						mkdir('c:\MatlabFiles\History\')
+					obj.paths.calibration = [root 'Calibration'];
+					if ~exist([root 'History'],'dir')
+						mkdir([root 'History']);
 					end
-					obj.paths.historypath=[obj.paths.temp 'History'];
+					obj.paths.historypath=[root 'History'];
 					
-					if ~exist(['c:\MatlabFiles\SavedData'],'dir')
-						mkdir(['c:\MatlabFiles\SavedData']);
+					if ~exist([root 'SavedData'],'dir')
+						mkdir([root 'SavedData']);
 					end
-					obj.paths.savedData = ['c:\MatlabFiles\SavedData\'];
+					obj.paths.savedData = [root 'SavedData'];
 				end
 				
 				obj.store.newlook='javax.swing.plaf.metal.MetalLookAndFeel';
@@ -329,7 +331,7 @@ classdef opticka < optickaCore
 				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.optickaVersion]);
 				
 			catch ME
-				if isappdata(obj.h.uihandle,'o')
+				if  isfield(obj.h,'uihandle') && ~isempty(obj.h.uihandle) && isappdata(obj.h.uihandle,'o')
 					rmappdata(obj.h.uihandle,'o');
 					clear o;
 				end
@@ -618,6 +620,12 @@ classdef opticka < optickaCore
 			revertN = obj.r.task.nVars;
 			try
 				obj.r.task.nVar(revertN+1).name = obj.gs(obj.h.OKVariableName);
+				s = obj.gs(obj.h.OKVariableValues);
+				if isempty(regexpi(s,'^\{'))
+					obj.r.task.nVar(revertN+1).values = str2num(s);
+				else
+					obj.r.task.nVar(revertN+1).values = eval(s);
+				end
 				obj.r.task.nVar(revertN+1).values = obj.gn(obj.h.OKVariableValues);
 				obj.r.task.nVar(revertN+1).stimulus = obj.gn(obj.h.OKVariableStimuli);
 				offset = obj.gn(obj.h.OKVariableOffset);
@@ -628,6 +636,7 @@ classdef opticka < optickaCore
 					obj.r.task.nVar(revertN+1).offsetstimulus = offset(1);
 					obj.r.task.nVar(revertN+1).offsetvalue = offset(2);
 				end
+				validate(obj.r.task);
 				obj.r.task.randomiseStimuli;
 
 				obj.refreshVariableList;
@@ -670,7 +679,13 @@ classdef opticka < optickaCore
 			if isobject(obj.r.task)
 				val = obj.gv(obj.h.OKVarList);
 				set(obj.h.OKVariableName,'String', obj.r.task.nVar(val).name);
-				str = num2str(obj.r.task.nVar(val).values);
+				v=obj.r.task.nVar(val).values;
+				if iscell(v)
+					v = obj.cell2str(v);
+				else
+					v = num2str(obj.r.task.nVar(val).values);
+				end
+				str = v;
 				str = regexprep(str,'\s+',' ');
 				set(obj.h.OKVariableValues,'String', str);
 				str = num2str(obj.r.task.nVar(val).stimulus);
@@ -1187,7 +1202,12 @@ classdef opticka < optickaCore
 			str = cell(obj.r.task.nVars,1);
 			V = obj.r.task.nVar;
 			for i=1:obj.r.task.nVars
-				str{i} = [V(i).name ' on Stim: ' num2str(V(i).stimulus) '|' num2str(V(i).values)];
+				if iscell(V(i).values)
+					v = obj.cell2str(V(i).values);
+				else
+					v = num2str(V(i).values);
+				end
+				str{i} = [V(i).name ' on Stim: ' num2str(V(i).stimulus) '|' v];
 				if isfield(V, 'offsetstimulus') && ~isempty(V(i).offsetstimulus)
 					str{i} =  [str{i} ' | Stim ' num2str(V(i).offsetstimulus) ' offset:' num2str(V(i).offsetvalue)];
 				end
@@ -1331,6 +1351,22 @@ classdef opticka < optickaCore
 			[status,result]=system([cmd rAddress]);
 		end
 		
+		% ===================================================================
+		%> @brief gs (getstring)
+		%> 
+		%> @param inhandle handle to UI element
+		%> @param value
+		% ===================================================================
+		function str = cell2str(in)
+			str = [];
+			if iscell(in)
+				str = '{';
+				for i = 1:length(in)
+					str = [str '[' num2str(in{i}) '],'];
+				end
+				str = regexprep(str,',$','}');
+			end
+		end
 		% ===================================================================
 		%> @brief gs (getstring)
 		%> 

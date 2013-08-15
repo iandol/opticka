@@ -20,9 +20,9 @@ classdef eyelinkManager < optickaCore
 		saveFile = 'myData.edf'
 		%> do we log messages to the command window?
 		verbose = false
-		%> fixation X position in degrees
+		%> fixation X position(s) in degrees
 		fixationX = 0
-		%> fixation Y position in degrees
+		%> fixation Y position(s) in degrees
 		fixationY = 0
 		%> fixation radius in degrees
 		fixationRadius = 1
@@ -85,11 +85,12 @@ classdef eyelinkManager < optickaCore
 	properties (SetAccess = private, GetAccess = private)
 		tempFile = 'MYDATA.edf'
 		fixN = 0
+		fixSelection = []
 		error = []
 		%> previous message sent to eyelink
 		previousMessage = ''
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'fixationX|fixationY|fixationRadius|fixationTime|fixationInitTime|sampleRate|calibrationStyle|enableCallbacks|callback|name|verbose|isDummy|remoteCalibration'
+		allowedProperties = 'IP|fixationX|fixationY|fixationRadius|fixationTime|fixationInitTime|sampleRate|calibrationStyle|enableCallbacks|callback|name|verbose|isDummy|remoteCalibration'
 	end
 	
 	methods
@@ -102,10 +103,12 @@ classdef eyelinkManager < optickaCore
 				obj.parseArgs(varargin,obj.allowedProperties);
 			end
 			obj.defaults = EyelinkInitDefaults();
-			ret = Eyelink('SetAddress', obj.IP);
-			if ret ~= 0
-				warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
-			end
+            if ~isempty(obj.IP)
+                ret = Eyelink('SetAddress', obj.IP);
+                if ret ~= 0
+                    warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+                end
+            end
 			try % is eyelink interface working
 				Eyelink('GetTrackerVersion'); 
 			catch %#ok<CTCH>
@@ -134,10 +137,12 @@ classdef eyelinkManager < optickaCore
 			
 			obj.screen = sM;
 			
-			ret = Eyelink('SetAddress', obj.IP);
-			if ret ~= 0
-				warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
-			end
+            if ~isempty(obj.IP)
+                ret = Eyelink('SetAddress', obj.IP);
+                if ret ~= 0
+                    warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+                end
+            end
 			
 			if ~isempty(obj.callback) && obj.enableCallbacks
 				[~,dummy] = EyelinkInit(obj.isDummy,obj.callback);
@@ -229,6 +234,7 @@ classdef eyelinkManager < optickaCore
 			obj.fixInitLength = 0;
 			obj.fixInitTotal = 0;
 			obj.fixN = 0;
+			obj.fixSelection = 0;
 		end
 				
 		% ===================================================================
@@ -364,6 +370,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function updateFixationValues(obj,x,y,inittime,fixtime,radius,strict)
+			%tic
 			resetFixation(obj)
 			if nargin > 1 && ~isempty(x)
 				if isinf(x)
@@ -380,7 +387,12 @@ classdef eyelinkManager < optickaCore
 				end
 			end
 			if nargin > 3 && ~isempty(inittime);
-				if length(inittime) == 2
+				if iscell(inittime) && length(inittime)==4
+					obj.fixationInitTime = inittime{1};
+					obj.fixationTime = inittime{2};
+					obj.fixationRadius = inittime{3};
+					obj.strictFixation = inittime{4};
+				elseif length(inittime) == 2
 					obj.fixationInitTime = randi(inittime*1000)/1000;
 				elseif length(inittime)==1
 					obj.fixationInitTime = inittime;
@@ -395,7 +407,7 @@ classdef eyelinkManager < optickaCore
 			end
 			if nargin > 5 && ~isempty(radius); obj.fixationRadius = radius; end
 			if nargin > 6 && ~isempty(strict); obj.strictFixation = strict; end
-			%fprintf('Set Fix: X=%g | Y=%g | IT=%g | FT=%g | R=%g\n', obj.fixationX, obj.fixationY, obj.fixationInitTime, obj.fixationTime, obj.fixationRadius);
+			%fprintf('updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g time=%g\n', obj.fixationX, obj.fixationY, num2str(obj.fixationInitTime), num2str(obj.fixationTime), obj.fixationRadius,toc*1000);
 		end
 		
 		% ===================================================================
@@ -405,32 +417,37 @@ classdef eyelinkManager < optickaCore
 		%> @return fixtime boolean if we're fixed for fixation time
 		%> @return searching boolean for if we are still searching for fixation
 		% ===================================================================
-		function [fixated, fixtime, searching] = isFixated(obj)
-			fixated = false;
-			fixtime = false;
-			searching = true;
+		function [fixated, fixtime, searching, window] = isFixated(obj)
+			fixated = false; fixtime = false; searching = true; window = [];
 			if obj.isConnected && ~isempty(obj.currentSample)
 				if obj.fixInitTotal == 0
 					obj.fixInitTotal = obj.currentSample.time;
 				end
-				r = sqrt((obj.x - obj.fixationX)^2 + (obj.y - obj.fixationY)^2);
-				%fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
-				if r < (obj.fixationRadius);
+				r = sqrt((obj.x - obj.fixationX).^2 + (obj.y - obj.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
+				window = find(r < obj.fixationRadius);
+				if any(window);
 					if obj.fixN == 0 
 						obj.fixN = 1;
+						obj.fixSelection = window(1);
 					end
-					if obj.fixStartTime == 0
-						obj.fixStartTime = obj.currentSample.time;
+					if obj.fixSelection == window(1);
+						if obj.fixStartTime == 0
+							obj.fixStartTime = obj.currentSample.time;
+						end
+						obj.fixLength = (obj.currentSample.time - obj.fixStartTime) / 1000;
+						if obj.fixLength > obj.fixationTime
+							fixtime = true;
+						end
+						obj.fixInitStartTime = 0;
+						searching = false;
+						fixated = true;
+						obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
+						return
+					else
+						fixated = false;
+						fixtime = false;
+						searching = false;
 					end
-					obj.fixLength = (obj.currentSample.time - obj.fixStartTime) / 1000;
-					if obj.fixLength > obj.fixationTime
-						fixtime = true;
-					end
-					obj.fixInitStartTime = 0;
-					searching = false;
-					fixated = true;
-					obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
-					return
 				else
 					if obj.fixN == 1 
 						obj.fixN = -100;
@@ -457,8 +474,8 @@ classdef eyelinkManager < optickaCore
 		%> fixation state, useful for using via stateMachine
 		%>
 		% ===================================================================
-		function out = testWithinFixationWindow(obj, yesString, noString)
-			if obj.isFixated
+		function out = testWithinFixationWindow(obj, yesString, noString, window)
+			if isFixated(obj)
 				out = yesString;
 			else
 				out = noString;
@@ -472,21 +489,26 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function out = testFixationTime(obj, yesString, noString)
-			[fix,fixtime] = obj.isFixated();
+			[fix,fixtime] = isFixated(obj);
 			if fix && fixtime
-				%obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TESTFIXTIME');
-				out = yesString;
+				out = yesString; %obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TESTFIXTIME');
 			else
 				out = noString;
 			end
 		end
 		
 		% ===================================================================
-		%> @brief Checks if we're looking for fixation a set time
+		%> @brief Checks if we're looking for fixation a set time. Input is
+		%> 2 strings, either one is returned depending on success or
+		%> failure, 'searching' may also be returned meaning the fixation
+		%> window hasn't been entered yet...
 		%>
+		%> @param yesString if this function succeeds return this string
+		%> @param noString if this function fails return this string
+		%> @return out the output string which is 'searching' if fixation is still being initiated, or yes or no string.
 		% ===================================================================
-		function out = testSearchHoldFixation(obj, yesString, noString)
-			[fix, fixtime, searching] = obj.isFixated();
+		function [out, window] = testSearchHoldFixation(obj, yesString, noString)
+			[fix, fixtime, searching, window] = obj.isFixated();
 			if searching
 				if (obj.strictFixation==true && (obj.fixN == 0)) || obj.strictFixation==false
 					out = 'searching';
@@ -626,16 +648,34 @@ classdef eyelinkManager < optickaCore
 		%> @brief draw the stimuli boxes on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawStimuli(obj)
+		function trackerClearScreen(obj)
 			if obj.isConnected
+				Eyelink('Command', 'clear_screen 0');
+			end
+		end
+		
+		% ===================================================================
+		%> @brief draw the stimuli boxes on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawStimuli(obj, ts)
+			if obj.isConnected
+				if exist('ts','var') && isstruct(ts)
+					obj.stimulusPositions = ts;
+				end
 				for i = 1:length(obj.stimulusPositions)
-					x = obj.screen.xCenter + (obj.stimulusPositions(i).x * obj.screen.ppd);
-					y = obj.screen.yCenter + (obj.stimulusPositions(i).y * obj.screen.ppd);
-					size = obj.stimulusPositions(i).size * obj.screen.ppd;
+					x = obj.stimulusPositions(i).x + obj.screen.xCenter;
+					y = obj.stimulusPositions(i).y + obj.screen.yCenter;
+					size = obj.stimulusPositions(i).size;
 					if isempty(size); size = 1 * obj.screen.ppd; end
 					rect = [0 0 size size];
 					rect = round(CenterRectOnPoint(rect, x, y));
-					Eyelink('Command', 'draw_box %d %d %d %d 12', rect(1), rect(2), rect(3), rect(4));
+					if obj.stimulusPositions(i).selected == true
+						Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
+						
+					else
+						Eyelink('Command', 'draw_box %d %d %d %d 11', rect(1), rect(2), rect(3), rect(4));
+					end
 				end
 				
 			end
@@ -648,13 +688,10 @@ classdef eyelinkManager < optickaCore
 		function trackerDrawFixation(obj)
 			if obj.isConnected
 				size = (obj.fixationRadius * 2) * obj.screen.ppd;
-				mod = round(size/10);
-				if mod < 0; mod = 0; end
-				rect = [0 0 size-mod size-mod];
-				x = obj.screen.xCenter + (obj.fixationX * obj.screen.ppd);
-				y = obj.screen.yCenter + (obj.fixationY * obj.screen.ppd);
+				rect = [0 0 size size];
+				x = toPixels(obj, obj.fixationX, 'x');
+				y = toPixels(obj, obj.fixationY, 'y');
 				rect = round(CenterRectOnPoint(rect, x, y));
-				Eyelink('Command','clear_screen 0');
 				Eyelink('Command', 'draw_box %d %d %d %d 14', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
@@ -825,13 +862,19 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function out = toDegrees(obj,in,axis)
+			if ~exist('axis','var');axis='';end
 			switch axis
 				case 'x'
 					out = (in - obj.screen.xCenter) / obj.screen.ppd;
 				case 'y'
 					out = (in - obj.screen.yCenter) / obj.screen.ppd;
 				otherwise
-					out = 0;
+					if length(in)==2
+						out(1) = (in(1) - obj.screen.xCenter) / obj.screen.ppd;
+						out(2) = (in(2) - obj.screen.yCenter) / obj.screen.ppd;
+					else
+						out = 0;
+					end
 			end
 		end
 		
@@ -840,13 +883,19 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function out = toPixels(obj,in,axis)
+			if ~exist('axis','var');axis='';end
 			switch axis
 				case 'x'
 					out = (in * obj.screen.ppd) + obj.screen.xCenter;
 				case 'y'
 					out = (in * obj.screen.ppd) + obj.screen.yCenter;
 				otherwise
-					out = 0;
+					if length(in)==2
+						out(1) = (in(1) * obj.screen.ppd) + obj.screen.xCenter;
+						out(2) = (in(2) * obj.screen.ppd) + obj.screen.yCenter;
+					else
+						out = 0;
+					end
 			end
 		end
 		

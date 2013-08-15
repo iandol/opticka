@@ -461,11 +461,12 @@ classdef runExperiment < optickaCore
 			
 			%------a throwaway structure to hold various parameters
 			tS = struct();
-			tS.useTask = false; %#ok<*PROP>
-			tS.checkKeysDuringStimulus = true;
+			tS.useTask = false;
+			tS.checkKeysDuringStimulus = false;
 			tS.recordEyePosition = false;
 			tS.askForComments = false;
-			tS.saveData = true;
+			tS.saveData = false;
+			tS.dummyEyelink = false;
 	
 			%------make a short handle to the screenManager
 			s = obj.screen; 
@@ -515,7 +516,7 @@ classdef runExperiment < optickaCore
 				%-----open the eyelink interface
 				obj.useEyeLink = true;
 				if obj.useEyeLink
-					obj.eyeLink = eyelinkManager('IP','10.1.1.1');
+					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
 					eL.saveFile = [obj.paths.savedData filesep 'Simba-' obj.savePrefix '.edf'];
 				end
@@ -582,9 +583,10 @@ classdef runExperiment < optickaCore
 				t.totalRuns = 1;
 				if tS.useTask == true
 					updateVariables(obj, t.totalRuns, true, false); % set to first variable
-					updateFixationTarget(obj, tS.useTask);
+					%updateFixationTarget(obj, true);
 				end
 				tS.stopTraining = false; %break while loop
+				tS.keyTicks = 0; %tick counter for reducing sensitivity of keyboard
 				tS.keyHold = 1; %a small loop to stop overeager key presses
 				tS.totalTicks = 1; % a tick counter
 				tS.pauseToggle = 1; %toggle pause/unpause
@@ -606,7 +608,7 @@ classdef runExperiment < optickaCore
 				tL.startTime = vbl;
 				
 				start(sM); %ignite the stateMachine!
-				
+
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				% Our main display loop
@@ -618,7 +620,7 @@ classdef runExperiment < optickaCore
 					update(sM);
 					
 					%------check eye position
-					if obj.useEyeLink; 
+					if obj.useEyeLink;
 						getSample(eL);
 						if tS.recordEyePosition == true
 							if strcmpi(sM.currentName,'stimulus')
@@ -652,12 +654,12 @@ classdef runExperiment < optickaCore
 					end
 					
 					%------Check keyboard for commands
-					if ~strcmpi(sM.currentName,'calibrate') || (~strcmpi(sM.currentName,'stimulus') || tS.checkKeysDuringStimulus == true)
+					if ~strcmpi(sM.currentName,'stimulus') || (tS.checkKeysDuringStimulus == true && strcmpi(sM.currentName,'stimulus'))
 						tS = obj.checkFixationKeys(tS);
 					end
 					
 					%------Log stim / no stim condition to log
-					if strcmpi(obj.stateMachine.currentName,'stimulus')
+					if strcmpi(sM.currentName,'stimulus')
 						tL.stimTime(tS.totalTicks)=1;
 					else
 						tL.stimTime(tS.totalTicks)=0;
@@ -679,12 +681,16 @@ classdef runExperiment < optickaCore
 						else
 							tL.vbl = Screen('Flip', s.win, nextvbl);
 						end
+						
+						tS.totalTicks = tS.totalTicks + 1;
+				
 					end
 					%==================================================%
 					
-					tS.totalTicks = tS.totalTicks + 1;
-					
-				end
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				end %=========================END OF MAIN LOOP===================
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				
 				drawBackground(s);
 				Screen('Flip', s.win);
 				Priority(0);
@@ -836,37 +842,13 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function updateFixationTarget(obj, useTask)
+		function updateFixationTarget(obj, useTask, varargin)
 			if ~exist('useTask','var');	useTask = false; end
 			if useTask == false
 				updateFixationValues(obj.eyeLink, obj.stimuli.lastXPosition, obj.stimuli.lastYPosition)
-				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
-				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
-				obj.eyeLink.stimulusPositions(1).size = 3;
 			else
-				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition)
-				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
-				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
-				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
-				%fprintf('LASTX: %g | LASTY: %g\n',obj.lastXPosition,obj.lastYPosition)
-			end
-		end
-		
-		% ===================================================================
-		%> @brief updates eyelink with stimuli positions
-		%>
-		%> @param
-		% ===================================================================
-		function updateStimFixTarget(obj,useTask)
-			if ~exist('useTask','var');	useTask = false; end
-			if useTask == false
-				obj.eyeLink.stimulusPositions(1).x = obj.stimuli.lastXPosition;
-				obj.eyeLink.stimulusPositions(1).y = obj.stimuli.lastYPosition;
-				obj.eyeLink.stimulusPositions(1).size = 3;
-			else
-				obj.eyeLink.stimulusPositions(1).x = obj.lastXPosition;
-				obj.eyeLink.stimulusPositions(1).y = obj.lastYPosition;
-				obj.eyeLink.stimulusPositions(1).size = obj.lastSize;
+				[obj.lastXPosition,obj.lastYPosition] = getFixationPositions(obj.stimuli);
+				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition, varargin);
 			end
 		end
 		
@@ -1026,13 +1008,13 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 		function trial = getTaskIndex(obj, index)
+			trial = -1;
 			if ~exist('index','var') && isprop(obj.task,'totalRuns')
 				index = obj.task.totalRuns;	
 				trial = obj.task.outIndex(index);
-				%fprintf('GOT TRIAL NUMBER = %g \n',trial)
+				fprintf('getTaskIndex: GOT TRIAL NUMBER = %g \n',trial)
 				return
 			end
-			trial = -1;
 		end
 		
 		% ===================================================================
@@ -1066,31 +1048,47 @@ classdef runExperiment < optickaCore
 				end
 				t = sprintf('Index#%g|Block#%g|Run#%g = ',index,thisBlock,thisRun);
 				for i=1:obj.task.nVars
-					ix = []; valueList = []; oValueList = []; %#ok<NASGU>
+					ix = []; valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
+					doXY = false;
 					ix = obj.task.nVar(i).stimulus; %which stimuli
 					value=obj.task.outVars{thisBlock,i}(thisRun);
-					valueList(1,1:size(ix,2)) = value;
-					name=[obj.task.nVar(i).name 'Out']; %which parameter
-					if regexpi(name,'xPositionOut','once')
-						obj.lastXPosition = value;
-					elseif regexpi(name,'yPositionOut','once')
-						obj.lastYPosition = value;
-					elseif regexpi(name,'sizeOut','once')
-						obj.lastSize = value;
+					if iscell(value)
+						value = value{1};
 					end
+					[valueList{1,1:size(ix,2)}] = deal(value);
+					name=[obj.task.nVar(i).name 'Out']; %which parameter
+					
+					if regexpi(name,'^xyPositionOut','once')
+						doXY = true;
+						obj.lastXPosition = value(1);
+						obj.lastYPosition = value(2);
+					elseif regexpi(name,'^xPositionOut','once')
+						obj.lastXPosition = value;
+					elseif regexpi(name,'^yPositionOut','once')
+						obj.lastYPosition = value;
+					elseif regexpi(name,'^sizeOut','once')
+						obj.lastSize = value;
+					
+					end
+					
 					offsetix = obj.task.nVar(i).offsetstimulus;
 					offsetvalue = obj.task.nVar(i).offsetvalue;
 
 					if ~isempty(offsetix)
 						ix = [ix offsetix];
-						ovalueList(1,1:size(offsetix,2)) = value+offsetvalue;
-						valueList = [valueList ovalueList];
+						[ovalueList{1,1:size(offsetix,2)}] = deal(value+offsetvalue);
+						valueList = [valueList{:} ovalueList];
 					end
 
 					a = 1;
 					for j = ix %loop through our stimuli references for this variable
-						t = [t sprintf('S%g: %s = %g ',j,name,valueList(a))];
-						obj.stimuli{j}.(name)=valueList(a);
+						t = [t sprintf('S%g: %s = %s ',j,name,num2str(valueList{a}))];
+						if ~doXY
+							obj.stimuli{j}.(name)=valueList{a};
+						else
+							obj.stimuli{j}.xPositionOut=valueList{a}(1);
+							obj.stimuli{j}.yPositionOut=valueList{a}(2);
+						end
 						a = a + 1;
 					end
 				end
@@ -1381,6 +1379,7 @@ classdef runExperiment < optickaCore
 		function tS = checkFixationKeys(obj,tS)
 			%frame increment to stop keys being too sensitive
 			fInc = 6;
+			tS.keyTicks = tS.keyTicks + 1;
 			%now lets check whether any keyboard commands are pressed...
 			[keyIsDown, ~, keyCode] = KbCheck(-1);
 			if keyIsDown == 1
@@ -1390,7 +1389,7 @@ classdef runExperiment < optickaCore
 					case 'q' %quit
 						tS.stopTraining = true;
 					case {'UpArrow','up'} %give a reward at any time
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							if ~isempty(obj.stimuli.controlTable)
 								maxl = length(obj.stimuli.controlTable);
 								if isempty(obj.stimuli.tableChoice) && maxl > 0
@@ -1403,10 +1402,10 @@ classdef runExperiment < optickaCore
 								delta=obj.stimuli.controlTable(obj.stimuli.tableChoice).delta;
 								fprintf('===>>> Set Control table %g - %s : %g\n',obj.stimuli.tableChoice,var,delta)
 							end
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case {'DownArrow','down'}
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							if ~isempty(obj.stimuli.controlTable)
 								maxl = length(obj.stimuli.controlTable);
 								if isempty(obj.stimuli.tableChoice) && maxl > 0
@@ -1419,11 +1418,11 @@ classdef runExperiment < optickaCore
 								delta=obj.stimuli.controlTable(obj.stimuli.tableChoice).delta;
 								fprintf('===>>> Set Control table %g - %s : %g\n',obj.stimuli.tableChoice,var,delta)
 							end
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					
 					case {'LeftArrow','left'} %previous variable 1 value
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							if ~isempty(obj.stimuli.controlTable.variable)
 								choice = obj.stimuli.tableChoice;
 								if isempty(choice)
@@ -1456,10 +1455,10 @@ classdef runExperiment < optickaCore
 									fprintf('===>>> Stimulus#%g--%s: %g (%g)\n',stims(i),var,val,oval)
 								end
 							end
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case {'RightArrow','right'} %next variable 1 value
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							if ~isempty(obj.stimuli.controlTable.variable)
 								choice = obj.stimuli.tableChoice;
 								if isempty(choice)
@@ -1492,54 +1491,54 @@ classdef runExperiment < optickaCore
 									fprintf('===>>> Stimulus#%g--%s: %g (%g)\n',stims(i),var,val,oval)
 								end
 							end
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case ',<'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							if obj.stimuli.setChoice > 1
 								obj.stimuli.setChoice = round(obj.stimuli.setChoice - 1);
 								obj.stimuli.showSet();
 							end
 							fprintf('===>>> Stimulus Set: #%g | Stimuli: %s\n',obj.stimuli.setChoice, num2str(obj.stimuli.stimulusSets{obj.stimuli.setChoice}))
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case '.>'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							if obj.stimuli.setChoice < length(obj.stimuli.stimulusSets)
 								obj.stimuli.setChoice = obj.stimuli.setChoice + 1;
 								obj.stimuli.showSet();
 							end
 							fprintf('===>>> Stimulus Set: #%g | Stimuli: %s\n',obj.stimuli.setChoice, num2str(obj.stimuli.stimulusSets{obj.stimuli.setChoice}))
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'r'
 						timedTTL(obj.lJack,0,1000);
 					case '=+'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							obj.screen.screenXOffset = obj.screen.screenXOffset + 1;
 							fprintf('===>>> Screen X Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case '-_'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							obj.screen.screenXOffset = obj.screen.screenXOffset - 1;
 							fprintf('===>>> Screen X Center: %g deg / %g pixels\n',obj.screen.screenXOffset,obj.screen.xCenter);
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case '[{'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							obj.screen.screenYOffset = obj.screen.screenYOffset - 1;
 							fprintf('===>>> Screen Y Center: %g deg / %g pixels\n',obj.screen.screenYOffset,obj.screen.yCenter);
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case ']}'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							obj.screen.screenYOffset = obj.screen.screenYOffset + 1;
 							fprintf('===>>> Screen Y Center: %g deg / %g pixels\n',obj.screen.screenYOffset,obj.screen.yCenter);
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'k'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							stateName = 'blank';
 							[isState, index] = isStateName(obj.stateMachine,stateName);
 							if isState
@@ -1552,10 +1551,10 @@ classdef runExperiment < optickaCore
 									end
 								end
 							end
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'l'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							stateName = 'blank';
 							[isState, index] = isStateName(obj.stateMachine,stateName);
 							if isState
@@ -1567,151 +1566,142 @@ classdef runExperiment < optickaCore
 								end
 								
 							end
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'm'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Calibrate ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 							forceTransition(obj.stateMachine, 'calibrate');	
 							return
 						end						
 					case 'f'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Flash ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 							forceTransition(obj.stateMachine, 'flash');
 							return
 						end						
 					case 'o'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Override ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 							forceTransition(obj.stateMachine, 'override');
 							return
 						end	
 					case 'g'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> grid ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 							forceTransition(obj.stateMachine, 'showgrid');
 							return
 						end		
 					case 'z' 
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							obj.eyeLink.fixationInitTime = obj.eyeLink.fixationInitTime - 0.1;
 							if obj.eyeLink.fixationInitTime < 0.01
 								obj.eyeLink.fixationInitTime = 0.01;
 							end
 							fprintf('===>>> FIXATION INIT TIME: %g\n',obj.eyeLink.fixationInitTime)
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'x' 
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							obj.eyeLink.fixationInitTime = obj.eyeLink.fixationInitTime + 0.1;
 							fprintf('===>>> FIXATION INIT TIME: %g\n',obj.eyeLink.fixationInitTime)
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'c' 
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							obj.eyeLink.fixationTime = obj.eyeLink.fixationTime - 0.1;
 							if obj.eyeLink.fixationTime < 0.01
 								obj.eyeLink.fixationTime = 0.01;
 							end
 							fprintf('===>>> FIXATION TIME: %g\n',obj.eyeLink.fixationTime)
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'v'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							obj.eyeLink.fixationTime = obj.eyeLink.fixationTime + 0.1;
 							fprintf('===>>> FIXATION TIME: %g\n',obj.eyeLink.fixationTime)
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'b'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							obj.eyeLink.fixationRadius = obj.eyeLink.fixationRadius - 0.1;
 							if obj.eyeLink.fixationRadius < 0.1
 								obj.eyeLink.fixationRadius = 0.1;
 							end
 							fprintf('===>>> FIXATION RADIUS: %g\n',obj.eyeLink.fixationRadius)
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'n'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							obj.eyeLink.fixationRadius = obj.eyeLink.fixationRadius + 0.1;
 							fprintf('===>>> FIXATION RADIUS: %g\n',obj.eyeLink.fixationRadius)
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'p' %pause the display
-						if tS.totalTicks > tS.keyHold
-							if rem(tS.pauseToggle,2)==0
+						if tS.keyTicks > tS.keyHold
+							if strcmpi(obj.stateMachine.currentState.name,'pause')
+								forceTransition(obj.stateMachine, obj.stateMachine.currentState.next);
+								fprintf('===>>> PAUSE OFF!\n');
+							else
 								forceTransition(obj.stateMachine, 'pause');
 								fprintf('===>>> PAUSE ENGAGED!\n');
 								tS.pauseToggle = tS.pauseToggle + 1;
-							else
-								if isStateName(obj.stateMachine,'fixate')
-									forceTransition(obj.stateMachine, 'fixate');
-									fprintf('===>>> PAUSE OFF!\n');
-								elseif isStateName(obj.stateMachine,'blank')
-									forceTransition(obj.stateMachine, 'blank');
-									fprintf('===>>> PAUSE OFF!\n');
-								else
-									forceTransition(obj.stateMachine, 'prestimulus');
-									fprintf('===>>> PAUSE OFF!\n');
-								end
-								tS.pauseToggle = tS.pauseToggle + 1;
-							end
-							tS.keyHold = tS.totalTicks + fInc;
+							end 
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 's'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							ShowCursor;
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'd'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							HideCursor;
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case '1!'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							if isfield(tS,'eO') && tS.eO.isOpen == true
 								bothEyesOpen(tS.eO)
 								Eyelink('Command','binocular_enabled = NO')
 								Eyelink('Command','active_eye = LEFT')
 							end
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case '2@'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							if isfield(tS,'eO') && tS.eO.isOpen == true
 								bothEyesClosed(tS.eO)
 								Eyelink('Command','binocular_enabled = NO');
 								Eyelink('Command','active_eye = LEFT');
 							end
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case '3#'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							if isfield(tS,'eO') && tS.eO.isOpen == true
 								leftEyeClosed(tS.eO)
 								Eyelink('Command','binocular_enabled = NO');
 								Eyelink('Command','active_eye = RIGHT');
 							end
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case '4$'
-						if tS.totalTicks > tS.keyHold
+						if tS.keyTicks > tS.keyHold
 							if isfield(tS,'eO') && tS.eO.isOpen == true
 								rightEyeClosed(tS.eO)
 								Eyelink('Command','binocular_enabled = NO');
 								Eyelink('Command','active_eye = LEFT');
 							end		
-							tS.keyHold = tS.totalTicks + fInc;
+							tS.keyHold = tS.keyTicks + fInc;
 						end
 						
 				end
