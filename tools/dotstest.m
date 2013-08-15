@@ -7,10 +7,15 @@ name = [name c];
 runtime = 1.0;
 useEyeLink = false;
 
+p=uigetdir(pwd,'Select Directory to Save Data and Screenshot:');
+cd(p);
+
+backgroundColour = [0.3 0.3 0.3];
+
 %-----dots stimulus
 n = dotsStimulus();
 n.name = name;
-n.size = 3;
+n.size = 2;
 n.speed = 4;
 n.dotType = 2; %high quality dots
 n.dotSize = 0.1;
@@ -27,24 +32,58 @@ n.mask = true;
 a = apparentMotionStimulus();
 a.name = name;
 a.yPosition = 0;
-a.barLength = 6;
-a.barWidth = 0.5;
+a.barLength = 10;
+a.barWidth = 0.3;
 a.nBars = 10;
-a.timing = [0.1 0.02];
-a.barSpacing = 4;
+a.timing = [0.2 0.05];
+a.barSpacing = 2;
 %a.delayTime = 0.48;
 %a.offTime = 0.62;
 a.direction = 'right'; %initial direction of AM stimulus
 
+%-----use a real driqfting bar
+b = barStimulus();
+b.yPosition = 30;
+b.barLength = a.barLength;
+b.barWidth = a.barWidth;
+b.speed = a.barSpacing / sum(a.timing);
+b.startPosition = -b.speed;
+%hide(b)
+
+%-----grey mask spot
+sp = barStimulus();
+sp.yPosition = 30;
+sp.barWidth = n.size+0.5;
+sp.speed = 0;
+sp.startPosition = 0;
+sp.barLength = a.barLength +1;
+sp.colour = [0.3 0.3 0.3];
+sp.alpha = 1;
+%hide(sp);
+
+%-----tweak timing based on settings
+t = (sum(a.timing) * a.nBars/2) - a.timing(2);
+n.delayTime = t; %time offset to first presentation
+n.offTime = t + 0.2; %time to turn off dots
+runtime = sum(a.timing) * a.nBars;
+
 %-----combine them into a single meta stimulus
 stimuli = metaStimulus();
-stimuli{1} = n;
-stimuli{2} = a;
+
+amidx = 4;
+dotsidx = 3;
+baridx = 1;
+maskidx = 2;
+stimuli{amidx} = a;
+stimuli{dotsidx} = n;
+stimuli{baridx} = b;
+stimuli{maskidx} = sp;
 
 %-----open the PTB screens
-s = screenManager('verbose',false,'blend',true,'screen',0,...
-	'bitDepth','8bit','debug',true,'antiAlias',0,'nativeBeamPosition',0, ...
-	'windowed',[],'backgroundColour',[0.3 0.3 0.3 0]); %use a temporary screenManager object
+s = screenManager('verbose',false,'blend',false,'screen',1,...
+	'bitDepth','8bit','debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
+	'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
+	'windowed',[],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
 screenVals = open(s); %open PTB screen
 setup(stimuli,s); %setup our stimulus object
 %drawGrid(s); %draw +-5 degree dot grid
@@ -123,9 +162,15 @@ try %our main experimental try catch loop
 			dirToggle = 'left';
 		end
 		
-		stimuli{1}.angleOut = angleToggle;
-		stimuli{2}.directionOut = dirToggle;
-		
+		stimuli{dotsidx}.angleOut = angleToggle;
+		stimuli{amidx}.directionOut = dirToggle;
+		if length(stimuli) >= baridx
+			if strcmpi(dirToggle,'right')
+				stimuli{baridx}.angleOut = 0;
+			else
+				stimuli{baridx}.angleOut = 180;
+			end
+		end
 		if (angleToggle == 180 && strcmpi(dirToggle,'left')) || (angleToggle == 0 && strcmpi(dirToggle,'right'))
 			congruence = true;
 		else
@@ -147,7 +192,7 @@ try %our main experimental try catch loop
 		
 		%-----setup our coherence value and print some info for the trial
 		if congruence == true
-			stimuli{1}.coherenceOut = UDCONGRUENT.xCurrent;
+			stimuli{dotsidx}.coherenceOut = UDCONGRUENT.xCurrent;
 			cc='CON';
 			st=UDCONGRUENT.stop;
 			rev = max(UDCONGRUENT.reversal);
@@ -155,7 +200,7 @@ try %our main experimental try catch loop
 			down = UDCONGRUENT.d;
 			x=length(UDCONGRUENT.x);
 		else
-			stimuli{1}.coherenceOut = UDINCONGRUENT.xCurrent;
+			stimuli{dotsidx}.coherenceOut = UDINCONGRUENT.xCurrent;
 			cc='INCON';
 			st=UDINCONGRUENT.stop;
 			rev = max(UDINCONGRUENT.reversal);
@@ -164,7 +209,7 @@ try %our main experimental try catch loop
 			x=length(UDINCONGRUENT.x);
 		end
 		update(stimuli);
-		t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | U/D: %i/%i |Stop/Rev: %i/%i \n',angleToggle,dirToggle,stimuli{1}.coherenceOut,cc,x,up,down,st,rev);
+		t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | U/D: %i/%i |Stop/Rev: %i/%i \n',angleToggle,dirToggle,stimuli{dotsidx}.coherenceOut,cc,x,up,down,st,rev);
 		disp(t);
 		
 		%-----fire up eyelink
@@ -253,6 +298,7 @@ try %our main experimental try catch loop
 				t = GetSecs+5;
 			end
 			breakloopkey = false;
+			quitkey = false;
 			while ~breakloopkey
 				[keyIsDown, ~, keyCode] = KbCheck(-1);
 				if keyIsDown == 1
@@ -275,6 +321,7 @@ try %our main experimental try catch loop
 							breakloopkey = true;
 						case {'q'}
 							fprintf('\nQUIT!\n');
+							quitkey = true;
 							breakloop = true;
 							breakloopkey = true;
 						otherwise
@@ -304,7 +351,6 @@ try %our main experimental try catch loop
 				breakloop = true;
 			end
 		end
-		fprintf('\n');
 		Screen('Flip',s.win); %flip the buffer
 		WaitSecs(0.5);
 	end
@@ -318,20 +364,20 @@ try %our main experimental try catch loop
 	reset(stimuli); %reset our stimulus ready for use again
 	
 	%-----Save Data
-	dat(1).name = name;
-	dat.useEyeLink = useEyeLink;
-	dat.runtime = runtime;
-	dat(1).sc(1).name='UDCONGRUENT';
-	dat(1).sc(1).data=UDCONGRUENT;
-	dat(1).sc(2).name='UDINCONGRUENT';
-	dat(1).sc(2).data=UDINCONGRUENT;
-	if useEyeLink == true;dat(1).eL = eL;end
-	dat(1).screen = s;
-	dat(1).stimuli = stimuli;
-	assignin('base','dat',dat);
-	uisave('dat',[name '.mat']);
-	
-	clear s stimuli eL dat;
+	if quitkey ~= true
+		dat(1).name = name;
+		dat.useEyeLink = useEyeLink;
+		dat.runtime = runtime;
+		dat(1).sc(1).name='UDCONGRUENT';
+		dat(1).sc(1).data=UDCONGRUENT;
+		dat(1).sc(2).name='UDINCONGRUENT';
+		dat(1).sc(2).data=UDINCONGRUENT;
+		if useEyeLink == true;dat(1).eL = eL;end
+		dat(1).screen = s;
+		dat(1).stimuli = stimuli;
+		assignin('base','dat',dat);
+		uisave('dat',[name '.mat']);
+	end
 	
 	%----------------Threshold estimates
 	Mean1 = PAL_AMUD_analyzeUD(UDCONGRUENT, 'trials', 10);
@@ -365,7 +411,9 @@ try %our main experimental try catch loop
 	set(gca,'FontSize',16);
 	title(['INCONGRUENT = ' num2str(Mean2)])
 	axis([0 max(t)+1 min(UDINCONGRUENT.x)-(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10 max(UDINCONGRUENT.x)+(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10]);
-	p.export([name '.png']);
+	if quitkey ~= true
+		p.export([name '.png']);
+	end
 
 catch ME
 	ple(ME)

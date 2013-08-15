@@ -4,13 +4,13 @@
 echo; echo "---> Deleting old html directory"; echo
 rm -rf html/
 
-MATLAB='/Applications/MATLAB_R2012b.app/bin/matlab'
+MATLAB='/Applications/MATLAB_R2013a.app/bin/matlab'
 if [ -f $MATLAB ]; then
 	$MATLAB -nodesktop -nosplash -r "publish('runtest.m');pause(2);exit"
 fi
 
 # We scrape the version number from the main opticka file
-VER=$(grep -o -E -e "optickaVersion\ +=\ +'[0-9\.]+'" opticka.m | grep -o -E -e "[0-9\.]+")
+VER=$(grep -o -E -e "optickaVersion@char\ +=\ +'[0-9\.]+'" opticka.m | grep -o -E -e "[0-9\.]+")
 echo; echo "---> Opticka version = $VER"; echo
 sleep 1
 # and then edit the Doxygen file

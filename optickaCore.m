@@ -1,6 +1,9 @@
 % ========================================================================
 %> @brief optickaCore base class inherited by many other opticka classes.
-%> optickaCore is itself derived from handle
+%> optickaCore is itself derived from handle. It provides methods to find
+%> attributes with specific parameters (used in autogenerating UI panels),
+%> clone the object, parse arguments safely on construction and default
+%> properties such as datestamp, a UUID and name/comment management.
 % ========================================================================
 classdef optickaCore < handle
 	
@@ -14,7 +17,7 @@ classdef optickaCore < handle
 	
 	%--------------------ABSTRACT PROPERTIES----------%
 	properties (Abstract = true)
-		%> verbose logging, subclasses must assign this. This is normally true/false
+		%> verbose logging, subclasses must assign this. This is normally logical true/false
 		verbose
 	end
 	
@@ -104,7 +107,6 @@ classdef optickaCore < handle
 		%> @brief initialise save directory path
 		%>
 		%> @param path path to save
-		%> 
 		% ===================================================================
 		function initialiseSave(obj,path)
 			if exist('path','var') && exist(path,'dir')
@@ -283,7 +285,7 @@ classdef optickaCore < handle
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief set paths for object
@@ -308,7 +310,7 @@ classdef optickaCore < handle
 		
 		% ===================================================================
 		%> @brief Sets properties from a structure or normal arguments pairs,
-		%> ignores invalid properties
+		%> ignores invalid or non-allowed properties
 		%>
 		%> @param args input structure
 		%> @param allowedProperties properties possible to set on construction

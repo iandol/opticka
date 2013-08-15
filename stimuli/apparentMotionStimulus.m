@@ -1,5 +1,8 @@
 % ========================================================================
-%> @brief barStimulus single bar stimulus, inherits from baseStimulus
+%> @brief apparentMotionStimulus, inherits from baseStimulus
+%>
+%> apparentMotionStimulus is a simple apparent motion stimulus, comprising
+%> of a bar which flashes on and off across a series of spatial positions.
 % ========================================================================
 classdef apparentMotionStimulus < baseStimulus
 
