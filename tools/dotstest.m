@@ -4,7 +4,6 @@ name = 'AM Ian Dots';
 c = sprintf(' %i',fix(clock()));
 c = regexprep(c,' ','_');
 name = [name c];
-runtime = 1.0;
 useEyeLink = false;
 
 p=uigetdir(pwd,'Select Directory to Save Data and Screenshot:');
@@ -15,7 +14,7 @@ backgroundColour = [0.3 0.3 0.3];
 %-----dots stimulus
 n = dotsStimulus();
 n.name = name;
-n.size = 2;
+n.size = 3;
 n.speed = 4;
 n.dotType = 2; %high quality dots
 n.dotSize = 0.1;
@@ -35,8 +34,8 @@ a.yPosition = 0;
 a.barLength = 10;
 a.barWidth = 0.3;
 a.nBars = 10;
-a.timing = [0.2 0.05];
-a.barSpacing = 2;
+a.timing = [0.1 0.1];
+a.barSpacing = 3;
 %a.delayTime = 0.48;
 %a.offTime = 0.62;
 a.direction = 'right'; %initial direction of AM stimulus
@@ -48,7 +47,7 @@ b.barLength = a.barLength;
 b.barWidth = a.barWidth;
 b.speed = a.barSpacing / sum(a.timing);
 b.startPosition = -b.speed;
-%hide(b)
+hide(b)
 
 %-----grey mask spot
 sp = barStimulus();
@@ -59,13 +58,14 @@ sp.startPosition = 0;
 sp.barLength = a.barLength +1;
 sp.colour = [0.3 0.3 0.3];
 sp.alpha = 1;
-%hide(sp);
+hide(sp);
 
 %-----tweak timing based on settings
 t = (sum(a.timing) * a.nBars/2) - a.timing(2);
 n.delayTime = t; %time offset to first presentation
 n.offTime = t + 0.2; %time to turn off dots
 runtime = sum(a.timing) * a.nBars;
+%runtime = 1.0;
 
 %-----combine them into a single meta stimulus
 stimuli = metaStimulus();
@@ -80,14 +80,12 @@ stimuli{baridx} = b;
 stimuli{maskidx} = sp;
 
 %-----open the PTB screens
-s = screenManager('verbose',false,'blend',false,'screen',1,...
+s = screenManager('verbose',false,'blend',true,'screen',0,...
 	'bitDepth','8bit','debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
 	'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
 	'windowed',[],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
 screenVals = open(s); %open PTB screen
 setup(stimuli,s); %setup our stimulus object
-%drawGrid(s); %draw +-5 degree dot grid
-%drawScreenCenter(s); %centre spot
 
 %-----setup eyelink
 if useEyeLink == true;
@@ -122,10 +120,10 @@ end
 up				= 1; %increase after n wrong
 down			= 2; %decrease after n consecutive right
 StepSizeDown	= 0.05;
-StepSizeUp		= 0.05;
+StepSizeUp		= 0.1;
 stopcriterion	= 'trials';
 stoprule		= 40;
-startvalue		= 0.5; %intensity on first trial
+startvalue		= 0.35; %intensity on first trial
 xMin			= 0;
 
 UDCONGRUENT = PAL_AMUD_setupUD('up',up,'down',down);
@@ -241,13 +239,15 @@ try %our main experimental try catch loop
 			if useEyeLink == true;statusMessage(eL,[t 'Show Stimulus...']);end
 			drawSpot(s,0.1,[1 1 0]);
 			vbls = Screen('Flip',s.win); %flip the buffer
+			vbl=vbls;
 			while GetSecs <= vbls+runtime
 				draw(stimuli); %draw stimulus
 				drawSpot(s,0.1,[1 1 0]);
 				%if useEyeLink == true;getSample(eL);drawEyePosition(eL);end
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				animate(stimuli); %animate stimulus, will be seen on next draw
-				vbl = Screen('Flip',s.win); %flip the buffer
+				nextvbl = vbl + screenVals.halfisi;
+				vbl = Screen('Flip',s.win, nextvbl); %flip the buffer
 			end
 			vbl = Screen('Flip',s.win);
 			
