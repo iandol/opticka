@@ -29,13 +29,15 @@ eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
 
 %-------randomise stimulus variables every trial?
+% obj.stimuli.choice = [];
+% n = 1;
+% in(n).name = 'xyPosition';
+% in(n).values = [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
+% in(n).stimuli = [7 8];
+% in(n).offset = [];
+% obj.stimuli.stimulusTable = in;
 obj.stimuli.choice = [];
-n = 1;
-in(n).name = 'xyPosition';
-in(n).values = [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
-in(n).stimuli = [7 8];
-in(n).offset = [];
-obj.stimuli.stimulusTable = in;
+obj.stimuli.stimulusTable = [];
 
 %--------allows using arrow keys to control this table during presentation
 obj.stimuli.tableChoice = 1;
@@ -112,6 +114,7 @@ pauseEntryFcn = @()setOffline(eL);
 psEntryFcn = { @()setOffline(eL); ...
 	@()randomise(obj.stimuli); ...
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
+	@()trackerClearScreen(eL); ... 
 	@()trackerDrawFixation(eL); ...
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 	@()resetFixation(eL); ...

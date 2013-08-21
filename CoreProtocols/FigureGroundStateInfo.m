@@ -9,28 +9,28 @@
 % tS = general simple struct to hold variables for this run
 %
 %------------General Settings-----------------
-tS.rewardTime = 200; %TTL time in milliseconds
+tS.rewardTime = 600; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
-tS.recordEyePosition = true;
-tS.askForComments = true;
-tS.saveData = true; %*** save behavioural and eye movement data? ***
+tS.recordEyePosition = false;
+tS.askForComments = false;
+tS.saveData = false; %*** save behavioural and eye movement data? ***
 obj.useDataPixx = true; %*** drive plexon to collect data? ***
 tS.dummyEyelink = false; 
 tS.name = 'figure-ground';
 
-luminancePedestal = [0.5 0.5 0.5];
+luminancePedestal = [0.7 0.7 0.7];
 fixX = 0;
 fixY = 0;
-firstFixInit = 0.6;
-firstFixTime = [0.5 0.7];
-firstFixRadius = 1;
+firstFixInit = 1.5;
+firstFixTime = 0.3;
+firstFixRadius = 1.5;
 obj.lastXPosition = fixX;
 obj.lastYPosition = fixY;
 
-targetFixInit = 0.5;
-targetFixTime = [0.5 0.9];
-targetRadius = 1.6;
+targetFixInit = 0.75;
+targetFixTime = [0.1];
+targetRadius = 3;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;
@@ -153,6 +153,7 @@ correctExitFcn = {
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
+	@()trackerClearScreen(eL); ... 
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
@@ -213,7 +214,7 @@ stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
 'prefix'	'fixate'	1.15	prefixEntryFcn	prefixFcn		[]				[]; ...
-'fixate'	'incorrect'	1.4	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
+'fixate'	'incorrect'	2	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
 'stimulus'  'incorrect'	1.5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			[]				incExitFcn; ...
 'breakfix'	'prefix'	1.25	breakEntryFcn	incFcn			[]				incExitFcn; ...

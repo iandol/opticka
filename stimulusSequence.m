@@ -228,7 +228,9 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					for g = 1:length(obj.nVar(f).values)
 						for hh = 1:length(obj.outValues(:,f))
 							if iscell(obj.nVar(f).values(g))
-								if min(obj.outValues{hh,f}{:} == obj.nVar(f).values{g}) == 1;
+								if ischar(obj.nVar(f).values{g}) && strcmpi(obj.outValues{hh,f}{:},obj.nVar(f).values{g})
+									obj.outMap(hh,f) = g;
+								elseif ~ischar(obj.nVar(f).values{g}) && min(obj.outValues{hh,f}{:} == obj.nVar(f).values{g}) == 1;
 									obj.outMap(hh,f) = g;
 								end
 							else

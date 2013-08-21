@@ -5,6 +5,7 @@ c = sprintf(' %i',fix(clock()));
 c = regexprep(c,' ','_');
 name = [name c];
 useEyeLink = false;
+useStaircase = true;
 
 p=uigetdir(pwd,'Select Directory to Save Data and Screenshot:');
 cd(p);

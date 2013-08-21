@@ -115,8 +115,8 @@ classdef eyelinkManager < optickaCore
 				obj.isDummy = true; 
 			end
 			obj.modify.calibrationtargetcolour = [1 1 0];
-			obj.modify.calibrationtargetsize = 5;
-			obj.modify.calibrationtargetwidth = 3;
+			obj.modify.calibrationtargetsize = 0.7;
+			obj.modify.calibrationtargetwidth = 0.02;
 			obj.modify.waitformodereadytime = 500;
 			obj.modify.displayCalResults = 1;
 			obj.modify.targetbeep = 0;
@@ -770,7 +770,8 @@ classdef eyelinkManager < optickaCore
 			
 				obj.statusMessage('DEMO Running'); %
 				setOffline(obj); %Eyelink('Command', 'set_idle_mode');
-				trackerDrawFixation(obj)
+				trackerClearScreen(obj);
+				trackerDrawFixation(obj);
 				
 				xx = 0;
 				a = 1;
@@ -782,8 +783,8 @@ classdef eyelinkManager < optickaCore
 					edfMessage(obj,['TRIALID ' num2str(a)]);
 					startRecording(obj);
 					WaitSecs(0.1);
-					syncTime(obj);
 					vbl=Screen('Flip',s.win);
+					syncTime(obj);
 					while yy == 0
 						err = checkRecording(obj);
 						if(err~=0); xx = 1; break; end;
@@ -818,6 +819,7 @@ classdef eyelinkManager < optickaCore
 					edfMessage(obj,'END_RT');
 					stopRecording(obj)
 					edfMessage(obj,'TRIAL_RESULT 1')
+					%driftCorrection(obj);
 					obj.fixationX = randi([-12 12]);
 					obj.fixationY = randi([-12 12]);
 					obj.fixationRadius = randi([1 6]);
@@ -826,6 +828,7 @@ classdef eyelinkManager < optickaCore
 					o.yPositionOut = obj.fixationY;
 					setOffline(obj); %Eyelink('Command', 'set_idle_mode');
 					statusMessage(obj,sprintf('X Pos = %g | Y Pos = %g | Radius = %g',obj.fixationX,obj.fixationY,obj.fixationRadius));
+					trackerClearScreen(obj);
 					trackerDrawFixation(obj)
 					update(o);
 					WaitSecs(0.3)
