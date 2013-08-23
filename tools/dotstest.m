@@ -137,6 +137,15 @@ UDINCONGRUENT = PAL_AMUD_setupUD(UDINCONGRUENT,'StepSizeDown',StepSizeDown,'Step
 	StepSizeUp,'stopcriterion',stopcriterion,'stoprule',stoprule, ...
 	'startvalue',startvalue,'xMin',xMin);
 
+task = stimulusSequence();
+task.nVar(1).name = 'angle';
+task.nVar(1).stimuli = dotsidx;
+task.nVar(1).values = {0, 180};
+task.nVar(2).name = 'direction';
+task.nVar(2).stimuli = amidx;
+task.nVar(2).values = {'left','right'};
+randomiseStimuli(task);
+
 try %our main experimental try catch loop
 	breakloop = false;
 	ts(1).x = -10 * s.ppd;
