@@ -148,15 +148,17 @@ randomiseStimuli(task);
 
 try %our main experimental try catch loop
 	breakloop = false;
+	
+	%ts is our stimulus positions to draw to the eyetracker display
 	ts(1).x = -10 * s.ppd;
 	ts(1).y = 0;
 	ts(1).size = 10 * s.ppd;
 	ts(1).selected = false;
 	ts(2) = ts(1);
 	ts(2).x = 10 * s.ppd;
+	
 	if useEyeLink == true; getSample(eL); end
 	vbl = Screen('Flip',s.win);
-	Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 	
 	loop = 1;
 	while ~breakloop
@@ -234,6 +236,7 @@ try %our main experimental try catch loop
 		if useEyeLink == true
 			while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
 				drawSpot(s,0.1,[1 1 0]);
+				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				Screen('Flip',s.win); %flip the buffer
 				getSample(eL);
 				fixated=testSearchHoldFixation(eL,'fix','breakfix');
