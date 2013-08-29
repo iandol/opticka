@@ -145,6 +145,7 @@ task.nVar(2).name = 'direction';
 task.nVar(2).stimuli = amidx;
 task.nVar(2).values = {'left','right'};
 randomiseStimuli(task);
+initialiseTask(task)
 
 try %our main experimental try catch loop
 	breakloop = false;
@@ -161,31 +162,35 @@ try %our main experimental try catch loop
 	vbl = Screen('Flip',s.win);
 	
 	loop = 1;
+	response = [];
 	while ~breakloop
 		
-		%-----select new angle and coherence
-		angleToggle = randi([0 1]) * 180;
-		dirToggle = randi([0 1]);
-		if dirToggle == 0;
-			dirToggle = 'right';
-		else
-			dirToggle = 'left';
-		end
-		
-		stimuli{dotsidx}.angleOut = angleToggle;
-		stimuli{amidx}.directionOut = dirToggle;
-		if length(stimuli) >= baridx
-			if strcmpi(dirToggle,'right')
-				stimuli{baridx}.angleOut = 0;
+		if useStaircase
+			%-----select new angle and coherence
+			angleToggle = randi([0 1]) * 180;
+			dirToggle = randi([0 1]);
+			if dirToggle == 0;
+				dirToggle = 'right';
 			else
-				stimuli{baridx}.angleOut = 180;
+				dirToggle = 'left';
 			end
-		end
-		if (angleToggle == 180 && strcmpi(dirToggle,'left')) || (angleToggle == 0 && strcmpi(dirToggle,'right'))
-			congruence = true;
+
+			stimuli{dotsidx}.angleOut = angleToggle;
+			stimuli{amidx}.directionOut = dirToggle;
+			if length(stimuli) >= baridx
+				if strcmpi(dirToggle,'right')
+					stimuli{baridx}.angleOut = 0;
+				else
+					stimuli{baridx}.angleOut = 180;
+				end
+			end
+			if (angleToggle == 180 && strcmpi(dirToggle,'left')) || (angleToggle == 0 && strcmpi(dirToggle,'right'))
+				congruence = true;
+			else
+				congruence = false;
+			end
 		else
-			congruence = false;
-		end
+			if isempty(response)
 		
 		%------draw bits to the eyelink
 		if useEyeLink == true

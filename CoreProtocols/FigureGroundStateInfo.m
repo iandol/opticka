@@ -12,7 +12,7 @@
 tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
-tS.recordEyePosition = false;
+tS.recordEyePosition = true;
 tS.askForComments = false;
 tS.saveData = false; %*** save behavioural and eye movement data? ***
 obj.useDataPixx = true; %*** drive plexon to collect data? ***
@@ -22,15 +22,15 @@ tS.name = 'figure-ground';
 luminancePedestal = [0.5 0.5 0.5];
 fixX = 0;
 fixY = 0;
-firstFixInit = 1;
+firstFixInit = 0.75;
 firstFixTime = [0.5];
 firstFixRadius = 1;
 obj.lastXPosition = fixX;
 obj.lastYPosition = fixY;
-strict = false;
+strict = true;
 
 targetFixInit = 0.75;
-targetFixTime = [0.4];
+targetFixTime = [0.5 0.7];
 targetRadius = 3;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
