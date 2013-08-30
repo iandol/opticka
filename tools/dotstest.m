@@ -145,45 +145,52 @@ task.nVar(2).name = 'direction';
 task.nVar(2).stimuli = amidx;
 task.nVar(2).values = {'left','right'};
 randomiseStimuli(task);
+initialiseTask(task)
 
 try %our main experimental try catch loop
 	breakloop = false;
+	
+	%ts is our stimulus positions to draw to the eyetracker display
 	ts(1).x = -10 * s.ppd;
 	ts(1).y = 0;
 	ts(1).size = 10 * s.ppd;
 	ts(1).selected = false;
 	ts(2) = ts(1);
 	ts(2).x = 10 * s.ppd;
+	
 	if useEyeLink == true; getSample(eL); end
 	vbl = Screen('Flip',s.win);
-	Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 	
 	loop = 1;
+	response = [];
 	while ~breakloop
 		
-		%-----select new angle and coherence
-		angleToggle = randi([0 1]) * 180;
-		dirToggle = randi([0 1]);
-		if dirToggle == 0;
-			dirToggle = 'right';
-		else
-			dirToggle = 'left';
-		end
-		
-		stimuli{dotsidx}.angleOut = angleToggle;
-		stimuli{amidx}.directionOut = dirToggle;
-		if length(stimuli) >= baridx
-			if strcmpi(dirToggle,'right')
-				stimuli{baridx}.angleOut = 0;
+		if useStaircase
+			%-----select new angle and coherence
+			angleToggle = randi([0 1]) * 180;
+			dirToggle = randi([0 1]);
+			if dirToggle == 0;
+				dirToggle = 'right';
 			else
-				stimuli{baridx}.angleOut = 180;
+				dirToggle = 'left';
 			end
-		end
-		if (angleToggle == 180 && strcmpi(dirToggle,'left')) || (angleToggle == 0 && strcmpi(dirToggle,'right'))
-			congruence = true;
+
+			stimuli{dotsidx}.angleOut = angleToggle;
+			stimuli{amidx}.directionOut = dirToggle;
+			if length(stimuli) >= baridx
+				if strcmpi(dirToggle,'right')
+					stimuli{baridx}.angleOut = 0;
+				else
+					stimuli{baridx}.angleOut = 180;
+				end
+			end
+			if (angleToggle == 180 && strcmpi(dirToggle,'left')) || (angleToggle == 0 && strcmpi(dirToggle,'right'))
+				congruence = true;
+			else
+				congruence = false;
+			end
 		else
-			congruence = false;
-		end
+			if isempty(response)
 		
 		%------draw bits to the eyelink
 		if useEyeLink == true
@@ -234,6 +241,7 @@ try %our main experimental try catch loop
 		if useEyeLink == true
 			while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
 				drawSpot(s,0.1,[1 1 0]);
+				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				Screen('Flip',s.win); %flip the buffer
 				getSample(eL);
 				fixated=testSearchHoldFixation(eL,'fix','breakfix');

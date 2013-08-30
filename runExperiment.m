@@ -518,7 +518,7 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
-					eL.saveFile = [obj.paths.savedData filesep 'Simba-' obj.savePrefix '.edf'];
+					eL.saveFile = [obj.paths.savedData filesep 'Spence-' obj.savePrefix '.edf'];
 				end
 				
 				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',['Fix' obj.savePrefix]); 
@@ -568,7 +568,7 @@ classdef runExperiment < optickaCore
 				
 				%-----premptive save in case of crash or error
 				rE = obj;
-				save([tempdir filesep 'Simba-' obj.savePrefix '.mat'],'rE','tS');
+				save([tempdir filesep 'Spence-' obj.savePrefix '.mat'],'rE','tS');
 				
 				createPlot(bR, eL);
 				
@@ -737,7 +737,7 @@ classdef runExperiment < optickaCore
 					rE = obj;
 					assignin('base', 'rE', obj);
 					assignin('base', 'tS', tS);
-					save([obj.paths.savedData filesep 'Simba-' obj.savePrefix '.mat'],'rE','bR','tL','tS','sM')
+					save([obj.paths.savedData filesep 'Spence-' obj.savePrefix '.mat'],'rE','bR','tL','tS','sM')
 				end
 				clear rE tL s tS bR lJ eL io sM			
 			catch ME

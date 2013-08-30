@@ -9,27 +9,28 @@
 % tS = general simple struct to hold variables for this run
 %
 %------------General Settings-----------------
-tS.rewardTime = 600; %TTL time in milliseconds
+tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
-tS.recordEyePosition = false;
+tS.recordEyePosition = true;
 tS.askForComments = false;
 tS.saveData = false; %*** save behavioural and eye movement data? ***
 obj.useDataPixx = true; %*** drive plexon to collect data? ***
 tS.dummyEyelink = false; 
 tS.name = 'figure-ground';
 
-luminancePedestal = [0.7 0.7 0.7];
+luminancePedestal = [0.5 0.5 0.5];
 fixX = 0;
 fixY = 0;
-firstFixInit = 1.5;
-firstFixTime = 0.3;
-firstFixRadius = 1.5;
+firstFixInit = 0.75;
+firstFixTime = [0.5];
+firstFixRadius = 1;
 obj.lastXPosition = fixX;
 obj.lastYPosition = fixY;
+strict = true;
 
 targetFixInit = 0.75;
-targetFixTime = [0.1];
+targetFixTime = [0.5 0.7];
 targetRadius = 3;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
@@ -45,7 +46,7 @@ eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 = use any keyboard
 
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
-eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
+eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, strict);
 
 %randomise stimulus variables every trial?
 obj.stimuli.choice = [];
@@ -108,10 +109,11 @@ initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 
 %exit fixation phase
 fixExitFcn = { @()animate(obj.stimuli); ... % animate stimuli for subsequent draw
-	@()updateFixationTarget(obj, tS.useTask, targetFixInit, targetFixTime, targetRadius, true); ... %use our stimuli values for next fix X and Y
-	@()updateFixationValues(eL, [], [], targetFixInit, targetFixTime, targetRadius, true); ... %set target fix window
+	@()updateFixationTarget(obj, tS.useTask, targetFixInit, targetFixTime, targetRadius, strict); ... %use our stimuli values for next fix X and Y
+	@()updateFixationValues(eL, [], [], targetFixInit, targetFixTime, targetRadius, strict); ... %set target fix window
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edit(obj.stimuli,4,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
+	@()edit(obj.stimuli,2,'modulateColourOut',luminancePedestal); ... %luminance pedestal
 	@()edfMessage(eL,'END_FIX'); ...
 	}; 
 
@@ -147,12 +149,12 @@ correctFcn = { @()draw(obj.stimuli);
 	};
 
 %when we exit the correct state
-correctExitFcn = {
+correctExitFcn = { @()edit(obj.stimuli,2,'modulateColourOut',[0.5 0.5 0.5]); ... %luminance pedestal
 	@()setOffline(eL); ... %set eyelink offline
 	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
-	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
+	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, strict); ...
 	@()trackerClearScreen(eL); ... 
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
@@ -173,12 +175,12 @@ incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eye
 incFcn = @()draw(obj.stimuli);
 
 %incorrect / break exit
-incExitFcn = { 
+incExitFcn = { @()edit(obj.stimuli,2,'modulateColourOut',[0.5 0.5 0.5]); ... %luminance pedestal
 	@()setOffline(eL); ... %set eyelink offline
 	@()updateVariables(obj,[],[],false); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
-	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixInit, firstFixRadius, true); ...
+	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
