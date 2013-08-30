@@ -82,8 +82,8 @@ if ( nslowchannels > 0 )
     allad = cell(1,nslowchannels);
     for ich = 0:nslowchannels-1
         if ( slowcounts(ich+1) > 0 )
-            [adfreq, nad, tsad, fnad, allad{ich+1}] = plx_ad(OpenedFileName, ich);
-            numads = numads + 1;
+			[adfreq, nad, tsad, fnad, allad{ich+1}] = plx_ad(OpenedFileName, ich);
+			numads = numads + 1;
         end
     end
 end
@@ -113,15 +113,15 @@ end
 if ( nevchannels > 0 ) 
     % need the event chanmap to make any sense of these
     [u,evchans] = plx_event_chanmap(OpenedFileName);
-    for iev = 1:nevchannels
-        if ( evcounts(iev) > 0 )
+	for iev = 1:nevchannels
+		if ( evcounts(iev) > 0 )
             evch = evchans(iev);
             if ( evch == 257 )
-                [nevs{iev}, tsevs{iev}, svStrobed] = plx_event_ts(OpenedFileName, evch); 
-            else
-                [nevs{iev}, tsevs{iev}, svdummy] = plx_event_ts(OpenedFileName, evch);
+				[nevs{iev}, tsevs{iev}, svStrobed] = plx_event_ts(OpenedFileName, evch); 
+			else
+				[nevs{iev}, tsevs{iev}, svdummy] = plx_event_ts(OpenedFileName, evch);
             end
-        end
-    end
+		end
+	end
 end
 [nev,evnames] = plx_event_names(OpenedFileName);
