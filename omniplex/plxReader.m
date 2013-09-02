@@ -166,8 +166,8 @@ classdef plxReader < optickaCore
 			end
 			if isempty(rE.tS) && exist('tS','var'); rE.tS = tS; end
 			meta.filename = [pn fn];
-			meta.protocol = 'FigureGround';
-			meta.description = 'FigureGround';
+			if ~isfield(tS,'name'); meta.protocol = 'FigureGround';	meta.description = 'FigureGround'; else
+				meta.protocol = tS.name; meta.description = tS.name; end
 			meta.comments = rE.comment;
 			meta.date = rE.savePrefix;
 			meta.numvars = rE.task.nVars;
@@ -227,6 +227,11 @@ classdef plxReader < optickaCore
 			[OpenedFileName, Version, Freq, Comment, Trodalness,...
 				NPW, PreThresh, SpikePeakV, SpikeADResBits,...
 				SlowPeakV, SlowADResBits, Duration, DateTime] = plx_information(obj.file);
+			if exist('plx_mexplex_version','file')
+				sdkversion = plx_mexplex_version();
+			else
+				sdkversion = -1;
+			end
 			obj.info = {};
 			obj.info{1} = sprintf('PLX File : %s', OpenedFileName);
 			obj.info{end+1} = sprintf('Behavioural File : %s', obj.matfile);
@@ -235,13 +240,15 @@ classdef plxReader < optickaCore
 			obj.info{end+1} = ' ';
 			obj.info{end+1} = sprintf('Plexon File Comment : %s', Comment);
 			obj.info{end+1} = sprintf('Version : %g', Version);
+			obj.info{end+1} = sprintf('SDK Version : %g', sdkversion);
 			obj.info{end+1} = sprintf('Frequency : %g Hz', Freq);
 			obj.info{end+1} = sprintf('Plexon Date/Time : %s', num2str(DateTime));
 			obj.info{end+1} = sprintf('Duration : %g seconds', Duration);
 			obj.info{end+1} = sprintf('Num Pts Per Wave : %g', NPW);
 			obj.info{end+1} = sprintf('Num Pts Pre-Threshold : %g', PreThresh);
 			% some of the information is only filled if the plx file version is >102
-			if ( Version > 102 )
+			if exist('Trodalness','var')
+				Trodalness = max(Trodalness);
 				if ( Trodalness < 2 )
 					obj.info{end+1} = sprintf('Data type : Single Electrode');
 				elseif ( Trodalness == 2 )

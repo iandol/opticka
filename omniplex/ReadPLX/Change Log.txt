@@ -53,3 +53,5 @@ Version 1.8.0, 11/8/12
 •	Modified existing plx routines so that they can read data both from plx files and from pl2 files.
 Version 1.8.1, 06/20/13
 •	Added routines to read data block-by-block from pl2 files. 
+Version 1.8.2, 07/22/13
+•	Added routine to report mexPlex version. In PlexMethods.cpp, added defines for building the code under MacOS.
