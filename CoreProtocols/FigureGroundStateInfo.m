@@ -13,8 +13,8 @@ tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
-tS.askForComments = false;
-tS.saveData = false; %*** save behavioural and eye movement data? ***
+tS.askForComments = true;
+tS.saveData = true; %*** save behavioural and eye movement data? ***
 obj.useDataPixx = true; %*** drive plexon to collect data? ***
 tS.dummyEyelink = false; 
 tS.name = 'figure-ground';
@@ -22,7 +22,7 @@ tS.name = 'figure-ground';
 luminancePedestal = [0.5 0.5 0.5];
 fixX = 0;
 fixY = 0;
-firstFixInit = 0.75;
+firstFixInit = 0.7;
 firstFixTime = [0.5];
 firstFixRadius = 1;
 obj.lastXPosition = fixX;
@@ -101,8 +101,7 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	};
 
 %fix within
-fixFcn = { @()draw(obj.stimuli); ... %draw stimulus
-	};
+fixFcn = { @()draw(obj.stimuli) }; %draw stimulus
 
 %test we are fixated for a certain length of time
 initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
@@ -181,6 +180,7 @@ incExitFcn = { @()edit(obj.stimuli,2,'modulateColourOut',[0.5 0.5 0.5]); ... %lu
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true); ...
+	@()trackerClearScreen(eL); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;

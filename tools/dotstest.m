@@ -190,7 +190,10 @@ try %our main experimental try catch loop
 				congruence = false;
 			end
 		else
-			if isempty(response)
+			if ~isempty(response)
+				
+			end
+		end
 		
 		%------draw bits to the eyelink
 		if useEyeLink == true

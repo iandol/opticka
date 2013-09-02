@@ -265,6 +265,8 @@ classdef screenManager < optickaCore
 				
 				tL.screenLog.preOpenWindow=GetSecs;
 				
+				%PsychDefaultSetup(2);
+				
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
