@@ -5,7 +5,7 @@ c = sprintf(' %i',fix(clock()));
 c = regexprep(c,' ','_');
 name = [name c];
 useEyeLink = false;
-useStaircase = true;
+useStaircase = false;
 
 p=uigetdir(pwd,'Select Directory to Save Data and Screenshot:');
 cd(p);
@@ -81,7 +81,7 @@ stimuli{baridx} = b;
 stimuli{maskidx} = sp;
 
 %-----open the PTB screens
-s = screenManager('verbose',false,'blend',true,'screen',0,...
+s = screenManager('verbose',false,'blend',true,'screen',1,...
 	'bitDepth','8bit','debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
 	'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
 	'windowed',[],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
@@ -138,12 +138,22 @@ UDINCONGRUENT = PAL_AMUD_setupUD(UDINCONGRUENT,'StepSizeDown',StepSizeDown,'Step
 	'startvalue',startvalue,'xMin',xMin);
 
 task = stimulusSequence();
+task.nBlocks = 20;
 task.nVar(1).name = 'angle';
 task.nVar(1).stimuli = dotsidx;
 task.nVar(1).values = {0, 180};
 task.nVar(2).name = 'direction';
 task.nVar(2).stimuli = amidx;
 task.nVar(2).values = {'left','right'};
+task.nVar(3).name = 'coherence';
+task.nVar(3).stimuli = dotsidx;
+task.nVar(3).values = {0 0.1 0.2 0.3 0.4 0.5 0.6};
+
+if ~useStaircase
+	UDCONGRUENT.startValue = task.outValues{1,3}{:};
+	UDINCONGRUENT.startValue = task.outValues{1,3}{:};
+end
+
 randomiseStimuli(task);
 initialiseTask(task)
 
@@ -166,7 +176,6 @@ try %our main experimental try catch loop
 	while ~breakloop
 		
 		if useStaircase
-			%-----select new angle and coherence
 			angleToggle = randi([0 1]) * 180;
 			dirToggle = randi([0 1]);
 			if dirToggle == 0;
@@ -174,25 +183,26 @@ try %our main experimental try catch loop
 			else
 				dirToggle = 'left';
 			end
-
-			stimuli{dotsidx}.angleOut = angleToggle;
-			stimuli{amidx}.directionOut = dirToggle;
-			if length(stimuli) >= baridx
-				if strcmpi(dirToggle,'right')
-					stimuli{baridx}.angleOut = 0;
-				else
-					stimuli{baridx}.angleOut = 180;
-				end
-			end
-			if (angleToggle == 180 && strcmpi(dirToggle,'left')) || (angleToggle == 0 && strcmpi(dirToggle,'right'))
-				congruence = true;
-			else
-				congruence = false;
-			end
 		else
-			if ~isempty(response)
-				
+			angleToggle = task.outValues{task.totalRuns,1}{:};
+			dirToggle = task.outValues{task.totalRuns,2}{:};
+		end
+		
+		stimuli{dotsidx}.angleOut = angleToggle;
+		stimuli{amidx}.directionOut = dirToggle;
+			
+		if length(stimuli) >= baridx
+			if strcmpi(dirToggle,'right')
+				stimuli{baridx}.angleOut = 0;
+			else
+				stimuli{baridx}.angleOut = 180;
 			end
+		end
+		
+		if (angleToggle == 180 && strcmpi(dirToggle,'left')) || (angleToggle == 0 && strcmpi(dirToggle,'right'))
+			congruence = true;
+		else
+			congruence = false;
 		end
 		
 		%------draw bits to the eyelink
@@ -209,26 +219,39 @@ try %our main experimental try catch loop
 		end
 		
 		%-----setup our coherence value and print some info for the trial
-		if congruence == true
-			stimuli{dotsidx}.coherenceOut = UDCONGRUENT.xCurrent;
-			cc='CON';
-			st=UDCONGRUENT.stop;
-			rev = max(UDCONGRUENT.reversal);
-			up = UDCONGRUENT.u;
-			down = UDCONGRUENT.d;
-			x=length(UDCONGRUENT.x);
+		if useStaircase
+			if congruence == true
+				coherenceOut = UDCONGRUENT.xCurrent;
+				cc='CON';
+				st=UDCONGRUENT.stop;
+				rev = max(UDCONGRUENT.reversal);
+				up = UDCONGRUENT.u;
+				down = UDCONGRUENT.d;
+				x=length(UDCONGRUENT.x);
+			else
+				coherenceOut = UDINCONGRUENT.xCurrent;
+				cc='INCON';
+				st=UDINCONGRUENT.stop;
+				rev = max(UDINCONGRUENT.reversal);
+				up = UDINCONGRUENT.u;
+				down = UDINCONGRUENT.d;
+				x=length(UDINCONGRUENT.x);
+			end
+			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | U/D: %i/%i |Stop/Rev: %i/%i \n',angleToggle,dirToggle,stimuli{dotsidx}.coherenceOut,cc,x,up,down,st,rev);
+			disp(t);
 		else
-			stimuli{dotsidx}.coherenceOut = UDINCONGRUENT.xCurrent;
-			cc='INCON';
-			st=UDINCONGRUENT.stop;
-			rev = max(UDINCONGRUENT.reversal);
-			up = UDINCONGRUENT.u;
-			down = UDINCONGRUENT.d;
-			x=length(UDINCONGRUENT.x);
+			if congruence == true
+				cc='CON';
+			else
+				cc='INCON';
+			end
+			coherenceOut = task.outValues{task.totalRuns,3}{:};
+			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i \n',angleToggle,dirToggle,stimuli{dotsidx}.coherenceOut,cc,task.totalRuns);
+			disp(t);
 		end
+		
+		stimuli{dotsidx}.coherenceOut = coherenceOut;
 		update(stimuli);
-		t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | U/D: %i/%i |Stop/Rev: %i/%i \n',angleToggle,dirToggle,stimuli{dotsidx}.coherenceOut,cc,x,up,down,st,rev);
-		disp(t);
 		
 		%-----fire up eyelink
 		if useEyeLink == true
@@ -351,25 +374,47 @@ try %our main experimental try catch loop
 				end
 				if t<=GetSecs; breakloopkey = true; end
 			end
-			%-----Update the staircase
-			if congruence == true
-				if UDCONGRUENT.stop ~= 1 && ~isempty(response)
-					UDCONGRUENT = PAL_AMUD_updateUD(UDCONGRUENT, response); %update UD structure
-				end
-			else
-				if UDINCONGRUENT.stop ~= 1 && ~isempty(response)
-					UDINCONGRUENT = PAL_AMUD_updateUD(UDINCONGRUENT, response); %update UD structure
-				end
-			end
-			if ~isempty(response)
-				fprintf('RESPONSE = %i\n', response);
-			else
-				fprintf('RESPONSE EMPTY\n', response);
-			end
 			
-			if UDINCONGRUENT.stop == 1 && UDCONGRUENT.stop == 1
-				fprintf('\nBOTH LOOPS HAVE STOPPED\n', response);
-				breakloop = true;
+			if useStaircase
+				%-----Update the staircase
+				if congruence == true
+					if UDCONGRUENT.stop ~= 1 && ~isempty(response)
+						UDCONGRUENT = PAL_AMUD_updateUD(UDCONGRUENT, response); %update UD structure
+					end
+				else
+					if UDINCONGRUENT.stop ~= 1 && ~isempty(response)
+						UDINCONGRUENT = PAL_AMUD_updateUD(UDINCONGRUENT, response); %update UD structure
+					end
+				end
+				if ~isempty(response)
+					fprintf('RESPONSE = %i\n', response);
+				else
+					fprintf('RESPONSE EMPTY\n', response);
+				end
+
+				if UDINCONGRUENT.stop == 1 && UDCONGRUENT.stop == 1
+					fprintf('\nBOTH LOOPS HAVE STOPPED\n', response);
+					breakloop = true;
+				end
+			else
+				if ~isempty(response)
+					if congruence == true
+						UDCONGRUENT.response(task.totalRuns) = response;
+						UDCONGRUENT.x(task.totalRuns) = coherenceOut;
+					else
+						UDINCONGRUENT.response(task.totalRuns) = response;
+						UDINCONGRUENT.x(task.totalRuns) = coherenceOut;
+					end
+					task.response{task.totalRuns,1} = response;
+					task.response{task.totalRuns,2} = congruence;
+					task.response{task.totalRuns,3} = coherenceOut;
+					task.totalRuns = task.totalRuns + 1;
+				end
+				
+				if task.totalRuns >= task.nRuns
+					fprintf('\nTask finished!\n', response);
+					breakloop = true;
+				end
 			end
 		end
 		Screen('Flip',s.win); %flip the buffer
@@ -384,55 +429,59 @@ try %our main experimental try catch loop
 	if useEyeLink == true; close(eL); end
 	reset(stimuli); %reset our stimulus ready for use again
 	
-	%-----Save Data
-	if quitkey ~= true
-		dat(1).name = name;
-		dat.useEyeLink = useEyeLink;
-		dat.runtime = runtime;
-		dat(1).sc(1).name='UDCONGRUENT';
-		dat(1).sc(1).data=UDCONGRUENT;
-		dat(1).sc(2).name='UDINCONGRUENT';
-		dat(1).sc(2).data=UDINCONGRUENT;
-		if useEyeLink == true;dat(1).eL = eL;end
-		dat(1).screen = s;
-		dat(1).stimuli = stimuli;
-		assignin('base','dat',dat);
-		uisave('dat',[name '.mat']);
+	if useStaircase
+		%----------------Threshold estimates
+		Mean1 = PAL_AMUD_analyzeUD(UDCONGRUENT, 'trials', 10);
+		message = sprintf('\rThreshold CONGRUENT estimate of last 10 trials');
+		message = strcat(message,sprintf(': %6.4f', Mean1));
+		disp(message);
+		Mean2 = PAL_AMUD_analyzeUD(UDINCONGRUENT, 'trials', 10);
+		message = sprintf('\rThreshold INCONGRUENT estimate of last 10 trials');
+		message = strcat(message,sprintf(': %6.4f', Mean2));
+		disp(message);
+	
+			%--------------Plots
+		t = 1:length(UDCONGRUENT.x);
+		f=figure('name','Up/Down Staircase');
+		p=panel(f);
+		p.pack(2,1)
+
+		p(1,1).select();
+		plot(t,UDCONGRUENT.x,'k');
+		hold on;
+		plot(t(UDCONGRUENT.response == 1),UDCONGRUENT.x(UDCONGRUENT.response == 1),'ko', 'MarkerFaceColor','k');
+		plot(t(UDCONGRUENT.response == 0),UDCONGRUENT.x(UDCONGRUENT.response == 0),'ko', 'MarkerFaceColor','w');
+		set(gca,'FontSize',16);
+		title(['CONGRUENT = ' num2str(Mean1)])
+		axis([0 max(t)+1 min(UDCONGRUENT.x)-(max(UDCONGRUENT.x)-min(UDCONGRUENT.x))/10 max(UDCONGRUENT.x)+(max(UDCONGRUENT.x)-min(UDCONGRUENT.x))/10]);
+		t = 1:length(UDINCONGRUENT.x);
+
+		p(2,1).select();
+		plot(t,UDINCONGRUENT.x,'k');
+		hold on;
+		plot(t(UDINCONGRUENT.response == 1),UDINCONGRUENT.x(UDINCONGRUENT.response == 1),'ko', 'MarkerFaceColor','k');
+		plot(t(UDINCONGRUENT.response == 0),UDINCONGRUENT.x(UDINCONGRUENT.response == 0),'ko', 'MarkerFaceColor','w');
+		set(gca,'FontSize',16);
+		title(['INCONGRUENT = ' num2str(Mean2)])
+		axis([0 max(t)+1 min(UDINCONGRUENT.x)-(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10 max(UDINCONGRUENT.x)+(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10]);
 	end
 	
-	%----------------Threshold estimates
-	Mean1 = PAL_AMUD_analyzeUD(UDCONGRUENT, 'trials', 10);
-	message = sprintf('\rThreshold CONGRUENT estimate of last 10 trials');
-	message = strcat(message,sprintf(': %6.4f', Mean1));
-	disp(message);
-	Mean2 = PAL_AMUD_analyzeUD(UDINCONGRUENT, 'trials', 10);
-	message = sprintf('\rThreshold INCONGRUENT estimate of last 10 trials');
-	message = strcat(message,sprintf(': %6.4f', Mean2));
-	disp(message);
 	
-	%--------------Plots
-	t = 1:length(UDCONGRUENT.x);
-	f=figure('name','Up/Down Staircase');
-	p=panel(f);
-	p.pack(2,1)
-	p(1,1).select();
-	plot(t,UDCONGRUENT.x,'k');
-	hold on;
-	plot(t(UDCONGRUENT.response == 1),UDCONGRUENT.x(UDCONGRUENT.response == 1),'ko', 'MarkerFaceColor','k');
-	plot(t(UDCONGRUENT.response == 0),UDCONGRUENT.x(UDCONGRUENT.response == 0),'ko', 'MarkerFaceColor','w');
-	set(gca,'FontSize',16);
-	title(['CONGRUENT = ' num2str(Mean1)])
-	axis([0 max(t)+1 min(UDCONGRUENT.x)-(max(UDCONGRUENT.x)-min(UDCONGRUENT.x))/10 max(UDCONGRUENT.x)+(max(UDCONGRUENT.x)-min(UDCONGRUENT.x))/10]);
-	t = 1:length(UDINCONGRUENT.x);
-	p(2,1).select();
-	plot(t,UDINCONGRUENT.x,'k');
-	hold on;
-	plot(t(UDINCONGRUENT.response == 1),UDINCONGRUENT.x(UDINCONGRUENT.response == 1),'ko', 'MarkerFaceColor','k');
-	plot(t(UDINCONGRUENT.response == 0),UDINCONGRUENT.x(UDINCONGRUENT.response == 0),'ko', 'MarkerFaceColor','w');
-	set(gca,'FontSize',16);
-	title(['INCONGRUENT = ' num2str(Mean2)])
-	axis([0 max(t)+1 min(UDINCONGRUENT.x)-(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10 max(UDINCONGRUENT.x)+(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10]);
-	if quitkey ~= true
+	dat(1).name = name;
+	dat.useEyeLink = useEyeLink;
+	dat.useStaircase = useStaircase;
+	dat.runtime = runtime;
+	dat.task = task;
+	dat(1).sc(1).name='UDCONGRUENT';
+	dat(1).sc(1).data=UDCONGRUENT;
+	dat(1).sc(2).name='UDINCONGRUENT';
+	dat(1).sc(2).data=UDINCONGRUENT;
+	if useEyeLink == true;dat(1).eL = eL;end
+	dat(1).screen = s;
+	dat(1).stimuli = stimuli;
+	assignin('base','dat',dat);
+	if quitkey ~= true %-----Save Data
+		uisave('dat',[name '.mat']);
 		p.export([name '.png']);
 	end
 

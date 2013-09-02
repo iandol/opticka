@@ -35,6 +35,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		nSegment
 		%> verbose or not
 		verbose = false
+		%> responses
+		response = []
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -255,7 +257,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		% ===================================================================
 		function initialiseTask(obj)
 			resetTask(obj);
-			for i = 1:2:length(obj.taskProperties)
+				for i = 1:2:length(obj.taskProperties)
 				if isempty(obj.findprop(obj.taskProperties{i}))
 					p=obj.addprop(obj.taskProperties{i}); %add new dynamic property
 					p.Transient = true;
@@ -435,6 +437,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> 
 		% ===================================================================
 		function resetTask(obj)
+			obj.response = [];
 			for i = 1:2:length(obj.taskProperties)
 				p = obj.findprop(obj.taskProperties{i});
 				if ~isempty(p)
