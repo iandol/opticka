@@ -1,16 +1,18 @@
 function dotstest()
 
-name = 'AMIanDots';
+useEyeLink = false;
+useStaircase = false;
+backgroundColour = [0.3 0.3 0.3];
+subject = 'Ian';
+
+if useStaircase; type = 'STAIR';else type = 'MOC';end %#ok<*UNRCH>
+name = ['AM_' type '_' subject];
 c = sprintf(' %i',fix(clock()));
 c = regexprep(c,' ','_');
 name = [name c];
-useEyeLink = false;
-useStaircase = false;
 
 p=uigetdir(pwd,'Select Directory to Save Data and Screenshot:');
 cd(p);
-
-backgroundColour = [0.3 0.3 0.3];
 
 %-----dots stimulus
 n = dotsStimulus();
@@ -72,6 +74,7 @@ runtime = sum(a.timing) * a.nBars;
 
 %-----combine them into a single meta stimulus
 stimuli = metaStimulus();
+stimuli.name = name;
 
 amidx = 4;
 dotsidx = 3;
@@ -95,7 +98,7 @@ if useEyeLink == true;
 	strictFixation = false;
 	eL = eyelinkManager('IP',[]);
 	eL.isDummy = false; %use dummy or real eyelink?
-	eL.name = 'apparent-motion-test';
+	eL.name = name;
 	eL.recordData = false; %save EDF file
 	eL.sampleRate = 250;
 	eL.remoteCalibration = true; % manual calibration?
@@ -132,6 +135,7 @@ UDINCONGRUENT = PAL_AMUD_setupUD(UDINCONGRUENT,'StepSizeDown',StepSizeDown,'Step
 	'startvalue',startvalue,'xMin',xMin);
 
 task = stimulusSequence();
+task.name = name;
 task.nBlocks = 20;
 task.nVar(1).name = 'angle';
 task.nVar(1).stimuli = dotsidx;
@@ -157,7 +161,7 @@ try %our main experimental try catch loop
 	s = screenManager('verbose',false,'blend',true,'screen',0,...
 		'bitDepth','8bit','debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
 		'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
-		'windowed',[],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
+		'windowed',[800 600],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
 	screenVals = open(s); %open PTB screen
 	setup(stimuli,s); %setup our stimulus object
 
@@ -243,7 +247,7 @@ try %our main experimental try catch loop
 			end
 			stimuli{dotsidx}.coherenceOut = coherenceOut;
 			update(stimuli);
-			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | U/D: %i/%i |Stop/Rev: %i/%i \n',stimuli{dotsidx}.angleOut,stimuli{amidx}.directionOut,stimuli{dotsidx}.coherenceOut,cc,x,up,down,st,rev);
+			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | U/D: %i/%i |Stop/Rev: %i/%i | ',stimuli{dotsidx}.angleOut,stimuli{amidx}.directionOut,stimuli{dotsidx}.coherenceOut,cc,x,up,down,st,rev);
 		else
 			if congruence == true
 				cc='CON';
@@ -253,7 +257,7 @@ try %our main experimental try catch loop
 			coherenceOut = task.outValues{task.totalRuns,3}{:};
 			stimuli{dotsidx}.coherenceOut = coherenceOut;
 			update(stimuli);
-			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i \n',stimuli{dotsidx}.angleOut,stimuli{amidx}.directionOut,stimuli{dotsidx}.coherenceOut,cc,task.totalRuns);
+			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | ',stimuli{dotsidx}.angleOut,stimuli{amidx}.directionOut,stimuli{dotsidx}.coherenceOut,cc,task.totalRuns);
 		end
 		
 		disp(t);
@@ -340,11 +344,12 @@ try %our main experimental try catch loop
 				setOffline(eL);
 			
 			end
+			
 			%-----check keyboard
 			if useEyeLink == true
-				t = GetSecs+1;
+				timeout = GetSecs+1;
 			else
-				t = GetSecs+5;
+				timeout = GetSecs+5;
 			end
 			breakloopkey = false;
 			quitkey = false;
@@ -377,7 +382,7 @@ try %our main experimental try catch loop
 							
 					end
 				end
-				if t<=GetSecs; breakloopkey = true; end
+				if timeout<=GetSecs; breakloopkey = true; end
 			end
 			
 			if useStaircase
@@ -396,7 +401,6 @@ try %our main experimental try catch loop
 				else
 					fprintf('RESPONSE EMPTY\n', response);
 				end
-
 				if UDINCONGRUENT.stop == 1 && UDCONGRUENT.stop == 1
 					fprintf('\nBOTH LOOPS HAVE STOPPED\n', response);
 					breakloop = true;
@@ -414,6 +418,9 @@ try %our main experimental try catch loop
 					task.response{task.totalRuns,2} = congruence;
 					task.response{task.totalRuns,3} = coherenceOut;
 					task.totalRuns = task.totalRuns + 1;
+					fprintf('RESPONSE = %i\n', response);
+				else
+					fprintf('RESPONSE EMPTY\n', response);
 				end
 				
 				if task.totalRuns >= task.nRuns
@@ -477,6 +484,7 @@ try %our main experimental try catch loop
 	dat(1).name = name;
 	dat.useEyeLink = useEyeLink;
 	dat.useStaircase = useStaircase;
+	dat.backgroundColour = backgroundColour;
 	dat.runtime = runtime;
 	dat.task = task;
 	dat(1).sc(1).name='UDCONGRUENT';
