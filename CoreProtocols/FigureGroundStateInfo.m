@@ -9,7 +9,7 @@
 % tS = general simple struct to hold variables for this run
 %
 %------------General Settings-----------------
-tS.rewardTime = 200; %TTL time in milliseconds
+tS.rewardTime = 220; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
@@ -31,7 +31,7 @@ strict = true;
 
 targetFixInit = 0.75;
 targetFixTime = [0.5 0.7];
-targetRadius = 3;
+targetRadius = 2.5;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;

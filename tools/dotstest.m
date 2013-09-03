@@ -1,6 +1,6 @@
 function dotstest()
 
-name = 'AM Ian Dots';
+name = 'AMIanDots';
 c = sprintf(' %i',fix(clock()));
 c = regexprep(c,' ','_');
 name = [name c];
@@ -21,45 +21,47 @@ n.dotType = 2; %high quality dots
 n.dotSize = 0.1;
 n.density = 25;
 n.colour = [0.6 0.6 0.6];
+n.maskColour = backgroundColour + 0.1;
 n.colourType = 'simple'; %try also randomBW
 n.coherence = 0.5;
 n.kill = 0.1;
 n.delayTime = 0.58; %time offset to first presentation
 n.offTime = 0.78; %time to turn off dots
-n.mask = true;
+n.mask = false;
 
 %-----apparent motion stimulus
 a = apparentMotionStimulus();
 a.name = name;
-a.yPosition = 0;
+a.yPosition = 30;
 a.barLength = 10;
 a.barWidth = 0.3;
 a.nBars = 10;
-a.timing = [0.1 0.1];
+a.timing = [0.15 0.05];
 a.barSpacing = 3;
 %a.delayTime = 0.48;
 %a.offTime = 0.62;
 a.direction = 'right'; %initial direction of AM stimulus
+hide(a)
 
 %-----use a real driqfting bar
 b = barStimulus();
-b.yPosition = 30;
+b.yPosition = 0;
 b.barLength = a.barLength;
 b.barWidth = a.barWidth;
 b.speed = a.barSpacing / sum(a.timing);
 b.startPosition = -b.speed;
-hide(b)
+%hide(b)
 
 %-----grey mask spot
 sp = barStimulus();
-sp.yPosition = 30;
-sp.barWidth = n.size+0.5;
+sp.yPosition = 0;
+sp.barWidth = n.size;
 sp.speed = 0;
 sp.startPosition = 0;
 sp.barLength = a.barLength +1;
-sp.colour = [0.3 0.3 0.3];
+sp.colour = backgroundColour + 0.1;
 sp.alpha = 1;
-hide(sp);
+%hide(sp);
 
 %-----tweak timing based on settings
 t = (sum(a.timing) * a.nBars/2) - a.timing(2);
@@ -79,14 +81,6 @@ stimuli{amidx} = a;
 stimuli{dotsidx} = n;
 stimuli{baridx} = b;
 stimuli{maskidx} = sp;
-
-%-----open the PTB screens
-s = screenManager('verbose',false,'blend',true,'screen',1,...
-	'bitDepth','8bit','debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
-	'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
-	'windowed',[],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
-screenVals = open(s); %open PTB screen
-setup(stimuli,s); %setup our stimulus object
 
 %-----setup eyelink
 if useEyeLink == true;
@@ -148,16 +142,26 @@ task.nVar(2).values = {'left','right'};
 task.nVar(3).name = 'coherence';
 task.nVar(3).stimuli = dotsidx;
 task.nVar(3).values = {0 0.1 0.2 0.3 0.4 0.5 0.6};
+randomiseStimuli(task);
+initialiseTask(task)
 
 if ~useStaircase
 	UDCONGRUENT.startValue = task.outValues{1,3}{:};
 	UDINCONGRUENT.startValue = task.outValues{1,3}{:};
 end
 
-randomiseStimuli(task);
-initialiseTask(task)
 
 try %our main experimental try catch loop
+	
+	%-----open the PTB screens
+	s = screenManager('verbose',false,'blend',true,'screen',0,...
+		'bitDepth','8bit','debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
+		'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
+		'windowed',[],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
+	screenVals = open(s); %open PTB screen
+	setup(stimuli,s); %setup our stimulus object
+
+
 	breakloop = false;
 	
 	%ts is our stimulus positions to draw to the eyetracker display
@@ -237,8 +241,9 @@ try %our main experimental try catch loop
 				down = UDINCONGRUENT.d;
 				x=length(UDINCONGRUENT.x);
 			end
-			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | U/D: %i/%i |Stop/Rev: %i/%i \n',angleToggle,dirToggle,stimuli{dotsidx}.coherenceOut,cc,x,up,down,st,rev);
-			disp(t);
+			stimuli{dotsidx}.coherenceOut = coherenceOut;
+			update(stimuli);
+			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | U/D: %i/%i |Stop/Rev: %i/%i \n',stimuli{dotsidx}.angleOut,stimuli{amidx}.directionOut,stimuli{dotsidx}.coherenceOut,cc,x,up,down,st,rev);
 		else
 			if congruence == true
 				cc='CON';
@@ -246,12 +251,12 @@ try %our main experimental try catch loop
 				cc='INCON';
 			end
 			coherenceOut = task.outValues{task.totalRuns,3}{:};
-			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i \n',angleToggle,dirToggle,stimuli{dotsidx}.coherenceOut,cc,task.totalRuns);
-			disp(t);
+			stimuli{dotsidx}.coherenceOut = coherenceOut;
+			update(stimuli);
+			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i \n',stimuli{dotsidx}.angleOut,stimuli{amidx}.directionOut,stimuli{dotsidx}.coherenceOut,cc,task.totalRuns);
 		end
 		
-		stimuli{dotsidx}.coherenceOut = coherenceOut;
-		update(stimuli);
+		disp(t);
 		
 		%-----fire up eyelink
 		if useEyeLink == true
@@ -397,7 +402,7 @@ try %our main experimental try catch loop
 					breakloop = true;
 				end
 			else
-				if ~isempty(response)
+				if ~isempty(response) && (response == true || response == false)
 					if congruence == true
 						UDCONGRUENT.response(task.totalRuns) = response;
 						UDCONGRUENT.x(task.totalRuns) = coherenceOut;
@@ -464,6 +469,8 @@ try %our main experimental try catch loop
 		set(gca,'FontSize',16);
 		title(['INCONGRUENT = ' num2str(Mean2)])
 		axis([0 max(t)+1 min(UDINCONGRUENT.x)-(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10 max(UDINCONGRUENT.x)+(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10]);
+	else
+		
 	end
 	
 	
@@ -480,9 +487,10 @@ try %our main experimental try catch loop
 	dat(1).screen = s;
 	dat(1).stimuli = stimuli;
 	assignin('base','dat',dat);
-	if quitkey ~= true %-----Save Data
+	button = questdlg('Do you want to save this to a MAT file?');
+	if strcmpi(button,'yes')
 		uisave('dat',[name '.mat']);
-		p.export([name '.png']);
+		if useStaircase; p.export([name '.png']); end
 	end
 
 catch ME
@@ -491,7 +499,7 @@ catch ME
 	reset(stimuli);
 	close(s); %close screen
 	if useEyeLink == true; close(eL); end
-	clear stimuli eL s
+	clear stimuli task eL s
 	rethrow(ME);
 end
 end
