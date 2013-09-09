@@ -443,6 +443,7 @@ classdef gratingStimulus < baseStimulus
 						obj.phaseIncrement = -obj.phaseIncrement;
 					end
 				end
+				fprintf('CALPhase: %g (%g)\n',obj.driftPhase, obj.phaseIncrement)
 			end
 		end
 		

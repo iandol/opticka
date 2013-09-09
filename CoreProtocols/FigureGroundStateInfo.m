@@ -9,7 +9,7 @@
 % tS = general simple struct to hold variables for this run
 %
 %------------General Settings-----------------
-tS.rewardTime = 220; %TTL time in milliseconds
+tS.rewardTime = 200; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
@@ -24,7 +24,7 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 0.7;
 firstFixTime = [0.5];
-firstFixRadius = 1;
+firstFixRadius = 1.15;
 obj.lastXPosition = fixX;
 obj.lastYPosition = fixY;
 strict = true;

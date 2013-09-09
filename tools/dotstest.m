@@ -1,4 +1,5 @@
-function dotstest()
+f
+unction dotstest()
 
 useEyeLink = false;
 useStaircase = false;
@@ -478,8 +479,10 @@ try %our main experimental try catch loop
 		axis([0 max(t)+1 min(UDINCONGRUENT.x)-(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10 max(UDINCONGRUENT.x)+(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10]);
 	else
 		
+		r = dat.task.response;
+		rc = 
+		
 	end
-	
 	
 	dat(1).name = name;
 	dat.useEyeLink = useEyeLink;
