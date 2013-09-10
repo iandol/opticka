@@ -418,13 +418,15 @@ try %our main experimental try catch loop
 					task.response{task.totalRuns,1} = response;
 					task.response{task.totalRuns,2} = congruence;
 					task.response{task.totalRuns,3} = coherenceOut;
+					task.response{task.totalRuns,4} = angleOut;
+					task.response{task.totalRuns,5} = dirToggle;
 					task.totalRuns = task.totalRuns + 1;
 					fprintf('RESPONSE = %i\n', response);
 				else
 					fprintf('RESPONSE EMPTY\n', response);
 				end
 				
-				if task.totalRuns >= task.nRuns
+				if task.totalRuns > task.nRuns
 					fprintf('\nTask finished!\n', response);
 					breakloop = true;
 				end
@@ -441,6 +443,21 @@ try %our main experimental try catch loop
 	
 	if useEyeLink == true; close(eL); end
 	reset(stimuli); %reset our stimulus ready for use again
+	
+	dat(1).name = name;
+	dat.useEyeLink = useEyeLink;
+	dat.useStaircase = useStaircase;
+	dat.backgroundColour = backgroundColour;
+	dat.runtime = runtime;
+	dat.task = task;
+	dat(1).sc(1).name='UDCONGRUENT';
+	dat(1).sc(1).data=UDCONGRUENT;
+	dat(1).sc(2).name='UDINCONGRUENT';
+	dat(1).sc(2).data=UDINCONGRUENT;
+	if useEyeLink == true;dat(1).eL = eL;end
+	dat(1).screen = s;
+	dat(1).stimuli = stimuli;
+	assignin('base','dat',dat);
 	
 	if useStaircase
 		%----------------Threshold estimates
@@ -479,25 +496,12 @@ try %our main experimental try catch loop
 		axis([0 max(t)+1 min(UDINCONGRUENT.x)-(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10 max(UDINCONGRUENT.x)+(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10]);
 	else
 		
-		r = dat.task.response;
-		rc = 
+		
+		
+		
 		
 	end
 	
-	dat(1).name = name;
-	dat.useEyeLink = useEyeLink;
-	dat.useStaircase = useStaircase;
-	dat.backgroundColour = backgroundColour;
-	dat.runtime = runtime;
-	dat.task = task;
-	dat(1).sc(1).name='UDCONGRUENT';
-	dat(1).sc(1).data=UDCONGRUENT;
-	dat(1).sc(2).name='UDINCONGRUENT';
-	dat(1).sc(2).data=UDINCONGRUENT;
-	if useEyeLink == true;dat(1).eL = eL;end
-	dat(1).screen = s;
-	dat(1).stimuli = stimuli;
-	assignin('base','dat',dat);
 	button = questdlg('Do you want to save this to a MAT file?');
 	if strcmpi(button,'yes')
 		uisave('dat',[name '.mat']);
