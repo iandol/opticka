@@ -244,8 +244,8 @@ classdef spotStimulus < baseStimulus
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
-		%=======================================================================
+	methods ( Access = protected ) %-------PROTECTED METHODS-----%
+	%=======================================================================
 		% ===================================================================
 		%> @brief sizeOut Set method
 		%>
@@ -272,6 +272,7 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_contrastOut(obj, value)
+			fprintf('N');
 			obj.contrastOut = value;
 			notify(obj,'changeColour');
 		end

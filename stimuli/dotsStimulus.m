@@ -307,7 +307,7 @@ classdef dotsStimulus < baseStimulus
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
 		
 		% ===================================================================

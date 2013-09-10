@@ -22,7 +22,7 @@ tS.name = 'figure-ground';
 luminancePedestal = [0.5 0.5 0.5];
 fixX = 0;
 fixY = 0;
-firstFixInit = 0.7;
+firstFixInit = 0.6;
 firstFixTime = [0.5];
 firstFixRadius = 1.15;
 obj.lastXPosition = fixX;
@@ -31,7 +31,7 @@ strict = true;
 
 targetFixInit = 0.75;
 targetFixTime = [0.5 0.7];
-targetRadius = 2.5;
+targetRadius = 2;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;

@@ -13,8 +13,8 @@ tS.rewardTime = 160; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
-tS.askForComments = true;
-tS.saveData = true; %*** save behavioural and eye movement data? ***
+tS.askForComments = false;
+tS.saveData = false; %*** save behavioural and eye movement data? ***
 obj.useDataPixx = true; %*** drive plexon to collect data? ***
 tS.name = 'dot-colour';
 
@@ -22,10 +22,10 @@ fixX = 0;
 fixY = 0;
 obj.lastXPosition = fixX;
 obj.lastYPosition = fixY;
-firstFixInit = 2;
-firstFixTime = 0.25;
+firstFixInit = 1;
+firstFixTime = 0.3;
 firstFixRadius = 1;
-stimulusFixTime = 1;
+stimulusFixTime = 0.75;
 
 eL.isDummy = false; %*** use dummy or real eyelink? ***
 eL.name = tS.name;
@@ -79,7 +79,7 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	@()sendTTL(io,3); ...
 	@()updateFixationValues(eL,fixX,fixY,[],firstFixTime); %reset 
 	@()setOffline(eL); ... %make sure offline before start recording
-	@()show(obj.stimuli{3}); ...
+	@()show(obj.stimuli{2}); ...
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
 	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(obj))]); ...
 	@()startRecording(eL); ... %fire up eyelink
@@ -97,8 +97,7 @@ initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 %exit fixation phase
 fixExitFcn = { @()statusMessage(eL,'Show Stimulus...'); ...
 	@()updateFixationValues(eL,[],[],[],stimulusFixTime); %reset a maintained fixation of 1 second
-	@()show(obj.stimuli{1}); ...
-	@()show(obj.stimuli{2}); ...
+	@()show(obj.stimuli); ...
 	@()edfMessage(eL,'END_FIX'); ...
 	}; 
 
@@ -138,6 +137,7 @@ correctExitFcn = {
 	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
+	@()trackerClearScreen(eL); ... 
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
@@ -160,6 +160,7 @@ incExitFcn = {
 	@()updateVariables(obj,[],[],false); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
+	@()trackerClearScreen(eL); ... 
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
 	};

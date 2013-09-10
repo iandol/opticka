@@ -141,6 +141,7 @@ correctExitFcn = {
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
+	@()trackerClearScreen(eL); ... 
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
@@ -163,6 +164,7 @@ incExitFcn = {
 	@()updateVariables(obj,[],[],false); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
+	@()trackerClearScreen(eL); ... 
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
 	};

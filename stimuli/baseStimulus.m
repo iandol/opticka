@@ -371,8 +371,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 					'NumberTitle', 'off');
 			end
 			
-			bgcolor = [0.85 0.85 0.85];
-			bgcoloredit = [0.87 0.87 0.87];
+			bgcolor = [0.91 0.91 0.91];
+			bgcoloredit = [0.95 0.95 0.95];
 			
 			handles.parent = parent;
 			handles.root = uiextras.BoxPanel('Parent',parent,...

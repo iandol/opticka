@@ -370,9 +370,9 @@ classdef gratingStimulus < baseStimulus
 					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
 			else
 				if isempty(obj.findprop('motionAngleOut'));
-					[sx sy]=pol2cart(obj.d2r(obj.motionAngle),obj.startPosition);
+					[sx, sy]=pol2cart(obj.d2r(obj.motionAngle),obj.startPosition);
 				else
-					[sx sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
+					[sx, sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
 				end
 				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
 				if isempty(obj.findprop('xPositionOut'));
@@ -443,7 +443,6 @@ classdef gratingStimulus < baseStimulus
 						obj.phaseIncrement = -obj.phaseIncrement;
 					end
 				end
-				fprintf('CALPhase: %g (%g)\n',obj.driftPhase, obj.phaseIncrement)
 			end
 		end
 		
