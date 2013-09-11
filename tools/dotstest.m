@@ -1,5 +1,4 @@
-f
-unction dotstest()
+function dotstest()
 
 useEyeLink = false;
 useStaircase = false;
@@ -36,7 +35,7 @@ n.mask = false;
 a = apparentMotionStimulus();
 a.name = name;
 a.yPosition = 30;
-a.barLength = 10;
+a.barLength = 3;
 a.barWidth = 0.3;
 a.nBars = 10;
 a.timing = [0.15 0.05];
@@ -61,7 +60,7 @@ sp.yPosition = 0;
 sp.barWidth = n.size;
 sp.speed = 0;
 sp.startPosition = 0;
-sp.barLength = a.barLength +1;
+sp.barLength = a.barLength + 20;
 sp.colour = backgroundColour + 0.1;
 sp.alpha = 1;
 %hide(sp);
@@ -166,9 +165,8 @@ try %our main experimental try catch loop
 	screenVals = open(s); %open PTB screen
 	setup(stimuli,s); %setup our stimulus object
 
-
 	breakloop = false;
-	
+
 	%ts is our stimulus positions to draw to the eyetracker display
 	ts(1).x = -10 * s.ppd;
 	ts(1).y = 0;
@@ -272,10 +270,14 @@ try %our main experimental try catch loop
 			WaitSecs(0.1);
 		end
 		
+		hide(stimuli)
+		show(stimuli{maskidx});
+		
 		%-----draw initial fixation spot
 		fixated = '';
 		if useEyeLink == true
 			while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
+				draw(stimuli); %draw stimulus
 				drawSpot(s,0.1,[1 1 0]);
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				Screen('Flip',s.win); %flip the buffer
@@ -283,15 +285,19 @@ try %our main experimental try catch loop
 				fixated=testSearchHoldFixation(eL,'fix','breakfix');
 			end
 		else
+			draw(stimuli); %draw stimulus
 			drawSpot(s,0.1,[1 1 0]);
-			WaitSecs(0.5);
+			Screen('Flip',s.win); %flip the buffer
+			WaitSecs(0.5);			
 			fixated = 'fix';
 		end
 		
 		%------Our main stimulus drawing loop
 		if strcmpi(fixated,'fix') %initial fixation held
 			if useEyeLink == true;statusMessage(eL,[t 'Show Stimulus...']);end
+			draw(stimuli); %draw stimulus
 			drawSpot(s,0.1,[1 1 0]);
+			show(stimuli)
 			vbls = Screen('Flip',s.win); %flip the buffer
 			vbl=vbls;
 			while GetSecs <= vbls+runtime
@@ -418,7 +424,7 @@ try %our main experimental try catch loop
 					task.response{task.totalRuns,1} = response;
 					task.response{task.totalRuns,2} = congruence;
 					task.response{task.totalRuns,3} = coherenceOut;
-					task.response{task.totalRuns,4} = angleOut;
+					task.response{task.totalRuns,4} = angleToggle;
 					task.response{task.totalRuns,5} = dirToggle;
 					task.totalRuns = task.totalRuns + 1;
 					fprintf('RESPONSE = %i\n', response);
@@ -470,7 +476,7 @@ try %our main experimental try catch loop
 		message = strcat(message,sprintf(': %6.4f', Mean2));
 		disp(message);
 	
-			%--------------Plots
+		%--------------Plots
 		t = 1:length(UDCONGRUENT.x);
 		f=figure('name','Up/Down Staircase');
 		p=panel(f);
@@ -495,10 +501,6 @@ try %our main experimental try catch loop
 		title(['INCONGRUENT = ' num2str(Mean2)])
 		axis([0 max(t)+1 min(UDINCONGRUENT.x)-(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10 max(UDINCONGRUENT.x)+(max(UDINCONGRUENT.x)-min(UDINCONGRUENT.x))/10]);
 	else
-		
-		
-		
-		
 		
 	end
 	
