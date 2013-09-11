@@ -1,6 +1,6 @@
 %=====RF Mapping state configuration file=====
 %------------General Settings-----------------
-tS.rewardTime = 130; %TTL time in milliseconds
+tS.rewardTime = 120; %TTL time in milliseconds
 tS.useTask = false;
 tS.checkKeysDuringStimulus = true;
 tS.recordEyePosition = false;
@@ -13,7 +13,7 @@ eL.isDummy = false; %use dummy or real eyelink?
 fixX = 0;
 fixY = 0;
 firstFixInit = 0.75;
-firstFixTime = 2;
+firstFixTime = 2.5;
 firstFixRadius = 1;
 
 % X, Y, FixInitTime, FixTime, Radius, StrictFix

@@ -22,7 +22,7 @@ n.speed = 4;
 n.dotType = 2; %high quality dots
 n.dotSize = 0.1;
 n.density = 25;
-n.colour = [0.6 0.6 0.6];
+n.colour = [0.45 0.45 0.45];
 n.maskColour = backgroundColour + 0.1;
 n.colourType = 'simple'; %try also randomBW
 n.coherence = 0.5;
@@ -34,27 +34,27 @@ n.mask = false;
 %-----apparent motion stimulus
 a = apparentMotionStimulus();
 a.name = name;
-a.yPosition = 30;
+a.yPosition = -30;
+a.colour = [0.4 0.4 0.4];
 a.barLength = 3;
-a.barWidth = 0.3;
+a.barWidth = 3;
 a.nBars = 10;
 a.timing = [0.15 0.05];
 a.barSpacing = 3;
 %a.delayTime = 0.48;
 %a.offTime = 0.62;
 a.direction = 'right'; %initial direction of AM stimulus
-hide(a)
 
 %-----use a real driqfting bar
 b = barStimulus();
 b.yPosition = 0;
+b.colour = a.colour;
 b.barLength = a.barLength;
 b.barWidth = a.barWidth;
 b.speed = a.barSpacing / sum(a.timing);
 b.startPosition = -b.speed;
-%hide(b)
 
-%-----grey mask spot
+%-----grey mask 
 sp = barStimulus();
 sp.yPosition = 0;
 sp.barWidth = n.size;
@@ -63,7 +63,6 @@ sp.startPosition = 0;
 sp.barLength = a.barLength + 20;
 sp.colour = backgroundColour + 0.1;
 sp.alpha = 1;
-%hide(sp);
 
 %-----tweak timing based on settings
 t = (sum(a.timing) * a.nBars/2) - a.timing(2);
@@ -161,7 +160,7 @@ try %our main experimental try catch loop
 	s = screenManager('verbose',false,'blend',true,'screen',0,...
 		'bitDepth','8bit','debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
 		'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
-		'windowed',[800 600],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
+		'windowed',[1280 1024],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
 	screenVals = open(s); %open PTB screen
 	setup(stimuli,s); %setup our stimulus object
 
@@ -278,7 +277,7 @@ try %our main experimental try catch loop
 		if useEyeLink == true
 			while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
 				draw(stimuli); %draw stimulus
-				drawSpot(s,0.1,[1 1 0]);
+				drawSpot(s,0.1,[1 1 0],-3,2);
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				Screen('Flip',s.win); %flip the buffer
 				getSample(eL);
@@ -286,7 +285,7 @@ try %our main experimental try catch loop
 			end
 		else
 			draw(stimuli); %draw stimulus
-			drawSpot(s,0.1,[1 1 0]);
+			drawSpot(s,0.1,[1 1 0],-3,2);
 			Screen('Flip',s.win); %flip the buffer
 			WaitSecs(0.5);			
 			fixated = 'fix';
@@ -296,13 +295,13 @@ try %our main experimental try catch loop
 		if strcmpi(fixated,'fix') %initial fixation held
 			if useEyeLink == true;statusMessage(eL,[t 'Show Stimulus...']);end
 			draw(stimuli); %draw stimulus
-			drawSpot(s,0.1,[1 1 0]);
+			drawSpot(s,0.1,[1 1 0],-3,2);
 			show(stimuli)
 			vbls = Screen('Flip',s.win); %flip the buffer
 			vbl=vbls;
 			while GetSecs <= vbls+runtime
 				draw(stimuli); %draw stimulus
-				drawSpot(s,0.1,[1 1 0]);
+				drawSpot(s,0.1,[1 1 0],-3,2);
 				%if useEyeLink == true;getSample(eL);drawEyePosition(eL);end
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				animate(stimuli); %animate stimulus, will be seen on next draw
