@@ -9,12 +9,12 @@
 % tS = general simple struct to hold variables for this run
 %
 %------------General Settings-----------------
-tS.rewardTime = 160; %TTL time in milliseconds
+tS.rewardTime = 150; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
-tS.askForComments = false;
-tS.saveData = false; %*** save behavioural and eye movement data? ***
+tS.askForComments = true;
+tS.saveData = true; %*** save behavioural and eye movement data? ***
 obj.useDataPixx = true; %*** drive plexon to collect data? ***
 tS.name = 'dot-colour';
 
@@ -22,8 +22,8 @@ fixX = 0;
 fixY = 0;
 obj.lastXPosition = fixX;
 obj.lastYPosition = fixY;
-firstFixInit = 1;
-firstFixTime = 0.3;
+firstFixInit = 0.7;
+firstFixTime = 0.5;
 firstFixRadius = 1;
 stimulusFixTime = 0.75;
 
@@ -34,7 +34,7 @@ eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV9'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 1;
+eL.modify.calibrationtargetsize = 0.5;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 = use any keyboard

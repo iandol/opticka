@@ -7,6 +7,7 @@ classdef plxReader < optickaCore
 		file@char
 		dir@char
 		matfile@char
+		matdir@char
 		edffile@char
 		cellmap@double
 		startOffset@double = 0
@@ -49,7 +50,7 @@ classdef plxReader < optickaCore
 				cd(obj.dir);
 			end
 			if isempty(obj.matfile)
-				[obj.matfile, ~] = uigetfile('*.mat','Load Behaviour MAT File');
+				[obj.matfile, obj.matdir] = uigetfile('*.mat','Load Behaviour MAT File');
 			end
 			if isempty(obj.edffile)
 				[obj.edffile, ~] = uigetfile('*.edf','Load Eyelink EDF File');
@@ -65,8 +66,11 @@ classdef plxReader < optickaCore
 		function parse(obj)
 			obj.paths.oldDir = pwd;
 			cd(obj.dir);
-			[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.dir);
-			generateInfo(obj);
+			if exist(obj.matdir','dir')
+				[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.matdir);
+			else
+				[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.dir);
+			end
 			getSpikes(obj);
 			getStrobes(obj);
 			parseSpikes(obj);
@@ -198,7 +202,15 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function loadEDF(obj)
+		function loadEDF(obj,pn)
+			if ~exist('pn','var')
+				if exist(obj.matdir,'dir')
+					pn = obj.matdir;
+				else
+					pn = obj.dir;
+				end
+			end
+			cd(pn);
 			if exist(obj.edffile,'file')
 				if ~isempty(obj.eA) && isa(obj.eA,'eyelinkAnalysis')
 					obj.eA.file = obj.edffile;
