@@ -159,8 +159,9 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function [meta, rE] = loadMat(fn,pn)
-			tic
+			oldd=pwd;
 			cd(pn);
+			tic
 			load(fn);
 			if ~exist('rE','var') && exist('obj','var')
 				rE = obj;
@@ -187,6 +188,7 @@ classdef plxReader < optickaCore
 			meta.trialtime = 500;
 			meta.matrix = [];
 			fprintf('Parsing Behavioural files took %g ms\n',round(toc*1000))
+			cd(oldd);
 		end
 	end
 	
@@ -210,13 +212,14 @@ classdef plxReader < optickaCore
 					pn = obj.dir;
 				end
 			end
+			oldd=pwd;
 			cd(pn);
 			if exist(obj.edffile,'file')
 				if ~isempty(obj.eA) && isa(obj.eA,'eyelinkAnalysis')
 					obj.eA.file = obj.edffile;
-					obj.eA.dir = obj.dir;
+					obj.eA.dir = pn;
 				else
-					in = struct('file',obj.edffile,'dir',obj.dir);
+					in = struct('file',obj.edffile,'dir',pn);
 					obj.eA = eyelinkAnalysis(in);
 				end
 				if isa(obj.rE.screen,'screenManager')
@@ -227,6 +230,7 @@ classdef plxReader < optickaCore
 				load(obj.eA);
 				parse(obj.eA);				
 			end
+			cd(oldd)
 		end
 			
 		% ===================================================================
