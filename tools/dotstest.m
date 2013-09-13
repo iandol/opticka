@@ -144,7 +144,10 @@ task.nVar(2).stimuli = amidx;
 task.nVar(2).values = {'left','right'};
 task.nVar(3).name = 'coherence';
 task.nVar(3).stimuli = dotsidx;
-task.nVar(3).values = {0 0.1 0.2 0.3 0.4 0.5 0.6};
+task.nVar(3).values = {0 0.1 0.2 0.3 0.4 0.5};
+task.nVar(4).name = 'yPosition';
+task.nVar(4).stimuli = baridx;
+task.nVar(4).values = {0 0 -30};
 randomiseStimuli(task);
 initialiseTask(task)
 
@@ -160,7 +163,7 @@ try %our main experimental try catch loop
 	s = screenManager('verbose',false,'blend',true,'screen',0,...
 		'bitDepth','8bit','debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
 		'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
-		'windowed',[1280 1024],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
+		'windowed',[],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
 	screenVals = open(s); %open PTB screen
 	setup(stimuli,s); %setup our stimulus object
 
@@ -192,10 +195,12 @@ try %our main experimental try catch loop
 		else
 			angleToggle = task.outValues{task.totalRuns,1}{:};
 			dirToggle = task.outValues{task.totalRuns,2}{:};
+			yToggle = task.outValues{task.totalRuns,4}{:};
 		end
 		
 		stimuli{dotsidx}.angleOut = angleToggle;
 		stimuli{amidx}.directionOut = dirToggle;
+		stimuli{baridx}.yPositionOut = yToggle;
 			
 		if length(stimuli) >= baridx
 			if strcmpi(dirToggle,'right')
@@ -255,7 +260,7 @@ try %our main experimental try catch loop
 			coherenceOut = task.outValues{task.totalRuns,3}{:};
 			stimuli{dotsidx}.coherenceOut = coherenceOut;
 			update(stimuli);
-			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | ',stimuli{dotsidx}.angleOut,stimuli{amidx}.directionOut,stimuli{dotsidx}.coherenceOut,cc,task.totalRuns);
+			t = sprintf('---> Angle: %i / %s | Coh: %.2g  | N(%s): %i | y: %g',stimuli{dotsidx}.angleOut,stimuli{amidx}.directionOut,stimuli{dotsidx}.coherenceOut,cc,task.totalRuns,yToggle);
 		end
 		
 		disp(t);
