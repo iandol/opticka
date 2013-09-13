@@ -4,6 +4,8 @@ useEyeLink = false;
 useStaircase = false;
 backgroundColour = [0.3 0.3 0.3];
 subject = 'Ian';
+fixx = 0;
+fixy = 0;
 
 if useStaircase; type = 'STAIR';else type = 'MOC';end %#ok<*UNRCH>
 name = ['AM_' type '_' subject];
@@ -60,7 +62,7 @@ sp.yPosition = 0;
 sp.barWidth = n.size;
 sp.speed = 0;
 sp.startPosition = 0;
-sp.barLength = a.barLength + 20;
+sp.barLength = a.barLength + 40;
 sp.colour = backgroundColour + 0.1;
 sp.alpha = 1;
 
@@ -282,7 +284,7 @@ try %our main experimental try catch loop
 		if useEyeLink == true
 			while ~strcmpi(fixated,'fix') && ~strcmpi(fixated,'breakfix')
 				draw(stimuli); %draw stimulus
-				drawSpot(s,0.1,[1 1 0],-3,2);
+				drawSpot(s,0.1,[1 1 0],fixx,fixy);
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				Screen('Flip',s.win); %flip the buffer
 				getSample(eL);
@@ -290,7 +292,7 @@ try %our main experimental try catch loop
 			end
 		else
 			draw(stimuli); %draw stimulus
-			drawSpot(s,0.1,[1 1 0],-3,2);
+			drawSpot(s,0.1,[1 1 0],fixx,fixy);
 			Screen('Flip',s.win); %flip the buffer
 			WaitSecs(0.5);			
 			fixated = 'fix';
@@ -300,19 +302,21 @@ try %our main experimental try catch loop
 		if strcmpi(fixated,'fix') %initial fixation held
 			if useEyeLink == true;statusMessage(eL,[t 'Show Stimulus...']);end
 			draw(stimuli); %draw stimulus
-			drawSpot(s,0.1,[1 1 0],-3,2);
+			drawSpot(s,0.1,[1 1 0],fixx,fixy);
 			show(stimuli)
 			vbls = Screen('Flip',s.win); %flip the buffer
 			vbl=vbls;
 			while GetSecs <= vbls+runtime
 				draw(stimuli); %draw stimulus
-				drawSpot(s,0.1,[1 1 0],-3,2);
+				drawSpot(s,0.1,[1 1 0],fixx,fixy);
 				%if useEyeLink == true;getSample(eL);drawEyePosition(eL);end
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				animate(stimuli); %animate stimulus, will be seen on next draw
 				nextvbl = vbl + screenVals.halfisi;
 				vbl = Screen('Flip',s.win, nextvbl); %flip the buffer
 			end
+			
+			Screen('Drawtext', s.win, ['TRIAL: ' num2str(task.totalRuns)],10,10);
 			vbl = Screen('Flip',s.win);
 			
 			%-----get our response
@@ -430,6 +434,7 @@ try %our main experimental try catch loop
 					task.response{task.totalRuns,3} = coherenceOut;
 					task.response{task.totalRuns,4} = angleToggle;
 					task.response{task.totalRuns,5} = dirToggle;
+					task.response{task.totalRuns,6} = yToggle;
 					task.totalRuns = task.totalRuns + 1;
 					fprintf('RESPONSE = %i\n', response);
 				else

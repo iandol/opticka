@@ -2,19 +2,36 @@ function  out  = makedprime(dat)
 
 r = dat.task.response;
 
-if size(r,2) > 3
+if dat.task.nVars<4
+	pos = zeros(size(r,1),1);
+else
+	pos = [dat.task.outValues{:,4}]';
+	pos = [pos{:}]'; pos = pos(1:length(r));
+end
+
+if size(r,2) > 5
+	rr = [r{:,1};r{:,2};r{:,3};r{:,4};r{:,5}]';
+elseif size(r,2) > 3
 	rr = [r{:,1};r{:,2};r{:,3};r{:,4}]';
+	rr = [rr,pos];
 else
 	rr = [r{:,1};r{:,2};r{:,3}]';
 	an = [dat.task.outValues{:,1}]';
 	an = [an{:,1}]';
 	an = an(1:length(rr));
-	rr = [rr, an];
+	pos = pos(1:length(rr));
+	rr = [rr, an, pos];
 end
 
 rrcongruent = rr(rr(:,2)==true,:);
+rrdotsalone1 = rrcongruent(rrcongruent(:,5)~=0,:);
+rrcongruent = rrcongruent(rrcongruent(:,5)==0,:);
 rrincongruent = rr(rr(:,2)==false,:);
+rrdotsalone2 = rrincongruent(rrincongruent(:,5)~=0,:);
+rrincongruent = rrincongruent(rrincongruent(:,5)==0,:);
 coherencevals = unique(rr(:,3));
+
+rrdotsalone = [rrdotsalone1;rrdotsalone2];
 
 for i = 1:length(coherencevals) %we step through each coherence value
 	
