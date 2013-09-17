@@ -142,6 +142,42 @@ classdef Container < hgsetget
             p = ancestor( obj.UIContainer, varargin{:} );
         end %ancestor
         
+        function setappdata( h, name, value )
+            %setappdata  Set application-defined data. 
+            %  setappdata(H, NAME, VALUE)
+            if isa(h, 'uiextras.Container')
+                h = h.UIContainer;
+            end
+            builtin( 'setappdata', h, name, value );
+        end % setappdata
+        
+        function value = getappdata( h, name )
+            %getappdata  Get value of application-defined data.
+            %  VALUE = getappdata(H, NAME)
+            if isa(h, 'uiextras.Container')
+                h = h.UIContainer;
+            end
+            value = builtin( 'getappdata', h, name );
+        end % getappdata
+        
+        function value = isappdata( h, name )
+            %isappdata  True if application-defined data exists.
+            %  isappdata(H, NAME)
+            if isa(h, 'uiextras.Container')
+                h = h.UIContainer;
+            end
+            value = builtin( 'isappdata', h, name );
+        end % isappdata
+        
+        function rmappdata( h, name )
+            %rmappdata  Remove application-defined data.
+            %  rmappdata(H, NAME)
+            if isa(h, 'uiextras.Container')
+                h = h.UIContainer;
+            end
+            builtin( 'rmappdata', h, name );
+        end % rmappdata
+        
         function delete( obj )
             %delete  destroy this layout
             %
@@ -150,7 +186,8 @@ classdef Container < hgsetget
             if ~isempty( obj.DeleteFcn )
                 uiextras.callCallback( obj.DeleteFcn, obj, [] );
             end
-            if ~isempty(obj.UIContainer) && ishandle( obj.UIContainer ) && ~strcmpi( get( obj.UIContainer, 'BeingDeleted' ), 'on' )
+            if ishandle( obj.UIContainer ) ...
+                    && ~strcmpi( get( obj.UIContainer, 'BeingDeleted' ), 'on' )
                 delete( obj.UIContainer );
             end
         end % delete
@@ -370,6 +407,10 @@ classdef Container < hgsetget
         
         function helpSetChildEnable( ~, child, state )
             % Set the enabled state of one child widget
+            
+            % We need to take a great deal of care to preserve the old
+            % enable state and to deal properly with children that are
+            % layouts in their own right.
             if strcmpi( get( child, 'Type' ), 'uipanel' )
                 % Might be another layout
                 if isappdata( child, 'Container' )

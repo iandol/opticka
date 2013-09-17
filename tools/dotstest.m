@@ -137,7 +137,7 @@ UDINCONGRUENT = PAL_AMUD_setupUD(UDINCONGRUENT,'StepSizeDown',StepSizeDown,'Step
 
 task = stimulusSequence();
 task.name = name;
-task.nBlocks = 20;
+task.nBlocks = 10;
 task.nVar(1).name = 'angle';
 task.nVar(1).stimuli = dotsidx;
 task.nVar(1).values = {0, 180};
@@ -146,7 +146,7 @@ task.nVar(2).stimuli = amidx;
 task.nVar(2).values = {'left','right'};
 task.nVar(3).name = 'coherence';
 task.nVar(3).stimuli = dotsidx;
-task.nVar(3).values = {0 0.1 0.2 0.3 0.4 0.5};
+task.nVar(3).values = {0 0.1 0.2 0.3 0.4};
 task.nVar(4).name = 'yPosition';
 task.nVar(4).stimuli = baridx;
 task.nVar(4).values = {0 0 -30};
@@ -162,8 +162,8 @@ end
 try %our main experimental try catch loop
 	
 	%-----open the PTB screens
-	s = screenManager('verbose',false,'blend',true,'screen',0,...
-		'bitDepth','8bit','debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
+	s = screenManager('verbose',false,'blend',true,'screen',0,'pixelsPerCm',44,...
+		'bitDepth','8bit','debug',true,'antiAlias',0,'nativeBeamPosition',0, ...
 		'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
 		'windowed',[],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
 	screenVals = open(s); %open PTB screen

@@ -1,5 +1,5 @@
 function  out  = makedprime(dat)
-
+set(0,'DefaultFigurePaperUnits','centimeters','DefaultFigurePaperType','A4')
 r = dat.task.response;
 
 if dat.task.nVars<4
@@ -10,7 +10,7 @@ else
 end
 
 if size(r,2) > 5
-	rr = [r{:,1};r{:,2};r{:,3};r{:,4};r{:,5}]';
+	rr = [r{:,1};r{:,2};r{:,3};r{:,4};r{:,6}]';
 elseif size(r,2) > 3
 	rr = [r{:,1};r{:,2};r{:,3};r{:,4}]';
 	rr = [rr,pos];
@@ -81,6 +81,34 @@ for i = 1:length(coherencevals) %we step through each coherence value
 	
 	[iDp(i), iC(i), inB(i), iPc(i)] = PAL_SDT_1AFC_PHFtoDP([ipc(i) ipf(i)]);
 	
+	%--------------------------------
+	doDots = false;
+	if ~isempty(rrdotsalone)
+		doDots = true;
+		dotsIndex = find(rrdotsalone(:,3) == coherencevals(i)); %find congruent trials == current coherence
+	
+		dotsCorrect = find(rrdotsalone(dotsIndex,1) == true); %correct congruent trials at this coherence
+		dotsIncorrect = find(rrdotsalone(dotsIndex,1) == false);  %incorrect congruent trials at this coherence
+
+		dotsAngle1 = find(rrdotsalone(dotsIndex,4) == 0); %index into 0deg = right angle
+		dotsAngle2 = find(rrdotsalone(dotsIndex,4) > 0); %left trials
+
+		intersectpc = intersect(dotsCorrect,dotsAngle1);
+		intersectpf = intersect(dotsIncorrect,dotsAngle2);
+
+		dc(i) = length(dotsCorrect) / length(dotsIndex);
+		dpc(i) = length(intersectpc) / length(dotsAngle1);
+		dpf(i) = length(intersectpf) / length(dotsAngle2);
+
+		dpc(dpc==1)=0.99;
+		dpc(dpc==0)=0.01;
+		dpf(dpf==1)=0.99;
+		dpf(dpf==0)=0.01;
+
+		[dDp(i), dC(i), dnB(i), dPc(i)] = PAL_SDT_1AFC_PHFtoDP([dpc(i) dpf(i)]);
+		
+	end
+	
 end
 
 out.vals = coherencevals';
@@ -103,6 +131,16 @@ out.iC = iC;
 out.inB = inB;
 out.iPc = iPc;
 
+if doDots
+	out.dc = dc;
+	out.dpc = dpc;
+	out.dpf = dpf;
+	out.dDp = dDp;
+	out.dC = dC;
+	out.dnB = dnB;
+	out.dPc = dPc;
+end
+
 f=figure('name','DPrime Output');
 set(f,'Color',[1 1 1]);
 figpos(1,[1000 1000])
@@ -115,43 +153,71 @@ maxy = max([max(out.cDp) max(out.iDp)]);
 
 p(1,1).select();
 plot(out.vals,out.cc,'k-o',out.vals,out.cDp,'r-o')
+if doDots
+	hold on
+	plot(out.vals,out.dc,'k:*',out.vals,out.dDp,'r:*')
+	hleg = legend('% Correct','d-prime','% Correct dots alone','d-prime dots alone','Location','NorthWest');
+else
+	hleg = legend('% Correct','d-prime','Location','NorthWest');
+end
 set(gca,'FontSize',16);
-title(['CONGRUENT' dat.name],'Interpreter','none','FontSize',20);
+title(['CONGRUENT' dat.name],'Interpreter','none','FontSize',18);
 axis([-inf inf miny maxy])
 xlabel('Coherence')
 ylabel('D-Prime / % correct')
-legend('% correct','D-Prime')
+set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
 box on
 grid on
 
 p(1,2).select();
 plot(out.vals,out.cC,'k-o',out.vals,out.cnB,'r-o')
-set(gca,'FontSize',20);
-title(['CONGRUENT' dat.name],'Interpreter','none','FontSize',20);
+if doDots
+	hold on
+	plot(out.vals,out.dC,'k:*',out.vals,out.dnB,'r:*')
+	hleg = legend('C bias','nB Bias','C bias dots alone','nB Bias dots alone','Location','NorthWest');
+else
+	hleg = legend('C bias','nB Bias','Location','NorthWest');
+end
+set(gca,'FontSize',16);
+title(['CONGRUENT' dat.name],'Interpreter','none','FontSize',18);
 xlabel('Coherence')
-legend('C bias','nB Bias')
 ylabel('BIAS')
+set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
 box on
 grid on
 
 p(2,1).select();
 plot(out.vals,out.ic,'k-o',out.vals,out.iDp,'r-o')
-set(gca,'FontSize',20);
-title(['INCONGRUENT' dat.name],'Interpreter','none','FontSize',20)
+if doDots
+	hold on
+	plot(out.vals,out.dc,'k:*',out.vals,out.dDp,'r:*')
+	hleg = legend('% Correct','d-prime','% Correct dots alone','d-prime dots alone','Location','NorthWest');
+else
+	hleg = legend('% Correct','d-prime','Location','NorthWest');
+end
+set(gca,'FontSize',16);
+title(['INCONGRUENT' dat.name],'Interpreter','none','FontSize',18)
 axis([-inf inf miny maxy])
 xlabel('Coherence')
 ylabel('D-Prime / % correct')
-legend('% correct','D-Prime')
+set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
 box on
 grid on
 
 p(2,2).select();
 plot(out.vals,out.iC,'k-o',out.vals,out.inB,'r-o')
-set(gca,'FontSize',20);
-title(['CONGRUENT' dat.name],'Interpreter','none','FontSize',20);
+if doDots
+	hold on
+	plot(out.vals,out.dC,'k:*',out.vals,out.dnB,'r:*')
+	hleg = legend('C bias','nB Bias','C bias dots alone','nB Bias dots alone','Location','NorthWest');
+else
+	hleg = legend('C bias','nB Bias','Location','NorthWest');
+end
+set(gca,'FontSize',16);
+title(['INCONGRUENT' dat.name],'Interpreter','none','FontSize',18);
 xlabel('Coherence')
-legend('C bias','nB Bias')
 ylabel('BIAS')
+set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
 box on
 grid on
 
