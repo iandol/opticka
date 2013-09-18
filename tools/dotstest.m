@@ -321,6 +321,7 @@ try %our main experimental try catch loop
 			
 			%-----get our response
 			response = [];
+			responseval = '';
 			if useEyeLink == true;
 				if angleToggle == 180
 					x = -10;
@@ -352,6 +353,7 @@ try %our main experimental try catch loop
 				else
 					response = [];
 				end
+				if correctwindow == 1; responseval = 'right'; else responseval = 'left'; end
 				
 				%-----disengage eyelink
 				vbl = Screen('Flip',s.win);
@@ -375,6 +377,7 @@ try %our main experimental try catch loop
 					if iscell(rchar);rchar=rchar{1};end
 					switch rchar
 						case {'LeftArrow','left'}
+							responseval = 'left';
 							if angleToggle == 180
 								response = 1;
 							else
@@ -382,6 +385,7 @@ try %our main experimental try catch loop
 							end
 							breakloopkey = true;
 						case {'RightArrow','right'}
+							responseval = 'right';
 							if angleToggle == 0
 								response = 1;
 							else
@@ -435,8 +439,9 @@ try %our main experimental try catch loop
 					task.response{task.totalRuns,4} = angleToggle;
 					task.response{task.totalRuns,5} = dirToggle;
 					task.response{task.totalRuns,6} = yToggle;
+					task.response{task.totalRuns,7} = responseval;
 					task.totalRuns = task.totalRuns + 1;
-					fprintf('RESPONSE = %i\n', response);
+					fprintf('RESPONSE (%s) = %i\n', responseval, response);
 				else
 					fprintf('RESPONSE EMPTY\n', response);
 				end

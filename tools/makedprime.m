@@ -36,18 +36,18 @@ rrdotsalone = [rrdotsalone1;rrdotsalone2];
 for i = 1:length(coherencevals) %we step through each coherence value
 	
 	%--------------------------
-	congruentIndex = find(rrcongruent(:,3) == coherencevals(i)); %find congruent trials == current coherence
+	cValIndex = rrcongruent(rrcongruent(:,3)==coherencevals(i),:); %find congruent trials == current coherence
 	
-	congruentCorrect = find(rrcongruent(congruentIndex,1) == true); %correct congruent trials at this coherence
-	congruentIncorrect = find(rrcongruent(congruentIndex,1) == false);  %incorrect congruent trials at this coherence
+	congruentCorrect = find(rrcongruent(cValIndex,1) == true); %correct congruent trials at this coherence
+	congruentIncorrect = find(rrcongruent(cValIndex,1) == false);  %incorrect congruent trials at this coherence
 	
-	congruentAngle1 = find(rrcongruent(congruentIndex,4) == 0); %index into 0deg = right angle
-	congruentAngle2 = find(rrcongruent(congruentIndex,4) > 0); %left trials
+	congruentAngle1 = find(rrcongruent(cValIndex,4) == 0); %index into 0deg = right angle
+	congruentAngle2 = find(rrcongruent(cValIndex,4) ~= 0); %left trials
 	
 	intersectpc = intersect(congruentCorrect,congruentAngle1);
 	intersectpf = intersect(congruentIncorrect,congruentAngle2);
 	
-	cc(i) = length(congruentCorrect) / length(congruentIndex);
+	cc(i) = length(congruentCorrect) / length(cValIndex);
 	cpc(i) = length(intersectpc) / length(congruentAngle1);
 	cpf(i) = length(intersectpf) / length(congruentAngle2);
 	
@@ -65,7 +65,7 @@ for i = 1:length(coherencevals) %we step through each coherence value
 	incongruentIncorrect = find(rrincongruent(incongruentIndex,1) == false);%incorrect incongruent trials at this coherence
 	
 	incongruentAngle1 = find(rrincongruent(incongruentIndex,4) == 0);
-	incongruentAngle2 = find(rrincongruent(incongruentIndex,4) > 0);
+	incongruentAngle2 = find(rrincongruent(incongruentIndex,4) ~= 0);
 	
 	intersectpc = intersect(incongruentCorrect,incongruentAngle1);
 	intersectpf = intersect(incongruentIncorrect,incongruentAngle2);
@@ -152,10 +152,10 @@ miny = min([min(out.cDp) min(out.iDp)]);
 maxy = max([max(out.cDp) max(out.iDp)]);
 
 p(1,1).select();
-plot(out.vals,out.cc,'k-o',out.vals,out.cDp,'r-o')
+plot(out.vals,out.cc*4.6527,'k-o',out.vals,out.cDp,'r-o')
 if doDots
 	hold on
-	plot(out.vals,out.dc,'k:*',out.vals,out.dDp,'r:*')
+	plot(out.vals,out.dc*4.6527,'k:*',out.vals,out.dDp,'r:*')
 	hleg = legend('% Correct','d-prime','% Correct dots alone','d-prime dots alone','Location','NorthWest');
 else
 	hleg = legend('% Correct','d-prime','Location','NorthWest');
@@ -187,10 +187,10 @@ box on
 grid on
 
 p(2,1).select();
-plot(out.vals,out.ic,'k-o',out.vals,out.iDp,'r-o')
+plot(out.vals,out.ic*4.6527,'k-o',out.vals,out.iDp,'r-o')
 if doDots
 	hold on
-	plot(out.vals,out.dc,'k:*',out.vals,out.dDp,'r:*')
+	plot(out.vals,out.dc*4.6527,'k:*',out.vals,out.dDp,'r:*')
 	hleg = legend('% Correct','d-prime','% Correct dots alone','d-prime dots alone','Location','NorthWest');
 else
 	hleg = legend('% Correct','d-prime','Location','NorthWest');
