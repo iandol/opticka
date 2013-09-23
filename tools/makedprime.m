@@ -254,7 +254,7 @@ out.icPc = icPc;
 f=figure('name','DPrime Output');
 set(f,'Color',[1 1 1]);
 figpos(1,[1000 1000])
-p=panel(f);
+p=panel(f,'no-manage-font');
 p.margin = 25;
 p.pack(2,3);
 
@@ -271,7 +271,7 @@ else
 	hleg = legend('% Correct','d-prime','Location','SouthEast');
 end
 set(gca,'FontSize',16);
-title(['CONGRUENT' dat.name],'Interpreter','none','FontSize',18);
+title(['CONGRUENT' dat.name],'Interpreter','none','FontSize',14);
 axis([-inf inf miny maxy])
 xlabel('Coherence')
 ylabel('D-Prime / % correct')
@@ -289,7 +289,7 @@ else
 	hleg = legend('C bias','nB Bias','Location','SouthEast');
 end
 set(gca,'FontSize',16);
-title(['CONGRUENT' dat.name],'Interpreter','none','FontSize',18);
+title(['CONGRUENT' dat.name],'Interpreter','none','FontSize',14);
 xlabel('Coherence')
 ylabel('BIAS')
 set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
@@ -306,7 +306,7 @@ else
 	hleg = legend('% Correct','d-prime','Location','SouthEast');
 end
 set(gca,'FontSize',16);
-title(['INCONGRUENT' dat.name],'Interpreter','none','FontSize',18)
+title(['INCONGRUENT' dat.name],'Interpreter','none','FontSize',14)
 axis([-inf inf miny maxy])
 xlabel('Coherence')
 ylabel('D-Prime / % correct')
@@ -324,7 +324,7 @@ else
 	hleg = legend('C bias','nB Bias','Location','SouthEast');
 end
 set(gca,'FontSize',16);
-title(['INCONGRUENT' dat.name],'Interpreter','none','FontSize',18);
+title(['INCONGRUENT' dat.name],'Interpreter','none','FontSize',14);
 xlabel('Coherence')
 ylabel('BIAS')
 set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
@@ -341,7 +341,7 @@ else
 	hleg = legend('% Correct','d-prime','Location','SouthEast');
 end
 set(gca,'FontSize',16);
-title(['COMBINE' dat.name],'Interpreter','none','FontSize',18)
+title(['COMBINE' dat.name],'Interpreter','none','FontSize',14)
 axis([-inf inf miny maxy])
 xlabel('Coherence')
 ylabel('D-Prime / % correct')
@@ -359,7 +359,7 @@ else
 	hleg = legend('C bias','nB Bias','Location','SouthEast');
 end
 set(gca,'FontSize',16);
-title(['COMBINE' dat.name],'Interpreter','none','FontSize',18);
+title(['COMBINE' dat.name],'Interpreter','none','FontSize',14);
 xlabel('Coherence')
 ylabel('BIAS')
 set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
@@ -371,6 +371,11 @@ f=figure('name','Percent Correct');
 set(f,'Color',[1 1 1]);
 figpos(1,[1000 1000])
 hold on
+
+[fitVals,outvals,outfine]=fitit(out.vals, out.coh.DotsAloneCorrect, out.coh.DotsAloneLength);
+out.dotsFit = fitVals;
+plot(out.vals,out.dc,'k.','MarkerSize',20);
+plot(outvals,outfine,'k-','linewidth',1.5);
 
 [fitVals,outvals,outfine]=fitit(out.vals, out.coh.CongruentCorrect, out.coh.CongruentLength);
 out.conFit = fitVals;
