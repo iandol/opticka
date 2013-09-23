@@ -33,10 +33,16 @@ coherencevals = unique(rr(:,3));
 
 rrdotsalone = [rrdotsalone1;rrdotsalone2];
 
+out.totalCongruent = rrcongruent;
+out.totalIncongruent = rrincongruent;
+out.totalDotsAlone = rrdotsalone;
+
 for i = 1:length(coherencevals) %we step through each coherence value
 	
 	%--------------------------
 	cohValIndex = rrcongruent(rrcongruent(:,3)==coherencevals(i),:); %find congruent trials == current coherence
+	
+	out.coh.CongruentLength(i) = length(cohValIndex);
 	
 	congruentCorrect = find(cohValIndex(:,1) == true); %correct congruent trials at this coherence
 	congruentIncorrect = find(cohValIndex(:,1) == false);  %incorrect congruent trials at this coherence
@@ -52,24 +58,27 @@ for i = 1:length(coherencevals) %we step through each coherence value
 	conFalseAlarm = [conFalseAlarm0; conFalseAlarm180];
 	congruentLength = length(cohValIndex);
 	
+	cc(i) = length(congruentCorrect) / congruentLength;
 	intersectpc = congruentHit0;
 	pclength = length(congruentAngle1);
 	intersectpf = conFalseAlarm180;
 	pflength = length(congruentAngle2);
-	
-	cc(i) = length(congruentCorrect) / congruentLength;
 	cpc(i) = length(intersectpc) / pclength;
 	cpf(i) = length(intersectpf) / pflength;
 	
-	cpc(cpc==1)=0.99;
-	cpc(cpc==0)=0.01;
-	cpf(cpf==1)=0.99;
-	cpf(cpf==0)=0.01;
+	cpc(cpc==1)=0.99; cpc(cpc==0)=0.01; cpf(cpf==1)=0.99; cpf(cpf==0)=0.01;
 	
 	[cDp(i), cC(i), cnB(i), cPc(i)] = PAL_SDT_1AFC_PHFtoDP([cpc(i) cpf(i)]);
 	
+	out.coh.CongruentCorrect(i) = length(congruentCorrect);
+	out.coh.congruentHit0(1,i)  = length(congruentHit0);
+	out.coh.congruentHit0(2,i)  = length(congruentAngle1);
+	out.coh.congruentHit180(1,i)  = length(congruentHit180);
+	out.coh.congruentHit180(2,i)  = length(congruentAngle2);
 	%--------------------------
 	cohValIndex = rrincongruent(rrincongruent(:,3)==coherencevals(i),:); %find incongruent trials == current coherence
+	
+	out.coh.IncongruentLength(i) = length(cohValIndex);
 	
 	incongruentCorrect = find(cohValIndex(:,1) == true); %correct incongruent trials at this coherence
 	incongruentIncorrect = find(cohValIndex(:,1) == false);%incorrect incongruent trials at this coherence
@@ -77,27 +86,30 @@ for i = 1:length(coherencevals) %we step through each coherence value
 	incongruentAngle1 = find(cohValIndex(:,4) == 0);
 	incongruentAngle2 = find(cohValIndex(:,4) ~= 0);
 	
-	incongrunetHit0 = intersect(incongruentCorrect,incongruentAngle1);
+	incongruentHit0 = intersect(incongruentCorrect,incongruentAngle1);
 	incongruentHit180 = intersect(incongruentCorrect,incongruentAngle2);
-	incongruentHit = [incongrunetHit0; incongruentHit180];
+	incongruentHit = [incongruentHit0; incongruentHit180];
 	inconFalseAlarm0 = intersect(incongruentIncorrect,incongruentAngle1);
 	inconFalseAlarm180 = intersect(incongruentIncorrect,incongruentAngle2);
 	inconFalseAlarm = [inconFalseAlarm0; inconFalseAlarm180];
 	incongruentLength = length(cohValIndex);
 	
-	intersectpc = incongrunetHit0;
+	intersectpc = incongruentHit0;
 	intersectpf = inconFalseAlarm180;
 	
 	ic(i) = length(incongruentCorrect) / incongruentLength;
 	ipc(i) = length(intersectpc) / length(incongruentAngle1);
 	ipf(i) = length(intersectpf) / length(incongruentAngle2);
 	
-	ipc(ipc==1)=0.99;
-	ipc(ipc==0)=0.01;
-	ipf(ipf==1)=0.99;
-	ipf(ipf==0)=0.01;
+	ipc(ipc==1)=0.99; ipc(ipc==0)=0.01; ipf(ipf==1)=0.99; ipf(ipf==0)=0.01;
 	
 	[iDp(i), iC(i), inB(i), iPc(i)] = PAL_SDT_1AFC_PHFtoDP([ipc(i) ipf(i)]);
+	
+	out.coh.IncongruentCorrect(i) = length(incongruentCorrect);
+	out.coh.incongruentHit0(1,i)  = length(incongruentHit0);
+	out.coh.incongruentHit0(2,i)  = length(incongruentAngle1);
+	out.coh.incongruentHit180(1,i)  = length(incongruentHit180);
+	out.coh.incongruentHit180(2,i)  = length(incongruentAngle2);
 	
 	%--------------------------------
 	%Stewarts congruent hit vs incongruent false alarms
@@ -109,10 +121,7 @@ for i = 1:length(coherencevals) %we step through each coherence value
 	pc(i) = length(intersectpc) / pclength;
 	pf(i) = length(intersectpf) / pflength;
 	
-	pc(pc==1)=0.99;
-	pc(pc==0)=0.01;
-	pf(pf==1)=0.99;
-	pf(pf==0)=0.01;
+	pc(pc==1)=0.99;	pc(pc==0)=0.01;	pf(pf==1)=0.99;	pf(pf==0)=0.01;
 	
 	[sDp(i), sC(i), snB(i), sPc(i)] = PAL_SDT_1AFC_PHFtoDP([pc(i) pf(i)]);
 	
@@ -126,10 +135,7 @@ for i = 1:length(coherencevals) %we step through each coherence value
 	pc(i) = length(intersectpc) / pclength;
 	pf(i) = length(intersectpf) / pflength;
 	
-	pc(pc==1)=0.99;
-	pc(pc==0)=0.01;
-	pf(pf==1)=0.99;
-	pf(pf==0)=0.01;
+	pc(pc==1)=0.99; pc(pc==0)=0.01; pf(pf==1)=0.99; pf(pf==0)=0.01;
 	
 	[ccDp(i), ccC(i), ccnB(i), ccPc(i)] = PAL_SDT_1AFC_PHFtoDP([pc(i) pf(i)]);
 	
@@ -156,33 +162,38 @@ for i = 1:length(coherencevals) %we step through each coherence value
 		doDots = true;
 		cohValIndex = rrdotsalone(rrdotsalone(:,3) == coherencevals(i),:); %find congruent trials == current coherence
 	
+		out.coh.DotsAloneLength(i) = length(cohValIndex);
+		
 		dotsCorrect = find(cohValIndex(:,1) == true); %correct congruent trials at this coherence
 		dotsIncorrect = find(cohValIndex(:,1) == false);  %incorrect congruent trials at this coherence
 
 		dotsAngle1 = find(cohValIndex(:,4) == 0); %index into 0deg = right angle
 		dotsAngle2 = find(cohValIndex(:,4) > 0); %left trials
 
-		dotshit0 = intersect(dotsCorrect,dotsAngle1);
-		dotshit180 = intersect(dotsCorrect,dotsAngle2);
-		dotshit = [dotshit0;dotshit180];
-		dotsfalsealarm0 = intersect(dotsIncorrect,dotsAngle1);
-		dotsfalsealarm180 = intersect(dotsIncorrect,dotsAngle2);
-		dotsfalsealarm = [dotsfalsealarm0; dotsfalsealarm180];
+		dotsHit0 = intersect(dotsCorrect,dotsAngle1);
+		dotsHit180 = intersect(dotsCorrect,dotsAngle2);
+		dotsHit = [dotsHit0;dotsHit180];
+		dotsFalseAlarm0 = intersect(dotsIncorrect,dotsAngle1);
+		dotsFalseAlarm180 = intersect(dotsIncorrect,dotsAngle2);
+		dotsFalseAlarm = [dotsFalseAlarm0; dotsFalseAlarm180];
+		dotsLength = length(cohValIndex);
 
-		intersectpc = dotshit0;
-		intersectpf = dotsfalsealarm180;
+		intersectpc = dotsHit0;
+		intersectpf = dotsFalseAlarm180;
 		
 		dc(i) = length(dotsCorrect) / length(cohValIndex);
 		dpc(i) = length(intersectpc) / length(dotsAngle1);
 		dpf(i) = length(intersectpf) / length(dotsAngle2);
 
-		dpc(dpc==1)=0.99;
-		dpc(dpc==0)=0.01;
-		dpf(dpf==1)=0.99;
-		dpf(dpf==0)=0.01;
+		dpc(dpc==1)=0.99; dpc(dpc==0)=0.01; dpf(dpf==1)=0.99; dpf(dpf==0)=0.01;
 
 		[dDp(i), dC(i), dnB(i), dPc(i)] = PAL_SDT_1AFC_PHFtoDP([dpc(i) dpf(i)]);
 		
+		out.coh.DotsAloneCorrect(i) = length(dotsCorrect);
+		out.coh.dotsHit0(1,i)  = length(dotsHit0);
+		out.coh.dotsHit0(2,i)  = length(dotsAngle1);
+		out.coh.dotsHit180(1,i)  = length(dotsHit180);
+		out.coh.dotsHit180(2,i)  = length(dotsAngle2);;
 	end
 	
 end
@@ -251,10 +262,10 @@ miny = min([min(out.cDp) min(out.iDp)]);
 maxy = max([max(out.cDp) max(out.iDp)]);
 
 p(1,1).select();
-plot(out.vals,out.cc,'k-o',out.vals,out.cDp,'r-o')
+plot(out.vals,out.cc,'k-o',out.vals,out.cDp,'r-o','MarkerSize',10,'linewidth',1.5)
 if doDots
 	hold on
-	plot(out.vals,out.dc,'k:*',out.vals,out.dDp,'r:*')
+	plot(out.vals,out.dc,'k:*',out.vals,out.dDp,'r:*','MarkerSize',10,'linewidth',1.5)
 	hleg = legend('% Correct','d-prime','% Correct dots alone','d-prime dots alone','Location','SouthEast');
 else
 	hleg = legend('% Correct','d-prime','Location','SouthEast');
@@ -268,11 +279,11 @@ set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
 box on
 grid on
 
-p(1,2).select();
-plot(out.vals,out.cC,'k-o',out.vals,out.cnB,'r-o')
+p(2,1).select();
+plot(out.vals,out.cC,'k-o',out.vals,out.cnB,'r-o','MarkerSize',10,'linewidth',1.5)
 if doDots
 	hold on
-	plot(out.vals,out.dC,'k:*',out.vals,out.dnB,'r:*')
+	plot(out.vals,out.dC,'k:*',out.vals,out.dnB,'r:*','MarkerSize',10,'linewidth',1.5)
 	hleg = legend('C bias','nB Bias','C bias dots alone','nB Bias dots alone','Location','SouthEast');
 else
 	hleg = legend('C bias','nB Bias','Location','SouthEast');
@@ -285,11 +296,11 @@ set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
 box on
 grid on
 
-p(2,1).select();
-plot(out.vals,out.ic,'k-o',out.vals,out.iDp,'r-o')
+p(1,2).select();
+plot(out.vals,out.ic,'k-o',out.vals,out.iDp,'r-o','MarkerSize',10,'linewidth',1.5)
 if doDots
 	hold on
-	plot(out.vals,out.dc,'k:*',out.vals,out.dDp,'r:*')
+	plot(out.vals,out.dc,'k:*',out.vals,out.dDp,'r:*','MarkerSize',10,'linewidth',1.5)
 	hleg = legend('% Correct','d-prime','% Correct dots alone','d-prime dots alone','Location','SouthEast');
 else
 	hleg = legend('% Correct','d-prime','Location','SouthEast');
@@ -304,10 +315,10 @@ box on
 grid on
 
 p(2,2).select();
-plot(out.vals,out.iC,'k-o',out.vals,out.inB,'r-o')
+plot(out.vals,out.iC,'k-o',out.vals,out.inB,'r-o','MarkerSize',10,'linewidth',1.5)
 if doDots
 	hold on
-	plot(out.vals,out.dC,'k:*',out.vals,out.dnB,'r:*')
+	plot(out.vals,out.dC,'k:*',out.vals,out.dnB,'r:*','MarkerSize',10,'linewidth',1.5)
 	hleg = legend('C bias','nB Bias','C bias dots alone','nB Bias dots alone','Location','SouthEast');
 else
 	hleg = legend('C bias','nB Bias','Location','SouthEast');
@@ -321,10 +332,10 @@ box on
 grid on
 
 p(1,3).select();
-plot(out.vals,out.sPc,'k-o',out.vals,out.sDp,'r-o')
+plot(out.vals,out.sPc,'k-o',out.vals,out.sDp,'r-o','MarkerSize',10,'linewidth',1.5)
 if doDots
 	hold on
-	plot(out.vals,out.dc,'k:*',out.vals,out.dDp,'r:*')
+	plot(out.vals,out.dc,'k:*',out.vals,out.dDp,'r:*','MarkerSize',10,'linewidth',1.5)
 	hleg = legend('% Correct','d-prime','% Correct dots alone','d-prime dots alone','Location','SouthEast');
 else
 	hleg = legend('% Correct','d-prime','Location','SouthEast');
@@ -339,10 +350,10 @@ box on
 grid on
 
 p(2,3).select();
-plot(out.vals,out.sC,'k-o',out.vals,out.snB,'r-o')
+plot(out.vals,out.sC,'k-o',out.vals,out.snB,'r-o','MarkerSize',10,'linewidth',1.5)
 if doDots
 	hold on
-	plot(out.vals,out.dC,'k:*',out.vals,out.dnB,'r:*')
+	plot(out.vals,out.dC,'k:*',out.vals,out.dnB,'r:*','MarkerSize',10,'linewidth',1.5)
 	hleg = legend('C bias','nB Bias','C bias dots alone','nB Bias dots alone','Location','SouthEast');
 else
 	hleg = legend('C bias','nB Bias','Location','SouthEast');
@@ -355,5 +366,92 @@ set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
 box on
 grid on
 
+
+f=figure('name','Percent Correct');
+set(f,'Color',[1 1 1]);
+figpos(1,[1000 1000])
+hold on
+
+[fitVals,outvals,outfine]=fitit(out.vals, out.coh.CongruentCorrect, out.coh.CongruentLength);
+out.conFit = fitVals;
+plot(out.vals,out.cc,'b.','MarkerSize',20);
+plot(outvals,outfine,'b-','linewidth',1.5);
+
+[fitVals,outvals,outfine]=fitit(out.vals, out.coh.IncongruentCorrect, out.coh.IncongruentLength);
+out.inconFit = fitVals;
+plot(out.vals,out.ic,'r.','MarkerSize',20);
+plot(outvals,outfine,'r-','linewidth',1.5);
+
+[fitVals,outvals,outfine]=fitit(out.vals, out.coh.DotsAloneCorrect, out.coh.DotsAloneLength);
+out.dotsFit = fitVals;
+plot(out.vals,out.dc,'k.','MarkerSize',20);
+plot(outvals,outfine,'k-','linewidth',1.5);
+
+hleg = legend('Congruent','Congruent Fit','Incongurent','Inongruent Fit','Dots Alone','Dots Alone Fit','Location','SouthEast');
+set(gca,'FontSize',15);
+title(['PC ' dat.name],'Interpreter','none','FontSize',16);
+xlabel('Coherence')
+ylabel('Percentage Correct')
+	set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
+box on
+grid on
+
+
+p1 = -fliplr(out.vals);
+p2 = unique([p1 out.vals]);
+
+cr = out.coh.congruentHit0(1,:) ./ out.coh.congruentHit0(2,:);
+ir = out.coh.incongruentHit0(1,:) ./ out.coh.incongruentHit0(2,:);
+dr = out.coh.dotsHit0(1,:) ./ out.coh.dotsHit0(2,:);
+
+cl = fliplr(1 - (out.coh.incongruentHit180(1,:) ./ out.coh.incongruentHit180(2,:))); 
+il = fliplr(1 - (out.coh.congruentHit180(1,:) ./ out.coh.congruentHit180(2,:)));
+dl = fliplr(1 - (out.coh.dotsHit180(1,:) ./ out.coh.dotsHit180(2,:)));
+
+cm = mean([cr(1) cl(end)]);
+c = [cl(1:end-1) cm cr(2:end)];
+im = mean([ir(1) il(end)]);
+i = [il(1:end-1) im ir(2:end)];
+dm = mean([dr(1) dl(end)]);
+d = [dl(1:end-1) dm dr(2:end)];
+
+f=figure('name','Overall Shift');
+set(f,'Color',[1 1 1]);
+figpos(1,[1000 1000])
+hold on
+plot(p2,c,'b.-',p2,i,'r.-',p2,d,'k.-','MarkerSize',30,'linewidth',1.5);
+hleg = legend('Congruent','Incongurent','Dots Alone','Location','SouthEast');
+set(gca,'FontSize',15);
+title(['PC ' dat.name],'Interpreter','none','FontSize',16);
+xlabel('Coherence L<->R')
+ylabel('Percentage Correct Right')
+set(hleg,'FontAngle','italic','TextColor',[.5,.4,.3],'FontSize',10)
+box on
+grid on
+end
+
+function [out, outvals, outfine, LL, exitFlag] = fitit(vals, num, tot)
+
+PF = {@PAL_Logistic; @PAL_Weibull; @PAL_Gumbel; @PAL_CumulativeNormal; @PAL_Gumbel; @PAL_HyperbolicSecant};
+PFSelect = 1;
+
+paramsValues = [0.15 10 0.5];
+paramsFree = [1 1 1];
+
+exitN = 1;
+exitFlag = 0;
+while exitFlag == 0 && exitN < 10
+	message = '';
+	[out, LL, exitFlag, message] = PAL_PFML_Fit(vals, num, tot, paramsValues, paramsFree, PF{PFSelect});
+	if exitFlag == 0;
+		disp(['Didn''t fit: ' message.message]);
+		paramsValues = out(1:3);
+		exitN = exitN + 1;
+	end
+end
+
+outvals = linspace(min(vals), max(vals), 500);
+f = PF{PFSelect};
+outfine = f(out, outvals);
 
 end
