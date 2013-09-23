@@ -382,12 +382,15 @@ out.inconFit = fitVals;
 plot(out.vals,out.ic,'r.','MarkerSize',20);
 plot(outvals,outfine,'r-','linewidth',1.5);
 
-[fitVals,outvals,outfine]=fitit(out.vals, out.coh.DotsAloneCorrect, out.coh.DotsAloneLength);
-out.dotsFit = fitVals;
-plot(out.vals,out.dc,'k.','MarkerSize',20);
-plot(outvals,outfine,'k-','linewidth',1.5);
-
-hleg = legend('Congruent','Congruent Fit','Incongurent','Inongruent Fit','Dots Alone','Dots Alone Fit','Location','SouthEast');
+if doDots
+	[fitVals,outvals,outfine]=fitit(out.vals, out.coh.DotsAloneCorrect, out.coh.DotsAloneLength);
+	out.dotsFit = fitVals;
+	plot(out.vals,out.dc,'k.','MarkerSize',20);
+	plot(outvals,outfine,'k-','linewidth',1.5);
+	hleg = legend('Congruent','Congruent Fit','Incongurent','Inongruent Fit','Dots Alone','Dots Alone Fit','Location','SouthEast');
+else
+	hleg = legend('Congruent','Congruent Fit','Incongurent','Inongruent Fit','Location','SouthEast');
+end
 set(gca,'FontSize',15);
 title(['PC ' dat.name],'Interpreter','none','FontSize',16);
 xlabel('Coherence')
@@ -412,15 +415,29 @@ cm = mean([cr(1) cl(end)]);
 c = [cl(1:end-1) cm cr(2:end)];
 im = mean([ir(1) il(end)]);
 i = [il(1:end-1) im ir(2:end)];
-dm = mean([dr(1) dl(end)]);
-d = [dl(1:end-1) dm dr(2:end)];
+if doDots
+	dm = mean([dr(1) dl(end)]);
+	d = [dl(1:end-1) dm dr(2:end)];
+end
+
+out.bvals = p2;
+out.c = c;
+out.i = i;
+if doDots
+	out.d = d;
+end
 
 f=figure('name','Overall Shift');
 set(f,'Color',[1 1 1]);
 figpos(1,[1000 1000])
 hold on
-plot(p2,c,'b.-',p2,i,'r.-',p2,d,'k.-','MarkerSize',30,'linewidth',1.5);
-hleg = legend('Congruent','Incongurent','Dots Alone','Location','SouthEast');
+if doDots
+	plot(p2,c,'b.-',p2,i,'r.-',p2,d,'k.-','MarkerSize',30,'linewidth',1.5);
+	hleg = legend('Congruent','Incongurent','Dots Alone','Location','SouthEast');
+else
+	plot(p2,c,'b.-',p2,i,'r.-','MarkerSize',30,'linewidth',1.5);
+	hleg = legend('Congruent','Incongurent','Location','SouthEast');
+end
 set(gca,'FontSize',15);
 title(['PC ' dat.name],'Interpreter','none','FontSize',16);
 xlabel('Coherence L<->R')
@@ -432,26 +449,59 @@ end
 
 function [out, outvals, outfine, LL, exitFlag] = fitit(vals, num, tot)
 
-PF = {@PAL_Logistic; @PAL_Weibull; @PAL_Gumbel; @PAL_CumulativeNormal; @PAL_Gumbel; @PAL_HyperbolicSecant};
+correctnegative = false;
+
+PF = {@PAL_Logistic; @PAL_Weibull; @PAL_CumulativeNormal; @PAL_Gumbel; @PAL_HyperbolicSecant};
 PFSelect = 1;
 
-paramsValues = [0.15 10 0.5];
-paramsFree = [1 1 1];
+if correctnegative
+	minv = min(vals);
+	vals = vals+minv;
+end
+
+iparamsValues = [0.15 10 0.5];
+iparamsFree = [1 1 1];
+
+paramsValues = iparamsValues;
+paramsFree = iparamsFree;
 
 exitN = 1;
 exitFlag = 0;
-while exitFlag == 0 && exitN < 10
+while exitFlag == 0 && exitN <= 50
 	message = '';
 	[out, LL, exitFlag, message] = PAL_PFML_Fit(vals, num, tot, paramsValues, paramsFree, PF{PFSelect});
 	if exitFlag == 0;
-		disp(['Didn''t fit: ' message.message]);
 		paramsValues = out(1:3);
+		disp([func2str(PF{PFSelect}) ' didn''t fit: ' message.message '|vals= ' num2str(out)]);
+		if exitN > 50
+			paramsValues = iparamsValues;
+			paramsFree = iparamsFree;
+			PFSelect = 5;
+		elseif exitN > 40
+			paramsValues = iparamsValues;
+			paramsFree = iparamsFree;
+			PFSelect = 4;
+		elseif exitN > 30
+			paramsValues = iparamsValues;
+			paramsFree = iparamsFree;
+			PFSelect = 3;
+		elseif exitN > 20
+			paramsValues = iparamsValues;
+			paramsFree = iparamsFree;
+			PFSelect = 2;
+		elseif exitN > 10
+		end
 		exitN = exitN + 1;
 	end
 end
 
+disp([func2str(PF{PFSelect}) ' fit: ' message.message '| vals= ' num2str(out)]);
+
 outvals = linspace(min(vals), max(vals), 500);
 f = PF{PFSelect};
+if correctnegative
+	outvals = outvals - minv;
+end
 outfine = f(out, outvals);
 
 end

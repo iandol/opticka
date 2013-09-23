@@ -6,6 +6,8 @@ backgroundColour = [0.3 0.3 0.3];
 subject = 'Ian';
 fixx = 0;
 fixy = 0;
+pixelsPerCm = 32; %32=Lab CRT -- 44=27"monitor or Macbook Pro
+nBlocks = 10; %number of repeated blocks?
 
 if useStaircase; type = 'STAIR';else type = 'MOC';end %#ok<*UNRCH>
 name = ['AM_' type '_' subject];
@@ -162,7 +164,7 @@ end
 try %our main experimental try catch loop
 	
 	%-----open the PTB screens
-	s = screenManager('verbose',false,'blend',true,'screen',0,'pixelsPerCm',44,...
+	s = screenManager('verbose',false,'blend',true,'screen',0,'pixelsPerCm',pixelsPerCm,...
 		'bitDepth','8bit','debug',true,'antiAlias',0,'nativeBeamPosition',0, ...
 		'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
 		'windowed',[],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
@@ -316,7 +318,7 @@ try %our main experimental try catch loop
 				vbl = Screen('Flip',s.win, nextvbl); %flip the buffer
 			end
 			
-			Screen('Drawtext', s.win, ['TRIAL: ' num2str(task.totalRuns)],10,10);
+			Screen('Drawtext', s.win, ['TRIAL: ' num2str(task.totalRuns) '/' num2str(task.nRuns)],10,10);
 			vbl = Screen('Flip',s.win);
 			
 			%-----get our response
@@ -416,9 +418,11 @@ try %our main experimental try catch loop
 					end
 				end
 				if ~isempty(response)
-					fprintf('RESPONSE = %i\n', response);
+					t=sprintf('RESPONSE (%s) = %i', responseval, response);
+					Screen('Drawtext', s.win, t,10,10);
+					disp(t);					
 				else
-					fprintf('RESPONSE EMPTY\n', response);
+					fprintf('RESPONSE EMPTY\n');
 				end
 				if UDINCONGRUENT.stop == 1 && UDCONGRUENT.stop == 1
 					fprintf('\nBOTH LOOPS HAVE STOPPED\n', response);
@@ -441,9 +445,13 @@ try %our main experimental try catch loop
 					task.response{task.totalRuns,6} = yToggle;
 					task.response{task.totalRuns,7} = responseval;
 					task.totalRuns = task.totalRuns + 1;
-					fprintf('RESPONSE (%s) = %i\n', responseval, response);
+					t=sprintf('RESPONSE (%s) = %i', responseval, response);
+					Screen('Drawtext', s.win, t,10,10);
+					disp(t);					
 				else
-					fprintf('RESPONSE EMPTY\n', response);
+					t=sprintf('RESPONSE EMPTY');
+					Screen('Drawtext', s.win, t,10,10);
+					disp(t);					
 				end
 				
 				if task.totalRuns > task.nRuns
