@@ -6,10 +6,11 @@ backgroundColour = [0.3 0.3 0.3];
 subject = 'Ian';
 fixx = 0;
 fixy = 0;
-pixelsPerCm = 32; %32=Lab CRT -- 44=27"monitor or Macbook Pro
+pixelsPerCm = 44; %32=Lab CRT -- 44=27"monitor or Macbook Pro
 nBlocks = 10; %number of repeated blocks?
+windowed = [1000 800];
 
-if useStaircase; type = 'STAIR';else type = 'MOC';end %#ok<*UNRCH>
+if useStaircase; type = 'STAIR'; else type = 'MOC'; end %#ok<*UNRCH>
 name = ['AM_' type '_' subject];
 c = sprintf(' %i',fix(clock()));
 c = regexprep(c,' ','_');
@@ -167,7 +168,7 @@ try %our main experimental try catch loop
 	s = screenManager('verbose',false,'blend',true,'screen',0,'pixelsPerCm',pixelsPerCm,...
 		'bitDepth','8bit','debug',true,'antiAlias',0,'nativeBeamPosition',0, ...
 		'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
-		'windowed',[],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
+		'windowed',windowed,'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
 	screenVals = open(s); %open PTB screen
 	setup(stimuli,s); %setup our stimulus object
 
@@ -318,7 +319,8 @@ try %our main experimental try catch loop
 				vbl = Screen('Flip',s.win, nextvbl); %flip the buffer
 			end
 			
-			Screen('Drawtext', s.win, ['TRIAL: ' num2str(task.totalRuns) '/' num2str(task.nRuns)],10,10);
+			Screen('Drawtext', s.win, ['TRIAL: ' num2str(task.totalRuns) '/' num2str(task.nRuns)], 10, 10);
+			Screen('Drawtext', s.win, t, 10, 30);
 			vbl = Screen('Flip',s.win);
 			
 			%-----get our response
