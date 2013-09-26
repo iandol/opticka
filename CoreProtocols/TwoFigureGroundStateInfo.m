@@ -24,21 +24,21 @@ fixX = 0;
 fixY = 0;
 firstFixInit = 0.7;
 firstFixTime = [0.5];
-firstFixRadius = 1;
+firstFixRadius = 1.2;
 obj.lastXPosition = fixX;
 obj.lastYPosition = fixY;
 strict = true;
 
 targetFixInit = 0.75;
 targetFixTime = [0.4];
-targetRadius = 2;
+targetRadius = 1.5;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
-eL.calibrationStyle = 'HV9'; % calibration style
+eL.calibrationStyle = 'HV5'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 0.5;
 eL.modify.calibrationtargetwidth = 0.01;

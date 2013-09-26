@@ -297,9 +297,9 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function value = get.nDots(obj)
 			if ~obj.inSetup && isprop(obj,'sizeOut')
-				obj.nDots_ = obj.densityOut * (obj.sizeOut/obj.ppd)^2;
+				obj.nDots_ = round(obj.densityOut * (obj.sizeOut/obj.ppd)^2);
 			else
-				obj.nDots_ = obj.density * obj.size^2;
+				obj.nDots_ = round(obj.density * obj.size^2);
 			end
 			value = obj.nDots_;
 		end
