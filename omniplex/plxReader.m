@@ -1,7 +1,6 @@
 classdef plxReader < optickaCore
-	%TIMELOG Simple class used to store the timing data from an experiment
-	%   timeLogger stores timing data for a taskrun and optionally graphs the
-	%   result.
+%PLXREADER Reads in Plexon .plx and .pl2 files along with metadata and
+%eyelink data. Parses the trial event structure.
 	
 	properties
 		file@char
@@ -97,10 +96,10 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief exportToRawSpikes 
 		%>
 		%> @param
-		%> @return
+		%> @return x spike data structure for spikes.m to read.
 		% ===================================================================
 		function x = exportToRawSpikes(obj, var, firstunit, StartTrial, EndTrial, trialtime, modtime, cuttime)
 			if ~isempty(obj.cellmap)
@@ -154,7 +153,8 @@ classdef plxReader < optickaCore
 	
 		% ===================================================================
 		%> @brief 
-		%>
+		%> This needs to be static as it may load data called "obj" which
+		%> will conflict with the obj object in the class.
 		%> @param
 		%> @return
 		% ===================================================================
@@ -192,11 +192,9 @@ classdef plxReader < optickaCore
 		end
 	end
 	
-	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-	
 	
 		% ===================================================================
 		%> @brief 
