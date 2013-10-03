@@ -454,7 +454,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	%=======================================================================
 		
 		% ===================================================================
-		%> @brief reset transienttask properties
+		%> @brief make a matrix from a cell array
 		%> 
 		%> 
 		% ===================================================================
@@ -462,7 +462,12 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			out = [];
 			if iscell(in)
 				for i = 1:size(in,2)
-					out = [out, [in{:,i}]'];
+					cc = [in{:,i}]'
+					if iscell(cc)
+						out = [out, [in{:,i}]'];
+					else
+						out = [out, {in{:,i}}'];
+					end
 				end
 			end
 		end

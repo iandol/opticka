@@ -13,10 +13,10 @@ tS.rewardTime = 150; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
-tS.askForComments = false;
-tS.saveData = false; %*** save behavioural and eye movement data? ***
+tS.askForComments = true;
+tS.saveData = true; %*** save behavioural and eye movement data? ***
 obj.useDataPixx = true; %*** drive plexon to collect data? ***
-tS.dummyEyelink = true; 
+tS.dummyEyelink = false; 
 tS.name = 'two-figure-ground';
 
 luminancePedestal = [0.5 0.5 0.5];

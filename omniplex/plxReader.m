@@ -311,7 +311,7 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function getStrobes(obj)
 			tic
-			[a,b,c] = plx_event_ts(obj.file,257);
+			[a,b,c] = plx_event_ts(obj.file,257); %257 is the strobed word channel
 			idx = find(c < 1);
 			if ~isempty(idx)
 				c(idx)=[];
@@ -327,8 +327,8 @@ classdef plxReader < optickaCore
 				c(end)=[];
 				b(end) = [];
 			end
-			[~,b19] = plx_event_ts(obj.file,19);
-			[~,b20] = plx_event_ts(obj.file,20);
+			[~,b19] = plx_event_ts(obj.file,19); %currently 19 is fix start
+			[~,b20] = plx_event_ts(obj.file,20); %20 is correct
 			[~,b21] = plx_event_ts(obj.file,21);
 			[~,b22] = plx_event_ts(obj.file,22);
 			[d,e] = plx_event_names(obj.file);
@@ -440,7 +440,7 @@ classdef plxReader < optickaCore
 				
 				
 				obj.meta.modtime = floor(obj.strobeList.tMaxCorrect * 10000);
-				obj.meta.trialtime = floor(obj.strobeList.tMaxCorrect * 10000);
+				obj.meta.trialtime = obj.meta.modtime;
 				m = [obj.rE.task.outIndex obj.rE.task.outMap obj.rE.task.cellStruct(obj.rE.task.outValues)];
 				m = m(1:obj.strobeList.nVars,:);
 				[~,ix] = sort(m(:,1),1);
