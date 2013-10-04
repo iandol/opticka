@@ -441,7 +441,7 @@ classdef plxReader < optickaCore
 				
 				obj.meta.modtime = floor(obj.strobeList.tMaxCorrect * 10000);
 				obj.meta.trialtime = obj.meta.modtime;
-				m = [obj.rE.task.outIndex obj.rE.task.outMap obj.rE.task.cellStruct(obj.rE.task.outValues)];
+				m = [obj.rE.task.outIndex obj.rE.task.outMap getMeta(obj.rE.task)];
 				m = m(1:obj.strobeList.nVars,:);
 				[~,ix] = sort(m(:,1),1);
 				m = m(ix,:);

@@ -120,7 +120,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			obj.initialiseRandom();
 			obj.isLoading = false;
 		end
-		
+
 		% ===================================================================
 		%> @brief set up the random number generator
 		%>
@@ -425,6 +425,36 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			end
 		end
 		
+		% ===================================================================
+		%> @brief get a meta matrix compatible with vs parsed data,
+		%  unwrapping cell arrays
+		%>
+		%> Generates a table with the randomised stimulus values
+		% ===================================================================
+		function [meta, key] = getMeta(obj)
+			meta = [];
+			vals = obj.outValues;
+			idx = obj.outMap;
+			if iscell(vals);
+				for i = 1:size(vals,2)
+					cc = [vals{:,i}]';
+					if iscell(cc)
+						t = '';
+						u = unique(idx(:,i));
+						for j=1:length(u);
+							f = find(idx(:,i)==u(j));
+							f = f(1);
+							t = [t sprintf('')];
+						end
+						meta(:,i) = idx(:,i);
+					else
+						meta(:,i) = cc;
+					end
+					
+				end	
+			end
+		end
+		
 	end % END METHODS
 	
 	%=======================================================================
@@ -462,7 +492,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			out = [];
 			if iscell(in)
 				for i = 1:size(in,2)
-					cc = [in{:,i}]'
+					cc = [in{:,i}]';
 					if iscell(cc)
 						out = [out, [in{:,i}]'];
 					else
