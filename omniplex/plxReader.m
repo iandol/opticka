@@ -263,11 +263,16 @@ classdef plxReader < optickaCore
 			else
 				sdkversion = -1;
 			end
+			
+			obj.info = {};
 			if obj.isPL2
 				obj.pl2 = PL2GetFileIndex(obj.file);
+				obj.info{1} = sprintf('PL2 File : %s', OpenedFileName);
+				obj.info{end+1} = sprintf('\tPL2 File Length : %d', obj.pl2.FileLength);
+				obj.info{end+1} = sprintf('\tPL2 Creator : %s %s', obj.pl2.CreatorSoftwareName, obj.pl2.CreatorSoftwareVersion);
+			else
+				obj.info{1} = sprintf('PLX File : %s', OpenedFileName);
 			end
-			obj.info = {};
-			obj.info{1} = sprintf('PLX File : %s', OpenedFileName);
 			obj.info{end+1} = sprintf('Behavioural File : %s', obj.matfile);
 			obj.info{end+1} = ' ';
 			obj.info{end+1} = sprintf('Behavioural File Comment : %s', obj.meta.comments);
