@@ -55,7 +55,7 @@ if isPl2 == 1
     end
     pl2 = PL2GetFileIndex(filename);
     for i=1:numel(pl2.EventChannels)
-        if (pl2.EventChannels{i}.PlxChannel == channelNumber) || (pl2.EventChannels{i}.Channel == channelNumber)
+        if pl2.EventChannels{i}.PlxChannel == channelNumber
             event = PL2EventTs(filename, i);
             if numel(event.Ts) > 0
                 n = numel(event.Ts);

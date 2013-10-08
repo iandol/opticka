@@ -45,6 +45,6 @@ function [blockInfo] = PL2ReadNextDataBlock(blockInfo)
 %       blockInfo.StartStopEventData.Timestamps - event timestamps in seconds
 %       blockInfo.StartStopEventData.Values - event values
 
-blockInfo = internalPL2ReadNExtDataBlock(blockInfo);
+blockInfo = internalPL2ReadNextDataBlock(blockInfo);
 
 end

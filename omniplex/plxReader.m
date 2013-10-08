@@ -21,6 +21,8 @@ classdef plxReader < optickaCore
 		meta@struct
 		rE@runExperiment
 		eA@eyelinkAnalysis
+		isPL2@logical = false
+		pl2@struct
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -70,6 +72,7 @@ classdef plxReader < optickaCore
 			else
 				[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.dir);
 			end
+			generateInfo(obj); 
 			getSpikes(obj);
 			getStrobes(obj);
 			parseSpikes(obj);
@@ -179,8 +182,21 @@ classdef plxReader < optickaCore
 			for i=1:rE.task.nVars
 				meta.var{i}.title = rE.task.nVar(i).name;
 				meta.var{i}.nvalues = length(rE.task.nVar(i).values);
-				meta.var{i}.values = rE.task.nVar(i).values;
-				meta.var{i}.range = length(rE.task.nVar(i).values);
+				meta.var{i}.range = meta.var{i}.nvalues;
+				if iscell(rE.task.nVar(i).values)
+					vals = rE.task.nVar(i).values;
+					num = 1:meta.var{i}.range;
+					meta.var{i}.values = num;
+					meta.var{i}.keystring = [];
+					for jj = 1:meta.var{i}.range
+						k = vals{jj};
+						meta.var{i}.key{jj} = num2str(k);
+						meta.var{i}.keystring = {meta.var{i}.keystring meta.var{i}.key{jj}};
+					end
+				else
+					meta.var{i}.values = rE.task.nVar(i).values;
+					meta.var{i}.key = '';
+				end
 			end
 			meta.repeats = rE.task.nBlocks;
 			meta.cycles = 1;
@@ -238,6 +254,7 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function generateInfo(obj)
+			checkPL2(obj);
 			[OpenedFileName, Version, Freq, Comment, Trodalness,...
 				NPW, PreThresh, SpikePeakV, SpikeADResBits,...
 				SlowPeakV, SlowADResBits, Duration, DateTime] = plx_information(obj.file);
@@ -245,6 +262,9 @@ classdef plxReader < optickaCore
 				sdkversion = plx_mexplex_version();
 			else
 				sdkversion = -1;
+			end
+			if obj.isPL2
+				obj.pl2 = PL2GetFileIndex(obj.file);
 			end
 			obj.info = {};
 			obj.info{1} = sprintf('PLX File : %s', OpenedFileName);
@@ -288,10 +308,18 @@ classdef plxReader < optickaCore
 				vals = '';
 				for i = 1:rE.task.nVars
 					names = [names ' | ' rE.task.nVar(i).name];
-					vals = [vals ' | ' num2str(rE.task.nVar(i).values)];
+					if iscell(rE.task.nVar(i).values)
+						val = '';
+						for jj = 1:length(rE.task.nVar(i).values)
+							val = [val num2str(rE.task.nVar(i).values{jj}) ' > '];
+						end
+						vals = [vals ' | ' val];
+					else
+						vals = [vals ' | ' num2str(rE.task.nVar(i).values)];
+					end
 				end
-				obj.info{end+1} = sprintf('Variable Names : %s', names);
-				obj.info{end+1} = sprintf('Variable Values : %s', vals);
+				obj.info{end+1} = sprintf('Variable Names : %s', names(4:end));
+				obj.info{end+1} = sprintf('Variable Values : %s', vals(4:end));
 				names = '';
 				for i = 1:rE.stimuli.n
 					names = [names ' | ' rE.stimuli{i}.name ':' rE.stimuli{i}.family];
@@ -570,6 +598,20 @@ classdef plxReader < optickaCore
 			obj.info{end+1} = ['Channel list : ' num2str(obj.tsList.chMap)];
 			obj.info{end+1} = ['Unit list (0=unsorted) : ' num2str(obj.tsList.unitMap)];
 
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function checkPL2(obj)
+			if isempty(regexpi(obj.file,'pl2'))
+				obj.isPL2 = false;
+			else
+				obj.isPL2 = true;
+			end
 		end
 		
 	end

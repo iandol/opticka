@@ -55,3 +55,5 @@ Version 1.8.1, 06/20/13
 •	Added routines to read data block-by-block from pl2 files. 
 Version 1.8.2, 07/22/13
 •	Added routine to report mexPlex version. In PlexMethods.cpp, added defines for building the code under MacOS.
+Version 1.8.3, 08/29/13
+•	Fixed bug in internalPL2EventTs.m that caused incorrect event timestamps and values reported for some PL2 files.
