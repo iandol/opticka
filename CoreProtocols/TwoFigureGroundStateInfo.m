@@ -31,7 +31,7 @@ strict = true;
 
 targetFixInit = 0.75;
 targetFixTime = [0.4];
-targetRadius = 1.5;
+targetRadius = 2;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;

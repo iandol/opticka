@@ -8,7 +8,6 @@ classdef behaviouralRecord < optickaCore
 	properties
 		%> verbosity
 		verbose = true
-		h = []
 		response = []
 		rt1 = []
 		rt2 = []
@@ -16,6 +15,11 @@ classdef behaviouralRecord < optickaCore
 		info = ''
 		rewardTime = 100;
 		rewardVolume = 0.1;
+	end
+	
+	properties (SetAccess = protected, GetAccess = public, Transient = true)
+		%> handles for the GUI
+		h
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
@@ -233,6 +237,11 @@ classdef behaviouralRecord < optickaCore
 			
 		end
 		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> 
+		% ===================================================================
 		function plotPerformance(obj)
 			createPlot(obj);
 			updatePlot(obj);

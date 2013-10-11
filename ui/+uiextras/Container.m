@@ -187,7 +187,7 @@ classdef Container < hgsetget
                 uiextras.callCallback( obj.DeleteFcn, obj, [] );
             end
             if ishandle( obj.UIContainer ) ...
-                    && ~strcmpi( get( obj.UIContainer, 'BeingDeleted' ), 'on' )
+                    & ~strcmpi( get( obj.UIContainer, 'BeingDeleted' ), 'on' )
                 delete( obj.UIContainer );
             end
         end % delete

@@ -100,7 +100,7 @@ classdef dPixxManager < optickaCore
 		
 		function sendTTL(obj,line)
 			if obj.isOpen
-				if line > 8 || line < 1
+				if ~exist('line','var') || line > 8 || line < 1
 					fprintf('1-8 lines (pins 17-24) are available on dataPixx only!\n')
 					return
 				end
