@@ -79,7 +79,7 @@ classdef plxReader < optickaCore
 			loadEDF(obj);
 		end
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -240,6 +240,9 @@ classdef plxReader < optickaCore
 					obj.eA.pixelsPerCm = obj.rE.screen.pixelsPerCm;
 					obj.eA.distance = obj.rE.screen.distance;
 				end
+				if isstruct(obj.rE.tS)
+					obj.eA.tS = obj.rE.tS;
+				end
 				obj.eA.varList = obj.strobeList.varOrderCorrect;
 				load(obj.eA);
 				parse(obj.eA);				
@@ -312,15 +315,17 @@ classdef plxReader < optickaCore
 				names = '';
 				vals = '';
 				for i = 1:rE.task.nVars
-					names = [names ' | ' rE.task.nVar(i).name];
+					names = [names ' || ' rE.task.nVar(i).name];
 					if iscell(rE.task.nVar(i).values)
 						val = '';
 						for jj = 1:length(rE.task.nVar(i).values)
-							val = [val num2str(rE.task.nVar(i).values{jj}) ' > '];
+							v=num2str(rE.task.nVar(i).values{jj});
+							v=regexprep(v,'\s+',' ');
+							val = [val v '/'];
 						end
-						vals = [vals ' | ' val];
+						vals = [vals ' || ' val];
 					else
-						vals = [vals ' | ' num2str(rE.task.nVar(i).values)];
+						vals = [vals ' || ' num2str(rE.task.nVar(i).values)];
 					end
 				end
 				obj.info{end+1} = sprintf('Variable Names : %s', names(4:end));
@@ -329,7 +334,7 @@ classdef plxReader < optickaCore
 				for i = 1:rE.stimuli.n
 					names = [names ' | ' rE.stimuli{i}.name ':' rE.stimuli{i}.family];
 				end
-				obj.info{end+1} = sprintf('Stimulus Names : %s', names);
+				obj.info{end+1} = sprintf('Stimulus Names : %s', names(4:end));
 			end
 			obj.info{end+1} = ' ';
 			obj.info = obj.info';

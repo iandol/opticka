@@ -16,6 +16,7 @@ classdef eyelinkAnalysis < optickaCore
 		varList@double
 		rtLimits@double
 		rtDivision@double
+		tS@struct
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -28,8 +29,9 @@ classdef eyelinkAnalysis < optickaCore
 		cSaccTimes@double
 		display@double
 		devList@double
-		vars
-		needOverride = false;
+		vars@struct
+		needOverride@logical = false;
+		validation@struct
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -323,6 +325,7 @@ classdef eyelinkAnalysis < optickaCore
 			end
 			
 			parseAsVars(obj);
+			parseSecondaryEyePos(obj);
 			
 			fprintf('Parsing EDF Trials took %g ms\n',round(toc*1000));
 		end
@@ -541,6 +544,23 @@ classdef eyelinkAnalysis < optickaCore
 				obj.vars(var).sT = [obj.vars(var).sT sT];
 			end
 			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parseSecondaryEyePos(obj)
+			if isstruct(obj.tS)
+				f=fieldnames(obj.tS.eyePos); %get fieldnames
+				re = regexp(f,'^CC','once'); %regexp over the cell
+				idx = cellfun(@(c)~isempty(c),re); %check which regexp returned true
+				f = f(idx); %use this index
+				obj.validation(1).uuids = f;
+				obj.validation.lengthCorrect = length(f);
+			end
 		end
 		
 		% ===================================================================
