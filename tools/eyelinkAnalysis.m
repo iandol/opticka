@@ -81,7 +81,8 @@ classdef eyelinkAnalysis < optickaCore
 		function parse(obj)
 			tic
 			isTrial = false;
-			tri = 1;
+			tri = 1; %current trial that is being parsed
+			eventN = 0;
 			obj.trials = struct();
 			obj.cidx = [];
 			obj.cSaccTimes = [];
@@ -128,6 +129,7 @@ classdef eyelinkAnalysis < optickaCore
 							id.ID = '1010';
 						end
 						isTrial = true;
+						eventN=1;
 						obj.trials(tri).id = str2double(id.ID);
 						obj.trials(tri).time = double(evt.time);
 						obj.trials(tri).sttime = double(evt.sttime);
@@ -164,6 +166,7 @@ classdef eyelinkAnalysis < optickaCore
 								rel = obj.trials(tri).sttime;
 								fixa.rt = false;
 							end
+							fixa.n = eventN;
 							fixa.sttime = double(evt.sttime);
 							fixa.entime = double(evt.entime);
 							fixa.time = fixa.sttime - rel;
@@ -182,6 +185,7 @@ classdef eyelinkAnalysis < optickaCore
 								obj.trials(tri).fixations(fix) = fixa;
 							end
 							obj.trials(tri).nfix = fix;
+							eventN = eventN + 1;
 							continue
 						end
 						
@@ -198,6 +202,7 @@ classdef eyelinkAnalysis < optickaCore
 								rel = obj.trials(tri).sttime;
 								sacc.rt = false;
 							end
+							sacc.n = eventN;
 							sacc.sttime = double(evt.sttime);
 							sacc.entime = double(evt.entime);
 							sacc.time = sacc.sttime - rel;
@@ -219,6 +224,7 @@ classdef eyelinkAnalysis < optickaCore
 							if sacc.rt == true
 								obj.trials(tri).saccadeTimes = [obj.trials(tri).saccadeTimes sacc.time];
 							end
+							eventN = eventN + 1;
 							continue
 						end
 						
