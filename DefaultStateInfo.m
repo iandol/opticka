@@ -10,7 +10,7 @@ rewardTime = 100; %TTL time in milliseconds
 
 eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
-eL.calibrationStyle = 'HV9'; % 5 point calibration
+eL.calibrationStyle = 'HV5'; % 5 point calibration
 eL.recordData = false; % don't save EDF file
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 1;

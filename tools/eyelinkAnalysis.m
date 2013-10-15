@@ -167,6 +167,7 @@ classdef eyelinkAnalysis < optickaCore
 								fixa.rt = false;
 							end
 							fixa.n = eventN;
+							fixa.ppd = ppd;
 							fixa.sttime = double(evt.sttime);
 							fixa.entime = double(evt.entime);
 							fixa.time = fixa.sttime - rel;
@@ -176,8 +177,8 @@ classdef eyelinkAnalysis < optickaCore
 							fixa.gsty = evt.gsty;
 							fixa.genx = evt.genx;
 							fixa.geny = evt.geny;
-							fixa.x = evt.gavx;
-							fixa.y = evt.gavy;
+							fixa.x = evt.gavx*ppd;
+							fixa.y = evt.gavy*ppd;
 							
 							if fix == 1
 								obj.trials(tri).fixations = fixa;
@@ -203,6 +204,7 @@ classdef eyelinkAnalysis < optickaCore
 								sacc.rt = false;
 							end
 							sacc.n = eventN;
+							sacc.ppd = ppd;
 							sacc.sttime = double(evt.sttime);
 							sacc.entime = double(evt.entime);
 							sacc.time = sacc.sttime - rel;
@@ -212,8 +214,8 @@ classdef eyelinkAnalysis < optickaCore
 							sacc.gsty = evt.gsty;
 							sacc.genx = evt.genx;
 							sacc.geny = evt.geny;
-							sacc.x = sacc.genx - sacc.gstx;
-							sacc.y = sacc.geny - sacc.gsty;
+							sacc.x = (sacc.genx - sacc.gstx)*ppd;
+							sacc.y = (sacc.geny - sacc.gsty)*ppd;
 							
 							if fix == 1
 								obj.trials(tri).saccades = sacc;

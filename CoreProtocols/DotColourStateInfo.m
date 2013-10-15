@@ -32,7 +32,7 @@ eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
-eL.calibrationStyle = 'HV9'; % calibration style
+eL.calibrationStyle = 'HV5'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 0.5;
 eL.modify.calibrationtargetwidth = 0.01;
