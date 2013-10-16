@@ -36,6 +36,10 @@ classdef eyelinkAnalysis < optickaCore
 		validation@struct
 	end
 	
+	properties (Dependent = true, SetAccess = private)
+		ppd
+	end
+	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
 		allowedProperties@char = 'file|dir|verbose'
@@ -168,26 +172,18 @@ classdef eyelinkAnalysis < optickaCore
 								fixa.rt = false;
 							end
 							fixa.n = eventN;
-							fixa.ppd = ppd;
+							fixa.ppd = obj.ppd;
 							fixa.sttime = double(evt.sttime);
 							fixa.entime = double(evt.entime);
 							fixa.time = fixa.sttime - rel;
 							fixa.length = fixa.entime - fixa.sttime;
 							fixa.rel = rel;
-<<<<<<< HEAD
-							fixa.gstx = evt.gstx;
-							fixa.gsty = evt.gsty;
-							fixa.genx = evt.genx;
-							fixa.geny = evt.geny;
-							fixa.x = evt.gavx*ppd;
-							fixa.y = evt.gavy*ppd;
-=======
+
 							[fixa.gstx, fixa.gsty]  = toDegrees(obj, [evt.gstx, evt.gsty]);
 							[fixa.genx, fixa.geny]  = toDegrees(obj, [evt.genx, evt.geny]);
 							[fixa.x, fixa.y]		= toDegrees(obj, [evt.gavx, evt.gavy]);
 							[fixa.theta, fixa.rho]	= cart2pol(fixa.x, fixa.y);
 							fixa.theta = rad2ang(fixa.theta);
->>>>>>> 08555cfcf9911f6e21a5bc54d3adbb64ebe6018b
 							
 							if fix == 1
 								obj.trials(tri).fixations = fixa;
@@ -213,26 +209,18 @@ classdef eyelinkAnalysis < optickaCore
 								sacc.rt = false;
 							end
 							sacc.n = eventN;
-							sacc.ppd = ppd;
+							sacc.ppd = obj.ppd;
 							sacc.sttime = double(evt.sttime);
 							sacc.entime = double(evt.entime);
 							sacc.time = sacc.sttime - rel;
 							sacc.length = sacc.entime - sacc.sttime;
 							sacc.rel = rel;
-<<<<<<< HEAD
-							sacc.gstx = evt.gstx;
-							sacc.gsty = evt.gsty;
-							sacc.genx = evt.genx;
-							sacc.geny = evt.geny;
-							sacc.x = (sacc.genx - sacc.gstx)*ppd;
-							sacc.y = (sacc.geny - sacc.gsty)*ppd;
-=======
+
 							[sacc.gstx, sacc.gsty]	= toDegrees(obj, [evt.gstx evt.gsty]);
 							[sacc.genx, sacc.geny]	= toDegrees(obj, [evt.genx evt.geny]);
 							[sacc.x, sacc.y]		= deal((sacc.genx - sacc.gstx), (sacc.geny - sacc.gsty));
 							[sacc.theta, sacc.rho]	= cart2pol(sacc.x, sacc.y);
 							sacc.theta = rad2ang(sacc.theta);
->>>>>>> 08555cfcf9911f6e21a5bc54d3adbb64ebe6018b
 							
 							if fix == 1
 								obj.trials(tri).saccades = sacc;
@@ -595,11 +583,17 @@ classdef eyelinkAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function spikeCorrelation(obj)
-			global data
 			
-			[e,vals] = finderror(data);
-			
-			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function ppd = get.ppd(obj)
+			ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
 		end
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
@@ -613,10 +607,9 @@ classdef eyelinkAnalysis < optickaCore
 		%>
 		% ===================================================================
 		function [outx, outy] = toDegrees(obj,in)
-			ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
 			if length(in)==2
-				outx = (in(1) - obj.xCenter) / ppd;
-				outy = (in(2) - obj.yCenter) / ppd;
+				outx = (in(1) - obj.xCenter) / obj.ppd;
+				outy = (in(2) - obj.yCenter) / obj.ppd;
 			else
 				outx = [];
 				outy = [];
@@ -628,10 +621,9 @@ classdef eyelinkAnalysis < optickaCore
 		%>
 		% ===================================================================
 		function [outx, outy] = toPixels(obj,in)
-			ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
 			if length(in)==2
-				outx = (in(1) * ppd) + obj.xCenter;
-				outy = (in(2) * ppd) + obj.yCenter;
+				outx = (in(1) * obj.ppd) + obj.xCenter;
+				outy = (in(2) * obj.ppd) + obj.yCenter;
 			else
 				outx = [];
 				outy = [];
