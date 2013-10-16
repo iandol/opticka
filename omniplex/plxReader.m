@@ -239,6 +239,8 @@ classdef plxReader < optickaCore
 				if isa(obj.rE.screen,'screenManager')
 					obj.eA.pixelsPerCm = obj.rE.screen.pixelsPerCm;
 					obj.eA.distance = obj.rE.screen.distance;
+					obj.eA.xCenter = obj.rE.screen.xCenter;
+					obj.eA.yCenter = obj.rE.screen.yCenter;
 				end
 				if isstruct(obj.rE.tS)
 					obj.eA.tS = obj.rE.tS;
