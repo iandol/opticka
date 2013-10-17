@@ -360,7 +360,9 @@ classdef eyelinkAnalysis < optickaCore
 			p = panel(h);
 			p.margintop = 15;
 			p.fontsize = 12;
-			p.pack(2,2);
+			p.pack('v',{2/3, []});
+			q = p(1);
+			q.pack(2,2);
 			if obj.distance == 57.3
 				ppd = round( obj.pixelsPerCm * (67 / 57.3)); %set the pixels per degree
 			else
@@ -394,25 +396,25 @@ classdef eyelinkAnalysis < optickaCore
 				1 0.5 0.5];
 			
 			for i = obj.cidx
-				tr = obj.trials(i);
-				if tr.id == 1010 %early edf files were broken, 1010 signifies this
+				thisTrial = obj.trials(i);
+				if thisTrial.id == 1010 %early edf files were broken, 1010 signifies this
 					c = rand(1,3);
 				else
-					c = map(tr.id,:);
+					c = map(thisTrial.id,:);
 				end
 				
-				if isempty(select) || ~isempty(intersect(select,tr.id));
+				if isempty(select) || ~isempty(intersect(select,thisTrial.id));
 					doplot= true;
 				else
 					doplot = false;
 				end
 				
 				if doplot == true
-					t = tr.times;
+					t = thisTrial.times;
 					idx = find((t >= -400) & (t <= 800));
 					t=t(idx);
-					x = tr.gx(idx);
-					y = tr.gy(idx);
+					x = thisTrial.gx(idx);
+					y = thisTrial.gy(idx);
 					x = x / ppd;
 					y = y / ppd;
 					
@@ -424,15 +426,26 @@ classdef eyelinkAnalysis < optickaCore
 						y(y>2000) = 65;
 					end
 					
-					p(1,1).select();
+					q(1,1).select();
 					
-					p(1,1).hold('on')
+					q(1,1).hold('on')
 					plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 					
-					p(1,2).select();
-					p(1,2).hold('on');
+					q(1,2).select();
+					q(1,2).hold('on');
 					plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 					plot(t,abs(y),'k-s','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					
+					p(2).select();
+					p(2).hold('on')
+					for fix=1:length(thisTrial.fixations)
+						f=thisTrial.fixations(fix);
+						plot3([f.time f.time+f.length],[f.gstx f.genx],[f.gsty f.geny],'k-o','LineWidth',1,'MarkerSize',10,'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',c)
+					end
+					for sac=1:length(thisTrial.saccades)
+						s=thisTrial.saccades(sac);
+						plot3([s.time s.time+s.length],[s.gstx s.genx],[s.gsty s.geny],'r-o','LineWidth',2,'MarkerSize',10,'MarkerEdgeColor',[1 0 0],'MarkerFaceColor',c)
+					end
 					
 					idxt = find(t>0 & t < 100);
 					
@@ -447,12 +460,12 @@ classdef eyelinkAnalysis < optickaCore
 					stdex = [stdex std(x(idxt))];
 					stdey = [stdey std(y(idxt))];
 					
-					p(2,1).select();
-					p(2,1).hold('on');
+					q(2,1).select();
+					q(2,1).hold('on');
 					plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 					
-					p(2,2).select();
-					p(2,2).hold('on');
+					q(2,2).select();
+					q(2,2).hold('on');
 					plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 					a = a + 1;
 				end
@@ -460,47 +473,65 @@ classdef eyelinkAnalysis < optickaCore
 			
 			display = obj.display / ppd;
 			
-			p(1,1).select();
+			q(1,1).select();
 			grid on
 			box on
 			axis([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2])
 			%axis square
-			title(p(1,1),'X vs. Y Eye Position in Degrees')
-			xlabel(p(1,1),'X Degrees')
-			ylabel(p(1,1),'Y Degrees')
+			title(q(1,1),'X vs. Y Eye Position in Degrees')
+			xlabel(q(1,1),'X Degrees')
+			ylabel(q(1,1),'Y Degrees')
 			
-			p(1,2).select();
+			q(1,2).select();
 			grid on
 			box on
-			axis([-200 500 0 inf])
+			axis tight;
+			ax = axis;
+			axis([-200 400 0 10])
 			t=sprintf('ABS Mean/SD 100ms: X=%.2g / %.2g | Y=%.2g / %.2g', mean(abs(meanx)), mean(abs(stdex)), ...
 				mean(abs(meany)), mean(abs(stdey)));
 			t2 = sprintf('ABS Median/SD 100ms: X=%.2g / %.2g | Y=%.2g / %.2g', median(abs(medx)), median(abs(stdex)), ...
 				median(abs(medy)), median(abs(stdey)));
-			h=title(sprintf('X & Y Position vs. Time\n%s\n%s', t,t2));
+			h=title(sprintf('X(square) & Y(circle) Position vs. Time\n%s\n%s', t,t2));
 			set(h,'BackgroundColor',[1 1 1]);
-			xlabel(p(1,2),'Time (s)')
-			ylabel(p(1,2),'Degrees')
+			xlabel(q(1,2),'Time (s)')
+			ylabel(q(1,2),'Degrees')
 			
-			p(2,1).select();
+			
+			p(2).select();
+			grid on;
+			box on;
+			axis tight;
+			axis([-100 400 -10 10 -10 10]);
+			view([0 0]);
+			xlabel(p(2),'Time (ms)')
+			ylabel(p(2),'X Position')
+			zlabel(p(2),'Y Position')
+			h=title('Saccades (red) and Fixation (black) Events');
+			set(h,'BackgroundColor',[1 1 1]);
+			
+			q(2,1).select();
 			grid on
 			box on
-			%axis square
+			axis tight;
+			axis([-1 1 -1 1])
 			h=title(sprintf('X & Y First 100ms MD/MN/STD: \nX : %.2g / %.2g / %.2g | Y : %.2g / %.2g / %.2g', ... 
 				mean(meanx), median(medx),mean(stdex),mean(meany),median(medy),mean(stdey)));			
 			set(h,'BackgroundColor',[1 1 1]);
-			xlabel(p(2,1),'X Degrees')
-			ylabel(p(2,1),'Y Degrees')
+			xlabel(q(2,1),'X Degrees')
+			ylabel(q(2,1),'Y Degrees')
 			
-			p(2,2).select();
+			q(2,2).select();
 			grid on
 			box on
+			axis tight;
+			axis([-1 1 -1 1])
 			%axis square
 			view(47,15)
-			title(p(2,2),'Average X vs. Y Position for first 150ms Over Time')
-			xlabel(p(2,2),'X Degrees')
-			ylabel(p(2,2),'Y Degrees')
-			zlabel(p(2,2),'Trial')
+			title(q(2,2),'Average X vs. Y Position for first 150ms Over Time')
+			xlabel(q(2,2),'X Degrees')
+			ylabel(q(2,2),'Y Degrees')
+			zlabel(q(2,2),'Trial')
 			
 			p(2).margintop = 20;
 			
@@ -545,8 +576,7 @@ classdef eyelinkAnalysis < optickaCore
 				idx = obj.cidx(i);
 				trial = obj.trials(idx);
 				
-				sT = trial.saccadeTimes(trial.saccadeTimes > 0);
-				sT = min(sT);
+				sT = min( trial.saccadeTimes(trial.saccadeTimes > 0) );
 				
 				obj.vars(var).name = num2str(var);
 				obj.vars(var).trial = [obj.vars(var).trial; trial];
@@ -574,16 +604,6 @@ classdef eyelinkAnalysis < optickaCore
 				obj.validation(1).uuids = f;
 				obj.validation.lengthCorrect = length(f);
 			end
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function spikeCorrelation(obj)
-			
 		end
 		
 		% ===================================================================
