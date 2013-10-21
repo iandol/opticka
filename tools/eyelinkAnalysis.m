@@ -22,6 +22,7 @@ classdef eyelinkAnalysis < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		isParsed@logical = false
 		%raw data
 		raw@struct
 		%inidividual trials
@@ -29,6 +30,7 @@ classdef eyelinkAnalysis < optickaCore
 		trialList@double
 		cidx@double
 		cSaccTimes@double
+		cFixations@struct
 		display@double
 		devList@double
 		vars@struct
@@ -42,7 +44,7 @@ classdef eyelinkAnalysis < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'file|dir|verbose'
+		allowedProperties@char = 'file|dir|verbose|pixelsPerCm|distance|xCenter|yCenter|rtStartMessage|rtEndMessage|varList|rtDivision|rtLimits|tS'
 	end
 	
 	methods
@@ -85,6 +87,7 @@ classdef eyelinkAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function parse(obj)
+			obj.isParsed = false;
 			tic
 			isTrial = false;
 			tri = 1; %current trial that is being parsed
@@ -337,9 +340,12 @@ classdef eyelinkAnalysis < optickaCore
 				obj.needOverride = false;
 			end
 			
+			obj.isParsed = true;
+			
 			parseAsVars(obj);
 			parseSecondaryEyePos(obj);
-			
+			parseFixationPositions(obj);
+
 			fprintf('Parsing EDF Trials took %g ms\n',round(toc*1000));
 		end
 		
@@ -596,7 +602,7 @@ classdef eyelinkAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function parseSecondaryEyePos(obj)
-			if isstruct(obj.tS)
+			if obj.isParsed && isstruct(obj.tS)
 				f=fieldnames(obj.tS.eyePos); %get fieldnames
 				re = regexp(f,'^CC','once'); %regexp over the cell
 				idx = cellfun(@(c)~isempty(c),re); %check which regexp returned true
@@ -605,6 +611,46 @@ classdef eyelinkAnalysis < optickaCore
 				obj.validation.lengthCorrect = length(f);
 			end
 		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parseFixationPositions(obj)
+			
+			if obj.isParsed && ~isempty(obj.cidx)
+				obj.cFixations(1).isFix = false;
+				obj.cFixations(1).idx = -1;
+				obj.cFixations(1).times = -1;
+				obj.cFixations(1).x = -1;
+				obj.cFixations(1).y = -1;
+				for i = 1:length(obj.cidx)
+					
+					idx = obj.cidx(i);
+					t = obj.trials(idx);
+					times = [t.fixations.time];
+					f = find(times > 100);
+					if ~isempty(f)
+						obj.cFixations(i).isFix = true;
+						obj.cFixations(i).idx = idx;
+						for jj = 1:length(f)
+							fx =  t.fixations(f(jj));
+							obj.cFixations(i).times(jj) = fx.time;
+							obj.cFixations(i).x(jj) = fx.x;
+							obj.cFixations(i).y(jj) = fx.y;
+						end
+					else
+						obj.cFixations(i).isFix = false;
+					end
+					
+				end
+				
+			end
+			
+		end
+		
 		
 		% ===================================================================
 		%> @brief 
