@@ -6,39 +6,59 @@
 classdef eyelinkAnalysis < optickaCore
 	
 	properties
+		%>file name
 		file@char = ''
+		%>directory
 		dir@char = ''
+		%>verbose output?
 		verbose = false
+		%>screen resolution
 		pixelsPerCm@double = 32
+		%>screen distance
 		distance@double = 57.3
+		%>screen X center in pixels
 		xCenter@double = 640
+		%>screen Y center in pixels
 		yCenter@double = 512
+		%>the EDF message name to start measuring stimulus presentation
 		rtStartMessage@char = 'END_FIX'
+		%>EDF message name to end the stimulus presentation
 		rtEndMessage@char = 'END_RT'
+		%>variable list from the saved data
 		varList@double
-		rtLimits@double
-		rtDivision@double
+		%>the temporary experiement structure which contains the eyePos
+		%>recorded from opticka
 		tS@struct
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%>have we parsed the EDF yet?
 		isParsed@logical = false
-		%raw data
+		%>raw data
 		raw@struct
-		%inidividual trials
+		%>inidividual trials
 		trials@struct
+		%>the trial variable identifier, negative values were incorrect trials
 		trialList@double
+		%>index of which trials were correct
 		cidx@double
+		%>the earliest saccade times for each correct trial
 		cSaccTimes@double
+		%>for each correct trial, the first fixations after saccade, x y and time
 		cFixations@struct
+		%>the display dimensions parsed from the EDF
 		display@double
-		devList@double
+		%>eye data parsed into invdividual variables
 		vars@struct
+		%>for some early EDF files, there is no trial variable ID so we
+		%>recreate it from the other saved data
 		needOverride@logical = false;
+		%>does the trial variable list match the other saved data?
 		validation@struct
 	end
 	
 	properties (Dependent = true, SetAccess = private)
+		%pixels per degree calculated from pixelsPerCm and distance
 		ppd
 	end
 	
@@ -425,7 +445,6 @@ classdef eyelinkAnalysis < optickaCore
 					y = y / ppd;
 					
 					if min(x) < -65 || max(x) > 65 || min(y) < -65 || max(y) > 65
-						obj.devList = [obj.devList i];
 						x(x<0) = -65;
 						x(x>2000) = 65;
 						y(y<0) = -65;

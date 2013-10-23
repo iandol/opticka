@@ -9,7 +9,7 @@
 % tS = general simple struct to hold variables for this run
 %
 %------------General Settings-----------------
-tS.rewardTime = 150; %TTL time in milliseconds
+tS.rewardTime = 160; %TTL time in milliseconds
 tS.useTask = true;
 tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
@@ -149,7 +149,7 @@ incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eye
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ...
 	@()hide(obj.stimuli); ...
-	}; 
+	};
 
 %our incorrect stimulus
 incFcn = [];
