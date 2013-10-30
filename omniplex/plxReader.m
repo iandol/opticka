@@ -134,12 +134,13 @@ classdef plxReader < optickaCore
 			x.endtrial =  EndTrial;
 			x.startmod = 1;
 			x.endmod = 1;
-			x.maxtime = obj.strobeList.tMaxCorrect * 1e4;
+			x.conversion = 1e4;
+			x.maxtime = obj.strobeList.tMaxCorrect * x.conversion;
 			a = 1;
 			for tr = x.starttrial:x.endtrial
-				x.trial(a).basetime = round(raw.run(tr).basetime * 1e4); %convert from seconds to 0.1ms as that is what VS used
+				x.trial(a).basetime = round(raw.run(tr).basetime * x.conversion); %convert from seconds to 0.1ms as that is what VS used
 				x.trial(a).modtimes = 0;
-				x.trial(a).mod{1} = round(raw.run(tr).spikes * 1e4) - x.trial(a).basetime;
+				x.trial(a).mod{1} = round(raw.run(tr).spikes * x.conversion) - x.trial(a).basetime;
 				a=a+1;
 			end
 			x.isPLX = true;

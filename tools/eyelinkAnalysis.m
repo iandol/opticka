@@ -445,10 +445,10 @@ classdef eyelinkAnalysis < optickaCore
 					y = y / ppd;
 					
 					if min(x) < -65 || max(x) > 65 || min(y) < -65 || max(y) > 65
-						x(x<0) = -65;
-						x(x>2000) = 65;
-						y(y<0) = -65;
-						y(y>2000) = 65;
+						x(x<0) = -20;
+						x(x>2000) = 20;
+						y(y<0) = -20;
+						y(y>2000) = 20;
 					end
 					
 					q(1,1).select();
@@ -471,6 +471,7 @@ classdef eyelinkAnalysis < optickaCore
 						s=thisTrial.saccades(sac);
 						plot3([s.time s.time+s.length],[s.gstx s.genx],[s.gsty s.geny],'r-o','LineWidth',2,'MarkerSize',10,'MarkerEdgeColor',[1 0 0],'MarkerFaceColor',c)
 					end
+					p(2).margin = 50;
 					
 					idxt = find(t>0 & t < 100);
 					
@@ -501,7 +502,7 @@ classdef eyelinkAnalysis < optickaCore
 			q(1,1).select();
 			grid on
 			box on
-			axis([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2])
+			axis(round([-display(1)/3 display(1)/3 -display(2)/3 display(2)/3]))
 			%axis square
 			title(q(1,1),'X vs. Y Eye Position in Degrees')
 			xlabel(q(1,1),'X Degrees')
@@ -522,13 +523,12 @@ classdef eyelinkAnalysis < optickaCore
 			xlabel(q(1,2),'Time (s)')
 			ylabel(q(1,2),'Degrees')
 			
-			
 			p(2).select();
 			grid on;
 			box on;
 			axis tight;
 			axis([-100 400 -10 10 -10 10]);
-			view([0 0]);
+			view([5 5]);
 			xlabel(p(2),'Time (ms)')
 			ylabel(p(2),'X Position')
 			zlabel(p(2),'Y Position')
