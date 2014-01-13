@@ -72,7 +72,7 @@ classdef plxReader < optickaCore
 			else
 				[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.dir);
 			end
-			generateInfo(obj); 
+			generateInfo(obj);
 			getSpikes(obj);
 			getStrobes(obj);
 			parseSpikes(obj);
@@ -147,6 +147,77 @@ classdef plxReader < optickaCore
 			x.tDelta = obj.strobeList.vars(var).tDeltacorrect(x.starttrial:x.endtrial);
 			x.startOffset = obj.startOffset;
 			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function LFPs = loadLFPs(obj)
+			tic
+			[n, names] = plx_adchan_names(obj.file);
+			[n, map] = plx_adchan_samplecounts(obj.file);
+			[n, raw] = plx_ad_chanmap(obj.file);
+			names = cellstr(names);
+			idx = find(map > 0);
+			aa=1;
+			LFPs = [];
+			for j = 1:length(idx)
+				cname = names{idx(j)};
+				if ~isempty(regexp(cname,'FP', 'once'))
+					LFPs(aa).name = cname;
+					LFPs(aa).index = raw(idx(j));
+					LFPs(aa).count = map(idx(j));
+					aa = aa + 1;
+				end
+			end
+			
+			for j = 1:length(LFPs)
+				[adfreq, n, ts, fn, ad] = plx_ad_v(obj.file, LFPs(j).index);
+
+				tbase = 1 / adfreq;
+				
+				LFPs(j).recordingFrequency = adfreq;
+				LFPs(j).timebase = tbase;
+				LFPs(j).timeStamps = ts;
+				LFPs(j).nDataPoints = fn;			
+				
+				if length(fn) > 1
+					data = ad(fn(1)+1:end);
+					time = ts(end) : tbase : (ts(end)+(tbase*(fn(end)-1)));
+					time = time(1:length(data));
+					LFPs(j).data = data;
+					LFPs(j).time = time;
+					LFPs(j).usedtimeStamp = ts(end);
+				elseif length(fn) == 1
+					data = ad(fn+1:end);
+					time = ts : tbase : (ts+(tbase*fn-1));
+					time = time(1:length(data));
+					LFPs(j).data = data;
+					LFPs(j).time = time;
+					LFPs(j).usedtimeStamp = ts;
+				else
+					return;
+				end
+				
+				if ~isempty(LFPs(j).data)
+					figure
+					plot(LFPs(j).time,LFPs(j).data,'k-x');
+					hold on
+					plot(obj.strobeList.start, zeros(size(obj.strobeList.start)), 'go');
+					plot(obj.strobeList.stop, zeros(size(obj.strobeList.stop)), 'ro');
+					plot(obj.strobeList.startFix, zeros(size(obj.strobeList.startFix)), 'bo');
+					plot(obj.strobeList.correct, zeros(size(obj.strobeList.correct)), 'yo');
+					hold off
+					title(['LFP & EVENT PLOT: File:' obj.file ' | Channel:' LFPs(j).name]);
+					xlabel('Time (s)');
+					ylabel('LFP Raw Amplitude (mV)');
+				end
+			end
+			
+			fprintf('Parsing LFPs took %g ms\n',round(toc*1000))
 		end
 		
 	end %---END PUBLIC METHODS---%
@@ -352,7 +423,11 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function getStrobes(obj)
 			tic
-			[a,b,c] = plx_event_ts(obj.file,257); %257 is the strobed word channel
+			[~,eventNames] = plx_event_names(obj.file);
+			[~,eventIndex] = plx_event_chanmap(obj.file);
+			eventNames = cellstr(eventNames);
+			idx = strcmpi(eventNames,'Strobed');
+			[a,b,c] = plx_event_ts(obj.file,eventIndex(idx)); %257 is the strobed word channel
 			idx = find(c < 1);
 			if ~isempty(idx)
 				c(idx)=[];
@@ -368,15 +443,25 @@ classdef plxReader < optickaCore
 				c(end)=[];
 				b(end) = [];
 			end
-			[~,b19] = plx_event_ts(obj.file,19); %currently 19 is fix start
-			[~,b20] = plx_event_ts(obj.file,20); %20 is correct
-			[~,b21] = plx_event_ts(obj.file,21);
-			[~,b22] = plx_event_ts(obj.file,22);
-			[d,e] = plx_event_names(obj.file);
-			[f,g] = plx_event_chanmap(obj.file);
+			idx = strcmpi(eventNames, 'Start');
+			[~,start] = plx_event_ts(obj.file,eventIndex(idx)); %currently 19 is fix start
+			idx = strcmpi(eventNames, 'Stop');
+			[~,stop] = plx_event_ts(obj.file,eventIndex(idx)); %currently 19 is fix start
+			idx = strcmpi(eventNames, 'EVT19');
+			[~,b19] = plx_event_ts(obj.file,eventIndex(idx)); %currently 19 is fix start
+			idx = strcmpi(eventNames, 'EVT20');
+			[~,b20] = plx_event_ts(obj.file,eventIndex(idx)); %20 is correct
+			idx = strcmpi(eventNames, 'EVT21');
+			[~,b21] = plx_event_ts(obj.file,eventIndex(idx));
+			idx = strcmpi(eventNames, 'EVT22');
+			[~,b22] = plx_event_ts(obj.file,eventIndex(idx));
 			if a > 0
 				obj.strobeList = struct();
 				obj.strobeList(1).n = a;
+				obj.strobeList.eventNames = eventNames;
+				obj.strobeList.eventIndex = eventIndex;
+				obj.strobeList.start = start;
+				obj.strobeList.stop = stop;
 				obj.strobeList.startFix = b19;
 				obj.strobeList.correct = b20;
 				obj.strobeList.breakFix = b21;
@@ -542,7 +627,7 @@ classdef plxReader < optickaCore
 				obj.info{end+1} = ['Channel ' num2str(obj.tsList.chMap(i)) ' unit list (0=unsorted) : ' num2str(obj.tsList.unitMap(i).units)];
 			end
 			obj.info{end+1} = ['Ch/Unit Names : ' namelist];
-			obj.tsList.ts = cell(obj.tsList.nUnits, 1); 
+			obj.tsList.ts = cell(obj.tsList.nUnits, 1);
 			obj.tsList.tsN = obj.tsList.ts;
 			obj.tsList.tsParse = obj.tsList.ts;
 			a = 1;
@@ -555,10 +640,9 @@ classdef plxReader < optickaCore
 					a = a+1;
 				end
 			end
-			fprintf('Loading all spikes took %g ms\n',round(toc*1000))
+			fprintf('Loading all spikes took %g ms\n',round(toc*1000));
 		end
-		
-		
+				
 		% ===================================================================
 		%> @brief 
 		%>
@@ -587,7 +671,7 @@ classdef plxReader < optickaCore
 			if obj.startOffset ~= 0
 				obj.info{end+1} = sprintf('START OFFSET ACTIVE : %g', obj.startOffset);
 			end
-			fprintf('Parsing all spikes took %g ms\n',round(toc*1000))
+			fprintf('Parsing spikes into trials took %g ms\n',round(toc*1000))
 		end
 		
 		% ===================================================================
@@ -625,6 +709,18 @@ classdef plxReader < optickaCore
 			else
 				obj.isPL2 = true;
 			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function [idx,val]=findNearest(obj,in,value)
+			tmp = abs(in-value);
+			[~,idx] = min(tmp);
+			val = tmp(idx);
 		end
 		
 	end
