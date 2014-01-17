@@ -22,6 +22,7 @@ classdef plxReader < optickaCore
 		rE@runExperiment
 		eA@eyelinkAnalysis
 		isPL2@logical = false
+		isEDF@logical = false
 		pl2@struct
 	end
 	
@@ -157,9 +158,9 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function LFPs = loadLFPs(obj)
 			tic
-			[n, names] = plx_adchan_names(obj.file);
-			[n, map] = plx_adchan_samplecounts(obj.file);
-			[n, raw] = plx_ad_chanmap(obj.file);
+			[~, names] = plx_adchan_names(obj.file);
+			[~, map] = plx_adchan_samplecounts(obj.file);
+			[~, raw] = plx_ad_chanmap(obj.file);
 			names = cellstr(names);
 			idx = find(map > 0);
 			aa=1;
@@ -175,7 +176,7 @@ classdef plxReader < optickaCore
 			end
 			
 			for j = 1:length(LFPs)
-				[adfreq, n, ts, fn, ad] = plx_ad_v(obj.file, LFPs(j).index);
+				[adfreq, ~, ts, fn, ad] = plx_ad_v(obj.file, LFPs(j).index);
 
 				tbase = 1 / adfreq;
 				
@@ -202,22 +203,53 @@ classdef plxReader < optickaCore
 					return;
 				end
 				
-				if ~isempty(LFPs(j).data)
-					figure
-					plot(LFPs(j).time,LFPs(j).data,'k-x');
-					hold on
-					plot(obj.strobeList.start, zeros(size(obj.strobeList.start)), 'go');
-					plot(obj.strobeList.stop, zeros(size(obj.strobeList.stop)), 'ro');
-					plot(obj.strobeList.startFix, zeros(size(obj.strobeList.startFix)), 'bo');
-					plot(obj.strobeList.correct, zeros(size(obj.strobeList.correct)), 'yo');
-					hold off
-					title(['LFP & EVENT PLOT: File:' obj.file ' | Channel:' LFPs(j).name]);
-					xlabel('Time (s)');
-					ylabel('LFP Raw Amplitude (mV)');
+				LFPs(j).vars = struct(); %#ok<*AGROW>
+				
+				for k = 1:obj.strobeList.nVars
+					times = [obj.strobeList.vars(k).t1correct,obj.strobeList.vars(k).t2correct];
+					LFPs(j).vars(k).times = times;
+					LFPs(j).vars(k).nTrials = length(times);
+					minL = Inf;
+					maxL = 0;
+					window = 0.2;
+					winsteps = window/1e-3;
+					for l = 1:LFPs(j).vars(k).nTrials
+						[idx1, val1, dlta1] = obj.findNearest(time,times(l,1));
+						[idx2, val2, dlta2] = obj.findNearest(time,times(l,2));
+						LFPs(j).vars(k).trial(l).startTime = val1;
+						LFPs(j).vars(k).trial(l).startIndex = idx1;
+						LFPs(j).vars(k).trial(l).endTime = val2;
+						LFPs(j).vars(k).trial(l).endIndex = idx2;
+						LFPs(j).vars(k).trial(l).startDelta = dlta1;
+						LFPs(j).vars(k).trial(l).endDelta = dlta2;
+						LFPs(j).vars(k).trial(l).data = data(idx1-winsteps:idx1+winsteps);
+						LFPs(j).vars(k).trial(l).time = [-window:1e-3:window]';
+						LFPs(j).vars(k).trial(l).abstime = LFPs(j).vars(k).trial(l).time + (val1-window);
+						minL = min([length(LFPs(j).vars(k).trial(l).data) minL]);
+						maxL = max([length(LFPs(j).vars(k).trial(l).data) maxL]);
+					end
+					LFPs(j).vars(k).time = LFPs(j).vars(k).trial(1).time;
+					LFPs(j).vars(k).alldata = [LFPs(j).vars(k).trial(:).data];
+					[LFPs(j).vars(k).average, LFPs(j).vars(k).error] = stderr(LFPs(j).vars(k).alldata');
+					LFPs(j).vars(k).minL = minL;
+					LFPs(j).vars(k).maxL = maxL;
 				end
 			end
 			
-			fprintf('Parsing LFPs took %g ms\n',round(toc*1000))
+			fprintf('Parsing LFPs took %g ms\n',round(toc*1000));			
+			
+			for j = 1:length(LFPs(2).vars)
+				figure
+				title(['LFP & EVENT PLOT: File:' obj.file ' | Channel:' LFPs(1).name ' | PLXVar:' num2str(j)]);
+				xlabel('Time (s)');
+ 				ylabel('LFP Raw Amplitude (mV)');
+				hold on
+				plot(LFPs(1).vars(j).time, LFPs(1).vars(j).alldata);
+				areabar(LFPs(1).vars(j).time, LFPs(1).vars(j).average,LFPs(1).vars(j).error,[0.7 0.7 0.7],0.5,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',2);
+				hold off
+				axis([0 0.2 -inf inf])
+			end
+			
 		end
 		
 	end %---END PUBLIC METHODS---%
@@ -717,10 +749,11 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function [idx,val]=findNearest(obj,in,value)
+		function [idx,val,delta]=findNearest(obj,in,value)
 			tmp = abs(in-value);
 			[~,idx] = min(tmp);
-			val = tmp(idx);
+			val = in(idx);
+			delta = abs(value - val);
 		end
 		
 	end
