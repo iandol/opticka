@@ -251,7 +251,7 @@ classdef plxReader < optickaCore
 			figuremap = str2num(answer{2});
 			
 			if ~isempty(groundmap) && ~isempty(figuremap)
-				
+				tic
 				for j = 1:length(LFPs)
 					
 					vars = LFPs(j).vars;
@@ -276,7 +276,7 @@ classdef plxReader < optickaCore
 						nvars(n).alldata = [nvars(n).alldata, vars(thisVar).alldata];
 					end
 					nvars(n).time = vars(1).time;
-					[nvars(n).average, nvars(n).error] = stderr(nvars(n).alldata');
+					[nvars(n).average, nvars(n).error] = stderr(nvars(n).alldata','CIMEAN');
 					nvars(n).minL = vars(1).minL;
 					nvars(n).maxL = vars(1).maxL;
 					
@@ -289,7 +289,7 @@ classdef plxReader < optickaCore
 						nvars(n).alldata = [nvars(n).alldata, vars(thisVar).alldata];
 					end
 					nvars(n).time = vars(1).time;
-					[nvars(n).average, nvars(n).error] = stderr(nvars(n).alldata');
+					[nvars(n).average, nvars(n).error] = stderr(nvars(n).alldata','CIMEAN');
 					nvars(n).minL = vars(1).minL;
 					nvars(n).maxL = vars(1).maxL;
 					
@@ -297,11 +297,11 @@ classdef plxReader < optickaCore
 					LFPs(j).vars = nvars;
 					LFPs(j).reparse = true;
 				end
-				
+				fprintf('Reparsing LFP variables took %g ms\n',round(toc*1000));
 			end
 			
 			for j = 1:length(LFPs(2).vars)
-				figure
+				figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
 				title(['LFP & EVENT PLOT: File:' obj.file ' | Channel:' LFPs(1).name ' | PLXVar:' num2str(j)]);
 				xlabel('Time (s)');
  				ylabel('LFP Raw Amplitude (mV)');
@@ -309,11 +309,22 @@ classdef plxReader < optickaCore
 				plot(LFPs(1).vars(j).time, LFPs(1).vars(j).alldata);
 				areabar(LFPs(1).vars(j).time, LFPs(1).vars(j).average,LFPs(1).vars(j).error,[0.7 0.7 0.7],0.5,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',2);
 				hold off
-				axis([-0.1 0.3 -inf inf])
+				axis([-0.1 0.2 -inf inf])
 			end
 			
 			if LFPs(1).reparse == true;
-				
+				for j = 1: length(LFPs)
+					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
+					title(['FIGURE vs. GROUND Reparse: File:' obj.file ' | Channel:' LFPs(j).name ' | PLXVar:' num2str(j)]);
+					xlabel('Time (s)');
+					ylabel('LFP Raw Amplitude (mV)');
+					hold on
+					areabar(LFPs(j).vars(1).time, LFPs(j).vars(1).average,LFPs(j).vars(1).error,[0.7 0.7 0.7],0.5,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',2);
+					areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.7 0.5 0.5],0.5,'r-o','MarkerFaceColor',[1 0 0],'LineWidth',2)
+					hold off
+					axis([-0.1 0.2 -inf inf])
+					legend('95% CI','Ground','95% CI','Figure')
+				end
 			end
 				
 			
