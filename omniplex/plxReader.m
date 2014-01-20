@@ -204,8 +204,9 @@ classdef plxReader < optickaCore
 				end
 				
 				LFPs(j).vars = struct(); %#ok<*AGROW>
+				LFPs(j).nVars = obj.strobeList.nVars;
 				
-				for k = 1:obj.strobeList.nVars
+				for k = 1:LFPs(j).nVars
 					times = [obj.strobeList.vars(k).t1correct,obj.strobeList.vars(k).t2correct];
 					LFPs(j).vars(k).times = times;
 					LFPs(j).vars(k).nTrials = length(times);
@@ -236,7 +237,68 @@ classdef plxReader < optickaCore
 				end
 			end
 			
-			fprintf('Parsing LFPs took %g ms\n',round(toc*1000));			
+			fprintf('Parsing LFPs took %g ms\n',round(toc*1000));
+			
+			options.Resize='on';
+			options.WindowStyle='normal';
+			options.Interpreter='tex';
+			prompt = {'Choose PLX variables to merge (ground):','Choose PLX variables to merge (figure):','Sigma'};
+			dlg_title = ['REPARSE ' num2str(LFPs(1).nVars) ' DATA VARIABLES'];
+			num_lines = [1 120];
+			def = {'1 2 3 4 5 6','7 8','0'};
+			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
+			groundmap = str2num(answer{1});
+			figuremap = str2num(answer{2});
+			
+			if ~isempty(groundmap) && ~isempty(figuremap)
+				
+				for j = 1:length(LFPs)
+					
+					vars = LFPs(j).vars;
+					nvars = vars(1);
+					nvars(1).times = [];
+					nvars(1).nTrials = 0;
+					nvars(1).trial = [];
+					nvars(1).time = [];
+					nvars(1).alldata = [];
+					nvars(1).average = [];
+					nvars(1).error = [];
+					nvars(1).minL = [];
+					nvars(1).maxL = [];
+					nvars(2) = nvars(1);
+					
+					n = 1;
+					for k = 1:length(groundmap)
+						thisVar = groundmap(k);
+						nvars(n).times = [nvars(n).times;vars(thisVar).times];
+						nvars(n).nTrials = nvars(n).nTrials + vars(thisVar).nTrials;
+						nvars(n).trial = [nvars(n).trial, vars(thisVar).trial];
+						nvars(n).alldata = [nvars(n).alldata, vars(thisVar).alldata];
+					end
+					nvars(n).time = vars(1).time;
+					[nvars(n).average, nvars(n).error] = stderr(nvars(n).alldata');
+					nvars(n).minL = vars(1).minL;
+					nvars(n).maxL = vars(1).maxL;
+					
+					n = 2;
+					for k = 1:length(figuremap)
+						thisVar = figuremap(k);
+						nvars(n).times = [nvars(n).times;vars(thisVar).times];
+						nvars(n).nTrials = nvars(n).nTrials + vars(thisVar).nTrials;
+						nvars(n).trial = [nvars(n).trial, vars(thisVar).trial];
+						nvars(n).alldata = [nvars(n).alldata, vars(thisVar).alldata];
+					end
+					nvars(n).time = vars(1).time;
+					[nvars(n).average, nvars(n).error] = stderr(nvars(n).alldata');
+					nvars(n).minL = vars(1).minL;
+					nvars(n).maxL = vars(1).maxL;
+					
+					LFPs(j).oldvars = LFPs(j).vars;
+					LFPs(j).vars = nvars;
+					LFPs(j).reparse = true;
+				end
+				
+			end
 			
 			for j = 1:length(LFPs(2).vars)
 				figure
@@ -247,8 +309,13 @@ classdef plxReader < optickaCore
 				plot(LFPs(1).vars(j).time, LFPs(1).vars(j).alldata);
 				areabar(LFPs(1).vars(j).time, LFPs(1).vars(j).average,LFPs(1).vars(j).error,[0.7 0.7 0.7],0.5,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',2);
 				hold off
-				axis([0 0.2 -inf inf])
+				axis([-0.1 0.3 -inf inf])
 			end
+			
+			if LFPs(1).reparse == true;
+				
+			end
+				
 			
 		end
 		
