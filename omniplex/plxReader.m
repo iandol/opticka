@@ -11,13 +11,14 @@ classdef plxReader < optickaCore
 		cellmap@double
 		startOffset@double = 0
 		verbose	= true
+		doLFP@logical = false 
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
 		info@cell
 		eventList@struct
 		tsList@struct
-		strobeList@struct
+		LFPs@struct
 		meta@struct
 		rE@runExperiment
 		eA@eyelinkAnalysis
@@ -29,7 +30,7 @@ classdef plxReader < optickaCore
 	properties (SetAccess = private, GetAccess = private)
 		oldDir@char
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'startOffset|cellmap|file|matfile|dir|verbose'
+		allowedProperties@char = 'file|dir|matfile|matdir|edffile|startOffset|cellmap|verbose|doLFP'
 	end
 	
 	%=======================================================================
@@ -55,7 +56,14 @@ classdef plxReader < optickaCore
 				[obj.matfile, obj.matdir] = uigetfile('*.mat','Load Behaviour MAT File');
 			end
 			if isempty(obj.edffile)
-				[obj.edffile, ~] = uigetfile('*.edf','Load Eyelink EDF File');
+				[an, ~] = uigetfile('*.edf','Load Eyelink EDF File');
+				if ischar(an)
+					obj.edffile = an;
+					obj.isEDF = true;
+				else
+					obj.edffile = '';
+					obj.isEDF = false;
+				end
 			end
 		end
 		
@@ -77,8 +85,15 @@ classdef plxReader < optickaCore
 			getSpikes(obj);
 			getStrobes(obj);
 			parseSpikes(obj);
-			loadEDF(obj);
+			if obj.isEDF == true
+				loadEDF(obj);
+			end
+			if obj.doLFP == true
+				loadLFPs(obj)
+				plotLFPs(obj)
+			end
 		end
+		
 		% ===================================================================
 		%> @brief
 		%>
@@ -97,6 +112,17 @@ classdef plxReader < optickaCore
 			%disp(obj.info);
 			%cd(obj.paths.oldDir);
 			reparseInfo(obj);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parseLFPs(obj)
+			loadLFPs(obj)
+			plotLFPs(obj)
 		end
 		
 		% ===================================================================
@@ -121,7 +147,7 @@ classdef plxReader < optickaCore
 			v = regexprep(v,'\s+',' ');
 			x.name = ['PLX#' num2str(var) '|' v];
 			x.raw = raw;
-			x.totaltrials = obj.strobeList.minRuns;
+			x.totaltrials = obj.eventList.minRuns;
 			x.nummods = 1;
 			x.error = [];
 			if StartTrial < 1 || StartTrial > EndTrial
@@ -136,7 +162,7 @@ classdef plxReader < optickaCore
 			x.startmod = 1;
 			x.endmod = 1;
 			x.conversion = 1e4;
-			x.maxtime = obj.strobeList.tMaxCorrect * x.conversion;
+			x.maxtime = obj.eventList.tMaxCorrect * x.conversion;
 			a = 1;
 			for tr = x.starttrial:x.endtrial
 				x.trial(a).basetime = round(raw.run(tr).basetime * x.conversion); %convert from seconds to 0.1ms as that is what VS used
@@ -145,11 +171,75 @@ classdef plxReader < optickaCore
 				a=a+1;
 			end
 			x.isPLX = true;
-			x.tDelta = obj.strobeList.vars(var).tDeltacorrect(x.starttrial:x.endtrial);
+			x.tDelta = obj.eventList.vars(var).tDeltacorrect(x.starttrial:x.endtrial);
 			x.startOffset = obj.startOffset;
 			
 		end
 		
+	end %---END PUBLIC METHODS---%
+	
+	%=======================================================================
+	methods ( Static = true) %-------STATIC METHODS-----%
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief 
+		%> This needs to be static as it may load data called "obj" which
+		%> will conflict with the obj object in the class.
+		%> @param
+		%> @return
+		% ===================================================================
+		function [meta, rE] = loadMat(fn,pn)
+			oldd=pwd;
+			cd(pn);
+			tic
+			load(fn);
+			if ~exist('rE','var') && exist('obj','var')
+				rE = obj;
+			end
+			if ~isa(rE,'runExperiment')
+				error('The behavioural file doesn''t contain a runExperiment object!!!');
+			end
+			if isempty(rE.tS) && exist('tS','var'); rE.tS = tS; end
+			meta.filename = [pn fn];
+			if ~isfield(tS,'name'); meta.protocol = 'FigureGround';	meta.description = 'FigureGround'; else
+				meta.protocol = tS.name; meta.description = tS.name; end
+			meta.comments = rE.comment;
+			meta.date = rE.savePrefix;
+			meta.numvars = rE.task.nVars;
+			for i=1:rE.task.nVars
+				meta.var{i}.title = rE.task.nVar(i).name;
+				meta.var{i}.nvalues = length(rE.task.nVar(i).values);
+				meta.var{i}.range = meta.var{i}.nvalues;
+				if iscell(rE.task.nVar(i).values)
+					vals = rE.task.nVar(i).values;
+					num = 1:meta.var{i}.range;
+					meta.var{i}.values = num;
+					meta.var{i}.keystring = [];
+					for jj = 1:meta.var{i}.range
+						k = vals{jj};
+						meta.var{i}.key{jj} = num2str(k);
+						meta.var{i}.keystring = {meta.var{i}.keystring meta.var{i}.key{jj}};
+					end
+				else
+					meta.var{i}.values = rE.task.nVar(i).values;
+					meta.var{i}.key = '';
+				end
+			end
+			meta.repeats = rE.task.nBlocks;
+			meta.cycles = 1;
+			meta.modtime = 500;
+			meta.trialtime = 500;
+			meta.matrix = [];
+			fprintf('Parsing Behavioural files took %g ms\n',round(toc*1000))
+			cd(oldd);
+		end
+	end
+	
+	%=======================================================================
+	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	%=======================================================================
+	
 		% ===================================================================
 		%> @brief 
 		%>
@@ -171,6 +261,7 @@ classdef plxReader < optickaCore
 					LFPs(aa).name = cname;
 					LFPs(aa).index = raw(idx(j));
 					LFPs(aa).count = map(idx(j));
+					LFPs(aa).vars = struct([]); %#ok<*AGROW>
 					aa = aa + 1;
 				end
 			end
@@ -203,11 +294,10 @@ classdef plxReader < optickaCore
 					return;
 				end
 				
-				LFPs(j).vars = struct(); %#ok<*AGROW>
-				LFPs(j).nVars = obj.strobeList.nVars;
+				LFPs(j).nVars = obj.eventList.nVars;
 				
 				for k = 1:LFPs(j).nVars
-					times = [obj.strobeList.vars(k).t1correct,obj.strobeList.vars(k).t2correct];
+					times = [obj.eventList.vars(k).t1correct,obj.eventList.vars(k).t2correct];
 					LFPs(j).vars(k).times = times;
 					LFPs(j).vars(k).nTrials = length(times);
 					minL = Inf;
@@ -300,6 +390,23 @@ classdef plxReader < optickaCore
 				fprintf('Reparsing LFP variables took %g ms\n',round(toc*1000));
 			end
 			
+			if ~isempty(LFPs(1).vars)
+				obj.LFPs = LFPs;
+			end
+				
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function plotLFPs(obj)
+			LFPs = obj.LFPs;
+			if isempty(LFPs);
+				return
+			end
 			for j = 1:length(LFPs(2).vars)
 				figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
 				title(['LFP & EVENT PLOT: File:' obj.file ' | Channel:' LFPs(1).name ' | PLXVar:' num2str(j)]);
@@ -320,79 +427,13 @@ classdef plxReader < optickaCore
 					ylabel('LFP Raw Amplitude (mV)');
 					hold on
 					areabar(LFPs(j).vars(1).time, LFPs(j).vars(1).average,LFPs(j).vars(1).error,[0.7 0.7 0.7],0.5,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',2);
-					areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.7 0.5 0.5],0.5,'r-o','MarkerFaceColor',[1 0 0],'LineWidth',2)
+					areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.7 0.5 0.5],0.5,'r-o','MarkerFaceColor',[1 0 0],'LineWidth',2);
 					hold off
-					axis([-0.1 0.2 -inf inf])
-					legend('95% CI','Ground','95% CI','Figure')
+					axis([-0.1 0.2 -inf inf]);
+					legend('95% CI','Ground','95% CI','Figure');
 				end
 			end
-				
-			
 		end
-		
-	end %---END PUBLIC METHODS---%
-	
-	%=======================================================================
-	methods ( Static = true) %-------STATIC METHODS-----%
-	%=======================================================================
-	
-		% ===================================================================
-		%> @brief 
-		%> This needs to be static as it may load data called "obj" which
-		%> will conflict with the obj object in the class.
-		%> @param
-		%> @return
-		% ===================================================================
-		function [meta, rE] = loadMat(fn,pn)
-			oldd=pwd;
-			cd(pn);
-			tic
-			load(fn);
-			if ~exist('rE','var') && exist('obj','var')
-				rE = obj;
-			end
-			if ~isa(rE,'runExperiment')
-				error('The behavioural file doesn''t contain a runExperiment object!!!');
-			end
-			if isempty(rE.tS) && exist('tS','var'); rE.tS = tS; end
-			meta.filename = [pn fn];
-			if ~isfield(tS,'name'); meta.protocol = 'FigureGround';	meta.description = 'FigureGround'; else
-				meta.protocol = tS.name; meta.description = tS.name; end
-			meta.comments = rE.comment;
-			meta.date = rE.savePrefix;
-			meta.numvars = rE.task.nVars;
-			for i=1:rE.task.nVars
-				meta.var{i}.title = rE.task.nVar(i).name;
-				meta.var{i}.nvalues = length(rE.task.nVar(i).values);
-				meta.var{i}.range = meta.var{i}.nvalues;
-				if iscell(rE.task.nVar(i).values)
-					vals = rE.task.nVar(i).values;
-					num = 1:meta.var{i}.range;
-					meta.var{i}.values = num;
-					meta.var{i}.keystring = [];
-					for jj = 1:meta.var{i}.range
-						k = vals{jj};
-						meta.var{i}.key{jj} = num2str(k);
-						meta.var{i}.keystring = {meta.var{i}.keystring meta.var{i}.key{jj}};
-					end
-				else
-					meta.var{i}.values = rE.task.nVar(i).values;
-					meta.var{i}.key = '';
-				end
-			end
-			meta.repeats = rE.task.nBlocks;
-			meta.cycles = 1;
-			meta.modtime = 500;
-			meta.trialtime = 500;
-			meta.matrix = [];
-			fprintf('Parsing Behavioural files took %g ms\n',round(toc*1000))
-			cd(oldd);
-		end
-	end
-	
-	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
 	
 		% ===================================================================
 		%> @brief 
@@ -427,7 +468,7 @@ classdef plxReader < optickaCore
 				if isstruct(obj.rE.tS)
 					obj.eA.tS = obj.rE.tS;
 				end
-				obj.eA.varList = obj.strobeList.varOrderCorrect;
+				obj.eA.varList = obj.eventList.varOrderCorrect;
 				load(obj.eA);
 				parse(obj.eA);				
 			end
@@ -566,127 +607,127 @@ classdef plxReader < optickaCore
 			idx = strcmpi(eventNames, 'EVT22');
 			[~,b22] = plx_event_ts(obj.file,eventIndex(idx));
 			if a > 0
-				obj.strobeList = struct();
-				obj.strobeList(1).n = a;
-				obj.strobeList.eventNames = eventNames;
-				obj.strobeList.eventIndex = eventIndex;
-				obj.strobeList.start = start;
-				obj.strobeList.stop = stop;
-				obj.strobeList.startFix = b19;
-				obj.strobeList.correct = b20;
-				obj.strobeList.breakFix = b21;
-				obj.strobeList.incorrect = b22;
-				obj.strobeList.times = b;
-				obj.strobeList.values = c;
-				obj.strobeList.varOrder = obj.strobeList.values(obj.strobeList.values<32000);
-				obj.strobeList.varOrderCorrect = zeros(length(obj.strobeList.correct),1);
-				obj.strobeList.unique = unique(c);
-				obj.strobeList.nVars = length(obj.strobeList.unique)-1;
-				obj.strobeList.minRuns = Inf;
-				obj.strobeList.maxRuns = 0;
-				obj.strobeList.tMin = Inf;
-				obj.strobeList.tMax = 0;
-				obj.strobeList.tMinCorrect = Inf;
-				obj.strobeList.tMaxCorrect = 0;
+				obj.eventList = struct();
+				obj.eventList(1).n = a;
+				obj.eventList.eventNames = eventNames;
+				obj.eventList.eventIndex = eventIndex;
+				obj.eventList.start = start;
+				obj.eventList.stop = stop;
+				obj.eventList.startFix = b19;
+				obj.eventList.correct = b20;
+				obj.eventList.breakFix = b21;
+				obj.eventList.incorrect = b22;
+				obj.eventList.times = b;
+				obj.eventList.values = c;
+				obj.eventList.varOrder = obj.eventList.values(obj.eventList.values<32000);
+				obj.eventList.varOrderCorrect = zeros(length(obj.eventList.correct),1);
+				obj.eventList.unique = unique(c);
+				obj.eventList.nVars = length(obj.eventList.unique)-1;
+				obj.eventList.minRuns = Inf;
+				obj.eventList.maxRuns = 0;
+				obj.eventList.tMin = Inf;
+				obj.eventList.tMax = 0;
+				obj.eventList.tMinCorrect = Inf;
+				obj.eventList.tMaxCorrect = 0;
 				
-				for i = 1:obj.strobeList.nVars
-					obj.strobeList.vars(i).name = obj.strobeList.unique(i);
-					idx = find(obj.strobeList.values == obj.strobeList.unique(i));
+				for i = 1:obj.eventList.nVars
+					obj.eventList.vars(i).name = obj.eventList.unique(i);
+					idx = find(obj.eventList.values == obj.eventList.unique(i));
 					idxend = idx+1;
 					while (length(idx) > length(idxend)) %prune incomplete trials
 						idx = idx(1:end-1);
 					end
-					obj.strobeList.vars(i).nRepeats = length(idx);
-					obj.strobeList.vars(i).index = idx;
-					obj.strobeList.vars(i).t1 = obj.strobeList.times(idx);
-					obj.strobeList.vars(i).t2 = obj.strobeList.times(idxend);
-					obj.strobeList.vars(i).tDelta = obj.strobeList.vars(i).t2 - obj.strobeList.vars(i).t1;
-					obj.strobeList.vars(i).tMin = min(obj.strobeList.vars(i).tDelta);
-					obj.strobeList.vars(i).tMax = max(obj.strobeList.vars(i).tDelta);				
-					for nr = 1:obj.strobeList.vars(i).nRepeats
-						tend = obj.strobeList.vars(i).t2(nr);
-						tc = obj.strobeList.correct > tend-0.2 & obj.strobeList.correct < tend+0.2;
-						tb = obj.strobeList.breakFix > tend-0.2 & obj.strobeList.breakFix < tend+0.2;
-						ti = obj.strobeList.incorrect > tend-0.2 & obj.strobeList.incorrect < tend+0.2;
+					obj.eventList.vars(i).nRepeats = length(idx);
+					obj.eventList.vars(i).index = idx;
+					obj.eventList.vars(i).t1 = obj.eventList.times(idx);
+					obj.eventList.vars(i).t2 = obj.eventList.times(idxend);
+					obj.eventList.vars(i).tDelta = obj.eventList.vars(i).t2 - obj.eventList.vars(i).t1;
+					obj.eventList.vars(i).tMin = min(obj.eventList.vars(i).tDelta);
+					obj.eventList.vars(i).tMax = max(obj.eventList.vars(i).tDelta);				
+					for nr = 1:obj.eventList.vars(i).nRepeats
+						tend = obj.eventList.vars(i).t2(nr);
+						tc = obj.eventList.correct > tend-0.2 & obj.eventList.correct < tend+0.2;
+						tb = obj.eventList.breakFix > tend-0.2 & obj.eventList.breakFix < tend+0.2;
+						ti = obj.eventList.incorrect > tend-0.2 & obj.eventList.incorrect < tend+0.2;
 						if max(tc) == 1
-							obj.strobeList.vars(i).responseIndex(nr,1) = true;
-							obj.strobeList.vars(i).responseIndex(nr,2) = false;
-							obj.strobeList.vars(i).responseIndex(nr,3) = false;
-							obj.strobeList.varOrderCorrect(tc==1) = i; %build the correct trial list
+							obj.eventList.vars(i).responseIndex(nr,1) = true;
+							obj.eventList.vars(i).responseIndex(nr,2) = false;
+							obj.eventList.vars(i).responseIndex(nr,3) = false;
+							obj.eventList.varOrderCorrect(tc==1) = i; %build the correct trial list
 						elseif max(tb) == 1
-							obj.strobeList.vars(i).responseIndex(nr,1) = false;
-							obj.strobeList.vars(i).responseIndex(nr,2) = true;
-							obj.strobeList.vars(i).responseIndex(nr,3) = false;
+							obj.eventList.vars(i).responseIndex(nr,1) = false;
+							obj.eventList.vars(i).responseIndex(nr,2) = true;
+							obj.eventList.vars(i).responseIndex(nr,3) = false;
 						elseif max(ti) == 1
-							obj.strobeList.vars(i).responseIndex(nr,1) = false;
-							obj.strobeList.vars(i).responseIndex(nr,2) = false;
-							obj.strobeList.vars(i).responseIndex(nr,3) = true;
+							obj.eventList.vars(i).responseIndex(nr,1) = false;
+							obj.eventList.vars(i).responseIndex(nr,2) = false;
+							obj.eventList.vars(i).responseIndex(nr,3) = true;
 						else
 							error('Problem Finding Correct Strobes!!!!! plxReader')
 						end
 					end
-					obj.strobeList.vars(i).nCorrect = sum(obj.strobeList.vars(i).responseIndex(:,1));
-					obj.strobeList.vars(i).nBreakFix = sum(obj.strobeList.vars(i).responseIndex(:,2));
-					obj.strobeList.vars(i).nIncorrect = sum(obj.strobeList.vars(i).responseIndex(:,3));
+					obj.eventList.vars(i).nCorrect = sum(obj.eventList.vars(i).responseIndex(:,1));
+					obj.eventList.vars(i).nBreakFix = sum(obj.eventList.vars(i).responseIndex(:,2));
+					obj.eventList.vars(i).nIncorrect = sum(obj.eventList.vars(i).responseIndex(:,3));
 					
-					if obj.strobeList.minRuns > obj.strobeList.vars(i).nCorrect
-						obj.strobeList.minRuns = obj.strobeList.vars(i).nCorrect;
+					if obj.eventList.minRuns > obj.eventList.vars(i).nCorrect
+						obj.eventList.minRuns = obj.eventList.vars(i).nCorrect;
 					end
-					if obj.strobeList.maxRuns < obj.strobeList.vars(i).nCorrect
-						obj.strobeList.maxRuns = obj.strobeList.vars(i).nCorrect;
-					end
-					
-					if obj.strobeList.tMin > obj.strobeList.vars(i).tMin
-						obj.strobeList.tMin = obj.strobeList.vars(i).tMin;
-					end
-					if obj.strobeList.tMax < obj.strobeList.vars(i).tMax
-						obj.strobeList.tMax = obj.strobeList.vars(i).tMax;
+					if obj.eventList.maxRuns < obj.eventList.vars(i).nCorrect
+						obj.eventList.maxRuns = obj.eventList.vars(i).nCorrect;
 					end
 					
-					obj.strobeList.vars(i).t1correct = obj.strobeList.vars(i).t1(obj.strobeList.vars(i).responseIndex(:,1));
-					obj.strobeList.vars(i).t2correct = obj.strobeList.vars(i).t2(obj.strobeList.vars(i).responseIndex(:,1));
-					obj.strobeList.vars(i).tDeltacorrect = obj.strobeList.vars(i).tDelta(obj.strobeList.vars(i).responseIndex(:,1));
-					obj.strobeList.vars(i).tMinCorrect = min(obj.strobeList.vars(i).tDeltacorrect);
-					obj.strobeList.vars(i).tMaxCorrect = max(obj.strobeList.vars(i).tDeltacorrect);
-					if obj.strobeList.tMinCorrect > obj.strobeList.vars(i).tMinCorrect
-						obj.strobeList.tMinCorrect = obj.strobeList.vars(i).tMinCorrect;
+					if obj.eventList.tMin > obj.eventList.vars(i).tMin
+						obj.eventList.tMin = obj.eventList.vars(i).tMin;
 					end
-					if obj.strobeList.tMaxCorrect < obj.strobeList.vars(i).tMaxCorrect
-						obj.strobeList.tMaxCorrect = obj.strobeList.vars(i).tMaxCorrect;
+					if obj.eventList.tMax < obj.eventList.vars(i).tMax
+						obj.eventList.tMax = obj.eventList.vars(i).tMax;
 					end
 					
-					obj.strobeList.vars(i).t1breakfix = obj.strobeList.vars(i).t1(obj.strobeList.vars(i).responseIndex(:,2));
-					obj.strobeList.vars(i).t2breakfix = obj.strobeList.vars(i).t2(obj.strobeList.vars(i).responseIndex(:,2));
-					obj.strobeList.vars(i).tDeltabreakfix = obj.strobeList.vars(i).tDelta(obj.strobeList.vars(i).responseIndex(:,2));
+					obj.eventList.vars(i).t1correct = obj.eventList.vars(i).t1(obj.eventList.vars(i).responseIndex(:,1));
+					obj.eventList.vars(i).t2correct = obj.eventList.vars(i).t2(obj.eventList.vars(i).responseIndex(:,1));
+					obj.eventList.vars(i).tDeltacorrect = obj.eventList.vars(i).tDelta(obj.eventList.vars(i).responseIndex(:,1));
+					obj.eventList.vars(i).tMinCorrect = min(obj.eventList.vars(i).tDeltacorrect);
+					obj.eventList.vars(i).tMaxCorrect = max(obj.eventList.vars(i).tDeltacorrect);
+					if obj.eventList.tMinCorrect > obj.eventList.vars(i).tMinCorrect
+						obj.eventList.tMinCorrect = obj.eventList.vars(i).tMinCorrect;
+					end
+					if obj.eventList.tMaxCorrect < obj.eventList.vars(i).tMaxCorrect
+						obj.eventList.tMaxCorrect = obj.eventList.vars(i).tMaxCorrect;
+					end
 					
-					obj.strobeList.vars(i).t1incorrect = obj.strobeList.vars(i).t1(obj.strobeList.vars(i).responseIndex(:,3));
-					obj.strobeList.vars(i).t2incorrect = obj.strobeList.vars(i).t2(obj.strobeList.vars(i).responseIndex(:,3));
-					obj.strobeList.vars(i).tDeltaincorrect = obj.strobeList.vars(i).tDelta(obj.strobeList.vars(i).responseIndex(:,3));
+					obj.eventList.vars(i).t1breakfix = obj.eventList.vars(i).t1(obj.eventList.vars(i).responseIndex(:,2));
+					obj.eventList.vars(i).t2breakfix = obj.eventList.vars(i).t2(obj.eventList.vars(i).responseIndex(:,2));
+					obj.eventList.vars(i).tDeltabreakfix = obj.eventList.vars(i).tDelta(obj.eventList.vars(i).responseIndex(:,2));
+					
+					obj.eventList.vars(i).t1incorrect = obj.eventList.vars(i).t1(obj.eventList.vars(i).responseIndex(:,3));
+					obj.eventList.vars(i).t2incorrect = obj.eventList.vars(i).t2(obj.eventList.vars(i).responseIndex(:,3));
+					obj.eventList.vars(i).tDeltaincorrect = obj.eventList.vars(i).tDelta(obj.eventList.vars(i).responseIndex(:,3));
 					
 				end
 				
-				obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.strobeList.nVars);
-				obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.strobeList.correct));
-				obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.strobeList.breakFix));
-				obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.strobeList.incorrect));
-				obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.strobeList.minRuns);
-				obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.strobeList.maxRuns);
-				obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.strobeList.tMin,obj.strobeList.tMinCorrect);
-				obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.strobeList.tMax,obj.strobeList.tMaxCorrect);
+				obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
+				obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
+				obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
+				obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.eventList.incorrect));
+				obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.eventList.minRuns);
+				obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.eventList.maxRuns);
+				obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.eventList.tMin,obj.eventList.tMinCorrect);
+				obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.eventList.tMax,obj.eventList.tMaxCorrect);
 				
 				
-				obj.meta.modtime = floor(obj.strobeList.tMaxCorrect * 10000);
+				obj.meta.modtime = floor(obj.eventList.tMaxCorrect * 10000);
 				obj.meta.trialtime = obj.meta.modtime;
 				m = [obj.rE.task.outIndex obj.rE.task.outMap getMeta(obj.rE.task)];
-				m = m(1:obj.strobeList.nVars,:);
+				m = m(1:obj.eventList.nVars,:);
 				[~,ix] = sort(m(:,1),1);
 				m = m(ix,:);
 				obj.meta.matrix = m;
 				
 			else
-				obj.strobeList = struct();
+				obj.eventList = struct();
 			end
-			fprintf('Loading all strobes/events took %g ms\n',round(toc*1000))
+			fprintf('Loading all event markers took %g ms\n',round(toc*1000))
 		end
 		
 		% ===================================================================
@@ -763,9 +804,9 @@ classdef plxReader < optickaCore
 			tic
 			for ps = 1:obj.tsList.nUnits
 				spikes = obj.tsList.ts{ps};
-				obj.tsList.tsParse{ps}.var = cell(obj.strobeList.nVars,1);
-				for nv = 1:obj.strobeList.nVars
-					var = obj.strobeList.vars(nv);
+				obj.tsList.tsParse{ps}.var = cell(obj.eventList.nVars,1);
+				for nv = 1:obj.eventList.nVars
+					var = obj.eventList.vars(nv);
 					obj.tsList.tsParse{ps}.var{nv}.run = struct();
 					obj.tsList.tsParse{ps}.var{nv}.name = var.name;
 					for nc = 1:var.nCorrect
@@ -792,14 +833,14 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function reparseInfo(obj)
 			
-			obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.strobeList.nVars);
-			obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.strobeList.correct));
-			obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.strobeList.breakFix));
-			obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.strobeList.incorrect));
-			obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.strobeList.minRuns);
-			obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.strobeList.maxRuns);
-			obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.strobeList.tMin,obj.strobeList.tMinCorrect);
-			obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.strobeList.tMax,obj.strobeList.tMaxCorrect);
+			obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
+			obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
+			obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
+			obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.eventList.incorrect));
+			obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.eventList.minRuns);
+			obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.eventList.maxRuns);
+			obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.eventList.tMin,obj.eventList.tMinCorrect);
+			obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.eventList.tMax,obj.eventList.tMaxCorrect);
 			obj.info{end+1} = ['Number of Active channels : ' num2str(obj.tsList.nCh)];
 			obj.info{end+1} = ['Number of Active units : ' num2str(obj.tsList.nUnit)];
 			obj.info{end+1} = ['Channel list : ' num2str(obj.tsList.chMap)];
