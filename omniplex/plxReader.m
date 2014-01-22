@@ -83,7 +83,7 @@ classdef plxReader < optickaCore
 			end
 			generateInfo(obj);
 			getSpikes(obj);
-			getStrobes(obj);
+			getEvents(obj);
 			parseSpikes(obj);
 			if obj.isEDF == true
 				loadEDF(obj);
@@ -107,7 +107,7 @@ classdef plxReader < optickaCore
 			%loadEDF(obj);
 			generateInfo(obj);
 			%getSpikes(obj);
-			getStrobes(obj);
+			getEvents(obj);
 			parseSpikes(obj);
 			%disp(obj.info);
 			%cd(obj.paths.oldDir);
@@ -262,6 +262,7 @@ classdef plxReader < optickaCore
 					LFPs(aa).index = raw(idx(j));
 					LFPs(aa).count = map(idx(j));
 					LFPs(aa).vars = struct([]); %#ok<*AGROW>
+					LFPs(aa).reparse = false;
 					aa = aa + 1;
 				end
 			end
@@ -332,13 +333,16 @@ classdef plxReader < optickaCore
 			options.Resize='on';
 			options.WindowStyle='normal';
 			options.Interpreter='tex';
-			prompt = {'Choose PLX variables to merge (ground):','Choose PLX variables to merge (figure):','Sigma'};
+			prompt = {'Choose PLX variables to merge (ground):','Choose PLX variables to merge (figure):','Choose PLX variables to merge (figure 2):'};
 			dlg_title = ['REPARSE ' num2str(LFPs(1).nVars) ' DATA VARIABLES'];
 			num_lines = [1 120];
-			def = {'1 2 3 4 5 6','7 8','0'};
+			def = {'1 2 3 4 5 6','7 8',''};
 			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
-			groundmap = str2num(answer{1});
-			figuremap = str2num(answer{2});
+			if isempty(answer)
+				groundmap = []; figuremap=[]; figure2map=[];
+			else
+				groundmap = str2num(answer{1});	figuremap = str2num(answer{2});	figure2map = str2num(answer{3});
+			end
 			
 			if ~isempty(groundmap) && ~isempty(figuremap)
 				tic
@@ -355,7 +359,8 @@ classdef plxReader < optickaCore
 					nvars(1).error = [];
 					nvars(1).minL = [];
 					nvars(1).maxL = [];
-					nvars(2) = nvars(1);
+					vartemplate = nvars(1);
+					nvars(2) = vartemplate;
 					
 					n = 1;
 					for k = 1:length(groundmap)
@@ -383,6 +388,22 @@ classdef plxReader < optickaCore
 					nvars(n).minL = vars(1).minL;
 					nvars(n).maxL = vars(1).maxL;
 					
+					if ~isempty(figure2map)
+						n = 3;
+						nvars(3) = vartemplate;
+						for k = 1:length(figure2map)
+							thisVar = figure2map(k);
+							nvars(n).times = [nvars(n).times;vars(thisVar).times];
+							nvars(n).nTrials = nvars(n).nTrials + vars(thisVar).nTrials;
+							nvars(n).trial = [nvars(n).trial, vars(thisVar).trial];
+							nvars(n).alldata = [nvars(n).alldata, vars(thisVar).alldata];
+						end
+						nvars(n).time = vars(1).time;
+						[nvars(n).average, nvars(n).error] = stderr(nvars(n).alldata','CIMEAN');
+						nvars(n).minL = vars(1).minL;
+						nvars(n).maxL = vars(1).maxL;
+					end
+					
 					LFPs(j).oldvars = LFPs(j).vars;
 					LFPs(j).vars = nvars;
 					LFPs(j).reparse = true;
@@ -392,10 +413,9 @@ classdef plxReader < optickaCore
 			
 			if ~isempty(LFPs(1).vars)
 				obj.LFPs = LFPs;
-			end
-				
+			end	
 		end
-		
+
 		% ===================================================================
 		%> @brief 
 		%>
@@ -407,14 +427,14 @@ classdef plxReader < optickaCore
 			if isempty(LFPs);
 				return
 			end
-			for j = 1:length(LFPs(2).vars)
+			for j = 1:length(LFPs(1).vars)
 				figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
 				title(['LFP & EVENT PLOT: File:' obj.file ' | Channel:' LFPs(1).name ' | PLXVar:' num2str(j)]);
 				xlabel('Time (s)');
  				ylabel('LFP Raw Amplitude (mV)');
 				hold on
 				plot(LFPs(1).vars(j).time, LFPs(1).vars(j).alldata);
-				areabar(LFPs(1).vars(j).time, LFPs(1).vars(j).average,LFPs(1).vars(j).error,[0.7 0.7 0.7],0.5,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',2);
+				areabar(LFPs(1).vars(j).time, LFPs(1).vars(j).average,LFPs(1).vars(j).error,[0.7 0.7 0.7],0.7,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',2);
 				hold off
 				axis([-0.1 0.2 -inf inf])
 			end
@@ -426,11 +446,16 @@ classdef plxReader < optickaCore
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV)');
 					hold on
-					areabar(LFPs(j).vars(1).time, LFPs(j).vars(1).average,LFPs(j).vars(1).error,[0.7 0.7 0.7],0.5,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',2);
-					areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.7 0.5 0.5],0.5,'r-o','MarkerFaceColor',[1 0 0],'LineWidth',2);
+					areabar(LFPs(j).vars(1).time, LFPs(j).vars(1).average,LFPs(j).vars(1).error,[0.7 0.7 0.7],0.6,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',2);
+					areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.7 0.5 0.5],0.6,'r-o','MarkerFaceColor',[1 0 0],'LineWidth',2);
+					if length(LFPs(j).vars)==3
+						areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.5 0.5 0.7],0.6,'b-o','MarkerFaceColor',[0 0 1],'LineWidth',2);
+						legend('95% CI','Ground','95% CI','Figure','95% CI','Figure 2');
+					else
+						legend('95% CI','Ground','95% CI','Figure');
+					end
 					hold off
 					axis([-0.1 0.2 -inf inf]);
-					legend('95% CI','Ground','95% CI','Figure');
 				end
 			end
 		end
@@ -572,7 +597,7 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function getStrobes(obj)
+		function getEvents(obj)
 			tic
 			[~,eventNames] = plx_event_names(obj.file);
 			[~,eventIndex] = plx_event_chanmap(obj.file);
@@ -832,7 +857,7 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function reparseInfo(obj)
-			
+
 			obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
 			obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
 			obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
