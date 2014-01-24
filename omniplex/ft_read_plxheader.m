@@ -11,6 +11,7 @@ function [hdr] = ft_read_plxheader(filename, varargin)
 %   'headerformat'   string
 %   'fallback'       can be empty or 'biosig' (default = [])
 %   'coordsys'       string, 'head' or 'dewar' (default = 'head')
+%   'freq'			 number, selecting either the wideband @40Khz or LFP @1KHz
 %
 % This returns a header structure with the following elements
 %   hdr.Fs                  sampling frequency
@@ -115,6 +116,7 @@ end
 headerformat = ft_getopt(varargin, 'headerformat');
 retry        = ft_getopt(varargin, 'retry', false);     % the default is not to retry reading the header
 coordsys     = ft_getopt(varargin, 'coordsys', 'head'); % this is used for ctf and neuromag_mne, it can be head or dewar
+freq		 = ft_getopt(varargin, 'freq');
 
 if isempty(headerformat)
   % only do the autodetection if the format was not specified
@@ -253,57 +255,6 @@ switch headerformat
     % also remember the original header details
     hdr.orig = orig;
     
-  case 'plexon_plx'
-    orig = read_plexon_plx(filename);
-    if orig.NumSlowChannels==0
-      warning('different sampling rates in continuous data not supported, please select channels carefully');
-    end
-    fsample = [orig.SlowChannelHeader.ADFreq];
-    if any(fsample~=fsample(1))
-      warning('different sampling rates in continuous data not supported, please select channels carefully');
-    end
-    for i=1:length(orig.SlowChannelHeader)
-      label{i} = deblank(orig.SlowChannelHeader(i).Name);
-    end
-    % continuous channels don't always contain data, remove the empty ones
-    sel  = [orig.DataBlockHeader.Type]==5;  % continuous
-    chan = [orig.DataBlockHeader.Channel];
-    for i=1:length(label)
-      chansel(i) = any(chan(sel)==orig.SlowChannelHeader(i).Channel);
-    end
-    chansel = find(chansel); % this is required for timestamp selection
-    label = label(chansel);
-    % only the continuous channels are returned as visible
-    hdr.nChans      = length(label);
-    hdr.Fs          = fsample(1);
-    hdr.label       = label;
-    % also remember the original header
-    hdr.orig        = orig;
-    
-    % select the first continuous channel that has data
-    sel = ([orig.DataBlockHeader.Type]==5 & [orig.DataBlockHeader.Channel]==orig.SlowChannelHeader(chansel(1)).Channel);
-    % get the timestamps that correspond with the continuous data
-    tsl = [orig.DataBlockHeader(sel).TimeStamp]';
-    tsh = [orig.DataBlockHeader(sel).UpperByteOf5ByteTimestamp]';
-    ts  = timestamp_plexon(tsl, tsh);  % use helper function, this returns an uint64 array
-    
-    % determine the number of samples in the continuous channels
-    num = [orig.DataBlockHeader(sel).NumberOfWordsInWaveform];
-    hdr.nSamples    = sum(num);
-    hdr.nSamplesPre = 0;      % continuous
-    hdr.nTrials     = 1;      % continuous
-    
-    % the timestamps indicate the beginning of each block, hence the timestamp of the last block corresponds with the end of the previous block
-    hdr.TimeStampPerSample = double(ts(end)-ts(1))/sum(num(1:(end-1)));
-    hdr.FirstTimeStamp     = ts(1);                                                %  the timestamp of the first continuous sample
-    
-    % also make the spike channels visible
-    for i=1:length(orig.ChannelHeader)
-      hdr.label{end+1} = deblank(orig.ChannelHeader(i).Name);
-    end
-    hdr.label = hdr.label(:);
-    hdr.nChans = length(hdr.label);
-    
   case {'plexon_plx_v2'}
     ft_hastoolbox('PLEXON', 1);
     
@@ -311,11 +262,7 @@ switch headerformat
     
     if orig.NumSlowChannels==0
       error('file does not contain continuous channels');
-    end
-    fsample = [orig.SlowChannelHeader.ADFreq];
-    if any(fsample~=fsample(1))
-      warning('different sampling rates in continuous data not supported, please select channels carefully');
-    end
+	end
     for i=1:length(orig.SlowChannelHeader)
       label{i} = deblank(orig.SlowChannelHeader(i).Name);
     end
@@ -323,9 +270,15 @@ switch headerformat
     [~, scounts] = plx_adchan_samplecounts(filename);
     chansel = scounts > 0;
     chansel = find(chansel); % this is required for timestamp selection
+	fsample = [orig.SlowChannelHeader.ADFreq];
+	fsample = fsample(chansel); %select non-empty channels only
+	if any(fsample~=fsample(1))
+      warning('different sampling rates in continuous data not supported, please select channels carefully');
+    end
     label = label(chansel);
     % only the continuous channels are returned as visible
     hdr.nChans      = length(label);
+	hdr.eventFs		= orig.ADFrequency;
     hdr.Fs          = fsample(1);
     hdr.label       = label;
     % also remember the original header
@@ -702,7 +655,6 @@ previous_argin  = current_argin;
 previous_argout = current_argout;
 
 function [ orig ] = plx_orig_header( fname )
-
 % PLX_ORIG_HEADER Extracts the header informations of plx files using the
 % Plexon Offline SDK, which is available from
 % http://www.plexon.com/assets/downloads/sdk/ReadingPLXandDDTfilesinMatlab-mexw.zip
