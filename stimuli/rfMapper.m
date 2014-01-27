@@ -78,7 +78,7 @@ classdef rfMapper < barStimulus
 			end
 			
 			obj.backgroundColour = [0 0 0 0];
-			obj.family = 'rfmapper';
+			obj.family = 'rfMapper';
 			obj.salutation('constructor','rfMapper initialisation complete');
 		end
 		
@@ -91,11 +91,11 @@ classdef rfMapper < barStimulus
 				obj.sM = rE.screen;
 			end
 			
-			obj.sM.windowed = [1000 800];
+			obj.sM.windowed = [];
 			
 			try
 				obj.sM.debug = true;
-				screenVals = open(obj.sM);
+				open(obj.sM);
 				
 				obj.setup(obj.sM);
 				
@@ -171,17 +171,16 @@ classdef rfMapper < barStimulus
 					
 					FlushEvents('keyDown');
 					
-					vbl = Screen('Flip', obj.sM.win, vbl + screenVals.halfisi);
+					vbl = Screen('Flip', obj.sM.win, vbl + obj.sM.screenVals.halfisi);
 					
 					obj.tick = obj.tick + 1;
 				end
 				
 				close(obj.sM);
-				obj.sM.win=[];
 				Priority(0);
 				ListenChar(0)
 				ShowCursor;
-				Screen('CloseAll');
+				sca;
 				if ~isempty(obj.xClick)
 					obj.drawMap;
 				end
@@ -516,7 +515,7 @@ classdef rfMapper < barStimulus
 		% ===================================================================
 		function regenerate(obj)
 			Screen('Close',obj.texture);
-			obj.constructMatrix(obj.ppd) %make our matrix
+			constructMatrix(obj) %make our matrix
 			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
 		end
 	end
