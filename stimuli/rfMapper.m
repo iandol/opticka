@@ -31,9 +31,9 @@ classdef rfMapper < barStimulus
 		xClick = 0
 		yClick = 0
 		xyDots = [0;0]
-		comment = ''
 		showClicks = 0
 		stimulus = 'bar'
+		backgroundColour = [0 0 0 0];
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -88,23 +88,18 @@ classdef rfMapper < barStimulus
 		% ===================================================================
 		function run(obj,rE)
 			if exist('rE','var')
-				obj.screen = rE.screen;
-			else
-				obj.screen = screenManager();
+				obj.sM = rE.screen;
 			end
 			
+			obj.sM.windowed = [1000 800];
+			
 			try
-				obj.screen.debug = true;
-				screenVals = open(obj.screen);
-				obj.xCenter = obj.screen.xCenter;
-				obj.yCenter = obj.screen.yCenter;
-				obj.win = obj.screen.win;
-				obj.winRect = obj.screen.winRect;
+				obj.sM.debug = true;
+				screenVals = open(obj.sM);
 				
-				obj.setup(obj.screen);
+				obj.setup(obj.sM);
 				
 				secondaryFigure(obj);
-				
 				
 				obj.buttons = [0 0 0]; % When the user clicks the mouse, 'buttons' becomes nonzero.
 				mX = 0; % The x-coordinate of the mouse cursor
@@ -112,7 +107,7 @@ classdef rfMapper < barStimulus
 				xOut = 0;
 				yOut = 0;
 				obj.rchar='';
-				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
+				Priority(MaxPriority(obj.sM.win)); %bump our priority to maximum allowed
 				FlushEvents;
 				HideCursor;
 				ListenChar(2);
@@ -120,12 +115,12 @@ classdef rfMapper < barStimulus
 				Finc = 6;
 				keyHold = 1;
 				
-				vbl = Screen('Flip', obj.win);
+				vbl = Screen('Flip', obj.sM.win);
 				
 				while isempty(regexpi(obj.rchar,'^esc'))
 					
 					%draw background
-					Screen('FillRect',obj.win,obj.backgroundColour,[]);
+					Screen('FillRect',obj.sM.win,obj.backgroundColour,[]);
 					
 					%draw text
 					t=sprintf('Buttons: %i\t',obj.buttons);
@@ -133,7 +128,7 @@ classdef rfMapper < barStimulus
 					if ischar(obj.rchar); t=[t sprintf('| Char: %s',obj.rchar)]; end
 					t=[t sprintf('Scale = %2.2g',obj.scale)];
 					t=[t sprintf(' | Texture = %g',obj.textureIndex)];
-					Screen('DrawText', obj.win, t, 0, 0, [1 1 0]);
+					Screen('DrawText', obj.sM.win, t, 0, 0, [1 1 0]);
 					
 					%draw central spot
 					sColour = obj.backgroundColour./2;
@@ -142,26 +137,26 @@ classdef rfMapper < barStimulus
 					%draw clicked points
 					if obj.showClicks == 1
 						obj.xyDots = vertcat((obj.xClick.*obj.ppd),(obj.yClick*obj.ppd));
-						Screen('DrawDots',obj.win,obj.xyDots,2,sColour,[obj.xCenter obj.yCenter],1);
+						Screen('DrawDots',obj.sM.win,obj.xyDots,2,sColour,[obj.sM.xCenter obj.sM.yCenter],1);
 					end
 					
 					% Draw at the new location.
 					if obj.isVisible == true
 						switch obj.stimulus
 							case 'bar'
-								Screen('DrawTexture', obj.win, obj.texture, [], obj.dstRect, obj.angleOut,[],obj.alpha);
+								Screen('DrawTexture', obj.sM.win, obj.texture, [], obj.dstRect, obj.angleOut,[],obj.alpha);
 							case 'grating'
 
 						end
 					end
 					
-					Screen('gluDisk',obj.win,sColour,obj.xCenter,obj.yCenter,2);
+					Screen('gluDisk',obj.sM.win,sColour,obj.sM.xCenter,obj.sM.yCenter,2);
 					
-					Screen('DrawingFinished', obj.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
+					Screen('DrawingFinished', obj.sM.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
-					[mX, mY, obj.buttons] = GetMouse(obj.screen.screen);
-					xOut = (mX - obj.xCenter)/obj.ppd;
-					yOut = (mY - obj.yCenter)/obj.ppd;
+					[mX, mY, obj.buttons] = GetMouse(obj.sM.screen);
+					xOut = (mX - obj.sM.xCenter)/obj.ppd;
+					yOut = (mY - obj.sM.yCenter)/obj.ppd;
 					if obj.buttons(2) == 1
 						obj.xClick = [obj.xClick xOut];
 						obj.yClick = [obj.yClick yOut];
@@ -176,12 +171,13 @@ classdef rfMapper < barStimulus
 					
 					FlushEvents('keyDown');
 					
-					vbl = Screen('Flip', obj.win, vbl + screenVals.halfisi);
+					vbl = Screen('Flip', obj.sM.win, vbl + screenVals.halfisi);
 					
 					obj.tick = obj.tick + 1;
 				end
 				
-				obj.win=[];
+				close(obj.sM);
+				obj.sM.win=[];
 				Priority(0);
 				ListenChar(0)
 				ShowCursor;
@@ -191,11 +187,11 @@ classdef rfMapper < barStimulus
 				end
 				
 			catch ME
-				obj.win=[];
+				close(obj.sM)
 				Priority(0);
-				ListenChar(0)
+				ListenChar(0);
 				ShowCursor;
-				Screen('CloseAll');
+				sca;
 				%psychrethrow(psychlasterror);
 				rethrow(ME);
 			end
@@ -252,9 +248,9 @@ classdef rfMapper < barStimulus
 				%obj.yClick = unique(obj.yClick);
 				obj.fhandle = figure;
 				plot(obj.xClick,obj.yClick,'k.-.')
-				xax = obj.winRect(3)/obj.ppd;
+				xax = obj.sM.winRect(3)/obj.ppd;
 				xax = xax - (xax/2);
-				yax = obj.winRect(4)/obj.ppd;
+				yax = obj.sM.winRect(4)/obj.ppd;
 				yax = yax - (yax/2);
 				axis([-xax xax -yax yax]);
 				title('Marked Positions during RF Mapping')
@@ -283,9 +279,9 @@ classdef rfMapper < barStimulus
 		% ===================================================================
 		function secondaryFigure(obj)
 			obj.fhandle = figure;
-			xax = obj.winRect(3)/obj.ppd;
+			xax = obj.sM.winRect(3)/obj.ppd;
 			xax = xax - (xax/2);
-			yax = obj.winRect(4)/obj.ppd;
+			yax = obj.sM.winRect(4)/obj.ppd;
 			yax = yax - (yax/2);
 			axis([-xax xax -yax yax]);
 			title('Marked Positions during RF Mapping')
@@ -521,7 +517,7 @@ classdef rfMapper < barStimulus
 		function regenerate(obj)
 			Screen('Close',obj.texture);
 			obj.constructMatrix(obj.ppd) %make our matrix
-			obj.texture=Screen('MakeTexture',obj.win,obj.matrix,1,[],2);
+			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
 		end
 	end
 end

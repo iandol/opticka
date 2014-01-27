@@ -406,7 +406,7 @@ classdef plxReader < optickaCore
 						nvars(n).maxL = vars(1).maxL;
 					
 					end
-					
+					LFPs(j).nVars = length(LFPs(j).vars);
 					LFPs(j).oldvars = LFPs(j).vars;
 					LFPs(j).vars = nvars;
 					LFPs(j).reparse = true;
@@ -608,8 +608,8 @@ classdef plxReader < optickaCore
 						vals = [vals ' || ' num2str(rE.task.nVar(i).values)];
 					end
 				end
-				obj.info{end+1} = sprintf('Variable Names : %s', names(4:end));
-				obj.info{end+1} = sprintf('Variable Values : %s', vals(4:end));
+				obj.info{end+1} = sprintf('Variable Names : %s', names(5:end));
+				obj.info{end+1} = sprintf('Variable Values : %s', vals(5:end));
 				names = '';
 				for i = 1:rE.stimuli.n
 					names = [names ' | ' rE.stimuli{i}.name ':' rE.stimuli{i}.family];
