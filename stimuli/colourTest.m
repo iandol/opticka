@@ -70,6 +70,7 @@ classdef colourTest < spotStimulus
 			end
 			
 			obj.sM.windowed = [];
+			obj.mouseOverride = true;
 			
 			try
 				obj.sM.debug = true;
@@ -86,7 +87,7 @@ classdef colourTest < spotStimulus
 				Priority(MaxPriority(obj.sM.win)); %bump our priority to maximum allowed
 				FlushEvents;
 				HideCursor;
-				ListenChar(2);
+				ListenChar(1);
 				obj.tick = 1;
 				Finc = 10;
 				keyHold = 1;
@@ -95,17 +96,18 @@ classdef colourTest < spotStimulus
 				
 				while isempty(regexpi(obj.rchar,'^esc'))
 					
-					%draw background
-					Screen('FillRect',obj.sM.win,obj.backgroundColour,[]);
-					
+					Screen('FillRect',obj.sM.win,obj.backgroundColour,[]); %draw background
 					draw(obj);
-					
 					Screen('DrawingFinished', obj.sM.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
-					
-					[mX, mY, obj.buttons] = GetMouse(obj.sM.screen);
-					%xOut = (mX - obj.sM.xCenter)/obj.ppd;
-					%yOut = (mY - obj.sM.yCenter)/obj.ppd;
-					
+
+					%[obj.xOut, obj.yOut, obj.buttons] = GetMouse(obj.sM.screen);
+					if obj.mouseOverride
+						getMousePosition(obj);
+						if obj.mouseValid
+							obj.xOut = obj.mouseX;
+							obj.yOut = obj.mouseY;
+						end
+					end
 					checkKeys(obj,mX,mY,keyHold,Finc);
 					
 					FlushEvents('keyDown');
@@ -172,8 +174,8 @@ classdef colourTest < spotStimulus
 				switch obj.rchar
 					case 'm' %increase size
 						if obj.tick > keyHold
-							if obj.sizeOut/obj.ppd < 30
-								obj.sizeOut = 30;
+							if obj.sizeOut/obj.ppd < 50
+								obj.sizeOut = 50;
 								disp(['Size is: ' num2str(obj.sizeOut)])
 							end
 							keyHold = obj.tick + Finc;
@@ -188,10 +190,14 @@ classdef colourTest < spotStimulus
 						end
 					case {'LeftArrow','left'}
 						if obj.tick > keyHold
+							sTemp = obj.sizeOut / obj.ppd;
+							obj.sizeOut = sTemp * 0.9;
 							keyHold = obj.tick + Finc;
 						end
 					case {'RightArrow','right'}
 						if obj.tick > keyHold
+							sTemp = obj.sizeOut / obj.ppd;
+							obj.sizeOut = sTemp * 1.1;
 							keyHold = obj.tick + Finc;
 						end
 					case {'UpArrow','up'}

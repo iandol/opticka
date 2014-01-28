@@ -11,7 +11,8 @@ classdef plxReader < optickaCore
 		cellmap@double
 		startOffset@double = 0
 		verbose	= true
-		doLFP@logical = false 
+		doLFP@logical = false
+		demeanLFP@logical = true
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -25,6 +26,9 @@ classdef plxReader < optickaCore
 		isPL2@logical = false
 		isEDF@logical = false
 		pl2@struct
+		cutTrials@cell
+		map@cell
+		ft@struct
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -89,8 +93,7 @@ classdef plxReader < optickaCore
 				loadEDF(obj);
 			end
 			if obj.doLFP == true
-				loadLFPs(obj)
-				plotLFPs(obj)
+				reparseLFPs(obj);
 			end
 		end
 		
@@ -121,8 +124,99 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function parseLFPs(obj)
-			loadLFPs(obj)
-			plotLFPs(obj)
+			obj.paths.oldDir = pwd;
+			cd(obj.dir);
+			if exist(obj.matdir','dir')
+				[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.matdir);
+			else
+				[obj.meta, obj.rE] = obj.loadMat(obj.matfile,obj.dir);
+			end
+			generateInfo(obj);
+			getEvents(obj);
+			loadLFPs(obj);
+			plotLFPs(obj);
+			ft_parseLFPs(obj);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function reparseLFPs(obj)
+			loadLFPs(obj);
+			plotLFPs(obj);
+			ft_parseLFPs(obj);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function ft = ft_parseLFPs(obj)
+			ft_defaults;
+			ft = struct();
+			ft(1).hdr = ft_read_plxheader(obj.file);
+			
+			tic
+			
+			ft.label = {obj.LFPs(:).name};
+			ft.time = cell(1);
+			ft.trial = cell(1);
+			ft.fsample = 1000;
+			ft.sampleinfo = [];
+			ft.trialinfo = [];
+			ft.cfg = struct;
+			ft.cfg.dataset = obj.file;
+			ft.cfg.headerformat = 'plexon_plx_v2';
+			ft.cfg.dataformat = ft.cfg.headerformat;
+			ft.cfg.eventformat = ft.cfg.headerformat;
+			ft.cfg.trl = [];
+			a=1;
+			for j = 1:length(obj.LFPs(1).vars)
+				for k = 1:obj.LFPs(1).vars(j).nTrials
+					ft.time{a} = obj.LFPs(1).vars(j).trial(k).time';
+					for i = 1:length(obj.LFPs)
+						dat(i,:) = obj.LFPs(i).vars(j).trial(k).data';
+					end
+					ft.trial{a} = dat;
+					ft.sampleinfo(a,1)= obj.LFPs(1).vars(j).trial(k).startIndex-300;
+					ft.sampleinfo(a,2)= obj.LFPs(1).vars(j).trial(k).startIndex+300;
+					ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -300];
+					ft.trialinfo(a,1) = j;
+					a = a+1;
+				end
+			end
+			ft.uniquetrials = unique(ft.trialinfo);
+	
+			fprintf('Parsing into fieldtrip format took %g ms\n',round(toc*1000));
+			
+			if ~isempty(ft)
+				obj.ft = ft;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function ftAnalysis(obj)
+			ft = obj.ft;
+			for i = ft.uniquetrials'
+				cfg = [];
+				cfg.trials = find(ft.trialinfo == i);
+				av{i} = ft_timelockanalysis(cfg,ft);
+			end
+			figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
+			areabar(av{1}.time,av{1}.avg(1,:),av{1}.var(1,:),[.5 .5 .5],'k');
+			areabar(av{2}.time,av{2}.avg(1,:),av{2}.var(1,:),[.7 .5 .5],'r');
+			areabar(av{3}.time,av{3}.avg(1,:),av{3}.var(1,:),[.5 .5 .7],'b');
+			obj.ft.av = av;
 		end
 		
 		% ===================================================================
@@ -303,7 +397,7 @@ classdef plxReader < optickaCore
 					LFPs(j).vars(k).nTrials = length(times);
 					minL = Inf;
 					maxL = 0;
-					window = 0.2;
+					window = 0.3;
 					winsteps = window/1e-3;
 					for l = 1:LFPs(j).vars(k).nTrials
 						[idx1, val1, dlta1] = obj.findNearest(time,times(l,1));
@@ -315,7 +409,14 @@ classdef plxReader < optickaCore
 						LFPs(j).vars(k).trial(l).startDelta = dlta1;
 						LFPs(j).vars(k).trial(l).endDelta = dlta2;
 						LFPs(j).vars(k).trial(l).data = data(idx1-winsteps:idx1+winsteps);
+						LFPs(j).vars(k).trial(l).prestimMean = mean(LFPs(j).vars(k).trial(l).data(1:250));
+						if obj.demeanLFP == true
+							LFPs(j).vars(k).trial(l).data = LFPs(j).vars(k).trial(l).data - LFPs(j).vars(k).trial(l).prestimMean;
+						end
+						LFPs(j).vars(k).trial(l).demean = obj.demeanLFP;
 						LFPs(j).vars(k).trial(l).time = [-window:1e-3:window]';
+						LFPs(j).vars(k).trial(l).window = window;
+						LFPs(j).vars(k).trial(l).winsteps = winsteps;
 						LFPs(j).vars(k).trial(l).abstime = LFPs(j).vars(k).trial(l).time + (val1-window);
 						minL = min([length(LFPs(j).vars(k).trial(l).data) minL]);
 						maxL = max([length(LFPs(j).vars(k).trial(l).data) maxL]);
@@ -330,32 +431,50 @@ classdef plxReader < optickaCore
 			
 			fprintf('Parsing LFPs took %g ms\n',round(toc*1000));
 			
-			cuttrials = '{';	
-			for i = 1:LFPs(j).nVars
-				cuttrials = [cuttrials ''''','];
+			cuttrials = '{ ';	
+			if isempty(obj.cutTrials) || length(obj.cutTrials) < LFPs(j).nVars
+				for i = 1:LFPs(j).nVars
+					cuttrials = [cuttrials ''''', '];
+				end
+			else
+				for i = 1:length(obj.cutTrials)
+					cuttrials = [cuttrials '''' num2str(obj.cutTrials{i}) ''', '];
+				end
 			end
-			cuttrials = cuttrials(1:end-1);
-			cuttrials = [cuttrials '}'];
+			cuttrials = cuttrials(1:end-2);
+			cuttrials = [cuttrials ' }'];
+			
+			map = cell(1,3);
+			if isempty(obj.map) || length(obj.map)~=3 || ~iscell(obj.map)
+				map{1} = '1 2 3 4 5 6';
+				map{2} = '7 8';
+				map{3} = '';
+			else
+				map{1} = num2str(obj.map{1});
+				map{2} = num2str(obj.map{2});
+				map{3} = num2str(obj.map{3});
+			end
 			
 			options.Resize='on';
 			options.WindowStyle='normal';
 			options.Interpreter='tex';
-			prompt = {'Choose PLX variables to merge (ground):','Choose PLX variables to merge (figure):','Choose PLX variables to merge (figure 2):','Enter Trials to exclude'};
+			prompt = {'Choose PLX variables to merge (ground):','Choose PLX variables to merge (figure):','Choose PLX variables to merge (figure 2):','Enter Trials to exclude','Choose which LFP channel to select'};
 			dlg_title = ['REPARSE ' num2str(LFPs(1).nVars) ' DATA VARIABLES'];
 			num_lines = [1 120];
-			def = {'1 2 3 4 5 6','7 8','',cuttrials};
+			def = {map{1}, map{2}, map{3}, cuttrials,'1'};
 			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
 			drawnow;
-			map = cell(1,3);
 			if isempty(answer)
-				map{1} = []; map{2}=[]; map{3}=[]; cuttrials = {''};
+				map{1} = []; map{2}=[]; map{3}=[]; cuttrials = {''}; chooseLFP = 1;
 			else
 				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3}); 
 				if ~isempty(answer{4}) && strcmpi(answer{4}(1),'{')
-					cuttrials = eval(answer{4});
+					obj.cutTrials = eval(answer{4});
 				else
-					cuttrials = {''};
+					obj.cutTrials = {''};
 				end
+				obj.map = map;
+				chooseLFP = 1;
 			end
 			
 			if ~isempty(map{1}) && ~isempty(map{2})
@@ -388,12 +507,13 @@ classdef plxReader < optickaCore
 
 						for k = 1:length(map{n})
 							thisVar = map{n}(k);
-							if (length(cuttrials) >= thisVar) && ~isempty(cuttrials{thisVar}) %trial removal
-								cut = cuttrials{thisVar};
+							if (length(obj.cutTrials) >= thisVar) && ~isempty(obj.cutTrials{thisVar}) %trial removal
+								cut = str2num(obj.cutTrials{thisVar});
 								vars(thisVar).times(cut,:) = [];
 								vars(thisVar).alldata(:,cut) = [];
 								vars(thisVar).trial(cut) = [];
 								vars(thisVar).nTrials = length(vars(thisVar).trial);
+								[vars(thisVar).average, vars(thisVar).error] = stderr(vars(thisVar).alldata');
 							end
 							nvars(n).times = [nvars(n).times;vars(thisVar).times];
 							nvars(n).nTrials = nvars(n).nTrials + vars(thisVar).nTrials;
@@ -406,9 +526,9 @@ classdef plxReader < optickaCore
 						nvars(n).maxL = vars(1).maxL;
 					
 					end
-					LFPs(j).nVars = length(LFPs(j).vars);
 					LFPs(j).oldvars = LFPs(j).vars;
 					LFPs(j).vars = nvars;
+					LFPs(j).nVars = length(LFPs(j).vars);
 					LFPs(j).reparse = true;
 				end
 				fprintf('Reparsing LFP variables took %g ms\n',round(toc*1000));
@@ -443,7 +563,7 @@ classdef plxReader < optickaCore
 				line([LFPs(j).time(1) LFPs(j).time(end)],[av-(2*sd) av-(2*sd)],'Color',get(h(j),'Color'),'LineWidth',2);
 				line([LFPs(j).time(1) LFPs(j).time(end)],[av+(2*sd) av+(2*sd)],'Color',get(h(j),'Color'),'LineWidth',2);
 			end
-			axis([0 30 -.5 .5])
+			axis([0 40 -.5 .5])
 			legend(h,name,'Location','NorthWest')
 			for j = 1:obj.eventList.nVars
 				color = rand(1,3);
@@ -455,6 +575,7 @@ classdef plxReader < optickaCore
 				end
 			end
 			hold off
+			box on
 			pan xon
 			
 			for j = 1:length(LFPs(1).vars)
@@ -463,10 +584,14 @@ classdef plxReader < optickaCore
 				xlabel('Time (s)');
  				ylabel('LFP Raw Amplitude (mV)');
 				hold on
-				plot(LFPs(1).vars(j).time, LFPs(1).vars(j).alldata);
+				for k = 1:size(LFPs(1).vars(j).alldata,2)
+					plot(LFPs(1).vars(j).time, LFPs(1).vars(j).alldata(:,k),'Tag',['TRL ' num2str(k)]);
+				end
 				areabar(LFPs(1).vars(j).time, LFPs(1).vars(j).average,LFPs(1).vars(j).error,[0.7 0.7 0.7],0.7,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',2);
 				hold off
-				axis([-0.1 0.2 -inf inf])
+				dc = datacursormode(gcf);
+				set(dc,'UpdateFcn', @lfpCursor, 'Enable', 'on','DisplayStyle','window');
+				axis([-0.1 0.3 -inf inf])
 			end
 			
 			if LFPs(1).reparse == true;
@@ -485,7 +610,7 @@ classdef plxReader < optickaCore
 						legend('95% CI','Ground','95% CI','Figure');
 					end
 					hold off
-					axis([-0.1 0.2 -inf inf]);
+					axis([-0.1 0.3 -inf inf]);
 				end
 			end
 		end

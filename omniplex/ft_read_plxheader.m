@@ -255,7 +255,7 @@ switch headerformat
     % also remember the original header details
     hdr.orig = orig;
     
-  case {'plexon_plx_v2'}
+  case {'plexon_plx', 'plexon_plx_v2'}
     ft_hastoolbox('PLEXON', 1);
     
     orig = plx_orig_header(filename);
@@ -279,10 +279,11 @@ switch headerformat
     % only the continuous channels are returned as visible
     hdr.nChans      = length(label);
 	hdr.eventFs		= orig.ADFrequency;
-    hdr.Fs          = fsample(1);
+    hdr.Fs          = min(fsample);
     hdr.label       = label;
     % also remember the original header
     hdr.orig        = orig;
+	hdr.fsample = fsample;
     
     hdr.nSamples = max(scounts);
     hdr.nSamplesPre = 0;      % continuous
