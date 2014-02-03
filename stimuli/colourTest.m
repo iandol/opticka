@@ -17,15 +17,9 @@ classdef colourTest < spotStimulus
 		fhandle
 		dStartTick = 1
 		dEndTick = 1
-		gratingTexture
-		sf
-		tf
-		phase
 		colourIndex = 1
 		bgcolourIndex = 2
 		colourList = {[1 1 1];[0 0 0];[1 0 0];[0 1 0];[0 0 1];[1 1 0];[1 0 1];[0 1 1];[.5 .5 .5]}
-		textureIndex = 1
-		textureList = {'simple','random','randomColour','randomN','randomBW'};
 		allowedProperties='type|screen|blend|antiAlias'
 	end
 	
@@ -70,7 +64,7 @@ classdef colourTest < spotStimulus
 			end
 			
 			obj.sM.windowed = [];
-			obj.mouseOverride = true;
+			obj.mouseOverride = false;
 			
 			try
 				obj.sM.debug = true;
@@ -87,8 +81,7 @@ classdef colourTest < spotStimulus
 				obj.rchar='';
 				Priority(MaxPriority(obj.sM.win)); %bump our priority to maximum allowed
 				FlushEvents;
-				HideCursor;
-				ListenChar(1);
+				ListenChar(2);
 				obj.tick = 1;
 				Finc = 16;
 				keyHold = 1;
@@ -282,22 +275,50 @@ classdef colourTest < spotStimulus
 						end
 					case '1!'
 						if obj.tick > keyHold
-						obj.colourIndex = obj.colourIndex+1;
-						
-						keyHold = obj.tick + Finc;
+							obj.colourOut = [0 0 0];
+							disp(['Colour is: ' num2str(obj.colourOut)]);
+							keyHold = obj.tick + Finc;
 						end
 					case '2@'
 						if obj.tick > keyHold
-						obj.bgcolourIndex = obj.bgcolourIndex+1;
-						
-						keyHold = obj.tick + Finc;
+							obj.colourOut = [0.25 0.25 0.15];
+							disp(['Colour is: ' num2str(obj.colourOut)]);
+							keyHold = obj.tick + Finc;
 						end
 					case '3#'
 						if obj.tick > keyHold
+							obj.colourOut = [0.5 0.5 0.5];
+							disp(['Colour is: ' num2str(obj.colourOut)]);
 							keyHold = obj.tick + Finc;
 						end
 					case '4$'
 						if obj.tick > keyHold
+							obj.colourOut = [0.75 0.75 0.75];
+							disp(['Colour is: ' num2str(obj.colourOut)]);
+							keyHold = obj.tick + Finc;
+						end
+					case '5%'
+						if obj.tick > keyHold
+							obj.colourOut = [1 1 1];
+							disp(['Colour is: ' num2str(obj.colourOut)]);
+							keyHold = obj.tick + Finc;
+						end
+					case '6^'
+						if obj.tick > keyHold
+							obj.colourOut = [1 0 0];
+							disp(['Colour is: ' num2str(obj.colourOut)]);
+							keyHold = obj.tick + Finc;
+						end
+					case '7&'
+						if obj.tick > keyHold
+							obj.colourOut = [0 1 0];
+							disp(['Colour is: ' num2str(obj.colourOut)]);
+							keyHold = obj.tick + Finc;
+						end
+					case '8*'
+						if obj.tick > keyHold
+							obj.colourOut = [0 0 1];
+							disp(['Colour is: ' num2str(obj.colourOut)]);
 							keyHold = obj.tick + Finc;
 						end
 					case 'space'
