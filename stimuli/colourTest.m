@@ -77,6 +77,7 @@ classdef colourTest < spotStimulus
 				open(obj.sM);
 				obj.colour = [0.2 0.2 0.2];
 				setup(obj, obj.sM);
+				resetTicks(obj);
 				
 				obj.buttons = [0 0 0]; % When the user clicks the mouse, 'buttons' becomes nonzero.
 				mX = 0; % The x-coordinate of the mouse cursor
@@ -89,7 +90,7 @@ classdef colourTest < spotStimulus
 				HideCursor;
 				ListenChar(1);
 				obj.tick = 1;
-				Finc = 10;
+				Finc = 16;
 				keyHold = 1;
 				
 				vbl = Screen('Flip', obj.sM.win);
@@ -214,10 +215,14 @@ classdef colourTest < spotStimulus
 						end
 					case ',<'
 						if obj.tick > keyHold
+							obj.mouseOverride = false;
+							ShowCursor;
 							keyHold = obj.tick + Finc;
 						end
 					case '.>'
 						if obj.tick > keyHold
+							obj.mouseOverride = true;
+							HideCursor;
 							keyHold = obj.tick + Finc;
 						end
 					case 'r'
