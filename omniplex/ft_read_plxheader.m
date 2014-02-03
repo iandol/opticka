@@ -273,7 +273,7 @@ switch headerformat
 	fsample = [orig.SlowChannelHeader.ADFreq];
 	fsample = fsample(chansel); %select non-empty channels only
 	if any(fsample~=fsample(1))
-      warning('different sampling rates in continuous data not supported, please select channels carefully');
+      %warning('different sampling rates in continuous data not supported, please select channels carefully');
     end
     label = label(chansel);
     % only the continuous channels are returned as visible
