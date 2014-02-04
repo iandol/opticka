@@ -62,18 +62,20 @@ classdef plxReader < optickaCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function obj=getFiles(obj,force)
+		function getFiles(obj,force)
 			if ~exist('force','var')
 				force = false;
 			end
 			if force == true || isempty(obj.file)
 				[f,p] = uigetfile({'*.plx;*.pl2';'PlexonFiles'},'Load Plexon File');
-				if ~isempty(f)
+				if ischar(f) && ~isempty(f)
 					obj.file = f;
 					obj.dir = p;
+						obj.paths.oldDir = pwd;
+					cd(obj.dir);
+				else
+					return
 				end
-				obj.paths.oldDir = pwd;
-				cd(obj.dir);
 				if isempty(obj.matfile) && ~isempty(obj.file)
 					[obj.matfile, obj.matdir] = uigetfile('*.mat','Load Behaviour MAT File');
 				end
@@ -87,7 +89,7 @@ classdef plxReader < optickaCore
 						obj.isEDF = false;
 					end
 				end
-		end
+			end
 		end
 		
 		% ===================================================================
@@ -97,6 +99,9 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function parse(obj)
+			if isempty(obj.file)
+				getFiles(obj,true);
+			end
 			obj.paths.oldDir = pwd;
 			cd(obj.dir);
 			if exist(obj.matdir','dir')

@@ -15,6 +15,7 @@ classdef colourTest < spotStimulus
 	
 	properties (SetAccess = private, GetAccess = private)
 		fhandle
+		sizeCache = 5;
 		dStartTick = 1
 		dEndTick = 1
 		colourIndex = 1
@@ -83,7 +84,7 @@ classdef colourTest < spotStimulus
 				FlushEvents;
 				ListenChar(2);
 				obj.tick = 1;
-				Finc = 16;
+				Finc = 35;
 				keyHold = 1;
 				
 				vbl = Screen('Flip', obj.sM.win);
@@ -169,6 +170,7 @@ classdef colourTest < spotStimulus
 					case 'm' %increase size
 						if obj.tick > keyHold
 							if obj.sizeOut/obj.ppd < 50
+								obj.sizeCache = obj.sizeOut/obj.ppd;
 								obj.sizeOut = 50;
 								disp(['Size is: ' num2str(obj.sizeOut)])
 							end
@@ -177,7 +179,7 @@ classdef colourTest < spotStimulus
 					case 'n' %decrease size
 						if obj.tick > keyHold
 							if obj.sizeOut/obj.ppd > 5
-								obj.sizeOut = 5;
+								obj.sizeOut = obj.sizeCache;
 								disp(['Size is: ' num2str(obj.sizeOut)]);
 							end
 							keyHold = obj.tick + Finc;
@@ -185,13 +187,13 @@ classdef colourTest < spotStimulus
 					case {'LeftArrow','left'}
 						if obj.tick > keyHold
 							sTemp = obj.sizeOut / obj.ppd;
-							obj.sizeOut = sTemp * 0.9;
+							obj.sizeOut = sTemp * 0.95;
 							keyHold = obj.tick + Finc;
 						end
 					case {'RightArrow','right'}
 						if obj.tick > keyHold
 							sTemp = obj.sizeOut / obj.ppd;
-							obj.sizeOut = sTemp * 1.1;
+							obj.sizeOut = sTemp * 1.05;
 							keyHold = obj.tick + Finc;
 						end
 					case {'UpArrow','up'}
