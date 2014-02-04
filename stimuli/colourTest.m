@@ -84,7 +84,7 @@ classdef colourTest < spotStimulus
 				FlushEvents;
 				ListenChar(2);
 				obj.tick = 1;
-				Finc = 35;
+				Finc = 3;
 				keyHold = 1;
 				
 				vbl = Screen('Flip', obj.sM.win);
@@ -103,7 +103,7 @@ classdef colourTest < spotStimulus
 							obj.yOut = obj.mouseY;
 						end
 					end
-					checkKeys(obj,mX,mY,keyHold,Finc);
+					keyHold = checkKeys(obj,mX,mY,keyHold,Finc);
 					
 					FlushEvents('keyDown');
 					
@@ -172,7 +172,7 @@ classdef colourTest < spotStimulus
 							if obj.sizeOut/obj.ppd < 50
 								obj.sizeCache = obj.sizeOut/obj.ppd;
 								obj.sizeOut = 50;
-								disp(['Size is: ' num2str(obj.sizeOut)])
+								disp(['Size is: ' num2str(obj.sizeOut) 'px'])
 							end
 							keyHold = obj.tick + Finc;
 						end
@@ -180,7 +180,7 @@ classdef colourTest < spotStimulus
 						if obj.tick > keyHold
 							if obj.sizeOut/obj.ppd > 5
 								obj.sizeOut = obj.sizeCache;
-								disp(['Size is: ' num2str(obj.sizeOut)]);
+								disp(['Size is: ' num2str(obj.sizeOut) 'px']);
 							end
 							keyHold = obj.tick + Finc;
 						end
@@ -188,12 +188,14 @@ classdef colourTest < spotStimulus
 						if obj.tick > keyHold
 							sTemp = obj.sizeOut / obj.ppd;
 							obj.sizeOut = sTemp * 0.95;
+							disp(['Size is: ' num2str(obj.sizeOut) 'px'])
 							keyHold = obj.tick + Finc;
 						end
 					case {'RightArrow','right'}
 						if obj.tick > keyHold
 							sTemp = obj.sizeOut / obj.ppd;
 							obj.sizeOut = sTemp * 1.05;
+							disp(['Size is: ' num2str(obj.sizeOut) 'px'])
 							keyHold = obj.tick + Finc;
 						end
 					case {'UpArrow','up'}
@@ -226,7 +228,7 @@ classdef colourTest < spotStimulus
 							if obj.colourOut(1) > 1
 								obj.colourOut(1) = 1;
 							end
-							disp(['Colour is: ' num2str(obj.colourOut)]);
+							disp(['Colour is: ' num2str(obj.colourOut) ' [' num2str(keyHold) ' ' num2str(obj.tick) ']']);
 							keyHold = obj.tick + Finc;
 						end
 
@@ -236,7 +238,7 @@ classdef colourTest < spotStimulus
 							if obj.colourOut(2) > 1
 								obj.colourOut(2) = 1;
 							end
-							disp(['Colour is: ' num2str(obj.colourOut)]);
+							disp(['Colour is: ' num2str(obj.colourOut) ' [' num2str(keyHold) ' ' num2str(obj.tick) ']']);
 							keyHold = obj.tick + Finc;
 						end
 					case 'b'
@@ -245,7 +247,7 @@ classdef colourTest < spotStimulus
 							if obj.colourOut(3) > 1
 								obj.colourOut(3) = 1;
 							end
-							disp(['Colour is: ' num2str(obj.colourOut)]);
+							disp(['Colour is: ' num2str(obj.colourOut) ' [' num2str(keyHold) ' ' num2str(obj.tick) ']']);
 							keyHold = obj.tick + Finc;
 						end
 					case 'e'
@@ -254,7 +256,7 @@ classdef colourTest < spotStimulus
 							if obj.colourOut(1) < 0.01
 								obj.colourOut(1) = 0;
 							end
-							disp(['Colour is: ' num2str(obj.colourOut)]);
+							disp(['Colour is: ' num2str(obj.colourOut) ' [' num2str(keyHold) ' ' num2str(obj.tick) ']']);
 							keyHold = obj.tick + Finc;
 						end
 					case 'f'
@@ -263,7 +265,7 @@ classdef colourTest < spotStimulus
 							if obj.colourOut(2) < 0.01
 								obj.colourOut(2) = 0;
 							end
-							disp(['Colour is: ' num2str(obj.colourOut)]);
+							disp(['Colour is: ' num2str(obj.colourOut) ' [' num2str(keyHold) ' ' num2str(obj.tick) ']']);
 							keyHold = obj.tick + Finc;
 						end
 					case 'v'
@@ -272,7 +274,7 @@ classdef colourTest < spotStimulus
 							if obj.colourOut(3) < 0.01
 								obj.colourOut(3) = 0;
 							end
-							disp(['Colour is: ' num2str(obj.colourOut)]);
+							disp(['Colour is: ' num2str(obj.colourOut) ' [' num2str(keyHold) ' ' num2str(obj.tick) ']']);
 							keyHold = obj.tick + Finc;
 						end
 					case '1!'
