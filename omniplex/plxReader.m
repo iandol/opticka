@@ -28,9 +28,11 @@ classdef plxReader < optickaCore
 		isPL2@logical = false
 		isEDF@logical = false
 		pl2@struct
-		cutTrials@cell
 		map@cell
 		ft@struct
+		cutTrials@cell
+		clickedTrials@cell
+		nLFPs@double = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -101,6 +103,7 @@ classdef plxReader < optickaCore
 		function parse(obj)
 			if isempty(obj.file)
 				getFiles(obj,true);
+				if isempty(obj.file);return;end
 			end
 			obj.paths.oldDir = pwd;
 			cd(obj.dir);
@@ -148,6 +151,10 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function parseLFPs(obj)
+			if isempty(obj.file)
+				getFiles(obj,true);
+				if isempty(obj.file);return;end
+			end
 			if obj.mversion < 8.2
 				error('LFP Analysis requires Matlab 2013b!!!')
 			end
@@ -258,7 +265,9 @@ classdef plxReader < optickaCore
 			ft = obj.ft;
 			if ~exist('cfg','var')
 				cfg = [];
+				cfg.keeptrials = 'yes';
 				cfg.covariance = 'yes';
+				cfg.covariancewindow = [0 0.2];
 			end
 			cfg.channel = ft.label{obj.selectedLFP};
 			for i = ft.uniquetrials'
@@ -267,18 +276,9 @@ classdef plxReader < optickaCore
 				if strcmpi(cfg.covariance,'yes')
 					disp(['-->> Covariance for Var:' num2str(i) ' = ' num2str(av{i}.cov)]);
 				end
-			end
-			figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
-			title(['FIELDTRIP TIMELOCK ANALYSIS: File:' obj.file ' | Channel:' obj.LFPs(obj.selectedLFP).name ' | LFP: ']);
-			xlabel('Time (s)');
- 			ylabel('LFP Raw Amplitude (mV)');
-			hold on
-			areabar(av{1}.time,av{1}.avg(1,:),av{1}.var(1,:),[.5 .5 .5],'k');
-			areabar(av{2}.time,av{2}.avg(1,:),av{2}.var(1,:),[.7 .5 .5],'r');
-			if length(av) > 2
-				areabar(av{3}.time,av{3}.avg(1,:),av{3}.var(1,:),[.5 .5 .7],'b');
-			end				
+			end		
 			obj.ft.av = av;
+			obj.drawAverageLFPs();
 		end
 		
 		% ===================================================================
@@ -305,9 +305,9 @@ classdef plxReader < optickaCore
 			end
 			for i = ft.uniquetrials'
 				cfg = [];
-				%cfg.baseline     = [-0.1 0];
-				%cfg.baselinetype = 'absolute';  
-				%cfg.channel		 = ft.label{obj.selectedLFP};
+				cfg.baseline     = [-0.1 0];
+				cfg.baselinetype = 'absolute';  
+				cfg.channel		 = ft.label{obj.selectedLFP};
 				figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
 				ft_singleplotTFR(cfg, fq{i});
 				xlabel('Time (s)');
@@ -368,55 +368,30 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief 
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawRawLFPs(obj,h,sel)
-			
-			if ~exist('h','var')
-					h=figure;figpos(1,[1600 1080]);set(h,'Color',[1 1 1]);
+		function plotLFPs(obj,sel)
+			if isempty(obj.LFPs);
+				return
 			end
-			clf(h,'reset')
-			if ~exist('sel','var')
-				sel= obj.selectedLFP;
+			if ~exist('sel','var') || ~ischar(sel)
+				sel = 'all';
 			end
 			
-			LFPs = obj.LFPs;
+			switch sel
+				case 'all'
+					obj.drawAllLFPs(); drawnow;			
+					obj.drawRawLFPs(); drawnow;		
+					obj.drawAverageLFPs(); drawnow;
+				case 'raw'
+					obj.drawRawLFPs(); drawnow;
+				case 'average'
+					obj.drawAverageLFPs(); drawnow;
+			end
 			
-			p=panel(h);
-			len=length(LFPs(sel).vars);
-			if len < 9
-				row=4;
-				col=2;
-			elseif len < 13
-				row = 4;
-				col = 3;
-			end
-			p.pack(row,col);
-			for j = 1:length(LFPs(sel).vars)
-				[i1,i2] = ind2sub([row,col], j);
-				p(i1,i2).select();
-				title(['LFP & EVENT PLOT: File:' obj.file ' | Channel:' LFPs(sel).name ' | Var:' num2str(j)]);
-				xlabel('Time (s)');
- 				ylabel('LFP Raw Amplitude (mV)');
-				hold on
-				for k = 1:size(LFPs(1).vars(j).alldata,2)
-					tag=['TRL:' num2str(k) '  VAR:' num2str(j)];
-					if strcmpi(class(gcf),'double')
-						c=rand(1,3);
-						plot(LFPs(sel).vars(j).time, LFPs(sel).vars(j).alldata(:,k),'Color',c,'Tag',tag);
-					else
-						plot(LFPs(sel).vars(j).time, LFPs(sel).vars(j).alldata(:,k),'Tag',tag);
-					end
-				end
-				areabar(LFPs(sel).vars(j).time, LFPs(sel).vars(j).average,LFPs(sel).vars(j).error,[0.7 0.7 0.7],0.7,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',1);
-				hold off
-				dc = datacursormode(gcf);
-				set(dc,'UpdateFcn', @lfpCursor, 'Enable', 'on', 'DisplayStyle','window');
-				axis([-0.1 0.3 -inf inf])
-			end
 			
 		end
 		
@@ -581,14 +556,20 @@ classdef plxReader < optickaCore
 			
 			fprintf('Loading and parsing LFPs into trials took %g ms\n',round(toc*1000));
 			
-			cuttrials = '{ ';	
+			cuttrials = '{ ';
 			if isempty(obj.cutTrials) || length(obj.cutTrials) < LFPs(j).nVars
 				for i = 1:LFPs(j).nVars
 					cuttrials = [cuttrials ''''', '];
 				end
 			else
-				for i = 1:length(obj.cutTrials)
-					cuttrials = [cuttrials '''' num2str(obj.cutTrials{i}) ''', '];
+				if isempty(cell2mat(obj.clickedTrials))
+					for i = 1:length(obj.cutTrials)
+						cuttrials = [cuttrials '''' num2str(obj.cutTrials{i}) ''', '];
+					end
+				else
+					for i = 1:length(obj.clickedTrials)
+						cuttrials = [cuttrials '''' num2str(obj.clickedTrials{i}) ''', '];
+					end
 				end
 			end
 			cuttrials = cuttrials(1:end-2);
@@ -691,51 +672,121 @@ classdef plxReader < optickaCore
 			
 			if ~isempty(LFPs(1).vars)
 				obj.LFPs = LFPs;
+				obj.nLFPs = length(LFPs);
 			end	
 		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function h=drawRawLFPs(obj,h,sel)
+			disp('Drawing RAW LFP Trials...')
+			if ~exist('h','var')
+				h=figure;figpos(1,[1920 1080]);set(h,'Color',[1 1 1]);
+				obj.clickedTrials = cell(1,obj.LFPs(1).nVars);
+			end
+			clf(h,'reset')
+			if ~exist('sel','var')
+				sel= obj.selectedLFP;
+			end
 
+			LFPs = obj.LFPs;
+
+			p=panel(h);
+			len=length(LFPs(sel).vars);
+			if len < 3
+				row = 2;
+				col = 1;
+			elseif len < 9
+				row = 3;
+				col = 1;
+			elseif len < 9
+				row=4;
+				col=2;
+			elseif len < 13
+				row = 4;
+				col = 3;
+			end
+			p.pack(row,col);
+			for j = 1:length(LFPs(sel).vars)
+				[i1,i2] = ind2sub([row,col], j);
+				p(i1,i2).select();
+				title(['LFP & EVENT PLOT: File:' obj.file ' | Channel:' LFPs(sel).name ' | Var:' num2str(j)]);
+				xlabel('Time (s)');
+ 				ylabel('LFP Raw Amplitude (mV)');
+				hold on
+				for k = 1:size(LFPs(1).vars(j).alldata,2)
+					dat = [j,k];
+					tag=['VAR:' num2str(dat(1)) '  TRL:' num2str(dat(2))];
+					if strcmpi(class(gcf),'double')
+						c=rand(1,3);
+						plot(LFPs(sel).vars(j).time, LFPs(sel).vars(j).alldata(:,k), 'Color', c, 'Tag', tag, 'ButtonDownFcn', @clickMe, 'UserData', dat);
+					else
+						plot(LFPs(sel).vars(j).time, LFPs(sel).vars(j).alldata(:,k),'Tag',tag,'ButtonDownFcn', @clickMe,'UserData',dat);
+					end
+				end
+				areabar(LFPs(sel).vars(j).time, LFPs(sel).vars(j).average,LFPs(sel).vars(j).error,[0.7 0.7 0.7],0.7,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',1);
+				hold off
+				axis([-0.1 0.3 -inf inf]);
+			end
+			dc = datacursormode(gcf);
+			set(dc,'UpdateFcn', @lfpCursor, 'Enable', 'on', 'DisplayStyle','window');
+			
+			uicontrol('Style', 'pushbutton', 'String', '>',...
+				'Position',[0 0 50 20],'Callback',@nextPlot);
+
+			function nextPlot(src,~)
+				obj.selectedLFP = obj.selectedLFP + 1;
+				if obj.selectedLFP > length(obj.LFPs)
+					obj.selectedLFP = 1;
+				end
+				drawRawLFPs(obj,gcf,obj.selectedLFP);
+			end
+			
+			function clickMe(src, ~)
+				if ~exist('src','var') || obj.LFPs(obj.selectedLFP).reparse == true
+					return
+				end
+				ud = get(src,'UserData');
+				tg = get(src,'Tag');
+				disp(tg);
+				if ~isempty(ud) && length(ud) == 2
+					var = ud(1);
+					trl = ud(2);
+					if length(obj.clickedTrials) < var
+						obj.clickedTrials{var} = trl;
+					else
+						if ischar(obj.clickedTrials{var})
+							obj.clickedTrials{var} = str2num(obj.clickedTrials{var});
+						end
+						it = intersect(obj.clickedTrials{var}, trl);
+						if ~ischar(it) && isempty(it)
+							obj.clickedTrials{var} = [obj.clickedTrials{var}, trl];
+						else
+							obj.clickedTrials{var}(obj.clickedTrials{var} == it) = [];
+						end
+					end
+					for i = 1:length(obj.clickedTrials)
+						disp(['Current Selected trials for Var ' num2str(i) ': ' num2str(obj.clickedTrials{i})]);
+					end
+				end
+				assignin('base','clickedLFP',obj.clickedTrials');
+			end
+			
+		end
+		
 		% ===================================================================
 		%> @brief 
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotLFPs(obj)
+		function drawAverageLFPs(obj)
+			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
 			LFPs = obj.LFPs;
-			if isempty(LFPs);
-				return
-			end
-			
-			%first plot is the whole raw LFP with event markers
-			figure;figpos(1,[2000 1000]);set(gcf,'Color',[1 1 1]);
-			title(['RAW LFP & EVENT PLOT: File:' obj.file ' | Channel:' LFPs(1).name ' | LFP: All']);
-			xlabel('Time (s)');
- 			ylabel('LFP Raw Amplitude (mV)');
-			hold on
-			for j = 1:length(LFPs)
-				h(j)=plot(LFPs(j).time, LFPs(j).data);
-				name{j} = ['LFP ' num2str(j)];
-				[av,sd] = stderr(LFPs(j).data,'SD');
-				line([LFPs(j).time(1) LFPs(j).time(end)],[av-(2*sd) av-(2*sd)],'Color',get(h(j),'Color'),'LineWidth',2);
-				line([LFPs(j).time(1) LFPs(j).time(end)],[av+(2*sd) av+(2*sd)],'Color',get(h(j),'Color'),'LineWidth',2);
-			end
-			axis([0 40 -.5 .5])
-			legend(h,name,'Location','NorthWest')
-			for j = 1:obj.eventList.nVars
-				color = rand(1,3);
-				var = obj.eventList.vars(j);
-				for k = 1:length(var.t1correct)
-					line([var.t1correct(k) var.t1correct(k)],[-.4 .4],'Color',color);
-					line([var.t2correct(k) var.t2correct(k)],[-.4 .4],'Color',color);
-					text(var.t1correct(k),.4,['VAR:' num2str(j) ' TRL:' num2str(k)]);
-				end
-			end
-			hold off
-			box on
-			pan xon
-			
-			obj.drawRawLFPs();
-			
 			if LFPs(1).reparse == true;
 				for j = 1: length(LFPs)
 					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
@@ -747,16 +798,68 @@ classdef plxReader < optickaCore
 					areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.7 0.5 0.5],0.6,'r-o','MarkerFaceColor',[1 0 0],'LineWidth',2);
 					if length(LFPs(j).vars)>2
 						areabar(LFPs(j).vars(3).time, LFPs(j).vars(3).average,LFPs(j).vars(3).error,[0.5 0.5 0.7],0.6,'b-o','MarkerFaceColor',[0 0 1],'LineWidth',2);
-						legend('95% CI','Ground','95% CI','Figure','95% CI','Figure 2');
+						legend('S.E.','Ground','S.E.','Figure','S.E.','Figure 2');
 					else
-						legend('95% CI','Ground','95% CI','Figure');
+						legend('S.E.','Ground','S.E.','Figure');
 					end
 					hold off
 					axis([-0.1 0.3 -inf inf]);
 				end
-			end
+				if isfield(obj.ft,'av')
+					av = obj.ft.av;
+					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
+					title(['FIELDTRIP TIMELOCK ANALYSIS: File:' obj.file ' | Channel:' obj.LFPs(obj.selectedLFP).name ' | LFP: ']);
+					xlabel('Time (s)');
+					ylabel('LFP Raw Amplitude (mV)');
+					hold on
+					areabar(av{1}.time,av{1}.avg(1,:),av{1}.var(1,:),[.5 .5 .5],'k');
+					areabar(av{2}.time,av{2}.avg(1,:),av{2}.var(1,:),[.7 .5 .5],'r');
+					if length(av) > 2
+						areabar(av{3}.time,av{3}.avg(1,:),av{3}.var(1,:),[.5 .5 .7],'b');
+					end		
+				end
+			end				
 		end
-	
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawAllLFPs(obj)
+			disp('Drawing Continuous LFP data...')
+			%first plot is the whole raw LFP with event markers
+			LFPs = obj.LFPs;
+			figure;figpos(1,[2000 1000]);set(gcf,'Color',[1 1 1]);
+			title(['RAW LFP & EVENT PLOT: File:' obj.file ' | Channel: All | LFP: All']);
+			xlabel('Time (s)');
+ 			ylabel('LFP Raw Amplitude (mV)');
+			hold on
+			for j = 1:length(LFPs)
+				c=rand(1,3);
+				h(j)=plot(LFPs(j).time, LFPs(j).data,'Color',c);
+				name{j} = ['LFP ' num2str(j)];
+				[av,sd] = stderr(LFPs(j).data,'SD');
+				line([LFPs(j).time(1) LFPs(j).time(end)],[av-(2*sd) av-(2*sd)],'Color',get(h(j),'Color'),'LineWidth',1);
+				line([LFPs(j).time(1) LFPs(j).time(end)],[av+(2*sd) av+(2*sd)],'Color',get(h(j),'Color'),'LineWidth',1);
+			end
+			axis([0 40 -.5 .5])
+			legend(h,name,'Location','NorthWest')
+			for j = 1:obj.eventList.nVars
+				color = rand(1,3);
+				var = obj.eventList.vars(j);
+				for k = 1:length(var.t1correct)
+					line([var.t1correct(k) var.t1correct(k)],[-.4 .4],'Color',color,'LineWidth',4);
+					line([var.t2correct(k) var.t2correct(k)],[-.4 .4],'Color',color,'LineWidth',4);
+					text(var.t1correct(k),.4,['VAR:' num2str(j) ' TRL:' num2str(k)]);
+				end
+			end
+			hold off;
+			box on;
+			pan xon;
+		end
+		
 		% ===================================================================
 		%> @brief 
 		%>
