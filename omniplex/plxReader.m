@@ -14,7 +14,7 @@ classdef plxReader < optickaCore
 		doLFP@logical = false
 		demeanLFP@logical = true
 		selectedLFP@double = 1
-		LFPWindow@double = 0.4
+		LFPWindow@double = 0.8
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -167,6 +167,7 @@ classdef plxReader < optickaCore
 			end
 			generateInfo(obj);
 			getEvents(obj);
+			obj.ft = struct();
 			loadLFPs(obj);
 			plotLFPs(obj);
 			ft_parseLFPs(obj);
@@ -179,6 +180,7 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function reparseLFPs(obj)
+			obj.ft = struct();
 			loadLFPs(obj);
 			plotLFPs(obj);
 			ft_parseLFPs(obj);
@@ -192,11 +194,9 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function ft = ft_parseLFPs(obj)
 			ft_defaults;
+			tic
 			ft = struct();
 			ft(1).hdr = ft_read_plxheader(obj.file);
-			
-			tic
-			
 			ft.label = {obj.LFPs(:).name};
 			ft.time = cell(1);
 			ft.trial = cell(1);
@@ -217,9 +217,10 @@ classdef plxReader < optickaCore
 						dat(i,:) = obj.LFPs(i).vars(j).trial(k).data';
 					end
 					ft.trial{a} = dat;
-					ft.sampleinfo(a,1)= obj.LFPs(1).vars(j).trial(k).startIndex-300;
-					ft.sampleinfo(a,2)= obj.LFPs(1).vars(j).trial(k).startIndex+300;
-					ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -300];
+					window = obj.LFPs(1).vars(j).trial(k).winsteps;
+					ft.sampleinfo(a,1)= obj.LFPs(1).vars(j).trial(k).startIndex-window;
+					ft.sampleinfo(a,2)= obj.LFPs(1).vars(j).trial(k).startIndex+window;
+					ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -window];
 					ft.trialinfo(a,1) = j;
 					a = a+1;
 				end
@@ -240,19 +241,23 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function ftPreProcess(obj,cfg)
-			ft = obj.ft;
-			if isfield(ft,'ftOld')
-				ft = ft.ftOld;
+			if isempty(obj.ft); ft_parseLFPs(obj); end
+			if isfield(obj.ft,'ftOld')
+				ft = obj.ft.ftOld;
+			else
+				ft = obj.ft;
 			end
 			if ~exist('cfg','var')
 				cfg = [];
 			else %assume we want to do some preprocessing
-				ft = ft_preprocessing(cfg,ft);			
+				ftp = ft_preprocessing(cfg,ft);
+				ftp.uniquetrials = unique(ftp.trialinfo);
 			end
 			cfg.method   = 'trial';
 			ftNew = ft_rejectvisual(cfg,ft);
+			ftNew.uniquetrials = unique(ftNew.trialinfo);
 			ftNew.ftOld = ft;
-			obj.ft = ftNew;	
+			obj.ft = ftNew;
 		end
 		
 		% ===================================================================
@@ -261,20 +266,21 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ftTimeLockAnalysis(obj,cfg)
+		function cfg=ftTimeLockAnalysis(obj,cfg)
 			ft = obj.ft;
 			if ~exist('cfg','var')
 				cfg = [];
 				cfg.keeptrials = 'yes';
+				cfg.removemean = 'yes';
 				cfg.covariance = 'yes';
 				cfg.covariancewindow = [0 0.2];
+				cfg.channel = ft.label{obj.selectedLFP};
 			end
-			cfg.channel = ft.label{obj.selectedLFP};
 			for i = ft.uniquetrials'
 				cfg.trials = find(ft.trialinfo == i);
 				av{i} = ft_timelockanalysis(cfg,ft);
-				if strcmpi(cfg.covariance,'yes')
-					disp(['-->> Covariance for Var:' num2str(i) ' = ' num2str(av{i}.cov)]);
+				if strcmpi(cfg.covariance,'yes') && ~strcmpi(cfg.keeptrials,'yes')					
+					disp(['-->> Covariance for Var:' num2str(i) ' = ' num2str(mean(av{i}.cov))]);
 				end
 			end		
 			obj.ft.av = av;
@@ -287,32 +293,74 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ftFrequencyAnalysis(obj,cfg)
+		function cfgUsed=ftFrequencyAnalysis(obj,cfg,preset)
+			if ~exist('preset','var'); preset='fix1'; end
 			ft = obj.ft;
-			if ~exist('cfg','var')
+			cfgUsed = {};
+			hmin = inf;
+			hmax = -inf;
+			if ~exist('cfg','var') || isempty(cfg)
 				cfg				= [];
+				cfg.keeptrials	= 'yes';
 				cfg.output		= 'pow';
-				cfg.method      = 'mtmconvol';
-				cfg.taper       = 'hanning';
-				cfg.foi         = 2.5:2.5:60;                     % analysis frequencies 
-				cfg.t_ftimwin   = ones(length(cfg.foi),1).*0.4;   % length of time window
-				cfg.toi         = -0.1:0.05:0.1;                  % time window "slides"
+				cfg.channel = ft.label{obj.selectedLFP};
+				cfg.toi         = -0.3:0.01:0.3;                  % time window "slides"
+				switch preset
+					case 'fix1'
+						tw = 0.2;
+						cfg.method      = 'mtmconvol';
+						cfg.taper		= 'hanning';
+						cfg.foi         = 2:5:80;						  % analysis frequencies 
+						cfg.t_ftimwin  = ones(length(cfg.foi),1).*tw;   % length of fixed time window
+					case 'mtm1'
+						cfg.method      = 'mtmconvol';
+						cfg.foi         = 2:2:80;						  % analysis frequencies 
+						cfg.t_ftimwin	= 5./cfg.foi;					  % x cycles per time window
+						cfg.toi         = -0.2:0.02:0.3;                  % time window "slides"
+					case 'mtm2'
+						cfg.method		= 'wavelet';
+						cfg.width		= 10;
+						%cfg.method      = 'mtmconvol';
+						%cfg.taper      = 'hanning';
+						cfg.foi         = 2:2:80;						  % analysis frequencies 
+						%cfg.foilimit = [5 60];
+						%cfg.tapsmofrq	= cfg.foi * 0.4;
+						%cfg.t_ftimwin = 0.2;
+						%cfg.t_ftimwin  = ones(length(cfg.foi),1).*0.2;   % length of fixed time window
+						%cfg.t_ftimwin	= 5./cfg.foi;  % x cycles per time window
+						cfg.toi         = -0.2:0.02:0.3;                  % time window "slides"
+					case 'morlet'
+						cfg.method		= 'wavelet';
+						cfg.width		= 10;
+						cfg.foi         = 2:2:80;						  % analysis frequencies 
+				end
 			end
-			cfg.channel = ft.label{obj.selectedLFP};
 			for i = ft.uniquetrials'
 				cfg.trials = find(ft.trialinfo == i);
 				fq{i} = ft_freqanalysis(cfg,ft);
+				cfgUsed{end+1}=cfg;
 			end
 			for i = ft.uniquetrials'
-				cfg = [];
-				cfg.baseline     = [-0.1 0];
-				cfg.baselinetype = 'absolute';  
-				cfg.channel		 = ft.label{obj.selectedLFP};
-				figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
-				ft_singleplotTFR(cfg, fq{i});
+				cfg					= [];
+				cfg.fontsize		= 14;
+				cfg.baseline		= [-0.2 0];
+				cfg.baselinetype	= 'relative';  
+				cfg.interactive = 'no';
+				cfg.channel			= ft.label{obj.selectedLFP};
+				h{i}=figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
+				cfgout=ft_singleplotTFR(cfg, fq{i});
+				clim = get(gca,'clim');
+				hmin = min([hmin min(clim)]);
+				hmax = max([hmax max(clim)]);
 				xlabel('Time (s)');
-				ylabel('Frequency');
+				ylabel('Frequency (Hz)');
+				box on; grid on;
 			end
+			for i = 1:length(h); 
+				figure(h{i});
+				set(gca,'clim', [hmin hmax]);	
+			end
+			cfgUsed{end+1}=cfgout;
 			obj.ft.fq = fq;
 		end
 		
@@ -378,15 +426,21 @@ classdef plxReader < optickaCore
 				return
 			end
 			if ~exist('sel','var') || ~ischar(sel)
-				sel = 'all';
+				sel = 'normal';
 			end
 			
 			switch sel
-				case 'all'
+				case 'normal'
 					obj.drawAllLFPs(); drawnow;			
 					obj.drawRawLFPs(); drawnow;		
 					obj.drawAverageLFPs(); drawnow;
-				case 'raw'
+				case 'all'
+					obj.drawAllLFPs(true);			
+					obj.drawRawLFPs();		
+					obj.drawAverageLFPs();
+				case 'continuous'
+					obj.drawAllLFPs(true); drawnow;
+				case 'trials'
 					obj.drawRawLFPs(); drawnow;
 				case 'average'
 					obj.drawAverageLFPs(); drawnow;
@@ -467,6 +521,7 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function LFPs = loadLFPs(obj)
 			tic
+			cd(obj.dir);
 			[~, names] = plx_adchan_names(obj.file);
 			[~, map] = plx_adchan_samplecounts(obj.file);
 			[~, raw] = plx_ad_chanmap(obj.file);
@@ -476,13 +531,16 @@ classdef plxReader < optickaCore
 			LFPs = [];
 			for j = 1:length(idx)
 				cname = names{idx(j)};
-				if ~isempty(regexp(cname,'FP', 'once'))
-					LFPs(aa).name = cname;
-					LFPs(aa).index = raw(idx(j));
-					LFPs(aa).count = map(idx(j));
-					LFPs(aa).reparse = false;
-					LFPs(aa).vars = struct([]); %#ok<*AGROW>
-					aa = aa + 1;
+				if ~isempty(regexp(cname,'FP', 'once')) %check we have a FP name field
+					num = str2num(regexp(cname,'\d*','match','once')); %what channel number
+					if num < 21
+						LFPs(aa).name = cname;
+						LFPs(aa).index = raw(idx(j));
+						LFPs(aa).count = map(idx(j));
+						LFPs(aa).reparse = false;
+						LFPs(aa).vars = struct([]); %#ok<*AGROW>
+						aa = aa + 1;
+					end
 				end
 			end
 			
@@ -700,7 +758,7 @@ classdef plxReader < optickaCore
 			if len < 3
 				row = 2;
 				col = 1;
-			elseif len < 9
+			elseif len < 4
 				row = 3;
 				col = 1;
 			elseif len < 9
@@ -736,7 +794,7 @@ classdef plxReader < optickaCore
 			set(dc,'UpdateFcn', @lfpCursor, 'Enable', 'on', 'DisplayStyle','window');
 			
 			uicontrol('Style', 'pushbutton', 'String', '>',...
-				'Position',[0 0 50 20],'Callback',@nextPlot);
+				'Position',[1 1 50 20],'Callback',@nextPlot);
 
 			function nextPlot(src,~)
 				obj.selectedLFP = obj.selectedLFP + 1;
@@ -794,8 +852,8 @@ classdef plxReader < optickaCore
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV)');
 					hold on
-					areabar(LFPs(j).vars(1).time, LFPs(j).vars(1).average,LFPs(j).vars(1).error,[0.7 0.7 0.7],0.6,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',2);
-					areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.7 0.5 0.5],0.6,'r-o','MarkerFaceColor',[1 0 0],'LineWidth',2);
+					areabar(LFPs(j).vars(1).time, LFPs(j).vars(1).average,LFPs(j).vars(1).error,[0.7 0.7 0.7],0.6,'k.-','MarkerFaceColor',[0 0 0],'LineWidth',2);
+					areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.7 0.5 0.5],0.6,'r.-','MarkerFaceColor',[1 0 0],'LineWidth',2);
 					if length(LFPs(j).vars)>2
 						areabar(LFPs(j).vars(3).time, LFPs(j).vars(3).average,LFPs(j).vars(3).error,[0.5 0.5 0.7],0.6,'b-o','MarkerFaceColor',[0 0 1],'LineWidth',2);
 						legend('S.E.','Ground','S.E.','Figure','S.E.','Figure 2');
@@ -808,15 +866,17 @@ classdef plxReader < optickaCore
 				if isfield(obj.ft,'av')
 					av = obj.ft.av;
 					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
-					title(['FIELDTRIP TIMELOCK ANALYSIS: File:' obj.file ' | Channel:' obj.LFPs(obj.selectedLFP).name ' | LFP: ']);
-					xlabel('Time (s)');
-					ylabel('LFP Raw Amplitude (mV)');
 					hold on
 					areabar(av{1}.time,av{1}.avg(1,:),av{1}.var(1,:),[.5 .5 .5],'k');
 					areabar(av{2}.time,av{2}.avg(1,:),av{2}.var(1,:),[.7 .5 .5],'r');
 					if length(av) > 2
 						areabar(av{3}.time,av{3}.avg(1,:),av{3}.var(1,:),[.5 .5 .7],'b');
-					end		
+					end
+					hold off
+					axis([-0.1 0.3 -inf inf]);
+					xlabel('Time (s)');
+					ylabel('LFP Raw Amplitude (mV)');
+					title(['FIELDTRIP TIMELOCK ANALYSIS: File:' obj.file ' | Channel:' av{1}.label{:} ' | LFP: ']);
 				end
 			end				
 		end
@@ -827,7 +887,11 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawAllLFPs(obj)
+		function drawAllLFPs(obj,override)
+			if ~exist('override','var'); override = false; end
+			if obj.LFPs(obj.selectedLFP).reparse == true && override == false
+				return
+			end
 			disp('Drawing Continuous LFP data...')
 			%first plot is the whole raw LFP with event markers
 			LFPs = obj.LFPs;
@@ -852,7 +916,7 @@ classdef plxReader < optickaCore
 				for k = 1:length(var.t1correct)
 					line([var.t1correct(k) var.t1correct(k)],[-.4 .4],'Color',color,'LineWidth',4);
 					line([var.t2correct(k) var.t2correct(k)],[-.4 .4],'Color',color,'LineWidth',4);
-					text(var.t1correct(k),.4,['VAR:' num2str(j) ' TRL:' num2str(k)]);
+					text(var.t1correct(k),.41,['VAR: ' num2str(j) '  TRL: ' num2str(k)]);
 				end
 			end
 			hold off;
