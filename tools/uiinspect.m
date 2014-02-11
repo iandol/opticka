@@ -64,6 +64,8 @@ function hFig = uiinspect(obj, fig)
 %    Please send to Yair Altman (altmany at gmail dot com)
 %
 % Change log:
+%    2013-06-30: Fixes for the upcoming HG2
+%    2013-01-25: Added context-menu option to export handle to workspace
 %    2013-01-23: Prevented intermittent crash reported for uiinspect(0); auto-expanded callbacks table if only one category; added hidden properties to the properties tooltip; updated FEX link in help; updated javadoc hyperlinks; fixed callbacks table
 %    2012-01-16: Fixes for R2012a
 %    2011-12-09: Fixed Matlab R2011b crash when inspecting COM object
@@ -99,7 +101,7 @@ function hFig = uiinspect(obj, fig)
 % referenced and attributed as such. The original author maintains the right to be solely associated with this work.
 
 % Programmed by Yair M. Altman: altmany(at)gmail.com
-% $Revision: 1.24 $  $Date: 2012/01/23 05:07:50 $
+% $Revision: 1.26 $  $Date: 2013/06/30 23:44:53 $
 
   try
       % Arg check
@@ -118,7 +120,7 @@ function hFig = uiinspect(obj, fig)
       end
       if nargin < 2
           fig = [];
-      elseif ~ishandle(fig) || ~ishghandle(fig) || ~isa(handle(fig),'figure')
+      elseif ~ishandle(fig) || ~ishghandle(fig) || (~isa(handle(fig),'figure') && ~isa(handle(fig),'matlab.ui.Figure'))
           myError('YMA:uiinspect:notAFigure','Second input to uiinspect must be a valid figure handle');
       end
 
@@ -322,8 +324,36 @@ function objChildren = getObjChildren(obj)
 %% Display object data
 function hFig = displayObj(obj, objMethods, objProps, objCallbacks, objChildren, objName, hFig)
 
+      % Set the figure title
+      if isempty(objName)
+          objName = 'object of ';
+      else
+          objName = [objName ' of '];
+      end
+      if ischar(obj)
+          className = obj;
+          objName = '';
+      else
+          className = builtin('class', obj);
+      end
+      title = ['uiinspect: ' objName 'class ' className];
+
+      % If no figure handle for reuse was specified
+      if isempty(hFig)
+          % Try to reuse figure with the same title
+          hFig = findall(0, '-depth',1, 'type','figure', 'name',title);
+      end
+      % If no valid figure was found, create a new one - otherwise clear and reuse
+      if isempty(hFig)
+          hFig = figure('visible','off');   % existing uiinspector for this object not found - create a new figure (invisible at first)
+      else
+          hFig = hFig(1);  % just in case there's more than one such figure
+          clf(hFig);
+      end
+      set(hFig, 'Name',title, 'NumberTitle','off', 'units','pixel', 'toolbar','none', 'menubar','none');
+
       % Prepare the data panes
-      [methodsPane, hgFlag] = getMethodsPane(objMethods, obj);
+      [methodsPane, hgFlag] = getMethodsPane(objMethods, obj, hFig);
       [callbacksPanel, cbTable] = getCbsPane(objCallbacks, false);
       [propsPane, inspectorTable] = getPropsPane(objProps);
       [childrenPane, propsNum] = getChildrenPane(objChildren, inspectorTable, propsPane);
@@ -362,34 +392,8 @@ function hFig = displayObj(obj, objMethods, objProps, objCallbacks, objChildren,
       else
           globalPanel.add(hsplitPane, BorderLayout.CENTER);
       end
-
-      % Set the figure title
-      if isempty(objName)
-          objName = 'object of ';
-      else
-          objName = [objName ' of '];
-      end
-      if ischar(obj)
-          className = obj;
-          objName = '';
-      else
-          className = builtin('class', obj);
-      end
-      title = ['uiinspect: ' objName 'class ' className];
-
-      % If no figure handle for reuse was specified
-      if isempty(hFig)
-          % Try to reuse figure with the same title
-          hFig = findall(0, '-depth',1, 'type','figure', 'name',title);
-      end
-      % If no valid figure was found, create a new one - otherwise clear and reuse
-      if isempty(hFig)
-          hFig = figure;   % existing uiinspector for this object not found - create a new figure
-      else
-          hFig = hFig(1);  % just in case there's more than one such figure
-          clf(hFig);
-      end
-      set(hFig, 'Name',title, 'NumberTitle','off', 'units','pixel', 'toolbar','none', 'menubar','none');
+      
+      set(hFig, 'visible','on');
       pos = get(hFig,'position');
       [obj, hcontainer] = javacomponent(globalPanel, [0,0,pos(3:4)], hFig);
       set(hcontainer,'units','normalized');
@@ -560,7 +564,7 @@ function [cbData, cbHeaders, cbTableEnabled] = getCbsData(obj, stripStdCbsFlag)
               if iscell(cbNames)
                   cbNames = sort(cbNames);
               end
-              hgHandleFlag = 0;  try hgHandleFlag = ishghandle(obj); catch end
+              hgHandleFlag = 0;  try hgHandleFlag = ishghandle(obj); catch, end
               try
                   obj = handle(obj,'CallbackProperties');
               catch
@@ -644,7 +648,6 @@ function loadedClass = loadClass(className)
       end
   end
 %end  % loadClass
-
 
 %% Get properties table data
 function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(obj, showMetaData, showInspectedPropsFlag, inspectorTable, cbInspected)
@@ -1123,7 +1126,7 @@ function modifiers = getClassModifiers(thisClass)
 %end  % getClassModifiers
 
 %% Prepare the methods pane
-function [methodsPane, hgFlag] = getMethodsPane(methodsObj, obj)
+function [methodsPane, hgFlag] = getMethodsPane(methodsObj, obj, hFig)
       import java.awt.*
       import javax.swing.*
       methodsPane = JPanel(BorderLayout);
@@ -1223,7 +1226,7 @@ function [methodsPane, hgFlag] = getMethodsPane(methodsObj, obj)
 						  prefix = 'javase/1.5.0';  % old: 'j2se/1.5.0';
 					  otherwise %case com.mathworks.util.PlatformInfo.VERSION_16
 						  prefix = 'javase/6';
-                  end
+				  end
                   domain = 'http://docs.oracle.com'; %download.oracle.com';  % old: java.sun.com
 				  url = [domain '/' prefix '/docs/api/' strrep(hyperlink,'.','/') '.html']; % TODO: treat classNames with internal '.'
 				  targetStr = ['web(''' url ''')'];
@@ -1256,7 +1259,7 @@ function [methodsPane, hgFlag] = getMethodsPane(methodsObj, obj)
 
       % If this is an HG handle, display hierarchy tree instead of methods
       if hgFlag
-          paneContents = getHandleTree(obj);
+          paneContents = getHandleTree(obj, hFig);
       else
           % Otherwise simply display the object's methods
           paneContents = getMethodsTable(methodsObj, methodsPanel);
@@ -1268,12 +1271,14 @@ function [methodsPane, hgFlag] = getMethodsPane(methodsObj, obj)
 %end  % getMethodsPane
 
 %% Display HG handle hiererchy in a tree
-function handleTree = getHandleTree(obj)
+function handleTree = getHandleTree(obj, hFig)
       import java.awt.*
       import javax.swing.*
 
       %handleTree = uitree.
-      tree_h = handle(com.mathworks.hg.peer.UITreePeer,'CallbackProperties');
+      tree_h = com.mathworks.hg.peer.UITreePeer;
+      try tree_h = javaObjectEDT(tree_h); catch, end
+      %tree_h = handle(com.mathworks.hg.peer.UITreePeer,'CallbackProperties');
       
       % Use the parent handle as root, unless there is none
       hRoot = handle(get(obj,'parent'));
@@ -1319,14 +1324,15 @@ function handleTree = getHandleTree(obj)
       userdata.inInit = true;
       userdata.jTree = jTreeObj;
       try
-          set(tree_h.java, 'userdata',userdata);
+          set(tree_h, 'userdata',userdata);
       catch
           setappdata(tree_h, 'userdata',userdata);
       end
 
       % Set the callback functions
-      set(tree_h, 'NodeExpandedCallback', {@nodeExpanded, tree_h});
-      set(tree_h, 'NodeSelectedCallback', @nodeSelected);
+      tree_hh = handle(tree_h,'CallbackProperties');
+      set(tree_hh, 'NodeExpandedCallback', {@nodeExpanded, tree_h});
+      set(tree_hh, 'NodeSelectedCallback', {@nodeSelected, tree_h, hFig});
 
       % Set the tree mouse-click callback
 % Note: default actions (expand/collapse) will still be performed?
@@ -1343,7 +1349,7 @@ function handleTree = getHandleTree(obj)
       % Update userdata
       userdata.inInit = false;
       try
-          set(tree_h.java, 'userdata',userdata);
+          set(tree_h, 'userdata',userdata);
       catch
           setappdata(tree_h, 'userdata',userdata);
       end
@@ -1358,20 +1364,30 @@ function jmenu = setTreeContextMenu(obj,node)
       menuItem0 = JMenuItem(titleStr);
       menuItem0.setEnabled(0);
       menuItem0.setArmed(0);
-      menuItem1 = JMenuItem('Inspect in this window');
-      menuItem2 = JMenuItem('Inspect in a new window');
-      menuItem3 = JMenuItem('Copy handle value to clipboard');
+      menuItem1 = JMenuItem('Copy handle value to clipboard');
+      if isjava(obj), prefix = 'j';  else,  prefix = 'h';  end  %#ok<NOCOM>
+      varname = char(node.getName);
+      varname = regexprep(varname,'<[^>]*>','');  % strip HTML
+      varname = strrep([prefix strtok(varname)], '$','_');
+      varname = genvarname(varname);
+      varname(2) = upper(varname(2));  % ensure lowerCamelCase
+      menuItem2 = JMenuItem(['Export handle to ' varname]);
+      menuItem3 = JMenuItem('Export handle to...');
       menuItem4 = JMenuItem('Request focus (bring to front)');
-      menuItem5 = JMenuItem('Inspect underlying Java object');
-      menuItem6 = JMenuItem('View object in Java hierarchy');
+      menuItem5 = JMenuItem('Inspect in this window');
+      menuItem6 = JMenuItem('Inspect in a new window');
+      menuItem7 = JMenuItem('Inspect underlying Java object');
+      menuItem8 = JMenuItem('View object in Java hierarchy');
 
       % Set the menu items' callbacks
-      set(handle(menuItem1,'CallbackProperties'),'ActionPerformedCallback',{@inspectHandle,obj,0});
-      set(handle(menuItem2,'CallbackProperties'),'ActionPerformedCallback',{@inspectHandle,obj,1});
-      set(handle(menuItem3,'CallbackProperties'),'ActionPerformedCallback',sprintf('clipboard(''copy'',''%.99g'')',handleValue));
+      set(handle(menuItem1,'CallbackProperties'),'ActionPerformedCallback',sprintf('clipboard(''copy'',''%.99g'')',handleValue));
+      set(handle(menuItem2,'CallbackProperties'),'ActionPerformedCallback',{@btExport_Callback,{obj,varname}});
+      set(handle(menuItem3,'CallbackProperties'),'ActionPerformedCallback',{@btExport_Callback,{obj,[]}});
       set(handle(menuItem4,'CallbackProperties'),'ActionPerformedCallback',{@requestFocus,obj});
-      set(handle(menuItem5,'CallbackProperties'),'ActionPerformedCallback',{@inspectJavaObj,obj,0});
-      set(handle(menuItem6,'CallbackProperties'),'ActionPerformedCallback',{@inspectJavaObj,obj,1});
+      set(handle(menuItem5,'CallbackProperties'),'ActionPerformedCallback',{@inspectHandle,obj,0});
+      set(handle(menuItem6,'CallbackProperties'),'ActionPerformedCallback',{@inspectHandle,obj,1});
+      set(handle(menuItem7,'CallbackProperties'),'ActionPerformedCallback',{@inspectJavaObj,obj,0});
+      set(handle(menuItem8,'CallbackProperties'),'ActionPerformedCallback',{@inspectJavaObj,obj,1});
 
       % Add all menu items to the context menu (with internal separator)
       jmenu = JPopupMenu;
@@ -1379,13 +1395,38 @@ function jmenu = setTreeContextMenu(obj,node)
       jmenu.addSeparator;
       jmenu.add(menuItem1);
       jmenu.add(menuItem2);
-      jmenu.addSeparator;
       jmenu.add(menuItem3);
+      jmenu.addSeparator;
       jmenu.add(menuItem4);
       jmenu.addSeparator;
       jmenu.add(menuItem5);
       jmenu.add(menuItem6);
+      jmenu.addSeparator;
+      jmenu.add(menuItem7);
+      jmenu.add(menuItem8);
 %end  % setTreeContextMenu
+
+%% Callback function for context-menu <Export handle> item
+function btExport_Callback(src, evd, varargin)  %#ok
+    try
+        data = varargin{1};
+        obj = data{1};
+        varName = data{2};
+        if isempty(varName)
+            varName = inputdlg('Enter workspace variable name',mfilename);
+            if isempty(varName),  return;  end  % bail out on <Cancel>
+            varName = varName{1};
+            if isempty(varName) || ~ischar(varName),  return;  end  % bail out on empty/null
+            varName = genvarname(varName);
+        end
+        assignin('base',varName,handle(obj,'CallbackProperties'));
+        msg = ['Exported object to base workspace variable ' varName];
+        msgbox(msg,mfilename,'help');
+    catch
+        % Never mind...
+        dispError
+    end
+%end  % btExport_Callback
 
 %% Inspect a specified handle
 function inspectHandle(hTree, eventData, obj, newFigureFlag)  %#ok hTree & eventData are unused
@@ -1905,17 +1946,18 @@ function nodes = getChildrenNodes(tree, parentNode)  %#ok tree is unused
 %end  % getChildrenNodes
 
 %% Select tree node
-function nodeSelected(src, evd, hFig)
+function nodeSelected(src, evd, tree_h, hFig)
     try
         rescanFlag = 0;
         %nodeHandle = evd.getCurrentNode.getUserObject;
         nodedata = get(evd.getCurrentNode,'userdata');
         nodeHandle = nodedata.obj;
         try
-            userdata = get(src,'userdata');
+            userdata = get(tree_h,'userdata');
         catch
-            userdata = getappdata(src,'userdata');
+            userdata = getappdata(tree_h,'userdata');
         end
+        if nargin<4,  hFig = gcf;  end
 
         if ~isempty(nodeHandle) && ~isempty(userdata) && ~userdata.inInit
 
@@ -1927,15 +1969,15 @@ function nodeSelected(src, evd, hFig)
             end
 
             % Get the current uiinspect figure handle
-            hFig = [];
-            try
-                hFig = ancestor(src,'figure');   % TODO - this fails: need to find a way to pass hFig...
-                if isempty(hFig)
-                    hFig = gcf;
-                end
-            catch
-                hFig = gcf;
-            end
+            %hFig = [];
+            %try
+            %    hFig = ancestor(src,'figure');   % TODO - this fails: need to find a way to pass hFig...
+            %    if isempty(hFig)
+            %        hFig = gcf;
+            %    end
+            %catch
+            %    hFig = gcf;
+            %end
 
             % Temoprarily modify the curpor pointer to an hourglass
             rescanFlag = 1;
@@ -2608,10 +2650,10 @@ function dataFieldsStr = getPropsHtml(obj, dataFields)
         if isempty(dataFields)
             return;
         end
-        oldVal = get(0,'HideUndocumented');
-        set(0,'HideUndocumented','off');
+        %oldVal = get(0,'HideUndocumented');
+        %set(0,'HideUndocumented','off');
         dataFieldsStr = evalc('disp(dataFields)');
-        set(0,'HideUndocumented',oldVal);
+        %set(0,'HideUndocumented',oldVal);
         if dataFieldsStr(end)==char(10),  dataFieldsStr=dataFieldsStr(1:end-1);  end
 
         % Strip out callbacks
