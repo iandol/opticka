@@ -295,12 +295,12 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function cfgUsed=ftFrequencyAnalysis(obj,cfg,preset,tw,cycles,width,smooth)
+		function cfgUsed=ftFrequencyAnalysis(obj,cfg,preset,tw,cycles,width,smth)
 			if ~exist('preset','var') || isempty(preset); preset='fix1'; end
 			if ~exist('tw','var') || isempty(tw); tw=0.2; end
 			if ~exist('cycles','var') || isempty(cycles); cycles = 5; end
 			if ~exist('width','var') || isempty(width); width = 10; end
-			if ~exist('smooth','var') || isempty(smooth); smooth = 10; end
+			if ~exist('smooth','var') || isempty(smth); smth = 10; end
 			ft = obj.ft;
 			cfgUsed = {};
 			if ~exist('cfg','var') || isempty(cfg)
@@ -312,7 +312,7 @@ classdef plxReader < optickaCore
 				cfg.tw = tw;
 				cfg.cycles = cycles;
 				cfg.width = width;
-				cfg.smooth = smooth;
+				cfg.smooth = smth;
 				switch preset
 					case 'fix1'
 						cfg.method      = 'mtmconvol';
@@ -329,7 +329,7 @@ classdef plxReader < optickaCore
 						cfg.method      = 'mtmconvol';
 						cfg.taper       = 'dpss';
 						cfg.foi         = 2:2:80;						  % analysis frequencies 
-						cfg.tapsmofrq	= cfg.foi * smooth;
+						cfg.tapsmofrq	= cfg.foi * cfg.smooth;
 						cfg.t_ftimwin	= cycles./cfg.foi;					  % x cycles per time window
 					case 'mtm2'
 						cfg.method      = 'mtmconvol';
@@ -390,7 +390,60 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function cfgUsed=ftSpikeLFP(obj,cfg)
-			
+			if ~exist('preset','var') || isempty(preset); preset='fix1'; end
+			if ~exist('tw','var') || isempty(tw); tw=0.2; end
+			if ~exist('cycles','var') || isempty(cycles); cycles = 5; end
+			if ~exist('width','var') || isempty(width); width = 10; end
+			if ~exist('smooth','var') || isempty(smth); smth = 10; end
+			ft = obj.ft;
+			cfgUsed = {};
+			if ~exist('cfg','var') || isempty(cfg)
+				cfg				= [];
+				cfg.keeptrials	= 'yes';
+				cfg.output		= 'pow';
+				cfg.channel = ft.label{obj.selectedLFP};
+				cfg.toi         = -0.4:0.02:0.4;                  % time window "slides"
+				cfg.tw = tw;
+				cfg.cycles = cycles;
+				cfg.width = width;
+				cfg.smooth = smth;
+				switch preset
+					case 'fix1'
+						cfg.method      = 'mtmconvol';
+						cfg.taper		= 'hanning';
+						lf = round(1 / cfg.tw);
+						cfg.foi         = lf:2:80;						  % analysis frequencies 
+						cfg.t_ftimwin  = ones(length(cfg.foi),1).*tw;   % length of fixed time window
+					case 'fix2'
+						cfg.method      = 'mtmconvol';
+						cfg.taper        = 'hanning';
+						cfg.foi         = 2:2:80;						  % analysis frequencies 
+						cfg.t_ftimwin	= cycles./cfg.foi;					  % x cycles per time window
+					case 'mtm1'
+						cfg.method      = 'mtmconvol';
+						cfg.taper       = 'dpss';
+						cfg.foi         = 2:2:80;						  % analysis frequencies 
+						cfg.tapsmofrq	= cfg.foi * cfg.smooth;
+						cfg.t_ftimwin	= cycles./cfg.foi;					  % x cycles per time window
+					case 'mtm2'
+						cfg.method      = 'mtmconvol';
+						cfg.taper       = 'dpss';
+						cfg.foi         = 2:2:80;						  % analysis frequencies 
+					case 'morlet'
+						cfg.method		= 'wavelet';
+						cfg.taper		= '';
+						cfg.width		= width;
+						cfg.foi         = 2:2:80;						  % analysis frequencies 
+				end
+			elseif ~isempty(cfg)
+				preset = 'custom';
+			end
+			for i = ft.uniquetrials'
+				cfg.trials = find(ft.trialinfo == i);
+				fq{i} = ft_freqanalysis(cfg,ft);
+				fq{i}.cfgUsed=cfg;
+				cfgUsed{i} = cfg;
+			end
 		end
 		
 		% ===================================================================
@@ -469,7 +522,7 @@ classdef plxReader < optickaCore
 					obj.drawAverageLFPs();
 				case 'continuous'
 					obj.drawAllLFPs(true); drawnow;
-				case 'trials'
+				case {'trials','raw'}
 					obj.drawRawLFPs(); drawnow;
 				case 'average'
 					obj.drawAverageLFPs(); drawnow;
@@ -822,13 +875,22 @@ classdef plxReader < optickaCore
 			dc = datacursormode(gcf);
 			set(dc,'UpdateFcn', @lfpCursor, 'Enable', 'on', 'DisplayStyle','window');
 			
-			uicontrol('Style', 'pushbutton', 'String', '>',...
-				'Position',[1 1 50 20],'Callback',@nextPlot);
+			uicontrol('Style', 'pushbutton', 'String', '<<',...
+				'Position',[1 1 50 20],'Callback',@previousChannel);
+			uicontrol('Style', 'pushbutton', 'String', '>>',...
+				'Position',[52 1 50 20],'Callback',@nextChannel);
 
-			function nextPlot(src,~)
+			function nextChannel(src,~)
 				obj.selectedLFP = obj.selectedLFP + 1;
 				if obj.selectedLFP > length(obj.LFPs)
 					obj.selectedLFP = 1;
+				end
+				drawRawLFPs(obj,gcf,obj.selectedLFP);
+			end
+			function previousChannel(src,~)
+				obj.selectedLFP = obj.selectedLFP - 1;
+				if obj.selectedLFP < 1
+					obj.selectedLFP = length(obj.LFPs);
 				end
 				drawRawLFPs(obj,gcf,obj.selectedLFP);
 			end
@@ -921,8 +983,6 @@ classdef plxReader < optickaCore
 			if obj.LFPs(obj.selectedLFP).reparse == true && override == false
 				return
 			end
-			profile clear
-			profile on
 			disp('Drawing Continuous LFP data...')
 			%first plot is the whole raw LFP with event markers
 			LFPs = obj.LFPs;
@@ -955,13 +1015,10 @@ classdef plxReader < optickaCore
 			hold off;
 			box on;
 			pan xon;
-			uicontrol('Style', 'pushbutton', 'String', '<',...
-				'Position',[1 1 20 20],'Callback',@backPlot);
-			uicontrol('Style', 'pushbutton', 'String', '>',...
-				'Position',[20 1 20 20],'Callback',@forwardPlot);
-			
-			profile off
-			profile report
+			uicontrol('Style', 'pushbutton', 'String', '<<',...
+				'Position',[1 1 50 20],'Callback',@backPlot);
+			uicontrol('Style', 'pushbutton', 'String', '>>',...
+				'Position',[52 1 50 20],'Callback',@forwardPlot);
 			
 			function forwardPlot(src, ~)
 				if ~exist('src','var')
