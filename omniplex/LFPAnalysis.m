@@ -99,7 +99,7 @@ classdef LFPAnalysis < optickaCore
 			end
 			ego.paths.oldDir = pwd;
 			cd(ego.dir);
-			ego.LFPs = getLFPs(ego.p);
+			ego.LFPs = getLFPs(ego.p, ego.LFPWindow, ego.demeanLFP);
 			ego.ft = struct();
 			parseLFPs(ego);
 			plotLFPs(ego);
@@ -800,19 +800,6 @@ classdef LFPAnalysis < optickaCore
 					box on; grid on;
 				end
 			end
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function [idx,val,delta]=findNearest(obj,in,value)
-			tmp = abs(in-value);
-			[~,idx] = min(tmp);
-			val = in(idx);
-			delta = abs(value - val);
 		end
 		
 	end

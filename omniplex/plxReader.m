@@ -148,9 +148,11 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function LFPs = getLFPs(obj)
+		function LFPs = getLFPs(obj, window, demean)
+			if ~exist('window','var'); window = 0.7; end
+			if ~exist('demean','var'); demean = true; end
 			cd(obj.dir);
-			LFPs = readLFPs(obj);
+			LFPs = readLFPs(obj, window, demean);
 		end
 		
 		% ===================================================================
@@ -355,8 +357,10 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function LFPs = readLFPs(obj)
-			if isempty(obj.eventList); obj.parseEvents; end
+		function LFPs = readLFPs(obj, window, demean)
+			if isempty(obj.eventList); getEvents(obj); end
+			if ~exist('window','var'); window = 0.8; end
+			if ~exist('demean','var'); demean = 0.8; end
 			tic
 			cd(obj.dir);
 			[~, names] = plx_adchan_names(obj.file);
@@ -417,7 +421,6 @@ classdef plxReader < optickaCore
 					LFPs(j).vars(k).nTrials = length(times);
 					minL = Inf;
 					maxL = 0;
-					window = obj.LFPWindow;
 					winsteps = round(window/1e-3);
 					for l = 1:LFPs(j).vars(k).nTrials
 						[idx1, val1, dlta1] = obj.findNearest(time,times(l,1));
@@ -430,10 +433,10 @@ classdef plxReader < optickaCore
 						LFPs(j).vars(k).trial(l).endDelta = dlta2;
 						LFPs(j).vars(k).trial(l).data = data(idx1-winsteps:idx1+winsteps);
 						LFPs(j).vars(k).trial(l).prestimMean = mean(LFPs(j).vars(k).trial(l).data(winsteps-101:winsteps-1)); %mean is 100ms before 0
-						if obj.demeanLFP == true
+						if demean == true
 							LFPs(j).vars(k).trial(l).data = LFPs(j).vars(k).trial(l).data - LFPs(j).vars(k).trial(l).prestimMean;
 						end
-						LFPs(j).vars(k).trial(l).demean = obj.demeanLFP;
+						LFPs(j).vars(k).trial(l).demean = demean;
 						LFPs(j).vars(k).trial(l).time = [-window:1e-3:window]';
 						LFPs(j).vars(k).trial(l).window = window;
 						LFPs(j).vars(k).trial(l).winsteps = winsteps;
@@ -809,20 +812,35 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function reparseInfo(obj)
-
-			obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
-			obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
-			obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
-			obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.eventList.incorrect));
-			obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.eventList.minRuns);
-			obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.eventList.maxRuns);
-			obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.eventList.tMin,obj.eventList.tMinCorrect);
-			obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.eventList.tMax,obj.eventList.tMaxCorrect);
-			obj.info{end+1} = ['Number of Active channels : ' num2str(obj.tsList.nCh)];
-			obj.info{end+1} = ['Number of Active units : ' num2str(obj.tsList.nUnit)];
-			obj.info{end+1} = ['Channel list : ' num2str(obj.tsList.chMap)];
-			obj.info{end+1} = ['Unit list (0=unsorted) : ' num2str(obj.tsList.unitMap)];
-
+			if ~isempty(obj.eventList)
+				obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
+				obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
+				obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
+				obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.eventList.incorrect));
+				obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.eventList.minRuns);
+				obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.eventList.maxRuns);
+				obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.eventList.tMin,obj.eventList.tMinCorrect);
+				obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.eventList.tMax,obj.eventList.tMaxCorrect);
+			end
+			if ~isempty(obj.tsList)
+				obj.info{end+1} = ['Number of Active channels : ' num2str(obj.tsList.nCh)];
+				obj.info{end+1} = ['Number of Active units : ' num2str(obj.tsList.nUnit)];
+				obj.info{end+1} = ['Channel list : ' num2str(obj.tsList.chMap)];
+				obj.info{end+1} = ['Unit list (0=unsorted) : ' num2str(obj.tsList.unitMap)];
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function [idx,val,delta]=findNearest(obj,in,value)
+			tmp = abs(in-value);
+			[~,idx] = min(tmp);
+			val = in(idx);
+			delta = abs(value - val);
 		end
 		
 	end
