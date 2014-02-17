@@ -143,16 +143,107 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief 
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function LFPs = getLFPs(obj, window, demean)
-			if ~exist('window','var'); window = 0.7; end
-			if ~exist('demean','var'); demean = true; end
+		function LFPs = readLFPs(obj, window, demean)
+			if isempty(obj.eventList); getEvents(obj); end
+			if ~exist('window','var'); window = 0.8; end
+			if ~exist('demean','var'); demean = 0.8; end
+			tic
 			cd(obj.dir);
-			LFPs = readLFPs(obj, window, demean);
+			[~, names] = plx_adchan_names(obj.file);
+			[~, map] = plx_adchan_samplecounts(obj.file);
+			[~, raw] = plx_ad_chanmap(obj.file);
+			names = cellstr(names);
+			idx = find(map > 0);
+			aa=1;
+			LFPs = [];
+			for j = 1:length(idx)
+				cname = names{idx(j)};
+				if ~isempty(regexp(cname,'FP', 'once')) %check we have a FP name field
+					num = str2num(regexp(cname,'\d*','match','once')); %what channel number
+					if num < 21
+						LFPs(aa).name = cname;
+						LFPs(aa).index = raw(idx(j));
+						LFPs(aa).count = map(idx(j));
+						LFPs(aa).reparse = false;
+						LFPs(aa).vars = struct([]); %#ok<*AGROW>
+						aa = aa + 1;
+					end
+				end
+			end
+			
+			for j = 1:length(LFPs)
+				[adfreq, ~, ts, fn, ad] = plx_ad_v(obj.file, LFPs(j).index);
+
+				tbase = 1 / adfreq;
+				
+				LFPs(j).recordingFrequency = adfreq;
+				LFPs(j).timebase = tbase;
+				LFPs(j).totalTimeStamps = ts;
+				LFPs(j).totalDataPoints = fn;			
+				
+				if length(fn) == 2 %1 gap, choose last data block
+					data = ad(fn(1)+1:end);
+					time = ts(end) : tbase : (ts(end)+(tbase*(fn(end)-1)));
+					time = time(1:length(data));
+					LFPs(j).usedtimeStamp = ts(end);
+				elseif length(fn) == 1 %no gaps
+					data = ad(fn+1:end);
+					time = ts : tbase : (ts+(tbase*fn-1));
+					time = time(1:length(data));
+					LFPs(j).usedtimeStamp = ts;
+				else
+					return;
+				end
+				LFPs(j).data = data;
+				LFPs(j).time = time;
+				LFPs(j).eventSample = round(LFPs(j).usedtimeStamp * 40e3);
+				LFPs(j).sample = round(LFPs(j).usedtimeStamp * LFPs(j).recordingFrequency);
+				
+				LFPs(j).nVars = obj.eventList.nVars;
+				
+				for k = 1:LFPs(j).nVars
+					times = [obj.eventList.vars(k).t1correct,obj.eventList.vars(k).t2correct];
+					LFPs(j).vars(k).times = times;
+					LFPs(j).vars(k).nTrials = length(times);
+					minL = Inf;
+					maxL = 0;
+					winsteps = round(window/1e-3);
+					for l = 1:LFPs(j).vars(k).nTrials
+						[idx1, val1, dlta1] = obj.findNearest(time,times(l,1));
+						[idx2, val2, dlta2] = obj.findNearest(time,times(l,2));
+						LFPs(j).vars(k).trial(l).startTime = val1;
+						LFPs(j).vars(k).trial(l).startIndex = idx1;
+						LFPs(j).vars(k).trial(l).endTime = val2;
+						LFPs(j).vars(k).trial(l).endIndex = idx2;
+						LFPs(j).vars(k).trial(l).startDelta = dlta1;
+						LFPs(j).vars(k).trial(l).endDelta = dlta2;
+						LFPs(j).vars(k).trial(l).data = data(idx1-winsteps:idx1+winsteps);
+						LFPs(j).vars(k).trial(l).prestimMean = mean(LFPs(j).vars(k).trial(l).data(winsteps-101:winsteps-1)); %mean is 100ms before 0
+						if demean == true
+							LFPs(j).vars(k).trial(l).data = LFPs(j).vars(k).trial(l).data - LFPs(j).vars(k).trial(l).prestimMean;
+						end
+						LFPs(j).vars(k).trial(l).demean = demean;
+						LFPs(j).vars(k).trial(l).time = [-window:1e-3:window]';
+						LFPs(j).vars(k).trial(l).window = window;
+						LFPs(j).vars(k).trial(l).winsteps = winsteps;
+						LFPs(j).vars(k).trial(l).abstime = LFPs(j).vars(k).trial(l).time + (val1-window);
+						minL = min([length(LFPs(j).vars(k).trial(l).data) minL]);
+						maxL = max([length(LFPs(j).vars(k).trial(l).data) maxL]);
+					end
+					LFPs(j).vars(k).time = LFPs(j).vars(k).trial(1).time;
+					LFPs(j).vars(k).alldata = [LFPs(j).vars(k).trial(:).data];
+					[LFPs(j).vars(k).average, LFPs(j).vars(k).error] = stderr(LFPs(j).vars(k).alldata');
+					LFPs(j).vars(k).minL = minL;
+					LFPs(j).vars(k).maxL = maxL;
+				end
+			end
+			
+			fprintf('Loading and parsing LFPs into trials took %g ms\n',round(toc*1000));
 		end
 		
 		% ===================================================================
@@ -350,110 +441,6 @@ classdef plxReader < optickaCore
 				end
 			end
 		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function LFPs = readLFPs(obj, window, demean)
-			if isempty(obj.eventList); getEvents(obj); end
-			if ~exist('window','var'); window = 0.8; end
-			if ~exist('demean','var'); demean = 0.8; end
-			tic
-			cd(obj.dir);
-			[~, names] = plx_adchan_names(obj.file);
-			[~, map] = plx_adchan_samplecounts(obj.file);
-			[~, raw] = plx_ad_chanmap(obj.file);
-			names = cellstr(names);
-			idx = find(map > 0);
-			aa=1;
-			LFPs = [];
-			for j = 1:length(idx)
-				cname = names{idx(j)};
-				if ~isempty(regexp(cname,'FP', 'once')) %check we have a FP name field
-					num = str2num(regexp(cname,'\d*','match','once')); %what channel number
-					if num < 21
-						LFPs(aa).name = cname;
-						LFPs(aa).index = raw(idx(j));
-						LFPs(aa).count = map(idx(j));
-						LFPs(aa).reparse = false;
-						LFPs(aa).vars = struct([]); %#ok<*AGROW>
-						aa = aa + 1;
-					end
-				end
-			end
-			
-			for j = 1:length(LFPs)
-				[adfreq, ~, ts, fn, ad] = plx_ad_v(obj.file, LFPs(j).index);
-
-				tbase = 1 / adfreq;
-				
-				LFPs(j).recordingFrequency = adfreq;
-				LFPs(j).timebase = tbase;
-				LFPs(j).totalTimeStamps = ts;
-				LFPs(j).totalDataPoints = fn;			
-				
-				if length(fn) == 2 %1 gap, choose last data block
-					data = ad(fn(1)+1:end);
-					time = ts(end) : tbase : (ts(end)+(tbase*(fn(end)-1)));
-					time = time(1:length(data));
-					LFPs(j).usedtimeStamp = ts(end);
-				elseif length(fn) == 1 %no gaps
-					data = ad(fn+1:end);
-					time = ts : tbase : (ts+(tbase*fn-1));
-					time = time(1:length(data));
-					LFPs(j).usedtimeStamp = ts;
-				else
-					return;
-				end
-				LFPs(j).data = data;
-				LFPs(j).time = time;
-				LFPs(j).eventSample = round(LFPs(j).usedtimeStamp * 40e3);
-				LFPs(j).sample = round(LFPs(j).usedtimeStamp * LFPs(j).recordingFrequency);
-				
-				LFPs(j).nVars = obj.eventList.nVars;
-				
-				for k = 1:LFPs(j).nVars
-					times = [obj.eventList.vars(k).t1correct,obj.eventList.vars(k).t2correct];
-					LFPs(j).vars(k).times = times;
-					LFPs(j).vars(k).nTrials = length(times);
-					minL = Inf;
-					maxL = 0;
-					winsteps = round(window/1e-3);
-					for l = 1:LFPs(j).vars(k).nTrials
-						[idx1, val1, dlta1] = obj.findNearest(time,times(l,1));
-						[idx2, val2, dlta2] = obj.findNearest(time,times(l,2));
-						LFPs(j).vars(k).trial(l).startTime = val1;
-						LFPs(j).vars(k).trial(l).startIndex = idx1;
-						LFPs(j).vars(k).trial(l).endTime = val2;
-						LFPs(j).vars(k).trial(l).endIndex = idx2;
-						LFPs(j).vars(k).trial(l).startDelta = dlta1;
-						LFPs(j).vars(k).trial(l).endDelta = dlta2;
-						LFPs(j).vars(k).trial(l).data = data(idx1-winsteps:idx1+winsteps);
-						LFPs(j).vars(k).trial(l).prestimMean = mean(LFPs(j).vars(k).trial(l).data(winsteps-101:winsteps-1)); %mean is 100ms before 0
-						if demean == true
-							LFPs(j).vars(k).trial(l).data = LFPs(j).vars(k).trial(l).data - LFPs(j).vars(k).trial(l).prestimMean;
-						end
-						LFPs(j).vars(k).trial(l).demean = demean;
-						LFPs(j).vars(k).trial(l).time = [-window:1e-3:window]';
-						LFPs(j).vars(k).trial(l).window = window;
-						LFPs(j).vars(k).trial(l).winsteps = winsteps;
-						LFPs(j).vars(k).trial(l).abstime = LFPs(j).vars(k).trial(l).time + (val1-window);
-						minL = min([length(LFPs(j).vars(k).trial(l).data) minL]);
-						maxL = max([length(LFPs(j).vars(k).trial(l).data) maxL]);
-					end
-					LFPs(j).vars(k).time = LFPs(j).vars(k).trial(1).time;
-					LFPs(j).vars(k).alldata = [LFPs(j).vars(k).trial(:).data];
-					[LFPs(j).vars(k).average, LFPs(j).vars(k).error] = stderr(LFPs(j).vars(k).alldata');
-					LFPs(j).vars(k).minL = minL;
-					LFPs(j).vars(k).maxL = maxL;
-				end
-			end
-			
-			fprintf('Loading and parsing LFPs into trials took %g ms\n',round(toc*1000));
-	end
 			
 		% ===================================================================
 		%> @brief 

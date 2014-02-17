@@ -20,6 +20,7 @@ classdef LFPAnalysis < optickaCore
 		cutTrials@cell
 		clickedTrials@cell
 		nLFPs@double = 0
+		map
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -99,7 +100,7 @@ classdef LFPAnalysis < optickaCore
 			end
 			ego.paths.oldDir = pwd;
 			cd(ego.dir);
-			ego.LFPs = getLFPs(ego.p, ego.LFPWindow, ego.demeanLFP);
+			ego.LFPs = readLFPs(ego.p, ego.LFPWindow, ego.demeanLFP);
 			ego.ft = struct();
 			parseLFPs(ego);
 			plotLFPs(ego);
@@ -116,7 +117,7 @@ classdef LFPAnalysis < optickaCore
 			ft_defaults;
 			tic
 			ft = struct();
-			ft(1).hdr = ft_read_plxheader(ego.file);
+			ft(1).hdr = ft_read_plxheader(ego.lfpfile);
 			ft.label = {ego.LFPs(:).name};
 			ft.time = cell(1);
 			ft.trial = cell(1);
@@ -124,7 +125,7 @@ classdef LFPAnalysis < optickaCore
 			ft.sampleinfo = [];
 			ft.trialinfo = [];
 			ft.cfg = struct;
-			ft.cfg.dataset = ego.file;
+			ft.cfg.dataset = ego.lfpfile;
 			ft.cfg.headerformat = 'plexon_plx_v2';
 			ft.cfg.dataformat = ft.cfg.headerformat;
 			ft.cfg.eventformat = ft.cfg.headerformat;
@@ -392,8 +393,10 @@ classdef LFPAnalysis < optickaCore
 		% ===================================================================
 		function LFPs = parseLFPs(ego)
 			
-			LFPs = readLFPs(ego.p);
-		
+			LFPs = ego.LFPs;
+			if isempty(LFPs)
+				LFPs = readLFPs(ego.p);
+			end
 			cuttrials = '{ ';
 			if isempty(ego.cutTrials) || length(ego.cutTrials) < LFPs(1).nVars
 				for i = 1:LFPs(1).nVars
@@ -552,7 +555,7 @@ classdef LFPAnalysis < optickaCore
 			for j = 1:length(LFPs(sel).vars)
 				[i1,i2] = ind2sub([row,col], j);
 				p(i1,i2).select();
-				title(['LFP & EVENT PLOT: File:' ego.file ' | Channel:' LFPs(sel).name ' | Var:' num2str(j)]);
+				title(['LFP & EVENT PLOT: File:' ego.lfpfile ' | Channel:' LFPs(sel).name ' | Var:' num2str(j)]);
 				xlabel('Time (s)');
  				ylabel('LFP Raw Amplitude (mV)');
 				hold on
@@ -637,7 +640,7 @@ classdef LFPAnalysis < optickaCore
 			if LFPs(1).reparse == true;
 				for j = 1: length(LFPs)
 					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
-					title(['FIGURE vs. GROUND Reparse: File:' ego.file ' | Channel:' LFPs(j).name ' | LFP:' num2str(j)]);
+					title(['FIGURE vs. GROUND Reparse: File:' ego.lfpfile ' | Channel:' LFPs(j).name ' | LFP:' num2str(j)]);
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV)');
 					hold on
@@ -665,7 +668,7 @@ classdef LFPAnalysis < optickaCore
 					axis([-0.1 0.3 -inf inf]);
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV)');
-					title(['FIELDTRIP TIMELOCK ANALYSIS: File:' ego.file ' | Channel:' av{1}.label{:} ' | LFP: ']);
+					title(['FIELDTRIP TIMELOCK ANALYSIS: File:' ego.lfpfile ' | Channel:' av{1}.label{:} ' | LFP: ']);
 				end
 			end				
 		end
@@ -685,7 +688,7 @@ classdef LFPAnalysis < optickaCore
 			%first plot is the whole raw LFP with event markers
 			LFPs = ego.LFPs;
 			figure;figpos(1,[2500 800]);set(gcf,'Color',[1 1 1]);
-			title(['RAW LFP & EVENT PLOT: File:' ego.file ' | Channel: All | LFP: All']);
+			title(['RAW LFP & EVENT PLOT: File:' ego.lfpfile ' | Channel: All | LFP: All']);
 			xlabel('Time (s)');
  			ylabel('LFP Raw Amplitude (mV)');
 			hold on
@@ -701,9 +704,9 @@ classdef LFPAnalysis < optickaCore
 			axis([0 40 -.5 .5])
 			legend(h,name,'Location','NorthWest')
 			disp('Drawing Event markers...')
-			for j = 1:ego.eventList.nVars
+			for j = 1:ego.p.eventList.nVars
 				color = rand(1,3);
-				var = ego.eventList.vars(j);
+				var = ego.p.eventList.vars(j);
 				for k = 1:length(var.t1correct)
 					line([var.t1correct(k) var.t1correct(k)],[-.4 .4],'Color',color,'LineWidth',4);
 					line([var.t2correct(k) var.t2correct(k)],[-.4 .4],'Color',color,'LineWidth',4);
