@@ -4,13 +4,22 @@ classdef plxReader < optickaCore
 	
 	%------------------NORMAL PROPERTIES----------%
 	properties
+		%> plx/pl2 file name
 		file@char
+		%> file directory
 		dir@char
+		%> the opticka mat file name
 		matfile@char
+		%> the opticka mat file directory
 		matdir@char
+		%> edf file name
 		edffile@char
 		cellmap@double
+		%> used by legacy spikes to allow negative time offsets
 		startOffset@double = 0
+		%> the window to check before/after trial end for behavioural marker
+		eventWindow@double = 0.2
+		%> verbose?
 		verbose	= true
 	end
 	
@@ -19,7 +28,6 @@ classdef plxReader < optickaCore
 		info@cell
 		eventList@struct
 		tsList@struct
-		LFPs@struct
 		meta@struct
 		rE@runExperiment
 		eA@eyelinkAnalysis
@@ -149,9 +157,11 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function LFPs = readLFPs(obj, window, demean)
-			if isempty(obj.eventList); getEvents(obj); end
 			if ~exist('window','var'); window = 0.8; end
 			if ~exist('demean','var'); demean = 0.8; end
+			if ~isempty(obj.eventList); 
+				getEvents(obj); 
+			end
 			tic
 			cd(obj.dir);
 			[~, names] = plx_adchan_names(obj.file);
@@ -341,9 +351,11 @@ classdef plxReader < optickaCore
 			load(fn);
 			if ~exist('rE','var') && exist('obj','var')
 				rE = obj;
+				clear obj;
 			end
 			if ~isa(rE,'runExperiment')
-				error('The behavioural file doesn''t contain a runExperiment object!!!');
+				warning('The behavioural file doesn''t contain a runExperiment object!!!');
+				return
 			end
 			if isempty(rE.tS) && exist('tS','var'); rE.tS = tS; end
 			meta.filename = [pn fn];
@@ -435,9 +447,9 @@ classdef plxReader < optickaCore
 			if ~exist('override','var'); override = false; end
 			if override == true || isempty(obj.rE)
 				if exist(obj.matdir, 'dir')
-					[obj.meta, obj.rE] = obj.loadMat(obj.matfile, obj.matdir);
+					[obj.meta, obj.rE] = loadMat(obj, obj.matfile, obj.matdir);
 				else
-					[obj.meta, obj.rE] = obj.loadMat(obj.matfile, obj.dir);
+					[obj.meta, obj.rE] = loadMat(obj, obj.matfile, obj.dir);
 				end
 			end
 		end
@@ -539,19 +551,24 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function getEvents(obj)
-			readMat(obj);
+			readMat(obj); %make sure we've loaded the behavioural file first
 			tic
 			[~,eventNames] = plx_event_names(obj.file);
 			[~,eventIndex] = plx_event_chanmap(obj.file);
 			eventNames = cellstr(eventNames);
 			idx = strcmpi(eventNames,'Strobed');
-			[a,b,c] = plx_event_ts(obj.file,eventIndex(idx)); %257 is the strobed word channel
-			idx = find(c < 1);
+			[a, b, c] = plx_event_ts(obj.file,eventIndex(idx)); %257 is the strobed word channel
+			if isempty(a) || a == 0
+				obj.eventList = struct();
+				warning('No strobe events detected!!!');
+				return
+			end
+			idx = find(c < 1); %check for zer or lower event numbers, remove
 			if ~isempty(idx)
 				c(idx)=[];
 				b(idx) = [];
 			end
-			idx = find(c > obj.rE.task.minBlocks & c < 32700);
+			idx = find(c > obj.rE.task.minBlocks & c < 32700); %check for invalid event numbers, remove
 			if ~isempty(idx)
 				c(idx)=[];
 				b(idx) = [];
@@ -561,140 +578,263 @@ classdef plxReader < optickaCore
 				c(end)=[];
 				b(end) = [];
 			end
+			a = length(b);
 			idx = strcmpi(eventNames, 'Start');
-			[~,start] = plx_event_ts(obj.file,eventIndex(idx)); %currently 19 is fix start
+			[~,start] = plx_event_ts(obj.file,eventIndex(idx)); %start event
 			idx = strcmpi(eventNames, 'Stop');
-			[~,stop] = plx_event_ts(obj.file,eventIndex(idx)); %currently 19 is fix start
-			idx = strcmpi(eventNames, 'EVT19');
+			[~,stop] = plx_event_ts(obj.file,eventIndex(idx)); %stop event
+			idx = strcmpi(eventNames, 'EVT19'); 
 			[~,b19] = plx_event_ts(obj.file,eventIndex(idx)); %currently 19 is fix start
 			idx = strcmpi(eventNames, 'EVT20');
 			[~,b20] = plx_event_ts(obj.file,eventIndex(idx)); %20 is correct
 			idx = strcmpi(eventNames, 'EVT21');
-			[~,b21] = plx_event_ts(obj.file,eventIndex(idx));
+			[~,b21] = plx_event_ts(obj.file,eventIndex(idx)); %21 is breakfix
 			idx = strcmpi(eventNames, 'EVT22');
-			[~,b22] = plx_event_ts(obj.file,eventIndex(idx));
-			if a > 0
-				obj.eventList = struct();
-				obj.eventList(1).n = a;
-				obj.eventList.eventNames = eventNames;
-				obj.eventList.eventIndex = eventIndex;
-				obj.eventList.start = start;
-				obj.eventList.stop = stop;
-				obj.eventList.startFix = b19;
-				obj.eventList.correct = b20;
-				obj.eventList.breakFix = b21;
-				obj.eventList.incorrect = b22;
-				obj.eventList.times = b;
-				obj.eventList.values = c;
-				obj.eventList.varOrder = obj.eventList.values(obj.eventList.values<32000);
-				obj.eventList.varOrderCorrect = zeros(length(obj.eventList.correct),1);
-				obj.eventList.unique = unique(c);
-				obj.eventList.nVars = length(obj.eventList.unique)-1;
-				obj.eventList.minRuns = Inf;
-				obj.eventList.maxRuns = 0;
-				obj.eventList.tMin = Inf;
-				obj.eventList.tMax = 0;
-				obj.eventList.tMinCorrect = Inf;
-				obj.eventList.tMaxCorrect = 0;
+			[~,b22] = plx_event_ts(obj.file,eventIndex(idx)); %22 is incorrect
+
+			eL = struct();
+			eL.eventNames = eventNames;
+			eL.eventIndex = eventIndex;
+			eL.n = a;
+			eL.nTrials = a/2;
+			eL.times = b;
+			eL.values = c;
+			eL.start = start;
+			eL.stop = stop;
+			eL.startFix = b19;
+			eL.correct = b20;
+			eL.breakFix = b21;
+			eL.incorrect = b22;
+			eL.varOrder = eL.values(eL.values<32000);
+			eL.varOrderCorrect = zeros(length(eL.correct),1);
+			eL.correctIndex = eL.varOrderCorrect;
+			eL.varOrderBreak = zeros(length(eL.breakFix),1);
+			eL.breakIndex = eL.varOrderBreak;
+			eL.varOrderIncorrect = zeros(length(eL.incorrect),1);
+			eL.incorrectIndex = eL.varOrderIncorrect;
+			eL.unique = unique(c);
+			eL.nVars = length(eL.unique)-1;
+			eL.minRuns = Inf;
+			eL.maxRuns = 0;
+			eL.tMin = Inf;
+			eL.tMax = 0;
+			eL.tMinCorrect = Inf;
+			eL.tMaxCorrect = 0;
+			eL.trials = struct('name',[],'index',[]);
+			eL.trials(eL.nTrials).name = [];
+			eL.vars = struct('name',[],'nRepeats',[],'index',[],'responseIndex',[],'t1',[],'t2',[],...
+				'nCorrect',[],'nBreakFix',[],'nIncorrect',[],'t1correct',[],'t2correct',[],...
+				't1breakfix',[],'t2breakfix',[],'t1incorrect',[],'t2incorrect',[]);
+			eL.vars(eL.nVars).name = [];
+			
+			aa = 1; cidx = 1; bidx = 1; iidx = 1;
+			
+			for i = 1:2:eL.n
 				
-				for i = 1:obj.eventList.nVars
-					obj.eventList.vars(i).name = obj.eventList.unique(i);
-					idx = find(obj.eventList.values == obj.eventList.unique(i));
+				var = eL.values(i);
+				
+				eL.trials(aa).name = var; eL.trials(aa).index = aa;
+				
+				eL.trials(aa).t1 = eL.times(i);
+				eL.trials(aa).t2 = eL.times(i+1);
+				eL.trials(aa).tDelta = eL.trials(aa).t2 - eL.trials(aa).t1;
+				
+				tstart = eL.trials(aa).t1;
+				tend = eL.trials(aa).t2;
+				
+				tc = eL.correct > tend-0.2 & eL.correct < tend+0.2;
+				tb = eL.breakFix > tend-0.2 & eL.breakFix < tend+0.2;
+				ti = eL.incorrect > tend-0.2 & eL.incorrect < tend+0.2;
+				eL.correctIndex = logical(eL.correctIndex + tc); 
+				eL.breakIndex = logical(eL.breakIndex + tb); 
+				eL.incorrectIndex = logical(eL.incorrectIndex + ti); 
+				
+				if max(tc) == 1
+					eL.trials(aa).isCorrect = true;
+					eL.trials(aa).isBreak = false;
+					eL.trials(aa).isIncorrect = false;
+					eL.varOrderCorrect(cidx) = var; %build the correct trial list
+					eL.vars(var).nCorrect = sum([eL.vars(var).nCorrect, 1]);
+					eL.vars(var).responseIndex(end+1,:) = [true, false,false];
+					cidx = cidx + 1;
+				elseif max(tb) == 1
+					eL.trials(aa).isCorrect = false;
+					eL.trials(aa).isBreak = true;
+					eL.trials(aa).isIncorrect = false;
+					eL.varOrderBreak(bidx) = var; %build the break trial list
+					eL.vars(var).nBreakFix = sum([eL.vars(var).nBreakFix, 1]);
+					eL.vars(var).responseIndex(end+1,:) = [false, true, false];
+					bidx = bidx + 1;
+				elseif max(ti) == 1
+					eL.trials(aa).isCorrect = false;
+					eL.trials(aa).isBreak = true;
+					eL.trials(aa).isIncorrect = false;
+					eL.varOrderIncorrect(iidx) = var; %build the incorrect trial list
+					eL.vars(var).nIncorrect = sum([eL.vars(var).nIncorrect, 1]);
+					eL.vars(var).responseIndex(end+1,:) = [false, false, true];
+					iidx = iidx + 1;
+				else
+					error('Problem Finding Correct Strobes!!!!! plxReader')
+				end	
+				
+				if isempty(eL.vars(var).name)
+					eL.vars(var).name = var;
+					idx = find(eL.values == var);
 					idxend = idx+1;
 					while (length(idx) > length(idxend)) %prune incomplete trials
 						idx = idx(1:end-1);
 					end
-					obj.eventList.vars(i).nRepeats = length(idx);
-					obj.eventList.vars(i).index = idx;
-					obj.eventList.vars(i).t1 = obj.eventList.times(idx);
-					obj.eventList.vars(i).t2 = obj.eventList.times(idxend);
-					obj.eventList.vars(i).tDelta = obj.eventList.vars(i).t2 - obj.eventList.vars(i).t1;
-					obj.eventList.vars(i).tMin = min(obj.eventList.vars(i).tDelta);
-					obj.eventList.vars(i).tMax = max(obj.eventList.vars(i).tDelta);				
-					for nr = 1:obj.eventList.vars(i).nRepeats
-						tend = obj.eventList.vars(i).t2(nr);
-						tc = obj.eventList.correct > tend-0.2 & obj.eventList.correct < tend+0.2;
-						tb = obj.eventList.breakFix > tend-0.2 & obj.eventList.breakFix < tend+0.2;
-						ti = obj.eventList.incorrect > tend-0.2 & obj.eventList.incorrect < tend+0.2;
-						if max(tc) == 1
-							obj.eventList.vars(i).responseIndex(nr,1) = true;
-							obj.eventList.vars(i).responseIndex(nr,2) = false;
-							obj.eventList.vars(i).responseIndex(nr,3) = false;
-							obj.eventList.varOrderCorrect(tc==1) = i; %build the correct trial list
-						elseif max(tb) == 1
-							obj.eventList.vars(i).responseIndex(nr,1) = false;
-							obj.eventList.vars(i).responseIndex(nr,2) = true;
-							obj.eventList.vars(i).responseIndex(nr,3) = false;
-						elseif max(ti) == 1
-							obj.eventList.vars(i).responseIndex(nr,1) = false;
-							obj.eventList.vars(i).responseIndex(nr,2) = false;
-							obj.eventList.vars(i).responseIndex(nr,3) = true;
-						else
-							error('Problem Finding Correct Strobes!!!!! plxReader')
-						end
+					eL.vars(var).nRepeats = length(idx);
+					eL.vars(var).index = idx;
+					eL.vars(var).t1 = eL.times(idx);
+					eL.vars(var).t2 = eL.times(idxend);
+					eL.vars(var).tDelta = eL.vars(var).t2 - eL.vars(var).t1;
+					eL.vars(var).tMin = min(eL.vars(var).tDelta);
+					eL.vars(var).tMax = max(eL.vars(var).tDelta);
+					if eL.minRuns > eL.vars(var).nRepeats
+						eL.minRuns = eL.vars(var).nRepeats;
 					end
-					obj.eventList.vars(i).nCorrect = sum(obj.eventList.vars(i).responseIndex(:,1));
-					obj.eventList.vars(i).nBreakFix = sum(obj.eventList.vars(i).responseIndex(:,2));
-					obj.eventList.vars(i).nIncorrect = sum(obj.eventList.vars(i).responseIndex(:,3));
-					
-					if obj.eventList.minRuns > obj.eventList.vars(i).nCorrect
-						obj.eventList.minRuns = obj.eventList.vars(i).nCorrect;
+					if eL.maxRuns < eL.vars(var).nRepeats
+						eL.maxRuns = eL.vars(var).nRepeats;
 					end
-					if obj.eventList.maxRuns < obj.eventList.vars(i).nCorrect
-						obj.eventList.maxRuns = obj.eventList.vars(i).nCorrect;
+					if eL.tMin > eL.vars(var).tMin
+						eL.tMin = eL.vars(var).tMin;
 					end
-					
-					if obj.eventList.tMin > obj.eventList.vars(i).tMin
-						obj.eventList.tMin = obj.eventList.vars(i).tMin;
+					if eL.tMax < eL.vars(var).tMax
+						eL.tMax = eL.vars(var).tMax;
 					end
-					if obj.eventList.tMax < obj.eventList.vars(i).tMax
-						obj.eventList.tMax = obj.eventList.vars(i).tMax;
-					end
-					
-					obj.eventList.vars(i).t1correct = obj.eventList.vars(i).t1(obj.eventList.vars(i).responseIndex(:,1));
-					obj.eventList.vars(i).t2correct = obj.eventList.vars(i).t2(obj.eventList.vars(i).responseIndex(:,1));
-					obj.eventList.vars(i).tDeltacorrect = obj.eventList.vars(i).tDelta(obj.eventList.vars(i).responseIndex(:,1));
-					obj.eventList.vars(i).tMinCorrect = min(obj.eventList.vars(i).tDeltacorrect);
-					obj.eventList.vars(i).tMaxCorrect = max(obj.eventList.vars(i).tDeltacorrect);
-					if obj.eventList.tMinCorrect > obj.eventList.vars(i).tMinCorrect
-						obj.eventList.tMinCorrect = obj.eventList.vars(i).tMinCorrect;
-					end
-					if obj.eventList.tMaxCorrect < obj.eventList.vars(i).tMaxCorrect
-						obj.eventList.tMaxCorrect = obj.eventList.vars(i).tMaxCorrect;
-					end
-					
-					obj.eventList.vars(i).t1breakfix = obj.eventList.vars(i).t1(obj.eventList.vars(i).responseIndex(:,2));
-					obj.eventList.vars(i).t2breakfix = obj.eventList.vars(i).t2(obj.eventList.vars(i).responseIndex(:,2));
-					obj.eventList.vars(i).tDeltabreakfix = obj.eventList.vars(i).tDelta(obj.eventList.vars(i).responseIndex(:,2));
-					
-					obj.eventList.vars(i).t1incorrect = obj.eventList.vars(i).t1(obj.eventList.vars(i).responseIndex(:,3));
-					obj.eventList.vars(i).t2incorrect = obj.eventList.vars(i).t2(obj.eventList.vars(i).responseIndex(:,3));
-					obj.eventList.vars(i).tDeltaincorrect = obj.eventList.vars(i).tDelta(obj.eventList.vars(i).responseIndex(:,3));
-					
+					eL.vars(var).nCorrect = 0;
+					eL.vars(var).nBreakFix = 0;
+					eL.vars(var).nIncorrect = 0;
 				end
 				
-				obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
-				obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
-				obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
-				obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.eventList.incorrect));
-				obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.eventList.minRuns);
-				obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.eventList.maxRuns);
-				obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.eventList.tMin,obj.eventList.tMinCorrect);
-				obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.eventList.tMax,obj.eventList.tMaxCorrect);
-				
-				
-				obj.meta.modtime = floor(obj.eventList.tMaxCorrect * 10000);
-				obj.meta.trialtime = obj.meta.modtime;
-				m = [obj.rE.task.outIndex obj.rE.task.outMap getMeta(obj.rE.task)];
-				m = m(1:obj.eventList.nVars,:);
-				[~,ix] = sort(m(:,1),1);
-				m = m(ix,:);
-				obj.meta.matrix = m;
-				
-			else
-				obj.eventList = struct();
+				if eL.trials(aa).isCorrect
+					eL.vars(var).t1correct = [eL.vars(var).t1correct, eL.trials(aa).t1];
+					eL.vars(var).t2correct = [eL.vars(var).t2correct, eL.trials(aa).t2];
+					eL.vars(var).tDeltacorrect = eL.vars(var).t2correct - eL.vars(var).t1correct;
+					eL.vars(var).tMinCorrect = min(eL.vars(var).tDeltacorrect);
+					eL.vars(var).tMaxCorrect = max(eL.vars(var).tDeltacorrect);
+					if eL.tMinCorrect > eL.vars(var).tMinCorrect
+						eL.tMinCorrect = eL.vars(var).tMinCorrect;
+					end
+					if eL.tMaxCorrect < eL.vars(var).tMaxCorrect
+						eL.tMaxCorrect = eL.vars(var).tMaxCorrect;
+					end
+				elseif eL.trials(aa).isBreak
+					eL.vars(var).t1breakfix = [eL.vars(var).t1breakfix, eL.trials(aa).t1];
+					eL.vars(var).t2breakfix = [eL.vars(var).t2breakfix, eL.trials(aa).t2];
+					eL.vars(var).tDeltabreakfix = eL.vars(var).t2breakfix - eL.vars(var).t1breakfix;
+				elseif eL.trials(aa).isIncorrect
+					eL.vars(var).t1incorrect = [eL.vars(var).t1incorrect, eL.trials(aa).t1];
+					eL.vars(var).t2incorrect = [eL.vars(var).t2incorrect, eL.trials(aa).t2];
+					eL.vars(var).tDeltaincorrect = eL.vars(var).t2incorrect - eL.vars(var).t1incorrect;
+				end
+
+				aa = aa + 1;
 			end
+
+% 			for i = 1:eL.nVars
+% 				eL.vars(i).name = eL.unique(i);
+% 				idx = find(eL.values == eL.unique(i));
+% 				idxend = idx+1;
+% 				while (length(idx) > length(idxend)) %prune incomplete trials
+% 					idx = idx(1:end-1);
+% 				end
+% 				eL.vars(i).nRepeats = length(idx);
+% 				eL.vars(i).index = idx;
+% 				eL.vars(i).t1 = eL.times(idx);
+% 				eL.vars(i).t2 = eL.times(idxend);
+% 				eL.vars(i).tDelta = eL.vars(i).t2 - eL.vars(i).t1;
+% 				eL.vars(i).tMin = min(eL.vars(i).tDelta);
+% 				eL.vars(i).tMax = max(eL.vars(i).tDelta);				
+% 				for nr = 1:eL.vars(i).nRepeats
+% 					tend = eL.vars(i).t2(nr);
+% 					tc = eL.correct > tend-0.2 & eL.correct < tend+0.2;
+% 					tb = eL.breakFix > tend-0.2 & eL.breakFix < tend+0.2;
+% 					ti = eL.incorrect > tend-0.2 & eL.incorrect < tend+0.2;
+% 					if max(tc) == 1
+% 						eL.vars(i).responseIndex(nr,1) = true;
+% 						eL.vars(i).responseIndex(nr,2) = false;
+% 						eL.vars(i).responseIndex(nr,3) = false;
+% 						eL.varOrderCorrect(tc==1) = i; %build the correct trial list
+% 					elseif max(tb) == 1
+% 						eL.vars(i).responseIndex(nr,1) = false;
+% 						eL.vars(i).responseIndex(nr,2) = true;
+% 						eL.vars(i).responseIndex(nr,3) = false;
+% 						eL.varOrderBreak(tb==1) = i; %build the correct trial list
+% 					elseif max(ti) == 1
+% 						eL.vars(i).responseIndex(nr,1) = false;
+% 						eL.vars(i).responseIndex(nr,2) = false;
+% 						eL.vars(i).responseIndex(nr,3) = true;
+% 						eL.varOrderIncorrect(ti==1) = i; %build the correct trial list
+% 					else
+% 						error('Problem Finding Correct Strobes!!!!! plxReader')
+% 					end
+% 				end
+% 				eL.vars(i).nCorrect = sum(eL.vars(i).responseIndex(:,1));
+% 				eL.vars(i).nBreakFix = sum(eL.vars(i).responseIndex(:,2));
+% 				eL.vars(i).nIncorrect = sum(eL.vars(i).responseIndex(:,3));
+% 
+% 				if eL.minRuns > eL.vars(i).nCorrect
+% 					eL.minRuns = eL.vars(i).nCorrect;
+% 				end
+% 				if eL.maxRuns < eL.vars(i).nCorrect
+% 					eL.maxRuns = eL.vars(i).nCorrect;
+% 				end
+% 
+% 				if eL.tMin > eL.vars(i).tMin
+% 					eL.tMin = eL.vars(i).tMin;
+% 				end
+% 				if eL.tMax < eL.vars(i).tMax
+% 					eL.tMax = eL.vars(i).tMax;
+% 				end
+% 
+% 				eL.vars(i).t1correct = eL.vars(i).t1(eL.vars(i).responseIndex(:,1));
+% 				eL.vars(i).t2correct = eL.vars(i).t2(eL.vars(i).responseIndex(:,1));
+% 				eL.vars(i).tDeltacorrect = eL.vars(i).tDelta(eL.vars(i).responseIndex(:,1));
+% 				eL.vars(i).tMinCorrect = min(eL.vars(i).tDeltacorrect);
+% 				eL.vars(i).tMaxCorrect = max(eL.vars(i).tDeltacorrect);
+% 				if eL.tMinCorrect > eL.vars(i).tMinCorrect
+% 					eL.tMinCorrect = eL.vars(i).tMinCorrect;
+% 				end
+% 				if eL.tMaxCorrect < eL.vars(i).tMaxCorrect
+% 					eL.tMaxCorrect = eL.vars(i).tMaxCorrect;
+% 				end
+% 
+% 				eL.vars(i).t1breakfix = eL.vars(i).t1(eL.vars(i).responseIndex(:,2));
+% 				eL.vars(i).t2breakfix = eL.vars(i).t2(eL.vars(i).responseIndex(:,2));
+% 				eL.vars(i).tDeltabreakfix = eL.vars(i).tDelta(eL.vars(i).responseIndex(:,2));
+% 
+% 				eL.vars(i).t1incorrect = eL.vars(i).t1(eL.vars(i).responseIndex(:,3));
+% 				eL.vars(i).t2incorrect = eL.vars(i).t2(eL.vars(i).responseIndex(:,3));
+% 				eL.vars(i).tDeltaincorrect = eL.vars(i).tDelta(eL.vars(i).responseIndex(:,3));
+% 
+% 			end
+			
+			obj.eventList = eL;
+
+			obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
+			obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
+			obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
+			obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.eventList.incorrect));
+			obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.eventList.minRuns);
+			obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.eventList.maxRuns);
+			obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.eventList.tMin,obj.eventList.tMinCorrect);
+			obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.eventList.tMax,obj.eventList.tMaxCorrect);
+
+
+			obj.meta.modtime = floor(obj.eventList.tMaxCorrect * 10000);
+			obj.meta.trialtime = obj.meta.modtime;
+			m = [obj.rE.task.outIndex obj.rE.task.outMap getMeta(obj.rE.task)];
+			m = m(1:obj.eventList.nVars,:);
+			[~,ix] = sort(m(:,1),1);
+			m = m(ix,:);
+			obj.meta.matrix = m;
+				
 			fprintf('Loading all event markers took %g ms\n',round(toc*1000))
+			clear eL
+			
+
 		end
 		
 		% ===================================================================
