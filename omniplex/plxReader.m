@@ -447,9 +447,9 @@ classdef plxReader < optickaCore
 			if ~exist('override','var'); override = false; end
 			if override == true || isempty(obj.rE)
 				if exist(obj.matdir, 'dir')
-					[obj.meta, obj.rE] = loadMat(obj, obj.matfile, obj.matdir);
+					[obj.meta, obj.rE] = obj.loadMat(obj.matfile, obj.matdir);
 				else
-					[obj.meta, obj.rE] = loadMat(obj, obj.matfile, obj.dir);
+					[obj.meta, obj.rE] = obj.loadMat(obj.matfile, obj.dir);
 				end
 			end
 		end
@@ -556,8 +556,9 @@ classdef plxReader < optickaCore
 			[~,eventNames] = plx_event_names(obj.file);
 			[~,eventIndex] = plx_event_chanmap(obj.file);
 			eventNames = cellstr(eventNames);
+			
 			idx = strcmpi(eventNames,'Strobed');
-			[a, b, c] = plx_event_ts(obj.file,eventIndex(idx)); %257 is the strobed word channel
+			[a, b, c] = plx_event_ts(obj.file,eventIndex(idx));
 			if isempty(a) || a == 0
 				obj.eventList = struct();
 				warning('No strobe events detected!!!');
@@ -579,6 +580,7 @@ classdef plxReader < optickaCore
 				b(end) = [];
 			end
 			a = length(b);
+			
 			idx = strcmpi(eventNames, 'Start');
 			[~,start] = plx_event_ts(obj.file,eventIndex(idx)); %start event
 			idx = strcmpi(eventNames, 'Stop');
@@ -607,11 +609,8 @@ classdef plxReader < optickaCore
 			eL.incorrect = b22;
 			eL.varOrder = eL.values(eL.values<32000);
 			eL.varOrderCorrect = zeros(length(eL.correct),1);
-			eL.correctIndex = eL.varOrderCorrect;
 			eL.varOrderBreak = zeros(length(eL.breakFix),1);
-			eL.breakIndex = eL.varOrderBreak;
 			eL.varOrderIncorrect = zeros(length(eL.incorrect),1);
-			eL.incorrectIndex = eL.varOrderIncorrect;
 			eL.unique = unique(c);
 			eL.nVars = length(eL.unique)-1;
 			eL.minRuns = Inf;
@@ -642,12 +641,9 @@ classdef plxReader < optickaCore
 				tstart = eL.trials(aa).t1;
 				tend = eL.trials(aa).t2;
 				
-				tc = eL.correct > tend-0.2 & eL.correct < tend+0.2;
-				tb = eL.breakFix > tend-0.2 & eL.breakFix < tend+0.2;
-				ti = eL.incorrect > tend-0.2 & eL.incorrect < tend+0.2;
-				eL.correctIndex = logical(eL.correctIndex + tc); 
-				eL.breakIndex = logical(eL.breakIndex + tb); 
-				eL.incorrectIndex = logical(eL.incorrectIndex + ti); 
+				tc = eL.correct > tend-obj.eventWindow & eL.correct < tend+obj.eventWindow;
+				tb = eL.breakFix > tend-obj.eventWindow & eL.breakFix < tend+obj.eventWindow;
+				ti = eL.incorrect > tend-obj.eventWindow & eL.incorrect < tend+obj.eventWindow;
 				
 				if max(tc) == 1
 					eL.trials(aa).isCorrect = true;
