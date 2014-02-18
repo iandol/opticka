@@ -628,50 +628,14 @@ classdef plxReader < optickaCore
 			
 			aa = 1; cidx = 1; bidx = 1; iidx = 1;
 			
-			for i = 1:2:eL.n
+			for i = 1:2:eL.n % iterate through all trials
 				
 				var = eL.values(i);
-				
-				eL.trials(aa).name = var; eL.trials(aa).index = aa;
-				
+				eL.trials(aa).name = var; 
+				eL.trials(aa).index = aa;				
 				eL.trials(aa).t1 = eL.times(i);
 				eL.trials(aa).t2 = eL.times(i+1);
 				eL.trials(aa).tDelta = eL.trials(aa).t2 - eL.trials(aa).t1;
-				
-				tstart = eL.trials(aa).t1;
-				tend = eL.trials(aa).t2;
-				
-				tc = eL.correct > tend-obj.eventWindow & eL.correct < tend+obj.eventWindow;
-				tb = eL.breakFix > tend-obj.eventWindow & eL.breakFix < tend+obj.eventWindow;
-				ti = eL.incorrect > tend-obj.eventWindow & eL.incorrect < tend+obj.eventWindow;
-				
-				if max(tc) == 1
-					eL.trials(aa).isCorrect = true;
-					eL.trials(aa).isBreak = false;
-					eL.trials(aa).isIncorrect = false;
-					eL.varOrderCorrect(cidx) = var; %build the correct trial list
-					eL.vars(var).nCorrect = sum([eL.vars(var).nCorrect, 1]);
-					eL.vars(var).responseIndex(end+1,:) = [true, false,false];
-					cidx = cidx + 1;
-				elseif max(tb) == 1
-					eL.trials(aa).isCorrect = false;
-					eL.trials(aa).isBreak = true;
-					eL.trials(aa).isIncorrect = false;
-					eL.varOrderBreak(bidx) = var; %build the break trial list
-					eL.vars(var).nBreakFix = sum([eL.vars(var).nBreakFix, 1]);
-					eL.vars(var).responseIndex(end+1,:) = [false, true, false];
-					bidx = bidx + 1;
-				elseif max(ti) == 1
-					eL.trials(aa).isCorrect = false;
-					eL.trials(aa).isBreak = true;
-					eL.trials(aa).isIncorrect = false;
-					eL.varOrderIncorrect(iidx) = var; %build the incorrect trial list
-					eL.vars(var).nIncorrect = sum([eL.vars(var).nIncorrect, 1]);
-					eL.vars(var).responseIndex(end+1,:) = [false, false, true];
-					iidx = iidx + 1;
-				else
-					error('Problem Finding Correct Strobes!!!!! plxReader')
-				end	
 				
 				if isempty(eL.vars(var).name)
 					eL.vars(var).name = var;
@@ -687,22 +651,36 @@ classdef plxReader < optickaCore
 					eL.vars(var).tDelta = eL.vars(var).t2 - eL.vars(var).t1;
 					eL.vars(var).tMin = min(eL.vars(var).tDelta);
 					eL.vars(var).tMax = max(eL.vars(var).tDelta);
-					if eL.minRuns > eL.vars(var).nRepeats
-						eL.minRuns = eL.vars(var).nRepeats;
-					end
-					if eL.maxRuns < eL.vars(var).nRepeats
-						eL.maxRuns = eL.vars(var).nRepeats;
-					end
-					if eL.tMin > eL.vars(var).tMin
-						eL.tMin = eL.vars(var).tMin;
-					end
-					if eL.tMax < eL.vars(var).tMax
-						eL.tMax = eL.vars(var).tMax;
-					end
 					eL.vars(var).nCorrect = 0;
 					eL.vars(var).nBreakFix = 0;
 					eL.vars(var).nIncorrect = 0;
 				end
+				
+				tc = eL.correct > eL.trials(aa).t2 - obj.eventWindow & eL.correct < eL.trials(aa).t2 + obj.eventWindow;
+				tb = eL.breakFix > eL.trials(aa).t2 - obj.eventWindow & eL.breakFix < eL.trials(aa).t2 + obj.eventWindow;
+				ti = eL.incorrect > eL.trials(aa).t2 - obj.eventWindow & eL.incorrect < eL.trials(aa).t2 + obj.eventWindow;
+				
+				if max(tc) == 1
+					eL.trials(aa).isCorrect = true; eL.trials(aa).isBreak = false; eL.trials(aa).isIncorrect = false;
+					eL.varOrderCorrect(cidx) = var; %build the correct trial list
+					eL.vars(var).nCorrect = eL.vars(var).nCorrect + 1;
+					eL.vars(var).responseIndex(end+1,:) = [true, false,false];
+					cidx = cidx + 1;
+				elseif max(tb) == 1
+					eL.trials(aa).isCorrect = false; eL.trials(aa).isBreak = true; eL.trials(aa).isIncorrect = false;
+					eL.varOrderBreak(bidx) = var; %build the break trial list
+					eL.vars(var).nBreakFix = eL.vars(var).nBreakFix + 1;
+					eL.vars(var).responseIndex(end+1,:) = [false, true, false];
+					bidx = bidx + 1;
+				elseif max(ti) == 1
+					eL.trials(aa).isCorrect = false; eL.trials(aa).isBreak = true; eL.trials(aa).isIncorrect = false;
+					eL.varOrderIncorrect(iidx) = var; %build the incorrect trial list
+					eL.vars(var).nIncorrect = eL.vars(var).nIncorrect + 1;
+					eL.vars(var).responseIndex(end+1,:) = [false, false, true];
+					iidx = iidx + 1;
+				else
+					error('plxReader Problem Finding Correct Strobes!!!!!')
+				end	
 				
 				if eL.trials(aa).isCorrect
 					eL.vars(var).t1correct = [eL.vars(var).t1correct, eL.trials(aa).t1];
@@ -710,12 +688,6 @@ classdef plxReader < optickaCore
 					eL.vars(var).tDeltacorrect = eL.vars(var).t2correct - eL.vars(var).t1correct;
 					eL.vars(var).tMinCorrect = min(eL.vars(var).tDeltacorrect);
 					eL.vars(var).tMaxCorrect = max(eL.vars(var).tDeltacorrect);
-					if eL.tMinCorrect > eL.vars(var).tMinCorrect
-						eL.tMinCorrect = eL.vars(var).tMinCorrect;
-					end
-					if eL.tMaxCorrect < eL.vars(var).tMaxCorrect
-						eL.tMaxCorrect = eL.vars(var).tMaxCorrect;
-					end
 				elseif eL.trials(aa).isBreak
 					eL.vars(var).t1breakfix = [eL.vars(var).t1breakfix, eL.trials(aa).t1];
 					eL.vars(var).t2breakfix = [eL.vars(var).t2breakfix, eL.trials(aa).t2];
@@ -725,88 +697,18 @@ classdef plxReader < optickaCore
 					eL.vars(var).t2incorrect = [eL.vars(var).t2incorrect, eL.trials(aa).t2];
 					eL.vars(var).tDeltaincorrect = eL.vars(var).t2incorrect - eL.vars(var).t1incorrect;
 				end
-
 				aa = aa + 1;
 			end
-
-% 			for i = 1:eL.nVars
-% 				eL.vars(i).name = eL.unique(i);
-% 				idx = find(eL.values == eL.unique(i));
-% 				idxend = idx+1;
-% 				while (length(idx) > length(idxend)) %prune incomplete trials
-% 					idx = idx(1:end-1);
-% 				end
-% 				eL.vars(i).nRepeats = length(idx);
-% 				eL.vars(i).index = idx;
-% 				eL.vars(i).t1 = eL.times(idx);
-% 				eL.vars(i).t2 = eL.times(idxend);
-% 				eL.vars(i).tDelta = eL.vars(i).t2 - eL.vars(i).t1;
-% 				eL.vars(i).tMin = min(eL.vars(i).tDelta);
-% 				eL.vars(i).tMax = max(eL.vars(i).tDelta);				
-% 				for nr = 1:eL.vars(i).nRepeats
-% 					tend = eL.vars(i).t2(nr);
-% 					tc = eL.correct > tend-0.2 & eL.correct < tend+0.2;
-% 					tb = eL.breakFix > tend-0.2 & eL.breakFix < tend+0.2;
-% 					ti = eL.incorrect > tend-0.2 & eL.incorrect < tend+0.2;
-% 					if max(tc) == 1
-% 						eL.vars(i).responseIndex(nr,1) = true;
-% 						eL.vars(i).responseIndex(nr,2) = false;
-% 						eL.vars(i).responseIndex(nr,3) = false;
-% 						eL.varOrderCorrect(tc==1) = i; %build the correct trial list
-% 					elseif max(tb) == 1
-% 						eL.vars(i).responseIndex(nr,1) = false;
-% 						eL.vars(i).responseIndex(nr,2) = true;
-% 						eL.vars(i).responseIndex(nr,3) = false;
-% 						eL.varOrderBreak(tb==1) = i; %build the correct trial list
-% 					elseif max(ti) == 1
-% 						eL.vars(i).responseIndex(nr,1) = false;
-% 						eL.vars(i).responseIndex(nr,2) = false;
-% 						eL.vars(i).responseIndex(nr,3) = true;
-% 						eL.varOrderIncorrect(ti==1) = i; %build the correct trial list
-% 					else
-% 						error('Problem Finding Correct Strobes!!!!! plxReader')
-% 					end
-% 				end
-% 				eL.vars(i).nCorrect = sum(eL.vars(i).responseIndex(:,1));
-% 				eL.vars(i).nBreakFix = sum(eL.vars(i).responseIndex(:,2));
-% 				eL.vars(i).nIncorrect = sum(eL.vars(i).responseIndex(:,3));
-% 
-% 				if eL.minRuns > eL.vars(i).nCorrect
-% 					eL.minRuns = eL.vars(i).nCorrect;
-% 				end
-% 				if eL.maxRuns < eL.vars(i).nCorrect
-% 					eL.maxRuns = eL.vars(i).nCorrect;
-% 				end
-% 
-% 				if eL.tMin > eL.vars(i).tMin
-% 					eL.tMin = eL.vars(i).tMin;
-% 				end
-% 				if eL.tMax < eL.vars(i).tMax
-% 					eL.tMax = eL.vars(i).tMax;
-% 				end
-% 
-% 				eL.vars(i).t1correct = eL.vars(i).t1(eL.vars(i).responseIndex(:,1));
-% 				eL.vars(i).t2correct = eL.vars(i).t2(eL.vars(i).responseIndex(:,1));
-% 				eL.vars(i).tDeltacorrect = eL.vars(i).tDelta(eL.vars(i).responseIndex(:,1));
-% 				eL.vars(i).tMinCorrect = min(eL.vars(i).tDeltacorrect);
-% 				eL.vars(i).tMaxCorrect = max(eL.vars(i).tDeltacorrect);
-% 				if eL.tMinCorrect > eL.vars(i).tMinCorrect
-% 					eL.tMinCorrect = eL.vars(i).tMinCorrect;
-% 				end
-% 				if eL.tMaxCorrect < eL.vars(i).tMaxCorrect
-% 					eL.tMaxCorrect = eL.vars(i).tMaxCorrect;
-% 				end
-% 
-% 				eL.vars(i).t1breakfix = eL.vars(i).t1(eL.vars(i).responseIndex(:,2));
-% 				eL.vars(i).t2breakfix = eL.vars(i).t2(eL.vars(i).responseIndex(:,2));
-% 				eL.vars(i).tDeltabreakfix = eL.vars(i).tDelta(eL.vars(i).responseIndex(:,2));
-% 
-% 				eL.vars(i).t1incorrect = eL.vars(i).t1(eL.vars(i).responseIndex(:,3));
-% 				eL.vars(i).t2incorrect = eL.vars(i).t2(eL.vars(i).responseIndex(:,3));
-% 				eL.vars(i).tDeltaincorrect = eL.vars(i).tDelta(eL.vars(i).responseIndex(:,3));
-% 
-% 			end
 			
+			eL.minRuns = min([eL.vars(:).nCorrect]);
+			eL.maxRuns = max([eL.vars(:).nCorrect]);
+			eL.tMin = min([eL.trials(:).tDelta]);
+			eL.tMax = max([eL.trials(:).tDelta]);
+			eL.tMinCorrect = min([eL.vars(:).tMinCorrect]);
+			eL.tMaxCorrect = max([eL.vars(:).tMaxCorrect]);
+			eL.correctIndex = [eL.trials(:).isCorrect]';
+			eL.breakIndex = [eL.trials(:).isBreak]';
+			eL.incorrectIndex = [eL.trials(:).isIncorrect]';
 			obj.eventList = eL;
 
 			obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
@@ -828,8 +730,7 @@ classdef plxReader < optickaCore
 			obj.meta.matrix = m;
 				
 			fprintf('Loading all event markers took %g ms\n',round(toc*1000))
-			clear eL
-			
+			clear eL m
 
 		end
 		
