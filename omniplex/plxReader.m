@@ -14,6 +14,7 @@ classdef plxReader < optickaCore
 		matdir@char
 		%> edf file name
 		edffile@char
+		%> used for legacy cell channel mapping (SMRs only have 6 channels)
 		cellmap@double
 		%> used by legacy spikes to allow negative time offsets
 		startOffset@double = 0
@@ -42,9 +43,11 @@ classdef plxReader < optickaCore
 	
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
-		oldDir@char
+		oldDir@char = ''
 		%> allowed properties passed to object upon construction
 		allowedProperties@char = 'file|dir|matfile|matdir|edffile|startOffset|cellmap|verbose|doLFP'
+		%>infocache
+		ic@struct
 	end
 	
 	%=======================================================================
@@ -159,7 +162,7 @@ classdef plxReader < optickaCore
 		function LFPs = readLFPs(obj, window, demean)
 			if ~exist('window','var'); window = 0.8; end
 			if ~exist('demean','var'); demean = 0.8; end
-			if ~isempty(obj.eventList); 
+			if isempty(obj.eventList); 
 				getEvents(obj); 
 			end
 			tic
@@ -327,7 +330,7 @@ classdef plxReader < optickaCore
 		function isPL2 = get.isPL2(obj)
 			isPL2 = false;
 			if ~isempty(regexpi(obj.file,'pl2'))
-				obj.isPL2 = true;
+				isPL2 = true;
 			end
 		end
 		
@@ -390,6 +393,28 @@ classdef plxReader < optickaCore
 			meta.matrix = [];
 			fprintf('Parsing Behavioural files took %g ms\n', round(toc*1000))
 			cd(oldd);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function handles = makeInfoBox(info)
+			if ~exist('info','var'), info = {''}; end
+			scr=get(0,'ScreenSize');
+			width=scr(3);
+			height=scr(4);
+			handles.root = figure('Units','pixels','Position',[0.01 0 width/4 height],'Tag','PLXInfoFigure',...
+				'Color',[0.2 0.2 0.2]);
+			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.2 1 0.8],...
+				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',1000,...
+				'FontSize',14,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left');
+			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0.01 0 1 0.2],...
+				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',1000,...
+				'FontSize',14,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left');
+			set(handles.display,'String',info,'FontSize',14);
 		end
 	end
 	
@@ -461,39 +486,42 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function generateInfo(obj)
-			[OpenedFileName, Version, Freq, Comment, Trodalness,...
-				NPW, PreThresh, SpikePeakV, SpikeADResBits,...
-				SlowPeakV, SlowADResBits, Duration, DateTime] = plx_information(obj.file);
-			if exist('plx_mexplex_version','file')
-				sdkversion = plx_mexplex_version();
-			else
-				sdkversion = -1;
+			tic
+			if ~isfield(obj.ic, 'Freq')
+				[obj.ic.OpenedFileName, obj.ic.Version, obj.ic.Freq, obj.ic.Comment, obj.ic.Trodalness,...
+					obj.ic.NPW, obj.ic.PreThresh, obj.ic.SpikePeakV, obj.ic.SpikeADResBits,...
+					obj.ic.SlowPeakV, obj.ic.SlowADResBits, obj.ic.Duration, obj.ic.DateTime] = plx_information(obj.file);
+				if exist('plx_mexplex_version','file')
+					obj.ic.sdkversion = plx_mexplex_version();
+				else
+					obj.ic.sdkversion = -1;
+				end
 			end
 			
 			obj.info = {};
 			if obj.isPL2
-				obj.pl2 = PL2GetFileIndex(obj.file);
+				if isempty(obj.pl2); obj.pl2 = PL2GetFileIndex(obj.file); end
 				obj.info{1} = sprintf('PL2 File : %s', OpenedFileName);
 				obj.info{end+1} = sprintf('\tPL2 File Length : %d', obj.pl2.FileLength);
 				obj.info{end+1} = sprintf('\tPL2 Creator : %s %s', obj.pl2.CreatorSoftwareName, obj.pl2.CreatorSoftwareVersion);
 			else
-				obj.info{1} = sprintf('PLX File : %s', OpenedFileName);
+				obj.info{1} = sprintf('PLX File : %s', obj.ic.OpenedFileName);
 			end
 			obj.info{end+1} = sprintf('Behavioural File : %s', obj.matfile);
 			obj.info{end+1} = ' ';
 			obj.info{end+1} = sprintf('Behavioural File Comment : %s', obj.meta.comments);
 			obj.info{end+1} = ' ';
-			obj.info{end+1} = sprintf('Plexon File Comment : %s', Comment);
-			obj.info{end+1} = sprintf('Version : %g', Version);
-			obj.info{end+1} = sprintf('SDK Version : %g', sdkversion);
-			obj.info{end+1} = sprintf('Frequency : %g Hz', Freq);
-			obj.info{end+1} = sprintf('Plexon Date/Time : %s', num2str(DateTime));
-			obj.info{end+1} = sprintf('Duration : %g seconds', Duration);
-			obj.info{end+1} = sprintf('Num Pts Per Wave : %g', NPW);
-			obj.info{end+1} = sprintf('Num Pts Pre-Threshold : %g', PreThresh);
+			obj.info{end+1} = sprintf('Plexon File Comment : %s', obj.ic.Comment);
+			obj.info{end+1} = sprintf('Version : %g', obj.ic.Version);
+			obj.info{end+1} = sprintf('SDK Version : %g', obj.ic.sdkversion);
+			obj.info{end+1} = sprintf('Frequency : %g Hz', obj.ic.Freq);
+			obj.info{end+1} = sprintf('Plexon Date/Time : %s', num2str(obj.ic.DateTime));
+			obj.info{end+1} = sprintf('Duration : %g seconds', obj.ic.Duration);
+			obj.info{end+1} = sprintf('Num Pts Per Wave : %g', obj.ic.NPW);
+			obj.info{end+1} = sprintf('Num Pts Pre-Threshold : %g', obj.ic.PreThresh);
 			% some of the information is only filled if the plx file version is >102
 			if exist('Trodalness','var')
-				Trodalness = max(Trodalness);
+				Trodalness = max(obj.ic.Trodalness);
 				if ( Trodalness < 2 )
 					obj.info{end+1} = sprintf('Data type : Single Electrode');
 				elseif ( Trodalness == 2 )
@@ -504,10 +532,10 @@ classdef plxReader < optickaCore
 					obj.info{end+1} = sprintf('Data type : Unknown');
 				end
 
-				obj.info{end+1} = sprintf('Spike Peak Voltage (mV) : %g', SpikePeakV);
-				obj.info{end+1} = sprintf('Spike A/D Resolution (bits) : %g', SpikeADResBits);
-				obj.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', SlowPeakV);
-				obj.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', SlowADResBits);
+				obj.info{end+1} = sprintf('Spike Peak Voltage (mV) : %g', obj.ic.SpikePeakV);
+				obj.info{end+1} = sprintf('Spike A/D Resolution (bits) : %g', obj.ic.SpikeADResBits);
+				obj.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', obj.ic.SlowPeakV);
+				obj.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', obj.ic.SlowADResBits);
 			end
 			obj.info{end+1} = ' ';
 			if isa(obj.rE,'runExperiment')
@@ -539,6 +567,7 @@ classdef plxReader < optickaCore
 				end
 				obj.info{end+1} = sprintf('Stimulus Names : %s', names(4:end));
 			end
+			fprintf('Generating info took %g ms\n',round(toc*1000))
 			obj.info{end+1} = ' ';
 			obj.info = obj.info';
 			obj.meta.info = obj.info;
@@ -711,16 +740,6 @@ classdef plxReader < optickaCore
 			eL.incorrectIndex = [eL.trials(:).isIncorrect]';
 			obj.eventList = eL;
 
-			obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
-			obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
-			obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
-			obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.eventList.incorrect));
-			obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.eventList.minRuns);
-			obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.eventList.maxRuns);
-			obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.eventList.tMin,obj.eventList.tMinCorrect);
-			obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.eventList.tMax,obj.eventList.tMaxCorrect);
-
-
 			obj.meta.modtime = floor(obj.eventList.tMaxCorrect * 10000);
 			obj.meta.trialtime = obj.meta.modtime;
 			m = [obj.rE.task.outIndex obj.rE.task.outMap getMeta(obj.rE.task)];
@@ -730,6 +749,8 @@ classdef plxReader < optickaCore
 			obj.meta.matrix = m;
 				
 			fprintf('Loading all event markers took %g ms\n',round(toc*1000))
+			%generateInfo(obj);
+			%reparseInfo(obj);
 			clear eL m
 
 		end
