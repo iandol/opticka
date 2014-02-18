@@ -1,6 +1,7 @@
 classdef LFPAnalysis < optickaCore
 %LFPAnalysis Wraps the native and fieldtrip analysis around our PLX/PL2 reading.
 	
+%------------------PUBLIC PROPERTIES----------%
 	properties
 		lfpfile@char
 		spikefile@char
@@ -12,6 +13,7 @@ classdef LFPAnalysis < optickaCore
 		verbose	= true
 	end
 	
+	%------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = public)
 		p@plxReader
 		pspike@plxReader
@@ -19,10 +21,16 @@ classdef LFPAnalysis < optickaCore
 		ft@struct
 		cutTrials@cell
 		clickedTrials@cell
-		nLFPs@double = 0
-		map
+		%> variable selection map for 3 groups
+		map@cell
 	end
 	
+	%------------------DEPENDENT PROPERTIES--------%
+	properties (SetAccess = private, Dependent = true)
+		nLFPs@double = 0
+	end
+	
+	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		oldDir@char
 		%> allowed properties passed to object upon construction
@@ -52,7 +60,7 @@ classdef LFPAnalysis < optickaCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function getFiles(ego,force)
+		function getFiles(ego, force)
 			if ~exist('force','var')
 				force = false;
 			end
@@ -100,11 +108,24 @@ classdef LFPAnalysis < optickaCore
 			end
 			ego.paths.oldDir = pwd;
 			cd(ego.dir);
+			ego.LFPs = struct();
 			ego.LFPs = readLFPs(ego.p, ego.LFPWindow, ego.demeanLFP);
 			ego.ft = struct();
 			parseLFPs(ego);
-			plotLFPs(ego);
 			ft_parseLFPs(ego);
+			plotLFPs(ego);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function reparseLFPs(ego)
+			parseLFPs(ego);
+			ft_parseLFPs(ego);
+			plotLFPs(ego);
 		end
 		
 		% ===================================================================
@@ -161,7 +182,7 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ftPreProcess(ego,cfg)
+		function ftPreProcess(ego, cfg)
 			if isempty(ego.ft); ft_parseLFPs(ego); end
 			if isfield(ego.ft,'ftOld')
 				ft = ego.ft.ftOld;
@@ -187,7 +208,7 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function cfg=ftTimeLockAnalysis(ego,cfg)
+		function cfg=ftTimeLockAnalysis(ego, cfg)
 			ft = ego.ft;
 			if ~exist('cfg','var')
 				cfg = [];
@@ -215,17 +236,18 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function cfgUsed=ftFrequencyAnalysis(ego,cfg,preset,tw,cycles,width,smth)
+		function cfgUsed=ftFrequencyAnalysis(ego, cfg, preset, tw, cycles, width, smth)
 			if ~exist('preset','var') || isempty(preset); preset='fix1'; end
 			if ~exist('tw','var') || isempty(tw); tw=0.2; end
 			if ~exist('cycles','var') || isempty(cycles); cycles = 5; end
 			if ~exist('width','var') || isempty(width); width = 10; end
-			if ~exist('smooth','var') || isempty(smth); smth = 10; end
+			if ~exist('smth','var') || isempty(smth); smth = 10; end
+			if ~isfield(ego.ft,'label'); ft_parseLFPs(ego); end
 			ft = ego.ft;
 			cfgUsed = {};
 			if ~exist('cfg','var') || isempty(cfg)
 				cfg				= [];
-				cfg.keeptrials	= 'yes';
+				cfg.keeptrials	= 'no';
 				cfg.output		= 'pow';
 				cfg.channel = ft.label{ego.selectedLFP};
 				cfg.toi         = -0.4:0.02:0.4;                  % time window "slides"
@@ -280,7 +302,7 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function cfgUsed=ftSpikeLFP(ego,cfg)
+		function cfgUsed=ftSpikeLFP(ego, cfg)
 			if ~exist('preset','var') || isempty(preset); preset='fix1'; end
 			if ~exist('tw','var') || isempty(tw); tw=0.2; end
 			if ~exist('cycles','var') || isempty(cycles); cycles = 5; end
@@ -343,7 +365,7 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotLFPs(ego,varargin)
+		function plotLFPs(ego, varargin)
 			if isempty(ego.LFPs);
 				return
 			end
@@ -379,6 +401,18 @@ classdef LFPAnalysis < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function nLFPs = get.nLFPs(obj)
+			nLFPs = 0;
+			if ~isempty(obj.LFPs)
+				nLFPs = length(obj.LFPs);
+			end	
+		end
+		
 	end
 
 	%=======================================================================
@@ -392,11 +426,53 @@ classdef LFPAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function LFPs = parseLFPs(ego)
-			
-			LFPs = ego.LFPs;
-			if isempty(LFPs)
-				LFPs = readLFPs(ego.p);
+			if isempty(ego.LFPs)
+				LFPs = readLFPs(ego.p, ego.LFPWindow, ego.demeanLFP);
+			else
+				LFPs = ego.LFPs;
 			end
+			
+			for j = 1:length(LFPs)
+				time = LFPs(j).time;
+				data = LFPs(j).data;
+				for k = 1:LFPs(j).nVars
+					times = [ego.p.eventList.vars(k).t1correct, ego.p.eventList.vars(k).t2correct];
+					LFPs(j).vars(k,1).times = times;
+					LFPs(j).vars(k).nTrials = length(times);
+					minL = Inf;
+					maxL = 0;
+					window = ego.LFPWindow;
+					winsteps = round(window/1e-3);
+					for l = 1:LFPs(j).vars(k).nTrials
+						[idx1, val1, dlta1] = ego.findNearest(time,times(l,1));
+						[idx2, val2, dlta2] = ego.findNearest(time,times(l,2));
+						LFPs(j).vars(k).trial(l).startTime = val1;
+						LFPs(j).vars(k).trial(l).startIndex = idx1;
+						LFPs(j).vars(k).trial(l).endTime = val2;
+						LFPs(j).vars(k).trial(l).endIndex = idx2;
+						LFPs(j).vars(k).trial(l).startDelta = dlta1;
+						LFPs(j).vars(k).trial(l).endDelta = dlta2;
+						LFPs(j).vars(k).trial(l).data = data( idx1 - winsteps : idx1 + winsteps );
+						LFPs(j).vars(k).trial(l).prestimMean = mean(LFPs(j).vars(k).trial(l).data(winsteps-101:winsteps-1)); %mean is 100ms before 0
+						if ego.demeanLFP == true
+							LFPs(j).vars(k).trial(l).data = LFPs(j).vars(k).trial(l).data - LFPs(j).vars(k).trial(l).prestimMean;
+						end
+						LFPs(j).vars(k).trial(l).demean = ego.demeanLFP;
+						LFPs(j).vars(k).trial(l).time = [ -window : 1e-3 : window ]';
+						LFPs(j).vars(k).trial(l).window = window;
+						LFPs(j).vars(k).trial(l).winsteps = winsteps;
+						LFPs(j).vars(k).trial(l).abstime = LFPs(j).vars(k).trial(l).time + (val1 - window);
+						minL = min([length(LFPs(j).vars(k).trial(l).data) minL]);
+						maxL = max([length(LFPs(j).vars(k).trial(l).data) maxL]);
+					end
+					LFPs(j).vars(k).time = LFPs(j).vars(k).trial(1).time;
+					LFPs(j).vars(k).alldata = [LFPs(j).vars(k).trial(:).data];
+					[LFPs(j).vars(k).average, LFPs(j).vars(k).error] = stderr(LFPs(j).vars(k).alldata');
+					LFPs(j).vars(k).minL = minL;
+					LFPs(j).vars(k).maxL = maxL;
+				end
+			end
+			
 			cuttrials = '{ ';
 			if isempty(ego.cutTrials) || length(ego.cutTrials) < LFPs(1).nVars
 				for i = 1:LFPs(1).nVars
@@ -513,7 +589,6 @@ classdef LFPAnalysis < optickaCore
 			
 			if ~isempty(LFPs(1).vars)
 				ego.LFPs = LFPs;
-				ego.nLFPs = length(LFPs);
 			end	
 		end
 		
@@ -523,7 +598,7 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function h=drawRawLFPs(ego,h,sel)
+		function h=drawRawLFPs(ego, h, sel)
 			disp('Drawing RAW LFP Trials...')
 			if ~exist('h','var')
 				h=figure;figpos(1,[1920 1080]);set(h,'Color',[1 1 1]);
@@ -534,10 +609,10 @@ classdef LFPAnalysis < optickaCore
 				sel= ego.selectedLFP;
 			end
 
-			LFPs = ego.LFPs;
+			LFP = ego.LFPs(sel);
 
 			p=panel(h);
-			len=length(LFPs(sel).vars);
+			len=length(LFP.vars);
 			if len < 3
 				row = 2;
 				col = 1;
@@ -552,24 +627,24 @@ classdef LFPAnalysis < optickaCore
 				col = 3;
 			end
 			p.pack(row,col);
-			for j = 1:length(LFPs(sel).vars)
+			for j = 1:length(LFP.vars)
 				[i1,i2] = ind2sub([row,col], j);
 				p(i1,i2).select();
-				title(['LFP & EVENT PLOT: File:' ego.lfpfile ' | Channel:' LFPs(sel).name ' | Var:' num2str(j)]);
+				title(['LFP & EVENT PLOT: File:' ego.lfpfile ' | Channel:' LFP.name ' | Var:' num2str(j)]);
 				xlabel('Time (s)');
  				ylabel('LFP Raw Amplitude (mV)');
 				hold on
-				for k = 1:size(LFPs(1).vars(j).alldata,2)
+				for k = 1:size(LFP(1).vars(j).alldata,2)
 					dat = [j,k];
 					tag=['VAR:' num2str(dat(1)) '  TRL:' num2str(dat(2))];
 					if strcmpi(class(gcf),'double')
 						c=rand(1,3);
-						plot(LFPs(sel).vars(j).time, LFPs(sel).vars(j).alldata(:,k), 'Color', c, 'Tag', tag, 'ButtonDownFcn', @clickMe, 'UserData', dat);
+						plot(LFP.vars(j).time, LFP.vars(j).alldata(:,k), 'Color', c, 'Tag', tag, 'ButtonDownFcn', @clickMe, 'UserData', dat);
 					else
-						plot(LFPs(sel).vars(j).time, LFPs(sel).vars(j).alldata(:,k),'Tag',tag,'ButtonDownFcn', @clickMe,'UserData',dat);
+						plot(LFP.vars(j).time, LFP.vars(j).alldata(:,k),'Tag',tag,'ButtonDownFcn', @clickMe,'UserData',dat);
 					end
 				end
-				areabar(LFPs(sel).vars(j).time, LFPs(sel).vars(j).average,LFPs(sel).vars(j).error,[0.7 0.7 0.7],0.7,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',1);
+				areabar(LFP.vars(j).time, LFP.vars(j).average,LFP.vars(j).error,[0.7 0.7 0.7],0.7,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',1);
 				hold off
 				axis([-0.1 0.3 -inf inf]);
 			end
@@ -638,7 +713,7 @@ classdef LFPAnalysis < optickaCore
 			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
 			LFPs = ego.LFPs;
 			if LFPs(1).reparse == true;
-				for j = 1: length(LFPs)
+				for j = 1:length(LFPs)
 					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
 					title(['FIGURE vs. GROUND Reparse: File:' ego.lfpfile ' | Channel:' LFPs(j).name ' | LFP:' num2str(j)]);
 					xlabel('Time (s)');
@@ -803,6 +878,19 @@ classdef LFPAnalysis < optickaCore
 					box on; grid on;
 				end
 			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function [idx,val,delta]=findNearest(obj,in,value)
+			tmp = abs(in-value);
+			[~,idx] = min(tmp);
+			val = in(idx);
+			delta = abs(value - val);
 		end
 		
 	end

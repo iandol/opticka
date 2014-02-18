@@ -2,7 +2,7 @@ classdef plxReader < optickaCore
 %> PLXREADER Reads in Plexon .plx and .pl2 files along with metadata and
 %> eyelink data. Parses the trial event structure.
 	
-	%------------------NORMAL PROPERTIES----------%
+	%------------------PUBLIC PROPERTIES----------%
 	properties
 		%> plx/pl2 file name
 		file@char
@@ -33,6 +33,7 @@ classdef plxReader < optickaCore
 		rE@runExperiment
 		eA@eyelinkAnalysis
 		pl2@struct
+		ic@struct = struct()
 	end
 	
 	%------------------DEPENDENT PROPERTIES--------%
@@ -47,7 +48,6 @@ classdef plxReader < optickaCore
 		%> allowed properties passed to object upon construction
 		allowedProperties@char = 'file|dir|matfile|matdir|edffile|startOffset|cellmap|verbose|doLFP'
 		%>infocache
-		ic@struct
 	end
 	
 	%=======================================================================
@@ -161,12 +161,12 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function LFPs = readLFPs(obj, window, demean)
 			if ~exist('window','var'); window = 0.8; end
-			if ~exist('demean','var'); demean = 0.8; end
+			if ~exist('demean','var'); demean = true; end
 			if isempty(obj.eventList); 
 				getEvents(obj); 
 			end
-			tic
 			cd(obj.dir);
+			tic
 			[~, names] = plx_adchan_names(obj.file);
 			[~, map] = plx_adchan_samplecounts(obj.file);
 			[~, raw] = plx_ad_chanmap(obj.file);
@@ -180,7 +180,7 @@ classdef plxReader < optickaCore
 					num = str2num(regexp(cname,'\d*','match','once')); %what channel number
 					if num < 21
 						LFPs(aa).name = cname;
-						LFPs(aa).index = raw(idx(j));
+						LFPs(aa).index = raw(idx(j)); LFPs(aa).channel = num;
 						LFPs(aa).count = map(idx(j));
 						LFPs(aa).reparse = false;
 						LFPs(aa).vars = struct([]); %#ok<*AGROW>
@@ -201,12 +201,12 @@ classdef plxReader < optickaCore
 				
 				if length(fn) == 2 %1 gap, choose last data block
 					data = ad(fn(1)+1:end);
-					time = ts(end) : tbase : (ts(end)+(tbase*(fn(end)-1)));
+					time = ts(end) : tbase : (ts(end)+(tbase*(fn(end)-1)))';
 					time = time(1:length(data));
 					LFPs(j).usedtimeStamp = ts(end);
 				elseif length(fn) == 1 %no gaps
 					data = ad(fn+1:end);
-					time = ts : tbase : (ts+(tbase*fn-1));
+					time = ts : tbase : (ts+(tbase*fn-1))';
 					time = time(1:length(data));
 					LFPs(j).usedtimeStamp = ts;
 				else
@@ -216,47 +216,10 @@ classdef plxReader < optickaCore
 				LFPs(j).time = time;
 				LFPs(j).eventSample = round(LFPs(j).usedtimeStamp * 40e3);
 				LFPs(j).sample = round(LFPs(j).usedtimeStamp * LFPs(j).recordingFrequency);
-				
 				LFPs(j).nVars = obj.eventList.nVars;
-				
-				for k = 1:LFPs(j).nVars
-					times = [obj.eventList.vars(k).t1correct,obj.eventList.vars(k).t2correct];
-					LFPs(j).vars(k).times = times;
-					LFPs(j).vars(k).nTrials = length(times);
-					minL = Inf;
-					maxL = 0;
-					winsteps = round(window/1e-3);
-					for l = 1:LFPs(j).vars(k).nTrials
-						[idx1, val1, dlta1] = obj.findNearest(time,times(l,1));
-						[idx2, val2, dlta2] = obj.findNearest(time,times(l,2));
-						LFPs(j).vars(k).trial(l).startTime = val1;
-						LFPs(j).vars(k).trial(l).startIndex = idx1;
-						LFPs(j).vars(k).trial(l).endTime = val2;
-						LFPs(j).vars(k).trial(l).endIndex = idx2;
-						LFPs(j).vars(k).trial(l).startDelta = dlta1;
-						LFPs(j).vars(k).trial(l).endDelta = dlta2;
-						LFPs(j).vars(k).trial(l).data = data(idx1-winsteps:idx1+winsteps);
-						LFPs(j).vars(k).trial(l).prestimMean = mean(LFPs(j).vars(k).trial(l).data(winsteps-101:winsteps-1)); %mean is 100ms before 0
-						if demean == true
-							LFPs(j).vars(k).trial(l).data = LFPs(j).vars(k).trial(l).data - LFPs(j).vars(k).trial(l).prestimMean;
-						end
-						LFPs(j).vars(k).trial(l).demean = demean;
-						LFPs(j).vars(k).trial(l).time = [-window:1e-3:window]';
-						LFPs(j).vars(k).trial(l).window = window;
-						LFPs(j).vars(k).trial(l).winsteps = winsteps;
-						LFPs(j).vars(k).trial(l).abstime = LFPs(j).vars(k).trial(l).time + (val1-window);
-						minL = min([length(LFPs(j).vars(k).trial(l).data) minL]);
-						maxL = max([length(LFPs(j).vars(k).trial(l).data) maxL]);
-					end
-					LFPs(j).vars(k).time = LFPs(j).vars(k).trial(1).time;
-					LFPs(j).vars(k).alldata = [LFPs(j).vars(k).trial(:).data];
-					[LFPs(j).vars(k).average, LFPs(j).vars(k).error] = stderr(LFPs(j).vars(k).alldata');
-					LFPs(j).vars(k).minL = minL;
-					LFPs(j).vars(k).maxL = maxL;
-				end
 			end
 			
-			fprintf('Loading and parsing LFPs into trials took %g ms\n',round(toc*1000));
+			fprintf('Loading LFPs took %g ms\n',round(toc*1000));
 		end
 		
 		% ===================================================================
@@ -406,12 +369,12 @@ classdef plxReader < optickaCore
 			scr=get(0,'ScreenSize');
 			width=scr(3);
 			height=scr(4);
-			handles.root = figure('Units','pixels','Position',[0.01 0 width/4 height],'Tag','PLXInfoFigure',...
+			handles.root = figure('Units','pixels','Position',[0 0 width/4 height],'Tag','PLXInfoFigure',...
 				'Color',[0.2 0.2 0.2]);
-			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.2 1 0.8],...
+			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0.05 0.2 1 0.8],...
 				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',1000,...
 				'FontSize',14,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left');
-			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0.01 0 1 0.2],...
+			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0.05 0 1 0.2],...
 				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',1000,...
 				'FontSize',14,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left');
 			set(handles.display,'String',info,'FontSize',14);
@@ -501,7 +464,7 @@ classdef plxReader < optickaCore
 			obj.info = {};
 			if obj.isPL2
 				if isempty(obj.pl2); obj.pl2 = PL2GetFileIndex(obj.file); end
-				obj.info{1} = sprintf('PL2 File : %s', OpenedFileName);
+				obj.info{1} = sprintf('PL2 File : %s', obj.ic.OpenedFileName);
 				obj.info{end+1} = sprintf('\tPL2 File Length : %d', obj.pl2.FileLength);
 				obj.info{end+1} = sprintf('\tPL2 Creator : %s %s', obj.pl2.CreatorSoftwareName, obj.pl2.CreatorSoftwareVersion);
 			else
@@ -649,11 +612,11 @@ classdef plxReader < optickaCore
 			eL.tMinCorrect = Inf;
 			eL.tMaxCorrect = 0;
 			eL.trials = struct('name',[],'index',[]);
-			eL.trials(eL.nTrials).name = [];
+			eL.trials(eL.nTrials,1).name = [];
 			eL.vars = struct('name',[],'nRepeats',[],'index',[],'responseIndex',[],'t1',[],'t2',[],...
 				'nCorrect',[],'nBreakFix',[],'nIncorrect',[],'t1correct',[],'t2correct',[],...
 				't1breakfix',[],'t2breakfix',[],'t1incorrect',[],'t2incorrect',[]);
-			eL.vars(eL.nVars).name = [];
+			eL.vars(eL.nVars,1).name = [];
 			
 			aa = 1; cidx = 1; bidx = 1; iidx = 1;
 			
@@ -712,18 +675,18 @@ classdef plxReader < optickaCore
 				end	
 				
 				if eL.trials(aa).isCorrect
-					eL.vars(var).t1correct = [eL.vars(var).t1correct, eL.trials(aa).t1];
-					eL.vars(var).t2correct = [eL.vars(var).t2correct, eL.trials(aa).t2];
+					eL.vars(var).t1correct = [eL.vars(var).t1correct; eL.trials(aa).t1];
+					eL.vars(var).t2correct = [eL.vars(var).t2correct; eL.trials(aa).t2];
 					eL.vars(var).tDeltacorrect = eL.vars(var).t2correct - eL.vars(var).t1correct;
 					eL.vars(var).tMinCorrect = min(eL.vars(var).tDeltacorrect);
 					eL.vars(var).tMaxCorrect = max(eL.vars(var).tDeltacorrect);
 				elseif eL.trials(aa).isBreak
-					eL.vars(var).t1breakfix = [eL.vars(var).t1breakfix, eL.trials(aa).t1];
-					eL.vars(var).t2breakfix = [eL.vars(var).t2breakfix, eL.trials(aa).t2];
+					eL.vars(var).t1breakfix = [eL.vars(var).t1breakfix; eL.trials(aa).t1];
+					eL.vars(var).t2breakfix = [eL.vars(var).t2breakfix; eL.trials(aa).t2];
 					eL.vars(var).tDeltabreakfix = eL.vars(var).t2breakfix - eL.vars(var).t1breakfix;
 				elseif eL.trials(aa).isIncorrect
-					eL.vars(var).t1incorrect = [eL.vars(var).t1incorrect, eL.trials(aa).t1];
-					eL.vars(var).t2incorrect = [eL.vars(var).t2incorrect, eL.trials(aa).t2];
+					eL.vars(var).t1incorrect = [eL.vars(var).t1incorrect; eL.trials(aa).t1];
+					eL.vars(var).t2incorrect = [eL.vars(var).t2incorrect; eL.trials(aa).t2];
 					eL.vars(var).tDeltaincorrect = eL.vars(var).t2incorrect - eL.vars(var).t1incorrect;
 				end
 				aa = aa + 1;
@@ -749,8 +712,8 @@ classdef plxReader < optickaCore
 			obj.meta.matrix = m;
 				
 			fprintf('Loading all event markers took %g ms\n',round(toc*1000))
-			%generateInfo(obj);
-			%reparseInfo(obj);
+			generateInfo(obj);
+			reparseInfo(obj);
 			clear eL m
 
 		end
@@ -873,19 +836,6 @@ classdef plxReader < optickaCore
 				obj.info{end+1} = ['Channel list : ' num2str(obj.tsList.chMap)];
 				obj.info{end+1} = ['Unit list (0=unsorted) : ' num2str(obj.tsList.unitMap)];
 			end
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function [idx,val,delta]=findNearest(obj,in,value)
-			tmp = abs(in-value);
-			[~,idx] = min(tmp);
-			val = in(idx);
-			delta = abs(value - val);
 		end
 		
 	end
