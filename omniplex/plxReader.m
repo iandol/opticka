@@ -94,11 +94,18 @@ classdef plxReader < optickaCore
 				[obj.matfile, obj.matdir] = uigetfile('*.mat','Load Behaviour MAT File');
 			end
 			if force == true || isempty(obj.edffile)
-				[an, ~] = uigetfile('*.edf','Load Eyelink EDF File');
-				if ischar(an)
-					obj.edffile = an;
+				cd(obj.matdir)
+				[~,f,~] = fileparts(obj.matfile);
+				f = [f '.edf'];
+				if ~exist(f, 'file');
+					[an, ~] = uigetfile('*.edf','Load Eyelink EDF File');
+					if ischar(an)
+						obj.edffile = an;
+					else
+						obj.edffile = '';
+					end
 				else
-					obj.edffile = '';
+					obj.edffile = f;
 				end
 			end
 		end

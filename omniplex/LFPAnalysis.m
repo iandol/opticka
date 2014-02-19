@@ -65,7 +65,7 @@ classdef LFPAnalysis < optickaCore
 				force = false;
 			end
 			if force == true || isempty(ego.lfpfile)
-				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},'Load LFP File');
+				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},'Load Continuous LFP File');
 				if ischar(f) && ~isempty(f)
 					ego.lfpfile = f;
 					ego.dir = p;
@@ -78,13 +78,17 @@ classdef LFPAnalysis < optickaCore
 				end
 			end
 			if force == true || isempty(ego.spikefile)
-				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},'Load Spike File');
+				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},'Load Spike LFP File');
 				if ischar(f) && ~isempty(f)
 					ego.spikefile = f;
-					ego.pspike = plxReader('file', ego.spikefile, 'dir', ego.dir);
-					ego.pspike.matfile = ego.p.matfile;
-					ego.pspike.matdir = ego.p.matdir;
-					ego.pspike.edffile = ego.p.edffile;
+					if strcmp(ego.lfpfile,ego.spikefile)
+						ego.pspike = ego.p;
+					else
+						ego.pspike = plxReader('file', ego.spikefile, 'dir', ego.dir);
+						ego.pspike.matfile = ego.p.matfile;
+						ego.pspike.matdir = ego.p.matdir;
+						ego.pspike.edffile = ego.p.edffile;
+					end
 				else
 					return
 				end
