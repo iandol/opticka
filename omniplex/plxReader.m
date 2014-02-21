@@ -26,6 +26,7 @@ classdef plxReader < optickaCore
 	
 	%------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = public)
+		%> info formatted in cellstrings for display
 		info@cell
 		eventList@struct
 		tsList@struct
@@ -390,7 +391,7 @@ classdef plxReader < optickaCore
 	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
+	%===== ==================================================================
 	
 		% ===================================================================
 		%> @brief 
