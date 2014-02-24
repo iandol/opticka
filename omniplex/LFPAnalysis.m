@@ -3,13 +3,23 @@ classdef LFPAnalysis < optickaCore
 	
 %------------------PUBLIC PROPERTIES----------%
 	properties
+		%> plexon file containing the LFP data
 		lfpfile@char
+		%> plexon file containing the spike data
 		spikefile@char
+		%> data directory
 		dir@char
+		%> remove the mean voltage offset from the individual trials?
 		demeanLFP@logical = true
+		%> time window for demeaning
+		demeanWindow@double = [-0.2 0]
+		%> default LFP channel
 		selectedLFP@double = 1
+		%> ± time window around the trigger
 		LFPWindow@double = 0.8
+		%> default range to plot
 		plotRange@double = [-0.2 0.4]
+		%> plot verbosity
 		verbose	= true
 	end
 	
@@ -29,16 +39,22 @@ classdef LFPAnalysis < optickaCore
 		clickedTrials@cell
 		%> variable selection map for 3 analysis groups
 		map@cell
+		%> UI panels
+		panels@struct = struct()
+		%> bandpass frequencies
+		bpfreq@cell = {[1 4], [5 8], [9 14], [15 30], [30 50], [50 100], [1 250]}
+		%> bandpass frequency names
+		bpnames@cell = {'\delta','\theta','\alpha','\beta','\gamma low','\gamma high','all'}
 	end
 	
 	%------------------DEPENDENT PROPERTIES--------%
 	properties (SetAccess = private, Dependent = true)
+		%> number of LFP channels
 		nLFPs@double = 0
 	end
 	
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
-		oldDir@char
 		%> allowed properties passed to object upon construction
 		allowedProperties@char = 'lfpfile|spikefile|dir|plotRange|demeanLFP|selectedLFP|LFPWindow|verbose'
 	end
@@ -209,11 +225,11 @@ classdef LFPAnalysis < optickaCore
 			if ~exist('cfg','var')
 				cfg = [];
 			else %assume we want to do some preprocessing
-				ftp = ft_preprocessing(cfg,ft);
+				ftp = ft_preprocessing(cfg, ft);
 				ftp.uniquetrials = unique(ftp.trialinfo);
 			end
 			cfg.method   = 'trial';
-			ftNew = ft_rejectvisual(cfg,ft);
+			ftNew = ft_rejectvisual(cfg, ft);
 			ftNew.uniquetrials = unique(ftNew.trialinfo);
 			ftNew.ftOld = ft;
 			ego.ft = ftNew;
@@ -237,9 +253,9 @@ classdef LFPAnalysis < optickaCore
 			end
 			for i = ft.uniquetrials'
 				cfg.trials = find(ft.trialinfo == i);
-				av{i} = ft_timelockanalysis(cfg,ft);
+				av{i} = ft_timelockanalysis(cfg, ft);
 				av{i}.cfgUsed = cfg;
-				if strcmpi(cfg.covariance,'yes')					
+				if strcmpi(cfg.covariance, 'yes')					
 					disp(['-->> Covariance for Var:' num2str(i) ' = ' num2str(mean(av{i}.cov))]);
 				end
 			end		
@@ -259,19 +275,18 @@ classdef LFPAnalysis < optickaCore
 			if ~exist('order','var'); order = 2; end
 			if ~exist('downsample','var'); downsample = true; end
 			if ~exist('rectify','var'); rectify = 'yes'; end
+			if rectify == true; rectify = 'yes'; end
 			
-			freq = {[1 4],[5 8],[9 14],[15 30],[30 50],[50 100], [1 250]};
-			fnames = {'\delta','\theta','\alpha','\beta','\gamma low','\gamma high','all'};
 			ft = ego.ft;
 			ft.bp = [];
 			
-			for j = 1:length(freq)
+			for j = 1:length(ego.bpfreq)
 				cfg						= [];
 				cfg.channel				= ft.label{ego.selectedLFP};
 				cfg.padding				= 0;
 				cfg.bpfilter			= 'yes';
 				cfg.bpfilttype			= 'but';
-				cfg.bpfreq				= freq{j};
+				cfg.bpfreq				= ego.bpfreq{j};
 				cfg.bpfiltdir			= 'twopass'; %filter direction, 'twopass', 'onepass' or 'onepass-reverse' (default = 'twopass') 
 				cfg.bpfiltord			= order;
 				cfg.bpinstabilityfix	= 'reduce';
@@ -280,10 +295,10 @@ classdef LFPAnalysis < optickaCore
 				cfg.baselinewindow		= [-0.1 0]; %[begin end] in seconds, the default is the complete trial (default = 'all')
 				cfg.detrend				= 'no'; %'no' or 'yes', remove linear trend from the data (done per trial) (default = 'no')
 				cfg.derivative			= 'no'; %'no' or 'yes', computes the first order derivative of the data (default = 'no')
-				disp(['===> FILTER BP = ' fnames{j} ' --> ' num2str(cfg.bpfreq)]);
+				disp(['===> FILTER BP = ' ego.bpnames{j} ' --> ' num2str(cfg.bpfreq)]);
 				disp('')
 				bp{j} = ft_preprocessing(cfg,ft);
-				bp{j}.freq = freq{j};
+				bp{j}.freq = ego.bpfreq{j};
 				bp{j}.uniquetrials = unique(bp{j}.trialinfo);
 				bp{j}.downsample = downsample;
 				if downsample == true
@@ -293,17 +308,17 @@ classdef LFPAnalysis < optickaCore
 					cfg.lpfilter			= 'yes';
 					cfg.lpfreq				= 8;
 					cfg.lpfilttype			= 'but';
+					cfg.lpfiltdir			= 'twopass'; %filter direction, 'twopass', 'onepass' or 'onepass-reverse' (default = 'twopass') 
 					cfg.lpinstabilityfix	= 'reduce';
 					bp{j} = ft_preprocessing(cfg,bp{j});
-					
 					cfg						= [];
 					cfg.resample			= 'yes';
-					cfg.resamplefs			= 40;
+					cfg.resamplefs			= 20;
 					cfg.detrend				= 'no';
-					disp(['===> DOWNSAMPLE = ' fnames{j}]);
+					disp(['===> DOWNSAMPLE = ' ego.bpnames{j}]);
 					bp{j} = ft_resampledata(cfg,bp{j});
 					
-					bp{j}.freq = freq{j};
+					bp{j}.freq = ego.bpfreq{j};
 					bp{j}.uniquetrials = unique(bp{j}.trialinfo);
 					bp{j}.downsample = downsample;
 				end
@@ -322,75 +337,8 @@ classdef LFPAnalysis < optickaCore
 					end
 				end	
 			end
-			
 			ego.ft.bp = bp;
-			
-			h=figure;figpos(1,[1500 1500]);set(h,'Color',[1 1 1]);
-			p=panel(h);
-			p.margin = [25 30 10 15]; %left bottom right top
-			p.fontsize = 12;
-			len=length(bp)+1;
-			if len < 3
-				row = 2;
-				col = 1;
-			elseif len < 4
-				row = 3;
-				col = 1;
-			elseif len < 7
-				row = 3;
-				col = 2;
-			elseif len < 9
-				row=4;
-				col=2;
-			elseif len < 13
-				row = 4;
-				col = 3;
-			end
-			p.pack(row,col);
-			for j = 1:length(bp)
-					[i1,i2] = ind2sub([row,col], j);
-					pp=p(i1,i2);
-					pp.margin = [0 0 20 0];
-					pp.pack(2,1);
-					pp(1,1).select();
-					pp(1,1).hold('on');
-					areabar(bp{j}.av{1}.time,bp{j}.av{1}.avg(1,:),bp{j}.av{1}.var(1,:),[.5 .5 .5],'k');
-					areabar(bp{j}.av{2}.time,bp{j}.av{2}.avg(1,:),bp{j}.av{2}.var(1,:),[.7 .5 .5],'r');
-					if length(bp{j}.av) > 2
-						areabar(bp{j}.av{3}.time,bp{j}.av{3}.avg(1,:),bp{j}.av{3}.var(1,:),[.5 .5 .7],'b');
-					end
-					pp(1,1).hold('off');
-					set(gca,'XTickLabel','')
-					box on; grid off
-					axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
-					pp(1,1).ylabel(['BP: ' fnames{j} '=' num2str(bp{j}.freq)]);
-					pp(1,1).title(['FIELDTRIP ' fnames{j} ' BANDPASS ANALYSIS: File:' ego.lfpfile ' | Channel:' bp{j}.av{1}.label{:}]);
-					pp(1,1).margin = [1 1 1 1];
-					
-					time = bp{j}.av{1}.time;
-					fig = bp{j}.av{2}.avg(1,:);
-					grnd = bp{j}.av{1}.avg(1,:);
-					idx1 = findNearest(ego, time, -0.2);
-					idx2 = findNearest(ego, time, 0);
-					idx3 = findNearest(ego, time, 0.05);
-					idx4 = findNearest(ego, time, 0.2);
-					pre = mean([mean(grnd(idx1:idx2)), mean(fig(idx1:idx2))]); 
-					res = (fig - grnd) / pre;
-					freqdiffs(j) = mean(fig(idx3:idx4)) / pre;
-					pp(2,1).select();
-					plot(time,res,'k.-','MarkerSize',8);
-					box on; grid on
-					axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
-					pp(2,1).ylabel('Normalised Residuals')
-					pp(2,1).margin = [1 1 1 1];
-			end
-			p(row,col).select();
-			bar(freqdiffs,'FaceColor',[0.3 0.3 0.3]);
-			set(gca,'XTick',1:length(bp),'XTickLabel',fnames);
-			p(row,col).xlabel('Frequency Band')
-			p(row,col).ylabel('Normalised Residual')
-			p(row,col).title('Normalised Difference at 0.05 - 0.2sec')
-			disp('Bandpass Analysis Fiished...')	
+			drawBandPass(ego);
 		end
 		
 		% ===================================================================
@@ -561,6 +509,8 @@ classdef LFPAnalysis < optickaCore
 					ego.drawAverageLFPs(); drawnow;
 				case 'frequency'
 					ego.drawLFPFrequencies(args); drawnow;
+				case 'bandpass'
+					ego.drawBandPass(); drawnow;
 			end
 		end
 		
@@ -635,6 +585,7 @@ classdef LFPAnalysis < optickaCore
 					maxL = 0;
 					window = ego.LFPWindow;
 					winsteps = round(window/1e-3);
+					demeanW = round(ego.demeanWindow/1e-3) - 1;
 					for l = 1:LFPs(j).vars(k).nTrials
 						[idx1, val1, dlta1] = ego.findNearest(time,times(l,1));
 						[idx2, val2, dlta2] = ego.findNearest(time,times(l,2));
@@ -645,7 +596,7 @@ classdef LFPAnalysis < optickaCore
 						LFPs(j).vars(k).trial(l).startDelta = dlta1;
 						LFPs(j).vars(k).trial(l).endDelta = dlta2;
 						LFPs(j).vars(k).trial(l).data = data( idx1 - winsteps : idx1 + winsteps );
-						LFPs(j).vars(k).trial(l).prestimMean = mean(LFPs(j).vars(k).trial(l).data(winsteps-101:winsteps-1)); %mean is 100ms before 0
+						LFPs(j).vars(k).trial(l).prestimMean = mean(LFPs(j).vars(k).trial(l).data(winsteps + demeanW(1) : winsteps + demeanW(2)));
 						if ego.demeanLFP == true
 							LFPs(j).vars(k).trial(l).data = LFPs(j).vars(k).trial(l).data - LFPs(j).vars(k).trial(l).prestimMean;
 						end
@@ -743,11 +694,11 @@ classdef LFPAnalysis < optickaCore
 					
 					if isempty(map{3})
 						repn=[1 2];
-						nvars(2) = vartemplate;
+						nvars(2,1) = vartemplate;
 					else
 						repn = [1 2 3];
-						nvars(2) = vartemplate;
-						nvars(3) = vartemplate;
+						nvars(2,1) = vartemplate;
+						nvars(3,1) = vartemplate;
 					end
 					
 					for n = repn
@@ -772,7 +723,9 @@ classdef LFPAnalysis < optickaCore
 						nvars(n).maxL = vars(1).maxL;
 					
 					end
-					LFPs(j).oldvars = LFPs(j).vars;
+					if isfield(ego.LFPs(j),'vars');
+						LFPs(j).oldvars = ego.LFPs(j).vars;
+					end
 					LFPs(j).vars = nvars;
 					LFPs(j).nVars = length(LFPs(j).vars);
 					LFPs(j).reparse = true;
@@ -854,6 +807,8 @@ classdef LFPAnalysis < optickaCore
 				'Position',[1 1 50 20],'Callback',@previousChannel);
 			uicontrol('Style', 'pushbutton', 'String', '>>',...
 				'Position',[52 1 50 20],'Callback',@nextChannel);
+			
+			ego.panels.raw = p;
 
 			function nextChannel(src,~)
 				ego.selectedLFP = ego.selectedLFP + 1;
@@ -1022,6 +977,84 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
+		function drawBandPass(ego)
+				if ~isfield(ego.ft,'bp') || isempty(ego.ft.bp);	return;	end
+				bp = ego.ft.bp;
+				h=figure;figpos(1,[1500 1500]);set(h,'Color',[1 1 1]);
+				p=panel(h);
+				p.margin = [20 20 10 15]; %left bottom right top
+				p.fontsize = 10;
+				len=length(bp)+1;
+				if len < 3
+					row = 2;
+					col = 1;
+				elseif len < 4
+					row = 3;
+					col = 1;
+				elseif len < 7
+					row = 3;
+					col = 2;
+				elseif len < 9
+					row=4;
+					col=2;
+				elseif len < 13
+					row = 4;
+					col = 3;
+				end
+				p.pack(row,col);
+				for j = 1:length(bp)
+						[i1,i2] = ind2sub([row,col], j);
+						pp=p(i1,i2);
+						pp.margin = [0 0 15 0];
+						pp.pack(2,1);
+						pp(1,1).select();
+						pp(1,1).hold('on');
+						areabar(bp{j}.av{1}.time,bp{j}.av{1}.avg(1,:),bp{j}.av{1}.var(1,:),[.5 .5 .5],'k');
+						areabar(bp{j}.av{2}.time,bp{j}.av{2}.avg(1,:),bp{j}.av{2}.var(1,:),[.7 .5 .5],'r');
+						if length(bp{j}.av) > 2
+							areabar(bp{j}.av{3}.time,bp{j}.av{3}.avg(1,:),bp{j}.av{3}.var(1,:),[.5 .5 .7],'b');
+						end
+						pp(1,1).hold('off');
+						set(gca,'XTickLabel','')
+						box on; grid off
+						axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+						pp(1,1).ylabel(['BP ' ego.bpnames{j} '=' num2str(bp{j}.freq)]);
+						pp(1,1).title(['FIELDTRIP ' ego.bpnames{j} ' BANDPASS ANALYSIS: File:' ego.lfpfile ' | Channel:' bp{j}.av{1}.label{:}]);
+						pp(1,1).margin = [1 1 1 1];
+
+						time = bp{j}.av{1}.time;
+						fig = bp{j}.av{2}.avg(1,:);
+						grnd = bp{j}.av{1}.avg(1,:);
+						idx1 = findNearest(ego, time, -0.2);
+						idx2 = findNearest(ego, time, 0);
+						idx3 = findNearest(ego, time, 0.05);
+						idx4 = findNearest(ego, time, 0.2);
+						pre = mean([mean(grnd(idx1:idx2)), mean(fig(idx1:idx2))]); 
+						res = (fig - grnd) / pre;
+						freqdiffs(j) = mean(fig(idx3:idx4)) / pre;
+						pp(2,1).select();
+						plot(time,res,'k.-','MarkerSize',8);
+						box on; grid on
+						axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+						pp(2,1).ylabel('Residuals (norm)')
+						pp(2,1).margin = [1 1 1 1];
+				end
+				p(row,col).select();
+				bar(freqdiffs,'FaceColor',[0.4 0.4 0.4]);
+				set(gca,'XTick',1:length(bp),'XTickLabel',ego.bpnames);
+				p(row,col).xlabel('Frequency Band')
+				p(row,col).ylabel('Normalised Residuals')
+				p(row,col).title('Normalised Difference at 0.05 - 0.2sec')
+				disp('Plotting Bandpass Analysis Finished...')
+				ego.panels.bp = p;
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function drawLFPFrequencies(ego,name)
 			if ~exist('name','var') || isempty(name); name = 'fqfix1'; end
 			if ~isfield(ego.ft,name)
@@ -1078,6 +1111,7 @@ classdef LFPAnalysis < optickaCore
 					box on; grid on;
 				end
 			end
+			ego.panels.fq = p;
 		end
 		
 		% ===================================================================
