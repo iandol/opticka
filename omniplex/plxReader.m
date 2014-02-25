@@ -16,39 +16,50 @@ classdef plxReader < optickaCore
 		edffile@char
 		%> used for legacy cell channel mapping (SMRs only have 6 channels)
 		cellmap@double
+		%> use the event on/off markers if empty, or a timerange around the event otherwise
+		eventWindow@double = []
+		%> the window to check before/after trial end for behavioural marker
+		eventSearchWindow@double = 0.2
 		%> used by legacy spikes to allow negative time offsets
 		startOffset@double = 0
-		%> the window to check before/after trial end for behavioural marker
-		eventWindow@double = 0.2
 		%> verbose?
-		verbose	= true
+		verbose	= false
 	end
 	
 	%------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = public)
 		%> info formatted in cellstrings for display
 		info@cell
+		%> event list parsed
 		eventList@struct
+		%> parsed spikes
 		tsList@struct
+		%> metadata
 		meta@struct
+		%> the experimental run object (loaded from matfile)
 		rE@runExperiment
+		%> the eyelink data (loaded from edffile)
 		eA@eyelinkAnalysis
+		%> the raw pl2 structure if this is a pl2 file
 		pl2@struct
-		ic@struct = struct()
 	end
 	
 	%------------------DEPENDENT PROPERTIES--------%
 	properties (SetAccess = private, Dependent = true)
-		isPL2@logical = false
-		isEDF@logical = false
+		%> is this a PL2 file?
+		isPL2@logical
+		%> is an EDF eyelink file present?
+		isEDF@logical
+		%> is trodal?
+		trodality@double
 	end
 	
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
-		oldDir@char = ''
+		%> info cache to speed up generating info{}
+		ic@struct = struct()
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'file|dir|matfile|matdir|edffile|startOffset|cellmap|verbose|doLFP'
-		%>infocache
+		allowedProperties@char = 'file|dir|matfile|matdir|edffile|startOffset|cellmap|verbose|eventWindow'
 	end
 	
 	%=======================================================================
@@ -71,47 +82,6 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Constructor
-		%>
-		%> @param varargin
-		%> @return
-		% ===================================================================
-		function getFiles(obj, force)
-			if ~exist('force','var')
-				force = false;
-			end
-			if force == true || isempty(obj.file)
-				[f,p] = uigetfile({'*.plx;*.pl2';'PlexonFiles'},'Load Plexon File');
-				if ischar(f) && ~isempty(f)
-					obj.file = f;
-					obj.dir = p;
-						obj.paths.oldDir = pwd;
-					cd(obj.dir);
-				else
-					return
-				end
-			end
-			if force == true || isempty(obj.matfile)
-				[obj.matfile, obj.matdir] = uigetfile('*.mat','Load Behaviour MAT File');
-			end
-			if force == true || isempty(obj.edffile)
-				cd(obj.matdir)
-				[~,f,~] = fileparts(obj.matfile);
-				f = [f '.edf'];
-				if ~exist(f, 'file');
-					[an, ~] = uigetfile('*.edf','Load Eyelink EDF File');
-					if ischar(an)
-						obj.edffile = an;
-					else
-						obj.edffile = '';
-					end
-				else
-					obj.edffile = f;
-				end
-			end
-		end
-		
-		% ===================================================================
 		%> @brief 
 		%>
 		%> @param
@@ -120,18 +90,18 @@ classdef plxReader < optickaCore
 		function parse(obj)
 			if isempty(obj.file)
 				getFiles(obj, true);
-				if isempty(obj.file); return; end
+				if isempty(obj.file); warning('No plexon file selected'); return; end
 			end
 			obj.paths.oldDir = pwd;
 			cd(obj.dir);
 			readMat(obj);
-			generateInfo(obj);
 			getSpikes(obj);
 			getEvents(obj);
 			parseSpikes(obj);
 			if obj.isEDF == true
 				loadEDF(obj);
 			end
+			generateInfo(obj);
 		end
 		
 		% ===================================================================
@@ -143,10 +113,9 @@ classdef plxReader < optickaCore
 		function reparse(obj)
 			obj.paths.oldDir = pwd;
 			cd(obj.dir);
-			generateInfo(obj);
 			getEvents(obj);
 			parseSpikes(obj);
-			reparseInfo(obj);
+			generateInfo(obj);
 		end
 		
 		% ===================================================================
@@ -158,7 +127,7 @@ classdef plxReader < optickaCore
 		function parseEvents(obj)
 			cd(obj.dir);
 			getEvents(obj);
-			reparseInfo(obj);
+			generateInfo(obj);
 		end
 		
 		% ===================================================================
@@ -167,9 +136,7 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function LFPs = readLFPs(obj, window, demean)
-			if ~exist('window','var'); window = 0.8; end
-			if ~exist('demean','var'); demean = true; end
+		function LFPs = readLFPs(obj)
 			if isempty(obj.eventList); 
 				getEvents(obj); 
 			end
@@ -302,6 +269,112 @@ classdef plxReader < optickaCore
 			isPL2 = false;
 			if ~isempty(regexpi(obj.file,'pl2'))
 				isPL2 = true;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> @param
+		%> @return 
+		% ===================================================================
+		function trodality = get.trodality(obj)
+			if ~isfield(obj.ic,'Trodalness') || ~isempty(obj.ic.Trodalness)
+				[~,~,~,~,obj.ic.Trodalness]=plx_information(obj.file);
+			end
+			trodality = max(obj.ic.Trodalness);
+			if isempty(trodality); trodality = 0; end
+		end
+		
+		% ===================================================================
+		%> @brief Constructor
+		%>
+		%> @param varargin
+		%> @return
+		% ===================================================================
+		function getFiles(obj, force)
+			if ~exist('force','var')
+				force = false;
+			end
+			if force == true || isempty(obj.file)
+				[f,p] = uigetfile({'*.plx;*.pl2';'PlexonFiles'},'Load Plexon File');
+				if ischar(f) && ~isempty(f)
+					obj.file = f;
+					obj.dir = p;
+						obj.paths.oldDir = pwd;
+					cd(obj.dir);
+				else
+					return
+				end
+			end
+			if force == true || isempty(obj.matfile)
+				[obj.matfile, obj.matdir] = uigetfile('*.mat','Load Behaviour MAT File');
+			end
+			if force == true || isempty(obj.edffile)
+				cd(obj.matdir)
+				[~,f,~] = fileparts(obj.matfile);
+				f = [f '.edf'];
+				if ~exist(f, 'file');
+					[an, ~] = uigetfile('*.edf','Load Eyelink EDF File');
+					if ischar(an)
+						obj.edffile = an;
+					else
+						obj.edffile = '';
+					end
+				else
+					obj.edffile = f;
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawEvents(obj)
+			h=figure;figpos(1,[2000 800]);set(gcf,'Color',[1 1 1]);
+			title(['EVENT PLOT: File:' obj.file]);
+			xlabel('Time (s)');
+			hold on
+			for j = 1:obj.eventList.nVars
+				color = rand(1,3);
+				var = obj.eventList.vars(j);
+				for k = 1:length(var.t1)
+					line([var.t1(k) var.t1(k)],[-.4 .4],'Color',color,'LineWidth',1);
+					line([var.t2(k) var.t2(k)],[-.4 .4],'Color',color,'LineWidth',1);
+					text(var.t1(k),.41,['VAR: ' num2str(j) '  TRL: ' num2str(k)]);
+				end
+			end
+			plot(obj.eventList.correct,zeros(size(obj.eventList.correct)),'g.','MarkerSize',15);
+			plot(obj.eventList.breakFix,zeros(size(obj.eventList.breakFix)),'b.','MarkerSize',15);
+			plot(obj.eventList.incorrect,zeros(size(obj.eventList.incorrect)),'r.','MarkerSize',15);
+			axis([0 40 -.5 .5])
+			hold off;
+			box on;
+			pan xon;
+			uicontrol('Style', 'pushbutton', 'String', '<<',...
+				'Position',[1 1 50 20],'Callback',@backPlot);
+			uicontrol('Style', 'pushbutton', 'String', '>>',...
+				'Position',[52 1 50 20],'Callback',@forwardPlot);
+			
+			function forwardPlot(src, ~)
+				if ~exist('src','var')
+					return
+				end
+				ax = axis(gca);
+				ax(1) = ax(1) + 40;
+				ax(2) = ax(1) + 40;
+				axis(ax);
+			end
+			function backPlot(src, ~)
+				if ~exist('src','var')
+					return
+				end
+				ax = axis(gca);
+				ax(1) = ax(1) - 40;
+				ax(2) = ax(1) + 40;
+				axis(ax);
 			end
 		end
 		
@@ -468,7 +541,6 @@ classdef plxReader < optickaCore
 					obj.ic.sdkversion = -1;
 				end
 			end
-			
 			obj.info = {};
 			if obj.isPL2
 				if isempty(obj.pl2); obj.pl2 = PL2GetFileIndex(obj.file); end
@@ -490,26 +562,24 @@ classdef plxReader < optickaCore
 			obj.info{end+1} = sprintf('Duration : %g seconds', obj.ic.Duration);
 			obj.info{end+1} = sprintf('Num Pts Per Wave : %g', obj.ic.NPW);
 			obj.info{end+1} = sprintf('Num Pts Pre-Threshold : %g', obj.ic.PreThresh);
-			% some of the information is only filled if the plx file version is >102
-			if exist('Trodalness','var')
-				Trodalness = max(obj.ic.Trodalness);
-				if ( Trodalness < 2 )
+			
+			switch obj.trodality
+				case 1
 					obj.info{end+1} = sprintf('Data type : Single Electrode');
-				elseif ( Trodalness == 2 )
+				case 2
 					obj.info{end+1} = sprintf('Data type : Stereotrode');
-				elseif ( Trodalness == 4 )
+				case 4
 					obj.info{end+1} = sprintf('Data type : Tetrode');
-				else
+				otherwise
 					obj.info{end+1} = sprintf('Data type : Unknown');
-				end
-
-				obj.info{end+1} = sprintf('Spike Peak Voltage (mV) : %g', obj.ic.SpikePeakV);
-				obj.info{end+1} = sprintf('Spike A/D Resolution (bits) : %g', obj.ic.SpikeADResBits);
-				obj.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', obj.ic.SlowPeakV);
-				obj.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', obj.ic.SlowADResBits);
 			end
-			obj.info{end+1} = ' ';
+			obj.info{end+1} = sprintf('Spike Peak Voltage (mV) : %g', obj.ic.SpikePeakV);
+			obj.info{end+1} = sprintf('Spike A/D Resolution (bits) : %g', obj.ic.SpikeADResBits);
+			obj.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', obj.ic.SlowPeakV);
+			obj.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', obj.ic.SlowADResBits);
+			
 			if isa(obj.rE,'runExperiment')
+				obj.info{end+1} = ' ';
 				rE = obj.rE; %#ok<*PROP>
 				obj.info{end+1} = sprintf('# of Stimulus Variables : %g', rE.task.nVars);
 				obj.info{end+1} = sprintf('Total # of Variable Values: %g', rE.task.minBlocks);
@@ -537,6 +607,28 @@ classdef plxReader < optickaCore
 					names = [names ' | ' rE.stimuli{i}.name ':' rE.stimuli{i}.family];
 				end
 				obj.info{end+1} = sprintf('Stimulus Names : %s', names(4:end));
+			end
+			if ~isempty(obj.eventList)
+				obj.info{end+1} = ' ';
+				obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
+				obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
+				obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
+				obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.eventList.incorrect));
+				obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.eventList.minRuns);
+				obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.eventList.maxRuns);
+				obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.eventList.tMin,obj.eventList.tMinCorrect);
+				obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.eventList.tMax,obj.eventList.tMaxCorrect);
+			end
+			if ~isempty(obj.tsList)
+				obj.info{end+1} = ' ';
+				obj.info{end+1} = ['Total Channel list : ' num2str(obj.tsList.chMap)];
+				obj.info{end+1} = ['Trodality Reduction : ' num2str(obj.tsList.trodreduction)];
+				obj.info{end+1} = ['Number of Active channels : ' num2str(obj.tsList.nCh)];
+				obj.info{end+1} = ['Number of Active units : ' num2str(obj.tsList.nUnits)];
+				for i=1:obj.tsList.nCh
+					obj.info{end+1} = ['Channel ' num2str(obj.tsList.chMap(i)) ' unit list (0=unsorted) : ' num2str(obj.tsList.unitMap(i).units)];
+				end
+				obj.info{end+1} = ['Ch/Unit Names : ' obj.tsList.namelist];
 			end
 			fprintf('Generating info took %g ms\n',round(toc*1000))
 			obj.info{end+1} = ' ';
@@ -656,9 +748,9 @@ classdef plxReader < optickaCore
 					eL.vars(var).nIncorrect = 0;
 				end
 				
-				tc = eL.correct > eL.trials(aa).t2 - obj.eventWindow & eL.correct < eL.trials(aa).t2 + obj.eventWindow;
-				tb = eL.breakFix > eL.trials(aa).t2 - obj.eventWindow & eL.breakFix < eL.trials(aa).t2 + obj.eventWindow;
-				ti = eL.incorrect > eL.trials(aa).t2 - obj.eventWindow & eL.incorrect < eL.trials(aa).t2 + obj.eventWindow;
+				tc = eL.correct > eL.trials(aa).t2 - obj.eventSearchWindow & eL.correct < eL.trials(aa).t2 + obj.eventSearchWindow;
+				tb = eL.breakFix > eL.trials(aa).t2 - obj.eventSearchWindow & eL.breakFix < eL.trials(aa).t2 + obj.eventSearchWindow;
+				ti = eL.incorrect > eL.trials(aa).t2 - obj.eventSearchWindow & eL.incorrect < eL.trials(aa).t2 + obj.eventSearchWindow;
 				
 				if max(tc) == 1
 					eL.trials(aa).isCorrect = true; eL.trials(aa).isBreak = false; eL.trials(aa).isIncorrect = false;
@@ -673,7 +765,7 @@ classdef plxReader < optickaCore
 					eL.vars(var).responseIndex(end+1,:) = [false, true, false];
 					bidx = bidx + 1;
 				elseif max(ti) == 1
-					eL.trials(aa).isCorrect = false; eL.trials(aa).isBreak = true; eL.trials(aa).isIncorrect = false;
+					eL.trials(aa).isCorrect = false; eL.trials(aa).isBreak = false; eL.trials(aa).isIncorrect = true;
 					eL.varOrderIncorrect(iidx) = var; %build the incorrect trial list
 					eL.vars(var).nIncorrect = eL.vars(var).nIncorrect + 1;
 					eL.vars(var).responseIndex(end+1,:) = [false, false, true];
@@ -710,6 +802,7 @@ classdef plxReader < optickaCore
 			eL.breakIndex = [eL.trials(:).isBreak]';
 			eL.incorrectIndex = [eL.trials(:).isIncorrect]';
 			obj.eventList = eL;
+			fprintf('Loading all event markers took %g ms\n',round(toc*1000))
 
 			obj.meta.modtime = floor(obj.eventList.tMaxCorrect * 10000);
 			obj.meta.trialtime = obj.meta.modtime;
@@ -717,13 +810,8 @@ classdef plxReader < optickaCore
 			m = m(1:obj.eventList.nVars,:);
 			[~,ix] = sort(m(:,1),1);
 			m = m(ix,:);
-			obj.meta.matrix = m;
-				
-			fprintf('Loading all event markers took %g ms\n',round(toc*1000))
-			generateInfo(obj);
-			reparseInfo(obj);
+			obj.meta.matrix = m;	
 			clear eL m
-
 		end
 		
 		% ===================================================================
@@ -741,21 +829,37 @@ classdef plxReader < optickaCore
 			[nunits1, nchannels1] = size( tscounts );
 			obj.tsList = struct();
 			[a,b]=ind2sub(size(tscounts),find(tscounts>0)); %finds row and columns of nonzero values
-			obj.tsList(1).chMap = unique(b)';
+			obj.tsList.chMap = unique(b)';
+			a = 1;
+			obj.tsList.trodreduction = false;
+			prevcount = inf;
+			nCh = 0;
+			nUnit = 0;
 			for i = 1:length(obj.tsList.chMap)
-				obj.tsList.unitMap(i).units = find(tscounts(:,obj.tsList.chMap(i))>0)';
-				obj.tsList.unitMap(i).n = length(obj.tsList.unitMap(i).units);
-				obj.tsList.unitMap(i).counts = tscounts(obj.tsList.unitMap(i).units,obj.tsList.chMap(i))';
-				obj.tsList.unitMap(i).units = obj.tsList.unitMap(i).units - 1; %fix the index as plxuses 0 as unsorted
+				units = find(tscounts(:,obj.tsList.chMap(i))>0)';
+				n = length(units);
+				counts = tscounts(units,obj.tsList.chMap(i))';
+				units = units - 1; %fix the index as plxuses 0 as unsorted
+				if a == 1 || (obj.trodality > 1 && ~isequal(counts, prevcount));
+					obj.tsList.unitMap(a).units = units;
+					obj.tsList.unitMap(a).n = n;
+					obj.tsList.unitMap(a).counts = counts;
+					prevcount = counts;
+					nCh = a;
+					nUnit = nUnit + n;
+					a = a + 1;
+				end
+			end
+			if obj.trodality > 1 && a < i
+				obj.tsList.trodreduction = true;	
+				disp('---! Removed tetrode channels with identical spike numbers !---');
 			end
 			obj.tsList.chMap = obj.tsList(1).chMap - 1; %fix the index as plx_info add 1 to channels
 			obj.tsList.chIndex = obj.tsList.chMap; %fucking pain channel number is different to ch index!!!
 			obj.tsList.chMap = chmap(obj.tsList(1).chMap); %set proper ch number
-			obj.tsList.nCh = length(obj.tsList.chMap);
-			obj.tsList.nUnits = length(b);
-			namelist = '';
-			a = 1;
-			list = 'Uabcdefghijklmnopqrstuvwxyz';
+			obj.tsList.nCh = nCh;
+			obj.tsList.nUnits = nUnit;
+			obj.tsList.namelist = ''; a = 1; list = 'Uabcdefghijklmnopqrstuvwxyz';
 			for ich = 1:obj.tsList.nCh
 				name = chnames{obj.tsList.chIndex(ich)};
 				unitN = obj.tsList.unitMap(ich).n;
@@ -763,17 +867,10 @@ classdef plxReader < optickaCore
 					t = '';
 					t = [num2str(a) ':' name list(iunit) '=' num2str(obj.tsList.unitMap(ich).counts(iunit))];
 					obj.tsList.names{a} = t;
-					namelist = [namelist ' ' t];
-					a=a+1;
+					obj.tsList.namelist = [obj.tsList.namelist ' ' t];
+					a = a + 1;
 				end
 			end
-			obj.info{end+1} = ['Number of Active channels : ' num2str(obj.tsList.nCh)];
-			obj.info{end+1} = ['Number of Active units : ' num2str(obj.tsList.nUnits)];
-			obj.info{end+1} = ['Channel list : ' num2str(obj.tsList.chMap)];
-			for i=1:obj.tsList.nCh
-				obj.info{end+1} = ['Channel ' num2str(obj.tsList.chMap(i)) ' unit list (0=unsorted) : ' num2str(obj.tsList.unitMap(i).units)];
-			end
-			obj.info{end+1} = ['Ch/Unit Names : ' namelist];
 			obj.tsList.ts = cell(obj.tsList.nUnits, 1);
 			obj.tsList.tsN = obj.tsList.ts;
 			obj.tsList.tsParse = obj.tsList.ts;
@@ -784,7 +881,7 @@ classdef plxReader < optickaCore
 				for iunit = 1:unitN
 					unit = obj.tsList.unitMap(ich).units(iunit);
 					[obj.tsList.tsN{a}, obj.tsList.ts{a}] = plx_ts(obj.file, ch , unit);
-					a = a+1;
+					a = a + 1;
 				end
 			end
 			fprintf('Loading all spikes took %g ms\n',round(toc*1000));
@@ -828,22 +925,7 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function reparseInfo(obj)
-			if ~isempty(obj.eventList)
-				obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
-				obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
-				obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
-				obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.eventList.incorrect));
-				obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.eventList.minRuns);
-				obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.eventList.maxRuns);
-				obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.eventList.tMin,obj.eventList.tMinCorrect);
-				obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.eventList.tMax,obj.eventList.tMaxCorrect);
-			end
-			if ~isempty(obj.tsList)
-				obj.info{end+1} = ['Number of Active channels : ' num2str(obj.tsList.nCh)];
-				obj.info{end+1} = ['Number of Active units : ' num2str(obj.tsList.nUnit)];
-				obj.info{end+1} = ['Channel list : ' num2str(obj.tsList.chMap)];
-				obj.info{end+1} = ['Unit list (0=unsorted) : ' num2str(obj.tsList.unitMap)];
-			end
+
 		end
 		
 	end

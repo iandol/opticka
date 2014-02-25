@@ -309,6 +309,7 @@ classdef LFPAnalysis < optickaCore
 					cfg.lpfreq				= 8;
 					cfg.lpfilttype			= 'but';
 					cfg.lpfiltdir			= 'twopass'; %filter direction, 'twopass', 'onepass' or 'onepass-reverse' (default = 'twopass') 
+					cfg.lpfiltord			= 8;
 					cfg.lpinstabilityfix	= 'reduce';
 					bp{j} = ft_preprocessing(cfg,bp{j});
 					cfg						= [];
@@ -783,7 +784,7 @@ classdef LFPAnalysis < optickaCore
 				for k = 1:size(LFP(1).vars(j).alldata,2)
 					dat = [j,k];
 					sel = ego.clickedTrials{j};
-					if LFP.reparse == false && intersect(k,sel);
+					if LFP.reparse == false && ~isempty(intersect(k,sel));
 						ls = ':';
 					else
 						ls = '-';

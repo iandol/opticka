@@ -19,19 +19,19 @@ obj.useDataPixx = true; %*** drive plexon to collect data? ***
 tS.dummyEyelink = false; 
 tS.name = 'figure-ground';
 
-luminancePedestal = [0.5 0.5 0.5];
-fixX = 0;
-fixY = 0;
-firstFixInit = 0.6;
-firstFixTime = [0.5];
-firstFixRadius = 1;
+tS.luminancePedestal = [0.5 0.5 0.5];
+tS.fixX = 0;
+tS.fixY = 0;
+tS.firstFixInit = 0.6;
+tS.firstFixTime = [0.5];
+tS.firstFixRadius = 1;
 obj.lastXPosition = fixX;
 obj.lastYPosition = fixY;
-strict = true;
+tS.strict = true;
 
-targetFixInit = 0.75;
-targetFixTime = [0.5 0.7];
-targetRadius = 2;
+tS.targetFixInit = 0.75;
+tS.targetFixTime = [0.5 0.7];
+tS.targetRadius = 2;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;
@@ -46,7 +46,7 @@ eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 = use any keyboard
 
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
-eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, strict);
+eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
 %randomise stimulus variables every trial?
 obj.stimuli.choice = [];
@@ -108,11 +108,11 @@ initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 
 %exit fixation phase
 fixExitFcn = { @()animate(obj.stimuli); ... % animate stimuli for subsequent draw
-	@()updateFixationTarget(obj, tS.useTask, targetFixInit, targetFixTime, targetRadius, strict); ... %use our stimuli values for next fix X and Y
-	@()updateFixationValues(eL, [], [], targetFixInit, targetFixTime, targetRadius, strict); ... %set target fix window
+	@()updateFixationTarget(obj, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %use our stimuli values for next fix X and Y
+	@()updateFixationValues(eL, [], [], tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %set target fix window
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edit(obj.stimuli,4,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
-	@()edit(obj.stimuli,2,'modulateColourOut',luminancePedestal); ... %luminance pedestal
+	@()edit(obj.stimuli,2,'modulateColourOut',tS.luminancePedestal); ... %luminance pedestal
 	@()edfMessage(eL,'END_FIX'); ...
 	}; 
 
@@ -153,7 +153,7 @@ correctExitFcn = { @()edit(obj.stimuli,2,'modulateColourOut',[0.5 0.5 0.5]); ...
 	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
-	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, strict); ...
+	@()updateFixationValues(eL, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict); ...
 	@()trackerClearScreen(eL); ... 
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
@@ -179,7 +179,7 @@ incExitFcn = { @()edit(obj.stimuli,2,'modulateColourOut',[0.5 0.5 0.5]); ... %lu
 	@()updateVariables(obj,[],[],false); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
-	@()updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true); ...
+	@()updateFixationValues(eL, tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, true); ...
 	@()trackerClearScreen(eL); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
