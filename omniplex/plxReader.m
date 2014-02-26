@@ -346,10 +346,11 @@ classdef plxReader < optickaCore
 					text(var.t1(k),.41,['VAR: ' num2str(j) '  TRL: ' num2str(k)]);
 				end
 			end
+			plot(obj.eventList.startFix,zeros(size(obj.eventList.startFix)),'c.','MarkerSize',15);
 			plot(obj.eventList.correct,zeros(size(obj.eventList.correct)),'g.','MarkerSize',15);
 			plot(obj.eventList.breakFix,zeros(size(obj.eventList.breakFix)),'b.','MarkerSize',15);
 			plot(obj.eventList.incorrect,zeros(size(obj.eventList.incorrect)),'r.','MarkerSize',15);
-			axis([0 40 -.5 .5])
+			axis([0 20 -.5 .5])
 			hold off;
 			box on;
 			pan xon;
@@ -363,8 +364,8 @@ classdef plxReader < optickaCore
 					return
 				end
 				ax = axis(gca);
-				ax(1) = ax(1) + 40;
-				ax(2) = ax(1) + 40;
+				ax(1) = ax(1) + 20;
+				ax(2) = ax(1) + 20;
 				axis(ax);
 			end
 			function backPlot(src, ~)
@@ -372,8 +373,8 @@ classdef plxReader < optickaCore
 					return
 				end
 				ax = axis(gca);
-				ax(1) = ax(1) - 40;
-				ax(2) = ax(1) + 40;
+				ax(1) = ax(1) - 20;
+				ax(2) = ax(1) + 20;
 				axis(ax);
 			end
 		end

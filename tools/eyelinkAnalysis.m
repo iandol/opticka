@@ -40,18 +40,18 @@ classdef eyelinkAnalysis < optickaCore
 		raw@struct
 		%> inidividual trials
 		trials@struct
-		%> the trial variable identifier, negative values were incorrect trials
-		trialList@double
-		%> index of which trials were correct
-		cidx@double
-		%> the earliest saccade times for each correct trial
-		cSaccTimes@double
-		%> for each correct trial, the first fixations after saccade, x y and time
-		cFixations@struct
-		%> the display dimensions parsed from the EDF
-		display@double
 		%> eye data parsed into invdividual variables
 		vars@struct
+		%> the trial variable identifier, negative values were incorrect trials
+		trialList@double
+		%> correct indices
+		correct@struct = struct()
+		%> breakfix indices
+		breakFix@struct = struct()
+		%> incorrect indices
+		incorrect@struct = struct()
+		%> the display dimensions parsed from the EDF
+		display@double
 		%> for some early EDF files, there is no trial variable ID so we
 		%> recreate it from the other saved data
 		needOverride@logical = false;
@@ -114,9 +114,13 @@ classdef eyelinkAnalysis < optickaCore
 			isTrial = false;
 			tri = 1; %current trial that is being parsed
 			eventN = 0;
+			obj.comment = obj.raw.HEADER;
 			obj.trials = struct();
-			obj.cidx = [];
-			obj.cSaccTimes = [];
+			obj.correct.idx = [];
+			obj.correct.saccTimes = [];
+			obj.correct.fixations = [];
+			obj.breakFix = obj.correct;
+			obj.incorrect = obj.correct;
 			obj.trialList = [];
 			
 			sample = obj.raw.FSAMPLE.gx(:,100); %check which eye
@@ -130,16 +134,15 @@ classdef eyelinkAnalysis < optickaCore
 				isMessage = false;
 				evt = obj.raw.FEVENT(i);
 				
-				if strcmpi(evt.codestring,'MESSAGEEVENT')
+				if evt.type == 24 %strcmpi(evt.codestring,'MESSAGEEVENT')
 					isMessage = true;
-				end
-				
-				if isMessage && ~isTrial
-					no = regexpi(evt.message,'^(?<NO>!cal|Validate|Reccfg|elclcfg)','names'); %ignore these first
+					no = regexpi(evt.message,'^(?<NO>!cal|!mode|Validate|Reccfg|elclcfg|Gaze_coords|thresholds|elcl_)','names'); %ignore these first
 					if ~isempty(no)  && ~isempty(no.NO)
 						continue
 					end
-					
+				end
+				
+				if isMessage && ~isTrial
 					rt = regexpi(evt.message,'^(?<d>V_RT MESSAGE) (?<a>\w+) (?<b>\w+)','names');
 					if ~isempty(rt) && ~isempty(rt.a) && ~isempty(rt.b)
 						obj.rtStartMessage = rt.a;
@@ -157,7 +160,7 @@ classdef eyelinkAnalysis < optickaCore
 					if ~isempty(id) && ~isempty(id.TAG)
 						if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
 							id.ID = '1010';
-							end
+						end
 						isTrial = true;
 						eventN=1;
 						obj.trials(tri).id = str2double(id.ID);
@@ -170,6 +173,9 @@ classdef eyelinkAnalysis < optickaCore
 						obj.trials(tri).saccadeTimes = [];
 						obj.trials(tri).rttime = [];
 						obj.trials(tri).uuid = [];
+						obj.trials(tri).correct = false;
+						obj.trials(tri).breakFix = false;
+						obj.trials(tri).incorrect = false;
 						continue
 					end
 				end
@@ -183,7 +189,8 @@ classdef eyelinkAnalysis < optickaCore
 							continue
 						end
 						
-						if strcmpi(evt.codestring,'ENDFIX')
+						if evt.type == 8 %strcmpi(evt.codestring,'ENDFIX')
+							fixa = [];
 							if isempty(obj.trials(tri).fixations)
 								fix = 1;
 							else
@@ -220,7 +227,8 @@ classdef eyelinkAnalysis < optickaCore
 							continue
 						end
 						
-						if strcmpi(evt.codestring,'ENDSACC')
+						if evt.type == 6 % strcmpi(evt.codestring,'ENDSACC')
+							sacc = [];
 							if isempty(obj.trials(tri).saccades)
 								fix = 1;
 							else
@@ -260,7 +268,7 @@ classdef eyelinkAnalysis < optickaCore
 							continue
 						end
 						
-						if strcmpi(evt.codestring,'ENDSAMPLES')
+						if evt.type == 16 %strcmpi(evt.codestring,'ENDSAMPLES')
 							obj.trials(tri).endsampletime = double(evt.sttime);
 							
 							obj.trials(tri).times = double(obj.raw.FSAMPLE.time( ...
@@ -294,7 +302,7 @@ classdef eyelinkAnalysis < optickaCore
 							continue
 						end
 						
-						endfix = regexpi(evt.message,['^' obj.rtStartMessage],'names');
+						endfix = regexpi(evt.message,['^' obj.rtStartMessage],'match');
 						if ~isempty(endfix)
 							obj.trials(tri).rtstarttime = double(evt.sttime);
 							obj.trials(tri).rt = true;
@@ -314,7 +322,7 @@ classdef eyelinkAnalysis < optickaCore
 							continue
 						end
 						
-						endrt = regexpi(evt.message,['^' obj.rtEndMessage],'names');
+						endrt = regexpi(evt.message,['^' obj.rtEndMessage],'match');
 						if ~isempty(endrt)
 							obj.trials(tri).rtendtime = double(evt.sttime);
 							if isfield(obj.trials,'rtstarttime')
@@ -323,13 +331,13 @@ classdef eyelinkAnalysis < optickaCore
 							continue
 						end
 						
-						id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>\d+)','names');
+						id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>(\-|\+|\d)+)','names');
 						if ~isempty(id) && ~isempty(id.ID)
 							obj.trials(tri).entime = double(evt.sttime);
 							obj.trials(tri).result = str2num(id.ID);
 							if obj.trials(tri).result == 1
 								obj.trials(tri).correct = true;
-								obj.cidx = [obj.cidx tri];
+								obj.correct.idx = [obj.correct.idx tri];
 								obj.trialList(tri) = obj.trials(tri).id;
 								if ~isempty(obj.trials(tri).saccadeTimes)
 									sT = obj.trials(tri).saccadeTimes;
@@ -338,13 +346,41 @@ classdef eyelinkAnalysis < optickaCore
 									else
 										sT = sT(1); %simply the first time
 									end
-									obj.cSaccTimes = [obj.cSaccTimes sT];
+									obj.correct.saccTimes = [obj.correct.saccTimes sT];
 								else
-									obj.cSaccTimes = [obj.cSaccTimes -Inf];
+									obj.correct.saccTimes = [obj.correct.saccTimes -Inf];
 								end
-							else
-								obj.trials(tri).correct = false;
+							elseif obj.trials(tri).result == -1
+								obj.trials(tri).breakFix = true;
+								obj.breakFix.idx = [obj.breakFix.idx tri];
 								obj.trialList(tri) = -obj.trials(tri).id;
+								if ~isempty(obj.trials(tri).saccadeTimes)
+									sT = obj.trials(tri).saccadeTimes;
+									if max(sT(sT>0)) > 0
+										sT = min(sT(sT>0)); %shortest RT after END_FIX
+									else
+										sT = sT(1); %simply the first time
+									end
+									obj.breakFix.saccTimes = [obj.breakFix.saccTimes sT];
+								else
+									obj.breakFix.saccTimes = [obj.breakFix.saccTimes -Inf];
+								end
+							elseif obj.trials(tri).result == 0
+								obj.trials(tri).incorrect = true;
+								obj.incorrect.idx = [obj.incorrect.idx tri];
+								obj.trialList(tri) = -obj.trials(tri).id;
+								if ~isempty(obj.trials(tri).saccadeTimes)
+									sT = obj.trials(tri).saccadeTimes;
+									if max(sT(sT>0)) > 0
+										sT = min(sT(sT>0)); %shortest RT after END_FIX
+									else
+										sT = sT(1); %simply the first time
+									end
+									obj.incorrect.saccTimes = [obj.incorrect.saccTimes sT];
+								else
+									obj.incorrect.saccTimes = [obj.incorrect.saccTimes -Inf];
+								end
+								
 							end
 							obj.trials(tri).deltaT = obj.trials(tri).entime - obj.trials(tri).sttime;
 							isTrial = false;
@@ -377,17 +413,15 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plot(obj,select)
-			
-			if ~exist('select','var');
-				select = [];
-			end
+		function plot(obj,select,type)
+			if ~exist('select','var'); select = []; end
+			if ~exist('type','var'); type = 'correct'; end
 			h=figure;
 			set(gcf,'Color',[1 1 1]);
 			figpos(1,[1200 1200]);
 			p = panel(h);
-			p.margintop = 15;
-			p.fontsize = 12;
+			p.margintop = 10;
+			p.fontsize = 8;
 			p.pack('v',{2/3, []});
 			q = p(1);
 			q.pack(2,2);
@@ -422,8 +456,16 @@ classdef eyelinkAnalysis < optickaCore
 				0.6000 0 0.3000;...
 				1 0 1;...
 				1 0.5 0.5];
-			
-			for i = obj.cidx
+			switch type
+				case 'correct'
+					idx = obj.correct.idx;
+				case 'breakFix'
+					idx = obj.breakFix.idx;
+				case 'incorrect'
+					idx = obj.incorrect.idx;
+			end
+
+			for i = idx
 				thisTrial = obj.trials(i);
 				if thisTrial.id == 1010 %early edf files were broken, 1010 signifies this
 					c = rand(1,3);
@@ -456,22 +498,29 @@ classdef eyelinkAnalysis < optickaCore
 					q(1,1).select();
 					
 					q(1,1).hold('on')
-					plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					plot(x, y,'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+						'MarkerFaceColor',c,'UserData',i,'ButtonDownFcn', @clickMe);
 					
 					q(1,2).select();
 					q(1,2).hold('on');
-					plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-					plot(t,abs(y),'k-s','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					plot(t,abs(x),'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+						'MarkerFaceColor',c,'UserData',i,'ButtonDownFcn', @clickMe);
+					plot(t,abs(y),'k-s','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+						'MarkerFaceColor',c,'UserData',i,'ButtonDownFcn', @clickMe);
 					
 					p(2).select();
 					p(2).hold('on')
 					for fix=1:length(thisTrial.fixations)
 						f=thisTrial.fixations(fix);
-						plot3([f.time f.time+f.length],[f.gstx f.genx],[f.gsty f.geny],'k-o','LineWidth',1,'MarkerSize',10,'MarkerEdgeColor',[0 0 0],'MarkerFaceColor',c)
+						plot3([f.time f.time+f.length],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
+							'LineWidth',1,'MarkerSize',5,'MarkerEdgeColor',[0 0 0],...
+							'MarkerFaceColor',c,'UserData',i,'ButtonDownFcn', @clickMe)
 					end
 					for sac=1:length(thisTrial.saccades)
 						s=thisTrial.saccades(sac);
-						plot3([s.time s.time+s.length],[s.gstx s.genx],[s.gsty s.geny],'r-o','LineWidth',2,'MarkerSize',10,'MarkerEdgeColor',[1 0 0],'MarkerFaceColor',c)
+						plot3([s.time s.time+s.length],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
+							'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
+							'MarkerFaceColor',c,'UserData',i,'ButtonDownFcn', @clickMe)
 					end
 					p(2).margin = 50;
 					
@@ -490,11 +539,13 @@ classdef eyelinkAnalysis < optickaCore
 					
 					q(2,1).select();
 					q(2,1).hold('on');
-					plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
+						'MarkerFaceColor',c,'UserData',i,'ButtonDownFcn', @clickMe);
 					
 					q(2,2).select();
 					q(2,2).hold('on');
-					plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
+						'MarkerFaceColor',c,'UserData',i,'ButtonDownFcn', @clickMe);
 					a = a + 1;
 				end
 			end
@@ -564,6 +615,23 @@ classdef eyelinkAnalysis < optickaCore
 			
 			assignin('base','xvals',xvals)
 			assignin('base','yvals',yvals)
+			
+			function clickMe(src, ~)
+				if ~exist('src','var')
+					return
+				end
+				l=get(src,'LineWidth');
+				if l > 1
+					set(src,'Linewidth',1);
+				else
+					set(src,'LineWidth',2);
+				end
+				ud = get(src,'UserData');
+				if ~isempty(ud)
+					disp(['TRIAL = ' num2str(ud) ' | VAR = ' num2str(obj.trials(ud).id)]);
+					disp(obj.trials(ud));
+				end
+			end
 		end
 		
 		% ===================================================================
@@ -578,15 +646,15 @@ classdef eyelinkAnalysis < optickaCore
 			if ~isempty(obj.varList) && obj.needOverride == true
 				varList = obj.varList; %#ok<*PROP>
 			else
-				varList = obj.trialList(obj.cidx);
-				if ~isempty(setdiff(obj.trialList(obj.cidx)', obj.varList))
+				varList = obj.trialList(obj.correct.idx);
+				if ~isempty(setdiff(obj.trialList(obj.correct.idx)', obj.varList))
 					obj.salutation('TRIAL NAMES DIFFERENT!','',true);
 					return
 				end
 			end
-			if length(varList) ~= length(obj.cidx)
+			if length(varList) ~= length(obj.correct.idx)
 				obj.salutation('TRIAL NAME BUG FIX FAILED!','',true);
-				warndlg('TRIAL NAME BUG FIX FAILED DURING SACCADE PASRSING')
+				warndlg('TRIAL NAME BUG FIX FAILED DURING SACCADE PARSING')
 				return
 			end
 			
@@ -600,7 +668,7 @@ classdef eyelinkAnalysis < optickaCore
 			
 			for i = 1:length(varList)
 				var = varList(i);
-				idx = obj.cidx(i);
+				idx = obj.correct.idx(i);
 				trial = obj.trials(idx);
 				
 				sT = min( trial.saccadeTimes(trial.saccadeTimes > 0) );
@@ -610,7 +678,7 @@ classdef eyelinkAnalysis < optickaCore
 				obj.vars(var).idx = [obj.vars(var).idx idx];
 				obj.vars(var).uuid = [obj.vars(var).uuid, trial.uuid];
 				obj.vars(var).id = [obj.vars(var).id var];
-				obj.vars(var).sTime = [obj.vars(var).sTime obj.cSaccTimes(i)];
+				obj.vars(var).sTime = [obj.vars(var).sTime obj.correct.saccTimes(i)];
 				obj.vars(var).sT = [obj.vars(var).sT sT];
 			end
 			
@@ -641,29 +709,28 @@ classdef eyelinkAnalysis < optickaCore
 		% ===================================================================
 		function parseFixationPositions(obj)
 			
-			if obj.isParsed && ~isempty(obj.cidx)
-				obj.cFixations(1).isFix = false;
-				obj.cFixations(1).idx = -1;
-				obj.cFixations(1).times = -1;
-				obj.cFixations(1).x = -1;
-				obj.cFixations(1).y = -1;
-				for i = 1:length(obj.cidx)
-					
-					idx = obj.cidx(i);
+			if obj.isParsed && ~isempty(obj.correct.idx)
+				obj.correct.fixations(1).isFix = false;
+				obj.correct.fixations(1).idx = -1;
+				obj.correct.fixations(1).times = -1;
+				obj.correct.fixations(1).x = -1;
+				obj.correct.fixations(1).y = -1;
+				for i = 1:length(obj.correct.idx)
+					idx = obj.correct.idx(i);
 					t = obj.trials(idx);
 					times = [t.fixations.time];
 					f = find(times > 100);
 					if ~isempty(f)
-						obj.cFixations(i).isFix = true;
-						obj.cFixations(i).idx = idx;
+						obj.correct.fixations(i).isFix = true;
+						obj.correct.fixations(i).idx = idx;
 						for jj = 1:length(f)
 							fx =  t.fixations(f(jj));
-							obj.cFixations(i).times(jj) = fx.time;
-							obj.cFixations(i).x(jj) = fx.x;
-							obj.cFixations(i).y(jj) = fx.y;
+							obj.correct.fixations(i).times(jj) = fx.time;
+							obj.correct.fixations(i).x(jj) = fx.x;
+							obj.correct.fixations(i).y(jj) = fx.y;
 						end
 					else
-						obj.cFixations(i).isFix = false;
+						obj.correct.fixations(i).isFix = false;
 					end
 					
 				end
