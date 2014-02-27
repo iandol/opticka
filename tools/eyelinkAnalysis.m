@@ -413,9 +413,26 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plot(obj,select,type)
-			if ~exist('select','var'); select = []; end
-			if ~exist('type','var'); type = 'correct'; end
+		function plot(obj,select,type,seperateVars)
+			if ~exist('select','var') || ~isnumeric(select); select = []; end
+			if ~exist('type','var') || isempty(type); type = 'correct'; end
+			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
+			switch type
+				case 'correct'
+					idx = obj.correct.idx;
+				case 'breakFix'
+					idx = obj.breakFix.idx;
+				case 'incorrect'
+					idx = obj.incorrect.idx;
+			end
+			if seperateVars == true && isempty(select)
+				vars = unique([obj.trials(idx).id]);
+				for j = vars
+					obj.plot(j,type,false);
+					drawnow;
+				end
+				return
+			end
 			h=figure;
 			set(gcf,'Color',[1 1 1]);
 			figpos(1,[1200 1200]);
@@ -448,7 +465,7 @@ classdef eyelinkAnalysis < optickaCore
 				0 0.7500 0.7500;...
 				0.7500 0 0.7500;...
 				1 0.7500 0;...
-				0.2500 0.2500 0.2500;...
+				0.4500 0.2500 0.2500;...
 				0 0.2500 0.7500;...
 				0 0 0;...
 				0 0.6000 1.0000;...
@@ -456,15 +473,15 @@ classdef eyelinkAnalysis < optickaCore
 				0.6000 0 0.3000;...
 				1 0 1;...
 				1 0.5 0.5];
-			switch type
-				case 'correct'
-					idx = obj.correct.idx;
-				case 'breakFix'
-					idx = obj.breakFix.idx;
-				case 'incorrect'
-					idx = obj.incorrect.idx;
-			end
 
+			if isempty(select)
+				thisVarName = 'ALL VARS ';
+			else
+				thisVarName = ['VAR' num2str(select) ' '];
+			end
+			
+			maxv = 1;
+			
 			for i = idx
 				thisTrial = obj.trials(i);
 				if thisTrial.id == 1010 %early edf files were broken, 1010 signifies this
@@ -505,8 +522,9 @@ classdef eyelinkAnalysis < optickaCore
 					q(1,2).hold('on');
 					plot(t,abs(x),'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 						'MarkerFaceColor',c,'UserData',i,'ButtonDownFcn', @clickMe);
-					plot(t,abs(y),'k-s','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+					plot(t,abs(y),'k-x','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 						'MarkerFaceColor',c,'UserData',i,'ButtonDownFcn', @clickMe);
+					maxv = max([maxv, max(abs(x)), max(abs(y))]) + 0.1;
 					
 					p(2).select();
 					p(2).hold('on')
@@ -557,7 +575,7 @@ classdef eyelinkAnalysis < optickaCore
 			box on
 			axis(round([-display(1)/3 display(1)/3 -display(2)/3 display(2)/3]))
 			%axis square
-			title(q(1,1),'X vs. Y Eye Position in Degrees')
+			title(q(1,1),[thisVarName upper(type) ': X vs. Y Eye Position in Degrees'])
 			xlabel(q(1,1),'X Degrees')
 			ylabel(q(1,1),'Y Degrees')
 			
@@ -566,7 +584,8 @@ classdef eyelinkAnalysis < optickaCore
 			box on
 			axis tight;
 			ax = axis;
-			axis([-200 400 0 10])
+			if maxv > 10; maxv = 10; end
+			axis([-200 400 0 maxv])
 			t=sprintf('ABS Mean/SD 100ms: X=%.2g / %.2g | Y=%.2g / %.2g', mean(abs(meanx)), mean(abs(stdex)), ...
 				mean(abs(meany)), mean(abs(stdey)));
 			t2 = sprintf('ABS Median/SD 100ms: X=%.2g / %.2g | Y=%.2g / %.2g', median(abs(medx)), median(abs(stdex)), ...
@@ -585,8 +604,9 @@ classdef eyelinkAnalysis < optickaCore
 			xlabel(p(2),'Time (ms)')
 			ylabel(p(2),'X Position')
 			zlabel(p(2),'Y Position')
-			h=title('Saccades (red) and Fixation (black) Events');
+			h=title([thisVarName upper(type) ': Saccades (red) and Fixation (black) Events']);
 			set(h,'BackgroundColor',[1 1 1]);
+			
 			
 			q(2,1).select();
 			grid on
@@ -606,7 +626,7 @@ classdef eyelinkAnalysis < optickaCore
 			axis([-1 1 -1 1])
 			%axis square
 			view(47,15)
-			title(q(2,2),'Average X vs. Y Position for first 150ms Over Time')
+			title(q(2,2),[thisVarName upper(type) ':Average X vs. Y Position for first 150ms Over Time'])
 			xlabel(q(2,2),'X Degrees')
 			ylabel(q(2,2),'Y Degrees')
 			zlabel(q(2,2),'Trial')
@@ -622,9 +642,9 @@ classdef eyelinkAnalysis < optickaCore
 				end
 				l=get(src,'LineWidth');
 				if l > 1
-					set(src,'Linewidth',1);
+					set(src,'Linewidth', 1, 'LineStyle', '-');
 				else
-					set(src,'LineWidth',2);
+					set(src,'LineWidth',2, 'LineStyle', ':');
 				end
 				ud = get(src,'UserData');
 				if ~isempty(ud)

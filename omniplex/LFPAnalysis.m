@@ -343,6 +343,25 @@ classdef LFPAnalysis < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief ftBandPass performs Leopold et al., 2003 type BLP
+		%>
+		%> @param order of BP filter to use
+		%> @param downsample whether to down/resample after filtering
+		%> @param rectify whether to rectify the responses
+		%> @return
+		% ===================================================================
+		function ftHilbert(ego,order,downsample,rectify)
+			if ~exist('order','var'); order = 2; end
+			if ~exist('downsample','var'); downsample = true; end
+			if ~exist('rectify','var'); rectify = 'yes'; end
+			if rectify == true; rectify = 'yes'; end
+			
+			ft = ego.ft;
+			ft.bp = [];
+			
+		end
+		
+		% ===================================================================
 		%> @brief
 		%>
 		%> @param
