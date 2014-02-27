@@ -277,6 +277,23 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return 
 		% ===================================================================
+		function integrateEyeData(obj)
+			plxList = [obj.eventList.trials.name]'; %var order list
+			edfTrials = obj.eA.trials;
+			edfTrials(obj.eA.incorrect.idx) = []; %remove incorrect trials
+			edfList = [edfTrials.id]';
+			if isequal(plxList,edfList) %check our variable list orders are equal
+				for i = 1:length(plxList)
+					obj.eventList.trials(i).eye = edfTrials(i);
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> @param
+		%> @return 
+		% ===================================================================
 		function trodality = get.trodality(obj)
 			if ~isfield(obj.ic,'Trodalness') || ~isempty(obj.ic.Trodalness)
 				[~,~,~,~,obj.ic.Trodalness]=plx_information(obj.file);
