@@ -282,10 +282,17 @@ classdef plxReader < optickaCore
 			edfTrials = obj.eA.trials;
 			edfTrials(obj.eA.incorrect.idx) = []; %remove incorrect trials
 			edfList = [edfTrials.id]';
+			c1 = [obj.eventList.trials.isCorrect]';
+			c2 = [edfTrials.correct]';
 			if isequal(plxList,edfList) %check our variable list orders are equal
 				for i = 1:length(plxList)
 					obj.eventList.trials(i).eye = edfTrials(i);
 				end
+			elseif isequal(c1,c2)
+				for i = 1:length(plxList)
+					obj.eventList.trials(i).eye = edfTrials(i);
+				end
+				warning('EDF trial name bug override in place!!!');
 			end
 		end
 		
@@ -330,15 +337,19 @@ classdef plxReader < optickaCore
 				cd(obj.matdir)
 				[~,f,~] = fileparts(obj.matfile);
 				f = [f '.edf'];
-				if ~exist(f, 'file');
+				ff = regexprep(f,'^Trainlog\-','','ignorecase');
+				ff = regexprep(ff,'\.edf','FIX\.edf','ignorecase');
+				if ~exist(f, 'file') && ~exist(ff,'file')
 					[an, ~] = uigetfile('*.edf','Load Eyelink EDF File');
 					if ischar(an)
 						obj.edffile = an;
 					else
 						obj.edffile = '';
 					end
-				else
+				elseif exist(f, 'file')
 					obj.edffile = f;
+				elseif exist(ff, 'file')
+					obj.edffile = ff;
 				end
 			end
 		end
@@ -519,7 +530,8 @@ classdef plxReader < optickaCore
 				end
 				obj.eA.varList = obj.eventList.varOrderCorrect;
 				load(obj.eA);
-				parse(obj.eA);				
+				parse(obj.eA);
+				fixVarNames(obj.eA, obj.eventList.trials);
 			end
 			cd(oldd)
 		end

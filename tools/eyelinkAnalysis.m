@@ -660,6 +660,29 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
+		function fixVarNames(obj,trials)
+			if obj.needOverride == true
+				a = 1;
+				for j = 1:length(obj.trials)
+					if obj.trials(j).incorrect ~= true
+						obj.trials(j).oldid = obj.trials(j).id;
+						obj.trials(j).id = trials(a).name;
+						obj.trialList(j) = obj.trials(j).id;
+						if obj.trials(j).breakFix == true
+							obj.trialList(j) = -[obj.trialList(j)];
+						end
+						a = a + 1;
+					end
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function parseAsVars(obj)
 			
 			obj.vars = struct();
