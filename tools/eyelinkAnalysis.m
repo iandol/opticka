@@ -99,7 +99,7 @@ classdef eyelinkAnalysis < optickaCore
 				fprintf('\n');
 				cd(oldpath)
 			end
-			fprintf('Loading EDF Files took %g ms\n',round(toc*1000));
+			fprintf('Loading Raw EDF Data took %g ms\n',round(toc*1000));
 		end
 		
 		% ===================================================================
@@ -781,7 +781,6 @@ classdef eyelinkAnalysis < optickaCore
 			end
 			
 		end
-		
 		
 		% ===================================================================
 		%> @brief 

@@ -16,7 +16,7 @@ classdef plxReader < optickaCore
 		edffile@char
 		%> used for legacy cell channel mapping (SMRs only have 6 channels)
 		cellmap@double
-		%> use the event on/off markers if empty, or a timerange around the event otherwise
+		%> use the event on/off markers if empty, or a timerange around the event on otherwise
 		eventWindow@double = []
 		%> the window to check before/after trial end for behavioural marker
 		eventSearchWindow@double = 0.2
@@ -95,12 +95,12 @@ classdef plxReader < optickaCore
 			obj.paths.oldDir = pwd;
 			cd(obj.dir);
 			readMat(obj);
-			getSpikes(obj);
+			readSpikes(obj);
 			getEvents(obj);
-			parseSpikes(obj);
 			if obj.isEDF == true
 				loadEDF(obj);
 			end
+			parseSpikes(obj);
 			generateInfo(obj);
 		end
 		
@@ -531,7 +531,7 @@ classdef plxReader < optickaCore
 				obj.eA.varList = obj.eventList.varOrderCorrect;
 				load(obj.eA);
 				parse(obj.eA);
-				fixVarNames(obj.eA, obj.eventList.trials);
+				if obj.eA.needOverride == true;	fixVarNames(obj.eA, obj.eventList.trials); end
 			end
 			cd(oldd)
 		end
@@ -701,7 +701,7 @@ classdef plxReader < optickaCore
 				c(end)=[];
 				b(end) = [];
 			end
-			a = length(b);
+			a = length(b); %readjust our strobed # count
 			
 			idx = strcmpi(eventNames, 'Start');
 			[~,start] = plx_event_ts(obj.file,eventIndex(idx)); %start event
@@ -720,7 +720,7 @@ classdef plxReader < optickaCore
 			eL.eventNames = eventNames;
 			eL.eventIndex = eventIndex;
 			eL.n = a;
-			eL.nTrials = a/2;
+			eL.nTrials = a/2; %we hope our strobe # even
 			eL.times = b;
 			eL.values = c;
 			eL.start = start;
@@ -850,7 +850,7 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function getSpikes(obj)
+		function readSpikes(obj)
 			tic
 			[tscounts, wfcounts, evcounts, slowcounts] = plx_info(obj.file,1);
 			[~,chnames] = plx_chan_names(obj.file);
@@ -914,11 +914,11 @@ classdef plxReader < optickaCore
 					a = a + 1;
 				end
 			end
-			fprintf('Loading all spikes took %g ms\n',round(toc*1000));
+			fprintf('Loading all spike channels took %g ms\n',round(toc*1000));
 		end
 
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -927,35 +927,55 @@ classdef plxReader < optickaCore
 			tic
 			for ps = 1:obj.tsList.nUnits
 				spikes = obj.tsList.ts{ps};
-				obj.tsList.tsParse{ps}.var = cell(obj.eventList.nVars,1);
-				for nv = 1:obj.eventList.nVars
-					var = obj.eventList.vars(nv);
-					obj.tsList.tsParse{ps}.var{nv}.run = struct();
-					obj.tsList.tsParse{ps}.var{nv}.name = var.name;
-					for nc = 1:var.nCorrect
-						idx =  spikes >= var.t1correct(nc)+obj.startOffset & spikes <= var.t2correct(nc);
-						obj.tsList.tsParse{ps}.var{nv}.run(nc).basetime = var.t1correct(nc) + obj.startOffset;
-						obj.tsList.tsParse{ps}.var{nv}.run(nc).modtimes = var.t1correct(nc) + obj.startOffset;
-						obj.tsList.tsParse{ps}.var{nv}.run(nc).spikes = spikes(idx);
-						obj.tsList.tsParse{ps}.var{nv}.run(nc).name = var.name;
-						obj.tsList.tsParse{ps}.var{nv}.run(nc).tDelta = var.tDeltacorrect(nc);
-					end				
+				trials = cell(obj.eventList.nTrials,1);
+				vars = cell(obj.eventList.nVars,1);
+				for trl = 1:obj.eventList.nTrials
+					%===process the trial
+					trial = obj.eventList.trials(trl);
+					trials{trl} = trial;
+					trials{trl}.eventWindow = obj.eventWindow;
+					if isempty(obj.eventWindow) %use event markers and startOffset
+						trials{trl}.tStart = trial.t1 + obj.startOffset;
+						trials{trl}.tEnd = trial.t2;
+						trials{trl}.basetime = trials{trl}.tStart; 
+						trials{trl}.modtimes = trials{trl}.tStart;
+					else
+						trials{trl}.tStart = trial.t1 - obj.eventWindow;
+						trials{trl}.tEnd = trial.t1 + obj.eventWindow;
+						trials{trl}.basetime = trial.t1; % basetime > tStart
+						trials{trl}.modtimes = trial.t1;
+					end
+					idx = spikes >= trials{trl}.tStart & spikes <= trials{trl}.tEnd;
+					trials{trl}.spikes = spikes(idx);
+					%===process the variable run
+					var = trial.name;
+					if isempty(vars{var})
+						vars{var} = obj.eventList.vars(var);
+						vars{var}.nTrials = 0;
+						vars{var}.run = struct([]);
+					end
+					vars{var}.nTrials = vars{var}.nTrials + 1;
+					vars{var}.run(vars{var}.nTrials).eventWindow = trials{trl}.eventWindow;
+					if isempty(obj.eventWindow)
+						vars{var}.run(vars{var}.nTrials).basetime = trial.t1 + obj.startOffset;
+						vars{var}.run(vars{var}.nTrials).modtimes = trial.t1 + obj.startOffset;
+					else
+						vars{var}.run(vars{var}.nTrials).basetime = trial.t1;
+						vars{var}.run(vars{var}.nTrials).modtimes = trial.t1;
+					end
+					vars{var}.run(vars{var}.nTrials).spikes = trials{trl}.spikes;
+					vars{var}.run(vars{var}.nTrials).tDelta = trials{trl}.tDelta;
+					vars{var}.run(vars{var}.nTrials).isCorrect = trials{trl}.isCorrect;
+					vars{var}.run(vars{var}.nTrials).isBreak = trials{trl}.isBreak;
+					vars{var}.run(vars{var}.nTrials).isIncorrect = trials{trl}.isIncorrect;
 				end
+				obj.tsList.tsParse{ps}.trials = trials;
+				obj.tsList.tsParse{ps}.var = vars;
 			end
+			fprintf('Parsing spikes into trials/variables took %g ms\n',round(toc*1000))
 			if obj.startOffset ~= 0
 				obj.info{end+1} = sprintf('START OFFSET ACTIVE : %g', obj.startOffset);
 			end
-			fprintf('Parsing spikes into trials took %g ms\n',round(toc*1000))
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function reparseInfo(obj)
-
 		end
 		
 	end
