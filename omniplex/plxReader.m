@@ -92,6 +92,10 @@ classdef plxReader < optickaCore
 				getFiles(obj, true);
 				if isempty(obj.file); warning('No plexon file selected'); return; end
 			end
+			if isempty(obj.matfile)
+				getFiles(obj);
+				if isempty(obj.matfile); warning('No behavioural mat file selected'); return; end
+			end
 			obj.paths.oldDir = pwd;
 			cd(obj.dir);
 			readMat(obj);
@@ -102,6 +106,7 @@ classdef plxReader < optickaCore
 			end
 			parseSpikes(obj);
 			generateInfo(obj);
+			integrateEyeData(obj);
 		end
 		
 		% ===================================================================
@@ -116,6 +121,7 @@ classdef plxReader < optickaCore
 			getEvents(obj);
 			parseSpikes(obj);
 			generateInfo(obj);
+			integrateEyeData(obj);
 		end
 		
 		% ===================================================================
@@ -128,6 +134,9 @@ classdef plxReader < optickaCore
 			cd(obj.dir);
 			getEvents(obj);
 			generateInfo(obj);
+			if isa(obj.ea,'eyelinkAnalysis')
+				integrateEyeData(obj);
+			end
 		end
 		
 		% ===================================================================
@@ -277,30 +286,6 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return 
 		% ===================================================================
-		function integrateEyeData(obj)
-			plxList = [obj.eventList.trials.name]'; %var order list
-			edfTrials = obj.eA.trials;
-			edfTrials(obj.eA.incorrect.idx) = []; %remove incorrect trials
-			edfList = [edfTrials.id]';
-			c1 = [obj.eventList.trials.isCorrect]';
-			c2 = [edfTrials.correct]';
-			if isequal(plxList,edfList) %check our variable list orders are equal
-				for i = 1:length(plxList)
-					obj.eventList.trials(i).eye = edfTrials(i);
-				end
-			elseif isequal(c1,c2)
-				for i = 1:length(plxList)
-					obj.eventList.trials(i).eye = edfTrials(i);
-				end
-				warning('EDF trial name bug override in place!!!');
-			end
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%> @param
-		%> @return 
-		% ===================================================================
 		function trodality = get.trodality(obj)
 			if ~isfield(obj.ic,'Trodalness') || ~isempty(obj.ic.Trodalness)
 				[~,~,~,~,obj.ic.Trodalness]=plx_information(obj.file);
@@ -357,28 +342,102 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		%> @brief 
 		%>
+			%> @param
+		%> @return
+		% ===================================================================
+		function spike = getFTSpikes(obj)
+			dat = obj.tsList.tsParse;
+			spike.label = obj.tsList.names;
+			spike.nUnits = obj.tsList.nUnits;
+			spike.timestamp = cell(1,spike.nUnits);
+			spike.unit = cell(1,spike.nUnits);
+			spike.hdr = [];
+			spike.hdr.FileHeader.Frequency = 40e3;
+			spike.hdr.FileHeader.Beg = 0;
+			spike.hdr.FileHeader.End = Inf;
+			spike.dimord = '{chan}_lead_time_spike';
+			spike.time = cell(1,spike.nUnits);
+			spike.trial = cell(1,spike.nUnits);
+			spike.trialtime = [];
+			spike.cfg = struct;
+			spike.cfg.dataset = obj.file;
+			spike.cfg.headerformat = 'plexon_plx_v2';
+			spike.cfg.dataformat = spike.cfg.headerformat;
+			spike.cfg.eventformat = spike.cfg.headerformat;
+			spike.cfg.trl = [];
+			fs = spike.hdr.FileHeader.Frequency;
+			for j = 1:length(dat{1}.trials)
+				for k = 1:spike.nUnits
+					t = dat{k}.trials{j};
+					s = t.spikes';
+					spike.timestamp{k} = [spike.timestamp{k} s*fs];
+					if isempty(obj.eventWindow)
+						spike.time{k} = [spike.time{k} s-t.base];
+					else
+						spike.time{k} = [spike.time{k} s-t.base];
+					end
+					spike.trial{k} = [spike.trial{k} ones(1,length(s))*j];
+					spike.trialtime(j,:) = [t.rStart t.rEnd];
+					spike.cfg.trl(j,:) = [spike.trialtime(j,:) t.rStart*fs t.name t.isCorrect];
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> @param
+		%> @return 
+		% ===================================================================
+		function integrateEyeData(obj)
+			tic
+			plxList = [obj.eventList.trials.name]'; %var order list
+			edfTrials = obj.eA.trials;
+			edfTrials(obj.eA.incorrect.idx) = []; %remove incorrect trials
+			edfList = [edfTrials.id]';
+			c1 = [obj.eventList.trials.isCorrect]';
+			c2 = [edfTrials.correct]';
+			if isequal(plxList,edfList) || isequal(c1,c2) %check our variable list orders are equal
+				for i = 1:length(plxList)
+					obj.eventList.trials(i).eye = edfTrials(i);
+					sT = edfTrials(i).saccadeTimes/1e3;
+					obj.eventList.trials(i).saccadeTimes = sT;
+					obj.eventList.trials(i).firstSaccade = min(sT(sT>0));
+				end
+			end
+			fprintf('Integrating eye data into event data took %g ms\n',round(toc*1000));
+		end
+		
+		
+		% ===================================================================
+		%> @brief 
+		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawEvents(obj)
-			h=figure;figpos(1,[2000 800]);set(gcf,'Color',[1 1 1]);
+		function drawEvents(obj,h)
+			if ~exist('h','var')
+				hh=figure;figpos(1,[2000 800]);set(gcf,'Color',[1 1 1]);
+				h = axes;
+				set(hh,'CurrentAxes',h);
+			end
+			axes(h);
 			title(['EVENT PLOT: File:' obj.file]);
 			xlabel('Time (s)');
 			hold on
-			for j = 1:obj.eventList.nVars
-				color = rand(1,3);
-				var = obj.eventList.vars(j);
-				for k = 1:length(var.t1)
-					line([var.t1(k) var.t1(k)],[-.4 .4],'Color',color,'LineWidth',1);
-					line([var.t2(k) var.t2(k)],[-.4 .4],'Color',color,'LineWidth',1);
-					text(var.t1(k),.41,['VAR: ' num2str(j) '  TRL: ' num2str(k)]);
-				end
+			color = rand(3,obj.eventList.nVars);
+			for j = 1:obj.eventList.nTrials
+				trl = obj.eventList.trials(j);
+				var = trl.name;
+				line([trl.t1 trl.t1],[-.4 .4],'Color',color(:,var),'LineWidth',1);
+				line([trl.t2 trl.t2],[-.4 .4],'Color',color(:,var),'LineWidth',1);
+				text(trl.t1,.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',12);
+				text(trl.t1,-.41,['SAC: ' num2str(trl.firstSaccade) '\newlineCOR: ' num2str(trl.isCorrect)],'FontSize',12);
 			end
 			plot(obj.eventList.startFix,zeros(size(obj.eventList.startFix)),'c.','MarkerSize',15);
 			plot(obj.eventList.correct,zeros(size(obj.eventList.correct)),'g.','MarkerSize',15);
 			plot(obj.eventList.breakFix,zeros(size(obj.eventList.breakFix)),'b.','MarkerSize',15);
 			plot(obj.eventList.incorrect,zeros(size(obj.eventList.incorrect)),'r.','MarkerSize',15);
-			axis([0 20 -.5 .5])
+			axis([0 10 -.5 .5])
 			hold off;
 			box on;
 			pan xon;
@@ -392,8 +451,8 @@ classdef plxReader < optickaCore
 					return
 				end
 				ax = axis(gca);
-				ax(1) = ax(1) + 20;
-				ax(2) = ax(1) + 20;
+				ax(1) = ax(1) + 10;
+				ax(2) = ax(1) + 10;
 				axis(ax);
 			end
 			function backPlot(src, ~)
@@ -401,9 +460,46 @@ classdef plxReader < optickaCore
 					return
 				end
 				ax = axis(gca);
-				ax(1) = ax(1) - 20;
-				ax(2) = ax(1) + 20;
+				ax(1) = ax(1) - 10;
+				ax(2) = ax(1) + 10;
 				axis(ax);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function handles = infoBox(obj, info)
+			%[left bottom width height]
+			if ~exist('info','var'), info = obj.info; end
+			scr=get(0,'ScreenSize');
+			width=scr(3);
+			height=scr(4);
+			handles.root = figure('Units','pixels','Position',[0 0 width/4 height],'Tag','PLXInfoFigure',...
+				'Color',[0.9 0.9 0.9]);
+			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.55 1 0.45],...
+				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',1000,...
+				'FontSize',14,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left');
+			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0 0.5 1 0.05],...
+				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',1000,...
+				'FontSize',14,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left',...
+				'Callback',@editComment);
+			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.4]);
+			if ~isempty(obj.eventList)
+				drawEvents(obj,handles.axis);
+			end
+			set(handles.display,'String',info,'FontSize',14);
+			set(handles.comments,'String',obj.comment,'FontSize',14);
+			
+			function editComment(src, ~)
+				if ~exist('src','var');	return; end
+				s = get(src,'String');
+				if ~isempty(s)
+					obj.comment = s;
+				end
 			end
 		end
 		
@@ -466,28 +562,6 @@ classdef plxReader < optickaCore
 			meta.matrix = [];
 			fprintf('Parsing Behavioural files took %g ms\n', round(toc*1000))
 			cd(oldd);
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function handles = makeInfoBox(info)
-			if ~exist('info','var'), info = {''}; end
-			scr=get(0,'ScreenSize');
-			width=scr(3);
-			height=scr(4);
-			handles.root = figure('Units','pixels','Position',[0 0 width/4 height],'Tag','PLXInfoFigure',...
-				'Color',[0.2 0.2 0.2]);
-			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0.05 0.2 1 0.8],...
-				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',1000,...
-				'FontSize',14,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left');
-			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0.05 0 1 0.2],...
-				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',1000,...
-				'FontSize',14,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left');
-			set(handles.display,'String',info,'FontSize',14);
 		end
 	end
 	
@@ -659,6 +733,13 @@ classdef plxReader < optickaCore
 					obj.info{end+1} = ['Channel ' num2str(obj.tsList.chMap(i)) ' unit list (0=unsorted) : ' num2str(obj.tsList.unitMap(i).units)];
 				end
 				obj.info{end+1} = ['Ch/Unit Names : ' obj.tsList.namelist];
+				obj.info{end+1} = sprintf('Number of Parsed Spike Trials : %g', length(obj.tsList.tsParse{1}.trials));
+				obj.info{end+1} = sprintf('Data window around event : %s ', num2str(obj.eventWindow));
+				obj.info{end+1} = sprintf('Start Offset : %g ', obj.startOffset);
+			end
+			if ~isempty(obj.eA)
+				obj.info{end+1} = ' ';
+				obj.info{end+1} = ['Eyelink data Parsed trial total : ' num2str(length(obj.eA.trials))];
 			end
 			fprintf('Generating info took %g ms\n',round(toc*1000))
 			obj.info{end+1} = ' ';
@@ -933,15 +1014,22 @@ classdef plxReader < optickaCore
 					%===process the trial
 					trial = obj.eventList.trials(trl);
 					trials{trl} = trial;
+					trials{trl}.startOffset = obj.startOffset;
 					trials{trl}.eventWindow = obj.eventWindow;
 					if isempty(obj.eventWindow) %use event markers and startOffset
 						trials{trl}.tStart = trial.t1 + obj.startOffset;
 						trials{trl}.tEnd = trial.t2;
-						trials{trl}.basetime = trials{trl}.tStart; 
+						trials{trl}.rStart = obj.startOffset;
+						trials{trl}.rEnd = trial.t2 - trial.t1;
+						trials{trl}.base = trial.t1;
+						trials{trl}.basetime = trials{trl}.tStart; %make offset invisible for systems that can't handle -time
 						trials{trl}.modtimes = trials{trl}.tStart;
 					else
 						trials{trl}.tStart = trial.t1 - obj.eventWindow;
 						trials{trl}.tEnd = trial.t1 + obj.eventWindow;
+						trials{trl}.rStart = -obj.eventWindow;
+						trials{trl}.rEnd = obj.eventWindow;
+						trials{trl}.base = trial.t1;
 						trials{trl}.basetime = trial.t1; % basetime > tStart
 						trials{trl}.modtimes = trial.t1;
 					end

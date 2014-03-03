@@ -7,10 +7,20 @@ classdef spikeAnalysis < optickaCore
 		file@char
 		%> data directory
 		dir@char
-		%> ± time window around the trigger
-		spikeWindow@double = []
+		%> ± time window around the trigger, if empty use event off
+		spikeWindow@double = 0.6
+		%> used by legacy spikes to allow negative time offsets
+		startOffset@double = 0
 		%> default range to plot
 		plotRange@double = [-0.2 0.4]
+		%> default range to measure an average firing rate
+		rateRange@double = [0.05 0.2]
+		%> bin size
+		binSize@double = 0.01
+		%> default Spike channel
+		selectedUnit@double = 1
+		%> default behavioural type
+		selectedBehaviour@char = 'correct';
 		%> plot verbosity
 		verbose	= true
 	end
@@ -21,10 +31,18 @@ classdef spikeAnalysis < optickaCore
 		p@plxReader
 		%> fieldtrip reparse
 		ft@struct
+		%> the events as trials structure
+		trial@struct
+		%> events structure
+		event@struct
+		%> spike trial structure
+		spike@cell
+		%> names of spike channels
+		names@cell
 		%> trials to remove in reparsing
-		cutTrials@cell
-		%> trials selected to remove via UI
-		clickedTrials@cell
+		cutTrials@double
+		%> selectedTrials
+		selectedTrials@cell
 		%> variable selection map for 3 analysis groups
 		map@cell
 		%> UI panels
@@ -53,36 +71,11 @@ classdef spikeAnalysis < optickaCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function ego = LFPAnalysis(varargin)
+		function ego = spikeAnalysis(varargin)
 			if nargin == 0; varargin.name = 'spikeAnalysis';end
 			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
 			if isempty(ego.name);ego.name = 'spikeAnalysis'; end
 			getFiles(ego, true);
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function loadLFPs(ego)
-			if isempty(ego.lfpfile)
-				getFiles(ego,true);
-				if isempty(ego.lfpfile);return;end
-			end
-			ego.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
-			if ego.mversion < 8.2
-				error('LFP Analysis requires Matlab >= 2013b!!!')
-			end
-			ego.paths.oldDir = pwd;
-			cd(ego.dir);
-			ego.LFPs = struct();
-			ego.LFPs = readLFPs(ego.p, ego.LFPWindow, ego.demeanLFP);
-			ego.ft = struct();
-			parseLFPs(ego);
-			ft_parseLFPs(ego);
-			plotLFPs(ego);
 		end
 		
 		% ===================================================================
@@ -95,7 +88,7 @@ classdef spikeAnalysis < optickaCore
 			if ~exist('force','var')
 				force = false;
 			end
-			if force == true || isempty(ego.lfpfile)
+			if force == true || isempty(ego.file)
 				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},'Load Spike File');
 				if ischar(f) && ~isempty(f)
 					ego.file = f;
@@ -109,52 +102,271 @@ classdef spikeAnalysis < optickaCore
 				end
 			end
 		end
-	
+		
 		% ===================================================================
-		%> @brief
+		%> @brief 
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function ft = ftParseSpikes(ego)
-			ft_defaults;
-			tic
-			ft = struct();
-			ft(1).hdr = ft_read_plxheader(ego.lfpfile);
-			ft.label = {ego.LFPs(:).name};
-			ft.time = cell(1);
-			ft.trial = cell(1);
-			ft.fsample = 1000;
-			ft.sampleinfo = [];
-			ft.trialinfo = [];
-			ft.cfg = struct;
-			ft.cfg.dataset = ego.lfpfile;
-			ft.cfg.headerformat = 'plexon_plx_v2';
-			ft.cfg.dataformat = ft.cfg.headerformat;
-			ft.cfg.eventformat = ft.cfg.headerformat;
-			ft.cfg.trl = [];
-			a=1;
-			for j = 1:length(ego.LFPs(1).vars)
-				for k = 1:ego.LFPs(1).vars(j).nTrials
-					ft.time{a} = ego.LFPs(1).vars(j).trial(k).time';
-					for i = 1:length(ego.LFPs)
-						dat(i,:) = ego.LFPs(i).vars(j).trial(k).data';
+		function parse(ego)
+			if isempty(ego.file)
+				getFiles(ego, true);
+				if isempty(ego.file); warning('No plexon file selected'); return; end
+			end
+			ego.paths.oldDir = pwd;
+			cd(ego.dir);
+			ego.p.eventWindow = ego.spikeWindow;
+			parse(ego.p);
+			ego.trial = ego.p.eventList.trials;
+			ego.event = ego.p.eventList;
+			for i = 1:ego.nUnits
+				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
+			end
+			ego.ft = getFTSpikes(ego.p);
+			ego.names = ego.ft.label;
+			makeSelection(ego);
+			showInfo(ego);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function makeSelection(ego)
+			cuttrials = '[ ';
+			if ~isempty(ego.cutTrials) 
+				cuttrials = [cuttrials num2str(ego.cutTrials)];
+			end
+			cuttrials = [cuttrials ' ]'];
+			
+			map = cell(1,3);
+			if isempty(ego.map) || length(ego.map)~=3 || ~iscell(ego.map)
+				map{1} = '1 2 3 4 5 6';
+				map{2} = '7 8';
+				map{3} = '';
+			else
+				map{1} = num2str(ego.map{1});
+				map{2} = num2str(ego.map{2});
+				map{3} = num2str(ego.map{3});
+			end
+			
+			sel = num2str(ego.selectedUnit);
+			beh = ego.selectedBehaviour;
+			
+			options.Resize='on';
+			options.WindowStyle='normal';
+			options.Interpreter='tex';
+			prompt = {'Choose PLX variables to merge A:','Choose PLX variables to merge B:','Choose PLX variables to merge C:','Enter Trials to exclude','Choose which Spike channel to select','Behavioural type ''correct'' ''breakFix'' ''incorrect'' ''all'''};
+			dlg_title = ['REPARSE ' num2str(ego.event.nVars) ' DATA VARIABLES'];
+			num_lines = [1 120];
+			def = {map{1}, map{2}, map{3}, cuttrials,sel,beh};
+			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
+			drawnow;
+			if isempty(answer)
+				map{1} = []; map{2}=[]; map{3}=[]; cuttrials = [];
+			else
+				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3}); 
+				ego.cutTrials = str2num(answer{4});
+				ego.map = map;
+				ego.selectedUnit = str2num(answer{5});
+				if ego.selectedUnit < 1 || ego.selectedUnit > length(ego.spike)
+					ego.selectedUnit = 1;
+				end
+				ego.selectedBehaviour = answer{6};
+			end
+			selectTrials(ego);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function selectTrials(ego)
+			
+			switch lower(ego.selectedBehaviour)
+				case 'correct'
+					bidx = find([ego.trial.isCorrect]==true);
+				case 'breakfix'
+					bidx = find([ego.trial.isBreak]==true);
+				case 'incorrect'
+					bidx = find([ego.trial.isIncorrect]==true);
+				otherwise
+					bidx = [ego.trial.index];
+			end
+			
+			ego.selectedTrials = {};
+			if isempty(ego.map{1})
+				a = 1;
+				for i = 1:ego.event.nVars
+					vidx = find([ego.trial.name]==ego.event.unique(i));
+					idx = intersect(vidx, bidx);
+					if ~isempty(idx)
+						ego.selectedTrials{a}.idx = idx;
+						ego.selectedTrials{a}.behaviour = ego.selectedBehaviour;
+						ego.selectedTrials{a}.sel = ego.event.unique(i);						
+						a = a + 1;
 					end
-					ft.trial{a} = dat;
-					window = ego.LFPs(1).vars(j).trial(k).winsteps;
-					ft.sampleinfo(a,1)= ego.LFPs(1).vars(j).trial(k).startIndex-window;
-					ft.sampleinfo(a,2)= ego.LFPs(1).vars(j).trial(k).startIndex+window;
-					ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -window];
-					ft.trialinfo(a,1) = j;
-					a = a+1;
+				end
+			else
+				idx = [];
+				for i = 1:length(ego.map{1})
+					idx = [idx find([ego.trial.name]==ego.map{1}(i))];
+				end
+				idx = intersect(idx, bidx);
+				if ~isempty(idx)
+					ego.selectedTrials{1}.idx = idx;
+					ego.selectedTrials{1}.behaviour = ego.selectedBehaviour;
+					ego.selectedTrials{1}.sel = ego.map{1};
+				end
+				
+				if ~isempty(ego.map{2})
+					idx = [];
+					for i = 1:length(ego.map{2})
+						idx = [idx find([ego.trial.name]==ego.map{2}(i))];
+					end
+					idx = intersect(idx, bidx);
+					if ~isempty(idx)
+						ego.selectedTrials{2}.idx = idx;
+						ego.selectedTrials{2}.behaviour = ego.selectedBehaviour;
+						ego.selectedTrials{2}.sel = ego.map{2};
+					end
+				end
+				
+				if ~isempty(ego.map{3})
+					idx = [];
+					for i = 1:length(ego.map{3})
+						idx = [idx find([ego.trial.name]==ego.map{3}(i))];
+					end
+					idx = intersect(idx, bidx);
+					if ~isempty(idx)
+						ego.selectedTrials{3}.idx = idx;
+						ego.selectedTrials{3}.behaviour = ego.selectedBehaviour;
+						ego.selectedTrials{3}.sel = ego.map{3};
+					end
 				end
 			end
-			ft.uniquetrials = unique(ft.trialinfo);
-	
-			fprintf('Parsing into fieldtrip format took %g ms\n',round(toc*1000));
 			
-			if ~isempty(ft)
-				ego.ft = ft;
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function doPSTH(ego)
+			for j = 1:length(ego.selectedTrials)
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.binsize			=  ego.binSize;
+				cfg.outputunit		= 'rate';
+				cfg.latency			= ego.plotRange;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				psth{j}				= ft_spike_psth(cfg, ego.ft);
+
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				%cfg.spikelength		= 0.8;
+				%cfg.topplotfunc		= 'line'; % plot as a line
+				cfg.errorbars		= 'sem'; % plot with the standard deviation
+				cfg.interactive		= 'no'; % toggle off interactive mode
+				h=figure;figpos(1,[1920 1080]);set(h,'Color',[1 1 1]);
+				ft_spike_plot_raster(cfg, ego.ft, psth{j})
+				title([upper(ego.selectedTrials{j}.behaviour) ' ' num2str(ego.selectedTrials{j}.sel) ' ' ego.file]);
+				
+				cfg            = [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				cfg.latency    = [ego.rateRange(1) ego.rateRange(2)]; % sustained response period
+				cfg.keeptrials = 'yes';
+				rate{j} = ft_spike_rate(cfg,ego.ft);
+			end
+			ego.ft.psth = psth;
+			ego.ft.rate = rate;
+			h=figure;figpos(1,[1920 1080]);set(h,'Color',[1 1 1]);
+			box on
+			grid on
+			hold on
+			if length(length(psth))<4;
+				c = [0 0 0;1 0 0;0 1 0;0 0 1];
+			else
+				c = rand(length(psth),3)/2;
+			end
+			t = [ego.file ' '];
+			for j = 1:length(psth)
+				e = sqrt(psth{j}.var ./ psth{j}.dof);
+				areabar(psth{j}.time, psth{j}.avg, e, c(j,:),'k-o','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
+				leg{j,1} = num2str(ego.selectedTrials{j}.sel);
+				t = [t 'Rate=' num2str(rate{j}.avg) ' '];
+			end
+			title(t);
+			xlabel('Time (s)')
+			ylabel('Firing Rate (Hz)')
+			%set(gcf,'Renderer','OpenGL');
+			legend(leg);
+			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function doDensity(ego)
+			for j = 1:length(ego.selectedTrials)
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.timwin			= [-0.025 0.025];
+				cfg.fsample			= 1000; % sample at 1000 hz
+				cfg.outputunit		= 'rate';
+				cfg.latency			= ego.plotRange;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				sd{j}				= ft_spikedensity(cfg, ego.ft);
+				
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				cfg.topplotfunc	= 'line'; % plot as a line
+				cfg.errorbars		= 'sem'; % plot with the standard deviation
+				cfg.interactive		= 'no'; % toggle off interactive mode
+				h=figure;figpos(1,[1920 1080]);set(h,'Color',[1 1 1]);
+				ft_spike_plot_raster(cfg, ego.ft, sd{j})
+				title([upper(ego.selectedTrials{j}.behaviour) ' ' num2str(ego.selectedTrials{j}.sel) ' ' ego.file])
+			end
+			ego.ft.sd = sd;
+			h=figure;figpos(1,[1920 1080]);set(h,'Color',[1 1 1]);
+			box on
+			grid on
+			hold on
+			c = rand(length(sd),3)/2;
+			for j = 1:length(sd)
+				e = sqrt(sd{j}.var ./ sd{j}.dof);
+				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)*2,'k-o','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
+				leg{j,1} = num2str(ego.selectedTrials{j}.sel);
+			end
+			set(gcf,'Renderer','OpenGL');
+			legend(leg);
+			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function showInfo(ego)
+			if ~isempty(ego.p.info)
+				infoBox(ego.p);
 			end
 		end
 
@@ -164,12 +376,12 @@ classdef spikeAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotSpikess(ego, varargin)
+		function plot(ego, varargin)
 			if isempty(ego.LFPs);
 				return
 			end
 			if isempty(varargin) || ~ischar(varargin{1})
-				sel = 'normal';
+				sel = 'psth';
 			else
 				sel = varargin{1};
 			end
@@ -181,7 +393,7 @@ classdef spikeAnalysis < optickaCore
 			end
 			
 			switch sel
-				case 'normal'
+				case 'psth'
 					ego.drawAllLFPs(); drawnow;			
 					ego.drawRawLFPs(); drawnow;		
 					ego.drawAverageLFPs(); drawnow;
@@ -207,12 +419,14 @@ classdef spikeAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function nLFPs = get.nUnits(ego)
+		function nUnits = get.nUnits(ego)
 			nUnits = 0;
-			if ~isempty(ego.units)
-				nUnits = length(ego.units);
+			if ~isempty(ego.p.tsList.nUnits)
+				nUnits = ego.p.tsList.nUnits;
 			end	
 		end
+		
+		
 		
 		% ===================================================================
 		%> @brief
@@ -242,16 +456,6 @@ classdef spikeAnalysis < optickaCore
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-	
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function LFPs = parseSpikes(ego)
-			
-		end
 		
 		% ===================================================================
 		%> @brief
