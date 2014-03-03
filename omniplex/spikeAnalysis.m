@@ -110,6 +110,7 @@ classdef spikeAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function parse(ego)
+			ft_defaults
 			if isempty(ego.file)
 				getFiles(ego, true);
 				if isempty(ego.file); warning('No plexon file selected'); return; end
@@ -260,6 +261,7 @@ classdef spikeAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function doPSTH(ego)
+			ft_defaults
 			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
@@ -293,7 +295,7 @@ classdef spikeAnalysis < optickaCore
 			box on
 			grid on
 			hold on
-			if length(length(psth))<4;
+			if length(psth)<4;
 				c = [0 0 0;1 0 0;0 1 0;0 0 1];
 			else
 				c = rand(length(psth),3)/2;
