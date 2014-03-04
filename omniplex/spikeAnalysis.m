@@ -19,8 +19,12 @@ classdef spikeAnalysis < optickaCore
 		binSize@double = 0.01
 		%> default Spike channel
 		selectedUnit@double = 1
+		%> saccadeFilter
+		filterFirstSaccades@double = [0 400];
 		%> default behavioural type
 		selectedBehaviour@char = 'correct';
+		%> region of interest for eye location [x y radius]
+		ROI@double = [5 5 2];
 		%> plot verbosity
 		verbose	= true
 	end
@@ -119,6 +123,8 @@ classdef spikeAnalysis < optickaCore
 			cd(ego.dir);
 			ego.p.eventWindow = ego.spikeWindow;
 			parse(ego.p);
+			ego.p.eA.ROI = ego.ROI;
+			parseROI(ego.p.eA);
 			ego.trial = ego.p.eventList.trials;
 			ego.event = ego.p.eventList;
 			for i = 1:ego.nUnits
@@ -156,14 +162,21 @@ classdef spikeAnalysis < optickaCore
 			
 			sel = num2str(ego.selectedUnit);
 			beh = ego.selectedBehaviour;
+			pr = num2str(ego.plotRange);
+			rr = num2str(ego.rateRange);
+			bw = num2str(ego.binSize);
 			
 			options.Resize='on';
 			options.WindowStyle='normal';
 			options.Interpreter='tex';
-			prompt = {'Choose PLX variables to merge A:','Choose PLX variables to merge B:','Choose PLX variables to merge C:','Enter Trials to exclude','Choose which Spike channel to select','Behavioural type ''correct'' ''breakFix'' ''incorrect'' ''all'''};
+			prompt = {'Choose PLX variables to merge A:','Choose PLX variables to merge B:',...
+				'Choose PLX variables to merge C:','Enter Trials to exclude',...
+				'Choose which Spike channel to select',...
+				'Behavioural type ''correct'' ''breakFix'' ''incorrect'' ''all''',...
+				'Plot Range (s)','Measure Range (s)','Bin Width (s)'};
 			dlg_title = ['REPARSE ' num2str(ego.event.nVars) ' DATA VARIABLES'];
 			num_lines = [1 120];
-			def = {map{1}, map{2}, map{3}, cuttrials,sel,beh};
+			def = {map{1}, map{2}, map{3}, cuttrials, sel, beh, pr, rr, bw};
 			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
 			drawnow;
 			if isempty(answer)
@@ -177,6 +190,9 @@ classdef spikeAnalysis < optickaCore
 					ego.selectedUnit = 1;
 				end
 				ego.selectedBehaviour = answer{6};
+				ego.plotRange = str2num(answer{7});
+				ego.rateRange = str2num(answer{8});
+				ego.binSize = str2num(answer{9});
 			end
 			selectTrials(ego);
 		end
@@ -199,6 +215,8 @@ classdef spikeAnalysis < optickaCore
 				otherwise
 					bidx = [ego.trial.index];
 			end
+			
+			
 			
 			ego.selectedTrials = {};
 			if isempty(ego.map{1})
@@ -303,6 +321,7 @@ classdef spikeAnalysis < optickaCore
 			t = [ego.file ' '];
 			for j = 1:length(psth)
 				e = sqrt(psth{j}.var ./ psth{j}.dof);
+				e(isnan(e)) = 0;
 				areabar(psth{j}.time, psth{j}.avg, e, c(j,:),'k-o','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = num2str(ego.selectedTrials{j}.sel);
 				t = [t 'Rate=' num2str(rate{j}.avg) ' '];
@@ -310,7 +329,7 @@ classdef spikeAnalysis < optickaCore
 			title(t);
 			xlabel('Time (s)')
 			ylabel('Firing Rate (Hz)')
-			%set(gcf,'Renderer','OpenGL');
+			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
 			
@@ -342,18 +361,36 @@ classdef spikeAnalysis < optickaCore
 				h=figure;figpos(1,[1920 1080]);set(h,'Color',[1 1 1]);
 				ft_spike_plot_raster(cfg, ego.ft, sd{j})
 				title([upper(ego.selectedTrials{j}.behaviour) ' ' num2str(ego.selectedTrials{j}.sel) ' ' ego.file])
+				
+				cfg            = [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				cfg.latency    = [ego.rateRange(1) ego.rateRange(2)]; % sustained response period
+				cfg.keeptrials = 'yes';
+				rate{j} = ft_spike_rate(cfg,ego.ft);
 			end
 			ego.ft.sd = sd;
+			ego.ft.rate = rate;
 			h=figure;figpos(1,[1920 1080]);set(h,'Color',[1 1 1]);
 			box on
 			grid on
 			hold on
-			c = rand(length(sd),3)/2;
+			if length(sd)<4;
+				c = [0 0 0;1 0 0;0 1 0;0 0 1];
+			else
+				c = rand(length(sd),3)/2;
+			end
+			t = [ego.file ' '];
 			for j = 1:length(sd)
 				e = sqrt(sd{j}.var ./ sd{j}.dof);
-				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)*2,'k-o','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
+				e(isnan(e)) = 0;
+				areabar(sd{j}.time, sd{j}.avg, e, c(j,:),'k-o','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = num2str(ego.selectedTrials{j}.sel);
+				t = [t 'Rate=' num2str(rate{j}.avg) ' '];
 			end
+			title(t);
+			xlabel('Time (s)')
+			ylabel('Firing Rate (Hz)')
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);

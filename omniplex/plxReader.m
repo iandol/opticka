@@ -430,8 +430,8 @@ classdef plxReader < optickaCore
 				var = trl.name;
 				line([trl.t1 trl.t1],[-.4 .4],'Color',color(:,var),'LineWidth',1);
 				line([trl.t2 trl.t2],[-.4 .4],'Color',color(:,var),'LineWidth',1);
-				text(trl.t1,.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',12);
-				text(trl.t1,-.41,['SAC: ' num2str(trl.firstSaccade) '\newlineCOR: ' num2str(trl.isCorrect)],'FontSize',12);
+				text(trl.t1,.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',10);
+				text(trl.t1,-.41,['SAC: ' num2str(trl.firstSaccade) '\newlineCOR: ' num2str(trl.isCorrect)],'FontSize',10);
 			end
 			plot(obj.eventList.startFix,zeros(size(obj.eventList.startFix)),'c.','MarkerSize',15);
 			plot(obj.eventList.correct,zeros(size(obj.eventList.correct)),'g.','MarkerSize',15);
@@ -482,17 +482,17 @@ classdef plxReader < optickaCore
 				'Color',[0.9 0.9 0.9]);
 			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.55 1 0.45],...
 				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',1000,...
-				'FontSize',14,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left');
+				'FontSize',12,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left');
 			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0 0.5 1 0.05],...
 				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',1000,...
-				'FontSize',14,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left',...
+				'FontSize',12,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left',...
 				'Callback',@editComment);
 			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.4]);
 			if ~isempty(obj.eventList)
 				drawEvents(obj,handles.axis);
 			end
-			set(handles.display,'String',info,'FontSize',14);
-			set(handles.comments,'String',obj.comment,'FontSize',14);
+			set(handles.display,'String',info,'FontSize',12);
+			set(handles.comments,'String',obj.comment,'FontSize',11);
 			
 			function editComment(src, ~)
 				if ~exist('src','var');	return; end
@@ -583,14 +583,16 @@ classdef plxReader < optickaCore
 					pn = obj.dir;
 				end
 			end
-			oldd=pwd;
-			cd(pn);
 			if exist(obj.edffile,'file')
+				oldd=pwd;
+				cd(pn);
 				if ~isempty(obj.eA) && isa(obj.eA,'eyelinkAnalysis')
 					obj.eA.file = obj.edffile;
 					obj.eA.dir = pn;
+					obj.eA.trialOverride = obj.eventList.trials;
 				else
-					in = struct('file',obj.edffile,'dir',pn);
+					in = struct('file',obj.edffile,'dir',pn,...
+						'trialOverride',obj.eventList.trials);
 					obj.eA = eyelinkAnalysis(in);
 				end
 				if isa(obj.rE.screen,'screenManager')
@@ -602,12 +604,11 @@ classdef plxReader < optickaCore
 				if isstruct(obj.rE.tS)
 					obj.eA.tS = obj.rE.tS;
 				end
-				obj.eA.varList = obj.eventList.varOrderCorrect;
 				load(obj.eA);
 				parse(obj.eA);
-				if obj.eA.needOverride == true;	fixVarNames(obj.eA, obj.eventList.trials); end
+				fixVarNames(obj.eA);
+				cd(oldd)
 			end
-			cd(oldd)
 		end
 		
 		% ===================================================================
@@ -740,6 +741,7 @@ classdef plxReader < optickaCore
 			if ~isempty(obj.eA)
 				obj.info{end+1} = ' ';
 				obj.info{end+1} = ['Eyelink data Parsed trial total : ' num2str(length(obj.eA.trials))];
+				obj.info{end+1} = ['Eyelink trial bug override : ' num2str(obj.eA.needOverride)];
 			end
 			fprintf('Generating info took %g ms\n',round(toc*1000))
 			obj.info{end+1} = ' ';
