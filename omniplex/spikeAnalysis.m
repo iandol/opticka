@@ -20,7 +20,7 @@ classdef spikeAnalysis < optickaCore
 		%> default Spike channel
 		selectedUnit@double = 1
 		%> saccadeFilter
-		filterFirstSaccades@double = [0 400];
+		filterFirstSaccades@double = [-800 800];
 		%> default behavioural type
 		selectedBehaviour@char = 'correct';
 		%> region of interest for eye location [x y radius]
@@ -241,7 +241,7 @@ classdef spikeAnalysis < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief selectTrials selects trials based on many filters
 		%>
 		%> @param
 		%> @return
@@ -345,7 +345,7 @@ classdef spikeAnalysis < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief doPSTH plots spike density for the selected trial groups
 		%>
 		%> @param
 		%> @return
@@ -408,7 +408,7 @@ classdef spikeAnalysis < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief doDensity plots spike density for the selected trial groups
 		%>
 		%> @param
 		%> @return
@@ -470,7 +470,7 @@ classdef spikeAnalysis < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief showInfo shows the info box for the plexon parsed data
 		%>
 		%> @param
 		%> @return
@@ -540,7 +540,7 @@ classdef spikeAnalysis < optickaCore
 		
 		
 		% ===================================================================
-		%> @brief
+		%> @brief save saves the object with a pregenerated name
 		%> @param
 		%> @return
 		% ===================================================================

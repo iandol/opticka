@@ -408,6 +408,8 @@ classdef plxReader < optickaCore
 						obj.eventList.trials(i).firstSaccade = NaN;
 					end
 				end
+			else
+				warning('Integrating eyelink trials into plxReader trials failed...');
 			end
 			fprintf('Integrating eye data into event data took %g ms\n',round(toc*1000));
 		end
