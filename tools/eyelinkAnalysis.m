@@ -32,7 +32,7 @@ classdef eyelinkAnalysis < optickaCore
 		rtLimits@double
 		rtDivision@double
 		%> region of interest?
-		ROI@double
+		ROI@double = [5 5 2]
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -169,6 +169,7 @@ classdef eyelinkAnalysis < optickaCore
 						isTrial = true;
 						eventN=1;
 						obj.trials(tri).id = str2double(id.ID);
+						obj.trials(tri).idx = tri;
 						obj.trials(tri).time = double(evt.time);
 						obj.trials(tri).sttime = double(evt.sttime);
 						obj.trials(tri).rt = false;
@@ -421,6 +422,7 @@ classdef eyelinkAnalysis < optickaCore
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
 			if length(select) > 1;
 				idx = select;
+				idxInternal = false;
 			else
 				switch lower(type)
 					case 'correct'
@@ -430,6 +432,7 @@ classdef eyelinkAnalysis < optickaCore
 					case 'incorrect'
 						idx = obj.incorrect.idx;
 				end
+				idxInternal = true;
 			end
 			if seperateVars == true && isempty(select)
 				vars = unique([obj.trials(idx).id]);
@@ -492,7 +495,13 @@ classdef eyelinkAnalysis < optickaCore
 			maxv = 1;
 			
 			for i = idx
-				thisTrial = obj.trials(i);
+				if idxInternal == true %we're using the eyelin index which includes incorrects
+					f = i;
+				else %we're using an external index which excludes incorrects
+					f = find([obj.trials.correctedIndex] == i);
+				end
+				if isempty(f); continue; end
+				thisTrial = obj.trials(f(1));
 				if thisTrial.id == 1010 %early edf files were broken, 1010 signifies this
 					c = rand(1,3);
 				else
@@ -500,81 +509,79 @@ classdef eyelinkAnalysis < optickaCore
 				end
 				
 				if isempty(select) || length(select) > 1 || ~isempty(intersect(select,thisTrial.id));
-					doplot= true;
 				else
-					doplot = false;
+					continue
 				end
 				
-				if doplot == true
-					t = thisTrial.times;
-					idx = find((t >= -400) & (t <= 800));
-					t=t(idx);
-					x = thisTrial.gx(idx);
-					y = thisTrial.gy(idx);
-					x = x / ppd;
-					y = y / ppd;
-					
-					if min(x) < -65 || max(x) > 65 || min(y) < -65 || max(y) > 65
-						x(x<0) = -20;
-						x(x>2000) = 20;
-						y(y<0) = -20;
-						y(y>2000) = 20;
-					end
-					
-					q(1,1).select();
-					
-					q(1,1).hold('on')
-					plot(x, y,'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
-						'MarkerFaceColor',c,'UserData',[i thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
-					
-					q(1,2).select();
-					q(1,2).hold('on');
-					plot(t,abs(x),'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
-						'MarkerFaceColor',c,'UserData',[i thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
-					plot(t,abs(y),'k-x','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
-						'MarkerFaceColor',c,'UserData',[i thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
-					maxv = max([maxv, max(abs(x)), max(abs(y))]) + 0.1;
-					
-					p(2).select();
-					p(2).hold('on')
-					for fix=1:length(thisTrial.fixations)
-						f=thisTrial.fixations(fix);
-						plot3([f.time f.time+f.length],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
-							'LineWidth',1,'MarkerSize',5,'MarkerEdgeColor',[0 0 0],...
-							'MarkerFaceColor',c,'UserData',[i thisTrial.correctedIndex],'ButtonDownFcn', @clickMe)
-					end
-					for sac=1:length(thisTrial.saccades)
-						s=thisTrial.saccades(sac);
-						plot3([s.time s.time+s.length],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
-							'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
-							'MarkerFaceColor',c,'UserData',[i thisTrial.correctedIndex],'ButtonDownFcn', @clickMe)
-					end
-					p(2).margin = 50;
-					
-					idxt = find(t>0 & t < 100);
-					
-					tvals{a} = t(idxt);
-					xvals{a} = x(idxt);
-					yvals{a} = y(idxt);
-					
-					meanx = [meanx mean(x(idxt))];
-					meany = [meany mean(y(idxt))];
-					medx = [medx median(x(idxt))];
-					medy = [medy median(y(idxt))];
-					stdex = [stdex std(x(idxt))];
-					stdey = [stdey std(y(idxt))];
-					
-					q(2,1).select();
-					q(2,1).hold('on');
-					plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
-						'MarkerFaceColor',c,'UserData',[i thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
-					
-					q(2,2).select();
-					q(2,2).hold('on');
-					plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
-						'MarkerFaceColor',c,'UserData',[i thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
-					a = a + 1;
+				t = thisTrial.times;
+				ix = find((t >= -400) & (t <= 800));
+				t=t(ix);
+				x = thisTrial.gx(ix);
+				y = thisTrial.gy(ix);
+				x = x / ppd;
+				y = y / ppd;
+
+				if min(x) < -65 || max(x) > 65 || min(y) < -65 || max(y) > 65
+					x(x<0) = -20;
+					x(x>2000) = 20;
+					y(y<0) = -20;
+					y(y>2000) = 20;
 				end
+
+				q(1,1).select();
+
+				q(1,1).hold('on')
+				plot(x, y,'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
+
+				q(1,2).select();
+				q(1,2).hold('on');
+				plot(t,abs(x),'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
+				plot(t,abs(y),'k-x','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
+				maxv = max([maxv, max(abs(x)), max(abs(y))]) + 0.1;
+
+				p(2).select();
+				p(2).hold('on')
+				for fix=1:length(thisTrial.fixations)
+					f=thisTrial.fixations(fix);
+					plot3([f.time f.time+f.length],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
+						'LineWidth',1,'MarkerSize',5,'MarkerEdgeColor',[0 0 0],...
+						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe)
+				end
+				for sac=1:length(thisTrial.saccades)
+					s=thisTrial.saccades(sac);
+					plot3([s.time s.time+s.length],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
+						'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
+						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe)
+				end
+				p(2).margin = 50;
+
+				idxt = find(t >= 0 & t <= 100);
+
+				tvals{a} = t(idxt);
+				xvals{a} = x(idxt);
+				yvals{a} = y(idxt);
+
+				meanx = [meanx mean(x(idxt))];
+				meany = [meany mean(y(idxt))];
+				medx = [medx median(x(idxt))];
+				medy = [medy median(y(idxt))];
+				stdex = [stdex std(x(idxt))];
+				stdey = [stdey std(y(idxt))];
+
+				q(2,1).select();
+				q(2,1).hold('on');
+				plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
+					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
+
+				q(2,2).select();
+				q(2,2).hold('on');
+				plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
+					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
+				a = a + 1;
+	
 			end
 			
 			display = obj.display / ppd;
@@ -657,7 +664,7 @@ classdef eyelinkAnalysis < optickaCore
 				end
 				ud = get(src,'UserData');
 				if ~isempty(ud)
-					disp(['TRIAL = ' num2str(ud) ' | VAR = ' num2str(obj.trials(ud(1)).id)]);
+					disp(['TRIAL = ' num2str(ud)]);
 					disp(obj.trials(ud(1)));
 				end
 			end
@@ -703,19 +710,75 @@ classdef eyelinkAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function parseROI(obj)
+			if isempty(obj.ROI)
+				disp('No ROI specified!!!')
+				return
+			end
 			fixationX = obj.ROI(1);
 			fixationY = obj.ROI(2);
 			fixationRadius = obj.ROI(3);
 			for i = 1:length(obj.trials)
-				x = obj.trials(i).gx;
-				y = obj.trials(i).gy;
+				obj.ROIInfo(i).id = obj.trials(i).id;
+				obj.ROIInfo(i).idx = i;
+				obj.ROIInfo(i).correctedIndex = obj.trials(i).correctedIndex;
+				obj.ROIInfo(i).uuid = obj.trials(i).uuid;
+				obj.ROIInfo(i).fixationX = fixationX;
+				obj.ROIInfo(i).fixationY = fixationY;
+				obj.ROIInfo(i).fixationRadius = fixationRadius;
+				x = obj.trials(i).gx / obj.ppd;
+				y = obj.trials(i).gy  / obj.ppd;
+				times = obj.trials(i).times;
+				f = find(times > 0); % we only check ROI post 0 time
 				r = sqrt((x - fixationX).^2 + (y - fixationY).^2); 
+				r=r(f);
 				window = find(r < fixationRadius);
 				if any(window)
-					obj.ROIInfo(i).isEnter = true;
+					obj.ROIInfo(i).enteredROI = true;
 				else
-					obj.ROIInfo(i).isEnter = false;
+					obj.ROIInfo(i).enteredROI = false;
 				end	
+				obj.trials(i).enteredROI = obj.ROIInfo(i).enteredROI;
+				obj.ROIInfo(i).x = x;
+				obj.ROIInfo(i).y = y;
+				obj.ROIInfo(i).times = times/1e3;
+				obj.ROIInfo(i).correct = obj.trials(i).correct;
+				obj.ROIInfo(i).breakFix = obj.trials(i).breakFix;
+				obj.ROIInfo(i).incorrect = obj.trials(i).incorrect;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function plotROI(obj)
+			if ~isempty(obj.ROIInfo)
+				figure;
+				for i = 1:length(obj.ROIInfo)
+					r = obj.ROIInfo(i);
+					hold on
+					c = [0.7 0.7 0.7];
+					if r.enteredROI == true; c = [0 0 0]; end
+					h = plot(r.times,r.x,'k-o',r.times,r.y,'k-v','color',c);
+					set(h,'UserData',[r.idx r.correctedIndex r.id r.correct r.breakFix r.incorrect],'ButtonDownFcn', @clickMe);
+				end
+				hold off
+				box on
+				grid on
+				xlabel('Time (s)')
+				ylabel('Position (degs)')
+				axis([-0.2 0.5 0 15])
+			end
+			function clickMe(src, ~)
+				if ~exist('src','var')
+					return
+				end
+				ud = get(src,'UserData');
+				if ~isempty(ud)
+					disp(['ROI Trial (idx correctidx var iscorrect isbreak isincorrect): ' num2str(ud)]);
+				end
 			end
 		end
 		
@@ -750,7 +813,11 @@ classdef eyelinkAnalysis < optickaCore
 				obj.vars(var).correctedidx = [obj.vars(var).correctedidx i];
 				obj.vars(var).uuid = [obj.vars(var).uuid, trial.uuid];
 				obj.vars(var).id = [obj.vars(var).id var];
-				obj.vars(var).sTime = [obj.vars(var).sTime trial.saccadeTimes(1)];
+				if ~isempty(trial.saccadeTimes)
+					obj.vars(var).sTime = [obj.vars(var).sTime trial.saccadeTimes(1)];
+				else
+					obj.vars(var).sTime = [obj.vars(var).sTime NaN];
+				end
 				obj.vars(var).sT = [obj.vars(var).sT trial.firstSaccade];
 			end
 		end

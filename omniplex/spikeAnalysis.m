@@ -24,7 +24,9 @@ classdef spikeAnalysis < optickaCore
 		%> default behavioural type
 		selectedBehaviour@char = 'correct';
 		%> region of interest for eye location [x y radius]
-		ROI@double = [5 5 2];
+		ROI@double = [];
+		%> include (false) or exclude (true) the ROI entered trials?
+		includeROI@logical = false
 		%> plot verbosity
 		verbose	= true
 	end
@@ -51,6 +53,8 @@ classdef spikeAnalysis < optickaCore
 		map@cell
 		%> UI panels
 		panels@struct = struct()
+		%> use ROI for trial selection
+		useROI@logical = false
 	end
 	
 	%------------------DEPENDENT PROPERTIES--------%
@@ -123,8 +127,6 @@ classdef spikeAnalysis < optickaCore
 			cd(ego.dir);
 			ego.p.eventWindow = ego.spikeWindow;
 			parse(ego.p);
-			ego.p.eA.ROI = ego.ROI;
-			parseROI(ego.p.eA);
 			ego.trial = ego.p.eventList.trials;
 			ego.event = ego.p.eventList;
 			for i = 1:ego.nUnits
@@ -132,7 +134,9 @@ classdef spikeAnalysis < optickaCore
 			end
 			ego.ft = getFTSpikes(ego.p);
 			ego.names = ego.ft.label;
-			makeSelection(ego);
+			select(ego);
+			ego.p.eA.ROI = ego.ROI;
+			parseROI(ego.p.eA);
 			showInfo(ego);
 		end
 		
@@ -142,7 +146,29 @@ classdef spikeAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function makeSelection(ego)
+		function reparse(ego)
+			ego.p.eventWindow = ego.spikeWindow;
+			parse(ego.p);
+			ego.trial = ego.p.eventList.trials;
+			ego.event = ego.p.eventList;
+			for i = 1:ego.nUnits
+				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
+			end
+			ego.ft = getFTSpikes(ego.p);
+			ego.names = ego.ft.label;
+			select(ego);
+			ego.p.eA.ROI = ego.ROI;
+			parseROI(ego.p.eA);
+			showInfo(ego);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function select(ego)
 			cuttrials = '[ ';
 			if ~isempty(ego.cutTrials) 
 				cuttrials = [cuttrials num2str(ego.cutTrials)];
@@ -165,6 +191,9 @@ classdef spikeAnalysis < optickaCore
 			pr = num2str(ego.plotRange);
 			rr = num2str(ego.rateRange);
 			bw = num2str(ego.binSize);
+			roi = num2str(ego.ROI);
+			includeroi = num2str(ego.includeROI);
+			saccfilt = num2str(ego.filterFirstSaccades);
 			
 			options.Resize='on';
 			options.WindowStyle='normal';
@@ -173,10 +202,13 @@ classdef spikeAnalysis < optickaCore
 				'Choose PLX variables to merge C:','Enter Trials to exclude',...
 				'Choose which Spike channel to select',...
 				'Behavioural type ''correct'' ''breakFix'' ''incorrect'' ''all''',...
-				'Plot Range (s)','Measure Range (s)','Bin Width (s)'};
+				'Plot Range (s)','Measure Range (s)','Bin Width (s)',...
+				'Region of Interest [X Y RADIUS]',...
+				'Include (1) or Exclude (0) the ROI trials?',...
+				'Saccade Filter'};
 			dlg_title = ['REPARSE ' num2str(ego.event.nVars) ' DATA VARIABLES'];
 			num_lines = [1 120];
-			def = {map{1}, map{2}, map{3}, cuttrials, sel, beh, pr, rr, bw};
+			def = {map{1}, map{2}, map{3}, cuttrials, sel, beh, pr, rr, bw, roi, includeroi,saccfilt};
 			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
 			drawnow;
 			if isempty(answer)
@@ -193,6 +225,17 @@ classdef spikeAnalysis < optickaCore
 				ego.plotRange = str2num(answer{7});
 				ego.rateRange = str2num(answer{8});
 				ego.binSize = str2num(answer{9});
+				roi = str2num(answer{10});
+				if isnumeric(roi) && length(roi) == 3
+					ego.ROI = roi;
+				else
+					ego.ROI = [];
+				end
+				if ~isempty(ego.ROI)
+					ego.useROI = true;
+				end
+				ego.includeROI = logical(str2num(answer{11}));
+				ego.filterFirstSaccades = str2num(answer{12});
 			end
 			selectTrials(ego);
 		end
@@ -207,23 +250,33 @@ classdef spikeAnalysis < optickaCore
 			
 			switch lower(ego.selectedBehaviour)
 				case 'correct'
-					bidx = find([ego.trial.isCorrect]==true);
+					behaviouridx = find([ego.trial.isCorrect]==true);
 				case 'breakfix'
-					bidx = find([ego.trial.isBreak]==true);
+					behaviouridx = find([ego.trial.isBreak]==true);
 				case 'incorrect'
-					bidx = find([ego.trial.isIncorrect]==true);
+					behaviouridx = find([ego.trial.isIncorrect]==true);
 				otherwise
-					bidx = [ego.trial.index];
+					behaviouridx = [ego.trial.index];
 			end
 			
+			idx = find([ego.trial.firstSaccade] >= ego.filterFirstSaccades(1));
+			idx2 = find([ego.trial.firstSaccade] <= ego.filterFirstSaccades(2));
+			saccidx = intersect(idx,idx2);
 			
+			if ego.useROI == true
+				idx = [ego.p.eA.ROIInfo.enteredROI] == obj.includeROI;
+				rois = ego.p.eA.ROIInfo(idx);
+				roiidx = [rois.correctedIndex];
+			end
 			
 			ego.selectedTrials = {};
 			if isempty(ego.map{1})
 				a = 1;
 				for i = 1:ego.event.nVars
 					vidx = find([ego.trial.name]==ego.event.unique(i));
-					idx = intersect(vidx, bidx);
+					idx = intersect(vidx, behaviouridx);
+					if ~isempty(saccidx); idx = intersect(idx, saccidx); end
+					if ego.useROI == true; idx = intersect(idx, roiidx); end
 					if ~isempty(idx)
 						ego.selectedTrials{a}.idx = idx;
 						ego.selectedTrials{a}.behaviour = ego.selectedBehaviour;
@@ -236,7 +289,9 @@ classdef spikeAnalysis < optickaCore
 				for i = 1:length(ego.map{1})
 					idx = [idx find([ego.trial.name]==ego.map{1}(i))];
 				end
-				idx = intersect(idx, bidx);
+				idx = intersect(idx, behaviouridx);
+				if ~isempty(saccidx); idx = intersect(idx, saccidx); end
+				if ego.useROI == true; idx = intersect(idx, roiidx); end
 				if ~isempty(idx)
 					ego.selectedTrials{1}.idx = idx;
 					ego.selectedTrials{1}.behaviour = ego.selectedBehaviour;
@@ -248,7 +303,9 @@ classdef spikeAnalysis < optickaCore
 					for i = 1:length(ego.map{2})
 						idx = [idx find([ego.trial.name]==ego.map{2}(i))];
 					end
-					idx = intersect(idx, bidx);
+					idx = intersect(idx, behaviouridx);
+					if ~isempty(saccidx); idx = intersect(idx, saccidx); end
+					if ego.useROI == true; idx = intersect(idx, roiidx); end
 					if ~isempty(idx)
 						ego.selectedTrials{2}.idx = idx;
 						ego.selectedTrials{2}.behaviour = ego.selectedBehaviour;
@@ -261,7 +318,9 @@ classdef spikeAnalysis < optickaCore
 					for i = 1:length(ego.map{3})
 						idx = [idx find([ego.trial.name]==ego.map{3}(i))];
 					end
-					idx = intersect(idx, bidx);
+					idx = intersect(idx, behaviouridx);
+					if ~isempty(saccidx); idx = intersect(idx, saccidx); end
+					if ego.useROI == true; idx = intersect(idx, roiidx); end
 					if ~isempty(idx)
 						ego.selectedTrials{3}.idx = idx;
 						ego.selectedTrials{3}.behaviour = ego.selectedBehaviour;
@@ -269,7 +328,20 @@ classdef spikeAnalysis < optickaCore
 					end
 				end
 			end
-			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function showEyePlots(ego)
+			if ~isempty(ego.selectedTrials)
+				for i = 1:length(ego.selectedTrials)
+					ego.p.eA.plot(ego.selectedTrials{i}.idx);
+				end
+			end
 		end
 		
 		% ===================================================================
@@ -460,7 +532,7 @@ classdef spikeAnalysis < optickaCore
 		% ===================================================================
 		function nUnits = get.nUnits(ego)
 			nUnits = 0;
-			if ~isempty(ego.p.tsList.nUnits)
+			if isfield(ego.p.tsList,'nUnits')
 				nUnits = ego.p.tsList.nUnits;
 			end	
 		end

@@ -400,8 +400,13 @@ classdef plxReader < optickaCore
 				for i = 1:length(plxList)
 					obj.eventList.trials(i).eye = edfTrials(i);
 					sT = edfTrials(i).saccadeTimes/1e3;
+					fS = min(sT(sT>0));
 					obj.eventList.trials(i).saccadeTimes = sT;
-					obj.eventList.trials(i).firstSaccade = min(sT(sT>0));
+					if ~isempty(fS)
+						obj.eventList.trials(i).firstSaccade = fS;
+					else
+						obj.eventList.trials(i).firstSaccade = NaN;
+					end
 				end
 			end
 			fprintf('Integrating eye data into event data took %g ms\n',round(toc*1000));
@@ -719,8 +724,8 @@ classdef plxReader < optickaCore
 				obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
 				obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
 				obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.eventList.incorrect));
-				obj.info{end+1} = sprintf('Minimum # of Trials :  %g', obj.eventList.minRuns);
-				obj.info{end+1} = sprintf('Maximum # of Trials :  %g', obj.eventList.maxRuns);
+				obj.info{end+1} = sprintf('Minimum # of Trials per variable :  %g', obj.eventList.minRuns);
+				obj.info{end+1} = sprintf('Maximum # of Trials per variable :  %g', obj.eventList.maxRuns);
 				obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.eventList.tMin,obj.eventList.tMinCorrect);
 				obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.eventList.tMax,obj.eventList.tMaxCorrect);
 			end
@@ -739,9 +744,17 @@ classdef plxReader < optickaCore
 				obj.info{end+1} = sprintf('Start Offset : %g ', obj.startOffset);
 			end
 			if ~isempty(obj.eA)
+				saccs = [obj.eA.trials.firstSaccade];
+				saccs(isnan(saccs)) = [];
+				saccs(saccs<0) = [];
+				mins = min(saccs);
+				maxs = max(saccs);
+				[avgs,es] = stderr(saccs);
+				ns = length(saccs);
 				obj.info{end+1} = ' ';
 				obj.info{end+1} = ['Eyelink data Parsed trial total : ' num2str(length(obj.eA.trials))];
 				obj.info{end+1} = ['Eyelink trial bug override : ' num2str(obj.eA.needOverride)];
+				obj.info{end+1} = sprintf('Valid First Post-Stimulus Saccades (#%g): %.4g ± %.3g (range %g:%g )',ns,avgs/1e3,es/1e3,mins/1e3,maxs/1e3);
 			end
 			fprintf('Generating info took %g ms\n',round(toc*1000))
 			obj.info{end+1} = ' ';
