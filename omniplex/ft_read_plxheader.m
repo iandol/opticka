@@ -697,6 +697,9 @@ orig.NumSlowChannels = length(contcounts);
 [orig.NumDSPChannels, dummy] = plx_chanmap(fname);
 orig.NumPointsWave = NPW;
 orig.NumPointsPreThr = PreTresh;
+if ~isempty( regexpi(DateTime,' \d$','match') )
+	DateTime = regexprep(DateTime,'\: \d$','','once');
+end
 [orig.Year orig.Month orig.Day orig.Hour orig.Minute orig.Second] = datevec(DateTime);
 orig.LastTimestamp = Duration * Freq;
 orig.Trodalness = Trodalness;

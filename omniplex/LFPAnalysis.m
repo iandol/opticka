@@ -135,7 +135,7 @@ classdef LFPAnalysis < optickaCore
 			ego.paths.oldDir = pwd;
 			cd(ego.dir);
 			ego.LFPs = struct();
-			ego.LFPs = readLFPs(ego.p, ego.LFPWindow, ego.demeanLFP);
+			ego.LFPs = readLFPs(ego.p);
 			ego.ft = struct();
 			parseLFPs(ego);
 			ft_parseLFPs(ego);
@@ -215,19 +215,25 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ftPreProcess(ego, cfg)
+		function ftPreProcess(ego, cfg, removeLineNoise)
 			if isempty(ego.ft); ft_parseLFPs(ego); end
+			if ~exist('removeLineNoise','var');removeLineNoise = false;end
+			if ~exist('cfg','var');cfg = [];end				
 			if isfield(ego.ft,'ftOld')
 				ft = ego.ft.ftOld;
 			else
 				ft = ego.ft;
 			end
-			if ~exist('cfg','var')
-				cfg = [];
-			else %assume we want to do some preprocessing
+			if removeLineNoise == true;
+				cfg.dftfilter = 'yes';
+				cfg.dftfreq = [50 100 150];
+				disp('---> Will remove 50 100 150Hz line noise!!!')
+			end
+			if ~isempty(cfg)
 				ftp = ft_preprocessing(cfg, ft);
 				ftp.uniquetrials = unique(ftp.trialinfo);
 			end
+			cfg = [];
 			cfg.method   = 'trial';
 			ftNew = ft_rejectvisual(cfg, ft);
 			ftNew.uniquetrials = unique(ftNew.trialinfo);
@@ -272,9 +278,9 @@ classdef LFPAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function ftBandPass(ego,order,downsample,rectify)
-			if ~exist('order','var'); order = 2; end
-			if ~exist('downsample','var'); downsample = true; end
-			if ~exist('rectify','var'); rectify = 'yes'; end
+			if ~exist('order','var') || isempty(order); order = 4; end
+			if ~exist('downsample','var') || isempty(downsample); downsample = true; end
+			if ~exist('rectify','var') || isempty(rectify); rectify = 'yes'; end
 			if rectify == true; rectify = 'yes'; end
 			
 			ft = ego.ft;
@@ -367,12 +373,12 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function cfgUsed=ftFrequencyAnalysis(ego, cfg, preset, tw, cycles, width, smth)
+		function cfgUsed=ftFrequencyAnalysis(ego, cfg, preset, tw, cycles, smth, width)
 			if ~exist('preset','var') || isempty(preset); preset='fix1'; end
 			if ~exist('tw','var') || isempty(tw); tw=0.2; end
 			if ~exist('cycles','var') || isempty(cycles); cycles = 5; end
+			if ~exist('smth','var') || isempty(smth); smth = 0.4; end
 			if ~exist('width','var') || isempty(width); width = 10; end
-			if ~exist('smth','var') || isempty(smth); smth = 10; end
 			if ~isfield(ego.ft,'label'); ft_parseLFPs(ego); end
 			ft = ego.ft;
 			cfgUsed = {};
@@ -380,22 +386,22 @@ classdef LFPAnalysis < optickaCore
 				cfg				= [];
 				cfg.keeptrials	= 'no';
 				cfg.output		= 'pow';
-				cfg.channel = ft.label{ego.selectedLFP};
-				cfg.toi         = -0.4:0.02:0.4;                  % time window "slides"
-				cfg.tw = tw;
-				cfg.cycles = cycles;
-				cfg.width = width;
-				cfg.smooth = smth;
+				cfg.channel		= ft.label{ego.selectedLFP};
+				cfg.toi         = -0.4:0.01:0.4;                  % time window "slides"
+				cfg.tw			= tw;
+				cfg.cycles		= cycles;
+				cfg.width		= width;
+				cfg.smooth		= smth;
 				switch preset
 					case 'fix1'
 						cfg.method      = 'mtmconvol';
 						cfg.taper		= 'hanning';
-						lf = round(1 / cfg.tw);
+						lf				= round(1 / cfg.tw);
 						cfg.foi         = lf:2:80;						  % analysis frequencies 
-						cfg.t_ftimwin  = ones(length(cfg.foi),1).*tw;   % length of fixed time window
+						cfg.t_ftimwin	= ones(length(cfg.foi),1).*tw;   % length of fixed time window
 					case 'fix2'
 						cfg.method      = 'mtmconvol';
-						cfg.taper        = 'hanning';
+						cfg.taper       = 'hanning';
 						cfg.foi         = 2:2:80;						  % analysis frequencies 
 						cfg.t_ftimwin	= cycles./cfg.foi;					  % x cycles per time window
 					case 'mtm1'
@@ -588,7 +594,7 @@ classdef LFPAnalysis < optickaCore
 		% ===================================================================
 		function LFPs = parseLFPs(ego)
 			if isempty(ego.LFPs)
-				LFPs = readLFPs(ego.p, ego.LFPWindow, ego.demeanLFP);
+				LFPs = readLFPs(ego.p);
 			else
 				LFPs = ego.LFPs;
 			end
@@ -724,13 +730,22 @@ classdef LFPAnalysis < optickaCore
 					for n = repn
 						for k = 1:length(map{n})
 							thisVar = map{n}(k);
-							if (length(ego.cutTrials) >= thisVar) && ~isempty(ego.cutTrials{thisVar}) %trial removal
-								cut = str2num(ego.cutTrials{thisVar});
-								vars(thisVar).times(cut,:) = [];
-								vars(thisVar).alldata(:,cut) = [];
-								vars(thisVar).trial(cut) = [];
-								vars(thisVar).nTrials = length(vars(thisVar).trial);
-								[vars(thisVar).average, vars(thisVar).error] = stderr(vars(thisVar).alldata');
+							if isempty(ego.cutTrials)
+								cut = [];
+							else
+								cut = ego.cutTrials{thisVar};
+							end
+							if ischar(cut); cut = str2num(cut); end
+							if (length(ego.cutTrials) >= thisVar) && ~isempty(cut) %trial removal
+								if max(cut) > length(vars(thisVar).times)
+									warning('Trying to remove non-existant / already removed trial?')
+								else
+									vars(thisVar).times(cut,:) = [];
+									vars(thisVar).alldata(:,cut) = [];
+									vars(thisVar).trial(cut) = [];
+									vars(thisVar).nTrials = length(vars(thisVar).trial);
+									[vars(thisVar).average, vars(thisVar).error] = stderr(vars(thisVar).alldata');
+								end
 							end
 							nvars(n).times = [nvars(n).times;vars(thisVar).times];
 							nvars(n).nTrials = nvars(n).nTrials + vars(thisVar).nTrials;
@@ -741,7 +756,6 @@ classdef LFPAnalysis < optickaCore
 						[nvars(n).average, nvars(n).error] = stderr(nvars(n).alldata');
 						nvars(n).minL = vars(1).minL;
 						nvars(n).maxL = vars(1).maxL;
-					
 					end
 					if isfield(ego.LFPs(j),'vars');
 						LFPs(j).oldvars = ego.LFPs(j).vars;
@@ -894,13 +908,13 @@ classdef LFPAnalysis < optickaCore
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV)');
 					hold on
-					areabar(LFPs(j).vars(1).time, LFPs(j).vars(1).average,LFPs(j).vars(1).error,[0.7 0.7 0.7],0.6,'k.-','MarkerFaceColor',[0 0 0],'LineWidth',2);
-					areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.7 0.5 0.5],0.6,'r.-','MarkerFaceColor',[1 0 0],'LineWidth',2);
+					areabar(LFPs(j).vars(1).time, LFPs(j).vars(1).average,LFPs(j).vars(1).error,[0.5 0.5 0.5],0.6,'k-','MarkerFaceColor',[0 0 0],'LineWidth',1);
+					areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.5 0.3 0.3],0.6,'r-','MarkerFaceColor',[1 0 0],'LineWidth',1);
 					if length(LFPs(j).vars)>2
-						areabar(LFPs(j).vars(3).time, LFPs(j).vars(3).average,LFPs(j).vars(3).error,[0.5 0.5 0.7],0.6,'b-o','MarkerFaceColor',[0 0 1],'LineWidth',2);
-						legend('S.E.','Ground','S.E.','Figure','S.E.','Figure 2');
+						areabar(LFPs(j).vars(3).time, LFPs(j).vars(3).average,LFPs(j).vars(3).error,[0.3 0.3 0.5],0.6,'b-','MarkerFaceColor',[0 0 1],'LineWidth',1);
+						legend('Ground','Figure','Figure 2');
 					else
-						legend('S.E.','Ground','S.E.','Figure');
+						legend('Ground','Figure');
 					end
 					hold off
 					axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
@@ -909,10 +923,10 @@ classdef LFPAnalysis < optickaCore
 					av = ego.ft.av;
 					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
 					hold on
-					areabar(av{1}.time,av{1}.avg(1,:),av{1}.var(1,:),[.5 .5 .5],'k');
-					areabar(av{2}.time,av{2}.avg(1,:),av{2}.var(1,:),[.7 .5 .5],'r');
+					areabar(av{1}.time,av{1}.avg(1,:),av{1}.var(1,:),[.5 .5 .5],0.6,'k-','LineWidth',1);
+					areabar(av{2}.time,av{2}.avg(1,:),av{2}.var(1,:),[.5 .3 .3],0.6,'r-','LineWidth',1);
 					if length(av) > 2
-						areabar(av{3}.time,av{3}.avg(1,:),av{3}.var(1,:),[.5 .5 .7],'b');
+						areabar(av{3}.time,av{3}.avg(1,:),av{3}.var(1,:),[.3 .3 .5],0.6,'b-','LineWidth',1);
 					end
 					hold off
 					axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
@@ -1050,8 +1064,8 @@ classdef LFPAnalysis < optickaCore
 						idx3 = findNearest(ego, time, 0.05);
 						idx4 = findNearest(ego, time, 0.2);
 						pre = mean([mean(grnd(idx1:idx2)), mean(fig(idx1:idx2))]); 
-						res = (fig - grnd) / pre;
-						freqdiffs(j) = mean(fig(idx3:idx4)) / pre;
+						res = (fig - grnd) ./ pre;
+						freqdiffs(j) = mean(fig(idx3:idx4)) / mean(grnd(idx3:idx4));
 						pp(2,1).select();
 						plot(time,res,'k.-','MarkerSize',8);
 						box on; grid on

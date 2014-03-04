@@ -193,16 +193,18 @@ classdef BoxPanel < uiextras.CardPanel & uiextras.DecoratedPanel
         end % set.MinimizeFcn
         
         function set.IsMinimized( obj, value )
-            obj.IsMinimized = (value(1) == true);
-            if value( obj.IsMinimized )
-                set( obj.HGWidgets_.MinimizeButton, ...
-                    'cdata', uiextras.loadLayoutIcon( 'panelMaximize.png' ), ...
-                    'tooltip', 'Maximize this panel' ); %#ok<MCSUP>
-            else
-                set( obj.HGWidgets_.MinimizeButton, ...
-                    'cdata', uiextras.loadLayoutIcon( 'panelMinimize.png' ), ...
-                    'tooltip', 'Minimize this panel' ); %#ok<MCSUP>
-            end
+			if isfield(obj.HGWidgets_,'MinimizeButton')
+				obj.IsMinimized = (value(1) == true);
+				if value( obj.IsMinimized )
+					set( obj.HGWidgets_.MinimizeButton, ...
+						'cdata', uiextras.loadLayoutIcon( 'panelMaximize.png' ), ...
+						'tooltip', 'Maximize this panel' ); %#ok<MCSUP>
+				else
+					set( obj.HGWidgets_.MinimizeButton, ...
+						'cdata', uiextras.loadLayoutIcon( 'panelMinimize.png' ), ...
+						'tooltip', 'Minimize this panel' ); %#ok<MCSUP>
+				end
+			end
         end % set.IsMinimized
         
         function set.DockFcn( obj, value )
@@ -214,16 +216,18 @@ classdef BoxPanel < uiextras.CardPanel & uiextras.DecoratedPanel
         end % set.DockFcn
         
         function set.IsDocked( obj, value )
-            obj.IsDocked = (value(1) == true);
-            if value( obj.IsDocked )
-                set( obj.HGWidgets_.DockButton, ...
-                    'cdata', uiextras.loadLayoutIcon( 'panelUndock.png' ), ...
-                    'tooltip', 'Undock this panel' ); %#ok<MCSUP>
-            else
-                set( obj.HGWidgets_.DockButton, ...
-                    'cdata', uiextras.loadLayoutIcon( 'panelDock.png' ), ...
-                    'tooltip', 'Dock this panel' ); %#ok<MCSUP>
-            end
+			if isfield(obj.HGWidgets_,'DockButton')
+				obj.IsDocked = (value(1) == true);
+				if value( obj.IsDocked )
+					set( obj.HGWidgets_.DockButton, ...
+						'cdata', uiextras.loadLayoutIcon( 'panelUndock.png' ), ...
+						'tooltip', 'Undock this panel' ); %#ok<MCSUP>
+				else
+					set( obj.HGWidgets_.DockButton, ...
+						'cdata', uiextras.loadLayoutIcon( 'panelDock.png' ), ...
+						'tooltip', 'Dock this panel' ); %#ok<MCSUP>
+				end
+			end
         end % set.IsMinimized
         
         function value = get.CloseRequestFcn( obj )

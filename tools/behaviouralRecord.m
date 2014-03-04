@@ -247,6 +247,30 @@ classdef behaviouralRecord < optickaCore
 			updatePlot(obj);
 		end
 		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> 
+		% ===================================================================
+		function clearHandles(obj)
+			obj.h = [];
+		end
+		
+	end
+	
+	%=======================================================================
+	methods (Static = true) %------------------STATIC METHODS
+	%=======================================================================
+		% ===================================================================
+		%> @brief loadobj
+		%> To be backwards compatible to older saved protocols, we have to parse 
+		%> structures / objects specifically during object load
+		%> @param in input object/structure
+		% ===================================================================
+		function lobj=loadobj(in)
+			in.clearHandles();
+			lobj = in;
+		end
 	end
 	
 	%=======================================================================
