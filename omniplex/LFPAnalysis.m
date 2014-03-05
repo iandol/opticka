@@ -12,13 +12,15 @@ classdef LFPAnalysis < optickaCore
 		%> remove the mean voltage offset from the individual trials?
 		demeanLFP@logical = true
 		%> time window for demeaning
-		demeanWindow@double = [-0.2 0]
+		baselineWindow@double = [-0.2 0]
 		%> default LFP channel
 		selectedLFP@double = 1
 		%> ± time window around the trigger
 		LFPWindow@double = 0.8
 		%> default range to plot
 		plotRange@double = [-0.2 0.4]
+		%> default behavioural type
+		selectedBehaviour@char = 'correct';
 		%> plot verbosity
 		verbose	= true
 	end
@@ -31,12 +33,14 @@ classdef LFPAnalysis < optickaCore
 		sp@spikeAnalysis
 		%> parsed LFPs
 		LFPs@struct
-		%> fieldtrip reparse
+		%> fieldtrip parsed data
 		ft@struct
+		%> selectedTrials: each cell is a trial list grouping
+		selectedTrials@cell
 		%> trials to remove in reparsing
-		cutTrials@cell
+		cutTrials@double
 		%> trials selected to remove via UI
-		clickedTrials@cell
+		clickedTrials@double
 		%> variable selection map for 3 analysis groups
 		map@cell
 		%> bandpass frequencies
@@ -55,6 +59,8 @@ classdef LFPAnalysis < optickaCore
 	properties (SetAccess = private, Dependent = true)
 		%> number of LFP channels
 		nLFPs@double = 0
+		%> number of LFP channels
+		nSelection@double = 0
 	end
 	
 	%------------------PRIVATE PROPERTIES----------%
@@ -98,6 +104,7 @@ classdef LFPAnalysis < optickaCore
 					ego.paths.oldDir = pwd;
 					cd(ego.dir);
 					ego.p = plxReader('file', ego.lfpfile, 'dir', ego.dir);
+					ego.p.name = ['^' ego.fullName '^'];
 					getFiles(ego.p);
 				else
 					return
@@ -109,6 +116,9 @@ classdef LFPAnalysis < optickaCore
 					ego.spikefile = f;
 					in = struct('file', ego.spikefile, 'dir', ego.dir);
 					ego.sp = spikeAnalysis(in);
+					ego.sp.name = ['^' ego.fullName '^'];
+					in = struct('matfile', ego.p.matfile, 'matdir', ego.p.matdir,'edffile',ego.p.edffile);
+					setFiles(ego.sp, in);
 				else
 					return
 				end
@@ -121,7 +131,7 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function loadLFPs(ego)
+		function parse(ego)
 			if isempty(ego.lfpfile)
 				getFiles(ego,true);
 				if isempty(ego.lfpfile);return;end
@@ -136,8 +146,11 @@ classdef LFPAnalysis < optickaCore
 			ego.LFPs = readLFPs(ego.p);
 			ego.ft = struct();
 			parseLFPs(ego);
+			userSelection(ego);
+			selectTrials(ego);
 			ft_parseLFPs(ego);
-			plotLFPs(ego);
+			plotLFPs(ego,'all');
+
 		end
 		
 		% ===================================================================
@@ -146,17 +159,12 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function reparseLFPs(ego)
-			if isfield(ego.LFPs,'oldvars') && length(ego.LFPs(1).oldvars) > ego.LFPs(1).nVars
-				for i = 1:ego.nLFPs
-					ego.LFPs(i).vars = ego.LFPs(i).oldvars;
-					ego.LFPs(i).nVars = length(ego.LFPs(i).vars);
-					rmfield(ego.LFPs(i),'oldvars');
-				end
-			end
+		function reparse(ego)
 			parseLFPs(ego);
+			userSelection(ego);
+			selectTrials(ego);
 			ft_parseLFPs(ego);
-			plotLFPs(ego);
+			plotLFPs(ego,'normal');
 		end
 		
 		% ===================================================================
@@ -167,13 +175,14 @@ classdef LFPAnalysis < optickaCore
 		% ===================================================================
 		function ft = ft_parseLFPs(ego)
 			ft_defaults;
+			LFPs = ego.LFPs;
 			tic
 			ft = struct();
 			ft(1).hdr = ft_read_plxheader(ego.lfpfile);
-			ft.label = {ego.LFPs(:).name};
+			ft.label = {LFPs(:).name};
 			ft.time = cell(1);
 			ft.trial = cell(1);
-			ft.fsample = 1000;
+			ft.fsample = LFPs(1).recordingFrequency;
 			ft.sampleinfo = [];
 			ft.trialinfo = [];
 			ft.cfg = struct;
@@ -183,20 +192,22 @@ classdef LFPAnalysis < optickaCore
 			ft.cfg.eventformat = ft.cfg.headerformat;
 			ft.cfg.trl = [];
 			a=1;
-			for j = 1:length(ego.LFPs(1).vars)
-				for k = 1:ego.LFPs(1).vars(j).nTrials
-					ft.time{a} = ego.LFPs(1).vars(j).trial(k).time';
-					for i = 1:length(ego.LFPs)
-						dat(i,:) = ego.LFPs(i).vars(j).trial(k).data';
+			for k = 1:LFPs(1).nTrials
+					ft.time{a} = LFPs(1).trials(k).time';
+					for i = 1:ego.nLFPs
+						dat(i,:) = LFPs(i).trials(k).data';
 					end
 					ft.trial{a} = dat;
-					window = ego.LFPs(1).vars(j).trial(k).winsteps;
-					ft.sampleinfo(a,1)= ego.LFPs(1).vars(j).trial(k).startIndex-window;
-					ft.sampleinfo(a,2)= ego.LFPs(1).vars(j).trial(k).startIndex+window;
+					window = LFPs(1).trials(k).winsteps;
+					%LFPs(1).sample-1 is the offset in samples due to a
+					%non-zero start time, fieldtrip is incredibly annoying
+					%limited to using samples to store timestamps, far from
+					%ideal!!!
+					ft.sampleinfo(a,1)= LFPs(1).trials(k).startIndex + LFPs(1).sample-1; 
+					ft.sampleinfo(a,2)= LFPs(1).trials(k).endIndex + LFPs(1).sample-1;
 					ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -window];
-					ft.trialinfo(a,1) = j;
-					a = a+1;
-				end
+					ft.trialinfo(a,1) = LFPs(1).trials(k).name;
+					a = a + 1;
 			end
 			ft.uniquetrials = unique(ft.trialinfo);
 	
@@ -255,8 +266,8 @@ classdef LFPAnalysis < optickaCore
 				cfg.covariancewindow = [0.075 0.2];
 				cfg.channel = ft.label{ego.selectedLFP};
 			end
-			for i = ft.uniquetrials'
-				cfg.trials = find(ft.trialinfo == i);
+			for i = 1:ego.nSelection
+				cfg.trials = ego.selectedTrials{i}.idx;
 				av{i} = ft_timelockanalysis(cfg, ft);
 				av{i}.cfgUsed = cfg;
 				if strcmpi(cfg.covariance, 'yes')					
@@ -296,7 +307,7 @@ classdef LFPAnalysis < optickaCore
 				cfg.bpinstabilityfix	= 'reduce';
 				cfg.rectify				= rectify;
 				cfg.demean				= 'yes'; %'no' or 'yes', whether to apply baseline correction (default = 'no')
-				cfg.baselinewindow		= [-0.1 0]; %[begin end] in seconds, the default is the complete trial (default = 'all')
+				cfg.baselinewindow		= obj.baselineWindow; %[begin end] in seconds, the default is the complete trial (default = 'all')
 				cfg.detrend				= 'no'; %'no' or 'yes', remove linear trend from the data (done per trial) (default = 'no')
 				cfg.derivative			= 'no'; %'no' or 'yes', computes the first order derivative of the data (default = 'no')
 				disp(['===> FILTER BP = ' ego.bpnames{j} ' --> ' num2str(cfg.bpfreq)]);
@@ -327,14 +338,14 @@ classdef LFPAnalysis < optickaCore
 					bp{j}.uniquetrials = unique(bp{j}.trialinfo);
 					bp{j}.downsample = downsample;
 				end
-				for i = bp{j}.uniquetrials'
+				for i = 1:ego.nSelection
 					cfg						= [];
-					cfg.keeptrials			= 'yes';
+					cfg.keeptrials			= 'no';
 					cfg.removemean			= 'no';
 					cfg.covariance			= 'no';
 					cfg.covariancewindow	= [0.075 0.2];
 					cfg.channel				= ft.label{ego.selectedLFP};
-					cfg.trials = find(ft.trialinfo == i);
+					cfg.trials = ego.selectedTrials{i}.idx;
 					bp{j}.av{i} = ft_timelockanalysis(cfg,bp{j});
 					bp{j}.av{i}.cfgUsed = cfg;
 					if strcmpi(cfg.covariance,'yes')					
@@ -421,8 +432,8 @@ classdef LFPAnalysis < optickaCore
 			elseif ~isempty(cfg)
 				preset = 'custom';
 			end
-			for i = ft.uniquetrials'
-				cfg.trials = find(ft.trialinfo == i);
+			for i = 1:ego.nSelection
+				cfg.trials = ego.selectedTrials{i}.idx;
 				fq{i} = ft_freqanalysis(cfg,ft);
 				fq{i}.cfgUsed=cfg;
 				cfgUsed{i} = cfg;
@@ -517,16 +528,15 @@ classdef LFPAnalysis < optickaCore
 			end
 			
 			switch sel
-				case 'normal'
-					ego.drawAllLFPs(); drawnow;			
+				case 'normal'	
 					ego.drawRawLFPs(); drawnow;		
 					ego.drawAverageLFPs(); drawnow;
 				case 'all'
-					ego.drawAllLFPs(true);			
+					ego.drawAllLFPs();			
 					ego.drawRawLFPs();		
 					ego.drawAverageLFPs();
 				case 'continuous'
-					ego.drawAllLFPs(true); drawnow;
+					ego.drawAllLFPs(); drawnow;
 				case {'trials','raw'}
 					ego.drawRawLFPs(); drawnow;
 				case 'average'
@@ -547,6 +557,18 @@ classdef LFPAnalysis < optickaCore
 			nLFPs = 0;
 			if ~isempty(ego.LFPs)
 				nLFPs = length(ego.LFPs);
+			end	
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function nSelection = get.nSelection(ego)
+			nSelection = 0;
+			if ~isempty(ego.selectedTrials)
+				nSelection = length(ego.selectedTrials);
 			end	
 		end
 		
@@ -591,74 +613,63 @@ classdef LFPAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function LFPs = parseLFPs(ego)
-			if isempty(ego.LFPs)
+			if ego.nLFPs == 0
 				LFPs = readLFPs(ego.p);
 			else
 				LFPs = ego.LFPs;
 			end
-			
 			tic
+			window = ego.LFPWindow; winsteps = round(window/1e-3);
+			demeanW = round(ego.baselineWindow/1e-3) - 1;
 			for j = 1:length(LFPs)
 				time = LFPs(j).time;
 				data = LFPs(j).data;
-				for k = 1:LFPs(j).nVars
-					times = [ego.p.eventList.vars(k).t1correct, ego.p.eventList.vars(k).t2correct];
-					LFPs(j).vars(k,1).times = times;
-					LFPs(j).vars(k).nTrials = length(times);
-					minL = Inf;
-					maxL = 0;
-					window = ego.LFPWindow;
-					winsteps = round(window/1e-3);
-					demeanW = round(ego.demeanWindow/1e-3) - 1;
-					for l = 1:LFPs(j).vars(k).nTrials
-						[idx1, val1, dlta1] = ego.findNearest(time,times(l,1));
-						[idx2, val2, dlta2] = ego.findNearest(time,times(l,2));
-						LFPs(j).vars(k).trial(l).startTime = val1;
-						LFPs(j).vars(k).trial(l).startIndex = idx1;
-						LFPs(j).vars(k).trial(l).endTime = val2;
-						LFPs(j).vars(k).trial(l).endIndex = idx2;
-						LFPs(j).vars(k).trial(l).startDelta = dlta1;
-						LFPs(j).vars(k).trial(l).endDelta = dlta2;
-						LFPs(j).vars(k).trial(l).data = data( idx1 - winsteps : idx1 + winsteps );
-						LFPs(j).vars(k).trial(l).prestimMean = mean(LFPs(j).vars(k).trial(l).data(winsteps + demeanW(1) : winsteps + demeanW(2)));
-						if ego.demeanLFP == true
-							LFPs(j).vars(k).trial(l).data = LFPs(j).vars(k).trial(l).data - LFPs(j).vars(k).trial(l).prestimMean;
-						end
-						LFPs(j).vars(k).trial(l).demean = ego.demeanLFP;
-						LFPs(j).vars(k).trial(l).time = [ -window : 1e-3 : window ]';
-						LFPs(j).vars(k).trial(l).window = window;
-						LFPs(j).vars(k).trial(l).winsteps = winsteps;
-						LFPs(j).vars(k).trial(l).abstime = LFPs(j).vars(k).trial(l).time + (val1 - window);
-						minL = min([length(LFPs(j).vars(k).trial(l).data) minL]);
-						maxL = max([length(LFPs(j).vars(k).trial(l).data) maxL]);
+				minL = Inf;
+				maxL = 0;
+				trials = ego.p.eventList.trials;
+				for k = 1:ego.p.eventList.nTrials
+					[idx1, val1, dlta1] = ego.findNearest(time, trials(k).t1);
+					trials(k).zeroTime = val1;
+					trials(k).zeroIndex = idx1; trials(k).startIndex = idx1 - winsteps; trials(k).endIndex = idx1 + winsteps;
+					trials(k).zeroDelta = dlta1;
+					trials(k).data = data( trials(k).startIndex : trials(k).endIndex );
+					trials(k).otime = time( trials(k).startIndex : trials(k).endIndex );
+					trials(k).time = [ -window : 1e-3 : window ]';
+					trials(k).prestimMean = mean(trials(k).data(winsteps + demeanW(1) : winsteps + demeanW(2)));
+					if ego.demeanLFP == true
+						trials(k).data = trials(k).data - trials(k).prestimMean;
 					end
-					LFPs(j).vars(k).time = LFPs(j).vars(k).trial(1).time;
-					LFPs(j).vars(k).alldata = [LFPs(j).vars(k).trial(:).data];
-					[LFPs(j).vars(k).average, LFPs(j).vars(k).error] = stderr(LFPs(j).vars(k).alldata');
-					LFPs(j).vars(k).minL = minL;
-					LFPs(j).vars(k).maxL = maxL;
+					trials(k).demean = ego.demeanLFP;
+					trials(k).window = window;
+					trials(k).winsteps = winsteps;
+					minL = min([length(trials(k).data) minL]);
+ 					maxL = max([length(trials(k).data) maxL]);
 				end
+				LFPs(j).trials = trials;
+				LFPs(j).minL = minL;
+				LFPs(j).maxL = maxL;
+				LFPs(j).reparse = true;
 			end
-			fprintf('Parsing LFPs with event markers > variables took %g ms\n',round(toc*1000));
 			
-			cuttrials = '{ ';
-			if isempty(ego.cutTrials) || length(ego.cutTrials) < LFPs(1).nVars
-				for i = 1:LFPs(1).nVars
-					cuttrials = [cuttrials ''''', '];
-				end
-			else
-				if isempty(cell2mat(ego.clickedTrials))
-					for i = 1:length(ego.cutTrials)
-						cuttrials = [cuttrials '''' num2str(ego.cutTrials{i}) ''', '];
-					end
-				else
-					for i = 1:length(ego.clickedTrials)
-						cuttrials = [cuttrials '''' num2str(ego.clickedTrials{i}) ''', '];
-					end
-				end
+			fprintf('Parsing LFPs into trials with event markers took %g ms\n',round(toc*1000));
+			
+			if ~isempty(LFPs(1).trials)
+				ego.LFPs = LFPs;
+			end	
+		end
+		
+		% ===================================================================
+		%> @brief selectTrials selects trials based on many filters
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function userSelection(ego)	
+			cuttrials = '[ ';
+			if ~isempty(ego.cutTrials) 
+				cuttrials = [cuttrials num2str(ego.cutTrials)];
 			end
-			cuttrials = cuttrials(1:end-2);
-			cuttrials = [cuttrials ' }'];
+			cuttrials = [cuttrials ' ]'];
 			
 			map = cell(1,3);
 			if isempty(ego.map) || length(ego.map)~=3 || ~iscell(ego.map)
@@ -670,104 +681,111 @@ classdef LFPAnalysis < optickaCore
 				map{2} = num2str(ego.map{2});
 				map{3} = num2str(ego.map{3});
 			end
-			
+
 			sel = num2str(ego.selectedLFP);
-			
+
 			options.Resize='on';
 			options.WindowStyle='normal';
 			options.Interpreter='tex';
-			prompt = {'Choose PLX variables to merge (ground):','Choose PLX variables to merge (figure):','Choose PLX variables to merge (figure 2):','Enter Trials to exclude','Choose which LFP channel to select'};
-			dlg_title = ['REPARSE ' num2str(LFPs(1).nVars) ' DATA VARIABLES'];
+			prompt = {'Choose PLX variables to merge (A):','Choose PLX variables to merge (B):','Choose PLX variables to merge (C):','Enter Trials to exclude','Choose which LFP channel to select'};
+			dlg_title = ['REPARSE ' num2str(ego.LFPs(1).nVars) ' DATA VARIABLES'];
 			num_lines = [1 120];
 			def = {map{1}, map{2}, map{3}, cuttrials,sel};
 			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
 			drawnow;
-			if isempty(answer)
-				map{1} = []; map{2}=[]; map{3}=[]; cuttrials = {''};
-			else
+			if ~isempty(answer)
 				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3}); 
-				if ~isempty(answer{4}) && strcmpi(answer{4}(1),'{')
-					ego.cutTrials = eval(answer{4});
-				else
-					ego.cutTrials = {''};
+				if ~isempty(answer{4}) 
+					ego.cutTrials = str2num(answer{4});
 				end
 				ego.map = map;
 				ego.selectedLFP = str2num(answer{5});
-				if ego.selectedLFP < 1 || ego.selectedLFP > length(LFPs)
+				if ego.selectedLFP < 1 || ego.selectedLFP > ego.nLFPs
 					ego.selectedLFP = 1;
 				end
 			end
-			
-			if ~isempty(map{1}) && ~isempty(map{2})
-				tic
-
-				for j = 1:length(LFPs)
-					
-					vars = LFPs(j).vars;
-					nvars = vars(1);
-					nvars(1).times = [];
-					nvars(1).nTrials = 0;
-					nvars(1).trial = [];
-					nvars(1).time = [];
-					nvars(1).alldata = [];
-					nvars(1).average = [];
-					nvars(1).error = [];
-					nvars(1).minL = [];
-					nvars(1).maxL = [];
-					vartemplate = nvars(1);
-					
-					if isempty(map{3})
-						repn=[1 2];
-						nvars(2,1) = vartemplate;
-					else
-						repn = [1 2 3];
-						nvars(2,1) = vartemplate;
-						nvars(3,1) = vartemplate;
-					end
-					
-					for n = repn
-						for k = 1:length(map{n})
-							thisVar = map{n}(k);
-							if isempty(ego.cutTrials)
-								cut = [];
-							else
-								cut = ego.cutTrials{thisVar};
-							end
-							if ischar(cut); cut = str2num(cut); end
-							if (length(ego.cutTrials) >= thisVar) && ~isempty(cut) %trial removal
-								if max(cut) > length(vars(thisVar).times)
-									warning('Trying to remove non-existant / already removed trial?')
-								else
-									vars(thisVar).times(cut,:) = [];
-									vars(thisVar).alldata(:,cut) = [];
-									vars(thisVar).trial(cut) = [];
-									vars(thisVar).nTrials = length(vars(thisVar).trial);
-									[vars(thisVar).average, vars(thisVar).error] = stderr(vars(thisVar).alldata');
-								end
-							end
-							nvars(n).times = [nvars(n).times;vars(thisVar).times];
-							nvars(n).nTrials = nvars(n).nTrials + vars(thisVar).nTrials;
-							nvars(n).trial = [nvars(n).trial, vars(thisVar).trial];
-							nvars(n).alldata = [nvars(n).alldata, vars(thisVar).alldata];
-						end
-						nvars(n).time = vars(1).time;
-						[nvars(n).average, nvars(n).error] = stderr(nvars(n).alldata');
-						nvars(n).minL = vars(1).minL;
-						nvars(n).maxL = vars(1).maxL;
-					end
-					if isfield(ego.LFPs(j),'vars');
-						LFPs(j).oldvars = ego.LFPs(j).vars;
-					end
-					LFPs(j).vars = nvars;
-					LFPs(j).nVars = length(LFPs(j).vars);
-					LFPs(j).reparse = true;
-				end
-				fprintf('Reparsing (combine & remove) LFP variable trials took %g ms\n',round(toc*1000));
+		end
+		
+		% ===================================================================
+		%> @brief selectTrials selects trials based on several filters
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function selectTrials(ego)
+			LFPs = ego.LFPs; %#ok<*PROP>
+			switch lower(ego.selectedBehaviour)
+				case 'correct'
+					behaviouridx = find([LFPs(1).trials.isCorrect]==true);
+				case 'breakfix'
+					behaviouridx = find([LFPs(1).trials.isBreak]==true);
+				case 'incorrect'
+					behaviouridx = find([LFPs(1).trials.isIncorrect]==true);
+				otherwise
+					behaviouridx = find([LFPs(1).trials.isCorrect]==true);
 			end
 			
-			if ~isempty(LFPs(1).vars)
-				ego.LFPs = LFPs;
-			end	
+			cutidx = ego.cutTrials;
+			
+			ego.selectedTrials = {};
+			if isempty(ego.map{1})
+				a = 1;
+				for i = 1:LFPs(1).nVars
+					vidx = find([LFPs(1).trials.name]==ego.p.eventList.unique(i));
+					idx = intersect(vidx, behaviouridx); %match the behaviour
+					idx = setdiff(idx, cutidx); %remove the cut trials
+					if ~isempty(idx)
+						ego.selectedTrials{a}.idx = idx;
+						ego.selectedTrials{1}.cutidx = cutidx;
+						ego.selectedTrials{a}.behaviour = ego.selectedBehaviour;
+						ego.selectedTrials{a}.sel = ego.event.unique(i);						
+						a = a + 1;
+					end
+				end
+			else
+				idx = [];
+				for i = 1:length(ego.map{1})
+					idx = [idx find([LFPs(1).trials.name]==ego.map{1}(i))];
+				end
+				idx = intersect(idx, behaviouridx); %match the behaviour
+				idx = setdiff(idx, cutidx); %remove the cut trials
+				if ~isempty(idx)
+					ego.selectedTrials{1}.idx = idx;
+					ego.selectedTrials{1}.cutidx = cutidx;
+					ego.selectedTrials{1}.behaviour = ego.selectedBehaviour;
+					ego.selectedTrials{1}.sel = ego.map{1};
+				end
+				
+				if ~isempty(ego.map{2})
+					idx = [];
+					for i = 1:length(ego.map{2})
+						idx = [idx find([LFPs(1).trials.name]==ego.map{2}(i))];
+					end
+					idx = intersect(idx, behaviouridx); %match the behaviour
+					idx = setdiff(idx, cutidx); %remove the cut trials
+					if ~isempty(idx)
+						ego.selectedTrials{end+1}.idx = idx;
+						ego.selectedTrials{1}.cutidx = cutidx;
+						ego.selectedTrials{end}.behaviour = ego.selectedBehaviour;
+						ego.selectedTrials{end}.sel = ego.map{2};
+					end
+				end
+				
+				if ~isempty(ego.map{3})
+					idx = [];
+					for i = 1:length(ego.map{3})
+						idx = [idx find([LFPs(1).trials.name]==ego.map{3}(i))];
+					end
+					idx = intersect(idx, behaviouridx); %match the behaviour
+					idx = setdiff(idx, cutidx); %remove the cut trials
+					if ~isempty(idx)
+						ego.selectedTrials{end+1}.idx = idx;
+						ego.selectedTrials{1}.cutidx = cutidx;
+						ego.selectedTrials{end}.behaviour = ego.selectedBehaviour;
+						ego.selectedTrials{end}.sel = ego.map{3};
+					end
+				end
+			end
 		end
 		
 		% ===================================================================
@@ -780,17 +798,17 @@ classdef LFPAnalysis < optickaCore
 			disp('Drawing RAW LFP Trials...')
 			if ~exist('h','var')
 				h=figure;figpos(1,[1920 1080]);set(h,'Color',[1 1 1]);
-				ego.clickedTrials = cell(1,ego.LFPs(1).nVars);
+				ego.clickedTrials = ego.cutTrials;
 			end
 			clf(h,'reset')
 			if ~exist('sel','var')
-				sel= ego.selectedLFP;
+				sel = ego.selectedLFP;
 			end
 
 			LFP = ego.LFPs(sel);
 
 			p=panel(h);
-			len=length(LFP.vars);
+			len=length(ego.selectedTrials);
 			if len < 3
 				row = 2;
 				col = 1;
@@ -805,31 +823,37 @@ classdef LFPAnalysis < optickaCore
 				col = 3;
 			end
 			p.pack(row,col);
-			for j = 1:length(LFP.vars)
+			for j = 1:length(ego.selectedTrials)
 				[i1,i2] = ind2sub([row,col], j);
 				p(i1,i2).select();
-				p(i1,i2).title(['LFP & EVENT PLOT: File:' ego.lfpfile ' | Channel:' LFP.name ' | Var:' num2str(j)]);
+				p(i1,i2).title(['LFP & EVENT PLOT: File:' ego.lfpfile ' | Channel:' LFP.name ' | Group:' num2str(j)]);
 				p(i1,i2).xlabel('Time (s)');
  				p(i1,i2).ylabel('LFP Raw Amplitude (mV)');
-				hold on
-				for k = 1:size(LFP(1).vars(j).alldata,2)
-					dat = [j,k];
-					sel = ego.clickedTrials{j};
-					if LFP.reparse == false && ~isempty(intersect(k,sel));
+				p(i1,i2).hold('on');
+				for k = 1:length(ego.selectedTrials{j}.idx)
+					trial = LFP.trials(ego.selectedTrials{j}.idx(k));
+					dat = [trial.name,trial.index,trial.t1];
+					sel = ego.clickedTrials;
+					if ~isempty(intersect(trial.index,sel));
 						ls = ':';
 					else
 						ls = '-';
 					end
-					tag=['VAR:' num2str(dat(1)) '  TRL:' num2str(dat(2))];
+					tag=['VAR:' num2str(dat(1)) '  TRL:' num2str(dat(2)) '  T1:' num2str(dat(3))];
 					if strcmpi(class(gcf),'double')
 						c=rand(1,3);
-						plot(LFP.vars(j).time, LFP.vars(j).alldata(:,k), 'LineStyle', ls, 'Color', c, 'Tag', tag, 'ButtonDownFcn', @clickMe, 'UserData', dat);
+						plot(trial.time, trial.data, 'LineStyle', ls, 'Color', c, 'Tag', tag, 'ButtonDownFcn', @clickMe, 'UserData', dat);
 					else
-						plot(LFP.vars(j).time, LFP.vars(j).alldata(:,k),'LineStyle', ls, 'Tag',tag,'ButtonDownFcn', @clickMe,'UserData',dat);
+						plot(trial.time, trial.data,'LineStyle', ls, 'Tag',tag,'ButtonDownFcn', @clickMe,'UserData',dat);
 					end
 				end
-				areabar(LFP.vars(j).time, LFP.vars(j).average,LFP.vars(j).error,[0.7 0.7 0.7],0.7,'k-o','MarkerFaceColor',[0 0 0],'LineWidth',1);
-				hold off
+				idx = ego.selectedTrials{j}.idx;
+				time = LFP.trials(1).time';
+				data = [LFP.trials(idx).data];
+				data = rot90(fliplr(data)); %get it into trial x data = row x column
+				[avg,err] = stderr(data);
+				areabar(time, avg, err,[0.5 0.5 0.5],0.6,'k-','MarkerFaceColor',[0 0 0],'LineWidth',1);
+				p(i1,i2).hold('off');
 				axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
 			end
 			%dc = datacursormode(gcf);
@@ -858,34 +882,27 @@ classdef LFPAnalysis < optickaCore
 			end
 			
 			function clickMe(src, ~)
-				if ~exist('src','var') || ego.LFPs(ego.selectedLFP).reparse == true
+				if ~exist('src','var')
 					return
 				end
 				ud = get(src,'UserData');
 				tg = get(src,'Tag');
 				disp(['Clicked on: ' tg]);
-				if ~isempty(ud) && length(ud) == 2
+				if ~isempty(ud) && length(ud) > 1
 					var = ud(1);
 					trl = ud(2);
-					if length(ego.clickedTrials) < var
-						ego.clickedTrials{var} = trl;
+					t1 = ud(3);
+					
+					if intersect(trl, ego.clickedTrials);
+						ego.clickedTrials(ego.clickedTrials == trl) = [];
+						set(src,'LineStyle','-','LineWidth',0.5);
 					else
-						if ischar(ego.clickedTrials{var})
-							ego.clickedTrials{var} = str2num(ego.clickedTrials{var});
-						end
-						it = intersect(ego.clickedTrials{var}, trl);
-						if ~ischar(it) && isempty(it)
-							ego.clickedTrials{var} = [ego.clickedTrials{var}, trl];
-							set(src,'LineStyle',':','LineWidth',2);
-						else
-							ego.clickedTrials{var}(ego.clickedTrials{var} == it) = [];
-							set(src,'LineStyle','-','LineWidth',0.5);
-						end
+						ego.clickedTrials = [ego.clickedTrials trl];
+						set(src,'LineStyle',':','LineWidth',2);
 					end
-					for i = 1:length(ego.clickedTrials)
-						disp(['Current Selected trials for Var ' num2str(i) ': ' num2str(ego.clickedTrials{i})]);
-					end
+					disp(['Current Selected trials : ' num2str(ego.clickedTrials)]);
 				end
+				ego.cutTrials = ego.clickedTrials;
 			end
 			
 		end
@@ -899,22 +916,26 @@ classdef LFPAnalysis < optickaCore
 		function drawAverageLFPs(ego)
 			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
 			LFPs = ego.LFPs;
+			c = [0 0 0;1.0000 0 0;0 0 1;0 1 0;0 0.7500 0.7500;0.7500 0 0.7500;1 0.7500 0;0.4500 0.2500 0.2500;...
+				0 0.2500 0.7500;0 0.6000 1.0000;1.0000 0.5000 0.25;0.6000 0 0.3000;1 0 1;1 0.5 0.5;0.25 0.45 0.65];
 			if LFPs(1).reparse == true;
 				for j = 1:length(LFPs)
 					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
-					title(['FIGURE vs. GROUND Reparse: File:' ego.lfpfile ' | Channel:' LFPs(j).name ' | LFP:' num2str(j)]);
+					title(['TIMELOCK AVERAGES: File:' ego.lfpfile ' | Channel:' LFPs(j).name]);
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV)');
 					hold on
-					areabar(LFPs(j).vars(1).time, LFPs(j).vars(1).average,LFPs(j).vars(1).error,[0.5 0.5 0.5],0.6,'k-','MarkerFaceColor',[0 0 0],'LineWidth',1);
-					areabar(LFPs(j).vars(2).time, LFPs(j).vars(2).average,LFPs(j).vars(2).error,[0.5 0.3 0.3],0.6,'r-','MarkerFaceColor',[1 0 0],'LineWidth',1);
-					if length(LFPs(j).vars)>2
-						areabar(LFPs(j).vars(3).time, LFPs(j).vars(3).average,LFPs(j).vars(3).error,[0.3 0.3 0.5],0.6,'b-','MarkerFaceColor',[0 0 1],'LineWidth',1);
-						legend('Ground','Figure','Figure 2');
-					else
-						legend('Ground','Figure');
+					for k = 1:length(ego.selectedTrials)
+						[time,avg,err]=getAverageTuningCurve(ego, ego.selectedTrials{k}.idx, j);
+						areabar(time, avg, err, c(k,:), 0.3, 'k.-', 'Color', c(k,:), 'MarkerFaceColor', c(k,:), 'LineWidth', 2);
+					end
+					if length(ego.selectedTrials) == 3
+						legend('Group A','Group B','Group C');
+					elseif length(ego.selectedTrials) == 2
+						legend('Group A','Group B');
 					end
 					hold off
+					grid on; box on
 					axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
 				end
 				if isfield(ego.ft,'av')
@@ -941,11 +962,7 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawAllLFPs(ego,override)
-			if ~exist('override','var'); override = false; end
-			if ego.LFPs(ego.selectedLFP).reparse == true && override == false
-				return
-			end
+		function drawAllLFPs(ego)
 			disp('Drawing Continuous LFP data...')
 			%first plot is the whole raw LFP with event markers
 			LFPs = ego.LFPs;
@@ -954,10 +971,10 @@ classdef LFPAnalysis < optickaCore
 			xlabel('Time (s)');
  			ylabel('LFP Raw Amplitude (mV)');
 			hold on
+			c = [0 0 0;1.0000 0 0;0 0 1;0 1 0;0 0.7500 0.7500;0.7500 0 0.7500;1 0.7500 0;0.4500 0.2500 0.2500;...
+				0 0.2500 0.7500;0 0.6000 1.0000;1.0000 0.5000 0.25;0.6000 0 0.3000;1 0 1;1 0.5 0.5;0.25 0.45 0.65];
 			for j = 1:length(LFPs)
-				c=rand(1,3);
-				c = c .* 0.75;
-				h(j)=plot(LFPs(j).time, LFPs(j).data,'Color',c);
+				h(j)=plot(LFPs(j).time, LFPs(j).data,'Color',c(j,:));
 				name{j} = ['LFP ' num2str(j)];
 				[av,sd] = stderr(LFPs(j).data,'SD');
 				line([LFPs(j).time(1) LFPs(j).time(end)],[av-(2*sd) av-(2*sd)],'Color',get(h(j),'Color'),'LineWidth',2, 'LineStyle','--');
@@ -966,15 +983,19 @@ classdef LFPAnalysis < optickaCore
 			axis([0 40 -.5 .5])
 			legend(h,name,'Location','NorthWest')
 			disp('Drawing Event markers...')
-			for j = 1:ego.p.eventList.nVars
-				color = rand(1,3);
-				var = ego.p.eventList.vars(j);
-				for k = 1:length(var.t1correct)
-					line([var.t1correct(k) var.t1correct(k)],[-.4 .4],'Color',color,'LineWidth',4);
-					line([var.t2correct(k) var.t2correct(k)],[-.4 .4],'Color',color,'LineWidth',4);
-					text(var.t1correct(k),.41,['VAR: ' num2str(j) '  TRL: ' num2str(k)]);
-				end
+			color = rand(3,ego.p.eventList.nVars);
+			for j = 1:ego.p.eventList.nTrials
+				trl = ego.p.eventList.trials(j);
+				var = trl.name;
+				line([trl.t1 trl.t1],[-.4 .4],'Color',color(:,var),'LineWidth',2);
+				line([trl.t2 trl.t2],[-.4 .4],'Color',color(:,var),'LineWidth',2);
+				text(trl.t1,.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',10);
+				text(trl.t1,-.41,['COR: ' num2str(trl.isCorrect)],'FontSize',10);
 			end
+			plot(ego.p.eventList.startFix,zeros(size(ego.p.eventList.startFix))-0.35,'c.','MarkerSize',15);
+			plot(ego.p.eventList.correct,zeros(size(ego.p.eventList.correct))-0.35,'g.','MarkerSize',15);
+			plot(ego.p.eventList.breakFix,zeros(size(ego.p.eventList.breakFix))-0.35,'b.','MarkerSize',15);
+			plot(ego.p.eventList.incorrect,zeros(size(ego.p.eventList.incorrect))-0.35,'r.','MarkerSize',15);
 			hold off;
 			box on;
 			pan xon;
@@ -1121,8 +1142,9 @@ classdef LFPAnalysis < optickaCore
 					p(i,jj).select();
 					cfg					= [];
 					cfg.fontsize		= 14;
-					cfg.baseline		= [-0.2 0];
+					cfg.baseline		= obj.baselineWindow;
 					cfg.baselinetype	= bl{jj};  
+					cfg.zlim			= [0 2];
 					cfg.interactive		= 'no';
 					cfg.channel			= ego.ft.label{ego.selectedLFP};
 					cfgOut=ft_singleplotTFR(cfg, fq{i});
@@ -1139,7 +1161,7 @@ classdef LFPAnalysis < optickaCore
 					title(t,'FontSize',cfg.fontsize);
 				end
 				for i = 1:length(h); 
-					set(h{i},'clim', [hmin hmax]);
+					%set(h{i},'clim', [hmin hmax]);
 					box on; grid on;
 				end
 			end
@@ -1152,7 +1174,20 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function [idx,val,delta]=findNearest(obj,in,value)
+		function [time,avg,err,data]=getAverageTuningCurve(ego,idx,sel)
+			time = ego.LFPs(sel).trials(1).time';
+			data = [ego.LFPs(sel).trials(idx).data];
+			data = rot90(fliplr(data)); %get it into trial x data = row x column
+			[avg,err] = stderr(data);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function [idx,val,delta]=findNearest(ego,in,value)
 			tmp = abs(in-value);
 			[~,idx] = min(tmp);
 			val = in(idx);

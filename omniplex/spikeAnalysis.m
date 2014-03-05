@@ -47,7 +47,7 @@ classdef spikeAnalysis < optickaCore
 		names@cell
 		%> trials to remove in reparsing
 		cutTrials@double
-		%> selectedTrials
+		%> selectedTrials: each cell is a trial list grouping
 		selectedTrials@cell
 		%> variable selection map for 3 analysis groups
 		map@cell
@@ -103,17 +103,65 @@ classdef spikeAnalysis < optickaCore
 				force = false;
 			end
 			if force == true || isempty(ego.file)
-				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},'Load Spike File');
+				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},'Load Spike PLX/PL2 File');
 				if ischar(f) && ~isempty(f)
 					ego.file = f;
 					ego.dir = p;
 					ego.paths.oldDir = pwd;
 					cd(ego.dir);
 					ego.p = plxReader('file', ego.file, 'dir', ego.dir);
+					ego.p.name = ['^' ego.fullName '^'];
 					getFiles(ego.p);
 				else
 					return
 				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Set the plxReader files from a structure
+		%>
+		%> @param varargin
+		%> @return
+		% ===================================================================
+		function setFiles(ego, in)
+			if isstruct(in)
+				f=fieldnames(in);
+				for i=1:length(f)
+					if isprop(ego,f{i})
+						try ego.(f{i}) = in.(f{i}); end
+					end
+				end
+				if isempty(ego.p)
+					ego.paths.oldDir = pwd;
+					cd(ego.dir);
+					ego.p = plxReader('file', ego.file, 'dir', ego.dir);
+					ego.p.name = ['^' ego.fullName '^'];
+				end
+				for i=1:length(f)
+					if isprop(ego.p,f{i})
+						try ego.p.(f{i}) = in.(f{i}); end
+					end
+				end
+				
+			end
+		end
+		
+		% ===================================================================
+		%> @brief set trials / var parsing from outside, override dialog
+		%>
+		%> @param varargin
+		%> @return
+		% ===================================================================
+		function setTrials(ego, in)
+			if isfield(in,'cutTrials')
+				ego.cutTrials = in.cutTrials;
+			end
+			if isfield(in,'selectedTrials')
+				ego.selectedTrials = in.selectedTrials;
+			end
+			if isfield(in,'map')
+				ego.map = in.map;
 			end
 		end
 		

@@ -146,10 +146,10 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function LFPs = readLFPs(obj)
+			cd(obj.dir);
 			if isempty(obj.eventList); 
 				getEvents(obj); 
 			end
-			cd(obj.dir);
 			tic
 			[~, names] = plx_adchan_names(obj.file);
 			[~, map] = plx_adchan_samplecounts(obj.file);
@@ -167,7 +167,7 @@ classdef plxReader < optickaCore
 						LFPs(aa).index = raw(idx(j)); LFPs(aa).channel = num;
 						LFPs(aa).count = map(idx(j));
 						LFPs(aa).reparse = false;
-						LFPs(aa).vars = struct([]); %#ok<*AGROW>
+						LFPs(aa).trials = struct([]); LFPs(aa).vars = struct([]); %#ok<*AGROW>
 						aa = aa + 1;
 					end
 				end
@@ -197,9 +197,10 @@ classdef plxReader < optickaCore
 					return;
 				end
 				LFPs(j).data = data;
-				LFPs(j).time = time;
+				LFPs(j).time = time';
 				LFPs(j).eventSample = round(LFPs(j).usedtimeStamp * 40e3);
 				LFPs(j).sample = round(LFPs(j).usedtimeStamp * LFPs(j).recordingFrequency);
+				LFPs(j).nTrials = obj.eventList.nTrials;
 				LFPs(j).nVars = obj.eventList.nVars;
 			end
 			
@@ -322,7 +323,7 @@ classdef plxReader < optickaCore
 				cd(obj.matdir)
 				[~,f,~] = fileparts(obj.matfile);
 				f = [f '.edf'];
-				ff = regexprep(f,'^Trainlog\-','','ignorecase');
+				ff = regexprep(f,'^[a-zA-Z]+\-','','ignorecase');
 				ff = regexprep(ff,'\.edf','FIX\.edf','ignorecase');
 				if ~exist(f, 'file') && ~exist(ff,'file')
 					[an, ~] = uigetfile('*.edf','Load Eyelink EDF File');
@@ -371,11 +372,7 @@ classdef plxReader < optickaCore
 					t = dat{k}.trials{j};
 					s = t.spikes';
 					spike.timestamp{k} = [spike.timestamp{k} s*fs];
-					if isempty(obj.eventWindow)
-						spike.time{k} = [spike.time{k} s-t.base];
-					else
-						spike.time{k} = [spike.time{k} s-t.base];
-					end
+					spike.time{k} = [spike.time{k} s-t.base];
 					spike.trial{k} = [spike.trial{k} ones(1,length(s))*j];
 					spike.trialtime(j,:) = [t.rStart t.rEnd];
 					spike.cfg.trl(j,:) = [spike.trialtime(j,:) t.rStart*fs t.name t.isCorrect];
