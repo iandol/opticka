@@ -51,12 +51,16 @@ classdef spikeAnalysis < optickaCore
 		selectedTrials@cell
 		%> variable selection map for 3 analysis groups
 		map@cell
-		%> UI panels
-		panels@struct = struct()
 		%> use ROI for trial selection
 		useROI@logical = false
 	end
 	
+	%------------------TRANSIENT PROPERTIES----------%
+	properties (SetAccess = private, GetAccess = public, Transient = true)
+		%> UI panels
+		panels@struct = struct()
+	end
+		
 	%------------------DEPENDENT PROPERTIES--------%
 	properties (SetAccess = private, Dependent = true)
 		%> number of LFP channels
@@ -66,7 +70,7 @@ classdef spikeAnalysis < optickaCore
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'lfpfile|spikefile|dir|plotRange|demeanLFP|selectedLFP|LFPWindow|verbose'
+		allowedProperties@char = 'file|dir|plotRange|demeanLFP|selectedLFP|spikeWindow|verbose'
 	end
 	
 	%=======================================================================
@@ -83,7 +87,9 @@ classdef spikeAnalysis < optickaCore
 			if nargin == 0; varargin.name = 'spikeAnalysis';end
 			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
 			if isempty(ego.name);ego.name = 'spikeAnalysis'; end
-			getFiles(ego, true);
+			if isempty(ego.file);
+				getFiles(ego,false);
+			end
 		end
 		
 		% ===================================================================

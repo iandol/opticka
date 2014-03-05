@@ -27,8 +27,8 @@ classdef LFPAnalysis < optickaCore
 	properties (SetAccess = private, GetAccess = public)
 		%> LFP plxReader object
 		p@plxReader
-		%> spike plxReader object; can be the same or different due to spike resorting
-		pspike@plxReader
+		%> spike analysis object
+		sp@spikeAnalysis
 		%> parsed LFPs
 		LFPs@struct
 		%> fieldtrip reparse
@@ -39,12 +39,16 @@ classdef LFPAnalysis < optickaCore
 		clickedTrials@cell
 		%> variable selection map for 3 analysis groups
 		map@cell
-		%> UI panels
-		panels@struct = struct()
 		%> bandpass frequencies
 		bpfreq@cell = {[1 4], [5 8], [9 14], [15 30], [30 50], [50 100], [1 250]}
 		%> bandpass frequency names
 		bpnames@cell = {'\delta','\theta','\alpha','\beta','\gamma low','\gamma high','all'}
+	end
+	
+	%------------------TRANSIENT PROPERTIES----------%
+	properties (SetAccess = private, GetAccess = public, Transient = true)
+		%> UI panels
+		panels@struct = struct()
 	end
 	
 	%------------------DEPENDENT PROPERTIES--------%
@@ -103,14 +107,8 @@ classdef LFPAnalysis < optickaCore
 				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},'Load Spike LFP File');
 				if ischar(f) && ~isempty(f)
 					ego.spikefile = f;
-					if strcmp(ego.lfpfile,ego.spikefile)
-						ego.pspike = ego.p;
-					else
-						ego.pspike = plxReader('file', ego.spikefile, 'dir', ego.dir);
-						ego.pspike.matfile = ego.p.matfile;
-						ego.pspike.matdir = ego.p.matdir;
-						ego.pspike.edffile = ego.p.edffile;
-					end
+					in = struct('file', ego.spikefile, 'dir', ego.dir);
+					ego.sp = spikeAnalysis(in);
 				else
 					return
 				end
