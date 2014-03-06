@@ -529,8 +529,8 @@ classdef plxReader < optickaCore
 				'FontSize',12,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left');
 			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0 0.5 1 0.05],...
 				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',1000,...
-				'FontSize',12,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left',...
-				'Callback',@editComment);
+				'FontSize',11,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left',...
+				'Callback',@editComment);%,'ButtonDownFcn',@editComment,'KeyReleaseFcn',@editComment);
 			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.4]);
 			if ~isempty(ego.eventList)
 				drawEvents(ego,handles.axis);
@@ -575,6 +575,9 @@ classdef plxReader < optickaCore
 				end
 				if isempty(ego.eA) && ~isempty(data.eA)
 					ego.eA = data.eA;
+				end
+				if isempty(ego.info) && ~isempty(data.info)
+					ego.info = data.info;
 				end
 			end
 		end

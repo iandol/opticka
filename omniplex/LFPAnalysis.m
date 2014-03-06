@@ -327,7 +327,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.bpinstabilityfix	= 'reduce';
 				cfg.rectify				= rectify;
 				cfg.demean				= 'yes'; %'no' or 'yes', whether to apply baseline correction (default = 'no')
-				cfg.baselinewindow		= obj.baselineWindow; %[begin end] in seconds, the default is the complete trial (default = 'all')
+				cfg.baselinewindow		= ego.baselineWindow; %[begin end] in seconds, the default is the complete trial (default = 'all')
 				cfg.detrend				= 'no'; %'no' or 'yes', remove linear trend from the data (done per trial) (default = 'no')
 				cfg.derivative			= 'no'; %'no' or 'yes', computes the first order derivative of the data (default = 'no')
 				disp(['===> FILTER BP = ' ego.bpnames{j} ' --> ' num2str(cfg.bpfreq)]);
@@ -362,14 +362,14 @@ classdef LFPAnalysis < analysisCore
 					cfg						= [];
 					cfg.keeptrials			= 'no';
 					cfg.removemean			= 'no';
-					cfg.covariance			= 'no';
-					cfg.covariancewindow	= [0.075 0.2];
+					cfg.covariance			= 'yes';
+					cfg.covariancewindow	= [0.05 0.2];
 					cfg.channel				= ft.label{ego.selectedLFP};
-					cfg.trials = ego.selectedTrials{i}.idx;
+					cfg.trials				= ego.selectedTrials{i}.idx;
 					bp{j}.av{i} = ft_timelockanalysis(cfg,bp{j});
 					bp{j}.av{i}.cfgUsed = cfg;
 					if strcmpi(cfg.covariance,'yes')					
-						disp(['-->> Covariance for Var:' num2str(i) ' = ' num2str(mean(av{i}.cov))]);
+						disp(['-->> Covariance for ' ego.selectedTrials{i}.name ' = ' num2str(mean(bp{j}.av{i}.cov))]);
 					end
 				end	
 			end
@@ -416,7 +416,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.keeptrials	= 'no';
 				cfg.output		= 'pow';
 				cfg.channel		= ft.label{ego.selectedLFP};
-				cfg.toi         = -0.4:0.01:0.4;                  % time window "slides"
+				cfg.toi         = -0.3:0.01:0.3;                  % time window "slides"
 				cfg.tw			= tw;
 				cfg.cycles		= cycles;
 				cfg.width		= width;
@@ -459,7 +459,7 @@ classdef LFPAnalysis < analysisCore
 				cfgUsed{i} = cfg;
 			end
 			ego.ft.(['fq' preset]) = fq;
-			drawLFPFrequencies(ego,['fq' preset]);
+			plotLFPs(ego,'freq',['fq' preset]);
 		end
 		
 		% ===================================================================
@@ -468,69 +468,66 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function cfgUsed=ftSpikeLFP(ego, cfg)
+		function cfgUsed=ftSpikeLFP(ego, unit)
 			if isempty(ego.sp.ft)
 				parseSpikes(ego);
 			end
+			if ~exist('unit','var'); unit = ego.sp.selectedUnit; end
+			ego.sp.selectedUnit = unit;
+			ego.sp.doDensity;
+			drawnow;
+			
 			ft = ego.ft;
 			spike = ego.sp.ft;
-			data_all = ft_appendspike([],ft, spike);
+			dat = ft_appendspike([],ft, spike);
 			
-			cfg              = [];
-			cfg.timwin       = [-0.15 0.15]; 
-			cfg.spikechannel = spike.label{1}; 
-			cfg.channel      = ft.label;
-			cfg.latency      = [-0.4 0];
-			staPre          = ft_spiketriggeredaverage(cfg, data_all);
-			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1]);
-			plot(staPre.time, staPre.avg(:,:)')
-			box on
-			grid on
-			legend(cfg.channel)
-			xlabel('time (s)')
-			xlim(cfg.timwin)
-			title(['PRE SpikeTriggered Average | File:' ego.lfpfile])
+			cfg					= [];
+			cfg.method			= 'nan'; % remove the replaced segment with interpolation
+			cfg.timwin			= [-0.001 0.001]; % remove 4 ms around every spike
+			cfg.spikechannel	= spike.label{unit};
+			cfg.channel			= ft.label;
+			%dati				= ft_spiketriggeredinterpolation(cfg, dat);
 			
-			ego.ft.staPre=staPre;
-			
-			cfg.latency      = [0 0.4];
-			staPost          = ft_spiketriggeredaverage(cfg, data_all);
-			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1]);
-			plot(staPost.time, staPost.avg(:,:)')
-			box on
-			grid on
-			legend(cfg.channel)
-			xlabel('time (s)')
-			xlim(cfg.timwin)
-			title(['POST SpikeTriggered Average | File:' ego.lfpfile])
-			
-			ego.ft.staPost=staPost;
-			
-			cfg              = [];
-			cfg.method       = 'mtmfft';
-			cfg.foilim       = [10 100]; % cfg.timwin determines spacing
-			cfg.timwin       = [-0.05 0.05]; % time window of 100 msec
-			cfg.taper        = 'hanning';
-			cfg.spikechannel = spike.label{1};
-			cfg.channel      = ft.label{ego.selectedLFP};
-			stsFFT           = ft_spiketriggeredspectrum(cfg, ft, spike);
-			
-			ang = squeeze(angle(stsFFT.fourierspctrm{1}));
-			mag = squeeze(abs(stsFFT.fourierspctrm{1}));
-			[av,ae] = stderr(ang);
-			[mv,me] = stderr(mag);
-			
-			ego.ft.stsFFT = stsFFT;
-			ego.ft.stsFFT.ang=squeeze(ang);
-			ego.ft.stsFFT.mag=squeeze(mag);
-			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1]);
-			areabar(stsFFT.freq,av,ae);
-			title(['Spike Triggered Phase | File:' ego.lfpfile])
-			xlabel('Frequency (Hz)')
-			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1]);
-			areabar(stsFFT.freq,mv,me);
-			title(['Spike Triggered Amplitude | File:' ego.lfpfile])
-			xlabel('Frequency (Hz)')
+			for j = 1:length(ego.selectedTrials)
+				name				= ['SPIKE:' spike.label{unit} ' | SEL: ' ego.selectedTrials{j}.name];
+				tempft				= selectFTTrials(ego,ft,ego.selectedTrials{j}.idx);
+				tempspike			= selectFTTrials(ego,spike,ego.selectedTrials{j}.idx);
+				tempdat				= selectFTTrials(ego,dat,ego.selectedTrials{j}.idx);
+				
+				cfg					= [];
+
+				cfg.timwin			= [-0.15 0.15]; 
+				cfg.spikechannel	= spike.label{unit}; 
+				cfg.channel			= ft.label;
+				cfg.latency			= [-0.4 0];
+				staPre				= ft_spiketriggeredaverage(cfg, tempdat);
+				ego.ft.staPre{j}	= staPre;
+				ego.ft.staPre{j}.name = name;
+
+				cfg.latency			= [0 0.4];
+				staPost				= ft_spiketriggeredaverage(cfg, tempdat);
+				ego.ft.staPost{j}	= staPost;
+				ego.ft.staPost{j}.name = name;
+
+				cfg					= [];
+
+				cfg.method			= 'mtmfft';
+				cfg.foilim			= [10 100]; % cfg.timwin determines spacing
+				cfg.timwin			= [-0.05 0.05]; % time window of 100 msec
+				cfg.taper			= 'hanning';
+				cfg.spikechannel	= spike.label{unit};
+				cfg.channel			= ft.label{ego.selectedLFP};
+				stsFFT				= ft_spiketriggeredspectrum(cfg, tempft, tempspike);
+
+				ang = squeeze(angle(stsFFT.fourierspctrm{1}));
+				mag = squeeze(abs(stsFFT.fourierspctrm{1}));
+				ego.ft.stsFFT{j} = stsFFT;
+				ego.ft.stsFFT{j}.name = name;
+				ego.ft.stsFFT{j}.ang=ang;
+				ego.ft.stsFFT{j}.mag=mag;
+				
+			end
+			drawSpikeLFP(ego);
 		end
 		
 		% ===================================================================
@@ -567,11 +564,11 @@ classdef LFPAnalysis < analysisCore
 					ego.drawAllLFPs(); drawnow;
 				case {'trials','raw'}
 					ego.drawRawLFPs(); drawnow;
-				case 'average'
+				case {'av','average'}
 					ego.drawAverageLFPs(); drawnow;
-				case 'frequency'
-					ego.drawLFPFrequencies(args); drawnow;
-				case 'bandpass'
+				case {'freq','frequency'}
+					ego.drawLFPFrequencies(args(:)); drawnow;
+				case {'bp','bandpass'}
 					ego.drawBandPass(); drawnow;
 			end
 		end
@@ -626,6 +623,33 @@ classdef LFPAnalysis < analysisCore
 				save(f,'lfp');
 				cd(od);
 			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function ftout=selectFTTrials(ego,ft,idx)
+			ftout = ft;
+			if isfield(ft,'nUnits') %assume a spike structure
+				ftout.trialtime = ft.trialtime(idx,:);
+				ftout.cfg.trl = ft.cfg.trl(idx,:);
+				for j = 1:ft.nUnits
+					sel					= ismember(ft.trial{j},idx);
+					ftout.timestamp{j}	= ft.timestamp{j}(sel);
+					ftout.time{j}		= ft.time{j}(sel);
+					ftout.trial{j}		= ft.trial{j}(sel);
+				end
+			else %assume continuous
+				ftout.sampleinfo = ft.sampleinfo(idx,:);
+				ftout.trialinfo = ft.trialinfo(idx,:);
+				if isfield(ft.cfg,'trl'); ftout.cfg.trl = ft.cfg.trl(idx,:); end
+				ftout.time = ft.time(idx);
+				ftout.trial = ft.trial(idx);
+			end
+			
 		end
 		
 		end
@@ -751,6 +775,7 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		function selectTrials(ego)
 			LFPs = ego.LFPs; %#ok<*PROP>
+			
 			switch lower(ego.selectedBehaviour)
 				case 'correct'
 					behaviouridx = find([LFPs(1).trials.isCorrect]==true);
@@ -775,7 +800,8 @@ classdef LFPAnalysis < analysisCore
 						ego.selectedTrials{a}.idx = idx;
 						ego.selectedTrials{1}.cutidx = cutidx;
 						ego.selectedTrials{a}.behaviour = ego.selectedBehaviour;
-						ego.selectedTrials{a}.sel = ego.p.eventList.unique(i);						
+						ego.selectedTrials{a}.sel = ego.p.eventList.unique(i);
+						ego.selectedTrials{a}.name = ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
 						a = a + 1;
 					end
 				end
@@ -788,9 +814,10 @@ classdef LFPAnalysis < analysisCore
 				idx = setdiff(idx, cutidx); %remove the cut trials
 				if ~isempty(idx)
 					ego.selectedTrials{1}.idx = idx;
-					ego.selectedTrials{1}.cutidx = cutidx;
-					ego.selectedTrials{1}.behaviour = ego.selectedBehaviour;
-					ego.selectedTrials{1}.sel = ego.map{1};
+					ego.selectedTrials{end}.cutidx = cutidx;
+					ego.selectedTrials{end}.behaviour = ego.selectedBehaviour;
+					ego.selectedTrials{end}.sel = ego.map{1};
+					ego.selectedTrials{end}.name = ['[' num2str(ego.selectedTrials{end}.sel) ']' ' #' num2str(length(idx))];
 				end
 				
 				if ~isempty(ego.map{2})
@@ -802,9 +829,10 @@ classdef LFPAnalysis < analysisCore
 					idx = setdiff(idx, cutidx); %remove the cut trials
 					if ~isempty(idx)
 						ego.selectedTrials{end+1}.idx = idx;
-						ego.selectedTrials{1}.cutidx = cutidx;
+						ego.selectedTrials{end}.cutidx = cutidx;
 						ego.selectedTrials{end}.behaviour = ego.selectedBehaviour;
 						ego.selectedTrials{end}.sel = ego.map{2};
+						ego.selectedTrials{end}.name = ['[' num2str(ego.selectedTrials{end}.sel) ']' ' #' num2str(length(idx))];
 					end
 				end
 				
@@ -817,9 +845,10 @@ classdef LFPAnalysis < analysisCore
 					idx = setdiff(idx, cutidx); %remove the cut trials
 					if ~isempty(idx)
 						ego.selectedTrials{end+1}.idx = idx;
-						ego.selectedTrials{1}.cutidx = cutidx;
+						ego.selectedTrials{end}.cutidx = cutidx;
 						ego.selectedTrials{end}.behaviour = ego.selectedBehaviour;
 						ego.selectedTrials{end}.sel = ego.map{3};
+						ego.selectedTrials{end}.name = ['[' num2str(ego.selectedTrials{end}.sel) ']' ' #' num2str(length(idx))];
 					end
 				end
 			end
@@ -845,20 +874,7 @@ classdef LFPAnalysis < analysisCore
 			LFP = ego.LFPs(sel);
 
 			p=panel(h);
-			len=length(ego.selectedTrials);
-			if len < 3
-				row = 2;
-				col = 1;
-			elseif len < 4
-				row = 3;
-				col = 1;
-			elseif len < 9
-				row=4;
-				col=2;
-			elseif len < 13
-				row = 4;
-				col = 3;
-			end
+			[row,col]=ego.optimalLayout(ego.nSelection);
 			p.pack(row,col);
 			for j = 1:length(ego.selectedTrials)
 				[i1,i2] = ind2sub([row,col], j);
@@ -961,7 +977,7 @@ classdef LFPAnalysis < analysisCore
 					set(gca,'Layer','bottom')
 					hold on
 					for k = 1:length(ego.selectedTrials)
-						leg{k,1} = num2str(ego.selectedTrials{k}.sel);
+						leg{k,1} = ego.selectedTrials{k}.name;
 						[time,avg,err]=getAverageTuningCurve(ego, ego.selectedTrials{k}.idx, j);
 						areabar(time, avg, err, c(k,:), 0.3, 'k.-', 'Color', c(k,:), 'MarkerFaceColor', c(k,:), 'LineWidth', 2);
 					end
@@ -1061,6 +1077,59 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
+		function drawSpikeLFP(ego)
+			disp('Drawing Spike LFP correlations...')
+			ft = ego.ft;
+			c = [0 0 0;1.0000 0 0;0 0 1;0 1 0;0 0.7500 0.7500;0.7500 0 0.7500;1 0.7500 0;0.4500 0.2500 0.2500;...
+				0 0.2500 0.7500;0 0.6000 1.0000;1.0000 0.5000 0.25;0.6000 0 0.3000;1 0 1;1 0.5 0.5;0.25 0.45 0.65];
+			for j = 1:length(ego.selectedTrials)
+				h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',num2str(ego.selectedTrials{j}.sel));
+				p=panel(h);
+				p.margin = [20 20 10 15]; %left bottom right top
+				p.fontsize = 10;
+				p.pack(2,2);
+				
+				p(1,1).select();
+				plot(ft.staPre{j}.time, ft.staPre{j}.avg(:,:)')
+				box on
+				grid on
+				legend(ft.staPre{j}.cfg.channel)
+				xlabel('Time (s)')
+				xlim(ft.staPre{j}.cfg.timwin)
+				title([ft.staPre{j}.name ' PRE STA \newlineFile:' ego.lfpfile])
+				
+				p(1,2).select();
+				plot(ft.staPost{j}.time, ft.staPost{j}.avg(:,:)')
+				box on
+				grid on
+				legend(ft.staPost{j}.cfg.channel)
+				xlabel('Time (s)')
+				xlim(ft.staPost{j}.cfg.timwin)
+				title([ft.staPost{j}.name ' POST STA \newlineFile:' ego.lfpfile])
+				
+				p(2,1).select();
+				[av,ae] = stderr(ft.stsFFT{j}.ang);
+				areabar(ft.stsFFT{j}.freq,rad2ang(av),rad2ang(ae));
+				legend(ft.stsFFT{j}.cfg.channel)
+				title([ft.stsFFT{j}.name ' Spike Triggered Phase \newlineFile:' ego.lfpfile]);
+				xlabel('Frequency (Hz)')
+				ylabel('Angle (deg)');
+				
+				p(2,2).select();
+				[mv,me] = stderr(ft.stsFFT{j}.mag);
+				areabar(ft.stsFFT{j}.freq, mv, me);
+				legend(ft.stsFFT{j}.cfg.channel)
+				title([ft.stsFFT{j}.name ' Spike Triggered Amplitude \newlineFile:' ego.lfpfile]);
+				xlabel('Frequency (Hz)')
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function drawBandPass(ego)
 				if ~isfield(ego.ft,'bp') || isempty(ego.ft.bp);	return;	end
 				bp = ego.ft.bp;
@@ -1069,22 +1138,7 @@ classdef LFPAnalysis < analysisCore
 				p.margin = [20 20 10 15]; %left bottom right top
 				p.fontsize = 10;
 				len=length(bp)+1;
-				if len < 3
-					row = 2;
-					col = 1;
-				elseif len < 4
-					row = 3;
-					col = 1;
-				elseif len < 7
-					row = 3;
-					col = 2;
-				elseif len < 9
-					row=4;
-					col=2;
-				elseif len < 13
-					row = 4;
-					col = 3;
-				end
+				[row,col]=ego.optimalLayout(len);
 				p.pack(row,col);
 				for j = 1:length(bp)
 						[i1,i2] = ind2sub([row,col], j);
@@ -1109,10 +1163,10 @@ classdef LFPAnalysis < analysisCore
 						time = bp{j}.av{1}.time;
 						fig = bp{j}.av{2}.avg(1,:);
 						grnd = bp{j}.av{1}.avg(1,:);
-						idx1 = findNearest(ego, time, -0.2);
-						idx2 = findNearest(ego, time, 0);
-						idx3 = findNearest(ego, time, 0.05);
-						idx4 = findNearest(ego, time, 0.2);
+						idx1 = ego.findNearest(time, -0.2);
+						idx2 = ego.findNearest(time, 0);
+						idx3 = ego.findNearest(time, 0.05);
+						idx4 = ego.findNearest(time, 0.2);
 						pre = mean([mean(grnd(idx1:idx2)), mean(fig(idx1:idx2))]); 
 						res = (fig - grnd) ./ pre;
 						freqdiffs(j) = mean(fig(idx3:idx4)) / mean(grnd(idx3:idx4));
@@ -1139,8 +1193,20 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawLFPFrequencies(ego,name)
-			if ~exist('name','var') || isempty(name); name = 'fqfix1'; end
+		function drawLFPFrequencies(ego,varargin)
+			if isempty(varargin); 
+				name = 'fqfix1';
+			elseif length(varargin)==1 && length(varargin{1}) > 1
+				varargin = varargin{1};
+			end
+				if length(varargin)>0
+				name = varargin{1};
+				while iscell(name);name=name{1};end
+			end
+			if length(varargin)>1
+				zlim = varargin{2};
+				while iscell(zlim);zlim=zlim{1};end
+			end
 			if ~isfield(ego.ft,name)
 				return;
 			end
@@ -1150,40 +1216,30 @@ classdef LFPAnalysis < analysisCore
 			p.margin = [15 15 30 20];
 			p.fontsize = 12;
 			len=length(fq);
-			if len < 3
-				row = 2;
-				col = 2;
-			elseif len < 4
-				row = 3;
-				col = 2;
-			elseif len < 9
-				row=4;
-				col=2;
-			elseif len < 13
-				row = 4;
-				col = 3;
-			end
+			[row,col]=ego.optimalLayout(len);
 			p.pack(row,col);
 			bl = {'relative','absolute'};
+			hmin = cell(size(bl));
+			hmax = hmin;
+			h = hmin;
 			for jj = 1:length(bl)
-				hmin = inf;
-				hmax = -inf;
-				h = {};
 				for i = 1:len
 					p(i,jj).select();
 					cfg					= [];
 					cfg.fontsize		= 14;
-					cfg.baseline		= obj.baselineWindow;
-					cfg.baselinetype	= bl{jj};  
-					cfg.zlim			= [0 2];
+					cfg.baseline		= ego.baselineWindow;
+					cfg.baselinetype	= bl{jj};
+					if strcmpi(bl{jj},'relative') && exist('zlim','var')
+						cfg.zlim		= zlim;
+					end
 					cfg.interactive		= 'no';
 					cfg.channel			= ego.ft.label{ego.selectedLFP};
 					cfgOut=ft_singleplotTFR(cfg, fq{i});
-					h{i} = gca;
+					h{jj}{i} = gca;
 					cfgUsed{i}.plotcfg = cfgOut;
 					clim = get(gca,'clim');
-					hmin = min([hmin min(clim)]);
-					hmax = max([hmax max(clim)]);
+					hmin{jj} = min([hmin{jj} min(clim)]);
+					hmax{jj} = max([hmax{jj} max(clim)]);
 					xlabel('Time (s)');
 					ylabel('Frequency (Hz)');
 					t = [bl{jj} '#' num2str(i) 'Preset: ' name ' | Method: ' fq{i}.cfgUsed.method ' | Taper: ' fq{i}.cfgUsed.taper];
@@ -1191,8 +1247,8 @@ classdef LFPAnalysis < analysisCore
 					t = [t ' | Width: ' num2str(fq{i}.cfgUsed.width) ' | Smooth: ' num2str(fq{i}.cfgUsed.smooth)];
 					title(t,'FontSize',cfg.fontsize);
 				end
-				for i = 1:length(h); 
-					%set(h{i},'clim', [hmin hmax]);
+				for i = 1:length(h{jj});
+					set(h{jj}{i},'clim', [hmin{jj} hmax{jj}]);
 					box on; grid on;
 				end
 			end

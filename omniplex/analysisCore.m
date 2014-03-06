@@ -86,6 +86,33 @@ classdef analysisCore < optickaCore
 			delta = abs(value - val);
 		end
 		
+		% ===================================================================
+		%> @brief set paths for object
+		%>
+		%> @param 
+		% ===================================================================
+		function [err]=var2SE(var,dof)
+			err = sqrt(var ./ dof);
+		end
+		
+		% ===================================================================
+		%> @brief set paths for object
+		%>
+		%> @param 
+		% ===================================================================
+		function [row,col]=optimalLayout(len)
+			row=1; col=1;
+			if		len == 2	row = 2;	col = 1;
+			elseif	len == 3	row = 3;	col = 1;
+			elseif	len == 4	row = 2;	col = 2;
+			elseif	len < 7	row = 3;	col = 2;
+			elseif	len < 10	row = 3;	col = 3;
+			elseif	len < 13	row = 4;	col = 3;
+			elseif	len < 17	row = 4;	col = 4;
+			elseif	len < 21	row = 5;	col = 4;
+			end
+		end
+		
 	end %---END STATIC METHODS---%
 	
 	%=======================================================================

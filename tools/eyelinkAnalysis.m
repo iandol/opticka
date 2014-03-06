@@ -81,6 +81,7 @@ classdef eyelinkAnalysis < analysisCore
 		function ego = eyelinkAnalysis(varargin)
 			if nargin == 0; varargin.name = ''; end
 			ego=ego@analysisCore(varargin); %superclass constructor
+			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
 			if isempty(ego.file) || isempty(ego.dir)
 				[ego.file, ego.dir] = uigetfile('*.edf','Load EDF File:');
 			end
