@@ -1,4 +1,4 @@
-classdef spikeAnalysis < optickaCore
+classdef spikeAnalysis < analysisCore
 %spikeAnalysis Wraps the native and fieldtrip analysis around our PLX/PL2 reading.
 	
 %------------------PUBLIC PROPERTIES----------%
@@ -86,7 +86,8 @@ classdef spikeAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function ego = spikeAnalysis(varargin)
-			if nargin == 0; varargin.name = 'spikeAnalysis';end
+			if nargin == 0; varargin.name = 'spikeAnalysis'; end
+			ego=ego@analysisCore(varargin); %superclass constructor
 			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
 			if isempty(ego.name);ego.name = 'spikeAnalysis'; end
 			if isempty(ego.file);
@@ -684,19 +685,6 @@ classdef spikeAnalysis < optickaCore
 		% ===================================================================
 		function h=drawRawLFPs(ego, h, sel)
 			
-		end
-
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function [idx,val,delta]=findNearest(obj,in,value)
-			tmp = abs(in-value);
-			[~,idx] = min(tmp);
-			val = in(idx);
-			delta = abs(value - val);
 		end
 		
 	end

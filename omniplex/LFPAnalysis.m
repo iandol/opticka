@@ -1,4 +1,4 @@
-classdef LFPAnalysis < optickaCore
+classdef LFPAnalysis < analysisCore
 %LFPAnalysis Wraps the native and fieldtrip analysis around our PLX/PL2 reading.
 	
 %------------------PUBLIC PROPERTIES----------%
@@ -81,6 +81,7 @@ classdef LFPAnalysis < optickaCore
 		% ===================================================================
 		function ego = LFPAnalysis(varargin)
 			if nargin == 0; varargin.name = 'LFPAnalysis';end
+			ego=ego@analysisCore(varargin); %superclass constructor
 			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
 			if isempty(ego.name);ego.name = 'LFPAnalysis'; end
 			getFiles(ego, true);
@@ -148,7 +149,7 @@ classdef LFPAnalysis < optickaCore
 			parseLFPs(ego);
 			userSelection(ego);
 			selectTrials(ego);
-			ft_parseLFPs(ego);
+			getFTLFPs(ego);
 			plotLFPs(ego,'all');
 		end
 
@@ -163,7 +164,7 @@ classdef LFPAnalysis < optickaCore
 			parseLFPs(ego);
 			userSelection(ego);
 			selectTrials(ego);
-			ft_parseLFPs(ego);
+			getFTLFPs(ego);
 			plotLFPs(ego,'normal');
 		end
 		
@@ -181,8 +182,8 @@ classdef LFPAnalysis < optickaCore
 			in.selectedBehaviour = ego.selectedBehaviour;
 			setTrials(ego.sp, in); %set spike anal to same trials etc.
 			syncData(ego.sp.p, ego.p); %copy any parsed data 
-			lazyParse(ego.sp);
-			syncData(ego.p, ego.sp.p); %copy any parsed data back 
+			lazyParse(ego.sp); %lazy parse the spikes
+			syncData(ego.p, ego.sp.p); %copy any new parsed data back 
 		end
 		
 		% ===================================================================
@@ -191,7 +192,7 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ft = ft_parseLFPs(ego)
+		function ft = getFTLFPs(ego)
 			ft_defaults;
 			LFPs = ego.LFPs;
 			tic
@@ -244,7 +245,7 @@ classdef LFPAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function ftPreProcess(ego, cfg, removeLineNoise)
-			if isempty(ego.ft); ft_parseLFPs(ego); end
+			if isempty(ego.ft); getFTLFPs(ego); end
 			if ~exist('removeLineNoise','var');removeLineNoise = false;end
 			if ~exist('cfg','var');cfg = [];end				
 			if isfield(ego.ft,'ftOld')
@@ -407,7 +408,7 @@ classdef LFPAnalysis < optickaCore
 			if ~exist('cycles','var') || isempty(cycles); cycles = 5; end
 			if ~exist('smth','var') || isempty(smth); smth = 0.4; end
 			if ~exist('width','var') || isempty(width); width = 10; end
-			if ~isfield(ego.ft,'label'); ft_parseLFPs(ego); end
+			if ~isfield(ego.ft,'label'); getFTLFPs(ego); end
 			ft = ego.ft;
 			cfgUsed = {};
 			if ~exist('cfg','var') || isempty(cfg)
@@ -468,56 +469,68 @@ classdef LFPAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function cfgUsed=ftSpikeLFP(ego, cfg)
+			if isempty(ego.sp.ft)
+				parseSpikes(ego);
+			end
 			ft = ego.ft;
 			spike = ego.sp.ft;
 			data_all = ft_appendspike([],ft, spike);
-			cfg              = [];
-			cfg.timwin       = [-0.2 0.2]; 
-			cfg.spikechannel = spike.label{1}; 
-			cfg.channel      = ft.label{ego.selectedLFP};
-			cfg.latency      = [0 0.4];
-			staPost          = ft_spiketriggeredaverage(cfg, data_all);
-			figure
-			plot(staPost.time, staPost.avg(:,:)')
-			box on
-			grid on
-			legend(ft.label{ego.selectedLFP})
-			xlabel('time (s)')
-			xlim(cfg.timwin)
-			title('POST')
 			
 			cfg              = [];
-			cfg.timwin       = [-0.2 0.2]; 
+			cfg.timwin       = [-0.15 0.15]; 
 			cfg.spikechannel = spike.label{1}; 
-			cfg.channel      = ft.label{ego.selectedLFP};
+			cfg.channel      = ft.label;
 			cfg.latency      = [-0.4 0];
 			staPre          = ft_spiketriggeredaverage(cfg, data_all);
-			figure
+			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1]);
 			plot(staPre.time, staPre.avg(:,:)')
 			box on
 			grid on
-			legend(ft.label{ego.selectedLFP})
+			legend(cfg.channel)
 			xlabel('time (s)')
 			xlim(cfg.timwin)
-			title('PRE')
+			title(['PRE SpikeTriggered Average | File:' ego.lfpfile])
 			
-			ego.ft.sta.post=staPost;
-			ego.ft.sta.pre=staPre;
+			ego.ft.staPre=staPre;
+			
+			cfg.latency      = [0 0.4];
+			staPost          = ft_spiketriggeredaverage(cfg, data_all);
+			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1]);
+			plot(staPost.time, staPost.avg(:,:)')
+			box on
+			grid on
+			legend(cfg.channel)
+			xlabel('time (s)')
+			xlim(cfg.timwin)
+			title(['POST SpikeTriggered Average | File:' ego.lfpfile])
+			
+			ego.ft.staPost=staPost;
 			
 			cfg              = [];
 			cfg.method       = 'mtmfft';
-			cfg.foilim       = [20 100]; % cfg.timwin determines spacing
+			cfg.foilim       = [10 100]; % cfg.timwin determines spacing
 			cfg.timwin       = [-0.05 0.05]; % time window of 100 msec
 			cfg.taper        = 'hanning';
 			cfg.spikechannel = spike.label{1};
 			cfg.channel      = ft.label{ego.selectedLFP};
 			stsFFT           = ft_spiketriggeredspectrum(cfg, ft, spike);
-			ang = angle(stsFFT.fourierspctrm{1});
-			mag = abs(stsFFT.fourierspctrm{1});
 			
-			ego.ft.stsFFT = stsFFT
-			ego.ang=squeeze(ang);
-			ego.mag=squeeze(mag);
+			ang = squeeze(angle(stsFFT.fourierspctrm{1}));
+			mag = squeeze(abs(stsFFT.fourierspctrm{1}));
+			[av,ae] = stderr(ang);
+			[mv,me] = stderr(mag);
+			
+			ego.ft.stsFFT = stsFFT;
+			ego.ft.stsFFT.ang=squeeze(ang);
+			ego.ft.stsFFT.mag=squeeze(mag);
+			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1]);
+			areabar(stsFFT.freq,av,ae);
+			title(['Spike Triggered Phase | File:' ego.lfpfile])
+			xlabel('Frequency (Hz)')
+			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1]);
+			areabar(stsFFT.freq,mv,me);
+			title(['Spike Triggered Amplitude | File:' ego.lfpfile])
+			xlabel('Frequency (Hz)')
 		end
 		
 		% ===================================================================
@@ -700,14 +713,20 @@ classdef LFPAnalysis < optickaCore
 			end
 
 			sel = num2str(ego.selectedLFP);
+			beh = ego.selectedBehaviour;
 
 			options.Resize='on';
 			options.WindowStyle='normal';
 			options.Interpreter='tex';
-			prompt = {'Choose PLX variables to merge (A):','Choose PLX variables to merge (B):','Choose PLX variables to merge (C):','Enter Trials to exclude','Choose which LFP channel to select'};
+			prompt = {'Choose PLX variables to merge (A, if empty parse all variables independantly):',...
+				'Choose PLX variables to merge (B):',...
+				'Choose PLX variables to merge (C):',...
+				'Enter Trials to exclude:',...
+				'Choose which LFP channel to select:',...
+				'Behavioural type (''correct'', ''breakFix'', ''incorrect'' | ''all''):'};
 			dlg_title = ['REPARSE ' num2str(ego.LFPs(1).nVars) ' DATA VARIABLES'];
 			num_lines = [1 120];
-			def = {map{1}, map{2}, map{3}, cuttrials,sel};
+			def = {map{1}, map{2}, map{3}, cuttrials,sel,beh};
 			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
 			drawnow;
 			if ~isempty(answer)
@@ -720,6 +739,7 @@ classdef LFPAnalysis < optickaCore
 				if ego.selectedLFP < 1 || ego.selectedLFP > ego.nLFPs
 					ego.selectedLFP = 1;
 				end
+				ego.selectedBehaviour = answer{6};
 			end
 		end
 		
@@ -1190,19 +1210,6 @@ classdef LFPAnalysis < optickaCore
 			data = [ego.LFPs(sel).trials(idx).data];
 			data = rot90(fliplr(data)); %get it into trial x data = row x column
 			[avg,err] = stderr(data);
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function [idx,val,delta]=findNearest(ego,in,value)
-			tmp = abs(in-value);
-			[~,idx] = min(tmp);
-			val = in(idx);
-			delta = abs(value - val);
 		end
 		
 	end

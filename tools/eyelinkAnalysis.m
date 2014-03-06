@@ -3,15 +3,13 @@
 %> offering a simpler interface
 %>
 % ========================================================================
-classdef eyelinkAnalysis < optickaCore
+classdef eyelinkAnalysis < analysisCore
 	
 	properties
 		%> file name
 		file@char = ''
 		%> directory
 		dir@char = ''
-		%> verbose output?
-		verbose = false
 		%> screen resolution
 		pixelsPerCm@double = 32
 		%> screen distance
@@ -33,6 +31,8 @@ classdef eyelinkAnalysis < optickaCore
 		rtDivision@double
 		%> region of interest?
 		ROI@double = [5 5 2]
+		%> verbose output?
+		verbose = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -78,13 +78,11 @@ classdef eyelinkAnalysis < optickaCore
 		%> @brief
 		%>
 		% ===================================================================
-		function obj = eyelinkAnalysis(varargin)
-			if nargin == 0; varargin.name = 'eyelinkAnalysis';end
-			if nargin>0
-				obj.parseArgs(varargin,obj.allowedProperties);
-			end
-			if isempty(obj.file) || isempty(obj.dir)
-				[obj.file, obj.dir] = uigetfile('*.edf','Load EDF File:');
+		function ego = eyelinkAnalysis(varargin)
+			if nargin == 0; varargin.name = ''; end
+			ego=ego@analysisCore(varargin); %superclass constructor
+			if isempty(ego.file) || isempty(ego.dir)
+				[ego.file, ego.dir] = uigetfile('*.edf','Load EDF File:');
 			end
 		end
 		
@@ -94,12 +92,12 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function load(obj)
+		function load(ego)
 			tic
-			if ~isempty(obj.file)
+			if ~isempty(ego.file)
 				oldpath = pwd;
-				cd(obj.dir)
-				obj.raw = edfmex(obj.file);
+				cd(ego.dir)
+				ego.raw = edfmex(ego.file);
 				fprintf('\n');
 				cd(oldpath)
 			end
@@ -112,32 +110,32 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parse(obj)
-			obj.isParsed = false;
+		function parse(ego)
+			ego.isParsed = false;
 			tic
 			isTrial = false;
 			tri = 1; %current trial that is being parsed
 			tri2 = 1; %trial ignoring incorrects
 			eventN = 0;
-			obj.comment = obj.raw.HEADER;
-			obj.trials = struct();
-			obj.correct.idx = [];
-			obj.correct.saccTimes = [];
-			obj.correct.fixations = [];
-			obj.breakFix = obj.correct;
-			obj.incorrect = obj.correct;
-			obj.trialList = [];
+			ego.comment = ego.raw.HEADER;
+			ego.trials = struct();
+			ego.correct.idx = [];
+			ego.correct.saccTimes = [];
+			ego.correct.fixations = [];
+			ego.breakFix = ego.correct;
+			ego.incorrect = ego.correct;
+			ego.trialList = [];
 			
-			sample = obj.raw.FSAMPLE.gx(:,100); %check which eye
+			sample = ego.raw.FSAMPLE.gx(:,100); %check which eye
 			if sample(1) == -32768 %only use right eye if left eye data is not present
 				eyeUsed = 2; %right eye index for FSAMPLE.gx;
 			else
 				eyeUsed = 1; %left eye index
 			end
 			
-			for i = 1:length(obj.raw.FEVENT)
+			for i = 1:length(ego.raw.FEVENT)
 				isMessage = false;
-				evt = obj.raw.FEVENT(i);
+				evt = ego.raw.FEVENT(i);
 				
 				if evt.type == 24 %strcmpi(evt.codestring,'MESSAGEEVENT')
 					isMessage = true;
@@ -150,14 +148,14 @@ classdef eyelinkAnalysis < optickaCore
 				if isMessage && ~isTrial
 					rt = regexpi(evt.message,'^(?<d>V_RT MESSAGE) (?<a>\w+) (?<b>\w+)','names');
 					if ~isempty(rt) && ~isempty(rt.a) && ~isempty(rt.b)
-						obj.rtStartMessage = rt.a;
-						obj.rtEndMessage = rt.b;
+						ego.rtStartMessage = rt.a;
+						ego.rtEndMessage = rt.b;
 						continue
 					end
 					
 					xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
 					if ~isempty(xy)  && ~isempty(xy.x)
-						obj.display = [str2num(xy.x)+1 str2num(xy.y)+1];
+						ego.display = [str2num(xy.x)+1 str2num(xy.y)+1];
 						continue
 					end
 					
@@ -168,20 +166,20 @@ classdef eyelinkAnalysis < optickaCore
 						end
 						isTrial = true;
 						eventN=1;
-						obj.trials(tri).id = str2double(id.ID);
-						obj.trials(tri).idx = tri;
-						obj.trials(tri).time = double(evt.time);
-						obj.trials(tri).sttime = double(evt.sttime);
-						obj.trials(tri).rt = false;
-						obj.trials(tri).rtstarttime = double(evt.sttime);
-						obj.trials(tri).fixations = [];
-						obj.trials(tri).saccades = [];
-						obj.trials(tri).saccadeTimes = [];
-						obj.trials(tri).rttime = [];
-						obj.trials(tri).uuid = [];
-						obj.trials(tri).correct = false;
-						obj.trials(tri).breakFix = false;
-						obj.trials(tri).incorrect = false;
+						ego.trials(tri).id = str2double(id.ID);
+						ego.trials(tri).idx = tri;
+						ego.trials(tri).time = double(evt.time);
+						ego.trials(tri).sttime = double(evt.sttime);
+						ego.trials(tri).rt = false;
+						ego.trials(tri).rtstarttime = double(evt.sttime);
+						ego.trials(tri).fixations = [];
+						ego.trials(tri).saccades = [];
+						ego.trials(tri).saccadeTimes = [];
+						ego.trials(tri).rttime = [];
+						ego.trials(tri).uuid = [];
+						ego.trials(tri).correct = false;
+						ego.trials(tri).breakFix = false;
+						ego.trials(tri).incorrect = false;
 						continue
 					end
 				end
@@ -191,158 +189,158 @@ classdef eyelinkAnalysis < optickaCore
 					if ~isMessage
 						
 						if strcmpi(evt.codestring,'STARTSAMPLES')
-							obj.trials(tri).startsampletime = double(evt.sttime);
+							ego.trials(tri).startsampletime = double(evt.sttime);
 							continue
 						end
 						
 						if evt.type == 8 %strcmpi(evt.codestring,'ENDFIX')
 							fixa = [];
-							if isempty(obj.trials(tri).fixations)
+							if isempty(ego.trials(tri).fixations)
 								fix = 1;
 							else
-								fix = length(obj.trials(tri).fixations)+1;
+								fix = length(ego.trials(tri).fixations)+1;
 							end
-							if obj.trials(tri).rt == true
-								rel = obj.trials(tri).rtstarttime;
+							if ego.trials(tri).rt == true
+								rel = ego.trials(tri).rtstarttime;
 								fixa.rt = true;
 							else
-								rel = obj.trials(tri).sttime;
+								rel = ego.trials(tri).sttime;
 								fixa.rt = false;
 							end
 							fixa.n = eventN;
-							fixa.ppd = obj.ppd;
+							fixa.ppd = ego.ppd;
 							fixa.sttime = double(evt.sttime);
 							fixa.entime = double(evt.entime);
 							fixa.time = fixa.sttime - rel;
 							fixa.length = fixa.entime - fixa.sttime;
 							fixa.rel = rel;
 
-							[fixa.gstx, fixa.gsty]  = toDegrees(obj, [evt.gstx, evt.gsty]);
-							[fixa.genx, fixa.geny]  = toDegrees(obj, [evt.genx, evt.geny]);
-							[fixa.x, fixa.y]		= toDegrees(obj, [evt.gavx, evt.gavy]);
+							[fixa.gstx, fixa.gsty]  = toDegrees(ego, [evt.gstx, evt.gsty]);
+							[fixa.genx, fixa.geny]  = toDegrees(ego, [evt.genx, evt.geny]);
+							[fixa.x, fixa.y]		= toDegrees(ego, [evt.gavx, evt.gavy]);
 							[fixa.theta, fixa.rho]	= cart2pol(fixa.x, fixa.y);
 							fixa.theta = rad2ang(fixa.theta);
 							
 							if fix == 1
-								obj.trials(tri).fixations = fixa;
+								ego.trials(tri).fixations = fixa;
 							else
-								obj.trials(tri).fixations(fix) = fixa;
+								ego.trials(tri).fixations(fix) = fixa;
 							end
-							obj.trials(tri).nfix = fix;
+							ego.trials(tri).nfix = fix;
 							eventN = eventN + 1;
 							continue
 						end
 						
 						if evt.type == 6 % strcmpi(evt.codestring,'ENDSACC')
 							sacc = [];
-							if isempty(obj.trials(tri).saccades)
+							if isempty(ego.trials(tri).saccades)
 								fix = 1;
 							else
-								fix = length(obj.trials(tri).saccades)+1;
+								fix = length(ego.trials(tri).saccades)+1;
 							end
-							if obj.trials(tri).rt == true
-								rel = obj.trials(tri).rtstarttime;
+							if ego.trials(tri).rt == true
+								rel = ego.trials(tri).rtstarttime;
 								sacc.rt = true;
 							else
-								rel = obj.trials(tri).sttime;
+								rel = ego.trials(tri).sttime;
 								sacc.rt = false;
 							end
 							sacc.n = eventN;
-							sacc.ppd = obj.ppd;
+							sacc.ppd = ego.ppd;
 							sacc.sttime = double(evt.sttime);
 							sacc.entime = double(evt.entime);
 							sacc.time = sacc.sttime - rel;
 							sacc.length = sacc.entime - sacc.sttime;
 							sacc.rel = rel;
 
-							[sacc.gstx, sacc.gsty]	= toDegrees(obj, [evt.gstx evt.gsty]);
-							[sacc.genx, sacc.geny]	= toDegrees(obj, [evt.genx evt.geny]);
+							[sacc.gstx, sacc.gsty]	= toDegrees(ego, [evt.gstx evt.gsty]);
+							[sacc.genx, sacc.geny]	= toDegrees(ego, [evt.genx evt.geny]);
 							[sacc.x, sacc.y]		= deal((sacc.genx - sacc.gstx), (sacc.geny - sacc.gsty));
 							[sacc.theta, sacc.rho]	= cart2pol(sacc.x, sacc.y);
 							sacc.theta = rad2ang(sacc.theta);
 							
 							if fix == 1
-								obj.trials(tri).saccades = sacc;
+								ego.trials(tri).saccades = sacc;
 							else
-								obj.trials(tri).saccades(fix) = sacc;
+								ego.trials(tri).saccades(fix) = sacc;
 							end
-							obj.trials(tri).nsacc = fix;
+							ego.trials(tri).nsacc = fix;
 							if sacc.rt == true
-								obj.trials(tri).saccadeTimes = [obj.trials(tri).saccadeTimes sacc.time];
+								ego.trials(tri).saccadeTimes = [ego.trials(tri).saccadeTimes sacc.time];
 							end
 							eventN = eventN + 1;
 							continue
 						end
 						
 						if evt.type == 16 %strcmpi(evt.codestring,'ENDSAMPLES')
-							obj.trials(tri).endsampletime = double(evt.sttime);
+							ego.trials(tri).endsampletime = double(evt.sttime);
 							
-							obj.trials(tri).times = double(obj.raw.FSAMPLE.time( ...
-								obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
-								obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime));
-							obj.trials(tri).times = obj.trials(tri).times - obj.trials(tri).rtstarttime;
-							obj.trials(tri).gx = obj.raw.FSAMPLE.gx(eyeUsed, ...
-								obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
-								obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime);
-							obj.trials(tri).gx = obj.trials(tri).gx - obj.display(1)/2;
-							obj.trials(tri).gy = obj.raw.FSAMPLE.gy(eyeUsed, ...
-								obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
-								obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime);
-							obj.trials(tri).gy = obj.trials(tri).gy - obj.display(2)/2;
-							obj.trials(tri).hx = obj.raw.FSAMPLE.hx(eyeUsed, ...
-								obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
-								obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime);
-							obj.trials(tri).hy = obj.raw.FSAMPLE.hy(eyeUsed, ...
-								obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
-								obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime);
-							obj.trials(tri).pa = obj.raw.FSAMPLE.pa(eyeUsed, ...
-								obj.raw.FSAMPLE.time >= obj.trials(tri).startsampletime & ...
-								obj.raw.FSAMPLE.time <= obj.trials(tri).endsampletime);
+							ego.trials(tri).times = double(ego.raw.FSAMPLE.time( ...
+								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
+								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime));
+							ego.trials(tri).times = ego.trials(tri).times - ego.trials(tri).rtstarttime;
+							ego.trials(tri).gx = ego.raw.FSAMPLE.gx(eyeUsed, ...
+								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
+								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime);
+							ego.trials(tri).gx = ego.trials(tri).gx - ego.display(1)/2;
+							ego.trials(tri).gy = ego.raw.FSAMPLE.gy(eyeUsed, ...
+								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
+								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime);
+							ego.trials(tri).gy = ego.trials(tri).gy - ego.display(2)/2;
+							ego.trials(tri).hx = ego.raw.FSAMPLE.hx(eyeUsed, ...
+								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
+								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime);
+							ego.trials(tri).hy = ego.raw.FSAMPLE.hy(eyeUsed, ...
+								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
+								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime);
+							ego.trials(tri).pa = ego.raw.FSAMPLE.pa(eyeUsed, ...
+								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
+								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime);
 							continue
 						end
 						
 					else
 						uuid = regexpi(evt.message,'^UUID (?<UUID>[\w]+)','names');
 						if ~isempty(uuid) && ~isempty(uuid.UUID)
-							obj.trials(tri).uuid = uuid.UUID;
+							ego.trials(tri).uuid = uuid.UUID;
 							continue
 						end
 						
-						endfix = regexpi(evt.message,['^' obj.rtStartMessage],'match');
+						endfix = regexpi(evt.message,['^' ego.rtStartMessage],'match');
 						if ~isempty(endfix)
-							obj.trials(tri).rtstarttime = double(evt.sttime);
-							obj.trials(tri).rt = true;
-							if ~isempty(obj.trials(tri).fixations)
-								for lf = 1 : length(obj.trials(tri).fixations)
-									obj.trials(tri).fixations(lf).time = obj.trials(tri).fixations(lf).sttime - obj.trials(tri).rtstarttime;
-									obj.trials(tri).fixations(lf).rt = true;
+							ego.trials(tri).rtstarttime = double(evt.sttime);
+							ego.trials(tri).rt = true;
+							if ~isempty(ego.trials(tri).fixations)
+								for lf = 1 : length(ego.trials(tri).fixations)
+									ego.trials(tri).fixations(lf).time = ego.trials(tri).fixations(lf).sttime - ego.trials(tri).rtstarttime;
+									ego.trials(tri).fixations(lf).rt = true;
 								end
 							end
-							if ~isempty(obj.trials(tri).saccades)
-								for lf = 1 : length(obj.trials(tri).saccades)
-									obj.trials(tri).saccades(lf).time = obj.trials(tri).saccades(lf).sttime - obj.trials(tri).rtstarttime;
-									obj.trials(tri).saccades(lf).rt = true;
-									obj.trials(tri).saccadeTimes(lf) = obj.trials(tri).saccades(lf).time;
+							if ~isempty(ego.trials(tri).saccades)
+								for lf = 1 : length(ego.trials(tri).saccades)
+									ego.trials(tri).saccades(lf).time = ego.trials(tri).saccades(lf).sttime - ego.trials(tri).rtstarttime;
+									ego.trials(tri).saccades(lf).rt = true;
+									ego.trials(tri).saccadeTimes(lf) = ego.trials(tri).saccades(lf).time;
 								end
 							end
 							continue
 						end
 						
-						endrt = regexpi(evt.message,['^' obj.rtEndMessage],'match');
+						endrt = regexpi(evt.message,['^' ego.rtEndMessage],'match');
 						if ~isempty(endrt)
-							obj.trials(tri).rtendtime = double(evt.sttime);
-							if isfield(obj.trials,'rtstarttime')
-								obj.trials(tri).rttime = obj.trials(tri).rtendtime - obj.trials(tri).rtstarttime;
+							ego.trials(tri).rtendtime = double(evt.sttime);
+							if isfield(ego.trials,'rtstarttime')
+								ego.trials(tri).rttime = ego.trials(tri).rtendtime - ego.trials(tri).rtstarttime;
 							end
 							continue
 						end
 						
 						id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>(\-|\+|\d)+)','names');
 						if ~isempty(id) && ~isempty(id.ID)
-							obj.trials(tri).entime = double(evt.sttime);
-							obj.trials(tri).result = str2num(id.ID);
-							obj.trials(tri).firstSaccade = [];
-							sT = obj.trials(tri).saccadeTimes;
+							ego.trials(tri).entime = double(evt.sttime);
+							ego.trials(tri).result = str2num(id.ID);
+							ego.trials(tri).firstSaccade = [];
+							sT = ego.trials(tri).saccadeTimes;
 							if max(sT(sT>0)) > 0
 								sT = min(sT(sT>0)); %shortest RT after END_FIX
 							elseif ~isempty(sT)
@@ -350,41 +348,41 @@ classdef eyelinkAnalysis < optickaCore
 							else
 								sT = NaN;
 							end
-							obj.trials(tri).firstSaccade = sT;
-							if obj.trials(tri).result == 1
-								obj.trials(tri).correct = true;
-								obj.correct.idx = [obj.correct.idx tri];
-								obj.trialList(tri) = obj.trials(tri).id;
+							ego.trials(tri).firstSaccade = sT;
+							if ego.trials(tri).result == 1
+								ego.trials(tri).correct = true;
+								ego.correct.idx = [ego.correct.idx tri];
+								ego.trialList(tri) = ego.trials(tri).id;
 								if ~isempty(sT) && sT > 0
-									obj.correct.saccTimes = [obj.correct.saccTimes sT];
+									ego.correct.saccTimes = [ego.correct.saccTimes sT];
 								else
-									obj.correct.saccTimes = [obj.correct.saccTimes NaN];
+									ego.correct.saccTimes = [ego.correct.saccTimes NaN];
 								end
-								obj.trials(tri).correctedIndex = tri2;
+								ego.trials(tri).correctedIndex = tri2;
 								tri2 = tri2 + 1;
-							elseif obj.trials(tri).result == -1
-								obj.trials(tri).breakFix = true;
-								obj.breakFix.idx = [obj.breakFix.idx tri];
-								obj.trialList(tri) = -obj.trials(tri).id;
+							elseif ego.trials(tri).result == -1
+								ego.trials(tri).breakFix = true;
+								ego.breakFix.idx = [ego.breakFix.idx tri];
+								ego.trialList(tri) = -ego.trials(tri).id;
 								if ~isempty(sT) && sT > 0
-									obj.breakFix.saccTimes = [obj.breakFix.saccTimes sT];
+									ego.breakFix.saccTimes = [ego.breakFix.saccTimes sT];
 								else
-									obj.breakFix.saccTimes = [obj.breakFix.saccTimes NaN];;
+									ego.breakFix.saccTimes = [ego.breakFix.saccTimes NaN];;
 								end
-								obj.trials(tri).correctedIndex = tri2;
+								ego.trials(tri).correctedIndex = tri2;
 								tri2 = tri2 + 1;
-							elseif obj.trials(tri).result == 0
-								obj.trials(tri).incorrect = true;
-								obj.incorrect.idx = [obj.incorrect.idx tri];
-								obj.trialList(tri) = -obj.trials(tri).id;
+							elseif ego.trials(tri).result == 0
+								ego.trials(tri).incorrect = true;
+								ego.incorrect.idx = [ego.incorrect.idx tri];
+								ego.trialList(tri) = -ego.trials(tri).id;
 								if ~isempty(sT) && sT > 0
-									obj.incorrect.saccTimes = [obj.incorrect.saccTimes sT];
+									ego.incorrect.saccTimes = [ego.incorrect.saccTimes sT];
 								else
-									obj.incorrect.saccTimes = [obj.incorrect.saccTimes NaN];
+									ego.incorrect.saccTimes = [ego.incorrect.saccTimes NaN];
 								end
-								obj.trials(tri).correctedIndex = NaN;
+								ego.trials(tri).correctedIndex = NaN;
 							end
-							obj.trials(tri).deltaT = obj.trials(tri).entime - obj.trials(tri).sttime;
+							ego.trials(tri).deltaT = ego.trials(tri).entime - ego.trials(tri).sttime;
 							isTrial = false;
 							tri = tri + 1;
 							continue
@@ -393,19 +391,19 @@ classdef eyelinkAnalysis < optickaCore
 				end
 			end
 			
-			if max(abs(obj.trialList)) == 1010 && min(abs(obj.trialList)) == 1010
-				obj.needOverride = true;
-				obj.salutation('','---> TRIAL NAME BUG OVERRIDE NEEDED!\n',true);
+			if max(abs(ego.trialList)) == 1010 && min(abs(ego.trialList)) == 1010
+				ego.needOverride = true;
+				ego.salutation('','---> TRIAL NAME BUG OVERRIDE NEEDED!\n',true);
 			else
-				obj.needOverride = false;
+				ego.needOverride = false;
 			end
 			
-			obj.isParsed = true;
+			ego.isParsed = true;
 			
-			parseAsVars(obj);
-			parseSecondaryEyePos(obj);
-			parseFixationPositions(obj);
-			parseROI(obj);
+			parseAsVars(ego);
+			parseSecondaryEyePos(ego);
+			parseFixationPositions(ego);
+			parseROI(ego);
 
 			fprintf('Parsing EDF Trials took %g ms\n',round(toc*1000));
 		end
@@ -416,7 +414,7 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plot(obj,select,type,seperateVars)
+		function plot(ego,select,type,seperateVars)
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
 			if ~exist('type','var') || isempty(type); type = 'correct'; end
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
@@ -426,18 +424,18 @@ classdef eyelinkAnalysis < optickaCore
 			else
 				switch lower(type)
 					case 'correct'
-						idx = obj.correct.idx;
+						idx = ego.correct.idx;
 					case 'breakfix'
-						idx = obj.breakFix.idx;
+						idx = ego.breakFix.idx;
 					case 'incorrect'
-						idx = obj.incorrect.idx;
+						idx = ego.incorrect.idx;
 				end
 				idxInternal = true;
 			end
 			if seperateVars == true && isempty(select)
-				vars = unique([obj.trials(idx).id]);
+				vars = unique([ego.trials(idx).id]);
 				for j = vars
-					obj.plot(j,type,false);
+					ego.plot(j,type,false);
 					drawnow;
 				end
 				return
@@ -451,10 +449,10 @@ classdef eyelinkAnalysis < optickaCore
 			p.pack('v',{2/3, []});
 			q = p(1);
 			q.pack(2,2);
-			if obj.distance == 57.3
-				ppd = round( obj.pixelsPerCm * (67 / 57.3)); %set the pixels per degree
+			if ego.distance == 57.3
+				ppd = round( ego.pixelsPerCm * (67 / 57.3)); %set the pixels per degree
 			else
-				ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
+				ppd = round( ego.pixelsPerCm * (ego.distance / 57.3)); %set the pixels per degree
 			end
 			a = 1;
 			stdex = [];
@@ -498,10 +496,10 @@ classdef eyelinkAnalysis < optickaCore
 				if idxInternal == true %we're using the eyelin index which includes incorrects
 					f = i;
 				else %we're using an external index which excludes incorrects
-					f = find([obj.trials.correctedIndex] == i);
+					f = find([ego.trials.correctedIndex] == i);
 				end
 				if isempty(f); continue; end
-				thisTrial = obj.trials(f(1));
+				thisTrial = ego.trials(f(1));
 				if thisTrial.id == 1010 %early edf files were broken, 1010 signifies this
 					c = rand(1,3);
 				else
@@ -584,7 +582,7 @@ classdef eyelinkAnalysis < optickaCore
 	
 			end
 			
-			display = obj.display / ppd;
+			display = ego.display / ppd;
 			
 			q(1,1).select();
 			grid on
@@ -665,7 +663,7 @@ classdef eyelinkAnalysis < optickaCore
 				ud = get(src,'UserData');
 				if ~isempty(ud)
 					disp(['TRIAL = ' num2str(ud)]);
-					disp(obj.trials(ud(1)));
+					disp(ego.trials(ud(1)));
 				end
 			end
 		end
@@ -676,25 +674,25 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function fixVarNames(obj)
-			if obj.needOverride == true
-				if isempty(obj.trialOverride)
+		function fixVarNames(ego)
+			if ego.needOverride == true
+				if isempty(ego.trialOverride)
 					warning('No replacement trials available!!!')
 					return
 				end
-				trials = obj.trialOverride;
-				if  max([obj.trials.correctedIndex]) ~= length(trials)
+				trials = ego.trialOverride;
+				if  max([ego.trials.correctedIndex]) ~= length(trials)
 					warning('TRIAL ID LENGTH MISMATCH!');
 					return
 				end
 				a = 1;
-				for j = 1:length(obj.trials)
-					if obj.trials(j).incorrect ~= true
-						obj.trials(j).oldid = obj.trials(j).id;
-						obj.trials(j).id = trials(a).name;
-						obj.trialList(j) = obj.trials(j).id;
-						if obj.trials(j).breakFix == true
-							obj.trialList(j) = -[obj.trialList(j)];
+				for j = 1:length(ego.trials)
+					if ego.trials(j).incorrect ~= true
+						ego.trials(j).oldid = ego.trials(j).id;
+						ego.trials(j).id = trials(a).name;
+						ego.trialList(j) = ego.trials(j).id;
+						if ego.trials(j).breakFix == true
+							ego.trialList(j) = -[ego.trialList(j)];
 						end
 						a = a + 1;
 					end
@@ -709,41 +707,41 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseROI(obj)
-			if isempty(obj.ROI)
+		function parseROI(ego)
+			if isempty(ego.ROI)
 				disp('No ROI specified!!!')
 				return
 			end
-			fixationX = obj.ROI(1);
-			fixationY = obj.ROI(2);
-			fixationRadius = obj.ROI(3);
-			for i = 1:length(obj.trials)
-				obj.ROIInfo(i).id = obj.trials(i).id;
-				obj.ROIInfo(i).idx = i;
-				obj.ROIInfo(i).correctedIndex = obj.trials(i).correctedIndex;
-				obj.ROIInfo(i).uuid = obj.trials(i).uuid;
-				obj.ROIInfo(i).fixationX = fixationX;
-				obj.ROIInfo(i).fixationY = fixationY;
-				obj.ROIInfo(i).fixationRadius = fixationRadius;
-				x = obj.trials(i).gx / obj.ppd;
-				y = obj.trials(i).gy  / obj.ppd;
-				times = obj.trials(i).times;
+			fixationX = ego.ROI(1);
+			fixationY = ego.ROI(2);
+			fixationRadius = ego.ROI(3);
+			for i = 1:length(ego.trials)
+				ego.ROIInfo(i).id = ego.trials(i).id;
+				ego.ROIInfo(i).idx = i;
+				ego.ROIInfo(i).correctedIndex = ego.trials(i).correctedIndex;
+				ego.ROIInfo(i).uuid = ego.trials(i).uuid;
+				ego.ROIInfo(i).fixationX = fixationX;
+				ego.ROIInfo(i).fixationY = fixationY;
+				ego.ROIInfo(i).fixationRadius = fixationRadius;
+				x = ego.trials(i).gx / ego.ppd;
+				y = ego.trials(i).gy  / ego.ppd;
+				times = ego.trials(i).times;
 				f = find(times > 0); % we only check ROI post 0 time
 				r = sqrt((x - fixationX).^2 + (y - fixationY).^2); 
 				r=r(f);
 				window = find(r < fixationRadius);
 				if any(window)
-					obj.ROIInfo(i).enteredROI = true;
+					ego.ROIInfo(i).enteredROI = true;
 				else
-					obj.ROIInfo(i).enteredROI = false;
+					ego.ROIInfo(i).enteredROI = false;
 				end	
-				obj.trials(i).enteredROI = obj.ROIInfo(i).enteredROI;
-				obj.ROIInfo(i).x = x;
-				obj.ROIInfo(i).y = y;
-				obj.ROIInfo(i).times = times/1e3;
-				obj.ROIInfo(i).correct = obj.trials(i).correct;
-				obj.ROIInfo(i).breakFix = obj.trials(i).breakFix;
-				obj.ROIInfo(i).incorrect = obj.trials(i).incorrect;
+				ego.trials(i).enteredROI = ego.ROIInfo(i).enteredROI;
+				ego.ROIInfo(i).x = x;
+				ego.ROIInfo(i).y = y;
+				ego.ROIInfo(i).times = times/1e3;
+				ego.ROIInfo(i).correct = ego.trials(i).correct;
+				ego.ROIInfo(i).breakFix = ego.trials(i).breakFix;
+				ego.ROIInfo(i).incorrect = ego.trials(i).incorrect;
 			end
 		end
 		
@@ -753,11 +751,11 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotROI(obj)
-			if ~isempty(obj.ROIInfo)
+		function plotROI(ego)
+			if ~isempty(ego.ROIInfo)
 				figure;
-				for i = 1:length(obj.ROIInfo)
-					r = obj.ROIInfo(i);
+				for i = 1:length(ego.ROIInfo)
+					r = ego.ROIInfo(i);
 					hold on
 					c = [0.7 0.7 0.7];
 					if r.enteredROI == true; c = [0 0 0]; end
@@ -788,18 +786,18 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseAsVars(obj)
-			obj.vars = struct();
-			obj.vars(1).name = '';
-			obj.vars(1).id = [];
-			obj.vars(1).idx = [];
-			obj.vars(1).correctedidx = [];
-			obj.vars(1).trial = [];
-			obj.vars(1).sTime = [];
-			obj.vars(1).sT = [];
-			obj.vars(1).uuid = {};
-			for i = 1:length(obj.trials)
-				trial = obj.trials(i);
+		function parseAsVars(ego)
+			ego.vars = struct();
+			ego.vars(1).name = '';
+			ego.vars(1).id = [];
+			ego.vars(1).idx = [];
+			ego.vars(1).correctedidx = [];
+			ego.vars(1).trial = [];
+			ego.vars(1).sTime = [];
+			ego.vars(1).sT = [];
+			ego.vars(1).uuid = {};
+			for i = 1:length(ego.trials)
+				trial = ego.trials(i);
 				var = trial.id;
 				if trial.incorrect == true
 					continue
@@ -807,18 +805,18 @@ classdef eyelinkAnalysis < optickaCore
 				if trial.id == 1010
 					continue
 				end
-				obj.vars(var).name = num2str(var);
-				obj.vars(var).trial = [obj.vars(var).trial; trial];
-				obj.vars(var).idx = [obj.vars(var).idx i];
-				obj.vars(var).correctedidx = [obj.vars(var).correctedidx i];
-				obj.vars(var).uuid = [obj.vars(var).uuid, trial.uuid];
-				obj.vars(var).id = [obj.vars(var).id var];
+				ego.vars(var).name = num2str(var);
+				ego.vars(var).trial = [ego.vars(var).trial; trial];
+				ego.vars(var).idx = [ego.vars(var).idx i];
+				ego.vars(var).correctedidx = [ego.vars(var).correctedidx i];
+				ego.vars(var).uuid = [ego.vars(var).uuid, trial.uuid];
+				ego.vars(var).id = [ego.vars(var).id var];
 				if ~isempty(trial.saccadeTimes)
-					obj.vars(var).sTime = [obj.vars(var).sTime trial.saccadeTimes(1)];
+					ego.vars(var).sTime = [ego.vars(var).sTime trial.saccadeTimes(1)];
 				else
-					obj.vars(var).sTime = [obj.vars(var).sTime NaN];
+					ego.vars(var).sTime = [ego.vars(var).sTime NaN];
 				end
-				obj.vars(var).sT = [obj.vars(var).sT trial.firstSaccade];
+				ego.vars(var).sT = [ego.vars(var).sT trial.firstSaccade];
 			end
 		end
 		
@@ -828,14 +826,14 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseSecondaryEyePos(obj)
-			if obj.isParsed && isstruct(obj.tS)
-				f=fieldnames(obj.tS.eyePos); %get fieldnames
+		function parseSecondaryEyePos(ego)
+			if ego.isParsed && isstruct(ego.tS)
+				f=fieldnames(ego.tS.eyePos); %get fieldnames
 				re = regexp(f,'^CC','once'); %regexp over the cell
 				idx = cellfun(@(c)~isempty(c),re); %check which regexp returned true
 				f = f(idx); %use this index
-				obj.validation(1).uuids = f;
-				obj.validation.lengthCorrect = length(f);
+				ego.validation(1).uuids = f;
+				ego.validation.lengthCorrect = length(f);
 			end
 		end
 		
@@ -845,10 +843,10 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseFixationPositions(obj)
-			if obj.isParsed
-				for i = 1:length(obj.trials)
-					t = obj.trials(i);
+		function parseFixationPositions(ego)
+			if ego.isParsed
+				for i = 1:length(ego.trials)
+					t = ego.trials(i);
 					f(1).isFix = false;
 					f(1).idx = -1;
 					f(1).times = -1;
@@ -875,10 +873,10 @@ classdef eyelinkAnalysis < optickaCore
 					else
 						bname='incorrect';
 					end
-					if isempty(obj.(bname).fixations)
-						obj.(bname).fixations = f;
+					if isempty(ego.(bname).fixations)
+						ego.(bname).fixations = f;
 					else
-						obj.(bname).fixations(end+1) = f;
+						ego.(bname).fixations(end+1) = f;
 					end
 				end
 				
@@ -892,8 +890,8 @@ classdef eyelinkAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ppd = get.ppd(obj)
-			ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
+		function ppd = get.ppd(ego)
+			ppd = round( ego.pixelsPerCm * (ego.distance / 57.3)); %set the pixels per degree
 		end
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
@@ -906,10 +904,10 @@ classdef eyelinkAnalysis < optickaCore
 		%> @brief
 		%>
 		% ===================================================================
-		function [outx, outy] = toDegrees(obj,in)
+		function [outx, outy] = toDegrees(ego,in)
 			if length(in)==2
-				outx = (in(1) - obj.xCenter) / obj.ppd;
-				outy = (in(2) - obj.yCenter) / obj.ppd;
+				outx = (in(1) - ego.xCenter) / ego.ppd;
+				outy = (in(2) - ego.yCenter) / ego.ppd;
 			else
 				outx = [];
 				outy = [];
@@ -920,10 +918,10 @@ classdef eyelinkAnalysis < optickaCore
 		%> @brief
 		%>
 		% ===================================================================
-		function [outx, outy] = toPixels(obj,in)
+		function [outx, outy] = toPixels(ego,in)
 			if length(in)==2
-				outx = (in(1) * obj.ppd) + obj.xCenter;
-				outy = (in(2) * obj.ppd) + obj.yCenter;
+				outx = (in(1) * ego.ppd) + ego.xCenter;
+				outy = (in(2) * ego.ppd) + ego.yCenter;
 			else
 				outx = [];
 				outy = [];
