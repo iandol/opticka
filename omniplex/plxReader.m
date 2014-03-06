@@ -72,12 +72,110 @@ classdef plxReader < optickaCore
 		%> @param varargin
 		%> @return
 		%===================================================================
-		function obj = plxReader(varargin)
+		function ego = plxReader(varargin)
 			if nargin == 0; varargin.name = 'plxReader'; end
-			if nargin>0; obj.parseArgs(varargin, obj.allowedProperties); end
-			if isempty(obj.name); obj.name = 'plxReader'; end
-			if isempty(obj.file);
-				getFiles(obj,false);
+			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
+			if isempty(ego.name); ego.name = 'plxReader'; end
+			if isempty(ego.file);
+				getFiles(ego,false);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief parse all data and sync plx / behaviour / eyelink info
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parse(ego)
+			if isempty(ego.file)
+				getFiles(ego, true);
+				if isempty(ego.file); warning('No plexon file selected'); return; end
+			end
+			if isempty(ego.matfile)
+				getFiles(ego);
+				if isempty(ego.matfile); warning('No behavioural mat file selected'); return; end
+			end
+			ego.paths.oldDir = pwd;
+			cd(ego.dir);
+			readMat(ego);
+			readSpikes(ego);
+			getEvents(ego);
+			if ego.isEDF == true
+				loadEDF(ego);
+			end
+			parseSpikes(ego);
+			generateInfo(ego);
+			integrateEyeData(ego);
+		end
+		
+		% ===================================================================
+		%> @brief only parse what needs parsing
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function lazyParse(ego)
+			if isempty(ego.file)
+				getFiles(ego, true);
+				if isempty(ego.file); warning('No plexon file selected'); return; end
+			end
+			if isempty(ego.matfile)
+				getFiles(ego);
+				if isempty(ego.matfile); warning('No behavioural mat file selected'); return; end
+			end
+			ego.paths.oldDir = pwd;
+			cd(ego.dir);
+			if ~isa(ego.rE,'runExperiment')
+				readMat(ego);
+			end
+			if isempty(ego.tsList)
+				readSpikes(ego);
+			end
+			if isempty(ego.eventList)
+				getEvents(ego);
+			end
+			if isempty(ego.eA) && ego.isEDF == true
+				loadEDF(ego);
+			end
+			if ~isfield(ego.tsList.tsParse,'trials')
+				parseSpikes(ego);
+			end
+			if isempty(ego.info)
+				generateInfo(ego);
+			end
+			if ~isempty(ego.eventList) && ~isempty(ego.eA)
+				integrateEyeData(ego);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function reparse(ego)
+			ego.paths.oldDir = pwd;
+			cd(ego.dir);
+			getEvents(ego);
+			parseSpikes(ego);
+			generateInfo(ego);
+			integrateEyeData(ego);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parseEvents(ego)
+			cd(ego.dir);
+			getEvents(ego);
+			generateInfo(ego);
+			if isa(ego.ea,'eyelinkAnalysis')
+				integrateEyeData(ego);
 			end
 		end
 		
@@ -87,73 +185,15 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parse(obj)
-			if isempty(obj.file)
-				getFiles(obj, true);
-				if isempty(obj.file); warning('No plexon file selected'); return; end
-			end
-			if isempty(obj.matfile)
-				getFiles(obj);
-				if isempty(obj.matfile); warning('No behavioural mat file selected'); return; end
-			end
-			obj.paths.oldDir = pwd;
-			cd(obj.dir);
-			readMat(obj);
-			readSpikes(obj);
-			getEvents(obj);
-			if obj.isEDF == true
-				loadEDF(obj);
-			end
-			parseSpikes(obj);
-			generateInfo(obj);
-			integrateEyeData(obj);
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function reparse(obj)
-			obj.paths.oldDir = pwd;
-			cd(obj.dir);
-			getEvents(obj);
-			parseSpikes(obj);
-			generateInfo(obj);
-			integrateEyeData(obj);
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function parseEvents(obj)
-			cd(obj.dir);
-			getEvents(obj);
-			generateInfo(obj);
-			if isa(obj.ea,'eyelinkAnalysis')
-				integrateEyeData(obj);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function LFPs = readLFPs(obj)
-			cd(obj.dir);
-			if isempty(obj.eventList); 
-				getEvents(obj); 
+		function LFPs = readLFPs(ego)
+			cd(ego.dir);
+			if isempty(ego.eventList); 
+				getEvents(ego); 
 			end
 			tic
-			[~, names] = plx_adchan_names(obj.file);
-			[~, map] = plx_adchan_samplecounts(obj.file);
-			[~, raw] = plx_ad_chanmap(obj.file);
+			[~, names] = plx_adchan_names(ego.file);
+			[~, map] = plx_adchan_samplecounts(ego.file);
+			[~, raw] = plx_ad_chanmap(ego.file);
 			names = cellstr(names);
 			idx = find(map > 0);
 			aa=1;
@@ -174,7 +214,7 @@ classdef plxReader < optickaCore
 			end
 			
 			for j = 1:length(LFPs)
-				[adfreq, ~, ts, fn, ad] = plx_ad_v(obj.file, LFPs(j).index);
+				[adfreq, ~, ts, fn, ad] = plx_ad_v(ego.file, LFPs(j).index);
 
 				tbase = 1 / adfreq;
 				
@@ -200,8 +240,8 @@ classdef plxReader < optickaCore
 				LFPs(j).time = time';
 				LFPs(j).eventSample = round(LFPs(j).usedtimeStamp * 40e3);
 				LFPs(j).sample = round(LFPs(j).usedtimeStamp * LFPs(j).recordingFrequency);
-				LFPs(j).nTrials = obj.eventList.nTrials;
-				LFPs(j).nVars = obj.eventList.nVars;
+				LFPs(j).nTrials = ego.eventList.nTrials;
+				LFPs(j).nVars = ego.eventList.nVars;
 			end
 			
 			fprintf('Loading LFPs took %g ms\n',round(toc*1000));
@@ -213,23 +253,23 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return x spike data structure for spikes.m to read.
 		% ===================================================================
-		function x = exportToRawSpikes(obj, var, firstunit, StartTrial, EndTrial, trialtime, modtime, cuttime)
-			if ~isempty(obj.cellmap)
-				fprintf('Extracting Var=%g for Cell %g from PLX unit %g\n', var, firstunit, obj.cellmap(firstunit));
-				raw = obj.tsList.tsParse{obj.cellmap(firstunit)};
+		function x = exportToRawSpikes(ego, var, firstunit, StartTrial, EndTrial, trialtime, modtime, cuttime)
+			if ~isempty(ego.cellmap)
+				fprintf('Extracting Var=%g for Cell %g from PLX unit %g\n', var, firstunit, ego.cellmap(firstunit));
+				raw = ego.tsList.tsParse{ego.cellmap(firstunit)};
 			else
 				fprintf('Extracting Var=%g for Cell %g from PLX unit %g \n', var, firstunit, firstunit);
-				raw = obj.tsList.tsParse{firstunit};
+				raw = ego.tsList.tsParse{firstunit};
 			end
 			if var > length(raw.var)
 				errordlg('This Plexon File seems to be Incomplete, check filesize...')
 			end
 			raw = raw.var{var};
-			v = num2str(obj.meta.matrix(var,:));
+			v = num2str(ego.meta.matrix(var,:));
 			v = regexprep(v,'\s+',' ');
 			x.name = ['PLX#' num2str(var) '|' v];
 			x.raw = raw;
-			x.totaltrials = obj.eventList.minRuns;
+			x.totaltrials = ego.eventList.minRuns;
 			x.nummods = 1;
 			x.error = [];
 			if StartTrial < 1 || StartTrial > EndTrial
@@ -244,7 +284,7 @@ classdef plxReader < optickaCore
 			x.startmod = 1;
 			x.endmod = 1;
 			x.conversion = 1e4;
-			x.maxtime = obj.eventList.tMaxCorrect * x.conversion;
+			x.maxtime = ego.eventList.tMaxCorrect * x.conversion;
 			a = 1;
 			for tr = x.starttrial:x.endtrial
 				x.trial(a).basetime = round(raw.run(tr).basetime * x.conversion); %convert from seconds to 0.1ms as that is what VS used
@@ -253,8 +293,8 @@ classdef plxReader < optickaCore
 				a=a+1;
 			end
 			x.isPLX = true;
-			x.tDelta = obj.eventList.vars(var).tDeltacorrect(x.starttrial:x.endtrial);
-			x.startOffset = obj.startOffset;
+			x.tDelta = ego.eventList.vars(var).tDeltacorrect(x.starttrial:x.endtrial);
+			x.startOffset = ego.startOffset;
 			
 		end
 		
@@ -263,9 +303,9 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return 
 		% ===================================================================
-		function isEDF = get.isEDF(obj)
+		function isEDF = get.isEDF(ego)
 			isEDF = false;
-			if ~isempty(obj.edffile)
+			if ~isempty(ego.edffile)
 				isEDF = true;
 			end
 		end
@@ -275,9 +315,9 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return 
 		% ===================================================================
-		function isPL2 = get.isPL2(obj)
+		function isPL2 = get.isPL2(ego)
 			isPL2 = false;
-			if ~isempty(regexpi(obj.file,'pl2'))
+			if ~isempty(regexpi(ego.file,'pl2'))
 				isPL2 = true;
 			end
 		end
@@ -287,11 +327,11 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return 
 		% ===================================================================
-		function trodality = get.trodality(obj)
-			if ~isfield(obj.ic,'Trodalness') || ~isempty(obj.ic.Trodalness)
-				[~,~,~,~,obj.ic.Trodalness]=plx_information(obj.file);
+		function trodality = get.trodality(ego)
+			if ~isfield(ego.ic,'Trodalness') || ~isempty(ego.ic.Trodalness)
+				[~,~,~,~,ego.ic.Trodalness]=plx_information(ego.file);
 			end
-			trodality = max(obj.ic.Trodalness);
+			trodality = max(ego.ic.Trodalness);
 			if isempty(trodality); trodality = 0; end
 		end
 		
@@ -301,41 +341,41 @@ classdef plxReader < optickaCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function getFiles(obj, force)
+		function getFiles(ego, force)
 			if ~exist('force','var')
 				force = false;
 			end
-			if force == true || isempty(obj.file)
+			if force == true || isempty(ego.file)
 				[f,p] = uigetfile({'*.plx;*.pl2';'PlexonFiles'},'Load Plexon File');
 				if ischar(f) && ~isempty(f)
-					obj.file = f;
-					obj.dir = p;
-						obj.paths.oldDir = pwd;
-					cd(obj.dir);
+					ego.file = f;
+					ego.dir = p;
+						ego.paths.oldDir = pwd;
+					cd(ego.dir);
 				else
 					return
 				end
 			end
-			if force == true || isempty(obj.matfile)
-				[obj.matfile, obj.matdir] = uigetfile('*.mat','Load Behaviour MAT File');
+			if force == true || isempty(ego.matfile)
+				[ego.matfile, ego.matdir] = uigetfile('*.mat','Load Behaviour MAT File');
 			end
-			if force == true || isempty(obj.edffile)
-				cd(obj.matdir)
-				[~,f,~] = fileparts(obj.matfile);
+			if force == true || isempty(ego.edffile)
+				cd(ego.matdir)
+				[~,f,~] = fileparts(ego.matfile);
 				f = [f '.edf'];
 				ff = regexprep(f,'^[a-zA-Z]+\-','','ignorecase');
 				ff = regexprep(ff,'\.edf','FIX\.edf','ignorecase');
 				if ~exist(f, 'file') && ~exist(ff,'file')
 					[an, ~] = uigetfile('*.edf','Load Eyelink EDF File');
 					if ischar(an)
-						obj.edffile = an;
+						ego.edffile = an;
 					else
-						obj.edffile = '';
+						ego.edffile = '';
 					end
 				elseif exist(f, 'file')
-					obj.edffile = f;
+					ego.edffile = f;
 				elseif exist(ff, 'file')
-					obj.edffile = ff;
+					ego.edffile = ff;
 				end
 			end
 		end
@@ -346,10 +386,10 @@ classdef plxReader < optickaCore
 			%> @param
 		%> @return
 		% ===================================================================
-		function spike = getFTSpikes(obj)
-			dat = obj.tsList.tsParse;
-			spike.label = obj.tsList.names;
-			spike.nUnits = obj.tsList.nUnits;
+		function spike = getFTSpikes(ego)
+			dat = ego.tsList.tsParse;
+			spike.label = ego.tsList.names;
+			spike.nUnits = ego.tsList.nUnits;
 			spike.timestamp = cell(1,spike.nUnits);
 			spike.unit = cell(1,spike.nUnits);
 			spike.hdr = [];
@@ -361,7 +401,7 @@ classdef plxReader < optickaCore
 			spike.trial = cell(1,spike.nUnits);
 			spike.trialtime = [];
 			spike.cfg = struct;
-			spike.cfg.dataset = obj.file;
+			spike.cfg.dataset = ego.file;
 			spike.cfg.headerformat = 'plexon_plx_v2';
 			spike.cfg.dataformat = spike.cfg.headerformat;
 			spike.cfg.eventformat = spike.cfg.headerformat;
@@ -385,24 +425,24 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return 
 		% ===================================================================
-		function integrateEyeData(obj)
+		function integrateEyeData(ego)
 			tic
-			plxList = [obj.eventList.trials.name]'; %var order list
-			edfTrials = obj.eA.trials;
-			edfTrials(obj.eA.incorrect.idx) = []; %remove incorrect trials
+			plxList = [ego.eventList.trials.name]'; %var order list
+			edfTrials = ego.eA.trials;
+			edfTrials(ego.eA.incorrect.idx) = []; %remove incorrect trials
 			edfList = [edfTrials.id]';
-			c1 = [obj.eventList.trials.isCorrect]';
+			c1 = [ego.eventList.trials.isCorrect]';
 			c2 = [edfTrials.correct]';
 			if isequal(plxList,edfList) || isequal(c1,c2) %check our variable list orders are equal
 				for i = 1:length(plxList)
-					obj.eventList.trials(i).eye = edfTrials(i);
+					ego.eventList.trials(i).eye = edfTrials(i);
 					sT = edfTrials(i).saccadeTimes/1e3;
 					fS = min(sT(sT>0));
-					obj.eventList.trials(i).saccadeTimes = sT;
+					ego.eventList.trials(i).saccadeTimes = sT;
 					if ~isempty(fS)
-						obj.eventList.trials(i).firstSaccade = fS;
+						ego.eventList.trials(i).firstSaccade = fS;
 					else
-						obj.eventList.trials(i).firstSaccade = NaN;
+						ego.eventList.trials(i).firstSaccade = NaN;
 					end
 				end
 			else
@@ -418,29 +458,29 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function drawEvents(obj,h)
+		function drawEvents(ego,h)
 			if ~exist('h','var')
 				hh=figure;figpos(1,[2000 800]);set(gcf,'Color',[1 1 1]);
 				h = axes;
 				set(hh,'CurrentAxes',h);
 			end
 			axes(h);
-			title(['EVENT PLOT: File:' obj.file]);
+			title(['EVENT PLOT: File:' ego.file]);
 			xlabel('Time (s)');
 			hold on
-			color = rand(3,obj.eventList.nVars);
-			for j = 1:obj.eventList.nTrials
-				trl = obj.eventList.trials(j);
+			color = rand(3,ego.eventList.nVars);
+			for j = 1:ego.eventList.nTrials
+				trl = ego.eventList.trials(j);
 				var = trl.name;
 				line([trl.t1 trl.t1],[-.4 .4],'Color',color(:,var),'LineWidth',1);
 				line([trl.t2 trl.t2],[-.4 .4],'Color',color(:,var),'LineWidth',1);
 				text(trl.t1,.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',10);
 				text(trl.t1,-.41,['SAC: ' num2str(trl.firstSaccade) '\newlineCOR: ' num2str(trl.isCorrect)],'FontSize',10);
 			end
-			plot(obj.eventList.startFix,zeros(size(obj.eventList.startFix)),'c.','MarkerSize',15);
-			plot(obj.eventList.correct,zeros(size(obj.eventList.correct)),'g.','MarkerSize',15);
-			plot(obj.eventList.breakFix,zeros(size(obj.eventList.breakFix)),'b.','MarkerSize',15);
-			plot(obj.eventList.incorrect,zeros(size(obj.eventList.incorrect)),'r.','MarkerSize',15);
+			plot(ego.eventList.startFix,zeros(size(ego.eventList.startFix)),'c.','MarkerSize',15);
+			plot(ego.eventList.correct,zeros(size(ego.eventList.correct)),'g.','MarkerSize',15);
+			plot(ego.eventList.breakFix,zeros(size(ego.eventList.breakFix)),'b.','MarkerSize',15);
+			plot(ego.eventList.incorrect,zeros(size(ego.eventList.incorrect)),'r.','MarkerSize',15);
 			axis([0 10 -.5 .5])
 			hold off;
 			box on;
@@ -476,9 +516,9 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function handles = infoBox(obj, info)
+		function handles = infoBox(ego, info)
 			%[left bottom width height]
-			if ~exist('info','var'), info = obj.info; end
+			if ~exist('info','var'), info = ego.info; end
 			scr=get(0,'ScreenSize');
 			width=scr(3);
 			height=scr(4);
@@ -492,17 +532,49 @@ classdef plxReader < optickaCore
 				'FontSize',12,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left',...
 				'Callback',@editComment);
 			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.4]);
-			if ~isempty(obj.eventList)
-				drawEvents(obj,handles.axis);
+			if ~isempty(ego.eventList)
+				drawEvents(ego,handles.axis);
 			end
 			set(handles.display,'String',info,'FontSize',12);
-			set(handles.comments,'String',obj.comment,'FontSize',11);
+			set(handles.comments,'String',ego.comment,'FontSize',11);
 			
 			function editComment(src, ~)
 				if ~exist('src','var');	return; end
 				s = get(src,'String');
 				if ~isempty(s)
-					obj.comment = s;
+					ego.comment = s;
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief allows data from another plxReader object to be used,
+		%> useful for example when you load LFP data in 1 plxReader and
+		%> spikes in another but they are using the same behaviour files etc.
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function syncData(ego, data)
+			if isa(data,'plxReader')
+				if ~strcmpi(ego.matfile, data.matfile)
+					warning('Different Behaviour mat files, can''t sync plxReaders');
+					return
+				end
+				if isempty(ego.eventList) && ~isempty(data.eventList)
+					ego.eventList = data.eventList;
+				end
+				if isempty(ego.tsList) && ~isempty(data.tsList)
+					ego.tsList = data.tsList;
+				end
+				if isempty(ego.meta) && ~isempty(data.meta)
+					ego.meta = data.meta;
+				end
+				if isempty(ego.rE) && ~isempty(data.rE)
+					ego.rE = data.rE;
+				end
+				if isempty(ego.eA) && ~isempty(data.eA)
+					ego.eA = data.eA;
 				end
 			end
 		end
@@ -515,8 +587,8 @@ classdef plxReader < optickaCore
 	
 		% ===================================================================
 		%> @brief 
-		%> This needs to be static as it may load data called "obj" which
-		%> will conflict with the obj object in the class.
+		%> This needs to be static as it may load data called "ego" which
+		%> will conflict with the ego object in the class.
 		%> @param
 		%> @return
 		% ===================================================================
@@ -525,9 +597,9 @@ classdef plxReader < optickaCore
 			cd(pn);
 			tic
 			load(fn);
-			if ~exist('rE','var') && exist('obj','var')
-				rE = obj;
-				clear obj;
+			if ~exist('rE','var') && exist('ego','var')
+				rE = ego;
+				clear ego;
 			end
 			if ~isa(rE,'runExperiment')
 				warning('The behavioural file doesn''t contain a runExperiment object!!!');
@@ -579,38 +651,38 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function loadEDF(obj,pn)
+		function loadEDF(ego,pn)
 			if ~exist('pn','var')
-				if exist(obj.matdir,'dir')
-					pn = obj.matdir;
+				if exist(ego.matdir,'dir')
+					pn = ego.matdir;
 				else
-					pn = obj.dir;
+					pn = ego.dir;
 				end
 			end
-			if exist(obj.edffile,'file')
+			if exist(ego.edffile,'file')
 				oldd=pwd;
 				cd(pn);
-				if ~isempty(obj.eA) && isa(obj.eA,'eyelinkAnalysis')
-					obj.eA.file = obj.edffile;
-					obj.eA.dir = pn;
-					obj.eA.trialOverride = obj.eventList.trials;
+				if ~isempty(ego.eA) && isa(ego.eA,'eyelinkAnalysis')
+					ego.eA.file = ego.edffile;
+					ego.eA.dir = pn;
+					ego.eA.trialOverride = ego.eventList.trials;
 				else
-					in = struct('file',obj.edffile,'dir',pn,...
-						'trialOverride',obj.eventList.trials);
-					obj.eA = eyelinkAnalysis(in);
+					in = struct('file',ego.edffile,'dir',pn,...
+						'trialOverride',ego.eventList.trials);
+					ego.eA = eyelinkAnalysis(in);
 				end
-				if isa(obj.rE.screen,'screenManager')
-					obj.eA.pixelsPerCm = obj.rE.screen.pixelsPerCm;
-					obj.eA.distance = obj.rE.screen.distance;
-					obj.eA.xCenter = obj.rE.screen.xCenter;
-					obj.eA.yCenter = obj.rE.screen.yCenter;
+				if isa(ego.rE.screen,'screenManager')
+					ego.eA.pixelsPerCm = ego.rE.screen.pixelsPerCm;
+					ego.eA.distance = ego.rE.screen.distance;
+					ego.eA.xCenter = ego.rE.screen.xCenter;
+					ego.eA.yCenter = ego.rE.screen.yCenter;
 				end
-				if isstruct(obj.rE.tS)
-					obj.eA.tS = obj.rE.tS;
+				if isstruct(ego.rE.tS)
+					ego.eA.tS = ego.rE.tS;
 				end
-				load(obj.eA);
-				parse(obj.eA);
-				fixVarNames(obj.eA);
+				load(ego.eA);
+				parse(ego.eA);
+				fixVarNames(ego.eA);
 				cd(oldd)
 			end
 		end
@@ -621,13 +693,13 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function readMat(obj,override)
+		function readMat(ego,override)
 			if ~exist('override','var'); override = false; end
-			if override == true || isempty(obj.rE)
-				if exist(obj.matdir, 'dir')
-					[obj.meta, obj.rE] = obj.loadMat(obj.matfile, obj.matdir);
+			if override == true || isempty(ego.rE)
+				if exist(ego.matdir, 'dir')
+					[ego.meta, ego.rE] = ego.loadMat(ego.matfile, ego.matdir);
 				else
-					[obj.meta, obj.rE] = obj.loadMat(obj.matfile, obj.dir);
+					[ego.meta, ego.rE] = ego.loadMat(ego.matfile, ego.dir);
 				end
 			end
 		end
@@ -638,61 +710,61 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function generateInfo(obj)
+		function generateInfo(ego)
 			tic
-			if ~isfield(obj.ic, 'Freq')
-				[obj.ic.OpenedFileName, obj.ic.Version, obj.ic.Freq, obj.ic.Comment, obj.ic.Trodalness,...
-					obj.ic.NPW, obj.ic.PreThresh, obj.ic.SpikePeakV, obj.ic.SpikeADResBits,...
-					obj.ic.SlowPeakV, obj.ic.SlowADResBits, obj.ic.Duration, obj.ic.DateTime] = plx_information(obj.file);
+			if ~isfield(ego.ic, 'Freq')
+				[ego.ic.OpenedFileName, ego.ic.Version, ego.ic.Freq, ego.ic.Comment, ego.ic.Trodalness,...
+					ego.ic.NPW, ego.ic.PreThresh, ego.ic.SpikePeakV, ego.ic.SpikeADResBits,...
+					ego.ic.SlowPeakV, ego.ic.SlowADResBits, ego.ic.Duration, ego.ic.DateTime] = plx_information(ego.file);
 				if exist('plx_mexplex_version','file')
-					obj.ic.sdkversion = plx_mexplex_version();
+					ego.ic.sdkversion = plx_mexplex_version();
 				else
-					obj.ic.sdkversion = -1;
+					ego.ic.sdkversion = -1;
 				end
 			end
-			obj.info = {};
-			if obj.isPL2
-				if isempty(obj.pl2); obj.pl2 = PL2GetFileIndex(obj.file); end
-				obj.info{1} = sprintf('PL2 File : %s', obj.ic.OpenedFileName);
-				obj.info{end+1} = sprintf('\tPL2 File Length : %d', obj.pl2.FileLength);
-				obj.info{end+1} = sprintf('\tPL2 Creator : %s %s', obj.pl2.CreatorSoftwareName, obj.pl2.CreatorSoftwareVersion);
+			ego.info = {};
+			if ego.isPL2
+				if isempty(ego.pl2); ego.pl2 = PL2GetFileIndex(ego.file); end
+				ego.info{1} = sprintf('PL2 File : %s', ego.ic.OpenedFileName);
+				ego.info{end+1} = sprintf('\tPL2 File Length : %d', ego.pl2.FileLength);
+				ego.info{end+1} = sprintf('\tPL2 Creator : %s %s', ego.pl2.CreatorSoftwareName, ego.pl2.CreatorSoftwareVersion);
 			else
-				obj.info{1} = sprintf('PLX File : %s', obj.ic.OpenedFileName);
+				ego.info{1} = sprintf('PLX File : %s', ego.ic.OpenedFileName);
 			end
-			obj.info{end+1} = sprintf('Behavioural File : %s', obj.matfile);
-			obj.info{end+1} = ' ';
-			obj.info{end+1} = sprintf('Behavioural File Comment : %s', obj.meta.comments);
-			obj.info{end+1} = ' ';
-			obj.info{end+1} = sprintf('Plexon File Comment : %s', obj.ic.Comment);
-			obj.info{end+1} = sprintf('Version : %g', obj.ic.Version);
-			obj.info{end+1} = sprintf('SDK Version : %g', obj.ic.sdkversion);
-			obj.info{end+1} = sprintf('Frequency : %g Hz', obj.ic.Freq);
-			obj.info{end+1} = sprintf('Plexon Date/Time : %s', num2str(obj.ic.DateTime));
-			obj.info{end+1} = sprintf('Duration : %g seconds', obj.ic.Duration);
-			obj.info{end+1} = sprintf('Num Pts Per Wave : %g', obj.ic.NPW);
-			obj.info{end+1} = sprintf('Num Pts Pre-Threshold : %g', obj.ic.PreThresh);
+			ego.info{end+1} = sprintf('Behavioural File : %s', ego.matfile);
+			ego.info{end+1} = ' ';
+			ego.info{end+1} = sprintf('Behavioural File Comment : %s', ego.meta.comments);
+			ego.info{end+1} = ' ';
+			ego.info{end+1} = sprintf('Plexon File Comment : %s', ego.ic.Comment);
+			ego.info{end+1} = sprintf('Version : %g', ego.ic.Version);
+			ego.info{end+1} = sprintf('SDK Version : %g', ego.ic.sdkversion);
+			ego.info{end+1} = sprintf('Frequency : %g Hz', ego.ic.Freq);
+			ego.info{end+1} = sprintf('Plexon Date/Time : %s', num2str(ego.ic.DateTime));
+			ego.info{end+1} = sprintf('Duration : %g seconds', ego.ic.Duration);
+			ego.info{end+1} = sprintf('Num Pts Per Wave : %g', ego.ic.NPW);
+			ego.info{end+1} = sprintf('Num Pts Pre-Threshold : %g', ego.ic.PreThresh);
 			
-			switch obj.trodality
+			switch ego.trodality
 				case 1
-					obj.info{end+1} = sprintf('Data type : Single Electrode');
+					ego.info{end+1} = sprintf('Data type : Single Electrode');
 				case 2
-					obj.info{end+1} = sprintf('Data type : Stereotrode');
+					ego.info{end+1} = sprintf('Data type : Stereotrode');
 				case 4
-					obj.info{end+1} = sprintf('Data type : Tetrode');
+					ego.info{end+1} = sprintf('Data type : Tetrode');
 				otherwise
-					obj.info{end+1} = sprintf('Data type : Unknown');
+					ego.info{end+1} = sprintf('Data type : Unknown');
 			end
-			obj.info{end+1} = sprintf('Spike Peak Voltage (mV) : %g', obj.ic.SpikePeakV);
-			obj.info{end+1} = sprintf('Spike A/D Resolution (bits) : %g', obj.ic.SpikeADResBits);
-			obj.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', obj.ic.SlowPeakV);
-			obj.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', obj.ic.SlowADResBits);
+			ego.info{end+1} = sprintf('Spike Peak Voltage (mV) : %g', ego.ic.SpikePeakV);
+			ego.info{end+1} = sprintf('Spike A/D Resolution (bits) : %g', ego.ic.SpikeADResBits);
+			ego.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', ego.ic.SlowPeakV);
+			ego.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', ego.ic.SlowADResBits);
 			
-			if isa(obj.rE,'runExperiment')
-				obj.info{end+1} = ' ';
-				rE = obj.rE; %#ok<*PROP>
-				obj.info{end+1} = sprintf('# of Stimulus Variables : %g', rE.task.nVars);
-				obj.info{end+1} = sprintf('Total # of Variable Values: %g', rE.task.minBlocks);
-				obj.info{end+1} = sprintf('Random Seed : %g', rE.task.randomSeed);
+			if isa(ego.rE,'runExperiment')
+				ego.info{end+1} = ' ';
+				rE = ego.rE; %#ok<*PROP>
+				ego.info{end+1} = sprintf('# of Stimulus Variables : %g', rE.task.nVars);
+				ego.info{end+1} = sprintf('Total # of Variable Values: %g', rE.task.minBlocks);
+				ego.info{end+1} = sprintf('Random Seed : %g', rE.task.randomSeed);
 				names = '';
 				vals = '';
 				for i = 1:rE.task.nVars
@@ -709,56 +781,56 @@ classdef plxReader < optickaCore
 						vals = [vals ' || ' num2str(rE.task.nVar(i).values)];
 					end
 				end
-				obj.info{end+1} = sprintf('Variable Names : %s', names(5:end));
-				obj.info{end+1} = sprintf('Variable Values : %s', vals(5:end));
+				ego.info{end+1} = sprintf('Variable Names : %s', names(5:end));
+				ego.info{end+1} = sprintf('Variable Values : %s', vals(5:end));
 				names = '';
 				for i = 1:rE.stimuli.n
 					names = [names ' | ' rE.stimuli{i}.name ':' rE.stimuli{i}.family];
 				end
-				obj.info{end+1} = sprintf('Stimulus Names : %s', names(4:end));
+				ego.info{end+1} = sprintf('Stimulus Names : %s', names(4:end));
 			end
-			if ~isempty(obj.eventList)
-				obj.info{end+1} = ' ';
-				obj.info{end+1} = sprintf('Number of Strobed Variables : %g', obj.eventList.nVars);
-				obj.info{end+1} = sprintf('Total # Correct Trials :  %g', length(obj.eventList.correct));
-				obj.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(obj.eventList.breakFix));
-				obj.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(obj.eventList.incorrect));
-				obj.info{end+1} = sprintf('Minimum # of Trials per variable :  %g', obj.eventList.minRuns);
-				obj.info{end+1} = sprintf('Maximum # of Trials per variable :  %g', obj.eventList.maxRuns);
-				obj.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', obj.eventList.tMin,obj.eventList.tMinCorrect);
-				obj.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', obj.eventList.tMax,obj.eventList.tMaxCorrect);
+			if ~isempty(ego.eventList)
+				ego.info{end+1} = ' ';
+				ego.info{end+1} = sprintf('Number of Strobed Variables : %g', ego.eventList.nVars);
+				ego.info{end+1} = sprintf('Total # Correct Trials :  %g', length(ego.eventList.correct));
+				ego.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(ego.eventList.breakFix));
+				ego.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(ego.eventList.incorrect));
+				ego.info{end+1} = sprintf('Minimum # of Trials per variable :  %g', ego.eventList.minRuns);
+				ego.info{end+1} = sprintf('Maximum # of Trials per variable :  %g', ego.eventList.maxRuns);
+				ego.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', ego.eventList.tMin,ego.eventList.tMinCorrect);
+				ego.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', ego.eventList.tMax,ego.eventList.tMaxCorrect);
 			end
-			if ~isempty(obj.tsList)
-				obj.info{end+1} = ' ';
-				obj.info{end+1} = ['Total Channel list : ' num2str(obj.tsList.chMap)];
-				obj.info{end+1} = ['Trodality Reduction : ' num2str(obj.tsList.trodreduction)];
-				obj.info{end+1} = ['Number of Active channels : ' num2str(obj.tsList.nCh)];
-				obj.info{end+1} = ['Number of Active units : ' num2str(obj.tsList.nUnits)];
-				for i=1:obj.tsList.nCh
-					obj.info{end+1} = ['Channel ' num2str(obj.tsList.chMap(i)) ' unit list (0=unsorted) : ' num2str(obj.tsList.unitMap(i).units)];
+			if ~isempty(ego.tsList)
+				ego.info{end+1} = ' ';
+				ego.info{end+1} = ['Total Channel list : ' num2str(ego.tsList.chMap)];
+				ego.info{end+1} = ['Trodality Reduction : ' num2str(ego.tsList.trodreduction)];
+				ego.info{end+1} = ['Number of Active channels : ' num2str(ego.tsList.nCh)];
+				ego.info{end+1} = ['Number of Active units : ' num2str(ego.tsList.nUnits)];
+				for i=1:ego.tsList.nCh
+					ego.info{end+1} = ['Channel ' num2str(ego.tsList.chMap(i)) ' unit list (0=unsorted) : ' num2str(ego.tsList.unitMap(i).units)];
 				end
-				obj.info{end+1} = ['Ch/Unit Names : ' obj.tsList.namelist];
-				obj.info{end+1} = sprintf('Number of Parsed Spike Trials : %g', length(obj.tsList.tsParse{1}.trials));
-				obj.info{end+1} = sprintf('Data window around event : %s ', num2str(obj.eventWindow));
-				obj.info{end+1} = sprintf('Start Offset : %g ', obj.startOffset);
+				ego.info{end+1} = ['Ch/Unit Names : ' ego.tsList.namelist];
+				ego.info{end+1} = sprintf('Number of Parsed Spike Trials : %g', length(ego.tsList.tsParse{1}.trials));
+				ego.info{end+1} = sprintf('Data window around event : %s ', num2str(ego.eventWindow));
+				ego.info{end+1} = sprintf('Start Offset : %g ', ego.startOffset);
 			end
-			if ~isempty(obj.eA)
-				saccs = [obj.eA.trials.firstSaccade];
+			if ~isempty(ego.eA)
+				saccs = [ego.eA.trials.firstSaccade];
 				saccs(isnan(saccs)) = [];
 				saccs(saccs<0) = [];
 				mins = min(saccs);
 				maxs = max(saccs);
 				[avgs,es] = stderr(saccs);
 				ns = length(saccs);
-				obj.info{end+1} = ' ';
-				obj.info{end+1} = ['Eyelink data Parsed trial total : ' num2str(length(obj.eA.trials))];
-				obj.info{end+1} = ['Eyelink trial bug override : ' num2str(obj.eA.needOverride)];
-				obj.info{end+1} = sprintf('Valid First Post-Stimulus Saccades (#%g): %.4g ± %.3g (range %g:%g )',ns,avgs/1e3,es/1e3,mins/1e3,maxs/1e3);
+				ego.info{end+1} = ' ';
+				ego.info{end+1} = ['Eyelink data Parsed trial total : ' num2str(length(ego.eA.trials))];
+				ego.info{end+1} = ['Eyelink trial bug override : ' num2str(ego.eA.needOverride)];
+				ego.info{end+1} = sprintf('Valid First Post-Stimulus Saccades (#%g): %.4g ± %.3g (range %g:%g )',ns,avgs/1e3,es/1e3,mins/1e3,maxs/1e3);
 			end
 			fprintf('Generating info took %g ms\n',round(toc*1000))
-			obj.info{end+1} = ' ';
-			obj.info = obj.info';
-			obj.meta.info = obj.info;
+			ego.info{end+1} = ' ';
+			ego.info = ego.info';
+			ego.meta.info = ego.info;
 		end
 		
 		% ===================================================================
@@ -767,17 +839,17 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function getEvents(obj)
-			readMat(obj); %make sure we've loaded the behavioural file first
+		function getEvents(ego)
+			readMat(ego); %make sure we've loaded the behavioural file first
 			tic
-			[~,eventNames] = plx_event_names(obj.file);
-			[~,eventIndex] = plx_event_chanmap(obj.file);
+			[~,eventNames] = plx_event_names(ego.file);
+			[~,eventIndex] = plx_event_chanmap(ego.file);
 			eventNames = cellstr(eventNames);
 			
 			idx = strcmpi(eventNames,'Strobed');
-			[a, b, c] = plx_event_ts(obj.file,eventIndex(idx));
+			[a, b, c] = plx_event_ts(ego.file,eventIndex(idx));
 			if isempty(a) || a == 0
-				obj.eventList = struct();
+				ego.eventList = struct();
 				warning('No strobe events detected!!!');
 				return
 			end
@@ -786,7 +858,7 @@ classdef plxReader < optickaCore
 				c(idx)=[];
 				b(idx) = [];
 			end
-			idx = find(c > obj.rE.task.minBlocks & c < 32700); %check for invalid event numbers, remove
+			idx = find(c > ego.rE.task.minBlocks & c < 32700); %check for invalid event numbers, remove
 			if ~isempty(idx)
 				c(idx)=[];
 				b(idx) = [];
@@ -799,17 +871,17 @@ classdef plxReader < optickaCore
 			a = length(b); %readjust our strobed # count
 			
 			idx = strcmpi(eventNames, 'Start');
-			[~,start] = plx_event_ts(obj.file,eventIndex(idx)); %start event
+			[~,start] = plx_event_ts(ego.file,eventIndex(idx)); %start event
 			idx = strcmpi(eventNames, 'Stop');
-			[~,stop] = plx_event_ts(obj.file,eventIndex(idx)); %stop event
+			[~,stop] = plx_event_ts(ego.file,eventIndex(idx)); %stop event
 			idx = strcmpi(eventNames, 'EVT19'); 
-			[~,b19] = plx_event_ts(obj.file,eventIndex(idx)); %currently 19 is fix start
+			[~,b19] = plx_event_ts(ego.file,eventIndex(idx)); %currently 19 is fix start
 			idx = strcmpi(eventNames, 'EVT20');
-			[~,b20] = plx_event_ts(obj.file,eventIndex(idx)); %20 is correct
+			[~,b20] = plx_event_ts(ego.file,eventIndex(idx)); %20 is correct
 			idx = strcmpi(eventNames, 'EVT21');
-			[~,b21] = plx_event_ts(obj.file,eventIndex(idx)); %21 is breakfix
+			[~,b21] = plx_event_ts(ego.file,eventIndex(idx)); %21 is breakfix
 			idx = strcmpi(eventNames, 'EVT22');
-			[~,b22] = plx_event_ts(obj.file,eventIndex(idx)); %22 is incorrect
+			[~,b22] = plx_event_ts(ego.file,eventIndex(idx)); %22 is incorrect
 
 			eL = struct();
 			eL.eventNames = eventNames;
@@ -873,9 +945,9 @@ classdef plxReader < optickaCore
 					eL.vars(var).nIncorrect = 0;
 				end
 				
-				tc = eL.correct > eL.trials(aa).t2 - obj.eventSearchWindow & eL.correct < eL.trials(aa).t2 + obj.eventSearchWindow;
-				tb = eL.breakFix > eL.trials(aa).t2 - obj.eventSearchWindow & eL.breakFix < eL.trials(aa).t2 + obj.eventSearchWindow;
-				ti = eL.incorrect > eL.trials(aa).t2 - obj.eventSearchWindow & eL.incorrect < eL.trials(aa).t2 + obj.eventSearchWindow;
+				tc = eL.correct > eL.trials(aa).t2 - ego.eventSearchWindow & eL.correct < eL.trials(aa).t2 + ego.eventSearchWindow;
+				tb = eL.breakFix > eL.trials(aa).t2 - ego.eventSearchWindow & eL.breakFix < eL.trials(aa).t2 + ego.eventSearchWindow;
+				ti = eL.incorrect > eL.trials(aa).t2 - ego.eventSearchWindow & eL.incorrect < eL.trials(aa).t2 + ego.eventSearchWindow;
 				
 				if max(tc) == 1
 					eL.trials(aa).isCorrect = true; eL.trials(aa).isBreak = false; eL.trials(aa).isIncorrect = false;
@@ -926,16 +998,16 @@ classdef plxReader < optickaCore
 			eL.correctIndex = [eL.trials(:).isCorrect]';
 			eL.breakIndex = [eL.trials(:).isBreak]';
 			eL.incorrectIndex = [eL.trials(:).isIncorrect]';
-			obj.eventList = eL;
+			ego.eventList = eL;
 			fprintf('Loading all event markers took %g ms\n',round(toc*1000))
 
-			obj.meta.modtime = floor(obj.eventList.tMaxCorrect * 10000);
-			obj.meta.trialtime = obj.meta.modtime;
-			m = [obj.rE.task.outIndex obj.rE.task.outMap getMeta(obj.rE.task)];
-			m = m(1:obj.eventList.nVars,:);
+			ego.meta.modtime = floor(ego.eventList.tMaxCorrect * 10000);
+			ego.meta.trialtime = ego.meta.modtime;
+			m = [ego.rE.task.outIndex ego.rE.task.outMap getMeta(ego.rE.task)];
+			m = m(1:ego.eventList.nVars,:);
 			[~,ix] = sort(m(:,1),1);
 			m = m(ix,:);
-			obj.meta.matrix = m;	
+			ego.meta.matrix = m;	
 			clear eL m
 		end
 		
@@ -945,67 +1017,67 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function readSpikes(obj)
+		function readSpikes(ego)
 			tic
-			[tscounts, wfcounts, evcounts, slowcounts] = plx_info(obj.file,1);
-			[~,chnames] = plx_chan_names(obj.file);
-			[~,chmap]=plx_chanmap(obj.file);
+			[tscounts, wfcounts, evcounts, slowcounts] = plx_info(ego.file,1);
+			[~,chnames] = plx_chan_names(ego.file);
+			[~,chmap]=plx_chanmap(ego.file);
 			chnames = cellstr(chnames);
 			[nunits1, nchannels1] = size( tscounts );
-			obj.tsList = struct();
+			ego.tsList = struct();
 			[a,b]=ind2sub(size(tscounts),find(tscounts>0)); %finds row and columns of nonzero values
-			obj.tsList.chMap = unique(b)';
+			ego.tsList.chMap = unique(b)';
 			a = 1;
-			obj.tsList.trodreduction = false;
+			ego.tsList.trodreduction = false;
 			prevcount = inf;
 			nCh = 0;
 			nUnit = 0;
-			for i = 1:length(obj.tsList.chMap)
-				units = find(tscounts(:,obj.tsList.chMap(i))>0)';
+			for i = 1:length(ego.tsList.chMap)
+				units = find(tscounts(:,ego.tsList.chMap(i))>0)';
 				n = length(units);
-				counts = tscounts(units,obj.tsList.chMap(i))';
+				counts = tscounts(units,ego.tsList.chMap(i))';
 				units = units - 1; %fix the index as plxuses 0 as unsorted
-				if a == 1 || (obj.trodality > 1 && ~isequal(counts, prevcount));
-					obj.tsList.unitMap(a).units = units;
-					obj.tsList.unitMap(a).n = n;
-					obj.tsList.unitMap(a).counts = counts;
+				if a == 1 || (ego.trodality > 1 && ~isequal(counts, prevcount));
+					ego.tsList.unitMap(a).units = units;
+					ego.tsList.unitMap(a).n = n;
+					ego.tsList.unitMap(a).counts = counts;
 					prevcount = counts;
 					nCh = a;
 					nUnit = nUnit + n;
 					a = a + 1;
 				end
 			end
-			if obj.trodality > 1 && a < i
-				obj.tsList.trodreduction = true;	
+			if ego.trodality > 1 && a < i
+				ego.tsList.trodreduction = true;	
 				disp('---! Removed tetrode channels with identical spike numbers !---');
 			end
-			obj.tsList.chMap = obj.tsList(1).chMap - 1; %fix the index as plx_info add 1 to channels
-			obj.tsList.chIndex = obj.tsList.chMap; %fucking pain channel number is different to ch index!!!
-			obj.tsList.chMap = chmap(obj.tsList(1).chMap); %set proper ch number
-			obj.tsList.nCh = nCh;
-			obj.tsList.nUnits = nUnit;
-			obj.tsList.namelist = ''; a = 1; list = 'Uabcdefghijklmnopqrstuvwxyz';
-			for ich = 1:obj.tsList.nCh
-				name = chnames{obj.tsList.chIndex(ich)};
-				unitN = obj.tsList.unitMap(ich).n;
+			ego.tsList.chMap = ego.tsList(1).chMap - 1; %fix the index as plx_info add 1 to channels
+			ego.tsList.chIndex = ego.tsList.chMap; %fucking pain channel number is different to ch index!!!
+			ego.tsList.chMap = chmap(ego.tsList(1).chMap); %set proper ch number
+			ego.tsList.nCh = nCh;
+			ego.tsList.nUnits = nUnit;
+			ego.tsList.namelist = ''; a = 1; list = 'Uabcdefghijklmnopqrstuvwxyz';
+			for ich = 1:ego.tsList.nCh
+				name = chnames{ego.tsList.chIndex(ich)};
+				unitN = ego.tsList.unitMap(ich).n;
 				for iunit = 1:unitN
 					t = '';
-					t = [num2str(a) ':' name list(iunit) '=' num2str(obj.tsList.unitMap(ich).counts(iunit))];
-					obj.tsList.names{a} = t;
-					obj.tsList.namelist = [obj.tsList.namelist ' ' t];
+					t = [num2str(a) ':' name list(iunit) '=' num2str(ego.tsList.unitMap(ich).counts(iunit))];
+					ego.tsList.names{a} = t;
+					ego.tsList.namelist = [ego.tsList.namelist ' ' t];
 					a = a + 1;
 				end
 			end
-			obj.tsList.ts = cell(obj.tsList.nUnits, 1);
-			obj.tsList.tsN = obj.tsList.ts;
-			obj.tsList.tsParse = obj.tsList.ts;
+			ego.tsList.ts = cell(ego.tsList.nUnits, 1);
+			ego.tsList.tsN = ego.tsList.ts;
+			ego.tsList.tsParse = ego.tsList.ts;
 			a = 1;
-			for ich = 1:obj.tsList.nCh
-				unitN = obj.tsList.unitMap(ich).n;
-				ch = obj.tsList.chMap(ich);
+			for ich = 1:ego.tsList.nCh
+				unitN = ego.tsList.unitMap(ich).n;
+				ch = ego.tsList.chMap(ich);
 				for iunit = 1:unitN
-					unit = obj.tsList.unitMap(ich).units(iunit);
-					[obj.tsList.tsN{a}, obj.tsList.ts{a}] = plx_ts(obj.file, ch , unit);
+					unit = ego.tsList.unitMap(ich).units(iunit);
+					[ego.tsList.tsN{a}, ego.tsList.ts{a}] = plx_ts(ego.file, ch , unit);
 					a = a + 1;
 				end
 			end
@@ -1018,31 +1090,31 @@ classdef plxReader < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseSpikes(obj)
+		function parseSpikes(ego)
 			tic
-			for ps = 1:obj.tsList.nUnits
-				spikes = obj.tsList.ts{ps};
-				trials = cell(obj.eventList.nTrials,1);
-				vars = cell(obj.eventList.nVars,1);
-				for trl = 1:obj.eventList.nTrials
+			for ps = 1:ego.tsList.nUnits
+				spikes = ego.tsList.ts{ps};
+				trials = cell(ego.eventList.nTrials,1);
+				vars = cell(ego.eventList.nVars,1);
+				for trl = 1:ego.eventList.nTrials
 					%===process the trial
-					trial = obj.eventList.trials(trl);
+					trial = ego.eventList.trials(trl);
 					trials{trl} = trial;
-					trials{trl}.startOffset = obj.startOffset;
-					trials{trl}.eventWindow = obj.eventWindow;
-					if isempty(obj.eventWindow) %use event markers and startOffset
-						trials{trl}.tStart = trial.t1 + obj.startOffset;
+					trials{trl}.startOffset = ego.startOffset;
+					trials{trl}.eventWindow = ego.eventWindow;
+					if isempty(ego.eventWindow) %use event markers and startOffset
+						trials{trl}.tStart = trial.t1 + ego.startOffset;
 						trials{trl}.tEnd = trial.t2;
-						trials{trl}.rStart = obj.startOffset;
+						trials{trl}.rStart = ego.startOffset;
 						trials{trl}.rEnd = trial.t2 - trial.t1;
 						trials{trl}.base = trial.t1;
 						trials{trl}.basetime = trials{trl}.tStart; %make offset invisible for systems that can't handle -time
 						trials{trl}.modtimes = trials{trl}.tStart;
 					else
-						trials{trl}.tStart = trial.t1 - obj.eventWindow;
-						trials{trl}.tEnd = trial.t1 + obj.eventWindow;
-						trials{trl}.rStart = -obj.eventWindow;
-						trials{trl}.rEnd = obj.eventWindow;
+						trials{trl}.tStart = trial.t1 - ego.eventWindow;
+						trials{trl}.tEnd = trial.t1 + ego.eventWindow;
+						trials{trl}.rStart = -ego.eventWindow;
+						trials{trl}.rEnd = ego.eventWindow;
 						trials{trl}.base = trial.t1;
 						trials{trl}.basetime = trial.t1; % basetime > tStart
 						trials{trl}.modtimes = trial.t1;
@@ -1052,15 +1124,15 @@ classdef plxReader < optickaCore
 					%===process the variable run
 					var = trial.name;
 					if isempty(vars{var})
-						vars{var} = obj.eventList.vars(var);
+						vars{var} = ego.eventList.vars(var);
 						vars{var}.nTrials = 0;
 						vars{var}.run = struct([]);
 					end
 					vars{var}.nTrials = vars{var}.nTrials + 1;
 					vars{var}.run(vars{var}.nTrials).eventWindow = trials{trl}.eventWindow;
-					if isempty(obj.eventWindow)
-						vars{var}.run(vars{var}.nTrials).basetime = trial.t1 + obj.startOffset;
-						vars{var}.run(vars{var}.nTrials).modtimes = trial.t1 + obj.startOffset;
+					if isempty(ego.eventWindow)
+						vars{var}.run(vars{var}.nTrials).basetime = trial.t1 + ego.startOffset;
+						vars{var}.run(vars{var}.nTrials).modtimes = trial.t1 + ego.startOffset;
 					else
 						vars{var}.run(vars{var}.nTrials).basetime = trial.t1;
 						vars{var}.run(vars{var}.nTrials).modtimes = trial.t1;
@@ -1071,12 +1143,12 @@ classdef plxReader < optickaCore
 					vars{var}.run(vars{var}.nTrials).isBreak = trials{trl}.isBreak;
 					vars{var}.run(vars{var}.nTrials).isIncorrect = trials{trl}.isIncorrect;
 				end
-				obj.tsList.tsParse{ps}.trials = trials;
-				obj.tsList.tsParse{ps}.var = vars;
+				ego.tsList.tsParse{ps}.trials = trials;
+				ego.tsList.tsParse{ps}.var = vars;
 			end
 			fprintf('Parsing spikes into trials/variables took %g ms\n',round(toc*1000))
-			if obj.startOffset ~= 0
-				obj.info{end+1} = sprintf('START OFFSET ACTIVE : %g', obj.startOffset);
+			if ego.startOffset ~= 0
+				ego.info{end+1} = sprintf('START OFFSET ACTIVE : %g', ego.startOffset);
 			end
 		end
 		

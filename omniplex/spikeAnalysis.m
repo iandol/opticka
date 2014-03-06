@@ -8,7 +8,7 @@ classdef spikeAnalysis < optickaCore
 		%> data directory
 		dir@char
 		%> ± time window around the trigger, if empty use event off
-		spikeWindow@double = 0.6
+		spikeWindow@double = 0.8
 		%> used by legacy spikes to allow negative time offsets
 		startOffset@double = 0
 		%> default range to plot
@@ -56,9 +56,11 @@ classdef spikeAnalysis < optickaCore
 	end
 	
 	%------------------TRANSIENT PROPERTIES----------%
-	properties (SetAccess = private, GetAccess = public, Transient = true)
+	properties (SetAccess = private, GetAccess = private, Transient = true)
 		%> UI panels
 		panels@struct = struct()
+		%>
+		selectOverride@logical = false
 	end
 		
 	%------------------DEPENDENT PROPERTIES--------%
@@ -159,9 +161,16 @@ classdef spikeAnalysis < optickaCore
 			end
 			if isfield(in,'selectedTrials')
 				ego.selectedTrials = in.selectedTrials;
+				ego.selectOverride = true;
 			end
 			if isfield(in,'map')
 				ego.map = in.map;
+			end
+			if isfield(in,'plotRange')
+				ego.plotRange = in.plotRange;
+			end
+			if isfield(in,'selectedBehaviour')
+				ego.selectedBehaviour = in.selectedBehaviour;
 			end
 		end
 		
@@ -173,6 +182,7 @@ classdef spikeAnalysis < optickaCore
 		% ===================================================================
 		function parse(ego)
 			ft_defaults
+			ego.selectOverride = false;
 			if isempty(ego.file)
 				getFiles(ego, true);
 				if isempty(ego.file); warning('No plexon file selected'); return; end
@@ -192,6 +202,37 @@ classdef spikeAnalysis < optickaCore
 			ego.p.eA.ROI = ego.ROI;
 			parseROI(ego.p.eA);
 			showInfo(ego);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function lazyParse(ego)
+			ft_defaults
+			if isempty(ego.file)
+				getFiles(ego, true);
+				if isempty(ego.file); warning('No plexon file selected'); return; end
+			end
+			ego.paths.oldDir = pwd;
+			cd(ego.dir);
+			ego.p.eventWindow = ego.spikeWindow;
+			lazyParse(ego.p);
+			ego.trial = ego.p.eventList.trials;
+			ego.event = ego.p.eventList;
+			for i = 1:ego.nUnits
+				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
+			end
+			ego.ft = getFTSpikes(ego.p);
+			ego.names = ego.ft.label;
+			if isempty(ego.selectedTrials)
+				select(ego);
+			elseif ego.selectOverride == false
+				selectTrials(ego)
+			end
+			disp('Lazy spike parsing finished...')
 		end
 		
 		% ===================================================================
@@ -223,6 +264,7 @@ classdef spikeAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function select(ego)
+			ego.selectOverride = false;
 			cuttrials = '[ ';
 			if ~isempty(ego.cutTrials) 
 				cuttrials = [cuttrials num2str(ego.cutTrials)];
@@ -301,7 +343,9 @@ classdef spikeAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function selectTrials(ego)
-			
+			if ego.selectOverride == true
+				return
+			end
 			switch lower(ego.selectedBehaviour)
 				case 'correct'
 					behaviouridx = find([ego.trial.isCorrect]==true);
@@ -312,6 +356,8 @@ classdef spikeAnalysis < optickaCore
 				otherwise
 					behaviouridx = [ego.trial.index];
 			end
+			
+			cutidx = ego.cutTrials;
 			
 			idx = find([ego.trial.firstSaccade] >= ego.filterFirstSaccades(1));
 			idx2 = find([ego.trial.firstSaccade] <= ego.filterFirstSaccades(2));
@@ -329,10 +375,12 @@ classdef spikeAnalysis < optickaCore
 				for i = 1:ego.event.nVars
 					vidx = find([ego.trial.name]==ego.event.unique(i));
 					idx = intersect(vidx, behaviouridx);
+					idx = setdiff(idx, cutidx); %remove the cut trials
 					if ~isempty(saccidx); idx = intersect(idx, saccidx); end
 					if ego.useROI == true; idx = intersect(idx, roiidx); end
 					if ~isempty(idx)
 						ego.selectedTrials{a}.idx = idx;
+						ego.selectedTrials{1}.cutidx = cutidx;
 						ego.selectedTrials{a}.behaviour = ego.selectedBehaviour;
 						ego.selectedTrials{a}.sel = ego.event.unique(i);						
 						a = a + 1;
@@ -344,10 +392,12 @@ classdef spikeAnalysis < optickaCore
 					idx = [idx find([ego.trial.name]==ego.map{1}(i))];
 				end
 				idx = intersect(idx, behaviouridx);
+				idx = setdiff(idx, cutidx); %remove the cut trials
 				if ~isempty(saccidx); idx = intersect(idx, saccidx); end
 				if ego.useROI == true; idx = intersect(idx, roiidx); end
 				if ~isempty(idx)
 					ego.selectedTrials{1}.idx = idx;
+					ego.selectedTrials{1}.cutidx = cutidx;
 					ego.selectedTrials{1}.behaviour = ego.selectedBehaviour;
 					ego.selectedTrials{1}.sel = ego.map{1};
 				end
@@ -358,10 +408,12 @@ classdef spikeAnalysis < optickaCore
 						idx = [idx find([ego.trial.name]==ego.map{2}(i))];
 					end
 					idx = intersect(idx, behaviouridx);
+					idx = setdiff(idx, cutidx); %remove the cut trials
 					if ~isempty(saccidx); idx = intersect(idx, saccidx); end
 					if ego.useROI == true; idx = intersect(idx, roiidx); end
 					if ~isempty(idx)
 						ego.selectedTrials{2}.idx = idx;
+						ego.selectedTrials{1}.cutidx = cutidx;
 						ego.selectedTrials{2}.behaviour = ego.selectedBehaviour;
 						ego.selectedTrials{2}.sel = ego.map{2};
 					end
@@ -373,10 +425,12 @@ classdef spikeAnalysis < optickaCore
 						idx = [idx find([ego.trial.name]==ego.map{3}(i))];
 					end
 					idx = intersect(idx, behaviouridx);
+					idx = setdiff(idx, cutidx); %remove the cut trials
 					if ~isempty(saccidx); idx = intersect(idx, saccidx); end
 					if ego.useROI == true; idx = intersect(idx, roiidx); end
 					if ~isempty(idx)
 						ego.selectedTrials{3}.idx = idx;
+						ego.selectedTrials{1}.cutidx = cutidx;
 						ego.selectedTrials{3}.behaviour = ego.selectedBehaviour;
 						ego.selectedTrials{3}.sel = ego.map{3};
 					end

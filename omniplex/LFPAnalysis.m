@@ -150,8 +150,8 @@ classdef LFPAnalysis < optickaCore
 			selectTrials(ego);
 			ft_parseLFPs(ego);
 			plotLFPs(ego,'all');
-
 		end
+
 		
 		% ===================================================================
 		%> @brief
@@ -173,12 +173,31 @@ classdef LFPAnalysis < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
+		function parseSpikes(ego)
+			in.cutTrials = ego.cutTrials;
+			in.selectedTrials = ego.selectedTrials;
+			in.map = ego.map;
+			in.plotRange = ego.plotRange;
+			in.selectedBehaviour = ego.selectedBehaviour;
+			setTrials(ego.sp, in); %set spike anal to same trials etc.
+			syncData(ego.sp.p, ego.p); %copy any parsed data 
+			lazyParse(ego.sp);
+			syncData(ego.p, ego.sp.p); %copy any parsed data back 
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function ft = ft_parseLFPs(ego)
 			ft_defaults;
 			LFPs = ego.LFPs;
 			tic
 			ft = struct();
 			ft(1).hdr = ft_read_plxheader(ego.lfpfile);
+			ft.hdr.FirstTimeStamp = 0; %we use LFPs(1).sample-1 below to fake 0 start time
 			ft.label = {LFPs(:).name};
 			ft.time = cell(1);
 			ft.trial = cell(1);
@@ -205,7 +224,7 @@ classdef LFPAnalysis < optickaCore
 					%ideal!!!
 					ft.sampleinfo(a,1)= LFPs(1).trials(k).startIndex + LFPs(1).sample-1; 
 					ft.sampleinfo(a,2)= LFPs(1).trials(k).endIndex + LFPs(1).sample-1;
-					ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -window];
+					ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -window LFPs(1).trials(k).t1];
 					ft.trialinfo(a,1) = LFPs(1).trials(k).name;
 					a = a + 1;
 			end
@@ -449,60 +468,56 @@ classdef LFPAnalysis < optickaCore
 		%> @return
 		% ===================================================================
 		function cfgUsed=ftSpikeLFP(ego, cfg)
-			if ~exist('preset','var') || isempty(preset); preset='fix1'; end
-			if ~exist('tw','var') || isempty(tw); tw=0.2; end
-			if ~exist('cycles','var') || isempty(cycles); cycles = 5; end
-			if ~exist('width','var') || isempty(width); width = 10; end
-			if ~exist('smooth','var') || isempty(smth); smth = 10; end
 			ft = ego.ft;
-			cfgUsed = {};
-			if ~exist('cfg','var') || isempty(cfg)
-				cfg				= [];
-				cfg.keeptrials	= 'yes';
-				cfg.output		= 'pow';
-				cfg.channel = ft.label{ego.selectedLFP};
-				cfg.toi         = -0.4:0.02:0.4;                  % time window "slides"
-				cfg.tw = tw;
-				cfg.cycles = cycles;
-				cfg.width = width;
-				cfg.smooth = smth;
-				switch preset
-					case 'fix1'
-						cfg.method      = 'mtmconvol';
-						cfg.taper		= 'hanning';
-						lf = round(1 / cfg.tw);
-						cfg.foi         = lf:2:80;						  % analysis frequencies 
-						cfg.t_ftimwin  = ones(length(cfg.foi),1).*tw;   % length of fixed time window
-					case 'fix2'
-						cfg.method      = 'mtmconvol';
-						cfg.taper        = 'hanning';
-						cfg.foi         = 2:2:80;						  % analysis frequencies 
-						cfg.t_ftimwin	= cycles./cfg.foi;					  % x cycles per time window
-					case 'mtm1'
-						cfg.method      = 'mtmconvol';
-						cfg.taper       = 'dpss';
-						cfg.foi         = 2:2:80;						  % analysis frequencies 
-						cfg.tapsmofrq	= cfg.foi * cfg.smooth;
-						cfg.t_ftimwin	= cycles./cfg.foi;					  % x cycles per time window
-					case 'mtm2'
-						cfg.method      = 'mtmconvol';
-						cfg.taper       = 'dpss';
-						cfg.foi         = 2:2:80;						  % analysis frequencies 
-					case 'morlet'
-						cfg.method		= 'wavelet';
-						cfg.taper		= '';
-						cfg.width		= width;
-						cfg.foi         = 2:2:80;						  % analysis frequencies 
-				end
-			elseif ~isempty(cfg)
-				preset = 'custom';
-			end
-			for i = ft.uniquetrials'
-				cfg.trials = find(ft.trialinfo == i);
-				fq{i} = ft_freqanalysis(cfg,ft);
-				fq{i}.cfgUsed=cfg;
-				cfgUsed{i} = cfg;
-			end
+			spike = ego.sp.ft;
+			data_all = ft_appendspike([],ft, spike);
+			cfg              = [];
+			cfg.timwin       = [-0.2 0.2]; 
+			cfg.spikechannel = spike.label{1}; 
+			cfg.channel      = ft.label{ego.selectedLFP};
+			cfg.latency      = [0 0.4];
+			staPost          = ft_spiketriggeredaverage(cfg, data_all);
+			figure
+			plot(staPost.time, staPost.avg(:,:)')
+			box on
+			grid on
+			legend(ft.label{ego.selectedLFP})
+			xlabel('time (s)')
+			xlim(cfg.timwin)
+			title('POST')
+			
+			cfg              = [];
+			cfg.timwin       = [-0.2 0.2]; 
+			cfg.spikechannel = spike.label{1}; 
+			cfg.channel      = ft.label{ego.selectedLFP};
+			cfg.latency      = [-0.4 0];
+			staPre          = ft_spiketriggeredaverage(cfg, data_all);
+			figure
+			plot(staPre.time, staPre.avg(:,:)')
+			box on
+			grid on
+			legend(ft.label{ego.selectedLFP})
+			xlabel('time (s)')
+			xlim(cfg.timwin)
+			title('PRE')
+			
+			ego.ft.sta.post=staPost;
+			ego.ft.sta.pre=staPre;
+			
+			cfg              = [];
+			cfg.method       = 'mtmfft';
+			cfg.foilim       = [20 100]; % cfg.timwin determines spacing
+			cfg.timwin       = [-0.05 0.05]; % time window of 100 msec
+			cfg.taper        = 'hanning';
+			cfg.spikechannel = spike.label{1};
+			cfg.channel      = ft.label{ego.selectedLFP};
+			stsFFT           = ft_spiketriggeredspectrum(cfg, ft, spike);
+			ang = angle(stsFFT.fourierspctrm{1});
+			mag = abs(stsFFT.fourierspctrm{1});
+			
+			ego.ft.stsFFT = stsFFT
+			ego.ang=squeeze(ang);
+			ego.mag=squeeze(mag);
 		end
 		
 		% ===================================================================
@@ -666,8 +681,10 @@ classdef LFPAnalysis < optickaCore
 		% ===================================================================
 		function userSelection(ego)	
 			cuttrials = '[ ';
-			if ~isempty(ego.cutTrials) 
+			if ~isempty(ego.cutTrials)
 				cuttrials = [cuttrials num2str(ego.cutTrials)];
+			elseif ~isempty(ego.clickedTrials)
+				cuttrials = [cuttrials num2str(ego.clickedTrials)];
 			end
 			cuttrials = [cuttrials ' ]'];
 			
@@ -738,7 +755,7 @@ classdef LFPAnalysis < optickaCore
 						ego.selectedTrials{a}.idx = idx;
 						ego.selectedTrials{1}.cutidx = cutidx;
 						ego.selectedTrials{a}.behaviour = ego.selectedBehaviour;
-						ego.selectedTrials{a}.sel = ego.event.unique(i);						
+						ego.selectedTrials{a}.sel = ego.p.eventList.unique(i);						
 						a = a + 1;
 					end
 				end
@@ -833,8 +850,8 @@ classdef LFPAnalysis < optickaCore
 				for k = 1:length(ego.selectedTrials{j}.idx)
 					trial = LFP.trials(ego.selectedTrials{j}.idx(k));
 					dat = [trial.name,trial.index,trial.t1];
-					sel = ego.clickedTrials;
-					if ~isempty(intersect(trial.index,sel));
+					cut = ego.cutTrials;
+					if ~isempty(intersect(trial.index,cut));
 						ls = ':';
 					else
 						ls = '-';
@@ -847,11 +864,7 @@ classdef LFPAnalysis < optickaCore
 						plot(trial.time, trial.data,'LineStyle', ls, 'Tag',tag,'ButtonDownFcn', @clickMe,'UserData',dat);
 					end
 				end
-				idx = ego.selectedTrials{j}.idx;
-				time = LFP.trials(1).time';
-				data = [LFP.trials(idx).data];
-				data = rot90(fliplr(data)); %get it into trial x data = row x column
-				[avg,err] = stderr(data);
+				[time,avg,err]=getAverageTuningCurve(ego, ego.selectedTrials{j}.idx, ego.selectedLFP);
 				areabar(time, avg, err,[0.5 0.5 0.5],0.6,'k-','MarkerFaceColor',[0 0 0],'LineWidth',1);
 				p(i1,i2).hold('off');
 				axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
@@ -924,18 +937,16 @@ classdef LFPAnalysis < optickaCore
 					title(['TIMELOCK AVERAGES: File:' ego.lfpfile ' | Channel:' LFPs(j).name]);
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV)');
+					grid on; box on
+					set(gca,'Layer','bottom')
 					hold on
 					for k = 1:length(ego.selectedTrials)
+						leg{k,1} = num2str(ego.selectedTrials{k}.sel);
 						[time,avg,err]=getAverageTuningCurve(ego, ego.selectedTrials{k}.idx, j);
 						areabar(time, avg, err, c(k,:), 0.3, 'k.-', 'Color', c(k,:), 'MarkerFaceColor', c(k,:), 'LineWidth', 2);
 					end
-					if length(ego.selectedTrials) == 3
-						legend('Group A','Group B','Group C');
-					elseif length(ego.selectedTrials) == 2
-						legend('Group A','Group B');
-					end
+					legend(leg);
 					hold off
-					grid on; box on
 					axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
 				end
 				if isfield(ego.ft,'av')
