@@ -174,8 +174,9 @@ classdef eyelinkAnalysis < analysisCore
 						end
 						isTrial = true;
 						eventN=1;
-						ego.trials(tri).id = str2double(id.ID);
+						ego.trials(tri).variable = str2double(id.ID);
 						ego.trials(tri).idx = tri;
+						ego.trials(tri).correctedIndex = [];
 						ego.trials(tri).time = double(evt.time);
 						ego.trials(tri).sttime = double(evt.sttime);
 						ego.trials(tri).rt = false;
@@ -360,7 +361,7 @@ classdef eyelinkAnalysis < analysisCore
 							if ego.trials(tri).result == 1
 								ego.trials(tri).correct = true;
 								ego.correct.idx = [ego.correct.idx tri];
-								ego.trialList(tri) = ego.trials(tri).id;
+								ego.trialList(tri) = ego.trials(tri).variable;
 								if ~isempty(sT) && sT > 0
 									ego.correct.saccTimes = [ego.correct.saccTimes sT];
 								else
@@ -371,18 +372,18 @@ classdef eyelinkAnalysis < analysisCore
 							elseif ego.trials(tri).result == -1
 								ego.trials(tri).breakFix = true;
 								ego.breakFix.idx = [ego.breakFix.idx tri];
-								ego.trialList(tri) = -ego.trials(tri).id;
+								ego.trialList(tri) = -ego.trials(tri).variable;
 								if ~isempty(sT) && sT > 0
 									ego.breakFix.saccTimes = [ego.breakFix.saccTimes sT];
 								else
-									ego.breakFix.saccTimes = [ego.breakFix.saccTimes NaN];;
+									ego.breakFix.saccTimes = [ego.breakFix.saccTimes NaN];
 								end
 								ego.trials(tri).correctedIndex = tri2;
 								tri2 = tri2 + 1;
 							elseif ego.trials(tri).result == 0
 								ego.trials(tri).incorrect = true;
 								ego.incorrect.idx = [ego.incorrect.idx tri];
-								ego.trialList(tri) = -ego.trials(tri).id;
+								ego.trialList(tri) = -ego.trials(tri).variable;
 								if ~isempty(sT) && sT > 0
 									ego.incorrect.saccTimes = [ego.incorrect.saccTimes sT];
 								else
@@ -452,8 +453,8 @@ classdef eyelinkAnalysis < analysisCore
 			set(gcf,'Color',[1 1 1]);
 			figpos(1,[1200 1200]);
 			p = panel(h);
-			p.margintop = 10;
-			p.fontsize = 8;
+			p.margin = [20 20 10 15]; %left bottom right top
+			p.fontsize = 12;
 			p.pack('v',{2/3, []});
 			q = p(1);
 			q.pack(2,2);
@@ -504,13 +505,13 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				if isempty(f); continue; end
 				thisTrial = ego.trials(f(1));
-				if thisTrial.id == 1010 %early edf files were broken, 1010 signifies this
+				if thisTrial.variable == 1010 %early edf files were broken, 1010 signifies this
 					c = rand(1,3);
 				else
-					c = map(thisTrial.id,:);
+					c = map(thisTrial.variable,:);
 				end
 				
-				if isempty(select) || length(select) > 1 || ~isempty(intersect(select,thisTrial.id));
+				if isempty(select) || length(select) > 1 || ~isempty(intersect(select,thisTrial.variable));
 				else
 					continue
 				end
@@ -691,9 +692,9 @@ classdef eyelinkAnalysis < analysisCore
 				a = 1;
 				for j = 1:length(ego.trials)
 					if ego.trials(j).incorrect ~= true
-						ego.trials(j).oldid = ego.trials(j).id;
-						ego.trials(j).id = trials(a).name;
-						ego.trialList(j) = ego.trials(j).id;
+						ego.trials(j).oldid = ego.trials(j).variable;
+						ego.trials(j).variable = trials(a).variable;
+						ego.trialList(j) = ego.trials(j).variable;
 						if ego.trials(j).breakFix == true
 							ego.trialList(j) = -[ego.trialList(j)];
 						end
@@ -720,7 +721,7 @@ classdef eyelinkAnalysis < analysisCore
 			fixationY = ego.ROI(2);
 			fixationRadius = ego.ROI(3);
 			for i = 1:length(ego.trials)
-				ego.ROIInfo(i).id = ego.trials(i).id;
+				ego.ROIInfo(i).variable = ego.trials(i).variable;
 				ego.ROIInfo(i).idx = i;
 				ego.ROIInfo(i).correctedIndex = ego.trials(i).correctedIndex;
 				ego.ROIInfo(i).uuid = ego.trials(i).uuid;
@@ -757,27 +758,104 @@ classdef eyelinkAnalysis < analysisCore
 		% ===================================================================
 		function plotROI(ego)
 			if ~isempty(ego.ROIInfo)
-				figure;
-				for i = 1:length(ego.ROIInfo)
-					r = ego.ROIInfo(i);
-					hold on
+				h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',ego.file);
+				
+				x1 = ego.ROI(1) - ego.ROI(3);
+				x2 = ego.ROI(1) + ego.ROI(3);
+				xmin = min([abs(x1), abs(x2)]);
+				xmax = max([abs(x1), abs(x2)]);
+				y1 = ego.ROI(2) - ego.ROI(3);
+				y2 = ego.ROI(2) + ego.ROI(3);
+				ymin = min([abs(y1), abs(y2)]);
+				ymax = max([abs(y1), abs(y2)]);
+				xp = [x1 x1 x2 x2];
+				yp = [y1 y2 y2 y1];
+				xpp = [xmin xmin xmax xmax];
+				ypp = [ymin ymin ymax ymax];
+				p=panel(h);
+				p.pack(1,2);
+				p.fontsize = 14;
+				p.margin = [15 15 15 15];
+				yes = logical([ego.ROIInfo.enteredROI]);
+				no = ~yes;
+				yesROI = ego.ROIInfo(yes);
+				noROI	= ego.ROIInfo(no);
+				p(1,1).select();
+				p(1,1).hold('on');
+				patch(xp,yp,[1 1 0],'EdgeColor','none');
+				p(1,2).select();
+				p(1,2).hold('on');
+				patch([0 1 1 0],xpp,[1 1 0],'EdgeColor','none');
+				patch([0 1 1 0],ypp,[0.5 1 0],'EdgeColor','none');
+				for i = 1:length(noROI)
 					c = [0.7 0.7 0.7];
-					if r.enteredROI == true; c = [0 0 0]; end
-					h = plot(r.times,r.x,'k-o',r.times,r.y,'k-v','color',c);
-					set(h,'UserData',[r.idx r.correctedIndex r.id r.correct r.breakFix r.incorrect],'ButtonDownFcn', @clickMe);
+					if noROI(i).correct == true
+						l = 'o-';
+					else
+						l = '.--';
+					end
+					t = noROI(i).times(noROI(i).times >= 0);
+					x = noROI(i).x(noROI(i).times >= 0);
+					y = noROI(i).y(noROI(i).times >= 0);
+					if ~isempty(x)
+						p(1,1).select();
+						h = plot(x,y,l,'color',c,'MarkerFaceColor',c,'LineWidth',1);
+						set(h,'UserData',[noROI(i).idx noROI(i).correctedIndex noROI(i).variable noROI(i).correct noROI(i).breakFix noROI(i).incorrect],'ButtonDownFcn', @clickMe);
+						p(1,2).select();
+						h = plot(t,abs(x),l,t,abs(y),l,'color',c,'MarkerFaceColor',c);
+						set(h,'UserData',[noROI(i).idx noROI(i).correctedIndex noROI(i).variable noROI(i).correct noROI(i).breakFix noROI(i).incorrect],'ButtonDownFcn', @clickMe);
+					end
+				end
+				for i = 1:length(yesROI)
+					c = [0.7 0 0];
+					if yesROI(i).correct == true
+						l = 'o-';
+					else
+						l = '.--';
+					end
+					t = yesROI(i).times(yesROI(i).times >= 0);
+					x = yesROI(i).x(yesROI(i).times >= 0);
+					y = yesROI(i).y(yesROI(i).times >= 0);
+					if ~isempty(x)
+						p(1,1).select();
+						h = plot(x,y,l,'color',c,'MarkerFaceColor',c);
+						set(h,'UserData',[yesROI(i).idx yesROI(i).correctedIndex yesROI(i).variable yesROI(i).correct yesROI(i).breakFix yesROI(i).incorrect],'ButtonDownFcn', @clickMe);
+						p(1,2).select();
+						h = plot(t,abs(x),l,t,abs(y),l,'color',c,'MarkerFaceColor',c);
+						set(h,'UserData',[yesROI(i).idx yesROI(i).correctedIndex yesROI(i).variable yesROI(i).correct yesROI(i).breakFix yesROI(i).incorrect],'ButtonDownFcn', @clickMe);
+					end
 				end
 				hold off
+				p(1,1).select();
+				p(1,1).hold('off');
 				box on
 				grid on
-				xlabel('Time (s)')
-				ylabel('Position (degs)')
-				axis([-0.2 0.5 0 15])
+				p(1,1).title(['ROI PLOT for ' num2str(ego.ROI) ' (entered = ' num2str(sum(yes)) ' | did not = ' num2str(sum(no)) ')']);
+				p(1,1).xlabel('X Position (degs)')
+				p(1,1).ylabel('Y Position (degs)')
+				axis square
+				axis([-10 10 -10 10]);
+				p(1,2).select();
+				p(1,2).hold('off');
+				box on
+				grid on
+				p(1,2).title(['ROI PLOT for ' num2str(ego.ROI) ' (entered = ' num2str(sum(yes)) ' | did not = ' num2str(sum(no)) ')']);
+				p(1,2).xlabel('Time(s)')
+				p(1,2).ylabel('Absolute X/Y Position (degs)')
+				axis square
+				axis([0 0.5 0 10]);
 			end
 			function clickMe(src, ~)
 				if ~exist('src','var')
 					return
 				end
 				ud = get(src,'UserData');
+				lw = get(src,'LineWidth');
+				if lw < 1.8
+					set(src,'LineWidth',2)
+				else
+					set(src,'LineWidth',1)
+				end
 				if ~isempty(ud)
 					disp(['ROI Trial (idx correctidx var iscorrect isbreak isincorrect): ' num2str(ud)]);
 				end
@@ -793,7 +871,7 @@ classdef eyelinkAnalysis < analysisCore
 		function parseAsVars(ego)
 			ego.vars = struct();
 			ego.vars(1).name = '';
-			ego.vars(1).id = [];
+			ego.vars(1).variable = [];
 			ego.vars(1).idx = [];
 			ego.vars(1).correctedidx = [];
 			ego.vars(1).trial = [];
@@ -802,11 +880,11 @@ classdef eyelinkAnalysis < analysisCore
 			ego.vars(1).uuid = {};
 			for i = 1:length(ego.trials)
 				trial = ego.trials(i);
-				var = trial.id;
+				var = trial.variable;
 				if trial.incorrect == true
 					continue
 				end
-				if trial.id == 1010
+				if trial.variable == 1010
 					continue
 				end
 				ego.vars(var).name = num2str(var);
@@ -814,7 +892,7 @@ classdef eyelinkAnalysis < analysisCore
 				ego.vars(var).idx = [ego.vars(var).idx i];
 				ego.vars(var).correctedidx = [ego.vars(var).correctedidx i];
 				ego.vars(var).uuid = [ego.vars(var).uuid, trial.uuid];
-				ego.vars(var).id = [ego.vars(var).id var];
+				ego.vars(var).variable = [ego.vars(var).variable var];
 				if ~isempty(trial.saccadeTimes)
 					ego.vars(var).sTime = [ego.vars(var).sTime trial.saccadeTimes(1)];
 				else

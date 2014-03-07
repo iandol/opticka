@@ -270,6 +270,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function select(ego)
+			if isempty(ego.trial); warning('Data not parsed yet...');return;end
 			ego.selectOverride = false;
 			cuttrials = '[ ';
 			if ~isempty(ego.cutTrials) 
@@ -312,7 +313,7 @@ classdef spikeAnalysis < analysisCore
 				'Region of Interest [X Y RADIUS] (blank = ignore):',...
 				'Include (1) or Exclude (0) the ROI trials?',...
 				'Saccade Filter in seconds [>Time1 <Time2], e.g. [-0.8 0.8] (blank = ignore):'};
-			dlg_title = ['REPARSE ' num2str(ego.event.nVars) ' DATA VARIABLES'];
+			dlg_title = [ego.file ': REPARSE ' num2str(ego.event.nVars) ' DATA VARIABLES'];
 			num_lines = [1 120];
 			def = {map{1}, map{2}, map{3}, cuttrials, sel, beh, pr, rr, bw, roi, includeroi,saccfilt};
 			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
@@ -343,6 +344,7 @@ classdef spikeAnalysis < analysisCore
 			if ~isempty(ego.ROI)
 				ego.p.eA.ROI = ego.ROI;
 				parseROI(ego.p.eA);
+				plotROI(ego.p.eA);
 			end
 			selectTrials(ego);
 		end
@@ -395,9 +397,9 @@ classdef spikeAnalysis < analysisCore
 			ego.selectedTrials = {};
 			a = 1;
 			for i = 1:length(map)
-				idx = [];
+				idx = []; if isempty(map{i}); continue; end
 				for j = 1:length(map{i})
-					idx = [ idx find( [ego.trial.name] == map{i}(j) ) ];
+					idx = [ idx find( [ego.trial.variable] == map{i}(j) ) ];
 				end
 				idx = intersect(idx, behaviouridx);
 				if ~isempty(cutidx);	idx = setdiff(idx, cutidx);		end %remove the cut trials
@@ -414,6 +416,7 @@ classdef spikeAnalysis < analysisCore
 					a = a + 1;
 				end
 			end
+			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); end
 		end
 		
 		% ===================================================================
@@ -423,6 +426,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function showEyePlots(ego)
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			if ~isempty(ego.selectedTrials)
 				for i = 1:length(ego.selectedTrials)
 					ego.p.eA.plot(ego.selectedTrials{i}.idx);
@@ -437,6 +441,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function doPSTH(ego)
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
 			p=panel(h);
 			p.margin = [20 20 20 10]; %left bottom right top
@@ -460,7 +465,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				cfg.spikelength		= 1;
 				%cfg.topplotfunc		= 'line'; % plot as a line
-				cfg.errorbars		= 'sem'; % plot with the standard deviation
+				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
 				cfg.interactive		= 'no'; % toggle off interactive mode
 				ft_spike_plot_raster(cfg, ego.ft, psth{j})
 				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file])
@@ -503,6 +508,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function doDensity(ego)
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
 			p=panel(h);
 			p.margin = [20 20 20 10]; %left bottom right top
@@ -526,7 +532,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				cfg.spikelength		= 1;
 				cfg.topplotfunc		= 'line'; % plot as a line
-				cfg.errorbars		= 'sem'; % plot with the standard deviation
+				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
 				cfg.interactive		= 'no'; % toggle off interactive mode
 				ft_spike_plot_raster(cfg, ego.ft, sd{j})
 				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file])
@@ -581,41 +587,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plot(ego, varargin)
-			if isempty(ego.LFPs);
-				return
-			end
-			if isempty(varargin) || ~ischar(varargin{1})
-				sel = 'psth';
-			else
-				sel = varargin{1};
-			end
-			
-			if length(varargin) > 1
-				args = varargin(2:end);
-			else
-				args = {};
-			end
-			
-			switch sel
-				case 'psth'
-					ego.drawAllLFPs(); drawnow;			
-					ego.drawRawLFPs(); drawnow;		
-					ego.drawAverageLFPs(); drawnow;
-				case 'all'
-					ego.drawAllLFPs(true);			
-					ego.drawRawLFPs();		
-					ego.drawAverageLFPs();
-				case 'continuous'
-					ego.drawAllLFPs(true); drawnow;
-				case {'trials','raw'}
-					ego.drawRawLFPs(); drawnow;
-				case 'average'
-					ego.drawAverageLFPs(); drawnow;
-				case 'frequency'
-					ego.drawLFPFrequencies(args); drawnow;
-				case 'bandpass'
-					ego.drawBandPass(); drawnow;
-			end
+
 		end
 		
 		% ===================================================================

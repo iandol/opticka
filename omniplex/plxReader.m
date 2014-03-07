@@ -363,9 +363,9 @@ classdef plxReader < optickaCore
 				cd(ego.matdir)
 				[~,f,~] = fileparts(ego.matfile);
 				f = [f '.edf'];
-				ff = regexprep(f,'^[a-zA-Z]+\-','','ignorecase');
-				ff = regexprep(ff,'\.edf','FIX\.edf','ignorecase');
-				if ~exist(f, 'file') && ~exist(ff,'file')
+				ff = regexprep(f,'\.edf','FIX\.edf','ignorecase');
+				fff = regexprep(ff,'^[a-zA-Z]+\-','','ignorecase');
+				if ~exist(f, 'file') && ~exist(ff,'file') && ~exist(fff,'file')
 					[an, ~] = uigetfile('*.edf','Load Eyelink EDF File');
 					if ischar(an)
 						ego.edffile = an;
@@ -415,7 +415,7 @@ classdef plxReader < optickaCore
 					spike.time{k} = [spike.time{k} s-t.base];
 					spike.trial{k} = [spike.trial{k} ones(1,length(s))*j];
 					spike.trialtime(j,:) = [t.rStart t.rEnd];
-					spike.cfg.trl(j,:) = [spike.trialtime(j,:) t.rStart*fs t.name t.isCorrect];
+					spike.cfg.trl(j,:) = [spike.trialtime(j,:) t.rStart*fs t.variable t.isCorrect];
 				end
 			end
 		end
@@ -427,10 +427,10 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function integrateEyeData(ego)
 			tic
-			plxList = [ego.eventList.trials.name]'; %var order list
+			plxList = [ego.eventList.trials.variable]'; %var order list
 			edfTrials = ego.eA.trials;
 			edfTrials(ego.eA.incorrect.idx) = []; %remove incorrect trials
-			edfList = [edfTrials.id]';
+			edfList = [edfTrials.variable]';
 			c1 = plxList([ego.eventList.trials.isCorrect]');
 			c2 = edfList([edfTrials.correct]);
 			if isequal(plxList,edfList) || isequal(c1,c2) %check our variable list orders are equal
@@ -475,7 +475,7 @@ classdef plxReader < optickaCore
 			color = rand(3,ego.eventList.nVars);
 			for j = 1:ego.eventList.nTrials
 				trl = ego.eventList.trials(j);
-				var = trl.name;
+				var = trl.variable;
 				line([trl.t1 trl.t1],[-.4 .4],'Color',color(:,var),'LineWidth',1);
 				line([trl.t2 trl.t2],[-.4 .4],'Color',color(:,var),'LineWidth',1);
 				text(trl.t1,.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',10);
@@ -529,14 +529,14 @@ classdef plxReader < optickaCore
 			height=scr(4);
 			handles.root = figure('Units','pixels','Position',[0 0 width/4 height],'Tag','PLXInfoFigure',...
 				'Color',[0.9 0.9 0.9]);
-			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.55 1 0.45],...
-				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',1000,...
-				'FontSize',12,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left');
-			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0 0.5 1 0.05],...
-				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',1000,...
-				'FontSize',11,'FontWeight','bold','FontName','Helvetica Neue','HorizontalAlignment','left',...
+			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.45 1 0.55],...
+				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',500,...
+				'FontSize',12,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left');
+			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0 0.4 1 0.05],...
+				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',500,...
+				'FontSize',12,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left',...
 				'Callback',@editComment);%,'ButtonDownFcn',@editComment,'KeyReleaseFcn',@editComment);
-			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.4]);
+			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.3]);
 			if ~isempty(ego.eventList)
 				drawEvents(ego,handles.axis);
 			end
@@ -917,25 +917,25 @@ classdef plxReader < optickaCore
 			eL.tMinCorrect = Inf;
 			eL.tMaxCorrect = 0;
 			eL.trials = struct('name',[],'index',[]);
-			eL.trials(eL.nTrials,1).name = [];
+			eL.trials(eL.nTrials,1).variable = [];
 			eL.vars = struct('name',[],'nRepeats',[],'index',[],'responseIndex',[],'t1',[],'t2',[],...
 				'nCorrect',[],'nBreakFix',[],'nIncorrect',[],'t1correct',[],'t2correct',[],...
 				't1breakfix',[],'t2breakfix',[],'t1incorrect',[],'t2incorrect',[]);
-			eL.vars(eL.nVars,1).name = [];
+			eL.vars(eL.nVars,1).variable = [];
 			
 			aa = 1; cidx = 1; bidx = 1; iidx = 1;
 			
 			for i = 1:2:eL.n % iterate through all trials
 				
 				var = eL.values(i);
-				eL.trials(aa).name = var; 
+				eL.trials(aa).variable = var; 
 				eL.trials(aa).index = aa;				
 				eL.trials(aa).t1 = eL.times(i);
 				eL.trials(aa).t2 = eL.times(i+1);
 				eL.trials(aa).tDelta = eL.trials(aa).t2 - eL.trials(aa).t1;
 				
-				if isempty(eL.vars(var).name)
-					eL.vars(var).name = var;
+				if isempty(eL.vars(var).variable)
+					eL.vars(var).variable = var;
 					idx = find(eL.values == var);
 					idxend = idx+1;
 					while (length(idx) > length(idxend)) %prune incomplete trials
@@ -1130,7 +1130,7 @@ classdef plxReader < optickaCore
 					idx = spikes >= trials{trl}.tStart & spikes <= trials{trl}.tEnd;
 					trials{trl}.spikes = spikes(idx);
 					%===process the variable run
-					var = trial.name;
+					var = trial.variable;
 					if isempty(vars{var})
 						vars{var} = ego.eventList.vars(var);
 						vars{var}.nTrials = 0;
