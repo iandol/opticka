@@ -965,8 +965,6 @@ classdef LFPAnalysis < analysisCore
 		function drawAverageLFPs(ego)
 			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
 			LFPs = ego.LFPs;
-			c = [0 0 0;1.0000 0 0;0 0 1;0 1 0;0 0.7500 0.7500;0.7500 0 0.7500;1 0.7500 0;0.4500 0.2500 0.2500;...
-				0 0.2500 0.7500;0 0.6000 1.0000;1.0000 0.5000 0.25;0.6000 0 0.3000;1 0 1;1 0.5 0.5;0.25 0.45 0.65];
 			if LFPs(1).reparse == true;
 				for j = 1:length(LFPs)
 					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
@@ -976,10 +974,11 @@ classdef LFPAnalysis < analysisCore
 					grid on; box on
 					set(gca,'Layer','bottom')
 					hold on
+					c = ego.optimalColours(length(ego.selectedTrials));
 					for k = 1:length(ego.selectedTrials)
 						leg{k,1} = ego.selectedTrials{k}.name;
 						[time,avg,err]=getAverageTuningCurve(ego, ego.selectedTrials{k}.idx, j);
-						areabar(time, avg, err, c(k,:), 0.3, 'k.-', 'Color', c(k,:), 'MarkerFaceColor', c(k,:), 'LineWidth', 2);
+						areabar(time, avg, err, c(k,:)/2, 0.3, 'k.-', 'Color', c(k,:), 'MarkerFaceColor', c(k,:), 'LineWidth', 2);
 					end
 					legend(leg);
 					hold off
@@ -989,10 +988,10 @@ classdef LFPAnalysis < analysisCore
 					av = ego.ft.av;
 					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
 					hold on
-					areabar(av{1}.time,av{1}.avg(1,:),av{1}.var(1,:),[.5 .5 .5],0.6,'k-','LineWidth',1);
-					areabar(av{2}.time,av{2}.avg(1,:),av{2}.var(1,:),[.5 .3 .3],0.6,'r-','LineWidth',1);
+					areabar(av{1}.time,av{1}.avg(1,:),av{1}.var(1,:),[.5 .5 .5],0.3,'k-','LineWidth',1);
+					areabar(av{2}.time,av{2}.avg(1,:),av{2}.var(1,:),[.5 .3 .3],0.3,'r-','LineWidth',1);
 					if length(av) > 2
-						areabar(av{3}.time,av{3}.avg(1,:),av{3}.var(1,:),[.3 .3 .5],0.6,'b-','LineWidth',1);
+						areabar(av{3}.time,av{3}.avg(1,:),av{3}.var(1,:),[.3 .3 .5],0.3,'b-','LineWidth',1);
 					end
 					hold off
 					axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);

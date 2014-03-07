@@ -431,18 +431,22 @@ classdef plxReader < optickaCore
 			edfTrials = ego.eA.trials;
 			edfTrials(ego.eA.incorrect.idx) = []; %remove incorrect trials
 			edfList = [edfTrials.id]';
-			c1 = [ego.eventList.trials.isCorrect]';
-			c2 = [edfTrials.correct]';
+			c1 = plxList([ego.eventList.trials.isCorrect]');
+			c2 = edfList([edfTrials.correct]);
 			if isequal(plxList,edfList) || isequal(c1,c2) %check our variable list orders are equal
 				for i = 1:length(plxList)
-					ego.eventList.trials(i).eye = edfTrials(i);
-					sT = edfTrials(i).saccadeTimes/1e3;
-					fS = min(sT(sT>0));
-					ego.eventList.trials(i).saccadeTimes = sT;
-					if ~isempty(fS)
-						ego.eventList.trials(i).firstSaccade = fS;
+					if plxList(i) == edfList(i)
+						ego.eventList.trials(i).eye = edfTrials(i);
+						sT = edfTrials(i).saccadeTimes/1e3;
+						fS = min(sT(sT>0));
+						ego.eventList.trials(i).saccadeTimes = sT;
+						if ~isempty(fS)
+							ego.eventList.trials(i).firstSaccade = fS;
+						else
+							ego.eventList.trials(i).firstSaccade = NaN;
+						end
 					else
-						ego.eventList.trials(i).firstSaccade = NaN;
+						warning(['integrateEyeData: Trial ' num2str(i) ' Variable' num2str(plxList(i)) ' FAILED']);
 					end
 				end
 			else

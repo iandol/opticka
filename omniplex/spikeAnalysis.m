@@ -479,16 +479,12 @@ classdef spikeAnalysis < analysisCore
 			box on
 			grid on
 			hold on
-			if length(psth)<4;
-				c = [0 0 0;1 0 0;0 1 0;0 0 1];
-			else
-				c = rand(length(psth),3)/2;
-			end
+			c = ego.optimalColours(length(psth));
 			t = [ego.file ' '];
 			for j = 1:length(psth)
 				e = sqrt(psth{j}.var ./ psth{j}.dof);
 				e(isnan(e)) = 0;
-				areabar(psth{j}.time, psth{j}.avg, e, c(j,:),'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
+				areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
 				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
 			end
@@ -549,15 +545,11 @@ classdef spikeAnalysis < analysisCore
 			box on
 			grid on
 			hold on
-			if length(sd)<4;
-				c = [0 0 0;1 0 0;0 1 0;0 0 1];
-			else
-				c = rand(length(sd),3)/2;
-			end
+			c = ego.optimalColours(length(sd));
 			t = [ego.file ' '];
 			for j = 1:length(sd)
 				e = ego.var2SE(sd{j}.var,sd{j}.dof);
-				areabar(sd{j}.time, sd{j}.avg, e, c(j,:),'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
+				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
 				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
 			end
