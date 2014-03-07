@@ -69,6 +69,10 @@ classdef eyelinkAnalysis < analysisCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%>57.3 bug override
+		override573 = true;
+		%> pixels per degree calculated from pixelsPerCm and distance (cache)
+		ppd_
 		%> allowed properties passed to object upon construction
 		allowedProperties@char = 'file|dir|verbose|pixelsPerCm|distance|xCenter|yCenter|rtStartMessage|rtEndMessage|trialOverride|rtDivision|rtLimits|tS|ROI'
 	end
@@ -85,6 +89,7 @@ classdef eyelinkAnalysis < analysisCore
 			if isempty(ego.file) || isempty(ego.dir)
 				[ego.file, ego.dir] = uigetfile('*.edf','Load EDF File:');
 			end
+			ego.ppd; %cache our initial ppd_
 		end
 		
 		% ===================================================================
@@ -126,6 +131,8 @@ classdef eyelinkAnalysis < analysisCore
 			ego.breakFix = ego.correct;
 			ego.incorrect = ego.correct;
 			ego.trialList = [];
+			
+			ego.ppd; %faster to cache this now (dependant property sets ppd_ too)
 			
 			sample = ego.raw.FSAMPLE.gx(:,100); %check which eye
 			if sample(1) == -32768 %only use right eye if left eye data is not present
@@ -209,7 +216,7 @@ classdef eyelinkAnalysis < analysisCore
 								fixa.rt = false;
 							end
 							fixa.n = eventN;
-							fixa.ppd = ego.ppd;
+							fixa.ppd = ego.ppd_;
 							fixa.sttime = double(evt.sttime);
 							fixa.entime = double(evt.entime);
 							fixa.time = fixa.sttime - rel;
@@ -247,7 +254,7 @@ classdef eyelinkAnalysis < analysisCore
 								sacc.rt = false;
 							end
 							sacc.n = eventN;
-							sacc.ppd = ego.ppd;
+							sacc.ppd = ego.ppd_;
 							sacc.sttime = double(evt.sttime);
 							sacc.entime = double(evt.entime);
 							sacc.time = sacc.sttime - rel;
@@ -450,11 +457,6 @@ classdef eyelinkAnalysis < analysisCore
 			p.pack('v',{2/3, []});
 			q = p(1);
 			q.pack(2,2);
-			if ego.distance == 57.3
-				ppd = round( ego.pixelsPerCm * (67 / 57.3)); %set the pixels per degree
-			else
-				ppd = round( ego.pixelsPerCm * (ego.distance / 57.3)); %set the pixels per degree
-			end
 			a = 1;
 			stdex = [];
 			meanx = [];
@@ -492,6 +494,7 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			
 			maxv = 1;
+			ppd = ego.ppd;
 			
 			for i = idx
 				if idxInternal == true %we're using the eyelin index which includes incorrects
@@ -511,7 +514,6 @@ classdef eyelinkAnalysis < analysisCore
 				else
 					continue
 				end
-				
 				t = thisTrial.times;
 				ix = find((t >= -400) & (t <= 800));
 				t=t(ix);
@@ -713,6 +715,7 @@ classdef eyelinkAnalysis < analysisCore
 				disp('No ROI specified!!!')
 				return
 			end
+			ppd = ego.ppd;
 			fixationX = ego.ROI(1);
 			fixationY = ego.ROI(2);
 			fixationRadius = ego.ROI(3);
@@ -724,8 +727,8 @@ classdef eyelinkAnalysis < analysisCore
 				ego.ROIInfo(i).fixationX = fixationX;
 				ego.ROIInfo(i).fixationY = fixationY;
 				ego.ROIInfo(i).fixationRadius = fixationRadius;
-				x = ego.trials(i).gx / ego.ppd;
-				y = ego.trials(i).gy  / ego.ppd;
+				x = ego.trials(i).gx / ppd;
+				y = ego.trials(i).gy  / ppd;
 				times = ego.trials(i).times;
 				f = find(times > 0); % we only check ROI post 0 time
 				r = sqrt((x - fixationX).^2 + (y - fixationY).^2); 
@@ -892,7 +895,12 @@ classdef eyelinkAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function ppd = get.ppd(ego)
-			ppd = round( ego.pixelsPerCm * (ego.distance / 57.3)); %set the pixels per degree
+			if ego.distance == 57.3 && ego.override573 == true
+				ppd = round( ego.pixelsPerCm * (67 / 57.3)); %set the pixels per degree, note this fixes some older files where 57.3 was entered instead of 67cm
+			else
+				ppd = round( ego.pixelsPerCm * (ego.distance / 57.3)); %set the pixels per degree
+			end
+			ego.ppd_ = ppd;
 		end
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
@@ -907,8 +915,8 @@ classdef eyelinkAnalysis < analysisCore
 		% ===================================================================
 		function [outx, outy] = toDegrees(ego,in)
 			if length(in)==2
-				outx = (in(1) - ego.xCenter) / ego.ppd;
-				outy = (in(2) - ego.yCenter) / ego.ppd;
+				outx = (in(1) - ego.xCenter) / ego.ppd_;
+				outy = (in(2) - ego.yCenter) / ego.ppd_;
 			else
 				outx = [];
 				outy = [];
@@ -921,8 +929,8 @@ classdef eyelinkAnalysis < analysisCore
 		% ===================================================================
 		function [outx, outy] = toPixels(ego,in)
 			if length(in)==2
-				outx = (in(1) * ego.ppd) + ego.xCenter;
-				outy = (in(2) * ego.ppd) + ego.yCenter;
+				outx = (in(1) * ego.ppd_) + ego.xCenter;
+				outy = (in(2) * ego.ppd_) + ego.yCenter;
 			else
 				outx = [];
 				outy = [];

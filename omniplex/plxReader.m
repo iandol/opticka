@@ -475,7 +475,8 @@ classdef plxReader < optickaCore
 				line([trl.t1 trl.t1],[-.4 .4],'Color',color(:,var),'LineWidth',1);
 				line([trl.t2 trl.t2],[-.4 .4],'Color',color(:,var),'LineWidth',1);
 				text(trl.t1,.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',10);
-				text(trl.t1,-.41,['SAC: ' num2str(trl.firstSaccade) '\newlineCOR: ' num2str(trl.isCorrect)],'FontSize',10);
+				if isfield(trl,'firstSaccade'); sT = trl.firstSaccade; else sT = NaN; end
+				text(trl.t1,-.41,['SAC: ' num2str(sT) '\newlineCOR: ' num2str(trl.isCorrect)],'FontSize',10);
 			end
 			plot(ego.eventList.startFix,zeros(size(ego.eventList.startFix)),'c.','MarkerSize',15);
 			plot(ego.eventList.correct,zeros(size(ego.eventList.correct)),'g.','MarkerSize',15);

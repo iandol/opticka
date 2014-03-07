@@ -19,13 +19,13 @@ classdef spikeAnalysis < analysisCore
 		binSize@double = 0.01
 		%> default Spike channel
 		selectedUnit@double = 1
-		%> saccadeFilter
-		filterFirstSaccades@double = [-800 800];
+		%> saccadeFilter, if empty ignore
+		filterFirstSaccades@double = [ ];
 		%> default behavioural type
 		selectedBehaviour@char = 'correct';
-		%> region of interest for eye location [x y radius]
+		%> region of interest for eye location [x y radius], if empty ignore
 		ROI@double = [];
-		%> include (false) or exclude (true) the ROI entered trials?
+		%> include (true) or exclude (false) the ROI entered trials?
 		includeROI@logical = false
 		%> plot verbosity
 		verbose	= true
@@ -51,8 +51,6 @@ classdef spikeAnalysis < analysisCore
 		selectedTrials@cell
 		%> variable selection map for 3 analysis groups
 		map@cell
-		%> use ROI for trial selection
-		useROI@logical = false
 	end
 	
 	%------------------TRANSIENT PROPERTIES----------%
@@ -201,10 +199,10 @@ classdef spikeAnalysis < analysisCore
 			end
 			ego.ft = getFTSpikes(ego.p);
 			ego.names = ego.ft.label;
+			showInfo(ego);
 			select(ego);
 			ego.p.eA.ROI = ego.ROI;
 			parseROI(ego.p.eA);
-			showInfo(ego);
 		end
 		
 		% ===================================================================
@@ -302,14 +300,18 @@ classdef spikeAnalysis < analysisCore
 			options.Resize='on';
 			options.WindowStyle='normal';
 			options.Interpreter='tex';
-			prompt = {'Choose PLX variables to merge A:','Choose PLX variables to merge B:',...
-				'Choose PLX variables to merge C:','Enter Trials to exclude',...
-				'Choose which Spike channel to select',...
-				'Behavioural type ''correct'' ''breakFix'' ''incorrect'' ''all''',...
-				'Plot Range (s)','Measure Range (s)','Bin Width (s)',...
-				'Region of Interest [X Y RADIUS]',...
+			prompt = {'Choose PLX variables to merge A (if empty, use all variables as individual groups and ignore B & C):',...
+				'Choose PLX variables to merge B:',...
+				'Choose PLX variables to merge C:',...
+				['Enter Trials (1-' num2str(ego.event.nTrials) ')  to exclude:'],...
+				['Choose which Spike channel to select (# units = ' num2str(ego.nUnits) ')'],...
+				'Behavioural type ''correct'' ''breakFix'' ''incorrect'' or ''all''',...
+				'Plot Range (seconds)',...
+				'Measure Range (seconds)',...
+				'Bin Width (seconds)',...
+				'Region of Interest [X Y RADIUS] (blank = ignore):',...
 				'Include (1) or Exclude (0) the ROI trials?',...
-				'Saccade Filter'};
+				'Saccade Filter in seconds [>Time1 <Time2], e.g. [-0.8 0.8] (blank = ignore):'};
 			dlg_title = ['REPARSE ' num2str(ego.event.nVars) ' DATA VARIABLES'];
 			num_lines = [1 120];
 			def = {map{1}, map{2}, map{3}, cuttrials, sel, beh, pr, rr, bw, roi, includeroi,saccfilt};
@@ -334,11 +336,6 @@ classdef spikeAnalysis < analysisCore
 					ego.ROI = roi;
 				else
 					ego.ROI = [];
-				end
-				if ~isempty(ego.ROI)
-					ego.useROI = true;
-				else
-					ego.useROI = false;
 				end
 				ego.includeROI = logical(str2num(answer{11}));
 				ego.filterFirstSaccades = str2num(answer{12});
@@ -382,91 +379,39 @@ classdef spikeAnalysis < analysisCore
 				saccidx = intersect(idx,idx2);
 			end
 			
-			if ~isempty(ego.ROI); ego.useROI = true;
-			else ego.useROI = false; end
-			if ego.useROI == true
+			roiidx = [];
+			if ~isempty(ego.ROI)
 				idx = [ego.p.eA.ROIInfo.enteredROI] == ego.includeROI;
 				rois = ego.p.eA.ROIInfo(idx);
 				roiidx = [rois.correctedIndex];
 			end	
 			
-			ego.selectedTrials = {};
 			if isempty(ego.map{1})
-				a = 1;
-				for i = 1:ego.event.nVars
-					vidx = find([ego.trial.name]==ego.event.unique(i));
-					idx = intersect(vidx, behaviouridx);
-					idx = setdiff(idx, cutidx); %remove the cut trials
-					if ~isempty(saccidx); idx = intersect(idx, saccidx); end
-					if ego.useROI == true; idx = intersect(idx, roiidx); end
-					if ~isempty(idx)
-						ego.selectedTrials{a}.idx = idx;
-						ego.selectedTrials{a}.cutidx = cutidx;
-						if ego.useROI == true; ego.selectedTrials{a}.roiidx = roiidx; end
-						if ~isempty(saccidx); ego.selectedTrials{a}.saccidx = saccidx; end
-						ego.selectedTrials{a}.behaviour = ego.selectedBehaviour;
-						ego.selectedTrials{a}.sel = ego.event.unique(i);	
-						ego.selectedTrials{a}.name = ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
-						a = a + 1;
-					end
-				end
+				for i = 1:ego.event.nVars; map{i} = ego.event.unique(i); end
 			else
+				map = ego.map; %#ok<*PROP>
+			end
+	
+			ego.selectedTrials = {};
+			a = 1;
+			for i = 1:length(map)
 				idx = [];
-				for i = 1:length(ego.map{1})
-					idx = [idx find([ego.trial.name]==ego.map{1}(i))];
+				for j = 1:length(map{i})
+					idx = [ idx find( [ego.trial.name] == map{i}(j) ) ];
 				end
 				idx = intersect(idx, behaviouridx);
-				idx = setdiff(idx, cutidx); %remove the cut trials
-				if ~isempty(saccidx); idx = intersect(idx, saccidx); end
-				if ego.useROI == true; idx = intersect(idx, roiidx); end
+				if ~isempty(cutidx);	idx = setdiff(idx, cutidx);		end %remove the cut trials
+				if ~isempty(saccidx);	idx = intersect(idx, saccidx);	end %remove saccade filtered trials
+				if ~isempty(roiidx);	idx = intersect(idx, roiidx);	end %remove roi filtered trials
 				if ~isempty(idx)
-					ego.selectedTrials{1}.idx = idx;
-					ego.selectedTrials{end}.cutidx = cutidx;
-					if ego.useROI == true; ego.selectedTrials{end}.roiidx = roiidx; end
-					if ~isempty(saccidx); ego.selectedTrials{end}.saccidx = saccidx; end
-					ego.selectedTrials{end}.behaviour = ego.selectedBehaviour;
-					ego.selectedTrials{end}.sel = ego.map{1};
-					ego.selectedTrials{end}.name = ['[' num2str(ego.selectedTrials{end}.sel) ']' ' #' num2str(length(idx))];
-				end
-				
-				if ~isempty(ego.map{2})
-					idx = [];
-					for i = 1:length(ego.map{2})
-						idx = [idx find([ego.trial.name]==ego.map{2}(i))];
-					end
-					idx = intersect(idx, behaviouridx);
-					idx = setdiff(idx, cutidx); %remove the cut trials
-					if ~isempty(saccidx); idx = intersect(idx, saccidx); end
-					if ego.useROI == true; idx = intersect(idx, roiidx); end
-					if ~isempty(idx)
-						ego.selectedTrials{end+1}.idx = idx;
-						ego.selectedTrials{end}.cutidx = cutidx;
-						if ego.useROI == true; ego.selectedTrials{end}.roiidx = roiidx; end
-						if ~isempty(saccidx); ego.selectedTrials{end}.saccidx = saccidx; end
-						ego.selectedTrials{end}.behaviour = ego.selectedBehaviour;
-						ego.selectedTrials{end}.sel = ego.map{2};
-						ego.selectedTrials{end}.name = ['[' num2str(ego.selectedTrials{end}.sel) ']' ' #' num2str(length(idx))];
-					end
-				end
-				
-				if ~isempty(ego.map{3})
-					idx = [];
-					for i = 1:length(ego.map{3})
-						idx = [idx find([ego.trial.name]==ego.map{3}(i))];
-					end
-					idx = intersect(idx, behaviouridx);
-					idx = setdiff(idx, cutidx); %remove the cut trials
-					if ~isempty(saccidx); idx = intersect(idx, saccidx); end
-					if ego.useROI == true; idx = intersect(idx, roiidx); end
-					if ~isempty(idx)
-						ego.selectedTrials{end+1}.idx = idx;
-						ego.selectedTrials{end}.cutidx = cutidx;
-						if ego.useROI == true; ego.selectedTrials{end}.roiidx = roiidx; end
-						if ~isempty(saccidx); ego.selectedTrials{end}.saccidx = saccidx; end
-						ego.selectedTrials{end}.behaviour = ego.selectedBehaviour;
-						ego.selectedTrials{end}.sel = ego.map{3};
-						ego.selectedTrials{end}.name = ['[' num2str(ego.selectedTrials{end}.sel) ']' ' #' num2str(length(idx))];
-					end
+					ego.selectedTrials{a}.idx			= idx;
+					ego.selectedTrials{a}.cutidx		= cutidx;
+					ego.selectedTrials{a}.roiidx		= roiidx;
+					ego.selectedTrials{a}.saccidx		= saccidx;
+					ego.selectedTrials{a}.behaviour		= ego.selectedBehaviour;
+					ego.selectedTrials{a}.sel			= map{i};
+					ego.selectedTrials{a}.name			= ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
+					a = a + 1;
 				end
 			end
 		end
