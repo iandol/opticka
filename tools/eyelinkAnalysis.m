@@ -971,20 +971,20 @@ classdef eyelinkAnalysis < analysisCore
 			p(1,1).hold('off');
 			box on
 			grid on
-			p(1,1).title(['TOI PLOT for ' num2str(ego.TOI) ' (entered = ' num2str(sum(yes)) ' | did not = ' num2str(sum(no)) ')']);
+			p(1,1).title(['TOI PLOT for ' num2str(ego.TOI) ' (yes = ' num2str(sum(yes)) ' || no = ' num2str(sum(no)) ')']);
 			p(1,1).xlabel('X Position (degs)')
 			p(1,1).ylabel('Y Position (degs)')
+			axis([-4 4 -4 4]);
 			axis square
-			axis([-xmax*4 xmax*4 -ymax*4 ymax*4]);
 			p(1,2).select();
 			p(1,2).hold('off');
 			box on
 			grid on
-			p(1,2).title(['TOI PLOT for ' num2str(ego.TOI) ' (entered = ' num2str(sum(yes)) ' | did not = ' num2str(sum(no)) ')']);
+			p(1,2).title(['TOI PLOT for ' num2str(ego.TOI) ' (yes = ' num2str(sum(yes)) ' || no = ' num2str(sum(no)) ')']);
 			p(1,2).xlabel('Time(s)')
 			p(1,2).ylabel('Absolute X/Y Position (degs)')
+			axis([t1 t2 0 4]);
 			axis square
-			axis([t1 t2 0 ego.TOI(5)*4]);
 
 			function clickMe(src, ~)
 				if ~exist('src','var')
@@ -998,7 +998,7 @@ classdef eyelinkAnalysis < analysisCore
 					set(src,'LineWidth',1)
 				end
 				if ~isempty(ud)
-					disp(['ROI Trial (idx correctidx var iscorrect isbreak isincorrect): ' num2str(ud)]);
+					disp(['TOI Trial (idx correctidx var iscorrect isbreak isincorrect): ' num2str(ud)]);
 				end
 			end
 		end
