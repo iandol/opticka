@@ -156,7 +156,7 @@ classdef spikeAnalysis < analysisCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function setTrials(ego, in)
+		function setSelection(ego, in)
 			if isfield(in,'cutTrials')
 				ego.cutTrials = in.cutTrials;
 			end
@@ -348,7 +348,178 @@ classdef spikeAnalysis < analysisCore
 			end
 			selectTrials(ego);
 		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function showEyePlots(ego)
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			if ~isempty(ego.selectedTrials)
+				for i = 1:length(ego.selectedTrials)
+					ego.p.eA.plot(ego.selectedTrials{i}.idx);
+				end
+			end
+		end
+			
+		% ===================================================================
+		%> @brief doPSTH plots spike density for the selected trial groups
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function PSTH(ego)
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			
+			for j = 1:length(ego.selectedTrials)
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.binsize			=  ego.binSize;
+				cfg.outputunit		= 'rate';
+				cfg.latency			= ego.plotRange;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				psth{j}				= ft_spike_psth(cfg, ego.ft);
+								
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				cfg.latency			= [ego.rateRange(1) ego.rateRange(2)]; % sustained response period
+				cfg.keeptrials		= 'yes';
+				rate{j}				= ft_spike_rate(cfg,ego.ft);
+			end
+			ego.ft.psth = psth;
+			ego.ft.rate = rate;
+			
+			if ego.doPlots; plotPSTH(ego); end
+		end
+		
+		% ===================================================================
+		%> @brief doDensity plots spike density for the selected trial groups
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function density(ego)
+			for j = 1:length(ego.selectedTrials)
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.timwin			= [-0.025 0.025];
+				cfg.fsample			= 1000; % sample at 1000 hz
+				cfg.outputunit		= 'rate';
+				cfg.latency			= ego.plotRange;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				sd{j}				= ft_spikedensity(cfg, ego.ft);
+				
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				cfg.latency			= [ego.rateRange(1) ego.rateRange(2)]; % sustained response period
+				cfg.keeptrials		= 'yes';
+				rate{j}				= ft_spike_rate(cfg,ego.ft);
+			end
+			ego.ft.sd = sd;
+			ego.ft.rate = rate;
+			
+			if ego.doPlots; plotDensity(ego); end
+		end
+		
+		% ===================================================================
+		%> @brief showInfo shows the info box for the plexon parsed data
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function showInfo(ego)
+			if ~isempty(ego.p.info)
+				infoBox(ego.p);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function nUnits = get.nUnits(ego)
+			nUnits = 0;
+			if isfield(ego.p.tsList,'nUnits')
+				nUnits = ego.p.tsList.nUnits;
+			end	
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function nSelection = get.nSelection(ego)
+			nSelection = 0;
+			if ~isempty(ego.selectedTrials)
+				nSelection = length(ego.selectedTrials);
+			end	
+		end		
+		
+		% ===================================================================
+		%> @brief save saves the object with a pregenerated name
+		%> @param
+		%> @return
+		% ===================================================================
+		function save(ego)
+			[~,f,~] = fileparts(ego.file);
+			name = ['SPIKE' f];
+			if ~isempty(ego.ft)
+				name = [name '-ft'];
+			end
+			name = [name '.mat'];
+			[f,p] = uiputfile(name,'SAVE Spike Analysis File');
+			if ischar(f) && ~isempty(f)
+				od = pwd;
+				cd(p);
+				spike = ego;
+				save(f,'spike');
+				cd(od);
+				clear spike;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function plot(ego, varargin)
+			if isempty(ego.fp);
+				return
+			end
+			if isempty(varargin) || ~ischar(varargin{1})
+				sel = 'normal';
+			else
+				sel = varargin{1};
+			end
+			
+			if length(varargin) > 1
+				args = varargin(2:end);
+			else
+				args = {};
+			end
+			
+			switch lower(sel)
+				case 'psth'	
+					plotPSTH(ego); drawnow;
+				case 'density'
+					plotDensity(ego); drawnow;
+			end
+		end
+		
+	end
 
+	%=======================================================================
+	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	%=======================================================================
+	
 		% ===================================================================
 		%> @brief selectTrials selects trials based on many filters
 		%>
@@ -420,163 +591,12 @@ classdef spikeAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function showEyePlots(ego)
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			if ~isempty(ego.selectedTrials)
-				for i = 1:length(ego.selectedTrials)
-					ego.p.eA.plot(ego.selectedTrials{i}.idx);
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief doPSTH plots spike density for the selected trial groups
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function doPSTH(ego)
-			parsePSTH(ego);
-			plotPSTH(ego);
-		end
-			
-		% ===================================================================
-		%> @brief doPSTH plots spike density for the selected trial groups
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function doDensity(ego)
-			parseDensity(ego)
-			plotDensity(ego)
-		end
-		% ===================================================================
-		%> @brief doPSTH plots spike density for the selected trial groups
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function parsePSTH(ego)
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			
-			for j = 1:length(ego.selectedTrials)
-				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.binsize			=  ego.binSize;
-				cfg.outputunit		= 'rate';
-				cfg.latency			= ego.plotRange;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				psth{j}				= ft_spike_psth(cfg, ego.ft);
-								
-				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				cfg.latency			= [ego.rateRange(1) ego.rateRange(2)]; % sustained response period
-				cfg.keeptrials		= 'yes';
-				rate{j}				= ft_spike_rate(cfg,ego.ft);
-			end
-			ego.ft.psth = psth;
-			ego.ft.rate = rate;
-		end
-		
-		% ===================================================================
-		%> @brief doDensity plots spike density for the selected trial groups
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function parseDensity(ego)
-			for j = 1:length(ego.selectedTrials)
-				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.timwin			= [-0.025 0.025];
-				cfg.fsample			= 1000; % sample at 1000 hz
-				cfg.outputunit		= 'rate';
-				cfg.latency			= ego.plotRange;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				sd{j}				= ft_spikedensity(cfg, ego.ft);
-				
-				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				cfg.latency			= [ego.rateRange(1) ego.rateRange(2)]; % sustained response period
-				cfg.keeptrials		= 'yes';
-				rate{j}				= ft_spike_rate(cfg,ego.ft);
-			end
-			ego.ft.sd = sd;
-			ego.ft.rate = rate;
-		end
-		
-		% ===================================================================
-		%> @brief showInfo shows the info box for the plexon parsed data
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function showInfo(ego)
-			if ~isempty(ego.p.info)
-				infoBox(ego.p);
-			end
-		end
-		
-		% ===================================================================
 		%> @brief
 		%> @param
 		%> @return
 		% ===================================================================
-		function nUnits = get.nUnits(ego)
-			nUnits = 0;
-			if isfield(ego.p.tsList,'nUnits')
-				nUnits = ego.p.tsList.nUnits;
-			end	
-		end
-		
-		% ===================================================================
-		%> @brief
-		%> @param
-		%> @return
-		% ===================================================================
-		function nSelection = get.nSelection(ego)
-			nSelection = 0;
-			if ~isempty(ego.selectedTrials)
-				nSelection = length(ego.selectedTrials);
-			end	
-		end		
-		
-		% ===================================================================
-		%> @brief save saves the object with a pregenerated name
-		%> @param
-		%> @return
-		% ===================================================================
-		function save(ego)
-			[~,f,~] = fileparts(ego.file);
-			name = ['SPIKE' f];
-			if ~isempty(ego.ft)
-				name = [name '-ft'];
-			end
-			name = [name '.mat'];
-			[f,p] = uiputfile(name,'SAVE Spike Analysis File');
-			if ischar(f) && ~isempty(f)
-				od = pwd;
-				cd(p);
-				spike = ego;
-				save(f,'spike');
-				cd(od);
-				clear spike;
-			end
-		end
-		
-		end
-
-	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
 		function plotDensity(ego)
+			if ~isfield(ego.ft,'sd'); warning('No Density parsed yet.'); return; end
 			sd = ego.ft.sd;
 			rate = ego.ft.rate;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
@@ -613,13 +633,19 @@ classdef spikeAnalysis < analysisCore
 			end
 			p(row,col).title(t);
 			p(row,col).xlabel('Time (s)')
-			p(row,col).ylabel('Firing Rate (Hz)')
+			p(row,col).ylabel(['Firing Rate (Hz) \pm ' cfg.errorbars])
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
 		end
 		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
 		function plotPSTH(ego)
+			if ~isfield(ego.ft,'psth'); warning('No PSTH parsed yet.'); return; end
 			psth = ego.ft.psth;
 			rate = ego.ft.rate;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
@@ -657,7 +683,7 @@ classdef spikeAnalysis < analysisCore
 			end
 			p(row,col).title(t);
 			p(row,col).xlabel('Time (s)')
-			p(row,col).ylabel('Firing Rate (Hz)')
+			p(row,col).ylabel(['Firing Rate (Hz) \pm ' cfg.errorbars])
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);

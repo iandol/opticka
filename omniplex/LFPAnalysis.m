@@ -147,10 +147,10 @@ classdef LFPAnalysis < analysisCore
 			ego.LFPs = readLFPs(ego.p);
 			ego.ft = struct();
 			parseLFPs(ego);
-			userSelection(ego);
+			select(ego);
 			selectTrials(ego);
 			getFTLFPs(ego);
-			plotLFPs(ego,'all');
+			plot(ego,'all');
 		end
 
 		
@@ -162,10 +162,10 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		function reparse(ego)
 			parseLFPs(ego);
-			userSelection(ego);
+			select(ego);
 			selectTrials(ego);
 			getFTLFPs(ego);
-			plotLFPs(ego,'normal');
+			plot(ego,'normal');
 		end
 		
 		% ===================================================================
@@ -180,10 +180,11 @@ classdef LFPAnalysis < analysisCore
 			in.map = ego.map;
 			in.plotRange = ego.plotRange;
 			in.selectedBehaviour = ego.selectedBehaviour;
-			setTrials(ego.sp, in); %set spike anal to same trials etc.
+			setSelection(ego.sp, in); %set spike anal to same trials etc.
 			syncData(ego.sp.p, ego.p); %copy any parsed data 
 			lazyParse(ego.sp); %lazy parse the spikes
 			syncData(ego.p, ego.sp.p); %copy any new parsed data back 
+			showInfo(ego.sp);
 		end
 		
 		% ===================================================================
@@ -295,7 +296,7 @@ classdef LFPAnalysis < analysisCore
 				end
 			end		
 			ego.ft.av = av;
-			drawAverageLFPs(ego);
+			if ego.doPlots; drawAverageLFPs(ego); end
 		end
 		
 		% ===================================================================
@@ -374,7 +375,7 @@ classdef LFPAnalysis < analysisCore
 				end	
 			end
 			ego.ft.bp = bp;
-			drawBandPass(ego);
+			if ego.doPlots; drawBandPass(ego); end
 		end
 		
 		% ===================================================================
@@ -459,7 +460,7 @@ classdef LFPAnalysis < analysisCore
 				cfgUsed{i} = cfg;
 			end
 			ego.ft.(['fq' preset]) = fq;
-			plotLFPs(ego,'freq',['fq' preset]);
+			if ego.doPlots; plot(ego,'freq',['fq' preset]); end
 		end
 		
 		% ===================================================================
@@ -527,7 +528,7 @@ classdef LFPAnalysis < analysisCore
 				ego.ft.stsFFT{j}.mag=mag;
 				
 			end
-			drawSpikeLFP(ego);
+			if ego.doPlots; drawSpikeLFP(ego); end
 		end
 		
 		% ===================================================================
@@ -544,13 +545,13 @@ classdef LFPAnalysis < analysisCore
 				parseSpikes(ego);
 			end
 			
-			ego.sp.doDensity;
+			ego.sp.density;
 						
 			for j = 1:length(ego.selectedTrials)
 				t = ['LFP: ' ego.LFPs(ego.selectedLFP).name ' | Unit: ' ego.sp.names{ego.sp.selectedUnit} ' | Sel:' ego.selectedTrials{j}.name];
 				figure;
 				[time,av,er]=getAverageTuningCurve(ego,ego.selectedTrials{j}.idx, ego.selectedLFP);
-				h1 = areabar(time,av,er);
+				h1 = areabar(time,av,er,'k.-');
 				axis(h1.axis,[ego.plotRange(1) ego.plotRange(2) -inf inf]);
 				ylabel(h1.axis,'Voltage (mV)');
 				box(h1.axis,'off')
@@ -583,7 +584,7 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotLFPs(ego, varargin)
+		function plot(ego, varargin)
 			if isempty(ego.LFPs);
 				return
 			end
@@ -700,6 +701,64 @@ classdef LFPAnalysis < analysisCore
 			
 		end
 		
+		% ===================================================================
+		%> @brief selectTrials selects trials based on many filters
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function select(ego)	
+			cuttrials = '[ ';
+			if ~isempty(ego.cutTrials)
+				cuttrials = [cuttrials num2str(ego.cutTrials)];
+			elseif ~isempty(ego.clickedTrials)
+				cuttrials = [cuttrials num2str(ego.clickedTrials)];
+			end
+			cuttrials = [cuttrials ' ]'];
+			
+			map = cell(1,3);
+			if isempty(ego.map) || length(ego.map)~=3 || ~iscell(ego.map)
+				map{1} = '1 2 3 4 5 6';
+				map{2} = '7 8';
+				map{3} = '';
+			else
+				map{1} = num2str(ego.map{1});
+				map{2} = num2str(ego.map{2});
+				map{3} = num2str(ego.map{3});
+			end
+
+			sel = num2str(ego.selectedLFP);
+			beh = ego.selectedBehaviour;
+
+			options.Resize='on';
+			options.WindowStyle='normal';
+			options.Interpreter='tex';
+			prompt = {'Choose PLX variables to merge (A, if empty parse all variables independantly):',...
+				'Choose PLX variables to merge (B):',...
+				'Choose PLX variables to merge (C):',...
+				'Enter Trials to exclude:',...
+				'Choose which LFP channel to select:',...
+				'Behavioural type (''correct'', ''breakFix'', ''incorrect'' | ''all''):'};
+			dlg_title = ['REPARSE ' num2str(ego.LFPs(1).nVars) ' DATA VARIABLES'];
+			num_lines = [1 120];
+			def = {map{1}, map{2}, map{3}, cuttrials,sel,beh};
+			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
+			drawnow;
+			if ~isempty(answer)
+				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3}); 
+				if ~isempty(answer{4}) 
+					ego.cutTrials = str2num(answer{4});
+				end
+				ego.map = map;
+				ego.selectedLFP = str2num(answer{5});
+				if ego.selectedLFP < 1 || ego.selectedLFP > ego.nLFPs
+					ego.selectedLFP = 1;
+				end
+				ego.selectedBehaviour = answer{6};
+			end
+			selectTrials(ego);
+		end
+		
 	end
 
 	%=======================================================================
@@ -757,64 +816,7 @@ classdef LFPAnalysis < analysisCore
 				ego.LFPs = LFPs;
 			end	
 		end
-		
-		% ===================================================================
-		%> @brief selectTrials selects trials based on many filters
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function userSelection(ego)	
-			cuttrials = '[ ';
-			if ~isempty(ego.cutTrials)
-				cuttrials = [cuttrials num2str(ego.cutTrials)];
-			elseif ~isempty(ego.clickedTrials)
-				cuttrials = [cuttrials num2str(ego.clickedTrials)];
-			end
-			cuttrials = [cuttrials ' ]'];
-			
-			map = cell(1,3);
-			if isempty(ego.map) || length(ego.map)~=3 || ~iscell(ego.map)
-				map{1} = '1 2 3 4 5 6';
-				map{2} = '7 8';
-				map{3} = '';
-			else
-				map{1} = num2str(ego.map{1});
-				map{2} = num2str(ego.map{2});
-				map{3} = num2str(ego.map{3});
-			end
-
-			sel = num2str(ego.selectedLFP);
-			beh = ego.selectedBehaviour;
-
-			options.Resize='on';
-			options.WindowStyle='normal';
-			options.Interpreter='tex';
-			prompt = {'Choose PLX variables to merge (A, if empty parse all variables independantly):',...
-				'Choose PLX variables to merge (B):',...
-				'Choose PLX variables to merge (C):',...
-				'Enter Trials to exclude:',...
-				'Choose which LFP channel to select:',...
-				'Behavioural type (''correct'', ''breakFix'', ''incorrect'' | ''all''):'};
-			dlg_title = ['REPARSE ' num2str(ego.LFPs(1).nVars) ' DATA VARIABLES'];
-			num_lines = [1 120];
-			def = {map{1}, map{2}, map{3}, cuttrials,sel,beh};
-			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
-			drawnow;
-			if ~isempty(answer)
-				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3}); 
-				if ~isempty(answer{4}) 
-					ego.cutTrials = str2num(answer{4});
-				end
-				ego.map = map;
-				ego.selectedLFP = str2num(answer{5});
-				if ego.selectedLFP < 1 || ego.selectedLFP > ego.nLFPs
-					ego.selectedLFP = 1;
-				end
-				ego.selectedBehaviour = answer{6};
-			end
-		end
-		
+				
 		% ===================================================================
 		%> @brief selectTrials selects trials based on several filters
 		%>
@@ -836,6 +838,8 @@ classdef LFPAnalysis < analysisCore
 			end
 			
 			cutidx = ego.cutTrials;
+			saccidx = [];
+			roiidx = [];
 			
 			if isempty(ego.map{1})
 				for i = 1:LFPs(1).nVars; map{i} = ego.p.eventList.unique(i); end
@@ -852,9 +856,12 @@ classdef LFPAnalysis < analysisCore
 					idx = [ idx find( [LFPs(1).trials.variable] == map{i}(j) ) ];
 				end
 				idx = intersect(idx, behaviouridx);
+				if ~isempty(cutidx);	idx = setdiff(idx, cutidx);		end %remove the cut trials
 				if ~isempty(idx)
 					ego.selectedTrials{a}.idx			= idx;
 					ego.selectedTrials{a}.cutidx		= cutidx;
+					ego.selectedTrials{a}.roiidx		= roiidx;
+					ego.selectedTrials{a}.saccidx		= saccidx;
 					ego.selectedTrials{a}.behaviour		= ego.selectedBehaviour;
 					ego.selectedTrials{a}.sel			= map{i};
 					ego.selectedTrials{a}.name			= ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
@@ -1027,24 +1034,26 @@ classdef LFPAnalysis < analysisCore
 			xlabel('Time (s)');
  			ylabel('LFP Raw Amplitude (mV)');
 			hold on
-			c = [0 0 0;1.0000 0 0;0 0 1;0 1 0;0 0.7500 0.7500;0.7500 0 0.7500;1 0.7500 0;0.4500 0.2500 0.2500;...
-				0 0.2500 0.7500;0 0.6000 1.0000;1.0000 0.5000 0.25;0.6000 0 0.3000;1 0 1;1 0.5 0.5;0.25 0.45 0.65];
+			c = ego.optimalColours(length(LFPs));
 			for j = 1:length(LFPs)
 				h(j)=plot(LFPs(j).time, LFPs(j).data,'Color',c(j,:));
 				name{j} = ['LFP ' num2str(j)];
 				[av,sd] = stderr(LFPs(j).data,'SD');
-				line([LFPs(j).time(1) LFPs(j).time(end)],[av-(2*sd) av-(2*sd)],'Color',get(h(j),'Color'),'LineWidth',2, 'LineStyle','--');
-				line([LFPs(j).time(1) LFPs(j).time(end)],[av+(2*sd) av+(2*sd)],'Color',get(h(j),'Color'),'LineWidth',2, 'LineStyle','--');
+				hl=line([LFPs(j).time(1) LFPs(j).time(end)],[av-(2*sd) av-(2*sd)],'Color',get(h(j),'Color'),'LineWidth',2, 'LineStyle','--');
+				set(get(get(hl,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+				hl=line([LFPs(j).time(1) LFPs(j).time(end)],[av+(2*sd) av+(2*sd)],'Color',get(h(j),'Color'),'LineWidth',2, 'LineStyle','--');
+				set(get(get(hl,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			end
 			axis([0 40 -.5 .5])
-			legend(h,name,'Location','NorthWest')
 			disp('Drawing Event markers...')
-			color = rand(3,ego.p.eventList.nVars);
+			c = ego.optimalColours(ego.p.eventList.nVars);
 			for j = 1:ego.p.eventList.nTrials
 				trl = ego.p.eventList.trials(j);
 				var = trl.variable;
-				line([trl.t1 trl.t1],[-.4 .4],'Color',color(:,var),'LineWidth',2);
-				line([trl.t2 trl.t2],[-.4 .4],'Color',color(:,var),'LineWidth',2);
+				hl=line([trl.t1 trl.t1],[-.4 .4],'Color',c(var,:),'LineWidth',2);
+				set(get(get(hl,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+				hl=line([trl.t2 trl.t2],[-.4 .4],'Color',c(var,:),'LineWidth',2);
+				set(get(get(hl,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 				text(trl.t1,.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',10);
 				text(trl.t1,-.41,['COR: ' num2str(trl.isCorrect)],'FontSize',10);
 			end
@@ -1052,6 +1061,11 @@ classdef LFPAnalysis < analysisCore
 			plot(ego.p.eventList.correct,zeros(size(ego.p.eventList.correct))-0.35,'g.','MarkerSize',15);
 			plot(ego.p.eventList.breakFix,zeros(size(ego.p.eventList.breakFix))-0.35,'b.','MarkerSize',15);
 			plot(ego.p.eventList.incorrect,zeros(size(ego.p.eventList.incorrect))-0.35,'r.','MarkerSize',15);
+			name{end+1} = 'start fixation';
+			name{end+1} = 'correct';
+			name{end+1} = 'break fix';
+			name{end+1} = 'incorrect';
+			legend(name,'Location','NorthWest')
 			hold off;
 			box on;
 			pan xon;
@@ -1087,10 +1101,9 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function drawSpikeLFP(ego)
+			if ~isfield(ego.ft,'staPre'); warning('No parsed spike-LFP available.'); return; end
 			disp('Drawing Spike LFP correlations...')
 			ft = ego.ft;
-			c = [0 0 0;1.0000 0 0;0 0 1;0 1 0;0 0.7500 0.7500;0.7500 0 0.7500;1 0.7500 0;0.4500 0.2500 0.2500;...
-				0 0.2500 0.7500;0 0.6000 1.0000;1.0000 0.5000 0.25;0.6000 0 0.3000;1 0 1;1 0.5 0.5;0.25 0.45 0.65];
 			for j = 1:length(ego.selectedTrials)
 				h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',num2str(ego.selectedTrials{j}.sel));
 				p=panel(h);
@@ -1141,6 +1154,7 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		function drawBandPass(ego)
 				if ~isfield(ego.ft,'bp') || isempty(ego.ft.bp);	return;	end
+				disp('Drawing Frequency Bandpass...')
 				bp = ego.ft.bp;
 				h=figure;figpos(1,[1500 1500]);set(h,'Color',[1 1 1]);
 				p=panel(h);

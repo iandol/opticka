@@ -478,8 +478,10 @@ classdef plxReader < optickaCore
 			for j = 1:ego.eventList.nTrials
 				trl = ego.eventList.trials(j);
 				var = trl.variable;
-				line([trl.t1 trl.t1],[-.4 .4],'Color',color(:,var),'LineWidth',1);
-				line([trl.t2 trl.t2],[-.4 .4],'Color',color(:,var),'LineWidth',1);
+				hl=line([trl.t1 trl.t1],[-.4 .4],'Color',color(:,var),'LineWidth',1);
+				set(get(get(hl,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+				hl=line([trl.t2 trl.t2],[-.4 .4],'Color',color(:,var),'LineWidth',1);
+				set(get(get(hl,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 				text(trl.t1,.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',10);
 				if isfield(trl,'firstSaccade'); sT = trl.firstSaccade; else sT = NaN; end
 				text(trl.t1,-.41,['SAC: ' num2str(sT) '\newlineCOR: ' num2str(trl.isCorrect)],'FontSize',10);
@@ -489,6 +491,12 @@ classdef plxReader < optickaCore
 			plot(ego.eventList.breakFix,zeros(size(ego.eventList.breakFix)),'b.','MarkerSize',15);
 			plot(ego.eventList.incorrect,zeros(size(ego.eventList.incorrect)),'r.','MarkerSize',15);
 			axis([0 10 -.5 .5])
+			name = {};
+			name{end+1} = 'start fixation';
+			name{end+1} = 'correct';
+			name{end+1} = 'break fix';
+			name{end+1} = 'incorrect';
+			legend(name,'Location','NorthWest')
 			hold off;
 			box on;
 			pan xon;
@@ -530,7 +538,7 @@ classdef plxReader < optickaCore
 			width=scr(3);
 			height=scr(4);
 			handles.root = figure('Units','pixels','Position',[0 0 width/4 height],'Tag','PLXInfoFigure',...
-				'Color',[0.9 0.9 0.9]);
+				'Color',[0.9 0.9 0.9],'Toolbar','none','Name', ego.file);
 			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.45 1 0.55],...
 				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',500,...
 				'FontSize',12,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left');
