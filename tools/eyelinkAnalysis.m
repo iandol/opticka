@@ -30,7 +30,9 @@ classdef eyelinkAnalysis < analysisCore
 		rtLimits@double
 		rtDivision@double
 		%> region of interest?
-		ROI@double = [5 5 2]
+		ROI@double = [ ]
+		%> time of interest?
+		TOI@double = [5 5 2]
 		%> verbose output?
 		verbose = false
 	end
@@ -413,6 +415,7 @@ classdef eyelinkAnalysis < analysisCore
 			parseSecondaryEyePos(ego);
 			parseFixationPositions(ego);
 			parseROI(ego);
+			%parseTOI(ego);
 
 			fprintf('Parsing EDF Trials took %g ms\n',round(toc*1000));
 		end
@@ -534,14 +537,14 @@ classdef eyelinkAnalysis < analysisCore
 
 				q(1,1).hold('on')
 				plot(x, y,'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
-					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
+					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 
 				q(1,2).select();
 				q(1,2).hold('on');
 				plot(t,abs(x),'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
-					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
+					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				plot(t,abs(y),'k-x','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
-					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
+					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				maxv = max([maxv, max(abs(x)), max(abs(y))]) + 0.1;
 
 				p(2).select();
@@ -550,13 +553,13 @@ classdef eyelinkAnalysis < analysisCore
 					f=thisTrial.fixations(fix);
 					plot3([f.time f.time+f.length],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
 						'LineWidth',1,'MarkerSize',5,'MarkerEdgeColor',[0 0 0],...
-						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe)
+						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
 				end
 				for sac=1:length(thisTrial.saccades)
 					s=thisTrial.saccades(sac);
 					plot3([s.time s.time+s.length],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
 						'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
-						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe)
+						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
 				end
 				p(2).margin = 50;
 
@@ -576,12 +579,12 @@ classdef eyelinkAnalysis < analysisCore
 				q(2,1).select();
 				q(2,1).hold('on');
 				plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
-					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
+					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 
 				q(2,2).select();
 				q(2,2).hold('on');
 				plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
-					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex],'ButtonDownFcn', @clickMe);
+					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				a = a + 1;
 	
 			end
@@ -666,42 +669,9 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				ud = get(src,'UserData');
 				if ~isempty(ud)
-					disp(['TRIAL = ' num2str(ud)]);
+					disp(['TRIAL | CORRECTED | VAR = ' num2str(ud)]);
 					disp(ego.trials(ud(1)));
 				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function fixVarNames(ego)
-			if ego.needOverride == true
-				if isempty(ego.trialOverride)
-					warning('No replacement trials available!!!')
-					return
-				end
-				trials = ego.trialOverride;
-				if  max([ego.trials.correctedIndex]) ~= length(trials)
-					warning('TRIAL ID LENGTH MISMATCH!');
-					return
-				end
-				a = 1;
-				for j = 1:length(ego.trials)
-					if ego.trials(j).incorrect ~= true
-						ego.trials(j).oldid = ego.trials(j).variable;
-						ego.trials(j).variable = trials(a).variable;
-						ego.trialList(j) = ego.trials(j).variable;
-						if ego.trials(j).breakFix == true
-							ego.trialList(j) = -[ego.trialList(j)];
-						end
-						a = a + 1;
-					end
-				end
-				disp('---> Trial name override in place!!!')
 			end
 		end
 		
@@ -714,6 +684,51 @@ classdef eyelinkAnalysis < analysisCore
 		function parseROI(ego)
 			if isempty(ego.ROI)
 				disp('No ROI specified!!!')
+				return
+			end
+			ppd = ego.ppd;
+			fixationX = ego.ROI(1);
+			fixationY = ego.ROI(2);
+			fixationRadius = ego.ROI(3);
+			for i = 1:length(ego.trials)
+				ego.ROIInfo(i).variable = ego.trials(i).variable;
+				ego.ROIInfo(i).idx = i;
+				ego.ROIInfo(i).correctedIndex = ego.trials(i).correctedIndex;
+				ego.ROIInfo(i).uuid = ego.trials(i).uuid;
+				ego.ROIInfo(i).fixationX = fixationX;
+				ego.ROIInfo(i).fixationY = fixationY;
+				ego.ROIInfo(i).fixationRadius = fixationRadius;
+				x = ego.trials(i).gx / ppd;
+				y = ego.trials(i).gy  / ppd;
+				times = ego.trials(i).times;
+				f = find(times > 0); % we only check ROI post 0 time
+				r = sqrt((x - fixationX).^2 + (y - fixationY).^2); 
+				r=r(f);
+				window = find(r < fixationRadius);
+				if any(window)
+					ego.ROIInfo(i).enteredROI = true;
+				else
+					ego.ROIInfo(i).enteredROI = false;
+				end	
+				ego.trials(i).enteredROI = ego.ROIInfo(i).enteredROI;
+				ego.ROIInfo(i).x = x;
+				ego.ROIInfo(i).y = y;
+				ego.ROIInfo(i).times = times/1e3;
+				ego.ROIInfo(i).correct = ego.trials(i).correct;
+				ego.ROIInfo(i).breakFix = ego.trials(i).breakFix;
+				ego.ROIInfo(i).incorrect = ego.trials(i).incorrect;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parseTOI(ego)
+			if isempty(ego.TOI)
+				disp('No TOI specified!!!')
 				return
 			end
 			ppd = ego.ppd;
@@ -863,6 +878,59 @@ classdef eyelinkAnalysis < analysisCore
 		end
 		
 		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function ppd = get.ppd(ego)
+			if ego.distance == 57.3 && ego.override573 == true
+				ppd = round( ego.pixelsPerCm * (67 / 57.3)); %set the pixels per degree, note this fixes some older files where 57.3 was entered instead of 67cm
+			else
+				ppd = round( ego.pixelsPerCm * (ego.distance / 57.3)); %set the pixels per degree
+			end
+			ego.ppd_ = ppd;
+		end
+		
+	end%-------------------------END PUBLIC METHODS--------------------------------%
+	
+	%=======================================================================
+	methods (Access = private) %------------------PRIVATE METHODS
+	%=======================================================================
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function fixVarNames(ego)
+			if ego.needOverride == true
+				if isempty(ego.trialOverride)
+					warning('No replacement trials available!!!')
+					return
+				end
+				trials = ego.trialOverride;
+				if  max([ego.trials.correctedIndex]) ~= length(trials)
+					warning('TRIAL ID LENGTH MISMATCH!');
+					return
+				end
+				a = 1;
+				for j = 1:length(ego.trials)
+					if ego.trials(j).incorrect ~= true
+						ego.trials(j).oldid = ego.trials(j).variable;
+						ego.trials(j).variable = trials(a).variable;
+						ego.trialList(j) = ego.trials(j).variable;
+						if ego.trials(j).breakFix == true
+							ego.trialList(j) = -[ego.trialList(j)];
+						end
+						a = a + 1;
+					end
+				end
+				disp('---> Trial name override in place!!!')
+			end
+		end
+		
+		% ===================================================================
 		%> @brief
 		%>
 		%> @param
@@ -965,27 +1033,6 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			
 		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function ppd = get.ppd(ego)
-			if ego.distance == 57.3 && ego.override573 == true
-				ppd = round( ego.pixelsPerCm * (67 / 57.3)); %set the pixels per degree, note this fixes some older files where 57.3 was entered instead of 67cm
-			else
-				ppd = round( ego.pixelsPerCm * (ego.distance / 57.3)); %set the pixels per degree
-			end
-			ego.ppd_ = ppd;
-		end
-		
-	end%-------------------------END PUBLIC METHODS--------------------------------%
-	
-	%=======================================================================
-	methods (Access = private) %------------------PRIVATE METHODS
-	%=======================================================================
 		
 		% ===================================================================
 		%> @brief

@@ -616,9 +616,9 @@ classdef plxReader < optickaCore
 			cd(pn);
 			tic
 			load(fn);
-			if ~exist('rE','var') && exist('ego','var')
-				rE = ego;
-				clear ego;
+			if ~exist('rE','var') && exist('obj','var')
+				rE = obj;
+				clear obj;
 			end
 			if ~isa(rE,'runExperiment')
 				warning('The behavioural file doesn''t contain a runExperiment object!!!');

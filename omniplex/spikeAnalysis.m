@@ -27,6 +27,8 @@ classdef spikeAnalysis < analysisCore
 		ROI@double = [];
 		%> include (true) or exclude (false) the ROI entered trials?
 		includeROI@logical = false
+		%> time of interest for fixation, if empty ignore
+		fixTOI@double = [];
 		%> plot verbosity
 		verbose	= true
 	end
@@ -297,6 +299,7 @@ classdef spikeAnalysis < analysisCore
 			roi = num2str(ego.ROI);
 			includeroi = num2str(ego.includeROI);
 			saccfilt = num2str(ego.filterFirstSaccades);
+			toifilt = num2str(ego.fixTOI);
 
 			options.Resize='on';
 			options.WindowStyle='normal';
@@ -310,12 +313,13 @@ classdef spikeAnalysis < analysisCore
 				'Plot Range (seconds)',...
 				'Measure Range (seconds)',...
 				'Bin Width (seconds)',...
-				'Region of Interest [X Y RADIUS] (blank = ignore):',...
+				'ROI Region of Interest [X Y RADIUS] (blank = ignore):',...
 				'Include (1) or Exclude (0) the ROI trials?',...
-				'Saccade Filter in seconds [>Time1 <Time2], e.g. [-0.8 0.8] (blank = ignore):'};
+				'Saccade Filter in seconds [>Time1 <Time2], e.g. [-0.8 0.8] (blank = ignore):',...
+				'Fixation TOI Time Of Interest [start-time end-time x y radius] (blank = ignore):'};
 			dlg_title = [ego.file ': REPARSE ' num2str(ego.event.nVars) ' DATA VARIABLES'];
 			num_lines = [1 120];
-			def = {map{1}, map{2}, map{3}, cuttrials, sel, beh, pr, rr, bw, roi, includeroi,saccfilt};
+			def = {map{1}, map{2}, map{3}, cuttrials, sel, beh, pr, rr, bw, roi, includeroi,saccfilt,toifilt};
 			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
 			drawnow;
 			if isempty(answer)
@@ -340,6 +344,7 @@ classdef spikeAnalysis < analysisCore
 				end
 				ego.includeROI = logical(str2num(answer{11}));
 				ego.filterFirstSaccades = str2num(answer{12});
+				ego.fixTOI = str2num(answer{13});
 			end
 			if ~isempty(ego.ROI)
 				ego.p.eA.ROI = ego.ROI;
