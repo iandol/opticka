@@ -11,13 +11,13 @@ classdef LFPAnalysis < analysisCore
 		dir@char
 		%> remove the mean voltage offset from the individual trials?
 		demeanLFP@logical = true
-		%> time window for demeaning
+		%> ± time window for demeaning
 		baselineWindow@double = [-0.2 0]
 		%> default LFP channel
 		selectedLFP@double = 1
-		%> � time window around the trigger
+		%> time window around the trigger
 		LFPWindow@double = 0.8
-		%> default range to plot
+		%> default ± range to plot
 		plotRange@double = [-0.2 0.4]
 		%> default behavioural type
 		selectedBehaviour@char = 'correct';
@@ -226,7 +226,7 @@ classdef LFPAnalysis < analysisCore
 					ft.sampleinfo(a,1)= LFPs(1).trials(k).startIndex + LFPs(1).sample-1; 
 					ft.sampleinfo(a,2)= LFPs(1).trials(k).endIndex + LFPs(1).sample-1;
 					ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -window LFPs(1).trials(k).t1];
-					ft.trialinfo(a,1) = LFPs(1).trials(k).name;
+					ft.trialinfo(a,1) = LFPs(1).trials(k).variable;
 					a = a + 1;
 			end
 			ft.uniquetrials = unique(ft.trialinfo);
@@ -469,30 +469,30 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function cfgUsed=ftSpikeLFP(ego, unit)
-			if isempty(ego.sp.ft)
-				parseSpikes(ego);
-			end
-			if ~exist('unit','var'); unit = ego.sp.selectedUnit; end
-			ego.sp.selectedUnit = unit;
-			ego.sp.doDensity;
-			drawnow;
-			
+			if ~exist('unit','var'); unit = ego.sp.selectedUnit;
+			else ego.sp.selectedUnit = unit; end
+			plotTogether(ego)
 			ft = ego.ft;
 			spike = ego.sp.ft;
 			dat = ft_appendspike([],ft, spike);
 			
-			cfg					= [];
-			cfg.method			= 'nan'; % remove the replaced segment with interpolation
-			cfg.timwin			= [-0.001 0.001]; % remove 4 ms around every spike
-			cfg.spikechannel	= spike.label{unit};
-			cfg.channel			= ft.label;
-			%dati				= ft_spiketriggeredinterpolation(cfg, dat);
+			try
+				cfg					= [];
+				cfg.method			= 'nan'; % remove the replaced segment with interpolation
+				cfg.timwin			= [-0.001 0.001]; % remove 4 ms around every spike
+				cfg.spikechannel	= spike.label{unit};
+				cfg.channel			= ft.label;
+				dati				= ft_spiketriggeredinterpolation(cfg, dat);
+			catch
+				warning('interpolation of spikes failed, using raw data');
+				dati=dat;
+			end
 			
 			for j = 1:length(ego.selectedTrials)
 				name				= ['SPIKE:' spike.label{unit} ' | SEL: ' ego.selectedTrials{j}.name];
 				tempft				= selectFTTrials(ego,ft,ego.selectedTrials{j}.idx);
 				tempspike			= selectFTTrials(ego,spike,ego.selectedTrials{j}.idx);
-				tempdat				= selectFTTrials(ego,dat,ego.selectedTrials{j}.idx);
+				tempdat				= selectFTTrials(ego,dati,ego.selectedTrials{j}.idx);
 				
 				cfg					= [];
 
@@ -528,6 +528,53 @@ classdef LFPAnalysis < analysisCore
 				
 			end
 			drawSpikeLFP(ego);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function plotTogether(ego,unit)
+			if ~exist('unit','var'); unit = ego.sp.selectedUnit;
+			else ego.sp.selectedUnit = unit; end
+			
+			if isempty(ego.sp.ft)
+				parseSpikes(ego);
+			end
+			
+			ego.sp.doDensity;
+						
+			for j = 1:length(ego.selectedTrials)
+				t = ['LFP: ' ego.LFPs(ego.selectedLFP).name ' | Unit: ' ego.sp.names{ego.sp.selectedUnit} ' | Sel:' ego.selectedTrials{j}.name];
+				figure;
+				[time,av,er]=getAverageTuningCurve(ego,ego.selectedTrials{j}.idx, ego.selectedLFP);
+				h1 = areabar(time,av,er);
+				axis(h1.axis,[ego.plotRange(1) ego.plotRange(2) -inf inf]);
+				ylabel(h1.axis,'Voltage (mV)');
+				box(h1.axis,'off')
+				set(h1.axis,'XColor','k','YColor','k')
+				h1_pos = get(h1.axis,'Position'); % store position of first axes
+				h2.axis = axes('Position',h1_pos,...
+					'XAxisLocation','top',...
+					'YAxisLocation','right',...
+					'Color','none');
+				set(h2.axis,'XColor','k','YColor','k')
+				axis(h2.axis)
+				hold(h2.axis,'on')
+				
+				time2 = ego.sp.ft.sd{j}.time;
+				av2 = ego.sp.ft.sd{j}.avg;
+				er2 = ego.var2SE(ego.sp.ft.sd{j}.var,ego.sp.ft.sd{j}.dof);
+				h=plot(time2,av2,'k.-');
+				h2.axish = h;
+				axis(h2.axis,[ego.plotRange(1) ego.plotRange(2) -inf inf]);
+				ylabel(h2.axis,'Firing Rate (Hz)');
+				box(h2.axis,'off')
+				title(t);
+			end
+			
 		end
 		
 		% ===================================================================
@@ -626,7 +673,8 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief selectFTTrials cut out trials where the ft function fails
+		%> to use cfg.trials
 		%>
 		%> @param
 		%> @return
@@ -652,7 +700,7 @@ classdef LFPAnalysis < analysisCore
 			
 		end
 		
-		end
+	end
 
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
@@ -789,69 +837,31 @@ classdef LFPAnalysis < analysisCore
 			
 			cutidx = ego.cutTrials;
 			
-			ego.selectedTrials = {};
 			if isempty(ego.map{1})
-				a = 1;
-				for i = 1:LFPs(1).nVars
-					vidx = find([LFPs(1).trials.name]==ego.p.eventList.unique(i));
-					idx = intersect(vidx, behaviouridx); %match the behaviour
-					idx = setdiff(idx, cutidx); %remove the cut trials
-					if ~isempty(idx)
-						ego.selectedTrials{a}.idx = idx;
-						ego.selectedTrials{1}.cutidx = cutidx;
-						ego.selectedTrials{a}.behaviour = ego.selectedBehaviour;
-						ego.selectedTrials{a}.sel = ego.p.eventList.unique(i);
-						ego.selectedTrials{a}.name = ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
-						a = a + 1;
-					end
-				end
+				for i = 1:LFPs(1).nVars; map{i} = ego.p.eventList.unique(i); end
 			else
-				idx = [];
-				for i = 1:length(ego.map{1})
-					idx = [idx find([LFPs(1).trials.name]==ego.map{1}(i))];
+				map = ego.map; %#ok<*PROP>
+			end
+			
+			ego.selectedTrials = {};
+			a = 1;
+			
+			for i = 1:length(map)
+				idx = []; if isempty(map{i}); continue; end
+				for j = 1:length(map{i})
+					idx = [ idx find( [LFPs(1).trials.variable] == map{i}(j) ) ];
 				end
-				idx = intersect(idx, behaviouridx); %match the behaviour
-				idx = setdiff(idx, cutidx); %remove the cut trials
+				idx = intersect(idx, behaviouridx);
 				if ~isempty(idx)
-					ego.selectedTrials{1}.idx = idx;
-					ego.selectedTrials{end}.cutidx = cutidx;
-					ego.selectedTrials{end}.behaviour = ego.selectedBehaviour;
-					ego.selectedTrials{end}.sel = ego.map{1};
-					ego.selectedTrials{end}.name = ['[' num2str(ego.selectedTrials{end}.sel) ']' ' #' num2str(length(idx))];
-				end
-				
-				if ~isempty(ego.map{2})
-					idx = [];
-					for i = 1:length(ego.map{2})
-						idx = [idx find([LFPs(1).trials.name]==ego.map{2}(i))];
-					end
-					idx = intersect(idx, behaviouridx); %match the behaviour
-					idx = setdiff(idx, cutidx); %remove the cut trials
-					if ~isempty(idx)
-						ego.selectedTrials{end+1}.idx = idx;
-						ego.selectedTrials{end}.cutidx = cutidx;
-						ego.selectedTrials{end}.behaviour = ego.selectedBehaviour;
-						ego.selectedTrials{end}.sel = ego.map{2};
-						ego.selectedTrials{end}.name = ['[' num2str(ego.selectedTrials{end}.sel) ']' ' #' num2str(length(idx))];
-					end
-				end
-				
-				if ~isempty(ego.map{3})
-					idx = [];
-					for i = 1:length(ego.map{3})
-						idx = [idx find([LFPs(1).trials.name]==ego.map{3}(i))];
-					end
-					idx = intersect(idx, behaviouridx); %match the behaviour
-					idx = setdiff(idx, cutidx); %remove the cut trials
-					if ~isempty(idx)
-						ego.selectedTrials{end+1}.idx = idx;
-						ego.selectedTrials{end}.cutidx = cutidx;
-						ego.selectedTrials{end}.behaviour = ego.selectedBehaviour;
-						ego.selectedTrials{end}.sel = ego.map{3};
-						ego.selectedTrials{end}.name = ['[' num2str(ego.selectedTrials{end}.sel) ']' ' #' num2str(length(idx))];
-					end
+					ego.selectedTrials{a}.idx			= idx;
+					ego.selectedTrials{a}.cutidx		= cutidx;
+					ego.selectedTrials{a}.behaviour		= ego.selectedBehaviour;
+					ego.selectedTrials{a}.sel			= map{i};
+					ego.selectedTrials{a}.name			= ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
+					a = a + 1;
 				end
 			end
+			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); end
 		end
 		
 		% ===================================================================
@@ -885,7 +895,7 @@ classdef LFPAnalysis < analysisCore
 				p(i1,i2).hold('on');
 				for k = 1:length(ego.selectedTrials{j}.idx)
 					trial = LFP.trials(ego.selectedTrials{j}.idx(k));
-					dat = [trial.name,trial.index,trial.t1];
+					dat = [trial.variable,trial.index,trial.t1];
 					cut = ego.cutTrials;
 					if ~isempty(intersect(trial.index,cut));
 						ls = ':';
@@ -1032,7 +1042,7 @@ classdef LFPAnalysis < analysisCore
 			color = rand(3,ego.p.eventList.nVars);
 			for j = 1:ego.p.eventList.nTrials
 				trl = ego.p.eventList.trials(j);
-				var = trl.name;
+				var = trl.variable;
 				line([trl.t1 trl.t1],[-.4 .4],'Color',color(:,var),'LineWidth',2);
 				line([trl.t2 trl.t2],[-.4 .4],'Color',color(:,var),'LineWidth',2);
 				text(trl.t1,.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',10);

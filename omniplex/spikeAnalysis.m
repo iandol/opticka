@@ -441,17 +441,30 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function doPSTH(ego)
+			parsePSTH(ego);
+			plotPSTH(ego);
+		end
+			
+		% ===================================================================
+		%> @brief doPSTH plots spike density for the selected trial groups
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function doDensity(ego)
+			parseDensity(ego)
+			plotDensity(ego)
+		end
+		% ===================================================================
+		%> @brief doPSTH plots spike density for the selected trial groups
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parsePSTH(ego)
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
-			p=panel(h);
-			p.margin = [20 20 20 10]; %left bottom right top
-			len = ego.nSelection + 1;
-			[row,col]=ego.optimalLayout(len);
-			p.pack(row,col);
+			
 			for j = 1:length(ego.selectedTrials)
-				[i1,i2] = ind2sub([row,col], j);
-				p(i1,i2).select();
-				
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
 				cfg.binsize			=  ego.binSize;
@@ -459,17 +472,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.latency			= ego.plotRange;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				psth{j}				= ft_spike_psth(cfg, ego.ft);
-
-				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				cfg.spikelength		= 1;
-				%cfg.topplotfunc		= 'line'; % plot as a line
-				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
-				cfg.interactive		= 'no'; % toggle off interactive mode
-				ft_spike_plot_raster(cfg, ego.ft, psth{j})
-				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file])
-				
+								
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
@@ -479,26 +482,6 @@ classdef spikeAnalysis < analysisCore
 			end
 			ego.ft.psth = psth;
 			ego.ft.rate = rate;
-			
-			p(row,col).select();
-			box on
-			grid on
-			hold on
-			c = ego.optimalColours(length(psth));
-			t = [ego.file ' '];
-			for j = 1:length(psth)
-				e = sqrt(psth{j}.var ./ psth{j}.dof);
-				e(isnan(e)) = 0;
-				areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
-				leg{j,1} = ego.selectedTrials{j}.name;
-				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
-			end
-			p(row,col).title(t);
-			p(row,col).xlabel('Time (s)')
-			p(row,col).ylabel('Firing Rate (Hz)')
-			set(gcf,'Renderer','OpenGL');
-			legend(leg);
-			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
 		end
 		
 		% ===================================================================
@@ -507,17 +490,8 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function doDensity(ego)
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
-			p=panel(h);
-			p.margin = [20 20 20 10]; %left bottom right top
-			len = ego.nSelection + 1;
-			[row,col]=ego.optimalLayout(len);
-			p.pack(row,col);
+		function parseDensity(ego)
 			for j = 1:length(ego.selectedTrials)
-				[i1,i2] = ind2sub([row,col], j);
-				p(i1,i2).select();
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
 				cfg.timwin			= [-0.025 0.025];
@@ -530,42 +504,12 @@ classdef spikeAnalysis < analysisCore
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				cfg.spikelength		= 1;
-				cfg.topplotfunc		= 'line'; % plot as a line
-				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
-				cfg.interactive		= 'no'; % toggle off interactive mode
-				ft_spike_plot_raster(cfg, ego.ft, sd{j})
-				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file])
-				
-				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				cfg.latency			= [ego.rateRange(1) ego.rateRange(2)]; % sustained response period
 				cfg.keeptrials		= 'yes';
 				rate{j}				= ft_spike_rate(cfg,ego.ft);
 			end
 			ego.ft.sd = sd;
 			ego.ft.rate = rate;
-			
-			p(row,col).select();
-			box on
-			grid on
-			hold on
-			c = ego.optimalColours(length(sd));
-			t = [ego.file ' '];
-			for j = 1:length(sd)
-				e = ego.var2SE(sd{j}.var,sd{j}.dof);
-				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
-				leg{j,1} = ego.selectedTrials{j}.name;
-				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
-			end
-			p(row,col).title(t);
-			p(row,col).xlabel('Time (s)')
-			p(row,col).ylabel('Firing Rate (Hz)')
-			set(gcf,'Renderer','OpenGL');
-			legend(leg);
-			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
-			
 		end
 		
 		% ===================================================================
@@ -578,16 +522,6 @@ classdef spikeAnalysis < analysisCore
 			if ~isempty(ego.p.info)
 				infoBox(ego.p);
 			end
-		end
-
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function plot(ego, varargin)
-
 		end
 		
 		% ===================================================================
@@ -642,6 +576,92 @@ classdef spikeAnalysis < analysisCore
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
+		function plotDensity(ego)
+			sd = ego.ft.sd;
+			rate = ego.ft.rate;
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			p=panel(h);
+			p.margin = [20 20 20 10]; %left bottom right top
+			len = ego.nSelection + 1;
+			[row,col]=ego.optimalLayout(len);
+			p.pack(row,col);
+			for j = 1:length(ego.selectedTrials)
+				[i1,i2] = ind2sub([row,col], j);
+				p(i1,i2).select();
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				cfg.spikelength		= 1;
+				cfg.topplotfunc		= 'line'; % plot as a line
+				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
+				cfg.interactive		= 'no'; % toggle off interactive mode
+				ft_spike_plot_raster(cfg, ego.ft, sd{j})
+				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file])
+			end
+			p(row,col).select();
+			box on
+			grid on
+			hold on
+			c = ego.optimalColours(length(sd));
+			t = [ego.file ' '];
+			for j = 1:length(sd)
+				e = ego.var2SE(sd{j}.var,sd{j}.dof);
+				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
+				leg{j,1} = ego.selectedTrials{j}.name;
+				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
+			end
+			p(row,col).title(t);
+			p(row,col).xlabel('Time (s)')
+			p(row,col).ylabel('Firing Rate (Hz)')
+			set(gcf,'Renderer','OpenGL');
+			legend(leg);
+			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+		end
 		
+		function plotPSTH(ego)
+			psth = ego.ft.psth;
+			rate = ego.ft.rate;
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			p=panel(h);
+			p.margin = [20 20 20 10]; %left bottom right top
+			len = ego.nSelection + 1;
+			[row,col]=ego.optimalLayout(len);
+			p.pack(row,col);
+			for j = 1:length(ego.selectedTrials)
+				[i1,i2] = ind2sub([row,col], j);
+				p(i1,i2).select();
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				cfg.spikelength		= 1;
+				%cfg.topplotfunc		= 'line'; % plot as a line
+				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
+				cfg.interactive		= 'no'; % toggle off interactive mode
+				ft_spike_plot_raster(cfg, ego.ft, psth{j})
+				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file])
+			end
+			p(row,col).select();
+			box on
+			grid on
+			hold on
+			c = ego.optimalColours(length(psth));
+			t = [ego.file ' '];
+			for j = 1:length(psth)
+				e = sqrt(psth{j}.var ./ psth{j}.dof);
+				e(isnan(e)) = 0;
+				areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
+				leg{j,1} = ego.selectedTrials{j}.name;
+				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
+			end
+			p(row,col).title(t);
+			p(row,col).xlabel('Time (s)')
+			p(row,col).ylabel('Firing Rate (Hz)')
+			set(gcf,'Renderer','OpenGL');
+			legend(leg);
+			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+		end
+	
 	end
 end

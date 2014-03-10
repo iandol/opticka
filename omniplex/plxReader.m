@@ -376,6 +376,8 @@ classdef plxReader < optickaCore
 					ego.edffile = f;
 				elseif exist(ff, 'file')
 					ego.edffile = ff;
+				elseif exist(fff, 'file')
+					ego.edffile = fff;
 				end
 			end
 		end
@@ -916,7 +918,7 @@ classdef plxReader < optickaCore
 			eL.tMax = 0;
 			eL.tMinCorrect = Inf;
 			eL.tMaxCorrect = 0;
-			eL.trials = struct('name',[],'index',[]);
+			eL.trials = struct('variable',[],'index',[]);
 			eL.trials(eL.nTrials,1).variable = [];
 			eL.vars = struct('name',[],'nRepeats',[],'index',[],'responseIndex',[],'t1',[],'t2',[],...
 				'nCorrect',[],'nBreakFix',[],'nIncorrect',[],'t1correct',[],'t2correct',[],...
