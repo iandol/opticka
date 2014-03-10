@@ -28,7 +28,7 @@ classdef spikeAnalysis < analysisCore
 		%> include (true) or exclude (false) the ROI entered trials?
 		includeROI@logical = false
 		%> time of interest for fixation, if empty ignore
-		fixTOI@double = [];
+		TOI@double = [];
 		%> plot verbosity
 		verbose	= true
 	end
@@ -203,8 +203,6 @@ classdef spikeAnalysis < analysisCore
 			ego.names = ego.ft.label;
 			showInfo(ego);
 			select(ego);
-			ego.p.eA.ROI = ego.ROI;
-			parseROI(ego.p.eA);
 		end
 		
 		% ===================================================================
@@ -235,9 +233,13 @@ classdef spikeAnalysis < analysisCore
 			elseif ego.selectOverride == false
 				selectTrials(ego)
 			end
-			if ~isempty(ego.ROI)
+			if ~isempty(ego.p.eA.ROIInfo)
 				ego.p.eA.ROI = ego.ROI;
 				parseROI(ego.p.eA);
+			end
+			if ~isempty(ego.p.eA.TOIInfo)
+				ego.p.eA.TOI = ego.TOI;
+				parseTOI(ego.p.eA);
 			end
 			disp('Lazy spike parsing finished...')
 		end
@@ -262,6 +264,10 @@ classdef spikeAnalysis < analysisCore
 			if ~isempty(ego.ROI)
 				ego.p.eA.ROI = ego.ROI;
 				parseROI(ego.p.eA);
+			end
+			if ~isempty(ego.TOI)
+				ego.p.eA.TOI = ego.TOI;
+				parseTOI(ego.p.eA);
 			end
 		end
 		
@@ -299,7 +305,7 @@ classdef spikeAnalysis < analysisCore
 			roi = num2str(ego.ROI);
 			includeroi = num2str(ego.includeROI);
 			saccfilt = num2str(ego.filterFirstSaccades);
-			toifilt = num2str(ego.fixTOI);
+			toifilt = num2str(ego.TOI);
 
 			options.Resize='on';
 			options.WindowStyle='normal';
@@ -344,12 +350,17 @@ classdef spikeAnalysis < analysisCore
 				end
 				ego.includeROI = logical(str2num(answer{11}));
 				ego.filterFirstSaccades = str2num(answer{12});
-				ego.fixTOI = str2num(answer{13});
+				ego.TOI = str2num(answer{13});
 			end
 			if ~isempty(ego.ROI)
 				ego.p.eA.ROI = ego.ROI;
 				parseROI(ego.p.eA);
 				plotROI(ego.p.eA);
+			end
+			if ~isempty(ego.TOI)
+				ego.p.eA.TOI = ego.TOI;
+				parseTOI(ego.p.eA);
+				plotTOI(ego.p.eA);
 			end
 			selectTrials(ego);
 		end
@@ -563,6 +574,13 @@ classdef spikeAnalysis < analysisCore
 				rois = ego.p.eA.ROIInfo(idx);
 				roiidx = [rois.correctedIndex];
 			end	
+
+			toiidx = [];
+			if ~isempty(ego.TOI)
+				idx = [ego.p.eA.TOIInfo.isTOI] == true;
+				tois = ego.p.eA.TOIInfo(idx);
+				toiidx = [tois.correctedIndex];
+			end	
 			
 			if isempty(ego.map{1})
 				for i = 1:ego.event.nVars; map{i} = ego.event.unique(i); end
@@ -581,10 +599,12 @@ classdef spikeAnalysis < analysisCore
 				if ~isempty(cutidx);	idx = setdiff(idx, cutidx);		end %remove the cut trials
 				if ~isempty(saccidx);	idx = intersect(idx, saccidx);	end %remove saccade filtered trials
 				if ~isempty(roiidx);	idx = intersect(idx, roiidx);	end %remove roi filtered trials
+				if ~isempty(toiidx);	idx = intersect(idx, toiidx);	end %remove roi filtered trials
 				if ~isempty(idx)
 					ego.selectedTrials{a}.idx			= idx;
 					ego.selectedTrials{a}.cutidx		= cutidx;
-					ego.selectedTrials{a}.roiidx		= roiidx;
+					ego.selectedTrials{a}.roiidx		= roiidx; 
+					ego.selectedTrials{a}.toiidx		= toiidx;
 					ego.selectedTrials{a}.saccidx		= saccidx;
 					ego.selectedTrials{a}.behaviour		= ego.selectedBehaviour;
 					ego.selectedTrials{a}.sel			= map{i};

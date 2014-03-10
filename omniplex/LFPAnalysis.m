@@ -847,6 +847,7 @@ classdef LFPAnalysis < analysisCore
 			cutidx = ego.cutTrials;
 			saccidx = [];
 			roiidx = [];
+			toiidx = [];
 			
 			if isempty(ego.map{1})
 				for i = 1:LFPs(1).nVars; map{i} = ego.p.eventList.unique(i); end
@@ -868,6 +869,7 @@ classdef LFPAnalysis < analysisCore
 					ego.selectedTrials{a}.idx			= idx;
 					ego.selectedTrials{a}.cutidx		= cutidx;
 					ego.selectedTrials{a}.roiidx		= roiidx;
+					ego.selectedTrials{a}.toiidx		= toiidx;
 					ego.selectedTrials{a}.saccidx		= saccidx;
 					ego.selectedTrials{a}.behaviour		= ego.selectedBehaviour;
 					ego.selectedTrials{a}.sel			= map{i};

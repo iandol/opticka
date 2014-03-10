@@ -32,7 +32,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> region of interest?
 		ROI@double = [ ]
 		%> time of interest?
-		TOI@double = [5 5 2]
+		TOI@double = [ ]
 		%> verbose output?
 		verbose = false
 	end
@@ -59,8 +59,10 @@ classdef eyelinkAnalysis < analysisCore
 		%> for some early EDF files, there is no trial variable ID so we
 		%> recreate it from the other saved data
 		needOverride@logical = false;
-		%>roi info
+		%>ROI info
 		ROIInfo
+		%>TOI info
+		TOIInfo
 		%> does the trial variable list match the other saved data?
 		validation@struct
 	end
@@ -456,10 +458,11 @@ classdef eyelinkAnalysis < analysisCore
 			set(gcf,'Color',[1 1 1]);
 			figpos(1,[1200 1200]);
 			p = panel(h);
-			p.margin = [20 20 10 15]; %left bottom right top
 			p.fontsize = 12;
+			p.margin = [10 10 10 20]; %left bottom right top
 			p.pack('v',{2/3, []});
 			q = p(1);
+			q.margin = [20 20 10 25]; %left bottom right top
 			q.pack(2,2);
 			a = 1;
 			stdex = [];
@@ -473,21 +476,8 @@ classdef eyelinkAnalysis < analysisCore
 			medy = [];
 			early = 0;
 			
-			map = [0 0 1.0000;...
-				0 0.5000 0;...
-				1.0000 0 0;...
-				0 0.7500 0.7500;...
-				0.7500 0 0.7500;...
-				1 0.7500 0;...
-				0.4500 0.2500 0.2500;...
-				0 0.2500 0.7500;...
-				0 0 0;...
-				0 0.6000 1.0000;...
-				1.0000 0.5000 0.25;...
-				0.6000 0 0.3000;...
-				1 0 1;...
-				1 0.5 0.5;...
-				0.25 0.45 0.65];
+			
+			map = ego.optimalColours(length(ego.vars));
 
 			if isempty(select)
 				thisVarName = 'ALL VARS ';
@@ -561,7 +551,7 @@ classdef eyelinkAnalysis < analysisCore
 						'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
 						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
 				end
-				p(2).margin = 50;
+				p(2).margin = [50]; %left bottom right top
 
 				idxt = find(t >= 0 & t <= 100);
 
@@ -628,7 +618,6 @@ classdef eyelinkAnalysis < analysisCore
 			h=title([thisVarName upper(type) ': Saccades (red) and Fixation (black) Events']);
 			set(h,'BackgroundColor',[1 1 1]);
 			
-			
 			q(2,1).select();
 			grid on
 			box on
@@ -686,6 +675,7 @@ classdef eyelinkAnalysis < analysisCore
 				disp('No ROI specified!!!')
 				return
 			end
+			tic
 			ppd = ego.ppd;
 			fixationX = ego.ROI(1);
 			fixationY = ego.ROI(2);
@@ -700,12 +690,14 @@ classdef eyelinkAnalysis < analysisCore
 				ego.ROIInfo(i).fixationRadius = fixationRadius;
 				x = ego.trials(i).gx / ppd;
 				y = ego.trials(i).gy  / ppd;
-				times = ego.trials(i).times;
-				f = find(times > 0); % we only check ROI post 0 time
+				times = ego.trials(i).times / 1e3;
+				idx = find(times > 0); % we only check ROI post 0 time
+				times = times(idx);
+				x = x(idx);
+				y = y(idx);
 				r = sqrt((x - fixationX).^2 + (y - fixationY).^2); 
-				r=r(f);
-				window = find(r < fixationRadius);
-				if any(window)
+				within = find(r < fixationRadius);
+				if any(within)
 					ego.ROIInfo(i).enteredROI = true;
 				else
 					ego.ROIInfo(i).enteredROI = false;
@@ -713,11 +705,14 @@ classdef eyelinkAnalysis < analysisCore
 				ego.trials(i).enteredROI = ego.ROIInfo(i).enteredROI;
 				ego.ROIInfo(i).x = x;
 				ego.ROIInfo(i).y = y;
-				ego.ROIInfo(i).times = times/1e3;
+				ego.ROIInfo(i).times = times;
+				ego.ROIInfo(i).r = r;
+				ego.ROIInfo(i).within = within;
 				ego.ROIInfo(i).correct = ego.trials(i).correct;
 				ego.ROIInfo(i).breakFix = ego.trials(i).breakFix;
 				ego.ROIInfo(i).incorrect = ego.trials(i).incorrect;
 			end
+			fprintf('Parsing ROI took %g ms\n', round(toc*1000))
 		end
 		
 		% ===================================================================
@@ -731,38 +726,52 @@ classdef eyelinkAnalysis < analysisCore
 				disp('No TOI specified!!!')
 				return
 			end
+			tic
 			ppd = ego.ppd;
-			fixationX = ego.ROI(1);
-			fixationY = ego.ROI(2);
-			fixationRadius = ego.ROI(3);
+			t1 = ego.TOI(1);
+			t2 = ego.TOI(2);
+			fixationX = ego.TOI(3);
+			fixationY = ego.TOI(4);
+			fixationRadius = ego.TOI(5);
 			for i = 1:length(ego.trials)
-				ego.ROIInfo(i).variable = ego.trials(i).variable;
-				ego.ROIInfo(i).idx = i;
-				ego.ROIInfo(i).correctedIndex = ego.trials(i).correctedIndex;
-				ego.ROIInfo(i).uuid = ego.trials(i).uuid;
-				ego.ROIInfo(i).fixationX = fixationX;
-				ego.ROIInfo(i).fixationY = fixationY;
-				ego.ROIInfo(i).fixationRadius = fixationRadius;
+				times = ego.trials(i).times / 1e3;
 				x = ego.trials(i).gx / ppd;
 				y = ego.trials(i).gy  / ppd;
-				times = ego.trials(i).times;
-				f = find(times > 0); % we only check ROI post 0 time
+				
+				idx = intersect(find(times>=t1), find(times<=t2));
+				times = times(idx);
+				x = x(idx);
+				y = y(idx);
+			
 				r = sqrt((x - fixationX).^2 + (y - fixationY).^2); 
-				r=r(f);
-				window = find(r < fixationRadius);
-				if any(window)
-					ego.ROIInfo(i).enteredROI = true;
+
+				within = find(r <= fixationRadius);
+				if length(within) == length(r)
+					ego.TOIInfo(i).isTOI = true;
 				else
-					ego.ROIInfo(i).enteredROI = false;
+					ego.TOIInfo(i).isTOI = false;
 				end	
-				ego.trials(i).enteredROI = ego.ROIInfo(i).enteredROI;
-				ego.ROIInfo(i).x = x;
-				ego.ROIInfo(i).y = y;
-				ego.ROIInfo(i).times = times/1e3;
-				ego.ROIInfo(i).correct = ego.trials(i).correct;
-				ego.ROIInfo(i).breakFix = ego.trials(i).breakFix;
-				ego.ROIInfo(i).incorrect = ego.trials(i).incorrect;
+				ego.trials(i).isTOI = ego.TOIInfo(i).isTOI;
+				
+				ego.TOIInfo(i).variable = ego.trials(i).variable;
+				ego.TOIInfo(i).idx = i;
+				ego.TOIInfo(i).correctedIndex = ego.trials(i).correctedIndex;
+				ego.TOIInfo(i).uuid = ego.trials(i).uuid;
+				ego.TOIInfo(i).t1 = t1;
+				ego.TOIInfo(i).t2 = t2;
+				ego.TOIInfo(i).fixationX = fixationX;
+				ego.TOIInfo(i).fixationY = fixationY;
+				ego.TOIInfo(i).fixationRadius = fixationRadius;
+				ego.TOIInfo(i).times = times;
+				ego.TOIInfo(i).x = x;
+				ego.TOIInfo(i).y = y;
+				ego.TOIInfo(i).r = r;
+				ego.TOIInfo(i).within = within;
+				ego.TOIInfo(i).correct = ego.trials(i).correct;
+				ego.TOIInfo(i).breakFix = ego.trials(i).breakFix;
+				ego.TOIInfo(i).incorrect = ego.trials(i).incorrect;
 			end
+			fprintf('Parsing TOI took %g ms\n', round(toc*1000))
 		end
 		
 		% ===================================================================
@@ -860,6 +869,123 @@ classdef eyelinkAnalysis < analysisCore
 				axis square
 				axis([0 0.5 0 10]);
 			end
+			function clickMe(src, ~)
+				if ~exist('src','var')
+					return
+				end
+				ud = get(src,'UserData');
+				lw = get(src,'LineWidth');
+				if lw < 1.8
+					set(src,'LineWidth',2)
+				else
+					set(src,'LineWidth',1)
+				end
+				if ~isempty(ud)
+					disp(['ROI Trial (idx correctidx var iscorrect isbreak isincorrect): ' num2str(ud)]);
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function plotTOI(ego)
+			if isempty(ego.TOIInfo)
+				disp('No TOI parsed!!!')
+				return
+			end
+			h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',ego.file);
+			
+			t1 = ego.TOI(1); 
+			t2 = ego.TOI(2);
+			x1 = ego.TOI(3) - ego.TOI(5);
+			x2 = ego.TOI(3) + ego.TOI(5);
+			xmin = min([abs(x1), abs(x2)]);
+			xmax = max([abs(x1), abs(x2)]);
+			y1 = ego.TOI(4) - ego.TOI(5);
+			y2 = ego.TOI(4) + ego.TOI(5);
+			ymin = min([abs(y1), abs(y2)]);
+			ymax = max([abs(y1), abs(y2)]);
+			xp = [x1 x1 x2 x2];
+			yp = [y1 y2 y2 y1];
+			xpp = [xmin xmin xmax xmax];
+			ypp = [ymin ymin ymax ymax];
+			p=panel(h);
+			p.pack(1,2);
+			p.fontsize = 14;
+			p.margin = [15 15 15 15];
+			yes = logical([ego.TOIInfo.isTOI]);
+			no = ~yes;
+			yesTOI = ego.TOIInfo(yes);
+			noTOI	= ego.TOIInfo(no);
+			p(1,1).select();
+			p(1,1).hold('on');
+			patch(xp,yp,[1 1 0],'EdgeColor','none');
+			p(1,2).select();
+			p(1,2).hold('on');
+			patch([t1 t2 t2 t1],xpp,[1 1 0],'EdgeColor','none');
+			patch([t1 t2 t2 t1],ypp,[0.5 1 0],'EdgeColor','none');
+			for i = 1:length(noTOI)
+				c = [0.7 0.7 0.7];
+				if noTOI(i).correct == true
+					l = 'o-';
+				else
+					l = '.--';
+				end
+				t = noTOI(i).times;
+				x = noTOI(i).x;
+				y = noTOI(i).y;
+				if ~isempty(x)
+					p(1,1).select();
+					h = plot(x,y,l,'color',c,'MarkerFaceColor',c,'LineWidth',1);
+					set(h,'UserData',[noTOI(i).idx noTOI(i).correctedIndex noTOI(i).variable noTOI(i).correct noTOI(i).breakFix noTOI(i).incorrect],'ButtonDownFcn', @clickMe);
+					p(1,2).select();
+					h = plot(t,abs(x),l,t,abs(y),l,'color',c,'MarkerFaceColor',c);
+					set(h,'UserData',[noTOI(i).idx noTOI(i).correctedIndex noTOI(i).variable noTOI(i).correct noTOI(i).breakFix noTOI(i).incorrect],'ButtonDownFcn', @clickMe);
+				end
+			end
+			for i = 1:length(yesTOI)
+				c = [0.7 0 0];
+				if yesTOI(i).correct == true
+					l = 'o-';
+				else
+					l = '.--';
+				end
+				t = yesTOI(i).times;
+				x = yesTOI(i).x;
+				y = yesTOI(i).y;
+				if ~isempty(x)
+					p(1,1).select();
+					h = plot(x,y,l,'color',c,'MarkerFaceColor',c);
+					set(h,'UserData',[yesTOI(i).idx yesTOI(i).correctedIndex yesTOI(i).variable yesTOI(i).correct yesTOI(i).breakFix yesTOI(i).incorrect],'ButtonDownFcn', @clickMe);
+					p(1,2).select();
+					h = plot(t,abs(x),l,t,abs(y),l,'color',c,'MarkerFaceColor',c);
+					set(h,'UserData',[yesTOI(i).idx yesTOI(i).correctedIndex yesTOI(i).variable yesTOI(i).correct yesTOI(i).breakFix yesTOI(i).incorrect],'ButtonDownFcn', @clickMe);
+				end
+			end
+			hold off
+			p(1,1).select();
+			p(1,1).hold('off');
+			box on
+			grid on
+			p(1,1).title(['TOI PLOT for ' num2str(ego.TOI) ' (entered = ' num2str(sum(yes)) ' | did not = ' num2str(sum(no)) ')']);
+			p(1,1).xlabel('X Position (degs)')
+			p(1,1).ylabel('Y Position (degs)')
+			axis square
+			axis([-xmax*4 xmax*4 -ymax*4 ymax*4]);
+			p(1,2).select();
+			p(1,2).hold('off');
+			box on
+			grid on
+			p(1,2).title(['TOI PLOT for ' num2str(ego.TOI) ' (entered = ' num2str(sum(yes)) ' | did not = ' num2str(sum(no)) ')']);
+			p(1,2).xlabel('Time(s)')
+			p(1,2).ylabel('Absolute X/Y Position (degs)')
+			axis square
+			axis([t1 t2 0 ego.TOI(5)*4]);
+
 			function clickMe(src, ~)
 				if ~exist('src','var')
 					return
