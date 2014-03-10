@@ -1056,7 +1056,7 @@ classdef plxReader < optickaCore
 				n = length(units);
 				counts = tscounts(units,ego.tsList.chMap(i))';
 				units = units - 1; %fix the index as plxuses 0 as unsorted
-				if a == 1 || (ego.trodality > 1 && ~isequal(counts, prevcount));
+				if a == 1 || ~isequal(counts, prevcount);
 					ego.tsList.unitMap(a).units = units;
 					ego.tsList.unitMap(a).n = n;
 					ego.tsList.unitMap(a).counts = counts;
