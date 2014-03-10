@@ -992,11 +992,17 @@ classdef LFPAnalysis < analysisCore
 			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
 			LFPs = ego.LFPs;
 			if LFPs(1).reparse == true;
+				h=figure;figpos(1,[1800 1800]);set(gcf,'Color',[1 1 1]);
+				p=panel(h);
+				p.margin = [20 20 10 15]; %left bottom right top
+				[row,col]=ego.optimalLayout(ego.nLFPs);
+				p.pack(row,col);
 				for j = 1:length(LFPs)
-					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
-					title(['TIMELOCK AVERAGES: File:' ego.lfpfile ' | Channel:' LFPs(j).name]);
-					xlabel('Time (s)');
-					ylabel('LFP Raw Amplitude (mV)');
+					[i1,i2] = ind2sub([row,col], j);
+					p(i1,i2).select();
+					p(i1,i2).title(['TIMELOCK AVERAGES: File:' ego.lfpfile ' | Channel:' LFPs(j).name]);
+					p(i1,i2).xlabel('Time (s)');
+					p(i1,i2).ylabel('LFP Raw Amplitude (mV)');
 					grid on; box on
 					set(gca,'Layer','bottom')
 					hold on
@@ -1007,7 +1013,7 @@ classdef LFPAnalysis < analysisCore
 						areabar(time, avg, err, c(k,:)/2, 0.3, 'k.-', 'Color', c(k,:), 'MarkerFaceColor', c(k,:), 'LineWidth', 2);
 					end
 					legend(leg);
-					hold off
+					p(i1,i2).hold('off');
 					axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
 				end
 				if isfield(ego.ft,'av')

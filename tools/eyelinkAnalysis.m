@@ -929,6 +929,7 @@ classdef eyelinkAnalysis < analysisCore
 			patch([t1 t2 t2 t1],xpp,[1 1 0],'EdgeColor','none');
 			patch([t1 t2 t2 t1],ypp,[0.5 1 0],'EdgeColor','none');
 			for i = 1:length(noTOI)
+				if noTOI(i).incorrect == true; continue; end
 				c = [0.7 0.7 0.7];
 				if noTOI(i).correct == true
 					l = 'o-';
@@ -948,6 +949,7 @@ classdef eyelinkAnalysis < analysisCore
 				end
 			end
 			for i = 1:length(yesTOI)
+				if yesTOI(i).incorrect == true; continue; end
 				c = [0.7 0 0];
 				if yesTOI(i).correct == true
 					l = 'o-';
@@ -1047,6 +1049,7 @@ classdef eyelinkAnalysis < analysisCore
 						a = a + 1;
 					end
 				end
+				parseAsVars(ego); %need to redo this now
 				disp('---> Trial name override in place!!!')
 			end
 		end

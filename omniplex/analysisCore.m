@@ -117,6 +117,7 @@ classdef analysisCore < optickaCore
 			elseif	len == 3,	row = 3;	col = 1;
 			elseif	len == 4,	row = 2;	col = 2;
 			elseif	len < 7,	row = 3;	col = 2;
+			elseif	len < 9,	row = 4;	col = 2;
 			elseif	len < 10,	row = 3;	col = 3;
 			elseif	len < 13,	row = 4;	col = 3;
 			elseif	len < 17,	row = 4;	col = 4;
