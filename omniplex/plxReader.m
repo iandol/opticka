@@ -357,7 +357,7 @@ classdef plxReader < optickaCore
 				end
 			end
 			if force == true || isempty(ego.matfile)
-				[ego.matfile, ego.matdir] = uigetfile('*.mat','Load Behaviour MAT File');
+				[ego.matfile, ego.matdir] = uigetfile('*.mat',['Load Behaviour MAT File for ' ego.file]);
 			end
 			if force == true || isempty(ego.edffile)
 				cd(ego.matdir)
@@ -366,7 +366,7 @@ classdef plxReader < optickaCore
 				ff = regexprep(f,'\.edf','FIX\.edf','ignorecase');
 				fff = regexprep(ff,'^[a-zA-Z]+\-','','ignorecase');
 				if ~exist(f, 'file') && ~exist(ff,'file') && ~exist(fff,'file')
-					[an, ~] = uigetfile('*.edf','Load Eyelink EDF File');
+					[an, ~] = uigetfile('*.edf',['Load Eyelink EDF File for ' ego.matfile]);
 					if ischar(an)
 						ego.edffile = an;
 					else
@@ -473,6 +473,7 @@ classdef plxReader < optickaCore
 			axes(h);
 			title(['EVENT PLOT: File:' ego.file]);
 			xlabel('Time (s)');
+			set(gca,'XGrid','on','XMinorGrid','on','Layer','bottom');
 			hold on
 			color = rand(3,ego.eventList.nVars);
 			for j = 1:ego.eventList.nTrials

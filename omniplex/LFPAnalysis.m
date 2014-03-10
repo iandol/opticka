@@ -112,7 +112,7 @@ classdef LFPAnalysis < analysisCore
 				end
 			end
 			if force == true || isempty(ego.spikefile)
-				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},'Load Spike LFP File');
+				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},['Load Spike LFP File to match ' ego.lfpfile]);
 				if ischar(f) && ~isempty(f)
 					ego.spikefile = f;
 					in = struct('file', ego.spikefile, 'dir', ego.dir);
@@ -546,34 +546,41 @@ classdef LFPAnalysis < analysisCore
 			end
 			
 			ego.sp.density;
-						
+			
+			h=figure;figpos(1,[1000 1500]);set(h,'Color',[1 1 1],'Name','Density LFP Co-Plot');
+			p=panel(h);
+			p.margin = [20 20 20 25]; %left bottom right top
+			[row,col]=ego.optimalLayout(ego.nSelection);
+			p.pack(row,col);
 			for j = 1:length(ego.selectedTrials)
+				[i1,i2] = ind2sub([row,col], j);
+				p(i1,i2).select();
 				t = ['LFP: ' ego.LFPs(ego.selectedLFP).name ' | Unit: ' ego.sp.names{ego.sp.selectedUnit} ' | Sel:' ego.selectedTrials{j}.name];
-				figure;
 				[time,av,er]=getAverageTuningCurve(ego,ego.selectedTrials{j}.idx, ego.selectedLFP);
-				h1 = areabar(time,av,er,'k.-');
+				h1 = areabar(time,av,er,[],[],'k.-');
 				axis(h1.axis,[ego.plotRange(1) ego.plotRange(2) -inf inf]);
 				ylabel(h1.axis,'Voltage (mV)');
-				box(h1.axis,'off')
-				set(h1.axis,'XColor','k','YColor','k')
+				xlabel(h1.axis,'Time (s)');
+				box(h1.axis,'off');
+				set(h1.axis,'XColor','k','YColor','k','XGrid','on','XMinorGrid','on','Layer','bottom');
 				h1_pos = get(h1.axis,'Position'); % store position of first axes
 				h2.axis = axes('Position',h1_pos,...
 					'XAxisLocation','top',...
 					'YAxisLocation','right',...
 					'Color','none');
-				set(h2.axis,'XColor','k','YColor','k')
-				axis(h2.axis)
-				hold(h2.axis,'on')
+				set(h2.axis,'XColor','k','YColor','k','XTickLabel',{});
+				axis(h2.axis);
+				hold(h2.axis,'on');
 				
 				time2 = ego.sp.ft.sd{j}.time;
 				av2 = ego.sp.ft.sd{j}.avg;
 				er2 = ego.var2SE(ego.sp.ft.sd{j}.var,ego.sp.ft.sd{j}.dof);
-				h=plot(time2,av2,'k.-');
+				h=areabar(time2,av2,er2,[0.7 0.5 0.5],[],'r.-');
 				h2.axish = h;
 				axis(h2.axis,[ego.plotRange(1) ego.plotRange(2) -inf inf]);
 				ylabel(h2.axis,'Firing Rate (Hz)');
 				box(h2.axis,'off')
-				title(t);
+				p(i1,i2).title(t);
 			end
 			
 		end
