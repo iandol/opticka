@@ -1,7 +1,7 @@
 classdef LFPAnalysis < analysisCore
-%LFPAnalysis Wraps the native and fieldtrip analysis around our PLX/PL2 reading.
+	%LFPAnalysis Wraps the native and fieldtrip analysis around our PLX/PL2 reading.
 	
-%------------------PUBLIC PROPERTIES----------%
+	%------------------PUBLIC PROPERTIES----------%
 	properties
 		%> plexon file containing the LFP data
 		lfpfile@char
@@ -72,7 +72,7 @@ classdef LFPAnalysis < analysisCore
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
-
+		
 		% ===================================================================
 		%> @brief Constructor
 		%>
@@ -152,7 +152,7 @@ classdef LFPAnalysis < analysisCore
 			getFTLFPs(ego);
 			plot(ego,'all');
 		end
-
+		
 		
 		% ===================================================================
 		%> @brief
@@ -181,9 +181,9 @@ classdef LFPAnalysis < analysisCore
 			in.plotRange = ego.plotRange;
 			in.selectedBehaviour = ego.selectedBehaviour;
 			setSelection(ego.sp, in); %set spike anal to same trials etc.
-			syncData(ego.sp.p, ego.p); %copy any parsed data 
+			syncData(ego.sp.p, ego.p); %copy any parsed data
 			lazyParse(ego.sp); %lazy parse the spikes
-			syncData(ego.p, ego.sp.p); %copy any new parsed data back 
+			syncData(ego.p, ego.sp.p); %copy any new parsed data back
 			showInfo(ego.sp);
 		end
 		
@@ -214,24 +214,24 @@ classdef LFPAnalysis < analysisCore
 			ft.cfg.trl = [];
 			a=1;
 			for k = 1:LFPs(1).nTrials
-					ft.time{a} = LFPs(1).trials(k).time';
-					for i = 1:ego.nLFPs
-						dat(i,:) = LFPs(i).trials(k).data';
-					end
-					ft.trial{a} = dat;
-					window = LFPs(1).trials(k).winsteps;
-					%LFPs(1).sample-1 is the offset in samples due to a
-					%non-zero start time, fieldtrip is incredibly annoying
-					%limited to using samples to store timestamps, far from
-					%ideal!!!
-					ft.sampleinfo(a,1)= LFPs(1).trials(k).startIndex + LFPs(1).sample-1; 
-					ft.sampleinfo(a,2)= LFPs(1).trials(k).endIndex + LFPs(1).sample-1;
-					ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -window LFPs(1).trials(k).t1];
-					ft.trialinfo(a,1) = LFPs(1).trials(k).variable;
-					a = a + 1;
+				ft.time{a} = LFPs(1).trials(k).time';
+				for i = 1:ego.nLFPs
+					dat(i,:) = LFPs(i).trials(k).data';
+				end
+				ft.trial{a} = dat;
+				window = LFPs(1).trials(k).winsteps;
+				%LFPs(1).sample-1 is the offset in samples due to a
+				%non-zero start time, fieldtrip is incredibly annoying
+				%limited to using samples to store timestamps, far from
+				%ideal!!!
+				ft.sampleinfo(a,1)= LFPs(1).trials(k).startIndex + LFPs(1).sample-1;
+				ft.sampleinfo(a,2)= LFPs(1).trials(k).endIndex + LFPs(1).sample-1;
+				ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -window LFPs(1).trials(k).t1];
+				ft.trialinfo(a,1) = LFPs(1).trials(k).variable;
+				a = a + 1;
 			end
 			ft.uniquetrials = unique(ft.trialinfo);
-	
+			
 			fprintf('Parsing into fieldtrip format took %g ms\n',round(toc*1000));
 			
 			if ~isempty(ft)
@@ -248,7 +248,7 @@ classdef LFPAnalysis < analysisCore
 		function ftPreProcess(ego, cfg, removeLineNoise)
 			if isempty(ego.ft); getFTLFPs(ego); end
 			if ~exist('removeLineNoise','var');removeLineNoise = false;end
-			if ~exist('cfg','var');cfg = [];end				
+			if ~exist('cfg','var');cfg = [];end
 			if isfield(ego.ft,'ftOld')
 				ft = ego.ft.ftOld;
 			else
@@ -291,10 +291,10 @@ classdef LFPAnalysis < analysisCore
 				cfg.trials = ego.selectedTrials{i}.idx;
 				av{i} = ft_timelockanalysis(cfg, ft);
 				av{i}.cfgUsed = cfg;
-				if strcmpi(cfg.covariance, 'yes')					
+				if strcmpi(cfg.covariance, 'yes')
 					disp(['-->> Covariance for Var:' num2str(i) ' = ' num2str(mean(av{i}.cov))]);
 				end
-			end		
+			end
 			ego.ft.av = av;
 			if ego.doPlots; drawAverageLFPs(ego); end
 		end
@@ -323,7 +323,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.bpfilter			= 'yes';
 				cfg.bpfilttype			= 'but';
 				cfg.bpfreq				= ego.bpfreq{j};
-				cfg.bpfiltdir			= 'twopass'; %filter direction, 'twopass', 'onepass' or 'onepass-reverse' (default = 'twopass') 
+				cfg.bpfiltdir			= 'twopass'; %filter direction, 'twopass', 'onepass' or 'onepass-reverse' (default = 'twopass')
 				cfg.bpfiltord			= order;
 				cfg.bpinstabilityfix	= 'reduce';
 				cfg.rectify				= rectify;
@@ -344,7 +344,7 @@ classdef LFPAnalysis < analysisCore
 					cfg.lpfilter			= 'yes';
 					cfg.lpfreq				= 8;
 					cfg.lpfilttype			= 'but';
-					cfg.lpfiltdir			= 'twopass'; %filter direction, 'twopass', 'onepass' or 'onepass-reverse' (default = 'twopass') 
+					cfg.lpfiltdir			= 'twopass'; %filter direction, 'twopass', 'onepass' or 'onepass-reverse' (default = 'twopass')
 					cfg.lpfiltord			= 8;
 					cfg.lpinstabilityfix	= 'reduce';
 					bp{j} = ft_preprocessing(cfg,bp{j});
@@ -369,10 +369,10 @@ classdef LFPAnalysis < analysisCore
 					cfg.trials				= ego.selectedTrials{i}.idx;
 					bp{j}.av{i} = ft_timelockanalysis(cfg,bp{j});
 					bp{j}.av{i}.cfgUsed = cfg;
-					if strcmpi(cfg.covariance,'yes')					
+					if strcmpi(cfg.covariance,'yes')
 						disp(['-->> Covariance for ' ego.selectedTrials{i}.name ' = ' num2str(mean(bp{j}.av{i}.cov))]);
 					end
-				end	
+				end
 			end
 			ego.ft.bp = bp;
 			if ego.doPlots; drawBandPass(ego); end
@@ -427,28 +427,28 @@ classdef LFPAnalysis < analysisCore
 						cfg.method      = 'mtmconvol';
 						cfg.taper		= 'hanning';
 						lf				= round(1 / cfg.tw);
-						cfg.foi         = lf:2:80;						  % analysis frequencies 
+						cfg.foi         = lf:2:80;						  % analysis frequencies
 						cfg.t_ftimwin	= ones(length(cfg.foi),1).*tw;   % length of fixed time window
 					case 'fix2'
 						cfg.method      = 'mtmconvol';
 						cfg.taper       = 'hanning';
-						cfg.foi         = 2:2:80;						  % analysis frequencies 
+						cfg.foi         = 2:2:80;						  % analysis frequencies
 						cfg.t_ftimwin	= cycles./cfg.foi;					  % x cycles per time window
 					case 'mtm1'
 						cfg.method      = 'mtmconvol';
 						cfg.taper       = 'dpss';
-						cfg.foi         = 2:2:80;						  % analysis frequencies 
+						cfg.foi         = 2:2:80;						  % analysis frequencies
 						cfg.tapsmofrq	= cfg.foi * cfg.smooth;
 						cfg.t_ftimwin	= cycles./cfg.foi;					  % x cycles per time window
 					case 'mtm2'
 						cfg.method      = 'mtmconvol';
 						cfg.taper       = 'dpss';
-						cfg.foi         = 2:2:80;						  % analysis frequencies 
+						cfg.foi         = 2:2:80;						  % analysis frequencies
 					case 'morlet'
 						cfg.method		= 'wavelet';
 						cfg.taper		= '';
 						cfg.width		= width;
-						cfg.foi         = 2:2:80;						  % analysis frequencies 
+						cfg.foi         = 2:2:80;						  % analysis frequencies
 				end
 			elseif ~isempty(cfg)
 				preset = 'custom';
@@ -496,22 +496,22 @@ classdef LFPAnalysis < analysisCore
 				tempdat				= selectFTTrials(ego,dati,ego.selectedTrials{j}.idx);
 				
 				cfg					= [];
-
-				cfg.timwin			= [-0.15 0.15]; 
-				cfg.spikechannel	= spike.label{unit}; 
+				
+				cfg.timwin			= [-0.15 0.15];
+				cfg.spikechannel	= spike.label{unit};
 				cfg.channel			= ft.label;
 				cfg.latency			= [-0.4 0];
 				staPre				= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.ft.staPre{j}	= staPre;
 				ego.ft.staPre{j}.name = name;
-
+				
 				cfg.latency			= [0 0.4];
 				staPost				= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.ft.staPost{j}	= staPost;
 				ego.ft.staPost{j}.name = name;
-
+				
 				cfg					= [];
-
+				
 				cfg.method			= 'mtmfft';
 				cfg.foilim			= [10 100]; % cfg.timwin determines spacing
 				cfg.timwin			= [-0.05 0.05]; % time window of 100 msec
@@ -519,7 +519,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.spikechannel	= spike.label{unit};
 				cfg.channel			= ft.label{ego.selectedLFP};
 				stsFFT				= ft_spiketriggeredspectrum(cfg, tempft, tempspike);
-
+				
 				ang = squeeze(angle(stsFFT.fourierspctrm{1}));
 				mag = squeeze(abs(stsFFT.fourierspctrm{1}));
 				ego.ft.stsFFT{j} = stsFFT;
@@ -532,7 +532,7 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -586,7 +586,7 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -608,12 +608,12 @@ classdef LFPAnalysis < analysisCore
 			end
 			
 			switch sel
-				case 'normal'	
-					ego.drawRawLFPs(); drawnow;		
+				case 'normal'
+					ego.drawRawLFPs(); drawnow;
 					ego.drawAverageLFPs(); drawnow;
 				case 'all'
-					ego.drawAllLFPs();			
-					ego.drawRawLFPs();		
+					ego.drawAllLFPs();
+					ego.drawRawLFPs();
 					ego.drawAverageLFPs();
 				case 'continuous'
 					ego.drawAllLFPs(); drawnow;
@@ -637,7 +637,7 @@ classdef LFPAnalysis < analysisCore
 			nLFPs = 0;
 			if ~isempty(ego.LFPs)
 				nLFPs = length(ego.LFPs);
-			end	
+			end
 		end
 		
 		% ===================================================================
@@ -649,7 +649,7 @@ classdef LFPAnalysis < analysisCore
 			nSelection = 0;
 			if ~isempty(ego.selectedTrials)
 				nSelection = length(ego.selectedTrials);
-			end	
+			end
 		end
 		
 		% ===================================================================
@@ -714,7 +714,7 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function select(ego)	
+		function select(ego)
 			cuttrials = '[ ';
 			if ~isempty(ego.cutTrials)
 				cuttrials = [cuttrials num2str(ego.cutTrials)];
@@ -733,10 +733,10 @@ classdef LFPAnalysis < analysisCore
 				map{2} = num2str(ego.map{2});
 				map{3} = num2str(ego.map{3});
 			end
-
+			
 			sel = num2str(ego.selectedLFP);
 			beh = ego.selectedBehaviour;
-
+			
 			options.Resize='on';
 			options.WindowStyle='normal';
 			options.Interpreter='tex';
@@ -752,8 +752,8 @@ classdef LFPAnalysis < analysisCore
 			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
 			drawnow;
 			if ~isempty(answer)
-				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3}); 
-				if ~isempty(answer{4}) 
+				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3});
+				if ~isempty(answer{4})
 					ego.cutTrials = str2num(answer{4});
 				end
 				ego.map = map;
@@ -767,13 +767,13 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 	end
-
+	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-	
+		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -809,7 +809,7 @@ classdef LFPAnalysis < analysisCore
 					trials(k).window = window;
 					trials(k).winsteps = winsteps;
 					minL = min([length(trials(k).data) minL]);
- 					maxL = max([length(trials(k).data) maxL]);
+					maxL = max([length(trials(k).data) maxL]);
 				end
 				LFPs(j).trials = trials;
 				LFPs(j).minL = minL;
@@ -821,9 +821,9 @@ classdef LFPAnalysis < analysisCore
 			
 			if ~isempty(LFPs(1).trials)
 				ego.LFPs = LFPs;
-			end	
+			end
 		end
-				
+		
 		% ===================================================================
 		%> @brief selectTrials selects trials based on several filters
 		%>
@@ -896,9 +896,9 @@ classdef LFPAnalysis < analysisCore
 			if ~exist('sel','var')
 				sel = ego.selectedLFP;
 			end
-
+			
 			LFP = ego.LFPs(sel);
-
+			
 			p=panel(h);
 			[row,col]=ego.optimalLayout(ego.nSelection);
 			p.pack(row,col);
@@ -907,7 +907,7 @@ classdef LFPAnalysis < analysisCore
 				p(i1,i2).select();
 				p(i1,i2).title(['LFP & EVENT PLOT: File:' ego.lfpfile ' | Channel:' LFP.name ' | Group:' num2str(j)]);
 				p(i1,i2).xlabel('Time (s)');
- 				p(i1,i2).ylabel('LFP Raw Amplitude (mV)');
+				p(i1,i2).ylabel('LFP Raw Amplitude (mV)');
 				p(i1,i2).hold('on');
 				for k = 1:length(ego.selectedTrials{j}.idx)
 					trial = LFP.trials(ego.selectedTrials{j}.idx(k));
@@ -940,7 +940,7 @@ classdef LFPAnalysis < analysisCore
 				'Position',[52 1 50 20],'Callback',@nextChannel);
 			
 			ego.panels.raw = p;
-
+			
 			function nextChannel(src,~)
 				ego.selectedLFP = ego.selectedLFP + 1;
 				if ego.selectedLFP > length(ego.LFPs)
@@ -983,7 +983,7 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -1031,11 +1031,11 @@ classdef LFPAnalysis < analysisCore
 					ylabel('LFP Raw Amplitude (mV)');
 					title(['FIELDTRIP TIMELOCK ANALYSIS: File:' ego.lfpfile ' | Channel:' av{1}.label{:} ' | LFP: ']);
 				end
-			end				
+			end
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -1047,7 +1047,7 @@ classdef LFPAnalysis < analysisCore
 			figure;figpos(1,[2500 800]);set(gcf,'Color',[1 1 1]);
 			title(['RAW LFP & EVENT PLOT: File:' ego.lfpfile ' | Channel: All | LFP: All']);
 			xlabel('Time (s)');
- 			ylabel('LFP Raw Amplitude (mV)');
+			ylabel('LFP Raw Amplitude (mV)');
 			hold on
 			c = ego.optimalColours(length(LFPs));
 			for j = 1:length(LFPs)
@@ -1110,7 +1110,7 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -1162,82 +1162,82 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
 		function drawBandPass(ego)
-				if ~isfield(ego.ft,'bp') || isempty(ego.ft.bp);	return;	end
-				disp('Drawing Frequency Bandpass...')
-				bp = ego.ft.bp;
-				h=figure;figpos(1,[1500 1500]);set(h,'Color',[1 1 1]);
-				p=panel(h);
-				p.margin = [20 20 10 15]; %left bottom right top
-				p.fontsize = 10;
-				len=length(bp)+1;
-				[row,col]=ego.optimalLayout(len);
-				p.pack(row,col);
-				for j = 1:length(bp)
-						[i1,i2] = ind2sub([row,col], j);
-						pp=p(i1,i2);
-						pp.margin = [0 0 15 0];
-						pp.pack(2,1);
-						pp(1,1).select();
-						pp(1,1).hold('on');
-						areabar(bp{j}.av{1}.time,bp{j}.av{1}.avg(1,:),bp{j}.av{1}.var(1,:),[.5 .5 .5],'k');
-						areabar(bp{j}.av{2}.time,bp{j}.av{2}.avg(1,:),bp{j}.av{2}.var(1,:),[.7 .5 .5],'r');
-						if length(bp{j}.av) > 2
-							areabar(bp{j}.av{3}.time,bp{j}.av{3}.avg(1,:),bp{j}.av{3}.var(1,:),[.5 .5 .7],'b');
-						end
-						pp(1,1).hold('off');
-						set(gca,'XTickLabel','')
-						box on; grid off
-						axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
-						pp(1,1).ylabel(['BP ' ego.bpnames{j} '=' num2str(bp{j}.freq)]);
-						pp(1,1).title(['FIELDTRIP ' ego.bpnames{j} ' BANDPASS ANALYSIS: File:' ego.lfpfile ' | Channel:' bp{j}.av{1}.label{:}]);
-						pp(1,1).margin = [1 1 1 1];
-
-						time = bp{j}.av{1}.time;
-						fig = bp{j}.av{2}.avg(1,:);
-						grnd = bp{j}.av{1}.avg(1,:);
-						idx1 = ego.findNearest(time, -0.2);
-						idx2 = ego.findNearest(time, 0);
-						idx3 = ego.findNearest(time, 0.05);
-						idx4 = ego.findNearest(time, 0.2);
-						pre = mean([mean(grnd(idx1:idx2)), mean(fig(idx1:idx2))]); 
-						res = (fig - grnd) ./ pre;
-						freqdiffs(j) = mean(fig(idx3:idx4)) / mean(grnd(idx3:idx4));
-						pp(2,1).select();
-						plot(time,res,'k.-','MarkerSize',8);
-						box on; grid on
-						axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
-						pp(2,1).ylabel('Residuals (norm)')
-						pp(2,1).margin = [1 1 1 1];
+			if ~isfield(ego.ft,'bp') || isempty(ego.ft.bp);	return;	end
+			disp('Drawing Frequency Bandpass...')
+			bp = ego.ft.bp;
+			h=figure;figpos(1,[1500 1500]);set(h,'Color',[1 1 1]);
+			p=panel(h);
+			p.margin = [20 20 10 15]; %left bottom right top
+			p.fontsize = 10;
+			len=length(bp)+1;
+			[row,col]=ego.optimalLayout(len);
+			p.pack(row,col);
+			for j = 1:length(bp)
+				[i1,i2] = ind2sub([row,col], j);
+				pp=p(i1,i2);
+				pp.margin = [0 0 15 0];
+				pp.pack(2,1);
+				pp(1,1).select();
+				pp(1,1).hold('on');
+				areabar(bp{j}.av{1}.time,bp{j}.av{1}.avg(1,:),bp{j}.av{1}.var(1,:),[.5 .5 .5],'k');
+				areabar(bp{j}.av{2}.time,bp{j}.av{2}.avg(1,:),bp{j}.av{2}.var(1,:),[.7 .5 .5],'r');
+				if length(bp{j}.av) > 2
+					areabar(bp{j}.av{3}.time,bp{j}.av{3}.avg(1,:),bp{j}.av{3}.var(1,:),[.5 .5 .7],'b');
 				end
-				p(row,col).select();
-				bar(freqdiffs,'FaceColor',[0.4 0.4 0.4]);
-				set(gca,'XTick',1:length(bp),'XTickLabel',ego.bpnames);
-				p(row,col).xlabel('Frequency Band')
-				p(row,col).ylabel('Normalised Residuals')
-				p(row,col).title('Normalised Difference at 0.05 - 0.2sec')
-				disp('Plotting Bandpass Analysis Finished...')
-				ego.panels.bp = p;
+				pp(1,1).hold('off');
+				set(gca,'XTickLabel','')
+				box on; grid off
+				axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+				pp(1,1).ylabel(['BP ' ego.bpnames{j} '=' num2str(bp{j}.freq)]);
+				pp(1,1).title(['FIELDTRIP ' ego.bpnames{j} ' BANDPASS ANALYSIS: File:' ego.lfpfile ' | Channel:' bp{j}.av{1}.label{:}]);
+				pp(1,1).margin = [1 1 1 1];
+				
+				time = bp{j}.av{1}.time;
+				fig = bp{j}.av{2}.avg(1,:);
+				grnd = bp{j}.av{1}.avg(1,:);
+				idx1 = ego.findNearest(time, -0.2);
+				idx2 = ego.findNearest(time, 0);
+				idx3 = ego.findNearest(time, 0.05);
+				idx4 = ego.findNearest(time, 0.2);
+				pre = mean([mean(grnd(idx1:idx2)), mean(fig(idx1:idx2))]);
+				res = (fig - grnd) ./ pre;
+				freqdiffs(j) = mean(fig(idx3:idx4)) / mean(grnd(idx3:idx4));
+				pp(2,1).select();
+				plot(time,res,'k.-','MarkerSize',8);
+				box on; grid on
+				axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+				pp(2,1).ylabel('Residuals (norm)')
+				pp(2,1).margin = [1 1 1 1];
+			end
+			p(row,col).select();
+			bar(freqdiffs,'FaceColor',[0.4 0.4 0.4]);
+			set(gca,'XTick',1:length(bp),'XTickLabel',ego.bpnames);
+			p(row,col).xlabel('Frequency Band')
+			p(row,col).ylabel('Normalised Residuals')
+			p(row,col).title('Normalised Difference at 0.05 - 0.2sec')
+			disp('Plotting Bandpass Analysis Finished...')
+			ego.panels.bp = p;
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
 		function drawLFPFrequencies(ego,varargin)
-			if isempty(varargin); 
+			if isempty(varargin);
 				name = 'fqfix1';
 			elseif length(varargin)==1 && length(varargin{1}) > 1
 				varargin = varargin{1};
 			end
-				if length(varargin)>0
+			if length(varargin)>0
 				name = varargin{1};
 				while iscell(name);name=name{1};end
 			end

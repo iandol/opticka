@@ -375,6 +375,7 @@ classdef spikeAnalysis < analysisCore
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			if ~isempty(ego.selectedTrials)
 				for i = 1:length(ego.selectedTrials)
+					disp(['---> Plotting eye position for: ' ego.selectedTrials{i}.name]);
 					ego.p.eA.plot(ego.selectedTrials{i}.idx);
 				end
 			end
@@ -426,7 +427,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.outputunit		= 'rate';
 				cfg.latency			= ego.plotRange;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				sd{j}				= ft_spikedensity(cfg, ego.ft);
+				sd{j}					= ft_spikedensity(cfg, ego.ft);
 				
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
@@ -683,12 +684,12 @@ classdef spikeAnalysis < analysisCore
 			for j = 1:length(ego.selectedTrials)
 				[i1,i2] = ind2sub([row,col], j);
 				p(i1,i2).select();
-				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				cfg						= [];
+				cfg.trials				= ego.selectedTrials{j}.idx;
+				cfg.spikechannel		= ego.names{ego.selectedUnit};
 				cfg.spikelength		= 1;
 				%cfg.topplotfunc		= 'line'; % plot as a line
-				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
+				cfg.errorbars			= 'conf95%'; % plot with the standard deviation
 				cfg.interactive		= 'no'; % toggle off interactive mode
 				ft_spike_plot_raster(cfg, ego.ft, psth{j})
 				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file])
