@@ -653,7 +653,7 @@ classdef eyelinkAnalysis < analysisCore
 			ylabel(q(2,2),'Y Degrees')
 			zlabel(q(2,2),'Trial')
 			
-			p(2).margin = 50;
+			p(2).margin = 20;
 			
 			assignin('base','xvals',xvals)
 			assignin('base','yvals',yvals)

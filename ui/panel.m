@@ -884,7 +884,7 @@ classdef (Sealed = true) panel < handle
 				header = [header 'Uncommitted ' p.state.name ': '];
 			end
 			if p.isRoot()
-				pp = ['attached to Figure ' num2str(p.h_figure)];
+				pp = ['attached to Figure ' num2str(double(p.h_figure))];
 			else
 				if isempty(p.packspec)
 					pp = 'stretch';

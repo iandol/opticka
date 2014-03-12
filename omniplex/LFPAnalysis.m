@@ -471,24 +471,38 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function cfgUsed=ftSpikeLFP(ego, unit)
-			if ~exist('unit','var'); unit = ego.sp.selectedUnit;
+		function cfgUsed=ftSpikeLFP(ego, unit, interpolate)
+			if ~exist('unit','var') || isempty(unit); unit = ego.sp.selectedUnit;
 			else ego.sp.selectedUnit = unit; end
-			plotTogether(ego)
+			if ~exist('interpolate','var'); 
+				interpolate = true; iVal = 0.0015;
+			elseif isnumeric(interpolate)
+				iVal = interpolate; interpolate = true; 
+			else
+				iVal = 0.0015;
+			end
+			if isempty(ego.sp.ft)
+				plotTogether(ego); drawnow;
+			end
 			ft = ego.ft;
 			spike = ego.sp.ft;
 			dat = ft_appendspike([],ft, spike);
 			
-			try
-				cfg					= [];
-				cfg.method			= 'nan'; % remove the replaced segment with interpolation
-				cfg.timwin			= [-0.001 0.001]; % remove 4 ms around every spike
-				cfg.spikechannel	= spike.label{unit};
-				cfg.channel			= ft.label;
-				dati					= ft_spiketriggeredinterpolation(cfg, dat);
-			catch
-				warning('Interpolation of spikes failed, using raw data');
-				dati=dat;
+			if interpolate
+				try
+					cfg					= [];
+					cfg.method			= 'nan'; % remove the replaced segment with interpolation
+					cfg.timwin			= [-iVal iVal]; % remove 3 ms around every spike
+					cfg.interptoi		= iVal*4; %value, time in seconds used for interpolation
+					cfg.spikechannel	= spike.label{unit};
+					cfg.channel			= ft.label;
+					dati					= ft_spiketriggeredinterpolation(cfg, dat);
+				catch ME
+					dati=dat;
+					warning('Spike Interpolation of LFP failed, using raw data');
+					disp(getReport(ME,'extended'));
+					pause(1);
+				end
 			end
 			
 			for j = 1:length(ego.selectedTrials)
@@ -501,12 +515,12 @@ classdef LFPAnalysis < analysisCore
 				cfg.timwin					= [-0.15 0.15];
 				cfg.spikechannel			= spike.label{unit};
 				cfg.channel					= ft.label;
-				cfg.latency					= [-0.3 0];
+				cfg.latency					= [-0.3 0.05];
 				staPre						= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.ft.staPre{j}			= staPre;
 				ego.ft.staPre{j}.name	= name;
 				
-				cfg.latency					= [0 0.3];
+				cfg.latency					= [-0.1 0.25];
 				staPost						= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.ft.staPost{j}			= staPost;
 				ego.ft.staPost{j}.name	= name;
@@ -514,7 +528,7 @@ classdef LFPAnalysis < analysisCore
 				cfg							= [];
 				cfg.method					= 'mtmfft';
 				cfg.foilim					= [5 100]; % cfg.timwin determines spacing
-				cfg.timwin					= [-0.05 0.05]; % time window of 100 msec
+				cfg.timwin					= [-0.025 0.025]; % time window of 100 msec
 				cfg.taper					= 'hanning';
 				cfg.spikechannel			= spike.label{unit};
 				cfg.channel					= ft.label{ego.selectedLFP};
@@ -614,7 +628,7 @@ classdef LFPAnalysis < analysisCore
 				args = {};
 			end
 			
-			switch sel
+			switch lower(sel)
 				case 'normal'
 					ego.drawRawLFPs(); drawnow;
 					ego.drawAverageLFPs(); drawnow;
@@ -632,6 +646,8 @@ classdef LFPAnalysis < analysisCore
 					ego.drawLFPFrequencies(args(:)); drawnow;
 				case {'bp','bandpass'}
 					ego.drawBandPass(); drawnow;
+				case {'slfp','spikelfp'}
+					ego.drawSpikeLFP(); drawnow;
 			end
 		end
 		
@@ -1111,7 +1127,8 @@ classdef LFPAnalysis < analysisCore
 			disp('Drawing Spike LFP correlations...')
 			ft = ego.ft;
 			for j = 1:length(ego.selectedTrials)
-				h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',num2str(ego.selectedTrials{j}.sel));
+				h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
+					[ego.lfpfile ' ' ft.staPre{j}.name]);
 				p=panel(h);
 				p.margin = [20 20 10 15]; %left bottom right top
 				p.fontsize = 10;
@@ -1119,36 +1136,54 @@ classdef LFPAnalysis < analysisCore
 				
 				p(1,1).select();
 				plot(ft.staPre{j}.time, ft.staPre{j}.avg(:,:)')
+				maxPre(j) = max(max(ft.staPre{j}.avg(:,:)));
+				minPre(j) = min(min(ft.staPre{j}.avg(:,:)));
 				box on
 				grid on
 				legend(ft.staPre{j}.cfg.channel)
 				xlabel('Time (s)')
 				xlim(ft.staPre{j}.cfg.timwin)
-				title([ft.staPre{j}.name ' PRE STA \newlineFile:' ego.lfpfile])
+				title(['PRE STA'])
 				
 				p(1,2).select();
 				plot(ft.staPost{j}.time, ft.staPost{j}.avg(:,:)')
+				maxPost(j) = max(max(ft.staPost{j}.avg(:,:)));
+				minPost(j) = min(min(ft.staPost{j}.avg(:,:)));
 				box on
 				grid on
 				legend(ft.staPost{j}.cfg.channel)
 				xlabel('Time (s)')
 				xlim(ft.staPost{j}.cfg.timwin)
-				title([ft.staPost{j}.name ' POST STA \newlineFile:' ego.lfpfile])
+				title(['POST STA'])
 				
 				p(2,1).select();
 				[av,ae] = stderr(ft.stsFFT{j}.ang);
 				areabar(ft.stsFFT{j}.freq,rad2ang(av),rad2ang(ae));
-				legend(ft.stsFFT{j}.cfg.channel)
-				title([ft.stsFFT{j}.name ' Spike Triggered Phase \newlineFile:' ego.lfpfile]);
-				xlabel('Frequency (Hz)')
+				legend(ft.stsFFT{j}.cfg.channel);
+				title(['Spike Triggered Phase']);
+				xlabel('Frequency (Hz)');
 				ylabel('Angle (deg)');
 				
 				p(2,2).select();
 				[mv,me] = stderr(ft.stsFFT{j}.mag);
 				areabar(ft.stsFFT{j}.freq, mv, me);
 				legend(ft.stsFFT{j}.cfg.channel)
-				title([ft.stsFFT{j}.name ' Spike Triggered Amplitude \newlineFile:' ego.lfpfile]);
-				xlabel('Frequency (Hz)')
+				title(['Spike Triggered Amplitude']);
+				xlabel('Frequency (Hz)');
+				
+				pp{j} = p;
+			end
+			
+			minPre = min(minPre);
+			minPost = min(minPost);
+			maxPre = max(maxPre);
+			maxPost = max(maxPost);
+			for j = 1:length(pp)
+				p = pp{j};
+				p(1,1).select();
+				axis([-inf inf minPre MaxPre]);
+				p(1,2).select();
+				axis([-inf inf minPost MaxPost])
 			end
 		end
 		
