@@ -150,7 +150,6 @@ classdef LFPAnalysis < analysisCore
 			ego.ft = struct();
 			parseLFPs(ego);
 			select(ego);
-			selectTrials(ego);
 			getFieldTripLFPs(ego);
 			plot(ego,'all');
 		end
@@ -293,6 +292,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.trials = ego.selectedTrials{i}.idx;
 				av{i} = ft_timelockanalysis(cfg, ft);
 				av{i}.cfgUsed = cfg;
+				av{i}.name = ego.selectedTrials{i}.name;
 				if strcmpi(cfg.covariance, 'yes')
 					disp(['-->> Covariance for Var:' num2str(i) ' = ' num2str(mean(av{i}.cov))]);
 				end
@@ -897,7 +897,7 @@ classdef LFPAnalysis < analysisCore
 			for j = 1:length(ego.selectedTrials)
 				[i1,i2] = ind2sub([row,col], j);
 				p(i1,i2).select();
-				p(i1,i2).title(['LFP & EVENT PLOT: File:' ego.lfpfile ' | Channel:' LFP.name ' | Group:' num2str(j)]);
+				p(i1,i2).title(['LFP & EVENT PLOT: File:' ego.lfpfile ' | Channel:' LFP.name ' | Group:' num2str(j) ' | Name:' ego.selectedTrials{j}.name]);
 				p(i1,i2).xlabel('Time (s)');
 				p(i1,i2).ylabel('LFP Raw Amplitude (mV)');
 				p(i1,i2).hold('on');

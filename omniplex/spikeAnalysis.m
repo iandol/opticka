@@ -278,7 +278,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function select(ego)
-			if isempty(ego.trial); warningdlg('Data not parsed yet...');return;end
+			if isempty(ego.trial); warndlg('Data not parsed yet...');return;end
 			ego.selectOverride = false;
 			cuttrials = '[ ';
 			if ~isempty(ego.cutTrials) 

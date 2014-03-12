@@ -469,6 +469,7 @@ classdef eyelinkAnalysis < analysisCore
 			meanx = [];
 			meany = [];
 			stdey = [];
+			sacc = [];
 			xvals = [];
 			yvals = [];
 			tvals = [];
@@ -476,28 +477,34 @@ classdef eyelinkAnalysis < analysisCore
 			medy = [];
 			early = 0;
 			
-			
 			map = ego.optimalColours(length(ego.vars));
 
 			if isempty(select)
 				thisVarName = 'ALL VARS ';
 			elseif length(select) > 1
-				thisVarName = 'SELECT TRIALS ';
+				thisVarName = 'SELECTION ';
 			else
 				thisVarName = ['VAR' num2str(select) ' '];
 			end
 			
 			maxv = 1;
 			ppd = ego.ppd;
+			if ~isempty(ego.TOI)
+				t1 = ego.TOI(1); t2 = ego.TOI(2);
+			else
+				t1 = 0; t2 = 0.1;
+			end
 			
 			for i = idx
-				if idxInternal == true %we're using the eyelin index which includes incorrects
+				if idxInternal == true %we're using the eyelink index which includes incorrects
 					f = i;
 				else %we're using an external index which excludes incorrects
 					f = find([ego.trials.correctedIndex] == i);
 				end
 				if isempty(f); continue; end
+				
 				thisTrial = ego.trials(f(1));
+				
 				if thisTrial.variable == 1010 %early edf files were broken, 1010 signifies this
 					c = rand(1,3);
 				else
@@ -505,22 +512,20 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				
 				if isempty(select) || length(select) > 1 || ~isempty(intersect(select,thisTrial.variable));
-				else
-					continue
+				else continue
 				end
-				t = thisTrial.times;
-				ix = find((t >= -400) & (t <= 800));
+				
+				t = thisTrial.times / 1e3; %convert to seconds
+				ix = find((t >= -0.4) & (t <= 0.8));
 				t=t(ix);
-				x = thisTrial.gx(ix);
-				y = thisTrial.gy(ix);
-				x = x / ppd;
-				y = y / ppd;
+				x = thisTrial.gx(ix) / ppd;
+				y = thisTrial.gy(ix) / ppd;
 
-				if min(x) < -65 || max(x) > 65 || min(y) < -65 || max(y) > 65
-					x(x<0) = -20;
-					x(x>2000) = 20;
-					y(y<0) = -20;
-					y(y>2000) = 20;
+				if min(x) < -20 || max(x) > 20 || min(y) < -20 || max(y) > 20
+					x(x < -20) = -20;
+					x(x > 20) = 20;
+					y(y < -20) = -20;
+					y(y > 20) = 20;
 				end
 
 				q(1,1).select();
@@ -541,24 +546,26 @@ classdef eyelinkAnalysis < analysisCore
 				p(2).hold('on')
 				for fix=1:length(thisTrial.fixations)
 					f=thisTrial.fixations(fix);
-					plot3([f.time f.time+f.length],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
+					plot3([f.time/1e3 f.time/1e3+f.length/1e3],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
 						'LineWidth',1,'MarkerSize',5,'MarkerEdgeColor',[0 0 0],...
 						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
 				end
 				for sac=1:length(thisTrial.saccades)
 					s=thisTrial.saccades(sac);
-					plot3([s.time s.time+s.length],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
+					plot3([s.time/1e3 s.time/1e3+s.length/1e3],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
 						'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
 						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
 				end
 				p(2).margin = [50]; %left bottom right top
-
-				idxt = find(t >= 0 & t <= 100);
+				
+				idxt = find(t >= t1 & t <= t2);
 
 				tvals{a} = t(idxt);
 				xvals{a} = x(idxt);
 				yvals{a} = y(idxt);
-
+				if isfield(thisTrial,'firstSaccade') && thisTrial.firstSaccade > 0
+					sacc = [sacc thisTrial.firstSaccade/1e3];
+				end
 				meanx = [meanx mean(x(idxt))];
 				meany = [meany mean(y(idxt))];
 				medx = [medx median(x(idxt))];
@@ -586,9 +593,9 @@ classdef eyelinkAnalysis < analysisCore
 			box on
 			axis(round([-display(1)/3 display(1)/3 -display(2)/3 display(2)/3]))
 			%axis square
-			title(q(1,1),[thisVarName upper(type) ': X vs. Y Eye Position in Degrees'])
-			xlabel(q(1,1),'X Degrees')
-			ylabel(q(1,1),'Y Degrees')
+			title(q(1,1),[thisVarName upper(type) ': X vs. Y Eye Position'])
+			xlabel(q(1,1),'X Deg')
+			ylabel(q(1,1),'Y Deg')
 			
 			q(1,2).select();
 			grid on
@@ -596,12 +603,13 @@ classdef eyelinkAnalysis < analysisCore
 			axis tight;
 			ax = axis;
 			if maxv > 10; maxv = 10; end
-			axis([-200 400 0 maxv])
-			t=sprintf('ABS Mean/SD 100ms: X=%.2g / %.2g | Y=%.2g / %.2g', mean(abs(meanx)), mean(abs(stdex)), ...
+			axis([-0.2 0.4 0 maxv])
+			ti=sprintf('ABS Mean/SD %g - %g s: X=%.2g / %.2g | Y=%.2g / %.2g', t1,t2,...
+				mean(abs(meanx)), mean(abs(stdex)), ...
 				mean(abs(meany)), mean(abs(stdey)));
-			t2 = sprintf('ABS Median/SD 100ms: X=%.2g / %.2g | Y=%.2g / %.2g', median(abs(medx)), median(abs(stdex)), ...
+			ti2 = sprintf('ABS Median/SD %g - %g s: X=%.2g / %.2g | Y=%.2g / %.2g', t1,t2,median(abs(medx)), median(abs(stdex)), ...
 				median(abs(medy)), median(abs(stdey)));
-			h=title(sprintf('X(square) & Y(circle) Position vs. Time\n%s\n%s', t,t2));
+			h=title(sprintf('X(square) & Y(cross) Position vs. Time\n%s\n%s', ti,ti2));
 			set(h,'BackgroundColor',[1 1 1]);
 			xlabel(q(1,2),'Time (s)')
 			ylabel(q(1,2),'Degrees')
@@ -610,12 +618,16 @@ classdef eyelinkAnalysis < analysisCore
 			grid on;
 			box on;
 			axis tight;
-			axis([-100 400 -10 10 -10 10]);
+			axis([-0.1 0.4 -10 10 -10 10]);
 			view([5 5]);
 			xlabel(p(2),'Time (ms)')
 			ylabel(p(2),'X Position')
 			zlabel(p(2),'Y Position')
-			h=title([thisVarName upper(type) ': Saccades (red) and Fixation (black) Events']);
+			mn = nanmean(sacc);
+			md = nanmedian(sacc);
+			[~,er] = stderr(sacc,'SD');
+			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2g / %.2g ± %.2g SD [%.2g <> %.2g]',...
+				thisVarName,upper(type),mn,md,er,min(sacc),max(sacc)));
 			set(h,'BackgroundColor',[1 1 1]);
 			
 			q(2,1).select();
@@ -623,8 +635,8 @@ classdef eyelinkAnalysis < analysisCore
 			box on
 			axis tight;
 			axis([-1 1 -1 1])
-			h=title(sprintf('X & Y First 100ms MD/MN/STD: \nX : %.2g / %.2g / %.2g | Y : %.2g / %.2g / %.2g', ... 
-				mean(meanx), median(medx),mean(stdex),mean(meany),median(medy),mean(stdey)));			
+			h=title(sprintf('X & Y %g-%gs MD/MN/STD: \nX : %.2g / %.2g / %.2g | Y : %.2g / %.2g / %.2g', ... 
+				t1,t2,mean(meanx), median(medx),mean(stdex),mean(meany),median(medy),mean(stdey)));			
 			set(h,'BackgroundColor',[1 1 1]);
 			xlabel(q(2,1),'X Degrees')
 			ylabel(q(2,1),'Y Degrees')
@@ -636,12 +648,12 @@ classdef eyelinkAnalysis < analysisCore
 			axis([-1 1 -1 1])
 			%axis square
 			view(47,15)
-			title(q(2,2),[thisVarName upper(type) ':Average X vs. Y Position for first 150ms Over Time'])
+			title(sprintf('%s %s Mean X & Y Pos %g-%g-s over time',thisVarName,upper(type),t1,t2))
 			xlabel(q(2,2),'X Degrees')
 			ylabel(q(2,2),'Y Degrees')
 			zlabel(q(2,2),'Trial')
 			
-			p(2).margintop = 20;
+			p(2).margin = 50;
 			
 			assignin('base','xvals',xvals)
 			assignin('base','yvals',yvals)
