@@ -39,8 +39,6 @@ classdef LFPAnalysis < analysisCore
 		selectedTrials@cell
 		%> trials to remove in reparsing
 		cutTrials@double
-		%> trials selected to remove via UI
-		clickedTrials@double
 		%> variable selection map for 3 analysis groups
 		map@cell
 		%> bandpass frequencies
@@ -153,7 +151,7 @@ classdef LFPAnalysis < analysisCore
 			parseLFPs(ego);
 			select(ego);
 			selectTrials(ego);
-			getFTLFPs(ego);
+			getFieldTripLFPs(ego);
 			plot(ego,'all');
 		end
 		
@@ -168,7 +166,7 @@ classdef LFPAnalysis < analysisCore
 			parseLFPs(ego);
 			select(ego);
 			selectTrials(ego);
-			getFTLFPs(ego);
+			getFieldTripLFPs(ego);
 			plot(ego,'normal');
 		end
 		
@@ -197,7 +195,7 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ft = getFTLFPs(ego)
+		function ft = getFieldTripLFPs(ego)
 			ft_defaults;
 			LFPs = ego.LFPs;
 			tic
@@ -250,7 +248,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function ftPreProcess(ego, cfg, removeLineNoise)
-			if isempty(ego.ft); getFTLFPs(ego); end
+			if isempty(ego.ft); getFieldTripLFPs(ego); end
 			if ~exist('removeLineNoise','var');removeLineNoise = false;end
 			if ~exist('cfg','var');cfg = [];end
 			if isfield(ego.ft,'ftOld')
@@ -413,7 +411,7 @@ classdef LFPAnalysis < analysisCore
 			if ~exist('cycles','var') || isempty(cycles); cycles = 5; end
 			if ~exist('smth','var') || isempty(smth); smth = 0.4; end
 			if ~exist('width','var') || isempty(width); width = 10; end
-			if ~isfield(ego.ft,'label'); getFTLFPs(ego); end
+			if ~isfield(ego.ft,'label'); getFieldTripLFPs(ego); end
 			ft = ego.ft;
 			cfgUsed = {};
 			if ~exist('cfg','var') || isempty(cfg)
@@ -696,11 +694,12 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function select(ego)
+			if ego.nLFPs<1; warningdlg('Data not parsed yet...');return;end
 			cuttrials = '[ ';
 			if ~isempty(ego.cutTrials)
 				cuttrials = [cuttrials num2str(ego.cutTrials)];
-			elseif ~isempty(ego.clickedTrials)
-				cuttrials = [cuttrials num2str(ego.clickedTrials)];
+			elseif ~isempty(ego.cutTrials)
+				cuttrials = [cuttrials num2str(ego.cutTrials)];
 			end
 			cuttrials = [cuttrials ' ]'];
 			
@@ -715,38 +714,46 @@ classdef LFPAnalysis < analysisCore
 				map{3} = num2str(ego.map{3});
 			end
 			
-			sel = num2str(ego.selectedLFP);
-			beh = ego.selectedBehaviour;
-			
-			options.Resize='on';
-			options.WindowStyle='normal';
-			options.Interpreter='tex';
-			prompt = {'Choose PLX variables to merge (A, if empty parse all variables independantly):',...
-				'Choose PLX variables to merge (B):',...
-				'Choose PLX variables to merge (C):',...
-				'Enter Trials to exclude:',...
-				'Choose which LFP channel to select:',...
-				'Behavioural type (''correct'', ''breakFix'', ''incorrect'' | ''all''):'};
-			dlg_title = ['REPARSE ' num2str(ego.LFPs(1).nVars) ' DATA VARIABLES'];
-			num_lines = [1 120];
-			def = {map{1}, map{2}, map{3}, cuttrials,sel,beh};
-			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
-			drawnow;
-			if ~isempty(answer)
-				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3});
-				if ~isempty(answer{4})
-					ego.cutTrials = str2num(answer{4});
+			lfp = 'p';
+			for i = 1:ego.nLFPs
+				if i == ego.selectedLFP
+					lfp = [lfp '|¤' num2str(i)];
+				else
+					lfp = [lfp '|' num2str(i)];
 				end
-				ego.map = map;
-				ego.selectedLFP = str2num(answer{5});
-				if ego.selectedLFP < 1 || ego.selectedLFP > ego.nLFPs
-					ego.selectedLFP = 1;
-				end
-				ego.selectedBehaviour = answer{6};
 			end
-			selectTrials(ego);
+			
+			inbeh = {'correct','breakFix','incorrect','all'};
+			beh = 'r';
+			for i = 1:length(inbeh)
+				if strcmpi(inbeh{i}, ego.selectedBehaviour)
+					beh = [beh '|¤' inbeh{i}];
+				else
+					beh = [beh '|' inbeh{i}];
+				end
+			end
+			
+			mtitle   = ['REPARSE ' num2str(ego.LFPs(1).nVars) ' DATA VARIABLES'];
+			options  = {['t|' map{1}],'Choose PLX variables to merge (A, if empty parse all variables independantly):';   ...
+				['t|' map{2}],'Choose PLX variables to merge (B):';   ...
+				['t|' map{3}],'Choose PLX variables to merge (C):';   ...
+				['t|' cuttrials],'Enter Trials to exclude:';   ...
+				[lfp],'Choose Default LFP Channel to View:';...
+				[beh],'Behavioural type (''correct'', ''breakFix'', ''incorrect'' | ''all''):';...
+				};
+			
+			answer = menuN(mtitle,options);
+			drawnow;
+			if iscell(answer) && ~isempty(answer)
+				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3});
+				ego.cutTrials = str2num(answer{4});
+				ego.map = map;
+				ego.selectedLFP = answer{5};
+				ego.selectedBehaviour = inbeh{answer{6}};
+				selectTrials(ego);
+			end
 		end
-		
+
 	end
 	
 	%=======================================================================
@@ -860,7 +867,9 @@ classdef LFPAnalysis < analysisCore
 			end
 			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); end
 			for j = 1:ego.nSelection
-				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n',j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx))
+				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\nCut Index: %s\nBehaviour: %s\n',...
+					j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx),num2str(ego.selectedTrials{j}.cutidx),...
+					ego.selectedBehaviour);
 			end
 		end
 		
@@ -874,7 +883,6 @@ classdef LFPAnalysis < analysisCore
 			disp('Drawing RAW LFP Trials...')
 			if ~exist('h','var')
 				h=figure;figpos(1,[1920 1080]);set(h,'Color',[1 1 1]);
-				ego.clickedTrials = ego.cutTrials;
 			end
 			clf(h,'reset')
 			if ~exist('sel','var')
@@ -952,16 +960,15 @@ classdef LFPAnalysis < analysisCore
 					trl = ud(2);
 					t1 = ud(3);
 					
-					if intersect(trl, ego.clickedTrials);
-						ego.clickedTrials(ego.clickedTrials == trl) = [];
+					if intersect(trl, ego.cutTrials);
+						ego.cutTrials(ego.cutTrials == trl) = [];
 						set(src,'LineStyle','-','LineWidth',0.5);
 					else
-						ego.clickedTrials = [ego.clickedTrials trl];
+						ego.cutTrials = [ego.cutTrials trl];
 						set(src,'LineStyle',':','LineWidth',2);
 					end
-					disp(['Current Selected trials : ' num2str(ego.clickedTrials)]);
+					disp(['Current Selected trials : ' num2str(ego.cutTrials)]);
 				end
-				ego.cutTrials = ego.clickedTrials;
 			end
 			
 		end

@@ -297,8 +297,25 @@ classdef spikeAnalysis < analysisCore
 				map{3} = num2str(ego.map{3});
 			end
 			
-			sel = num2str(ego.selectedUnit);
-			beh = ego.selectedBehaviour;
+			unit = 'p';
+			for i = 1:ego.nUnits
+				if i == ego.selectedUnit
+					unit = [unit '|¤' ego.names{i}];
+				else
+					unit = [unit '|'  ego.names{i}];
+				end
+			end
+			
+			inbeh = {'correct','breakFix','incorrect','all'};
+			beh = 'r';
+			for i = 1:length(inbeh)
+				if strcmpi(inbeh{i}, ego.selectedBehaviour)
+					beh = [beh '|¤' inbeh{i}];
+				else
+					beh = [beh '|' inbeh{i}];
+				end
+			end
+
 			pr = num2str(ego.plotRange);
 			rr = num2str(ego.rateRange);
 			bw = num2str(ego.binSize);
@@ -306,39 +323,30 @@ classdef spikeAnalysis < analysisCore
 			includeroi = num2str(ego.includeROI);
 			saccfilt = num2str(ego.filterFirstSaccades);
 			toifilt = num2str(ego.TOI);
-
-			options.Resize='on';
-			options.WindowStyle='normal';
-			options.Interpreter='tex';
-			prompt = {'Choose PLX variables to merge A (if empty, use all variables as individual groups and ignore B & C):',...
-				'Choose PLX variables to merge B:',...
-				'Choose PLX variables to merge C:',...
-				['Enter Trials (1-' num2str(ego.event.nTrials) ')  to exclude:'],...
-				['Choose which Spike channel to select (# units = ' num2str(ego.nUnits) ')'],...
-				'Behavioural type ''correct'' ''breakFix'' ''incorrect'' or ''all''',...
-				'Plot Range (seconds)',...
-				'Measure Range (seconds)',...
-				'Bin Width (seconds)',...
-				'ROI Region of Interest [X Y RADIUS] (blank = ignore):',...
-				'Include (1) or Exclude (0) the ROI trials?',...
-				'Saccade Filter in seconds [TIME1 TIME2], e.g. [-0.8 0.8] (blank = ignore):',...
-				'Fixation TOI Time Of Interest [STARTTIME ENDTIME  X Y RADIUS] (blank = ignore):'};
-			dlg_title = [ego.file ': REPARSE ' num2str(ego.event.nVars) ' DATA VARIABLES'];
-			num_lines = [1 120];
-			def = {map{1}, map{2}, map{3}, cuttrials, sel, beh, pr, rr, bw, roi, includeroi,saccfilt,toifilt};
-			answer = inputdlg(prompt,dlg_title,num_lines,def,options);
+			
+			mtitle   = [ego.file ': REPARSE ' num2str(ego.event.nVars) ' DATA VARIABLES'];
+			options  = {['t|' map{1}],'Choose PLX variables to merge (A, if empty parse all variables independantly):';   ...
+				['t|' map{2}],'Choose PLX variables to merge (B):';   ...
+				['t|' map{3}],'Choose PLX variables to merge (C):';   ...
+				['t|' cuttrials],'Enter Trials to exclude:';   ...
+				[unit],'Choose Default Spike Channel to View:';...
+				[beh],'Behavioural type (''correct'', ''breakFix'', ''incorrect'' | ''all''):';...
+				['t|' pr],'Plot Range (±seconds):';   ...
+				['t|' rr],'Measure Firing Rate Range (±seconds):';   ...
+				['t|' bw],'Bin Width (seconds):';   ...
+				['t|' roi],'ROI Region of Interest [X Y RADIUS] (blank = ignore):';   ...
+				['t|' includeroi],'Include (1) or Exclude (0) the ROI trials?:';   ...
+				['t|' saccfilt],'Saccade Filter in seconds [TIME1 TIME2], e.g. [-0.8 0.8] (blank = ignore):';   ...
+				['t|' toifilt],'Fixation TOI Time Of Interest [STARTTIME ENDTIME  X Y RADIUS] (blank = ignore):';   ...
+				};
+			answer = menuN(mtitle,options);
 			drawnow;
-			if isempty(answer)
-				map{1} = []; map{2}=[]; map{3}=[]; cuttrials = [];
-			else
+			if iscell(answer) && ~isempty(answer)
 				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3}); 
 				ego.cutTrials = str2num(answer{4});
 				ego.map = map;
-				ego.selectedUnit = str2num(answer{5});
-				if ego.selectedUnit < 1 || ego.selectedUnit > length(ego.spike)
-					ego.selectedUnit = 1;
-				end
-				ego.selectedBehaviour = answer{6};
+				ego.selectedUnit = answer{5};
+				ego.selectedBehaviour = inbeh{answer{6}};
 				ego.plotRange = str2num(answer{7});
 				ego.rateRange = str2num(answer{8});
 				ego.binSize = str2num(answer{9});
@@ -351,18 +359,18 @@ classdef spikeAnalysis < analysisCore
 				ego.includeROI = logical(str2num(answer{11}));
 				ego.filterFirstSaccades = str2num(answer{12});
 				ego.TOI = str2num(answer{13});
+				if ~isempty(ego.ROI)
+					ego.p.eA.ROI = ego.ROI;
+					parseROI(ego.p.eA);
+					plotROI(ego.p.eA);
+				end
+				if ~isempty(ego.TOI)
+					ego.p.eA.TOI = ego.TOI;
+					parseTOI(ego.p.eA);
+					plotTOI(ego.p.eA);
+				end
+				selectTrials(ego);
 			end
-			if ~isempty(ego.ROI)
-				ego.p.eA.ROI = ego.ROI;
-				parseROI(ego.p.eA);
-				plotROI(ego.p.eA);
-			end
-			if ~isempty(ego.TOI)
-				ego.p.eA.TOI = ego.TOI;
-				parseTOI(ego.p.eA);
-				plotTOI(ego.p.eA);
-			end
-			selectTrials(ego);
 		end
 		
 		% ===================================================================
@@ -458,10 +466,9 @@ classdef spikeAnalysis < analysisCore
 				cfg.param			= 'coeffvar'; % compute the coefficient of variation (sd/mn of isis)
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				isi{j}				= ft_spike_isi(cfg, ego.ft);
-				
 			end
-			ego.ft.psth = psth;
-			ego.ft.rate = rate;
+			ego.ft.isi = isi;
+			
 			for j = 1:length(ego.selectedTrials)
 			  cfg              = [];
 			  cfg.spikechannel = isi{j}.label{k};
@@ -562,6 +569,8 @@ classdef spikeAnalysis < analysisCore
 					plotPSTH(ego); drawnow;
 				case 'density'
 					plotDensity(ego); drawnow;
+				case 'densitysummary'
+					plotDensitySummary(ego); drawnow;
 			end
 		end
 		
@@ -654,7 +663,7 @@ classdef spikeAnalysis < analysisCore
 					ego.selectedTrials{a}.roiidx		= roiidx; 
 					ego.selectedTrials{a}.toiidx		= toiidx;
 					ego.selectedTrials{a}.saccidx		= saccidx;
-					ego.selectedTrials{a}.behaviour		= ego.selectedBehaviour;
+					ego.selectedTrials{a}.behaviour	= ego.selectedBehaviour;
 					ego.selectedTrials{a}.sel			= map{i};
 					ego.selectedTrials{a}.name			= ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
 					a = a + 1;
@@ -662,7 +671,9 @@ classdef spikeAnalysis < analysisCore
 			end
 			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); end
 			for j = 1:ego.nSelection
-				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n',j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx))
+				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\nCut Index: %s\nBehaviour: %s\n',...
+					j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx),num2str(ego.selectedTrials{j}.cutidx),...
+					ego.selectedBehaviour);
 			end
 		end
 		
@@ -710,7 +721,37 @@ classdef spikeAnalysis < analysisCore
 			end
 			p(row,col).title(t);
 			p(row,col).xlabel('Time (s)')
-			p(row,col).ylabel(['Firing Rate (Hz) \pm ' cfg.errorbars])
+			p(row,col).ylabel(['Firing Rate (Hz) \pm S.E.M.'])
+			set(gcf,'Renderer','OpenGL');
+			legend(leg);
+			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function plotDensitySummary(ego)
+			if ~isfield(ego.ft,'sd'); warning('No Density parsed yet.'); return; end
+			sd = ego.ft.sd;
+			rate = ego.ft.rate;
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			box on
+			grid on
+			hold on
+			c = ego.optimalColours(length(sd));
+			t = [ego.file ' ' ego.names{ego.selectedUnit} ' '];
+			for j = 1:length(sd)
+				e = ego.var2SE(sd{j}.var,sd{j}.dof);
+				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
+				leg{j,1} = ego.selectedTrials{j}.name;
+				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
+			end
+			title(t,'FontSize',15);
+			xlabel('Time (s)')
+			ylabel(['Firing Rate (Hz) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);

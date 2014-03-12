@@ -568,10 +568,10 @@ classdef plxReader < optickaCore
 				if isfield(trl,'firstSaccade'); sT = trl.firstSaccade; else sT = NaN; end
 				text(trl.t1,-.41,['SAC: ' num2str(sT) '\newlineCOR: ' num2str(trl.isCorrect)],'FontSize',10);
 			end
-			plot(ego.eventList.startFix,zeros(size(ego.eventList.startFix)),'c.','MarkerSize',15);
-			plot(ego.eventList.correct,zeros(size(ego.eventList.correct)),'g.','MarkerSize',15);
-			plot(ego.eventList.breakFix,zeros(size(ego.eventList.breakFix)),'b.','MarkerSize',15);
-			plot(ego.eventList.incorrect,zeros(size(ego.eventList.incorrect)),'r.','MarkerSize',15);
+			plot(ego.eventList.startFix,zeros(size(ego.eventList.startFix)),'c.','MarkerSize',18);
+			plot(ego.eventList.correct,zeros(size(ego.eventList.correct)),'g.','MarkerSize',18);
+			plot(ego.eventList.breakFix,zeros(size(ego.eventList.breakFix)),'b.','MarkerSize',18);
+			plot(ego.eventList.incorrect,zeros(size(ego.eventList.incorrect)),'r.','MarkerSize',18);
 			axis([0 10 -.5 .5])
 			name = {};
 			name{end+1} = 'start fixation';
