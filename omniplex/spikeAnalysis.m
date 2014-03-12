@@ -23,7 +23,7 @@ classdef spikeAnalysis < analysisCore
 		filterFirstSaccades@double = [ ];
 		%> default behavioural type
 		selectedBehaviour@char = 'correct';
-		%> region of interest for eye location [x y radius], if empty ignore
+		%> region of interest for eye location [x y radius include], if empty ignore
 		ROI@double = [];
 		%> include (true) or exclude (false) the ROI entered trials?
 		includeROI@logical = false
@@ -34,7 +34,7 @@ classdef spikeAnalysis < analysisCore
 	end
 	
 	%------------------VISIBLE PROPERTIES----------%
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		%> spike plxReader object; can be the same or different due to spike resorting
 		p@plxReader
 		%> fieldtrip reparse
@@ -56,7 +56,7 @@ classdef spikeAnalysis < analysisCore
 	end
 	
 	%------------------TRANSIENT PROPERTIES----------%
-	properties (SetAccess = private, GetAccess = private, Transient = true)
+	properties (SetAccess = protected, GetAccess = private, Transient = true)
 		%> UI panels
 		panels@struct = struct()
 		%>
@@ -64,7 +64,7 @@ classdef spikeAnalysis < analysisCore
 	end
 		
 	%------------------DEPENDENT PROPERTIES--------%
-	properties (SetAccess = private, Dependent = true)
+	properties (SetAccess = protected, Dependent = true)
 		%> number of LFP channels
 		nUnits@double = 0
 		%> number of selected trial sets
@@ -199,7 +199,7 @@ classdef spikeAnalysis < analysisCore
 			for i = 1:ego.nUnits
 				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
 			end
-			ego.ft = getFTSpikes(ego.p);
+			ego.ft = getFieldTripSpikes(ego.p);
 			ego.names = ego.ft.label;
 			showInfo(ego);
 			select(ego);
@@ -226,7 +226,7 @@ classdef spikeAnalysis < analysisCore
 			for i = 1:ego.nUnits
 				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
 			end
-			ego.ft = getFTSpikes(ego.p);
+			ego.ft = getFieldTripSpikes(ego.p);
 			ego.names = ego.ft.label;
 			if isempty(ego.selectedTrials)
 				select(ego);
@@ -258,7 +258,7 @@ classdef spikeAnalysis < analysisCore
 			for i = 1:ego.nUnits
 				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
 			end
-			ego.ft = getFTSpikes(ego.p);
+			ego.ft = getFieldTripSpikes(ego.p);
 			ego.names = ego.ft.label;
 			select(ego);
 			if ~isempty(ego.ROI)
@@ -278,7 +278,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function select(ego)
-			if isempty(ego.trial); warning('Data not parsed yet...');return;end
+			if isempty(ego.trial); warningdlg('Data not parsed yet...');return;end
 			ego.selectOverride = false;
 			cuttrials = '[ ';
 			if ~isempty(ego.cutTrials) 
@@ -409,7 +409,7 @@ classdef spikeAnalysis < analysisCore
 			ego.ft.psth = psth;
 			ego.ft.rate = rate;
 			
-			if ego.doPlots; plotPSTH(ego); end
+			if ego.doPlots; plot(ego,'psth'); end
 		end
 		
 		% ===================================================================
@@ -439,7 +439,41 @@ classdef spikeAnalysis < analysisCore
 			ego.ft.sd = sd;
 			ego.ft.rate = rate;
 			
-			if ego.doPlots; plotDensity(ego); end
+			if ego.doPlots; plot(ego,'density'); end
+		end
+		
+		% ===================================================================
+		%> @brief doPSTH plots spike density for the selected trial groups
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function ISI(ego)
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			
+			for j = 1:length(ego.selectedTrials)
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.bins				= [0:0.0005:0.1]; % use bins of 0.5 milliseconds;
+				cfg.param			= 'coeffvar'; % compute the coefficient of variation (sd/mn of isis)
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				isi{j}				= ft_spike_isi(cfg, ego.ft);
+				
+			end
+			ego.ft.psth = psth;
+			ego.ft.rate = rate;
+			for j = 1:length(ego.selectedTrials)
+			  cfg              = [];
+			  cfg.spikechannel = isi{j}.label{k};
+			  cfg.interpolate  = 5; % interpolate at 5 times the original density
+			  cfg.window       = 'gausswin'; % use a gaussian window to smooth
+			  cfg.winlen       = 0.004; % the window by which we smooth has size 4 by 4 ms
+			  cfg.colormap     = jet(300); % colormap
+			  cfg.scatter      = 'no'; % do not plot the individual isis per spike as scatters
+			  figure, ft_spike_plot_isireturn(cfg,isi{j})
+			end
+			
+			%if ego.doPlots; plot(ego,'psth'); end
 		end
 		
 		% ===================================================================
@@ -508,7 +542,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plot(ego, varargin)
-			if isempty(ego.fp);
+			if isempty(ego.ft);
 				return
 			end
 			if isempty(varargin) || ~ischar(varargin{1})
@@ -531,10 +565,23 @@ classdef spikeAnalysis < analysisCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief Allows two analysis objects to share a single plxReader object
+		%>
+		%> @param
+		% ===================================================================
+		function inheritPlxReader(ego,p)
+			if exist('p','var') && isa(p,'plxReader')
+				if isprop(ego,'p')
+					ego.p = p;
+				end
+			end
+		end
+		
 	end
 
 	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	methods ( Access = protected ) %-------PRIVATE METHODS-----%
 	%=======================================================================
 	
 		% ===================================================================
@@ -597,10 +644,10 @@ classdef spikeAnalysis < analysisCore
 					idx = [ idx find( [ego.trial.variable] == map{i}(j) ) ];
 				end
 				idx = intersect(idx, behaviouridx);
-				if ~isempty(cutidx);	idx = setdiff(idx, cutidx);		end %remove the cut trials
+				if ~isempty(cutidx);		idx = setdiff(idx, cutidx);		end %remove the cut trials
 				if ~isempty(saccidx);	idx = intersect(idx, saccidx);	end %remove saccade filtered trials
-				if ~isempty(roiidx);	idx = intersect(idx, roiidx);	end %remove roi filtered trials
-				if ~isempty(toiidx);	idx = intersect(idx, toiidx);	end %remove roi filtered trials
+				if ~isempty(roiidx);		idx = intersect(idx, roiidx);		end %remove roi filtered trials
+				if ~isempty(toiidx);		idx = intersect(idx, toiidx);		end %remove roi filtered trials
 				if ~isempty(idx)
 					ego.selectedTrials{a}.idx			= idx;
 					ego.selectedTrials{a}.cutidx		= cutidx;
@@ -614,6 +661,9 @@ classdef spikeAnalysis < analysisCore
 				end
 			end
 			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); end
+			for j = 1:ego.nSelection
+				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n',j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx))
+			end
 		end
 		
 		% ===================================================================
@@ -633,6 +683,7 @@ classdef spikeAnalysis < analysisCore
 			[row,col]=ego.optimalLayout(len);
 			p.pack(row,col);
 			for j = 1:length(ego.selectedTrials)
+				%ft = ego.subselectFieldTripTrials(ego.ft,ego.selectedTrials{j}.idx);
 				[i1,i2] = ind2sub([row,col], j);
 				p(i1,i2).select();
 				cfg					= [];
@@ -675,13 +726,14 @@ classdef spikeAnalysis < analysisCore
 			psth = ego.ft.psth;
 			rate = ego.ft.rate;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			len = ego.nSelection + 1;
 			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
 			p=panel(h);
 			p.margin = [20 20 20 10]; %left bottom right top
-			len = ego.nSelection + 1;
 			[row,col]=ego.optimalLayout(len);
 			p.pack(row,col);
 			for j = 1:length(ego.selectedTrials)
+				%ft = ego.subselectFieldTripTrials(ego.ft,ego.selectedTrials{j}.idx);
 				[i1,i2] = ind2sub([row,col], j);
 				p(i1,i2).select();
 				cfg						= [];
@@ -692,7 +744,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.errorbars			= 'conf95%'; % plot with the standard deviation
 				cfg.interactive		= 'no'; % toggle off interactive mode
 				ft_spike_plot_raster(cfg, ego.ft, psth{j})
-				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file])
+				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file]);
 			end
 			p(row,col).select();
 			box on
@@ -713,6 +765,15 @@ classdef spikeAnalysis < analysisCore
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function plotISI(ego)
+			
 		end
 	
 	end

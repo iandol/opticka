@@ -26,7 +26,7 @@ classdef LFPAnalysis < analysisCore
 	end
 	
 	%------------------VISIBLE PROPERTIES----------%
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		%> LFP plxReader object
 		p@plxReader
 		%> spike analysis object
@@ -50,13 +50,13 @@ classdef LFPAnalysis < analysisCore
 	end
 	
 	%------------------TRANSIENT PROPERTIES----------%
-	properties (SetAccess = private, GetAccess = public, Transient = true)
+	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> UI panels
 		panels@struct = struct()
 	end
 	
 	%------------------DEPENDENT PROPERTIES--------%
-	properties (SetAccess = private, Dependent = true)
+	properties (SetAccess = protected, Dependent = true)
 		%> number of LFP channels
 		nLFPs@double = 0
 		%> number of LFP channels
@@ -84,7 +84,7 @@ classdef LFPAnalysis < analysisCore
 			ego=ego@analysisCore(varargin); %superclass constructor
 			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
 			if isempty(ego.name);ego.name = 'LFPAnalysis'; end
-			getFiles(ego, true);
+			if isempty(ego.lfpfile);getFiles(ego, true);end
 		end
 		
 		% ===================================================================
@@ -119,7 +119,11 @@ classdef LFPAnalysis < analysisCore
 					ego.sp = spikeAnalysis(in);
 					ego.sp.name = ['^' ego.fullName '^'];
 					in = struct('matfile', ego.p.matfile, 'matdir', ego.p.matdir,'edffile',ego.p.edffile);
-					setFiles(ego.sp, in);
+					if strcmpi(ego.lfpfile, ego.spikefile)
+						inheritPlxReader(ego.sp, ego.p);
+					else
+						setFiles(ego.sp, in);
+					end
 				else
 					return
 				end
@@ -483,42 +487,40 @@ classdef LFPAnalysis < analysisCore
 				cfg.timwin			= [-0.001 0.001]; % remove 4 ms around every spike
 				cfg.spikechannel	= spike.label{unit};
 				cfg.channel			= ft.label;
-				dati				= ft_spiketriggeredinterpolation(cfg, dat);
+				dati					= ft_spiketriggeredinterpolation(cfg, dat);
 			catch
-				warning('interpolation of spikes failed, using raw data');
+				warning('Interpolation of spikes failed, using raw data');
 				dati=dat;
 			end
 			
 			for j = 1:length(ego.selectedTrials)
 				name				= ['SPIKE:' spike.label{unit} ' | SEL: ' ego.selectedTrials{j}.name];
-				tempft				= selectFTTrials(ego,ft,ego.selectedTrials{j}.idx);
-				tempspike			= selectFTTrials(ego,spike,ego.selectedTrials{j}.idx);
-				tempdat				= selectFTTrials(ego,dati,ego.selectedTrials{j}.idx);
+				tempft			= ego.subselectFieldTripTrials(ft,ego.selectedTrials{j}.idx);
+				tempspike		= ego.subselectFieldTripTrials(spike,ego.selectedTrials{j}.idx);
+				tempdat			= ego.subselectFieldTripTrials(dati,ego.selectedTrials{j}.idx);
 				
-				cfg					= [];
+				cfg							= [];
+				cfg.timwin					= [-0.15 0.15];
+				cfg.spikechannel			= spike.label{unit};
+				cfg.channel					= ft.label;
+				cfg.latency					= [-0.3 0];
+				staPre						= ft_spiketriggeredaverage(cfg, tempdat);
+				ego.ft.staPre{j}			= staPre;
+				ego.ft.staPre{j}.name	= name;
 				
-				cfg.timwin			= [-0.15 0.15];
-				cfg.spikechannel	= spike.label{unit};
-				cfg.channel			= ft.label;
-				cfg.latency			= [-0.4 0];
-				staPre				= ft_spiketriggeredaverage(cfg, tempdat);
-				ego.ft.staPre{j}	= staPre;
-				ego.ft.staPre{j}.name = name;
+				cfg.latency					= [0 0.3];
+				staPost						= ft_spiketriggeredaverage(cfg, tempdat);
+				ego.ft.staPost{j}			= staPost;
+				ego.ft.staPost{j}.name	= name;
 				
-				cfg.latency			= [0 0.4];
-				staPost				= ft_spiketriggeredaverage(cfg, tempdat);
-				ego.ft.staPost{j}	= staPost;
-				ego.ft.staPost{j}.name = name;
-				
-				cfg					= [];
-				
-				cfg.method			= 'mtmfft';
-				cfg.foilim			= [10 100]; % cfg.timwin determines spacing
-				cfg.timwin			= [-0.05 0.05]; % time window of 100 msec
-				cfg.taper			= 'hanning';
-				cfg.spikechannel	= spike.label{unit};
-				cfg.channel			= ft.label{ego.selectedLFP};
-				stsFFT				= ft_spiketriggeredspectrum(cfg, tempft, tempspike);
+				cfg							= [];
+				cfg.method					= 'mtmfft';
+				cfg.foilim					= [5 100]; % cfg.timwin determines spacing
+				cfg.timwin					= [-0.05 0.05]; % time window of 100 msec
+				cfg.taper					= 'hanning';
+				cfg.spikechannel			= spike.label{unit};
+				cfg.channel					= ft.label{ego.selectedLFP};
+				stsFFT						= ft_spiketriggeredspectrum(cfg, tempft, tempspike);
 				
 				ang = squeeze(angle(stsFFT.fourierspctrm{1}));
 				mag = squeeze(abs(stsFFT.fourierspctrm{1}));
@@ -544,6 +546,13 @@ classdef LFPAnalysis < analysisCore
 			if isempty(ego.sp.ft)
 				parseSpikes(ego);
 			end
+			
+			in.cutTrials = ego.cutTrials;
+			in.selectedTrials = ego.selectedTrials;
+			in.map = ego.map;
+			in.plotRange = ego.plotRange;
+			in.selectedBehaviour = ego.selectedBehaviour;
+			setSelection(ego.sp, in); %set spike anal to same trials etc
 			
 			ego.sp.density;
 			
@@ -681,34 +690,6 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief selectFTTrials cut out trials where the ft function fails
-		%> to use cfg.trials
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function ftout=selectFTTrials(ego,ft,idx)
-			ftout = ft;
-			if isfield(ft,'nUnits') %assume a spike structure
-				ftout.trialtime = ft.trialtime(idx,:);
-				ftout.cfg.trl = ft.cfg.trl(idx,:);
-				for j = 1:ft.nUnits
-					sel					= ismember(ft.trial{j},idx);
-					ftout.timestamp{j}	= ft.timestamp{j}(sel);
-					ftout.time{j}		= ft.time{j}(sel);
-					ftout.trial{j}		= ft.trial{j}(sel);
-				end
-			else %assume continuous
-				ftout.sampleinfo = ft.sampleinfo(idx,:);
-				ftout.trialinfo = ft.trialinfo(idx,:);
-				if isfield(ft.cfg,'trl'); ftout.cfg.trl = ft.cfg.trl(idx,:); end
-				ftout.time = ft.time(idx);
-				ftout.trial = ft.trial(idx);
-			end
-			
-		end
-		
-		% ===================================================================
 		%> @brief selectTrials selects trials based on many filters
 		%>
 		%> @param
@@ -769,7 +750,7 @@ classdef LFPAnalysis < analysisCore
 	end
 	
 	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
+	methods ( Access = protected ) %-------PRIVATE METHODS-----%
 	%=======================================================================
 		
 		% ===================================================================
@@ -863,7 +844,7 @@ classdef LFPAnalysis < analysisCore
 				for j = 1:length(map{i})
 					idx = [ idx find( [LFPs(1).trials.variable] == map{i}(j) ) ];
 				end
-				idx = intersect(idx, behaviouridx);
+				idx = intersect(idx, behaviouridx); %this has a positive side effect of also sorting the trials
 				if ~isempty(cutidx);	idx = setdiff(idx, cutidx);		end %remove the cut trials
 				if ~isempty(idx)
 					ego.selectedTrials{a}.idx			= idx;
@@ -871,13 +852,16 @@ classdef LFPAnalysis < analysisCore
 					ego.selectedTrials{a}.roiidx		= roiidx;
 					ego.selectedTrials{a}.toiidx		= toiidx;
 					ego.selectedTrials{a}.saccidx		= saccidx;
-					ego.selectedTrials{a}.behaviour		= ego.selectedBehaviour;
+					ego.selectedTrials{a}.behaviour	= ego.selectedBehaviour;
 					ego.selectedTrials{a}.sel			= map{i};
 					ego.selectedTrials{a}.name			= ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
 					a = a + 1;
 				end
 			end
 			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); end
+			for j = 1:ego.nSelection
+				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n',j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx))
+			end
 		end
 		
 		% ===================================================================

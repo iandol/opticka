@@ -388,7 +388,7 @@ classdef plxReader < optickaCore
 			%> @param
 		%> @return
 		% ===================================================================
-		function spike = getFTSpikes(ego)
+		function spike = getFieldTripSpikes(ego)
 			dat = ego.tsList.tsParse;
 			spike.label = ego.tsList.names;
 			spike.nUnits = ego.tsList.nUnits;
@@ -457,6 +457,87 @@ classdef plxReader < optickaCore
 			fprintf('Integrating eye data into event data took %g ms\n',round(toc*1000));
 		end
 		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function handles = infoBox(ego, info)
+			%[left bottom width height]
+			if ~exist('info','var'), info = ego.info; end
+			scr=get(0,'ScreenSize');
+			width=scr(3);
+			height=scr(4);
+			handles.root = figure('Units','pixels','Position',[0 0 width/4 height],'Tag','PLXInfoFigure',...
+				'Color',[0.9 0.9 0.9],'Toolbar','none','Name', ego.file);
+			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.45 1 0.55],...
+				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',500,...
+				'FontSize',12,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left');
+			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0 0.4 1 0.05],...
+				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',500,...
+				'FontSize',12,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left',...
+				'Callback',@editComment);%,'ButtonDownFcn',@editComment,'KeyReleaseFcn',@editComment);
+			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.3]);
+			if ~isempty(ego.eventList)
+				drawEvents(ego,handles.axis);
+			end
+			set(handles.display,'String',info,'FontSize',12);
+			set(handles.comments,'String',ego.comment,'FontSize',11);
+			
+			function editComment(src, ~)
+				if ~exist('src','var');	return; end
+				s = get(src,'String');
+				if ~isempty(s)
+					ego.comment = s;
+				end
+			end
+		end
+		
+	end %---END PUBLIC METHODS---%
+	
+	%=======================================================================
+	methods ( Hidden = true) %-------HIDDEN METHODS-----%
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief allows data from another plxReader object to be used,
+		%> useful for example when you load LFP data in 1 plxReader and
+		%> spikes in another but they are using the same behaviour files etc.
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function syncData(ego, data)
+			if isa(data,'plxReader')
+				if strcmpi(ego.uuid, data.uuid)
+					disp('Two plxReader objects are identical, skip syncing');
+					return
+				end
+				if ~strcmpi(ego.matfile, data.matfile)
+					warning('Different Behaviour mat files, can''t sync plxReaders');
+					return
+				end
+				if isempty(ego.eventList) && ~isempty(data.eventList)
+					ego.eventList = data.eventList;
+				end
+				if isempty(ego.tsList) && ~isempty(data.tsList)
+					ego.tsList = data.tsList;
+				end
+				if isempty(ego.meta) && ~isempty(data.meta)
+					ego.meta = data.meta;
+				end
+				if isempty(ego.rE) && ~isempty(data.rE)
+					ego.rE = data.rE;
+				end
+				if isempty(ego.eA) && ~isempty(data.eA)
+					ego.eA = data.eA;
+				end
+				if isempty(ego.info) && ~isempty(data.info)
+					ego.info = data.info;
+				end
+			end
+		end
 		
 		% ===================================================================
 		%> @brief 
@@ -525,80 +606,8 @@ classdef plxReader < optickaCore
 				axis(ax);
 			end
 		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function handles = infoBox(ego, info)
-			%[left bottom width height]
-			if ~exist('info','var'), info = ego.info; end
-			scr=get(0,'ScreenSize');
-			width=scr(3);
-			height=scr(4);
-			handles.root = figure('Units','pixels','Position',[0 0 width/4 height],'Tag','PLXInfoFigure',...
-				'Color',[0.9 0.9 0.9],'Toolbar','none','Name', ego.file);
-			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.45 1 0.55],...
-				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',500,...
-				'FontSize',12,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left');
-			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0 0.4 1 0.05],...
-				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',500,...
-				'FontSize',12,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left',...
-				'Callback',@editComment);%,'ButtonDownFcn',@editComment,'KeyReleaseFcn',@editComment);
-			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.3]);
-			if ~isempty(ego.eventList)
-				drawEvents(ego,handles.axis);
-			end
-			set(handles.display,'String',info,'FontSize',12);
-			set(handles.comments,'String',ego.comment,'FontSize',11);
-			
-			function editComment(src, ~)
-				if ~exist('src','var');	return; end
-				s = get(src,'String');
-				if ~isempty(s)
-					ego.comment = s;
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief allows data from another plxReader object to be used,
-		%> useful for example when you load LFP data in 1 plxReader and
-		%> spikes in another but they are using the same behaviour files etc.
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function syncData(ego, data)
-			if isa(data,'plxReader')
-				if ~strcmpi(ego.matfile, data.matfile)
-					warning('Different Behaviour mat files, can''t sync plxReaders');
-					return
-				end
-				if isempty(ego.eventList) && ~isempty(data.eventList)
-					ego.eventList = data.eventList;
-				end
-				if isempty(ego.tsList) && ~isempty(data.tsList)
-					ego.tsList = data.tsList;
-				end
-				if isempty(ego.meta) && ~isempty(data.meta)
-					ego.meta = data.meta;
-				end
-				if isempty(ego.rE) && ~isempty(data.rE)
-					ego.rE = data.rE;
-				end
-				if isempty(ego.eA) && ~isempty(data.eA)
-					ego.eA = data.eA;
-				end
-				if isempty(ego.info) && ~isempty(data.info)
-					ego.info = data.info;
-				end
-			end
-		end
-		
-	end %---END PUBLIC METHODS---%
+	
+	end
 	
 	%=======================================================================
 	methods ( Static = true) %-------STATIC METHODS-----%
