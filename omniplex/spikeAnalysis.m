@@ -25,8 +25,6 @@ classdef spikeAnalysis < analysisCore
 		selectedBehaviour@char = 'correct';
 		%> region of interest for eye location [x y radius include], if empty ignore
 		ROI@double = [];
-		%> include (true) or exclude (false) the ROI entered trials?
-		includeROI@logical = false
 		%> time of interest for fixation, if empty ignore
 		TOI@double = [];
 		%> plot verbosity
@@ -320,7 +318,6 @@ classdef spikeAnalysis < analysisCore
 			rr = num2str(ego.rateRange);
 			bw = num2str(ego.binSize);
 			roi = num2str(ego.ROI);
-			includeroi = num2str(ego.includeROI);
 			saccfilt = num2str(ego.filterFirstSaccades);
 			toifilt = num2str(ego.TOI);
 			
@@ -334,8 +331,7 @@ classdef spikeAnalysis < analysisCore
 				['t|' pr],'Plot Range (±seconds):';   ...
 				['t|' rr],'Measure Firing Rate Range (±seconds):';   ...
 				['t|' bw],'Bin Width (seconds):';   ...
-				['t|' roi],'ROI Region of Interest [X Y RADIUS] (blank = ignore):';   ...
-				['t|' includeroi],'Include (1) or Exclude (0) the ROI trials?:';   ...
+				['t|' roi],'ROI Region of Interest [X Y RADIUS INCLUDE[0/1]] (blank = ignore):';   ...
 				['t|' saccfilt],'Saccade Filter in seconds [TIME1 TIME2], e.g. [-0.8 0.8] (blank = ignore):';   ...
 				['t|' toifilt],'Fixation TOI Time Of Interest [STARTTIME ENDTIME  X Y RADIUS] (blank = ignore):';   ...
 				};
@@ -350,15 +346,19 @@ classdef spikeAnalysis < analysisCore
 				ego.plotRange = str2num(answer{7});
 				ego.rateRange = str2num(answer{8});
 				ego.binSize = str2num(answer{9});
-				roi = str2num(answer{10});
-				if isnumeric(roi) && length(roi) == 3
-					ego.ROI = roi;
+				roi = answer{10};
+				if isnumeric(str2num(roi)) && length(str2num(roi)) == 4
+					ego.ROI = str2num(roi);
 				else
 					ego.ROI = [];
 				end
-				ego.includeROI = logical(str2num(answer{11}));
-				ego.filterFirstSaccades = str2num(answer{12});
-				ego.TOI = str2num(answer{13});
+% 				if ~isempty(regexp(roi,'^{')) %assume a cell array
+% 					roi = eval(roi);
+% 				else
+% 					
+% 				end
+				ego.filterFirstSaccades = str2num(answer{11});
+				ego.TOI = str2num(answer{12});
 				if ~isempty(ego.ROI)
 					ego.p.eA.ROI = ego.ROI;
 					parseROI(ego.p.eA);
@@ -627,7 +627,7 @@ classdef spikeAnalysis < analysisCore
 			
 			roiidx = [];
 			if ~isempty(ego.ROI)
-				idx = [ego.p.eA.ROIInfo.enteredROI] == ego.includeROI;
+				idx = [ego.p.eA.ROIInfo.enteredROI] == logical(ego.ROI(4));
 				rois = ego.p.eA.ROIInfo(idx);
 				roiidx = [rois.correctedIndex];
 			end	
