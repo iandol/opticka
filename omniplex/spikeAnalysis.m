@@ -293,6 +293,7 @@ classdef spikeAnalysis < analysisCore
 				ego.selectedBehaviour = inbeh{answer{6}};
 				ego.plotRange = str2num(answer{7});
 				ego.rateRange = str2num(answer{8});
+
 				bw = str2num(answer{9});
 				
 				if length(bw) == 1
@@ -308,8 +309,9 @@ classdef spikeAnalysis < analysisCore
 				else
 					ego.ROI = [];
 				end
-				ego.filterFirstSaccades = str2num(answer{12});
 				ego.TOI = str2num(answer{11});
+				ego.filterFirstSaccades = str2num(answer{12});
+				
 				if ~isempty(ego.ROI)
 					ego.p.eA.ROI = ego.ROI;
 					parseROI(ego.p.eA);
@@ -611,7 +613,7 @@ classdef spikeAnalysis < analysisCore
 			
 			roiidx = [];
 			if ~isempty(ego.ROI)
-				idx = [ego.p.eA.ROIInfo.enteredROI] == ego.includeROI;
+				idx = [ego.p.eA.ROIInfo.enteredROI] == logical(ego.ROI(4));
 				rois = ego.p.eA.ROIInfo(idx);
 				roiidx = [rois.correctedIndex];
 			end	

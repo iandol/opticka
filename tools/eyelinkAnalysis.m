@@ -78,7 +78,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> pixels per degree calculated from pixelsPerCm and distance (cache)
 		ppd_
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'file|dir|verbose|pixelsPerCm|distance|xCenter|yCenter|rtStartMessage|rtEndMessage|trialOverride|rtDivision|rtLimits|tS|ROI'
+		allowedProperties@char = 'file|dir|verbose|pixelsPerCm|distance|xCenter|yCenter|rtStartMessage|rtEndMessage|trialOverride|rtDivision|rtLimits|tS|ROI|TOI'
 	end
 	
 	methods
@@ -417,7 +417,7 @@ classdef eyelinkAnalysis < analysisCore
 			parseSecondaryEyePos(ego);
 			parseFixationPositions(ego);
 			parseROI(ego);
-			%parseTOI(ego);
+			parseTOI(ego);
 
 			fprintf('Parsing EDF Trials took %g ms\n',round(toc*1000));
 		end
@@ -589,6 +589,7 @@ classdef eyelinkAnalysis < analysisCore
 			display = ego.display / ppd;
 			
 			q(1,1).select();
+			set(gca,'YDir','reverse')
 			grid on
 			box on
 			axis(round([-display(1)/3 display(1)/3 -display(2)/3 display(2)/3]))
@@ -631,6 +632,7 @@ classdef eyelinkAnalysis < analysisCore
 			set(h,'BackgroundColor',[1 1 1]);
 			
 			q(2,1).select();
+			set(gca,'YDir','reverse')
 			grid on
 			box on
 			axis tight;
@@ -764,7 +766,6 @@ classdef eyelinkAnalysis < analysisCore
 					ego.TOIInfo(i).isTOI = false;
 				end	
 				ego.trials(i).isTOI = ego.TOIInfo(i).isTOI;
-				
 				ego.TOIInfo(i).variable = ego.trials(i).variable;
 				ego.TOIInfo(i).idx = i;
 				ego.TOIInfo(i).correctedIndex = ego.trials(i).correctedIndex;
