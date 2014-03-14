@@ -64,6 +64,43 @@ classdef analysisCore < optickaCore
 			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
 		end
 		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function showEyePlots(ego)
+			if ~isprop(ego,'p') || ~isa(ego.p,'plxReader') || isempty(ego.p.eA)
+				return
+			end
+			if isprop(ego,'nSelection')
+				if ~isempty(ego.selectedTrials)
+					for i = 1:length(ego.selectedTrials)
+						disp(['---> Plotting eye position for: ' ego.selectedTrials{i}.name]);
+						ego.p.eA.plot(ego.selectedTrials{i}.idx);
+					end
+				end
+			else
+				ego.p.eA.plot();
+			end
+		end
+		
+		% ===================================================================
+		%> @brief showInfo shows the info box for the plexon parsed data
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function showInfo(ego)
+			if ~isprop(ego,'p') || ~isa(ego.p,'plxReader')
+				return
+			end
+			if ~isempty(ego.p.info)
+				infoBox(ego.p);
+			end
+		end
+		
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================

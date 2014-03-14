@@ -17,6 +17,8 @@ classdef spikeAnalysis < analysisCore
 		rateRange@double = [0.05 0.2]
 		%> bin size
 		binSize@double = 0.01
+		%> gaussian window
+		gaussWindow = [-0.02 0.02];
 		%> default Spike channel
 		selectedUnit@double = 1
 		%> saccadeFilter, if empty ignore
@@ -25,8 +27,6 @@ classdef spikeAnalysis < analysisCore
 		selectedBehaviour@char = 'correct';
 		%> region of interest for eye location [x y radius include], if empty ignore
 		ROI@double = [];
-		%> include (true) or exclude (false) the ROI entered trials?
-		includeROI@logical = false
 		%> time of interest for fixation, if empty ignore
 		TOI@double = [];
 		%> plot verbosity
@@ -59,8 +59,8 @@ classdef spikeAnalysis < analysisCore
 	properties (SetAccess = protected, GetAccess = private, Transient = true)
 		%> UI panels
 		panels@struct = struct()
-		%>
-		selectOverride@logical = false
+		%> do we yoke the selection to the parent function (e.g. LFPAnalysis)
+		yokedSelection@logical = false
 	end
 		
 	%------------------DEPENDENT PROPERTIES--------%
@@ -124,60 +124,6 @@ classdef spikeAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief Set the plxReader files from a structure
-		%>
-		%> @param varargin
-		%> @return
-		% ===================================================================
-		function setFiles(ego, in)
-			if isstruct(in)
-				f=fieldnames(in);
-				for i=1:length(f)
-					if isprop(ego,f{i})
-						try ego.(f{i}) = in.(f{i}); end
-					end
-				end
-				if isempty(ego.p)
-					ego.paths.oldDir = pwd;
-					cd(ego.dir);
-					ego.p = plxReader('file', ego.file, 'dir', ego.dir);
-					ego.p.name = ['^' ego.fullName '^'];
-				end
-				for i=1:length(f)
-					if isprop(ego.p,f{i})
-						try ego.p.(f{i}) = in.(f{i}); end
-					end
-				end
-				
-			end
-		end
-		
-		% ===================================================================
-		%> @brief set trials / var parsing from outside, override dialog
-		%>
-		%> @param varargin
-		%> @return
-		% ===================================================================
-		function setSelection(ego, in)
-			if isfield(in,'cutTrials')
-				ego.cutTrials = in.cutTrials;
-			end
-			if isfield(in,'selectedTrials')
-				ego.selectedTrials = in.selectedTrials;
-				ego.selectOverride = true;
-			end
-			if isfield(in,'map')
-				ego.map = in.map;
-			end
-			if isfield(in,'plotRange')
-				ego.plotRange = in.plotRange;
-			end
-			if isfield(in,'selectedBehaviour')
-				ego.selectedBehaviour = in.selectedBehaviour;
-			end
-		end
-		
-		% ===================================================================
 		%> @brief 
 		%>
 		%> @param
@@ -185,7 +131,7 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function parse(ego)
 			ft_defaults
-			ego.selectOverride = false;
+			ego.yokedSelection = false;
 			if isempty(ego.file)
 				getFiles(ego, true);
 				if isempty(ego.file); warning('No plexon file selected'); return; end
@@ -230,7 +176,7 @@ classdef spikeAnalysis < analysisCore
 			ego.names = ego.ft.label;
 			if isempty(ego.selectedTrials)
 				select(ego);
-			elseif ego.selectOverride == false
+			elseif ego.yokedSelection == false
 				selectTrials(ego)
 			end
 			if ~isempty(ego.p.eA.ROIInfo)
@@ -279,7 +225,7 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function select(ego)
 			if isempty(ego.trial); warndlg('Data not parsed yet...');return;end
-			ego.selectOverride = false;
+			ego.yokedSelection = false;
 			cuttrials = '[ ';
 			if ~isempty(ego.cutTrials) 
 				cuttrials = [cuttrials num2str(ego.cutTrials)];
@@ -318,9 +264,8 @@ classdef spikeAnalysis < analysisCore
 
 			pr = num2str(ego.plotRange);
 			rr = num2str(ego.rateRange);
-			bw = num2str(ego.binSize);
+			bw = [num2str(ego.binSize) '       ' num2str(ego.gaussWindow)];
 			roi = num2str(ego.ROI);
-			includeroi = num2str(ego.includeROI);
 			saccfilt = num2str(ego.filterFirstSaccades);
 			toifilt = num2str(ego.TOI);
 			
@@ -333,11 +278,10 @@ classdef spikeAnalysis < analysisCore
 				[beh],'Behavioural type (''correct'', ''breakFix'', ''incorrect'' | ''all''):';...
 				['t|' pr],'Plot Range (±seconds):';   ...
 				['t|' rr],'Measure Firing Rate Range (±seconds):';   ...
-				['t|' bw],'Bin Width (seconds):';   ...
-				['t|' roi],'ROI Region of Interest [X Y RADIUS] (blank = ignore):';   ...
-				['t|' includeroi],'Include (1) or Exclude (0) the ROI trials?:';   ...
+				['t|' bw],'Binwidth & Gaussian Window for PSTH/Density [BINWIDTH -WINDOW +WINDOW] (seconds):';   ...
+				['t|' roi],'Stimulus Region of Interest [X Y RADIUS INCLUDE[0|1]] (blank = ignore):';   ...
+				['t|' toifilt],'Fixation Time/Region Of Interest [STARTTIME ENDTIME  X Y RADIUS] (blank = ignore):';   ...
 				['t|' saccfilt],'Saccade Filter in seconds [TIME1 TIME2], e.g. [-0.8 0.8] (blank = ignore):';   ...
-				['t|' toifilt],'Fixation TOI Time Of Interest [STARTTIME ENDTIME  X Y RADIUS] (blank = ignore):';   ...
 				};
 			answer = menuN(mtitle,options);
 			drawnow;
@@ -349,16 +293,23 @@ classdef spikeAnalysis < analysisCore
 				ego.selectedBehaviour = inbeh{answer{6}};
 				ego.plotRange = str2num(answer{7});
 				ego.rateRange = str2num(answer{8});
-				ego.binSize = str2num(answer{9});
+				bw = str2num(answer{9});
+				
+				if length(bw) == 1
+					ego.binSize = bw(1);
+				elseif length(bw)==2
+					ego.gaussWindow = [-abs(bw(2)) abs(bw(2))];
+				elseif length(bw)==3
+					ego.gaussWindow = [bw(2) bw(3)];
+				end
 				roi = str2num(answer{10});
-				if isnumeric(roi) && length(roi) == 3
+				if isnumeric(roi) && length(roi) == 4
 					ego.ROI = roi;
 				else
 					ego.ROI = [];
 				end
-				ego.includeROI = logical(str2num(answer{11}));
 				ego.filterFirstSaccades = str2num(answer{12});
-				ego.TOI = str2num(answer{13});
+				ego.TOI = str2num(answer{11});
 				if ~isempty(ego.ROI)
 					ego.p.eA.ROI = ego.ROI;
 					parseROI(ego.p.eA);
@@ -370,22 +321,6 @@ classdef spikeAnalysis < analysisCore
 					plotTOI(ego.p.eA);
 				end
 				selectTrials(ego);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function showEyePlots(ego)
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			if ~isempty(ego.selectedTrials)
-				for i = 1:length(ego.selectedTrials)
-					disp(['---> Plotting eye position for: ' ego.selectedTrials{i}.name]);
-					ego.p.eA.plot(ego.selectedTrials{i}.idx);
-				end
 			end
 		end
 			
@@ -430,7 +365,7 @@ classdef spikeAnalysis < analysisCore
 			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.timwin			= [-0.025 0.025];
+				cfg.timwin			= ego.gaussWindow;
 				cfg.fsample			= 1000; % sample at 1000 hz
 				cfg.outputunit		= 'rate';
 				cfg.latency			= ego.plotRange;
@@ -484,18 +419,6 @@ classdef spikeAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief showInfo shows the info box for the plexon parsed data
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function showInfo(ego)
-			if ~isempty(ego.p.info)
-				infoBox(ego.p);
-			end
-		end
-		
-		% ===================================================================
 		%> @brief
 		%> @param
 		%> @return
@@ -539,6 +462,67 @@ classdef spikeAnalysis < analysisCore
 				save(f,'spike');
 				cd(od);
 				clear spike;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Set the plxReader files from a structure, used when this is yoked to an
+		%> LFPAnalysis
+		%>
+		%> @param varargin
+		%> @return
+		% ===================================================================
+		function setFiles(ego, in)
+			if isstruct(in)
+				f=fieldnames(in);
+				for i=1:length(f)
+					if isprop(ego,f{i})
+						try ego.(f{i}) = in.(f{i}); end
+					end
+				end
+				if isempty(ego.p)
+					ego.paths.oldDir = pwd;
+					cd(ego.dir);
+					ego.p = plxReader('file', ego.file, 'dir', ego.dir);
+					ego.p.name = ['^' ego.fullName '^'];
+				end
+				for i=1:length(f)
+					if isprop(ego.p,f{i})
+						try ego.p.(f{i}) = in.(f{i}); end
+					end
+				end
+				
+			end
+		end
+		
+		% ===================================================================
+		%> @brief set trials / var parsing from outside, override dialog, used when this is yoked to an
+		%> LFPAnalysis
+		%>
+		%> @param varargin
+		%> @return
+		% ===================================================================
+		function setSelection(ego, in)
+			if isfield(in,'yokedSelection')
+				ego.yokedSelection = in.yokedSelection;
+			else
+				ego.yokedSelection = false;
+			end
+			if isfield(in,'cutTrials')
+				ego.cutTrials = in.cutTrials;
+			end
+			if isfield(in,'selectedTrials')
+				ego.selectedTrials = in.selectedTrials;
+				ego.yokedSelection = true;
+			end
+			if isfield(in,'map')
+				ego.map = in.map;
+			end
+			if isfield(in,'plotRange')
+				ego.plotRange = in.plotRange;
+			end
+			if isfield(in,'selectedBehaviour')
+				ego.selectedBehaviour = in.selectedBehaviour;
 			end
 		end
 		
@@ -601,7 +585,7 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function selectTrials(ego)
 			
-			if ego.selectOverride == true
+			if ego.yokedSelection == true
 				return
 			end
 			

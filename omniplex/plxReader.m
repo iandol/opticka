@@ -221,25 +221,24 @@ classdef plxReader < optickaCore
 				LFPs(j).recordingFrequency = adfreq;
 				LFPs(j).timebase = tbase;
 				LFPs(j).totalTimeStamps = ts;
-				LFPs(j).totalDataPoints = fn;			
+				LFPs(j).totalDataPoints = fn;	
 				
-				if length(fn) == 2 %1 gap, choose last data block
-					data = ad(fn(1)+1:end);
-					time = ts(end) : tbase : (ts(end)+(tbase*(fn(end)-1)))';
-					time = time(1:length(data));
-					LFPs(j).usedtimeStamp = ts(end);
-				elseif length(fn) == 1 %no gaps
-					data = ad(fn+1:end);
-					time = ts : tbase : (ts+(tbase*fn-1))';
-					time = time(1:length(data));
-					LFPs(j).usedtimeStamp = ts;
-				else
-					return;
+				time = [];
+				sample = [];
+				
+				for i = 1:length(ts) % join each fragment together
+					timefragment = linspace(ts(i), ts(i) + ( (fn(i)-1) * tbase ), fn(i)); %generate out times
+					samplefragment = linspace(fn(i), fn(i)+fn(i)-1,fn(i)); %sample number
+					time = [time tf];
+					sample = [sample sf];
+					LFPs(j).usedtimeStamp(i) = ts(i);
+					LFPs(j).eventSample(i) = round(LFPs(j).usedtimeStamp(i) * 40e3);
+					LFPs(j).sample(i) = round(LFPs(j).usedtimeStamp(i) * LFPs(j).recordingFrequency);
 				end
-				LFPs(j).data = data;
+				if ~isequal(length(time), length(ad)); error('Reading LFP fragments from plexon file failed!'); end
+				LFPs(j).data = ad;
 				LFPs(j).time = time';
-				LFPs(j).eventSample = round(LFPs(j).usedtimeStamp * 40e3);
-				LFPs(j).sample = round(LFPs(j).usedtimeStamp * LFPs(j).recordingFrequency);
+				LFPs(j).sample = sample';
 				LFPs(j).nTrials = ego.eventList.nTrials;
 				LFPs(j).nVars = ego.eventList.nVars;
 			end
