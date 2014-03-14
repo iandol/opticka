@@ -690,7 +690,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.topplotfunc		= 'line'; % plot as a line
 				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
 				cfg.interactive		= 'no'; % toggle off interactive mode
-				ft_spike_plot_raster(cfg, ego.ft, sd{j})
+				ft_spike_plot_raster(cfg, ego.ft, sd{j});
 				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file])
 			end
 			p(row,col).select();

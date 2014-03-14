@@ -78,7 +78,7 @@ classdef analysisCore < optickaCore
 				if ~isempty(ego.selectedTrials)
 					for i = 1:length(ego.selectedTrials)
 						disp(['---> Plotting eye position for: ' ego.selectedTrials{i}.name]);
-						ego.p.eA.plot(ego.selectedTrials{i}.idx);
+						ego.p.eA.plot(ego.selectedTrials{i}.idx,[],[],ego.selectedTrials{i}.name);
 					end
 				end
 			else

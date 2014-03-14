@@ -428,10 +428,19 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plot(ego,select,type,seperateVars)
+		function plot(ego,select,type,seperateVars,name)
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
 			if ~exist('type','var') || isempty(type); type = 'correct'; end
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
+			if ~exist('name','var') || isempty(name)
+				if isnumeric(select)
+					if length(select) > 1
+						name = [ego.file ' | Select: ' num2str(length(select)) ' trials'];
+					else
+						name = [ego.file ' | Select: ' num2str(select)];
+					end
+				end
+			end
 			if length(select) > 1;
 				idx = select;
 				idxInternal = false;
@@ -455,7 +464,7 @@ classdef eyelinkAnalysis < analysisCore
 				return
 			end
 			h=figure;
-			set(gcf,'Color',[1 1 1]);
+			set(gcf,'Color',[1 1 1],'Name',name);
 			figpos(1,[1200 1200]);
 			p = panel(h);
 			p.fontsize = 12;

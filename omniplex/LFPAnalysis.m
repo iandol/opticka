@@ -221,13 +221,8 @@ classdef LFPAnalysis < analysisCore
 				end
 				ft.trial{a} = dat;
 				window = LFPs(1).trials(k).winsteps;
-				%LFPs(1).sample-1 is the offset in samples due to a non-zero start time, fieldtrip is 
-				%incredibly annoying limited to using samples to store timestamps, far from
-				%ideal!!! this is now more complicated as the plexon can pause/unpause so sample can have
-				%multiple values, we use the first sample value because managing the segments is not worth
-				%the effort, why can't fieldtrip just use time!?!?!?!
-				ft.sampleinfo(a,1)= LFPs(1).trials(k).startIndex + LFPs(1).sample(1)-1;
-				ft.sampleinfo(a,2)= LFPs(1).trials(k).endIndex + LFPs(1).sample(1)-1;
+				ft.sampleinfo(a,1)= LFPs(1).trials(k).rawSampleStart; %faked sample numbers
+				ft.sampleinfo(a,2)= LFPs(1).trials(k).rawSampleEnd;
 				ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -window LFPs(1).trials(k).t1];
 				ft.trialinfo(a,1) = LFPs(1).trials(k).variable;
 				a = a + 1;
@@ -633,6 +628,7 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		function plot(ego, varargin)
 			if isempty(ego.LFPs) || ego.doPlots == false;
+				disp('Nothing parsed or doPlots is false, no plotting performed...')
 				return
 			end
 			if isempty(varargin) || ~ischar(varargin{1})
@@ -814,7 +810,7 @@ classdef LFPAnalysis < analysisCore
 			demeanW = round(ego.baselineWindow/1e-3) - 1;
 			for j = 1:length(LFPs)
 				time		= LFPs(j).time;
-				sample	= LFPs(j).time;
+				sample	= LFPs(j).sample;
 				data		= LFPs(j).data;
 				minL		= Inf;
 				maxL		= 0;
@@ -823,14 +819,15 @@ classdef LFPAnalysis < analysisCore
 					[idx1, val1, dlta1] = ego.findNearest(time, trials(k).t1);
 					trials(k).zeroTime = val1;
 					trials(k).zeroIndex = idx1; 
+					trials(k).zeroDelta = dlta1;
 					trials(k).startIndex = idx1 - winsteps; 
 					trials(k).endIndex = idx1 + winsteps;
-					trials(k).zeroDelta = dlta1;
-					trials(k).data = data( trials(k).startIndex : trials(k).endIndex );
 					trials(k).otime = time( trials(k).startIndex : trials(k).endIndex );
+					trials(k).time = [ -window : 1e-3 : window ]';
+					trials(k).sample = sample( trials(k).startIndex : trials(k).endIndex );
+					trials(k).data = data( trials(k).startIndex : trials(k).endIndex );
 					trials(k).rawSampleStart = sample(trials(k).startIndex);
 					trials(k).rawSampleEnd = sample(trials(k).endIndex);
-					trials(k).time = [ -window : 1e-3 : window ]';
 					trials(k).prestimMean = mean(trials(k).data(winsteps + demeanW(1) : winsteps + demeanW(2)));
 					if ego.demeanLFP == true
 						trials(k).data = trials(k).data - trials(k).prestimMean;
@@ -1054,12 +1051,15 @@ classdef LFPAnalysis < analysisCore
 					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
 					hold on
 					e = ego.var2SE(av{1}.var(1,:),av{1}.dof(1,:));
-					areabar(av{1}.time, av{1}.avg(1,:), e,[.5 .5 .5],0.3,'k-','LineWidth',1);
+					areabar(av{1}.time, av{1}.avg(1,:), e,[.5 .5 .5],0.3,'b-','LineWidth',1);
 					e = ego.var2SE(av{2}.var(1,:),av{2}.dof(1,:));
 					areabar(av{2}.time, av{2}.avg(1,:), e,[.5 .3 .3],0.3,'r-','LineWidth',1);
-					if length(av) > 2
+					if length(av) == 2
+						legend(av{1}.name,av{2}.name)
+					elseif length(av) > 2
 						e = ego.var2SE(av{3}.var(1,:),av{3}.dof(1,:));
-						areabar(av{3}.time, av{3}.avg(1,:), e,[.3 .3 .5],0.3,'b-','LineWidth',1);
+						areabar(av{3}.time, av{3}.avg(1,:), e,[.3 .3 .5],0.3,'g-','LineWidth',1);
+						legend(av{1}.name,av{2}.name,av{3}.name);
 					end
 					hold off
 					ax=axis;

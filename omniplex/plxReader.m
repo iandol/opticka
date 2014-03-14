@@ -228,12 +228,13 @@ classdef plxReader < optickaCore
 				
 				for i = 1:length(ts) % join each fragment together
 					timefragment = linspace(ts(i), ts(i) + ( (fn(i)-1) * tbase ), fn(i)); %generate out times
-					samplefragment = linspace(fn(i), fn(i)+fn(i)-1,fn(i)); %sample number
-					time = [time tf];
-					sample = [sample sf];
+					startsample = round(ts(i) * LFPs(j).recordingFrequency);
+					samplefragment = linspace(startsample, startsample+fn(i)-1,fn(i)); %sample number
+					time = [time timefragment];
+					sample = [sample samplefragment];
 					LFPs(j).usedtimeStamp(i) = ts(i);
 					LFPs(j).eventSample(i) = round(LFPs(j).usedtimeStamp(i) * 40e3);
-					LFPs(j).sample(i) = round(LFPs(j).usedtimeStamp(i) * LFPs(j).recordingFrequency);
+					LFPs(j).sample(i) = startsample;
 				end
 				if ~isequal(length(time), length(ad)); error('Reading LFP fragments from plexon file failed!'); end
 				LFPs(j).data = ad;
@@ -382,9 +383,9 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief Create a FieldTrip spike structure
 		%>
-			%> @param
+		%> @param
 		%> @return
 		% ===================================================================
 		function spike = getFieldTripSpikes(ego)
@@ -401,6 +402,7 @@ classdef plxReader < optickaCore
 			spike.time = cell(1,spike.nUnits);
 			spike.trial = cell(1,spike.nUnits);
 			spike.trialtime = [];
+			spike.sampleinfo = [];
 			spike.cfg = struct;
 			spike.cfg.dataset = ego.file;
 			spike.cfg.headerformat = 'plexon_plx_v2';
@@ -416,9 +418,11 @@ classdef plxReader < optickaCore
 					spike.time{k} = [spike.time{k} s-t.base];
 					spike.trial{k} = [spike.trial{k} ones(1,length(s))*j];
 					spike.trialtime(j,:) = [t.rStart t.rEnd];
+					spike.sampleinfo(j,:) = [t.tStart*fs t.tEnd*fs];
 					spike.cfg.trl(j,:) = [spike.trialtime(j,:) t.rStart*fs t.variable t.isCorrect];
 				end
 			end
+			fprintf('Coverting spikes to fieldtrip format took %g ms\n',round(toc*1000));
 		end
 		
 		% ===================================================================
