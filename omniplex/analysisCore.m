@@ -152,7 +152,7 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief a wrapper to make plotyy more friendly to errorbars
 		%>
 		%> @param
 		% ===================================================================
@@ -164,7 +164,7 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief variance to standard eror
 		%>
 		%> @param
 		% ===================================================================
@@ -173,7 +173,7 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief preferred row col layout for multiple plots
 		%> @param
 		% ===================================================================
 		function [row,col]=optimalLayout(len)
@@ -191,7 +191,7 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief make optimally different colours
+		%> @brief make optimally different colours for plots
 		%>
 		%> @param
 		% ===================================================================

@@ -223,9 +223,13 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function select(ego)
+		function select(ego,force)
+			if ~exist('force','var'); force = false; end
 			if isempty(ego.trial); warndlg('Data not parsed yet...');return;end
-			ego.yokedSelection = false;
+			if force == true; ego.yokedSelection = false; end
+			if ego.yokedSelection == true;
+				disp('This spikeanalysis object is currently locked, run select(true) to override lock...'); return
+			end
 			cuttrials = '[ ';
 			if ~isempty(ego.cutTrials) 
 				cuttrials = [cuttrials num2str(ego.cutTrials)];
@@ -334,7 +338,7 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function PSTH(ego)
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			
+			ft_defaults;
 			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
@@ -364,6 +368,8 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function density(ego)
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			ft_defaults;
 			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
@@ -395,7 +401,7 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function ISI(ego)
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			
+			ft_defaults;
 			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
