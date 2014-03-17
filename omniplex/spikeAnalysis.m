@@ -405,19 +405,7 @@ classdef spikeAnalysis < analysisCore
 				isi{j}				= ft_spike_isi(cfg, ego.ft);
 			end
 			ego.ft.isi = isi;
-			
-			for j = 1:length(ego.selectedTrials)
-			  cfg              = [];
-			  cfg.spikechannel = isi{j}.label{k};
-			  cfg.interpolate  = 5; % interpolate at 5 times the original density
-			  cfg.window       = 'gausswin'; % use a gaussian window to smooth
-			  cfg.winlen       = 0.004; % the window by which we smooth has size 4 by 4 ms
-			  cfg.colormap     = jet(300); % colormap
-			  cfg.scatter      = 'no'; % do not plot the individual isis per spike as scatters
-			  figure, ft_spike_plot_isireturn(cfg,isi{j})
-			end
-			
-			%if ego.doPlots; plot(ego,'psth'); end
+			if ego.doPlots; plot(ego,'isi'); end
 		end
 		
 		% ===================================================================
@@ -557,6 +545,8 @@ classdef spikeAnalysis < analysisCore
 					plotDensity(ego); drawnow;
 				case 'densitysummary'
 					plotDensitySummary(ego); drawnow;
+				case 'isi'
+					plotISI(ego); drawnow;
 			end
 		end
 		
@@ -775,7 +765,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.errorbars			= 'conf95%'; % plot with the standard deviation
 				cfg.interactive		= 'yes'; % toggle off interactive mode
 				ft_spike_plot_raster(cfg, ego.ft, psth{j});
-				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file]);
+				p(i1,i2).title([ego.selectedTrials{j}.name ' ' ego.file]);
 			end
 			p(row,col).select();
 			box on
@@ -804,8 +794,29 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plotISI(ego)
-			
+			if ~isfield(ego.ft,'isi'); warning('No ISI parsed yet.'); return; end
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			isi = ego.ft.isi;
+			len = ego.nSelection;
+			h=figure;figpos(1,[1000 2000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			p=panel(h);
+			p.margin = [20 20 20 20]; %left bottom right top
+			[row,col]=ego.optimalLayout(len);
+			p.pack(row,col);
+			for j = 1:length(ego.selectedTrials)
+				[i1,i2] = ind2sub([row,col], j);
+				p(i1,i2).select();
+				cfg              = [];
+				cfg.spikechannel = isi{j}.label{1};
+				cfg.interpolate  = 5; % interpolate at 5 times the original density
+				cfg.window       = 'gausswin'; % use a gaussian window to smooth
+				cfg.winlen       = 0.004; % the window by which we smooth has size 4 by 4 ms
+				cfg.colormap     = jet(300); % colormap
+				cfg.scatter      = 'no'; % do not plot the individual isis per spike as scatters
+				ft_spike_plot_isireturn(cfg,isi{j})
+				p(i1,i2).title([ego.selectedTrials{j}.name ' ' ego.file]);
+			end
 		end
-	
+		
 	end
 end

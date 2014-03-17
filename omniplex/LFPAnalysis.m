@@ -900,13 +900,13 @@ classdef LFPAnalysis < analysisCore
 					ego.selectedTrials{a}.saccidx		= saccidx;
 					ego.selectedTrials{a}.behaviour	= ego.selectedBehaviour;
 					ego.selectedTrials{a}.sel			= map{i};
-					ego.selectedTrials{a}.name			= ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
+					ego.selectedTrials{a}.name			= ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx)) '|' ego.selectedTrials{a}.behaviour];
 					a = a + 1;
 				end
 			end
 			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); end
 			for j = 1:ego.nSelection
-				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\nCut Index: %s\nBehaviour: %s\n',...
+				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n-Cut Index: %s\nBehaviour: %s\n',...
 					j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx),num2str(ego.selectedTrials{j}.cutidx),...
 					ego.selectedBehaviour);
 			end
@@ -929,8 +929,9 @@ classdef LFPAnalysis < analysisCore
 			end
 			
 			LFP = ego.LFPs(sel);
-			
+			cut = ego.cutTrials;
 			p=panel(h);
+			p.margin = [20 20 10 15]; %left bottom right top
 			[row,col]=ego.optimalLayout(ego.nSelection);
 			p.pack(row,col);
 			for j = 1:length(ego.selectedTrials)
@@ -942,16 +943,14 @@ classdef LFPAnalysis < analysisCore
 				p(i1,i2).hold('on');
 				for k = 1:length(ego.selectedTrials{j}.idx)
 					trial = LFP.trials(ego.selectedTrials{j}.idx(k));
-					dat = [trial.variable,trial.index,trial.t1];
-					cut = ego.cutTrials;
-					if ~isempty(intersect(trial.index,cut));
-						ls = ':';
+					dat = [trial.variable,trial.index,trial.t1,trial.isCorrect,trial.isBreak];
+					if ismember(trial.index,cut);
+						ls = ':';c=[0.5 0.5 0.5];
 					else
-						ls = '-';
+						ls = '-';c=rand(1,3);
 					end
-					tag=['VAR:' num2str(dat(1)) '  TRL:' num2str(dat(2)) '  T1:' num2str(dat(3))];
+					tag=['VAR:' num2str(dat(1)) '  TRL:' num2str(dat(2)) '  T1:' num2str(dat(3)) '  CORR:' num2str(dat(4)) '  BREAK:' num2str(dat(5))];
 					if strcmpi(class(gcf),'double')
-						c=rand(1,3);
 						plot(trial.time, trial.data, 'LineStyle', ls, 'Color', c, 'Tag', tag, 'ButtonDownFcn', @clickMe, 'UserData', dat);
 					else
 						plot(trial.time, trial.data,'LineStyle', ls, 'Tag',tag,'ButtonDownFcn', @clickMe,'UserData',dat);
@@ -1380,7 +1379,7 @@ classdef LFPAnalysis < analysisCore
 			time = ego.LFPs(sel).trials(1).time';
 			data = [ego.LFPs(sel).trials(idx).data];
 			data = rot90(fliplr(data)); %get it into trial x data = row x column
-			[avg,err] = stderr(data);
+			[avg,err] = stderr(data,'SE');
 		end
 		
 	end
