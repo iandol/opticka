@@ -686,10 +686,12 @@ classdef spikeAnalysis < analysisCore
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				cfg.spikelength		= 1;
-				cfg.topplotfunc		= 'line'; % plot as a line
+				cfg.spikelength	= 1;
+				cfg.trialborders	= 'no';
+				cfg.showselection	= 'yes';
+				cfg.topplotfunc	= 'line'; % plot as a line
 				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
-				cfg.interactive		= 'no'; % toggle off interactive mode
+				cfg.interactive	= 'yes'; % toggle off interactive mode
 				ft_spike_plot_raster(cfg, ego.ft, sd{j});
 				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file])
 			end
@@ -767,10 +769,12 @@ classdef spikeAnalysis < analysisCore
 				cfg.trials				= ego.selectedTrials{j}.idx;
 				cfg.spikechannel		= ego.names{ego.selectedUnit};
 				cfg.spikelength		= 1;
+				cfg.trialborders		= 'no';
+				cfg.showselection		= 'no';
 				%cfg.topplotfunc		= 'line'; % plot as a line
 				cfg.errorbars			= 'conf95%'; % plot with the standard deviation
-				cfg.interactive		= 'no'; % toggle off interactive mode
-				ft_spike_plot_raster(cfg, ego.ft, psth{j})
+				cfg.interactive		= 'yes'; % toggle off interactive mode
+				ft_spike_plot_raster(cfg, ego.ft, psth{j});
 				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file]);
 			end
 			p(row,col).select();
