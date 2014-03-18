@@ -669,14 +669,14 @@ classdef spikeAnalysis < analysisCore
 			sd = ego.ft.sd;
 			rate = ego.ft.rate;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			h=figure;set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			if length(sd) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
 			p.margin = [20 20 20 10]; %left bottom right top
 			len = ego.nSelection + 1;
 			[row,col]=ego.optimalLayout(len);
 			p.pack(row,col);
 			for j = 1:length(ego.selectedTrials)
-				%ft = ego.subselectFieldTripTrials(ego.ft,ego.selectedTrials{j}.idx);
 				[i1,i2] = ind2sub([row,col], j);
 				p(i1,i2).select();
 				cfg					= [];
@@ -684,12 +684,13 @@ classdef spikeAnalysis < analysisCore
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				cfg.spikelength	= 1;
 				cfg.trialborders	= 'no';
-				cfg.showselection	= 'yes';
+				%cfg.plotselection	= 'yes';
 				cfg.topplotfunc	= 'line'; % plot as a line
 				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
-				cfg.interactive	= 'yes'; % toggle off interactive mode
-				ft_spike_plot_raster(cfg, ego.ft, sd{j});
-				p(i1,i2).title([upper(ego.selectedTrials{j}.behaviour) ' ' ego.selectedTrials{j}.name ' ' ego.file])
+				cfg.interactive	= 'no'; % toggle off interactive mode
+				cfgUsed{j} = ft_spike_plot_raster(cfg, ego.ft);
+				%set(cfgUsed{j}.hdl.axRaster, 'Position', cfgUsed{j}.pos.posRaster);
+				%title([ego.selectedTrials{j}.name ' ' ego.file ' ' ego.names{ego.selectedUnit}])
 			end
 			p(row,col).select();
 			box on
@@ -765,12 +766,13 @@ classdef spikeAnalysis < analysisCore
 				cfg.trials				= ego.selectedTrials{j}.idx;
 				cfg.spikechannel		= ego.names{ego.selectedUnit};
 				cfg.spikelength		= 1;
+				cfg.latency				= ego.plotRange;
 				cfg.trialborders		= 'no';
-				cfg.showselection		= 'no';
+				%cfg.plotselection		= 'yes';
 				%cfg.topplotfunc		= 'line'; % plot as a line
 				cfg.errorbars			= 'conf95%'; % plot with the standard deviation
-				cfg.interactive		= 'yes'; % toggle off interactive mode
-				ft_spike_plot_raster(cfg, ego.ft, psth{j});
+				cfg.interactive		= 'no'; % toggle off interactive mode
+				ft_spike_plot_raster(cfg, ego.ft,psth{j});
 				p(i1,i2).title([ego.selectedTrials{j}.name ' ' ego.file]);
 			end
 			p(row,col).select();

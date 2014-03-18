@@ -944,6 +944,10 @@ classdef (Sealed = true) panel < handle
 
 	methods
 		
+		function addaxis(p, ax)
+			h = get(p.getOrCreateAxis(), 'xlabel');
+		end
+		
 		function xlabel(p, text)
 			
 			% apply an xlabel to the panel (or group)

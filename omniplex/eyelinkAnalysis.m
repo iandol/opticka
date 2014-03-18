@@ -681,8 +681,8 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				ud = get(src,'UserData');
 				if ~isempty(ud)
-					disp(['TRIAL | CORRECTED | VAR = ' num2str(ud)]);
 					disp(ego.trials(ud(1)));
+					disp(['TRIAL | CORRECTED | VAR = ' num2str(ud)]);
 				end
 			end
 		end
