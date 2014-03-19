@@ -483,7 +483,7 @@ classdef LFPAnalysis < analysisCore
 				plotTogether(ego); drawnow;
 			end
 			
-			%in.yokedSelection = true;
+			in.yokedSelection = true;
 			in.cutTrials = ego.cutTrials;
 			in.selectedTrials = ego.selectedTrials;
 			in.map = ego.map;
@@ -548,6 +548,38 @@ classdef LFPAnalysis < analysisCore
 				ego.ft.stsFFT{j}.ang=ang;
 				ego.ft.stsFFT{j}.mag=mag;
 				
+				cfg							= [];
+				cfg.method					= 'convol';
+				cfg.foi						= 5:10:100;
+				cfg.t_ftimwin				= 5./cfg.foi; % 5 cycles per frequency
+				cfg.taper					= 'hanning';
+				cfg.spikechannel			= spike.label{unit};
+				cfg.channel					= ft.label{ego.selectedLFP};
+				stsConvol						= ft_spiketriggeredspectrum(cfg, tempft, tempspike);
+				
+				ang = squeeze(angle(stsConvol.fourierspctrm{1}));
+				mag = squeeze(abs(stsConvol.fourierspctrm{1}));
+				ego.ft.stsConvol{j} = stsConvol;
+				ego.ft.stsConvol{j}.name = name;
+				ego.ft.stsConvol{j}.ang=ang;
+				ego.ft.stsConvol{j}.mag=mag;
+				
+				cfg               = [];
+				cfg.method        = 'ppc0'; % compute the Pairwise Phase Consistency
+				cfg.spikechannel	= spike.label{unit};
+				cfg.channel			= ft.label{ego.selectedLFP};
+				cfg.avgoverchan   = 'unweighted'; % weight spike-LFP phases irrespective of LFP power
+				cfg.timwin        = 'all'; % compute over all available spikes in the window 
+				cfg.latency       = [0 0.3]; % sustained visual stimulation period
+				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
+				
+				% plot the results
+			  figure
+			  plot(statSts.freq,statSts.ppc0')  
+			  xlabel('frequency')
+			  ylabel('PPC')
+				ego.ft.statSts{j} = statSts;
+
 			end
 			if ego.doPlots; drawSpikeLFP(ego); end
 		end

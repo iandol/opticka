@@ -683,19 +683,21 @@ classdef spikeAnalysis < analysisCore
 				cfg.trials			= ego.selectedTrials{j}.idx;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				cfg.spikelength	= 1;
+				cfg.latency			= ego.plotRange;
 				cfg.trialborders	= 'no';
-				%cfg.plotselection	= 'yes';
+				cfg.plotselection	= 'yes';
 				cfg.topplotfunc	= 'line'; % plot as a line
 				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
 				cfg.interactive	= 'no'; % toggle off interactive mode
 				cfgUsed{j} = ft_spike_plot_raster(cfg, ego.ft);
-				%set(cfgUsed{j}.hdl.axRaster, 'Position', cfgUsed{j}.pos.posRaster);
-				%title([ego.selectedTrials{j}.name ' ' ego.file ' ' ego.names{ego.selectedUnit}])
+				box on
+				grid on
+				if isfield(cfgUsed{j}.hdl,'axTopPlot'); set(cfgUsed{j}.hdl.axTopPlot,'Color','none'); end
 			end
 			p(row,col).select();
 			box on
 			grid on
-			hold on
+			p(row,col).hold('on');
 			c = ego.optimalColours(length(sd));
 			t = [ego.file ' '];
 			for j = 1:length(sd)
@@ -753,7 +755,8 @@ classdef spikeAnalysis < analysisCore
 			rate = ego.ft.rate;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			len = ego.nSelection + 1;
-			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			h=figure;set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			if length(psth) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
 			p.margin = [20 20 20 10]; %left bottom right top
 			[row,col]=ego.optimalLayout(len);
@@ -768,12 +771,12 @@ classdef spikeAnalysis < analysisCore
 				cfg.spikelength		= 1;
 				cfg.latency				= ego.plotRange;
 				cfg.trialborders		= 'no';
-				%cfg.plotselection		= 'yes';
+				cfg.plotselection		= 'yes';
 				%cfg.topplotfunc		= 'line'; % plot as a line
 				cfg.errorbars			= 'conf95%'; % plot with the standard deviation
 				cfg.interactive		= 'no'; % toggle off interactive mode
-				ft_spike_plot_raster(cfg, ego.ft,psth{j});
-				p(i1,i2).title([ego.selectedTrials{j}.name ' ' ego.file]);
+				cfgUsed{j} = ft_spike_plot_raster(cfg, ego.ft);
+				if isfield(cfgUsed{j}.hdl,'axTopPlot'); set(cfgUsed{j}.hdl.axTopPlot,'Color','none'); end
 			end
 			p(row,col).select();
 			box on
