@@ -598,7 +598,7 @@ classdef eyelinkAnalysis < analysisCore
 			display = ego.display / ppd;
 			
 			q(1,1).select();
-			set(gca,'YDir','reverse')
+			axis ij
 			grid on
 			box on
 			axis(round([-display(1)/3 display(1)/3 -display(2)/3 display(2)/3]))
@@ -641,7 +641,7 @@ classdef eyelinkAnalysis < analysisCore
 			set(h,'BackgroundColor',[1 1 1]);
 			
 			q(2,1).select();
-			set(gca,'YDir','reverse')
+			axis ij
 			grid on
 			box on
 			axis tight;

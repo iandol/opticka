@@ -17,7 +17,7 @@ classdef spikeAnalysis < analysisCore
 		rateRange@double = [0.05 0.2]
 		%> bin size
 		binSize@double = 0.01
-		%> gaussian window
+		%> gaussian window for density plots
 		gaussWindow = [-0.02 0.02];
 		%> default Spike channel
 		selectedUnit@double = 1
@@ -29,6 +29,8 @@ classdef spikeAnalysis < analysisCore
 		ROI@double = [];
 		%> time of interest for fixation, if empty ignore
 		TOI@double = [];
+		%> inset raster plot?
+		insetRasterPlot@logical = false;
 		%> plot verbosity
 		verbose	= true
 	end
@@ -673,31 +675,37 @@ classdef spikeAnalysis < analysisCore
 			if length(sd) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
 			p.margin = [20 20 20 10]; %left bottom right top
-			len = ego.nSelection + 1;
+			p.pack('v', {3/4 []})
+			q = p(1);
+			len = ego.nSelection;
 			[row,col]=ego.optimalLayout(len);
-			p.pack(row,col);
+			q.pack(row,col);
 			for j = 1:length(ego.selectedTrials)
 				[i1,i2] = ind2sub([row,col], j);
-				p(i1,i2).select();
+				q(i1,i2).select();
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				cfg.spikelength	= 1;
+				if length(cfg.trials) < 50; cfg.spikelength = 0.7; else cfg.spikelength = 1; end
 				cfg.latency			= ego.plotRange;
 				cfg.trialborders	= 'no';
 				cfg.plotselection	= 'yes';
 				cfg.topplotfunc	= 'line'; % plot as a line
 				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
 				cfg.interactive	= 'no'; % toggle off interactive mode
-				cfgUsed{j} = ft_spike_plot_raster(cfg, ego.ft);
-				box on
-				grid on
+				if ego.insetRasterPlot
+					cfgUsed{j}		= ft_spike_plot_raster(cfg, ego.ft, sd{j});
+				else
+					cfgUsed{j}		= ft_spike_plot_raster(cfg, ego.ft);
+				end
+				q(i1,i2).title([ego.names{ego.selectedUnit} ' VAR: ' num2str(j)])
 				if isfield(cfgUsed{j}.hdl,'axTopPlot'); set(cfgUsed{j}.hdl.axTopPlot,'Color','none'); end
+				ego.appendTrialNames(cfgUsed{j}.hdl.axRaster,cfgUsed{j}.trials);
 			end
-			p(row,col).select();
+			p(2).select();
 			box on
 			grid on
-			p(row,col).hold('on');
+			p(2).hold('on');
 			c = ego.optimalColours(length(sd));
 			t = [ego.file ' '];
 			for j = 1:length(sd)
@@ -706,9 +714,9 @@ classdef spikeAnalysis < analysisCore
 				leg{j,1} = ego.selectedTrials{j}.name;
 				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
 			end
-			p(row,col).title(t);
-			p(row,col).xlabel('Time (s)')
-			p(row,col).ylabel(['Firing Rate (Hz) \pm S.E.M.'])
+			p(2).title(t);
+			p(2).xlabel('Time (s)')
+			p(2).ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
@@ -738,7 +746,7 @@ classdef spikeAnalysis < analysisCore
 			end
 			title(t,'FontSize',15);
 			xlabel('Time (s)')
-			ylabel(['Firing Rate (Hz) \pm S.E.M.'])
+			ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
@@ -759,41 +767,47 @@ classdef spikeAnalysis < analysisCore
 			if length(psth) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
 			p.margin = [20 20 20 10]; %left bottom right top
+			p.pack('v', {3/4 []})
+			q = p(1);
+			len = ego.nSelection;
 			[row,col]=ego.optimalLayout(len);
-			p.pack(row,col);
+			q.pack(row,col);
 			for j = 1:length(ego.selectedTrials)
 				%ft = ego.subselectFieldTripTrials(ego.ft,ego.selectedTrials{j}.idx);
 				[i1,i2] = ind2sub([row,col], j);
-				p(i1,i2).select();
+				q(i1,i2).select();
 				cfg						= [];
 				cfg.trials				= ego.selectedTrials{j}.idx;
 				cfg.spikechannel		= ego.names{ego.selectedUnit};
-				cfg.spikelength		= 1;
+				if length(cfg.trials) < 50; cfg.spikelength = 0.7; else cfg.spikelength = 1; end
 				cfg.latency				= ego.plotRange;
 				cfg.trialborders		= 'no';
 				cfg.plotselection		= 'yes';
 				%cfg.topplotfunc		= 'line'; % plot as a line
 				cfg.errorbars			= 'conf95%'; % plot with the standard deviation
 				cfg.interactive		= 'no'; % toggle off interactive mode
-				cfgUsed{j} = ft_spike_plot_raster(cfg, ego.ft);
+				if ego.insetRasterPlot
+					cfgUsed{j}			= ft_spike_plot_raster(cfg, ego.ft, psth{j});
+				else
+					cfgUsed{j}			= ft_spike_plot_raster(cfg, ego.ft);
+				end
 				if isfield(cfgUsed{j}.hdl,'axTopPlot'); set(cfgUsed{j}.hdl.axTopPlot,'Color','none'); end
+				ego.appendTrialNames(cfgUsed{j}.hdl.axRaster,cfgUsed{j}.trials);
 			end
-			p(row,col).select();
-			box on
-			grid on
-			hold on
+			p(2).select();
+			box on; grid on
+			p(2).hold('on');
 			c = ego.optimalColours(length(psth));
 			t = [ego.file ' '];
 			for j = 1:length(psth)
-				e = sqrt(psth{j}.var ./ psth{j}.dof);
-				e(isnan(e)) = 0;
+				e = ego.var2SE(psth{j}.var,psth{j}.dof);
 				areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
 				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
 			end
-			p(row,col).title(t);
-			p(row,col).xlabel('Time (s)')
-			p(row,col).ylabel(['Firing Rate (Hz) \pm ' cfg.errorbars])
+			p(2).title(t);
+			p(2).xlabel('Time (s)')
+			ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
@@ -827,6 +841,30 @@ classdef spikeAnalysis < analysisCore
 				ft_spike_plot_isireturn(cfg,isi{j})
 				p(i1,i2).title([ego.selectedTrials{j}.name ' ' ego.file]);
 			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function appendTrialNames(ego,hdl,idx)
+			axis(hdl);
+			xpos = xlim;
+			for j = 1:length(idx)
+				cs{j} = num2str(idx(j));
+				y(j) = j;
+				x(j) = xpos(2) + abs(((xpos(2)-xpos(1))/100));
+			end
+			if length(idx) > 100
+				fs = 7;
+			elseif length(idx) > 50
+				fs = 8;
+			else
+				fs = 10;
+			end
+			text(x,y,cs,'FontSize',fs,'Interpreter','none')
+			%set(hdl,'YGrid','on','YMinorGrid','on')
 		end
 		
 	end

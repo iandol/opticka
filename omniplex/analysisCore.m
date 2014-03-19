@@ -178,15 +178,19 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		function [row,col]=optimalLayout(len)
 			row=1; col=1;
-			if		len == 2,	row = 2;	col = 1;
+			if		len == 2,		row = 2;	col = 1;
 			elseif	len == 3,	row = 3;	col = 1;
 			elseif	len == 4,	row = 2;	col = 2;
-			elseif	len < 7,	row = 3;	col = 2;
-			elseif	len < 9,	row = 4;	col = 2;
+			elseif	len < 7,		row = 3;	col = 2;
+			elseif	len < 9,		row = 4;	col = 2;
 			elseif	len < 10,	row = 3;	col = 3;
 			elseif	len < 13,	row = 4;	col = 3;
 			elseif	len < 17,	row = 4;	col = 4;
 			elseif	len < 21,	row = 5;	col = 4;
+			elseif	len < 26,	row = 5;	col = 5;
+			elseif	len < 31,	row = 6;	col = 5;
+			elseif	len < 37,	row = 6;	col = 6;
+			else						row = ceil(len/10); col = 10;
 			end
 		end
 		
@@ -258,39 +262,40 @@ classdef analysisCore < optickaCore
 				colors(i,:) = rgb(index,:);  % save for output
 				lastlab = lab(index,:);  % prepare for next iteration
 			end
-		end
 		
-		function c = parsecolor(s)
-			if ischar(s)
-				c = colorstr2rgb(s);
-			elseif isnumeric(s) && size(s,2) == 3
-				c = s;
-			else
-				error('MATLAB:InvalidColorSpec','Color specification cannot be parsed.');
-			end
-		end
-		
-		function c = colorstr2rgb(c)
-			% Convert a color string to an RGB value.
-			% This is cribbed from Matlab's whitebg function.
-			% Why don't they make this a stand-alone function?
-			rgbspec = [1 0 0;0 1 0;0 0 1;1 1 1;0 1 1;1 0 1;1 1 0;0 0 0];
-			cspec = 'rgbwcmyk';
-			k = find(cspec==c(1));
-			if isempty(k)
-				error('MATLAB:InvalidColorString','Unknown color string.');
-			end
-			if k~=3 || length(c)==1,
-				c = rgbspec(k,:);
-			elseif length(c)>2,
-				if strcmpi(c(1:3),'bla')
-					c = [0 0 0];
-				elseif strcmpi(c(1:3),'blu')
-					c = [0 0 1];
+			function c = parsecolor(s)
+				if ischar(s)
+					c = colorstr2rgb(s);
+				elseif isnumeric(s) && size(s,2) == 3
+					c = s;
 				else
-					error('MATLAB:UnknownColorString', 'Unknown color string.');
+					error('MATLAB:InvalidColorSpec','Color specification cannot be parsed.');
 				end
 			end
+
+			function c = colorstr2rgb(c)
+				% Convert a color string to an RGB value.
+				% This is cribbed from Matlab's whitebg function.
+				% Why don't they make this a stand-alone function?
+				rgbspec = [1 0 0;0 1 0;0 0 1;1 1 1;0 1 1;1 0 1;1 1 0;0 0 0];
+				cspec = 'rgbwcmyk';
+				k = find(cspec==c(1));
+				if isempty(k)
+					error('MATLAB:InvalidColorString','Unknown color string.');
+				end
+				if k~=3 || length(c)==1,
+					c = rgbspec(k,:);
+				elseif length(c)>2,
+					if strcmpi(c(1:3),'bla')
+						c = [0 0 0];
+					elseif strcmpi(c(1:3),'blu')
+						c = [0 0 1];
+					else
+						error('MATLAB:UnknownColorString', 'Unknown color string.');
+					end
+				end
+			end
+		
 		end
 		
 	end %---END STATIC METHODS---%
