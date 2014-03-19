@@ -199,7 +199,9 @@ classdef LFPAnalysis < analysisCore
 			LFPs = ego.LFPs;
 			tic
 			ft = struct();
+			olddir=pwd; cd(ego.dir);
 			ft(1).hdr = ft_read_plxheader(ego.lfpfile);
+			cd(olddir);
 			ft.hdr.FirstTimeStamp = 0; %we use LFPs(1).sample-1 below to fake 0 start time
 			ft.label = {LFPs(:).name};
 			ft.time = cell(1);
@@ -223,7 +225,7 @@ classdef LFPAnalysis < analysisCore
 				window = LFPs(1).trials(k).winsteps;
 				ft.sampleinfo(a,1)= LFPs(1).trials(k).rawSampleStart; %faked sample numbers
 				ft.sampleinfo(a,2)= LFPs(1).trials(k).rawSampleEnd;
-				ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -window LFPs(1).trials(k).t1];
+				ft.cfg.trl(a,:) = [ft.sampleinfo(a,:) -window LFPs(1).trials(k).variable LFPs(1).trials(k).index LFPs(1).trials(k).t1];
 				ft.trialinfo(a,1) = LFPs(1).trials(k).variable;
 				a = a + 1;
 			end
@@ -421,31 +423,31 @@ classdef LFPAnalysis < analysisCore
 				cfg.smooth		= smth;
 				switch preset
 					case 'fix1'
-						cfg.method      = 'mtmconvol';
-						cfg.taper		= 'hanning';
-						lf				= round(1 / cfg.tw);
-						cfg.foi         = lf:2:80;						  % analysis frequencies
-						cfg.t_ftimwin	= ones(length(cfg.foi),1).*tw;   % length of fixed time window
+						cfg.method			= 'mtmconvol';
+						cfg.taper			= 'hanning';
+						lf						= round(1 / cfg.tw);
+						cfg.foi				= lf:2:80;						  % analysis frequencies
+						cfg.t_ftimwin		= ones(length(cfg.foi),1).*tw;   % length of fixed time window
 					case 'fix2'
-						cfg.method      = 'mtmconvol';
-						cfg.taper       = 'hanning';
-						cfg.foi         = 2:2:80;						  % analysis frequencies
-						cfg.t_ftimwin	= cycles./cfg.foi;					  % x cycles per time window
+						cfg.method			= 'mtmconvol';
+						cfg.taper			= 'hanning';
+						cfg.foi				= 2:2:80;						 % analysis frequencies
+						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
 					case 'mtm1'
-						cfg.method      = 'mtmconvol';
-						cfg.taper       = 'dpss';
-						cfg.foi         = 2:2:80;						  % analysis frequencies
-						cfg.tapsmofrq	= cfg.foi * cfg.smooth;
-						cfg.t_ftimwin	= cycles./cfg.foi;					  % x cycles per time window
+						cfg.method			= 'mtmconvol';
+						cfg.taper			= 'dpss';
+						cfg.foi				= 2:2:80;						 % analysis frequencies
+						cfg.tapsmofrq		= cfg.foi * cfg.smooth;
+						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
 					case 'mtm2'
-						cfg.method      = 'mtmconvol';
-						cfg.taper       = 'dpss';
-						cfg.foi         = 2:2:80;						  % analysis frequencies
+						cfg.method			= 'mtmconvol';
+						cfg.taper			= 'dpss';
+						cfg.foi				= 2:2:80;						 % analysis frequencies
 					case 'morlet'
-						cfg.method		= 'wavelet';
-						cfg.taper		= '';
-						cfg.width		= width;
-						cfg.foi         = 2:2:80;						  % analysis frequencies
+						cfg.method			= 'wavelet';
+						cfg.taper			= '';
+						cfg.width			= width;
+						cfg.foi				= 2:2:80;						 % analysis frequencies
 				end
 			elseif ~isempty(cfg)
 				preset = 'custom';
@@ -550,12 +552,12 @@ classdef LFPAnalysis < analysisCore
 				
 				cfg							= [];
 				cfg.method					= 'convol';
-				cfg.foi						= 5:10:100;
+				cfg.foi						= 5:5:100;
 				cfg.t_ftimwin				= 5./cfg.foi; % 5 cycles per frequency
 				cfg.taper					= 'hanning';
 				cfg.spikechannel			= spike.label{unit};
 				cfg.channel					= ft.label{ego.selectedLFP};
-				stsConvol						= ft_spiketriggeredspectrum(cfg, tempft, tempspike);
+				stsConvol					= ft_spiketriggeredspectrum(cfg, tempft, tempspike);
 				
 				ang = squeeze(angle(stsConvol.fourierspctrm{1}));
 				mag = squeeze(abs(stsConvol.fourierspctrm{1}));
@@ -569,16 +571,11 @@ classdef LFPAnalysis < analysisCore
 				cfg.spikechannel	= spike.label{unit};
 				cfg.channel			= ft.label{ego.selectedLFP};
 				cfg.avgoverchan   = 'unweighted'; % weight spike-LFP phases irrespective of LFP power
-				cfg.timwin        = 'all'; % compute over all available spikes in the window 
-				cfg.latency       = [0 0.3]; % sustained visual stimulation period
+				cfg.timwin        = 'all'; % compute over all available spikes in the window
+				cfg.latency       = [0 0.2]; % sustained visual stimulation period
 				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
-				
-				% plot the results
-			  figure
-			  plot(statSts.freq,statSts.ppc0')  
-			  xlabel('frequency')
-			  ylabel('PPC')
 				ego.ft.statSts{j} = statSts;
+				ego.ft.statSts{j}.name = name;
 
 			end
 			if ego.doPlots; drawSpikeLFP(ego); end
@@ -1194,65 +1191,130 @@ classdef LFPAnalysis < analysisCore
 			if ~isfield(ego.ft,'staPre'); warning('No parsed spike-LFP available.'); return; end
 			disp('Drawing Spike LFP correlations...')
 			ft = ego.ft;
-			for j = 1:length(ego.selectedTrials)
-				h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
-					[ego.lfpfile ' ' ft.staPre{j}.name]);
-				p=panel(h);
-				p.margin = [20 20 10 15]; %left bottom right top
-				p.fontsize = 10;
-				p.pack(2,2);
-				
-				p(1,1).select();
-				plot(ft.staPre{j}.time, ft.staPre{j}.avg(:,:)')
-				maxPre(j) = max(max(ft.staPre{j}.avg(:,:)));
-				minPre(j) = min(min(ft.staPre{j}.avg(:,:)));
-				box on
-				grid on
-				legend(ft.staPre{j}.cfg.channel)
-				xlabel('Time (s)')
-				xlim(ft.staPre{j}.cfg.timwin)
-				title(['PRE STA'])
-				
-				p(1,2).select();
-				plot(ft.staPost{j}.time, ft.staPost{j}.avg(:,:)')
-				maxPost(j) = max(max(ft.staPost{j}.avg(:,:)));
-				minPost(j) = min(min(ft.staPost{j}.avg(:,:)));
-				box on
-				grid on
-				legend(ft.staPost{j}.cfg.channel)
-				xlabel('Time (s)')
-				xlim(ft.staPost{j}.cfg.timwin)
-				title(['POST STA'])
-				
-				p(2,1).select();
-				[av,ae] = stderr(ft.stsFFT{j}.ang);
-				areabar(ft.stsFFT{j}.freq,rad2ang(av),rad2ang(ae));
-				legend(ft.stsFFT{j}.cfg.channel);
-				title(['Spike Triggered Phase']);
-				xlabel('Frequency (Hz)');
-				ylabel('Angle (deg)');
-				
-				p(2,2).select();
-				[mv,me] = stderr(ft.stsFFT{j}.mag);
-				areabar(ft.stsFFT{j}.freq, mv, me);
-				legend(ft.stsFFT{j}.cfg.channel)
-				title(['Spike Triggered Amplitude']);
-				xlabel('Frequency (Hz)');
-				
-				pp{j} = p;
-			end
+			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
+				[ego.lfpfile]);
+			p=panel(h);
+			p.margin = [20 20 10 15]; %left bottom right top
+			p.fontsize = 10;
+			p.pack(2,2);
+
+			p(1,1).select();
+			plot(ft.staPre{1}.time, ft.staPre{1}.avg(:,:)')
+			maxPre(1) = max(max(ft.staPre{1}.avg(:,:)));
+			minPre(1) = min(min(ft.staPre{1}.avg(:,:)));
+			box on
+			grid on
+			legend(ft.staPre{1}.cfg.channel)
+			xlabel('Time (s)')
+			xlim(ft.staPre{1}.cfg.timwin)
+			title(['PRE ' ft.staPre{1}.name])
+
+			p(1,2).select();
+			plot(ft.staPost{1}.time, ft.staPost{1}.avg(:,:)')
+			maxPost(1) = max(max(ft.staPost{1}.avg(:,:)));
+			minPost(1) = min(min(ft.staPost{1}.avg(:,:)));
+			box on
+			grid on
+			legend(ft.staPost{1}.cfg.channel)
+			xlabel('Time (s)')
+			xlim(ft.staPost{1}.cfg.timwin)
+			title(['POST ' ft.staPost{1}.name])
+
+			p(2,1).select();
+			plot(ft.staPre{2}.time, ft.staPre{2}.avg(:,:)')
+			maxPre(2) = max(max(ft.staPre{2}.avg(:,:)));
+			minPre(2) = min(min(ft.staPre{2}.avg(:,:)));
+			box on
+			grid on
+			legend(ft.staPre{2}.cfg.channel)
+			xlabel('Time (s)')
+			xlim(ft.staPre{2}.cfg.timwin)
+			title(['PRE ' ft.staPre{2}.name])
+
+			p(2,2).select();
+			plot(ft.staPost{2}.time, ft.staPost{2}.avg(:,:)')
+			maxPost(2) = max(max(ft.staPost{2}.avg(:,:)));
+			minPost(2) = min(min(ft.staPost{2}.avg(:,:)));
+			box on
+			grid on
+			legend(ft.staPost{2}.cfg.channel)
+			xlabel('Time (s)')
+			xlim(ft.staPost{2}.cfg.timwin)
+			title(['POST ' ft.staPost{1}.name])
 			
 			minPre = min(minPre);
 			minPost = min(minPost);
 			maxPre = max(maxPre);
 			maxPost = max(maxPost);
-			for j = 1:length(pp)
-				p = pp{j};
-				p(1,1).select();
-				axis([-inf inf minPre maxPre]);
-				p(1,2).select();
-				axis([-inf inf minPost maxPost])
-			end
+			p(1,1).select();
+			axis([-inf inf minPre maxPre]);
+			p(1,2).select();
+			axis([-inf inf minPost maxPost]);
+			p(2,1).select();
+			axis([-inf inf minPre maxPre]);
+			p(2,2).select();
+			axis([-inf inf minPost maxPost]);
+				
+			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
+				[ego.lfpfile ' ' ft.stsFFT{1}.name]);
+			p=panel(h);
+			p.margin = [20 20 10 15]; %left bottom right top
+			p.fontsize = 10;
+			p.pack(2,2);
+			
+			p(1,1).select();
+			p(1,1).hold('on');
+			[av,ae] = stderr(ft.stsFFT{1}.ang);
+			areabar(ft.stsFFT{1}.freq,rad2ang(av),rad2ang(ae),[],[],'k-o');
+			[av,ae] = stderr(ft.stsFFT{2}.ang);
+			areabar(ft.stsFFT{2}.freq,rad2ang(av),rad2ang(ae),[],[],'r-o');
+			legend('Group A','Group B');
+			title(['Spike Triggered Phase FFT']);
+			xlabel('Frequency (Hz)');
+			ylabel('Angle (deg)');
+
+			p(1,2).select();
+			p(1,2).hold('on');
+			[mv,me] = stderr(ft.stsFFT{1}.mag);
+			areabar(ft.stsFFT{1}.freq, mv, me,[],[],'k-o');
+			[mv,me] = stderr(ft.stsFFT{2}.mag);
+			areabar(ft.stsFFT{2}.freq, mv, me,[],[],'r-o');
+			legend('Group A','Group B');
+			title(['Spike Triggered Amplitude FFT']);
+			xlabel('Frequency (Hz)');
+			
+			p(2,1).select();
+			p(2,1).hold('on');
+			[av,ae] = stderr(ft.stsConvol{1}.ang);
+			areabar(ft.stsConvol{1}.freq,rad2ang(av),rad2ang(ae),[],[],'k-o');
+			[av,ae] = stderr(ft.stsConvol{2}.ang);
+			areabar(ft.stsConvol{2}.freq,rad2ang(av),rad2ang(ae),[],[],'r-o');
+			legend('Group A','Group B');
+			title(['Spike Triggered Phase CONVOL']);
+			xlabel('Frequency (Hz)');
+			ylabel('Angle (deg)');
+
+			p(2,2).select();
+			p(2,2).hold('on');
+			[mv,me] = stderr(ft.stsConvol{1}.mag);
+			areabar(ft.stsConvol{1}.freq, mv, me,[],[],'k-o');
+			[mv,me] = stderr(ft.stsConvol{2}.mag);
+			areabar(ft.stsConvol{2}.freq, mv, me,[],[],'r-o');
+			legend('Group A','Group B');
+			title(['Spike Triggered Amplitude CONVOL']);
+			xlabel('Frequency (Hz)');
+			
+			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
+				[ego.lfpfile ]);
+			hold on
+			plot(ft.statSts{1}.freq,ft.statSts{1}.ppc0','k-o')
+			plot(ft.statSts{2}.freq,ft.statSts{2}.ppc0','r-o')
+			legend('Group A','Group B');
+			box on; grid on;
+			xlabel('frequency')
+			ylabel('PPC')
+			title('PPC0 Measure');
+
 		end
 		
 		% ===================================================================
@@ -1336,14 +1398,16 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function drawLFPFrequencies(ego,varargin)
-			if isempty(varargin) || isempty(varargin{1})
+			if isempty(varargin) || isempty(varargin{1}) || ~ischar(varargin{1})
 				name = 'fqfix1';
-				varargin = {};
+				if isempty(varargin)
+					varargin = {};
+				end
 			end
 			while iscell(varargin) && length(varargin)==1 && length(varargin{1}) > 1
 				varargin = varargin{1};
 			end
-			if ~isempty(varargin)
+			if ~isempty(varargin) && ischar(varargin{1});
 				name = varargin{1};
 				while iscell(name);name=name{1};end
 			end
@@ -1352,16 +1416,16 @@ classdef LFPAnalysis < analysisCore
 				while iscell(zlim);zlim=zlim{1};end
 			end
 			if ~isfield(ego.ft,name)
+				disp('The Frequency field is not present in fieldtrip structure...');
 				return;
 			end
 			fq = ego.ft.(name);
-			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
+			h=figure;figpos(1,[2500 2000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
 			p=panel(h);
 			p.margin = [15 15 30 20];
-			p.fontsize = 12;
-			bl = {'relative','absolute'};
-			len=length(fq) * length(bl);
-			[row,col]=ego.optimalLayout(len);
+			if isnumeric(gcf);	p.fontsize = 12; end
+			bl = {'relative','absolute','no'};
+			row = 2; col = 3;
 			p.pack(row,col);
 			hmin = cell(size(bl));
 			hmax = hmin;
@@ -1369,20 +1433,23 @@ classdef LFPAnalysis < analysisCore
 			for jj = 1:length(bl)
 				for i = 1:length(fq)
 					p(i,jj).select();
-					cfg					= [];
-					cfg.fontsize		= 14;
-					cfg.baseline		= ego.baselineWindow;
-					cfg.baselinetype	= bl{jj};
-					if strcmpi(bl{jj},'relative') && exist('zlim','var')
-						cfg.zlim		= zlim;
+					cfg							= [];
+					cfg.fontsize				= 14;
+					if strcmpi(bl{jj},'no');
+						cfg.baseline			= 'no';
+					else
+						cfg.baseline			= ego.baselineWindow;
+						cfg.baselinetype		= bl{jj};
 					end
-					cfg.interactive		= 'no';
-					cfg.channel			= ego.ft.label{ego.selectedLFP};
-					cfgOut=ft_singleplotTFR(cfg, fq{i});
+					if strcmpi(bl{jj},'relative') && exist('zlim','var')
+						cfg.zlim					= zlim;
+					end
+					cfg.interactive			= 'no';
+					cfg.channel					= ego.ft.label{ego.selectedLFP};
+					cfgOut						= ft_singleplotTFR(cfg, fq{i});
 					grid on; box on;
-					set(gca,'Layer','top')
+					set(gca,'Layer','top','TickDir','out')
 					h{jj}{i} = gca;
-					cfgUsed{i}.plotcfg = cfgOut;
 					clim = get(gca,'clim');
 					hmin{jj} = min([hmin{jj} min(clim)]);
 					hmax{jj} = max([hmax{jj} max(clim)]);
