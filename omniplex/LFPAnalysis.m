@@ -613,7 +613,7 @@ classdef LFPAnalysis < analysisCore
 			
 			h=figure;figpos(1,[1000 1500]);set(h,'Color',[1 1 1],'Name','Density LFP Co-Plot');
 			p=panel(h);
-			p.margin = [20 20 20 25]; %left bottom right top
+			p.margin = [20 20 20 20]; %left bottom right top
 			[row,col]=ego.optimalLayout(ego.nSelection);
 			p.pack(row,col);
 			for j = 1:length(ego.selectedTrials)

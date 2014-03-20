@@ -674,7 +674,7 @@ classdef spikeAnalysis < analysisCore
 			h=figure;set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
 			if length(sd) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
-			p.margin = [20 20 20 10]; %left bottom right top
+			p.margin = [15 20 10 10]; %left bottom right top
 			p.pack('v', {3/4 []})
 			q = p(1);
 			len = ego.nSelection;
@@ -703,6 +703,7 @@ classdef spikeAnalysis < analysisCore
 				ego.appendTrialNames(cfgUsed{j}.hdl.axRaster,cfgUsed{j}.trials);
 			end
 			p(2).select();
+			p(2).margin = [15 2 10 10]; %left bottom right top
 			box on
 			grid on
 			p(2).hold('on');
@@ -831,13 +832,13 @@ classdef spikeAnalysis < analysisCore
 			for j = 1:length(ego.selectedTrials)
 				[i1,i2] = ind2sub([row,col], j);
 				p(i1,i2).select();
-				cfg              = [];
-				cfg.spikechannel = isi{j}.label{1};
-				cfg.interpolate  = 5; % interpolate at 5 times the original density
-				cfg.window       = 'gausswin'; % use a gaussian window to smooth
-				cfg.winlen       = 0.004; % the window by which we smooth has size 4 by 4 ms
-				cfg.colormap     = jet(300); % colormap
-				cfg.scatter      = 'no'; % do not plot the individual isis per spike as scatters
+				cfg					= [];
+				cfg.spikechannel	= isi{j}.label{1};
+				cfg.interpolate	= 5; % interpolate at 5 times the original density
+				cfg.window			= 'gausswin'; % use a gaussian window to smooth
+				cfg.winlen			= 0.004; % the window by which we smooth has size 4 by 4 ms
+				cfg.colormap		= jet(300); % colormap
+				cfg.scatter			= 'no'; % do not plot the individual isis per spike as scatters
 				ft_spike_plot_isireturn(cfg,isi{j})
 				p(i1,i2).title([ego.selectedTrials{j}.name ' ' ego.file]);
 			end
@@ -856,14 +857,17 @@ classdef spikeAnalysis < analysisCore
 				y(j) = j;
 				x(j) = xpos(2) + abs(((xpos(2)-xpos(1))/100));
 			end
-			if length(idx) > 100
-				fs = 7;
-			elseif length(idx) > 50
+			if length(idx) >= 100
 				fs = 8;
+			elseif length(idx) >= 40
+				fs = 9;
 			else
 				fs = 10;
 			end
-			text(x,y,cs,'FontSize',fs,'Interpreter','none')
+			if ~isnumeric(gca)
+				fs = fs-4;
+			end
+			text(x,y,cs,'FontSize',fs,'Color',[0.4 0.4 0.4],'Interpreter','none')
 			%set(hdl,'YGrid','on','YMinorGrid','on')
 		end
 		
