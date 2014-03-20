@@ -521,7 +521,7 @@ classdef LFPAnalysis < analysisCore
 				tempdat			= ego.subselectFieldTripTrials(dati,ego.selectedTrials{j}.idx);
 				
 				cfg							= [];
-				cfg.timwin					= [-0.15 0.15];
+				cfg.timwin					= [-0.15 0.15]; 
 				cfg.spikechannel			= spike.label{unit};
 				cfg.channel					= ft.label;
 				cfg.latency					= [-0.3 0.05];
@@ -536,8 +536,9 @@ classdef LFPAnalysis < analysisCore
 				
 				cfg							= [];
 				cfg.method					= 'mtmfft';
-				cfg.foilim					= [5 100]; % cfg.timwin determines spacing
-				cfg.timwin					= [-0.025 0.025]; % time window of 100 msec
+				cfg.foilim					= [0 100]; % cfg.timwin determines spacing [begin end], time around each spike (default = [-0.1 0.1])
+				cfg.timwin					= [-0.025 0.025]; %[begin end], time around each spike (default = [-0.1 0.1])
+				%cfg.tapsmofrq = number, the amount of spectral smoothing through multi-tapering. Note that 4 Hz smoothing means plus-minus 4 Hz,i.e. a 8 Hz smoothing box. Note: multitapering rotates phases (no problem for consistency)
 				cfg.taper					= 'hanning';
 				cfg.spikechannel			= spike.label{unit};
 				cfg.channel					= ft.label{ego.selectedLFP};
@@ -551,9 +552,11 @@ classdef LFPAnalysis < analysisCore
 				ego.ft.stsFFT{j}.mag=mag;
 				
 				cfg							= [];
-				cfg.method					= 'convol';
-				cfg.foi						= 5:5:100;
-				cfg.t_ftimwin				= 5./cfg.foi; % 5 cycles per frequency
+				cfg.method					= 'mtmconvol';
+				cfg.latency					= [-0.1 0.25];
+				%cfg.tapsmofrq	= vector 1 x numfoi, the amount of spectral smoothing through multi-tapering. Note that 4 Hz smoothing means plus-minus 4 Hz, i.e. a 8 Hz smoothing box.
+				cfg.foi						= 5:5:100; %vector 1 x numfoi, frequencies of interest
+				cfg.t_ftimwin				= 5./cfg.foi; % vector 1 x numfoi, length of time window (in seconds)
 				cfg.taper					= 'hanning';
 				cfg.spikechannel			= spike.label{unit};
 				cfg.channel					= ft.label{ego.selectedLFP};
@@ -574,8 +577,30 @@ classdef LFPAnalysis < analysisCore
 				cfg.timwin        = 'all'; % compute over all available spikes in the window
 				cfg.latency       = [0 0.2]; % sustained visual stimulation period
 				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
-				ego.ft.statSts{j} = statSts;
-				ego.ft.statSts{j}.name = name;
+				ego.ft.statSts0{j} = statSts;
+				ego.ft.statSts0{j}.name = name;
+				
+				cfg               = [];
+				cfg.method        = 'ppc1'; % compute the Pairwise Phase Consistency
+				cfg.spikechannel	= spike.label{unit};
+				cfg.channel			= ft.label{ego.selectedLFP};
+				cfg.avgoverchan   = 'unweighted'; % weight spike-LFP phases irrespective of LFP power
+				cfg.timwin        = 'all'; % compute over all available spikes in the window
+				cfg.latency       = [0 0.2]; % sustained visual stimulation period
+				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
+				ego.ft.statSts1{j} = statSts;
+				ego.ft.statSts1{j}.name = name;
+				
+				cfg               = [];
+				cfg.method        = 'ppc2'; % compute the Pairwise Phase Consistency
+				cfg.spikechannel	= spike.label{unit};
+				cfg.channel			= ft.label{ego.selectedLFP};
+				cfg.avgoverchan   = 'unweighted'; % weight spike-LFP phases irrespective of LFP power
+				cfg.timwin        = 'all'; % compute over all available spikes in the window
+				cfg.latency       = [0 0.2]; % sustained visual stimulation period
+				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
+				ego.ft.statSts2{j} = statSts;
+				ego.ft.statSts2{j}.name = name;
 
 			end
 			if ego.doPlots; drawSpikeLFP(ego); end
@@ -1309,7 +1334,7 @@ classdef LFPAnalysis < analysisCore
 			hold on
 			plot(ft.statSts{1}.freq,ft.statSts{1}.ppc0','k-o')
 			plot(ft.statSts{2}.freq,ft.statSts{2}.ppc0','r-o')
-			legend('Group A','Group B');
+			legend(ft.statSts{1}.name,ft.statSts{2}.name);
 			box on; grid on;
 			xlabel('frequency')
 			ylabel('PPC')

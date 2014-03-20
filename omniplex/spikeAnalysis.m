@@ -713,9 +713,10 @@ classdef spikeAnalysis < analysisCore
 				e = ego.var2SE(sd{j}.var,sd{j}.dof);
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
-				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
+				t = [t 'R' num2str(j) ' = ' num2str(rate{j}.avg) ' '];
 			end
-			p(2).title(t);
+			disp(t);
+			p(2).title(t,'FontSize',12);
 			p(2).xlabel('Time (s)')
 			p(2).ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
@@ -743,11 +744,12 @@ classdef spikeAnalysis < analysisCore
 				e = ego.var2SE(sd{j}.var,sd{j}.dof);
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
-				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
+				t = [t 'R' num2str(j) ' = ' num2str(rate{j}.avg) ' '];
 			end
+			disp(t);
 			title(t,'FontSize',15);
 			xlabel('Time (s)')
-			ylabel(['Firing Rate (s/s) \pm S.E.M.'])
+			ylabel('Firing Rate (s/s) \pm S.E.M.')
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
@@ -804,9 +806,9 @@ classdef spikeAnalysis < analysisCore
 				e = ego.var2SE(psth{j}.var,psth{j}.dof);
 				areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
-				t = [t 'Rate' num2str(j) '=' num2str(rate{j}.avg) ' '];
+				t = [t 'R' num2str(j) ' = ' num2str(rate{j}.avg) ' '];
 			end
-			p(2).title(t);
+			p(2).title(t,'FontSize',12);
 			p(2).xlabel('Time (s)')
 			ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
