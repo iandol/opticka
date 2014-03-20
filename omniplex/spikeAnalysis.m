@@ -703,20 +703,21 @@ classdef spikeAnalysis < analysisCore
 				ego.appendTrialNames(cfgUsed{j}.hdl.axRaster,cfgUsed{j}.trials);
 			end
 			p(2).select();
-			p(2).margin = [15 2 10 10]; %left bottom right top
+			p(2).marginbottom = 2; %left bottom right top
 			box on
 			grid on
 			p(2).hold('on');
 			c = ego.optimalColours(length(sd));
-			t = [ego.file ' '];
+			t = [ego.file];
 			for j = 1:length(sd)
 				e = ego.var2SE(sd{j}.var,sd{j}.dof);
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
-				t = [t 'R' num2str(j) ' = ' num2str(rate{j}.avg) ' '];
+				e = ego.var2SE(rate{j}.var,rate{j}.dof);
+				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
 			end
-			disp(t);
-			p(2).title(t,'FontSize',12);
+			disp([t sprintf(' | rateRange: %s', num2str(rate{1}.cfg.latency))]);
+			title(t,'FontSize',12);
 			p(2).xlabel('Time (s)')
 			p(2).ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
@@ -744,9 +745,9 @@ classdef spikeAnalysis < analysisCore
 				e = ego.var2SE(sd{j}.var,sd{j}.dof);
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
-				t = [t 'R' num2str(j) ' = ' num2str(rate{j}.avg) ' '];
+				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
 			end
-			disp(t);
+			disp([t sprintf(' | rateRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',15);
 			xlabel('Time (s)')
 			ylabel('Firing Rate (s/s) \pm S.E.M.')
@@ -801,15 +802,18 @@ classdef spikeAnalysis < analysisCore
 			box on; grid on
 			p(2).hold('on');
 			c = ego.optimalColours(length(psth));
-			t = [ego.file ' '];
+			t = [ego.file];
 			for j = 1:length(psth)
 				e = ego.var2SE(psth{j}.var,psth{j}.dof);
 				areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
-				t = [t 'R' num2str(j) ' = ' num2str(rate{j}.avg) ' '];
+				e = ego.var2SE(rate{j}.var,rate{j}.dof);
+				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
 			end
-			p(2).title(t,'FontSize',12);
-			p(2).xlabel('Time (s)')
+			disp([t sprintf(' | rateRange: %s', num2str(rate{1}.cfg.latency))]);
+			title(t,'FontSize',12);
+			p(2).margintop = 25;
+			xlabel('Time (s)')
 			ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
