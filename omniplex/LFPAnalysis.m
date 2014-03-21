@@ -35,6 +35,8 @@ classdef LFPAnalysis < analysisCore
 		LFPs@struct
 		%> fieldtrip parsed data
 		ft@struct
+		%> fieldtrip parsed results
+		results@struct
 		%> selectedTrials: each cell is a trial list grouping
 		selectedTrials@cell
 		%> trials to remove in reparsing
@@ -148,6 +150,7 @@ classdef LFPAnalysis < analysisCore
 			ego.LFPs = struct();
 			ego.LFPs = readLFPs(ego.p);
 			ego.ft = struct();
+			ego.results = struct();
 			parseLFPs(ego);
 			select(ego);
 			getFieldTripLFPs(ego);
@@ -475,11 +478,11 @@ classdef LFPAnalysis < analysisCore
 			if ~exist('unit','var') || isempty(unit); unit = ego.sp.selectedUnit;
 			else ego.sp.selectedUnit = unit; end
 			if ~exist('interpolate','var'); 
-				interpolate = true; iVal = 0.0015;
+				interpolate = true; iVal = 0.0025;
 			elseif isnumeric(interpolate)
 				iVal = interpolate; interpolate = true; 
 			else
-				iVal = 0.0015;
+				iVal = 0.0025;
 			end
 			if isempty(ego.sp.ft)
 				plotTogether(ego); drawnow;
@@ -500,8 +503,8 @@ classdef LFPAnalysis < analysisCore
 			if interpolate
 				try
 					cfg					= [];
-					cfg.method			= 'nan'; % remove the replaced segment with interpolation
-					cfg.timwin			= [-iVal iVal]; % remove 3 ms around every spike
+					cfg.method			= 'pchip'; % remove the replaced segment with interpolation
+					cfg.timwin			= [-0.001 0.003]; % remove 3 ms around every spike
 					%cfg.interptoi		= iVal*4; %value, time in seconds used for interpolation
 					cfg.spikechannel	= spike.label{unit};
 					cfg.channel			= ft.label;
@@ -521,15 +524,15 @@ classdef LFPAnalysis < analysisCore
 				tempdat			= ego.subselectFieldTripTrials(dati,ego.selectedTrials{j}.idx);
 				
 				cfg							= [];
-				cfg.timwin					= [-0.15 0.15]; 
+				cfg.timwin					= [-0.1 0.1]; 
 				cfg.spikechannel			= spike.label{unit};
 				cfg.channel					= ft.label;
-				cfg.latency					= [-0.3 0.05];
+				cfg.latency					= [-0.25 0.05];
 				staPre						= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.ft.staPre{j}			= staPre;
 				ego.ft.staPre{j}.name	= name;
 				
-				cfg.latency					= [-0.05 0.25];
+				cfg.latency					= [0.05 0.18];
 				staPost						= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.ft.staPost{j}			= staPost;
 				ego.ft.staPost{j}.name	= name;
@@ -537,13 +540,13 @@ classdef LFPAnalysis < analysisCore
 				cfg							= [];
 				cfg.method					= 'mtmfft';
 				cfg.latency					= [0 0.25];
-				cfg.foilim					= [0 100]; % cfg.timwin determines spacing [begin end], time around each spike (default = [-0.1 0.1])
-				cfg.timwin					= [-0.025 0.025]; %[begin end], time around each spike (default = [-0.1 0.1])
+				cfg.foilim					= [0 80]; % cfg.timwin determines spacing [begin end], time around each spike (default = [-0.1 0.1])
+				cfg.timwin					= [-0.02 0.02]; %[begin end], time around each spike (default = [-0.1 0.1])
 				%cfg.tapsmofrq = number, the amount of spectral smoothing through multi-tapering. Note that 4 Hz smoothing means plus-minus 4 Hz,i.e. a 8 Hz smoothing box. Note: multitapering rotates phases (no problem for consistency)
 				cfg.taper					= 'hanning';
 				cfg.spikechannel			= spike.label{unit};
 				cfg.channel					= ft.label{ego.selectedLFP};
-				stsFFT						= ft_spiketriggeredspectrum(cfg, tempft, tempspike);
+				stsFFT						= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
 				
 				ang = squeeze(angle(stsFFT.fourierspctrm{1}));
 				mag = squeeze(abs(stsFFT.fourierspctrm{1}));
@@ -556,12 +559,12 @@ classdef LFPAnalysis < analysisCore
 				cfg.method					= 'mtmconvol';
 				cfg.latency					= [0 0.25];
 				%cfg.tapsmofrq	= vector 1 x numfoi, the amount of spectral smoothing through multi-tapering. Note that 4 Hz smoothing means plus-minus 4 Hz, i.e. a 8 Hz smoothing box.
-				cfg.foi						= 5:5:100; %vector 1 x numfoi, frequencies of interest
+				cfg.foi						= 5:5:80; %vector 1 x numfoi, frequencies of interest
 				cfg.t_ftimwin				= 5./cfg.foi; % vector 1 x numfoi, length of time window (in seconds)
 				cfg.taper					= 'hanning';
 				cfg.spikechannel			= spike.label{unit};
 				cfg.channel					= ft.label{ego.selectedLFP};
-				stsConvol					= ft_spiketriggeredspectrum(cfg, tempft, tempspike);
+				stsConvol					= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
 				
 				ang = squeeze(angle(stsConvol.fourierspctrm{1}));
 				mag = squeeze(abs(stsConvol.fourierspctrm{1}));
@@ -571,7 +574,7 @@ classdef LFPAnalysis < analysisCore
 				ego.ft.stsConvol{j}.mag=mag;
 				
 				cfg.latency					= []; %we now reset just in case stat is affected by this
-				stsConvol					= ft_spiketriggeredspectrum(cfg, tempft, tempspike);
+				stsConvol					= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
 				
 				cfg               = [];
 				cfg.method        = 'ppc0'; % compute the Pairwise Phase Consistency
@@ -579,7 +582,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.channel			= ft.label{ego.selectedLFP};
 				cfg.avgoverchan   = 'unweighted'; % weight spike-LFP phases irrespective of LFP power
 				cfg.timwin        = 'all'; % compute over all available spikes in the window
-				cfg.latency       = [0 0.25]; % sustained visual stimulation period
+				cfg.latency       = [0.05 0.2]; % sustained visual stimulation period
 				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
 				ego.ft.statSts0{j} = statSts;
 				ego.ft.statSts0{j}.name = name;
@@ -590,7 +593,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.channel			= ft.label{ego.selectedLFP};
 				cfg.avgoverchan   = 'unweighted'; % weight spike-LFP phases irrespective of LFP power
 				cfg.timwin        = 'all'; % compute over all available spikes in the window
-				cfg.latency       = [0 0.25]; % sustained visual stimulation period
+				cfg.latency       = [0.05 0.2]; % sustained visual stimulation period
 				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
 				ego.ft.statSts1{j} = statSts;
 				ego.ft.statSts1{j}.name = name;
@@ -601,7 +604,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.channel			= ft.label{ego.selectedLFP};
 				cfg.avgoverchan   = 'unweighted'; % weight spike-LFP phases irrespective of LFP power
 				cfg.timwin        = 'all'; % compute over all available spikes in the window
-				cfg.latency       = [0 0.25]; % sustained visual stimulation period
+				cfg.latency       = [0.05 0.2]; % sustained visual stimulation period
 				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
 				ego.ft.statSts2{j} = statSts;
 				ego.ft.statSts2{j}.name = name;
@@ -1269,22 +1272,20 @@ classdef LFPAnalysis < analysisCore
 			legend(ft.staPost{2}.cfg.channel)
 			xlabel('Time (s)')
 			xlim(ft.staPost{2}.cfg.timwin)
-			title(['POST ' ft.staPost{1}.name])
+			title(['POST ' ft.staPost{2}.name])
 			
-			minPre = min(minPre);
-			maxPre = max(maxPre);
-			minPost = min(minPost);
-			maxPost = max(maxPost);
-			if isnan(minPost) || isnan(maxPost); minPost = 0; maxPost = 1; end
-			if minPost >= maxPost; maxPost = minPost + 1; end
+			miny = min([minPre minPost]);
+			maxy = max([maxPre maxPost]);
+			if isnan(miny) || isnan(maxy); miny = -0.5; maxy = 0.5; end
+			if miny >= maxy; maxy = miny + 1; end
 			p(1,1).select();
-			axis([-inf inf minPost maxPost]);
+			axis([-inf inf miny maxy]);
 			p(1,2).select();
-			axis([-inf inf minPost maxPost]);
+			axis([-inf inf miny maxy]);
 			p(2,1).select();
-			axis([-inf inf minPost maxPost]);
+			axis([-inf inf miny maxy]);
 			p(2,2).select();
-			axis([-inf inf minPost maxPost]);
+			axis([-inf inf miny maxy]);
 				
 			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
 				[ego.lfpfile ' ' ft.stsFFT{1}.name]);
@@ -1407,10 +1408,10 @@ classdef LFPAnalysis < analysisCore
 				minv = minv - (abs(minv)/15);
 				maxv = maxv + (abs(maxv)/15);
 				if minv >= maxv;minv = -inf; end
-				areabar(time, grnd, grnde,[.5 .5 .5],'k');
-				areabar(time, fig, fige,[.7 .5 .5],'r');
+				areabar(time, grnd, grnde,[.5 .5 .5],'b');
+				areabar(time, fig, fige,[.5 .7 .5],'g');
 				if length(bp{j}.av) > 2
-					areabar(bp{j}.av{3}.time,bp{j}.av{3}.avg(1,:),bp{j}.av{3}.var(1,:),[.5 .5 .7],'b');
+					areabar(bp{j}.av{3}.time,bp{j}.av{3}.avg(1,:),bp{j}.av{3}.var(1,:),[.7 .5 .5],'r');
 				end
 				pp(1,1).hold('off');
 				set(gca,'XTickLabel','')

@@ -174,7 +174,7 @@ classdef plxReader < optickaCore
 			cd(ego.dir);
 			getEvents(ego);
 			generateInfo(ego);
-			if isa(ego.ea,'eyelinkAnalysis')
+			if isa(ego.eA,'eyelinkAnalysis')
 				integrateEyeData(ego);
 			end
 		end
