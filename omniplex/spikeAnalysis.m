@@ -717,7 +717,7 @@ classdef spikeAnalysis < analysisCore
 				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
 			end
 			disp([t sprintf(' | rateRange: %s', num2str(rate{1}.cfg.latency))]);
-			title(t,'FontSize',12);
+			title(t,'FontSize',13);
 			p(2).xlabel('Time (s)')
 			p(2).ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
@@ -811,7 +811,7 @@ classdef spikeAnalysis < analysisCore
 				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
 			end
 			disp([t sprintf(' | rateRange: %s', num2str(rate{1}.cfg.latency))]);
-			title(t,'FontSize',12);
+			title(t,'FontSize',13);
 			p(2).margintop = 25;
 			xlabel('Time (s)')
 			ylabel(['Firing Rate (s/s) \pm S.E.M.'])
