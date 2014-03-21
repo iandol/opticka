@@ -1453,22 +1453,24 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function drawLFPFrequencies(ego,varargin)
-			if isempty(varargin) || isempty(varargin{1}) || ~ischar(varargin{1})
+			if isempty(varargin) || isempty(varargin{1})
 				name = 'fqfix1';
 				if isempty(varargin)
 					varargin = {};
 				end
 			end
-			while iscell(varargin) && length(varargin)==1 && length(varargin{1}) > 1
+			while iscell(varargin) && length(varargin)==1 
 				varargin = varargin{1};
 			end
-			if ~isempty(varargin) && ischar(varargin{1});
-				name = varargin{1};
+			if (~isempty(varargin) && ischar(varargin)) ||  (~isempty(varargin) && ischar(varargin{1}))
+				if ischar(varargin);	name = varargin;
+				else name = varargin{1}; end
 				while iscell(name);name=name{1};end
 			end
-			if length(varargin)>1
-				zlim = varargin{2};
-				while iscell(zlim);zlim=zlim{1};end
+			if iscell(varargin) && length(varargin) > 1
+				zlimi = varargin{2};
+				while iscell(zlimi);zlimi=zlimi{1};end
+				if ~isnumeric(zlimi); clear zlimi; end
 			end
 			if ~isfield(ego.ft,name)
 				disp('The Frequency field is not present in fieldtrip structure...');
@@ -1480,7 +1482,7 @@ classdef LFPAnalysis < analysisCore
 			p.margin = [15 15 30 20];
 			if isnumeric(gcf);	p.fontsize = 12; end
 			bl = {'relative','absolute','no'};
-			row = 2; col = 3;
+			row = length(fq); col = 3;
 			p.pack(row,col);
 			hmin = cell(size(bl));
 			hmax = hmin;
@@ -1496,8 +1498,8 @@ classdef LFPAnalysis < analysisCore
 						cfg.baseline			= ego.baselineWindow;
 						cfg.baselinetype		= bl{jj};
 					end
-					if strcmpi(bl{jj},'relative') && exist('zlim','var')
-						cfg.zlim					= zlim;
+					if strcmpi(bl{jj},'relative') && exist('zlimi','var')
+						cfg.zlim					= zlimi;
 					end
 					cfg.interactive			= 'no';
 					cfg.channel					= ego.ft.label{ego.selectedLFP};
