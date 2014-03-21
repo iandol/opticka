@@ -716,7 +716,7 @@ classdef spikeAnalysis < analysisCore
 				t = [t 'R' num2str(j) ' = ' num2str(rate{j}.avg) ' '];
 			end
 			disp(t);
-			p(2).title(t,'FontSize',12);
+			title(t,'FontSize',12);
 			p(2).xlabel('Time (s)')
 			p(2).ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
