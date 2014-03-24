@@ -29,9 +29,12 @@ classdef analysisCore < optickaCore
 		
 	end
 	
-	%--------------------TRANSIENT PROPERTIES----------%
+	%------------------TRANSIENT PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected, Transient = true)
-		
+		%> UI panels
+		panels@struct = struct()
+		%> do we yoke the selection to the parent function (e.g. LFPAnalysis)
+		yokedSelection@logical = false
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
@@ -65,13 +68,13 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+			%> @brief 
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
 		function showEyePlots(ego)
-			if ~isprop(ego,'p') || ~isa(ego.p,'plxReader') || isempty(ego.p.eA)
+			if ~isprop(ego,'p') || ~isa(ego.p,'plxReader') || isempty(ego.p.eA) || ~isa(ego.p.eA,'eyelinkAnalysis')
 				return
 			end
 			if isprop(ego,'nSelection')
@@ -303,8 +306,50 @@ classdef analysisCore < optickaCore
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
-	
+		% ===================================================================
+		%> @brief Allows two analysis objects to share a single plxReader object
+		%>
+		%> @param
+		% ===================================================================
+		function inheritPlxReader(ego,p)
+			if exist('p','var') && isa(p,'plxReader')
+				if isprop(ego,'p')
+					ego.p = p;
+				end
+			end
+		end
 		
+		% ===================================================================
+		%> @brief set trials / var parsing from outside, override dialog, used when 
+		%> yoked to another analysis object
+		%> 
+		%>
+		%> @param varargin
+		%> @return
+		% ===================================================================
+		function setSelection(ego, in)
+			if isfield(in,'yokedSelection') && isfield(ego,'yokedSelection')
+				ego.yokedSelection = in.yokedSelection;
+			else
+				ego.yokedSelection = false;
+			end
+			if isfield(in,'cutTrials') && isfield(ego,'cutTrials')
+				ego.cutTrials = in.cutTrials;
+			end
+			if isfield(in,'selectedTrials') && isfield(ego,'selectedTrials')
+				ego.selectedTrials = in.selectedTrials;
+				ego.yokedSelection = true;
+			end
+			if isfield(in,'map') && isfield(ego,'map')
+				ego.map = in.map;
+			end
+			if isfield(in,'plotRange') && isfield(ego,'plotRange')
+				ego.plotRange = in.plotRange;
+			end
+			if isfield(in,'selectedBehaviour') && isfield(ego,'selectedBehaviour')
+				ego.selectedBehaviour = in.selectedBehaviour;
+			end
+		end
 		
 	end %---END PROTECTED METHODS---%
 	

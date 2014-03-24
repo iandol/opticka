@@ -11,14 +11,16 @@ classdef LFPAnalysis < analysisCore
 		dir@char
 		%> remove the mean voltage offset from the individual trials?
 		demeanLFP@logical = true
-		%> Â± time window for demeaning
+		%> ± time window for demeaning
 		baselineWindow@double = [-0.2 0]
 		%> default LFP channel
 		selectedLFP@double = 1
 		%> time window around the trigger
 		LFPWindow@double = 0.8
-		%> default Â± range to plot
+		%> default ± range to plot
 		plotRange@double = [-0.2 0.4]
+		%> default range to measure for differences
+		measureRange@double = [0.05 0.2]
 		%> default behavioural type
 		selectedBehaviour@char = 'correct';
 		%> plot verbosity
@@ -43,18 +45,16 @@ classdef LFPAnalysis < analysisCore
 		cutTrials@double
 		%> variable selection map for 3 analysis groups
 		map@cell
+	end
+	
+	%------------------HIDDEN PROPERTIES----------%
+	properties (SetAccess = protected, GetAccess = public, Hidden = true)
 		%> bandpass frequencies
 		bpfreq@cell = {[1 4], [5 8], [9 14], [15 30], [30 50], [50 100], [1 250]}
 		%> bandpass frequency names
 		bpnames@cell = {'\delta','\theta','\alpha','\beta','\gamma low','\gamma high','all'}
 	end
-	
-	%------------------TRANSIENT PROPERTIES----------%
-	properties (SetAccess = protected, GetAccess = public, Transient = true)
-		%> UI panels
-		panels@struct = struct()
-	end
-	
+
 	%------------------DEPENDENT PROPERTIES--------%
 	properties (SetAccess = protected, Dependent = true)
 		%> number of LFP channels
@@ -66,7 +66,7 @@ classdef LFPAnalysis < analysisCore
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'lfpfile|spikefile|dir|plotRange|demeanLFP|selectedLFP|LFPWindow|verbose'
+		allowedProperties@char = 'lfpfile|spikefile|dir|demeanLFP|baselineWindow|selectedLFP|LFPWindow|plotRange|selectedBehaviour|verbose'
 	end
 	
 	%=======================================================================
@@ -141,6 +141,7 @@ classdef LFPAnalysis < analysisCore
 				getFiles(ego,true);
 				if isempty(ego.lfpfile);return;end
 			end
+			ego.yokedSelection = false;
 			ego.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
 			if ego.mversion < 8.2
 				error('LFP Analysis requires Matlab >= 2013b!!!')
@@ -189,6 +190,16 @@ classdef LFPAnalysis < analysisCore
 			lazyParse(ego.sp); %lazy parse the spikes
 			syncData(ego.p, ego.sp.p); %copy any new parsed data back
 			showInfo(ego.sp);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function useSpikeSelect(ego)
+			
 		end
 		
 		% ===================================================================
@@ -279,25 +290,42 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function cfg=ftTimeLockAnalysis(ego, cfg)
-			ft = ego.ft;
-			if ~exist('cfg','var'); cfg = []; end
+		function cfg=ftTimeLockAnalysis(ego, cfg, statcfg)
+			ego.results.av = [];
+			ego.results.avstat = [];
+			ft = ego.ft;			
+			if ~exist('cfg','var') || isempty(cfg); cfg = []; end
 			if isnumeric(cfg) && length(cfg) == 2; w=cfg;cfg=[];cfg.covariancewindow=w; end
 			if ~isfield(cfg,'covariancewindow');cfg.covariancewindow = [0.075 0.2];end
-			cfg.keeptrials = 'yes';
-			cfg.removemean = 'yes';
-			cfg.covariance = 'yes';
-			cfg.channel = ft.label{ego.selectedLFP};
+			cfg.keeptrials			= 'yes';
+			cfg.removemean			= 'yes';
+			cfg.covariance			= 'yes';
+			cfg.channel				= ft.label{ego.selectedLFP};
 			for i = 1:ego.nSelection
-				cfg.trials = ego.selectedTrials{i}.idx;
-				av{i} = ft_timelockanalysis(cfg, ft);
-				av{i}.cfgUsed = cfg;
-				av{i}.name = ego.selectedTrials{i}.name;
-				if strcmpi(cfg.covariance, 'yes')
-					disp(['-->> Covariance [' num2str(cfg.covariancewindow) '] for Var:' num2str(i) ' = ' num2str(mean(av{i}.cov))]);
-				end
+				cfg.trials			= ego.selectedTrials{i}.idx;
+				av{i}					= ft_timelockanalysis(cfg, ft);
+				av{i}.cfgUsed		= cfg;
+				av{i}.name			= ego.selectedTrials{i}.name;
 			end
-			ego.ft.av = av;
+			
+			ego.results.av = av;
+			
+			if exist('statcfg','var');	cfg					= statcfg;
+			else cfg													= [];end
+			cfg.channel												= ft.label{ego.selectedLFP};
+			if ~isfield(cfg,'latency'); cfg.latency		= ego.measureRange; end
+			cfg.avgovertime										= 'no'; 
+			cfg.parameter											= 'trial';
+			cfg.method												= 'montecarlo';
+			if ~isfield(cfg,'statistic'); cfg.statistic	= 'indepsamplesT'; end
+			if ~isfield(cfg,'alpha'); cfg.alpha				= 0.05; end
+			cfg.numrandomization									= 1000;
+			cfg.correcttail										= 'prob';
+			stat														= ft_timelockstatistics(cfg, av{1}, av{2});
+			ego.results.avstat									= stat;
+			cfg.avgovertime											= 'yes'; 
+			stat														= ft_timelockstatistics(cfg, av{1}, av{2});
+			ego.results.avstatavg								= stat;
 			if ego.doPlots; drawAverageLFPs(ego); end
 		end
 		
@@ -316,7 +344,7 @@ classdef LFPAnalysis < analysisCore
 			if rectify == true; rectify = 'yes'; end
 			
 			ft = ego.ft;
-			ft.bp = [];
+			results.bp = [];
 			
 			for j = 1:length(ego.bpfreq)
 				cfg						= [];
@@ -376,7 +404,7 @@ classdef LFPAnalysis < analysisCore
 					end
 				end
 			end
-			ego.ft.bp = bp;
+			ego.results.bp = bp;
 			if ego.doPlots; drawBandPass(ego); end
 		end
 		
@@ -395,7 +423,7 @@ classdef LFPAnalysis < analysisCore
 			if rectify == true; rectify = 'yes'; end
 			
 			ft = ego.ft;
-			ft.bp = [];
+			results.bp = [];
 			
 		end
 		
@@ -462,7 +490,7 @@ classdef LFPAnalysis < analysisCore
 				cfgUsed{i} = cfg;
 			end
 			ego.ft.(['fq' preset]) = fq;
-			if ego.doPlots; 
+			if ego.doPlots;
 				plot(ego,'freq',['fq' preset]);
 				plot(ego,'freq',['fq' preset],[0 2]); 
 			end
@@ -718,6 +746,8 @@ classdef LFPAnalysis < analysisCore
 					ego.drawRawLFPs(); drawnow;
 				case {'av','average'}
 					ego.drawAverageLFPs(); drawnow;
+				case {'timelock'}
+					ego.drawTimelockLFPs(); drawnow;
 				case {'freq','frequency'}
 					ego.drawLFPFrequencies(args(:)); drawnow;
 				case {'bp','bandpass'}
@@ -827,6 +857,8 @@ classdef LFPAnalysis < analysisCore
 				end
 			end
 			
+			mrange = ego.measureRange;
+			
 			mtitle   = ['REPARSE ' num2str(ego.LFPs(1).nVars) ' DATA VARIABLES'];
 			options  = {['t|' map{1}],'Choose PLX variables to merge (A, if empty parse all variables independantly):';   ...
 				['t|' map{2}],'Choose PLX variables to merge (B):';   ...
@@ -834,6 +866,7 @@ classdef LFPAnalysis < analysisCore
 				['t|' cuttrials],'Enter Trials to exclude:';   ...
 				[lfp],'Choose Default LFP Channel to View:';...
 				[beh],'Behavioural type (''correct'', ''breakFix'', ''incorrect'' | ''all''):';...
+				['t|' num2str(mrange)],'Measurement Range (s) for Statistical Comparisons:';...
 				};
 			
 			answer = menuN(mtitle,options);
@@ -844,6 +877,7 @@ classdef LFPAnalysis < analysisCore
 				ego.map = map;
 				ego.selectedLFP = answer{5};
 				ego.selectedBehaviour = inbeh{answer{6}};
+				ego.measureRange = str2num(answer{7});
 				selectTrials(ego);
 			end
 		end
@@ -1002,19 +1036,20 @@ classdef LFPAnalysis < analysisCore
 				p(i1,i2).xlabel('Time (s)');
 				p(i1,i2).ylabel('LFP Raw Amplitude (mV)');
 				p(i1,i2).hold('on');
+				c = ego.optimalColours(length(ego.selectedTrials{j}.idx));
 				for k = 1:length(ego.selectedTrials{j}.idx)
 					trial = LFP.trials(ego.selectedTrials{j}.idx(k));
 					dat = [trial.variable,trial.index,trial.t1,trial.isCorrect,trial.isBreak];
 					if ismember(trial.index,cut);
-						ls = ':';c=[0.5 0.5 0.5];
+						ls = ':';cc=[0.5 0.5 0.5];
 					else
-						ls = '-';c=rand(1,3);
+						ls = '-';cc=c(k,:);
 					end
 					tag=['VAR:' num2str(dat(1)) '  TRL:' num2str(dat(2)) '  T1:' num2str(dat(3)) '  CORR:' num2str(dat(4)) '  BREAK:' num2str(dat(5))];
 					if strcmpi(class(gcf),'double')
-						plot(trial.time, trial.data, 'LineStyle', ls, 'Color', c, 'Tag', tag, 'ButtonDownFcn', @clickMe, 'UserData', dat);
+						plot(trial.time, trial.data, 'LineStyle', ls, 'Color', cc, 'Tag', tag, 'ButtonDownFcn', @clickMe, 'UserData', dat);
 					else
-						plot(trial.time, trial.data,'LineStyle', ls, 'Tag',tag,'ButtonDownFcn', @clickMe,'UserData',dat);
+						plot(trial.time, trial.data, 'LineStyle', ls, 'Tag',tag,'ButtonDownFcn', @clickMe,'UserData',dat);
 					end
 				end
 				[time,avg,err]=getAverageTuningCurve(ego, ego.selectedTrials{j}.idx, ego.selectedLFP);
@@ -1106,10 +1141,27 @@ classdef LFPAnalysis < analysisCore
 					p(i1,i2).hold('off');
 					axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
 				end
-				if isfield(ego.ft,'av')
-					av = ego.ft.av;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawTimelockLFPs(ego)
+			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
+			if isfield(ego.results,'av')
+					av = ego.results.av;
+					avstat = ego.results.avstat;
 					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
 					hold on
+					xp = [avstat.cfg.latency(1) avstat.cfg.latency(2) avstat.cfg.latency(2) avstat.cfg.latency(1)];
+					ym=mean(av{1}.avg(1,:));
+					yp = [ym ym ym ym];
+					mh = patch(xp,yp,[0.8 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
+					set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 					e = ego.var2SE(av{1}.var(1,:),av{1}.dof(1,:));
 					areabar(av{1}.time, av{1}.avg(1,:), e,[.5 .5 .5],0.3,'b-','LineWidth',1);
 					e = ego.var2SE(av{2}.var(1,:),av{2}.dof(1,:));
@@ -1121,8 +1173,18 @@ classdef LFPAnalysis < analysisCore
 						areabar(av{3}.time, av{3}.avg(1,:), e,[.3 .3 .5],0.3,'g-','LineWidth',1);
 						legend(av{1}.name,av{2}.name,av{3}.name);
 					end
-					hold off
 					ax=axis;
+					set(mh,'YData',[ax(3) ax(3) ax(4) ax(4)]);
+					pos = ax(4)-((ax(4)-ax(3))/20);
+					if length(avstat.prob) == 1
+						text(avstat.cfg.latency(1), pos, sprintf('p-value is: %.3g',avstat.prob),'FontSize',14);
+					else
+						times = avstat.time(avstat.mask);
+						pos = repmat(pos, size(times));
+						text(times,pos,'*','FontSize',8);
+					end
+					hold off
+					grid on; box on
 					axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
 					ax=axis;
 					[c1,c1e]=stderr(av{1}.cov);
@@ -1135,7 +1197,6 @@ classdef LFPAnalysis < analysisCore
 					ylabel('LFP Raw Amplitude (mV) ±SEM');
 					title(['FIELDTRIP TIMELOCK ANALYSIS: File:' ego.lfpfile ' | Channel:' av{1}.label{:} ' | LFP: ']);
 				end
-			end
 		end
 		
 		% ===================================================================
@@ -1379,9 +1440,9 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function drawBandPass(ego)
-			if ~isfield(ego.ft,'bp') || isempty(ego.ft.bp);	return;	end
+			if ~isfield(ego.ft,'bp') || isempty(ego.results.bp);	return;	end
 			disp('Drawing Frequency Bandpass...')
-			bp = ego.ft.bp;
+			bp = ego.results.bp;
 			h=figure;figpos(1,[1500 1500]);set(h,'Color',[1 1 1]);
 			p=panel(h);
 			p.margin = [20 20 10 15]; %left bottom right top

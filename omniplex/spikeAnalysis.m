@@ -14,7 +14,7 @@ classdef spikeAnalysis < analysisCore
 		%> default range to plot
 		plotRange@double = [-0.2 0.4]
 		%> default range to measure an average firing rate
-		rateRange@double = [0.05 0.2]
+		measureRange@double = [0.05 0.2]
 		%> bin size
 		binSize@double = 0.01
 		%> gaussian window for density plots
@@ -41,6 +41,8 @@ classdef spikeAnalysis < analysisCore
 		p@plxReader
 		%> fieldtrip reparse
 		ft@struct
+		%> fieldtrip parsed results
+		results@struct
 		%> the events as trials structure
 		trial@struct
 		%> events structure
@@ -55,14 +57,6 @@ classdef spikeAnalysis < analysisCore
 		selectedTrials@cell
 		%> variable selection map for 3 analysis groups
 		map@cell
-	end
-	
-	%------------------TRANSIENT PROPERTIES----------%
-	properties (SetAccess = protected, GetAccess = private, Transient = true)
-		%> UI panels
-		panels@struct = struct()
-		%> do we yoke the selection to the parent function (e.g. LFPAnalysis)
-		yokedSelection@logical = false
 	end
 		
 	%------------------DEPENDENT PROPERTIES--------%
@@ -269,7 +263,7 @@ classdef spikeAnalysis < analysisCore
 			end
 
 			pr = num2str(ego.plotRange);
-			rr = num2str(ego.rateRange);
+			rr = num2str(ego.measureRange);
 			bw = [num2str(ego.binSize) '       ' num2str(ego.gaussWindow)];
 			roi = num2str(ego.ROI);
 			saccfilt = num2str(ego.filterFirstSaccades);
@@ -298,7 +292,7 @@ classdef spikeAnalysis < analysisCore
 				ego.selectedUnit = answer{5};
 				ego.selectedBehaviour = inbeh{answer{6}};
 				ego.plotRange = str2num(answer{7});
-				ego.rateRange = str2num(answer{8});
+				ego.measureRange = str2num(answer{8});
 
 				bw = str2num(answer{9});
 				
@@ -353,7 +347,7 @@ classdef spikeAnalysis < analysisCore
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				cfg.latency			= [ego.rateRange(1) ego.rateRange(2)]; % sustained response period
+				cfg.latency			= [ego.measureRange(1) ego.measureRange(2)]; % sustained response period
 				cfg.keeptrials		= 'yes';
 				rate{j}				= ft_spike_rate(cfg,ego.ft);
 			end
@@ -385,7 +379,7 @@ classdef spikeAnalysis < analysisCore
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				cfg.latency			= [ego.rateRange(1) ego.rateRange(2)]; % sustained response period
+				cfg.latency			= [ego.measureRange(1) ego.measureRange(2)]; % sustained response period
 				cfg.keeptrials		= 'yes';
 				rate{j}				= ft_spike_rate(cfg,ego.ft);
 			end
@@ -494,34 +488,13 @@ classdef spikeAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief set trials / var parsing from outside, override dialog, used when this is yoked to an
-		%> LFPAnalysis
+		%> @brief 
 		%>
-		%> @param varargin
+		%> @param
 		%> @return
 		% ===================================================================
-		function setSelection(ego, in)
-			if isfield(in,'yokedSelection')
-				ego.yokedSelection = in.yokedSelection;
-			else
-				ego.yokedSelection = false;
-			end
-			if isfield(in,'cutTrials')
-				ego.cutTrials = in.cutTrials;
-			end
-			if isfield(in,'selectedTrials')
-				ego.selectedTrials = in.selectedTrials;
-				ego.yokedSelection = true;
-			end
-			if isfield(in,'map')
-				ego.map = in.map;
-			end
-			if isfield(in,'plotRange')
-				ego.plotRange = in.plotRange;
-			end
-			if isfield(in,'selectedBehaviour')
-				ego.selectedBehaviour = in.selectedBehaviour;
-			end
+		function findRepeats(ego)
+			
 		end
 		
 		% ===================================================================
@@ -555,19 +528,6 @@ classdef spikeAnalysis < analysisCore
 					plotDensitySummary(ego); drawnow;
 				case 'isi'
 					plotISI(ego); drawnow;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Allows two analysis objects to share a single plxReader object
-		%>
-		%> @param
-		% ===================================================================
-		function inheritPlxReader(ego,p)
-			if exist('p','var') && isa(p,'plxReader')
-				if isprop(ego,'p')
-					ego.p = p;
-				end
 			end
 		end
 		
@@ -707,6 +667,11 @@ classdef spikeAnalysis < analysisCore
 			box on
 			grid on
 			p(2).hold('on');
+			
+			xp = [rate{1}.cfg.latency(1) rate{1}.cfg.latency(2) rate{1}.cfg.latency(2) rate{1}.cfg.latency(1)];
+			yp = [nanmean(sd{1}.avg) nanmean(sd{1}.avg) nanmean(sd{1}.avg) nanmean(sd{1}.avg)];
+			mh = patch(xp,yp,[0.9 0.9 0.9],'FaceAlpha',0.6,'EdgeColor','none');
+			set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			c = ego.optimalColours(length(sd));
 			t = [ego.file];
 			for j = 1:length(sd)
@@ -716,13 +681,16 @@ classdef spikeAnalysis < analysisCore
 				e = ego.var2SE(rate{j}.var,rate{j}.dof);
 				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
 			end
-			disp([t sprintf(' | rateRange: %s', num2str(rate{1}.cfg.latency))]);
+			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',13);
 			p(2).xlabel('Time (s)')
 			p(2).ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
-			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+			ax=axis;
+			axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
+			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
+			set(gca,'Layer','top');
 		end
 		
 		% ===================================================================
@@ -747,7 +715,7 @@ classdef spikeAnalysis < analysisCore
 				leg{j,1} = ego.selectedTrials{j}.name;
 				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
 			end
-			disp([t sprintf(' | rateRange: %s', num2str(rate{1}.cfg.latency))]);
+			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',15);
 			xlabel('Time (s)')
 			ylabel('Firing Rate (s/s) \pm S.E.M.')
@@ -810,7 +778,7 @@ classdef spikeAnalysis < analysisCore
 				e = ego.var2SE(rate{j}.var,rate{j}.dof);
 				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
 			end
-			disp([t sprintf(' | rateRange: %s', num2str(rate{1}.cfg.latency))]);
+			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',13);
 			p(2).margintop = 25;
 			xlabel('Time (s)')

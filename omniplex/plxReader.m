@@ -317,7 +317,7 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function isPL2 = get.isPL2(ego)
 			isPL2 = false;
-			if ~isempty(regexpi(ego.file,'pl2'))
+			if ~isempty(regexpi(ego.file,'\.pl2$'))
 				isPL2 = true;
 			end
 		end
