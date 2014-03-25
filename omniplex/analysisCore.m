@@ -7,6 +7,7 @@ classdef analysisCore < optickaCore
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		doPlots@logical = true
+		alpha@double = 0.01
 	end
 	
 	%--------------------ABSTRACT PROPERTIES----------%
@@ -45,7 +46,7 @@ classdef analysisCore < optickaCore
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = ''
+		allowedProperties@char = 'doPlots'
 	end
 	
 	%=======================================================================
@@ -328,25 +329,25 @@ classdef analysisCore < optickaCore
 		%> @return
 		% ===================================================================
 		function setSelection(ego, in)
-			if isfield(in,'yokedSelection') && isfield(ego,'yokedSelection')
+			if isfield(in,'yokedSelection') && isprop(ego,'yokedSelection')
 				ego.yokedSelection = in.yokedSelection;
 			else
 				ego.yokedSelection = false;
 			end
-			if isfield(in,'cutTrials') && isfield(ego,'cutTrials')
+			if isfield(in,'cutTrials') && isprop(ego,'cutTrials')
 				ego.cutTrials = in.cutTrials;
 			end
-			if isfield(in,'selectedTrials') && isfield(ego,'selectedTrials')
+			if isfield(in,'selectedTrials') && isprop(ego,'selectedTrials')
 				ego.selectedTrials = in.selectedTrials;
 				ego.yokedSelection = true;
 			end
-			if isfield(in,'map') && isfield(ego,'map')
+			if isfield(in,'map') && isprop(ego,'map')
 				ego.map = in.map;
 			end
-			if isfield(in,'plotRange') && isfield(ego,'plotRange')
+			if isfield(in,'plotRange') && isprop(ego,'plotRange')
 				ego.plotRange = in.plotRange;
 			end
-			if isfield(in,'selectedBehaviour') && isfield(ego,'selectedBehaviour')
+			if isfield(in,'selectedBehaviour') && isprop(ego,'selectedBehaviour')
 				ego.selectedBehaviour = in.selectedBehaviour;
 			end
 		end

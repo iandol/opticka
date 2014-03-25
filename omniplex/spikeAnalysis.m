@@ -36,7 +36,7 @@ classdef spikeAnalysis < analysisCore
 	end
 	
 	%------------------VISIBLE PROPERTIES----------%
-	properties (SetAccess = protected, GetAccess = public)
+	properties (SetAccess = {?analysisCore}, GetAccess = public)
 		%> spike plxReader object; can be the same or different due to spike resorting
 		p@plxReader
 		%> fieldtrip reparse

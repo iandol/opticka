@@ -28,7 +28,7 @@ classdef LFPAnalysis < analysisCore
 	end
 	
 	%------------------VISIBLE PROPERTIES----------%
-	properties (SetAccess = protected, GetAccess = public)
+	properties (SetAccess = {?analysisCore}, GetAccess = public)
 		%> LFP plxReader object
 		p@plxReader
 		%> spike analysis object
@@ -296,7 +296,7 @@ classdef LFPAnalysis < analysisCore
 			ft = ego.ft;			
 			if ~exist('cfg','var') || isempty(cfg); cfg = []; end
 			if isnumeric(cfg) && length(cfg) == 2; w=cfg;cfg=[];cfg.covariancewindow=w; end
-			if ~isfield(cfg,'covariancewindow');cfg.covariancewindow = [0.075 0.2];end
+			if ~isfield(cfg,'covariancewindow');cfg.covariancewindow = ego.measureRange;end
 			cfg.keeptrials			= 'yes';
 			cfg.removemean			= 'yes';
 			cfg.covariance			= 'yes';
@@ -306,6 +306,11 @@ classdef LFPAnalysis < analysisCore
 				av{i}					= ft_timelockanalysis(cfg, ft);
 				av{i}.cfgUsed		= cfg;
 				av{i}.name			= ego.selectedTrials{i}.name;
+				idx1					= ego.findNearest(av{i}.time, ego.baselineWindow(1));
+				idx2					= ego.findNearest(av{i}.time, ego.baselineWindow(2));
+				av{i}.baselineWindow = ego.baselineWindow;
+				[av{i}.baseline, err]	= stderr(av{i}.avg(idx1:idx2),'2SD');
+				av{i}.baselineCI = [av{i}.baseline - err, av{i}.baseline + err];
 			end
 			
 			ego.results.av = av;
@@ -316,17 +321,19 @@ classdef LFPAnalysis < analysisCore
 			if ~isfield(cfg,'latency'); cfg.latency		= ego.measureRange; end
 			cfg.avgovertime										= 'no'; 
 			cfg.parameter											= 'trial';
-			cfg.method												= 'montecarlo';
+			cfg.method												= 'montecarlo'; %'analytic'; % 'montecarlo'
 			if ~isfield(cfg,'statistic'); cfg.statistic	= 'indepsamplesT'; end
 			if ~isfield(cfg,'alpha'); cfg.alpha				= 0.05; end
 			cfg.numrandomization									= 1000;
 			cfg.correcttail										= 'prob';
+			cfg.design												= [ones(size(av{1}.trial,1),1); 2*ones(size(av{2}.trial,1),1)]';
+			cfg.ivar													= 1;
 			stat														= ft_timelockstatistics(cfg, av{1}, av{2});
 			ego.results.avstat									= stat;
-			cfg.avgovertime											= 'yes'; 
+			cfg.avgovertime										= 'yes'; 
 			stat														= ft_timelockstatistics(cfg, av{1}, av{2});
 			ego.results.avstatavg								= stat;
-			if ego.doPlots; drawAverageLFPs(ego); end
+			if ego.doPlots; drawTimelockLFPs(ego); end
 		end
 		
 		% ===================================================================
@@ -444,7 +451,7 @@ classdef LFPAnalysis < analysisCore
 			cfgUsed = {};
 			if ~exist('cfg','var') || isempty(cfg)
 				cfg				= [];
-				cfg.keeptrials	= 'no';
+				cfg.keeptrials	= 'yes';
 				cfg.output		= 'pow';
 				cfg.channel		= ft.label{ego.selectedLFP};
 				cfg.toi         = -0.3:0.01:0.3;                  % time window "slides"
@@ -489,11 +496,34 @@ classdef LFPAnalysis < analysisCore
 				fq{i}.cfgUsed=cfg;
 				cfgUsed{i} = cfg;
 			end
-			ego.ft.(['fq' preset]) = fq;
-			if ego.doPlots;
+			ego.results.(['fq' preset]) = fq;
+			ego.ftFreqStats(['fq' preset]);
+			if ego.doPlots
 				plot(ego,'freq',['fq' preset]);
 				plot(ego,'freq',['fq' preset],[0 2]); 
 			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function ftFreqStats(ego,name)
+			ft = ego.ft;
+			fq = ego.results.(name);
+			cfgd						= [];
+			cfgd.variance			= 'yes';
+			cfgd.jackknife			= 'yes';
+			cfgd.channel			= ft.label{ego.selectedLFP};
+			cfgd.foilim				= 'all';
+			cfgd.toilim				= ego.measureRange;
+			
+			for i = 1:length(fq)
+				stat{i}				= ft_freqdescriptives(cfgd,fq{i});
+			end
+			ego.results.([name 'stat']) = stat;
 		end
 		
 		% ===================================================================
@@ -660,7 +690,7 @@ classdef LFPAnalysis < analysisCore
 				parseSpikes(ego);
 			end
 			
-			%in.yokedSelection = true;
+			in.yokedSelection = true;
 			in.cutTrials = ego.cutTrials;
 			in.selectedTrials = ego.selectedTrials;
 			in.map = ego.map;
@@ -734,29 +764,32 @@ classdef LFPAnalysis < analysisCore
 			
 			switch lower(sel)
 				case 'normal'
-					ego.drawRawLFPs(); drawnow;
-					ego.drawAverageLFPs(); drawnow;
+					ego.drawRawLFPs();
+					ego.drawAverageLFPs();
 				case 'all'
 					ego.drawAllLFPs();
 					ego.drawRawLFPs();
 					ego.drawAverageLFPs();
+					ego.drawTimelockLFPs();
 				case 'continuous'
-					ego.drawAllLFPs(); drawnow;
+					ego.drawAllLFPs();
 				case {'trials','raw'}
-					ego.drawRawLFPs(); drawnow;
+					ego.drawRawLFPs();
 				case {'av','average'}
-					ego.drawAverageLFPs(); drawnow;
-				case {'timelock'}
-					ego.drawTimelockLFPs(); drawnow;
+					ego.drawAverageLFPs();
+				case {'timelock','tlock','tl'}
+					ego.drawTimelockLFPs();
 				case {'freq','frequency'}
-					ego.drawLFPFrequencies(args(:)); drawnow;
+					ego.drawLFPFrequencies(args(:));
 				case {'bp','bandpass'}
-					ego.drawBandPass(); drawnow;
+					ego.drawBandPass();
 				case {'slfp','spikelfp'}
-					ego.drawSpikeLFP(); drawnow;
+					ego.drawSpikeLFP();
 				case {'both','together'}
-					ego.plotTogether(); drawnow;
+					ego.plotTogether();
 			end
+			
+			
 		end
 		
 		% ===================================================================
@@ -879,6 +912,45 @@ classdef LFPAnalysis < analysisCore
 				ego.selectedBehaviour = inbeh{answer{6}};
 				ego.measureRange = str2num(answer{7});
 				selectTrials(ego);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function set.demeanLFP(ego,in)
+			if ~isequal(ego.demeanLFP,logical(in))
+				ego.demeanLFP = logical(in);
+				disp('You should REPARSE the LFP data to enable this change')
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function set.baselineWindow(ego,in)
+			if isnumeric(in) && length(in)==2 && ~isequal(ego.baselineWindow, in)
+				ego.demeanLFP = in;
+				disp('You should REPARSE the LFP data to enable this change')
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function set.LFPWindow(ego,in)
+			if isnumeric(in) && length(in)==1 && ~isequal(ego.LFPWindow, in)
+				ego.LFPWindow = in;
+				disp('You should PARSE the LFP data to enable this change')
 			end
 		end
 
@@ -1155,13 +1227,26 @@ classdef LFPAnalysis < analysisCore
 			if isfield(ego.results,'av')
 					av = ego.results.av;
 					avstat = ego.results.avstat;
-					figure;figpos(1,[1000 1000]);set(gcf,'Color',[1 1 1]);
+					avstatavg = ego.results.avstatavg;
+					figure;figpos(1,[1700 1000]);set(gcf,'Color',[1 1 1]);
 					hold on
+					
 					xp = [avstat.cfg.latency(1) avstat.cfg.latency(2) avstat.cfg.latency(2) avstat.cfg.latency(1)];
 					ym=mean(av{1}.avg(1,:));
 					yp = [ym ym ym ym];
 					mh = patch(xp,yp,[0.8 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
 					set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+					
+					xp = [ego.plotRange(1) ego.plotRange(2) ego.plotRange(2) ego.plotRange(1)];
+					yp = [av{1}.baselineCI(1) av{1}.baselineCI(1) av{1}.baselineCI(2) av{1}.baselineCI(2)];
+					me1 = patch(xp,yp,[0.8 0.8 1],'FaceAlpha',0.5,'EdgeColor','none');
+					set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+					
+					yp = [av{2}.baselineCI(1) av{2}.baselineCI(1) av{2}.baselineCI(2) av{2}.baselineCI(2)];
+					me2 = patch(xp,yp,[1 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
+					set(get(get(me2,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+
+					
 					e = ego.var2SE(av{1}.var(1,:),av{1}.dof(1,:));
 					areabar(av{1}.time, av{1}.avg(1,:), e,[.5 .5 .5],0.3,'b-','LineWidth',1);
 					e = ego.var2SE(av{2}.var(1,:),av{2}.dof(1,:));
@@ -1173,15 +1258,17 @@ classdef LFPAnalysis < analysisCore
 						areabar(av{3}.time, av{3}.avg(1,:), e,[.3 .3 .5],0.3,'g-','LineWidth',1);
 						legend(av{1}.name,av{2}.name,av{3}.name);
 					end
+					
 					ax=axis;
 					set(mh,'YData',[ax(3) ax(3) ax(4) ax(4)]);
+					
 					pos = ax(4)-((ax(4)-ax(3))/20);
 					if length(avstat.prob) == 1
 						text(avstat.cfg.latency(1), pos, sprintf('p-value is: %.3g',avstat.prob),'FontSize',14);
 					else
 						times = avstat.time(avstat.mask);
 						pos = repmat(pos, size(times));
-						text(times,pos,'*','FontSize',8);
+						text(times,pos,'*','FontSize',10);
 					end
 					hold off
 					grid on; box on
@@ -1192,10 +1279,11 @@ classdef LFPAnalysis < analysisCore
 					[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',0.05);
 					covt = num2str(av{1}.cfgUsed.covariancewindow);
 					covt = regexprep(covt,' +',' ');
-					text(ax(1),ax(3)+((ax(4)-ax(3))/20),sprintf('<%s> COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',covt,c1,c1e,c2,c2e,pval),'FontSize',14);
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV) ±SEM');
-					title(['FIELDTRIP TIMELOCK ANALYSIS: File:' ego.lfpfile ' | Channel:' av{1}.label{:} ' | LFP: ']);
+					t=sprintf('COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
+					tt=sprintf('%s | Ch: %s | P-val: %.3g\n%s', ego.lfpfile, av{1}.label{:}, avstatavg.prob, t);
+					title(tt,'FontSize',14);
 				end
 		end
 		
@@ -1533,11 +1621,12 @@ classdef LFPAnalysis < analysisCore
 				while iscell(zlimi);zlimi=zlimi{1};end
 				if ~isnumeric(zlimi); clear zlimi; end
 			end
-			if ~isfield(ego.ft,name)
+			if ~isfield(ego.results,name)
 				disp('The Frequency field is not present in fieldtrip structure...');
 				return;
 			end
-			fq = ego.ft.(name);
+			fq = ego.results.(name);
+			fqstat = ego.results.([name 'stat']);
 			h=figure;figpos(1,[2500 2000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
 			p=panel(h);
 			p.margin = [15 15 30 20];
@@ -1552,7 +1641,7 @@ classdef LFPAnalysis < analysisCore
 				for i = 1:length(fq)
 					p(i,jj).select();
 					cfg							= [];
-					cfg.fontsize				= 14;
+					cfg.fontsize				= 13;
 					if strcmpi(bl{jj},'no');
 						cfg.baseline			= 'no';
 					else
@@ -1583,7 +1672,28 @@ classdef LFPAnalysis < analysisCore
 					box on; grid on;
 				end
 			end
-			ego.panels.fq = p;
+			ego.panels.(name) = p;
+			
+			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
+						
+			hold on
+			p = squeeze(fqstat{1}.powspctrm);
+			e = squeeze(fqstat{1}.powspctrmsem);
+			p = p';
+			e = e';
+			p = nanmean(p);
+			e = max(e);
+			areabar(fqstat{1}.freq, p, e,[0.5 0.5 0.7],[],'b-');
+			
+			p = squeeze(fqstat{2}.powspctrm);
+			e = squeeze(fqstat{2}.powspctrmsem);
+			p = p';
+			e = e';
+			p = nanmean(p);
+			e = max(e);
+			areabar(fqstat{2}.freq, p, e,[0.7 0.5 0.5],[],'r-');
+			
+			
 		end
 		
 		% ===================================================================
