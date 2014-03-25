@@ -321,10 +321,11 @@ classdef LFPAnalysis < analysisCore
 			if ~isfield(cfg,'latency'); cfg.latency		= ego.measureRange; end
 			cfg.avgovertime										= 'no'; 
 			cfg.parameter											= 'trial';
-			cfg.method												= 'montecarlo'; %'analytic'; % 'montecarlo'
+			if ~isfield(cfg,'method');cfg.method			= 'montecarlo'; end %'analytic'; % 'montecarlo'
 			if ~isfield(cfg,'statistic'); cfg.statistic	= 'indepsamplesT'; end
 			if ~isfield(cfg,'alpha'); cfg.alpha				= ego.alpha; end
 			cfg.numrandomization									= 1000;
+			cfg.tail													= 0; %two tail
 			cfg.correcttail										= 'prob';
 			cfg.design												= [ones(size(av{1}.trial,1),1); 2*ones(size(av{2}.trial,1),1)]';
 			cfg.ivar													= 1;
@@ -497,7 +498,7 @@ classdef LFPAnalysis < analysisCore
 				cfgUsed{i} = cfg;
 			end
 			ego.results.(['fq' preset]) = fq;
-			ego.ftFreqStats(['fq' preset]);
+			ftFrequencyStats(ego, ['fq' preset]);
 			if ego.doPlots
 				plot(ego,'freq',['fq' preset]);
 				plot(ego,'freq',['fq' preset],[0 2]); 
@@ -510,7 +511,9 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ftFreqStats(ego,name)
+		function ftFrequencyStats(ego,name)
+			if ~exist('name','var');name='fqfix1';end
+			if ~isfield(ego.results,name); disp('No frequency data parsed...'); return; end
 			ft = ego.ft;
 			fq = ego.results.(name);
 			cfgd						= [];
@@ -519,7 +522,6 @@ classdef LFPAnalysis < analysisCore
 			cfgd.channel			= ft.label{ego.selectedLFP};
 			cfgd.foilim				= 'all';
 			cfgd.toilim				= ego.measureRange;
-			cfgd.alpha
 			
 			for i = 1:length(fq)
 				stat{i}				= ft_freqdescriptives(cfgd,fq{i});
@@ -1232,7 +1234,7 @@ classdef LFPAnalysis < analysisCore
 					h=figure;figpos(1,[1700 1000]);set(gcf,'Color',[1 1 1]);
 					p=panel(h);
 					p.margin = [20 20 10 15]; %left bottom right top
-					p.pack('v', {3/4 []})
+					p.pack('v', {5/6 []})
 					p(1).select();
 					p(1).hold('on');
 					
@@ -1286,7 +1288,6 @@ classdef LFPAnalysis < analysisCore
 					tt=sprintf('%s | Ch: %s | p-val: %.3g [@%.2g]\n%s', ego.lfpfile, av{1}.label{:}, avstatavg.prob, ego.alpha, t);
 					title(tt,'FontSize',14);
 					
-					
 					p(2).select();
 					p(2).hold('on');
 					res1 = av{2}.avg(1,:) - av{1}.avg(1,:);
@@ -1304,7 +1305,7 @@ classdef LFPAnalysis < analysisCore
 					title('Residuals')
 					xlim([ego.plotRange(1) ego.plotRange(2)]);
 					xlabel('Time (s)');
-					ylabel('Res LFP Raw Amplitude (mV)');
+					ylabel('Residuals (mV)');
 				end
 		end
 		

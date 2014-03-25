@@ -335,6 +335,8 @@ classdef spikeAnalysis < analysisCore
 		function PSTH(ego)
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			ft_defaults;
+			psth = cell(1,length(ego.selectedTrials));
+			rate = psth; baseline = psth;
 			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
@@ -350,9 +352,13 @@ classdef spikeAnalysis < analysisCore
 				cfg.latency			= [ego.measureRange(1) ego.measureRange(2)]; % sustained response period
 				cfg.keeptrials		= 'yes';
 				rate{j}				= ft_spike_rate(cfg,ego.ft);
+
+				cfg.latency			= [-0.2 0];
+				baseline{j}			= ft_spike_rate(cfg,ego.ft);
 			end
 			ego.ft.psth = psth;
 			ego.ft.rate = rate;
+			ego.ft.baseline = baseline;
 			
 			if ego.doPlots; plot(ego,'psth'); end
 		end
@@ -366,6 +372,8 @@ classdef spikeAnalysis < analysisCore
 		function density(ego)
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			ft_defaults;
+			sd = cell(1,length(ego.selectedTrials));
+			rate = sd; baseline = sd;
 			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
@@ -382,9 +390,13 @@ classdef spikeAnalysis < analysisCore
 				cfg.latency			= [ego.measureRange(1) ego.measureRange(2)]; % sustained response period
 				cfg.keeptrials		= 'yes';
 				rate{j}				= ft_spike_rate(cfg,ego.ft);
+				
+				cfg.latency			= [-0.2 0];
+				baseline{j}			= ft_spike_rate(cfg,ego.ft);
 			end
 			ego.ft.sd = sd;
 			ego.ft.rate = rate;
+			ego.ft.baseline = baseline;
 			
 			if ego.doPlots; plot(ego,'density'); end
 		end
