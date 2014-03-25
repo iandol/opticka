@@ -20,7 +20,7 @@ classdef LFPAnalysis < analysisCore
 		%> default ± range to plot
 		plotRange@double = [-0.2 0.4]
 		%> default range to measure for differences
-		measureRange@double = [0.05 0.2]
+		measureRange@double = [0.1 0.2]
 		%> default behavioural type
 		selectedBehaviour@char = 'correct';
 		%> plot verbosity
@@ -323,7 +323,7 @@ classdef LFPAnalysis < analysisCore
 			cfg.parameter											= 'trial';
 			cfg.method												= 'montecarlo'; %'analytic'; % 'montecarlo'
 			if ~isfield(cfg,'statistic'); cfg.statistic	= 'indepsamplesT'; end
-			if ~isfield(cfg,'alpha'); cfg.alpha				= 0.05; end
+			if ~isfield(cfg,'alpha'); cfg.alpha				= ego.alpha; end
 			cfg.numrandomization									= 1000;
 			cfg.correcttail										= 'prob';
 			cfg.design												= [ones(size(av{1}.trial,1),1); 2*ones(size(av{2}.trial,1),1)]';
@@ -519,6 +519,7 @@ classdef LFPAnalysis < analysisCore
 			cfgd.channel			= ft.label{ego.selectedLFP};
 			cfgd.foilim				= 'all';
 			cfgd.toilim				= ego.measureRange;
+			cfgd.alpha
 			
 			for i = 1:length(fq)
 				stat{i}				= ft_freqdescriptives(cfgd,fq{i});
@@ -1228,8 +1229,12 @@ classdef LFPAnalysis < analysisCore
 					av = ego.results.av;
 					avstat = ego.results.avstat;
 					avstatavg = ego.results.avstatavg;
-					figure;figpos(1,[1700 1000]);set(gcf,'Color',[1 1 1]);
-					hold on
+					h=figure;figpos(1,[1700 1000]);set(gcf,'Color',[1 1 1]);
+					p=panel(h);
+					p.margin = [20 20 10 15]; %left bottom right top
+					p.pack('v', {3/4 []})
+					p(1).select();
+					p(1).hold('on');
 					
 					xp = [avstat.cfg.latency(1) avstat.cfg.latency(2) avstat.cfg.latency(2) avstat.cfg.latency(1)];
 					ym=mean(av{1}.avg(1,:));
@@ -1246,16 +1251,15 @@ classdef LFPAnalysis < analysisCore
 					me2 = patch(xp,yp,[1 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
 					set(get(get(me2,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 
-					
 					e = ego.var2SE(av{1}.var(1,:),av{1}.dof(1,:));
-					areabar(av{1}.time, av{1}.avg(1,:), e,[.5 .5 .5],0.3,'b-','LineWidth',1);
+					areabar(av{1}.time, av{1}.avg(1,:), e,[.5 .5 .5],0.3,'b.-','LineWidth',1);
 					e = ego.var2SE(av{2}.var(1,:),av{2}.dof(1,:));
-					areabar(av{2}.time, av{2}.avg(1,:), e,[.5 .3 .3],0.3,'r-','LineWidth',1);
+					areabar(av{2}.time, av{2}.avg(1,:), e,[.5 .3 .3],0.3,'r.-','LineWidth',1);
 					if length(av) == 2
 						legend(av{1}.name,av{2}.name)
 					elseif length(av) > 2
 						e = ego.var2SE(av{3}.var(1,:),av{3}.dof(1,:));
-						areabar(av{3}.time, av{3}.avg(1,:), e,[.3 .3 .5],0.3,'g-','LineWidth',1);
+						areabar(av{3}.time, av{3}.avg(1,:), e,[.3 .3 .5],0.3,'g.-','LineWidth',1);
 						legend(av{1}.name,av{2}.name,av{3}.name);
 					end
 					
@@ -1263,27 +1267,44 @@ classdef LFPAnalysis < analysisCore
 					set(mh,'YData',[ax(3) ax(3) ax(4) ax(4)]);
 					
 					pos = ax(4)-((ax(4)-ax(3))/20);
-					if length(avstat.prob) == 1
-						text(avstat.cfg.latency(1), pos, sprintf('p-value is: %.3g',avstat.prob),'FontSize',14);
-					else
-						times = avstat.time(avstat.mask);
-						pos = repmat(pos, size(times));
-						text(times,pos,'*','FontSize',10);
-					end
+					times = avstat.time(avstat.mask);
+					pos = repmat(pos, size(times));
+					text(times,pos,'*','FontSize',10);
+					
 					hold off
 					grid on; box on
 					axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
 					ax=axis;
 					[c1,c1e]=stderr(av{1}.cov);
 					[c2,c2e]=stderr(av{2}.cov);
-					[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',0.05);
+					[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',ego.alpha);
 					covt = num2str(av{1}.cfgUsed.covariancewindow);
 					covt = regexprep(covt,' +',' ');
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV) ±SEM');
 					t=sprintf('COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
-					tt=sprintf('%s | Ch: %s | P-val: %.3g\n%s', ego.lfpfile, av{1}.label{:}, avstatavg.prob, t);
+					tt=sprintf('%s | Ch: %s | p-val: %.3g [@%.2g]\n%s', ego.lfpfile, av{1}.label{:}, avstatavg.prob, ego.alpha, t);
 					title(tt,'FontSize',14);
+					
+					
+					p(2).select();
+					p(2).hold('on');
+					res1 = av{2}.avg(1,:) - av{1}.avg(1,:);
+					plot(av{1}.time, res1,'b.-')
+					if length(av) == 2
+						legend('Group B-A')
+					elseif length(av) > 2
+						res2 = av{3}.avg(1,:) - av{1}.avg(1,:);
+						res2 = av{3}.avg(1,:) - av{2}.avg(1,:);
+						plot(av{1}.time, res2,'r.-')
+						plot(av{1}.time, res3,'g.-')
+						legend('Group B-A','Group C-A','Group C-B')
+					end
+					grid on; box on
+					title('Residuals')
+					xlim([ego.plotRange(1) ego.plotRange(2)]);
+					xlabel('Time (s)');
+					ylabel('Res LFP Raw Amplitude (mV)');
 				end
 		end
 		
