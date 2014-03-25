@@ -1086,12 +1086,12 @@ classdef plxReader < optickaCore
 			end
 			if ego.trodality > 1 && a < i
 				ego.tsList.trodreduction = true;	
-				disp('---! Removed tetrode channels with identical spike numbers !---');
-				end
+				warning('---! Removed tetrode channels with identical spike numbers !---');
+			end
 			ego.tsList.chMap = ego.tsList(1).chMap;
 			ego.tsList.chIndex = ego.tsList.chMap; 
-			ego.tsList.chMap = chmap(ego.tsList(1).chMap); %fucking pain channel number is different to ch index!!!
-			ego.tsList.activeChIndex = [ego.tsList.unitMap(:).ch]; %just the active channels
+			ego.tsList.chMap = chmap(ego.tsList.chMap); %fucking pain channel number is different to ch index!!!
+			ego.tsList.activeChIndex = [ego.tsList.unitMap(:).chIdx]; %just the active channels
 			ego.tsList.activeCh = chmap(ego.tsList.activeChIndex); %mapped to the channel numbers
 			ego.tsList.nCh = nCh; 
 			ego.tsList.nUnits = nUnit;
