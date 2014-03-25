@@ -297,26 +297,26 @@ classdef LFPAnalysis < analysisCore
 			if ~exist('cfg','var') || isempty(cfg); cfg = []; end
 			if isnumeric(cfg) && length(cfg) == 2; w=cfg;cfg=[];cfg.covariancewindow=w; end
 			if ~isfield(cfg,'covariancewindow');cfg.covariancewindow = ego.measureRange;end
-			cfg.keeptrials			= 'yes';
-			cfg.removemean			= 'yes';
-			cfg.covariance			= 'yes';
-			cfg.channel				= ft.label{ego.selectedLFP};
+			cfg.keeptrials					= 'yes';
+			cfg.removemean					= 'yes';
+			cfg.covariance					= 'yes';
+			cfg.channel						= ft.label{ego.selectedLFP};
 			for i = 1:ego.nSelection
-				cfg.trials			= ego.selectedTrials{i}.idx;
-				av{i}					= ft_timelockanalysis(cfg, ft);
-				av{i}.cfgUsed		= cfg;
-				av{i}.name			= ego.selectedTrials{i}.name;
-				idx1					= ego.findNearest(av{i}.time, ego.baselineWindow(1));
-				idx2					= ego.findNearest(av{i}.time, ego.baselineWindow(2));
-				av{i}.baselineWindow = ego.baselineWindow;
+				cfg.trials					= ego.selectedTrials{i}.idx;
+				av{i}							= ft_timelockanalysis(cfg, ft);
+				av{i}.cfgUsed				= cfg;
+				av{i}.name					= ego.selectedTrials{i}.name;
+				idx1							= ego.findNearest(av{i}.time, ego.baselineWindow(1));
+				idx2							= ego.findNearest(av{i}.time, ego.baselineWindow(2));
+				av{i}.baselineWindow		= ego.baselineWindow;
 				[av{i}.baseline, err]	= stderr(av{i}.avg(idx1:idx2),'2SD');
-				av{i}.baselineCI = [av{i}.baseline - err, av{i}.baseline + err];
+				av{i}.baselineCI			= [av{i}.baseline - err, av{i}.baseline + err];
 			end
 			
 			ego.results.av = av;
 			
 			if exist('statcfg','var');	cfg					= statcfg;
-			else cfg													= [];end
+			else cfg													= []; end
 			cfg.channel												= ft.label{ego.selectedLFP};
 			if ~isfield(cfg,'latency'); cfg.latency		= ego.measureRange; end
 			cfg.avgovertime										= 'no'; 

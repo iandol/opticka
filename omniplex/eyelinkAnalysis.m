@@ -1054,25 +1054,28 @@ classdef eyelinkAnalysis < analysisCore
 					warning('No replacement trials available!!!')
 					return
 				end
-				trials = ego.trialOverride;
+				trials = ego.trialOverride; %#ok<*PROP>
 				if  max([ego.trials.correctedIndex]) ~= length(trials)
 					warning('TRIAL ID LENGTH MISMATCH!');
 					return
 				end
 				a = 1;
+				ego.trialList = [];
 				for j = 1:length(ego.trials)
 					if ego.trials(j).incorrect ~= true
-						ego.trials(j).oldid = ego.trials(j).variable;
-						ego.trials(j).variable = trials(a).variable;
-						ego.trialList(j) = ego.trials(j).variable;
-						if ego.trials(j).breakFix == true
-							ego.trialList(j) = -[ego.trialList(j)];
+						if a <= length(trials) && ego.trials(j).correctedIndex == trials(a).index
+							ego.trials(j).oldid = ego.trials(j).variable;
+							ego.trials(j).variable = trials(a).variable;
+							ego.trialList(j) = ego.trials(j).variable;
+							if ego.trials(j).breakFix == true
+								ego.trialList(j) = -[ego.trialList(j)];
+							end
+							a = a + 1;
 						end
-						a = a + 1;
 					end
 				end
 				parseAsVars(ego); %need to redo this now
-				disp('---> Trial name override in place!!!')
+				warning('---> Trial name override in place!!!')
 			end
 		end
 		

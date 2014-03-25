@@ -1050,12 +1050,16 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function readSpikes(ego)
 			tic
-			[tscounts, wfcounts, evcounts, slowcounts] = plx_info(ego.file,1);
-			[~,chnames] = plx_chan_names(ego.file);
-			[~,chmap]=plx_chanmap(ego.file);
-			chnames = cellstr(chnames);
-			[nunits1, nchannels1] = size( tscounts );
 			ego.tsList = struct();
+			[tscounts, wfcounts, evcounts, slowcounts]	= plx_info(ego.file,1);
+			[~,chnames]												= plx_chan_names(ego.file);
+			[~,chmap]												= plx_chanmap(ego.file);
+			chnames = cellstr(chnames);
+			
+			%!!!WARNING tscounts column 1 is empty, read plx_info for details
+			%we remove the first column here so we don't have the idx-1 issue
+			tscounts = tscounts(:,2:end);
+			
 			[a,b]=ind2sub(size(tscounts),find(tscounts>0)); %finds row and columns of nonzero values
 			ego.tsList.chMap = unique(b)';
 			a = 1;
@@ -1070,7 +1074,8 @@ classdef plxReader < optickaCore
 				units = units - 1; %fix the index as plxuses 0 as unsorted
 				if a == 1 || ~isequal(counts, prevcount);
 					ego.tsList.unitMap(a).units = units; 
-					ego.tsList.unitMap(a).ch = ego.tsList.chMap(i);
+					ego.tsList.unitMap(a).ch = chmap(ego.tsList.chMap(i));
+					ego.tsList.unitMap(a).chIdx = ego.tsList.chMap(i);
 					ego.tsList.unitMap(a).n = n;
 					ego.tsList.unitMap(a).counts = counts;
 					prevcount = counts;
@@ -1082,38 +1087,43 @@ classdef plxReader < optickaCore
 			if ego.trodality > 1 && a < i
 				ego.tsList.trodreduction = true;	
 				disp('---! Removed tetrode channels with identical spike numbers !---');
-			end
-			ego.tsList.chMap = ego.tsList(1).chMap - 1; %fix the index as plx_info add 1 to channels
-			ego.tsList.activeCh = chmap([ego.tsList.unitMap(:).ch] - 1); %just the active channels
-			ego.tsList.chIndex = ego.tsList.chMap; %fucking pain channel number is different to ch index!!!
-			ego.tsList.chMap = chmap(ego.tsList(1).chMap); %set proper ch number
-			ego.tsList.nCh = nCh;
-			ego.tsList.nUnits = nUnit;
-			ego.tsList.namelist = ''; a = 1; list = 'Uabcdefghijklmnopqrstuvwxyz';
-			for ich = 1:length(ego.tsList.activeCh)
-				name = chnames{ego.tsList.activeCh(ich)};
-				unitN = ego.tsList.unitMap(ich).n;
-				for iunit = 1:unitN
-					t = '';
-					t = [num2str(a) ':' name list(iunit) '=' num2str(ego.tsList.unitMap(ich).counts(iunit))];
-					ego.tsList.names{a} = t;
-					ego.tsList.namelist = [ego.tsList.namelist ' ' t];
-					a = a + 1;
 				end
-			end
+			ego.tsList.chMap = ego.tsList(1).chMap;
+			ego.tsList.chIndex = ego.tsList.chMap; 
+			ego.tsList.chMap = chmap(ego.tsList(1).chMap); %fucking pain channel number is different to ch index!!!
+			ego.tsList.activeChIndex = [ego.tsList.unitMap(:).ch]; %just the active channels
+			ego.tsList.activeCh = chmap(ego.tsList.activeChIndex); %mapped to the channel numbers
+			ego.tsList.nCh = nCh; 
+			ego.tsList.nUnits = nUnit;
+
 			ego.tsList.ts = cell(ego.tsList.nUnits, 1);
 			ego.tsList.tsN = ego.tsList.ts;
 			ego.tsList.tsParse = ego.tsList.ts;
-			a = 1;
+			ego.tsList.namelist = ''; list = 'UabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST';
+			a = 1; 
 			for ich = 1:length(ego.tsList.activeCh)
-				unitN = ego.tsList.unitMap(ich).n;
 				ch = ego.tsList.activeCh(ich);
+				name = chnames{ego.tsList.activeChIndex(ich)};
+				unitN = ego.tsList.unitMap(ich).n;
 				for iunit = 1:unitN
+					
 					unit = ego.tsList.unitMap(ich).units(iunit);
-					[ego.tsList.tsN{a}, ego.tsList.ts{a}] = plx_ts(ego.file, ch , unit);
+					[tsN,ts] = plx_ts(ego.file, ch, unit);
+					if ~isequal(tsN,ego.tsList.unitMap(ich).counts(iunit))
+						error('SPIKE PARSING COUNT ERROR!!!')
+					end
+					ego.tsList.tsN{a} = tsN;
+					ego.tsList.ts{a} = ts;
+					
+					t = '';
+					t = [num2str(a) ':' name list(iunit) '=' num2str(tsN)];
+					ego.tsList.names{a} = t;
+					ego.tsList.namelist = [ego.tsList.namelist ' ' t];
+					
 					a = a + 1;
 				end
 			end
+			
 			fprintf('Loading all spike channels took %g ms\n',round(toc*1000));
 		end
 
