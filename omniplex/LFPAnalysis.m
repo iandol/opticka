@@ -298,7 +298,7 @@ classdef LFPAnalysis < analysisCore
 			if isnumeric(cfg) && length(cfg) == 2; w=cfg;cfg=[];cfg.covariancewindow=w; end
 			if ~isfield(cfg,'covariancewindow');cfg.covariancewindow = ego.measureRange;end
 			cfg.keeptrials					= 'yes';
-			cfg.removemean					= 'yes';
+			cfg.removemean					= 'no';
 			cfg.covariance					= 'yes';
 			cfg.channel						= ft.label{ego.selectedLFP};
 			for i = 1:ego.nSelection
@@ -309,8 +309,14 @@ classdef LFPAnalysis < analysisCore
 				idx1							= ego.findNearest(av{i}.time, ego.baselineWindow(1));
 				idx2							= ego.findNearest(av{i}.time, ego.baselineWindow(2));
 				av{i}.baselineWindow		= ego.baselineWindow;
-				[av{i}.baseline, err]	= stderr(av{i}.avg(idx1:idx2),'2SD');
-				av{i}.baselineCI			= [av{i}.baseline - err, av{i}.baseline + err];
+				%tr = squeeze(av{i}.trial(:,:,idx1:idx2)); tr=mean(tr');
+				tr = av{i}.avg(idx1:idx2);
+				[av{i}.baseline, err]	= stderr(tr(:),'2SD');
+				if length(err) == 1
+					av{i}.baselineCI			= [av{i}.baseline - err, av{i}.baseline + err];
+				else
+					av{i}.baselineCI			= [err(1), err(2)];
+				end
 			end
 			
 			ego.results.av = av;
@@ -495,14 +501,14 @@ classdef LFPAnalysis < analysisCore
 				cfg.trials = ego.selectedTrials{i}.idx;
 				fq{i} = ft_freqanalysis(cfg,ft);
 				fq{i}.cfgUsed=cfg;
+				fq{i}.name = ego.selectedTrials{i}.name;
 				cfgUsed{i} = cfg;
 			end
 			ego.results.(['fq' preset]) = fq;
-			ftFrequencyStats(ego, ['fq' preset]);
 			if ego.doPlots
 				plot(ego,'freq',['fq' preset]);
-				plot(ego,'freq',['fq' preset],[0 2]); 
 			end
+			ftFrequencyStats(ego, ['fq' preset]);
 		end
 		
 		% ===================================================================
@@ -523,10 +529,14 @@ classdef LFPAnalysis < analysisCore
 			cfgd.foilim				= 'all';
 			cfgd.toilim				= ego.measureRange;
 			
+			stat = cell(size(fq));
 			for i = 1:length(fq)
 				stat{i}				= ft_freqdescriptives(cfgd,fq{i});
+				stat{i}.name		= fq{i}.name;
+				stat{i}.toilim		= ego.measureRange;
 			end
 			ego.results.([name 'stat']) = stat;
+			ego.drawLFPFrequencyStats(name);
 		end
 		
 		% ===================================================================
@@ -1648,13 +1658,12 @@ classdef LFPAnalysis < analysisCore
 				return;
 			end
 			fq = ego.results.(name);
-			fqstat = ego.results.([name 'stat']);
 			h=figure;figpos(1,[2500 2000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
 			p=panel(h);
 			p.margin = [15 15 30 20];
 			if isnumeric(gcf);	p.fontsize = 12; end
-			bl = {'relative','absolute','no'};
-			row = length(fq); col = 3;
+			bl = {'relative','relative2','absolute','no'};
+			row = length(fq); col = length(bl);
 			p.pack(row,col);
 			hmin = cell(size(bl));
 			hmax = hmin;
@@ -1673,6 +1682,10 @@ classdef LFPAnalysis < analysisCore
 					if strcmpi(bl{jj},'relative') && exist('zlimi','var')
 						cfg.zlim					= zlimi;
 					end
+					if strcmpi(bl{jj},'relative2')
+						cfg.baselinetype		= 'relative';
+						cfg.zlim					= [0 2];
+					end
 					cfg.interactive			= 'no';
 					cfg.channel					= ego.ft.label{ego.selectedLFP};
 					cfgOut						= ft_singleplotTFR(cfg, fq{i});
@@ -1684,7 +1697,7 @@ classdef LFPAnalysis < analysisCore
 					hmax{jj} = max([hmax{jj} max(clim)]);
 					xlabel('Time (s)');
 					ylabel('Frequency (Hz)');
-					t = [bl{jj} '#' num2str(i) ' ' name ' | Method:' fq{i}.cfgUsed.method ' | Taper:' fq{i}.cfgUsed.taper];
+					t = [bl{jj} '#' num2str(i) ' ' name ' | Mth:' fq{i}.cfgUsed.method ' | Tp:' fq{i}.cfgUsed.taper];
 					t = [t ' | Win:' num2str(fq{i}.cfgUsed.tw) ' | Cyc:' num2str(fq{i}.cfgUsed.cycles)];
 					t = [t ' | Wdth:' num2str(fq{i}.cfgUsed.width) ' | Smth:' num2str(fq{i}.cfgUsed.smooth)];
 					title(t,'FontSize',cfg.fontsize);
@@ -1695,9 +1708,22 @@ classdef LFPAnalysis < analysisCore
 				end
 			end
 			ego.panels.(name) = p;
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawLFPFrequencyStats(ego,name)
+			if ~exist('name','var');name='fqfix1';end
+			if ~isfield(ego.results,name);return; end
+			fq = ego.results.(name);
+			fqstat = ego.results.([name 'stat']);
 			
 			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
-						
+				
 			hold on
 			p = squeeze(fqstat{1}.powspctrm);
 			e = squeeze(fqstat{1}.powspctrmsem);
@@ -1715,7 +1741,10 @@ classdef LFPAnalysis < analysisCore
 			e = max(e);
 			areabar(fqstat{2}.freq, p, e,[0.7 0.5 0.5],[],'r-');
 			
-			
+			title(['Frequency Power for Measurement Window ' num2str(fqstat{1}.toilim)])
+			ylabel('Power');
+			xlabel('Frequency (Hz)');
+			legend(fqstat{1}.name,fqstat{2}.name)
 		end
 		
 		% ===================================================================
