@@ -291,8 +291,8 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function cfg=ftTimeLockAnalysis(ego, cfg, statcfg)
-			ego.results.av = [];
-			ego.results.avstat = [];
+			ego.results(1).av = [];
+			ego.results(1).avstat = [];
 			ft = ego.ft;			
 			if ~exist('cfg','var') || isempty(cfg); cfg = []; end
 			if isnumeric(cfg) && length(cfg) == 2; w=cfg;cfg=[];cfg.covariancewindow=w; end
@@ -319,7 +319,7 @@ classdef LFPAnalysis < analysisCore
 				end
 			end
 			
-			ego.results.av = av;
+			ego.results(1).av = av;
 			
 			if exist('statcfg','var');	cfg					= statcfg;
 			else cfg													= []; end
@@ -327,12 +327,14 @@ classdef LFPAnalysis < analysisCore
 			if ~isfield(cfg,'latency'); cfg.latency		= ego.measureRange; end
 			cfg.avgovertime										= 'no'; 
 			cfg.parameter											= 'trial';
-			if ~isfield(cfg,'method');cfg.method			= 'montecarlo'; end %'analytic'; % 'montecarlo'
-			if ~isfield(cfg,'statistic'); cfg.statistic	= 'indepsamplesT'; end
+			if ~isfield(cfg,'method');cfg.method			= 'stats'; end %'analytic'; % 'montecarlo'
+			if ~isfield(cfg,'statistic'); cfg.statistic	= 'ttest2'; end %'indepsamplesT'
 			if ~isfield(cfg,'alpha'); cfg.alpha				= ego.alpha; end
-			cfg.numrandomization									= 1000;
+			cfg.numrandomization									= 4000;
+			cfg.resampling											= 'permutation'; %bootstrap
 			cfg.tail													= 0; %two tail
 			cfg.correcttail										= 'prob';
+			cfg.correctm											= 'bonferroni'; %holm fdr hochberg bonferroni
 			cfg.design												= [ones(size(av{1}.trial,1),1); 2*ones(size(av{2}.trial,1),1)]';
 			cfg.ivar													= 1;
 			stat														= ft_timelockstatistics(cfg, av{1}, av{2});
@@ -418,7 +420,7 @@ classdef LFPAnalysis < analysisCore
 					end
 				end
 			end
-			ego.results.bp = bp;
+			ego.results(1).bp = bp;
 			if ego.doPlots; drawBandPass(ego); end
 		end
 		
@@ -454,6 +456,8 @@ classdef LFPAnalysis < analysisCore
 			if ~exist('smth','var') || isempty(smth); smth = 0.4; end
 			if ~exist('width','var') || isempty(width); width = 10; end
 			if ~isfield(ego.ft,'label'); getFieldTripLFPs(ego); end
+			if isfield(ego.results(1),['fq' preset]);ego.results(1).(['fq' preset]) = [];end
+			if isempty(ego.ft);disp('No parsed data yet...');return;end
 			ft = ego.ft;
 			cfgUsed = {};
 			if ~exist('cfg','var') || isempty(cfg)
@@ -504,7 +508,7 @@ classdef LFPAnalysis < analysisCore
 				fq{i}.name = ego.selectedTrials{i}.name;
 				cfgUsed{i} = cfg;
 			end
-			ego.results.(['fq' preset]) = fq;
+			ego.results(1).(['fq' preset]) = fq;
 			if ego.doPlots
 				plot(ego,'freq',['fq' preset]);
 			end
@@ -1279,7 +1283,7 @@ classdef LFPAnalysis < analysisCore
 					set(mh,'YData',[ax(3) ax(3) ax(4) ax(4)]);
 					
 					pos = ax(4)-((ax(4)-ax(3))/20);
-					times = avstat.time(avstat.mask);
+					times = avstat.time(logical(avstat.mask));
 					pos = repmat(pos, size(times));
 					text(times,pos,'*','FontSize',10);
 					
@@ -1306,7 +1310,7 @@ classdef LFPAnalysis < analysisCore
 						legend('Group B-A')
 					elseif length(av) > 2
 						res2 = av{3}.avg(1,:) - av{1}.avg(1,:);
-						res2 = av{3}.avg(1,:) - av{2}.avg(1,:);
+						res3 = av{3}.avg(1,:) - av{2}.avg(1,:);
 						plot(av{1}.time, res2,'r.-')
 						plot(av{1}.time, res3,'g.-')
 						legend('Group B-A','Group C-A','Group C-B')
@@ -1401,7 +1405,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function drawSpikeLFP(ego)
-			if ~isfield(ego.ft,'staPre'); warning('No parsed spike-LFP available.'); return; end
+			if ~isfield(ego.results,'staPre'); warning('No parsed spike-LFP available.'); return; end
 			disp('Drawing Spike LFP correlations...')
 			ft = ego.ft;
 			h=figure;figpos(1,[1200 1200]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
@@ -1560,7 +1564,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function drawBandPass(ego)
-			if ~isfield(ego.ft,'bp') || isempty(ego.results.bp);	return;	end
+			if ~isfield(ego.results,'bp') || isempty(ego.results.bp); disp('No bandpass data available...'); return; end
 			disp('Drawing Frequency Bandpass...')
 			bp = ego.results.bp;
 			h=figure;figpos(1,[1500 1500]);set(h,'Color',[1 1 1]);
