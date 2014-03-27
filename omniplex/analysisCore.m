@@ -7,7 +7,7 @@ classdef analysisCore < optickaCore
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		doPlots@logical = true
-		alpha@double = 0.01
+		stats@struct
 	end
 	
 	%--------------------ABSTRACT PROPERTIES----------%
@@ -66,6 +66,7 @@ classdef analysisCore < optickaCore
 			if nargin == 0; varargin.name = ''; end
 			ego=ego@optickaCore(varargin); %superclass constructor
 			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
+			setStats(ego);
 		end
 		
 		% ===================================================================
@@ -103,6 +104,41 @@ classdef analysisCore < optickaCore
 			if ~isempty(ego.p.info)
 				infoBox(ego.p);
 			end
+		end
+		
+		% ===================================================================
+		%> @brief showInfo shows the info box for the plexon parsed data
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function stats = setStats(ego)
+			if ~isfield(ego.stats,'alpha') || isempty(ego.stats.alpha)
+				ego.stats(1).alpha = 0.01;
+			end
+			if ~isfield(ego.stats,'method') || isempty(ego.stats.method)
+				ego.stats(1).method = 'analytic';
+			end
+			if ~isfield(ego.stats,'statistic') || isempty(ego.stats.statistic)
+				ego.stats(1).statistic = 'indepsamplesT';
+			end
+			if ~isfield(ego.stats,'correctm') || isempty(ego.stats.correctm)
+				ego.stats(1).correctm = 'no';
+			end
+			if ~isfield(ego.stats,'nrand') || isempty(ego.stats.nrand)
+				ego.stats(1).nrand = 1000;
+			end
+			if ~isfield(ego.stats,'tail') || isempty(ego.stats.tail)
+				ego.stats(1).tail = 0;
+			end
+			if ~isfield(ego.stats,'parameter') || isempty(ego.stats.parameter)
+				ego.stats(1).parameter = 'trial';
+			end
+			if ~isfield(ego.stats,'resampling') || isempty(ego.stats.resampling)
+				ego.stats(1).resampling = 'permutation';
+			end
+			stats = ego.stats;
+			return;
 		end
 		
 	end %---END PUBLIC METHODS---%

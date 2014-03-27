@@ -321,20 +321,22 @@ classdef LFPAnalysis < analysisCore
 			
 			ego.results(1).av = av;
 			
+			sv = setStats(ego);
+			
 			if exist('statcfg','var');	cfg					= statcfg;
 			else cfg													= []; end
 			cfg.channel												= ft.label{ego.selectedLFP};
 			if ~isfield(cfg,'latency'); cfg.latency		= ego.measureRange; end
 			cfg.avgovertime										= 'no'; 
 			cfg.parameter											= 'trial';
-			if ~isfield(cfg,'method');cfg.method			= 'analytic'; end %'analytic'; % 'montecarlo'
-			if ~isfield(cfg,'statistic'); cfg.statistic	= 'indepsamplesT'; end %'indepsamplesT'
-			if ~isfield(cfg,'alpha'); cfg.alpha				= ego.alpha; end
-			cfg.numrandomization									= 5000;
-			cfg.resampling											= 'permutation'; %bootstrap
-			cfg.tail													= 0; %two tail
+			if ~isfield(cfg,'method');cfg.method			= sv.method; end %'analytic'; % 'montecarlo'
+			if ~isfield(cfg,'statistic'); cfg.statistic	= sv.statistic; end %'indepsamplesT'
+			if ~isfield(cfg,'alpha'); cfg.alpha				= sv.alpha; end
+			cfg.numrandomization									= sv.nrand;
+			cfg.resampling											= sv.resampling; %bootstrap
+			cfg.tail													= sv.tail; %two tail
 			cfg.correcttail										= 'prob';
-			cfg.correctm											= 'bonferroni'; %holm fdr hochberg bonferroni
+			cfg.correctm											= sv.correctm; %holm fdr hochberg bonferroni
 			cfg.design												= [ones(size(av{1}.trial,1),1); 2*ones(size(av{2}.trial,1),1)]';
 			cfg.ivar													= 1;
 			stat														= ft_timelockstatistics(cfg, av{1}, av{2});
@@ -588,6 +590,53 @@ classdef LFPAnalysis < analysisCore
 					stat{i}.toilim		= cfgd.toilim;
 				end
 				ego.results.([name 'response']) = stat;
+				
+				sv								= setStats(ego);
+				cfg							= [];
+				cfg.channel					= fq{1}.label;
+				cfg.latency					= range;
+				cfg.frequency				= 'all';
+				cfg.avgoverchan			= 'no';
+				cfg.avgovertime			= 'no';
+				cfg.avgoverfreq			= 'no';
+				cfg.parameter				= 'powspctrm';
+				cfg.method					= sv.method;
+				cfg.statistic				= sv.statistic;
+				cfg.alpha					= sv.alpha; 
+				cfg.numrandomization		= sv.nrand;
+				cfg.resampling				= sv.resampling; %bootstrap
+				cfg.tail						= sv.tail; %two tail
+				cfg.correcttail			= 'prob';
+				cfg.correctm				= sv.correctm; %holm fdr hochberg bonferroni
+				cfg.design					= [ones(size(fq{1}.trialinfo,1),1); 2*ones(size(fq{2}.trialinfo,1),1)]';
+				cfg.ivar = 1;
+				
+				stat							= ft_freqstatistics(cfg,fqb{1},fqb{2});
+				stat.blname					= fqb{1}.blname;
+				ego.results.([name 'statall']) = stat;
+				
+				clear stat statl
+				for k = 1:length(ego.bpfreq)-1
+					cfg.frequency			= ego.bpfreq{k};
+					cfg.correctm			= 'no'; %holm fdr hochberg bonferroni
+					cfg.avgovertime		= 'yes';
+					cfg.avgoverfreq		= 'yes';
+					stat(k)					= ft_freqstatistics(cfg,fqb{1},fqb{2});
+					statl(k).blname		= fqb{1}.blname;
+					statl(k).freq			= cfg.frequency;
+					t=num2str(statl(k).freq);t=regexprep(t,' +',' ');
+					statl(k).name			= [ego.bpnames{k} ' ' t];
+					statl(k).alpha			= cfg.alpha;
+				end
+				fn=fieldnames(statl);
+				for k = 1:length(stat)
+					for l=1:length(fn)
+						stat(k).(fn{l}) = statl(k).(fn{l});
+					end
+				end
+				
+				ego.results.([name 'statf']) = stat;
+				
 				ego.drawLFPFrequencyStats(name);
 			end
 		end
@@ -1690,7 +1739,7 @@ classdef LFPAnalysis < analysisCore
 			fq = ego.results.(name);
 			h=figure;figpos(1,[2500 2000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
 			p=panel(h);
-			p.margin = [15 15 30 20];
+			p.margin = [15 15 30 20];%left bottom right top
 			if isnumeric(gcf);	p.fontsize = 12; end
 			bl = {'relative','relative2','absolute','no'};
 			row = length(fq); col = length(bl);
@@ -1749,12 +1798,17 @@ classdef LFPAnalysis < analysisCore
 		function drawLFPFrequencyStats(ego,name)
 			if ~exist('name','var');name='fqfix1';end
 			if ~isfield(ego.results,name);return; end
+			lo = {'b-o','r-o','g-o','k-o','y-o','b:o','r:o'};
+			
 			fq = ego.results.(name);
 			fqbline = ego.results.([name 'bline']);
 			fqresponse = ego.results.([name 'response']);
+			fqstatall = ego.results.([name 'statall']);
+			fqstatf = ego.results.([name 'statf']);
+			
 			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
 			p=panel(h);
-			p.margin = [15 15 5 20];
+			p.margin = [15 15 5 20];%left bottom right top
 			p.pack('v', {7/8 []})
 			p(1).select();
 			hold on
@@ -1762,24 +1816,61 @@ classdef LFPAnalysis < analysisCore
 			plotpowline(fqbline{2}.freq,fqbline{2}.powspctrm,fqbline{2}.powspctrmsem,'r:o');
 			plotpowline(fqresponse{1}.freq,fqresponse{1}.powspctrm,fqresponse{1}.powspctrmsem,'b-o');
 			plotpowline(fqresponse{2}.freq,fqresponse{2}.powspctrm,fqresponse{2}.powspctrmsem,'r-o');
+			leg = {['BL' fqbline{1}.name],['BL' fqbline{2}.name],...
+				['M' fqresponse{1}.name],['M' fqresponse{2}.name]};
+			if length(fqbline)>2
+				plotpowline(fqbline{2}.freq,fqbline{2}.powspctrm,fqbline{2}.powspctrmsem,'r:o');
+				plotpowline(fqresponse{2}.freq,fqresponse{2}.powspctrm,fqresponse{2}.powspctrmsem,'r-o');	
+				leg = {['BL' fqbline{1}.name],['BL' fqbline{2}.name],['BL' fqbline{3}.name],...
+				['M' fqresponse{1}.name],['M' fqresponse{2}.name],['M' fqresponse{3}.name]};
+			end
 			grid on; box on
 			t=''; if isfield(fqresponse{1},'blname'); t = fqresponse{1}.blname; end
 			title(['Baseline: ' t ' | Measurement Window: ' num2str(fqresponse{1}.toilim)])
 			ylabel('Power');
 			xlabel('Frequency (Hz)');
-			legend(['BL' fqbline{1}.name],['BL' fqbline{2}.name],...
-				['M' fqresponse{1}.name],['M' fqresponse{2}.name]);
+			legend(leg);
 			
+			p(2).select();
+			p(2).margintop = 0;
 			p1 = squeeze(fqresponse{1}.powspctrm);
 			p2 = squeeze(fqresponse{2}.powspctrm);
 			p1 = nanmean(p1,2);
 			p2 = nanmean(p2,2);
-			p(2).select();
-			p(2).margintop = 0;
 			plot(fqresponse{1}.freq,(p2-p1));
 			xlabel('Frequency (Hz)');
 			ylabel('Residuals')
 			grid on;box on
+			
+			t=''; if isfield(fqstatall,'blname'); t = fqstatall.blname; end
+			
+			h=figure;figpos(1,[800 1200]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
+			p=panel(h);
+			p.margin = [15 10 5 15];%left bottom right top
+			p.pack('v', {1/2 []})
+			p(1).select();
+			surf(fqstatall.time,fqstatall.freq,double(squeeze(fqstatall.mask)));
+			xlabel('Time');
+			ylabel('Frequency');
+			view([90 270]);
+			axis tight
+			grid on; box on;
+			set(gca,'TickDir','out');
+			title(['Baseline: ' t ' Significance']);
+			
+			p(2).select();
+			f=[fqstatf(:).prob];
+			x=1:length(f);
+			plot(x,f);	
+			hold on
+			line([min(x) max(x)],[fqstatf(1).alpha fqstatf(1).alpha]);
+			set(gca,'XTick',1:length(f),'XTickLabel',{fqstatf(:).name});
+			ylabel('P Values');
+			xlabel('Frequency Bands');
+			ylim([0 0.1])
+			grid on; box on;
+			set(gca,'TickDir','out');
+			title(['Baseline: ' t 'Frequency Band p-values'])
 			function plotpowline(f,p,e,lc)
 				p = squeeze(p);
 				e = squeeze(e);
