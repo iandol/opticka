@@ -602,11 +602,11 @@ classdef LFPAnalysis < analysisCore
 			if ~exist('unit','var') || isempty(unit); unit = ego.sp.selectedUnit;
 			else ego.sp.selectedUnit = unit; end
 			if ~exist('interpolate','var'); 
-				interpolate = true; iVal = 0.0025;
+				interpolate = true; iVal = 0.0025; iMethod = 'linear';
 			elseif isnumeric(interpolate)
 				iVal = interpolate; interpolate = true; 
-			else
-				iVal = 0.0025;
+			elseif ischar(interpolate)
+				iMethod = interpolate; interpolate = true; iVal = 0.0025;
 			end
 			if isempty(ego.sp.ft)
 				plotTogether(ego); drawnow;
@@ -653,13 +653,13 @@ classdef LFPAnalysis < analysisCore
 				cfg.channel					= ft.label;
 				cfg.latency					= [-0.25 0.05];
 				staPre						= ft_spiketriggeredaverage(cfg, tempdat);
-				ego.ft.staPre{j}			= staPre;
-				ego.ft.staPre{j}.name	= name;
+				ego.results.staPre{j}			= staPre;
+				ego.results.staPre{j}.name	= name;
 				
 				cfg.latency					= [0.05 0.18];
 				staPost						= ft_spiketriggeredaverage(cfg, tempdat);
-				ego.ft.staPost{j}			= staPost;
-				ego.ft.staPost{j}.name	= name;
+				ego.results.staPost{j}			= staPost;
+				ego.results.staPost{j}.name	= name;
 				
 				cfg							= [];
 				cfg.method					= 'mtmfft';
@@ -674,10 +674,10 @@ classdef LFPAnalysis < analysisCore
 				
 				ang = squeeze(angle(stsFFT.fourierspctrm{1}));
 				mag = squeeze(abs(stsFFT.fourierspctrm{1}));
-				ego.ft.stsFFT{j} = stsFFT;
-				ego.ft.stsFFT{j}.name = name;
-				ego.ft.stsFFT{j}.ang=ang;
-				ego.ft.stsFFT{j}.mag=mag;
+				ego.results.stsFFT{j} = stsFFT;
+				ego.results.stsFFT{j}.name = name;
+				ego.results.stsFFT{j}.ang=ang;
+				ego.results.stsFFT{j}.mag=mag;
 				
 				cfg							= [];
 				cfg.method					= 'mtmconvol';
@@ -692,10 +692,10 @@ classdef LFPAnalysis < analysisCore
 				
 				ang = squeeze(angle(stsConvol.fourierspctrm{1}));
 				mag = squeeze(abs(stsConvol.fourierspctrm{1}));
-				ego.ft.stsConvol{j} = stsConvol;
-				ego.ft.stsConvol{j}.name = name;
-				ego.ft.stsConvol{j}.ang=ang;
-				ego.ft.stsConvol{j}.mag=mag;
+				ego.results.stsConvol{j} = stsConvol;
+				ego.results.stsConvol{j}.name = name;
+				ego.results.stsConvol{j}.ang=ang;
+				ego.results.stsConvol{j}.mag=mag;
 				
 				cfg.latency					= []; %we now reset just in case stat is affected by this
 				stsConvol					= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
@@ -708,8 +708,8 @@ classdef LFPAnalysis < analysisCore
 				cfg.timwin        = 'all'; % compute over all available spikes in the window
 				cfg.latency       = [0.05 0.2]; % sustained visual stimulation period
 				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
-				ego.ft.statSts0{j} = statSts;
-				ego.ft.statSts0{j}.name = name;
+				ego.results.statSts0{j} = statSts;
+				ego.results.statSts0{j}.name = name;
 				
 				cfg               = [];
 				cfg.method        = 'ppc1'; % compute the Pairwise Phase Consistency
@@ -719,8 +719,8 @@ classdef LFPAnalysis < analysisCore
 				cfg.timwin        = 'all'; % compute over all available spikes in the window
 				cfg.latency       = [0.05 0.2]; % sustained visual stimulation period
 				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
-				ego.ft.statSts1{j} = statSts;
-				ego.ft.statSts1{j}.name = name;
+				ego.results.statSts1{j} = statSts;
+				ego.results.statSts1{j}.name = name;
 				
 				cfg               = [];
 				cfg.method        = 'ppc2'; % compute the Pairwise Phase Consistency
@@ -730,8 +730,8 @@ classdef LFPAnalysis < analysisCore
 				cfg.timwin        = 'all'; % compute over all available spikes in the window
 				cfg.latency       = [0.05 0.2]; % sustained visual stimulation period
 				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
-				ego.ft.statSts2{j} = statSts;
-				ego.ft.statSts2{j}.name = name;
+				ego.results.statSts2{j} = statSts;
+				ego.results.statSts2{j}.name = name;
 
 			end
 			if ego.doPlots; drawSpikeLFP(ego); end
@@ -1458,153 +1458,128 @@ classdef LFPAnalysis < analysisCore
 		function drawSpikeLFP(ego)
 			if ~isfield(ego.results,'staPre'); warning('No parsed spike-LFP available.'); return; end
 			disp('Drawing Spike LFP correlations...')
-			ft = ego.ft;
+			res = ego.results;
 			h=figure;figpos(1,[1200 1200]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
-				[ego.lfpfile]);
+				[ego.lfpfile ' | ' ego.spikefile ' | ' res.staPre{1}.cfg.spikechannel{1}]);
 			p=panel(h);
 			p.margin = [20 20 10 15]; %left bottom right top
 			p.fontsize = 10;
-			p.pack(2,2);
+			p.pack(length(res.staPre),2);
+			
+			for i = 1:length(res.staPre)
+				p(i,1).select();
+				plot(res.staPre{i}.time, res.staPre{i}.avg(:,:)')
+				maxPre(i) = max(max(res.staPre{i}.avg(:,:)));
+				minPre(i) = min(min(res.staPre{i}.avg(:,:)));
+				box on
+				grid on
+				legend(res.staPre{i}.cfg.channel)
+				xlabel('Time (s)')
+				xlim(res.staPre{i}.cfg.timwin)
+				title(['PRE ' res.staPre{i}.name])
 
-			p(1,1).select();
-			plot(ft.staPre{1}.time, ft.staPre{1}.avg(:,:)')
-			maxPre(1) = max(max(ft.staPre{1}.avg(:,:)));
-			minPre(1) = min(min(ft.staPre{1}.avg(:,:)));
-			box on
-			grid on
-			legend(ft.staPre{1}.cfg.channel)
-			xlabel('Time (s)')
-			xlim(ft.staPre{1}.cfg.timwin)
-			title(['PRE ' ft.staPre{1}.name])
-
-			p(1,2).select();
-			plot(ft.staPost{1}.time, ft.staPost{1}.avg(:,:)')
-			maxPost(1) = max(max(ft.staPost{1}.avg(:,:)));
-			minPost(1) = min(min(ft.staPost{1}.avg(:,:)));
-			box on
-			grid on
-			legend(ft.staPost{1}.cfg.channel)
-			xlabel('Time (s)')
-			xlim(ft.staPost{1}.cfg.timwin)
-			title(['POST ' ft.staPost{1}.name])
-
-			p(2,1).select();
-			plot(ft.staPre{2}.time, ft.staPre{2}.avg(:,:)')
-			maxPre(2) = max(max(ft.staPre{2}.avg(:,:)));
-			minPre(2) = min(min(ft.staPre{2}.avg(:,:)));
-			box on
-			grid on
-			legend(ft.staPre{2}.cfg.channel)
-			xlabel('Time (s)')
-			xlim(ft.staPre{2}.cfg.timwin)
-			title(['PRE ' ft.staPre{2}.name])
-
-			p(2,2).select();
-			plot(ft.staPost{2}.time, ft.staPost{2}.avg(:,:)')
-			maxPost(2) = max(max(ft.staPost{2}.avg(:,:)));
-			minPost(2) = min(min(ft.staPost{2}.avg(:,:)));
-			box on
-			grid on
-			legend(ft.staPost{2}.cfg.channel)
-			xlabel('Time (s)')
-			xlim(ft.staPost{2}.cfg.timwin)
-			title(['POST ' ft.staPost{2}.name])
+				p(i,2).select();
+				plot(res.staPost{i}.time, res.staPost{i}.avg(:,:)')
+				maxPost(i) = max(max(res.staPost{i}.avg(:,:)));
+				minPost(i) = min(min(res.staPost{i}.avg(:,:)));
+				box on
+				grid on
+				legend(res.staPost{i}.cfg.channel)
+				xlabel('Time (s)')
+				xlim(res.staPost{i}.cfg.timwin)
+				title(['POST ' res.staPost{i}.name])
+			end
 			
 			miny = min([minPre minPost]);
 			maxy = max([maxPre maxPost]);
 			if isnan(miny) || isnan(maxy); miny = -0.5; maxy = 0.5; end
 			if miny >= maxy; maxy = miny + 1; end
-			p(1,1).select();
-			axis([-inf inf miny maxy]);
-			p(1,2).select();
-			axis([-inf inf miny maxy]);
-			p(2,1).select();
-			axis([-inf inf miny maxy]);
-			p(2,2).select();
-			axis([-inf inf miny maxy]);
+			for i = 1:length(res.staPre)
+				p(i,1).select();
+				axis([-inf inf miny maxy]);
+				p(i,2).select();
+				axis([-inf inf miny maxy]);
+			end
 				
 			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
-				[ego.lfpfile ' ' ft.stsFFT{1}.name]);
+				[ego.lfpfile '|' res.stsFFT{1}.lfplabel{1} '|' res.stsFFT{1}.label{1}]);
 			p=panel(h);
 			p.margin = [20 20 10 15]; %left bottom right top
 			p.fontsize = 10;
 			p.pack(2,2);
 			
-			p(1,1).select();
-			p(1,1).hold('on');
-			[av,ae] = stderr(ft.stsFFT{1}.ang);
-			areabar(ft.stsFFT{1}.freq,rad2ang(av),rad2ang(ae),[],[],'k-o');
-			[av,ae] = stderr(ft.stsFFT{2}.ang);
-			areabar(ft.stsFFT{2}.freq,rad2ang(av),rad2ang(ae),[],[],'r-o');
-			legend('Group A','Group B');
-			title(['Spike Triggered Phase FFT']);
-			xlabel('Frequency (Hz)');
-			ylabel('Angle (deg)');
-
-			p(1,2).select();
-			p(1,2).hold('on');
-			[mv,me] = stderr(ft.stsFFT{1}.mag);
-			areabar(ft.stsFFT{1}.freq, mv, me,[],[],'k-o');
-			[mv,me] = stderr(ft.stsFFT{2}.mag);
-			areabar(ft.stsFFT{2}.freq, mv, me,[],[],'r-o');
-			legend('Group A','Group B');
-			title(['Spike Triggered Amplitude FFT']);
-			xlabel('Frequency (Hz)');
+			lo = {'b-o','r-o','g-o','k-o','y-o','b:o','r:o'};
 			
-			p(2,1).select();
-			p(2,1).hold('on');
-			[av,ae] = stderr(ft.stsConvol{1}.ang);
-			areabar(ft.stsConvol{1}.freq,rad2ang(av),rad2ang(ae),[],[],'k-o');
-			[av,ae] = stderr(ft.stsConvol{2}.ang);
-			areabar(ft.stsConvol{2}.freq,rad2ang(av),rad2ang(ae),[],[],'r-o');
-			legend('Group A','Group B');
-			title(['Spike Triggered Phase CONVOL']);
-			xlabel('Frequency (Hz)');
-			ylabel('Angle (deg)');
-
-			p(2,2).select();
-			p(2,2).hold('on');
-			[mv,me] = stderr(ft.stsConvol{1}.mag);
-			areabar(ft.stsConvol{1}.freq, mv, me,[],[],'k-o');
-			[mv,me] = stderr(ft.stsConvol{2}.mag);
-			areabar(ft.stsConvol{2}.freq, mv, me,[],[],'r-o');
-			legend('Group A','Group B');
-			title(['Spike Triggered Amplitude CONVOL']);
-			xlabel('Frequency (Hz)');
+			for i = 1: length(res.stsFFT)
+				p(1,1).select();
+				p(1,1).hold('on');
+				[av,ae] = stderr(res.stsFFT{i}.ang);
+				areabar(res.stsFFT{i}.freq,rad2ang(av),rad2ang(ae),[],[],lo{i});
+				leg{i} = res.stsFFT{i}.name;
+				title(['Spike Triggered Phase FFT']);
+				xlabel('Frequency (Hz)');
+				ylabel('Angle (deg)');
+				
+				p(1,2).select();
+				p(1,2).hold('on');
+				[mv,me] = stderr(res.stsFFT{i}.mag);
+				areabar(res.stsFFT{i}.freq, mv, me,[],[],lo{i});
+				title(['Spike Triggered Amplitude FFT']);
+				xlabel('Frequency (Hz)');
+				
+				p(2,1).select();
+				p(2,1).hold('on');
+				[av,ae] = stderr(res.stsConvol{i}.ang);
+				areabar(res.stsConvol{i}.freq,rad2ang(av),rad2ang(ae),[],[],lo{i});
+				title(['Spike Triggered Phase CONVOL']);
+				xlabel('Frequency (Hz)');
+				ylabel('Angle (deg)');
+				
+				p(2,2).select();
+				p(2,2).hold('on');
+				[mv,me] = stderr(res.stsConvol{i}.mag);
+				areabar(res.stsConvol{i}.freq, mv, me,[],[],lo{i});
+				title(['Spike Triggered Amplitude CONVOL']);
+				xlabel('Frequency (Hz)');
+			end
+			p(1,1).select();
+			legend(leg);
 			
 			h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
-				['PPC for ' ego.lfpfile]);
+				['PPC for ' ego.lfpfile ' ' ego.spikefile]);
 			p=panel(h);
-			p.margin = [20 20 10 15]; %left bottom right top
+			p.margin = [20 20 10 15]; %leres bottom right top
 			p.fontsize = 10;
 			p.pack(1,3);
+			
+			for i = 1:length(res.statSts0)
+				p(1,1).select();
+				hold on
+				plot(res.statSts0{i}.freq,res.statSts0{i}.ppc0',lo{i})
+				leg{i}=res.statSts0{1}.name;
+				box on; grid on;
+				xlabel('frequency')
+				ylabel('PPC')
+				title('PPC0 Measure');
+				
+				p(1,2).select();
+				hold on
+				plot(res.statSts1{i}.freq,res.statSts1{i}.ppc1',lo{i})
+				box on; grid on;
+				xlabel('frequency')
+				ylabel('PPC')
+				title('PPC1 Measure');
+				
+				p(1,3).select();
+				hold on
+				plot(res.statSts2{i}.freq,res.statSts2{i}.ppc2',lo{i})
+				box on; grid on;
+				xlabel('frequency')
+				ylabel('PPC')
+				title('PPC2 Measure');
+			end
 			p(1,1).select();
-			hold on
-			plot(ft.statSts0{1}.freq,ft.statSts0{1}.ppc0','k-o')
-			plot(ft.statSts0{2}.freq,ft.statSts0{2}.ppc0','r-o')
-			legend(ft.statSts0{1}.name,ft.statSts0{2}.name);
-			box on; grid on;
-			xlabel('frequency')
-			ylabel('PPC')
-			title('PPC0 Measure');
-			p(1,2).select();
-			hold on
-			plot(ft.statSts1{1}.freq,ft.statSts1{1}.ppc1','k-o')
-			plot(ft.statSts1{2}.freq,ft.statSts1{2}.ppc1','r-o')
-			legend(ft.statSts1{1}.name,ft.statSts1{2}.name);
-			box on; grid on;
-			xlabel('frequency')
-			ylabel('PPC')
-			title('PPC1 Measure');
-			p(1,3).select();
-			hold on
-			plot(ft.statSts2{1}.freq,ft.statSts2{1}.ppc2','k-o')
-			plot(ft.statSts2{2}.freq,ft.statSts2{2}.ppc2','r-o')
-			legend(ft.statSts2{1}.name,ft.statSts2{2}.name);
-			box on; grid on;
-			xlabel('frequency')
-			ylabel('PPC')
-			title('PPC2 Measure');
+			legend(leg);
 			
 		end
 		
