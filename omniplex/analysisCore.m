@@ -174,6 +174,16 @@ classdef analysisCore < optickaCore
 				bw = ego.baselineWindow;
 			else bw = [-inf inf]; end
 			
+			mlist6={'no','linear','nan','pchip','cubic','spline'};
+			interp = 'p';
+			for i = 1:length(mlist6)
+				if strcmpi(mlist6{i},num2str(ego.stats.interp))
+					interp = [interp '|¤' mlist6{i}];
+				else
+					interp = [interp '|' mlist6{i}];
+				end
+			end
+			
 			mtitle   = ['Select Statistics Settings'];
 			options  = {['t|' num2str(s.alpha)],'Set the Statistical Alpha Value (alpha):';   ...
 				[mt],'Main Statistical Method (method):';...
@@ -184,6 +194,8 @@ classdef analysisCore < optickaCore
 				['t|' num2str(s.nrand)],'Set # Resamples for Monte Carlo Method (nrand):';   ...
 				['t|' num2str(mr)],'Measurement Range (measureRange):';   ...
 				['t|' num2str(bw)],'Baseline Window (baselineWindow):';   ...
+				[interp],'Interpolation Method for Spike-LFP Interpolation?:';...
+				['t|' num2str(ego.stats.interpw)],'Interpolation Window (s):';   ...
 				};
 			            
 			answer = menuN(mtitle,options);
@@ -198,6 +210,8 @@ classdef analysisCore < optickaCore
 				ego.stats.nrand = str2num(answer{7});
 				if isprop(ego,'measureRange'); ego.measureRange = str2num(answer{8}); end
 				if isprop(ego,'baselineWindow'); ego.baselineWindow = str2num(answer{9}); end
+				ego.stats.interp = mlist6{answer{10}};
+				ego.stats.interpw = str2num(answer{11});
 			end
 			
 			stats = ego.stats;
@@ -480,6 +494,12 @@ classdef analysisCore < optickaCore
 			end
 			if ~isfield(ego.stats,'resampling') || isempty(ego.stats.resampling)
 				ego.stats(1).resampling = 'permutation';
+			end
+			if ~isfield(ego.stats,'interp') || isempty(ego.stats.interp)
+				ego.stats(1).interp = 'linear';
+			end
+			if ~isfield(ego.stats,'interpw') || isempty(ego.stats.interpw)
+				ego.stats(1).interpw = [-0.001 0.004];
 			end
 		end
 	end %---END PROTECTED METHODS---%

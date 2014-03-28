@@ -458,6 +458,7 @@ classdef LFPAnalysis < analysisCore
 			if ~exist('smth','var') || isempty(smth); smth = 0.4; end
 			if ~exist('width','var') || isempty(width); width = 10; end
 			if ~isfield(ego.ft,'label'); getFieldTripLFPs(ego); end
+			if isempty(ego.results);ego.results=struct();end
 			if isfield(ego.results(1),['fq' preset]);ego.results(1).(['fq' preset]) = [];end
 			if isempty(ego.ft);disp('No parsed data yet...');return;end
 			ft = ego.ft;
@@ -654,18 +655,18 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function cfgUsed=ftSpikeLFP(ego, unit, interpolate)
+			sv = ego.stats;
 			if ~exist('unit','var') || isempty(unit); unit = ego.sp.selectedUnit;
 			else ego.sp.selectedUnit = unit; end
 			if ~exist('interpolate','var'); 
-				interpolate = true; iVal = 0.0025; iMethod = 'linear';
-			elseif isnumeric(interpolate)
-				iVal = interpolate; interpolate = true; 
+				interpolate = true; iMethod = sv.interp;
 			elseif ischar(interpolate)
-				iMethod = interpolate; interpolate = true; iVal = 0.0025;
+				iMethod = interpolate; interpolate = true;
 			end
 			if isempty(ego.sp.ft)
 				plotTogether(ego); drawnow;
 			end
+			if strcmpi(iMethod,'no');interpolate=false;end
 			
 			in.yokedSelection = true;
 			in.cutTrials = ego.cutTrials;
@@ -679,12 +680,12 @@ classdef LFPAnalysis < analysisCore
 			spike = ego.sp.ft;
 			dat = ft_appendspike([],ft, spike);
 			
-			if interpolate
+			if ~strcmpi(iMethod,'no') || interpolate
 				try
 					cfg					= [];
-					cfg.method			= 'pchip'; % remove the replaced segment with interpolation
-					cfg.timwin			= [-0.001 0.003]; % remove 3 ms around every spike
-					%cfg.interptoi		= iVal*4; %value, time in seconds used for interpolation
+					cfg.method			= iMethod; % remove the replaced segment with interpolation
+					cfg.timwin			= sv.interpw; % remove X ms around every spike
+					cfg.interptoi		= 0.1;
 					cfg.spikechannel	= spike.label{unit};
 					cfg.channel			= ft.label;
 					dati					= ft_spiketriggeredinterpolation(cfg, dat);
@@ -694,6 +695,8 @@ classdef LFPAnalysis < analysisCore
 					disp(getReport(ME,'extended'));
 					pause(1);
 				end
+			else
+				dati=dat;
 			end
 			
 			for j = 1:length(ego.selectedTrials)
@@ -708,7 +711,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.channel					= ft.label;
 				cfg.latency					= [-0.25 0.05];
 				staPre						= ft_spiketriggeredaverage(cfg, tempdat);
-				ego.results.staPre{j}			= staPre;
+				ego.results(1).staPre{j}			= staPre;
 				ego.results.staPre{j}.name	= name;
 				
 				cfg.latency					= [0.05 0.18];
@@ -1664,10 +1667,14 @@ classdef LFPAnalysis < analysisCore
 				pp(1,1).select();
 				pp(1,1).hold('on');
 				time = bp{j}.av{1}.time;
-				fig = bp{j}.av{2}.avg(1,:);
-				fige = bp{j}.av{2}.var(1,:);
 				grnd = bp{j}.av{1}.avg(1,:);
-				grnde = bp{j}.av{1}.var(1,:);
+				grnde = ego.var2SE(bp{j}.av{1}.var(1,:),bp{j}.av{1}.dof(1,:));
+				fig = bp{j}.av{2}.avg(1,:);
+				fige = ego.var2SE(bp{j}.av{2}.var(1,:),bp{j}.av{2}.dof(1,:));
+				if length(bp{j}.av) > 2
+					bord = bp{j}.av{3}.avg(1,:);
+					borde = ego.var2SE(bp{j}.av{3}.var(1,:),bp{j}.av{3}.dof(1,:));
+				end
 				idxa = ego.findNearest(time, ego.plotRange(1));
 				idxb = ego.findNearest(time, ego.plotRange(2));
 				minv = min([min(fig(idxa:idxb)) min(grnd(idxa:idxb))]);
@@ -1676,16 +1683,16 @@ classdef LFPAnalysis < analysisCore
 				maxv = maxv + (abs(maxv)/15);
 				if minv >= maxv;minv = -inf; end
 				areabar(time, grnd, grnde,[.5 .5 .5],'b');
-				areabar(time, fig, fige,[.5 .7 .5],'g');
+				areabar(time, fig, fige,[.7 .5 .5],'r');
 				if length(bp{j}.av) > 2
-					areabar(bp{j}.av{3}.time,bp{j}.av{3}.avg(1,:),bp{j}.av{3}.var(1,:),[.7 .5 .5],'r');
+					areabar(time,bord,borde,[.7 .5 .5],'g');
 				end
 				pp(1,1).hold('off');
 				set(gca,'XTickLabel','')
 				box on; grid off
 				axis([ego.plotRange(1) ego.plotRange(2) minv maxv]);
 				pp(1,1).ylabel(['BP ' ego.bpnames{j} '=' num2str(bp{j}.freq)]);
-				pp(1,1).title(['FIELDTRIP ' ego.bpnames{j} ' BANDPASS ANALYSIS: File:' ego.lfpfile ' | Channel:' bp{j}.av{1}.label{:}]);
+				pp(1,1).title([ego.bpnames{j} ' BP: File:' ego.lfpfile ' | Channel:' bp{j}.av{1}.label{:}]);
 				pp(1,1).margin = [1 1 1 1];
 				
 				idx1 = ego.findNearest(time, -0.2);
@@ -1694,10 +1701,17 @@ classdef LFPAnalysis < analysisCore
 				idx4 = ego.findNearest(time, 0.2);
 				pre = mean([mean(grnd(idx1:idx2)), mean(fig(idx1:idx2))]);
 				res = (fig - grnd) ./ pre;
+				if length(bp{j}.av) > 2
+					res2 = (bord - grnd) ./ pre;
+				end
 				freqdiffs(j) = mean(fig(idx3:idx4)) / mean(grnd(idx3:idx4));
 				pp(2,1).select();
-				plot(time,res,'k.-','MarkerSize',8);
-				box on; grid on
+				plot(time,res,'m.-','MarkerSize',6);
+				if length(bp{j}.av) > 2
+					hold on
+					plot(time,res2,'c.-','MarkerSize',6);
+				end
+				box on; grid on; hold off
 				axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
 				pp(2,1).ylabel('Residuals')
 				pp(2,1).margin = [1 1 1 1];
@@ -1822,12 +1836,13 @@ classdef LFPAnalysis < analysisCore
 			q(1).select();
 			hold on
 			plotpowline(fqbline{1}.freq,fqbline{1}.powspctrm,fqbline{1}.powspctrmsem,'b:o');
+			plotpowline(fqbline{2}.freq,fqbline{2}.powspctrm,fqbline{2}.powspctrmsem,'r:o');
 			if length(fqbline)>2
 				plotpowline(fqbline{3}.freq,fqbline{3}.powspctrm,fqbline{3}.powspctrmsem,'g:o');
 			end
-			plotpowline(fqbline{2}.freq,fqbline{2}.powspctrm,fqbline{2}.powspctrmsem,'r:o');
 			
 			plotpowline(fqresponse{1}.freq,fqresponse{1}.powspctrm,fqresponse{1}.powspctrmsem,'b-o');
+			plotpowline(fqresponse{2}.freq,fqresponse{2}.powspctrm,fqresponse{2}.powspctrmsem,'r-o');
 			if length(fqbline)>2
 				plotpowline(fqresponse{3}.freq,fqresponse{3}.powspctrm,fqresponse{3}.powspctrmsem,'g-o');	
 				leg = {['BL' fqbline{1}.name],['BL' fqbline{2}.name],['BL' fqbline{3}.name],...
@@ -1836,7 +1851,6 @@ classdef LFPAnalysis < analysisCore
 				leg = {['BL' fqbline{1}.name],['BL' fqbline{2}.name],...
 				['M' fqresponse{1}.name],['M' fqresponse{2}.name]};
 			end
-			plotpowline(fqresponse{2}.freq,fqresponse{2}.powspctrm,fqresponse{2}.powspctrmsem,'r-o');
 			grid on; box on
 			t=''; if isfield(fqresponse{1},'blname'); t = fqresponse{1}.blname; end
 			title(['Baseline: ' t ' | Measurement Window: ' num2str(fqresponse{1}.toilim)])
