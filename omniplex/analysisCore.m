@@ -113,32 +113,95 @@ classdef analysisCore < optickaCore
 		%> @return
 		% ===================================================================
 		function stats = setStats(ego)
-			if ~isfield(ego.stats,'alpha') || isempty(ego.stats.alpha)
-				ego.stats(1).alpha = 0.01;
+			initialiseStats(ego);
+			s=ego.stats;
+			
+			mlist1={'analytic', 'montecarlo', 'stats'};
+			mt = 'p';
+			for i = 1:length(mlist1)
+				if strcmpi(mlist1{i},ego.stats.method)
+					mt = [mt '|¤' mlist1{i}];
+				else
+					mt = [mt '|' mlist1{i}];
+				end
 			end
-			if ~isfield(ego.stats,'method') || isempty(ego.stats.method)
-				ego.stats(1).method = 'analytic';
+			
+			mlist2={'indepsamplesT','indepsamplesF','indepsamplesregrT','indepsamplesZcoh','depsamplesT','depsamplesFmultivariate','depsamplesregrT','actvsblT','ttest','ttest2','anova1','kruskalwallis'};
+			statistic = 'p';
+			for i = 1:length(mlist2)
+				if strcmpi(mlist2{i},ego.stats.statistic)
+					statistic = [statistic '|¤' mlist2{i}];
+				else
+					statistic = [statistic '|' mlist2{i}];
+				end
 			end
-			if ~isfield(ego.stats,'statistic') || isempty(ego.stats.statistic)
-				ego.stats(1).statistic = 'indepsamplesT';
+			
+			mlist3={'no','bonferroni','holm','fdr','hochberg'};
+			mc = 'p';
+			for i = 1:length(mlist3)
+				if strcmpi(mlist3{i},ego.stats.correctm)
+					mc = [mc '|¤' mlist3{i}];
+				else
+					mc = [mc '|' mlist3{i}];
+				end
 			end
-			if ~isfield(ego.stats,'correctm') || isempty(ego.stats.correctm)
-				ego.stats(1).correctm = 'no';
+			
+			mlist4={'permutation','bootstrap'};
+			rs = 'p';
+			for i = 1:length(mlist4)
+				if strcmpi(mlist4{i},ego.stats.resampling)
+					rs = [rs '|¤' mlist4{i}];
+				else
+					rs = [rs '|' mlist4{i}];
+				end
 			end
-			if ~isfield(ego.stats,'nrand') || isempty(ego.stats.nrand)
-				ego.stats(1).nrand = 1000;
+			
+			mlist5={'-1','0','1'};
+			tail = 'p';
+			for i = 1:length(mlist5)
+				if strcmpi(mlist5{i},num2str(ego.stats.tail))
+					tail = [tail '|¤' mlist5{i}];
+				else
+					tail = [tail '|' mlist5{i}];
+				end
 			end
-			if ~isfield(ego.stats,'tail') || isempty(ego.stats.tail)
-				ego.stats(1).tail = 0;
+			
+			if isprop(ego,'measureRange')
+				mr = ego.measureRange;
+			else mr = [-inf inf]; end
+			
+			if isprop(ego,'baselineWindow')
+				bw = ego.baselineWindow;
+			else bw = [-inf inf]; end
+			
+			mtitle   = ['Select Statistics Settings'];
+			options  = {['t|' num2str(s.alpha)],'Set the Statistical Alpha Value (alpha):';   ...
+				[mt],'Main Statistical Method (method):';...
+				[statistic],'Statistical Type (statistic):';...
+				[mc],'Multiple Correction Methodology (correctm):';...
+				[rs],'Resampling Method (resampling):';...
+				[tail],'Tail [0 is a two-tailed test] (tail):';...
+				['t|' num2str(s.nrand)],'Set # Resamples for Monte Carlo Method (nrand):';   ...
+				['t|' num2str(mr)],'Measurement Range (measureRange):';   ...
+				['t|' num2str(bw)],'Baseline Window (baselineWindow):';   ...
+				};
+			            
+			answer = menuN(mtitle,options);
+			drawnow;
+			if iscell(answer) && ~isempty(answer)
+				ego.stats.alpha = str2num(answer{1});
+				ego.stats.method = mlist1{answer{2}};
+				ego.stats.statistic = mlist2{answer{3}};
+				ego.stats.correctm = mlist3{answer{4}};
+				ego.stats.resampling = mlist4{answer{5}};
+				ego.stats.tail = str2num(mlist5{answer{6}});
+				ego.stats.nrand = str2num(answer{7});
+				if isprop(ego,'measureRange'); ego.measureRange = str2num(answer{8}); end
+				if isprop(ego,'baselineWindow'); ego.baselineWindow = str2num(answer{9}); end
 			end
-			if ~isfield(ego.stats,'parameter') || isempty(ego.stats.parameter)
-				ego.stats(1).parameter = 'trial';
-			end
-			if ~isfield(ego.stats,'resampling') || isempty(ego.stats.resampling)
-				ego.stats(1).resampling = 'permutation';
-			end
+			
 			stats = ego.stats;
-			return;
+			
 		end
 		
 	end %---END PUBLIC METHODS---%
@@ -360,8 +423,7 @@ classdef analysisCore < optickaCore
 		%> @brief set trials / var parsing from outside, override dialog, used when 
 		%> yoked to another analysis object
 		%> 
-		%>
-		%> @param varargin
+		%> @param in structure
 		%> @return
 		% ===================================================================
 		function setSelection(ego, in)
@@ -388,6 +450,38 @@ classdef analysisCore < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		%> @return
+		% ===================================================================
+		function initialiseStats(ego)
+			if ~isfield(ego.stats,'alpha') || isempty(ego.stats.alpha)
+				ego.stats(1).alpha = 0.01;
+			end
+			if ~isfield(ego.stats,'method') || isempty(ego.stats.method)
+				ego.stats(1).method = 'analytic';
+			end
+			if ~isfield(ego.stats,'statistic') || isempty(ego.stats.statistic)
+				ego.stats(1).statistic = 'indepsamplesT';
+			end
+			if ~isfield(ego.stats,'correctm') || isempty(ego.stats.correctm)
+				ego.stats(1).correctm = 'no';
+			end
+			if ~isfield(ego.stats,'nrand') || isempty(ego.stats.nrand)
+				ego.stats(1).nrand = 1000;
+			end
+			if ~isfield(ego.stats,'tail') || isempty(ego.stats.tail)
+				ego.stats(1).tail = 0;
+			end
+			if ~isfield(ego.stats,'parameter') || isempty(ego.stats.parameter)
+				ego.stats(1).parameter = 'trial';
+			end
+			if ~isfield(ego.stats,'resampling') || isempty(ego.stats.resampling)
+				ego.stats(1).resampling = 'permutation';
+			end
+		end
 	end %---END PROTECTED METHODS---%
 	
 end %---END CLASSDEF---%
