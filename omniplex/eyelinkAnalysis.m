@@ -10,6 +10,26 @@ classdef eyelinkAnalysis < analysisCore
 		file@char = ''
 		%> directory
 		dir@char = ''
+		%> the EDF message name to start measuring stimulus presentation
+		rtStartMessage@char = 'END_FIX'
+		%> EDF message name to end the stimulus presentation
+		rtEndMessage@char = 'END_RT'
+		%> the temporary experiement structure which contains the eyePos recorded from opticka
+		tS@struct
+		%> region of interest?
+		ROI@double = [ ]
+		%> time of interest?
+		TOI@double = [ ]
+		%> verbose output?
+		verbose = false
+	end
+	
+	properties (Hidden = true)
+		%> these are used for spikes spike saccade time correlations
+		rtLimits@double
+		rtDivision@double
+		%> trial list from the saved behavioural data, used to fix trial name bug old files
+		trialOverride@struct
 		%> screen resolution
 		pixelsPerCm@double = 32
 		%> screen distance
@@ -18,23 +38,6 @@ classdef eyelinkAnalysis < analysisCore
 		xCenter@double = 640
 		%> screen Y center in pixels
 		yCenter@double = 512
-		%> the EDF message name to start measuring stimulus presentation
-		rtStartMessage@char = 'END_FIX'
-		%> EDF message name to end the stimulus presentation
-		rtEndMessage@char = 'END_RT'
-		%> trial list from the saved behavioural data, used to fix trial name bug old files
-		trialOverride@struct
-		%> the temporary experiement structure which contains the eyePos recorded from opticka
-		tS@struct
-		%> these are used for spikes spike saccade time correlations
-		rtLimits@double
-		rtDivision@double
-		%> region of interest?
-		ROI@double = [ ]
-		%> time of interest?
-		TOI@double = [ ]
-		%> verbose output?
-		verbose = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -1076,6 +1079,8 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				parseAsVars(ego); %need to redo this now
 				warning('---> Trial name override in place!!!')
+			else
+				ego.trialOverride = struct();
 			end
 		end
 		

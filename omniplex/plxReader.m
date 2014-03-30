@@ -467,26 +467,26 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function handles = infoBox(ego, info)
-			%[left bottom width height]
+			if feature('HGUsingMatlabClasses');fs = 10;else fs = 14;end
 			if ~exist('info','var'), info = ego.info; end
-			scr=get(0,'ScreenSize');
+			scr=get(0,'ScreenSize');%[left bottom width height]
 			width=scr(3);
 			height=scr(4);
 			handles.root = figure('Units','pixels','Position',[0 0 width/4 height],'Tag','PLXInfoFigure',...
 				'Color',[0.9 0.9 0.9],'Toolbar','none','Name', ego.file);
 			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.45 1 0.55],...
 				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',500,...
-				'FontSize',12,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left');
+				'FontSize',fs,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left');
 			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0 0.4 1 0.05],...
 				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',500,...
-				'FontSize',12,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left',...
+				'FontSize',fs,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left',...
 				'Callback',@editComment);%,'ButtonDownFcn',@editComment,'KeyReleaseFcn',@editComment);
 			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.3]);
 			if ~isempty(ego.eventList)
 				drawEvents(ego,handles.axis);
 			end
-			set(handles.display,'String',info,'FontSize',12);
-			set(handles.comments,'String',ego.comment,'FontSize',11);
+			set(handles.display,'String',info,'FontSize',fs);
+			set(handles.comments,'String',ego.comment,'FontSize',fs);
 			
 			function editComment(src, ~)
 				if ~exist('src','var');	return; end
@@ -889,7 +889,7 @@ classdef plxReader < optickaCore
 				c(idx)=[];
 				b(idx) = [];
 			end
-			idx = find(c > ego.rE.task.minBlocks & c < 32700); %check for invalid event numbers, remove
+			idx = find(c > ego.rE.task.minBlocks & c < 32767); %check for invalid event numbers, remove
 			if ~isempty(idx)
 				c(idx)=[];
 				b(idx) = [];
@@ -927,7 +927,7 @@ classdef plxReader < optickaCore
 			eL.correct = b20;
 			eL.breakFix = b21;
 			eL.incorrect = b22;
-			eL.varOrder = eL.values(eL.values<32000);
+			eL.varOrder = eL.values(eL.values<32767);
 			eL.varOrderCorrect = zeros(length(eL.correct),1);
 			eL.varOrderBreak = zeros(length(eL.breakFix),1);
 			eL.varOrderIncorrect = zeros(length(eL.incorrect),1);

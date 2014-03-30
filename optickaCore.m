@@ -237,49 +237,49 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
-		%> @brief Use this syntax to make a deep copy of an object OBJ, 
+		%> @brief Use this syntax to make a deep copy of an object OBJ,
 		%> i.e. OBJ_OUT has the same field values, but will not behave as a handle-copy of OBJ anymore.
-		%> 
+		%>
 		%> @return obj_out  cloned object
 		% ===================================================================
 		function obj_out = clone(obj)
-            meta = metaclass(obj);
-            obj_out = feval(class(obj),'cloning',true);
-            for i = 1:length(meta.Properties)
-                prop = meta.Properties{i};
-                if strcmpi(prop.SetAccess,'Public') && ~(prop.Dependent || prop.Constant) && ~(isempty(obj.(prop.Name)) && isempty(obj_out.(prop.Name)))
-                    if isobject(obj.(prop.Name)) && isa(obj.(prop.Name),'optickaCore')
-                        obj_out.(prop.Name) = obj.(prop.Name).clone;
+			meta = metaclass(obj);
+			obj_out = feval(class(obj),'cloning',true);
+			for i = 1:length(meta.Properties)
+				prop = meta.Properties{i};
+				if strcmpi(prop.SetAccess,'Public') && ~(prop.Dependent || prop.Constant) && ~(isempty(obj.(prop.Name)) && isempty(obj_out.(prop.Name)))
+					if isobject(obj.(prop.Name)) && isa(obj.(prop.Name),'optickaCore')
+						obj_out.(prop.Name) = obj.(prop.Name).clone;
 					else
-                        try
-                            obj_out.(prop.Name) = obj.(prop.Name);
-                        catch %#ok<CTCH>
-                            warning('optickaCore:clone', 'Problem copying property "%s"',prop.Name)
-                        end
-                    end
+						try
+							obj_out.(prop.Name) = obj.(prop.Name);
+						catch %#ok<CTCH>
+							warning('optickaCore:clone', 'Problem copying property "%s"',prop.Name)
+						end
+					end
 				end
-            end
-            
-            % Check lower levels ...
-            props_child = {meta.PropertyList.Name};
-            
-            CheckSuperclasses(meta)
-            
-            % This function is called recursively ...
-            function CheckSuperclasses(List)
-                for ii=1:length(List.SuperclassList(:))
-                    if ~isempty(List.SuperclassList(ii).SuperclassList)
-                        CheckSuperclasses(List.SuperclassList(ii))
-                    end
-                    for jj=1:length(List.SuperclassList(ii).PropertyList(:))
-                        prop_super = List.SuperclassList(ii).PropertyList(jj).Name;
-                        if ~strcmp(prop_super, props_child)
-                            obj_out.(prop_super) = obj.(prop_super);
-                        end
-                    end
-                end
 			end
-        end
+			
+			% Check lower levels ...
+			props_child = {meta.PropertyList.Name};
+			
+			CheckSuperclasses(meta)
+			
+			% This function is called recursively ...
+			function CheckSuperclasses(List)
+				for ii=1:length(List.SuperclassList(:))
+					if ~isempty(List.SuperclassList(ii).SuperclassList)
+						CheckSuperclasses(List.SuperclassList(ii))
+					end
+					for jj=1:length(List.SuperclassList(ii).PropertyList(:))
+						prop_super = List.SuperclassList(ii).PropertyList(jj).Name;
+						if ~strcmp(prop_super, props_child)
+							obj_out.(prop_super) = obj.(prop_super);
+						end
+					end
+				end
+			end
+		end
 		
 	end
 	
@@ -290,7 +290,7 @@ classdef optickaCore < handle
 		% ===================================================================
 		%> @brief set paths for object
 		%>
-		%> @param 
+		%> @param
 		% ===================================================================
 		function setPaths(obj)
 			obj.paths(1).whatami = obj.className;
@@ -362,6 +362,6 @@ classdef optickaCore < handle
 				end
 			end
 		end
-
+		
 	end
 end

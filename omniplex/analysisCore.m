@@ -51,7 +51,7 @@ classdef analysisCore < optickaCore
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ==================================================================
 		%> @brief Class constructor
@@ -66,11 +66,11 @@ classdef analysisCore < optickaCore
 			if nargin == 0; varargin.name = ''; end
 			ego=ego@optickaCore(varargin); %superclass constructor
 			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
-			setStats(ego);
+			initialiseStats(ego);
 		end
 		
 		% ===================================================================
-			%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -99,7 +99,11 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		function showInfo(ego)
 			if ~isprop(ego,'p') || ~isa(ego.p,'plxReader')
-				return
+				if isprop(ego,'sp') && isa(ego.sp,'spikeAnalysis')
+					showInfo(ego.sp);
+				else
+					return
+				end
 			end
 			if ~isempty(ego.p.info)
 				infoBox(ego.p);
@@ -189,15 +193,15 @@ classdef analysisCore < optickaCore
 				[mt],'Main Statistical Method (method):';...
 				[statistic],'Statistical Type (statistic):';...
 				[mc],'Multiple Correction Methodology (correctm):';...
-				[rs],'Resampling Method (resampling):';...
 				[tail],'Tail [0 is a two-tailed test] (tail):';...
+				[rs],'MonteCarlo Resampling Method (resampling):';...
 				['t|' num2str(s.nrand)],'Set # Resamples for Monte Carlo Method (nrand):';   ...
-				['t|' num2str(mr)],'Measurement Range (measureRange):';   ...
-				['t|' num2str(bw)],'Baseline Window (baselineWindow):';   ...
+				['t|' num2str(mr)],'Global Measurement Range (measureRange):';   ...
+				['t|' num2str(bw)],'Global Baseline Window (baselineWindow):';   ...
 				[interp],'Interpolation Method for Spike-LFP Interpolation?:';...
-				['t|' num2str(ego.stats.interpw)],'Interpolation Window (s):';   ...
+				['t|' num2str(ego.stats.interpw)],'Spike-LFP Interpolation Window (s):';   ...
 				};
-			            
+			
 			answer = menuN(mtitle,options);
 			drawnow;
 			if iscell(answer) && ~isempty(answer)
@@ -205,8 +209,8 @@ classdef analysisCore < optickaCore
 				ego.stats.method = mlist1{answer{2}};
 				ego.stats.statistic = mlist2{answer{3}};
 				ego.stats.correctm = mlist3{answer{4}};
-				ego.stats.resampling = mlist4{answer{5}};
-				ego.stats.tail = str2num(mlist5{answer{6}});
+				ego.stats.tail = str2num(mlist5{answer{5}});
+				ego.stats.resampling = mlist4{answer{6}};
 				ego.stats.nrand = str2num(answer{7});
 				if isprop(ego,'measureRange'); ego.measureRange = str2num(answer{8}); end
 				if isprop(ego,'baselineWindow'); ego.baselineWindow = str2num(answer{9}); end
@@ -223,7 +227,7 @@ classdef analysisCore < optickaCore
 	%=======================================================================
 	methods ( Static = true) %-------STATIC METHODS-----%
 	%=======================================================================
-	
+		
 		% ===================================================================
 		%> @brief selectFTTrials cut out trials where the ft function fails
 		%> to use cfg.trials
@@ -379,7 +383,7 @@ classdef analysisCore < optickaCore
 				colors(i,:) = rgb(index,:);  % save for output
 				lastlab = lab(index,:);  % prepare for next iteration
 			end
-		
+			
 			function c = parsecolor(s)
 				if ischar(s)
 					c = colorstr2rgb(s);
@@ -389,7 +393,7 @@ classdef analysisCore < optickaCore
 					error('MATLAB:InvalidColorSpec','Color specification cannot be parsed.');
 				end
 			end
-
+			
 			function c = colorstr2rgb(c)
 				% Convert a color string to an RGB value.
 				% This is cribbed from Matlab's whitebg function.
@@ -412,7 +416,7 @@ classdef analysisCore < optickaCore
 					end
 				end
 			end
-		
+			
 		end
 		
 	end %---END STATIC METHODS---%
@@ -434,9 +438,9 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief set trials / var parsing from outside, override dialog, used when 
+		%> @brief set trials / var parsing from outside, override dialog, used when
 		%> yoked to another analysis object
-		%> 
+		%>
 		%> @param in structure
 		%> @return
 		% ===================================================================
@@ -465,14 +469,14 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
-		%> 
-		%> @param 
+		%> @brief
+		%>
+		%> @param
 		%> @return
 		% ===================================================================
 		function initialiseStats(ego)
 			if ~isfield(ego.stats,'alpha') || isempty(ego.stats.alpha)
-				ego.stats(1).alpha = 0.01;
+				ego.stats(1).alpha = 0.05;
 			end
 			if ~isfield(ego.stats,'method') || isempty(ego.stats.method)
 				ego.stats(1).method = 'analytic';
