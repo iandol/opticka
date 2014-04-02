@@ -959,6 +959,9 @@ classdef LFPAnalysis < analysisCore
 			if isfield(ego.results,'av')
 				name = [name '-TL'];
 			end
+			if isfield(ego.results,'staPre')
+				name = [name '-SP'];
+			end
 				name = [name '.mat'];
 			[f,p] = uiputfile(name,'SAVE LFP Analysis File');
 			if ischar(f) && ~isempty(f)
@@ -1535,7 +1538,7 @@ classdef LFPAnalysis < analysisCore
 				legend(res.staPre{i}.cfg.channel)
 				xlabel('Time (s)')
 				xlim(res.staPre{i}.cfg.timwin)
-				t = ['PRE' num2str(res.staPre{i}.cfg.latency) ' ' res.staPre{i}.name];
+				t = ['PRE:' num2str(res.staPre{i}.cfg.latency) ' ' res.staPre{i}.name];
 				t = regexprep(t,' +',' ');
 				title(t)
 
@@ -1548,7 +1551,7 @@ classdef LFPAnalysis < analysisCore
 				legend(res.staPost{i}.cfg.channel)
 				xlabel('Time (s)')
 				xlim(res.staPost{i}.cfg.timwin)
-				t=['POST' num2str(res.staPost{i}.cfg.latency) ' ' res.staPost{i}.name];
+				t=['POST:' num2str(res.staPost{i}.cfg.latency) ' ' res.staPost{i}.name];
 				t = regexprep(t,' +',' ');
 				title(t)
 			end
@@ -1577,7 +1580,7 @@ classdef LFPAnalysis < analysisCore
 				p(1,1).select();
 				p(1,1).hold('on');
 				[av,ae] = stderr(res.stsFFT{i}.ang);
-				areabar(res.stsFFT{i}.freq,rad2ang(av),rad2ang(ae),[],[],lo{i});
+				areabar(res.stsFFT{i}.freq,rad2ang(av),rad2ang(ae),[],0.2,lo{i});
 				leg{i} = res.stsFFT{i}.name;
 				title(['Spike Triggered Phase FFT: ' num2str(res.stsFFT{i}.cfg.latency)]);
 				xlabel('Frequency (Hz)');
@@ -1586,14 +1589,14 @@ classdef LFPAnalysis < analysisCore
 				p(1,2).select();
 				p(1,2).hold('on');
 				[mv,me] = stderr(res.stsFFT{i}.mag);
-				areabar(res.stsFFT{i}.freq, mv, me,[],[],lo{i});
+				areabar(res.stsFFT{i}.freq, mv, me,[],0.2,lo{i});
 				title(['Spike Triggered Amplitude FFT: ' num2str(res.stsFFT{i}.cfg.latency)]);
 				xlabel('Frequency (Hz)');
 				
 				p(2,1).select();
 				p(2,1).hold('on');
 				[av,ae] = stderr(res.stsConvol{i}.ang);
-				areabar(res.stsConvol{i}.freq,rad2ang(av),rad2ang(ae),[],[],lo{i});
+				areabar(res.stsConvol{i}.freq,rad2ang(av),rad2ang(ae),[],0.2,lo{i});
 				title(['Spike Triggered Phase CONVOL: ' num2str(res.stsConvol{i}.cfg.latency)]);
 				xlabel('Frequency (Hz)');
 				ylabel('Angle (deg)');
@@ -1601,7 +1604,7 @@ classdef LFPAnalysis < analysisCore
 				p(2,2).select();
 				p(2,2).hold('on');
 				[mv,me] = stderr(res.stsConvol{i}.mag);
-				areabar(res.stsConvol{i}.freq, mv, me,[],[],lo{i});
+				areabar(res.stsConvol{i}.freq, mv, me,[],0.2,lo{i});
 				title(['Spike Triggered Amplitude CONVOL: ' num2str(res.stsConvol{i}.cfg.latency)]);
 				xlabel('Frequency (Hz)');
 			end
