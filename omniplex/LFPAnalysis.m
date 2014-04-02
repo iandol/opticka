@@ -700,35 +700,35 @@ classdef LFPAnalysis < analysisCore
 			end
 			
 			for j = 1:length(ego.selectedTrials)
-				name				= ['SPIKE:' spike.label{unit} ' | SEL: ' ego.selectedTrials{j}.name];
+				name				= [spike.label{unit} ' | ' ego.selectedTrials{j}.name];
 				tempft			= ego.subselectFieldTripTrials(ft,ego.selectedTrials{j}.idx);
 				tempspike		= ego.subselectFieldTripTrials(spike,ego.selectedTrials{j}.idx);
 				tempdat			= ego.subselectFieldTripTrials(dati,ego.selectedTrials{j}.idx);
 				
-				cfg							= [];
-				cfg.timwin					= [-0.1 0.1]; 
-				cfg.spikechannel			= spike.label{unit};
-				cfg.channel					= ft.label;
-				cfg.latency					= [-0.25 0.05];
-				staPre						= ft_spiketriggeredaverage(cfg, tempdat);
-				ego.results(1).staPre{j}			= staPre;
-				ego.results.staPre{j}.name	= name;
+				cfg									= [];
+				cfg.timwin							= [-0.15 0.15]; 
+				cfg.spikechannel					= spike.label{unit};
+				cfg.channel							= ft.label;
+				cfg.latency							= [-0.25 -0.05];
+				staPre								= ft_spiketriggeredaverage(cfg, tempdat);
+				ego.results(1).staPre{j}		= staPre;
+				ego.results.staPre{j}.name		= name;
 				
-				cfg.latency					= [0.05 0.18];
-				staPost						= ft_spiketriggeredaverage(cfg, tempdat);
+				cfg.latency							= [0.05 0.18];
+				staPost								= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.results.staPost{j}			= staPost;
 				ego.results.staPost{j}.name	= name;
 				
-				cfg							= [];
-				cfg.method					= 'mtmfft';
-				cfg.latency					= [0 0.25];
-				cfg.foilim					= [0 80]; % cfg.timwin determines spacing [begin end], time around each spike (default = [-0.1 0.1])
-				cfg.timwin					= [-0.02 0.02]; %[begin end], time around each spike (default = [-0.1 0.1])
+				cfg									= [];
+				cfg.method							= 'mtmfft';
+				cfg.latency							= ego.measureRange;
+				cfg.foilim							= [5 100]; % cfg.timwin determines spacing [begin end], time around each spike (default = [-0.1 0.1])
+				cfg.timwin							= [-0.04 0.04]; %[begin end], time around each spike (default = [-0.1 0.1])
 				%cfg.tapsmofrq = number, the amount of spectral smoothing through multi-tapering. Note that 4 Hz smoothing means plus-minus 4 Hz,i.e. a 8 Hz smoothing box. Note: multitapering rotates phases (no problem for consistency)
-				cfg.taper					= 'hanning';
-				cfg.spikechannel			= spike.label{unit};
-				cfg.channel					= ft.label{ego.selectedLFP};
-				stsFFT						= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
+				cfg.taper							= 'hanning';
+				cfg.spikechannel					= spike.label{unit};
+				cfg.channel							= ft.label{ego.selectedLFP};
+				stsFFT								= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
 				
 				ang = squeeze(angle(stsFFT.fourierspctrm{1}));
 				mag = squeeze(abs(stsFFT.fourierspctrm{1}));
@@ -737,16 +737,16 @@ classdef LFPAnalysis < analysisCore
 				ego.results.stsFFT{j}.ang=ang;
 				ego.results.stsFFT{j}.mag=mag;
 				
-				cfg							= [];
-				cfg.method					= 'mtmconvol';
-				cfg.latency					= [0 0.25];
+				cfg									= [];
+				cfg.method							= 'mtmconvol';
+				cfg.latency							= ego.measureRange;
 				%cfg.tapsmofrq	= vector 1 x numfoi, the amount of spectral smoothing through multi-tapering. Note that 4 Hz smoothing means plus-minus 4 Hz, i.e. a 8 Hz smoothing box.
-				cfg.foi						= 5:5:80; %vector 1 x numfoi, frequencies of interest
-				cfg.t_ftimwin				= 5./cfg.foi; % vector 1 x numfoi, length of time window (in seconds)
-				cfg.taper					= 'hanning';
-				cfg.spikechannel			= spike.label{unit};
-				cfg.channel					= ft.label{ego.selectedLFP};
-				stsConvol					= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
+				cfg.foi								= 5:5:100; %vector 1 x numfoi, frequencies of interest
+				cfg.t_ftimwin						= 5./cfg.foi; % vector 1 x numfoi, length of time window (in seconds)
+				cfg.taper							= 'hanning';
+				cfg.spikechannel					= spike.label{unit};
+				cfg.channel							= ft.label{ego.selectedLFP};
+				stsConvol							= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
 				
 				ang = squeeze(angle(stsConvol.fourierspctrm{1}));
 				mag = squeeze(abs(stsConvol.fourierspctrm{1}));
@@ -764,7 +764,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.channel			= ft.label{ego.selectedLFP};
 				cfg.avgoverchan   = 'unweighted'; % weight spike-LFP phases irrespective of LFP power
 				cfg.timwin        = 'all'; % compute over all available spikes in the window
-				cfg.latency       = [0.05 0.2]; % sustained visual stimulation period
+				cfg.latency       = ego.measureRange; % sustained visual stimulation period
 				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
 				ego.results.statSts0{j} = statSts;
 				ego.results.statSts0{j}.name = name;
@@ -775,7 +775,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.channel			= ft.label{ego.selectedLFP};
 				cfg.avgoverchan   = 'unweighted'; % weight spike-LFP phases irrespective of LFP power
 				cfg.timwin        = 'all'; % compute over all available spikes in the window
-				cfg.latency       = [0.05 0.2]; % sustained visual stimulation period
+				cfg.latency       = ego.measureRange; % sustained visual stimulation period
 				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
 				ego.results.statSts1{j} = statSts;
 				ego.results.statSts1{j}.name = name;
@@ -786,7 +786,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.channel			= ft.label{ego.selectedLFP};
 				cfg.avgoverchan   = 'unweighted'; % weight spike-LFP phases irrespective of LFP power
 				cfg.timwin        = 'all'; % compute over all available spikes in the window
-				cfg.latency       = [0.05 0.2]; % sustained visual stimulation period
+				cfg.latency       = ego.measureRange; % sustained visual stimulation period
 				statSts           = ft_spiketriggeredspectrum_stat(cfg,stsConvol);
 				ego.results.statSts2{j} = statSts;
 				ego.results.statSts2{j}.name = name;
@@ -1535,7 +1535,9 @@ classdef LFPAnalysis < analysisCore
 				legend(res.staPre{i}.cfg.channel)
 				xlabel('Time (s)')
 				xlim(res.staPre{i}.cfg.timwin)
-				title(['PRE ' res.staPre{i}.name])
+				t = ['PRE' num2str(res.staPre{i}.cfg.latency) ' ' res.staPre{i}.name];
+				t = regexprep(t,' +',' ');
+				title(t)
 
 				p(i,2).select();
 				plot(res.staPost{i}.time, res.staPost{i}.avg(:,:)')
@@ -1546,7 +1548,9 @@ classdef LFPAnalysis < analysisCore
 				legend(res.staPost{i}.cfg.channel)
 				xlabel('Time (s)')
 				xlim(res.staPost{i}.cfg.timwin)
-				title(['POST ' res.staPost{i}.name])
+				t=['POST' num2str(res.staPost{i}.cfg.latency) ' ' res.staPost{i}.name];
+				t = regexprep(t,' +',' ');
+				title(t)
 			end
 			
 			miny = min([minPre minPost]);
@@ -1575,7 +1579,7 @@ classdef LFPAnalysis < analysisCore
 				[av,ae] = stderr(res.stsFFT{i}.ang);
 				areabar(res.stsFFT{i}.freq,rad2ang(av),rad2ang(ae),[],[],lo{i});
 				leg{i} = res.stsFFT{i}.name;
-				title(['Spike Triggered Phase FFT']);
+				title(['Spike Triggered Phase FFT: ' num2str(res.stsFFT{i}.cfg.latency)]);
 				xlabel('Frequency (Hz)');
 				ylabel('Angle (deg)');
 				
@@ -1583,14 +1587,14 @@ classdef LFPAnalysis < analysisCore
 				p(1,2).hold('on');
 				[mv,me] = stderr(res.stsFFT{i}.mag);
 				areabar(res.stsFFT{i}.freq, mv, me,[],[],lo{i});
-				title(['Spike Triggered Amplitude FFT']);
+				title(['Spike Triggered Amplitude FFT: ' num2str(res.stsFFT{i}.cfg.latency)]);
 				xlabel('Frequency (Hz)');
 				
 				p(2,1).select();
 				p(2,1).hold('on');
 				[av,ae] = stderr(res.stsConvol{i}.ang);
 				areabar(res.stsConvol{i}.freq,rad2ang(av),rad2ang(ae),[],[],lo{i});
-				title(['Spike Triggered Phase CONVOL']);
+				title(['Spike Triggered Phase CONVOL: ' num2str(res.stsConvol{i}.cfg.latency)]);
 				xlabel('Frequency (Hz)');
 				ylabel('Angle (deg)');
 				
@@ -1598,7 +1602,7 @@ classdef LFPAnalysis < analysisCore
 				p(2,2).hold('on');
 				[mv,me] = stderr(res.stsConvol{i}.mag);
 				areabar(res.stsConvol{i}.freq, mv, me,[],[],lo{i});
-				title(['Spike Triggered Amplitude CONVOL']);
+				title(['Spike Triggered Amplitude CONVOL: ' num2str(res.stsConvol{i}.cfg.latency)]);
 				xlabel('Frequency (Hz)');
 			end
 			p(1,1).select();
@@ -1615,11 +1619,11 @@ classdef LFPAnalysis < analysisCore
 				p(1,1).select();
 				hold on
 				plot(res.statSts0{i}.freq,res.statSts0{i}.ppc0',lo{i})
-				leg{i}=res.statSts0{1}.name;
+				leg{i}=[res.statSts0{i}.name ' | ' num2str(min(res.statSts0{i}.nspikes)) ' spks'];
 				box on; grid on;
 				xlabel('frequency')
 				ylabel('PPC')
-				title('PPC0 Measure');
+				title([res.statSts0{i}.cfg.method ' Measure for ' num2str(res.statSts0{i}.cfg.latency)]);
 				
 				p(1,2).select();
 				hold on
@@ -1627,7 +1631,7 @@ classdef LFPAnalysis < analysisCore
 				box on; grid on;
 				xlabel('frequency')
 				ylabel('PPC')
-				title('PPC1 Measure');
+				title([res.statSts1{i}.cfg.method ' Measure for ' num2str(res.statSts1{i}.cfg.latency)]);
 				
 				p(1,3).select();
 				hold on
@@ -1635,7 +1639,7 @@ classdef LFPAnalysis < analysisCore
 				box on; grid on;
 				xlabel('frequency')
 				ylabel('PPC')
-				title('PPC2 Measure');
+				title([res.statSts2{i}.cfg.method ' Measure for ' num2str(res.statSts2{i}.cfg.latency)]);
 			end
 			p(1,1).select();
 			legend(leg);
@@ -1827,7 +1831,7 @@ classdef LFPAnalysis < analysisCore
 			fqstatall = ego.results.([name 'statall']);
 			fqstatf = ego.results.([name 'statf']);
 			
-			h=figure;figpos(1,[1500 1500]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
+			h=figure;figpos(1,[1500 1500]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' | ' fq{1}.cfgUsed.channel ' | ' name ' | CorrectM:' fqstatall.cfg.correctm]);
 			p=panel(h);
 			p.margin = [15 15 15 15];%left bottom right top
 			p.pack('h', {1/2 []})
@@ -1852,8 +1856,8 @@ classdef LFPAnalysis < analysisCore
 				['M' fqresponse{1}.name],['M' fqresponse{2}.name]};
 			end
 			grid on; box on
-			t=''; if isfield(fqresponse{1},'blname'); t = fqresponse{1}.blname; end
-			title(['Baseline: ' t ' | Measurement Window: ' num2str(fqresponse{1}.toilim)])
+			t=''; if isfield(fqresponse{1},'blname'); t = [' | BL:' fqresponse{1}.blname]; end
+			title([name t ' | TWin: ' num2str(fqresponse{1}.toilim)])
 			ylabel('Power');
 			xlabel('Frequency (Hz)');
 			legend(leg);

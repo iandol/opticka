@@ -844,17 +844,17 @@ classdef spikeAnalysis < analysisCore
 				x(j) = xpos(2) + abs(((xpos(2)-xpos(1))/100));
 			end
 			if length(idx) >= 100
-				fs = 8;
-			elseif length(idx) >= 40
 				fs = 9;
-			else
+			elseif length(idx) >= 40
 				fs = 10;
+			else
+				fs = 11;
 			end
 			if ~isnumeric(gca)
-				fs = fs-4;
+				fs = fs-3;
 			end
-			text(x,y,cs,'FontSize',fs,'Color',[0.4 0.4 0.4],'Interpreter','none')
-			%set(hdl,'YGrid','on','YMinorGrid','on')
+			text(x,y,cs,'FontSize',fs,'Color',[0.5 0.5 0.5],'Interpreter','none')
+			set(hdl,'YGrid','on','YMinorGrid','on')
 		end
 		
 	end
