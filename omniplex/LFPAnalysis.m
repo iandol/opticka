@@ -709,7 +709,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.timwin							= [-0.15 0.15]; 
 				cfg.spikechannel					= spike.label{unit};
 				cfg.channel							= ft.label;
-				cfg.latency							= [-0.025 -0.05];
+				cfg.latency							= [-0.275 -0.075];
 				staPre								= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.results(1).staPre{j}		= staPre;
 				ego.results.staPre{j}.name		= name;
