@@ -953,13 +953,13 @@ classdef LFPAnalysis < analysisCore
 			if ~isempty(ego.ft)
 				name = [name '-ft'];
 			end
-			if isfield(ego.ft,'bp')
+			if isfield(ego.results,'bp')
 				name = [name '-BP'];
 			end
-			if isfield(ego.ft,'av')
+			if isfield(ego.results,'av')
 				name = [name '-TL'];
 			end
-			name = [name '.mat'];
+				name = [name '.mat'];
 			[f,p] = uiputfile(name,'SAVE LFP Analysis File');
 			if ischar(f) && ~isempty(f)
 				od = pwd;
