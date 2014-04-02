@@ -691,7 +691,7 @@ classdef LFPAnalysis < analysisCore
 					dati					= ft_spiketriggeredinterpolation(cfg, dat);
 				catch ME
 					dati=dat;
-					warning('Spike Interpolation of LFP failed, using raw data');
+					warndlg('Spike Interpolation of LFP failed, using raw data');
 					disp(getReport(ME,'extended'));
 					pause(1);
 				end
@@ -709,12 +709,12 @@ classdef LFPAnalysis < analysisCore
 				cfg.timwin							= [-0.15 0.15]; 
 				cfg.spikechannel					= spike.label{unit};
 				cfg.channel							= ft.label;
-				cfg.latency							= [-0.25 -0.05];
+				cfg.latency							= [-0.025 -0.05];
 				staPre								= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.results(1).staPre{j}		= staPre;
 				ego.results.staPre{j}.name		= name;
 				
-				cfg.latency							= [0.05 0.18];
+				cfg.latency							= ego.measureRange;
 				staPost								= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.results.staPost{j}			= staPost;
 				ego.results.staPost{j}.name	= name;
