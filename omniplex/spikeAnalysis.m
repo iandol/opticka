@@ -17,8 +17,10 @@ classdef spikeAnalysis < analysisCore
 		measureRange@double = [0.05 0.2]
 		%> bin size
 		binSize@double = 0.01
-		%> gaussian window for density plots
-		gaussWindow = [-0.02 0.02];
+		%> gaussian/smooth window for density plots
+		densityWindow = [-0.015 0.015];
+		%> density plots smooth function
+		densityFunction = 'gauss';
 		%> default Spike channel
 		selectedUnit@double = 1
 		%> saccadeFilter, if empty ignore
@@ -261,10 +263,20 @@ classdef spikeAnalysis < analysisCore
 					beh = [beh '|' inbeh{i}];
 				end
 			end
+			
+			indenf = {'gauss','alphawin'};
+			denf = 'r';
+			for i = 1:length(indenf)
+				if strcmpi(indenf{i}, ego.densityFunction)
+					denf = [denf '|¤' indenf{i}];
+				else
+					denf = [denf '|' indenf{i}];
+				end
+			end
 
 			pr = num2str(ego.plotRange);
 			rr = num2str(ego.measureRange);
-			bw = [num2str(ego.binSize) '       ' num2str(ego.gaussWindow)];
+			bw = [num2str(ego.binSize) '       ' num2str(ego.densityWindow)];
 			roi = num2str(ego.ROI);
 			saccfilt = num2str(ego.filterFirstSaccades);
 			toifilt = num2str(ego.TOI);
@@ -275,10 +287,11 @@ classdef spikeAnalysis < analysisCore
 				['t|' map{3}],'Choose PLX variables to merge (C):';   ...
 				['t|' cuttrials],'Enter Trials to exclude:';   ...
 				[unit],'Choose Default Spike Channel to View:';...
-				[beh],'Behavioural type (''correct'', ''breakFix'', ''incorrect'' | ''all''):';...
+				[beh],'Behavioural response type:';...
 				['t|' pr],'Plot Range (±seconds):';   ...
 				['t|' rr],'Measure Firing Rate Range (±seconds):';   ...
-				['t|' bw],'Binwidth & Gaussian Window for PSTH/Density [BINWIDTH -WINDOW +WINDOW] (seconds):';   ...
+				['t|' bw],'Binwidth (PSTH) & Smooth Window (Density) [BINWIDTH -WINDOW +WINDOW] (seconds):';   ...
+				[denf],'Smoothing function for Density Plots:';...
 				['t|' roi],'Stimulus Region of Interest [X Y RADIUS INCLUDE[0|1]] (blank = ignore):';   ...
 				['t|' toifilt],'Fixation Time/Region Of Interest [STARTTIME ENDTIME  X Y RADIUS] (blank = ignore):';   ...
 				['t|' saccfilt],'Saccade Filter in seconds [TIME1 TIME2], e.g. [-0.8 0.8] (blank = ignore):';   ...
@@ -296,21 +309,26 @@ classdef spikeAnalysis < analysisCore
 
 				bw = str2num(answer{9});
 				
+				ego.densityFunction = indenf{answer{10}};
+				
 				if length(bw) == 1
 					ego.binSize = bw(1);
 				elseif length(bw)==2
-					ego.gaussWindow = [-abs(bw(2)) abs(bw(2))];
+					ego.binSize = bw(1);
+					ego.densityWindow = [-abs(bw(2)) abs(bw(2))];
 				elseif length(bw)==3
-					ego.gaussWindow = [bw(2) bw(3)];
+					ego.binSize = bw(1);
+					ego.densityWindow = [bw(2) bw(3)];
 				end
-				roi = str2num(answer{10});
+				
+				roi = str2num(answer{11});
 				if isnumeric(roi) && length(roi) == 4
 					ego.ROI = roi;
 				else
 					ego.ROI = [];
 				end
-				ego.TOI = str2num(answer{11});
-				ego.filterFirstSaccades = str2num(answer{12});
+				ego.TOI = str2num(answer{12});
+				ego.filterFirstSaccades = str2num(answer{13});
 				
 				if ~isempty(ego.ROI)
 					ego.p.eA.ROI = ego.ROI;
@@ -340,7 +358,7 @@ classdef spikeAnalysis < analysisCore
 			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.binsize			=  ego.binSize;
+				cfg.binsize			= ego.binSize;
 				cfg.outputunit		= 'rate';
 				cfg.latency			= ego.plotRange;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
@@ -356,7 +374,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.latency			= [-0.2 0];
 				baseline{j}			= ft_spike_rate(cfg,ego.ft);
 			end
-			ego.ft.psth = psth;
+				ego.ft.psth = psth;
 			ego.ft.rate = rate;
 			ego.ft.baseline = baseline;
 			
@@ -377,7 +395,8 @@ classdef spikeAnalysis < analysisCore
 			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.timwin			= ego.gaussWindow;
+				cfg.winfunc			= ego.densityFunction;
+				cfg.timwin			= ego.densityWindow;
 				cfg.fsample			= 1000; % sample at 1000 hz
 				cfg.outputunit		= 'rate';
 				cfg.latency			= ego.plotRange;
@@ -695,8 +714,8 @@ classdef spikeAnalysis < analysisCore
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',13);
-			p(2).xlabel('Time (s)')
-			p(2).ylabel(['Firing Rate (s/s) \pm S.E.M.'])
+			xlabel(['Time (s) [window = ' sd{1}.cfg.winfunc ' ' num2str(sd{1}.cfg.timwin) '] ']);
+			ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			ax=axis;
@@ -719,6 +738,10 @@ classdef spikeAnalysis < analysisCore
 			box on
 			grid on
 			hold on
+			xp = [rate{1}.cfg.latency(1) rate{1}.cfg.latency(2) rate{1}.cfg.latency(2) rate{1}.cfg.latency(1)];
+			yp = [nanmean(sd{1}.avg) nanmean(sd{1}.avg) nanmean(sd{1}.avg) nanmean(sd{1}.avg)];
+			mh = patch(xp,yp,[0.9 0.9 0.9],'FaceAlpha',0.6,'EdgeColor','none');
+			set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			c = ego.optimalColours(length(sd));
 			t = [ego.file ' ' ego.names{ego.selectedUnit} ' '];
 			for j = 1:length(sd)
@@ -729,11 +752,14 @@ classdef spikeAnalysis < analysisCore
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',15);
-			xlabel('Time (s)')
+			xlabel(['Time (s) [window = ' sd{1}.cfg.winfunc ' ' num2str(sd{1}.cfg.timwin) '] ']);
 			ylabel('Firing Rate (s/s) \pm S.E.M.')
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
-			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+			ax=axis;
+			axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
+			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
+			set(gca,'Layer','top');
 		end
 		
 		% ===================================================================
@@ -781,6 +807,10 @@ classdef spikeAnalysis < analysisCore
 			p(2).select();
 			box on; grid on
 			p(2).hold('on');
+			xp = [rate{1}.cfg.latency(1) rate{1}.cfg.latency(2) rate{1}.cfg.latency(2) rate{1}.cfg.latency(1)];
+			yp = [nanmean(psth{1}.avg) nanmean(psth{1}.avg) nanmean(psth{1}.avg) nanmean(psth{1}.avg)];
+			mh = patch(xp,yp,[0.9 0.9 0.9],'FaceAlpha',0.6,'EdgeColor','none');
+			set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			c = ego.optimalColours(length(psth));
 			t = [ego.file];
 			for j = 1:length(psth)
@@ -793,11 +823,14 @@ classdef spikeAnalysis < analysisCore
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',13);
 			p(2).margintop = 25;
-			xlabel('Time (s)')
+			xlabel(['Time (s) [binsize = ' num2str(psth{1}.cfg.binsize) ' ]']);
 			ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
-			axis([ego.plotRange(1) ego.plotRange(2) -inf inf]);
+			ax=axis;
+			axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
+			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
+			set(gca,'Layer','top');
 		end
 		
 		% ===================================================================

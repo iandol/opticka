@@ -762,6 +762,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.method							= 'ppc0'; % compute the Pairwise Phase Consistency
 				cfg.spikechannel					= spike.label{unit};
 				cfg.channel							= ft.label{ego.selectedLFP};
+				cfg.spikesel						= 'all';
 				cfg.avgoverchan					= 'unweighted'; % weight spike-LFP phases irrespective of LFP power
 				cfg.timwin							= 'all'; % compute over all available spikes in the window
 				cfg.latency							= ego.measureRange; % sustained visual stimulation period
@@ -773,6 +774,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.method							= 'ppc1'; % compute the Pairwise Phase Consistency
 				cfg.spikechannel					= spike.label{unit};
 				cfg.channel							= ft.label{ego.selectedLFP};
+				cfg.spikesel						= 'all';
 				cfg.avgoverchan					= 'unweighted'; % weight spike-LFP phases irrespective of LFP power
 				cfg.timwin							= 'all'; % compute over all available spikes in the window
 				cfg.latency							= ego.measureRange; % sustained visual stimulation period
@@ -783,6 +785,7 @@ classdef LFPAnalysis < analysisCore
 				cfg									= [];
 				cfg.method							= 'ppc2'; % compute the Pairwise Phase Consistency
 				cfg.spikechannel					= spike.label{unit};
+				cfg.spikesel						= 'all';
 				cfg.channel							= ft.label{ego.selectedLFP};
 				cfg.avgoverchan					= 'unweighted'; % weight spike-LFP phases irrespective of LFP power
 				cfg.timwin							= 'all'; % compute over all available spikes in the window
