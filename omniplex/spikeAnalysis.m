@@ -354,7 +354,6 @@ classdef spikeAnalysis < analysisCore
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			ft_defaults;
 			psth = cell(1,length(ego.selectedTrials));
-			rate = psth; baseline = psth;
 			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
@@ -363,20 +362,9 @@ classdef spikeAnalysis < analysisCore
 				cfg.latency			= ego.plotRange;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				psth{j}				= ft_spike_psth(cfg, ego.ft);
-								
-				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				cfg.latency			= [ego.measureRange(1) ego.measureRange(2)]; % sustained response period
-				cfg.keeptrials		= 'yes';
-				rate{j}				= ft_spike_rate(cfg,ego.ft);
-
-				cfg.latency			= [-0.2 0];
-				baseline{j}			= ft_spike_rate(cfg,ego.ft);
 			end
-				ego.ft.psth = psth;
-			ego.ft.rate = rate;
-			ego.ft.baseline = baseline;
+			ego.ft.psth = psth;
+			getRates(ego);
 			
 			if ego.doPlots; plot(ego,'psth'); end
 		end
@@ -391,7 +379,6 @@ classdef spikeAnalysis < analysisCore
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			ft_defaults;
 			sd = cell(1,length(ego.selectedTrials));
-			rate = sd; baseline = sd;
 			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
@@ -402,22 +389,39 @@ classdef spikeAnalysis < analysisCore
 				cfg.latency			= ego.plotRange;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				sd{j}					= ft_spikedensity(cfg, ego.ft);
-				
+			end
+			ego.ft.sd = sd;
+			getRates(ego);
+			
+			if ego.doPlots; plot(ego,'density'); end
+		end
+		
+		% ===================================================================
+		%> @brief doPSTH plots spike density for the selected trial groups
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function getRates(ego)
+			rate = cell(1,length(ego.selectedTrials));
+			baseline = rate;
+			for j = 1:length(ego.selectedTrials)
 				cfg					= [];
 				cfg.trials			= ego.selectedTrials{j}.idx;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				cfg.latency			= [ego.measureRange(1) ego.measureRange(2)]; % sustained response period
 				cfg.keeptrials		= 'yes';
 				rate{j}				= ft_spike_rate(cfg,ego.ft);
-				
-				cfg.latency			= [-0.2 0];
+				rate{j}.CI			= bootci(ego.stats.nrand, {@mean, rate{j}.trial},'alpha',ego.stats.alpha);
+				rate{j}.alpha		= ego.stats.alpha;
+					
+				cfg.latency			= ego.baselineWindow;
 				baseline{j}			= ft_spike_rate(cfg,ego.ft);
+				baseline{j}.CI		= bootci(ego.stats.nrand, {@mean, baseline{j}.trial},'alpha',ego.stats.alpha);
+				baseline{j}.alpha		= ego.stats.alpha;
 			end
-			ego.ft.sd = sd;
 			ego.ft.rate = rate;
 			ego.ft.baseline = baseline;
-			
-			if ego.doPlots; plot(ego,'density'); end
 		end
 		
 		% ===================================================================
@@ -661,6 +665,7 @@ classdef spikeAnalysis < analysisCore
 			if ~isfield(ego.ft,'sd'); warning('No Density parsed yet.'); return; end
 			sd = ego.ft.sd;
 			rate = ego.ft.rate;
+			baseline = ego.ft.baseline;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			h=figure;set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
 			if length(sd) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
@@ -693,17 +698,25 @@ classdef spikeAnalysis < analysisCore
 				if isfield(cfgUsed{j}.hdl,'axTopPlot'); set(cfgUsed{j}.hdl.axTopPlot,'Color','none'); end
 				ego.appendTrialNames(cfgUsed{j}.hdl.axRaster,cfgUsed{j}.trials);
 			end
+			
 			p(2).select();
 			p(2).marginbottom = 2; %left bottom right top
-			box on
-			grid on
+			box on;grid on
 			p(2).hold('on');
+			c = ego.optimalColours(length(sd));
 			
 			xp = [rate{1}.cfg.latency(1) rate{1}.cfg.latency(2) rate{1}.cfg.latency(2) rate{1}.cfg.latency(1)];
 			yp = [nanmean(sd{1}.avg) nanmean(sd{1}.avg) nanmean(sd{1}.avg) nanmean(sd{1}.avg)];
 			mh = patch(xp,yp,[0.9 0.9 0.9],'FaceAlpha',0.6,'EdgeColor','none');
 			set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-			c = ego.optimalColours(length(sd));
+			
+			for j = 1:length(sd)
+				xp = [ego.plotRange(1) ego.plotRange(2) ego.plotRange(2) ego.plotRange(1)];
+				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
+				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
+				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+			end
+			
 			t = [ego.file];
 			for j = 1:length(sd)
 				e = ego.var2SE(sd{j}.var,sd{j}.dof);
@@ -771,6 +784,7 @@ classdef spikeAnalysis < analysisCore
 			if ~isfield(ego.ft,'psth'); warning('No PSTH parsed yet.'); return; end
 			psth = ego.ft.psth;
 			rate = ego.ft.rate;
+			baseline = ego.ft.baseline;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			len = ego.nSelection + 1;
 			h=figure;set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
@@ -807,11 +821,20 @@ classdef spikeAnalysis < analysisCore
 			p(2).select();
 			box on; grid on
 			p(2).hold('on');
+			c = ego.optimalColours(length(psth));
+			
 			xp = [rate{1}.cfg.latency(1) rate{1}.cfg.latency(2) rate{1}.cfg.latency(2) rate{1}.cfg.latency(1)];
 			yp = [nanmean(psth{1}.avg) nanmean(psth{1}.avg) nanmean(psth{1}.avg) nanmean(psth{1}.avg)];
 			mh = patch(xp,yp,[0.9 0.9 0.9],'FaceAlpha',0.6,'EdgeColor','none');
 			set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-			c = ego.optimalColours(length(psth));
+			
+			for j = 1:length(baseline)
+				xp = [ego.plotRange(1) ego.plotRange(2) ego.plotRange(2) ego.plotRange(1)];
+				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
+				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
+				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+			end
+			
 			t = [ego.file];
 			for j = 1:length(psth)
 				e = ego.var2SE(psth{j}.var,psth{j}.dof);

@@ -11,8 +11,6 @@ classdef LFPAnalysis < analysisCore
 		dir@char
 		%> remove the mean voltage offset from the individual trials?
 		demeanLFP@logical = true
-		%> ± time window for demeaning
-		baselineWindow@double = [-0.2 0]
 		%> default LFP channel
 		selectedLFP@double = 1
 		%> time window around the trigger

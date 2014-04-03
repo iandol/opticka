@@ -799,21 +799,25 @@ classdef plxReader < optickaCore
 				names = '';
 				vals = '';
 				for i = 1:rE.task.nVars
-					names = [names ' || ' rE.task.nVar(i).name];
+					names = [names '  <|>  ' rE.task.nVar(i).name];
 					if iscell(rE.task.nVar(i).values)
 						val = '';
 						for jj = 1:length(rE.task.nVar(i).values)
 							v=num2str(rE.task.nVar(i).values{jj});
 							v=regexprep(v,'\s+',' ');
-							val = [val v '/'];
+							if isempty(val)
+								val = [v];
+							else
+								val = [val ' / ' v];
+							end
 						end
-						vals = [vals ' || ' val];
+						vals = [vals '  <|>  ' val];
 					else
-						vals = [vals ' || ' num2str(rE.task.nVar(i).values)];
+						vals = [vals '  <|>  ' num2str(rE.task.nVar(i).values)];
 					end
 				end
-				ego.info{end+1} = sprintf('Variable Names : %s', names(5:end));
-				ego.info{end+1} = sprintf('Variable Values : %s', vals(5:end));
+				ego.info{end+1} = sprintf('Variable Names : %s', names(6:end));
+				ego.info{end+1} = sprintf('Variable Values : %s', vals(6:end));
 				names = '';
 				for i = 1:rE.stimuli.n
 					names = [names ' | ' rE.stimuli{i}.name ':' rE.stimuli{i}.family];

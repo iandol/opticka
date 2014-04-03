@@ -6,8 +6,12 @@ classdef analysisCore < optickaCore
 	
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
+		%> generate plots?
 		doPlots@logical = true
+		%> various stats values in a structure for different analyses
 		stats@struct
+		%> ± time window for baseline estimation/removal
+		baselineWindow@double = [-0.2 0]
 	end
 	
 	%--------------------ABSTRACT PROPERTIES----------%
