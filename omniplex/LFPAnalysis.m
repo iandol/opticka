@@ -15,10 +15,6 @@ classdef LFPAnalysis < analysisCore
 		selectedLFP@double = 1
 		%> time window around the trigger
 		LFPWindow@double = 0.8
-		%> default ± range to plot
-		plotRange@double = [-0.2 0.4]
-		%> default range to measure for differences
-		measureRange@double = [0.1 0.2]
 		%> default behavioural type
 		selectedBehaviour@char = 'correct';
 		%> plot verbosity
@@ -64,7 +60,7 @@ classdef LFPAnalysis < analysisCore
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'lfpfile|spikefile|dir|demeanLFP|baselineWindow|selectedLFP|LFPWindow|plotRange|selectedBehaviour|verbose'
+		allowedProperties@char = 'lfpfile|spikefile|dir|demeanLFP|selectedLFP|LFPWindow|selectedBehaviour|verbose'
 	end
 	
 	%=======================================================================
@@ -1055,19 +1051,6 @@ classdef LFPAnalysis < analysisCore
 			if ~isequal(ego.demeanLFP,logical(in))
 				ego.demeanLFP = logical(in);
 				disp('You should REPARSE the LFP data to enable this change')
-			end
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function set.baselineWindow(ego,in)
-			if isnumeric(in) && length(in)==2 && ~isequal(ego.baselineWindow, in)
-				ego.baselineWindow = in;
-				disp('You should REPARSE the LFP data to fully enable this change')
 			end
 		end
 		

@@ -12,6 +12,10 @@ classdef analysisCore < optickaCore
 		stats@struct
 		%> ± time window for baseline estimation/removal
 		baselineWindow@double = [-0.2 0]
+		%> default range to measure values from
+		measureRange@double = [0.1 0.2]
+		%> default range to plot
+		plotRange@double = [-0.2 0.4]
 	end
 	
 	%--------------------ABSTRACT PROPERTIES----------%
@@ -26,7 +30,8 @@ classdef analysisCore < optickaCore
 	
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
-		
+		%>getDensity stats object
+		gd@getDensity
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%
@@ -50,7 +55,7 @@ classdef analysisCore < optickaCore
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'doPlots'
+		allowedProperties@char = 'doPlots|baselineWindow|measureRange|plotRange|stats'
 	end
 	
 	%=======================================================================
@@ -224,6 +229,23 @@ classdef analysisCore < optickaCore
 			
 			stats = ego.stats;
 			
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function set.baselineWindow(ego,in)
+			if isnumeric(in) && length(in)==2 && in(1)<in(2)
+				if ~isequal(ego.baselineWindow, in)
+					ego.baselineWindow = in;
+					disp('You should REPARSE the data to fully enable this change')
+				end
+			else
+				disp('baselineWindow input invalid.');
+			end
 		end
 		
 	end %---END PUBLIC METHODS---%

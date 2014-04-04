@@ -11,10 +11,6 @@ classdef spikeAnalysis < analysisCore
 		spikeWindow@double = 0.8
 		%> used by legacy spikes to allow negative time offsets
 		startOffset@double = 0
-		%> default range to plot
-		plotRange@double = [-0.2 0.4]
-		%> default range to measure an average firing rate
-		measureRange@double = [0.05 0.2]
 		%> bin size
 		binSize@double = 0.01
 		%> gaussian/smooth window for density plots
@@ -538,6 +534,52 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
+		function saccadeTimeVsResponse(ego)
+			if isempty(ego.gd)
+				ego.gd = getDensity();
+			end
+			usez = true;
+			ego.gd.alpha = ego.stats.alpha;
+			if usez
+				ego.gd.normaliseScatter = false;
+			else
+				ego.gd.normaliseScatter = true;
+			end
+			getRates(ego);
+			for j = 1:ego.nSelection
+				st=[ego.trial(ego.selectedTrials{j}.idx).firstSaccade]';
+				nanidx = isnan(st);
+				st(nanidx)=[];
+				if usez; st = zscore(st); end
+				rate = ego.ft.rate{j}.trial;
+				rate(nanidx) = [];
+				rate = rate/max(rate);
+				if usez; rate = zscore(rate); end
+				t = ['SaccadeVsResponse ' num2str(ego.selectedTrials{j}.sel)];
+				t = regexprep(t,'\s+','_');
+				ego.gd.columnlabels = {t};
+				ego.gd.x = st;
+				ego.gd.y = rate;
+				run(ego.gd);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function compareBaseline(ego)
+			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function plot(ego, varargin)
 			if isempty(ego.ft);
 				return
@@ -559,7 +601,7 @@ classdef spikeAnalysis < analysisCore
 					plotPSTH(ego); drawnow;
 				case 'density'
 					plotDensity(ego); drawnow;
-				case 'densitysummary'
+				case {'ds','densitysummary'}
 					plotDensitySummary(ego); drawnow;
 				case 'isi'
 					plotISI(ego); drawnow;
@@ -710,12 +752,15 @@ classdef spikeAnalysis < analysisCore
 			mh = patch(xp,yp,[0.9 0.9 0.9],'FaceAlpha',0.6,'EdgeColor','none');
 			set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			
-			for j = 1:length(sd)
+			blineText = sprintf('BASELINE (p=%.4g):',baseline{1}.alpha);
+			for j = 1:length(baseline)
 				xp = [ego.plotRange(1) ego.plotRange(2) ego.plotRange(2) ego.plotRange(1)];
 				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
 				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
 				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+				blineText = sprintf('%s  Group:%i %.4g ± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
 			end
+			disp(blineText);
 			
 			t = [ego.file];
 			for j = 1:length(sd)
@@ -723,7 +768,7 @@ classdef spikeAnalysis < analysisCore
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
 				e = ego.var2SE(rate{j}.var,rate{j}.dof);
-				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
+				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',13);
@@ -733,6 +778,7 @@ classdef spikeAnalysis < analysisCore
 			legend(leg);
 			ax=axis;
 			axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
+			text(ego.plotRange(1),ax(3),blineText,'FontSize',13);
 			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
 			set(gca,'Layer','top');
 		end
