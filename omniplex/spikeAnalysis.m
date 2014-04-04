@@ -398,6 +398,27 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
+		function ISI(ego)
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			ft_defaults;
+			for j = 1:length(ego.selectedTrials)
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.bins				= [0:0.0005:0.1]; % use bins of 0.5 milliseconds;
+				cfg.param			= 'coeffvar'; % compute the coefficient of variation (sd/mn of isis)
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				isi{j}				= ft_spike_isi(cfg, ego.ft);
+			end
+			ego.ft.isi = isi;
+			if ego.doPlots; plot(ego,'isi'); end
+		end
+		
+		% ===================================================================
+		%> @brief doPSTH plots spike density for the selected trial groups
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function getRates(ego)
 			rate = cell(1,length(ego.selectedTrials));
 			baseline = rate;
@@ -418,27 +439,6 @@ classdef spikeAnalysis < analysisCore
 			end
 			ego.ft.rate = rate;
 			ego.ft.baseline = baseline;
-		end
-		
-		% ===================================================================
-		%> @brief doPSTH plots spike density for the selected trial groups
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function ISI(ego)
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			ft_defaults;
-			for j = 1:length(ego.selectedTrials)
-				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.bins				= [0:0.0005:0.1]; % use bins of 0.5 milliseconds;
-				cfg.param			= 'coeffvar'; % compute the coefficient of variation (sd/mn of isis)
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				isi{j}				= ft_spike_isi(cfg, ego.ft);
-			end
-			ego.ft.isi = isi;
-			if ego.doPlots; plot(ego,'isi'); end
 		end
 		
 		% ===================================================================
@@ -538,7 +538,7 @@ classdef spikeAnalysis < analysisCore
 			if isempty(ego.gd)
 				ego.gd = getDensity();
 			end
-			usez = true;
+			usez = false;
 			ego.gd.alpha = ego.stats.alpha;
 			if usez
 				ego.gd.normaliseScatter = false;
@@ -553,11 +553,12 @@ classdef spikeAnalysis < analysisCore
 				if usez; st = zscore(st); end
 				rate = ego.ft.rate{j}.trial;
 				rate(nanidx) = [];
-				rate = rate/max(rate);
+				%rate = rate/max(rate);
 				if usez; rate = zscore(rate); end
 				t = ['SaccadeVsResponse ' num2str(ego.selectedTrials{j}.sel)];
 				t = regexprep(t,'\s+','_');
 				ego.gd.columnlabels = {t};
+				ego.gd.legendtxt = {'Saccades','Spikes'};
 				ego.gd.x = st;
 				ego.gd.y = rate;
 				run(ego.gd);
