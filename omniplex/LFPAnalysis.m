@@ -1041,6 +1041,78 @@ classdef LFPAnalysis < analysisCore
 			end
 		end
 		
+		
+		% ===================================================================
+		%> @brief
+			%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function createSurrogate(ego)
+			
+			ft = ego.ft;
+			f = ft.fsample;
+			nCh = length(ft.label);
+			
+			tmult = (length(ft.time{1})-1) / f;
+
+			randphase = true; %randomise phase?
+			rphase = 0; %initial phase
+			basef = 5; % base frequency
+			pimult = basef * 2; %resultant pi multiplier
+			burstf = 30; %small burst frequency
+			burstmult = burstf * 2; %resultant pi multiplier
+			
+			plotSurrogates()
+			
+			for j = 1:length(ft.trial)
+				time = ft.time{j};
+				for k = 1:nCh
+					mx = max(ft.trial{j}(k,:));
+					mn = min(ft.trial{j}(k,:));
+					rn = mx - mn;
+					y = makeSurrogate(time);
+					y = y * rn; % scale to the voltage range of the original trial
+					y = y + mn;
+					ft.trial{j}(k,:) = y;
+				end
+			end
+			
+			plotSurrogates();
+			
+			ego.ft = ft;
+			
+			function y = makeSurrogate(x)
+				if randphase; rphase = rand * pi; end
+				tmult = (length(x)-1) / f;
+				y = sin((0 : (pi*pimult)/f : (pi*pimult) * tmult)+rphase)';
+				y = y(1:length(x));
+				yy = sin((0 : (pi*burstmult)/f : (pi*burstmult) * 0.2))';
+				yy = yy ./ 2;
+				y(900:1100) = y(900:1100) + yy;
+				y = y + (rand(size(y))-0.5);
+				y = y - min(y);
+				y = y / max(y); % 0 - 1 range;
+				if size(y,2) < size(y,1); y = y'; end
+			end
+			
+			function plotSurrogates()
+				
+				for ii = 1:ego.nSelection
+					figure;
+					hold on
+					for jj = ego.selectedTrials{ii}.idx
+						plot(ft.time{jj},ft.trial{jj}(1,:));
+					end
+					title(ego.selectedTrials{ii}.name);
+					xlabel('Time');
+					ylabel('Voltage');
+				end
+				
+			end
+			
+		end
+		
 		% ===================================================================
 		%> @brief
 		%>
