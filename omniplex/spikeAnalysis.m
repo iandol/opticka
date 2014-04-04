@@ -705,6 +705,7 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function plotDensity(ego)
 			if ~isfield(ego.ft,'sd'); warning('No Density parsed yet.'); return; end
+			disp('Plotting Density Data...')
 			sd = ego.ft.sd;
 			rate = ego.ft.rate;
 			baseline = ego.ft.baseline;
@@ -778,7 +779,7 @@ classdef spikeAnalysis < analysisCore
 			legend(leg);
 			ax=axis;
 			axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
-			text(ego.plotRange(1),ax(3),blineText,'FontSize',13);
+			text(ego.plotRange(1),ax(3),blineText,'FontSize',10,'VerticalAlignment','baseline');
 			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
 			set(gca,'Layer','top');
 		end
@@ -790,33 +791,50 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function plotDensitySummary(ego)
 			if ~isfield(ego.ft,'sd'); warning('No Density parsed yet.'); return; end
+			disp('Plotting Density Data...')
 			sd = ego.ft.sd;
 			rate = ego.ft.rate;
+			baseline = ego.ft.baseline;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
 			box on
 			grid on
 			hold on
+			
 			xp = [rate{1}.cfg.latency(1) rate{1}.cfg.latency(2) rate{1}.cfg.latency(2) rate{1}.cfg.latency(1)];
 			yp = [nanmean(sd{1}.avg) nanmean(sd{1}.avg) nanmean(sd{1}.avg) nanmean(sd{1}.avg)];
 			mh = patch(xp,yp,[0.9 0.9 0.9],'FaceAlpha',0.6,'EdgeColor','none');
 			set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+			
 			c = ego.optimalColours(length(sd));
-			t = [ego.file ' ' ego.names{ego.selectedUnit} ' '];
+			
+			blineText = sprintf('BASELINE (p=%.4g):',baseline{1}.alpha);
+			for j = 1:length(baseline)
+				xp = [ego.plotRange(1) ego.plotRange(2) ego.plotRange(2) ego.plotRange(1)];
+				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
+				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
+				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+				blineText = sprintf('%s  Group:%i %.4g ± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
+			end
+			disp(blineText);
+			
+			t = [ego.file];
 			for j = 1:length(sd)
 				e = ego.var2SE(sd{j}.var,sd{j}.dof);
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
-				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
+				e = ego.var2SE(rate{j}.var,rate{j}.dof);
+				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
-			title(t,'FontSize',15);
+			title(t,'FontSize',14);
 			xlabel(['Time (s) [window = ' sd{1}.cfg.winfunc ' ' num2str(sd{1}.cfg.timwin) '] ']);
-			ylabel('Firing Rate (s/s) \pm S.E.M.')
+			ylabel(['Firing Rate (s/s) \pm S.E.M.'])
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			ax=axis;
 			axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
+			text(ego.plotRange(1),ax(3),blineText,'FontSize',11,'VerticalAlignment','baseline');
 			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
 			set(gca,'Layer','top');
 		end
