@@ -1073,9 +1073,12 @@ classdef LFPAnalysis < analysisCore
 			
 			powerDivisor = 2; %how much to attenuate the secondary frequencies
 			group2Divisor = 1; %do we use a diff divisor for group 2?
-			noiseDivisor = 1; %scale noise to signal
+			noiseDivisor = 0.2; %scale noise to signal
 			
-			plotSurrogates()
+			fprintf('\n\nSurrogate Data:\nRandom phase \t\t= %i\nBase F \t\t= %i\nBurst F \t\t= %i\nOnset F \t\t= %i\nGeneral Divisor \t\t= %i\nGroup 2 Divisor \t\t= %i\nNoise Divisor \t\t= %i\n\n',...
+				randPhase,basef,burstf,onsetf,powerDivisor,group2Divisor,noiseDivisor);
+			
+			%plotSurrogates()
 			
 			for j = 1:length(ft.trial)
 				time = ft.time{j};

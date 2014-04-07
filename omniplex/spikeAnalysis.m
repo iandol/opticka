@@ -598,13 +598,13 @@ classdef spikeAnalysis < analysisCore
 			end
 			
 			switch lower(sel)
-				case 'psth'	
+				case {'p','psth'}	
 					plotPSTH(ego); drawnow;
-				case 'density'
+				case {'d','density'}
 					plotDensity(ego); drawnow;
 				case {'ds','densitysummary'}
 					plotDensitySummary(ego); drawnow;
-				case 'isi'
+				case {'i','isi'}
 					plotISI(ego); drawnow;
 			end
 		end
@@ -688,10 +688,24 @@ classdef spikeAnalysis < analysisCore
 					ego.selectedTrials{a}.behaviour	= ego.selectedBehaviour;
 					ego.selectedTrials{a}.sel			= map{i};
 					ego.selectedTrials{a}.name			= ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
+					if isfield(ego.stats,'sort') && ~isempty(ego.stats.sort)
+						switch ego.stats.sort
+							case 'saccades'
+								st = [ego.trial(idx).firstSaccade];
+								mn = nanmean(st);
+								st(isnan(st)) = mn;
+								[~,stidx] = sort(st);
+								ego.selectedTrials{a}.idx = idx(stidx);
+								ego.selectedTrials{a}.sort = 'saccades';
+							case 'variable'
+
+						end					
+					end
 					a = a + 1;
 				end
 			end
-			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); end
+			
+			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); return; end
 			for j = 1:ego.nSelection
 				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\nCut Index: %s\nBehaviour: %s\n',...
 					j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx),num2str(ego.selectedTrials{j}.cutidx),...
@@ -729,6 +743,7 @@ classdef spikeAnalysis < analysisCore
 				if length(cfg.trials) < 50; cfg.spikelength = 0.7; else cfg.spikelength = 1; end
 				cfg.latency			= ego.plotRange;
 				cfg.trialborders	= 'no';
+				cfg.linewidth		= 1.5;
 				cfg.plotselection	= 'yes';
 				cfg.topplotfunc	= 'line'; % plot as a line
 				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
@@ -851,7 +866,7 @@ classdef spikeAnalysis < analysisCore
 			rate = ego.ft.rate;
 			baseline = ego.ft.baseline;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			len = ego.nSelection + 1;
+
 			h=figure;set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
 			if length(psth) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
@@ -957,8 +972,14 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function appendTrialNames(ego,hdl,idx)
+			
 			axis(hdl);
 			xpos = xlim;
+			
+			st = [ego.trial(idx).firstSaccade];
+			yt = 1:length(st);
+			plot(st,yt,'ys','MarkerFaceColor','y','MarkerSize',3);
+			
 			for j = 1:length(idx)
 				cs{j} = num2str(idx(j));
 				y(j) = j;
