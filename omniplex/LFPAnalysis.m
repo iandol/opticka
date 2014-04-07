@@ -1052,20 +1052,28 @@ classdef LFPAnalysis < analysisCore
 			ego.getFieldTripLFPs(); %reset ft to real data
 			ft = ego.ft;
 			f = ft.fsample; %f is the frequency, normally 1000 for LFPs
-			nCh = length(ft.label);
+			nCh = length(ft.label); %number of channels
 			
-			tmult = (length(ft.time{1})-1) / f;
+			tmult = (length(ft.time{1})-1) / f; 
 
-			randphase = true; %randomise phase?
-			rphase = 0; %initial phase
+			randPhase = true; %randomise phase?
+			randPhaseRange = 2*pi; %how much to randomise phase?
+			rphase = 0; %default phase
+			
 			basef = 5; % base frequency
-			pimult = basef * 2; %resultant pi multiplier
+			piMult = basef * 2; %resultant pi multiplier
+			
 			burstf = 30; %small burst frequency
-			burstmult = burstf * 2; %resultant pi multiplier
-			burstOnset = 0.1;
-			burstLength = 0.2;
-			onsetf = 10;
-			onsetmult = onsetf * 2;
+			burstMult = burstf * 2; %resultant pi multiplier
+			burstOnset = 0.1; %time of onset of burst freq
+			burstLength = 0.2; %length of burst
+			
+			onsetf = 10; %an onset at 0 frequency
+			onsetMult = onsetf * 2; %onset multiplier
+			
+			powerDivisor = 2; %how much to attenuate the secondary frequencies
+			group2Divisor = 1; %do we use a diff divisor for group 2?
+			noiseDivisor = 1; %scale noise to signal
 			
 			plotSurrogates()
 			
@@ -1075,7 +1083,7 @@ classdef LFPAnalysis < analysisCore
 					mx = max(ft.trial{j}(k,:));
 					mn = min(ft.trial{j}(k,:));
 					rn = mx - mn;
-					y = makeSurrogate(time);
+					y = makeSurrogate();
 					y = y * rn; % scale to the voltage range of the original trial
 					y = y + mn;
 					ft.trial{j}(k,:) = y;
@@ -1086,27 +1094,37 @@ classdef LFPAnalysis < analysisCore
 			
 			ego.ft = ft;
 			
-			function y = makeSurrogate(x)
-				if randphase; rphase = rand * (2*pi); end
-				tmult = (length(x)-1) / f;
-				y = sin((0 : (pi*pimult)/f : (pi*pimult) * tmult)+rphase)';
-				y = y(1:length(x));
-				yy = sin((0 : (pi*burstmult)/f : (pi*burstmult) * burstLength)+rphase)';
-				yy = yy ./ 2;
-				yyy = sin((0 : (pi*onsetmult)/f : (pi*onsetmult) * 0.4)+rphase)';
-				yyy = yyy ./ 2;
-				st = ego.findNearest(x,burstOnset);
-				en = ego.findNearest(x,burstOnset+burstLength);
+			function y = makeSurrogate()
+				if randPhase; rphase = rand * randPhaseRange; end
+				%base frequency
+				y = sin((0 : (pi*piMult)/f : (pi*piMult) * tmult)+rphase)';
+				y = y(1:length(time));
+				%burst frequency with different power in group 2 if present
+				yy = sin((0 : (pi*burstMult)/f : (pi*burstMult) * burstLength)+rphase)';
+				if ego.nSelection > 1 && ismember(j,ego.selectedTrials{2}.idx)
+					yy = yy ./ group2Divisor;
+				else
+					yy = yy ./ powerDivisor;
+				end
+				%intermediate onset frequency
+				yyy = sin((0 : (pi*onsetMult)/f : (pi*onsetMult) * 0.4)+rphase)';
+				yyy = yyy ./ 0.5;
+				%find our times to inject yy burst frequency
+				st = ego.findNearest(time,burstOnset);
+				en = ego.findNearest(time,burstOnset+burstLength);
 				y(st:en) = y(st:en) + yy;
+				%add our fixed 0.4s intermediate onset freq
 				y(801:1201) = y(801:1201) + yyy;
-				y = y + (rand(size(y))-0.5);
-				y = y - min(y);
-				y = y / max(y); % 0 - 1 range;
+				%add our noise
+				y = y + ((rand(size(y))-0.5)./noiseDivisor);
+				%normalise our surrogate to be 0-1 range
+				y = y - min(y); y = y / max(y); % 0 - 1 range;
+				%make sure we are a column vector
 				if size(y,2) < size(y,1); y = y'; end
 			end
 			
 			function plotSurrogates()
-				h=figure;
+				h=figure;figpos(1,[800 1600]);set(gcf,'Color',[1 1 1]);
 				p=panel(h);
 				p.pack(ego.nSelection,1)
 				for ii = 1:ego.nSelection
