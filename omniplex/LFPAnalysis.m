@@ -1049,9 +1049,9 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function createSurrogate(ego)
-			
+			ego.getFieldTripLFPs(); %reset ft to real data
 			ft = ego.ft;
-			f = ft.fsample;
+			f = ft.fsample; %f is the frequency, normally 1000 for LFPs
 			nCh = length(ft.label);
 			
 			tmult = (length(ft.time{1})-1) / f;
@@ -1062,6 +1062,10 @@ classdef LFPAnalysis < analysisCore
 			pimult = basef * 2; %resultant pi multiplier
 			burstf = 30; %small burst frequency
 			burstmult = burstf * 2; %resultant pi multiplier
+			burstOnset = 0.1;
+			burstLength = 0.2;
+			onsetf = 10;
+			onsetmult = onsetf * 2;
 			
 			plotSurrogates()
 			
@@ -1083,13 +1087,18 @@ classdef LFPAnalysis < analysisCore
 			ego.ft = ft;
 			
 			function y = makeSurrogate(x)
-				if randphase; rphase = rand * pi; end
+				if randphase; rphase = rand * (2*pi); end
 				tmult = (length(x)-1) / f;
 				y = sin((0 : (pi*pimult)/f : (pi*pimult) * tmult)+rphase)';
 				y = y(1:length(x));
-				yy = sin((0 : (pi*burstmult)/f : (pi*burstmult) * 0.2))';
+				yy = sin((0 : (pi*burstmult)/f : (pi*burstmult) * burstLength)+rphase)';
 				yy = yy ./ 2;
-				y(900:1100) = y(900:1100) + yy;
+				yyy = sin((0 : (pi*onsetmult)/f : (pi*onsetmult) * 0.4)+rphase)';
+				yyy = yyy ./ 2;
+				st = ego.findNearest(x,burstOnset);
+				en = ego.findNearest(x,burstOnset+burstLength);
+				y(st:en) = y(st:en) + yy;
+				y(801:1201) = y(801:1201) + yyy;
 				y = y + (rand(size(y))-0.5);
 				y = y - min(y);
 				y = y / max(y); % 0 - 1 range;
@@ -1097,9 +1106,11 @@ classdef LFPAnalysis < analysisCore
 			end
 			
 			function plotSurrogates()
-				
+				h=figure;
+				p=panel(h);
+				p.pack(ego.nSelection,1)
 				for ii = 1:ego.nSelection
-					figure;
+					p(ii,1).select();
 					hold on
 					for jj = ego.selectedTrials{ii}.idx
 						plot(ft.time{jj},ft.trial{jj}(1,:));
@@ -1108,7 +1119,6 @@ classdef LFPAnalysis < analysisCore
 					xlabel('Time');
 					ylabel('Voltage');
 				end
-				
 			end
 			
 		end
