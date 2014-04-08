@@ -429,6 +429,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				cfg.latency			= [ego.measureRange(1) ego.measureRange(2)]; % sustained response period
 				cfg.keeptrials		= 'yes';
+				cfg.outputunit		= 'rate';
 				rate{j}				= ft_spike_rate(cfg,ego.ft);
 				rate{j}.CI			= bootci(ego.stats.nrand, {@mean, rate{j}.trial},'alpha',ego.stats.alpha);
 				rate{j}.alpha		= ego.stats.alpha;

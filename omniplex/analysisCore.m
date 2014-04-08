@@ -264,22 +264,26 @@ classdef analysisCore < optickaCore
 		%> @return
 		% ===================================================================
 		function ftout=subselectFieldTripTrials(ft,idx)
-			ftout = ft;
+			if size(idx,2)>size(idx,1); idx = idx'; end
+			ftout								= ft;
+			ftout.trialidx					= idx;
 			if isfield(ft,'nUnits') %assume a spike structure
-				ftout.trialtime = ft.trialtime(idx,:);
-				ftout.cfg.trl = ft.cfg.trl(idx,:);
+				ftout.trialtime			= ft.trialtime(idx,:);
+				ftout.cfg.trl				= ft.cfg.trl(idx,:);
 				for j = 1:ft.nUnits
-					sel					= ismember(ft.trial{j},idx);
+					sel						= ismember(ft.trial{j},idx);
 					ftout.timestamp{j}	= ft.timestamp{j}(sel);
-					ftout.time{j}		= ft.time{j}(sel);
-					ftout.trial{j}		= ft.trial{j}(sel);
+					ftout.time{j}			= ft.time{j}(sel);
+					ftout.trial{j}			= ft.trial{j}(sel);
 				end
 			else %assume continuous
-				ftout.sampleinfo = ft.sampleinfo(idx,:);
-				ftout.trialinfo = ft.trialinfo(idx,:);
-				if isfield(ft.cfg,'trl'); ftout.cfg.trl = ft.cfg.trl(idx,:); end
-				ftout.time = ft.time(idx);
-				ftout.trial = ft.trial(idx);
+				ftout.sampleinfo			= ft.sampleinfo(idx,:);
+				ftout.trialinfo			= ft.trialinfo(idx,:);
+				if isfield(ft.cfg,'trl')
+					ftout.cfg.trl			= ft.cfg.trl(idx,:); 
+				end
+				ftout.time					= ft.time(idx);
+				ftout.trial					= ft.trial(idx);
 			end
 			
 		end

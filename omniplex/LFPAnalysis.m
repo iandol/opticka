@@ -695,7 +695,6 @@ classdef LFPAnalysis < analysisCore
 			
 			for j = 1:length(ego.selectedTrials)
 				name				= [spike.label{unit} ' | ' ego.selectedTrials{j}.name];
-				tempft			= ego.subselectFieldTripTrials(ft,ego.selectedTrials{j}.idx);
 				tempspike		= ego.subselectFieldTripTrials(spike,ego.selectedTrials{j}.idx);
 				tempdat			= ego.subselectFieldTripTrials(dati,ego.selectedTrials{j}.idx);
 				
@@ -719,6 +718,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.foilim							= [5 100]; % cfg.timwin determines spacing [begin end], time around each spike (default = [-0.1 0.1])
 				cfg.timwin							= [-0.04 0.04]; %[begin end], time around each spike (default = [-0.1 0.1])
 				%cfg.tapsmofrq = number, the amount of spectral smoothing through multi-tapering. Note that 4 Hz smoothing means plus-minus 4 Hz,i.e. a 8 Hz smoothing box. Note: multitapering rotates phases (no problem for consistency)
+				cfg.rejectsaturation				= 'no';
 				cfg.taper							= 'hanning';
 				cfg.spikechannel					= spike.label{unit};
 				cfg.channel							= ft.label{ego.selectedLFP};
@@ -737,6 +737,7 @@ classdef LFPAnalysis < analysisCore
 				%cfg.tapsmofrq	= vector 1 x numfoi, the amount of spectral smoothing through multi-tapering. Note that 4 Hz smoothing means plus-minus 4 Hz, i.e. a 8 Hz smoothing box.
 				cfg.foi								= 5:5:100; %vector 1 x numfoi, frequencies of interest
 				cfg.t_ftimwin						= 5./cfg.foi; % vector 1 x numfoi, length of time window (in seconds)
+				cfg.rejectsaturation				= 'no';
 				cfg.taper							= 'hanning';
 				cfg.spikechannel					= spike.label{unit};
 				cfg.channel							= ft.label{ego.selectedLFP};
