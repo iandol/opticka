@@ -749,15 +749,15 @@ classdef LFPAnalysis < analysisCore
 				ego.results.stsConvol{j}.ang	= ang;
 				ego.results.stsConvol{j}.mag	= mag;
 				
-				cfg.latency							= []; %we now reset just in case stat is affected by this
-				stsConvol							= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
+				%cfg.latency							= []; %we now reset just in case stat is affected by this
+				%stsConvol							= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
 				
 				cfg									= [];
 				cfg.method							= 'ppc0'; % compute the Pairwise Phase Consistency
 				cfg.spikechannel					= spike.label{unit};
 				cfg.channel							= ft.label{ego.selectedLFP};
 				cfg.spikesel						= 'all';
-				cfg.avgoverchan					= 'unweighted'; % weight spike-LFP phases irrespective of LFP power
+				cfg.avgoverchan					= 'no';
 				cfg.timwin							= 'all'; % compute over all available spikes in the window
 				cfg.latency							= ego.measureRange; % sustained visual stimulation period
 				statSts								= ft_spiketriggeredspectrum_stat(cfg,stsConvol);
@@ -908,7 +908,7 @@ classdef LFPAnalysis < analysisCore
 					ego.drawSpikeLFP();
 				case {'both','together'}
 					ego.plotTogether();
-				case {'freqstats','fstats','fstat'}
+				case {'freqstats','fstats','fstat','fs'}
 					ego.drawLFPFrequencyStats();
 			end
 			

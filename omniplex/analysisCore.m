@@ -111,11 +111,13 @@ classdef analysisCore < optickaCore
 				if isprop(ego,'sp') && isa(ego.sp,'spikeAnalysis')
 					showInfo(ego.sp);
 				else
+					disp('No Info present...')
 					return
 				end
-			end
-			if ~isempty(ego.p.info)
+			elseif ~isempty(ego.p.info)
 				infoBox(ego.p);
+			else
+				disp('No Info present...')
 			end
 		end
 		

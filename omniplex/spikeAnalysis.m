@@ -420,6 +420,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function getRates(ego)
+			if isempty(ego.stats); ego.initialiseStats(); end
 			rate = cell(1,length(ego.selectedTrials));
 			baseline = rate;
 			for j = 1:length(ego.selectedTrials)
