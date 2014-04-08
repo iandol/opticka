@@ -611,22 +611,29 @@ classdef LFPAnalysis < analysisCore
 				ego.results.([name 'statall']) = stat;
 				
 				clear stat statl
-				a=1;
-				for k = 1:length(ego.bpfreq)-1
-					cfg.frequency			= ego.bpfreq{k};
-					cfg.correctm			= 'no'; %holm fdr hochberg bonferroni
+				
+				freq							= ego.bpfreq(1:end-1);
+				fnames						= ego.bpnames(1:end-1);
+				if isfield(ego.stats,'customFreq')
+					freq{end+1}				= ego.stats.customFreq;
+					fnames{end+1}			= 'custom';
+				end
+				a = 1;
+				for k = 1:length(freq)
+					cfg.frequency			= freq{k};
+					cfg.correctm			= sv.correctm; %holm fdr hochberg bonferroni
 					cfg.avgovertime		= 'yes';
 					cfg.avgoverfreq		= 'yes';
 					try
 						stat(a)					= ft_freqstatistics(cfg,fqb{1},fqb{2});
 						statl(a).blname		= fqb{1}.blname;
 						statl(a).freq			= cfg.frequency;
-						t=num2str(statl(a).freq);t=regexprep(t,' +',' ');
-						statl(a).name			= [ego.bpnames{k} ' ' t];
+						t							= num2str(statl(a).freq); t = regexprep(t,'\s+',' ');
+						statl(a).name			= [fnames{k} ':' t];
 						statl(a).alpha			= cfg.alpha;
 						a = a + 1;
 					catch
-						disp(['Stats failed for ' ego.bpnames{k}])
+						disp(['Stats failed for ' fnames{k}]);
 					end
 				end
 				fn=fieldnames(statl);
