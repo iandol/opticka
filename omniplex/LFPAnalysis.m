@@ -442,46 +442,6 @@ classdef LFPAnalysis < analysisCore
 			
 		end
 		
-		
-		% ===================================================================
-		%> @brief ftBandPass performs Leopold et al., 2003 type BLP
-		%>
-		%> @param order of BP filter to use
-		%> @param downsample whether to down/resample after filtering
-		%> @param rectify whether to rectify the responses
-		%> @return
-		% ===================================================================
-		function chSpectrum(ego)
-			if ~exist('mtspectrumc','file'); return; end
-			
-			params.tapers = [3 5];
-			params.Fs = 1000;
-			params.err = [1 0.05];
-			params.fpass = [0 100];
-			params.trialave = 1;
-			
-			h=figure;figpos(1,[1200 1200]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
-				[ego.lfpfile ' | ' ego.spikefile]);
-			p=panel(h);
-			p.pack('v', {9/10 []})
-			lo = {'b.-','r.-','g.-','k.-','y.-','b.:','r.:','g.:','k.:','y.:'};
-			
-			for i=1:ego.nSelection
-				d = [ego.LFPs(ego.selectedLFP).trials(ego.selectedTrials{i}.idx).data];
-				
-				[s,f,e] = mtspectrumc(d(400:600,:),params);
-				p(1).select();
-				p(1).hold('on');
-				areabar(f,s,e,[],0.2,lo{i+5})
-				
-				[s,f,e] = mtspectrumc(d(800:1000,:),params);
-				areabar(f,s,e,[],0.2,lo{i})
-			end
-			ylabel('Frequency')
-				
-		end
-		
-		
 		% ===================================================================
 		%> @brief
 		%>
@@ -1195,6 +1155,132 @@ classdef LFPAnalysis < analysisCore
 				end
 			end
 			
+		end
+		
+		% ===================================================================
+		%> @brief chSpectrum chronux spectrum equivalent
+		%>
+		% ===================================================================
+		function chSpectrum(ego)
+			if ~exist('mtspectrumc','file'); return; end
+			
+			params.tapers = [3 5];
+			params.Fs = 1000;
+			params.err = [1 0.05];
+			params.fpass = [0 100];
+			params.trialave = 1;
+			uselog = 'l';
+			
+			h=figure;figpos(1,[1200 1200]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
+				[ego.lfpfile ' | ' ego.spikefile]);
+			p=panel(h);
+			p.pack('v', {1/2 []});
+			q=p(2);
+			q.pack(1,ego.nSelection);
+			lo = {'b-o','r-o','g-o','k.-','y.-','c.-','b.:','r.:','g.:','k.:','y.:','c.:'};
+			
+			ft = ego.ft;
+			lfp = ego.LFPs(ego.selectedLFP);
+			time = ft.time{1};
+			b1 = ego.findNearest(time,ego.baselineWindow(1));
+			b2 = ego.findNearest(time,ego.baselineWindow(2));
+			s1 = ego.findNearest(time,ego.measureRange(1));
+			s2 = ego.findNearest(time,ego.measureRange(2));
+			
+			mx = -Inf;
+			mn = Inf;
+			
+			for i=1:ego.nSelection
+				%d = [lfp.trials(ego.selectedTrials{i}.idx).data];
+				idx = ego.selectedTrials{i}.idx;
+				d = zeros(length(ft.trial{1}(1,:)),length(idx));
+				for j = 1:length(idx)
+					d(:,j) = ft.trial{idx(j)}(ego.selectedLFP,:)';
+				end
+% 				figure;imagesc(d);
+				
+				p(1).select();
+				p(1).hold('on');
+				[s,f,e] = mtspectrumc(d(b1:b2,:),params);
+				%areabar(f,s,e,[],0.2,lo{i+5})
+				plot_vector(s,f,uselog,e,lo{i+6},0.5);
+				mn = min([mn min(s)]);
+				mx = max([mx max(s)]);
+				
+				[s,f,e] = mtspectrumc(d(s1:s2,:),params);
+				plot_vector(s,f,uselog,e,lo{i},2);
+				mn = min([mn min(s)]);
+				mx = max([mx max(s)]);
+				
+				q(1,i).select();
+				[s,t,f,e] = mtspecgramc(d(400:1200,:), [0.3,0.01], params );
+				plot_matrix(s,t-0.3,f,uselog);
+				axis tight
+			end
+			if strcmpi(uselog,'l')
+				mn = 10*log10(mn);
+				mx = 10*log10(mx);
+			end
+			for i=1:ego.nSelection
+				q(1,i).select();
+				set(gca,'CLim',[mn mx]);
+			end				
+			
+			function plot_matrix(X,t,f,plt,Xerr,zlims)
+				if nargin < 1; error('Need data'); end;
+				[NT,NF]=size(X);
+				if nargin < 2;	 t=1:NT;		end;
+				if nargin < 3;	 f=1:NF;		end;
+				if length(f)~=NF || length(t)~=NT; error('axes grid and data have incompatible lengths'); end;
+				if nargin < 4 || isempty(plt); plt='l'; end;
+				if strcmp(plt,'l');
+					 X=10*log10(X);
+					 if nargin ==5; Xerr=10*log10(Xerr); end;
+				end;
+				if nargin < 5 || isempty(Xerr)
+					imagesc(t,f,X');
+					if exist('zlims','var'); zlim(zlims); end
+					axis xy; 
+					colorbar; 
+					title('Spectrogram');
+				else
+					subplot(311); imagesc(t,f,squeeze(Xerr(1,:,:))'); axis xy; colorbar; title('Lower confidence');
+					subplot(312); imagesc(t,f,X'); title('X');axis xy; colorbar;
+					subplot(313); imagesc(t,f,squeeze(Xerr(2,:,:))'); axis xy; colorbar; title('Upper confidence');
+				end;
+				xlabel('t');ylabel('f');
+			end
+			
+			function plot_vector(X,f,plt,Xerr,c,w) 
+				if nargin < 1; error('Need data'); end;
+				N=length(X); 
+				if nargin < 2 || isempty(f);	 f=1:N;	end;
+				if length(f)~=N; error('frequencies and data have incompatible lengths'); end;
+				if nargin < 3 || isempty(plt) ;	 plt='l';	end;
+				if nargin < 4 || isempty(Xerr);	 Xerr=[];	end;				
+				if nargin < 5 || isempty(c); c='b.-';end;
+				if nargin < 6 || isempty(w);	 w=1;	end;
+
+				if strcmp(plt,'l');
+					 X=10*log10(X);
+					 if nargin >=4 & ~isempty(Xerr); Xerr=10*log10(Xerr); end;
+				end;
+
+				if nargin < 4 || isempty(Xerr);
+					 plot(f,X,c,'Linewidth',w);
+				else
+					 if length(Xerr)==1;
+						 plot(f,X,c); 
+						 line(get(gca,'xlim'),[Xerr,Xerr],'Color',c,'LineStyle','--','Linewidth',w);
+					 elseif ~isempty(Xerr);
+						 plot(f,X,c,'Linewidth',w); 
+						 hold on; plot(f,Xerr(1,:),[c(1) '--'],'Linewidth',w); plot(f,Xerr(2,:),[c(1) '--'],'Linewidth',w); 
+					 end
+				end
+				xlabel('f');
+				if strcmp(plt,'l'); ylabel('10*log10(X)'); else ylabel('X'); end;
+			end
+				
 		end
 		
 		% ===================================================================
