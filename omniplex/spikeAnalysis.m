@@ -979,9 +979,11 @@ classdef spikeAnalysis < analysisCore
 			axis(hdl);
 			xpos = xlim;
 			
-			st = [ego.trial(idx).firstSaccade];
-			yt = 1:length(st);
-			plot(st,yt,'ys','MarkerFaceColor','y','MarkerSize',3);
+			if isfield(ego.trial(idx(1)),'firstSaccade')
+				st = [ego.trial(idx).firstSaccade];
+				yt = 1:length(st);
+				plot(st,yt,'ys','MarkerFaceColor','y','MarkerSize',3);
+			end
 			
 			for j = 1:length(idx)
 				cs{j} = num2str(idx(j));

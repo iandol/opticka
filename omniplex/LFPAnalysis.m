@@ -442,6 +442,46 @@ classdef LFPAnalysis < analysisCore
 			
 		end
 		
+		
+		% ===================================================================
+		%> @brief ftBandPass performs Leopold et al., 2003 type BLP
+		%>
+		%> @param order of BP filter to use
+		%> @param downsample whether to down/resample after filtering
+		%> @param rectify whether to rectify the responses
+		%> @return
+		% ===================================================================
+		function chSpectrum(ego)
+			if ~exist('mtspectrumc','file'); return; end
+			
+			params.tapers = [3 5];
+			params.Fs = 1000;
+			params.err = [1 0.05];
+			params.fpass = [0 100];
+			params.trialave = 1;
+			
+			h=figure;figpos(1,[1200 1200]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
+				[ego.lfpfile ' | ' ego.spikefile]);
+			p=panel(h);
+			p.pack('v', {9/10 []})
+			lo = {'b.-','r.-','g.-','k.-','y.-','b.:','r.:','g.:','k.:','y.:'};
+			
+			for i=1:ego.nSelection
+				d = [ego.LFPs(ego.selectedLFP).trials(ego.selectedTrials{i}.idx).data];
+				
+				[s,f,e] = mtspectrumc(d(400:600,:),params);
+				p(1).select();
+				p(1).hold('on');
+				areabar(f,s,e,[],0.2,lo{i+5})
+				
+				[s,f,e] = mtspectrumc(d(800:1000,:),params);
+				areabar(f,s,e,[],0.2,lo{i})
+			end
+			ylabel('Frequency')
+				
+		end
+		
+		
 		% ===================================================================
 		%> @brief
 		%>
