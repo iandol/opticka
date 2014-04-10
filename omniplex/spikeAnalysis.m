@@ -745,7 +745,7 @@ classdef spikeAnalysis < analysisCore
 				if length(cfg.trials) < 50; cfg.spikelength = 0.7; else cfg.spikelength = 1; end
 				cfg.latency			= ego.plotRange;
 				cfg.trialborders	= 'no';
-				cfg.linewidth		= 1.5;
+				cfg.linewidth		= 1;
 				cfg.plotselection	= 'yes';
 				cfg.topplotfunc	= 'line'; % plot as a line
 				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
@@ -887,6 +887,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.spikechannel		= ego.names{ego.selectedUnit};
 				if length(cfg.trials) < 50; cfg.spikelength = 0.7; else cfg.spikelength = 1; end
 				cfg.latency				= ego.plotRange;
+				cfg.linewidth			= 1;
 				cfg.trialborders		= 'no';
 				cfg.plotselection		= 'yes';
 				%cfg.topplotfunc		= 'line'; % plot as a line

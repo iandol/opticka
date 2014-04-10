@@ -82,7 +82,7 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief Constructor
+		%> @brief getFiles loads the requisite files before parsing
 		%>
 		%> @param varargin
 		%> @return
@@ -125,7 +125,7 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief parse is the major first data parsing method
 		%>
 		%> @param
 		%> @return
@@ -136,16 +136,11 @@ classdef LFPAnalysis < analysisCore
 				if isempty(ego.lfpfile);return;end
 			end
 			ego.yokedSelection = false;
-			ego.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
-			if ego.mversion < 8.2
-				error('LFP Analysis requires Matlab >= 2013b!!!')
-			end
 			ego.paths.oldDir = pwd;
 			cd(ego.dir);
-			ego.LFPs = struct();
+			%clear our data structures
+			ego.LFPs = struct(); ego.ft = struct(); ego.results = struct(); ego.panels = struct();
 			ego.LFPs = readLFPs(ego.p);
-			ego.ft = struct();
-			ego.results = struct();
 			parseLFPs(ego);
 			select(ego);
 			getFieldTripLFPs(ego);
@@ -154,12 +149,18 @@ classdef LFPAnalysis < analysisCore
 		
 		
 		% ===================================================================
-		%> @brief
+		%> @brief reparse data after an initial parse
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
 		function reparse(ego)
+			if isempty(ego.lfpfile) %we obviously haven't done an initial parse
+				parse(ego); 
+				return
+			end
+			ego.ft = struct();
+			ego.results = struct();
 			parseLFPs(ego);
 			select(ego);
 			selectTrials(ego);
@@ -178,6 +179,8 @@ classdef LFPAnalysis < analysisCore
 			in.selectedTrials = ego.selectedTrials;
 			in.map = ego.map;
 			in.plotRange = ego.plotRange;
+			in.measureRange = ego.measureRange;
+			in.baselineWindow = ego.baselineWindow;
 			in.selectedBehaviour = ego.selectedBehaviour;
 			setSelection(ego.sp, in); %set spike anal to same trials etc.
 			syncData(ego.sp.p, ego.p); %copy any parsed data
@@ -824,6 +827,8 @@ classdef LFPAnalysis < analysisCore
 			in.selectedTrials			= ego.selectedTrials;
 			in.map						= ego.map;
 			in.plotRange				= ego.plotRange;
+			in.measureRange			= ego.measureRange;
+			in.baselineWindow			= ego.baselineWindow;
 			in.selectedBehaviour		= ego.selectedBehaviour;
 			setSelection(ego.sp, in); %set spike anal to same trials etc
 			

@@ -497,6 +497,18 @@ classdef analysisCore < optickaCore
 			if isfield(in,'plotRange') && isprop(ego,'plotRange')
 				ego.plotRange = in.plotRange;
 			end
+			if isfield(in,'plotRange') && isprop(ego,'plotRange')
+				ego.plotRange = in.plotRange;
+			end
+			if isfield(in,'measureRange') && isprop(ego,'measureRange')
+				ego.measureRange = in.measureRange;
+			end
+			if isfield(in,'baselineWindow') && isprop(ego,'baselineWindow')
+				ego.baselineWindow = in.baselineWindow;
+			end
+			if isfield(in,'alpha') && isfield(ego.stats,'alpha')
+				ego.stats.alpha = in.alpha;
+			end
 			if isfield(in,'selectedBehaviour') && isprop(ego,'selectedBehaviour')
 				ego.selectedBehaviour = in.selectedBehaviour;
 			end

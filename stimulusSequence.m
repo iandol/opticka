@@ -367,7 +367,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			obj.h = struct();
 			build_gui();
 			if iscell(obj.outValues);
-				outvals = obj.cellStruct(obj.outValues);
+				outvals = cell2mat(obj.outValues);
 				data = [outvals obj.outIndex obj.outMap];
 			else
 				data = [obj.outValues obj.outIndex obj.outMap];
@@ -496,7 +496,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					if iscell(cc)
 						out = [out, [in{:,i}]'];
 					else
-						out = [out, {in{:,i}}'];
+						out = [out, cc];
 					end
 				end
 			end

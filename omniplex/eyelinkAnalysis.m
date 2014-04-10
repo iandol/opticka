@@ -1144,6 +1144,11 @@ classdef eyelinkAnalysis < analysisCore
 				f = f(idx); %use this index
 				ego.validation(1).uuids = f;
 				ego.validation.lengthCorrect = length(f);
+				if length(ego.correct.idx) == ego.validation.lengthCorrect
+					disp('Secondary Eye Position Data appears consistent with EDF parsed trials')
+				else
+					warning('Secondary Eye Position Data inconsistent with EDF parsed trials')
+				end
 			end
 		end
 		
