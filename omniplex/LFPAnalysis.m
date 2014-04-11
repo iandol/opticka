@@ -480,23 +480,23 @@ classdef LFPAnalysis < analysisCore
 					case 'fix2'
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'hanning';
-						cfg.foi				= 2:2:80;						 % analysis frequencies
+						cfg.foi				= 5:2:80;						 % analysis frequencies
 						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
 					case 'mtm1'
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'dpss';
-						cfg.foi				= 2:2:80;						 % analysis frequencies
+						cfg.foi				= 5:2:80;						 % analysis frequencies
 						cfg.tapsmofrq		= cfg.foi * cfg.smooth;
 						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
 					case 'mtm2'
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'dpss';
-						cfg.foi				= 2:2:80;						 % analysis frequencies
+						cfg.foi				= 5:2:80;						 % analysis frequencies
 					case 'morlet'
 						cfg.method			= 'wavelet';
 						cfg.taper			= '';
 						cfg.width			= width;
-						cfg.foi				= 2:2:80;						 % analysis frequencies
+						cfg.foi				= 5:2:80;						 % analysis frequencies
 				end
 			elseif ~isempty(cfg)
 				preset = 'custom';
@@ -1161,70 +1161,95 @@ classdef LFPAnalysis < analysisCore
 		%> @brief chSpectrum chronux spectrum equivalent
 		%>
 		% ===================================================================
-		function chSpectrum(ego)
+		function chSpectrum(ego,tapers)
 			if ~exist('mtspectrumc','file'); return; end
-			
-			params.tapers = [3 5];
+			if ~exist('tapers','var'); tapers = [10 2]; end
+			params.tapers = tapers;
 			params.Fs = 1000;
-			params.err = [1 0.05];
+			%params.pad = 0;
+			params.err = [1 ego.stats.alpha];
 			params.fpass = [0 100];
 			params.trialave = 1;
 			uselog = 'l';
 			
-			h=figure;figpos(1,[1200 1200]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
-				[ego.lfpfile ' | ' ego.spikefile]);
-			p=panel(h);
-			p.pack('v', {1/2 []});
+			h=figure;
+			figpos(1,[1800 1200]);
+			set(h,'Color',[1 1 1],'NumberTitle','off','Name',[ego.lfpfile ' | ' ego.spikefile]);
+			o=panel(h);
+			o.pack('h', {2/3 []});
+			o(2).pack('v', {1/2 []});
+			p = o(1);
+			p.pack('v', {1/3 []});
 			q=p(2);
-			q.pack(1,ego.nSelection);
+			q.pack(2,ego.nSelection);
 			lo = {'b-o','r-o','g-o','k.-','y.-','c.-','b.:','r.:','g.:','k.:','y.:','c.:'};
 			
 			ft = ego.ft;
 			lfp = ego.LFPs(ego.selectedLFP);
+			sp = ego.sp.spike{ego.sp.selectedUnit};
 			time = ft.time{1};
 			b1 = ego.findNearest(time,ego.baselineWindow(1));
 			b2 = ego.findNearest(time,ego.baselineWindow(2));
 			s1 = ego.findNearest(time,ego.measureRange(1));
 			s2 = ego.findNearest(time,ego.measureRange(2));
-			
-			mx = -Inf;
-			mn = Inf;
+			tit = sprintf('TAPER: %i & %i | Baseline: %.2g : %.2g | Stimulus: %.2g : %.2g',tapers(1), tapers(2),...
+				ego.baselineWindow(1), ego.baselineWindow(2), ego.measureRange(1), ego.measureRange(2));
+			cmin = Inf; cmax = -Inf;
 			
 			for i=1:ego.nSelection
 				%d = [lfp.trials(ego.selectedTrials{i}.idx).data];
 				idx = ego.selectedTrials{i}.idx;
 				d = zeros(length(ft.trial{1}(1,:)),length(idx));
+				spk = [];
 				for j = 1:length(idx)
 					d(:,j) = ft.trial{idx(j)}(ego.selectedLFP,:)';
+					spk(j).times = sp.trials{idx(j)}.spikes - sp.trials{idx(j)}.base;
 				end
-% 				figure;imagesc(d);
 				
 				p(1).select();
 				p(1).hold('on');
 				[s,f,e] = mtspectrumc(d(b1:b2,:),params);
 				%areabar(f,s,e,[],0.2,lo{i+5})
 				plot_vector(s,f,uselog,e,lo{i+6},0.5);
-				mn = min([mn min(s)]);
-				mx = max([mx max(s)]);
 				
 				[s,f,e] = mtspectrumc(d(s1:s2,:),params);
 				plot_vector(s,f,uselog,e,lo{i},2);
-				mn = min([mn min(s)]);
-				mx = max([mx max(s)]);
 				
 				q(1,i).select();
-				[s,t,f,e] = mtspecgramc(d(400:1200,:), [0.3,0.01], params );
-				plot_matrix(s,t-0.3,f,uselog);
-				axis tight
+				[s,t,f,e] = mtspecgramc(d(300:1300,:), [0.3,0.01], params );
+				t = t - 0.5;
+				plot_matrix(s,t,f,uselog);
+				cl = get(gca,'CLim'); cmin = min(cmin, cl(1)); cmax = max(cmax, cl(2));
+				box on; axis tight
+				
+				q(2,i).select();
+				bt1 = ego.findNearest(t,ego.baselineWindow(1));
+				bt2 = ego.findNearest(t,ego.baselineWindow(2));
+				sB=mean(s(bt1:bt2,:)); % spectrum in the first movingwindow taken to be baseline
+				plot_matrix(s./repmat(sB,[size(s,1) 1]), t,f,uselog);
+				title('Baseline subtraction')
+				box on; axis tight
+				
+				datasp=extractdatapt(spk, ego.measureRange,1);
+				datalfp=extractdatac(d, params.Fs, ego.measureRange+0.8);
+				[C,phi,S12,S1,S2,f,zerosp,confC,phistd]=coherencycpt(datalfp,datasp,params);
+				o(2,1).select();
+				hold on;
+				plot(f,C,lo{i}); line(get(gca,'xlim'),[confC confC],'Color',lo{i}(1));ylim([0 1]);
+				%plotsig(C,confC,1,f,lo{i}); ylim([0 1]);
+				xlabel(''); ylabel('Coherence');
+				o(2,2).select();
+				hold on;
+				areabar(f,phi,phistd,[0.5 0.5 0.5],0.3,lo{i});
+				xlabel('Frequency'); ylabel('Phase');
+				
 			end
-			if strcmpi(uselog,'l')
-				mn = 10*log10(mn);
-				mx = 10*log10(mx);
-			end
+			p(1).select();
+			p(1).title(tit);
 			for i=1:ego.nSelection
 				q(1,i).select();
-				set(gca,'CLim',[mn mx]);
-			end				
+				set(gca,'CLim',[cmin cmax]);
+			end	
 			
 			function plot_matrix(X,t,f,plt,Xerr,zlims)
 				if nargin < 1; error('Need data'); end;
@@ -1278,7 +1303,7 @@ classdef LFPAnalysis < analysisCore
 					 end
 				end
 				xlabel('f');
-				if strcmp(plt,'l'); ylabel('10*log10(X)'); else ylabel('X'); end;
+				if strcmp(plt,'l'); ylabel('10*log10(X) dB'); else ylabel('X'); end;
 			end
 				
 		end
