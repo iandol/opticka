@@ -465,7 +465,8 @@ classdef LFPAnalysis < analysisCore
 				cfg.keeptrials	= 'yes';
 				cfg.output		= 'pow';
 				cfg.channel		= ft.label{ego.selectedLFP};
-				cfg.toi         = -0.3:0.01:0.3;                  % time window "slides"
+				cfg.toi        = -0.3:0.01:0.3;                  % time window "slides"
+				cfg.foi			= 4:2:100;						 % analysis frequencies
 				cfg.tw			= tw;
 				cfg.cycles		= cycles;
 				cfg.width		= width;
@@ -475,28 +476,24 @@ classdef LFPAnalysis < analysisCore
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'hanning';
 						lf						= round(1 / cfg.tw);
-						cfg.foi				= lf:2:80;						  % analysis frequencies
+						cfg.foi				= lf:2:100;						  % analysis frequencies
 						cfg.t_ftimwin		= ones(length(cfg.foi),1).*tw;   % length of fixed time window
 					case 'fix2'
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'hanning';
-						cfg.foi				= 5:2:80;						 % analysis frequencies
 						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
 					case 'mtm1'
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'dpss';
-						cfg.foi				= 5:2:80;						 % analysis frequencies
 						cfg.tapsmofrq		= cfg.foi * cfg.smooth;
 						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
 					case 'mtm2'
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'dpss';
-						cfg.foi				= 5:2:80;						 % analysis frequencies
 					case 'morlet'
 						cfg.method			= 'wavelet';
 						cfg.taper			= '';
 						cfg.width			= width;
-						cfg.foi				= 5:2:80;						 % analysis frequencies
 				end
 			elseif ~isempty(cfg)
 				preset = 'custom';
@@ -1157,155 +1154,17 @@ classdef LFPAnalysis < analysisCore
 			
 		end
 		
+		
 		% ===================================================================
-		%> @brief chSpectrum chronux spectrum equivalent
+		%> @brief
 		%>
+		%> @param
+		%> @return
 		% ===================================================================
 		function chSpectrum(ego,tapers)
-			if ~exist('mtspectrumc','file'); return; end
+			if ~exist('mtspectrumc','file'); disp('Chronux V2.10 not installed...');return; end
 			if ~exist('tapers','var'); tapers = [10 2]; end
-			params.tapers = tapers;
-			params.Fs = 1000;
-			%params.pad = 0;
-			params.err = [1 ego.stats.alpha];
-			params.fpass = [0 100];
-			params.trialave = 1;
-			uselog = 'l';
-			
-			h=figure;
-			figpos(1,[1800 1200]);
-			set(h,'Color',[1 1 1],'NumberTitle','off','Name',[ego.lfpfile ' | ' ego.spikefile]);
-			o=panel(h);
-			o.pack('h', {2/3 []});
-			o(2).pack('v', {1/2 []});
-			p = o(1);
-			p.pack('v', {1/3 []});
-			q=p(2);
-			q.pack(2,ego.nSelection);
-			lo = {'b-o','r-o','g-o','k.-','y.-','c.-','b.:','r.:','g.:','k.:','y.:','c.:'};
-			
-			ft = ego.ft;
-			lfp = ego.LFPs(ego.selectedLFP);
-			sp = ego.sp.spike{ego.sp.selectedUnit};
-			time = ft.time{1};
-			b1 = ego.findNearest(time,ego.baselineWindow(1));
-			b2 = ego.findNearest(time,ego.baselineWindow(2));
-			s1 = ego.findNearest(time,ego.measureRange(1));
-			s2 = ego.findNearest(time,ego.measureRange(2));
-			tit = sprintf('TAPER: %i & %i | Baseline: %.2g : %.2g | Stimulus: %.2g : %.2g',tapers(1), tapers(2),...
-				ego.baselineWindow(1), ego.baselineWindow(2), ego.measureRange(1), ego.measureRange(2));
-			cmin = Inf; cmax = -Inf;
-			
-			for i=1:ego.nSelection
-				%d = [lfp.trials(ego.selectedTrials{i}.idx).data];
-				idx = ego.selectedTrials{i}.idx;
-				d = zeros(length(ft.trial{1}(1,:)),length(idx));
-				spk = [];
-				for j = 1:length(idx)
-					d(:,j) = ft.trial{idx(j)}(ego.selectedLFP,:)';
-					spk(j).times = sp.trials{idx(j)}.spikes - sp.trials{idx(j)}.base;
-				end
-				
-				p(1).select();
-				p(1).hold('on');
-				[s,f,e] = mtspectrumc(d(b1:b2,:),params);
-				%areabar(f,s,e,[],0.2,lo{i+5})
-				plot_vector(s,f,uselog,e,lo{i+6},0.5);
-				
-				[s,f,e] = mtspectrumc(d(s1:s2,:),params);
-				plot_vector(s,f,uselog,e,lo{i},2);
-				
-				q(1,i).select();
-				[s,t,f,e] = mtspecgramc(d(300:1300,:), [0.3,0.01], params );
-				t = t - 0.5;
-				plot_matrix(s,t,f,uselog);
-				cl = get(gca,'CLim'); cmin = min(cmin, cl(1)); cmax = max(cmax, cl(2));
-				box on; axis tight
-				
-				q(2,i).select();
-				bt1 = ego.findNearest(t,ego.baselineWindow(1));
-				bt2 = ego.findNearest(t,ego.baselineWindow(2));
-				sB=mean(s(bt1:bt2,:)); % spectrum in the first movingwindow taken to be baseline
-				plot_matrix(s./repmat(sB,[size(s,1) 1]), t,f,uselog);
-				title('Baseline subtraction')
-				box on; axis tight
-				
-				datasp=extractdatapt(spk, ego.measureRange,1);
-				datalfp=extractdatac(d, params.Fs, ego.measureRange+0.8);
-				[C,phi,S12,S1,S2,f,zerosp,confC,phistd]=coherencycpt(datalfp,datasp,params);
-				o(2,1).select();
-				hold on;
-				plot(f,C,lo{i}); line(get(gca,'xlim'),[confC confC],'Color',lo{i}(1));ylim([0 1]);
-				%plotsig(C,confC,1,f,lo{i}); ylim([0 1]);
-				xlabel(''); ylabel('Coherence');
-				o(2,2).select();
-				hold on;
-				areabar(f,phi,phistd,[0.5 0.5 0.5],0.3,lo{i});
-				xlabel('Frequency'); ylabel('Phase');
-				
-			end
-			p(1).select();
-			p(1).title(tit);
-			for i=1:ego.nSelection
-				q(1,i).select();
-				set(gca,'CLim',[cmin cmax]);
-			end	
-			
-			function plot_matrix(X,t,f,plt,Xerr,zlims)
-				if nargin < 1; error('Need data'); end;
-				[NT,NF]=size(X);
-				if nargin < 2;	 t=1:NT;		end;
-				if nargin < 3;	 f=1:NF;		end;
-				if length(f)~=NF || length(t)~=NT; error('axes grid and data have incompatible lengths'); end;
-				if nargin < 4 || isempty(plt); plt='l'; end;
-				if strcmp(plt,'l');
-					 X=10*log10(X);
-					 if nargin ==5; Xerr=10*log10(Xerr); end;
-				end;
-				if nargin < 5 || isempty(Xerr)
-					imagesc(t,f,X');
-					if exist('zlims','var'); zlim(zlims); end
-					axis xy; 
-					colorbar; 
-					title('Spectrogram');
-				else
-					subplot(311); imagesc(t,f,squeeze(Xerr(1,:,:))'); axis xy; colorbar; title('Lower confidence');
-					subplot(312); imagesc(t,f,X'); title('X');axis xy; colorbar;
-					subplot(313); imagesc(t,f,squeeze(Xerr(2,:,:))'); axis xy; colorbar; title('Upper confidence');
-				end;
-				xlabel('t');ylabel('f');
-			end
-			
-			function plot_vector(X,f,plt,Xerr,c,w) 
-				if nargin < 1; error('Need data'); end;
-				N=length(X); 
-				if nargin < 2 || isempty(f);	 f=1:N;	end;
-				if length(f)~=N; error('frequencies and data have incompatible lengths'); end;
-				if nargin < 3 || isempty(plt) ;	 plt='l';	end;
-				if nargin < 4 || isempty(Xerr);	 Xerr=[];	end;				
-				if nargin < 5 || isempty(c); c='b.-';end;
-				if nargin < 6 || isempty(w);	 w=1;	end;
-
-				if strcmp(plt,'l');
-					 X=10*log10(X);
-					 if nargin >=4 & ~isempty(Xerr); Xerr=10*log10(Xerr); end;
-				end;
-
-				if nargin < 4 || isempty(Xerr);
-					 plot(f,X,c,'Linewidth',w);
-				else
-					 if length(Xerr)==1;
-						 plot(f,X,c); 
-						 line(get(gca,'xlim'),[Xerr,Xerr],'Color',c,'LineStyle','--','Linewidth',w);
-					 elseif ~isempty(Xerr);
-						 plot(f,X,c,'Linewidth',w); 
-						 hold on; plot(f,Xerr(1,:),[c(1) '--'],'Linewidth',w); plot(f,Xerr(2,:),[c(1) '--'],'Linewidth',w); 
-					 end
-				end
-				xlabel('f');
-				if strcmp(plt,'l'); ylabel('10*log10(X) dB'); else ylabel('X'); end;
-			end
-				
+			ego.runChronuxAnalysis(tapers)
 		end
 		
 		% ===================================================================
@@ -1818,7 +1677,7 @@ classdef LFPAnalysis < analysisCore
 				axis([-inf inf miny maxy]);
 			end
 				
-			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
+			h=figure;figpos(1,[1200 1200]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
 				[ego.lfpfile '|' res.stsFFT{1}.lfplabel{1} '|' res.stsFFT{1}.label{1}]);
 			p=panel(h);
 			p.margin = [20 20 10 15]; %left bottom right top
@@ -1872,7 +1731,7 @@ classdef LFPAnalysis < analysisCore
 			xlabel('Frequency (Hz)');
 			grid on; box on;
 			
-			h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
+			h=figure;figpos(1,[1920 1080]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
 				['PPC for ' ego.lfpfile ' ' ego.spikefile]);
 			p=panel(h);
 			p.margin = [20 20 10 15]; %leres bottom right top
@@ -2174,6 +2033,158 @@ classdef LFPAnalysis < analysisCore
 				e = max(e);
 				areabar(f, p, e,[0.5 0.5 0.5],0.2,lc);
 			end
+		end
+		
+		% ===================================================================
+		%> @brief chSpectrum chronux spectrum equivalent
+		%>
+		% ===================================================================
+		function runChronuxAnalysis(ego,tapers)
+			params.tapers = tapers;
+			params.Fs = 1000;
+			%params.pad = 0;
+			params.err = [1 ego.stats.alpha];
+			params.fpass = [0 100];
+			params.trialave = 1;
+			uselog = 'l';
+			
+			h=figure;
+			figpos(1,[1800 1200]);
+			set(h,'Color',[1 1 1],'NumberTitle','off','Name',[ego.lfpfile ' | ' ego.spikefile]);
+			o=panel(h);
+			o.margin = [15 15 5 15];%left bottom right top
+			o.pack('h', {2/3 []});
+			o(2).pack('v', {1/2 []});
+			p = o(1);
+			p.pack('v', {1/3 []});
+			q=p(2);
+			q.pack(2,ego.nSelection);
+			lo = {'b-o','r-o','g-o','k.-','y.-','c.-','b.:','r.:','g.:','k.:','y.:','c.:'};
+			
+			ft = ego.ft;
+			lfp = ego.LFPs(ego.selectedLFP);
+			names = lfp.name;
+			sp = ego.sp.spike{ego.sp.selectedUnit};
+			names = [names '<>' ego.sp.names{ego.sp.selectedUnit}];
+			time = ft.time{1};
+			b1 = ego.findNearest(time,ego.baselineWindow(1));
+			b2 = ego.findNearest(time,ego.baselineWindow(2));
+			s1 = ego.findNearest(time,ego.measureRange(1));
+			s2 = ego.findNearest(time,ego.measureRange(2));
+			tit = sprintf('%s TAPER: %i & %i | Baseline T: %.2g : %.2g secs | Stimulus T: %.2g : %.2g secs',lfp.name,tapers(1), tapers(2),...
+				ego.baselineWindow(1), ego.baselineWindow(2), ego.measureRange(1), ego.measureRange(2));
+			cmin = Inf; cmax = -Inf;
+			
+			for i=1:ego.nSelection
+				%d = [lfp.trials(ego.selectedTrials{i}.idx).data];
+				idx = ego.selectedTrials{i}.idx;
+				d = zeros(length(ft.trial{1}(1,:)),length(idx));
+				spk = [];
+				for j = 1:length(idx)
+					d(:,j) = ft.trial{idx(j)}(ego.selectedLFP,:)';
+					spk(j).times = sp.trials{idx(j)}.spikes - sp.trials{idx(j)}.base;
+				end
+				
+				p(1).select();
+				p(1).hold('on');
+				[s,f,e] = mtspectrumc(d(b1:b2,:),params);
+				%areabar(f,s,e,[],0.2,lo{i+5})
+				plot_vector(s,f,uselog,e,lo{i+6},0.5);
+				grid on; box on;
+				
+				[s,f,e] = mtspectrumc(d(s1:s2,:),params);
+				plot_vector(s,f,uselog,e,lo{i},2);
+				
+				q(1,i).select();
+				[s,t,f,e] = mtspecgramc(d(300:1300,:), [0.3,0.01], params );
+				t = t - 0.5;
+				plot_matrix(s,t,f,uselog);
+				title(['Group ' num2str(i)])
+				cl = get(gca,'CLim'); cmin = min(cmin, cl(1)); cmax = max(cmax, cl(2));
+				box on; axis tight
+				
+				q(2,i).select();
+				bt1 = ego.findNearest(t,ego.baselineWindow(1));
+				bt2 = ego.findNearest(t,ego.baselineWindow(2));
+				sB=mean(s(bt1:bt2,:)); % spectrum in the first movingwindow taken to be baseline
+				plot_matrix(s./repmat(sB,[size(s,1) 1]), t,f,uselog);
+				title(['Group ' num2str(i) ' - baseline']);
+				box on; axis tight
+				
+				datasp=extractdatapt(spk, ego.measureRange,1);
+				datalfp=extractdatac(d, params.Fs, ego.measureRange+0.8);
+				[C,phi,S12,S1,S2,f,zerosp,confC,phistd]=coherencycpt(datalfp,datasp,params);
+				o(2,1).select();
+				hold on; grid on; box on;
+				plot(f,C,lo{i}); line(get(gca,'xlim'),[confC confC],'Color',lo{i}(1));ylim([0 1]);
+				title(names); xlabel(''); ylabel('Coherence');
+				o(2,2).select();
+				hold on; grid on; box on;
+				areabar(f,phi,phistd,[0.5 0.5 0.5],0.3,lo{i});
+				xlabel('Frequency'); ylabel('Phase');
+				
+			end
+			p(1).select();
+			p(1).title(tit);
+			for i=1:ego.nSelection
+				q(1,i).select();
+				set(gca,'CLim',[cmin cmax]);
+			end	
+			
+			function plot_matrix(X,t,f,plt,Xerr,zlims)
+				if nargin < 1; error('Need data'); end;
+				[NT,NF]=size(X);
+				if nargin < 2;	 t=1:NT;		end;
+				if nargin < 3;	 f=1:NF;		end;
+				if length(f)~=NF || length(t)~=NT; error('axes grid and data have incompatible lengths'); end;
+				if nargin < 4 || isempty(plt); plt='l'; end;
+				if strcmp(plt,'l');
+					 X=10*log10(X);
+					 if nargin ==5; Xerr=10*log10(Xerr); end;
+				end;
+				if nargin < 5 || isempty(Xerr)
+					imagesc(t,f,X');
+					if exist('zlims','var'); zlim(zlims); end
+					axis xy; 
+					colorbar; 
+				else
+					subplot(311); imagesc(t,f,squeeze(Xerr(1,:,:))'); axis xy; colorbar; title('Lower confidence');
+					subplot(312); imagesc(t,f,X'); title('X');axis xy; colorbar;
+					subplot(313); imagesc(t,f,squeeze(Xerr(2,:,:))'); axis xy; colorbar; title('Upper confidence');
+				end;
+				xlabel('Time (s)');ylabel('Frequency');
+			end
+			
+			function plot_vector(X,f,plt,Xerr,c,w) 
+				if nargin < 1; error('Need data'); end;
+				N=length(X); 
+				if nargin < 2 || isempty(f);	 f=1:N;	end;
+				if length(f)~=N; error('frequencies and data have incompatible lengths'); end;
+				if nargin < 3 || isempty(plt) ;	 plt='l';	end;
+				if nargin < 4 || isempty(Xerr);	 Xerr=[];	end;				
+				if nargin < 5 || isempty(c); c='b.-';end;
+				if nargin < 6 || isempty(w);	 w=1;	end;
+
+				if strcmp(plt,'l');
+					 X=10*log10(X);
+					 if nargin >=4 & ~isempty(Xerr); Xerr=10*log10(Xerr); end;
+				end;
+
+				if nargin < 4 || isempty(Xerr);
+					 plot(f,X,c,'Linewidth',w);
+				else
+					 if length(Xerr)==1;
+						 plot(f,X,c); 
+						 line(get(gca,'xlim'),[Xerr,Xerr],'Color',c,'LineStyle','--','Linewidth',w);
+					 elseif ~isempty(Xerr);
+						 plot(f,X,c,'Linewidth',w); 
+						 hold on; plot(f,Xerr(1,:),[c(1) '--'],'Linewidth',w); plot(f,Xerr(2,:),[c(1) '--'],'Linewidth',w); 
+					 end
+				end
+				xlabel('f');
+				if strcmp(plt,'l'); ylabel('10*log10(X) dB'); else ylabel('X'); end;
+			end
+				
 		end
 		
 		% ===================================================================
