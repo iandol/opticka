@@ -710,6 +710,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.spikechannel					= spike.label{unit};
 				cfg.channel							= ft.label;
 				cfg.latency							= [-0.275 -0.075];
+				cfg.keeptrials						= 'yes';
 				staPre								= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.results(1).staPre{j}		= staPre;
 				ego.results.staPre{j}.name		= name;
@@ -832,7 +833,8 @@ classdef LFPAnalysis < analysisCore
 			ft_defaults
 			ego.sp.density;
 			
-			h=figure;figpos(1,[1000 1500]);set(h,'Color',[1 1 1],'Name',['Co-Plot > LFP: ' ego.LFPs(ego.selectedLFP).name ' | Unit: ' ego.sp.names{ego.sp.selectedUnit}]);
+			h=figure;figpos(1,[1000 1500]);set(h,'Color',[1 1 1],'NumberTitle','off',...
+				'Name',['Co-Plot ' ego.lfpfile '+' ego.spikefile ' > LFP: ' ego.LFPs(ego.selectedLFP).name ' | Unit: ' ego.sp.names{ego.sp.selectedUnit}]);
 			p=panel(h);
 			p.margin = [20 20 20 20]; %left bottom right top
 			[row,col]=ego.optimalLayout(ego.nSelection);

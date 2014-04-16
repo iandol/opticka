@@ -727,7 +727,7 @@ classdef spikeAnalysis < analysisCore
 			rate = ego.ft.rate;
 			baseline = ego.ft.baseline;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			h=figure;set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			h=figure;set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
 			if length(sd) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
 			p.margin = [15 20 10 10]; %left bottom right top
@@ -814,7 +814,7 @@ classdef spikeAnalysis < analysisCore
 			rate = ego.ft.rate;
 			baseline = ego.ft.baseline;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
 			box on
 			grid on
 			hold on
@@ -869,7 +869,7 @@ classdef spikeAnalysis < analysisCore
 			baseline = ego.ft.baseline;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 
-			h=figure;set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			h=figure;set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
 			if length(psth) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
 			p.margin = [20 20 20 10]; %left bottom right top
@@ -949,7 +949,7 @@ classdef spikeAnalysis < analysisCore
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			isi = ego.ft.isi;
 			len = ego.nSelection;
-			h=figure;figpos(1,[1000 2000]);set(h,'Color',[1 1 1],'Name',ego.names{ego.selectedUnit});
+			h=figure;figpos(1,[1000 2000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
 			p=panel(h);
 			p.margin = [20 20 20 20]; %left bottom right top
 			[row,col]=ego.optimalLayout(len);
