@@ -359,7 +359,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				psth{j}				= ft_spike_psth(cfg, ego.ft);
 			end
-			ego.ft.psth = psth;
+			ego.results.psth = psth;
 			getRates(ego);
 			
 			if ego.doPlots; plot(ego,'psth'); end
@@ -386,7 +386,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				sd{j}					= ft_spikedensity(cfg, ego.ft);
 			end
-			ego.ft.sd = sd;
+			ego.results.sd = sd;
 			getRates(ego);
 			
 			if ego.doPlots; plot(ego,'density'); end
@@ -409,7 +409,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				isi{j}				= ft_spike_isi(cfg, ego.ft);
 			end
-			ego.ft.isi = isi;
+			ego.results.isi = isi;
 			if ego.doPlots; plot(ego,'isi'); end
 		end
 		
@@ -439,8 +439,8 @@ classdef spikeAnalysis < analysisCore
 				baseline{j}.CI		= bootci(ego.stats.nrand, {@mean, baseline{j}.trial},'alpha',ego.stats.alpha);
 				baseline{j}.alpha		= ego.stats.alpha;
 			end
-			ego.ft.rate = rate;
-			ego.ft.baseline = baseline;
+			ego.results.rate = rate;
+			ego.results.baseline = baseline;
 		end
 		
 		% ===================================================================
@@ -553,7 +553,7 @@ classdef spikeAnalysis < analysisCore
 				nanidx = isnan(st);
 				st(nanidx)=[];
 				if usez; st = zscore(st); end
-				rate = ego.ft.rate{j}.trial;
+				rate = ego.results.rate{j}.trial;
 				rate(nanidx) = [];
 				%rate = rate/max(rate);
 				if usez; rate = zscore(rate); end
@@ -723,9 +723,9 @@ classdef spikeAnalysis < analysisCore
 		function plotDensity(ego)
 			if ~isfield(ego.ft,'sd'); warning('No Density parsed yet.'); return; end
 			disp('Plotting Density Data...')
-			sd = ego.ft.sd;
-			rate = ego.ft.rate;
-			baseline = ego.ft.baseline;
+			sd = ego.results.sd;
+			rate = ego.results.rate;
+			baseline = ego.results.baseline;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			h=figure;set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
 			if length(sd) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
@@ -810,9 +810,9 @@ classdef spikeAnalysis < analysisCore
 		function plotDensitySummary(ego)
 			if ~isfield(ego.ft,'sd'); warning('No Density parsed yet.'); return; end
 			disp('Plotting Density Data...')
-			sd = ego.ft.sd;
-			rate = ego.ft.rate;
-			baseline = ego.ft.baseline;
+			sd = ego.results.sd;
+			rate = ego.results.rate;
+			baseline = ego.results.baseline;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
 			box on
@@ -864,9 +864,9 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function plotPSTH(ego)
 			if ~isfield(ego.ft,'psth'); warning('No PSTH parsed yet.'); return; end
-			psth = ego.ft.psth;
-			rate = ego.ft.rate;
-			baseline = ego.ft.baseline;
+			psth = ego.results.psth;
+			rate = ego.results.rate;
+			baseline = ego.results.baseline;
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 
 			h=figure;set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
@@ -947,7 +947,7 @@ classdef spikeAnalysis < analysisCore
 		function plotISI(ego)
 			if ~isfield(ego.ft,'isi'); warning('No ISI parsed yet.'); return; end
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			isi = ego.ft.isi;
+			isi = ego.results.isi;
 			len = ego.nSelection;
 			h=figure;figpos(1,[1000 2000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
 			p=panel(h);

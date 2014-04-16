@@ -706,19 +706,19 @@ classdef LFPAnalysis < analysisCore
 				tempdat			= ego.subselectFieldTripTrials(dati,ego.selectedTrials{j}.idx);
 				
 				cfg									= [];
-				cfg.timwin							= [-0.15 0.15]; 
+				cfg.timwin							= [-0.1 0.1]; 
 				cfg.spikechannel					= spike.label{unit};
 				cfg.channel							= ft.label;
-				cfg.latency							= [-0.275 -0.075];
+				cfg.latency							= [-0.2 -0.05];
 				cfg.keeptrials						= 'yes';
 				staPre								= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.results(1).staPre{j}		= staPre;
-				ego.results.staPre{j}.name		= name;
+				ego.results.staPre{j}.name		= [name ':' num2str(cfg.latency)];
 				
 				cfg.latency							= ego.measureRange;
 				staPost								= ft_spiketriggeredaverage(cfg, tempdat);
 				ego.results.staPost{j}			= staPost;
-				ego.results.staPost{j}.name	= name;
+				ego.results.staPost{j}.name	= [name ':' num2str(cfg.latency)];
 				
 				cfg									= [];
 				cfg.method							= 'mtmfft';
@@ -1642,7 +1642,11 @@ classdef LFPAnalysis < analysisCore
 			
 			for i = 1:length(res.staPre)
 				p(i,1).select();
-				plot(res.staPre{i}.time, res.staPre{i}.avg(:,:)')
+				hold on;
+				e = ego.var2SE(res.staPre{i}.var,res.staPre{i}.dof);
+				for j = 1:size(res.staPre{i}.avg,1)
+					areabar(res.staPre{i}.time, res.staPre{i}.avg(j,:), e(j,:),[0.5 0.5 0.5],0.2);
+				end
 				maxPre(i) = max(max(res.staPre{i}.avg(:,:)));
 				minPre(i) = min(min(res.staPre{i}.avg(:,:)));
 				box on
@@ -1655,7 +1659,11 @@ classdef LFPAnalysis < analysisCore
 				title(t)
 
 				p(i,2).select();
-				plot(res.staPost{i}.time, res.staPost{i}.avg(:,:)')
+				hold on;
+				e = ego.var2SE(res.staPost{i}.var,res.staPost{i}.dof);
+				for j = 1:size(res.staPost{i}.avg,1)
+					areabar(res.staPost{i}.time, res.staPost{i}.avg(j,:), e(j,:),[0.5 0.5 0.5],0.2);
+				end
 				maxPost(i) = max(max(res.staPost{i}.avg(:,:)));
 				minPost(i) = min(min(res.staPost{i}.avg(:,:)));
 				box on

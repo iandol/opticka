@@ -271,6 +271,7 @@ classdef analysisCore < optickaCore
 			ftout.trialidx					= idx;
 			if isfield(ft,'nUnits') %assume a spike structure
 				ftout.trialtime			= ft.trialtime(idx,:);
+				ftout.sampleinfo			= ft.sampleinfo(idx,:);
 				ftout.cfg.trl				= ft.cfg.trl(idx,:);
 				for j = 1:ft.nUnits
 					sel						= ismember(ft.trial{j},idx);
@@ -333,7 +334,7 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		function [row,col]=optimalLayout(len)
 			row=1; col=1;
-			if		len == 2,		row = 2;	col = 1;
+			if			len == 2,	row = 2;	col = 1;
 			elseif	len == 3,	row = 3;	col = 1;
 			elseif	len == 4,	row = 2;	col = 2;
 			elseif	len < 7,		row = 3;	col = 2;
