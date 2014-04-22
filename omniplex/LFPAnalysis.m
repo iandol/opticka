@@ -135,6 +135,7 @@ classdef LFPAnalysis < analysisCore
 				getFiles(ego,true);
 				if isempty(ego.lfpfile);return;end
 			end
+			checkPaths(ego);
 			ego.yokedSelection = false;
 			ego.paths.oldDir = pwd;
 			cd(ego.dir);

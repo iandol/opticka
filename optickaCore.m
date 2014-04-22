@@ -284,6 +284,49 @@ classdef optickaCore < handle
 	end
 	
 	%=======================================================================
+	methods ( Hidden = true ) %-------HIDDEN METHODS-----%
+	%=======================================================================
+		% ===================================================================
+		%> @brief checkPaths
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function checkPaths(ego)
+			if isprop(ego,'dir')
+				if ~exist(ego.dir,'dir')
+					if isprop(ego,'file')
+						fn = ego.file;
+					else
+						fn = '';
+					end
+					p = uigetdir('',['Please find new directory for: ' fn]);
+					if p ~= 0
+						ego.dir = p;
+					else
+						warning('Can''t find valid source directory')
+					end
+				end
+			end
+			if isprop(ego,'matdir')
+				if ~exist(ego.matdir,'dir')
+					if isprop(ego,'matfile')
+						fn = ego.matfile;
+					else
+						fn = '';
+					end
+					p = uigetdir('',['Please find new directory for: ' fn]);
+					if p ~= 0
+						ego.matdir = p;
+					else
+						warning('Can''t find valid source directory')
+					end
+				end
+			end
+		end
+	end
+	
+	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
 		

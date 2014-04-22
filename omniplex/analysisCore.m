@@ -79,6 +79,40 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief checkPaths
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function checkPaths(ego)
+			if isprop(ego,'dir')
+				if ~exist(ego.dir,'dir')
+					if isprop(ego,'file')
+						fn = ego.file;
+					elseif isprop(ego,'lfpfile')
+						fn = ego.lfpfile;
+					else
+						fn = '';
+					end
+					p = uigetdir('',['Please find new directory for: ' fn]);
+					if p ~= 0
+						ego.dir = p;
+					else
+						warning('Can''t find valid source directory')
+					end
+				end
+			end
+			if isprop(ego,'p') && isa(ego.p,'plxReader')
+				ego.p.dir = ego.dir;
+				checkPaths(ego.p);
+			end
+			if isprop(ego,'sp') && isprop(ego.sp,'p') && isa(ego.sp.p,'plxReader')
+				ego.sp.p.dir = ego.dir;
+				checkPaths(ego.sp.p);
+			end
+		end
+		
+		% ===================================================================
 		%> @brief
 		%>
 		%> @param
