@@ -149,7 +149,8 @@ classdef analysisCore < optickaCore
 					return
 				end
 			elseif ~isempty(ego.p.info)
-				infoBox(ego.p);
+				p = gcp(); % get the current parallel pool
+				parfeval(p, @ego.p.infoBox);
 			else
 				disp('No Info present...')
 			end
@@ -296,7 +297,8 @@ classdef analysisCore < optickaCore
 		%> @brief selectFTTrials cut out trials where the ft function fails
 		%> to use cfg.trials
 		%>
-		%> @param
+		%> @param ft fieldtrip structure
+		
 		%> @return
 		% ===================================================================
 		function ftout=subselectFieldTripTrials(ft,idx)
@@ -322,7 +324,6 @@ classdef analysisCore < optickaCore
 				ftout.time					= ft.time(idx);
 				ftout.trial					= ft.trial(idx);
 			end
-			
 		end
 		
 		% ==================================================================
@@ -339,18 +340,6 @@ classdef analysisCore < optickaCore
 			[~,idx] = min(tmp);
 			val = in(idx);
 			delta = abs(value - val);
-		end
-		
-		% ===================================================================
-		%> @brief a wrapper to make plotyy more friendly to errorbars
-		%>
-		%> @param
-		% ===================================================================
-		function [h]=plotYY(x,y)
-			[m,e] = stderr(y);
-			if size(m) == size(x)
-				h=areabar(x,m,e);
-			end
 		end
 		
 		% ===================================================================
@@ -386,13 +375,10 @@ classdef analysisCore < optickaCore
 		
 		% ===================================================================
 		%> @brief make optimally different colours for plots
-		%>
+		%> Copyright 2010-2011 by Timothy E. Holy
 		%> @param
 		% ===================================================================
 		function colors = optimalColours(n_colors,bg,func)
-			% Copyright 2010-2011 by Timothy E. Holy
-			
-			% Parse the inputs
 			if (nargin < 2)
 				bg = [1 1 1];  % default white background
 			else

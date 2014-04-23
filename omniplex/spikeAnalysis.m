@@ -8,29 +8,29 @@ classdef spikeAnalysis < analysisCore
 		%> data directory
 		dir@char
 		%> ± time window around the trigger, if empty use event off
-		spikeWindow@double = 0.8
+		spikeWindow@double						= 0.8
 		%> used by legacy spikes to allow negative time offsets
-		startOffset@double = 0
+		startOffset@double						= 0
 		%> bin size
-		binSize@double = 0.01
+		binSize@double								= 0.01
 		%> gaussian/smooth window for density plots
-		densityWindow = [-0.015 0.015];
+		densityWindow@double						= [-0.015 0.015]
 		%> density plots smooth function
-		densityFunction = 'gauss';
+		densityFunction@char						= 'gauss'
 		%> default Spike channel
-		selectedUnit@double = 1
+		selectedUnit@double						= 1
 		%> saccadeFilter, if empty ignore
-		filterFirstSaccades@double = [ ];
+		filterFirstSaccades@double				= [ ]
 		%> default behavioural type
-		selectedBehaviour@char = 'correct';
+		selectedBehaviour@cell					= {'correct'}
 		%> region of interest for eye location [x y radius include], if empty ignore
-		ROI@double = [];
+		ROI@double									= []
 		%> time of interest for fixation, if empty ignore
-		TOI@double = [];
+		TOI@double									= []
 		%> inset raster plot?
-		insetRasterPlot@logical = false;
+		insetRasterPlot@logical					= false
 		%> plot verbosity
-		verbose	= true
+		verbose										= true
 	end
 	
 	%------------------VISIBLE PROPERTIES----------%
@@ -255,9 +255,10 @@ classdef spikeAnalysis < analysisCore
 			end
 			
 			inbeh = {'correct','breakFix','incorrect','all'};
+			
 			beh = 'r';
 			for i = 1:length(inbeh)
-				if strcmpi(inbeh{i}, ego.selectedBehaviour)
+				if strcmpi(inbeh{i}, ego.selectedBehaviour{1})
 					beh = [beh '|¤' inbeh{i}];
 				else
 					beh = [beh '|' inbeh{i}];
@@ -280,6 +281,7 @@ classdef spikeAnalysis < analysisCore
 			roi = num2str(ego.ROI);
 			saccfilt = num2str(ego.filterFirstSaccades);
 			toifilt = num2str(ego.TOI);
+			ego.selectedBehaviour = {};
 			
 			mtitle   = [ego.file ': REPARSE ' num2str(ego.event.nVars) ' DATA VARIABLES'];
 			options  = {['t|' map{1}],'Choose PLX variables to merge (A, if empty parse all variables independantly):';   ...
@@ -299,11 +301,35 @@ classdef spikeAnalysis < analysisCore
 			answer = menuN(mtitle,options);
 			drawnow;
 			if iscell(answer) && ~isempty(answer)
-				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3}); 
+				re = regexpi(answer{1},'^[CBI]','once');
+				if ~isempty(re)
+					ego.selectedBehaviour{1} = answer{1}(1);
+					answer{1} = answer{1}(2:end);
+				else
+					ego.selectedBehaviour{1} = inbeh{answer{6}};
+				end
+				ego.map{1} = str2num(answer{1});
+				
+				re = regexpi(answer{2},'^[CBI]','once');
+				if ~isempty(re)
+					ego.selectedBehaviour{2} = answer{2}(1);
+					answer{2} = answer{2}(2:end);
+				else
+					ego.selectedBehaviour{2} = inbeh{answer{6}};
+				end
+				ego.map{2} = str2num(answer{2});
+				
+				re = regexpi(answer{3},'^[CBI]','once');
+				if ~isempty(re)
+					ego.selectedBehaviour{3} = answer{3}(1);
+					answer{3} = answer{3}(2:end);
+				else
+					ego.selectedBehaviour{3} = inbeh{answer{6}};
+				end
+				ego.map{3} = str2num(answer{3}); 
+
 				ego.cutTrials = str2num(answer{4});
-				ego.map = map;
 				ego.selectedUnit = answer{5};
-				ego.selectedBehaviour = inbeh{answer{6}};
 				ego.plotRange = str2num(answer{7});
 				ego.measureRange = str2num(answer{8});
 
@@ -629,22 +655,11 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function selectTrials(ego)
 			
-			if ego.yokedSelection == true
+			if ego.yokedSelection == true %if we are yoked to another object, don't run this method
 				return
 			end
 			
-			switch lower(ego.selectedBehaviour)
-				case 'correct'
-					behaviouridx = find([ego.trial.isCorrect]==true);
-				case 'breakfix'
-					behaviouridx = find([ego.trial.isBreak]==true);
-				case 'incorrect'
-					behaviouridx = find([ego.trial.isIncorrect]==true);
-				otherwise
-					behaviouridx = [ego.trial.index];
-			end
-			
-			cutidx = ego.cutTrials;
+			cutidx = ego.cutTrials; %cut trials index
 			
 			saccidx = [];
 			if ~isempty(ego.filterFirstSaccades)
@@ -665,22 +680,53 @@ classdef spikeAnalysis < analysisCore
 				idx = [ego.p.eA.TOIInfo.isTOI] == true;
 				tois = ego.p.eA.TOIInfo(idx);
 				toiidx = [tois.correctedIndex];
-			end	
+			end
 			
-			if isempty(ego.map{1})
-				for i = 1:ego.event.nVars; map{i} = ego.event.unique(i); end
+			if length(ego.selectedBehaviour) ~= length(ego.map)
+				error('Index error for behaviours');
+			end
+			
+			for i = 1:length(ego.selectedBehaviour) %generate our selected behaviour indexes
+				switch lower(ego.selectedBehaviour{i})
+					case {'c', 'correct'}
+						behaviouridx{i} = find([ego.trial.isCorrect]==true); %#ok<*AGROW>
+						selectedBehaviour{i} = 'correct';
+					case {'b', 'breakfix'}
+						behaviouridx{i} = find([ego.trial.isBreak]==true);
+						selectedBehaviour{i} = 'breakfix';
+					case {'i', 'incorrect'}
+						behaviouridx{i} = find([ego.trial.isIncorrect]==true);
+						selectedBehaviour{i} = 'incorrect';						
+					otherwise
+						behaviouridx{i} = [ego.trial.index];
+						selectedBehaviour{i} = 'all';
+				end
+			end
+			
+			if isempty(ego.map{1}) %if our map is empty, generate groups for each variable
+				bidx = behaviouridx{1};
+				sb = selectedBehaviour{1};
+				for i = 1:ego.event.nVars; 
+					map{i} = ego.event.unique(i); 
+					behaviouridx{i} = bidx;
+					selectedBehaviour{i} = sb;
+				end
 			else
 				map = ego.map; %#ok<*PROP>
 			end
 	
 			ego.selectedTrials = {};
+			varList = [ego.trial.variable];
 			a = 1;
 			for i = 1:length(map)
-				idx = []; if isempty(map{i}); continue; end
-				for j = 1:length(map{i})
-					idx = [ idx find( [ego.trial.variable] == map{i}(j) ) ];
+				if isempty(map{i}); continue; end
+				idx = find(ismember(varList,map{i})==true);
+				if length(behaviouridx) >= i
+					bidx = behaviouridx{i};
+				else
+					bidx = behaviouridx{1};
 				end
-				idx = intersect(idx, behaviouridx);
+				idx = intersect(idx, bidx);
 				if ~isempty(cutidx);		idx = setdiff(idx, cutidx);		end %remove the cut trials
 				if ~isempty(saccidx);	idx = intersect(idx, saccidx);	end %remove saccade filtered trials
 				if ~isempty(roiidx);		idx = intersect(idx, roiidx);		end %remove roi filtered trials
@@ -691,7 +737,8 @@ classdef spikeAnalysis < analysisCore
 					ego.selectedTrials{a}.roiidx		= roiidx; 
 					ego.selectedTrials{a}.toiidx		= toiidx;
 					ego.selectedTrials{a}.saccidx		= saccidx;
-					ego.selectedTrials{a}.behaviour	= ego.selectedBehaviour;
+					ego.selectedTrials{a}.bidx			= bidx;
+					ego.selectedTrials{a}.behaviour	= selectedBehaviour{i};
 					ego.selectedTrials{a}.sel			= map{i};
 					ego.selectedTrials{a}.name			= ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
 					if isfield(ego.stats,'sort') && ~isempty(ego.stats.sort)
@@ -713,9 +760,9 @@ classdef spikeAnalysis < analysisCore
 			
 			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); return; end
 			for j = 1:ego.nSelection
-				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\nCut Index: %s\nBehaviour: %s\n',...
+				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\nCut Index: %s\nBehaviour:%s\n',...
 					j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx),num2str(ego.selectedTrials{j}.cutidx),...
-					ego.selectedBehaviour);
+					ego.selectedTrials{j}.behaviour);
 			end
 		end
 		

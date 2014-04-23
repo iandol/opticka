@@ -141,12 +141,10 @@ classdef plxReader < optickaCore
 			if ~isfield(ego.tsList.tsParse,'trials')
 				parseSpikes(ego);
 			end
-			if isempty(ego.info)
-				generateInfo(ego);
-			end
 			if ~isempty(ego.eventList) && ~isempty(ego.eA)
 				integrateEyeData(ego);
 			end
+			generateInfo(ego);
 		end
 		
 		% ===================================================================
@@ -823,6 +821,11 @@ classdef plxReader < optickaCore
 					names = [names ' | ' rE.stimuli{i}.name ':' rE.stimuli{i}.family];
 				end
 				ego.info{end+1} = sprintf('Stimulus Names : %s', names(4:end));
+			end
+			if isfield(ego.meta,'matrix')
+				ego.info{end+1} = ' ';
+				ego.info{end+1} = 'Variable Map:';
+				ego.info{end+1} = num2str(ego.meta.matrix);
 			end
 			if ~isempty(ego.eventList)
 				ego.info{end+1} = ' ';
