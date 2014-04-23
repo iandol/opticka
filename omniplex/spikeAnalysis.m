@@ -130,6 +130,7 @@ classdef spikeAnalysis < analysisCore
 				getFiles(ego, true);
 				if isempty(ego.file); warning('No plexon file selected'); return; end
 			end
+			
 			ego.paths.oldDir = pwd;
 			cd(ego.dir);
 			ego.p.eventWindow = ego.spikeWindow;
@@ -139,6 +140,7 @@ classdef spikeAnalysis < analysisCore
 			for i = 1:ego.nUnits
 				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
 			end
+			ego.ft = struct(); ego.results = struct();
 			ego.ft = getFieldTripSpikes(ego.p);
 			ego.names = ego.ft.label;
 			showInfo(ego);
@@ -166,6 +168,7 @@ classdef spikeAnalysis < analysisCore
 			for i = 1:ego.nUnits
 				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
 			end
+			ego.ft = struct(); ego.results = struct();
 			ego.ft = getFieldTripSpikes(ego.p);
 			ego.names = ego.ft.label;
 			if isempty(ego.selectedTrials)
@@ -198,6 +201,7 @@ classdef spikeAnalysis < analysisCore
 			for i = 1:ego.nUnits
 				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
 			end
+			ego.ft = struct(); ego.results = struct();
 			ego.ft = getFieldTripSpikes(ego.p);
 			ego.names = ego.ft.label;
 			select(ego);
@@ -359,7 +363,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				psth{j}				= ft_spike_psth(cfg, ego.ft);
 			end
-			ego.results.psth = psth;
+			ego.results(1).psth = psth;
 			getRates(ego);
 			
 			if ego.doPlots; plot(ego,'psth'); end
@@ -386,7 +390,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				sd{j}					= ft_spikedensity(cfg, ego.ft);
 			end
-			ego.results.sd = sd;
+			ego.results(1).sd = sd;
 			getRates(ego);
 			
 			if ego.doPlots; plot(ego,'density'); end
@@ -584,7 +588,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plot(ego, varargin)
-			if isempty(ego.ft);
+			if isempty(ego.results);
 				return
 			end
 			if isempty(varargin) || ~ischar(varargin{1})
@@ -721,7 +725,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plotDensity(ego)
-			if ~isfield(ego.ft,'sd'); warning('No Density parsed yet.'); return; end
+			if ~isfield(ego.results,'sd'); warning('No Density parsed yet.'); return; end
 			disp('Plotting Density Data...')
 			sd = ego.results.sd;
 			rate = ego.results.rate;
@@ -808,7 +812,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plotDensitySummary(ego)
-			if ~isfield(ego.ft,'sd'); warning('No Density parsed yet.'); return; end
+			if ~isfield(ego.results,'sd'); warning('No Density parsed yet.'); return; end
 			disp('Plotting Density Data...')
 			sd = ego.results.sd;
 			rate = ego.results.rate;
@@ -863,7 +867,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plotPSTH(ego)
-			if ~isfield(ego.ft,'psth'); warning('No PSTH parsed yet.'); return; end
+			if ~isfield(ego.results,'psth'); warning('No PSTH parsed yet.'); return; end
 			psth = ego.results.psth;
 			rate = ego.results.rate;
 			baseline = ego.results.baseline;
@@ -945,7 +949,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plotISI(ego)
-			if ~isfield(ego.ft,'isi'); warning('No ISI parsed yet.'); return; end
+			if ~isfield(ego.results,'isi'); warning('No ISI parsed yet.'); return; end
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			isi = ego.results.isi;
 			len = ego.nSelection;
