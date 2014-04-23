@@ -480,11 +480,11 @@ classdef plxReader < optickaCore
 				'FontSize',fs,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left',...
 				'Callback',@editComment);%,'ButtonDownFcn',@editComment,'KeyReleaseFcn',@editComment);
 			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.3]);
+			set(handles.display,'String',info,'FontSize',fs);
+			set(handles.comments,'String',ego.comment,'FontSize',fs);
 			if ~isempty(ego.eventList)
 				drawEvents(ego,handles.axis);
 			end
-			set(handles.display,'String',info,'FontSize',fs);
-			set(handles.comments,'String',ego.comment,'FontSize',fs);
 			
 			function editComment(src, ~)
 				if ~exist('src','var');	return; end
@@ -641,25 +641,27 @@ classdef plxReader < optickaCore
 			meta.comments = rE.comment;
 			meta.date = rE.savePrefix;
 			meta.numvars = rE.task.nVars;
+			var = cell(rE.task.nVars,1);
 			for i=1:rE.task.nVars
-				meta.var{i}.title = rE.task.nVar(i).name;
-				meta.var{i}.nvalues = length(rE.task.nVar(i).values);
-				meta.var{i}.range = meta.var{i}.nvalues;
+				var{i}.title = rE.task.nVar(i).name;
+				var{i}.nvalues = length(rE.task.nVar(i).values);
+				var{i}.range = var{i}.nvalues;
 				if iscell(rE.task.nVar(i).values)
 					vals = rE.task.nVar(i).values;
-					num = 1:meta.var{i}.range;
-					meta.var{i}.values = num;
-					meta.var{i}.keystring = [];
-					for jj = 1:meta.var{i}.range
+					num = 1:var{i}.range;
+					var{i}.values = num;
+					var{i}.keystring = [];
+					for jj = 1var{i}.range
 						k = vals{jj};
-						meta.var{i}.key{jj} = num2str(k);
-						meta.var{i}.keystring = {meta.var{i}.keystring meta.var{i}.key{jj}};
+						var{i}.key{jj} = num2str(k);
+						var{i}.keystring = {var{i}.keystring var{i}.key{jj}};
 					end
 				else
-					meta.var{i}.values = rE.task.nVar(i).values;
-					meta.var{i}.key = '';
+					var{i}.values = rE.task.nVar(i).values;
+					var{i}.key = '';
 				end
 			end
+			meta.var = var;
 			meta.repeats = rE.task.nBlocks;
 			meta.cycles = 1;
 			meta.modtime = 500;
@@ -1056,7 +1058,7 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function readSpikes(ego)
-			tic
+			
 			ego.tsList = struct();
 			[tscounts, wfcounts, evcounts, slowcounts]	= plx_info(ego.file,1);
 			[~,chnames]												= plx_chan_names(ego.file);
@@ -1107,7 +1109,7 @@ classdef plxReader < optickaCore
 			ego.tsList.tsN = ego.tsList.ts;
 			ego.tsList.tsParse = ego.tsList.ts;
 			ego.tsList.namelist = ''; list = 'UabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST';
-			a = 1; 
+			a = 1; tic
 			for ich = 1:length(ego.tsList.activeCh)
 				ch = ego.tsList.activeCh(ich);
 				name = chnames{ego.tsList.activeChIndex(ich)};
@@ -1130,7 +1132,6 @@ classdef plxReader < optickaCore
 					a = a + 1;
 				end
 			end
-			
 			fprintf('Loading all spike channels took %g ms\n',round(toc*1000));
 		end
 

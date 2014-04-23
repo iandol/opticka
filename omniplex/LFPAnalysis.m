@@ -16,7 +16,7 @@ classdef LFPAnalysis < analysisCore
 		%> time window around the trigger
 		LFPWindow@double = 0.8
 		%> default behavioural type
-		selectedBehaviour@char = 'correct';
+		selectedBehaviour@cell = {'correct'};
 		%> plot verbosity
 		verbose	= true
 	end

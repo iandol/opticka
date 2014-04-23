@@ -149,8 +149,7 @@ classdef analysisCore < optickaCore
 					return
 				end
 			elseif ~isempty(ego.p.info)
-				p = gcp(); % get the current parallel pool
-				parfeval(p, @ego.p.infoBox);
+				infoBox(ego.p);
 			else
 				disp('No Info present...')
 			end
