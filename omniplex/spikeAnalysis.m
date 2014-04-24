@@ -653,8 +653,7 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function selectTrials(ego)
-			
+		function selectTrials(ego)	
 			if ego.yokedSelection == true %if we are yoked to another object, don't run this method
 				return
 			end
@@ -720,13 +719,13 @@ classdef spikeAnalysis < analysisCore
 			a = 1;
 			for i = 1:length(map)
 				if isempty(map{i}); continue; end
-				idx = find(ismember(varList,map{i})==true);
+				idx = find(ismember(varList,map{i})==true); %selects our trials based on variable
 				if length(behaviouridx) >= i
 					bidx = behaviouridx{i};
 				else
 					bidx = behaviouridx{1};
 				end
-				idx = intersect(idx, bidx);
+				idx = intersect(idx, bidx); %this has a positive side effect of also sorting the trials
 				if ~isempty(cutidx);		idx = setdiff(idx, cutidx);		end %remove the cut trials
 				if ~isempty(saccidx);	idx = intersect(idx, saccidx);	end %remove saccade filtered trials
 				if ~isempty(roiidx);		idx = intersect(idx, roiidx);		end %remove roi filtered trials
@@ -760,7 +759,7 @@ classdef spikeAnalysis < analysisCore
 			
 			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); return; end
 			for j = 1:ego.nSelection
-				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\nCut Index: %s\nBehaviour:%s\n',...
+				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n-Cut Index: %s\nBehaviour: %s\n',...
 					j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx),num2str(ego.selectedTrials{j}.cutidx),...
 					ego.selectedTrials{j}.behaviour);
 			end

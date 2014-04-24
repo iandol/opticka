@@ -1249,6 +1249,16 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
+		function checkFirstSaccades(ego)
+			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function parseFixationPositions(ego)
 			if ego.isParsed
 				for i = 1:length(ego.trials)

@@ -143,6 +143,7 @@ classdef LFPAnalysis < analysisCore
 			ego.LFPs = struct(); ego.ft = struct(); ego.results = struct(); ego.panels = struct();
 			ego.LFPs = readLFPs(ego.p);
 			parseLFPs(ego);
+			showInfo(ego);
 			select(ego);
 			getFieldTripLFPs(ego);
 			plot(ego,'all');
@@ -196,8 +197,34 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function useSpikeSelect(ego)
-			
+		function useSpikeSelect(ego,val)
+			in = struct();
+			if val == true
+				in.yokedSelection = false;
+				setSelection(ego.sp,in);
+				select(ego.sp);
+				in.yokedSelection = true;
+				in.cutTrials = ego.sp.cutTrials;
+				in.selectedTrials = ego.sp.selectedTrials;
+				in.map = ego.sp.map;
+				in.plotRange = ego.sp.plotRange;
+				in.measureRange = ego.sp.measureRange;
+				in.baselineWindow = ego.sp.baselineWindow;
+				in.selectedBehaviour = ego.sp.selectedBehaviour;
+			else
+				in.yokedSelection = false;
+				setSelection(ego,in);
+				select(ego)
+				in.cutTrials = ego.cutTrials;
+				in.selectedTrials = ego.selectedTrials;
+				in.map = ego.map;
+				in.plotRange = ego.plotRange;
+				in.measureRange = ego.measureRange;
+				in.baselineWindow = ego.baselineWindow;
+				in.selectedBehaviour = ego.selectedBehaviour;
+				in.yokedSelection = true;
+				setSelection(ego.sp, in); %set spike anal to same trials etc.
+			end
 		end
 		
 		% ===================================================================
@@ -860,9 +887,9 @@ classdef LFPAnalysis < analysisCore
 				axis(h2.axis);
 				hold(h2.axis,'on');
 				
-				time2 = ego.sp.ft.sd{j}.time;
-				av2 = ego.sp.ft.sd{j}.avg;
-				er2 = ego.var2SE(ego.sp.ft.sd{j}.var,ego.sp.ft.sd{j}.dof);
+				time2 = ego.sp.results.sd{j}.time;
+				av2 = ego.sp.results.sd{j}.avg;
+				er2 = ego.var2SE(ego.sp.results.sd{j}.var,ego.sp.results.sd{j}.dof);
 				h=areabar(time2,av2,er2,[0.7 0.5 0.5],[],'r.-');
 				h2.axish = h;
 				axis(h2.axis,[ego.plotRange(1) ego.plotRange(2) -inf inf]);
@@ -990,6 +1017,11 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function select(ego)
+			if ~exist('force','var'); force = false; end
+			if force == true; ego.yokedSelection = false; end
+			if ego.yokedSelection == true;
+				disp('This spikeanalysis object is currently locked, run select(true) to override lock...'); return
+			end
 			if ego.nLFPs<1; warningdlg('Data not parsed yet...');return;end
 			cuttrials = '[ ';
 			if ~isempty(ego.cutTrials)
@@ -1022,7 +1054,7 @@ classdef LFPAnalysis < analysisCore
 			inbeh = {'correct','breakFix','incorrect','all'};
 			beh = 'r';
 			for i = 1:length(inbeh)
-				if strcmpi(inbeh{i}, ego.selectedBehaviour)
+				if strcmpi(inbeh{i}, ego.selectedBehaviour{1})
 					beh = [beh '|¤' inbeh{i}];
 				else
 					beh = [beh '|' inbeh{i}];
@@ -1044,11 +1076,35 @@ classdef LFPAnalysis < analysisCore
 			answer = menuN(mtitle,options);
 			drawnow;
 			if iscell(answer) && ~isempty(answer)
-				map{1} = str2num(answer{1}); map{2} = str2num(answer{2}); map{3} = str2num(answer{3});
+				re = regexpi(answer{1},'^[CBI]','once');
+				if ~isempty(re)
+					ego.selectedBehaviour{1} = answer{1}(1);
+					answer{1} = answer{1}(2:end);
+				else
+					ego.selectedBehaviour{1} = inbeh{answer{6}};
+				end
+				ego.map{1} = str2num(answer{1});
+				
+				re = regexpi(answer{2},'^[CBI]','once');
+				if ~isempty(re)
+					ego.selectedBehaviour{2} = answer{2}(1);
+					answer{2} = answer{2}(2:end);
+				else
+					ego.selectedBehaviour{2} = inbeh{answer{6}};
+				end
+				ego.map{2} = str2num(answer{2});
+				
+				re = regexpi(answer{3},'^[CBI]','once');
+				if ~isempty(re)
+					ego.selectedBehaviour{3} = answer{3}(1);
+					answer{3} = answer{3}(2:end);
+				else
+					ego.selectedBehaviour{3} = inbeh{answer{6}};
+				end
+				ego.map{3} = str2num(answer{3}); 
+				
 				ego.cutTrials = str2num(answer{4});
-				ego.map = map;
 				ego.selectedLFP = answer{5};
-				ego.selectedBehaviour = inbeh{answer{6}};
 				ego.measureRange = str2num(answer{7});
 				selectTrials(ego);
 			end
@@ -1056,8 +1112,8 @@ classdef LFPAnalysis < analysisCore
 		
 		
 		% ===================================================================
-		%> @brief
-			%>
+		%> @brief replaces the LFP signals with a noisy surrogate to test
+		%>
 		%> @param
 		%> @return
 		% ===================================================================
@@ -1267,17 +1323,30 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function selectTrials(ego)
+			if ego.yokedSelection == true %if we are yoked to another object, don't run this method
+				return
+			end
 			LFPs = ego.LFPs; %#ok<*PROP>
 			
-			switch lower(ego.selectedBehaviour)
-				case 'correct'
-					behaviouridx = find([LFPs(1).trials.isCorrect]==true);
-				case 'breakfix'
-					behaviouridx = find([LFPs(1).trials.isBreak]==true);
-				case 'incorrect'
-					behaviouridx = find([LFPs(1).trials.isIncorrect]==true);
-				otherwise
-					behaviouridx = find([LFPs(1).trials.isCorrect]==true);
+			if length(ego.selectedBehaviour) ~= length(ego.map)
+				error('Index error for behaviours');
+			end
+			
+			for i = 1:length(ego.selectedBehaviour) %generate our selected behaviour indexes
+				switch lower(ego.selectedBehaviour{i})
+					case {'c', 'correct'}
+						behaviouridx{i} = find([LFPs(1).trials.isCorrect]==true); %#ok<*AGROW>
+						selectedBehaviour{i} = 'correct';
+					case {'b', 'breakfix'}
+						behaviouridx{i} = find([LFPs(1).trials.isBreak]==true);
+						selectedBehaviour{i} = 'breakfix';
+					case {'i', 'incorrect'}
+						behaviouridx{i} = find([LFPs(1).trials.isIncorrect]==true);
+						selectedBehaviour{i} = 'incorrect';						
+					otherwise
+						behaviouridx{i} = [LFPs(1).trials.index];
+						selectedBehaviour{i} = 'all';
+				end
 			end
 			
 			cutidx = ego.cutTrials;
@@ -1285,21 +1354,31 @@ classdef LFPAnalysis < analysisCore
 			roiidx = [];
 			toiidx = [];
 			
-			if isempty(ego.map{1})
-				for i = 1:LFPs(1).nVars; map{i} = ego.p.eventList.unique(i); end
+			if isempty(ego.map{1}) %if our map is empty, generate groups for each variable
+				bidx = behaviouridx{1};
+				sb = selectedBehaviour{1};
+				for i = 1:ego.event.nVars; 
+					map{i} = ego.p.eventList.unique(i); 
+					behaviouridx{i} = bidx;
+					selectedBehaviour{i} = sb;
+				end
 			else
 				map = ego.map; %#ok<*PROP>
 			end
-			
+	
 			ego.selectedTrials = {};
+			varList = [LFPs(1).trials.variable];
 			a = 1;
 			
 			for i = 1:length(map)
-				idx = []; if isempty(map{i}); continue; end
-				for j = 1:length(map{i})
-					idx = [ idx find( [LFPs(1).trials.variable] == map{i}(j) ) ];
+				if isempty(map{i}); continue; end
+				idx = find(ismember(varList,map{i})==true); %selects our trials based on variable
+				if length(behaviouridx) >= i
+					bidx = behaviouridx{i};
+				else
+					bidx = behaviouridx{1};
 				end
-				idx = intersect(idx, behaviouridx); %this has a positive side effect of also sorting the trials
+				idx = intersect(idx, bidx); %this has a positive side effect of also sorting the trials
 				if ~isempty(cutidx);	idx = setdiff(idx, cutidx);		end %remove the cut trials
 				if ~isempty(idx)
 					ego.selectedTrials{a}.idx			= idx;
@@ -1307,7 +1386,8 @@ classdef LFPAnalysis < analysisCore
 					ego.selectedTrials{a}.roiidx		= roiidx;
 					ego.selectedTrials{a}.toiidx		= toiidx;
 					ego.selectedTrials{a}.saccidx		= saccidx;
-					ego.selectedTrials{a}.behaviour	= ego.selectedBehaviour;
+					ego.selectedTrials{a}.bidx			= bidx;
+					ego.selectedTrials{a}.behaviour	= selectedBehaviour{i};
 					ego.selectedTrials{a}.sel			= map{i};
 					ego.selectedTrials{a}.name			= ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx)) '|' ego.selectedTrials{a}.behaviour];
 					a = a + 1;
@@ -1317,7 +1397,7 @@ classdef LFPAnalysis < analysisCore
 			for j = 1:ego.nSelection
 				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n-Cut Index: %s\nBehaviour: %s\n',...
 					j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx),num2str(ego.selectedTrials{j}.cutidx),...
-					ego.selectedBehaviour);
+					ego.selectedTrials{j}.behaviour);
 			end
 		end
 		

@@ -466,7 +466,10 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function handles = infoBox(ego, info)
 			if feature('HGUsingMatlabClasses');fs = 10;else fs = 14;end
-			if ~exist('info','var'), info = ego.info; end
+			if ~exist('info','var')
+				if isempty(ego.info); ego.generateInfo(); end
+				info = ego.info; 
+			end
 			scr=get(0,'ScreenSize');%[left bottom width height]
 			width=scr(3);
 			height=scr(4);
