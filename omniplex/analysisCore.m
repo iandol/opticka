@@ -528,7 +528,16 @@ classdef analysisCore < optickaCore
 				ego.stats.alpha = in.alpha;
 			end
 			if isfield(in,'selectedBehaviour') && isprop(ego,'selectedBehaviour')
-				ego.selectedBehaviour = in.selectedBehaviour;
+				if ischar(in.selectedBehaviour)
+					ego.selectedBehaviour = cell(1);
+					ego.selectedBehaviour{1} = in.selectedBehaviour;
+				elseif iscell(in.selectedBehaviour)
+					ego.selectedBehaviour = cell(1);
+					ego.selectedBehaviour = in.selectedBehaviour;
+				else
+					ego.selectedBehaviour = cell(1);
+					ego.selectedBehaviour{1}='correct';
+				end
 			end
 		end
 		
