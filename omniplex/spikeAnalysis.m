@@ -255,8 +255,12 @@ classdef spikeAnalysis < analysisCore
 			end
 			
 			inbeh = {'correct','breakFix','incorrect','all'};
-			
 			beh = 'r';
+			if ischar(ego.selectedBehaviour);
+				t = ego.selectedBehaviour;
+				ego.selectedBehaviour = cell(1);
+				ego.selectedBehaviour{1} = t;
+			end
 			for i = 1:length(inbeh)
 				if strcmpi(inbeh{i}, ego.selectedBehaviour{1})
 					beh = [beh '|¤' inbeh{i}];

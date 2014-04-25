@@ -56,6 +56,8 @@ classdef plxReader < optickaCore
 	
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
+		%>info box handles
+		ibhandles@struct = struct()
 		%> info cache to speed up generating info{}
 		ic@struct = struct()
 		%> allowed properties passed to object upon construction
@@ -467,7 +469,7 @@ classdef plxReader < optickaCore
 		function handles = infoBox(ego, info)
 			if feature('HGUsingMatlabClasses');fs = 10;else fs = 14;end
 			if ~exist('info','var')
-				if isempty(ego.info); ego.generateInfo(); end
+				ego.generateInfo();
 				info = ego.info; 
 			end
 			scr=get(0,'ScreenSize');%[left bottom width height]
@@ -475,18 +477,29 @@ classdef plxReader < optickaCore
 			height=scr(4);
 			handles.root = figure('Units','pixels','Position',[0 0 width/4 height],'Tag','PLXInfoFigure',...
 				'Color',[0.9 0.9 0.9],'Toolbar','none','Name', ego.file);
-			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.45 1 0.55],...
+			handles.display = uicontrol('Style','edit','Units','normalized','Position',[0 0.35 1 0.65],...
 				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',500,...
 				'FontSize',fs,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left');
-			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0 0.4 1 0.05],...
+			handles.comments = uicontrol('Style','edit','Units','normalized','Position',[0 0.3 1 0.05],...
 				'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor',[.1 .1 .1],'Max',500,...
 				'FontSize',fs,'FontWeight','bold','FontName','Helvetica','HorizontalAlignment','left',...
 				'Callback',@editComment);%,'ButtonDownFcn',@editComment,'KeyReleaseFcn',@editComment);
-			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.3]);
+			handles.axis = axes('Units','normalized','Position',[0.05 0.05 0.9 0.2],...
+				'ButtonDownFcn',@deferDraw,'UserData','empty');
+			title(handles.axis,'Click Axis to draw Event Data');
 			set(handles.display,'String',info,'FontSize',fs);
 			set(handles.comments,'String',ego.comment,'FontSize',fs);
-			if ~isempty(ego.eventList)
-				drawEvents(ego,handles.axis);
+			ego.ibhandles = handles;
+			
+			function deferDraw(src, ~)
+				title(ego.ibhandles.axis,'Please wait...');
+				drawnow;
+				hh = get(ego.ibhandles.axis,'UserData');
+				if strcmpi(hh,'empty')
+					if ~isempty(ego.eventList)
+						drawEvents(ego,ego.ibhandles.axis);
+					end
+				end
 			end
 			
 			function editComment(src, ~)
@@ -556,6 +569,7 @@ classdef plxReader < optickaCore
 				set(hh,'CurrentAxes',h);
 			end
 			axes(h);
+			if ~strcmpi(get(gca,'UserData'),'empty'); return; end
 			title(['EVENT PLOT: File:' ego.file]);
 			xlabel('Time (s)');
 			set(gca,'XGrid','on','XMinorGrid','on','Layer','bottom');
@@ -747,6 +761,7 @@ classdef plxReader < optickaCore
 		function generateInfo(ego)
 			tic
 			if ~isfield(ego.ic, 'Freq')
+				cd(ego.dir);
 				[ego.ic.OpenedFileName, ego.ic.Version, ego.ic.Freq, ego.ic.Comment, ego.ic.Trodalness,...
 					ego.ic.NPW, ego.ic.PreThresh, ego.ic.SpikePeakV, ego.ic.SpikeADResBits,...
 					ego.ic.SlowPeakV, ego.ic.SlowADResBits, ego.ic.Duration, ego.ic.DateTime] = plx_information(ego.file);
@@ -792,7 +807,19 @@ classdef plxReader < optickaCore
 			ego.info{end+1} = sprintf('Spike A/D Resolution (bits) : %g', ego.ic.SpikeADResBits);
 			ego.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', ego.ic.SlowPeakV);
 			ego.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', ego.ic.SlowADResBits);
-			
+
+			if ~isempty(ego.eventList)
+				generateMeta(ego);
+				ego.info{end+1} = ' ';
+				ego.info{end+1} = sprintf('Number of Strobed Variables : %g', ego.eventList.nVars);
+				ego.info{end+1} = sprintf('Total # Correct Trials :  %g', length(ego.eventList.correct));
+				ego.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(ego.eventList.breakFix));
+				ego.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(ego.eventList.incorrect));
+				ego.info{end+1} = sprintf('Minimum # of Trials per variable :  %g', ego.eventList.minRuns);
+				ego.info{end+1} = sprintf('Maximum # of Trials per variable :  %g', ego.eventList.maxRuns);
+				ego.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', ego.eventList.tMin,ego.eventList.tMinCorrect);
+				ego.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', ego.eventList.tMax,ego.eventList.tMaxCorrect);
+			end
 			if isa(ego.rE,'runExperiment')
 				ego.info{end+1} = ' ';
 				rE = ego.rE; %#ok<*PROP>
@@ -831,17 +858,6 @@ classdef plxReader < optickaCore
 				ego.info{end+1} = ' ';
 				ego.info{end+1} = 'Variable Map:';
 				ego.info{end+1} = num2str(ego.meta.matrix);
-			end
-			if ~isempty(ego.eventList)
-				ego.info{end+1} = ' ';
-				ego.info{end+1} = sprintf('Number of Strobed Variables : %g', ego.eventList.nVars);
-				ego.info{end+1} = sprintf('Total # Correct Trials :  %g', length(ego.eventList.correct));
-				ego.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(ego.eventList.breakFix));
-				ego.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(ego.eventList.incorrect));
-				ego.info{end+1} = sprintf('Minimum # of Trials per variable :  %g', ego.eventList.minRuns);
-				ego.info{end+1} = sprintf('Maximum # of Trials per variable :  %g', ego.eventList.maxRuns);
-				ego.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', ego.eventList.tMin,ego.eventList.tMinCorrect);
-				ego.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', ego.eventList.tMax,ego.eventList.tMaxCorrect);
 			end
 			if ~isempty(ego.tsList)
 				ego.info{end+1} = ' ';
@@ -1043,7 +1059,17 @@ classdef plxReader < optickaCore
 			eL.incorrectIndex = [eL.trials(:).isIncorrect]';
 			ego.eventList = eL;
 			fprintf('Loading all event markers took %g ms\n',round(toc*1000))
-
+			generateMeta(ego);
+			clear eL
+		end
+		
+		% ===================================================================
+		%> @brief meta is used by the old analysis routines
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function generateMeta(ego)
 			ego.meta.modtime = floor(ego.eventList.tMaxCorrect * 10000);
 			ego.meta.trialtime = ego.meta.modtime;
 			m = [ego.rE.task.outIndex ego.rE.task.outMap getMeta(ego.rE.task)];
@@ -1051,7 +1077,6 @@ classdef plxReader < optickaCore
 			[~,ix] = sort(m(:,1),1);
 			m = m(ix,:);
 			ego.meta.matrix = m;	
-			clear eL m
 		end
 		
 		% ===================================================================

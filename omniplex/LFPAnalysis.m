@@ -198,6 +198,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function useSpikeSelect(ego,val)
+			if ~exist('val','var'); val = false; end
 			in = struct();
 			if val == true
 				in.yokedSelection = false;
@@ -211,6 +212,8 @@ classdef LFPAnalysis < analysisCore
 				in.measureRange = ego.sp.measureRange;
 				in.baselineWindow = ego.sp.baselineWindow;
 				in.selectedBehaviour = ego.sp.selectedBehaviour;
+				disp('Now setting the LFP object to the spike selection...')
+				setSelection(ego,in);
 			else
 				in.yokedSelection = false;
 				setSelection(ego,in);
@@ -223,6 +226,7 @@ classdef LFPAnalysis < analysisCore
 				in.baselineWindow = ego.baselineWindow;
 				in.selectedBehaviour = ego.selectedBehaviour;
 				in.yokedSelection = true;
+				disp('Now setting the spike object to the LFP selection...')
 				setSelection(ego.sp, in); %set spike anal to same trials etc.
 			end
 		end
@@ -1053,6 +1057,11 @@ classdef LFPAnalysis < analysisCore
 			
 			inbeh = {'correct','breakFix','incorrect','all'};
 			beh = 'r';
+			if ischar(ego.selectedBehaviour);
+				t = ego.selectedBehaviour;
+				ego.selectedBehaviour = cell(1);
+				ego.selectedBehaviour{1} = t;
+			end
 			for i = 1:length(inbeh)
 				if strcmpi(inbeh{i}, ego.selectedBehaviour{1})
 					beh = [beh '|¤' inbeh{i}];

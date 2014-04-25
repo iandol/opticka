@@ -451,7 +451,9 @@ classdef stimulusSequence < optickaCore & dynamicprops
 						meta(:,i) = cc;
 					end
 					
-				end	
+				end
+			else
+				meta = obj.outValues;
 			end
 		end
 		
