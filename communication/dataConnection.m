@@ -130,7 +130,7 @@ classdef dataConnection < handle
 						obj.connList = [obj.connList obj.conn];
 						obj.connList = unique(obj.connList);
 					else
-						sprintf('%s cannot open UDP socket (%d)', ...
+						fprintf('%s cannot open UDP socket (%d)\n', ...
 							mfilename, obj.conn);
 						obj.isOpen = false;
 						obj.conn = -1;
@@ -352,7 +352,7 @@ classdef dataConnection < handle
 					if nBytes > 0
 						data = pnet(obj.conn, 'readline', nBytes, 'noblock');
 					end
-				%============================TCP
+					%============================TCP
 				case 'tcp'
 					data = pnet(obj.conn, 'readline', 1024,' noblock');
 			end
@@ -431,7 +431,7 @@ classdef dataConnection < handle
 						data = data{1};
 					end
 					obj.dataIn = data;
-				%============================TCP
+					%============================TCP
 				case 'tcp'
 					if ~exist('size','var');size=256000;end
 					while loop > 0
@@ -483,7 +483,7 @@ classdef dataConnection < handle
 					end
 					if sendPacket;pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);end
 					
-				%============================TCP
+					%============================TCP
 				case 'tcp'
 					if formatted == false
 						pnet(obj.conn, 'write', data);
@@ -623,13 +623,12 @@ classdef dataConnection < handle
 			pnet(obj.conn ,'setreadtimeout', obj.readTimeOut);
 			ls = 1;
 			msgloop=1;
-			while ls
-				
+			while ls			
 				if msgloop == 1;fprintf('WAIT FOR CONNECTION ON PORT: %d\n',obj.lPort);end
 				msgloop=2;
 				try
 					obj.rconn = pnet(obj.conn,'tcplisten');
-					pause(1);
+					pause(0.25);
 				catch ME
 					disp 'Try:  "pnet closeall"  in all matlab sessions on this server.';
 					disp ' ';
@@ -702,7 +701,7 @@ classdef dataConnection < handle
 	
 	%=======================================================================
 	methods ( Access = private ) % PRIVATE METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief checkForEscape
@@ -746,7 +745,7 @@ classdef dataConnection < handle
 						pause(0.1);
 					end
 					if pnet(obj.rconn,'status')==0;break;end
-					C=pnet_getvar(obj.rconn);
+					C=getVar(obj);
 					pnet(obj.rconn,'printf',['\n' obj.busyCmd '\n']);
 					drawnow;
 					
@@ -829,45 +828,52 @@ classdef dataConnection < handle
 		% ===================================================================
 		function putVar(obj,varargin)
 			if ~isempty(varargin)
-				while 1
-					if length(varargin) == 1
-						varargin = varargin{1};
-					else
-						break
-					end
+				while iscell(varargin) && length(varargin) == 1
+					varargin = varargin{1};
 				end
+				VAR=varargin;
 				switch obj.protocol
 					case 'udp'
-						VAR=varargin{2};
 						switch class(VAR),
 							case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
 								pnet(obj.conn,'printf','%s',class(VAR));
 								obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
+								
 								pnet(obj.conn,'Write',uint32(ndims(VAR)));
 								obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
+								
 								pnet(obj.conn,'Write',uint32(size(VAR)));
 								obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
+								
 								pnet(obj.conn,'Write',VAR);
 								obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
 							otherwise
-								tmpfile=[tempname,'.mat'];
+								%tmpfile=[tempname,'.mat'];
 								try
-									save(tmpfile,'VAR');
-									filedata=dir(tmpfile);
+									%save(tmpfile,'VAR');
+									%filedata=dir(tmpfile);
 									%obj.dataLength = filedata.bytes;
-									pnet(obj.conn,'printf','--matfile--');
+									bytes = uint32(getByteStreamFromArray(VAR));
+									dataLength = uint32(size(bytes)); %#ok<*PROP>
+									
+									pnet(obj.conn,'printf','--bytestream--');
 									obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
-									pnet(obj.conn,'Write',uint32(filedata.bytes));
+									
+									pnet(obj.conn,'Write',uint32(ndims(bytes)));
 									obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
-									pnet(obj.conn,'WriteFromFile',tmpfile);
+									
+									pnet(obj.conn,'Write',dataLength);
+									obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
+										
+									%pnet(obj.conn,'WriteFromFile',tmpfile);
+									pnet(obj.conn,'Write',bytes);
 									obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
 								end
 								try
-									delete(tmpfile);
+									%delete(tmpfile);
 								end
 						end
 					case 'tcp'
-						VAR=varargin{2};
 						switch class(VAR),
 							case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
 								pnet(obj.conn,'printf','\n%s\n',class(VAR));
@@ -875,14 +881,18 @@ classdef dataConnection < handle
 								pnet(obj.conn,'Write',uint32(size(VAR)));
 								pnet(obj.conn,'Write',VAR);
 							otherwise
-								tmpfile=[tempname,'.mat'];
+								%tmpfile=[tempname,'.mat'];
 								try
-									save(tmpfile,'VAR');
-									filedata=dir(tmpfile);
-									dataLength = filedata.bytes;
-									pnet(obj.conn,'printf','\n--matfile--\n');
-									pnet(obj.conn,'Write',uint32(filedata.bytes));
-									pnet(obj.conn,'WriteFromFile',tmpfile);
+									%save(tmpfile,'VAR');
+									%filedata=dir(tmpfile);
+									%dataLength = filedata.bytes;
+									bytes = uint32(getByteStreamFromArray(VAR));
+									dataLength = uint32(length(bytes));
+									pnet(obj.conn,'printf','\n--bytestream--\n');
+									pnet(obj.conn,'Write',uint32(ndims(bytes)));
+									pnet(obj.conn,'Write',dataLength);
+									pnet(obj.conn,'Write',bytes);
+									%pnet(obj.conn,'WriteFromFile',tmpfile);
 								end
 								try
 									%delete(tmpfile);
@@ -914,55 +924,70 @@ classdef dataConnection < handle
 							case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
 								nBytes = pnet(obj.conn, 'readpacket');
 								datadims=double(pnet(obj.conn,'Read',1,'uint32'));
+								
 								nBytes = pnet(obj.conn, 'readpacket');
 								datasize=double(pnet(obj.conn,'Read',datadims,'uint32'));
+								
 								nBytes = pnet(obj.conn, 'readpacket');
 								VAR=pnet(obj.conn,'Read',datasize,dataclass);
-								return
-							case '--matfile--'
-								tmpfile=[tempname,'.mat'];
+							case '--bytestream--'
+								%tmpfile=[tempname,'.mat'];
 								VAR=[];
 								try
 									nBytes = pnet(obj.conn, 'readpacket');
-									bytes=double(pnet(obj.conn,'Read',[1 1],'uint32'));
+									datadims=double(pnet(obj.conn,'Read',1,'uint32'));
+									
 									nBytes = pnet(obj.conn, 'readpacket');
-									pnet(obj.conn,'ReadToFile',tmpfile,bytes);
-									load(tmpfile);
+									datasize=double(pnet(obj.conn,'Read',datadims,'uint32'));
+									
+									nBytes = pnet(obj.conn, 'readpacket');
+									bytes=pnet(obj.conn,'Read',datasize,'uint32');
+									VAR=getArrayFromByteStream(uint8(bytes));
+									fprintf('Reported size: %ix%i | Returned Size: %ix%i\n',...
+										datasize(1),datasize(2),size(bytes,1),size(bytes,2));
+									%nBytes = pnet(obj.conn, 'readpacket');
+									%pnet(obj.conn,'ReadToFile',tmpfile,bytes);
+									%load(tmpfile);
+									break;
 								end
-								try
-									delete(tmpfile);
-								end
+								%try delete(tmpfile); end
 						end
 					end
-					varargout{1}=VAR;
 				case 'tcp'
-					while 1
+					lp = 10;
+					while lp > 0 
+						lp = lp - 1;
 						dataclass=pnet(obj.conn,'readline',1024);
 						switch dataclass,
 							case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
 								datadims=double(pnet(obj.conn,'Read',1,'uint32'));
 								datasize=double(pnet(obj.conn,'Read',datadims,'uint32'));
 								VAR=pnet(obj.conn,'Read',datasize,dataclass);
+								fprintf('Reported size: %ix%i | Returned Size: %ix%i\n',...
+										datasize(1),datasize(2),size(VAR,1),size(VAR,2));
 								break;
-							case '--matfile--'
-								tmpfile=[tempname,'.mat'];
+							case '--bytestream--'
+								%tmpfile=[tempname,'.mat'];
 								VAR=[];
 								try %#ok<*TRYNC>
-									bytes=double(pnet(obj.conn,'Read',[1 1],'uint32'));
-									pnet(obj.conn,'ReadToFile',tmpfile,bytes);
-									load(tmpfile);
+									datadims=double(pnet(obj.conn,'Read',1,'uint32'));
+									datasize=double(pnet(obj.conn,'Read',datadims,'uint32'));
+									bytes=pnet(obj.conn,'Read',datasize,'uint32');
+									VAR=getArrayFromByteStream(uint8(bytes));
+									fprintf('Reported size: %ix%i | Returned Size: %ix%i\n',...
+										datasize(1),datasize(2),size(bytes,1),size(bytes,2));
+									%pnet(obj.conn,'ReadToFile',tmpfile,bytes);
+									%load(tmpfile);
+									break;
 								end
-								try %#ok<TRYNC>
-									%delete(tmpfile);
-								end
-								break
+								%try delete(tmpfile); end
 						end
+						fprintf('.');
 					end
-					varargout{1}=VAR;
-					return;
-					
+					if lp == 0; disp('TCP loop depleted waiting for variable...'); end
 			end
-			
+			varargout{1}=VAR;
+			return;
 		end
 		
 		% ===================================================================

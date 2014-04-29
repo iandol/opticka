@@ -328,10 +328,13 @@ classdef plxReader < optickaCore
 		%> @return 
 		% ===================================================================
 		function trodality = get.trodality(ego)
-			if ~isfield(ego.ic,'Trodalness') || ~isempty(ego.ic.Trodalness)
-				[~,~,~,~,ego.ic.Trodalness]=plx_information(ego.file);
+			trodality = [];
+			try
+				if ~isfield(ego.ic,'Trodalness') || ~isempty(ego.ic.Trodalness)
+					[~,~,~,~,ego.ic.Trodalness]=plx_information(ego.file);
+				end
+				trodality = max(ego.ic.Trodalness);
 			end
-			trodality = max(ego.ic.Trodalness);
 			if isempty(trodality); trodality = 0; end
 		end
 		
@@ -760,38 +763,46 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function generateInfo(ego)
 			tic
-			if ~isfield(ego.ic, 'Freq')
-				cd(ego.dir);
-				[ego.ic.OpenedFileName, ego.ic.Version, ego.ic.Freq, ego.ic.Comment, ego.ic.Trodalness,...
-					ego.ic.NPW, ego.ic.PreThresh, ego.ic.SpikePeakV, ego.ic.SpikeADResBits,...
-					ego.ic.SlowPeakV, ego.ic.SlowADResBits, ego.ic.Duration, ego.ic.DateTime] = plx_information(ego.file);
-				if exist('plx_mexplex_version','file')
-					ego.ic.sdkversion = plx_mexplex_version();
+			oldInfo = ego.info;
+			ego.info = {};
+			try
+				if ~isfield(ego.ic, 'Freq')
+					cd(ego.dir);
+					[ego.ic.OpenedFileName, ego.ic.Version, ego.ic.Freq, ego.ic.Comment, ego.ic.Trodalness,...
+						ego.ic.NPW, ego.ic.PreThresh, ego.ic.SpikePeakV, ego.ic.SpikeADResBits,...
+						ego.ic.SlowPeakV, ego.ic.SlowADResBits, ego.ic.Duration, ego.ic.DateTime] = plx_information(ego.file);
+					if exist('plx_mexplex_version','file')
+						ego.ic.sdkversion = plx_mexplex_version();
+					else
+						ego.ic.sdkversion = -1;
+					end
+				end
+				if ego.isPL2
+				if isempty(ego.pl2); ego.pl2 = PL2GetFileIndex(ego.file); end
+					ego.info{1} = sprintf('PL2 File : %s', ego.ic.OpenedFileName);
+					ego.info{end+1} = sprintf('\tPL2 File Length : %d', ego.pl2.FileLength);
+					ego.info{end+1} = sprintf('\tPL2 Creator : %s %s', ego.pl2.CreatorSoftwareName, ego.pl2.CreatorSoftwareVersion);
 				else
-					ego.ic.sdkversion = -1;
+					ego.info{1} = sprintf('PLX File : %s', ego.ic.OpenedFileName);
+				end
+				ego.info{end+1} = sprintf('Behavioural File : %s', ego.matfile);
+				ego.info{end+1} = ' ';
+				ego.info{end+1} = sprintf('Behavioural File Comment : %s', ego.meta.comments);
+				ego.info{end+1} = ' ';
+				ego.info{end+1} = sprintf('Plexon File Comment : %s', ego.ic.Comment);
+				ego.info{end+1} = sprintf('Version : %g', ego.ic.Version);
+				ego.info{end+1} = sprintf('SDK Version : %g', ego.ic.sdkversion);
+				ego.info{end+1} = sprintf('Frequency : %g Hz', ego.ic.Freq);
+				ego.info{end+1} = sprintf('Plexon Date/Time : %s', num2str(ego.ic.DateTime));
+				ego.info{end+1} = sprintf('Duration : %g seconds', ego.ic.Duration);
+				ego.info{end+1} = sprintf('Num Pts Per Wave : %g', ego.ic.NPW);
+				ego.info{end+1} = sprintf('Num Pts Pre-Threshold : %g', ego.ic.PreThresh);
+			catch
+				if ~isempty(oldInfo)
+					ego.info = oldInfo;
+					return
 				end
 			end
-			ego.info = {};
-			if ego.isPL2
-				if isempty(ego.pl2); ego.pl2 = PL2GetFileIndex(ego.file); end
-				ego.info{1} = sprintf('PL2 File : %s', ego.ic.OpenedFileName);
-				ego.info{end+1} = sprintf('\tPL2 File Length : %d', ego.pl2.FileLength);
-				ego.info{end+1} = sprintf('\tPL2 Creator : %s %s', ego.pl2.CreatorSoftwareName, ego.pl2.CreatorSoftwareVersion);
-			else
-				ego.info{1} = sprintf('PLX File : %s', ego.ic.OpenedFileName);
-			end
-			ego.info{end+1} = sprintf('Behavioural File : %s', ego.matfile);
-			ego.info{end+1} = ' ';
-			ego.info{end+1} = sprintf('Behavioural File Comment : %s', ego.meta.comments);
-			ego.info{end+1} = ' ';
-			ego.info{end+1} = sprintf('Plexon File Comment : %s', ego.ic.Comment);
-			ego.info{end+1} = sprintf('Version : %g', ego.ic.Version);
-			ego.info{end+1} = sprintf('SDK Version : %g', ego.ic.sdkversion);
-			ego.info{end+1} = sprintf('Frequency : %g Hz', ego.ic.Freq);
-			ego.info{end+1} = sprintf('Plexon Date/Time : %s', num2str(ego.ic.DateTime));
-			ego.info{end+1} = sprintf('Duration : %g seconds', ego.ic.Duration);
-			ego.info{end+1} = sprintf('Num Pts Per Wave : %g', ego.ic.NPW);
-			ego.info{end+1} = sprintf('Num Pts Pre-Threshold : %g', ego.ic.PreThresh);
 			
 			switch ego.trodality
 				case 1

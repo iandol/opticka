@@ -110,7 +110,7 @@ classdef opticka < optickaCore
 			status = obj.ping(rAddress);
 			if status > 0
 				set(obj.h.OKOmniplexStatus,'String','Omniplex: machine ping ERROR!')
-				errordlg('Cannot ping Omniplex machine, please ensure it is connected!!!')
+					errordlg('Cannot ping Omniplex machine, please ensure it is connected!!!')
 				error('Cannot ping Omniplex, please ensure it is connected!!!')
 			end
 			if isempty(obj.oc)
