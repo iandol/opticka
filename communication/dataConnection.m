@@ -624,11 +624,11 @@ classdef dataConnection < handle
 			ls = 1;
 			msgloop=1;
 			while ls			
-				if msgloop == 1;fprintf('WAIT FOR CONNECTION ON PORT: %d\n',obj.lPort);end
+				if msgloop == 1;fprintf('\nWAIT FOR CONNECTION ON PORT: %d\n',obj.lPort);end
 				msgloop=2;
 				try
 					obj.rconn = pnet(obj.conn,'tcplisten');
-					pause(0.25);
+					pause(0.01);
 				catch ME
 					disp 'Try:  "pnet closeall"  in all matlab sessions on this server.';
 					disp ' ';
@@ -652,7 +652,7 @@ classdef dataConnection < handle
 					pnet(obj.conn,'close')
 					obj.conn = -1;
 					obj.rconn = -1;
-					break
+					break;
 				end
 			end
 			
@@ -674,7 +674,9 @@ classdef dataConnection < handle
 			end
 			switch varargin{1}
 				case 'echo'
-					
+					pnet(obj.conn,'printf','\n--remote--\n');
+					obj.flushStatus; % Flush status buffer. Keep last status in readbuffer
+					obj.putVar(obj.conn,'echo','Hello!');
 				case 'put'
 					pnet(obj.conn,'printf','\n--remote--\n');
 					obj.flushStatus; % Flush status buffer. Keep last status in readbuffer
@@ -690,6 +692,11 @@ classdef dataConnection < handle
 					obj.flushStatus; % Flush status buffer. Keep last status in readbuffer
 					obj.putVar(obj.conn,varargin);
 					varargout=obj.getVar;
+				case 'close'
+					pnet(obj.conn,'printf','\n--remote--\n');
+					obj.flushStatus; % Flush status buffer. Keep last status in readbuffer
+					obj.putVar(obj.conn,'close');
+					close(obj);
 				otherwise
 					
 			end
@@ -720,11 +727,11 @@ classdef dataConnection < handle
 		%> Check if the user has hit escape
 		% ===================================================================
 		function out = checkForEscape(obj)
-			out=0;
+			out=false;
 			[~,~,key]=KbCheck;
 			key=KbName(key);
 			if strcmpi(key,'escape') %allow keyboard break
-				out=1;
+				out=true;
 			end
 		end
 		
@@ -738,57 +745,64 @@ classdef dataConnection < handle
 				ls = 1;
 				while ls
 					okflag=1;
-					str = '';
-					drawnow;
-					while strcmp(str,obj.remoteCmd)==0 && pnet(obj.rconn,'status'),
-						str=pnet(obj.rconn,'readline',1024,[],'noblock');
-						pause(0.1);
+					str = ''; 
+					fprintf('Waiting for %s command...',obj.remoteCmd);
+					while ~strcmpi(str,obj.remoteCmd) && pnet(obj.rconn,'status')
+						pause(0.01);
+						str=pnet(obj.rconn,'readline',1024,'noblock');
+						if checkForEscape(obj)
+							pnet(obj.rconn,'close');
+							return;
+						end
 					end
 					if pnet(obj.rconn,'status')==0;break;end
 					C=getVar(obj);
 					pnet(obj.rconn,'printf',['\n' obj.busyCmd '\n']);
 					drawnow;
-					
-					switch lower(C{1})
-						case 'eval'
-							global DEFAULT_CON__;
-							DEFAULT_CON__=obj.rconn;
-							try
-								fprintf('\n');
-								disp(['REMOTE EVAL>> ' C{2:min(2:end)}]);
-								evalin('caller',C{2:end},'okflag=0;');
-							catch
-								okflag=0;
-							end
-							DEFAULT_CON__=[];
-						case 'put'
-							C=C(2:end);
-							for n=1:2:length(C)
-								fprintf('\n');
-								disp(['REMOTE PUT>> ' C{n}]);
+					if ~isempty(C) && iscell(C)
+						switch lower(C{1})
+							case 'eval'
+								global DEFAULT_CON__;
+								DEFAULT_CON__=obj.rconn;
 								try
-									assignin('caller',C{n:n+1});
+									fprintf('\n');
+									disp(['REMOTE EVAL>> ' C{2:min(2:end)}]);
+									evalin('caller',C{2:end},'okflag=0;');
 								catch
 									okflag=0;
 								end
-							end
-						case 'get'
-							C=C(2:end);
-							R=cell(size(C));
-							for n=1:length(C)
-								fprintf('\n');
-								disp(['REMOTE GET>> ' C{n}]);
-								try
-									R{n}=evalin('caller',[C{n} ';']);
-								catch
-									okflag=0;
+								DEFAULT_CON__=[];
+							case 'put'
+								C=C(2:end);
+								for n=1:2:length(C)
+									fprintf('\n');
+									disp(['REMOTE PUT>> ' C{n}]);
+									try
+										assignin('caller',C{n:n+1});
+									catch
+										okflag=0;
+									end
 								end
-							end
-							pnet_putvar(obj.rconn,R);
-						case 'close'
-							pnet(obj.rconn,'close');
-							return;
-					end %END SWITCH
+							case 'get'
+								C=C(2:end);
+								R=cell(size(C));
+								for n=1:length(C)
+									fprintf('\n');
+									disp(['REMOTE GET>> ' C{n}]);
+									try
+										R{n}=evalin('caller',[C{n} ';']);
+									catch
+										okflag=0;
+									end
+								end
+								pnet_putvar(obj.rconn,R);
+							case 'close'
+								pnet(obj.rconn,'close');
+								return;
+						end %END SWITCH
+					else
+						disp('Remote Message appeared Empty...');
+					end
 					
 					if okflag,
 						pnet(obj.rconn,'printf','\n--ready--\n');
@@ -828,6 +842,7 @@ classdef dataConnection < handle
 		% ===================================================================
 		function putVar(obj,varargin)
 			if ~isempty(varargin)
+				if length(varargin)==2 && varargin{1}==0;varargin = varargin{2:end};end
 				while iscell(varargin) && length(varargin) == 1
 					varargin = varargin{1};
 				end
@@ -886,12 +901,13 @@ classdef dataConnection < handle
 									%save(tmpfile,'VAR');
 									%filedata=dir(tmpfile);
 									%dataLength = filedata.bytes;
-									bytes = uint32(getByteStreamFromArray(VAR));
-									dataLength = uint32(length(bytes));
+									bytes = uint32(getByteStreamFromArray(VAR))
+									dataLength = uint32(size(bytes));
 									pnet(obj.conn,'printf','\n--bytestream--\n');
-									pnet(obj.conn,'Write',uint32(ndims(bytes)));
+									pnet(obj.conn,'Write',uint32(ndims(dataLength)));
 									pnet(obj.conn,'Write',dataLength);
 									pnet(obj.conn,'Write',bytes);
+									pnet(obj.conn,'printf','\n--end--\n');
 									%pnet(obj.conn,'WriteFromFile',tmpfile);
 								end
 								try
@@ -930,6 +946,8 @@ classdef dataConnection < handle
 								
 								nBytes = pnet(obj.conn, 'readpacket');
 								VAR=pnet(obj.conn,'Read',datasize,dataclass);
+							case '--matfile--'
+								
 							case '--bytestream--'
 								%tmpfile=[tempname,'.mat'];
 								VAR=[];
@@ -954,35 +972,47 @@ classdef dataConnection < handle
 						end
 					end
 				case 'tcp'
-					lp = 10;
+					if obj.rconn >= 0
+						thisConnection = obj.rconn;
+					else
+						thisConnection = obj.conn;
+					end
+					lp = 1e12;
 					while lp > 0 
 						lp = lp - 1;
-						dataclass=pnet(obj.conn,'readline',1024);
+						dataclass=pnet(thisConnection,'readline',1024);
 						switch dataclass,
 							case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
-								datadims=double(pnet(obj.conn,'Read',1,'uint32'));
-								datasize=double(pnet(obj.conn,'Read',datadims,'uint32'));
-								VAR=pnet(obj.conn,'Read',datasize,dataclass);
+								datadims=double(pnet(thisConnection,'Read',1,'uint32'));
+								datasize=double(pnet(thisConnection,'Read',datadims,'uint32'));
+								VAR=pnet(thisConnection,'Read',datasize,dataclass);
 								fprintf('Reported size: %ix%i | Returned Size: %ix%i\n',...
 										datasize(1),datasize(2),size(VAR,1),size(VAR,2));
 								break;
-							case '--bytestream--'
-								%tmpfile=[tempname,'.mat'];
+							case '--matfile--'
+								tmpfile=[tempname,'.mat'];
 								VAR=[];
-								try %#ok<*TRYNC>
-									datadims=double(pnet(obj.conn,'Read',1,'uint32'));
-									datasize=double(pnet(obj.conn,'Read',datadims,'uint32'));
-									bytes=pnet(obj.conn,'Read',datasize,'uint32');
+								try
+									datasize=double(pnet(thisConnection,'Read',[1 1],'uint32'));
+									pnet(thisConnection,'ReadToFile',tmpfile,datasize);
+									load(tmpfile);
+									break;
+								end
+								try delete(tmpfile); end
+							case '--bytestream--'
+								VAR=[];
+								try 
+									dimz=double(pnet(thisConnection,'Read',[1 1],'uint32'));
+									datasize=double(pnet(thisConnection,'Read',dimz,'uint32'));
+									bytes=pnet(thisConnection,'Read',datasize,'uint32');
 									VAR=getArrayFromByteStream(uint8(bytes));
 									fprintf('Reported size: %ix%i | Returned Size: %ix%i\n',...
 										datasize(1),datasize(2),size(bytes,1),size(bytes,2));
-									%pnet(obj.conn,'ReadToFile',tmpfile,bytes);
-									%load(tmpfile);
 									break;
 								end
 								%try delete(tmpfile); end
 						end
-						fprintf('.');
+						%fprintf('.');
 					end
 					if lp == 0; disp('TCP loop depleted waiting for variable...'); end
 			end
