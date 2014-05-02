@@ -297,17 +297,23 @@ classdef LFPAnalysis < analysisCore
 				ft = ego.ft;
 			end
 			if removeLineNoise == true;
+				cfg.padding = 0.2;
 				cfg.dftfilter = 'yes';
-				cfg.dftfreq = [50 100 150];
+				cfg.dftfreq = [80 160 240];
 				disp('---> Will remove 50 100 150Hz line noise!!!')
 			end
 			if ~isempty(cfg)
 				ftp = ft_preprocessing(cfg, ft);
 				ftp.uniquetrials = unique(ftp.trialinfo);
+				ftp.removeLineNoise = removeLineNoise;
 			end
 			cfg = [];
 			cfg.method   = 'trial';
-			ftNew = ft_rejectvisual(cfg, ft);
+			if exist('ftp','var')
+				ftNew = ft_rejectvisual(cfg, ftp);
+			else
+				ftNew = ft_rejectvisual(cfg, ft);
+			end
 			ftNew.uniquetrials = unique(ftNew.trialinfo);
 			ftNew.ftOld = ft;
 			ego.ft = ftNew;
@@ -1113,6 +1119,7 @@ classdef LFPAnalysis < analysisCore
 				ego.map{3} = str2num(answer{3}); 
 				
 				ego.cutTrials = str2num(answer{4});
+				ego.cutTrials = sort(unique(ego.cutTrials));
 				ego.selectedLFP = answer{5};
 				ego.measureRange = str2num(answer{7});
 				selectTrials(ego);
