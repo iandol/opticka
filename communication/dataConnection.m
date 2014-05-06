@@ -29,7 +29,6 @@ classdef dataConnection < handle
 	%dataConnection Allows send/recieve over Ethernet
 	%   This uses the TCP/UDP library to manage connections between servers
 	%   and clients in Matlab
-	
 	properties
 		%> Whether this object is a 'client' or 'server' (TCP), normally UDP
 		%> objects will always be clients
@@ -54,7 +53,7 @@ classdef dataConnection < handle
 		verbosity = 1
 		%> this is a mode where the object sits in a loop and can be
 		%> controlled by a remote matlab instance, which passes commands the
-		%> server can 'eval'
+		%> server can 'put' or 'eval'
 		autoServer = false
 		%> default read timeout
 		readTimeOut = 0.1
@@ -120,7 +119,6 @@ classdef dataConnection < handle
 		% ===================================================================
 		function conn = open(obj)
 			switch obj.protocol
-				
 				case 'udp'
 					obj.conn = pnet('udpsocket', obj.lPort);
 					if obj.conn >= 0
@@ -135,11 +133,9 @@ classdef dataConnection < handle
 						obj.isOpen = false;
 						obj.conn = -1;
 					end
-					conn = obj.conn;
-					
+					conn = obj.conn;					
 				case 'tcp'
 					switch obj.type
-						
 						case 'server'
 							loop = 1;
 							while loop <= 10
@@ -164,25 +160,22 @@ classdef dataConnection < handle
 									end
 								else
 									obj.isOpen = true;
-									obj.rconnList = [obj.rconnList obj.rconn];
-									obj.rconnList = unique(obj.rconnList);
+									obj.rconnList = unique([obj.rconnList obj.rconn]);
 									obj.checkStatus('rconn')
-									loop = 11;
-									break
+									loop = 100;break;
 								end
 								loop = loop + 1;
 							end
-							conn = obj.rconn;
-							
+							conn = obj.rconn;	
 						case 'client'
 							loop = 1;
-							while loop < 5
+							while loop <= 10
 								obj.conn=pnet('tcpconnect',obj.rAddress,obj.rPort);
 								if obj.conn == -1
 									fprintf('---> CAN NOT CONNECT TO HOST: %s PORT: %d\nRETRY....',obj.rAddress,obj.rPort);
-									pause(1);
+									pause(0.5);
 								else
-									fprintf('---> CONNECTED TO HOST: %s PORT: %d !\n',obj.rAddress,obj.rPort);
+									
 									break
 								end
 							end
@@ -196,18 +189,17 @@ classdef dataConnection < handle
 									obj.close('conn')
 									warning('---> %s cannot connect to remote TCP host (status: %d)',mfilename,obj.status);
 								else
+									fprintf('---> CONNECTED TO HOST: %s PORT: %d !\n',obj.rAddress,obj.rPort);
 									obj.isOpen = true;
-									obj.connList = [obj.connList obj.conn];
-									obj.connList = unique(obj.connList);
+									obj.connList = unique([obj.connList obj.conn]);
 								end
 							else
-								sprintf('---> %s cannot open TCP socket (%d)', ...
+								fprintf('---> %s cannot open TCP socket (%d)', ...
 									mfilename, obj.conn);
 								obj.isOpen = false;
 								obj.conn = -1;
 							end
 							conn = obj.conn;
-							
 					end
 			end
 		end
@@ -218,72 +210,46 @@ classdef dataConnection < handle
 		%> Close the ethernet connection
 		% ===================================================================
 		function status = close(obj,type,force)
-			
-			if ~exist('type','var')
-				type = 'conn';
-			end
-			if ~exist('force','var')
-				force = true;
-			end
-			if ischar(force)
-				force = true;
-			end
-			
+			if ~exist('type','var');type = 'conn';end
+			if ~exist('force','var');force = true;end
+			if ischar(force);force = true;end
 			status = 0;
 			
 			switch type
-				
-				case 'conn'
-					try
-						obj.salutation('close Method','Trying to close PNet conn connection...')
-						if force == true
-							for i = 1:length(obj.connList)
-								try
-									pnet(obj.connList(i), 'close');
-									fprintf('Closed connection %i.\n',obj.connList(i));
-								catch %#ok<CTCH>
-									fprintf('Couldn''t close connection %i, perhaps closed?\n',obj.connList(i));
-								end
-							end
-						else
-							obj.status = pnet(obj.conn,'status');
-							if obj.status <=0;
-								obj.isOpen = false;
-								obj.salutation('close Method','Connection appears closed...');
-							else
-								try %#ok<TRYNC>
-									pnet(obj.conn, 'close');
-								end
-							end
-							obj.conn = -1;
+				case {'conn','local'}
+					name = 'conn';
+					list = 'connList';
+					type = 'local';
+				case {'rconn','remote'}
+					name = 'rconn';
+					list = 'rconnList';
+					type = 'remote';
+			end
+			
+			try
+				obj.salutation('close Method',['Trying to close ' type ' connection...'])
+				if force == true
+					for i = 1:length(obj.(list))
+						try
+							pnet(obj.(list)(i), 'close');
+							fprintf('Closed connection %i.\n',obj.(list)(i));
+						catch %#ok<CTCH>
+							status = -1;
+							fprintf('Couldn''t close connection %i, perhaps closed?\n',obj.(list)(i));
 						end
 					end
-					
-				case 'rconn'
-					try
-						obj.salutation('close Method','Trying to close PNet rconn connection...')
-						if force == true
-							for i = 1:length(obj.rconnList)
-								try
-									pnet(obj.rconnList(i), 'close');
-									fprintf('Closed connection %i.\n',obj.rconnList(i));
-								catch %#ok<CTCH>
-									fprintf('Couldn''t close connection %i, perhaps closed?\n',obj.rconnList(i));
-								end
-							end
-						else
-							obj.status = pnet(obj.rconn,'status');
-							if obj.status <=0;
-								obj.isOpen = false;
-								obj.salutation('close Method','Connection appears closed...');
-							else
-								try %#ok<TRYNC>
-									pnet(obj.rconn, 'close');
-								end
-							end
-							obj.conn = -1;
+				else
+					obj.status = pnet(obj.(name),'status');
+					if obj.status <=0;
+						obj.isOpen = false;
+						obj.salutation('close Method','Connection appears closed...');
+					else
+						try %#ok<TRYNC>
+							pnet(obj.(name), 'close');
 						end
 					end
+					obj.conn = -1;
+				end
 			end
 		end
 		
@@ -317,16 +283,14 @@ classdef dataConnection < handle
 		function hasData = checkData(obj)
 			obj.hasData = false;
 			switch obj.protocol
-				
-				case 'udp'
+				case 'udp'%============================UDP
 					data = pnet(obj.conn, 'read', 65536, obj.dataType, 'view');
 					if isempty(data)
 						obj.hasData = pnet(obj.conn, 'readpacket') > 0;
 					else
 						obj.hasData = true;
 					end
-					
-				case 'tcp'
+				case 'tcp'%============================TCP
 					data = pnet(obj.conn, 'read', 1024, obj.dataType, 'noblock', 'view');
 					if ~isempty(data)
 						obj.hasData = true;
@@ -346,14 +310,12 @@ classdef dataConnection < handle
 		function data = readline(obj)
 			data = [];
 			switch obj.protocol
-				%============================UDP
-				case 'udp'
+				case 'udp'%============================UDP
 					nBytes = pnet(obj.conn, 'readpacket');
 					if nBytes > 0
 						data = pnet(obj.conn, 'readline', nBytes, 'noblock');
 					end
-					%============================TCP
-				case 'tcp'
+				case 'tcp'%============================TCP
 					data = pnet(obj.conn, 'readline', 1024,' noblock');
 			end
 			obj.dataIn = data;
@@ -474,17 +436,14 @@ classdef dataConnection < handle
 			end
 			
 			switch obj.protocol
-				%============================UDP
-				case 'udp'
+				case 'udp'%============================UDP
 					if formatted == false
 						pnet(obj.conn, 'write', data);
 					else
 						pnet(obj.conn, 'printf', data);
 					end
 					if sendPacket;pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);end
-					
-					%============================TCP
-				case 'tcp'
+				case 'tcp'%============================TCP
 					if formatted == false
 						pnet(obj.conn, 'write', data);
 					else
@@ -501,7 +460,7 @@ classdef dataConnection < handle
 		function data = readVar(obj)
 			pnet(obj.conn ,'setreadtimeout', 5);
 			data = obj.getVar;
-			pnet(obj.conn ,'setreadtimeout', 0);
+			pnet(obj.conn ,'setreadtimeout', obj.readTimeOut);
 		end
 		
 		% ===================================================================
@@ -513,7 +472,7 @@ classdef dataConnection < handle
 		function writeVar(obj, varargin)
 			pnet(obj.conn ,'setwritetimeout', 5);
 			obj.putVar(varargin);
-			pnet(obj.conn ,'setwritetimeout', 0);
+			pnet(obj.conn ,'setwritetimeout', obj.writeTimeOut);
 		end
 		
 		% ===================================================================
@@ -554,7 +513,7 @@ classdef dataConnection < handle
 		%>
 		%> Check status
 		% ===================================================================
-		% 		#define STATUS_NOCONNECT   0    // Disconnected pipe that is note closed
+		% 		#define STATUS_NOCONNECT   0    // Disconnected pipe that is not closed
 		% 		#define STATUS_TCP_SOCKET  1
 		% 		#define STATUS_IO_OK       5    // Used for IS_... test
 		% 		#define STATUS_UDP_CLIENT  6
@@ -673,6 +632,11 @@ classdef dataConnection < handle
 				obj.open;
 			end
 			switch varargin{1}
+				case 'ping'
+					pnet(obj.conn,'printf','\n--remote--\n');
+					obj.flushStatus; % Flush status buffer. Keep last status in readbuffer
+					ping.time = GetSecs;
+					obj.putVar(obj.conn,'ping',ping);
 				case 'echo'
 					pnet(obj.conn,'printf','\n--remote--\n');
 					obj.flushStatus; % Flush status buffer. Keep last status in readbuffer
@@ -742,9 +706,9 @@ classdef dataConnection < handle
 		% ===================================================================
 		function serverLoop(obj)
 			while pnet(obj.rconn,'status')
-				ls = 1;
+				ls = true;
 				while ls
-					okflag=1;
+					okflag = true;
 					str = ''; 
 					fprintf('Waiting for %s command...',obj.remoteCmd);
 					while ~strcmpi(str,obj.remoteCmd) && pnet(obj.rconn,'status')
@@ -761,6 +725,17 @@ classdef dataConnection < handle
 					drawnow;
 					if ~isempty(C) && iscell(C)
 						switch lower(C{1})
+							case 'ping'
+								C=C(2:end);
+								for n=1:2:length(C)
+									fprintf('\n');
+									disp(['REMOTE PING>> ' C{n}]);
+									try
+										assignin('caller',C{n:n+1});
+									catch
+										okflag = false;
+									end
+								end
 							case 'eval'
 								global DEFAULT_CON__;
 								DEFAULT_CON__=obj.rconn;
@@ -769,7 +744,7 @@ classdef dataConnection < handle
 									disp(['REMOTE EVAL>> ' C{2:min(2:end)}]);
 									evalin('caller',C{2:end},'okflag=0;');
 								catch
-									okflag=0;
+									okflag = false;
 								end
 								DEFAULT_CON__=[];
 							case 'put'
@@ -780,7 +755,7 @@ classdef dataConnection < handle
 									try
 										assignin('caller',C{n:n+1});
 									catch
-										okflag=0;
+										okflag = false;
 									end
 								end
 							case 'get'
@@ -792,7 +767,7 @@ classdef dataConnection < handle
 									try
 										R{n}=evalin('caller',[C{n} ';']);
 									catch
-										okflag=0;
+										okflag = false;
 									end
 								end
 								pnet_putvar(obj.rconn,R);
@@ -804,7 +779,7 @@ classdef dataConnection < handle
 						disp('Remote Message appeared Empty...');
 					end
 					
-					if okflag,
+					if okflag
 						pnet(obj.rconn,'printf','\n--ready--\n');
 					else
 						pnet(obj.rconn,'printf','\n--error--\n');
@@ -863,11 +838,7 @@ classdef dataConnection < handle
 								pnet(obj.conn,'Write',VAR);
 								obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
 							otherwise
-								%tmpfile=[tempname,'.mat'];
 								try
-									%save(tmpfile,'VAR');
-									%filedata=dir(tmpfile);
-									%obj.dataLength = filedata.bytes;
 									bytes = uint32(getByteStreamFromArray(VAR));
 									dataLength = uint32(size(bytes)); %#ok<*PROP>
 									
@@ -879,13 +850,9 @@ classdef dataConnection < handle
 									
 									pnet(obj.conn,'Write',dataLength);
 									obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
-										
-									%pnet(obj.conn,'WriteFromFile',tmpfile);
+
 									pnet(obj.conn,'Write',bytes);
 									obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
-								end
-								try
-									%delete(tmpfile);
 								end
 						end
 					case 'tcp'
@@ -896,22 +863,14 @@ classdef dataConnection < handle
 								pnet(obj.conn,'Write',uint32(size(VAR)));
 								pnet(obj.conn,'Write',VAR);
 							otherwise
-								%tmpfile=[tempname,'.mat'];
 								try
-									%save(tmpfile,'VAR');
-									%filedata=dir(tmpfile);
-									%dataLength = filedata.bytes;
-									bytes = uint32(getByteStreamFromArray(VAR))
+									bytes = uint32(getByteStreamFromArray(VAR));
 									dataLength = uint32(size(bytes));
 									pnet(obj.conn,'printf','\n--bytestream--\n');
 									pnet(obj.conn,'Write',uint32(ndims(dataLength)));
 									pnet(obj.conn,'Write',dataLength);
 									pnet(obj.conn,'Write',bytes);
 									pnet(obj.conn,'printf','\n--end--\n');
-									%pnet(obj.conn,'WriteFromFile',tmpfile);
-								end
-								try
-									%delete(tmpfile);
 								end
 						end
 				end
@@ -977,7 +936,7 @@ classdef dataConnection < handle
 					else
 						thisConnection = obj.conn;
 					end
-					lp = 1e12;
+					lp = 25;
 					while lp > 0 
 						lp = lp - 1;
 						dataclass=pnet(thisConnection,'readline',1024);
@@ -1010,9 +969,7 @@ classdef dataConnection < handle
 										datasize(1),datasize(2),size(bytes,1),size(bytes,2));
 									break;
 								end
-								%try delete(tmpfile); end
 						end
-						%fprintf('.');
 					end
 					if lp == 0; disp('TCP loop depleted waiting for variable...'); end
 			end
