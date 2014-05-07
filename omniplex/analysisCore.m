@@ -183,7 +183,7 @@ classdef analysisCore < optickaCore
 				end
 			end
 			
-			mlist3={'no','bonferroni','holm','fdr','hochberg'};
+			mlist3={'no','cluster','bonferroni','holm','fdr','hochberg'};
 			mc = 'p';
 			for i = 1:length(mlist3)
 				if strcmpi(mlist3{i},ego.stats.correctm)
@@ -232,7 +232,7 @@ classdef analysisCore < optickaCore
 			end
 			
 			mtitle   = ['Select Statistics Settings'];
-			options  = {['t|' num2str(s.alpha)],'Set the Statistical Alpha Value (alpha):'; ...
+			options  = {['t|' num2str(s.alpha,6)],'Set the Statistical Alpha Value (alpha):'; ...
 				[mt],'Main LFP Statistical Method (method):'; ...
 				[statistic],'LFP Statistical Type (statistic):'; ...
 				[mc],'LFP Multiple Correction Methodology (correctm):'; ...
@@ -244,6 +244,7 @@ classdef analysisCore < optickaCore
 				[interp],'Interpolation Method for Spike-LFP Interpolation?:'; ...
 				['t|' num2str(ego.stats.interpw)],'Spike-LFP Interpolation Window (s):'; ...
 				['t|' num2str(ego.stats.customFreq)],'LFP Frequency Stats Custom Frequency Band:'; ...
+				['t|' num2str(ego.stats.smoothing,12)],'Smoothing Value to use for Curves:'; ...
 				};
 			
 			answer = menuN(mtitle,options);
@@ -261,6 +262,7 @@ classdef analysisCore < optickaCore
 				ego.stats.interp = mlist6{answer{10}};
 				ego.stats.interpw = str2num(answer{11});
 				ego.stats.customFreq = str2num(answer{12});
+				ego.stats.smoothing = eval(answer{13});
 			end
 			
 			stats = ego.stats;
@@ -580,6 +582,9 @@ classdef analysisCore < optickaCore
 			end
 			if ~isfield(ego.stats,'customFreq') || isempty(ego.stats.customFreq)
 				ego.stats(1).customFreq = [60 70];
+			end
+			if ~isfield(ego.stats,'smoothing') || isempty(ego.stats.smoothing)
+				ego.stats(1).smoothing = 0;
 			end
 		end
 	end %---END PROTECTED METHODS---%

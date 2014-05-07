@@ -372,6 +372,12 @@ classdef LFPAnalysis < analysisCore
 			cfg.tail													= sv.tail; %two tail
 			cfg.correcttail										= 'prob';
 			cfg.correctm											= sv.correctm; %holm fdr hochberg bonferroni
+			if strcmpi(cfg.correctm,'cluster')
+				cfg.neighbours										= [];
+				cfg.clustertail									= cfg.tail;
+				cfg.clusteralpha									= 0.05;
+				cfg.clusterstatistic								= 'maxsum';
+			end
 			cfg.design												= [ones(size(av{1}.trial,1),1); 2*ones(size(av{2}.trial,1),1)]';
 			cfg.ivar													= 1;
 			stat														= ft_timelockstatistics(cfg, av{1}, av{2});
@@ -547,7 +553,7 @@ classdef LFPAnalysis < analysisCore
 			if ego.doPlots
 				plot(ego,'freq',['fq' preset]);
 			end
-			ftFrequencyStats(ego, ['fq' preset],{'no','relative','absolute'});
+			ftFrequencyStats(ego, ['fq' preset],{'no','relative','absolute','db'});
 		end
 		
 		% ===================================================================
@@ -641,6 +647,12 @@ classdef LFPAnalysis < analysisCore
 				cfg.tail						= sv.tail; %two tail
 				cfg.correcttail			= 'prob';
 				cfg.correctm				= sv.correctm; %holm fdr hochberg bonferroni
+				if strcmpi(cfg.correctm,'cluster')
+					cfg.neighbours			= [];
+					cfg.clustertail		= 0;
+					cfg.clusteralpha		= 0.05;
+					cfg.clusterstatistic = 'maxsum';
+				end
 				cfg.design					= [ones(size(fq{1}.trialinfo,1),1); 2*ones(size(fq{2}.trialinfo,1),1)]';
 				cfg.ivar = 1;
 				
@@ -1567,7 +1579,7 @@ classdef LFPAnalysis < analysisCore
 					av = ego.results.av;
 					avstat = ego.results.avstat;
 					avstatavg = ego.results.avstatavg;
-					h=figure;figpos(1,[1700 1000]);set(gcf,'Color',[1 1 1]);
+					h=figure;figpos(1,[1700 1000]);set(gcf,'Name',[ego.lfpfile ' ' av{1}.label{:}],'Color',[1 1 1]);
 					p=panel(h);
 					p.margin = [20 20 10 15]; %left bottom right top
 					p.pack('v', {5/6 []})
@@ -1585,21 +1597,54 @@ classdef LFPAnalysis < analysisCore
 					me1 = patch(xp,yp,[0.8 0.8 1],'FaceAlpha',0.5,'EdgeColor','none');
 					set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 					
-					yp = [av{2}.baselineCI(1) av{2}.baselineCI(1) av{2}.baselineCI(2) av{2}.baselineCI(2)];
-					me2 = patch(xp,yp,[1 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
+					yp2 = [av{2}.baselineCI(1) av{2}.baselineCI(1) av{2}.baselineCI(2) av{2}.baselineCI(2)];
+					me2 = patch(xp,yp2,[1 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
 					set(get(get(me2,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 
-					e = ego.var2SE(av{1}.var(1,:),av{1}.dof(1,:));
-					areabar(av{1}.time, av{1}.avg(1,:), e,[.5 .5 .5],0.3,'b.-','LineWidth',1);
-					e = ego.var2SE(av{2}.var(1,:),av{2}.dof(1,:));
-					areabar(av{2}.time, av{2}.avg(1,:), e,[.5 .3 .3],0.3,'r.-','LineWidth',1);
-					if length(av) == 2
-						legend(av{1}.name,av{2}.name)
-					elseif length(av) > 2
-						e = ego.var2SE(av{3}.var(1,:),av{3}.dof(1,:));
-						areabar(av{3}.time, av{3}.avg(1,:), e,[.3 .3 .5],0.3,'g.-','LineWidth',1);
-						legend(av{1}.name,av{2}.name,av{3}.name);
+					tlout = struct();
+					tlout(1).e = ego.var2SE(av{1}.var(1,:),av{1}.dof(1,:))';
+					tlout(1).t=av{1}.time'; 
+					tlout(1).d=av{1}.avg(1,:)';
+					
+					tlout(2).e = ego.var2SE(av{2}.var(1,:),av{2}.dof(1,:))';
+					tlout(2).t=av{2}.time'; 
+					tlout(2).d=av{2}.avg(1,:)';
+					
+					if length(av) > 2
+						tlout(3).e = ego.var2SE(av{3}.var(1,:),av{3}.dof(1,:))';
+						tlout(3).t=av{3}.time'; 
+						tlout(3).d=av{3}.avg(1,:)';
 					end
+					
+					if ego.stats.smoothing > 0
+						prm = ego.stats.smoothing;
+						for i = 1:length(av);
+							tlout(i).f = fit(tlout(i).t,tlout(i).d,'smoothingspline','SmoothingParam', prm); %data
+							tlout(i).fe = fit(tlout(i).t,tlout(i).e,'smoothingspline','SmoothingParam', prm); %error
+							tlout(i).s = feval(tlout(i).f,tlout(i).t);
+							tlout(i).se = feval(tlout(i).fe,tlout(i).t);
+						end
+						areabar(tlout(1).t, tlout(1).s, tlout(1).se, [.5 .5 .5],0.3,'b-','LineWidth',1);
+						areabar(tlout(2).t, tlout(2).s, tlout(2).se, [.5 .4 .4],0.3,'r-','LineWidth',1);
+						if length(av) == 2
+							legend(av{1}.name,av{2}.name)
+						else
+							areabar(tlout(3).t, tlout(3).s, tlout(3).se,[.4 .5 .4],0.3,'g-','LineWidth',1);
+							legend(av{1}.name,av{2}.name,av{3}.name);
+						end
+					else
+						areabar(tlout(1).t, tlout(1).d, tlout(1).e, [.5 .5 .5],0.3,'b.-','LineWidth',1);
+						areabar(tlout(2).t, tlout(2).d, tlout(2).e, [.5 .4 .4],0.3,'r.-','LineWidth',1);
+						if length(av) == 2
+							legend(av{1}.name,av{2}.name)
+						else
+							areabar(tlout(3).t, tlout(3).d, tlout(3).e,[.4 .5 .4],0.3,'g.-','LineWidth',1);
+							legend(av{1}.name,av{2}.name,av{3}.name);
+						end
+					end
+					
+					
+					assignin('base','timelockOut',tlout);
 					
 					ax=axis;
 					set(mh,'YData',[ax(3) ax(3) ax(4) ax(4)]);
@@ -1621,7 +1666,7 @@ classdef LFPAnalysis < analysisCore
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV) ±SEM');
 					t=sprintf('COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
-					tt=sprintf('%s | Ch: %s | p-val: %.3g [@%.2g]\n%s', ego.lfpfile, av{1}.label{:}, avstatavg.prob, ego.stats.alpha, t);
+					tt=sprintf('%s | Ch: %s | p-val: %.3g [@%.2g] | %s : %s\n%s', ego.lfpfile, av{1}.label{:}, avstatavg.prob, ego.stats.alpha, avstat.cfg.method, avstat.cfg.correctm, t);
 					title(tt,'FontSize',fs);
 					
 					p(2).select();
@@ -1992,18 +2037,18 @@ classdef LFPAnalysis < analysisCore
 				return;
 			end
 			fq = ego.results.(name);
-			h=figure;figpos(1,[2500 2000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
+			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
 			p=panel(h);
 			p.margin = [15 15 30 20];%left bottom right top
 			if isnumeric(gcf);	p.fontsize = 12; end
-			bl = {'relative','relative2','absolute','no'};
-			row = length(fq); col = length(bl);
+			bl = {'relative','db','no'};
+			row = length([1 2]); col = length(bl);
 			p.pack(row,col);
 			hmin = cell(size(bl));
 			hmax = hmin;
 			h = hmin;
 			for jj = 1:length(bl)
-				for i = 1:length(fq)
+				for i = 1:length([1 2])
 					p(i,jj).select();
 					cfg							= [];
 					cfg.fontsize				= 13;
@@ -2025,6 +2070,8 @@ classdef LFPAnalysis < analysisCore
 					cfgOut						= ft_singleplotTFR(cfg, fq{i});
 					grid on; box on;
 					set(gca,'Layer','top','TickDir','out')
+					xlim(ego.plotRange);
+					axis square
 					h{jj}{i} = gca;
 					clim = get(gca,'clim');
 					hmin{jj} = min([hmin{jj} min(clim)]);
@@ -2069,16 +2116,16 @@ classdef LFPAnalysis < analysisCore
 			q.pack('v',{7/8 []});
 			q(1).select();
 			hold on
-			plotpowline(fqbline{1}.freq,fqbline{1}.powspctrm,fqbline{1}.powspctrmsem,'b:o');
-			plotpowline(fqbline{2}.freq,fqbline{2}.powspctrm,fqbline{2}.powspctrmsem,'r:o');
+			plotpowline(fqbline{1}.freq,fqbline{1}.powspctrm,fqbline{1}.powspctrmsem,'b:x',[0.6 0.6 0.6]);
+			plotpowline(fqbline{2}.freq,fqbline{2}.powspctrm,fqbline{2}.powspctrmsem,'r:x',[0.6 0.6 0.6]);
 			if length(fqbline)>2
-				plotpowline(fqbline{3}.freq,fqbline{3}.powspctrm,fqbline{3}.powspctrmsem,'g:o');
+				plotpowline(fqbline{3}.freq,fqbline{3}.powspctrm,fqbline{3}.powspctrmsem,'g:x',[0.6 0.6 0.6]);
 			end
 			
-			plotpowline(fqresponse{1}.freq,fqresponse{1}.powspctrm,fqresponse{1}.powspctrmsem,'b-o');
-			plotpowline(fqresponse{2}.freq,fqresponse{2}.powspctrm,fqresponse{2}.powspctrmsem,'r-o');
+			plotpowline(fqresponse{1}.freq,fqresponse{1}.powspctrm,fqresponse{1}.powspctrmsem,'b-o',[0.4 0.4 0.5]);
+			plotpowline(fqresponse{2}.freq,fqresponse{2}.powspctrm,fqresponse{2}.powspctrmsem,'r-o',[0.5 0.4 0.4]);
 			if length(fqbline)>2
-				plotpowline(fqresponse{3}.freq,fqresponse{3}.powspctrm,fqresponse{3}.powspctrmsem,'g-o');	
+				plotpowline(fqresponse{3}.freq,fqresponse{3}.powspctrm,fqresponse{3}.powspctrmsem,'g-o',[0.4 0.5 0.4]);	
 				leg = {['BL' fqbline{1}.name],['BL' fqbline{2}.name],['BL' fqbline{3}.name],...
 				['M' fqresponse{1}.name],['M' fqresponse{2}.name],['M' fqresponse{3}.name]};
 			else
@@ -2091,6 +2138,10 @@ classdef LFPAnalysis < analysisCore
 			ylabel('Power');
 			xlabel('Frequency (Hz)');
 			legend(leg);
+			if strcmpi(fqresponse{1}.blname,'no')
+				set(gca,'YScale','log');
+			end
+			axis tight
 			
 			q(2).select();
 			q(2).margintop = 0;
@@ -2101,6 +2152,7 @@ classdef LFPAnalysis < analysisCore
 			plot(fqresponse{1}.freq,(p2-p1));
 			xlabel('Frequency (Hz)');
 			ylabel('Residuals')
+			axis tight
 			grid on;box on
 			
 			t=''; if isfield(fqstatall,'blname'); t = fqstatall.blname; end
@@ -2125,20 +2177,22 @@ classdef LFPAnalysis < analysisCore
 			line([min(x) max(x)],[fqstatf(1).alpha fqstatf(1).alpha],...
 				'LineStyle',':','LineWidth',3);
 			set(gca,'XTick',1:length(f),'XTickLabel',{fqstatf(:).name});
-			ylabel('p-value');
+			ylabel('p-value (log axis)');
 			xlabel('Frequency Bands');
-			ylim([0 fqstatf(1).alpha*2])
+			%ylim([0 fqstatf(1).alpha*2])
+			axis tight
 			grid on; box on;
 			set(gca,'TickDir','out');
-			title(['Baseline: ' t 'Frequency Band p-values'])
-			function plotpowline(f,p,e,lc)
+			set(gca,'YScale','log');
+			title(['Baseline: ' t 'Frequency Band p-values']);
+			function plotpowline(f,p,e,lc,ec)
 				p = squeeze(p);
 				e = squeeze(e);
 				p = p';
 				e = e';
 				p = nanmean(p);
 				e = max(e);
-				areabar(f, p, e,[0.5 0.5 0.5],0.2,lc);
+				areabar(f, p, e, ec,0.2,lc);
 			end
 		end
 		
