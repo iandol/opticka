@@ -1652,7 +1652,8 @@ classdef LFPAnalysis < analysisCore
 					pos = ax(4)-((ax(4)-ax(3))/20);
 					times = avstat.time(logical(avstat.mask));
 					pos = repmat(pos, size(times));
-					text(times,pos,'*','FontSize',10);
+					hp=plot(times,pos,'o');
+					set(get(get(hp,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 					
 					hold off
 					grid on; box on
@@ -1661,17 +1662,20 @@ classdef LFPAnalysis < analysisCore
 					[c1,c1e]=stderr(av{1}.cov);
 					[c2,c2e]=stderr(av{2}.cov);
 					[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',ego.stats.alpha);
-					covt = num2str(av{1}.cfgUsed.covariancewindow);
-					covt = regexprep(covt,' +',' ');
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV) ±SEM');
 					t=sprintf('COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
-					tt=sprintf('%s | Ch: %s | p-val: %.3g [@%.2g] | %s : %s\n%s', ego.lfpfile, av{1}.label{:}, avstatavg.prob, ego.stats.alpha, avstat.cfg.method, avstat.cfg.correctm, t);
+					tt=sprintf('%s | Ch: %s | %s p = %.3g [%s : %s (alpha=%.2g)]\n%s', ego.lfpfile, av{1}.label{:}, avstat.cfg.statistic, avstatavg.prob, avstat.cfg.method, avstat.cfg.correctm, ego.stats.alpha, t);
 					title(tt,'FontSize',fs);
 					
 					p(2).select();
 					p(2).hold('on');
+					
+					idx1 = ego.findNearest(av{1}.time, avstat.cfg.latency(1));
+					idx2 = ego.findNearest(av{1}.time, avstat.cfg.latency(2));
+					
 					res1 = av{2}.avg(1,:) - av{1}.avg(1,:);
+					t = sprintf('Residuals (Sums: %.2g',sum(res1(idx1:idx2)));
 					plot(av{1}.time, res1,'b.-')
 					if length(av) == 2
 						legend('Group B-A')
@@ -1681,9 +1685,11 @@ classdef LFPAnalysis < analysisCore
 						plot(av{1}.time, res2,'r.-')
 						plot(av{1}.time, res3,'g.-')
 						legend('Group B-A','Group C-A','Group C-B')
+						t = sprintf('%s %.2g %.2g',t,sum(res2(idx1:idx2)),sum(res3(idx1:idx2)));
 					end
 					grid on; box on
-					title('Residuals')
+					t = [t ')'];
+					title(t)
 					xlim([ego.plotRange(1) ego.plotRange(2)]);
 					xlabel('Time (s)');
 					ylabel('Residuals (mV)');
