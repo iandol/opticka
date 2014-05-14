@@ -290,28 +290,23 @@ classdef eyelinkAnalysis < analysisCore
 						
 						if evt.type == 16 %strcmpi(evt.codestring,'ENDSAMPLES')
 							ego.trials(tri).endsampletime = double(evt.sttime);
+							idx = ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
+								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime;
 							
-							ego.trials(tri).times = double(ego.raw.FSAMPLE.time( ...
-								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
-								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime));
+							ego.trials(tri).times = double(ego.raw.FSAMPLE.time(idx));
 							ego.trials(tri).times = ego.trials(tri).times - ego.trials(tri).rtstarttime;
-							ego.trials(tri).gx = ego.raw.FSAMPLE.gx(eyeUsed, ...
-								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
-								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime);
+							
+							ego.trials(tri).gx = ego.raw.FSAMPLE.gx(eyeUsed, idx);
 							ego.trials(tri).gx = ego.trials(tri).gx - ego.display(1)/2;
-							ego.trials(tri).gy = ego.raw.FSAMPLE.gy(eyeUsed, ...
-								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
-								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime);
+							
+							ego.trials(tri).gy = ego.raw.FSAMPLE.gy(eyeUsed, idx);
 							ego.trials(tri).gy = ego.trials(tri).gy - ego.display(2)/2;
-							ego.trials(tri).hx = ego.raw.FSAMPLE.hx(eyeUsed, ...
-								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
-								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime);
-							ego.trials(tri).hy = ego.raw.FSAMPLE.hy(eyeUsed, ...
-								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
-								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime);
-							ego.trials(tri).pa = ego.raw.FSAMPLE.pa(eyeUsed, ...
-								ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
-								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime);
+							
+							ego.trials(tri).hx = ego.raw.FSAMPLE.hx(eyeUsed, idx);
+							
+							ego.trials(tri).hy = ego.raw.FSAMPLE.hy(eyeUsed, idx);
+							
+							ego.trials(tri).pa = ego.raw.FSAMPLE.pa(eyeUsed, idx);
 							continue
 						end
 						
@@ -614,7 +609,6 @@ classdef eyelinkAnalysis < analysisCore
 			grid on
 			box on
 			axis tight;
-			ax = axis;
 			if maxv > 10; maxv = 10; end
 			axis([-0.2 0.4 0 maxv])
 			ti=sprintf('ABS Mean/SD %g - %g s: X=%.2g / %.2g | Y=%.2g / %.2g', t1,t2,...
@@ -1103,6 +1097,7 @@ classdef eyelinkAnalysis < analysisCore
 			stdex = [];
 			stdey = [];
 			early = [];
+			maxv = [];
 			for i = 1:length(fn)-1
 				if ~isempty(regexpi(fn{i},'^E')) && ~isempty(regexpi(fn{i+1},'^CC'))
 					x = tS.(fn{i}).x;
@@ -1119,6 +1114,7 @@ classdef eyelinkAnalysis < analysisCore
 						t = t(1:length(x));
 						plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 						plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+						maxv = max([maxv, max(abs(x)), max(abs(y))]);
 						
 						p(2,1).select();
 						p(2,1).hold('on');
@@ -1145,7 +1141,8 @@ classdef eyelinkAnalysis < analysisCore
 			p(1,1).select();
 			grid on
 			box on
-			axis square
+			axis square; axis ij
+			xlim([-10 10]); ylim([-10 10]);
 			title('X vs. Y Eye Position in Degrees')
 			xlabel('X Degrees')
 			ylabel('Y Degrees')
@@ -1153,6 +1150,8 @@ classdef eyelinkAnalysis < analysisCore
 			p(1,2).select();
 			grid on
 			box on
+			if maxv > 10; maxv = 10; end
+			axis([-0.01 0.4 0 maxv+0.1])
 			title(sprintf('X and Y Position vs. time | Early = %g / %g', sum(early),length(early)))
 			xlabel('Time (s)')
 			ylabel('Degrees')
@@ -1160,7 +1159,7 @@ classdef eyelinkAnalysis < analysisCore
 			p(2,1).select();
 			grid on
 			box on
-			axis square
+			axis square; axis ij
 			title(sprintf('Average X vs. Y Position for first 150ms STDX: %g | STDY: %g',mean(stdex),mean(stdey)))
 			xlabel('X Degrees')
 			ylabel('Y Degrees')
@@ -1168,7 +1167,7 @@ classdef eyelinkAnalysis < analysisCore
 			p(2,2).select();
 			grid on
 			box on
-			axis square
+			axis square; axis ij
 			title('Average X vs. Y Position for first 150ms Over Time')
 			xlabel('X Degrees')
 			ylabel('Y Degrees')
