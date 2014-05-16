@@ -1110,6 +1110,9 @@ classdef plxReader < optickaCore
 			
 			[a,b]=ind2sub(size(tscounts),find(tscounts>0)); %finds row and columns of nonzero values
 			ego.tsList.chMap = unique(b)';
+			if isempty(ego.tsList.chMap);
+				warning('---! No units seem to be present in the data... !---');
+			end
 			a = 1;
 			ego.tsList.trodreduction = false;
 			prevcount = inf;
@@ -1132,7 +1135,7 @@ classdef plxReader < optickaCore
 					a = a + 1;
 				end
 			end
-			if ego.trodality > 1 && a < i
+			if ego.trodality > 1 & a < i
 				ego.tsList.trodreduction = true;	
 				warning('---! Removed tetrode channels with identical spike numbers !---');
 			end
