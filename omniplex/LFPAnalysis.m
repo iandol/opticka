@@ -2048,13 +2048,13 @@ classdef LFPAnalysis < analysisCore
 			p.margin = [15 15 30 20];%left bottom right top
 			if isnumeric(gcf);	p.fontsize = 12; end
 			bl = {'relative','db','no'};
-			row = length([1 2]); col = length(bl);
+			row = length(fq); col = length(bl);
 			p.pack(row,col);
 			hmin = cell(size(bl));
 			hmax = hmin;
 			h = hmin;
 			for jj = 1:length(bl)
-				for i = 1:length([1 2])
+				for i = 1:length(fq)
 					p(i,jj).select();
 					cfg							= [];
 					cfg.fontsize				= 13;
@@ -2089,6 +2089,7 @@ classdef LFPAnalysis < analysisCore
 					t = [t ' | Wdth:' num2str(fq{i}.cfgUsed.width) ' | Smth:' num2str(fq{i}.cfgUsed.smooth)];
 					title(t,'FontSize',cfg.fontsize);
 				end
+				colormap('jet');
 				for i = 1:length(h{jj});
 					set(h{jj}{i},'clim', [hmin{jj} hmax{jj}]);
 					box on; grid on;
