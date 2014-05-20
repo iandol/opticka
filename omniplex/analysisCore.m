@@ -120,6 +120,7 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		function showEyePlots(ego)
 			if ~isprop(ego,'p') || ~isa(ego.p,'plxReader') || isempty(ego.p.eA) || ~isa(ego.p.eA,'eyelinkAnalysis')
+				disp('Eyelink data not parsed yet, try plotTogether for LFP data and parse for spike data');
 				return
 			end
 			if isprop(ego,'nSelection')

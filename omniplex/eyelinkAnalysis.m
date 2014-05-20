@@ -1,4 +1,4 @@
-% ========================================================================
+	% ========================================================================
 %> @brief eyelinkManager wraps around the eyelink toolbox functions
 %> offering a simpler interface
 %>
@@ -22,6 +22,8 @@ classdef eyelinkAnalysis < analysisCore
 		TOI@double = [ ]
 		%> verbose output?
 		verbose = false
+		%> minimum saccade distance in degrees
+		minSaccadeDistance@double = 0.99
 	end
 	
 	properties (Hidden = true)
@@ -191,6 +193,7 @@ classdef eyelinkAnalysis < analysisCore
 						ego.trials(tri).fixations = [];
 						ego.trials(tri).saccades = [];
 						ego.trials(tri).saccadeTimes = [];
+						ego.trials(tri).firstSaccade = NaN;
 						ego.trials(tri).rttime = [];
 						ego.trials(tri).uuid = [];
 						ego.trials(tri).correct = false;
@@ -250,9 +253,9 @@ classdef eyelinkAnalysis < analysisCore
 						if evt.type == 6 % strcmpi(evt.codestring,'ENDSACC')
 							sacc = [];
 							if isempty(ego.trials(tri).saccades)
-								fix = 1;
+								nsacc = 1;
 							else
-								fix = length(ego.trials(tri).saccades)+1;
+								nsacc = length(ego.trials(tri).saccades)+1;
 							end
 							if ego.trials(tri).rt == true
 								rel = ego.trials(tri).rtstarttime;
@@ -275,14 +278,20 @@ classdef eyelinkAnalysis < analysisCore
 							[sacc.theta, sacc.rho]	= cart2pol(sacc.x, sacc.y);
 							sacc.theta = rad2ang(sacc.theta);
 							
-							if fix == 1
+							if sacc.rho > ego.minSaccadeDistance; sacc.microSaccade = false;
+							else sacc.microSaccade = true; end
+							
+							if nsacc == 1
 								ego.trials(tri).saccades = sacc;
 							else
-								ego.trials(tri).saccades(fix) = sacc;
+								ego.trials(tri).saccades(nsacc) = sacc;
 							end
-							ego.trials(tri).nsacc = fix;
+							ego.trials(tri).nsacc = nsacc;
 							if sacc.rt == true
 								ego.trials(tri).saccadeTimes = [ego.trials(tri).saccadeTimes sacc.time];
+							end
+							if isnan(ego.trials(tri).firstSaccade) && sacc.time > 0 && sacc.microSaccade == false
+								ego.trials(tri).firstSaccade = sacc.time;
 							end
 							eventN = eventN + 1;
 							continue

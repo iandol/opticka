@@ -174,7 +174,7 @@ classdef plxReader < optickaCore
 			cd(ego.dir);
 			getEvents(ego);
 			generateInfo(ego);
-			if isa(ego.eA,'eyelinkAnalysis')
+			if ~isempty(ego.eA)
 				integrateEyeData(ego);
 			end
 		end
@@ -305,7 +305,7 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function isEDF = get.isEDF(ego)
 			isEDF = false;
-			if ~isempty(ego.edffile)
+			if ~isempty(ego.edffile) && exist([ego.matdir filesep ego.edffile],'file');
 				isEDF = true;
 			end
 		end
@@ -445,13 +445,17 @@ classdef plxReader < optickaCore
 				for i = 1:length(plxList)
 					if plxList(i) == edfList(i)
 						ego.eventList.trials(i).eye = edfTrials(i);
-						sT = edfTrials(i).saccadeTimes/1e3;
-						fS = min(sT(sT>0));
-						ego.eventList.trials(i).saccadeTimes = sT;
-						if ~isempty(fS)
-							ego.eventList.trials(i).firstSaccade = fS;
+						ego.eventList.trials(i).saccadeTimes = edfTrials(i).saccadeTimes/1e3;
+						if isfield(edfTrials,'firstSaccade')
+							ego.eventList.trials(i).firstSaccade = edfTrials(i).firstSaccade / 1e3;
 						else
-							ego.eventList.trials(i).firstSaccade = NaN;
+							sT = ego.eventList.trials(i).saccadeTimes;
+							fS = min(sT(sT>0));
+							if ~isempty(fS)
+								ego.eventList.trials(i).firstSaccade = fS;
+							else
+								ego.eventList.trials(i).firstSaccade = NaN;
+							end
 						end
 					else
 						warning(['integrateEyeData: Trial ' num2str(i) ' Variable' num2str(plxList(i)) ' FAILED']);
@@ -710,9 +714,9 @@ classdef plxReader < optickaCore
 					pn = ego.dir;
 				end
 			end
+			oldd=pwd;
+			cd(pn);
 			if exist(ego.edffile,'file')
-				oldd=pwd;
-				cd(pn);
 				if ~isempty(ego.eA) && isa(ego.eA,'eyelinkAnalysis')
 					ego.eA.file = ego.edffile;
 					ego.eA.dir = pn;
@@ -734,8 +738,8 @@ classdef plxReader < optickaCore
 				load(ego.eA);
 				parse(ego.eA);
 				fixVarNames(ego.eA);
-				cd(oldd)
 			end
+			cd(oldd)
 		end
 		
 		% ===================================================================
@@ -867,7 +871,7 @@ classdef plxReader < optickaCore
 			end
 			if isfield(ego.meta,'matrix')
 				ego.info{end+1} = ' ';
-				ego.info{end+1} = 'Variable Map:';
+				ego.info{end+1} = 'Variable Map (Variable Index1 Index2 Index 3 Value1 Value2 Value3):';
 				ego.info{end+1} = num2str(ego.meta.matrix);
 			end
 			if ~isempty(ego.tsList)
