@@ -1,6 +1,6 @@
-	% ========================================================================
-%> @brief eyelinkManager wraps around the eyelink toolbox functions
-%> offering a simpler interface
+% ========================================================================
+%> @brief eyelinkAnalysis offers a set of methods to load and parse raw EDF files. It
+%> understands opticka trials so can parse eye data and plot it for trial groups.
 %>
 % ========================================================================
 classdef eyelinkAnalysis < analysisCore
@@ -45,6 +45,8 @@ classdef eyelinkAnalysis < analysisCore
 	properties (SetAccess = private, GetAccess = public)
 		%> have we parsed the EDF yet?
 		isParsed@logical = false
+		%> sample rate
+		sampleRate@double = 250
 		%> raw data
 		raw@struct
 		%> inidividual trials
@@ -113,6 +115,7 @@ classdef eyelinkAnalysis < analysisCore
 				oldpath = pwd;
 				cd(ego.dir)
 				ego.raw = edfmex(ego.file);
+				ego.sampleRate = ego.raw.RECORDINGS(1).sample_rate;
 				fprintf('\n');
 				cd(oldpath)
 			end
@@ -233,7 +236,7 @@ classdef eyelinkAnalysis < analysisCore
 							fixa.time = fixa.sttime - rel;
 							fixa.length = fixa.entime - fixa.sttime;
 							fixa.rel = rel;
-
+							
 							[fixa.gstx, fixa.gsty]  = toDegrees(ego, [evt.gstx, evt.gsty]);
 							[fixa.genx, fixa.geny]  = toDegrees(ego, [evt.genx, evt.geny]);
 							[fixa.x, fixa.y]		= toDegrees(ego, [evt.gavx, evt.gavy]);
@@ -271,7 +274,7 @@ classdef eyelinkAnalysis < analysisCore
 							sacc.time = sacc.sttime - rel;
 							sacc.length = sacc.entime - sacc.sttime;
 							sacc.rel = rel;
-
+							
 							[sacc.gstx, sacc.gsty]	= toDegrees(ego, [evt.gstx evt.gsty]);
 							[sacc.genx, sacc.geny]	= toDegrees(ego, [evt.genx evt.geny]);
 							[sacc.x, sacc.y]		= deal((sacc.genx - sacc.gstx), (sacc.geny - sacc.gsty));
@@ -287,12 +290,6 @@ classdef eyelinkAnalysis < analysisCore
 								ego.trials(tri).saccades(nsacc) = sacc;
 							end
 							ego.trials(tri).nsacc = nsacc;
-							if sacc.rt == true
-								ego.trials(tri).saccadeTimes = [ego.trials(tri).saccadeTimes sacc.time];
-							end
-							if isnan(ego.trials(tri).firstSaccade) && sacc.time > 0 && sacc.microSaccade == false
-								ego.trials(tri).firstSaccade = sacc.time;
-							end
 							eventN = eventN + 1;
 							continue
 						end
@@ -359,16 +356,17 @@ classdef eyelinkAnalysis < analysisCore
 						if ~isempty(id) && ~isempty(id.ID)
 							ego.trials(tri).entime = double(evt.sttime);
 							ego.trials(tri).result = str2num(id.ID);
-							ego.trials(tri).firstSaccade = [];
-							sT = ego.trials(tri).saccadeTimes;
-							if max(sT(sT>0)) > 0
-								sT = min(sT(sT>0)); %shortest RT after END_FIX
-							elseif ~isempty(sT)
-								sT = sT(1); %simply the first time
-							else
-								sT = NaN;
+							sT=[];
+							ego.trials(tri).saccadeTimes = [];
+							for ii = 1:ego.trials(tri).nsacc
+								t = ego.trials(tri).saccades(ii).time;
+								ego.trials(tri).saccadeTimes(ii) = t;
+								if isnan(ego.trials(tri).firstSaccade) && t > 0 && ego.trials(tri).saccades(ii).microSaccade == false
+									ego.trials(tri).firstSaccade = t;
+									sT=t;
+								end
 							end
-							ego.trials(tri).firstSaccade = sT;
+							
 							if ego.trials(tri).result == 1
 								ego.trials(tri).correct = true;
 								ego.correct.idx = [ego.correct.idx tri];
@@ -425,7 +423,7 @@ classdef eyelinkAnalysis < analysisCore
 			parseFixationPositions(ego);
 			parseROI(ego);
 			parseTOI(ego);
-
+			
 			fprintf('Parsing EDF Trials took %g ms\n',round(toc*1000));
 		end
 		
@@ -494,7 +492,7 @@ classdef eyelinkAnalysis < analysisCore
 			early = 0;
 			
 			map = ego.optimalColours(length(ego.vars));
-
+			
 			if isempty(select)
 				thisVarName = 'ALL VARS ';
 			elseif length(select) > 1
@@ -536,20 +534,20 @@ classdef eyelinkAnalysis < analysisCore
 				t=t(ix);
 				x = thisTrial.gx(ix) / ppd;
 				y = thisTrial.gy(ix) / ppd;
-
+				
 				if min(x) < -20 || max(x) > 20 || min(y) < -20 || max(y) > 20
 					x(x < -20) = -20;
 					x(x > 20) = 20;
 					y(y < -20) = -20;
 					y(y > 20) = 20;
 				end
-
+				
 				q(1,1).select();
-
+				
 				q(1,1).hold('on')
 				plot(x, y,'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
-
+				
 				q(1,2).select();
 				q(1,2).hold('on');
 				plot(t,abs(x),'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
@@ -557,7 +555,7 @@ classdef eyelinkAnalysis < analysisCore
 				plot(t,abs(y),'k-x','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				maxv = max([maxv, max(abs(x)), max(abs(y))]) + 0.1;
-
+				
 				p(2).select();
 				p(2).hold('on')
 				for fix=1:length(thisTrial.fixations)
@@ -575,7 +573,7 @@ classdef eyelinkAnalysis < analysisCore
 				p(2).margin = [50]; %left bottom right top
 				
 				idxt = find(t >= t1 & t <= t2);
-
+				
 				tvals{a} = t(idxt);
 				xvals{a} = x(idxt);
 				yvals{a} = y(idxt);
@@ -588,18 +586,18 @@ classdef eyelinkAnalysis < analysisCore
 				medy = [medy median(y(idxt))];
 				stdex = [stdex std(x(idxt))];
 				stdey = [stdey std(y(idxt))];
-
+				
 				q(2,1).select();
 				q(2,1).hold('on');
 				plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
-
+				
 				q(2,2).select();
 				q(2,2).hold('on');
 				plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				a = a + 1;
-	
+				
 			end
 			
 			display = ego.display / ppd;
@@ -652,8 +650,8 @@ classdef eyelinkAnalysis < analysisCore
 			box on
 			axis tight;
 			axis([-1 1 -1 1])
-			h=title(sprintf('X & Y %g-%gs MD/MN/STD: \nX : %.2g / %.2g / %.2g | Y : %.2g / %.2g / %.2g', ... 
-				t1,t2,mean(meanx), median(medx),mean(stdex),mean(meany),median(medy),mean(stdey)));			
+			h=title(sprintf('X & Y %g-%gs MD/MN/STD: \nX : %.2g / %.2g / %.2g | Y : %.2g / %.2g / %.2g', ...
+				t1,t2,mean(meanx), median(medx),mean(stdex),mean(meany),median(medy),mean(stdey)));
 			set(h,'BackgroundColor',[1 1 1]);
 			xlabel(q(2,1),'X Degrees')
 			ylabel(q(2,1),'Y Degrees')
@@ -724,13 +722,13 @@ classdef eyelinkAnalysis < analysisCore
 				times = times(idx);
 				x = x(idx);
 				y = y(idx);
-				r = sqrt((x - fixationX).^2 + (y - fixationY).^2); 
+				r = sqrt((x - fixationX).^2 + (y - fixationY).^2);
 				within = find(r < fixationRadius);
 				if any(within)
 					ego.ROIInfo(i).enteredROI = true;
 				else
 					ego.ROIInfo(i).enteredROI = false;
-				end	
+				end
 				ego.trials(i).enteredROI = ego.ROIInfo(i).enteredROI;
 				ego.ROIInfo(i).x = x;
 				ego.ROIInfo(i).y = y;
@@ -771,15 +769,15 @@ classdef eyelinkAnalysis < analysisCore
 				times = times(idx);
 				x = x(idx);
 				y = y(idx);
-			
-				r = sqrt((x - fixationX).^2 + (y - fixationY).^2); 
-
+				
+				r = sqrt((x - fixationX).^2 + (y - fixationY).^2);
+				
 				within = find(r <= fixationRadius);
 				if length(within) == length(r)
 					ego.TOIInfo(i).isTOI = true;
 				else
 					ego.TOIInfo(i).isTOI = false;
-				end	
+				end
 				ego.trials(i).isTOI = ego.TOIInfo(i).isTOI;
 				ego.TOIInfo(i).variable = ego.trials(i).variable;
 				ego.TOIInfo(i).idx = i;
@@ -927,7 +925,7 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',ego.file);
 			
-			t1 = ego.TOI(1); 
+			t1 = ego.TOI(1);
 			t2 = ego.TOI(2);
 			x1 = ego.TOI(3) - ego.TOI(5);
 			x2 = ego.TOI(3) + ego.TOI(5);
@@ -1015,7 +1013,7 @@ classdef eyelinkAnalysis < analysisCore
 			p(1,2).ylabel('Absolute X/Y Position (degs)')
 			axis([t1 t2 0 4]);
 			axis square
-
+			
 			function clickMe(src, ~)
 				if ~exist('src','var')
 					return
@@ -1034,7 +1032,7 @@ classdef eyelinkAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -1087,12 +1085,22 @@ classdef eyelinkAnalysis < analysisCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function doMicrosaccades(ego)
+			ego.computeMicrosaccades();
+		end
+		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
 	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
-	
+		
 		function plotSecondaryEyeLogs(tS)
 			ifi = 0.013;
 			tS = tS.eyePos;
@@ -1112,37 +1120,37 @@ classdef eyelinkAnalysis < analysisCore
 					x = tS.(fn{i}).x;
 					y = tS.(fn{i}).y;
 					%if a < Inf%(max(x) < 16 && min(x) > -16) && (max(y) < 16 && min(y) > -16) && mean(abs(x(1:10))) < 1 && mean(abs(y(1:10))) < 1
-						c = rand(1,3);
-						p(1,1).select();
-						p(1,1).hold('on')
-						plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-
-						p(1,2).select();
-						p(1,2).hold('on');
-						t = 0:ifi:(ifi*length(x));
-						t = t(1:length(x));
-						plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-						plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-						maxv = max([maxv, max(abs(x)), max(abs(y))]);
-						
-						p(2,1).select();
-						p(2,1).hold('on');
-						plot(mean(x(1:10)), mean(y(1:10)),'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-						stdex = [stdex std(x(1:10))];
-						stdey = [stdey std(y(1:10))];
-						
-						p(2,2).select();
-						p(2,2).hold('on');
-						plot3(mean(x(1:10)), mean(y(1:10)),a,'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-						
-						if mean(x(14:16)) > 5 || mean(y(14:16)) > 5
-							early(a) = 1;
-						else
-							early(a) = 0;
-						end
-						
-						a = a + 1;
-						
+					c = rand(1,3);
+					p(1,1).select();
+					p(1,1).hold('on')
+					plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					
+					p(1,2).select();
+					p(1,2).hold('on');
+					t = 0:ifi:(ifi*length(x));
+					t = t(1:length(x));
+					plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					maxv = max([maxv, max(abs(x)), max(abs(y))]);
+					
+					p(2,1).select();
+					p(2,1).hold('on');
+					plot(mean(x(1:10)), mean(y(1:10)),'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					stdex = [stdex std(x(1:10))];
+					stdey = [stdey std(y(1:10))];
+					
+					p(2,2).select();
+					p(2,2).hold('on');
+					plot3(mean(x(1:10)), mean(y(1:10)),a,'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
+					
+					if mean(x(14:16)) > 5 || mean(y(14:16)) > 5
+						early(a) = 1;
+					else
+						early(a) = 0;
+					end
+					
+					a = a + 1;
+					
 					%end
 				end
 			end
@@ -1230,7 +1238,7 @@ classdef eyelinkAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -1252,17 +1260,7 @@ classdef eyelinkAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function checkFirstSaccades(ego)
-			
-		end
-		
-		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -1334,6 +1332,335 @@ classdef eyelinkAnalysis < analysisCore
 				outx = [];
 				outy = [];
 			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function computeMicrosaccades(ego)
+			
+			VFAC=5;
+			MINDUR=5;  %  equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
+			sampleRate = ego.sampleRate;
+			for jj = 1:length(ego.trials)
+				samples = []; sac = []; radius = [];
+				ego.trials(jj).msacc = struct();
+				ego.trials(jj).msacctimes = [];
+				samples(:,1) = ego.trials(jj).times/1e3;
+				samples(:,2) = ego.trials(jj).gx/ego.ppd;
+				samples(:,3) = ego.trials(jj).gy/ego.ppd;
+				samples(:,4) = nan(size(samples(:,1)));
+				samples(:,5) = samples(:,4);
+				eye_used = 0;
+				
+				try
+					switch eye_used
+						case 0
+							v = vecvel(samples(:,2:3),sampleRate,2);
+							[sac radius] = microsacc(samples(:,2:3),v,VFAC,MINDUR);
+							monol=[];
+							monor=[];
+						case 1
+							v = vecvel(samples(:,2:3),sampleRate,2);
+							[sac radius] = microsacc(samples(:,4:5),v,VFAC,MINDUR);
+							monol=[];
+							monor=[];
+						case 2
+							MSlcoords=samples(:,2:3);
+							MSrcoords=samples(:,4:5);
+							vl = vecvel(MSlcoords,sampleRate,2);
+							vr = vecvel(MSrcoords,sampleRate,2);
+							[sacl radius] = microsacc(MSlcoords,vl,VFAC,MINDUR);
+							[sacr radius] = microsacc(MSrcoords,vr,VFAC,MINDUR);
+							[bsac, monol, monor] = binsacc(sacl,sacr);
+							sac = saccpar(bsac);
+					end
+
+					for ii = 1:size(sac,1)
+						ego.trials(jj).msacc(ii).time = samples(sac(ii,1),1);
+						ego.trials(jj).msacc(ii).endtime = samples(sac(ii,2),1);
+						ego.trials(jj).msacc(ii).velocity = sac(ii,3);
+						ego.trials(jj).msacc(ii).dx = sac(ii,4);
+						ego.trials(jj).msacc(ii).dy = sac(ii,5);
+						ego.trials(jj).msacc(ii).dX = sac(ii,6);
+						ego.trials(jj).msacc(ii).dY = sac(ii,7);
+					end
+					ego.trials(jj).msacctimes = [ego.trials(jj).msacc(:).time];
+				end
+			end
+				
+			function v = vecvel(xx,SAMPLING,TYPE)
+				%------------------------------------------------------------
+				%  FUNCTION vecvel.m
+				%  Calculation of eye velocity from position data
+				%
+				%  INPUT:
+				%   xy(1:N,1:2)     raw data, x- and y-components of the time series
+				%   SAMPLING        sampling rate (number of samples per second)
+				%   TYPE            velocity type: TYPE=2 recommended
+				%
+				%  OUTPUT:
+				%   v(1:N,1:2)      velocity, x- and y-components
+				%-------------------------------------------------------------
+				
+				N = length(xx);            % length of the time series
+				v = zeros(N,2);
+				
+				switch TYPE
+					case 1
+						v(2:N-1,:) = [xx(3:end,:) - xx(1:end-2,:)]*SAMPLING/2;
+					case 2
+						v(3:N-2,:) = [xx(5:end,:) + xx(4:end-1,:) - xx(2:end-3,:) - xx(1:end-4,:)]*SAMPLING/6;
+						v(2,:)     = [xx(3,:) - xx(1,:)]*SAMPLING/2;
+						v(N-1,:)   = [xx(end,:) - xx(end-2,:)]*SAMPLING/2;
+				end
+				return
+			end
+			
+			function [sac, radius] = microsacc(x,vel,VFAC,MINDUR)
+				%-------------------------------------------------------------------
+				%  FUNCTION microsacc.m
+				%  Detection of monocular candidates for microsaccades;
+				%
+				%  INPUT:
+				%   x(:,1:2)         position vector
+				%   vel(:,1:2)       velocity vector
+				%   VFAC             relative velocity threshold
+				%   MINDUR           minimal saccade duration
+				%
+				%  OUTPUT:
+				%   radius         threshold velocity (x,y) used to distinguish microsaccs
+				%   sac(1:num,1)   onset of saccade
+				%   sac(1:num,2)   end of saccade
+				%   sac(1:num,3)   peak velocity of saccade (vpeak)
+				%   sac(1:num,4)   horizontal component     (dx)
+				%   sac(1:num,5)   vertical component       (dy)
+				%   sac(1:num,6)   horizontal amplitude     (dX)
+				%   sac(1:num,7)   vertical amplitude       (dY)
+				%---------------------------------------------------------------------
+				
+				% SDS... VFAC (relative velocity threshold) E&M 2006 use a value of VFAC=5
+				
+				
+				% compute threshold
+				% SDS... this is sqrt[median(x^2) - (median x)^2]
+				msdx = sqrt( median(vel(:,1).^2) - (median(vel(:,1)))^2 );
+				msdy = sqrt( median(vel(:,2).^2) - (median(vel(:,2)))^2 );
+				if msdx<realmin
+					msdx = sqrt( mean(vel(:,1).^2) - (mean(vel(:,1)))^2 );
+					if msdx<realmin
+						error('msdx<realmin in microsacc.m');
+					end
+				end
+				if msdy<realmin
+					msdy = sqrt( mean(vel(:,2).^2) - (mean(vel(:,2)))^2 );
+					if msdy<realmin
+						error('msdy<realmin in microsacc.m');
+					end
+				end
+				radiusx = VFAC*msdx;
+				radiusy = VFAC*msdy;
+				radius = [radiusx radiusy];
+				
+				% compute test criterion: ellipse equation
+				test = (vel(:,1)/radiusx).^2 + (vel(:,2)/radiusy).^2;
+				indx = find(test>1);
+				
+				% determine saccades
+				% SDS..  this loop reads through the index of above-threshold velocities,
+				%        storing the beginning and end of each period (i.e. each saccade)
+				%        as the position in the overall time series of data submitted
+				%        to the analysis
+				N = length(indx);
+				sac = [];
+				nsac = 0;
+				dur = 1;
+				a = 1;
+				k = 1;
+				while k<N
+					if indx(k+1)-indx(k)==1     % looks 1 instant ahead of current instant
+						dur = dur + 1;
+					else
+						if dur>=MINDUR
+							nsac = nsac + 1;
+							b = k;             % hence b is the last instant of the consecutive series constituting a microsaccade
+							sac(nsac,:) = [indx(a) indx(b)];
+						end
+						a = k+1;
+						dur = 1;
+					end
+					k = k + 1;
+				end
+				
+				% check for minimum duration
+				% SDS.. this just deals with the final set of above threshold
+				%       velocities; adds it to the list if the duration is long enough
+				if dur>=MINDUR
+					nsac = nsac + 1;
+					b = k;
+					sac(nsac,:) = [indx(a) indx(b)];
+				end
+				
+				% compute peak velocity, horizonal and vertical components
+				for s=1:nsac
+					% onset and offset
+					a = sac(s,1);
+					b = sac(s,2);
+					% saccade peak velocity (vpeak)
+					vpeak = max( sqrt( vel(a:b,1).^2 + vel(a:b,2).^2 ) );
+					sac(s,3) = vpeak;
+					% saccade vector (dx,dy)            SDS..  this is the difference between initial and final positions
+					dx = x(b,1)-x(a,1);
+					dy = x(b,2)-x(a,2);
+					sac(s,4) = dx;
+					sac(s,5) = dy;
+					
+					% saccade amplitude (dX,dY)         SDS.. this is the difference between max and min positions over the excursion of the msac
+					i = sac(s,1):sac(s,2);
+					[minx, ix1] = min(x(i,1));              %       dX > 0 signifies rightward  (if ix2 > ix1)
+					[maxx, ix2] = max(x(i,1));              %       dX < 0 signifies  leftward  (if ix2 < ix1)
+					[miny, iy1] = min(x(i,2));              %       dY > 0 signifies    upward  (if iy2 > iy1)
+					[maxy, iy2] = max(x(i,2));              %       dY < 0 signifies  downward  (if iy2 < iy1)
+					dX = sign(ix2-ix1)*(maxx-minx);
+					dY = sign(iy2-iy1)*(maxy-miny);
+					sac(s,6:7) = [dX dY];
+				end
+				
+			end
+			
+			function [sac, monol, monor] = binsacc(sacl,sacr)
+				%-------------------------------------------------------------------
+				%  FUNCTION binsacc.m
+				%
+				%  INPUT: saccade matrices from FUNCTION microsacc.m
+				%   sacl(:,1:7)       microsaccades detected from left eye
+				%   sacr(:,1:7)       microsaccades detected from right eye
+				%
+				%  OUTPUT:
+				%   sac(:,1:14)       binocular microsaccades (right eye/left eye)
+				%   monol(:,1:7)      monocular microsaccades of the left eye
+				%   monor(:,1:7)      monocular microsaccades of the right eye
+				%---------------------------------------------------------------------
+				
+				% SDS.. The aim of this routine is to pair up msaccs in L & R eyes that are
+				%       coincident in time. Some msaccs in one eye may not have a matching
+				%       msacc in the other; the code also seems to allow for a msacc in one
+				%       eye matching 2 events in the other eye - in which case the
+				%       larger amplitude one is selected, and the other discarded.
+				
+				if size(sacr,1)*size(sacl,1)>0
+					
+					% determine saccade clusters
+					TR = max(sacr(:,2));
+					TL = max(sacl(:,2));
+					T = max([TL TR]);
+					s = zeros(1,T+1);
+					for i=1:size(sacl,1)
+						s(sacl(i,1)+1:sacl(i,2)) = 1;   % SDS.. creates time-series with 1 for duration of left eye  msacc events and 0 for duration of intervals
+						% NB.   sacl(i,1)+1    the +1 is necessary for the diff function [line 219] to correctly pick out the start instants of msaccs
+					end
+					for i=1:size(sacr,1)
+						s(sacr(i,1)+1:sacr(i,2)) = 1;   % SDS.. superimposes similar for right eye; hence a time-series of binocular events
+					end                                 %   ... 'binocular' means that either L, R or both eyes moved
+					s(1) = 0;
+					s(end) = 0;
+					m = find(diff(s~=0));   % SDS.. finds time series positions of start and ends of (binocular) m.saccd phases
+					N = length(m)/2;        % SDS.. N = number of microsaccades
+					m = reshape(m,2,N)';    % SDS.. col 1 is all sacc onsets; col 2 is all sacc end points
+					
+					% determine binocular saccades
+					NB = 0;
+					NR = 0;
+					NL = 0;
+					sac = [];
+					monol = [];
+					monor = [];
+					% SDS..  the loop counts through each position in the binoc list
+					for i=1:N                                               % ..  'find' operates on the sacl (& sacr) matrices;
+						l = find( m(i,1)<=sacl(:,1) & sacl(:,2)<=m(i,2) );  % ..   finds position of msacc in L eye list to match the timing of each msacc in binoc list (as represented by 'm')
+						r = find( m(i,1)<=sacr(:,1) & sacr(:,2)<=m(i,2) );  % ..   finds position of msacc in R eye list ...
+						% ..   N.B. some 'binoc' msaccs will not match one or other of the monoc lists
+						if length(l)*length(r)>0                            % SDS..   Selects binoc msaccs.  [use of 'length' function is a bit quaint..  l and r should not be vectors, but single values..?]
+							ampr = sqrt(sacr(r,6).^2+sacr(r,7).^2);         % ..      is allowing for 2 (or more) discrete monocular msaccs coinciding with a single event in the 'binoc' list
+							ampl = sqrt(sacl(l,6).^2+sacl(l,7).^2);
+							[h ir] = max(ampr);                             % hence r(ir) in L241 is the position in sacr of the larger amplitude saccade (if there are 2 or more that occurence of binoc saccade)
+							[h il] = max(ampl);                             % hence l(il) in L241 is the position in sacl of the larger amplitude saccade (if there are 2 or more that occurence of binoc saccade)
+							NB = NB + 1;
+							sac(NB,:) = [sacr(r(ir),:) sacl(l(il),:)];      % ..      the final compilation selects the larger amplitude msacc to represent the msacc in that eye
+						else
+							% determine monocular saccades
+							if isempty(l)                                 % If no msacc in L eye
+								NR = NR + 1;
+								monor(NR,:) = sacr(r,:);                    %..  record R eye monoc msacc.
+							end
+							if isempty(r)                                 %If no msacc in R eye
+								NL = NL + 1;
+								monol(NL,:) = sacl(l,:);                    %..  record L eye monoc msacc
+							end
+						end
+					end
+				else
+					% special cases of exclusively monocular saccades
+					if size(sacr,1)==0
+						sac = [];
+						monor = [];
+						monol = sacl;
+					end
+					if size(sacl,1)==0
+						sac = [];
+						monol = [];
+						monor = sacr;
+					end
+				end
+			end
+			
+			function sac = saccpar(bsac)
+				%-------------------------------------------------------------------
+				%  FUNCTION saccpar.m
+				%  Calculation of binocular saccade parameters;
+				%
+				%  INPUT: binocular saccade matrix from FUNCTION binsacc.m
+				%   sac(:,1:14)       binocular microsaccades
+				%
+				%  OUTPUT:
+				%   sac(:,1:9)        parameters averaged over left and right eye data
+				%---------------------------------------------------------------------
+				if size(bsac,1)>0
+					sacr = bsac(:,1:7);
+					sacl = bsac(:,8:14);
+					
+					% 1. Onset
+					a = min([sacr(:,1)'; sacl(:,1)'])';     % produces single column vector of ealier onset in L v R eye msaccs
+					
+					% 2. Offset
+					b = max([sacr(:,2)'; sacl(:,2)'])';     % produces single column vector of later offset in L v R eye msaccs
+					
+					% 3. Duration
+					DR = sacr(:,2)-sacr(:,1)+1;
+					DL = sacl(:,2)-sacl(:,1)+1;
+					D = (DR+DL)/2;
+					
+					% 4. Delay between eyes
+					delay = sacr(:,1) - sacl(:,1);
+					
+					% 5. Peak velocity
+					vpeak = (sacr(:,3)+sacl(:,3))/2;
+					
+					% 6. Saccade distance
+					dist = (sqrt(sacr(:,4).^2+sacr(:,5).^2)+sqrt(sacl(:,4).^2+sacl(:,5).^2))/2;
+					angle1 = atan2((sacr(:,5)+sacl(:,5))/2,(sacr(:,4)+sacl(:,4))/2);
+					
+					% 7. Saccade amplitude
+					ampl = (sqrt(sacr(:,6).^2+sacr(:,7).^2)+sqrt(sacl(:,6).^2+sacl(:,7).^2))/2;
+					angle2 = atan2((sacr(:,7)+sacl(:,7))/2,(sacr(:,6)+sacl(:,6))/2);        %SDS..  NB 'atan2'function operates on (y,x) - not (x,y)!
+					
+					sac = [a b D delay vpeak dist angle1 ampl angle2];
+				else
+					sac = [];
+				end
+			end
+			
 		end
 		
 	end

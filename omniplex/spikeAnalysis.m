@@ -1036,7 +1036,7 @@ classdef spikeAnalysis < analysisCore
 			if isfield(ego.trial(idx(1)),'firstSaccade')
 				st = [ego.trial(idx).firstSaccade];
 				yt = 1:length(st);
-				plot(st,yt,'ys','MarkerFaceColor','y','MarkerSize',3);
+				plot(st,yt,'go','MarkerFaceColor',[0 1 0],'MarkerSize',4);
 			end
 			
 			for j = 1:length(idx)

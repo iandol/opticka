@@ -441,6 +441,9 @@ classdef plxReader < optickaCore
 			edfList = [edfTrials.variable]';
 			c1 = plxList([ego.eventList.trials.isCorrect]');
 			c2 = edfList([edfTrials.correct]);
+			if length(c2) > length(c1)
+				c2 = c2(1:length(c1));
+			end
 			if isequal(plxList,edfList) || isequal(c1,c2) %check our variable list orders are equal
 				for i = 1:length(plxList)
 					if plxList(i) == edfList(i)
