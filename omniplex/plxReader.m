@@ -460,6 +460,16 @@ classdef plxReader < optickaCore
 								ego.eventList.trials(i).firstSaccade = NaN;
 							end
 						end
+						if isfield(edfTrials,'sampleSaccades')
+							ego.eventList.trials(i).sampleSaccades = edfTrials(i).sampleSaccades;
+						else
+							ego.eventList.trials(i).sampleSaccades = NaN;
+						end
+						if isfield(edfTrials,'microSaccades')
+							ego.eventList.trials(i).microSaccades = edfTrials(i).microSaccades;
+						else
+							ego.eventList.trials(i).microSaccades = NaN;
+						end
 					else
 						warning(['integrateEyeData: Trial ' num2str(i) ' Variable' num2str(plxList(i)) ' FAILED']);
 					end

@@ -115,7 +115,9 @@ classdef eyelinkAnalysis < analysisCore
 				oldpath = pwd;
 				cd(ego.dir)
 				ego.raw = edfmex(ego.file);
-				ego.sampleRate = ego.raw.RECORDINGS(1).sample_rate;
+				if isnumeric(ego.raw.RECORDINGS(1).sample_rate)
+					ego.sampleRate = double(ego.raw.RECORDINGS(1).sample_rate);
+				end
 				fprintf('\n');
 				cd(oldpath)
 			end
@@ -130,7 +132,7 @@ classdef eyelinkAnalysis < analysisCore
 		% ===================================================================
 		function parse(ego)
 			ego.isParsed = false;
-			tic
+			tmain = tic;
 			isTrial = false;
 			tri = 1; %current trial that is being parsed
 			tri2 = 1; %trial ignoring incorrects
@@ -423,8 +425,9 @@ classdef eyelinkAnalysis < analysisCore
 			parseFixationPositions(ego);
 			parseROI(ego);
 			parseTOI(ego);
+			computeMicrosaccades(ego);
 			
-			fprintf('Parsing EDF Trials took %g ms\n',round(toc*1000));
+			fprintf('\tOverall Parsing of EDF Trials took %g ms\n',round(toc(tmain)*1000));
 		end
 		
 		% ===================================================================
@@ -702,7 +705,7 @@ classdef eyelinkAnalysis < analysisCore
 				disp('No ROI specified!!!')
 				return
 			end
-			tic
+			tROI = tic;
 			ppd = ego.ppd;
 			fixationX = ego.ROI(1);
 			fixationY = ego.ROI(2);
@@ -739,7 +742,7 @@ classdef eyelinkAnalysis < analysisCore
 				ego.ROIInfo(i).breakFix = ego.trials(i).breakFix;
 				ego.ROIInfo(i).incorrect = ego.trials(i).incorrect;
 			end
-			fprintf('Parsing ROI took %g ms\n', round(toc*1000))
+			fprintf('Parsing ROI took %g ms\n', round(toc(tROI)*1000))
 		end
 		
 		% ===================================================================
@@ -753,7 +756,7 @@ classdef eyelinkAnalysis < analysisCore
 				disp('No TOI specified!!!')
 				return
 			end
-			tic
+			tTOI = tic;
 			ppd = ego.ppd;
 			t1 = ego.TOI(1);
 			t2 = ego.TOI(2);
@@ -797,7 +800,7 @@ classdef eyelinkAnalysis < analysisCore
 				ego.TOIInfo(i).breakFix = ego.trials(i).breakFix;
 				ego.TOIInfo(i).incorrect = ego.trials(i).incorrect;
 			end
-			fprintf('Parsing TOI took %g ms\n', round(toc*1000))
+			fprintf('Parsing TOI took %g ms\n', round(toc(tTOI)*1000))
 		end
 		
 		% ===================================================================
@@ -1343,8 +1346,10 @@ classdef eyelinkAnalysis < analysisCore
 			VFAC=5;
 			MINDUR=5;  %  equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
 			sampleRate = ego.sampleRate;
+			tic
 			for jj = 1:length(ego.trials)
-				samples = []; sac = []; radius = [];
+				if ego.trials(jj).incorrect == true;	continue;	end
+				samples = []; sac = []; radius = []; monol=[]; monor=[];
 				ego.trials(jj).msacc = struct();
 				ego.trials(jj).msacctimes = [];
 				samples(:,1) = ego.trials(jj).times/1e3;
@@ -1353,30 +1358,25 @@ classdef eyelinkAnalysis < analysisCore
 				samples(:,4) = nan(size(samples(:,1)));
 				samples(:,5) = samples(:,4);
 				eye_used = 0;
-				
 				try
 					switch eye_used
 						case 0
 							v = vecvel(samples(:,2:3),sampleRate,2);
-							[sac radius] = microsacc(samples(:,2:3),v,VFAC,MINDUR);
-							monol=[];
-							monor=[];
+							[sac, radius] = microsacc(samples(:,2:3),v,VFAC,MINDUR);
 						case 1
 							v = vecvel(samples(:,2:3),sampleRate,2);
-							[sac radius] = microsacc(samples(:,4:5),v,VFAC,MINDUR);
-							monol=[];
-							monor=[];
+							[sac, radius] = microsacc(samples(:,4:5),v,VFAC,MINDUR);
 						case 2
 							MSlcoords=samples(:,2:3);
 							MSrcoords=samples(:,4:5);
 							vl = vecvel(MSlcoords,sampleRate,2);
 							vr = vecvel(MSrcoords,sampleRate,2);
-							[sacl radius] = microsacc(MSlcoords,vl,VFAC,MINDUR);
-							[sacr radius] = microsacc(MSrcoords,vr,VFAC,MINDUR);
+							[sacl, radiusl] = microsacc(MSlcoords,vl,VFAC,MINDUR);
+							[sacr, radiusr] = microsacc(MSrcoords,vr,VFAC,MINDUR);
 							[bsac, monol, monor] = binsacc(sacl,sacr);
 							sac = saccpar(bsac);
 					end
-
+					ego.trials(jj).radius = radius;
 					for ii = 1:size(sac,1)
 						ego.trials(jj).msacc(ii).time = samples(sac(ii,1),1);
 						ego.trials(jj).msacc(ii).endtime = samples(sac(ii,2),1);
@@ -1385,10 +1385,19 @@ classdef eyelinkAnalysis < analysisCore
 						ego.trials(jj).msacc(ii).dy = sac(ii,5);
 						ego.trials(jj).msacc(ii).dX = sac(ii,6);
 						ego.trials(jj).msacc(ii).dY = sac(ii,7);
+						[theta,rho]=cart2pol(sac(ii,6),sac(ii,7));
+						ego.trials(jj).msacc(ii).theta = rad2ang(theta);
+						ego.trials(jj).msacc(ii).rho = rho;
+						ego.trials(jj).msacc(ii).isMicroSaccade = rho<=ego.minSaccadeDistance;
 					end
-					ego.trials(jj).msacctimes = [ego.trials(jj).msacc(:).time];
+					ego.trials(jj).sampleSaccades = [ego.trials(jj).msacc(:).time];
+					ego.trials(jj).microSaccades = [ego.trials(jj).sampleSaccades([ego.trials(jj).msacc(:).isMicroSaccade])];
+					if isempty(ego.trials(jj).microSaccades); ego.trials(jj).microSaccades = NaN; end
+				catch ME
+					getReport(ME)
 				end
 			end
+			fprintf('Parsing MicroSaccades took %g ms\n', round(toc*1000))
 				
 			function v = vecvel(xx,SAMPLING,TYPE)
 				%------------------------------------------------------------

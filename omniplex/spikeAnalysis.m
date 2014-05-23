@@ -1032,17 +1032,23 @@ classdef spikeAnalysis < analysisCore
 			
 			axis(hdl);
 			xpos = xlim;
-			
-			if isfield(ego.trial(idx(1)),'firstSaccade')
-				st = [ego.trial(idx).firstSaccade];
-				yt = 1:length(st);
-				plot(st,yt,'go','MarkerFaceColor',[0 1 0],'MarkerSize',4);
-			end
+			hold on
 			
 			for j = 1:length(idx)
 				cs{j} = num2str(idx(j));
 				y(j) = j;
 				x(j) = xpos(2) + abs(((xpos(2)-xpos(1))/100));
+				if isfield(ego.trial(idx(1)),'microSaccades')
+					mS{j} = ego.trial(idx(j)).microSaccades;
+					if ~isnan(mS{j}) 
+						plot(mS{j},y(j),'yo','MarkerFaceColor',[1 1 0],'MarkerSize',4);
+					end
+				end
+			end
+			if isfield(ego.trial(idx(1)),'firstSaccade')
+				st = [ego.trial(idx).firstSaccade];
+				yt = 1:length(st);
+				plot(st,yt,'go','MarkerFaceColor',[0 1 0],'MarkerSize',4);
 			end
 			if length(idx) >= 100
 				fs = 9;
