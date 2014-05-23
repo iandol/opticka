@@ -1033,15 +1033,21 @@ classdef spikeAnalysis < analysisCore
 			axis(hdl);
 			xpos = xlim;
 			hold on
-			
+			nMS1 = 0;
+			nMS2 = 0;
 			for j = 1:length(idx)
 				cs{j} = num2str(idx(j));
 				y(j) = j;
 				x(j) = xpos(2) + abs(((xpos(2)-xpos(1))/100));
 				if isfield(ego.trial(idx(1)),'microSaccades')
-					mS{j} = ego.trial(idx(j)).microSaccades;
-					if ~isnan(mS{j}) 
-						plot(mS{j},y(j),'yo','MarkerFaceColor',[1 1 0],'MarkerSize',4);
+					mS = ego.trial(idx(j)).microSaccades;
+					mS(isnan(mS))=[];
+					if ~isempty(mS)
+						mS1 = mS( mS >= ego.baselineWindow(1) & mS <= ego.baselineWindow(2));
+						mS2 = mS( mS >= 0 & mS <= ego.measureRange(2));
+						nMS1 = nMS1 + length(mS1);
+						nMS2 = nMS2 + length(mS2);
+						plot(mS,y(j),'yo','MarkerFaceColor',[1 1 0],'MarkerSize',4);
 					end
 				end
 			end
@@ -1062,6 +1068,8 @@ classdef spikeAnalysis < analysisCore
 			end
 			text(x,y,cs,'FontSize',fs,'Color',[0.5 0.5 0.5],'Interpreter','none')
 			set(hdl,'YGrid','on','YMinorGrid','on')
+			fprintf('\nRatio of baseline microSaccades: %.2g (%i msaccs for %i trials)\n',nMS1/length(idx),nMS1,length(idx));
+			fprintf('Ratio of response microSaccades: %.2g (%i msaccs for %i trials)\n\n',nMS2/length(idx),nMS2,length(idx));
 		end
 		
 	end

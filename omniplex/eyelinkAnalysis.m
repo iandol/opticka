@@ -24,6 +24,10 @@ classdef eyelinkAnalysis < analysisCore
 		verbose = false
 		%> minimum saccade distance in degrees
 		minSaccadeDistance@double = 0.99
+		%> relative velocity threshold
+		VFAC=5
+		%> minimum saccade duration
+		MINDUR=2  %equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
 	end
 	
 	properties (Hidden = true)
@@ -493,6 +497,7 @@ classdef eyelinkAnalysis < analysisCore
 			medx = [];
 			medy = [];
 			early = 0;
+			mS = [];
 			
 			map = ego.optimalColours(length(ego.vars));
 			
@@ -558,6 +563,10 @@ classdef eyelinkAnalysis < analysisCore
 				plot(t,abs(y),'k-x','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				maxv = max([maxv, max(abs(x)), max(abs(y))]) + 0.1;
+				if ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
+					plot(thisTrial.microSaccades,-0.2,'yo','Color','y','MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+					'MarkerFaceColor','y','UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
+				end
 				
 				p(2).select();
 				p(2).hold('on')
@@ -620,7 +629,7 @@ classdef eyelinkAnalysis < analysisCore
 			box on
 			axis tight;
 			if maxv > 10; maxv = 10; end
-			axis([-0.2 0.4 0 maxv])
+			axis([-0.2 0.4 -0.2 maxv])
 			ti=sprintf('ABS Mean/SD %g - %g s: X=%.2g / %.2g | Y=%.2g / %.2g', t1,t2,...
 				mean(abs(meanx)), mean(abs(stdex)), ...
 				mean(abs(meany)), mean(abs(stdey)));
@@ -1344,14 +1353,15 @@ classdef eyelinkAnalysis < analysisCore
 		function computeMicrosaccades(ego)
 			
 			VFAC=5;
-			MINDUR=5;  %  equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
+			MINDUR=2;  %equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
 			sampleRate = ego.sampleRate;
 			tic
 			for jj = 1:length(ego.trials)
 				if ego.trials(jj).incorrect == true;	continue;	end
 				samples = []; sac = []; radius = []; monol=[]; monor=[];
 				ego.trials(jj).msacc = struct();
-				ego.trials(jj).msacctimes = [];
+				ego.trials(jj).sampleSaccades = [];
+				ego.trials(jj).microSaccades = [];
 				samples(:,1) = ego.trials(jj).times/1e3;
 				samples(:,2) = ego.trials(jj).gx/ego.ppd;
 				samples(:,3) = ego.trials(jj).gy/ego.ppd;
@@ -1390,8 +1400,13 @@ classdef eyelinkAnalysis < analysisCore
 						ego.trials(jj).msacc(ii).rho = rho;
 						ego.trials(jj).msacc(ii).isMicroSaccade = rho<=ego.minSaccadeDistance;
 					end
-					ego.trials(jj).sampleSaccades = [ego.trials(jj).msacc(:).time];
-					ego.trials(jj).microSaccades = [ego.trials(jj).sampleSaccades([ego.trials(jj).msacc(:).isMicroSaccade])];
+					if ~isempty(sac)
+						ego.trials(jj).sampleSaccades = [ego.trials(jj).msacc(:).time];
+						ego.trials(jj).microSaccades = [ego.trials(jj).sampleSaccades([ego.trials(jj).msacc(:).isMicroSaccade])];
+					else
+						ego.trials(jj).sampleSaccades = NaN;
+						ego.trials(jj).microSaccades = NaN;
+					end
 					if isempty(ego.trials(jj).microSaccades); ego.trials(jj).microSaccades = NaN; end
 				catch ME
 					getReport(ME)
