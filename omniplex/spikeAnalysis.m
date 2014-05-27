@@ -419,6 +419,11 @@ classdef spikeAnalysis < analysisCore
 				cfg.latency			= ego.plotRange;
 				cfg.spikechannel	= ego.names{ego.selectedUnit};
 				sd{j}					= ft_spikedensity(cfg, ego.ft);
+				e						= ego.var2SE(sd{j}.var,sd{j}.dof);
+				sd{j}.stderr		= e;
+				tCrit					= tinv( 0.975, sd{j}.dof );
+				et						= tCrit.*sqrt( sd{j}.var ./ sd{j}.dof ); 
+				sd{j}.stdterr		= et;
 			end
 			ego.results(1).sd = sd;
 			getRates(ego);
@@ -634,7 +639,7 @@ classdef spikeAnalysis < analysisCore
 			end
 			
 			switch lower(sel)
-				case {'p','psth'}	
+				case {'p','psth'}
 					plotPSTH(ego); drawnow;
 				case {'d','density'}
 					plotDensity(ego); drawnow;
@@ -837,7 +842,13 @@ classdef spikeAnalysis < analysisCore
 			
 			t = [ego.file];
 			for j = 1:length(sd)
-				e = ego.var2SE(sd{j}.var,sd{j}.dof);
+				if strcmpi(ego.stats.ploterror,'SEM')
+					e = sd{j}.stderr;
+					yt='Firing Rate (s/s) \pm 1 S.E.M.';
+				else
+					e = sd{j}.stdterr;
+					yt='Firing Rate (s/s) \pm 95% CI';
+				end
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = ego.selectedTrials{j}.name;
 				e = ego.var2SE(rate{j}.var,rate{j}.dof);
@@ -846,7 +857,7 @@ classdef spikeAnalysis < analysisCore
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',13);
 			xlabel(['Time (s) [window = ' sd{1}.cfg.winfunc ' ' num2str(sd{1}.cfg.timwin) '] ']);
-			ylabel(['Firing Rate (s/s) \pm S.E.M.'])
+			ylabel(yt)
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			ax=axis;

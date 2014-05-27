@@ -232,6 +232,16 @@ classdef analysisCore < optickaCore
 				end
 			end
 			
+			mlist7={'SEM','95%'};
+			ploterror = 'p';
+			for i = 1:length(mlist7)
+				if strcmpi(mlist7{i},ego.stats.ploterror)
+					ploterror = [ploterror '|¤' mlist7{i}];
+				else
+					ploterror = [ploterror '|' mlist7{i}];
+				end
+			end
+			
 			mtitle   = ['Select Statistics Settings'];
 			options  = {['t|' num2str(s.alpha,6)],'Set the Statistical Alpha Value (alpha):'; ...
 				[mt],'Main LFP Statistical Method (method):'; ...
@@ -246,6 +256,7 @@ classdef analysisCore < optickaCore
 				['t|' num2str(ego.stats.interpw)],'Spike-LFP Interpolation Window (s):'; ...
 				['t|' num2str(ego.stats.customFreq)],'LFP Frequency Stats Custom Frequency Band:'; ...
 				['t|' num2str(ego.stats.smoothing,12)],'Smoothing Value to use for Curves:'; ...
+				[ploterror],'Error data for Tuning Curves?:'; ...
 				};
 			
 			answer = menuN(mtitle,options);
@@ -264,6 +275,7 @@ classdef analysisCore < optickaCore
 				ego.stats.interpw = str2num(answer{11});
 				ego.stats.customFreq = str2num(answer{12});
 				ego.stats.smoothing = eval(answer{13});
+				ego.stats.ploterror = mlist7{answer{14}};
 			end
 			
 			stats = ego.stats;
@@ -586,6 +598,9 @@ classdef analysisCore < optickaCore
 			end
 			if ~isfield(ego.stats,'smoothing') || isempty(ego.stats.smoothing)
 				ego.stats(1).smoothing = 0;
+			end
+			if ~isfield(ego.stats,'ploterror') || isempty(ego.stats.ploterror)
+				ego.stats(1).ploterror = 'SEM';
 			end
 		end
 	end %---END PROTECTED METHODS---%

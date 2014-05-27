@@ -137,293 +137,8 @@ classdef eyelinkAnalysis < analysisCore
 		function parse(ego)
 			ego.isParsed = false;
 			tmain = tic;
-			isTrial = false;
-			tri = 1; %current trial that is being parsed
-			tri2 = 1; %trial ignoring incorrects
-			eventN = 0;
-			ego.comment = ego.raw.HEADER;
-			ego.trials = struct();
-			ego.correct.idx = [];
-			ego.correct.saccTimes = [];
-			ego.correct.fixations = [];
-			ego.breakFix = ego.correct;
-			ego.incorrect = ego.correct;
-			ego.trialList = [];
-			
-			ego.ppd; %faster to cache this now (dependant property sets ppd_ too)
-			
-			sample = ego.raw.FSAMPLE.gx(:,100); %check which eye
-			if sample(1) == -32768 %only use right eye if left eye data is not present
-				eyeUsed = 2; %right eye index for FSAMPLE.gx;
-			else
-				eyeUsed = 1; %left eye index
-			end
-			
-			for i = 1:length(ego.raw.FEVENT)
-				isMessage = false;
-				evt = ego.raw.FEVENT(i);
-				
-				if evt.type == 24 %strcmpi(evt.codestring,'MESSAGEEVENT')
-					isMessage = true;
-					no = regexpi(evt.message,'^(?<NO>!cal|!mode|Validate|Reccfg|elclcfg|Gaze_coords|thresholds|elcl_)','names'); %ignore these first
-					if ~isempty(no)  && ~isempty(no.NO)
-						continue
-					end
-				end
-				
-				if isMessage && ~isTrial
-					rt = regexpi(evt.message,'^(?<d>V_RT MESSAGE) (?<a>\w+) (?<b>\w+)','names');
-					if ~isempty(rt) && ~isempty(rt.a) && ~isempty(rt.b)
-						ego.rtStartMessage = rt.a;
-						ego.rtEndMessage = rt.b;
-						continue
-					end
-					
-					xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
-					if ~isempty(xy)  && ~isempty(xy.x)
-						ego.display = [str2num(xy.x)+1 str2num(xy.y)+1];
-						continue
-					end
-					
-					id = regexpi(evt.message,'^(?<TAG>TRIALID)(\s*)(?<ID>\d*)','names');
-					if ~isempty(id) && ~isempty(id.TAG)
-						if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
-							id.ID = '1010';
-						end
-						isTrial = true;
-						eventN=1;
-						ego.trials(tri).variable = str2double(id.ID);
-						ego.trials(tri).idx = tri;
-						ego.trials(tri).correctedIndex = [];
-						ego.trials(tri).time = double(evt.time);
-						ego.trials(tri).sttime = double(evt.sttime);
-						ego.trials(tri).rt = false;
-						ego.trials(tri).rtstarttime = double(evt.sttime);
-						ego.trials(tri).fixations = [];
-						ego.trials(tri).saccades = [];
-						ego.trials(tri).saccadeTimes = [];
-						ego.trials(tri).firstSaccade = NaN;
-						ego.trials(tri).rttime = [];
-						ego.trials(tri).uuid = [];
-						ego.trials(tri).correct = false;
-						ego.trials(tri).breakFix = false;
-						ego.trials(tri).incorrect = false;
-						continue
-					end
-				end
-				
-				if isTrial
-					
-					if ~isMessage
-						
-						if strcmpi(evt.codestring,'STARTSAMPLES')
-							ego.trials(tri).startsampletime = double(evt.sttime);
-							continue
-						end
-						
-						if evt.type == 8 %strcmpi(evt.codestring,'ENDFIX')
-							fixa = [];
-							if isempty(ego.trials(tri).fixations)
-								fix = 1;
-							else
-								fix = length(ego.trials(tri).fixations)+1;
-							end
-							if ego.trials(tri).rt == true
-								rel = ego.trials(tri).rtstarttime;
-								fixa.rt = true;
-							else
-								rel = ego.trials(tri).sttime;
-								fixa.rt = false;
-							end
-							fixa.n = eventN;
-							fixa.ppd = ego.ppd_;
-							fixa.sttime = double(evt.sttime);
-							fixa.entime = double(evt.entime);
-							fixa.time = fixa.sttime - rel;
-							fixa.length = fixa.entime - fixa.sttime;
-							fixa.rel = rel;
-							
-							[fixa.gstx, fixa.gsty]  = toDegrees(ego, [evt.gstx, evt.gsty]);
-							[fixa.genx, fixa.geny]  = toDegrees(ego, [evt.genx, evt.geny]);
-							[fixa.x, fixa.y]		= toDegrees(ego, [evt.gavx, evt.gavy]);
-							[fixa.theta, fixa.rho]	= cart2pol(fixa.x, fixa.y);
-							fixa.theta = rad2ang(fixa.theta);
-							
-							if fix == 1
-								ego.trials(tri).fixations = fixa;
-							else
-								ego.trials(tri).fixations(fix) = fixa;
-							end
-							ego.trials(tri).nfix = fix;
-							eventN = eventN + 1;
-							continue
-						end
-						
-						if evt.type == 6 % strcmpi(evt.codestring,'ENDSACC')
-							sacc = [];
-							if isempty(ego.trials(tri).saccades)
-								nsacc = 1;
-							else
-								nsacc = length(ego.trials(tri).saccades)+1;
-							end
-							if ego.trials(tri).rt == true
-								rel = ego.trials(tri).rtstarttime;
-								sacc.rt = true;
-							else
-								rel = ego.trials(tri).sttime;
-								sacc.rt = false;
-							end
-							sacc.n = eventN;
-							sacc.ppd = ego.ppd_;
-							sacc.sttime = double(evt.sttime);
-							sacc.entime = double(evt.entime);
-							sacc.time = sacc.sttime - rel;
-							sacc.length = sacc.entime - sacc.sttime;
-							sacc.rel = rel;
-							
-							[sacc.gstx, sacc.gsty]	= toDegrees(ego, [evt.gstx evt.gsty]);
-							[sacc.genx, sacc.geny]	= toDegrees(ego, [evt.genx evt.geny]);
-							[sacc.x, sacc.y]		= deal((sacc.genx - sacc.gstx), (sacc.geny - sacc.gsty));
-							[sacc.theta, sacc.rho]	= cart2pol(sacc.x, sacc.y);
-							sacc.theta = rad2ang(sacc.theta);
-							
-							if sacc.rho > ego.minSaccadeDistance; sacc.microSaccade = false;
-							else sacc.microSaccade = true; end
-							
-							if nsacc == 1
-								ego.trials(tri).saccades = sacc;
-							else
-								ego.trials(tri).saccades(nsacc) = sacc;
-							end
-							ego.trials(tri).nsacc = nsacc;
-							eventN = eventN + 1;
-							continue
-						end
-						
-						if evt.type == 16 %strcmpi(evt.codestring,'ENDSAMPLES')
-							ego.trials(tri).endsampletime = double(evt.sttime);
-							idx = ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
-								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime;
-							
-							ego.trials(tri).times = double(ego.raw.FSAMPLE.time(idx));
-							ego.trials(tri).times = ego.trials(tri).times - ego.trials(tri).rtstarttime;
-							
-							ego.trials(tri).gx = ego.raw.FSAMPLE.gx(eyeUsed, idx);
-							ego.trials(tri).gx = ego.trials(tri).gx - ego.display(1)/2;
-							
-							ego.trials(tri).gy = ego.raw.FSAMPLE.gy(eyeUsed, idx);
-							ego.trials(tri).gy = ego.trials(tri).gy - ego.display(2)/2;
-							
-							ego.trials(tri).hx = ego.raw.FSAMPLE.hx(eyeUsed, idx);
-							
-							ego.trials(tri).hy = ego.raw.FSAMPLE.hy(eyeUsed, idx);
-							
-							ego.trials(tri).pa = ego.raw.FSAMPLE.pa(eyeUsed, idx);
-							continue
-						end
-						
-					else
-						uuid = regexpi(evt.message,'^UUID (?<UUID>[\w]+)','names');
-						if ~isempty(uuid) && ~isempty(uuid.UUID)
-							ego.trials(tri).uuid = uuid.UUID;
-							continue
-						end
-						
-						endfix = regexpi(evt.message,['^' ego.rtStartMessage],'match');
-						if ~isempty(endfix)
-							ego.trials(tri).rtstarttime = double(evt.sttime);
-							ego.trials(tri).rt = true;
-							if ~isempty(ego.trials(tri).fixations)
-								for lf = 1 : length(ego.trials(tri).fixations)
-									ego.trials(tri).fixations(lf).time = ego.trials(tri).fixations(lf).sttime - ego.trials(tri).rtstarttime;
-									ego.trials(tri).fixations(lf).rt = true;
-								end
-							end
-							if ~isempty(ego.trials(tri).saccades)
-								for lf = 1 : length(ego.trials(tri).saccades)
-									ego.trials(tri).saccades(lf).time = ego.trials(tri).saccades(lf).sttime - ego.trials(tri).rtstarttime;
-									ego.trials(tri).saccades(lf).rt = true;
-									ego.trials(tri).saccadeTimes(lf) = ego.trials(tri).saccades(lf).time;
-								end
-							end
-							continue
-						end
-						
-						endrt = regexpi(evt.message,['^' ego.rtEndMessage],'match');
-						if ~isempty(endrt)
-							ego.trials(tri).rtendtime = double(evt.sttime);
-							if isfield(ego.trials,'rtstarttime')
-								ego.trials(tri).rttime = ego.trials(tri).rtendtime - ego.trials(tri).rtstarttime;
-							end
-							continue
-						end
-						
-						id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>(\-|\+|\d)+)','names');
-						if ~isempty(id) && ~isempty(id.ID)
-							ego.trials(tri).entime = double(evt.sttime);
-							ego.trials(tri).result = str2num(id.ID);
-							sT=[];
-							ego.trials(tri).saccadeTimes = [];
-							for ii = 1:ego.trials(tri).nsacc
-								t = ego.trials(tri).saccades(ii).time;
-								ego.trials(tri).saccadeTimes(ii) = t;
-								if isnan(ego.trials(tri).firstSaccade) && t > 0 && ego.trials(tri).saccades(ii).microSaccade == false
-									ego.trials(tri).firstSaccade = t;
-									sT=t;
-								end
-							end
-							
-							if ego.trials(tri).result == 1
-								ego.trials(tri).correct = true;
-								ego.correct.idx = [ego.correct.idx tri];
-								ego.trialList(tri) = ego.trials(tri).variable;
-								if ~isempty(sT) && sT > 0
-									ego.correct.saccTimes = [ego.correct.saccTimes sT];
-								else
-									ego.correct.saccTimes = [ego.correct.saccTimes NaN];
-								end
-								ego.trials(tri).correctedIndex = tri2;
-								tri2 = tri2 + 1;
-							elseif ego.trials(tri).result == -1
-								ego.trials(tri).breakFix = true;
-								ego.breakFix.idx = [ego.breakFix.idx tri];
-								ego.trialList(tri) = -ego.trials(tri).variable;
-								if ~isempty(sT) && sT > 0
-									ego.breakFix.saccTimes = [ego.breakFix.saccTimes sT];
-								else
-									ego.breakFix.saccTimes = [ego.breakFix.saccTimes NaN];
-								end
-								ego.trials(tri).correctedIndex = tri2;
-								tri2 = tri2 + 1;
-							elseif ego.trials(tri).result == 0
-								ego.trials(tri).incorrect = true;
-								ego.incorrect.idx = [ego.incorrect.idx tri];
-								ego.trialList(tri) = -ego.trials(tri).variable;
-								if ~isempty(sT) && sT > 0
-									ego.incorrect.saccTimes = [ego.incorrect.saccTimes sT];
-								else
-									ego.incorrect.saccTimes = [ego.incorrect.saccTimes NaN];
-								end
-								ego.trials(tri).correctedIndex = NaN;
-							end
-							ego.trials(tri).deltaT = ego.trials(tri).entime - ego.trials(tri).sttime;
-							isTrial = false;
-							tri = tri + 1;
-							continue
-						end
-					end
-				end
-			end
-			
-			if max(abs(ego.trialList)) == 1010 && min(abs(ego.trialList)) == 1010
-				ego.needOverride = true;
-				ego.salutation('','---> TRIAL NAME BUG OVERRIDE NEEDED!\n',true);
-			else
-				ego.needOverride = false;
-			end
-			
-			ego.isParsed = true;
-			
+	
+			parseEvents(ego);
 			parseAsVars(ego);
 			parseSecondaryEyePos(ego);
 			parseFixationPositions(ego);
@@ -431,7 +146,21 @@ classdef eyelinkAnalysis < analysisCore
 			parseTOI(ego);
 			computeMicrosaccades(ego);
 			
+			ego.isParsed = true;
+			
 			fprintf('\tOverall Parsing of EDF Trials took %g ms\n',round(toc(tmain)*1000));
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parseSaccades(ego)
+			parseROI(ego);
+			parseTOI(ego);
+			computeMicrosaccades(ego);
 		end
 		
 		% ===================================================================
@@ -1097,16 +826,6 @@ classdef eyelinkAnalysis < analysisCore
 			end
 		end
 		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function doMicrosaccades(ego)
-			ego.computeMicrosaccades();
-		end
-		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
@@ -1208,6 +927,299 @@ classdef eyelinkAnalysis < analysisCore
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
+	
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parseEvents(ego)
+			isTrial = false;
+			tri = 1; %current trial that is being parsed
+			tri2 = 1; %trial ignoring incorrects
+			eventN = 0;
+			ego.comment = ego.raw.HEADER;
+			ego.trials = struct();
+			ego.correct.idx = [];
+			ego.correct.saccTimes = [];
+			ego.correct.fixations = [];
+			ego.breakFix = ego.correct;
+			ego.incorrect = ego.correct;
+			ego.trialList = [];
+			
+			ego.ppd; %faster to cache this now (dependant property sets ppd_ too)
+			
+			sample = ego.raw.FSAMPLE.gx(:,100); %check which eye
+			if sample(1) == -32768 %only use right eye if left eye data is not present
+				eyeUsed = 2; %right eye index for FSAMPLE.gx;
+			else
+				eyeUsed = 1; %left eye index
+			end
+			
+			for i = 1:length(ego.raw.FEVENT)
+				isMessage = false;
+				evt = ego.raw.FEVENT(i);
+				
+				if evt.type == 24 %strcmpi(evt.codestring,'MESSAGEEVENT')
+					isMessage = true;
+					no = regexpi(evt.message,'^(?<NO>!cal|!mode|Validate|Reccfg|elclcfg|Gaze_coords|thresholds|elcl_)','names'); %ignore these first
+					if ~isempty(no)  && ~isempty(no.NO)
+						continue
+					end
+				end
+				
+				if isMessage && ~isTrial
+					rt = regexpi(evt.message,'^(?<d>V_RT MESSAGE) (?<a>\w+) (?<b>\w+)','names');
+					if ~isempty(rt) && ~isempty(rt.a) && ~isempty(rt.b)
+						ego.rtStartMessage = rt.a;
+						ego.rtEndMessage = rt.b;
+						continue
+					end
+					
+					xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
+					if ~isempty(xy)  && ~isempty(xy.x)
+						ego.display = [str2num(xy.x)+1 str2num(xy.y)+1];
+						continue
+					end
+					
+					id = regexpi(evt.message,'^(?<TAG>TRIALID)(\s*)(?<ID>\d*)','names');
+					if ~isempty(id) && ~isempty(id.TAG)
+						if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
+							id.ID = '1010';
+						end
+						isTrial = true;
+						eventN=1;
+						ego.trials(tri).variable = str2double(id.ID);
+						ego.trials(tri).idx = tri;
+						ego.trials(tri).correctedIndex = [];
+						ego.trials(tri).time = double(evt.time);
+						ego.trials(tri).sttime = double(evt.sttime);
+						ego.trials(tri).rt = false;
+						ego.trials(tri).rtstarttime = double(evt.sttime);
+						ego.trials(tri).fixations = [];
+						ego.trials(tri).saccades = [];
+						ego.trials(tri).saccadeTimes = [];
+						ego.trials(tri).firstSaccade = NaN;
+						ego.trials(tri).rttime = [];
+						ego.trials(tri).uuid = [];
+						ego.trials(tri).correct = false;
+						ego.trials(tri).breakFix = false;
+						ego.trials(tri).incorrect = false;
+						continue
+					end
+				end
+				
+				if isTrial
+					
+					if ~isMessage
+						
+						if strcmpi(evt.codestring,'STARTSAMPLES')
+							ego.trials(tri).startsampletime = double(evt.sttime);
+							continue
+						end
+						
+						if evt.type == 8 %strcmpi(evt.codestring,'ENDFIX')
+							fixa = [];
+							if isempty(ego.trials(tri).fixations)
+								fix = 1;
+							else
+								fix = length(ego.trials(tri).fixations)+1;
+							end
+							if ego.trials(tri).rt == true
+								rel = ego.trials(tri).rtstarttime;
+								fixa.rt = true;
+							else
+								rel = ego.trials(tri).sttime;
+								fixa.rt = false;
+							end
+							fixa.n = eventN;
+							fixa.ppd = ego.ppd_;
+							fixa.sttime = double(evt.sttime);
+							fixa.entime = double(evt.entime);
+							fixa.time = fixa.sttime - rel;
+							fixa.length = fixa.entime - fixa.sttime;
+							fixa.rel = rel;
+							
+							[fixa.gstx, fixa.gsty]  = toDegrees(ego, [evt.gstx, evt.gsty]);
+							[fixa.genx, fixa.geny]  = toDegrees(ego, [evt.genx, evt.geny]);
+							[fixa.x, fixa.y]		= toDegrees(ego, [evt.gavx, evt.gavy]);
+							[fixa.theta, fixa.rho]	= cart2pol(fixa.x, fixa.y);
+							fixa.theta = rad2ang(fixa.theta);
+							
+							if fix == 1
+								ego.trials(tri).fixations = fixa;
+							else
+								ego.trials(tri).fixations(fix) = fixa;
+							end
+							ego.trials(tri).nfix = fix;
+							eventN = eventN + 1;
+							continue
+						end
+						
+						if evt.type == 6 % strcmpi(evt.codestring,'ENDSACC')
+							sacc = [];
+							if isempty(ego.trials(tri).saccades)
+								nsacc = 1;
+							else
+								nsacc = length(ego.trials(tri).saccades)+1;
+							end
+							if ego.trials(tri).rt == true
+								rel = ego.trials(tri).rtstarttime;
+								sacc.rt = true;
+							else
+								rel = ego.trials(tri).sttime;
+								sacc.rt = false;
+							end
+							sacc.n = eventN;
+							sacc.ppd = ego.ppd_;
+							sacc.sttime = double(evt.sttime);
+							sacc.entime = double(evt.entime);
+							sacc.time = sacc.sttime - rel;
+							sacc.length = sacc.entime - sacc.sttime;
+							sacc.rel = rel;
+							
+							[sacc.gstx, sacc.gsty]	= toDegrees(ego, [evt.gstx evt.gsty]);
+							[sacc.genx, sacc.geny]	= toDegrees(ego, [evt.genx evt.geny]);
+							[sacc.x, sacc.y]		= deal((sacc.genx - sacc.gstx), (sacc.geny - sacc.gsty));
+							[sacc.theta, sacc.rho]	= cart2pol(sacc.x, sacc.y);
+							sacc.theta = rad2ang(sacc.theta);
+							
+							if sacc.rho > ego.minSaccadeDistance; sacc.microSaccade = false;
+							else sacc.microSaccade = true; end
+							
+							if nsacc == 1
+								ego.trials(tri).saccades = sacc;
+							else
+								ego.trials(tri).saccades(nsacc) = sacc;
+							end
+							ego.trials(tri).nsacc = nsacc;
+							eventN = eventN + 1;
+							continue
+						end
+						
+						if evt.type == 16 %strcmpi(evt.codestring,'ENDSAMPLES')
+							ego.trials(tri).endsampletime = double(evt.sttime);
+							idx = ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
+								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime;
+							
+							ego.trials(tri).times = double(ego.raw.FSAMPLE.time(idx));
+							ego.trials(tri).times = ego.trials(tri).times - ego.trials(tri).rtstarttime;
+							
+							ego.trials(tri).gx = ego.raw.FSAMPLE.gx(eyeUsed, idx);
+							ego.trials(tri).gx = ego.trials(tri).gx - ego.display(1)/2;
+							
+							ego.trials(tri).gy = ego.raw.FSAMPLE.gy(eyeUsed, idx);
+							ego.trials(tri).gy = ego.trials(tri).gy - ego.display(2)/2;
+							
+							ego.trials(tri).hx = ego.raw.FSAMPLE.hx(eyeUsed, idx);
+							
+							ego.trials(tri).hy = ego.raw.FSAMPLE.hy(eyeUsed, idx);
+							
+							ego.trials(tri).pa = ego.raw.FSAMPLE.pa(eyeUsed, idx);
+							continue
+						end
+						
+					else
+						uuid = regexpi(evt.message,'^UUID (?<UUID>[\w]+)','names');
+						if ~isempty(uuid) && ~isempty(uuid.UUID)
+							ego.trials(tri).uuid = uuid.UUID;
+							continue
+						end
+						
+						endfix = regexpi(evt.message,['^' ego.rtStartMessage],'match');
+						if ~isempty(endfix)
+							ego.trials(tri).rtstarttime = double(evt.sttime);
+							ego.trials(tri).rt = true;
+							if ~isempty(ego.trials(tri).fixations)
+								for lf = 1 : length(ego.trials(tri).fixations)
+									ego.trials(tri).fixations(lf).time = ego.trials(tri).fixations(lf).sttime - ego.trials(tri).rtstarttime;
+									ego.trials(tri).fixations(lf).rt = true;
+								end
+							end
+							if ~isempty(ego.trials(tri).saccades)
+								for lf = 1 : length(ego.trials(tri).saccades)
+									ego.trials(tri).saccades(lf).time = ego.trials(tri).saccades(lf).sttime - ego.trials(tri).rtstarttime;
+									ego.trials(tri).saccades(lf).rt = true;
+									ego.trials(tri).saccadeTimes(lf) = ego.trials(tri).saccades(lf).time;
+								end
+							end
+							continue
+						end
+						
+						endrt = regexpi(evt.message,['^' ego.rtEndMessage],'match');
+						if ~isempty(endrt)
+							ego.trials(tri).rtendtime = double(evt.sttime);
+							if isfield(ego.trials,'rtstarttime')
+								ego.trials(tri).rttime = ego.trials(tri).rtendtime - ego.trials(tri).rtstarttime;
+							end
+							continue
+						end
+						
+						id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>(\-|\+|\d)+)','names');
+						if ~isempty(id) && ~isempty(id.ID)
+							ego.trials(tri).entime = double(evt.sttime);
+							ego.trials(tri).result = str2num(id.ID);
+							sT=[];
+							ego.trials(tri).saccadeTimes = [];
+							for ii = 1:ego.trials(tri).nsacc
+								t = ego.trials(tri).saccades(ii).time;
+								ego.trials(tri).saccadeTimes(ii) = t;
+								if isnan(ego.trials(tri).firstSaccade) && t > 0 && ego.trials(tri).saccades(ii).microSaccade == false
+									ego.trials(tri).firstSaccade = t;
+									sT=t;
+								end
+							end
+							
+							if ego.trials(tri).result == 1
+								ego.trials(tri).correct = true;
+								ego.correct.idx = [ego.correct.idx tri];
+								ego.trialList(tri) = ego.trials(tri).variable;
+								if ~isempty(sT) && sT > 0
+									ego.correct.saccTimes = [ego.correct.saccTimes sT];
+								else
+									ego.correct.saccTimes = [ego.correct.saccTimes NaN];
+								end
+								ego.trials(tri).correctedIndex = tri2;
+								tri2 = tri2 + 1;
+							elseif ego.trials(tri).result == -1
+								ego.trials(tri).breakFix = true;
+								ego.breakFix.idx = [ego.breakFix.idx tri];
+								ego.trialList(tri) = -ego.trials(tri).variable;
+								if ~isempty(sT) && sT > 0
+									ego.breakFix.saccTimes = [ego.breakFix.saccTimes sT];
+								else
+									ego.breakFix.saccTimes = [ego.breakFix.saccTimes NaN];
+								end
+								ego.trials(tri).correctedIndex = tri2;
+								tri2 = tri2 + 1;
+							elseif ego.trials(tri).result == 0
+								ego.trials(tri).incorrect = true;
+								ego.incorrect.idx = [ego.incorrect.idx tri];
+								ego.trialList(tri) = -ego.trials(tri).variable;
+								if ~isempty(sT) && sT > 0
+									ego.incorrect.saccTimes = [ego.incorrect.saccTimes sT];
+								else
+									ego.incorrect.saccTimes = [ego.incorrect.saccTimes NaN];
+								end
+								ego.trials(tri).correctedIndex = NaN;
+							end
+							ego.trials(tri).deltaT = ego.trials(tri).entime - ego.trials(tri).sttime;
+							isTrial = false;
+							tri = tri + 1;
+							continue
+						end
+					end
+				end
+			end
+			
+			if max(abs(ego.trialList)) == 1010 && min(abs(ego.trialList)) == 1010
+				ego.needOverride = true;
+				ego.salutation('','---> TRIAL NAME BUG OVERRIDE NEEDED!\n',true);
+			else
+				ego.needOverride = false;
+			end
+	end
 		
 		% ===================================================================
 		%> @brief
