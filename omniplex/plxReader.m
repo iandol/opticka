@@ -179,11 +179,17 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function parseEvents(ego)
 			cd(ego.dir);
+			if ~isa(ego.rE,'runExperiment') || isempty(ego.rE)
+				readMat(ego);
+			end
 			getEvents(ego);
-			generateInfo(ego);
-			if ~isempty(ego.eA)
+			if ego.isEDF == true
+				if isempty(ego.eA) && ego.isEDF == true
+					loadEDF(ego);
+				end
 				integrateEyeData(ego);
 			end
+			generateInfo(ego);
 		end
 		
 		% ===================================================================
@@ -364,6 +370,7 @@ classdef plxReader < optickaCore
 			spike.trial						= bCell;
 			spike.trialtime				= [];
 			spike.sampleinfo				= [];
+			spike.saccadeRealign			= ego.saccadeRealign;
 			spike.cfg						= struct;
 			spike.cfg.dataset				= ego.file;
 			spike.cfg.headerformat		= 'plexon_plx_v2';
@@ -373,23 +380,24 @@ classdef plxReader < optickaCore
 			fs									= spike.hdr.FileHeader.Frequency;
 			for j = 1:length(dat{1}.trials)
 				for k = 1:spike.nUnits
-					t = dat{k}.trials{j};
-					s = t.spikes';
-					spike.trial{k} = [spike.trial{k} ones(1,length(s))*j];
-					if ego.saccadeRealign && isfield(dat{k}.trials{j},'firstSaccade')
-						fS = dat{k}.trials{j}.firstSaccade;
+					t									= dat{k}.trials{j};
+					s									= t.spikes';
+					spike.trial{k}					= [spike.trial{k} ones(1,length(s))*j];
+					if ego.saccadeRealign && isfield(ego.eventList.trials,'firstSaccade')
+						fS								= ego.eventList.trials(j).firstSaccade;
 						if isnan(fS); fS = 0; end
-						spike.timestamp{k} = [spike.timestamp{k} s*fs];
-						spike.time{k} = [spike.time{k} s-(t.base - fS)];
-						spike.trialtime(j,:) = [t.rStart-fS t.rEnd-fS];
-						spike.sampleinfo(j,:) = [t.tStart*fs t.tEnd*fs];
+						spike.firstSaccade(j)	= fS;
+						spike.timestamp{k}		= [spike.timestamp{k} s*fs];
+						spike.time{k}				= [spike.time{k} (s - t.base) - fS];
+						spike.trialtime(j,:)		= [t.rStart-fS t.rEnd-fS];
+						spike.sampleinfo(j,:)	= [t.tStart*fs t.tEnd*fs];
 					else
-						spike.timestamp{k} = [spike.timestamp{k} s*fs];
-						spike.time{k} = [spike.time{k} s-t.base];
-						spike.trialtime(j,:) = [t.rStart t.rEnd];
-						spike.sampleinfo(j,:) = [t.tStart*fs t.tEnd*fs];
+						spike.timestamp{k}		= [spike.timestamp{k} s*fs];
+						spike.time{k}				= [spike.time{k} s-t.base];
+						spike.trialtime(j,:)		= [t.rStart t.rEnd];
+						spike.sampleinfo(j,:)	= [t.tStart*fs t.tEnd*fs];
 					end
-					spike.cfg.trl(j,:) = [spike.trialtime(j,:) t.rStart*fs t.variable t.isCorrect];
+					spike.cfg.trl(j,:)			= [spike.trialtime(j,:) t.rStart*fs t.variable t.isCorrect];
 				end
 			end
 			fprintf('Converting spikes to fieldtrip format took %g ms\n',round(toc(tft)*1000));

@@ -841,7 +841,7 @@ classdef spikeAnalysis < analysisCore
 			
 			t = [ego.file];
 			for j = 1:length(sd)
-				if strcmpi(ego.stats.ploterror,'SEM')
+				if isfield(ego.stats,'ploterror') && strcmpi(ego.stats.ploterror,'SEM')
 					e = sd{j}.stderr;
 					yt='Firing Rate (s/s) \pm 1 S.E.M.';
 				else
@@ -1051,6 +1051,9 @@ classdef spikeAnalysis < analysisCore
 				x(j) = xpos(2) + abs(((xpos(2)-xpos(1))/100));
 				if isfield(ego.trial(idx(1)),'microSaccades')
 					mS = ego.trial(idx(j)).microSaccades;
+					if ego.p.saccadeRealign == true
+						mS = mS - ego.trial(idx(j)).firstSaccade;
+					end
 					mS(isnan(mS))=[];
 					if ~isempty(mS)
 						mS1 = mS( mS >= ego.baselineWindow(1) & mS <= ego.baselineWindow(2));
@@ -1063,6 +1066,9 @@ classdef spikeAnalysis < analysisCore
 			end
 			if isfield(ego.trial(idx(1)),'firstSaccade')
 				st = [ego.trial(idx).firstSaccade];
+				if ego.p.saccadeRealign == true
+					st = st - st;
+				end
 				yt = 1:length(st);
 				plot(st,yt,'go','MarkerFaceColor',[0 1 0],'MarkerSize',4);
 			end

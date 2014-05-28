@@ -141,12 +141,14 @@ classdef LFPAnalysis < analysisCore
 			cd(ego.dir);
 			%clear our data structures
 			ego.LFPs = struct(); ego.ft = struct(); ego.results = struct(); ego.panels = struct();
+			ego.p.eventWindow = ego.LFPWindow;
+			parseEvents(ego.p);
 			ego.LFPs = readLFPs(ego.p);
 			parseLFPs(ego);
 			showInfo(ego);
 			select(ego);
 			getFieldTripLFPs(ego);
-			plot(ego,'all');
+			plot(ego,'normal');
 		end
 		
 		
@@ -163,6 +165,7 @@ classdef LFPAnalysis < analysisCore
 			end
 			ego.ft = struct();
 			ego.results = struct();
+			parseEvents(ego.p);
 			parseLFPs(ego);
 			select(ego);
 			selectTrials(ego);
@@ -177,6 +180,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseSpikes(ego)
+			ego.sp.p.saccadeRealign = ego.p.saccadeRealign;
 			in.cutTrials = ego.cutTrials;
 			in.selectedTrials = ego.selectedTrials;
 			in.map = ego.map;
@@ -1309,7 +1313,13 @@ classdef LFPAnalysis < analysisCore
 				maxL		= 0;
 				trials	= ego.p.eventList.trials;
 				for k = 1:ego.p.eventList.nTrials
-					[idx1, val1, dlta1] = ego.findNearest(time, trials(k).t1);
+					if ego.p.saccadeRealign == true
+						t1 = trials(k).t1; 
+						if ~isnan(trials(k).firstSaccade); t1 = t1+trials(k).firstSaccade; end
+					else
+						t1 = trials(k).t1;
+					end
+					[idx1, val1, dlta1] = ego.findNearest(time, t1);
 					trials(k).zeroTime = val1;
 					trials(k).zeroIndex = idx1; 
 					trials(k).zeroDelta = dlta1;
