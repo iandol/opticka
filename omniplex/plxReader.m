@@ -197,7 +197,7 @@ classdef plxReader < optickaCore
 			if isempty(ego.eventList); 
 				getEvents(ego); 
 			end
-			tic
+			tlfp = tic;
 			[~, names] = plx_adchan_names(ego.file);
 			[~, map] = plx_adchan_samplecounts(ego.file);
 			[~, raw] = plx_ad_chanmap(ego.file);
@@ -251,7 +251,7 @@ classdef plxReader < optickaCore
 				LFPs(j).nVars = ego.eventList.nVars;
 			end
 			
-			fprintf('Loading raw LFP data took %g ms\n',round(toc*1000));
+			fprintf('Loading raw LFP data took %g ms\n',round(toc(tlfp)*1000));
 		end
 		
 		
@@ -349,40 +349,50 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function spike = getFieldTripSpikes(ego)
-			dat = ego.tsList.tsParse;
-			spike.label = ego.tsList.names;
-			spike.nUnits = ego.tsList.nUnits;
-			spike.timestamp = cell(1,spike.nUnits);
-			spike.unit = cell(1,spike.nUnits);
-			spike.hdr = [];
+			tft = tic;
+			dat								= ego.tsList.tsParse;
+			spike.label						= ego.tsList.names;
+			spike.nUnits					= ego.tsList.nUnits; bCell = cell(1,spike.nUnits);
+			spike.timestamp				= bCell;
+			spike.unit						= bCell;
+			spike.hdr						= [];
 			spike.hdr.FileHeader.Frequency = 40e3;
-			spike.hdr.FileHeader.Beg = 0;
-			spike.hdr.FileHeader.End = Inf;
-			spike.dimord = '{chan}_lead_time_spike';
-			spike.time = cell(1,spike.nUnits);
-			spike.trial = cell(1,spike.nUnits);
-			spike.trialtime = [];
-			spike.sampleinfo = [];
-			spike.cfg = struct;
-			spike.cfg.dataset = ego.file;
-			spike.cfg.headerformat = 'plexon_plx_v2';
-			spike.cfg.dataformat = spike.cfg.headerformat;
-			spike.cfg.eventformat = spike.cfg.headerformat;
-			spike.cfg.trl = [];
-			fs = spike.hdr.FileHeader.Frequency;
+			spike.hdr.FileHeader.Beg	= 0;
+			spike.hdr.FileHeader.End	= Inf;
+			spike.dimord					= '{chan}_lead_time_spike';
+			spike.time						= bCell;
+			spike.trial						= bCell;
+			spike.trialtime				= [];
+			spike.sampleinfo				= [];
+			spike.cfg						= struct;
+			spike.cfg.dataset				= ego.file;
+			spike.cfg.headerformat		= 'plexon_plx_v2';
+			spike.cfg.dataformat			= spike.cfg.headerformat;
+			spike.cfg.eventformat		= spike.cfg.headerformat;
+			spike.cfg.trl					= [];
+			fs									= spike.hdr.FileHeader.Frequency;
 			for j = 1:length(dat{1}.trials)
 				for k = 1:spike.nUnits
 					t = dat{k}.trials{j};
 					s = t.spikes';
-					spike.timestamp{k} = [spike.timestamp{k} s*fs];
-					spike.time{k} = [spike.time{k} s-t.base];
 					spike.trial{k} = [spike.trial{k} ones(1,length(s))*j];
-					spike.trialtime(j,:) = [t.rStart t.rEnd];
-					spike.sampleinfo(j,:) = [t.tStart*fs t.tEnd*fs];
+					if ego.saccadeRealign && isfield(dat{k}.trials{j},'firstSaccade')
+						fS = dat{k}.trials{j}.firstSaccade;
+						if isnan(fS); fS = 0; end
+						spike.timestamp{k} = [spike.timestamp{k} s*fs];
+						spike.time{k} = [spike.time{k} s-(t.base - fS)];
+						spike.trialtime(j,:) = [t.rStart-fS t.rEnd-fS];
+						spike.sampleinfo(j,:) = [t.tStart*fs t.tEnd*fs];
+					else
+						spike.timestamp{k} = [spike.timestamp{k} s*fs];
+						spike.time{k} = [spike.time{k} s-t.base];
+						spike.trialtime(j,:) = [t.rStart t.rEnd];
+						spike.sampleinfo(j,:) = [t.tStart*fs t.tEnd*fs];
+					end
 					spike.cfg.trl(j,:) = [spike.trialtime(j,:) t.rStart*fs t.variable t.isCorrect];
 				end
 			end
-			fprintf('Coverting spikes to fieldtrip format took %g ms\n',round(toc*1000));
+			fprintf('Converting spikes to fieldtrip format took %g ms\n',round(toc(tft)*1000));
 		end
 		
 		% ===================================================================
@@ -391,7 +401,7 @@ classdef plxReader < optickaCore
 		%> @return 
 		% ===================================================================
 		function integrateEyeData(ego)
-			tic
+			ted = tic;
 			plxList = [ego.eventList.trials.variable]'; %var order list
 			edfTrials = ego.eA.trials;
 			edfTrials(ego.eA.incorrect.idx) = []; %remove incorrect trials
@@ -434,7 +444,7 @@ classdef plxReader < optickaCore
 			else
 				warning('Integrating eyelink trials into plxReader trials failed...');
 			end
-			fprintf('Integrating eye data into event data took %g ms\n',round(toc*1000));
+			fprintf('Integrating eye data into event data took %g ms\n',round(toc(ted)*1000));
 		end
 		
 		% ===================================================================

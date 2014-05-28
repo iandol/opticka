@@ -1489,14 +1489,14 @@ classdef LFPAnalysis < analysisCore
 			
 			ego.panels.raw = p;
 			
-			function nextChannel(~)
+			function nextChannel(src,~)
 				ego.selectedLFP = ego.selectedLFP + 1;
 				if ego.selectedLFP > length(ego.LFPs)
 					ego.selectedLFP = 1;
 				end
 				drawTrialLFPs(ego,gcf,ego.selectedLFP);
 			end
-			function previousChannel(~)
+			function previousChannel(src,~)
 				ego.selectedLFP = ego.selectedLFP - 1;
 				if ego.selectedLFP < 1
 					ego.selectedLFP = length(ego.LFPs);

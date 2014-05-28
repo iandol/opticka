@@ -130,7 +130,6 @@ classdef spikeAnalysis < analysisCore
 				getFiles(ego, true);
 				if isempty(ego.file); warning('No plexon file selected'); return; end
 			end
-			
 			ego.paths.oldDir = pwd;
 			cd(ego.dir);
 			ego.p.eventWindow = ego.spikeWindow;
