@@ -31,39 +31,43 @@
         <hr>
 
         <section id="main_content">
-          <h1>Introduction</h1>
+          <h1>
+<a name="opticka-stimulus-generator-" class="anchor" href="#opticka-stimulus-generator-"><span class="octicon octicon-link"></span></a>Opticka Stimulus Generator </h1>
 
-<p>Opticka Stimulus Generator is an object oriented GUI driven framework for the <a href="http://psychtoolbox.org/wikka.php?wakka=HomePage">Psychophysics toolbox (PTB)</a>, allowing randomised interleaved presentation of stimuli. It is designed to work on OS X, Windows (currently no digital I/O) or Linux, and interfaces via strobed words (using either a DataPixx [15bit] or a LabJack [11bit]) and ethernet with a Plexon Omniplex for recording neurophysiological data. It shouldn&#8217;t be difficult to send TTLs and strobed words out to other equipment types.
-Behavioural control uses the eyelink eye tracker and a full behavioural repertoire is available by using a <a href="http://144.82.131.18/optickadocs/classstate_machine.html#details">state-machine</a> logic.
-The various classes can also be used without the need to run the GUI (see <a href="http://144.82.131.18/optickadocs/runtest.html">runtest.m</a> for an example), and stimuli provide a unified interface (setup, animate, draw, update, reset) to integrate into standard PTB routines. The various object methods take care of all the background geometry and normalization, meaning stimuli are much easier to use than &#8220;raw&#8221; PTB.
-<img src="http://i41.tinypic.com/qrdik1.png" alt="screenshot" /></p>
+<p>Opticka Stimulus Generator is an object oriented framework with optional GUI for the <a href="http://psychtoolbox.org/wikka.php?wakka=HomePage">Psychophysics toolbox (PTB)</a>, allowing randomised interleaved presentation of complex stimuli. It is designed to work on OS X, Windows (currently no digital I/O) or Linux, and interfaces via strobed words (using either a DataPixx [15bit] or a LabJack [11bit]) and ethernet with a Plexon Omniplex for recording neurophysiological data. It shouldn't be difficult to send TTLs and strobed words out to other equipment types.
+Behavioural control uses the Eyelink eye tracker and a full behavioural repertoire is available by using a <a href="http://144.82.131.18/optickadocs/classstate_machine.html#details">state-machine</a> logic. Opticka uses the ethernet interface to the Eyelink thus affording much better control and reliability over using the analog voltages alone. The various classes can be used without the need to run the GUI (see <a href="http://144.82.131.18/optickadocs/optickatest.html">optickatest.m</a> for an example), and stimuli provide a unified interface (setup, animate, draw, update, reset) to integrate into standard PTB routines. The various object methods take care of all the background geometry and normalization, meaning stimuli are much easier to use than "raw" PTB.  Analysis routines are also present for taking the raw Plexon files (.PLX or .PL2) and Eyelink files (.EDF) and parsing them into a consistent trials and variable structure, then interfacing directly with <a href="http://fieldtrip.fcdonders.nl/start">Fieldtrip</a> for further spike and LFP analysis.  </p>
 
-<h1 id="quickdocumentation">Quick Documentation</h1>
+<p><img src="http://i41.tinypic.com/qrdik1.png" alt="Opticka Screenshot"></p>
 
-<p>runtest.m is a self-documenting minimal toy example showing mini experiment with 10 different stimuli. Read the Matlab-generated HTML for runtest.m here: <a href="http://144.82.131.18/optickadocs/runtest.html">runtest.m Report</a>
-There is also auto-generated class documentation here: <a href="http://144.82.131.18/optickadocs/inherits.html">Opticka Class Docs</a>, however this is only as good as the comments in the code, which are far from ideal&#8230;</p>
+<h1>
+<a name="quick-documentation" class="anchor" href="#quick-documentation"><span class="octicon octicon-link"></span></a>Quick Documentation</h1>
 
-<h1 id="installinstructions">Install Instructions</h1>
+<p>optickatest.m is a self-documenting minimal toy example showing a mini experiment with 10 different stimuli. Read the Matlab-generated HTML for <code>optickatest.m</code> here: <a href="http://144.82.131.18/optickadocs/optickatest.html">optickatest.m Report</a>.
+There is also auto-generated class documentation here: <a href="http://144.82.131.18/optickadocs/inherits.html">Opticka Class Docs</a>, however this is only as good as the comments in the code, which as always could be improved...</p>
 
-<p>Opticka prefers the latest Psychophysics Toolbox (V3.0.10) and at least Matlab 2010a. It has been tested and is mostly used on 64bit OS X 10.8.x &amp; Matlab 2013a. You can simply download the .ZIP from Github, and add the contents/subdirectories to Matlab path. Or if you have git installed, clone this Github repo and add to Matlab path.</p>
+<h1>
+<a name="install-instructions" class="anchor" href="#install-instructions"><span class="octicon octicon-link"></span></a>Install Instructions</h1>
 
-<p>Opticka should currently be working both on OS X, Linux and Windows, though the LabJack control of the Omniplex currently only works under OS X and Linux (only a few days work to make it work under windows, if need be). I&#8217;m not really testing under Windows/Linux as much as in OS X. Linux is the preferred OS for PTB according the Mario Kleiner at the moment, but problems with our Eyelink Libraries keep us on OS X for the moment.</p>
+<p>Opticka prefers the latest Psychophysics Toolbox (V3.0.12) and at least Matlab 2010a. It has been tested and is mostly used on 64bit OS X 10.8.x &amp; Matlab 2013a. You can simply download the .ZIP from Github, and add the contents/subdirectories to Matlab path. Or if you have git installed, clone this Github repo and add to Matlab path.</p>
 
-<h1 id="features">Features</h1>
+<p>Opticka should currently be working both on OS X, Linux and Windows, though the LabJack control of the Omniplex currently only works under OS X and Linux (only a few days work to make it work under windows, if need be). I'm not really testing under Windows/Linux as much as in OS X. Linux is the preferred OS for PTB according the Mario Kleiner at the moment, but problems with our Eyelink Libraries keep us on OS X for the moment.</p>
+
+<h1>
+<a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h1>
 
 <ul>
 <li>Values are always given in eye-relevant co-ordinates (degrees etc.) that are internally calculated based on screen geometry/distance</li>
 <li>No limit on the number of independent variables, and variables can be linked to multiple stimuli.</li>
-<li>A state machine logic can run behavioural tasks driven by for e.g. eye position.</li>
+<li>A state machine logic can run behavioural tasks driven by for e.g. eye position or behavioural response.</li>
 <li>Number of heterogeneous stimuli displayed simultaneously only limited by the GPU / computer power.</li>
 <li>Display lists are used, so one can easily change drawing order (i.e. what stimulus draws over other stimuli), by changing its order on the list.</li>
 <li>Object Oriented, allowing stimulus classes to be easily added and code to autodocument using DOxygen.</li>
 <li>The set of stimuli and variables can be saved into protocol files, to easily run successive protocols quickly.</li>
 <li>Fairly comprehensive control of the PTB interface to the drawing hardware, like blending mode, bit depth, windowing, verbosity.</li>
-<li>Colour is defined in floating point format, takes advantage of higher bit depths in newer graphics cards when available. The buffer can be defined from 8&#8211;32bits, use full alpha blending within that space and enable a &gt;8bit output using pseudogrey bitstealing techniques.</li>
+<li>Colour is defined in floating point format, takes advantage of higher bit depths in newer graphics cards when available. The buffer can be defined from 8-32bits, use full alpha blending within that space and enable a &gt;8bit output using pseudogrey bitstealing techniques.</li>
 <li>Sub-pixel precision (1/256th pixel) for movement and positioning.</li>
 <li>TTL output to data acquisition and other devices. Currently uses DataPixx or LabJack to interface to the Plexon Omniplex using strobed words.</li>
-<li>Can talk to other machines on the network during display using TCP/UDP (used to control Plexon online display, so one can see PSTHs for each stimulus variable shown in real time).</li>
+<li>Can talk to other machines on the network during display using TCP/UDP (used to control a Plexon online display, so one can see PSTHs for each stimulus variable shown in real time).</li>
 <li>Each stimulus has its own relative X &amp; Y position, and the screen centre can be arbitrarily moved via the GUI. This allows quick setup over particular parts of visual space, i.e. relative to a receptive field without needing to edit lots of other values.</li>
 <li>Can record stimuli to video files.</li>
 <li>Manages monitor calibration using ColorCalII or i1Pro from ViewPixx. Calibration sets can be saved and loaded easily via the GUI.</li>
@@ -75,19 +79,19 @@ There is also auto-generated class documentation here: <a href="http://144.82.13
 <li>Cosine or hermite interpolation for filtering grating edges.</li>
 <li>Square wave gratings</li>
 <li>Gabors</li>
-</ul></li>
-<li>Coherent dot stimuli, coherence expressed from 0&#8211;1. Either square or round dots. Colours can be simple, random, random luminance or binary. Kill rates allow random replacement rates for dots. Circularly smoothed masked aperture option.</li>
+</ul>
+</li>
+<li>Coherent dot stimuli, coherence expressed from 0-1. Either square or round dots. Colours can be simple, random, random luminance or binary. Kill rates allow random replacement rates for dots. Circularly smoothed masked aperture option.</li>
 <li>Bars, either solid colour or random noise texture. Bars can be animated, direction can be independent of their angle.</li>
 <li>Flashing/pulsing spots.</li>
 <li>Pictures/Images that can drift and rotate.</li>
 <li>Hand-mapping module - use mouse controlled dynamic bar / texture / colour to handmap receptive fields; includes logging of clicked position and later printout / storage of hand maps. These maps are in screen co-ordinates for quick subsequent stimulus placement.</li>
 </ul>
-
         </section>
 
         <footer>
           Opticka is maintained by <a href="https://github.com/iandol">iandol</a><br>
-          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="http://twitter.com/jasonlong">Jason Long</a>.
+          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
         </footer>
 
         
