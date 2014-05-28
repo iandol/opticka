@@ -1,6 +1,7 @@
 classdef plxReader < optickaCore
 %> PLXREADER Reads in Plexon .plx and .pl2 files along with metadata and
-%> eyelink data. Parses the trial event structure.
+%> eyelink data. Parses the trial event structure. Converts into Fieldtrip
+%> data structures.
 	
 	%------------------PUBLIC PROPERTIES----------%
 	properties
@@ -8,22 +9,28 @@ classdef plxReader < optickaCore
 		file@char
 		%> file directory
 		dir@char
-		%> the opticka mat file name
+		%> the opticka experimental filename
 		matfile@char
-		%> the opticka mat file directory
+		%> the opticka file directory
 		matdir@char
-		%> edf file name
+		%> Eyelink edf file name (should be same directory as opticka file).
 		edffile@char
-		%> used for legacy cell channel mapping (SMRs only have 6 channels)
-		cellmap@double
 		%> use the event on/off markers if empty, or a timerange around the event on otherwise
 		eventWindow@double = []
 		%> the window to check before/after trial end for behavioural marker
 		eventSearchWindow@double = 0.2
 		%> used by legacy spikes to allow negative time offsets
 		startOffset@double = 0
+		%> Use first saccade to realign time 0 for data?
+		saccadeRealign = false;
 		%> verbose?
 		verbose	= false
+	end
+	
+	%------------------HIDDEN PROPERTIES----------%
+	properties (Hidden = true)
+		%> used for legacy cell channel mapping (SMRs only have 6 channels)
+		cellmap@double
 	end
 	
 	%------------------VISIBLE PROPERTIES----------%
@@ -105,10 +112,10 @@ classdef plxReader < optickaCore
 			getEvents(ego);
 			if ego.isEDF == true
 				loadEDF(ego);
+				integrateEyeData(ego);
 			end
 			parseSpikes(ego);
 			generateInfo(ego);
-			integrateEyeData(ego);
 		end
 		
 		% ===================================================================
@@ -140,11 +147,11 @@ classdef plxReader < optickaCore
 			if isempty(ego.eA) && ego.isEDF == true
 				loadEDF(ego);
 			end
-			if ~isfield(ego.tsList.tsParse,'trials')
-				parseSpikes(ego);
-			end
 			if ~isempty(ego.eventList) && ~isempty(ego.eA)
 				integrateEyeData(ego);
+			end
+			if ~isfield(ego.tsList.tsParse,'trials')
+				parseSpikes(ego);
 			end
 			generateInfo(ego);
 		end
@@ -159,9 +166,9 @@ classdef plxReader < optickaCore
 			ego.paths.oldDir = pwd;
 			cd(ego.dir);
 			getEvents(ego);
+			integrateEyeData(ego);
 			parseSpikes(ego);
 			generateInfo(ego);
-			integrateEyeData(ego);
 		end
 		
 		% ===================================================================
@@ -244,59 +251,9 @@ classdef plxReader < optickaCore
 				LFPs(j).nVars = ego.eventList.nVars;
 			end
 			
-			fprintf('Loading LFPs took %g ms\n',round(toc*1000));
+			fprintf('Loading raw LFP data took %g ms\n',round(toc*1000));
 		end
 		
-		% ===================================================================
-		%> @brief exportToRawSpikes 
-		%>
-		%> @param
-		%> @return x spike data structure for spikes.m to read.
-		% ===================================================================
-		function x = exportToRawSpikes(ego, var, firstunit, StartTrial, EndTrial, trialtime, modtime, cuttime)
-			if ~isempty(ego.cellmap)
-				fprintf('Extracting Var=%g for Cell %g from PLX unit %g\n', var, firstunit, ego.cellmap(firstunit));
-				raw = ego.tsList.tsParse{ego.cellmap(firstunit)};
-			else
-				fprintf('Extracting Var=%g for Cell %g from PLX unit %g \n', var, firstunit, firstunit);
-				raw = ego.tsList.tsParse{firstunit};
-			end
-			if var > length(raw.var)
-				errordlg('This Plexon File seems to be Incomplete, check filesize...')
-			end
-			raw = raw.var{var};
-			v = num2str(ego.meta.matrix(var,:));
-			v = regexprep(v,'\s+',' ');
-			x.name = ['PLX#' num2str(var) '|' v];
-			x.raw = raw;
-			x.totaltrials = ego.eventList.minRuns;
-			x.nummods = 1;
-			x.error = [];
-			if StartTrial < 1 || StartTrial > EndTrial
-				StartTrial = 1;
-			end
-			if EndTrial > x.totaltrials
-				EndTrial = x.totaltrials;
-			end
-			x.numtrials = (EndTrial - StartTrial)+1;
-			x.starttrial = StartTrial;
-			x.endtrial =  EndTrial;
-			x.startmod = 1;
-			x.endmod = 1;
-			x.conversion = 1e4;
-			x.maxtime = ego.eventList.tMaxCorrect * x.conversion;
-			a = 1;
-			for tr = x.starttrial:x.endtrial
-				x.trial(a).basetime = round(raw.run(tr).basetime * x.conversion); %convert from seconds to 0.1ms as that is what VS used
-				x.trial(a).modtimes = 0;
-				x.trial(a).mod{1} = round(raw.run(tr).spikes * x.conversion) - x.trial(a).basetime;
-				a=a+1;
-			end
-			x.isPLX = true;
-			x.tDelta = ego.eventList.vars(var).tDeltacorrect(x.starttrial:x.endtrial);
-			x.startOffset = ego.startOffset;
-			
-		end
 		
 		% ===================================================================
 		%> @brief 
@@ -538,11 +495,62 @@ classdef plxReader < optickaCore
 	%=======================================================================
 	
 		% ===================================================================
+		%> @brief exportToRawSpikes for legacy spikes support
+		%>
+		%> @param
+		%> @return x spike data structure for spikes.m to read.
+		% ===================================================================
+		function x = exportToRawSpikes(ego, var, firstunit, StartTrial, EndTrial, trialtime, modtime, cuttime)
+			if ~isempty(ego.cellmap)
+				fprintf('Extracting Var=%g for Cell %g from PLX unit %g\n', var, firstunit, ego.cellmap(firstunit));
+				raw = ego.tsList.tsParse{ego.cellmap(firstunit)};
+			else
+				fprintf('Extracting Var=%g for Cell %g from PLX unit %g \n', var, firstunit, firstunit);
+				raw = ego.tsList.tsParse{firstunit};
+			end
+			if var > length(raw.var)
+				errordlg('This Plexon File seems to be Incomplete, check filesize...')
+			end
+			raw = raw.var{var};
+			v = num2str(ego.meta.matrix(var,:));
+			v = regexprep(v,'\s+',' ');
+			x.name = ['PLX#' num2str(var) '|' v];
+			x.raw = raw;
+			x.totaltrials = ego.eventList.minRuns;
+			x.nummods = 1;
+			x.error = [];
+			if StartTrial < 1 || StartTrial > EndTrial
+				StartTrial = 1;
+			end
+			if EndTrial > x.totaltrials
+				EndTrial = x.totaltrials;
+			end
+			x.numtrials = (EndTrial - StartTrial)+1;
+			x.starttrial = StartTrial;
+			x.endtrial =  EndTrial;
+			x.startmod = 1;
+			x.endmod = 1;
+			x.conversion = 1e4;
+			x.maxtime = ego.eventList.tMaxCorrect * x.conversion;
+			a = 1;
+			for tr = x.starttrial:x.endtrial
+				x.trial(a).basetime = round(raw.run(tr).basetime * x.conversion); %convert from seconds to 0.1ms as that is what VS used
+				x.trial(a).modtimes = 0;
+				x.trial(a).mod{1} = round(raw.run(tr).spikes * x.conversion) - x.trial(a).basetime;
+				a=a+1;
+			end
+			x.isPLX = true;
+			x.tDelta = ego.eventList.vars(var).tDeltacorrect(x.starttrial:x.endtrial);
+			x.startOffset = ego.startOffset;
+			
+		end
+	
+		% ===================================================================
 		%> @brief allows data from another plxReader object to be used,
 		%> useful for example when you load LFP data in 1 plxReader and
 		%> spikes in another but they are using the same behaviour files etc.
 		%>
-		%> @param
+		%> @param data another plxReader instance for syncing to
 		%> @return
 		% ===================================================================
 		function syncData(ego, data)
@@ -577,9 +585,9 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief drawEvents plot a timeline of all event data
 		%>
-		%> @param
+		%> @param h an existing axis handle, otherwise make new figure
 		%> @return
 		% ===================================================================
 		function drawEvents(ego,h)
@@ -625,7 +633,7 @@ classdef plxReader < optickaCore
 			uicontrol('Style', 'pushbutton', 'String', '>>',...
 				'Position',[52 1 50 20],'Callback',@forwardPlot);
 			
-			function forwardPlot(src, ~)
+			function forwardPlot(~, ~)
 				if ~exist('src','var')
 					return
 				end
@@ -634,7 +642,7 @@ classdef plxReader < optickaCore
 				ax(2) = ax(1) + 10;
 				axis(ax);
 			end
-			function backPlot(src, ~)
+			function backPlot(~, ~)
 				if ~exist('src','var')
 					return
 				end
@@ -714,9 +722,9 @@ classdef plxReader < optickaCore
 	%===== ==================================================================
 	
 		% ===================================================================
-		%> @brief 
+		%> @brief load and parse (via eyelinkAnalysis) the Eyelink EDF file
 		%>
-		%> @param
+		%> @param pn path to EDF file
 		%> @return
 		% ===================================================================
 		function loadEDF(ego,pn)
@@ -773,7 +781,7 @@ classdef plxReader < optickaCore
 		end
 			
 		% ===================================================================
-		%> @brief 
+		%> @brief generate text info about loaded data
 		%>
 		%> @param
 		%> @return
@@ -921,7 +929,7 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief get event markers from the plexon PLX/PL2 file
 		%>
 		%> @param
 		%> @return
@@ -1092,7 +1100,7 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief meta is used by the old analysis routines
+		%> @brief meta is used by the old spikes analysis routines
 		%>
 		%> @param
 		%> @return
@@ -1108,7 +1116,7 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief read raw spke data from plexon PLX/PL2 file
 		%>
 		%> @param
 		%> @return
@@ -1195,7 +1203,7 @@ classdef plxReader < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief
+		%> @brief parse raw spikes into trials and variables
 		%>
 		%> @param
 		%> @return

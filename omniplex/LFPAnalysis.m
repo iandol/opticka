@@ -1385,7 +1385,7 @@ classdef LFPAnalysis < analysisCore
 			if isempty(ego.map{1}) %if our map is empty, generate groups for each variable
 				bidx = behaviouridx{1};
 				sb = selectedBehaviour{1};
-				for i = 1:ego.event.nVars; 
+				for i = 1:ego.p.eventList.nVars; 
 					map{i} = ego.p.eventList.unique(i); 
 					behaviouridx{i} = bidx;
 					selectedBehaviour{i} = sb;
@@ -1489,14 +1489,14 @@ classdef LFPAnalysis < analysisCore
 			
 			ego.panels.raw = p;
 			
-			function nextChannel(src,~)
+			function nextChannel(~)
 				ego.selectedLFP = ego.selectedLFP + 1;
 				if ego.selectedLFP > length(ego.LFPs)
 					ego.selectedLFP = 1;
 				end
 				drawTrialLFPs(ego,gcf,ego.selectedLFP);
 			end
-			function previousChannel(src,~)
+			function previousChannel(~)
 				ego.selectedLFP = ego.selectedLFP - 1;
 				if ego.selectedLFP < 1
 					ego.selectedLFP = length(ego.LFPs);
