@@ -222,7 +222,15 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function toggleSaccadeRealign(ego)
 			ego.p.saccadeRealign = ~ego.p.saccadeRealign;
+			doPlots = ego.doPlots;
+			ego.doPlots = false;
 			ego.reparse;	
+			ego.doPlots = doPlots;
+			if ego.p.saccadeRealign == true
+				disp('Saccade Realign is now ENABLED...')
+			else
+				disp('Saccade Realign is now DISABLED...')
+			end
 		end
 		
 		% ===================================================================

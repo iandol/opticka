@@ -160,8 +160,17 @@ classdef LFPAnalysis < analysisCore
 		function toggleSaccadeRealign(ego)
 			ego.p.saccadeRealign = ~ego.p.saccadeRealign;
 			ego.sp.p.saccadeRealign = ego.p.saccadeRealign;
+			doPlots = ego.doPlots;
+			ego.doPlots = false;
 			ego.reparse;
-			ego.parseSpikes;			
+			ego.parseSpikes;
+			ego.doPlots = doPlots;
+			ego.plot('av');
+			if ego.p.saccadeRealign == true
+				disp('Saccade Realign is now ENABLED...')
+			else
+				disp('Saccade Realign is now DISABLED...')
+			end
 		end
 		% ===================================================================
 		%> @brief reparse data after an initial parse
