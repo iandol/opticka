@@ -44,7 +44,7 @@ classdef LFPAnalysis < analysisCore
 	%------------------HIDDEN PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
 		%> bandpass frequencies
-		bpfreq@cell = {[1 4], [5 8], [9 14], [15 30], [30 50], [50 100], [1 250]}
+		bpfreq@cell = {[1 4], [5 8], [8 14], [15 30], [30 50], [50 100], [1 250]}
 		%> bandpass frequency names
 		bpnames@cell = {'\delta','\theta','\alpha','\beta','\gamma low','\gamma high','all'}
 	end
@@ -151,7 +151,18 @@ classdef LFPAnalysis < analysisCore
 			plot(ego,'normal');
 		end
 		
-		
+		% ===================================================================
+		%> @brief reparse data after an initial parse
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function toggleSaccadeRealign(ego)
+			ego.p.saccadeRealign = ~ego.p.saccadeRealign;
+			ego.sp.p.saccadeRealign = ego.p.saccadeRealign;
+			ego.reparse;
+			ego.parseSpikes;			
+		end
 		% ===================================================================
 		%> @brief reparse data after an initial parse
 		%>
@@ -513,7 +524,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.keeptrials	= 'yes';
 				cfg.output		= 'pow';
 				cfg.channel		= ft.label{ego.selectedLFP};
-				cfg.toi        = -0.3:0.01:0.3;                  % time window "slides"
+				cfg.toi        = -0.4:0.02:0.4;                  % time window "slides"
 				cfg.foi			= 4:2:100;						 % analysis frequencies
 				cfg.tw			= tw;
 				cfg.cycles		= cycles;
@@ -2086,7 +2097,7 @@ classdef LFPAnalysis < analysisCore
 					cfgOut						= ft_singleplotTFR(cfg, fq{i});
 					grid on; box on;
 					set(gca,'Layer','top','TickDir','out')
-					xlim(ego.plotRange);
+					%xlim(ego.plotRange);
 					axis square
 					h{jj}{i} = gca;
 					clim = get(gca,'clim');

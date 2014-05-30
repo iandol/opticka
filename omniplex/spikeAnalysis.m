@@ -1,7 +1,7 @@
 classdef spikeAnalysis < analysisCore
 %spikeAnalysis Wraps the native and fieldtrip analysis around our PLX/PL2 reading.
 	
-%------------------PUBLIC PROPERTIES----------%
+	%------------------PUBLIC PROPERTIES----------%
 	properties
 		%> plexon file containing the spike data
 		file@char
@@ -212,6 +212,17 @@ classdef spikeAnalysis < analysisCore
 				ego.p.eA.TOI = ego.TOI;
 				parseTOI(ego.p.eA);
 			end
+		end
+		
+		% ===================================================================
+		%> @brief reparse data after an initial parse
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function toggleSaccadeRealign(ego)
+			ego.p.saccadeRealign = ~ego.p.saccadeRealign;
+			ego.reparse;	
 		end
 		
 		% ===================================================================
