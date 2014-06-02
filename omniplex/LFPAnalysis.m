@@ -2294,7 +2294,7 @@ classdef LFPAnalysis < analysisCore
 				plot_vector(s,f,uselog,e,lo{i},2);
 				
 				q(1,i).select();
-				[s,t,f,e] = mtspecgramc(d(300:1300,:), [0.3,0.01], params );
+				[s,t,f,e] = mtspecgramc(d(300:1300,:), [0.3,0.05], params );
 				t = t - 0.5;
 				plot_matrix(s,t,f,uselog);
 				title(['Group ' num2str(i)])

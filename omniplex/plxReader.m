@@ -358,16 +358,18 @@ classdef plxReader < optickaCore
 			tft = tic;
 			dat								= ego.tsList.tsParse;
 			spike.label						= ego.tsList.names;
-			spike.nUnits					= ego.tsList.nUnits; bCell = cell(1,spike.nUnits);
+			spike.nUnits					= ego.tsList.nUnits; 
+			bCell								= cell(1,spike.nUnits);
 			spike.timestamp				= bCell;
+			spike.waveform					= bCell;
+			spike.time						= bCell;
+			spike.trial						= bCell;
 			spike.unit						= bCell;
 			spike.hdr						= [];
 			spike.hdr.FileHeader.Frequency = 40e3;
 			spike.hdr.FileHeader.Beg	= 0;
 			spike.hdr.FileHeader.End	= Inf;
 			spike.dimord					= '{chan}_lead_time_spike';
-			spike.time						= bCell;
-			spike.trial						= bCell;
 			spike.trialtime				= [];
 			spike.sampleinfo				= [];
 			spike.saccadeRealign			= ego.saccadeRealign;
@@ -382,23 +384,31 @@ classdef plxReader < optickaCore
 				for k = 1:spike.nUnits
 					t									= dat{k}.trials{j};
 					s									= t.spikes';
+					w									= t.waves';
 					spike.trial{k}					= [spike.trial{k} ones(1,length(s))*j];
 					if ego.saccadeRealign && isfield(ego.eventList.trials,'firstSaccade')
 						fS								= ego.eventList.trials(j).firstSaccade;
 						if isnan(fS); fS = 0; end
 						spike.firstSaccade(j)	= fS;
 						spike.timestamp{k}		= [spike.timestamp{k} s*fs];
+						spike.waveform{k}			= [spike.waveform{k}, w];
 						spike.time{k}				= [spike.time{k} (s - t.base) - fS];
 						spike.trialtime(j,:)		= [t.rStart-fS t.rEnd-fS];
 						spike.sampleinfo(j,:)	= [t.tStart*fs t.tEnd*fs];
 					else
 						spike.timestamp{k}		= [spike.timestamp{k} s*fs];
+						spike.waveform{k}			= [spike.waveform{k}, w];
 						spike.time{k}				= [spike.time{k} s-t.base];
 						spike.trialtime(j,:)		= [t.rStart t.rEnd];
 						spike.sampleinfo(j,:)	= [t.tStart*fs t.tEnd*fs];
 					end
 					spike.cfg.trl(j,:)			= [spike.trialtime(j,:) t.rStart*fs t.variable t.isCorrect];
 				end
+			end
+			for k = 1:spike.nUnits
+				clear w;
+				w(1,:,:) = spike.waveform{k};
+				spike.waveform{k} = w;
 			end
 			fprintf('Converting spikes to fieldtrip format took %g ms\n',round(toc(tft)*1000));
 		end
@@ -1203,11 +1213,16 @@ classdef plxReader < optickaCore
 					
 					unit = ego.tsList.unitMap(ich).units(iunit);
 					[tsN,ts] = plx_ts(ego.file, ch, unit);
+					[twN, npw, tsW, wave] = plx_waves_v(ego.file, ch, unit);
 					if ~isequal(tsN,ego.tsList.unitMap(ich).counts(iunit))
 						error('SPIKE PARSING COUNT ERROR!!!')
 					end
 					ego.tsList.tsN{a} = tsN;
 					ego.tsList.ts{a} = ts;
+					if twN == tsN
+						ego.tsList.tsW{a} = ts;
+						ego.tsList.wave{a} = wave;
+					end
 					
 					t = '';
 					t = [num2str(a) ':' name list(iunit) '=' num2str(tsN)];
@@ -1229,7 +1244,8 @@ classdef plxReader < optickaCore
 		function parseSpikes(ego)
 			tic
 			for ps = 1:ego.tsList.nUnits
-				spikes = ego.tsList.ts{ps};
+				spikes = ego.tsList.ts{ps}; 
+				waves = ego.tsList.wave{ps};
 				trials = cell(ego.eventList.nTrials,1);
 				vars = cell(ego.eventList.nVars,1);
 				for trl = 1:ego.eventList.nTrials
@@ -1256,7 +1272,8 @@ classdef plxReader < optickaCore
 						trials{trl}.modtimes = trial.t1;
 					end
 					idx = spikes >= trials{trl}.tStart & spikes <= trials{trl}.tEnd;
-					trials{trl}.spikes = spikes(idx);
+					trials{trl}.spikes = spikes(idx); 
+					trials{trl}.waves = waves(idx,:);
 					%===process the variable run
 					var = trial.variable;
 					if isempty(vars{var})
@@ -1281,6 +1298,7 @@ classdef plxReader < optickaCore
 				end
 				ego.tsList.tsParse{ps}.trials = trials;
 				ego.tsList.tsParse{ps}.var = vars;
+				clear spikes waves trials vars
 			end
 			fprintf('Parsing spikes into trials/variables took %g ms\n',round(toc*1000))
 			if ego.startOffset ~= 0

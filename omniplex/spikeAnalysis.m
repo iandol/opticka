@@ -883,6 +883,14 @@ classdef spikeAnalysis < analysisCore
 			text(ego.plotRange(1),ax(3),blineText,'FontSize',10,'VerticalAlignment','baseline');
 			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
 			set(gca,'Layer','top');
+			
+			for j = 1:length(ego.selectedTrials)
+				cfg					= [];
+				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				s = ego.spike{ego.selectedUnit};
+				len = length(s.trials);
+			end
 		end
 		
 		% ===================================================================
