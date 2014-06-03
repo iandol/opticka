@@ -169,6 +169,16 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
+		function pruneTrials(ego,num)
+			ego.trials(num) = [];			
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function plot(ego,select,type,seperateVars,name)
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
 			if ~exist('type','var') || isempty(type); type = 'correct'; end
@@ -995,10 +1005,12 @@ classdef eyelinkAnalysis < analysisCore
 						ego.trials(tri).correctedIndex = [];
 						ego.trials(tri).time = double(evt.time);
 						ego.trials(tri).sttime = double(evt.sttime);
+						ego.trials(tri).totaltime = (ego.trials(tri).sttime - ego.trials(1).sttime)/1e3;
 						ego.trials(tri).rt = false;
 						ego.trials(tri).rtstarttime = double(evt.sttime);
 						ego.trials(tri).fixations = [];
 						ego.trials(tri).saccades = [];
+						ego.trials(tri).nsacc = [];
 						ego.trials(tri).saccadeTimes = [];
 						ego.trials(tri).firstSaccade = NaN;
 						ego.trials(tri).rttime = [];
@@ -1170,7 +1182,6 @@ classdef eyelinkAnalysis < analysisCore
 									sT=t;
 								end
 							end
-							
 							if ego.trials(tri).result == 1
 								ego.trials(tri).correct = true;
 								ego.correct.idx = [ego.correct.idx tri];
@@ -1211,6 +1222,10 @@ classdef eyelinkAnalysis < analysisCore
 						end
 					end
 				end
+			end
+			
+			if ~ego.trials(end).correct && ~ego.trials(end).correct && ~ego.trials(end).correct
+				ego.trials(end) = [];
 			end
 			
 			if max(abs(ego.trialList)) == 1010 && min(abs(ego.trialList)) == 1010

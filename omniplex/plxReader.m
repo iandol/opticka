@@ -426,6 +426,9 @@ classdef plxReader < optickaCore
 			edfList = [edfTrials.variable]';
 			c1 = plxList([ego.eventList.trials.isCorrect]');
 			c2 = edfList([edfTrials.correct]);
+			if length(edfList) > length(plxList)
+				edfList = edfList(1:length(plxList));
+			end
 			if length(c2) > length(c1)
 				c2 = c2(1:length(c1));
 			end
@@ -662,18 +665,12 @@ classdef plxReader < optickaCore
 				'Position',[52 1 50 20],'Callback',@forwardPlot);
 			
 			function forwardPlot(~, ~)
-				if ~exist('src','var')
-					return
-				end
 				ax = axis(gca);
 				ax(1) = ax(1) + 10;
 				ax(2) = ax(1) + 10;
 				axis(ax);
 			end
 			function backPlot(~, ~)
-				if ~exist('src','var')
-					return
-				end
 				ax = axis(gca);
 				ax(1) = ax(1) - 10;
 				ax(2) = ax(1) + 10;
