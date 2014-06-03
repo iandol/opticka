@@ -113,9 +113,14 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function load(ego)
+		function load(ego,force)
+			if ~exist('force','var');force=false;end
+			if isempty(ego.file)
+				warning('No EDF file specified...');
+				return
+			end
 			tic
-			if ~isempty(ego.file)
+			if isempty(ego.raw) || force == true
 				oldpath = pwd;
 				cd(ego.dir)
 				ego.raw = edfmex(ego.file);
@@ -170,7 +175,27 @@ classdef eyelinkAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function pruneTrials(ego,num)
-			ego.trials(num) = [];			
+			c = ego.trials(num).correct;
+			b = ego.trials(num).breakFix;
+			e = ego.trials(num).incorrect;
+			ego.trials(num) = [];
+			ego.trialList(num) = [];
+			if c == true
+				ii = find(ego.correct.idx == num);
+				ego.correct.idx(ii) = [];
+				ego.correct.saccTimes(ii) = [];
+			elseif b == true
+				ii = find(ego.breakFix.idx == num);
+				ego.breakFix.idx(ii) = [];
+				ego.breakFix.saccTimes(ii) = [];
+			elseif e == true
+				ii = find(ego.incorrect.idx == num);
+				ego.incorrect.idx(ii) = [];
+				ego.incorrect.saccTimes(ii) = [];
+			end
+			for i = num:length(ego.trials)
+				ego.trials(i).correctedIndex = ego.trials(i).correctedIndex - 1;
+			end
 		end
 		
 		% ===================================================================
@@ -450,7 +475,7 @@ classdef eyelinkAnalysis < analysisCore
 		% ===================================================================
 		function parseROI(ego)
 			if isempty(ego.ROI)
-				disp('No ROI specified!!!')
+				disp('No ROI specified...')
 				return
 			end
 			tROI = tic;
@@ -501,7 +526,7 @@ classdef eyelinkAnalysis < analysisCore
 		% ===================================================================
 		function parseTOI(ego)
 			if isempty(ego.TOI)
-				disp('No TOI specified!!!')
+				disp('No TOI specified...')
 				return
 			end
 			tTOI = tic;
