@@ -414,7 +414,10 @@ classdef spikeAnalysis < analysisCore
 			ego.results(1).psth = psth;
 			getRates(ego);
 			
-			if ego.doPlots; plot(ego,'psth'); end
+			if ego.doPlots 
+				plot(ego,'waves',ego.measureRange);
+				plot(ego,'psth'); 
+			end
 		end
 		
 		% ===================================================================
@@ -446,7 +449,11 @@ classdef spikeAnalysis < analysisCore
 			ego.results(1).sd = sd;
 			getRates(ego);
 			
-			if ego.doPlots; plot(ego,'density'); end
+			
+			if ego.doPlots 
+				plot(ego,'waves',ego.measureRange);
+				plot(ego,'density'); 
+			end
 		end
 		
 		% ===================================================================
@@ -1066,7 +1073,7 @@ classdef spikeAnalysis < analysisCore
 				while iscell(timeWindow);timeWindow=timeWindow{1};end
 			end
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			h=figure;figpos(1,[1000 2000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
+			h=figure;figpos(2,[1000 2000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
 			p=panel(h);
 			p.margin = [20 20 20 20]; %left bottom right top
 			[row,col]=ego.optimalLayout(ego.nSelection);
