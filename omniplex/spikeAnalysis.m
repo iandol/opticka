@@ -1103,8 +1103,10 @@ classdef spikeAnalysis < analysisCore
 						waves = vertcat(waves,w);
 					end
 				end
-				[a,e]=stderr(waves,'SD');
-				areabar(time,a,e,[0.7 0.7 0.7],0.75,'r-o','LineWidth',2);
+				if ~isempty(waves)
+					[a,e]=stderr(waves,'SD');
+					areabar(time,a,e,[0.7 0.7 0.7],0.75,'r-o','LineWidth',2);
+				end
 				xlabel('Time(ms)')
 				ylabel('Voltage (mV)')
 				title(name)
