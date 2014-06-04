@@ -665,6 +665,8 @@ classdef spikeAnalysis < analysisCore
 					plotDensitySummary(ego); drawnow;
 				case {'i','isi'}
 					plotISI(ego); drawnow;
+				case {'w','waves','waveforms'}
+					plotWaveforms(ego,args); drawnow;
 			end
 		end
 		
@@ -883,14 +885,6 @@ classdef spikeAnalysis < analysisCore
 			text(ego.plotRange(1),ax(3),blineText,'FontSize',10,'VerticalAlignment','baseline');
 			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
 			set(gca,'Layer','top');
-			
-			for j = 1:length(ego.selectedTrials)
-				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				s = ego.spike{ego.selectedUnit};
-				len = length(s.trials);
-			end
 		end
 		
 		% ===================================================================
@@ -1058,6 +1052,57 @@ classdef spikeAnalysis < analysisCore
 				ft_spike_plot_isireturn(cfg,isi{j})
 				p(i1,i2).title([ego.selectedTrials{j}.name ' ' ego.file]);
 			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function plotWaveforms(ego,timeWindow)
+			if ~exist('timeWindow','var') || isempty(timeWindow)
+				timeWindow = ego.plotRange;
+			elseif iscell(timeWindow) 
+				while iscell(timeWindow);timeWindow=timeWindow{1};end
+			end
+			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			h=figure;figpos(1,[1000 2000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
+			p=panel(h);
+			p.margin = [20 20 20 20]; %left bottom right top
+			[row,col]=ego.optimalLayout(ego.nSelection);
+			p.pack(row,col);
+			for j = 1:length(ego.selectedTrials)
+				[i1,i2] = ind2sub([row,col], j);
+				p(i1,i2).select();
+				idx				= ego.selectedTrials{j}.idx;
+				map				= ego.optimalColours(length(idx));
+				name				= [ego.names{ego.selectedUnit} ' ' ego.selectedTrials{j}.name '| time:' num2str(timeWindow)];
+				s					= ego.spike{ego.selectedUnit};
+				len				= length(s.trials);
+				t					= [s.trials{idx}]; %extract our trials
+				time				= 0:1/40000:(1/40000)*(size(t(1).waves,2)-1);
+				waves = [];
+				hold on
+				for k = 1:length(t)
+					if isempty(timeWindow)
+						w = t(k).waves;
+					else
+						sp = t(k).spikes - t(k).base;
+						idx = find(sp >= timeWindow(1) & sp <= timeWindow(2));
+						w = t(k).waves(idx,:);
+					end
+					if ~isempty(w)
+						plot(time,w','k-','Color',map(k,:));
+						waves = vertcat(waves,w);
+					end
+				end
+				[a,e]=stderr(waves,'SD');
+				areabar(time,a,e,[0.7 0.7 0.7],0.75,'r-o','LineWidth',2);
+				xlabel('Time(ms)')
+				ylabel('Voltage (mV)')
+				title(name)
+			end
+			
 		end
 		
 		% ===================================================================
