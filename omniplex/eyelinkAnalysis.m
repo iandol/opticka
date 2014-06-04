@@ -327,7 +327,7 @@ classdef eyelinkAnalysis < analysisCore
 				plot(t,abs(y),'k-x','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				maxv = max([maxv, max(abs(x)), max(abs(y))]) + 0.1;
-				if ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
+				if isfield(thisTrial,'microSaccade') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
 					plot(thisTrial.microSaccades,-0.2,'yo','Color','y','MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor','y','UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				end

@@ -187,6 +187,7 @@ classdef plxReader < optickaCore
 				if isempty(ego.eA) && ego.isEDF == true
 					loadEDF(ego);
 				end
+				ego.eA.parse;
 				integrateEyeData(ego);
 			end
 			generateInfo(ego);

@@ -1073,13 +1073,17 @@ classdef spikeAnalysis < analysisCore
 				while iscell(timeWindow);timeWindow=timeWindow{1};end
 			end
 			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			h=figure;figpos(2,[1000 2000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
+			if ~isfield(ego.spike{1}.trials{1},'waves')
+				warning('No waveform data present, nothing to plot...')
+				return
+			end
+			h=figure;figpos(2,[2000 1000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
 			p=panel(h);
 			p.margin = [20 20 20 20]; %left bottom right top
 			[row,col]=ego.optimalLayout(ego.nSelection);
-			p.pack(row,col);
+			p.pack(col,row);
 			for j = 1:length(ego.selectedTrials)
-				[i1,i2] = ind2sub([row,col], j);
+				[i1,i2] = ind2sub([col,row], j);
 				p(i1,i2).select();
 				idx				= ego.selectedTrials{j}.idx;
 				map				= ego.optimalColours(length(idx));
@@ -1087,8 +1091,13 @@ classdef spikeAnalysis < analysisCore
 				s					= ego.spike{ego.selectedUnit};
 				len				= length(s.trials);
 				t					= [s.trials{idx}]; %extract our trials
-				time				= 0:1/40000:(1/40000)*(size(t(1).waves,2)-1);
+				if ~isfield(t,'waves')
+					warning('No waveform data present')
+					return
+				end
+				time				= (0:1/4e4:(1/4e4)*(size(t(1).waves,2)-1)) .*1e3;
 				waves = [];
+				nwaves = 0;
 				hold on
 				for k = 1:length(t)
 					if isempty(timeWindow)
@@ -1103,13 +1112,14 @@ classdef spikeAnalysis < analysisCore
 						waves = vertcat(waves,w);
 					end
 				end
-				if ~isempty(waves)
+					if ~isempty(waves)
+					nwaves = size(waves,1);
 					[a,e]=stderr(waves,'SD');
 					areabar(time,a,e,[0.7 0.7 0.7],0.75,'r-o','LineWidth',2);
 				end
 				xlabel('Time(ms)')
 				ylabel('Voltage (mV)')
-				title(name)
+				title([name ' | nwaves: ' num2str(nwaves)]);
 			end
 			
 		end
