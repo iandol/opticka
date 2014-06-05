@@ -194,7 +194,8 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function reparse(ego)
 			ego.p.eventWindow = ego.spikeWindow;
-			parse(ego.p);
+			ego.trial = struct([]); ego.event = struct([]);
+			reparse(ego.p);
 			ego.trial = ego.p.eventList.trials;
 			ego.event = ego.p.eventList;
 			for i = 1:ego.nUnits

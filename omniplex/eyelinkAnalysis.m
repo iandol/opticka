@@ -31,6 +31,8 @@ classdef eyelinkAnalysis < analysisCore
 	end
 	
 	properties (Hidden = true)
+		%occasionally we have some trials in the EDF not in the plx, this prunes them out
+		trialsToPrune@double = []
 		%> these are used for spikes spike saccade time correlations
 		rtLimits@double
 		rtDivision@double
@@ -142,8 +144,10 @@ classdef eyelinkAnalysis < analysisCore
 		function parse(ego)
 			ego.isParsed = false;
 			tmain = tic;
-	
 			parseEvents(ego);
+			if ~isempty(ego.trialsToPrune)
+				ego.pruneTrials(ego.trialsToPrune);
+			end
 			parseAsVars(ego);
 			parseSecondaryEyePos(ego);
 			parseFixationPositions(ego);
@@ -175,24 +179,14 @@ classdef eyelinkAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function pruneTrials(ego,num)
-			c = ego.trials(num).correct;
-			b = ego.trials(num).breakFix;
-			e = ego.trials(num).incorrect;
 			ego.trials(num) = [];
 			ego.trialList(num) = [];
-			if c == true
-				ii = find(ego.correct.idx == num);
-				ego.correct.idx(ii) = [];
-				ego.correct.saccTimes(ii) = [];
-			elseif b == true
-				ii = find(ego.breakFix.idx == num);
-				ego.breakFix.idx(ii) = [];
-				ego.breakFix.saccTimes(ii) = [];
-			elseif e == true
-				ii = find(ego.incorrect.idx == num);
-				ego.incorrect.idx(ii) = [];
-				ego.incorrect.saccTimes(ii) = [];
-			end
+			ego.correct.idx = find([ego.trials.correct] == true);
+			ego.correct.saccTimes = [ego.trials(ego.correct.idx).firstSaccade];
+			ego.breakFix.idx = find([ego.trials.breakFix] == true);
+			ego.breakFix.saccTimes = [ego.trials(ego.breakFix.idx).firstSaccade];
+			ego.incorrect.idx = find([ego.trials.incorrect] == true);
+			ego.incorrect.saccTimes = [ego.trials(ego.incorrect.idx).firstSaccade];
 			for i = num:length(ego.trials)
 				ego.trials(i).correctedIndex = ego.trials(i).correctedIndex - 1;
 			end

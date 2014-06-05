@@ -160,7 +160,7 @@ classdef plxReader < optickaCore
 		%> @brief
 		%>
 		%> @param
-		%> @return
+			%> @return
 		% ===================================================================
 		function reparse(ego)
 			ego.paths.oldDir = pwd;
@@ -435,7 +435,7 @@ classdef plxReader < optickaCore
 			end
 			if isequal(plxList,edfList) || isequal(c1,c2) %check our variable list orders are equal
 				for i = 1:length(plxList)
-					if plxList(i) == edfList(i)
+					if edfTrials(i).correctedIndex == ego.eventList.trials(i).index
 						ego.eventList.trials(i).eye = edfTrials(i);
 						ego.eventList.trials(i).saccadeTimes = edfTrials(i).saccadeTimes/1e3;
 						if isfield(edfTrials,'firstSaccade')
