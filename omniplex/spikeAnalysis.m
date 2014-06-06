@@ -509,6 +509,39 @@ classdef spikeAnalysis < analysisCore
 		end
 		
 		% ===================================================================
+		%> @brief doPSTH plots spike density for the selected trial groups
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function ROC(ego)
+			getRates(ego);
+			dp = ego.results.rate{2}.trial;
+			dn = ego.results.rate{1}.trial;
+			scores = ego.formatByClass(dp,dn);
+			[tp,fp] = ego.roc(scores);
+			[A,Aci] = ego.auc(scores,0.05,'boot',1000,'type','bca');
+			p = ego.aucBootstrap(scores,2000,'both',0.5);
+			h=figure;set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
+			figpos(1,[1000 1000]);
+			plot(fp,tp); axis square
+			grid on; box on;
+			line([0 1],[0 1],'LineStyle','--');
+			xlabel('False alarm rate');
+			ylabel('Hit rate');
+			t = sprintf('Time: %.2g - %.2g | AUC: %.2g %.2g<>%.2g | p=%.2g',...
+				ego.results.rate{2}.cfg.latency(1),...
+				ego.results.rate{2}.cfg.latency(2),...
+				A,Aci(1),Aci(2),p);
+			title(t);
+			ego.results.ROC.tp = tp;
+			ego.results.ROC.fp = fp;
+			ego.results.ROC.auc = A;
+			ego.results.ROC.aucCI = Aci;
+			ego.results.ROC.p = p;
+		end
+		
+		% ===================================================================
 		%> @brief
 		%> @param
 		%> @return

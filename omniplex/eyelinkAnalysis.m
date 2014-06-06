@@ -7,52 +7,52 @@ classdef eyelinkAnalysis < analysisCore
 	
 	properties
 		%> file name
-		file@char = ''
+		file@char									= ''
 		%> directory
-		dir@char = ''
+		dir@char										= ''
 		%> the EDF message name to start measuring stimulus presentation
-		rtStartMessage@char = 'END_FIX'
+		rtStartMessage@char						= 'END_FIX'
 		%> EDF message name to end the stimulus presentation
-		rtEndMessage@char = 'END_RT'
+		rtEndMessage@char							= 'END_RT'
 		%> the temporary experiement structure which contains the eyePos recorded from opticka
 		tS@struct
 		%> region of interest?
-		ROI@double = [ ]
+		ROI@double									= [ ]
 		%> time of interest?
-		TOI@double = [ ]
+		TOI@double									= [ ]
 		%> verbose output?
-		verbose = false
+		verbose										= false
 		%> minimum saccade distance in degrees
-		minSaccadeDistance@double = 0.99
+		minSaccadeDistance@double				= 0.99
 		%> relative velocity threshold
-		VFAC=5
+		VFAC@double									= 5
 		%> minimum saccade duration
-		MINDUR=2  %equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
+		MINDUR@double								= 2  %equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
 	end
 	
 	properties (Hidden = true)
 		%occasionally we have some trials in the EDF not in the plx, this prunes them out
-		trialsToPrune@double = []
+		trialsToPrune@double						= []
 		%> these are used for spikes spike saccade time correlations
 		rtLimits@double
 		rtDivision@double
 		%> trial list from the saved behavioural data, used to fix trial name bug old files
 		trialOverride@struct
 		%> screen resolution
-		pixelsPerCm@double = 32
+		pixelsPerCm@double						= 32
 		%> screen distance
-		distance@double = 57.3
+		distance@double							= 57.3
 		%> screen X center in pixels
-		xCenter@double = 640
+		xCenter@double								= 640
 		%> screen Y center in pixels
-		yCenter@double = 512
+		yCenter@double								= 512
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
 		%> have we parsed the EDF yet?
-		isParsed@logical = false
+		isParsed@logical							= false
 		%> sample rate
-		sampleRate@double = 250
+		sampleRate@double							= 250
 		%> raw data
 		raw@struct
 		%> inidividual trials
@@ -62,16 +62,16 @@ classdef eyelinkAnalysis < analysisCore
 		%> the trial variable identifier, negative values were breakfix/incorrect trials
 		trialList@double
 		%> correct indices
-		correct@struct = struct()
+		correct@struct								= struct()
 		%> breakfix indices
-		breakFix@struct = struct()
+		breakFix@struct							= struct()
 		%> incorrect indices
-		incorrect@struct = struct()
+		incorrect@struct							= struct()
 		%> the display dimensions parsed from the EDF
 		display@double
 		%> for some early EDF files, there is no trial variable ID so we
 		%> recreate it from the other saved data
-		needOverride@logical = false;
+		needOverride@logical						= false;
 		%>ROI info
 		ROIInfo
 		%>TOI info
@@ -87,7 +87,7 @@ classdef eyelinkAnalysis < analysisCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%>57.3 bug override
-		override573 = true;
+		override573									= true;
 		%> pixels per degree calculated from pixelsPerCm and distance (cache)
 		ppd_
 		%> allowed properties passed to object upon construction
