@@ -34,7 +34,7 @@ classdef plxReader < optickaCore
 	end
 	
 	%------------------VISIBLE PROPERTIES----------%
-	properties (SetAccess = private, GetAccess = public)
+	properties (SetAccess = protected, GetAccess = public)
 		%> info formatted in cellstrings for display
 		info@cell
 		%> event list parsed
@@ -52,7 +52,7 @@ classdef plxReader < optickaCore
 	end
 	
 	%------------------DEPENDENT PROPERTIES--------%
-	properties (SetAccess = private, Dependent = true)
+	properties (SetAccess = protected, Dependent = true)
 		%> is this a PL2 file?
 		isPL2@logical
 		%> is an EDF eyelink file present?
@@ -83,6 +83,7 @@ classdef plxReader < optickaCore
 		%===================================================================
 		function ego = plxReader(varargin)
 			if nargin == 0; varargin.name = 'plxReader'; end
+			ego=ego@optickaCore(varargin); %superclass constructor
 			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
 			if isempty(ego.name); ego.name = 'plxReader'; end
 			if isempty(ego.file);
@@ -105,6 +106,7 @@ classdef plxReader < optickaCore
 				getFiles(ego);
 				if isempty(ego.matfile); warning('No behavioural mat file selected'); return; end
 			end
+			checkPaths(ego);
 			ego.paths.oldDir = pwd;
 			cd(ego.dir);
 			readMat(ego);
@@ -115,6 +117,46 @@ classdef plxReader < optickaCore
 				integrateEyeData(ego);
 			end
 			parseSpikes(ego);
+			generateInfo(ego);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+			%> @return
+		% ===================================================================
+		function reparse(ego)
+			ego.paths.oldDir = pwd;
+			cd(ego.dir);
+			getEvents(ego);
+			if ego.isEDF == true
+				parse(ego.eA); fixVarNames(ego.eA);
+				integrateEyeData(ego);
+			end
+			parseSpikes(ego);
+			generateInfo(ego);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parseEvents(ego)
+			cd(ego.dir);
+			if ~isa(ego.rE,'runExperiment') || isempty(ego.rE)
+				readMat(ego);
+			end
+			getEvents(ego);
+			if ego.isEDF == true
+				if isempty(ego.eA) && ego.isEDF == true
+					loadEDF(ego);
+				end
+				parse(ego.eA); fixVarNames(ego.eA);
+				integrateEyeData(ego);
+			end
 			generateInfo(ego);
 		end
 		
@@ -157,44 +199,7 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-			%> @return
-		% ===================================================================
-		function reparse(ego)
-			ego.paths.oldDir = pwd;
-			cd(ego.dir);
-			getEvents(ego);
-			integrateEyeData(ego);
-			parseSpikes(ego);
-			generateInfo(ego);
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function parseEvents(ego)
-			cd(ego.dir);
-			if ~isa(ego.rE,'runExperiment') || isempty(ego.rE)
-				readMat(ego);
-			end
-			getEvents(ego);
-			if ego.isEDF == true
-				if isempty(ego.eA) && ego.isEDF == true
-					loadEDF(ego);
-				end
-				ego.eA.parse;
-				integrateEyeData(ego);
-			end
-			generateInfo(ego);
-		end
-		
-		% ===================================================================
-		%> @brief 
+		%> @brief read continuous LFP from PLX/PL2 file into a structure
 		%>
 		%> @param
 		%> @return
@@ -300,53 +305,6 @@ classdef plxReader < optickaCore
 				trodality = max(ego.ic.Trodalness);
 			end
 			if isempty(trodality); trodality = 0; end
-		end
-		
-		% ===================================================================
-		%> @brief Constructor
-		%>
-		%> @param varargin
-		%> @return
-		% ===================================================================
-		function getFiles(ego, force)
-			if ~exist('force','var')
-				force = false;
-			end
-			if force == true || isempty(ego.file)
-				[f,p] = uigetfile({'*.plx;*.pl2';'PlexonFiles'},'Load Plexon File');
-				if ischar(f) && ~isempty(f)
-					ego.file = f;
-					ego.dir = p;
-						ego.paths.oldDir = pwd;
-					cd(ego.dir);
-				else
-					return
-				end
-			end
-			if force == true || isempty(ego.matfile)
-				[ego.matfile, ego.matdir] = uigetfile('*.mat',['Load Behaviour MAT File for ' ego.file]);
-			end
-			if force == true || isempty(ego.edffile)
-				cd(ego.matdir)
-				[~,f,~] = fileparts(ego.matfile);
-				f = [f '.edf'];
-				ff = regexprep(f,'\.edf','FIX\.edf','ignorecase');
-				fff = regexprep(ff,'^[a-zA-Z]+\-','','ignorecase');
-				if ~exist(f, 'file') && ~exist(ff,'file') && ~exist(fff,'file')
-					[an, ~] = uigetfile('*.edf',['Load Eyelink EDF File for ' ego.matfile]);
-					if ischar(an)
-						ego.edffile = an;
-					else
-						ego.edffile = '';
-					end
-				elseif exist(f, 'file')
-					ego.edffile = f;
-				elseif exist(ff, 'file')
-					ego.edffile = ff;
-				elseif exist(fff, 'file')
-					ego.edffile = fff;
-				end
-			end
 		end
 		
 		% ===================================================================
@@ -745,8 +703,55 @@ classdef plxReader < optickaCore
 	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%===== ==================================================================
+	%=======================================================================
 	
+		% ===================================================================
+		%> @brief Constructor
+		%>
+		%> @param varargin
+		%> @returnscr
+		% ===================================================================
+		function getFiles(ego, force)
+			if ~exist('force','var')
+				force = false;
+			end
+			if force == true || isempty(ego.file)
+				[f,p] = uigetfile({'*.plx;*.pl2';'PlexonFiles'},'Load Plexon File');
+				if ischar(f) && ~isempty(f)
+					ego.file = f;
+					ego.dir = p;
+						ego.paths.oldDir = pwd;
+					cd(ego.dir);
+				else
+					return
+				end
+			end
+			if force == true || isempty(ego.matfile)
+				[ego.matfile, ego.matdir] = uigetfile('*.mat',['Load Behaviour MAT File for ' ego.file]);
+			end
+			if force == true || isempty(ego.edffile)
+				cd(ego.matdir)
+				[~,f,~] = fileparts(ego.matfile);
+				f = [f '.edf'];
+				ff = regexprep(f,'\.edf','FIX\.edf','ignorecase');
+				fff = regexprep(ff,'^[a-zA-Z]+\-','','ignorecase');
+				if ~exist(f, 'file') && ~exist(ff,'file') && ~exist(fff,'file')
+					[an, ~] = uigetfile('*.edf',['Load Eyelink EDF File for ' ego.matfile]);
+					if ischar(an)
+						ego.edffile = an;
+					else
+						ego.edffile = '';
+					end
+				elseif exist(f, 'file')
+					ego.edffile = f;
+				elseif exist(ff, 'file')
+					ego.edffile = ff;
+				elseif exist(fff, 'file')
+					ego.edffile = fff;
+				end
+			end
+		end
+		
 		% ===================================================================
 		%> @brief load and parse (via eyelinkAnalysis) the Eyelink EDF file
 		%>
@@ -785,6 +790,8 @@ classdef plxReader < optickaCore
 				load(ego.eA);
 				parse(ego.eA);
 				fixVarNames(ego.eA);
+			else
+				warning('Couldn''t find EDF file...')				
 			end
 			cd(oldd)
 		end

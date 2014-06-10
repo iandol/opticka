@@ -16,6 +16,8 @@ classdef analysisCore < optickaCore
 		measureRange@double = [0.1 0.2]
 		%> default range to plot
 		plotRange@double = [-0.2 0.4]
+		%> root directory to check for data if files can't be found
+		rootDirectory@char = ''
 	end
 	
 	%--------------------ABSTRACT PROPERTIES----------%
@@ -99,6 +101,12 @@ classdef analysisCore < optickaCore
 						ego.dir = p;
 					else
 						warning('Can''t find valid source directory')
+					end
+				end
+				if ~isempty(regexpi(ego.dir,'^/Users/'))
+					re = regexpi(ego.dir,'^(?<us>/Users/[^/]+)(?<rd>.+)','names');
+					if ~isempty(re.rd)
+						ego.dir = ['~' re.rd];
 					end
 				end
 			end
@@ -605,7 +613,7 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief format for ROC
+		%> @brief format data for ROC
 		%>
 		%> @param dp scores for "signal" distribution
 		%> @param dn scores for "noise" distribution
@@ -622,7 +630,7 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief ROC
+		%> @brief ROC see http://www.subcortex.net/research/code/area_under_roc_curve
 		%>
 		%> @param data - [class , score] matrix
 		%> @return tp   - true positive rate
@@ -660,60 +668,16 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		%> @brief Area under ROC
 		%>
+		%> @param data - [class , score] matrix
+		%> @param alpha    - level for confidence intervals (eg., enter 0.05 if you want 95% CIs)
+		%> @param flag     - 'hanley' yields Hanley-McNeil (1982) asymptotic CI; 'maxvar' yields maximum variance CI;'mann-whitney';'logit';'boot' yields bootstrapped CI (DEFAULT)
+		%> @param nboot - if 'boot' is set, specifies # of resamples, default=1000
+		%> @param varargin - additional arguments to pass to BOOTCI, only valid for 'boot' this assumes you have the STATs toolbox, otherwise it's ignored and a crude percentile bootstrap is estimated.
+		%> @return A   - area under ROC
+		%> @return Aci - confidence intervals
 		% ===================================================================
-		function [A,Aci] = auc(ego,data,alpha,flag,nboot,varargin);
-			%     [A,Aci] = auc(data,alpha,flag,nboot,varargin);
-			%
-			%     INPUTS
-			%     data     - Nx2 matrix [t , y], where
-			%                t - a vector indicating class value (>0 positive class, <=0 negative)
-			%                y - score value for each instance
-			%
-			%     OPTIONAL
-			%     alpha    - level for confidence intervals (eg., enter 0.05 if you want 95% CIs)
-			%     flag     - 'hanley' yields Hanley-McNeil (1982) asymptotic CI
-			%                'maxvar' yields maximum variance CI
-			%                'mann-whitney'
-			%                'logit'
-			%                'boot' yields bootstrapped CI (DEFAULT)
-			%     nboot    - if 'boot' is set, specifies # of resamples, default=1000
-			%     varargin - additional arguments to pass to BOOTCI, only valid for 'boot'
-			%                this assumes you have the STATs toolbox, otherwise it's
-			%                ignored and a crude percentile bootstrap is estimated.
-			%
-			%     OUTPUTS
-			%     A        - area under ROC
-			%     Aci      - confidence intervals
-			%
-			%     EXAMPLES
-			%     % Classic binormal ROC. 100 samples from each class, with a unit mean separation
-			%     % between the classes.
-			%     >> mu = 1;
-			%     >> y = [randn(100,1)+mu ; randn(100,1)];
-			%     >> t = [ones(100,1) ; zeros(100,1)];
-			%     >> [A,Aci] = auc([t,y])
-			%     >> trueA = normcdf(mu/sqrt(1+1^2))
-			%
-			%     REFERENCE
-			%     Gengsheng Qin & Lejla Hotilovac. Comparison of non-parametric
-			%     confidence intervals for the area under the ROC curve of a continuous
-			%     scale diagnostic test.
-			%     Stat Methods Med Res 17:207, 2008
-			
+		function [A,Aci] = auc(ego,data,alpha,flag,nboot,varargin)
 			%     $ Copyright (C) 2011 Brian Lau http://www.subcortex.net/ $
-			%
-			%     This program is free software: you can redistribute it and/or modify
-			%     it under the terms of the GNU General Public License as published by
-			%     the Free Software Foundation, either version 3 of the License, or
-			%     (at your option) any later version.
-			%
-			%     This program is distributed in the hope that it will be useful,
-			%     but WITHOUT ANY WARRANTY; without even the implied warranty of
-			%     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-			%     GNU General Public License for more details.
-			%
-			%     You should have received a copy of the GNU General Public License
-			%     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 			if size(data,2) ~= 2
 				error('Incorrect input size in AUC!');
 			end

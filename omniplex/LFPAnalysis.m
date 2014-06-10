@@ -122,6 +122,7 @@ classdef LFPAnalysis < analysisCore
 					return
 				end
 			end
+			checkPaths(ego);
 		end
 		
 		% ===================================================================
@@ -157,6 +158,26 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
+		function reparse(ego)
+			if isempty(ego.lfpfile) %we obviously haven't done an initial parse
+				parse(ego); 
+				return
+			end
+			ego.ft = struct();
+			ego.results = struct();
+			parseEvents(ego.p);
+			parseLFPs(ego);
+			select(ego);
+			selectTrials(ego);
+			getFieldTripLFPs(ego);
+		end
+		
+		% ===================================================================
+		%> @brief reparse data after an initial parse
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function toggleSaccadeRealign(ego)
 			ego.p.saccadeRealign = ~ego.p.saccadeRealign;
 			ego.sp.p.saccadeRealign = ego.p.saccadeRealign;
@@ -171,26 +192,6 @@ classdef LFPAnalysis < analysisCore
 			else
 				disp('Saccade Realign is now DISABLED...')
 			end
-		end
-		% ===================================================================
-		%> @brief reparse data after an initial parse
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function reparse(ego)
-			if isempty(ego.lfpfile) %we obviously haven't done an initial parse
-				parse(ego); 
-				return
-			end
-			ego.ft = struct();
-			ego.results = struct();
-			parseEvents(ego.p);
-			parseLFPs(ego);
-			select(ego);
-			selectTrials(ego);
-			getFieldTripLFPs(ego);
-			plot(ego,'normal');
 		end
 		
 		% ===================================================================

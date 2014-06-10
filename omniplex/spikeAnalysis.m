@@ -130,6 +130,7 @@ classdef spikeAnalysis < analysisCore
 				getFiles(ego, true);
 				if isempty(ego.file); warning('No plexon file selected'); return; end
 			end
+			checkPaths(ego);
 			ego.paths.oldDir = pwd;
 			cd(ego.dir);
 			ego.p.eventWindow = ego.spikeWindow;
@@ -144,46 +145,6 @@ classdef spikeAnalysis < analysisCore
 			ego.names = ego.ft.label;
 			showInfo(ego);
 			select(ego);
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function lazyParse(ego)
-			ft_defaults
-			if isempty(ego.file)
-				getFiles(ego, true);
-				if isempty(ego.file); warning('No plexon file selected'); return; end
-			end
-			ego.paths.oldDir = pwd;
-			cd(ego.dir);
-			ego.p.eventWindow = ego.spikeWindow;
-			lazyParse(ego.p);
-			ego.trial = ego.p.eventList.trials;
-			ego.event = ego.p.eventList;
-			for i = 1:ego.nUnits
-				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
-			end
-			ego.ft = struct(); ego.results = struct();
-			ego.ft = getFieldTripSpikes(ego.p);
-			ego.names = ego.ft.label;
-			if isempty(ego.selectedTrials)
-				select(ego);
-			elseif ego.yokedSelection == false
-				selectTrials(ego)
-			end
-			if ~isempty(ego.p.eA.ROIInfo)
-				ego.p.eA.ROI = ego.ROI;
-				parseROI(ego.p.eA);
-			end
-			if ~isempty(ego.p.eA.TOIInfo)
-				ego.p.eA.TOI = ego.TOI;
-				parseTOI(ego.p.eA);
-			end
-			disp('Lazy spike parsing finished...')
 		end
 		
 		% ===================================================================
@@ -216,7 +177,48 @@ classdef spikeAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief reparse data after an initial parse
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function lazyParse(ego)
+			ft_defaults
+			if isempty(ego.file)
+				getFiles(ego, true);
+				if isempty(ego.file); warning('No plexon file selected'); return; end
+			end
+			checkPaths(ego);
+			ego.paths.oldDir = pwd;
+			cd(ego.dir);
+			ego.p.eventWindow = ego.spikeWindow;
+			lazyParse(ego.p);
+			ego.trial = ego.p.eventList.trials;
+			ego.event = ego.p.eventList;
+			for i = 1:ego.nUnits
+				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
+			end
+			ego.ft = struct(); ego.results = struct();
+			ego.ft = getFieldTripSpikes(ego.p);
+			ego.names = ego.ft.label;
+			if isempty(ego.selectedTrials)
+				select(ego);
+			elseif ego.yokedSelection == false
+				selectTrials(ego)
+			end
+			if ~isempty(ego.p.eA.ROIInfo)
+				ego.p.eA.ROI = ego.ROI;
+				parseROI(ego.p.eA);
+			end
+			if ~isempty(ego.p.eA.TOIInfo)
+				ego.p.eA.TOI = ego.TOI;
+				parseTOI(ego.p.eA);
+			end
+			disp('Lazy spike parsing finished...')
+		end
+		
+		% ===================================================================
+		%> @brief reparse data to saccade onset after an initial parse
 		%>
 		%> @param
 		%> @return
@@ -228,9 +230,9 @@ classdef spikeAnalysis < analysisCore
 			ego.reparse;	
 			ego.doPlots = doPlots;
 			if ego.p.saccadeRealign == true
-				disp('Saccade Realign is now ENABLED...')
+				disp('Saccade Realign is now ENABLED, data was reparsed...')
 			else
-				disp('Saccade Realign is now DISABLED...')
+				disp('Saccade Realign is now DISABLED, data was reparsed...')
 			end
 		end
 		
@@ -611,20 +613,24 @@ classdef spikeAnalysis < analysisCore
 				end
 				for i=1:length(f)
 					if isprop(ego.p,f{i})
-						try ego.p.(f{i}) = in.(f{i}); end
+						try 
+							ego.p.(f{i}) = in.(f{i}); 
+						catch
+							fprintf('---> spikeAnalysis setFiles: skipping %s\n',f{i});
+						end
 					end
 				end
-				
 			end
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief findRepeats looks for repetition priming effects
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
 		function findRepeats(ego)
+			
 			
 		end
 		
@@ -672,6 +678,10 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function compareBaseline(ego)
+			
+			
+			
+			
 			
 		end
 		
@@ -1155,7 +1165,6 @@ classdef spikeAnalysis < analysisCore
 				ylabel('Voltage (mV)')
 				title([name ' | nwaves: ' num2str(nwaves)]);
 			end
-			
 		end
 		
 		% ===================================================================
