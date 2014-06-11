@@ -173,7 +173,10 @@ classdef eyelinkAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief prunetrials -- very rarely (n=1) we lose a trial strobe in the plexon data and
+		%> thus when we try to align the plexon trial index and EDF trial index they are off-by-one,
+		%> this function is used once the index of the trial is know to prune it out of the EDF data
+		%> set and recalculate the indexes.
 		%>
 		%> @param
 		%> @return
@@ -190,6 +193,7 @@ classdef eyelinkAnalysis < analysisCore
 			for i = num:length(ego.trials)
 				ego.trials(i).correctedIndex = ego.trials(i).correctedIndex - 1;
 			end
+			fprintf('Pruned %i trials from EDF trial data \n',num)
 		end
 		
 		% ===================================================================
@@ -1243,8 +1247,15 @@ classdef eyelinkAnalysis < analysisCore
 				end
 			end
 			
-			if ~ego.trials(end).correct && ~ego.trials(end).correct && ~ego.trials(end).correct
+			%prune the end trial if invalid
+			if ~ego.trials(end).correct && ~ego.trials(end).breakFix && ~ego.trials(end).incorrect
 				ego.trials(end) = [];
+				ego.correct.idx = find([ego.trials.correct] == true);
+				ego.correct.saccTimes = [ego.trials(ego.correct.idx).firstSaccade];
+				ego.breakFix.idx = find([ego.trials.breakFix] == true);
+				ego.breakFix.saccTimes = [ego.trials(ego.breakFix.idx).firstSaccade];
+				ego.incorrect.idx = find([ego.trials.incorrect] == true);
+				ego.incorrect.saccTimes = [ego.trials(ego.incorrect.idx).firstSaccade];
 			end
 			
 			if max(abs(ego.trialList)) == 1010 && min(abs(ego.trialList)) == 1010

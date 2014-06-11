@@ -16,15 +16,17 @@ classdef plxReader < optickaCore
 		%> Eyelink edf file name (should be same directory as opticka file).
 		edffile@char
 		%> use the event on/off markers if empty, or a timerange around the event on otherwise
-		eventWindow@double = []
+		eventWindow@double			= []
 		%> the window to check before/after trial end for behavioural marker
-		eventSearchWindow@double = 0.2
+		eventSearchWindow@double	= 0.2
 		%> used by legacy spikes to allow negative time offsets
-		startOffset@double = 0
+		startOffset@double			= 0
 		%> Use first saccade to realign time 0 for data?
-		saccadeRealign = false;
+		saccadeRealign@logical		= false
+		%> reduce the duplicate tetrode channels?
+		channelReduction@logical	= true
 		%> verbose?
-		verbose	= false
+		verbose							= false
 	end
 	
 	%------------------HIDDEN PROPERTIES----------%
@@ -64,9 +66,9 @@ classdef plxReader < optickaCore
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%>info box handles
-		ibhandles@struct = struct()
+		ibhandles@struct				= struct()
 		%> info cache to speed up generating info{}
-		ic@struct = struct()
+		ic@struct						= struct()
 		%> allowed properties passed to object upon construction
 		allowedProperties@char = 'file|dir|matfile|matdir|edffile|startOffset|cellmap|verbose|eventWindow'
 	end
@@ -1155,7 +1157,7 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function readSpikes(ego)
-			
+			rsT = tic;
 			ego.tsList = struct();
 			[tscounts, wfcounts, evcounts, slowcounts]	= plx_info(ego.file,1);
 			[~,chnames]												= plx_chan_names(ego.file);
@@ -1180,8 +1182,8 @@ classdef plxReader < optickaCore
 				units = find(tscounts(:,ego.tsList.chMap(i))>0)';
 				n = length(units);
 				counts = tscounts(units,ego.tsList.chMap(i))';
-				units = units - 1; %fix the index as plxuses 0 as unsorted
-				if a == 1 || ~isequal(counts, prevcount);
+				units = units - 1; %fix the index as plx uses 0 as unsorted
+				if ~isequal(counts, prevcount) || ego.channelReduction == false 
 					ego.tsList.unitMap(a).units = units; 
 					ego.tsList.unitMap(a).ch = chmap(ego.tsList.chMap(i));
 					ego.tsList.unitMap(a).chIdx = ego.tsList.chMap(i);
@@ -1193,7 +1195,7 @@ classdef plxReader < optickaCore
 					a = a + 1;
 				end
 			end
-			if ego.trodality > 1 & a < i
+			if ego.trodality > 1 && a < i
 				ego.tsList.trodreduction = true;	
 				warning('---! Removed tetrode channels with identical spike numbers !---');
 			end
@@ -1209,7 +1211,7 @@ classdef plxReader < optickaCore
 			ego.tsList.tsN = ego.tsList.ts;
 			ego.tsList.tsParse = ego.tsList.ts;
 			ego.tsList.namelist = ''; list = 'UabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST';
-			a = 1; tic
+			a = 1;
 			for ich = 1:length(ego.tsList.activeCh)
 				ch = ego.tsList.activeCh(ich);
 				name = chnames{ego.tsList.activeChIndex(ich)};
@@ -1237,7 +1239,7 @@ classdef plxReader < optickaCore
 					a = a + 1;
 				end
 			end
-			fprintf('Loading all spike channels took %g ms\n',round(toc*1000));
+			fprintf('Loading all spike channels took %g ms\n',round(toc(rsT)*1000));
 		end
 
 		% ===================================================================
@@ -1247,7 +1249,7 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function parseSpikes(ego)
-			tic
+			psT = tic;
 			for ps = 1:ego.tsList.nUnits
 				spikes = ego.tsList.ts{ps}; 
 				waves = ego.tsList.wave{ps};
@@ -1305,7 +1307,7 @@ classdef plxReader < optickaCore
 				ego.tsList.tsParse{ps}.var = vars;
 				clear spikes waves trials vars
 			end
-			fprintf('Parsing spikes into trials/variables took %g ms\n',round(toc*1000))
+			fprintf('Parsing spikes into trials/variables took %g ms\n',round(toc(psT)*1000))
 			if ego.startOffset ~= 0
 				ego.info{end+1} = sprintf('START OFFSET ACTIVE : %g', ego.startOffset);
 			end
