@@ -1232,7 +1232,7 @@ classdef plxReader < optickaCore
 					end
 					
 					t = '';
-					t = [num2str(a) ':' name list(iunit) '=' num2str(tsN)];
+					t = [num2str(a) ':' name '.' num2str(ch) list(iunit) '=' num2str(tsN)];
 					ego.tsList.names{a} = t;
 					ego.tsList.namelist = [ego.tsList.namelist ' ' t];
 					
