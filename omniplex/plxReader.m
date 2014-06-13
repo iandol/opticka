@@ -638,6 +638,53 @@ classdef plxReader < optickaCore
 				axis(ax);
 			end
 		end
+		
+		% ===================================================================
+		%> @brief Constructor
+		%>
+		%> @param varargin
+		%> @returnscr
+		% ===================================================================
+		function getFiles(ego, force)
+			if ~exist('force','var')
+				force = false;
+			end
+			if force == true || isempty(ego.file)
+				[f,p] = uigetfile({'*.plx;*.pl2';'PlexonFiles'},'Load Plexon File');
+				if ischar(f) && ~isempty(f)
+					ego.file = f;
+					ego.dir = p;
+						ego.paths.oldDir = pwd;
+					cd(ego.dir);
+				else
+					return
+				end
+			end
+			if force == true || isempty(ego.matfile)
+				[ego.matfile, ego.matdir] = uigetfile('*.mat',['Load Behaviour MAT File for ' ego.file]);
+			end
+			if force == true || isempty(ego.edffile)
+				cd(ego.matdir)
+				[~,f,~] = fileparts(ego.matfile);
+				f = [f '.edf'];
+				ff = regexprep(f,'\.edf','FIX\.edf','ignorecase');
+				fff = regexprep(ff,'^[a-zA-Z]+\-','','ignorecase');
+				if ~exist(f, 'file') && ~exist(ff,'file') && ~exist(fff,'file')
+					[an, ~] = uigetfile('*.edf',['Load Eyelink EDF File for ' ego.matfile]);
+					if ischar(an)
+						ego.edffile = an;
+					else
+						ego.edffile = '';
+					end
+				elseif exist(f, 'file')
+					ego.edffile = f;
+				elseif exist(ff, 'file')
+					ego.edffile = ff;
+				elseif exist(fff, 'file')
+					ego.edffile = fff;
+				end
+			end
+		end
 	
 	end
 	
@@ -706,53 +753,6 @@ classdef plxReader < optickaCore
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-	
-		% ===================================================================
-		%> @brief Constructor
-		%>
-		%> @param varargin
-		%> @returnscr
-		% ===================================================================
-		function getFiles(ego, force)
-			if ~exist('force','var')
-				force = false;
-			end
-			if force == true || isempty(ego.file)
-				[f,p] = uigetfile({'*.plx;*.pl2';'PlexonFiles'},'Load Plexon File');
-				if ischar(f) && ~isempty(f)
-					ego.file = f;
-					ego.dir = p;
-						ego.paths.oldDir = pwd;
-					cd(ego.dir);
-				else
-					return
-				end
-			end
-			if force == true || isempty(ego.matfile)
-				[ego.matfile, ego.matdir] = uigetfile('*.mat',['Load Behaviour MAT File for ' ego.file]);
-			end
-			if force == true || isempty(ego.edffile)
-				cd(ego.matdir)
-				[~,f,~] = fileparts(ego.matfile);
-				f = [f '.edf'];
-				ff = regexprep(f,'\.edf','FIX\.edf','ignorecase');
-				fff = regexprep(ff,'^[a-zA-Z]+\-','','ignorecase');
-				if ~exist(f, 'file') && ~exist(ff,'file') && ~exist(fff,'file')
-					[an, ~] = uigetfile('*.edf',['Load Eyelink EDF File for ' ego.matfile]);
-					if ischar(an)
-						ego.edffile = an;
-					else
-						ego.edffile = '';
-					end
-				elseif exist(f, 'file')
-					ego.edffile = f;
-				elseif exist(ff, 'file')
-					ego.edffile = ff;
-				elseif exist(fff, 'file')
-					ego.edffile = fff;
-				end
-			end
-		end
 		
 		% ===================================================================
 		%> @brief load and parse (via eyelinkAnalysis) the Eyelink EDF file

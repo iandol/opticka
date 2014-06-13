@@ -1702,9 +1702,17 @@ classdef LFPAnalysis < analysisCore
 					grid on; box on
 					axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
 					ax=axis;
+					c1 = NaN; c1e=c1; c2=c1; c2e=c1; pval=c1;
+					for ii = 1:length(av)	
+						if size(av{ii}.cov,3)>1; 
+							av{ii}.cov = av{ii}.cov(:,:,1);
+						end
+					end	
 					[c1,c1e]=stderr(av{1}.cov);
 					[c2,c2e]=stderr(av{2}.cov);
-					[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',ego.stats.alpha);
+					try
+						[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',ego.stats.alpha);
+					end
 					xlabel('Time (s)');
 					ylabel('LFP Raw Amplitude (mV) ±SEM');
 					t=sprintf('COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
