@@ -143,11 +143,8 @@ classdef LFPAnalysis < analysisCore
 			%clear our data structures
 			ego.LFPs = struct(); ego.ft = struct(); ego.results = struct(); ego.panels = struct();
 			ego.p.eventWindow = ego.LFPWindow;
-			disp('parseEvents(ego.p);')
 			parseEvents(ego.p);
-			disp('ego.LFPs = readLFPs(ego.p);')
 			ego.LFPs = readLFPs(ego.p);
-			disp('parseLFPs(ego);')
 			parseLFPs(ego);
 			showInfo(ego);
 			select(ego);
@@ -523,9 +520,9 @@ classdef LFPAnalysis < analysisCore
 		function cfgUsed=ftFrequencyAnalysis(ego, cfg, preset, tw, cycles, smth, width)
 			if ~exist('preset','var') || isempty(preset); preset='fix1'; end
 			if ~exist('tw','var') || isempty(tw); tw=0.2; end
-			if ~exist('cycles','var') || isempty(cycles); cycles = 5; end
-			if ~exist('smth','var') || isempty(smth); smth = 0.4; end
-			if ~exist('width','var') || isempty(width); width = 10; end
+			if ~exist('cycles','var') || isempty(cycles); cycles = 4; end
+			if ~exist('smth','var') || isempty(smth); smth = 0.2; end
+			if ~exist('width','var') || isempty(width); width = 7; end
 			if ~isfield(ego.ft,'label'); getFieldTripLFPs(ego); end
 			if isempty(ego.results);ego.results=struct();end
 			if isfield(ego.results(1),['fq' preset]);ego.results(1).(['fq' preset]) = [];end
@@ -1193,29 +1190,56 @@ classdef LFPAnalysis < analysisCore
 			
 			tmult = (length(ft.time{1})-1) / f; 
 
-			randPhase = true; %randomise phase?
-			randPhaseRange = 2*pi; %how much to randomise phase?
-			rphase = 0; %default phase
+			randPhase				= true; %randomise phase?
+			randPhaseRange			= 2*pi; %how much to randomise phase?
+			rphase					= 0; %default phase
+			basef						= 5; % base frequency
+			onsetf					= 10; %an onset at 0 frequency
+			onsetDivisor			= 0.5; %scale the onset frequency
+			burstf					= 30; %small burst frequency
+			burstOnset				= 0.1; %time of onset of burst freq
+			burstLength				= 0.2; %length of burst
+			powerDivisor			= 2; %how much to attenuate the secondary frequencies
+			group2Divisor			= 1; %do we use a diff divisor for group 2?
+			noiseDivisor			= 0.4; %scale noise to signal
 			
-			basef = 5; % base frequency
-			piMult = basef * 2; %resultant pi multiplier
+			options = {'p|¤true|false', 'Use random phases?';...
+				['t|' num2str(randPhaseRange)], 'Random phase range in radians?';...
+				['t|' num2str(rphase)], 'Default phase?';...
+				['t|' num2str(basef)], 'Base Frequency (Hz)';...
+				['t|' num2str(onsetf)], 'Onset (time=0) Frequency (Hz)';...
+				['t|' num2str(onsetDivisor)], 'Onset F Power Divisor';...
+				['t|' num2str(burstf)], 'Burst Frequency (Hz)';...
+				['t|' num2str(burstOnset)], 'Burst Onset Time (s)';...
+				['t|' num2str(burstLength)], 'Burst Length (s)';...
+				['t|' num2str(powerDivisor)], 'Burst Power Divisor';...
+				['t|' num2str(group2Divisor)], 'Burst Power Divisor for Group 2';...
+				['t|' num2str(noiseDivisor)], 'Noise Divisor';...
+				};
+			answer = menuN('Select Surrogate options:',options);
+			drawnow;
+			if iscell(answer) && ~isempty(answer)
+				randPhase = logical(answer{1});
+				randPhaseRange = eval(answer{2});
+				rphase = str2num(answer{3});
+				basef = str2num(answer{4});
+				onsetf = str2num(answer{5});
+				onsetDivisor = str2num(answer{6});
+				burstf = str2num(answer{7});
+				burstOnset = str2num(answer{8});
+				burstLength = str2num(answer{9});
+				powerDivisor = str2num(answer{10});
+				group2Divisor = str2num(answer{11});
+				noiseDivisor = str2num(answer{12});
+			end
 			
-			burstf = 30; %small burst frequency
-			burstMult = burstf * 2; %resultant pi multiplier
-			burstOnset = 0.1; %time of onset of burst freq
-			burstLength = 0.2; %length of burst
+			piMult					= basef * 2; %resultant pi multiplier
+			burstMult				= burstf * 2; %resultant pi multiplier
+			onsetMult				= onsetf * 2; %onset multiplier
 			
-			onsetf = 10; %an onset at 0 frequency
-			onsetMult = onsetf * 2; %onset multiplier
+			fprintf('\n\nSurrogate Data:\nRandom phase \t\t\t\t= %i\nRandom Phase Range (pi=%.3g) = %.3g\nBase F \t\t\t\t= %i\nBurst F (starts at %.2g secs) \t= %i\nOnset F (starts at 0 time) \t= %i\nGeneral Divisor \t\t= %i\nGroup 2 Burst F Divisor \t= %i\nNoise Divisor \t\t= %.3g\n\n',...
+				randPhase,pi,randPhaseRange,basef,burstOnset,burstf,onsetf,powerDivisor,group2Divisor,noiseDivisor);
 			
-			powerDivisor = 2; %how much to attenuate the secondary frequencies
-			group2Divisor = 1; %do we use a diff divisor for group 2?
-			noiseDivisor = 0.2; %scale noise to signal
-			
-			fprintf('\n\nSurrogate Data:\nRandom phase \t\t= %i\nBase F \t\t= %i\nBurst F \t\t= %i\nOnset F \t\t= %i\nGeneral Divisor \t\t= %i\nGroup 2 Divisor \t\t= %i\nNoise Divisor \t\t= %i\n\n',...
-				randPhase,basef,burstf,onsetf,powerDivisor,group2Divisor,noiseDivisor);
-			
-			%plotSurrogates()
 			
 			for j = 1:length(ft.trial)
 				time = ft.time{j};
@@ -1240,6 +1264,7 @@ classdef LFPAnalysis < analysisCore
 				y = sin((0 : (pi*piMult)/f : (pi*piMult) * tmult)+rphase)';
 				y = y(1:length(time));
 				%burst frequency with different power in group 2 if present
+				if randPhase; rphase = rand * randPhaseRange; end
 				yy = sin((0 : (pi*burstMult)/f : (pi*burstMult) * burstLength)+rphase)';
 				if ego.nSelection > 1 && ismember(j,ego.selectedTrials{2}.idx)
 					yy = yy ./ group2Divisor;
@@ -1247,8 +1272,9 @@ classdef LFPAnalysis < analysisCore
 					yy = yy ./ powerDivisor;
 				end
 				%intermediate onset frequency
+				if randPhase; rphase = rand * randPhaseRange; end
 				yyy = sin((0 : (pi*onsetMult)/f : (pi*onsetMult) * 0.4)+rphase)';
-				yyy = yyy ./ 0.5;
+				yyy = yyy ./ onsetDivisor;
 				%find our times to inject yy burst frequency
 				st = ego.findNearest(time,burstOnset);
 				en = ego.findNearest(time,burstOnset+burstLength);
@@ -1273,7 +1299,7 @@ classdef LFPAnalysis < analysisCore
 					for jj = ego.selectedTrials{ii}.idx
 						plot(ft.time{jj},ft.trial{jj}(1,:));
 					end
-					title(ego.selectedTrials{ii}.name);
+					title(['Surrogate Data: ' ego.selectedTrials{ii}.name]);
 					xlabel('Time');
 					ylabel('Voltage');
 				end
@@ -1948,7 +1974,7 @@ classdef LFPAnalysis < analysisCore
 			p=panel(h);
 			p.margin = [20 20 10 15]; %leres bottom right top
 			p.fontsize = 10;
-			p.pack(1,3);
+			p.pack(1,4);
 			
 			for i = 1:length(res.statSts0)
 				p(1,1).select();
@@ -1975,6 +2001,14 @@ classdef LFPAnalysis < analysisCore
 				xlabel('frequency')
 				ylabel('PPC')
 				title([res.statSts2{i}.cfg.method ' Measure for ' num2str(res.statSts2{i}.cfg.latency)]);
+				
+				p(1,4).select();
+				hold on
+				plot(res.statSts3{i}.freq,res.statSts3{i}.plv',lo{i})
+				box on; grid on;
+				xlabel('frequency')
+				ylabel('PLV')
+				title([res.statSts3{i}.cfg.method ' Measure for ' num2str(res.statSts3{i}.cfg.latency)]);
 			end
 			p(1,1).select();
 			legend(leg);
@@ -2101,7 +2135,7 @@ classdef LFPAnalysis < analysisCore
 			p=panel(h);
 			p.margin = [15 15 30 20];%left bottom right top
 			if isnumeric(gcf);	p.fontsize = 12; end
-			bl = {'relative','db','no'};
+			bl = {'relative','db', 'absolute', 'no'};
 			row = length(fq); col = length(bl);
 			p.pack(row,col);
 			hmin = cell(size(bl));
@@ -2138,9 +2172,9 @@ classdef LFPAnalysis < analysisCore
 					hmax{jj} = max([hmax{jj} max(clim)]);
 					xlabel('Time (s)');
 					ylabel('Frequency (Hz)');
-					t = [bl{jj} '#' num2str(i) ' ' name ' | Mth:' fq{i}.cfgUsed.method ' | Tp:' fq{i}.cfgUsed.taper];
-					t = [t '\newlineWin:' num2str(fq{i}.cfgUsed.tw) ' | Cyc:' num2str(fq{i}.cfgUsed.cycles)];
-					t = [t ' | Wdth:' num2str(fq{i}.cfgUsed.width) ' | Smth:' num2str(fq{i}.cfgUsed.smooth)];
+					t = [bl{jj} '#' num2str(i) ' ' name ' |Mth:' fq{i}.cfgUsed.method ' |Tp:' fq{i}.cfgUsed.taper];
+					t = [t '\newlineWin:' num2str(fq{i}.cfgUsed.tw) ' |Cyc:' num2str(fq{i}.cfgUsed.cycles)];
+					t = [t ' |Smth:' num2str(fq{i}.cfgUsed.smooth) ' | Wdth:' num2str(fq{i}.cfgUsed.width) ];
 					title(t,'FontSize',cfg.fontsize);
 				end
 				colormap('jet');
