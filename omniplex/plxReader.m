@@ -156,7 +156,6 @@ classdef plxReader < optickaCore
 				if isempty(ego.eA) && ego.isEDF == true
 					loadEDF(ego);
 				end
-				parse(ego.eA); fixVarNames(ego.eA);
 				integrateEyeData(ego);
 			end
 			generateInfo(ego);
@@ -729,7 +728,7 @@ classdef plxReader < optickaCore
 					num = 1:var{i}.range;
 					var{i}.values = num;
 					var{i}.keystring = [];
-					for jj = 1var{i}.range
+					for jj = var{i}.range
 						k = vals{jj};
 						var{i}.key{jj} = num2str(k);
 						var{i}.keystring = {var{i}.keystring var{i}.key{jj}};

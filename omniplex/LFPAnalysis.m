@@ -143,8 +143,11 @@ classdef LFPAnalysis < analysisCore
 			%clear our data structures
 			ego.LFPs = struct(); ego.ft = struct(); ego.results = struct(); ego.panels = struct();
 			ego.p.eventWindow = ego.LFPWindow;
+			disp('parseEvents(ego.p);')
 			parseEvents(ego.p);
+			disp('ego.LFPs = readLFPs(ego.p);')
 			ego.LFPs = readLFPs(ego.p);
+			disp('parseLFPs(ego);')
 			parseLFPs(ego);
 			showInfo(ego);
 			select(ego);
