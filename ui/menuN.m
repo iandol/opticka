@@ -105,7 +105,7 @@ function choice = menuN(mtitle,options,Opt)
 % Author: Johan Winges
 
 if feature('HGUsingMatlabClasses')
-	fs = 10;
+	fs = 12;
 else
 	fs = 14;
 end

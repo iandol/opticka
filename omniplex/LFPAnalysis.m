@@ -775,8 +775,21 @@ classdef LFPAnalysis < analysisCore
 				dati=dat;
 			end
 			
-			cycles = 3;
-			smooth = 0.3;
+			ego.results.staPre		= cell(1,ego.nSelection);
+			ego.results.staPost		= cell(1,ego.nSelection);
+			ego.results.stsFFT		= cell(1,ego.nSelection);
+			ego.results.stsConvol	= cell(1,ego.nSelection);
+			ego.results.statSts0		= cell(1,ego.nSelection);
+			ego.results.statSts1		= cell(1,ego.nSelection);
+			ego.results.statSts2		= cell(1,ego.nSelection);
+			ego.results.statSts3		= cell(1,ego.nSelection);
+			ego.results.statSts4		= cell(1,ego.nSelection);
+			ego.results.statSts5		= cell(1,ego.nSelection);
+			ego.results.statStsW		= cell(1,ego.nSelection);
+			
+			cycles = ego.stats.spikelfptaperopt(1);
+			smooth = ego.stats.spikelfptaperopt(2);
+			taper = ego.stats.spikelfptaper;
 			for j = 1:length(ego.selectedTrials)
 				name				= [spike.label{unit} ' | ' ego.selectedTrials{j}.name];
 				tempspike		= ego.subselectFieldTripTrials(spike,ego.selectedTrials{j}.idx);
@@ -805,7 +818,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.timwin							= [-0.1 0.1]; %[begin end], time around each spike (default = [-0.1 0.1])
 				cfg.tapsmofrq						= 3; %the amount of spectral smoothing through multi-tapering. Note that 4 Hz smoothing means plus-minus 4 Hz,i.e. a 8 Hz smoothing box. Note: multitapering rotates phases (no problem for consistency)
 				cfg.rejectsaturation				= 'no';
-				cfg.taper							= 'hanning';
+				cfg.taper							= taper;
 				cfg.spikechannel					= spike.label{unit};
 				cfg.channel							= ft.label{ego.selectedLFP};
 				stsFFT								= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
@@ -826,7 +839,7 @@ classdef LFPAnalysis < analysisCore
 				cfg.t_ftimwin						= cycles ./ cfg.foi; % vector 1 x numfoi, length of time window (in seconds)
 				cfg.rejectsaturation				= 'no';
 				cfg.borderspikes					= 'yes';
-				cfg.taper							= 'dpss';
+				cfg.taper							= taper;
 				cfg.spikechannel					= spike.label{unit};
 				cfg.channel							= ft.label{ego.selectedLFP};
 				stsConvol							= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
@@ -921,12 +934,13 @@ classdef LFPAnalysis < analysisCore
 				cfg.channel							= ft.label{ego.selectedLFP};
 				cfg.spikesel						= 'all';
 				cfg.avgoverchan					= 'unweighted';
-				cfg.timwin							= 0.2; 
-				cfg. winstepsize					= 0.01;
-				cfg.latency							= ego.measureRange; % sustained visual stimulation period
+				cfg.timwin							= ego.stats.spikelfppcw(1); 
+				cfg. winstepsize					= ego.stats.spikelfppcw(2);
+				cfg.latency							= [-0.3 0.3];
 				statSts								= ft_spiketriggeredspectrum_stat(cfg,stsConvol);
 				ego.results.statStsW{j}			= statSts;
 				ego.results.statStsW{j}.name	= name;
+				ego.results.statStsW{j}.times = [cfg.latency(1):cfg. winstepsize:cfg.latency(2)-cfg. winstepsize];
 				clear statSts
 			end
 			if ego.doPlots; drawSpikeLFP(ego); end
@@ -1909,7 +1923,7 @@ classdef LFPAnalysis < analysisCore
 				[ego.lfpfile ' | ' ego.spikefile ' | ' res.staPre{1}.cfg.spikechannel{1}]);
 			p=panel(h);
 			p.margin = [20 20 10 15]; %left bottom right top
-			p.fontsize = 10;
+			p.fontsize = 12;
 			p.pack(length(res.staPre),2);
 			
 			for i = 1:length(res.staPre)
@@ -1963,7 +1977,7 @@ classdef LFPAnalysis < analysisCore
 				[ego.lfpfile '|' res.stsFFT{1}.lfplabel{1} '|' res.stsFFT{1}.label{1}]);
 			p=panel(h);
 			p.margin = [20 20 10 15]; %left bottom right top
-			p.fontsize = 10;
+			p.fontsize = 12;
 			p.pack(2,2);
 			
 			lo = {'b-o','r-o','g-o','k-o','y-o','b:o','r:o'};
@@ -2017,7 +2031,7 @@ classdef LFPAnalysis < analysisCore
 				['PPC for ' ego.lfpfile ' ' ego.spikefile]);
 			p=panel(h);
 			p.margin = [20 20 10 15]; %leres bottom right top
-			p.fontsize = 10;
+			p.fontsize = 12;
 			p.pack(2,3);
 			
 			for i = 1:length(res.statSts0)
@@ -2072,6 +2086,24 @@ classdef LFPAnalysis < analysisCore
 			end
 			p(1,1).select();
 			legend(leg);
+			
+			w = ego.results.statStsW;
+			h=figure;figpos(2,[500 1000]);set(h,'Color',[1 1 1],'NumberTitle','off','Name',...
+				[ego.lfpfile '|' res.stsFFT{1}.lfplabel{1} '|' res.stsFFT{1}.label{1}]);
+			p=panel(h);
+			p.margin = [20 20 10 15]; %leres bottom right top
+			p.fontsize = 12;
+			p.pack(length(w),1);
+			colormap(jet)
+			for i = 1:length(w)
+				p(i,1).select();
+				imagesc(w{i}.times, w{i}.freq, squeeze(w{i}.ppc0));
+				box on; grid on; axis tight; axis xy
+				xlabel('Time')
+				ylabel('Frequency');
+				title(['Timwin: ' num2str(w{i}.cfg.timwin) ' | ' w{i}.name])
+				colorbar
+			end
 			
 		end
 		

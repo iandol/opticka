@@ -265,6 +265,9 @@ classdef analysisCore < optickaCore
 				['t|' num2str(ego.stats.customFreq)],'LFP Frequency Stats Custom Frequency Band:'; ...
 				['t|' num2str(ego.stats.smoothing,12)],'Smoothing Value to use for Curves:'; ...
 				[ploterror],'Error data for Tuning Curves?:'; ...
+				['t|' num2str(ego.stats.spikelfptaper)],'Spike LFP Taper Method:'; ...
+				['t|' num2str(ego.stats.spikelfptaperopt)],'Spike LFP Taper Options [Cycles Smooth]:'; ...
+				['t|' num2str(ego.stats.spikelfppcw)],'Spike LFP PPC Window [Size Step]:'; ...
 				};
 			
 			answer = menuN(mtitle,options);
@@ -284,6 +287,9 @@ classdef analysisCore < optickaCore
 				ego.stats.customFreq = str2num(answer{12});
 				ego.stats.smoothing = eval(answer{13});
 				ego.stats.ploterror = mlist7{answer{14}};
+				ego.stats.spikelfptaper = answer{15};
+				ego.stats.spikelfptaperopt = str2num(answer{16});
+				ego.stats.spikelfppcw = str2num(answer{17});
 			end
 			
 			stats = ego.stats;
@@ -609,6 +615,15 @@ classdef analysisCore < optickaCore
 			end
 			if ~isfield(ego.stats,'ploterror') || isempty(ego.stats.ploterror)
 				ego.stats(1).ploterror = 'SEM';
+			end
+			if ~isfield(ego.stats,'spikelfptaper') || isempty(ego.stats.spikelfptaper)
+				ego.stats(1).spikelfptaper = 'dpss';
+			end
+			if ~isfield(ego.stats,'spikelfptaperopt') || isempty(ego.stats.spikelfptaperopt)
+				ego.stats(1).spikelfptaperopt = [3 0.3];
+			end
+			if ~isfield(ego.stats,'spikelfppcw') || isempty(ego.stats.spikelfppcw)
+				ego.stats(1).spikelfppcw = [0.2 0.02];
 			end
 		end
 		
