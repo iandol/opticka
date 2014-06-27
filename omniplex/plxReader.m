@@ -435,7 +435,7 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function handles = infoBox(ego, info)
-			if feature('HGUsingMatlabClasses');fs = 10;else fs = 14;end
+			if feature('HGUsingMatlabClasses');fs = 12;else fs = 14;end
 			if ~exist('info','var')
 				ego.generateInfo();
 				info = ego.info; 

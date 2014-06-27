@@ -554,11 +554,13 @@ classdef LFPAnalysis < analysisCore
 					case 'mtm1'
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'dpss';
-						cfg.tapsmofrq		= cfg.foi * cfg.smooth;
+						cfg.tapsmofrq		= cfg.foi .* cfg.smooth;
 						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
 					case 'mtm2'
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'dpss';
+						cfg.tapsmofrq		= ones(size(cfg.foi)) .* cfg.smooth;
+						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
 					case 'morlet'
 						cfg.method			= 'wavelet';
 						cfg.taper			= '';
@@ -591,7 +593,15 @@ classdef LFPAnalysis < analysisCore
 			if ~exist('name','var') || isempty('name');name='fqfix1';end
 			if ~exist('bline','var') || isempty(bline);bline='no';end
 			if ~exist('range','var') || isempty(range);range=ego.measureRange;end
-			if ~isfield(ego.results,name); disp('No frequency data parsed...'); return; end
+			if ~isfield(ego.results,name)
+				fprintf('\nCan''t find %s results; ',name)
+				if isfield(ego.results,'fqfix1'); name = 'fqfix1';
+				elseif isfield(ego.results,'fqmtm1'); name = 'fqmtm1';
+				elseif isfield(ego.results,'fqmorlet'); name = 'fqmorlet';
+				else return;
+				end
+				fprintf('using %s frequency analysis instead.\n',name)
+			end
 			ft = ego.ft;
 			fq = ego.results.(name);
 
@@ -657,7 +667,7 @@ classdef LFPAnalysis < analysisCore
 				if isempty(ego.stats); ego.setStats(); end
 				sv								= ego.stats;
 				cfg							= [];
-				cfg.channel					= fq{1}.label;
+				cfg.channel					= fq{1}.cfgUsed.channel;
 				cfg.latency					= range;
 				cfg.frequency				= 'all';
 				cfg.avgoverchan			= 'no';
@@ -1041,7 +1051,7 @@ classdef LFPAnalysis < analysisCore
 			end
 			
 			switch lower(sel)
-				case 'normal'
+				case {'n', 'normal'}
 					ego.drawTrialLFPs();
 					ego.drawAverageLFPs();
 				case 'all'
@@ -1049,7 +1059,7 @@ classdef LFPAnalysis < analysisCore
 					ego.drawTrialLFPs();
 					ego.drawAverageLFPs();
 					ego.drawTimelockLFPs();
-				case 'continuous'
+				case {'cont','continuous'}
 					ego.drawContinuousLFPs();
 				case {'trials','raw'}
 					ego.drawTrialLFPs();
@@ -1061,12 +1071,14 @@ classdef LFPAnalysis < analysisCore
 					ego.drawLFPFrequencies(args(:));
 				case {'bp','bandpass'}
 					ego.drawBandPass();
-				case {'slfp','spikelfp'}
+				case {'s', 'slfp', 'spikelfp'}
 					ego.drawSpikeLFP();
-				case {'both','together'}
+				case {'pt', 'both', 'together'}
 					ego.plotTogether();
 				case {'freqstats','fstats','fstat','fs'}
 					ego.drawLFPFrequencyStats();
+				otherwise
+					disp('Didn''t recognise draw method, try: normal, all, continuous, raw, average, timelock, freq, bandpass, spikelfp, fstats etc...')
 			end
 			
 			
@@ -1248,7 +1260,6 @@ classdef LFPAnalysis < analysisCore
 			
 			tmult = (length(ft.time{1})-1) / f; 
 
-			randPhase				= true; %randomise phase?
 			randPhaseRange			= 2*pi; %how much to randomise phase?
 			rphase					= 0; %default phase
 			basef						= 5; % base frequency
@@ -1261,8 +1272,7 @@ classdef LFPAnalysis < analysisCore
 			group2Divisor			= 1; %do we use a diff divisor for group 2?
 			noiseDivisor			= 0.4; %scale noise to signal
 			
-			options = {'p|¤true|false', 'Use random phases?';...
-				['t|' num2str(randPhaseRange)], 'Random phase range in radians?';...
+			options = {['t|' num2str(randPhaseRange)], 'Random phase range in radians?';...
 				['t|' num2str(rphase)], 'Default phase?';...
 				['t|' num2str(basef)], 'Base Frequency (Hz)';...
 				['t|' num2str(onsetf)], 'Onset (time=0) Frequency (Hz)';...
@@ -1277,26 +1287,25 @@ classdef LFPAnalysis < analysisCore
 			answer = menuN('Select Surrogate options:',options);
 			drawnow;
 			if iscell(answer) && ~isempty(answer)
-				randPhase = logical(answer{1});
-				randPhaseRange = eval(answer{2});
-				rphase = str2num(answer{3});
-				basef = str2num(answer{4});
-				onsetf = str2num(answer{5});
-				onsetDivisor = str2num(answer{6});
-				burstf = str2num(answer{7});
-				burstOnset = str2num(answer{8});
-				burstLength = str2num(answer{9});
-				powerDivisor = str2num(answer{10});
-				group2Divisor = str2num(answer{11});
-				noiseDivisor = str2num(answer{12});
+				randPhaseRange = eval(answer{1});
+				rphase = str2num(answer{2});
+				basef = str2num(answer{3});
+				onsetf = str2num(answer{4});
+				onsetDivisor = str2num(answer{5});
+				burstf = str2num(answer{6});
+				burstOnset = str2num(answer{7});
+				burstLength = str2num(answer{8});
+				powerDivisor = str2num(answer{9});
+				group2Divisor = str2num(answer{10});
+				noiseDivisor = str2num(answer{11});
 			end
 			
 			piMult					= basef * 2; %resultant pi multiplier
 			burstMult				= burstf * 2; %resultant pi multiplier
 			onsetMult				= onsetf * 2; %onset multiplier
 			
-			fprintf('\n\nSurrogate Data:\nRandom phase \t\t\t\t= %i\nRandom Phase Range (pi=%.3g) = %.3g\nBase F \t\t\t\t= %i\nBurst F (starts at %.2g secs) \t= %i\nOnset F (starts at 0 time) \t= %i\nGeneral Divisor \t\t= %i\nGroup 2 Burst F Divisor \t= %i\nNoise Divisor \t\t= %.3g\n\n',...
-				randPhase,pi,randPhaseRange,basef,burstOnset,burstf,onsetf,powerDivisor,group2Divisor,noiseDivisor);
+			fprintf('\n\nSurrogate Data:\nRandom Phase Range (pi=%.3g) = %.3g\nBase F \t\t\t\t= %i\nBurst F (starts at %.2g secs) \t= %i\nOnset F (starts at 0 time) \t= %i\nGeneral Divisor \t\t= %i\nGroup 2 Burst F Divisor \t= %i\nNoise Divisor \t\t= %.3g\n\n',...
+				pi,randPhaseRange,basef,burstOnset,burstf,onsetf,powerDivisor,group2Divisor,noiseDivisor);
 			
 			
 			for j = 1:length(ft.trial)
@@ -1317,12 +1326,12 @@ classdef LFPAnalysis < analysisCore
 			ego.ft = ft;
 			
 			function y = makeSurrogate()
-				if randPhase; rphase = rand * randPhaseRange; end
+				rphase = rand * randPhaseRange;
 				%base frequency
 				y = sin((0 : (pi*piMult)/f : (pi*piMult) * tmult)+rphase)';
 				y = y(1:length(time));
 				%burst frequency with different power in group 2 if present
-				if randPhase; rphase = rand * randPhaseRange; end
+				rphase = rand * randPhaseRange;
 				yy = sin((0 : (pi*burstMult)/f : (pi*burstMult) * burstLength)+rphase)';
 				if ego.nSelection > 1 && ismember(j,ego.selectedTrials{2}.idx)
 					yy = yy ./ group2Divisor;
@@ -1330,7 +1339,7 @@ classdef LFPAnalysis < analysisCore
 					yy = yy ./ powerDivisor;
 				end
 				%intermediate onset frequency
-				if randPhase; rphase = rand * randPhaseRange; end
+				rphase = rand * randPhaseRange;
 				yyy = sin((0 : (pi*onsetMult)/f : (pi*onsetMult) * 0.4)+rphase)';
 				yyy = yyy ./ onsetDivisor;
 				%find our times to inject yy burst frequency
@@ -1358,6 +1367,7 @@ classdef LFPAnalysis < analysisCore
 						plot(ft.time{jj},ft.trial{jj}(1,:));
 					end
 					title(['Surrogate Data: ' ego.selectedTrials{ii}.name]);
+					grid on; box on
 					xlabel('Time');
 					ylabel('Voltage');
 				end
@@ -1704,7 +1714,7 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		function drawTimelockLFPs(ego)
 			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
-			if feature('HGUsingMatlabClasses');fs = 10;else fs = 14;end
+			if feature('HGUsingMatlabClasses');fs = 12;else fs = 14;end
 			if isfield(ego.results,'av')
 					av = ego.results.av;
 					avstat = ego.results.avstat;
@@ -2286,7 +2296,15 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		function drawLFPFrequencyStats(ego,name)
 			if ~exist('name','var');name='fqfix1';end
-			if ~isfield(ego.results,name);return; end
+			if ~isfield(ego.results,name)
+				fprintf('\nCan''t find %s frequency analysis; ',name)
+				if isfield(ego.results,'fqfix1'); name = 'fqfix1';
+				elseif isfield(ego.results,'fqmtm1'); name = 'fqmtm1';
+				elseif isfield(ego.results,'fqmorlet'); name = 'fqmorlet';
+				else return;
+				end
+				fprintf('plotting %s frequency analysis instead.\n',name)
+			end
 			lo = {'b-o','r-o','g-o','k-o','y-o','b:o','r:o'};
 			
 			fq = ego.results.(name);

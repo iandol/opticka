@@ -105,14 +105,14 @@ function choice = menuN(mtitle,options,Opt)
 % Author: Johan Winges
 
 if feature('HGUsingMatlabClasses')
-	fs = 12;
+	fs = 10;
 else
 	fs = 14;
 end
 %% Set up default Opt struct:
 defOpt = struct();
-defOpt.fontName               = 'helvetica neue';
-defOpt.subtitleFontSize       = fs;
+defOpt.fontName               = 'menlo';
+defOpt.subtitleFontSize       = fs-1;
 defOpt.pushbuttonFontSize     = fs;
 defOpt.popupmenuFontSize      = fs;
 defOpt.radiobuttonFontSize    = fs;
