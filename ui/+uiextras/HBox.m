@@ -1,5 +1,5 @@
-classdef HBox < uiextras.Box
-    %HBox  Arrange elements in a single horizontal row
+classdef HBox < uix.HBox
+    %uiextras.HBox  Arrange elements in a single horizontal row
     %
     %   obj = uiextras.HBox() creates a new horizontal box layout with
     %   all parameters set to defaults. The output is a new layout object
@@ -30,63 +30,85 @@ classdef HBox < uiextras.Box
     %             uiextras.HBoxFlex
     %             uiextras.Grid
     
-    %   Copyright 2009-2010 The MathWorks, Inc.
-    %   $Revision: 374 $
-    %   $Date: 2012-12-20 09:18:15 +0000 (Thu, 20 Dec 2012) $
+    %   Copyright 2009-2013 The MathWorks, Inc.
+    %   $Revision: 921 $ $Date: 2014-06-03 11:11:36 +0100 (Tue, 03 Jun 2014) $
+    
+    properties( Hidden, Access = public, Dependent )
+        Enable % deprecated
+        Sizes
+        MinimumSizes
+    end
     
     methods
         
         function obj = HBox( varargin )
-            %HBox  Container with contents in a single horizontal row
             
-            % First step is to create the parent class. We pass the
-            % arguments (if any) just incase the parent needs setting
-            obj@uiextras.Box( varargin{:} );
+            % Call uix constructor
+            obj@uix.HBox( varargin{:} )
             
-            % Set user-supplied property values
-            if nargin > 0
-                set( obj, varargin{:} );
-            end  
+            % Auto-parent
+            if ~ismember( 'Parent', varargin(1:2:end) )
+                obj.Parent = gcf();
+            end
+            
         end % constructor
         
-    end % public methods
+    end % structors
     
-    methods( Access = protected )
+    methods
         
-        function [widths,heights] = redraw( obj )
-            %REDRAW  Redraw container contents.
-            % Get container width and height
-            totalPosition = ceil( getpixelposition( obj.UIContainer ) );
-            totalWidth = totalPosition(3);
-            totalHeight = totalPosition(4);
+        function value = get.Enable( ~ )
             
-            % Get children
-            children = obj.getValidChildren();
-            nChildren = numel( children );
+            % Warn
+            % warning( 'uiextras:Deprecated', ...
+            %     'Property ''Enable'' will be removed in a future release.' )
             
-            % Get padding, spacing and sizes
-            padding = obj.Padding;
-            spacing = obj.Spacing;
+            % Return
+            value = 'on';
             
-            % Compute widths
-            widths = uiextras.calculatePixelSizes( totalWidth, ...
-                obj.Sizes, obj.MinimumSizes, padding, spacing );
-            
-            % Compute heights
-            heights = repmat( totalHeight - padding * 2, size( children ) );
-            heights = max( heights, 1 ); % minimum is 1 pixel
-            
-            % Compute and set new positions in pixels
-            for ii = 1:nChildren
-                child = children(ii);
-                newPosition = [sum( widths(1:ii-1) ) + padding + spacing * (ii-1) + 1, ...
-                    padding + 1, ...
-                    widths(ii), ...
-                    heights(ii)];
-                obj.repositionChild( child, newPosition )
-            end   
-        end % redraw
+        end % get.Enable
         
-    end % protected methods
+        function set.Enable( ~, value )
+            
+            % Check
+            assert( ischar( value ) && any( strcmp( value, {'on','off'} ) ), ...
+                'uiextras:InvalidPropertyValue', ...
+                'Property ''Enable'' must be ''on'' or ''off''.' )
+            
+            % Warn
+            % warning( 'uiextras:Deprecated', ...
+            %     'Property ''Enable'' will be removed in a future release.' )
+            
+        end % set.Enable
+        
+        function value = get.Sizes( obj )
+            
+            % Get
+            value = transpose( obj.Widths );
+            
+        end % get.Sizes
+        
+        function set.Sizes( obj, value )
+            
+            % Set
+            obj.Widths = value;
+            
+        end % set.Sizes
+        
+        function value = get.MinimumSizes( obj )
+            
+            % Get
+            value = transpose( obj.MinimumWidths );
+            
+        end % get.MinimumSizes
+        
+        function set.MinimumSizes( obj, value )
+            
+            % Get
+            obj.MinimumWidths = value;
+            
+        end % set.MinimumSizes
+        
+    end % accessors
     
 end % classdef

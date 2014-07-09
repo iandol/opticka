@@ -1409,8 +1409,8 @@ classdef eyelinkAnalysis < analysisCore
 		% ===================================================================
 		function computeMicrosaccades(ego)
 			
-			VFAC=5;
-			MINDUR=2;  %equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
+			VFAC=ego.VFAC;
+			MINDUR=ego.MINDUR;
 			sampleRate = ego.sampleRate;
 			tic
 			for jj = 1:length(ego.trials)
