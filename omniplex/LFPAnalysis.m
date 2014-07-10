@@ -493,6 +493,25 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
+		%> @brief ftHilbert 
+		%>
+		%> @param order of BP filter to use
+		%> @param downsample whether to down/resample after filtering
+		%> @param rectify whether to rectify the responses
+		%> @return
+		% ===================================================================
+		function ftHilbert(ego)
+			if ~exist('order','var'); order = 2; end
+			if ~exist('downsample','var'); downsample = true; end
+			if ~exist('rectify','var'); rectify = 'yes'; end
+			if rectify == true; rectify = 'yes'; end
+			
+			ft = ego.ft;
+			results.bp = [];
+			
+		end
+		
+		% ===================================================================
 		%> @brief ftBandPass performs Leopold et al., 2003 type BLP
 		%>
 		%> @param order of BP filter to use
@@ -500,7 +519,7 @@ classdef LFPAnalysis < analysisCore
 		%> @param rectify whether to rectify the responses
 		%> @return
 		% ===================================================================
-		function ftHilbert(ego,order,downsample,rectify)
+		function ftAlphaPhase(ego)
 			if ~exist('order','var'); order = 2; end
 			if ~exist('downsample','var'); downsample = true; end
 			if ~exist('rectify','var'); rectify = 'yes'; end
@@ -534,11 +553,12 @@ classdef LFPAnalysis < analysisCore
 				cfg.keeptrials	= 'yes';
 				cfg.output		= 'pow';
 				cfg.channel		= ft.label{ego.selectedLFP};
-				cfg.toi        = -0.4:0.02:0.4;                  % time window "slides"
+				cfg.toi        = -0.4:0.01:0.4;                  % time window "slides"
 				cfg.foi			= 4:2:100;						 % analysis frequencies
 				cfg.tw			= tw;
+				cfg.pad			= 2;
 				cfg.cycles		= cycles;
-				cfg.width		= width;
+				cfg.width		= width; %'width', or number of cycles, of the wavelet (default = 7)
 				cfg.smooth		= smth;
 				switch preset
 					case 'fix1'
@@ -562,9 +582,17 @@ classdef LFPAnalysis < analysisCore
 						cfg.tapsmofrq		= ones(size(cfg.foi)) .* cfg.smooth;
 						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
 					case 'morlet'
+						%cfg = rmfield(cfg,'foi');
+						%cfg.foilim			= [4 100];
 						cfg.method			= 'wavelet';
 						cfg.taper			= '';
-						cfg.width			= width;
+						cfg.width			= width; %'width', or number of cycles, of the wavelet (default = 7)
+					case 'tfr'
+						cfg = rmfield(cfg,'foi');
+						cfg.foilim			= [4 100];
+						cfg.method			= 'tfr';
+						cfg.taper			= '';
+						cfg.width			= width; %'width', or number of cycles, of the wavelet (default = 7)
 				end
 			elseif ~isempty(cfg)
 				preset = 'custom';
