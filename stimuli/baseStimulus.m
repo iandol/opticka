@@ -357,9 +357,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief make a GUI properties panel for this object
 		%>
 		% ===================================================================
-		function handles = makePanel(obj,parent)
+		function handles = makePanel(obj, parent)
 			
-			if ~isempty(obj.handles) && isa(obj.handles.root,'uiextras.BoxPanel')
+			if ~isempty(obj.handles) && isa(obj.handles.root,'uiextras.BoxPanel') && ishandle(obj.handles.root)
 				fprintf('---> Panel already open for %s\n', obj.fullName);
 				return
 			end
@@ -367,13 +367,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if ~exist('parent','var')
 				parent = figure('Tag','gFig',...
 					'Name', [obj.fullName 'Properties'], ...
+					'CloseRequestFcn', @obj.closePanel,...
 					'MenuBar', 'none', ...
 					'NumberTitle', 'off');
+				figpos(1,[800 300]);
 			end
 			
 			bgcolor = [0.91 0.91 0.91];
 			bgcoloredit = [0.95 0.95 0.95];
-			fsmall = 7;
+			fsmall = 10;
 			SansFont = 'Helvetica';
 			MonoFont = 'Menlo';
 			
@@ -381,7 +383,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			handles.root = uiextras.BoxPanel('Parent',parent,...
 				'Title',obj.fullName,...
 				'FontName','Helvetica',...
-				'FontSize',10,...
+				'FontSize',fsmall,...
 				'FontWeight','normal',...
 				'Padding',0,...
 				'TitleColor',[0.8 0.78 0.76],...
@@ -611,13 +613,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief close GUI panel for this object
 		%>
 		% ===================================================================
-		function closePanel(obj)
+		function closePanel(obj,varargin)
 			if isempty(obj.handles)
 				return
 			end
-			if ~isempty(obj.handles.root)
+			if isfield(obj.handles,'root') && isgraphics(obj.handles.root)
 				readPanel(obj);
 				delete(obj.handles.root);
+			end
+			if isfield(obj.handles,'parent') && isgraphics(obj.handles.parent,'figure')
+				delete(obj.handles.parent)
 			end
 			obj.handles = [];
 		end
