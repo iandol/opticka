@@ -684,6 +684,30 @@ classdef plxReader < optickaCore
 				end
 			end
 		end
+		
+		% ===================================================================
+		%> @brief Constructor remove the raw wave matrices etc to reduce memory
+		%>
+		%> @param varargin
+		%> @returnscr
+		% ===================================================================
+		function optimiseSize(ego)
+			if isfield(ego.tsList, 'nUnits') && ego.tsList.nUnits > 0
+				blank = cell(ego.tsList.nUnits,1);
+				if isfield(ego.tsList,'ts')
+					ego.tsList.ts = blank;
+				end
+				if isfield(ego.tsList,'tsN')
+					ego.tsList.tsN = blank;
+				end
+				if isfield(ego.tsList,'tsW')
+					ego.tsList.tsW = blank;
+				end
+				if isfield(ego.tsList,'wave')
+					ego.tsList.wave = blank;
+				end
+			end
+		end
 	
 	end
 	

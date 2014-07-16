@@ -20,14 +20,10 @@ classdef analysisCore < optickaCore
 		rootDirectory@char = ''
 	end
 	
-	%--------------------ABSTRACT PROPERTIES----------%
-	properties (Abstract = true)
-		
-	end
-	
-	%--------------------HIDDEN PROPERTIES------------%
-	properties (SetAccess = protected, Hidden = true)
-		
+	%------------------TRANSIENT PROPERTIES----------%
+	properties (Transient = true)
+		%check for if we are running retina on a mac
+		isRetina@logical = false
 	end
 	
 	%--------------------VISIBLE PROPERTIES-----------%
@@ -36,22 +32,12 @@ classdef analysisCore < optickaCore
 		gd@getDensity
 	end
 	
-	%--------------------DEPENDENT PROPERTIES----------%
-	properties (SetAccess = private, Dependent = true)
-		
-	end
-	
 	%------------------TRANSIENT PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected, Transient = true)
 		%> UI panels
 		panels@struct = struct()
 		%> do we yoke the selection to the parent function (e.g. LFPAnalysis)
 		yokedSelection@logical = false
-	end
-	
-	%--------------------PROTECTED PROPERTIES----------%
-	properties (SetAccess = protected, GetAccess = protected)
-		
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
@@ -77,6 +63,7 @@ classdef analysisCore < optickaCore
 			if nargin == 0; varargin.name = ''; end
 			ego=ego@optickaCore(varargin); %superclass constructor
 			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
+			checkRetina(ego);
 			initialiseStats(ego);
 		end
 		
@@ -313,11 +300,35 @@ classdef analysisCore < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief Constructor remove the raw matrices etc to reduce memory
+		%>
+		%> @param varargin
+		%> @returnscr
+		% ===================================================================
+		function optimiseSize(ego)
+			if isa(ego, 'LFPAnalysis')
+				for i = 1: ego.nLFPs
+					ego.LFPs(i).sample = [];
+					ego.LFPs(i).data = [];
+					ego.LFPs(i).time = [];
+				end
+				ego.results = struct([]);
+				optimiseSize(ego.p);
+				if isa(ego.sp, 'spikeAnalysis')
+					optimiseSize(ego.sp.p);
+				end
+			end
+			if isa(ego, 'spikeAnalysis')
+				optimiseSize(ego.p);
+			end
+		end
+		
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================
 	methods ( Static = true) %-------STATIC METHODS-----%
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief selectFTTrials cut out trials where the ft function fails
@@ -624,6 +635,20 @@ classdef analysisCore < optickaCore
 			end
 			if ~isfield(ego.stats,'spikelfppcw') || isempty(ego.stats.spikelfppcw)
 				ego.stats(1).spikelfppcw = [0.2 0.02];
+			end
+		end
+		
+		function checkRetina(ego)
+			ego.isRetina = false;
+			if feature('HGUsingMatlabClasses')
+				if ismac
+					[s,c]=system('system_profiler SPDisplaysDataType');
+					if s == 0
+						if ~isempty(regexpi(c,'Retina LCD'))
+							ego.isRetina = true;
+						end
+					end
+				end
 			end
 		end
 		

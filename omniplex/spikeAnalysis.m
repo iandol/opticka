@@ -584,6 +584,7 @@ classdef spikeAnalysis < analysisCore
 				od = pwd;
 				cd(p);
 				spike = ego;
+				optimiseSize(spike.p);
 				save(f,'spike');
 				cd(od);
 				clear spike;

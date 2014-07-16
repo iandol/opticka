@@ -39,6 +39,8 @@ classdef LFPAnalysis < analysisCore
 		cutTrials@double
 		%> variable selection map for 3 analysis groups
 		map@cell
+		%> external plot destination handle (see LFPMeta for an example)
+		plotDestination = [];
 	end
 	
 	%------------------HIDDEN PROPERTIES----------%
@@ -170,6 +172,46 @@ classdef LFPAnalysis < analysisCore
 			select(ego);
 			selectTrials(ego);
 			getFieldTripLFPs(ego);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function lazyParse(ego)
+			if isempty(ego.file)
+				getFiles(ego, true);
+				if isempty(ego.file); warning('No plexon file selected'); return; end
+			end
+			checkPaths(ego);
+			ego.paths.oldDir = pwd;
+			cd(ego.dir);
+			ego.p.eventWindow = ego.spikeWindow;
+			lazyParse(ego.p);
+			ego.trial = ego.p.eventList.trials;
+			ego.event = ego.p.eventList;
+			for i = 1:ego.nUnits
+				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
+			end
+			ego.ft = struct(); ego.results = struct();
+			ego.ft = getFieldTripSpikes(ego.p);
+			ego.names = ego.ft.label;
+			if isempty(ego.selectedTrials)
+				select(ego);
+			elseif ego.yokedSelection == false
+				selectTrials(ego)
+			end
+			if ~isempty(ego.p.eA.ROIInfo)
+				ego.p.eA.ROI = ego.ROI;
+				parseROI(ego.p.eA);
+			end
+			if ~isempty(ego.p.eA.TOIInfo)
+				ego.p.eA.TOI = ego.TOI;
+				parseTOI(ego.p.eA);
+			end
+			disp('Lazy spike parsing finished...')
 		end
 		
 		% ===================================================================
@@ -1062,7 +1104,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plot(ego, varargin)
-			if isempty(ego.LFPs) || ego.doPlots == false;
+			if isempty(ego.LFPs) || (ego.doPlots == false && isempty(ego.plotDestination))
 				disp('Nothing parsed or doPlots is false, no plotting performed...')
 				return
 			end
@@ -1137,7 +1179,7 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief saves this object as a MAT file, object renamed to 'lfp'
 		%> @param
 		%> @return
 		% ===================================================================
@@ -1162,6 +1204,8 @@ classdef LFPAnalysis < analysisCore
 				od = pwd;
 				cd(p);
 				lfp = ego;
+				optimiseSize(lfp.p);
+				optimiseSize(lfp.sp.p);
 				save(f,'lfp');
 				cd(od);
 			end
@@ -1742,12 +1786,16 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		function drawTimelockLFPs(ego)
 			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
-			if feature('HGUsingMatlabClasses');fs = 12;else fs = 14;end
+			if ego.isRetina;fs = 9;else fs = 12;end
 			if isfield(ego.results,'av')
 					av = ego.results.av;
 					avstat = ego.results.avstat;
 					avstatavg = ego.results.avstatavg;
-					h=figure;figpos(1,[1700 1000]);set(gcf,'Name',[ego.lfpfile ' ' av{1}.label{:}],'Color',[1 1 1]);
+					if isgraphics(ego.plotDestination)
+						h = ego.plotDestination;
+					else
+						h=figure;figpos(1,[1700 1000]);set(gcf,'Name',[ego.lfpfile ' ' av{1}.label{:}],'Color',[1 1 1]);
+					end
 					p=panel(h);
 					p.margin = [20 20 10 15]; %left bottom right top
 					p.pack('v', {5/6 []})

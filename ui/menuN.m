@@ -105,9 +105,15 @@ function choice = menuN(mtitle,options,Opt)
 % Author: Johan Winges
 
 if feature('HGUsingMatlabClasses')
-	fs = 10;
-else
-	fs = 14;
+	fs = 12;
+	if ismac
+		[s,c]=system('system_profiler SPDisplaysDataType');
+		if s == 0
+			if ~isempty(regexpi(c,'Retina LCD'))
+				fs = 7;
+			end
+		end
+	end
 end
 %% Set up default Opt struct:
 defOpt = struct();
