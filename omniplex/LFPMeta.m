@@ -49,6 +49,7 @@ classdef LFPMeta < analysisCore
 			me=me@analysisCore(varargin); %superclass constructor
 			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
 			if isempty(me.name);me.name = 'LFPMeta'; end
+			initialiseOptions(me);
 			makeUI(me);
 		end
 		
@@ -73,7 +74,7 @@ classdef LFPMeta < analysisCore
 			tic
 			l = length(file);
 			for ll = 1:length(file)
-				set(me.handles.root,'Title',sprintf('Loading %g of %g Cells...',ll,l));
+				notifyUI(me,sprintf('Loading %g of %g Cells...',ll,l));
 				load(file{ll});
 				if exist('lfp','var') && isa(lfp,'LFPAnalysis')
 					optimiseSize(lfp);
@@ -107,7 +108,7 @@ classdef LFPMeta < analysisCore
 			end
 			
 			fprintf('Cell loading took %.5g seconds\n',toc)
-			set(me.handles.root,'Title',sprintf('Loaded %g Cells...',me.nSites));
+			notifyUI(me,sprintf('Loaded %g Cells...',me.nSites));
 			
 		end
 		
@@ -147,6 +148,41 @@ classdef LFPMeta < analysisCore
 		% ===================================================================
 		function process(me,varargin)
 			if me.nSites > 0
+				am = get(me.handles.analmethod,'Value');
+				for i = 1: me.nSites
+					
+					me.raw{i}.doPlots = false;
+					me.raw{i}.stats = me.stats;
+					me.raw{i}.baselineWindow = me.baselineWindow;
+					me.raw{i}.measureRange = me.measureRange;
+					me.raw{i}.plotRange = me.plotRange;
+					
+					if am == 1 %timelock
+						cfg = [];cfg.keeptrials = 'no';
+						me.raw{i}.ftTimeLockAnalysis(cfg);
+					else
+						me.raw{i}.ftFrequencyAnalysis([],...
+							me.options.tw,...
+							me.options.cycles,...
+							me.options.smth,...
+							me.options.width);
+					end
+					
+				end
+				
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function run(me,varargin)
+			if me.nSites > 0
+				
+				am = get(me.handles.analmethod,'Value');
 				
 				for i = 1: me.nSites
 					
@@ -156,17 +192,41 @@ classdef LFPMeta < analysisCore
 					me.raw{i}.measureRange = me.measureRange;
 					me.raw{i}.plotRange = me.plotRange;
 					
-					am = get(me.handles.analmethod,'Value');
 					if am == 1 %timelock
-						me.raw{i}.ftTimeLockAnalysis();
+						if ~isfield(me.raw{i}.results,'av')
+							errordlg('You have''nt Processed the data yet...')
+						end
+						metaA{i} = me.raw{i}.results.av{1};
+						metaB{i} = me.raw{i}.results.av{2};
+						
 					else
-						me.raw{i}.ftFrequencyAnalysis([],me.options.tw,...
-							me.options.cycles,me.options.smth,me.options.width);
+						
+						metaA{i} = me.raw{i}.(['fq' me.options.method]){1};
+						metaB{i} = me.raw{i}.(['fq' me.options.method]){1};
+						
 					end
+					
 					
 				end
 				
+				if am == 1 %timelock
+					cfg			= [];
+					cfg.channel = 'all';
+					cfg.keepindividual = 'no';
+					%cfg.latency = me.measureRange;
+					%cfg.normalizevar   = 'N' or 'N-1' (default = 'N-1')
+					%  cfg.method         = 'across' (default) or 'within', see below.
+					%  cfg.parameter      = string or cell-array indicating which
+					avgA = ft_timelockgrandaverage(cfg, metaA{:});
+					avgB = ft_timelockgrandaverage(cfg, metaB{:});
+				else
+					
+				end
+				
+				
+				
 			end
+			
 		end
 		% ===================================================================
 		%> @brief 
@@ -380,7 +440,7 @@ classdef LFPMeta < analysisCore
 		%> @return
 		% ===================================================================
 		function reset(me,varargin)
-			set(me.handles.root,'Title','Resetting all data...');
+			notifyUI(me,'Resetting all data...');
 			drawnow
 			me.raw = cell(1);
 			me.cells = cell(1);
@@ -404,7 +464,7 @@ classdef LFPMeta < analysisCore
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
 	
-	% ===================================================================
+		% ===================================================================
 		%> @brief
 		%>
 		%> @param
@@ -613,44 +673,38 @@ classdef LFPMeta < analysisCore
 				'Parent',handles.controls3,...
 				'FontSize', fs,...
 				'Tag','LMAanalmethod',...
-				'Callback',@me.replot,...
 				'String',{'timelock','power'});
 			handles.selectbars = uicontrol('Style','checkbox',...
 				'Parent',handles.controls3,...
 				'Tag','LMAselectbars',...
-				'Callback',@me.replot,...
 				'FontSize', fs,...
 				'BackgroundColor',bgcolor,...
-				'String','Test?');
+				'String','');
 			handles.symmetricgaussian = uicontrol('Style','checkbox',...
 				'Parent',handles.controls3,...
 				'Tag','symmetricgaussian',...
 				'Value',1,...
-				'Callback',@me.replot,...
 				'FontSize', fs,...
 				'BackgroundColor',bgcolor,...
-				'String','Test?');
+				'String','');
 			uiextras.Empty('Parent',handles.controls3,'BackgroundColor',bgcolor)
 			handles.smoothstep = uicontrol('Style','edit',...
 				'Parent',handles.controls3,...
 				'Tag','LMAsmoothstep',...
-				'Tooltip','Smoothing step in ms',...
+				'Tooltip','...',...
 				'FontSize', fs,...
-				'Callback',@me.replot,...
 				'String','1');
 			handles.gaussstep = uicontrol('Style','edit',...
 				'Parent',handles.controls3,...
 				'Tag','LMAgaussstep',...
-				'Tooltip','Gaussian Smoothing step in ms',...
+				'Tooltip','...',...
 				'FontSize', fs,...
-				'Callback',@me.replot,...
-				'String','0');
+				'String','0'); %'Callback',@me.replot,
 			handles.offset = uicontrol('Style','edit',...
 				'Parent',handles.controls3,...
 				'Tag','LMAoffset',...
-				'Tooltip','Time offset (ms)',...
+				'Tooltip','...',...
 				'FontSize', fs,...
-				'Callback',@me.replot,...
 				'String','200');
 			
 			set(handles.hbox,'Sizes', [-2 -1]);
@@ -660,6 +714,10 @@ classdef LFPMeta < analysisCore
 
 			me.handles = handles;
 			me.openUI = true;
+		end
+		
+		function notifyUI(me, info)
+			set(me.handles.root,'Title',info);
 		end
 	end	
 end

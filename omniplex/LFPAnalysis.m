@@ -395,13 +395,14 @@ classdef LFPAnalysis < analysisCore
 		function cfg=ftTimeLockAnalysis(ego, cfg, statcfg)
 			ego.results(1).av = [];
 			ego.results(1).avstat = [];
-			ft = ego.ft;			
+			ft = ego.ft;	
+			ft = rmfield(ft,'uniquetrials'); %ft_timelockanalysis > ft_selectdata generates a warning as this is an unofficial field, so remove it here
 			if ~exist('cfg','var') || isempty(cfg); cfg = []; end
 			if isnumeric(cfg) && length(cfg) == 2; w=cfg;cfg=[];cfg.covariancewindow=w; end
 			if ~isfield(cfg,'covariancewindow');cfg.covariancewindow = ego.measureRange;end
-			cfg.keeptrials					= 'yes';
-			cfg.removemean					= 'no';
-			cfg.covariance					= 'yes';
+			if ~isfield(cfg,'keeptrials'); cfg.keeptrials = 'yes'; end
+			if ~isfield(cfg,'removemean'); cfg.removemean	= 'no'; end
+			if ~isfield(cfg,'covariance'); cfg.covariance	= 'yes'; end
 			cfg.channel						= ft.label{ego.selectedLFP};
 			for i = 1:ego.nSelection
 				cfg.trials					= ego.selectedTrials{i}.idx;
@@ -425,33 +426,35 @@ classdef LFPAnalysis < analysisCore
 			if isempty(ego.stats); ego.setStats(); end
 			sv = ego.stats;
 			
-			if exist('statcfg','var');	cfg					= statcfg;
-			else cfg													= []; end
-			cfg.channel												= ft.label{ego.selectedLFP};
-			if ~isfield(cfg,'latency'); cfg.latency		= ego.measureRange; end
-			cfg.avgovertime										= 'no'; 
-			cfg.parameter											= 'trial';
-			if ~isfield(cfg,'method');cfg.method			= sv.method; end %'analytic'; % 'montecarlo'
-			if ~isfield(cfg,'statistic'); cfg.statistic	= sv.statistic; end %'indepsamplesT'
-			if ~isfield(cfg,'alpha'); cfg.alpha				= sv.alpha; end
-			cfg.numrandomization									= sv.nrand;
-			cfg.resampling											= sv.resampling; %bootstrap
-			cfg.tail													= sv.tail; %two tail
-			cfg.correcttail										= 'prob';
-			cfg.correctm											= sv.correctm; %holm fdr hochberg bonferroni
-			if strcmpi(cfg.correctm,'cluster')
-				cfg.neighbours										= [];
-				cfg.clustertail									= cfg.tail;
-				cfg.clusteralpha									= 0.05;
-				cfg.clusterstatistic								= 'maxsum';
+			if isfield(av{1},'trial') %keeptrials was ON
+				if exist('statcfg','var');	cfg					= statcfg;
+				else cfg													= []; end
+				cfg.channel												= ft.label{ego.selectedLFP};
+				if ~isfield(cfg,'latency'); cfg.latency		= ego.measureRange; end
+				cfg.avgovertime										= 'no'; 
+				cfg.parameter											= 'trial';
+				if ~isfield(cfg,'method');cfg.method			= sv.method; end %'analytic'; % 'montecarlo'
+				if ~isfield(cfg,'statistic'); cfg.statistic	= sv.statistic; end %'indepsamplesT'
+				if ~isfield(cfg,'alpha'); cfg.alpha				= sv.alpha; end
+				cfg.numrandomization									= sv.nrand;
+				cfg.resampling											= sv.resampling; %bootstrap
+				cfg.tail													= sv.tail; %two tail
+				cfg.correcttail										= 'prob';
+				cfg.correctm											= sv.correctm; %holm fdr hochberg bonferroni
+				if strcmpi(cfg.correctm,'cluster')
+					cfg.neighbours										= [];
+					cfg.clustertail									= cfg.tail;
+					cfg.clusteralpha									= 0.05;
+					cfg.clusterstatistic								= 'maxsum';
+				end
+				cfg.ivar													= 1;
+				cfg.design												= [ones(size(av{1}.trial,1),1); 2*ones(size(av{2}.trial,1),1)]';
+				stat														= ft_timelockstatistics(cfg, av{1}, av{2});
+				ego.results.avstat									= stat;
+				cfg.avgovertime										= 'yes'; 
+				stat														= ft_timelockstatistics(cfg, av{1}, av{2});
+				ego.results.avstatavg								= stat;
 			end
-			cfg.design												= [ones(size(av{1}.trial,1),1); 2*ones(size(av{2}.trial,1),1)]';
-			cfg.ivar													= 1;
-			stat														= ft_timelockstatistics(cfg, av{1}, av{2});
-			ego.results.avstat									= stat;
-			cfg.avgovertime										= 'yes'; 
-			stat														= ft_timelockstatistics(cfg, av{1}, av{2});
-			ego.results.avstatavg								= stat;
 			if ego.doPlots; drawTimelockLFPs(ego); end
 		end
 		
@@ -1751,7 +1754,11 @@ classdef LFPAnalysis < analysisCore
 			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
 			LFPs = ego.LFPs;
 			if LFPs(1).reparse == true;
-				h=figure;figpos(1,[1800 1800]);set(gcf,'Color',[1 1 1]);
+				if isgraphics(ego.plotDestination)
+					h = ego.plotDestination;
+				else
+					h=figure;figpos(1,[1700 1000]);set(gcf,'Name',[ego.lfpfile ' ' av{1}.label{:}],'Color',[1 1 1]);
+				end
 				p=panel(h);
 				p.margin = [20 20 10 15]; %left bottom right top
 				[row,col]=ego.optimalLayout(ego.nLFPs);
@@ -1788,136 +1795,138 @@ classdef LFPAnalysis < analysisCore
 			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
 			if ego.isRetina;fs = 9;else fs = 12;end
 			if isfield(ego.results,'av')
-					av = ego.results.av;
-					avstat = ego.results.avstat;
-					avstatavg = ego.results.avstatavg;
-					if isgraphics(ego.plotDestination)
-						h = ego.plotDestination;
-					else
-						h=figure;figpos(1,[1700 1000]);set(gcf,'Name',[ego.lfpfile ' ' av{1}.label{:}],'Color',[1 1 1]);
-					end
-					p=panel(h);
-					p.margin = [20 20 10 15]; %left bottom right top
-					p.pack('v', {5/6 []})
-					p(1).select();
-					p(1).hold('on');
-					
-					xp = [avstat.cfg.latency(1) avstat.cfg.latency(2) avstat.cfg.latency(2) avstat.cfg.latency(1)];
-					ym=mean(av{1}.avg(1,:));
-					yp = [ym ym ym ym];
-					mh = patch(xp,yp,[0.8 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
-					set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-					
-					xp = [ego.plotRange(1) ego.plotRange(2) ego.plotRange(2) ego.plotRange(1)];
-					yp = [av{1}.baselineCI(1) av{1}.baselineCI(1) av{1}.baselineCI(2) av{1}.baselineCI(2)];
-					me1 = patch(xp,yp,[0.8 0.8 1],'FaceAlpha',0.5,'EdgeColor','none');
-					set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-					
-					yp2 = [av{2}.baselineCI(1) av{2}.baselineCI(1) av{2}.baselineCI(2) av{2}.baselineCI(2)];
-					me2 = patch(xp,yp2,[1 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
-					set(get(get(me2,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-
-					tlout = struct();
-					tlout(1).e = ego.var2SE(av{1}.var(1,:),av{1}.dof(1,:))';
-					tlout(1).t=av{1}.time'; 
-					tlout(1).d=av{1}.avg(1,:)';
-					
-					tlout(2).e = ego.var2SE(av{2}.var(1,:),av{2}.dof(1,:))';
-					tlout(2).t=av{2}.time'; 
-					tlout(2).d=av{2}.avg(1,:)';
-					
-					if length(av) > 2
-						tlout(3).e = ego.var2SE(av{3}.var(1,:),av{3}.dof(1,:))';
-						tlout(3).t=av{3}.time'; 
-						tlout(3).d=av{3}.avg(1,:)';
-					end
-					
-					if ego.stats.smoothing > 0
-						prm = ego.stats.smoothing;
-						for i = 1:length(av);
-							tlout(i).f = fit(tlout(i).t,tlout(i).d,'smoothingspline','SmoothingParam', prm); %data
-							tlout(i).fe = fit(tlout(i).t,tlout(i).e,'smoothingspline','SmoothingParam', prm); %error
-							tlout(i).s = feval(tlout(i).f,tlout(i).t);
-							tlout(i).se = feval(tlout(i).fe,tlout(i).t);
-						end
-						areabar(tlout(1).t, tlout(1).s, tlout(1).se, [.5 .5 .5],0.3,'b-','LineWidth',1);
-						areabar(tlout(2).t, tlout(2).s, tlout(2).se, [.5 .4 .4],0.3,'r-','LineWidth',1);
-						if length(av) == 2
-							legend(av{1}.name,av{2}.name)
-						else
-							areabar(tlout(3).t, tlout(3).s, tlout(3).se,[.4 .5 .4],0.3,'g-','LineWidth',1);
-							legend(av{1}.name,av{2}.name,av{3}.name);
-						end
-					else
-						areabar(tlout(1).t, tlout(1).d, tlout(1).e, [.5 .5 .5],0.3,'b.-','LineWidth',1);
-						areabar(tlout(2).t, tlout(2).d, tlout(2).e, [.5 .4 .4],0.3,'r.-','LineWidth',1);
-						if length(av) == 2
-							legend(av{1}.name,av{2}.name)
-						else
-							areabar(tlout(3).t, tlout(3).d, tlout(3).e,[.4 .5 .4],0.3,'g.-','LineWidth',1);
-							legend(av{1}.name,av{2}.name,av{3}.name);
-						end
-					end
-					
-					
-					assignin('base','timelockOut',tlout);
-					
-					ax=axis;
-					set(mh,'YData',[ax(3) ax(3) ax(4) ax(4)]);
-					
-					pos = ax(4)-((ax(4)-ax(3))/20);
-					times = avstat.time(logical(avstat.mask));
-					pos = repmat(pos, size(times));
-					hp=plot(times,pos,'o');
-					set(get(get(hp,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-					
-					hold off
-					grid on; box on
-					axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
-					ax=axis;
-					c1 = NaN; c1e=c1; c2=c1; c2e=c1; pval=c1;
-					for ii = 1:length(av)	
-						if size(av{ii}.cov,3)>1; 
-							av{ii}.cov = av{ii}.cov(:,:,1);
-						end
-					end	
-					[c1,c1e]=stderr(av{1}.cov);
-					[c2,c2e]=stderr(av{2}.cov);
-					try
-						[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',ego.stats.alpha);
-					end
-					xlabel('Time (s)');
-					ylabel('LFP Raw Amplitude (mV) ±SEM');
-					t=sprintf('COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
-					tt=sprintf('%s | Ch: %s | %s p = %.3g [%s : %s (alpha=%.2g)]\n%s', ego.lfpfile, av{1}.label{:}, avstat.cfg.statistic, avstatavg.prob, avstat.cfg.method, avstat.cfg.correctm, ego.stats.alpha, t);
-					title(tt,'FontSize',fs);
-					
-					p(2).select();
-					p(2).hold('on');
-					
-					idx1 = ego.findNearest(av{1}.time, avstat.cfg.latency(1));
-					idx2 = ego.findNearest(av{1}.time, avstat.cfg.latency(2));
-					
-					res1 = av{2}.avg(1,:) - av{1}.avg(1,:);
-					t = sprintf('Residuals (Sums: %.2g',sum(res1(idx1:idx2)));
-					plot(av{1}.time, res1,'b.-')
-					if length(av) == 2
-						legend('Group B-A')
-					elseif length(av) > 2
-						res2 = av{3}.avg(1,:) - av{1}.avg(1,:);
-						res3 = av{3}.avg(1,:) - av{2}.avg(1,:);
-						plot(av{1}.time, res2,'r.-')
-						plot(av{1}.time, res3,'g.-')
-						legend('Group B-A','Group C-A','Group C-B')
-						t = sprintf('%s %.2g %.2g',t,sum(res2(idx1:idx2)),sum(res3(idx1:idx2)));
-					end
-					grid on; box on
-					t = [t ')'];
-					title(t)
-					xlim([ego.plotRange(1) ego.plotRange(2)]);
-					xlabel('Time (s)');
-					ylabel('Residuals (mV)');
+				av = ego.results.av;
+				avstat = ego.results.avstat;
+				avstatavg = ego.results.avstatavg;
+				if isgraphics(ego.plotDestination)
+					h = ego.plotDestination;
+				else
+					h=figure;figpos(1,[1700 1000]);set(gcf,'Name',[ego.lfpfile ' ' av{1}.label{:}],'Color',[1 1 1]);
 				end
+				p=panel(h);
+				p.margin = [20 20 10 15]; %left bottom right top
+				p.pack('v', {5/6 []})
+				p(1).select();
+				p(1).hold('on');
+				
+				xp = [avstat.cfg.latency(1) avstat.cfg.latency(2) avstat.cfg.latency(2) avstat.cfg.latency(1)];
+				ym=mean(av{1}.avg(1,:));
+				yp = [ym ym ym ym];
+				mh = patch(xp,yp,[0.8 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
+				set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+				
+				xp = [ego.plotRange(1) ego.plotRange(2) ego.plotRange(2) ego.plotRange(1)];
+				yp = [av{1}.baselineCI(1) av{1}.baselineCI(1) av{1}.baselineCI(2) av{1}.baselineCI(2)];
+				me1 = patch(xp,yp,[0.8 0.8 1],'FaceAlpha',0.5,'EdgeColor','none');
+				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+				
+				yp2 = [av{2}.baselineCI(1) av{2}.baselineCI(1) av{2}.baselineCI(2) av{2}.baselineCI(2)];
+				me2 = patch(xp,yp2,[1 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
+				set(get(get(me2,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+				
+				tlout = struct();
+				tlout(1).e = ego.var2SE(av{1}.var(1,:),av{1}.dof(1,:))';
+				tlout(1).t=av{1}.time';
+				tlout(1).d=av{1}.avg(1,:)';
+				
+				tlout(2).e = ego.var2SE(av{2}.var(1,:),av{2}.dof(1,:))';
+				tlout(2).t=av{2}.time';
+				tlout(2).d=av{2}.avg(1,:)';
+				
+				if length(av) > 2
+					tlout(3).e = ego.var2SE(av{3}.var(1,:),av{3}.dof(1,:))';
+					tlout(3).t=av{3}.time';
+					tlout(3).d=av{3}.avg(1,:)';
+				end
+				
+				if ego.stats.smoothing > 0
+					prm = ego.stats.smoothing;
+					for i = 1:length(av);
+						tlout(i).f = fit(tlout(i).t,tlout(i).d,'smoothingspline','SmoothingParam', prm); %data
+						tlout(i).fe = fit(tlout(i).t,tlout(i).e,'smoothingspline','SmoothingParam', prm); %error
+						tlout(i).s = feval(tlout(i).f,tlout(i).t);
+						tlout(i).se = feval(tlout(i).fe,tlout(i).t);
+					end
+					areabar(tlout(1).t, tlout(1).s, tlout(1).se, [.5 .5 .5],0.3,'b-','LineWidth',1);
+					areabar(tlout(2).t, tlout(2).s, tlout(2).se, [.5 .4 .4],0.3,'r-','LineWidth',1);
+					if length(av) == 2
+						legend(av{1}.name,av{2}.name)
+					else
+						areabar(tlout(3).t, tlout(3).s, tlout(3).se,[.4 .5 .4],0.3,'g-','LineWidth',1);
+						legend(av{1}.name,av{2}.name,av{3}.name);
+					end
+				else
+					areabar(tlout(1).t, tlout(1).d, tlout(1).e, [.5 .5 .5],0.3,'b.-','LineWidth',1);
+					areabar(tlout(2).t, tlout(2).d, tlout(2).e, [.5 .4 .4],0.3,'r.-','LineWidth',1);
+					if length(av) == 2
+						legend(av{1}.name,av{2}.name)
+					else
+						areabar(tlout(3).t, tlout(3).d, tlout(3).e,[.4 .5 .4],0.3,'g.-','LineWidth',1);
+						legend(av{1}.name,av{2}.name,av{3}.name);
+					end
+				end
+				
+				
+				assignin('base','timelockOut',tlout);
+				
+				ax=axis;
+				set(mh,'YData',[ax(3) ax(3) ax(4) ax(4)]);
+				
+				pos = ax(4)-((ax(4)-ax(3))/20);
+				times = avstat.time(logical(avstat.mask));
+				pos = repmat(pos, size(times));
+				hp=plot(times,pos,'o');
+				set(get(get(hp,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+				
+				hold off
+				grid on; box on
+				axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
+				ax=axis;
+				c1 = NaN; c1e=c1; c2=c1; c2e=c1; pval=c1;
+				for ii = 1:length(av)
+					if size(av{ii}.cov,3)>1;
+						av{ii}.cov = av{ii}.cov(:,:,1);
+					end
+				end
+				[c1,c1e]=stderr(av{1}.cov);
+				[c2,c2e]=stderr(av{2}.cov);
+				try
+					[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',ego.stats.alpha);
+				end
+				xlabel('Time (s)');
+				ylabel('LFP Raw Amplitude (mV) ±SEM');
+				t=sprintf('COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
+				tt=sprintf('%s | Ch: %s | %s p = %.3g [%s : %s (alpha=%.2g)]\n%s', ego.lfpfile, av{1}.label{:}, avstat.cfg.statistic, avstatavg.prob, avstat.cfg.method, avstat.cfg.correctm, ego.stats.alpha, t);
+				title(tt,'FontSize',fs);
+				
+				p(2).select();
+				p(2).hold('on');
+				
+				idx1 = ego.findNearest(av{1}.time, avstat.cfg.latency(1));
+				idx2 = ego.findNearest(av{1}.time, avstat.cfg.latency(2));
+				
+				res1 = av{2}.avg(1,:) - av{1}.avg(1,:);
+				t = sprintf('Residuals (Sums: %.2g',sum(res1(idx1:idx2)));
+				plot(av{1}.time, res1,'b.-')
+				if length(av) == 2
+					legend('Group B-A')
+				elseif length(av) > 2
+					res2 = av{3}.avg(1,:) - av{1}.avg(1,:);
+					res3 = av{3}.avg(1,:) - av{2}.avg(1,:);
+					plot(av{1}.time, res2,'r.-')
+					plot(av{1}.time, res3,'g.-')
+					legend('Group B-A','Group C-A','Group C-B')
+					t = sprintf('%s %.2g %.2g',t,sum(res2(idx1:idx2)),sum(res3(idx1:idx2)));
+				end
+				grid on; box on
+				t = [t ')'];
+				title(t)
+				xlim([ego.plotRange(1) ego.plotRange(2)]);
+				xlabel('Time (s)');
+				ylabel('Residuals (mV)');
+			else
+				disp('No Timelock analysis performed, so no data can be plotted...');
+			end
 		end
 		
 		% ===================================================================
@@ -2304,16 +2313,27 @@ classdef LFPAnalysis < analysisCore
 				while iscell(zlimi);zlimi=zlimi{1};end
 				if ~isnumeric(zlimi); clear zlimi; end
 			end
+			if iscell(varargin) && length(varargin) > 2
+				bl = varargin{2};
+				while iscell(bl);bl=bl{1};end
+				if ~ischar(bl); clear bl; end
+			end
 			if ~isfield(ego.results,name)
 				disp('The Frequency field is not present in fieldtrip structure...');
 				return;
 			end
 			fq = ego.results.(name);
-			h=figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
+			if isgraphics(ego.plotDestination)
+				h = ego.plotDestination;
+			else
+				h = figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',[ego.lfpfile ' ' fq{1}.cfgUsed.channel]);
+			end
 			p=panel(h);
 			p.margin = [15 15 30 20];%left bottom right top
 			if isnumeric(gcf);	p.fontsize = 12; end
-			bl = {'relative','db', 'absolute', 'no'};
+			if ~exist('bl','var')
+				bl = {'relative','db', 'absolute', 'no'};
+			end
 			row = length(fq); col = length(bl);
 			p.pack(row,col);
 			hmin = cell(size(bl));
