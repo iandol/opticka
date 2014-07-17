@@ -150,7 +150,7 @@ classdef LFPMeta < analysisCore
 			if me.nSites > 0
 				am = get(me.handles.analmethod,'Value');
 				for i = 1: me.nSites
-					
+					notifyUI(me,sprintf('Reprocessing the timelock/frequency analysis for site %i',i));
 					me.raw{i}.doPlots = false;
 					me.raw{i}.stats = me.stats;
 					me.raw{i}.baselineWindow = me.baselineWindow;
@@ -169,7 +169,7 @@ classdef LFPMeta < analysisCore
 					end
 					
 				end
-				
+				notifyUI(me,'Reprocessing complete for %i sites',i);
 			end
 		end
 		
@@ -258,24 +258,6 @@ classdef LFPMeta < analysisCore
 			
 		end
 		
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function remove(me, varargin)
-			if me.nSites > 0
-				sel = get(me.handles.list,'Value');
-				me.cells(sel,:) = [];
-				me.list(sel) = [];
-				me.raw(sel) = [];
-				if sel > 1
-					set(me.handles.list,'Value',sel-1);
-				end
-				set(me.handles.list,'String',me.list);
-			end
-		end
 		
 		% ===================================================================
 		%> @brief 
@@ -396,6 +378,7 @@ classdef LFPMeta < analysisCore
 	%=======================================================================
 	methods (Hidden = true) %------------------Hidden METHODS
 	%=======================================================================
+	
 		% ===================================================================
 		%> @brief
 		%>
@@ -429,6 +412,38 @@ classdef LFPMeta < analysisCore
 					end
 				end
 				replot(me);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function remove(me, varargin)
+			if me.nSites > 0
+				sel = get(me.handles.list,'Value');
+				me.cells(sel,:) = [];
+				me.list(sel) = [];
+				me.raw(sel) = [];
+				if sel > 1
+					set(me.handles.list,'Value',sel-1);
+				end
+				set(me.handles.list,'String',me.list);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function reparse(me,varargin)
+			if me.nSites > 0
+				sel = get(me.handles.list,'Value');
+				me.raw{sel}.reparse;
 			end
 		end
 
@@ -530,7 +545,6 @@ classdef LFPMeta < analysisCore
 				fprintf('---> UI already open!\n');
 				return
 			end
-
 			if ~exist('parent','var')
 				parent = figure('Tag','LMAMeta',...
 					'Name', ['LFP Meta Analysis V' num2str(me.version)], ...
@@ -540,6 +554,11 @@ classdef LFPMeta < analysisCore
 				figpos(1,[1600 800])
 			end
 			me.handles(1).parent = parent;
+			%make context menu
+			hcmenu = uicontextmenu;
+			item1 = uimenu(hcmenu,'Label','Reparse','Callback',@me.plot);
+			item2 = uimenu(hcmenu,'Label','Plot','Callback',@me.plot);
+			item3 = uimenu(hcmenu,'Label','Remove','Callback',@me.remove);
 			
 			fs = 10;
 			if ismac
@@ -666,8 +685,10 @@ classdef LFPMeta < analysisCore
 				'Tag','LMAlistbox',...
 				'Min',1,...
 				'Max',1,...
-				'FontSize',fs+1,...
-				'String',{''});
+				'FontSize',fs-1,...
+				'FontName',MonoFont,...
+				'String',{''},...
+				'uicontextmenu',hcmenu);
 			
 			handles.analmethod = uicontrol('Style','popupmenu',...
 				'Parent',handles.controls3,...
@@ -716,8 +737,19 @@ classdef LFPMeta < analysisCore
 			me.openUI = true;
 		end
 		
-		function notifyUI(me, info)
-			set(me.handles.root,'Title',info);
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function notifyUI(me, varargin)
+			if nargin > 2
+				info = sprintf(varargin{:});
+			else
+				info = varargin{1};
+			end
+			set(me.handles.root,'Title',info); drawnow
 		end
 	end	
 end
