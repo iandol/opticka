@@ -854,6 +854,7 @@ classdef spikeAnalysis < analysisCore
 		function plotDensity(ego)
 			if ~isfield(ego.results,'sd'); warning('No Density parsed yet.'); return; end
 			disp('Plotting Density Data...')
+			fs = get(0,'DefaultAxesFontSize');
 			sd = ego.results.sd;
 			rate = ego.results.rate;
 			baseline = ego.results.baseline;
@@ -861,7 +862,8 @@ classdef spikeAnalysis < analysisCore
 			h=figure;set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
 			if length(sd) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
-			p.margin = [15 20 10 10]; %left bottom right top
+			p.fontsize = fs;
+			p.margin = [12 12 12 6]; %left bottom right top
 			p.pack('v', {3/4 []})
 			q = p(1);
 			len = ego.nSelection;
@@ -927,14 +929,14 @@ classdef spikeAnalysis < analysisCore
 				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
-			title(t,'FontSize',13);
+			title(t);
 			xlabel(['Time (s) [window = ' sd{1}.cfg.winfunc ' ' num2str(sd{1}.cfg.timwin) '] ']);
 			ylabel(yt)
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			ax=axis;
 			axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
-			text(ego.plotRange(1),ax(3),blineText,'FontSize',10,'VerticalAlignment','baseline');
+			text(ego.plotRange(1),ax(3),blineText,'FontSize',fs+1,'VerticalAlignment','baseline');
 			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
 			set(gca,'Layer','top');
 		end
@@ -1122,9 +1124,11 @@ classdef spikeAnalysis < analysisCore
 				warning('No waveform data present, nothing to plot...')
 				return
 			end
-			h=figure;figpos(2,[2000 1000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
+			fs = get(0,'DefaultAxesFontSize');
+			h=figure;figpos(2,[1600 600]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
 			p=panel(h);
-			p.margin = [20 20 20 20]; %left bottom right top
+			p.fontsize = fs-1;
+			p.margin = [10 8 12 8]; %left bottom right top
 			[row,col]=ego.optimalLayout(ego.nSelection);
 			p.pack(col,row);
 			for j = 1:length(ego.selectedTrials)
@@ -1157,7 +1161,7 @@ classdef spikeAnalysis < analysisCore
 						waves = vertcat(waves,w);
 					end
 				end
-					if ~isempty(waves)
+				if ~isempty(waves)
 					nwaves = size(waves,1);
 					[a,e]=stderr(waves,'SD');
 					areabar(time,a,e,[0.7 0.7 0.7],0.75,'r-o','LineWidth',2);
@@ -1195,7 +1199,7 @@ classdef spikeAnalysis < analysisCore
 						mS2 = mS( mS >= 0 & mS <= ego.measureRange(2));
 						nMS1 = nMS1 + length(mS1);
 						nMS2 = nMS2 + length(mS2);
-						plot(mS,y(j),'yo','MarkerFaceColor',[1 1 0],'MarkerSize',4);
+						plot(mS, y(j), 'ro', 'MarkerFaceColor', 'none', 'MarkerSize', 4);
 					end
 				end
 			end
@@ -1205,7 +1209,7 @@ classdef spikeAnalysis < analysisCore
 					st = st - st;
 				end
 				yt = 1:length(st);
-				plot(st,yt,'go','MarkerFaceColor',[0 1 0],'MarkerSize',4);
+				plot(st, yt, 'go', 'MarkerFaceColor', 'none', 'MarkerSize', 4);
 			end
 			if length(idx) >= 100
 				fs = 9;

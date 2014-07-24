@@ -309,9 +309,9 @@ classdef analysisCore < optickaCore
 		function optimiseSize(ego)
 			if isa(ego, 'LFPAnalysis')
 				for i = 1: ego.nLFPs
-					ego.LFPs(i).sample = [];
-					ego.LFPs(i).data = [];
-					ego.LFPs(i).time = [];
+					%ego.LFPs(i).sample = [];
+					%ego.LFPs(i).data = [];
+					%ego.LFPs(i).time = [];
 				end
 				ego.results = struct([]);
 				optimiseSize(ego.p);

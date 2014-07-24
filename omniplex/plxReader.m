@@ -435,7 +435,15 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function handles = infoBox(ego, info)
-			if feature('HGUsingMatlabClasses');fs = 12;else fs = 14;end
+			fs = 10;
+			if ismac
+				[s,c]=system('system_profiler SPDisplaysDataType');
+				if s == 0
+					if ~isempty(regexpi(c,'Retina LCD'))
+						fs = 7;
+					end
+				end
+			end
 			if ~exist('info','var')
 				ego.generateInfo();
 				info = ego.info; 

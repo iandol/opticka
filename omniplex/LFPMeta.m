@@ -54,7 +54,7 @@ classdef LFPMeta < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief add LFPAnalysis objects to the meta list
 		%>
 		%> @param
 		%> @return
@@ -114,7 +114,7 @@ classdef LFPMeta < analysisCore
 		
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief plot individual
 		%>
 		%> @param
 		%> @return
@@ -158,8 +158,9 @@ classdef LFPMeta < analysisCore
 					me.raw{i}.plotRange = me.plotRange;
 					
 					if am == 1 %timelock
-						cfg = [];cfg.keeptrials = 'no';
+						cfg = [];cfg.keeptrials = 'yes';
 						me.raw{i}.ftTimeLockAnalysis(cfg);
+	
 					else
 						me.raw{i}.ftFrequencyAnalysis([],...
 							me.options.tw,...
@@ -198,7 +199,10 @@ classdef LFPMeta < analysisCore
 						end
 						metaA{i} = me.raw{i}.results.av{1};
 						metaB{i} = me.raw{i}.results.av{2};
-						
+						metaA{i}.label = {'LFP'}; %force an homogeneous label name
+						metaB{i}.label = {'LFP'};
+						metaA{i}.dimord = 'chan_time';
+						metaB{i}.dimord = 'chan_time';
 					else
 						
 						metaA{i} = me.raw{i}.(['fq' me.options.method]){1};
@@ -210,21 +214,32 @@ classdef LFPMeta < analysisCore
 				end
 				
 				if am == 1 %timelock
-					cfg			= [];
-					cfg.channel = 'all';
-					cfg.keepindividual = 'no';
-					%cfg.latency = me.measureRange;
-					%cfg.normalizevar   = 'N' or 'N-1' (default = 'N-1')
-					%  cfg.method         = 'across' (default) or 'within', see below.
-					%  cfg.parameter      = string or cell-array indicating which
+					cfg						= [];
+					cfg.channel				= 'all';
+					cfg.keepindividual	= 'no';
+					cfg.parameter			= 'avg';
+					cfg.method				= 'across'; %(default) or 'within', see below.
+% 					cfg.latency				= me.measureRange;
+% 					cfg.normalizevar		= 'N' or 'N-1' (default = 'N-1')
 					avgA = ft_timelockgrandaverage(cfg, metaA{:});
 					avgB = ft_timelockgrandaverage(cfg, metaB{:});
 				else
 					
 				end
 				
-				
-				
+				me.handles.axistabs.Selection = 2;
+				ho = me.handles.axisall;
+				delete(ho.Children);
+				h = uipanel('Parent',ho,'units', 'normalized', 'position', [0 0 1 1]);
+				ha = axes('Parent',h);
+				e = analysisCore.var2SE(avgA.var, avgA.dof);
+				areabar(avgA.time,avgA.avg, e);
+				hold on
+				e = analysisCore.var2SE(avgB.var, avgB.dof);
+				areabar(avgB.time, avgB.avg, e);
+				xlabel('Time (s)');
+				ylabel('Voltage (mV)');
+
 			end
 			
 		end
@@ -286,10 +301,34 @@ classdef LFPMeta < analysisCore
 		%> @return
 		% ===================================================================
 		function spawn(me, varargin)
+			gh = gca;
 			h = figure;
 			figpos(1,[1000 800]);
 			set(h,'Color',[1 1 1]);
-			hh = copyobj(me.handles.axis2,h);
+			hh = copyobj(gh,h);
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function toggleSaccades(me, varargin)
+			if me.nSites > 0
+				firstState = false;
+				for i = 1 : me.nSites
+					if i == 1
+						me.raw{i}.toggleSaccadeRealign
+						firstState = me.raw{i}.p.saccadeRealign; %keep our first state saved
+					else
+						if firstState ~= me.raw{i}.p.saccadeRealign; %make sure all states will sync to first
+							me.raw{i}.toggleSaccadeRealign
+						end
+					end
+					
+				end
+			end
 		end
 		
 		% ===================================================================
@@ -464,6 +503,11 @@ classdef LFPMeta < analysisCore
 				set(me.handles.list,'Value',1);
 				set(me.handles.list,'String',{''});
 			end
+			ho = me.handles.axisind;
+			delete(ho.Children);
+			ho = me.handles.axisall;
+			delete(ho.Children);
+			me.handles.axistabs.SelectedChild=1;
 			if isfield(me.handles,'axis1')
 				me.handles.axistabs.SelectedChild=2; 
 				axes(me.handles.axis2);cla
@@ -554,25 +598,26 @@ classdef LFPMeta < analysisCore
 				figpos(1,[1600 800])
 			end
 			me.handles(1).parent = parent;
+			
 			%make context menu
 			hcmenu = uicontextmenu;
-			item1 = uimenu(hcmenu,'Label','Reparse','Callback',@me.plot);
-			item2 = uimenu(hcmenu,'Label','Plot','Callback',@me.plot);
-			item3 = uimenu(hcmenu,'Label','Remove','Callback',@me.remove);
+			uimenu(hcmenu,'Label','Reparse (select)','Callback',@me.reparse,'Accelerator','e');
+			uimenu(hcmenu,'Label','Plot (select)','Callback',@me.plot,'Accelerator','p');
+			uimenu(hcmenu,'Label','Remove (select)','Callback',@me.remove,'Accelerator','r');
+			uimenu(hcmenu,'Label','Process (all)','Callback',@me.process,'Separator','on');
+			uimenu(hcmenu,'Label','Run (all)','Callback',@me.run);
+			uimenu(hcmenu,'Label','Toggle Saccade (all)','Callback',@me.toggleSaccades);
+			uimenu(hcmenu,'Label','Reset (all)','Callback',@me.reset);
 			
 			fs = 10;
 			if ismac
 				[s,c]=system('system_profiler SPDisplaysDataType');
-				if s == 0
-					if ~isempty(regexpi(c,'Retina LCD'))
-						fs = 7;
-					end
-				end
+				if s == 0; if ~isempty(regexpi(c,'Retina LCD')); fs = 7; end; end
 			end	
 			SansFont = 'Helvetica';
-			MonoFont = 'Menlo';
-			bgcolor = [0.85 0.85 0.85];
-			bgcoloredit = [0.87 0.87 0.87];
+			MonoFont = 'Consolas';
+			bgcolor = [0.89 0.89 0.89];
+			bgcoloredit = [0.9 0.9 0.9];
 
 			handles.parent = me.handles.parent; %#ok<*PROP>
 			handles.root = uiextras.BoxPanel('Parent',parent,...
@@ -627,13 +672,13 @@ classdef LFPMeta < analysisCore
 				'Tooltip','Remove a single item',...
 				'Callback',@me.remove,...
 				'String','Remove');
-			handles.plotbutton = uicontrol('Style','pushbutton',...
-				'Parent',handles.controls1,...
-				'Tag','LMAsavebutton',...
-				'FontSize', fs,...
-				'Tooltip','Plot data',...
-				'Callback',@me.plot,...
-				'String','Plot');
+% 			handles.saccbutton = uicontrol('Style','pushbutton',...
+% 				'Parent',handles.controls1,...
+% 				'Tag','LMAsaccbutton',...
+% 				'FontSize', fs,...
+% 				'Tooltip','Toggle Saccade Realign',...
+% 				'Callback',@me.toggleSaccades,...
+% 				'String','Toggle Saccades');
 			handles.processbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LMArunbutton',...
@@ -665,13 +710,13 @@ classdef LFPMeta < analysisCore
 				'FontSize', fs,...
 				'Callback',@me.setOptions,...
 				'String','Options');
-			handles.max = uicontrol('Style','edit',...
-				'Parent',handles.controls1,...
-				'Tag','LMAmax',...
-				'Tooltip','Cell Max Override',...
-				'FontSize', fs,...
-				'Callback',@me.editmax,...
-				'String','0');
+% 			handles.max = uicontrol('Style','edit',...
+% 				'Parent',handles.controls1,...
+% 				'Tag','LMAmax',...
+% 				'Tooltip','Cell Max Override',...
+% 				'FontSize', fs,...
+% 				'Callback',@me.editmax,...
+% 				'String','0');
 			handles.weight = uicontrol('Style','edit',...
 				'Parent',handles.controls1,...
 				'Tag','LMAweight',...

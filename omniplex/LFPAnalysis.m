@@ -46,7 +46,7 @@ classdef LFPAnalysis < analysisCore
 	%------------------HIDDEN PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
 		%> bandpass frequencies
-		bpfreq@cell = {[1 4], [5 8], [8 14], [15 30], [30 50], [50 100], [1 250]}
+		bpfreq@cell = {[1 4], [4 7], [7 14], [15 30], [30 50], [50 100], [1 250]}
 		%> bandpass frequency names
 		bpnames@cell = {'\delta','\theta','\alpha','\beta','\gamma low','\gamma high','all'}
 	end
@@ -228,7 +228,6 @@ classdef LFPAnalysis < analysisCore
 			ego.reparse;
 			ego.parseSpikes;
 			ego.doPlots = doPlots;
-			ego.plot('av');
 			if ego.p.saccadeRealign == true
 				disp('Saccade Realign is now ENABLED...')
 			else
@@ -393,8 +392,6 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function cfg=ftTimeLockAnalysis(ego, cfg, statcfg)
-			ego.results(1).av = [];
-			ego.results(1).avstat = [];
 			ft = ego.ft;	
 			ft = rmfield(ft,'uniquetrials'); %ft_timelockanalysis > ft_selectdata generates a warning as this is an unofficial field, so remove it here
 			if ~exist('cfg','var') || isempty(cfg); cfg = []; end
@@ -404,6 +401,11 @@ classdef LFPAnalysis < analysisCore
 			if ~isfield(cfg,'removemean'); cfg.removemean	= 'no'; end
 			if ~isfield(cfg,'covariance'); cfg.covariance	= 'yes'; end
 			cfg.channel						= ft.label{ego.selectedLFP};
+			ego.results(1).av = [];
+			if strcmp(cfg.keeptrials, 'yes')
+				ego.results(1).avstat = [];
+				ego.results(1).avstatavg = [];
+			end 
 			for i = 1:ego.nSelection
 				cfg.trials					= ego.selectedTrials{i}.idx;
 				av{i}							= ft_timelockanalysis(cfg, ft);
@@ -426,7 +428,7 @@ classdef LFPAnalysis < analysisCore
 			if isempty(ego.stats); ego.setStats(); end
 			sv = ego.stats;
 			
-			if isfield(av{1},'trial') %keeptrials was ON
+			if strcmp(cfg.keeptrials, 'yes') %keeptrials was ON
 				if exist('statcfg','var');	cfg					= statcfg;
 				else cfg													= []; end
 				cfg.channel												= ft.label{ego.selectedLFP};
@@ -1272,7 +1274,7 @@ classdef LFPAnalysis < analysisCore
 			
 			mrange = ego.measureRange;
 			
-			mtitle   = ['REPARSE ' num2str(ego.LFPs(1).nVars) ' DATA VARIABLES'];
+			mtitle   = [ego.lfpfile ': REPARSE ' num2str(ego.LFPs(1).nVars) ' VARS'];
 			options  = {['t|' map{1}],'Choose PLX variables to merge (A, if empty parse all variables independantly):';   ...
 				['t|' map{2}],'Choose PLX variables to merge (B):';   ...
 				['t|' map{3}],'Choose PLX variables to merge (C):';   ...
@@ -1757,7 +1759,7 @@ classdef LFPAnalysis < analysisCore
 				if isgraphics(ego.plotDestination)
 					h = ego.plotDestination;
 				else
-					h=figure;figpos(1,[1700 1000]);set(gcf,'Name',[ego.lfpfile ' ' av{1}.label{:}],'Color',[1 1 1]);
+					h=figure;figpos(1,[1700 1000]);set(gcf,'Name',[ego.lfpfile],'Color',[1 1 1]);
 				end
 				p=panel(h);
 				p.margin = [20 20 10 15]; %left bottom right top
