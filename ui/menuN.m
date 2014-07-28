@@ -104,8 +104,8 @@ function choice = menuN(mtitle,options,Opt)
 %
 % Author: Johan Winges
 
+fs = 10;
 if feature('HGUsingMatlabClasses')
-	fs = 12;
 	if ismac
 		[s,c]=system('system_profiler SPDisplaysDataType');
 		if s == 0
