@@ -1852,25 +1852,24 @@ classdef LFPAnalysis < analysisCore
 					areabar(tlout(1).t, tlout(1).s, tlout(1).se, [.5 .5 .5],0.3,'b-','LineWidth',1);
 					areabar(tlout(2).t, tlout(2).s, tlout(2).se, [.5 .4 .4],0.3,'r-','LineWidth',1);
 					if length(av) == 2
-						legend(av{1}.name,av{2}.name)
+						legend(av{1}.name,av{2}.name,'Location','southwest')
 					else
 						areabar(tlout(3).t, tlout(3).s, tlout(3).se,[.4 .5 .4],0.3,'g-','LineWidth',1);
-						legend(av{1}.name,av{2}.name,av{3}.name);
+						legend(av{1}.name,av{2}.name,av{3}.name,'Location','southwest');
 					end
 				else
 					areabar(tlout(1).t, tlout(1).d, tlout(1).e, [.5 .5 .5],0.3,'b.-','LineWidth',1);
 					areabar(tlout(2).t, tlout(2).d, tlout(2).e, [.5 .4 .4],0.3,'r.-','LineWidth',1);
 					if length(av) == 2
-						legend(av{1}.name,av{2}.name)
+						legend(av{1}.name,av{2}.name,'Location','southwest')
 					else
 						areabar(tlout(3).t, tlout(3).d, tlout(3).e,[.4 .5 .4],0.3,'g.-','LineWidth',1);
-						legend(av{1}.name,av{2}.name,av{3}.name);
+						legend(av{1}.name,av{2}.name,av{3}.name,'Location','southwest');
 					end
 				end
-				
-				
+
 				assignin('base','timelockOut',tlout);
-				
+
 				ax=axis;
 				set(mh,'YData',[ax(3) ax(3) ax(4) ax(4)]);
 				
@@ -1896,7 +1895,7 @@ classdef LFPAnalysis < analysisCore
 					[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',ego.stats.alpha);
 				end
 				xlabel('Time (s)');
-				ylabel('LFP Raw Amplitude (mV) ±SEM');
+				ylabel('LFP Raw Amplitude (mV) ±SE');
 				t=sprintf('COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
 				tt=sprintf('%s | Ch: %s | %s p = %.3g [%s : %s (alpha=%.2g)]\n%s', ego.lfpfile, av{1}.label{:}, avstat.cfg.statistic, avstatavg.prob, avstat.cfg.method, avstat.cfg.correctm, ego.stats.alpha, t);
 				title(tt,'FontSize',fs);
@@ -1977,7 +1976,7 @@ classdef LFPAnalysis < analysisCore
 			name{end+1} = 'correct';
 			name{end+1} = 'break fix';
 			name{end+1} = 'incorrect';
-			legend(name,'Location','NorthWest')
+			legend(name,'Location','southwest')
 			hold off;
 			box on;
 			pan xon;

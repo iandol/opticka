@@ -21,8 +21,10 @@ classdef LFPMeta < analysisCore
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> handles for the GUI
 		handles@struct
+		%> is the UI opened?
 		openUI@logical = false
-		version@double = 0.8
+		%> version
+		version@double = 0.81
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
@@ -49,6 +51,8 @@ classdef LFPMeta < analysisCore
 			me=me@analysisCore(varargin); %superclass constructor
 			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
 			if isempty(me.name);me.name = 'LFPMeta'; end
+			
+			me.plotRange = [-0.35 0.35];
 			initialiseOptions(me);
 			makeUI(me);
 		end
@@ -61,8 +65,8 @@ classdef LFPMeta < analysisCore
 		% ===================================================================
 		function add(me,varargin)
 			[file,path]=uigetfile('*.mat','Meta-Analysis:Choose LFP source File','Multiselect','on');
-			if ~exist('file','var')
-				warning('No File Specified', 'Meta-Analysis Error')
+			if ~iscell(file) && ~ischar(file)
+				warning('Meta-Analysis Error: No File Specified')
 				return
 			end
 	
@@ -71,7 +75,7 @@ classdef LFPMeta < analysisCore
 				file = {file};
 			end
 			
-			tic
+			addtic = tic;
 			l = length(file);
 			for ll = 1:length(file)
 				notifyUI(me,sprintf('Loading %g of %g Cells...',ll,l));
@@ -107,7 +111,7 @@ classdef LFPMeta < analysisCore
 				clear lfp
 			end
 			
-			fprintf('Cell loading took %.5g seconds\n',toc)
+			fprintf('Cell loading took %.5g seconds\n',toc(addtic))
 			notifyUI(me,sprintf('Loaded %g Cells...',me.nSites));
 			
 		end
@@ -137,6 +141,19 @@ classdef LFPMeta < analysisCore
 						me.raw{sel}.plotDestination = h;
 				end
 				
+			end
+		end
+		
+		% ===================================================================
+		%> @brief plot individual
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function plotSite(me,varargin)
+			if me.nSites > 0
+				me.handles.axistabs.Selection = 1;
+				plot(me);
 			end
 		end
 		
@@ -732,6 +749,7 @@ classdef LFPMeta < analysisCore
 				'Max',1,...
 				'FontSize',fs-1,...
 				'FontName',MonoFont,...
+				'Callback',@me.plotSite,...
 				'String',{''},...
 				'uicontextmenu',hcmenu);
 			
