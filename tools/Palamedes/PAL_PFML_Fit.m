@@ -37,6 +37,9 @@
 %       Options include:    
 %           @PAL_Logistic
 %           @PAL_Weibull
+%           @PAL_Gumbel (i.e., log-Weibull)
+%           @PAL_Quick
+%           @PAL_logQuick
 %           @PAL_CumulativeNormal
 %           @PAL_Gumbel
 %           @PAL_HyperbolicSecant
@@ -120,10 +123,10 @@
 %       [0 1], 'searchOptions',options)
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.0.2, 1.2.0, 1.3.0, 1.3.1, 1.4.0 
+% Modified: Palamedes version 1.0.2, 1.2.0, 1.3.0, 1.3.1, 1.4.0, 1.6.3
 %   (see History.m)
 
-function [paramsValues LL exitflag output] = PAL_PFML_Fit(StimLevels, NumPos, OutOfNum, searchGrid, paramsFree, PF, varargin)
+function [paramsValues, LL, exitflag, output] = PAL_PFML_Fit(StimLevels, NumPos, OutOfNum, searchGrid, paramsFree, PF, varargin)
 
 options = [];
 lapseLimits = [];
@@ -141,8 +144,7 @@ if ~isempty(varargin)
         end
         if strncmpi(varargin{n}, 'lapseLimits',6)
             if paramsFree(4) == 0 && ~isempty(varargin{n+1})
-                message = ['Lapse rate is not a free parameter: ''lapseLimits'' argument ignored'];
-                warning('PALAMEDES:PFML_Fit_lapseLimits',message)
+                warning('PALAMEDES:invalidOption','Lapse rate is not a free parameter: ''LapseLimits'' argument ignored');
             else
                 lapseLimits = varargin{n+1};
             end
@@ -150,8 +152,7 @@ if ~isempty(varargin)
         end
         if strncmpi(varargin{n}, 'guessLimits',6)
             if paramsFree(3) == 0 && ~isempty(varargin{n+1})
-                message = ['Guess rate is not a free parameter: ''guessLimits'' argument ignored'];
-                warning('PALAMEDES:PFML_Fit_guessLimits',message)
+                warning('PALAMEDES:invalidOption','Guess rate is not a free parameter: ''GuessLimits'' argument ignored');
             else
                 guessLimits = varargin{n+1};
             end
@@ -159,8 +160,7 @@ if ~isempty(varargin)
         end
         if strncmpi(varargin{n}, 'lapseFit',6)
             if paramsFree(4) == 0 && ~strncmpi(varargin{n+1},'def',3)
-                message = ['Lapse rate is not a free parameter: ''lapseFit'' argument ignored'];
-                warning(message);
+                warning('PALAMEDES:invalidOption','Lapse rate is not a free parameter: ''LapseFit'' argument ignored');
             else
                 lapseFit = varargin{n+1};
             end
@@ -171,19 +171,17 @@ if ~isempty(varargin)
             valid = 1;
         end
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end        
     end            
 end
 
 if ~isempty(guessLimits) && gammaEQlambda
-    message = ['Guess rate is constrained to equal lapse rate: ''guessLimits'' argument ignored'];
-    warning('PALAMEDES:PFML_Fit_guessLimits',message)
+    warning('PALAMEDES:invalidOption','Guess rate is constrained to equal lapse rate: ''guessLimits'' argument ignored');
     guessLimits = [];
 end
 
-[StimLevels NumPos OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);
+[StimLevels, NumPos, OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);
 
 if isstruct(searchGrid)
     if gammaEQlambda
@@ -217,7 +215,7 @@ else
                 paramsFixedVals(length(paramsFixedVals)+1) = lambda; %lapse rate
                 paramsFreeVals = paramsFreeVals(1:length(paramsFreeVals)-1);    %set lapse rate estimate as fixed value
                 paramsFree(4) = 0;               
-                [paramsFreeVals negLL exitflag output] = PAL_minimize(@PAL_PFML_negLL, paramsFreeVals, options, paramsFixedVals, paramsFree, StimLevels(1:len-1), NumPos(1:len-1), OutOfNum(1:len-1), PF,'gammaEQlambda',gammaEQlambda,'guessLimits',guessLimits);        
+                [paramsFreeVals, negLL, exitflag, output] = PAL_minimize(@PAL_PFML_negLL, paramsFreeVals, options, paramsFixedVals, paramsFree, StimLevels(1:len-1), NumPos(1:len-1), OutOfNum(1:len-1), PF,'gammaEQlambda',gammaEQlambda,'guessLimits',guessLimits);        
                 negLL = negLL - log((1 - lambda).^NumPos(len)) - log(lambda.^(OutOfNum(len)-NumPos(len)));
             else
                 lambda = 1 - (NumPos(len)+(OutOfNum(1)-NumPos(1)))./(OutOfNum(len)+OutOfNum(1));                
@@ -229,11 +227,11 @@ else
                 paramsFixedVals(length(paramsFixedVals)) = lambda;
                 paramsFreeVals = paramsFreeVals(1:length(paramsFreeVals)-1);
                 paramsFree(4) = 0;
-                [paramsFreeVals negLL exitflag output] = PAL_minimize(@PAL_PFML_negLL, paramsFreeVals, options, paramsFixedVals, paramsFree, StimLevels(2:len-1), NumPos(2:len-1), OutOfNum(2:len-1), PF,'gammaEQlambda',gammaEQlambda);        
+                [paramsFreeVals, negLL, exitflag, output] = PAL_minimize(@PAL_PFML_negLL, paramsFreeVals, options, paramsFixedVals, paramsFree, StimLevels(2:len-1), NumPos(2:len-1), OutOfNum(2:len-1), PF,'gammaEQlambda',gammaEQlambda);        
                 negLL = negLL - log((1 - lambda).^(NumPos(len)+(OutOfNum(1)-NumPos(1)))) - log(lambda.^(OutOfNum(len)-NumPos(len)+NumPos(1)));
             end            
         case {'nap', 'jap', 'def'}
-            [paramsFreeVals negLL exitflag output] = PAL_minimize(@PAL_PFML_negLL, paramsFreeVals, options, paramsFixedVals, paramsFree, StimLevels, NumPos, OutOfNum, PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+            [paramsFreeVals, negLL, exitflag, output] = PAL_minimize(@PAL_PFML_negLL, paramsFreeVals, options, paramsFixedVals, paramsFree, StimLevels, NumPos, OutOfNum, PF,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
     end
 end
 

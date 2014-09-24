@@ -14,13 +14,9 @@
 %numParams = 3;
 %
 %Introduced: Palamedes version 1.1.0 (NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
-function [LL numParams] = PAL_PFML_LLsaturated(NumPos, OutOfNum)
+function [LL, numParams] = PAL_PFML_LLsaturated(NumPos, OutOfNum)
 
-warningstates = warning('query','all');
-warning off MATLAB:DivideByZero
-
-[LL numParams] = PAL_PFML_negLLNonParametric(NumPos, OutOfNum);
+[LL, numParams] = PAL_PFML_negLLNonParametric(NumPos, OutOfNum);
 LL = -LL;
-
-warning(warningstates);

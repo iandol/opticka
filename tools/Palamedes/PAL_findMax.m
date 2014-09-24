@@ -25,12 +25,12 @@
 %           1     2     3
 %
 % Introduced: Palamedes version 1.1.1 (NP)
-% Modified: Palamedes version 1.2.0, 1.6.0 (see History.m)
+% Modified: Palamedes version 1.2.0, 1.6.0, 1.6.3 (see History.m)
 
-function [maxim Indices] = PAL_findMax(array)
+function [maxim, Indices] = PAL_findMax(array)
 
 s = size(array);
-[maxim I] = max(reshape(array,[1 prod(s)]));
+[maxim, I] = max(reshape(array,[1 prod(s)]));
 
 for dim = length(s):-1:1
     f = prod(s(1:dim-1));     

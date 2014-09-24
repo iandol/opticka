@@ -27,14 +27,15 @@
 % 10, and the output is the corresponding N=5 d's
 %
 % Introduced: Palamedes version 1.0.0 (FK)
-% Modified: Palamedes version 1.4.0 (see History.m)
+% Modified: Palamedes version 1.4.0, 1.6.3 (see History.m)
 
 function dP=PAL_SDT_MAFC_PCtoDP(pC,M)
 
-[rows cols]=size(pC);
+[rows, cols]=size(pC);
 
 func=@PAL_SDT_MAFC_DPtoPC;
 
+dP = zeros(rows,cols);
 
 for r=1:rows
     for c=1:cols

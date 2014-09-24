@@ -34,6 +34,9 @@
 %       Options include:    
 %           @PAL_Logistic
 %           @PAL_Weibull
+%           @PAL_Gumbel (i.e., log-Weibull)
+%           @PAL_Quick
+%           @PAL_logQuick
 %           @PAL_CumulativeNormal
 %           @PAL_Gumbel
 %           @PAL_HyperbolicSecant
@@ -59,16 +62,16 @@
 %
 %       Use 'searchGrid' argument to define a 4D parameter 
 %       grid through which to perform a brute-force search for initial 
-%       guesses (using PAL_PFML_BruteForceFit) to be used during fitting 
-%       procedure. Structure should have fields .alpha, .beta, .gamma, and 
-%       .lambda. Each should list parameter values to be included in brute 
-%       force search. Fields for fixed parameters should be scalars equal 
-%       to the fixed parameter value. Note that all fields may be scalars
-%       in which case no brute-force search will precede the iterative
-%       parameter search. For more information, see example below. Note 
-%       that choices made here have a large effect on processing time and 
-%       memory usage. In some future version of Palamedes this argument 
-%       will be required.
+%       guesses (performed by PAL_PFML_BruteForceFit) to be used during 
+%       fitting procedure. Structure should have fields .alpha, .beta, 
+%       .gamma, and .lambda. Each should list parameter values to be 
+%       included in brute force search. Fields for fixed parameters should 
+%       be scalars equal to the fixed parameter value. Note that all fields 
+%       may be scalars in which case no brute-force search will precede the 
+%       iterative parameter search. For more information, see example 
+%       below. Note that choices made here have a large effect on 
+%       processing time and memory usage. In some future version of 
+%       Palamedes this argument will be required.
 %
 %       If highest entry in 'StimLevels' is so high that it can be 
 %       assumed that errors observed there can be due only to lapses, use 
@@ -155,29 +158,25 @@
 %
 %Introduced: Palamedes version 1.0.0 (NP)
 %Modified: Palamedes version 1.0.1, 1.0.2, 1.1.0, 1.2.0, 1.3.0, 1.3.1, 
-%   1.4.0 (NP). (see History.m)
+%   1.4.0, 1.6.3 (see History.m)
 
-function [SD paramsSim LLSim converged] = PAL_PFML_BootstrapNonParametric(StimLevels, NumPos, OutOfNum, obsolete, paramsFree, B, PF, varargin)
+function [SD, paramsSim, LLSim, converged] = PAL_PFML_BootstrapNonParametric(StimLevels, NumPos, OutOfNum, obsolete, paramsFree, B, PF, varargin)
 
 if ~isempty(obsolete)
     message = ['Option to pass initial guesses to function in the form of a '];    
     message = [message 'vector will be removed in some future version of '];
     message = [message 'Palamedes. Instead use the (for now) optional '];
-    message = [message '''paramsInit'' argument to pass a structure in '];
+    message = [message '''searchgrid'' argument to pass a structure in '];
     message = [message 'order to define a 4D parameter space through '];
     message = [message 'which to search for initial search values using a '];
-    message = [message 'brute force search. Usage of the ''paramsInit'' '];
+    message = [message 'brute force search. Usage of the ''searchGrid'' '];
     message = [message 'argument will become required in some future '];
     message = [message 'version of Palamedes. Type help '];
     message = [message 'PAL_PFML_BootstrapNonParametric for more '];
     message = [message 'information. '];
-
-    warning('PALAMEDES:paramsInitBNP',message)
-    warning('off','PALAMEDES:paramsInitBNP');
+    warning('PALAMEDES:useSearchGrid',message);
+    warning('off','PALAMEDES:useSearchgrid');
 end
-
-warningstates = warning('query','all');
-warning off MATLAB:log:logOfZero
 
 options = [];
 maxTries = 1;
@@ -211,8 +210,7 @@ if ~isempty(varargin)
             if paramsFree(4) == 1
                 lapseLimits = varargin{n+1};
             else
-                message = ['Lapse rate is not a free parameter: ''LapseLimits'' argument ignored'];
-                warning(message);
+                warning('PALAMEDES:invalidOption','Lapse rate is not a free parameter: ''LapseLimits'' argument ignored');
             end
             valid = 1;
         end
@@ -220,8 +218,7 @@ if ~isempty(varargin)
             if paramsFree(3) == 1
                 guessLimits = varargin{n+1};
             else
-                message = ['Guess rate is not a free parameter: ''guessLimits'' argument ignored'];
-                warning(message);
+                warning('PALAMEDES:invalidOption','Guess rate is not a free parameter: ''GuessLimits'' argument ignored');
             end
             valid = 1;
         end
@@ -231,8 +228,7 @@ if ~isempty(varargin)
         end        
         if strncmpi(varargin{n}, 'lapseFit',6)
             if paramsFree(4) == 0
-                message = ['Lapse rate is not a free parameter: ''lapseFit'' argument ignored'];
-                warning(message);
+                warning('PALAMEDES:invalidOption','Lapse rate is not a free parameter: ''LapseFit'' argument ignored');
             else
                 lapseFit = varargin{n+1};
             end
@@ -243,35 +239,33 @@ if ~isempty(varargin)
             valid = 1;
         end
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end
     end            
 end
 
 if ~isempty(guessLimits) && gammaEQlambda
-    message = ['Guess rate is constrained to equal lapse rate: ''guessLimits'' argument ignored'];
-    warning('PALAMEDES:PFML_Fit_guessLimits',message)
+    warning('PALAMEDES:invalidOption','Guess rate is constrained to equal lapse rate: ''guessLimits'' argument ignored');
     guessLimits = [];
 end
 
-[StimLevels NumPos OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);
+[StimLevels, NumPos, OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);
 
 if min(OutOfNum) == 1
     message = ['Some stimulus intensities appeared on a single trial only:'];
     message = [message sprintf('\nConsider a parametric bootstrap instead.')];
-    warning(message);
+    warning('PALAMEDES:considerParametricBootstrap',message);
     StimLevels
     OutOfNum
 end
 
-if exist('searchGrid')
+if exist('searchGrid','var')
     
     if gammaEQlambda
         searchGrid.gamma = 0;
     end      
     
-    [paramsGrid.alpha paramsGrid.beta paramsGrid.gamma paramsGrid.lambda] = ndgrid(searchGrid.alpha,searchGrid.beta,searchGrid.gamma,searchGrid.lambda);
+    [paramsGrid.alpha, paramsGrid.beta, paramsGrid.gamma, paramsGrid.lambda] = ndgrid(searchGrid.alpha,searchGrid.beta,searchGrid.gamma,searchGrid.lambda);
 
     singletonDim = uint16(size(paramsGrid.alpha) == 1);    
     
@@ -300,11 +294,11 @@ for b = 1:B
     %Simulate experiment
     NumPosSim = PAL_PF_SimulateObserverNonParametric(StimLevels, NumPos, OutOfNum);
     
-    if exist('searchGrid')
+    if exist('searchGrid','var')
 
         LLspace = zeros(size(paramsGrid.alpha,1),size(paramsGrid.alpha,2),size(paramsGrid.alpha,3),size(paramsGrid.alpha,4));
 
-        if iscolumn(LLspace)
+        if size(LLspace,2) == 1 && ndims(LLspace) == 2
             LLspace = LLspace';
         end
 
@@ -325,15 +319,15 @@ for b = 1:B
         end
         
         if isvector(LLspace)
-            [maxim Itemp] = max(LLspace)
+            [maxim, Itemp] = max(LLspace);
         else
             if strncmpi(lapseFit,'iap',3)
-                [trash lapseIndex] = min(abs(searchGrid.lambda-(1-NumPosSim(len)/OutOfNum(len))));
+                [trash, lapseIndex] = min(abs(searchGrid.lambda-(1-NumPosSim(len)/OutOfNum(len))));
                 LLspace = shiftdim(LLspace,length(size(LLspace))-1);
-                [maxim Itemp] = PAL_findMax(LLspace(lapseIndex,:,:,:));
+                [maxim, Itemp] = PAL_findMax(LLspace(lapseIndex,:,:,:));
                 Itemp = circshift(Itemp',length(size(LLspace))-1)';
             else
-                [maxim Itemp] = PAL_findMax(LLspace);
+                [maxim, Itemp] = PAL_findMax(LLspace);
             end
         end
         
@@ -347,29 +341,25 @@ for b = 1:B
         end
     end
     
-    [paramsSim(b,:) LLSim(b,:) converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, paramsGuess, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+    [paramsSim(b,:), LLSim(b,:), converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, paramsGuess, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
     
-    if ~exist('searchGrid') 
+    if ~exist('searchGrid','var') 
         tries = 1;
         while converged(b) == 0 && tries < maxTries
                 NewSearchInitials = searchGrid+(rand(1,4)-.5).*rangeTries.*paramsFree;
-                [paramsSim(b,:) LLSim(b,:) converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, NewSearchInitials, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'lapseFit','guessLimits',guessLimits,lapseFit,'gammaEQlambda',gammaEQlambda);                
+                [paramsSim(b,:), LLSim(b,:), converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, NewSearchInitials, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'lapseFit','guessLimits',guessLimits,lapseFit,'gammaEQlambda',gammaEQlambda);                
                 tries = tries + 1;            
         end
     end    
     if ~converged(b)
-        message = ['Fit to simulation ' int2str(b) ' of ' int2str(B) ' did not converge.'];
-        warning(message);
+        warning('PALAMEDES:convergeFail','Fit to simulation %s of %s did not converge.',int2str(b), int2str(B));
     end
 
 end
 
 exitflag = sum(converged) == B;
 if exitflag ~= 1
-    message = ['Only ' int2str(sum(converged)) ' of ' int2str(B) ' simulations converged'];
-    warning(message);
+    warning('PALAMEDES:convergeFail','Only %s of %s simulations converged.',int2str(sum(converged)), int2str(B));
 end
 
-[Mean SD] = PAL_MeanSDSSandSE(paramsSim);
-
-warning(warningstates);
+[Mean, SD] = PAL_MeanSDSSandSE(paramsSim);

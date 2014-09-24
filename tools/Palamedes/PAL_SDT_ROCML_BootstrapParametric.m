@@ -112,7 +112,7 @@
 %   % perform bootstrap
 %
 %   [dPsd Rsd] = ...
-%     PAL_SDT_ROCML_BootstrapParametric(paramsValues, OutOfNum, SDTF,...a
+%     PAL_SDT_ROCML_BootstrapParametric(paramsValues, OutOfNum, SDTF,...
 %     invSDTF, B)
 %
 %returns something like this:
@@ -126,9 +126,9 @@
 %    0.0760
 %
 %Introduced: Palamedes version 1.6.0 (FK & NP)
-%
+%Modified: Palamedes version 1.6.3 (see History.m)
 
-function [dPsd Rsd paramsSim LLsim converged] = PAL_SDT_ROCML_BootstrapParametric(paramsValues, OutOfNum, SDTF, invSDTF, B, varargin)
+function [dPsd, Rsd, paramsSim, LLsim, converged] = PAL_SDT_ROCML_BootstrapParametric(paramsValues, OutOfNum, SDTF, invSDTF, B, varargin)
 
 options = [];
 
@@ -158,8 +158,7 @@ if ~isempty(varargin)
             valid = 1;
         end
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end
     end            
 end
@@ -169,23 +168,21 @@ for b = 1:B
     %Simulate experiment
     cumNumHF = PAL_SDT_ROC_SimulateObserverParametric(paramsValues, OutOfNum, invSDTF);
     
-    [dP(b) R(b) C(b,:) LLsim(b) converged(b)] = PAL_SDT_ROCML_Fit(cumNumHF, OutOfNum, SDTF, invSDTF,'ratioSDvalue', Rval, 'ratioSDfree', Rfree, 'searchOptions',options);
+    [dP(b), R(b), C(b,:), LLsim(b), converged(b)] = PAL_SDT_ROCML_Fit(cumNumHF, OutOfNum, SDTF, invSDTF,'ratioSDvalue', Rval, 'ratioSDfree', Rfree, 'searchOptions',options);
     
     if ~converged(b)
-        message = ['Fit to simulation ' int2str(b) ' of ' int2str(B) ' did not converge.'];
-        warning(message);
+        warning('PALAMEDES:convergeFail','Fit to simulation %s of %s did not converge.',int2str(b), int2str(B));
     end
     
 end
 
 exitflag = sum(converged) == B;
 if exitflag ~= 1
-    message = ['Only ' int2str(sum(converged)) ' of ' int2str(B) ' simulations converged'];
-    warning(message);
+    warning('PALAMEDES:convergeFail','Only %s of %s simulations converged.',int2str(sum(converged)), int2str(B));
 end
 
 paramsSim(:,1) = dP;
 paramsSim(:,2) = R;
 
-[dPmean dPsd] = PAL_MeanSDSSandSE(dP);
-[Rmean Rsd] = PAL_MeanSDSSandSE(R);
+[dPmean, dPsd] = PAL_MeanSDSSandSE(dP);
+[Rmean, Rsd] = PAL_MeanSDSSandSE(R);

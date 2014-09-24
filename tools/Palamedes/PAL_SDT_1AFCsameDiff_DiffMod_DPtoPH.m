@@ -7,7 +7,6 @@
 %
 % Introduced: Palamedes version 1.0.0 (FK)
 
-
 function pH=PAL_SDT_1AFCsameDiff_DiffMod_DPtoPH(dP,k)
 
 pH=PAL_ZtoP((-k+dP)./sqrt(2)) + PAL_ZtoP((-k-dP)./sqrt(2));

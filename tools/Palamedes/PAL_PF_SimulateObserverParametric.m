@@ -20,9 +20,12 @@
 %   'PF': Form of the psychometric function to be simulated. Should be
 %       passed as inline function. Options include:
 %           @PAL_Logistic
-%           @PAL_CumulativeNormal
 %           @PAL_Weibull
-%           @PAL_Gumbel       
+%           @PAL_Gumbel (i.e., log-Weibull)
+%           @PAL_Quick
+%           @PAL_logQuick
+%           @PAL_CumulativeNormal
+%           @PAL_Gumbel
 %           @PAL_HyperbolicSecant
 %
 %Output:
@@ -72,7 +75,7 @@
 %       3   29  50  76  95
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.3.0, 1.4.0 (see History.m)
+% Modified: Palamedes version 1.3.0, 1.4.0, 1.6.3 (see History.m)
 
 function NumPos = PAL_PF_SimulateObserverParametric(paramsValues, StimLevels, OutOfNum, PF, varargin)
 
@@ -92,8 +95,7 @@ if ~isempty(varargin)
             valid = 1;
         end                                
         if valid == 0
-            message = ['Warning: ' varargin{n} ' is not a valid option. Ignored.'];
-            disp(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end
     end            
 end
@@ -111,6 +113,7 @@ if strncmpi(lapseFit,'jap',3) || strncmpi(lapseFit,'iap',3)
         pcorrect(find(StimLevels == min(StimLevels(OutOfNum>0)))) = paramsValues(4);        
     end
 end
+NumPos = zeros(1,length(StimLevels));
 for Level = 1:length(StimLevels)
     Pos = rand(OutOfNum(Level),1);
     Pos(Pos < pcorrect(Level)) = 1;

@@ -60,12 +60,9 @@
 %   y =  0
 %        
 %Introduced: Palamedes version 1.0.0 (NP)
-%Modified: Palamedes version 1.1.0, 1.5.0, 1.6.0 (see History.m)
+%Modified: Palamedes version 1.1.0, 1.5.0, 1.6.0, 1.6.3 (see History.m)
 
 function Entropy = PAL_Entropy(pdf,varargin)
-
-warningstates = warning('query','all');
-warning off MATLAB:log:logOfZero
 
 nds = ndims(pdf);
 
@@ -88,4 +85,3 @@ for d = 1:nds
     Entropy = sum(Entropy,d);    
 end
 Entropy = -Entropy;
-warning(warningstates)

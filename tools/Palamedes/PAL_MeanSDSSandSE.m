@@ -23,12 +23,17 @@
 %   SE =    0     1     1
 %
 %Introduced: Palamedes version 1.0.0 (NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
-function [Mean SD SS SE] = PAL_MeanSDSSandSE(x)
+function [Mean, SD, SS, SE] = PAL_MeanSDSSandSE(x)
 
 if size(x,1) == 1
     x = x';
 end
+
+SS = zeros(1,size(x,2));
+SD = zeros(1,size(x,2));
+SE = zeros(1,size(x,2));
 
 Mean = sum(x,1)/size(x,1);
 for i = 1:size(x,2)

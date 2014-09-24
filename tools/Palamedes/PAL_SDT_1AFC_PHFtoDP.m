@@ -57,10 +57,10 @@
 % and pC.  Note that if R~=1, lnB is not calculated and returns a NaN
 %
 % Introduced: Palamedes version 1.0.0 (FK)
-% Modified: Palamedes version 1.6.0 (FK & NP)
+% Modified: Palamedes version 1.6.0, 1.6.3 (see History.m)
 
 
-function [dP C lnB pC] = PAL_SDT_1AFC_PHFtoDP(pHF,varargin)
+function [dP, C, lnB, pC] = PAL_SDT_1AFC_PHFtoDP(pHF,varargin)
 
 R = ones(size(pHF(:,1))); % default
 
@@ -72,8 +72,7 @@ if ~isempty(varargin)
         valid = 1;
     end
     if valid == 0
-        message = ['Warning: ' varargin{1} ' is not a valid option. Ignored.'];
-        warning(message);
+        warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{1});
     end        
 end   
 

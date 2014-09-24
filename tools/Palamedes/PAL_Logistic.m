@@ -27,11 +27,11 @@
 %   y = 0.5000
 %
 %Introduced: Palamedes version 1.0.0 (NP)
-%Modified: Palamedes version 1.0.2, 1.1.1, 1.2.0 (see History.m)
+%Modified: Palamedes version 1.0.2, 1.1.1, 1.2.0, 1.6.3 (see History.m)
 
 function y = PAL_Logistic(params,x,varargin)
 
-[alpha beta gamma lambda] = PAL_unpackParamsPF(params);
+[alpha, beta, gamma, lambda] = PAL_unpackParamsPF(params);
 
 if ~isempty(varargin)
     if strncmpi(varargin{1}, 'Inverse',3)

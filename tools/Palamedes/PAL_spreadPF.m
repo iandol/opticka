@@ -8,7 +8,10 @@
 %   the range of stimulus intensities (or, more generally, the IV) across 
 %   which the PF evaluates from gamma (PF's 'guess-rate') + 'delta' to 
 %   1 - lambda (PF's 'lapse-rate') - delta. 'delta' must have value greater 
-%   than 0 and less than (1 - gamma - lambda)/2
+%   than 0 and less than (1 - gamma - lambda)/2.
+%
+%   'PFname's supported are: 'Logistic', 'CumulativeNormal', 'Weibull',
+%   'Quick', 'Gumbel', 'logQuick', and 'HyperbolicSecant'.
 %
 %Example:
 %   spread = PAL_spreadPF([0 1 0 0], (1 - .6826)/2, 'CumulativeNormal')
@@ -21,25 +24,28 @@
 %       the normal distribution falls between Z = -1 and Z = 1).
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.4.0 (see History.m)
+% Modified: Palamedes version 1.4.0, 1.6.1, 1.6.3 (see History.m)
 
 function spread = PAL_spreadPF(params, delta, PFname)
 
-[alpha beta gamma lambda] = PAL_unpackParamsPF(params);
+[alpha, beta, gamma, lambda] = PAL_unpackParamsPF(params);
 
-switch lower(PFname(1:3))
-    case{'log'}
+switch lower(PFname(1:4))
+    case{'logi'}
         spread = 2.*log((1 - delta - gamma - lambda)./delta)./beta;
-    case{'cum'}
+    case{'cumu'}
         spread = 2.*sqrt(2).*erfinv(1-(2.*delta./(1 - gamma - lambda)))./beta;
-    case{'wei'}
+    case{'weib'}
         spread = alpha.*((-log(1 - (1 - lambda - delta - gamma)./(1 - gamma - lambda))).^(1./beta)-(-log(1 - delta./(1 - gamma - lambda))).^(1./beta));
-    case{'gum'}
+    case{'quic'}
+        spread = alpha.*((-log2(1 - (1 - lambda - delta - gamma)./(1 - gamma - lambda))).^(1./beta)-(-log2(1 - delta./(1 - gamma - lambda))).^(1./beta));
+    case{'gumb'}
         spread = log10(log(delta./(1 - gamma - lambda))./log(1 - delta./(1 - gamma - lambda)))./beta;
-    case{'hyp'}
+    case{'logq'}
+        spread = log10(log(delta./(1 - gamma - lambda))./log(1 - delta./(1 - gamma - lambda)))./beta;
+    case{'hype'}
         spread = 2.*log(tan((pi./2).*(1 - lambda - delta - gamma)./(1 - gamma - lambda))./tan((pi./2).*(delta)./(1 - gamma - lambda)))./(pi.*beta);
     otherwise
-        message = ['The function ' PFname ' is not supported.'];
-        warning(message);
+        warning('PALAMEDES:invalidOption','The function %s is not supported',PFname);
         spread = [];
 end

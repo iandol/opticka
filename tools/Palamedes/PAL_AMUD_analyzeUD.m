@@ -29,6 +29,7 @@
 %       of the last 25 trials.
 %
 %Introduced: Palamedes version 1.0.0 (NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
 function Mean = PAL_AMUD_analyzeUD(UD, varargin)
 
@@ -44,8 +45,7 @@ if ~isempty(varargin)
             number = varargin{n+1};
             LowReversal = HighReversal - number + 1;
             if LowReversal < 1
-                message = ['You asked for the last ' int2str(number) ' reversals. There are only ' int2str(HighReversal) ' reversals.'];
-                warning(message);
+                warning('PALAMEDES:invalidOption','You asked for the last %s reversals. There are only %s reversals.',int2str(number),int2str(HighReversal));               
                 LowReversal = 1;
             end
             valid = 1;
@@ -55,15 +55,13 @@ if ~isempty(varargin)
             number = varargin{n+1};
             LowTrial = NumTrials - number + 1;
             if LowTrial < 1
-                message = ['You asked for the last ' int2str(number) ' trials. There are only ' int2str(NumTrials) ' trials.'];
-                warning(message);
+                warning('PALAMEDES:invalidOption','You asked for the last %s trials. There are only %s trials.',int2str(number),int2str(NumTrials));               
                 LowTrial = 1;
             end
             valid = 1;
         end
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n})
         end        
     end            
 else

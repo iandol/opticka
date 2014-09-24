@@ -8,9 +8,8 @@
 %Internal Function
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.3.0, 1.3.1, 1.4.0, 1.4.1, 1.4.2 
+% Modified: Palamedes version 1.3.0, 1.3.1, 1.4.0, 1.4.1, 1.4.2, 1.6.3
 %   (see History.m)
-
 
 function negLL = PAL_PFML_negLL(paramsFreeVals, paramsFixedVals, paramsFree, StimLevels, NumPos, OutOfNum, PF, varargin)
 
@@ -40,8 +39,7 @@ if ~isempty(varargin)
             valid = 1;
         end        
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end        
     end            
 end

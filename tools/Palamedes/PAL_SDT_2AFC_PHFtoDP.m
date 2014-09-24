@@ -48,9 +48,10 @@
 % proportion of false alarms.   The columns in the output give the  
 % resulting N=3 vectors of dP, C, lnB and pC
 %
-%Introduced: Palamedes version 1.0.0 (FK)
+% Introduced: Palamedes version 1.0.0 (FK)
+% Modified: Palamedes version 1.6.3 (see History.m)
 
-function [dP C lnB pC]=PAL_SDT_2AFC_PHFtoDP(pHF)
+function [dP, C, lnB, pC]=PAL_SDT_2AFC_PHFtoDP(pHF)
 
 zH=PAL_PtoZ(pHF(:,1));
 zF=PAL_PtoZ(pHF(:,2));

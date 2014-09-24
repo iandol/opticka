@@ -7,6 +7,7 @@
 %Internal function
 %
 %Introduced: Palamedes version 1.0.0 (NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
 function MC = PAL_PFLR_setupMC(params, varargin)
 
@@ -159,8 +160,7 @@ if NumOpts > 1
         end
 
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n})
         end        
 
     end

@@ -68,9 +68,9 @@
 %       PsiValues, SDnoise,'SearchOptions',options);
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.4.0 (NP): (see History.m)
+% Modified: Palamedes version 1.4.0, 1.6.3 (NP): (see History.m)
 
-function [PsiValues SDnoise LL exitflag output] = PAL_MLDS_Fit(Stim, NumGreater, OutOfNum, PsiValues, SDnoise, varargin)
+function [PsiValues, SDnoise, LL, exitflag, output] = PAL_MLDS_Fit(Stim, NumGreater, OutOfNum, PsiValues, SDnoise, varargin)
 
 options = [];
 
@@ -83,15 +83,14 @@ if ~isempty(varargin)
             valid = 1;
         end
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end        
     end            
 end
 
 NumLevels = length(PsiValues);
 
-[FreeParams negLL exitflag output] = PAL_minimize(@PAL_MLDS_negLL,[PsiValues(2:NumLevels-1) SDnoise], options, Stim, NumGreater, OutOfNum);
+[FreeParams, negLL, exitflag, output] = PAL_minimize(@PAL_MLDS_negLL,[PsiValues(2:NumLevels-1) SDnoise], options, Stim, NumGreater, OutOfNum);
 
 LL = -negLL;
 

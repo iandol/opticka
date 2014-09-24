@@ -9,9 +9,9 @@
 %Internal function
 %
 %Introduced: Palamedes version 1.0.0 (NP)
-%Modified: Palamedes version 1.1.0 (see History.m)
+%Modified: Palamedes version 1.1.0, 1.6.3 (see History.m)
 
-function [thetas thetasID FM] = PAL_PFML_PtoT(params, FM)
+function [thetas, thetasID, FM] = PAL_PFML_PtoT(params, FM)
 
 thetas = [];
 thetasID = [];
@@ -123,7 +123,3 @@ switch PAL_whatIs(FM.argsL)
         thetas = [thetas FM.argsL.paramsValuesL(FM.argsL.paramsFreeL==1)];
         thetasID = [thetasID 4*ones(1,sum(FM.argsL.paramsFreeL==1))];
 end                        
-
-thetas = round(thetas*10000)/10000; %This serves to avoid values that differ from zero by rounding error magnitudes only.
-                                            %such values affect convergence
-                                            %negatively

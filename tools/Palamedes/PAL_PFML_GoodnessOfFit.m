@@ -31,6 +31,9 @@
 %       Options include:    
 %           @PAL_Logistic
 %           @PAL_Weibull
+%           @PAL_Gumbel (i.e., log-Weibull)
+%           @PAL_Quick
+%           @PAL_logQuick
 %           @PAL_CumulativeNormal
 %           @PAL_Gumbel
 %           @PAL_HyperbolicSecant
@@ -143,10 +146,10 @@
 %       'lapseLimits',[0 .03]);
 %
 % Introduced: Palemedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.0.2, 1.1.0, 1.2.0, 1.3.9, 1.3.1, 1.4.0
-%   (see History.m)
+% Modified: Palamedes version 1.0.2, 1.1.0, 1.2.0, 1.3.9, 1.3.1, 1.4.0,
+%   1.6.3 (see History.m)
 
-function [Dev pDev DevSim converged] = PAL_PFML_GoodnessOfFit(StimLevels, NumPos, OutOfNum, paramsValues, paramsFree, B, PF, varargin);
+function [Dev, pDev, DevSim, converged] = PAL_PFML_GoodnessOfFit(StimLevels, NumPos, OutOfNum, paramsValues, paramsFree, B, PF, varargin)
 
 searchGrid = paramsValues;
 
@@ -181,8 +184,7 @@ if ~isempty(varargin)
             if paramsFree(4) == 1
                 lapseLimits = varargin{n+1};
             else
-                message = ['Lapse rate is not a free parameter: ''lapseLimits'' argument ignored'];
-                warning(message);
+                warning('PALAMEDES:invalidOption','Lapse rate is not a free parameter: ''LapseLimits'' argument ignored');
             end
             valid = 1;
         end
@@ -190,8 +192,7 @@ if ~isempty(varargin)
             if paramsFree(3) == 1
                 guessLimits = varargin{n+1};
             else
-                message = ['Guess rate is not a free parameter: ''guessLimits'' argument ignored'];
-                warning(message);
+                warning('PALAMEDES:invalidOption','Guess rate is not a free parameter: ''GuessLimits'' argument ignored');
             end
             valid = 1;
         end
@@ -201,8 +202,7 @@ if ~isempty(varargin)
         end        
         if strncmpi(varargin{n}, 'lapseFit',6)
             if paramsFree(4) == 0
-                message = ['Lapse rate is not a free parameter: ''lapseFit'' argument ignored'];
-                warning(message);
+                warning('PALAMEDES:invalidOption','Lapse rate is not a free parameter: ''LapseFit'' argument ignored');
             else
                 lapseFit = varargin{n+1};
             end
@@ -213,22 +213,19 @@ if ~isempty(varargin)
             if gammaEQlambda                
                 if paramsValues(3) ~= paramsValues(4)
                     paramsValues(3) = paramsValues(4);
-                    message = ['Generating gamma value changed to ' num2str(paramsValues(3),'%5.3f') ' to match lapse value'];                    
-                    warning(message);
+                    warning('PALAMEDES:invalidOption','Generating gamma value changed to %s in order to match lapse value.',num2str(paramsValues(3)));
                 end                
             valid = 1;
             end
         end        
         if valid == 0
-            message = ['Warning: ' varargin{n} ' is not a valid option. Ignored.'];
-            disp(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end
     end            
 end
 
 if ~isempty(guessLimits) && gammaEQlambda
-    message = ['Guess rate is constrained to equal lapse rate: ''guessLimits'' argument ignored'];
-    warning('PALAMEDES:PFML_Fit_guessLimits',message)
+    warning('PALAMEDES:invalidOption','Guess rate is constrained to equal lapse rate: ''guessLimits'' argument ignored');
     guessLimits = [];
 end
 
@@ -241,16 +238,10 @@ if ~isstruct(searchGrid)
     message = [message 'which to search for initial search values using a '];
     message = [message 'brute force search. Type help '];
     message = [message 'PAL_PFML_GoodnessOfFit for more information.'];
-    warning('PALAMEDES:paramsInitGoF',message)
-    warning('off','PALAMEDES:paramsInitGoF');
+    warning('PALAMEDES:useSearchGrid',message);
 end
 
-warningstates = warning('query','all');
-warning off MATLAB:log:logOfZero
-warning off MATLAB:DivideByZero
-
-
-[StimLevels NumPos OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);
+[StimLevels, NumPos, OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);
 
 negLLCon = PAL_PFML_negLL([], paramsValues, [0 0 0 0], StimLevels, NumPos, OutOfNum, PF,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
 negLLAug = PAL_PFML_negLLNonParametric(NumPos, OutOfNum);
@@ -263,7 +254,7 @@ if isstruct(searchGrid)
         searchGrid.gamma = 0;
     end
     
-    [paramsGrid.alpha paramsGrid.beta paramsGrid.gamma paramsGrid.lambda] = ndgrid(searchGrid.alpha,searchGrid.beta,searchGrid.gamma,searchGrid.lambda);
+    [paramsGrid.alpha, paramsGrid.beta, paramsGrid.gamma, paramsGrid.lambda] = ndgrid(searchGrid.alpha,searchGrid.beta,searchGrid.gamma,searchGrid.lambda);
 
     singletonDim = uint16(size(paramsGrid.alpha) == 1);    
     
@@ -294,7 +285,7 @@ for b = 1:B
     if isstruct(searchGrid)
         LLspace = zeros(size(paramsGrid.alpha,1),size(paramsGrid.alpha,2),size(paramsGrid.alpha,3),size(paramsGrid.alpha,4));
 
-        if iscolumn(LLspace)
+        if size(LLspace,2) == 1 && ndims(LLspace) == 2
             LLspace = LLspace';
         end
 
@@ -315,15 +306,15 @@ for b = 1:B
         end
         
         if isvector(LLspace)
-            [maxim Itemp] = max(LLspace)
+            [maxim, Itemp] = max(LLspace);
         else
             if strncmpi(lapseFit,'iap',3)
-                [trash lapseIndex] = min(abs(searchGrid.lambda-(1-NumPosSim(len)/OutOfNum(len))));
+                [trash, lapseIndex] = min(abs(searchGrid.lambda-(1-NumPosSim(len)/OutOfNum(len))));
                 LLspace = shiftdim(LLspace,length(size(LLspace))-1);
-                [maxim Itemp] = PAL_findMax(LLspace(lapseIndex,:,:,:));
+                [maxim, Itemp] = PAL_findMax(LLspace(lapseIndex,:,:,:));
                 Itemp = circshift(Itemp',length(size(LLspace))-1)';
             else
-                [maxim Itemp] = PAL_findMax(LLspace);
+                [maxim, Itemp] = PAL_findMax(LLspace);
             end
         end
         
@@ -338,13 +329,13 @@ for b = 1:B
 
     end    
     
-    [paramsValuesSim trash converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, paramsGuess, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+    [paramsValuesSim, trash, converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, paramsGuess, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
 
     if ~isstruct(searchGrid)     
         tries = 1;
         while converged(b) == 0 && tries < maxTries
             NewSearchInitials = paramsValues+(rand(1,4)-.5).*RangeTries.*paramsFree;
-            [paramsValuesSim trash converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, NewSearchInitials, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+            [paramsValuesSim, trash, converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, NewSearchInitials, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
             tries = tries + 1;
         end    
     end
@@ -353,18 +344,14 @@ for b = 1:B
     negLLAugSim = PAL_PFML_negLLNonParametric(NumPosSim, OutOfNum);
     DevSim(b) = 2*(negLLConSim-negLLAugSim);
     if ~converged(b)
-        message = ['Fit to simulation ' int2str(b) ' of ' int2str(B) ' did not converge.'];
-        warning(message);
+        warning('PALAMEDES:convergeFail','Fit to simulation %s of %s did not converge.',int2str(b), int2str(B));
     end
 
 end
 
 exitflag = sum(converged) == B;
 if exitflag ~= 1
-    message = ['Only ' int2str(sum(converged)) ' of ' int2str(B) ' simulations converged'];
-    warning(message);
+    warning('PALAMEDES:convergeFail','Only %s of %s simulations converged.',int2str(sum(converged)), int2str(B));
 end
 
 pDev = length(DevSim(DevSim>Dev))/B;
-
-warning(warningstates);

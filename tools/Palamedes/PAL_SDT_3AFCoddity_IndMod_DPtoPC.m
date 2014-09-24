@@ -36,12 +36,15 @@
 % corresponding N=6 proportion correct
 %
 % Introduced: Palamedes version 1.6.0 (FK & NP)
+% Modified: Palamedes version 1.6.3(see History.m)
 
 function pC = PAL_SDT_3AFCoddity_IndMod_DPtoPC(dP)
 
-[rows cols] = size(dP);
+[rows, cols] = size(dP);
 
-if exist('quadgk.m') == 2
+pC = zeros(rows, cols);
+
+if exist('quadgk.m','file') == 2
     
     for r = 1:rows
         for c = 1:cols

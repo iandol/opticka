@@ -35,6 +35,7 @@
 %   Tip: use PAL_MLDS_GroupTrialsbyX to combine like trials.
 %
 %Introduced: Palamedes version 1.0.0 (NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
 function NumGreater = PAL_MLDS_SimulateObserver(Stim, OutOfNum, PsiValues, SDnoise)
 
@@ -47,6 +48,8 @@ end
 if size(Stim,2) == 2
     D = (PsiValues(Stim(:,1))-PsiValues(Stim(:,2)));
 end
+
+NumGreater = zeros(1,length(D));
 
 for Level = 1:length(D)
     Z_D = D(Level)./SDnoise;

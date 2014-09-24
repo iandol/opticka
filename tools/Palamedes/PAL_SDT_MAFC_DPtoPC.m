@@ -29,16 +29,18 @@
 % the output is the corresponding N=6 proportion correct
 %
 % Introduced: Palamedes version 1.0.0 (FK)
-% Modified: Palamedes version 1.4.0 (see History.m)
+% Modified: Palamedes version 1.4.0, 1.6.3 (see History.m)
 
 function pC=PAL_SDT_MAFC_DPtoPC(dP,M)
 
-[rows cols]=size(dP);
+[rows, cols]=size(dP);
 
-if exist('quadgk.m')==2
+pC = zeros(rows,cols);
+
+if exist('quadgk.m','file')==2
     
     limit = Inf;
-    if exist('OCTAVE_VERSION')
+    if exist('OCTAVE_VERSION','builtin')
         limit = 100;    %Octave does not like Inf as limit
     end
     

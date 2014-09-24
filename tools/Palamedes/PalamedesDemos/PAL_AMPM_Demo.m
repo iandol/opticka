@@ -1,9 +1,9 @@
 %
 %PAL_AMPM_Demo  Demonstrates use of Palamedes routines to implement the
-%'psi' adaptive procedure (Kontsevich & Tyler, Vision Res. 39(16):2729-37, 
-%1999) and some variations (www.palamedestoolbox.org/psimarginal.html).
+%'psi' adaptive procedure (Kontsevich & Tyler, 1999) and some variations 
+%(Prins, 2013 or www.palamedestoolbox.org/psimarginal.html).
 %
-%Note that many more possibilites exist! (see
+%Note that many more possibilites exist! (see Prins (2013) or 
 %www.palamedestoolbox.org/psimarginal.html)
 %
 %User is prompted as to whether original psi method, the psi+, or the
@@ -73,8 +73,8 @@
 %http://f1000.com/posters/browse/summary/1090339
 %
 %Prins, N. (2013). The psi-marginal adaptive method: how to give nuisance 
-%parameters the attention they deserve (no more, no less).
-%www.palamedestoolbox.org/psimarginal.html.
+%parameters the attention they deserve (no more, no less). Journal of
+%Vision, 13(7):3, 1-17. doi: 10.1167/13.7.3 
 %
 %NP (March 2013)
 
@@ -82,18 +82,25 @@ clear all
 
 %opengl software %works without this, but graphs miss axes
 
-warningstates = warning('query','all'); %avoids inconsequential Log of Zero
-warning off all                         %warnings                                     
-                                        
-s = RandStream.create('mt19937ar','seed','shuffle'); %do something different each time
-RandStream.setGlobalStream(s);
+if exist('RandStream.m','file');
+    s = RandStream.create('mt19937ar','seed','shuffle'); %do something different each time
+    RandStream.setGlobalStream(s);
+else
+    fprintf('\nYour version of Matlab or Octave does not support RandStream:');
+    fprintf('\nRandom number generator is not randomly seeded.\n\n');
+end
+if exist('OCTAVE_VERSION');
+    fprintf('\nUnder Octave, Figure will not render exactly (or hardly at all!) as intended. \n');
+    fprintf('Visit www.palamedestoolbox.org/demosfiguregallery.html to see figure\n');
+    fprintf('as intended.\n\n');
+end
 
 marginalize = [];
 AvoidConsecutive = 0;
 
 fprintf(1,'\n')
 disp('For more information on what goes on in this demo, type help PAL_AMPM_Demo')
-disp('or visit NP''s poster at VSS in May (2013)!')
+disp('or go to: http://www.journalofvision.org/content/13/7/3')
 fprintf(1,'\n')
 method = input('Original Psi (0), Psi+ (1), or Psi-marginal (2)?: ');
 if method == 2
@@ -122,10 +129,9 @@ end
 fprintf(1,'\n')
 NumTrials = input('Number of trials: ');
 fprintf(1,'\n')
-disp('Use space bar and ''g'' to step through or automate, respectively.') 
 
 plotGrain = 51; %Allow higher resolution for visualization compared to what Psi-marginal works with
-computeGrain = plotGrain; 
+computeGrain = 51; 
 
 suspend = 0;
 trackSuspend = [];
@@ -159,8 +165,13 @@ posterior = ones(size(a));
 %totals keeps track of number of trials presented at each value of stimRange
 totals = zeros(size(stimRange));
 
-kpf = @(src,event) disp('');   %dummy function used in next line
-fh = figure('units','pixels','position',[100 50 1100 700],'keypressfcn',kpf);
+if ~exist('OCTAVE_VERSION');
+    disp('Use space bar and ''g'' to step through or automate, respectively.') 
+    kpf = @(src,event) disp('');   %dummy function used in next line
+    fh = figure('units','pixels','position',[100 50 1100 700],'keypressfcn',kpf);
+else
+    fh = figure('units','pixels','position',[100 50 1100 700]);
+end
 
 %Something to tag figure labels unto
 axes
@@ -235,9 +246,11 @@ while PM.stop ~= 1
     %%%%%%%% (a): full 3-D posterior
     slice(a,b,l,PAL_Scale0to1(posterior)*64,[],[],lambdas);
     shading flat;
-    alpha('color');
-    am = linspace(.25,1,64);
-    alphamap(am);
+    if ~exist('OCTAVE_VERSION');
+        alpha('color');
+        am = linspace(.25,1,64);
+        alphamap(am);
+    end
     axis([min(alphas) max(alphas) min(betas) max(betas) min(lambdas) max(lambdas)])
     set(gca,'cameraposition',[-2.52 -1.57 0.1])
     set(gca,'xtick',[-.8:.4:.8]);
@@ -477,14 +490,13 @@ while PM.stop ~= 1
     drawnow
     
     %Allow user input to step through (space bar) or automate (g)
-    cc = get(gcf,'currentcharacter');
-    if cc == ' ';
-        pause
-    end   
-    if length(PM.response) == 1
-        pause
+    if ~exist('OCTAVE_VERSION');
+        cc = get(gcf,'currentcharacter');
+        if cc == ' ';
+            pause
+        end   
+        if length(PM.response) == 1
+            pause
+        end
     end
-
 end
-
-warning(warningstates);

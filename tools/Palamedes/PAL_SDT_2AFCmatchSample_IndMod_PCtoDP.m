@@ -23,11 +23,13 @@
 % the corresponding d's
 %
 % Introduced: Palamedes version 1.0.0 (FK)
-% Modified: Palamedes version 1.4.0 (see History.m)
+% Modified: Palamedes version 1.4.0, 1.6.3 (see History.m)
 
 function [dP]=PAL_SDT_2AFCmatchSample_IndMod_PCtoDP(pC)
 
 func=@PAL_SDT_2AFCmatchSample_IndMod_DPtoPC;
+
+dP = zeros(1,length(pC));
 
 for r=1:length(pC)    
     dP(r)=PAL_minimize(@PAL_sqDistanceYfuncX,1,[],pC(r),func,[]);

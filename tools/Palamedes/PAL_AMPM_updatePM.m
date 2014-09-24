@@ -37,7 +37,7 @@
 %   For more information see: www.palamedestoolbox.org/psimarginal.html
 %
 %Introduced: Palamedes version 1.0.0 (NP)
-%Modified: Palamedes version 1.5.0, 1.6.0 (see History.m)
+%Modified: Palamedes version 1.5.0, 1.6.0, 1.6.1, 1.6.3 (see History.m)
 
 function PM = PAL_AMPM_updatePM(PM,response,varargin)
 
@@ -50,8 +50,7 @@ if ~isempty(varargin)
         valid = 1;
     end
     if valid == 0
-        message = [varargin{1} ' is not a valid option. Ignored.'];
-        warning(message);
+        warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{1})
     end        
 end
 
@@ -65,9 +64,9 @@ else
 end
 PM.pdf = PM.pdf./sum(sum(sum(sum(PM.pdf))));
 
-[PM expectedEntropy] = PAL_AMPM_expectedEntropy(PM,'fixLapse',fixLapse);
+[PM, expectedEntropy] = PAL_AMPM_expectedEntropy(PM,'fixLapse',fixLapse);
 
-[MinEntropy PM.I] = min(squeeze(expectedEntropy));
+[minEntropy, PM.I] = min(squeeze(expectedEntropy));
 
 PM.xCurrent = PM.stimRange(PM.I);
 PM.x(trial+1) = PM.xCurrent;

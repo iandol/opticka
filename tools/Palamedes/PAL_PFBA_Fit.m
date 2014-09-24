@@ -35,9 +35,12 @@
 %   'PF': The psychometric function to be fitted. This needs to be passed 
 %       as an inline function. Options include:
 %           @PAL_Logistic
-%           @PAL_CumulativeNormal
 %           @PAL_Weibull
-%           @PAL_Gumbel       
+%           @PAL_Gumbel (i.e., log-Weibull)
+%           @PAL_Quick
+%           @PAL_logQuick
+%           @PAL_CumulativeNormal
+%           @PAL_Gumbel
 %           @PAL_HyperbolicSecant
 %
 %Output:
@@ -77,8 +80,9 @@
 %       'prior', prior);
 %
 %Introduced: Palamedes version 1.0.0 (NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
-function [paramsValues posterior] = PAL_PFBA_Fit(StimLevels, NumPos, OutOfNum, priorAlphaValues, priorBetaValues, gamma, lambda, PF, varargin)
+function [paramsValues, posterior] = PAL_PFBA_Fit(StimLevels, NumPos, OutOfNum, priorAlphaValues, priorBetaValues, gamma, lambda, PF, varargin)
 
 prior = ones(length(priorBetaValues),length(priorAlphaValues))/(length(priorBetaValues).*length(priorAlphaValues));
 
@@ -91,17 +95,16 @@ if ~isempty(varargin)
             valid = 1;
         end
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end        
     end            
 end
 
 prior = log(prior);
 
-[StimLevels NumPos OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);
+[StimLevels, NumPos, OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);
 
-[params.alpha params.beta] = meshgrid(priorAlphaValues,priorBetaValues);
+[params.alpha, params.beta] = meshgrid(priorAlphaValues,priorBetaValues);
 params.beta = 10.^params.beta;
 params.gamma = gamma;
 params.lambda = lambda;

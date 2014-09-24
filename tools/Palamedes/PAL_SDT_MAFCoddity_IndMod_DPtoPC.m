@@ -39,10 +39,11 @@
 % the output is the corresponding N=6 proportion correct. 
 %
 % Introduced: Palamedes version 1.6.0 (FK & NP)
+% Modified: Palamedes version 1.6.3 (see History.m)
 
 function pC = PAL_SDT_MAFCoddity_IndMod_DPtoPC(dP,M,varargin)
 
-[rows cols] = size(dP);
+[rows, cols] = size(dP);
 numReps = 100000;
 
 if ~isempty(varargin)
@@ -52,13 +53,14 @@ if ~isempty(varargin)
         valid = 1;
     end
     if valid == 0
-        message = ['Warning: ' varargin{1} ' is not a valid option. Ignored.'];        
-        warning(message);
+        warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{1});
     end        
 end            
 
 Diag = logical(repmat(eye(M),[1,1,numReps]));
 Diag = permute(Diag,[3,1,2]);
+
+pC = zeros(rows,cols);
 
 for r = 1:rows
     for c = 1:cols
@@ -82,7 +84,7 @@ for r = 1:rows
 
             prodL = prodL + prod(L,2);
 
-            [maxVal maxIndex] = max(prodL,[],3);
+            [maxVal, maxIndex] = max(prodL,[],3);
             pC(r,c) = length(maxIndex(maxIndex == 1))./numReps;
             
         end 

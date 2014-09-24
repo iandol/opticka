@@ -6,7 +6,7 @@
 %Internal function
 %
 %Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.3.0, 1.4.0 (see History.m)
+% Modified: Palamedes version 1.3.0, 1.4.0, 1.6.3 (see History.m)
 
 function Dev = PAL_PFML_DevianceGoF(StimLevels,NumPos,OutOfNum,params,PF,varargin)
 
@@ -26,19 +26,23 @@ if ~isempty(varargin)
             valid = 1;
         end        
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end
     end            
 end
 
-for cond = 1:size(StimLevels,1)
+numConds = size(StimLevels,1);
+
+negLLAugCond = zeros(1,numConds);
+negLLConCond = zeros(1,numConds);
+
+for cond = 1:numConds
     
     StimLevelsCond = StimLevels(cond,:);
     NumPosCond = NumPos(cond,:);
     OutOfNumCond = OutOfNum(cond,:);
     
-    [StimLevelsCond NumPosCond OutOfNumCond] = PAL_PFML_GroupTrialsbyX(StimLevelsCond, NumPosCond, OutOfNumCond);
+    [StimLevelsCond, NumPosCond, OutOfNumCond] = PAL_PFML_GroupTrialsbyX(StimLevelsCond, NumPosCond, OutOfNumCond);
     negLLAugCond(cond) = PAL_PFML_negLLNonParametric(NumPosCond, OutOfNumCond);
     negLLConCond(cond) = PAL_PFML_negLL([], params(cond,:), [0 0 0 0], StimLevelsCond, NumPosCond, OutOfNumCond, PF,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
     

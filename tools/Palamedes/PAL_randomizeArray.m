@@ -73,9 +73,10 @@
 %   randomizes the order of the columns) after setting the random number 
 %   generator to a state based on the clock and returns this state.
 %
-%Introduced: Palamedes version 1.0.0 (NP)
+% Introduced: Palamedes version 1.0.0 (NP)
+% Modified: Palamedes version 1.6.3 (see History.m)
 
-function [x state] = PAL_randomizeArray(x, varargin)
+function [x, state] = PAL_randomizeArray(x, varargin)
 
 dim = 1;
 
@@ -93,15 +94,14 @@ if ~isempty(varargin)
                     if strncmpi(varargin{n+1},'clo',3)
                         rand('state',sum(100*clock()));
                     else
-                        message = [varargin{n+1} 'is not a valid option. Ignored']
+                        message = [varargin{n+1} 'is not a valid option. Ignored'];
                         warning(message);
                         done = 1;
                     end
                 end
                 n = n + 1;
             else
-                message = [varargin{1} 'is not a valid option. Ignored']
-                warning(message);
+                warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{1});
                 done = 1;
             end
         end

@@ -8,7 +8,7 @@
 %Internal Function
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.3.0, 1.4.0, 1.6.0 (see History.m)
+% Modified: Palamedes version 1.3.0, 1.4.0, 1.6.0, 1.6.3 (see History.m)
 
 function negLL = PAL_PFML_negLLMultiple(thetas, thetasID, params, StimLevels, NumPos, OutOfNum, FM, PF, varargin)
 
@@ -38,8 +38,7 @@ if ~isempty(varargin)
             valid = 1;
         end                
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end        
     end            
 end

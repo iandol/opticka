@@ -22,7 +22,7 @@
 %
 %
 %Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.4.0 (see History.m)
+% Modified: Palamedes version 1.4.0, 1.6.3 (see History.m)
 
 
 function RF = PAL_AMRF_updateRF(RF, amplitude, response)
@@ -41,7 +41,7 @@ if trial == 1
 end
 
 RF.pdf = PAL_AMRF_pdfUpdate(RF.pdf, RF.priorAlphaRange, RF.beta, RF.gamma, RF.lambda, RF.x(trial), response, RF.PF);
-[RF.mode RF.mean RF.sd] = PAL_AMRF_pdfDescriptives(RF.pdf, RF.priorAlphaRange);
+[RF.mode, RF.mean, RF.sd] = PAL_AMRF_pdfDescriptives(RF.pdf, RF.priorAlphaRange);
 if strcmpi(RF.meanmode,'mean')
     if (RF.mean > RF.xCurrent && RF.direction == 1) || (RF.mean < RF.xCurrent && RF.direction == -1)
         RF.reversal(trial) = 0;
@@ -74,5 +74,5 @@ RF.xStaircase(trial+1) = RF.xCurrent;
 
 if (strncmpi(RF.stopCriterion,'reversals',4) && sum(RF.reversal~=0) == RF.stopRule)||(strncmpi(RF.stopCriterion,'trials',4) && trial == RF.stopRule)
     RF.stop = 1;
-    [RF.modeUniformPrior RF.meanUniformPrior RF.sdUniformPrior] = PAL_AMRF_pdfDescriptives(RF.pdf./RF.prior, RF.priorAlphaRange);
+    [RF.modeUniformPrior, RF.meanUniformPrior, RF.sdUniformPrior] = PAL_AMRF_pdfDescriptives(RF.pdf./RF.prior, RF.priorAlphaRange);
 end

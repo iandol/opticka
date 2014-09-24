@@ -29,12 +29,14 @@
 % the output is the corresponding N=6 proportion correct. 
 %
 % Introduced: Palamedes version 1.0.0 (FK & NP)
-% Modified: Palamedes version 1.0.1 (see History.m)
+% Modified: Palamedes version 1.0.1, 1.6.3 (see History.m)
 
 function pC = PAL_SDT_MAFCmatchSample_DiffMod_DPtoPC(dP,M)
 
-[rows cols]=size(dP);
+[rows, cols]=size(dP);
 numReps=100000;
+
+pC = zeros(rows,cols);
 
 for r = 1:rows
     for c = 1:cols
@@ -44,7 +46,7 @@ for r = 1:rows
         RM(1,:) = RM(1,:)+dP(r,c);
 
         sqDiff = (repmat(RT,M,1)-RM).^2;
-        [minVal minIndex]=min(sqDiff,[],1);
+        [minVal, minIndex]=min(sqDiff,[],1);
        
         pC(r,c) = length(minIndex(minIndex == 1))./numReps;
 

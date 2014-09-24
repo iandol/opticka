@@ -31,7 +31,7 @@
 %
 %Introduced: Palamedes version 1.0.0 (NP)
 
-function [StimG NumGreaterG OutOfNumG] = PAL_MLDS_GroupTrialsbyX(Stim, NumGreater, OutOfNum)
+function [StimG, NumGreaterG, OutOfNumG] = PAL_MLDS_GroupTrialsbyX(Stim, NumGreater, OutOfNum)
 
 if size(Stim,1) == 1
     Stim = Stim';
@@ -53,7 +53,7 @@ while size(Stim,1) ~= 0
         
 end
 
-[StimG I] = sortrows(xG);
+[StimG, I] = sortrows(xG);
 NumGreaterG = NumGreaterG(I);
 OutOfNumG = OutOfNumG(I);
 if size(StimG,2) == 1

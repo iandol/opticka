@@ -35,11 +35,11 @@
 % vectors of dP and C
 %
 % Introduced: Palamedes version 1.0.0 (FK)
-% Modified: Palamedes version 1.4.0 (see History.m)
+% Modified: Palamedes version 1.4.0, 1.6.3 (see History.m)
 
-function [dP C]=PAL_SDT_2AFCmatchSample_IndMod_PHFtoDP(pHF)
+function [dP, C]=PAL_SDT_2AFCmatchSample_IndMod_PHFtoDP(pHF)
 
-[rows cols]=size(pHF);
+[rows, cols]=size(pHF);
 
 zH=PAL_PtoZ(pHF(:,1));
 zF=PAL_PtoZ(pHF(:,2));
@@ -51,7 +51,8 @@ PCmax=PAL_ZtoP(zDiff);
 
 func=@PAL_SDT_2AFCmatchSample_IndMod_DPtoPC;
 
+dP = zeros(rows,1);
+
 for r=1:rows
     dP(r)=PAL_minimize(@PAL_sqDistanceYfuncX,1,[],PCmax(r),func,[]);
 end
-dP=dP';

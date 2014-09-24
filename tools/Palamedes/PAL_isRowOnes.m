@@ -6,7 +6,7 @@
 %
 %Example 2: PAL_isRowOnes([1 0 1 1]) returns 0
 %
-%Example 3: PAL_isIdentity([1 1 1 1]') returns 0
+%Example 3: PAL_isRowOnes([1 1 1 1]') returns 0
 %
 %Introduced: Palamedes version 1.0.0 (NP)
 

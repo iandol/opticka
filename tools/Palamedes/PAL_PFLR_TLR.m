@@ -8,9 +8,9 @@
 %Internal function
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.1.0, 1 .3.0, 1.4.0 (see History.m)
+% Modified: Palamedes version 1.1.0, 1 .3.0, 1.4.0, 1.6.3 (see History.m)
 
-function [TLR exitflag paramsL paramsF funcParamsL funcParamsF] = PAL_PFLR_TLR(StimLevels, NumPos, OutOfNum, paramsValues, PF, MC, varargin)
+function [TLR, exitflag, paramsL, paramsF, funcParamsL, funcParamsF] = PAL_PFLR_TLR(StimLevels, NumPos, OutOfNum, paramsValues, PF, MC, varargin)
 
 if size(paramsValues,1) == 1
     paramsValues = repmat(paramsValues,[size(StimLevels,1) 1]);
@@ -61,13 +61,12 @@ if ~isempty(varargin)
             valid = 1;
         end                                                
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n})
         end        
     end            
 end
 
-[paramsL LLL exitflagL output funcParamsL] = PAL_PFML_FitMultiple(StimLevels,NumPos, OutOfNum, paramsValues, PF, 'Thresholds',MC.argsAlesser,'Slopes',MC.argsBlesser,'GuessRates',MC.argsGlesser,'LapseRates',MC.argsLlesser,'searchoptions',options,'lapseLimits', lapseLimits,'guessLimits', guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+[paramsL, LLL, exitflagL, output, funcParamsL] = PAL_PFML_FitMultiple(StimLevels,NumPos, OutOfNum, paramsValues, PF, 'Thresholds',MC.argsAlesser,'Slopes',MC.argsBlesser,'GuessRates',MC.argsGlesser,'LapseRates',MC.argsLlesser,'searchoptions',options,'lapseLimits', lapseLimits,'guessLimits', guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
 Try = 1;
 
 while exitflagL == 0 && Try < maxTries    
@@ -97,7 +96,7 @@ while exitflagL == 0 && Try < maxTries
             ArgsLTry.paramsValuesL = ArgsLTry.paramsValuesL + ArgsLTry.paramsFreeL.*(rand(1,length(rangeTries.paramsValuesL))-.5).*rangeTries.paramsValuesL;
         end
     end
-    [paramsL LLL exitflagL output funcParamsL] = PAL_PFML_FitMultiple(StimLevels,NumPos, OutOfNum, paramsTry, PF, 'Thresholds',ArgsATry,'Slopes',ArgsBTry,'GuessRates',ArgsGTry,'LapseRates',ArgsLTry,'searchoptions',options,'lapseLimits', lapseLimits,'guessLimits', guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+    [paramsL, LLL, exitflagL, output, funcParamsL] = PAL_PFML_FitMultiple(StimLevels,NumPos, OutOfNum, paramsTry, PF, 'Thresholds',ArgsATry,'Slopes',ArgsBTry,'GuessRates',ArgsGTry,'LapseRates',ArgsLTry,'searchoptions',options,'lapseLimits', lapseLimits,'guessLimits', guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
     Try = Try + 1;    
 end
 
@@ -122,7 +121,7 @@ if isstruct(MC.argsLlesser) && isstruct(MC.argsLfuller)
     MC.argsLfuller = temp;
 end
 
-[paramsF LLF exitflagF output funcParamsF] = PAL_PFML_FitMultiple(StimLevels,NumPos, OutOfNum, paramsL, PF,'Thresholds',MC.argsAfuller,'Slopes',MC.argsBfuller,'GuessRates',MC.argsGfuller,'LapseRates',MC.argsLfuller,'searchoptions',options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+[paramsF, LLF, exitflagF, output, funcParamsF] = PAL_PFML_FitMultiple(StimLevels,NumPos, OutOfNum, paramsL, PF,'Thresholds',MC.argsAfuller,'Slopes',MC.argsBfuller,'GuessRates',MC.argsGfuller,'LapseRates',MC.argsLfuller,'searchoptions',options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
 
 Try = 1;
 
@@ -153,7 +152,7 @@ while exitflagF == 0 && Try < maxTries
             ArgsLTry.paramsValuesL = ArgsLTry.paramsValuesL + (rand(1,length(rangeTries.paramsValuesL))-.5).*rangeTries.paramsValuesL;
         end
     end
-    [paramsF LLF exitflagF output funcParamsF] = PAL_PFML_FitMultiple(StimLevels,NumPos, OutOfNum, paramsTry, PF,'Thresholds',ArgsATry,'Slopes',ArgsBTry,'GuessRates',ArgsGTry,'LapseRates',ArgsLTry,'searchoptions',options,'lapseLimits', lapseLimits,'guessLimits', guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+    [paramsF, LLF, exitflagF, output, funcParamsF] = PAL_PFML_FitMultiple(StimLevels,NumPos, OutOfNum, paramsTry, PF,'Thresholds',ArgsATry,'Slopes',ArgsBTry,'GuessRates',ArgsGTry,'LapseRates',ArgsLTry,'searchoptions',options,'lapseLimits', lapseLimits,'guessLimits', guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
     Try = Try + 1;
 end
 

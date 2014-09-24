@@ -85,8 +85,7 @@
 %       'RF.stop' will be set to 1.
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.2.0, 1.4.0 (see History.m)
-
+% Modified: Palamedes version 1.2.0, 1.4.0, 1.6.3 (see History.m)
 
 function RF = PAL_AMRF_setupRF(varargin)
 
@@ -97,7 +96,7 @@ if mod(NumOpts,2) == 0
     RF.prior = ones(size(RF.priorAlphaRange));
     RF.prior = RF.prior./sum(RF.prior);
     RF.pdf = RF.prior;
-    [RF.mode RF.mean RF.sd] = PAL_AMRF_pdfDescriptives(RF.pdf, RF.priorAlphaRange);
+    [RF.mode, RF.mean, RF.sd] = PAL_AMRF_pdfDescriptives(RF.pdf, RF.priorAlphaRange);
     RF.modeUniformPrior = [];
     RF.meanUniformPrior = [];
     RF.sdUniformPrior = [];
@@ -194,8 +193,7 @@ if NumOpts > 1
                 supplied(11) = true;
             end
             if valid == 0
-                message = [varargin{n} ' is not a valid option. Ignored.'];
-                warning(message);
+                warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n})
             end    
         end
     end            
@@ -206,7 +204,7 @@ if NumOpts > 1
     if isempty(RF.x)   %First session. Otherwise keep going with existing RF.pdf
         RF.pdf = RF.prior;
     end
-    [RF.mode RF.mean RF.sd] = PAL_AMRF_pdfDescriptives(RF.pdf, RF.priorAlphaRange);
+    [RF.mode, RF.mean, RF.sd] = PAL_AMRF_pdfDescriptives(RF.pdf, RF.priorAlphaRange);
 
     if strcmpi(RF.meanmode, 'mean')
         RF.xCurrent = RF.mean;

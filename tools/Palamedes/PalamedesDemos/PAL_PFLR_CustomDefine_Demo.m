@@ -306,8 +306,7 @@ params(1:16,4) = .02;   %fixed value lapse rate
     text(0.5,6,MT,'color',[0 0 0]);
     text(0.5,5.5,'PF slope: \beta(m) = \omega_1 + m\times\omega_2',...
         'color',[0 0 0]);
-    s = warning('query','all');
-    warning off all %avoid warning "unmatched '}' in TeX text string"
+    s = warning('off','MATLAB:gui:latexsup:BadTeXString');
     text(19,5.75,'}','FontSize',35);
     drawnow
     warning(s); %returns warnings to previous state

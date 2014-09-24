@@ -40,7 +40,7 @@ OutOfNum = [100 100 100 100 100 100];
 searchGrid.alpha = 0:.001:.1;
 searchGrid.beta = logspace(1,3,100);
 searchGrid.gamma = .5;  %scalar here (since fixed) but may be vector
-searchGrid.lambda = 0;  %ditto
+searchGrid.lambda = 0.02;  %ditto
 
 %Threshold and Slope are free parameters, guess and lapse rate are fixed
 paramsFree = [1 1 0 0];  %1: free parameter, 0: fixed parameter
@@ -54,15 +54,11 @@ options = PAL_minimize('options');   %type PAL_minimize('options','help') for he
 options.TolFun = 1e-09;     %increase required precision on LL
 options.MaxIter = 100;
 options.Display = 'off';    %suppress fminsearch messages
-lapseLimits = [0 1];        %limit range for lambda
-                            %(will be ignored here since lambda is not a
-                            %free parameter)
 
 %Perform fit
 disp('Fitting function.....');
 [paramsValues LL exitflag output] = PAL_PFML_Fit(StimLevels,NumPos, ...
-    OutOfNum,searchGrid,paramsFree,PF,'searchOptions',options, ...
-    'lapseLimits',lapseLimits);
+    OutOfNum,searchGrid,paramsFree,PF,'searchOptions',options);
 
 disp('done:')
 message = sprintf('Threshold estimate: %6.4f',paramsValues(1));
@@ -79,13 +75,11 @@ disp('Determining standard errors.....');
 if ParOrNonPar == 1
     [SD paramsSim LLSim converged] = PAL_PFML_BootstrapParametric(...
         StimLevels, OutOfNum, paramsValues, paramsFree, B, PF, ...
-        'searchOptions',options,'lapseLimits',lapseLimits,'searchGrid', ...
-        searchGrid);
+        'searchOptions',options,'searchGrid', searchGrid);
 else
     [SD paramsSim LLSim converged] = PAL_PFML_BootstrapNonParametric(...
         StimLevels, NumPos, OutOfNum, [], paramsFree, B, PF,...
-        'searchOptions',options,'searchGrid',searchGrid, ...
-        'lapseLimits',lapseLimits);
+        'searchOptions',options,'searchGrid',searchGrid);
 end
 
 disp('done:');
@@ -102,7 +96,7 @@ disp('Determining Goodness-of-fit.....');
 
 [Dev pDev] = PAL_PFML_GoodnessOfFit(StimLevels, NumPos, OutOfNum, ...
     paramsValues, paramsFree, B, PF,'searchOptions',options, ...
-    'searchGrid', searchGrid, 'lapseLimits',lapseLimits);
+    'searchGrid', searchGrid);
 
 disp('done:');
 

@@ -52,9 +52,9 @@
 %   20    20    20    40
 %
 %Introduced: Palamedes version 1.0.0 (NP)
-%Modified: Palamedes version 1.2.0 (see History.m)
+%Modified: Palamedes version 1.2.0, 1.6.3 (see History.m)
 
-function [StimLevelsG NumPosG OutOfNumG] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum)
+function [StimLevelsG, NumPosG, OutOfNumG] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum)
 
 for row = 1:size(StimLevels,1)
 

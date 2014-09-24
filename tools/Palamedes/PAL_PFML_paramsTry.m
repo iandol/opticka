@@ -33,6 +33,7 @@
 %    2.8315    1.4595         0    0.0600
 %
 %Introduced: Palamedes version 1.1.1 (NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
 function [ paramsTry ] = PAL_PFML_paramsTry(params, rangeTries, varargin)
 
@@ -51,21 +52,24 @@ if ~isempty(varargin)
     NumOpts = length(varargin);
     for n = 1:2:NumOpts
         valid = 0;
-        if strncmpi(varargin{n}, 'thresholds',4)
+        if strncmpi(varargin{n}, 'thresholds',4) && (strncmpi(varargin{n+1}, 'con',3) || strncmpi(varargin{n+1}, 'unc',3) || strncmpi(varargin{n+1}, 'fix',3))
             thresholds = varargin{n+1};
             valid = 1;
         end
-        if strncmpi(varargin{n}, 'slopes',4)
+        if strncmpi(varargin{n}, 'slopes',4) && (strncmpi(varargin{n+1}, 'con',3) || strncmpi(varargin{n+1}, 'unc',3) || strncmpi(varargin{n+1}, 'fix',3))
             slopes = varargin{n+1};
             valid = 1;
         end
-        if strncmpi(varargin{n}, 'guessrates',4)
+        if strncmpi(varargin{n}, 'guessrates',4) && (strncmpi(varargin{n+1}, 'con',3) || strncmpi(varargin{n+1}, 'unc',3) || strncmpi(varargin{n+1}, 'fix',3))
             guessrates = varargin{n+1};
             valid = 1;
         end
-        if strncmpi(varargin{n}, 'lapserates',4)
+        if strncmpi(varargin{n}, 'lapserates',4) && (strncmpi(varargin{n+1}, 'con',3) || strncmpi(varargin{n+1}, 'unc',3) || strncmpi(varargin{n+1}, 'fix',3))
             lapserates = varargin{n+1};
             valid = 1;
+        end
+        if ~valid
+            warning('PALAMEDES:invalidOption','''%s'', ''%s'' is not a valid combination of options. Using default instead.',varargin{n},varargin{n+1});
         end
     end
 end
@@ -106,6 +110,4 @@ switch lower(lapserates(1:3))
         paramsTry(:,4) = zeros(size(paramsTry(:,1)));
 end
 
-    paramsTry = params + paramsTry.*rangeTries;
-    
-
+paramsTry = params + paramsTry.*rangeTries;

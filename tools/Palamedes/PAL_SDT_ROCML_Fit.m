@@ -147,9 +147,9 @@
 % 0 otherwise
 %
 %Introduced: Palamedes version 1.6.0 (FK & NP)
-%
+%Modified: Palamedes version 1.6.3 (see History.m)
 
-function [dP R C negLL exitflag output] = PAL_SDT_ROCML_Fit(cumNumHF,OutOfNum,SDTF,invSDTF,varargin)
+function [dP, R, C, negLL, exitflag, output] = PAL_SDT_ROCML_Fit(cumNumHF,OutOfNum,SDTF,invSDTF,varargin)
 
 options = []; %default
 Rval = 1; %default
@@ -173,8 +173,7 @@ if ~isempty(varargin)
             valid = 1;
         end
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end
     end            
 end
@@ -187,7 +186,7 @@ Rvec=repmat(Rval,1,length(cumNumHF)); % convert scalar R to a vector for input t
 pHF=cumNumHF./OutOfNum;
 pHF(pHF == 0) = 0.0001;
 pHF(pHF == 1) = 0.9999;
-[dP C]=SDTF(pHF,'ratioSDvalue',Rvec);
+[dP, C]=SDTF(pHF,'ratioSDvalue',Rvec);
 dP(dP<=0)=0.0001;
 guessDP=10.^mean(log10(dP'));
 guessC=C';
@@ -200,7 +199,7 @@ paramsFree = [1 Rfree ones(size(guessC))];
 paramsFreeVals = paramsValues(paramsFree == 1);
 paramsFixedVals = paramsValues(paramsFree == 0);
 
-[paramsFreeVals negLL exitflag output] = PAL_minimize(@PAL_SDT_ROCML_negLL, paramsFreeVals, options, paramsFixedVals, paramsFree, cumNumHF, OutOfNum, invSDTF); 
+[paramsFreeVals, negLL, exitflag, output] = PAL_minimize(@PAL_SDT_ROCML_negLL, paramsFreeVals, options, paramsFixedVals, paramsFree, cumNumHF, OutOfNum, invSDTF); 
 
 paramsValues(paramsFree == 1) = paramsFreeVals;
 paramsValues(paramsFree == 0) = paramsFixedVals;

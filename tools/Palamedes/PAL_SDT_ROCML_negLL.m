@@ -6,8 +6,9 @@
 %Internal Function
 %
 %Introduced: Palamedes version 1.6.0 (FK & NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
-function negLL = PAL_SDT_ROCML_negLL(paramsFreeVals, paramsFixedVals, paramsFree, cumNumHF, OutOfNum, invSDTF) 
+function negLL = PAL_SDT_ROCML_negLL(paramsFreeVals, paramsFixedVals, paramsFree, cumNumHF, OutOfNum, invSDTF)
 
 paramsValues(paramsFree == 1) = paramsFreeVals;
 paramsValues(paramsFree == 0) = paramsFixedVals;

@@ -21,15 +21,16 @@
 %   SD = 0.7921
 %       
 %Introduced: Palamedes version 1.0.0 (NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
-function [Mode Mean SD] = PAL_AMRF_pdfDescriptives(pdf, values)
+function [Mode, Mean, SD] = PAL_AMRF_pdfDescriptives(pdf, values)
 
 pdf = pdf./sum(pdf);
 if min(pdf) == max(pdf)                     %if uniform distribution
     Mode = values(round(length(values)/2)); %define mode as median
                                             %(assumes values are ordered)
 else
-    [trash I] = max(pdf);
+    [trash, I] = max(pdf);
     Mode = values(I);
 end
 Mean = sum(pdf.*values);

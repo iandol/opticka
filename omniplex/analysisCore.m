@@ -315,7 +315,7 @@ classdef analysisCore < optickaCore
 				end
 				ego.results = struct([]);
 				optimiseSize(ego.p);
-				if isa(ego.sp, 'spikeAnalysis')
+				if isa(ego.sp, 'spikeAnalysis') && ~isempty(ego.sp)
 					optimiseSize(ego.sp.p);
 				end
 			end

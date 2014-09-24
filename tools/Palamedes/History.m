@@ -934,10 +934,249 @@
 %   PAL_PFML_BootstrapParametricMultiple, PAL_PFML_FitMultiple, and
 %   PAL_PFML_GoodnessOfFitMultiple.
 %
-
-
-
-
-
-
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Version 1.6.1 Release December 20, 2013
+%
+% Purposes of release: (1) Reduction of computational load of AMPM 
+% routines: duplication of a computation avoided by absorbing 
+% PAL_AMPM_pSuccessGivenx function into PAL_AMPM_PosteriorTplus1, 
+% PAL_AMPM_PosteriorTplus1 recoded to increase efficiency. 
+% Functionality of user-end AMPM routines not affected (2) update 
+% PAL_spreadPF (3) fix incompatibility of PAL_AMPM_DEMO with
+% GNU Octave.
+%
+% PAL_AMPM_pSuccessGivenx:
+% Removed: Palamedes version 1.6.1 (NP): Removed. Functionality absorbed in
+%   PAL_AMPM_PosteriorTplus1 in order to reduce computational load of AMPM 
+%   routines.
+%
+% PAL_AMPM_expectedEntropy:
+% Modified: Palamedes version 1.6.1 (NP): pSuccessGivenx imported from
+%   PAL_AMPM_PosteriorTSplus1 rather than from (the now removed) 
+%   PAL_AMPM_pSuccessGivenx.
+%
+% PAL_AMPM_PosteriorTplus1:
+% Modified: Palamedes version 1.6.1 (NP): Recoded to increase efficiency, 
+%   absorbed functionality of (the now removed) PAL_AMPM_pSuccessGivenx.
+%
+% PAL_AMPM_setupPM:
+% Modified: Palamedes version 1.6.1 (NP): Modified to comply with
+%   absorption of PAL_AMPM_pSuccessGivenx functionality into
+%   PAL_AMPM_PosteriorTplus1.
+%
+% PAL_spreadPF:
+% Modified: Palamedes version 1.6.1 (NP): Added the options to compute
+%   spread for Quick and logQuick functions (both introduced in version
+%   1.6.0).
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Version 1.6.2 Release February 17, 2014
+%
+% Purposes of release: Improve PAL_Contrast (functionality and
+%   user-friendliness), minor maintenance on PAL_minimize.
+% 
+% PAL_isOrthogonal:
+% Introduced: Palamedes version 1.6.2 (NP): Checks orthogonality of the
+%   pairings of row vectors. Called by PAL_Contrasts to verify 
+%   orthogonality of model matrices.
+%
+% PAL_Contrasts:
+% Modified: Palamedes version 1.6.2 (NP): Modified to return integer-
+%   valued contrast coefficients when possible, also verifies orthogonality
+%   of polynomial contrasts and issues warning when incapable of finding a
+%   full set of orthogonal polynomial contrasts, allows user to specify IV
+%   levels that are not equally spaced.
+%
+% PAL_minimize:
+% Modified: Palamedes version 1.6.2 (NP): Directs user to possible cause of
+%   issued warning regarding values of MaxFunEvals and/or MaxIter.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Version 1.6.3 Release March 3, 2014
+%
+% Purposes of release: Restore backward compatibility to Matlab Release 14
+%   SP1 (compatibility checked with Matlab version 7.0.1.24704, bare Matlab
+%   [no Matlab toolboxes]) and restore compatibility with GNU Octave 
+%   (compatibility checked with GNU Octave version 3.8.0 under Ubuntu 
+%   13.10). Minor maintenance.
+%
+% PAL_AMPM_PosteriorTplus1:
+% Modified: Palamedes version 1.6.3 (NP): Checks for presence of bsxfun.m
+%   and performs alternative operation if not present (in order to restore 
+%   compatibility with older versions of Matlab).
+%
+% PAL_Contrasts:
+% Modified: Palamedes version 1.6.3 (NP): No longer changes type of 'temp'
+%   to int64. (in order to restore compatibility with older versions of 
+%   Matlab).
+%
+% PAL_PFML_BootstrapNonParametric:
+% Modified: Palamedes version 1.6.3 (NP): No longer calls iscolumn.m (in 
+%   order to restore compatibility with older versions of Matlab).
+%
+% PAL_PFML_BootstrapParametric:
+% Modified: Palamedes version 1.6.3 (NP): No longer calls iscolumn.m (in 
+%   order to restore compatibility with older versions of Matlab).
+%
+% PAL_PFML_GoodnessOfFit:
+% Modified: Palamedes version 1.6.3 (NP): No longer calls iscolumn.m (in 
+%   order to restore compatibility with older versions of Matlab).
+%
+% PAL_PFML_PtoT:
+% Modified: Palamedes version 1.6.3 (NP): Removed rounding of theta values 
+%   that are very near zero. Problem is taken care of in PAL_minimize.
+%
+% PAL_Quick:
+% Modified: Palamedes version 1.6.3 (NP): Negative stimulus intensity
+%   values will generate an error. Error message suggests to use
+%   PAL_logQuick.
+%
+% PAL_Weibull:
+% Modified: Palamedes version 1.6.3 (NP): Negative stimulus intensity
+%   values will generate an error. Error message suggests to use
+%   PAL_logQuick.
+% 
+% PAL_AMPM_CreateLUT and
+% PAL_AMPM_expectedEntropy and
+% PAL_AMPM_PosteriorTplus1 and
+% PAL_AMPM_setupPM and
+% PAL_AMPM_updatePM and
+% PAL_AMRF_pdfDescriptives and
+% PAL_AMRF_setupRF and
+% PAL_AMRF_updateRF and
+% PAL_AMUD_analyzeUD and
+% PAL_AMUD_setupUD and
+% PAL_Contrasts and
+% PAL_CumulativeNormal and
+% PAL_Entropy and
+% PAL_findMax and
+% PAL_Gumbel and
+% PAL_HyperbolicSecant and
+% PAL_isOrthogonal and
+% PAL_Logistic and
+% PAL_logQuick and
+% PAL_MeanSDSSandSE and
+% PAL_minimize and
+% PAL_MLDS_Bootstrap and
+% PAL_MLDS_Fit and
+% PAL_MLDS_GroupTrialsbyX and
+% PAL_MLDS_SimulateObserver and
+% PAL_PF_SimulateObserverParametric and
+% PAL_PFBA_Fit and
+% PAL_PFLR_ModelComparison and
+% PAL_PFLR_setupMC and
+% PAL_PFLR_TLR and
+% PAL_PFML_BootstrapNonParametric and
+% PAL_PFML_BootstrapNonParametricMultiple and
+% PAL_PFML_BootstrapParametric and
+% PAL_PFML_BootstrapParametricMultiple and
+% PAL_PFML_BruteForceFit and
+% PAL_PFML_DevianceGoF and
+% PAL_PFML_Fit and
+% PAL_PFML_FitMultiple and
+% PAL_PFML_GoodnessOfFit and
+% PAL_PFML_GoodnessOfFitMultiple and
+% PAL_PFML_GroupTrialsbyX and
+% PAL_PFML_LLsaturated and
+% PAL_PFML_negLL and
+% PAL_PFML_negLLMultiple and
+% PAL_PFML_negLLNonParametric and
+% PAL_PFML_paramsTry and
+% PAL_PFML_PtoT and
+% PAL_Quick and
+% PAL_randomizeArray and
+% PAL_SDT_1AFC_DPtoPHF and
+% PAL_SDT_1AFC_PHFtoDP and
+% PAL_SDT_1AFCsameDiff_DiffMod_PHFtoDP and
+% PAL_SDT_1AFCsameDiff_IndMod_PHFtoDP and
+% PAL_SDT_2AFC_PHFtoDP and
+% PAL_SDT_2AFCmatchSample_DiffMod_PCtoDP and
+% PAL_SDT_2AFCmatchSample_DiffMod_PHFtoDP and
+% PAL_SDT_2AFCmatchSample_IndMod_PCtoDP and
+% PAL_SDT_2AFCmatchSample_IndMod_PHFtoDP and
+% PAL_SDT_3AFCoddity_IndMod_DPtoPC and
+% PAL_SDT_3AFCoddity_IndMod_PCtoDP and
+% PAL_SDT_MAFC_DPtoPC and
+% PAL_SDT_MAFC_PCtoDP and
+% PAL_SDT_MAFCmatchSample_DiffMod_DPtoPC and
+% PAL_SDT_MAFCmatchSample_DiffMod_PCtoDP and
+% PAL_SDT_MAFCoddity_DPtoPC and
+% PAL_SDT_MAFCoddity_IndMod_DPtoPC and
+% PAL_SDT_MAFCoddity_IndMod_PCtoDP and
+% PAL_SDT_MAFCoddity_PCtoDP and
+% PAL_SDT_ROCML_BootstrapParametric and
+% PAL_SDT_ROCML_Fit and
+% PAL_SDT_ROCML_GoodnessOfFit and
+% PAL_SDT_ROCML_negLL and
+% PAL_SDT_ROCML_negLLNonParametric and
+% PAL_SDT_ROCML_RatioSDcomparison and
+% PAL_spreadPF and
+% PAL_unpackParamsPF and
+% PAL_Weibull:
+% Modified: Palamedes version 1.6.3 (NP): Minor maintenance: Removed
+%   suppression of logOfZero warnings, removed suppression of DivideByZero 
+%   warnings (users of older versions of Matlab and users of Octave may
+%   occassionally encounter either warning, please ignore [they are 
+%   inconsequential] or suppress in code), Palamedes warnings are given
+%   identifiers, separated output variables using commas, pre-allocated
+%   variables, etc.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.6.3.1 Release April 10, 2014
+%
+% Purposes of release: Direct user to page:
+% www.palamedestoolbox.org/weibullandfriends.html in help comments of:
+% PAL_Gumbel, PAL_logQuick, PAL_Quick, and PAL_Weibull. Error messages
+% issued by PAL_Weibull and PAL_Quick when negative stimulus values are
+% passed direct user to same page.
+%
+% No change in functionality.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.7.0 Release June 27, 2014
+%
+% Purposes of release: (1) Introduce SDT summation routines (listed below)
+% (2) Introduce PAL_LLfixed and PAL_GoodnessOfFitZeroDF (3) Correct some 
+% regressions that occurred in 1.6.3.1 (some of the updates introduced in 
+% version 1.6.3 were, somehow, undone in 1.6.3.1). Version 1.7.0 was 
+% created by starting from 1.6.3, performing upgrade to 1.6.3.1 again, then 
+% making the changes that are recorded below to result in version 1.7.0.
+%
+% PAL_SDT_AS_PCtoSL:
+% Introduced: Palamedes version 1.7.0 (FK&NP)
+%
+% PAL_SDT_AS_PCtoSL:
+% Introduced: Palamedes version 1.7.0 (FK&NP)
+%
+% PAL_SDT_AS_uneqSLtoPC:
+% Introduced: Palamedes version 1.7.0 (FK&NP)
+%
+% PAL_SDT_PS_DPtoPCpartFunc:
+% Introduced: Palamedes version 1.7.0 (FK&NP)
+%
+% PAL_SDT_PS_MonteCarlo_SLtoPC:
+% Introduced: Palamedes version 1.7.0 (FK&NP)
+%
+% PAL_SDT_PS_MonteCarlo_uneqSLtoPC:
+% Introduced: Palamedes version 1.7.0 (FK&NP)
+%
+% PAL_SDT_PS_PCtoSL:
+% Introduced: Palamedes version 1.7.0 (FK&NP)
+%
+% PAL_SDT_PS_SLtoPC:
+% Introduced: Palamedes version 1.7.0 (FK&NP)
+%
+% PAL_SDT_PS_uneqDPtoPCpartFunc:
+% Introduced: Palamedes version 1.7.0 (FK&NP)
+%
+% PAL_SDT_PS_uneqDPtoPCpartFunc2:
+% Introduced: Palamedes version 1.7.0 (FK&NP)
+%
+% PAL_SDT_PS_uneqSLtoPC:
+% Introduced: Palamedes version 1.7.0 (FK&NP)
+%
+% PAL_LLfixed:
+% Introduced: Palamedes version 1.7.0 (NP)
+%
+% PAL_GoodnessOfFitZeroDF:
+% Introduced: Palamedes version 1.7.0 (NP)

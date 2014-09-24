@@ -27,13 +27,15 @@
 % a scalar M with a value of 5, and the output is an N=5 vector of d's.  
 % 
 % Introduced: Palamedes version 1.0.0 (FK)
-% Modified: Palamedes version 1.4.0 (see History.m)
+% Modified: Palamedes version 1.4.0, 1.6.3 (see History.m)
 
 function dP=PAL_SDT_MAFCoddity_PCtoDP(pC,M)
 
-[rows cols]=size(pC);
+[rows, cols]=size(pC);
 
 func=@PAL_SDT_MAFCoddity_DPtoPC;
+
+dP = zeros(rows,cols);
 
 for r=1:rows
     for c=1:cols

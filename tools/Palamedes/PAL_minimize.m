@@ -24,8 +24,9 @@
 %   308-313).
 %
 % Introduced: Palamedes version 1.4.0 (NP)
+% Modified: Palamedes version 1.6.2, 1.6.3 (see History.m)
 
-function [ x fval exitflag output] = PAL_minimize( fun, x0, options, varargin )
+function [ x, fval, exitflag, output] = PAL_minimize( fun, x0, options, varargin )
 
     
 %Return options structure with default and display information:
@@ -33,8 +34,8 @@ if nargin<=2 && nargout <= 1 && strcmpi(fun,'options')
     options = struct('Display','off','MaxIter','400*numberOfVariables',...
     'MaxFunEvals','400*numberOfVariables','TolX',1e-6,'TolFun',1e-6);
     if nargin == 2 && strcmpi(x0,'help')
-        fprintf('\nNote that the field names are case sensitive!\n');
-        options
+        fprintf('\nNote that the field names are case sensitive!\n\n');
+        disp(options);
         fprintf('\nDisplay:\n\t''off'': no output.\n\t''notify'': message is ');
         fprintf('displayed only in case search does not converge.\n\t''final'': ');
         fprintf('message is displayed after search is terminated.\n\t''iter'': ');
@@ -86,13 +87,21 @@ end
 
 if ischar(maxFunEvals)
     if ~strcmpi(maxFunEvals,'400*numberOfVariables');
-        warning(strcat(maxFunEvals,' is not a valid option for maxFunEvals. Use scalar value.'));
+        warningMessage = strcat(maxFunEvals,' is not a valid option for maxFunEvals. Use a scalar value or (the string) ''400*numberofvariables''.');
+        if strcmpi(maxFunEvals,'200*numberOfVariables');
+            warningMessage = strcat(warningMessage,' You might be using default values for Matlab''s fminsearch. Use: options = PAL_minimize(''options''); instead of: options = optimset(''fminsearch'');');
+        end
+        warning('PALAMEDES:invalidOption', warningMessage);
     end
     maxFunEvals = 400*n;
 end
 if ischar(maxIter)      
     if ~strcmpi(maxIter,'400*numberOfVariables');
-        warning(strcat(maxIter,' is not a valid option for maxIter. Use scalar value.'));
+        warningMessage = strcat(maxIter,' is not a valid option for maxIter. Use a scalar value or (the string) ''400*numberofvariables''.');
+        if strcmpi(maxIter,'200*numberOfVariables');
+            warningMessage = strcat(warningMessage,' You might be using default values for Matlab''s fminsearch. Use: options = PAL_minimize(''options''); instead of: options = optimset(''fminsearch'');');
+        end
+        warning('PALAMEDES:invalidOption', warningMessage);
     end
     maxIter = 400*n;
 end
@@ -125,7 +134,7 @@ end
 
 if display == 2
     fprintf('\titer:\tevals:\tfeval:\tparams:\n');
-    fprintf('%6d\t%6d\t%9.3f\t',0,1,f(1));     
+    fprintf('%6d\t%6d\t%9.3f\t',iterations,evals,f(1));     
     for j = 1:n            
         fprintf('%9.3f\t',V(1,j));    %user-supplied guesses
     end
@@ -135,7 +144,7 @@ end
 iterations = 1;
 evals = n+1;
 
-[f I] = sortrows(f);
+[f, I] = sortrows(f);
 V = V(I,:);
 
 if display == 2
@@ -225,7 +234,7 @@ while (max(max(abs(V(2:n+1,:)-V(ones(1,n),:)))) > tolX || max(abs(f(2:n+1)-f(1))
     
     iterations = iterations+1;
     
-    [f I] = sortrows(f);
+    [f, I] = sortrows(f);
     V = V(I,:);
 
     if display == 2

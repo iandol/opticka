@@ -29,12 +29,14 @@
 % the output is the corresponding N=6 proportion correct.  
 %
 % Introduced: Palamedes version 1.0.0 (FK & NP)
-% Modified: Palamedes version 1.0.1 (see History.m)
+% Modified: Palamedes version 1.0.1, 1.6.3 (see History.m)
 
 function pC = PAL_SDT_MAFCoddity_DPtoPC(dP,M)
 
-[rows cols]=size(dP);
+[rows, cols]=size(dP);
 numReps=100000;
+
+pC = zeros(rows,cols);
 
 for r = 1:rows
     for c = 1:cols
@@ -43,7 +45,7 @@ for r = 1:rows
         R(1,:) = R(1,:)+dP(r,c);
 
         sqDiff = (R-repmat(mean(R),M,1)).^2;
-        [maxVal maxIndex]=max(sqDiff);
+        [maxVal, maxIndex]=max(sqDiff);
 
         pC(r,c) = length(maxIndex(maxIndex == 1))./numReps;
 

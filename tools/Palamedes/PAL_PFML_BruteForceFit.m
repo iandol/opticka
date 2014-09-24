@@ -27,6 +27,9 @@
 %       Options include:    
 %           @PAL_Logistic
 %           @PAL_Weibull
+%           @PAL_Gumbel (i.e., log-Weibull)
+%           @PAL_Quick
+%           @PAL_logQuick
 %           @PAL_CumulativeNormal
 %           @PAL_Gumbel
 %           @PAL_HyperbolicSecant
@@ -71,9 +74,9 @@
 %       OutOfNum, searchGrid, PF)
 %
 % Introduced: Palamedes version 1.2.0 (NP)
-% Modified: Palamedes version 1.3.0, 1.3.1, 1.6.0 (see History.m)
+% Modified: Palamedes version 1.3.0, 1.3.1, 1.6.0, 1.6.3 (see History.m)
 
-function [ paramsValues maxim LLspace] = PAL_PFML_BruteForceFit(StimLevels,NumPos, OutOfNum, searchGrid, PF, varargin)
+function [ paramsValues, maxim, LLspace] = PAL_PFML_BruteForceFit(StimLevels,NumPos, OutOfNum, searchGrid, PF, varargin)
 
     lapseFit = 'default';
     gammaEQlambda = logical(false);
@@ -91,8 +94,7 @@ function [ paramsValues maxim LLspace] = PAL_PFML_BruteForceFit(StimLevels,NumPo
                 valid = 1;
             end
             if valid == 0
-                message = [varargin{n} ' is not a valid option. Ignored.'];
-                warning(message);
+                warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
             end        
         end            
     end    
@@ -101,11 +103,11 @@ function [ paramsValues maxim LLspace] = PAL_PFML_BruteForceFit(StimLevels,NumPo
         searchGrid.gamma = 0;
     end
     
-    [StimLevels NumPos OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);    
+    [StimLevels, NumPos, OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);    
 
     switch lower(lapseFit(1:3))
         case {'nap', 'def'}
-            [paramsGrid.alpha paramsGrid.beta paramsGrid.gamma paramsGrid.lambda] = ndgrid(searchGrid.alpha,searchGrid.beta,searchGrid.gamma,searchGrid.lambda);
+            [paramsGrid.alpha, paramsGrid.beta, paramsGrid.gamma, paramsGrid.lambda] = ndgrid(searchGrid.alpha,searchGrid.beta,searchGrid.gamma,searchGrid.lambda);
             if gammaEQlambda
                 paramsGrid.gamma = paramsGrid.lambda;
             end            
@@ -114,7 +116,7 @@ function [ paramsValues maxim LLspace] = PAL_PFML_BruteForceFit(StimLevels,NumPo
                LLspace = LLspace + NumPos(level).*log(PF(paramsGrid,StimLevels(level)))+(OutOfNum(level)-NumPos(level)).*log(1-PF(paramsGrid,StimLevels(level)));
             end
         case 'jap' 
-            [paramsGrid.alpha paramsGrid.beta paramsGrid.gamma paramsGrid.lambda] = ndgrid(searchGrid.alpha,searchGrid.beta,searchGrid.gamma,searchGrid.lambda);
+            [paramsGrid.alpha, paramsGrid.beta, paramsGrid.gamma, paramsGrid.lambda] = ndgrid(searchGrid.alpha,searchGrid.beta,searchGrid.gamma,searchGrid.lambda);
             len = length(NumPos);            
             LLspace = zeros(size(paramsGrid.alpha,1),size(paramsGrid.alpha,2),size(paramsGrid.alpha,3),size(paramsGrid.alpha,4));
             if gammaEQlambda
@@ -133,7 +135,7 @@ function [ paramsValues maxim LLspace] = PAL_PFML_BruteForceFit(StimLevels,NumPo
             else
                 searchGrid.lambda = 1 - NumPos(len)/OutOfNum(len);
             end
-            [paramsGrid.alpha paramsGrid.beta paramsGrid.gamma paramsGrid.lambda] = ndgrid(searchGrid.alpha,searchGrid.beta,searchGrid.gamma,searchGrid.lambda);                                    
+            [paramsGrid.alpha, paramsGrid.beta, paramsGrid.gamma, paramsGrid.lambda] = ndgrid(searchGrid.alpha,searchGrid.beta,searchGrid.gamma,searchGrid.lambda);                                    
             LLspace = zeros(size(paramsGrid.alpha,1),size(paramsGrid.alpha,2),size(paramsGrid.alpha,3),size(paramsGrid.alpha,4));
             LLspace = LLspace + log((1-searchGrid.lambda).^NumPos(len)) + log(searchGrid.lambda.^(OutOfNum(len)-NumPos(len)));
             if gammaEQlambda
@@ -144,7 +146,7 @@ function [ paramsValues maxim LLspace] = PAL_PFML_BruteForceFit(StimLevels,NumPo
             end
     end
         
-    [maxim I] = PAL_findMax(LLspace);
+    [maxim, I] = PAL_findMax(LLspace);
     
     while length(I) < 4
         I = [I 1];
@@ -155,4 +157,5 @@ function [ paramsValues maxim LLspace] = PAL_PFML_BruteForceFit(StimLevels,NumPo
     if gammaEQlambda
         paramsValues(3) = paramsValues(4);
     end
+    
 end

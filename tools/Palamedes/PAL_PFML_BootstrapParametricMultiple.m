@@ -25,6 +25,9 @@
 %       Options include:    
 %           @PAL_Logistic
 %           @PAL_Weibull
+%           @PAL_Gumbel (i.e., log-Weibull)
+%           @PAL_Quick
+%           @PAL_logQuick
 %           @PAL_CumulativeNormal
 %           @PAL_Gumbel
 %           @PAL_HyperbolicSecant
@@ -178,14 +181,11 @@
 %    
 %Introduced: Palamedes version 1.0.0 (NP)
 %Modified: Palamedes version 1.0.2, 1.1.0, 1.2.0, 1.3.0, 1.4.0, 1.4.2, 
-%   1.6.0 (see History.m)
+%   1.6.0, 1.6.3 (see History.m)
 
-function [SD paramsSim LLSim converged SDfunc funcParamsSim] = PAL_PFML_BootstrapParametricMultiple(StimLevels, OutOfNum, paramsValues, B, PF, varargin)
+function [SD, paramsSim, LLSim, converged, SDfunc, funcParamsSim] = PAL_PFML_BootstrapParametricMultiple(StimLevels, OutOfNum, paramsValues, B, PF, varargin)
 
-warningstates = warning('query','all');
-warning off MATLAB:log:logOfZero
-
-[StimLevels trash OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, OutOfNum, OutOfNum);
+[StimLevels, trash, OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, OutOfNum, OutOfNum);
 
 options = [];
 maxTries = 1;
@@ -255,28 +255,24 @@ if ~isempty(varargin)
             valid = 1;
         end                                
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});        
         end
     end            
 end
 
 if (strncmpi(lapseFit,'iap',3) || strncmpi(lapseFit,'jap',3)) && ((PAL_whatIs(ArgsL) == 2 && strncmpi(ArgsL,'fix',3)) || isempty(ArgsL))
-    message = ['Lapse rates are not free: ''lapseFit'' argument ignored'];
-    warning(message);
+    warning('PALAMEDES:invalidOption','Lapses rates are not free: ''LapseLimits'' argument ignored');
     lapseFit = 'nap';
 end
 if (strncmpi(lapseFit,'iap',3) || strncmpi(lapseFit,'jap',3)) && PAL_whatIs(ArgsL) == 4
-    message = ['Lapse rates custom-reparameterized: ''lapseFit'' argument ignored'];
-    warning(message);
+    warning('PALAMEDES:invalidOption','Lapse rates custom-reparameterized: ''lapseFit'' argument ignored');
     lapseFit = 'nap';
 end
 
 if gammaEQlambda
-    FM.argsG = [];
+    ArgsG = [];
     if ~isempty(guessLimits)
-        message = ['Guess rates constrained to equal lapse rates: ''guessLimits'' ignored'];
-        warning(message);
+        warning('PALAMEDES:invalidOption','Guess rates constrained to equal lapse rates: ''guessLimits'' ignored');
         guessLimits = [];
     end    
 end
@@ -290,7 +286,7 @@ for b = 1:B
         NumPosSim(cond,:) = PAL_PF_SimulateObserverParametric(paramsValues(cond,:), StimLevels(cond,:), OutOfNum(cond,:), PF,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
     end
 
-    [paramsSim(b,:,:) LLSim(b) converged(b) trash temp] = PAL_PFML_FitMultiple(StimLevels, NumPosSim, OutOfNum, paramsValues, PF, 'Thresh', ArgsA, 'Slopes', ArgsB,'GuessR',ArgsG,'LapseR',ArgsL,'searchoptions',options, 'lapseLimits', lapseLimits,'guessLimits', guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+    [paramsSim(b,:,:), LLSim(b), converged(b), trash, temp] = PAL_PFML_FitMultiple(StimLevels, NumPosSim, OutOfNum, paramsValues, PF, 'Thresh', ArgsA, 'Slopes', ArgsB,'GuessR',ArgsG,'LapseR',ArgsL,'searchoptions',options, 'lapseLimits', lapseLimits,'guessLimits', guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
 
     if isstruct(ArgsA) || isstruct(ArgsB) || isstruct(ArgsG) || isstruct(ArgsL)
         funcParamsSim(b) = temp;
@@ -324,7 +320,7 @@ for b = 1:B
                 ArgsLTry.paramsValuesL = ArgsLTry.paramsValuesL + ArgsLTry.paramsFreeL.*(rand(1,length(rangeTries.paramsValuesL))-.5).*rangeTries.paramsValuesL;
             end
         end
-        [paramsSim(b,:,:) LLSim(b) converged(b) trash temp] = PAL_PFML_FitMultiple(StimLevels, NumPosSim, OutOfNum, paramsTry, PF, 'Thresh', ArgsATry, 'Slopes', ArgsBTry,'GuessR',ArgsGTry,'LapseR',ArgsLTry,'searchoptions',options, 'lapseLimits', lapseLimits,'guessLimits', guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+        [paramsSim(b,:,:), LLSim(b), converged(b), trash, temp] = PAL_PFML_FitMultiple(StimLevels, NumPosSim, OutOfNum, paramsTry, PF, 'Thresh', ArgsATry, 'Slopes', ArgsBTry,'GuessR',ArgsGTry,'LapseR',ArgsLTry,'searchoptions',options, 'lapseLimits', lapseLimits,'guessLimits', guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
 
         if isstruct(ArgsA) || isstruct(ArgsB) || isstruct(ArgsG) || isstruct(ArgsL)
             funcParamsSim(b) = temp;
@@ -332,33 +328,28 @@ for b = 1:B
         tries = tries + 1;
     end    
     if ~converged(b)
-        message = ['Fit to simulation ' int2str(b) ' of ' int2str(B) ' did not converge.'];
-        warning(message);
+        warning('PALAMEDES:convergeFail','Fit to simulation %s of %s did not converge.',int2str(b), int2str(B));
     end
 
 end
 
 exitflag = sum(converged) == B;
 if exitflag ~= 1
-    message = ['Only ' int2str(sum(converged)) ' of ' int2str(B) ' simulations converged'];
-    warning(message);
+    warning('PALAMEDES:convergeFail','Only %s of %s simulations converged.',int2str(sum(converged)), int2str(B));
 end
 
 for cond = 1:size(StimLevels,1)
-    [Mean(cond,:) SD(cond,:)] = PAL_MeanSDSSandSE(squeeze(paramsSim(:,cond,:)));
+    [Mean(cond,:), SD(cond,:)] = PAL_MeanSDSSandSE(squeeze(paramsSim(:,cond,:)));
 end
-
 if ~isempty(funcParamsSim(1).paramsValuesA)
-    [Meanfunc.A SDfunc.A] = PAL_MeanSDSSandSE(cat(1,funcParamsSim.paramsValuesA));
+    [Meanfunc.A, SDfunc.A] = PAL_MeanSDSSandSE(cat(1,funcParamsSim.paramsValuesA));
 end
 if ~isempty(funcParamsSim(1).paramsValuesB)
-    [Meanfunc.B SDfunc.B] = PAL_MeanSDSSandSE(cat(1,funcParamsSim.paramsValuesB));
+    [Meanfunc.B, SDfunc.B] = PAL_MeanSDSSandSE(cat(1,funcParamsSim.paramsValuesB));
 end
 if ~isempty(funcParamsSim(1).paramsValuesG)
-    [Meanfunc.G SDfunc.G] = PAL_MeanSDSSandSE(cat(1,funcParamsSim.paramsValuesG));
+    [Meanfunc.G, SDfunc.G] = PAL_MeanSDSSandSE(cat(1,funcParamsSim.paramsValuesG));
 end
 if ~isempty(funcParamsSim(1).paramsValuesL)
-    [Meanfunc.L SDfunc.L] = PAL_MeanSDSSandSE(cat(1,funcParamsSim.paramsValuesL));
+    [Meanfunc.L, SDfunc.L] = PAL_MeanSDSSandSE(cat(1,funcParamsSim.paramsValuesL));
 end
-
-warning(warningstates);

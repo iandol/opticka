@@ -89,8 +89,9 @@
 %       SDTF, invSDTF, B);
 %
 %Introduced: Palamedes version 1.6.0 (FK & NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
-function [Dev pDev DevSim converged] = PAL_SDT_ROCML_GoodnessOfFit(paramsValues, cumNumHF, OutOfNum, SDTF, invSDTF, B, varargin)
+function [Dev, pDev, DevSim, converged] = PAL_SDT_ROCML_GoodnessOfFit(paramsValues, cumNumHF, OutOfNum, SDTF, invSDTF, B, varargin)
 
 options = []; %default
 Rfree = 1; %default
@@ -116,8 +117,7 @@ if ~isempty(varargin)
             valid = 1;
         end
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end
     end            
 end
@@ -135,22 +135,20 @@ for b = 1:B
     
     cumNumHF = PAL_SDT_ROC_SimulateObserverParametric(paramsValues, OutOfNum, invSDTF);
     
-    [trash trash trash negLLConSim converged(b)] = PAL_SDT_ROCML_Fit(cumNumHF, OutOfNum, SDTF, invSDTF, 'ratioSDvalue', Rval, 'ratioSDfree', Rfree,'searchOptions',options);
+    [trash, trash, trash, negLLConSim, converged(b)] = PAL_SDT_ROCML_Fit(cumNumHF, OutOfNum, SDTF, invSDTF, 'ratioSDvalue', Rval, 'ratioSDfree', Rfree,'searchOptions',options);
     negLLAugSim = PAL_SDT_ROCML_negLLNonParametric(cumNumHF, OutOfNum); 
     
     DevSim(b) = 2*(negLLConSim-negLLAugSim);
     
     if ~converged(b)
-        message = ['Fit to simulation ' int2str(b) ' of ' int2str(B) ' did not converge.'];
-        warning(message);
+        warning('PALAMEDES:convergeFail','Fit to simulation %s of %s did not converge.',int2str(b), int2str(B));
     end
 
 end
 
 exitflag = sum(converged) == B;
 if exitflag ~= 1
-    message = ['Only ' int2str(sum(converged)) ' of ' int2str(B) ' simulations converged'];
-    warning(message);
+    warning('PALAMEDES:convergeFail','Only %s of %s simulations converged.',int2str(sum(converged)), int2str(B));
 end
 
 if B > 0

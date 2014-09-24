@@ -10,7 +10,7 @@
 %
 %Introduced: Palamedes version 1.0.0 (NP)
 
-function [sum difference product ratio] = PAL_ExampleFunction(array1, array2)
+function [sum, difference, product, ratio] = PAL_ExampleFunction(array1, array2)
 
 sum = array1 + array2;
 difference = array1 - array2;

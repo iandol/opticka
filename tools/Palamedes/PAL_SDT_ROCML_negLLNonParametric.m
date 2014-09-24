@@ -6,8 +6,9 @@
 %Internal Function
 %
 %Introduced: Palamedes version 1.6.0 (FK & NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
-function [negLL numParams] = PAL_SDT_ROCML_negLLNonParametric(cumNumHF, OutOfNum) 
+function [negLL, numParams] = PAL_SDT_ROCML_negLLNonParametric(cumNumHF, OutOfNum) 
 
 pHF=cumNumHF./OutOfNum;
 

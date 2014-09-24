@@ -1,8 +1,8 @@
 %
 %PAL_AMPM_setupPM  Creates structure which contains settings for and 
-%   results of Kontsevich & Tyler's psi adaptive method (Vision Research, 
-%   39(16):2729-37, 1999) and variations on it
-%   (www.palamedestoolbox.org/psimarginal.html)
+%   results of Kontsevich & Tyler's (1999) psi adaptive method and 
+%   variations on it (see Prins (2013) or 
+%   www.palamedestoolbox.org/psimarginal.html)
 %   
 %   syntax: PM = PAL_AMPM_setupPM({optional arguments})
 %
@@ -56,7 +56,7 @@
 %       parameter will be estimated for both, the prior used will be that 
 %       set for 'priorLambdaRange'.
 %
-%   'marginalize'         vector {[]}
+%   'marginalize'         vector {[]} (or string)
 %       Allows users to marginalize parameters out of the posterior
 %       distribution before the to-be-minimized expected entropy is
 %       calculated. This allows one to include, say, the lapse rate in the
@@ -136,9 +136,18 @@
 %       been reached, 'PM.stop' will equal 0, when criterion is reached, 
 %       'PM.stop' will be set to 1.
 %
+% References:
+%
+% Kontsevich, L.L. & Tyler, C.W. (1999). Bayesian adaptive estimation of 
+%   psychometric slope and threshold. Vision Research, 39, 2729–2737.
+%
+% Prins, N. (2013). The psi-marginal adaptive method: how to give nuisance 
+%   parameters the attention they deserve (no more, no less). Journal of
+%   Vision, 13(7):3, 1-17. doi: 10.1167/13.7.3 
+%
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.1.1, 1.2.0, 1.4.0, 1.5.0, 1.6.0 (see 
-%   History.m)
+% Modified: Palamedes version 1.1.1, 1.2.0, 1.4.0, 1.5.0, 1.6.0, 1.6.1, 
+%   1.6.3 (see History.m)
 
 function PM = PAL_AMPM_setupPM(varargin)
 
@@ -154,8 +163,8 @@ message = [message 'by transposing any user-supplied prior (i.e., prior = prior'
 message = [message 'PAL_AMPM_setupPM and transposing PM.pdf before plotting it '];
 message = [message '(e.g., surf(PM.pdf'') instead of surf(PM.pdf)). Visit '];
 message = [message 'www.palamedestoolbox.org/pal_ampm_incompatibility.html.'];
-warning('PALAMEDES:AMPM_setupPM_priorTranspose',message);
-warning('off','PALAMEDES:AMPM_setupPM_priorTranspose');
+warning('PALAMEDES:AMPM_setupPM:priorTranspose',message);
+warning('off','PALAMEDES:AMPM_setupPM:priorTranspose');
 
 if mod(NumOpts,2) == 0
 
@@ -165,16 +174,15 @@ if mod(NumOpts,2) == 0
     PM.priorLambdaRange = 0.02;
     PM.gammaEQlambda = logical(false);
     PM.stimRange = -1:.1:1;
-    [PM.priorAlphas PM.priorBetas PM.priorGammas PM.priorLambdas] = ndgrid(PM.priorAlphaRange,PM.priorBetaRange,PM.priorGammaRange,PM.priorLambdaRange);
+    [PM.priorAlphas, PM.priorBetas, PM.priorGammas, PM.priorLambdas] = ndgrid(PM.priorAlphaRange,PM.priorBetaRange,PM.priorGammaRange,PM.priorLambdaRange);
     PM.PF = @PAL_Gumbel;
     PM.LUT = PAL_AMPM_CreateLUT(PM.priorAlphaRange, PM.priorBetaRange, PM.priorGammaRange, PM.priorLambdaRange, PM.stimRange, PM.PF,PM.gammaEQlambda);
     PM.prior = ones(size(PM.priorAlphas));
     PM.prior = PM.prior./sum(sum(sum(sum(PM.prior))));
     PM.pdf = PM.prior;
-    pSuccessGivenx = PAL_AMPM_pSuccessGivenx(PM.LUT, PM.pdf);
-    [PM.posteriorTplus1givenSuccess PM.posteriorTplus1givenFailure] = PAL_AMPM_PosteriorTplus1(PM.pdf, PM.LUT); 
+    [PM.posteriorTplus1givenSuccess, PM.posteriorTplus1givenFailure, pSuccessGivenx] = PAL_AMPM_PosteriorTplus1(PM.pdf, PM.LUT); 
     ExpectedEntropy = PAL_Entropy(PM.posteriorTplus1givenSuccess,4).*pSuccessGivenx + PAL_Entropy(PM.posteriorTplus1givenFailure,4).*(1-pSuccessGivenx);
-    [MinEntropy PM.I] = min(squeeze(ExpectedEntropy));
+    [minEntropy, PM.I] = min(squeeze(ExpectedEntropy));
     PM.xCurrent = PM.stimRange(PM.I);
     PM.x = PM.xCurrent;
     PM.numTrials = 50;
@@ -295,15 +303,14 @@ if NumOpts > 1
             supplied(12) = true;
         end
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end        
     end
     if PM.gammaEQlambda == true;
         PM.priorGammaRange = 0; %value will be ignored
     end
     if supplied(1) || supplied(2) || supplied(3) || supplied(4)
-        [PM.priorAlphas PM.priorBetas PM.priorGammas PM.priorLambdas] = ndgrid(PM.priorAlphaRange,PM.priorBetaRange,PM.priorGammaRange,PM.priorLambdaRange);
+        [PM.priorAlphas, PM.priorBetas, PM.priorGammas, PM.priorLambdas] = ndgrid(PM.priorAlphaRange,PM.priorBetaRange,PM.priorGammaRange,PM.priorLambdaRange);
         if ~supplied(6)
             PM.prior = ones(size(PM.priorAlphas));
             PM.prior = PM.prior./sum(sum(sum(sum(PM.prior))));
@@ -316,9 +323,9 @@ if NumOpts > 1
     if supplied(1) || supplied(2) || supplied(3) || supplied(4) || supplied(5) || supplied(7) || supplied(12)
         PM.LUT = PAL_AMPM_CreateLUT(PM.priorAlphaRange,PM.priorBetaRange,PM.priorGammaRange,PM.priorLambdaRange,PM.stimRange,PM.PF,PM.gammaEQlambda);
 
-        [PM expectedEntropy] = PAL_AMPM_expectedEntropy(PM);
+        [PM, expectedEntropy] = PAL_AMPM_expectedEntropy(PM);
         
-        [MinEntropy PM.I] = min(squeeze(expectedEntropy));
+        [minEntropy, PM.I] = min(squeeze(expectedEntropy));
         PM.xCurrent = PM.stimRange(PM.I);
         PM.x(length(PM.x)) = PM.xCurrent;
     end

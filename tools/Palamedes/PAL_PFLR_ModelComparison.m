@@ -42,6 +42,9 @@
 %       Options include:    
 %           @PAL_Logistic
 %           @PAL_Weibull
+%           @PAL_Gumbel (i.e., log-Weibull)
+%           @PAL_Quick
+%           @PAL_logQuick
 %           @PAL_CumulativeNormal
 %           @PAL_Gumbel
 %           @PAL_HyperbolicSecant
@@ -186,15 +189,12 @@
 %       'searchOptions',options,'lapseFit','iAPLE');
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.0.2, 1.1.0, 1.2.0, 1.3.0, 1.4.0, 1.6.0 
-%   (see History.m)
+% Modified: Palamedes version 1.0.2, 1.1.0, 1.2.0, 1.3.0, 1.4.0, 1.6.0, 
+%   1.6.3 (see History.m)
 
-function [TLR pTLR paramsL paramsF TLRSim converged funcParamsL funcParamsF] = PAL_PFLR_ModelComparison(StimLevels, NumPos, OutOfNum, paramsValues, B, PF, varargin)
+function [TLR, pTLR, paramsL, paramsF, TLRSim, converged, funcParamsL, funcParamsF] = PAL_PFLR_ModelComparison(StimLevels, NumPos, OutOfNum, paramsValues, B, PF, varargin)
 
-warningstates = warning('query','all');
-warning off MATLAB:DivideByZero;
-
-[StimLevels NumPos OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);
+[StimLevels, NumPos, OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);
 
 if size(paramsValues,1) == 1
     paramsValues = repmat(paramsValues,[size(StimLevels,1) 1]);
@@ -285,20 +285,17 @@ if ~isempty(varargin)
             valid = 1;
         end                                        
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});    
         end        
     end            
 end
 
 if (strncmpi(lapseFit,'iap',3) || strncmpi(lapseFit,'jap',3)) && ((PAL_whatIs(MC.argsLlesser) == 2 && strncmpi(MC.argsLlesser,'fix',3)) || (PAL_whatIs(MC.argsLfuller) == 2 && strncmpi(MC.argsLfuller,'fix',3)) || isempty(MC.argsLlesser) || isempty(MC.argsLfuller))
-    message = ['Lapse rates are not free in lesser or fuller model: ''lapseFit'' argument ignored'];
-    warning(message);
+    warning('PALAMEDES:invalidOption','Lapse rates are not free in lesser or fuller model: ''lapseFit'' argument ignored');    
     lapseFit = 'nap';
 end
 if (strncmpi(lapseFit,'iap',3) || strncmpi(lapseFit,'jap',3)) && (PAL_whatIs(MC.argsLlesser) == 4 || PAL_whatIs(MC.argsLfuller) == 4)
-    message = ['Lapse rates custom-reparameterized in lesser or fuller model: ''lapseFit'' argument ignored'];
-    warning(message);
+    warning('PALAMEDES:invalidOption','Lapse rates custom-reparameterized in lesser or fuller model: ''lapseFit'' argument ignored');    
     lapseFit = 'nap';
 end
 
@@ -306,20 +303,19 @@ if gammaEQlambda
     MC.argsGlesser = [];
     MC.argsGfuller = [];
     if ~isempty(guessLimits)
-        message = ['Guess rates constrained to equal lapse rates: ''guessLimits'' ignored'];
-        warning(message);
+        warning('PALAMEDES:invalidOption','Guess rates constrained to equal lapse rates: ''guessLimits'' ignored');        
         guessLimits = [];
     end    
 end
 
-[TLR exitflagDat paramsL paramsF funcParamsL funcParamsF] = PAL_PFLR_TLR(StimLevels, NumPos, OutOfNum, paramsValues, PF, MC,'searchoptions',options,'maxtries',maxTries,'rangetries',rangeTries,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+[TLR, exitflagDat, paramsL, paramsF, funcParamsL, funcParamsF] = PAL_PFLR_TLR(StimLevels, NumPos, OutOfNum, paramsValues, PF, MC,'searchoptions',options,'maxtries',maxTries,'rangetries',rangeTries,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
 
 if ~exitflagDat
     TLRSim = [];
     converged = []; 
     pTLR = [];
     exitflag = 0;
-    warning('Fit to data did not converge. Exiting.');
+    warning('PALAMEDES:convergeFailAbort','Fit to data did not converge. Exiting.');
 else
     if isstruct(MC.argsAlesser)
         MC.argsAlesser = funcParamsL;
@@ -352,19 +348,15 @@ else
             NumPos(Cond,:) = PAL_PF_SimulateObserverParametric(paramsL(Cond,:), StimLevels(Cond,:), OutOfNum(Cond,:), PF,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
         end
 
-        [TLRSim(b) converged(b)] = PAL_PFLR_TLR(StimLevels, NumPos, OutOfNum, paramsValues, PF, MC,'searchoptions',options,'maxtries',maxTries,'rangetries',rangeTries,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+        [TLRSim(b), converged(b)] = PAL_PFLR_TLR(StimLevels, NumPos, OutOfNum, paramsValues, PF, MC,'searchoptions',options,'maxtries',maxTries,'rangetries',rangeTries,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
         if ~converged(b)
-            message = ['Fit to simulation ' int2str(b) ' of ' int2str(B) ' did not converge.'];
-            warning(message);
+            warning('PALAMEDES:convergeFail','Fit to simulation %s of %s did not converge.',int2str(b), int2str(B));
         end        
     end
 
     pTLR = length(TLRSim(TLRSim > TLR))./B;
     exitflag = (sum(converged) == B);
     if ~exitflag
-        message = ['Only ' int2str(sum(converged)) ' of ' int2str(B) ' simulations converged.'];
-        warning(message);
+        warning('PALAMEDES:convergeFail','Only %s of %s simulations converged.',int2str(sum(converged)), int2str(B));
     end
 end
-
-warning(warningstates);

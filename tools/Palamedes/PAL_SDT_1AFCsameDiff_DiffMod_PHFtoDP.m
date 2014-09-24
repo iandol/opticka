@@ -35,19 +35,20 @@
 % are the resulting N=3 vectors of dP and k
 %
 % Introduced: Palamedes version 1.0.0 (FK)
-% Modified: Palamedes version 1.4.0 (see History.m)
+% Modified: Palamedes version 1.4.0, 1.6.3 (see History.m)
 
 
-function [dP k]=PAL_SDT_1AFCsameDiff_DiffMod_PHFtoDP(pHF)
+function [dP, k]=PAL_SDT_1AFCsameDiff_DiffMod_PHFtoDP(pHF)
 
-[rows cols]=size(pHF);
+[rows, cols]=size(pHF);
 
 k=-sqrt(2).*PAL_PtoZ(pHF(:,2)./2);
 pH=pHF(:,1);
 
 func=@PAL_SDT_1AFCsameDiff_DiffMod_DPtoPH;
 
+dP = zeros(rows,1);
+
 for r=1:rows
     dP(r) = PAL_minimize(@PAL_sqDistanceYfuncX,1,[],pH(r),func,k(r));
 end
-dP=dP';

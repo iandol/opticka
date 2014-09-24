@@ -15,7 +15,7 @@
 %is a 6 parameter model (4 thresholds, 1 slope, 1 lapse rate). Plots of the 
 %fit are presented in a figure.
 %
-%Program then estimates standard errorr on the 6 free parameters using
+%Program then estimates standard error on the 6 free parameters using
 %bootstrap simulations. Standard error bars are added to the figure.
 %
 %Next a model comparison is performed. The model above is compared to a

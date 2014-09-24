@@ -39,6 +39,7 @@
 % the output is an N=5 vector of d's
 %
 % Introduced: Palamedes version 1.6.0 (FK & NP)
+% Modified: Palamedes version 1.6.3 (see History.m)
 
 function [dP] = PAL_SDT_3AFCoddity_IndMod_PCtoDP(pC, varargin)
 
@@ -53,15 +54,16 @@ if ~isempty(varargin)
             valid = 1;
         end
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end
     end            
 end
 
-[rows cols] = size(pC);
+[rows, cols] = size(pC);
 
 func = @PAL_SDT_3AFCoddity_IndMod_DPtoPC;
+
+dP = zeros(rows, cols);
 
 for r = 1:rows
     for c = 1:cols

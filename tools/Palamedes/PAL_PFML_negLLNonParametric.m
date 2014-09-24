@@ -9,9 +9,9 @@
 %Internal Function
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.1.0, 1.6.0 (see History.m)
+% Modified: Palamedes version 1.1.0, 1.6.0, 1.6.3 (see History.m)
 
-function [negLL numParams] = PAL_PFML_negLLNonParametric(NumPos, OutOfNum)
+function [negLL, numParams] = PAL_PFML_negLLNonParametric(NumPos, OutOfNum)
 
 pcorrect = NumPos./OutOfNum;
 

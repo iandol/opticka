@@ -27,14 +27,16 @@
 % a scalar M with a value of 6, and the output is an N=5 vector of d's
 %
 % Introduced: Palamedes version 1.0.0 (FK)
-% Modified: Palamedes version 1.4.0 (see History.m)
+% Modified: Palamedes version 1.4.0, 1.6.3 (see History.m)
 
 
 function dP=PAL_SDT_MAFCmatchSample_DiffMod_PCtoDP(pC,M)
 
-[rows cols]=size(pC);
+[rows, cols]=size(pC);
 
 func=@PAL_SDT_MAFCmatchSample_DiffMod_DPtoPC;
+
+dP = zeros(rows,cols);
 
 for r=1:rows
     for c=1:cols

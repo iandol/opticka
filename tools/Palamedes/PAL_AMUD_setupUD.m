@@ -79,7 +79,7 @@
 %       'UD.stop' will be set to 1.
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.2.0, 1.4.5 (see History.m)
+% Modified: Palamedes version 1.2.0, 1.4.5, 1.6.3 (see History.m)
 
 function UD = PAL_AMUD_setupUD(varargin)
 
@@ -156,8 +156,7 @@ if NumOpts > 1
             valid = 1;
         end
         if valid == 0
-            message = [varargin{n} ' is not a valid option. Ignored.'];
-            warning(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n})        
         end        
     end            
 end

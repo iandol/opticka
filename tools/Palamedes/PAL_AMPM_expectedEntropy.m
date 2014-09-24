@@ -7,8 +7,9 @@
 %Internal function
 %
 %Introduced: Palamedes version 1.6.0 (NP)
+%Modified: Palamedes version 1.6.1, 1.6.3 (see History.m)
 
-function [PM expectedEntropy] = PAL_AMPM_expectedEntropy(PM,varargin)
+function [PM, expectedEntropy] = PAL_AMPM_expectedEntropy(PM,varargin)
 
 fixLapse = false;
 
@@ -19,16 +20,16 @@ if ~isempty(varargin)
         valid = 1;
     end
     if valid == 0
-        message = [varargin{1} ' is not a valid option. Ignored.'];
-        warning(message);
+        warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{1})
     end        
 end
 
-pSuccessGivenx = PAL_AMPM_pSuccessGivenx(PM.LUT, PM.pdf);
-[PM.posteriorTplus1givenSuccess PM.posteriorTplus1givenFailure] = PAL_AMPM_PosteriorTplus1(PM.pdf, PM.LUT);
+[PM.posteriorTplus1givenSuccess, PM.posteriorTplus1givenFailure, pSuccessGivenx] = PAL_AMPM_PosteriorTplus1(PM.pdf, PM.LUT);
 
 if fixLapse
-    [trash I] = PAL_findMax(PM.pdf);
+    tempSuccess = zeros(size(PM.posteriorTplus1givenSuccess(:,:,:,1,:)));
+    tempFailure = zeros(size(PM.posteriorTplus1givenSuccess(:,:,:,1,:)));
+    [trash, I] = PAL_findMax(PM.pdf);
     for SR = 1:length(PM.stimRange)
         tempSuccess(:,:,:,:,SR) = PM.posteriorTplus1givenSuccess(:,:,:,I(4),SR)./sum(sum(sum(sum(sum(PM.posteriorTplus1givenSuccess(:,:,:,I(4),SR))))));
         tempFailure(:,:,:,:,SR) = PM.posteriorTplus1givenFailure(:,:,:,I(4),SR)./sum(sum(sum(sum(sum(PM.posteriorTplus1givenFailure(:,:,:,I(4),SR))))));

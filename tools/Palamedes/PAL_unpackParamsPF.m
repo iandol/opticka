@@ -6,8 +6,9 @@
 %Internal function
 %
 %Introduced: Palamedes version 1.0.0 (NP)
+%Modified: Palamedes version 1.6.3 (see History.m)
 
-function [alpha beta gamma lambda] = PAL_unpackParamsPF(params)
+function [alpha, beta, gamma, lambda] = PAL_unpackParamsPF(params)
 
 gamma = 0;
 lambda = 0;

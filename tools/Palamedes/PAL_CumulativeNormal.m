@@ -29,12 +29,12 @@
 %   y = 0.5000
 %
 %Introduced: Palamedes version 1.0.0 (NP)
-%Modified: Palamedes version 1.0.2, 1.1.1, 1.2.0, 1.4.0, 1.4.4 
+%Modified: Palamedes version 1.0.2, 1.1.1, 1.2.0, 1.4.0, 1.4.4, 1.6.3 
 %   (see History.m)
 
 function y = PAL_CumulativeNormal(params, x, varargin)
 
-[alpha beta gamma lambda] = PAL_unpackParamsPF(params);
+[alpha, beta, gamma, lambda] = PAL_unpackParamsPF(params);
 
 if ~isempty(varargin)
     if strncmpi(varargin{1}, 'Inverse',3)

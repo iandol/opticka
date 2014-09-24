@@ -88,12 +88,9 @@
 %       PsiValues, SDnoise, 100, 'maxTries',4,'rangeTries',.1);
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.1.0, 1.2.0, 1.4.0 (see History.m)
+% Modified: Palamedes version 1.1.0, 1.2.0, 1.4.0, 1.6.3 (see History.m)
 
-function [SD_PsiValues SD_SDnoise paramsSim LLSim converged] = PAL_MLDS_Bootstrap(Stim, OutOfNum, PsiValues, SDnoise, B, varargin)
-
-warningstates = warning('query','all');
-warning off MATLAB:log:logOfZero
+function [SD_PsiValues, SD_SDnoise, paramsSim, LLSim, converged] = PAL_MLDS_Bootstrap(Stim, OutOfNum, PsiValues, SDnoise, B, varargin)
 
 options = [];
 maxTries = 1;
@@ -120,8 +117,7 @@ if ~isempty(varargin)
             valid = 1;
         end        
         if valid == 0
-            message = ['Warning: ' varargin{n} ' is not a valid option. Ignored.'];
-            disp(message);
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n})    
         end        
     end            
 end
@@ -132,30 +128,26 @@ for b = 1:B
 
     NumGreater = PAL_MLDS_SimulateObserver(Stim, OutOfNum, PsiValues, SDnoise);
 
-    [paramsSim(b,:) LLSim(b) converged(b)] = PAL_minimize(@PAL_MLDS_negLL,[PsiValues(2:NumLevels-1) SDnoise], options, Stim, NumGreater, OutOfNum);
+    [paramsSim(b,:), LLSim(b), converged(b)] = PAL_minimize(@PAL_MLDS_negLL,[PsiValues(2:NumLevels-1) SDnoise], options, Stim, NumGreater, OutOfNum);
 
     tries = 1;
     while converged(b) == 0 && tries < maxTries        
         NewSearchInitials = [PsiValues(2:NumLevels-1) SDnoise]+(rand(1,length(PsiValues)-1)-.5).*rangeTries;
-        [paramsSim(b,:) LLSim(b,:) converged(b)] = PAL_minimize(@PAL_MLDS_negLL,NewSearchInitials, options, Stim, NumGreater, OutOfNum);
+        [paramsSim(b,:), LLSim(b,:), converged(b)] = PAL_minimize(@PAL_MLDS_negLL,NewSearchInitials, options, Stim, NumGreater, OutOfNum);
         tries = tries + 1;
     end    
     if ~converged(b)
-        message = ['Fit to simulation ' int2str(b) ' of ' int2str(B) ' did not converge.'];
-        warning(message);
+        warning('PALAMEDES:convergeFail','Fit to simulation %s of %s did not converge.',int2str(b), int2str(B));
     end    
 end
 
 paramsSim = [zeros(B,1) paramsSim(:,1:size(paramsSim,2)-1) ones(B,1) paramsSim(:,size(paramsSim,2))];
 
-[Mean SD] = PAL_MeanSDSSandSE(paramsSim);
+[Mean, SD] = PAL_MeanSDSSandSE(paramsSim);
 SD_PsiValues = SD(1:length(SD)-1);
 SD_SDnoise = SD(length(SD));
 LLSim = -LLSim;
 exitflag = sum(converged) == B;
 if exitflag ~= 1
-    message = ['Only ' int2str(sum(converged)) ' of ' int2str(B) ' simulations converged'];
-    warning(message);
+    warning('PALAMEDES:convergeFail','Only %s of %s simulations converged',int2str(sum(converged)),int2str(B));
 end
-
-warning(warningstates);

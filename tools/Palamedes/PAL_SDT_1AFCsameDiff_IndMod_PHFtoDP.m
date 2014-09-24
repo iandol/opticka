@@ -35,8 +35,9 @@
 % vectors of dP and C
 %
 % Introduced: Palamedes version 1.0.0 (FK)
+% Modified: Palamedes version 1.6.3 (see History.m)
 
-function [dP C]=PAL_SDT_1AFCsameDiff_IndMod_PHFtoDP(pHF)
+function [dP, C]=PAL_SDT_1AFCsameDiff_IndMod_PHFtoDP(pHF)
 
 zH=PAL_PtoZ(pHF(:,1));
 zF=PAL_PtoZ(pHF(:,2));
