@@ -5,13 +5,26 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
     %  object o.  A child observer raises events when objects are added to
     %  and removed from the property Children of o.
     %
+    %  When property 'HandleVisibilityMode' is set to 'all', children are
+    %  recognized regardless of handle visibility.  When set to 'on',
+    %  children with 'HandleVisibility' set to 'off' do not generate
+    %  events.
+    %
     %  See also: uix.AncestryObserver, uix.Node
     
-    %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 978 $ $Date: 2014-09-28 14:20:44 -0400 (Sun, 28 Sep 2014) $
+    %  Copyright 2009-2013 The MathWorks, Inc.
+    %  $Revision: 957 $ $Date: 2014-09-04 15:21:51 +0100 (Thu, 04 Sep 2014) $
     
     properties( Access = private )
         Root % root node
+    end
+    
+    properties( Dependent, AbortSet )
+        HandleVisibilityMode % handle visibility mode [all|on]
+    end
+    
+    properties( Access = private )
+        HandleVisibilityMode_ = 'all' % backing for HandleVisibilityMode
     end
     
     events( NotifyAccess = private )
@@ -40,14 +53,12 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
                 'ObjectChildAdded', ...
                 @(~,e)obj.addChild(nRoot,e.Child) );
             childAddedListener.Recursive = true;
-            nRoot.addprop( 'ChildAddedListener' );
-            nRoot.ChildAddedListener = childAddedListener;
+            nRoot.addListener( childAddedListener );
             childRemovedListener = event.listener( oRoot, ...
                 'ObjectChildRemoved', ...
                 @(~,e)obj.removeChild(nRoot,e.Child) );
             childRemovedListener.Recursive = true;
-            nRoot.addprop( 'ChildRemovedListener' );
-            nRoot.ChildRemovedListener = childRemovedListener;
+            nRoot.addListener( childRemovedListener );
             
             % Add children
             oChildren = hgGetTrueChildren( oRoot );
@@ -61,6 +72,51 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
         end % constructor
         
     end % structors
+    
+    methods
+        
+        function value = get.HandleVisibilityMode( obj )
+            
+            value = obj.HandleVisibilityMode_;
+            
+        end % get.HandleVisibilityMode
+        
+        function set.HandleVisibilityMode( obj, value )
+            
+            % Check
+            assert( ischar( value ) && any( strcmp( value, {'on','all'} ) ), ...
+                'uix:InvalidPropertyValue', ...
+                'Property ''HandleVisibilityMode'' must be ''on'' or ''all''.' )
+            
+            % Set
+            obj.HandleVisibilityMode_ = value;
+            
+            % Update
+            notifyChildEvent( obj.Root )
+            
+            function notifyChildEvent( nc )
+                
+                % Process child nodes
+                ngc = nc.Children;
+                for ii = 1:numel( ngc )
+                    notifyChildEvent( ngc(ii) )
+                end
+                
+                % Process this node
+                oc = nc.Object;
+                if strcmp( oc.HandleVisibility, 'on' )
+                    % no event
+                elseif strcmp( value, 'all' )
+                    notify( obj, 'ChildAdded', uix.ChildEvent( oc ) )
+                else % strcmp( value, 'on' )
+                    notify( obj, 'ChildRemoved', uix.ChildEvent( oc ) )
+                end
+                
+            end % notifyChildEvent
+            
+        end % set.HandleVisibilityMode
+        
+    end % accessors
     
     methods( Access = private )
         
@@ -77,55 +133,28 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
             nChild = uix.Node( oChild );
             nParent.addChild( nChild )
             if isgraphics( oChild )
-                % Add Internal PreSet property listener
-                internalPreSetListener = event.proplistener( oChild, ...
-                    findprop( oChild, 'Internal' ), 'PreSet', ...
-                    @(~,~)obj.preSetInternal(nChild) );
-                nChild.addprop( 'InternalPreSetListener' );
-                nChild.InternalPreSetListener = internalPreSetListener;
-                % Add Internal PostSet property listener
-                internalPostSetListener = event.proplistener( oChild, ...
+                % Add property listener
+                nChild.addListener( event.proplistener( oChild, ...
                     findprop( oChild, 'Internal' ), 'PostSet', ...
-                    @(~,~)obj.postSetInternal(nChild) );
-                nChild.addprop( 'InternalPostSetListener' );
-                nChild.InternalPostSetListener = internalPostSetListener;
+                    @(~,~)obj.postSetInternal(nChild) ) )
+                nChild.addListener( event.proplistener( oChild, ...
+                    findprop( oChild, 'HandleVisibility' ), 'PostSet', ...
+                    @(~,~)obj.postSetHandleVisibility(nChild) ) )
             else
-                % Add ObjectChildAdded listener
-                childAddedListener = event.listener( oChild, ...
+                % Add child listeners
+                nChild.addListener( event.listener( oChild, ...
                     'ObjectChildAdded', ...
-                    @(~,e)obj.addChild(nChild,e.Child) );
-                nChild.addprop( 'ChildAddedListener' );
-                nChild.ChildAddedListener = childAddedListener;
-                % Add ObjectChildRemoved listener
-                childRemovedListener = event.listener( oChild, ...
+                    @(~,e)obj.addChild(nChild,e.Child) ) )
+                nChild.addListener( event.listener( oChild, ...
                     'ObjectChildRemoved', ...
-                    @(~,e)obj.removeChild(nChild,e.Child) );
-                nChild.addprop( 'ChildRemovedListener' );
-                nChild.ChildRemovedListener = childRemovedListener;
+                    @(~,e)obj.removeChild(nChild,e.Child) ) )
             end
             
             % Raise ChildAdded event
-            if isgraphics( oChild ) && oChild.Internal == false
-                if verLessThan( 'MATLAB', '8.5' ) && ...
-                        isa( oChild, 'matlab.ui.control.UIControl' ) % TODO
-                    %  A workaround is required in R2014b for G1129721,
-                    %  where setting the property 'Visible' of a uicontrol
-                    %  to 'on' in response to an ObjectChildAdded event
-                    %  causes a crash.  Instead, the property set must be
-                    %  postponed until the PostSet event of the uicontrol
-                    %  property 'Parent', which follows the
-                    %  ObjectChildAdded event.  Thus it is necessary to
-                    %  ensure that the ChildAdded event on the
-                    %  ChildObserver does not fire until it is safe to set
-                    %  the property 'Visible' of the child.
-                    parentPostSetListener = event.proplistener( oChild, ...
-                        findprop( oChild, 'Parent' ), 'PostSet', ...
-                        @(~,~)obj.postSetParent(nChild) );
-                    nChild.addprop( 'ParentPostSetListener' );
-                    nChild.ParentPostSetListener = parentPostSetListener;
-                else
-                    notify( obj, 'ChildAdded', uix.ChildEvent( oChild ) )
-                end
+            if isgraphics( oChild ) && oChild.Internal == false && ...
+                    ~( strcmp( obj.HandleVisibilityMode, 'on' ) && ...
+                    strcmp( oChild.HandleVisibility, 'off' ) )
+                notify( obj, 'ChildAdded', uix.ChildEvent( oChild ) )
             end
             
             % Add grandchildren
@@ -167,7 +196,9 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
                 
                 % Process this node
                 oc = nc.Object;
-                if isgraphics( oc ) && oc.Internal == false
+                if isgraphics( oc ) && oc.Internal == false && ...
+                        ~( strcmp( obj.HandleVisibilityMode, 'on' ) && ...
+                        strcmp( oc.HandleVisibility, 'off' ) )
                     notify( obj, 'ChildRemoved', uix.ChildEvent( oc ) )
                 end
                 
@@ -175,21 +206,7 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
             
         end % removeChild
         
-        function preSetInternal( ~, nChild )
-            %preSetInternal  Perform property PreSet tasks
-            %
-            %  co.preSetInternal(n) caches the previous value of the
-            %  property Internal of the object referenced by the node n, to
-            %  enable PostSet tasks to identify whether the value changed.
-            %  This is necessary since Internal AbortSet is false.
-            
-            oldInternal = nChild.Object.Internal;
-            nChild.addprop( 'OldInternal' );
-            nChild.OldInternal = oldInternal;
-            
-        end % preSetInternal
-        
-        function postSetInternal( obj, nChild )
+        function postSetInternal( obj, n )
             %postSetInternal  Perform property PostSet tasks
             %
             %  co.postSetInternal(n) raises a ChildAdded or ChildRemoved
@@ -197,36 +214,40 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
             %  the value of the property Internal of the object referenced
             %  by the node n.
             
-            % Retrieve old and new values
-            oChild = nChild.Object;
-            newInternal = oChild.Internal;
-            oldInternal = nChild.OldInternal;
-            
-            % Clean up node
-            delete( findprop( nChild, 'OldInternal' ) )
-            
-            % Raise event
-            switch newInternal
-                case oldInternal % no change
-                    % no event
-                case true % false to true
-                    notify( obj, 'ChildRemoved', uix.ChildEvent( oChild ) )
-                case false % true to false
-                    notify( obj, 'ChildAdded', uix.ChildEvent( oChild ) )
+            % Raise event if required
+            object = n.Object;
+            if strcmp( obj.HandleVisibilityMode, 'on' ) && ...
+                    strcmp( object.HandleVisibility, 'off' )
+                % invisible
+            elseif object.Internal == false
+                notify( obj, 'ChildAdded', uix.ChildEvent( object ) )
+            else
+                notify( obj, 'ChildRemoved', uix.ChildEvent( object ) )
             end
             
         end % postSetInternal
         
-        function postSetParent( obj, nChild )
+        function postSetHandleVisibility( obj, n )
+            %postSetHandleVisibility  Perform property PostSet tasks
+            %
+            %  co.postSetHandleVisibility(n) raises a ChildAdded or
+            %  ChildRemoved event on the child observer co in response to a
+            %  change of the value of the property HandleVisibility of the
+            %  object referenced by the node n.
             
-            % Clean up node
-            delete( findprop( nChild, 'ParentPostSetListener' ) )
+            % Raise event if required
+            object = n.Object;
+            if object.Internal == true
+                % internal
+            elseif strcmp( obj.HandleVisibilityMode, 'all' )
+                % all handle visibilities
+            elseif strcmp( object.HandleVisibility, 'on' )
+                notify( obj, 'ChildAdded', uix.ChildEvent( object ) )
+            else % strcmp( object.HandleVisibility, 'off' )
+                notify( obj, 'ChildRemoved', uix.ChildEvent( object ) )
+            end
             
-            % Raise event
-            oChild = nChild.Object;
-            notify( obj, 'ChildAdded', uix.ChildEvent( oChild ) )
-            
-        end % postSetParent
+        end % postSetHandleVisibility
         
     end % event handlers
     

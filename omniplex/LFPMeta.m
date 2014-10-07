@@ -85,7 +85,11 @@ classdef LFPMeta < analysisCore
 					idx = me.nSites+1;
 					me.raw{idx} = lfp;
 					for i = 1:2
-						me.cells{idx,i}.name = [lfp.selectedTrials{i}.name];
+						if ~isempty(lfp.selectedTrials)
+							me.cells{idx,i}.name = [lfp.selectedTrials{i}.name];
+						else
+							me.cells{idx,i}.name = 'unknown';
+						end
 						me.cells{idx,i}.weight = 1;
 						me.cells{idx,i}.selLFP = lfp.selectedLFP;
 						me.cells{idx,i}.selUnit = lfp.sp.selectedUnit;
@@ -112,7 +116,7 @@ classdef LFPMeta < analysisCore
 			end
 			
 			fprintf('Cell loading took %.5g seconds\n',toc(addtic))
-			notifyUI(me,sprintf('Loaded %g Cells...',me.nSites));
+			notifyUI(me,sprintf('Loaded %g Cells, you now need to process them...',me.nSites));
 			
 		end
 		
@@ -511,26 +515,28 @@ classdef LFPMeta < analysisCore
 		%> @return
 		% ===================================================================
 		function reset(me,varargin)
-			notifyUI(me,'Resetting all data...');
-			drawnow
-			me.raw = cell(1);
-			me.cells = cell(1);
-			me.list = cell(1);
-			if isfield(me.handles,'list')
-				set(me.handles.list,'Value',1);
-				set(me.handles.list,'String',{''});
-			end
-			ho = me.handles.axisind;
-			delete(ho.Children);
-			ho = me.handles.axisall;
-			delete(ho.Children);
-			me.handles.axistabs.SelectedChild=1;
-			if isfield(me.handles,'axis1')
-				me.handles.axistabs.SelectedChild=2; 
-				axes(me.handles.axis2);cla
-				me.handles.axistabs.SelectedChild=1; 
-				axes(me.handles.axis1); cla
-				set(me.handles.root,'Title',['Number of Cells Loaded: ' num2str(me.nSites)]);
+			try
+				notifyUI(me,'Resetting all data...');
+				drawnow
+				me.raw = cell(1);
+				me.cells = cell(1);
+				me.list = cell(1);
+				if isfield(me.handles,'list')
+					set(me.handles.list,'Value',1);
+					set(me.handles.list,'String',{''});
+				end
+				ho = me.handles.axisind;
+				delete(ho.Children);
+				ho = me.handles.axisall;
+				delete(ho.Children);
+				me.handles.axistabs.SelectedChild=1;
+				if isfield(me.handles,'axis1')
+					me.handles.axistabs.SelectedChild=2; 
+					axes(me.handles.axis2);cla
+					me.handles.axistabs.SelectedChild=1; 
+					axes(me.handles.axis1); cla
+					set(me.handles.root,'Title',['Number of Cells Loaded: ' num2str(me.nSites)]);
+				end
 			end
 		end
 		
@@ -602,7 +608,7 @@ classdef LFPMeta < analysisCore
 		%> @return
 		% ===================================================================
 		function makeUI(me)
-			if ~isempty(me.handles) && isfield(me.handles,'root') && isa(me.handles.root,'uiextras.BoxPanel')
+			if ~isempty(me.handles) && isfield(me.handles,'root') && isa(me.handles.root,'uix.BoxPanel')
 				fprintf('---> UI already open!\n');
 				return
 			end
@@ -627,17 +633,13 @@ classdef LFPMeta < analysisCore
 			uimenu(hcmenu,'Label','Reset (all)','Callback',@me.reset);
 			
 			fs = 10;
-			if ismac
-				[s,c]=system('system_profiler SPDisplaysDataType');
-				if s == 0; if ~isempty(regexpi(c,'Retina LCD')); fs = 7; end; end
-			end	
 			SansFont = 'Helvetica';
 			MonoFont = 'Consolas';
 			bgcolor = [0.89 0.89 0.89];
 			bgcoloredit = [0.9 0.9 0.9];
 
 			handles.parent = me.handles.parent; %#ok<*PROP>
-			handles.root = uiextras.BoxPanel('Parent',parent,...
+			handles.root = uix.BoxPanel('Parent',parent,...
 				'Title','Please load some data...',...
 				'FontName',SansFont,...
 				'FontSize',fs,...
@@ -646,20 +648,20 @@ classdef LFPMeta < analysisCore
 				'TitleColor',[0.8 0.78 0.76],...
 				'BackgroundColor',bgcolor);
 
-			handles.hbox = uiextras.HBoxFlex('Parent', handles.root,'Padding',0,...
-				'Spacing', 5, 'BackgroundColor', bgcolor, 'ShowMarkings','on');
-			handles.axistabs = uiextras.TabPanel('Parent', handles.hbox,'Padding',0,...
-				'BackgroundColor',bgcolor,'TabSize',120,'FontSize', fs+1,'FontName',SansFont);
-			handles.axisind = uiextras.Panel('Parent', handles.axistabs,'Padding',0,...
+			handles.hbox = uix.HBoxFlex('Parent', handles.root,'Padding',0,...
+				'Spacing', 5, 'BackgroundColor', bgcolor);
+			handles.axistabs = uix.TabPanel('Parent', handles.hbox,'Padding',0,...
+				'BackgroundColor',bgcolor,'TabWidth',120,'FontSize', fs+1,'FontName',SansFont);
+			handles.axisind = uix.Panel('Parent', handles.axistabs,'Padding',0,...
 				'BackgroundColor',bgcolor);
-			handles.axisall = uiextras.Panel('Parent', handles.axistabs,'Padding',0,...
+			handles.axisall = uix.Panel('Parent', handles.axistabs,'Padding',0,...
 				'BackgroundColor',bgcolor);
-			handles.axistabs.TabNames = {'Individual','Population'};
+			handles.axistabs.TabTitles = {'Individual','Population'};
 
-			handles.controls = uiextras.VBox('Parent', handles.hbox,'Padding',0,'Spacing',0,'BackgroundColor',bgcolor);
-			handles.controls1 = uiextras.Grid('Parent', handles.controls,'Padding',4,'Spacing',2,'BackgroundColor',bgcolor);
-			handles.controls2 = uiextras.Grid('Parent', handles.controls,'Padding',4,'Spacing',0,'BackgroundColor',bgcolor);
-			handles.controls3 = uiextras.Grid('Parent', handles.controls,'Padding',4,'Spacing',2,'BackgroundColor',bgcolor);
+			handles.controls = uix.VBox('Parent', handles.hbox,'Padding',0,'Spacing',0,'BackgroundColor',bgcolor);
+			handles.controls1 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',2,'BackgroundColor',bgcolor);
+			handles.controls2 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',0,'BackgroundColor',bgcolor);
+			handles.controls3 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',2,'BackgroundColor',bgcolor);
 			
 			handles.loadbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
@@ -771,7 +773,7 @@ classdef LFPMeta < analysisCore
 				'FontSize', fs,...
 				'BackgroundColor',bgcolor,...
 				'String','');
-			uiextras.Empty('Parent',handles.controls3,'BackgroundColor',bgcolor)
+			uix.Empty('Parent',handles.controls3,'BackgroundColor',bgcolor)
 			handles.smoothstep = uicontrol('Style','edit',...
 				'Parent',handles.controls3,...
 				'Tag','LMAsmoothstep',...
@@ -791,10 +793,10 @@ classdef LFPMeta < analysisCore
 				'FontSize', fs,...
 				'String','200');
 			
-			set(handles.hbox,'Sizes', [-2 -1]);
-			set(handles.controls,'Sizes', [50 -1 95]);
-			set(handles.controls1,'RowSizes', [-1 -1])
-			set(handles.controls3,'ColumnSizes', [-1 -1 -1], 'RowSizes', [-1 -1 -1])
+			set(handles.hbox,'Widths', [-2 -1]);
+			set(handles.controls,'Heights', [50 -1 95]);
+			set(handles.controls1,'Heights', [-1 -1])
+			set(handles.controls3,'Widths', [-1 -1 -1], 'Heights', [-1 -1 -1])
 
 			me.handles = handles;
 			me.openUI = true;
@@ -812,7 +814,7 @@ classdef LFPMeta < analysisCore
 			else
 				info = varargin{1};
 			end
-			set(me.handles.root,'Title',info); drawnow
+			try; set(me.handles.root,'Title',info); drawnow; end
 		end
 	end	
 end

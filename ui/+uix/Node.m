@@ -1,10 +1,13 @@
-classdef( Hidden ) Node < dynamicprops
+classdef ( Hidden ) Node < dynamicprops
     %uix.Node  Node
     %
     %  n = uix.Node(o) creates a node for the handle o.
+    %
+    %  Node is a helper class for managing trees of objects and associated
+    %  listeners.
     
-    %  Copyright 2009-2013 The MathWorks, Inc.
-    %  $Revision: 887 $ $Date: 2013-11-26 10:53:41 +0000 (Tue, 26 Nov 2013) $
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 978 $ $Date: 2014-09-28 14:20:44 -0400 (Sun, 28 Sep 2014) $
     
     properties( SetAccess = private )
         Object % object
@@ -12,7 +15,6 @@ classdef( Hidden ) Node < dynamicprops
     end
     
     properties( Access = private )
-        Listeners = event.listener.empty( [0 1] ) % external listeners
         ChildListeners = event.listener.empty( [0 1] ) % internal listeners
     end
     
@@ -53,7 +55,7 @@ classdef( Hidden ) Node < dynamicprops
             obj.Children(end+1,:) = child;
             obj.ChildListeners(end+1,:) = childListener;
             
-        end % add
+        end % addChild
         
         function removeChild( obj, child )
             %removeChild  Remove child
@@ -73,22 +75,7 @@ classdef( Hidden ) Node < dynamicprops
             obj.Children(tf,:) = [];
             obj.ChildListeners(tf,:) = [];
             
-        end % remove
-        
-        function addListener( obj, listener )
-            %addListener  Add listener
-            %
-            %  n.addListener(l) adds the listener l to the node n.
-            
-            % Check
-            assert( isa( listener, 'event.listener' ) && ...
-                isequal( size( listener ), [1 1] ), ...
-                'uix:InvalidArgument', 'Invalid listener.' )
-            
-            % Add
-            obj.Listeners(end+1,:) = listener;
-            
-        end % addListener
+        end % removeChild
         
     end % public methods
     

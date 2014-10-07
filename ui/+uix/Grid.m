@@ -1,4 +1,15 @@
 classdef Grid < uix.Box
+    %uix.Grid  Grid
+    %
+    %  b = uix.Grid(p1,v1,p2,v2,...) constructs a grid and sets parameter
+    %  p1 to value v1, etc.
+    %
+    %  A grid lays out contents from top to bottom and left to right.
+    %
+    %  See also: uix.HBox, uix.VBox, uix.GridFlex
+    
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 991 $ $Date: 2014-09-28 15:38:31 -0400 (Sun, 28 Sep 2014) $
     
     properties( Access = public, Dependent, AbortSet )
         Widths % widths of contents, in pixels and/or weights
@@ -17,6 +28,12 @@ classdef Grid < uix.Box
     methods
         
         function obj = Grid( varargin )
+            %uix.Grid  Grid constructor
+            %
+            %  b = uix.Grid() constructs a grid.
+            %
+            %  b = uix.Grid(p1,v1,p2,v2,...) sets parameter p1 to value v1,
+            %  etc.
             
             % Call superclass constructor
             obj@uix.Box()

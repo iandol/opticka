@@ -23,8 +23,8 @@ classdef HButtonBox < uix.HButtonBox
     %   See also: uiextras.VButtonBox
     %             uiextras.HBox
     
-    %   Copyright 2009-2010 The MathWorks, Inc.
-    %   $Revision: 898 $ $Date: 2014-01-23 02:14:27 +0000 (Thu, 23 Jan 2014) $
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 979 $ $Date: 2014-09-28 14:26:12 -0400 (Sun, 28 Sep 2014) $
     
     methods
         

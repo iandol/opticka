@@ -1,23 +1,46 @@
 classdef VBoxFlex < uix.VBox
+    %uix.VBoxFlex  Flexible vertical box
+    %
+    %  b = uix.VBoxFlex(p1,v1,p2,v2,...) constructs a flexible vertical box
+    %  and sets parameter p1 to value v1, etc.
+    %
+    %  A vertical box lays out contents from top to bottom.  Users can
+    %  resize contents by dragging the dividers.
+    %
+    %  See also: uix.HBoxFlex, uix.GridFlex, uix.VBox, uix.VButtonBox
+    
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 999 $ $Date: 2014-10-01 14:55:26 -0400 (Wed, 01 Oct 2014) $
+    
+    properties( Access = public, Dependent, AbortSet )
+        DividerMarkings % divider markings [on|off]
+    end
     
     properties( Access = private )
-        RowDividers = uix.Divider.empty( [0 1] )
-        FrontDivider
-        LocationObserver
-        MousePressListener = event.listener.empty( [0 0] )
-        MouseReleaseListener = event.listener.empty( [0 0] )
-        MouseMotionListener = event.listener.empty( [0 0] )
-        ActiveDivider = 0
-        ActiveDividerPosition = [NaN NaN NaN NaN]
-        MousePressLocation = [NaN NaN]
-        Pointer = 'unset'
-        OldPointer = 0
-        BackgroundColorListener
+        RowDividers = uix.Divider.empty( [0 1] ) % row dividers
+        FrontDivider % front divider
+        DividerMarkings_ = 'on' % backing for DividerMarkings
+        LocationObserver % location observer
+        MousePressListener = event.listener.empty( [0 0] ) % mouse press listener
+        MouseReleaseListener = event.listener.empty( [0 0] ) % mouse release listener
+        MouseMotionListener = event.listener.empty( [0 0] ) % mouse motion listener
+        ActiveDivider = 0 % active divider index
+        ActiveDividerPosition = [NaN NaN NaN NaN] % active divider position
+        MousePressLocation = [NaN NaN] % mouse press location
+        Pointer = 'unset' % mouse pointer
+        OldPointer = 0 % old pointer
+        BackgroundColorListener % background color listener
     end
     
     methods
         
         function obj = VBoxFlex( varargin )
+            %uix.VBoxFlex  Flexible vertical box constructor
+            %
+            %  b = uix.VBoxFlex() constructs a flexible vertical box.
+            %
+            %  b = uix.VBoxFlex(p1,v1,p2,v2,...) sets parameter p1 to value
+            %  v1, etc.
             
             % Call superclass constructor
             obj@uix.VBox()
@@ -48,6 +71,31 @@ classdef VBoxFlex < uix.VBox
         end % constructor
         
     end % structors
+    
+    methods
+        
+        function value = get.DividerMarkings( obj )
+            
+            value = obj.DividerMarkings_;
+            
+        end % get.DividerMarkings
+        
+        function set.DividerMarkings( obj, value )
+            
+            % Check
+            assert( ischar( value ) && any( strcmp( value, {'on','off'} ) ), ...
+                'uix:InvalidArgument', ...
+                'Property ''DividerMarkings'' must be ''on'' or ''off'.' )
+            
+            % Set
+            obj.DividerMarkings_ = value;
+            
+            % Mark as dirty
+            obj.Dirty = true;
+            
+        end % set.DividerMarkings
+        
+    end % accessors
     
     methods( Access = protected )
         
@@ -185,6 +233,7 @@ classdef VBoxFlex < uix.VBox
         end % onMouseMotion
         
         function onBackgroundColorChange( obj, ~, ~ )
+            %onBackgroundColorChange  Handler for BackgroundColor changes
             
             backgroundColor = obj.BackgroundColor;
             highlightColor = min( [backgroundColor / 0.75; 1 1 1] );
@@ -255,7 +304,12 @@ classdef VBoxFlex < uix.VBox
             for ii = 1:r
                 rowDivider = obj.RowDividers(ii);
                 rowDivider.Position = rowPositions(ii,:);
-                rowDivider.Markings = rowPositions(ii,3)/2;
+                switch obj.DividerMarkings_
+                    case 'on'
+                        rowDivider.Markings = rowPositions(ii,3)/2;
+                    case 'off'
+                        rowDivider.Markings = zeros( [0 1] );
+                end
             end
             
             % Update pointer

@@ -1180,6 +1180,9 @@ classdef LFPAnalysis < analysisCore
 			nSelection = 0;
 			if ~isempty(ego.selectedTrials)
 				nSelection = length(ego.selectedTrials);
+			else
+				ego.selectTrials();
+				nSelection = length(ego.selectedTrials);
 			end
 		end
 		
@@ -1574,7 +1577,8 @@ classdef LFPAnalysis < analysisCore
 			LFPs = ego.LFPs; %#ok<*PROP>
 			
 			if length(ego.selectedBehaviour) ~= length(ego.map)
-				error('Index error for behaviours');
+				for i = 1:length(ego.map);ego.selectedBehaviour{i} = 'correct';end
+				warning('Had to reset selectedBehaviours, probably due to an old LFPAnalysis object');
 			end
 			
 			for i = 1:length(ego.selectedBehaviour) %generate our selected behaviour indexes

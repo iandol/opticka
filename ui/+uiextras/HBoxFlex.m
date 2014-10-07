@@ -24,14 +24,14 @@ classdef HBoxFlex < uix.HBoxFlex
     %             uiextras.HBox
     %             uiextras.Grid
     
-    %   Copyright 2009-2013 The MathWorks, Inc.
-    %   $Revision: 921 $ $Date: 2014-06-03 11:11:36 +0100 (Tue, 03 Jun 2014) $
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 979 $ $Date: 2014-09-28 14:26:12 -0400 (Sun, 28 Sep 2014) $
     
     properties( Hidden, Access = public, Dependent )
         Enable % deprecated
         Sizes
         MinimumSizes
-        ShowMarkings % deprecated
+        ShowMarkings
     end
     
     methods
@@ -104,27 +104,17 @@ classdef HBoxFlex < uix.HBoxFlex
             
         end % set.MinimumSizes
         
-        function value = get.ShowMarkings( ~ )
+        function value = get.ShowMarkings( obj )
             
-            % Warn
-            % warning( 'uiextras:Deprecated', ...
-            %     'Property ''ShowMarkings'' will be removed in a future release.' )
-            
-            % Return
-            value = 'on';
+            % Get
+            value = obj.DividerMarkings;
             
         end % get.ShowMarkings
         
-        function set.ShowMarkings( ~, value )
+        function set.ShowMarkings( obj, value )
             
-            % Check
-            assert( ischar( value ) && any( strcmp( value, {'on','off'} ) ), ...
-                'uiextras:InvalidPropertyValue', ...
-                'Property ''ShowMarkings'' must be ''on'' or ''off''.' )
-            
-            % Warn
-            % warning( 'uiextras:Deprecated', ...
-            %     'Property ''ShowMarkings'' will be removed in a future release.' )
+            % Set
+            obj.DividerMarkings = value;
             
         end % set.ShowMarkings
         

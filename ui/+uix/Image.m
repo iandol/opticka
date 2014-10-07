@@ -1,4 +1,16 @@
 classdef Image < hgsetget
+    %uix.Image  Image
+    %
+    %  im = uix.Image(p1,v1,p2,v2,...) constructs an image and sets
+    %  parameter p1 to value v1, etc.
+    %
+    %  This class wraps a JLabel to provide a relatively lightweight way to
+    %  present arbitrary CData and to align it both horizontally and
+    %  vertically (unlike a uicontrol) and without the overhead of creating
+    %  axes.
+    
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 986 $ $Date: 2014-09-28 15:01:25 -0400 (Sun, 28 Sep 2014) $
     
     properties( Access = private )
         Label % javax.swing.JLabel
@@ -50,7 +62,7 @@ classdef Image < hgsetget
         function delete( obj )
             
             container = obj.Container;
-            if ishghandle( container ) && strcmp( container.BeingDeleted, 'off' )
+            if isgraphics( container ) && strcmp( container.BeingDeleted, 'off' )
                 delete( container )
             end
             

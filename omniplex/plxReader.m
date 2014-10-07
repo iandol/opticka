@@ -436,14 +436,14 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function handles = infoBox(ego, info)
 			fs = 10;
-			if ismac
-				[s,c]=system('system_profiler SPDisplaysDataType');
-				if s == 0
-					if ~isempty(regexpi(c,'Retina LCD'))
-						fs = 7;
-					end
-				end
-			end
+% 			if ismac
+% 				[s,c]=system('system_profiler SPDisplaysDataType');
+% 				if s == 0
+% 					if ~isempty(regexpi(c,'Retina LCD'))
+% 						fs = 7;
+% 					end
+% 				end
+% 			end
 			if ~exist('info','var')
 				ego.generateInfo();
 				info = ego.info; 

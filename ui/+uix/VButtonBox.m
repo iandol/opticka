@@ -1,8 +1,26 @@
 classdef VButtonBox < uix.ButtonBox
+    %uix.VButtonBox  Vertical button box
+    %
+    %  b = uix.VButtonBox(p1,v1,p2,v2,...) constructs a vertical button box
+    %  and sets parameter p1 to value v1, etc.
+    %
+    %  A vertical button box lays out equally sized buttons from top to
+    %  bottom.
+    %
+    %  See also: uix.HButtonBox
+    
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 986 $ $Date: 2014-09-28 15:01:25 -0400 (Sun, 28 Sep 2014) $
     
     methods
         
         function obj = VButtonBox( varargin )
+            %uix.VButtonBox  Vertical button box constructor
+            %
+            %  b = uix.VButtonBox() constructs a vertical button box.
+            %
+            %  b = uix.VButtonBox(p1,v1,p2,v2,...) sets parameter p1 to
+            %  value v1, etc.
             
             % Call superclass constructor
             obj@uix.ButtonBox()

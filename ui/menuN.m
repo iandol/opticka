@@ -105,16 +105,16 @@ function choice = menuN(mtitle,options,Opt)
 % Author: Johan Winges
 
 fs = 10;
-if feature('HGUsingMatlabClasses')
-	if ismac
-		[s,c]=system('system_profiler SPDisplaysDataType');
-		if s == 0
-			if ~isempty(regexpi(c,'Retina LCD'))
-				fs = 7;
-			end
-		end
-	end
-end
+% if feature('HGUsingMatlabClasses')
+% 	if ismac
+% 		[s,c]=system('system_profiler SPDisplaysDataType');
+% 		if s == 0
+% 			if ~isempty(regexpi(c,'Retina LCD'))
+% 				fs = 7;
+% 			end
+% 		end
+% 	end
+% end
 %% Set up default Opt struct:
 defOpt = struct();
 defOpt.fontName               = 'menlo';

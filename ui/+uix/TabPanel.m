@@ -1,4 +1,20 @@
 classdef TabPanel < uix.Container
+    %uix.TabPanel  Tab panel
+    %
+    %  p = uix.TabPanel(p1,v1,p2,v2,...) constructs a tab panel and sets
+    %  parameter p1 to value v1, etc.
+    %
+    %  A tab panel shows one of its contents and hides the others according
+    %  to which tab is selected.
+    %
+    %  From R2014b, MATLAB provides uitabgroup and uitab as standard
+    %  components.  Consider using uitabgroup and uitab for new code if
+    %  these meet your requirements.
+    %
+    %  See also: uitabgroup, uitab, uix.CardPanel
+    
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 992 $ $Date: 2014-09-29 04:20:51 -0400 (Mon, 29 Sep 2014) $
     
     properties( Access = public, Dependent, AbortSet )
         FontAngle % font angle
@@ -53,12 +69,18 @@ classdef TabPanel < uix.Container
     end
     
     events( NotifyAccess = private )
-        SelectionChanged
+        SelectionChanged % selection changed
     end
     
     methods
         
         function obj = TabPanel( varargin )
+            %uix.TabPanel  Tab panel constructor
+            %
+            %  p = uix.TabPanel() constructs a tab panel.
+            %
+            %  p = uix.TabPanel(p1,v1,p2,v2,...) sets parameter p1 to value
+            %  v1, etc.
             
             % Call superclass constructor
             obj@uix.Container()
@@ -650,6 +672,13 @@ classdef TabPanel < uix.Container
                     child.Visible = 'off';
                     if isa( child, 'matlab.graphics.axis.Axes' )
                         child.ContentsVisible = 'off';
+                    end
+                    % As a remedy for g1100294, move off-screen too
+                    if isa( child, 'matlab.graphics.axis.Axes' ) ...
+                            && strcmp(child.ActivePositionProperty, 'outerposition')
+                        child.OuterPosition(1) = -child.OuterPosition(3)-20;
+                    else
+                        child.Position(1) = -child.Position(3)-20;
                     end
                 end
             end

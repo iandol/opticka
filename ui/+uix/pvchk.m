@@ -9,8 +9,8 @@ function pvchk( pv )
 %  This function is typically used from class constructors,
 %  uix.pvchk(varargin).
 
-%  Copyright 2009-2013 The MathWorks, Inc.
-%  $Revision: 914 $ $Date: 2014-05-16 13:28:10 +0100 (Fri, 16 May 2014) $
+%  Copyright 2009-2014 The MathWorks, Inc.
+%  $Revision: 978 $ $Date: 2014-09-28 14:20:44 -0400 (Sun, 28 Sep 2014) $
 
 ME = MException( 'uix:InvalidArgument', 'Invalid argument' );
 if rem( numel( pv ), 2 ) ~= 0

@@ -13,8 +13,8 @@ classdef ( Hidden, Sealed ) AncestryObserver < handle
     %
     %  See also: uix.ChildObserver
 
-    %  Copyright 2009-2013 The MathWorks, Inc.
-    %  $Revision: 887 $ $Date: 2013-11-26 10:53:41 +0000 (Tue, 26 Nov 2013) $
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 998 $ $Date: 2014-10-01 14:48:20 -0400 (Wed, 01 Oct 2014) $
     
     properties( GetAccess = public, SetAccess = private )
         Subject % subject
@@ -37,15 +37,12 @@ classdef ( Hidden, Sealed ) AncestryObserver < handle
             %
             %  o = uix.AncestryObserver(s) creates an ancestry observer for
             %  the subject s.
-            %
-            %  o = uix.LocationObserver(a) creates an ancestry observer for
-            %  the figure-to-subject ancestry a.
             
             persistent ROOT
             if isequal( ROOT, [] ), ROOT = groot(); end
             
             % Check
-            assert( ishghandle( subject ) && ...
+            assert( isgraphics( subject ) && ...
                 isequal( size( subject ), [1 1] ) && ...
                 ~isequal( subject, ROOT ), ...
                 'uix.InvalidArgument', ...
@@ -99,7 +96,7 @@ classdef ( Hidden, Sealed ) AncestryObserver < handle
         
     end % methods
     
-    methods
+    methods( Access = private )
         
         function onPreChange( obj, ~, ~ )
             %onPreChange  Event handler

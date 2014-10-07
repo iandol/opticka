@@ -1,4 +1,16 @@
 classdef CardPanel < uix.Container
+    %uix.CardPanel  Card panel
+    %
+    %  b = uix.CardPanel(p1,v1,p2,v2,...) constructs a card panel and sets
+    %  parameter p1 to value v1, etc.
+    %
+    %  A card panel is a standard container (uicontainer) that shows one
+    %  its contents and hides the others.
+    %
+    %  See also: uix.Panel, uix.BoxPanel, uix.TabPanel, uicontainer
+    
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 992 $ $Date: 2014-09-29 04:20:51 -0400 (Mon, 29 Sep 2014) $
     
     properties( Access = public, Dependent, AbortSet )
         Selection % selected contents
@@ -11,6 +23,12 @@ classdef CardPanel < uix.Container
     methods
         
         function obj = CardPanel( varargin )
+            %uix.CardPanel  Card panel constructor
+            %
+            %  p = uix.CardPanel() constructs a card panel.
+            %
+            %  p = uix.CardPanel(p1,v1,p2,v2,...) sets parameter p1 to
+            %  value v1, etc.
             
             % Call superclass constructor
             obj@uix.Container()
@@ -102,6 +120,13 @@ classdef CardPanel < uix.Container
                     child.Visible = 'off';
                     if isa( child, 'matlab.graphics.axis.Axes' )
                         child.ContentsVisible = 'off';
+                    end
+                    % As a remedy for g1100294, move off-screen too
+                    if isa( child, 'matlab.graphics.axis.Axes' ) ...
+                            && strcmp(child.ActivePositionProperty, 'outerposition')
+                        child.OuterPosition(1) = -child.OuterPosition(3)-20;
+                    else
+                        child.Position(1) = -child.Position(3)-20;
                     end
                 end
             end

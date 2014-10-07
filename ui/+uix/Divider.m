@@ -6,8 +6,8 @@ classdef Divider < hgsetget
     %  d = uix.Divider(p1,v1,p2,v2,...) creates a divider and sets
     %  specified property p1 to value v1, etc.
     
-    %  Copyright 2009-2013 The MathWorks, Inc.
-    %  $Revision: 918 $ $Date: 2014-06-03 11:03:08 +0100 (Tue, 03 Jun 2014) $
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 978 $ $Date: 2014-09-28 14:20:44 -0400 (Sun, 28 Sep 2014) $
     
     properties( Dependent )
         Parent % parent
@@ -19,9 +19,6 @@ classdef Divider < hgsetget
         ShadowColor % border shadow color [RGB]
         Orientation % orientation [vertical|horizontal]
         Markings % markings [pixels]
-    end
-    
-    properties( AbortSet, SetObservable )
     end
     
     properties( Access = private )
@@ -73,7 +70,7 @@ classdef Divider < hgsetget
             %delete  Destructor
             
             control = obj.Control;
-            if ishghandle( control ) && ~strcmp( control, 'BeingDeleted' )
+            if isgraphics( control ) && ~strcmp( control, 'BeingDeleted' )
                 control.delete()
             end
             

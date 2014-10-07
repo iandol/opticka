@@ -1,23 +1,46 @@
 classdef HBoxFlex < uix.HBox
+    %uix.HBoxFlex  Flexible horizontal box
+    %
+    %  b = uix.HBoxFlex(p1,v1,p2,v2,...) constructs a flexible horizontal
+    %  box and sets parameter p1 to value v1, etc.
+    %
+    %  A horizontal box lays out contents from left to right.  Users can
+    %  resize contents by dragging the dividers.
+    %
+    %  See also: uix.VBoxFlex, uix.GridFlex, uix.HBox, uix.HButtonBox
+    
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 999 $ $Date: 2014-10-01 14:55:26 -0400 (Wed, 01 Oct 2014) $
+    
+    properties( Access = public, Dependent, AbortSet )
+        DividerMarkings % divider markings [on|off]
+    end
     
     properties( Access = private )
-        ColumnDividers = uix.Divider.empty( [0 1] )
-        FrontDivider
-        LocationObserver
-        MousePressListener = event.listener.empty( [0 0] )
-        MouseReleaseListener = event.listener.empty( [0 0] )
-        MouseMotionListener = event.listener.empty( [0 0] )
-        ActiveDivider = 0
-        ActiveDividerPosition = [NaN NaN NaN NaN]
-        MousePressLocation = [NaN NaN]
-        Pointer = 'unset'
-        OldPointer = 0
-        BackgroundColorListener
+        ColumnDividers = uix.Divider.empty( [0 1] ) % column dividers
+        FrontDivider % front divider
+        DividerMarkings_ = 'on' % backing for DividerMarkings
+        LocationObserver % location observer
+        MousePressListener = event.listener.empty( [0 0] ) % mouse press listener
+        MouseReleaseListener = event.listener.empty( [0 0] ) % mouse release listener
+        MouseMotionListener = event.listener.empty( [0 0] ) % mouse motion listener
+        ActiveDivider = 0 % active divider index
+        ActiveDividerPosition = [NaN NaN NaN NaN] % active divider position
+        MousePressLocation = [NaN NaN] % mouse press location
+        Pointer = 'unset' % mouse pointer
+        OldPointer = 0 % old pointer
+        BackgroundColorListener % background color listener
     end
     
     methods
         
         function obj = HBoxFlex( varargin )
+            %uix.HBoxFlex  Flexible horizontal box constructor
+            %
+            %  b = uix.HBoxFlex() constructs a flexible horizontal box.
+            %
+            %  b = uix.HBoxFlex(p1,v1,p2,v2,...) sets parameter p1 to value
+            %  v1, etc.
             
             % Call superclass constructor
             obj@uix.HBox()
@@ -48,6 +71,31 @@ classdef HBoxFlex < uix.HBox
         end % constructor
         
     end % structors
+    
+    methods
+        
+        function value = get.DividerMarkings( obj )
+            
+            value = obj.DividerMarkings_;
+            
+        end % get.DividerMarkings
+        
+        function set.DividerMarkings( obj, value )
+            
+            % Check
+            assert( ischar( value ) && any( strcmp( value, {'on','off'} ) ), ...
+                'uix:InvalidArgument', ...
+                'Property ''DividerMarkings'' must be ''on'' or ''off'.' )
+            
+            % Set
+            obj.DividerMarkings_ = value;
+            
+            % Mark as dirty
+            obj.Dirty = true;
+            
+        end % set.DividerMarkings
+        
+    end % accessors
     
     methods( Access = protected )
         
@@ -181,6 +229,7 @@ classdef HBoxFlex < uix.HBox
         end % onMouseMotion
         
         function onBackgroundColorChange( obj, ~, ~ )
+            %onBackgroundColorChange  Handler for BackgroundColor changes
             
             backgroundColor = obj.BackgroundColor;
             highlightColor = min( [backgroundColor / 0.75; 1 1 1] );
@@ -251,7 +300,12 @@ classdef HBoxFlex < uix.HBox
             for ii = 1:c
                 columnDivider = obj.ColumnDividers(ii);
                 columnDivider.Position = columnPositions(ii,:);
-                columnDivider.Markings = columnPositions(ii,4)/2;
+                switch obj.DividerMarkings_
+                    case 'on'
+                        columnDivider.Markings = columnPositions(ii,4)/2;
+                    case 'off'
+                        columnDivider.Markings = zeros( [0 1] );
+                end
             end
             
             % Update pointer

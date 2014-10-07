@@ -1,4 +1,15 @@
 classdef HBox < uix.Box
+    %uix.HBox  Horizontal box
+    %
+    %  b = uix.HBox(p1,v1,p2,v2,...) constructs a horizontal box and sets
+    %  parameter p1 to value v1, etc.
+    %
+    %  A horizontal box lays out contents from left to right.
+    %
+    %  See also: uix.VBox, uix.Grid, uix.HButtonBox, uix.HBoxFlex
+    
+    %  Copyright 2009-2014 The MathWorks, Inc.
+    %  $Revision: 991 $ $Date: 2014-09-28 15:38:31 -0400 (Sun, 28 Sep 2014) $
     
     properties( Access = public, Dependent, AbortSet )
         Widths % widths of contents, in pixels and/or weights
@@ -13,6 +24,12 @@ classdef HBox < uix.Box
     methods
         
         function obj = HBox( varargin )
+            %uix.HBox  Horizontal box constructor
+            %
+            %  b = uix.HBox() constructs a horizontal box.
+            %
+            %  b = uix.HBox(p1,v1,p2,v2,...) sets parameter p1 to value v1,
+            %  etc.
             
             % Call superclass constructor
             obj@uix.Box()
