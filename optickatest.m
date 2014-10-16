@@ -23,7 +23,7 @@
 %% Initial clear up of previous runs
 % Make sure we start in a clean environment, not essential
 clear myStim myTask myScreen rExp
-sca
+sca %PTB screen clear all
 
 %% Stimulus Initialisation
 % These set up the 10 different stimuli. Please note that values are in
@@ -145,25 +145,25 @@ showLog(myTask);
 % blending etc. hideFlash uses a trick from Mario to set the CLUT to the
 % task background colour so you don't see the black flash on PTB screen
 % initialisation.
-myScreen = screenManager('distance', 57.3,...
-	'pixelsPerCm', 44,...
+myScreen = screenManager('distance', 57.3,... %display distance from observer
+	'pixelsPerCm', 44,... %calibration value for screen size/pixel density
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
 	'windowed', 0,... %set to a widthxheight for debugging i.e. [800 600]; set to 0 for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on OS X ATI 5870
 	'bitDepth', '8bit',... %try 8bit, FloatingPoint16bit FloatingPoint32bit
 	'logFrames', 'true',... %every screen flip is logged for full missed frame accounting.
 	'benchmark', 'false',... %when true flip as fast as possible, turn logFrames off to work
-	'hideFlash', true); %mario's gamma trick
+	'hideFlash', false); %mario's gamma trick
 
 %% Setup runExperiment Object
 % We now pass our stimulus screen and sequence objects to the
 % runExperiment class. runExperinet contains the run class that actually
 % runs the task.
-rExp = runExperiment('stimuli', myStim,...
-	'task', myTask,...
-	'screen', myScreen,...
-	'debug', false,...
-	'verbose', false);
+rExp = runExperiment('stimuli', myStim,... %stimulus objects
+	'task', myTask,... %task design object
+	'screen', myScreen,... %screen manager object
+	'debug', false,... %debug mode is off
+	'verbose', false); %minimal verbosity
 
 %%
 % run our experiment, to exit early, press the right (OS X) or middle (Win/Linux) mouse

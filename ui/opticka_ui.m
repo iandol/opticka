@@ -423,8 +423,11 @@ if isappdata(handles.output,'o')
 	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
 	
 	if ~isfield(o.store,'dotsStimulus')
-		o.store.dotsStimulus=dotsStimulus('name','Coherent Dots Stimulus');
+		o.store.dotsStimulus=dotsStimulus('name', 'Coherent Dots Stimulus',...
+			'speed', 2,'mask',false);
 	end
+	o.store.dotsStimulus.speed = 2;
+	o.store.dotsStimulus.mask = false;
 	o.store.visibleStimulus = o.store.dotsStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
 	set(handles.OKAddStimulus,'Enable','on');

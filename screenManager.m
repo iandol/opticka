@@ -222,6 +222,9 @@ classdef screenManager < optickaCore
 			end
 			if ~exist('debug','var')
 				debug = obj.debug;
+				if ~isempty(obj.windowed) && length(obj.windowed)==2 %override for windowed stimuli!
+					debug = true;
+				end
 			end
 			if ~exist('tL','var')
 				tL = struct;
@@ -251,7 +254,7 @@ classdef screenManager < optickaCore
 				%override VTOTAL?
 				%Screen('Preference', 'VBLEndlineOverride', 1066);
 				
-				if debug == true || (length(obj.windowed)==1 && obj.windowed ~= 0)
+				if debug == true || length(obj.windowed)==2 || (length(obj.windowed)==1 && obj.windowed ~= 0)
 					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
 					Screen('Preference', 'Verbosity', 2);

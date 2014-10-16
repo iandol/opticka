@@ -21,9 +21,9 @@ classdef dotsStimulus < baseStimulus
 		%> type of dot (integer, where 0 means filled square, 1
 		%> means filled circle, and 2 means filled circle with high-quality
 		%> anti-aliasing)
-		dotType		= 1
+		dotType		= 2
 		%> whether to use a circular mask or not
-		mask		= true
+		mask		= false
 		%> colour of the mask, empty sets mask colour to = background of screen
 		maskColour	= []
 		%> smooth the alpha edge of the mask by this number of pixels, 0 is
@@ -219,15 +219,15 @@ classdef dotsStimulus < baseStimulus
 		function draw(obj)
 			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
 				try
-				if obj.mask == true
-					Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
-					Screen('DrawDots', obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,...
-						[obj.xOut obj.yOut],obj.dotTypeOut);
-					Screen('DrawTexture', obj.sM.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
-					Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
-				else
-					Screen('DrawDots',obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,[obj.xOut obj.yOut],obj.dotTypeOut);
-				end
+					if obj.mask == true
+						Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
+						Screen('DrawDots', obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,...
+							[obj.xOut obj.yOut],obj.dotTypeOut);
+						Screen('DrawTexture', obj.sM.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
+						Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
+					else
+						Screen('DrawDots',obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,[obj.xOut obj.yOut],obj.dotTypeOut);
+					end
 				catch ME
 					ple(ME)
 				end

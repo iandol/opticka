@@ -294,14 +294,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				if ~exist('s','var') || ~isa(s,'screenManager')
 					s = screenManager('verbose',false,'blend',true,'screen',0,...
-						'bitDepth','8bit','debug',false,...
+						'bitDepth','8bit','debug',true,...
 						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
 				end
 				oldwindowed = s.windowed;
 				if benchmark
 					s.windowed = [];
 				else
-					s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2];
+					wR = Screen('Rect',1);
+					s.windowed = [wR(3)/2 wR(4)/2];
 					%s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
 				end
 				open(s); %open PTB screen
