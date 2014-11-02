@@ -16,14 +16,14 @@ classdef screenManager < optickaCore
 		%> hide the black flash as PTB tests its refresh timing, uses a gamma
 		%> trick from Mario
 		hideFlash = false
-		%> windowed: when 0 use fullscreen; set to 1 and it is windowed 800x600pixels or you
+		%> windowed: when FALSE use fullscreen; set to TRUE and it is windowed 800x600pixels or you
 		%> can add in a window width and height i.e. [800 600] to specify windowed size. Remember
 		%> that windowed presentation should never be used for real experimental
-		%> presentation due to poor timing accounting...
-		windowed = 0
-		%> change the debug parameters for poorer temporal fidelity during debugging
+		%> presentation due to poor timing...
+		windowed = false
+		%> true = change the debug parameters for poorer temporal fidelity but no sync testing etc.
 		debug = false
-		%> shows the info text and position grid during stimulus presentation
+		%> true = shows the info text and position grid during stimulus presentation
 		visualDebug = false
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer = 1
@@ -96,7 +96,7 @@ classdef screenManager < optickaCore
 		allowedProperties='bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect = [0;0;50;50]
-		%> the values computed to draw the 1deg dotted grid in debug mode
+		%> the values computed to draw the 1deg dotted grid in visualDebug mode
 		grid
 		%> the movie pointer
 		moviePtr = []
@@ -198,11 +198,11 @@ classdef screenManager < optickaCore
 			
 			Screen('Preference', 'TextRenderer', 0); %fast text renderer
 			
-			if obj.debug == true %we yoke these together but can then be overridden
+			if obj.debug == true %we yoke these together but they can then be overridden
 				obj.visualDebug = true;
 			end
 			
-			obj.makeGrid; %our debug size grid
+			obj.makeGrid; %our visualDebug size grid
 			
 			screenVals = obj.screenVals;
 			
@@ -222,9 +222,9 @@ classdef screenManager < optickaCore
 			end
 			if ~exist('debug','var')
 				debug = obj.debug;
-				if ~isempty(obj.windowed) && length(obj.windowed)==2 %override for windowed stimuli!
-					debug = true;
-				end
+			end
+			if ~islogical(obj.windowed) && isnumeric(obj.windowed) %force debug for windowed stimuli!
+				debug = true;
 			end
 			if ~exist('tL','var')
 				tL = struct;
@@ -254,7 +254,8 @@ classdef screenManager < optickaCore
 				%override VTOTAL?
 				%Screen('Preference', 'VBLEndlineOverride', 1066);
 				
-				if debug == true || length(obj.windowed)==2 || (length(obj.windowed)==1 && obj.windowed ~= 0)
+				if debug == true || (length(obj.windowed)==1 && obj.windowed ~= 0)
+					fprintf('\n---> screenManager: Skipping Sync Tests etc.\n');
 					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
 					Screen('Preference', 'Verbosity', 2);
@@ -276,15 +277,17 @@ classdef screenManager < optickaCore
 				if ischar(obj.bitDepth) && ~strcmpi(obj.bitDepth,'8bit')
 					PsychImaging('AddTask', 'General', obj.bitDepth);
 				end
-				if isempty(obj.windowed) || (length(obj.windowed)==1 && obj.windowed == 0) %fullscreen
+				if obj.windowed == false %fullscreen
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
 				else %windowed
 					if length(obj.windowed) == 2
-						obj.windowed = [1 1 obj.windowed(1)+1 obj.windowed(2)+1];
+						windowed = [1 1 obj.windowed(1)+1 obj.windowed(2)+1];
+					elseif length(obj.windowed) == 4
+						windowed = obj.windowed+1;
 					else
-						obj.windowed=[1 1 801 601];
+						windowed=[1 1 801 601];
 					end
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,obj.windowed, [], obj.doubleBuffer+1,[],obj.antiAlias,[],kPsychGUIWindow);
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias,[],kPsychGUIWindow);
 				end
 				
 				tL.screenLog.postOpenWindow=GetSecs;
@@ -306,7 +309,7 @@ classdef screenManager < optickaCore
 				if obj.screenVals.fps==0
 					obj.screenVals.fps=round(1/obj.screenVals.ifi);
 				end
-				if isempty(obj.windowed) || length(obj.windowed) == 1 %fullscreen
+				if obj.windowed == false %fullscreen
 					obj.screenVals.halfisi=obj.screenVals.ifi/2;
 				else
 					% windowed presentation doesn't handle the preferred method
@@ -366,7 +369,7 @@ classdef screenManager < optickaCore
 		function hideScreenFlash(obj)
 			% This is the trick Mario told us to "hide" the colour changes as PTB
 			% intialises -- we could use backgroundcolour here to be even better
-			if obj.hideFlash == true && length(obj.windowed) == 1 && obj.windowed(1) == 0
+			if obj.hideFlash == true && all(obj.windowed == false)
 				if isa(obj.gammaTable,'calibrateLuminance') && (obj.gammaTable.choice > 0)
 					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.gammaTable.gammaTable{obj.gammaTable.choice}(128,:), 256, 3));
 					obj.screenVals.resetGamma = true;
