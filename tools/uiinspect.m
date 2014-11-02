@@ -64,6 +64,8 @@ function hFig = uiinspect(obj, fig)
 %    Please send to Yair Altman (altmany at gmail dot com)
 %
 % Change log:
+%    2014-10-20: Fixes for multiple edge cases
+%    2014-10-13: Fixes for R2014a, R2014b
 %    2013-06-30: Fixes for the upcoming HG2
 %    2013-01-25: Added context-menu option to export handle to workspace
 %    2013-01-23: Prevented intermittent crash reported for uiinspect(0); auto-expanded callbacks table if only one category; added hidden properties to the properties tooltip; updated FEX link in help; updated javadoc hyperlinks; fixed callbacks table
@@ -101,7 +103,7 @@ function hFig = uiinspect(obj, fig)
 % referenced and attributed as such. The original author maintains the right to be solely associated with this work.
 
 % Programmed by Yair M. Altman: altmany(at)gmail.com
-% $Revision: 1.26 $  $Date: 2013/06/30 23:44:53 $
+% $Revision: 1.28 $  $Date: 2014/10/20 04:25:12 $
 
   try
       % Arg check
@@ -379,7 +381,7 @@ function hFig = displayObj(obj, objMethods, objProps, objCallbacks, objChildren,
 
       % blog link at bottom
       blogLabel = JLabel('<html><center>More undocumented stuff at: <b><a href="">UndocumentedMatlab.com</a></center></html>');
-      set(handle(blogLabel,'CallbackProperties'), 'MouseClickedCallback', 'web(''http://UndocumentedMatlab.com'')');
+      set(handle(blogLabel,'CallbackProperties'), 'MouseClickedCallback', 'web(''http://UndocumentedMatlab.com'',''-browser'')');
       blogLabel.setCursor(java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
       lowerPanel = JPanel(FlowLayout);
       lowerPanel.add(blogLabel);
@@ -543,14 +545,27 @@ function [cbData, cbHeaders, cbTableEnabled] = getCbsData(obj, stripStdCbsFlag)
       cbData = {'(no callbacks)'};
       cbHeaders = {'Callback name'};
       cbTableEnabled = false;
+      cbNames = {};
 
       try
-          classHdl = classhandle(handle(obj));
-          cbNames = get(classHdl.Events,'Name');
-          if ~isempty(cbNames) && ~iscom(obj)  %only java-based please...
-              cbNames = strcat(cbNames,'Callback');
+          try
+              classHdl = classhandle(handle(obj));
+              cbNames = get(classHdl.Events,'Name');
+              if ~isempty(cbNames) && ~iscom(obj)  %only java-based please...
+                  cbNames = strcat(cbNames,'Callback');
+              end
+              propNames = get(classHdl.Properties,'Name');
+          catch
+              % Try to interpret as an MCOS class object
+              try
+                  oldWarn = warning('off','MATLAB:structOnObject');
+                  dataFields = struct(obj);
+                  warning(oldWarn);
+              catch
+                  dataFields = get(obj);
+              end
+              propNames = fieldnames(dataFields);
           end
-          propNames = get(classHdl.Properties,'Name');
           propCbIdx = [];
           if ischar(propNames),  propNames={propNames};  end
           if ~isempty(propNames)
@@ -748,23 +763,23 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
                       
                       % Fade non-settable properties (gray italic font)
                       prefix = '';
-                      if strcmpi(sp.AccessFlags.PublicSet,'off')
-                          prefix = unsettablePrefix;
-                      end
+                      try if strcmpi(sp.AccessFlags.PublicSet,'off'), prefix = unsettablePrefix; end, catch, end
+                      try if ~isequal(sp.SetAccess,'public'),         prefix = unsettablePrefix; end, catch, end
 
                       % Get the property's meta-data
                       propsData{idx,1} = [prefix propName];
                       propsData{idx,2} = '';
                       if ~isempty(sp)
-                          propsData{idx,2} = [prefix sp.DataType];
-                          propsData{idx,4} = [prefix sp.AccessFlags.PublicGet];
-                          propsData{idx,5} = [prefix sp.AccessFlags.PublicSet];
-                          propsData{idx,6} = [prefix sp.Visible];
-                          if ~strcmp(propName,'FactoryValue')
-                              %propsData{idx,7} = [prefix charizeData(get(sp,'FactoryValue'))];  % sp.FactoryValue fails...
+                          try
+                              % UDD
+                              dataType  = sp.DataType;
+                              publicGet = sp.AccessFlags.PublicGet;
+                              publicSet = sp.AccessFlags.PublicSet;
+                              isVisible = sp.Visible;
                               try
                                   factoryValue = '';
                                   factoryValue = charizeData(sp.FactoryValue);
+                                  %factoryValue = charizeData(get(sp,'FactoryValue'));  % sp.FactoryValue fails...
                               catch
                                   % Prevent a Matlab crash on R2011b
                                   V = sscanf(version, '%d.', 2);
@@ -772,14 +787,45 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
                                       factoryValue = charizeData(get(sp,'FactoryValue'));
                                   end
                               end
-                              propsData{idx,7} = [prefix factoryValue];
+                              extraStr = factoryValue;
+                          catch
+                              % MCOS/HG2
+                              publicGet = sp.GetAccess;
+                              publicSet = sp.SetAccess;
+                              isVisible = 'on'; if sp.Hidden, isVisible = 'off'; end
+                              try
+                                  factoryValue = charizeData(sp.DefaultValue);
+                                  dataType = class(factoryValue);
+                              catch  % no default value defined - TODO: how do we get the data type?
+                                  factoryValue = '';
+                                  dataType = strrep(sp.Description,' PropInfo','');
+                                  if strcmp(dataType,propName),  dataType='?';  end
+                              end
+							  extraStr = strtrim([factoryValue ...
+                                                  charizeBoolData(sp.Sealed,   ' Sealed') ...
+                                                  charizeBoolData(sp.Dependent,' Dependent') ...
+                                                  charizeBoolData(sp.Constant, ' Constant') ...
+                                                  charizeBoolData(sp.Abstract, ' Abstract') ...
+                                                  charizeBoolData(sp.Transient,' Transient')]);
+                          end
+                          propsData{idx,2} = [prefix charizeData(dataType)];
+                          propsData{idx,4} = [prefix charizeData(publicGet)];
+                          propsData{idx,5} = [prefix charizeData(publicSet)];
+                          propsData{idx,6} = [prefix charizeData(isVisible)];
+                          if ~isempty(extraStr) % && ~strcmp(propName,'FactoryValue')
+                              propsData{idx,7} = [prefix extraStr];
                           else
                               propsData{idx,7} = '';  % otherwise Matlab crashes...
                           end
                           %propsData{idx,8} = [prefix sp.Description];
                       end
                       % TODO: some fields (see EOL comment below) generate a Java Exception from: com.mathworks.mlwidgets.inspector.PropertyRootNode$PropertyListener$1$1.run
-                      if strcmpi(sp.AccessFlags.PublicGet,'on') % && ~any(strcmpi(sp.Name,{'FixedColors','ListboxTop','Extent'}))
+                      try
+                          isGettable = strcmpi(sp.AccessFlags.PublicGet,'on'); % && ~any(strcmpi(sp.Name,{'FixedColors','ListboxTop','Extent'}))
+                      catch
+                          isGettable = isequal(sp.GetAccess,'public');
+                      end
+                      if isGettable
                           try
                               % Trap warning about unused/deprecated properties
                               s = warning('off','all');
@@ -888,7 +934,7 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
 										  propsData{idx,2} = [unsettablePrefix  propsData{idx,2}];
 										  propsData{idx,4} = [unsettablePrefix 'on'];
 										  [propsData{idx,5:6}] = deal([unsettablePrefix 'off']);
-										  propsData{idx,7} = [unsettablePrefix propsData{idx,3}];
+										  %propsData{idx,7} = [unsettablePrefix propsData{idx,3}];
 										  propsData{idx,3} = [staticFinalPrefix propsData{idx,3}];
 									  end
 								  end
@@ -992,8 +1038,8 @@ function list = getTreeData(data)
         names = regexprep(data,'([A-Z][a-z]+).*','$1');
         %hash = java.util.Hashtable;
         others = {};
-        for propIdx = 1 : length(data)
-            if (propIdx < length(data) && strcmp(names{propIdx},names{propIdx+1})) || ...
+        for propIdx = 1 : size(data,1)
+            if (propIdx < size(data,1) && strcmp(names{propIdx},names{propIdx+1})) || ...
                (propIdx > 1            && strcmp(names{propIdx},names{propIdx-1}))
                 % Child callback property
                 setProp(list,data{propIdx,1},data{propIdx,2},names{propIdx});
@@ -1277,7 +1323,8 @@ function handleTree = getHandleTree(obj, hFig)
 
       %handleTree = uitree.
       tree_h = com.mathworks.hg.peer.UITreePeer;
-      try tree_h = javaObjectEDT(tree_h); catch, end
+      tree_hh = handle(tree_h,'CallbackProperties');
+      try tree_h = javaObjectEDT(tree_h); catch, end  % auto-delegate on EDT
       %tree_h = handle(com.mathworks.hg.peer.UITreePeer,'CallbackProperties');
       
       % Use the parent handle as root, unless there is none
@@ -1330,7 +1377,6 @@ function handleTree = getHandleTree(obj, hFig)
       end
 
       % Set the callback functions
-      tree_hh = handle(tree_h,'CallbackProperties');
       set(tree_hh, 'NodeExpandedCallback', {@nodeExpanded, tree_h});
       set(tree_hh, 'NodeSelectedCallback', {@nodeSelected, tree_h, hFig});
 
@@ -1685,14 +1731,18 @@ function [nodeName, nodeTitle] = getNodeName(hndl)
 
         % Initialize (just in case one of the succeding lines croaks)
         nodeName = '';
-        if ~ismethod(hndl,'getClass')
-            try
-                nodeName = hndl.class;
-            catch
-                nodeName = hndl.type;  % last-ditch try...
+        try
+            nodeName = class(hndl);
+        catch
+            if ~ismethod(hndl,'getClass')
+                try
+                    nodeName = hndl.class;
+                catch
+                    nodeName = hndl.type;  % last-ditch try...
+                end
+            else
+                nodeName = hndl.getClass.getSimpleName;
             end
-        else
-            nodeName = hndl.getClass.getSimpleName;
         end
         nodeType = nodeName;
 
@@ -2248,7 +2298,8 @@ function evNames = stripStdCbs(evNames)
                      'MouseClicked',   'MouseDragged',     'MouseEntered',  'MouseExited', ...
                      'MouseMoved',     'MousePressed',     'MouseReleased', 'MouseWheelMoved', ...
                      'PropertyChange', 'VetoableChange',   ...
-                     'CaretPositionChanged', 'InputMethodTextChanged'};
+                     'CaretPositionChanged',               'InputMethodTextChanged', ...
+                     'ButtonDown',     'Create',           'Delete'};
         evNames = setdiff(evNames,strcat(stdEvents,'Callback'))';
     catch
         % Never mind...
@@ -2658,7 +2709,25 @@ function dataFieldsStr = getPropsHtml(obj, dataFields)
 
         % Strip out callbacks
         dataFieldsStr = regexprep(dataFieldsStr,'^\s*\w*Callback(Data)?:[^\n]*$','','lineanchors');
+
+        % Strip out internal HG2 mirror properties
+        dataFieldsStr = regexprep(dataFieldsStr,'^\s*\w*_I:[^\n]*$','','lineanchors');
         dataFieldsStr = regexprep(dataFieldsStr,'\n\n','\n');
+
+        % Sort the fieldnames
+        try
+            [a,b,c,d] = regexp(dataFieldsStr,'(\w*): ');
+            fieldNames = strrep(d,': ','');
+        catch
+            fieldNames = fieldnames(dataFields);
+        end
+        try
+            [fieldNames, sortedIdx] = sort(fieldNames);
+            s = strsplit(dataFieldsStr, sprintf('\n'))';
+            dataFieldsStr = strjoin(s(sortedIdx), sprintf('\n'));
+        catch
+            % never mind... - ignore, leave unsorted
+        end
 
         % HTMLize tooltip data
         % First, set the fields' font based on its read-write status
@@ -2673,7 +2742,6 @@ function dataFieldsStr = getPropsHtml(obj, dataFields)
                 % Some Matlab class objects simply cannot be converted into a handle()
             end
         end
-        fieldNames = fieldnames(dataFields);
         for fieldIdx = 1 : length(fieldNames)
             thisFieldName = fieldNames{fieldIdx};
             try
@@ -2683,11 +2751,14 @@ function dataFieldsStr = getPropsHtml(obj, dataFields)
             catch
                 accessFlags = [];
                 visible = 'on';
+                try if hProp.Hidden, visible='off'; end, catch, end
             end
-            if isfield(accessFlags,'PublicSet') && strcmpi(accessFlags.PublicSet,'on')
+            if (~isempty(hProp) && isprop(hProp,'SetAccess') && isequal(hProp.SetAccess,'public')) || ...  % isequal(...'public') and not strcmpi(...) because might be a cell array of classes
+               (~isempty(accessFlags) && isfield(accessFlags,'PublicSet') && strcmpi(accessFlags.PublicSet,'on'))
                 % Bolden read/write fields
-                thisFieldFormat = ['<b>' thisFieldName '<b>:$2'];
-            elseif ~isfield(accessFlags,'PublicSet')
+                thisFieldFormat = ['<b>' thisFieldName '</b>:$2'];
+            elseif (isempty(hProp) || ~isprop(hProp,'SetAccess')) && ...
+                   (isempty(accessFlags) || ~isfield(accessFlags,'PublicSet'))
                 % Undefined - probably a Matlab-defined field of com.mathworks.hg.peer.FigureFrameProxy...
                 thisFieldFormat = ['<font color="blue">' thisFieldName '</font>:$2'];
                 undefinedStr = ', <font color="blue">undefined</font>';
@@ -2697,7 +2768,7 @@ function dataFieldsStr = getPropsHtml(obj, dataFields)
             end
             if strcmpi(visible,'off')
                 %thisFieldFormat = ['<i>' thisFieldFormat '</i>']; %#ok<AGROW>
-                thisFieldFormat = regexprep(thisFieldFormat, '(.*):(.*)', '<i>$1:<i>$2');
+                thisFieldFormat = regexprep(thisFieldFormat, {'(.*):(.*)','<.?b>'}, {'<i>$1:<i>$2',''}); %'(.*):(.*)', '<i>$1:<i>$2');
                 hiddenStr = ', <i>hidden</i>';
             end
             dataFieldsStr = regexprep(dataFieldsStr, ['([\s\n])' thisFieldName ':([^\n]*)'], ['$1' thisFieldFormat]);
@@ -2714,7 +2785,7 @@ function dataFieldsStr = getPropsHtml(obj, dataFields)
         % Method 2: 2x2-column <table>
         dataFieldsStr = regexprep(dataFieldsStr, '^\s*([^:]+:)([^\n]*)\n^\s*([^:]+:)([^\n]*)$', '<tr><td>&nbsp;$1</td><td>&nbsp;$2</td><td>&nbsp;&nbsp;&nbsp;&nbsp;$3</td><td>&nbsp;$4&nbsp;</td></tr>', 'lineanchors');
         dataFieldsStr = regexprep(dataFieldsStr, '^[^<]\s*([^:]+:)([^\n]*)$', '<tr><td>&nbsp;$1</td><td>&nbsp;$2</td><td>&nbsp;</td><td>&nbsp;</td></tr>', 'lineanchors');
-        dataFieldsStr = ['(<b>modifiable</b>' undefinedStr hiddenStr ' &amp; <font color="#C0C0C0">read-only</font> fields)<p>&nbsp;&nbsp;<table cellpadding="0" cellspacing="0">' dataFieldsStr '</table>'];
+        dataFieldsStr = ['(<b>documented</b>' undefinedStr hiddenStr ' &amp; <font color="#C0C0C0">read-only</font> fields)<p>&nbsp;&nbsp;<table cellpadding="0" cellspacing="0">' dataFieldsStr '</table>'];
     catch
         % never mind - bail out (Maybe matlab 6 that does not support regexprep?)
         disp(lasterr);  rethrow(lasterror)
@@ -2765,7 +2836,13 @@ function dataFields = updateObjTooltip(obj, uiObject)
         % Probably a non-HG java object
         try
             % Note: the bulk-get approach enables access to user-defined schema-props, but not to some original classhandle Properties...
-            dataFields = get(obj);
+            try
+                oldWarn3 = warning('off','MATLAB:structOnObject');
+                dataFields = struct(obj);
+                warning(oldWarn3);
+            catch
+                dataFields = get(obj);
+            end
             dataFieldsStr = getPropsHtml(obj, dataFields);
         catch
             % Probably a missing property getter implementation

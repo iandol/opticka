@@ -162,7 +162,7 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 rExp = runExperiment('stimuli', myStim,... %stimulus objects
 	'task', myTask,... %task design object
 	'screen', myScreen,... %screen manager object
-	'debug', false,... %debug mode is off
+	'debug', true,... %setup screen to not complain about sync errors etc.
 	'verbose', false); %minimal verbosity
 
 %%

@@ -301,7 +301,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if benchmark
 					s.windowed = [];
 				else
-					wR = Screen('Rect',1);
+					wR = Screen('Rect',max(Screen('Screens')));
 					s.windowed = [wR(3)/2 wR(4)/2];
 					%s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
 				end
