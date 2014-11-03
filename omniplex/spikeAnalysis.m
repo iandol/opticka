@@ -511,7 +511,7 @@ classdef spikeAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief doPSTH plots spike density for the selected trial groups
+		%> @brief ROC plots ROC and AUC comparing group 2 and group 1 data
 		%>
 		%> @param
 		%> @return

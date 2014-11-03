@@ -1798,8 +1798,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function drawTimelockLFPs(ego)
-			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
-			if ego.isRetina;fs = 9;else fs = 12;end
+			disp('Drawing Averaged (Reparsed) Timelocked LFPs...');
 			if isfield(ego.results,'av')
 				av = ego.results.av;
 				avstat = ego.results.avstat;
@@ -1902,7 +1901,7 @@ classdef LFPAnalysis < analysisCore
 				ylabel('LFP Raw Amplitude (mV) ±SE');
 				t=sprintf('COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
 				tt=sprintf('%s | Ch: %s | %s p = %.3g [%s : %s (alpha=%.2g)]\n%s', ego.lfpfile, av{1}.label{:}, avstat.cfg.statistic, avstatavg.prob, avstat.cfg.method, avstat.cfg.correctm, ego.stats.alpha, t);
-				title(tt,'FontSize',fs);
+				title(tt,'FontSize',12);
 				
 				p(2).select();
 				p(2).hold('on');

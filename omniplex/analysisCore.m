@@ -22,14 +22,13 @@ classdef analysisCore < optickaCore
 	
 	%------------------TRANSIENT PROPERTIES----------%
 	properties (Transient = true)
-		%check for if we are running retina on a mac
-		isRetina@logical = false
+		%>getDensity stats object
+		gd@getDensity
 	end
 	
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
-		%>getDensity stats object
-		gd@getDensity
+		
 	end
 	
 	%------------------TRANSIENT PROPERTIES----------%
@@ -63,7 +62,6 @@ classdef analysisCore < optickaCore
 			if nargin == 0; varargin.name = ''; end
 			ego=ego@optickaCore(varargin); %superclass constructor
 			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
-			checkRetina(ego);
 			initialiseStats(ego);
 		end
 		
@@ -515,7 +513,7 @@ classdef analysisCore < optickaCore
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
-		%=======================================================================
+	%=======================================================================
 		% ===================================================================
 		%> @brief Allows two analysis objects to share a single plxReader object
 		%>
@@ -638,20 +636,6 @@ classdef analysisCore < optickaCore
 			end
 		end
 		
-		function checkRetina(ego)
-			ego.isRetina = false;
-			if feature('HGUsingMatlabClasses')
-				if ismac
-					[s,c]=system('system_profiler SPDisplaysDataType');
-					if s == 0
-						if ~isempty(regexpi(c,'Retina LCD'))
-							ego.isRetina = true;
-						end
-					end
-				end
-			end
-		end
-		
 		% ===================================================================
 		%> @brief format data for ROC
 		%>
@@ -662,10 +646,8 @@ classdef analysisCore < optickaCore
 		function data = formatByClass(ego,dp,dn)
 			dp = dp(:);
 			dn = dn(:);
-			
 			y = [dp ; dn];
 			t = logical([ ones(size(dp)) ; zeros(size(dn)) ]);
-			
 			data = [t,y];
 		end
 		
