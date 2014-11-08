@@ -74,6 +74,8 @@ classdef dotsStimulus < baseStimulus
 		maskTexture
 		%> the stimulus rect of the mask
 		maskRect
+		%> was mask blank when initialised?
+		wasMaskColourBlank = false
 		%> rDots used in coherence calculation
 		rDots
 		%> angles used in coherence calculation
@@ -165,7 +167,11 @@ classdef dotsStimulus < baseStimulus
 			%build the mask
 			if obj.mask == true
 				if isempty(obj.maskColour)
+					obj.wasMaskColourBlank = true;
 					obj.maskColour = obj.sM.backgroundColour;
+					obj.maskColour(4) = 0; %set alpha to 0
+				else
+					obj.wasMaskColourBlank = false;
 				end
 				wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
 				mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
@@ -271,6 +277,7 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function reset(obj)
 			obj.removeTmpProperties;
+			if obj.wasMaskColourBlank;	obj.maskColour = []; end
 			obj.angles = [];
 			obj.xy = [];
 			obj.dxs = [];

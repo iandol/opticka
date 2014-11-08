@@ -1,50 +1,56 @@
 % ========================================================================
 %> @brief single grating stimulus, inherits from baseStimulus
 %> GRATINGSTIMULUS single grating stimulus, inherits from baseStimulus
-%>   The current properties are:
+%>   The basic properties are:
 %>   sf = spatial frequency in degrees
-%>   tf = temporal frequency
+%>   tf = temporal frequency in degs/s
 %>   angle = angle in degrees
-%>   rotationMethod = do we rotate the grating texture (1) or the patch
-%>   itself (0)
+%>   rotationMethod = do we rotate the grating texture (true) or the patch itself (false)
 %>   phase = phase of grating
 %>   contrast = contrast from 0 - 1
-%>   mask = use circular mask (1) or not (0)
+%>   mask = use circular mask (true) or not (false)
+%>
+%> See docs for more property details
 % ========================================================================
 classdef gratingStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		%> family type
+		%> family type, can be 'sinusoid' or 'square'
 		type = 'sinusoid'
-		%> spatial frequency
+		%> spatial frequency of the grating
 		sf = 1
-		%> temporal frequency
+		%> temporal frequency of the grating
 		tf = 1
-		%> rotate the object (0/false) or the texture (1/true)?
+		%> rotate the grating object (false) or the grating texture within the object (true [default])?
 		rotationMethod = true
 		%> phase of grating
 		phase = 0
 		%> contrast of grating
 		contrast = 0.5
-		%> use a circular mask?
+		%> use a circular mask for the grating (default = true), note this can also be smoothed at the edge.
 		mask = true
-		%> reverse the drift direction?
+		%> direction of the drift; default = false means drift left>right when angle is 0deg.
+		%This switch can be accomplished simply setting angle, but this control enables
+		%simple reverse direction protocols.
 		driftDirection = false
-		%> the angle which the direction of the grating patch is moving
+		%> the angle which the direction of the grating object is moving - the object can
+		%> move as well as the grating texture within the object.
 		motionAngle = 0
-		%> Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure
+		%> PTB Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure (see PTB docs)
 		contrastMult = 0.5
-		%> do we need to correct the phase to be relative to center not edge?
+		%> Do we need to correct the phase to be relative to center not edge? This enables
+		%> centre surround stimuli are phase matched, and if we enlarge a grating object its
+		%> phase stays identical at the centre of the object (where we would imagine our RF)
 		correctPhase = false
-		%> reverse phase of grating X times per second?
+		%> Reverse phase of grating X times per second? Useful with a static grating for linearity testing
 		phaseReverseTime = 0
 		%> What phase to use for reverse?
 		phaseOfReverse = 180
-		%> cosine smoothing sigma in pixels for circular masked gratings
+		%> If mask == true, cosine smoothing sigma in pixels for mask
 		sigma = 0.0
-		%> use colour or alpha channel for smoothing?
+		%> If mask == true, use colour or alpha channel for smoothing?
 		useAlpha = false
-		%> use cosine (0) or hermite interpolation (1)
+		%> If mask == true, use cosine (false) or hermite interpolation (true, default)
 		smoothMethod = true
 		%> aspect ratio of the grating
 		aspectRatio = 1;
