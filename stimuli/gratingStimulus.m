@@ -5,7 +5,7 @@
 %>   sf = spatial frequency in degrees
 %>   tf = temporal frequency in degs/s
 %>   angle = angle in degrees
-%>   rotationMethod = do we rotate the grating texture (true) or the patch itself (false)
+%>   rotateTexture = do we rotate the grating texture (true) or the patch itself (false)
 %>   phase = phase of grating
 %>   contrast = contrast from 0 - 1
 %>   mask = use circular mask (true) or not (false)
@@ -21,8 +21,8 @@ classdef gratingStimulus < baseStimulus
 		sf = 1
 		%> temporal frequency of the grating
 		tf = 1
-		%> rotate the grating object (false) or the grating texture within the object (true [default])?
-		rotationMethod = true
+		%> rotate the grating patch (false) or the grating texture within the patch (true [default])?
+		rotateTexture = true
 		%> phase of grating
 		phase = 0
 		%> contrast of grating
@@ -32,7 +32,7 @@ classdef gratingStimulus < baseStimulus
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
 		%This switch can be accomplished simply setting angle, but this control enables
 		%simple reverse direction protocols.
-		driftDirection = false
+		reverseDirection = false
 		%> the angle which the direction of the grating object is moving - the object can
 		%> move as well as the grating texture within the object.
 		motionAngle = 0
@@ -76,8 +76,8 @@ classdef gratingStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['sf|tf|angle|motionAngle|phase|rotationMethod|' ... 
-			'contrast|mask|driftDirection|speed|startPosition|aspectRatio|' ... 
+		allowedProperties = ['sf|tf|angle|motionAngle|phase|rotateTexture|' ... 
+			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ... 
 			'contrastMult|sigma|useAlpha|smoothMethod|' ...
 			'correctPhase|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
@@ -164,7 +164,7 @@ classdef gratingStimulus < baseStimulus
 					p.Transient = true;p.Hidden = true;
 					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
 					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
-					if strcmp(fn{j},'driftDirection');p.SetMethod = @set_driftDirectionOut;end
+					if strcmp(fn{j},'reverseDirection');p.SetMethod = @set_reverseDirectionOut;end
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
@@ -187,7 +187,7 @@ classdef gratingStimulus < baseStimulus
 			if obj.speed > 0; obj.doMotion = true;end
 			
 			if isempty(obj.findprop('rotateMode'));p=obj.addprop('rotateMode');p.Transient=true;p.Hidden=true;end
-			if obj.rotationMethod==1
+			if obj.rotateTexture
 				obj.rotateMode = kPsychUseTextureMatrixForRotation;
 			else
 				obj.rotateMode = [];
@@ -416,11 +416,11 @@ classdef gratingStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief driftDirectionOut Set method
+		%> @brief reverseDirectionOut Set method
 		%>
 		% ===================================================================
-		function set_driftDirectionOut(obj,value)
-			obj.driftDirectionOut = value;
+		function set_reverseDirectionOut(obj,value)
+			obj.reverseDirectionOut = value;
 			notify(obj,'changePhaseIncrement');
 		end
 		
@@ -444,8 +444,8 @@ classdef gratingStimulus < baseStimulus
 		function calculatePhaseIncrement(obj,~,~)
 			if ~isempty(obj.findprop('tfOut'))
 				obj.phaseIncrement = (obj.tfOut * 360) * obj.sM.screenVals.ifi;
-				if ~isempty(obj.findprop('driftDirectionOut'))
-					if obj.driftDirectionOut == false
+				if ~isempty(obj.findprop('reverseDirectionOut'))
+					if obj.reverseDirectionOut == false
 						obj.phaseIncrement = -obj.phaseIncrement;
 					end
 				end

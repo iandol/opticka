@@ -20,7 +20,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion@char = '1.100'
+		optickaVersion@char = '1.011'
 		%> history of display objects
 		history
 		%> is this a remote instance?
