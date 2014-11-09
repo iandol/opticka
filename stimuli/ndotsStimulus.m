@@ -8,7 +8,7 @@ classdef ndotsStimulus < baseStimulus
 		%> dot type, only simple supported at present
 		type = 'simple'
 		%> the size of dots in the kinetogram (pixels)
-		dotSize = 3
+		dotSize = 4
 		%> type of dot (integer, where 0 means filled square, 1
 		%> means filled circle, and 2 means filled circle with high-quality
 		%> anti-aliasing)
@@ -39,7 +39,7 @@ classdef ndotsStimulus < baseStimulus
 		%> (true), or indiscriminately (false)
 		isLimitedLifetime = true
 		%> show mask or not?
-		mask = true
+		mask = false
 		%> mask GL modes
 		msrcMode = 'GL_SRC_ALPHA'
 		mdstMode = 'GL_ONE_MINUS_SRC_ALPHA'
@@ -106,11 +106,11 @@ classdef ndotsStimulus < baseStimulus
 		maskColour
 		maskRect
 		maskSmoothing = 0
+		%> was mask blank when initialised?
+		wasMaskColourBlank = false
 		fieldSize
 		kernel = []
 		shader = 0
-		srcMode = 'GL_ONE'
-		dstMode = 'GL_ZERO'
 		allowedProperties='msrcMode|mdstMode|directionWeights|mask|isMovingAsHerd|isWrapping|isLimitedLifetime|dotType|speed|density|dotSize|angle|coherence|density|interleaving|drunkenWalk';
 		ignoreProperties='msrcMode|mdstMode|pixelXY|pixelOrigin|deltaR|frameNumber|frameSelector|dotLifetimes|nDots|normalizedXY|pixelScale|maskTexture|maskDestinationRect|maskSourceRect'
 	end
@@ -159,7 +159,7 @@ classdef ndotsStimulus < baseStimulus
 			obj.sM = sM;
 			obj.ppd=sM.ppd;
 			
-			fn = fieldnames(ndotsStimulus);
+			fn = sort(properties('ndotsStimulus'));
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
@@ -188,7 +188,11 @@ classdef ndotsStimulus < baseStimulus
 			%build the mask
 			if obj.mask == true
 				if isempty(obj.maskColour)
+					obj.wasMaskColourBlank = true;
 					obj.maskColour = obj.sM.backgroundColour;
+					obj.maskColour(4) = 0; %set alpha to 0
+				else
+					obj.wasMaskColourBlank = false;
 				end
 				wrect = SetRect(0, 0, obj.fieldSize+obj.dotSizeOut, obj.fieldSize+obj.dotSizeOut);
 				mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
@@ -280,8 +284,9 @@ classdef ndotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function reset(obj)
-			resetTicks(obj);
 			obj.removeTmpProperties;
+			if obj.wasMaskColourBlank;	obj.maskColour = []; end
+			resetTicks(obj);
 		end
 		
 	end%---END PUBLIC METHODS---%

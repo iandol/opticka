@@ -424,10 +424,9 @@ if isappdata(handles.output,'o')
 	
 	if ~isfield(o.store,'dotsStimulus')
 		o.store.dotsStimulus=dotsStimulus('name', 'Coherent Dots Stimulus',...
-			'speed', 2,'mask',false);
+			'speed', 2, 'colour', [1 1 1]);
 	end
 	o.store.dotsStimulus.speed = 2;
-	o.store.dotsStimulus.mask = false;
 	o.store.visibleStimulus = o.store.dotsStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
 	set(handles.OKAddStimulus,'Enable','on');
@@ -450,8 +449,10 @@ if isappdata(handles.output,'o')
 	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
 	
 	if ~isfield(o.store,'ndotsStimulus')
-		o.store.ndotsStimulus=ndotsStimulus('name','Newsome Dots Stimulus');
+		o.store.ndotsStimulus=ndotsStimulus('name','Newsome Dots Stimulus',...
+			'speed', 2, 'colour', [1 1 1]);
 	end
+	o.store.ndotsStimulus.speed = 2;
 	o.store.visibleStimulus = o.store.ndotsStimulus;
 	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
 	set(handles.OKAddStimulus,'Enable','on');

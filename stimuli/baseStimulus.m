@@ -21,7 +21,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> Y Position in degrees relative to screen center
 		yPosition = 0
 		%> Size in degrees
-		size = 2
+		size = 4
 		%> Colour as a 0-1 range RGBA
 		colour = [0.5 0.5 0.5]
 		%> Alpha as a 0-1 range
