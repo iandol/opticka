@@ -165,7 +165,7 @@ classdef spotStimulus < baseStimulus
 		%> @return stimulus structure.
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
+			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
 				if obj.doFlash == false
 					Screen('gluDisk',obj.sM.win,obj.colourOut,obj.xOut,obj.yOut,obj.sizeOut/2);
 				else
@@ -272,7 +272,7 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_contrastOut(obj, value)
-			fprintf('N');
+			if iscell(value); value = value{1}; end
 			obj.contrastOut = value;
 			notify(obj,'changeColour');
 		end
