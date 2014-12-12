@@ -64,6 +64,9 @@ function hFig = uiinspect(obj, fig)
 %    Please send to Yair Altman (altmany at gmail dot com)
 %
 % Change log:
+%    2014-11-21: Additional fixes for R2014b (HG2)
+%    2014-10-24: Fixed properties panel for .Net objects
+%    2014-10-24: Fixed a reported "invalid object handle" bug
 %    2014-10-20: Fixes for multiple edge cases
 %    2014-10-13: Fixes for R2014a, R2014b
 %    2013-06-30: Fixes for the upcoming HG2
@@ -103,7 +106,7 @@ function hFig = uiinspect(obj, fig)
 % referenced and attributed as such. The original author maintains the right to be solely associated with this work.
 
 % Programmed by Yair M. Altman: altmany(at)gmail.com
-% $Revision: 1.28 $  $Date: 2014/10/20 04:25:12 $
+% $Revision: 1.31 $  $Date: 2014/11/21 15:46:34 $
 
   try
       % Arg check
@@ -559,6 +562,7 @@ function [cbData, cbHeaders, cbTableEnabled] = getCbsData(obj, stripStdCbsFlag)
               % Try to interpret as an MCOS class object
               try
                   oldWarn = warning('off','MATLAB:structOnObject');
+                  warning off MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame
                   dataFields = struct(obj);
                   warning(oldWarn);
               catch
@@ -700,8 +704,11 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
           catch
               % never mind...
           end
+
+          % Sort properties alphabetically
+          % Note: sorting is already a side-effect of setdiff, but setdiff is not called when showInspectedPropsFlag=1
           if iscell(propNames)
-              propNames = unique(propNames);
+              propNames = sort(unique(propNames));
           end
 
           %propsData = cell(0,7);
@@ -734,12 +741,6 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
                   if ~isequal(oldPropNames,propNames)
                       cbInspected.setVisible(1);
                   end
-              end
-
-              % Sort properties alphabetically
-              % Note: sorting is already a side-effect of setdiff, but setdiff is not called when showInspectedPropsFlag=1
-              if iscell(propNames)
-                  propNames = sort(propNames);
               end
 
               % Strip callback properties
@@ -831,12 +832,18 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
                               s = warning('off','all');
                               lastwarn('');
                               try
-                                  value = javaMethod(['get' sp.Name],obj);
+                                  value = javaMethod(['get' sp.Name],obj);  % Java object
                               catch
-                                  value = get(obj, sp.Name);
+                                  try
+                                      value = get(obj, sp.Name);  % standard MCOS object
+                                  catch
+                                      value = obj.(sp.Name);  % .Net object
+                                  end
                               end
-                              strToIgnore = 'Possible deprecated use of get on a Java object';
-                              if ~strncmpi(strToIgnore,lastwarn,length(strToIgnore))
+                              strToIgnore1 = 'Possible deprecated use of get on a Java object';
+                              strToIgnore2 = 'figure JavaFrame property will be obsoleted in a future release.';
+                              if ~strncmpi(strToIgnore1,lastwarn,length(strToIgnore1)) && ...
+                                 ~strncmpi(strToIgnore2,lastwarn,length(strToIgnore2))
                                   disp(lastwarn);
                               end
                               warning(s);
@@ -847,7 +854,7 @@ function [propsData, propsHeaders, propTableEnabled, propsNum] = getPropsData(ob
                                   propsData{idx,3} = value;
                               end
                           catch
-                              errMsg = regexprep(lasterr, {char(10),'Error using ==> get.Java exception occurred:..'}, {' ',''});
+                              errMsg = regexprep(lasterr, {char(10),'Error using ==> get.Java exception occurred:..','Error using .* Message: ',' Source:.*'}, {' ','','',''});
                               propsData{idx,3} = [errorPrefix errMsg];
                               propsData{idx,1} = strrep(propsData{idx,1},propName,[errorPrefix propName]);
                           end
@@ -1326,6 +1333,7 @@ function handleTree = getHandleTree(obj, hFig)
       tree_hh = handle(tree_h,'CallbackProperties');
       try tree_h = javaObjectEDT(tree_h); catch, end  % auto-delegate on EDT
       %tree_h = handle(com.mathworks.hg.peer.UITreePeer,'CallbackProperties');
+      try setappdata(tree_h, 'userdata',[]); catch, end  % required to prevent an "invalid object" error downstream
       
       % Use the parent handle as root, unless there is none
       hRoot = handle(get(obj,'parent'));
@@ -2274,7 +2282,8 @@ function identifiers = disableDbstopError
     dbStat = dbstatus;
     idx = find(strcmp({dbStat.cond},'error'));
     identifiers = [dbStat(idx).identifier];
-    if ~isempty(idx)
+    v = version;
+    if ~isempty(idx) && v(1) < '8';
         dbclear if error;
         msgbox('''dbstop if error'' had to be disabled due to a Matlab bug that would have caused Matlab to crash.', mfilename, 'warn');
     end
@@ -2838,6 +2847,7 @@ function dataFields = updateObjTooltip(obj, uiObject)
             % Note: the bulk-get approach enables access to user-defined schema-props, but not to some original classhandle Properties...
             try
                 oldWarn3 = warning('off','MATLAB:structOnObject');
+                warning off MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame
                 dataFields = struct(obj);
                 warning(oldWarn3);
             catch

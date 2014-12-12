@@ -47,7 +47,7 @@ classdef analysisCore < optickaCore
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ==================================================================
 		%> @brief Class constructor
@@ -329,12 +329,39 @@ classdef analysisCore < optickaCore
 	%=======================================================================
 		
 		% ===================================================================
+		%> @brief phaseDifference basic phase diff measurement
+		%>
+		%> @param x - first signal in the time domain
+		%> @param y - second signal in the time domain
+		%> @return phase - phase difference Y -> X, degrees
+		% ===================================================================
+		function phase = phaseDifference(x,y)	
+			if size(x, 2) > 1 ; x = x'; end% represent x as column-vector if it is not
+			if size(y, 2) > 1; y = y';	end% represent y as column-vector if it is not
+			% signals length
+			xlen = length(x);
+			ylen = length(y);
+			% window preparation
+			xwin = hanning(xlen, 'periodic');
+			ywin = hanning(ylen, 'periodic');
+			% fft of the first signal
+			X = fft(x.*xwin);
+			% fft of the second signal
+			Y = fft(y.*ywin);
+			% phase difference calculation
+			[~, indx] = max(abs(X));
+			[~, indy] = max(abs(Y));
+			PhDiff = angle(Y(indy)) - angle(X(indx));
+			phase = PhDiff*180/pi;
+		end
+		
+		% ===================================================================
 		%> @brief selectFTTrials cut out trials where the ft function fails
 		%> to use cfg.trials
 		%>
 		%> @param ft fieldtrip structure
-		
-		%> @return
+		%> @param idx index to use for selection
+		%> @return ftOut modified ft structure
 		% ===================================================================
 		function ftout=subselectFieldTripTrials(ft,idx)
 			if size(idx,2)>size(idx,1); idx = idx'; end
@@ -380,17 +407,21 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		%> @brief variance to standard eror
 		%>
-		%> @param
+		%> @param var variance
+		%> @param dof degrees of freedom
+		%> @return err standard error
 		% ===================================================================
-		function [err]=var2SE(var,dof)
+		function err = var2SE(var,dof)
 			err = sqrt(var ./ dof);
 		end
 		
 		% ===================================================================
-		%> @brief preferred row col layout for multiple plots
-		%> @param
+		%> @brief calculates preferred row col layout for multiple plots
+		%> @param len length of data points to plot
+		%> @return row number of rows
+		%> @return col number of columns
 		% ===================================================================
-		function [row,col]=optimalLayout(len)
+		function [row,col] = optimalLayout(len)
 			row=1; col=1;
 			if			len == 2,	row = 2;	col = 1;
 			elseif	len == 3,	row = 3;	col = 1;
