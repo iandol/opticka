@@ -39,6 +39,10 @@ classdef spikeAnalysis < analysisCore
 		p@plxReader
 		%> fieldtrip reparse
 		ft@struct
+		%> chronux reparse, cell is condition, struct is trials
+		chronux@cell
+		%> chronux parsed results
+		chresults@struct
 		%> fieldtrip parsed results
 		results@struct
 		%> the events as trials structure
@@ -624,6 +628,20 @@ classdef spikeAnalysis < analysisCore
 			end
 		end
 		
+		
+		% ===================================================================
+		%> @brief findRepeats looks for repetition priming effects
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function chSpectrum(ego)
+			
+			
+		end
+		
+		
+		
 		% ===================================================================
 		%> @brief findRepeats looks for repetition priming effects
 		%>
@@ -720,6 +738,35 @@ classdef spikeAnalysis < analysisCore
 				case {'w','waves','waveforms'}
 					plotWaveforms(ego,args); drawnow;
 			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%> @param
+		%> @return
+		% ===================================================================
+		function getChronuxSpikes(ego)
+			tft = tic;
+			ego.chronux = {};
+			for i = 1:ego.nSelection
+				idx = ego.selectedTrials{i}.idx;
+				data = []; a = 1;
+				for j = idx
+					base = ego.spike{ego.selectedUnit}.trials{j}.base;
+					if ego.p.saccadeRealign && isfield(ego.spike{ego.selectedUnit}.trials{j},'firstSaccade')
+						fS = ego.spike{ego.selectedUnit}.trials{j}.firstSaccade;
+						data(a).times = ego.spike{ego.selectedUnit}.trials{j}.spikes' - (base+fS);
+					else
+						data(a).times = ego.spike{ego.selectedUnit}.trials{j}.spikes' - base;
+					end
+					data(a).base = base;
+					data(a).variable = ego.spike{ego.selectedUnit}.trials{j}.variable;
+					data(a).index = ego.spike{ego.selectedUnit}.trials{j}.index;
+					a = a + 1;
+				end
+				ego.chronux{i} = data;
+			end
+			fprintf('Converting spikes to chronux format took %g ms\n',round(toc(tft)*1000));
 		end
 		
 	end

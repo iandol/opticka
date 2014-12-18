@@ -299,10 +299,8 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Constructor remove the raw matrices etc to reduce memory
+		%> @brief optimiseSize remove the raw matrices etc to reduce memory
 		%>
-		%> @param varargin
-		%> @returnscr
 		% ===================================================================
 		function optimiseSize(ego)
 			if isa(ego, 'LFPAnalysis')

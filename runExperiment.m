@@ -166,7 +166,7 @@ classdef runExperiment < optickaCore
 
 			%initialise runLog for this run
 			obj.previousInfo.runLog = obj.runLog;
-				obj.runLog = timeLogger();
+			obj.runLog = timeLogger();
 			tL = obj.runLog;
 
 			%make a handle to the screenManager, so lazy!
