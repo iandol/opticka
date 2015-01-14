@@ -697,11 +697,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function compareBaseline(ego)
-			
-			
-			
-			
-			
+
 		end
 		
 		% ===================================================================
@@ -741,7 +737,9 @@ classdef spikeAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief Get spike structure in chronux format to use with its functions, the
+		%>  results are stored in the chronux property, which is a cell array containing
+		%>  structures for each data selection.
 		%> @param
 		%> @return
 		% ===================================================================
@@ -759,6 +757,7 @@ classdef spikeAnalysis < analysisCore
 					else
 						data(a).times = ego.spike{ego.selectedUnit}.trials{j}.spikes' - base;
 					end
+					data(a).times = data(a).times + (ego.spikeWindow+0.1); %annoyingly chronux doesn't handle negative spike times!!!!
 					data(a).base = base;
 					data(a).variable = ego.spike{ego.selectedUnit}.trials{j}.variable;
 					data(a).index = ego.spike{ego.selectedUnit}.trials{j}.index;
@@ -1274,5 +1273,46 @@ classdef spikeAnalysis < analysisCore
 			fprintf('Ratio of response microSaccades: %.2g (%i msaccs for %i trials)\n\n',nMS2/length(idx),nMS2,length(idx));
 		end
 		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function closeUI(me)
+			try delete(me.handles.parent); end %#ok<TRYNC>
+			me.handles = struct();
+			me.openUI = false;
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function makeUI(me)
+			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function updateUI(me)
+			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function notifyUI(me)
+			
+		end
 	end
 end

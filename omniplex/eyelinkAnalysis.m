@@ -99,14 +99,14 @@ classdef eyelinkAnalysis < analysisCore
 		%> @brief
 		%>
 		% ===================================================================
-		function ego = eyelinkAnalysis(varargin)
+		function me = eyelinkAnalysis(varargin)
 			if nargin == 0; varargin.name = ''; end
-			ego=ego@analysisCore(varargin); %superclass constructor
-			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
-			if isempty(ego.file) || isempty(ego.dir)
-				[ego.file, ego.dir] = uigetfile('*.edf','Load EDF File:');
+			me=me@analysisCore(varargin); %superclass constructor
+			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
+			if isempty(me.file) || isempty(me.dir)
+				[me.file, me.dir] = uigetfile('*.edf','Load EDF File:');
 			end
-			ego.ppd; %cache our initial ppd_
+			me.ppd; %cache our initial ppd_
 		end
 		
 		% ===================================================================
@@ -115,19 +115,19 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function load(ego,force)
+		function load(me,force)
 			if ~exist('force','var');force=false;end
-			if isempty(ego.file)
+			if isempty(me.file)
 				warning('No EDF file specified...');
 				return
 			end
 			tic
-			if isempty(ego.raw) || force == true
+			if isempty(me.raw) || force == true
 				oldpath = pwd;
-				cd(ego.dir)
-				ego.raw = edfmex(ego.file);
-				if isnumeric(ego.raw.RECORDINGS(1).sample_rate)
-					ego.sampleRate = double(ego.raw.RECORDINGS(1).sample_rate);
+				cd(me.dir)
+				me.raw = edfmex(me.file);
+				if isnumeric(me.raw.RECORDINGS(1).sample_rate)
+					me.sampleRate = double(me.raw.RECORDINGS(1).sample_rate);
 				end
 				fprintf('\n');
 				cd(oldpath)
@@ -141,21 +141,21 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parse(ego)
-			ego.isParsed = false;
+		function parse(me)
+			me.isParsed = false;
 			tmain = tic;
-			parseEvents(ego);
-			if ~isempty(ego.trialsToPrune)
-				ego.pruneTrials(ego.trialsToPrune);
+			parseEvents(me);
+			if ~isempty(me.trialsToPrune)
+				me.pruneTrials(me.trialsToPrune);
 			end
-			parseAsVars(ego);
-			parseSecondaryEyePos(ego);
-			parseFixationPositions(ego);
-			parseROI(ego);
-			parseTOI(ego);
-			computeMicrosaccades(ego);
+			parseAsVars(me);
+			parseSecondaryEyePos(me);
+			parseFixationPositions(me);
+			parseROI(me);
+			parseTOI(me);
+			computeMicrosaccades(me);
 			
-			ego.isParsed = true;
+			me.isParsed = true;
 			
 			fprintf('\tOverall Parsing of EDF Trials took %g ms\n',round(toc(tmain)*1000));
 		end
@@ -166,10 +166,10 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseSaccades(ego)
-			parseROI(ego);
-			parseTOI(ego);
-			computeMicrosaccades(ego);
+		function parseSaccades(me)
+			parseROI(me);
+			parseTOI(me);
+			computeMicrosaccades(me);
 		end
 		
 		% ===================================================================
@@ -181,17 +181,17 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function pruneTrials(ego,num)
-			ego.trials(num) = [];
-			ego.trialList(num) = [];
-			ego.correct.idx = find([ego.trials.correct] == true);
-			ego.correct.saccTimes = [ego.trials(ego.correct.idx).firstSaccade];
-			ego.breakFix.idx = find([ego.trials.breakFix] == true);
-			ego.breakFix.saccTimes = [ego.trials(ego.breakFix.idx).firstSaccade];
-			ego.incorrect.idx = find([ego.trials.incorrect] == true);
-			ego.incorrect.saccTimes = [ego.trials(ego.incorrect.idx).firstSaccade];
-			for i = num:length(ego.trials)
-				ego.trials(i).correctedIndex = ego.trials(i).correctedIndex - 1;
+		function pruneTrials(me,num)
+			me.trials(num) = [];
+			me.trialList(num) = [];
+			me.correct.idx = find([me.trials.correct] == true);
+			me.correct.saccTimes = [me.trials(me.correct.idx).firstSaccade];
+			me.breakFix.idx = find([me.trials.breakFix] == true);
+			me.breakFix.saccTimes = [me.trials(me.breakFix.idx).firstSaccade];
+			me.incorrect.idx = find([me.trials.incorrect] == true);
+			me.incorrect.saccTimes = [me.trials(me.incorrect.idx).firstSaccade];
+			for i = num:length(me.trials)
+				me.trials(i).correctedIndex = me.trials(i).correctedIndex - 1;
 			end
 			fprintf('Pruned %i trials from EDF trial data \n',num)
 		end
@@ -202,16 +202,16 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plot(ego,select,type,seperateVars,name)
+		function plot(me,select,type,seperateVars,name)
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
 			if ~exist('type','var') || isempty(type); type = 'correct'; end
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
 			if ~exist('name','var') || isempty(name)
 				if isnumeric(select)
 					if length(select) > 1
-						name = [ego.file ' | Select: ' num2str(length(select)) ' trials'];
+						name = [me.file ' | Select: ' num2str(length(select)) ' trials'];
 					else
-						name = [ego.file ' | Select: ' num2str(select)];
+						name = [me.file ' | Select: ' num2str(select)];
 					end
 				end
 			end
@@ -221,18 +221,18 @@ classdef eyelinkAnalysis < analysisCore
 			else
 				switch lower(type)
 					case 'correct'
-						idx = ego.correct.idx;
+						idx = me.correct.idx;
 					case 'breakfix'
-						idx = ego.breakFix.idx;
+						idx = me.breakFix.idx;
 					case 'incorrect'
-						idx = ego.incorrect.idx;
+						idx = me.incorrect.idx;
 				end
 				idxInternal = true;
 			end
 			if seperateVars == true && isempty(select)
-				vars = unique([ego.trials(idx).id]);
+				vars = unique([me.trials(idx).id]);
 				for j = vars
-					ego.plot(j,type,false);
+					me.plot(j,type,false);
 					drawnow;
 				end
 				return
@@ -261,7 +261,7 @@ classdef eyelinkAnalysis < analysisCore
 			early = 0;
 			mS = [];
 			
-			map = ego.optimalColours(length(ego.vars));
+			map = me.optimalColours(length(me.vars));
 			
 			if isempty(select)
 				thisVarName = 'ALL VARS ';
@@ -272,9 +272,9 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			
 			maxv = 1;
-			ppd = ego.ppd;
-			if ~isempty(ego.TOI)
-				t1 = ego.TOI(1); t2 = ego.TOI(2);
+			ppd = me.ppd;
+			if ~isempty(me.TOI)
+				t1 = me.TOI(1); t2 = me.TOI(2);
 			else
 				t1 = 0; t2 = 0.1;
 			end
@@ -283,11 +283,11 @@ classdef eyelinkAnalysis < analysisCore
 				if idxInternal == true %we're using the eyelink index which includes incorrects
 					f = i;
 				else %we're using an external index which excludes incorrects
-					f = find([ego.trials.correctedIndex] == i);
+					f = find([me.trials.correctedIndex] == i);
 				end
 				if isempty(f); continue; end
 				
-				thisTrial = ego.trials(f(1));
+				thisTrial = me.trials(f(1));
 				
 				if thisTrial.variable == 1010 %early edf files were broken, 1010 signifies this
 					c = rand(1,3);
@@ -374,7 +374,7 @@ classdef eyelinkAnalysis < analysisCore
 				
 			end
 			
-			display = ego.display / ppd;
+			display = me.display / ppd;
 			
 			q(1,1).select();
 			axis ij
@@ -459,7 +459,7 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				ud = get(src,'UserData');
 				if ~isempty(ud)
-					disp(ego.trials(ud(1)));
+					disp(me.trials(ud(1)));
 					disp(['TRIAL | CORRECTED | VAR = ' num2str(ud)]);
 				end
 			end
@@ -471,27 +471,27 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseROI(ego)
-			if isempty(ego.ROI)
+		function parseROI(me)
+			if isempty(me.ROI)
 				disp('No ROI specified...')
 				return
 			end
 			tROI = tic;
-			ppd = ego.ppd;
-			fixationX = ego.ROI(1);
-			fixationY = ego.ROI(2);
-			fixationRadius = ego.ROI(3);
-			for i = 1:length(ego.trials)
-				ego.ROIInfo(i).variable = ego.trials(i).variable;
-				ego.ROIInfo(i).idx = i;
-				ego.ROIInfo(i).correctedIndex = ego.trials(i).correctedIndex;
-				ego.ROIInfo(i).uuid = ego.trials(i).uuid;
-				ego.ROIInfo(i).fixationX = fixationX;
-				ego.ROIInfo(i).fixationY = fixationY;
-				ego.ROIInfo(i).fixationRadius = fixationRadius;
-				x = ego.trials(i).gx / ppd;
-				y = ego.trials(i).gy  / ppd;
-				times = ego.trials(i).times / 1e3;
+			ppd = me.ppd;
+			fixationX = me.ROI(1);
+			fixationY = me.ROI(2);
+			fixationRadius = me.ROI(3);
+			for i = 1:length(me.trials)
+				me.ROIInfo(i).variable = me.trials(i).variable;
+				me.ROIInfo(i).idx = i;
+				me.ROIInfo(i).correctedIndex = me.trials(i).correctedIndex;
+				me.ROIInfo(i).uuid = me.trials(i).uuid;
+				me.ROIInfo(i).fixationX = fixationX;
+				me.ROIInfo(i).fixationY = fixationY;
+				me.ROIInfo(i).fixationRadius = fixationRadius;
+				x = me.trials(i).gx / ppd;
+				y = me.trials(i).gy  / ppd;
+				times = me.trials(i).times / 1e3;
 				idx = find(times > 0); % we only check ROI post 0 time
 				times = times(idx);
 				x = x(idx);
@@ -499,19 +499,19 @@ classdef eyelinkAnalysis < analysisCore
 				r = sqrt((x - fixationX).^2 + (y - fixationY).^2);
 				within = find(r < fixationRadius);
 				if any(within)
-					ego.ROIInfo(i).enteredROI = true;
+					me.ROIInfo(i).enteredROI = true;
 				else
-					ego.ROIInfo(i).enteredROI = false;
+					me.ROIInfo(i).enteredROI = false;
 				end
-				ego.trials(i).enteredROI = ego.ROIInfo(i).enteredROI;
-				ego.ROIInfo(i).x = x;
-				ego.ROIInfo(i).y = y;
-				ego.ROIInfo(i).times = times;
-				ego.ROIInfo(i).r = r;
-				ego.ROIInfo(i).within = within;
-				ego.ROIInfo(i).correct = ego.trials(i).correct;
-				ego.ROIInfo(i).breakFix = ego.trials(i).breakFix;
-				ego.ROIInfo(i).incorrect = ego.trials(i).incorrect;
+				me.trials(i).enteredROI = me.ROIInfo(i).enteredROI;
+				me.ROIInfo(i).x = x;
+				me.ROIInfo(i).y = y;
+				me.ROIInfo(i).times = times;
+				me.ROIInfo(i).r = r;
+				me.ROIInfo(i).within = within;
+				me.ROIInfo(i).correct = me.trials(i).correct;
+				me.ROIInfo(i).breakFix = me.trials(i).breakFix;
+				me.ROIInfo(i).incorrect = me.trials(i).incorrect;
 			end
 			fprintf('Parsing ROI took %g ms\n', round(toc(tROI)*1000))
 		end
@@ -522,22 +522,22 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseTOI(ego)
-			if isempty(ego.TOI)
+		function parseTOI(me)
+			if isempty(me.TOI)
 				disp('No TOI specified...')
 				return
 			end
 			tTOI = tic;
-			ppd = ego.ppd;
-			t1 = ego.TOI(1);
-			t2 = ego.TOI(2);
-			fixationX = ego.TOI(3);
-			fixationY = ego.TOI(4);
-			fixationRadius = ego.TOI(5);
-			for i = 1:length(ego.trials)
-				times = ego.trials(i).times / 1e3;
-				x = ego.trials(i).gx / ppd;
-				y = ego.trials(i).gy  / ppd;
+			ppd = me.ppd;
+			t1 = me.TOI(1);
+			t2 = me.TOI(2);
+			fixationX = me.TOI(3);
+			fixationY = me.TOI(4);
+			fixationRadius = me.TOI(5);
+			for i = 1:length(me.trials)
+				times = me.trials(i).times / 1e3;
+				x = me.trials(i).gx / ppd;
+				y = me.trials(i).gy  / ppd;
 				
 				idx = intersect(find(times>=t1), find(times<=t2));
 				times = times(idx);
@@ -548,28 +548,28 @@ classdef eyelinkAnalysis < analysisCore
 				
 				within = find(r <= fixationRadius);
 				if length(within) == length(r)
-					ego.TOIInfo(i).isTOI = true;
+					me.TOIInfo(i).isTOI = true;
 				else
-					ego.TOIInfo(i).isTOI = false;
+					me.TOIInfo(i).isTOI = false;
 				end
-				ego.trials(i).isTOI = ego.TOIInfo(i).isTOI;
-				ego.TOIInfo(i).variable = ego.trials(i).variable;
-				ego.TOIInfo(i).idx = i;
-				ego.TOIInfo(i).correctedIndex = ego.trials(i).correctedIndex;
-				ego.TOIInfo(i).uuid = ego.trials(i).uuid;
-				ego.TOIInfo(i).t1 = t1;
-				ego.TOIInfo(i).t2 = t2;
-				ego.TOIInfo(i).fixationX = fixationX;
-				ego.TOIInfo(i).fixationY = fixationY;
-				ego.TOIInfo(i).fixationRadius = fixationRadius;
-				ego.TOIInfo(i).times = times;
-				ego.TOIInfo(i).x = x;
-				ego.TOIInfo(i).y = y;
-				ego.TOIInfo(i).r = r;
-				ego.TOIInfo(i).within = within;
-				ego.TOIInfo(i).correct = ego.trials(i).correct;
-				ego.TOIInfo(i).breakFix = ego.trials(i).breakFix;
-				ego.TOIInfo(i).incorrect = ego.trials(i).incorrect;
+				me.trials(i).isTOI = me.TOIInfo(i).isTOI;
+				me.TOIInfo(i).variable = me.trials(i).variable;
+				me.TOIInfo(i).idx = i;
+				me.TOIInfo(i).correctedIndex = me.trials(i).correctedIndex;
+				me.TOIInfo(i).uuid = me.trials(i).uuid;
+				me.TOIInfo(i).t1 = t1;
+				me.TOIInfo(i).t2 = t2;
+				me.TOIInfo(i).fixationX = fixationX;
+				me.TOIInfo(i).fixationY = fixationY;
+				me.TOIInfo(i).fixationRadius = fixationRadius;
+				me.TOIInfo(i).times = times;
+				me.TOIInfo(i).x = x;
+				me.TOIInfo(i).y = y;
+				me.TOIInfo(i).r = r;
+				me.TOIInfo(i).within = within;
+				me.TOIInfo(i).correct = me.trials(i).correct;
+				me.TOIInfo(i).breakFix = me.trials(i).breakFix;
+				me.TOIInfo(i).incorrect = me.trials(i).incorrect;
 			end
 			fprintf('Parsing TOI took %g ms\n', round(toc(tTOI)*1000))
 		end
@@ -580,16 +580,16 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotROI(ego)
-			if ~isempty(ego.ROIInfo)
-				h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',ego.file);
+		function plotROI(me)
+			if ~isempty(me.ROIInfo)
+				h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.file);
 				
-				x1 = ego.ROI(1) - ego.ROI(3);
-				x2 = ego.ROI(1) + ego.ROI(3);
+				x1 = me.ROI(1) - me.ROI(3);
+				x2 = me.ROI(1) + me.ROI(3);
 				xmin = min([abs(x1), abs(x2)]);
 				xmax = max([abs(x1), abs(x2)]);
-				y1 = ego.ROI(2) - ego.ROI(3);
-				y2 = ego.ROI(2) + ego.ROI(3);
+				y1 = me.ROI(2) - me.ROI(3);
+				y2 = me.ROI(2) + me.ROI(3);
 				ymin = min([abs(y1), abs(y2)]);
 				ymax = max([abs(y1), abs(y2)]);
 				xp = [x1 x1 x2 x2];
@@ -600,10 +600,10 @@ classdef eyelinkAnalysis < analysisCore
 				p.pack(1,2);
 				p.fontsize = 14;
 				p.margin = [15 15 15 15];
-				yes = logical([ego.ROIInfo.enteredROI]);
+				yes = logical([me.ROIInfo.enteredROI]);
 				no = ~yes;
-				yesROI = ego.ROIInfo(yes);
-				noROI	= ego.ROIInfo(no);
+				yesROI = me.ROIInfo(yes);
+				noROI	= me.ROIInfo(no);
 				p(1,1).select();
 				p(1,1).hold('on');
 				patch(xp,yp,[1 1 0],'EdgeColor','none');
@@ -654,7 +654,7 @@ classdef eyelinkAnalysis < analysisCore
 				p(1,1).hold('off');
 				box on
 				grid on
-				p(1,1).title(['ROI PLOT for ' num2str(ego.ROI) ' (entered = ' num2str(sum(yes)) ' | did not = ' num2str(sum(no)) ')']);
+				p(1,1).title(['ROI PLOT for ' num2str(me.ROI) ' (entered = ' num2str(sum(yes)) ' | did not = ' num2str(sum(no)) ')']);
 				p(1,1).xlabel('X Position (degs)')
 				p(1,1).ylabel('Y Position (degs)')
 				axis square
@@ -663,7 +663,7 @@ classdef eyelinkAnalysis < analysisCore
 				p(1,2).hold('off');
 				box on
 				grid on
-				p(1,2).title(['ROI PLOT for ' num2str(ego.ROI) ' (entered = ' num2str(sum(yes)) ' | did not = ' num2str(sum(no)) ')']);
+				p(1,2).title(['ROI PLOT for ' num2str(me.ROI) ' (entered = ' num2str(sum(yes)) ' | did not = ' num2str(sum(no)) ')']);
 				p(1,2).xlabel('Time(s)')
 				p(1,2).ylabel('Absolute X/Y Position (degs)')
 				axis square
@@ -692,21 +692,21 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotTOI(ego)
-			if isempty(ego.TOIInfo)
+		function plotTOI(me)
+			if isempty(me.TOIInfo)
 				disp('No TOI parsed!!!')
 				return
 			end
-			h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',ego.file);
+			h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.file);
 			
-			t1 = ego.TOI(1);
-			t2 = ego.TOI(2);
-			x1 = ego.TOI(3) - ego.TOI(5);
-			x2 = ego.TOI(3) + ego.TOI(5);
+			t1 = me.TOI(1);
+			t2 = me.TOI(2);
+			x1 = me.TOI(3) - me.TOI(5);
+			x2 = me.TOI(3) + me.TOI(5);
 			xmin = min([abs(x1), abs(x2)]);
 			xmax = max([abs(x1), abs(x2)]);
-			y1 = ego.TOI(4) - ego.TOI(5);
-			y2 = ego.TOI(4) + ego.TOI(5);
+			y1 = me.TOI(4) - me.TOI(5);
+			y2 = me.TOI(4) + me.TOI(5);
 			ymin = min([abs(y1), abs(y2)]);
 			ymax = max([abs(y1), abs(y2)]);
 			xp = [x1 x1 x2 x2];
@@ -717,10 +717,10 @@ classdef eyelinkAnalysis < analysisCore
 			p.pack(1,2);
 			p.fontsize = 14;
 			p.margin = [15 15 15 15];
-			yes = logical([ego.TOIInfo.isTOI]);
+			yes = logical([me.TOIInfo.isTOI]);
 			no = ~yes;
-			yesTOI = ego.TOIInfo(yes);
-			noTOI	= ego.TOIInfo(no);
+			yesTOI = me.TOIInfo(yes);
+			noTOI	= me.TOIInfo(no);
 			p(1,1).select();
 			p(1,1).hold('on');
 			patch(xp,yp,[1 1 0],'EdgeColor','none');
@@ -773,7 +773,7 @@ classdef eyelinkAnalysis < analysisCore
 			p(1,1).hold('off');
 			box on
 			grid on
-			p(1,1).title(['TOI PLOT for ' num2str(ego.TOI) ' (yes = ' num2str(sum(yes)) ' || no = ' num2str(sum(no)) ')']);
+			p(1,1).title(['TOI PLOT for ' num2str(me.TOI) ' (yes = ' num2str(sum(yes)) ' || no = ' num2str(sum(no)) ')']);
 			p(1,1).xlabel('X Position (degs)')
 			p(1,1).ylabel('Y Position (degs)')
 			axis([-4 4 -4 4]);
@@ -782,7 +782,7 @@ classdef eyelinkAnalysis < analysisCore
 			p(1,2).hold('off');
 			box on
 			grid on
-			p(1,2).title(['TOI PLOT for ' num2str(ego.TOI) ' (yes = ' num2str(sum(yes)) ' || no = ' num2str(sum(no)) ')']);
+			p(1,2).title(['TOI PLOT for ' num2str(me.TOI) ' (yes = ' num2str(sum(yes)) ' || no = ' num2str(sum(no)) ')']);
 			p(1,2).xlabel('Time(s)')
 			p(1,2).ylabel('Absolute X/Y Position (degs)')
 			axis([t1 t2 0 4]);
@@ -811,13 +811,13 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ppd = get.ppd(ego)
-			if ego.distance == 57.3 && ego.override573 == true
-				ppd = round( ego.pixelsPerCm * (67 / 57.3)); %set the pixels per degree, note this fixes some older files where 57.3 was entered instead of 67cm
+		function ppd = get.ppd(me)
+			if me.distance == 57.3 && me.override573 == true
+				ppd = round( me.pixelsPerCm * (67 / 57.3)); %set the pixels per degree, note this fixes some older files where 57.3 was entered instead of 67cm
 			else
-				ppd = round( ego.pixelsPerCm * (ego.distance / 57.3)); %set the pixels per degree
+				ppd = round( me.pixelsPerCm * (me.distance / 57.3)); %set the pixels per degree
 			end
-			ego.ppd_ = ppd;
+			me.ppd_ = ppd;
 		end
 		
 		% ===================================================================
@@ -826,36 +826,36 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function fixVarNames(ego)
-			if ego.needOverride == true
-				if isempty(ego.trialOverride)
+		function fixVarNames(me)
+			if me.needOverride == true
+				if isempty(me.trialOverride)
 					warning('No replacement trials available!!!')
 					return
 				end
-				trials = ego.trialOverride; %#ok<*PROP>
-				if  max([ego.trials.correctedIndex]) ~= length(trials)
+				trials = me.trialOverride; %#ok<*PROP>
+				if  max([me.trials.correctedIndex]) ~= length(trials)
 					warning('TRIAL ID LENGTH MISMATCH!');
 					return
 				end
 				a = 1;
-				ego.trialList = [];
-				for j = 1:length(ego.trials)
-					if ego.trials(j).incorrect ~= true
-						if a <= length(trials) && ego.trials(j).correctedIndex == trials(a).index
-							ego.trials(j).oldid = ego.trials(j).variable;
-							ego.trials(j).variable = trials(a).variable;
-							ego.trialList(j) = ego.trials(j).variable;
-							if ego.trials(j).breakFix == true
-								ego.trialList(j) = -[ego.trialList(j)];
+				me.trialList = [];
+				for j = 1:length(me.trials)
+					if me.trials(j).incorrect ~= true
+						if a <= length(trials) && me.trials(j).correctedIndex == trials(a).index
+							me.trials(j).oldid = me.trials(j).variable;
+							me.trials(j).variable = trials(a).variable;
+							me.trialList(j) = me.trials(j).variable;
+							if me.trials(j).breakFix == true
+								me.trialList(j) = -[me.trialList(j)];
 							end
 							a = a + 1;
 						end
 					end
 				end
-				parseAsVars(ego); %need to redo this now
+				parseAsVars(me); %need to redo this now
 				warning('---> Trial name override in place!!!')
 			else
-				ego.trialOverride = struct();
+				me.trialOverride = struct();
 			end
 		end
 		
@@ -958,41 +958,83 @@ classdef eyelinkAnalysis < analysisCore
 	end
 	
 	%=======================================================================
-	methods (Access = private) %------------------PRIVATE METHODS
+	methods (Access = protected) %------------------PRIVATE METHODS
 	%=======================================================================
 	
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function closeUI(me)
+			try delete(me.handles.parent); end %#ok<TRYNC>
+			me.handles = struct();
+			me.openUI = false;
+		end
+		
 		% ===================================================================
 		%> @brief
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseEvents(ego)
+		function makeUI(me)
+			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function updateUI(me)
+			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function notifyUI(me)
+			
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function parseEvents(me)
 			isTrial = false;
 			tri = 1; %current trial that is being parsed
 			tri2 = 1; %trial ignoring incorrects
 			eventN = 0;
-			ego.comment = ego.raw.HEADER;
-			ego.trials = struct();
-			ego.correct.idx = [];
-			ego.correct.saccTimes = [];
-			ego.correct.fixations = [];
-			ego.breakFix = ego.correct;
-			ego.incorrect = ego.correct;
-			ego.trialList = [];
+			me.comment = me.raw.HEADER;
+			me.trials = struct();
+			me.correct.idx = [];
+			me.correct.saccTimes = [];
+			me.correct.fixations = [];
+			me.breakFix = me.correct;
+			me.incorrect = me.correct;
+			me.trialList = [];
 			
-			ego.ppd; %faster to cache this now (dependant property sets ppd_ too)
+			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
 			
-			sample = ego.raw.FSAMPLE.gx(:,100); %check which eye
+			sample = me.raw.FSAMPLE.gx(:,100); %check which eye
 			if sample(1) == -32768 %only use right eye if left eye data is not present
 				eyeUsed = 2; %right eye index for FSAMPLE.gx;
 			else
 				eyeUsed = 1; %left eye index
 			end
 			
-			for i = 1:length(ego.raw.FEVENT)
+			for i = 1:length(me.raw.FEVENT)
 				isMessage = false;
-				evt = ego.raw.FEVENT(i);
+				evt = me.raw.FEVENT(i);
 				
 				if evt.type == 24 %strcmpi(evt.codestring,'MESSAGEEVENT')
 					isMessage = true;
@@ -1005,14 +1047,14 @@ classdef eyelinkAnalysis < analysisCore
 				if isMessage && ~isTrial
 					rt = regexpi(evt.message,'^(?<d>V_RT MESSAGE) (?<a>\w+) (?<b>\w+)','names');
 					if ~isempty(rt) && ~isempty(rt.a) && ~isempty(rt.b)
-						ego.rtStartMessage = rt.a;
-						ego.rtEndMessage = rt.b;
+						me.rtStartMessage = rt.a;
+						me.rtEndMessage = rt.b;
 						continue
 					end
 					
 					xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
 					if ~isempty(xy)  && ~isempty(xy.x)
-						ego.display = [str2num(xy.x)+1 str2num(xy.y)+1];
+						me.display = [str2num(xy.x)+1 str2num(xy.y)+1];
 						continue
 					end
 					
@@ -1023,24 +1065,24 @@ classdef eyelinkAnalysis < analysisCore
 						end
 						isTrial = true;
 						eventN=1;
-						ego.trials(tri).variable = str2double(id.ID);
-						ego.trials(tri).idx = tri;
-						ego.trials(tri).correctedIndex = [];
-						ego.trials(tri).time = double(evt.time);
-						ego.trials(tri).sttime = double(evt.sttime);
-						ego.trials(tri).totaltime = (ego.trials(tri).sttime - ego.trials(1).sttime)/1e3;
-						ego.trials(tri).rt = false;
-						ego.trials(tri).rtstarttime = double(evt.sttime);
-						ego.trials(tri).fixations = [];
-						ego.trials(tri).saccades = [];
-						ego.trials(tri).nsacc = [];
-						ego.trials(tri).saccadeTimes = [];
-						ego.trials(tri).firstSaccade = NaN;
-						ego.trials(tri).rttime = [];
-						ego.trials(tri).uuid = [];
-						ego.trials(tri).correct = false;
-						ego.trials(tri).breakFix = false;
-						ego.trials(tri).incorrect = false;
+						me.trials(tri).variable = str2double(id.ID);
+						me.trials(tri).idx = tri;
+						me.trials(tri).correctedIndex = [];
+						me.trials(tri).time = double(evt.time);
+						me.trials(tri).sttime = double(evt.sttime);
+						me.trials(tri).totaltime = (me.trials(tri).sttime - me.trials(1).sttime)/1e3;
+						me.trials(tri).rt = false;
+						me.trials(tri).rtstarttime = double(evt.sttime);
+						me.trials(tri).fixations = [];
+						me.trials(tri).saccades = [];
+						me.trials(tri).nsacc = [];
+						me.trials(tri).saccadeTimes = [];
+						me.trials(tri).firstSaccade = NaN;
+						me.trials(tri).rttime = [];
+						me.trials(tri).uuid = [];
+						me.trials(tri).correct = false;
+						me.trials(tri).breakFix = false;
+						me.trials(tri).incorrect = false;
 						continue
 					end
 				end
@@ -1050,195 +1092,195 @@ classdef eyelinkAnalysis < analysisCore
 					if ~isMessage
 						
 						if strcmpi(evt.codestring,'STARTSAMPLES')
-							ego.trials(tri).startsampletime = double(evt.sttime);
+							me.trials(tri).startsampletime = double(evt.sttime);
 							continue
 						end
 						
 						if evt.type == 8 %strcmpi(evt.codestring,'ENDFIX')
 							fixa = [];
-							if isempty(ego.trials(tri).fixations)
+							if isempty(me.trials(tri).fixations)
 								fix = 1;
 							else
-								fix = length(ego.trials(tri).fixations)+1;
+								fix = length(me.trials(tri).fixations)+1;
 							end
-							if ego.trials(tri).rt == true
-								rel = ego.trials(tri).rtstarttime;
+							if me.trials(tri).rt == true
+								rel = me.trials(tri).rtstarttime;
 								fixa.rt = true;
 							else
-								rel = ego.trials(tri).sttime;
+								rel = me.trials(tri).sttime;
 								fixa.rt = false;
 							end
 							fixa.n = eventN;
-							fixa.ppd = ego.ppd_;
+							fixa.ppd = me.ppd_;
 							fixa.sttime = double(evt.sttime);
 							fixa.entime = double(evt.entime);
 							fixa.time = fixa.sttime - rel;
 							fixa.length = fixa.entime - fixa.sttime;
 							fixa.rel = rel;
 							
-							[fixa.gstx, fixa.gsty]  = toDegrees(ego, [evt.gstx, evt.gsty]);
-							[fixa.genx, fixa.geny]  = toDegrees(ego, [evt.genx, evt.geny]);
-							[fixa.x, fixa.y]		= toDegrees(ego, [evt.gavx, evt.gavy]);
+							[fixa.gstx, fixa.gsty]  = toDegrees(me, [evt.gstx, evt.gsty]);
+							[fixa.genx, fixa.geny]  = toDegrees(me, [evt.genx, evt.geny]);
+							[fixa.x, fixa.y]		= toDegrees(me, [evt.gavx, evt.gavy]);
 							[fixa.theta, fixa.rho]	= cart2pol(fixa.x, fixa.y);
 							fixa.theta = rad2ang(fixa.theta);
 							
 							if fix == 1
-								ego.trials(tri).fixations = fixa;
+								me.trials(tri).fixations = fixa;
 							else
-								ego.trials(tri).fixations(fix) = fixa;
+								me.trials(tri).fixations(fix) = fixa;
 							end
-							ego.trials(tri).nfix = fix;
+							me.trials(tri).nfix = fix;
 							eventN = eventN + 1;
 							continue
 						end
 						
 						if evt.type == 6 % strcmpi(evt.codestring,'ENDSACC')
 							sacc = [];
-							if isempty(ego.trials(tri).saccades)
+							if isempty(me.trials(tri).saccades)
 								nsacc = 1;
 							else
-								nsacc = length(ego.trials(tri).saccades)+1;
+								nsacc = length(me.trials(tri).saccades)+1;
 							end
-							if ego.trials(tri).rt == true
-								rel = ego.trials(tri).rtstarttime;
+							if me.trials(tri).rt == true
+								rel = me.trials(tri).rtstarttime;
 								sacc.rt = true;
 							else
-								rel = ego.trials(tri).sttime;
+								rel = me.trials(tri).sttime;
 								sacc.rt = false;
 							end
 							sacc.n = eventN;
-							sacc.ppd = ego.ppd_;
+							sacc.ppd = me.ppd_;
 							sacc.sttime = double(evt.sttime);
 							sacc.entime = double(evt.entime);
 							sacc.time = sacc.sttime - rel;
 							sacc.length = sacc.entime - sacc.sttime;
 							sacc.rel = rel;
 							
-							[sacc.gstx, sacc.gsty]	= toDegrees(ego, [evt.gstx evt.gsty]);
-							[sacc.genx, sacc.geny]	= toDegrees(ego, [evt.genx evt.geny]);
+							[sacc.gstx, sacc.gsty]	= toDegrees(me, [evt.gstx evt.gsty]);
+							[sacc.genx, sacc.geny]	= toDegrees(me, [evt.genx evt.geny]);
 							[sacc.x, sacc.y]		= deal((sacc.genx - sacc.gstx), (sacc.geny - sacc.gsty));
 							[sacc.theta, sacc.rho]	= cart2pol(sacc.x, sacc.y);
 							sacc.theta = rad2ang(sacc.theta);
 							
-							if sacc.rho > ego.minSaccadeDistance; sacc.microSaccade = false;
+							if sacc.rho > me.minSaccadeDistance; sacc.microSaccade = false;
 							else sacc.microSaccade = true; end
 							
 							if nsacc == 1
-								ego.trials(tri).saccades = sacc;
+								me.trials(tri).saccades = sacc;
 							else
-								ego.trials(tri).saccades(nsacc) = sacc;
+								me.trials(tri).saccades(nsacc) = sacc;
 							end
-							ego.trials(tri).nsacc = nsacc;
+							me.trials(tri).nsacc = nsacc;
 							eventN = eventN + 1;
 							continue
 						end
 						
 						if evt.type == 16 %strcmpi(evt.codestring,'ENDSAMPLES')
-							ego.trials(tri).endsampletime = double(evt.sttime);
-							idx = ego.raw.FSAMPLE.time >= ego.trials(tri).startsampletime & ...
-								ego.raw.FSAMPLE.time <= ego.trials(tri).endsampletime;
+							me.trials(tri).endsampletime = double(evt.sttime);
+							idx = me.raw.FSAMPLE.time >= me.trials(tri).startsampletime & ...
+								me.raw.FSAMPLE.time <= me.trials(tri).endsampletime;
 							
-							ego.trials(tri).times = double(ego.raw.FSAMPLE.time(idx));
-							ego.trials(tri).times = ego.trials(tri).times - ego.trials(tri).rtstarttime;
+							me.trials(tri).times = double(me.raw.FSAMPLE.time(idx));
+							me.trials(tri).times = me.trials(tri).times - me.trials(tri).rtstarttime;
 							
-							ego.trials(tri).gx = ego.raw.FSAMPLE.gx(eyeUsed, idx);
-							ego.trials(tri).gx = ego.trials(tri).gx - ego.display(1)/2;
+							me.trials(tri).gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
+							me.trials(tri).gx = me.trials(tri).gx - me.display(1)/2;
 							
-							ego.trials(tri).gy = ego.raw.FSAMPLE.gy(eyeUsed, idx);
-							ego.trials(tri).gy = ego.trials(tri).gy - ego.display(2)/2;
+							me.trials(tri).gy = me.raw.FSAMPLE.gy(eyeUsed, idx);
+							me.trials(tri).gy = me.trials(tri).gy - me.display(2)/2;
 							
-							ego.trials(tri).hx = ego.raw.FSAMPLE.hx(eyeUsed, idx);
+							me.trials(tri).hx = me.raw.FSAMPLE.hx(eyeUsed, idx);
 							
-							ego.trials(tri).hy = ego.raw.FSAMPLE.hy(eyeUsed, idx);
+							me.trials(tri).hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
 							
-							ego.trials(tri).pa = ego.raw.FSAMPLE.pa(eyeUsed, idx);
+							me.trials(tri).pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
 							continue
 						end
 						
 					else
 						uuid = regexpi(evt.message,'^UUID (?<UUID>[\w]+)','names');
 						if ~isempty(uuid) && ~isempty(uuid.UUID)
-							ego.trials(tri).uuid = uuid.UUID;
+							me.trials(tri).uuid = uuid.UUID;
 							continue
 						end
 						
-						endfix = regexpi(evt.message,['^' ego.rtStartMessage],'match');
+						endfix = regexpi(evt.message,['^' me.rtStartMessage],'match');
 						if ~isempty(endfix)
-							ego.trials(tri).rtstarttime = double(evt.sttime);
-							ego.trials(tri).rt = true;
-							if ~isempty(ego.trials(tri).fixations)
-								for lf = 1 : length(ego.trials(tri).fixations)
-									ego.trials(tri).fixations(lf).time = ego.trials(tri).fixations(lf).sttime - ego.trials(tri).rtstarttime;
-									ego.trials(tri).fixations(lf).rt = true;
+							me.trials(tri).rtstarttime = double(evt.sttime);
+							me.trials(tri).rt = true;
+							if ~isempty(me.trials(tri).fixations)
+								for lf = 1 : length(me.trials(tri).fixations)
+									me.trials(tri).fixations(lf).time = me.trials(tri).fixations(lf).sttime - me.trials(tri).rtstarttime;
+									me.trials(tri).fixations(lf).rt = true;
 								end
 							end
-							if ~isempty(ego.trials(tri).saccades)
-								for lf = 1 : length(ego.trials(tri).saccades)
-									ego.trials(tri).saccades(lf).time = ego.trials(tri).saccades(lf).sttime - ego.trials(tri).rtstarttime;
-									ego.trials(tri).saccades(lf).rt = true;
-									ego.trials(tri).saccadeTimes(lf) = ego.trials(tri).saccades(lf).time;
+							if ~isempty(me.trials(tri).saccades)
+								for lf = 1 : length(me.trials(tri).saccades)
+									me.trials(tri).saccades(lf).time = me.trials(tri).saccades(lf).sttime - me.trials(tri).rtstarttime;
+									me.trials(tri).saccades(lf).rt = true;
+									me.trials(tri).saccadeTimes(lf) = me.trials(tri).saccades(lf).time;
 								end
 							end
 							continue
 						end
 						
-						endrt = regexpi(evt.message,['^' ego.rtEndMessage],'match');
+						endrt = regexpi(evt.message,['^' me.rtEndMessage],'match');
 						if ~isempty(endrt)
-							ego.trials(tri).rtendtime = double(evt.sttime);
-							if isfield(ego.trials,'rtstarttime')
-								ego.trials(tri).rttime = ego.trials(tri).rtendtime - ego.trials(tri).rtstarttime;
+							me.trials(tri).rtendtime = double(evt.sttime);
+							if isfield(me.trials,'rtstarttime')
+								me.trials(tri).rttime = me.trials(tri).rtendtime - me.trials(tri).rtstarttime;
 							end
 							continue
 						end
 						
 						id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>(\-|\+|\d)+)','names');
 						if ~isempty(id) && ~isempty(id.ID)
-							ego.trials(tri).entime = double(evt.sttime);
-							ego.trials(tri).result = str2num(id.ID);
+							me.trials(tri).entime = double(evt.sttime);
+							me.trials(tri).result = str2num(id.ID);
 							sT=[];
-							ego.trials(tri).saccadeTimes = [];
-							for ii = 1:ego.trials(tri).nsacc
-								t = ego.trials(tri).saccades(ii).time;
-								ego.trials(tri).saccadeTimes(ii) = t;
-								if isnan(ego.trials(tri).firstSaccade) && t > 0 && ego.trials(tri).saccades(ii).microSaccade == false
-									ego.trials(tri).firstSaccade = t;
+							me.trials(tri).saccadeTimes = [];
+							for ii = 1:me.trials(tri).nsacc
+								t = me.trials(tri).saccades(ii).time;
+								me.trials(tri).saccadeTimes(ii) = t;
+								if isnan(me.trials(tri).firstSaccade) && t > 0 && me.trials(tri).saccades(ii).microSaccade == false
+									me.trials(tri).firstSaccade = t;
 									sT=t;
 								end
 							end
-							if ego.trials(tri).result == 1
-								ego.trials(tri).correct = true;
-								ego.correct.idx = [ego.correct.idx tri];
-								ego.trialList(tri) = ego.trials(tri).variable;
+							if me.trials(tri).result == 1
+								me.trials(tri).correct = true;
+								me.correct.idx = [me.correct.idx tri];
+								me.trialList(tri) = me.trials(tri).variable;
 								if ~isempty(sT) && sT > 0
-									ego.correct.saccTimes = [ego.correct.saccTimes sT];
+									me.correct.saccTimes = [me.correct.saccTimes sT];
 								else
-									ego.correct.saccTimes = [ego.correct.saccTimes NaN];
+									me.correct.saccTimes = [me.correct.saccTimes NaN];
 								end
-								ego.trials(tri).correctedIndex = tri2;
+								me.trials(tri).correctedIndex = tri2;
 								tri2 = tri2 + 1;
-							elseif ego.trials(tri).result == -1
-								ego.trials(tri).breakFix = true;
-								ego.breakFix.idx = [ego.breakFix.idx tri];
-								ego.trialList(tri) = -ego.trials(tri).variable;
+							elseif me.trials(tri).result == -1
+								me.trials(tri).breakFix = true;
+								me.breakFix.idx = [me.breakFix.idx tri];
+								me.trialList(tri) = -me.trials(tri).variable;
 								if ~isempty(sT) && sT > 0
-									ego.breakFix.saccTimes = [ego.breakFix.saccTimes sT];
+									me.breakFix.saccTimes = [me.breakFix.saccTimes sT];
 								else
-									ego.breakFix.saccTimes = [ego.breakFix.saccTimes NaN];
+									me.breakFix.saccTimes = [me.breakFix.saccTimes NaN];
 								end
-								ego.trials(tri).correctedIndex = tri2;
+								me.trials(tri).correctedIndex = tri2;
 								tri2 = tri2 + 1;
-							elseif ego.trials(tri).result == 0
-								ego.trials(tri).incorrect = true;
-								ego.incorrect.idx = [ego.incorrect.idx tri];
-								ego.trialList(tri) = -ego.trials(tri).variable;
+							elseif me.trials(tri).result == 0
+								me.trials(tri).incorrect = true;
+								me.incorrect.idx = [me.incorrect.idx tri];
+								me.trialList(tri) = -me.trials(tri).variable;
 								if ~isempty(sT) && sT > 0
-									ego.incorrect.saccTimes = [ego.incorrect.saccTimes sT];
+									me.incorrect.saccTimes = [me.incorrect.saccTimes sT];
 								else
-									ego.incorrect.saccTimes = [ego.incorrect.saccTimes NaN];
+									me.incorrect.saccTimes = [me.incorrect.saccTimes NaN];
 								end
-								ego.trials(tri).correctedIndex = NaN;
+								me.trials(tri).correctedIndex = NaN;
 							end
-							ego.trials(tri).deltaT = ego.trials(tri).entime - ego.trials(tri).sttime;
+							me.trials(tri).deltaT = me.trials(tri).entime - me.trials(tri).sttime;
 							isTrial = false;
 							tri = tri + 1;
 							continue
@@ -1248,21 +1290,21 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			
 			%prune the end trial if invalid
-			if ~ego.trials(end).correct && ~ego.trials(end).breakFix && ~ego.trials(end).incorrect
-				ego.trials(end) = [];
-				ego.correct.idx = find([ego.trials.correct] == true);
-				ego.correct.saccTimes = [ego.trials(ego.correct.idx).firstSaccade];
-				ego.breakFix.idx = find([ego.trials.breakFix] == true);
-				ego.breakFix.saccTimes = [ego.trials(ego.breakFix.idx).firstSaccade];
-				ego.incorrect.idx = find([ego.trials.incorrect] == true);
-				ego.incorrect.saccTimes = [ego.trials(ego.incorrect.idx).firstSaccade];
+			if ~me.trials(end).correct && ~me.trials(end).breakFix && ~me.trials(end).incorrect
+				me.trials(end) = [];
+				me.correct.idx = find([me.trials.correct] == true);
+				me.correct.saccTimes = [me.trials(me.correct.idx).firstSaccade];
+				me.breakFix.idx = find([me.trials.breakFix] == true);
+				me.breakFix.saccTimes = [me.trials(me.breakFix.idx).firstSaccade];
+				me.incorrect.idx = find([me.trials.incorrect] == true);
+				me.incorrect.saccTimes = [me.trials(me.incorrect.idx).firstSaccade];
 			end
 			
-			if max(abs(ego.trialList)) == 1010 && min(abs(ego.trialList)) == 1010
-				ego.needOverride = true;
-				ego.salutation('','---> TRIAL NAME BUG OVERRIDE NEEDED!\n',true);
+			if max(abs(me.trialList)) == 1010 && min(abs(me.trialList)) == 1010
+				me.needOverride = true;
+				me.salutation('','---> TRIAL NAME BUG OVERRIDE NEEDED!\n',true);
 			else
-				ego.needOverride = false;
+				me.needOverride = false;
 			end
 	end
 		
@@ -1272,18 +1314,18 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseAsVars(ego)
-			ego.vars = struct();
-			ego.vars(1).name = '';
-			ego.vars(1).variable = [];
-			ego.vars(1).idx = [];
-			ego.vars(1).correctedidx = [];
-			ego.vars(1).trial = [];
-			ego.vars(1).sTime = [];
-			ego.vars(1).sT = [];
-			ego.vars(1).uuid = {};
-			for i = 1:length(ego.trials)
-				trial = ego.trials(i);
+		function parseAsVars(me)
+			me.vars = struct();
+			me.vars(1).name = '';
+			me.vars(1).variable = [];
+			me.vars(1).idx = [];
+			me.vars(1).correctedidx = [];
+			me.vars(1).trial = [];
+			me.vars(1).sTime = [];
+			me.vars(1).sT = [];
+			me.vars(1).uuid = {};
+			for i = 1:length(me.trials)
+				trial = me.trials(i);
 				var = trial.variable;
 				if trial.incorrect == true
 					continue
@@ -1291,18 +1333,18 @@ classdef eyelinkAnalysis < analysisCore
 				if trial.variable == 1010
 					continue
 				end
-				ego.vars(var).name = num2str(var);
-				ego.vars(var).trial = [ego.vars(var).trial; trial];
-				ego.vars(var).idx = [ego.vars(var).idx i];
-				ego.vars(var).correctedidx = [ego.vars(var).correctedidx i];
-				ego.vars(var).uuid = [ego.vars(var).uuid, trial.uuid];
-				ego.vars(var).variable = [ego.vars(var).variable var];
+				me.vars(var).name = num2str(var);
+				me.vars(var).trial = [me.vars(var).trial; trial];
+				me.vars(var).idx = [me.vars(var).idx i];
+				me.vars(var).correctedidx = [me.vars(var).correctedidx i];
+				me.vars(var).uuid = [me.vars(var).uuid, trial.uuid];
+				me.vars(var).variable = [me.vars(var).variable var];
 				if ~isempty(trial.saccadeTimes)
-					ego.vars(var).sTime = [ego.vars(var).sTime trial.saccadeTimes(1)];
+					me.vars(var).sTime = [me.vars(var).sTime trial.saccadeTimes(1)];
 				else
-					ego.vars(var).sTime = [ego.vars(var).sTime NaN];
+					me.vars(var).sTime = [me.vars(var).sTime NaN];
 				end
-				ego.vars(var).sT = [ego.vars(var).sT trial.firstSaccade];
+				me.vars(var).sT = [me.vars(var).sT trial.firstSaccade];
 			end
 		end
 		
@@ -1312,15 +1354,15 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseSecondaryEyePos(ego)
-			if ego.isParsed && isstruct(ego.tS)
-				f=fieldnames(ego.tS.eyePos); %get fieldnames
+		function parseSecondaryEyePos(me)
+			if me.isParsed && isstruct(me.tS)
+				f=fieldnames(me.tS.eyePos); %get fieldnames
 				re = regexp(f,'^CC','once'); %regexp over the cell
 				idx = cellfun(@(c)~isempty(c),re); %check which regexp returned true
 				f = f(idx); %use this index
-				ego.validation(1).uuids = f;
-				ego.validation.lengthCorrect = length(f);
-				if length(ego.correct.idx) == ego.validation.lengthCorrect
+				me.validation(1).uuids = f;
+				me.validation.lengthCorrect = length(f);
+				if length(me.correct.idx) == me.validation.lengthCorrect
 					disp('Secondary Eye Position Data appears consistent with EDF parsed trials')
 				else
 					warning('Secondary Eye Position Data inconsistent with EDF parsed trials')
@@ -1334,10 +1376,10 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseFixationPositions(ego)
-			if ego.isParsed
-				for i = 1:length(ego.trials)
-					t = ego.trials(i);
+		function parseFixationPositions(me)
+			if me.isParsed
+				for i = 1:length(me.trials)
+					t = me.trials(i);
 					f(1).isFix = false;
 					f(1).idx = -1;
 					f(1).times = -1;
@@ -1364,10 +1406,10 @@ classdef eyelinkAnalysis < analysisCore
 					else
 						bname='incorrect';
 					end
-					if isempty(ego.(bname).fixations)
-						ego.(bname).fixations = f;
+					if isempty(me.(bname).fixations)
+						me.(bname).fixations = f;
 					else
-						ego.(bname).fixations(end+1) = f;
+						me.(bname).fixations(end+1) = f;
 					end
 				end
 				
@@ -1379,10 +1421,10 @@ classdef eyelinkAnalysis < analysisCore
 		%> @brief
 		%>
 		% ===================================================================
-		function [outx, outy] = toDegrees(ego,in)
+		function [outx, outy] = toDegrees(me,in)
 			if length(in)==2
-				outx = (in(1) - ego.xCenter) / ego.ppd_;
-				outy = (in(2) - ego.yCenter) / ego.ppd_;
+				outx = (in(1) - me.xCenter) / me.ppd_;
+				outy = (in(2) - me.yCenter) / me.ppd_;
 			else
 				outx = [];
 				outy = [];
@@ -1393,10 +1435,10 @@ classdef eyelinkAnalysis < analysisCore
 		%> @brief
 		%>
 		% ===================================================================
-		function [outx, outy] = toPixels(ego,in)
+		function [outx, outy] = toPixels(me,in)
 			if length(in)==2
-				outx = (in(1) * ego.ppd_) + ego.xCenter;
-				outy = (in(2) * ego.ppd_) + ego.yCenter;
+				outx = (in(1) * me.ppd_) + me.xCenter;
+				outy = (in(2) * me.ppd_) + me.yCenter;
 			else
 				outx = [];
 				outy = [];
@@ -1407,21 +1449,21 @@ classdef eyelinkAnalysis < analysisCore
 		%> @brief
 		%>
 		% ===================================================================
-		function computeMicrosaccades(ego)
+		function computeMicrosaccades(me)
 			
-			VFAC=ego.VFAC;
-			MINDUR=ego.MINDUR;
-			sampleRate = ego.sampleRate;
+			VFAC=me.VFAC;
+			MINDUR=me.MINDUR;
+			sampleRate = me.sampleRate;
 			tic
-			for jj = 1:length(ego.trials)
-				if ego.trials(jj).incorrect == true;	continue;	end
+			for jj = 1:length(me.trials)
+				if me.trials(jj).incorrect == true;	continue;	end
 				samples = []; sac = []; radius = []; monol=[]; monor=[];
-				ego.trials(jj).msacc = struct();
-				ego.trials(jj).sampleSaccades = [];
-				ego.trials(jj).microSaccades = [];
-				samples(:,1) = ego.trials(jj).times/1e3;
-				samples(:,2) = ego.trials(jj).gx/ego.ppd;
-				samples(:,3) = ego.trials(jj).gy/ego.ppd;
+				me.trials(jj).msacc = struct();
+				me.trials(jj).sampleSaccades = [];
+				me.trials(jj).microSaccades = [];
+				samples(:,1) = me.trials(jj).times/1e3;
+				samples(:,2) = me.trials(jj).gx/me.ppd;
+				samples(:,3) = me.trials(jj).gy/me.ppd;
 				samples(:,4) = nan(size(samples(:,1)));
 				samples(:,5) = samples(:,4);
 				eye_used = 0;
@@ -1443,28 +1485,28 @@ classdef eyelinkAnalysis < analysisCore
 							[bsac, monol, monor] = binsacc(sacl,sacr);
 							sac = saccpar(bsac);
 					end
-					ego.trials(jj).radius = radius;
+					me.trials(jj).radius = radius;
 					for ii = 1:size(sac,1)
-						ego.trials(jj).msacc(ii).time = samples(sac(ii,1),1);
-						ego.trials(jj).msacc(ii).endtime = samples(sac(ii,2),1);
-						ego.trials(jj).msacc(ii).velocity = sac(ii,3);
-						ego.trials(jj).msacc(ii).dx = sac(ii,4);
-						ego.trials(jj).msacc(ii).dy = sac(ii,5);
-						ego.trials(jj).msacc(ii).dX = sac(ii,6);
-						ego.trials(jj).msacc(ii).dY = sac(ii,7);
+						me.trials(jj).msacc(ii).time = samples(sac(ii,1),1);
+						me.trials(jj).msacc(ii).endtime = samples(sac(ii,2),1);
+						me.trials(jj).msacc(ii).velocity = sac(ii,3);
+						me.trials(jj).msacc(ii).dx = sac(ii,4);
+						me.trials(jj).msacc(ii).dy = sac(ii,5);
+						me.trials(jj).msacc(ii).dX = sac(ii,6);
+						me.trials(jj).msacc(ii).dY = sac(ii,7);
 						[theta,rho]=cart2pol(sac(ii,6),sac(ii,7));
-						ego.trials(jj).msacc(ii).theta = rad2ang(theta);
-						ego.trials(jj).msacc(ii).rho = rho;
-						ego.trials(jj).msacc(ii).isMicroSaccade = rho<=ego.minSaccadeDistance;
+						me.trials(jj).msacc(ii).theta = rad2ang(theta);
+						me.trials(jj).msacc(ii).rho = rho;
+						me.trials(jj).msacc(ii).isMicroSaccade = rho<=me.minSaccadeDistance;
 					end
 					if ~isempty(sac)
-						ego.trials(jj).sampleSaccades = [ego.trials(jj).msacc(:).time];
-						ego.trials(jj).microSaccades = [ego.trials(jj).sampleSaccades([ego.trials(jj).msacc(:).isMicroSaccade])];
+						me.trials(jj).sampleSaccades = [me.trials(jj).msacc(:).time];
+						me.trials(jj).microSaccades = [me.trials(jj).sampleSaccades([me.trials(jj).msacc(:).isMicroSaccade])];
 					else
-						ego.trials(jj).sampleSaccades = NaN;
-						ego.trials(jj).microSaccades = NaN;
+						me.trials(jj).sampleSaccades = NaN;
+						me.trials(jj).microSaccades = NaN;
 					end
-					if isempty(ego.trials(jj).microSaccades); ego.trials(jj).microSaccades = NaN; end
+					if isempty(me.trials(jj).microSaccades); me.trials(jj).microSaccades = NaN; end
 				catch ME
 					getReport(ME)
 				end

@@ -19,10 +19,6 @@ classdef LFPMeta < analysisCore
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
-		%> handles for the GUI
-		handles@struct
-		%> is the UI opened?
-		openUI@logical = false
 		%> version
 		version@double = 0.81
 	end
@@ -543,7 +539,7 @@ classdef LFPMeta < analysisCore
 	end%-------------------------END HIDDEN METHODS--------------------------------%
 	
 	%=======================================================================
-	methods (Access = private) %------------------PRIVATE METHODS
+	methods (Access = protected) %------------------PRIVATE METHODS
 	%=======================================================================
 	
 		% ===================================================================
@@ -588,7 +584,6 @@ classdef LFPMeta < analysisCore
 			
 		end
 		
-		
 		% ===================================================================
 		%> @brief 
 		%>
@@ -613,10 +608,10 @@ classdef LFPMeta < analysisCore
 				return
 			end
 			if ~exist('parent','var')
-				parent = figure('Tag','LMAMeta',...
+				parent = figure('Tag','LMAMeta', ...
 					'Name', ['LFP Meta Analysis V' num2str(me.version)], ...
 					'MenuBar', 'none', ...
-					'CloseRequestFcn', @me.quit,...
+					'CloseRequestFcn', @me.quit, ...
 					'NumberTitle', 'off');
 				figpos(1,[1600 800])
 			end
@@ -814,7 +809,17 @@ classdef LFPMeta < analysisCore
 			else
 				info = varargin{1};
 			end
-			try; set(me.handles.root,'Title',info); drawnow; end
+			try set(me.handles.root,'Title',info); drawnow; end %#ok<TRYNC>
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function updateUI(me)
+			
 		end
 	end	
 end

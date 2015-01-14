@@ -1,6 +1,7 @@
 % ========================================================================
 %> @brief analysisCore base class inherited by other analysis classes.
-%> analysidCore is itself derived from optickaCore.
+%> analysisCore is itself derived from optickaCore. Provides a set of shared methods
+%> and some core properties and stats UI for various analysis classes.
 % ========================================================================
 classdef analysisCore < optickaCore
 	
@@ -10,11 +11,11 @@ classdef analysisCore < optickaCore
 		doPlots@logical = true
 		%> various stats values in a structure for different analyses
 		stats@struct
-		%> ± time window for baseline estimation/removal
+		%> ± time window (s) for baseline estimation/removal
 		baselineWindow@double = [-0.2 0]
-		%> default range to measure values from
+		%> default range (s) to measure values from
 		measureRange@double = [0.1 0.2]
-		%> default range to plot
+		%> default range to plot data
 		plotRange@double = [-0.2 0.4]
 		%> root directory to check for data if files can't be found
 		rootDirectory@char = ''
@@ -35,8 +36,15 @@ classdef analysisCore < optickaCore
 	properties (SetAccess = protected, GetAccess = protected, Transient = true)
 		%> UI panels
 		panels@struct = struct()
-		%> do we yoke the selection to the parent function (e.g. LFPAnalysis)
+		%> do we yoke the selection to the parent object (e.g. LFPAnalysis > spikeAnalysis)
 		yokedSelection@logical = false
+		%> handles for the GUI
+		handles@struct
+	end
+	
+	properties (SetAccess = protected, GetAccess = public, Transient = true)
+		%> is the UI opened?
+		openUI@logical = false
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
@@ -58,11 +66,11 @@ classdef analysisCore < optickaCore
 		%> parsed.
 		%> @return instance of class.
 		% ==================================================================
-		function ego = analysisCore(varargin)
+		function me = analysisCore(varargin)
 			if nargin == 0; varargin.name = ''; end
-			ego=ego@optickaCore(varargin); %superclass constructor
-			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
-			initialiseStats(ego);
+			me=me@optickaCore(varargin); %superclass constructor
+			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
+			initialiseStats(me);
 		end
 		
 		% ===================================================================
@@ -71,37 +79,37 @@ classdef analysisCore < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function checkPaths(ego)
-			if isprop(ego,'dir')
-				if ~exist(ego.dir,'dir')
-					if isprop(ego,'file')
-						fn = ego.file;
-					elseif isprop(ego,'lfpfile')
-						fn = ego.lfpfile;
+		function checkPaths(me)
+			if isprop(me,'dir')
+				if ~exist(me.dir,'dir')
+					if isprop(me,'file')
+						fn = me.file;
+					elseif isprop(me,'lfpfile')
+						fn = me.lfpfile;
 					else
 						fn = '';
 					end
 					p = uigetdir('',['Please find new directory for: ' fn]);
 					if p ~= 0
-						ego.dir = p;
+						me.dir = p;
 					else
 						warning('Can''t find valid source directory')
 					end
 				end
-				if ~isempty(regexpi(ego.dir,'^/Users/'))
-					re = regexpi(ego.dir,'^(?<us>/Users/[^/]+)(?<rd>.+)','names');
+				if ~isempty(regexpi(me.dir,'^/Users/'))
+					re = regexpi(me.dir,'^(?<us>/Users/[^/]+)(?<rd>.+)','names');
 					if ~isempty(re.rd)
-						ego.dir = ['~' re.rd];
+						me.dir = ['~' re.rd];
 					end
 				end
 			end
-			if isprop(ego,'p') && isa(ego.p,'plxReader')
-				ego.p.dir = ego.dir;
-				checkPaths(ego.p);
+			if isprop(me,'p') && isa(me.p,'plxReader')
+				me.p.dir = me.dir;
+				checkPaths(me.p);
 			end
-			if isprop(ego,'sp') && isprop(ego.sp,'p') && isa(ego.sp.p,'plxReader')
-				ego.sp.p.dir = ego.dir;
-				checkPaths(ego.sp.p);
+			if isprop(me,'sp') && isprop(me.sp,'p') && isa(me.sp.p,'plxReader')
+				me.sp.p.dir = me.dir;
+				checkPaths(me.sp.p);
 			end
 		end
 		
@@ -111,20 +119,20 @@ classdef analysisCore < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function showEyePlots(ego)
-			if ~isprop(ego,'p') || ~isa(ego.p,'plxReader') || isempty(ego.p.eA) || ~isa(ego.p.eA,'eyelinkAnalysis')
+		function showEyePlots(me)
+			if ~isprop(me,'p') || ~isa(me.p,'plxReader') || isempty(me.p.eA) || ~isa(me.p.eA,'eyelinkAnalysis')
 				disp('Eyelink data not parsed yet, try plotTogether for LFP data and parse for spike data');
 				return
 			end
-			if isprop(ego,'nSelection')
-				if ~isempty(ego.selectedTrials)
-					for i = 1:length(ego.selectedTrials)
-						disp(['---> Plotting eye position for: ' ego.selectedTrials{i}.name]);
-						ego.p.eA.plot(ego.selectedTrials{i}.idx,[],[],ego.selectedTrials{i}.name);
+			if isprop(me,'nSelection')
+				if ~isempty(me.selectedTrials)
+					for i = 1:length(me.selectedTrials)
+						disp(['---> Plotting eye position for: ' me.selectedTrials{i}.name]);
+						me.p.eA.plot(me.selectedTrials{i}.idx,[],[],me.selectedTrials{i}.name);
 					end
 				end
 			else
-				ego.p.eA.plot();
+				me.p.eA.plot();
 			end
 		end
 		
@@ -134,16 +142,16 @@ classdef analysisCore < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function showInfo(ego)
-			if ~isprop(ego,'p') || ~isa(ego.p,'plxReader')
-				if isprop(ego,'sp') && isa(ego.sp,'spikeAnalysis')
-					showInfo(ego.sp);
+		function showInfo(me)
+			if ~isprop(me,'p') || ~isa(me.p,'plxReader')
+				if isprop(me,'sp') && isa(me.sp,'spikeAnalysis')
+					showInfo(me.sp);
 				else
 					disp('No Info present...')
 					return
 				end
 			else
-				infoBox(ego.p);
+				infoBox(me.p);
 			end
 		end
 		
@@ -153,14 +161,14 @@ classdef analysisCore < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function stats = setStats(ego)
-			initialiseStats(ego);
-			s=ego.stats;
+		function stats = setStats(me)
+			initialiseStats(me);
+			s=me.stats;
 			
 			mlist1={'analytic', 'montecarlo', 'stats'};
 			mt = 'p';
 			for i = 1:length(mlist1)
-				if strcmpi(mlist1{i},ego.stats.method)
+				if strcmpi(mlist1{i},me.stats.method)
 					mt = [mt '|¤' mlist1{i}];
 				else
 					mt = [mt '|' mlist1{i}];
@@ -170,7 +178,7 @@ classdef analysisCore < optickaCore
 			mlist2={'indepsamplesT','indepsamplesF','indepsamplesregrT','indepsamplesZcoh','depsamplesT','depsamplesFmultivariate','depsamplesregrT','actvsblT','ttest','ttest2','anova1','kruskalwallis'};
 			statistic = 'p';
 			for i = 1:length(mlist2)
-				if strcmpi(mlist2{i},ego.stats.statistic)
+				if strcmpi(mlist2{i},me.stats.statistic)
 					statistic = [statistic '|¤' mlist2{i}];
 				else
 					statistic = [statistic '|' mlist2{i}];
@@ -180,7 +188,7 @@ classdef analysisCore < optickaCore
 			mlist3={'no','cluster','bonferroni','holm','fdr','hochberg'};
 			mc = 'p';
 			for i = 1:length(mlist3)
-				if strcmpi(mlist3{i},ego.stats.correctm)
+				if strcmpi(mlist3{i},me.stats.correctm)
 					mc = [mc '|¤' mlist3{i}];
 				else
 					mc = [mc '|' mlist3{i}];
@@ -190,7 +198,7 @@ classdef analysisCore < optickaCore
 			mlist4={'permutation','bootstrap'};
 			rs = 'p';
 			for i = 1:length(mlist4)
-				if strcmpi(mlist4{i},ego.stats.resampling)
+				if strcmpi(mlist4{i},me.stats.resampling)
 					rs = [rs '|¤' mlist4{i}];
 				else
 					rs = [rs '|' mlist4{i}];
@@ -200,25 +208,25 @@ classdef analysisCore < optickaCore
 			mlist5={'-1','0','1'};
 			tail = 'p';
 			for i = 1:length(mlist5)
-				if strcmpi(mlist5{i},num2str(ego.stats.tail))
+				if strcmpi(mlist5{i},num2str(me.stats.tail))
 					tail = [tail '|¤' mlist5{i}];
 				else
 					tail = [tail '|' mlist5{i}];
 				end
 			end
 			
-			if isprop(ego,'measureRange')
-				mr = ego.measureRange;
+			if isprop(me,'measureRange')
+				mr = me.measureRange;
 			else mr = [-inf inf]; end
 			
-			if isprop(ego,'baselineWindow')
-				bw = ego.baselineWindow;
+			if isprop(me,'baselineWindow')
+				bw = me.baselineWindow;
 			else bw = [-inf inf]; end
 			
 			mlist6={'no','linear','nan','pchip','cubic','spline'};
 			interp = 'p';
 			for i = 1:length(mlist6)
-				if strcmpi(mlist6{i},num2str(ego.stats.interp))
+				if strcmpi(mlist6{i},num2str(me.stats.interp))
 					interp = [interp '|¤' mlist6{i}];
 				else
 					interp = [interp '|' mlist6{i}];
@@ -228,7 +236,7 @@ classdef analysisCore < optickaCore
 			mlist7={'SEM','95%'};
 			ploterror = 'p';
 			for i = 1:length(mlist7)
-				if strcmpi(mlist7{i},ego.stats.ploterror)
+				if strcmpi(mlist7{i},me.stats.ploterror)
 					ploterror = [ploterror '|¤' mlist7{i}];
 				else
 					ploterror = [ploterror '|' mlist7{i}];
@@ -246,38 +254,38 @@ classdef analysisCore < optickaCore
 				['t|' num2str(mr)],'Global Measurement Range (measureRange):'; ...
 				['t|' num2str(bw)],'Global Baseline Window (baselineWindow):'; ...
 				[interp],'Interpolation Method for Spike-LFP Interpolation?:'; ...
-				['t|' num2str(ego.stats.interpw)],'Spike-LFP Interpolation Window (s):'; ...
-				['t|' num2str(ego.stats.customFreq)],'LFP Frequency Stats Custom Frequency Band:'; ...
-				['t|' num2str(ego.stats.smoothing,12)],'Smoothing Value to use for Curves:'; ...
+				['t|' num2str(me.stats.interpw)],'Spike-LFP Interpolation Window (s):'; ...
+				['t|' num2str(me.stats.customFreq)],'LFP Frequency Stats Custom Frequency Band:'; ...
+				['t|' num2str(me.stats.smoothing,12)],'Smoothing Value to use for Curves:'; ...
 				[ploterror],'Error data for Tuning Curves?:'; ...
-				['t|' num2str(ego.stats.spikelfptaper)],'Spike LFP Taper Method:'; ...
-				['t|' num2str(ego.stats.spikelfptaperopt)],'Spike LFP Taper Options [Cycles Smooth]:'; ...
-				['t|' num2str(ego.stats.spikelfppcw)],'Spike LFP PPC Window [Size Step]:'; ...
+				['t|' num2str(me.stats.spikelfptaper)],'Spike LFP Taper Method:'; ...
+				['t|' num2str(me.stats.spikelfptaperopt)],'Spike LFP Taper Options [Cycles Smooth]:'; ...
+				['t|' num2str(me.stats.spikelfppcw)],'Spike LFP PPC Window [Size Step]:'; ...
 				};
 			
 			answer = menuN(mtitle,options);
 			drawnow;
 			if iscell(answer) && ~isempty(answer)
-				ego.stats.alpha = str2num(answer{1});
-				ego.stats.method = mlist1{answer{2}};
-				ego.stats.statistic = mlist2{answer{3}};
-				ego.stats.correctm = mlist3{answer{4}};
-				ego.stats.tail = str2num(mlist5{answer{5}});
-				ego.stats.resampling = mlist4{answer{6}};
-				ego.stats.nrand = str2num(answer{7});
-				if isprop(ego,'measureRange'); ego.measureRange = str2num(answer{8}); end
-				if isprop(ego,'baselineWindow'); ego.baselineWindow = str2num(answer{9}); end
-				ego.stats.interp = mlist6{answer{10}};
-				ego.stats.interpw = str2num(answer{11});
-				ego.stats.customFreq = str2num(answer{12});
-				ego.stats.smoothing = eval(answer{13});
-				ego.stats.ploterror = mlist7{answer{14}};
-				ego.stats.spikelfptaper = answer{15};
-				ego.stats.spikelfptaperopt = str2num(answer{16});
-				ego.stats.spikelfppcw = str2num(answer{17});
+				me.stats.alpha = str2num(answer{1});
+				me.stats.method = mlist1{answer{2}};
+				me.stats.statistic = mlist2{answer{3}};
+				me.stats.correctm = mlist3{answer{4}};
+				me.stats.tail = str2num(mlist5{answer{5}});
+				me.stats.resampling = mlist4{answer{6}};
+				me.stats.nrand = str2num(answer{7});
+				if isprop(me,'measureRange'); me.measureRange = str2num(answer{8}); end
+				if isprop(me,'baselineWindow'); me.baselineWindow = str2num(answer{9}); end
+				me.stats.interp = mlist6{answer{10}};
+				me.stats.interpw = str2num(answer{11});
+				me.stats.customFreq = str2num(answer{12});
+				me.stats.smoothing = eval(answer{13});
+				me.stats.ploterror = mlist7{answer{14}};
+				me.stats.spikelfptaper = answer{15};
+				me.stats.spikelfptaperopt = str2num(answer{16});
+				me.stats.spikelfppcw = str2num(answer{17});
 			end
 			
-			stats = ego.stats;
+			stats = me.stats;
 			
 		end
 		
@@ -287,10 +295,10 @@ classdef analysisCore < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function set.baselineWindow(ego,in)
+		function set.baselineWindow(me,in)
 			if isnumeric(in) && length(in)==2 && in(1)<in(2)
-				if ~isequal(ego.baselineWindow, in)
-					ego.baselineWindow = in;
+				if ~isequal(me.baselineWindow, in)
+					me.baselineWindow = in;
 					disp('You should REPARSE the data to fully enable this change')
 				end
 			else
@@ -302,25 +310,39 @@ classdef analysisCore < optickaCore
 		%> @brief optimiseSize remove the raw matrices etc to reduce memory
 		%>
 		% ===================================================================
-		function optimiseSize(ego)
-			if isa(ego, 'LFPAnalysis')
-				for i = 1: ego.nLFPs
-					%ego.LFPs(i).sample = [];
-					%ego.LFPs(i).data = [];
-					%ego.LFPs(i).time = [];
+		function optimiseSize(me)
+			if isa(me, 'LFPAnalysis')
+				for i = 1: me.nLFPs
+					%me.LFPs(i).sample = [];
+					%me.LFPs(i).data = [];
+					%me.LFPs(i).time = [];
 				end
-				ego.results = struct([]);
-				optimiseSize(ego.p);
-				if isa(ego.sp, 'spikeAnalysis') && ~isempty(ego.sp)
-					optimiseSize(ego.sp.p);
+				me.results = struct([]);
+				optimiseSize(me.p);
+				if isa(me.sp, 'spikeAnalysis') && ~isempty(me.sp)
+					optimiseSize(me.sp.p);
 				end
 			end
-			if isa(ego, 'spikeAnalysis')
-				optimiseSize(ego.p);
+			if isa(me, 'spikeAnalysis')
+				optimiseSize(me.p);
 			end
 		end
 		
 	end %---END PUBLIC METHODS---%
+	
+	%=======================================================================
+	methods ( Hidden = true ) %-------HIDDEN METHODS-----%
+	%=======================================================================
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function gui(me)
+			makeUI(me);
+		end
+	end
 	
 	%=======================================================================
 	methods ( Static = true) %-------STATIC METHODS-----%
@@ -541,6 +563,15 @@ classdef analysisCore < optickaCore
 	end %---END STATIC METHODS---%
 	
 	%=======================================================================
+	methods ( Abstract = true, Access = protected ) %-------Abstract METHODS-----%
+	%=======================================================================
+		makeUI(me)
+		closeUI(me)
+		updateUI(me)
+		notifyUI(me, varargin)
+	end %---END Abstract METHODS---%
+	
+	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
 		% ===================================================================
@@ -548,10 +579,10 @@ classdef analysisCore < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function inheritPlxReader(ego,p)
+		function inheritPlxReader(me,p)
 			if exist('p','var') && isa(p,'plxReader')
-				if isprop(ego,'p')
-					ego.p = p;
+				if isprop(me,'p')
+					me.p = p;
 				end
 			end
 		end
@@ -563,47 +594,47 @@ classdef analysisCore < optickaCore
 		%> @param in structure
 		%> @return
 		% ===================================================================
-		function setSelection(ego, in)
-			if isfield(in,'yokedSelection') && isprop(ego,'yokedSelection')
-				ego.yokedSelection = in.yokedSelection;
+		function setSelection(me, in)
+			if isfield(in,'yokedSelection') && isprop(me,'yokedSelection')
+				me.yokedSelection = in.yokedSelection;
 			else
-				ego.yokedSelection = false;
+				me.yokedSelection = false;
 			end
-			if isfield(in,'cutTrials') && isprop(ego,'cutTrials')
-				ego.cutTrials = in.cutTrials;
+			if isfield(in,'cutTrials') && isprop(me,'cutTrials')
+				me.cutTrials = in.cutTrials;
 			end
-			if isfield(in,'selectedTrials') && isprop(ego,'selectedTrials')
-				ego.selectedTrials = in.selectedTrials;
-				ego.yokedSelection = true;
+			if isfield(in,'selectedTrials') && isprop(me,'selectedTrials')
+				me.selectedTrials = in.selectedTrials;
+				me.yokedSelection = true;
 			end
-			if isfield(in,'map') && isprop(ego,'map')
-				ego.map = in.map;
+			if isfield(in,'map') && isprop(me,'map')
+				me.map = in.map;
 			end
-			if isfield(in,'plotRange') && isprop(ego,'plotRange')
-				ego.plotRange = in.plotRange;
+			if isfield(in,'plotRange') && isprop(me,'plotRange')
+				me.plotRange = in.plotRange;
 			end
-			if isfield(in,'plotRange') && isprop(ego,'plotRange')
-				ego.plotRange = in.plotRange;
+			if isfield(in,'plotRange') && isprop(me,'plotRange')
+				me.plotRange = in.plotRange;
 			end
-			if isfield(in,'measureRange') && isprop(ego,'measureRange')
-				ego.measureRange = in.measureRange;
+			if isfield(in,'measureRange') && isprop(me,'measureRange')
+				me.measureRange = in.measureRange;
 			end
-			if isfield(in,'baselineWindow') && isprop(ego,'baselineWindow')
-				ego.baselineWindow = in.baselineWindow;
+			if isfield(in,'baselineWindow') && isprop(me,'baselineWindow')
+				me.baselineWindow = in.baselineWindow;
 			end
-			if isfield(in,'alpha') && isfield(ego.stats,'alpha')
-				ego.stats.alpha = in.alpha;
+			if isfield(in,'alpha') && isfield(me.stats,'alpha')
+				me.stats.alpha = in.alpha;
 			end
-			if isfield(in,'selectedBehaviour') && isprop(ego,'selectedBehaviour')
+			if isfield(in,'selectedBehaviour') && isprop(me,'selectedBehaviour')
 				if ischar(in.selectedBehaviour)
-					ego.selectedBehaviour = cell(1);
-					ego.selectedBehaviour{1} = in.selectedBehaviour;
+					me.selectedBehaviour = cell(1);
+					me.selectedBehaviour{1} = in.selectedBehaviour;
 				elseif iscell(in.selectedBehaviour)
-					ego.selectedBehaviour = cell(1);
-					ego.selectedBehaviour = in.selectedBehaviour;
+					me.selectedBehaviour = cell(1);
+					me.selectedBehaviour = in.selectedBehaviour;
 				else
-					ego.selectedBehaviour = cell(1);
-					ego.selectedBehaviour{1}='correct';
+					me.selectedBehaviour = cell(1);
+					me.selectedBehaviour{1}='correct';
 				end
 			end
 		end
@@ -614,54 +645,54 @@ classdef analysisCore < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function initialiseStats(ego)
-			if ~isfield(ego.stats,'alpha') || isempty(ego.stats.alpha)
-				ego.stats(1).alpha = 0.05;
+		function initialiseStats(me)
+			if ~isfield(me.stats,'alpha') || isempty(me.stats.alpha)
+				me.stats(1).alpha = 0.05;
 			end
-			if ~isfield(ego.stats,'method') || isempty(ego.stats.method)
-				ego.stats(1).method = 'analytic';
+			if ~isfield(me.stats,'method') || isempty(me.stats.method)
+				me.stats(1).method = 'analytic';
 			end
-			if ~isfield(ego.stats,'statistic') || isempty(ego.stats.statistic)
-				ego.stats(1).statistic = 'indepsamplesT';
+			if ~isfield(me.stats,'statistic') || isempty(me.stats.statistic)
+				me.stats(1).statistic = 'indepsamplesT';
 			end
-			if ~isfield(ego.stats,'correctm') || isempty(ego.stats.correctm)
-				ego.stats(1).correctm = 'no';
+			if ~isfield(me.stats,'correctm') || isempty(me.stats.correctm)
+				me.stats(1).correctm = 'no';
 			end
-			if ~isfield(ego.stats,'nrand') || isempty(ego.stats.nrand)
-				ego.stats(1).nrand = 1000;
+			if ~isfield(me.stats,'nrand') || isempty(me.stats.nrand)
+				me.stats(1).nrand = 1000;
 			end
-			if ~isfield(ego.stats,'tail') || isempty(ego.stats.tail)
-				ego.stats(1).tail = 0;
+			if ~isfield(me.stats,'tail') || isempty(me.stats.tail)
+				me.stats(1).tail = 0;
 			end
-			if ~isfield(ego.stats,'parameter') || isempty(ego.stats.parameter)
-				ego.stats(1).parameter = 'trial';
+			if ~isfield(me.stats,'parameter') || isempty(me.stats.parameter)
+				me.stats(1).parameter = 'trial';
 			end
-			if ~isfield(ego.stats,'resampling') || isempty(ego.stats.resampling)
-				ego.stats(1).resampling = 'permutation';
+			if ~isfield(me.stats,'resampling') || isempty(me.stats.resampling)
+				me.stats(1).resampling = 'permutation';
 			end
-			if ~isfield(ego.stats,'interp') || isempty(ego.stats.interp)
-				ego.stats(1).interp = 'linear';
+			if ~isfield(me.stats,'interp') || isempty(me.stats.interp)
+				me.stats(1).interp = 'linear';
 			end
-			if ~isfield(ego.stats,'interpw') || isempty(ego.stats.interpw)
-				ego.stats(1).interpw = [-0.001 0.004];
+			if ~isfield(me.stats,'interpw') || isempty(me.stats.interpw)
+				me.stats(1).interpw = [-0.001 0.004];
 			end
-			if ~isfield(ego.stats,'customFreq') || isempty(ego.stats.customFreq)
-				ego.stats(1).customFreq = [60 70];
+			if ~isfield(me.stats,'customFreq') || isempty(me.stats.customFreq)
+				me.stats(1).customFreq = [60 70];
 			end
-			if ~isfield(ego.stats,'smoothing') || isempty(ego.stats.smoothing)
-				ego.stats(1).smoothing = 0;
+			if ~isfield(me.stats,'smoothing') || isempty(me.stats.smoothing)
+				me.stats(1).smoothing = 0;
 			end
-			if ~isfield(ego.stats,'ploterror') || isempty(ego.stats.ploterror)
-				ego.stats(1).ploterror = 'SEM';
+			if ~isfield(me.stats,'ploterror') || isempty(me.stats.ploterror)
+				me.stats(1).ploterror = 'SEM';
 			end
-			if ~isfield(ego.stats,'spikelfptaper') || isempty(ego.stats.spikelfptaper)
-				ego.stats(1).spikelfptaper = 'dpss';
+			if ~isfield(me.stats,'spikelfptaper') || isempty(me.stats.spikelfptaper)
+				me.stats(1).spikelfptaper = 'dpss';
 			end
-			if ~isfield(ego.stats,'spikelfptaperopt') || isempty(ego.stats.spikelfptaperopt)
-				ego.stats(1).spikelfptaperopt = [3 0.3];
+			if ~isfield(me.stats,'spikelfptaperopt') || isempty(me.stats.spikelfptaperopt)
+				me.stats(1).spikelfptaperopt = [3 0.3];
 			end
-			if ~isfield(ego.stats,'spikelfppcw') || isempty(ego.stats.spikelfppcw)
-				ego.stats(1).spikelfppcw = [0.2 0.02];
+			if ~isfield(me.stats,'spikelfppcw') || isempty(me.stats.spikelfppcw)
+				me.stats(1).spikelfppcw = [0.2 0.02];
 			end
 		end
 		
@@ -672,7 +703,7 @@ classdef analysisCore < optickaCore
 		%> @param dn scores for "noise" distribution
 		%> @return data - [class , score] matrix
 		% ===================================================================
-		function data = formatByClass(ego,dp,dn)
+		function data = formatByClass(me,dp,dn)
 			dp = dp(:);
 			dn = dn(:);
 			y = [dp ; dn];
@@ -687,7 +718,7 @@ classdef analysisCore < optickaCore
 		%> @return tp   - true positive rate
 		%> @return fp   - false positive rate
 		% ===================================================================
-		function [tp,fp] = roc(ego,data)
+		function [tp,fp] = roc(me,data)
 			if size(data,2) ~= 2
 				error('Incorrect input size in ROC!');
 			end
@@ -727,7 +758,7 @@ classdef analysisCore < optickaCore
 		%> @return A   - area under ROC
 		%> @return Aci - confidence intervals
 		% ===================================================================
-		function [A,Aci] = auc(ego,data,alpha,flag,nboot,varargin)
+		function [A,Aci] = auc(me,data,alpha,flag,nboot,varargin)
 			%     $ Copyright (C) 2011 Brian Lau http://www.subcortex.net/ $
 			if size(data,2) ~= 2
 				error('Incorrect input size in AUC!');
@@ -765,7 +796,7 @@ classdef analysisCore < optickaCore
 			m = sum(data(:,1)>0);
 			n = sum(data(:,1)<=0);
 			
-			[tp,fp] = ego.roc(data);
+			[tp,fp] = me.roc(data);
 			% Integrate ROC, A = trapz(fp,tp);
 			A = sum((fp(2:end) - fp(1:end-1)).*(tp(2:end) + tp(1:end-1)))/2;
 			
@@ -851,9 +882,9 @@ classdef analysisCore < optickaCore
 						Aci = prctile(A_boot,100*[alpha/2 1-alpha/2]);
 					else
 						if exist('varargin','var')
-							Aci = bootci(nboot,{@ego.auc,data},varargin{:})';
+							Aci = bootci(nboot,{@me.auc,data},varargin{:})';
 						else
-							Aci = bootci(nboot,{@ego.auc,data},'type','per')';
+							Aci = bootci(nboot,{@me.auc,data},'type','per')';
 						end
 					end
 				else
@@ -866,7 +897,7 @@ classdef analysisCore < optickaCore
 		%> @brief AUC bootstrap
 		%>
 		% ===================================================================
-		function p = aucBootstrap(ego,data,nboot,flag,H0)
+		function p = aucBootstrap(me,data,nboot,flag,H0)
 			
 			if size(data,2) ~= 2
 				error('Incorrect input size in AUC_BOOTSTRAP!');
@@ -895,7 +926,7 @@ classdef analysisCore < optickaCore
 			N = size(data,1);
 			for i = 1:nboot
 				ind = unidrnd(N,[N 1]);
-				A_boot(i) = ego.auc(data(ind,:));
+				A_boot(i) = me.auc(data(ind,:));
 			end
 			
 			% http://www.stat.umn.edu/geyer/old03/5601/examp/tests.html

@@ -494,6 +494,155 @@ classdef plxReader < optickaCore
 	%=======================================================================
 	
 		% ===================================================================
+		%> @brief generate text info about loaded data
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function info = generateInfo(ego)
+			infoTic=tic;
+			oldInfo = ego.info;
+			ego.info = {};
+			try
+				if ~isfield(ego.ic, 'Freq')
+					cd(ego.dir);
+					[ego.ic.OpenedFileName, ego.ic.Version, ego.ic.Freq, ego.ic.Comment, ego.ic.Trodalness,...
+						ego.ic.NPW, ego.ic.PreThresh, ego.ic.SpikePeakV, ego.ic.SpikeADResBits,...
+						ego.ic.SlowPeakV, ego.ic.SlowADResBits, ego.ic.Duration, ego.ic.DateTime] = plx_information(ego.file);
+					if exist('plx_mexplex_version','file')
+						ego.ic.sdkversion = plx_mexplex_version();
+					else
+						ego.ic.sdkversion = -1;
+					end
+				end
+				if ego.isPL2
+					if isempty(ego.pl2); ego.pl2 = PL2GetFileIndex(ego.file); end
+					ego.info{1} = sprintf('PL2 File : %s', ego.ic.OpenedFileName);
+					ego.info{end+1} = sprintf('\tPL2 File Length : %d', ego.pl2.FileLength);
+					ego.info{end+1} = sprintf('\tPL2 Creator : %s %s', ego.pl2.CreatorSoftwareName, ego.pl2.CreatorSoftwareVersion);
+				else
+					ego.info{1} = sprintf('PLX File : %s', ego.ic.OpenedFileName);
+				end
+				ego.info{end+1} = sprintf('Behavioural File : %s', ego.matfile);
+				ego.info{end+1} = ' ';
+				if isfield(ego.meta,'comment'); ego.info{end+1} = sprintf('Behavioural File Comment : %s', ego.meta.comments); ego.info{end+1} = ' '; end
+				ego.info{end+1} = sprintf('Plexon File Comment : %s', ego.ic.Comment);
+				ego.info{end+1} = sprintf('Version : %g', ego.ic.Version);
+				ego.info{end+1} = sprintf('SDK Version : %g', ego.ic.sdkversion);
+				ego.info{end+1} = sprintf('Frequency : %g Hz', ego.ic.Freq);
+				ego.info{end+1} = sprintf('Plexon Date/Time : %s', num2str(ego.ic.DateTime));
+				ego.info{end+1} = sprintf('Duration : %g seconds', ego.ic.Duration);
+				ego.info{end+1} = sprintf('Num Pts Per Wave : %g', ego.ic.NPW);
+				ego.info{end+1} = sprintf('Num Pts Pre-Threshold : %g', ego.ic.PreThresh);
+			catch
+				if ~isempty(oldInfo)
+					ego.info = oldInfo;
+					fprintf('Not properly parsed yet, info generation took %g ms\n',round(toc(infoTic)*1000))
+					return
+				end
+			end
+			
+			switch ego.trodality
+				case 1
+					ego.info{end+1} = sprintf('Data type : Single Electrode');
+				case 2
+					ego.info{end+1} = sprintf('Data type : Stereotrode');
+				case 4
+					ego.info{end+1} = sprintf('Data type : Tetrode');
+				otherwise
+					ego.info{end+1} = sprintf('Data type : Unknown');
+			end
+			ego.info{end+1} = sprintf('Spike Peak Voltage (mV) : %g', ego.ic.SpikePeakV);
+			ego.info{end+1} = sprintf('Spike A/D Resolution (bits) : %g', ego.ic.SpikeADResBits);
+			ego.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', ego.ic.SlowPeakV);
+			ego.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', ego.ic.SlowADResBits);
+
+			if ~isempty(ego.eventList)
+				generateMeta(ego);
+				ego.info{end+1} = ' ';
+				ego.info{end+1} = sprintf('Number of Strobed Variables : %g', ego.eventList.nVars);
+				ego.info{end+1} = sprintf('Total # Correct Trials :  %g', length(ego.eventList.correct));
+				ego.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(ego.eventList.breakFix));
+				ego.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(ego.eventList.incorrect));
+				ego.info{end+1} = sprintf('Minimum # of Trials per variable :  %g', ego.eventList.minRuns);
+				ego.info{end+1} = sprintf('Maximum # of Trials per variable :  %g', ego.eventList.maxRuns);
+				ego.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', ego.eventList.tMin,ego.eventList.tMinCorrect);
+				ego.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', ego.eventList.tMax,ego.eventList.tMaxCorrect);
+			end
+			if isa(ego.rE,'runExperiment') && ~isempty(ego.rE)
+				ego.info{end+1} = ' ';
+				rE = ego.rE; %#ok<*PROP>
+				ego.info{end+1} = sprintf('# of Stimulus Variables : %g', rE.task.nVars);
+				ego.info{end+1} = sprintf('Total # of Variable Values: %g', rE.task.minBlocks);
+				ego.info{end+1} = sprintf('Random Seed : %g', rE.task.randomSeed);
+				names = '';
+				vals = '';
+				for i = 1:rE.task.nVars
+					names = [names '  <|>  ' rE.task.nVar(i).name];
+					if iscell(rE.task.nVar(i).values)
+						val = '';
+						for jj = 1:length(rE.task.nVar(i).values)
+							v=num2str(rE.task.nVar(i).values{jj});
+							v=regexprep(v,'\s+',' ');
+							if isempty(val)
+								val = [v];
+							else
+								val = [val ' / ' v];
+							end
+						end
+						vals = [vals '  <|>  ' val];
+					else
+						vals = [vals '  <|>  ' num2str(rE.task.nVar(i).values)];
+					end
+				end
+				ego.info{end+1} = sprintf('Variable Names : %s', names(6:end));
+				ego.info{end+1} = sprintf('Variable Values : %s', vals(6:end));
+				names = '';
+				for i = 1:rE.stimuli.n
+					names = [names ' | ' rE.stimuli{i}.name ':' rE.stimuli{i}.family];
+				end
+				ego.info{end+1} = sprintf('Stimulus Names : %s', names(4:end));
+			end
+			if isfield(ego.meta,'matrix')
+				ego.info{end+1} = ' ';
+				ego.info{end+1} = 'Variable Map (Variable Index1 Index2 Index 3 Value1 Value2 Value3):';
+				ego.info{end+1} = num2str(ego.meta.matrix);
+			end
+			if ~isempty(ego.tsList)
+				ego.info{end+1} = ' ';
+				ego.info{end+1} = ['Total Channel list : ' num2str(ego.tsList.chMap)];
+				ego.info{end+1} = ['Trodality Reduction : ' num2str(ego.tsList.trodreduction)];
+				ego.info{end+1} = ['Number of Active channels : ' num2str(ego.tsList.nCh)];
+				ego.info{end+1} = ['Number of Active units : ' num2str(ego.tsList.nUnits)];
+				for i=1:ego.tsList.nCh
+					ego.info{end+1} = ['Channel ' num2str(ego.tsList.chMap(i)) ' unit list (0=unsorted) : ' num2str(ego.tsList.unitMap(i).units)];
+				end
+				ego.info{end+1} = ['Ch/Unit Names : ' ego.tsList.namelist];
+				ego.info{end+1} = sprintf('Number of Parsed Spike Trials : %g', length(ego.tsList.tsParse{1}.trials));
+				ego.info{end+1} = sprintf('Data window around event : %s ', num2str(ego.eventWindow));
+				ego.info{end+1} = sprintf('Start Offset : %g ', ego.startOffset);
+			end
+			if ~isempty(ego.eA)
+				saccs = [ego.eA.trials.firstSaccade];
+				saccs(isnan(saccs)) = [];
+				saccs(saccs<0) = [];
+				mins = min(saccs);
+				maxs = max(saccs);
+				[avgs,es] = stderr(saccs);
+				ns = length(saccs);
+				ego.info{end+1} = ' ';
+				ego.info{end+1} = ['Eyelink data Parsed trial total : ' num2str(length(ego.eA.trials))];
+				ego.info{end+1} = ['Eyelink trial bug override : ' num2str(ego.eA.needOverride)];
+				ego.info{end+1} = sprintf('Valid First Post-Stimulus Saccades (#%g): %.4g ± %.3g (range %g:%g )',ns,avgs/1e3,es/1e3,mins/1e3,maxs/1e3);
+			end
+			fprintf('Generating info took %g ms\n',round(toc(infoTic)*1000))
+			ego.info{end+1} = ' ';
+			ego.info = ego.info';
+			info = ego.info;
+			ego.meta(1).info = ego.info;
+		end
+		
+		% ===================================================================
 		%> @brief exportToRawSpikes for legacy spikes support
 		%>
 		%> @param
@@ -844,154 +993,6 @@ classdef plxReader < optickaCore
 					[ego.meta, ego.rE] = ego.loadMat(ego.matfile, ego.dir);
 				end
 			end
-		end
-			
-		% ===================================================================
-		%> @brief generate text info about loaded data
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function generateInfo(ego)
-			tic
-			oldInfo = ego.info;
-			ego.info = {};
-			try
-				if ~isfield(ego.ic, 'Freq')
-					cd(ego.dir);
-					[ego.ic.OpenedFileName, ego.ic.Version, ego.ic.Freq, ego.ic.Comment, ego.ic.Trodalness,...
-						ego.ic.NPW, ego.ic.PreThresh, ego.ic.SpikePeakV, ego.ic.SpikeADResBits,...
-						ego.ic.SlowPeakV, ego.ic.SlowADResBits, ego.ic.Duration, ego.ic.DateTime] = plx_information(ego.file);
-					if exist('plx_mexplex_version','file')
-						ego.ic.sdkversion = plx_mexplex_version();
-					else
-						ego.ic.sdkversion = -1;
-					end
-				end
-				if ego.isPL2
-				if isempty(ego.pl2); ego.pl2 = PL2GetFileIndex(ego.file); end
-					ego.info{1} = sprintf('PL2 File : %s', ego.ic.OpenedFileName);
-					ego.info{end+1} = sprintf('\tPL2 File Length : %d', ego.pl2.FileLength);
-					ego.info{end+1} = sprintf('\tPL2 Creator : %s %s', ego.pl2.CreatorSoftwareName, ego.pl2.CreatorSoftwareVersion);
-				else
-					ego.info{1} = sprintf('PLX File : %s', ego.ic.OpenedFileName);
-				end
-				ego.info{end+1} = sprintf('Behavioural File : %s', ego.matfile);
-				ego.info{end+1} = ' ';
-				ego.info{end+1} = sprintf('Behavioural File Comment : %s', ego.meta.comments);
-				ego.info{end+1} = ' ';
-				ego.info{end+1} = sprintf('Plexon File Comment : %s', ego.ic.Comment);
-				ego.info{end+1} = sprintf('Version : %g', ego.ic.Version);
-				ego.info{end+1} = sprintf('SDK Version : %g', ego.ic.sdkversion);
-				ego.info{end+1} = sprintf('Frequency : %g Hz', ego.ic.Freq);
-				ego.info{end+1} = sprintf('Plexon Date/Time : %s', num2str(ego.ic.DateTime));
-				ego.info{end+1} = sprintf('Duration : %g seconds', ego.ic.Duration);
-				ego.info{end+1} = sprintf('Num Pts Per Wave : %g', ego.ic.NPW);
-				ego.info{end+1} = sprintf('Num Pts Pre-Threshold : %g', ego.ic.PreThresh);
-			catch
-				if ~isempty(oldInfo)
-					ego.info = oldInfo;
-					return
-				end
-			end
-			
-			switch ego.trodality
-				case 1
-					ego.info{end+1} = sprintf('Data type : Single Electrode');
-				case 2
-					ego.info{end+1} = sprintf('Data type : Stereotrode');
-				case 4
-					ego.info{end+1} = sprintf('Data type : Tetrode');
-				otherwise
-					ego.info{end+1} = sprintf('Data type : Unknown');
-			end
-			ego.info{end+1} = sprintf('Spike Peak Voltage (mV) : %g', ego.ic.SpikePeakV);
-			ego.info{end+1} = sprintf('Spike A/D Resolution (bits) : %g', ego.ic.SpikeADResBits);
-			ego.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', ego.ic.SlowPeakV);
-			ego.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', ego.ic.SlowADResBits);
-
-			if ~isempty(ego.eventList)
-				generateMeta(ego);
-				ego.info{end+1} = ' ';
-				ego.info{end+1} = sprintf('Number of Strobed Variables : %g', ego.eventList.nVars);
-				ego.info{end+1} = sprintf('Total # Correct Trials :  %g', length(ego.eventList.correct));
-				ego.info{end+1} = sprintf('Total # BreakFix Trials :  %g', length(ego.eventList.breakFix));
-				ego.info{end+1} = sprintf('Total # Incorrect Trials :  %g', length(ego.eventList.incorrect));
-				ego.info{end+1} = sprintf('Minimum # of Trials per variable :  %g', ego.eventList.minRuns);
-				ego.info{end+1} = sprintf('Maximum # of Trials per variable :  %g', ego.eventList.maxRuns);
-				ego.info{end+1} = sprintf('Shortest Trial Time (all/correct):  %g / %g s', ego.eventList.tMin,ego.eventList.tMinCorrect);
-				ego.info{end+1} = sprintf('Longest Trial Time (all/correct):  %g / %g s', ego.eventList.tMax,ego.eventList.tMaxCorrect);
-			end
-			if isa(ego.rE,'runExperiment')
-				ego.info{end+1} = ' ';
-				rE = ego.rE; %#ok<*PROP>
-				ego.info{end+1} = sprintf('# of Stimulus Variables : %g', rE.task.nVars);
-				ego.info{end+1} = sprintf('Total # of Variable Values: %g', rE.task.minBlocks);
-				ego.info{end+1} = sprintf('Random Seed : %g', rE.task.randomSeed);
-				names = '';
-				vals = '';
-				for i = 1:rE.task.nVars
-					names = [names '  <|>  ' rE.task.nVar(i).name];
-					if iscell(rE.task.nVar(i).values)
-						val = '';
-						for jj = 1:length(rE.task.nVar(i).values)
-							v=num2str(rE.task.nVar(i).values{jj});
-							v=regexprep(v,'\s+',' ');
-							if isempty(val)
-								val = [v];
-							else
-								val = [val ' / ' v];
-							end
-						end
-						vals = [vals '  <|>  ' val];
-					else
-						vals = [vals '  <|>  ' num2str(rE.task.nVar(i).values)];
-					end
-				end
-				ego.info{end+1} = sprintf('Variable Names : %s', names(6:end));
-				ego.info{end+1} = sprintf('Variable Values : %s', vals(6:end));
-				names = '';
-				for i = 1:rE.stimuli.n
-					names = [names ' | ' rE.stimuli{i}.name ':' rE.stimuli{i}.family];
-				end
-				ego.info{end+1} = sprintf('Stimulus Names : %s', names(4:end));
-			end
-			if isfield(ego.meta,'matrix')
-				ego.info{end+1} = ' ';
-				ego.info{end+1} = 'Variable Map (Variable Index1 Index2 Index 3 Value1 Value2 Value3):';
-				ego.info{end+1} = num2str(ego.meta.matrix);
-			end
-			if ~isempty(ego.tsList)
-				ego.info{end+1} = ' ';
-				ego.info{end+1} = ['Total Channel list : ' num2str(ego.tsList.chMap)];
-				ego.info{end+1} = ['Trodality Reduction : ' num2str(ego.tsList.trodreduction)];
-				ego.info{end+1} = ['Number of Active channels : ' num2str(ego.tsList.nCh)];
-				ego.info{end+1} = ['Number of Active units : ' num2str(ego.tsList.nUnits)];
-				for i=1:ego.tsList.nCh
-					ego.info{end+1} = ['Channel ' num2str(ego.tsList.chMap(i)) ' unit list (0=unsorted) : ' num2str(ego.tsList.unitMap(i).units)];
-				end
-				ego.info{end+1} = ['Ch/Unit Names : ' ego.tsList.namelist];
-				ego.info{end+1} = sprintf('Number of Parsed Spike Trials : %g', length(ego.tsList.tsParse{1}.trials));
-				ego.info{end+1} = sprintf('Data window around event : %s ', num2str(ego.eventWindow));
-				ego.info{end+1} = sprintf('Start Offset : %g ', ego.startOffset);
-			end
-			if ~isempty(ego.eA)
-				saccs = [ego.eA.trials.firstSaccade];
-				saccs(isnan(saccs)) = [];
-				saccs(saccs<0) = [];
-				mins = min(saccs);
-				maxs = max(saccs);
-				[avgs,es] = stderr(saccs);
-				ns = length(saccs);
-				ego.info{end+1} = ' ';
-				ego.info{end+1} = ['Eyelink data Parsed trial total : ' num2str(length(ego.eA.trials))];
-				ego.info{end+1} = ['Eyelink trial bug override : ' num2str(ego.eA.needOverride)];
-				ego.info{end+1} = sprintf('Valid First Post-Stimulus Saccades (#%g): %.4g ± %.3g (range %g:%g )',ns,avgs/1e3,es/1e3,mins/1e3,maxs/1e3);
-			end
-			fprintf('Generating info took %g ms\n',round(toc*1000))
-			ego.info{end+1} = ' ';
-			ego.info = ego.info';
-			ego.meta.info = ego.info;
 		end
 		
 		% ===================================================================
