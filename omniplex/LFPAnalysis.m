@@ -21,6 +21,14 @@ classdef LFPAnalysis < analysisCore
 		verbose = true
 	end
 	
+	%------------------DEPENDENT PROPERTIES--------%
+	properties (SetAccess = protected, Dependent = true)
+		%> number of LFP channels
+		nLFPs@double = 0
+		%> number of LFP channels
+		nSelection@double = 0
+	end
+	
 	%------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = {?analysisCore}, GetAccess = public)
 		%> LFP plxReader object
@@ -49,14 +57,6 @@ classdef LFPAnalysis < analysisCore
 		bpfreq@cell = {[1 4], [4 7], [7 14], [15 30], [30 50], [50 100], [1 250]}
 		%> bandpass frequency names
 		bpnames@cell = {'\delta','\theta','\alpha','\beta','\gamma low','\gamma high','all'}
-	end
-
-	%------------------DEPENDENT PROPERTIES--------%
-	properties (SetAccess = protected, Dependent = true)
-		%> number of LFP channels
-		nLFPs@double = 0
-		%> number of LFP channels
-		nSelection@double = 0
 	end
 	
 	%------------------PRIVATE PROPERTIES----------%
@@ -97,11 +97,12 @@ classdef LFPAnalysis < analysisCore
 				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},'Load Continuous LFP File');
 				if ischar(f) && ~isempty(f)
 					me.lfpfile = f;
+					me.name = f;
 					me.dir = p;
 					me.paths.oldDir = pwd;
 					cd(me.dir);
 					me.p = plxReader('file', me.lfpfile, 'dir', me.dir);
-					me.p.name = ['^' me.fullName '^'];
+					me.p.name = ['PARENT:' me.uuid ' ' ];
 					getFiles(me.p);
 				else
 					return
@@ -113,7 +114,7 @@ classdef LFPAnalysis < analysisCore
 					me.spikefile = f;
 					in = struct('file', me.spikefile, 'dir', me.dir);
 					me.sp = spikeAnalysis(in);
-					me.sp.name = ['^' me.fullName '^'];
+					me.sp.name = [f ' PARENT:' me.uuid];
 					in = struct('matfile', me.p.matfile, 'matdir', me.p.matdir,'edffile',me.p.edffile);
 					if strcmpi(me.lfpfile, me.spikefile)
 						inheritPlxReader(me.sp, me.p);
@@ -128,12 +129,15 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief parse is the major first data parsing method
+		%> @brief parse is the major first data parsing step. This performs *all* the steps
+		%> from checking paths are still correct, parsing the Plexon events (our trial and
+		%> behavioural data), parsing raw LFPs into the trial structures, and finally
+		%> converting into a .ft fieldtrip structure.
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function parse(me,varargin)
+		function parse(me, varargin)
 			if isempty(me.lfpfile)
 				getFiles(me,true);
 				if isempty(me.lfpfile);return;end
@@ -148,10 +152,10 @@ classdef LFPAnalysis < analysisCore
 			parseEvents(me.p);
 			me.LFPs = readLFPs(me.p);
 			parseLFPs(me);
-			if isempty(varargin); showInfo(me); end
+			if ~me.openUI; showInfo(me); end
 			select(me);
 			getFieldTripLFPs(me);
-			if ~isempty(varargin) 
+			if me.openUI
 				updateUI(me);
 			else
 				plot(me,'normal');
@@ -159,7 +163,7 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief reparse data after an initial parse
+		%> @brief reparse data after an initial parse, takes less time.
 		%>
 		%> @param
 		%> @return
@@ -176,18 +180,16 @@ classdef LFPAnalysis < analysisCore
 			select(me);
 			selectTrials(me);
 			getFieldTripLFPs(me);
-			if ~isempty(varargin) 
-				updateUI(me);
-			end
+			if me.openUI; updateUI(me); end
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief This only parses some data if there is no equivalent structure yet.
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function lazyParse(me)
+		function lazyParse(me, varargin)
 			if isempty(me.file)
 				getFiles(me, true);
 				if isempty(me.file); warning('No plexon file selected'); return; end
@@ -218,16 +220,18 @@ classdef LFPAnalysis < analysisCore
 				me.p.eA.TOI = me.TOI;
 				parseTOI(me.p.eA);
 			end
+			if me.openUI; updateUI(me); end
 			disp('Lazy spike parsing finished...')
 		end
 		
 		% ===================================================================
-		%> @brief reparse data after an initial parse
+		%> @brief toggle between stimulus=0 and post-stimulus sccade=0 so we can align spikes
+		%> and LFPs to either event
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function toggleSaccadeRealign(me)
+		function toggleSaccadeRealign(me, varargin)
 			me.p.saccadeRealign = ~me.p.saccadeRealign;
 			me.sp.p.saccadeRealign = me.p.saccadeRealign;
 			doPlots = me.doPlots;
@@ -243,12 +247,15 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief This LFP object has a spikeAnalysis object as a property so we can use a
+		%> different spike sort to the parent LFP plexon file. But we have to ensure that the
+		%> spikeAnalysis is 'locked' or 'yoked' to the LFPAnalysis object settings and
+		%> selection. This function makes surethis locking occurs...
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function parseSpikes(me)
+		function parseSpikes(me, varargin)
 			me.sp.p.saccadeRealign = me.p.saccadeRealign;
 			in.cutTrials = me.cutTrials;
 			in.selectedTrials = me.selectedTrials;
@@ -261,11 +268,16 @@ classdef LFPAnalysis < analysisCore
 			syncData(me.sp.p, me.p); %copy any parsed data
 			lazyParse(me.sp); %lazy parse the spikes
 			syncData(me.p, me.sp.p); %copy any new parsed data back
-			showInfo(me.sp);
+			if me.openUI; 
+				updateUI(me)
+			else
+				showInfo(me.sp);
+			end
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief As we can also select trials from the spikeanalysis object, this function
+		%> allows us to let the LFPAnalysis use the spikeanalysis selection.
 		%>
 		%> @param
 		%> @return
@@ -305,12 +317,13 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief Parse the Plexon plxReader LFP data (itself parsed into trials) into a fieldtrip structure, stored in
+		%> the .ft property and also returned to the commandline if needed.
 		%>
 		%> @param
-		%> @return
+		%> @return ft fieldtrip structure
 		% ===================================================================
-		function ft = getFieldTripLFPs(me)
+		function ft = getFieldTripLFPs(me, varargin)
 			ft_defaults;
 			LFPs = me.LFPs;
 			tic
@@ -355,9 +368,12 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief Uses the Fieldtrip preprocessing functions if need be. This modifies the
+		%> .ft property structure but not the raw .LFP property. To undo these changes you must
+		%> use the getFieldTripLFPs() method to regenerate .ft
 		%>
-		%> @param
+		%> @param cfg a fieldtrip cfg structure
+		%> @param removeLineNoise a boolean to remove line noise
 		%> @return
 		% ===================================================================
 		function ftPreProcess(me, cfg, removeLineNoise)
@@ -393,7 +409,7 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief Performs a FieldTrip timelock analysis on our parsed data.
 		%>
 		%> @param
 		%> @return
@@ -591,11 +607,12 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function cfgUsed=ftFrequencyAnalysis(me, cfg, preset, tw, cycles, smth, width)
-			if ~exist('preset','var') || isempty(preset); preset='fix1'; end
-			if ~exist('tw','var') || isempty(tw); tw=0.2; end
-			if ~exist('cycles','var') || isempty(cycles); cycles = 4; end
-			if ~exist('smth','var') || isempty(smth); smth = 0.2; end
-			if ~exist('width','var') || isempty(width); width = 7; end
+			if me.openUI; setTimeFreqOptions(me); end
+			if ~exist('preset','var') || isempty(preset); preset=me.options.method; end
+			if ~exist('tw','var') || isempty(tw); tw=me.options.tw; end
+			if ~exist('cycles','var') || isempty(cycles); cycles = me.options.cycles; end
+			if ~exist('smth','var') || isempty(smth); smth = me.options.smth; end
+			if ~exist('width','var') || isempty(width); width = me.options.width; end
 			if ~isfield(me.ft,'label'); getFieldTripLFPs(me); end
 			if isempty(me.results);me.results=struct();end
 			if isfield(me.results(1),['fq' preset]);me.results(1).(['fq' preset]) = [];end
@@ -1273,8 +1290,17 @@ classdef LFPAnalysis < analysisCore
 				end
 			end
 			
-			if me.sp
-				
+			spk = 'p';
+			if me.sp.nUnits == 0
+				spk = [spk '|No units'];
+			else
+				for i = 1:me.sp.nUnits
+					if i == me.sp.selectedUnit
+						spk = [spk '|¤' me.sp.names{i}];
+					else
+						spk = [spk '|'  me.sp.names{i}];
+					end
+				end
 			end
 			
 			inbeh = {'correct','breakFix','incorrect','all'};
@@ -1299,7 +1325,8 @@ classdef LFPAnalysis < analysisCore
 				['t|' map{2}],'Choose PLX variables to merge (B):';   ...
 				['t|' map{3}],'Choose PLX variables to merge (C):';   ...
 				['t|' cuttrials],'Enter Trials to exclude:';   ...
-				[lfp],'Choose Default LFP Channel to View:';...
+				[lfp],'Choose LFP Channel to View:';...
+				[spk],'Choose Spike Unit:';...
 				[beh],'Behavioural type (''correct'', ''breakFix'', ''incorrect'' | ''all''):';...
 				['t|' num2str(mrange)],'Measurement Range (s) for Statistical Comparisons:';...
 				};
@@ -1312,7 +1339,7 @@ classdef LFPAnalysis < analysisCore
 					me.selectedBehaviour{1} = answer{1}(1);
 					answer{1} = answer{1}(2:end);
 				else
-					me.selectedBehaviour{1} = inbeh{answer{6}};
+					me.selectedBehaviour{1} = inbeh{answer{7}};
 				end
 				me.map{1} = str2num(answer{1});
 				
@@ -1321,7 +1348,7 @@ classdef LFPAnalysis < analysisCore
 					me.selectedBehaviour{2} = answer{2}(1);
 					answer{2} = answer{2}(2:end);
 				else
-					me.selectedBehaviour{2} = inbeh{answer{6}};
+					me.selectedBehaviour{2} = inbeh{answer{7}};
 				end
 				me.map{2} = str2num(answer{2});
 				
@@ -1330,21 +1357,24 @@ classdef LFPAnalysis < analysisCore
 					me.selectedBehaviour{3} = answer{3}(1);
 					answer{3} = answer{3}(2:end);
 				else
-					me.selectedBehaviour{3} = inbeh{answer{6}};
+					me.selectedBehaviour{3} = inbeh{answer{7}};
 				end
 				me.map{3} = str2num(answer{3}); 
 				
 				me.cutTrials = str2num(answer{4});
 				me.cutTrials = sort(unique(me.cutTrials));
 				me.selectedLFP = answer{5};
-				me.measureRange = str2num(answer{7});
+				me.sp.selectedUnit = answer{6};
+				me.measureRange = str2num(answer{8});
 				selectTrials(me);
 			end
 		end
 		
 		
 		% ===================================================================
-		%> @brief replaces the LFP signals with a noisy surrogate to test
+		%> @brief replaces the LFP signals with a noisy surrogate to test, you can change the
+		%> surrogate parameters in the code, including randomising phase and having a
+		%> timelocked burst of a particular frequency to test time frequency algorithms etc.
 		%>
 		%> @param
 		%> @return
@@ -2685,32 +2715,25 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function closeUI(me, varargin)
-			try delete(me.handles.parent); end %#ok<TRYNC>
-			me.handles = struct();
-			me.openUI = false;
-		end
-		
-		% ===================================================================
 		%> @brief
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function makeUI(me)
-			if ~isempty(me.handles) && isfield(me.handles,'root') && isa(me.handles.root,'uix.BoxPanel')
+		function makeUI(me, varargin)
+			if ~isempty(me.handles) && isfield(me.handles,'hbox') && isa(me.handles.hbox,'uix.HBoxFlex')
 				fprintf('---> UI already open!\n');
 				me.openUI = true;
 				return
 			end
+			embedMode = false;
+			if isa(varargin{1},'uix.BoxPanel')
+				parent = varargin{1};
+				embedMode = true;
+			end
 			if ~exist('parent','var')
 				parent = figure('Tag','LFP Analysis',...
-					'Name', ['LFP Analysis ' me.fullName], ...
+					'Name', ['LFP Analysis: ' me.fullName], ...
 					'MenuBar', 'none', ...
 					'CloseRequestFcn', @me.closeUI,...
 					'NumberTitle', 'off');
@@ -2718,44 +2741,42 @@ classdef LFPAnalysis < analysisCore
 			end
 			me.handles(1).parent = parent;
 			
-			%make context menu
-			hcmenu = uicontextmenu;
-			uimenu(hcmenu,'Label','Select','Callback',@me.select,'Accelerator','e');
-			uimenu(hcmenu,'Label','Plot','Callback',@me.plot,'Accelerator','p');
-			uimenu(hcmenu,'Label','Toggle Saccade (all)','Callback',@me.toggleSaccades);
-			
 			fs = 10;
 			SansFont = 'Helvetica';
 			MonoFont = 'Consolas';
 			bgcolor = [0.89 0.89 0.89];
 			bgcoloredit = [0.9 0.9 0.9];
+			
+			%make context menu
+			hcmenu = uicontextmenu;
+			uimenu(hcmenu,'Label','Select','Callback',@me.select,'Accelerator','e');
+			uimenu(hcmenu,'Label','Plot','Callback',@me.plot,'Accelerator','p');
 
 			handles.parent = me.handles.parent; %#ok<*PROP>
-			handles.root = uix.BoxPanel('Parent',parent,...
-				'Title','LFP Analysis UI',...
-				'FontName',SansFont,...
-				'FontSize',fs,...
-				'FontWeight','normal',...
-				'Padding',0,...
-				'TitleColor',[0.8 0.78 0.76],...
-				'BackgroundColor',bgcolor);
-
-			handles.hbox = uix.HBoxFlex('Parent', handles.root,'Padding',0,...
-				'Spacing', 5, 'BackgroundColor', bgcolor);
-			handles.axistabs = uix.TabPanel('Parent', handles.hbox,'Padding',0,...
+			if embedMode == true
+				handles.root = handles.parent;
+			else
+				handles.root = uix.BoxPanel('Parent',parent,...
+					'Title','LFP Analysis UI',...
+					'FontName',SansFont,...
+					'FontSize',fs,...
+					'FontWeight','normal',...
+					'Padding',0,...
+					'TitleColor',[0.8 0.78 0.76],...
+					'BackgroundColor',bgcolor);
+			end
+			handles.tabs = uix.TabPanel('Parent', handles.root,'Padding',0,...
 				'BackgroundColor',bgcolor,'TabWidth',120,'FontSize', fs+1,'FontName',SansFont);
-			handles.lfppanel = uix.Panel('Parent', handles.axistabs,'Padding',0,...
+			handles.lfppanel = uix.Panel('Parent', handles.tabs,'Padding',0,...
 				'BackgroundColor',bgcolor);
-			handles.spikepanel = uix.Panel('Parent', handles.axistabs,'Padding',0,...
+			handles.spikepanel = uix.Panel('Parent', handles.tabs,'Padding',0,...
 				'BackgroundColor',bgcolor);
-			handles.axistabs.TabTitles = {'LFP Plexon File','Spikes Plexon file'};
-			handles.lfpinfo = uicontrol('Parent', handles.lfppanel,'Style','edit','Units','normalized',...
+			handles.tabs.TabTitles = {'LFP Plexon File','Spikes Plexon file'};
+			handles.hbox = uix.HBoxFlex('Parent', handles.lfppanel,'Padding',0,...
+				'Spacing', 5, 'BackgroundColor', bgcolor);
+			handles.lfpinfo = uicontrol('Parent', handles.hbox,'Style','edit','Units','normalized',...
 				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',500,...
 				'FontSize',fs+1,'FontWeight','bold','FontName',SansFont,'HorizontalAlignment','left');
-			handles.spikeinfo = uicontrol('Parent', handles.spikepanel,'Style','edit','Units','normalized',...
-				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',500,...
-				'FontSize',fs+1,'FontWeight','bold','FontName',SansFont,'HorizontalAlignment','left');
-
 			handles.controls = uix.VBoxFlex('Parent', handles.hbox,'Padding',0,'Spacing',0,'BackgroundColor',bgcolor);
 			handles.controls1 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',2,'BackgroundColor',bgcolor);
 			handles.controls2 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',0,'BackgroundColor',bgcolor);
@@ -2774,6 +2795,13 @@ classdef LFPAnalysis < analysisCore
 				'Tooltip','Reparse should be a bit quicker',...
 				'Callback',@me.reparse,...
 				'String','Reparse LFPs');
+			handles.reparsebutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls1,...
+				'Tag','LFPAparses',...
+				'FontSize', fs,...
+				'Tooltip','Parse the spikes using the LFP trial selection, useful for plotTogether and ftSpikeLFP',...
+				'Callback',@me.parseSpikes,...
+				'String','Parse Spikes');
 			handles.selectbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LFPAselect',...
@@ -2809,13 +2837,20 @@ classdef LFPAnalysis < analysisCore
 				'Tooltip','Toggle Saccade Realign',...
 				'Callback',@me.toggleSaccadeRealign,...
 				'String','Toggle Saccade Align');
+			handles.surrbutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls1,...
+				'Tag','LMAsurrbutton',...
+				'FontSize', fs,...
+				'Tooltip','Create surrogate Data, with known parameters so you can test if analysis is working, reparse to recover original data',...
+				'Callback',@me.createSurrogate,...
+				'String','Create Surrogate Data!');
 			handles.analmethod = uicontrol('Style','popupmenu',...
 				'Parent',handles.controls1,...
 				'FontSize', fs,...
 				'Tooltip','Select a method to run',...
 				'Callback',@runAnal,...
 				'Tag','LFPAanalmethod',...
-				'String',{'plotTogether','ftTimeLockAnalysis','ftFrequencyAnalysis','ftBandPass','ftSpikeLFP','chSpectrum'});
+				'String',{'plotTogether','ftTimeLockAnalysis','ftFrequencyAnalysis','ftFrequencyStats','ftBandPass','ftSpikeLFP','chSpectrum'});
 			
 			handles.list = uicontrol('Style','edit',...
 				'Parent',handles.controls2,...
@@ -2831,14 +2866,10 @@ classdef LFPAnalysis < analysisCore
 			set(handles.controls,'Heights', [60 -1]);
 			set(handles.controls1,'Heights', [-1 -1]);
 			
+			me.sp.GUI(handles.spikepanel);
+			
 			me.handles = handles;
 			me.openUI = true;
-			
-			if me.nLFPs == 0
-				notifyUI(me,'You need to PARSE the data files first');
-			else
-				notifyUI(me,'Data seems to be parsed, try running an analysis');
-			end
 			
 			updateUI(me);
 			
@@ -2857,16 +2888,33 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function updateUI(me)
-			if ~isempty(me.handles)
+		function closeUI(me, varargin)
+			try me.sp.closeUI; end %#ok<TRYNC>
+			try delete(me.handles.parent); end %#ok<TRYNC>
+			me.handles = struct();
+			me.openUI = false;
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function updateUI(me, varargin)
+			if me.openUI && ~isempty(me.handles)
+				if me.nLFPs == 0
+					notifyUI(me,'You need to PARSE the data files first');
+				else
+					notifyUI(me,'Data seems to be parsed, try running an analysis');
+				end
 				fs = 10;
 				if isa(me.p,'plxReader')
 					me.p.generateInfo;
 					set(me.handles.lfpinfo,'String',me.p.info,'FontSize',fs+1)
 				end
-				if isa(me.sp.p,'plxReader')
-					me.sp.p.generateInfo;
-					set(me.handles.spikeinfo,'String',me.sp.p.info,'FontSize',fs+1)
+				if isa(me.sp,'spikeanalysis')
+					updateUI(me.sp);
 				end
 			end
 		end
@@ -2885,7 +2933,9 @@ classdef LFPAnalysis < analysisCore
 			else
 				info = varargin;
 			end
-			try set(me.handles.root,'Title',info); drawnow; end
+			if isa(me.handles.root,'uix.BoxPanel')
+				try set(me.handles.root,'Title',info); end %#ok<TRYNC>
+			end
 		end
 	end
 end

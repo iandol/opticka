@@ -27,9 +27,10 @@ classdef analysisCore < optickaCore
 		gd@getDensity
 	end
 	
-	%--------------------VISIBLE PROPERTIES-----------%
-	properties (SetAccess = protected, GetAccess = public)
-		
+	%--------------------PROTECTED PROPERTIES-----------%
+	properties (SetAccess = protected, GetAccess = protected)
+		%> various stats values in a structure for different analyses
+		options@struct
 	end
 	
 	%------------------TRANSIENT PROPERTIES----------%
@@ -119,7 +120,7 @@ classdef analysisCore < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function showEyePlots(me)
+		function showEyePlots(me, varargin)
 			if ~isprop(me,'p') || ~isa(me.p,'plxReader') || isempty(me.p.eA) || ~isa(me.p.eA,'eyelinkAnalysis')
 				disp('Eyelink data not parsed yet, try plotTogether for LFP data and parse for spike data');
 				return
@@ -142,7 +143,7 @@ classdef analysisCore < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function showInfo(me)
+		function showInfo(me, varargin)
 			if ~isprop(me,'p') || ~isa(me.p,'plxReader')
 				if isprop(me,'sp') && isa(me.sp,'spikeAnalysis')
 					showInfo(me.sp);
@@ -161,7 +162,7 @@ classdef analysisCore < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function stats = setStats(me)
+		function stats = setStats(me, varargin)
 			initialiseStats(me);
 			s=me.stats;
 			
@@ -339,8 +340,60 @@ classdef analysisCore < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function gui(me)
-			makeUI(me);
+		function GUI(me, varargin)
+			makeUI(me, varargin);
+		end
+		
+		% ===================================================================
+		%> @brief showInfo shows the info box for the plexon parsed data
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function options = setTimeFreqOptions(me, varargin)
+			initialiseTimeFreqOptions(me);
+			
+			mlist1={'fix1', 'fix2', 'mtm1','mtm2','morlet','tfr'};
+			mt = 'p';
+			for i = 1:length(mlist1)
+				if strcmpi(mlist1{i},me.options.method)
+					mt = [mt '|¤' mlist1{i}];
+				else
+					mt = [mt '|' mlist1{i}];
+				end
+			end
+			
+			mlist2={'no','relative','absolute','dB'};
+			bline = 'p';
+			for i = 1:length(mlist2)
+				if strcmpi(mlist2{i},me.options.bline)
+					bline = [bline '|¤' mlist2{i}];
+				else
+					bline = [bline '|' mlist2{i}];
+				end
+			end
+
+			mtitle   = ['Select Statistics Settings'];
+			options  = {[mt],'Main LFP Method (method):'; ...
+				[bline],'Baseline Correction (bline):'; ...
+				['t|' num2str(me.options.tw)],'LFP Time Window (tw):'; ...
+				['t|' num2str(me.options.cycles)],'LFP # Cycles (cycles):'; ...
+				['t|' num2str(me.options.smth)],'Smoothing Value (smth):'; ...
+				['t|' num2str(me.options.width)],'LFP Taper Width (width):'; ...
+				};
+			
+			answer = menuN(mtitle,options);
+			drawnow;
+			if iscell(answer) && ~isempty(answer)
+				me.options.method		= mlist1{answer{1}};
+				me.options.bline		= mlist2{answer{2}};
+				me.options.tw			= str2num(answer{3});
+				me.options.cycles		= str2num(answer{4});
+				me.options.smth		= str2num(answer{5});
+				me.options.width		= str2num(answer{6});
+			end
+			
+			options = me.options;
 		end
 	end
 	
@@ -574,6 +627,33 @@ classdef analysisCore < optickaCore
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
+	
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function initialiseTimeFreqOptions(me)
+			if ~isfield(me.options,'method') || isempty(me.options.method)
+				me.options(1).method = 'fix1';
+			end
+			if ~isfield(me.options,'bline') || isempty(me.options.bline)
+				me.options(1).bline = 'no';
+			end
+			if ~isfield(me.options,'tw') || isempty(me.options.tw)
+				me.options(1).tw = 0.2;
+			end
+			if ~isfield(me.options,'cycles') || isempty(me.options.cycles)
+				me.options(1).cycles = 3;
+			end
+			if ~isfield(me.options,'smth') || isempty(me.options.smth)
+				me.options(1).smth = 0.3;
+			end
+			if ~isfield(me.options,'width') || isempty(me.options.width)
+				me.options(1).width = 7;
+			end
+		end
 		% ===================================================================
 		%> @brief Allows two analysis objects to share a single plxReader object
 		%>

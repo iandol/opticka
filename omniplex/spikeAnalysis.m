@@ -85,13 +85,13 @@ classdef spikeAnalysis < analysisCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function ego = spikeAnalysis(varargin)
+		function me = spikeAnalysis(varargin)
 			if nargin == 0; varargin.name = 'spikeAnalysis'; end
-			ego=ego@analysisCore(varargin); %superclass constructor
-			if nargin>0; ego.parseArgs(varargin, ego.allowedProperties); end
-			if isempty(ego.name);ego.name = 'spikeAnalysis'; end
-			if isempty(ego.file);
-				getFiles(ego,false);
+			me=me@analysisCore(varargin); %superclass constructor
+			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
+			if isempty(me.name);me.name = 'spikeAnalysis'; end
+			if isempty(me.file);
+				getFiles(me,false);
 			end
 		end
 		
@@ -101,20 +101,20 @@ classdef spikeAnalysis < analysisCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function getFiles(ego, force)
+		function getFiles(me, force)
 			if ~exist('force','var')
 				force = false;
 			end
-			if force == true || isempty(ego.file)
+			if force == true || isempty(me.file)
 				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},'Load Spike PLX/PL2 File');
 				if ischar(f) && ~isempty(f)
-					ego.file = f;
-					ego.dir = p;
-					ego.paths.oldDir = pwd;
-					cd(ego.dir);
-					ego.p = plxReader('file', ego.file, 'dir', ego.dir);
-					ego.p.name = ['^' ego.fullName '^'];
-					getFiles(ego.p);
+					me.file = f;
+					me.dir = p;
+					me.paths.oldDir = pwd;
+					cd(me.dir);
+					me.p = plxReader('file', me.file, 'dir', me.dir);
+					me.p.name = ['^' me.fullName '^'];
+					getFiles(me.p);
 				else
 					return
 				end
@@ -127,28 +127,29 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function parse(ego)
+		function parse(me, varargin)
 			ft_defaults
-			ego.yokedSelection = false;
-			if isempty(ego.file)
-				getFiles(ego, true);
-				if isempty(ego.file); warning('No plexon file selected'); return; end
+			me.yokedSelection = false;
+			if isempty(me.file)
+				getFiles(me, true);
+				if isempty(me.file); warning('No plexon file selected'); return; end
 			end
-			checkPaths(ego);
-			ego.paths.oldDir = pwd;
-			cd(ego.dir);
-			ego.p.eventWindow = ego.spikeWindow;
-			parse(ego.p);
-			ego.trial = ego.p.eventList.trials;
-			ego.event = ego.p.eventList;
-			for i = 1:ego.nUnits
-				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
+			checkPaths(me);
+			me.paths.oldDir = pwd;
+			cd(me.dir);
+			me.p.eventWindow = me.spikeWindow;
+			parse(me.p);
+			me.trial = me.p.eventList.trials;
+			me.event = me.p.eventList;
+			for i = 1:me.nUnits
+				me.spike{i}.trials = me.p.tsList.tsParse{i}.trials;
 			end
-			ego.ft = struct(); ego.results = struct();
-			ego.ft = getFieldTripSpikes(ego.p);
-			ego.names = ego.ft.label;
-			showInfo(ego);
-			select(ego);
+			me.ft = struct(); me.results = struct();
+			me.ft = getFieldTripSpikes(me.p);
+			me.names = me.ft.label;
+			if ~me.openUI; showInfo(me); end
+			select(me);
+			if ~me.openUI; updateUI(me); end
 		end
 		
 		% ===================================================================
@@ -157,27 +158,28 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function reparse(ego)
-			ego.p.eventWindow = ego.spikeWindow;
-			ego.trial = struct([]); ego.event = struct([]);
-			reparse(ego.p);
-			ego.trial = ego.p.eventList.trials;
-			ego.event = ego.p.eventList;
-			for i = 1:ego.nUnits
-				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
+		function reparse(me, varargin)
+			me.p.eventWindow = me.spikeWindow;
+			me.trial = struct([]); me.event = struct([]);
+			reparse(me.p);
+			me.trial = me.p.eventList.trials;
+			me.event = me.p.eventList;
+			for i = 1:me.nUnits
+				me.spike{i}.trials = me.p.tsList.tsParse{i}.trials;
 			end
-			ego.ft = struct(); ego.results = struct();
-			ego.ft = getFieldTripSpikes(ego.p);
-			ego.names = ego.ft.label;
-			select(ego);
-			if ~isempty(ego.ROI)
-				ego.p.eA.ROI = ego.ROI;
-				parseROI(ego.p.eA);
+			me.ft = struct(); me.results = struct();
+			me.ft = getFieldTripSpikes(me.p);
+			me.names = me.ft.label;
+			select(me);
+			if ~isempty(me.ROI)
+				me.p.eA.ROI = me.ROI;
+				parseROI(me.p.eA);
 			end
-			if ~isempty(ego.TOI)
-				ego.p.eA.TOI = ego.TOI;
-				parseTOI(ego.p.eA);
+			if ~isempty(me.TOI)
+				me.p.eA.TOI = me.TOI;
+				parseTOI(me.p.eA);
 			end
+			if ~me.openUI; updateUI(me); end
 		end
 		
 		% ===================================================================
@@ -186,37 +188,37 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function lazyParse(ego)
+		function lazyParse(me)
 			ft_defaults
-			if isempty(ego.file)
-				getFiles(ego, true);
-				if isempty(ego.file); warning('No plexon file selected'); return; end
+			if isempty(me.file)
+				getFiles(me, true);
+				if isempty(me.file); warning('No plexon file selected'); return; end
 			end
-			checkPaths(ego);
-			ego.paths.oldDir = pwd;
-			cd(ego.dir);
-			ego.p.eventWindow = ego.spikeWindow;
-			lazyParse(ego.p);
-			ego.trial = ego.p.eventList.trials;
-			ego.event = ego.p.eventList;
-			for i = 1:ego.nUnits
-				ego.spike{i}.trials = ego.p.tsList.tsParse{i}.trials;
+			checkPaths(me);
+			me.paths.oldDir = pwd;
+			cd(me.dir);
+			me.p.eventWindow = me.spikeWindow;
+			lazyParse(me.p);
+			me.trial = me.p.eventList.trials;
+			me.event = me.p.eventList;
+			for i = 1:me.nUnits
+				me.spike{i}.trials = me.p.tsList.tsParse{i}.trials;
 			end
-			ego.ft = struct(); ego.results = struct();
-			ego.ft = getFieldTripSpikes(ego.p);
-			ego.names = ego.ft.label;
-			if isempty(ego.selectedTrials)
-				select(ego);
-			elseif ego.yokedSelection == false
-				selectTrials(ego)
+			me.ft = struct(); me.results = struct();
+			me.ft = getFieldTripSpikes(me.p);
+			me.names = me.ft.label;
+			if isempty(me.selectedTrials)
+				select(me);
+			elseif me.yokedSelection == false
+				selectTrials(me)
 			end
-			if ~isempty(ego.p.eA.ROIInfo)
-				ego.p.eA.ROI = ego.ROI;
-				parseROI(ego.p.eA);
+			if ~isempty(me.p.eA.ROIInfo)
+				me.p.eA.ROI = me.ROI;
+				parseROI(me.p.eA);
 			end
-			if ~isempty(ego.p.eA.TOIInfo)
-				ego.p.eA.TOI = ego.TOI;
-				parseTOI(ego.p.eA);
+			if ~isempty(me.p.eA.TOIInfo)
+				me.p.eA.TOI = me.TOI;
+				parseTOI(me.p.eA);
 			end
 			disp('Lazy spike parsing finished...')
 		end
@@ -227,13 +229,13 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function toggleSaccadeRealign(ego)
-			ego.p.saccadeRealign = ~ego.p.saccadeRealign;
-			doPlots = ego.doPlots;
-			ego.doPlots = false;
-			ego.reparse;	
-			ego.doPlots = doPlots;
-			if ego.p.saccadeRealign == true
+		function toggleSaccadeRealign(me)
+			me.p.saccadeRealign = ~me.p.saccadeRealign;
+			doPlots = me.doPlots;
+			me.doPlots = false;
+			me.reparse;	
+			me.doPlots = doPlots;
+			if me.p.saccadeRealign == true
 				disp('Saccade Realign is now ENABLED, data was reparsed...')
 			else
 				disp('Saccade Realign is now DISABLED, data was reparsed...')
@@ -246,48 +248,48 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function select(ego,force)
+		function select(me,force)
 			if ~exist('force','var'); force = false; end
-			if isempty(ego.trial); warndlg('Data not parsed yet...');return;end
-			if force == true; ego.yokedSelection = false; end
-			if ego.yokedSelection == true;
+			if isempty(me.trial); warndlg('Data not parsed yet...');return;end
+			if force == true; me.yokedSelection = false; end
+			if me.yokedSelection == true;
 				disp('This spikeanalysis object is currently locked, run select(true) to override lock...'); return
 			end
 			cuttrials = '[ ';
-			if ~isempty(ego.cutTrials) 
-				cuttrials = [cuttrials num2str(ego.cutTrials)];
+			if ~isempty(me.cutTrials) 
+				cuttrials = [cuttrials num2str(me.cutTrials)];
 			end
 			cuttrials = [cuttrials ' ]'];
 			
 			map = cell(1,3);
-			if isempty(ego.map) || length(ego.map)~=3 || ~iscell(ego.map)
+			if isempty(me.map) || length(me.map)~=3 || ~iscell(me.map)
 				map{1} = '1 2 3 4 5 6';
 				map{2} = '7 8';
 				map{3} = '';
 			else
-				map{1} = num2str(ego.map{1});
-				map{2} = num2str(ego.map{2});
-				map{3} = num2str(ego.map{3});
+				map{1} = num2str(me.map{1});
+				map{2} = num2str(me.map{2});
+				map{3} = num2str(me.map{3});
 			end
 			
 			unit = 'p';
-			for i = 1:ego.nUnits
-				if i == ego.selectedUnit
-					unit = [unit '|¤' ego.names{i}];
+			for i = 1:me.nUnits
+				if i == me.selectedUnit
+					unit = [unit '|¤' me.names{i}];
 				else
-					unit = [unit '|'  ego.names{i}];
+					unit = [unit '|'  me.names{i}];
 				end
 			end
 			
 			inbeh = {'correct','breakFix','incorrect','all'};
 			beh = 'r';
-			if ischar(ego.selectedBehaviour);
-				t = ego.selectedBehaviour;
-				ego.selectedBehaviour = cell(1);
-				ego.selectedBehaviour{1} = t;
+			if ischar(me.selectedBehaviour);
+				t = me.selectedBehaviour;
+				me.selectedBehaviour = cell(1);
+				me.selectedBehaviour{1} = t;
 			end
 			for i = 1:length(inbeh)
-				if strcmpi(inbeh{i}, ego.selectedBehaviour{1})
+				if strcmpi(inbeh{i}, me.selectedBehaviour{1})
 					beh = [beh '|¤' inbeh{i}];
 				else
 					beh = [beh '|' inbeh{i}];
@@ -297,22 +299,22 @@ classdef spikeAnalysis < analysisCore
 			indenf = {'gauss','alphawin'};
 			denf = 'r';
 			for i = 1:length(indenf)
-				if strcmpi(indenf{i}, ego.densityFunction)
+				if strcmpi(indenf{i}, me.densityFunction)
 					denf = [denf '|¤' indenf{i}];
 				else
 					denf = [denf '|' indenf{i}];
 				end
 			end
 
-			pr = num2str(ego.plotRange);
-			rr = num2str(ego.measureRange);
-			bw = [num2str(ego.binSize) '       ' num2str(ego.densityWindow)];
-			roi = num2str(ego.ROI);
-			saccfilt = num2str(ego.filterFirstSaccades);
-			toifilt = num2str(ego.TOI);
-			ego.selectedBehaviour = {};
+			pr = num2str(me.plotRange);
+			rr = num2str(me.measureRange);
+			bw = [num2str(me.binSize) '       ' num2str(me.densityWindow)];
+			roi = num2str(me.ROI);
+			saccfilt = num2str(me.filterFirstSaccades);
+			toifilt = num2str(me.TOI);
+			me.selectedBehaviour = {};
 			
-			mtitle   = [ego.file ': REPARSE ' num2str(ego.event.nVars) ' DATA VARIABLES'];
+			mtitle   = [me.file ': REPARSE ' num2str(me.event.nVars) ' DATA VARIABLES'];
 			options  = {['t|' map{1}],'Choose PLX variables to merge (A, if empty parse all variables independantly):';   ...
 				['t|' map{2}],'Choose PLX variables to merge (B):';   ...
 				['t|' map{3}],'Choose PLX variables to merge (C):';   ...
@@ -332,70 +334,70 @@ classdef spikeAnalysis < analysisCore
 			if iscell(answer) && ~isempty(answer)
 				re = regexpi(answer{1},'^[CBI]','once');
 				if ~isempty(re)
-					ego.selectedBehaviour{1} = answer{1}(1);
+					me.selectedBehaviour{1} = answer{1}(1);
 					answer{1} = answer{1}(2:end);
 				else
-					ego.selectedBehaviour{1} = inbeh{answer{6}};
+					me.selectedBehaviour{1} = inbeh{answer{6}};
 				end
-				ego.map{1} = str2num(answer{1});
+				me.map{1} = str2num(answer{1});
 				
 				re = regexpi(answer{2},'^[CBI]','once');
 				if ~isempty(re)
-					ego.selectedBehaviour{2} = answer{2}(1);
+					me.selectedBehaviour{2} = answer{2}(1);
 					answer{2} = answer{2}(2:end);
 				else
-					ego.selectedBehaviour{2} = inbeh{answer{6}};
+					me.selectedBehaviour{2} = inbeh{answer{6}};
 				end
-				ego.map{2} = str2num(answer{2});
+				me.map{2} = str2num(answer{2});
 				
 				re = regexpi(answer{3},'^[CBI]','once');
 				if ~isempty(re)
-					ego.selectedBehaviour{3} = answer{3}(1);
+					me.selectedBehaviour{3} = answer{3}(1);
 					answer{3} = answer{3}(2:end);
 				else
-					ego.selectedBehaviour{3} = inbeh{answer{6}};
+					me.selectedBehaviour{3} = inbeh{answer{6}};
 				end
-				ego.map{3} = str2num(answer{3}); 
+				me.map{3} = str2num(answer{3}); 
 
-				ego.cutTrials = str2num(answer{4});
-				ego.selectedUnit = answer{5};
-				ego.plotRange = str2num(answer{7});
-				ego.measureRange = str2num(answer{8});
+				me.cutTrials = str2num(answer{4});
+				me.selectedUnit = answer{5};
+				me.plotRange = str2num(answer{7});
+				me.measureRange = str2num(answer{8});
 
 				bw = str2num(answer{9});
 				
-				ego.densityFunction = indenf{answer{10}};
+				me.densityFunction = indenf{answer{10}};
 				
 				if length(bw) == 1
-					ego.binSize = bw(1);
+					me.binSize = bw(1);
 				elseif length(bw)==2
-					ego.binSize = bw(1);
-					ego.densityWindow = [-abs(bw(2)) abs(bw(2))];
+					me.binSize = bw(1);
+					me.densityWindow = [-abs(bw(2)) abs(bw(2))];
 				elseif length(bw)==3
-					ego.binSize = bw(1);
-					ego.densityWindow = [bw(2) bw(3)];
+					me.binSize = bw(1);
+					me.densityWindow = [bw(2) bw(3)];
 				end
 				
 				roi = str2num(answer{11});
 				if isnumeric(roi) && length(roi) == 4
-					ego.ROI = roi;
+					me.ROI = roi;
 				else
-					ego.ROI = [];
+					me.ROI = [];
 				end
-				ego.TOI = str2num(answer{12});
-				ego.filterFirstSaccades = str2num(answer{13});
+				me.TOI = str2num(answer{12});
+				me.filterFirstSaccades = str2num(answer{13});
 				
-				if ~isempty(ego.ROI)
-					ego.p.eA.ROI = ego.ROI;
-					parseROI(ego.p.eA);
-					plotROI(ego.p.eA);
+				if ~isempty(me.ROI)
+					me.p.eA.ROI = me.ROI;
+					parseROI(me.p.eA);
+					plotROI(me.p.eA);
 				end
-				if ~isempty(ego.TOI)
-					ego.p.eA.TOI = ego.TOI;
-					parseTOI(ego.p.eA);
-					plotTOI(ego.p.eA);
+				if ~isempty(me.TOI)
+					me.p.eA.TOI = me.TOI;
+					parseTOI(me.p.eA);
+					plotTOI(me.p.eA);
 				end
-				selectTrials(ego);
+				selectTrials(me);
 			end
 		end
 			
@@ -405,25 +407,25 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function PSTH(ego)
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+		function PSTH(me)
+			if me.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			ft_defaults;
-			psth = cell(1,length(ego.selectedTrials));
-			for j = 1:length(ego.selectedTrials)
+			psth = cell(1,length(me.selectedTrials));
+			for j = 1:length(me.selectedTrials)
 				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.binsize			= ego.binSize;
+				cfg.trials			= me.selectedTrials{j}.idx;
+				cfg.binsize			= me.binSize;
 				cfg.outputunit		= 'rate';
-				cfg.latency			= ego.plotRange;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				psth{j}				= ft_spike_psth(cfg, ego.ft);
+				cfg.latency			= me.plotRange;
+				cfg.spikechannel	= me.names{me.selectedUnit};
+				psth{j}				= ft_spike_psth(cfg, me.ft);
 			end
-			ego.results(1).psth = psth;
-			getRates(ego);
+			me.results(1).psth = psth;
+			getRates(me);
 			
-			if ego.doPlots 
-				plot(ego,'waves',ego.measureRange);
-				plot(ego,'psth'); 
+			if me.doPlots 
+				plot(me,'waves',me.measureRange);
+				plot(me,'psth'); 
 			end
 		end
 		
@@ -433,33 +435,33 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function density(ego)
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+		function density(me)
+			if me.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			ft_defaults;
-			sd = cell(1,length(ego.selectedTrials));
-			for j = 1:length(ego.selectedTrials)
+			sd = cell(1,length(me.selectedTrials));
+			for j = 1:length(me.selectedTrials)
 				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.winfunc			= ego.densityFunction;
-				cfg.timwin			= ego.densityWindow;
+				cfg.trials			= me.selectedTrials{j}.idx;
+				cfg.winfunc			= me.densityFunction;
+				cfg.timwin			= me.densityWindow;
 				cfg.fsample			= 1000; % sample at 1000 hz
 				cfg.outputunit		= 'rate';
-				cfg.latency			= ego.plotRange;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				sd{j}					= ft_spikedensity(cfg, ego.ft);
-				e						= ego.var2SE(sd{j}.var,sd{j}.dof);
+				cfg.latency			= me.plotRange;
+				cfg.spikechannel	= me.names{me.selectedUnit};
+				sd{j}					= ft_spikedensity(cfg, me.ft);
+				e						= me.var2SE(sd{j}.var,sd{j}.dof);
 				sd{j}.stderr		= e;
 				tCrit					= tinv( 0.975, sd{j}.dof );
 				et						= tCrit.*sqrt( sd{j}.var ./ sd{j}.dof ); 
 				sd{j}.stdterr		= et;
 			end
-			ego.results(1).sd = sd;
-			getRates(ego);
+			me.results(1).sd = sd;
+			getRates(me);
 			
 			
-			if ego.doPlots 
-				plot(ego,'waves',ego.measureRange);
-				plot(ego,'density'); 
+			if me.doPlots 
+				plot(me,'waves',me.measureRange);
+				plot(me,'density'); 
 			end
 		end
 		
@@ -469,19 +471,19 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ISI(ego)
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+		function ISI(me)
+			if me.nSelection == 0; error('The selection results in no valid trials to process!'); end
 			ft_defaults;
-			for j = 1:length(ego.selectedTrials)
+			for j = 1:length(me.selectedTrials)
 				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
+				cfg.trials			= me.selectedTrials{j}.idx;
 				cfg.bins				= [0:0.0005:0.1]; % use bins of 0.5 milliseconds;
 				cfg.param			= 'coeffvar'; % compute the coefficient of variation (sd/mn of isis)
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				isi{j}				= ft_spike_isi(cfg, ego.ft);
+				cfg.spikechannel	= me.names{me.selectedUnit};
+				isi{j}				= ft_spike_isi(cfg, me.ft);
 			end
-			ego.results.isi = isi;
-			if ego.doPlots; plot(ego,'isi'); end
+			me.results.isi = isi;
+			if me.doPlots; plot(me,'isi'); end
 		end
 		
 		% ===================================================================
@@ -490,28 +492,28 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function getRates(ego)
-			if isempty(ego.stats); ego.initialiseStats(); end
-			rate = cell(1,length(ego.selectedTrials));
+		function getRates(me)
+			if isempty(me.stats); me.initialiseStats(); end
+			rate = cell(1,length(me.selectedTrials));
 			baseline = rate;
-			for j = 1:length(ego.selectedTrials)
+			for j = 1:length(me.selectedTrials)
 				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
-				cfg.latency			= [ego.measureRange(1) ego.measureRange(2)]; % sustained response period
+				cfg.trials			= me.selectedTrials{j}.idx;
+				cfg.spikechannel	= me.names{me.selectedUnit};
+				cfg.latency			= [me.measureRange(1) me.measureRange(2)]; % sustained response period
 				cfg.keeptrials		= 'yes';
 				cfg.outputunit		= 'rate';
-				rate{j}				= ft_spike_rate(cfg,ego.ft);
-				rate{j}.CI			= bootci(ego.stats.nrand, {@mean, rate{j}.trial},'alpha',ego.stats.alpha);
-				rate{j}.alpha		= ego.stats.alpha;
+				rate{j}				= ft_spike_rate(cfg,me.ft);
+				rate{j}.CI			= bootci(me.stats.nrand, {@mean, rate{j}.trial},'alpha',me.stats.alpha);
+				rate{j}.alpha		= me.stats.alpha;
 					
-				cfg.latency			= ego.baselineWindow;
-				baseline{j}			= ft_spike_rate(cfg,ego.ft);
-				baseline{j}.CI		= bootci(ego.stats.nrand, {@mean, baseline{j}.trial},'alpha',ego.stats.alpha);
-				baseline{j}.alpha		= ego.stats.alpha;
+				cfg.latency			= me.baselineWindow;
+				baseline{j}			= ft_spike_rate(cfg,me.ft);
+				baseline{j}.CI		= bootci(me.stats.nrand, {@mean, baseline{j}.trial},'alpha',me.stats.alpha);
+				baseline{j}.alpha		= me.stats.alpha;
 			end
-			ego.results.rate = rate;
-			ego.results.baseline = baseline;
+			me.results.rate = rate;
+			me.results.baseline = baseline;
 		end
 		
 		% ===================================================================
@@ -520,15 +522,15 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ROC(ego)
-			getRates(ego);
-			dp = ego.results.rate{2}.trial;
-			dn = ego.results.rate{1}.trial;
-			scores = ego.formatByClass(dp,dn);
-			[tp,fp] = ego.roc(scores);
-			[A,Aci] = ego.auc(scores,0.05,'boot',1000,'type','bca');
-			p = ego.aucBootstrap(scores,2000,'both',0.5);
-			h=figure;set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
+		function ROC(me)
+			getRates(me);
+			dp = me.results.rate{2}.trial;
+			dn = me.results.rate{1}.trial;
+			scores = me.formatByClass(dp,dn);
+			[tp,fp] = me.roc(scores);
+			[A,Aci] = me.auc(scores,0.05,'boot',1000,'type','bca');
+			p = me.aucBootstrap(scores,2000,'both',0.5);
+			h=figure;set(h,'Color',[1 1 1],'Name',[me.file ' ' me.names{me.selectedUnit}]);
 			figpos(1,[1000 1000]);
 			plot(fp,tp); axis square
 			grid on; box on;
@@ -536,15 +538,15 @@ classdef spikeAnalysis < analysisCore
 			xlabel('False alarm rate');
 			ylabel('Hit rate');
 			t = sprintf('Time: %.2g - %.2g | AUC: %.2g %.2g<>%.2g | p=%.2g',...
-				ego.results.rate{2}.cfg.latency(1),...
-				ego.results.rate{2}.cfg.latency(2),...
+				me.results.rate{2}.cfg.latency(1),...
+				me.results.rate{2}.cfg.latency(2),...
 				A,Aci(1),Aci(2),p);
 			title(t);
-			ego.results.ROC.tp = tp;
-			ego.results.ROC.fp = fp;
-			ego.results.ROC.auc = A;
-			ego.results.ROC.aucCI = Aci;
-			ego.results.ROC.p = p;
+			me.results.ROC.tp = tp;
+			me.results.ROC.fp = fp;
+			me.results.ROC.auc = A;
+			me.results.ROC.aucCI = Aci;
+			me.results.ROC.p = p;
 		end
 		
 		% ===================================================================
@@ -552,10 +554,10 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function nUnits = get.nUnits(ego)
+		function nUnits = get.nUnits(me)
 			nUnits = 0;
-			if isfield(ego.p.tsList,'nUnits')
-				nUnits = ego.p.tsList.nUnits;
+			if isfield(me.p.tsList,'nUnits')
+				nUnits = me.p.tsList.nUnits;
 			end	
 		end
 		
@@ -564,10 +566,10 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function nSelection = get.nSelection(ego)
+		function nSelection = get.nSelection(me)
 			nSelection = 0;
-			if ~isempty(ego.selectedTrials)
-				nSelection = length(ego.selectedTrials);
+			if ~isempty(me.selectedTrials)
+				nSelection = length(me.selectedTrials);
 			end	
 		end		
 		
@@ -576,10 +578,10 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function save(ego)
-			[~,f,~] = fileparts(ego.file);
+		function save(me)
+			[~,f,~] = fileparts(me.file);
 			name = ['SPIKE' f];
-			if ~isempty(ego.ft)
+			if ~isempty(me.ft)
 				name = [name '-ft'];
 			end
 			name = [name '.mat'];
@@ -587,7 +589,7 @@ classdef spikeAnalysis < analysisCore
 			if ischar(f) && ~isempty(f)
 				od = pwd;
 				cd(p);
-				spike = ego;
+				spike = me;
 				optimiseSize(spike.p);
 				save(f,'spike');
 				cd(od);
@@ -602,24 +604,24 @@ classdef spikeAnalysis < analysisCore
 		%> @param varargin
 		%> @return
 		% ===================================================================
-		function setFiles(ego, in)
+		function setFiles(me, in)
 			if isstruct(in)
 				f=fieldnames(in);
 				for i=1:length(f)
-					if isprop(ego,f{i})
-						try ego.(f{i}) = in.(f{i}); end
+					if isprop(me,f{i})
+						try me.(f{i}) = in.(f{i}); end
 					end
 				end
-				if isempty(ego.p)
-					ego.paths.oldDir = pwd;
-					cd(ego.dir);
-					ego.p = plxReader('file', ego.file, 'dir', ego.dir);
-					ego.p.name = ['^' ego.fullName '^'];
+				if isempty(me.p)
+					me.paths.oldDir = pwd;
+					cd(me.dir);
+					me.p = plxReader('file', me.file, 'dir', me.dir);
+					me.p.name = ['^' me.fullName '^'];
 				end
 				for i=1:length(f)
-					if isprop(ego.p,f{i})
+					if isprop(me.p,f{i})
 						try 
-							ego.p.(f{i}) = in.(f{i}); 
+							me.p.(f{i}) = in.(f{i}); 
 						catch
 							fprintf('---> spikeAnalysis setFiles: skipping %s\n',f{i});
 						end
@@ -635,7 +637,7 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function chSpectrum(ego)
+		function chSpectrum(me)
 			
 			
 		end
@@ -648,7 +650,7 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function findRepeats(ego)
+		function findRepeats(me)
 			
 			
 		end
@@ -659,34 +661,34 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function saccadeTimeVsResponse(ego)
-			if isempty(ego.gd)
-				ego.gd = getDensity();
+		function saccadeTimeVsResponse(me)
+			if isempty(me.gd)
+				me.gd = getDensity();
 			end
 			usez = false;
-			ego.gd.alpha = ego.stats.alpha;
+			me.gd.alpha = me.stats.alpha;
 			if usez
-				ego.gd.normaliseScatter = false;
+				me.gd.normaliseScatter = false;
 			else
-				ego.gd.normaliseScatter = true;
+				me.gd.normaliseScatter = true;
 			end
-			getRates(ego);
-			for j = 1:ego.nSelection
-				st=[ego.trial(ego.selectedTrials{j}.idx).firstSaccade]';
+			getRates(me);
+			for j = 1:me.nSelection
+				st=[me.trial(me.selectedTrials{j}.idx).firstSaccade]';
 				nanidx = isnan(st);
 				st(nanidx)=[];
 				if usez; st = zscore(st); end
-				rate = ego.results.rate{j}.trial;
+				rate = me.results.rate{j}.trial;
 				rate(nanidx) = [];
 				%rate = rate/max(rate);
 				if usez; rate = zscore(rate); end
-				t = ['SaccadeVsResponse ' num2str(ego.selectedTrials{j}.sel)];
+				t = ['SaccadeVsResponse ' num2str(me.selectedTrials{j}.sel)];
 				t = regexprep(t,'\s+','_');
-				ego.gd.columnlabels = {t};
-				ego.gd.legendtxt = {'Saccades','Spikes'};
-				ego.gd.x = st;
-				ego.gd.y = rate;
-				run(ego.gd);
+				me.gd.columnlabels = {t};
+				me.gd.legendtxt = {'Saccades','Spikes'};
+				me.gd.x = st;
+				me.gd.y = rate;
+				run(me.gd);
 			end
 		end
 		
@@ -696,7 +698,7 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function compareBaseline(ego)
+		function compareBaseline(me)
 
 		end
 		
@@ -706,8 +708,8 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plot(ego, varargin)
-			if isempty(ego.results);
+		function plot(me, varargin)
+			if isempty(me.results);
 				return
 			end
 			if isempty(varargin) || ~ischar(varargin{1})
@@ -724,15 +726,15 @@ classdef spikeAnalysis < analysisCore
 			
 			switch lower(sel)
 				case {'p','psth'}
-					plotPSTH(ego); drawnow;
+					plotPSTH(me); drawnow;
 				case {'d','density'}
-					plotDensity(ego); drawnow;
+					plotDensity(me); drawnow;
 				case {'ds','densitysummary'}
-					plotDensitySummary(ego); drawnow;
+					plotDensitySummary(me); drawnow;
 				case {'i','isi'}
-					plotISI(ego); drawnow;
+					plotISI(me); drawnow;
 				case {'w','waves','waveforms'}
-					plotWaveforms(ego,args); drawnow;
+					plotWaveforms(me,args); drawnow;
 			end
 		end
 		
@@ -743,27 +745,27 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function getChronuxSpikes(ego)
+		function getChronuxSpikes(me)
 			tft = tic;
-			ego.chronux = {};
-			for i = 1:ego.nSelection
-				idx = ego.selectedTrials{i}.idx;
+			me.chronux = {};
+			for i = 1:me.nSelection
+				idx = me.selectedTrials{i}.idx;
 				data = []; a = 1;
 				for j = idx
-					base = ego.spike{ego.selectedUnit}.trials{j}.base;
-					if ego.p.saccadeRealign && isfield(ego.spike{ego.selectedUnit}.trials{j},'firstSaccade')
-						fS = ego.spike{ego.selectedUnit}.trials{j}.firstSaccade;
-						data(a).times = ego.spike{ego.selectedUnit}.trials{j}.spikes' - (base+fS);
+					base = me.spike{me.selectedUnit}.trials{j}.base;
+					if me.p.saccadeRealign && isfield(me.spike{me.selectedUnit}.trials{j},'firstSaccade')
+						fS = me.spike{me.selectedUnit}.trials{j}.firstSaccade;
+						data(a).times = me.spike{me.selectedUnit}.trials{j}.spikes' - (base+fS);
 					else
-						data(a).times = ego.spike{ego.selectedUnit}.trials{j}.spikes' - base;
+						data(a).times = me.spike{me.selectedUnit}.trials{j}.spikes' - base;
 					end
-					data(a).times = data(a).times + (ego.spikeWindow+0.1); %annoyingly chronux doesn't handle negative spike times!!!!
+					data(a).times = data(a).times + (me.spikeWindow+0.1); %annoyingly chronux doesn't handle negative spike times!!!!
 					data(a).base = base;
-					data(a).variable = ego.spike{ego.selectedUnit}.trials{j}.variable;
-					data(a).index = ego.spike{ego.selectedUnit}.trials{j}.index;
+					data(a).variable = me.spike{me.selectedUnit}.trials{j}.variable;
+					data(a).index = me.spike{me.selectedUnit}.trials{j}.index;
 					a = a + 1;
 				end
-				ego.chronux{i} = data;
+				me.chronux{i} = data;
 			end
 			fprintf('Converting spikes to chronux format took %g ms\n',round(toc(tft)*1000));
 		end
@@ -780,69 +782,69 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function selectTrials(ego)	
-			if ego.yokedSelection == true %if we are yoked to another object, don't run this method
+		function selectTrials(me)	
+			if me.yokedSelection == true %if we are yoked to another object, don't run this method
 				return
 			end
 			
-			cutidx = ego.cutTrials; %cut trials index
+			cutidx = me.cutTrials; %cut trials index
 			
 			saccidx = [];
-			if ~isempty(ego.filterFirstSaccades)
-				idx = find([ego.trial.firstSaccade] >= ego.filterFirstSaccades(1));
-				idx2 = find([ego.trial.firstSaccade] <= ego.filterFirstSaccades(2));
+			if ~isempty(me.filterFirstSaccades)
+				idx = find([me.trial.firstSaccade] >= me.filterFirstSaccades(1));
+				idx2 = find([me.trial.firstSaccade] <= me.filterFirstSaccades(2));
 				saccidx = intersect(idx,idx2);
 			end
 			
 			roiidx = [];
-			if ~isempty(ego.ROI)
-				idx = [ego.p.eA.ROIInfo.enteredROI] == logical(ego.ROI(4));
-				rois = ego.p.eA.ROIInfo(idx);
+			if ~isempty(me.ROI)
+				idx = [me.p.eA.ROIInfo.enteredROI] == logical(me.ROI(4));
+				rois = me.p.eA.ROIInfo(idx);
 				roiidx = [rois.correctedIndex];
 			end	
 
 			toiidx = [];
-			if ~isempty(ego.TOI)
-				idx = [ego.p.eA.TOIInfo.isTOI] == true;
-				tois = ego.p.eA.TOIInfo(idx);
+			if ~isempty(me.TOI)
+				idx = [me.p.eA.TOIInfo.isTOI] == true;
+				tois = me.p.eA.TOIInfo(idx);
 				toiidx = [tois.correctedIndex];
 			end
 			
-			if length(ego.selectedBehaviour) ~= length(ego.map)
+			if length(me.selectedBehaviour) ~= length(me.map)
 				error('Index error for behaviours');
 			end
 			
-			for i = 1:length(ego.selectedBehaviour) %generate our selected behaviour indexes
-				switch lower(ego.selectedBehaviour{i})
+			for i = 1:length(me.selectedBehaviour) %generate our selected behaviour indexes
+				switch lower(me.selectedBehaviour{i})
 					case {'c', 'correct'}
-						behaviouridx{i} = find([ego.trial.isCorrect]==true); %#ok<*AGROW>
+						behaviouridx{i} = find([me.trial.isCorrect]==true); %#ok<*AGROW>
 						selectedBehaviour{i} = 'correct';
 					case {'b', 'breakfix'}
-						behaviouridx{i} = find([ego.trial.isBreak]==true);
+						behaviouridx{i} = find([me.trial.isBreak]==true);
 						selectedBehaviour{i} = 'breakfix';
 					case {'i', 'incorrect'}
-						behaviouridx{i} = find([ego.trial.isIncorrect]==true);
+						behaviouridx{i} = find([me.trial.isIncorrect]==true);
 						selectedBehaviour{i} = 'incorrect';						
 					otherwise
-						behaviouridx{i} = [ego.trial.index];
+						behaviouridx{i} = [me.trial.index];
 						selectedBehaviour{i} = 'all';
 				end
 			end
 			
-			if isempty(ego.map{1}) %if our map is empty, generate groups for each variable
+			if isempty(me.map{1}) %if our map is empty, generate groups for each variable
 				bidx = behaviouridx{1};
 				sb = selectedBehaviour{1};
-				for i = 1:ego.event.nVars; 
-					map{i} = ego.event.unique(i); 
+				for i = 1:me.event.nVars; 
+					map{i} = me.event.unique(i); 
 					behaviouridx{i} = bidx;
 					selectedBehaviour{i} = sb;
 				end
 			else
-				map = ego.map; %#ok<*PROP>
+				map = me.map; %#ok<*PROP>
 			end
 	
-			ego.selectedTrials = {};
-			varList = [ego.trial.variable];
+			me.selectedTrials = {};
+			varList = [me.trial.variable];
 			a = 1;
 			for i = 1:length(map)
 				if isempty(map{i}); continue; end
@@ -858,24 +860,24 @@ classdef spikeAnalysis < analysisCore
 				if ~isempty(roiidx);		idx = intersect(idx, roiidx);		end %remove roi filtered trials
 				if ~isempty(toiidx);		idx = intersect(idx, toiidx);		end %remove roi filtered trials
 				if ~isempty(idx)
-					ego.selectedTrials{a}.idx			= idx;
-					ego.selectedTrials{a}.cutidx		= cutidx;
-					ego.selectedTrials{a}.roiidx		= roiidx; 
-					ego.selectedTrials{a}.toiidx		= toiidx;
-					ego.selectedTrials{a}.saccidx		= saccidx;
-					ego.selectedTrials{a}.bidx			= bidx;
-					ego.selectedTrials{a}.behaviour	= selectedBehaviour{i};
-					ego.selectedTrials{a}.sel			= map{i};
-					ego.selectedTrials{a}.name			= ['[' num2str(ego.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
-					if isfield(ego.stats,'sort') && ~isempty(ego.stats.sort)
-						switch ego.stats.sort
+					me.selectedTrials{a}.idx			= idx;
+					me.selectedTrials{a}.cutidx		= cutidx;
+					me.selectedTrials{a}.roiidx		= roiidx; 
+					me.selectedTrials{a}.toiidx		= toiidx;
+					me.selectedTrials{a}.saccidx		= saccidx;
+					me.selectedTrials{a}.bidx			= bidx;
+					me.selectedTrials{a}.behaviour	= selectedBehaviour{i};
+					me.selectedTrials{a}.sel			= map{i};
+					me.selectedTrials{a}.name			= ['[' num2str(me.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
+					if isfield(me.stats,'sort') && ~isempty(me.stats.sort)
+						switch me.stats.sort
 							case 'saccades'
-								st = [ego.trial(idx).firstSaccade];
+								st = [me.trial(idx).firstSaccade];
 								mn = nanmean(st);
 								st(isnan(st)) = mn;
 								[~,stidx] = sort(st);
-								ego.selectedTrials{a}.idx = idx(stidx);
-								ego.selectedTrials{a}.sort = 'saccades';
+								me.selectedTrials{a}.idx = idx(stidx);
+								me.selectedTrials{a}.sort = 'saccades';
 							case 'variable'
 
 						end					
@@ -884,11 +886,11 @@ classdef spikeAnalysis < analysisCore
 				end
 			end
 			
-			if ego.nSelection == 0; warndlg('The selection results in no valid trials to process!'); return; end
-			for j = 1:ego.nSelection
+			if me.nSelection == 0; warndlg('The selection results in no valid trials to process!'); return; end
+			for j = 1:me.nSelection
 				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n-Cut Index: %s\nBehaviour: %s\n',...
-					j,ego.selectedTrials{j}.name,num2str(ego.selectedTrials{j}.idx),num2str(ego.selectedTrials{j}.cutidx),...
-					ego.selectedTrials{j}.behaviour);
+					j,me.selectedTrials{j}.name,num2str(me.selectedTrials{j}.idx),num2str(me.selectedTrials{j}.cutidx),...
+					me.selectedTrials{j}.behaviour);
 			end
 		end
 		
@@ -897,53 +899,53 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotDensity(ego)
-			if ~isfield(ego.results,'sd'); warning('No Density parsed yet.'); return; end
+		function plotDensity(me)
+			if ~isfield(me.results,'sd'); warning('No Density parsed yet.'); return; end
 			disp('Plotting Density Data...')
 			fs = get(0,'DefaultAxesFontSize');
-			sd = ego.results.sd;
-			rate = ego.results.rate;
-			baseline = ego.results.baseline;
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			h=figure;set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
+			sd = me.results.sd;
+			rate = me.results.rate;
+			baseline = me.results.baseline;
+			if me.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			h=figure;set(h,'Color',[1 1 1],'Name',[me.file ' ' me.names{me.selectedUnit}]);
 			if length(sd) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
 			p.fontsize = fs;
 			p.margin = [12 12 12 6]; %left bottom right top
 			p.pack('v', {3/4 []})
 			q = p(1);
-			len = ego.nSelection;
-			[row,col]=ego.optimalLayout(len);
+			len = me.nSelection;
+			[row,col]=me.optimalLayout(len);
 			q.pack(row,col);
-			for j = 1:length(ego.selectedTrials)
+			for j = 1:length(me.selectedTrials)
 				[i1,i2] = ind2sub([row,col], j);
 				q(i1,i2).select();
 				cfg					= [];
-				cfg.trials			= ego.selectedTrials{j}.idx;
-				cfg.spikechannel	= ego.names{ego.selectedUnit};
+				cfg.trials			= me.selectedTrials{j}.idx;
+				cfg.spikechannel	= me.names{me.selectedUnit};
 				if length(cfg.trials) < 50; cfg.spikelength = 0.7; else cfg.spikelength = 1; end
-				cfg.latency			= ego.plotRange;
+				cfg.latency			= me.plotRange;
 				cfg.trialborders	= 'no';
 				cfg.linewidth		= 1;
 				cfg.plotselection	= 'yes';
 				cfg.topplotfunc	= 'line'; % plot as a line
 				cfg.errorbars		= 'conf95%'; % plot with the standard deviation
 				cfg.interactive	= 'no'; % toggle off interactive mode
-				if ego.insetRasterPlot
-					cfgUsed{j}		= ft_spike_plot_raster(cfg, ego.ft, sd{j});
+				if me.insetRasterPlot
+					cfgUsed{j}		= ft_spike_plot_raster(cfg, me.ft, sd{j});
 				else
-					cfgUsed{j}		= ft_spike_plot_raster(cfg, ego.ft);
+					cfgUsed{j}		= ft_spike_plot_raster(cfg, me.ft);
 				end
-				q(i1,i2).title([ego.names{ego.selectedUnit} ' VAR: ' num2str(j)])
+				q(i1,i2).title([me.names{me.selectedUnit} ' VAR: ' num2str(j)])
 				if isfield(cfgUsed{j}.hdl,'axTopPlot'); set(cfgUsed{j}.hdl.axTopPlot,'Color','none'); end
-				ego.appendTrialNames(cfgUsed{j}.hdl.axRaster,cfgUsed{j}.trials);
+				me.appendTrialNames(cfgUsed{j}.hdl.axRaster,cfgUsed{j}.trials);
 			end
 			
 			p(2).select();
 			p(2).marginbottom = 2; %left bottom right top
 			box on;grid on
 			p(2).hold('on');
-			c = ego.optimalColours(length(sd));
+			c = me.optimalColours(length(sd));
 			
 			xp = [rate{1}.cfg.latency(1) rate{1}.cfg.latency(2) rate{1}.cfg.latency(2) rate{1}.cfg.latency(1)];
 			yp = [nanmean(sd{1}.avg) nanmean(sd{1}.avg) nanmean(sd{1}.avg) nanmean(sd{1}.avg)];
@@ -952,7 +954,7 @@ classdef spikeAnalysis < analysisCore
 			
 			blineText = sprintf('BASELINE (p=%.4g):',baseline{1}.alpha);
 			for j = 1:length(baseline)
-				xp = [ego.plotRange(1) ego.plotRange(2) ego.plotRange(2) ego.plotRange(1)];
+				xp = [me.plotRange(1) me.plotRange(2) me.plotRange(2) me.plotRange(1)];
 				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
 				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
 				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
@@ -960,9 +962,9 @@ classdef spikeAnalysis < analysisCore
 			end
 			disp(blineText);
 			
-			t = [ego.file];
+			t = [me.file];
 			for j = 1:length(sd)
-				if isfield(ego.stats,'ploterror') && strcmpi(ego.stats.ploterror,'SEM')
+				if isfield(me.stats,'ploterror') && strcmpi(me.stats.ploterror,'SEM')
 					e = sd{j}.stderr;
 					yt='Firing Rate (s/s) \pm 1 S.E.M.';
 				else
@@ -970,8 +972,8 @@ classdef spikeAnalysis < analysisCore
 					yt='Firing Rate (s/s) \pm 95% CI';
 				end
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
-				leg{j,1} = ego.selectedTrials{j}.name;
-				e = ego.var2SE(rate{j}.var,rate{j}.dof);
+				leg{j,1} = me.selectedTrials{j}.name;
+				e = me.var2SE(rate{j}.var,rate{j}.dof);
 				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
@@ -981,8 +983,8 @@ classdef spikeAnalysis < analysisCore
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			ax=axis;
-			axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
-			text(ego.plotRange(1),ax(3),blineText,'FontSize',fs+1,'VerticalAlignment','baseline');
+			axis([me.plotRange(1) me.plotRange(2) ax(3) ax(4)]);
+			text(me.plotRange(1),ax(3),blineText,'FontSize',fs+1,'VerticalAlignment','baseline');
 			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
 			set(gca,'Layer','top');
 		end
@@ -992,14 +994,14 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotDensitySummary(ego)
-			if ~isfield(ego.results,'sd'); warning('No Density parsed yet.'); return; end
+		function plotDensitySummary(me)
+			if ~isfield(me.results,'sd'); warning('No Density parsed yet.'); return; end
 			disp('Plotting Density Data...')
-			sd = ego.results.sd;
-			rate = ego.results.rate;
-			baseline = ego.results.baseline;
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
+			sd = me.results.sd;
+			rate = me.results.rate;
+			baseline = me.results.baseline;
+			if me.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			h=figure;figpos(1,[1000 1000]);set(h,'Color',[1 1 1],'Name',[me.file ' ' me.names{me.selectedUnit}]);
 			box on
 			grid on
 			hold on
@@ -1009,11 +1011,11 @@ classdef spikeAnalysis < analysisCore
 			mh = patch(xp,yp,[0.9 0.9 0.9],'FaceAlpha',0.6,'EdgeColor','none');
 			set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			
-			c = ego.optimalColours(length(sd));
+			c = me.optimalColours(length(sd));
 			
 			blineText = sprintf('BASELINE (p=%.4g):',baseline{1}.alpha);
 			for j = 1:length(baseline)
-				xp = [ego.plotRange(1) ego.plotRange(2) ego.plotRange(2) ego.plotRange(1)];
+				xp = [me.plotRange(1) me.plotRange(2) me.plotRange(2) me.plotRange(1)];
 				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
 				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
 				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
@@ -1021,12 +1023,12 @@ classdef spikeAnalysis < analysisCore
 			end
 			disp(blineText);
 			
-			t = [ego.file];
+			t = [me.file];
 			for j = 1:length(sd)
-				e = ego.var2SE(sd{j}.var,sd{j}.dof);
+				e = me.var2SE(sd{j}.var,sd{j}.dof);
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
-				leg{j,1} = ego.selectedTrials{j}.name;
-				e = ego.var2SE(rate{j}.var,rate{j}.dof);
+				leg{j,1} = me.selectedTrials{j}.name;
+				e = me.var2SE(rate{j}.var,rate{j}.dof);
 				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
@@ -1036,8 +1038,8 @@ classdef spikeAnalysis < analysisCore
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			ax=axis;
-			axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
-			text(ego.plotRange(1),ax(3),blineText,'FontSize',11,'VerticalAlignment','baseline');
+			axis([me.plotRange(1) me.plotRange(2) ax(3) ax(4)]);
+			text(me.plotRange(1),ax(3),blineText,'FontSize',11,'VerticalAlignment','baseline');
 			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
 			set(gca,'Layer','top');
 		end
@@ -1047,49 +1049,49 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotPSTH(ego)
-			if ~isfield(ego.results,'psth'); warning('No PSTH parsed yet.'); return; end
-			psth = ego.results.psth;
-			rate = ego.results.rate;
-			baseline = ego.results.baseline;
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
+		function plotPSTH(me)
+			if ~isfield(me.results,'psth'); warning('No PSTH parsed yet.'); return; end
+			psth = me.results.psth;
+			rate = me.results.rate;
+			baseline = me.results.baseline;
+			if me.nSelection == 0; error('The selection results in no valid trials to process!'); end
 
-			h=figure;set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
+			h=figure;set(h,'Color',[1 1 1],'Name',[me.file ' ' me.names{me.selectedUnit}]);
 			if length(psth) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
 			p.margin = [20 20 20 10]; %left bottom right top
 			p.pack('v', {3/4 []})
 			q = p(1);
-			len = ego.nSelection;
-			[row,col]=ego.optimalLayout(len);
+			len = me.nSelection;
+			[row,col]=me.optimalLayout(len);
 			q.pack(row,col);
-			for j = 1:length(ego.selectedTrials)
-				%ft = ego.subselectFieldTripTrials(ego.ft,ego.selectedTrials{j}.idx);
+			for j = 1:length(me.selectedTrials)
+				%ft = me.subselectFieldTripTrials(me.ft,me.selectedTrials{j}.idx);
 				[i1,i2] = ind2sub([row,col], j);
 				q(i1,i2).select();
 				cfg						= [];
-				cfg.trials				= ego.selectedTrials{j}.idx;
-				cfg.spikechannel		= ego.names{ego.selectedUnit};
+				cfg.trials				= me.selectedTrials{j}.idx;
+				cfg.spikechannel		= me.names{me.selectedUnit};
 				if length(cfg.trials) < 50; cfg.spikelength = 0.7; else cfg.spikelength = 1; end
-				cfg.latency				= ego.plotRange;
+				cfg.latency				= me.plotRange;
 				cfg.linewidth			= 1;
 				cfg.trialborders		= 'no';
 				cfg.plotselection		= 'yes';
 				%cfg.topplotfunc		= 'line'; % plot as a line
 				cfg.errorbars			= 'conf95%'; % plot with the standard deviation
 				cfg.interactive		= 'no'; % toggle off interactive mode
-				if ego.insetRasterPlot
-					cfgUsed{j}			= ft_spike_plot_raster(cfg, ego.ft, psth{j});
+				if me.insetRasterPlot
+					cfgUsed{j}			= ft_spike_plot_raster(cfg, me.ft, psth{j});
 				else
-					cfgUsed{j}			= ft_spike_plot_raster(cfg, ego.ft);
+					cfgUsed{j}			= ft_spike_plot_raster(cfg, me.ft);
 				end
 				if isfield(cfgUsed{j}.hdl,'axTopPlot'); set(cfgUsed{j}.hdl.axTopPlot,'Color','none'); end
-				ego.appendTrialNames(cfgUsed{j}.hdl.axRaster,cfgUsed{j}.trials);
+				me.appendTrialNames(cfgUsed{j}.hdl.axRaster,cfgUsed{j}.trials);
 			end
 			p(2).select();
 			box on; grid on
 			p(2).hold('on');
-			c = ego.optimalColours(length(psth));
+			c = me.optimalColours(length(psth));
 			
 			xp = [rate{1}.cfg.latency(1) rate{1}.cfg.latency(2) rate{1}.cfg.latency(2) rate{1}.cfg.latency(1)];
 			yp = [nanmean(psth{1}.avg) nanmean(psth{1}.avg) nanmean(psth{1}.avg) nanmean(psth{1}.avg)];
@@ -1097,18 +1099,18 @@ classdef spikeAnalysis < analysisCore
 			set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			
 			for j = 1:length(baseline)
-				xp = [ego.plotRange(1) ego.plotRange(2) ego.plotRange(2) ego.plotRange(1)];
+				xp = [me.plotRange(1) me.plotRange(2) me.plotRange(2) me.plotRange(1)];
 				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
 				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
 				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			end
 			
-			t = [ego.file];
+			t = [me.file];
 			for j = 1:length(psth)
-				e = ego.var2SE(psth{j}.var,psth{j}.dof);
+				e = me.var2SE(psth{j}.var,psth{j}.dof);
 				areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
-				leg{j,1} = ego.selectedTrials{j}.name;
-				e = ego.var2SE(rate{j}.var,rate{j}.dof);
+				leg{j,1} = me.selectedTrials{j}.name;
+				e = me.var2SE(rate{j}.var,rate{j}.dof);
 				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
@@ -1119,7 +1121,7 @@ classdef spikeAnalysis < analysisCore
 			set(gcf,'Renderer','OpenGL');
 			legend(leg);
 			ax=axis;
-			axis([ego.plotRange(1) ego.plotRange(2) ax(3) ax(4)]);
+			axis([me.plotRange(1) me.plotRange(2) ax(3) ax(4)]);
 			set(mh,'yData',[ax(3) ax(3) ax(4) ax(4)]);
 			set(gca,'Layer','top');
 		end
@@ -1129,17 +1131,17 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotISI(ego)
-			if ~isfield(ego.results,'isi'); warning('No ISI parsed yet.'); return; end
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			isi = ego.results.isi;
-			len = ego.nSelection;
-			h=figure;figpos(1,[1000 2000]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
+		function plotISI(me)
+			if ~isfield(me.results,'isi'); warning('No ISI parsed yet.'); return; end
+			if me.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			isi = me.results.isi;
+			len = me.nSelection;
+			h=figure;figpos(1,[1000 2000]);set(h,'Color',[1 1 1],'Name',[me.file ' ' me.names{me.selectedUnit}]);
 			p=panel(h);
 			p.margin = [20 20 20 20]; %left bottom right top
-			[row,col]=ego.optimalLayout(len);
+			[row,col]=me.optimalLayout(len);
 			p.pack(row,col);
-			for j = 1:length(ego.selectedTrials)
+			for j = 1:length(me.selectedTrials)
 				[i1,i2] = ind2sub([row,col], j);
 				p(i1,i2).select();
 				cfg					= [];
@@ -1150,7 +1152,7 @@ classdef spikeAnalysis < analysisCore
 				cfg.colormap		= jet(300); % colormap
 				cfg.scatter			= 'no'; % do not plot the individual isis per spike as scatters
 				ft_spike_plot_isireturn(cfg,isi{j})
-				p(i1,i2).title([ego.selectedTrials{j}.name ' ' ego.file]);
+				p(i1,i2).title([me.selectedTrials{j}.name ' ' me.file]);
 			end
 		end
 		
@@ -1159,31 +1161,31 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotWaveforms(ego,timeWindow)
+		function plotWaveforms(me,timeWindow)
 			if ~exist('timeWindow','var') || isempty(timeWindow)
-				timeWindow = ego.plotRange;
+				timeWindow = me.plotRange;
 			elseif iscell(timeWindow) 
 				while iscell(timeWindow);timeWindow=timeWindow{1};end
 			end
-			if ego.nSelection == 0; error('The selection results in no valid trials to process!'); end
-			if ~isfield(ego.spike{1}.trials{1},'waves')
+			if me.nSelection == 0; error('The selection results in no valid trials to process!'); end
+			if ~isfield(me.spike{1}.trials{1},'waves')
 				warning('No waveform data present, nothing to plot...')
 				return
 			end
 			fs = get(0,'DefaultAxesFontSize');
-			h=figure;figpos(2,[1600 600]);set(h,'Color',[1 1 1],'Name',[ego.file ' ' ego.names{ego.selectedUnit}]);
+			h=figure;figpos(2,[1600 600]);set(h,'Color',[1 1 1],'Name',[me.file ' ' me.names{me.selectedUnit}]);
 			p=panel(h);
 			p.fontsize = fs-1;
 			p.margin = [10 8 12 8]; %left bottom right top
-			[row,col]=ego.optimalLayout(ego.nSelection);
+			[row,col]=me.optimalLayout(me.nSelection);
 			p.pack(col,row);
-			for j = 1:length(ego.selectedTrials)
+			for j = 1:length(me.selectedTrials)
 				[i1,i2] = ind2sub([col,row], j);
 				p(i1,i2).select();
-				idx				= ego.selectedTrials{j}.idx;
-				map				= ego.optimalColours(length(idx));
-				name				= [ego.names{ego.selectedUnit} ' ' ego.selectedTrials{j}.name '| time:' num2str(timeWindow)];
-				s					= ego.spike{ego.selectedUnit};
+				idx				= me.selectedTrials{j}.idx;
+				map				= me.optimalColours(length(idx));
+				name				= [me.names{me.selectedUnit} ' ' me.selectedTrials{j}.name '| time:' num2str(timeWindow)];
+				s					= me.spike{me.selectedUnit};
 				len				= length(s.trials);
 				t					= [s.trials{idx}]; %extract our trials
 				if ~isfield(t,'waves')
@@ -1223,7 +1225,7 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function appendTrialNames(ego,hdl,idx)
+		function appendTrialNames(me,hdl,idx)
 			
 			axis(hdl);
 			xpos = xlim;
@@ -1234,24 +1236,24 @@ classdef spikeAnalysis < analysisCore
 				cs{j} = num2str(idx(j));
 				y(j) = j;
 				x(j) = xpos(2) + abs(((xpos(2)-xpos(1))/100));
-				if isfield(ego.trial(idx(1)),'microSaccades')
-					mS = ego.trial(idx(j)).microSaccades;
-					if ego.p.saccadeRealign == true
-						mS = mS - ego.trial(idx(j)).firstSaccade;
+				if isfield(me.trial(idx(1)),'microSaccades')
+					mS = me.trial(idx(j)).microSaccades;
+					if me.p.saccadeRealign == true
+						mS = mS - me.trial(idx(j)).firstSaccade;
 					end
 					mS(isnan(mS))=[];
 					if ~isempty(mS)
-						mS1 = mS( mS >= ego.baselineWindow(1) & mS <= ego.baselineWindow(2));
-						mS2 = mS( mS >= 0 & mS <= ego.measureRange(2));
+						mS1 = mS( mS >= me.baselineWindow(1) & mS <= me.baselineWindow(2));
+						mS2 = mS( mS >= 0 & mS <= me.measureRange(2));
 						nMS1 = nMS1 + length(mS1);
 						nMS2 = nMS2 + length(mS2);
 						plot(mS, y(j), 'ro', 'MarkerFaceColor', 'none', 'MarkerSize', 4);
 					end
 				end
 			end
-			if isfield(ego.trial(idx(1)),'firstSaccade')
-				st = [ego.trial(idx).firstSaccade];
-				if ego.p.saccadeRealign == true
+			if isfield(me.trial(idx(1)),'firstSaccade')
+				st = [me.trial(idx).firstSaccade];
+				if me.p.saccadeRealign == true
 					st = st - st;
 				end
 				yt = 1:length(st);
@@ -1274,25 +1276,183 @@ classdef spikeAnalysis < analysisCore
 		end
 		
 		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function makeUI(me, varargin)
+			if ~isempty(me.handles) && isfield(me.handles,'hbox') && isa(me.handles.hbox,'uix.HBoxFlex')
+				fprintf('---> UI already open!\n');
+				me.openUI = true;
+				return
+			end
+			embedMode = false; %check if LFPAnalysis wants us to embed in its figure?
+			while iscell(varargin); varargin = varargin{1}; end
+			if isa(varargin,'uix.Panel')
+				parent = varargin;
+				embedMode = true;
+			end
+			if ~exist('parent','var')
+				parent = figure('Tag','Spike Analysis',...
+					'Name', ['Spike Analysis: ' me.fullName], ...
+					'MenuBar', 'none', ...
+					'CloseRequestFcn', @me.closeUI,...
+					'NumberTitle', 'off');
+				figpos(1,[1200 600])
+			end
+			me.handles(1).parent = parent;
+			
+			%make context menu
+			hcmenu = uicontextmenu;
+			uimenu(hcmenu,'Label','Select','Callback',@me.select,'Accelerator','e');
+			uimenu(hcmenu,'Label','Plot','Callback',@me.plot,'Accelerator','p');
+			
+			fs = 10;
+			SansFont = 'Helvetica';
+			MonoFont = 'Consolas';
+			bgcolor = [0.89 0.89 0.89];
+			bgcoloredit = [0.9 0.9 0.9];
+
+			handles.parent = me.handles.parent; %#ok<*PROP>
+			if embedMode == true
+				handles.root = handles.parent;
+			else
+				handles.root = uix.BoxPanel('Parent',parent,...
+					'Title','Spike Analysis UI',...
+					'FontName',SansFont,...
+					'FontSize',fs,...
+					'FontWeight','normal',...
+					'Padding',0,...
+					'TitleColor',[0.8 0.78 0.76],...
+					'BackgroundColor',bgcolor);
+			end
+			
+			handles.hbox = uix.HBoxFlex('Parent', handles.root,'Padding',0,...
+				'Spacing', 5, 'BackgroundColor', bgcolor);
+			handles.spikeinfo = uicontrol('Parent', handles.hbox,'Style','edit','Units','normalized',...
+				'BackgroundColor',[0.3 0.3 0.3],'ForegroundColor',[1 1 0],'Max',500,...
+				'FontSize',fs+1,'FontWeight','bold','FontName',SansFont,'HorizontalAlignment','left');
+
+			handles.controls = uix.VBoxFlex('Parent', handles.hbox,'Padding',0,'Spacing',0,'BackgroundColor',bgcolor);
+			handles.controls1 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',2,'BackgroundColor',bgcolor);
+			handles.controls2 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',0,'BackgroundColor',bgcolor);
+			
+			handles.parsebutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls1,...
+				'Tag','LFPAParse',...
+				'Tooltip','Parse All data',...
+				'FontSize', fs,...
+				'Callback',@me.parse,...
+				'String','Parse Spikes');
+			handles.reparsebutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls1,...
+				'Tag','LFPAReparse',...
+				'FontSize', fs,...
+				'Tooltip','Reparse should be a bit quicker',...
+				'Callback',@me.reparse,...
+				'String','Reparse Spikes');
+			handles.selectbutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls1,...
+				'Tag','LFPAselect',...
+				'FontSize', fs,...
+				'Tooltip','Select trials',...
+				'Callback',@me.select,...
+				'String','Select Trials');
+			handles.plotbutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls1,...
+				'Tag','LFPAplotbutton',...
+				'FontSize', fs,...
+				'Tooltip','Plot',...
+				'Callback',@me.plot,...
+				'String','Plot');
+			handles.statbutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls1,...
+				'Tag','LFPAstatbutton',...
+				'FontSize', fs,...
+				'Tooltip','Plot',...
+				'Callback',@me.setStats,...
+				'String','Analysis Stats Options');
+			handles.savebutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls1,...
+				'Tag','LFPAsave',...
+				'FontSize', fs,...
+				'Tooltip','Save this LFP Analysis object',...
+				'Callback',@me.save,...
+				'String','Save Analysis Object');
+			handles.saccbutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls1,...
+				'Tag','LMAsaccbutton',...
+				'FontSize', fs,...
+				'Tooltip','Toggle Saccade Realign',...
+				'Callback',@me.toggleSaccadeRealign,...
+				'String','Toggle Saccade Align');
+			handles.analmethod = uicontrol('Style','popupmenu',...
+				'Parent',handles.controls1,...
+				'FontSize', fs,...
+				'Tooltip','Select a method to run',...
+				'Callback',@runAnal,...
+				'Tag','LFPAanalmethod',...
+				'String',{'density','PSTH','ISI','ROC'});
+			
+			handles.list = uicontrol('Style','edit',...
+				'Parent',handles.controls2,...
+				'Tag','LMAlistbox',...
+				'Min',1,...
+				'Max',100,...
+				'FontSize',fs-1,...
+				'FontName',MonoFont,...
+				'String',{''},...
+				'uicontextmenu',hcmenu);
+			
+			set(handles.hbox,'Widths', [-1 -1]);
+			set(handles.controls,'Heights', [60 -1]);
+			set(handles.controls1,'Heights', [-1 -1]);
+			
+			me.handles = handles;
+			me.openUI = true;
+			
+			updateUI(me);
+			
+			function runAnal(src, ~)
+				if ~exist('src','var');	return; end
+				s = get(src,'String'); v = get(src,'Value'); s = s{v};
+				if me.nUnits > 0
+					eval(['me.' s])
+				end
+			end
+		end
+		
+		
+		% ===================================================================
 		%> @brief 
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function closeUI(me)
+		function closeUI(me, varargin)
 			try delete(me.handles.parent); end %#ok<TRYNC>
 			me.handles = struct();
 			me.openUI = false;
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief 
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function makeUI(me)
-			
+		function updateUI(me, varargin)
+			if me.openUI && isa(me.p,'plxReader')
+				if me.nUnits == 0
+					notifyUI(me,'You need to PARSE the data files first');
+				else
+					notifyUI(me,'Data seems to be parsed, try running an analysis');
+				end
+				fs = 10;
+				me.p.generateInfo;
+				set(me.handles.spikeinfo,'String',me.p.info,'FontSize',fs+1)
+			end
 		end
 		
 		% ===================================================================
@@ -1301,18 +1461,17 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function updateUI(me)
-			
-		end
-		
-		% ===================================================================
-		%> @brief 
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function notifyUI(me)
-			
+		function notifyUI(me, varargin)
+			if nargin > 2
+				info = sprintf(varargin{:});
+			elseif nargin == 1 && iscell(varargin)
+				info = varargin{1};
+			else
+				info = varargin;
+			end
+			if isa(me.handles.root,'uix.BoxPanel')
+				try set(me.handles.root,'Title',info); end
+			end
 		end
 	end
 end

@@ -3,8 +3,6 @@ classdef LFPMeta < analysisCore
 	properties
 		%verbosity
 		verbose = true;
-		%> various stats values in a structure for different analyses
-		options@struct
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -49,7 +47,6 @@ classdef LFPMeta < analysisCore
 			if isempty(me.name);me.name = 'LFPMeta'; end
 			
 			me.plotRange = [-0.35 0.35];
-			initialiseOptions(me);
 			makeUI(me);
 		end
 		
@@ -59,7 +56,7 @@ classdef LFPMeta < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function add(me,varargin)
+		function add(me, varargin)
 			[file,path]=uigetfile('*.mat','Meta-Analysis:Choose LFP source File','Multiselect','on');
 			if ~iscell(file) && ~ischar(file)
 				warning('Meta-Analysis Error: No File Specified')
@@ -123,7 +120,7 @@ classdef LFPMeta < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plot(me,varargin)
+		function plot(me, varargin)
 			if me.nSites > 0
 				tab = me.handles.axistabs.Selection;
 				sel = get(me.handles.list,'Value');
@@ -150,7 +147,7 @@ classdef LFPMeta < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plotSite(me,varargin)
+		function plotSite(me, varargin)
 			if me.nSites > 0
 				me.handles.axistabs.Selection = 1;
 				plot(me);
@@ -163,7 +160,7 @@ classdef LFPMeta < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function process(me,varargin)
+		function process(me, varargin)
 			if me.nSites > 0
 				am = get(me.handles.analmethod,'Value');
 				for i = 1: me.nSites
@@ -266,7 +263,7 @@ classdef LFPMeta < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function load(me,varargin)
+		function load(me, varargin)
 			[file,path]=uigetfile('*.mat','Meta-Analysis:Choose MetaAnalysis');
 			if ~ischar(file)
 				errordlg('No File Specified', 'Meta-Analysis Error');
@@ -287,9 +284,7 @@ classdef LFPMeta < analysisCore
 			end
 			
 			clear lfpmet
-			
 		end
-		
 		
 		% ===================================================================
 		%> @brief 
@@ -376,65 +371,24 @@ classdef LFPMeta < analysisCore
 			closeUI(me);
 		end
 		
-		% ===================================================================
-		%> @brief showInfo shows the info box for the plexon parsed data
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function options = setOptions(me, varargin)
-			initialiseOptions(me);
-			
-			mlist1={'fix1', 'fix2', 'mtm1','mtm2','morlet','tfr'};
-			mt = 'p';
-			for i = 1:length(mlist1)
-				if strcmpi(mlist1{i},me.options.method)
-					mt = [mt '|¤' mlist1{i}];
-				else
-					mt = [mt '|' mlist1{i}];
-				end
-			end
-			
-			mlist2={'no','relative','absolute','dB'};
-			bline = 'p';
-			for i = 1:length(mlist2)
-				if strcmpi(mlist2{i},me.options.bline)
-					bline = [bline '|¤' mlist2{i}];
-				else
-					bline = [bline '|' mlist2{i}];
-				end
-			end
-
-			mtitle   = ['Select Statistics Settings'];
-			options  = {[mt],'Main LFP Method (method):'; ...
-				[bline],'Baseline Correction (bline):'; ...
-				['t|' num2str(me.options.tw)],'LFP Time Window (tw):'; ...
-				['t|' num2str(me.options.cycles)],'LFP # Cycles (cycles):'; ...
-				['t|' num2str(me.options.smth)],'Smoothing Value (smth):'; ...
-				['t|' num2str(me.options.width)],'LFP Taper Width (width):'; ...
-				};
-			
-			answer = menuN(mtitle,options);
-			drawnow;
-			if iscell(answer) && ~isempty(answer)
-				me.options.method		= mlist1{answer{1}};
-				me.options.bline		= mlist2{answer{2}};
-				me.options.tw			= str2num(answer{3});
-				me.options.cycles		= str2num(answer{4});
-				me.options.smth		= str2num(answer{5});
-				me.options.width		= str2num(answer{6});
-			end
-			
-			options = me.options;
-			setStats(me);
-		end
-		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
 	methods (Hidden = true) %------------------Hidden METHODS
 	%=======================================================================
 	
+		% ===================================================================
+		%> @brief showInfo shows the info box for the plexon parsed data
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function setOptions(me, varargin)
+			initialiseTimeFreqOptions(me);
+			setTimeFreqOptions(me);
+			setStats(me);
+		end
+		
 		% ===================================================================
 		%> @brief
 		%>
@@ -541,33 +495,6 @@ classdef LFPMeta < analysisCore
 	%=======================================================================
 	methods (Access = protected) %------------------PRIVATE METHODS
 	%=======================================================================
-	
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function initialiseOptions(me)
-			if ~isfield(me.options,'method') || isempty(me.options.method)
-				me.options(1).method = 'fix1';
-			end
-			if ~isfield(me.options,'bline') || isempty(me.options.bline)
-				me.options(1).bline = 'no';
-			end
-			if ~isfield(me.options,'tw') || isempty(me.options.tw)
-				me.options(1).tw = 0.2;
-			end
-			if ~isfield(me.options,'cycles') || isempty(me.options.cycles)
-				me.options(1).cycles = 3;
-			end
-			if ~isfield(me.options,'smth') || isempty(me.options.smth)
-				me.options(1).smth = 0.3;
-			end
-			if ~isfield(me.options,'width') || isempty(me.options.width)
-				me.options(1).width = 7;
-			end
-		end
 		
 		% ===================================================================
 		%> @brief
