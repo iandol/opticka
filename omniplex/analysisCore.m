@@ -9,8 +9,6 @@ classdef analysisCore < optickaCore
 	properties
 		%> generate plots?
 		doPlots@logical = true
-		%> various stats values in a structure for different analyses
-		stats@struct
 		%> ± time window (s) for baseline estimation/removal
 		baselineWindow@double = [-0.2 0]
 		%> default range (s) to measure values from
@@ -71,11 +69,13 @@ classdef analysisCore < optickaCore
 			if nargin == 0; varargin.name = ''; end
 			me=me@optickaCore(varargin); %superclass constructor
 			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
-			initialiseStats(me);
+			initialiseOptions(me);
 		end
 		
 		% ===================================================================
-		%> @brief checkPaths
+		%> @brief checkPaths: if we've saved an object then load it on a new machine paths to
+		%> source files may be wrong. If so then allows us to find a new directory for the
+		%> source files.
 		%>
 		%> @param
 		%> @return
@@ -164,12 +164,12 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		function stats = setStats(me, varargin)
 			initialiseStats(me);
-			s=me.stats;
+			s=me.options.stats;
 			
 			mlist1={'analytic', 'montecarlo', 'stats'};
 			mt = 'p';
 			for i = 1:length(mlist1)
-				if strcmpi(mlist1{i},me.stats.method)
+				if strcmpi(mlist1{i},me.options.stats.method)
 					mt = [mt '|¤' mlist1{i}];
 				else
 					mt = [mt '|' mlist1{i}];
@@ -179,7 +179,7 @@ classdef analysisCore < optickaCore
 			mlist2={'indepsamplesT','indepsamplesF','indepsamplesregrT','indepsamplesZcoh','depsamplesT','depsamplesFmultivariate','depsamplesregrT','actvsblT','ttest','ttest2','anova1','kruskalwallis'};
 			statistic = 'p';
 			for i = 1:length(mlist2)
-				if strcmpi(mlist2{i},me.stats.statistic)
+				if strcmpi(mlist2{i},me.options.stats.statistic)
 					statistic = [statistic '|¤' mlist2{i}];
 				else
 					statistic = [statistic '|' mlist2{i}];
@@ -189,7 +189,7 @@ classdef analysisCore < optickaCore
 			mlist3={'no','cluster','bonferroni','holm','fdr','hochberg'};
 			mc = 'p';
 			for i = 1:length(mlist3)
-				if strcmpi(mlist3{i},me.stats.correctm)
+				if strcmpi(mlist3{i},me.options.stats.correctm)
 					mc = [mc '|¤' mlist3{i}];
 				else
 					mc = [mc '|' mlist3{i}];
@@ -199,7 +199,7 @@ classdef analysisCore < optickaCore
 			mlist4={'permutation','bootstrap'};
 			rs = 'p';
 			for i = 1:length(mlist4)
-				if strcmpi(mlist4{i},me.stats.resampling)
+				if strcmpi(mlist4{i},me.options.stats.resampling)
 					rs = [rs '|¤' mlist4{i}];
 				else
 					rs = [rs '|' mlist4{i}];
@@ -209,7 +209,7 @@ classdef analysisCore < optickaCore
 			mlist5={'-1','0','1'};
 			tail = 'p';
 			for i = 1:length(mlist5)
-				if strcmpi(mlist5{i},num2str(me.stats.tail))
+				if strcmpi(mlist5{i},num2str(me.options.stats.tail))
 					tail = [tail '|¤' mlist5{i}];
 				else
 					tail = [tail '|' mlist5{i}];
@@ -227,7 +227,7 @@ classdef analysisCore < optickaCore
 			mlist6={'no','linear','nan','pchip','cubic','spline'};
 			interp = 'p';
 			for i = 1:length(mlist6)
-				if strcmpi(mlist6{i},num2str(me.stats.interp))
+				if strcmpi(mlist6{i},num2str(me.options.stats.interp))
 					interp = [interp '|¤' mlist6{i}];
 				else
 					interp = [interp '|' mlist6{i}];
@@ -237,56 +237,56 @@ classdef analysisCore < optickaCore
 			mlist7={'SEM','95%'};
 			ploterror = 'p';
 			for i = 1:length(mlist7)
-				if strcmpi(mlist7{i},me.stats.ploterror)
+				if strcmpi(mlist7{i},me.options.stats.ploterror)
 					ploterror = [ploterror '|¤' mlist7{i}];
 				else
 					ploterror = [ploterror '|' mlist7{i}];
 				end
 			end
 			
-			mtitle   = ['Select Statistics Settings'];
-			options  = {['t|' num2str(s.alpha,6)],'Set the Statistical Alpha Value (alpha):'; ...
-				[mt],'Main LFP Statistical Method (method):'; ...
-				[statistic],'LFP Statistical Type (statistic):'; ...
-				[mc],'LFP Multiple Correction Methodology (correctm):'; ...
+			mtitle   = ['Global Statistics Settings'];
+			options  = {['t|' num2str(s.alpha,6)],'Global Alpha Value (alpha):'; ...
+				[mt],'FieldTrip Statistical Method (method):'; ...
+				[statistic],'FieldTrip Statistical Type (statistic):'; ...
+				[mc],'Multi-Sample Correction Method (correctm):'; ...
 				[tail],'Tail [0 is a two-tailed test] (tail):'; ...
-				[rs],'LFP MonteCarlo Resampling Method (resampling):'; ...
-				['t|' num2str(s.nrand)],'Set # Resamples for LFP Monte Carlo Method (nrand):'; ...
+				[rs],'FieldTrip MonteCarlo Resampling Method (resampling):'; ...
+				['t|' num2str(s.nrand)],'Set # Resamples for Monte Carlo Method (nrand):'; ...
 				['t|' num2str(mr)],'Global Measurement Range (measureRange):'; ...
 				['t|' num2str(bw)],'Global Baseline Window (baselineWindow):'; ...
 				[interp],'Interpolation Method for Spike-LFP Interpolation?:'; ...
-				['t|' num2str(me.stats.interpw)],'Spike-LFP Interpolation Window (s):'; ...
-				['t|' num2str(me.stats.customFreq)],'LFP Frequency Stats Custom Frequency Band:'; ...
-				['t|' num2str(me.stats.smoothing,12)],'Smoothing Value to use for Curves:'; ...
+				['t|' num2str(me.options.stats.interpw)],'Spike-LFP Interpolation Window (s):'; ...
+				['t|' num2str(me.options.stats.customFreq)],'LFP Frequency Stats Custom Frequency Band:'; ...
+				['t|' num2str(me.options.stats.smoothing,12)],'Smoothing Value to use for Curves:'; ...
 				[ploterror],'Error data for Tuning Curves?:'; ...
-				['t|' num2str(me.stats.spikelfptaper)],'Spike LFP Taper Method:'; ...
-				['t|' num2str(me.stats.spikelfptaperopt)],'Spike LFP Taper Options [Cycles Smooth]:'; ...
-				['t|' num2str(me.stats.spikelfppcw)],'Spike LFP PPC Window [Size Step]:'; ...
+				['t|' num2str(me.options.stats.spikelfptaper)],'Spike LFP Taper Method:'; ...
+				['t|' num2str(me.options.stats.spikelfptaperopt)],'Spike LFP Taper Options [Cycles Smooth]:'; ...
+				['t|' num2str(me.options.stats.spikelfppcw)],'Spike LFP PPC Window [Size Step]:'; ...
 				};
 			
 			answer = menuN(mtitle,options);
 			drawnow;
 			if iscell(answer) && ~isempty(answer)
-				me.stats.alpha = str2num(answer{1});
-				me.stats.method = mlist1{answer{2}};
-				me.stats.statistic = mlist2{answer{3}};
-				me.stats.correctm = mlist3{answer{4}};
-				me.stats.tail = str2num(mlist5{answer{5}});
-				me.stats.resampling = mlist4{answer{6}};
-				me.stats.nrand = str2num(answer{7});
+				me.options.stats.alpha = str2num(answer{1});
+				me.options.stats.method = mlist1{answer{2}};
+				me.options.stats.statistic = mlist2{answer{3}};
+				me.options.stats.correctm = mlist3{answer{4}};
+				me.options.stats.tail = str2num(mlist5{answer{5}});
+				me.options.stats.resampling = mlist4{answer{6}};
+				me.options.stats.nrand = str2num(answer{7});
 				if isprop(me,'measureRange'); me.measureRange = str2num(answer{8}); end
 				if isprop(me,'baselineWindow'); me.baselineWindow = str2num(answer{9}); end
-				me.stats.interp = mlist6{answer{10}};
-				me.stats.interpw = str2num(answer{11});
-				me.stats.customFreq = str2num(answer{12});
-				me.stats.smoothing = eval(answer{13});
-				me.stats.ploterror = mlist7{answer{14}};
-				me.stats.spikelfptaper = answer{15};
-				me.stats.spikelfptaperopt = str2num(answer{16});
-				me.stats.spikelfppcw = str2num(answer{17});
+				me.options.stats.interp = mlist6{answer{10}};
+				me.options.stats.interpw = str2num(answer{11});
+				me.options.stats.customFreq = str2num(answer{12});
+				me.options.stats.smoothing = eval(answer{13});
+				me.options.stats.ploterror = mlist7{answer{14}};
+				me.options.stats.spikelfptaper = answer{15};
+				me.options.stats.spikelfptaperopt = str2num(answer{16});
+				me.options.stats.spikelfppcw = str2num(answer{17});
 			end
 			
-			stats = me.stats;
+			stats = me.options.stats;
 			
 		end
 		
@@ -351,7 +351,7 @@ classdef analysisCore < optickaCore
 		%> @return
 		% ===================================================================
 		function options = setTimeFreqOptions(me, varargin)
-			initialiseTimeFreqOptions(me);
+			initialiseOptions(me);
 			
 			mlist1={'fix1', 'fix2', 'mtm1','mtm2','morlet','tfr'};
 			mt = 'p';
@@ -462,7 +462,7 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ==================================================================
-		%> @brief find nearest value in a vector
+		%> @brief find nearest value in a vector, if more than 1 index return the first
 		%>
 		%> @param in input vector
 		%> @param value value to find
@@ -471,20 +471,21 @@ classdef analysisCore < optickaCore
 		%> @return delta the difference between val and value
 		% ==================================================================
 		function [idx,val,delta]=findNearest(in,value)
-			tmp = abs(in-value);
-			[~,idx] = min(tmp);
+			%find nearest value in a vector, if more than 1 index return the first	
+			[~,idx] = min(abs(in - value));
 			val = in(idx);
 			delta = abs(value - val);
 		end
 		
 		% ===================================================================
-		%> @brief variance to standard eror
+		%> @brief convert variance to standard error
 		%>
 		%> @param var variance
 		%> @param dof degrees of freedom
 		%> @return err standard error
 		% ===================================================================
 		function err = var2SE(var,dof)
+			%convert variance to standard error
 			err = sqrt(var ./ dof);
 		end
 		
@@ -495,6 +496,7 @@ classdef analysisCore < optickaCore
 		%> @return col number of columns
 		% ===================================================================
 		function [row,col] = optimalLayout(len)
+			%calculates preferred row col layout for multiple plots
 			row=1; col=1;
 			if			len == 2,	row = 2;	col = 1;
 			elseif	len == 3,	row = 3;	col = 1;
@@ -518,6 +520,7 @@ classdef analysisCore < optickaCore
 		%> @param
 		% ===================================================================
 		function colors = optimalColours(n_colors,bg,func)
+			%make optimally different colours for plots
 			if (nargin < 2)
 				bg = [1 1 1];  % default white background
 			else
@@ -618,9 +621,13 @@ classdef analysisCore < optickaCore
 	%=======================================================================
 	methods ( Abstract = true, Access = protected ) %-------Abstract METHODS-----%
 	%=======================================================================
+		%> make the UI for the analysis object
 		makeUI(me)
+		%> close the UI for the analysis object
 		closeUI(me)
+		%> update the UI for the analysis object
 		updateUI(me)
+		%> modify text of the UI for the analysis object
 		notifyUI(me, varargin)
 	end %---END Abstract METHODS---%
 	
@@ -629,12 +636,13 @@ classdef analysisCore < optickaCore
 	%=======================================================================
 	
 		% ===================================================================
-		%> @brief
+		%> @brief initialise settings for fieldtrip time frequency analysis
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function initialiseTimeFreqOptions(me)
+		function initialiseOptions(me)
+			%initialise settings for fieldtrip time frequency analysis
 			if ~isfield(me.options,'method') || isempty(me.options.method)
 				me.options(1).method = 'fix1';
 			end
@@ -653,13 +661,22 @@ classdef analysisCore < optickaCore
 			if ~isfield(me.options,'width') || isempty(me.options.width)
 				me.options(1).width = 7;
 			end
+			%initialise settings for stats analysis
+			if ~isfield(me.options,'stats') || isempty(me.options.stats)
+				me.options(1).stats = struct();
+				initialiseStats(me);
+			end
 		end
+		
 		% ===================================================================
-		%> @brief Allows two analysis objects to share a single plxReader object
+		%> @brief Allows two analysis objects to share a single plxReader object. This is
+		%> important in cases where for e.g. an LFPAnalysis object uses the same plexon file as
+		%> its spikeAnalysis child used for spike-LFP anaysis.
 		%>
 		%> @param
 		% ===================================================================
 		function inheritPlxReader(me,p)
+			%Allows two analysis objects to share a single plxReader object
 			if exist('p','var') && isa(p,'plxReader')
 				if isprop(me,'p')
 					me.p = p;
@@ -669,7 +686,8 @@ classdef analysisCore < optickaCore
 		
 		% ===================================================================
 		%> @brief set trials / var parsing from outside, override dialog, used when
-		%> yoked to another analysis object
+		%> yoked to another analysis object, for example when spikeAnalysis is a child of
+		%> LFPAnalysis
 		%>
 		%> @param in structure
 		%> @return
@@ -702,8 +720,8 @@ classdef analysisCore < optickaCore
 			if isfield(in,'baselineWindow') && isprop(me,'baselineWindow')
 				me.baselineWindow = in.baselineWindow;
 			end
-			if isfield(in,'alpha') && isfield(me.stats,'alpha')
-				me.stats.alpha = in.alpha;
+			if isfield(in,'alpha') && isfield(me.options.stats,'alpha')
+				me.options.stats.alpha = in.alpha;
 			end
 			if isfield(in,'selectedBehaviour') && isprop(me,'selectedBehaviour')
 				if ischar(in.selectedBehaviour)
@@ -720,59 +738,62 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief initialise the statistics options, see setStats()
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
 		function initialiseStats(me)
-			if ~isfield(me.stats,'alpha') || isempty(me.stats.alpha)
-				me.stats(1).alpha = 0.05;
+			%initialise the statistics options
+			if isempty(me.options); initialiseOptions(me); end
+			if ~isfield(me.options, 'stats'); me.options.stats(1) = struct(); end
+			if ~isfield(me.options.stats,'alpha') || isempty(me.options.stats.alpha)
+				me.options.stats(1).alpha = 0.05;
 			end
-			if ~isfield(me.stats,'method') || isempty(me.stats.method)
-				me.stats(1).method = 'analytic';
+			if ~isfield(me.options.stats,'method') || isempty(me.options.stats.method)
+				me.options.stats(1).method = 'analytic';
 			end
-			if ~isfield(me.stats,'statistic') || isempty(me.stats.statistic)
-				me.stats(1).statistic = 'indepsamplesT';
+			if ~isfield(me.options.stats,'statistic') || isempty(me.options.stats.statistic)
+				me.options.stats(1).statistic = 'indepsamplesT';
 			end
-			if ~isfield(me.stats,'correctm') || isempty(me.stats.correctm)
-				me.stats(1).correctm = 'no';
+			if ~isfield(me.options.stats,'correctm') || isempty(me.options.stats.correctm)
+				me.options.stats(1).correctm = 'no';
 			end
-			if ~isfield(me.stats,'nrand') || isempty(me.stats.nrand)
-				me.stats(1).nrand = 1000;
+			if ~isfield(me.options.stats,'nrand') || isempty(me.options.stats.nrand)
+				me.options.stats(1).nrand = 1000;
 			end
-			if ~isfield(me.stats,'tail') || isempty(me.stats.tail)
-				me.stats(1).tail = 0;
+			if ~isfield(me.options.stats,'tail') || isempty(me.options.stats.tail)
+				me.options.stats(1).tail = 0;
 			end
-			if ~isfield(me.stats,'parameter') || isempty(me.stats.parameter)
-				me.stats(1).parameter = 'trial';
+			if ~isfield(me.options.stats,'parameter') || isempty(me.options.stats.parameter)
+				me.options.stats(1).parameter = 'trial';
 			end
-			if ~isfield(me.stats,'resampling') || isempty(me.stats.resampling)
-				me.stats(1).resampling = 'permutation';
+			if ~isfield(me.options.stats,'resampling') || isempty(me.options.stats.resampling)
+				me.options.stats(1).resampling = 'permutation';
 			end
-			if ~isfield(me.stats,'interp') || isempty(me.stats.interp)
-				me.stats(1).interp = 'linear';
+			if ~isfield(me.options.stats,'interp') || isempty(me.options.stats.interp)
+				me.options.stats(1).interp = 'linear';
 			end
-			if ~isfield(me.stats,'interpw') || isempty(me.stats.interpw)
-				me.stats(1).interpw = [-0.001 0.004];
+			if ~isfield(me.options.stats,'interpw') || isempty(me.options.stats.interpw)
+				me.options.stats(1).interpw = [-0.001 0.004];
 			end
-			if ~isfield(me.stats,'customFreq') || isempty(me.stats.customFreq)
-				me.stats(1).customFreq = [60 70];
+			if ~isfield(me.options.stats,'customFreq') || isempty(me.options.stats.customFreq)
+				me.options.stats(1).customFreq = [60 70];
 			end
-			if ~isfield(me.stats,'smoothing') || isempty(me.stats.smoothing)
-				me.stats(1).smoothing = 0;
+			if ~isfield(me.options.stats,'smoothing') || isempty(me.options.stats.smoothing)
+				me.options.stats(1).smoothing = 0;
 			end
-			if ~isfield(me.stats,'ploterror') || isempty(me.stats.ploterror)
-				me.stats(1).ploterror = 'SEM';
+			if ~isfield(me.options.stats,'ploterror') || isempty(me.options.stats.ploterror)
+				me.options.stats(1).ploterror = 'SEM';
 			end
-			if ~isfield(me.stats,'spikelfptaper') || isempty(me.stats.spikelfptaper)
-				me.stats(1).spikelfptaper = 'dpss';
+			if ~isfield(me.options.stats,'spikelfptaper') || isempty(me.options.stats.spikelfptaper)
+				me.options.stats(1).spikelfptaper = 'dpss';
 			end
-			if ~isfield(me.stats,'spikelfptaperopt') || isempty(me.stats.spikelfptaperopt)
-				me.stats(1).spikelfptaperopt = [3 0.3];
+			if ~isfield(me.options.stats,'spikelfptaperopt') || isempty(me.options.stats.spikelfptaperopt)
+				me.options.stats(1).spikelfptaperopt = [3 0.3];
 			end
-			if ~isfield(me.stats,'spikelfppcw') || isempty(me.stats.spikelfppcw)
-				me.stats(1).spikelfppcw = [0.2 0.02];
+			if ~isfield(me.options.stats,'spikelfppcw') || isempty(me.options.stats.spikelfppcw)
+				me.options.stats(1).spikelfppcw = [0.2 0.02];
 			end
 		end
 		

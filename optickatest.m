@@ -18,7 +18,7 @@
 % receptive fields and generate drawn hand maps.
 %
 % The source of this file can be found at:
-% <https://github.com/iandol/opticka/blob/master/runtest.m>
+% <https://github.com/iandol/opticka/blob/master/optickatest.m>
 
 %% Initial clear up of previous runs
 % Make sure we start in a clean environment, not essential

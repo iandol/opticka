@@ -1,19 +1,18 @@
-#Opticka Stimulus Generator {#mainpage}
-[![DOI](https://zenodo.org/badge/4521/iandol/opticka.png)](http://dx.doi.org/10.5281/zenodo.11080)
+# Opticka Stimulus Generator ![DOI](https://zenodo.org/badge/4521/iandol/opticka.png)](http://dx.doi.org/10.5281/zenodo.11080)
 Opticka Stimulus Generator is an object oriented framework with optional GUI for the [Psychophysics toolbox (PTB)](http://psychtoolbox.org/wikka.php?wakka=HomePage), allowing randomised interleaved presentation of complex visual stimuli. It is designed to work on OS X, Windows or Linux, and interfaces via strobed words (using either a DataPixx [15bit] or a LabJack [11bit]) and ethernet with a Plexon Omniplex for recording neurophysiological data. The communication class can send TTLs and strobed words out to other equipment types. Behavioural control uses the Eyelink eye tracker and a full behavioural repertoire is available by using [State-Machine](http://144.82.131.18/optickadocs/classstate_machine.html#details) logic. Opticka uses the TCP interface to the Eyelink affording much better control and reliability over using analog voltages alone. The various base classes can be used without the need to run the GUI (see [optickatest.m](http://144.82.131.18/optickadocs/optickatest.html) for an example), and stimuli provide a unified interface (setup, animate, draw, update, reset) to integrate into existing PTB routines. The various object methods take care of all the background geometry and normalization, meaning stimuli are much easier to use than “raw” PTB. Full analysis routines are also present for taking the raw Plexon files (.PLX or .PL2), Eyelink files (.EDF) and behavioural responses and parsing them into a consistent structure, interfacing directly with [Fieldtrip](http://fieldtrip.fcdonders.nl/start) for further spike, LFP, and spike-LFP analysis. The data structures also allow the use of Jonathan Victor's [STA toolkit](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2818590/), and [nStat toolbox](http://www.neurostat.mit.edu/nstat/) (a pp-GLM modelling approach to analysing neural data).  
 
 
 ![Opticka Screenshot](http://i41.tinypic.com/qrdik1.png)
 
-#Quick Documentation
+# Quick Documentation
 optickatest.m is a self-documenting minimal toy example showing a mini experiment with 10 different stimuli. Read the Matlab-generated HTML for ``optickatest.m`` here: [optickatest.m Report](http://144.82.131.18/optickadocs/optickatest.html).
 There is also auto-generated class documentation here: [Opticka Class Docs](http://144.82.131.18/optickadocs/inherits.html), however this is only as good as the comments in the code, which as always could be improved...
 
-#Install Instructions
+# Install Instructions
 Opticka prefers the latest Psychophysics Toolbox (V3.0.12) and at least Matlab 2010a. It has been tested and is mostly used on 64bit OS X 10.10.x & Matlab 2014b (which is great update BTW). You can simply download the .ZIP from Github, and add the contents/subdirectories to Matlab path. Or if you have git installed, clone this Github repo and add to Matlab path.
 
 Opticka should currently be working both on OS X, Linux and Windows, though the LabJack control of the Omniplex currently only works under OS X and Linux (only a few days work to make it work under windows, if need be). I'm not really testing under Windows/Linux as much as in OS X. Linux is the preferred OS for PTB according the Mario Kleiner at the moment, but problems with the Eyelink Libraries keep us on OS X for the moment.
-##Features
+## Features
  * Values are always given in eye-relevant co-ordinates (degrees etc.) that are internally calculated based on screen geometry/distance
  * No limit on the number of independent variables, and variables can be linked to multiple stimuli.
  * A state machine logic can run behavioural tasks driven by for e.g. eye position or behavioural response.

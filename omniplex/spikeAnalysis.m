@@ -137,6 +137,7 @@ classdef spikeAnalysis < analysisCore
 			checkPaths(me);
 			me.paths.oldDir = pwd;
 			cd(me.dir);
+			fprintf('\n<strong>§§</strong> Parsing Spike data denovo...\n')
 			me.p.eventWindow = me.spikeWindow;
 			parse(me.p);
 			me.trial = me.p.eventList.trials;
@@ -159,6 +160,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function reparse(me, varargin)
+			fprintf('\n<strong>§§</strong> Reparsing Spike data...\n')
 			me.p.eventWindow = me.spikeWindow;
 			me.trial = struct([]); me.event = struct([]);
 			reparse(me.p);
@@ -197,6 +199,7 @@ classdef spikeAnalysis < analysisCore
 			checkPaths(me);
 			me.paths.oldDir = pwd;
 			cd(me.dir);
+			fprintf('<strong>§</strong> Lazy parsing spike data...\n')
 			me.p.eventWindow = me.spikeWindow;
 			lazyParse(me.p);
 			me.trial = me.p.eventList.trials;
@@ -220,7 +223,6 @@ classdef spikeAnalysis < analysisCore
 				me.p.eA.TOI = me.TOI;
 				parseTOI(me.p.eA);
 			end
-			disp('Lazy spike parsing finished...')
 		end
 		
 		% ===================================================================
@@ -229,7 +231,10 @@ classdef spikeAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function toggleSaccadeRealign(me)
+		function toggleSaccadeRealign(me, varargin)
+			if me.yokedSelection == true;
+				warning('This spikeAnalysis object is currently locked, toggle its parent LFPAnalysis object'); return;
+			end
 			me.p.saccadeRealign = ~me.p.saccadeRealign;
 			doPlots = me.doPlots;
 			me.doPlots = false;
@@ -493,7 +498,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function getRates(me)
-			if isempty(me.stats); me.initialiseStats(); end
+			if isempty(me.options.stats); me.initialiseStats(); end
 			rate = cell(1,length(me.selectedTrials));
 			baseline = rate;
 			for j = 1:length(me.selectedTrials)
@@ -504,13 +509,13 @@ classdef spikeAnalysis < analysisCore
 				cfg.keeptrials		= 'yes';
 				cfg.outputunit		= 'rate';
 				rate{j}				= ft_spike_rate(cfg,me.ft);
-				rate{j}.CI			= bootci(me.stats.nrand, {@mean, rate{j}.trial},'alpha',me.stats.alpha);
-				rate{j}.alpha		= me.stats.alpha;
+				rate{j}.CI			= bootci(me.options.stats.nrand, {@mean, rate{j}.trial},'alpha',me.options.stats.alpha);
+				rate{j}.alpha		= me.options.stats.alpha;
 					
 				cfg.latency			= me.baselineWindow;
 				baseline{j}			= ft_spike_rate(cfg,me.ft);
-				baseline{j}.CI		= bootci(me.stats.nrand, {@mean, baseline{j}.trial},'alpha',me.stats.alpha);
-				baseline{j}.alpha		= me.stats.alpha;
+				baseline{j}.CI		= bootci(me.options.stats.nrand, {@mean, baseline{j}.trial},'alpha',me.options.stats.alpha);
+				baseline{j}.alpha		= me.options.stats.alpha;
 			end
 			me.results.rate = rate;
 			me.results.baseline = baseline;
@@ -666,7 +671,7 @@ classdef spikeAnalysis < analysisCore
 				me.gd = getDensity();
 			end
 			usez = false;
-			me.gd.alpha = me.stats.alpha;
+			me.gd.alpha = me.options.stats.alpha;
 			if usez
 				me.gd.normaliseScatter = false;
 			else
@@ -767,7 +772,7 @@ classdef spikeAnalysis < analysisCore
 				end
 				me.chronux{i} = data;
 			end
-			fprintf('Converting spikes to chronux format took %g ms\n',round(toc(tft)*1000));
+			fprintf('<strong>§</strong> Converting spikes to chronux format took <strong>%g ms</strong>\n',round(toc(tft)*1000));
 		end
 		
 	end
@@ -869,8 +874,8 @@ classdef spikeAnalysis < analysisCore
 					me.selectedTrials{a}.behaviour	= selectedBehaviour{i};
 					me.selectedTrials{a}.sel			= map{i};
 					me.selectedTrials{a}.name			= ['[' num2str(me.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
-					if isfield(me.stats,'sort') && ~isempty(me.stats.sort)
-						switch me.stats.sort
+					if isfield(me.options.stats,'sort') && ~isempty(me.options.stats.sort)
+						switch me.options.stats.sort
 							case 'saccades'
 								st = [me.trial(idx).firstSaccade];
 								mn = nanmean(st);
@@ -964,7 +969,7 @@ classdef spikeAnalysis < analysisCore
 			
 			t = [me.file];
 			for j = 1:length(sd)
-				if isfield(me.stats,'ploterror') && strcmpi(me.stats.ploterror,'SEM')
+				if isfield(me.options.stats,'ploterror') && strcmpi(me.options.stats.ploterror,'SEM')
 					e = sd{j}.stderr;
 					yt='Firing Rate (s/s) \pm 1 S.E.M.';
 				else

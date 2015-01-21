@@ -166,7 +166,7 @@ classdef LFPMeta < analysisCore
 				for i = 1: me.nSites
 					notifyUI(me,sprintf('Reprocessing the timelock/frequency analysis for site %i',i));
 					me.raw{i}.doPlots = false;
-					me.raw{i}.stats = me.stats;
+					me.raw{i}.stats = me.options.stats;
 					me.raw{i}.baselineWindow = me.baselineWindow;
 					me.raw{i}.measureRange = me.measureRange;
 					me.raw{i}.plotRange = me.plotRange;
@@ -202,7 +202,7 @@ classdef LFPMeta < analysisCore
 				for i = 1: me.nSites
 					
 					me.raw{i}.doPlots = false;
-					me.raw{i}.stats = me.stats;
+					me.raw{i}.stats = me.options.stats;
 					me.raw{i}.baselineWindow = me.baselineWindow;
 					me.raw{i}.measureRange = me.measureRange;
 					me.raw{i}.plotRange = me.plotRange;

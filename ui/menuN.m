@@ -103,8 +103,6 @@ function choice = menuN(mtitle,options,Opt)
 %
 %
 % Author: Johan Winges
-
-fs = 10;
 % if feature('HGUsingMatlabClasses')
 % 	if ismac
 % 		[s,c]=system('system_profiler SPDisplaysDataType');
@@ -116,9 +114,10 @@ fs = 10;
 % 	end
 % end
 %% Set up default Opt struct:
+fs = 11;
 defOpt = struct();
 defOpt.fontName               = 'menlo';
-defOpt.subtitleFontSize       = fs-1;
+defOpt.subtitleFontSize       = fs+1;
 defOpt.pushbuttonFontSize     = fs;
 defOpt.popupmenuFontSize      = fs;
 defOpt.radiobuttonFontSize    = fs;
@@ -128,9 +127,10 @@ defOpt.checkboxFontSize       = fs;
 defOpt.sliderFontSize         = fs;
 defOpt.sliderStepsFraction    = [0.01,0.1];
 defOpt.okButtonLabel          = 'ACCEPT';
-defOpt.pixelHeigthUIcontrol   = 20;
-defOpt.pixelPaddingHeigth     = [8,   5]; % [bottom/top, between uicontrols]
-defOpt.pixelPaddingWidth      = [6,   4]; % [bottom/top, between uicontrols]
+defOpt.labelPadding				= -4;
+defOpt.pixelHeightUIcontrol   = 18;
+defOpt.pixelPaddingHeigth     = [2,   4]; % [bottom/top, between uicontrols]
+defOpt.pixelPaddingWidth      = [5,   1]; % [width, between uicontrols]
 defOpt.InsteadOfPushUse       = 'p';      % p = popupmenu, r = radiobuttons
 
 % Check for opt input:
@@ -161,7 +161,7 @@ extentWidthUniversal          = 300;   % It is increased/decreased when necessar
 extentWidthUniversalMin       = 300;   % Minimum allowed width of uicontrols
 
 extentWidthSliderMin          = 100;
-extentHeigthTextInPadding     = 0;
+extentHeightTextInPadding     = 0;
 extentHeigthTextPadding       = 2;
 extentWidthTextInPadding      = 40;
 
@@ -356,7 +356,7 @@ for idxOptions = numOptionsGroups:-1:1
             tmpExtent(3)+extentWidthCheckboxInPadding);
          tmpNewSize  = [tmpExtentWidthMaxChild, ...
             tmpExtent(4) + extentHeigthCheckboxInPadding];
-			if tmpNewSize(2) < defOpt.pixelHeigthUIcontrol; tmpNewSize(2) = defOpt.pixelHeigthUIcontrol; end
+			if tmpNewSize(2) < defOpt.pixelHeightUIcontrol; tmpNewSize(2) = defOpt.pixelHeightUIcontrol; end
          % Update size of uicontrol:
          set(hObjects{idxObjects},'Position',[tmpCurrentPositionChild,tmpNewSize]);   
          % Update current position Y coordinate:
@@ -431,7 +431,7 @@ for idxOptions = numOptionsGroups:-1:1
             tmpExtent(3)+extentWidthRadiobuttonInPadding);
          tmpNewSize  = [tmpExtentWidthMaxChild, ...
             tmpExtent(4) + extentHeigthRadiobuttonInPadding];
-			if tmpNewSize(2) < defOpt.pixelHeigthUIcontrol; tmpNewSize(2) = defOpt.pixelHeigthUIcontrol; end
+			if tmpNewSize(2) < defOpt.pixelHeightUIcontrol; tmpNewSize(2) = defOpt.pixelHeightUIcontrol; end
          % Update size of uicontrol:
          set(hObjects{idxObjects},'Position',[tmpCurrentPositionChild,tmpNewSize]);   
          % Update current position Y coordinate:
@@ -501,7 +501,7 @@ for idxOptions = numOptionsGroups:-1:1
       extentWidthUniversal   = max(extentWidthUniversal, ...
          tmpExtent(3)+extentWidthPopupmenuInPadding);
       tmpNewSize  = [extentWidthUniversal, tmpExtent(4)];
-		if tmpNewSize(2) < defOpt.pixelHeigthUIcontrol; tmpNewSize(2) = defOpt.pixelHeigthUIcontrol; end
+		if tmpNewSize(2) < defOpt.pixelHeightUIcontrol; tmpNewSize(2) = defOpt.pixelHeightUIcontrol; end
       % Update size of uicontrol:
       set(hOptions{idxOptions},'Position',[tmpCurrentPosition,tmpNewSize]);   
       % Update current position Y coordinate:
@@ -540,7 +540,7 @@ for idxOptions = numOptionsGroups:-1:1
       extentWidthUniversal   = max(extentWidthUniversal, ...
          tmpExtent(3)+extentWidthPopupmenuInPadding);
       tmpNewSize  = [extentWidthUniversal, tmpExtent(4)];
-		if tmpNewSize(2) < defOpt.pixelHeigthUIcontrol; tmpNewSize(2) = defOpt.pixelHeigthUIcontrol; end
+		if tmpNewSize(2) < defOpt.pixelHeightUIcontrol; tmpNewSize(2) = defOpt.pixelHeightUIcontrol; end
       % Update size of uicontrol:
       set(hOptions{idxOptions},'Position',[tmpCurrentPosition,tmpNewSize]);   
       % Update current position Y coordinate:
@@ -608,7 +608,7 @@ for idxOptions = numOptionsGroups:-1:1
          'Position',    tmpPosition);
       % Check actual necessary size:
       tmpExtentText = get( hSliderGroup{1} ,'extent');
-      tmpNecessaryHeight = tmpExtentText(4) + extentHeigthTextInPadding;
+      tmpNecessaryHeight = tmpExtentText(4) + extentHeightTextInPadding;
       
       hSliderGroup{2}      = uicontrol( ...
          'Style',       'Slider',...
@@ -658,15 +658,16 @@ for idxOptions = numOptionsGroups:-1:1
          'String',      subtitles{idxOptions},...
          'Position',    tmpPosition,...
          'HorizontalAlignment', 'left');
+		uistack(hSubtitle{idxOptions},'bottom')
       
       % Check actual necessary size:
       tmpExtent = get(hSubtitle{idxOptions},'extent');
       extentWidthUniversal   = max(extentWidthUniversal, ...
          tmpExtent(3));
-      tmpNewSize  = [extentWidthUniversal, tmpExtent(4) + extentHeigthTextInPadding];
+      tmpNewSize  = [extentWidthUniversal, tmpExtent(4) + extentHeightTextInPadding];
       % Update size of uicontrol:
       set(hSubtitle{idxOptions},'Position',[tmpCurrentPosition(1)+Opt.pixelPaddingWidth(2),...
-         tmpCurrentPosition(2),tmpNewSize]);   
+         tmpCurrentPosition(2)+Opt.labelPadding,tmpNewSize]);   
       % Update current position Y coordinate:
       tmpCurrentPosition(2) = tmpCurrentPosition(2) + tmpNewSize(2) + ...
          extentHeigthTextPadding + Opt.pixelPaddingHeigth(2);

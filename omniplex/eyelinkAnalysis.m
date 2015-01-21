@@ -132,7 +132,7 @@ classdef eyelinkAnalysis < analysisCore
 				fprintf('\n');
 				cd(oldpath)
 			end
-			fprintf('Loading Raw EDF Data took %g ms\n',round(toc*1000));
+			fprintf('<strong>§</strong> Loading Raw EDF Data took <strong>%g ms</strong>\n',round(toc*1000));
 		end
 		
 		% ===================================================================
@@ -157,7 +157,7 @@ classdef eyelinkAnalysis < analysisCore
 			
 			me.isParsed = true;
 			
-			fprintf('\tOverall Parsing of EDF Trials took %g ms\n',round(toc(tmain)*1000));
+			fprintf('\tOverall Parsing of EDF Trials took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
 		end
 		
 		% ===================================================================
@@ -513,7 +513,7 @@ classdef eyelinkAnalysis < analysisCore
 				me.ROIInfo(i).breakFix = me.trials(i).breakFix;
 				me.ROIInfo(i).incorrect = me.trials(i).incorrect;
 			end
-			fprintf('Parsing ROI took %g ms\n', round(toc(tROI)*1000))
+			fprintf('<strong>§</strong> Parsing eyelink region of interest (ROI) took <strong>%g ms</strong>\n', round(toc(tROI)*1000))
 		end
 		
 		% ===================================================================
@@ -571,7 +571,7 @@ classdef eyelinkAnalysis < analysisCore
 				me.TOIInfo(i).breakFix = me.trials(i).breakFix;
 				me.TOIInfo(i).incorrect = me.trials(i).incorrect;
 			end
-			fprintf('Parsing TOI took %g ms\n', round(toc(tTOI)*1000))
+			fprintf('<strong>§</strong> Parsing eyelink time of interest (TOI) took <strong>%g ms</strong>\n', round(toc(tTOI)*1000))
 		end
 		
 		% ===================================================================
@@ -1511,7 +1511,7 @@ classdef eyelinkAnalysis < analysisCore
 					getReport(ME)
 				end
 			end
-			fprintf('Parsing MicroSaccades took %g ms\n', round(toc*1000))
+			fprintf('<strong>§</strong> Parsing MicroSaccades took <strong>%g ms</strong>\n', round(toc*1000))
 				
 			function v = vecvel(xx,SAMPLING,TYPE)
 				%------------------------------------------------------------

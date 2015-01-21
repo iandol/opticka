@@ -1,5 +1,9 @@
 classdef LFPAnalysis < analysisCore
-	%LFPAnalysis Wraps the native and fieldtrip analysis around our PLX/PL2 reading.
+	%> LFPAnalysis Wraps native and fieldtrip analysis around our 
+	%> PLX/PL2 reading, taking our trial selection and behavioural 
+	%> selection into account. As we can do spike-LFP anaysis this asks for a
+	%> spike data file, it can be the same as the LFP file or different if we resorted
+	%> the data. 
 	
 	%------------------PUBLIC PROPERTIES----------%
 	properties
@@ -12,8 +16,8 @@ classdef LFPAnalysis < analysisCore
 		%> remove the mean voltage offset from the individual trials?
 		demeanLFP@logical = true
 		%> default LFP channel
-		selectedLFP@double = 1
-		%> time window around the trigger
+		selectedLFP@int8 = int8(1)
+		%> time window around the trigger we wish to load
 		LFPWindow@double = 0.8
 		%> default behavioural type
 		selectedBehaviour@cell = {'correct'}
@@ -24,8 +28,8 @@ classdef LFPAnalysis < analysisCore
 	%------------------DEPENDENT PROPERTIES--------%
 	properties (SetAccess = protected, Dependent = true)
 		%> number of LFP channels
-		nLFPs@double = 0
-		%> number of LFP channels
+		nLFPs@int8 = int8(0)
+		%> selected LFP channel
 		nSelection@double = 0
 	end
 	
@@ -35,20 +39,23 @@ classdef LFPAnalysis < analysisCore
 		p@plxReader
 		%> spike analysis object
 		sp@spikeAnalysis
-		%> parsed LFPs
+		%> trial parsed LFPs
 		LFPs@struct
-		%> fieldtrip parsed data
+		%> fieldtrip structure parsed from .LFPs
 		ft@struct
 		%> fieldtrip parsed results
 		results@struct
 		%> selectedTrials: each cell is a trial list grouping
 		selectedTrials@cell
-		%> trials to remove in reparsing
-		cutTrials@double
-		%> variable selection map for 3 analysis groups
+		%> trials to remove in reparsing. Our raw data plot allows us to visually remove
+		%> trials, we can also call fieldtrip preprocessing code too.
+		cutTrials@int32
+		%> variable selection map for the analysis groups
 		map@cell
 		%> external plot destination handle (see LFPMeta for an example)
 		plotDestination = [];
+		%> last freq method used
+		lastFrequencyMethod@char
 	end
 	
 	%------------------HIDDEN PROPERTIES----------%
@@ -61,7 +68,7 @@ classdef LFPAnalysis < analysisCore
 	
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
-		%> allowed properties passed to object upon construction
+		%> allowed properties passed to object upon construction, see parseArgs
 		allowedProperties@char = 'lfpfile|spikefile|dir|demeanLFP|selectedLFP|LFPWindow|selectedBehaviour|verbose'
 	end
 	
@@ -72,7 +79,7 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		%> @brief Constructor
 		%>
-		%> @param varargin
+		%> @param varargin see parseArgs for more details
 		%> @return
 		% ===================================================================
 		function me = LFPAnalysis(varargin)
@@ -86,7 +93,7 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		%> @brief getFiles loads the requisite files before parsing
 		%>
-		%> @param varargin
+		%> @param force force us to ask for new filenames
 		%> @return
 		% ===================================================================
 		function getFiles(me, force)
@@ -142,6 +149,7 @@ classdef LFPAnalysis < analysisCore
 				getFiles(me,true);
 				if isempty(me.lfpfile);return;end
 			end
+			fprintf('\n<strong>§§</strong> Parsing all LFP data from raw plexon files denovo...\n')
 			checkPaths(me);
 			me.yokedSelection = false;
 			me.paths.oldDir = pwd;
@@ -157,6 +165,7 @@ classdef LFPAnalysis < analysisCore
 			getFieldTripLFPs(me);
 			if me.openUI
 				updateUI(me);
+				set(me.handles.list,'String',{['=== Data Parsed @ ' datestr(now) '===']});
 			else
 				plot(me,'normal');
 			end
@@ -173,12 +182,12 @@ classdef LFPAnalysis < analysisCore
 				parse(me); 
 				return
 			end
+			fprintf('\n<strong>§§</strong> Reparsing LFP data...\n')
 			me.ft = struct();
 			me.results = struct();
 			parseEvents(me.p);
 			parseLFPs(me);
 			select(me);
-			selectTrials(me);
 			getFieldTripLFPs(me);
 			if me.openUI; updateUI(me); end
 		end
@@ -194,6 +203,7 @@ classdef LFPAnalysis < analysisCore
 				getFiles(me, true);
 				if isempty(me.file); warning('No plexon file selected'); return; end
 			end
+			fprintf('\n<strong>§§</strong> Lazy parsing LFP data (i.e. only structures that haven''t been parsed yet)...\n')
 			checkPaths(me);
 			me.paths.oldDir = pwd;
 			cd(me.dir);
@@ -221,7 +231,7 @@ classdef LFPAnalysis < analysisCore
 				parseTOI(me.p.eA);
 			end
 			if me.openUI; updateUI(me); end
-			disp('Lazy spike parsing finished...')
+			fprintf('Lazy spike parsing finished...\n')
 		end
 		
 		% ===================================================================
@@ -232,6 +242,8 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function toggleSaccadeRealign(me, varargin)
+			if me.p.saccadeRealign == true; t = 'ENABLED';else t = 'DISABLED'; end
+			fprintf(['\n<strong>§§</strong> Toggling Saccade align, was: ' t '\n'])
 			me.p.saccadeRealign = ~me.p.saccadeRealign;
 			me.sp.p.saccadeRealign = me.p.saccadeRealign;
 			doPlots = me.doPlots;
@@ -240,9 +252,23 @@ classdef LFPAnalysis < analysisCore
 			me.parseSpikes;
 			me.doPlots = doPlots;
 			if me.p.saccadeRealign == true
-				disp('Saccade Realign is now ENABLED...')
+				t = ['Saccade Realign ENABLED @ ' datestr(now)];
+				fprintf(['\n<strong>§§</strong> ' t '\n']);
+				if me.openUI; 
+					t = {' '; t; ' '};
+					s=get(me.handles.list,'String');
+					s = [s; t];
+					set(me.handles.list,'String',s,'Value',length(s));
+				end
 			else
-				disp('Saccade Realign is now DISABLED...')
+				t = ['Saccade Realign DISABLED @ ' datestr(now)];
+				fprintf(['\n<strong>§§</strong> ' t '\n']);
+				if me.openUI; 
+					t = {' '; t; ' '};
+					s=get(me.handles.list,'String');
+					s = [s; t];
+					set(me.handles.list,'String',s,'Value',length(s));
+				end
 			end
 		end
 		
@@ -256,6 +282,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseSpikes(me, varargin)
+			fprintf('\n<strong>§§</strong> Reparsing Spike data...\n')
 			me.sp.p.saccadeRealign = me.p.saccadeRealign;
 			in.cutTrials = me.cutTrials;
 			in.selectedTrials = me.selectedTrials;
@@ -326,7 +353,7 @@ classdef LFPAnalysis < analysisCore
 		function ft = getFieldTripLFPs(me, varargin)
 			ft_defaults;
 			LFPs = me.LFPs;
-			tic
+			getft = tic;
 			ft = struct();
 			olddir=pwd; cd(me.dir);
 			ft(1).hdr = ft_read_plxheader(me.lfpfile);
@@ -360,7 +387,7 @@ classdef LFPAnalysis < analysisCore
 			end
 			ft.uniquetrials = unique(ft.trialinfo);
 			
-			fprintf('Parsing into fieldtrip format took %g ms\n',round(toc*1000));
+			fprintf('<strong>§</strong> Parsing into fieldtrip format took <strong>%g ms</strong>\n',round(toc(getft)*1000));
 			
 			if ~isempty(ft)
 				me.ft = ft;
@@ -448,8 +475,8 @@ classdef LFPAnalysis < analysisCore
 			end
 			
 			me.results(1).av = av;
-			if isempty(me.stats); me.setStats(); end
-			sv = me.stats;
+			if isempty(me.options.stats); me.setStats(); end
+			sv = me.options.stats;
 			
 			if strcmp(cfg.keeptrials, 'yes') %keeptrials was ON
 				if exist('statcfg','var');	cfg					= statcfg;
@@ -606,7 +633,7 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function cfgUsed=ftFrequencyAnalysis(me, cfg, preset, tw, cycles, smth, width)
+		function ftFrequencyAnalysis(me, cfg, preset, tw, cycles, smth, width)
 			if me.openUI; setTimeFreqOptions(me); end
 			if ~exist('preset','var') || isempty(preset); preset=me.options.method; end
 			if ~exist('tw','var') || isempty(tw); tw=me.options.tw; end
@@ -673,13 +700,13 @@ classdef LFPAnalysis < analysisCore
 				fq{i} = ft_freqanalysis(cfg,ft);
 				fq{i}.cfgUsed=cfg;
 				fq{i}.name = me.selectedTrials{i}.name;
-				cfgUsed{i} = cfg;
 			end
-			me.results(1).(['fq' preset]) = fq;
+			me.lastFrequencyMethod = ['fq' preset];
+			me.results(1).(me.lastFrequencyMethod) = fq;
 			if me.doPlots
-				plot(me,'freq',['fq' preset]);
+				plot(me,'freq',me.lastFrequencyMethod);
 			end
-			ftFrequencyStats(me, ['fq' preset],{'no','relative','absolute','db'});
+			%ftFrequencyStats(me, ['fq' preset],{'no','relative','absolute','db'});
 		end
 		
 		% ===================================================================
@@ -689,8 +716,15 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function ftFrequencyStats(me,name,bline,range)
-			if ~exist('name','var') || isempty('name');name='fqfix1';end
-			if ~exist('bline','var') || isempty(bline);bline='no';end
+			if ~exist('name','var') || isempty('name');
+				if ~isempty(me.lastFrequencyMethod)
+					name = me.lastFrequencyMethod;
+				else
+					name='fqfix1'; %default method
+				end
+			end
+			if me.openUI; setTimeFreqOptions(me); end
+			if ~exist('bline','var') || isempty(bline);bline=me.options.bline;end
 			if ~exist('range','var') || isempty(range);range=me.measureRange;end
 			if ~isfield(me.results,name)
 				fprintf('\nCan''t find %s results; ',name)
@@ -763,8 +797,8 @@ classdef LFPAnalysis < analysisCore
 					stat{i}.toilim		= cfgd.toilim;
 				end
 				me.results.([name 'response']) = stat;
-				if isempty(me.stats); me.setStats(); end
-				sv								= me.stats;
+				if isempty(me.options.stats); me.setStats(); end
+				sv								= me.options.stats;
 				cfg							= [];
 				cfg.channel					= fq{1}.cfgUsed.channel;
 				cfg.latency					= range;
@@ -798,8 +832,8 @@ classdef LFPAnalysis < analysisCore
 				
 				freq							= me.bpfreq(1:end-1);
 				fnames						= me.bpnames(1:end-1);
-				if isfield(me.stats,'customFreq')
-					freq{end+1}				= me.stats.customFreq;
+				if isfield(me.options.stats,'customFreq')
+					freq{end+1}				= me.options.stats.customFreq;
 					fnames{end+1}			= 'custom';
 				end
 				a = 1;
@@ -840,7 +874,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function cfgUsed=ftSpikeLFP(me, unit, interpolate)
-			sv = me.stats;
+			sv = me.options.stats;
 			if ~exist('unit','var') || isempty(unit); unit = me.sp.selectedUnit;
 			else me.sp.selectedUnit = unit; end
 			if ~exist('interpolate','var'); 
@@ -896,9 +930,9 @@ classdef LFPAnalysis < analysisCore
 			me.results.statSts5		= cell(1,me.nSelection);
 			me.results.statStsW		= cell(1,me.nSelection);
 			
-			cycles = me.stats.spikelfptaperopt(1);
-			smooth = me.stats.spikelfptaperopt(2);
-			taper = me.stats.spikelfptaper;
+			cycles = me.options.stats.spikelfptaperopt(1);
+			smooth = me.options.stats.spikelfptaperopt(2);
+			taper = me.options.stats.spikelfptaper;
 			for j = 1:length(me.selectedTrials)
 				name				= [spike.label{unit} ' | ' me.selectedTrials{j}.name];
 				tempspike		= me.subselectFieldTripTrials(spike,me.selectedTrials{j}.idx);
@@ -1043,8 +1077,8 @@ classdef LFPAnalysis < analysisCore
 				cfg.channel							= ft.label{me.selectedLFP};
 				cfg.spikesel						= 'all';
 				cfg.avgoverchan					= 'unweighted';
-				cfg.timwin							= me.stats.spikelfppcw(1); 
-				cfg. winstepsize					= me.stats.spikelfppcw(2);
+				cfg.timwin							= me.options.stats.spikelfppcw(1); 
+				cfg. winstepsize					= me.options.stats.spikelfppcw(2);
 				cfg.latency							= [-0.3 0.3];
 				statSts								= ft_spiketriggeredspectrum_stat(cfg,stsConvol);
 				me.results.statStsW{j}			= statSts;
@@ -1361,9 +1395,9 @@ classdef LFPAnalysis < analysisCore
 				end
 				me.map{3} = str2num(answer{3}); 
 				
-				me.cutTrials = str2num(answer{4});
+				me.cutTrials = int32(str2num(answer{4}));
 				me.cutTrials = sort(unique(me.cutTrials));
-				me.selectedLFP = answer{5};
+				me.selectedLFP = int8(answer{5});
 				me.sp.selectedUnit = answer{6};
 				me.measureRange = str2num(answer{8});
 				selectTrials(me);
@@ -1576,7 +1610,7 @@ classdef LFPAnalysis < analysisCore
 					else
 						t1 = trials(k).t1;
 					end
-					[idx1, val1, dlta1] = me.findNearest(time, t1);
+					[idx1, val1, dlta1] = findNrst(time, t1);
 					trials(k).zeroTime = val1;
 					trials(k).zeroIndex = idx1; 
 					trials(k).zeroDelta = dlta1;
@@ -1604,10 +1638,15 @@ classdef LFPAnalysis < analysisCore
 				LFPs(j).reparse = true;
 			end
 			
-			fprintf('Parsing LFPs into trials with event markers took %g ms\n',round(toc*1000));
+			fprintf('<strong>§</strong> Parsing LFPs into trials with event markers took <strong>%g ms</strong>\n',round(toc*1000));
 			
 			if ~isempty(LFPs(1).trials)
 				me.LFPs = LFPs;
+			end
+			function [idx,val,delta]=findNrst(in,value)
+				[~,idx] = min(abs(in-value));
+				val = in(idx);
+				delta = abs(value - val);
 			end
 		end
 		
@@ -1691,10 +1730,21 @@ classdef LFPAnalysis < analysisCore
 			end
 			if me.nSelection == 0; warndlg('The selection results in no valid trials to process!'); end
 			for j = 1:me.nSelection
-				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n-Cut Index: %s\nBehaviour: %s\n',...
+				t{j}=sprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n-Cut Index: %s\nBehaviour: %s\n',...
 					j,me.selectedTrials{j}.name,num2str(me.selectedTrials{j}.idx),num2str(me.selectedTrials{j}.cutidx),...
 					me.selectedTrials{j}.behaviour);
+				disp(t{j});
 			end
+			if size(t,2) > size(t,1); t = t'; end
+			if me.openUI
+				s=get(me.handles.list,'String');
+				s{end+1} = ['Reselected @ ' datestr(now)];
+				if size(s,2) > size(s,1); s = s'; end
+				if length(s) > 500; s = s(end-500:end); end
+				s = [s; t];
+				set(me.handles.list,'String',s,'Value',length(s));
+			end
+
 		end
 		
 		% ===================================================================
@@ -1891,8 +1941,8 @@ classdef LFPAnalysis < analysisCore
 					tlout(3).d=av{3}.avg(1,:)';
 				end
 				
-				if me.stats.smoothing > 0
-					prm = me.stats.smoothing;
+				if me.options.stats.smoothing > 0
+					prm = me.options.stats.smoothing;
 					for i = 1:length(av);
 						tlout(i).f = fit(tlout(i).t,tlout(i).d,'smoothingspline','SmoothingParam', prm); %data
 						tlout(i).fe = fit(tlout(i).t,tlout(i).e,'smoothingspline','SmoothingParam', prm); %error
@@ -1942,12 +1992,12 @@ classdef LFPAnalysis < analysisCore
 				[c1,c1e]=stderr(av{1}.cov);
 				[c2,c2e]=stderr(av{2}.cov);
 				try
-					[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',me.stats.alpha);
+					[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',me.options.stats.alpha);
 				end
 				xlabel('Time (s)');
 				ylabel('LFP Raw Amplitude (mV) ±SE');
 				t=sprintf('COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
-				tt=sprintf('%s | Ch: %s | %s p = %.3g [%s : %s (alpha=%.2g)]\n%s', me.lfpfile, av{1}.label{:}, avstat.cfg.statistic, avstatavg.prob, avstat.cfg.method, avstat.cfg.correctm, me.stats.alpha, t);
+				tt=sprintf('%s | Ch: %s | %s p = %.3g [%s : %s (alpha=%.2g)]\n%s', me.lfpfile, av{1}.label{:}, avstat.cfg.statistic, avstatavg.prob, avstat.cfg.method, avstat.cfg.correctm, me.options.stats.alpha, t);
 				title(tt,'FontSize',12);
 				
 				p(2).select();
@@ -2556,7 +2606,7 @@ classdef LFPAnalysis < analysisCore
 			params.tapers = tapers;
 			params.Fs = 1000;
 			%params.pad = 0;
-			params.err = [1 me.stats.alpha];
+			params.err = [1 me.options.stats.alpha];
 			params.fpass = [0 100];
 			params.trialave = 1;
 			uselog = 'l';

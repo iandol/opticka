@@ -1,7 +1,8 @@
 classdef plxReader < optickaCore
 %> PLXREADER Reads in Plexon .plx and .pl2 files along with metadata and
-%> eyelink data. Parses the trial event structure. Converts into Fieldtrip
-%> data structures.
+%> eyelink EDF files. Parses the trial event / behaviour structure. 
+%> Integrates EDF events and raw X/Y data into trial LFP/spike structures.
+%> Converts into Fieldtrip and custom structures.
 	
 	%------------------PUBLIC PROPERTIES----------%
 	properties
@@ -69,7 +70,7 @@ classdef plxReader < optickaCore
 		ibhandles@struct				= struct()
 		%> info cache to speed up generating info{}
 		ic@struct						= struct()
-		%> allowed properties passed to object upon construction
+		%> allowed properties passed to object upon construction, see optickaCore.parseArgs()
 		allowedProperties@char = 'file|dir|matfile|matdir|edffile|startOffset|cellmap|verbose|eventWindow'
 	end
 	
@@ -94,7 +95,7 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief parse all data and sync plx / behaviour / eyelink info
+		%> @brief parse all data denovo and sync plx / behaviour / eyelink info
 		%>
 		%> @param
 		%> @return
@@ -224,10 +225,12 @@ classdef plxReader < optickaCore
 					num = str2num(regexp(cname,'\d*','match','once')); %what channel number
 					if num < 21
 						LFPs(aa).name = cname;
-						LFPs(aa).index = raw(idx(j)); LFPs(aa).channel = num;
+						LFPs(aa).index = raw(idx(j)); 
+						LFPs(aa).channel = num;
 						LFPs(aa).count = map(idx(j));
 						LFPs(aa).reparse = false;
-						LFPs(aa).trials = struct([]); LFPs(aa).vars = struct([]); %#ok<*AGROW>
+						LFPs(aa).trials = struct([]); 
+						LFPs(aa).vars = struct([]); %#ok<*AGROW>
 						aa = aa + 1;
 					end
 				end
@@ -243,8 +246,8 @@ classdef plxReader < optickaCore
 				LFPs(j).totalTimeStamps = ts;
 				LFPs(j).totalDataPoints = fn;	
 				
-				time = [];
-				sample = [];
+				time = single([]);
+				sample = int32([]);
 				
 				for i = 1:length(ts) % join each fragment together
 					timefragment = linspace(ts(i), ts(i) + ( (fn(i)-1) * tbase ), fn(i)); %generate out times
@@ -257,14 +260,14 @@ classdef plxReader < optickaCore
 					LFPs(j).sample(i) = startsample;
 				end
 				if ~isequal(length(time), length(ad)); error('Reading LFP fragments from plexon file failed!'); end
-				LFPs(j).data = ad;
+				LFPs(j).data = single(ad);
 				LFPs(j).time = time';
 				LFPs(j).sample = sample';
 				LFPs(j).nTrials = ego.eventList.nTrials;
 				LFPs(j).nVars = ego.eventList.nVars;
 			end
 			
-			fprintf('Loading raw LFP data took %g ms\n',round(toc(tlfp)*1000));
+			fprintf('<strong>§</strong> Loading raw LFP data took <strong>%g ms</strong>\n',round(toc(tlfp)*1000));
 		end
 		
 		
@@ -370,7 +373,7 @@ classdef plxReader < optickaCore
 				w(1,:,:) = spike.waveform{k};
 				spike.waveform{k} = w;
 			end
-			fprintf('Converting spikes to fieldtrip format took %g ms\n',round(toc(tft)*1000));
+			fprintf('<strong>§</strong> Converting spikes to fieldtrip format took <strong>%g ms</strong>\n',round(toc(tft)*1000));
 		end
 		
 		% ===================================================================
@@ -425,7 +428,7 @@ classdef plxReader < optickaCore
 			else
 				warning('Integrating eyelink trials into plxReader trials failed...');
 			end
-			fprintf('Integrating eye data into event data took %g ms\n',round(toc(ted)*1000));
+			fprintf('<strong>§</strong> Integrating eye data into event data took <strong>%g ms</strong>\n',round(toc(ted)*1000));
 		end
 		
 		% ===================================================================
@@ -537,7 +540,7 @@ classdef plxReader < optickaCore
 			catch
 				if ~isempty(oldInfo)
 					ego.info = oldInfo;
-					fprintf('Not properly parsed yet, info generation took %g ms\n',round(toc(infoTic)*1000))
+					fprintf('Not properly parsed yet, info generation took <strong>%g ms</strong>\n',round(toc(infoTic)*1000))
 					return
 				end
 			end
@@ -635,7 +638,7 @@ classdef plxReader < optickaCore
 				ego.info{end+1} = ['Eyelink trial bug override : ' num2str(ego.eA.needOverride)];
 				ego.info{end+1} = sprintf('Valid First Post-Stimulus Saccades (#%g): %.4g ± %.3g (range %g:%g )',ns,avgs/1e3,es/1e3,mins/1e3,maxs/1e3);
 			end
-			fprintf('Generating info took %g ms\n',round(toc(infoTic)*1000))
+			fprintf('<strong>§</strong> Generating info took <strong>%g ms</strong>\n',round(toc(infoTic)*1000))
 			ego.info{end+1} = ' ';
 			ego.info = ego.info';
 			info = ego.info;
@@ -864,6 +867,11 @@ classdef plxReader < optickaCore
 					ego.tsList.wave = blank;
 				end
 			end
+			if ~isempty(ego.rE)
+				for i = 1: ego.rE.stimuli.n
+					reset(ego.rE.stimuli{i})
+				end
+			end
 		end
 	
 	end
@@ -925,7 +933,7 @@ classdef plxReader < optickaCore
 			meta.modtime = 500;
 			meta.trialtime = 500;
 			meta.matrix = [];
-			fprintf('Parsing Behavioural files took %g ms\n', round(toc*1000))
+			fprintf('<strong>§</strong> Parsing Behavioural files took <strong>%g ms</strong>\n', round(toc*1000))
 			cd(oldd);
 		end
 	end
@@ -1050,14 +1058,14 @@ classdef plxReader < optickaCore
 			eL.eventIndex = eventIndex;
 			eL.n = a;
 			eL.nTrials = a/2; %we hope our strobe # even
-			eL.times = b;
-			eL.values = c;
+			eL.times = single(b);
+			eL.values = int32(c);
 			eL.start = start;
 			eL.stop = stop;
-			eL.startFix = b19;
-			eL.correct = b20;
-			eL.breakFix = b21;
-			eL.incorrect = b22;
+			eL.startFix = single(b19);
+			eL.correct = single(b20);
+			eL.breakFix = single(b21);
+			eL.incorrect = single(b22);
 			eL.varOrder = eL.values(eL.values<32767);
 			eL.varOrderCorrect = zeros(length(eL.correct),1);
 			eL.varOrderBreak = zeros(length(eL.breakFix),1);
@@ -1161,7 +1169,7 @@ classdef plxReader < optickaCore
 			eL.breakIndex = [eL.trials(:).isBreak]';
 			eL.incorrectIndex = [eL.trials(:).isIncorrect]';
 			ego.eventList = eL;
-			fprintf('Loading all event markers took %g ms\n',round(toc*1000))
+			fprintf('<strong>§</strong> Loading all event markers took <strong>%g ms</strong>\n',round(toc*1000))
 			generateMeta(ego);
 			clear eL
 		end
@@ -1271,7 +1279,7 @@ classdef plxReader < optickaCore
 					a = a + 1;
 				end
 			end
-			fprintf('Loading all spike channels took %g ms\n',round(toc(rsT)*1000));
+			fprintf('<strong>§</strong> Loading all spike channels took <strong>%g ms</strong>\n',round(toc(rsT)*1000));
 		end
 
 		% ===================================================================
@@ -1339,7 +1347,7 @@ classdef plxReader < optickaCore
 				ego.tsList.tsParse{ps}.var = vars;
 				clear spikes waves trials vars
 			end
-			fprintf('Parsing spikes into trials/variables took %g ms\n',round(toc(psT)*1000))
+			fprintf('<strong>§</strong> Parsing spikes into trials/variables took <strong>%g ms</strong>\n',round(toc(psT)*1000))
 			if ego.startOffset ~= 0
 				ego.info{end+1} = sprintf('START OFFSET ACTIVE : %g', ego.startOffset);
 			end
