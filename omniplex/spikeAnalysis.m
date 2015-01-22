@@ -7,7 +7,7 @@ classdef spikeAnalysis < analysisCore
 		file@char
 		%> data directory
 		dir@char
-		%> ± time window around the trigger, if empty use event off
+		%> Â± time window around the trigger, if empty use event off
 		spikeWindow@double						= 0.8
 		%> used by legacy spikes to allow negative time offsets
 		startOffset@double						= 0
@@ -133,7 +133,7 @@ classdef spikeAnalysis < analysisCore
 			checkPaths(me);
 			me.paths.oldDir = pwd;
 			cd(me.dir);
-			fprintf('\n<strong>§§</strong> Parsing Spike data denovo...\n')
+			fprintf('\n<strong>Â§Â§</strong> Parsing Spike data denovo...\n')
 			me.spike = {};
 			me.p.eventWindow = me.spikeWindow;
 			parse(me.p);
@@ -155,7 +155,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function reparse(me, varargin)
-			fprintf('\n<strong>§§</strong> Reparsing Spike data...\n')
+			fprintf('\n<strong>Â§Â§</strong> Reparsing Spike data...\n')
 			me.p.eventWindow = me.spikeWindow;
 			me.spike = {};
 			reparse(me.p);
@@ -192,7 +192,7 @@ classdef spikeAnalysis < analysisCore
 			checkPaths(me);
 			me.paths.oldDir = pwd;
 			cd(me.dir);
-			fprintf('<strong>§</strong> Lazy parsing spike data...\n')
+			fprintf('<strong>Â§</strong> Lazy parsing spike data...\n')
 			me.p.eventWindow = me.spikeWindow;
 			lazyParse(me.p);
 			for i = 1:me.nUnits
@@ -271,7 +271,7 @@ classdef spikeAnalysis < analysisCore
 			unit = 'p';
 			for i = 1:me.nUnits
 				if i == me.selectedUnit
-					unit = [unit '|¤' me.names{i}];
+					unit = [unit '|Â¤' me.names{i}];
 				else
 					unit = [unit '|'  me.names{i}];
 				end
@@ -286,7 +286,7 @@ classdef spikeAnalysis < analysisCore
 			end
 			for i = 1:length(inbeh)
 				if strcmpi(inbeh{i}, me.selectedBehaviour{1})
-					beh = [beh '|¤' inbeh{i}];
+					beh = [beh '|Â¤' inbeh{i}];
 				else
 					beh = [beh '|' inbeh{i}];
 				end
@@ -296,7 +296,7 @@ classdef spikeAnalysis < analysisCore
 			denf = 'r';
 			for i = 1:length(indenf)
 				if strcmpi(indenf{i}, me.densityFunction)
-					denf = [denf '|¤' indenf{i}];
+					denf = [denf '|Â¤' indenf{i}];
 				else
 					denf = [denf '|' indenf{i}];
 				end
@@ -317,8 +317,8 @@ classdef spikeAnalysis < analysisCore
 				['t|' cuttrials],'Enter Trials to exclude:';   ...
 				[unit],'Choose Default Spike Channel to View:';...
 				[beh],'Behavioural response type:';...
-				['t|' pr],'Plot Range (±seconds):';   ...
-				['t|' rr],'Measure Firing Rate Range (±seconds):';   ...
+				['t|' pr],'Plot Range (Â±seconds):';   ...
+				['t|' rr],'Measure Firing Rate Range (Â±seconds):';   ...
 				['t|' bw],'Binwidth (PSTH) & Smooth Window (Density) [BINWIDTH -WINDOW +WINDOW] (seconds):';   ...
 				[denf],'Smoothing function for Density Plots:';...
 				['t|' roi],'Stimulus Region of Interest [X Y RADIUS INCLUDE[0|1]] (blank = ignore):';   ...
@@ -355,7 +355,7 @@ classdef spikeAnalysis < analysisCore
 				end
 				me.map{3} = str2num(answer{3}); 
 
-				me.cutTrials = str2num(answer{4});
+				me.cutTrials = int32(str2num(answer{4}));
 				me.selectedUnit = answer{5};
 				me.plotRange = str2num(answer{7});
 				me.measureRange = str2num(answer{8});
@@ -763,7 +763,7 @@ classdef spikeAnalysis < analysisCore
 				end
 				me.chronux{i} = data;
 			end
-			fprintf('<strong>§</strong> Converting spikes to chronux format took <strong>%g ms</strong>\n',round(toc(tft)*1000));
+			fprintf('<strong>Â§</strong> Converting spikes to chronux format took <strong>%g ms</strong>\n',round(toc(tft)*1000));
 		end
 		
 	end
@@ -954,7 +954,7 @@ classdef spikeAnalysis < analysisCore
 				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
 				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
 				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-				blineText = sprintf('%s  Group:%i %.4g ± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
+				blineText = sprintf('%s  Group:%i %.4g Â± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
 			end
 			disp(blineText);
 			
@@ -970,7 +970,7 @@ classdef spikeAnalysis < analysisCore
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
-				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
+				t = [t sprintf(' R%i: %.4g Â± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t);
@@ -1015,7 +1015,7 @@ classdef spikeAnalysis < analysisCore
 				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
 				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
 				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-				blineText = sprintf('%s  Group:%i %.4g ± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
+				blineText = sprintf('%s  Group:%i %.4g Â± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
 			end
 			disp(blineText);
 			
@@ -1025,7 +1025,7 @@ classdef spikeAnalysis < analysisCore
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
-				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
+				t = [t sprintf(' R%i: %.4g Â± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',14);
@@ -1107,7 +1107,7 @@ classdef spikeAnalysis < analysisCore
 				areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
-				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
+				t = [t sprintf(' R%i: %.4g Â± %.3g', j, rate{j}.avg, e)];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',13);
