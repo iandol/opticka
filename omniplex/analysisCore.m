@@ -19,14 +19,14 @@ classdef analysisCore < optickaCore
 		rootDirectory@char = ''
 	end
 	
-	%------------------TRANSIENT PROPERTIES----------%
+	%------------------PUBLIC TRANSIENT PROPERTIES----------%
 	properties (Transient = true)
 		%>getDensity stats object
 		gd@getDensity
 	end
 	
-	%--------------------PROTECTED PROPERTIES-----------%
-	properties (SetAccess = protected, GetAccess = protected)
+	%--------------------VISIBLE PROPERTIES-----------%
+	properties (SetAccess = protected, GetAccess = public)
 		%> various stats values in a structure for different analyses
 		options@struct
 	end
@@ -41,6 +41,7 @@ classdef analysisCore < optickaCore
 		handles@struct
 	end
 	
+	%------------------VISIBLE TRANSIENT PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> is the UI opened?
 		openUI@logical = false
@@ -59,10 +60,8 @@ classdef analysisCore < optickaCore
 		% ==================================================================
 		%> @brief Class constructor
 		%>
-		%> More detailed description of what the constructor does.
-		%>
-		%> @param args are passed as a structure of properties which is
-		%> parsed.
+		%> @param args are passed as a set of properties which is
+		%> parsed by optickaCore.parseArgs
 		%> @return instance of class.
 		% ==================================================================
 		function me = analysisCore(varargin)
@@ -363,7 +362,7 @@ classdef analysisCore < optickaCore
 				end
 			end
 			
-			mlist2={'no','relative','absolute','dB'};
+			mlist2={'no','absolute', 'relative', 'relchange','db', 'vssum'};
 			bline = 'p';
 			for i = 1:length(mlist2)
 				if strcmpi(mlist2{i},me.options.bline)
@@ -707,9 +706,6 @@ classdef analysisCore < optickaCore
 			end
 			if isfield(in,'map') && isprop(me,'map')
 				me.map = in.map;
-			end
-			if isfield(in,'plotRange') && isprop(me,'plotRange')
-				me.plotRange = in.plotRange;
 			end
 			if isfield(in,'plotRange') && isprop(me,'plotRange')
 				me.plotRange = in.plotRange;

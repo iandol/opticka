@@ -16,7 +16,7 @@ classdef LFPAnalysis < analysisCore
 		%> remove the mean voltage offset from the individual trials?
 		demeanLFP@logical = true
 		%> default LFP channel
-		selectedLFP@int8 = int8(1)
+		selectedLFP@double
 		%> time window around the trigger we wish to load
 		LFPWindow@double = 0.8
 		%> default behavioural type
@@ -28,7 +28,7 @@ classdef LFPAnalysis < analysisCore
 	%------------------DEPENDENT PROPERTIES--------%
 	properties (SetAccess = protected, Dependent = true)
 		%> number of LFP channels
-		nLFPs@int8 = int8(0)
+		nLFPs@double = 0
 		%> selected LFP channel
 		nSelection@double = 0
 	end
@@ -97,6 +97,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function getFiles(me, force)
+		%getFiles loads the requisite files before parsing
 			if ~exist('force','var')
 				force = false;
 			end
@@ -145,6 +146,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parse(me, varargin)
+		%parse is the major first data parsing step
 			if isempty(me.lfpfile)
 				getFiles(me,true);
 				if isempty(me.lfpfile);return;end
@@ -209,8 +211,6 @@ classdef LFPAnalysis < analysisCore
 			cd(me.dir);
 			me.p.eventWindow = me.spikeWindow;
 			lazyParse(me.p);
-			me.trial = me.p.eventList.trials;
-			me.event = me.p.eventList;
 			for i = 1:me.nUnits
 				me.spike{i}.trials = me.p.tsList.tsParse{i}.trials;
 			end
@@ -282,7 +282,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseSpikes(me, varargin)
-			fprintf('\n<strong>§§</strong> Reparsing Spike data...\n')
+			fprintf('\n<strong>§§</strong> Syncing settings and reparsing Spike data...\n')
 			me.sp.p.saccadeRealign = me.p.saccadeRealign;
 			in.cutTrials = me.cutTrials;
 			in.selectedTrials = me.selectedTrials;
@@ -290,13 +290,15 @@ classdef LFPAnalysis < analysisCore
 			in.plotRange = me.plotRange;
 			in.measureRange = me.measureRange;
 			in.baselineWindow = me.baselineWindow;
-			in.selectedBehaviour = me.selectedBehaviour;
+			in.selectedBehaviour = me.selectedBehaviour; 
+			in.yokedSelection = true;
 			setSelection(me.sp, in); %set spike anal to same trials etc.
-			syncData(me.sp.p, me.p); %copy any parsed data
+			syncData(me.sp.p, me.p, 'tsList'); %copy any parsed data, exclude tsList
 			lazyParse(me.sp); %lazy parse the spikes
-			syncData(me.p, me.sp.p); %copy any new parsed data back
+			syncData(me.p, me.sp.p, 'tsList'); %copy any new parsed data back, exclude tsList
 			if me.openUI; 
-				updateUI(me)
+				updateUI(me.sp)
+				updateUI(me);
 			else
 				showInfo(me.sp);
 			end
@@ -1251,7 +1253,7 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function save(me)
+		function save(me, varargin)
 			[~,f,~] = fileparts(me.lfpfile);
 			name = ['LFP' f];
 			if ~isempty(me.ft)
@@ -1397,7 +1399,7 @@ classdef LFPAnalysis < analysisCore
 				
 				me.cutTrials = int32(str2num(answer{4}));
 				me.cutTrials = sort(unique(me.cutTrials));
-				me.selectedLFP = int8(answer{5});
+				me.selectedLFP = answer{5};
 				me.sp.selectedUnit = answer{6};
 				me.measureRange = str2num(answer{8});
 				selectTrials(me);
@@ -2427,13 +2429,13 @@ classdef LFPAnalysis < analysisCore
 			if isgraphics(me.plotDestination)
 				h = me.plotDestination;
 			else
-				h = figure;figpos(1,[2000 2000]);set(h,'Color',[1 1 1],'Name',[me.lfpfile ' ' fq{1}.cfgUsed.channel]);
+				h = figure;figpos(1,[1000 2000]);set(h,'Color',[1 1 1],'Name',[me.lfpfile ' ' fq{1}.cfgUsed.channel]);
 			end
 			p=panel(h);
 			p.margin = [15 15 30 20];%left bottom right top
 			if isnumeric(gcf);	p.fontsize = 12; end
 			if ~exist('bl','var')
-				bl = {'relative','db', 'absolute', 'no'};
+				bl = {me.options.bline};
 			end
 			row = length(fq); col = length(bl);
 			p.pack(row,col);
@@ -2900,7 +2902,7 @@ classdef LFPAnalysis < analysisCore
 				'Tooltip','Select a method to run',...
 				'Callback',@runAnal,...
 				'Tag','LFPAanalmethod',...
-				'String',{'plotTogether','ftTimeLockAnalysis','ftFrequencyAnalysis','ftFrequencyStats','ftBandPass','ftSpikeLFP','chSpectrum'});
+				'String',{'plotTogether','ftTimeLockAnalysis','ftFrequencyAnalysis','ftFrequencyStats','ftBandPass','ftSpikeLFP','chSpectrum','showEyePlots'});
 			
 			handles.list = uicontrol('Style','edit',...
 				'Parent',handles.controls2,...

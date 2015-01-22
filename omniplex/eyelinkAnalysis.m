@@ -1,10 +1,12 @@
 % ========================================================================
 %> @brief eyelinkAnalysis offers a set of methods to load and parse raw EDF files. It
-%> understands opticka trials so can parse eye data and plot it for trial groups.
+%> understands opticka trials so can parse eye data and plot it for trial groups. You
+%> can also manually find microsaccades, and perform ROI/TOI filtering on the eye
+%> movements.
 %>
 % ========================================================================
 classdef eyelinkAnalysis < analysisCore
-	
+% eyelinkAnalysis offers a set of methods to load and parse raw EDF files.
 	properties
 		%> file name
 		file@char									= ''
@@ -864,8 +866,16 @@ classdef eyelinkAnalysis < analysisCore
 	%=======================================================================
 	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
-		
+		% ===================================================================
+		%> @brief we also collect eye position within the main PTB loop (sampled at every
+		%> screen refresh) and this is a lower resolution backup of the eye position data if we
+		%> need.
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function plotSecondaryEyeLogs(tS)
+			
 			ifi = 0.013;
 			tS = tS.eyePos;
 			fn = fieldnames(tS);
@@ -967,7 +977,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function closeUI(me)
+		function closeUI(me, varargin)
 			try delete(me.handles.parent); end %#ok<TRYNC>
 			me.handles = struct();
 			me.openUI = false;
@@ -979,7 +989,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function makeUI(me)
+		function makeUI(me, varargin)
 			
 		end
 		
@@ -989,7 +999,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function updateUI(me)
+		function updateUI(me, varargin)
 			
 		end
 		
@@ -999,12 +1009,12 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function notifyUI(me)
+		function notifyUI(me, varargin)
 			
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief main parse loop for EDF events, has to be one big serial loop
 		%>
 		%> @param
 		%> @return

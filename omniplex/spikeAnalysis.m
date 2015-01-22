@@ -37,24 +37,20 @@ classdef spikeAnalysis < analysisCore
 	properties (SetAccess = {?analysisCore}, GetAccess = public)
 		%> spike plxReader object; can be the same or different due to spike resorting
 		p@plxReader
-		%> fieldtrip reparse
-		ft@struct
-		%> chronux reparse, cell is condition, struct is trials
-		chronux@cell
-		%> chronux parsed results
-		chresults@struct
-		%> fieldtrip parsed results
-		results@struct
-		%> the events as trials structure
-		trial@struct
-		%> events structure
-		event@struct
 		%> spike trial structure
 		spike@cell
 		%> names of spike channels
 		names@cell
+		%> fieldtrip reparse
+		ft@struct
+		%> fieldtrip parsed results
+		results@struct
+		%> chronux reparse, cell is condition, struct is trials
+		chronux@cell
+		%> chronux parsed results
+		chresults@struct
 		%> trials to remove in reparsing
-		cutTrials@double
+		cutTrials@int32
 		%> selectedTrials: each cell is a trial list grouping
 		selectedTrials@cell
 		%> variable selection map for 3 analysis groups
@@ -138,12 +134,11 @@ classdef spikeAnalysis < analysisCore
 			me.paths.oldDir = pwd;
 			cd(me.dir);
 			fprintf('\n<strong>§§</strong> Parsing Spike data denovo...\n')
+			me.spike = {};
 			me.p.eventWindow = me.spikeWindow;
 			parse(me.p);
-			me.trial = me.p.eventList.trials;
-			me.event = me.p.eventList;
 			for i = 1:me.nUnits
-				me.spike{i}.trials = me.p.tsList.tsParse{i}.trials;
+				me.spike{i}.trials = me.p.tsList.tsParse{i}.trials;%TODO: inefficient duplication, make into handles
 			end
 			me.ft = struct(); me.results = struct();
 			me.ft = getFieldTripSpikes(me.p);
@@ -162,12 +157,10 @@ classdef spikeAnalysis < analysisCore
 		function reparse(me, varargin)
 			fprintf('\n<strong>§§</strong> Reparsing Spike data...\n')
 			me.p.eventWindow = me.spikeWindow;
-			me.trial = struct([]); me.event = struct([]);
+			me.spike = {};
 			reparse(me.p);
-			me.trial = me.p.eventList.trials;
-			me.event = me.p.eventList;
 			for i = 1:me.nUnits
-				me.spike{i}.trials = me.p.tsList.tsParse{i}.trials;
+				me.spike{i}.trials = me.p.tsList.tsParse{i}.trials;%TODO: inefficient duplication, make into handles
 			end
 			me.ft = struct(); me.results = struct();
 			me.ft = getFieldTripSpikes(me.p);
@@ -202,10 +195,8 @@ classdef spikeAnalysis < analysisCore
 			fprintf('<strong>§</strong> Lazy parsing spike data...\n')
 			me.p.eventWindow = me.spikeWindow;
 			lazyParse(me.p);
-			me.trial = me.p.eventList.trials;
-			me.event = me.p.eventList;
 			for i = 1:me.nUnits
-				me.spike{i}.trials = me.p.tsList.tsParse{i}.trials;
+				me.spike{i}.trials = me.p.tsList.tsParse{i}.trials; %TODO: inefficient duplication, make into handles
 			end
 			me.ft = struct(); me.results = struct();
 			me.ft = getFieldTripSpikes(me.p);
@@ -255,7 +246,7 @@ classdef spikeAnalysis < analysisCore
 		% ===================================================================
 		function select(me,force)
 			if ~exist('force','var'); force = false; end
-			if isempty(me.trial); warndlg('Data not parsed yet...');return;end
+			if isempty(me.p.eventList.trials); warndlg('Data not parsed yet...');return;end
 			if force == true; me.yokedSelection = false; end
 			if me.yokedSelection == true;
 				disp('This spikeanalysis object is currently locked, run select(true) to override lock...'); return
@@ -319,7 +310,7 @@ classdef spikeAnalysis < analysisCore
 			toifilt = num2str(me.TOI);
 			me.selectedBehaviour = {};
 			
-			mtitle   = [me.file ': REPARSE ' num2str(me.event.nVars) ' DATA VARIABLES'];
+			mtitle   = [me.file ': REPARSE ' num2str(me.p.eventList.nVars) ' DATA VARIABLES'];
 			options  = {['t|' map{1}],'Choose PLX variables to merge (A, if empty parse all variables independantly):';   ...
 				['t|' map{2}],'Choose PLX variables to merge (B):';   ...
 				['t|' map{3}],'Choose PLX variables to merge (C):';   ...
@@ -621,7 +612,7 @@ classdef spikeAnalysis < analysisCore
 					me.paths.oldDir = pwd;
 					cd(me.dir);
 					me.p = plxReader('file', me.file, 'dir', me.dir);
-					me.p.name = ['^' me.fullName '^'];
+					me.p.name = ['PARENT:' me.uuid ' ' ];
 				end
 				for i=1:length(f)
 					if isprop(me.p,f{i})
@@ -679,7 +670,7 @@ classdef spikeAnalysis < analysisCore
 			end
 			getRates(me);
 			for j = 1:me.nSelection
-				st=[me.trial(me.selectedTrials{j}.idx).firstSaccade]';
+				st=[me.p.eventList.trials(me.selectedTrials{j}.idx).firstSaccade]';
 				nanidx = isnan(st);
 				st(nanidx)=[];
 				if usez; st = zscore(st); end
@@ -796,8 +787,8 @@ classdef spikeAnalysis < analysisCore
 			
 			saccidx = [];
 			if ~isempty(me.filterFirstSaccades)
-				idx = find([me.trial.firstSaccade] >= me.filterFirstSaccades(1));
-				idx2 = find([me.trial.firstSaccade] <= me.filterFirstSaccades(2));
+				idx = find([me.p.eventList.trials.firstSaccade] >= me.filterFirstSaccades(1));
+				idx2 = find([me.p.eventList.trials.firstSaccade] <= me.filterFirstSaccades(2));
 				saccidx = intersect(idx,idx2);
 			end
 			
@@ -822,16 +813,16 @@ classdef spikeAnalysis < analysisCore
 			for i = 1:length(me.selectedBehaviour) %generate our selected behaviour indexes
 				switch lower(me.selectedBehaviour{i})
 					case {'c', 'correct'}
-						behaviouridx{i} = find([me.trial.isCorrect]==true); %#ok<*AGROW>
+						behaviouridx{i} = find([me.p.eventList.trials.isCorrect]==true); %#ok<*AGROW>
 						selectedBehaviour{i} = 'correct';
 					case {'b', 'breakfix'}
-						behaviouridx{i} = find([me.trial.isBreak]==true);
+						behaviouridx{i} = find([me.p.eventList.trials.isBreak]==true);
 						selectedBehaviour{i} = 'breakfix';
 					case {'i', 'incorrect'}
-						behaviouridx{i} = find([me.trial.isIncorrect]==true);
+						behaviouridx{i} = find([me.p.eventList.trials.isIncorrect]==true);
 						selectedBehaviour{i} = 'incorrect';						
 					otherwise
-						behaviouridx{i} = [me.trial.index];
+						behaviouridx{i} = [me.p.eventList.trials.index];
 						selectedBehaviour{i} = 'all';
 				end
 			end
@@ -839,8 +830,8 @@ classdef spikeAnalysis < analysisCore
 			if isempty(me.map{1}) %if our map is empty, generate groups for each variable
 				bidx = behaviouridx{1};
 				sb = selectedBehaviour{1};
-				for i = 1:me.event.nVars; 
-					map{i} = me.event.unique(i); 
+				for i = 1:me.p.eventList.nVars; 
+					map{i} = me.p.eventList.unique(i); 
 					behaviouridx{i} = bidx;
 					selectedBehaviour{i} = sb;
 				end
@@ -849,7 +840,7 @@ classdef spikeAnalysis < analysisCore
 			end
 	
 			me.selectedTrials = {};
-			varList = [me.trial.variable];
+			varList = [me.p.eventList.trials.variable];
 			a = 1;
 			for i = 1:length(map)
 				if isempty(map{i}); continue; end
@@ -877,7 +868,7 @@ classdef spikeAnalysis < analysisCore
 					if isfield(me.options.stats,'sort') && ~isempty(me.options.stats.sort)
 						switch me.options.stats.sort
 							case 'saccades'
-								st = [me.trial(idx).firstSaccade];
+								st = [me.p.eventList.trials(idx).firstSaccade];
 								mn = nanmean(st);
 								st(isnan(st)) = mn;
 								[~,stidx] = sort(st);
@@ -1241,10 +1232,10 @@ classdef spikeAnalysis < analysisCore
 				cs{j} = num2str(idx(j));
 				y(j) = j;
 				x(j) = xpos(2) + abs(((xpos(2)-xpos(1))/100));
-				if isfield(me.trial(idx(1)),'microSaccades')
-					mS = me.trial(idx(j)).microSaccades;
+				if isfield(me.p.eventList.trials(idx(1)),'microSaccades')
+					mS = me.p.eventList.trials(idx(j)).microSaccades;
 					if me.p.saccadeRealign == true
-						mS = mS - me.trial(idx(j)).firstSaccade;
+						mS = mS - me.p.eventList.trials(idx(j)).firstSaccade;
 					end
 					mS(isnan(mS))=[];
 					if ~isempty(mS)
@@ -1256,8 +1247,8 @@ classdef spikeAnalysis < analysisCore
 					end
 				end
 			end
-			if isfield(me.trial(idx(1)),'firstSaccade')
-				st = [me.trial(idx).firstSaccade];
+			if isfield(me.p.eventList.trials(idx(1)),'firstSaccade')
+				st = [me.p.eventList.trials(idx).firstSaccade];
 				if me.p.saccadeRealign == true
 					st = st - st;
 				end
@@ -1398,7 +1389,7 @@ classdef spikeAnalysis < analysisCore
 				'Tooltip','Select a method to run',...
 				'Callback',@runAnal,...
 				'Tag','LFPAanalmethod',...
-				'String',{'density','PSTH','ISI','ROC'});
+				'String',{'density','PSTH','ISI','ROC','showEyePlots'});
 			
 			handles.list = uicontrol('Style','edit',...
 				'Parent',handles.controls2,...
