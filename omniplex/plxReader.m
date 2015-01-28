@@ -37,7 +37,7 @@ classdef plxReader < optickaCore
 	end
 	
 	%------------------VISIBLE PROPERTIES----------%
-	properties (SetAccess = protected, GetAccess = public)
+	properties (SetAccess = {?analysisCore}, GetAccess = public)
 		%> info formatted in cellstrings for display
 		info@cell
 		%> event list parsed

@@ -68,7 +68,7 @@ classdef colourTest < spotStimulus
 			obj.mouseOverride = false;
 			
 			try
-				obj.sM.debug = true;
+				%obj.sM.debug = true;
 				open(obj.sM);
 				obj.colour = [0.2 0.2 0.2];
 				setup(obj, obj.sM);

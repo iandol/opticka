@@ -7,7 +7,7 @@ classdef spikeAnalysis < analysisCore
 		file@char
 		%> data directory
 		dir@char
-		%> Â± time window around the trigger, if empty use event off
+		%> ± time window around the trigger, if empty use event off
 		spikeWindow@double						= 0.8
 		%> used by legacy spikes to allow negative time offsets
 		startOffset@double						= 0
@@ -133,7 +133,7 @@ classdef spikeAnalysis < analysisCore
 			checkPaths(me);
 			me.paths.oldDir = pwd;
 			cd(me.dir);
-			fprintf('\n<strong>Â§Â§</strong> Parsing Spike data denovo...\n')
+			fprintf('\n<strong>§§</strong> Parsing Spike data denovo...\n')
 			me.spike = {};
 			me.p.eventWindow = me.spikeWindow;
 			parse(me.p);
@@ -155,7 +155,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function reparse(me, varargin)
-			fprintf('\n<strong>Â§Â§</strong> Reparsing Spike data...\n')
+			fprintf('\n<strong>§§</strong> Reparsing Spike data...\n')
 			me.p.eventWindow = me.spikeWindow;
 			me.spike = {};
 			reparse(me.p);
@@ -192,7 +192,7 @@ classdef spikeAnalysis < analysisCore
 			checkPaths(me);
 			me.paths.oldDir = pwd;
 			cd(me.dir);
-			fprintf('<strong>Â§</strong> Lazy parsing spike data...\n')
+			fprintf('<strong>§</strong> Lazy parsing spike data...\n')
 			me.p.eventWindow = me.spikeWindow;
 			lazyParse(me.p);
 			for i = 1:me.nUnits
@@ -239,17 +239,25 @@ classdef spikeAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief selects trials/options based on many filters
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function select(me,force)
-			if ~exist('force','var'); force = false; end
+		function select(me, varargin)
+			if ~exist('varargin','var') || ~islogical(varargin)
+				force = false; 
+			elseif islogical(varargin)
+				force = varargin;
+			end
 			if isempty(me.p.eventList.trials); warndlg('Data not parsed yet...');return;end
 			if force == true; me.yokedSelection = false; end
 			if me.yokedSelection == true;
-				disp('This spikeanalysis object is currently locked, run select(true) to override lock...'); return
+				if me.openUI
+					warndlg('This spikeAnalysis object is currently locked, force parse or run select(true) to override lock, or use the LFPAnalysis parent select...'); return
+				else
+					warning('This spikeAnalysis object is currently locked, force parse or run select(true) to override lock, or use the LFPAnalysis parent select...'); return
+				end
 			end
 			cuttrials = '[ ';
 			if ~isempty(me.cutTrials) 
@@ -271,7 +279,7 @@ classdef spikeAnalysis < analysisCore
 			unit = 'p';
 			for i = 1:me.nUnits
 				if i == me.selectedUnit
-					unit = [unit '|Â¤' me.names{i}];
+					unit = [unit '|¤' me.names{i}];
 				else
 					unit = [unit '|'  me.names{i}];
 				end
@@ -286,7 +294,7 @@ classdef spikeAnalysis < analysisCore
 			end
 			for i = 1:length(inbeh)
 				if strcmpi(inbeh{i}, me.selectedBehaviour{1})
-					beh = [beh '|Â¤' inbeh{i}];
+					beh = [beh '|¤' inbeh{i}];
 				else
 					beh = [beh '|' inbeh{i}];
 				end
@@ -296,7 +304,7 @@ classdef spikeAnalysis < analysisCore
 			denf = 'r';
 			for i = 1:length(indenf)
 				if strcmpi(indenf{i}, me.densityFunction)
-					denf = [denf '|Â¤' indenf{i}];
+					denf = [denf '|¤' indenf{i}];
 				else
 					denf = [denf '|' indenf{i}];
 				end
@@ -308,6 +316,7 @@ classdef spikeAnalysis < analysisCore
 			roi = num2str(me.ROI);
 			saccfilt = num2str(me.filterFirstSaccades);
 			toifilt = num2str(me.TOI);
+			comment = me.comment;
 			me.selectedBehaviour = {};
 			
 			mtitle   = [me.file ': REPARSE ' num2str(me.p.eventList.nVars) ' DATA VARIABLES'];
@@ -324,6 +333,7 @@ classdef spikeAnalysis < analysisCore
 				['t|' roi],'Stimulus Region of Interest [X Y RADIUS INCLUDE[0|1]] (blank = ignore):';   ...
 				['t|' toifilt],'Fixation Time/Region Of Interest [STARTTIME ENDTIME  X Y RADIUS] (blank = ignore):';   ...
 				['t|' saccfilt],'Saccade Filter in seconds [TIME1 TIME2], e.g. [-0.8 0.8] (blank = ignore):';   ...
+				['t|' comment],'Comment:';...
 				};
 			answer = menuN(mtitle,options);
 			drawnow;
@@ -359,6 +369,7 @@ classdef spikeAnalysis < analysisCore
 				me.selectedUnit = answer{5};
 				me.plotRange = str2num(answer{7});
 				me.measureRange = str2num(answer{8});
+				me.comment = answer{14};
 
 				bw = str2num(answer{9});
 				
@@ -489,7 +500,7 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function getRates(me)
-			if isempty(me.options.stats); me.initialiseStats(); end
+			if isempty(me.options) || isempty(me.options.stats); me.initialise(); end
 			rate = cell(1,length(me.selectedTrials));
 			baseline = rate;
 			for j = 1:length(me.selectedTrials)
@@ -763,7 +774,7 @@ classdef spikeAnalysis < analysisCore
 				end
 				me.chronux{i} = data;
 			end
-			fprintf('<strong>Â§</strong> Converting spikes to chronux format took <strong>%g ms</strong>\n',round(toc(tft)*1000));
+			fprintf('<strong>§</strong> Converting spikes to chronux format took <strong>%g ms</strong>\n',round(toc(tft)*1000));
 		end
 		
 	end
@@ -779,8 +790,29 @@ classdef spikeAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function selectTrials(me)	
-			if me.yokedSelection == true %if we are yoked to another object, don't run this method
-				return
+			%if we are yoked to another object, don't run this method
+			if me.yokedSelection == true; disp('Object is yoked, cannot run selectTrials...');return; end
+
+			if length(me.selectedBehaviour) ~= length(me.map)
+				for i = 1:length(me.map);me.selectedBehaviour{i} = 'correct';end
+				warning('Had to reset selectedBehaviours, probably due to an old LFPAnalysis object');
+			end
+			
+			for i = 1:length(me.selectedBehaviour) %generate our selected behaviour indexes
+				switch lower(me.selectedBehaviour{i})
+					case {'c', 'correct'}
+						behaviouridx{i} = find([me.p.eventList.trials.isCorrect]==true); %#ok<*AGROW>
+						selectedBehaviour{i} = 'correct';
+					case {'b', 'breakfix'}
+						behaviouridx{i} = find([me.p.eventList.trials.isBreak]==true);
+						selectedBehaviour{i} = 'breakfix';
+					case {'i', 'incorrect'}
+						behaviouridx{i} = find([me.p.eventList.trials.isIncorrect]==true);
+						selectedBehaviour{i} = 'incorrect';						
+					otherwise
+						behaviouridx{i} = [me.p.eventList.trials.index];
+						selectedBehaviour{i} = 'all';
+				end
 			end
 			
 			cutidx = me.cutTrials; %cut trials index
@@ -806,27 +838,6 @@ classdef spikeAnalysis < analysisCore
 				toiidx = [tois.correctedIndex];
 			end
 			
-			if length(me.selectedBehaviour) ~= length(me.map)
-				error('Index error for behaviours');
-			end
-			
-			for i = 1:length(me.selectedBehaviour) %generate our selected behaviour indexes
-				switch lower(me.selectedBehaviour{i})
-					case {'c', 'correct'}
-						behaviouridx{i} = find([me.p.eventList.trials.isCorrect]==true); %#ok<*AGROW>
-						selectedBehaviour{i} = 'correct';
-					case {'b', 'breakfix'}
-						behaviouridx{i} = find([me.p.eventList.trials.isBreak]==true);
-						selectedBehaviour{i} = 'breakfix';
-					case {'i', 'incorrect'}
-						behaviouridx{i} = find([me.p.eventList.trials.isIncorrect]==true);
-						selectedBehaviour{i} = 'incorrect';						
-					otherwise
-						behaviouridx{i} = [me.p.eventList.trials.index];
-						selectedBehaviour{i} = 'all';
-				end
-			end
-			
 			if isempty(me.map{1}) %if our map is empty, generate groups for each variable
 				bidx = behaviouridx{1};
 				sb = selectedBehaviour{1};
@@ -842,6 +853,7 @@ classdef spikeAnalysis < analysisCore
 			me.selectedTrials = {};
 			varList = [me.p.eventList.trials.variable];
 			a = 1;
+			
 			for i = 1:length(map)
 				if isempty(map{i}); continue; end
 				idx = find(ismember(varList,map{i})==true); %selects our trials based on variable
@@ -864,7 +876,7 @@ classdef spikeAnalysis < analysisCore
 					me.selectedTrials{a}.bidx			= bidx;
 					me.selectedTrials{a}.behaviour	= selectedBehaviour{i};
 					me.selectedTrials{a}.sel			= map{i};
-					me.selectedTrials{a}.name			= ['[' num2str(me.selectedTrials{a}.sel) ']' ' #' num2str(length(idx))];
+					me.selectedTrials{a}.name			= ['[' num2str(me.selectedTrials{a}.sel) ']' ' #' num2str(length(idx)) '|' me.selectedTrials{a}.behaviour];
 					if isfield(me.options.stats,'sort') && ~isempty(me.options.stats.sort)
 						switch me.options.stats.sort
 							case 'saccades'
@@ -882,11 +894,21 @@ classdef spikeAnalysis < analysisCore
 				end
 			end
 			
-			if me.nSelection == 0; warndlg('The selection results in no valid trials to process!'); return; end
+			if me.nSelection == 0; warning('The selection results in no valid trials to process!'); return; end
 			for j = 1:me.nSelection
-				fprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n-Cut Index: %s\nBehaviour: %s\n',...
+				t{j}=sprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n-Cut Index: %s\nBehaviour: %s\n',...
 					j,me.selectedTrials{j}.name,num2str(me.selectedTrials{j}.idx),num2str(me.selectedTrials{j}.cutidx),...
 					me.selectedTrials{j}.behaviour);
+				disp(t{j});
+			end
+			if size(t,2) > size(t,1); t = t'; end
+			if me.openUI
+				s=get(me.handles.list,'String');
+				s{end+1} = ['Reselected @ ' datestr(now)];
+				if size(s,2) > size(s,1); s = s'; end
+				if length(s) > 500; s = s(end-500:end); end
+				s = [s; t];
+				set(me.handles.list,'String',s,'Value',length(s));
 			end
 		end
 		
@@ -954,7 +976,7 @@ classdef spikeAnalysis < analysisCore
 				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
 				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
 				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-				blineText = sprintf('%s  Group:%i %.4g Â± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
+				blineText = sprintf('%s  Group:%i %.4g ± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
 			end
 			disp(blineText);
 			
@@ -970,7 +992,7 @@ classdef spikeAnalysis < analysisCore
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
-				t = [t sprintf(' R%i: %.4g Â± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
+				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t);
@@ -1015,7 +1037,7 @@ classdef spikeAnalysis < analysisCore
 				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
 				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
 				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-				blineText = sprintf('%s  Group:%i %.4g Â± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
+				blineText = sprintf('%s  Group:%i %.4g ± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
 			end
 			disp(blineText);
 			
@@ -1025,7 +1047,7 @@ classdef spikeAnalysis < analysisCore
 				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
-				t = [t sprintf(' R%i: %.4g Â± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
+				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',14);
@@ -1107,7 +1129,7 @@ classdef spikeAnalysis < analysisCore
 				areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
-				t = [t sprintf(' R%i: %.4g Â± %.3g', j, rate{j}.avg, e)];
+				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',13);

@@ -52,6 +52,10 @@ classdef LFPAnalysis < analysisCore
 		cutTrials@int32
 		%> variable selection map for the analysis groups
 		map@cell
+	end
+	
+	%------------------CLASS PROPERTIES----------%
+	properties (SetAccess = {?analysisCore}, GetAccess = {?analysisCore})
 		%> external plot destination handle (see LFPMeta for an example)
 		plotDestination = [];
 		%> last freq method used
@@ -374,6 +378,9 @@ classdef LFPAnalysis < analysisCore
 			ft.cfg.eventformat = ft.cfg.headerformat;
 			ft.cfg.trl = [];
 			a=1;
+			if ~isfield(LFPs,'nTrials'); 
+				for jj = 1:length(LFPs); LFPs(jj).nTrials = me.p.eventList.nTrials; end
+			end
 			for k = 1:LFPs(1).nTrials
 				ft.time{a} = LFPs(1).trials(k).time';
 				for i = 1:me.nLFPs
@@ -444,13 +451,16 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function cfg=ftTimeLockAnalysis(me, cfg, statcfg)
+			if isempty(fieldnames(me.ft)); warning('Fieldtrip structure is empty, regenerating...');me.getFieldTripLFPs;end
 			ft = me.ft;	
-			ft = rmfield(ft,'uniquetrials'); %ft_timelockanalysis > ft_selectdata generates a warning as this is an unofficial field, so remove it here
+			if isfield(ft,'uniquetrials');
+				ft = rmfield(ft,'uniquetrials'); %ft_timelockanalysis > ft_selectdata generates a warning as this is an unofficial field, so remove it here
+			end
 			if ~exist('cfg','var') || isempty(cfg); cfg = []; end
 			if isnumeric(cfg) && length(cfg) == 2; w=cfg;cfg=[];cfg.covariancewindow=w; end
 			if ~isfield(cfg,'covariancewindow');cfg.covariancewindow = me.measureRange;end
 			if ~isfield(cfg,'keeptrials'); cfg.keeptrials = 'yes'; end
-			if ~isfield(cfg,'removemean'); cfg.removemean	= 'no'; end
+			if ~isfield(cfg,'removemean'); cfg.removemean	= 'yes'; end
 			if ~isfield(cfg,'covariance'); cfg.covariance	= 'yes'; end
 			cfg.channel						= ft.label{me.selectedLFP};
 			me.results(1).av = [];
@@ -1282,7 +1292,7 @@ classdef LFPAnalysis < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief selectTrials selects trials based on many filters
+		%> @brief selects trials/options based on many filters
 		%>
 		%> @param
 		%> @return
@@ -1295,7 +1305,11 @@ classdef LFPAnalysis < analysisCore
 			end
 			if force == true; me.yokedSelection = false; end
 			if me.yokedSelection == true;
-				disp('This spikeanalysis object is currently locked, run select(true) to override lock...'); return
+				if me.openUI
+					warndlg('This LFPAnalysis object is currently locked, force parse or run select(true) to override lock...'); return
+				else
+					warning('This LFPAnalysis object is currently locked, force parse or run select(true) to override lock...'); return
+				end
 			end
 			if me.nLFPs<1; warningdlg('Data not parsed yet...');return;end
 			cuttrials = '[ ';
@@ -1355,6 +1369,10 @@ classdef LFPAnalysis < analysisCore
 			end
 			
 			mrange = me.measureRange;
+			pr = num2str(me.plotRange);
+			bl = num2str(me.baselineWindow);
+			comment = me.comment;
+			me.selectedBehaviour = {};
 			
 			mtitle   = [me.lfpfile ': REPARSE ' num2str(me.LFPs(1).nVars) ' VARS'];
 			options  = {['t|' map{1}],'Choose PLX variables to merge (A, if empty parse all variables independantly):';   ...
@@ -1365,6 +1383,9 @@ classdef LFPAnalysis < analysisCore
 				[spk],'Choose Spike Unit:';...
 				[beh],'Behavioural type (''correct'', ''breakFix'', ''incorrect'' | ''all''):';...
 				['t|' num2str(mrange)],'Measurement Range (s) for Statistical Comparisons:';...
+				['t|' num2str(pr)],'Plot Range (s):';...
+				['t|' num2str(bl)],'Baseline Window (s; default [-0.2 0]):';...
+				['t|' comment],'Comment:';...
 				};
 			
 			answer = menuN(mtitle,options);
@@ -1402,6 +1423,9 @@ classdef LFPAnalysis < analysisCore
 				me.selectedLFP = answer{5};
 				me.sp.selectedUnit = answer{6};
 				me.measureRange = str2num(answer{8});
+				me.plotRange = str2num(answer{9});
+				me.baselineWindow = str2num(answer{10});
+				me.comment = answer{11};
 				selectTrials(me);
 			end
 		end
@@ -1659,9 +1683,9 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function selectTrials(me)
-			if me.yokedSelection == true %if we are yoked to another object, don't run this method
-				return
-			end
+			%if we are yoked to another object, don't run this method
+			if me.yokedSelection == true; disp('Object is yoked, cannot run selectTrials...');return; end
+			if isempty(me.options); initialise(me); end%initialise the various analysisCore options fields
 			LFPs = me.LFPs; %#ok<*PROP>
 			
 			if length(me.selectedBehaviour) ~= length(me.map)
@@ -1716,7 +1740,10 @@ classdef LFPAnalysis < analysisCore
 					bidx = behaviouridx{1};
 				end
 				idx = intersect(idx, bidx); %this has a positive side effect of also sorting the trials
-				if ~isempty(cutidx);	idx = setdiff(idx, cutidx);		end %remove the cut trials
+				if ~isempty(cutidx);	idx = setdiff(idx, cutidx); end%remove the cut trials
+				if ~isempty(saccidx);	idx = intersect(idx, saccidx);	end %remove saccade filtered trials
+				if ~isempty(roiidx);		idx = intersect(idx, roiidx);		end %remove roi filtered trials
+				if ~isempty(toiidx);		idx = intersect(idx, toiidx);		end %remove roi filtered trialsend 
 				if ~isempty(idx)
 					me.selectedTrials{a}.idx			= idx;
 					me.selectedTrials{a}.cutidx		= cutidx;
@@ -1727,10 +1754,23 @@ classdef LFPAnalysis < analysisCore
 					me.selectedTrials{a}.behaviour	= selectedBehaviour{i};
 					me.selectedTrials{a}.sel			= map{i};
 					me.selectedTrials{a}.name			= ['[' num2str(me.selectedTrials{a}.sel) ']' ' #' num2str(length(idx)) '|' me.selectedTrials{a}.behaviour];
+					if isfield(me.options.stats,'sort') && ~isempty(me.options.stats.sort)
+						switch me.options.stats.sort
+							case 'saccades'
+								st = [me.p.eventList.trials(idx).firstSaccade];
+								mn = nanmean(st);
+								st(isnan(st)) = mn;
+								[~,stidx] = sort(st);
+								me.selectedTrials{a}.idx = idx(stidx);
+								me.selectedTrials{a}.sort = 'saccades';
+							case 'variable'
+
+						end					
+					end
 					a = a + 1;
 				end
 			end
-			if me.nSelection == 0; warndlg('The selection results in no valid trials to process!'); end
+			if me.nSelection == 0; warning('The selection results in no valid trials to process!'); end
 			for j = 1:me.nSelection
 				t{j}=sprintf(' SELECT TRIALS GROUP %g\n=======================\nInfo: %s\nTrial Index: %s\n-Cut Index: %s\nBehaviour: %s\n',...
 					j,me.selectedTrials{j}.name,num2str(me.selectedTrials{j}.idx),num2str(me.selectedTrials{j}.cutidx),...
@@ -1913,62 +1953,40 @@ classdef LFPAnalysis < analysisCore
 				p(1).select();
 				p(1).hold('on');
 				
+				cl = me.optimalColours(length(av));
+				
 				xp = [avstat.cfg.latency(1) avstat.cfg.latency(2) avstat.cfg.latency(2) avstat.cfg.latency(1)];
 				ym=mean(av{1}.avg(1,:));
 				yp = [ym ym ym ym];
-				mh = patch(xp,yp,[0.8 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
+				mh = patch(xp,yp,[0 0 0],'FaceAlpha',0.1,'EdgeColor','none');
 				set(get(get(mh,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-				
-				xp = [me.plotRange(1) me.plotRange(2) me.plotRange(2) me.plotRange(1)];
-				yp = [av{1}.baselineCI(1) av{1}.baselineCI(1) av{1}.baselineCI(2) av{1}.baselineCI(2)];
-				me1 = patch(xp,yp,[0.8 0.8 1],'FaceAlpha',0.5,'EdgeColor','none');
-				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-				
-				yp2 = [av{2}.baselineCI(1) av{2}.baselineCI(1) av{2}.baselineCI(2) av{2}.baselineCI(2)];
-				me2 = patch(xp,yp2,[1 0.8 0.8],'FaceAlpha',0.5,'EdgeColor','none');
-				set(get(get(me2,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-				
-				tlout = struct();
-				tlout(1).e = me.var2SE(av{1}.var(1,:),av{1}.dof(1,:))';
-				tlout(1).t=av{1}.time';
-				tlout(1).d=av{1}.avg(1,:)';
-				
-				tlout(2).e = me.var2SE(av{2}.var(1,:),av{2}.dof(1,:))';
-				tlout(2).t=av{2}.time';
-				tlout(2).d=av{2}.avg(1,:)';
-				
-				if length(av) > 2
-					tlout(3).e = me.var2SE(av{3}.var(1,:),av{3}.dof(1,:))';
-					tlout(3).t=av{3}.time';
-					tlout(3).d=av{3}.avg(1,:)';
+				%we draw baseline patches first
+				for i = 1:length(av)
+					xp = [me.plotRange(1) me.plotRange(2) me.plotRange(2) me.plotRange(1)];
+					yp = [av{i}.baselineCI(1) av{i}.baselineCI(1) av{i}.baselineCI(2) av{i}.baselineCI(2)];
+					me1 = patch(xp,yp,cl(i,:),'FaceAlpha',0.1,'EdgeColor','none');
+					set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 				end
 				
-				if me.options.stats.smoothing > 0
-					prm = me.options.stats.smoothing;
-					for i = 1:length(av);
+				tlout = struct();
+				for i = 1:length(av)
+					tlout(i).e = me.var2SE(av{i}.var(1,:),av{i}.dof(1,:))';
+					tlout(i).t=av{i}.time';
+					tlout(i).d=av{i}.avg(1,:)';
+					namestr{i} = av{i}.name;
+
+					if me.options.stats.smoothing > 0
+						prm = me.options.stats.smoothing;
 						tlout(i).f = fit(tlout(i).t,tlout(i).d,'smoothingspline','SmoothingParam', prm); %data
 						tlout(i).fe = fit(tlout(i).t,tlout(i).e,'smoothingspline','SmoothingParam', prm); %error
 						tlout(i).s = feval(tlout(i).f,tlout(i).t);
 						tlout(i).se = feval(tlout(i).fe,tlout(i).t);
-					end
-					areabar(tlout(1).t, tlout(1).s, tlout(1).se, [.5 .5 .5],0.3,'b-','LineWidth',1);
-					areabar(tlout(2).t, tlout(2).s, tlout(2).se, [.5 .4 .4],0.3,'r-','LineWidth',1);
-					if length(av) == 2
-						legend(av{1}.name,av{2}.name,'Location','southwest')
+						areabar(tlout(i).t, tlout(i).s, tlout(i).se, [.5 .5 .5],0.3,'LineWidth',1);
 					else
-						areabar(tlout(3).t, tlout(3).s, tlout(3).se,[.4 .5 .4],0.3,'g-','LineWidth',1);
-						legend(av{1}.name,av{2}.name,av{3}.name,'Location','southwest');
-					end
-				else
-					areabar(tlout(1).t, tlout(1).d, tlout(1).e, [.5 .5 .5],0.3,'b.-','LineWidth',1);
-					areabar(tlout(2).t, tlout(2).d, tlout(2).e, [.5 .4 .4],0.3,'r.-','LineWidth',1);
-					if length(av) == 2
-						legend(av{1}.name,av{2}.name,'Location','southwest')
-					else
-						areabar(tlout(3).t, tlout(3).d, tlout(3).e,[.4 .5 .4],0.3,'g.-','LineWidth',1);
-						legend(av{1}.name,av{2}.name,av{3}.name,'Location','southwest');
+						areabar(tlout(i).t, tlout(i).d, tlout(i).e, [.5 .5 .5],0.3,'b.-','LineWidth',1,'Color',cl(i,:));
 					end
 				end
+				legend(namestr,'Location','southwest');
 
 				assignin('base','timelockOut',tlout);
 
@@ -2010,7 +2028,7 @@ classdef LFPAnalysis < analysisCore
 				
 				res1 = av{2}.avg(1,:) - av{1}.avg(1,:);
 				t = sprintf('Residuals (Sums: %.2g',sum(res1(idx1:idx2)));
-				plot(av{1}.time, res1,'b.-')
+				plot(av{1}.time, res1,'k.-')
 				if length(av) == 2
 					legend('Group B-A')
 				elseif length(av) > 2
@@ -2437,14 +2455,23 @@ classdef LFPAnalysis < analysisCore
 			if ~exist('bl','var')
 				bl = {me.options.bline};
 			end
-			row = length(fq); col = length(bl);
+			if length(bl) == 1;
+				[row,col] = me.optimalLayout(length(fq));
+			else
+				row = length(fq); col = length(bl);
+			end
 			p.pack(row,col);
 			hmin = cell(size(bl));
 			hmax = hmin;
 			h = hmin;
 			for jj = 1:length(bl)
 				for i = 1:length(fq)
-					p(i,jj).select();
+					if length(bl)==1;	
+						[aa,bb] = ind2sub([row, col],i);
+						p(aa,bb).select();
+					else
+						p(i,jj).select(); 
+					end
 					cfg							= [];
 					cfg.fontsize				= 13;
 					if strcmpi(bl{jj},'no');
@@ -2466,7 +2493,7 @@ classdef LFPAnalysis < analysisCore
 					grid on; box on;
 					set(gca,'Layer','top','TickDir','out')
 					%xlim(me.plotRange);
-					axis square
+					%axis square
 					h{jj}{i} = gca;
 					clim = get(gca,'clim');
 					hmin{jj} = min([hmin{jj} min(clim)]);

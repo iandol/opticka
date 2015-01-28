@@ -1,12 +1,11 @@
 % ========================================================================
-%> @brief eyelinkAnalysis offers a set of methods to load and parse raw EDF files. It
+%> @brief eyelinkAnalysis offers a set of methods to load, parse & plot raw EDF files. It
 %> understands opticka trials so can parse eye data and plot it for trial groups. You
 %> can also manually find microsaccades, and perform ROI/TOI filtering on the eye
 %> movements.
-%>
 % ========================================================================
 classdef eyelinkAnalysis < analysisCore
-% eyelinkAnalysis offers a set of methods to load and parse raw EDF files.
+% eyelinkAnalysis offers a set of methods to load, parse & plot raw EDF files.
 	properties
 		%> file name
 		file@char									= ''
