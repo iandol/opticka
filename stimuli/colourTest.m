@@ -64,7 +64,7 @@ classdef colourTest < spotStimulus
 				obj.sM = rE.screen;
 			end
 			
-			obj.sM.windowed = [];
+			obj.sM.windowed = false;
 			obj.mouseOverride = false;
 			
 			try
