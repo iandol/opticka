@@ -260,7 +260,7 @@ classdef plxReader < optickaCore
 					LFPs(j).sample(i) = startsample;
 				end
 				if ~isequal(length(time), length(ad)); error('Reading LFP fragments from plexon file failed!'); end
-				LFPs(j).data = single(ad);
+				LFPs(j).data = ad;
 				LFPs(j).time = time';
 				LFPs(j).sample = sample';
 				LFPs(j).nTrials = me.eventList.nTrials;

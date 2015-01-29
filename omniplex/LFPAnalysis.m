@@ -506,10 +506,15 @@ classdef LFPAnalysis < analysisCore
 				cfg.correcttail										= 'prob';
 				cfg.correctm											= sv.correctm; %holm fdr hochberg bonferroni
 				if strcmpi(cfg.correctm,'cluster')
-					cfg.neighbours										= [];
-					cfg.clustertail									= cfg.tail;
-					cfg.clusteralpha									= 0.05;
-					cfg.clusterstatistic								= 'maxsum';
+					if strcmpi(cfg.method,'montecarlo') %cluster only valid with monte carlo
+						cfg.neighbours										= [];
+						cfg.clustertail									= cfg.tail;
+						cfg.clusteralpha									= 0.05;
+						cfg.clusterstatistic								= 'maxsum';
+					else
+						warning('Switched to Bonferroni correction cluster requires monte carlo method.');
+						cfg.correctm = 'bonferroni';
+					end
 				end
 				cfg.ivar													= 1;
 				cfg.design												= [ones(size(av{1}.trial,1),1); 2*ones(size(av{2}.trial,1),1)]';
@@ -680,29 +685,29 @@ classdef LFPAnalysis < analysisCore
 					case 'fix2'
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'hanning';
-						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
+						cfg.t_ftimwin		= cfg.cycles./cfg.foi;			 % x cycles per time window
 					case 'mtm1'
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'dpss';
 						cfg.tapsmofrq		= cfg.foi .* cfg.smooth;
-						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
+						cfg.t_ftimwin		= cfg.cycles./cfg.foi;			 % x cycles per time window
 					case 'mtm2'
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'dpss';
 						cfg.tapsmofrq		= ones(size(cfg.foi)) .* cfg.smooth;
-						cfg.t_ftimwin		= cycles./cfg.foi;			 % x cycles per time window
+						cfg.t_ftimwin		= cfg.cycles./cfg.foi;			 % x cycles per time window
 					case 'morlet'
 						%cfg = rmfield(cfg,'foi');
 						%cfg.foilim			= [4 100];
 						cfg.method			= 'wavelet';
 						cfg.taper			= '';
-						cfg.width			= width; %'width', or number of cycles, of the wavelet (default = 7)
+						cfg.width			= cfg.width; %'width', or number of cycles, of the wavelet (default = 7)
 					case 'tfr'
 						cfg = rmfield(cfg,'foi');
 						cfg.foilim			= [4 100];
 						cfg.method			= 'tfr';
 						cfg.taper			= '';
-						cfg.width			= width; %'width', or number of cycles, of the wavelet (default = 7)
+						cfg.width			= cfg.width; %'width', or number of cycles, of the wavelet (default = 7)
 				end
 			elseif ~isempty(cfg)
 				preset = 'custom';
@@ -930,10 +935,10 @@ classdef LFPAnalysis < analysisCore
 				dati=dat;
 			end
 			
-			me.results.staPre		= cell(1,me.nSelection);
+			me.results.staPre			= cell(1,me.nSelection);
 			me.results.staPost		= cell(1,me.nSelection);
-			me.results.stsFFT		= cell(1,me.nSelection);
-			me.results.stsConvol	= cell(1,me.nSelection);
+			me.results.stsFFT			= cell(1,me.nSelection);
+			me.results.stsConvol		= cell(1,me.nSelection);
 			me.results.statSts0		= cell(1,me.nSelection);
 			me.results.statSts1		= cell(1,me.nSelection);
 			me.results.statSts2		= cell(1,me.nSelection);
@@ -942,9 +947,9 @@ classdef LFPAnalysis < analysisCore
 			me.results.statSts5		= cell(1,me.nSelection);
 			me.results.statStsW		= cell(1,me.nSelection);
 			
-			cycles = me.options.stats.spikelfptaperopt(1);
-			smooth = me.options.stats.spikelfptaperopt(2);
-			taper = me.options.stats.spikelfptaper;
+			cycles						= me.options.stats.spikelfptaperopt(1);
+			smooth						= me.options.stats.spikelfptaperopt(2);
+			taper							= me.options.stats.spikelfptaper;
 			for j = 1:length(me.selectedTrials)
 				name				= [spike.label{unit} ' | ' me.selectedTrials{j}.name];
 				tempspike		= me.subselectFieldTripTrials(spike,me.selectedTrials{j}.idx);
@@ -958,12 +963,12 @@ classdef LFPAnalysis < analysisCore
 				cfg.latency							= [-0.25 -0.05];
 				cfg.keeptrials						= 'yes';
 				staPre								= ft_spiketriggeredaverage(cfg, tempdat);
-				me.results(1).staPre{j}		= staPre;
+				me.results(1).staPre{j}			= staPre;
 				me.results.staPre{j}.name		= [name ':' num2str(cfg.latency)];
 				cfg.latency							= me.measureRange;
 				staPost								= ft_spiketriggeredaverage(cfg, tempdat);
 				me.results.staPost{j}			= staPost;
-				me.results.staPost{j}.name	= [name ':' num2str(cfg.latency)];
+				me.results.staPost{j}.name		= [name ':' num2str(cfg.latency)];
 				
 				%--------------------------FFT METHOD-----------------------
 				cfg									= [];
@@ -979,7 +984,7 @@ classdef LFPAnalysis < analysisCore
 				stsFFT								= ft_spiketriggeredspectrum(cfg, tempdat, tempspike);
 				ang									= squeeze(angle(stsFFT.fourierspctrm{1}));
 				mag									= squeeze(abs(stsFFT.fourierspctrm{1}));
-				me.results.stsFFT{j}			= stsFFT;
+				me.results.stsFFT{j}				= stsFFT;
 				me.results.stsFFT{j}.name		= name;
 				me.results.stsFFT{j}.ang		= ang;
 				me.results.stsFFT{j}.mag		= mag;
@@ -988,7 +993,7 @@ classdef LFPAnalysis < analysisCore
 				%--------------------------CONVOL METHOD-----------------------
 				cfg									= [];
 				cfg.method							= 'mtmconvol';
-				cfg.latency							= me.measureRange;
+				%cfg.latency							= me.measureRange;
 				cfg.foi								= 6:4:100; %vector 1 x numfoi, frequencies of interest
 				cfg.tapsmofrq						= cfg.foi * smooth; %the amount of spectral smoothing through multi-tapering. Note that 4 Hz smoothing means plus-minus 4 Hz,i.e. a 8 Hz smoothing box. Note: multitapering rotates phases (no problem for consistency)
 				cfg.t_ftimwin						= cycles ./ cfg.foi; % vector 1 x numfoi, length of time window (in seconds)
@@ -1001,7 +1006,7 @@ classdef LFPAnalysis < analysisCore
 				
 				ang									= squeeze(angle(stsConvol.fourierspctrm{1}));
 				mag									= squeeze(abs(stsConvol.fourierspctrm{1}));
-				me.results.stsConvol{j}		= stsConvol;
+				me.results.stsConvol{j}			= stsConvol;
 				me.results.stsConvol{j}.name	= name;
 				me.results.stsConvol{j}.ang	= ang;
 				me.results.stsConvol{j}.mag	= mag;
@@ -1095,7 +1100,7 @@ classdef LFPAnalysis < analysisCore
 				statSts								= ft_spiketriggeredspectrum_stat(cfg,stsConvol);
 				me.results.statStsW{j}			= statSts;
 				me.results.statStsW{j}.name	= name;
-				me.results.statStsW{j}.times = [cfg.latency(1):cfg. winstepsize:cfg.latency(2)-cfg. winstepsize];
+				me.results.statStsW{j}.times	= [cfg.latency(1):cfg. winstepsize:cfg.latency(2)-cfg. winstepsize];
 				clear statSts
 			end
 			if me.doPlots; drawSpikeLFP(me); end
@@ -1439,7 +1444,7 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function createSurrogate(me)
+		function createSurrogate(me, varargin)
 			me.getFieldTripLFPs(); %reset ft to real data
 			ft = me.ft;
 			f = ft.fsample; %f is the frequency, normally 1000 for LFPs
@@ -1684,13 +1689,13 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		function selectTrials(me)
 			%if we are yoked to another object, don't run this method
-			if me.yokedSelection == true; disp('Object is yoked, cannot run selectTrials...');return; end
+			if me.yokedSelection == true; fprintf('Object is yoked, cannot run selectTrials...\n');return; end
 			if isempty(me.options); initialise(me); end%initialise the various analysisCore options fields
 			LFPs = me.LFPs; %#ok<*PROP>
 			
 			if length(me.selectedBehaviour) ~= length(me.map)
 				for i = 1:length(me.map);me.selectedBehaviour{i} = 'correct';end
-				warning('Had to reset selectedBehaviours, probably due to an old LFPAnalysis object');
+				warning('Reset .selectedBehaviours to match .map length...');
 			end
 			
 			for i = 1:length(me.selectedBehaviour) %generate our selected behaviour indexes
@@ -2209,8 +2214,8 @@ classdef LFPAnalysis < analysisCore
 
 					p(1,2).select();
 					p(1,2).hold('on');
-					[mv,me] = stderr(res.stsFFT{i}.mag);
-					areabar(res.stsFFT{i}.freq, mv, me,[],0.2,lo{i});
+					[mv,merr] = stderr(res.stsFFT{i}.mag);
+					areabar(res.stsFFT{i}.freq, mv, merr,[],0.2,lo{i});
 					
 					p(2,1).select();
 					p(2,1).hold('on');
@@ -2219,8 +2224,8 @@ classdef LFPAnalysis < analysisCore
 
 					p(2,2).select();
 					p(2,2).hold('on');
-					[mv,me] = stderr(res.stsConvol{i}.mag);
-					areabar(res.stsConvol{i}.freq, mv, me,[],0.2,lo{i});
+					[mv,merr] = stderr(res.stsConvol{i}.mag);
+					areabar(res.stsConvol{i}.freq, mv, merr,[],0.2,lo{i});
 				end
 			end
 			p(1,1).select();

@@ -285,7 +285,7 @@ classdef colourTest < spotStimulus
 						end
 					case '2@'
 						if obj.tick > keyHold
-							obj.colourOut = [0.25 0.25 0.15];
+							obj.colourOut = [0.25 0.25 0.25];
 							disp(['Colour is: ' num2str(obj.colourOut)]);
 							keyHold = obj.tick + Finc;
 						end
