@@ -1188,12 +1188,18 @@ classdef LFPAnalysis < analysisCore
 				disp('Nothing parsed or doPlots is false, no plotting performed...')
 				return
 			end
-			if isempty(varargin) || ~ischar(varargin{1})
+			if isempty(varargin)
 				sel = 'normal';
-			elseif isa(varargin{1},'UIControl')
-				varargin = {};
-			else
+			elseif isa(varargin{1},'matlab.ui.control.UIControl') %callback from the GUI
+				if length(varargin)==3 %with an additional callback item
+					sel = varargin{3};
+				else
+					sel = 'normal';
+				end
+			elseif ischar(varargin{1})
 				sel = varargin{1};
+			else
+				sel = 'normal';
 			end
 			
 			if length(varargin) > 1
@@ -1210,7 +1216,6 @@ classdef LFPAnalysis < analysisCore
 					me.drawContinuousLFPs();
 					me.drawTrialLFPs();
 					me.drawAverageLFPs();
-					me.drawTimelockLFPs();
 				case {'cont','continuous'}
 					me.drawContinuousLFPs();
 				case {'trials','raw'}
@@ -2090,8 +2095,8 @@ classdef LFPAnalysis < analysisCore
 				set(get(get(hl,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 				hl=line([trl.t2 trl.t2],[-.4 .4],'Color',c(var,:),'LineWidth',2);
 				set(get(get(hl,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-				text(trl.t1,.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',10);
-				text(trl.t1,-.41,['COR: ' num2str(trl.isCorrect)],'FontSize',10);
+				text(double(trl.t1),.41,['VAR: ' num2str(var) '\newlineTRL: ' num2str(j)],'FontSize',10);
+				text(double(trl.t1),-.41,['COR: ' num2str(trl.isCorrect)],'FontSize',10);
 			end
 			plot(me.p.eventList.startFix,zeros(size(me.p.eventList.startFix))-0.35,'c.','MarkerSize',15);
 			plot(me.p.eventList.correct,zeros(size(me.p.eventList.correct))-0.35,'g.','MarkerSize',15);
@@ -2898,7 +2903,7 @@ classdef LFPAnalysis < analysisCore
 				'Tag','LFPAplotbutton',...
 				'FontSize', fs,...
 				'Tooltip','Plot',...
-				'Callback',@me.plot,...
+				'Callback',{@me.plot, 'all'},...
 				'String','Plot Raw LFPs');
 			handles.statbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
