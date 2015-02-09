@@ -394,6 +394,8 @@ classdef analysisCore < optickaCore
 				['t|' num2str(me.options.cycles)],'LFP # Cycles per time window (cycles [fix2,mtm1,mtm2]):'; ...
 				['t|' num2str(me.options.smth)],'Smoothing Value (smth [mtm1,mtm2]):'; ...
 				['t|' num2str(me.options.width)],'LFP Taper Width in cycles (width [morlet,tfr]):'; ...
+				['t|' me.options.toi],'Time of interest (min:step:max in seconds):'; ...
+				['t|' me.options.foi],'Frequencies of Interest (min:step:max in Hz):'; ...
 				};
 			
 			answer = menuN(mtitle,options);
@@ -405,6 +407,8 @@ classdef analysisCore < optickaCore
 				me.options.cycles		= str2num(answer{4});
 				me.options.smth		= str2num(answer{5});
 				me.options.width		= str2num(answer{6});
+				me.options.toi			= answer{7};
+				me.options.foi			= answer{8};
 			end
 			
 			options = me.options;
@@ -650,6 +654,12 @@ classdef analysisCore < optickaCore
 			end
 			if ~isfield(me.options,'width') || isempty(me.options.width)
 				me.options(1).width = 7;
+			end
+			if ~isfield(me.options,'toi') || isempty(me.options.toi)
+				me.options(1).toi = '-0.4:0.01:0.4';
+			end
+			if ~isfield(me.options,'foi') || isempty(me.options.foi)
+				me.options(1).foi = '4:2:100';
 			end
 			%initialise settings for stats analysis
 			if ~isfield(me.options,'stats') || isempty(me.options.stats)

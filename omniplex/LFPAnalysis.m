@@ -650,17 +650,21 @@ classdef LFPAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function ftFrequencyAnalysis(me, cfg, preset, tw, cycles, smth, width)
+		function ftFrequencyAnalysis(me, cfg, preset, tw, cycles, smth, width,toi,foi)
+			if ~isfield(me.ft,'label'); getFieldTripLFPs(me); end
 			if me.openUI; setTimeFreqOptions(me); end
+			
 			if ~exist('preset','var') || isempty(preset); preset=me.options.method; end
 			if ~exist('tw','var') || isempty(tw); tw=me.options.tw; end
 			if ~exist('cycles','var') || isempty(cycles); cycles = me.options.cycles; end
 			if ~exist('smth','var') || isempty(smth); smth = me.options.smth; end
 			if ~exist('width','var') || isempty(width); width = me.options.width; end
-			if ~isfield(me.ft,'label'); getFieldTripLFPs(me); end
+			if ~exist('toi','var') || isempty(toi); toi = me.options.toi; end
+			if ~exist('foi','var') || isempty(foi); foi = me.options.foi; end
+			
 			if isempty(me.results);me.results=struct();end
 			if isfield(me.results(1),['fq' preset]);me.results(1).(['fq' preset]) = [];end
-			if isempty(me.ft);disp('No parsed data yet...');return;end
+			
 			ft = me.ft;
 			cfgUsed = {};
 			if ~exist('cfg','var') || isempty(cfg)
@@ -668,8 +672,8 @@ classdef LFPAnalysis < analysisCore
 				cfg.keeptrials	= 'yes';
 				cfg.output		= 'pow';
 				cfg.channel		= ft.label{me.selectedLFP};
-				cfg.toi        = -0.4:0.01:0.4;                  % time window "slides"
-				cfg.foi			= 4:2:100;						 % analysis frequencies
+				if ischar(toi); cfg.toi=str2num(toi); else cfg.toi=toi; end % time window "slides"
+				if ischar(foi); cfg.foi=str2num(foi); else cfg.foi=foi; end % analysis frequencies
 				cfg.tw			= tw;
 				cfg.pad			= 2;
 				cfg.cycles		= cycles;
@@ -680,7 +684,8 @@ classdef LFPAnalysis < analysisCore
 						cfg.method			= 'mtmconvol';
 						cfg.taper			= 'hanning';
 						lf						= round(1 / cfg.tw);
-						cfg.foi				= lf:2:100;						  % analysis frequencies
+						cfg.foi				= lf:min(diff(cfg.foi)):max(cfg.foi); % analysis frequencies
+						fprintf('Fixed window of %g means the minimum frequency of interest is: %g\n', cfg.tw, lf);
 						cfg.t_ftimwin		= ones(length(cfg.foi),1).*tw;   % length of fixed time window
 					case 'fix2'
 						cfg.method			= 'mtmconvol';
@@ -697,14 +702,12 @@ classdef LFPAnalysis < analysisCore
 						cfg.tapsmofrq		= ones(size(cfg.foi)) .* cfg.smooth;
 						cfg.t_ftimwin		= cfg.cycles./cfg.foi;			 % x cycles per time window
 					case 'morlet'
-						%cfg = rmfield(cfg,'foi');
-						%cfg.foilim			= [4 100];
 						cfg.method			= 'wavelet';
 						cfg.taper			= '';
 						cfg.width			= cfg.width; %'width', or number of cycles, of the wavelet (default = 7)
 					case 'tfr'
+						cfg.foilim			= [min(cfg.foi) max(cfg.foi)];
 						cfg = rmfield(cfg,'foi');
-						cfg.foilim			= [4 100];
 						cfg.method			= 'tfr';
 						cfg.taper			= '';
 						cfg.width			= cfg.width; %'width', or number of cycles, of the wavelet (default = 7)
@@ -1580,8 +1583,16 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function chSpectrum(me,tapers)
-			if ~exist('mtspectrumc','file'); disp('Chronux V2.10 not installed...');return; end
-			if ~exist('tapers','var'); tapers = [10 2]; end
+			if ~exist('mtspectrumc','file'); warning('Chronux V2.10 not installed...');return; end
+			if ~exist('tapers','var') || isempty(tapers)
+				if me.openUI; 
+					answer=menuN('Chronux Spectrum:',{'t|[10 2]','Set Tapers [TW K] TW=time-bandwidth-product, K=#tapers:'});
+					if iscell(answer) && ~isempty(answer); tapers = str2num(answer{1}); 
+					elseif ischar(answer); tapers = str2num(answer);end
+				else
+					tapers = [10 2]; 
+				end
+			end
 			me.runChronuxAnalysis(tapers)
 		end
 		
@@ -2654,14 +2665,16 @@ classdef LFPAnalysis < analysisCore
 			figpos(1,[1800 1200]);
 			set(h,'Color',[1 1 1],'NumberTitle','off','Name',[me.lfpfile ' | ' me.spikefile]);
 			o=panel(h);
-			o.margin = [15 15 5 15];%left bottom right top
+			o.margin = [25 10 10 10];%left bottom right top
 			o.pack('h', {2/3 []});
 			o(2).pack('v', {1/2 []});
 			p = o(1);
+			p.margin = [15 15 15 15];%left bottom right top
 			p.pack('v', {1/3 []});
 			q=p(2);
+			q.margin = [30 15 20 10];%left bottom right top
 			q.pack(2,me.nSelection);
-			lo = {'b-o','r-o','g-o','k.-','y.-','c.-','b.:','r.:','g.:','k.:','y.:','c.:'};
+			lo = {'k-o','r-o','b-o','g.-','y.-','c.-','k.:','r.:','b.:','g.:','y.:','c.:'};
 			
 			ft = me.ft;
 			lfp = me.LFPs(me.selectedLFP);
@@ -2677,6 +2690,7 @@ classdef LFPAnalysis < analysisCore
 				me.baselineWindow(1), me.baselineWindow(2), me.measureRange(1), me.measureRange(2));
 			cmin = Inf; cmax = -Inf;
 			
+			name={};
 			for i=1:me.nSelection
 				%d = [lfp.trials(me.selectedTrials{i}.idx).data];
 				idx = me.selectedTrials{i}.idx;
@@ -2690,12 +2704,13 @@ classdef LFPAnalysis < analysisCore
 				p(1).select();
 				p(1).hold('on');
 				[s,f,e] = mtspectrumc(d(b1:b2,:),params);
-				%areabar(f,s,e,[],0.2,lo{i+5})
-				plot_vector(s,f,uselog,e,lo{i+6},0.5);
+				plot_vector(s,f,uselog,e,lo{i+6},0.5);%areabar(f,s,e,[],0.2,lo{i+5})
+				name{end+1} = ['BASELINE ' me.selectedTrials{i}.name];
 				grid on; box on;
 				
 				[s,f,e] = mtspectrumc(d(s1:s2,:),params);
 				plot_vector(s,f,uselog,e,lo{i},2);
+				name{end+1} = ['DATA ' me.selectedTrials{i}.name];
 				
 				q(1,i).select();
 				[s,t,f,e] = mtspecgramc(d(300:1300,:), [0.3,0.05], params );
@@ -2728,6 +2743,7 @@ classdef LFPAnalysis < analysisCore
 			end
 			p(1).select();
 			p(1).title(tit);
+			legend(name);
 			for i=1:me.nSelection
 				q(1,i).select();
 				set(gca,'CLim',[cmin cmax]);
@@ -2764,7 +2780,7 @@ classdef LFPAnalysis < analysisCore
 				if length(f)~=N; error('frequencies and data have incompatible lengths'); end;
 				if nargin < 3 || isempty(plt) ;	 plt='l';	end;
 				if nargin < 4 || isempty(Xerr);	 Xerr=[];	end;				
-				if nargin < 5 || isempty(c); c='b.-';end;
+				if nargin < 5 || isempty(c); c='k.-';end;
 				if nargin < 6 || isempty(w);	 w=1;	end;
 
 				if strcmp(plt,'l');
@@ -2780,7 +2796,11 @@ classdef LFPAnalysis < analysisCore
 						 line(get(gca,'xlim'),[Xerr,Xerr],'Color',c,'LineStyle','--','Linewidth',w);
 					 elseif ~isempty(Xerr);
 						 plot(f,X,c,'Linewidth',w); 
-						 hold on; plot(f,Xerr(1,:),[c(1) '--'],'Linewidth',w); plot(f,Xerr(2,:),[c(1) '--'],'Linewidth',w); 
+						 hold on; 
+						 he1=plot(f,Xerr(1,:),[c(1) '--'],'Linewidth',w);
+						 he2=plot(f,Xerr(2,:),[c(1) '--'],'Linewidth',w);
+						 set(get(get(he1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+						 set(get(get(he2,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 					 end
 				end
 				xlabel('f');
