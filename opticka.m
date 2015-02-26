@@ -415,9 +415,25 @@ classdef opticka < optickaCore
 			obj.r.screen.visualDebug = logical(obj.gv(obj.h.OKDebug));
 			obj.r.screen.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
 			obj.r.screen.nativeBeamPosition = logical(obj.gv(obj.h.OKNativeBeamPosition));
-			obj.r.useLabJack = logical(obj.gv(obj.h.OKuseLabJack));
-			obj.r.useDataPixx = logical(obj.gv(obj.h.OKuseDataPixx));
-			obj.r.useEyeLink = logical(obj.gv(obj.h.OKuseEyeLink));
+			
+			if strcmpi(obj.h.OKuseLabJack.Checked,'on')
+				obj.r.useLabJack = true;
+			else
+				obj.r.useLabJack = false;
+			end
+			if strcmpi(obj.h.OKuseDataPixx.Checked,'on')
+				obj.r.useDataPixx = true;
+			else
+				obj.r.useDataPixx = false;
+			end
+			if strcmpi(obj.h.OKuseEyeLink.Checked,'on')
+				obj.r.useEyeLink = true;
+			else
+				obj.r.useEyeLink = false;
+			end
+			%obj.r.useLabJack = logical(obj.gv(obj.h.OKuseLabJack));
+			%obj.r.useDataPixx = logical(obj.gv(obj.h.OKuseDataPixx));
+			%obj.r.useEyeLink = logical(obj.gv(obj.h.OKuseEyeLink));
 			
 		end
 		

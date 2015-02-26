@@ -6,10 +6,10 @@
 % 
 % DOCUMENTATION. Scan the introductory information in the
 % folder "docs". Learn to use panel by working through the
-% demonstration scripts in the folder "demo". Reference
-% information is available through "doc panel" or "help
-% panel". For the change log, use "edit panel" to view the
-% file "panel.m".
+% demonstration scripts in the folder "demo" (list the demos
+% by typing "help panel/demo"). Reference information is
+% available through "doc panel" or "help panel". For the
+% change log, use "edit panel" to view the file "panel.m".
 
 
 
@@ -253,20 +253,26 @@
 % 10/05/13
 % Release Version 2.10
 % ############################################################
+%
+% 14/05/13
+% Some minor optimisations, so now panel is not slower than
+% subplot (see demopanelK).
+%
+% 14/01/15
+% Various fixes to work correctly under R2014b. Essentially,
+% checked the demos, added retirement notes to fixdash(), and
+% added function "fignum()".
+%
+% ############################################################
+% 14/01/15
+% Release Version 2.11
+% ############################################################
+
 
 
 classdef (Sealed = true) panel < handle
 	
-	% panel is an alternative to subplot
-	%
-	% for detailed reference information, use "doc panel". to
-	% learn how to use panel, work through the demos (in the
-	% "demo" folder), starting with "demopanel1".
-	
-	
-	
-	
-	
+
 	
 	%% ---- PROPERTIES ----
 	
@@ -606,11 +612,6 @@ classdef (Sealed = true) panel < handle
 
 			% PRIVATE DOCUMENTATION
 			%
-			% h_parent
-			%   can also be a handle to an existing panel. this is
-			%   used internally when pack()ing child panels into a
-			%   parent panel.
-			%
 			% 'defer'
 			%   THIS IS NO LONGER ADVERTISED since we replaced the
 			%   LP solution with a procedural solution, but still
@@ -623,111 +624,39 @@ classdef (Sealed = true) panel < handle
 			%   preparing a complex layout; pass 'defer', and
 			%   layout will not be computed at all until you call
 			%   refresh() or export() on the root panel.
+			%
+			% 'pack'
+			%   this constructor is called internally from pack()
+			%   to create new panels when packing them into
+			%   parents. the first argument is passed as 'pack' in
+			%   this case, which allows us to do slightly quicker
+			%   parsing of the arguments, since we know the
+			%   calling convention (see immediately below).
 
-			% default condition
-			passed_h_parent = [];
-			add = false;
-			set_units = [];
-			
 			% default state
 			p.state = [];
 			p.state.name = '';
 			p.state.defer = 0;
 			p.state.manage_font = 1;
-			
-			% peel off args
-			while ~isempty(varargin)
-				
-				% get arg
-				arg = varargin{1};
-				varargin = varargin(2:end);
-				
-				% handle text
-				if ischar(arg)
-					
-					switch arg
-						
-						case 'add'
-							add = true;
-							continue;
-							
-						case 'defer'
-							p.state.defer = 1;
-							continue;
-							
-						case 'no-manage-font'
-							p.state.manage_font = 0;
-							continue;
-							
-						case {'mm' 'cm' 'in' 'pt'}
-							set_units = arg;
-							continue;
-							
-						otherwise
-							error('panel:InvalidArgument', ['unrecognised text argument "' arg '"']);
-							
-					end
-					
-				end
-				
-				% handle parent
-				if isscalar(arg) && (ishandle(arg) || isa(arg, 'panel'))
-					passed_h_parent = arg;
-					continue;
-				end
-				
-				% error
-				error('panel:InvalidArgument', 'unrecognised argument to panel constructor');
-				
-			end
-			
-			% no callbacks
 			p.m_callback = {};
-			
-			% no fixdash
 			p.m_fixdash = {};
+			p.packspec = [];
+			p.packdim = 2;
+			p.m_panelType = p.PANEL_TYPE_UNCOMMITTED;
+			p.prop = panel.getPropertyInitialState();
 			
-			% debug output
-			panel.debugmsg('creating new panel...');
-			
-			% attach to current figure if no parent supplied
-			if nargin < 1 || isempty(passed_h_parent)
-				passed_h_parent = gcf;
+			% handle call from pack() aqap
+			if nargin && isequal(varargin{1}, 'pack')
 				
-				% this might cause a figure to be created - if so,
-				% give it time to display now so we don't get a (or
-				% two, in fact!) resize event(s) later
-				drawnow
-			end
-			
-			% see what our parent is
-			if ishandle(passed_h_parent)
+				% since we know the calling convention, in this
+				% case, we can handle this as quickly as possible,
+				% so that large recursive layouts do not get held up
+				% by spurious code, here.
 				
-				parentType = get(passed_h_parent, 'type');
+				% parent is a panel
+				passed_h_parent = varargin{2};
 				
-				% parent is a graphics object - become a root panel
-				p.state.name = 'root';
-				p.parent = [];
-				p.m_root = p;
-				
-				switch parentType
-					
-					case 'uipanel'
-						p.h_parent = passed_h_parent;
-						p.h_figure = getParentFigure(passed_h_parent);
-						
-					case 'figure'
-						p.h_parent = passed_h_parent;
-						p.h_figure = passed_h_parent;
-						
-					otherwise
-						error('panel:InvalidArgument', ['panel() cannot be attached to an object of type "' parentType '"']);
-						
-				end
-				
-			elseif isa(passed_h_parent, 'panel')
-				
-				% parent is a panel - become its child
+				% become its child
 				indexInParent = int2str(length(passed_h_parent.m_children)+1);
 				if passed_h_parent.isRoot()
 					p.state.name = ['(' indexInParent ')'];
@@ -739,45 +668,109 @@ classdef (Sealed = true) panel < handle
 				p.parent = passed_h_parent;
 				p.m_root = passed_h_parent.m_root;
 				
-			else
-				
-				% error
-				error('panel:InvalidArgument', 'argument to panel() constructor must be a figure handle or a panel object');
+				% done!
+				return
 				
 			end
-			
-			% default state
-			p.packspec = [];
-			p.packdim = 2;
-			p.m_panelType = p.PANEL_TYPE_UNCOMMITTED;
-			p.prop = panel.getPropertyInitialState();
+				
+			% default condition
+			passed_h_parent = [];
+			add = false;
 
-			% set units
-			if ~isempty(set_units)
-				p.setPropertyValue('units', set_units);
-			end
-			
-			% if we are root
-			if p.isRoot()
-				
-				% lay in callbacks
-				addHandleCallback(p.h_figure, 'CloseRequestFcn', @panel.closeCallback);
-				addHandleCallback(p.h_parent, 'ResizeFcn', @panel.resizeCallback);
-				
-				% register for callbacks
-				if add
-					panel.callbackDispatcher('registerNoClear', p);
-				else
-					panel.callbackDispatcher('register', p);
+			% peel off args
+			while ~isempty(varargin)
+
+				% get arg
+				arg = varargin{1};
+				varargin = varargin(2:end);
+
+				% handle text
+				if ischar(arg)
+
+					switch arg
+
+						case 'add'
+							add = true;
+							continue;
+
+						case 'defer'
+							p.state.defer = 1;
+							continue;
+
+						case 'no-manage-font'
+							p.state.manage_font = 0;
+							continue;
+
+						case {'mm' 'cm' 'in' 'pt'}
+							p.setPropertyValue('units', arg);
+							continue;
+
+						otherwise
+							error('panel:InvalidArgument', ['unrecognised text argument "' arg '"']);
+
+					end
+
 				end
-				
-				% lock class in memory (prevent persistent from being cleared by clear all)
-				panel.lockClass();
-				
+
+				% handle parent
+				if isscalar(arg) && ishandle(arg)
+					passed_h_parent = arg;
+					continue;
+				end
+
+				% error
+				error('panel:InvalidArgument', 'unrecognised argument to panel constructor');
+
 			end
-			
-			% debug output
-			panel.debugmsg(['created "' p.state.name '"!']);
+
+			% attach to current figure if no parent supplied
+			if isempty(passed_h_parent)
+				passed_h_parent = gcf;
+
+				% this might cause a figure to be created - if so,
+				% give it time to display now so we don't get a (or
+				% two, in fact!) resize event(s) later
+				drawnow
+			end
+
+			% we are a root panel
+			p.state.name = 'root';
+			p.parent = [];
+			p.m_root = p;
+
+			% get parent type
+			parentType = get(passed_h_parent, 'type');
+
+			% set handles
+			switch parentType
+
+				case 'uipanel'
+					p.h_parent = passed_h_parent;
+					p.h_figure = getParentFigure(passed_h_parent);
+
+				case 'figure'
+					p.h_parent = passed_h_parent;
+					p.h_figure = passed_h_parent;
+
+				otherwise
+					error('panel:InvalidArgument', ...
+						['panel() cannot be attached to an object of type "' parentType '"']);
+
+			end
+
+			% lay in callbacks
+			addHandleCallback(p.h_figure, 'CloseRequestFcn', @panel.closeCallback);
+			addHandleCallback(p.h_parent, 'ResizeFcn', @panel.resizeCallback);
+
+			% register for callbacks
+			if add
+				panel.callbackDispatcher('registerNoClear', p);
+			else
+				panel.callbackDispatcher('register', p);
+			end
+
+			% lock class in memory (prevent persistent from being cleared by clear all)
+			panel.lockClass();
 			
 		end
 		
@@ -794,7 +787,7 @@ classdef (Sealed = true) panel < handle
 			% when you close the associated figure.
 			
 			% debug output
-			panel.debugmsg(['deleting "' p.state.name '"...']);
+% 			panel.debugmsg(['deleting "' p.state.name '"...']);
 			
 			% delete managed graphics objects
 			for n = 1:length(p.h_object)
@@ -829,7 +822,7 @@ classdef (Sealed = true) panel < handle
 			end
 			
 			% debug output
-			panel.debugmsg(['deleted "' p.state.name '"!']);
+% 			panel.debugmsg(['deleted "' p.state.name '"!']);
 			
 		end
 		
@@ -856,8 +849,8 @@ classdef (Sealed = true) panel < handle
 			
 			display(p);
 			
-		end
-		
+        end
+        
 		function display(p, indent)
 
 			% default
@@ -884,7 +877,7 @@ classdef (Sealed = true) panel < handle
 				header = [header 'Uncommitted ' p.state.name ': '];
 			end
 			if p.isRoot()
-				pp = ['attached to Figure ' num2str(double(p.h_figure))];
+				pp = ['attached to Figure ' panel.fignum(p.h_figure)];
 			else
 				if isempty(p.packspec)
 					pp = 'stretch';
@@ -943,10 +936,6 @@ classdef (Sealed = true) panel < handle
 	%% ---- PUBLIC METHODS ----
 
 	methods
-		
-		function addaxis(p, ax)
-			h = get(p.getOrCreateAxis(), 'xlabel');
-		end
 		
 		function xlabel(p, text)
 			
@@ -1092,6 +1081,11 @@ classdef (Sealed = true) panel < handle
 		function fixdash(p, hs, linestyle)
 			
 			% pass dashed lines to be fixed up during export
+            %
+            % NB: Matlab's difficulty with dotted/dashed lines on export
+            % seems to be fixed in R2014b, so if using this version or a
+            % later one, this functionality of panel will be of no
+            % interest. Text below was from pre R2014b.
 			%
 			% p.fixdash(h, linestyle)
 			%   add the lines specified as handles in "h" to the
@@ -1381,6 +1375,9 @@ classdef (Sealed = true) panel < handle
 			% p.export('myfig', '-pletter', '-c2', '-as', '-rp');
 
 			% LEGACY
+			%
+			% (this is legacy since the 'defer' flag is no longer
+			% needed - though it is still supported)
 			%
 			% NB: if you pass 'defer' to the constructor, calling
 			% export() both exports the panel and releases the
@@ -1995,101 +1992,70 @@ classdef (Sealed = true) panel < handle
 			% add (pack) child panel(s) into an existing panel
 			%
 			% p.pack(...)
-			%   add children to the panel "p". if p is currently
-			%   uncommitted, it is committed by this call to be a
-			%   "parent panel". if p is already committed as an
-			%   "object panel" (a panel that manages graphics
-			%   objects), an error is raised, since panels must be
-			%   either parent or object panels, and cannot be
-			%   both. new (child) panels are created by this call;
-			%   these are created as "uncommitted panels", ready
-			%   to be pack()ed or select()ed themselves. if the
-			%   parent "p" already has children, the additional
-			%   children are appended.
+			%   add children to the panel "p", committing it as a
+			%   "parent" panel (if it is not already). new (child)
+			%   panels are created using this call - they start as
+			%   "uncommitted" panels. if the parent already has
+			%   children, the new children are appended. The
+			%   following arguments are understood:
 			%
-			% NB: the interface to pack() was changed at release
-			%   2.10 to add support for panels of fixed physical
-			%   size. the interface offered at 2.9 and earlier is
-			%   still available (see LEGACY, below) but should not
-			%   be used in future.
+			% 'h'/'v' - switch "p" to pack in the horizontal or
+			%   vertical packing dimension for relative packing
+			%   mode (default for new panels is vertical).
+			%
+			% {a, b, c, ...} (a cell row vector) - pack panels
+			%   into "p" with "packing specifiers" a, b, c, etc.
+			%   packing specifiers are detailed below.
 			%
 			% PACKING MODES
+			%   panels can be packed into their parent in two
+			%   modes, dependent on their packing specifier. you
+			%   can see a visual representation of these modes on
+			%   the HTML documentation page "Layout".
 			%
-			% (i) Fixed Size (relative mode)
+			% (i) Relative Mode - panels are packed into the space
+			%   occupied by their parent. size along the parent's
+			%   "packing dimension" is dictated by the packing
+			%   specifier; along the other dimension size matches
+			%   the parent. the following packing specifiers
+			%   indicate Relative Mode.
 			%
-			%   panels in this mode have a fixed physical size
-			%   along the packing dimension of their parent (such
-			%   as 20mm, or 2in). these panels share their
-			%   parent's size in the other dimension.
+			%   a) Fixed Size: the specifier is a scalar double in
+			%   a cell {d}. The panel will be of size d in the
+			%   current units of "p" (see the property "p.units"
+			%   for details, but default units are mm).
 			%
-			% (ii) Fractional Size (relative mode)
+			%   b) Fractional Size: the specifier is a scalar
+			%   double between 0 and 1 (or between 1 and 100, as a
+			%   percentage). The panel is sized as a fraction of
+			%   the space remaining in its parent after Fixed Size
+			%   panels and inter-panel margins have been subtracted.
 			%
-			%   panels in this mode have a size along the packing
-			%   dimension of their parent that is a fraction of
-			%   their parent's size (such as 1/2 or 1/3). these
-			%   panels share their parent's size in the other
-			%   dimension. also can be specified as a percentage.
+			%   c) Stretchable: the specifier is the empty matrix
+			%   []. remaining space in the parent after Fixed and
+			%   Fractional Size panels have been subtracted is
+			%   shared out amongst Stretchable Size panels.
 			%
-			% (iii) Stretchable (relative mode)
-			%
-			%   panels in this mode are 'stretchable'; space
-			%   remaining after non-stretchable panels in relative
-			%   mode have been sized is shared out among their
-			%   stretchable siblings.
-			%
-			% (iv) Fractional size (absolute mode)
-			%
-			%   panels packed in this mode hover over their parent
-			%   at whatever location is specified. they do not
-			%   contribute to the layout computations of their
-			%   siblings packed in relative mode, as for objects
-			%   with the position:absolute property in CSS.
-			%
-			% ARGUMENTS
-			%
-			% 'h'/'v'
-			%   switch "p" to pack in the horizontal or vertical
-			%   packing dimension for relative packing mode
-			%   (default is vertical).
-			%
-			% {a, b, c, ...}
-			%   (i.e. a cell row vector). pack panels into "p"
-			%   with 'packing specifiers' a, b, c, etc. the
-			%   packing specifiers can be any of the following:
-			%
-			%   [] : pack into parent in relative mode with
-			%     'stretchable' size.
-			%
-			%   scalar between 0 and 1 : pack into parent in
-			%     relative mode at the specified fractional size.
-			%
-			%   scalar between 1 and 100 : pack into parent in
-			%     relative mode at the specified percentage size.
-			%
-			%   {d} : pack into parent in relative mode at a fixed
-			%     size of d units, where the units are the current
-			%     units for "p". NB: if only a single panel is to
-			%     be packed, in this mode, the argument would,
-			%     thus, be {{d}} (i.e. two nested cells).
-			%
-			%   [l b w h] : pack into parent in absolute mode at
-			%			the specified location. [l b w h] are the [left
-			%			bottom width height] as fractions of the parent
-			%			size.
+			% (ii) Absolute Mode - panels hover above their
+			%   parent and do not take up space, as if using the
+			%   position:absolute property in CSS. The packing
+			%   specifier is a 1x4 double vector indicating the
+			%   [left bottom width height] of the panel in
+			%   normalised coordinates of its parent. for example,
+			%   the specifier [0 0 1 1] generates a child panel
+			%   that fills its parent.
 			%
 			% SHORTCUTS
 			%
 			% ** a small scalar integer, N, (1 to 32) is expanded
 			%    to {[], [], ... []}, with N entries. that is, it
-			%    means pack N panels in relative mode
-			%    (stretchable) and share the available space
-			%    between them.
+			%    packs N panels in Relative Mode (Stretchable) and
+			%    shares the available space between them.
 			%
 			% ** the call to pack() is recursive, so following a
-			%    cell array argument, an additional cell array
-			%    argument will be used to generate a separate call
-			%    to pack() on each of the children created by the
-			%    first. hence the call:
+			%    packing specifier list, an additional list will
+			%    be used to generate a separate call to pack() on
+			%    each of the children created by the first. hence:
 			%
 			%      p.pack({[] []}, {[] []})
 			%
@@ -2102,8 +2068,7 @@ classdef (Sealed = true) panel < handle
 			%
 			%    which is a common idiom in the demos. NB: on
 			%    recursion, the packing dimension is flipped
-			%    automatically, so that the grid is properly
-			%    formed.
+			%    automatically, so that a grid is formed.
 			%
 			% ** if no arguments are passed at all, a single
 			%    argument {[]} is assumed, so that a single
@@ -2112,8 +2077,13 @@ classdef (Sealed = true) panel < handle
 			%
 			% see also: panel (overview), panel/panel(), select()
 			%
-			% LEGACY (edit panel.m to see LEGACY support
-			% information for releases prior to 2.10).
+			% LEGACY
+			%
+			%   the interface to pack() was changed at release
+			%   2.10 to add support for panels of fixed physical
+			%   size. the interface offered at 2.9 and earlier is
+			%   still available (look inside panel.m - search for
+			%   text "LEGACY" - for details).
 
 			% LEGACY
 			%
@@ -2180,7 +2150,7 @@ classdef (Sealed = true) panel < handle
 				end
 				
 				% report (DEBUG)
-				panel.debugmsg('use of LEGACY interface to pack()', 1);
+% 				panel.debugmsg('use of LEGACY interface to pack()', 1);
 				
 				% handle legacy case
 				if isequal(arg, 'abs')
@@ -2280,7 +2250,7 @@ classdef (Sealed = true) panel < handle
 				end
 
 				% create a child
-				child = panel(p);
+				child = panel('pack', p);
 				child.packspec = packspec;
 
 				% store it in the parent
@@ -3179,7 +3149,7 @@ classdef (Sealed = true) panel < handle
 			p.state.defer = 0;
 
 			% debug output
-			panel.debugmsg(['refresh "' p.state.name '"...']);
+% 			panel.debugmsg(['refresh "' p.state.name '"...']);
 			
 			% call recomputeLayout
 			p.recomputeLayout([]);
@@ -3268,7 +3238,7 @@ classdef (Sealed = true) panel < handle
 			end				
 			
 			% debug output
-			panel.debugmsg(['recomputeLayout "' p.state.name '"...']);
+% 			panel.debugmsg(['recomputeLayout "' p.state.name '"...']);
 
 % 			% root may have a packspec of its own
 % 			if ~isempty(p.packspec)
@@ -3565,7 +3535,7 @@ classdef (Sealed = true) panel < handle
 			end
 			
 			% debug output
-			panel.debugmsg(['applyLayout "' p.state.name '"...']);
+% 			panel.debugmsg(['applyLayout "' p.state.name '"...']);
 			
 			% defaults
 			recurse = false;
@@ -3651,7 +3621,7 @@ classdef (Sealed = true) panel < handle
 			end
 
 			% debug output
-			panel.debugmsg(['applyLayout1 "' p.state.name '"...']);
+% 			panel.debugmsg(['applyLayout1 "' p.state.name '"...']);
 			
 			% handle LAYOUT_MODE
 			switch p.m_context.mode
@@ -3716,7 +3686,7 @@ classdef (Sealed = true) panel < handle
 % 					if strcmp(w.state, 'on')
 % 						warning on backtrace
 % 					end
-					panel.debugmsg('***WARNING*** the object managed by a panel has been destroyed');
+% 					panel.debugmsg('***WARNING*** the object managed by a panel has been destroyed');
 					return
 				else
 					rethrow(err)
@@ -3741,7 +3711,7 @@ classdef (Sealed = true) panel < handle
 						get(h_axes(n), 'title') ...
 						];
 				end
-
+				
 				% apply font properties
 				set(h, ...
 					'fontname', p.getPropertyValue('fontname'), ...
@@ -3781,7 +3751,7 @@ classdef (Sealed = true) panel < handle
 			end
 
 			% debug output
-			panel.debugmsg(['applyLayout2 "' p.state.name '"...']);
+% 			panel.debugmsg(['applyLayout2 "' p.state.name '"...']);
 			
 			% matlab moves x/ylabels around depending on
 			% whether the axis in question has any x/yticks,
@@ -3988,6 +3958,18 @@ classdef (Sealed = true) panel < handle
 		
 	methods (Static = true, Access = private)
 	
+        function s = fignum(h)
+            
+            % handled differently pre/post 2014b
+            if isa(h, 'matlab.ui.Figure')
+                % R2014b
+                s = num2str(h.Number);
+            else
+                % pre-R2014b
+                s = num2str(h);
+            end
+        end
+		
 		function prop = getPropertyInitialState()
 			
 			prop = panel.getPropertyDefaults();
@@ -4037,7 +4019,7 @@ classdef (Sealed = true) panel < handle
 	%% ---- STATIC PUBLIC METHODS ----
 	
 	methods (Static = true)
-	
+		
 		function p = recover(h_figure)
 			
 			% get a handle to the root panel associated with a figure
@@ -4288,7 +4270,7 @@ classdef (Sealed = true) panel < handle
 		function out = callbackDispatcher(op, data)
 			
 			% debug output
-			panel.debugmsg(['callbackDispatcher(' op ')...'])
+% 			panel.debugmsg(['callbackDispatcher(' op ')...'])
 			
 			% persistent store
 			persistent registeredPanels
@@ -4332,19 +4314,19 @@ classdef (Sealed = true) panel < handle
 					end
 					
 					% debug output
-					panel.debugmsg(['panel registered (' int2str(length(registeredPanels)) ' now registered)']);
+% 					panel.debugmsg(['panel registered (' int2str(length(registeredPanels)) ' now registered)']);
 					
 				case 'unregister'
 					
 					% debug output
-					panel.debugmsg(['on unregister, ' int2str(length(registeredPanels)) ' registered']);
+% 					panel.debugmsg(['on unregister, ' int2str(length(registeredPanels)) ' registered']);
 					
 					for r = 1:length(registeredPanels)
 						if registeredPanels(r) == data
 							registeredPanels = registeredPanels([1:r-1 r+1:end]);
 
 							% debug output
-							panel.debugmsg(['panel unregistered (' int2str(length(registeredPanels)) ' now registered)']);
+% 							panel.debugmsg(['panel unregistered (' int2str(length(registeredPanels)) ' now registered)']);
 							
 							return
 						end

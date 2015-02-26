@@ -490,8 +490,8 @@ classdef calibrateLuminance < handle
 			obj.p.fontsize = 12;
 			
 			if isstruct(obj.inputValuesI1)
-				obj.p(1,3).pack(2,2);
-				obj.p(2,3).pack(2,2);
+				%obj.p(1,3).pack(2,2);
+				%obj.p(2,3).pack(2,2);
 			end
 			
 			obj.p(1,1).select();
@@ -505,14 +505,16 @@ classdef calibrateLuminance < handle
 					inputTest = obj.inputValuesTest;
 				end
 				plot(obj.ramp, inputValues(1).in, 'k.-',obj.ramp, inputValues(2).in, 'r.-',obj.ramp, inputValues(3).in, 'g.-',obj.ramp, inputValues(4).in, 'b.-');
-				legend('Luminance','Red','Green','Blue')
+				leg = {'Luminance','Red','Green','Blue'};
 				if ~isempty(inputTest)
 					obj.p(1,1).hold('on')
-					plot(obj.ramp, inputTest(1).in, 'ko-',obj.ramp, inputTest(2).in, 'ro-',obj.ramp, inputTest(3).in, 'go-',obj.ramp, inputTest(1).in, 'bo-');
+					plot(obj.ramp, inputTest(1).in, 'ko-',obj.ramp, inputTest(2).in, 'ro-',obj.ramp, inputTest(3).in, 'go-',obj.ramp, inputTest(4).in, 'bo-');
 					obj.p(1,1).hold('off')
-					legend('CCal','I1Pro','CCalCorrected','I1ProCorrected')
 				end
-				axis tight
+				leg = [leg,{'CCal','I1Pro','CCalCorrected','I1ProCorrected'}];
+				legend(leg)
+				axis tight; grid on; grid minor; box on
+				
 				xlabel('Indexed Values');
 				ylabel('Luminance cd/m^2');
 				title('Input -> Output Raw Data');
@@ -537,7 +539,7 @@ classdef calibrateLuminance < handle
 					obj.p(1,1).hold('on')
 					legend('CCal','I1Pro','CCalCorrected','I1ProCorrected')
 				end
-				axis tight
+				axis tight; grid on; grid minor; box on
 				xlabel('Indexed Values');
 				ylabel('Luminance cd/m^2');
 				title('Input -> Output Raw Data');
@@ -567,7 +569,7 @@ classdef calibrateLuminance < handle
 				plot(rampNorm, inputValuesNorm)
 				legendtext{end+1} = 'Raw Data';
 				obj.p(1,2).hold('off')
-				axis tight
+				axis tight; grid on; box on; if loop == 1; grid minor; end
 				xlabel('Normalised Luminance Input');
 				ylabel('Normalised Luminance Output');
 				legend(legendtext,'Location','NorthWest');
@@ -581,7 +583,7 @@ classdef calibrateLuminance < handle
 					legendtext{i} = obj.modelFit{i}.method;
 				end
 				obj.p(2,1).hold('off');
-				axis tight
+				axis tight; grid on; box on; if loop == 1; grid minor; end
 				xlabel('Indexed Values')
 				ylabel('Normalised Luminance Output');
 				legend(legendtext,'Location','NorthWest');
@@ -594,7 +596,7 @@ classdef calibrateLuminance < handle
 					legendtext{i} = obj.modelFit{i}.method;
 				end
 				obj.p(2,2).hold('off');
-				axis tight
+				axis tight; grid on; box on; if loop == 1; grid minor; end
 				xlabel('Indexed Values')
 				ylabel('Residual Values');
 				legend(legendtext,'Location','Best');
@@ -626,11 +628,13 @@ classdef calibrateLuminance < handle
 				else
 					obj.p(1,3).select();
 				end
+				obj.p(1,3).select();
+				hold on
 				surf(obj.ramp,obj.wavelengths,spectrum);
 				title('Original Spectrum')
 				xlabel('Indexed Values')
 				ylabel('Wavelengths');
-				axis tight
+				axis tight; grid on; box on; grid minor; 
 			end
 			if ~isempty(spectrumTest)
 				obj.p(2,3).select();
@@ -638,7 +642,7 @@ classdef calibrateLuminance < handle
 				title('Corrected Spectrum')
 				xlabel('Indexed Values')
 				ylabel('Wavelengths');
-				axis tight
+				axis tight; grid on; box on; grid minor;
 			end
 		
 			obj.p.title(t);
