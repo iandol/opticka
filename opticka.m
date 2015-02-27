@@ -988,12 +988,13 @@ classdef opticka < optickaCore
 						end							
 						obj.getStateInfo();
 					end
+					obj.h.OKuseLabJack.Checked = 'off';	obj.h.OKuseDataPixx.Checked = 'off'; obj.h.OKuseEyeLink.Checked = 'off';
 					obj.r.useLabJack = tmp.r.useLabJack;
-					set(obj.h.OKuseLabJack,'Value',obj.r.useLabJack)
+					if obj.r.useLabJack == true; obj.h.OKuseLabJack.Checked = 'on'; end
 					obj.r.useDataPixx = tmp.r.useDataPixx;
-					set(obj.h.OKuseDataPixx,'Value',obj.r.useDataPixx)
+					if obj.r.useDataPixx == true; obj.h.OKuseDataPixx.Checked = 'on'; end
 					obj.r.useEyeLink = tmp.r.useEyeLink;
-					set(obj.h.OKuseEyeLink,'Value',obj.r.useEyeLink)
+					if obj.r.useEyeLink == true; obj.h.OKuseEyeLink.Checked = 'on'; end
 				end
 				
 				%copy screen parameters

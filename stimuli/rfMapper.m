@@ -91,7 +91,7 @@ classdef rfMapper < barStimulus
 				obj.sM = rE.screen;
 			end
 			
-			obj.sM.windowed = [];
+			%obj.sM.windowed = [];
 			
 			try
 				obj.sM.debug = true;
