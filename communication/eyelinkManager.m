@@ -224,7 +224,7 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief reset the fixation counters ready for a new trial
 		%>
 		% ===================================================================
 		function resetFixation(obj)

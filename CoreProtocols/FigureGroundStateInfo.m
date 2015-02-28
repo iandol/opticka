@@ -1,4 +1,6 @@
-%FIGURE GROUND state configuration file, this gets loaded by opticka via runExperiment class
+%FIGURE GROUND state configuration file, this gets loaded by opticka via
+%runExperiment class. The following class objects are already loaded and available to
+%use: 
 % io = datapixx (digital I/O to plexon)
 % s = screenManager
 % sM = State Machine
@@ -7,26 +9,27 @@
 % bR = behavioural record plot
 % obj.stimuli = our list of stimuli
 % tS = general simple struct to hold variables for this run
-%
+
 %------------General Settings-----------------
 tS.rewardTime = 150; %TTL time in milliseconds
 tS.useTask = true;
-tS.checkKeysDuringStimulus = false;
-tS.recordEyePosition = true;
+tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
+tS.recordEyePosition = false; %==record eye position within PTB, in addition to the EDF?
 tS.askForComments = true;
-tS.saveData = true; %*** save behavioural and eye movement data? ***
-obj.useDataPixx = true; %*** drive plexon to collect data? ***
-tS.dummyEyelink = false; 
-tS.name = 'figure-ground';
+tS.saveData = true; %==save behavioural and eye movement data?
+obj.useDataPixx = true; %==drive plexon to collect data?
+tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.name = 'figure-ground'; %==name of this protocol
 
-tS.luminancePedestal = [0.5 0.5 0.5];
+%------------Eyetracker Settings-----------------
+tS.luminancePedestal = [0.5 0.5 0.5]; %used during training, it sets the clip behind the figure to a different luminance which makes the figure more salient and thus easier to train to.
 tS.fixX = 0;
 tS.fixY = 0;
 tS.firstFixInit = 0.6;
 tS.firstFixTime = [0.5];
 tS.firstFixRadius = 1;
-obj.lastXPosition = fixX;
-obj.lastYPosition = fixY;
+obj.lastXPosition = tS.fixX;
+obj.lastYPosition = tS.fixY;
 tS.strict = true;
 
 tS.targetFixInit = 0.75;
@@ -45,25 +48,31 @@ eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 = use any keyboard
 
-% X, Y, FixInitTime, FixTime, Radius, StrictFix
+%Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
-%randomise stimulus variables every trial?
+%randomise stimulus variables every trial? useful during initial training but not for
+%data collection.
 obj.stimuli.choice = [];
 obj.stimuli.stimulusTable = [];
 
 % allows using arrow keys to control this table during the main loop
-% ideal for mapping receptive fields so we can twiddle parameters
+% ideal for mapping receptive fields so we can twiddle parameters, normally not used
+% for normal tasks
 obj.stimuli.controlTable = [];
 obj.stimuli.tableChoice = 1;
 
-% this allows us to enable subsets from our stimulus list
+% this allows us to enable subsets from our stimulus list. So each set is a
+% particular display like fixation spot only, background. During the trial you can
+% use the showSet method of obj.stimuli to change to a particular stimulus set.
 % numbers are the stimuli in the opticka UI
 obj.stimuli.stimulusSets = {[1,4],[1 2 3 4]};
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
-%which stimulus in the list is used for a fixation target?
+%which stimulus in the list is used for a fixation target? For this protocol it means
+%the subject must fixate this stimulus (the figure is #3 in the list) to get the
+%reward.
 obj.stimuli.fixationChoice = 3;
 
 %----------------------State Machine States-------------------------
@@ -71,31 +80,31 @@ obj.stimuli.fixationChoice = 3;
 % in the scope of the runExperiemnt object.
 
 %pause entry
-pauseEntryFcn = { @()rstop(io); ...
+pauseEntryFcn = { @()rstop(io); ... %rstop is pause the plexon
 	@()setOffline(eL); ... %set eyelink offline
-	@()stopRecording(eL); ...
-	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
-	@()disableFlip(obj); ...
+	@()stopRecording(eL); ... %stop ete position recording
+	@()edfMessage(eL,'TRIAL_RESULT -10'); ... %store message in EDF
+	@()disableFlip(obj); ... %stop screen updates
 	}; 
 
 %pause exit
 pauseExitFcn = { @()rstart(io) };%lets unpause the plexon!
 
-prefixEntryFcn = { @()enableFlip(obj); };
-prefixFcn = { @()draw(obj.stimuli) };
+prefixEntryFcn = { @()enableFlip(obj); }; %enable stimulus flipping
+prefixFcn = { @()draw(obj.stimuli) }; % draw our setimulus set.
 
 %fixate entry
 fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
 	@()enableFlip(obj); 
-	@()resetFixation(eL); ...
+	@()resetFixation(eL); ... %reset the fixation counters ready for a new trial
 	@()setOffline(eL); ... %make sure offline before start recording
-	@()edit(obj.stimuli,4,'colourOut',[1 1 0]); ...
-	@()show(obj.stimuli); ...
-	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
-	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(obj))]); ...
-	@()edfMessage(eL,['UUID ' UUID(sM)]); ...
+	@()edit(obj.stimuli,4,'colourOut',[1 1 0]); ... %edit fixation spot to be yellow
+	@()show(obj.stimuli); ... %enable our stimulus set
+	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ... %this 3 lines set the trial info for the eyelink
+	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(obj))]); ... %obj.getTaskIndex gives us which trial we're at
+	@()edfMessage(eL,['UUID ' UUID(sM)]); ... %add in the uuid of the current state for good measure
 	@()startRecording(eL); ... %fire up eyelink
-	@()sendTTL(io,3); ...
+	@()sendTTL(io,3); ... %send TTL on line 3 (pin 19)
 	@()syncTime(eL); ... %EDF sync message
 	@()draw(obj.stimuli); ... %draw stimulus
 	};
@@ -114,7 +123,7 @@ fixExitFcn = { @()animate(obj.stimuli); ... % animate stimuli for subsequent dra
 	@()edit(obj.stimuli,4,'colourOut',[0.65 0.65 0.45]); ... %dim fix spot
 	@()edit(obj.stimuli,2,'modulateColourOut',tS.luminancePedestal); ... %luminance pedestal
 	@()edfMessage(eL,'END_FIX'); ...
-	}; 
+	};
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = @()doStrobe(obj,true);
@@ -133,7 +142,7 @@ stimExitFcn = { @()setStrobeValue(obj,inf); @()doStrobe(obj,true) };
 
 %if the subject is correct (small reward)
 correctEntryFcn = { @()timedTTL(lJ,0,tS.rewardTime); ... % labjack sends a TTL to Crist reward system
-	@()sendTTL(io,4); ...
+	@()sendTTL(io,4); ... %send correct TTL to dataPixx->Plexon
 	@()edfMessage(eL,'END_RT'); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
