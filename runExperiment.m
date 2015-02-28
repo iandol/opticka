@@ -452,14 +452,14 @@ classdef runExperiment < optickaCore
 				error('There is no working PTB available!')
 			end
 			
-			%initialise runLog for this run
+			%initialise time logs for this run
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog; %short handle to log
 			
 			obj.behaviouralRecord = behaviouralRecord('name',['Fix' obj.savePrefix]); %#ok<*CPROP>
 			bR = obj.behaviouralRecord;
 			
-			%------a throwaway structure to hold various parameters
+			%------a throwaway structure to hold various parameters, will be saved after the run, but prefer structure to keep it light...
 			tS = struct();
 			tS.useTask = false;
 			tS.checkKeysDuringStimulus = false;
@@ -557,6 +557,7 @@ classdef runExperiment < optickaCore
 				obj.stimuli.verbose = obj.verbose;
 				setup(obj.stimuli); %run setup() for each stimulus
 				
+                %-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
 				ListenChar(2); %capture keystrokes
 				
@@ -568,16 +569,21 @@ classdef runExperiment < optickaCore
 				
 				%-----premptive save in case of crash or error
 				rE = obj;
+                warning('off');
 				save([tempdir filesep 'Spence-' obj.savePrefix '.mat'],'rE','tS');
-				
+				warning('on');
+                
+                %-----set up our behavioural plot
 				createPlot(bR, eL);
 				
+                %-----set up the datapixx, put it into paused mode
 				if obj.useDataPixx 
 					rstop(io); %make sure this is set low first
 					sendTTL(io, 7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
 					WaitSecs(0.1);
-				end
+                end
 				
+                %-----initialise out various counters
 				t.tick = 1;
 				t.switched = 1;
 				t.totalRuns = 1;
@@ -596,18 +602,21 @@ classdef runExperiment < optickaCore
 				
 				HideCursor;
 				warning('off'); %#ok<*WNOFF>
-				%check initial eye position
+                
+				%-----check initial eye position
 				if obj.useEyeLink; getSample(eL); end
 				
 				%if obj.useDataPixx; rstart(io); end
 				
+                %-----initialise our vbl's
 				tL.screenLog.beforeDisplay = GetSecs;
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
 				
-				start(sM); %ignite the stateMachine!
+                %-----ignite the stateMachine!
+				start(sM); 
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -737,7 +746,9 @@ classdef runExperiment < optickaCore
 					rE = obj;
 					assignin('base', 'rE', obj);
 					assignin('base', 'tS', tS);
-					save([obj.paths.savedData filesep 'Spence-' obj.savePrefix '.mat'],'rE','bR','tL','tS','sM')
+                    warning('off')
+					save([obj.paths.savedData filesep 'Spence-' obj.savePrefix '.mat'],'rE','bR','tL','tS','sM');
+                    warning('on')
 				end
 				clear rE tL s tS bR lJ eL io sM			
 			catch ME

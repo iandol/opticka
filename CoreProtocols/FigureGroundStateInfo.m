@@ -13,12 +13,12 @@
 %------------General Settings-----------------
 tS.rewardTime = 150; %TTL time in milliseconds
 tS.useTask = true;
-tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
-tS.recordEyePosition = false; %==record eye position within PTB, in addition to the EDF?
+tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
+tS.recordEyePosition = true; %==record eye position within PTB, in addition to the EDF?
 tS.askForComments = true;
 tS.saveData = true; %==save behavioural and eye movement data?
 obj.useDataPixx = true; %==drive plexon to collect data?
-tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.name = 'figure-ground'; %==name of this protocol
 
 %------------Eyetracker Settings-----------------
@@ -27,14 +27,14 @@ tS.fixX = 0;
 tS.fixY = 0;
 tS.firstFixInit = 0.6;
 tS.firstFixTime = [0.5];
-tS.firstFixRadius = 1;
+tS.firstFixRadius = 2;
 obj.lastXPosition = tS.fixX;
 obj.lastYPosition = tS.fixY;
 tS.strict = true;
 
-tS.targetFixInit = 0.75;
-tS.targetFixTime = [0.5 0.7];
-tS.targetRadius = 2;
+tS.targetFixInit = 3;
+tS.targetFixTime = [0.2 0.5];
+tS.targetRadius = 4;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;
