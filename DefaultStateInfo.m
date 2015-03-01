@@ -1,13 +1,33 @@
-%Default state configuration file for runExperiment.runTrainingSession. 
+%Default state configuration file for runExperiment.runTrainingSession (full
+%behavioural task design).
 %This controls a stateMachine instance, switching between these states and 
 %executing functions. This will be run in the scope of the calling
-%runTrainingSession function and thus obj.screen and friends will be
-%available at run time.
+%runTrainingSession function and thus runExperiment.screen and friends will be
+%available at run time (with easy to use names listed below).
+%The following class objects (easily named handle copies) are already loaded and available to
+%use: 
+% io = datapixx (digital I/O to plexon)
+% s = screenManager
+% sM = State Machine
+% eL = eyelink manager
+% lJ = LabJack (reward trigger to Crist reward system)
+% bR = behavioural record plot
+% obj.stimuli = our list of stimuli
+% tS = general simple struct to hold variables for this run
+
+%------------General Settings-----------------
+tS.rewardTime = 150; %TTL time in milliseconds
+tS.useTask = true; %use stimulusSequence (randomised variable task object)
+tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
+tS.recordEyePosition = true; %==record eye position within PTB, in addition to the EDF?
+tS.askForComments = true;
+tS.saveData = true; %==save behavioural and eye movement data?
+obj.useDataPixx = true; %==drive plexon to collect data?
+tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.name = 'figure-ground'; %==name of this protocol
 
 %------------------------Eyelink setup--------------------------
 obj.useEyeLink = true;
-rewardTime = 100; %TTL time in milliseconds
-
 eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV5'; % 5 point calibration
@@ -24,13 +44,6 @@ eL.fixationRadius = 1;
 eL.fixationInitTime = 0.6;
 eL.fixationTime = 2.0;
 eL.strictFixation = true;
-
-%----------------------State Machine States-------------------------
-%these are our functions that will execute as the stateMachine runs
-% io = datapixx (digital I/O to plexon)
-% s = screenManager
-% sm = State Machine
-% lj = LabJack (reward trigger to Crist reward system)
 
 %pause entry
 pauseEntryFcn =  { @()disableFlip(obj); @()setOffline(eL); @()rstop(io) }; %lets pause the plexon!
@@ -78,7 +91,7 @@ stimExitFcn = { @()setStrobeValue(obj,inf); @()doStrobe(obj,true) };
 maintainFixFcn = @()testWithinFixationWindow(eL,'yes','breakfix');
 
 %if the subject is correct 
-correctEntry = { @()timedTTL(lj,0,rewardTime); ...
+correctEntry = { @()timedTTL(lj,0,ts.rewardTime); ...
 	@()updatePlot(bR, eL, sM); ...
 	@()statusMessage(eL,'Correct! :-)') };
 

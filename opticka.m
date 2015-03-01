@@ -16,6 +16,8 @@ classdef opticka < optickaCore
 	properties (SetAccess = public, GetAccess = public, Transient = true)
 		%> general store for misc properties
 		store = struct()
+		%> all of the handles to the opticka_ui GUI
+		h@struct
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -27,8 +29,6 @@ classdef opticka < optickaCore
 		remote = 0
 		%> omniplex connection, via TCP
 		oc
-		%> all of the handles to the opticka_ui GUI
-		h@struct
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -71,6 +71,7 @@ classdef opticka < optickaCore
 		%> @brief Route calls to private methods (yeah, I know...)
 		%>
 		%> @param in switch to route to correct method.
+		%> @param vars additional vars to pass.
 		% ===================================================================
 		function router(obj,in,vars)
 			if ~exist('vars','var')
@@ -866,7 +867,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function saveProtocol(obj)
 			obj.paths.currentPath = pwd;
-			cd([obj.paths.root filesep 'CoreProtocols']); %cd(obj.paths.protocols);
+			cd(obj.paths.protocols);
 			[f,p] = uiputfile('*.mat','Save Opticka Protocol','Protocol.mat');
 			if f ~= 0
 				cd(p);
@@ -878,7 +879,11 @@ classdef opticka < optickaCore
 					tmp.store = rmfield(tmp.store,'evnt');
 				end
 				tmp.store.oldlook = [];
+				tmp.store.visibleStimulus = [];
+				tmp.h = struct(); %remove the handles to the UI which will not be valid
+				warning('off');
 				save(f,'tmp');
+				warning('on');
 				obj.refreshStimulusList;
 				obj.refreshVariableList;
 				obj.refreshProtocolsList;
@@ -919,30 +924,24 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function loadProtocol(obj,ui)
 			
-			file = [];
-			
-			if ~exist('ui','var') || isempty(ui)
-				ui = false;
-			end
-			
-			if ui == false
+			if ~exist('ui','var') || isempty(ui);	ui = true; end
+			obj.paths.currentPath = pwd;
+
+			if ui == true
 				v = obj.gv(obj.h.OKProtocolsList);
 				file = obj.gs(obj.h.OKProtocolsList,v);
+				p = obj.paths.protocols;
+			else
+				[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)'); %cd([obj.paths.root filesep 'CoreProtocols'])
 			end
 			
-			obj.paths.currentPath = pwd;
-			%cd(obj.paths.protocols);
-			cd([obj.paths.root filesep 'CoreProtocols'])
-			if isempty(file)
-				[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)');
-				if file == 0
-					return
-				end
-				cd(p)
-				load(file)
-			else
-				load(file);
+			if isempty(file) | file == 0
+				return
 			end
+			cd(p);
+			load(file);
+			obj.paths.protocols = p;
+			
 			obj.comment = ['Protocol: ' file];
 			obj.r.comment = obj.comment;
 			
@@ -1106,15 +1105,17 @@ classdef opticka < optickaCore
 			
 			files = files(isfile); % select only directory entries from the current listing
 			
-			filelist=cell(size(files));
+			filelist=cell(0);
 			for i=1:length(files)
 				filename = files(i).name;
-				filelist{i} = filename;
+				if ~isempty(regexpi(filename,'\.mat$'))
+					filelist{end+1} = filename;
+				end
 			end
 			
 			set(obj.h.OKProtocolsList,'Value', 1);
 			set(obj.h.OKProtocolsList,'String',filelist);
-			
+			cd(obj.paths.currentPath);
 		end
 		
 		% ===================================================================
