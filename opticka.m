@@ -16,13 +16,16 @@ classdef opticka < optickaCore
 	properties (SetAccess = public, GetAccess = public, Transient = true)
 		%> general store for misc properties
 		store = struct()
+	end
+	
+	properties (SetAccess = private, GetAccess = public, Transient = true)
 		%> all of the handles to the opticka_ui GUI
 		h@struct
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion@char = '1.015'
+		optickaVersion@char = '1.016'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -36,7 +39,8 @@ classdef opticka < optickaCore
 		allowedProperties@char='verbose'
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList@cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
-			'OKbackgroundColour','OKAntiAliasing','OKbitDepth'};
+			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKTrainingResearcherName',...
+			'OKTrainingName'};
 	end
 	
 	events
@@ -50,9 +54,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		%> @brief Class constructor
 		%>
-		%> More detailed description of what the constructor does.
-		%>
-		%> @param args are passed as a structure of properties which is
+		%> @param varargin are passed as a structure of properties which is
 		%> parsed.
 		%> @return instance of opticka class.
 		% ===================================================================
@@ -99,7 +101,7 @@ classdef opticka < optickaCore
 				obj.remote = 1;
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief connectToOmniplex
 		%> Gets the settings from the UI and connects to omniplex
@@ -325,6 +327,8 @@ classdef opticka < optickaCore
 					obj.r.stateInfoFile = obj.paths.stateInfoFile;
 				end
 				
+				obj.h.OKTrainingResearcherName.String = obj.r.researcherName;
+				obj.h.OKTrainingName.String = obj.r.subjectName;
 				getStateInfo(obj);
 
 				set(obj.h.OKVarList,'String','');
@@ -432,9 +436,6 @@ classdef opticka < optickaCore
 			else
 				obj.r.useEyeLink = false;
 			end
-			%obj.r.useLabJack = logical(obj.gv(obj.h.OKuseLabJack));
-			%obj.r.useDataPixx = logical(obj.gv(obj.h.OKuseDataPixx));
-			%obj.r.useEyeLink = logical(obj.gv(obj.h.OKuseEyeLink));
 			
 		end
 		
@@ -461,7 +462,6 @@ classdef opticka < optickaCore
 			obj.r.task.realTime = obj.gv(obj.h.OKrealTime);
 			if isempty(obj.r.task.taskStream); obj.r.task.initialiseRandom; end
 			obj.r.task.randomiseStimuli;
-			
 		end
 		
 		% ===================================================================
@@ -810,6 +810,7 @@ classdef opticka < optickaCore
 					end
 				end	
 			end
+			drawnow
 		end
 		
 		% ===================================================================
@@ -1370,10 +1371,10 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief gs (getstring)
+		%> @brief cell2str converts cell string to single string
 		%> 
-		%> @param inhandle handle to UI element
-		%> @param value
+		%> @param in cell variable
+		%> @return string
 		% ===================================================================
 		function str = cell2str(in)
 			str = [];

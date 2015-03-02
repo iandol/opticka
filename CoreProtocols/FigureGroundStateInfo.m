@@ -14,11 +14,11 @@
 tS.rewardTime = 150; %TTL time in milliseconds
 tS.useTask = true; %use stimulusSequence (randomised variable task object)
 tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
-tS.recordEyePosition = true; %==record eye position within PTB, in addition to the EDF?
-tS.askForComments = true;
+tS.recordEyePosition = true; %==record eye position within PTB, **in addition** to the EDF?
+tS.askForComments = true; %==little UI requestor asks for comments before/after run
 tS.saveData = true; %==save behavioural and eye movement data?
 obj.useDataPixx = true; %==drive plexon to collect data?
-tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.name = 'figure-ground'; %==name of this protocol
 
 %------------Eyetracker Settings-----------------

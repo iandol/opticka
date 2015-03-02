@@ -28,31 +28,33 @@ classdef runExperiment < optickaCore
 		%> screen manager object
 		screen
 		%> use dataPixx for digital I/O
-		useDataPixx = false
+		useDataPixx@logical = false
 		%> use LabJack for digital I/O
-		useLabJack = false
+		useLabJack@logical = false
 		%> use eyelink?
-		useEyeLink = false
-		%> key manager 
-		keyManager 
+		useEyeLink@logical = false
 		%> this lets the opticka UI leave commands to runExperiment
-		uiCommand = ''
+		uiCommand@char = ''
 		%> do we flip or not?
-		doFlip = true
+		doFlip@logical = true
 		%> log all frame times, gets slow for > 1e6 frames
-		logFrames = true
+		logFrames@logical = true
 		%> enable debugging? (poorer temporal fidelity)
-		debug = false
+		debug@logical = false
 		%> shows the info text and position grid during stimulus presentation
-		visualDebug = false
+		visualDebug@logical = false
 		%> flip as fast as possible?
-		benchmark = false
-		%> verbose logging?
+		benchmark@logical = false
+		%> verbose logging to command window?
 		verbose = false
 		%> strobed word value
 		strobeValue = []
 		%> send strobe on next flip?
-		sendStrobe = false
+		sendStrobe@logical = false
+		%> subject name
+		subjectName@char = 'Simulcra'
+		%> researcher name
+		researcherName@char = 'John Doe'
 	end
 	
 	properties (Hidden = true)
@@ -77,6 +79,14 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> stateMachine
+		stateMachine
+		%> eyelink manager object
+		eyeLink
+		%> data pixx control
+		dPixx
+		%> LabJack object
+		lJack
 		%> state machine control cell array
 		stateInfo = {}
 		%> general computer info
@@ -97,14 +107,6 @@ classdef runExperiment < optickaCore
 		currentInfo
 		%> previous info populated during load of a saved object
 		previousInfo = struct()
-		%> LabJack object
-		lJack
-		%> stateMachine
-		stateMachine
-		%> eyelink manager object
-		eyeLink
-		%> data pixx control
-		dPixx
 		%> save prefix generated from clock time
 		savePrefix
 	end
@@ -151,7 +153,7 @@ classdef runExperiment < optickaCore
 		%> @param obj required class object
 		% ===================================================================
 		function run(obj)
-			global lJ
+			global lJ %eyelink calibration needs access to labjack for reward
 			initialiseSaveFile(obj) %get a sensible default name
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
@@ -437,7 +439,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function runTask(obj)
 			global lJ %eyelink calibration needs access to labjack for reward
-			global tS
+			global tS %tS is our simple settings structure
 			if isempty(regexpi(obj.comment, '^Protocol','once'))
 				obj.comment = '';
 			end
@@ -452,22 +454,24 @@ classdef runExperiment < optickaCore
 				error('There is no working PTB available!')
 			end
 			
-			%initialise time logs for this run
+			%------a general structure to hold various parameters, will be saved after the run; prefer structure over class to keep it light...
+			tS = struct();
+			tS.name = 'generic'; %==name of this protocol
+			tS.useTask = false; %use stimulusSequence (randomised variable task object)
+			tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
+			tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
+			tS.askForComments = false; %==little UI requestor asks for comments before/after run
+			tS.saveData = false; %==save behavioural and eye movement data?
+			tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+	
+			%------initialise time logs for this run
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog; %short handle to log
 			
-			obj.behaviouralRecord = behaviouralRecord('name',['Fix' obj.savePrefix]); %#ok<*CPROP>
-			bR = obj.behaviouralRecord;
-			
-			%------a throwaway structure to hold various parameters, will be saved after the run, but prefer structure to keep it light...
-			tS = struct();
-			tS.useTask = false;
-			tS.checkKeysDuringStimulus = false;
-			tS.recordEyePosition = false;
-			tS.askForComments = false;
-			tS.saveData = false;
-			tS.dummyEyelink = false;
-	
+			%-----behavioural record
+			obj.behaviouralRecord = behaviouralRecord('name',[obj.subjectName '-' obj.savePrefix]); %#ok<*CPROP>
+			bR = obj.behaviouralRecord; %short handle
+		
 			%------make a short handle to the screenManager
 			s = obj.screen; 
 			obj.stimuli.screen = [];
@@ -488,14 +492,13 @@ classdef runExperiment < optickaCore
 				tS=rmfield(tS,'eO');
 			end
 			
-			%-------Set up Digital I/O for this run...
+			%-------Set up Digital I/O (dPixx and labjack) for this task run...
 			if isa(obj.dPixx,'dPixxManager')
-				io = obj.dPixx; io.name = ['Fix' obj.savePrefix];
+				io = obj.dPixx; io.name = [obj.subjectName '-' obj.savePrefix];
 			else
-				obj.dPixx = dPixxManager('verbose',obj.verbose,'name',['Fix' obj.savePrefix]);
+				obj.dPixx = dPixxManager('verbose',obj.verbose,'name',[obj.subjectName '-' obj.savePrefix]);
 				io = obj.dPixx;
 			end
-			
 			if obj.useDataPixx
 				io.silentMode = false;
 				io.verbose = obj.verbose;
@@ -507,23 +510,24 @@ classdef runExperiment < optickaCore
 				io.name = 'silentruninstance';
 				open(io);
 			end
-			obj.lJack = labJack('name',['Fix' obj.savePrefix],'readResponse', false,'verbose',obj.verbose);
+			obj.lJack = labJack('name',[obj.subjectName '-' obj.savePrefix],'readResponse', false,'verbose',obj.verbose);
 			lJ = obj.lJack;
 			
 			%-----------------------------------------------------------
-			try%======This is our main TRY CATCH experiment display loop
+			try %-----This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------
 				%-----open the eyelink interface
-				obj.useEyeLink = true;
+				obj.useEyeLink = true; %we always need the eyelink, even if we run a dummy mode
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
-					eL.saveFile = [obj.paths.savedData filesep 'Spence-' obj.savePrefix '.edf'];
+					eL.saveFile = [obj.paths.savedData filesep obj.subjectName '-' obj.savePrefix '.edf'];
 				end
 				
-				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',['Fix' obj.savePrefix]); 
+				%-----initialise the state machine
+				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',[obj.subjectName '-' obj.savePrefix]); 
 				sM = obj.stateMachine;
-				sM.timeDelta = obj.screenVals.ifi; %tell it the spcreen IFI
+				sM.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 				if isempty(obj.paths.stateInfoFile)
 					errordlg('Please specify a valid State Machine file...')
 				elseif ischar(obj.paths.stateInfoFile)
@@ -553,14 +557,20 @@ classdef runExperiment < optickaCore
 				%------open the PTB screen
 				obj.screenVals = s.open(obj.debug,tL);
 				
-				obj.stimuli.screen = s;
+				obj.stimuli.screen = s; %make sure our stimuli use the same screen
 				obj.stimuli.verbose = obj.verbose;
 				setup(obj.stimuli); %run setup() for each stimulus
 				
-                %-----take over the keyboard!
+            %-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
-				ListenChar(2); %capture keystrokes
-				
+				if obj.debug == false
+					HideCursor;
+					warning('off'); %#ok<*WNOFF>
+					ListenChar(2); %2=capture all keystrokes
+				else
+					ListenChar(1); %1=listen
+				end
+
 				%-----set up the eyelink interface
 				if obj.useEyeLink
 					initialise(eL, s);
@@ -569,21 +579,21 @@ classdef runExperiment < optickaCore
 				
 				%-----premptive save in case of crash or error
 				rE = obj;
-                warning('off');
-				save([tempdir filesep 'Spence-' obj.savePrefix '.mat'],'rE','tS');
+            warning('off');
+				save([tempdir filesep obj.subjectName '-' obj.savePrefix '.mat'],'rE','tS');
 				warning('on');
                 
-                %-----set up our behavioural plot
+            %-----set up our behavioural plot
 				createPlot(bR, eL);
 				
-                %-----set up the datapixx, put it into paused mode
-				if obj.useDataPixx 
+            %-----set up the datapixx, put it into paused mode
+				if obj.useDataPixx
 					rstop(io); %make sure this is set low first
 					sendTTL(io, 7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
 					WaitSecs(0.1);
-                end
+            end
 				
-                %-----initialise out various counters
+            %-----initialise out various counters
 				t.tick = 1;
 				t.switched = 1;
 				t.totalRuns = 1;
@@ -591,7 +601,7 @@ classdef runExperiment < optickaCore
 					updateVariables(obj, t.totalRuns, true, false); % set to first variable
 					%updateFixationTarget(obj, true);
 				end
-				tS.stopTraining = false; %break while loop
+				tS.stopTraining = false; %used to break main while loop
 				tS.keyTicks = 0; %tick counter for reducing sensitivity of keyboard
 				tS.keyHold = 1; %a small loop to stop overeager key presses
 				tS.totalTicks = 1; % a tick counter
@@ -599,23 +609,18 @@ classdef runExperiment < optickaCore
 				tS.eyePos = []; %locally record eye position
 				
 				%profile clear; profile on;
-				
-				HideCursor;
-				warning('off'); %#ok<*WNOFF>
                 
 				%-----check initial eye position
 				if obj.useEyeLink; getSample(eL); end
 				
-				%if obj.useDataPixx; rstart(io); end
-				
-                %-----initialise our vbl's
+            %-----initialise our vbl's
 				tL.screenLog.beforeDisplay = GetSecs;
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
 				
-                %-----ignite the stateMachine!
+            %-----ignite the stateMachine!
 				start(sM); 
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -628,36 +633,31 @@ classdef runExperiment < optickaCore
 					%------run the stateMachine one tick forward
 					update(sM);
 					
-					%------check eye position
+					%------check eye position manually. REMEMBER eyelink will save the real eye data in
+					% the EDF this is just a backup wrapped in the PTB loop. Good to have a copy (even if
+					% it is sampled at the refresh rate), but make cause a small performance hit.
 					if obj.useEyeLink;
-						getSample(eL);
 						if tS.recordEyePosition == true
-							if strcmpi(sM.currentName,'stimulus')
-								uuid = ['E' sM.currentUUID];
-								if isfield(tS.eyePos,uuid)
-									tS.eyePos.(uuid).x(end+1) = eL.x;
-									tS.eyePos.(uuid).y(end+1) = eL.y;
-								else
-									tS.eyePos.(uuid).x = eL.x;
-									tS.eyePos.(uuid).y = eL.y;
-								end
-							elseif strcmpi(sM.currentName,'fixate')
-								uuid = ['F' sM.currentUUID];
-								if isfield(tS.eyePos,uuid)
-									tS.eyePos.(uuid).x(end+1) = eL.x;
-									tS.eyePos.(uuid).y(end+1) = eL.y;
-								else
-									tS.eyePos.(uuid).x = eL.x;
-									tS.eyePos.(uuid).y = eL.y;
-								end
-							elseif strcmpi(sM.currentName,'correct')
-								uuid = ['CC' sM.currentUUID];
-								tS.eyePos.(uuid).x = 1;
-								tS.eyePos.(uuid).y = 1;
-							elseif strcmpi(sM.currentName,'breakfix')
-								uuid = ['BF' sM.currentUUID];
-								tS.eyePos.(uuid).x = 1;
-								tS.eyePos.(uuid).y = 1;
+							getSample(eL);
+							switch sM.currentName
+								case 'stimulus'
+									prefix = 'E';
+								case 'fixate'
+									prefix = 'F';
+								case 'correct'
+									prefix = 'CC';
+								case 'breakfix'
+									prefix = 'BF';
+								otherwise
+									prefix = 'U';
+							end
+							uuid = [prefix sM.currentUUID];
+							if isfield(tS.eyePos,uuid)
+								tS.eyePos.(uuid).x(end+1) = eL.x;
+								tS.eyePos.(uuid).y(end+1) = eL.y;
+							else
+								tS.eyePos.(uuid).x = eL.x;
+								tS.eyePos.(uuid).y = eL.y;
 							end
 						end
 					end
@@ -722,11 +722,9 @@ classdef runExperiment < optickaCore
 					tS.eO=[];
 				end
 				
-				close(s);
-				close(eL);
-				obj.eyeLink = [];
-				close(lJ);
-				obj.lJack=[];
+				close(s); %screen
+				close(eL); obj.eyeLink = []; %eyelink
+				close(lJ); obj.lJack=[]; %labjack
 				
 				if tS.askForComments
 					comment = inputdlg('Final Comment for this Run?','Run Comment');
@@ -746,9 +744,9 @@ classdef runExperiment < optickaCore
 					rE = obj;
 					assignin('base', 'rE', obj);
 					assignin('base', 'tS', tS);
-                    warning('off')
-					save([obj.paths.savedData filesep 'Spence-' obj.savePrefix '.mat'],'rE','bR','tL','tS','sM');
-                    warning('on')
+               warning('off')
+					save([obj.paths.savedData filesep obj.subjectName '-' obj.savePrefix '.mat'],'rE','bR','tL','tS','sM');
+               warning('on')
 				end
 				clear rE tL s tS bR lJ eL io sM			
 			catch ME
@@ -773,7 +771,6 @@ classdef runExperiment < optickaCore
 				obj.lJack=[];
 				clear tL s tS bR lJ eL io sM
 				rethrow(ME)
-				
 			end
 
 		end
