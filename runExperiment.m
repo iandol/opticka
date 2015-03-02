@@ -445,7 +445,7 @@ classdef runExperiment < optickaCore
 			end
 			
 			initialiseSaveFile(obj)
-			obj.name = obj.savePrefix;
+			obj.name = [obj.subjectName '-' obj.savePrefix];
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -463,13 +463,14 @@ classdef runExperiment < optickaCore
 			tS.askForComments = false; %==little UI requestor asks for comments before/after run
 			tS.saveData = false; %==save behavioural and eye movement data?
 			tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+			tS.useMagStim = false;
 	
 			%------initialise time logs for this run
 			obj.trainingLog = timeLogger;
 			tL = obj.trainingLog; %short handle to log
 			
 			%-----behavioural record
-			obj.behaviouralRecord = behaviouralRecord('name',[obj.subjectName '-' obj.savePrefix]); %#ok<*CPROP>
+			obj.behaviouralRecord = behaviouralRecord('name',obj.name); %#ok<*CPROP>
 			bR = obj.behaviouralRecord; %short handle
 		
 			%------make a short handle to the screenManager
@@ -494,9 +495,9 @@ classdef runExperiment < optickaCore
 			
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
 			if isa(obj.dPixx,'dPixxManager')
-				io = obj.dPixx; io.name = [obj.subjectName '-' obj.savePrefix];
+				io = obj.dPixx; io.name = obj.name;
 			else
-				obj.dPixx = dPixxManager('verbose',obj.verbose,'name',[obj.subjectName '-' obj.savePrefix]);
+				obj.dPixx = dPixxManager('verbose',obj.verbose,'name',obj.name);
 				io = obj.dPixx;
 			end
 			if obj.useDataPixx
@@ -510,7 +511,7 @@ classdef runExperiment < optickaCore
 				io.name = 'silentruninstance';
 				open(io);
 			end
-			obj.lJack = labJack('name',[obj.subjectName '-' obj.savePrefix],'readResponse', false,'verbose',obj.verbose);
+			obj.lJack = labJack('name',obj.name,'readResponse', false,'verbose',obj.verbose);
 			lJ = obj.lJack;
 			
 			%-----------------------------------------------------------
@@ -525,7 +526,7 @@ classdef runExperiment < optickaCore
 				end
 				
 				%-----initialise the state machine
-				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',[obj.subjectName '-' obj.savePrefix]); 
+				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',obj.name); 
 				sM = obj.stateMachine;
 				sM.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 				if isempty(obj.paths.stateInfoFile)
@@ -561,7 +562,7 @@ classdef runExperiment < optickaCore
 				obj.stimuli.verbose = obj.verbose;
 				setup(obj.stimuli); %run setup() for each stimulus
 				
-            %-----take over the keyboard!
+				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
 				if obj.debug == false
 					HideCursor;
@@ -570,7 +571,7 @@ classdef runExperiment < optickaCore
 				else
 					ListenChar(1); %1=listen
 				end
-
+				
 				%-----set up the eyelink interface
 				if obj.useEyeLink
 					initialise(eL, s);
@@ -580,7 +581,7 @@ classdef runExperiment < optickaCore
 				%-----premptive save in case of crash or error
 				rE = obj;
             warning('off');
-				save([tempdir filesep obj.subjectName '-' obj.savePrefix '.mat'],'rE','tS');
+				save([tempdir filesep obj.name '.mat'],'rE','tS');
 				warning('on');
                 
             %-----set up our behavioural plot
@@ -637,8 +638,8 @@ classdef runExperiment < optickaCore
 					% the EDF this is just a backup wrapped in the PTB loop. Good to have a copy (even if
 					% it is sampled at the refresh rate), but make cause a small performance hit.
 					if obj.useEyeLink;
+						getSample(eL);
 						if tS.recordEyePosition == true
-							getSample(eL);
 							switch sM.currentName
 								case 'stimulus'
 									prefix = 'E';
@@ -651,13 +652,15 @@ classdef runExperiment < optickaCore
 								otherwise
 									prefix = 'U';
 							end
-							uuid = [prefix sM.currentUUID];
-							if isfield(tS.eyePos,uuid)
-								tS.eyePos.(uuid).x(end+1) = eL.x;
-								tS.eyePos.(uuid).y(end+1) = eL.y;
-							else
-								tS.eyePos.(uuid).x = eL.x;
-								tS.eyePos.(uuid).y = eL.y;
+							if ~strcmpi(prefix,'U')
+								uuid = [prefix sM.currentUUID];
+								if isfield(tS.eyePos,uuid)
+									tS.eyePos.(uuid).x(end+1) = eL.x;
+									tS.eyePos.(uuid).y(end+1) = eL.y;
+								else
+									tS.eyePos.(uuid).x = eL.x;
+									tS.eyePos.(uuid).y = eL.y;
+								end
 							end
 						end
 					end
@@ -723,7 +726,7 @@ classdef runExperiment < optickaCore
 				end
 				
 				close(s); %screen
-				close(eL); obj.eyeLink = []; %eyelink
+				close(eL); obj.eyeLink = []; %eyelink, should save the EDF for us we've already given it our name and folder
 				close(lJ); obj.lJack=[]; %labjack
 				
 				if tS.askForComments
@@ -742,10 +745,10 @@ classdef runExperiment < optickaCore
 				
 				if tS.saveData
 					rE = obj;
-					assignin('base', 'rE', obj);
-					assignin('base', 'tS', tS);
+					%assignin('base', 'rE', obj);
+					%assignin('base', 'tS', tS);
                warning('off')
-					save([obj.paths.savedData filesep obj.subjectName '-' obj.savePrefix '.mat'],'rE','bR','tL','tS','sM');
+					save([obj.paths.savedData filesep obj.name '.mat'],'rE','bR','tL','tS','sM');
                warning('on')
 				end
 				clear rE tL s tS bR lJ eL io sM			
@@ -1380,7 +1383,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief manage keypresses during fixation loop
+		%> @brief manage key commands during task loop
 		%>
 		%> @param args input structure
 		% ===================================================================
@@ -1591,7 +1594,15 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.keyTicks + fInc;
 							forceTransition(obj.stateMachine, 'flash');
 							return
-						end						
+						end	
+					case 't'
+						if tS.keyTicks > tS.keyHold
+							fprintf('===>>> MagStim ENGAGED!\n');
+							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
+							tS.keyHold = tS.keyTicks + fInc;
+							forceTransition(obj.stateMachine, 'magstim');
+							return
+						end
 					case 'o'
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Override ENGAGED!\n');

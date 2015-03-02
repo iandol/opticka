@@ -158,7 +158,7 @@ switch eyecmd
 			clearScreen = 1;
 			needsupdate = 1;
 			calxy = [];
-			if isa(lJ,'labJack')
+			if isa(lJ,'labJack') %this is why we need lJ to be universal
 				lJ.timedTTL(0,160);
 			end
 		end

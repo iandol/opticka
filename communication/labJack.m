@@ -406,9 +406,9 @@ classdef labJack < handle
 		%> shouldn't be needed anyway. Any time longer than this will be
 		%> truncated to the maximum allowable time.
 		%>
-		%>  @param line 0-7=FIO, 8-15=EIO, or 16-19=CIO
+		%> @param line 0-7=FIO, 8-15=EIO, or 16-19=CIO
 		%>	@param time time in ms
-		%>  @param sync optinal logical flag whether to use blocking (true) command
+		%> @param sync optional logical flag whether to use blocking (true) command
 		% ===================================================================
 		function timedTTL(obj,line,time)
 			if (~exist('line','var') || ~exist('time','var'));
@@ -489,7 +489,7 @@ classdef labJack < handle
 				obj.timedTTLCache = obj.command;
 				obj.outp = obj.rawWrite(obj.command);
 				if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
-				obj.salutation('timedTTL method',sprintf('Tlong:%g Tshort:%g output time = %g ms', time1, time2, otime*1000))
+				obj.salutation('timedTTL method',sprintf('Line:%g Tlong:%g Tshort:%g output time = %g ms', line, time1, time2, otime*1000))
 			end
 		end
 		
@@ -527,7 +527,7 @@ classdef labJack < handle
 		%> @brief setDIODirection
 		%>	setDIODirection sets the direction for FIO, EIO and CIO as read or write
 		%>	@param value is binary identifier for 0-7 bit range
-		%>  @param mask is the mask to apply the command
+		%> @param mask is the mask to apply the command
 		% ===================================================================
 		function setDIODirection(obj,value,mask)
 			if ~exist('value','var');fprintf('\nsetDIODirection Input options: \n\t\tvalue, [mask]\n\n');return;end

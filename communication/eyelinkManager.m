@@ -608,6 +608,8 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function close(obj)
+			obj.paths.currentDirectory = pwd;
+			cd(obj.paths.savedData);
 			try
 				if obj.isRecording == true
 					Eyelink('StopRecording');
@@ -630,8 +632,10 @@ classdef eyelinkManager < optickaCore
 						disp(ME.message);
 					end
 				end
+				trackerClearScreen(obj);
 			catch ME
 				obj.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
+				trackerClearScreen(obj);
 				Eyelink('Shutdown');
 				obj.error = ME;
 				obj.salutation(ME.message);
@@ -642,6 +646,7 @@ classdef eyelinkManager < optickaCore
 			obj.isRecording = false;
 			obj.eyeUsed = -1;
 			obj.screen = [];
+			cd(obj.paths.currentDirectory);
 		end
 		
 		% ===================================================================
@@ -691,10 +696,7 @@ classdef eyelinkManager < optickaCore
 				x = toPixels(obj, obj.fixationX, 'x');
 				y = toPixels(obj, obj.fixationY, 'y');
 				rect = round(CenterRectOnPoint(rect, x, y));
-                col = randi([1 15]);
-                fprintf('draw_box %d %d %d %d %d', rect(1), rect(2), rect(3), rect(4), col);
-				Eyelink('Command', 'draw_box %d %d %d %d %d', rect(1), rect(2), rect(3), rect(4), col);
-                Eyelink('Command', 'draw_cross %d %d %d', randi([100 600]), randi([100 600]),col);
+				Eyelink('Command', 'draw_box %d %d %d %d %d', rect(1), rect(2), rect(3), rect(4), 4);
             end
 		end
 		

@@ -18,9 +18,16 @@ tS.recordEyePosition = true; %==record eye position within PTB, **in addition** 
 tS.askForComments = true; %==little UI requestor asks for comments before/after run
 tS.saveData = true; %==save behavioural and eye movement data?
 obj.useDataPixx = true; %==drive plexon to collect data?
-tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.name = 'figure-ground'; %==name of this protocol
+tS.useMagStim = true; %enable the magstim manager
 
+%-----enable the magstimManager which uses FOI1 of the LabJack
+if tS.useMagStim
+	mS = magstimManager('lJ',lJ,'defaultTTL',2);
+	open(mS);
+end
+				
 %------------Eyetracker Settings-----------------
 tS.luminancePedestal = [0.5 0.5 0.5]; %used during training, it sets the clip behind the figure to a different luminance which makes the figure more salient and thus easier to train to.
 tS.fixX = 0;
@@ -42,9 +49,9 @@ if tS.saveData == true; eL.recordData = true; end% save EDF file?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV5'; % calibration style
-eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 0.5;
-eL.modify.calibrationtargetwidth = 0.01;
+eL.modify.calibrationtargetcolour = [1 1 1];
+eL.modify.calibrationtargetsize = 1;
+eL.modify.calibrationtargetwidth = 0.1;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 = use any keyboard
 
@@ -82,8 +89,9 @@ obj.stimuli.fixationChoice = 3;
 %pause entry
 pauseEntryFcn = { @()rstop(io); ... %rstop is pause the plexon
 	@()setOffline(eL); ... %set eyelink offline
-	@()stopRecording(eL); ... %stop ete position recording
+	@()stopRecording(eL); ... %stop eye position recording
 	@()edfMessage(eL,'TRIAL_RESULT -10'); ... %store message in EDF
+	@()drawBackground(s); ... %blank the display
 	@()disableFlip(obj); ... %stop screen updates
 	}; 
 
@@ -213,6 +221,9 @@ overrideFcn = @()keyOverride(obj); %a special mode which enters a matlab debug s
 %screenflash
 flashFcn = @()flashScreen(s, 0.2); % fullscreen flash mode for visual background activity detection
 
+%screenflash
+magstimFcn = @()stimulate(mS); % run the magstim
+
 %show 1deg size grid
 gridFcn = @()drawGrid(s);
 
@@ -223,17 +234,18 @@ disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
-'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
-'prefix'	'fixate'	1.15	prefixEntryFcn	prefixFcn		[]				[]; ...
-'fixate'	'incorrect'	2	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
-'stimulus'  'incorrect'	1.5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
-'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			[]				incExitFcn; ...
-'breakfix'	'prefix'	1.25	breakEntryFcn	incFcn			[]				incExitFcn; ...
-'correct'	'prefix'	0.25	correctEntryFcn	correctFcn		[]				correctExitFcn; ...
+'pause'		'prefix'		inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
+'prefix'		'fixate'		1.15		prefixEntryFcn	prefixFcn	[]				[]; ...
+'fixate'		'incorrect'	2			fixEntryFcn		fixFcn		initFixFcn	fixExitFcn; ...
+'stimulus'  'incorrect'	1.5		stimEntryFcn	stimFcn		maintainFixFcn	stimExitFcn; ...
+'incorrect'	'prefix'		1.25		incEntryFcn		incFcn		[]				incExitFcn; ...
+'breakfix'	'prefix'		1.25		breakEntryFcn	incFcn		[]				incExitFcn; ...
+'correct'	'prefix'		0.25		correctEntryFcn correctFcn	[]				correctExitFcn; ...
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[]; ...
 'override'	'pause'		0.5		overrideFcn		[]				[]				[]; ...
-'flash'		'pause'		0.5		flashFcn		[]				[]				[]; ...
-'showgrid'	'pause'		10		[]				gridFcn			[]				[]; ...
+'flash'		'pause'		0.5		flashFcn			[]				[]				[]; ...
+'magstim'	'pause'		0.5		[]					magstimFcn	[]				[]; ...
+'showgrid'	'pause'		10			[]					gridFcn		[]				[]; ...
 };
 
 disp(stateInfoTmp)
