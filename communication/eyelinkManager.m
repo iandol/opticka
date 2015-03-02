@@ -95,7 +95,7 @@ classdef eyelinkManager < optickaCore
 	
 	methods
 		% ===================================================================
-		%> @brief 
+		%> @brief This is the constructor for this class
 		%>
 		% ===================================================================
 		function obj = eyelinkManager(varargin)
