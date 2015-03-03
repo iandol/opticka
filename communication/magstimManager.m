@@ -10,7 +10,7 @@ classdef magstimManager < optickaCore
 		%> labJack to use
 		lJ 
 		%> time to stimulate
-		stimulateTime = 10
+		stimulateTime = 60
 		%> frequency to stimulate at
 		frequency = 0.7
 		%>time of reward
@@ -113,8 +113,9 @@ classdef magstimManager < optickaCore
 					WaitSecs(timeToWait-0.01);
 					tNow=GetSecs;
 					rloop = rloop + 1;
+					fprintf('->Time of Stimulation: %i seconds\n',tNow-t1)
 				end
-				fprintf('===>>>MagStim FINISHED')
+				fprintf('===>>>MagStim FINISHED\n')
 			end
 		end
 		

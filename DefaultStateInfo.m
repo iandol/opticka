@@ -15,6 +15,30 @@
 % obj.stimuli = our list of stimuli
 % tS = general simple struct to hold variables for this run
 
+% On branch master
+% Your branch is up-to-date with 'origin/master'.
+% Changes not staged for commit:
+%   (use "git add <file>..." to update what will be committed)
+%   (use "git checkout -- <file>..." to discard changes in working directory)
+% 
+% 	modified:   CoreProtocols/FigureGroundStateInfo.m
+% 	modified:   CoreProtocols/RFMappingStateInfo.m
+% 	modified:   DefaultStateInfo.m
+% 	modified:   communication/eyelinkCallback.m
+% 	modified:   communication/magstimManager.m
+% 	modified:   opticka.m
+% 	modified:   runExperiment.m
+% 	modified:   screenManager.m
+% 	modified:   stimuli/metaStimulus.m
+% 	modified:   ui/opticka_ui.m
+% 
+% Untracked files:
+%   (use "git add <file>..." to include in what will be committed)
+% 
+% 	CoreProtocols/JordiCampoMapper.mat
+
+
+
 %------------General Settings-----------------
 tS.rewardTime = 150; %TTL time in milliseconds
 tS.useTask = true; %use stimulusSequence (randomised variable task object)

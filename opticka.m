@@ -15,7 +15,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = public, GetAccess = public, Transient = true)
 		%> general store for misc properties
-		store = struct()
+		store@struct = struct()
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true)
