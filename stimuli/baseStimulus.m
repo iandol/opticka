@@ -628,6 +628,20 @@ classdef baseStimulus < optickaCore & dynamicprops
 			obj.handles = [];
 		end
 		
+		% ===================================================================
+		%> @brief checkPaths
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function varargout=cleanHandles(obj,varargin)
+			if isprop(obj,'handles')
+				obj.handles = [];
+			end
+			if isprop(obj,'h')
+				obj.handles = [];
+			end
+		end
 		
 	end %---END PUBLIC METHODS---%
 	

@@ -874,14 +874,18 @@ classdef opticka < optickaCore
 				cd(p);
 				tmp = clone(obj);
 				tmp.r.paths.stateInfoFile = obj.r.paths.stateInfoFile;
-				if isfield(tmp.store,'evnt') %delete our previous event
-					delete(tmp.store.evnt);
-					tmp.store.evnt = [];
-					tmp.store = rmfield(tmp.store,'evnt');
-				end
-				tmp.store.oldlook = [];
-				tmp.store.visibleStimulus = [];
+% 				if isfield(tmp.store,'evnt') %delete our previous event
+% 					delete(tmp.store.evnt);
+% 					tmp.store.evnt = [];
+% 					tmp.store = rmfield(tmp.store,'evnt');
+% 				end
+% 				tmp.store.oldlook = [];
+% 				tmp.store.visibleStimulus = [];
+				tmp.store = struct();
 				tmp.h = struct(); %remove the handles to the UI which will not be valid
+				for i = 1:tmp.r.stimuli.n
+					cleanHandles(tmp.r.stimuli{i});
+				end
 				warning('off');
 				save(f,'tmp');
 				warning('on');
