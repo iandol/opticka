@@ -514,7 +514,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		% ===================================================================
 		function lobj=loadobj(in)
 			if ~isa(in,'stimulusSequence') && isstruct(in)
-				fprintf('---> Rebuilding stimulusSequence structure...\n');
+				fprintf('---> stimulusSequence loadobj: Rebuilding  structure...\n');
 				lobj = stimulusSequence;
 				lobj.isLoading = true;
 				fni = fieldnames(in);
@@ -523,13 +523,13 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					lobj.(fn{i}) = in.(fn{i});
 				end
 			elseif isa(in,'stimulusSequence')
-				fprintf('---> Loading stimulusSequence object...\n');
+				fprintf('--->  stimulusSequence loadobj: Loading stimulusSequence object...\n');
 				in.currentState = []; %lets strip the old random streams
 				in.oldStream = [];
 				in.taskStream = [];
 				lobj = in;
 			else
-				fprintf('---> Loading stimulusSequence FAILED...\n');
+				fprintf('--->  stimulusSequence loadobj: Loading stimulusSequence FAILED...\n');
 			end
 			lobj.isLoading = false;
 		end
