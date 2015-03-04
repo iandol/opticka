@@ -210,8 +210,6 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function initialiseUI(obj)
-			
-			obj.store.oldlook=javax.swing.UIManager.getLookAndFeel;
 			try
 				obj.paths.whoami = mfilename;
 				obj.paths.whereami = fileparts(which(mfilename));
@@ -291,11 +289,7 @@ classdef opticka < optickaCore
 					end
 					obj.paths.savedData = [root 'SavedData'];
 				end
-				
-				obj.store.newlook='javax.swing.plaf.metal.MetalLookAndFeel';
-				if obj.mversion < 7.12 && (ismac || ispc)
-					javax.swing.UIManager.setLookAndFeel(obj.store.newlook);
-				end
+
 				uihandle=opticka_ui; %our GUI file
 				obj.centerGUI(uihandle);
 				obj.h=guidata(uihandle);
@@ -304,9 +298,6 @@ classdef opticka < optickaCore
 				setappdata(obj.h.uihandle,'o',obj); %we stash our object in the root appdata store for retirieval from the UI
 				set(obj.h.OKOptickaVersion,'String','Initialising GUI, please wait...');
 				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.optickaVersion]);
-				if obj.mversion < 7.12 && (ismac || ispc)
-					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
-				end
 
 				drawnow;
 					
@@ -340,10 +331,7 @@ classdef opticka < optickaCore
 					rmappdata(obj.h.uihandle,'o');
 					clear o;
 				end
-				close(obj.h.uihandle);
-				if obj.mversion < 7.12 && (ismac || ispc)
-					javax.swing.UIManager.setLookAndFeel(obj.store.oldlook);
-				end
+				if isfield(obj.h,'uihandle'); close(obj.h.uihandle); end
 				errordlg('Problem initialising Opticka, please check errors on the commandline')
 				rethrow(ME)
 			end
@@ -1313,8 +1301,8 @@ classdef opticka < optickaCore
 		%> 
 		%> @param obj
 		% ===================================================================
-% 		function sobj = saveobj(obj)
-% 			sobj = obj;
+ 		function sobj = saveobj(obj)
+ 			sobj = obj;
 % 			if isfield(sobj.store,'evnt') %delete our previous event
 % 				delete(sobj.store.evnt);
 % 				sobj.store.evnt = [];
@@ -1330,7 +1318,7 @@ classdef opticka < optickaCore
 % 			end
 % 			sobj.store.oldlook=[]; %need to remove this as java objects not supported for save in matlab
 % 			sobj.oc = [];
-% 		end
+ 		end
 		
 	end
 	
