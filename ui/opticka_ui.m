@@ -262,8 +262,10 @@ end
 function OKuseDataPixx_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	if get(hObject,'Value') == 1 && get(handles.OKuseDataPixx,'Value') == 1
-		set(handles.OKuseLabJack,'Value', 0)
+	if strcmpi(get(hObject,'Checked'),'on')
+		set(hObject,'Checked','off');
+	else
+		set(hObject,'Checked','on');
 	end
 	o.getScreenVals;
 end
@@ -272,8 +274,10 @@ end
 function OKuseLabJack_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	if get(hObject,'Value') == 1 && get(handles.OKuseDataPixx,'Value') == 1
-		set(handles.OKuseDataPixx,'Value', 0)
+	if strcmpi(get(hObject,'Checked'),'on')
+		set(hObject,'Checked','off');
+	else
+		set(hObject,'Checked','on');
 	end
 	o.getScreenVals;
 end
@@ -282,6 +286,11 @@ end
 function OKuseEyeLink_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
+	if strcmpi(get(hObject,'Checked'),'on')
+		set(hObject,'Checked','off');
+	else
+		set(hObject,'Checked','on');
+	end
 	o.getScreenVals;
 end
 

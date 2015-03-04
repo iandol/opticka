@@ -1,11 +1,4 @@
-%Default state configuration file for runExperiment.runTrainingSession (full
-%behavioural task design).
-%This controls a stateMachine instance, switching between these states and 
-%executing functions. This will be run in the scope of the calling
-%runTrainingSession function and thus runExperiment.screen and friends will be
-%available at run time (with easy to use names listed below).
-%The following class objects (easily named handle copies) are already loaded and available to
-%use: 
+%JORDI RFMAP state configuration file, this gets loaded by opticka via runExperiment class
 % io = datapixx (digital I/O to plexon)
 % s = screenManager
 % sM = State Machine
@@ -14,19 +7,19 @@
 % bR = behavioural record plot
 % obj.stimuli = our list of stimuli
 % tS = general simple struct to hold variables for this run
-
+%
 %------------General Settings-----------------
-tS.rewardTime = 150; %TTL time in milliseconds
-tS.useTask = true; %use stimulusSequence (randomised variable task object)
-tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
-tS.recordEyePosition = true; %==record eye position within PTB, in addition to the EDF?
+tS.rewardTime = 75; %TTL time in milliseconds
+tS.useTask = true;
+tS.checkKeysDuringStimulus = false;
+tS.recordEyePosition = true;
 tS.askForComments = true;
-tS.saveData = true; %==save behavioural and eye movement data?
-obj.useDataPixx = true; %==drive plexon to collect data?
+tS.saveData = true; %*** save behavioural and eye movement data? ***
+obj.useDataPixx = true; %*** drive plexon to collect data? ***
 obj.useLabJack = true; %used for rewards and to control magstim
 tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = true; %enable the magstim manager
-tS.name = 'figure-ground'; %==name of this protocol
+tS.name = 'jordirfmapper';
 
 %-----enable the magstimManager which uses FOI2 of the LabJack
 if tS.useMagStim
@@ -40,12 +33,12 @@ end
 %------------Eyetracker Settings-----------------
 tS.fixX = 0;
 tS.fixY = 0;
-tS.firstFixInit = 0.1;
-tS.firstFixTime = 0.3;
-tS.firstFixRadius = 2;
-tS.stimulusFixTime = 0.5;
 obj.lastXPosition = tS.fixX;
 obj.lastYPosition = tS.fixY;
+tS.firstFixInit = 0.2;
+tS.firstFixTime = 0.2;
+tS.firstFixRadius = 1;
+tS.stimulusFixTime = 0.5;
 tS.strict = true;
 
 %------------------------Eyelink setup--------------------------
@@ -53,31 +46,29 @@ eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
 if tS.dummyEyelink; eL.isDummy = true; end%*** use dummy or real eyelink? ***
 eL.sampleRate = 250;
-eL.remoteCalibration = true; %manual calibration
-eL.calibrationStyle = 'HV5'; % 5 point calibration
+eL.remoteCalibration = true; % manual calibration?
+eL.calibrationStyle = 'HV5'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 0.5;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
-eL.modify.devicenumber = -1; % -1 == use any keyboard
+eL.modify.devicenumber = -1; % -1 = use any keyboard
 
-%Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
-eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
+% X, Y, FixInitTime, FixTime, Radius, StrictFix
+eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, true);
 
-%randomise stimulus variables every trial? useful during initial training but not for
-%data collection.
+%randomise stimulus variables every trial?
 obj.stimuli.choice = [];
 obj.stimuli.stimulusTable = [];
 
 % allows using arrow keys to control this table during the main loop
-% ideal for mapping receptive fields so we can twiddle parameters, normally not used
-% for normal tasks
+% ideal for mapping receptive fields so we can twiddle parameters
 obj.stimuli.controlTable = [];
 obj.stimuli.tableChoice = 1;
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
-obj.stimuli.stimulusSets = {[1,2]}; %EDIT THIS TO SAY WHICH STMULI TO SHOW
+obj.stimuli.stimulusSets = {[1,2]};
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
@@ -125,7 +116,7 @@ initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 %exit fixation phase
 fixExitFcn = { @()statusMessage(eL,'Show Stimulus...'); ...
 	@()updateFixationValues(eL,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
-	@()show(obj.stimuli{1}); ...
+	@()show(obj.stimuli); ...
 	@()edfMessage(eL,'END_FIX'); ...
 	}; 
 
@@ -215,9 +206,12 @@ flashFcn = { @()drawBackground(s); ...
 };
 
 %magstim
-magstimFcn = { @()drawBackground(s); ...
+magstimFcn = { @()rstop(io); ...
+	@()drawBackground(s); ...
 	@()stimulate(mS); % run the magstim
 };
+
+magstimExitFcn = @()rstart(io);%lets unpause the plexon!...
 
 %show 1deg size grid
 gridFcn = @()drawGrid(s);
@@ -227,18 +221,18 @@ disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
-'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
-'prefix'	'fixate'	0.75	prefixEntryFcn	prefixFcn		[]				[]; ...
-'fixate'	'incorrect'	1	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
-'stimulus'  'incorrect'	2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
-'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			[]				incExitFcn; ...
-'breakfix'	'prefix'	1.25	breakEntryFcn	incFcn			[]				incExitFcn; ...
-'correct'	'prefix'	0.25	correctEntryFcn	correctFcn		[]				correctExitFcn; ...
+'pause'		'fixate'		inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
+'prefix'	'fixate'			0.5		prefixEntryFcn	prefixFcn		[]				[]; ...
+'fixate'	'incorrect'		1			fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
+'stimulus'  'incorrect'	2			stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
+'incorrect'	'prefix'		1.25		incEntryFcn		incFcn			[]				incExitFcn; ...
+'breakfix'	'prefix'		1.25		breakEntryFcn	incFcn			[]				incExitFcn; ...
+'correct'	'prefix'		0.25		correctEntryFcn	correctFcn		[]				correctExitFcn; ...
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[]; ...
 'override'	'pause'		0.5		overrideFcn		[]				[]				[]; ...
-'flash'		'pause'		0.5		flashFcn		[]				[]				[]; ...
-'magstim'	'prefix'		0.5		[]					magstimFcn	[]				[]; ...
-'showgrid'	'pause'		10		[]				gridFcn			[]				[]; ...
+'flash'		'pause'		0.5		flashFcn			[]				[]				[]; ...
+'magstim'	'prefix'		0.5		[]					magstimFcn	[]				magstimExitFcn; ...
+'showgrid'	'pause'		10			[]					gridFcn			[]				[]; ...
 };
 
 disp(stateInfoTmp)

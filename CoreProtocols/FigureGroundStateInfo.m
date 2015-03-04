@@ -18,6 +18,7 @@ tS.recordEyePosition = true; %==record eye position within PTB, **in addition** 
 tS.askForComments = true; %==little UI requestor asks for comments before/after run
 tS.saveData = true; %==save behavioural and eye movement data?
 obj.useDataPixx = true; %==drive plexon to collect data?
+obj.useLabJack = true; %==used for rewards and to control magstim
 tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = true; %enable the magstim manager
 tS.name = 'figure-ground'; %==name of this protocol
