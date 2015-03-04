@@ -877,9 +877,16 @@ classdef opticka < optickaCore
 				warning('off');
 				save(f,'tmp');
 				warning('on');
+				r=obj.r;
+				st=obj.r.stimuli;
+				s=obj.r.screen;
+				save(['R' f],'r');
+				save(['ST' f],'st');
+				save(['S' f],'s');
 				obj.refreshStimulusList;
 				obj.refreshVariableList;
 				obj.refreshProtocolsList;
+				clear tmp r
 			end
 			cd(obj.paths.currentPath);
 		end

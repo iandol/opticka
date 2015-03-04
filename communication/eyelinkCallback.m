@@ -486,10 +486,10 @@ try
 	
 	if size <= 64
 		Screen('DrawDots', eyewin, calxy, size, el.calibrationtargetcolour, [], 1);
-		Screen('DrawDots', eyewin, calxy, 3, [1 0 1], [], 1);
+		Screen('DrawDots', eyewin, calxy, 3, [1 0.5 1], [], 1);
 	else
 		Screen('FillOval', eyewin, el.calibrationtargetcolour, [calxy(1)-size/2 calxy(2)-size/2 calxy(1)+size/2 calxy(2)+size/2], size+2);
-		Screen('FillOval', eyewin, [1 0 1], [calxy(1)-inset/2 calxy(2)-inset/2 calxy(1)+inset/2 calxy(2)+inset/2], inset+2);
+		Screen('FillOval', eyewin, [1 0.5 1], [calxy(1)-inset/2 calxy(2)-inset/2 calxy(1)+inset/2 calxy(2)+inset/2], inset+2);
 	end
 catch ME
 	ple(ME)
