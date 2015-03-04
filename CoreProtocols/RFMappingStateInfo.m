@@ -1,29 +1,40 @@
 %=====RF Mapping state configuration file=====
 %------------General Settings-----------------
 tS.rewardTime = 140; %TTL time in milliseconds
-tS.useTask = false;
-tS.checkKeysDuringStimulus = true;
-tS.recordEyePosition = false;
-tS.askForComments = false;
+tS.useTask = false; %use stimulusSequence (randomised variable task object)
+tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
+tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
+tS.askForComments = false; %==little UI requestor asks for comments before/after run
 tS.saveData = false; %we don't want to save any data
 obj.useDataPixx = false; %make sure we don't trigger the plexon
+tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.useMagStim = true; %enable the magstim manager
+tS.name = 'RFMapping'; %==name of this protocol
 
+%-----enable the magstimManager which uses FOI1 of the LabJack
+if tS.useMagStim
+	mS = magstimManager('lJ',lJ,'defaultTTL',2);
+	mS.stimulateTime	= 240;
+	mS.frequency		= 0.7;
+	mS.rewardTime		= 25;
+	open(mS);
+end
 %------------Eyelink Settings----------------
 eL.isDummy = false; %use dummy or real eyelink?
-fixX = 0;
-fixY = 0;
-firstFixInit = 0.75;
-firstFixTime = 2.5;
-firstFixRadius = 1;
+tS.fixX = 0;
+tS.fixY = 0;
+tS.firstFixInit = 0.75;
+tS.firstFixTime = 1;
+tS.firstFixRadius = 4;
 
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
-eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
+eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, true);
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV5'; % calibration style
-eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 0.5;
+eL.modify.calibrationtargetcolour = [1 1 1];
+eL.modify.calibrationtargetsize = 2;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard

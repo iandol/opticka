@@ -409,17 +409,17 @@ classdef opticka < optickaCore
 			obj.r.screen.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
 			obj.r.screen.nativeBeamPosition = logical(obj.gv(obj.h.OKNativeBeamPosition));
 			
-			if strcmpi(obj.h.OKuseLabJack.Checked,'on')
+			if strcmpi(get(obj.h.OKuseLabJack,'Checked'),'on')
 				obj.r.useLabJack = true;
 			else
 				obj.r.useLabJack = false;
 			end
-			if strcmpi(obj.h.OKuseDataPixx.Checked,'on')
+			if strcmpi(get(obj.h.OKuseDataPixx,'Checked'),'on')
 				obj.r.useDataPixx = true;
 			else
 				obj.r.useDataPixx = false;
 			end
-			if strcmpi(obj.h.OKuseEyeLink.Checked,'on')
+			if strcmpi(get(obj.h.OKuseEyeLink,'Checked'),'on')
 				obj.r.useEyeLink = true;
 			else
 				obj.r.useEyeLink = false;
@@ -869,14 +869,20 @@ classdef opticka < optickaCore
 % 				end
 % 				tmp.store.oldlook = [];
 % 				tmp.store.visibleStimulus = [];
-				tmp.store = struct();
+				tmp.store = struct(); %lets just nuke this incase some rogue handles are lurking
 				tmp.h = struct(); %remove the handles to the UI which will not be valid
 				for i = 1:tmp.r.stimuli.n
+					%each stimulus can contain UI handles in its obj.handles
+					%property (which is TRANSIENT and protected). Lets run a
+					%special function to clean the handles and remove *any* GUI
+					%handles from these objects:
 					cleanHandles(tmp.r.stimuli{i});
 				end
-				warning('off');
-				save(f,'tmp');
+				warning('off'); %warnings are bug 01254952
+				save(f,'tmp'); %this is the original code -- MAT CRASH on load
 				warning('on');
+				% lets try to save various sub-objects of opticka and isolate
+				% which causes the problem:
 				r=obj.r;
 				st=obj.r.stimuli;
 				s=obj.r.screen;
@@ -886,7 +892,7 @@ classdef opticka < optickaCore
 				obj.refreshStimulusList;
 				obj.refreshVariableList;
 				obj.refreshProtocolsList;
-				clear tmp r
+				clear tmp r st s
 			end
 			cd(obj.paths.currentPath);
 		end

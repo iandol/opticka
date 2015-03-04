@@ -94,9 +94,6 @@ classdef magstimManager < optickaCore
 		%>
 		% ===================================================================
 		function stimulate(obj)
-			obj.frequency = 1;
-			obj.rewardTime = 4;
-			obj.stimulateTime = 20;
 			if obj.isOpen && obj.silentMode == false
 				t1 = GetSecs;
 				tNow = t1;

@@ -19,12 +19,15 @@ tS.askForComments = true; %==little UI requestor asks for comments before/after 
 tS.saveData = true; %==save behavioural and eye movement data?
 obj.useDataPixx = true; %==drive plexon to collect data?
 tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
-tS.name = 'figure-ground'; %==name of this protocol
 tS.useMagStim = true; %enable the magstim manager
+tS.name = 'figure-ground'; %==name of this protocol
 
 %-----enable the magstimManager which uses FOI1 of the LabJack
 if tS.useMagStim
 	mS = magstimManager('lJ',lJ,'defaultTTL',2);
+	mS.stimulateTime	= 240;
+	mS.frequency		= 0.7;
+	mS.rewardTime		= 25;
 	open(mS);
 end
 				
@@ -213,16 +216,21 @@ breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message 
 	};
 
 %calibration function
-calibrateFcn = { @()setOffline(eL); @()rstop(io); @()trackerSetup(eL) }; %enter tracker calibrate/validate setup mode
+calibrateFcn = { @()drawBackground(s); ... %blank the display
+	@()setOffline(eL); @()rstop(io); @()trackerSetup(eL) }; %enter tracker calibrate/validate setup mode
 
 %debug override
 overrideFcn = @()keyOverride(obj); %a special mode which enters a matlab debug state so we can manually edit object values
 
 %screenflash
-flashFcn = @()flashScreen(s, 0.2); % fullscreen flash mode for visual background activity detection
+flashFcn = { @()drawBackground(s); ...
+	@()flashScreen(s, 0.2); % fullscreen flash mode for visual background activity detection
+};
 
 %screenflash
-magstimFcn = @()stimulate(mS); % run the magstim
+magstimFcn = { @()drawBackground(s); ...
+	@()stimulate(mS); % run the magstim
+	};
 
 %show 1deg size grid
 gridFcn = @()drawGrid(s);

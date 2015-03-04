@@ -64,8 +64,12 @@ classdef Container < handle
                 childObserver, 'ChildAdded', @obj.onChildAdded );
             childRemovedListener = event.listener( ...
                 childObserver, 'ChildRemoved', @obj.onChildRemoved );
-            sizeChangedListener = event.listener( ...
-                obj, 'SizeChanged', @obj.onSizeChanged );
+				 try
+					sizeChangedListener = event.listener( ...
+						 obj, 'SizeChanged', @obj.onSizeChanged );
+				 catch
+					 sizeChangedListener = @()disp('dummy listener');
+				 end
             
             % Store observers and listeners
             obj.AncestryObserver = ancestryObserver;
