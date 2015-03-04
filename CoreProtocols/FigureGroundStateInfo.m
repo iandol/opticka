@@ -22,7 +22,7 @@ tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away 
 tS.useMagStim = true; %enable the magstim manager
 tS.name = 'figure-ground'; %==name of this protocol
 
-%-----enable the magstimManager which uses FOI1 of the LabJack
+%-----enable the magstimManager which uses FOI2 of the LabJack
 if tS.useMagStim
 	mS = magstimManager('lJ',lJ,'defaultTTL',2);
 	mS.stimulateTime	= 240;
@@ -46,6 +46,7 @@ tS.targetFixInit = 3;
 tS.targetFixTime = [0.2 0.5];
 tS.targetRadius = 4;
 
+%------------------------Eyelink setup--------------------------
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
@@ -53,7 +54,7 @@ eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
 eL.calibrationStyle = 'HV5'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 1];
-eL.modify.calibrationtargetsize = 1;
+eL.modify.calibrationtargetsize = 0.5;
 eL.modify.calibrationtargetwidth = 0.1;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 = use any keyboard
@@ -252,7 +253,7 @@ stateInfoTmp = { ...
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[]; ...
 'override'	'pause'		0.5		overrideFcn		[]				[]				[]; ...
 'flash'		'pause'		0.5		flashFcn			[]				[]				[]; ...
-'magstim'	'pause'		0.5		[]					magstimFcn	[]				[]; ...
+'magstim'	'prefix'		0.5		[]					magstimFcn	[]				[]; ...
 'showgrid'	'pause'		10			[]					gridFcn		[]				[]; ...
 };
 

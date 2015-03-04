@@ -1306,8 +1306,8 @@ classdef spikeAnalysis < analysisCore
 				return
 			end
 			embedMode = false; %check if LFPAnalysis wants us to embed in its figure?
-			while iscell(varargin); varargin = varargin{1}; end
-			if isa(varargin,'uix.Panel')
+			while iscell(varargin) && ~isempty(varargin); varargin = varargin{1}; end
+			if ~isempty(varargin) && isa(varargin,'uix.Panel')
 				parent = varargin;
 				embedMode = true;
 			end

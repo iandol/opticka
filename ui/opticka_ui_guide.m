@@ -1618,7 +1618,7 @@ function OKStartTask_ClickedCallback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	if isa(o.r,'runExperiment')
-		o.r.screenSettings.optickahandle = handles.output;
+		%o.r.screenSettings.optickahandle = handles.output;
 		initialiseSave(o.r, o.paths.savedData)
 		if ~isempty(regexp(o.comment, '^Protocol','once'))
 			o.r.comment = o.comment;

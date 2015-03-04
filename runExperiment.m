@@ -55,11 +55,11 @@ classdef runExperiment < optickaCore
 		subjectName@char = 'Simulcra'
 		%> researcher name
 		researcherName@char = 'John Doe'
+		%> structure for screenManager on initialisation and info from opticka
+		screenSettings = struct()
 	end
 	
 	properties (Hidden = true)
-		%> structure for screenManager on initialisation and info from opticka
-		screenSettings = struct()
 		%> our old stimulus structure used to be a simple cell, now use
 		%> stimuli
 		stimulus

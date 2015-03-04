@@ -18,7 +18,7 @@ classdef opticka < optickaCore
 		store@struct = struct()
 	end
 	
-	properties (SetAccess = private, GetAccess = public, Transient = true)
+	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> all of the handles to the opticka_ui GUI
 		h@struct
 	end
@@ -97,7 +97,7 @@ classdef opticka < optickaCore
 		%> @param obj self object
 		% ===================================================================
 		function amIRemote(obj)
-			if ~ishandle(obj.h.uihandle)
+			if ~ishandle(obj.h.output)
 				obj.remote = 1;
 			end
 		end
@@ -290,15 +290,13 @@ classdef opticka < optickaCore
 					obj.paths.savedData = [root 'SavedData'];
 				end
 
-				uihandle=opticka_ui; %our GUI file
+				uihandle = opticka_ui; %our GUI file
 				obj.centerGUI(uihandle);
 				obj.h=guidata(uihandle);
-				obj.h.uihandle = uihandle; %save handle in a less cryptically names field
 				guidata(uihandle,obj.h); %save back this change
-				setappdata(obj.h.uihandle,'o',obj); %we stash our object in the root appdata store for retirieval from the UI
+				setappdata(obj.h.output,'o',obj); %we stash our object in the root appdata store for retirieval from the UI
 				set(obj.h.OKOptickaVersion,'String','Initialising GUI, please wait...');
 				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.optickaVersion]);
-
 				drawnow;
 					
 				obj.loadPrefs();
@@ -327,12 +325,12 @@ classdef opticka < optickaCore
 				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.optickaVersion]);
 				
 			catch ME
-				if  isfield(obj.h,'uihandle') && ~isempty(obj.h.uihandle) && isappdata(obj.h.uihandle,'o')
-					rmappdata(obj.h.uihandle,'o');
+				if  isfield(obj.h,'output') && ~isempty(obj.h.output) && isappdata(obj.h.output,'o')
+					rmappdata(obj.h.output,'o');
 					clear o;
 				end
-				if isfield(obj.h,'uihandle'); close(obj.h.uihandle); end
-				errordlg('Problem initialising Opticka, please check errors on the commandline')
+				if isfield(obj.h,'output'); close(obj.h.output); end
+				errordlg('Problem initialising Opticka UI, please check errors on the commandline!')
 				rethrow(ME)
 			end
 			
@@ -361,7 +359,7 @@ classdef opticka < optickaCore
 				set(obj.h.OKOptickaVersion,'String',olds)
 			end
 			
-			obj.r.screenSettings.optickahandle = obj.h.uihandle;
+			obj.r.screenSettings.optickahandle = obj.h.output;
 			
 			obj.r.screen.screen = obj.gv(obj.h.OKSelectScreen)-1;
 			
@@ -862,37 +860,17 @@ classdef opticka < optickaCore
 				cd(p);
 				tmp = clone(obj);
 				tmp.r.paths.stateInfoFile = obj.r.paths.stateInfoFile;
-% 				if isfield(tmp.store,'evnt') %delete our previous event
-% 					delete(tmp.store.evnt);
-% 					tmp.store.evnt = [];
-% 					tmp.store = rmfield(tmp.store,'evnt');
-% 				end
-% 				tmp.store.oldlook = [];
-% 				tmp.store.visibleStimulus = [];
 				tmp.store = struct(); %lets just nuke this incase some rogue handles are lurking
-				tmp.h = struct(); %remove the handles to the UI which will not be valid
+				tmp.h = struct(); %remove the handles to the UI which will not be valid on reload
+				if isfield(tmp.r.screenSettings,'optickahandle'); tmp.r.screenSettings.optickahandle = []; end %!!!this fixes matlab bug 01255186
 				for i = 1:tmp.r.stimuli.n
-					%each stimulus can contain UI handles in its obj.handles
-					%property (which is TRANSIENT and protected). Lets run a
-					%special function to clean the handles and remove *any* GUI
-					%handles from these objects:
-					cleanHandles(tmp.r.stimuli{i});
+					cleanHandles(tmp.r.stimuli{i}); %just in case!
 				end
-				warning('off'); %warnings are bug 01254952
 				save(f,'tmp'); %this is the original code -- MAT CRASH on load, it is the same if i save obj directly or the cloned variant tmp
-				warning('on');
-				% lets try to save various sub-objects of opticka and isolate
-				% which causes the problem:
-				r=obj.r;
-				st=obj.r.stimuli;
-				s=obj.r.screen;
-				save(['R' f],'r'); %!!!CRASH on load, so runExperiment object is the culprit
-				save(['ST' f],'st'); %no crash on load 
-				save(['S' f],'s'); %no crash on load
 				obj.refreshStimulusList;
 				obj.refreshVariableList;
 				obj.refreshProtocolsList;
-				clear tmp r st s
+				clear tmp f p
 			end
 			cd(obj.paths.currentPath);
 		end
@@ -1297,8 +1275,8 @@ classdef opticka < optickaCore
 		%> 
 		% ===================================================================
 		function fixUI(obj)
-			ch = findall(obj.h.uihandle);
-			set(obj.h.uihandle,'Units','pixels');
+			ch = findall(obj.h.output);
+			set(obj.h.output,'Units','pixels');
 			for k = 1:length(ch)
 				if isprop(ch(k),'Units')
 					set(ch(k),'Units','pixels');

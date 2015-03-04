@@ -19,14 +19,14 @@ obj.useDataPixx = true; %*** drive plexon to collect data? ***
 tS.dummyEyelink = false; 
 tS.name = 'area-summation-dots';
 
-fixX = 0;
-fixY = 0;
-obj.lastXPosition = fixX;
-obj.lastYPosition = fixY;
-firstFixInit = 1;
-firstFixTime = 0.5;
-firstFixRadius = 1;
-stimulusFixTime = 0.75;
+tS.fixX = 0;
+tS.fixY = 0;
+obj.lastXPosition = tS.fixX;
+obj.lastYPosition = tS.fixY;
+tS.firstFixInit = 1;
+tS.firstFixTime = 1;
+tS.firstFixRadius = 1;
+tS.stimulusFixTime = 0.75;
 
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
 eL.name = tS.name;
@@ -41,9 +41,10 @@ eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 = use any keyboard
 
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
-eL.updateFixationValues(fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, true);
+eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, true);
 
-%randomise stimulus variables every trial?
+%randomise stimulus variables every trial? useful during initial training but not for
+%data collection.
 obj.stimuli.choice = [];
 obj.stimuli.stimulusTable = [];
 
@@ -64,6 +65,7 @@ showSet(obj.stimuli);
 
 %pause entry
 pauseEntryFcn = { @()hide(obj.stimuli); ...
+	@()drawBackground(s); ... %blank the display
 	@()rstop(io); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()stopRecording(eL); ...
@@ -80,7 +82,7 @@ prefixFcn = []; %@()draw(obj.stimuli);
 %fixate entry
 fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
 	@()sendTTL(io,3); ...
-	@()updateFixationValues(eL,fixX,fixY,[],firstFixTime); %reset 
+	@()updateFixationValues(eL,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset 
 	@()setOffline(eL); ... %make sure offline before start recording
 	@()show(obj.stimuli{2}); ...
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
@@ -99,7 +101,7 @@ initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 
 %exit fixation phase
 fixExitFcn = { @()statusMessage(eL,'Show Stimulus...'); ...
-	@()updateFixationValues(eL,[],[],[],stimulusFixTime); %reset a maintained fixation of 1 second
+	@()updateFixationValues(eL,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
 	@()show(obj.stimuli{1}); ...
 	@()edfMessage(eL,'END_FIX'); ...
 	}; 
@@ -187,6 +189,11 @@ overrideFcn = @()keyOverride(obj); %a special mode which enters a matlab debug s
 %screenflash
 flashFcn = @()flashScreen(s, 0.2); % fullscreen flash mode for visual background activity detection
 
+%magstim
+magstimFcn = { @()drawBackground(s); ...
+	@()stimulate(mS); % run the magstim
+};
+
 %show 1deg size grid
 gridFcn = @()drawGrid(s);
 
@@ -196,15 +203,16 @@ disp('================>> Building state info file <<================')
 stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn; ...
-'prefix'	'fixate'	0.75	prefixEntryFcn	prefixFcn		[]				[]; ...
+'prefix'	'fixate'	1	prefixEntryFcn	prefixFcn		[]				[]; ...
 'fixate'	'incorrect'	1	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
-'stimulus'  'incorrect'	2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
-'incorrect'	'prefix'	1.25	incEntryFcn		incFcn			[]				incExitFcn; ...
-'breakfix'	'prefix'	1.25	breakEntryFcn	incFcn			[]				incExitFcn; ...
+'stimulus'  'incorrect'	1		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
+'incorrect'	'prefix'	0.5	incEntryFcn		incFcn			[]				incExitFcn; ...
+'breakfix'	'prefix'	0.5	breakEntryFcn	incFcn			[]				incExitFcn; ...
 'correct'	'prefix'	0.25	correctEntryFcn	correctFcn		[]				correctExitFcn; ...
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[]; ...
 'override'	'pause'		0.5		overrideFcn		[]				[]				[]; ...
 'flash'		'pause'		0.5		flashFcn		[]				[]				[]; ...
+'magstim'	'prefix'		0.5		[]					magstimFcn	[]				[]; ...
 'showgrid'	'pause'		10		[]				gridFcn			[]				[]; ...
 };
 
