@@ -879,16 +879,16 @@ classdef opticka < optickaCore
 					cleanHandles(tmp.r.stimuli{i});
 				end
 				warning('off'); %warnings are bug 01254952
-				save(f,'tmp'); %this is the original code -- MAT CRASH on load
+				save(f,'tmp'); %this is the original code -- MAT CRASH on load, it is the same if i save obj directly or the cloned variant tmp
 				warning('on');
 				% lets try to save various sub-objects of opticka and isolate
 				% which causes the problem:
 				r=obj.r;
 				st=obj.r.stimuli;
 				s=obj.r.screen;
-				save(['R' f],'r');
-				save(['ST' f],'st');
-				save(['S' f],'s');
+				save(['R' f],'r'); %!!!CRASH on load, so runExperiment object is the culprit
+				save(['ST' f],'st'); %no crash on load 
+				save(['S' f],'s'); %no crash on load
 				obj.refreshStimulusList;
 				obj.refreshVariableList;
 				obj.refreshProtocolsList;
