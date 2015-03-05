@@ -1,6 +1,8 @@
-function [  ] = testptb(  )
+function testptb()
 
-Screen('preference','skipsynctests',2)
+Screen('preference','skipsynctests',2);
+Screen('Preference', 'TextRenderer', 0);
+
 backgroundColour = [0.3 0.3 0.3];
 name = 'test';
 
@@ -38,6 +40,7 @@ try
 		vbl=vbls;
 		while GetSecs <= vbls+1
 			draw(stimuli); %draw stimulus
+			Screen('Drawtext', s.win, 'BLAH BLAH BLAH!!!!!', 20, 20);
 			Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 			animate(stimuli); %animate stimulus, will be seen on next draw
 			nextvbl = vbl + screenVals.halfisi;
@@ -52,6 +55,7 @@ try
 	end
 	
 catch
+	warning('CRASH!')
 	close(s)
 end
 close(s)
