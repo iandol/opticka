@@ -92,6 +92,8 @@ classdef screenManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> linux font name;
+		linuxFontName = '-adobe-helvetica-bold-o-normal--11-80-100-100-p-60-iso8859-1'
 		%> properties allowed to be modified during construction
 		allowedProperties='bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
@@ -344,6 +346,10 @@ classdef screenManager < optickaCore
 				if obj.blend==1
 					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
 					fprintf('\n---> screenManager: Initial OpenGL blending set to %s | %s\n', obj.srcMode, obj.dstMode);
+				end
+				
+				if ismac == 0 && isunix == 1
+					Screen('TextFont', obj.win, obj.linuxFontName);
 				end
 				
 				obj.screenVals.black = 0;
