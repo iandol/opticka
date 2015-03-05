@@ -574,18 +574,22 @@ classdef runExperiment < optickaCore
 				
 				%-----set up the eyelink interface
 				if obj.useEyeLink
+					fprintf('===>>> Handing over to eyelink for calibration & validation...\n')
 					initialise(eL, s);
 					setup(eL);
 				end
 				
-				%-----premptive save in case of crash or error
+				fprintf('\n===>>> Checking variables & Setting up Equipment, please wait...\n\n')
+				
+				%-----premptive save in case of crash or error SAVE IN /TMP
 				rE = obj;
-            warning('off');
-				save([tempdir filesep obj.name '.mat'],'rE','tS');
-				warning('on');
-                
+				htmp = obj.screenSettings.optickahandle; obj.screenSettings.optickahandle = [];
+            save([tempdir filesep obj.name '.mat'],'rE','tS');
+				obj.screenSettings.optickahandle = htmp;
+				
             %-----set up our behavioural plot
 				createPlot(bR, eL);
+				drawnow;
 				
             %-----set up the datapixx, put it into paused mode
 				if obj.useDataPixx
@@ -1523,7 +1527,7 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'r'
-						timedTTL(obj.lJack,0,1000);
+						timedTTL(obj.lJack,0,150);
 					case '=+'
 						if tS.keyTicks > tS.keyHold
 							obj.screen.screenXOffset = obj.screen.screenXOffset + 1;

@@ -226,9 +226,18 @@ classdef textureStimulus < baseStimulus
 		%>  using the size value
 		% ===================================================================
 		function setRect(obj)
-			setRect@baseStimulus(obj) %call our superclass version first
-			obj.dstRect = ScaleRect(obj.dstRect, obj.scale, obj.scale);
-			obj.mvRect = obj.dstRect;
+			if ~isempty(obj.texture)
+				%setRect@baseStimulus(obj) %call our superclass version first
+				obj.dstRect=Screen('Rect',obj.texture);
+				if obj.mouseOverride && obj.mouseValid
+					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
+				else
+					obj.dstRect=CenterRectOnPointd(obj.dstRect, obj.xOut, obj.yOut);
+				end
+				obj.dstRect = ScaleRect(obj.dstRect, obj.scale, obj.scale);
+				fprintf('TEXTURE dstRect = %i % i %i %i\n',obj.dstRect(1), obj.dstRect(2),obj.dstRect(3),obj.dstRect(4));
+				obj.mvRect = obj.dstRect;
+			end
 		end
 		
 	end
