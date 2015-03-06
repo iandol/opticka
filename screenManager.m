@@ -280,7 +280,8 @@ classdef screenManager < optickaCore
 					PsychImaging('AddTask', 'General', obj.bitDepth);
 				end
 				if obj.windowed == false %fullscreen
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour,[], [], obj.doubleBuffer+1,[],obj.antiAlias);
+					windowed = [];
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				else %windowed
 					if length(obj.windowed) == 2
 						windowed = [1 1 obj.windowed(1)+1 obj.windowed(2)+1];
@@ -290,6 +291,7 @@ classdef screenManager < optickaCore
 						windowed=[1 1 801 601];
 					end
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias,[],kPsychGUIWindow);
+					%[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
 				
 				tL.screenLog.postOpenWindow=GetSecs;
@@ -322,7 +324,11 @@ classdef screenManager < optickaCore
 				
 				%get screen dimensions
 				[obj.screenVals.width, obj.screenVals.height] = Screen('WindowSize',obj.win);
-				obj.winRect = Screen('Rect',obj.win);
+				if isempty(windowed)
+					obj.winRect = Screen('Rect',obj.win);
+				else
+					obj.winRect = windowed-1;
+				end
 				updateCenter(obj);
 				
 				if obj.hideFlash == true && isempty(obj.gammaTable)

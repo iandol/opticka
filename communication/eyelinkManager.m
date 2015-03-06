@@ -103,16 +103,16 @@ classdef eyelinkManager < optickaCore
 				obj.parseArgs(varargin,obj.allowedProperties);
 			end
 			obj.defaults = EyelinkInitDefaults();
-            if ~isempty(obj.IP)
-                ret = Eyelink('SetAddress', obj.IP);
-                if ret ~= 0
-                    warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
-                end
-            end
 			try % is eyelink interface working
 				Eyelink('GetTrackerVersion'); 
 			catch %#ok<CTCH>
 				obj.isDummy = true; 
+			end
+			if ~isempty(obj.IP) && obj.isDummy == true
+				 ret = Eyelink('SetAddress', obj.IP);
+				 if ret ~= 0
+					  warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+				 end
 			end
 			obj.modify.calibrationtargetcolour = [1 1 0];
 			obj.modify.calibrationtargetsize = 0.7;
@@ -137,12 +137,12 @@ classdef eyelinkManager < optickaCore
 			
 			obj.screen = sM;
 			
-            if ~isempty(obj.IP)
-                ret = Eyelink('SetAddress', obj.IP);
-                if ret ~= 0
-                    warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
-                end
-            end
+			if ~isempty(obj.IP) && obj.isDummy == false
+				 ret = Eyelink('SetAddress', obj.IP);
+				 if ret ~= 0
+					  warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+				 end
+			end
 			
 			if ~isempty(obj.callback) && obj.enableCallbacks
 				[~,dummy] = EyelinkInit(obj.isDummy,obj.callback);
@@ -238,7 +238,7 @@ classdef eyelinkManager < optickaCore
 		end
 				
 		% ===================================================================
-		%> @brief 
+		%> @brief check the connection with the eyelink
 		%>
 		% ===================================================================
 		function connected = checkConnection(obj)
@@ -353,6 +353,7 @@ classdef eyelinkManager < optickaCore
 				obj.currentSample.gy = obj.y;
 				obj.currentSample.pa = obj.pupil;
 				obj.currentSample.time = GetSecs*1000;
+				%fprintf('Dummy X: %g Y: %g\n',obj.x,obj.y);
 			end
 			evt = obj.currentSample;
 		end
@@ -650,7 +651,7 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief draw the stimuli boxes on the tracker display
+		%> @brief draw the background colour
 		%>
 		% ===================================================================
 		function trackerClearScreen(obj)

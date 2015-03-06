@@ -433,8 +433,8 @@ classdef runExperiment < optickaCore
 		end
 	
 		% ===================================================================
-		%> @brief runTask runs a state machine driven task.
-		%>
+		%> @brief runTask runs a state machine (behaviourally) driven task. Uses a StateInfo.m
+		%> file to control the behavioural paradigm. 
 		%> @param obj required class object
 		% ===================================================================
 		function runTask(obj)
@@ -444,17 +444,19 @@ classdef runExperiment < optickaCore
 				obj.comment = '';
 			end
 			
-			initialiseSaveFile(obj)
-			obj.name = [obj.subjectName '-' obj.savePrefix];
+			initialiseSaveFile(obj); %generate a savePrefix for this run
+			obj.name = [obj.subjectName '-' obj.savePrefix]; %give us a run name
 			if isempty(obj.screen) || isempty(obj.task)
-				obj.initialise;
+				obj.initialise; %we set up screenManager and stimulusSequence objects
 			end
-			if obj.screen.isPTB == false
+			if obj.screen.isPTB == false %NEED PTB!
 				errordlg('There is no working PTB available!')
 				error('There is no working PTB available!')
 			end
 			
-			%------a general structure to hold various parameters, will be saved after the run; prefer structure over class to keep it light...
+			%------a general structure to hold various parameters, 
+			% will be saved after the run; prefer structure over class 
+			% to keep it light. These defaults will be overwritten in StateFile.m
 			tS = struct();
 			tS.name = 'generic'; %==name of this protocol
 			tS.useTask = false; %use stimulusSequence (randomised variable task object)
@@ -462,7 +464,7 @@ classdef runExperiment < optickaCore
 			tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 			tS.askForComments = false; %==little UI requestor asks for comments before/after run
 			tS.saveData = false; %==save behavioural and eye movement data?
-			tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+			tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 			tS.useMagStim = false;
 	
 			%------initialise time logs for this run

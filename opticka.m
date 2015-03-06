@@ -403,6 +403,7 @@ classdef opticka < optickaCore
 			obj.r.verbose = logical(obj.gv(obj.h.OKVerbose)); %set method
 			obj.verbose = obj.r.verbose;
 			obj.r.screen.debug = logical(obj.gv(obj.h.OKDebug));
+			obj.r.debug = obj.r.screen.debug;
 			obj.r.screen.visualDebug = logical(obj.gv(obj.h.OKDebug));
 			obj.r.screen.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
 			obj.r.screen.nativeBeamPosition = logical(obj.gv(obj.h.OKNativeBeamPosition));
