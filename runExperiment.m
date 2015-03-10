@@ -722,6 +722,8 @@ classdef runExperiment < optickaCore
 					close(io);
 				end
 				
+				notify(obj,'endRun');
+				
 				%profile off; profile report; profile clear
 				ShowCursor;
 				warning('on'); %#ok<WNON>
@@ -895,7 +897,6 @@ classdef runExperiment < optickaCore
 		function set.verbose(obj,value)
 			value = logical(value);
 			obj.verbose = value;
-			obj.salutation('Verbose cascaded...');
 			if isa(obj.task,'stimulusSequence') %#ok<*MCSUP>
 				obj.task.verbose = value;
 			end
@@ -914,6 +915,12 @@ classdef runExperiment < optickaCore
 			if isa(obj.dPixx,'dPixxManager')
 				obj.dPixx.verbose = value;
 			end
+			if isa(obj.stimuli,'metaStimulus') && obj.stimuli.n > 0
+				for i = 1:obj.stimuli.n
+					obj.stimuli{i}.verbose = value;
+				end
+			end
+			obj.salutation(sprintf('Verbose = %i cascaded...',value));
 		end
 		
 		% ===================================================================

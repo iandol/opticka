@@ -279,6 +279,7 @@ classdef screenManager < optickaCore
 				if ischar(obj.bitDepth) && ~strcmpi(obj.bitDepth,'8bit')
 					PsychImaging('AddTask', 'General', obj.bitDepth);
 				end
+				if isempty(obj.windowed); obj.windowed = false; end
 				if obj.windowed == false %fullscreen
 					windowed = [];
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
@@ -290,8 +291,8 @@ classdef screenManager < optickaCore
 					else
 						windowed=[1 1 801 601];
 					end
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias,[],kPsychGUIWindow);
-					%[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
+					%[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias,[],kPsychGUIWindow);
+					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
 				
 				tL.screenLog.postOpenWindow=GetSecs;
@@ -322,12 +323,14 @@ classdef screenManager < optickaCore
 					obj.screenVals.halfisi = 0;
 				end
 				
-				%get screen dimensions
+				%get screen dimensions -- check !!!!!
 				[obj.screenVals.width, obj.screenVals.height] = Screen('WindowSize',obj.win);
 				if isempty(windowed)
 					obj.winRect = Screen('Rect',obj.win);
 				else
-					obj.winRect = windowed-1;
+					obj.winRect = windowed;
+					obj.screenVals.width = obj.winRect(3);
+					obj.screenVals.height = obj.winRect(4);
 				end
 				updateCenter(obj);
 				
@@ -777,7 +780,7 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Set method for pixelsPerCm
+		%> @brief update our screen centre to use any offsets we've defined
 		%>
 		%> @param
 		% ===================================================================

@@ -25,22 +25,22 @@ stimuli = metaStimulus();
 stimuli.name = name;
 stimuli{1} = n;
 
-%-----open the PTB screens
-s = screenManager('verbose',false,'blend',true,'screen',1,...
-	'bitDepth','FloatingPoint32Bit','debug',true, ...
-	'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
-	'windowed',[],'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
+%-----setup the PTB screen manager
+s = screenManager('verbose', false, 'blend', true, 'screen', max(Screen('Screens')), ...
+	'bitDepth', 'FloatingPoint32Bit', 'debug', false, ...
+	'srcMode', 'GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
+	'windowed', [], 'backgroundColour', [backgroundColour 0]); 
 
 try
-	for i = 1:1000
-		fprintf('RUN: %g screen open\n',i)
+	for i = 1:100
+		fprintf('RUN %g: screen opening\n',i)
 		screenVals = open(s); %open PTB screen
 		setup(stimuli,s); %setup our stimulus object
 		vbls = Screen('Flip',s.win); %flip the buffer
 		vbl=vbls;
 		while GetSecs <= vbls+1
 			draw(stimuli); %draw stimulus
-			Screen('Drawtext', s.win, 'BLAH BLAH BLAH!!!!!', 20, 20);
+			Screen('Drawtext', s.win, 'Can Linux Draw Text?', 20, 20);
 			Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 			animate(stimuli); %animate stimulus, will be seen on next draw
 			nextvbl = vbl + screenVals.halfisi;
@@ -48,15 +48,16 @@ try
 		end
 		vbl = Screen('Flip',s.win);
 		close(s)
-		fprintf('RUN: %g screen closed\n',i)
+		fprintf('RUN %g: screen closed\n',i)
 		if KbCheck
 			return
 		end
 	end
-	
-catch
+catch ME
 	warning('CRASH!')
 	close(s)
+	rethrow ME
 end
 close(s)
+clear s n stimuli
 

@@ -387,7 +387,7 @@ classdef metaStimulus < optickaCore
 			
 			oldwindowed = s.windowed;
 			if benchmark
-				s.windowed = [];
+				s.windowed = false;
 			else
 				%s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2];
 				%s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
@@ -396,8 +396,10 @@ classdef metaStimulus < optickaCore
 			s.windowed = oldwindowed;
 			setup(obj,s); %setup our stimulus object
 			draw(obj); %draw stimulus
-			drawGrid(s); %draw +-5 degree dot grid
-			drawScreenCenter(s); %centre spot
+			if s.visualDebug
+				drawGrid(s); %draw +-5 degree dot grid
+				drawScreenCenter(s); %centre spot
+			end
 			if benchmark; 
 				Screen('DrawText', s.win, 'Benchmark, screen will not update properly, see FPS on command window at end.', 5,5,[0 0 0]);
 			else
@@ -408,7 +410,7 @@ classdef metaStimulus < optickaCore
 			if benchmark; b=GetSecs; end
 			for i = 1:(s.screenVals.fps*runtime) %should be 2 seconds worth of flips
 				draw(obj); %draw stimulus
-				if ~benchmark;
+				if ~benchmark && s.visualDebug
 					drawGrid(s); %draw +-5 degree dot grid
 					drawScreenCenter(s); %centre spot
 				end

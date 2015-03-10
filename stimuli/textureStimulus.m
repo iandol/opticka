@@ -235,7 +235,9 @@ classdef textureStimulus < baseStimulus
 					obj.dstRect=CenterRectOnPointd(obj.dstRect, obj.xOut, obj.yOut);
 				end
 				obj.dstRect = ScaleRect(obj.dstRect, obj.scale, obj.scale);
-				fprintf('TEXTURE dstRect = %i % i %i %i\n',obj.dstRect(1), obj.dstRect(2),obj.dstRect(3),obj.dstRect(4));
+				if obj.verbose
+					fprintf('TEXTURE dstRect = %4.2i %4.2i %4.2i %4.2i\n',obj.dstRect(1), obj.dstRect(2),obj.dstRect(3),obj.dstRect(4));
+				end
 				obj.mvRect = obj.dstRect;
 			end
 		end

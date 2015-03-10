@@ -299,9 +299,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				oldwindowed = s.windowed;
 				if benchmark
-					s.windowed = [];
+					s.windowed = false;
 				else
-					wR = Screen('Rect',max(Screen('Screens')));
+					wR = Screen('Rect',0);
 					s.windowed = [wR(3)/2 wR(4)/2];
 					%s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
 				end
@@ -320,8 +320,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if benchmark; b=GetSecs; end
 				for i = 1:(s.screenVals.fps*runtime) %should be 2 seconds worth of flips
 					draw(obj); %draw stimulus
-					drawGrid(s); %draw +-5 degree dot grid
-					drawScreenCenter(s); %centre spot
+					if s.visualDebug
+						drawGrid(s); %draw +-5 degree dot grid
+						drawScreenCenter(s); %centre spot
+					end
 					Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 					animate(obj); %animate stimulus, will be seen on next draw
 					if benchmark
@@ -752,7 +754,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				obj.xOut = obj.xPositionOut + (dx * obj.ppd) + obj.sM.xCenter;
 				obj.yOut = obj.yPositionOut + (dy * obj.ppd) + obj.sM.yCenter;
-				%fprintf('---> %s X = %g / %g / %g | Y = %g / %g / %g\n',obj.fullName, obj.xOut, obj.xPositionOut, dx, obj.yOut, obj.yPositionOut, dy);
+				if obj.verbose; fprintf('--->computePosition: %s X = %g / %g / %g | Y = %g / %g / %g\n',obj.fullName, obj.xOut, obj.xPositionOut, dx, obj.yOut, obj.yPositionOut, dy); end
 			end
 			setAnimationDelta(obj);
 		end
