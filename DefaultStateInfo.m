@@ -19,14 +19,14 @@
 tS.rewardTime = 150; %TTL time in milliseconds
 tS.useTask = true; %use stimulusSequence (randomised variable task object)
 tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
-tS.recordEyePosition = true; %==record eye position within PTB, in addition to the EDF?
-tS.askForComments = true; %==little UI requestor asks for comments before/after run
-tS.saveData = true; %==save behavioural and eye movement data?
-obj.useDataPixx = true; %==drive plexon to collect data?
-obj.useLabJack = true; %used for rewards and to control magstim
-tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
-tS.useMagStim = true; %enable the magstim manager
-tS.name = 'figure-ground'; %==name of this protocol
+tS.recordEyePosition = false; %==record eye position within PTB, in addition to the EDF?
+tS.askForComments = false; %==little UI requestor asks for comments before/after run
+tS.saveData = false; %==save behavioural and eye movement data?
+obj.useDataPixx = false; %==drive plexon to collect data?
+obj.useLabJack = false; %used for rewards and to control magstim
+tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.useMagStim = false; %enable the magstim manager
+tS.name = 'default'; %==name of this protocol
 
 %-----enable the magstimManager which uses FOI2 of the LabJack
 if tS.useMagStim
@@ -40,21 +40,21 @@ end
 %------------Eyetracker Settings-----------------
 tS.fixX = 0;
 tS.fixY = 0;
-tS.firstFixInit = 0.1;
-tS.firstFixTime = 0.3;
+tS.firstFixInit = 0.8;
+tS.firstFixTime = 0.6;
 tS.firstFixRadius = 2;
 tS.stimulusFixTime = 0.5;
 obj.lastXPosition = tS.fixX;
 obj.lastYPosition = tS.fixY;
-tS.strict = true;
+tS.strict = false; %do we forbid eye to enter-exit-reenter fixation window?
 
 %------------------------Eyelink setup--------------------------
 eL.name = tS.name;
-if tS.saveData == true; eL.recordData = true; end% save EDF file?
-if tS.dummyEyelink; eL.isDummy = true; end%*** use dummy or real eyelink? ***
+if tS.saveData == true; eL.recordData = true; end %===save EDF file?
+if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
 eL.sampleRate = 250;
-eL.remoteCalibration = true; %manual calibration
-eL.calibrationStyle = 'HV5'; % 5 point calibration
+eL.remoteCalibration = true; %===manual calibration
+eL.calibrationStyle = 'HV5'; %===5 point calibration
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 0.5;
 eL.modify.calibrationtargetwidth = 0.01;
@@ -77,7 +77,7 @@ obj.stimuli.tableChoice = 1;
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
-obj.stimuli.stimulusSets = {[1,2]}; %EDIT THIS TO SAY WHICH STMULI TO SHOW
+obj.stimuli.stimulusSets = {[1,6],[2,6],[3,6],[4,6],[5,6]}; %EDIT THIS TO SAY WHICH STMULI TO SHOW
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
@@ -107,7 +107,7 @@ fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on
 	@()sendTTL(io,3); ...
 	@()updateFixationValues(eL,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset 
 	@()setOffline(eL); ... %make sure offline before start recording
-	@()show(obj.stimuli{2}); ...
+	@()show(obj.stimuli{6}); ...
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
 	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(obj))]); ...
 	@()startRecording(eL); ... %fire up eyelink
@@ -125,7 +125,7 @@ initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 %exit fixation phase
 fixExitFcn = { @()statusMessage(eL,'Show Stimulus...'); ...
 	@()updateFixationValues(eL,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
-	@()show(obj.stimuli{1}); ...
+	@()showSet(obj.stimuli); ...
 	@()edfMessage(eL,'END_FIX'); ...
 	}; 
 

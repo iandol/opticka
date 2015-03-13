@@ -285,13 +285,13 @@ classdef screenManager < optickaCore
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				else %windowed
 					if length(obj.windowed) == 2
-						windowed = [1 1 obj.windowed(1)+1 obj.windowed(2)+1];
+						windowed = [0 0 obj.windowed(1) obj.windowed(2)];
 					elseif length(obj.windowed) == 4
-						windowed = obj.windowed+1;
+						windowed = obj.windowed;
 					else
-						windowed=[1 1 801 601];
+						windowed=[0 0 800 600];
 					end
-					%[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias,[],kPsychGUIWindow);
+					%[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias,[],kPsychGUIWindow,windowed);
 					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
 				
@@ -329,8 +329,8 @@ classdef screenManager < optickaCore
 					obj.winRect = Screen('Rect',obj.win);
 				else
 					obj.winRect = windowed;
-					obj.screenVals.width = obj.winRect(3);
-					obj.screenVals.height = obj.winRect(4);
+					obj.screenVals.width = obj.winRect(3)-obj.winRect(1);
+					obj.screenVals.height = obj.winRect(4)-obj.winRect(2);
 				end
 				updateCenter(obj);
 				
@@ -748,6 +748,25 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function ppd = get.ppd(obj)
 			ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
+		end
+		
+		% ===================================================================
+		%> @brief return mouse position in degrees
+		%>
+		%> @param
+		% ===================================================================
+		function [xPos, yPos] = mousePosition(obj, verbose)
+			if ~exist('verbose','var') || isempty(verbose); verbose = obj.verbose; end
+			if obj.isOpen
+				[xPos,yPos] = GetMouse(obj.win);
+			else
+				[xPos,yPos] = GetMouse();
+			end
+			xPos = (xPos - obj.xCenter) / obj.ppd;
+			yPos = (yPos - obj.yCenter) / obj.ppd;
+			if verbose
+				fprintf('--->>> MOUSE POSITION: \tX = %5.5g \t\tY = %5.5g\n',xPos,yPos);
+			end
 		end
 		
 		% ===================================================================

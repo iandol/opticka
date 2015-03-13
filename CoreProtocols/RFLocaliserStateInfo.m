@@ -1,4 +1,4 @@
-%=====RF Mapping state configuration file=====
+%=====RF Localiser state configuration file=====
 %------------General Settings-----------------
 tS.rewardTime = 140; %TTL time in milliseconds
 tS.useTask = false; %use stimulusSequence (randomised variable task object)
@@ -8,9 +8,9 @@ tS.askForComments = false; %==little UI requestor asks for comments before/after
 tS.saveData = false; %we don't want to save any data
 obj.useDataPixx = false; %make sure we don't trigger the plexon
 obj.useLabJack = true; %used for rewards and to control magstim
-tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
-tS.useMagStim = true; %enable the magstim manager
-tS.name = 'RFMapping'; %==name of this protocol
+tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.useMagStim = false; %enable the magstim manager
+tS.name = 'RF Localiser'; %==name of this protocol
 
 %-----enable the magstimManager which uses FOI1 of the LabJack
 if tS.useMagStim
@@ -30,7 +30,8 @@ tS.firstFixRadius = 4;
 
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, true);
-if tS.saveData == true; eL.recordData = true; end% save EDF file?
+if tS.saveData == true; eL.recordData = true; end %===save EDF file?
+if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
 eL.sampleRate = 250;
 eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV5'; % calibration style
@@ -120,7 +121,7 @@ showSet(obj.stimuli);
 % bR = behavioural record plot
 %--------------------------------------------------------------------
 %pause entry
-pauseEntryFcn = @()setOffline(eL);
+pauseEntryFcn = {@()setOffline(eL); @()fprintf('\n===>>>ENTER PAUSE STATE\n');};
 
 %prestim entry
 psEntryFcn = { @()setOffline(eL); ...
@@ -155,7 +156,7 @@ stimFcn = { @()draw(obj.stimuli); ...	@()drawEyePosition(eL); ...
 maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
 
 %as we exit stim presentation state
-stimExitFcn = [];
+stimExitFcn = @()mousePosition(s,true);
 
 %if the subject is correct (small reward)
 correctEntryFcn = { @()timedTTL(lJ,0,tS.rewardTime); ...

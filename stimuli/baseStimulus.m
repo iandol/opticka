@@ -45,9 +45,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
-		%> Our screen rectangle position in PTB format
+		%> Our source screen rectangle position in PTB format
 		dstRect
-		%> Our screen rectangle position in PTB format
+		%> Our screen rectangle position in PTB format, update during animations
 		mvRect
 		%> tick updates +1 on each draw, resets on each update
 		tick = 1
@@ -754,7 +754,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				obj.xOut = obj.xPositionOut + (dx * obj.ppd) + obj.sM.xCenter;
 				obj.yOut = obj.yPositionOut + (dy * obj.ppd) + obj.sM.yCenter;
-				if obj.verbose; fprintf('--->computePosition: %s X = %g / %g / %g | Y = %g / %g / %g\n',obj.fullName, obj.xOut, obj.xPositionOut, dx, obj.yOut, obj.yPositionOut, dy); end
+				if obj.verbose; fprintf('--->computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',obj.fullName, obj.xOut, obj.xPositionOut, dx, obj.yOut, obj.yPositionOut, dy); end
 			end
 			setAnimationDelta(obj);
 		end

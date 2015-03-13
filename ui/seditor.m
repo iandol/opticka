@@ -55,7 +55,7 @@ classdef seditor < handle
 				'Color', [0.9 0.9 0.9]);
 			
 			obj.handles.panel = uiextras.BoxPanel('Parent',obj.handles.figure1,...
-				'TitleColor',[1 0.75 0.25],'Title','Properties:');
+				'TitleColor',[1 0.75 0.25],'ForegroundColor',[0 0 0],'Title','Properties:','FontSize',12);
 			obj.handles.vbox = uiextras.VBox('Parent',obj.handles.panel);
 			
 			% --- POPUP MENU -------------------------------------

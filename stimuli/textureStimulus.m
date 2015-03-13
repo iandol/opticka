@@ -229,14 +229,14 @@ classdef textureStimulus < baseStimulus
 			if ~isempty(obj.texture)
 				%setRect@baseStimulus(obj) %call our superclass version first
 				obj.dstRect=Screen('Rect',obj.texture);
+				obj.dstRect = ScaleRect(obj.dstRect, obj.scale, obj.scale);
 				if obj.mouseOverride && obj.mouseValid
 					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
 				else
 					obj.dstRect=CenterRectOnPointd(obj.dstRect, obj.xOut, obj.yOut);
 				end
-				obj.dstRect = ScaleRect(obj.dstRect, obj.scale, obj.scale);
 				if obj.verbose
-					fprintf('TEXTURE dstRect = %4.2i %4.2i %4.2i %4.2i\n',obj.dstRect(1), obj.dstRect(2),obj.dstRect(3),obj.dstRect(4));
+					fprintf('---> stimulus TEXTURE dstRect = %5.5g %5.5g %5.5g %5.5g\n',obj.dstRect(1), obj.dstRect(2),obj.dstRect(3),obj.dstRect(4));
 				end
 				obj.mvRect = obj.dstRect;
 			end
