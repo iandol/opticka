@@ -205,7 +205,7 @@ classdef parseOpxSpikes < handle
 					obj.unit{j}.trial{num}.spikes = s;
 					obj.unit{j}.trials{y,x,z}=obj.unit{j}.trials{y,x,z}+1;
 					obj.unit{j}.trialsums{y,x,z}(obj.unit{j}.trials{y,x,z})=length(s);
-					[m,e]=stderr(obj.unit{j}.trialsums{y,x,z});
+					[m,e]=analysisCore.stderr(obj.unit{j}.trialsums{y,x,z});
 					obj.unit{j}.matrix{y,x,z} = m;
 					obj.unit{j}.errormat{y,x,z} = e;
 					obj.unit{j}.raw{y,x,z} = sort([obj.unit{j}.raw{y,x,z}; obj.unit{j}.trial{num}.spikes]);

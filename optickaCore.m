@@ -38,7 +38,7 @@ classdef optickaCore < handle
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%
-	properties (SetAccess = private, Dependent = true)
+	properties (Dependent = true)
 		%> The fullName is the object name combined with its uuid and class name
 		fullName@char = ''
 	end

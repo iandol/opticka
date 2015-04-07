@@ -883,9 +883,9 @@ classdef opxOnline < handle
 			% ===================================================================
 			function plotCurve()
 				for ii = 1:length(data)
-					[mn(ii),er(ii)]=stderr(data{ii});
+					[mn(ii),er(ii)]=analysisCore.stderr(data{ii});
 				end
-				areabar(obj.data.xValues',mn',er',[0.8 0.8 0.8],'k.-');
+				me.areabar(obj.data.xValues',mn',er',[0.8 0.8 0.8],'k.-');
 				set(gca,'XGrid','on','YGrid','on','XMinorTick', 'on','YMinorTick','on','XColor',[0.4 0.4 0.4],'YColor',[0.4 0.4 0.4]);
 				xmin=min(obj.data.xValues);
 				xmax=max(obj.data.xValues);

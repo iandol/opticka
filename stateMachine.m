@@ -9,7 +9,12 @@
 %> property or via tick time, where each update() to the stateMachine is a
 %> 'tick'. Tick time is useful when controlled via an external manager like 
 %> the Psychophysics toolbox which uses display refresh as a natural
-%> tick.
+%> tick timer. States have 4 fundamental evaluation points: ENTER, WITHIN, TRANSITION
+%> and EXIT. TRANSITION evaluation is used to allow logic to switch from a 
+%> default transition path to an alternate. For example, you can imagine a 
+%> default stimulus > incorrect transition, but if the subject answers correctly 
+%> you can use the transition evaluation to switch instead to a correct state.
+%> 
 %> To run a demo, try the following:
 %> >> sm = stateMachine
 %> >> runDemo(sm);
@@ -35,8 +40,10 @@ classdef stateMachine < optickaCore
 		waitFcn = @WaitSecs
 		%> transition function run globally between transitions
 		globalTransitionFcn = {}
-		%> state to tranisition to to skip the previous state's exit
-		%> functions
+		%> N x 2 cell array of regexp strings, list to skip the current -> next state's exit functions; for example
+		%> skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
+		%> 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
+		%> state. Add multiple rows for skipping multiple state's exit states.
 		skipExitStates = ''
 	end
 	
@@ -382,21 +389,19 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief printcurrentTick fprints current tick to command window
+		%> @brief evalExitFcn sets current state skipExit value
 		%> 
 		%> 
 		% ===================================================================
 		function evalExitFcn(obj,value)
 			if obj.isRunning == true
 				obj.currentState.skipExitFcn = value;
-				if value
-					fprintf('SKIP EXIT STATE!!!\n')
-				end
+ 				%if value; fprintf('SKIP EXIT STATE!!!\n'); end
 			end
 		end
 		
 		% ===================================================================
-		%> @brief printcurrentTick fprints current tick to command window
+		%> @brief printcurrentTick prints current (and total) ticks to command window
 		%> 
 		%> 
 		% ===================================================================
@@ -414,7 +419,7 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief runDemo runs a sample state machine session
+		%> @brief reset the object
 		%> 
 		%> 
 		% ===================================================================
@@ -442,21 +447,22 @@ classdef stateMachine < optickaCore
 		%> 
 		% ===================================================================
 		function runDemo(obj)
+			oldVerbose = obj.verbose;
 			obj.verbose = true;
 			beginFcn = @()disp('::enter state: begin -- Hello there!');
 			middleFcn = @()disp('::enter state: middle -- Still here?');
-			surpriseFcn = @()disp('::SURPRISE!!!');
 			endFcn = @()disp('::enter state: end -- See you soon!');
-			withinFcn = [];
+			surpriseFcn = @()disp('::SURPRISE!!!');
+			withinFcn = []; %don't run anything within the state
 			transitionFcn = @()sprintf('false'); %transition function never returns a valid state name
 			transitionFcn2 = @()sprintf('surprise'); %returns a valid state name and thus triggers a transition
 			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
 			statesInfo = { ...
 			'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'; ...
-			'begin'		'middle'	2	beginFcn	withinFcn	transitionFcn	exitFcn; ...
-			'middle'	'end'		2	middleFcn	withinFcn	transitionFcn2	exitFcn; ...
-			'end'		''			2	endFcn		withinFcn	transitionFcn	exitFcn; ...
-			'surprise'	'end'		2	surpriseFcn	withinFcn	[]				exitFcn; ...
+			'begin'		'middle'		2			beginFcn		withinFcn	transitionFcn		exitFcn; ...
+			'middle'		'end'			2			middleFcn	withinFcn	transitionFcn2		exitFcn; ...
+			'end'			''				2			endFcn		withinFcn	transitionFcn		exitFcn; ...
+			'surprise'	'end'			2			surpriseFcn	withinFcn	[]						exitFcn; ...
 			};
 			addStates(obj,statesInfo);
 			disp('>--------------------------------------------------')
@@ -466,13 +472,17 @@ classdef stateMachine < optickaCore
 			obj.waitFcn(1);
 			run(obj);
 			stateMachine.plotLogs(obj.log);
+			disp('>--------------------------------------------------')
+			disp(' Demo finished, you can run the reset() method to ');
+			disp(' cleanup this object...')
+			disp('>--------------------------------------------------')
+			obj.verbose = oldVerbose; %reset verbose back to original value
 		end
-		
 		
 	end
 	
 	%=======================================================================
-	methods ( Access = protected ) %-------PRIVATE (protected) METHODS-----%
+	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
 		
 		% ===================================================================
@@ -504,7 +514,7 @@ classdef stateMachine < optickaCore
 				
 				obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false)
 				
-				tic;
+				%tic;
 				if isa(thisState.entryFcn,'function_handle') %function handle, lets feval it
 					feval(thisState.entryFcn);
 				elseif iscell(thisState.entryFcn) %nested class of function handles
@@ -512,7 +522,7 @@ classdef stateMachine < optickaCore
 						feval(thisState.entryFcn{i});
 					end
 				end
-				obj.fevalTime.enter = toc*1000;
+				%obj.fevalTime.enter = toc*1000;
 	
 			else
 				obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length',false);
@@ -556,7 +566,7 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function exitCurrentState(obj)
 			thisState = obj.currentState;
-			tic;
+			%tic;
 			if thisState.skipExitFcn == false
 				if iscell(thisState.exitFcn) %nested class of function handles	
 					for i = 1:size(thisState.exitFcn, 1) %nested class
@@ -566,7 +576,7 @@ classdef stateMachine < optickaCore
 					feval(thisState.exitFcn);
 				end
 			end
-			obj.fevalTime.exit = toc*1000;
+			%obj.fevalTime.exit = toc*1000;
 			
 			storeCurrentStateInfo(obj);
 			
@@ -622,38 +632,52 @@ classdef stateMachine < optickaCore
 	methods (Static) %------------------STATIC METHODS
 	%=======================================================================
 	
-% 		% ===================================================================
-% 		%> @brief loadobj handler
-% 		%>
-% 		% ===================================================================
-% 		function lobj=loadobj(in)
-% 			lobj = in;
-% 		end
+		% ===================================================================
+		%> @brief loadobj handler
+		%>
+		% ===================================================================
+		%function lobj=loadobj(in)
+		%	lobj = in;
+		%end
 
 		% ===================================================================
 		%> @brief plot timing logs
 		%>
 		% ===================================================================
 		function plotLogs(log)
-			
+			for i = 1:length(log)			
+				names{i} = log(i).name;
+			end
 			figure;
+			plot([log.entryTime]-[log.startTime],'ko','MarkerSize',12)
 			hold on
-			plot([log.entryTime]-[log.startTime],ones(length(log)),'go','MarkerSize',8)
-			plot([log.tnow]-[log.startTime],ones(length(log))+0.01,'ro','MarkerSize',8)
-			axis([-inf inf 0.9 1.1])
-			box on
-			grid on
-			
+			plot([log.tnow]-[log.startTime],'ro','MarkerSize',12)
+			legend('State Enter time ','State End time');
+			%axis([-inf inf 0.97 1.02]);
+			title('State Enter/Exit Times from Start');
+			xlabel('Time (s)');
+			set(gca,'XTick',1:length(log));
+			set(gca,'XTickLabel',names);
+			try set(gca,'XTickLabelRotation',45); end
+			box on;
+			grid on;
 			if isfield(log(1).fevalTime,'enter')
 				for i = 1:length(log)			
 					int(i) = log(i).fevalTime.enter;
-					outt(i) = log(i).fevalTime.exit;	
+					outt(i) = log(i).fevalTime.exit;
 				end
 				figure;
-				plot(int,'k-.')
+				h = plot(int,'ko','MarkerSize',12);
 				hold on
-				plot(outt,'r-.')
+				plot(outt,'ro','MarkerSize',12)
+				set(gca,'XTick',1:length(log));
+				set(gca,'XTickLabel',names);
+				try set(gca,'XTickLabelRotation',45); end
 				legend('enter','exit')
+				title('Time the enter and exit state function evals ran')
+				ylabel('Time (milliseconds)')
+				box on;
+				grid on;
 			end
 		end
 		

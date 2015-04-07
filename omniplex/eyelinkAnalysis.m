@@ -414,7 +414,7 @@ classdef eyelinkAnalysis < analysisCore
 			zlabel(p(2),'Y Position')
 			mn = nanmean(sacc);
 			md = nanmedian(sacc);
-			[~,er] = stderr(sacc,'SD');
+			[~,er] = me.stderr(sacc,'SD');
 			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2g / %.2g ± %.2g SD [%.2g <> %.2g]',...
 				thisVarName,upper(type),mn,md,er,min(sacc),max(sacc)));
 			set(h,'BackgroundColor',[1 1 1]);
@@ -1131,7 +1131,7 @@ classdef eyelinkAnalysis < analysisCore
 							[fixa.genx, fixa.geny]  = toDegrees(me, [evt.genx, evt.geny]);
 							[fixa.x, fixa.y]		= toDegrees(me, [evt.gavx, evt.gavy]);
 							[fixa.theta, fixa.rho]	= cart2pol(fixa.x, fixa.y);
-							fixa.theta = rad2ang(fixa.theta);
+							fixa.theta = me.rad2ang(fixa.theta);
 							
 							if fix == 1
 								me.trials(tri).fixations = fixa;
@@ -1169,7 +1169,7 @@ classdef eyelinkAnalysis < analysisCore
 							[sacc.genx, sacc.geny]	= toDegrees(me, [evt.genx evt.geny]);
 							[sacc.x, sacc.y]		= deal((sacc.genx - sacc.gstx), (sacc.geny - sacc.gsty));
 							[sacc.theta, sacc.rho]	= cart2pol(sacc.x, sacc.y);
-							sacc.theta = rad2ang(sacc.theta);
+							sacc.theta = me.rad2ang(sacc.theta);
 							
 							if sacc.rho > me.minSaccadeDistance; sacc.microSaccade = false;
 							else sacc.microSaccade = true; end

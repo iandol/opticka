@@ -989,7 +989,7 @@ classdef spikeAnalysis < analysisCore
 					e = sd{j}.stdterr;
 					yt='Firing Rate (s/s) \pm 95% CI';
 				end
-				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
+				me.areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
 				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
@@ -1044,7 +1044,7 @@ classdef spikeAnalysis < analysisCore
 			t = [me.file];
 			for j = 1:length(sd)
 				e = me.var2SE(sd{j}.var,sd{j}.dof);
-				areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
+				me.areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
 				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
@@ -1126,7 +1126,7 @@ classdef spikeAnalysis < analysisCore
 			t = [me.file];
 			for j = 1:length(psth)
 				e = me.var2SE(psth{j}.var,psth{j}.dof);
-				areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
+				me.areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
 				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
@@ -1229,8 +1229,8 @@ classdef spikeAnalysis < analysisCore
 				end
 				if ~isempty(waves)
 					nwaves = size(waves,1);
-					[a,e]=stderr(waves,'SD');
-					areabar(time,a,e,[0.7 0.7 0.7],0.75,'r-o','LineWidth',2);
+					[a,e] = me.stderr(waves,'SD');
+					me.areabar(time,a,e,[0.7 0.7 0.7],0.75,'r-o','LineWidth',2);
 				end
 				xlabel('Time(ms)')
 				ylabel('Voltage (mV)')

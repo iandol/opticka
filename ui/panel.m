@@ -267,6 +267,22 @@
 % 14/01/15
 % Release Version 2.11
 % ############################################################
+%
+% 28/03/15
+% Changed export() logic slightly so that if either -h or -w option is
+% specified, direct sizing model is selected (and, therefore, /all/
+% options from the paper sizing model are ignored). Thus, either -w or
+% -h can be specified, with -a, and intuitively-correct behaviour
+% results.
+%
+% 02/04/15
+% Changed functions x/y/zlabel and title to return a handle to the
+% referenced object so that caller can access its properties.
+%
+% ############################################################
+% 02/04/15
+% Release Version 2.12
+% ############################################################
 
 
 
@@ -937,7 +953,7 @@ classdef (Sealed = true) panel < handle
 
 	methods
 		
-		function xlabel(p, text)
+		function h = xlabel(p, text)
 			
 			% apply an xlabel to the panel (or group)
 			%
@@ -957,7 +973,7 @@ classdef (Sealed = true) panel < handle
 			
 		end
 		
-		function ylabel(p, text)
+		function h = ylabel(p, text)
 			
 			% apply a ylabel to the panel (or group)
 			%
@@ -977,7 +993,7 @@ classdef (Sealed = true) panel < handle
 			
 		end
 		
-		function zlabel(p, text)
+		function h = zlabel(p, text)
 			
 			% apply a zlabel to the panel (or group)
 			%
@@ -997,7 +1013,7 @@ classdef (Sealed = true) panel < handle
 			
 		end
 		
-		function title(p, text)
+		function h = title(p, text)
 			
 			% apply a title to the panel (or group)
 			%
@@ -1197,58 +1213,55 @@ classdef (Sealed = true) panel < handle
 			%
 			% p.export(filename, ...)
 			%
-			% export the figure containing panel "p" to an image
-			% file. you must supply the filename of this output
-			% file, with or without a file extension. any further
-			% arguments must be option strings starting with the
-			% dash ("-") character. "p" should be the root panel.
+			% export the figure containing panel "p" to an image file.
+			% you must supply the filename of this output file, with or
+			% without a file extension. any further arguments must be
+			% option strings starting with the dash ("-") character. "p"
+			% should be the root panel.
 			%
 			% if the filename does not include an extension, the
 			% appropriate extension will be added. if it does, the
-			% output format will be inferred from it, unless
-			% overridden by the "-o" option, described below.
+			% output format will be inferred from it, unless overridden
+			% by the "-o" option, described below.
 			%
-			% if you are targeting a print publication, you may
-			% find it easiest to size your output using the "paper
-			% sizing model" (below). if you prefer, you can use
-			% the "direct sizing model", instead. these two
-			% sizing models are described below. underneath these
-			% are listed the options unrelated to sizing (which
-			% apply regardless of which sizing model you use).
+			% if you are targeting a print publication, you may find it
+			% easiest to size your output using the "paper sizing model"
+			% (below). if you prefer, you can use the "direct sizing
+			% model", instead. these two sizing models are described
+			% below. underneath these are listed the options unrelated
+			% to sizing (which apply regardless of which sizing model
+			% you use).
 			%
 			%
 			%
 			% PAPER SIZING MODEL:
 			%
-			% using the paper sizing model, you specify your
-			% target as a region of a piece of paper, and the
-			% actual size in millimeters is calculated for you.
-			% this is usually very convenient, but if you find it
-			% unsuitable, the direct sizing model (next section)
-			% is provided as an alternative.
+			% using the paper sizing model, you specify your target as a
+			% region of a piece of paper, and the actual size in
+			% millimeters is calculated for you. this is usually very
+			% convenient, but if you find it unsuitable, the direct
+			% sizing model (next section) is provided as an alternative.
 			%
-			% to specify the region, you specify the type (size)
-			% of paper, the orientation, the number of columns,
-			% and the aspect ratio of the figure (or the fraction
-			% of a column to fill). usually, the remaining options
-			% can be left as defaults.
+			% to specify the region, you specify the type (size) of
+			% paper, the orientation, the number of columns, and the
+			% aspect ratio of the figure (or the fraction of a column to
+			% fill). usually, the remaining options can be left as
+			% defaults.
 			%
 			% -pX
-			%   X is the paper type, A2-A6 or letter (default is
-			%   A4). NB: you can also specify paper type LNCS
-			%   (Lecture Notes in Computer Science), using
-			%   "-pLNCS". If you do this, the margins are also
-			%   adjusted to match LNCS format.
+			%   X is the paper type, A2-A6 or letter (default is A4).
+			%   NB: you can also specify paper type LNCS (Lecture Notes
+			%   in Computer Science), using "-pLNCS". If you do this,
+			%   the margins are also adjusted to match LNCS format.
 			%
 			% -l
 			%   specify landscape mode (default is portrait).
 			%
 			% -mX
-			%   X is the paper margins in mm. you can provide a
-			%   scalar (same margins all round) or a
-			%   comma-separated list of four values, specifying
-			%   the left, bottom, right, top margins separately
-			%   (default is 20mm all round).
+			%   X is the paper margins in mm. you can provide a scalar
+			%   (same margins all round) or a comma-separated list of
+			%   four values, specifying the left, bottom, right, top
+			%   margins separately (default is 20mm all round).
 			%
 			% -iX
 			%   X is the inter-column space in mm (default is
@@ -1258,48 +1271,45 @@ classdef (Sealed = true) panel < handle
 			%   X is the number of columns (default is 1).
 			%
 			% NB: the following two options represent two ways to
-			% specify the height of the figure relative to the
-			% space defined by the above options. if you supply
-			% both, whichever comes second will be used.
+			% specify the height of the figure relative to the space
+			% defined by the above options. if you supply both,
+			% whichever comes second will be used.
 			%
 			% -aX
-			%   X is the aspect ratio of the resulting image file.
-			%   X can be one of the following strings - s
-			%   (square), g (landscape golden ratio), gp (portrait
-			%   golden ratio), h (half-height), d (double-height)
-			%   - or a number greater than zero, to specify the
-			%   aspect ratio explicitly. note that, if using the
-			%   numeric form, the ratio is expressed as the
-			%   quotient of width over height, in the usual way.
-			%   ratios greater than 10 or less than 0.1 are
-			%   disallowed, since these can cause a very large
-			%   figure file to be created accidentally. default is
-			%   to use the landscape golden ratio.
+			%   X is the aspect ratio of the resulting image file (width
+			%   is set by the paper model). X can be one of the strings:
+			%   s (square), g (landscape golden ratio), gp (portrait
+			%   golden ratio), h (half-height), d (double-height); or, a
+			%   number greater than zero, to specify the aspect ratio
+			%   explicitly. note that, if using the numeric form, the
+			%   ratio is expressed as the quotient of width over height,
+			%   in the usual way. ratios greater than 10 or less than
+			%   0.1 are disallowed, since these can cause a very large
+			%   figure file to be created accidentally. default is to
+			%   use the landscape golden ratio.
 			%
 			% -fX
-			%   X is the fraction of the column (or page, if there
-			%   are not columns) to fill. X can be one of the
-			%   following strings - a (all), tt (two thirds), h
-			%   (half), t (third), q (quarter) - or a fraction
-			%   between 0 and 1, to specify the fraction of the
-			%   space to fill as a number. default is to use
-			%   aspect ratio, not fill fraction.
+			%   X is the fraction of the column (or page, if there are
+			%   not columns) to fill. X can be one of the following
+			%   strings - a (all), tt (two thirds), h (half), t (third),
+			%   q (quarter) - or a fraction between 0 and 1, to specify
+			%   the fraction of the space to fill as a number. default
+			%   is to use aspect ratio, not fill fraction.
 			%
 			%
 			%
 			% DIRECT SIZING MODEL:
 			%
-			% these two options override any output of the paper
-			% model, so you can override just one, or both (in
-			% which case all paper model options are ignored).
+			% if one of these two options is set, the output image is
+			% sized according to that option and the aspect ratio (see
+			% above) and the paper model is not used. if both are set,
+			% the aspect ratio is not used either.
 			%
 			% -wX
-			%   X is width in mm (default is to use the width
-			%   produced by the paper model).
+			%   X is the explicit width in mm.
 			%
 			% -hX
-			%   X is height in mm (default is to use the height
-			%   produced by the paper model).
+			%   X is the explicit height in mm.
 			%
 			%
 			%
@@ -1653,11 +1663,6 @@ classdef (Sealed = true) panel < handle
 			w = (sz(1) + pars.intercolumnspacing) / pars.cols - pars.intercolumnspacing;
 			sz(1) = w;
 			
-			% explicit measurement overrides automatic
-			if pars.width
-				sz(1) = pars.width;
-			end
-			
 			% apply fill / aspect ratio
 			if pars.fill > 0
 				% fill fraction
@@ -1667,9 +1672,34 @@ classdef (Sealed = true) panel < handle
 				sz(2) = sz(1) * (-1 / pars.fill);
 			end
 			
-			% explicit measurement overrides automatic
-			if pars.height
-				sz(2) = pars.height;
+			% direct sizing model is used if either of width or height
+			% is set
+			if pars.width || pars.height
+				
+				% use aspect ratio to fill in either one that is not
+				% specified
+ 				if ~pars.width || ~pars.height
+					
+					% aspect ratio must not be a fill
+					if pars.fill >= 0
+						error('cannot use fill fraction with direct sizing model');
+					end
+
+					% compute width
+					if ~pars.width
+	 					pars.width = pars.height * -pars.fill;
+					end
+					
+					% compute height
+					if ~pars.height
+	 					pars.height = pars.width / -pars.fill;
+					end
+					
+				end
+				
+				% store
+				sz = [pars.width pars.height];
+				
 			end
 			
 %%%% GET TARGET DIMENSIONS (END)
@@ -2653,7 +2683,8 @@ classdef (Sealed = true) panel < handle
 				
 				case { ...
 						'fontname' 'fontsize' 'fontweight' ...
-						'margin' 'marginleft' 'marginbottom' 'marginright' 'margintop' ...
+						'margin' 'marginleft' ...
+						'marginbottom' 'marginright' 'margintop' ...
  						'units' ...
 						}
 
@@ -2731,7 +2762,7 @@ classdef (Sealed = true) panel < handle
 					
 				case { ...
 						'addCallback' 'setCallback' 'clearCallbacks' ...
-						'xlabel' 'ylabel' 'zlabel' 'title' 'hold' ...
+						'hold' ...
 						'refresh' 'export' ...
 						'pack' 'repack' ...
 						'identify' 'show' ...
@@ -2748,6 +2779,7 @@ classdef (Sealed = true) panel < handle
 					
 				case { ...
 						'select' 'fixdash' ...
+						'xlabel' 'ylabel' 'zlabel' 'title' ...
 						}
 					
 					% validate

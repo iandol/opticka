@@ -478,7 +478,7 @@ classdef LFPAnalysis < analysisCore
 				av{i}.baselineWindow		= me.baselineWindow;
 				%tr = squeeze(av{i}.trial(:,:,idx1:idx2)); tr=mean(tr');
 				tr = av{i}.avg(idx1:idx2);
-				[av{i}.baseline, err]	= stderr(tr(:),'2SD');
+				[av{i}.baseline, err]	= me.stderr(tr(:),'2SD');
 				if length(err) == 1
 					av{i}.baselineCI			= [av{i}.baseline - err, av{i}.baseline + err];
 				else
@@ -1152,7 +1152,7 @@ classdef LFPAnalysis < analysisCore
 				p(i1,i2).select();
 				t = ['LFP: ' me.LFPs(me.selectedLFP).name ' | Unit: ' me.sp.names{me.sp.selectedUnit} ' | Sel:' me.selectedTrials{j}.name];
 				[time,av,er]=getAverageTuningCurve(me,me.selectedTrials{j}.idx, me.selectedLFP);
-				h1 = areabar(time,av,er,[],[],'k.-');
+				h1 = me.areabar(time,av,er,[],[],'k.-');
 				axis(h1.axis,[me.plotRange(1) me.plotRange(2) -inf inf]);
 				ylabel(h1.axis,'Voltage (mV)');
 				xlabel(h1.axis,'Time (s)');
@@ -1170,7 +1170,7 @@ classdef LFPAnalysis < analysisCore
 				time2 = me.sp.results.sd{j}.time;
 				av2 = me.sp.results.sd{j}.avg;
 				er2 = me.var2SE(me.sp.results.sd{j}.var,me.sp.results.sd{j}.dof);
-				h=areabar(time2,av2,er2,[0.7 0.5 0.5],[],'r.-');
+				h=me.areabar(time2,av2,er2,[0.7 0.5 0.5],[],'r.-');
 				h2.axish = h;
 				axis(h2.axis,[me.plotRange(1) me.plotRange(2) -inf inf]);
 				ylabel(h2.axis,'Firing Rate (Hz)');
@@ -1583,7 +1583,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function chSpectrum(me,tapers)
-			if ~exist('mtspectrumc','file'); warning('Chronux V2.10 not installed...');return; end
+			if ~exist('mtspectrumc','file'); warning('Chronux Toolbox not installed...');return; end
 			if ~exist('tapers','var') || isempty(tapers)
 				if me.openUI; 
 					answer=menuN('Chronux Spectrum:',{'t|[10 2]','Set Tapers [TW K] TW=time-bandwidth-product, K=#tapers:'});
@@ -1841,7 +1841,7 @@ classdef LFPAnalysis < analysisCore
 				p(i1,i2).hold('on');
 				c = me.optimalColours(length(me.selectedTrials{j}.idx));
 				[time,avg,err]=getAverageTuningCurve(me, me.selectedTrials{j}.idx, me.selectedLFP,'2SD');
-				areabar(time, avg, err,[0.5 0.5 0.5],0.4,'k-','MarkerFaceColor',[0 0 0],'LineWidth',2);
+				me.areabar(time, avg, err,[0.5 0.5 0.5],0.4,'k-','MarkerFaceColor',[0 0 0],'LineWidth',2);
 				for k = 1:length(me.selectedTrials{j}.idx)
 					trial = LFP.trials(me.selectedTrials{j}.idx(k));
 					dat = [trial.variable,trial.index,trial.t1,trial.isCorrect,trial.isBreak];
@@ -1942,7 +1942,7 @@ classdef LFPAnalysis < analysisCore
 					for k = 1:length(me.selectedTrials)
 						leg{k,1} = me.selectedTrials{k}.name;
 						[time,avg,err]=getAverageTuningCurve(me, me.selectedTrials{k}.idx, j);
-						areabar(time, avg, err, c(k,:)/2, 0.3, 'k.-', 'Color', c(k,:), 'MarkerFaceColor', c(k,:), 'LineWidth', 2);
+						me.areabar(time, avg, err, c(k,:)/2, 0.3, 'k.-', 'Color', c(k,:), 'MarkerFaceColor', c(k,:), 'LineWidth', 2);
 					end
 					legend(leg);
 					p(i1,i2).hold('off');
@@ -2002,9 +2002,9 @@ classdef LFPAnalysis < analysisCore
 						tlout(i).fe = fit(tlout(i).t,tlout(i).e,'smoothingspline','SmoothingParam', prm); %error
 						tlout(i).s = feval(tlout(i).f,tlout(i).t);
 						tlout(i).se = feval(tlout(i).fe,tlout(i).t);
-						areabar(tlout(i).t, tlout(i).s, tlout(i).se, [.5 .5 .5],0.3,'LineWidth',1);
+						me.areabar(tlout(i).t, tlout(i).s, tlout(i).se, [.5 .5 .5],0.3,'LineWidth',1);
 					else
-						areabar(tlout(i).t, tlout(i).d, tlout(i).e, [.5 .5 .5],0.3,'b.-','LineWidth',1,'Color',cl(i,:));
+						me.areabar(tlout(i).t, tlout(i).d, tlout(i).e, [.5 .5 .5],0.3,'b.-','LineWidth',1,'Color',cl(i,:));
 					end
 				end
 				legend(namestr,'Location','southwest');
@@ -2030,8 +2030,8 @@ classdef LFPAnalysis < analysisCore
 						av{ii}.cov = av{ii}.cov(:,:,1);
 					end
 				end
-				[c1,c1e]=stderr(av{1}.cov);
-				[c2,c2e]=stderr(av{2}.cov);
+				[c1,c1e]=me.stderr(av{1}.cov);
+				[c2,c2e]=me.stderr(av{2}.cov);
 				try
 					[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',me.options.stats.alpha);
 				end
@@ -2090,7 +2090,7 @@ classdef LFPAnalysis < analysisCore
 			for j = 1:length(LFPs)
 				h(j)=plot(LFPs(j).time, LFPs(j).data,'Color',c(j,:));
 				name{j} = ['LFP ' num2str(j)];
-				[av,sd] = stderr(LFPs(j).data,'SD');
+				[av,sd] = me.stderr(LFPs(j).data,'SD');
 				hl=line([LFPs(j).time(1) LFPs(j).time(end)],[av-(2*sd) av-(2*sd)],'Color',get(h(j),'Color'),'LineWidth',2, 'LineStyle','--');
 				set(get(get(hl,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 				hl=line([LFPs(j).time(1) LFPs(j).time(end)],[av+(2*sd) av+(2*sd)],'Color',get(h(j),'Color'),'LineWidth',2, 'LineStyle','--');
@@ -2168,7 +2168,7 @@ classdef LFPAnalysis < analysisCore
 				hold on;
 				e = me.var2SE(res.staPre{i}.var,res.staPre{i}.dof);
 				for j = 1:size(res.staPre{i}.avg,1)
-					areabar(res.staPre{i}.time, res.staPre{i}.avg(j,:), e(j,:),[0.5 0.5 0.5],0.2);
+					me.areabar(res.staPre{i}.time, res.staPre{i}.avg(j,:), e(j,:),[0.5 0.5 0.5],0.2);
 				end
 				maxPre(i) = max(max(res.staPre{i}.avg(:,:)));
 				minPre(i) = min(min(res.staPre{i}.avg(:,:)));
@@ -2185,7 +2185,7 @@ classdef LFPAnalysis < analysisCore
 				hold on;
 				e = me.var2SE(res.staPost{i}.var,res.staPost{i}.dof);
 				for j = 1:size(res.staPost{i}.avg,1)
-					areabar(res.staPost{i}.time, res.staPost{i}.avg(j,:), e(j,:),[0.5 0.5 0.5],0.2);
+					me.areabar(res.staPost{i}.time, res.staPost{i}.avg(j,:), e(j,:),[0.5 0.5 0.5],0.2);
 				end
 				maxPost(i) = max(max(res.staPost{i}.avg(:,:)));
 				minPost(i) = min(min(res.staPost{i}.avg(:,:)));
@@ -2224,24 +2224,24 @@ classdef LFPAnalysis < analysisCore
 				if ~isempty(res.stsFFT{i}.ang)
 					p(1,1).select();
 					p(1,1).hold('on');
-					[av,ae] = stderr(res.stsFFT{i}.ang);
-					areabar(res.stsFFT{i}.freq,rad2ang(av),rad2ang(ae),[],0.2,lo{i});
+					[av,ae] = me.stderr(res.stsFFT{i}.ang);
+					me.areabar(res.stsFFT{i}.freq,rad2ang(av),rad2ang(ae),[],0.2,lo{i});
 					leg{i} = res.stsFFT{i}.name;
 
 					p(1,2).select();
 					p(1,2).hold('on');
-					[mv,merr] = stderr(res.stsFFT{i}.mag);
-					areabar(res.stsFFT{i}.freq, mv, merr,[],0.2,lo{i});
+					[mv,merr] = me.stderr(res.stsFFT{i}.mag);
+					me.areabar(res.stsFFT{i}.freq, mv, merr,[],0.2,lo{i});
 					
 					p(2,1).select();
 					p(2,1).hold('on');
-					[av,ae] = stderr(res.stsConvol{i}.ang);
-					areabar(res.stsConvol{i}.freq,rad2ang(av),rad2ang(ae),[],0.2,lo{i});
+					[av,ae] = me.stderr(res.stsConvol{i}.ang);
+					me.areabar(res.stsConvol{i}.freq,rad2ang(av),rad2ang(ae),[],0.2,lo{i});
 
 					p(2,2).select();
 					p(2,2).hold('on');
-					[mv,merr] = stderr(res.stsConvol{i}.mag);
-					areabar(res.stsConvol{i}.freq, mv, merr,[],0.2,lo{i});
+					[mv,merr] = me.stderr(res.stsConvol{i}.mag);
+					me.areabar(res.stsConvol{i}.freq, mv, merr,[],0.2,lo{i});
 				end
 			end
 			p(1,1).select();
@@ -2384,10 +2384,10 @@ classdef LFPAnalysis < analysisCore
 				minv = minv - (abs(minv)/15);
 				maxv = maxv + (abs(maxv)/15);
 				if minv >= maxv;minv = -inf; end
-				areabar(time, grnd, grnde,[.5 .5 .5],'b');
-				areabar(time, fig, fige,[.7 .5 .5],'r');
+				me.areabar(time, grnd, grnde,[.5 .5 .5],'b');
+				me.areabar(time, fig, fige,[.7 .5 .5],'r');
 				if length(bp{j}.av) > 2
-					areabar(time,bord,borde,[.7 .5 .5],'g');
+					me.areabar(time,bord,borde,[.7 .5 .5],'g');
 				end
 				pp(1,1).hold('off');
 				set(gca,'XTickLabel','')
@@ -2644,7 +2644,7 @@ classdef LFPAnalysis < analysisCore
 				e = e';
 				p = nanmean(p);
 				e = max(e);
-				areabar(f, p, e, ec,0.2,lc);
+				me.areabar(f, p, e, ec,0.2,lc);
 			end
 		end
 		
@@ -2704,7 +2704,7 @@ classdef LFPAnalysis < analysisCore
 				p(1).select();
 				p(1).hold('on');
 				[s,f,e] = mtspectrumc(d(b1:b2,:),params);
-				plot_vector(s,f,uselog,e,lo{i+6},0.5);%areabar(f,s,e,[],0.2,lo{i+5})
+				plot_vector(s,f,uselog,e,lo{i+6},0.5);%me.areabar(f,s,e,[],0.2,lo{i+5})
 				name{end+1} = ['BASELINE ' me.selectedTrials{i}.name];
 				grid on; box on;
 				
@@ -2737,7 +2737,7 @@ classdef LFPAnalysis < analysisCore
 				title(names); xlabel(''); ylabel('Coherence');
 				o(2,2).select();
 				hold on; grid on; box on;
-				areabar(f,phi,phistd,[0.5 0.5 0.5],0.3,lo{i});
+				me.areabar(f,phi,phistd,[0.5 0.5 0.5],0.3,lo{i});
 				xlabel('Frequency'); ylabel('Phase');
 				
 			end
@@ -2820,7 +2820,7 @@ classdef LFPAnalysis < analysisCore
 			time = me.LFPs(sel).trials(1).time';
 			data = [me.LFPs(sel).trials(idx).data];
 			data = rot90(fliplr(data)); %get it into trial x data = row x column
-			[avg,err] = stderr(data,err);
+			[avg,err] = me.stderr(data,err);
 		end
 		
 		% ===================================================================

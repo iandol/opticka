@@ -333,13 +333,8 @@ classdef analysisCore < optickaCore
 			end
 		end
 		
-	end %---END PUBLIC METHODS---%
-	
-	%=======================================================================
-	methods ( Hidden = true ) %-------HIDDEN METHODS-----%
-	%=======================================================================
 		% ===================================================================
-		%> @brief
+		%> @brief show a GUI if available for analysis object
 		%>
 		%> @param
 		%> @return
@@ -347,6 +342,12 @@ classdef analysisCore < optickaCore
 		function GUI(me, varargin)
 			makeUI(me, varargin);
 		end
+		
+	end %---END PUBLIC METHODS---%
+	
+	%=======================================================================
+	methods ( Hidden = true ) %-------HIDDEN METHODS-----%
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief
@@ -508,6 +509,159 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
+		function alpha = rad2ang(alphain,rect,rot)
+			if nargin<3 
+				rot=0; 
+			end 
+			if nargin<2 
+				rect=0; 
+			end 
+
+			alpha = alphain * (180/pi); 
+
+			for i=1:length(alpha)	 
+				if rot==1 
+					if alpha(i)>=0 
+						alpha(i)=alpha(i)-180; 
+					else 
+						alpha(i)=alpha(i)+180; 
+					end			 
+					%alpha(i)=180+alpha(i); 
+					if alpha(i)==360 
+						alpha(i)=0; 
+					end 
+				end 
+				if rect==1 && alpha(i)<0  
+					alpha(i)=360+alpha(i); 
+				end 
+			end 
+		end
+		
+		% ===================================================================
+		function alpha = ang2rad(alpha)
+			alpha = alpha * pi /180;
+		end
+		
+		% ===================================================================
+		%> Plots mean and error choosable by switches
+		%>
+		%> [mean,error] = stderr(data,type)
+		%>
+		%> Switches: SE 2SE SD 2SD 3SD V FF CV AF
+		% ===================================================================
+		function [avg,error] = stderr(data,type,onlyerror)
+			if nargin<3; onlyerror=0; end
+			if nargin<2; type='SE';	end
+			if size(type,1)>1; type=reshape(type,1,size(type,1));	end
+			if size(data,1) > 1 && size(data,2) > 1; nvals = size(data,1);
+			else nvals = length(data); end
+			avg=nanmean(data);
+			switch(type)
+				case 'SE'
+					err=nanstd(data);
+					error=sqrt(err.^2/nvals);
+				case '2SE'
+					err=nanstd(data);
+					error=sqrt(err.^2/nvals);
+					error = error*2;
+				case 'CIMEAN'
+					[error, raw] = bootci(1000,{@nanmean,data},'alpha',0.01);
+					avg = nanmean(raw);
+				case 'CIMEDIAN'
+					[error, raw] = bootci(1000,{@nanmedian,data},'alpha',0.01);
+					avg = nanmedian(raw);
+				case 'SD'
+					error=nanstd(data);
+				case '2SD'
+					error=(nanstd(data))*2;
+				case '3SD'
+					error=(nanstd(data))*3;
+				case 'V'
+					error=nanstd(data).^2;
+				case 'F'
+					if max(data)==0
+						error=0;
+					else
+						error=nanvar(data)/nanmean(data);
+					end
+				case 'C'
+					if max(data)==0
+						error=0;
+					else
+						error=nanstd(data)/nanmean(data);
+					end
+				case 'A'
+					if max(data)==0
+						error=0;
+					else
+						error=nanvar(diff(data))/(2*nanmean(data));
+					end
+			end
+			if onlyerror==1
+				avg=error;
+			end
+		end
+		
+		% ===================================================================
+		%> Plots X and Y value data with error bar shown as a shaded
+		%> area. Use:
+		%> areabar(x,y,error,c1,alpha,plotoptions)
+		%>     where c1 is the colour of the shaded options and plotoptions are
+		%>     passed to the line plot
+		% ===================================================================
+		function handles = areabar(xvalues,ydata,error,c1,alpha,varargin)
+			if min(size(xvalues)) > 1 || min(size(ydata)) > 1 || min(size(error)) > 2
+				warning('Sorry, you can only plot vector data.')
+				error('Areabar error');
+			end
+			if strcmpi(get(gca,'NextPlot'),'add'); NextPlot = 'add';
+			else NextPlot = 'replacechildren'; end
+			if nargin <4 || isempty(c1) || ischar(c1); c1=[0.5 0.5 0.5]; end
+
+			if nargin < 5 || isempty(alpha) || ischar(alpha)
+				if exist('alpha','var') && ischar(alpha)
+					[varargin{2:end+1}]=varargin{1:end};
+					varargin{1} = alpha;
+				end
+				alpha = 0.5;
+			end
+			idx=find(isnan(ydata));
+			ydata(idx)=[]; xvalues(idx)=[]; error(idx)=[];
+			x=size(xvalues); y=size(ydata); e=size(error);
+			%need to organise to rows
+			if x(1) < x(2); xvalues=xvalues'; end
+			if y(1) < y(2); ydata=ydata'; end
+			if e(1) < e(2); error=error'; end
+			error(isnan(error)) = 0;
+			x=length(xvalues);
+			if size(error,2) == 2
+				err=zeros(x+x,1);
+				err(1:x,1)=error(:,1);
+				err(x+1:x+x,1)=flipud(error(:,2));
+			else
+				err=zeros(x+x,1);
+				err(1:x,1)=ydata+error;
+				err(x+1:x+x,1)=flipud(ydata-error);
+			end
+			areax=zeros(x+x,1);
+			areax(1:x,1)=xvalues;
+			areax(x+1:x+x,1)=flipud(xvalues);
+			axis auto
+			if max(c1) > 1; c1 = c1 / max(c1); end
+			handles.fill = fill(areax,err,c1,'EdgeColor','none','FaceAlpha',alpha);
+			set(get(get(handles.fill,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+			handles.axis = (gca);
+			set(gca,'NextPlot','add');
+			handles.plot = plot(xvalues,ydata,varargin{:});
+			set(gca,'NextPlot',NextPlot);
+			%set(gca,'PlotBoxAspectRatioMode','manual');
+			uistack(handles.plot,'top')
+			set(gca,'Layer','bottom');
+			if alpha == 1; set(gcf,'Renderer','painters'); end
+			box on;
+		end
+		
+		% ===================================================================
 		%> @brief calculates preferred row col layout for multiple plots
 		%> @param len length of data points to plot
 		%> @return row number of rows
@@ -539,6 +693,11 @@ classdef analysisCore < optickaCore
 		%> @param
 		% ===================================================================
 		function colors = optimalColours(n_colors,bg,func) %make optimally different colours for plots
+			if ~exist('makecform','file') %no im proc toolbox, just return default colours
+				colors = colormap(parula(n_colors));
+				colors = [0 0 0; 1 0 0; 0 1 0; 0 0 1; 0.3 0.3 0.3; 1 0.5 0; colors];
+				return;
+			end
 			if (nargin < 2)
 				bg = [1 1 1];  % default white background
 			else

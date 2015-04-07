@@ -631,7 +631,7 @@ classdef plxReader < optickaCore
 				saccs(saccs<0) = [];
 				mins = min(saccs);
 				maxs = max(saccs);
-				[avgs,es] = stderr(saccs);
+				[avgs,es] = analysisCore.stderr(saccs);
 				ns = length(saccs);
 				me.info{end+1} = ' ';
 				me.info{end+1} = ['Eyelink data Parsed trial total : ' num2str(length(me.eA.trials))];

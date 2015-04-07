@@ -208,10 +208,10 @@ classdef LFPMeta < analysisCore
 				h = uipanel('Parent',ho,'units', 'normalized', 'position', [0 0 1 1]);
 				ha = axes('Parent',h);
 				e = analysisCore.var2SE(avgA.var, avgA.dof);
-				areabar(avgA.time,avgA.avg, e, [0.5 0.5 0.5],0.5,'k.-');
+				me.areabar(avgA.time,avgA.avg, e, [0.5 0.5 0.5],0.5,'k.-');
 				hold on
 				e = analysisCore.var2SE(avgB.var, avgB.dof);
-				areabar(avgB.time, avgB.avg, e, [0.5 0.5 0.5],0.5,'r.-');
+				me.areabar(avgB.time, avgB.avg, e, [0.5 0.5 0.5],0.5,'r.-');
 				hold off
 				legend('Group A','Group B')
 				grid on
