@@ -26,18 +26,16 @@ classdef stateMachine < optickaCore
 	
 	properties
 		%>our main state list, stored as a structure
-		stateList = struct([])
+		stateList@struct = struct([])
 		%> timedelta for time > ticks calculation, assume 60Hz by default
 		%> but set to correct IFI of display before use
-		timeDelta = 0.0167
+		timeDelta@double = 1/60
 		%> use real time (true) or ticks (false) to mark state time
-		realTime = false
-		%> verbose logging to command window?
-		verbose = false
+		realTime@logical = false
 		%> clock function to use
-		clockFcn = @GetSecs
+		clockFcn@function_handle = @GetSecs
 		%> pause function
-		waitFcn = @WaitSecs
+		waitFcn@function_handle = @WaitSecs
 		%> transition function run globally between transitions
 		globalTransitionFcn = {}
 		%> N x 2 cell array of regexp strings, list to skip the current -> next state's exit functions; for example
@@ -45,17 +43,19 @@ classdef stateMachine < optickaCore
 		%> 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
 		%> state. Add multiple rows for skipping multiple state's exit states.
 		skipExitStates = ''
+		%> verbose logging to command window?
+		verbose = false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> total number of ticks, updated via runBriefly() and update()
-		totalTicks
+		totalTicks@double
 		%> time at start of stateMachine
-		startTime
+		startTime@double
 		%> final time a finish
-		finalTime
+		finalTime@double
 		%> final ticks at finish
-		finalTick
+		finalTick@double
 		%> current state
 		currentState
 		%> current state name
@@ -130,13 +130,13 @@ classdef stateMachine < optickaCore
 		%> @return instance of class.
 		% ===================================================================
 		function obj = stateMachine(varargin)
+			if nargin == 0; varargin.name = 'state machine';end
+			obj = obj@optickaCore(varargin); %superclass constructor
 			%initialise the statelist index
 			obj.stateList = struct([]);
 			obj.stateListIndex = containers.Map('uniformValues', false);
 			%parse any inputs
-			if nargin>0
-				parseArgs(obj, varargin, obj.allowedProperties);
-			end
+			if nargin>0; parseArgs(obj, varargin, obj.allowedProperties); end
 		end
 		
 		% ===================================================================
@@ -448,20 +448,21 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function runDemo(obj)
 			oldVerbose = obj.verbose;
+			oldTimeDelta = obj.timeDelta;
+			obj.timeDelta = 0.001;
 			obj.verbose = true;
-			beginFcn = @()disp('::enter state: begin -- Hello there!');
-			middleFcn = @()disp('::enter state: middle -- Still here?');
-			endFcn = @()disp('::enter state: end -- See you soon!');
-			surpriseFcn = @()disp('::SURPRISE!!!');
+			beginFcn = @()disp('Hello there!');
+			middleFcn = @()disp('Still here?');
+			endFcn = @()disp('See you soon!');
+			surpriseFcn = @()disp('SURPRISE!!!');
 			withinFcn = []; %don't run anything within the state
-			transitionFcn = @()sprintf('false'); %transition function never returns a valid state name
-			transitionFcn2 = @()sprintf('surprise'); %returns a valid state name and thus triggers a transition
+			transitionFcn = @()sprintf('surprise'); %returns a valid state name and thus triggers a transition
 			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
 			statesInfo = { ...
 			'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'; ...
-			'begin'		'middle'		2			beginFcn		withinFcn	transitionFcn		exitFcn; ...
-			'middle'		'end'			2			middleFcn	withinFcn	transitionFcn2		exitFcn; ...
-			'end'			''				2			endFcn		withinFcn	transitionFcn		exitFcn; ...
+			'begin'		'middle'		2			beginFcn		withinFcn	[]						exitFcn; ...
+			'middle'		'end'			2			middleFcn	withinFcn	transitionFcn		exitFcn; ...
+			'end'			''				2			endFcn		withinFcn	[]						exitFcn; ...
 			'surprise'	'end'			2			surpriseFcn	withinFcn	[]						exitFcn; ...
 			};
 			addStates(obj,statesInfo);
@@ -477,6 +478,21 @@ classdef stateMachine < optickaCore
 			disp(' cleanup this object...')
 			disp('>--------------------------------------------------')
 			obj.verbose = oldVerbose; %reset verbose back to original value
+			obj.timeDelta = oldTimeDelta;
+		end
+		
+		% ===================================================================
+		%> @brief TODO!!!! skip exit management
+		%> @param
+		%> @return
+		% ===================================================================
+		function set.skipExitStates(obj,list)
+			if ~exist('list','var') || isempty(list) || ~iscell(list); return; end
+			for i=1:size(list,1)
+				if ~isempty(regexpi(obj.currentName,obj.skipExitStates{i,1})) && ~isempty(regexpi(nextName,obj.skipExitStates{i,2}));
+					obj.currentState.skipExitFcn = true;
+				end
+			end
 		end
 		
 	end
@@ -512,7 +528,7 @@ classdef stateMachine < optickaCore
 				end
 				obj.nextTickOut = round(thisState.time / obj.timeDelta);
 				
-				obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false)
+				if obj.verbose; obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false); end
 				
 				%tic;
 				if isa(thisState.entryFcn,'function_handle') %function handle, lets feval it
@@ -550,7 +566,7 @@ classdef stateMachine < optickaCore
 %				if isa(obj.globalTransitionFcn,'function_handle') %function handle, lets feval it
 %					feval(obj.globalTransitionFcn);
 %				end
-				obj.salutation(['Transition @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false)
+				if obj.verbose; obj.salutation(['Transition @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false); end
 				enterStateAtIndex(obj, index);
 			else
 				obj.salutation('transitionToStateWithName method', 'ERROR, default to return to first state!!!\n',true)
@@ -585,7 +601,7 @@ classdef stateMachine < optickaCore
 			obj.nextTickOut = [];
 			obj.nextTimeOut = [];
 			
-			obj.salutation(['Exiting state:' thisState.name ' @ ' num2str(obj.log(end).tnow) 's | ' num2str(obj.log(end).stateTimeToNow) 's | ' num2str(obj.log(end).tick) '/' num2str(obj.totalTicks) 'ticks'],'',false);
+			if obj.verbose; obj.salutation(['Exit state:' thisState.name ' @ ' num2str(obj.log(end).tnow-obj.startTime) 's | ' num2str(obj.log(end).stateTimeToNow) 'secs | ' num2str(obj.log(end).tick) '/' num2str(obj.totalTicks) 'ticks'],'',false); end
 		end
 		
 		% ===================================================================
@@ -655,7 +671,7 @@ classdef stateMachine < optickaCore
 			legend('State Enter time ','State End time');
 			%axis([-inf inf 0.97 1.02]);
 			title('State Enter/Exit Times from Start');
-			xlabel('Time (s)');
+			ylabel('Time (seconds)');
 			set(gca,'XTick',1:length(log));
 			set(gca,'XTickLabel',names);
 			try set(gca,'XTickLabelRotation',45); end

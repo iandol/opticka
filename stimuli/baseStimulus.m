@@ -551,9 +551,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 			end
 				
 			pList = findAttributes(obj,'SetAccess','public'); %our public properties
+			dList = findAttributes(obj,'Dependent', true); %find dependent properties
+			pList = setdiff(pList,dList); %remove dependent properties as we don't want to set them!
 			handleList = fieldnames(obj.handles); %the handle name list
 			handleListMod = regexprep(handleList,'_.+$',''); %we remove the suffix so names are equivalent
-			
 			outList = intersect(pList,handleListMod);
 			
 			for i=1:length(outList)
