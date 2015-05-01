@@ -12,13 +12,13 @@ classdef LFPMeta < analysisCore
 		list@cell
 		%> raw LFP objects
 		raw@cell
-		%> meta results
+		%> meta result
 		results
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> version
-		version@double = 0.85
+		version@double = 1.01
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
@@ -75,6 +75,7 @@ classdef LFPMeta < analysisCore
 				load(file{ll});
 				if exist('lfp','var') && isa(lfp,'LFPAnalysis')
 					optimiseSize(lfp);
+					lfp.results = struct();
 					idx = me.nSites+1;
 					me.raw{idx} = lfp;
 					for i = 1:2
@@ -121,53 +122,57 @@ classdef LFPMeta < analysisCore
 		% ===================================================================
 		function process(me, varargin)
 			if me.nSites > 0
-				analMethod = get(me.handles.analmethod,'Value');
-				if isempty(me.options) || isempty(me.options.stats); initialise(me); end%initialise the various analysisCore options fields
+				me.previousSelection = -1;
+				ho = me.handles.axisind;
+				delete(ho.Children);
+				ho = me.handles.axisall;
+				delete(ho.Children);
+				as = get(me.handles.analmethod,'String');
+				am = get(me.handles.analmethod,'Value');
+				setOptions(me); %initialise the various analysisCore options fields
+				ptic = tic;
 				for i = 1 : me.nSites
-					notifyUI(me,sprintf('Reprocessing the timelock/frequency analysis for site %i',i));
+					notifyUI(me,sprintf('Reprocessing Fieldtrip %s analysis for site %i...',as{am},i));
 					me.raw{i}.doPlots = false;
-					me.raw{i}.options.stats = me.options.stats;
+					me.raw{i}.options = me.options;
 					me.raw{i}.baselineWindow = me.baselineWindow;
 					me.raw{i}.measureRange = me.measureRange;
 					me.raw{i}.plotRange = me.plotRange;
-					
-					if analMethod == 1 %timelock
+					if am == 1 %timelock
 						cfg = [];cfg.keeptrials = 'yes';
 						me.raw{i}.ftTimeLockAnalysis(cfg);
-	
 					else
-						me.raw{i}.ftFrequencyAnalysis([],...
-							me.options.tw,...
-							me.options.cycles,...
-							me.options.smth,...
-							me.options.width);
+						cfg = [];cfg.keeptrials = 'no';
+						me.raw{i}.ftFrequencyAnalysis(cfg);
 					end
-					
 				end
-				notifyUI(me,'Reprocessing complete for %i sites',i);
+				notifyUI(me,'Fieldtrip Reprocessing for %s analysis completed for %i sites; took %g s',as{am},i,toc(ptic));
 				plotSite(me);
 			end
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief run the averaging of the data
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
 		function run(me,varargin)
 			if me.nSites > 0
-				
+				me.previousSelection = -1;
+				me.handles.axistabs.Selection = 2;
+				ho = me.handles.axisall;
+				delete(ho.Children);
+				as = get(me.handles.analmethod,'String');
 				am = get(me.handles.analmethod,'Value');
-				
+				notifyUI(me,'Starting computing the Fieldtrip Grand Average for dataset: %s',as{am});
+				rtic = tic;
 				for i = 1: me.nSites
-					
 					me.raw{i}.doPlots = false;
-					me.raw{i}.options.stats = me.options.stats;
+					me.raw{i}.options = me.options;
 					me.raw{i}.baselineWindow = me.baselineWindow;
 					me.raw{i}.measureRange = me.measureRange;
 					me.raw{i}.plotRange = me.plotRange;
-					
 					if am == 1 %timelock
 						if ~isfield(me.raw{i}.results,'av')
 							errordlg('You have''nt Processed the data yet...')
@@ -179,13 +184,11 @@ classdef LFPMeta < analysisCore
 						metaA{i}.dimord = 'chan_time';
 						metaB{i}.dimord = 'chan_time';
 					else
-						
-						metaA{i} = me.raw{i}.(['fq' me.options.method]){1};
-						metaB{i} = me.raw{i}.(['fq' me.options.method]){1};
-						
+						metaA{i} = me.raw{i}.results.(['fq' me.options.method]){1};
+						metaB{i} = me.raw{i}.results.(['fq' me.options.method]){2};
+						metaA{i}.label = {'LFP'}; %force an homogeneous label name
+						metaB{i}.label = {'LFP'};
 					end
-					
-					
 				end
 				
 				if am == 1 %timelock
@@ -198,28 +201,78 @@ classdef LFPMeta < analysisCore
 % 					cfg.normalizevar		= 'N' or 'N-1' (default = 'N-1')
 					avgA = ft_timelockgrandaverage(cfg, metaA{:});
 					avgB = ft_timelockgrandaverage(cfg, metaB{:});
-				else
-					
+				else %powerspectrum
+					cfg						= [];
+					cfg.channel				= 'all';metaA{1}.label;
+					cfg.keepindividual	= 'no';
+					cfg.parameter			= 'powspctrm';
+					cfg.foilim				= 'all';
+					cfg.toilim				= 'all';
+					avgA = ft_freqgrandaverage([], metaA{:});
+					avgB = ft_freqgrandaverage([], metaB{:});
 				end
 				
-				me.handles.axistabs.Selection = 2;
-				ho = me.handles.axisall;
-				delete(ho.Children);
-				h = uipanel('Parent',ho,'units', 'normalized', 'position', [0 0 1 1]);
-				ha = axes('Parent',h);
-				e = analysisCore.var2SE(avgA.var, avgA.dof);
-				me.areabar(avgA.time,avgA.avg, e, [0.5 0.5 0.5],0.5,'k.-');
-				hold on
-				e = analysisCore.var2SE(avgB.var, avgB.dof);
-				me.areabar(avgB.time, avgB.avg, e, [0.5 0.5 0.5],0.5,'r.-');
-				hold off
-				legend('Group A','Group B')
-				grid on
-				xlim(me.plotRange)
-				title('Population average')
-				xlabel('Time (s)');
-				ylabel('Voltage (mV) ±1S.E.');
+				h = uipanel('Parent',ho,'units', 'normalized', 'position', [0 0 1 1],'BackgroundColor',[1 1 1],'BorderType','none');
 
+				if am == 1 %timelock
+					axes('Parent',h);
+					e = analysisCore.var2SE(avgA.var, avgA.dof);
+					me.areabar(avgA.time,avgA.avg, e, [0.5 0.5 0.5],0.5,'k.-');
+					hold on
+					e = analysisCore.var2SE(avgB.var, avgB.dof);
+					me.areabar(avgB.time, avgB.avg, e, [0.5 0.5 0.5],0.5,'r.-');
+					hold off
+					legend('Group A','Group B')
+					grid on
+					xlim(me.plotRange)
+					title('Population average')
+					xlabel('Time (s)');
+					ylabel('Voltage (mV) ±1S.E.');
+				else
+					p=panel(h);
+					p.margin = [15 15 30 20];%left bottom right top
+					p.pack(2,1);
+					p(1,1).select();
+					cfg						= [];
+					cfg.fontsize			= 13;
+					if strcmpi(me.options.bline,'no')
+						cfg.baseline = 'no';
+					else
+						cfg.baselinetype		= me.options.bline;
+						cfg.baseline			= me.baselineWindow;
+						if strcmpi(cfg.baselinetype,'relative')
+							cfg.zlim					= [0 2];
+						end
+					end
+					cfg.interactive		= 'no';
+					cfg.channel				= metaA{1}.label;
+					cfgOut					= ft_singleplotTFR(cfg, avgA);
+					title(['GROUP A Average of ' num2str(me.nSites)])
+					grid on; box on;
+					set(gca,'Layer','top','TickDir','out')
+					ah{1} = gca;
+					clim = get(gca,'clim');
+					hmin(1) = min(clim);
+					hmax(1) = max(clim);
+					xlabel('Time (s)');
+					ylabel('Frequency (Hz)');
+					p(2,1).select();
+					cfgOut						= ft_singleplotTFR(cfg, avgB);
+					title(['GROUP A Average of ' num2str(me.nSites)])
+					grid on; box on;
+					set(gca,'Layer','top','TickDir','out')
+					ah{2} = gca;
+					clim = get(gca,'clim');
+					hmin(2) = min(clim);
+					hmax(2) = max(clim);
+					xlabel('Time (s)');
+					ylabel('Frequency (Hz)');
+					set(ah{1},'clim', [min(hmin) max(hmax)]);
+					set(ah{2},'clim', [min(hmin) max(hmax)]);
+					colormap default;
+					colormap('jet');
+					end
+				notifyUI(me,'Finished computing the Grand Average for dataset: %s; took %g s',as{am},toc(rtic));
 			end
 			
 		end
@@ -235,21 +288,22 @@ classdef LFPMeta < analysisCore
 				errordlg('No File Specified', 'Meta-Analysis Error');
 				return
 			end
-			
+			notifyUI(me,'Loading MetaAnalysis object...');
 			cd(path);
 			load(file);
-			if exist('lfpmet','var') && isa(fgmet,'LFPMeta')
+			if exist('lfpmet','var') && isa(lfpmet,'LFPMeta')
 				reset(me);
+				for i = 1:length(lfpmet.raw)
+					lfpmet.raw{i}.results = struct();
+				end
 				me.raw = lfpmet.raw;
 				me.cells = lfpmet.cells;
 				me.list = lfpmet.list;
-				me.mint = lfpmet.mint;
-				me.maxt = lfpmet.maxt;
 				set(me.handles.list,'String',me.list);
-				set(me.handles.list,'Value',me.nSites);
+				set(me.handles.list,'Value',1);
 			end
-			
 			clear lfpmet
+			notifyUI(me,'Loaded MetaAnalysis object: %i sites; use context menu to reparse and analyse',me.nSites);
 		end
 		
 		% ===================================================================
@@ -267,6 +321,9 @@ classdef LFPMeta < analysisCore
 			me.oldDir = pwd;
 			cd(path);
 			lfpmet = me; %#ok<NASGU>
+			for i = 1:length(lfpmet.raw)
+				lfpmet.raw{i}.results = struct();
+			end
 			save(file,'lfpmet');
 			clear lfpmet;
 			cd(me.oldDir);
@@ -279,11 +336,20 @@ classdef LFPMeta < analysisCore
 		%> @return
 		% ===================================================================
 		function spawn(me, varargin)
-			gh = gca;
+			tab = me.handles.axistabs.Selection;
+			switch tab
+				case 1
+					gh = me.handles.axisind;
+				otherwise
+					gh = me.handles.axisall;
+			end
 			h = figure;
 			figpos(1,[1000 800]);
 			set(h,'Color',[1 1 1]);
 			hh = copyobj(gh,h);
+			set(hh,'Units','normalized','Position',[0 0 1 1]); 
+			set(hh.Children,'Units','normalized','Position',[0 0 1 1]);
+			colormap('jet')
 		end
 		
 		% ===================================================================
@@ -294,6 +360,7 @@ classdef LFPMeta < analysisCore
 		% ===================================================================
 		function toggleSaccades(me, varargin)
 			if me.nSites > 0
+				notifyUI(me,'Will start to toggle the saccade align state for all sites...')
 				firstState = false;
 				for i = 1 : me.nSites
 					if i == 1
@@ -304,8 +371,9 @@ classdef LFPMeta < analysisCore
 							me.raw{i}.toggleSaccadeRealign
 						end
 					end
-					
+					notifyUI(me,sprintf('Saccade align state has been toggled to %i for site %i...',firstState,i))
 				end
+				notifyUI(me,sprintf('Saccade align state has been toggled to %i for all sites, please reprocess',firstState))
 			end
 		end
 		
@@ -354,7 +422,7 @@ classdef LFPMeta < analysisCore
 				tab = me.handles.axistabs.Selection;
 				sel = get(me.handles.list,'Value');
 				me.raw{sel}.select();
-				me.plotsite();
+				notifyUI(me,'If you have changed the selection for a site, you will need to reanalyse/recompute averages');
 			end
 		end
 		
@@ -365,8 +433,8 @@ classdef LFPMeta < analysisCore
 		%> @return
 		% ===================================================================
 		function plotSite(me, varargin)
-			if me.nSites > 0
-				me.handles.axistabs.Selection = 1;
+			tab = get(me.handles.axistabs, 'Selection');
+			if me.nSites > 0 && tab == 1
 				plot(me);
 			end
 		end
@@ -379,30 +447,26 @@ classdef LFPMeta < analysisCore
 		% ===================================================================
 		function plot(me, varargin)
 			if me.nSites > 0
-				tab = me.handles.axistabs.Selection;
-				sel = get(me.handles.list,'Value');
-				switch tab
-					case 1
-						if sel ~= me.previousSelection;
-							ho = me.handles.axisind;
-							delete(ho.Children);
-							h = uipanel('Parent',ho,'units', 'normalized', 'position', [0 0 1 1]);
-							me.raw{sel}.plotDestination = h;
-							plot(me.raw{sel},'timelock');
-							me.previousSelection = sel;
-						end
-					case 2
-% 						ho = me.handles.axisall;
-% 						delete(ho.Children);
-% 						h = uipanel('Parent',ho,'units', 'normalized', 'position', [0 0 1 1]);
-						
+				analmethod = get(me.handles.analmethod, 'Value');
+				sel = get(me.handles.list, 'Value');
+				ho = me.handles.axisind;
+				delete(ho.Children);
+				h = uipanel('Parent',ho,'units', 'normalized', 'position', [0 0 1 1],'BackgroundColor',[1 1 1],'BorderType','none');
+				me.raw{sel}.plotDestination = h;
+				if sel ~= me.previousSelection;
+					switch analmethod
+						case 1
+							plot(me.raw{sel},'timelock');		
+						case 2
+							plot(me.raw{sel},'freq');
+					end
 				end
-				
+				me.previousSelection = sel;
 			end
 		end
 		
 		% ===================================================================
-		%> @brief showInfo shows the info box for the plexon parsed data
+		%> @brief setOptions shows the analysis options
 		%>
 		%> @param
 		%> @return
@@ -413,7 +477,7 @@ classdef LFPMeta < analysisCore
 			setStats(me);
 		end
 		
-		% ===================================================================
+		% ============================================='uipanel======================
 		%> @brief
 		%>
 		%> @param
@@ -531,21 +595,7 @@ classdef LFPMeta < analysisCore
 	%=======================================================================
 	methods (Access = protected) %------------------PRIVATE METHODS
 	%=======================================================================
-		
-		% ===================================================================
-		%> @brief
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function [psth1,psth2,time]=computeAverage(me)
-			
-			for idx = 1:me.nSites
-				
-				
-			end
-			
-		end
+
 		
 		% ===================================================================
 		%> @brief 
@@ -582,17 +632,16 @@ classdef LFPMeta < analysisCore
 			
 			%make context menu
 			hcmenu = uicontextmenu;
-			uimenu(hcmenu,'Label','Parse (selected)','Callback',@me.parse,'Accelerator','a');
+			uimenu(hcmenu,'Label','Parse (selected)','Callback',@me.parse,'Accelerator','p');
 			uimenu(hcmenu,'Label','Reparse (selected)','Callback',@me.reparse,'Accelerator','e');
 			uimenu(hcmenu,'Label','Select (selected)','Callback',@me.select,'Accelerator','s');
-			uimenu(hcmenu,'Label','Remove (selected)','Callback',@me.remove,'Accelerator','r');
-			uimenu(hcmenu,'Label','Reanalyse (all)','Callback',@me.process,'Separator','on');
-			uimenu(hcmenu,'Label','Compute average (all)','Callback',@me.run);
-			uimenu(hcmenu,'Label','Toggle Saccades (all)','Callback',@me.toggleSaccades);
-			uimenu(hcmenu,'Label','Reset (all)','Callback',@me.reset);
+			uimenu(hcmenu,'Label','Remove (selected)','Callback',@me.remove,'Accelerator','x');
+			uimenu(hcmenu,'Label','1. Reanalyse (all)','Callback',@me.process,'Separator','on','Accelerator','r');
+			uimenu(hcmenu,'Label','2. Compute Average (all)','Callback',@me.run,'Accelerator','a');
+			uimenu(hcmenu,'Label','Toggle Saccades (all)','Callback',@me.toggleSaccades,'Separator','on');
 			
 			fs = 11;
-			SansFont = 'Helvetica';
+			SansFont = 'Avenir Next';
 			MonoFont = 'Menlo';
 			bgcolor = [0.89 0.89 0.89];
 			bgcoloredit = [0.9 0.9 0.9];
@@ -601,10 +650,10 @@ classdef LFPMeta < analysisCore
 			handles.root = uix.BoxPanel('Parent',parent,...
 				'Title','Please load some data...',...
 				'FontName',SansFont,...
-				'FontSize',fs+2,...
+				'FontSize',fs+3,...
 				'FontWeight','bold',...
 				'Padding',0,...
-				'TitleColor',[0.8 0.78 0.76],...
+				'TitleColor',[0.7 0.68 0.66],...
 				'BackgroundColor',bgcolor);
 
 			handles.hbox = uix.HBoxFlex('Parent', handles.root,'Padding',0,...
@@ -612,19 +661,36 @@ classdef LFPMeta < analysisCore
 			handles.axistabs = uix.TabPanel('Parent', handles.hbox,'Padding',0,...
 				'BackgroundColor',bgcolor,'TabWidth',120,'FontSize', fs+1,'FontName',SansFont);
 			handles.axisind = uix.Panel('Parent', handles.axistabs,'Padding',0,...
-				'BackgroundColor',bgcolor);
+				'BackgroundColor',[1 1 0.95]);
 			handles.axisall = uix.Panel('Parent', handles.axistabs,'Padding',0,...
-				'BackgroundColor',bgcolor);
+				'BackgroundColor',[1 0.95 0.95]);
 			handles.axistabs.TabTitles = {'Individual','Population'};
-
+			
 			handles.controls = uix.VBox('Parent', handles.hbox,'Padding',0,'Spacing',0,'BackgroundColor',bgcolor);
 			handles.controls1 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',2,'BackgroundColor',bgcolor);
-			handles.controls2 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',0,'BackgroundColor',bgcolor);
 			handles.controls3 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',2,'BackgroundColor',bgcolor);
+			handles.controls2 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',0,'BackgroundColor',bgcolor);
 			
+			handles.addbutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls1,...
+				'Tag','LMAaddbutton',...
+				'FontName',SansFont,...
+				'FontSize', fs,...
+				'Tooltip','Add a singe LFP item',...
+				'Callback',@me.add,...
+				'String','Add');
+			handles.removebutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls1,...
+				'Tag','LMAremovebutton',...
+				'FontName',SansFont,...
+				'FontSize', fs,...
+				'Tooltip','Remove a single item',...
+				'Callback',@me.remove,...
+				'String','Remove');
 			handles.loadbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LMAloadbutton',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tooltip','Load a previous meta analysis',...
 				'Callback',@me.load,...
@@ -633,69 +699,48 @@ classdef LFPMeta < analysisCore
 				'Parent',handles.controls1,...
 				'Tag','LMAsavebutton',...
 				'Tooltip','Save the meta-analysis',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Callback',@me.save,...
 				'String','Save');
-			handles.addbutton = uicontrol('Style','pushbutton',...
-				'Parent',handles.controls1,...
-				'Tag','LMAaddbutton',...
-				'FontSize', fs,...
-				'Tooltip','Add a singe LFP item',...
-				'Callback',@me.add,...
-				'String','Add');
-			handles.removebutton = uicontrol('Style','pushbutton',...
-				'Parent',handles.controls1,...
-				'Tag','LMAremovebutton',...
-				'FontSize', fs,...
-				'Tooltip','Remove a single item',...
-				'Callback',@me.remove,...
-				'String','Remove');
-			handles.processbutton = uicontrol('Style','pushbutton',...
-				'Parent',handles.controls1,...
-				'Tag','LMArunbutton',...
-				'FontSize', fs,...
-				'Tooltip','(Re)Process the individual LFPs',...
-				'Callback',@me.process,...
-				'String','Process');
-			handles.runbutton = uicontrol('Style','pushbutton',...
-				'Parent',handles.controls1,...
-				'Tag','LMArunbutton',...
-				'FontSize', fs,...
-				'Callback',@me.run,...
-				'String','Run');
 			handles.spawnbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LMAspawnbutton',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Callback',@me.spawn,...
 				'String','Spawn');
 			handles.resetbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LMAreplotbutton',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Callback',@me.reset,...
 				'String','Reset');
 			handles.optionsbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LMAsettingsbutton',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Callback',@me.setOptions,...
 				'String','Options');
 			handles.saccbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LMAsaccbutton',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tooltip','Toggle Saccade Realign',...
 				'Callback',@me.toggleSaccades,...
 				'String','Toggle Saccades');
-			handles.weight = uicontrol('Style','edit',...
-				'Parent',handles.controls1,...
-				'Tag','LMAweight',...
-				'FontSize', fs,...
-				'Enable','off',...
-				'Tooltip','Cell Weight',...
-				'Callback',@me.editweight,...
-				'String','1 1');
+% 			handles.weight = uicontrol('Style','edit',...
+% 				'Parent',handles.controls1,...
+% 				'Tag','LMAweight',...
+% 				'FontSize', fs,...
+% 				'Enable','off',...
+% 				'Tooltip','Cell Weight',...
+% 				'Callback',@me.editweight,...
+% 				'BackgroundColor',bgcoloredit,...
+% 				'String','1 1');
 			
 			handles.list = uicontrol('Style','listbox',...
 				'Parent',handles.controls2,...
@@ -710,13 +755,28 @@ classdef LFPMeta < analysisCore
 			
 			handles.analmethod = uicontrol('Style','popupmenu',...
 				'Parent',handles.controls3,...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tag','LMAanalmethod',...
 				'String',{'timelock','power'});
+			handles.reanalbutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls3,...
+				'Tag','LMAreanalbutton',...
+				'FontName',SansFont,...
+				'FontSize', fs,...
+				'Callback',@me.process,...
+				'String','Reanalyse All');
+			handles.runbutton = uicontrol('Style','pushbutton',...
+				'Parent',handles.controls3,...
+				'Tag','LMAsettingsbutton',...
+				'FontName',SansFont,...
+				'FontSize', fs,...
+				'Callback',@me.run,...
+				'String','Average All');
 			
 			set(handles.hbox,'Widths', [-3 -1]);
-			set(handles.controls,'Heights', [70 -1 95]);
-			set(handles.controls1,'Heights', [-1 -1 -1])
+			set(handles.controls,'Heights', [70 35 -1]);
+			set(handles.controls1,'Heights', [-1 -1])
 			set(handles.controls3,'Widths', [-1], 'Heights', [-1])
 
 			me.handles = handles;

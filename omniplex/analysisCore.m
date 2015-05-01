@@ -107,7 +107,7 @@ classdef analysisCore < optickaCore
 				me.p.dir = me.dir;
 				checkPaths(me.p);
 			end
-			if isprop(me,'sp') && ~isempty(me.sp) && isprop(me.sp,'p') isa(me.sp.p,'plxReader')
+			if isprop(me,'sp') && ~isempty(me.sp) && isprop(me.sp,'p') && isa(me.sp.p,'plxReader')
 				me.sp.p.dir = me.dir;
 				checkPaths(me.sp.p);
 			end
@@ -659,6 +659,22 @@ classdef analysisCore < optickaCore
 			set(gca,'Layer','bottom');
 			if alpha == 1; set(gcf,'Renderer','painters'); end
 			box on;
+		end
+		
+		% ===================================================================
+		%> Plots mean and error choosable by switches
+		%>
+		%> [mean,error] = stderr(data,type)
+		%>
+		%> Switches: SE 2SE SD 2SD 3SD V FF CV AF
+		% ===================================================================
+		function out = cellArray2Num(data)
+			if iscellstr(data)
+				out = [];
+				for i = 1:numel(data)
+					out = [out str2num(data{i})];
+				end
+			end
 		end
 		
 		% ===================================================================

@@ -267,7 +267,7 @@ classdef plxReader < optickaCore
 				LFPs(j).nVars = me.eventList.nVars;
 			end
 			
-			fprintf('<strong>§</strong> Loading raw LFP data took <strong>%g ms</strong>\n',round(toc(tlfp)*1000));
+			fprintf('<strong>:#:</strong> Loading raw LFP data took <strong>%g ms</strong>\n',round(toc(tlfp)*1000));
 		end
 		
 		
@@ -373,7 +373,7 @@ classdef plxReader < optickaCore
 				w(1,:,:) = spike.waveform{k};
 				spike.waveform{k} = w;
 			end
-			fprintf('<strong>§</strong> Converting spikes to fieldtrip format took <strong>%g ms</strong>\n',round(toc(tft)*1000));
+			fprintf('<strong>:#:</strong> Converting spikes to fieldtrip format took <strong>%g ms</strong>\n',round(toc(tft)*1000));
 		end
 		
 		% ===================================================================
@@ -428,7 +428,7 @@ classdef plxReader < optickaCore
 			else
 				warning('Integrating eyelink trials into plxReader trials failed...');
 			end
-			fprintf('<strong>§</strong> Integrating eye data into event data took <strong>%g ms</strong>\n',round(toc(ted)*1000));
+			fprintf('<strong>:#:</strong> Integrating eye data into event data took <strong>%g ms</strong>\n',round(toc(ted)*1000));
 		end
 		
 		% ===================================================================
@@ -638,7 +638,7 @@ classdef plxReader < optickaCore
 				me.info{end+1} = ['Eyelink trial bug override : ' num2str(me.eA.needOverride)];
 				me.info{end+1} = sprintf('Valid First Post-Stimulus Saccades (#%g): %.4g ± %.3g (range %g:%g )',ns,avgs/1e3,es/1e3,mins/1e3,maxs/1e3);
 			end
-			fprintf('<strong>§</strong> Generating info for %s took <strong>%g ms</strong>\n',me.fullName,round(toc(infoTic)*1000))
+			fprintf('<strong>:#:</strong> Generating info for %s took <strong>%g ms</strong>\n',me.fullName,round(toc(infoTic)*1000))
 			me.info{end+1} = ' ';
 			me.info = me.info';
 			info = me.info;
@@ -709,7 +709,7 @@ classdef plxReader < optickaCore
 			if ~exist('exclude','var') || ~ischar(exclude); exclude = ''; end
 			if isa(inplx,'plxReader')
 				if strcmpi(me.uuid, inplx.uuid)
-					disp('Two plxReader objects are identical, skip syncing');
+					fprintf('\tThe two plxReader objects are identical, skipping syncing...\n');
 					return
 				end
 				if ~strcmpi(me.matfile, inplx.matfile)
@@ -924,7 +924,7 @@ classdef plxReader < optickaCore
 			meta.modtime = 500;
 			meta.trialtime = 500;
 			meta.matrix = [];
-			fprintf('<strong>§</strong> Parsing Behavioural files took <strong>%g ms</strong>\n', round(toc*1000))
+			fprintf('<strong>:#:</strong> Parsing Behavioural files took <strong>%g ms</strong>\n', round(toc*1000))
 			cd(oldd);
 		end
 	end
@@ -1160,7 +1160,7 @@ classdef plxReader < optickaCore
 			eL.breakIndex = [eL.trials(:).isBreak]';
 			eL.incorrectIndex = [eL.trials(:).isIncorrect]';
 			me.eventList = eL;
-			fprintf('<strong>§</strong> Loading all event markers took <strong>%g ms</strong>\n',round(toc*1000))
+			fprintf('<strong>:#:</strong> Loading all event markers took <strong>%g ms</strong>\n',round(toc*1000))
 			generateMeta(me);
 			clear eL
 		end
@@ -1228,7 +1228,7 @@ classdef plxReader < optickaCore
 			end
 			if me.trodality > 1 && a < i
 				me.tsList.trodreduction = true;	
-				warning('---! Removed tetrode channels with identical spike numbers !---');
+				fprintf('---! Removing tetrode channels with identical spike numbers (use channelReduction=TRUE/FALSE to control this) !---\n');
 			end
 			me.tsList.chMap = me.tsList(1).chMap;
 			me.tsList.chIndex = me.tsList.chMap; 
@@ -1270,7 +1270,7 @@ classdef plxReader < optickaCore
 					a = a + 1;
 				end
 			end
-			fprintf('<strong>§</strong> Loading all spike channels took <strong>%g ms</strong>\n',round(toc(rsT)*1000));
+			fprintf('<strong>:#:</strong> Loading all spike channels took <strong>%g ms</strong>\n',round(toc(rsT)*1000));
 		end
 
 		% ===================================================================
@@ -1338,7 +1338,7 @@ classdef plxReader < optickaCore
 				me.tsList.tsParse{ps}.var = vars;
 				clear spikes waves trials vars
 			end
-			fprintf('<strong>§</strong> Parsing spikes into trials/variables took <strong>%g ms</strong>\n',round(toc(psT)*1000))
+			fprintf('<strong>:#:</strong> Parsing spikes into trials/variables took <strong>%g ms</strong>\n',round(toc(psT)*1000))
 			if me.startOffset ~= 0
 				me.info{end+1} = sprintf('START OFFSET ACTIVE : %g', me.startOffset);
 			end

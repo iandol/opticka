@@ -133,7 +133,7 @@ classdef eyelinkAnalysis < analysisCore
 				fprintf('\n');
 				cd(oldpath)
 			end
-			fprintf('<strong>§</strong> Loading Raw EDF Data took <strong>%g ms</strong>\n',round(toc*1000));
+			fprintf('<strong>:#:</strong> Loading Raw EDF Data took <strong>%g ms</strong>\n',round(toc*1000));
 		end
 		
 		% ===================================================================
@@ -514,7 +514,7 @@ classdef eyelinkAnalysis < analysisCore
 				me.ROIInfo(i).breakFix = me.trials(i).breakFix;
 				me.ROIInfo(i).incorrect = me.trials(i).incorrect;
 			end
-			fprintf('<strong>§</strong> Parsing eyelink region of interest (ROI) took <strong>%g ms</strong>\n', round(toc(tROI)*1000))
+			fprintf('<strong>:#:</strong> Parsing eyelink region of interest (ROI) took <strong>%g ms</strong>\n', round(toc(tROI)*1000))
 		end
 		
 		% ===================================================================
@@ -572,7 +572,7 @@ classdef eyelinkAnalysis < analysisCore
 				me.TOIInfo(i).breakFix = me.trials(i).breakFix;
 				me.TOIInfo(i).incorrect = me.trials(i).incorrect;
 			end
-			fprintf('<strong>§</strong> Parsing eyelink time of interest (TOI) took <strong>%g ms</strong>\n', round(toc(tTOI)*1000))
+			fprintf('<strong>:#:</strong> Parsing eyelink time of interest (TOI) took <strong>%g ms</strong>\n', round(toc(tTOI)*1000))
 		end
 		
 		% ===================================================================
@@ -1504,7 +1504,7 @@ classdef eyelinkAnalysis < analysisCore
 						me.trials(jj).msacc(ii).dX = sac(ii,6);
 						me.trials(jj).msacc(ii).dY = sac(ii,7);
 						[theta,rho]=cart2pol(sac(ii,6),sac(ii,7));
-						me.trials(jj).msacc(ii).theta = rad2ang(theta);
+						me.trials(jj).msacc(ii).theta = me.rad2ang(theta);
 						me.trials(jj).msacc(ii).rho = rho;
 						me.trials(jj).msacc(ii).isMicroSaccade = rho<=me.minSaccadeDistance;
 					end
@@ -1520,7 +1520,7 @@ classdef eyelinkAnalysis < analysisCore
 					getReport(ME)
 				end
 			end
-			fprintf('<strong>§</strong> Parsing MicroSaccades took <strong>%g ms</strong>\n', round(toc*1000))
+			fprintf('<strong>:#:</strong> Parsing MicroSaccades took <strong>%g ms</strong>\n', round(toc*1000))
 				
 			function v = vecvel(xx,SAMPLING,TYPE)
 				%------------------------------------------------------------
@@ -1571,10 +1571,8 @@ classdef eyelinkAnalysis < analysisCore
 				%   sac(1:num,6)   horizontal amplitude     (dX)
 				%   sac(1:num,7)   vertical amplitude       (dY)
 				%---------------------------------------------------------------------
-				
 				% SDS... VFAC (relative velocity threshold) E&M 2006 use a value of VFAC=5
-				
-				
+
 				% compute threshold
 				% SDS... this is sqrt[median(x^2) - (median x)^2]
 				msdx = sqrt( median(vel(:,1).^2) - (median(vel(:,1)))^2 );
@@ -1674,7 +1672,6 @@ classdef eyelinkAnalysis < analysisCore
 				%   monol(:,1:7)      monocular microsaccades of the left eye
 				%   monor(:,1:7)      monocular microsaccades of the right eye
 				%---------------------------------------------------------------------
-				
 				% SDS.. The aim of this routine is to pair up msaccs in L & R eyes that are
 				%       coincident in time. Some msaccs in one eye may not have a matching
 				%       msacc in the other; the code also seems to allow for a msacc in one

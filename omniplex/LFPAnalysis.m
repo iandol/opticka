@@ -84,7 +84,7 @@ classdef LFPAnalysis < analysisCore
 		%> @brief Constructor
 		%>
 		%> @param varargin see parseArgs for more details
-		%> @return
+		%> @return constructors return the object
 		% ===================================================================
 		function me = LFPAnalysis(varargin)
 			if nargin == 0; varargin.name = 'LFPAnalysis';end
@@ -155,7 +155,7 @@ classdef LFPAnalysis < analysisCore
 				getFiles(me,true);
 				if isempty(me.lfpfile);return;end
 			end
-			fprintf('\n<strong>§§</strong> Parsing all LFP data from raw plexon files denovo...\n')
+			fprintf('\n<strong>:#:</strong> Parsing all LFP data from raw plexon files denovo...\n')
 			checkPaths(me);
 			me.yokedSelection = false;
 			me.paths.oldDir = pwd;
@@ -188,7 +188,7 @@ classdef LFPAnalysis < analysisCore
 				parse(me); 
 				return
 			end
-			fprintf('\n<strong>§§</strong> Reparsing LFP data...\n')
+			fprintf('\n<strong>:#:</strong> Reparsing LFP data...\n')
 			me.ft = struct();
 			me.results = struct();
 			parseEvents(me.p);
@@ -209,7 +209,7 @@ classdef LFPAnalysis < analysisCore
 				getFiles(me, true);
 				if isempty(me.file); warning('No plexon file selected'); return; end
 			end
-			fprintf('\n<strong>§§</strong> Lazy parsing LFP data (i.e. only structures that haven''t been parsed yet)...\n')
+			fprintf('\n<strong>:#:</strong> Lazy parsing LFP data (i.e. only structures that haven''t been parsed yet)...\n')
 			checkPaths(me);
 			me.paths.oldDir = pwd;
 			cd(me.dir);
@@ -247,7 +247,7 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		function toggleSaccadeRealign(me, varargin)
 			if me.p.saccadeRealign == true; t = 'ENABLED';else t = 'DISABLED'; end
-			fprintf(['\n<strong>§§</strong> Toggling Saccade align, was: ' t '\n'])
+			fprintf(['\n<strong>:#:</strong> Saccade align state, was: ' t '\n'])
 			me.p.saccadeRealign = ~me.p.saccadeRealign;
 			me.sp.p.saccadeRealign = me.p.saccadeRealign;
 			doPlots = me.doPlots;
@@ -257,7 +257,7 @@ classdef LFPAnalysis < analysisCore
 			me.doPlots = doPlots;
 			if me.p.saccadeRealign == true
 				t = ['Saccade Realign ENABLED @ ' datestr(now)];
-				fprintf(['\n<strong>§§</strong> ' t '\n']);
+				fprintf(['\n<strong>:#:</strong> ' t '\n']);
 				if me.openUI; 
 					t = {' '; t; ' '};
 					s=get(me.handles.list,'String');
@@ -266,7 +266,7 @@ classdef LFPAnalysis < analysisCore
 				end
 			else
 				t = ['Saccade Realign DISABLED @ ' datestr(now)];
-				fprintf(['\n<strong>§§</strong> ' t '\n']);
+				fprintf(['\n<strong>:#:</strong> ' t '\n']);
 				if me.openUI; 
 					t = {' '; t; ' '};
 					s=get(me.handles.list,'String');
@@ -286,7 +286,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseSpikes(me, varargin)
-			fprintf('\n<strong>§§</strong> Syncing settings and reparsing Spike data...\n')
+			fprintf('\n<strong>:#:</strong> Syncing settings and reparsing Spike data...\n')
 			me.sp.p.saccadeRealign = me.p.saccadeRealign;
 			in.cutTrials = me.cutTrials;
 			in.selectedTrials = me.selectedTrials;
@@ -396,7 +396,7 @@ classdef LFPAnalysis < analysisCore
 			end
 			ft.uniquetrials = unique(ft.trialinfo);
 			
-			fprintf('<strong>§</strong> Parsing into fieldtrip format took <strong>%g ms</strong>\n',round(toc(getft)*1000));
+			fprintf('<strong>:#:</strong> Parsing into fieldtrip format took <strong>%g ms</strong>\n',round(toc(getft)*1000));
 			
 			if ~isempty(ft)
 				me.ft = ft;
@@ -653,7 +653,7 @@ classdef LFPAnalysis < analysisCore
 		function ftFrequencyAnalysis(me, cfg, preset, tw, cycles, smth, width,toi,foi)
 			if ~isfield(me.ft,'label'); getFieldTripLFPs(me); end
 			if me.openUI; setTimeFreqOptions(me); end
-			
+			if ~exist('cfg','var') || isempty(cfg); cfg=[]; end
 			if ~exist('preset','var') || isempty(preset); preset=me.options.method; end
 			if ~exist('tw','var') || isempty(tw); tw=me.options.tw; end
 			if ~exist('cycles','var') || isempty(cycles); cycles = me.options.cycles; end
@@ -667,9 +667,8 @@ classdef LFPAnalysis < analysisCore
 			
 			ft = me.ft;
 			cfgUsed = {};
-			if ~exist('cfg','var') || isempty(cfg)
-				cfg				= [];
-				cfg.keeptrials	= 'yes';
+			if isempty(cfg) || (length(fieldnames(cfg))==1 && isfield(cfg,'keeptrials'))
+				if ~isfield(cfg,'keeptrials'); cfg.keeptrials	= 'no'; end
 				cfg.output		= 'pow';
 				cfg.channel		= ft.label{me.selectedLFP};
 				if ischar(toi); cfg.toi=str2num(toi); else cfg.toi=toi; end % time window "slides"
@@ -685,7 +684,7 @@ classdef LFPAnalysis < analysisCore
 						cfg.taper			= 'hanning';
 						lf						= round(1 / cfg.tw);
 						cfg.foi				= lf:min(diff(cfg.foi)):max(cfg.foi); % analysis frequencies
-						fprintf('Fixed window of %g means the minimum frequency of interest is: %g\n', cfg.tw, lf);
+						fprintf('\n:#:--->>>Fixed window of %g means the minimum frequency of interest is: %g\n', cfg.tw, lf);
 						cfg.t_ftimwin		= ones(length(cfg.foi),1).*tw;   % length of fixed time window
 					case 'fix2'
 						cfg.method			= 'mtmconvol';
@@ -717,15 +716,21 @@ classdef LFPAnalysis < analysisCore
 			end
 			for i = 1:me.nSelection
 				cfg.trials = me.selectedTrials{i}.idx;
+				if isfield(ft,'uniquetrials')
+					ut = ft.uniquetrials;
+					ft = rmfield(ft,'uniquetrials');
+				end
 				fq{i} = ft_freqanalysis(cfg,ft);
 				fq{i}.cfgUsed=cfg;
 				fq{i}.name = me.selectedTrials{i}.name;
+				if exist('ut','var'); fq{i}.uniquetrials = ut; end
 			end
 			me.lastFrequencyMethod = ['fq' preset];
 			me.results(1).(me.lastFrequencyMethod) = fq;
 			if me.doPlots
 				plot(me,'freq',me.lastFrequencyMethod);
 			end
+			clear fq ut ft;
 			%ftFrequencyStats(me, ['fq' preset],{'no','relative','absolute','db'});
 		end
 		
@@ -1227,7 +1232,7 @@ classdef LFPAnalysis < analysisCore
 					me.drawAverageLFPs();
 				case {'timelock','tlock','tl'}
 					me.drawTimelockLFPs();
-				case {'freq','frequency','f'}
+				case {'freq','frequency','f','power'}
 					me.drawLFPFrequencies(args(:));
 				case {'bp','bandpass'}
 					me.drawBandPass();
@@ -1240,8 +1245,6 @@ classdef LFPAnalysis < analysisCore
 				otherwise
 					disp('Didn''t recognise draw method, try: normal, all, continuous, raw, average, timelock, freq, bandpass, spikelfp, fstats etc...')
 			end
-			
-			
 		end
 		
 		% ===================================================================
@@ -1277,6 +1280,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function save(me, varargin)
+			fprintf('<strong>:#:</strong> Saving LFPAnalysis object: ...\t');
 			[~,f,~] = fileparts(me.lfpfile);
 			name = ['LFP' f];
 			if ~isempty(me.ft)
@@ -1293,6 +1297,7 @@ classdef LFPAnalysis < analysisCore
 			end
 				name = [name '.mat'];
 			[f,p] = uiputfile(name,'SAVE LFP Analysis File');
+			stic = tic;
 			if ischar(f) && ~isempty(f)
 				od = pwd;
 				cd(p);
@@ -1302,6 +1307,7 @@ classdef LFPAnalysis < analysisCore
 				save(f,'lfp');
 				cd(od);
 			end
+			fprintf('... took <strong>%g ms</strong>\n',round(toc(stic)*1000));
 		end
 		
 		% ===================================================================
@@ -1327,6 +1333,9 @@ classdef LFPAnalysis < analysisCore
 			if me.nLFPs<1; warningdlg('Data not parsed yet...');return;end
 			cuttrials = '[ ';
 			if ~isempty(me.cutTrials)
+				if iscellstr(me.cutTrials)
+					me.cutTrials = int32(me.cellArray2Num(me.cutTrials));
+				end
 				cuttrials = [cuttrials num2str(me.cutTrials)];
 			elseif ~isempty(me.cutTrials)
 				cuttrials = [cuttrials num2str(me.cutTrials)];
@@ -1354,7 +1363,7 @@ classdef LFPAnalysis < analysisCore
 			end
 			
 			spk = 'p';
-			if me.sp.nUnits == 0
+			if isempty(me.sp) || me.sp.nUnits == 0
 				spk = [spk '|No units'];
 			else
 				for i = 1:me.sp.nUnits
@@ -1434,7 +1443,11 @@ classdef LFPAnalysis < analysisCore
 				me.cutTrials = int32(str2num(answer{4}));
 				me.cutTrials = sort(unique(me.cutTrials));
 				me.selectedLFP = answer{5};
-				me.sp.selectedUnit = answer{6};
+				if ~isempty(me.sp) 
+					if me.sp.nUnits > 0
+						me.sp.selectedUnit = answer{6};
+					end
+				end
 				me.measureRange = str2num(answer{8});
 				me.plotRange = str2num(answer{9});
 				me.baselineWindow = str2num(answer{10});
@@ -1635,12 +1648,12 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function LFPs = parseLFPs(me)
-			if me.nLFPs == 0
+			if me.nLFPs == 0 || isempty(me.LFPs(1).time);
 				LFPs = readLFPs(me.p);
 			else
 				LFPs = me.LFPs;
 			end
-			tic
+			plfp = tic;
 			window = me.LFPWindow; winsteps = round(window/1e-3);
 			demeanW = round(me.baselineWindow/1e-3) - 1;
 			for j = 1:length(LFPs)
@@ -1685,7 +1698,7 @@ classdef LFPAnalysis < analysisCore
 				LFPs(j).reparse = true;
 			end
 			
-			fprintf('<strong>§</strong> Parsing LFPs into trials with event markers took <strong>%g ms</strong>\n',round(toc*1000));
+			fprintf('<strong>:#:</strong> Parsing LFPs into trials with event markers took <strong>%g ms</strong>\n',round(toc(plfp)*1000));
 			
 			if ~isempty(LFPs(1).trials)
 				me.LFPs = LFPs;
@@ -1708,10 +1721,13 @@ classdef LFPAnalysis < analysisCore
 			if me.yokedSelection == true; fprintf('Object is yoked, cannot run selectTrials...\n');return; end
 			if isempty(me.options); initialise(me); end%initialise the various analysisCore options fields
 			LFPs = me.LFPs; %#ok<*PROP>
-			
+			if ~isfield(LFPs,'trials')
+				LFPs = readLFPs(me.p); parseLFPs(me);
+				me.LFPs = LFPs;
+			end
 			if length(me.selectedBehaviour) ~= length(me.map)
 				for i = 1:length(me.map);me.selectedBehaviour{i} = 'correct';end
-				warning('Reset .selectedBehaviours to match .map length...');
+				fprintf('\n---> LFPAnalysis: Reset selectedBehaviours to match map length...\n');
 			end
 			
 			for i = 1:length(me.selectedBehaviour) %generate our selected behaviour indexes
@@ -2437,7 +2453,7 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		function drawLFPFrequencies(me,varargin)
 			if isempty(varargin) || isempty(varargin{1})
-				name = 'fqfix1';
+				name = ['fq' me.options.method];
 				if isempty(varargin)
 					varargin = {};
 				end
@@ -2468,7 +2484,8 @@ classdef LFPAnalysis < analysisCore
 			if isgraphics(me.plotDestination)
 				h = me.plotDestination;
 			else
-				h = figure;figpos(1,[1000 2000]);set(h,'Color',[1 1 1],'Name',[me.lfpfile ' ' fq{1}.cfgUsed.channel]);
+				ho = figure;figpos(1,[1000 2000]);set(ho,'Color',[1 1 1],'Name',[me.lfpfile ' ' fq{1}.cfgUsed.channel]);
+				h = uipanel('Parent',ho,'units', 'normalized', 'position', [0 0 1 1],'BackgroundColor',[1 1 0],'BorderType','none');
 			end
 			p=panel(h);
 			p.margin = [15 15 30 20];%left bottom right top
@@ -2500,14 +2517,17 @@ classdef LFPAnalysis < analysisCore
 					else
 						cfg.baseline			= me.baselineWindow;
 						cfg.baselinetype		= bl{jj};
+						if strcmpi(bl{jj},'relative') && exist('zlimi','var')
+							cfg.zlim					= zlimi;
+						else
+							
+						end
+						if strcmpi(bl{jj},'relative2')
+							cfg.baselinetype		= 'relative';
+							cfg.zlim					= [0 2];
+						end
 					end
-					if strcmpi(bl{jj},'relative') && exist('zlimi','var')
-						cfg.zlim					= zlimi;
-					end
-					if strcmpi(bl{jj},'relative2')
-						cfg.baselinetype		= 'relative';
-						cfg.zlim					= [0 2];
-					end
+					if isfield(fq{i},'uniquetrials'); fq{i} = rmfield(fq{i},'uniquetrials'); end
 					cfg.interactive			= 'no';
 					cfg.channel					= me.ft.label{me.selectedLFP};
 					cfgOut						= ft_singleplotTFR(cfg, fq{i});
@@ -2526,13 +2546,15 @@ classdef LFPAnalysis < analysisCore
 					t = [t ' |Smth:' num2str(fq{i}.cfgUsed.smooth) ' | Wdth:' num2str(fq{i}.cfgUsed.width) ];
 					title(t,'FontSize',cfg.fontsize);
 				end
-				colormap('jet');
 				for i = 1:length(h{jj});
 					set(h{jj}{i},'clim', [hmin{jj} hmax{jj}]);
 					box on; grid on;
 				end
+				colormap default
+				colormap('jet');
 			end
 			me.panels.(name) = p;
+			clear fq p
 		end
 		
 		% ===================================================================
@@ -2850,8 +2872,8 @@ classdef LFPAnalysis < analysisCore
 			end
 			me.handles(1).parent = parent;
 			
-			fs = 10;
-			SansFont = 'Helvetica';
+			fs = 11;
+			SansFont = 'Avenir Next';
 			MonoFont = 'Consolas';
 			bgcolor = [0.89 0.89 0.89];
 			bgcoloredit = [0.9 0.9 0.9];
@@ -2868,10 +2890,10 @@ classdef LFPAnalysis < analysisCore
 				handles.root = uix.BoxPanel('Parent',parent,...
 					'Title','LFP Analysis UI',...
 					'FontName',SansFont,...
-					'FontSize',fs,...
-					'FontWeight','normal',...
+					'FontSize',fs+2,...
+					'FontWeight','bold',...
 					'Padding',0,...
-					'TitleColor',[0.8 0.78 0.76],...
+					'TitleColor',[0.7 0.68 0.66],...
 					'BackgroundColor',bgcolor);
 			end
 			handles.tabs = uix.TabPanel('Parent', handles.root,'Padding',0,...
@@ -2888,18 +2910,21 @@ classdef LFPAnalysis < analysisCore
 				'FontSize',fs+1,'FontWeight','bold','FontName',SansFont,'HorizontalAlignment','left');
 			handles.controls = uix.VBoxFlex('Parent', handles.hbox,'Padding',0,'Spacing',0,'BackgroundColor',bgcolor);
 			handles.controls1 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',2,'BackgroundColor',bgcolor);
+			handles.controls3 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',2,'BackgroundColor',bgcolor);
 			handles.controls2 = uix.Grid('Parent', handles.controls,'Padding',4,'Spacing',0,'BackgroundColor',bgcolor);
 			
 			handles.parsebutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LFPAParse',...
 				'Tooltip','Parse All data',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Callback',@me.parse,...
 				'String','Parse LFPs');
 			handles.reparsebutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LFPAReparse',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tooltip','Reparse should be a bit quicker',...
 				'Callback',@me.reparse,...
@@ -2907,6 +2932,7 @@ classdef LFPAnalysis < analysisCore
 			handles.reparsebutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LFPAparses',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tooltip','Parse the spikes using the LFP trial selection, useful for plotTogether and ftSpikeLFP',...
 				'Callback',@me.parseSpikes,...
@@ -2914,6 +2940,7 @@ classdef LFPAnalysis < analysisCore
 			handles.selectbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LFPAselect',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tooltip','Select trials',...
 				'Callback',@me.select,...
@@ -2921,13 +2948,15 @@ classdef LFPAnalysis < analysisCore
 			handles.plotbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LFPAplotbutton',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tooltip','Plot',...
 				'Callback',{@me.plot, 'all'},...
-				'String','Plot Raw LFPs');
+				'String','Examine Raw LFPs');
 			handles.statbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LFPAstatbutton',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tooltip','Plot',...
 				'Callback',@me.setStats,...
@@ -2935,6 +2964,7 @@ classdef LFPAnalysis < analysisCore
 			handles.savebutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LFPAsave',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tooltip','Save this LFP Analysis object',...
 				'Callback',@me.save,...
@@ -2942,6 +2972,7 @@ classdef LFPAnalysis < analysisCore
 			handles.saccbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LMAsaccbutton',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tooltip','Toggle Saccade Realign',...
 				'Callback',@me.toggleSaccadeRealign,...
@@ -2949,32 +2980,45 @@ classdef LFPAnalysis < analysisCore
 			handles.surrbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls1,...
 				'Tag','LMAsurrbutton',...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tooltip','Create surrogate Data, with known parameters so you can test if analysis is working, reparse to recover original data',...
 				'Callback',@me.createSurrogate,...
 				'String','Create Surrogate Data!');
-			handles.analmethod = uicontrol('Style','popupmenu',...
+			handles.plotsbutton = uicontrol('Style','togglebutton',...
 				'Parent',handles.controls1,...
+				'Tag','LMAplotsbutton',...
+				'FontName',SansFont,...
+				'FontSize', fs,...
+				'Min',0,...
+				'Max',1,...
+				'Value',double(me.doPlots),...
+				'Tooltip','Plot analysis results each time or not',...
+				'Callback',@togglePlots,...
+				'String','Plot Results?');
+			handles.analmethod = uicontrol('Style','popupmenu',...
+				'Parent',handles.controls3,...
+				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Tooltip','Select a method to run',...
 				'Callback',@runAnal,...
 				'Tag','LFPAanalmethod',...
 				'String',{'plotTogether','ftTimeLockAnalysis','ftFrequencyAnalysis','ftFrequencyStats','ftBandPass','ftSpikeLFP','chSpectrum','showEyePlots'});
-			
 			handles.list = uicontrol('Style','edit',...
 				'Parent',handles.controls2,...
 				'Tag','LMAlistbox',...
 				'Min',1,...
 				'Max',100,...
-				'FontSize',fs-1,...
+				'FontSize',fs,...
 				'FontName',MonoFont,...
 				'String',{''},...
 				'uicontextmenu',hcmenu);
 			
 			set(handles.hbox,'Widths', [-1 -1]);
-			set(handles.controls,'Heights', [60 -1]);
+			set(handles.controls,'Heights', [75 30 -1]);
 			set(handles.controls1,'Heights', [-1 -1]);
-			
+			set(handles.controls3,'Widths', [-1], 'Heights', [-1])
+
 			me.sp.GUI(handles.spikepanel);
 			
 			me.handles = handles;
@@ -2988,6 +3032,13 @@ classdef LFPAnalysis < analysisCore
 				if me.nLFPs > 0
 					eval(['me.' s])
 				end
+			end
+			
+			function togglePlots(src, ~)
+				if ~exist('src','var');	return; end
+				v = get(src,'Value');
+				me.doPlots = logical(v);
+				fprintf('doPlots is %i\n',me.doPlots)
 			end
 		end
 		

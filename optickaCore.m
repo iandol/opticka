@@ -40,7 +40,7 @@ classdef optickaCore < handle
 	%--------------------DEPENDENT PROPERTIES----------%
 	properties (Dependent = true)
 		%> The fullName is the object name combined with its uuid and class name
-		fullName@char = ''
+		fullName@char
 	end
 	
 	%--------------------TRANSIENT PROPERTIES----------%
@@ -60,7 +60,7 @@ classdef optickaCore < handle
 		%> allowed properties passed to object upon construction
 		allowedProperties@char = 'name|cloning'
 		%> cached full name
-		fullName_@char = ''
+		fullName_@char
 	end
 	
 	%=======================================================================
