@@ -6,8 +6,8 @@ classdef LFPMeta < analysisCore
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
-		%> cells (sites)
-		cells@cell
+		%> LFP sites
+		sites@cell
 		%> display list
 		list@cell
 		%> raw LFP objects
@@ -18,7 +18,7 @@ classdef LFPMeta < analysisCore
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> version
-		version@double = 1.01
+		version@double = 1.11
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
@@ -68,6 +68,13 @@ classdef LFPMeta < analysisCore
 				file = {file};
 			end
 			
+			if size(me.list,2) > size(me.list,1)
+				me.list = rot90(me.list);
+				if size(me.raw,2) > size(me.raw,1)
+					me.raw = rot90(me.raw);
+				end
+			end
+			
 			addtic = tic;
 			l = length(file);
 			for ll = 1:length(file)
@@ -77,40 +84,19 @@ classdef LFPMeta < analysisCore
 					optimiseSize(lfp);
 					lfp.results = struct();
 					idx = me.nSites+1;
-					me.raw{idx} = lfp;
-					for i = 1:2
-						if ~isempty(lfp.selectedTrials)
-							me.cells{idx,i}.name = [lfp.selectedTrials{i}.name];
-						else
-							me.cells{idx,i}.name = 'unknown';
-						end
-						me.cells{idx,i}.weight = 1;
-						me.cells{idx,i}.selLFP = lfp.selectedLFP;
-						me.cells{idx,i}.selUnit = lfp.sp.selectedUnit;
-						me.cells{idx,i}.type = 'LFPAnalysis';
-					end
+					me.raw{idx,1} = lfp;
+					%generateSitesInfo(me,idx);
 				else
 					warndlg('This file wasn''t an LFPAnalysis MAT file...')
 					return
 				end
-
-				t = [me.cells{idx,1}.name '>>>' me.cells{idx,2}.name];
-				if strcmpi(me.cells{idx,1}.type,'oPro')
-					t = regexprep(t,'[\|\s][\d\-\.]+','');
-				else
-					
-				end
-				t = [lfp.lfpfile ' : ' t];
-				me.list{idx} = t;
-
-				set(me.handles.list,'String',me.list);
-				set(me.handles.list,'Value',me.nSites);
-
 				clear lfp
 			end
 			
-			fprintf('Cell loading took %.5g seconds\n',toc(addtic))
-			notifyUI(me,sprintf('Loaded %g Cells, you now need to process them...',me.nSites));
+			generateSitesList(me);
+			tt=toc(addtic);
+			fprintf('Cell loading took %.5g seconds\n',tt)
+			notifyUI(me,sprintf('Loaded %g Cells in %.5gsecs, you now need to process them...',me.nSites,tt));
 			
 		end
 		
@@ -122,6 +108,7 @@ classdef LFPMeta < analysisCore
 		% ===================================================================
 		function process(me, varargin)
 			if me.nSites > 0
+				me.handles.axistabs.Selection = 1;
 				me.previousSelection = -1;
 				ho = me.handles.axisind;
 				delete(ho.Children);
@@ -288,8 +275,9 @@ classdef LFPMeta < analysisCore
 				errordlg('No File Specified', 'Meta-Analysis Error');
 				return
 			end
-			notifyUI(me,'Loading MetaAnalysis object...');
+			notifyUI(me,'Loading MetaAnalysis object, please be patient...');
 			cd(path);
+			ltic=tic;
 			load(file);
 			if exist('lfpmet','var') && isa(lfpmet,'LFPMeta')
 				reset(me);
@@ -297,13 +285,10 @@ classdef LFPMeta < analysisCore
 					lfpmet.raw{i}.results = struct();
 				end
 				me.raw = lfpmet.raw;
-				me.cells = lfpmet.cells;
-				me.list = lfpmet.list;
-				set(me.handles.list,'String',me.list);
-				set(me.handles.list,'Value',1);
 			end
+			generateSitesList(me);
 			clear lfpmet
-			notifyUI(me,'Loaded MetaAnalysis object: %i sites; use context menu to reparse and analyse',me.nSites);
+			notifyUI(me,'Loaded MetaAnalysis object: %i sites took %.3gs; use context menu to reparse and analyse',me.nSites,toc(ltic));
 		end
 		
 		% ===================================================================
@@ -318,6 +303,9 @@ classdef LFPMeta < analysisCore
 				errordlg('No file selected...')
 				return 
 			end
+			fprintf('<strong>:#:</strong> Saving LFPAnalysis object: ...\t');
+			notifyUI(me,'Saving MetaAnalysis object...');
+			stic = tic;
 			me.oldDir = pwd;
 			cd(path);
 			lfpmet = me; %#ok<NASGU>
@@ -327,6 +315,9 @@ classdef LFPMeta < analysisCore
 			save(file,'lfpmet');
 			clear lfpmet;
 			cd(me.oldDir);
+			to = round(toc(stic)*1000);
+			fprintf('... took <strong>%g ms</strong>\n',to);
+			notifyUI(me,'MetaAnalysis object saved in %gms, you''ll need to reanalyse now...',to);
 		end
 		
 		% ===================================================================
@@ -378,21 +369,20 @@ classdef LFPMeta < analysisCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief get method for nSites
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
 		function value = get.nSites(me)
-			value = length(me.list);
+			value = length(me.raw);
 			if isempty(value)
 				value = 0;
 				return
-			elseif value == 1 && iscell(me.list) && isempty(me.list{1})
+			elseif value == 1 && iscell(me.raw) && isempty(me.raw{1})
 				value = 0;
 			end
 		end
-		
 		
 		% ===================================================================
 		%> @brief
@@ -412,6 +402,30 @@ classdef LFPMeta < analysisCore
 	%=======================================================================
 	
 		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function cleanPaths(me,varargin)
+			me.rootDirectory = uigetdir([],'Please select new root folder');
+			rD = me.rootDirectory;
+			if ~isempty(regexpi(rD,[filesep '$'])); rD = rD(1:end-1); end
+			fprintf('\n--->>> Will rebuild directories using %s \n',rD);
+			for i = 1:numel(me.raw)
+				if isprop(me.raw{i},'rootDirectory')
+					me.raw{i}.rootDirectory = me.rootDirectory;
+				end
+				if ~exist(me.raw{i}.dir,'dir')
+					me.raw{i}.checkPaths();
+				else
+					fprintf('--->>> %i. %s already exists, no need to rebuild path...\n',i,me.raw{i}.dir);
+				end
+			end
+			generateSitesList(me);
+		end
+		
+		% ===================================================================
 		%> @brief plot individual
 		%>
 		%> @param
@@ -424,6 +438,7 @@ classdef LFPMeta < analysisCore
 				me.raw{sel}.select();
 				notifyUI(me,'If you have changed the selection for a site, you will need to reanalyse/recompute averages');
 			end
+			generateSitesList(me);
 		end
 		
 		% ===================================================================
@@ -435,7 +450,12 @@ classdef LFPMeta < analysisCore
 		function plotSite(me, varargin)
 			tab = get(me.handles.axistabs, 'Selection');
 			if me.nSites > 0 && tab == 1
-				plot(me);
+				sel = get(me.handles.list, 'Value');
+				if ~isempty(fieldnames(me.raw{sel}.results))
+					plot(me);
+				else
+					fprintf('--->>> There are no fieldtrip results for this site, cannot plot...\n')
+				end
 			end
 		end
 		
@@ -488,8 +508,8 @@ classdef LFPMeta < analysisCore
 				sel = get(me.handles.list,'Value');
 				w = str2num(get(me.handles.weight,'String'));
 				if length(w) == 2;
-					me.cells{sel,1}.weight = w(1);
-					me.cells{sel,2}.weight = w(2);
+					me.sites{sel,1}.weight = w(1);
+					me.sites{sel,2}.weight = w(2);
 					if min(w) == 0
 						s = me.list{sel};
 						s = regexprep(s,'^\*+','');
@@ -522,7 +542,7 @@ classdef LFPMeta < analysisCore
 		function remove(me, varargin)
 			if me.nSites > 0
 				sel = get(me.handles.list,'Value');
-				me.cells(sel,:) = [];
+				me.sites(sel,:) = [];
 				me.list(sel) = [];
 				me.raw(sel) = [];
 				if sel > 1
@@ -569,7 +589,7 @@ classdef LFPMeta < analysisCore
 				notifyUI(me,'Resetting all data...');
 				drawnow
 				me.raw = cell(1);
-				me.cells = cell(1);
+				me.sites = cell(1);
 				me.list = cell(1);
 				if isfield(me.handles,'list')
 					set(me.handles.list,'Value',1);
@@ -579,7 +599,8 @@ classdef LFPMeta < analysisCore
 				delete(ho.Children);
 				ho = me.handles.axisall;
 				delete(ho.Children);
-				me.handles.axistabs.SelectedChild=1;
+				me.handles.axistabs.SelectedChild = 1;
+				me.handles.axistabs.Selection = 1;
 				if isfield(me.handles,'axis1')
 					me.handles.axistabs.SelectedChild=2; 
 					axes(me.handles.axis2);cla
@@ -595,7 +616,62 @@ classdef LFPMeta < analysisCore
 	%=======================================================================
 	methods (Access = protected) %------------------PRIVATE METHODS
 	%=======================================================================
+	
+		% ===================================================================
+		%> @brief generates the selection information
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function generateSitesInfo(me,idx)
+			for i = 1:2
+				if ~isempty(me.raw{idx}.selectedTrials)
+					me.sites{idx,i}.name = [me.raw{idx}.selectedTrials{i}.name];
+				else
+					me.sites{idx,i}.name = 'unknown';
+				end
+				me.sites{idx,i}.weight = 1;
+				me.sites{idx,i}.selLFP = me.raw{idx}.selectedLFP;
+				me.sites{idx,i}.selUnit = me.raw{idx}.sp.selectedUnit;
+				me.sites{idx,i}.type = 'LFPAnalysis';
+				me.sites{idx,i}.file = me.raw{idx}.lfpfile;
+			end
+		end
+		% ===================================================================
+		%> @brief generates the list shown in the GUI
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function generateSitesList(me)
+			for idx = 1 : me.nSites
+				generateSitesInfo(me,idx);
+				t = [me.sites{idx,1}.name '>>>' me.sites{idx,2}.name];
+				if strcmpi(me.sites{idx,1}.type,'oPro')
+					t = regexprep(t,'[\|\s][\d\-\.]+','');
+				else
+					
+				end
+				t = [me.raw{idx}.lfpfile ': ' t];
+				me.list{idx,1} = t;
+			end
 
+			if size(me.list,2) > size(me.list,1)
+				me.list = rot90(me.list);
+				if size(me.raw,2) > size(me.raw,1)
+					me.raw = rot90(me.raw);
+				end
+			end
+			
+			[me.list, indx] = sortrows(me.list);
+			me.raw = me.raw(indx);
+			
+			v = get(me.handles.list,'Value');
+			if v > me.nSites
+				set(me.handles.list,'Value',me.nSites);
+			end
+			set(me.handles.list,'String',me.list);
+		end
 		
 		% ===================================================================
 		%> @brief 
@@ -635,10 +711,12 @@ classdef LFPMeta < analysisCore
 			uimenu(hcmenu,'Label','Parse (selected)','Callback',@me.parse,'Accelerator','p');
 			uimenu(hcmenu,'Label','Reparse (selected)','Callback',@me.reparse,'Accelerator','e');
 			uimenu(hcmenu,'Label','Select (selected)','Callback',@me.select,'Accelerator','s');
+			uimenu(hcmenu,'Label','Show GUI (selected)','Callback',@me.remove,'Accelerator','g');
 			uimenu(hcmenu,'Label','Remove (selected)','Callback',@me.remove,'Accelerator','x');
-			uimenu(hcmenu,'Label','1. Reanalyse (all)','Callback',@me.process,'Separator','on','Accelerator','r');
-			uimenu(hcmenu,'Label','2. Compute Average (all)','Callback',@me.run,'Accelerator','a');
+			uimenu(hcmenu,'Label','A. Reanalyse (all)','Callback',@me.process,'Separator','on','Accelerator','r');
+			uimenu(hcmenu,'Label','B. Average (all)','Callback',@me.run,'Accelerator','a');
 			uimenu(hcmenu,'Label','Toggle Saccades (all)','Callback',@me.toggleSaccades,'Separator','on');
+			uimenu(hcmenu,'Label','Clean up Paths (all)','Callback',@me.cleanPaths);
 			
 			fs = 11;
 			SansFont = 'Avenir Next';
@@ -765,14 +843,14 @@ classdef LFPMeta < analysisCore
 				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Callback',@me.process,...
-				'String','Reanalyse All');
+				'String','A. Reanalyse All');
 			handles.runbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls3,...
 				'Tag','LMAsettingsbutton',...
 				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Callback',@me.run,...
-				'String','Average All');
+				'String','B. Average All');
 			
 			set(handles.hbox,'Widths', [-3 -1]);
 			set(handles.controls,'Heights', [70 35 -1]);

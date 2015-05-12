@@ -148,7 +148,11 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function parseEvents(me)
-			cd(me.dir);
+			try
+				cd(me.dir);
+			catch
+				
+			end
 			if ~isa(me.rE,'runExperiment') || isempty(me.rE)
 				readMat(me);
 			end
@@ -182,7 +186,7 @@ classdef plxReader < optickaCore
 			if ~isa(me.rE,'runExperiment') || isempty(me.rE)
 				readMat(me);
 			end
-			if isempty(me.tsList)
+			if isempty(me.tsList) || ~isfield(me.tsList, 'tsParse')
 				readSpikes(me);
 			end
 			if isempty(me.eventList)
@@ -611,7 +615,7 @@ classdef plxReader < optickaCore
 				me.info{end+1} = 'Variable Map (Variable Index1 Index2 Index 3 Value1 Value2 Value3):';
 				me.info{end+1} = num2str(me.meta.matrix);
 			end
-			if ~isempty(me.tsList)
+			if ~isempty(fieldnames(me.tsList))
 				me.info{end+1} = ' ';
 				me.info{end+1} = ['Total Channel list : ' num2str(me.tsList.chMap)];
 				me.info{end+1} = ['Trodality Reduction : ' num2str(me.tsList.trodreduction)];
@@ -1195,8 +1199,8 @@ classdef plxReader < optickaCore
 			[~,chmap]												= plx_chanmap(me.file);
 			chnames = cellstr(chnames);
 			
-			%!!!WARNING tscounts column 1 is empty, read plx_info for details
-			%we remove the first column here so we don't have the idx-1 issue
+			% !!!WARNING tscounts column 1 is empty, read plx_info for details
+			% we remove the first column here so we don't have the idx-1 issue
 			tscounts = tscounts(:,2:end);
 			
 			[a,b]=ind2sub(size(tscounts),find(tscounts>0)); %finds row and columns of nonzero values

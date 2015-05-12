@@ -3,7 +3,7 @@ classdef LFPAnalysis < analysisCore
 	%> PLX/PL2 reading, taking our trial selection and behavioural 
 	%> selection into account. As we can do spike-LFP anaysis this asks for a
 	%> spike data file, it can be the same as the LFP file or different if we resorted
-	%> the data. 
+	%> the data.
 	
 	%------------------PUBLIC PROPERTIES----------%
 	properties
@@ -3049,6 +3049,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function closeUI(me, varargin)
+			fprintf('--->>> Close UI for object: %s',me.fullName);
 			try me.sp.closeUI; end %#ok<TRYNC>
 			try delete(me.handles.parent); end %#ok<TRYNC>
 			me.handles = struct();

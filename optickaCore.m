@@ -309,16 +309,21 @@ classdef optickaCore < handle
 			end
 			if isprop(ego,'matdir')
 				if ~exist(ego.matdir,'dir')
-					if isprop(ego,'matfile')
-						fn = ego.matfile;
+					if exist(ego.dir,'dir')
+						ego.matdir = ego.file;
 					else
-						fn = '';
-					end
-					p = uigetdir('',['Please find new directory for: ' fn]);
-					if p ~= 0
-						ego.matdir = p;
-					else
-						warning('Can''t find valid source directory')
+						if isprop(ego,'matfile')
+							fn = ego.matfile;
+						else
+							fn = '';
+						end
+
+						p = uigetdir('',['Please find new directory for: ' fn]);
+						if p ~= 0
+							ego.matdir = p;
+						else
+							warning('Can''t find valid source directory')
+						end
 					end
 				end
 			end

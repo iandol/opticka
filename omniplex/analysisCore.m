@@ -79,8 +79,10 @@ classdef analysisCore < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function checkPaths(me)
+		function checkPaths(me,varargin)
 			if isprop(me,'dir')
+				d = me.dir;
+				rD = me.rootDirectory;
 				if ~exist(me.dir,'dir')
 					if isprop(me,'file')
 						fn = me.file;
@@ -89,11 +91,27 @@ classdef analysisCore < optickaCore
 					else
 						fn = '';
 					end
-					p = uigetdir('',['Please find new directory for: ' fn]);
-					if p ~= 0
-						me.dir = p;
+					if ~isempty(regexpi(d,[filesep '$'])); d = d(1:end-1); end
+					seps = regexpi(d,filesep,'split');
+					isDir = false;
+					while ~isDir
+						nd = [rD filesep seps{end}];
+						if exist(nd,'dir')
+							isDir = true;
+						elseif numel(seps) == 1
+							nd = '';
+							break
+						else
+							nd = '';
+							seps{end-1} = [seps{end-1} filesep seps{end}];
+							seps = seps(1:end-1);
+						end
+					end
+					if isDir
+						fprintf('--->>> Found %s based on %s\n',nd,d)
+						me.dir = nd;
 					else
-						warning('Can''t find valid source directory')
+						fprintf('---!!! Couldn''t find: %s, please copy data to correct folders\n',d);
 					end
 				end
 				if ~isempty(regexpi(me.dir,'^/Users/'))
@@ -102,14 +120,14 @@ classdef analysisCore < optickaCore
 						me.dir = ['~' re.rd];
 					end
 				end
-			end
-			if isprop(me,'p') && isa(me.p,'plxReader')
-				me.p.dir = me.dir;
-				checkPaths(me.p);
-			end
-			if isprop(me,'sp') && ~isempty(me.sp) && isprop(me.sp,'p') && isa(me.sp.p,'plxReader')
-				me.sp.p.dir = me.dir;
-				checkPaths(me.sp.p);
+				if isDir && isprop(me,'p') && isa(me.p,'plxReader')
+					me.p.dir = me.dir;
+					me.p.matdir = me.dir;
+					checkPaths(me.p);
+				end
+				if isDir && isprop(me,'sp') && isa(me.sp,'spikeAnalysis')
+					checkPaths(me.sp)
+				end
 			end
 		end
 		
@@ -426,8 +444,10 @@ classdef analysisCore < optickaCore
 		%> @param x - first signal in the time domain
 		%> @param y - second signal in the time domain
 		%> @return phase - phase difference Y -> X, degrees
+		%> @return angX - phase X, degrees
+		%> @return angY - phase Y, degrees
 		% ===================================================================
-		function phase = phaseDifference(x,y)	
+		function [PhDiff, angX, angY] = phaseDifference(x,y)	
 			if size(x, 2) > 1 ; x = x'; end% represent x as column-vector if it is not
 			if size(y, 2) > 1; y = y';	end% represent y as column-vector if it is not
 			% signals length
@@ -443,8 +463,25 @@ classdef analysisCore < optickaCore
 			% phase difference calculation
 			[~, indx] = max(abs(X));
 			[~, indy] = max(abs(Y));
-			PhDiff = angle(Y(indy)) - angle(X(indx));
-			phase = PhDiff*180/pi;
+			angY = angle(Y(indy));
+			angX = angle(X(indx));
+			PhDiff = angY - angX;
+			PhDiff = PhDiff * (180/pi);
+		end
+		
+		% ===================================================================
+		%> @brief phase basic phase measurement
+		%>
+		%> @param x - signal in the time domain
+		%> @return phase - phase, degrees
+		% ===================================================================
+		function angX = phase(x)	
+			if size(x, 2) > 1 ; x = x'; end% represent x as column-vector if it is not
+			xlen = length(x); % signals length
+			xwin = hanning(xlen, 'periodic'); % window preparation
+			X = fft(x.*xwin); % fft of the signal
+			[~, indx] = max(abs(X)); % phase difference calculation
+			angX = angle(X(indx));
 		end
 		
 		% ===================================================================
