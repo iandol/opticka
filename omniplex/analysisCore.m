@@ -81,22 +81,23 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		function checkPaths(me,varargin)
 			if isprop(me,'dir')
-				d = me.dir;
+				if isprop(me,'file')
+					fn = me.file;
+				elseif isprop(me,'lfpfile')
+					fn = me.lfpfile;
+				else
+					fn = '';
+				end
+				oldDir = me.dir;
 				rD = me.rootDirectory;
+				isDir = false;
 				if ~exist(me.dir,'dir')
-					if isprop(me,'file')
-						fn = me.file;
-					elseif isprop(me,'lfpfile')
-						fn = me.lfpfile;
-					else
-						fn = '';
-					end
-					if ~isempty(regexpi(d,[filesep '$'])); d = d(1:end-1); end
-					seps = regexpi(d,filesep,'split');
-					isDir = false;
+					if ~isempty(regexpi(oldDir,[filesep '$'])); oldDir = oldDir(1:end-1); end
+					seps = regexpi(oldDir,filesep,'split');
 					while ~isDir
 						nd = [rD filesep seps{end}];
 						if exist(nd,'dir')
+							me.dir = nd;
 							isDir = true;
 						elseif numel(seps) == 1
 							nd = '';
@@ -107,12 +108,8 @@ classdef analysisCore < optickaCore
 							seps = seps(1:end-1);
 						end
 					end
-					if isDir
-						fprintf('--->>> Found %s based on %s\n',nd,d)
-						me.dir = nd;
-					else
-						fprintf('---!!! Couldn''t find: %s, please copy data to correct folders\n',d);
-					end
+				else
+					isDir = true;
 				end
 				if ~isempty(regexpi(me.dir,'^/Users/'))
 					re = regexpi(me.dir,'^(?<us>/Users/[^/]+)(?<rd>.+)','names');
@@ -120,13 +117,22 @@ classdef analysisCore < optickaCore
 						me.dir = ['~' re.rd];
 					end
 				end
-				if isDir && isprop(me,'p') && isa(me.p,'plxReader')
-					me.p.dir = me.dir;
-					me.p.matdir = me.dir;
-					checkPaths(me.p);
-				end
-				if isDir && isprop(me,'sp') && isa(me.sp,'spikeAnalysis')
-					checkPaths(me.sp)
+				if isDir
+					fprintf('--->>> Found %s based on %s for %s file %s\n',me.dir,oldDir,me.className,fn)
+					if isprop(me,'p') && isa(me.p,'plxReader')
+						me.p.dir = me.dir;
+						me.p.matdir = me.dir;
+						checkPaths(me.p);
+					end
+					if isprop(me,'sp') && isa(me.sp,'spikeAnalysis')
+						me.sp.dir = me.dir;
+						if isprop(me.sp,'rootDirectory')
+							me.sp.rootDirectory = me.rootDirectory;
+						end
+						checkPaths(me.sp);
+					end
+				else
+					fprintf('---!!! Couldn''t find: %s, please copy file %s to correct folders\n',oldDir,fn);
 				end
 			end
 		end

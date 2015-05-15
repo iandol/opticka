@@ -416,11 +416,7 @@ classdef LFPMeta < analysisCore
 				if isprop(me.raw{i},'rootDirectory')
 					me.raw{i}.rootDirectory = me.rootDirectory;
 				end
-				if ~exist(me.raw{i}.dir,'dir')
-					me.raw{i}.checkPaths();
-				else
-					fprintf('--->>> %i. %s already exists, no need to rebuild path...\n',i,me.raw{i}.dir);
-				end
+				me.raw{i}.checkPaths();
 			end
 			generateSitesList(me);
 		end
@@ -713,8 +709,8 @@ classdef LFPMeta < analysisCore
 			uimenu(hcmenu,'Label','Select (selected)','Callback',@me.select,'Accelerator','s');
 			uimenu(hcmenu,'Label','Show GUI (selected)','Callback',@me.remove,'Accelerator','g');
 			uimenu(hcmenu,'Label','Remove (selected)','Callback',@me.remove,'Accelerator','x');
-			uimenu(hcmenu,'Label','A. Reanalyse (all)','Callback',@me.process,'Separator','on','Accelerator','r');
-			uimenu(hcmenu,'Label','B. Average (all)','Callback',@me.run,'Accelerator','a');
+			uimenu(hcmenu,'Label','I. Reanalyse (all)','Callback',@me.process,'Separator','on','Accelerator','r');
+			uimenu(hcmenu,'Label','II. Average (all)','Callback',@me.run,'Accelerator','a');
 			uimenu(hcmenu,'Label','Toggle Saccades (all)','Callback',@me.toggleSaccades,'Separator','on');
 			uimenu(hcmenu,'Label','Clean up Paths (all)','Callback',@me.cleanPaths);
 			
@@ -809,7 +805,7 @@ classdef LFPMeta < analysisCore
 				'FontSize', fs,...
 				'Tooltip','Toggle Saccade Realign',...
 				'Callback',@me.toggleSaccades,...
-				'String','Toggle Saccades');
+				'String','Saccade-toggle');
 % 			handles.weight = uicontrol('Style','edit',...
 % 				'Parent',handles.controls1,...
 % 				'Tag','LMAweight',...
@@ -843,14 +839,14 @@ classdef LFPMeta < analysisCore
 				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Callback',@me.process,...
-				'String','A. Reanalyse All');
+				'String','I. Reanalyse All');
 			handles.runbutton = uicontrol('Style','pushbutton',...
 				'Parent',handles.controls3,...
 				'Tag','LMAsettingsbutton',...
 				'FontName',SansFont,...
 				'FontSize', fs,...
 				'Callback',@me.run,...
-				'String','B. Average All');
+				'String','II. Average All');
 			
 			set(handles.hbox,'Widths', [-3 -1]);
 			set(handles.controls,'Heights', [70 35 -1]);
