@@ -8,7 +8,7 @@ classdef Container < handle
     %  construction.
     
     %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 978 $ $Date: 2014-09-28 14:20:44 -0400 (Sun, 28 Sep 2014) $
+    %  $Revision: 1077 $ $Date: 2015-03-19 16:44:14 +0000 (Thu, 19 Mar 2015) $
     
     properties( Dependent, Access = public )
         Contents % contents in layout order
@@ -64,12 +64,8 @@ classdef Container < handle
                 childObserver, 'ChildAdded', @obj.onChildAdded );
             childRemovedListener = event.listener( ...
                 childObserver, 'ChildRemoved', @obj.onChildRemoved );
-				 try
-					sizeChangedListener = event.listener( ...
-						 obj, 'SizeChanged', @obj.onSizeChanged );
-				 catch
-					 sizeChangedListener = @()disp('dummy listener');
-				 end
+            sizeChangedListener = event.listener( ...
+                obj, 'SizeChanged', @obj.onSizeChanged );
             
             % Store observers and listeners
             obj.AncestryObserver = ancestryObserver;

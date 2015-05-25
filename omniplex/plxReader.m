@@ -1006,7 +1006,7 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function getEvents(me)
 			readMat(me); %make sure we've loaded the behavioural file first
-			tic
+			getic = tic;
 			[~,eventNames] = plx_event_names(me.file);
 			[~,eventIndex] = plx_event_chanmap(me.file);
 			eventNames = cellstr(eventNames);
@@ -1082,6 +1082,11 @@ classdef plxReader < optickaCore
 			
 			aa = 1; cidx = 1; bidx = 1; iidx = 1;
 			
+			if eL.nVars < me.rE.task.minBlocks
+				fprintf('\n--->>> plxReader.getEvents parser:\n')
+				error('---!!! %s only contains %i variables when there should be %i minimum for a trial; this suggests an incomplete run and cannot properly parse this dataset into a trial structure.',me.fullName, eL.nVars, me.rE.task.minBlocks);
+			end
+			
 			for i = 1:2:eL.n % iterate through all trials
 				
 				var = eL.values(i);
@@ -1090,7 +1095,7 @@ classdef plxReader < optickaCore
 				eL.trials(aa).t1 = eL.times(i);
 				eL.trials(aa).t2 = eL.times(i+1);
 				eL.trials(aa).tDelta = eL.trials(aa).t2 - eL.trials(aa).t1;
-				
+				fprintf('Parsing %i - %i for var %i\n',i,aa,var)
 				if isempty(eL.vars(var).variable)
 					eL.vars(var).variable = var;
 					idx = find(eL.values == var);
@@ -1164,7 +1169,7 @@ classdef plxReader < optickaCore
 			eL.breakIndex = [eL.trials(:).isBreak]';
 			eL.incorrectIndex = [eL.trials(:).isIncorrect]';
 			me.eventList = eL;
-			fprintf('<strong>:#:</strong> Loading all event markers took <strong>%g ms</strong>\n',round(toc*1000))
+			fprintf('<strong>:#:</strong> Loading all event markers took <strong>%g ms</strong>\n',round(toc(getic)*1000))
 			generateMeta(me);
 			clear eL
 		end

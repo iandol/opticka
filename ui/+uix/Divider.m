@@ -7,7 +7,7 @@ classdef Divider < hgsetget
     %  specified property p1 to value v1, etc.
     
     %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 978 $ $Date: 2014-09-28 14:20:44 -0400 (Sun, 28 Sep 2014) $
+    %  $Revision: 1065 $ $Date: 2014-10-30 17:40:04 +0000 (Thu, 30 Oct 2014) $
     
     properties( Dependent )
         Parent % parent
@@ -241,6 +241,21 @@ classdef Divider < hgsetget
     end % accessors
     
     methods
+        
+        function tf = isMouseOver( obj, eventData )
+            %isMouseOver  Test for mouse over
+            %
+            %  tf = d.isMouseOver(wmd) tests whether the WindowMouseData
+            %  wmd is consistent with the mouse pointer being over the
+            %  divider d.
+            
+            tf = obj.Control == eventData.HitObject;
+            
+        end % isMouseOver
+        
+    end % methods
+    
+    methods( Access = private )
         
         function onDeleted( obj, ~, ~ )
             %onDeleted  Event handler

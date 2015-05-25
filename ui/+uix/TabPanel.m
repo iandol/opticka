@@ -14,7 +14,7 @@ classdef TabPanel < uix.Container
     %  See also: uitabgroup, uitab, uix.CardPanel
     
     %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 992 $ $Date: 2014-09-29 04:20:51 -0400 (Mon, 29 Sep 2014) $
+    %  $Revision: 1094 $ $Date: 2015-05-14 16:52:45 +0100 (Thu, 14 May 2015) $
     
     properties( Access = public, Dependent, AbortSet )
         FontAngle % font angle
@@ -29,13 +29,14 @@ classdef TabPanel < uix.Container
     end
     
     properties
-        SelectionChangedCallback = '' % selection change callback
+        SelectionChangedFcn = '' % selection change callback
     end
     
     properties( Access = public, Dependent, AbortSet )
         TabEnables % tab enable states
         TabLocation % tab location [top|bottom]
         TabTitles % tab titles
+        TabContextMenus % tab context menus
         TabWidth % tab width
     end
     
@@ -58,6 +59,7 @@ classdef TabPanel < uix.Container
         LocationObserver % location observer
         BackgroundColorListener % listener
         SelectionChangedListener % listener
+        G1218142 = false % bug flag
     end
     
     properties( Access = private, Constant )
@@ -350,7 +352,7 @@ classdef TabPanel < uix.Container
             
         end % get.Selection
         
-        function set.SelectionChangedCallback( obj, value )
+        function set.SelectionChangedFcn( obj, value )
             
             % Check
             if ischar( value ) % string
@@ -365,13 +367,13 @@ classdef TabPanel < uix.Container
                 % OK
             else
                 error( 'uix:InvalidPropertyValue', ...
-                    'Property ''SelectionChangedCallback'' must be a valid callback.' )
+                    'Property ''SelectionChangedFcn'' must be a valid callback.' )
             end
             
             % Set
-            obj.SelectionChangedCallback = value;
+            obj.SelectionChangedFcn = value;
             
-        end % set.SelectionChangedCallback
+        end % set.SelectionChangedFcn
         
         function set.Selection( obj, value ) % TODO
             
@@ -562,6 +564,27 @@ classdef TabPanel < uix.Container
             
         end % set.TabTitles
         
+        function value = get.TabContextMenus( obj )
+            
+            tabs = obj.Tabs;
+            n = numel( tabs );
+            value = cell( [n 1] );
+            for ii = 1:n
+                value{ii} = tabs(ii).UIContextMenu;
+            end
+            
+        end % get.TabContextMenus
+        
+        function set.TabContextMenus( obj, value )
+            
+            tabs = obj.Tabs;
+            n = numel( tabs );
+            for ii = 1:n
+                tabs(ii).UIContextMenu = value{ii};
+            end
+            
+        end % set.TabContextMenus
+        
         function value = get.TabWidth( obj )
             
             value = obj.TabWidth_;
@@ -573,9 +596,9 @@ classdef TabPanel < uix.Container
             % Check
             assert( isa( value, 'double' ) && isscalar( value ) && ...
                 isreal( value ) && ~isinf( value ) && ...
-                ~isnan( value ) && value > 0, ...
+                ~isnan( value ) && value ~= 0, ...
                 'uix:InvalidPropertyValue', ...
-                'Property ''TabWidth'' must be a positive scalar.' )
+                'Property ''TabWidth'' must be a non-zero scalar.' )
             
             % Set
             obj.TabWidth_ = value;
@@ -608,9 +631,10 @@ classdef TabPanel < uix.Container
             end
             
             % Compute positions
-            location = obj.LocationObserver.Location;
-            w = ceil( location(1) + location(3) ) - floor( location(1) ); % width
-            h = ceil( location(2) + location(4) ) - floor( location(2) ); % height
+            bounds = hgconvertunits( ancestor( obj, 'figure' ), ...
+                [0 0 1 1], 'normalized', 'pixels', obj );
+            w = ceil( bounds(1) + bounds(3) ) - floor( bounds(1) ); % width
+            h = ceil( bounds(2) + bounds(4) ) - floor( bounds(2) ); % height
             p = obj.Padding_; % padding
             tH = obj.TabHeight; % tab height
             if n > 0 && tH == -1 % cache stale, refresh
@@ -633,6 +657,9 @@ classdef TabPanel < uix.Container
             cW = max( [w - 2 * p, 1] ); % contents width
             tW = obj.TabWidth_; % tab width
             dW = obj.DividerWidth; % tab divider width
+            if tW < 0 && n > 0 % relative
+                tW = max( ( w - (n+1) * dW ) / n, 1 );
+            end
             for ii = 1:n
                 tabs(ii).Position = [1 + (ii-1) * tW + ii * dW, tY, tW, tH];
             end
@@ -651,7 +678,14 @@ classdef TabPanel < uix.Container
             for ii = 1:numel( children )
                 child = children(ii);
                 if ii == selection
-                    child.Visible = 'on';
+                    if obj.G1218142
+                        warning( 'uix:G1218142', ...
+                            'Selected child of %s is not visible due to bug G1218142.  The child will become visible at the next redraw.', ...
+                            class( obj ) )
+                        obj.G1218142 = false;
+                    else
+                        child.Visible = 'on';
+                    end
                     child.Units = 'pixels';
                     if isa( child, 'matlab.graphics.axis.Axes' )
                         switch child.ActivePositionProperty
@@ -686,6 +720,11 @@ classdef TabPanel < uix.Container
         end % redraw
         
         function addChild( obj, child )
+            
+            % Check for bug
+            if verLessThan( 'MATLAB', '8.5' ) && strcmp( child.Visible, 'off' )
+                obj.G1218142 = true;
+            end
             
             % Create new tab
             n = numel( obj.Tabs );
@@ -893,7 +932,7 @@ classdef TabPanel < uix.Container
         function onSelectionChanged( obj, source, eventData )
             
             % Call callback
-            callback = obj.SelectionChangedCallback;
+            callback = obj.SelectionChangedFcn;
             if ischar( callback ) && isequal( callback, '' )
                 % do nothing
             elseif ischar( callback )

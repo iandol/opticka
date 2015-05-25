@@ -4,7 +4,7 @@ classdef ( Hidden, Sealed ) AncestryObserver < handle
     %  o = uix.AncestryObserver(s) creates an ancestry observer for the
     %  subject s.
     %
-    %  o = uix.LocationObserver(a) creates an ancestry observer for the
+    %  o = uix.AncestryObserver(a) creates an ancestry observer for the
     %  figure-to-subject ancestry a.
     %
     %  An ancestry observer provides ongoing access to the ancestry of a
@@ -14,7 +14,7 @@ classdef ( Hidden, Sealed ) AncestryObserver < handle
     %  See also: uix.ChildObserver
 
     %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 998 $ $Date: 2014-10-01 14:48:20 -0400 (Wed, 01 Oct 2014) $
+    %  $Revision: 1057 $ $Date: 2014-10-29 17:54:09 +0000 (Wed, 29 Oct 2014) $
     
     properties( GetAccess = public, SetAccess = private )
         Subject % subject

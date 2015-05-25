@@ -362,9 +362,11 @@ classdef LFPMeta < analysisCore
 							me.raw{i}.toggleSaccadeRealign
 						end
 					end
-					notifyUI(me,sprintf('Saccade align state has been toggled to %i for site %i...',firstState,i))
+					t = sprintf('Saccade align state has been toggled to %i for site %i...',firstState,i);
+					notifyUI(me,t)
 				end
-				notifyUI(me,sprintf('Saccade align state has been toggled to %i for all sites, please reprocess',firstState))
+				t = sprintf('Saccade align state has been toggled to %i for all sites, please reprocess',firstState);
+				notifyUI(me,t)
 			end
 		end
 		
@@ -491,6 +493,16 @@ classdef LFPMeta < analysisCore
 			initialise(me);
 			setTimeFreqOptions(me);
 			setStats(me);
+			for i = 1:me.nSites
+				if isprop(me.raw{i},'options')
+					me.raw{i}.options = me.options;
+					me.raw{i}.sp.options = me.options;
+				end
+				me.raw{i}.baselineWindow = me.baselineWindow;
+				me.raw{i}.plotRange = me.plotRange;
+				me.raw{i}.sp.baselineWindow = me.baselineWindow;
+				me.raw{i}.sp.plotRange = me.plotRange;
+			end
 		end
 		
 		% ============================================='uipanel======================

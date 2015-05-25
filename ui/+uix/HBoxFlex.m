@@ -10,7 +10,7 @@ classdef HBoxFlex < uix.HBox
     %  See also: uix.VBoxFlex, uix.GridFlex, uix.HBox, uix.HButtonBox
     
     %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 999 $ $Date: 2014-10-01 14:55:26 -0400 (Wed, 01 Oct 2014) $
+    %  $Revision: 999 $ $Date: 2014-10-01 19:55:26 +0100 (Wed, 01 Oct 2014) $
     
     properties( Access = public, Dependent, AbortSet )
         DividerMarkings % divider markings [on|off]

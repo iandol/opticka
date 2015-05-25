@@ -121,7 +121,7 @@ classdef LFPAnalysis < analysisCore
 				end
 			end
 			if force == true || isempty(me.spikefile)
-				[f,p] = uigetfile({'*.plx;*.pl2';'Plexon Files'},['Load Spike LFP File to match ' me.lfpfile]);
+				f = uigetfile({'*.plx;*.pl2';'Plexon Files'},['Load Spike LFP File to match ' me.lfpfile]);
 				if ischar(f) && ~isempty(f)
 					me.spikefile = f;
 					in = struct('file', me.spikefile, 'dir', me.dir);
@@ -166,7 +166,7 @@ classdef LFPAnalysis < analysisCore
 			parseEvents(me.p);
 			me.LFPs = readLFPs(me.p);
 			parseLFPs(me);
-			if ~me.openUI; showInfo(me); end
+			if ~me.openUI && me.doPlots; showInfo(me); end
 			select(me);
 			getFieldTripLFPs(me);
 			if me.openUI
@@ -193,7 +193,7 @@ classdef LFPAnalysis < analysisCore
 			me.results = struct();
 			parseEvents(me.p);
 			parseLFPs(me);
-			select(me);
+			if me.doPlots; select(me); end
 			getFieldTripLFPs(me);
 			if me.openUI; updateUI(me); end
 		end
@@ -303,7 +303,7 @@ classdef LFPAnalysis < analysisCore
 			if me.openUI; 
 				updateUI(me.sp)
 				updateUI(me);
-			else
+			elseif me.doPlots
 				showInfo(me.sp);
 			end
 		end

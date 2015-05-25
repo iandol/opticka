@@ -8,7 +8,7 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
     %  See also: uix.AncestryObserver, uix.Node
     
     %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 978 $ $Date: 2014-09-28 14:20:44 -0400 (Sun, 28 Sep 2014) $
+    %  $Revision: 1084 $ $Date: 2015-05-12 17:44:28 +0100 (Tue, 12 May 2015) $
     
     properties( Access = private )
         Root % root node
@@ -106,26 +106,7 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
             
             % Raise ChildAdded event
             if isgraphics( oChild ) && oChild.Internal == false
-                if verLessThan( 'MATLAB', '8.5' ) && ...
-                        isa( oChild, 'matlab.ui.control.UIControl' ) % TODO
-                    %  A workaround is required in R2014b for G1129721,
-                    %  where setting the property 'Visible' of a uicontrol
-                    %  to 'on' in response to an ObjectChildAdded event
-                    %  causes a crash.  Instead, the property set must be
-                    %  postponed until the PostSet event of the uicontrol
-                    %  property 'Parent', which follows the
-                    %  ObjectChildAdded event.  Thus it is necessary to
-                    %  ensure that the ChildAdded event on the
-                    %  ChildObserver does not fire until it is safe to set
-                    %  the property 'Visible' of the child.
-                    parentPostSetListener = event.proplistener( oChild, ...
-                        findprop( oChild, 'Parent' ), 'PostSet', ...
-                        @(~,~)obj.postSetParent(nChild) );
-                    nChild.addprop( 'ParentPostSetListener' );
-                    nChild.ParentPostSetListener = parentPostSetListener;
-                else
-                    notify( obj, 'ChildAdded', uix.ChildEvent( oChild ) )
-                end
+                notify( obj, 'ChildAdded', uix.ChildEvent( oChild ) )
             end
             
             % Add grandchildren
@@ -216,17 +197,6 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
             end
             
         end % postSetInternal
-        
-        function postSetParent( obj, nChild )
-            
-            % Clean up node
-            delete( findprop( nChild, 'ParentPostSetListener' ) )
-            
-            % Raise event
-            oChild = nChild.Object;
-            notify( obj, 'ChildAdded', uix.ChildEvent( oChild ) )
-            
-        end % postSetParent
         
     end % event handlers
     

@@ -10,7 +10,7 @@ classdef Panel < matlab.ui.container.Panel & uix.mixin.Container
     %  See also: uix.CardPanel, uix.BoxPanel, uipanel
     
     %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 992 $ $Date: 2014-09-29 04:20:51 -0400 (Mon, 29 Sep 2014) $
+    %  $Revision: 1084 $ $Date: 2015-05-12 17:44:28 +0100 (Tue, 12 May 2015) $
     
     properties( Access = public, Dependent, AbortSet )
         Selection % selected contents
@@ -18,6 +18,10 @@ classdef Panel < matlab.ui.container.Panel & uix.mixin.Container
     
     properties( Access = protected )
         Selection_ = 0 % backing for Selection
+    end
+    
+    properties( Access = private )
+        G1218142 = false % bug flag
     end
     
     methods
@@ -32,6 +36,7 @@ classdef Panel < matlab.ui.container.Panel & uix.mixin.Container
             
             % Call superclass constructor
             obj@matlab.ui.container.Panel()
+            obj@uix.mixin.Container()
             
             % Set properties
             if nargin > 0
@@ -99,7 +104,14 @@ classdef Panel < matlab.ui.container.Panel & uix.mixin.Container
             for ii = 1:numel( children )
                 child = children(ii);
                 if ii == selection
-                    child.Visible = 'on';
+                    if obj.G1218142
+                        warning( 'uix:G1218142', ...
+                            'Selected child of %s is not visible due to bug G1218142.  The child will become visible at the next redraw.', ...
+                            class( obj ) )
+                        obj.G1218142 = false;
+                    else
+                        child.Visible = 'on';
+                    end
                     child.Units = 'pixels';
                     if isa( child, 'matlab.graphics.axis.Axes' )
                         switch child.ActivePositionProperty
@@ -134,6 +146,11 @@ classdef Panel < matlab.ui.container.Panel & uix.mixin.Container
         end % redraw
         
         function addChild( obj, child )
+            
+            % Check for bug
+            if verLessThan( 'MATLAB', '8.5' ) && strcmp( child.Visible, 'off' )
+                obj.G1218142 = true;
+            end
             
             % Select new content
             obj.Selection_ = numel( obj.Contents_ ) + 1;

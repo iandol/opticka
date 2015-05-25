@@ -30,12 +30,14 @@ classdef Grid < uix.Grid
     %   See also: uiextras.GridFlex
     
     %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 979 $ $Date: 2014-09-28 14:26:12 -0400 (Sun, 28 Sep 2014) $
+    %  $Revision: 1077 $ $Date: 2015-03-19 16:44:14 +0000 (Thu, 19 Mar 2015) $
     
     properties( Hidden, Access = public, Dependent )
         Enable % deprecated
-        RowSizes
-        ColumnSizes
+        RowSizes % heights of contents, in pixels and/or weights
+        MinimumRowSizes % minimum heights of contents, in pixels
+        ColumnSizes % widths of contents, in pixels and/or weights
+        MinimumColumnSizes % minimum widths of contents, in pixels
     end
     
     methods
@@ -83,7 +85,7 @@ classdef Grid < uix.Grid
         function value = get.RowSizes( obj )
             
             % Get
-            value = transpose( obj.Heights );
+            value = obj.Heights;
             
         end % get.RowSizes
         
@@ -94,10 +96,24 @@ classdef Grid < uix.Grid
             
         end % set.RowSizes
         
+        function value = get.MinimumRowSizes( obj )
+            
+            % Get
+            value = obj.MinimumHeights;
+            
+        end % get.MinimumRowSizes
+        
+        function set.MinimumRowSizes( obj, value )
+            
+            % Set
+            obj.MinimumHeights = value;
+            
+        end % set.MinimumRowSizes
+        
         function value = get.ColumnSizes( obj )
             
             % Get
-            value = transpose( obj.Widths );
+            value = obj.Widths;
             
         end % get.ColumnSizes
         
@@ -107,6 +123,20 @@ classdef Grid < uix.Grid
             obj.Widths = value;
             
         end % set.ColumnSizes
+        
+        function value = get.MinimumColumnSizes( obj )
+            
+            % Get
+            value = obj.MinimumWidths;
+            
+        end % get.MinimumColumnSizes
+        
+        function set.MinimumColumnSizes( obj, value )
+            
+            % Get
+            obj.MinimumWidths = value;
+            
+        end % set.MinimumColumnSizes
         
     end % accessors
     
