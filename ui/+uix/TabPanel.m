@@ -841,6 +841,29 @@ classdef TabPanel < uix.Container
             locationObserver = uix.LocationObserver( [newAncestors; obj] );
             obj.LocationObserver = locationObserver;
             
+            % Reparent context menus if figure has changed
+            if isempty( oldAncestors ) || ...
+                    ~isa( oldAncestors(1), 'matlab.ui.Figure' )
+                oldFigure = gobjects( [0 0] );
+            else
+                oldFigure = oldAncestors(1);
+            end
+            if isempty( newAncestors ) || ...
+                    ~isa( newAncestors(1), 'matlab.ui.Figure' )
+                newFigure = gobjects( [0 0] );
+            else
+                newFigure = newAncestors(1);
+            end
+            if ~isequal( oldFigure, newFigure )
+                contextMenus = obj.TabContextMenus;
+                for ii = 1:numel( contextMenus )
+                    contextMenu = contextMenus{ii};
+                    if ~isempty( contextMenu )
+                        contextMenu.Parent = newFigure;
+                    end
+                end
+            end
+            
             % Call superclass method
             reparent@uix.Container( obj, oldAncestors, newAncestors )
             

@@ -2,7 +2,13 @@ classdef plxReader < optickaCore
 %> PLXREADER Reads in Plexon .plx and .pl2 files along with metadata and
 %> eyelink EDF files. Parses the trial event / behaviour structure. 
 %> Integrates EDF events and raw X/Y data into trial LFP/spike structures.
-%> Converts into Fieldtrip and custom structures.
+%> Converts into Fieldtrip and custom structures. The plexon files contain the neural
+%> data and the strobed words and TTLs. Each strobed word represents a 15bit trial
+%> number, and there are 8 additional TTL lines. The opticka mat file includes the
+%> experimental structure (stimulusSequence), the stimuli (metaStimulus) and all other
+%> parameters. The strobed word trial order can be linked to the opticka trial order to
+%> determine what stimuli were shown. The EDF file contains the eyelink data
+%> timestamped for each trial along with trial numbers and other trial information.
 	
 	%------------------PUBLIC PROPERTIES----------%
 	properties
@@ -10,15 +16,15 @@ classdef plxReader < optickaCore
 		file@char
 		%> file directory
 		dir@char
-		%> the opticka experimental filename
+		%> the opticka experimental object mat filename
 		matfile@char
 		%> the opticka file directory
 		matdir@char
 		%> Eyelink edf file name (should be same directory as opticka file).
 		edffile@char
-		%> use the event on/off markers if empty, or a timerange around the event on otherwise
+		%> use the event on/off markers if empty, or a timerange around the event otherwise
 		eventWindow@double			= []
-		%> the window to check before/after trial end for behavioural marker
+		%> the window to check before/after trial end for a behavioural marker
 		eventSearchWindow@double	= 0.2
 		%> used by legacy spikes to allow negative time offsets
 		startOffset@double			= 0
@@ -38,19 +44,19 @@ classdef plxReader < optickaCore
 	
 	%------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = {?analysisCore}, GetAccess = public)
-		%> info formatted in cellstrings for display
+		%> general info formatted as cellstrings for display
 		info@cell
-		%> event list parsed
+		%> parsed event list from plexon strobed words/TTLs
 		eventList@struct
-		%> timestamped parsed spikes
+		%> parsed timestamped spikes
 		tsList@struct
-		%> metadata
+		%> general metadata (useful for legacy spikes analysis routines)
 		meta@struct
-		%> the experimental run object (loaded from matfile)
+		%> the experimental runExperiment object (loaded from the matfile)
 		rE@runExperiment
-		%> the eyelink data (loaded from edffile)
+		%> the eyelink data parsed as an eyelinkAnalysis object (loaded from edffile)
 		eA@eyelinkAnalysis
-		%> the raw pl2 structure if this is a pl2 file
+		%> the raw pl2 structure if this is a plexon pl2 file
 		pl2@struct
 	end
 	
@@ -71,7 +77,7 @@ classdef plxReader < optickaCore
 		%> info cache to speed up generating info{}
 		ic@struct						= struct()
 		%> allowed properties passed to object upon construction, see optickaCore.parseArgs()
-		allowedProperties@char = 'file|dir|matfile|matdir|edffile|startOffset|cellmap|verbose|eventWindow'
+		allowedProperties@char		= 'file|dir|matfile|matdir|edffile|startOffset|cellmap|verbose|eventWindow'
 	end
 	
 	%=======================================================================
@@ -124,10 +130,10 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief reparse only reparse eye data and spikes from the raw loaded structures
 		%>
 		%> @param
-			%> @return
+		%> @return
 		% ===================================================================
 		function reparse(me)
 			me.paths.oldDir = pwd;
@@ -276,7 +282,7 @@ classdef plxReader < optickaCore
 		
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief get method to check if EDF file is present
 		%> @param
 		%> @return 
 		% ===================================================================
@@ -288,7 +294,7 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief get method to check if this is a newer pl2 plexon file
 		%> @param
 		%> @return 
 		% ===================================================================
@@ -300,7 +306,7 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief get method to check if the spike data was recorded using a tetrode
 		%> @param
 		%> @return 
 		% ===================================================================
@@ -316,7 +322,7 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Create a FieldTrip spike structure
+		%> @brief generate a FieldTrip formatted spike structure
 		%>
 		%> @param
 		%> @return
@@ -381,7 +387,9 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief integrate the saccade information into the trial event data, somewhat
+		%> complicated as not all EDF parsed trials are exactly matched to the plexon event
+		%> markers.
 		%> @param
 		%> @return 
 		% ===================================================================
@@ -436,21 +444,14 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief make a GUI box with all the data information available, including a plot of
+		%> all event markers, which is defered from being drawn until the axis is clicked on.
 		%>
-		%> @param
+		%> @param info a cellstring info structure, optional
 		%> @return
 		% ===================================================================
 		function handles = infoBox(me, info)
 			fs = 10;
-% 			if ismac
-% 				[s,c]=system('system_profiler SPDisplaysDataType');
-% 				if s == 0
-% 					if ~isempty(regexpi(c,'Retina LCD'))
-% 						fs = 7;
-% 					end
-% 				end
-% 			end
 			if ~exist('info','var')
 				me.generateInfo();
 				info = me.info; 
@@ -794,10 +795,10 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Constructor
+		%> @brief get file names and directories for plexon, opticka and EDF files.
 		%>
-		%> @param varargin
-		%> @returnscr
+		%> @param force force new files to be selected even if there are existing ones
+		%> @return
 		% ===================================================================
 		function getFiles(me, force)
 			if ~exist('force','var')
@@ -841,10 +842,10 @@ classdef plxReader < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Constructor remove the raw wave matrices etc to reduce memory
+		%> @brief  remove the raw wave matrices etc to reduce memory
 		%>
-		%> @param varargin
-		%> @returnscr
+		%> @param 
+		%> @return
 		% ===================================================================
 		function optimiseSize(me)
 			if isfield(me.tsList, 'nUnits') && me.tsList.nUnits > 0
@@ -876,7 +877,7 @@ classdef plxReader < optickaCore
 	%=======================================================================
 	
 		% ===================================================================
-		%> @brief 
+		%> @brief load the opticka object mat file
 		%> This needs to be static as it may load data called "me" which
 		%> will conflict with the me object in the class.
 		%> @param

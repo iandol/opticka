@@ -1,7 +1,7 @@
 function obj = Empty( varargin )
 %uiextras.Empty  Create an empty space
 %
-%   obj = uiextras.Empty() creates a placeholder that can be used to add
+%   obj = uiextras.Empty() creates an empty space that can be used to add
 %   gaps between elements in layouts.
 %
 %   obj = uiextras.Empty(param,value,...) also sets one or more property
@@ -17,7 +17,7 @@ function obj = Empty( varargin )
 %   >> uicontrol( 'Parent', box, 'Background', 'b' )
 
 %  Copyright 2009-2014 The MathWorks, Inc.
-%  $Revision: 979 $ $Date: 2014-09-28 14:26:12 -0400 (Sun, 28 Sep 2014) $
+%  $Revision: 1115 $ $Date: 2015-05-28 15:16:22 +0100 (Thu, 28 May 2015) $
 
 % Call uix construction function
 obj = uix.Empty( varargin{:} );

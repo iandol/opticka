@@ -11,7 +11,7 @@ classdef BoxPanel < uix.Container
     %  See also: uix.Panel, uipanel, uix.CardPanel
     
     %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 1084 $ $Date: 2015-05-12 17:44:28 +0100 (Tue, 12 May 2015) $
+    %  $Revision: 1113 $ $Date: 2015-05-28 13:15:49 +0100 (Thu, 28 May 2015) $
     
     properties( Dependent )
         Title % title
@@ -32,6 +32,7 @@ classdef BoxPanel < uix.Container
         HelpFcn % help callback
         Minimized % minimized [true|false]
         MinimizeFcn % minimize callback
+        Selection % selected contents
     end
     
     properties( Access = private )
@@ -52,6 +53,7 @@ classdef BoxPanel < uix.Container
         MinimizeButton % title button
         Docked_ = true % backing for Docked
         Minimized_ = false % backing for Minimized
+        Selection_ = 0 % backing for Selection
         ColorButtonCData % Button images with colors applied
         G1218142 = false % bug flag
     end
@@ -467,6 +469,40 @@ classdef BoxPanel < uix.Container
             
         end % set.Minimized
         
+        function value = get.Selection( obj )
+            
+            value = obj.Selection_;
+            
+        end % get.Selection
+        
+        function set.Selection( obj, value )
+            
+            % Check
+            assert( isa( value, 'double' ), 'uix:InvalidPropertyValue', ...
+                'Property ''Selection'' must be of type double.' )
+            assert( isequal( size( value ), [1 1] ), ...
+                'uix:InvalidPropertyValue', ...
+                'Property ''Selection'' must be scalar.' )
+            assert( isreal( value ) && rem( value, 1 ) == 0, ...
+                'uix:InvalidPropertyValue', ...
+                'Property ''Selection'' must be an integer.' )
+            n = numel( obj.Contents_ );
+            if n == 0
+                assert( value == 0, 'uix:InvalidPropertyValue', ...
+                    'Property ''Selection'' must be 0 for a container with no children.' )
+            else
+                assert( value >= 1 && value <= n, 'uix:InvalidPropertyValue', ...
+                    'Property ''Selection'' must be between 1 and the number of children.' )
+            end
+            
+            % Set
+            obj.Selection_ = value;
+            
+            % Mark as dirty
+            obj.Dirty = true;
+            
+        end % set.Selection
+        
     end % accessors
     
     methods( Access = protected )
@@ -557,7 +593,7 @@ classdef BoxPanel < uix.Container
             
             % Redraw contents
             children = obj.Contents_;
-            selection = numel( children );
+            selection = obj.Selection_;
             for ii = 1:numel( children )
                 child = children(ii);
                 if ii == selection && ~minimized
@@ -609,10 +645,33 @@ classdef BoxPanel < uix.Container
                 obj.G1218142 = true;
             end
             
+            % Select new content
+            obj.Selection_ = numel( obj.Contents_ ) + 1;
+            
             % Call superclass method
-            addChild@uix.Container( obj, child )
+            addChild@uix.mixin.Container( obj, child )
             
         end % addChild
+        
+        function removeChild( obj, child )
+            
+            % Adjust selection if required
+            contents = obj.Contents_;
+            n = numel( contents );
+            index = find( contents == child );
+            selection = obj.Selection_;
+            if index == 1 && selection == 1 && n > 1
+                % retain selection
+            elseif index <= selection
+                obj.Selection_ = selection - 1;
+            else
+                % retain selection
+            end
+            
+            % Call superclass method
+            removeChild@uix.mixin.Container( obj, child )
+            
+        end % removeChild
         
     end % template methods
     
