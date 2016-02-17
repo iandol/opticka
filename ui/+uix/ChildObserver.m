@@ -5,10 +5,10 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
     %  object o.  A child observer raises events when objects are added to
     %  and removed from the property Children of o.
     %
-    %  See also: uix.AncestryObserver, uix.Node
+    %  See also: uix.Node
     
-    %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 1084 $ $Date: 2015-05-12 17:44:28 +0100 (Tue, 12 May 2015) $
+    %  Copyright 2009-2015 The MathWorks, Inc.
+    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
     
     properties( Access = private )
         Root % root node
@@ -30,7 +30,7 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
             %  of o.
             
             % Check
-            assert( isgraphics( oRoot ) && ...
+            assert( iscontent( oRoot ) && ...
                 isequal( size( oRoot ), [1 1] ), 'uix.InvalidArgument', ...
                 'Object must be a graphics object.' )
             
@@ -76,7 +76,7 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
             % Create child node
             nChild = uix.Node( oChild );
             nParent.addChild( nChild )
-            if isgraphics( oChild )
+            if iscontent( oChild )
                 % Add Internal PreSet property listener
                 internalPreSetListener = event.proplistener( oChild, ...
                     findprop( oChild, 'Internal' ), 'PreSet', ...
@@ -105,12 +105,12 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
             end
             
             % Raise ChildAdded event
-            if isgraphics( oChild ) && oChild.Internal == false
+            if iscontent( oChild ) && oChild.Internal == false
                 notify( obj, 'ChildAdded', uix.ChildEvent( oChild ) )
             end
             
             % Add grandchildren
-            if ~isgraphics( oChild )
+            if ~iscontent( oChild )
                 oGrandchildren = hgGetTrueChildren( oChild );
                 for ii = 1:numel( oGrandchildren )
                     obj.addChild( nChild, oGrandchildren(ii) )
@@ -148,7 +148,7 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
                 
                 % Process this node
                 oc = nc.Object;
-                if isgraphics( oc ) && oc.Internal == false
+                if iscontent( oc ) && oc.Internal == false
                     notify( obj, 'ChildRemoved', uix.ChildEvent( oc ) )
                 end
                 
@@ -201,3 +201,19 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
     end % event handlers
     
 end % classdef
+
+function tf = iscontent( o )
+%iscontent  True for graphics that can be Contents (and can be Children)
+%
+%  uix.ChildObserver needs to determine which objects can be Contents,
+%  which is equivalent to can be Children if HandleVisibility is 'on' and
+%  Internal is false.  Prior to R2016a, this condition could be checked
+%  using isgraphics.  From R2016a, isgraphics returns true for a wider
+%  range of objects, including some that can never by Contents, e.g.,
+%  JavaCanvas.  Therefore this function checks whether an object is of type
+%  matlab.graphics.internal.GraphicsBaseFunctions, which is what isgraphics
+%  did prior to R2016a.
+
+tf = isa( o, 'matlab.graphics.internal.GraphicsBaseFunctions' );
+
+end % iscontent

@@ -9,8 +9,8 @@ classdef HButtonBox < uix.ButtonBox
     %
     %  See also: uix.VButtonBox
     
-    %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 1077 $ $Date: 2015-03-19 16:44:14 +0000 (Thu, 19 Mar 2015) $
+    %  Copyright 2009-2015 The MathWorks, Inc.
+    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
     
     methods
         
@@ -21,9 +21,6 @@ classdef HButtonBox < uix.ButtonBox
             %
             %  b = uix.HButtonBox(p1,v1,p2,v2,...) sets parameter p1 to
             %  value v1, etc.
-            
-            % Call superclass constructor
-            obj@uix.ButtonBox()
             
             % Set properties
             if nargin > 0

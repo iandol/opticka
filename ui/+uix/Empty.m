@@ -22,9 +22,11 @@ function obj = Empty( varargin )
 % Create uicontainer
 obj = matlab.ui.container.internal.UIContainer( 'Tag', 'empty', varargin{:} );
 
-% Create Parent listener
+% Create property for Parent listener
 p = addprop( obj, 'ParentListener' );
 p.Hidden = true;
+
+% Create Parent listener
 obj.ParentListener = event.proplistener( obj, ...
     findprop( obj, 'Parent' ), 'PostSet', @(~,~)onParentChanged(obj) );
 
@@ -32,38 +34,26 @@ obj.ParentListener = event.proplistener( obj, ...
 p = addprop( obj, 'ParentColorListener' );
 p.Hidden = true;
 
-% Initialize
-onParentChanged( obj )
+% Initialize color and listener
+updateColor( obj )
+updateListener( obj )
 
 end % uix.Empty
 
 function onParentChanged( obj )
 %onParentColorChanged  Event handler
 
-parent = obj.Parent;
-if isempty( parent )
-    obj.ParentColorListener = [];
-else
-    property = getColorProperty( parent );
-    obj.ParentColorListener = event.proplistener( parent, ...
-        findprop( parent, property ), 'PostSet', ...
-        @(~,~)onParentColorChanged(obj) );
-end
+% Update color and listener
+updateColor( obj )
+updateListener( obj )
 
 end % onParentChanged
 
 function onParentColorChanged( obj )
 %onParentColorChanged  Event handler
 
-% Set uicontainer BackgroundColor to match Parent
-parent = obj.Parent;
-property = getColorProperty( parent );
-color = parent.( property );
-try
-    obj.BackgroundColor = color;
-catch e
-    warning( e.identifier, e.message ) % rethrow as warning
-end
+% Update color
+updateColor( obj )
 
 end % onParentColorChanged
 
@@ -80,3 +70,33 @@ end
 error( 'Cannot find color property for %s.', class( obj ) )
 
 end % getColorProperty
+
+function updateColor( obj )
+%updateColor  Set uicontainer BackgroundColor to match Parent
+
+parent = obj.Parent;
+if isempty( parent ), return, end
+property = getColorProperty( parent );
+color = parent.( property );
+try
+    obj.BackgroundColor = color;
+catch e
+    warning( e.identifier, e.message ) % rethrow as warning
+end
+
+end % updateColor
+
+function updateListener( obj )
+%updateListener  Create listener to parent color property
+
+parent = obj.Parent;
+if isempty( parent )
+    obj.ParentColorListener = [];
+else
+    property = getColorProperty( parent );
+    obj.ParentColorListener = event.proplistener( parent, ...
+        findprop( parent, property ), 'PostSet', ...
+        @(~,~)onParentColorChanged(obj) );
+end
+
+end % updateListener

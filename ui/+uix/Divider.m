@@ -6,8 +6,8 @@ classdef Divider < hgsetget
     %  d = uix.Divider(p1,v1,p2,v2,...) creates a divider and sets
     %  specified property p1 to value v1, etc.
     
-    %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 1065 $ $Date: 2014-10-30 17:40:04 +0000 (Thu, 30 Oct 2014) $
+    %  Copyright 2009-2015 The MathWorks, Inc.
+    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
     
     properties( Dependent )
         Parent % parent
@@ -70,8 +70,8 @@ classdef Divider < hgsetget
             %delete  Destructor
             
             control = obj.Control;
-            if isgraphics( control ) && ~strcmp( control, 'BeingDeleted' )
-                control.delete()
+            if isgraphics( control ) && strcmp( control.BeingDeleted, 'off' )
+                delete( control )
             end
             
         end % destructor
@@ -249,7 +249,7 @@ classdef Divider < hgsetget
             %  wmd is consistent with the mouse pointer being over the
             %  divider d.
             
-            tf = obj.Control == eventData.HitObject;
+            tf = reshape( [obj.Control] == eventData.HitObject, size( obj ) );
             
         end % isMouseOver
         

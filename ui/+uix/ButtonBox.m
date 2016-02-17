@@ -3,8 +3,8 @@ classdef ButtonBox < uix.Box
     %
     %  uix.ButtonBox is a base class for containers that lay out buttons.
     
-    %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 985 $ $Date: 2014-09-28 14:55:26 -0400 (Sun, 28 Sep 2014) $
+    %  Copyright 2009-2015 The MathWorks, Inc.
+    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
     
     properties( Access = public, Dependent, AbortSet )
         ButtonSize % button size, in pixels
@@ -17,23 +17,6 @@ classdef ButtonBox < uix.Box
         HorizontalAlignment_ = 'center' % backing for HorizontalAlignment
         VerticalAlignment_ = 'middle' % backing for VerticalAlignment
     end
-    
-    methods
-        
-        function obj = ButtonBox( varargin )
-            
-            % Call superclass constructor
-            obj@uix.Box()
-            
-            % Set properties
-            if nargin > 0
-                uix.pvchk( varargin )
-                set( obj, varargin{:} )
-            end
-            
-        end % constructor
-        
-    end % structors
     
     methods
         

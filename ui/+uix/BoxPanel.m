@@ -1,4 +1,4 @@
-classdef BoxPanel < uix.Container
+classdef BoxPanel < uix.Panel & uix.mixin.Panel
     %uix.BoxPanel  Box panel
     %
     %  p = uix.BoxPanel(p1,v1,p2,v2,...) constructs a box panel and sets
@@ -10,56 +10,40 @@ classdef BoxPanel < uix.Container
     %
     %  See also: uix.Panel, uipanel, uix.CardPanel
     
-    %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 1113 $ $Date: 2015-05-28 13:15:49 +0100 (Thu, 28 May 2015) $
+    %  Copyright 2009-2015 The MathWorks, Inc.
+    %  $Revision: 1212 $ $Date: 2015-12-18 13:16:39 -0600 (Fri, 18 Dec 2015) $
     
     properties( Dependent )
-        Title % title
-        BorderWidth % border width [pixels]
-        BorderType % border type [none|line|beveledin|beveledout|etchedin|etchedout]
-        FontAngle % font angle [normal|italic|oblique]
-        FontName % font name
-        FontSize % font size
-        FontUnits % font units
-        FontWeight % font weight [normal|bold]
-        ForegroundColor % title text color [RGB]
-        HighlightColor % border highlight color [RGB]
-        ShadowColor % border shadow color [RGB]
         TitleColor % title background color [RGB]
-        CloseRequestFcn % close request callback
+        Minimized % minimized [true|false]
+        MinimizeFcn % minimize callback
         Docked % docked [true|false]
         DockFcn % dock callback
         HelpFcn % help callback
-        Minimized % minimized [true|false]
-        MinimizeFcn % minimize callback
-        Selection % selected contents
+        CloseRequestFcn % close request callback
+    end
+    
+    properties( Dependent, SetAccess = private )
+        TitleHeight % title panel height [pixels]
     end
     
     properties( Access = private )
-        Titlebar % titlebar
-        TopBorder % border image
-        MiddleBorder % border image
-        BottomBorder % border image
-        LeftBorder % border image
-        RightBorder % border image
-        BorderWidth_ = 1 % backing for BorderWidth
-        BorderType_ = 'etchedout' % backing for BorderType
-        HighlightColor_ = [1 1 1] % backing for HighlightColor
-        ShadowColor_ = [0.7 0.7 0.7] % backing for ShadowColor
-        TitleHeight = -1 % cache of title height (-1 denotes stale cache)
+        TitleBox % title bar box
+        TitleText % title text label
+        EmptyTitle = '' % title when empty, [] otherwise
+        TitleAccess = 'public' % 'private' when getting or setting Title, 'public' otherwise
+        TitleHeight_ = -1 % cache of title text height (-1 denotes stale cache)
+        MinimizeButton % title button
+        DockButton % title button
         HelpButton % title button
         CloseButton % title button
-        DockButton % title button
-        MinimizeButton % title button
         Docked_ = true % backing for Docked
         Minimized_ = false % backing for Minimized
-        Selection_ = 0 % backing for Selection
-        ColorButtonCData % Button images with colors applied
-        G1218142 = false % bug flag
     end
     
-    properties( Access = private, Constant )
-        RawButtonCData = uix.BoxPanel.getButtonCData() % button image data
+    properties( Constant, Access = private )
+        NullTitle = char.empty( [2 0] ) % an obscure empty string, the actual panel Title
+        BlankTitle = ' ' % a non-empty blank string, the empty uicontrol String
     end
     
     methods
@@ -72,65 +56,73 @@ classdef BoxPanel < uix.Container
             %  p = uix.BoxPanel(p1,v1,p2,v2,...) sets parameter p1 to value
             %  v1, etc.
             
-            % Call superclass constructor
-            obj@uix.Container()
-            
             % Set default colors
-            defaultTitleColor = [0.05 0.25 0.5];
-            defaultForegroundColor = [1 1 1];
+            foregroundColor = [1 1 1];
+            backgroundColor = [0.05 0.25 0.5];
             
-            % Create title and borders
-            titlebar = matlab.ui.control.UIControl( 'Internal', true, ...
-                'Parent', obj, 'Style', 'text', 'Units', 'pixels', ...
-                'HorizontalAlignment', 'left', ...
-                'ForegroundColor', defaultForegroundColor, ...
-                'BackgroundColor', defaultTitleColor);
-            topBorder = uix.Image( 'Internal', true, 'Parent', obj, ...
-                'Units', 'pixels' );
-            middleBorder = uix.Image( 'Internal', true, 'Parent', obj, ...
-                'Units', 'pixels' );
-            bottomBorder = uix.Image( 'Internal', true, 'Parent', obj, ...
-                'Units', 'pixels' );
-            leftBorder = uix.Image( 'Internal', true, 'Parent', obj, ...
-                'Units', 'pixels' );
-            rightBorder = uix.Image( 'Internal', true, 'Parent', obj, ...
-                'Units', 'pixels' );
+            % Create panels and decorations
+            titleBox = uix.HBox( 'Internal', true, 'Parent', obj, ...
+                'Units', 'pixels', 'BackgroundColor', backgroundColor );
+            titleText = uix.Text( 'Parent', titleBox, ...
+                'ForegroundColor', foregroundColor, ...
+                'BackgroundColor', backgroundColor, ...
+                'String', obj.BlankTitle, 'HorizontalAlignment', 'left' );
             
             % Create buttons
-            cData = obj.RawButtonCData;
-            closeButton = matlab.ui.control.UIControl( ...
-                'Internal', true, 'Parent', obj, 'Style', 'checkbox', ...
-                'CData', cData.Close, 'Visible', 'off', ...
-                'BackgroundColor', defaultTitleColor, ...
-                'TooltipString', 'Close this panel' );
-            dockButton = matlab.ui.control.UIControl( ...
-                'Internal', true, 'Parent', obj, 'Style', 'checkbox', ...
-                'CData', cData.Undock, 'Visible', 'off', ...
-                'BackgroundColor', defaultTitleColor, ...
-                'TooltipString', 'Undock this panel' );
-            helpButton = matlab.ui.control.UIControl( ...
-                'Internal', true, 'Parent', obj, 'Style', 'checkbox', ...
-                'CData', cData.Help, 'Visible', 'off', ...
-                'BackgroundColor', defaultTitleColor, ...
-                'TooltipString', 'Get help on this panel' );
-            minimizeButton = matlab.ui.control.UIControl( ...
-                'Internal', true, 'Parent', obj, 'Style', 'checkbox', ...
-                'CData', cData.Minimize, 'Visible', 'off', ...
-                'BackgroundColor', defaultTitleColor, ...
-                'TooltipString', 'Minimize this panel' );
+            minimizeButton = uix.Text( ...
+                'ForegroundColor', foregroundColor, ...
+                'BackgroundColor', backgroundColor, ...
+                'FontWeight', 'bold', 'Enable', 'on' );
+            dockButton = uix.Text( ...
+                'ForegroundColor', foregroundColor, ...
+                'BackgroundColor', backgroundColor, ...
+                'FontWeight', 'bold', 'Enable', 'on' );
+            helpButton = uix.Text( ...
+                'ForegroundColor', foregroundColor, ...
+                'BackgroundColor', backgroundColor, ...
+                'FontWeight', 'bold', 'String', '?', ...
+                'TooltipString', 'Get help on this panel', 'Enable', 'on' );
+            closeButton = uix.Text( ...
+                'ForegroundColor', foregroundColor, ...
+                'BackgroundColor', backgroundColor, ...
+                'FontWeight', 'bold', 'String', char( 215 ), ...
+                'TooltipString', 'Close this panel', 'Enable', 'on' );
             
             % Store properties
-            obj.Titlebar = titlebar;
-            obj.TopBorder = topBorder;
-            obj.MiddleBorder = middleBorder;
-            obj.BottomBorder = bottomBorder;
-            obj.LeftBorder = leftBorder;
-            obj.RightBorder = rightBorder;
+            obj.Title = obj.NullTitle;
+            obj.TitleBox = titleBox;
+            obj.TitleText = titleText;
+            obj.MinimizeButton = minimizeButton;
+            obj.DockButton = dockButton;
             obj.HelpButton = helpButton;
             obj.CloseButton = closeButton;
-            obj.DockButton = dockButton;
-            obj.MinimizeButton = minimizeButton;
-            obj.recolorButtons()
+            
+            % Create listeners
+            addlistener( obj, 'BorderWidth', 'PostSet', ...
+                @obj.onBorderWidthChanged );
+            addlistener( obj, 'BorderType', 'PostSet', ...
+                @obj.onBorderTypeChanged );
+            addlistener( obj, 'FontAngle', 'PostSet', ...
+                @obj.onFontAngleChanged );
+            addlistener( obj, 'FontName', 'PostSet', ...
+                @obj.onFontNameChanged );
+            addlistener( obj, 'FontSize', 'PostSet', ...
+                @obj.onFontSizeChanged );
+            addlistener( obj, 'FontUnits', 'PostSet', ...
+                @obj.onFontUnitsChanged );
+            addlistener( obj, 'FontWeight', 'PostSet', ...
+                @obj.onFontWeightChanged );
+            addlistener( obj, 'ForegroundColor', 'PostSet', ...
+                @obj.onForegroundColorChanged );
+            addlistener( obj, 'Title', 'PreGet', ...
+                @obj.onTitleReturning );
+            addlistener( obj, 'Title', 'PostGet', ...
+                @obj.onTitleReturned );
+            addlistener( obj, 'Title', 'PostSet', ...
+                @obj.onTitleChanged );
+            
+            % Draw buttons
+            obj.redrawButtons()
             
             % Set properties
             if nargin > 0
@@ -144,205 +136,21 @@ classdef BoxPanel < uix.Container
     
     methods
         
-        function value = get.BorderWidth( obj )
-            
-            value = obj.BorderWidth_;
-            
-        end % get.BorderWidth
-        
-        function set.BorderWidth( obj, value )
-            
-            % Check
-            assert( isnumeric( value ) && isequal( size( value ), [1 1] ) && ...
-                value > 0, 'uix:InvalidPropertyValue', ...
-                'Property ''BorderWidth'' must be numeric and positive.' )
-            
-            % Set
-            obj.BorderWidth_ = value;
-            
-            % Mark as dirty
-            obj.Dirty = true;
-            
-        end % set.BorderWidth
-        
-        function value = get.BorderType( obj )
-            
-            value = obj.BorderType_;
-            
-        end % get.BorderType
-        
-        function set.BorderType( obj, value )
-            
-            % Check
-            assert( ischar( value ) && ...
-                any( strcmp( value, {'none','line','beveledin','beveledout','etchedin','etchedout'} ) ), ...
-                'uix:InvalidPropertyValue', ...
-                'Property ''BorderType'' must be ''none'', ''line'', ''beveledin'', ''beveledout'', ''etchedin'' or ''etchedout''.' )
-            
-            % Set
-            obj.BorderType_ = value;
-            
-            % Mark as dirty
-            obj.Dirty = true;
-            
-        end % set.BorderType
-        
-        function value = get.FontAngle( obj )
-            
-            value = obj.Titlebar.FontAngle;
-            
-        end % get.FontAngle
-        
-        function set.FontAngle( obj, value )
-            
-            obj.Titlebar.FontAngle = value;
-            
-        end % set.FontAngle
-        
-        function value = get.FontName( obj )
-            
-            value = obj.Titlebar.FontName;
-            
-        end % get.FontName
-        
-        function set.FontName( obj, value )
-            
-            % Set
-            obj.Titlebar.FontName = value;
-            
-            % Mark as dirty
-            obj.TitleHeight = -1;
-            obj.Dirty = true;
-            
-        end % set.FontName
-        
-        function value = get.FontSize( obj )
-            
-            value = obj.Titlebar.FontSize;
-            
-        end % get.FontSize
-        
-        function set.FontSize( obj, value )
-            
-            % Set
-            obj.Titlebar.FontSize = value;
-            
-            % Mark as dirty
-            obj.TitleHeight = -1;
-            obj.Dirty = true;
-            
-        end % set.FontSize
-        
-        function value = get.FontUnits( obj )
-            
-            value = obj.Titlebar.FontUnits;
-            
-        end % get.FontUnits
-        
-        function set.FontUnits( obj, value )
-            
-            obj.Titlebar.FontUnits = value;
-            
-        end % set.FontUnits
-        
-        function value = get.FontWeight( obj )
-            
-            value = obj.Titlebar.FontWeight;
-            
-        end % get.FontWeight
-        
-        function set.FontWeight( obj, value )
-            
-            obj.Titlebar.FontWeight = value;
-            
-        end % set.FontWeight
-        
-        function value = get.ForegroundColor( obj )
-            
-            value = obj.Titlebar.ForegroundColor;
-            
-        end % get.ForegroundColor
-        
-        function set.ForegroundColor( obj, value )
-            
-            obj.Titlebar.ForegroundColor = value;
-            obj.recolorButtons()
-            
-        end % set.ForegroundColor
-        
-        function value = get.HighlightColor( obj )
-            
-            value = obj.HighlightColor_;
-            
-        end % get.HighlightColor
-        
-        function set.HighlightColor( obj, value )
-            
-            % Check
-            assert( isnumeric( value ) && isequal( size( value ), [1 3] ) && ...
-                all( isreal( value ) ) && all( value >= 0 ) && all( value <= 1 ), ...
-                'uix:InvalidPropertyValue', ...
-                'Property ''HighlightColor'' must be an RGB triple.' )
-            
-            % Set
-            obj.HighlightColor_ = value;
-            
-            % Mark as dirty
-            obj.Dirty = true; % TODO just redraw borders
-            
-        end % set.HighlightColor
-        
-        function value = get.ShadowColor( obj )
-            
-            value = obj.ShadowColor_;
-            
-        end % get.ShadowColor
-        
-        function set.ShadowColor( obj, value )
-            
-            % Check
-            assert( isnumeric( value ) && isequal( size( value ), [1 3] ) && ...
-                all( isreal( value ) ) && all( value >= 0 ) && all( value <= 1 ), ...
-                'uix:InvalidPropertyValue', ...
-                'Property ''ShadowColor'' must be an RGB triple.' )
-            
-            % Set
-            obj.ShadowColor_ = value;
-            
-            % Mark as dirty
-            obj.Dirty = true; % TODO just redraw borders
-            
-        end % set.ShadowColor
-        
-        function value = get.Title( obj )
-            
-            value = obj.Titlebar.String;
-            
-        end % get.Title
-        
-        function set.Title( obj, value )
-            
-            obj.Titlebar.String = value;
-            
-            % Mark as dirty
-            obj.TitleHeight = -1;
-            obj.Dirty = true;
-            
-        end % set.Title
-        
         function value = get.TitleColor( obj )
             
-            value = obj.Titlebar.BackgroundColor;
+            value = obj.TitleBox.BackgroundColor;
             
         end % get.TitleColor
         
         function set.TitleColor( obj, value )
             
-            obj.Titlebar.BackgroundColor = value;
+            % Set
+            obj.TitleBox.BackgroundColor = value;
+            obj.TitleText.BackgroundColor = value;
+            obj.MinimizeButton.BackgroundColor = value;
+            obj.DockButton.BackgroundColor = value;
             obj.HelpButton.BackgroundColor = value;
             obj.CloseButton.BackgroundColor = value;
-            obj.DockButton.BackgroundColor = value;
-            obj.MinimizeButton.BackgroundColor = value;
             
         end % set.TitleColor
         
@@ -358,7 +166,7 @@ classdef BoxPanel < uix.Container
             obj.CloseButton.Callback = value;
             
             % Mark as dirty
-            obj.Dirty = true; % TODO just redraw buttons
+            obj.redrawButtons()
             
         end % set.CloseRequestFcn
         
@@ -374,7 +182,7 @@ classdef BoxPanel < uix.Container
             obj.DockButton.Callback = value;
             
             % Mark as dirty
-            obj.Dirty = true; % TODO just redraw buttons
+            obj.redrawButtons()
             
         end % set.DockFcn
         
@@ -390,7 +198,7 @@ classdef BoxPanel < uix.Container
             obj.HelpButton.Callback = value;
             
             % Mark as dirty
-            obj.Dirty = true; % TODO just redraw buttons
+            obj.redrawButtons()
             
         end % set.HelpFcn
         
@@ -406,7 +214,7 @@ classdef BoxPanel < uix.Container
             obj.MinimizeButton.Callback = value;
             
             % Mark as dirty
-            obj.Dirty = true; % TODO just redraw buttons
+            obj.redrawButtons()
             
         end % set.MinimizeFcn
         
@@ -426,15 +234,8 @@ classdef BoxPanel < uix.Container
             % Set
             obj.Docked_ = value;
             
-            % Update button
-            dockButton = obj.DockButton;
-            if value
-                dockButton.CData = obj.ColorButtonCData.Undock;
-                dockButton.TooltipString = 'Undock this panel';
-            else
-                dockButton.CData = obj.ColorButtonCData.Dock;
-                dockButton.TooltipString = 'Dock this panel';
-            end
+            % Mark as dirty
+            obj.redrawButtons()
             
         end % set.Docked
         
@@ -454,56 +255,144 @@ classdef BoxPanel < uix.Container
             % Set
             obj.Minimized_ = value;
             
-            % Update button
-            minimizeButton = obj.MinimizeButton;
-            if value
-                minimizeButton.CData = obj.ColorButtonCData.Maximize;
-                minimizeButton.TooltipString = 'Maximize this panel';
-            else
-                minimizeButton.CData = obj.ColorButtonCData.Minimize;
-                minimizeButton.TooltipString = 'Minimize this panel';
-            end
-            
             % Mark as dirty
             obj.Dirty = true;
             
         end % set.Minimized
         
-        function value = get.Selection( obj )
+        function value = get.TitleHeight( obj )
             
-            value = obj.Selection_;
+            value = obj.TitleBox.Position(4);
             
-        end % get.Selection
+        end % get.TitleHeight
         
-        function set.Selection( obj, value )
-            
-            % Check
-            assert( isa( value, 'double' ), 'uix:InvalidPropertyValue', ...
-                'Property ''Selection'' must be of type double.' )
-            assert( isequal( size( value ), [1 1] ), ...
-                'uix:InvalidPropertyValue', ...
-                'Property ''Selection'' must be scalar.' )
-            assert( isreal( value ) && rem( value, 1 ) == 0, ...
-                'uix:InvalidPropertyValue', ...
-                'Property ''Selection'' must be an integer.' )
-            n = numel( obj.Contents_ );
-            if n == 0
-                assert( value == 0, 'uix:InvalidPropertyValue', ...
-                    'Property ''Selection'' must be 0 for a container with no children.' )
-            else
-                assert( value >= 1 && value <= n, 'uix:InvalidPropertyValue', ...
-                    'Property ''Selection'' must be between 1 and the number of children.' )
-            end
-            
-            % Set
-            obj.Selection_ = value;
+    end % accessors
+    
+    methods( Access = private )
+        
+        function onBorderWidthChanged( obj, ~, ~ )
             
             % Mark as dirty
             obj.Dirty = true;
             
-        end % set.Selection
+        end % onBorderWidthChanged
         
-    end % accessors
+        function onBorderTypeChanged( obj, ~, ~ )
+            
+            % Mark as dirty
+            obj.Dirty = true;
+            
+        end % onBorderTypeChanged
+        
+        function onFontAngleChanged( obj, ~, ~ )
+            
+            obj.TitleText.FontAngle = obj.FontAngle;
+            
+        end % onFontAngleChanged
+        
+        function onFontNameChanged( obj, ~, ~ )
+            
+            % Set
+            obj.TitleText.FontName = obj.FontName;
+            
+            % Mark as dirty
+            obj.TitleHeight_ = -1;
+            obj.Dirty = true;
+            
+        end % onFontNameChanged
+        
+        function onFontSizeChanged( obj, ~, ~ )
+            
+            % Set
+            fontSize = obj.FontSize;
+            obj.TitleText.FontSize = fontSize;
+            obj.HelpButton.FontSize = fontSize;
+            obj.CloseButton.FontSize = fontSize;
+            obj.DockButton.FontSize = fontSize;
+            obj.MinimizeButton.FontSize = fontSize;
+            
+            % Mark as dirty
+            obj.TitleHeight_ = -1;
+            obj.Dirty = true;
+            
+        end % onFontSizeChanged
+        
+        function onFontUnitsChanged( obj, ~, ~ )
+            
+            fontUnits = obj.FontUnits;
+            obj.TitleText.FontUnits = fontUnits;
+            obj.HelpButton.FontUnits = fontUnits;
+            obj.CloseButton.FontUnits = fontUnits;
+            obj.DockButton.FontUnits = fontUnits;
+            obj.MinimizeButton.FontUnits = fontUnits;
+            
+        end % onFontUnitsChanged
+        
+        function onFontWeightChanged( obj, ~, ~ )
+            
+            obj.TitleText.FontWeight = obj.FontWeight;
+            
+        end % onFontWeightChanged
+        
+        function onForegroundColorChanged( obj, ~, ~ )
+            
+            foregroundColor = obj.ForegroundColor;
+            obj.TitleText.ForegroundColor = foregroundColor;
+            obj.MinimizeButton.ForegroundColor = foregroundColor;
+            obj.DockButton.ForegroundColor = foregroundColor;
+            obj.HelpButton.ForegroundColor = foregroundColor;
+            obj.CloseButton.ForegroundColor = foregroundColor;
+            
+        end % onForegroundColorChanged
+        
+        function onTitleReturning( obj, ~, ~ )
+            
+            if strcmp( obj.TitleAccess, 'public' )
+                
+                obj.TitleAccess = 'private'; % start
+                if ischar( obj.EmptyTitle )
+                    obj.Title = obj.EmptyTitle;
+                else
+                    obj.Title = obj.TitleText.String;
+                end
+                
+            end
+            
+        end % onTitleReturning
+        
+        function onTitleReturned( obj, ~, ~ )
+            
+            obj.Title = obj.NullTitle; % unset Title
+            obj.TitleAccess = 'public'; % finish
+            
+        end % onTitleReturned
+        
+        function onTitleChanged( obj, ~, ~ )
+            
+            if strcmp( obj.TitleAccess, 'public' )
+                
+                % Set
+                obj.TitleAccess = 'private'; % start
+                title = obj.Title;
+                if isempty( title )
+                    obj.EmptyTitle = title; % store
+                    obj.TitleText.String = obj.BlankTitle; % set String to blank
+                else
+                    obj.EmptyTitle = []; % not empty
+                    obj.TitleText.String = title; % set String to title
+                end
+                obj.Title = obj.NullTitle; % unset Title
+                obj.TitleAccess = 'public'; % finish
+                
+                % Mark as dirty
+                obj.TitleHeight_ = -1;
+                obj.Dirty = true;
+                
+            end
+            
+        end % onTitleChanged
+        
+    end % property event handlers
     
     methods( Access = protected )
         
@@ -512,166 +401,58 @@ classdef BoxPanel < uix.Container
             %
             %  p.redraw() redraws the panel.
             %
-            %  See also: redrawBorders, redrawButtons
+            %  See also: redrawButtons
             
-            % Compute positions
+            % Compute bounds
             bounds = hgconvertunits( ancestor( obj, 'figure' ), ...
                 [0 0 1 1], 'normalized', 'pixels', obj );
-            width = ceil( bounds(1) + bounds(3) ) - floor( bounds(1) );
-            height = ceil( bounds(2) + bounds(4) ) - floor( bounds(2) );
-            titleHeight = obj.TitleHeight;
-            if titleHeight == -1 % cache stale, refresh
-                titleAdjust = 3; % extent seems to be a bit bigger than required for one line of text
-                titleHeight = obj.Titlebar.Extent(4) - titleAdjust;
-                obj.TitleHeight = titleHeight; % store
-            end
-            minimized = obj.Minimized_;
-            switch obj.BorderType_
-                case 'none'
-                    borderSize = 0;
-                case {'line','beveledin','beveledout'}
-                    borderSize = obj.BorderWidth_;
-                case {'etchedin','etchedout'}
-                    borderSize = obj.BorderWidth_ * 2;
-            end
-            padding = obj.Padding_;
-            contentWidth = max( [width - 2 * borderSize, ...
-                1 + 2 * padding] );
-            if minimized % show title only
-                titlePosition = [1 + borderSize, 1 + height - ...
-                    borderSize - titleHeight, contentWidth, titleHeight];
-                contentsPosition = NaN( [1 4] );
-                topPosition = [1 + borderSize, 1 + height - borderSize, ...
-                    contentWidth, borderSize];
-                middlePosition = topPosition; % will be invisible
-                bottomPosition = [1 + borderSize, 1 + height - 2 * ...
-                    borderSize - titleHeight, contentWidth, borderSize];
-                leftPosition = [1, 1 + height - 2 * borderSize - ...
-                    titleHeight, borderSize, 2 * borderSize + titleHeight];
-                rightPosition = [1 + borderSize + contentWidth, 1 + ...
-                    height - 2 * borderSize - titleHeight, borderSize, ...
-                    2 * borderSize + titleHeight];
-            else % show title and contents
-                contentHeight = max( [height - 3 * borderSize - titleHeight, ...
-                    1 + 2 * padding] );
-                titlePosition = [1 + borderSize, 1 + 2 * borderSize + contentHeight, ...
-                    contentWidth, titleHeight];
-                contentsPosition = [1 + borderSize + padding, ...
-                    1 + borderSize + padding, contentWidth - 2 * padding, ...
-                    contentHeight - 2 * padding];
-                topPosition = [1 + borderSize, 1 + 2 * borderSize + ...
-                    titleHeight + contentHeight, contentWidth, borderSize];
-                middlePosition = [1 + borderSize, 1 + borderSize + ...
-                    contentHeight, contentWidth, borderSize];
-                bottomPosition = [1 + borderSize, 1, contentWidth, borderSize];
-                leftPosition = [1, 1, borderSize, 3 * borderSize + ...
-                    titleHeight + contentHeight];
-                rightPosition = [1 + borderSize + contentWidth, 1, ...
-                    borderSize, 3 * borderSize + titleHeight + contentHeight];
-            end
             
-            % Set decorations positions
-            obj.Titlebar.Position = titlePosition;
-            obj.TopBorder.Position = topPosition;
-            obj.MiddleBorder.Position = middlePosition;
-            obj.BottomBorder.Position = bottomPosition;
-            obj.LeftBorder.Position = leftPosition;
-            obj.RightBorder.Position = rightPosition;
-            
-            % Set decorations visibility
-            if minimized
-                obj.MiddleBorder.Visible = 'off';
-            else
-                obj.MiddleBorder.Visible = 'on';
+            % Position decorations
+            tX = 1;
+            tW = max( bounds(3), 1 );
+            tH = obj.TitleHeight_; % title height
+            if tH == -1 % cache stale, refresh
+                tH = ceil( obj.TitleText.Extent(4) );
+                obj.TitleHeight_ = tH; % store
             end
-            
-            % Redraw borders
-            obj.redrawBorders()
-            
-            % Redraw buttons
+            tY = 1 + bounds(4) - tH;
+            obj.TitleBox.Position = [tX tY tW tH];
             obj.redrawButtons()
             
-            % Redraw contents
-            children = obj.Contents_;
-            selection = obj.Selection_;
-            for ii = 1:numel( children )
-                child = children(ii);
-                if ii == selection && ~minimized
-                    if obj.G1218142
-                        warning( 'uix:G1218142', ...
-                            'Selected child of %s is not visible due to bug G1218142.  The child will become visible at the next redraw.', ...
-                            class( obj ) )
-                        obj.G1218142 = false;
-                    else
-                        child.Visible = 'on';
-                    end
-                    child.Units = 'pixels';
-                    if isa( child, 'matlab.graphics.axis.Axes' )
-                        switch child.ActivePositionProperty
-                            case 'position'
-                                child.Position = contentsPosition;
-                            case 'outerposition'
-                                child.OuterPosition = contentsPosition;
-                            otherwise
-                                error( 'uix:InvalidState', ...
-                                    'Unknown value ''%s'' for property ''ActivePositionProperty'' of %s.', ...
-                                    child.ActivePositionProperty, class( child ) )
-                        end
-                        child.ContentsVisible = 'on';
-                    else
-                        child.Position = contentsPosition;
-                    end
-                else
-                    child.Visible = 'off';
-                    if isa( child, 'matlab.graphics.axis.Axes' )
-                        child.ContentsVisible = 'off';
-                    end
-                    % As a remedy for g1100294, move off-screen too
-                    if isa( child, 'matlab.graphics.axis.Axes' ) ...
-                            && strcmp(child.ActivePositionProperty, 'outerposition')
-                        child.OuterPosition(1) = -child.OuterPosition(3)-20;
-                    else
-                        child.Position(1) = -child.Position(3)-20;
-                    end
-                end
-            end
+            % Position contents
+            p = obj.Padding_;
+            cX = 1 + p;
+            cW = max( bounds(3) - 2 * p, 1 );
+            cH = max( bounds(4) - tH - 2 * p, 1 );
+            cY = tY - p - cH;
+            contentsPosition = [cX cY cW cH];
+            obj.redrawContents( contentsPosition )
             
         end % redraw
         
-        function addChild( obj, child )
-            
-            % Check for bug
-            if verLessThan( 'MATLAB', '8.5' ) && strcmp( child.Visible, 'off' )
-                obj.G1218142 = true;
-            end
-            
-            % Select new content
-            obj.Selection_ = numel( obj.Contents_ ) + 1;
+        function redrawContents( obj, position )
+            %redrawContents  Redraw contents
             
             % Call superclass method
-            addChild@uix.mixin.Container( obj, child )
+            redrawContents@uix.mixin.Panel( obj, position )
             
-        end % addChild
-        
-        function removeChild( obj, child )
-            
-            % Adjust selection if required
-            contents = obj.Contents_;
-            n = numel( contents );
-            index = find( contents == child );
-            selection = obj.Selection_;
-            if index == 1 && selection == 1 && n > 1
-                % retain selection
-            elseif index <= selection
-                obj.Selection_ = selection - 1;
-            else
-                % retain selection
+            % If minimized, hide selected contents too
+            if obj.Selection_ ~= 0 && obj.Minimized_
+                child = obj.Contents_(obj.Selection_);
+                child.Visible = 'off';
+                if isa( child, 'matlab.graphics.axis.Axes' )
+                    child.ContentsVisible = 'off';
+                end
+                % As a remedy for g1100294, move off-screen too
+                if isa( child, 'matlab.graphics.axis.Axes' ) ...
+                        && strcmp(child.ActivePositionProperty, 'outerposition' )
+                    child.OuterPosition(1) = -child.OuterPosition(3)-20;
+                else
+                    child.Position(1) = -child.Position(3)-20;
+                end
             end
             
-            % Call superclass method
-            removeChild@uix.mixin.Container( obj, child )
-            
-        end % removeChild
+        end % redrawContents
         
     end % template methods
     
@@ -681,241 +462,63 @@ classdef BoxPanel < uix.Container
             %redrawButtons  Redraw buttons
             %
             %  p.redrawButtons() redraws the titlebar buttons.
+            %
+            %  Buttons use unicode arrow symbols:
+            %  https://en.wikipedia.org/wiki/Arrow_%28symbol%29#Arrows_in_Unicode
             
-            % Get button positions
-            titlebarPosition = obj.Titlebar.Position; % position
-            h = 9; % height
-            w = 10; % width
-            s = 4; % spacing
-            x = titlebarPosition(1) + titlebarPosition(3) - w - s; % x
-            y = titlebarPosition(2) + titlebarPosition(4)/2 - h/2; % y
-            closeButtonEnabled = ~isempty( obj.CloseRequestFcn );
-            if closeButtonEnabled
-                closePosition = [x y w h];
-                x = x - w - s;
+            % Retrieve button box and buttons
+            box = obj.TitleBox;
+            minimizeButton = obj.MinimizeButton;
+            dockButton = obj.DockButton;
+            helpButton = obj.HelpButton;
+            closeButton = obj.CloseButton;
+            
+            % Detach all buttons
+            minimizeButton.Parent = [];
+            dockButton.Parent = [];
+            helpButton.Parent = [];
+            closeButton.Parent = [];
+            
+            % Attach active buttons
+            minimize = ~isempty( obj.MinimizeFcn );
+            if minimize
+                minimizeButton.Parent = box;
+                box.Widths(end) = minimizeButton.Extent(3);
             end
-            dockButtonEnabled = ~isempty( obj.DockFcn );
-            if dockButtonEnabled
-                dockPosition = [x y w h];
-                x = x - w - s;
+            dock = ~isempty( obj.DockFcn );
+            if dock
+                dockButton.Parent = box;
+                box.Widths(end) = dockButton.Extent(3);
             end
-            minimizeButtonEnabled = ~isempty( obj.MinimizeFcn );
-            if minimizeButtonEnabled
-                minimizePosition = [x y w h];
-                x = x - w - s;
+            help = ~isempty( obj.HelpFcn );
+            if help
+                helpButton.Parent = box;
+                box.Widths(end) = helpButton.Extent(3);
             end
-            helpButtonEnabled = ~isempty( obj.HelpFcn );
-            if helpButtonEnabled
-                helpPosition = [x y w h];
+            close = ~isempty( obj.CloseRequestFcn );
+            if close
+                closeButton.Parent = box;
+                box.Widths(end) = closeButton.Extent(3);
             end
             
-            % Paint buttons
-            if closeButtonEnabled
-                obj.CloseButton.Position = closePosition;
-                obj.CloseButton.Visible = 'on';
+            % Update icons
+            if obj.Minimized_
+                minimizeButton.String = char( 9662 );
+                minimizeButton.TooltipString = 'Expand this panel';
             else
-                obj.CloseButton.Visible = 'off';
+                minimizeButton.String = char( 9652 );
+                minimizeButton.TooltipString = 'Collapse this panel';
             end
-            if dockButtonEnabled
-                obj.DockButton.Position = dockPosition;
-                obj.DockButton.Visible = 'on';
+            if obj.Docked_
+                dockButton.String = char( 8599 );
+                dockButton.TooltipString = 'Undock this panel';
             else
-                obj.DockButton.Visible = 'off';
-            end
-            if minimizeButtonEnabled
-                obj.MinimizeButton.Position = minimizePosition;
-                obj.MinimizeButton.Visible = 'on';
-            else
-                obj.MinimizeButton.Visible = 'off';
-            end
-            if helpButtonEnabled
-                obj.HelpButton.Position = helpPosition;
-                obj.HelpButton.Visible = 'on';
-            else
-                obj.HelpButton.Visible = 'off';
+                dockButton.String = char( 8600 );
+                dockButton.TooltipString = 'Dock this panel';
             end
             
         end % redrawButtons
         
-        function redrawBorders( obj )
-            %redrawBorders  Redraw borders
-            %
-            %  p.redrawBorders() redraws the panel borders.
-            
-            % Get borders
-            topBorder = obj.TopBorder;
-            middleBorder = obj.MiddleBorder;
-            bottomBorder = obj.BottomBorder;
-            leftBorder = obj.LeftBorder;
-            rightBorder = obj.RightBorder;
-            
-            % Get border positions
-            topPosition = topBorder.Position;
-            middlePosition = middleBorder.Position;
-            bottomPosition = bottomBorder.Position;
-            leftPosition = leftBorder.Position;
-            rightPosition = rightBorder.Position;
-            
-            % Compute border masks
-            switch obj.BorderType_
-                case {'none','line'}
-                    topMask = true( topPosition([4 3]) );
-                    middleMask = true( middlePosition([4 3]) );
-                    bottomMask = true( bottomPosition([4 3]) );
-                    leftMask = true( leftPosition([4 3]) );
-                    rightMask = true( rightPosition([4 3]) );
-                case 'beveledin'
-                    topMask = false( topPosition([4 3]) );
-                    middleMask = false( middlePosition([4 3]) );
-                    bottomMask = true( bottomPosition([4 3]) );
-                    leftMask = false( leftPosition([4 3]) );
-                    leftMask(end-leftPosition(3)+1:end,:) = ...
-                        fliplr( tril( ones( leftPosition(3) ) ) == 1 );
-                    rightMask = true( rightPosition([4 3]) );
-                    rightMask(1:leftPosition(3),:) = ...
-                        fliplr( tril( ones( leftPosition(3) ) ) == 1 );
-                case 'beveledout'
-                    topMask = true( topPosition([4 3]) );
-                    middleMask = true( middlePosition([4 3]) );
-                    bottomMask = false( bottomPosition([4 3]) );
-                    leftMask = true( leftPosition([4 3]) );
-                    leftMask(end-leftPosition(3)+1:end,:) = ...
-                        fliplr( tril( ones( leftPosition(3) ) ) == 0 );
-                    rightMask = false( rightPosition([4 3]) );
-                    rightMask(1:leftPosition(3),:) = ...
-                        fliplr( tril( ones( leftPosition(3) ) ) == 0 );
-                case 'etchedin'
-                    topMask = [false( [topPosition(4)/2, topPosition(3)] ); ...
-                        true( [topPosition(4)/2, topPosition(3)] )];
-                    middleMask = [false( [middlePosition(4)/2, middlePosition(3)] ); ...
-                        true( [middlePosition(4)/2, middlePosition(3)] )];
-                    bottomMask = [false( [bottomPosition(4)/2, bottomPosition(3)] ); ...
-                        true( [bottomPosition(4)/2, bottomPosition(3)] )];
-                    leftMask = [false( [leftPosition(4), leftPosition(3)/2] ), ...
-                        true( [leftPosition(4), leftPosition(3)/2] )];
-                    leftMask(1:leftPosition(3)/2,:) = false;
-                    leftMask(end-leftPosition(3)/2+1:end,1:leftPosition(3)/2) = ...
-                        fliplr( tril( ones( leftPosition(3)/2 ) ) == 1 );
-                    leftMask(end-leftPosition(3)+1:end-leftPosition(3)/2,leftPosition(3)/2+1:end) = ...
-                        fliplr( tril( ones( leftPosition(3)/2 ) ) == 0 );
-                    rightMask = [false( [rightPosition(4), rightPosition(3)/2] ), ...
-                        true( [rightPosition(4), rightPosition(3)/2] )];
-                    rightMask(end-rightPosition(3)/2+1:end,:) = true;
-                    rightMask(rightPosition(3)/2+1:rightPosition(3),1:rightPosition(3)/2) = ...
-                        fliplr( tril( ones( rightPosition(3)/2 ) ) == 0 );
-                    rightMask(1:rightPosition(3)/2,rightPosition(3)/2+1:end) = ...
-                        fliplr( tril( ones( rightPosition(3)/2 ) ) == 1 );
-                case 'etchedout'
-                    topMask = [true( [topPosition(4)/2, topPosition(3)] ); ...
-                        false( [topPosition(4)/2, topPosition(3)] )];
-                    middleMask = [true( [middlePosition(4)/2, middlePosition(3)] ); ...
-                        false( [middlePosition(4)/2, middlePosition(3)] )];
-                    bottomMask = [true( [bottomPosition(4)/2, bottomPosition(3)] ); ...
-                        false( [bottomPosition(4)/2, bottomPosition(3)] )];
-                    leftMask = [true( [leftPosition(4), leftPosition(3)/2] ), ...
-                        false( [leftPosition(4), leftPosition(3)/2] )];
-                    leftMask(1:leftPosition(3)/2,:) = true;
-                    leftMask(end-leftPosition(3)/2+1:end,1:leftPosition(3)/2) = ...
-                        fliplr( tril( ones( leftPosition(3)/2 ) ) == 0 );
-                    leftMask(end-leftPosition(3)+1:end-leftPosition(3)/2,leftPosition(3)/2+1:end) = ...
-                        fliplr( tril( ones( leftPosition(3)/2 ) ) == 1 );
-                    rightMask = [true( [rightPosition(4), rightPosition(3)/2] ), ...
-                        false( [rightPosition(4), rightPosition(3)/2] )];
-                    rightMask(end-rightPosition(3)/2+1:end,:) = false;
-                    rightMask(rightPosition(3)/2+1:rightPosition(3),1:rightPosition(3)/2) = ...
-                        fliplr( tril( ones( rightPosition(3)/2 ) ) == 1 );
-                    rightMask(1:rightPosition(3)/2,rightPosition(3)/2+1:end) = ...
-                        fliplr( tril( ones( rightPosition(3)/2 ) ) == 0 );
-            end
-            
-            % Convert masks to color data
-            highlightColor = uix.Image.rgb2int( obj.HighlightColor_ );
-            shadowColor = uix.Image.rgb2int( obj.ShadowColor_ );
-            topJData = mask2jdata( topMask, highlightColor, shadowColor );
-            middleJData = mask2jdata( middleMask, highlightColor, shadowColor );
-            bottomJData = mask2jdata( bottomMask, highlightColor, shadowColor );
-            leftJData = mask2jdata( leftMask, highlightColor, shadowColor );
-            rightJData = mask2jdata( rightMask, highlightColor, shadowColor );
-            
-            % Paint borders
-            topBorder.JData = topJData;
-            middleBorder.JData = middleJData;
-            bottomBorder.JData = bottomJData;
-            leftBorder.JData = leftJData;
-            rightBorder.JData = rightJData;
-            
-            function c = mask2jdata( m, h, s )
-                
-                c = repmat( s, size( m ) );
-                c(m) = h;
-                
-            end % mask2jdata
-            
-        end % redrawBorders
-        
-        function recolorButtons( obj )
-            %recolorButtons  Recolor buttons
-            %
-            %  p.recolorButtons() recolors the panel buttons.
-            
-            % Update the icon colors to match the foreground color
-            obj.ColorButtonCData = obj.RawButtonCData;
-            flds = fieldnames(obj.ColorButtonCData);
-            for ii=1:numel(flds)
-                data = obj.ColorButtonCData.(flds{ii});
-                
-                % Recolor black to the foreground colour
-                data = iRecolor(data, [0 0 0], obj.ForegroundColor);
-                % Recolor red to a mid-tone
-                midTone = 0.5*obj.ForegroundColor + 0.5*obj.TitleColor;
-                data = iRecolor(data, [1 0 0], midTone);
-                
-                obj.ColorButtonCData.(flds{ii}) = data;
-            end
-            
-            % Now update the uicontrols
-            obj.CloseButton.CData = obj.ColorButtonCData.Close;
-            obj.HelpButton.CData = obj.ColorButtonCData.Help;
-            if obj.Docked
-                obj.DockButton.CData = obj.ColorButtonCData.Undock;
-            else
-                obj.DockButton.CData = obj.ColorButtonCData.Dock;
-            end
-            if obj.Minimized
-                obj.MinimizeButton.CData = obj.ColorButtonCData.Maximize;
-            else
-                obj.MinimizeButton.CData = obj.ColorButtonCData.Minimize;
-            end
-            
-            function im = iRecolor(im, oldCol, newCol)
-                idx = find((im(:,:,1) == oldCol(1)) & (im(:,:,2) == oldCol(2)) & (im(:,:,3) == oldCol(3)));
-                pixelsPerChannel = size(data,1)*size(data,2);
-                im(idx) = newCol(1);
-                im(idx+pixelsPerChannel) = newCol(2);
-                im(idx+2*pixelsPerChannel) = newCol(3);
-            end % iRecolor
-            
-        end % recolorButtons
-        
     end % helper methods
-    
-    methods( Access = private, Static )
-        
-        function cData = getButtonCData()
-            %getButtonCData  Get button image data
-            %
-            %  c = uix.BoxPanel.getButtonCData() returns the image data for
-            %  box panel titlebar buttons.
-            
-            cData.Close = uix.loadIcon( 'panelClose.png' );
-            cData.Dock = uix.loadIcon( 'panelDock.png' );
-            cData.Undock = uix.loadIcon( 'panelUndock.png' );
-            cData.Help = uix.loadIcon( 'panelHelp.png' );
-            cData.Minimize = uix.loadIcon( 'panelMinimize.png' );
-            cData.Maximize = uix.loadIcon( 'panelMaximize.png' );
-            
-        end % getButtonCData
-        
-    end % static helper methods
     
 end % classdef

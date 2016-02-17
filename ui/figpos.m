@@ -58,6 +58,12 @@ case 5 %full screen
 	if x < 1; x=0; end
 	if y < 1; y=0; end
 	set(gcf,'Position',[x y size(1) size(2)]);
+case 6 %top of screen
+	x=(width/2)-(size(1)/2);
+	y=(height)-((size(2)+40)/2);
+	if x < 1; x=0; end
+	if y < 1; y=0; end
+	set(gcf,'Position',[x y size(1) size(2)]);
 otherwise %center it
 	x=(width/2)-(size(1)/2);
 	y=(height/2)-((size(2)+40)/2);

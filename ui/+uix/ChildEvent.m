@@ -3,8 +3,8 @@ classdef( Hidden, Sealed ) ChildEvent < event.EventData
     %
     %  e = uix.ChildEvent(c) creates event data including the child c.
     
-    %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 978 $ $Date: 2014-09-28 14:20:44 -0400 (Sun, 28 Sep 2014) $
+    %  Copyright 2009-2015 The MathWorks, Inc.
+    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
     
     properties( SetAccess = private )
         Child % child

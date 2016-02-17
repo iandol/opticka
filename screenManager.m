@@ -263,6 +263,7 @@ classdef screenManager < optickaCore
 					Screen('Preference', 'Verbosity', 2);
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				else
+					fprintf('\n---> screenManager: Sync Tests enabled.\n');
 					Screen('Preference', 'SkipSyncTests', 0);
 					Screen('Preference', 'VisualDebugLevel', 3);
 					Screen('Preference', 'Verbosity', obj.verbosityLevel); %errors and warnings
@@ -376,7 +377,7 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief prepare the Screen values on the local machine
+		%> @brief This is the trick Mario told us to "hide" the colour changes as PTB starts -- we could use backgroundcolour here to be even better
 		%>
 		%> @param
 		%> @return
@@ -546,6 +547,26 @@ classdef screenManager < optickaCore
 			obj.distance = value;
 			obj.makeGrid();
 			%obj.salutation(['set distance: ' num2str(obj.distance) '|ppd: ' num2str(obj.ppd)],'Custom set method')
+		end
+		
+		% ===================================================================
+		%> @brief Set method for windowed
+		%>
+		%> @param
+		% ===================================================================
+		function set.windowed(obj,value)
+			if length(value) == 2 && isnumeric(value)
+				obj.windowed = value;
+			elseif islogical(value)
+				obj.windowed = value;
+			elseif value == 1
+				obj.windowed = true;
+			elseif value == 0
+				obj.windowed = false;
+			else
+				obj.windowed = false;
+			end
+				
 		end
 		
 		% ===================================================================

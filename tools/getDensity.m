@@ -68,8 +68,6 @@
 		barwidth = 1.75
 		%> are we verbose printing to command line?
 		verbose = true
-		%> any comments to add to the object
-		comment = ''
 		%> do we scale the axes to be equal for the scatterplots
 		scaleaxes = true
 		%> do we show the unity line for the scatterplot?
@@ -702,8 +700,6 @@
 				outs.(fieldn).ycolout = ycolout;
 				outs.(fieldn).text = t;
 				
-				%set(gcf,'Renderer','zbuffer');
-				
 				fprintf('\n---> getDensity Computation time took: %.2g seconds\n',toc);
 				
 				obj.pn = pn;
@@ -1002,17 +998,13 @@
 					value = value';
 				end
 				for ii = 1:length(value)
-					if isempty(value{ii})
+					if isempty(value{ii}) || isnan(value{ii})
 						value{ii} = 'Unknown';
 					end
 					value{ii}=regexprep(value{ii},'^\?$','Unknown');
-					value{ii}=regexprep(value{ii},'\W','_');
+					value{ii}=matlab.lang.makeValidName(value{ii});
 				end
-				if obj.nominalcases == true
-					obj.cases = nominal(value);
-				else
-					obj.cases = ordinal(value);
-				end
+				obj.cases = categorical(value);
 			end
 			notify(obj,'checkData');
 		end
