@@ -269,12 +269,12 @@ classdef gratingStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
+			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
 				Screen('DrawTexture', obj.sM.win, obj.texture, [],obj.mvRect,...
 					obj.angleOut, [], [], [], [], obj.rotateMode,...
 					[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
-				obj.tick = obj.tick + 1;
 			end
+			obj.tick = obj.tick + 1;
 		end
 		
 		% ===================================================================

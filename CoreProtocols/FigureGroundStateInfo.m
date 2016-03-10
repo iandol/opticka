@@ -5,7 +5,7 @@
 % s = screenManager
 % sM = State Machine
 % eL = eyelink manager
-% lJ = LabJack (reward trigger to Crist reward system)
+% lJ = LabJack (TTL trigger to Crist reward system/Magstim)
 % bR = behavioural record plot
 % obj.stimuli = our list of stimuli
 % tS = general simple struct to hold variables for this run
@@ -49,7 +49,7 @@ tS.targetRadius = 4;
 
 %------------------------Eyelink setup--------------------------
 eL.isDummy = tS.dummyEyelink; %use dummy or real eyelink?
-eL.name = tS.name;
+eL.name = tS.name; %protocol name copied here
 if tS.saveData == true; eL.recordData = true; end% save EDF file?
 eL.sampleRate = 250;
 eL.remoteCalibration = true; % manual calibration?
@@ -90,6 +90,8 @@ obj.stimuli.fixationChoice = 3;
 %----------------------State Machine States-------------------------
 % these are our functions that will execute as the stateMachine runs,
 % in the scope of the runExperiemnt object.
+% each statemachine "function" is a cell array of anonymous functions that enables
+% each state to perform a set of actions on entry, during and on exit of that state.
 
 %pause entry
 pauseEntryFcn = { @()rstop(io); ... %rstop is pause the plexon

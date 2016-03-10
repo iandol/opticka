@@ -11,34 +11,39 @@
 classdef baseStimulus < optickaCore & dynamicprops
 	
 	properties (Abstract = true, SetAccess = protected)
-		%> the stimulus family
+		%> the stimulus family (grating, dots etc.)
 		family
 	end
 	
 	properties
-		%> X Position in degrees relative to screen center
+		%> X Position +- in degrees relative to screen center (0,0)
 		xPosition = 0
-		%> Y Position in degrees relative to screen center
+		%> Y Position +- in degrees relative to screen center (0,0)
 		yPosition = 0
 		%> Size in degrees
 		size = 4
-		%> Colour as a 0-1 range RGBA
+		%> Colour as a 0-1 range RGB or RGBA
 		colour = [0.5 0.5 0.5]
-		%> Alpha as a 0-1 range
+		%> Alpha as a 0-1 range, this gets added to the RGB colour
 		alpha = 1
 		%> Do we print details to the commandline?
 		verbose = false
-		%> For moving stimuli do we start "before" our initial position?
+		%> For moving stimuli do we start "before" our initial position? THis allows you to
+		%> center a stimulus at a screen location, but then drift it across that location, so
+		%> if xyPosition is 0,0 and startPosition is -2 then the stimulus will start at -2 drifing
+		%> towards 0.
 		startPosition = 0
 		%> speed in degs/s
 		speed = 0
 		%> angle in degrees
 		angle = 0
-		%> delay time to display, can set upper and lower range for random interval
+		%> delay time to display relative to stimulus onset, can set upper and lower range
+		%> for random interval. This allows for a goup of stimuli some to be delayed relative
+		%> to others for a global stimulus onset time.
 		delayTime = 0
-		%> time to turn stimulus off
+		%> time to turn stimulus off, relative to stimulus onset
 		offTime = Inf
-		%> override X and Y position with mouse input?
+		%> override X and Y position with mouse input? Useful for RF mapping
 		mouseOverride = false
 		%> true or false, whether to draw() this object
 		isVisible = true
@@ -341,9 +346,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 					fprintf('\n------> SPEED = %g fps\n', fps);
 				end
 				s.windowed = oldwindowed;
+				reset(obj); %reset our stimulus ready for use again
 				close(s); %close screen
 				clear s fps benchmark runtime b bb i; %clear up a bit
-				reset(obj); %reset our stimulus ready for use again
 				warning on
 			catch ME
 				if exist('s','var')

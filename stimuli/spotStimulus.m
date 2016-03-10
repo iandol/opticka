@@ -171,8 +171,8 @@ classdef spotStimulus < baseStimulus
 				else
 					Screen('gluDisk',obj.sM.win,obj.currentColour,obj.xOut,obj.yOut,obj.sizeOut/2);
 				end
-				obj.tick = obj.tick + 1;
 			end
+			obj.tick = obj.tick + 1;
 		end
 		
 		% ===================================================================

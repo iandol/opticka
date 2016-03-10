@@ -37,7 +37,7 @@ classdef metaStimulus < optickaCore
 		controlTable = []
 		%> show subsets of stimuli?
 		stimulusSets = []
-		%>
+		%> which set of stimuli to display
 		setChoice = 0;
 		%>
 		flashRate = 0.25
@@ -364,6 +364,19 @@ classdef metaStimulus < optickaCore
 					for i = 1:length(sets)
 						show(obj.stimuli{sets(i)});
 					end
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Toggle show/hide for particular sets of stimuli
+		%>
+		% ===================================================================
+		function changeSet(obj,value)
+			if ~isempty(obj.stimulusSets) && value > 0
+				if value <= length(obj.stimulusSets)
+					obj.setChoice = value;
+					showSet(obj);
 				end
 			end
 		end

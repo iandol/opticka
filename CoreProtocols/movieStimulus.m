@@ -1,35 +1,30 @@
 % ========================================================================
-%> @brief textureStimulus is the superclass for texture based stimulus objects
+%> @brief movieStimulus is the class for movie based stimulus objects
 %>
-%> Superclass providing basic structure for texture stimulus classes
 %>
 % ========================================================================	
-classdef textureStimulus < baseStimulus	
+classdef movieStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		type = 'picture'
-		contrast = 1
-		interpMethod = 'nearest'
+		type = 'movie'
 		fileName = ''
-		%>scale up the texture in the bar
-		pixelScale = 1 
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> scale is set by size
 		scale = 1
 		family = 'texture'
-		matrix
+		movie
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
-		typeList = {'picture'}
+		typeList = {'movie'}
 		fileNameList = 'filerequestor';
 		interpMethodList = {'nearest','linear','spline','cubic'}
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties='type|fileName|contrast|scale|interpMethod|pixelScale';
+		allowedProperties='type|fileName|contrast|interpMethod|pixelScale';
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = 'scale|fileName|interpMethod|pixelScale'
 	end
@@ -48,7 +43,7 @@ classdef textureStimulus < baseStimulus
 		%>
 		%> @return instance of opticka class.
 		% ===================================================================
-		function obj = textureStimulus(varargin)
+		function obj = movieStimulus(varargin)
 			if nargin == 0;varargin.family = 'texture';end
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
 			obj.size = 1; %override default
@@ -57,9 +52,7 @@ classdef textureStimulus < baseStimulus
 			end
 			
 			if isempty(obj.fileName) %use our default
-				p = mfilename('fullpath');
-				p = fileparts(p);
-				obj.fileName = [p filesep 'Bosch.jpeg'];
+				obj.fileName = [ PsychtoolboxRoot 'PsychDemos/MovieDemos/DualDiscs.mov' ];
 			end
 			
 			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
@@ -99,10 +92,8 @@ classdef textureStimulus < baseStimulus
 			
 			obj.sM = sM;
 			obj.ppd=sM.ppd;
-			
-			obj.texture = []; %we need to reset this
 
-			fn = fieldnames(textureStimulus);
+			fn = fieldnames(movieStimulus);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
@@ -115,25 +106,7 @@ classdef textureStimulus < baseStimulus
 				end
 			end
 			
-			ialpha = [];
-			if ~isempty(in)
-				obj.matrix = in;
-			elseif ~isempty(obj.fileName) && exist(obj.fileName,'file')
-				[obj.matrix, ~, ialpha] = imread(obj.fileName);
-			else
-				obj.matrix = uint8(ones(obj.size*obj.ppd,obj.size*obj.ppd,3)); %white texture
-			end
-			
-			obj.matrix = obj.matrix .* obj.contrast;
-			
-			if isempty(ialpha)
-				obj.matrix(:,:,4) = uint8(obj.alpha .* 255);
-			else
-				obj.matrix(:,:,4) = ialpha;
-			end
-			
-			specialFlags = 0; %4 is optimization for uint8 textures. 0 is default
-			obj.texture = Screen('MakeTexture', obj.sM.win, obj.matrix, 1, specialFlags);
+			obj.movie = Screen('OpenMovie', obj.sM.win, obj.fileName);
 			
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
@@ -155,9 +128,9 @@ classdef textureStimulus < baseStimulus
 			
 			obj.inSetup = false;
 			
-			computePosition(obj);
-			setRect(obj);
-			
+			%computePosition(obj);
+			%setRect(obj);
+			Screen('PlayMovie', obj.movie, 1, 1);
 		end
 
 		% ===================================================================
@@ -169,6 +142,7 @@ classdef textureStimulus < baseStimulus
 			resetTicks(obj);
 			computePosition(obj);
 			setRect(obj);
+			Screen('SetMovieTimeIndex', obj.movie, 0); %reset movie
 		end
 		
 		% ===================================================================
@@ -177,9 +151,11 @@ classdef textureStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
-				Screen('DrawTexture',obj.sM.win,obj.texture,[],obj.mvRect,obj.angleOut);
+				obj.texture = Screen('GetMovieImage', obj.sM.win, obj.movie);
+				Screen('DrawTexture',obj.sM.win,obj.texture);
+				Screen('Close',obj.texture);
+				obj.tick = obj.tick + 1;
 			end
-			obj.tick = obj.tick + 1;
 		end
 		
 		% ===================================================================
@@ -211,6 +187,10 @@ classdef textureStimulus < baseStimulus
 			obj.mvRect = [];
 			obj.dstRect = [];
 			obj.removeTmpProperties;
+			if ~isempty(obj.movie)
+				try Screen('CloseMovie', obj.movie); end
+			end
+			obj.movie = [];
 		end
 		
 	end %---END PUBLIC METHODS---%
