@@ -41,7 +41,7 @@ tS.firstFixTime = [0.5];
 tS.firstFixRadius = 2;
 obj.lastXPosition = tS.fixX;
 obj.lastYPosition = tS.fixY;
-tS.strict = true;
+tS.strict = true; %do we allow (strict==false) multiple entry/exits of fix window within the time limit
 
 tS.targetFixInit = 3;
 tS.targetFixTime = [0.2 0.5];
@@ -198,7 +198,7 @@ incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eye
 incFcn = @()draw(obj.stimuli);
 
 %incorrect / break exit
-incExitFcn = { @()edit(obj.stimuli,2,'modulateColourOut',[0.5 0.5 0.5]); ... %luminance pedestal
+incExitFcn = { %@()edit(obj.stimuli,2,'modulateColourOut',[0.5 0.5 0.5]); ... %luminance pedestal
 	@()setOffline(eL); ... %set eyelink offline
 	@()updateVariables(obj,[],[],false); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display

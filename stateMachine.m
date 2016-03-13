@@ -1,20 +1,20 @@
 % ========================================================================
 %> @brief stateMachine a state machine object
-%> 
+%>
 %> stateMachine allows a set of 'states' to be run, with functions
 %> executed on entering state, within the state, and on
 %> exiting the state. States can be linked, so a 'middle' state can be
 %> run after a 'start' state. States can run in a loop (run() method) and
 %> use either real time as assesed using the clockFcn fHandle
 %> property or via tick time, where each update() to the stateMachine is a
-%> 'tick'. Tick time is useful when controlled via an external manager like 
+%> 'tick'. Tick time is useful when controlled via an external manager like
 %> the Psychophysics toolbox which uses display refresh as a natural
 %> tick timer. States have 4 fundamental evaluation points: ENTER, WITHIN, TRANSITION
-%> and EXIT. TRANSITION evaluation is used to allow logic to switch from a 
-%> default transition path to an alternate. For example, you can imagine a 
-%> default stimulus > incorrect transition, but if the subject answers correctly 
+%> and EXIT. TRANSITION evaluation is used to allow logic to switch from a
+%> default transition path to an alternate. For example, you can imagine a
+%> default stimulus > incorrect transition, but if the subject answers correctly
 %> you can use the transition evaluation to switch instead to a correct state.
-%> 
+%>
 %> To run a demo, try the following:
 %> >> sm = stateMachine
 %> >> runDemo(sm);
@@ -25,12 +25,16 @@
 classdef stateMachine < optickaCore
 	
 	properties
-		%>our main state list, stored as a structure
+		%> our main state list, stored as a structure
 		stateList@struct = struct([])
 		%> timedelta for time > ticks calculation, assume 60Hz by default
-		%> but set to correct IFI of display before use
+		%> but set to correct IFI of display before use.
 		timeDelta@double = 1/60
-		%> use real time (true) or ticks (false) to mark state time
+		%> use real time (true) or ticks (false) to mark state time. Real time is more
+		%> accurate, and robust against unexpected delays. Ticks uses timeDelta per tick and a
+		%> tick timer (each loop is 1 tick) for time measurement. This is simpler, can be
+		%> controlled by an external driver that deals with timing, but without supervision
+		%> but delays will accumulate vs real timer.
 		realTime@logical = false
 		%> clock function to use
 		clockFcn@function_handle = @GetSecs
@@ -141,7 +145,7 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> @brief Add new states to the state machine.
-        %> @param newStates a cell array with information defining a state.
+		%> @param newStates a cell array with information defining a state.
 		%> @return newStateIndexes indexes to newly added states
 		% ===================================================================
 		function newStateIndexes = addStates(obj,newStates)
@@ -189,36 +193,36 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> Edit fields of an existing state.
-        %> @param stateName string name of an existing state in allStates
-        %> @param varargin flexible number of field-value paris to edit the
-        %> fields of the @a stateName state.
-        %> @details
-        %> Assigns the given values to the given fields of the existing
-        %> state that has the name @a stateName.  @a varargin represents a
-        %> flexible number of traling arguments passed to editStateByName().
-        %> The first argument in each pair should be one of the field names
-        %> of the allStates struct, which include the default state fields
-        %> described for addField() and the names of any sharedEntry or
-        %> sharedExit fevalables.  The second argument in each pair should
-        %> be a value to assign to the named field.
-        %> @details
-        %> Editing the @b name field of a state might cause the state
-        %> machine to misbehave.
-        %> @details
-        %> Returns the index into allStates of the @a stateName state.  If
-        %> @a stateName is not the name of an existing state, returns [].
-        % ===================================================================
+		%> @param stateName string name of an existing state in allStates
+		%> @param varargin flexible number of field-value paris to edit the
+		%> fields of the @a stateName state.
+		%> @details
+		%> Assigns the given values to the given fields of the existing
+		%> state that has the name @a stateName.  @a varargin represents a
+		%> flexible number of traling arguments passed to editStateByName().
+		%> The first argument in each pair should be one of the field names
+		%> of the allStates struct, which include the default state fields
+		%> described for addField() and the names of any sharedEntry or
+		%> sharedExit fevalables.  The second argument in each pair should
+		%> be a value to assign to the named field.
+		%> @details
+		%> Editing the @b name field of a state might cause the state
+		%> machine to misbehave.
+		%> @details
+		%> Returns the index into allStates of the @a stateName state.  If
+		%> @a stateName is not the name of an existing state, returns [].
+		% ===================================================================
 		function index = editStateByName(obj, stateName, varargin)
-            [isState, index] = isStateName(obj,stateName);
-            if isState
-                for ii = 1:2:length(varargin)
-                    field = varargin{ii};
-                    if isfield(obj.stateList, field)
-                        obj.stateList(index).(field) = varargin{ii+1};
-                    end
-                end
-            end
-        end
+			[isState, index] = isStateName(obj,stateName);
+			if isState
+				for ii = 1:2:length(varargin)
+					field = varargin{ii};
+					if isfield(obj.stateList, field)
+						obj.stateList(index).(field) = varargin{ii+1};
+					end
+				end
+			end
+		end
 		
 		% ===================================================================
 		%> @brief getState retrieve a named state from the state list
@@ -233,8 +237,8 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> @brief update the state machine, normally run via an external loop
-		%> 
-		%> 
+		%>
+		%>
 		% ===================================================================
 		function update(obj)
 			if obj.isRunning == true
@@ -283,10 +287,10 @@ classdef stateMachine < optickaCore
 				
 				%TODO lets assume to update a tick here, we may miss a tick on
 				%the tranition above, not sure of the implications of
-				%updating ticks before or after? 
+				%updating ticks before or after?
 				obj.currentTick = obj.currentTick + 1;
 				obj.totalTicks = obj.totalTicks + 1;
-
+				
 			else
 				obj.salutation('update method','stateMachine has not been started yet',true)
 			end
@@ -295,7 +299,7 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		%> @brief forceTransition force the state machine into a new named state
 		%> @param stateName name of the state to transition to
-		%> 
+		%>
 		% ===================================================================
 		function forceTransition(obj,stateName)
 			if obj.isRunning == true
@@ -304,7 +308,7 @@ classdef stateMachine < optickaCore
 					transitionToStateWithName(obj, stateName)
 					return
 				else
-					obj.salutation('forceTransition method',['state: ' stateName ' not found...'],false)
+					if obj.verbose;obj.salutation('forceTransition method',['state: ' stateName ' not found...'],false);end
 				end
 			else
 				obj.salutation('forceTransition method','stateMachine has not been started yet',true)
@@ -313,8 +317,8 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> @brief start the state machine
-		%> 
-		%> 
+		%>
+		%>
 		% ===================================================================
 		function start(obj)
 			if obj.isRunning == false
@@ -335,8 +339,8 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> @brief finish stop the state machine
-		%> 
-		%> 
+		%>
+		%>
 		% ===================================================================
 		function finish(obj)
 			if obj.isFinishing == true
@@ -354,8 +358,8 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> @brief run automomously run the state machine
-		%> 
-		%> 
+		%>
+		%>
 		% ===================================================================
 		function run(obj)
 			if obj.isRunning == false
@@ -390,20 +394,20 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> @brief evalExitFcn sets current state skipExit value
-		%> 
-		%> 
+		%>
+		%>
 		% ===================================================================
 		function evalExitFcn(obj,value)
 			if obj.isRunning == true
 				obj.currentState.skipExitFcn = value;
- 				%if value; fprintf('SKIP EXIT STATE!!!\n'); end
+				%if value; fprintf('SKIP EXIT STATE!!!\n'); end
 			end
 		end
 		
 		% ===================================================================
 		%> @brief printcurrentTick prints current (and total) ticks to command window
-		%> 
-		%> 
+		%>
+		%>
 		% ===================================================================
 		function printCurrentTick(obj)
 			fprintf('%g:%g',obj.currentTick,obj.totalTicks)
@@ -411,8 +415,8 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> @brief UUID function to return current UUID via a method
-		%> 
-		%> 
+		%>
+		%>
 		% ===================================================================
 		function uuid = UUID(obj)
 			uuid = obj.currentUUID;
@@ -420,8 +424,8 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> @brief reset the object
-		%> 
-		%> 
+		%>
+		%>
 		% ===================================================================
 		function reset(obj)
 			obj.stateList = struct([]);
@@ -443,8 +447,8 @@ classdef stateMachine < optickaCore
 		
 		% ===================================================================
 		%> @brief runDemo runs a sample state machine session
-		%> 
-		%> 
+		%>
+		%>
 		% ===================================================================
 		function runDemo(obj)
 			oldVerbose = obj.verbose;
@@ -459,12 +463,12 @@ classdef stateMachine < optickaCore
 			transitionFcn = @()sprintf('surprise'); %returns a valid state name and thus triggers a transition
 			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
 			statesInfo = { ...
-			'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'; ...
-			'begin'		'middle'		2			beginFcn		withinFcn	[]						exitFcn; ...
-			'middle'		'end'			2			middleFcn	withinFcn	transitionFcn		exitFcn; ...
-			'end'			''				2			endFcn		withinFcn	[]						exitFcn; ...
-			'surprise'	'end'			2			surpriseFcn	withinFcn	[]						exitFcn; ...
-			};
+				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'; ...
+				'begin'		'middle'		2			beginFcn		withinFcn	[]						exitFcn; ...
+				'middle'		'end'			2			middleFcn	withinFcn	transitionFcn		exitFcn; ...
+				'end'			''				2			endFcn		withinFcn	[]						exitFcn; ...
+				'surprise'	'end'			2			surpriseFcn	withinFcn	[]						exitFcn; ...
+				};
 			addStates(obj,statesInfo);
 			disp('>--------------------------------------------------')
 			disp(' The demo will run the following states settings:  ')
@@ -482,16 +486,18 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief TODO!!!! skip exit management
-		%> @param
+		%> @brief TODO!!!! skip exit management, this tests an N x 2 cell array if the first
+		%> regex matches currentName and the second regex matches next state then skip running
+		%> the exit function, this is an optimisation.
+		%> @param list Nx2 cell array list of regexes for
 		%> @return
 		% ===================================================================
 		function set.skipExitStates(obj,list)
 			if ~exist('list','var') || isempty(list) || ~iscell(list); return; end
-			for i=1:size(list,1)
-				if ~isempty(regexpi(obj.currentName,obj.skipExitStates{i,1})) && ~isempty(regexpi(nextName,obj.skipExitStates{i,2}));
-					obj.currentState.skipExitFcn = true;
-				end
+			if size(list,2) == 2
+				obj.skipExitStates = list;
+			else
+				obj.skipExitStates = [];
 			end
 		end
 		
@@ -534,12 +540,12 @@ classdef stateMachine < optickaCore
 				if isa(thisState.entryFcn,'function_handle') %function handle, lets feval it
 					feval(thisState.entryFcn);
 				elseif iscell(thisState.entryFcn) %nested class of function handles
-					for i = 1:size(thisState.entryFcn,1) 
+					for i = 1:size(thisState.entryFcn,1)
 						feval(thisState.entryFcn{i});
 					end
 				end
 				%obj.fevalTime.enter = toc*1000;
-	
+				
 			else
 				obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length',false);
 				obj.finish();
@@ -563,16 +569,16 @@ classdef stateMachine < optickaCore
 					end
 				end
 				exitCurrentState(obj);
-%				if isa(obj.globalTransitionFcn,'function_handle') %function handle, lets feval it
-%					feval(obj.globalTransitionFcn);
-%				end
+				%				if isa(obj.globalTransitionFcn,'function_handle') %function handle, lets feval it
+				%					feval(obj.globalTransitionFcn);
+				%				end
 				if obj.verbose; obj.salutation(['Transition @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false); end
 				enterStateAtIndex(obj, index);
 			else
 				obj.salutation('transitionToStateWithName method', 'ERROR, default to return to first state!!!\n',true)
 				enterStateAtIndex(obj, 1);
 			end
-				
+			
 		end
 		
 		% ===================================================================
@@ -584,7 +590,7 @@ classdef stateMachine < optickaCore
 			thisState = obj.currentState;
 			%tic;
 			if thisState.skipExitFcn == false
-				if iscell(thisState.exitFcn) %nested class of function handles	
+				if iscell(thisState.exitFcn) %nested class of function handles
 					for i = 1:size(thisState.exitFcn, 1) %nested class
 						feval(thisState.exitFcn{i});
 					end
@@ -641,13 +647,13 @@ classdef stateMachine < optickaCore
 				out.(fn{j}) = obj.(fn{j});
 			end
 		end
-
+		
 	end
 	
 	%=======================================================================
 	methods (Static) %------------------STATIC METHODS
 	%=======================================================================
-	
+		
 		% ===================================================================
 		%> @brief loadobj handler
 		%>
@@ -655,13 +661,13 @@ classdef stateMachine < optickaCore
 		%function lobj=loadobj(in)
 		%	lobj = in;
 		%end
-
+		
 		% ===================================================================
 		%> @brief plot timing logs
 		%>
 		% ===================================================================
 		function plotLogs(log)
-			for i = 1:length(log)			
+			for i = 1:length(log)
 				names{i} = log(i).name;
 			end
 			figure;
@@ -678,7 +684,7 @@ classdef stateMachine < optickaCore
 			box on;
 			grid on;
 			if isfield(log(1).fevalTime,'enter')
-				for i = 1:length(log)			
+				for i = 1:length(log)
 					int(i) = log(i).fevalTime.enter;
 					outt(i) = log(i).fevalTime.exit;
 				end

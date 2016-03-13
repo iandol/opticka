@@ -408,7 +408,7 @@ classdef eyelinkManager < optickaCore
 			end
 			if nargin > 5 && ~isempty(radius); obj.fixationRadius = radius; end
 			if nargin > 6 && ~isempty(strict); obj.strictFixation = strict; end
-			%fprintf('updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g time=%g\n', obj.fixationX, obj.fixationY, num2str(obj.fixationInitTime), num2str(obj.fixationTime), obj.fixationRadius,toc*1000);
+			if obj.verbose; fprintf('---> eyelinkManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g\n', obj.fixationX, obj.fixationY, num2str(obj.fixationInitTime), num2str(obj.fixationTime), obj.fixationRadius); end
 		end
 		
 		% ===================================================================
@@ -443,6 +443,7 @@ classdef eyelinkManager < optickaCore
 						searching = false;
 						fixated = true;
 						obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
+						%if obj.verbose;fprintf('%g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, obj.fixLength, obj.fixationTime, obj.fixTotal, obj.fixInitTotal);end
 						return
 					else
 						fixated = false;
@@ -513,33 +514,31 @@ classdef eyelinkManager < optickaCore
 			if searching
 				if (obj.strictFixation==true && (obj.fixN == 0)) || obj.strictFixation==false
 					out = 'searching';
-					return
 				else
 					out = noString;
-					%fprintf('--->Eyelink STRICT SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);
-					return
+					if obj.verbose; fprintf('---> Eyelink:testSearchHoldFixation STRICT SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 				end
+				return
 			elseif fix
 				if (obj.strictFixation==true && ~(obj.fixN == -100)) || obj.strictFixation==false
 					if fixtime
 						out = yesString;
+						if obj.verbose; fprintf('---> Eyelink:testSearchHoldFixation FIXATION SUCCESSFUL!: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 					else
 						out = 'fixing';
 					end
-					return
 				else
 					out = noString;
-					%fprintf('--->Eyelink FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching)
-					return
+					if obj.verbose;fprintf('---> Eyelink:testSearchHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 				end
+				return
 			elseif searching == false
 				out = noString;
-				%fprintf('--->Eyelink SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching)
-				return
+				if obj.verbose;fprintf('---> Eyelink:testSearchHoldFixation SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 			else
 				out = '';
 			end
-			
+			return
 		end
 		
 		% ===================================================================
@@ -569,12 +568,12 @@ classdef eyelinkManager < optickaCore
 				x = obj.toPixels(obj.x,'x');
 				y = obj.toPixels(obj.y,'y');
 				if obj.isFixated
-					Screen('DrawDots', obj.screen.win, [x y], 8, [1 0.5 1 1], [], 1);
+					Screen('DrawDots', obj.screen.win, [x y], 10, [1 0.5 1 1], [], 1);
 					if obj.fixLength > obj.fixationTime
 						Screen('DrawText', obj.screen.win, 'FIX', x, y, [1 1 1]);
 					end	
 				else
-					Screen('DrawDots', obj.screen.win, [x y], 4, [1 0.5 0 1], [], 1);
+					Screen('DrawDots', obj.screen.win, [x y], 6, [1 0.5 0 1], [], 1);
 				end	
 			end
 		end

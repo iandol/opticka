@@ -706,14 +706,15 @@ classdef runExperiment < optickaCore
 					%==================================================%
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				end %=========================END OF MAIN LOOP===================
+				end %=========================END OF MAIN LOOP======================
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				
+				show(obj.stimuli); %make all stimuli visible again, useful for editing 
 				drawBackground(s);
 				Screen('Flip', s.win);
 				Priority(0);
 				ListenChar(0);
-				obj.salutation(sprintf('Total ticks: %g | stateMachine ticks: %g', tS.totalTicks, sM.totalTicks));
+				fprintf('\n===>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
 				
 				if obj.useDataPixx
 					rstop(io); %pause plexon
@@ -857,7 +858,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief updates eyelink with stimuli random position
+		%> @brief updates eyelink with stimuli position
 		%>
 		%> @param
 		% ===================================================================
@@ -872,7 +873,27 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief when running allow keyboard override, so we can edit things
+		%> @brief checks the variable value of a stimulus (e.g. its angle) and then sets a fixation target based on
+		%> that value, so you can use two test stimuli and set the target to one of them in a
+		%> forced choice paradigm.
+		%>
+		%> @param
+		% ===================================================================
+		function updateConditionalFixationTarget(obj, stimulus, variable, mapping, varargin)
+			stimuluschoice = [];
+			try
+				value = obj.stimuli{stimulus}.([variable 'Out']); %get our value
+				stimuluschoice = mapping(2,mapping(1,:)==value);
+			end
+			if ~isempty(stimuluschoice)
+				obj.stimuli.fixationChoice = stimuluschoice;
+				[obj.lastXPosition,obj.lastYPosition] = getFixationPositions(obj.stimuli);
+				updateFixationValues(obj.eyeLink, obj.lastXPosition, obj.lastYPosition, varargin);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief when running allow keyboard override, so we can edit/debug things
 		%>
 		%> @param
 		% ===================================================================
@@ -1684,7 +1705,7 @@ classdef runExperiment < optickaCore
 								fprintf('===>>> PAUSE OFF!\n');
 							else
 								forceTransition(obj.stateMachine, 'pause');
-								fprintf('===>>> PAUSE ENGAGED!\n');
+								fprintf('===>>> PAUSE ENGAGED! (press [p] to unpause)\n');
 								tS.pauseToggle = tS.pauseToggle + 1;
 							end 
 							tS.keyHold = tS.keyTicks + fInc;

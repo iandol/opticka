@@ -760,7 +760,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				obj.xOut = obj.xPositionOut + (dx * obj.ppd) + obj.sM.xCenter;
 				obj.yOut = obj.yPositionOut + (dy * obj.ppd) + obj.sM.yCenter;
-				if obj.verbose; fprintf('--->computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',obj.fullName, obj.xOut, obj.xPositionOut, dx, obj.yOut, obj.yPositionOut, dy); end
+				if obj.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',obj.fullName, obj.xOut, obj.xPositionOut, dx, obj.yOut, obj.yPositionOut, dy); end
 			end
 			setAnimationDelta(obj);
 		end

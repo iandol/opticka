@@ -342,7 +342,7 @@ classdef metaStimulus < optickaCore
 						else
 							obj.stimulusPositions(a).selected = false;
 						end
-						%fprintf('Stim%i = X: %.2f Y: %.2f Size: %.2f\n',i, obj.stimulusPositions(a).x,obj.stimulusPositions(a).y,obj.stimulusPositions(a).size);
+						if obj.verbose==true; fprintf('Stim%i = X: %.2f Y: %.2f Size: %.2f\n',i, obj.stimulusPositions(a).x,obj.stimulusPositions(a).y,obj.stimulusPositions(a).size); end
 						a = a + 1;
 					end
 				end
@@ -373,6 +373,7 @@ classdef metaStimulus < optickaCore
 		%>
 		% ===================================================================
 		function changeSet(obj,value)
+			if ~exist('value','var'); value = 0; end
 			if ~isempty(obj.stimulusSets) && value > 0
 				if value <= length(obj.stimulusSets)
 					obj.setChoice = value;
