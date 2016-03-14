@@ -3,9 +3,10 @@
 
 echo; echo "---> Deleting old html directory"; echo
 rm -rf html/
+rm -rf docs/
 
 #Auto-run Matlab, publishing HTML output from optickatest.m
-MATLAB='/Applications/MATLAB_R2014b.app/bin/matlab'
+MATLAB='/Applications/MATLAB_R2016a.app/bin/matlab'
 if [ -f $MATLAB ]; then
 	$MATLAB -nodesktop -nosplash -r "publish('optickatest.m');pause(2);exit"
 fi
@@ -25,11 +26,13 @@ sleep 2
 echo; echo "---> Will run DOXYGEN"; echo
 doxygen .doxyfile
 echo; echo "---> Ran doxygen"
-open html/index.html
-open html/optickatest.html
-echo; echo "---> FINISHED!"
 #a little cleanup if rogue files are produced...
 rm .doxyfilee
 rm .doxyfile-e
 rm debug.txt
+sleep 1
+mv html/ docs/
+open html/index.html
+open html/optickatest.html
+echo; echo "---> FINISHED!"
 exit 0

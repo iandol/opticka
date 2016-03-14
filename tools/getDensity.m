@@ -1,4 +1,4 @@
-	classdef getDensity < handle
+classdef getDensity < handle
 	%GETDENSITY computes bootstrapped density estimates and full stats for two
 	%groups. You can pass a set of cases to the function and it will compute
 	%statistics automagically for all cases as well. There are numerous
@@ -345,7 +345,7 @@
 				py = 1;
 				pn(py,px).select()
 				
-				if isDataEqualLength && exist('notBoxPlot','file')
+				if isDataEqualLength
 					% 					if ~isempty(uniquecases) && ~isempty(casesLocal)
 					% 						for jj = 1:length(uniquecases)
 					% 							caseidx = ismember(casesLocal,uniquecases{jj});
@@ -356,15 +356,15 @@
 					% 					else
 					% 						notBoxPlot([xcol ycol],[1 1]);
 					% 					end
-					notBoxPlot([xcol ycol],[1 2]);
+					obj.notBoxPlot([xcol ycol],[1 2]);
 					set(gca,'XTick', [1 2],'XTickLabel', obj.legendtxt)
 					pn(py,px).ylabel(obj.columnlabels{idx});
 					
-				elseif isDataEqualLength==false && exist('notBoxPlot','file')
+				elseif isDataEqualLength==false
 					
-					notBoxPlot(xcol,1);
+					obj.notBoxPlot(xcol,1);
 					hold on
-					notBoxPlot(ycol,2);
+					obj.notBoxPlot(ycol,2);
 					set(gca,'XTick', [1 2],'XTickLabel', obj.legendtxt)
 					pn(py,px).ylabel(obj.columnlabels{idx});
 					
@@ -496,7 +496,7 @@
 					set(gca,'Layer','top');
 				end
 				
-
+				
 				
 				%============================Lets measure statistics
 				t=['Mn/Mdn: ' sprintf('%0.3g', xmean) '\pm' sprintf('%0.3g', xstderr) '/' sprintf('%0.3g', xmedian) ' | ' sprintf('%0.3g', ymean) '\pm' sprintf('%0.3g', ystderr) ' / ' sprintf('%0.3g', ymedian)];
@@ -1151,6 +1151,7 @@
 				end
 				obj.yrownames = ntmp;
 			end
+			warning off
 			if ~isempty(obj.x)
 				if ~isempty(obj.cases) && obj.isDataEqualLength
 					obj.xdata = dataset({obj.x,obj.columnlabels{:}},'ObsNames',obj.xrownames);
@@ -1171,7 +1172,8 @@
 			end
 			if length(obj.index) > size(obj.x,2)
 				obj.index = [];
-			end			
+			end
+			warning on
 		end
 		
 		% ===================================================================
@@ -1402,6 +1404,203 @@
 			end
 		end
 		
+		% ===================================================================
+		%> @brief notBoxplot is a boxplot alternative
+		%>
+		%> 
+		% ===================================================================
+		function varargout=notBoxPlot(obj,y,x,jitter,style)
+			% notBoxPlot - Doesn't plot box plots!
+			% Rob Campbell - January 2010
+			narginchk(1,5)
+			if nargin==1
+				disp('Wrong number of inputs!')
+				return
+			end
+			
+			if isvector(y), y=y(:); end
+			
+			if nargin<3 || isempty(x)
+				x=1:size(y,2);
+			end
+			
+			if nargin<4 || isempty(jitter)
+				jitter=0.5; %larger value means greater amplitude jitter
+			end
+			
+			if nargin<5 || isempty(style)
+				style='patch'; %Can also be 'line' or 'sdline'
+			end
+			style=lower(style);
+			
+			if jitter==0 && strcmp(style,'patch')
+				warning('A zero value for jitter means no patch object visible')
+			end
+			
+			if isvector(y) & isvector(x) & length(x)>1
+				x=x(:);
+				
+				if length(x)~=length(y)
+					error('length(x) should equal length(y)')
+				end
+				
+				u=unique(x);
+				for ii=1:length(u)
+					f=find(x==u(ii));
+					h(ii)=obj.notBoxPlot(y(f),u(ii),jitter,style);
+				end
+				
+				
+				%Make plot look pretty
+				if length(u)>1
+					xlim([min(u)-1,max(u)+1])
+					set(gca,'XTick',u)
+				end
+				
+				if nargout==1
+					varargout{1}=h;
+				end
+				
+				return
+				
+			end
+			
+			if length(x) ~= size(y,2)
+				error('length of x doesn''t match the number of columns in y')
+			end
+			
+			%We're going to render points with the same x value in different
+			%colors so we loop through all unique x values and do the plotting
+			%with nested functions. No clf in order to give the user more
+			%flexibility in combining plot elements.
+			hold on
+			[uX,a,b]=unique(x);
+			h=[];
+			for ii=1:length(uX)
+				f=find(b==ii);
+				h=[h,myPlotter(x(f),y(:,f))];
+			end
+			hold off
+			%Tidy up plot: make it look pretty
+			if length(x)>1
+				set(gca,'XTick',unique(x))
+				xlim([min(x)-1,max(x)+1])
+			end
+			if nargout==1
+				varargout{1}=h;
+			end
+				function h=myPlotter(X,Y)
+				
+				SEM=SEM_calc(Y); %Supplied external function
+				SD=nanstd(Y);  %Requires the stats toolbox
+				mu=nanmean(Y); %Requires the stats toolbox
+				
+				%The plot colors to use for multiple sets of points on the same x
+				%location
+				cols=hsv(length(X)+1)*0.5;
+				cols(1,:)=0;
+				jitScale=jitter*0.55; %To scale the patch by the width of the jitter
+				
+				for k=1:length(X)
+					thisY=Y(:,k);
+					thisY=thisY(~isnan(thisY));
+					thisX=repmat(X(k),1,length(thisY));
+					
+					if strcmp(style,'patch')
+						h(k).sdPtch=patchMaker(SD(k),[0.85 0.85 0.85]);
+					end
+					
+					if strcmp(style,'patch') || strcmp(style,'sdline')
+						h(k).semPtch=patchMaker(SEM(k),[0.8 0.7 0.7]);
+						h(k).mu=plot([X(k)-jitScale,X(k)+jitScale],[mu(k),mu(k)],'-r',...
+							'linewidth',2);
+					end
+					
+					%Plot jittered raw data
+					C=cols(k,:);
+					J=(rand(size(thisX))-0.5)*jitter;
+					
+					
+					h(k).data=plot(thisX+J, thisY, 'o', 'color', C,...
+						'markerfacecolor', C+(1-C)*0.65);
+				end
+				
+				if strcmp(style,'line') | strcmp(style,'sdline')
+					for k=1:length(X)
+						%Plot SD
+						h(k).sd=plot([X(k),X(k)],[mu(k)-SD(k),mu(k)+SD(k)],...
+							'-','color',[0.2,0.2,1],'linewidth',2);
+						set(h(k).sd,'ZData',[1,1]*-1)
+					end
+				end
+				
+				if strcmp(style,'line')
+					for k=1:length(X)
+						%Plot mean and SEM
+						h(k).mu=plot(X(k),mu(k),'o','color','r',...
+							'markerfacecolor','r',...
+							'markersize',10);
+						
+						h(k).sem=plot([X(k),X(k)],[mu(k)-SEM(k),mu(k)+SEM(k)],'-r',...
+							'linewidth',2);
+						h(k).xAxisLocation=x(k);
+					end
+				end
+				
+				function ptch=patchMaker(thisInterval,color)
+					l=mu(k)-thisInterval;
+					u=mu(k)+thisInterval;
+					ptch=patch([X(k)-jitScale, X(k)+jitScale, X(k)+jitScale, X(k)-jitScale],...
+						[l,l,u,u], 0);
+					set(ptch,'edgecolor','none','facecolor',color)
+				end %function patchMaker
+				
+				function ci = bootCI_calc(vect, nboot, fhandle, alpha)
+					mm = fhandle(vect);
+					xci = bootciold(nboot,{fhandle,vect},'alpha',alpha);
+					ci = xci;
+					ci = [xci(1) mm xci(2)];
+					ci = diff(ci);
+					ci = max(ci);
+				end
+				
+				function sem=SEM_calc(vect, CI)
+					narginchk(1,2)
+					
+					if isvector(vect)
+						vect=vect(:);
+					end
+					
+					
+					if nargin==1
+						stdCI = 1.96 ;
+					elseif nargin==2
+						CI = CI/2 ; %Convert to 2-tail
+						stdCI = abs(norminv(CI,0,1)) ;
+					end
+					
+					sem = ( (nanstd(vect)) ./ sqrt(sum(~isnan(vect))) ) * stdCI ;
+				end
+				
+				function tint=tInterval_Calc(vect, CI)
+					narginchk(1,2)
+					if isvector(vect)
+						vect=vect(:);
+					end
+					if nargin==1
+						CI = 0.025; %If no second argument, work out a 2-tailed 5% t-interval
+						stdCI=tinv(1-CI, length(vect)-1);
+					elseif nargin==2
+						CI = CI/2 ; %Convert to 2-tail
+						stdCI=tinv(1-CI, length(vect)-1); %Based on the t distribution
+					end
+					if stdCI==0
+						error('Can''t find confidence iterval for 0 standard deviations!')
+					end
+					tint =  ( (nanstd(vect)) ./ sqrt(sum(~isnan(vect))) ) * stdCI ;
+				end
+			end %function myPlotter
+		end %function notBoxPlot
 		
 		% ===================================================================
 		%> @brief Sets properties from a structure or normal arguments,

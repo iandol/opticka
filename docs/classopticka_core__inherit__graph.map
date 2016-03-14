@@ -1,0 +1,34 @@
+<map id="optickaCore" name="optickaCore">
+<area shape="rect" id="node3" href="$classanalysis_core.html" title="analysisCore base class inherited by other analysis classes. analysisCore is itself derived from opti..." alt="" coords="271,104,370,129"/>
+<area shape="rect" id="node8" href="$classbase_stimulus.html" title="baseStimulus is the superclass for all opticka stimulus objects " alt="" coords="270,449,371,475"/>
+<area shape="rect" id="node23" href="$classd_pixx_manager.html" title="DataPixx Communication Class. " alt="" coords="267,499,374,524"/>
+<area shape="rect" id="node24" href="$classeyelink_manager.html" title="eyelinkManager wraps around the eyelink toolbox functions offering a simpler interface ..." alt="" coords="263,548,378,573"/>
+<area shape="rect" id="node25" href="$classeye_occluder.html" title="eyeOccluder" alt="" coords="272,597,368,623"/>
+<area shape="rect" id="node26" href="$classmagstim_manager.html" title="magstimManager" alt="" coords="258,647,382,672"/>
+<area shape="rect" id="node27" href="$classmeta_stimulus.html" title="metaStimulus is a wrapper for opticka stimuli METASTIMULUS a collection of stimuli, wrapped in one structure. It allows you to treat a group of heterogenous stimuli as if it is a single stimulus, so for example animate(metaStimulus) will run the animate method for all stimuli in the group without having to call it for each stimulus. You can also pick individual stimuli by using cell indexing of this object. So for example metaStimulus{2} actually calls metaStimulus.stimuli{2}. You can also pass a mask stimulus set, and when you toggle showMask, the mask stimuli will be drawn instead of the stimuli themselves, the timing is left to the calling function. " alt="" coords="269,696,371,721"/>
+<area shape="rect" id="node28" href="$classopticka.html" title="Opticka stimulus generator class. " alt="" coords="289,745,352,771"/>
+<area shape="rect" id="node29" href="$classplx_reader.html" title="plxReader" alt="" coords="279,795,361,820"/>
+<area shape="rect" id="node30" href="$classrun_experiment.html" title="runExperiment is the main Experiment manager; Inherits from optickaCore " alt="" coords="266,844,374,869"/>
+<area shape="rect" id="node31" href="$classscreen_manager.html" title="screenManager Manages a Screen object screenManager manages PTB screen settings for opticka..." alt="" coords="263,893,377,919"/>
+<area shape="rect" id="node32" href="$classstate_machine.html" title="stateMachine a state machine object " alt="" coords="270,943,371,968"/>
+<area shape="rect" id="node33" href="$classstimulus_sequence.html" title="stimulusSequence a method of constanst variable manager " alt="" coords="255,992,385,1017"/>
+<area shape="rect" id="node2" href="$classhandle.html" title="handle" alt="" coords="5,696,67,721"/>
+<area shape="rect" id="node4" href="$classeyelink_analysis.html" title="eyelinkAnalysis offers a set of methods to load, parse &amp; plot raw EDF files. It understands opticka t..." alt="" coords="460,5,572,31"/>
+<area shape="rect" id="node5" href="$class_l_f_p_analysis.html" title="LFPAnalysis" alt="" coords="469,55,563,80"/>
+<area shape="rect" id="node6" href="$class_l_f_p_meta.html" title="LFPMeta" alt="" coords="478,104,554,129"/>
+<area shape="rect" id="node7" href="$classspike_analysis.html" title="spikeAnalysis" alt="" coords="465,153,567,179"/>
+<area shape="rect" id="node9" href="$classannulus_stimulus.html" title="annulusStimulus TODO " alt="" coords="456,203,576,228"/>
+<area shape="rect" id="node10" href="$classapparent_motion_stimulus.html" title="apparentMotionStimulus, inherits from baseStimulus " alt="" coords="433,252,599,277"/>
+<area shape="rect" id="node11" href="$classbar_stimulus.html" title="barStimulus single bar stimulus, inherits from baseStimulus " alt="" coords="470,301,562,327"/>
+<area shape="rect" id="node13" href="$classdots_stimulus.html" title="dotsStimulus simple variable coherence dots stimulus, inherits from baseStimulus " alt="" coords="467,351,565,376"/>
+<area shape="rect" id="node14" href="$classgabor_stimulus.html" title="single grating stimulus, inherits from baseStimulus GRATINGSTIMULUS single grating stimulus..." alt="" coords="463,400,569,425"/>
+<area shape="rect" id="node15" href="$classgrating_stimulus.html" title="single grating stimulus, inherits from baseStimulus GRATINGSTIMULUS single grating stimulus..." alt="" coords="459,449,573,475"/>
+<area shape="rect" id="node16" href="$classmovie_stimulus.html" title="movieStimulus is the class for movie based stimulus objects " alt="" coords="462,499,570,524"/>
+<area shape="rect" id="node17" href="$classndots_stimulus.html" title="ndotsStimulus limited lifetime coherence dots stimulus " alt="" coords="463,548,569,573"/>
+<area shape="rect" id="node18" href="$classplaid_stimulus.html" title="plaidStimulus TODO " alt="" coords="466,597,566,623"/>
+<area shape="rect" id="node19" href="$classspot_stimulus.html" title="single bar stimulus, inherits from baseStimulus SPOTSTIMULUS single bar stimulus, inherits from baseS..." alt="" coords="467,647,565,672"/>
+<area shape="rect" id="node21" href="$classtarget_inducer_stimulus.html" title="target inducer stimulus, inherits from baseStimulus " alt="" coords="441,696,592,721"/>
+<area shape="rect" id="node22" href="$classtexture_stimulus.html" title="textureStimulus is the superclass for texture based stimulus objects " alt="" coords="459,745,573,771"/>
+<area shape="rect" id="node12" href="$classrf_mapper.html" title="receptive field mapper rfMapper is a mouse driven receptive field mapper, using various keyboard comm..." alt="" coords="650,301,725,327"/>
+<area shape="rect" id="node20" href="$classcolour_test.html" title="colour test is a simple RGB colour blender for teaching " alt="" coords="647,647,729,672"/>
+</map>

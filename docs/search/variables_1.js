@@ -1,0 +1,22 @@
+var searchData=
+[
+  ['backgroundcolour',['backgroundColour',['../classscreen_manager.html#a89f95004612459078eddc528ecf2a51d',1,'screenManager::backgroundColour()'],['../classcolour_test.html#a592c4cc6f38c4b97a4dacbfbca819bb8',1,'colourTest::backgroundColour()'],['../classrf_mapper.html#ad70bade14982f7717d53322f6080e513',1,'rfMapper::backgroundColour()']]],
+  ['barlength',['barLength',['../classapparent_motion_stimulus.html#a96f951e62518471aeb27e33bcc07c3d9',1,'apparentMotionStimulus::barLength()'],['../classbar_stimulus.html#af9770285264338df9e862c2589db92ab',1,'barStimulus::barLength()']]],
+  ['barspacing',['barSpacing',['../classapparent_motion_stimulus.html#ad7cdbfeb8af94ca518374f1e5f1c465f',1,'apparentMotionStimulus']]],
+  ['barwidth',['barWidth',['../classapparent_motion_stimulus.html#a754a61cec39b1c9e79b1d79021f951f6',1,'apparentMotionStimulus::barWidth()'],['../classbar_stimulus.html#afb3d003aa69e60e09e55741c1feaea58',1,'barStimulus::barWidth()']]],
+  ['baselinewindow',['baselineWindow',['../classanalysis_core.html#a13d4a33b944dadb9aa03ead159398406',1,'analysisCore']]],
+  ['baudrate',['baudRate',['../classsend_serial.html#a67dec41c10227eee186c02650e68c5ad',1,'sendSerial']]],
+  ['behaviouralrecord',['behaviouralRecord',['../classrun_experiment.html#a412d8a964573488891cce4e80895da13',1,'runExperiment']]],
+  ['benchmark',['benchmark',['../classrun_experiment.html#a16b5d425345931abed70d5ebf1dfaad6',1,'runExperiment']]],
+  ['bgcolourindex',['bgcolourIndex',['../classcolour_test.html#a42198c3dcf542eba044b35f646ed5373',1,'colourTest::bgcolourIndex()'],['../classrf_mapper.html#a81ed11f4ad6d63494b04dd09bb2a4a67',1,'rfMapper::bgcolourIndex()']]],
+  ['binsize',['binSize',['../classspike_analysis.html#a9e98aa51d42489f590e23cad13ca2480',1,'spikeAnalysis']]],
+  ['bitdepth',['bitDepth',['../classscreen_manager.html#acaf8d8a11651d93c3671e6693ff3e724',1,'screenManager']]],
+  ['black',['black',['../classplaid_stimulus.html#a86e9087f656390c59ae1560b47ef9791',1,'plaidStimulus']]],
+  ['blend',['blend',['../classscreen_manager.html#aace8bff0762f4f1ca6397efd8e806508',1,'screenManager::blend()'],['../classrf_mapper.html#ab5860146e07e7eb2b5dbc91486eb0d80',1,'rfMapper::blend()']]],
+  ['bpfreq',['bpfreq',['../class_l_f_p_analysis.html#a79d264f528a743ebecc98dde027d5a42',1,'LFPAnalysis']]],
+  ['bpnames',['bpnames',['../class_l_f_p_analysis.html#a33484e457391c094b634db9ce8068aae',1,'LFPAnalysis']]],
+  ['breakcmd',['breakCmd',['../classdata_connection.html#a161b924a62d5221a7af018b2d91651d5',1,'dataConnection']]],
+  ['breakfix',['breakFix',['../classeyelink_analysis.html#a97c9d9c90fcf1b9703409d555dd69219',1,'eyelinkAnalysis']]],
+  ['busycmd',['busyCmd',['../classdata_connection.html#aadba20c085acea5e913a8644c42ec17f',1,'dataConnection']]],
+  ['buttons',['buttons',['../classcolour_test.html#adaa01205c87c21bc3df3cc078683afc1',1,'colourTest::buttons()'],['../classrf_mapper.html#af95c5009caa6472e250172f4c9d196de',1,'rfMapper::buttons()']]]
+];

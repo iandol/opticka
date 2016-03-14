@@ -38,7 +38,7 @@ PROJECT_NAME           = "Opticka"
 # could be handy for archiving the generated documentation or if some version
 # control system is used.
 
-PROJECT_NUMBER = 1.012
+PROJECT_NUMBER = 1.019
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewer a
@@ -2131,7 +2131,7 @@ DOT_NUM_THREADS        = 0
 # The default value is: Helvetica.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-DOT_FONTNAME           = Helvetica
+DOT_FONTNAME           = Graublau Slab
 
 # The DOT_FONTSIZE tag can be used to set the size (in points) of the font of
 # dot graphs.

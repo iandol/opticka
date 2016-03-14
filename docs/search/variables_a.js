@@ -1,0 +1,28 @@
+var searchData=
+[
+  ['laddress',['lAddress',['../classdata_connection.html#a3b4796e3d8a26d38e1a28fed521bd048',1,'dataConnection::lAddress()'],['../classopx_online.html#af2de4c5c0b0b52a580121a44199f5de4',1,'opxOnline::lAddress()']]],
+  ['lastfrequencymethod',['lastFrequencyMethod',['../class_l_f_p_analysis.html#a94fd029eb69673a71f23db72a557a80d',1,'LFPAnalysis']]],
+  ['lastindex',['lastIndex',['../classrun_experiment.html#ad9ff3c19568b6e9a67fcb28ad90c1917',1,'runExperiment']]],
+  ['lastsize',['lastSize',['../classrun_experiment.html#acd35aa5f2ed54b01585ab437dbbc7a9a',1,'runExperiment']]],
+  ['lastxposition',['lastXPosition',['../classrun_experiment.html#a8f316be26fca35d8c9488b167cd6bfc5',1,'runExperiment::lastXPosition()'],['../classmeta_stimulus.html#a9938214387bf564f2c12d8ac5e46978b',1,'metaStimulus::lastXPosition()']]],
+  ['lastyposition',['lastYPosition',['../classrun_experiment.html#ae3e6565e7bcb3c64d9fd1033c4241cf9',1,'runExperiment::lastYPosition()'],['../classmeta_stimulus.html#a724cd127cf5a665de868732397132858',1,'metaStimulus::lastYPosition()']]],
+  ['layout_5fmode_5fnormal',['LAYOUT_MODE_NORMAL',['../classpanel.html#a9aa37607d205664334e36800c4e636e2',1,'panel']]],
+  ['layout_5fmode_5fpostprint',['LAYOUT_MODE_POSTPRINT',['../classpanel.html#ae30ca57530242e9227ca5013a0a703f2',1,'panel']]],
+  ['layout_5fmode_5fpreprint',['LAYOUT_MODE_PREPRINT',['../classpanel.html#a1ff10a1ee64f4153fa4fdc4ecec92c9e',1,'panel']]],
+  ['led',['led',['../classlab_jack.html#a84bf0bfdd3e0bdda29c7d797c7398dc7',1,'labJack']]],
+  ['ledisoff',['ledIsOFF',['../classlab_jack.html#a979853e784a13695f6c19b521646c23d',1,'labJack']]],
+  ['ledison',['ledIsON',['../classlab_jack.html#a937dd1d95de63f8931e058c3347888d8',1,'labJack']]],
+  ['lfpfile',['lfpfile',['../class_l_f_p_analysis.html#a6f75090b96e5a6f908f44dede4d28c6a',1,'LFPAnalysis']]],
+  ['lfps',['LFPs',['../class_l_f_p_analysis.html#a87a37ca738a69b28a9ca0c282a18fd3c',1,'LFPAnalysis']]],
+  ['lfpwindow',['LFPWindow',['../class_l_f_p_analysis.html#adbf4e0b27bcaff01dcb53f9b112e53a3',1,'LFPAnalysis']]],
+  ['library',['library',['../classlab_jack.html#a620fc53ff14da92d68b066c88ed3b211',1,'labJack']]],
+  ['linuxfontname',['linuxFontName',['../classscreen_manager.html#a9d407118896dbe9d2ba808917933c85a',1,'screenManager']]],
+  ['list',['list',['../class_l_f_p_meta.html#af47625916668e184f52a20eaf30331a3',1,'LFPMeta']]],
+  ['lj',['lJ',['../classmagstim_manager.html#a890e937c894af893b8c1213ee794c67d',1,'magstimManager']]],
+  ['ljack',['lJack',['../classrun_experiment.html#a83bc895664e8fd52492d0070805fc4a6',1,'runExperiment']]],
+  ['loadproperties',['loadProperties',['../classstimulus_sequence.html#ac58ef182b541dcc0fd5ec359763f7f4c',1,'stimulusSequence']]],
+  ['log',['log',['../classstate_machine.html#a78981158f987fa75f7acba36b24d2e19',1,'stateMachine']]],
+  ['logframes',['logFrames',['../classrun_experiment.html#a286b61cccbb903c73d66fb29cdf97a83',1,'runExperiment']]],
+  ['lport',['lPort',['../classdata_connection.html#a9f8752bc4e3dad03b098b02b4bf07e39',1,'dataConnection::lPort()'],['../classopx_online.html#aa78cc03577e370fcaadfa590c45f7fd7',1,'opxOnline::lPort()']]],
+  ['lutsize',['lutSize',['../classcalibrate_luminance.html#a728ce377b2b78922b8e24692edfd6559',1,'calibrateLuminance']]]
+];
