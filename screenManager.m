@@ -67,6 +67,8 @@ classdef screenManager < optickaCore
 		verbose = false
 		%> level of PTB verbosity, set to 10 for full PTB logging
 		verbosityLevel = 4
+		%> Use retina resokution natively
+		useRetina = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -95,7 +97,7 @@ classdef screenManager < optickaCore
 		%> linux font name;
 		linuxFontName = '-adobe-helvetica-bold-o-normal--11-80-100-100-p-60-iso8859-1'
 		%> properties allowed to be modified during construction
-		allowedProperties='bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
+		allowedProperties='useretina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect = [0;0;50;50]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
@@ -277,6 +279,9 @@ classdef screenManager < optickaCore
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
+				if obj.useRetina == true
+					PsychImaging('AddTask', 'General', 'UseRetinaResolution');
+				end
 				if ischar(obj.bitDepth) && ~strcmpi(obj.bitDepth,'8bit')
 					PsychImaging('AddTask', 'General', obj.bitDepth);
 				end
@@ -666,7 +671,7 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief draw small spot centered on the screen
+		%> @brief draw timed small spot centered on the screen
 		%>
 		%> @param
 		%> @return

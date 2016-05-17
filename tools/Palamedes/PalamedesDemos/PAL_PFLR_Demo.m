@@ -1,4 +1,3 @@
-%
 %PAL_PFLR_Demo  Demonstrates use of Palamedes functions to (1) fit
 %psychometric functions to multiple conditions simultaneously (2) determine
 %standard errors of the free parameters in simultaneous fits using

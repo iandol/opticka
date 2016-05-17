@@ -1,7 +1,7 @@
 %
 % PAL_SDT_PS_MonteCarlo_SLtoPC(x,g,p,M,Q,n)
 % 
-% uses numerical integration to calculate proportion correct PC based 
+% uses Monte Carlo simulation to calculate proportion correct PC based 
 % on the PROBABILITY SUMMATION of n identical stimuli in Q monitored 
 % channels, with signal level x subject to a scaling factor g and 
 % transducer exponent p such that d'= (gx)^p, for a M-AFC 

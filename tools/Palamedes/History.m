@@ -1144,39 +1144,295 @@
 %
 % PAL_SDT_AS_PCtoSL:
 % Introduced: Palamedes version 1.7.0 (FK&NP)
-%
-% PAL_SDT_AS_PCtoSL:
-% Introduced: Palamedes version 1.7.0 (FK&NP)
+% uses an iterative search procedure of PAL_SDT_AS_SLtoPC to calculate the 
+% stimulus level x from proportion correct PC, a PC that would result 
+% from the ADDITIVE SUMMATION of n identical stimuli in Q monitored 
+% channels, if x was subject to a scaling factor g and a transducer 
+% exponent p such that d'= (gx)^p, for a M-AFC 
+% (M-alternative-forced-choice) task under the assumptions of 
+% signal-detection-theory, assuming an unbiased observer.
 %
 % PAL_SDT_AS_uneqSLtoPC:
 % Introduced: Palamedes version 1.7.0 (FK&NP)
+% uses numerical integration to calculate proportion correct PC based 
+% on the ADDITIVE SUMMATION of unequal stimulus levels x in Q monitored 
+% channels, with each stimulus level x subject to a scaling factor g 
+% and a transducer exponent p such that d'= (gx)^p, for a M-AFC 
+% (M-alternative-forced-choice) task under the assumptions of SDT and 
+% assuming an unbiased observer
 %
 % PAL_SDT_PS_DPtoPCpartFunc:
 % Introduced: Palamedes version 1.7.0 (FK&NP)
+% Internal function
 %
 % PAL_SDT_PS_MonteCarlo_SLtoPC:
 % Introduced: Palamedes version 1.7.0 (FK&NP)
+% uses numerical integration to calculate proportion correct PC based 
+% on the PROBABILITY SUMMATION of n identical stimuli in Q monitored 
+% channels, with signal level x subject to a scaling factor g and 
+% transducer exponent p such that d'= (gx)^p, for a M-AFC 
+% (M-alternative-forced-choice) task under the assumptions of 
+% signal-detection-theory and assuming an unbiased observer
 %
 % PAL_SDT_PS_MonteCarlo_uneqSLtoPC:
 % Introduced: Palamedes version 1.7.0 (FK&NP)
+% uses Monte Carlo simulation to calculate proportion correct based 
+% on the PROBABILITY SUMMATION of unequal stimulus levels x in Q monitored 
+% channels, with each stimulus level x subject to a scaling factor g 
+% and a transducer exponent p such that d'= (gx)^p, for a M-AFC 
+% (M-alternative-forced-choice) task, under the assumptions of SDT and 
+% assuming an unbiased observer
 %
 % PAL_SDT_PS_PCtoSL:
 % Introduced: Palamedes version 1.7.0 (FK&NP)
+% uses an iterative search procedure of PAL_SDT_AS_SLtoPC to calculate 
+% stimulus level x from proportion correct PC, a PC that would result 
+% from the PROBABILITY SUMMATION of n identical stimuli in Q monitored 
+% channels, with x subject to a scaling factor g and transducer exponent p 
+% such that d'= (gx)^p, for a M-AFC (M-alternative-forced-choice) task 
+% under the assumptions of signal-detection-theory, assuming an unbiased 
+% observer.
 %
 % PAL_SDT_PS_SLtoPC:
 % Introduced: Palamedes version 1.7.0 (FK&NP)
+% uses numerical integration to calculate proportion correct PC based 
+% on the PROBABILITY SUMMATION of n identical stimuli in Q monitored 
+% channels, with stimulus level x subject to a scaling factor g and 
+% transducer exponent p such that d'= (gx)^p, for a M-AFC 
+% (M-alternative-forced-choice) task, under the assumptions of 
+% signal-detection-theory and assuming an unbiased observer
 %
 % PAL_SDT_PS_uneqDPtoPCpartFunc:
 % Introduced: Palamedes version 1.7.0 (FK&NP)
+% Internal function
 %
 % PAL_SDT_PS_uneqDPtoPCpartFunc2:
 % Introduced: Palamedes version 1.7.0 (FK&NP)
+% Internal function
 %
 % PAL_SDT_PS_uneqSLtoPC:
 % Introduced: Palamedes version 1.7.0 (FK&NP)
+% uses numerical integration to calculate proportion correct based 
+% on the PROBABILITY SUMMATION of unequal stimulus levels in Q monitored 
+% channels, with each stimulus level x subject to a scaling factor g 
+% and a transducer with exponent p such that d'= (gx)^p, for a M-AFC 
+% (M-alternative-forced-choice) task, under the assumptions of SDT and 
+% assuming an unbiased observer
 %
 % PAL_LLfixed:
 % Introduced: Palamedes version 1.7.0 (NP)
+% Internal Function
 %
 % PAL_GoodnessOfFitZeroDF:
 % Introduced: Palamedes version 1.7.0 (NP)
+% Determine Goodness-of-Fit of model of binomial data where the model 
+% consists only of fixed parameter values (i.e., the model has zero degrees 
+% of freedom).
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.8.0 Release February 19, 2015
+%
+% Purpose of release is to a) modify the names of the SDT (signal-
+% detection-theory) differencing model oddity routines, b) introduce 2AFC 
+% SDT routines, c) introduce routines for fitting PFs (psychometric 
+% functions) with SDT models, d) introduce new routines for summation under 
+% SDT and e) introduce routines for fitting summation PFs under SDT.
+% 
+% PAL_SDT_MAFC_Oddity_DPtoPC
+% Modified: Palamedes version 1.8.0 (FK)
+% Disabled, renamed PAL_SDT_MAFC_Oddity_DiffMod_DPtoPC
+% 
+% PAL_SDT_MAFC_Oddity_DPtoPC
+% Modified: Palamedes version 1.8.0 (FK)
+% Disabled, renamed PAL_SDT_MAFC_Oddity_DiffMod_PCtoDP
+% 
+% PAL_SDT_MAFC_Oddity_DiffMod_DPtoPC
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% PAL_SDT_MAFCoddity_DiffMod_DPtoPC converts d'(d-prime) to 
+% proportion correct for a M-AFC (M-alternative-forced-choice) 
+% oddity task, assuming a Differencing model and an unbiased 
+% observer
+% 
+% PAL_SDT_MAFC_Oddity_DiffMod_PCtoDP
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% PAL_SDT_MAFCoddity_DiffMod_PCtoDP converts proportion correct into 
+% d'(d-prime) for a M-AFC (M-alternative-forced-choice) oddity
+% task, assuming a Differencing Observer model and an unbiased observer
+% 
+% PAL_SDT_2AFC_DPtoPC
+% Introduced: Palamedes version 1.8.0 (FK)
+% PAL_SDT_2AFC_DPtoPC converts d'(d-prime) into proportion correct for a 
+% 2AFC (two-alternative-forced-choice) task
+% 
+% PAL_SDT_2AFC_PCtoDP
+% Introduced: Palamedes version 1.8.0 (FK)
+% PAL_SDT_2AFC_PCtoDP converts proportion correct to d' (d-prime) for a 
+% 2AFC (two-alternative-forced-choice) task
+%
+% PAL_SDT_PS_2uneqSLtoPC
+% Introduced: Palamedes version 1.8.0 (FK)
+% uses numerical integration to calculate proportion correct based 
+% on the PROBABILITY SUMMATION of two unequal intensity stimuli, one 
+% with an intensity of x the other r*x, in Q monitored channels, with each 
+% x subject to a scaling factor g and transducer exponent p 
+% such that d'= (gx)^p, in a M-AFC (M-alternative-forced-choice) task, 
+% under the assumptions of SDT and assuming an unbiased observer
+% 
+% PAL_SDT_AS_2uneqSLtoPC
+% Introduced: Palamedes version 1.8.0 (FK)
+% uses numerical integration to calculate proportion correct based 
+% on the ADDITIVE SUMMATION of two unequal stimulus intensities, one of 
+% which is x the other r*x, in Q monitored channels, with each x subject 
+% to a scaling factor g and transducer exponent p such that d'= (gx)^p, 
+% for a M-AFC (M-alternative-forced-choice) task, under the assumptions of 
+% SDT and assuming an unbiased observer
+% 
+% PAL_SDT_PS_PCto2uneqSL
+% Introduced: Palamedes version 1.8.0 (FK)
+% uses an iterative search procedure of PAL_SDT_PS_2uneqSLtoPC to 
+% calculate two stimulus levels x with a ratio r from proportion correct PC, 
+% a PC that would result from the PROBABILITY SUMMATION of the two 
+% different stimuli, in Q monitored channels, with x subject to a scaling 
+% factor g and transducer exponent p such that d'= (gx)^p, for a M-AFC 
+% (M-alternative-forced-choice) task under the assumptions of 
+% signal-detection-theory, assuming an unbiased observer.
+% 
+% PAL_SDT_AS_PCto2uneqSL
+% Introduced: Palamedes version 1.8.0 (FK)
+% uses an iterative search procedure of PAL_SDT_AS_2uneqSLtoPC to 
+% calculate two stimulus levels x with ratio r from proportion correct PC, 
+% a PC that would result from the ADDITIVE SUMMATION of the two 
+% x values, in Q monitored channels, with x subject to a scaling 
+% factor g and transducer exponent p such that d'= (gx)^p, for a M-AFC 
+% (M-alternative-forced-choice) task under the assumptions of 
+% signal-detection-theory, assuming an unbiased observer.
+% 
+% PAL_SDT_SLtoPC
+% Introduced: Palamedes version 1.8.0 (FK)
+% Converts stimulus intensities to proportion correct assuming parameters 
+% of an SDT (signal detection theory) model
+% 
+% PAL_SDT_PCtoSL
+% Introduced: Palamedes version 1.8.0 (FK)
+% Converts proportion correct to stimulus intensity assuming parameters of 
+% an SDT (signal detection theory) model
+% 
+% PAL_SDT_PFML_negLL
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% (negative) Log Likelihood associated with fit of SDT (signal-detection-
+% theory) psychometric function 
+% 
+% PAL_SDT_PFML_Fit
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% Fits the parameters of an SDT (signal dtection theory) psychometric 
+% function (PF) using a Maximum Likelihood criterion.
+% 
+% PAL_SDT_PF_SimulateObserverParametric
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% Simulate observer characterized by a PF (psychomtric function) from an 
+% SDT (signal detection thory) model.
+% 
+% PAL_SDT_PFML_BootstrapParametric
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% Perform parametric bootstrap to determine standard errors on parameters 
+% of an SDT (signal detection theory) model fitted to PF (psychometric 
+% function) data
+% 
+% PAL_SDT_PFML_GoodnessOfFit
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% Determines goodness-of-fit of the parameters of a signal detection theory 
+% (SDT) model fitted to psychometric function (PF) data
+% 
+% PAL_SDT_Summ_MultiplePFML_negLL
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% (negative) Log Likelihood associated with fit of summation psychometric 
+% function 
+% 
+% PAL_SDT_Summ_MultiplePFML_Fit
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% Fits the parameters of a set of summation psychometric curves using a 
+% Maximum Likelihood criterion, based on either a probability or additive 
+% summation model
+% 
+% PAL_SDT_Summ_MultiplePF_SimulateObserverParametric
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% Simulate observer for a summation experiment with multiple PFs 
+% (psychometric functions) based on SDT (signal detection theory)
+% 
+% PAL_SDT_Summ_MultiplePFML_BootstrapParametric
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% Perform parametric bootstrap to determine standard errors on parameters 
+% of SDT (signal detection theory) probability and additive summation 
+% models simultaneously fitted to multiple PF (psychometric function) data
+% 
+% PAL_SDT_Summ_MultiplePFML_GoodnessOfFit
+% Introduced: Palamedes version 1.8.0 (FK & NP)
+% Obtains Goodness-of-fit of parameters of SDT (signal detection theory) 
+% probability and additive summation models obtained from simultaneously 
+% fitted multiple PF (psychometric function) data  
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.8.1 Release December 2, 2015
+%
+% Minor maintenance. Upgrade PAL_PFBA_Fit, bug fixes, make code compatible 
+% with 2nd Edition of 'Psychophysics: A Practical Introduction'
+%
+% PAL_AMRF_setupRF:
+% Modified: Palamedes version 1.8.1 (NP)
+% initialized xMin and xMax to -Inf and Inf respectively
+%
+% PAL_PFBA_Fit:
+% Modified: Palamedes version 1.8.1 (NP)
+% Any combination of the four parameters of the PF can now be freed. The
+% format of the input and output arguments has changed. That is, 'old 
+% style' usage is not compatible with 'new style' usage. For now, 
+% PAL_PFBA_Fit will detect whether routine is used 'old style' or 'new 
+% style' and act accordingly. 
+%
+% PAL_PFBA_Fit_OldStyle:
+% Introduced/Modified: Palamedes version 1.8.1 (NP)
+% This routine handles the 'old style' usage of PAL_PFBA_Fit (see entry
+% above) and is essentially PAL_PFBA_Fit from earlier Palamedes version.
+%
+% PAL_PFML_BootstrapNonParametric:
+% Modified: Palamedes version 1.8.1 (NP)
+% Removed functionality of 'maxTries' and 'rangeTries' options. Users 
+% supplying these arguments will be encouraged to use 'searchGrid' option 
+% instead.
+%
+% PAL_PFML_BootstrapParametric:
+% Modified: Palamedes version 1.8.1 (NP)
+% Removed functionality of 'maxTries' and 'rangeTries' options. Users 
+% supplying these arguments will be encouraged to use 'searchGrid' option 
+% instead.
+%
+% PAL_PFML_Fit:
+% Modified: Palamedes version 1.8.1 (NP)
+% output argument 'output' has new field output.seed that contains the seed 
+% that was used for the Nelder-Mead Simplex search.
+%
+% PAL_PFML_GoodnessOfFit:
+% Modified: Palamedes version 1.8.1 (NP)
+% Removed functionality of 'maxTries' and 'rangeTries' options. Users 
+% supplying these arguments will be encouraged to use 'searchGrid' option 
+% instead.
+%
+% PAL_PFML_GoodnessOfFitMultiple:
+% Modified: Palamedes version 1.8.1 (NP)
+% Default setting for 'thresholds' and 'slopes' is now 'unconstrained' 
+% (was 'constrained').
+%
+% PAL_PFML_negLL:
+% Modified: Palamedes version 1.8.1 (NP)
+% Evaluates to Inf when params(2) < 0. Keeps search away from negative 
+% values for slope parameter.
+%
+% PAL_PFML_setupParametrizationStruct:
+% Introduced: Palamedes version 1.81. (NP)
+% Allows alternative spelling of PAL_PFML_setupParametrizationStruct
+%
+% PAL_PFML_setupParametrizationStruct:
+% Modified: Palamedes version 1.8.1 (NP)
+% Code has been moved to new PAL_PFML_setupParameterizationStruct (alt.
+% spelling).
+

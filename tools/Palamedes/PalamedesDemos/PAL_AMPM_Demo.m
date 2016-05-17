@@ -80,8 +80,6 @@
 
 clear all
 
-%opengl software %works without this, but graphs miss axes
-
 if exist('RandStream.m','file');
     s = RandStream.create('mt19937ar','seed','shuffle'); %do something different each time
     RandStream.setGlobalStream(s);
@@ -165,13 +163,7 @@ posterior = ones(size(a));
 %totals keeps track of number of trials presented at each value of stimRange
 totals = zeros(size(stimRange));
 
-if ~exist('OCTAVE_VERSION');
-    disp('Use space bar and ''g'' to step through or automate, respectively.') 
-    kpf = @(src,event) disp('');   %dummy function used in next line
-    fh = figure('units','pixels','position',[100 50 1100 700],'keypressfcn',kpf);
-else
-    fh = figure('units','pixels','position',[100 50 1100 700]);
-end
+fh = figure('units','pixels','position',[100 50 1100 700]);
 
 %Something to tag figure labels unto
 axes
@@ -212,11 +204,17 @@ else
     priorLambdaRange = [0:.01:.1];
 end
 
+
+S = warning('QUERY', 'PALAMEDES:AMPM_setupPM:priorTranspose');
+warning('off','PALAMEDES:AMPM_setupPM:priorTranspose');
+
 %Initialize PM structure (use of single() cuts down on memory load)
 PM = PAL_AMPM_setupPM('priorAlphaRange',single(priorAlphaRange),...
     'priorBetaRange',single(priorBetaRange),'priorGammaRange',single(gamma),...
     'priorLambdaRange',single(priorLambdaRange), 'numtrials',NumTrials, 'PF' , PF,...
-    'stimRange',single(stimRange),'priorLambdaRange',single(priorLambdaRange),'marginalize',marginalize);
+    'stimRange',single(stimRange),'marginalize',marginalize);
+
+warning(S);
 
 %trial loop
 while PM.stop ~= 1
@@ -399,8 +397,8 @@ while PM.stop ~= 1
 
  %Decide whether to suspend psi-marginal temporarily. Strategy effectively
  %draws WaitTime from exponential mass function resulting in constant
- %'hazard' (when in suspended mode, there is a constant probability (equal
- %to 1/WaitTime) of returning to psi-marginal mode on each trial).
+ %'hazard' (i.e., when in suspended mode, there is a constant probability 
+ %(equal to 1/WaitTime) of returning to psi-marginal mode on each trial).
  
     if PM.xCurrent == max(single(stimRange)) && AvoidConsecutive
         suspend = 1;
@@ -489,14 +487,4 @@ while PM.stop ~= 1
     
     drawnow
     
-    %Allow user input to step through (space bar) or automate (g)
-    if ~exist('OCTAVE_VERSION');
-        cc = get(gcf,'currentcharacter');
-        if cc == ' ';
-            pause
-        end   
-        if length(PM.response) == 1
-            pause
-        end
-    end
 end
