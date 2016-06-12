@@ -308,7 +308,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 				else
 					wR = Screen('Rect',0);
 					s.windowed = [wR(3)/2 wR(4)/2];
-					%s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
 				end
 				open(s); %open PTB screen
 				setup(obj,s); %setup our stimulus object

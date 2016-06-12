@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion@char = '1.019'
+		optickaVersion@char = '1.021'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -39,7 +39,7 @@ classdef opticka < optickaCore
 		allowedProperties@char='verbose'
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList@cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
-			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKTrainingResearcherName',...
+			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina','OKHideFlash','OKTrainingResearcherName',...
 			'OKTrainingName'};
 	end
 	
@@ -390,6 +390,7 @@ classdef opticka < optickaCore
 			obj.r.logFrames = logical(obj.gv(obj.h.OKlogFrames));
 			obj.r.benchmark = logical(obj.gv(obj.h.OKbenchmark));
 			obj.r.screen.hideFlash = logical(obj.gv(obj.h.OKHideFlash));
+			obj.r.screen.useRetina = logical(obj.gv(obj.h.OKUseRetina));
 			if strcmpi(obj.r.screen.bitDepth,'8bit')
 				set(obj.h.OKAntiAliasing,'String','0');
 			end
@@ -1002,6 +1003,7 @@ classdef opticka < optickaCore
 					set(obj.h.OKOpenGLBlending,'Value', tmp.r.screen.blend);
 					set(obj.h.OKAntiAliasing,'String', num2str(tmp.r.screen.antiAlias));
 					set(obj.h.OKHideFlash,'Value', tmp.r.screen.hideFlash);
+					set(obj.h.OKUseRetina,'Value', tmp.r.screen.useRetina);
 					string = num2str(tmp.r.screen.backgroundColour);
 					string = regexprep(string,'\s+',' '); %collapse spaces
 					set(obj.h.OKbackgroundColour,'String',string);

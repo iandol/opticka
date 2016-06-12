@@ -85,7 +85,9 @@ classdef getDensity < handle
 		%> for multiple columns only run a subset; empty runs all.
 		index = []
 		%> normalise (Z-score) values to plot on scatter?
-		normaliseScatter = false;
+		normaliseScatter = false
+		%> show distribution plot underneath box plot?
+		doDistribution = true
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
@@ -183,7 +185,6 @@ classdef getDensity < handle
 				c1 = [0.2 0.2 0.2];
 				c2 = [0.8 0.2 0.2];
 				casesLocal = obj.cases;
-				uniquecases = obj.uniquecases;
 				
 				outs.x = obj.x;
 				outs.y = obj.y;
@@ -198,7 +199,7 @@ classdef getDensity < handle
 				h=figure;
 				outs.(fieldn).h = h;
 				set(h,'Color',[1 1 1]);
-				if exist('figpos'); figpos(1,[1200 1200]); end
+				if exist('figpos','file'); figpos(1,[1400 1200]); end
 				t = [obj.columnlabels{:}];
 				set(h,'name',t);
 				
@@ -225,12 +226,7 @@ classdef getDensity < handle
 				end
 				
 				[xcol,ycol,casesLocal,xouttext,youttext] = obj.removeOutliers(xcol,ycol,casesLocal,xouttext,youttext);
-				
-				isDataEqualLength = false;
-				if length(xcol) == length(ycol)
-					isDataEqualLength = true;
-				end
-				
+
 				xmean=nanmean(xcol);
 				xmedian=nanmedian(xcol);
 				ymean=nanmean(ycol);
@@ -246,24 +242,28 @@ classdef getDensity < handle
 				pn(py,px).select();
 				
 				if ystd > 0
-					outs.(fieldn).histo1 = histogram(xcol);
+					[n1,b1]=histcounts(xcol);
+					[n2,b2]=histcounts(ycol);
+					bw = min([diff(b2) diff(b1)]);
+					bl = [min([min(xcol) min(ycol)]) max([max(xcol) max(ycol)])];
+					outs.(fieldn).histo1 = histogram(xcol,10,'BinWidth',bw,...
+						'BinLimits',bl,'EdgeColor','none','FaceAlpha',0.6);
 					outs.(fieldn).histo1.FaceColor = c1;
 					xn = outs.(fieldn).histo1.Values;
 					hbinsx = outs.(fieldn).histo1.BinEdges;
 					hold on
-					outs.(fieldn).histo2 = histogram(ycol);
+					outs.(fieldn).histo2 = histogram(ycol,10,'BinWidth',bw,...
+						'BinLimits',bl,'EdgeColor','none','FaceAlpha',0.6);
 					outs.(fieldn).histo2.FaceColor = c2;
 					yn = outs.(fieldn).histo2.Values;
 					hbinsy = outs.(fieldn).histo2.BinEdges;
 				else
-					outs.(fieldn).histo1 = histogram(xcol);
+					outs.(fieldn).histo1 = histogram(xcol,10,'EdgeColor','none','FaceAlpha',0.6);
 					outs.(fieldn).histo1.FaceColor = c1;
 					xn = outs.(fieldn).histo1.Values;
 					hbinsx = outs.(fieldn).histo1.BinEdges;
 				end
 				
-				axis tight;
-				ticks out
 				lim=ylim;
 				text(xmean,lim(2),'\downarrow','Color',c1,'HorizontalAlignment','center',...
 					'VerticalAlignment','bottom','FontSize',15,'FontWeight','bold');
@@ -279,16 +279,16 @@ classdef getDensity < handle
 					hold on
 					if length(find(xn>0))>1
 						try
-							f1=fit(hbinsx',xn','gauss1');
-							plot(f1,'k');
+							f1=fit(hbinsx(1:end-1)',xn','gauss1');
+							plot(f1,'Color',c1);
 						catch
 							disp('Couldn''t fit gaussian to histogram 1')
 						end
 					end
 					if ystd > 0 && length(find(yn>0))>1
 						try
-							f2=fit(hbinsy',yn','gauss1');
-							plot(f2,'r');
+							f2=fit(hbinsy(1:end-1)',yn','gauss1');
+							plot(f2,'Color',c2);
 						catch
 							disp('Couldn''t fit gaussian to histogram 2')
 						end
@@ -297,47 +297,44 @@ classdef getDensity < handle
 					hold off
 				end
 				
-				grid on
+				grid on; ticks out;	box on
 				pn(py,px).xlabel(obj.columnlabels{idx});
-				pn(py,px).ylabel('Number of cells');
-				pn(py,px).title('Histogram and Gaussian Fits');
+				pn(py,px).ylabel('Number of Units');
+				pn(py,px).title('Histogram');
 				
 				
 				%==========================================DO BOX PLOTS
 				px = 2;
 				py = 1;
 				pn(py,px).select()
-				if isDataEqualLength && exist('distributionPlot','file')
+				if exist('distributionPlot','file') && obj.doDistribution
 					hold on
-					distributionPlot({xcol,ycol},0.3);
-				elseif isDataEqualLength==false && exist('distributionPlot','file')
-					hold on
-					distributionPlot({xcol,ycol},0.3);
+					distributionPlot({xcol,ycol},'colormap',parula,'showMM',2,...
+						'xValues',[0.65 1.65],'histOri','left','distWidth',0.2);
 				end
-				if isDataEqualLength
-					boxplot([xcol ycol],'positions',[1 2],'notch',1,'whisker',1,...
+				if obj.isDataEqualLength
+					boxplot([xcol ycol],'positions',[1 2],'notch','on','whisker',1,...
 						'labels',obj.legendtxt,'colors','k',...
-						'boxstyle','outline','medianstyle','line',...
-						'widths',0.5,'symbol','ro');
+						'boxstyle','outline','medianstyle','target',...
+						'widths',0.5,'symbol','ko','OutlierSize',4,'Jitter',0.5);
 				else
-					boxplot(xcol,'positions',1,'notch',1,'whisker',1,...
-						'labels',obj.legendtxt{1},'colors','k',...
-						'boxstyle','outline','medianstyle','line',...
-						'widths',0.5,'symbol','ro');
-					boxplot(ycol,'positions',2,'notch',1,'whisker',1,...
-						'labels',obj.legendtxt{2},'colors','k',...
-						'boxstyle','outline','medianstyle','line',...
-						'widths',0.5,'symbol','ro');
+					hold on
+					boxplot(xcol,'positions',1,'notch','on','whisker',1,...
+						'labels',obj.legendtxt{1},'colors',c1,...
+						'boxstyle','outline','medianstyle','target',...
+						'widths',0.5,'symbol','ko','OutlierSize',4,'Jitter',0.5);
+					boxplot(ycol,'positions',2,'notch','on','whisker',1,...
+						'labels',obj.legendtxt{2},'colors',c2,...
+						'boxstyle','outline','medianstyle','target',...
+						'widths',0.5,'symbol','ko','OutlierSize',4,'Jitter',0.5);
 				end
 				pn(py,px).ylabel(obj.columnlabels{idx});
 				axis tight
-				ticks out
 				xlim([0.5 2.5])
 				set(gca,'XTick', [1 2],'XTickLabel', obj.legendtxt)
 				pn(py,px).title('Box / Density Plots')
 				hold off
-				box on
-				grid on
+				grid on; ticks out;	box on
 				yl1 = ylim; %we check this against the next plot below
 				
 				%==========================================DO SCATBOX PLOTS
@@ -345,10 +342,10 @@ classdef getDensity < handle
 				py = 1;
 				pn(py,px).select()
 				
-				if isDataEqualLength
-					% 					if ~isempty(uniquecases) && ~isempty(casesLocal)
-					% 						for jj = 1:length(uniquecases)
-					% 							caseidx = ismember(casesLocal,uniquecases{jj});
+				if obj.isDataEqualLength
+					% 					if ~isempty(obj.uniquecases) && ~isempty(casesLocal)
+					% 						for jj = 1:length(obj.uniquecases)
+					% 							caseidx = ismember(casesLocal,obj.uniquecases{jj});
 					% 							xtmp(:,jj) = xcol(caseidx);
 					% 							ytmp(:,jj) = ycol(caseidx);
 					% 						end
@@ -360,7 +357,7 @@ classdef getDensity < handle
 					set(gca,'XTick', [1 2],'XTickLabel', obj.legendtxt)
 					pn(py,px).ylabel(obj.columnlabels{idx});
 					
-				elseif isDataEqualLength==false
+				else
 					
 					obj.notBoxPlot(xcol,1);
 					hold on
@@ -372,9 +369,7 @@ classdef getDensity < handle
 				xlim([0 3]);
 				pn(py,px).title('ScatterBox Plots')
 				hold off
-				ticks out
-				box on
-				grid on
+				grid on; ticks out;	box on
 				yl2 = ylim;
 				
 				%==========================================EQUALISE Y AXIS
@@ -388,7 +383,7 @@ classdef getDensity < handle
 				%==========================================DO Correlation SCATTER
 				xcolout = xcol;
 				ycolout = ycol;
-				if ystd > 0 && isDataEqualLength
+				if ystd > 0 && obj.isDataEqualLength
 					px = 1;
 					py = 2;
 					pn(py,px).select()
@@ -441,8 +436,8 @@ classdef getDensity < handle
 					end
 					if ~isempty(casesLocal)
 						t = 'Group: ';
-						for jj = 1:length(uniquecases)
-							t = [t num2str(jj) '=' uniquecases{jj} ' '];
+						for jj = 1:length(obj.uniquecases)
+							t = [t num2str(jj) '=' obj.uniquecases{jj} ' '];
 						end
 					else
 						colours = [0 0 0];
@@ -453,7 +448,8 @@ classdef getDensity < handle
 					if ~isempty(casesLocal)
 						gscatter(xcolout,ycolout,casesLocal,'krbgmyc','o');
 					else
-						scatter(xcolout,ycolout,repmat(80,length(xcol),1),[0 0 0]);
+						scatter(xcolout,ycolout,repmat(80,length(xcolout),1),'o','MarkerEdgeColor', [0 0 0],...
+						'MarkerFaceColor', [0.65 0.65 0.65],'MarkerFaceAlpha',0.2,'MarkerEdgeAlpha',0.75);
 					end
 					try %#ok<TRYNC>
 						h = lsline;
@@ -474,7 +470,7 @@ classdef getDensity < handle
 						end
 					end
 					if sc == true && obj.showoriginalscatter == true
-						scatter(xcol,ycol,repmat(80,length(xcol),1),'ko','MarkerEdgeColor',[0.7 0.7 0.7]);
+						scatter(xcol,ycol,repmat(80,length(xcol),1),'k.','MarkerEdgeColor',[0.7 0.7 0.7]);
 					end
 					axis square
 					axis(axrange);
@@ -490,14 +486,10 @@ classdef getDensity < handle
 					end
 					pn(py,px).title(['Prson:' sprintf('%0.2g',r) '(p=' sprintf('%0.4g',p) ') | Spman:' sprintf('%0.2g',r2) '(p=' sprintf('%0.4g',p2) ') ' t]);
 					hold off
-					grid on
-					ticks out
-					box on
+					grid on; ticks out;	box on
 					set(gca,'Layer','top');
 				end
-				
-				
-				
+
 				%============================Lets measure statistics
 				t=['Mn/Mdn: ' sprintf('%0.3g', xmean) '\pm' sprintf('%0.3g', xstderr) '/' sprintf('%0.3g', xmedian) ' | ' sprintf('%0.3g', ymean) '\pm' sprintf('%0.3g', ystderr) ' / ' sprintf('%0.3g', ymedian)];
 				
@@ -508,7 +500,7 @@ classdef getDensity < handle
 						[h,p1]=ttest2(xcol,ycol,obj.alpha);
 					end
 					[p2,h]=ranksum(xcol,ycol,'alpha',obj.alpha);
-					if isDataEqualLength
+					if obj.isDataEqualLength
 						[h,p3]=ttest(xcol,ycol,obj.alpha);
 						[p4,h]=signrank(xcol,ycol,'alpha',obj.alpha);
 						[p5,h]=signtest(xcol,ycol,'alpha',obj.alpha);
@@ -597,7 +589,7 @@ classdef getDensity < handle
 					'function', obj.densityFunction, 'support', obj.densityBounds);
 				
 				%==========================================DO CDF
-				if isDataEqualLength
+				if obj.isDataEqualLength
 					px = 2;
 					py = 2;
 				else
@@ -614,23 +606,21 @@ classdef getDensity < handle
 				% 				hold off
 				hold on
 				[f,x,flo,fup] = ecdf(xcol,'alpha',obj.alpha);
+				flo(1)=0;flo(end)=flo(end-1); fup(1)=0; fup(end)=fup(end-1);
+				patch('XData',[x;flipud(x)],'YData',[flo;flipud(fup)],'FaceColor',[0 0 0],'FaceAlpha',0.1,'EdgeColor','none');
 				stairs(x,f,'k','LineWidth',2);
-				stairs(x,flo,'k:');
-				stairs(x,fup,'k:');
 				[f,x,flo,fup] = ecdf(ycol,'alpha',obj.alpha);
+				flo(1)=0;flo(end)=flo(end-1); fup(1)=0; fup(end)=fup(end-1);
+				patch('XData',[x;flipud(x)],'YData',[flo;flipud(fup)],'FaceColor',[1 0 0],'FaceAlpha',0.1,'EdgeColor','none');
 				stairs(x,f,'r','LineWidth',2);
-				stairs(x,flo,'r:');
-				stairs(x,fup,'r:');
 				hold off
 				
-				grid on
-				ticks out
-				box on
+				grid on; ticks out;	box on
 				pn(py,px).title(['Cumulative Distribution Function, p=' num2str(obj.alpha)]);
 				pn(py,px).xlabel(obj.columnlabels{idx});
 				
 				%==========================================Do DENSITY
-				if isDataEqualLength
+				if obj.isDataEqualLength
 					px = 3;
 					py = 2;
 				else
@@ -708,12 +698,12 @@ classdef getDensity < handle
 					obj.doSinglePlots(pn);
 				end
 				
-				if isDataEqualLength && ~isempty(uniquecases) && ~isempty(casesLocal)
-					for jj = 1:length(uniquecases)
-						caseidx = ismember(casesLocal,uniquecases{jj});
+				if obj.isDataEqualLength && ~isempty(obj.uniquecases) && ~isempty(casesLocal)
+					for jj = 1:length(obj.uniquecases)
+						caseidx = ismember(casesLocal,obj.uniquecases{jj});
 						xtmp = xcol(caseidx);
 						ytmp = ycol(caseidx);
-						name = ['Case_' uniquecases{jj}];
+						name = ['Case_' obj.uniquecases{jj}];
 						otmp = obj.toStructure();
 						otmp.x = xtmp;
 						otmp.y = ytmp;
@@ -923,6 +913,8 @@ classdef getDensity < handle
 				end
 				value(isnan(value)) = []; %purge nans
 				obj.x = value;
+			elseif istable(value)
+				obj.x = table2array(value);
 			else
 				warning('x input data isn''t valid, must be a vector or a structure of vectors')
 			end
@@ -965,6 +957,8 @@ classdef getDensity < handle
 				end
 				value(isnan(value)) = []; %purge nans
 				obj.y = value;
+			elseif istable(value)
+				obj.y = table2array(value);
 			end
 			
 			notify(obj,'checkData');
@@ -1039,77 +1033,66 @@ classdef getDensity < handle
 				set(h,'Color',[0.9 0.9 0.9])
 				p = copyobj(pn(1,1).axis,h, 'legacy');
 				set(p,'Units','Normalized','OuterPosition',[minp minp maxp maxp]);
-				set(gcf,'Renderer','painters');
 				
 				h = figure;
 				figpos(1,[wid hei]);
 				set(h,'Color',[0.9 0.9 0.9])
 				p = copyobj(pn(1,2).axis,h, 'legacy');
 				set(p,'Units','Normalized','OuterPosition',[minp minp maxp maxp]);
-				%set(gcf,'Renderer','zbuffer');
 				
 				h = figure;
 				figpos(1,[wid hei]);
 				set(h,'Color',[0.9 0.9 0.9])
 				p = copyobj(pn(1,3).axis,h, 'legacy');
 				set(p,'Units','Normalized','OuterPosition',[minp minp maxp maxp]);
-				set(gcf,'Renderer','painters');
 				
 				h=figure;
 				figpos(1,[wid hei]);
 				set(h,'Color',[0.9 0.9 0.9])
 				p = copyobj(pn(2,1).axis,h, 'legacy');
 				set(p,'Units','Normalized','OuterPosition',[minp minp maxp maxp]);
-				set(gcf,'Renderer','painters');
 				
 				h=figure;
 				figpos(1,[wid hei]);
 				set(h,'Color',[0.9 0.9 0.9])
 				p = copyobj(pn(2,2).axis,h, 'legacy');
 				set(p,'Units','Normalized','OuterPosition',[minp minp maxp maxp]);
-				set(gcf,'Renderer','painters');
 				
 				h=figure;
 				figpos(1,[wid hei]);
 				set(h,'Color',[0.9 0.9 0.9])
 				p = copyobj(pn(2,3).axis,h, 'legacy');
 				set(p,'Units','Normalized','OuterPosition',[minp minp maxp maxp]);
-				set(gcf,'Renderer','painters');
 			else
 				h = figure;
 				figpos(1,[wid hei]);
 				set(h,'Color',[0.9 0.9 0.9])
 				p = copyobj(pn(1,1).axis,h, 'legacy');
 				set(p,'Units','Normalized','OuterPosition',[minp minp maxp maxp]);
-				set(gcf,'Renderer','painters');
 				
 				h = figure;
 				figpos(1,[wid hei]);
 				set(h,'Color',[0.9 0.9 0.9])
 				p = copyobj(pn(1,2).axis,h, 'legacy');
 				set(p,'Units','Normalized','OuterPosition',[minp minp maxp maxp]);
-				%set(gcf,'Renderer','zbuffer');
 				
 				h = figure;
 				figpos(1,[wid hei]);
 				set(h,'Color',[0.9 0.9 0.9])
 				p = copyobj(pn(1,3).axis,h, 'legacy');
 				set(p,'Units','Normalized','OuterPosition',[minp minp maxp maxp]);
-				set(gcf,'Renderer','painters');
 				
 				h = figure;
 				figpos(1,[wid hei]);
 				set(h,'Color',[0.9 0.9 0.9])
 				p = copyobj(pn(2,1).axis,h, 'legacy');
 				set(p,'Units','Normalized','OuterPosition',[minp minp maxp maxp]);
-				set(gcf,'Renderer','painters');
 				
 				h = figure;
 				figpos(1,[wid hei]);
 				set(h,'Color',[0.9 0.9 0.9])
 				p = copyobj(pn(2,2).axis,h, 'legacy');
 				set(p,'Units','Normalized','OuterPosition',[minp minp maxp maxp]);
-				set(gcf,'Renderer','painters');
 				
 			end
 		end
@@ -1521,8 +1504,8 @@ classdef getDensity < handle
 					J=(rand(size(thisX))-0.5)*jitter;
 					
 					
-					h(k).data=plot(thisX+J, thisY, 'o', 'color', C,...
-						'markerfacecolor', C+(1-C)*0.65);
+					h(k).data=scatter(thisX+J, thisY, 'o', 'MarkerEdgeColor', C,...
+						'MarkerFaceColor', C+(1-C)*0.65,'MarkerFaceAlpha',0.5,'MarkerEdgeAlpha',0.75);
 				end
 				
 				if strcmp(style,'line') | strcmp(style,'sdline')

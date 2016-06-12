@@ -114,6 +114,7 @@ classdef screenManager < optickaCore
 		timedSpotTime = 0
 		timedSpotTick = 0
 		timedSpotNextTick = 0
+		ppd_
 	end
 	
 	methods
@@ -186,9 +187,7 @@ classdef screenManager < optickaCore
 			obj.screenVals.originalGammaTable = obj.screenVals.gammaTable;
 			
 			%get screen dimensions
-			[obj.screenVals.width, obj.screenVals.height] = Screen('WindowSize',obj.screen);
-			obj.winRect = Screen('Rect',obj.screen);
-			updateCenter(obj);
+			setScreenSize(obj);
 			
 			obj.screenVals.resetGamma = false;
 			
@@ -285,21 +284,20 @@ classdef screenManager < optickaCore
 				if ischar(obj.bitDepth) && ~strcmpi(obj.bitDepth,'8bit')
 					PsychImaging('AddTask', 'General', obj.bitDepth);
 				end
+				
 				if isempty(obj.windowed); obj.windowed = false; end
 				if obj.windowed == false %fullscreen
-					windowed = [];
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
+					winSize = [];
 				else %windowed
 					if length(obj.windowed) == 2
-						windowed = [0 0 obj.windowed(1) obj.windowed(2)];
+						winSize = [0 0 obj.windowed(1) obj.windowed(2)];
 					elseif length(obj.windowed) == 4
-						windowed = obj.windowed;
+						winSize = obj.windowed;
 					else
-						windowed=[0 0 800 600];
+						winSize=[0 0 800 600];
 					end
-					%[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias,[],kPsychGUIWindow,windowed);
-					[obj.win, obj.winRect] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, windowed, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				end
+				[obj.win] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, winSize, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				
 				tL.screenLog.postOpenWindow=GetSecs;
 				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
@@ -311,7 +309,6 @@ classdef screenManager < optickaCore
 					error('GLSL Shading support is required for Opticka!');
 				end
 				
-				obj.isOpen = true;
 				obj.screenVals.win = obj.win; %make a copy
 				
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
@@ -330,15 +327,7 @@ classdef screenManager < optickaCore
 				end
 				
 				%get screen dimensions -- check !!!!!
-				[obj.screenVals.width, obj.screenVals.height] = Screen('WindowSize',obj.win);
-				if isempty(windowed)
-					obj.winRect = Screen('Rect',obj.win);
-				else
-					obj.winRect = windowed;
-					obj.screenVals.width = obj.winRect(3)-obj.winRect(1);
-					obj.screenVals.height = obj.winRect(4)-obj.winRect(2);
-				end
-				updateCenter(obj);
+				setScreenSize(obj);
 				
 				if obj.hideFlash == true && isempty(obj.gammaTable)
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
@@ -370,6 +359,7 @@ classdef screenManager < optickaCore
 				obj.screenVals.black = 0;
  				obj.screenVals.white = 1;
 				
+				obj.isOpen = true;
 				screenVals = obj.screenVals;
 				
 			catch ME
@@ -551,7 +541,6 @@ classdef screenManager < optickaCore
 			end
 			obj.distance = value;
 			obj.makeGrid();
-			%obj.salutation(['set distance: ' num2str(obj.distance) '|ppd: ' num2str(obj.ppd)],'Custom set method')
 		end
 		
 		% ===================================================================
@@ -570,8 +559,7 @@ classdef screenManager < optickaCore
 				obj.windowed = false;
 			else
 				obj.windowed = false;
-			end
-				
+			end	
 		end
 		
 		% ===================================================================
@@ -773,7 +761,12 @@ classdef screenManager < optickaCore
 		%> @param
 		% ===================================================================
 		function ppd = get.ppd(obj)
-			ppd = round( obj.pixelsPerCm * (obj.distance / 57.3)); %set the pixels per degree
+			if obj.useRetina %note pixelsPerCm is normally recorded using non-retina mode so we fix that here if we are now in retina mode
+				ppd = round( (obj.pixelsPerCm*2) * (obj.distance / 57.3) ); %set the pixels per degree
+			else
+				ppd = round( obj.pixelsPerCm * (obj.distance / 57.3) ); %set the pixels per degree
+			end
+			obj.ppd_ = ppd;
 		end
 		
 		% ===================================================================
@@ -788,8 +781,8 @@ classdef screenManager < optickaCore
 			else
 				[xPos,yPos] = GetMouse();
 			end
-			xPos = (xPos - obj.xCenter) / obj.ppd;
-			yPos = (yPos - obj.yCenter) / obj.ppd;
+			xPos = (xPos - obj.xCenter) / obj.ppd_;
+			yPos = (yPos - obj.yCenter) / obj.ppd_;
 			if verbose
 				fprintf('--->>> MOUSE POSITION: \tX = %5.5g \t\tY = %5.5g\n',xPos,yPos);
 			end
@@ -811,6 +804,22 @@ classdef screenManager < optickaCore
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
+	
+		% ===================================================================
+		%> @brief Sets screen size, taking retina mode into account
+		%>  
+		% ===================================================================
+		function setScreenSize(obj)
+			%get screen dimensions
+			if ~isempty(obj.win)
+				swin = obj.win;
+			else
+				swin = obj.screen;
+			end
+			[obj.screenVals.width, obj.screenVals.height] = Screen('WindowSize',swin);
+			obj.winRect = Screen('Rect',swin);
+			updateCenter(obj);
+		end
 		% ===================================================================
 		%> @brief Makes a 15x15 1deg dot grid for debug mode
 		%> This is always updated on setting distance or pixelsPerCm 

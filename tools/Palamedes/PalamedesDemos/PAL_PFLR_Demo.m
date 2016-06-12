@@ -61,7 +61,7 @@ if exist('OCTAVE_VERSION');
     if strcmp(cont,'y')
         fprintf('\n\n');
     else
-        break;
+        return;
     end
 end
 
@@ -299,7 +299,7 @@ disp(message);
 
 %Fit lesser model (constrained thresholds, unconstrained slopes, 
 %   fixed guess rates, fixed lapse rates).
-[paramsL LL exitflag output trash numParams1T2S] = PAL_PFML_FitMultiple(StimLevels, NumPos, ...
+[paramsL, LL, exitflag, output, trash, numParams1T2S] = PAL_PFML_FitMultiple(StimLevels, NumPos, ...
     OutOfNum, params, PF, 'thresholds','constrained','slopes',...
     'unconstrained','guessrates','fixed','lapserates','fixed',...
     'lapseLimits',lapseLimits,'SearchOptions',options);
