@@ -262,7 +262,7 @@ classdef opticka < optickaCore
 				
 				elseif ispc
 					%root = 'c:\MatlabFiles';
-					root = 'c:\Users\Guest\MatlabFiles\';
+					root = 'c:\Users\Public\MatlabFiles\';
 					obj.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
 					obj.paths.temp=tempdir;
 					if ~exist([root 'Protocols'],'dir')

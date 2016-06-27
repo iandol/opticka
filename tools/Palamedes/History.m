@@ -1435,4 +1435,20 @@
 % Modified: Palamedes version 1.8.1 (NP)
 % Code has been moved to new PAL_PFML_setupParameterizationStruct (alt.
 % spelling).
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.8.2 Release June 22, 2016
+%
+% Purpose: Fix bug in PAL_AMPM_setupPM. Also: Introduce a minimal-code demo 
+% program of basic psi-method (PAL_AMPM_Basic_Demo). PAL_AMPM_Demo updated 
+% to use a custom prior.
+%
+% PAL_AMPM_setupPM:
+% Modified: Palamedes version 1.8.2 (NP)
+% Bug fix: User supplied prior was ignored when supplied with existing PM 
+% in call to PAL_AMPM_setupPM, i.e., when first argument to
+% PAL_AMPM_setupPM was a previously existing structure, e.g.: 
+% PM = PAL_AMPM_setupPM(PM, 'prior',prior) %prior was ignored
+% PM = PAL_AMPM_setupPM('prior',prior)     %prior was not ignored
+
 

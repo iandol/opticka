@@ -139,7 +139,7 @@
 % References:
 %
 % Kontsevich, L.L. & Tyler, C.W. (1999). Bayesian adaptive estimation of 
-%   psychometric slope and threshold. Vision Research, 39, 2729–2737.
+%   psychometric slope and threshold. Vision Research, 39, 2729ï¿½2737.
 %
 % Prins, N. (2013). The psi-marginal adaptive method: how to give nuisance 
 %   parameters the attention they deserve (no more, no less). Journal of
@@ -147,7 +147,7 @@
 %
 % Introduced: Palamedes version 1.0.0 (NP)
 % Modified: Palamedes version 1.1.1, 1.2.0, 1.4.0, 1.5.0, 1.6.0, 1.6.1, 
-%   1.6.3 (see History.m)
+%   1.6.3, 1.8.2 (see History.m)
 
 function PM = PAL_AMPM_setupPM(varargin)
 
@@ -243,7 +243,7 @@ if NumOpts > 1
             PM.prior = PM.prior./sum(sum(sum(sum(PM.prior))));
             PM.pdf = PM.prior;
             valid = 1;
-            supplied(6) = true;
+            supplied(6) = true;            
         end
         if strcmpi(varargin{n}, opts(7))
             PM.PF = varargin{n+1};
@@ -320,7 +320,7 @@ if NumOpts > 1
         end
     end
     
-    if supplied(1) || supplied(2) || supplied(3) || supplied(4) || supplied(5) || supplied(7) || supplied(12)
+    if supplied(1) || supplied(2) || supplied(3) || supplied(4) || supplied(5) || supplied(6) || supplied(7) || supplied(12)
         PM.LUT = PAL_AMPM_CreateLUT(PM.priorAlphaRange,PM.priorBetaRange,PM.priorGammaRange,PM.priorLambdaRange,PM.stimRange,PM.PF,PM.gammaEQlambda);
 
         [PM, expectedEntropy] = PAL_AMPM_expectedEntropy(PM);

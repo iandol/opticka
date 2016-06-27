@@ -310,7 +310,7 @@ classdef getDensity < handle
 				if exist('distributionPlot','file') && obj.doDistribution
 					hold on
 					distributionPlot({xcol,ycol},'colormap',parula,'showMM',2,...
-						'xValues',[0.65 1.65],'histOri','left','distWidth',0.2);
+						'xValues',[0.625 1.625],'histOri','center','distWidth',0.2);
 				end
 				if obj.isDataEqualLength
 					boxplot([xcol ycol],'positions',[1 2],'notch','on','whisker',1,...

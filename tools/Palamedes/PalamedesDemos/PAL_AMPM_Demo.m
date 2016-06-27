@@ -6,6 +6,12 @@
 %Note that many more possibilites exist! (see Prins (2013) or 
 %www.palamedestoolbox.org/psimarginal.html)
 %
+%The code of this demo may be hard to plow through for a beginning user of
+%Matlab or Palamedes or the psi method. If you're interested to implement
+%the psi-method (or variation on it) but are just getting started, our 
+%advice is to start adapting the code in PAL_AMPM_Basic_Demo which is a 
+%minimal-code, no-frills implementation of the original psi-method.
+%
 %User is prompted as to whether original psi method, the psi+, or the
 %psi-marginal should be demonstrated. The psi-method keeps track of a 2D
 %(threshold x slope) posterior and selects stimulus placement that will
@@ -32,10 +38,10 @@
 %vigilance. User will be prompted to indicate whether this should be
 %prevented by suspending psi+ or psi-marginal and temporarily act as the
 %original psi-method by fixing the lapse rate for a random number of trials
-%after a placement at the highest possible intensity. Note that this
-%strategy is not fool-proof, especially early in a trial run (the 
-%original psi-method produces consecutive series at the extreme amplitudes 
-%sometimes as well).
+%after a placement at the highest possible intensity. Note that series of
+%consecutive high intensity trials may still occur, especially early in a 
+%trial run (the original psi-method produces consecutive series at the 
+%extreme amplitudes sometimes as well).
 %
 %Note that the Psi-marginal method can be set up to treat any of the PF's
 %four parameters either as a parameter of primary interest whose
@@ -43,8 +49,9 @@
 %should subserve the estimation of the primary parameter, or as a fixed
 %parameter.
 %
-%Note that user may define a prior other than the constrained uniform prior
-%used here.
+%This demo uses a non-uniform prior. Note that our choice for the 
+%characteristics of the prior here is motivated by convenience only.
+%Different scenarios require different prior.
 %
 %Note that user may constrain the guess rate and the lapse rate to be equal
 %as would be appropriate in, say, a vernier acuity task.
@@ -99,6 +106,10 @@ AvoidConsecutive = 0;
 fprintf(1,'\n')
 disp('For more information on what goes on in this demo, type help PAL_AMPM_Demo')
 disp('or go to: http://www.journalofvision.org/content/13/7/3')
+fprintf(1,'\n')
+disp('If you are interested in a minimal-code version of the original psi-method')
+disp('try PAL_AMPM_Basic_Demo which is a no-frills implementation of the original')
+disp('psi method.')
 fprintf(1,'\n')
 method = input('Original Psi (0), Psi+ (1), or Psi-marginal (2)?: ');
 if method == 2
@@ -158,7 +169,8 @@ l = permute(l, [2 1 3]);
 
 vizLUT = squeeze(PAL_AMPM_CreateLUT(alphas,betas,gammas,lambdas,stimRange,PF,false));
 vizLUT = permute(vizLUT,[2 1 3 4]);
-posterior = ones(size(a));
+vizprior = PAL_pdfNormal(a,0,1).*PAL_pdfNormal(b,0,1);
+posterior = vizprior;%ones(size(a));
 
 %totals keeps track of number of trials presented at each value of stimRange
 totals = zeros(size(stimRange));
@@ -213,6 +225,10 @@ PM = PAL_AMPM_setupPM('priorAlphaRange',single(priorAlphaRange),...
     'priorBetaRange',single(priorBetaRange),'priorGammaRange',single(gamma),...
     'priorLambdaRange',single(priorLambdaRange), 'numtrials',NumTrials, 'PF' , PF,...
     'stimRange',single(stimRange),'marginalize',marginalize);
+
+prior = PAL_pdfNormal(PM.priorAlphas,0,1).*PAL_pdfNormal(PM.priorBetas,log10(1),1);
+
+PM = PAL_AMPM_setupPM(PM,'prior',prior);
 
 warning(S);
 
@@ -406,6 +422,7 @@ while PM.stop ~= 1
     if suspend == 1
         suspend = rand(1) > 1./WaitTime;
     end            
+
     
  %update PM based on response
     PM = PAL_AMPM_updatePM(PM,response,'fixLapse',suspend);
