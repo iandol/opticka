@@ -1,7 +1,7 @@
 function dotstest()
 
 useEyeLink = false;
-useStaircase = false;
+useStaircase = true;
 backgroundColour = [0.3 0.3 0.3];
 subject = 'Ian';
 fixx = 0;
@@ -27,7 +27,7 @@ n.speed = 4;
 n.dotType = 2; %high quality dots
 n.dotSize = 0.1;
 n.density = 25;
-n.colour = [0.45 0.45 0.45];
+n.colour = [0.5 0.5 0.5];
 n.maskColour = backgroundColour + 0.1;
 n.colourType = 'simple'; %try also randomBW
 n.coherence = 0.5;
@@ -40,7 +40,7 @@ n.mask = false;
 a = apparentMotionStimulus();
 a.name = name;
 a.yPosition = -30;
-a.colour = [0.4 0.4 0.4];
+a.colour = [0.5 0.5 0.5];
 a.barLength = 3;
 a.barWidth = 3;
 a.nBars = 10;
@@ -162,11 +162,11 @@ if ~useStaircase
 end
 
 
-try %our main experimental try catch loop
+try %our main experimentqal try catch loop
 	
 	%-----open the PTB screens
 	s = screenManager('verbose',false,'blend',true,'screen',0,'pixelsPerCm',pixelsPerCm,...
-		'bitDepth','8bit','debug',true,'antiAlias',0,'nativeBeamPosition',0, ...
+		'bitDepth','8bit','debug',false,'antiAlias',0,'nativeBeamPosition',0, ...
 		'srcMode','GL_SRC_ALPHA','dstMode','GL_ONE_MINUS_SRC_ALPHA',...
 		'windowed',windowed,'backgroundColour',[backgroundColour 0]); %use a temporary screenManager object
 	screenVals = open(s); %open PTB screen
@@ -189,6 +189,7 @@ try %our main experimental try catch loop
 	response = [];
 	while ~breakloop
 		
+		yToggle = task.outValues{task.totalRuns,4}{:};
 		if useStaircase
 			angleToggle = randi([0 1]) * 180;
 			dirToggle = randi([0 1]);
@@ -200,7 +201,6 @@ try %our main experimental try catch loop
 		else
 			angleToggle = task.outValues{task.totalRuns,1}{:};
 			dirToggle = task.outValues{task.totalRuns,2}{:};
-			yToggle = task.outValues{task.totalRuns,4}{:};
 		end
 		
 		stimuli{dotsidx}.angleOut = angleToggle;

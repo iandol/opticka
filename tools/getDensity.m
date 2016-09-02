@@ -908,7 +908,7 @@ classdef getDensity < handle
 					obj.columnlabels = names;
 				end
 			elseif isnumeric(value)
-				if ~iscolumn(value)
+				if size(value,1) == 1 && ~iscolumn(value)
 					value=value';
 				end
 				value(isnan(value)) = []; %purge nans
@@ -952,7 +952,7 @@ classdef getDensity < handle
 					obj.columnlabels = names;
 				end
 			elseif isnumeric(value)
-				if ~iscolumn(value)
+				if size(value,1) == 1 && ~iscolumn(value)
 					value=value';
 				end
 				value(isnan(value)) = []; %purge nans

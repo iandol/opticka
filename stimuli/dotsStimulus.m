@@ -14,8 +14,10 @@ classdef dotsStimulus < baseStimulus
 		colourType	= 'randomBW'
 		%> width of dot (deg)
 		dotSize		= 0.05
-		%> dot coherence from 0 - 1
+		%> dot coherence from 0 - 1, non-coherent dots are given a random direction
 		coherence	= 0.5
+		%> what proportion of dots are in the same direction, other dots are given the opposite direction
+		angleProbability = 1
 		%> fraction of dots to kill each frame  (limited lifetime)
 		kill		= 0
 		%> type of dot (integer, where 0 means filled square, 1
@@ -325,6 +327,10 @@ classdef dotsStimulus < baseStimulus
 			makeColours(obj)
 			%sort out our angles and percent incoherent
 			obj.angles = ones(obj.nDots_,1) .* obj.angleOut;
+			if obj.angleProbability < 1
+				n = round(obj.nDots_*obj.angleProbability);
+				obj.angles(1:n) = obj.angleOut + 180;
+			end
 			obj.rDots=obj.nDots_-floor(obj.nDots_*(obj.coherenceOut));
 			if obj.rDots>0
 				obj.angles(1:obj.rDots) = obj.r2d((2*pi).*rand(1,obj.rDots));
