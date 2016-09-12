@@ -55,7 +55,7 @@ classdef metaStimulus < optickaCore
 	properties (SetAccess = private, GetAccess = public) 
 		%> stimulus family
 		family = 'meta'
-		%> structure holing positions for each stimulus
+		%> structure holding positions for each stimulus
 		stimulusPositions = []
 		%> used for optional logging for update times
 		updateLog = []
@@ -63,7 +63,6 @@ classdef metaStimulus < optickaCore
 	
 	%--------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = public, Transient = true); 
-		%> stimulus family
 		lastXPosition = 0
 		lastYPosition = 0
 	end
@@ -124,17 +123,18 @@ classdef metaStimulus < optickaCore
 		%> @param choice override a single choice
 		%> @return
 		% ===================================================================
-		function update(obj,choice)
+		function update(obj,choice,mask)
 			%tic
+			if ~exist('mask','var');mask=false;end
 			if exist('choice','var') %user forces a single stimulus
 				
 				update(obj.stimuli{choice});
 				
-% 			elseif ~isempty(obj.choice) %object forces a single stimulus
-% 				
-% 				update(obj.stimuli{obj.choice});
+			elseif ~isempty(obj.choice) %object forces a single stimulus
 				
-			elseif obj.showMask == true && obj.nMask > 0 %draw mask instead
+				update(obj.stimuli{obj.choice});
+				
+			elseif mask && obj.showMask == true && obj.nMask > 0 %draw mask instead
 				
 				for i = 1:obj.nMask
 					update(obj.maskStimuli{i});
@@ -161,9 +161,9 @@ classdef metaStimulus < optickaCore
 				
 				draw(obj.stimuli{choice});
 				
-% 			elseif ~isempty(obj.choice) %object forces a single stimulus
-% 				
-% 				draw(obj.stimuli{obj.choice});
+			elseif ~isempty(obj.choice) %object forces a single stimulus
+				
+				draw(obj.stimuli{obj.choice});
 				
 			elseif obj.showMask == true && obj.nMask > 0 %draw mask instead
 				
@@ -191,9 +191,9 @@ classdef metaStimulus < optickaCore
 				
 				animate(obj.stimuli{choice});
 				
-% 			elseif ~isempty(obj.choice) %object forces a single stimulus
-% 				
-% 				animate(obj.stimuli{obj.choice});
+			elseif ~isempty(obj.choice) %object forces a single stimulus
+				
+				animate(obj.stimuli{obj.choice});
 				
 			elseif obj.showMask == true && obj.nMask > 0 %draw mask instead
 				
@@ -301,9 +301,16 @@ classdef metaStimulus < optickaCore
 		%> @brief Edit -- fast change a particular value.
 		%>
 		% ===================================================================
-		function edit(obj, stims, var, value)
-			for i = 1:length(stims)
-				obj.stimuli{stims(i)}.(var) = value;
+		function edit(obj, stims, var, value, mask)
+			if ~exist('mask','var'); mask = false; end
+			if mask == false
+				for i = 1:length(stims)
+					obj.stimuli{stims(i)}.(var) = value;
+				end
+			else
+				for i = 1:length(stims)
+					obj.maskStimuli{stims(i)}.(var) = value;
+				end
 			end
 		end
 		
@@ -406,7 +413,7 @@ classdef metaStimulus < optickaCore
 				%s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2];
 				%s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
 			end
-			open(s); %open PTB screen
+			open(s); s.visualDebug = false; %open PTB screen
 			s.windowed = oldwindowed;
 			setup(obj,s); %setup our stimulus object
 			draw(obj); %draw stimulus
@@ -414,9 +421,9 @@ classdef metaStimulus < optickaCore
 				drawGrid(s); %draw +-5 degree dot grid
 				drawScreenCenter(s); %centre spot
 			end
-			if benchmark; 
+			if benchmark
 				Screen('DrawText', s.win, 'Benchmark, screen will not update properly, see FPS on command window at end.', 5,5,[0 0 0]);
-			else
+			elseif s.visualDebug
 				Screen('DrawText', s.win, 'Stimulus unanimated for 1 second, animated for 2, then unanimated for a final second...', 5,5,[0 0 0]);
 			end
 			Screen('Flip',s.win);
