@@ -35,7 +35,7 @@ classdef eyelinkManager < optickaCore
 		%> tracker update speed (Hz), should be 250 500 1000 2000
 		sampleRate = 250
 		%> calibration style
-		calibrationStyle = 'HV5'
+		calibrationStyle = 'HV9'
 		%> use manual remote calibration
 		remoteCalibration = true
 		% use callbacks
@@ -108,12 +108,12 @@ classdef eyelinkManager < optickaCore
 			catch %#ok<CTCH>
 				obj.isDummy = true; 
 			end
-			if ~isempty(obj.IP) && obj.isDummy == true
-				 ret = Eyelink('SetAddress', obj.IP);
-				 if ret ~= 0
-					  warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
-				 end
-			end
+% 			if ~isempty(obj.IP) && obj.isDummy == false
+% 				 ret = Eyelink('SetAddress', obj.IP);
+% 				 if ret ~= 0
+% 					  warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+% 				 end
+% 			end
 			obj.modify.calibrationtargetcolour = [1 1 0];
 			obj.modify.calibrationtargetsize = 0.7;
 			obj.modify.calibrationtargetwidth = 0.02;
@@ -135,6 +135,7 @@ classdef eyelinkManager < optickaCore
 				return
 			end
 			
+			Eyelink('Shutdown'); %just make sure link is closed
 			obj.screen = sM;
 			
 			if ~isempty(obj.IP) && obj.isDummy == false
@@ -242,7 +243,16 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function connected = checkConnection(obj)
-			obj.isConnected = logical(Eyelink('IsConnected'));
+			c = false;
+			isc = Eyelink('IsConnected');
+			if isc == 1
+			obj.isConnected = true;
+			elseif isc == -1
+				obj.isConnected = false;
+				obj.isDummy = true;
+			else
+				obj.isConnected = false;
+			end
 			connected = obj.isConnected;
 		end
 		
@@ -608,10 +618,10 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function close(obj)
-			obj.paths.currentDirectory = pwd;
-			cd(obj.paths.savedData);
 			try
 				if obj.isRecording == true
+% 					obj.paths.currentDirectory = pwd;
+% 					cd(obj.paths.savedData);
 					Eyelink('StopRecording');
 					Eyelink('CloseFile');
 					try

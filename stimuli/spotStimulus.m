@@ -261,6 +261,8 @@ classdef spotStimulus < baseStimulus
 		function set_colourOut(obj, value)
 			if length(value) == 1
 				value = [value value value obj.alphaOut];
+			elseif length(value) == 3
+				value = [value obj.alphaOut];
 			end
 			obj.colourOutTemp = value;
 			obj.colourOut = value;
@@ -287,6 +289,7 @@ classdef spotStimulus < baseStimulus
 				obj.stopLoop = true;
 				obj.colourOut = [(obj.colourOutTemp(1:3) .* obj.contrastOut) obj.alpha];
 				obj.stopLoop = false;
+				if obj.verbose; fprintf('Contrast: %g | Colour out is: %g %g %g \n',obj.contrastOut,obj.colourOut(1),obj.colourOut(2),obj.colourOut(3)); end
 			end
 		end
 		
