@@ -114,7 +114,7 @@ if useEyeLink == true;
 	eL.modify.devicenumber = -1; % -1 = use any keyboard
 	% X, Y, FixInitTime, FixTime, Radius, StrictFix
 	updateFixationValues(eL, fixX, fixY, firstFixInit, firstFixTime, firstFixRadius, strictFixation);
-	initialise(qeL, s);
+	initialise(eL, s);
 	setup(eL);
 end
 

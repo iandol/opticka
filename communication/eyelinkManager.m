@@ -104,16 +104,16 @@ classdef eyelinkManager < optickaCore
 			end
 			obj.defaults = EyelinkInitDefaults();
 			try % is eyelink interface working
-				Eyelink('GetTrackerVersion'); 
+				Eyelink('GetTrackerVersion');
 			catch %#ok<CTCH>
-				obj.isDummy = true; 
+				obj.isDummy = true;
 			end
-% 			if ~isempty(obj.IP) && obj.isDummy == false
-% 				 ret = Eyelink('SetAddress', obj.IP);
-% 				 if ret ~= 0
-% 					  warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
-% 				 end
-% 			end
+			% 			if ~isempty(obj.IP) && obj.isDummy == false
+			% 				 ret = Eyelink('SetAddress', obj.IP);
+			% 				 if ret ~= 0
+			% 					  warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+			% 				 end
+			% 			end
 			obj.modify.calibrationtargetcolour = [1 1 0];
 			obj.modify.calibrationtargetsize = 0.7;
 			obj.modify.calibrationtargetwidth = 0.02;
@@ -139,10 +139,10 @@ classdef eyelinkManager < optickaCore
 			obj.screen = sM;
 			
 			if ~isempty(obj.IP) && obj.isDummy == false
-				 ret = Eyelink('SetAddress', obj.IP);
-				 if ret ~= 0
-					  warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
-				 end
+				ret = Eyelink('SetAddress', obj.IP);
+				if ret ~= 0
+					warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+				end
 			end
 			
 			if ~isempty(obj.callback) && obj.enableCallbacks
@@ -176,7 +176,7 @@ classdef eyelinkManager < optickaCore
 					obj.defaults.(fn{i}) = obj.modify.(fn{i});
 				end
 			end
-
+			
 			obj.updateDefaults();
 			
 			[~, obj.version] = Eyelink('GetTrackerVersion');
@@ -185,7 +185,7 @@ classdef eyelinkManager < optickaCore
 			% try to open file to record data to
 			if obj.isConnected && obj.recordData
 				err = Eyelink('Openfile', obj.tempFile);
-				if err ~= 0 
+				if err ~= 0
 					obj.salutation('Initialise Method', 'Cannot setup data file, aborting data recording');
 					obj.isRecording = false;
 				else
@@ -205,7 +205,7 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		% ===================================================================
 		function updateDefaults(obj)
@@ -213,7 +213,7 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		% ===================================================================
 		function setup(obj)
@@ -237,16 +237,15 @@ classdef eyelinkManager < optickaCore
 			obj.fixN = 0;
 			obj.fixSelection = 0;
 		end
-				
+		
 		% ===================================================================
 		%> @brief check the connection with the eyelink
 		%>
 		% ===================================================================
 		function connected = checkConnection(obj)
-			c = false;
 			isc = Eyelink('IsConnected');
 			if isc == 1
-			obj.isConnected = true;
+				obj.isConnected = true;
 			elseif isc == -1
 				obj.isConnected = false;
 				obj.isDummy = true;
@@ -284,7 +283,7 @@ classdef eyelinkManager < optickaCore
 					Eyelink('Command','key_function 9 ''remote_cal_target 9''');
 					Eyelink('Command','key_function 0 ''remote_cal_target 0''');
 					Eyelink('Command','key_function q ''remote_cal_complete''');
-				else 
+				else
 					Eyelink('Command', 'generate_default_targets = YES');
 					Eyelink('Command','remote_cal_enable = 0');
 				end
@@ -363,7 +362,7 @@ classdef eyelinkManager < optickaCore
 				obj.currentSample.gy = obj.y;
 				obj.currentSample.pa = obj.pupil;
 				obj.currentSample.time = GetSecs*1000;
-				%fprintf('Dummy X: %g Y: %g\n',obj.x,obj.y);
+				if obj.verbose;fprintf('Dummy X: %g Y: %g\n',obj.x,obj.y);end
 			end
 			evt = obj.currentSample;
 		end
@@ -373,7 +372,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function evt = getEvent(obj)
-		
+			
 		end
 		
 		% ===================================================================
@@ -411,7 +410,7 @@ classdef eyelinkManager < optickaCore
 			end
 			if nargin > 4 && ~isempty(fixtime)
 				if length(fixtime) == 2
-					obj.fixationTime = randi(fixtime*1000)/1000; 
+					obj.fixationTime = randi(fixtime*1000)/1000;
 				elseif length(fixtime) == 1
 					obj.fixationTime = fixtime;
 				end
@@ -430,14 +429,14 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function [fixated, fixtime, searching, window] = isFixated(obj)
 			fixated = false; fixtime = false; searching = true; window = [];
-			if obj.isConnected && ~isempty(obj.currentSample)
+			if (obj.isConnected || obj.isDummy) && ~isempty(obj.currentSample)
 				if obj.fixInitTotal == 0
 					obj.fixInitTotal = obj.currentSample.time;
 				end
 				r = sqrt((obj.x - obj.fixationX).^2 + (obj.y - obj.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
 				window = find(r < obj.fixationRadius);
 				if any(window);
-					if obj.fixN == 0 
+					if obj.fixN == 0
 						obj.fixN = 1;
 						obj.fixSelection = window(1);
 					end
@@ -453,7 +452,7 @@ classdef eyelinkManager < optickaCore
 						searching = false;
 						fixated = true;
 						obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
-						%if obj.verbose;fprintf('%g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, obj.fixLength, obj.fixationTime, obj.fixTotal, obj.fixInitTotal);end
+						if obj.verbose;fprintf('%g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, obj.fixLength, obj.fixationTime, obj.fixTotal, obj.fixInitTotal);end
 						return
 					else
 						fixated = false;
@@ -461,7 +460,7 @@ classdef eyelinkManager < optickaCore
 						searching = false;
 					end
 				else
-					if obj.fixN == 1 
+					if obj.fixN == 1
 						obj.fixN = -100;
 					end
 					if obj.fixInitStartTime == 0
@@ -480,13 +479,13 @@ classdef eyelinkManager < optickaCore
 				end
 			end
 		end
-			
+		
 		% ===================================================================
 		%> @brief testFixation returns input yes or no strings based on
 		%> fixation state, useful for using via stateMachine
 		%>
 		% ===================================================================
-		function out = testWithinFixationWindow(obj, yesString, noString, window)
+		function out = testWithinFixationWindow(obj, yesString, noString)
 			if isFixated(obj)
 				out = yesString;
 			else
@@ -574,17 +573,17 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function drawEyePosition(obj)
-			if obj.isConnected && obj.screen.isOpen && ~isempty(obj.x) && ~isempty(obj.y)
+			if (obj.isDummy || obj.isConnected) && obj.screen.isOpen && ~isempty(obj.x) && ~isempty(obj.y)
 				x = obj.toPixels(obj.x,'x');
 				y = obj.toPixels(obj.y,'y');
 				if obj.isFixated
-					Screen('DrawDots', obj.screen.win, [x y], 10, [1 0.5 1 1], [], 1);
+					Screen('DrawDots', obj.screen.win, [x y], 8, [1 0.5 1 1], [], 1);
 					if obj.fixLength > obj.fixationTime
 						Screen('DrawText', obj.screen.win, 'FIX', x, y, [1 1 1]);
-					end	
+					end
 				else
 					Screen('DrawDots', obj.screen.win, [x y], 6, [1 0.5 0 1], [], 1);
-				end	
+				end
 			end
 		end
 		
@@ -597,18 +596,19 @@ classdef eyelinkManager < optickaCore
 			if ~strcmpi(message,obj.previousMessage) && obj.isConnected
 				obj.previousMessage = message;
 				Eyelink('Command',['record_status_message ''' message '''']);
+				if obj.verbose; fprintf('-+-+>Eyelink status message: %s',message);end
 			end
 		end
 		
 		% ===================================================================
 		%> @brief send message to store in EDF data
-		%> 
+		%>
 		%>
 		% ===================================================================
 		function edfMessage(obj, message)
 			if obj.isConnected
 				Eyelink('Message', message );
-				%fprintf('EDF Message: %s\n',message);
+				if obj.verbose; fprintf('-+-+>EDF Message: %s\n',message);end
 			end
 		end
 		
@@ -620,8 +620,8 @@ classdef eyelinkManager < optickaCore
 		function close(obj)
 			try
 				if obj.isRecording == true
-% 					obj.paths.currentDirectory = pwd;
-% 					cd(obj.paths.savedData);
+					% 					obj.paths.currentDirectory = pwd;
+					% 					cd(obj.paths.savedData);
 					Eyelink('StopRecording');
 					Eyelink('CloseFile');
 					try
@@ -656,7 +656,7 @@ classdef eyelinkManager < optickaCore
 			obj.isRecording = false;
 			obj.eyeUsed = -1;
 			obj.screen = [];
-			cd(obj.paths.currentDirectory);
+			%cd(obj.paths.currentDirectory);
 		end
 		
 		% ===================================================================
@@ -707,7 +707,7 @@ classdef eyelinkManager < optickaCore
 				y = toPixels(obj, obj.fixationY, 'y');
 				rect = round(CenterRectOnPoint(rect, x, y));
 				Eyelink('Command', 'draw_box %d %d %d %d %d', rect(1), rect(2), rect(3), rect(4), 4);
-            end
+			end
 		end
 		
 		% ===================================================================
@@ -739,7 +739,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function setOffline(obj)
-			if obj.isConnected 
+			if obj.isConnected
 				Eyelink('Command', 'set_idle_mode');
 			end
 		end
@@ -768,7 +768,7 @@ classdef eyelinkManager < optickaCore
 		function runDemo(obj)
 			stopkey=KbName('ESCAPE');
 			nextKey=KbName('SPACE');
-			obj.recordData = true;	
+			obj.recordData = true;
 			try
 				s = screenManager();
 				s.backgroundColour = [0.5 0.5 0.5 0];
@@ -778,18 +778,18 @@ classdef eyelinkManager < optickaCore
 				open(s); %open out screen
 				setup(o,s); %setup our stimulus with open screen
 				
-				ListenChar(1); 
+				ListenChar(1);
 				initialise(obj,s); %initialise eyelink with our screen
 				setup(obj); %setup eyelink
-			
+				
 				obj.statusMessage('DEMO Running'); %
-  				setOffline(obj); %Eyelink('Command', 'set_idle_mode');
+				setOffline(obj); %Eyelink('Command', 'set_idle_mode');
 				trackerClearScreen(obj);
 				trackerDrawFixation(obj);
 				xx = 0;
 				a = 1;
 				
- 				while xx == 0
+				while xx == 0
 					yy = 0;
 					b = 1;
 					edfMessage(obj,'V_RT MESSAGE END_FIX END_RT');
@@ -801,19 +801,19 @@ classdef eyelinkManager < optickaCore
 					while yy == 0
 						err = checkRecording(obj);
 						if(err~=0); xx = 1; break; end;
-
+						
 						[~, ~, keyCode] = KbCheck(-1);
 						if keyCode(stopkey); xx = 1; break;	end;
 						if keyCode(nextKey); yy = 1; break; end
 						
 						if b == 30; edfMessage(obj,'END_FIX');end
-
+						
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
-
+						
 						getSample(obj);
-
+						
 						if ~isempty(obj.currentSample)
 							x = obj.toPixels(obj.x,'x'); %#ok<*PROP>
 							y = obj.toPixels(obj.y,'y');
@@ -821,9 +821,9 @@ classdef eyelinkManager < optickaCore
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(obj);
 						end
-
-						Screen('DrawingFinished', s.win); 
-                        animate(o);
+						
+						Screen('DrawingFinished', s.win);
+						animate(o);
 						vbl=Screen('Flip',s.win, vbl+(s.screenVals.ifi * 0.5));
 						b=b+1;
 					end
@@ -841,8 +841,8 @@ classdef eyelinkManager < optickaCore
 					statusMessage(obj,sprintf('X Pos = %g | Y Pos = %g | Radius = %g',obj.fixationX,obj.fixationY,obj.fixationRadius));
 					trackerClearScreen(obj);
 					trackerDrawFixation(obj);
-                    ts.x = 200; ts.y = 200; ts.size = 100; ts.selected = true;
-                    trackerDrawStimuli(obj, ts);
+					ts.x = 200; ts.y = 200; ts.size = 100; ts.selected = true;
+					trackerDrawStimuli(obj, ts);
 					update(o);
 					WaitSecs(0.3)
 					a=a+1;
@@ -871,7 +871,7 @@ classdef eyelinkManager < optickaCore
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief
