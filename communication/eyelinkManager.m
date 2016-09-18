@@ -108,12 +108,6 @@ classdef eyelinkManager < optickaCore
 			catch %#ok<CTCH>
 				obj.isDummy = true;
 			end
-			% 			if ~isempty(obj.IP) && obj.isDummy == false
-			% 				 ret = Eyelink('SetAddress', obj.IP);
-			% 				 if ret ~= 0
-			% 					  warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
-			% 				 end
-			% 			end
 			obj.modify.calibrationtargetcolour = [1 1 0];
 			obj.modify.calibrationtargetsize = 0.7;
 			obj.modify.calibrationtargetwidth = 0.02;
@@ -138,10 +132,10 @@ classdef eyelinkManager < optickaCore
 			Eyelink('Shutdown'); %just make sure link is closed
 			obj.screen = sM;
 			
-			if ~isempty(obj.IP) && obj.isDummy == false
+			if ~isempty(obj.IP) && ~obj.isDummy 
 				ret = Eyelink('SetAddress', obj.IP);
 				if ret ~= 0
-					warning('!--> Couldn''t set IP address to %s...\n',obj.IP);
+					warning('!!!--> Couldn''t set IP address to %s!!!\n',obj.IP);
 				end
 			end
 			
@@ -362,7 +356,7 @@ classdef eyelinkManager < optickaCore
 				obj.currentSample.gy = obj.y;
 				obj.currentSample.pa = obj.pupil;
 				obj.currentSample.time = GetSecs*1000;
-				if obj.verbose;fprintf('Dummy X: %g Y: %g\n',obj.x,obj.y);end
+				%if obj.verbose;fprintf('Dummy X: %.2g | Y: %.2g\n',obj.x,obj.y);end
 			end
 			evt = obj.currentSample;
 		end
@@ -417,7 +411,7 @@ classdef eyelinkManager < optickaCore
 			end
 			if nargin > 5 && ~isempty(radius); obj.fixationRadius = radius; end
 			if nargin > 6 && ~isempty(strict); obj.strictFixation = strict; end
-			if obj.verbose; fprintf('---> eyelinkManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g\n', obj.fixationX, obj.fixationY, num2str(obj.fixationInitTime), num2str(obj.fixationTime), obj.fixationRadius); end
+			if obj.verbose; fprintf('-+-+-> eyelinkManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g\n', obj.fixationX, obj.fixationY, num2str(obj.fixationInitTime), num2str(obj.fixationTime), obj.fixationRadius); end
 		end
 		
 		% ===================================================================
@@ -452,7 +446,7 @@ classdef eyelinkManager < optickaCore
 						searching = false;
 						fixated = true;
 						obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
-						if obj.verbose;fprintf('%g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, obj.fixLength, obj.fixationTime, obj.fixTotal, obj.fixInitTotal);end
+						%if obj.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, obj.fixLength, obj.fixationTime, obj.fixTotal, obj.fixInitTotal);end
 						return
 					else
 						fixated = false;
@@ -525,25 +519,25 @@ classdef eyelinkManager < optickaCore
 					out = 'searching';
 				else
 					out = noString;
-					if obj.verbose; fprintf('---> Eyelink:testSearchHoldFixation STRICT SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+					if obj.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation STRICT SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 				end
 				return
 			elseif fix
 				if (obj.strictFixation==true && ~(obj.fixN == -100)) || obj.strictFixation==false
 					if fixtime
 						out = yesString;
-						if obj.verbose; fprintf('---> Eyelink:testSearchHoldFixation FIXATION SUCCESSFUL!: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+						if obj.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation FIXATION SUCCESSFUL!: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 					else
 						out = 'fixing';
 					end
 				else
 					out = noString;
-					if obj.verbose;fprintf('---> Eyelink:testSearchHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+					if obj.verbose;fprintf('-+-+-> Eyelink:testSearchHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 				end
 				return
 			elseif searching == false
 				out = noString;
-				if obj.verbose;fprintf('---> Eyelink:testSearchHoldFixation SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+				if obj.verbose;fprintf('-+-+-> Eyelink:testSearchHoldFixation SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 			else
 				out = '';
 			end
@@ -596,7 +590,7 @@ classdef eyelinkManager < optickaCore
 			if ~strcmpi(message,obj.previousMessage) && obj.isConnected
 				obj.previousMessage = message;
 				Eyelink('Command',['record_status_message ''' message '''']);
-				if obj.verbose; fprintf('-+-+>Eyelink status message: %s',message);end
+				if obj.verbose; fprintf('-+-+->Eyelink status message: %s',message);end
 			end
 		end
 		
@@ -608,7 +602,7 @@ classdef eyelinkManager < optickaCore
 		function edfMessage(obj, message)
 			if obj.isConnected
 				Eyelink('Message', message );
-				if obj.verbose; fprintf('-+-+>EDF Message: %s\n',message);end
+				if obj.verbose; fprintf('-+-+->EDF Message: %s\n',message);end
 			end
 		end
 		
