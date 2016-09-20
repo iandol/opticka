@@ -17,8 +17,8 @@ classdef discStimulus < baseStimulus
 		sigma = 11.0
 		%> use colour or alpha channel for smoothing?
 		useAlpha = true
-		%> use cosine (false) or hermite interpolation (true, default)
-		smoothMethod = true
+		%> use cosine (0) or hermite interpolation (1, default)
+		smoothMethod = 1
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -46,13 +46,8 @@ classdef discStimulus < baseStimulus
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
 		stopLoop = false
-		allowedProperties='type|flashTime|flashOn|flashOffColour|contrast'
-		ignoreProperties = 'flashSwitch|FlashOn';
-	end
-	
-	events
-		%> triggered when changing colour, so we can change other bits
-		changeColour
+		allowedProperties='type|flashTime|flashOn|flashOffColour|sigma|useAlpha|smoothMethod'
+		ignoreProperties = 'type|name|flashSwitch|FlashOn';
 	end
 	
 	%=======================================================================
@@ -96,8 +91,6 @@ classdef discStimulus < baseStimulus
 				obj.show;
 			end
 			
-			addlistener(obj,'changeColour',@obj.computeColour);
-			
 			obj.sM = sM;
 			obj.ppd=sM.ppd;
 			
@@ -135,13 +128,13 @@ classdef discStimulus < baseStimulus
 			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
 			obj.res = round([obj.gratingSize obj.gratingSize]);
 			
-			if isempty(obj.findprop('maskValue'));p=obj.addprop('maskValue');p.Transient=true;end
-			obj.maskValue = floor((obj.ppd*obj.size)/2);
+			if isempty(obj.findprop('radius'));p=obj.addprop('radius');p.Transient=true;end
+			obj.radius = floor((obj.ppd*obj.size)/2);
 			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
 			
 			obj.texture = CreateProceduralSmoothDisc(obj.sM.win, obj.res(1), ...
-						obj.res(2), obj.colourOut, obj.maskValue, 1, obj.sigmaOut, ...
+						obj.res(2), [0 0 0 0], obj.radius, obj.sigmaOut, ...
 						obj.useAlpha, obj.smoothMethod);
 			
 			if strcmpi(obj.type,'flash')
@@ -155,9 +148,9 @@ classdef discStimulus < baseStimulus
 			end
 			
 			obj.inSetup = false;
-			
 			computePosition(obj);
-			setAnimationDelta(obj);
+			setRect(obj);
+			
 		end
 		
 		% ===================================================================
@@ -169,7 +162,7 @@ classdef discStimulus < baseStimulus
 		function update(obj)
 			resetTicks(obj);
 			computePosition(obj);
-			setAnimationDelta(obj);
+			setRect(obj);
 			if obj.doFlash
 				obj.resetFlash;
 			end
@@ -183,12 +176,15 @@ classdef discStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
+				%Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] 
+				%[,rotationAngle] [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] 
+				%[, specialFlags] [, auxParameters]);
 				if obj.doFlash == false
-					Screen('DrawTexture', obj.sM.win, obj.texture, [],obj.mvRect,...
+					Screen('DrawTexture', obj.sM.win, obj.texture, [], obj.mvRect,...
 					obj.angleOut, [], [], obj.colourOut, [], [],...
 					[]);
 				else
-					Screen('DrawTexture', obj.sM.win, obj.texture, [],obj.mvRect,...
+					Screen('DrawTexture', obj.sM.win, obj.texture, [], obj.mvRect,...
 					obj.angleOut, [], [], obj.currentColour, [], [],...
 					[]);
 				end
@@ -207,13 +203,11 @@ classdef discStimulus < baseStimulus
 				if obj.mouseOverride
 					getMousePosition(obj);
 					if obj.mouseValid
-						obj.xOut = obj.mouseX;
-						obj.yOut = obj.mouseY;
+						obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
 					end
 				end
 				if obj.doMotion == true
-					obj.xOut = obj.xOut + obj.dX_;
-					obj.yOut = obj.yOut + obj.dY_;
+					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
 				end
 				if obj.doFlash == true
 					if obj.flashCounter <= obj.flashSwitch
@@ -267,6 +261,34 @@ classdef discStimulus < baseStimulus
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
+	
+		% ===================================================================
+		%> @brief setRect
+		%> setRect makes the PsychRect based on the texture and screen values
+		%> this is modified over parent method as textures have slightly different
+		%> requirements.
+		% ===================================================================
+		function setRect(obj)
+			obj.dstRect=Screen('Rect',obj.texture);
+			if obj.mouseOverride && obj.mouseValid
+					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
+			else
+				if isempty(obj.findprop('angleOut'));
+					[sx, sy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+				else
+					[sx, sy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
+				end
+				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
+				if isempty(obj.findprop('xPositionOut'));
+					obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
+				else
+					obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));
+				end
+			end
+			obj.mvRect=obj.dstRect;
+			obj.setAnimationDelta();
+		end
+		
 		% ===================================================================
 		%> @brief sizeOut Set method
 		%>

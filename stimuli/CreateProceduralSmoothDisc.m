@@ -1,7 +1,8 @@
-function [discid, discrect] = CreateProceduralSineSmoothedGrating(windowPtr, width, height, backgroundColorOffset, radius, contrastPreMultiplicator, sigma, useAlpha, method)
-% [gratingid, gratingrect] = CreateProceduralSineGrating(windowPtr, width, height [, backgroundColorOffset =(0,0,0,0)] [, radius=inf][, contrastPreMultiplicator=1])
+function [discid, discrect] = CreateProceduralSmoothDisc(windowPtr, width, height, backgroundColorOffset, radius, sigma, useAlpha, method)
+% [gratingid, gratingrect] = CreateProceduralSmoothDisc(windowPtr, width, height 
+% [, backgroundColorOffset =(0,0,0,0)] [, radius=inf])
 %
-% Creates a procedural texture that allows to draw sine grating stimulus patches
+% Creates a procedural texture that allows to draw smoothed discs
 % in a very fast and efficient manner on modern graphics hardware.
 %
 % 'windowPtr' A handle to the onscreen window.
@@ -19,19 +20,15 @@ function [discid, discrect] = CreateProceduralSineSmoothedGrating(windowPtr, wid
 % 'radius' pixels is applied to the grating. By default, no aperture is
 % applied.
 %
-% 'contrastPreMultiplicator' Optional, defaults to 1. This value is
-% multiplied as a scaling factor to the requested contrast value. If you
-% specify contrastPreMultiplicator = 0.5 then the per grating 'contrast'
-% value will correspond to what practitioners of the field usually
-% understand to be the contrast value of a grating.
+% 'sigma' smoothing value in pixels
 %
 % 'useAlpha' whether to use colour (0) or alpha (1) for smoothing channel
 %
-% 'method' whether to use cosine (0) or smoothstep(1) functions
+% 'method' whether to use cosine (0) or smoothstep (1) functions
 %
-% The function returns a procedural texture handle 'gratingid' that you can
+% The function returns a procedural texture handle 'did' thiscat you can
 % pass to the Screen('DrawTexture(s)', windowPtr, gratingid, ...) functions
-% like any other texture handle. The 'gratingrect' is a rectangle which
+% like any other texture handle. The 'discrect' is a rectangle which
 % describes the size of the support.
 %
 % A typical invocation to draw a grating patch looks like this:
@@ -57,10 +54,6 @@ function [discid, discrect] = CreateProceduralSineSmoothedGrating(windowPtr, wid
 % draw many different gratings simultaneously - this is much faster!
 %
 
-% History:
-% 11/25/2007 Written. (MK)
-% 08/09/2010 Add support for optional circular aperture. (MK)
-% 09/03/2010 Add 'contrastPreMultiplicator' as suggested by Xiangrui Li (MK).
 
 % Global GL struct: Will be initialized in the LoadGLSLProgramFromFiles
 % below:
@@ -86,32 +79,23 @@ if nargin < 5 || isempty(radius)
 	radius = inf;
 end
 
-if nargin < 6 || isempty(contrastPreMultiplicator)
-	contrastPreMultiplicator = 1.0;
-end
-
-if nargin < 7 || isempty(sigma)
+if nargin < 6 || isempty(sigma)
 	sigma = 11.0;
 end
 
-if nargin < 8 || isempty(useAlpha)
-	useAlpha = 0.0;
+if nargin < 7 || isempty(useAlpha)
+	useAlpha = 1.0;
 end
 
-if nargin < 9 || isempty(method)
+if nargin < 8 || isempty(method)
 	method = 1.0;
 end
 
 p = mfilename('fullpath');
 p = [fileparts(p) filesep];
 
-if isinf(radius)
-	% Load standard grating shader:
-	discShader = LoadGLSLProgramFromFiles('BasicSineGratingShader', 1);
-else
-	% Load grating shader with circular aperture and smoothing support:
-	discShader = LoadGLSLProgramFromFiles({[p 'smoothdisc.vert.txt'], [p 'smoothdisc.frag.txt']}, 1);
-end
+% Load grating shader with circular aperture and smoothing support:
+discShader = LoadGLSLProgramFromFiles({[p 'smoothdisc.vert.txt'], [p 'smoothdisc.frag.txt']}, 1);
 
 % Setup shader:
 glUseProgram(discShader);
@@ -131,9 +115,6 @@ if ~isinf(radius)
 	% Apply method:
 	glUniform1f(glGetUniformLocation(discShader, 'Method'), method);
 end
-
-% Apply contrast premultiplier:
-glUniform1f(glGetUniformLocation(discShader, 'contrastPreMultiplicator'), contrastPreMultiplicator);
 
 glUseProgram(0);
 
