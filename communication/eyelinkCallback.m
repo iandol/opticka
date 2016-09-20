@@ -165,7 +165,7 @@ switch eyecmd
         if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
     case 3
         % Alert message:
-		fprintf('--->>> EYELINKCALLBACK:3 Eyelink Alert: %s.\n', msg);
+		if verbose; fprintf('--->>> EYELINKCALLBACK:3 Eyelink Alert: %s.\n', msg); end
         needsupdate = 1;
         % TODO FIXME: Implement some reasonable behaviour...
     case 4
@@ -367,7 +367,6 @@ fprintf('--->>> EYELINKCALLBACK : drawn-instructions\n');
 function  imgtitle=EyelinkDrawCameraImage(eyewin, el, eyelinktex, imgtitle,newImage)
 persistent lasttitle;
 global dh dw offscreen;
-verbose = true;
 if verbose; fprintf('--->>> EYELINKCALLBACK EyelinkDrawCameraImage\n'); end
 try
     

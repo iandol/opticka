@@ -142,6 +142,31 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
+		function simpleParse(me)
+			me.isParsed = false;
+			tmain = tic;
+			parseEvents(me);
+			if ~isempty(me.trialsToPrune)
+				me.pruneTrials(me.trialsToPrune);
+			end
+			parseAsVars(me);
+			parseSecondaryEyePos(me);
+			parseFixationPositions(me);
+			parseROI(me);
+			parseTOI(me);
+			computeMicrosaccades(me);
+			
+			me.isParsed = true;
+			
+			fprintf('\tOverall Parsing of EDF Trials took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
 		function parse(me)
 			me.isParsed = false;
 			tmain = tic;

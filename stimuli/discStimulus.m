@@ -1,9 +1,8 @@
 % ========================================================================
 %> @brief single disc stimulus, inherits from baseStimulus
-%> SPOTSTIMULUS single disc stimulus, inherits from baseStimulus
-%>   The current properties are:
+%> DISCSTIMULUS single disc stimulus, inherits from baseStimulus
 % ========================================================================
-classdef spotStimulus < baseStimulus
+classdef discStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> type can be "simple" or "flash"
@@ -12,16 +11,19 @@ classdef spotStimulus < baseStimulus
 		flashTime = [0.5 0.5]
 		%> is the ON flash the first flash we see?
 		flashOn = true
-		%> contrast is realy a multiplier to the stimulus colour, not
-		%> formally defined contrast in this case
-		contrast = 1
 		%> colour for flash, empty to inherit from screen background with 0 alpha
 		flashOffColour = []
+		%> cosine smoothing sigma in pixels for mask
+		sigma = 11.0
+		%> use colour or alpha channel for smoothing?
+		useAlpha = true
+		%> use cosine (false) or hermite interpolation (true, default)
+		smoothMethod = true
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> stimulus family
-		family = 'spot'
+		family = 'disc'
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
@@ -49,13 +51,13 @@ classdef spotStimulus < baseStimulus
 	end
 	
 	events
-		%> triggered when changing size, so we can change sf etc to compensate
+		%> triggered when changing colour, so we can change other bits
 		changeColour
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -66,9 +68,9 @@ classdef spotStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function obj = spotStimulus(varargin)
+		function obj = discStimulus(varargin)
 			%Initialise for superclass, stops a noargs error
-			if nargin == 0; varargin.family = 'spot'; end
+			if nargin == 0; varargin.family = 'disc'; end
 			
 			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
 			obj.colour = [1 1 1];
@@ -96,11 +98,12 @@ classdef spotStimulus < baseStimulus
 			
 			addlistener(obj,'changeColour',@obj.computeColour);
 			
-			obj.sM = [];
 			obj.sM = sM;
 			obj.ppd=sM.ppd;
 			
-			fn = fieldnames(spotStimulus);
+			obj.texture = []; %we need to reset this
+			
+			fn = fieldnames(discStimulus);
 			for j=1:length(fn)
 				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=obj.addprop([fn{j} 'Out']);
@@ -109,7 +112,6 @@ classdef spotStimulus < baseStimulus
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
-					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
 				end
 				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
 					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
@@ -126,6 +128,21 @@ classdef spotStimulus < baseStimulus
 			obj.doFlash = false;
 			
 			if obj.speedOut > 0; obj.doMotion = true; end
+			
+			if isempty(obj.findprop('gratingSize'));p=obj.addprop('gratingSize');p.Transient=true;end
+			obj.gratingSize = round(obj.ppd*obj.size);
+			
+			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
+			obj.res = round([obj.gratingSize obj.gratingSize]);
+			
+			if isempty(obj.findprop('maskValue'));p=obj.addprop('maskValue');p.Transient=true;end
+			obj.maskValue = floor((obj.ppd*obj.size)/2);
+			
+			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
+			
+			obj.texture = CreateProceduralSmoothDisc(obj.sM.win, obj.res(1), ...
+						obj.res(2), obj.colourOut, obj.maskValue, 1, obj.sigmaOut, ...
+						obj.useAlpha, obj.smoothMethod);
 			
 			if strcmpi(obj.type,'flash')
 				obj.doFlash = true;
@@ -167,9 +184,13 @@ classdef spotStimulus < baseStimulus
 		function draw(obj)
 			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
 				if obj.doFlash == false
-					Screen('gluDisk',obj.sM.win,obj.colourOut,obj.xOut,obj.yOut,obj.sizeOut/2);
+					Screen('DrawTexture', obj.sM.win, obj.texture, [],obj.mvRect,...
+					obj.angleOut, [], [], obj.colourOut, [], [],...
+					[]);
 				else
-					Screen('gluDisk',obj.sM.win,obj.currentColour,obj.xOut,obj.yOut,obj.sizeOut/2);
+					Screen('DrawTexture', obj.sM.win, obj.texture, [],obj.mvRect,...
+					obj.angleOut, [], [], obj.currentColour, [], [],...
+					[]);
 				end
 			end
 			obj.tick = obj.tick + 1;
@@ -266,32 +287,8 @@ classdef spotStimulus < baseStimulus
 			end
 			obj.colourOutTemp = value;
 			obj.colourOut = value;
-			if obj.stopLoop == false; notify(obj,'changeColour'); end
 		end
 		
-		% ===================================================================
-		%> @brief contrastOut SET method
-		%>
-		% ===================================================================
-		function set_contrastOut(obj, value)
-			if iscell(value); value = value{1}; end
-			obj.contrastOut = value;
-			notify(obj,'changeColour');
-		end
-		
-		% ===================================================================
-		%> @brief computeColour triggered event
-		%> Use an event to recalculate as get method is slower (called
-		%> many more times), than an event which is only called on update
-		% ===================================================================
-		function computeColour(obj,~,~)
-			if ~isempty(obj.findprop('contrastOut')) && ~isempty(obj.findprop('colourOut'))
-				obj.stopLoop = true;
-				obj.colourOut = [(obj.colourOutTemp(1:3) .* obj.contrastOut) obj.alpha];
-				obj.stopLoop = false;
-				if obj.verbose; fprintf('Contrast: %g | Colour out is: %g %g %g \n',obj.contrastOut,obj.colourOut(1),obj.colourOut(2),obj.colourOut(3)); end
-			end
-		end
 		
 		% ===================================================================
 		%> @brief setupFlash
