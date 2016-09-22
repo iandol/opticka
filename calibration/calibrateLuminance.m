@@ -49,6 +49,8 @@ classdef calibrateLuminance < handle
 		analysisMethods = {'pchipinterp';'smoothingspline';'cubicinterp';'splineinterp'}
 		%> filename this was saved as
 		filename
+		%> EXTERNAL data
+		externalInput
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -289,8 +291,8 @@ classdef calibrateLuminance < handle
 			end
 			
 			obj.canAnalyze = 1;
-			analyze(obj);
-			test(obj);
+			%analyze(obj);
+			%test(obj);
 			
 		end
 		
@@ -346,7 +348,12 @@ classdef calibrateLuminance < handle
 				obj.spectrumTest(1).in = zeros(36,length(obj.ramp));
 				obj.spectrumTest(2).in = obj.spectrumTest(1).in; obj.spectrumTest(3).in = obj.spectrumTest(1).in; obj.spectrumTest(4).in = obj.spectrumTest(1).in;
 
-				for col = 1:4
+				if obj.testColour
+					loop=1:4;
+				else
+					loop = 1;
+				end
+				for col = loop
 					vals = obj.ramp';
 					valsl = length(vals);
 					cout = zeros(valsl,3);
@@ -365,20 +372,25 @@ classdef calibrateLuminance < handle
 					for i = 1:valsl
 						Screen('FillRect',obj.win,cout(i,:));
 						Screen('Flip',obj.win);
-						WaitSecs(0.1);
-						if obj.useCCal2 == true
-							[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
-							obj.inputValuesTest(col).in(a) = obj.thisY;
+						if ~obj.useCCal2 && ~obj.useI1Pro
+							WaitSecs(1);
+							obj.inputValuesTest(col).in(a) = input(['LUM: ' num2str(cout(i,:)) ' = ']);
+							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(a));
+						else
+							if obj.useCCal2 == true
+								[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
+								obj.inputValuesTest(col).in(a) = obj.thisY;
+							end
+							if obj.useI1Pro == true
+								I1('TriggerMeasurement');
+								Lxy = I1('GetTriStimulus');
+								obj.inputValuesI1Test(col).in(a) = Lxy(1);
+								%obj.inputValuesTest(col).in(a) = obj.inputValuesI1Test(col).in(a);
+								sp = I1('GetSpectrum')';
+								obj.spectrumTest(col).in(:,a) = sp;
+							end
+							fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValuesI1Test(col).in(a), obj.inputValuesI1Test(col).in(a));
 						end
-						if obj.useI1Pro == true
-							I1('TriggerMeasurement');
-							Lxy = I1('GetTriStimulus');
-							obj.inputValuesI1Test(col).in(a) = Lxy(1);
-							%obj.inputValuesTest(col).in(a) = obj.inputValuesI1Test(col).in(a);
-							sp = I1('GetSpectrum')';
-							obj.spectrumTest(col).in(:,a) = sp;
-						end
-						fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValuesI1Test(col).in(a), obj.inputValuesI1Test(col).in(a));
 						a = a + 1;
 					end
 				end
@@ -516,39 +528,51 @@ classdef calibrateLuminance < handle
 			figpos(1,[1200 1200]);
 			obj.p = panel(obj.plotHandle);
 			
-			obj.p.pack(2,3);
+			if obj.useI1Pro
+				obj.p.pack(2,3);
+			else
+				obj.p.pack(2,2);
+			end
 			obj.p.margin = [15 20 10 15];
 			obj.p.fontsize = 12;
 			
-			if isstruct(obj.inputValuesI1)
-				%obj.p(1,3).pack(2,2);
-				%obj.p(2,3).pack(2,2);
-			end
 			
 			obj.p(1,1).select();
 			
-			if isstruct(obj.inputValuesI1)
+			if  isstruct(obj.inputValues) || obj.useI1Pro
 				if obj.useI1Pro == true
 					inputValues = obj.inputValuesI1; %#ok<*PROP>
 					inputTest = obj.inputValuesI1Test;
 				else
-					inputValues = obj.inputValuesI1;
+					inputValues = obj.inputValues;
 					inputTest = obj.inputValuesTest;
 				end
-				plot(obj.ramp, inputValues(1).in, 'k.-',obj.ramp, inputValues(2).in, 'r.-',obj.ramp, inputValues(3).in, 'g.-',obj.ramp, inputValues(4).in, 'b.-');
-				leg = {'Luminance','Red','Green','Blue'};
-				if ~isempty(inputTest)
-					obj.p(1,1).hold('on')
-					plot(obj.ramp, inputTest(1).in, 'ko-',obj.ramp, inputTest(2).in, 'ro-',obj.ramp, inputTest(3).in, 'go-',obj.ramp, inputTest(4).in, 'bo-');
-					obj.p(1,1).hold('off')
+				if ~obj.testColour
+					plot(obj.ramp, inputValues(1).in, 'k.-');
+					leg = {'RAW'};
+					if ~isempty(inputTest)
+						obj.p(1,1).hold('on')
+						plot(obj.ramp, inputTest(1).in, 'ko-');
+						obj.p(1,1).hold('off')
+						leg = [leg,{'Corrected'}];
+					end
+				else
+					plot(obj.ramp, inputValues(1).in, 'k.-',obj.ramp, inputValues(2).in, 'r.-',obj.ramp, inputValues(3).in, 'g.-',obj.ramp, inputValues(4).in, 'b.-');
+					leg = {'Luminance','Red','Green','Blue'};
+					if ~isempty(inputTest)
+						obj.p(1,1).hold('on')
+						plot(obj.ramp, inputTest(1).in, 'ko-',obj.ramp, inputTest(2).in, 'ro-',obj.ramp, inputTest(3).in, 'go-',obj.ramp, inputTest(4).in, 'bo-');
+						obj.p(1,1).hold('off')
+						leg = [leg,{'CLum','CRed','CGreen','CBlue'}];
+					end
 				end
-				leg = [leg,{'CCal','I1Pro','CCalCorrected','I1ProCorrected'}];
-				legend(leg)
+				
+				legend(leg,'Location','northwest')
 				axis tight; grid on; grid minor; box on
 				
 				xlabel('Indexed Values');
 				ylabel('Luminance cd/m^2');
-				title('Input -> Output Raw Data');
+				title('Input -> Output Raw and Tested Data');
 			else %legacy plot
 				plot(obj.ramp, obj.inputValues, 'k.-');
 				legend('CCal')
@@ -583,7 +607,7 @@ classdef calibrateLuminance < handle
 				ii = 1;
 			end
 			for loop = 1:ii
-				if isstruct(obj.inputValuesI1)
+				if isstruct(obj.inputValues)
 					rampNorm = obj.rampNorm(loop).in;
 					inputValuesNorm = obj.inputValuesNorm(loop).in;
 				else
@@ -637,11 +661,10 @@ classdef calibrateLuminance < handle
 			if isempty(obj.comments)
 				t = obj.filename;
 			else
-				t = obj.comments;
+				t = [obj.filename obj.comments];
 			end
 			
-			if isstruct(obj.inputValuesI1)
-				
+			if obj.useI1Pro && isstruct(obj.inputValuesI1)
 				spectrum = obj.spectrum(loop).in;
 				if ~isempty(obj.spectrumTest)
 					spectrumTest = obj.spectrumTest(loop).in;
@@ -652,8 +675,7 @@ classdef calibrateLuminance < handle
 				spectrum = obj.spectrum;
 				spectrumTest = obj.spectrumTest;
 			end
-				
-			if ~isempty(spectrum)
+			if obj.useI1Pro && ~isempty(spectrum)
 				if isstruct(obj.inputValuesI1)
 					
 				else
@@ -667,7 +689,7 @@ classdef calibrateLuminance < handle
 				ylabel('Wavelengths');
 				axis tight; grid on; box on; grid minor; 
 			end
-			if ~isempty(spectrumTest)
+			if obj.useI1Pro && ~isempty(spectrumTest) && max(obj.spectrumTest(1).in)>0
 				obj.p(2,3).select();
 				surf(obj.ramp,obj.wavelengths,spectrumTest);
 				title('Corrected Spectrum')
@@ -675,6 +697,7 @@ classdef calibrateLuminance < handle
 				ylabel('Wavelengths');
 				axis tight; grid on; box on; grid minor;
 			end
+				
 		
 			obj.p.title(t);
 			obj.p.refresh();
