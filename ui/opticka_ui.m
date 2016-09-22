@@ -575,6 +575,32 @@ if isappdata(handles.output,'o')
 end
 
 % --------------------------------------------------------------------
+function OKMenuDisc_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuDisc (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	
+	o = getappdata(handles.output,'o');
+	
+	if isfield(o.store,'visibleStimulus');
+		o.store.visibleStimulus.closePanel();
+		o.store = rmfield(o.store,'visibleStimulus');
+	end
+	
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
+	if o.r.stimuli.n == 0;handles.OKStimList.String='Once you''ve edited this stimulus, click [add]';end
+	
+	if ~isfield(o.store,'discStimulus')
+		o.store.discStimulus=discStimulus('name','Disc Stimulus');
+	end
+	o.store.visibleStimulus = o.store.discStimulus;
+	set(handles.OKPanelStimulusText,'String','')
+	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+	set(handles.OKAddStimulus,'Enable','on');
+end
+
+% --------------------------------------------------------------------
 function OKMenuTexture_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuTexture (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1911,6 +1937,12 @@ h18 = uimenu(...
 'Label','Spot',...
 'Tag','OKMenuSpot');
 
+h18b = uimenu(...
+'Parent',h12,...
+'Accelerator','S',...
+'Callback',@(hObject,eventdata)opticka_ui('OKMenuDisc_Callback',hObject,eventdata,guidata(hObject)),...
+'Label','Smoothed Disc',...
+'Tag','OKMenuDisc');
 
 
 h19 = uimenu(...

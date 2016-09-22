@@ -179,6 +179,7 @@ classdef discStimulus < baseStimulus
 				%Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] 
 				%[,rotationAngle] [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] 
 				%[, specialFlags] [, auxParameters]);
+				Screen('BlendFunction', obj.sM.win, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');
 				if obj.doFlash == false
 					Screen('DrawTexture', obj.sM.win, obj.texture, [], obj.mvRect,...
 					obj.angleOut, [], [], obj.colourOut, [], [],...
@@ -188,6 +189,7 @@ classdef discStimulus < baseStimulus
 					obj.angleOut, [], [], obj.currentColour, [], [],...
 					[]);
 				end
+				Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
 			end
 			obj.tick = obj.tick + 1;
 		end

@@ -4,7 +4,7 @@
 %> calibrateLuminance manaul / automatic luminance calibration
 %> To enter settings use a structure:
 %>
-%> >> mycal = calibrateLuminance(struct('nMeasures',25,'useCCal',true))
+%> >> mycal = calibrateLuminance(struct('nMeasures',25,'useCCal2',true))
 %>
 %> calibrateLuminance will ask if you need to zero calibrate, you only need
 %> to do this after first plugging in the ColorCal. Then simply place the
@@ -26,7 +26,7 @@ classdef calibrateLuminance < handle
 	
 	properties
 		%> how much detail to show on commandline
-		verbosity = 0
+		verbosity = false
 		%> allows the constructor to run the open method immediately
 		runNow = true
 		%> number of measures (default = 30)
@@ -34,11 +34,13 @@ classdef calibrateLuminance < handle
 		%> screen to calibrate
 		screen
 		%> use ColorCalII automatically
-		useCCal = false
+		useCCal2 = false
 		%> use i1Pro?
-		useI1Pro = true
+		useI1Pro = false
 		%> choose I1Pro over CCal if both connected?
-		preferI1Pro = true
+		preferI1Pro = false
+		%> test R G and B as seperate curves?
+		testColour = false
 		%> comments to note about this calibration
 		comments = {''}
 		%> which gamma table should opticka select?
@@ -73,7 +75,6 @@ classdef calibrateLuminance < handle
 		gammaTable
 		displayGamma
 		modelFit
-		testColour = false
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -83,7 +84,7 @@ classdef calibrateLuminance < handle
 		canAnalyze
 		p
 		plotHandle
-		allowedPropertiesBase='^(verbosity|runNow|screen|nMeasures)$'
+		allowedPropertiesBase='^(useCCal2|useI1Pro|verbosity|runNow|screen|nMeasures)$'
 	end
 	
 	%=======================================================================
@@ -103,7 +104,7 @@ classdef calibrateLuminance < handle
 			if nargin>0 && isstruct(args)
 				if nargin>0 && isstruct(args)
 					fnames = fieldnames(args); %find our argument names
-					for i=1:length(fnames);
+					for i=1:length(fnames)
 						if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
 							obj.salutation(fnames{i},'Configuring property constructor');
 							obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
@@ -114,12 +115,11 @@ classdef calibrateLuminance < handle
 			if isempty(obj.screen)
 				obj.screen = max(Screen('Screens'));
 			end
-			if I1('IsConnected') == 0
+			if obj.useI1Pro && I1('IsConnected') == 0
 				obj.useI1Pro = false;
 				fprintf('---> Couldn''t connect to I1Pro!!!\n');
 			end
 			if obj.runNow == true
-				obj.calibrate;
 				obj.run;
 			end
 		end
@@ -143,14 +143,15 @@ classdef calibrateLuminance < handle
 				fprintf('Calibrating ... ');
 				I1('Calibrate');
 				fprintf('FINISHED\n');
-			end
-			if obj.useCCal == true
+			elseif obj.useCCal2 == true
 				obj.cMatrix = ColorCal2('ReadColorMatrix');
 				if isempty(obj.cMatrix)
-					obj.useCCal = false;
+					obj.useCCal2 = false;
 				else
 					obj.zeroCalibration;
 				end
+			else
+				input('Please run manual calibration, then press enter to continue');
 			end
 		end
 		
@@ -167,21 +168,21 @@ classdef calibrateLuminance < handle
 			obj.spectrum = [];
 			obj.spectrumTest = [];
 			
-			reply = input('Do you need to calibrate sensors (Y/N)?...','s');
+			reply = input('Do you need to calibrate sensors (Y/N) = ','s');
 			if strcmpi(reply,'y')
 				calibrate(obj)
 			end
-			if obj.useCCal == false && obj.useI1Pro == false
+			if ~obj.useCCal2 && ~obj.useI1Pro
 				input(sprintf(['When black screen appears, point photometer, \n' ...
 					'get reading in cd/m^2, input reading using numpad and press enter. \n' ...
 					'A screen of higher luminance will be shown. Repeat %d times. ' ...
 					'Press enter to start'], obj.nMeasures));
-			elseif obj.useI1Pro == true && obj.useCCal == true
+			elseif obj.useI1Pro == true && obj.useCCal2 == true
 				fprintf('\nPlace i1 and Cal over light source, then press i1 button to measure: ');
 				while I1('KeyPressed') == 0
 					WaitSecs(0.01);
 				end
-			elseif obj.useI1Pro == true && obj.useCCal == false
+			elseif obj.useI1Pro == true && obj.useCCal2 == false
 				input('Please place i1Pro in front of monitor then press enter...');
 			end
 			
@@ -189,7 +190,7 @@ classdef calibrateLuminance < handle
 			psychlasterror('reset');
 			
 			try
-				Screen('Preference', 'SkipSyncTests', 1);
+				Screen('Preference', 'SkipSyncTests', 2);
 				Screen('Preference', 'VisualDebugLevel', 0);
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
@@ -209,16 +210,30 @@ classdef calibrateLuminance < handle
 				obj.ramp(end) = 1;
 				
 				obj.inputValues(1).in = zeros(1,length(obj.ramp));
-				obj.inputValues(2).in = obj.inputValues(1).in; obj.inputValues(3).in = obj.inputValues(1).in; obj.inputValues(4).in = obj.inputValues(1).in;
+				obj.inputValues(2).in = obj.inputValues(1).in; 
+				obj.inputValues(3).in = obj.inputValues(1).in; 
+				obj.inputValues(4).in = obj.inputValues(1).in;
 				
-				obj.inputValuesI1(1).in = zeros(1,length(obj.ramp));
-				obj.inputValuesI1(2).in = obj.inputValuesI1(1).in; obj.inputValuesI1(3).in = obj.inputValuesI1(1).in; obj.inputValuesI1(4).in = obj.inputValuesI1(1).in;
+				if obj.useI1Pro
+					obj.inputValuesI1(1).in = zeros(1,length(obj.ramp));
+					obj.inputValuesI1(2).in = obj.inputValuesI1(1).in; 
+					obj.inputValuesI1(3).in = obj.inputValuesI1(1).in; 
+					obj.inputValuesI1(4).in = obj.inputValuesI1(1).in;
+				end
 				
-				obj.spectrum(1).in = zeros(36,length(obj.ramp));
-				obj.spectrum(2).in = obj.spectrum(1).in; obj.spectrum(3).in = obj.spectrum(1).in; obj.spectrum(4).in = obj.spectrum(1).in;
-				obj.testColour = true;
+				if obj.testColour
+					obj.spectrum(1).in = zeros(36,length(obj.ramp));
+					obj.spectrum(2).in = obj.spectrum(1).in; 
+					obj.spectrum(3).in = obj.spectrum(1).in; 
+					obj.spectrum(4).in = obj.spectrum(1).in;
+				end
 				
-				for col = 1:4
+				if obj.testColour
+					loop=1:4;
+				else
+					loop = 1;
+				end
+				for col = loop
 					vals = obj.ramp';
 					valsl = length(vals);
 					cout = zeros(valsl,3);
@@ -237,22 +252,32 @@ classdef calibrateLuminance < handle
 					for i = 1:valsl
 						Screen('FillRect',obj.win,cout(i,:));
 						Screen('Flip',obj.win);
-						WaitSecs(0.25);
-						if obj.useCCal == true
-							[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
-							obj.inputValues(col).in(a) = obj.thisY;
+						WaitSecs(0.2);
+						if ~obj.useCCal2 && ~obj.useI1Pro
+							obj.inputValues(col).in(a) = input(['Enter luminance for value=' num2str(cout(i,:)) ': ']);
+							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(a));
+						else
+							if obj.useCCal2 == true
+								[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
+								obj.inputValues(col).in(a) = obj.thisY;
+							end
+							if obj.useI1Pro == true
+								I1('TriggerMeasurement');
+								Lxy = I1('GetTriStimulus');
+								obj.inputValuesI1(col).in(a) = Lxy(1);
+								%obj.inputValues(col).in(a) = obj.inputValuesI1(col).in(a);
+								sp = I1('GetSpectrum')';
+								obj.spectrum(col).in(:,a) = sp;
+							end
+							fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValues(col).in(a), obj.inputValuesI1(col).in(a));
 						end
-						if obj.useI1Pro == true
-							I1('TriggerMeasurement');
-							Lxy = I1('GetTriStimulus');
-							obj.inputValuesI1(col).in(a) = Lxy(1);
-							%obj.inputValues(col).in(a) = obj.inputValuesI1(col).in(a);
-							sp = I1('GetSpectrum')';
-							obj.spectrum(col).in(:,a) = sp;
-						end
-						fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValues(col).in(a), obj.inputValuesI1(col).in(a));
 						a = a + 1;
 					end
+					if col == 1 % assign the RGB values to each channel by default
+						obj.inputValues(2).in = obj.inputValues(1).in;
+						obj.inputValues(3).in = obj.inputValues(1).in;
+						obj.inputValues(4).in = obj.inputValues(1).in;
+					end		
 				end
 				
 				RestoreCluts;
@@ -341,7 +366,7 @@ classdef calibrateLuminance < handle
 						Screen('FillRect',obj.win,cout(i,:));
 						Screen('Flip',obj.win);
 						WaitSecs(0.1);
-						if obj.useCCal == true
+						if obj.useCCal2 == true
 							[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
 							obj.inputValuesTest(col).in(a) = obj.thisY;
 						end
@@ -400,7 +425,13 @@ classdef calibrateLuminance < handle
 					ii = 1;
 				end
 				for loop = 1:ii
-					if obj.preferI1Pro == true
+					if ~obj.useCCal2 && ~obj.useCCal2
+						if isstruct(obj.inputValues)
+							inputValues = obj.inputValues(loop).in;
+						else
+							inputValues = obj.inputValues;
+						end
+					elseif obj.preferI1Pro == true
 						if isstruct(obj.inputValuesI1)
 							inputValues = obj.inputValuesI1(loop).in;
 						else

@@ -367,6 +367,7 @@ fprintf('--->>> EYELINKCALLBACK : drawn-instructions\n');
 function  imgtitle=EyelinkDrawCameraImage(eyewin, el, eyelinktex, imgtitle,newImage)
 persistent lasttitle;
 global dh dw offscreen;
+verbose=false;
 if verbose; fprintf('--->>> EYELINKCALLBACK EyelinkDrawCameraImage\n'); end
 try
     

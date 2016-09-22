@@ -132,7 +132,8 @@ classdef eyelinkManager < optickaCore
 			Eyelink('Shutdown'); %just make sure link is closed
 			obj.screen = sM;
 			
-			if ~isempty(obj.IP) && ~obj.isDummy 
+			if ~isempty(obj.IP) && ~obj.isDummy
+				obj.salutation('Eyelink Initialise',['Trying to set custom IP address: ' obj.IP],true)
 				ret = Eyelink('SetAddress', obj.IP);
 				if ret ~= 0
 					warning('!!!--> Couldn''t set IP address to %s!!!\n',obj.IP);
@@ -313,10 +314,12 @@ classdef eyelinkManager < optickaCore
 		%> @brief wrapper for EyelinkDoDriftCorrection
 		%>
 		% ===================================================================
-		function driftCorrection(obj)
+		function success = driftCorrection(obj)
+			success = false;
 			if obj.isConnected
-				EyelinkDoDriftCorrection(obj.defaults);
+				success = EyelinkDoDriftCorrection(obj.defaults);
 			end
+			if ~success; obj.salutation('Drift Correct','FAILED',true); end
 		end
 		
 		% ===================================================================
