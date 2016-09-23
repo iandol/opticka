@@ -28,7 +28,7 @@ classdef calibrateLuminance < handle
 		%> how much detail to show on commandline
 		verbosity = false
 		%> allows the constructor to run the open method immediately
-		runNow = true
+		runNow = false
 		%> number of measures (default = 30)
 		nMeasures = 30
 		%> screen to calibrate
@@ -49,8 +49,10 @@ classdef calibrateLuminance < handle
 		analysisMethods = {'pchipinterp';'smoothingspline';'cubicinterp';'splineinterp'}
 		%> filename this was saved as
 		filename
-		%> EXTERNAL data
+		%> EXTERNAL data as a N x 2 matrix
 		externalInput
+		%> length of gamma table
+		tableLength = 256;
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -86,7 +88,7 @@ classdef calibrateLuminance < handle
 		canAnalyze
 		p
 		plotHandle
-		allowedPropertiesBase='^(useCCal2|useI1Pro|verbosity|runNow|screen|nMeasures)$'
+		allowedPropertiesBase='^(useCCal2|useI1Pro|testColour|filename|tableLength|verbosity|runNow|screen|nMeasures)$'
 	end
 	
 	%=======================================================================
@@ -188,7 +190,7 @@ classdef calibrateLuminance < handle
 				input('Please place i1Pro in front of monitor then press enter...');
 			end
 			
-			obj.initialClut = repmat([0:255]'/255,1,3); %#ok<NBRAK>
+			obj.initialClut = repmat([0:1/(obj.tableLength-1):1]',1,3); %#ok<NBRAK>
 			psychlasterror('reset');
 			
 			try
@@ -291,9 +293,17 @@ classdef calibrateLuminance < handle
 			end
 			
 			obj.canAnalyze = 1;
-			%analyze(obj);
-			%test(obj);
-			
+		end
+		
+		% ===================================================================
+		%> @brief run all options
+		%>	runs,  analyzes (fits) and tests the monitor
+		%>
+		% ===================================================================
+		function runAll(obj)
+			run(obj);
+			analyze(obj);
+			test(obj);
 		end
 		
 		% ===================================================================
@@ -477,10 +487,10 @@ classdef calibrateLuminance < handle
 						'Upper',3,'Lower',0,'StartPoint',1.5);
 					[fittedmodel, gof, output] = fit(rampNorm',inputValuesNorm',g,fo);
 					obj.displayGamma = fittedmodel.g;
-					obj.gammaTable{1,loop} = ((([0:1/255:1]'))).^(1/fittedmodel.g);
+					obj.gammaTable{1,loop} = ((([0:1/(obj.tableLength-1):1]'))).^(1/fittedmodel.g);
 
 					obj.modelFit{1,loop}.method = 'Gamma';
-					obj.modelFit{1,loop}.table = fittedmodel([0:1/255:1]);
+					obj.modelFit{1,loop}.table = fittedmodel([0:1/(obj.tableLength-1):1]');
 					obj.modelFit{1,loop}.gof = gof;
 					obj.modelFit{1,loop}.output = output;
 
@@ -489,14 +499,14 @@ classdef calibrateLuminance < handle
 						%fo = fitoptions('MaxIter',1000);
 						[fittedmodel,gof,output] = fit(rampNorm',inputValuesNorm', method);
 						obj.modelFit{i+1,loop}.method = method;
-						obj.modelFit{i+1,loop}.table = fittedmodel([0:1/255:1]);
+						obj.modelFit{i+1,loop}.table = fittedmodel([0:1/(obj.tableLength-1):1]');
 						obj.modelFit{i+1,loop}.gof = gof;
 						obj.modelFit{i+1,loop}.output = output;
 						%Invert interpolation
 						x = inputValuesNorm;
 						x = obj.makeUnique(x);
 						[fittedmodel,gof] = fit(x',rampNorm',method);
-						obj.gammaTable{i+1,loop} = fittedmodel([0:1/255:1]);
+						obj.gammaTable{i+1,loop} = fittedmodel([0:1/(obj.tableLength-1):1]');
 					end
 
 				end
@@ -618,7 +628,7 @@ classdef calibrateLuminance < handle
 				obj.p(1,2).hold('on');
 				legendtext = cell(1);
 				for i=1:size(obj.modelFit,1)
-					plot([0:1/255:1], obj.modelFit{i,loop}.table);
+					plot([0:1/(obj.tableLength-1):1]', obj.modelFit{i,loop}.table);
 					legendtext{i} = obj.modelFit{i,loop}.method;
 				end
 				plot(rampNorm, inputValuesNorm)

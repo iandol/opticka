@@ -67,7 +67,7 @@ classdef screenManager < optickaCore
 		verbose = false
 		%> level of PTB verbosity, set to 10 for full PTB logging
 		verbosityLevel = 4
-		%> Use retina resokution natively
+		%> Use retina resolution natively
 		useRetina = false
 	end
 	
@@ -401,6 +401,10 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function close(obj)
 			if obj.isPTB == true
+				if isfield(obj.screenVals,'originalGammaTable')
+					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.originalGammaTable);
+					fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
+				end
 				Screen('Close');
 				Screen('CloseAll');
 				obj.win=[];

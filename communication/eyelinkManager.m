@@ -616,9 +616,12 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function close(obj)
 			try
-				if obj.isRecording == true
-					% 					obj.paths.currentDirectory = pwd;
-					% 					cd(obj.paths.savedData);
+				obj.isConnected = false;
+				obj.isDummy = false;
+				obj.isRecording = false;
+				obj.eyeUsed = -1;
+				obj.screen = [];
+				if obj.isRecording == true && ~isempty(obj.saveFile)
 					Eyelink('StopRecording');
 					Eyelink('CloseFile');
 					try
@@ -653,7 +656,6 @@ classdef eyelinkManager < optickaCore
 			obj.isRecording = false;
 			obj.eyeUsed = -1;
 			obj.screen = [];
-			%cd(obj.paths.currentDirectory);
 		end
 		
 		% ===================================================================
