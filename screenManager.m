@@ -372,6 +372,16 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief Flip the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function vbl = flip(obj)
+			vbl = Screen('Flip',obj.win);
+		end
+		
+		% ===================================================================
 		%> @brief This is the trick Mario told us to "hide" the colour changes as PTB starts -- we could use backgroundcolour here to be even better
 		%>
 		%> @param
@@ -611,7 +621,7 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Flash the screen
+		%> @brief Flash the screen until keypress
 		%>
 		%> @param
 		% ===================================================================
@@ -640,26 +650,48 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief draw small spot centered on the screen
 		%>
-		%> @param
+		%> @param size in degrees
+		%> @param colour of spot
+		%> @param x position in degrees relative to screen center
+		%> @param y position in degrees relative to screen center
 		%> @return
 		% ===================================================================
 		function drawSpot(obj,size,colour,x,y)
-			if nargin < 5; y = []; end
-			if nargin < 4; x = []; end
-			if nargin < 3; colour = [1 1 1 1]; end
-			if nargin < 2; size = 1; end
-			if isempty(x); 
-                x = obj.xCenter; 
-            else
-                x = obj.xCenter - (x * obj.ppd);
-            end
-			if isempty(y); 
-                y = obj.yCenter; 
-            else
-                y = obj.yCenter - (y * obj.ppd);
-            end
+			if nargin < 5 || isempty(y); y = 0; end
+			if nargin < 4 || isempty(x); x = 0; end
+			if nargin < 3 || isempty(colour); colour = [1 1 1 1]; end
+			if nargin < 2 || isempty(size); size = 1; end
+			
+			x = obj.xCenter + (x * obj.ppd);
+			y = obj.yCenter + (y * obj.ppd);
 			size = size/2 * obj.ppd;
-			Screen('gluDisk',obj.win,colour,x,y,size);
+			
+			Screen('gluDisk', obj.win, colour, x, y, size);
+	end
+		
+		% ===================================================================
+		%> @brief draw small cross
+		%>
+		%> @param size size in degrees
+		%> @param colour of cross
+		%> @param x position in degrees relative to screen center
+		%> @param y position in degrees relative to screen center
+		%> @param lineWidth of lines
+		%> @return
+		% ===================================================================
+		function drawCross(obj,size,colour,x,y,lineWidth)
+			if nargin < 6 || isempty(lineWidth); lineWidth = 2; end
+			if nargin < 5 || isempty(y); y = 0; end
+			if nargin < 4 || isempty(x); x = 0; end
+			if nargin < 3 || isempty(colour); colour = [0 0 0 1]; end
+			if nargin < 2 || isempty(size); size = 0.5; end
+			
+			x = obj.xCenter + (x * obj.ppd);
+			y = obj.yCenter + (y * obj.ppd);
+			size = size/2 * obj.ppd;
+			
+			Screen('DrawLines', obj.win, [-size size 0 0;0 0 -size size],...
+				lineWidth, colour, [x y]);
 		end
 		
 		% ===================================================================

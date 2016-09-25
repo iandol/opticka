@@ -1,6 +1,6 @@
 function [discid, discrect] = CreateProceduralSmoothDisc(windowPtr, width, height, backgroundColorOffset, radius, sigma, useAlpha, method)
-% [gratingid, gratingrect] = CreateProceduralSmoothDisc(windowPtr, width, height 
-% [, backgroundColorOffset =(0,0,0,0)] [, radius=inf])
+% [discid, discrect] = CreateProceduralSmoothDisc(windowPtr, width, height 
+% [, backgroundColorOffset =(0,0,0,0)] [, radius=inf] [, sigma=11] [,useAlpha=1] [,method=1])
 %
 % Creates a procedural texture that allows to draw smoothed discs
 % in a very fast and efficient manner on modern graphics hardware.
@@ -26,15 +26,15 @@ function [discid, discrect] = CreateProceduralSmoothDisc(windowPtr, width, heigh
 %
 % 'method' whether to use cosine (0) or smoothstep (1) functions
 %
-% The function returns a procedural texture handle 'did' thiscat you can
+% The function returns a procedural texture handle that you can
 % pass to the Screen('DrawTexture(s)', windowPtr, gratingid, ...) functions
 % like any other texture handle. The 'discrect' is a rectangle which
 % describes the size of the support.
 %
 % A typical invocation to draw a grating patch looks like this:
 %
-% Screen('DrawTexture', windowPtr, gratingid, [], dstRect, Angle, [], [],
-% modulateColor, [], [], [phase+180, freq, contrast, 0]);
+% Screen('DrawTexture', windowPtr, discid, [], dstRect, Angle, [], [],
+% modulateColor, [], [], []);
 %
 % Draws the grating 'gratingid' into window 'windowPtr', at position 'dstRect'
 % or in the center if dstRect is set to []. Make sure 'dstRect' has the
@@ -75,7 +75,6 @@ else
 end
 
 if nargin < 5 || isempty(radius)
-	% Don't apply circular aperture if no radius given:
 	radius = inf;
 end
 
@@ -118,8 +117,8 @@ end
 
 glUseProgram(0);
 
-% Create a purely virtual procedural texture 'gaborid' of size width x height virtual pixels.
-% Attach the GaborShader to it to define its appearance:
+% Create a purely virtual procedural texture 'discid' of size width x height virtual pixels.
+% Attach the discShader to it to define its appearance:
 discid = Screen('SetOpenGLTexture', windowPtr, [], 0, GL.TEXTURE_RECTANGLE_EXT, width, height, 1, discShader);
 
 % Query and return its bounding rectangle:

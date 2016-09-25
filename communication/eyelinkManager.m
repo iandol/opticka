@@ -151,12 +151,12 @@ classdef eyelinkManager < optickaCore
 			
 			obj.checkConnection();
 			
-			%to calculate velocity measurenments etc.
+			%to calculate velocity measurements etc. distance is in millimeters
 			Eyelink('Command', ['screen_distance = ' num2str(obj.screen.distance*10)]);
 			
 			if obj.screen.isOpen == true
 				rect=obj.screen.winRect;
-				Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3)-1,rect(4)-1);
+				Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
 				obj.defaults = EyelinkInitDefaults(obj.screen.win);
 				if exist(obj.callback,'file')
 					obj.defaults.callback = obj.callback;
@@ -189,7 +189,7 @@ classdef eyelinkManager < optickaCore
 				end
 			end
 			
-			Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld',rect(1),rect(2),rect(3)-1,rect(4)-1);
+			Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
 			Eyelink('Command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
 			Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
 			Eyelink('Command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
@@ -393,7 +393,7 @@ classdef eyelinkManager < optickaCore
 					obj.fixationY = y;
 				end
 			end
-			if nargin > 3 && ~isempty(inittime);
+			if nargin > 3 && ~isempty(inittime)
 				if iscell(inittime) && length(inittime)==4
 					obj.fixationInitTime = inittime{1};
 					obj.fixationTime = inittime{2};
@@ -555,7 +555,7 @@ classdef eyelinkManager < optickaCore
 		function eyeUsed = checkEye(obj)
 			if obj.isConnected
 				obj.eyeUsed = Eyelink('EyeAvailable'); % get eye that's tracked
-				if obj.eyeUsed == obj.defaults.BINOCULAR; % if both eyes are tracked
+				if obj.eyeUsed == obj.defaults.BINOCULAR % if both eyes are tracked
 					obj.eyeUsed = obj.defaults.LEFT_EYE; % use left eye
 				end
 				eyeUsed = obj.eyeUsed;
@@ -678,12 +678,12 @@ classdef eyelinkManager < optickaCore
 					obj.stimulusPositions = ts;
 				end
 				for i = 1:length(obj.stimulusPositions)
-					x = obj.stimulusPositions(i).x + obj.screen.xCenter;
-					y = obj.stimulusPositions(i).y + obj.screen.yCenter;
+					x = obj.stimulusPositions(i).x + obj.screen.xCenter; %#ok<PROPLC>
+					y = obj.stimulusPositions(i).y + obj.screen.yCenter;%#ok<PROPLC>
 					size = obj.stimulusPositions(i).size;
 					if isempty(size); size = 1 * obj.screen.ppd; end
 					rect = [0 0 size size];
-					rect = round(CenterRectOnPoint(rect, x, y));
+					rect = round(CenterRectOnPoint(rect, x, y)); %#ok<PROPLC>
 					if obj.stimulusPositions(i).selected == true
 						Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
 					else
