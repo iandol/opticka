@@ -49,9 +49,9 @@ classdef screenManager < optickaCore
 		%> use OpenGL blending mode
 		blend = false
 		%> GL_ONE %src mode
-		srcMode = 'GL_ONE'
+		srcMode = 'GL_SRC_ALPHA'
 		%> GL_ONE % dst mode
-		dstMode = 'GL_ZERO'
+		dstMode = 'GL_ONE_MINUS_SRC_ALPHA'
 		%> show a white square in the top-left corner to trigger a
 		%> photodiode attached to screen. This is only displayed when the
 		%> stimulus is shown, not during the blank and can therefore be used
@@ -97,7 +97,7 @@ classdef screenManager < optickaCore
 		%> linux font name;
 		linuxFontName = '-adobe-helvetica-bold-o-normal--11-80-100-100-p-60-iso8859-1'
 		%> properties allowed to be modified during construction
-		allowedProperties='useretina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
+		allowedProperties='gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect = [0;0;50;50]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
@@ -411,7 +411,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function close(obj)
 			if obj.isPTB == true
-				if isfield(obj.screenVals,'originalGammaTable')
+				if isfield(obj.screenVals,'originalGammaTable') && ~isempty(obj.screenVals.originalGammaTable)
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.originalGammaTable);
 					fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 				end

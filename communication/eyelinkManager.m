@@ -11,7 +11,7 @@ classdef eyelinkManager < optickaCore
 		%> eyetracker defaults structure
 		defaults = struct()
 		%> IP address of host
-		IP = '10.1.1.1'
+		IP = ''
 		%> start eyetracker in dummy mode?
 		isDummy = false
 		%> do we record and retrieve eyetracker EDF file?
@@ -35,9 +35,9 @@ classdef eyelinkManager < optickaCore
 		%> tracker update speed (Hz), should be 250 500 1000 2000
 		sampleRate = 250
 		%> calibration style
-		calibrationStyle = 'HV9'
+		calibrationStyle = 'HV5'
 		%> use manual remote calibration
-		remoteCalibration = true
+		remoteCalibration = false
 		% use callbacks
 		enableCallbacks = true
 		%> cutom calibration callback (enables better handling of
@@ -108,13 +108,13 @@ classdef eyelinkManager < optickaCore
 			catch %#ok<CTCH>
 				obj.isDummy = true;
 			end
-			obj.modify.calibrationtargetcolour = [1 1 0];
-			obj.modify.calibrationtargetsize = 0.7;
-			obj.modify.calibrationtargetwidth = 0.02;
-			obj.modify.waitformodereadytime = 500;
+			obj.modify.calibrationtargetcolour = [1 1 1];
+			obj.modify.calibrationtargetsize = 0.8;
+			obj.modify.calibrationtargetwidth = 0.04;
+			%obj.modify.waitformodereadytime = 500;
 			obj.modify.displayCalResults = 1;
-			obj.modify.targetbeep = 0;
-			obj.modify.devicenumber = -1;
+			%obj.modify.targetbeep = 0;
+			%obj.modify.devicenumber = -1;
 			obj.tempFile = 'MYDATA.edf';
 		end
 		
@@ -151,14 +151,11 @@ classdef eyelinkManager < optickaCore
 			
 			obj.checkConnection();
 			
-			%to calculate velocity measurements etc. distance is in millimeters
-			Eyelink('Command', ['screen_distance = ' num2str(obj.screen.distance*10)]);
-			
 			if obj.screen.isOpen == true
 				rect=obj.screen.winRect;
 				Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
 				obj.defaults = EyelinkInitDefaults(obj.screen.win);
-				if exist(obj.callback,'file')
+				if ~isempty(obj.callback) && exist(obj.callback,'file')
 					obj.defaults.callback = obj.callback;
 				end
 				obj.defaults.backgroundcolour = obj.screen.backgroundColour;
@@ -286,7 +283,7 @@ classdef eyelinkManager < optickaCore
 				[~,out] = Eyelink('CalMessage');
 				obj.salutation('SETUP',out);
 			end
-		end
+	end
 		
 		% ===================================================================
 		%> @brief wrapper for StartRecording
@@ -769,11 +766,9 @@ classdef eyelinkManager < optickaCore
 			nextKey=KbName('SPACE');
 			obj.recordData = true;
 			try
-				s = screenManager();
+				s = screenManager('debug',true);
 				s.backgroundColour = [0.5 0.5 0.5 0];
 				o = dotsStimulus('size',obj.fixationRadius*2,'speed',2,'mask',false,'density',30);
-				%s.windowed = [800 600];
-				s.screen = 1;
 				open(s); %open out screen
 				setup(o,s); %setup our stimulus with open screen
 				
@@ -781,7 +776,7 @@ classdef eyelinkManager < optickaCore
 				initialise(obj,s); %initialise eyelink with our screen
 				setup(obj); %setup eyelink
 				
-				obj.statusMessage('DEMO Running'); %
+  				obj.statusMessage('DEMO Running'); %
 				setOffline(obj); %Eyelink('Command', 'set_idle_mode');
 				trackerClearScreen(obj);
 				trackerDrawFixation(obj);

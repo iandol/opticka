@@ -256,7 +256,7 @@ classdef calibrateLuminance < handle
 					for i = 1:valsl
 						Screen('FillRect',obj.win,cout(i,:));
 						Screen('Flip',obj.win);
-						WaitSecs(0.2);
+						WaitSecs(1);
 						if ~obj.useCCal2 && ~obj.useI1Pro
 							obj.inputValues(col).in(a) = input(['Enter luminance for value=' num2str(cout(i,:)) ': ']);
 							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(a));

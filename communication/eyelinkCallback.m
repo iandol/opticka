@@ -325,7 +325,7 @@ end
 % Draw calibration target, if any is specified:
 if ~isempty(calxy)
 	drawInstructions=0;
-	EyelinkDrawCalibrationTarget(eyewin, el, calxy);
+	EyelinkDrawCalibrationTarget(eyewin, el, calxy, verbose);
 end
 
 % Need to draw instructions?
@@ -475,7 +475,7 @@ try
 	inset=round(el.calibrationtargetwidth/100*width);
 	insetSize = floor(size-2*inset);
 	if insetSize < 1
-		insetSize = 1;
+		insetSize = 4;
 	end
 	
 	if sum(el.calibrationtargetcolour) > 0.6
