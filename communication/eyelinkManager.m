@@ -111,10 +111,10 @@ classdef eyelinkManager < optickaCore
 			obj.modify.calibrationtargetcolour = [1 1 1];
 			obj.modify.calibrationtargetsize = 0.8;
 			obj.modify.calibrationtargetwidth = 0.04;
-			%obj.modify.waitformodereadytime = 500;
 			obj.modify.displayCalResults = 1;
 			%obj.modify.targetbeep = 0;
 			%obj.modify.devicenumber = -1;
+			%obj.modify.waitformodereadytime = 500;
 			obj.tempFile = 'MYDATA.edf';
 		end
 		
@@ -615,7 +615,6 @@ classdef eyelinkManager < optickaCore
 			try
 				obj.isConnected = false;
 				obj.isDummy = false;
-				obj.isRecording = false;
 				obj.eyeUsed = -1;
 				obj.screen = [];
 				if obj.isRecording == true && ~isempty(obj.saveFile)
@@ -627,8 +626,8 @@ classdef eyelinkManager < optickaCore
 						if status > 0
 							obj.salutation('Close Method',sprintf('ReceiveFile status %d', status));
 						end
-						if 2==exist(obj.tempFile, 'file')
-							obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', obj.tempFile, pwd),true);
+						if exist(obj.tempFile, 'file')
+							obj.salutation('Close Method',sprintf('Data file ''%s'' can be found in ''%s''', obj.tempFile, strrep(pwd,'\','/')),true);
 							status = movefile(obj.tempFile, obj.saveFile,'f');
 							if status == 1
 								obj.salutation('Close Method',sprintf('Data file copied to ''%s''', obj.saveFile),true);
