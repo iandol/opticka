@@ -259,7 +259,7 @@ try
 	%Screen('Preference', 'VBLEndlineOverride', 1066);
 	Screen('Preference', 'SkipSyncTests', 0);
 	Screen('Preference', 'VisualDebugLevel', 3);
-	Screen('Preference', 'Verbosity', 10); %errors and warnings
+	Screen('Preference', 'Verbosity', 4); %errors and warnings
 	Screen('Preference', 'SuppressAllWarnings', 0);
 	
 	% Query size of screen:
@@ -355,6 +355,7 @@ try
 		else
 			c = 0;
 		end
+		clog(i) = c;
 		Screen('FillRect', w, c+0.2, [0 0 50 50]);
 		% Screen('FillRect', w, mod(i, 2)*255);
 		if (stereo>0)
@@ -418,7 +419,7 @@ try
 		end;
 		
 		%add in a bit of I/O work into the loop
-		if c == 1; lj.prepareStrobe(2000); end
+		%if c == 1; lj.prepareStrobe(2000); end
 		
 		% Flip: The clearmode argument specifies if flip should clear the
 		% drawing buffer after flip (=0 - default), keep it "as is"
@@ -437,8 +438,8 @@ try
 		% beampos > screen height means that flip returned during the VBL
 		% interval. Small values << screen height are also ok,
 		% they just indicate either a slower machine or some types of flat-panels...
-		[ tvbl so(i) flipfin(i) missest(i) beampos(i)]=Screen('Flip', w, tdeadline, clearmode);
-		if c == 1; lj.strobeWord; end
+		[ tvbl, so(i), flipfin(i), missest(i), beampos(i)]=Screen('Flip', w, tdeadline, clearmode);
+		%if c == 1; lj.strobeWord; end
 		% Record timestamp for later use:
 		ts(i) = tvbl;
 		
@@ -461,7 +462,7 @@ try
 	
 	% Figure 1 shows time deltas between successive flips in milliseconds:
 	% This should equal the product numifis * ifi:
-	figure;
+	figure('Position',[0 0 1024 800],'Name','Performance Results');
 	subplot(2,3,1);
 	hold on;
 	plot((ts(2:n) - ts(1:n-1)) * 1000,'k.','MarkerSize',8);
@@ -472,7 +473,7 @@ try
 	plot(ones(1,n)*ifi*ni*1000);
 	title('Delta between successive Flips');
 	ylabel('Time (ms)');
-	hold off
+	hold off; box on; grid on;
 	
 	
 	% Figure 3 shows estimated size of presentation deadline-miss in
@@ -483,14 +484,20 @@ try
 	plot(zeros(1,n));
 	title('Estimate of missed deadlines (+ == miss):');
 	ylabel('Time (ms)');
-	hold off;
+	hold off; box on; grid on;
 	
 	% Figure 4 shows difference in ms between finish of Flip and estimated
 	% start of VBL time:
 	subplot(2,3,3);
+	hold on
 	plot((flipfin - ts)*1000,'k.','MarkerSize',8);
+	stairs(clog,'k-','Color',[0.4 0.4 0.4]);
+	ylim([-5 5]);
+	hold off
+	box on; grid on;
 	title('Delta between start of VBL and return of Flip:');
 	ylabel('Time (ms)');
+	legend({'Deltas','Flicker Value'})
 	
 	% Figure 5 shows difference in ms between finish of Flip and estimated
 	% stimulus-onset:
@@ -502,6 +509,7 @@ try
 	subplot(2,3,5);
 	plot(beampos,'k-','MarkerSize',8);
 	title('Rasterbeam position when timestamp was taken (in scanlines):');
+	box on; grid on;
 	
 	if max(a) >= 0
 		subplot(2,3,6);

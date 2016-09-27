@@ -146,15 +146,6 @@ classdef eyelinkAnalysis < analysisCore
 			me.isParsed = false;
 			tmain = tic;
 			parseEvents(me);
-			if ~isempty(me.trialsToPrune)
-				me.pruneTrials(me.trialsToPrune);
-			end
-			parseAsVars(me);
-			parseSecondaryEyePos(me);
-			parseFixationPositions(me);
-			parseROI(me);
-			parseTOI(me);
-			computeMicrosaccades(me);
 			
 			me.isParsed = true;
 			
@@ -241,7 +232,7 @@ classdef eyelinkAnalysis < analysisCore
 					end
 				end
 			end
-			if length(select) > 1;
+			if length(select) > 1
 				idx = select;
 				idxInternal = false;
 			else
