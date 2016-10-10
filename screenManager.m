@@ -27,11 +27,11 @@ classdef screenManager < optickaCore
 		visualDebug = false
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer = 1
-		%> bitDepth of framebuffer
-		bitDepth = '8bit'
+		%> bitDepth of framebuffer, '8bit' is best for old GPUs
+		bitDepth = 'FloatingPoint32BitIfPossible'
 		%> use operating system native beamposition queries, better false if
-		%> kernel driver installed on OS x
-		nativeBeamPosition = false
+		%> kernel driver installed on macOS
+		nativeBeamPosition = true
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 		timestampingMode = 1
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8
@@ -199,12 +199,13 @@ classdef screenManager < optickaCore
 			end
 			obj.screenVals.ifi=1/obj.screenVals.fps;
 			
-			Screen('Preference', 'TextRenderer', 0); %fast text renderer
+			%Screen('Preference', 'TextRenderer', 0); %fast text renderer
 			
 			if obj.debug == true %we yoke these together but they can then be overridden
 				obj.visualDebug = true;
 			end
 			
+			obj.ppd; %generate our dependent propertie and caches it to ppd_ for speed
 			obj.makeGrid; %our visualDebug size grid
 			
 			screenVals = obj.screenVals;
@@ -426,7 +427,309 @@ classdef screenManager < optickaCore
 			end
 		end
 		
+
 		% ===================================================================
+		%> @brief reset the gamma table
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function resetScreenGamma(obj)
+			if obj.hideFlash == true || obj.windowed(1) ~= 1 || (~isempty(obj.screenVals) && obj.screenVals.resetGamma == true && ~isempty(obj.screenVals.originalGammaTable))
+				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
+				Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.originalGammaTable);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Set method for distance
+		%>
+		%> @param
+		% ===================================================================
+		function set.distance(obj,value)
+			if ~(value > 0)
+				value = 57.3;
+			end
+			obj.distance = value;
+			obj.ppd; %recalculate ppd and cache it
+			obj.makeGrid();
+		end
+		
+		% ===================================================================
+		%> @brief Set method for pixelsPerCm
+		%>
+		%> @param
+		% ===================================================================
+		function set.pixelsPerCm(obj,value)
+			if ~(value > 0)
+				value = 44;
+			end
+			obj.pixelsPerCm = value;
+			obj.ppd; %recalculate ppd and cache it
+			obj.makeGrid();
+			%obj.salutation(['set pixelsPerCm: ' num2str(obj.pixelsPerCm) '|ppd: ' num2str(obj.ppd)],'Custom set method')
+		end		
+		
+		% ===================================================================
+		%> @brief Get method for ppd (a dependent property)
+		%>
+		%> @param
+		% ===================================================================
+		function ppd = get.ppd(obj)
+			if obj.useRetina %note pixelsPerCm is normally recorded using non-retina mode so we fix that here if we are now in retina mode
+				ppd = round( (obj.pixelsPerCm*2) * (obj.distance / 57.3) ); %set the pixels per degree
+			else
+				ppd = round( obj.pixelsPerCm * (obj.distance / 57.3) ); %set the pixels per degree
+			end
+			obj.ppd_ = ppd; %cache value for speed!!!
+		end
+		
+		% ===================================================================
+		%> @brief Set method for windowed
+		%>
+		%> @param
+		% ===================================================================
+		function set.windowed(obj,value)
+			if length(value) == 2 && isnumeric(value)
+				obj.windowed = value;
+			elseif islogical(value)
+				obj.windowed = value;
+			elseif value == 1
+				obj.windowed = true;
+			elseif value == 0
+				obj.windowed = false;
+			else
+				obj.windowed = false;
+			end	
+		end
+		
+		% ===================================================================
+		%> @brief Set method for pixelsPerCm
+		%>
+		%> @param
+		% ===================================================================
+		function set.screenXOffset(obj,value)
+			obj.screenXOffset = value;
+			obj.updateCenter();
+		end
+		
+		% ===================================================================
+		%> @brief Set method for pixelsPerCm
+		%>
+		%> @param
+		% ===================================================================
+		function set.screenYOffset(obj,value)
+			obj.screenYOffset = value;
+			obj.updateCenter();
+		end
+		
+		% ===================================================================
+		%> @brief Screen('DrawingFinished')
+		%>
+		%> @param
+		% ===================================================================
+		function finishDrawing(obj)
+			Screen('DrawingFinished', obj.win); 
+		end
+		
+		% ===================================================================
+		%> @brief Flash the screen until keypress
+		%>
+		%> @param
+		% ===================================================================
+		function flashScreen(obj,interval)			
+			if obj.isOpen			
+				int = round(interval / obj.screenVals.ifi);
+				KbReleaseWait;
+				while ~KbCheck(-1)
+					if mod(obj.flashTick,int) == 0
+						obj.flashOn = not(obj.flashOn);
+						obj.flashTick = 0;
+					end
+					if obj.flashOn == 0
+						Screen('FillRect',obj.win,[0 0 0 1]);
+					else
+						Screen('FillRect',obj.win,[1 1 1 1]);
+					end
+					Screen('Flip',obj.win);
+					obj.flashTick = obj.flashTick + 1;
+				end
+				drawBackground(obj);
+				Screen('Flip',obj.win);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief draw small spot centered on the screen
+		%>
+		%> @param size in degrees
+		%> @param colour of spot
+		%> @param x position in degrees relative to screen center
+		%> @param y position in degrees relative to screen center
+		%> @return
+		% ===================================================================
+		function drawSpot(obj,size,colour,x,y)
+			if nargin < 5 || isempty(y); y = 0; end
+			if nargin < 4 || isempty(x); x = 0; end
+			if nargin < 3 || isempty(colour); colour = [1 1 1 1]; end
+			if nargin < 2 || isempty(size); size = 1; end
+			
+			x = obj.xCenter + (x * obj.ppd_);
+			y = obj.yCenter + (y * obj.ppd_);
+			size = size/2 * obj.ppd_;
+			
+			Screen('gluDisk', obj.win, colour, x, y, size);
+		end
+		
+		% ===================================================================
+		%> @brief draw small cross
+		%>
+		%> @param size size in degrees
+		%> @param colour of cross
+		%> @param x position in degrees relative to screen center
+		%> @param y position in degrees relative to screen center
+		%> @param lineWidth of lines
+		%> @return
+		% ===================================================================
+		function drawCross(obj,size,colour,x,y,lineWidth)
+			if nargin < 6 || isempty(lineWidth); lineWidth = 2; end
+			if nargin < 5 || isempty(y); y = 0; end
+			if nargin < 4 || isempty(x); x = 0; end
+			if nargin < 3 || isempty(colour)
+				if mean(obj.backgroundColour(1:3)) < 0.5
+					colour = [1 1 1 1]; 
+				elseif  mean(obj.backgroundColour(1:3)) > 0.5
+					colour = [0 0 0 1]; 
+				else
+					colour = [1 0 0 1];
+				end
+			end
+			if nargin < 2 || isempty(size); size = 0.5; end
+			
+			x = obj.xCenter + (x * obj.ppd_);
+			y = obj.yCenter + (y * obj.ppd_);
+			size = size/2 * obj.ppd_;
+			
+			Screen('DrawLines', obj.win, [-size size 0 0;0 0 -size size],...
+				lineWidth, colour, [x y]);
+		end
+		
+		% ===================================================================
+		%> @brief draw timed small spot centered on the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawTimedSpot(obj,size,colour,time,reset)
+			if nargin < 5; reset = false; end
+			if nargin < 4; time = 0.2; end
+			if nargin < 3; colour = [1 1 1 1]; end
+			if nargin < 2; size = 1; end
+			if reset == true
+				if length(time) == 2
+					obj.timedSpotTime = randi(time*1000)/1000;
+				else
+					obj.timedSpotTime = time;
+				end
+				obj.timedSpotNextTick = round(obj.timedSpotTime / obj.screenVals.ifi);
+				obj.timedSpotTick = 1;
+				return
+			end
+			if obj.timedSpotTick <= obj.timedSpotNextTick
+				size = size/2 * obj.ppd_;
+				Screen('gluDisk',obj.win,colour,obj.xCenter,obj.yCenter,size);
+			end
+			obj.timedSpotTick = obj.timedSpotTick + 1;
+		end
+		
+		% ===================================================================
+		%> @brief draw small spot centered on the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawGreenSpot(obj,size)
+			if ~exist('size','var')
+				size = 1;
+			end
+			size = size/2 * obj.ppd_;
+			Screen('gluDisk',obj.win,[0 1 0 1],obj.xCenter,obj.yCenter,size);
+		end
+		
+		% ===================================================================
+		%> @brief draw small spot centered on the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawRedSpot(obj,size)
+			if ~exist('size','var')
+				size = 1;
+			end
+			size = size/2 * obj.ppd_;
+			Screen('gluDisk',obj.win,[1 0 0 1],obj.xCenter,obj.yCenter,size);
+		end
+		
+		% ===================================================================
+		%> @brief draw small spot centered on the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawScreenCenter(obj)
+			Screen('gluDisk',obj.win,[1 0 1 1],obj.xCenter,obj.yCenter,2);
+		end
+		
+		% ===================================================================
+		%> @brief draw a 5x5 1deg dot grid for visual debugging
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawGrid(obj)
+			Screen('DrawDots',obj.win,obj.grid,1,[1 0 1 1],[obj.xCenter obj.yCenter],1);
+		end
+		
+		% ===================================================================
+		%> @brief draw a white square in top-left of screen to trigger photodiode
+		%> 
+		%> @param colour colour of square
+		%> @return
+		% ===================================================================
+		function drawPhotoDiodeSquare(obj,colour)
+			Screen('FillRect',obj.win,colour,obj.photoDiodeRect);
+		end
+		
+		% ===================================================================
+		%> @brief Draw the background colour
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawBackground(obj)
+			Screen('FillRect',obj.win,obj.backgroundColour,[]);
+		end
+		
+		% ===================================================================
+		%> @brief return mouse position in degrees
+		%>
+		%> @param
+		% ===================================================================
+		function [xPos, yPos] = mousePosition(obj, verbose)
+			if ~exist('verbose','var') || isempty(verbose); verbose = obj.verbose; end
+			if obj.isOpen
+				[xPos,yPos] = GetMouse(obj.win);
+			else
+				[xPos,yPos] = GetMouse();
+			end
+			xPos = (xPos - obj.xCenter) / obj.ppd_;
+			yPos = (yPos - obj.yCenter) / obj.ppd_;
+			if verbose
+				fprintf('--->>> MOUSE POSITION: \tX = %5.5g \t\tY = %5.5g\n',xPos,yPos);
+			end
+		end
+		
+				% ===================================================================
 		%> @brief prepare the recording of stimulus frames
 		%>
 		%> @param
@@ -488,7 +791,6 @@ classdef screenManager < optickaCore
 			end
 		end
 		
-		
 		% ===================================================================
 		%> @brief finish stimulus recording
 		%>
@@ -527,308 +829,6 @@ classdef screenManager < optickaCore
 					implay(mimg);
 					clear mimg
 				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief reset the gamma table
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function resetScreenGamma(obj)
-			if obj.hideFlash == true || obj.windowed(1) ~= 1 || (~isempty(obj.screenVals) && obj.screenVals.resetGamma == true && ~isempty(obj.screenVals.gammaTable))
-				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
-				Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
-			end
-		end
-		
-		
-		% ===================================================================
-		%> @brief Set method for distance
-		%>
-		%> @param
-		% ===================================================================
-		function set.distance(obj,value)
-			if ~(value > 0)
-				value = 57.3;
-			end
-			obj.distance = value;
-			obj.makeGrid();
-		end
-		
-		% ===================================================================
-		%> @brief Set method for windowed
-		%>
-		%> @param
-		% ===================================================================
-		function set.windowed(obj,value)
-			if length(value) == 2 && isnumeric(value)
-				obj.windowed = value;
-			elseif islogical(value)
-				obj.windowed = value;
-			elseif value == 1
-				obj.windowed = true;
-			elseif value == 0
-				obj.windowed = false;
-			else
-				obj.windowed = false;
-			end	
-		end
-		
-		% ===================================================================
-		%> @brief Set method for pixelsPerCm
-		%>
-		%> @param
-		% ===================================================================
-		function set.pixelsPerCm(obj,value)
-			if ~(value > 0)
-				value = 44;
-			end
-			obj.pixelsPerCm = value;
-			obj.makeGrid();
-			%obj.salutation(['set pixelsPerCm: ' num2str(obj.pixelsPerCm) '|ppd: ' num2str(obj.ppd)],'Custom set method')
-		end
-		
-		% ===================================================================
-		%> @brief Set method for pixelsPerCm
-		%>
-		%> @param
-		% ===================================================================
-		function set.screenXOffset(obj,value)
-			obj.screenXOffset = value;
-			obj.updateCenter();
-		end
-		
-		% ===================================================================
-		%> @brief Set method for pixelsPerCm
-		%>
-		%> @param
-		% ===================================================================
-		function set.screenYOffset(obj,value)
-			obj.screenYOffset = value;
-			obj.updateCenter();
-		end
-		
-		
-		% ===================================================================
-		%> @brief Screen('DrawingFinished')
-		%>
-		%> @param
-		% ===================================================================
-		function finishDrawing(obj)
-			Screen('DrawingFinished', obj.win); 
-		end
-		
-		% ===================================================================
-		%> @brief Flash the screen until keypress
-		%>
-		%> @param
-		% ===================================================================
-		function flashScreen(obj,interval)			
-			if obj.isOpen			
-				int = round(interval / obj.screenVals.ifi);
-				KbReleaseWait;
-				while ~KbCheck(-1)
-					if mod(obj.flashTick,int) == 0
-						obj.flashOn = not(obj.flashOn);
-						obj.flashTick = 0;
-					end
-					if obj.flashOn == 0
-						Screen('FillRect',obj.win,[0 0 0 1]);
-					else
-						Screen('FillRect',obj.win,[1 1 1 1]);
-					end
-					Screen('Flip',obj.win);
-					obj.flashTick = obj.flashTick + 1;
-				end
-				drawBackground(obj);
-				Screen('Flip',obj.win);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief draw small spot centered on the screen
-		%>
-		%> @param size in degrees
-		%> @param colour of spot
-		%> @param x position in degrees relative to screen center
-		%> @param y position in degrees relative to screen center
-		%> @return
-		% ===================================================================
-		function drawSpot(obj,size,colour,x,y)
-			if nargin < 5 || isempty(y); y = 0; end
-			if nargin < 4 || isempty(x); x = 0; end
-			if nargin < 3 || isempty(colour); colour = [1 1 1 1]; end
-			if nargin < 2 || isempty(size); size = 1; end
-			
-			x = obj.xCenter + (x * obj.ppd);
-			y = obj.yCenter + (y * obj.ppd);
-			size = size/2 * obj.ppd;
-			
-			Screen('gluDisk', obj.win, colour, x, y, size);
-	end
-		
-		% ===================================================================
-		%> @brief draw small cross
-		%>
-		%> @param size size in degrees
-		%> @param colour of cross
-		%> @param x position in degrees relative to screen center
-		%> @param y position in degrees relative to screen center
-		%> @param lineWidth of lines
-		%> @return
-		% ===================================================================
-		function drawCross(obj,size,colour,x,y,lineWidth)
-			if nargin < 6 || isempty(lineWidth); lineWidth = 2; end
-			if nargin < 5 || isempty(y); y = 0; end
-			if nargin < 4 || isempty(x); x = 0; end
-			if nargin < 3 || isempty(colour); 
-				if mean(obj.backgroundColour(1:3)) < 0.5
-					colour = [1 1 1 1]; 
-				elseif  mean(obj.backgroundColour(1:3)) > 0.5
-					colour = [0 0 0 1]; 
-				else
-					colour = [1 0 0 1];
-				end
-			end
-			if nargin < 2 || isempty(size); size = 0.5; end
-			
-			x = obj.xCenter + (x * obj.ppd);
-			y = obj.yCenter + (y * obj.ppd);
-			size = size/2 * obj.ppd;
-			
-			Screen('DrawLines', obj.win, [-size size 0 0;0 0 -size size],...
-				lineWidth, colour, [x y]);
-		end
-		
-		% ===================================================================
-		%> @brief draw timed small spot centered on the screen
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function drawTimedSpot(obj,size,colour,time,reset)
-			if nargin < 5; reset = false; end
-			if nargin < 4; time = 0.2; end
-			if nargin < 3; colour = [1 1 1 1]; end
-			if nargin < 2; size = 1; end
-			if reset == true
-				if length(time) == 2
-					obj.timedSpotTime = randi(time*1000)/1000;
-				else
-					obj.timedSpotTime = time;
-				end
-				obj.timedSpotNextTick = round(obj.timedSpotTime / obj.screenVals.ifi);
-				obj.timedSpotTick = 1;
-				return
-			end
-			if obj.timedSpotTick <= obj.timedSpotNextTick
-				size = size/2 * obj.ppd;
-				Screen('gluDisk',obj.win,colour,obj.xCenter,obj.yCenter,size);
-			end
-			obj.timedSpotTick = obj.timedSpotTick + 1;
-		end
-		
-		% ===================================================================
-		%> @brief draw small spot centered on the screen
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function drawGreenSpot(obj,size)
-			if ~exist('size','var')
-				size = 1;
-			end
-			size = size/2 * obj.ppd;
-			Screen('gluDisk',obj.win,[0 1 0 1],obj.xCenter,obj.yCenter,size);
-		end
-		
-		% ===================================================================
-		%> @brief draw small spot centered on the screen
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function drawRedSpot(obj,size)
-			if ~exist('size','var')
-				size = 1;
-			end
-			size = size/2 * obj.ppd;
-			Screen('gluDisk',obj.win,[1 0 0 1],obj.xCenter,obj.yCenter,size);
-		end
-		
-		% ===================================================================
-		%> @brief draw small spot centered on the screen
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function drawScreenCenter(obj)
-			Screen('gluDisk',obj.win,[1 0 1 1],obj.xCenter,obj.yCenter,2);
-		end
-		
-		% ===================================================================
-		%> @brief draw a 5x5 1deg dot grid for visual debugging
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function drawGrid(obj)
-			Screen('DrawDots',obj.win,obj.grid,1,[1 0 1 1],[obj.xCenter obj.yCenter],1);
-		end
-		
-		% ===================================================================
-		%> @brief draw a white square in top-left of screen to trigger photodiode
-		%> 
-		%> @param colour colour of square
-		%> @return
-		% ===================================================================
-		function drawPhotoDiodeSquare(obj,colour)
-			Screen('FillRect',obj.win,colour,obj.photoDiodeRect);
-		end
-		
-		% ===================================================================
-		%> @brief Draw the background colour
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function drawBackground(obj)
-			Screen('FillRect',obj.win,obj.backgroundColour,[]);
-		end
-		
-		
-		% ===================================================================
-		%> @brief Get method for ppd (a dependent property)
-		%>
-		%> @param
-		% ===================================================================
-		function ppd = get.ppd(obj)
-			if obj.useRetina %note pixelsPerCm is normally recorded using non-retina mode so we fix that here if we are now in retina mode
-				ppd = round( (obj.pixelsPerCm*2) * (obj.distance / 57.3) ); %set the pixels per degree
-			else
-				ppd = round( obj.pixelsPerCm * (obj.distance / 57.3) ); %set the pixels per degree
-			end
-			obj.ppd_ = ppd;
-		end
-		
-		% ===================================================================
-		%> @brief return mouse position in degrees
-		%>
-		%> @param
-		% ===================================================================
-		function [xPos, yPos] = mousePosition(obj, verbose)
-			if ~exist('verbose','var') || isempty(verbose); verbose = obj.verbose; end
-			if obj.isOpen
-				[xPos,yPos] = GetMouse(obj.win);
-			else
-				[xPos,yPos] = GetMouse();
-			end
-			xPos = (xPos - obj.xCenter) / obj.ppd_;
-			yPos = (yPos - obj.yCenter) / obj.ppd_;
-			if verbose
-				fprintf('--->>> MOUSE POSITION: \tX = %5.5g \t\tY = %5.5g\n',xPos,yPos);
 			end
 		end
 		
@@ -874,7 +874,7 @@ classdef screenManager < optickaCore
 			for i=rnge
 				obj.grid = horzcat(obj.grid, [rnge;ones(1,length(rnge))*i]);
 			end
-			obj.grid = obj.grid .* obj.ppd; %we use ppd so we can cache ppd_ for elsewhere
+			obj.grid = obj.grid .* obj.ppd_;
 		end
 		
 		% ===================================================================
@@ -886,8 +886,8 @@ classdef screenManager < optickaCore
 			if length(obj.winRect) == 4
 				%get the center of our screen, along with user defined offsets
 				[obj.xCenter, obj.yCenter] = RectCenter(obj.winRect);
-				obj.xCenter = obj.xCenter + (obj.screenXOffset * obj.ppd);
-				obj.yCenter = obj.yCenter + (obj.screenYOffset * obj.ppd);
+				obj.xCenter = obj.xCenter + (obj.screenXOffset * obj.ppd_);
+				obj.yCenter = obj.yCenter + (obj.screenYOffset * obj.ppd_);
 			end
 		end
 	
