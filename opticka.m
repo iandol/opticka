@@ -727,14 +727,18 @@ classdef opticka < optickaCore
 			end
 			if max(ftime) > 0
 				[~,idx]=max(ftime);
-				load([obj.paths.calibration filesep d(idx).name]);
+				tmp = load([obj.paths.calibration filesep d(idx).name]);
+				if isstruct(tmp)
+					fn = fieldnames(tmp);
+					tmp = tmp.(fn{1});
+				end
 				if isa(tmp,'calibrateLuminance')
 					tmp.filename = [obj.paths.calibration filesep d(idx).name];
 					if isa(obj.r,'runExperiment') && isa(obj.r.screen,'screenManager')
 						obj.r.screen.gammaTable = tmp;
 						set(obj.h.OKUseGamma,'Value',1);
 						set(obj.h.OKUseGamma,'String',['None'; 'Gamma'; obj.r.screen.gammaTable.analysisMethods]);
-						obj.r.screen.gammaTable.choice = 1;
+						obj.r.screen.gammaTable.choice = 2;
 					end
 				end
 			end
