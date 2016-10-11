@@ -683,7 +683,15 @@ classdef screenManager < optickaCore
 			if nargin < 6 || isempty(lineWidth); lineWidth = 2; end
 			if nargin < 5 || isempty(y); y = 0; end
 			if nargin < 4 || isempty(x); x = 0; end
-			if nargin < 3 || isempty(colour); colour = [0 0 0 1]; end
+			if nargin < 3 || isempty(colour); 
+				if mean(obj.backgroundColour(1:3)) < 0.5
+					colour = [1 1 1 1]; 
+				elseif  mean(obj.backgroundColour(1:3)) > 0.5
+					colour = [0 0 0 1]; 
+				else
+					colour = [1 0 0 1];
+				end
+			end
 			if nargin < 2 || isempty(size); size = 0.5; end
 			
 			x = obj.xCenter + (x * obj.ppd);
