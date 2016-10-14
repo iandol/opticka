@@ -26,7 +26,7 @@ classdef calibrateLuminance < handle
 	
 	properties
 		%> how much detail to show on commandline
-		verbosity = false
+		verbose = false
 		%> allows the constructor to run the open method immediately
 		runNow = false
 		%> number of measures (default = 30)
@@ -53,6 +53,14 @@ classdef calibrateLuminance < handle
 		externalInput
 		%> length of gamma table
 		tableLength = 256;
+	end
+	
+	%--------------------VISIBLE PROPERTIES-----------%
+	properties (SetAccess = protected, GetAccess = public)
+		%> clock() dateStamp set on construction
+		dateStamp@double
+		%> universal ID
+		uuid@char
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -88,7 +96,7 @@ classdef calibrateLuminance < handle
 		canAnalyze
 		p
 		plotHandle
-		allowedPropertiesBase='^(useCCal2|useI1Pro|testColour|filename|tableLength|verbosity|runNow|screen|nMeasures)$'
+		allowedPropertiesBase='^(preferI1Pro|useCCal2|useI1Pro|testColour|filename|tableLength|verbose|runNow|screen|nMeasures)$'
 	end
 	
 	%=======================================================================
@@ -116,6 +124,8 @@ classdef calibrateLuminance < handle
 					end
 				end
 			end
+			obj.dateStamp = clock();
+			obj.uuid = num2str(dec2hex(floor((now - floor(now))*1e10))); %obj.uuid = char(java.util.UUID.randomUUID)%128bit uuid
 			if isempty(obj.screen)
 				obj.screen = max(Screen('Screens'));
 			end
@@ -737,6 +747,19 @@ classdef calibrateLuminance < handle
 		%===============Destructor======================%
 		function delete(obj)
 			obj.salutation('DELETE Method','Closing calibrateLuminance')
+			obj.plotHandle = [];
+			obj.p = [];
+		end
+		
+		% ===================================================================
+		%> @brief custom save method
+		%> 
+		%>
+		% ===================================================================
+		function obj = saveobj(obj)
+			obj.salutation('SAVE Method','Saving calibrateLuminance object')
+			obj.plotHandle = [];
+			obj.p = []; %remove the panel object, useless on reload
 		end
 		
 		% ===================================================================
@@ -767,7 +790,7 @@ classdef calibrateLuminance < handle
 		
 		%===========Salutation==========%
 		function salutation(obj,in,message)
-			if obj.verbosity > 0
+			if obj.verbose > 0
 				if ~exist('in','var')
 					in = 'General Message';
 				end
