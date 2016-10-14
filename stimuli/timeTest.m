@@ -471,7 +471,7 @@ try
 		ni=1;
 	end;
 	plot(ones(1,n)*ifi*ni*1000);
-	title('Delta between successive Flips');
+	title('Succesive Flip Delta');
 	ylabel('Time (ms)');
 	hold off; box on; grid on;
 	
@@ -482,7 +482,7 @@ try
 	hold on;
 	plot(missest*1000,'k.','MarkerSize',8);
 	plot(zeros(1,n));
-	title('Estimate of missed deadlines (+ == miss):');
+	title('Estimate missed deadlines (+ = miss)');
 	ylabel('Time (ms)');
 	hold off; box on; grid on;
 	
@@ -508,7 +508,7 @@ try
 	% Figure 2 shows the recorded beam positions:
 	subplot(2,3,5);
 	plot(beampos,'k-','MarkerSize',8);
-	title('Rasterbeam position when timestamp was taken (in scanlines):');
+	title('Rasterbeam position (in scanlines):');
 	box on; grid on;
 	
 	if max(a) >= 0

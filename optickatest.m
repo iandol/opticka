@@ -50,7 +50,7 @@ myStim{2}=gratingStimulus('sf',3,'contrast',0.5,'tf',1,'size',3,'xPosition',-3,.
 	'yPosition',-4,'gabor',1,'mask',0);
 
 myStim{3}=gratingStimulus('sf',1,'contrast',0.5,'size',3,'angle',45,'xPosition',-2,...
-	'yPosition',2,'gabor',0,'mask',1,'speed',2);
+	'yPosition',2,'gabor',0,'mask',1,'sigma',15,'speed',2);
 
 myStim{4}=gratingStimulus('sf',1,'contrast',0.5,'tf',0,'size',2,'xPosition',-3,...
 	'yPosition',-3,'gabor',0,'mask',1,'speed',2);
@@ -80,8 +80,8 @@ myStim{8}=dotsStimulus('density',50,'speed',1,'coherence',0.5,'xPosition',4,...
 
 %%
 % a simple circular spot, spots can also flash if needed
-myStim{9}=spotStimulus('speed',2,'xPosition',4,'type','flash',...
-	'yPosition',4,'colour',[1 1 0],'size',1,'flashTime',[0.2 0.2]);
+myStim{9}=discStimulus('speed',2,'xPosition',4,'type','flash',...
+	'yPosition',4,'colour',[1 1 1],'size',2,'flashTime',[0.2 0.2]);
 
 %%
 % a texture stimulus, by default this loads a picture from the opticka
@@ -148,7 +148,7 @@ showLog(myTask);
 myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'pixelsPerCm', 44,... %calibration value for screen size/pixel density
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
-	'windowed', [800 600],... %set to a widthxheight for debugging i.e. [800 600]; set to false for fullscreen
+	'windowed', [ ],... %set to a widthxheight for debugging i.e. [800 600]; set to false for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on OS X ATI 5870
 	'bitDepth', '8bit',... %try 8bit, FloatingPoint16bit FloatingPoint32bit
 	'hideFlash', false); %mario's gamma trick
@@ -160,7 +160,7 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 rExp = runExperiment('stimuli', myStim,... %stimulus objects
 	'task', myTask,... %task design object
 	'screen', myScreen,... %screen manager object
-	'debug', true,... %setup screen to not complain about sync errors etc.
+	'debug', false,... %setup screen to complain about sync errors etc.
 	'verbose', false); %minimal verbosity
 
 %%
