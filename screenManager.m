@@ -29,9 +29,6 @@ classdef screenManager < optickaCore
 		doubleBuffer = 1
 		%> bitDepth of framebuffer, '8bit' is best for old GPUs
 		bitDepth = 'FloatingPoint32BitIfPossible'
-		%> use operating system native beamposition queries, better false if
-		%> kernel driver installed on macOS
-		nativeBeamPosition = true
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 		timestampingMode = 1
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8
@@ -238,25 +235,8 @@ classdef screenManager < optickaCore
 				
 				obj.hideScreenFlash();
 				
-				%override native beam position queries?
-				if obj.nativeBeamPosition == false
-					v = bitor(2^16, Screen('Preference','ConserveVRAM'));
-					Screen('Preference','ConserveVRAM', v);
-					fprintf('---> screenManager: ConserveVRAM set at %g\n',v);
-				else
-					v = bitxor(2^16, Screen('Preference','ConserveVRAM'));
-					Screen('Preference','ConserveVRAM', v);
-					fprintf('---> screenManager: ConserveVRAM set at %g\n',v);
-				end
 				%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 				Screen('Preference', 'VBLTimestampingMode', obj.timestampingMode);
-				%force screentohead mapping
-				if obj.maxScreen == 1
-					Screen('Preference','ScreenToHead',0,0,3);
-					Screen('Preference','ScreenToHead',1,1,4);
-				end
-				%override VTOTAL?
-				%Screen('Preference', 'VBLEndlineOverride', 1066);
 				
 				if debug == true || (length(obj.windowed)==1 && obj.windowed ~= 0)
 					fprintf('\n---> screenManager: Skipping Sync Tests etc.\n');
@@ -273,8 +253,6 @@ classdef screenManager < optickaCore
 				end
 				
 				tL.screenLog.preOpenWindow=GetSecs;
-				
-				%PsychDefaultSetup(2);
 				
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
@@ -396,7 +374,6 @@ classdef screenManager < optickaCore
 					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, repmat(obj.gammaTable.gammaTable{obj.gammaTable.choice}(128,:), 256, 3));
 					obj.screenVals.resetGamma = true;
 				else
-					%table = repmat(obj.screenVals.gammaTable(128,:), 256, 1); %use midpoint in system gamma table
 					table = repmat(obj.backgroundColour(:,1:3), 256, 1);
 					obj.screenVals.oldGamma = Screen('LoadNormalizedGammaTable', obj.screen, table);
 					obj.screenVals.resetGamma = true;
