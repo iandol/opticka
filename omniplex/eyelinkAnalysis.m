@@ -30,7 +30,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> minimum saccade duration
 		MINDUR@double								= 2  %equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
 	end
-	
+
 	properties (Hidden = true)
 		%occasionally we have some trials in the EDF not in the plx, this prunes them out
 		trialsToPrune@double						= []
@@ -48,7 +48,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> screen Y center in pixels
 		yCenter@double								= 512
 	end
-	
+
 	properties (SetAccess = private, GetAccess = public)
 		%> have we parsed the EDF yet?
 		isParsed@logical							= false
@@ -80,12 +80,12 @@ classdef eyelinkAnalysis < analysisCore
 		%> does the trial variable list match the other saved data?
 		validation@struct
 	end
-	
+
 	properties (Dependent = true, SetAccess = private)
 		%> pixels per degree calculated from pixelsPerCm and distance
 		ppd
 	end
-	
+
 	properties (SetAccess = private, GetAccess = private)
 		%>57.3 bug override
 		override573									= true;
@@ -94,7 +94,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> allowed properties passed to object upon construction
 		allowedProperties@char = 'file|dir|verbose|pixelsPerCm|distance|xCenter|yCenter|rtStartMessage|rtEndMessage|trialOverride|rtDivision|rtLimits|tS|ROI|TOI'
 	end
-	
+
 	methods
 		% ===================================================================
 		%> @brief
@@ -109,7 +109,7 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			me.ppd; %cache our initial ppd_
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -135,7 +135,7 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			fprintf('<strong>:#:</strong> Loading Raw EDF Data took <strong>%g ms</strong>\n',round(toc*1000));
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -143,15 +143,16 @@ classdef eyelinkAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function simpleParse(me)
+			if isempty(me.raw); me.load(); end
 			me.isParsed = false;
 			tmain = tic;
 			parseEvents(me);
-			
+
 			me.isParsed = true;
-			
+
 			fprintf('\tOverall Parsing of EDF Trials took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -171,12 +172,12 @@ classdef eyelinkAnalysis < analysisCore
 			parseROI(me);
 			parseTOI(me);
 			computeMicrosaccades(me);
-			
+
 			me.isParsed = true;
-			
+
 			fprintf('\tOverall Parsing of EDF Trials took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -188,7 +189,7 @@ classdef eyelinkAnalysis < analysisCore
 			parseTOI(me);
 			computeMicrosaccades(me);
 		end
-		
+
 		% ===================================================================
 		%> @brief prunetrials -- very rarely (n=1) we lose a trial strobe in the plexon data and
 		%> thus when we try to align the plexon trial index and EDF trial index they are off-by-one,
@@ -212,7 +213,7 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			fprintf('Pruned %i trials from EDF trial data \n',num)
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -243,6 +244,8 @@ classdef eyelinkAnalysis < analysisCore
 						idx = me.breakFix.idx;
 					case 'incorrect'
 						idx = me.incorrect.idx;
+					otherwise
+						idx = 1:length(me.trials);
 				end
 				idxInternal = true;
 			end
@@ -277,9 +280,9 @@ classdef eyelinkAnalysis < analysisCore
 			medy = [];
 			early = 0;
 			mS = [];
-			
+
 			map = me.optimalColours(length(me.vars));
-			
+
 			if isempty(select)
 				thisVarName = 'ALL VARS ';
 			elseif length(select) > 1
@@ -287,7 +290,7 @@ classdef eyelinkAnalysis < analysisCore
 			else
 				thisVarName = ['VAR' num2str(select) ' '];
 			end
-			
+
 			maxv = 1;
 			ppd = me.ppd;
 			if ~isempty(me.TOI)
@@ -295,7 +298,7 @@ classdef eyelinkAnalysis < analysisCore
 			else
 				t1 = 0; t2 = 0.1;
 			end
-			
+
 			for i = idx
 				if idxInternal == true %we're using the eyelink index which includes incorrects
 					f = i;
@@ -303,38 +306,38 @@ classdef eyelinkAnalysis < analysisCore
 					f = find([me.trials.correctedIndex] == i);
 				end
 				if isempty(f); continue; end
-				
+
 				thisTrial = me.trials(f(1));
-				
+
 				if thisTrial.variable == 1010 %early edf files were broken, 1010 signifies this
 					c = rand(1,3);
 				else
 					c = map(thisTrial.variable,:);
 				end
-				
+
 				if isempty(select) || length(select) > 1 || ~isempty(intersect(select,thisTrial.variable));
 				else continue
 				end
-				
+
 				t = thisTrial.times / 1e3; %convert to seconds
 				ix = find((t >= -0.4) & (t <= 0.8));
 				t=t(ix);
 				x = thisTrial.gx(ix) / ppd;
 				y = thisTrial.gy(ix) / ppd;
-				
+
 				if min(x) < -20 || max(x) > 20 || min(y) < -20 || max(y) > 20
 					x(x < -20) = -20;
 					x(x > 20) = 20;
 					y(y < -20) = -20;
 					y(y > 20) = 20;
 				end
-				
+
 				q(1,1).select();
-				
+
 				q(1,1).hold('on')
 				plot(x, y,'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
-				
+
 				q(1,2).select();
 				q(1,2).hold('on');
 				plot(t,abs(x),'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
@@ -346,7 +349,7 @@ classdef eyelinkAnalysis < analysisCore
 					plot(thisTrial.microSaccades,-0.2,'yo','Color','y','MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor','y','UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				end
-				
+
 				p(2).select();
 				p(2).hold('on')
 				for fix=1:length(thisTrial.fixations)
@@ -362,9 +365,9 @@ classdef eyelinkAnalysis < analysisCore
 						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
 				end
 				p(2).margin = [50]; %left bottom right top
-				
+
 				idxt = find(t >= t1 & t <= t2);
-				
+
 				tvals{a} = t(idxt);
 				xvals{a} = x(idxt);
 				yvals{a} = y(idxt);
@@ -377,22 +380,22 @@ classdef eyelinkAnalysis < analysisCore
 				medy = [medy median(y(idxt))];
 				stdex = [stdex std(x(idxt))];
 				stdey = [stdey std(y(idxt))];
-				
+
 				q(2,1).select();
 				q(2,1).hold('on');
 				plot(meanx(end), meany(end),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
-				
+
 				q(2,2).select();
 				q(2,2).hold('on');
 				plot3(meanx(end), meany(end),a,'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				a = a + 1;
-				
+
 			end
-			
+
 			display = me.display / ppd;
-			
+
 			q(1,1).select();
 			axis ij
 			grid on
@@ -402,7 +405,7 @@ classdef eyelinkAnalysis < analysisCore
 			title(q(1,1),[thisVarName upper(type) ': X vs. Y Eye Position'])
 			xlabel(q(1,1),'X Deg')
 			ylabel(q(1,1),'Y Deg')
-			
+
 			q(1,2).select();
 			grid on
 			box on
@@ -418,7 +421,7 @@ classdef eyelinkAnalysis < analysisCore
 			set(h,'BackgroundColor',[1 1 1]);
 			xlabel(q(1,2),'Time (s)')
 			ylabel(q(1,2),'Degrees')
-			
+
 			p(2).select();
 			grid on;
 			box on;
@@ -434,7 +437,7 @@ classdef eyelinkAnalysis < analysisCore
 			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2g / %.2g ± %.2g SD [%.2g <> %.2g]',...
 				thisVarName,upper(type),mn,md,er,min(sacc),max(sacc)));
 			set(h,'BackgroundColor',[1 1 1]);
-			
+
 			q(2,1).select();
 			axis ij
 			grid on
@@ -446,7 +449,7 @@ classdef eyelinkAnalysis < analysisCore
 			set(h,'BackgroundColor',[1 1 1]);
 			xlabel(q(2,1),'X Degrees')
 			ylabel(q(2,1),'Y Degrees')
-			
+
 			q(2,2).select();
 			grid on
 			box on
@@ -458,12 +461,12 @@ classdef eyelinkAnalysis < analysisCore
 			xlabel(q(2,2),'X Degrees')
 			ylabel(q(2,2),'Y Degrees')
 			zlabel(q(2,2),'Trial')
-			
+
 			p(2).margin = 20;
-			
+
 			assignin('base','xvals',xvals)
 			assignin('base','yvals',yvals)
-			
+
 			function clickMe(src, ~)
 				if ~exist('src','var')
 					return
@@ -481,7 +484,7 @@ classdef eyelinkAnalysis < analysisCore
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -532,7 +535,7 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			fprintf('<strong>:#:</strong> Parsing eyelink region of interest (ROI) took <strong>%g ms</strong>\n', round(toc(tROI)*1000))
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -555,14 +558,14 @@ classdef eyelinkAnalysis < analysisCore
 				times = me.trials(i).times / 1e3;
 				x = me.trials(i).gx / ppd;
 				y = me.trials(i).gy  / ppd;
-				
+
 				idx = intersect(find(times>=t1), find(times<=t2));
 				times = times(idx);
 				x = x(idx);
 				y = y(idx);
-				
+
 				r = sqrt((x - fixationX).^2 + (y - fixationY).^2);
-				
+
 				within = find(r <= fixationRadius);
 				if length(within) == length(r)
 					me.TOIInfo(i).isTOI = true;
@@ -590,7 +593,7 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			fprintf('<strong>:#:</strong> Parsing eyelink time of interest (TOI) took <strong>%g ms</strong>\n', round(toc(tTOI)*1000))
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -600,7 +603,7 @@ classdef eyelinkAnalysis < analysisCore
 		function plotROI(me)
 			if ~isempty(me.ROIInfo)
 				h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.file);
-				
+
 				x1 = me.ROI(1) - me.ROI(3);
 				x2 = me.ROI(1) + me.ROI(3);
 				xmin = min([abs(x1), abs(x2)]);
@@ -702,7 +705,7 @@ classdef eyelinkAnalysis < analysisCore
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -715,7 +718,7 @@ classdef eyelinkAnalysis < analysisCore
 				return
 			end
 			h=figure;figpos(1,[2000 1000]);set(h,'Color',[1 1 1],'Name',me.file);
-			
+
 			t1 = me.TOI(1);
 			t2 = me.TOI(2);
 			x1 = me.TOI(3) - me.TOI(5);
@@ -804,7 +807,7 @@ classdef eyelinkAnalysis < analysisCore
 			p(1,2).ylabel('Absolute X/Y Position (degs)')
 			axis([t1 t2 0 4]);
 			axis square
-			
+
 			function clickMe(src, ~)
 				if ~exist('src','var')
 					return
@@ -821,7 +824,7 @@ classdef eyelinkAnalysis < analysisCore
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -836,7 +839,7 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			me.ppd_ = ppd;
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -875,9 +878,9 @@ classdef eyelinkAnalysis < analysisCore
 				me.trialOverride = struct();
 			end
 		end
-		
+
 	end%-------------------------END PUBLIC METHODS--------------------------------%
-	
+
 	%=======================================================================
 	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
@@ -890,7 +893,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plotSecondaryEyeLogs(tS)
-			
+
 			ifi = 0.013;
 			tS = tS.eyePos;
 			fn = fieldnames(tS);
@@ -913,7 +916,7 @@ classdef eyelinkAnalysis < analysisCore
 					p(1,1).select();
 					p(1,1).hold('on')
 					plot(x, y,'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-					
+
 					p(1,2).select();
 					p(1,2).hold('on');
 					t = 0:ifi:(ifi*length(x));
@@ -921,29 +924,29 @@ classdef eyelinkAnalysis < analysisCore
 					plot(t,abs(x),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 					plot(t,abs(y),'k-o','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 					maxv = max([maxv, max(abs(x)), max(abs(y))]);
-					
+
 					p(2,1).select();
 					p(2,1).hold('on');
 					plot(mean(x(1:10)), mean(y(1:10)),'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
 					stdex = [stdex std(x(1:10))];
 					stdey = [stdey std(y(1:10))];
-					
+
 					p(2,2).select();
 					p(2,2).hold('on');
 					plot3(mean(x(1:10)), mean(y(1:10)),a,'ko','Color',c,'MarkerSize',5,'MarkerEdgeColor',[0 0 0], 'MarkerFaceColor',c);
-					
+
 					if mean(x(14:16)) > 5 || mean(y(14:16)) > 5
 						early(a) = 1;
 					else
 						early(a) = 0;
 					end
-					
+
 					a = a + 1;
-					
+
 					%end
 				end
 			end
-			
+
 			p(1,1).select();
 			grid on
 			box on
@@ -952,7 +955,7 @@ classdef eyelinkAnalysis < analysisCore
 			title('X vs. Y Eye Position in Degrees')
 			xlabel('X Degrees')
 			ylabel('Y Degrees')
-			
+
 			p(1,2).select();
 			grid on
 			box on
@@ -961,7 +964,7 @@ classdef eyelinkAnalysis < analysisCore
 			title(sprintf('X and Y Position vs. time | Early = %g / %g', sum(early),length(early)))
 			xlabel('Time (s)')
 			ylabel('Degrees')
-			
+
 			p(2,1).select();
 			grid on
 			box on
@@ -969,7 +972,7 @@ classdef eyelinkAnalysis < analysisCore
 			title(sprintf('Average X vs. Y Position for first 150ms STDX: %g | STDY: %g',mean(stdex),mean(stdey)))
 			xlabel('X Degrees')
 			ylabel('Y Degrees')
-			
+
 			p(2,2).select();
 			grid on
 			box on
@@ -979,15 +982,15 @@ classdef eyelinkAnalysis < analysisCore
 			ylabel('Y Degrees')
 			zlabel('Trial')
 		end
-		
+
 	end
-	
+
 	%=======================================================================
 	methods (Access = protected) %------------------PRIVATE METHODS
 	%=======================================================================
-	
+
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
@@ -997,7 +1000,7 @@ classdef eyelinkAnalysis < analysisCore
 			me.handles = struct();
 			me.openUI = false;
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -1005,29 +1008,29 @@ classdef eyelinkAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function makeUI(me, varargin)
-			
+
 		end
-		
+
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
 		function updateUI(me, varargin)
-			
+
 		end
-		
+
 		% ===================================================================
-		%> @brief 
+		%> @brief
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
 		function notifyUI(me, varargin)
-			
+
 		end
-		
+
 		% ===================================================================
 		%> @brief main parse loop for EDF events, has to be one big serial loop
 		%>
@@ -1047,20 +1050,20 @@ classdef eyelinkAnalysis < analysisCore
 			me.breakFix = me.correct;
 			me.incorrect = me.correct;
 			me.trialList = [];
-			
+
 			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
-			
+
 			sample = me.raw.FSAMPLE.gx(:,100); %check which eye
 			if sample(1) == -32768 %only use right eye if left eye data is not present
 				eyeUsed = 2; %right eye index for FSAMPLE.gx;
 			else
 				eyeUsed = 1; %left eye index
 			end
-			
+
 			for i = 1:length(me.raw.FEVENT)
 				isMessage = false;
 				evt = me.raw.FEVENT(i);
-				
+
 				if evt.type == 24 %strcmpi(evt.codestring,'MESSAGEEVENT')
 					isMessage = true;
 					no = regexpi(evt.message,'^(?<NO>!cal|!mode|Validate|Reccfg|elclcfg|Gaze_coords|thresholds|elcl_)','names'); %ignore these first
@@ -1068,7 +1071,7 @@ classdef eyelinkAnalysis < analysisCore
 						continue
 					end
 				end
-				
+
 				if isMessage && ~isTrial
 					rt = regexpi(evt.message,'^(?<d>V_RT MESSAGE) (?<a>\w+) (?<b>\w+)','names');
 					if ~isempty(rt) && ~isempty(rt.a) && ~isempty(rt.b)
@@ -1076,13 +1079,13 @@ classdef eyelinkAnalysis < analysisCore
 						me.rtEndMessage = rt.b;
 						continue
 					end
-					
+
 					xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
 					if ~isempty(xy)  && ~isempty(xy.x)
 						me.display = [str2num(xy.x)+1 str2num(xy.y)+1];
 						continue
 					end
-					
+
 					id = regexpi(evt.message,'^(?<TAG>TRIALID)(\s*)(?<ID>\d*)','names');
 					if ~isempty(id) && ~isempty(id.TAG)
 						if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
@@ -1108,19 +1111,20 @@ classdef eyelinkAnalysis < analysisCore
 						me.trials(tri).correct = false;
 						me.trials(tri).breakFix = false;
 						me.trials(tri).incorrect = false;
+						me.trials(tri).messages = [];
 						continue
 					end
 				end
-				
+
 				if isTrial
-					
+
 					if ~isMessage
-						
+
 						if strcmpi(evt.codestring,'STARTSAMPLES')
 							me.trials(tri).startsampletime = double(evt.sttime);
 							continue
 						end
-						
+
 						if evt.type == 8 %strcmpi(evt.codestring,'ENDFIX')
 							fixa = [];
 							if isempty(me.trials(tri).fixations)
@@ -1142,13 +1146,13 @@ classdef eyelinkAnalysis < analysisCore
 							fixa.time = fixa.sttime - rel;
 							fixa.length = fixa.entime - fixa.sttime;
 							fixa.rel = rel;
-							
+
 							[fixa.gstx, fixa.gsty]  = toDegrees(me, [evt.gstx, evt.gsty]);
 							[fixa.genx, fixa.geny]  = toDegrees(me, [evt.genx, evt.geny]);
 							[fixa.x, fixa.y]		= toDegrees(me, [evt.gavx, evt.gavy]);
 							[fixa.theta, fixa.rho]	= cart2pol(fixa.x, fixa.y);
 							fixa.theta = me.rad2ang(fixa.theta);
-							
+
 							if fix == 1
 								me.trials(tri).fixations = fixa;
 							else
@@ -1158,7 +1162,7 @@ classdef eyelinkAnalysis < analysisCore
 							eventN = eventN + 1;
 							continue
 						end
-						
+
 						if evt.type == 6 % strcmpi(evt.codestring,'ENDSACC')
 							sacc = [];
 							if isempty(me.trials(tri).saccades)
@@ -1180,16 +1184,16 @@ classdef eyelinkAnalysis < analysisCore
 							sacc.time = sacc.sttime - rel;
 							sacc.length = sacc.entime - sacc.sttime;
 							sacc.rel = rel;
-							
+
 							[sacc.gstx, sacc.gsty]	= toDegrees(me, [evt.gstx evt.gsty]);
 							[sacc.genx, sacc.geny]	= toDegrees(me, [evt.genx evt.geny]);
 							[sacc.x, sacc.y]		= deal((sacc.genx - sacc.gstx), (sacc.geny - sacc.gsty));
 							[sacc.theta, sacc.rho]	= cart2pol(sacc.x, sacc.y);
 							sacc.theta = me.rad2ang(sacc.theta);
-							
+
 							if sacc.rho > me.minSaccadeDistance; sacc.microSaccade = false;
 							else sacc.microSaccade = true; end
-							
+
 							if nsacc == 1
 								me.trials(tri).saccades = sacc;
 							else
@@ -1199,29 +1203,29 @@ classdef eyelinkAnalysis < analysisCore
 							eventN = eventN + 1;
 							continue
 						end
-						
+
 						if evt.type == 16 %strcmpi(evt.codestring,'ENDSAMPLES')
 							me.trials(tri).endsampletime = double(evt.sttime);
 							idx = me.raw.FSAMPLE.time >= me.trials(tri).startsampletime & ...
 								me.raw.FSAMPLE.time <= me.trials(tri).endsampletime;
-							
+
 							me.trials(tri).times = double(me.raw.FSAMPLE.time(idx));
 							me.trials(tri).times = me.trials(tri).times - me.trials(tri).rtstarttime;
-							
+
 							me.trials(tri).gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
 							me.trials(tri).gx = me.trials(tri).gx - me.display(1)/2;
-							
+
 							me.trials(tri).gy = me.raw.FSAMPLE.gy(eyeUsed, idx);
 							me.trials(tri).gy = me.trials(tri).gy - me.display(2)/2;
-							
+
 							me.trials(tri).hx = me.raw.FSAMPLE.hx(eyeUsed, idx);
-							
+
 							me.trials(tri).hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
-							
+
 							me.trials(tri).pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
 							continue
 						end
-						
+
 					else
 						uuid = regexpi(evt.message,'^UUID (?<UUID>[\w]+)','names');
 						if ~isempty(uuid) && ~isempty(uuid.UUID)
@@ -1229,6 +1233,12 @@ classdef eyelinkAnalysis < analysisCore
 							continue
 						end
 						
+						msg = regexpi(evt.message,'^MSG:(?<MSG>[\w]+) *(?<VAL>.*)','names');
+						if ~isempty(msg) && ~isempty(msg.MSG)
+							me.trials(tri).messages.(msg.MSG) = msg.VAL;
+							continue
+						end
+
 						endfix = regexpi(evt.message,['^' me.rtStartMessage],'match');
 						if ~isempty(endfix)
 							me.trials(tri).rtstarttime = double(evt.sttime);
@@ -1248,7 +1258,7 @@ classdef eyelinkAnalysis < analysisCore
 							end
 							continue
 						end
-						
+
 						endrt = regexpi(evt.message,['^' me.rtEndMessage],'match');
 						if ~isempty(endrt)
 							me.trials(tri).rtendtime = double(evt.sttime);
@@ -1257,7 +1267,7 @@ classdef eyelinkAnalysis < analysisCore
 							end
 							continue
 						end
-						
+
 						id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>(\-|\+|\d)+)','names');
 						if ~isempty(id) && ~isempty(id.ID)
 							me.trials(tri).entime = double(evt.sttime);
@@ -1313,7 +1323,7 @@ classdef eyelinkAnalysis < analysisCore
 					end
 				end
 			end
-			
+
 			%prune the end trial if invalid
 			if ~me.trials(end).correct && ~me.trials(end).breakFix && ~me.trials(end).incorrect
 				me.trials(end) = [];
@@ -1324,7 +1334,7 @@ classdef eyelinkAnalysis < analysisCore
 				me.incorrect.idx = find([me.trials.incorrect] == true);
 				me.incorrect.saccTimes = [me.trials(me.incorrect.idx).firstSaccade];
 			end
-			
+
 			if max(abs(me.trialList)) == 1010 && min(abs(me.trialList)) == 1010
 				me.needOverride = true;
 				me.salutation('','---> TRIAL NAME BUG OVERRIDE NEEDED!\n',true);
@@ -1332,7 +1342,7 @@ classdef eyelinkAnalysis < analysisCore
 				me.needOverride = false;
 			end
 	end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -1372,7 +1382,7 @@ classdef eyelinkAnalysis < analysisCore
 				me.vars(var).sT = [me.vars(var).sT trial.firstSaccade];
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -1394,7 +1404,7 @@ classdef eyelinkAnalysis < analysisCore
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -1437,11 +1447,11 @@ classdef eyelinkAnalysis < analysisCore
 						me.(bname).fixations(end+1) = f;
 					end
 				end
-				
+
 			end
-			
+
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -1455,7 +1465,7 @@ classdef eyelinkAnalysis < analysisCore
 				outy = [];
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
@@ -1469,13 +1479,13 @@ classdef eyelinkAnalysis < analysisCore
 				outy = [];
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief
 		%>
 		% ===================================================================
 		function computeMicrosaccades(me)
-			
+
 			VFAC=me.VFAC;
 			MINDUR=me.MINDUR;
 			sampleRate = me.sampleRate;
@@ -1537,7 +1547,7 @@ classdef eyelinkAnalysis < analysisCore
 				end
 			end
 			fprintf('<strong>:#:</strong> Parsing MicroSaccades took <strong>%g ms</strong>\n', round(toc*1000))
-				
+
 			function v = vecvel(xx,SAMPLING,TYPE)
 				%------------------------------------------------------------
 				%  FUNCTION vecvel.m
@@ -1551,10 +1561,10 @@ classdef eyelinkAnalysis < analysisCore
 				%  OUTPUT:
 				%   v(1:N,1:2)      velocity, x- and y-components
 				%-------------------------------------------------------------
-				
+
 				N = length(xx);            % length of the time series
 				v = zeros(N,2);
-				
+
 				switch TYPE
 					case 1
 						v(2:N-1,:) = [xx(3:end,:) - xx(1:end-2,:)]*SAMPLING/2;
@@ -1565,7 +1575,7 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				return
 			end
-			
+
 			function [sac, radius] = microsacc(x,vel,VFAC,MINDUR)
 				%-------------------------------------------------------------------
 				%  FUNCTION microsacc.m
@@ -1608,11 +1618,11 @@ classdef eyelinkAnalysis < analysisCore
 				radiusx = VFAC*msdx;
 				radiusy = VFAC*msdy;
 				radius = [radiusx radiusy];
-				
+
 				% compute test criterion: ellipse equation
 				test = (vel(:,1)/radiusx).^2 + (vel(:,2)/radiusy).^2;
 				indx = find(test>1);
-				
+
 				% determine saccades
 				% SDS..  this loop reads through the index of above-threshold velocities,
 				%        storing the beginning and end of each period (i.e. each saccade)
@@ -1638,7 +1648,7 @@ classdef eyelinkAnalysis < analysisCore
 					end
 					k = k + 1;
 				end
-				
+
 				% check for minimum duration
 				% SDS.. this just deals with the final set of above threshold
 				%       velocities; adds it to the list if the duration is long enough
@@ -1647,7 +1657,7 @@ classdef eyelinkAnalysis < analysisCore
 					b = k;
 					sac(nsac,:) = [indx(a) indx(b)];
 				end
-				
+
 				% compute peak velocity, horizonal and vertical components
 				for s=1:nsac
 					% onset and offset
@@ -1661,7 +1671,7 @@ classdef eyelinkAnalysis < analysisCore
 					dy = x(b,2)-x(a,2);
 					sac(s,4) = dx;
 					sac(s,5) = dy;
-					
+
 					% saccade amplitude (dX,dY)         SDS.. this is the difference between max and min positions over the excursion of the msac
 					i = sac(s,1):sac(s,2);
 					[minx, ix1] = min(x(i,1));              %       dX > 0 signifies rightward  (if ix2 > ix1)
@@ -1672,9 +1682,9 @@ classdef eyelinkAnalysis < analysisCore
 					dY = sign(iy2-iy1)*(maxy-miny);
 					sac(s,6:7) = [dX dY];
 				end
-				
+
 			end
-			
+
 			function [sac, monol, monor] = binsacc(sacl,sacr)
 				%-------------------------------------------------------------------
 				%  FUNCTION binsacc.m
@@ -1693,9 +1703,9 @@ classdef eyelinkAnalysis < analysisCore
 				%       msacc in the other; the code also seems to allow for a msacc in one
 				%       eye matching 2 events in the other eye - in which case the
 				%       larger amplitude one is selected, and the other discarded.
-				
+
 				if size(sacr,1)*size(sacl,1)>0
-					
+
 					% determine saccade clusters
 					TR = max(sacr(:,2));
 					TL = max(sacl(:,2));
@@ -1713,7 +1723,7 @@ classdef eyelinkAnalysis < analysisCore
 					m = find(diff(s~=0));   % SDS.. finds time series positions of start and ends of (binocular) m.saccd phases
 					N = length(m)/2;        % SDS.. N = number of microsaccades
 					m = reshape(m,2,N)';    % SDS.. col 1 is all sacc onsets; col 2 is all sacc end points
-					
+
 					% determine binocular saccades
 					NB = 0;
 					NR = 0;
@@ -1759,7 +1769,7 @@ classdef eyelinkAnalysis < analysisCore
 					end
 				end
 			end
-			
+
 			function sac = saccpar(bsac)
 				%-------------------------------------------------------------------
 				%  FUNCTION saccpar.m
@@ -1774,41 +1784,41 @@ classdef eyelinkAnalysis < analysisCore
 				if size(bsac,1)>0
 					sacr = bsac(:,1:7);
 					sacl = bsac(:,8:14);
-					
+
 					% 1. Onset
 					a = min([sacr(:,1)'; sacl(:,1)'])';     % produces single column vector of ealier onset in L v R eye msaccs
-					
+
 					% 2. Offset
 					b = max([sacr(:,2)'; sacl(:,2)'])';     % produces single column vector of later offset in L v R eye msaccs
-					
+
 					% 3. Duration
 					DR = sacr(:,2)-sacr(:,1)+1;
 					DL = sacl(:,2)-sacl(:,1)+1;
 					D = (DR+DL)/2;
-					
+
 					% 4. Delay between eyes
 					delay = sacr(:,1) - sacl(:,1);
-					
+
 					% 5. Peak velocity
 					vpeak = (sacr(:,3)+sacl(:,3))/2;
-					
+
 					% 6. Saccade distance
 					dist = (sqrt(sacr(:,4).^2+sacr(:,5).^2)+sqrt(sacl(:,4).^2+sacl(:,5).^2))/2;
 					angle1 = atan2((sacr(:,5)+sacl(:,5))/2,(sacr(:,4)+sacl(:,4))/2);
-					
+
 					% 7. Saccade amplitude
 					ampl = (sqrt(sacr(:,6).^2+sacr(:,7).^2)+sqrt(sacl(:,6).^2+sacl(:,7).^2))/2;
 					angle2 = atan2((sacr(:,7)+sacl(:,7))/2,(sacr(:,6)+sacl(:,6))/2);        %SDS..  NB 'atan2'function operates on (y,x) - not (x,y)!
-					
+
 					sac = [a b D delay vpeak dist angle1 ampl angle2];
 				else
 					sac = [];
 				end
 			end
-			
+
 		end
-		
+
 	end
-	
+
 end
 

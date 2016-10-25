@@ -525,7 +525,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					lobj.(fn{i}) = in.(fn{i});
 				end
 			elseif isa(in,'stimulusSequence')
-				fprintf('--->  stimulusSequence loadobj: Loading stimulusSequence object...\n');
+				%fprintf('--->  stimulusSequence loadobj: Loading stimulusSequence object...\n');
 				in.currentState = []; %lets strip the old random streams
 				in.oldStream = [];
 				in.taskStream = [];
