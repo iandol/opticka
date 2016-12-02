@@ -83,6 +83,7 @@ classdef eyelinkManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		ppd_
 		tempFile = 'MYDATA.edf'
 		fixN = 0
 		fixSelection = []
@@ -159,6 +160,7 @@ classdef eyelinkManager < optickaCore
 					obj.defaults.callback = obj.callback;
 				end
 				obj.defaults.backgroundcolour = obj.screen.backgroundColour;
+				obj.ppd_ = obj.screen.ppd;
 			end
 			
 			%structure of eyelink modifiers
@@ -187,6 +189,8 @@ classdef eyelinkManager < optickaCore
 			end
 			
 			Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
+			Eyelink('Message', 'DISPLAY_PPD %ld', round(obj.ppd_));
+			Eyelink('Message', 'DISPLAY_DISTANCE %ld', round(obj.screen.distance));
 			Eyelink('Command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
 			Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
 			Eyelink('Command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
@@ -314,9 +318,14 @@ classdef eyelinkManager < optickaCore
 		function success = driftCorrection(obj)
 			success = false;
 			if obj.isConnected
-				success = EyelinkDoDriftCorrection(obj.defaults);
+				%success = EyelinkDoDriftCorrection(obj.defaults);
+				success = Eyelink('DriftCorrStart', obj.screen.xCenter, obj.screen.yCenter, 1, 1, 1);
 			end
-			if ~success; obj.salutation('Drift Correct','FAILED',true); end
+			if success == -1
+				obj.salutation('Drift Correct','FAILED',true);
+			else
+				Eyelink('ApplyDriftCorr');
+			end
 		end
 		
 		% ===================================================================
@@ -674,10 +683,10 @@ classdef eyelinkManager < optickaCore
 					obj.stimulusPositions = ts;
 				end
 				for i = 1:length(obj.stimulusPositions)
-					x = obj.stimulusPositions(i).x + obj.screen.xCenter; %#ok<PROPLC>
-					y = obj.stimulusPositions(i).y + obj.screen.yCenter;%#ok<PROPLC>
-					size = obj.stimulusPositions(i).size;
-					if isempty(size); size = 1 * obj.screen.ppd; end
+					x = toPixels(obj, obj.stimulusPositions(i).x,'x'); %#ok<PROPLC>
+					y = toPixels(obj, obj.stimulusPositions(i).y,'y');%#ok<PROPLC>
+					size = obj.stimulusPositions(i).size * obj.ppd_;
+					if isempty(size); size = 1 * obj.ppd_; end
 					rect = [0 0 size size];
 					rect = round(CenterRectOnPoint(rect, x, y)); %#ok<PROPLC>
 					if obj.stimulusPositions(i).selected == true
@@ -696,12 +705,12 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function trackerDrawFixation(obj)
 			if obj.isConnected
-				size = (obj.fixationRadius * 2) * obj.screen.ppd;
+				size = (obj.fixationRadius * 2) * obj.ppd_;
 				rect = [0 0 size size];
 				x = toPixels(obj, obj.fixationX, 'x');
 				y = toPixels(obj, obj.fixationY, 'y');
 				rect = round(CenterRectOnPoint(rect, x, y));
-				Eyelink('Command', 'draw_box %d %d %d %d %d', rect(1), rect(2), rect(3), rect(4), 4);
+				Eyelink('Command', 'draw_box %d %d %d %d 4', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
 		
@@ -763,6 +772,9 @@ classdef eyelinkManager < optickaCore
 		function runDemo(obj)
 			stopkey=KbName('ESCAPE');
 			nextKey=KbName('SPACE');
+			calibkey=KbName('C');
+			validkey=KbName('V');
+			driftkey=KbName('D');
 			obj.recordData = true;
 			try
 				s = screenManager('debug',true);
@@ -798,6 +810,7 @@ classdef eyelinkManager < optickaCore
 						[~, ~, keyCode] = KbCheck(-1);
 						if keyCode(stopkey); xx = 1; break;	end;
 						if keyCode(nextKey); yy = 1; break; end
+						if keyCode(calibkey); yy = 1; break; end
 						
 						if b == 30; edfMessage(obj,'END_FIX');end
 						
@@ -823,19 +836,22 @@ classdef eyelinkManager < optickaCore
 					edfMessage(obj,'END_RT');
 					stopRecording(obj)
 					edfMessage(obj,'TRIAL_RESULT 1')
-					%driftCorrection(obj);
+					if xx ~=1; driftCorrection(obj); end
 					obj.fixationX = randi([-5 5]);
 					obj.fixationY = randi([-5 5]);
 					obj.fixationRadius = randi([1 5]);
 					o.sizeOut = obj.fixationRadius*2;
 					o.xPositionOut = obj.fixationX;
 					o.yPositionOut = obj.fixationY;
+					ts.x = obj.fixationX;
+					ts.y = obj.fixationY;
+					ts.size = o.sizeOut;
+					ts.selected = true;
 					setOffline(obj); %Eyelink('Command', 'set_idle_mode');
 					statusMessage(obj,sprintf('X Pos = %g | Y Pos = %g | Radius = %g',obj.fixationX,obj.fixationY,obj.fixationRadius));
 					trackerClearScreen(obj);
 					trackerDrawFixation(obj);
-					ts.x = 200; ts.y = 200; ts.size = 100; ts.selected = true;
-					trackerDrawStimuli(obj, ts);
+					trackerDrawStimuli(obj,ts);
 					update(o);
 					WaitSecs(0.3)
 					a=a+1;
@@ -874,13 +890,13 @@ classdef eyelinkManager < optickaCore
 			if ~exist('axis','var');axis='';end
 			switch axis
 				case 'x'
-					out = (in - obj.screen.xCenter) / obj.screen.ppd;
+					out = (in - obj.screen.xCenter) / obj.ppd_;
 				case 'y'
-					out = (in - obj.screen.yCenter) / obj.screen.ppd;
+					out = (in - obj.screen.yCenter) / obj.ppd_;
 				otherwise
 					if length(in)==2
-						out(1) = (in(1) - obj.screen.xCenter) / obj.screen.ppd;
-						out(2) = (in(2) - obj.screen.yCenter) / obj.screen.ppd;
+						out(1) = (in(1) - obj.screen.xCenter) / obj.ppd_;
+						out(2) = (in(2) - obj.screen.yCenter) / obj.ppd_;
 					else
 						out = 0;
 					end
@@ -895,13 +911,13 @@ classdef eyelinkManager < optickaCore
 			if ~exist('axis','var');axis='';end
 			switch axis
 				case 'x'
-					out = (in * obj.screen.ppd) + obj.screen.xCenter;
+					out = (in * obj.ppd_) + obj.screen.xCenter;
 				case 'y'
-					out = (in * obj.screen.ppd) + obj.screen.yCenter;
+					out = (in * obj.ppd_) + obj.screen.yCenter;
 				otherwise
 					if length(in)==2
-						out(1) = (in(1) * obj.screen.ppd) + obj.screen.xCenter;
-						out(2) = (in(2) * obj.screen.ppd) + obj.screen.yCenter;
+						out(1) = (in(1) * obj.ppd_) + obj.screen.xCenter;
+						out(2) = (in(2) * obj.ppd_) + obj.screen.yCenter;
 					else
 						out = 0;
 					end
