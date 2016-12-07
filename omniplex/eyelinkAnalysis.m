@@ -20,27 +20,30 @@ classdef eyelinkAnalysis < analysisCore
 		rtStartMessage@char							= 'END_FIX'
 		%> EDF message name to end the stimulus presentation
 		rtEndMessage@char								= 'END_RT'
-		%> the temporary experiement structure which contains the eyePos recorded from opticka
-		tS@struct
+		%> EDF message name to signal end of the trial, also parses a passed number, so
+		%e.g. "TRIAL_RESULT -1" sets the trial.resultvalue to -1
+		trialEndMessage@char						= 'TRIAL_RESULT'
 		%> region of interest?
-		ROI@double									= [ ]
+		ROI@double											= [ ]
 		%> time of interest?
-		TOI@double									= [ ]
+		TOI@double											= [ ]
 		%> verbose output?
-		verbose											= false
+		verbose													= false
 		%> minimum saccade distance in degrees
 		minSaccadeDistance@double				= 0.99
 		%> relative velocity threshold
-		VFAC@double									= 5
+		VFAC@double											= 5
 		%> minimum saccade duration
-		MINDUR@double								= 2  %equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
+		MINDUR@double										= 2  %equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
+		%> the temporary experiement structure which contains the eyePos recorded from opticka
+		tS@struct
 	end
 
 	properties (Hidden = true)
 		%TRIAL_RESULT message values, optional but tags trials with these identifiers.
-		correctValue@double					= 1
-		incorrectValue@double				= 0
-		breakFixValue@double				= -1
+		correctValue@double							= 1
+		incorrectValue@double						= 0
+		breakFixValue@double						= -1
 		%occasionally we have some trials in the EDF not in the plx, this prunes them out
 		trialsToPrune@double						= []
 		%> these are used for spikes spike saccade time correlations
@@ -49,13 +52,13 @@ classdef eyelinkAnalysis < analysisCore
 		%> trial list from the saved behavioural data, used to fix trial name bug old files
 		trialOverride@struct
 		%> screen resolution
-		pixelsPerCm@double						= 32
+		pixelsPerCm@double							= 32
 		%> screen distance
-		distance@double							= 57.3
+		distance@double									= 57.3
 		%> screen X center in pixels
-		xCenter@double								= 640
+		xCenter@double									= 640
 		%> screen Y center in pixels
-		yCenter@double								= 512
+		yCenter@double									= 512
 	end
 
 	properties (SetAccess = private, GetAccess = public)
@@ -1149,6 +1152,7 @@ classdef eyelinkAnalysis < analysisCore
 						me.trials(tri).firstSaccade = NaN;
 						me.trials(tri).rttime = [];
 						me.trials(tri).uuid = [];
+						me.trials(tri).result = [];
 						me.trials(tri).correct = false;
 						me.trials(tri).breakFix = false;
 						me.trials(tri).incorrect = false;
@@ -1283,7 +1287,11 @@ classdef eyelinkAnalysis < analysisCore
 						
 						msg = regexpi(evt.message,'^MSG:(?<MSG>[\w]+) *(?<VAL>.*)','names');
 						if ~isempty(msg) && ~isempty(msg.MSG)
-							me.trials(tri).messages.(msg.MSG) = msg.VAL;
+							if isfield(me.trials(tri).messages,msg.MSG)
+								me.trials(tri).messages.(msg.MSG){end+1} = msg.VAL;
+							else
+								me.trials(tri).messages.(msg.MSG){1} = msg.VAL;
+							end
 							continue
 						end
 						
@@ -1322,7 +1330,7 @@ classdef eyelinkAnalysis < analysisCore
 							continue
 						end
 
-						id = regexpi(evt.message,'^TRIAL_RESULT (?<ID>(\-|\+|\d)+)','names');
+						id = regexpi(evt.message,['^' me.trialEndMessage ' (?<ID>(\-|\+|\d)+)'],'names');
 						if ~isempty(id) && ~isempty(id.ID)
 							me.trials(tri).entime = double(evt.sttime);
 							me.trials(tri).result = str2num(id.ID);
@@ -1336,7 +1344,7 @@ classdef eyelinkAnalysis < analysisCore
 									sT=t;
 								end
 							end
-							if me.trials(tri).result == me.correctValue
+							if any(find(me.trials(tri).result == me.correctValue))
 								me.trials(tri).correct = true;
 								me.correct.idx = [me.correct.idx tri];
 								me.trialList(tri) = me.trials(tri).variable;
@@ -1347,7 +1355,7 @@ classdef eyelinkAnalysis < analysisCore
 								end
 								me.trials(tri).correctedIndex = tri2;
 								tri2 = tri2 + 1;
-							elseif me.trials(tri).result == me.breakFixValue
+							elseif any(find(me.trials(tri).result == me.breakFixValue))
 								me.trials(tri).breakFix = true;
 								me.breakFix.idx = [me.breakFix.idx tri];
 								me.trialList(tri) = -me.trials(tri).variable;
@@ -1358,7 +1366,7 @@ classdef eyelinkAnalysis < analysisCore
 								end
 								me.trials(tri).correctedIndex = tri2;
 								tri2 = tri2 + 1;
-							elseif me.trials(tri).result == me.incorrectValue
+							elseif any(find(me.trials(tri).result == me.incorrectValue))
 								me.trials(tri).incorrect = true;
 								me.incorrect.idx = [me.incorrect.idx tri];
 								me.trialList(tri) = -me.trials(tri).variable;

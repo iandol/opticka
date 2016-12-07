@@ -6,7 +6,7 @@ classdef getDensity < handle
 	% x - our first data group, plotted along the abscissa
 	% y - our second data group, plotted along the ordinate
 	% nboot - number of bootstrap iterations default: 1000
-	% fhandle - function handle to bootstrap default: @mean
+	% avgFunction - function handle to bootstrap default: @mean
 	% alpha - P value to use for all statistics
 	% legendtxt - A cell list of the main X and Y data, i.e. {'Control','Drug'}
 	% dogauss - Add gaussian fits to the histograms? default: true
@@ -27,7 +27,7 @@ classdef getDensity < handle
 		%> number of bootstrap iterations default: 1000
 		nboot = 1000
 		%> function handle to bootstrap default: @mean
-		fhandle = @nanmean
+		avgFunction = @nanmean
 		%> P value to use for all statistics
 		alpha = 0.05
 		%> A cell list of the main X and Y data, i.e. {'Control','Drug'}
@@ -563,10 +563,10 @@ classdef getDensity < handle
 				t=[t 'Lilliefors: ' sprintf('%0.3g', p8) ' / ' sprintf('%0.3g', p9) '\newline'];
 				t=[t 'KSTest: ' sprintf('%0.3g', p10) '\newline'];
 
-				[xci,xpop]=bootci(obj.nboot,{obj.fhandle,xcol},'alpha',obj.alpha);
-				[yci,ypop]=bootci(obj.nboot,{obj.fhandle,ycol},'alpha',obj.alpha);
-				xmean = fhandle(xpop);
-				ymean = fhandle(ypop);
+				[xci,xpop]=bootci(obj.nboot,{obj.avgFunction,xcol},'alpha',obj.alpha);
+				[yci,ypop]=bootci(obj.nboot,{obj.avgFunction,ycol},'alpha',obj.alpha);
+				xmean = obj.avgFunction(xpop);
+				ymean = obj.avgFunction(ypop);
 
 				try
 					[xxci,xxpop]=bootci(obj.nboot,{@median,xcol},'alpha',obj.alpha);
@@ -641,7 +641,7 @@ classdef getDensity < handle
 					hold off
 				end
 				axis tight
-				title(['BootStrap Density Plots; using: ' func2str(obj.fhandle)]);
+				title(['BootStrap Density Plots; using: ' func2str(obj.avgFunction)]);
 				box on
 				grid on
 				set(gca,'Layer','top');
