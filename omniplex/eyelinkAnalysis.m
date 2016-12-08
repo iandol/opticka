@@ -21,14 +21,9 @@ classdef eyelinkAnalysis < analysisCore
 		%> EDF message name to end the stimulus presentation
 		rtEndMessage@char								= 'END_RT'
 		%> EDF message name to signal end of the trial, also parses a passed number, so
-		%e.g. "TRIAL_RESULT -1" sets the trial.resultvalue to -1
+		%> e.g. "TRIAL_RESULT -1" sets the trial.result to -1, these are used to label trials
+		%> as correct, incorrect, breakfix etc.
 		trialEndMessage@char						= 'TRIAL_RESULT'
-		%> region of interest?
-		ROI@double											= [ ]
-		%> time of interest?
-		TOI@double											= [ ]
-		%> verbose output?
-		verbose													= false
 		%> minimum saccade distance in degrees
 		minSaccadeDistance@double				= 0.99
 		%> relative velocity threshold
@@ -37,8 +32,14 @@ classdef eyelinkAnalysis < analysisCore
 		MINDUR@double										= 2  %equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
 		%> the temporary experiement structure which contains the eyePos recorded from opticka
 		tS@struct
-		%> exclude incorrect trials when indexing?
+		%> exclude incorrect trials when indexing (trials contain an idx and correctedIdx value and you can use either)
 		excludeIncorrect@logical				= true
+		%> region of interest?
+		ROI@double											= [ ]
+		%> time of interest?
+		TOI@double											= [ ]
+		%> verbose output?
+		verbose													= false
 	end
 
 	properties (Hidden = true)
@@ -196,7 +197,7 @@ classdef eyelinkAnalysis < analysisCore
 
 			me.isParsed = true;
 
-			fprintf('\tOverall Parsing of EDF Trials took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
+			fprintf('\tOverall Simple Parsing of EDF Trials took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
 		end
 
 		% ===================================================================
@@ -215,9 +216,7 @@ classdef eyelinkAnalysis < analysisCore
 			parseAsVars(me);
 			parseSecondaryEyePos(me);
 			parseFixationPositions(me);
-			parseROI(me);
-			parseTOI(me);
-			computeMicrosaccades(me);
+			parseSaccades(me);
 
 			me.isParsed = true;
 
@@ -225,7 +224,7 @@ classdef eyelinkAnalysis < analysisCore
 		end
 
 		% ===================================================================
-		%> @brief
+		%> @brief parse saccade related data
 		%>
 		%> @param
 		%> @return
@@ -234,6 +233,25 @@ classdef eyelinkAnalysis < analysisCore
 			parseROI(me);
 			parseTOI(me);
 			computeMicrosaccades(me);
+		end
+		
+		% ===================================================================
+		%> @brief remove trials from correct list that did not use a rt start or end message
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function pruneNonRTTrials(me)
+			for i = 1:length(me.trials)
+				if isnan(me.trials(i).rtstarttime) || isnan(me.trials(i).rtendtime) 
+					me.trials(i).correct = false;
+					me.trials(i).incorrect = true;
+				end
+			end
+			me.correct.idx = find([me.trials.correct] == true);
+			me.correct.saccTimes = [me.trials(me.correct.idx).firstSaccade];
+			me.incorrect.idx = find([me.trials.incorrect] == true);
+			me.incorrect.saccTimes = [me.trials(me.incorrect.idx).firstSaccade];
 		end
 
 		% ===================================================================
@@ -261,7 +279,8 @@ classdef eyelinkAnalysis < analysisCore
 		end
 
 		% ===================================================================
-		%> @brief
+		%> @brief give a list of trials and it will plot both the raw eye position and the
+		%> events
 		%>
 		%> @param
 		%> @return
@@ -1165,10 +1184,10 @@ classdef eyelinkAnalysis < analysisCore
 						me.trials(tri).sttime = double(evt.sttime);
 						me.trials(tri).entime = NaN;
 						me.trials(tri).totaltime = (me.trials(tri).sttime - me.trials(1).sttime)/1e3;
-						me.trials(tri).rtstarttime = double(evt.sttime);
-						me.trials(tri).rtendtime = NaN;
 						me.trials(tri).startsampletime = NaN;
 						me.trials(tri).endsampletime = NaN;
+						me.trials(tri).rtstarttime = double(evt.sttime);
+						me.trials(tri).rtendtime = NaN;
 						me.trials(tri).synctime = NaN;
 						me.trials(tri).deltaT = NaN;
 						me.trials(tri).rttime = NaN;
@@ -1224,7 +1243,7 @@ classdef eyelinkAnalysis < analysisCore
 							continue
 						end
 
-						if evt.type == 6 % strcmpi(evt.codestring,'ENDSACC')
+						if evt.type == me.EVENT_TYPES.ENDSACC % strcmpi(evt.codestring,'ENDSACC')
 							sacc = [];
 							if isempty(me.trials(tri).saccades)
 								nsacc = 1;
@@ -1265,7 +1284,7 @@ classdef eyelinkAnalysis < analysisCore
 							continue
 						end
 
-						if evt.type == 16 %strcmpi(evt.codestring,'ENDSAMPLES')
+						if evt.type ==  me.EVENT_TYPES.ENDSAMPLES %strcmpi(evt.codestring,'ENDSAMPLES')
 							me.trials(tri).endsampletime = double(evt.sttime);
 							idx = me.raw.FSAMPLE.time >= me.trials(tri).startsampletime & ...
 								me.raw.FSAMPLE.time <= me.trials(tri).endsampletime;
@@ -1577,7 +1596,7 @@ classdef eyelinkAnalysis < analysisCore
 			sampleRate = me.sampleRate;
 			tic
 			for jj = 1:length(me.trials)
-				if me.trials(jj).incorrect == true;	continue;	end
+				if me.trials(jj).incorrect == true || me.trials(jj).breakFix == true;	continue;	end
 				samples = []; sac = []; radius = []; monol=[]; monor=[];
 				me.trials(jj).msacc = struct();
 				me.trials(jj).sampleSaccades = [];
@@ -1629,7 +1648,7 @@ classdef eyelinkAnalysis < analysisCore
 					end
 					if isempty(me.trials(jj).microSaccades); me.trials(jj).microSaccades = NaN; end
 				catch ME
-					getReport(ME)
+					%getReport(ME)
 				end
 			end
 			fprintf('<strong>:#:</strong> Parsing MicroSaccades took <strong>%g ms</strong>\n', round(toc*1000))
@@ -1692,13 +1711,13 @@ classdef eyelinkAnalysis < analysisCore
 				if msdx<realmin
 					msdx = sqrt( mean(vel(:,1).^2) - (mean(vel(:,1)))^2 );
 					if msdx<realmin
-						error('msdx<realmin in microsacc.m');
+						disp(['TRIAL: ' num2str(jj) ' msdx<realmin in eyelinkAnalysis.microsacc']);
 					end
 				end
 				if msdy<realmin
 					msdy = sqrt( mean(vel(:,2).^2) - (mean(vel(:,2)))^2 );
 					if msdy<realmin
-						error('msdy<realmin in microsacc.m');
+						disp(['TRIAL: ' num2str(jj) ' msdy<realmin in eyelinkAnalysis.microsacc']);
 					end
 				end
 				radiusx = VFAC*msdx;
