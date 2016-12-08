@@ -344,7 +344,6 @@ classdef screenManager < optickaCore
 			catch ME
 				obj.close();
 				screenVals = obj.prepareScreen();
-				ple(ME)
 				rethrow(ME)
 			end
 			
