@@ -360,6 +360,21 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief Flip the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function forceWin(obj,win)
+			obj.win = win;
+			obj.isOpen = true;
+			obj.isPTB = true;
+			obj.screenVals.ifi = Screen('GetFlipInterval', obj.win);
+			setScreenSize(obj);
+			fprintf('---> screenManager slaved to external win: %i\n',win);
+		end
+		
+		% ===================================================================
 		%> @brief This is the trick Mario told us to "hide" the colour changes as PTB starts -- we could use backgroundcolour here to be even better
 		%>
 		%> @param

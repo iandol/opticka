@@ -49,6 +49,11 @@ classdef eyelinkManager < optickaCore
 		stimulusPositions = []
 	end
 	
+	properties (Hidden = true)
+		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
+		win = []
+	end
+	
 	properties (SetAccess = private, GetAccess = public)
 		%> Gaze X position in degrees
 		x = []
@@ -152,16 +157,22 @@ classdef eyelinkManager < optickaCore
 			
 			obj.checkConnection();
 			
-			if obj.screen.isOpen == true
-				rect=obj.screen.winRect;
-				Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
-				obj.defaults = EyelinkInitDefaults(obj.screen.win);
-				if ~isempty(obj.callback) && exist(obj.callback,'file')
-					obj.defaults.callback = obj.callback;
-				end
-				obj.defaults.backgroundcolour = obj.screen.backgroundColour;
-				obj.ppd_ = obj.screen.ppd;
+			if obj.screen.isOpen == true 
+				obj.win = obj.screen.win;
+				obj.defaults = EyelinkInitDefaults(obj.win);
+			elseif ~isempty(obj.win)
+				obj.defaults = EyelinkInitDefaults(obj.win);
+			else
+				obj.defaults = EyelinkInitDefaults();
 			end
+			
+			rect=obj.screen.winRect;
+			Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
+			if ~isempty(obj.callback) && exist(obj.callback,'file')
+				obj.defaults.callback = obj.callback;
+			end
+			obj.defaults.backgroundcolour = obj.screen.backgroundColour;
+			obj.ppd_ = obj.screen.ppd;
 			
 			%structure of eyelink modifiers
 			fn = fieldnames(obj.modify);
@@ -355,8 +366,8 @@ classdef eyelinkManager < optickaCore
 					obj.pupil = obj.currentSample.pa(obj.eyeUsed+1);
 				end
 			elseif obj.isDummy %lets use a mouse to simulate the eye signal
-				if obj.screen.isOpen
-					[obj.x, obj.y] = GetMouse(obj.screen.win);
+				if ~isempty(obj.win)
+					[obj.x, obj.y] = GetMouse(obj.win);
 				else
 					[obj.x, obj.y] = GetMouse([]);
 				end
@@ -580,12 +591,12 @@ classdef eyelinkManager < optickaCore
 				x = obj.toPixels(obj.x,'x');
 				y = obj.toPixels(obj.y,'y');
 				if obj.isFixated
-					Screen('DrawDots', obj.screen.win, [x y], 8, [1 0.5 1 1], [], 1);
+					Screen('DrawDots', obj.win, [x y], 8, [1 0.5 1 1], [], 1);
 					if obj.fixLength > obj.fixationTime
-						Screen('DrawText', obj.screen.win, 'FIX', x, y, [1 1 1]);
+						Screen('DrawText', obj.win, 'FIX', x, y, [1 1 1]);
 					end
 				else
-					Screen('DrawDots', obj.screen.win, [x y], 6, [1 0.5 0 1], [], 1);
+					Screen('DrawDots', obj.win, [x y], 6, [1 0.5 0 1], [], 1);
 				end
 			end
 		end
