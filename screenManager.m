@@ -467,6 +467,8 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function set.windowed(obj,value)
 			if length(value) == 2 && isnumeric(value)
+				obj.windowed = [0 0 value];
+			elseif length(value) == 4 && isnumeric(value)
 				obj.windowed = value;
 			elseif islogical(value)
 				obj.windowed = value;
