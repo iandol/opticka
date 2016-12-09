@@ -344,7 +344,6 @@ classdef screenManager < optickaCore
 			catch ME
 				obj.close();
 				screenVals = obj.prepareScreen();
-				ple(ME)
 				rethrow(ME)
 			end
 			
@@ -573,12 +572,12 @@ classdef screenManager < optickaCore
 			if nargin < 5 || isempty(y); y = 0; end
 			if nargin < 4 || isempty(x); x = 0; end
 			if nargin < 3 || isempty(colour)
-				if mean(obj.backgroundColour(1:3)) < 0.5
+				if mean(obj.backgroundColour(1:3)) <= 0.5
 					colour = [1 1 1 1]; 
 				elseif  mean(obj.backgroundColour(1:3)) > 0.5
 					colour = [0 0 0 1]; 
-				else
-					colour = [1 0 0 1];
+				elseif length(colour) < 4
+					colour = [0 0 0 1];
 				end
 			end
 			if nargin < 2 || isempty(size); size = 0.5; end
