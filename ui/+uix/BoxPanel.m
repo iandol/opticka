@@ -11,7 +11,7 @@ classdef BoxPanel < uix.Panel & uix.mixin.Panel
     %  See also: uix.Panel, uipanel, uix.CardPanel
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1212 $ $Date: 2015-12-18 13:16:39 -0600 (Fri, 18 Dec 2015) $
+    %  $Revision: 1426 $ $Date: 2016-11-16 07:12:06 +0000 (Wed, 16 Nov 2016) $
     
     properties( Dependent )
         TitleColor % title background color [RGB]
@@ -56,9 +56,12 @@ classdef BoxPanel < uix.Panel & uix.mixin.Panel
             %  p = uix.BoxPanel(p1,v1,p2,v2,...) sets parameter p1 to value
             %  v1, etc.
             
-            % Set default colors
+            % Define default colors
             foregroundColor = [1 1 1];
             backgroundColor = [0.05 0.25 0.5];
+            
+            % Set default colors
+            obj.ForegroundColor = foregroundColor;
             
             % Create panels and decorations
             titleBox = uix.HBox( 'Internal', true, 'Parent', obj, ...
@@ -126,8 +129,14 @@ classdef BoxPanel < uix.Panel & uix.mixin.Panel
             
             % Set properties
             if nargin > 0
-                uix.pvchk( varargin )
-                set( obj, varargin{:} )
+                try
+                    assert( rem( nargin, 2 ) == 0, 'uix:InvalidArgument', ...
+                        'Parameters and values must be provided in pairs.' )
+                    set( obj, varargin{:} )
+                catch e
+                    delete( obj )
+                    e.throwAsCaller()
+                end
             end
             
         end % constructor
@@ -212,6 +221,12 @@ classdef BoxPanel < uix.Panel & uix.mixin.Panel
             
             % Set
             obj.MinimizeButton.Callback = value;
+            obj.TitleText.Callback = value;
+            if isempty( value )
+                obj.TitleText.Enable = 'inactive';
+            else
+                obj.TitleText.Enable = 'on';
+            end
             
             % Mark as dirty
             obj.redrawButtons()
@@ -254,6 +269,9 @@ classdef BoxPanel < uix.Panel & uix.mixin.Panel
             
             % Set
             obj.Minimized_ = value;
+            
+            % Show selected child
+            obj.showSelection()
             
             % Mark as dirty
             obj.Dirty = true;
@@ -403,11 +421,9 @@ classdef BoxPanel < uix.Panel & uix.mixin.Panel
             %
             %  See also: redrawButtons
             
-            % Compute bounds
+            % Compute positions
             bounds = hgconvertunits( ancestor( obj, 'figure' ), ...
                 [0 0 1 1], 'normalized', 'pixels', obj );
-            
-            % Position decorations
             tX = 1;
             tW = max( bounds(3), 1 );
             tH = obj.TitleHeight_; % title height
@@ -416,43 +432,51 @@ classdef BoxPanel < uix.Panel & uix.mixin.Panel
                 obj.TitleHeight_ = tH; % store
             end
             tY = 1 + bounds(4) - tH;
-            obj.TitleBox.Position = [tX tY tW tH];
-            obj.redrawButtons()
-            
-            % Position contents
             p = obj.Padding_;
             cX = 1 + p;
             cW = max( bounds(3) - 2 * p, 1 );
             cH = max( bounds(4) - tH - 2 * p, 1 );
             cY = tY - p - cH;
             contentsPosition = [cX cY cW cH];
-            obj.redrawContents( contentsPosition )
+            
+            % Redraw contents
+            selection = obj.Selection_;
+            if selection ~= 0
+                uix.setPosition( obj.Contents_(selection), contentsPosition, 'pixels' )
+            end
+            obj.TitleBox.Position = [tX tY tW tH];
+            obj.redrawButtons()
             
         end % redraw
         
-        function redrawContents( obj, position )
-            %redrawContents  Redraw contents
+        function showSelection( obj )
+            %showSelection  Show selected child, hide the others
+            %
+            %  c.showSelection() shows the selected child of the container
+            %  c, and hides the others.
             
             % Call superclass method
-            redrawContents@uix.mixin.Panel( obj, position )
+            showSelection@uix.mixin.Panel( obj )
             
             % If minimized, hide selected contents too
-            if obj.Selection_ ~= 0 && obj.Minimized_
-                child = obj.Contents_(obj.Selection_);
+            selection = obj.Selection_;
+            if selection ~= 0 && obj.Minimized_
+                child = obj.Contents_(selection);
                 child.Visible = 'off';
                 if isa( child, 'matlab.graphics.axis.Axes' )
                     child.ContentsVisible = 'off';
                 end
                 % As a remedy for g1100294, move off-screen too
+                margin = 1000;
                 if isa( child, 'matlab.graphics.axis.Axes' ) ...
                         && strcmp(child.ActivePositionProperty, 'outerposition' )
-                    child.OuterPosition(1) = -child.OuterPosition(3)-20;
+                    child.OuterPosition(1) = -child.OuterPosition(3)-margin;
                 else
-                    child.Position(1) = -child.Position(3)-20;
+                    child.Position(1) = -child.Position(3)-margin;
                 end
             end
             
-        end % redrawContents
+        end % showSelection
         
     end % template methods
     
@@ -468,18 +492,21 @@ classdef BoxPanel < uix.Panel & uix.mixin.Panel
             
             % Retrieve button box and buttons
             box = obj.TitleBox;
+            titleText = obj.TitleText;
             minimizeButton = obj.MinimizeButton;
             dockButton = obj.DockButton;
             helpButton = obj.HelpButton;
             closeButton = obj.CloseButton;
             
             % Detach all buttons
+            titleText.Parent = [];
             minimizeButton.Parent = [];
             dockButton.Parent = [];
             helpButton.Parent = [];
             closeButton.Parent = [];
             
             % Attach active buttons
+            titleText.Parent = box;
             minimize = ~isempty( obj.MinimizeFcn );
             if minimize
                 minimizeButton.Parent = box;

@@ -9,7 +9,7 @@ classdef Grid < uix.Box
     %  See also: uix.HBox, uix.VBox, uix.GridFlex
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
+    %  $Revision: 1426 $ $Date: 2016-11-16 07:12:06 +0000 (Wed, 16 Nov 2016) $
     
     properties( Access = public, Dependent, AbortSet )
         Widths % widths of contents, in pixels and/or weights
@@ -37,8 +37,14 @@ classdef Grid < uix.Box
             
             % Set properties
             if nargin > 0
-                uix.pvchk( varargin )
-                set( obj, varargin{:} )
+                try
+                    assert( rem( nargin, 2 ) == 0, 'uix:InvalidArgument', ...
+                        'Parameters and values must be provided in pairs.' )
+                    set( obj, varargin{:} )
+                catch e
+                    delete( obj )
+                    e.throwAsCaller()
+                end
             end
             
         end % constructor
@@ -223,6 +229,9 @@ classdef Grid < uix.Box
     methods( Access = protected )
         
         function redraw( obj )
+            %redraw  Redraw
+            %
+            %  c.redraw() redraws the container c.
             
             % Compute positions
             bounds = hgconvertunits( ancestor( obj, 'figure' ), ...
@@ -251,27 +260,15 @@ classdef Grid < uix.Box
             % Set positions
             children = obj.Contents_;
             for ii = 1:numel( children )
-                child = children(ii);
-                child.Units = 'pixels';
-                if isa( child, 'matlab.graphics.axis.Axes' )
-                    switch child.ActivePositionProperty
-                        case 'position'
-                            child.Position = positions(ii,:);
-                        case 'outerposition'
-                            child.OuterPosition = positions(ii,:);
-                        otherwise
-                            error( 'uix:InvalidState', ...
-                                'Unknown value ''%s'' for property ''ActivePositionProperty'' of %s.', ...
-                                child.ActivePositionProperty, class( child ) )
-                    end
-                else
-                    child.Position = positions(ii,:);
-                end
+                uix.setPosition( children(ii), positions(ii,:), 'pixels' )
             end
             
         end % redraw
         
         function addChild( obj, child )
+            %addChild  Add child
+            %
+            %  c.addChild(d) adds the child d to the container c.
             
             % Add column and even a row if necessary
             n = numel( obj.Contents_ );
@@ -293,6 +290,9 @@ classdef Grid < uix.Box
         end % addChild
         
         function removeChild( obj, child )
+            %removeChild  Remove child
+            %
+            %  c.removeChild(d) removes the child d from the container c.
             
             % Remove column and even row if necessary
             n = numel( obj.Contents_ );

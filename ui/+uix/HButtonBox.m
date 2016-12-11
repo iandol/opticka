@@ -10,7 +10,7 @@ classdef HButtonBox < uix.ButtonBox
     %  See also: uix.VButtonBox
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
+    %  $Revision: 1426 $ $Date: 2016-11-16 07:12:06 +0000 (Wed, 16 Nov 2016) $
     
     methods
         
@@ -24,8 +24,14 @@ classdef HButtonBox < uix.ButtonBox
             
             % Set properties
             if nargin > 0
-                uix.pvchk( varargin )
-                set( obj, varargin{:} )
+                try
+                    assert( rem( nargin, 2 ) == 0, 'uix:InvalidArgument', ...
+                        'Parameters and values must be provided in pairs.' )
+                    set( obj, varargin{:} )
+                catch e
+                    delete( obj )
+                    e.throwAsCaller()
+                end
             end
             
         end % constructor
@@ -84,22 +90,7 @@ classdef HButtonBox < uix.ButtonBox
             % Set positions
             children = obj.Contents_;
             for ii = 1:numel( children )
-                child = children(ii);
-                child.Units = 'pixels';
-                if isa( child, 'matlab.graphics.axis.Axes' )
-                    switch child.ActivePositionProperty
-                        case 'position'
-                            child.Position = positions(ii,:);
-                        case 'outerposition'
-                            child.OuterPosition = positions(ii,:);
-                        otherwise
-                            error( 'uix:InvalidState', ...
-                                'Unknown value ''%s'' for property ''ActivePositionProperty'' of %s.', ...
-                                child.ActivePositionProperty, class( child ) )
-                    end
-                else
-                    child.Position = positions(ii,:);
-                end
+                uix.setPosition( children(ii), positions(ii,:), 'pixels' )
             end
             
         end % redraw

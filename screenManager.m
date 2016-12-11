@@ -41,7 +41,7 @@ classdef screenManager < optickaCore
 		screenXOffset = 0
 		%> shunt screen center by Y degrees
 		screenYOffset = 0
-		%> the monitor to use, 0 is a the main display
+		%> the monitor to use, 0 is the main display
 		screen = []
 		%> use OpenGL blending mode
 		blend = false
@@ -205,6 +205,10 @@ classdef screenManager < optickaCore
 			obj.ppd; %generate our dependent propertie and caches it to ppd_ for speed
 			obj.makeGrid; %our visualDebug size grid
 			
+			obj.screenVals.white = WhiteIndex(obj.screen);
+			obj.screenVals.black = BlackIndex(obj.screen);
+			obj.screenVals.gray = GrayIndex(obj.screen);
+			
 			screenVals = obj.screenVals;
 			
 		end
@@ -337,6 +341,7 @@ classdef screenManager < optickaCore
 				
 				obj.screenVals.black = 0;
  				obj.screenVals.white = 1;
+				obj.screenVals.gray	= 0.5;
 				
 				obj.isOpen = true;
 				screenVals = obj.screenVals;

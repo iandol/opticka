@@ -15,7 +15,7 @@ function cdata = loadIcon( filename, bgcol )
 %   See also: imread
 
 %  Copyright 2009-2015 The MathWorks, Inc.
-%  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
+%  $Revision: 1256 $ $Date: 2016-02-24 17:30:18 +0000 (Wed, 24 Feb 2016) $
 
 % Check inputs
 narginchk( 1, 2 )
@@ -43,7 +43,7 @@ end
 cdata = convertToDouble( cdata );
 
 % Handle transparency
-[rows, cols, depth] = size( cdata ); %#ok<NASGU>
+[rows, cols, ~] = size( cdata );
 if ~isempty( alpha )
     
     % Transparency specified

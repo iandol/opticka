@@ -10,7 +10,7 @@ classdef CardPanel < uix.Container & uix.mixin.Panel
     %  See also: uix.Panel, uix.BoxPanel, uix.TabPanel, uicontainer
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
+    %  $Revision: 1426 $ $Date: 2016-11-16 07:12:06 +0000 (Wed, 16 Nov 2016) $
     
     methods
         
@@ -24,8 +24,14 @@ classdef CardPanel < uix.Container & uix.mixin.Panel
             
             % Set properties
             if nargin > 0
-                uix.pvchk( varargin )
-                set( obj, varargin{:} )
+                try
+                    assert( rem( nargin, 2 ) == 0, 'uix:InvalidArgument', ...
+                        'Parameters and values must be provided in pairs.' )
+                    set( obj, varargin{:} )
+                catch e
+                    delete( obj )
+                    e.throwAsCaller()
+                end
             end
             
         end % constructor
@@ -35,6 +41,7 @@ classdef CardPanel < uix.Container & uix.mixin.Panel
     methods( Access = protected )
         
         function redraw( obj )
+            %redraw  Redraw
             
             % Compute positions
             bounds = hgconvertunits( ancestor( obj, 'figure' ), ...
@@ -45,7 +52,10 @@ classdef CardPanel < uix.Container & uix.mixin.Panel
             position = [padding+1 padding+1 xSizes ySizes];
             
             % Redraw contents
-            obj.redrawContents( position )
+            selection = obj.Selection_;
+            if selection ~= 0
+                uix.setPosition( obj.Contents_(selection), position, 'pixels' )
+            end
             
         end % redraw
         

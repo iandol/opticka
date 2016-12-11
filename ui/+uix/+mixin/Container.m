@@ -4,8 +4,8 @@ classdef Container < handle
     %  uix.mixin.Container is a mixin class used by containers to provide
     %  various properties and template methods.
     
-    %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
+    %  Copyright 2009-2016 The MathWorks, Inc.
+    %  $Revision: 1358 $ $Date: 2016-09-14 11:34:17 +0100 (Wed, 14 Sep 2016) $
     
     properties( Dependent, Access = public )
         Contents % contents in layout order
@@ -61,6 +61,9 @@ classdef Container < handle
             obj.ChildAddedListener = childAddedListener;
             obj.ChildRemovedListener = childRemovedListener;
             obj.SizeChangedListener = sizeChangedListener;
+            
+            % Track usage
+            obj.track()
             
         end % constructor
         
@@ -274,6 +277,20 @@ classdef Container < handle
             tf = ~isempty( obj.FigureObserver.Figure );
             
         end % isDrawable
+        
+        function track( obj )
+            %track  Track usage
+            
+            persistent TRACKED % single shot
+            if isempty( TRACKED )
+                v = ver( 'layout' );
+                try %#ok<TRYNC>
+                    uix.tracking( 'UA-82270656-2', v(1).Version, class( obj ) )
+                end
+                TRACKED = true;
+            end
+            
+        end % track
         
     end % template methods
     

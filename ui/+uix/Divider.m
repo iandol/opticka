@@ -1,4 +1,4 @@
-classdef Divider < hgsetget
+classdef Divider < matlab.mixin.SetGet
     %uix.Divider  Draggable divider
     %
     %  d = uix.Divider() creates a divider.
@@ -7,7 +7,7 @@ classdef Divider < hgsetget
     %  specified property p1 to value v1, etc.
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
+    %  $Revision: 1426 $ $Date: 2016-11-16 07:12:06 +0000 (Wed, 16 Nov 2016) $
     
     properties( Dependent )
         Parent % parent
@@ -44,14 +44,22 @@ classdef Divider < hgsetget
             % Create control
             control = matlab.ui.control.UIControl( ...
                 'Style', 'checkbox', 'Internal', true, ...
-                'Enable', 'inactive', 'DeleteFcn', @obj.onDeleted );
+                'Enable', 'inactive', 'DeleteFcn', @obj.onDeleted,...
+                'Tag', 'uix.Divider' );
             
             % Store control
             obj.Control = control;
             
             % Set properties
             if nargin > 0
-                set( obj, varargin{:} );
+                try
+                    assert( rem( nargin, 2 ) == 0, 'uix:InvalidArgument', ...
+                        'Parameters and values must be provided in pairs.' )
+                    set( obj, varargin{:} )
+                catch e
+                    delete( obj )
+                    e.throwAsCaller()
+                end
             end
             
             % Force update

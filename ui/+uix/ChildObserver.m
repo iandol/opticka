@@ -8,7 +8,7 @@ classdef ( Hidden, Sealed ) ChildObserver < handle
     %  See also: uix.Node
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
+    %  $Revision: 1310 $ $Date: 2016-06-28 13:34:38 +0100 (Tue, 28 Jun 2016) $
     
     properties( Access = private )
         Root % root node
@@ -214,6 +214,7 @@ function tf = iscontent( o )
 %  matlab.graphics.internal.GraphicsBaseFunctions, which is what isgraphics
 %  did prior to R2016a.
 
-tf = isa( o, 'matlab.graphics.internal.GraphicsBaseFunctions' );
+tf = isa( o, 'matlab.graphics.internal.GraphicsBaseFunctions' ) &&...
+     isprop( o, 'Position' );
 
 end % iscontent
