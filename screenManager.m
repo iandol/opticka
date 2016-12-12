@@ -10,19 +10,19 @@ classdef screenManager < optickaCore
 	
 	properties
 		%> MBP 1440x900 is 33.2x20.6cm so approx 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
-		pixelsPerCm = 44
+		pixelsPerCm@double = 44
 		%> distance of subject from CRT -- rad2ang(2*(atan((0.5*1cm)/57.3cm))) equals 1deg
-		distance = 57.3
+		distance@double = 57.3
 		%> hide the black flash as PTB tests its refresh timing, uses a gamma
 		%> trick from Mario
-		hideFlash = false
+		hideFlash@logical = false
 		%> windowed: when FALSE use fullscreen; set to TRUE and it is windowed 800x600pixels or you
 		%> can add in a window width and height i.e. [800 600] to specify windowed size. Remember
 		%> that windowed presentation should never be used for real experimental
 		%> presentation due to poor timing...
 		windowed = false
 		%> true = change the debug parameters for poorer temporal fidelity but no sync testing etc.
-		debug = false
+		debug@logical = false
 		%> true = shows the info text and position grid during stimulus presentation
 		visualDebug = false
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
@@ -339,9 +339,9 @@ classdef screenManager < optickaCore
 					Screen('TextFont', obj.win, obj.linuxFontName);
 				end
 				
-				obj.screenVals.black = 0;
- 				obj.screenVals.white = 1;
-				obj.screenVals.gray	= 0.5;
+				obj.screenVals.white = WhiteIndex(obj.screen);
+				obj.screenVals.black = BlackIndex(obj.screen);
+				obj.screenVals.gray = GrayIndex(obj.screen);
 				
 				obj.isOpen = true;
 				screenVals = obj.screenVals;
@@ -375,6 +375,9 @@ classdef screenManager < optickaCore
 			obj.isOpen = true;
 			obj.isPTB = true;
 			obj.screenVals.ifi = Screen('GetFlipInterval', obj.win);
+			obj.screenVals.white = WhiteIndex(obj.win);
+			obj.screenVals.black = BlackIndex(obj.win);
+			obj.screenVals.gray = GrayIndex(obj.win);
 			setScreenSize(obj);
 			fprintf('---> screenManager slaved to external win: %i\n',win);
 		end
