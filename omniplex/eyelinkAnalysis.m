@@ -1155,6 +1155,7 @@ classdef eyelinkAnalysis < analysisCore
 				eyeUsed = 1; %left eye index
 			end
 			
+			pb = textprogressbar(length(me.raw.FEVENT),'startmsg','Parsing Eyelink Events: ','showactualnum',true,'updatestep',round(length(me.raw.FEVENT)/100));
 			for i = 1:length(me.raw.FEVENT)
 				isMessage = false;
 				evt = me.raw.FEVENT(i);
@@ -1443,6 +1444,7 @@ classdef eyelinkAnalysis < analysisCore
 						end
 					end
 				end
+				pb(i);
 			end
 			
 			%prune the end trial if invalid
@@ -1618,7 +1620,8 @@ classdef eyelinkAnalysis < analysisCore
 			VFAC=me.VFAC;
 			MINDUR=me.MINDUR;
 			sampleRate = me.sampleRate;
-			tic
+			pb = textprogressbar(length(me.trials),'startmsg','Loading trials to compute microsaccades: ','showactualnum',true);
+			cms = tic;
 			for jj = 1:length(me.trials)
 				if me.trials(jj).incorrect == true || me.trials(jj).breakFix == true;	continue;	end
 				samples = []; sac = []; radius = []; monol=[]; monor=[];
@@ -1674,8 +1677,9 @@ classdef eyelinkAnalysis < analysisCore
 				catch ME
 					%getReport(ME)
 				end
+				pb(jj)
 			end
-			fprintf('<strong>:#:</strong> Parsing MicroSaccades took <strong>%g ms</strong>\n', round(toc*1000))
+			fprintf('<strong>:#:</strong> Parsing MicroSaccades took <strong>%g ms</strong>\n', round(toc(cms)*1000))
 			
 			function v = vecvel(xx,SAMPLING,TYPE)
 				%------------------------------------------------------------

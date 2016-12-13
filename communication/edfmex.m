@@ -17,7 +17,15 @@
 %     end_at_record_number    -   load up to this record number. Default is
 %                                  0 indicating read to end of file.
 % 
-%     load_sample_flag       -    0 to skip samples. Default = 1.
+%     load_sample_flag       -    0 to skip samples. Default = 1. 
+%                                 Or an array specifying which sample fields 
+%                                 to load in the order of fieldnames(e.FSAMPLE), 
+%                                 upto the last field that should be loaded, 
+%                                 i.e. [1 0 0 0 0 0 1 1] would only load time, 
+%                                 gx and gy. 
+%                                 Or a cell array of string containing the 
+%                                 sample fields to load, e.g. {'time', 'gx',
+%                                 'gy'}
 % 
 %     load_events_flag       -    0 to skip events. Default = 1.
 % 
@@ -58,15 +66,19 @@
 %
 %        mex edfmex.cpp edfapi.lib
 % 
-
-%Last modified June 4th 2009
-
-% Written by C. Kovach 2007 and released for non-commercial use 
-% without any gaurantee whatsoever. I am not responsible for any 
-% loss or corruption of data, damage to hardware, personal injury, 
-% marital discord or any other disaster arising from the use of 
-% this software. 
+%   Copyright (C) 2009  Christopher K. Kovach, 2015 Christopher K. Kovach & Jonas Knöll
+% 
+%   This program is free software: you can redistribute it and/or modify
+%   it under the terms of the GNU Affero General Public License as published by
+%   the Free Software Foundation, either version 3 of the License, or
+%   (at your option) any later version.
+% 
+%   This program is distributed in the hope that it will be useful,
+%   but WITHOUT ANY WARRANTY; without even the implied warranty of
+%   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%   GNU Affero General Public License for more details.
+% 
+%   You should have received a copy of the GNU Affero General Public License
+%   along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 %
-% Questions can be sent to christopher-kovach@uiowa.edu.
-
- 
+% Questions can be sent to christopher-kovach@uiowa.edu or Jonas Knöll (jonas.knoell@utexas.edu) 
