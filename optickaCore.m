@@ -380,7 +380,7 @@ classdef optickaCore < handle
 			
 			if isstruct(args)
 				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames);
+				for i=1:length(fnames)
 					if regexpi(fnames{i},allowedProperties) %only set if allowed property
 						obj.salutation(fnames{i},'Constructor parsing input argument');
 						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
