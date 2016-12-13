@@ -322,7 +322,7 @@ classdef eyelinkAnalysis < analysisCore
 					end
 				end
 			end
-			if length(select) > 1
+			if isnumeric(select)
 				idx = select;
 				idxInternal = false;
 			else
@@ -437,9 +437,9 @@ classdef eyelinkAnalysis < analysisCore
 				
 				q(1,2).select();
 				q(1,2).hold('on');
-				plot(t,abs(x),'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+				plot(t,abs(x),'k-x','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
-				plot(t,abs(y),'k-x','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+				plot(t,abs(y),'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				maxv = max([maxv, max(abs(x)), max(abs(y))]) + 0.1;
 				if isfield(thisTrial,'microSaccade') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
