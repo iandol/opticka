@@ -88,7 +88,7 @@ classdef eyelinkManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		ppd_
+		ppd_@double = 35
 		tempFile = 'MYDATA.edf'
 		fixN = 0
 		fixSelection = []
@@ -758,7 +758,6 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command', 'set_idle_mode');
 			end
 		end
-		
 		
 		% ===================================================================
 		%> @brief automagically turn pixels to degrees
