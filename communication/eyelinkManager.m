@@ -329,8 +329,9 @@ classdef eyelinkManager < optickaCore
 		function success = driftCorrection(obj)
 			success = false;
 			if obj.isConnected
-				%success = EyelinkDoDriftCorrection(obj.defaults);
-				success = Eyelink('DriftCorrStart', obj.screen.xCenter, obj.screen.yCenter, 1, 1, 1);
+				success = EyelinkDoDriftCorrection(obj.defaults, obj.fixationX, obj.fixationY);
+				%success = Eyelink('DriftCorrStart', obj.screen.xCenter, obj.screen.yCenter, 1, 1, 1);
+				fprintf('Drift Correct RETURN: %.2g', success);
 			end
 			if success == -1
 				obj.salutation('Drift Correct','FAILED',true);
