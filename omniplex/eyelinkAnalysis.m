@@ -420,33 +420,47 @@ classdef eyelinkAnalysis < analysisCore
 
 				t = thisTrial.times / 1e3; %convert to seconds
 				ix = find((t >= me.measureRange(1)) & (t <= me.measureRange(2)));
-				t=t(ix);
+				ip = find((t >= me.plotRange(1)) & (t <= me.plotRange(2)));
+				tm = t(ix);
+				tp = t(ip);
 				x = thisTrial.gx(ix) / me.ppd_;
 				y = thisTrial.gy(ix) / me.ppd_;
+				xp = thisTrial.gx(ip) / me.ppd_;
+				yp = thisTrial.gy(ip) / me.ppd_;
 
 				if min(x) < -20 || max(x) > 20 || min(y) < -20 || max(y) > 20
-					x(x < -20) = -20;
-					x(x > 20) = 20;
-					y(y < -20) = -20;
-					y(y > 20) = 20;
+					x(x < -20) = -20; x(x > 20) = 20; y(y < -20) = -20; y(y > 20) = 20;
+				end
+				if min(xp) < -20 || max(xp) > 20 || min(yp) < -20 || max(yp) > 20
+					xp(xp < -20) = -20;	xp(xp > 20) = 20;	yp(yp < -20) = -20; yp(yp > 20) = 20;
 				end
 
 				q(1,1).select();
 
 				q(1,1).hold('on')
-				plot(x, y,'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
-					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
-
+				plot(xp, yp,'k-','Color',c,'LineWidth',1,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
+				if isfield(thisTrial,'microSaccades') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
+					for jj = 1: length(thisTrial.microSaccades)
+						if thisTrial.microSaccades(jj) >= me.plotRange(1) && thisTrial.microSaccades(jj) <= me.plotRange(2)
+							midx = me.findNearest(tp,thisTrial.microSaccades(jj));
+							plot(xp(midx),yp(midx),'ko','Color',c,'MarkerSize',6,'MarkerEdgeColor',[0 0 0],...
+								'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable thisTrial.microSaccades(jj)],'ButtonDownFcn', @clickMe);
+						end
+					end
+				end
+				
 				q(1,2).select();
 				q(1,2).hold('on');
-				plot(t,abs(x),'k-x','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+				plot(tm,abs(x),'k-x','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
-				plot(t,abs(y),'k-o','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+				plot(tm,abs(y),'k-o','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				maxv = max([maxv, max(abs(x)), max(abs(y))]) + 0.1;
-				if isfield(thisTrial,'microSaccade') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
-					plot(thisTrial.microSaccades,-0.2,'yo','Color','y','MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
-						'MarkerFaceColor','y','UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
+				if isfield(thisTrial,'microSaccades') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
+					if any(thisTrial.microSaccades >= me.plotRange(1) & thisTrial.microSaccades <= me.plotRange(2))
+						plot(thisTrial.microSaccades,-0.1,'ko','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
+							'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
+					end
 				end
 
 				p(2).select();
@@ -577,7 +591,8 @@ classdef eyelinkAnalysis < analysisCore
 				ud = get(src,'UserData');
 				if ~isempty(ud)
 					disp(me.trials(ud(1)));
-					disp(['TRIAL | CORRECTED | VAR = ' num2str(ud)]);
+					disp(['TRIAL | CORRECTED | VAR | microSaccade time = ' num2str(ud)]);
+					
 				end
 			end
 		end
