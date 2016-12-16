@@ -510,16 +510,18 @@ classdef eyelinkAnalysis < analysisCore
 			display = me.display / me.ppd_;
 
 			q(1,1).select();
+			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			ah.DataAspectRatio = [1 1 1];
 			axis ij;
 			grid on;
 			box on;
 			axis(round([-display(1)/3 display(1)/3 -display(2)/3 display(2)/3]));
-			%axis square
 			title(q(1,1),[thisVarName upper(type) ': X vs. Y Eye Position']);
 			xlabel(q(1,1),'X Deg');
 			ylabel(q(1,1),'Y Deg');
 
 			q(1,2).select();
+			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
 			axis tight;
@@ -536,6 +538,7 @@ classdef eyelinkAnalysis < analysisCore
 			ylabel(q(1,2),'Degrees');
 
 			p(2).select();
+			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
 			axis([me.plotRange(1) me.plotRange(2) -10 10 -10 10]);
@@ -552,6 +555,7 @@ classdef eyelinkAnalysis < analysisCore
 			p(2).margin = [100 20 20 20]; %left bottom right top
 
 			q(2,1).select();
+			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			axis ij;
 			grid on;
 			box on;
@@ -564,6 +568,7 @@ classdef eyelinkAnalysis < analysisCore
 			ylabel(q(2,1),'Y Degrees');
 
 			q(2,2).select();
+			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
 			axis tight;
@@ -594,6 +599,11 @@ classdef eyelinkAnalysis < analysisCore
 					disp(['TRIAL | CORRECTED | VAR | microSaccade time = ' num2str(ud)]);
 					
 				end
+			end
+			function spawnMe(src, ~)
+				fnew = figure;
+				na = copyobj(src,fnew);
+				na.Position = [0.1 0.1 0.8 0.8];
 			end
 		end
 
