@@ -66,6 +66,9 @@ classdef screenManager < optickaCore
 		verbosityLevel = 4
 		%> Use retina resolution natively
 		useRetina = false
+		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc[, rank]);
+		%> Each N should be a different display
+		screenToHead = []
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -94,7 +97,7 @@ classdef screenManager < optickaCore
 		%> linux font name;
 		linuxFontName = '-adobe-helvetica-bold-o-normal--11-80-100-100-p-60-iso8859-1'
 		%> properties allowed to be modified during construction
-		allowedProperties='gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
+		allowedProperties='screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect = [0;0;50;50]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
@@ -238,6 +241,16 @@ classdef screenManager < optickaCore
 				obj.screenVals.resetGamma = false;
 				
 				obj.hideScreenFlash();
+				
+				if ~isempty(obj.screenToHead) && isnumeric(obj.screenToHead)
+					for i = 1:size(obj.screenToHead,1)
+						sth = obj.screenToHead(i,:);
+						if lengtht(stc) == 3
+							fprintf('\n---> screenManager: Custom Screen to Head: %i %i %i\n',sth(1), sth(2), sth(3));
+							Screen('Preference', 'ScreenToHead', sth(1), sth(2), sth(3));
+						end
+					end
+				end
 				
 				%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 				Screen('Preference', 'VBLTimestampingMode', obj.timestampingMode);
