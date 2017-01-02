@@ -35,8 +35,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		nSegment
 		%> verbose or not
 		verbose = false
-		%> responses
-		response = []
+		%> link a Palamedes staircase to this task
+		staircase = []
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -50,13 +50,13 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		outMap
 		%> minimum number of blocks
 		minBlocks
+	end
+	
+	properties (SetAccess = private, GetAccess = public, Transient = true, Hidden = true)
 		%> reserved for future use of multiple random stream states
 		states
 		%> reserved for future use of multiple random stream states
 		nStates = 1
-	end
-	
-	properties (SetAccess = private, GetAccess = public, Transient = true)
 		%> old random number stream
 		oldStream
 		%> current random number stream
@@ -76,6 +76,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> have we initialised the dynamic task properties?
+		taskInitialised = false
 		%> cache value for nVars
 		nVars_
 		%> handles from obj.showLog
@@ -95,10 +97,11 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> nVar template and default values
 		varTemplate = struct('name','','stimulus',[],'values',[],'offsetstimulus',[],'offsetvalue',[])
 		%Set up the task structures needed
-		taskProperties = {'tick',0,'blankTick',0,'thisRun',1,'thisBlock',1,'totalRuns',1,'isBlank',false,...
-				'switched',false,'strobeThisFrame',false,'doUpdate',false,'startTime',0,'switchTime',0,...
-				'switchTick',0,'timeNow',0,'stimIsDrifting',[],'stimIsMoving',[],...
-				'stimIsDots',[],'stimIsFlashing',[]}
+		taskProperties = {'response',[],'responseInfo',{},'tick',0,'blankTick',0,'thisRun',1,...
+			'thisBlock',1,'totalRuns',1,'isBlank',false,...
+			'switched',false,'strobeThisFrame',false,'doUpdate',false,'startTime',0,'switchTime',0,...
+			'switchTick',0,'timeNow',0,'runTimeList',[],'stimIsDrifting',[],'stimIsMoving',[],...
+			'stimIsDots',[],'stimIsFlashing',[]}
 	end
 	
 	
@@ -169,7 +172,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		% ===================================================================
 		function randomiseStimuli(obj)
 			if obj.nVars > 0 %no need unless we have some variables
-				if obj.verbose==true;tic;end
+				if obj.verbose==true;rSTime = tic;end
 				obj.currentState=obj.taskStream.State;
 				%obj.states(obj.nstates) = obj.currentState;
 				%obj.nstates = obj.nstates + 1;
@@ -243,13 +246,24 @@ classdef stimulusSequence < optickaCore & dynamicprops
 						end
 					end
 				end
-				if obj.verbose==true;obj.salutation(sprintf('Randomise Stimuli: %g ms\n',toc*1000));end
+				if obj.verbose; obj.salutation(sprintf('randomiseStimuli took %g ms\n',toc(rSTime)*1000)); end
 			else
 				obj.outIndex = 1; %there is only one stimulus, no variables
 			end
 		end
 		
 		% ===================================================================
+		%> @brief Initialise the variables and task together
+		%>
+		% ===================================================================
+		function initialise(obj)
+			if isempty(obj.outValues)
+				obj.randomiseStimuli();
+				obj.initialiseTask();
+			end
+		end
+		
+				% ===================================================================
 		%> @brief Initialise the properties used to track the run
 		%>
 		%> Initialise the properties used to track the run. These are dynamic
@@ -257,42 +271,42 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		% ===================================================================
 		function initialiseTask(obj)
 			resetTask(obj);
-				for i = 1:2:length(obj.taskProperties)
+			for i = 1:2:length(obj.taskProperties)
 				if isempty(obj.findprop(obj.taskProperties{i}))
 					p=obj.addprop(obj.taskProperties{i}); %add new dynamic property
 					p.Transient = true;
 				end
-				obj.(obj.taskProperties{i})=obj.taskProperties{i+1}; %#ok<*MCNPR>
+				obj.(obj.taskProperties{i}) = obj.taskProperties{i+1}; %#ok<*MCNPR>
 			end
-		end		
+			obj.totalRuns = obj.minBlocks * obj.nBlocks;
+			obj.taskInitialised = true;
+		end
 		
 		% ===================================================================
-		%> @brief validate the stimulusSequence is ok
+		%> @brief update the task with a response
 		%>
-		%> Check we have a minimal task structure
 		% ===================================================================
-		function validate(obj)
-			
-			vin = obj.nVar;
-			vout = vin;
-			obj.nVar = [];
-			shift = 0;
-			
-			for i = 1:length(vin)
-				if isempty(vin(i).name) || isempty(vin(i).values) || isempty(vin(i).stimulus)
-					vout(i + shift) = [];
-					shift = shift-1;
+		function updateTask(obj, thisResponse, runTime, info)
+			if obj.taskInitialised
+				if obj.thisRun > obj.totalRuns
+					obj.salutation('Task FINISHED, no more updates allowed');
+					return
+				end
+				if ~exist('thisResponse','var'); thisResponse = NaN; end
+				if ~exist('runTime','var'); runTime = GetSecs; end
+				if ~exist('info','var'); info = 'none'; end
+				obj.response(obj.thisRun) = thisResponse;
+				obj.responseInfo{obj.thisRun} = info;
+				obj.runTimeList(obj.thisRun) = runTime - obj.startTime;
+				
+				if obj.verbose
+					obj.salutation(sprintf('Task Run %i: response = %.2g @ %.2g secs',obj.thisRun, thisResponse, obj.runTimeList(obj.thisRun)));
+				end
+				obj.thisRun = obj.thisRun + 1;
+				if obj.thisRun > obj.minBlocks * obj.thisBlock
+					obj.thisBlock = obj.thisBlock + 1;
 				end
 			end
-			
-			obj.nVar = vout;
-			
-			clear vin vout shift
-			
-			if obj.nVars == 0
-				obj.outIndex = 1; %there is only one stimulus, no variables
-			end
-		
 		end
 		
 		% ===================================================================
@@ -315,7 +329,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				fnOut = intersect(fn,fnTemplate);
 				for ii = 1:idx
 					for i = 1:length(fnOut)
-						if ~isempty(invalue(ii).(fn{i}));
+						if ~isempty(invalue(ii).(fn{i}))
 							obj.nVar(ii).(fn{i}) = invalue(ii).(fn{i});
 						end
 					end
@@ -336,7 +350,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			if length(obj.nVar) > 0 && ~isempty(obj.nVar(1).name) %#ok<ISMT>
 				nVars = length(obj.nVar);
 			end
-			obj.nVars_ = nVars;
+			obj.nVars_ = nVars; %cache value
 		end
 		
 		% ===================================================================
@@ -366,7 +380,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		function showLog(obj)
 			obj.h = struct();
 			build_gui();
-			if iscell(obj.outValues);
+			if iscell(obj.outValues)
 				outvals = cell2mat(obj.outValues);
 				data = [outvals obj.outIndex obj.outMap];
 			else
@@ -437,13 +451,13 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			meta = [];
 			vals = obj.outValues;
 			idx = obj.outMap;
-			if iscell(vals);
+			if iscell(vals)
 				for i = 1:size(vals,2)
 					cc = [vals{:,i}]';
 					if iscell(cc)
 						t = '';
 						u = unique(idx(:,i));
-						for j=1:length(u);
+						for j=1:length(u)
 							f = find(idx(:,i)==u(j));
 							f = f(1);
 							t = [t sprintf('')];
@@ -459,6 +473,29 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			end
 		end
 		
+		% ===================================================================
+		%> @brief validate the stimulusSequence is ok
+		%>
+		%> Check we have a minimal task structure
+		% ===================================================================
+		function validate(obj)
+			vin = obj.nVar;
+			vout = vin;
+			obj.nVar = [];
+			shift = 0;
+			for i = 1:length(vin)
+				if isempty(vin(i).name) || isempty(vin(i).values) || isempty(vin(i).stimulus)
+					vout(i + shift) = [];
+					shift = shift-1;
+				end
+			end
+			obj.nVar = vout;
+			clear vin vout shift
+			if obj.nVars == 0
+				obj.outIndex = 1; %there is only one stimulus, no variables
+			end
+		end
+		
 	end % END METHODS
 	
 	%=======================================================================
@@ -466,18 +503,18 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	%=======================================================================
 			
 		% ===================================================================
-		%> @brief reset transienttask properties
+		%> @brief reset dynamic task properties
 		%> 
 		%> 
 		% ===================================================================
 		function resetTask(obj)
-			obj.response = [];
 			for i = 1:2:length(obj.taskProperties)
 				p = obj.findprop(obj.taskProperties{i});
 				if ~isempty(p)
 					delete(p);
 				end
 			end
+			obj.taskInitialised = false;
 		end	
 		
 		

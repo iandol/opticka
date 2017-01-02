@@ -66,7 +66,7 @@ classdef screenManager < optickaCore
 		verbosityLevel = 4
 		%> Use retina resolution natively
 		useRetina = false
-		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc[, rank]);
+		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc);
 		%> Each N should be a different display
 		screenToHead = []
 	end
