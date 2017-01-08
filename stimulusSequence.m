@@ -35,8 +35,6 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		nSegment
 		%> verbose or not
 		verbose = false
-		%> link a Palamedes staircase to this task
-		staircase = []
 	end
 	
 	properties (SetAccess = private, GetAccess = public)

@@ -1,7 +1,7 @@
 % ========================================================================
 %> @brief analysisCore base class inherited by other analysis classes.
 %> analysisCore is itself derived from optickaCore. Provides a set of shared methods
-%> and some core properties and stats UI for various analysis classes.
+%> and some core properties and stats GUI for various analysis classes.
 % ========================================================================
 classdef analysisCore < optickaCore
 	
@@ -9,7 +9,7 @@ classdef analysisCore < optickaCore
 	properties
 		%> generate plots?
 		doPlots@logical = true
-		%> ± time window (s) for baseline estimation/removal
+		%> +- time window (s) for baseline estimation/removal
 		baselineWindow@double = [-0.2 0]
 		%> default range (s) to measure values from
 		measureRange@double = [0.1 0.2]
@@ -21,7 +21,7 @@ classdef analysisCore < optickaCore
 	
 	%------------------PUBLIC TRANSIENT PROPERTIES----------%
 	properties (Transient = true)
-		%>getDensity stats object
+		%>getDensity stats object, used for group comparisons
 		gd@getDensity
 	end
 	
@@ -50,7 +50,7 @@ classdef analysisCore < optickaCore
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'doPlots|baselineWindow|measureRange|plotRange|stats'
+		allowedProperties@char = 'doPlots|baselineWindow|measureRange|plotRange|rootDirectory'
 	end
 	
 	%=======================================================================
@@ -138,7 +138,7 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief showEyePlots if we have a linked eyelink file show the raw data plots
 		%>
 		%> @param
 		%> @return
@@ -180,7 +180,7 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief showInfo shows the info box for the plexon parsed data
+		%> @brief setStats set up the stats structure used in many Fieldtrip analyses
 		%>
 		%> @param
 		%> @return
@@ -331,7 +331,7 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief optimiseSize remove the raw matrices etc to reduce memory
+		%> @brief optimiseSize remove the raw matrices etc. to reduce memory
 		%>
 		% ===================================================================
 		function optimiseSize(me)
@@ -384,7 +384,7 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief showInfo shows the info box for the plexon parsed data
+		%> @brief setTimeFreqOptions for Fieldtrip time freq analysis of LFP data
 		%>
 		%> @param
 		%> @return
@@ -491,12 +491,12 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief selectFTTrials cut out trials where the ft function fails
+		%> @brief subselectFieldTripTrials sub-select trials where the ft function fails
 		%> to use cfg.trials
 		%>
 		%> @param ft fieldtrip structure
 		%> @param idx index to use for selection
-		%> @return ftOut modified ft structure
+		%> @return ftout modified ft structure
 		% ===================================================================
 		function ftout=subselectFieldTripTrials(ft,idx)
 			if size(idx,2)>size(idx,1); idx = idx'; end
@@ -588,11 +588,12 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		%> Plots mean and error choosable by switches
 		%>
-		%> [mean,error] = stderr(data,type)
+		%> [mean,error] = stderr(data,type,onlyerror,alpha)
 		%>
 		%> Switches: SE 2SE SD 2SD 3SD V FF CV AF
 		% ===================================================================
-		function [avg,error] = stderr(data,type,onlyerror)
+		function [avg,error] = stderr(data,type,onlyerror,alpha)
+			if nargin<4; alpha=0.05; end
 			if nargin<3; onlyerror=0; end
 			if nargin<2; type='SE';	end
 			if size(type,1)>1; type=reshape(type,1,size(type,1));	end
@@ -608,10 +609,10 @@ classdef analysisCore < optickaCore
 					error=sqrt(err.^2/nvals);
 					error = error*2;
 				case 'CIMEAN'
-					[error, raw] = bootci(1000,{@nanmean,data},'alpha',0.01);
+					[error, raw] = bootci(1000,{@nanmean,data},'alpha',alpha);
 					avg = nanmean(raw);
 				case 'CIMEDIAN'
-					[error, raw] = bootci(1000,{@nanmedian,data},'alpha',0.01);
+					[error, raw] = bootci(1000,{@nanmedian,data},'alpha',alpha);
 					avg = nanmedian(raw);
 				case 'SD'
 					error=nanstd(data);
@@ -705,11 +706,11 @@ classdef analysisCore < optickaCore
 		end
 		
 		% ===================================================================
-		%> Plots mean and error choosable by switches
+		%> cellArray2Num
 		%>
-		%> [mean,error] = stderr(data,type)
+		%> out = cellArray2Num(data)
 		%>
-		%> Switches: SE 2SE SD 2SD 3SD V FF CV AF
+		%> 
 		% ===================================================================
 		function out = cellArray2Num(data)
 			if iscellstr(data)
@@ -749,7 +750,7 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		%> @brief make optimally different colours for plots
 		%> Copyright 2010-2011 by Timothy E. Holy
-		%> @param
+		%> @param n_colors
 		% ===================================================================
 		function colors = optimalColours(n_colors,bg,func) %make optimally different colours for plots
 			if ~exist('makecform','file') %no im proc toolbox, just return default colours
@@ -1054,7 +1055,7 @@ classdef analysisCore < optickaCore
 			fp = cumsum(~t)/sum(~t);
 			
 			% handle equally scored instances (BL 030708, see pg. 10 of Fawcett)
-			[uY,idx] = unique(Y);
+			[~,idx] = unique(Y);
 			tp = tp(idx);
 			fp = fp(idx);
 			
