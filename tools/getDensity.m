@@ -470,7 +470,7 @@ classdef getDensity < handle
 						end
 					end
 					if sc == true && obj.showoriginalscatter == true
-						scatter(xcol,ycol,repmat(80,length(xcol),1),'k.','MarkerEdgeColor',[0.7 0.7 0.7]);
+						scatter(xcol,ycol,repmat(80,length(xcol),1),'k.','MarkerFaceColor',[0.5 0.5 0.5],'MarkerEdgeColor',[0.5 0.5 0.5]);
 					end
 					axis square
 					axis(axrange);

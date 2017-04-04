@@ -2,7 +2,7 @@ classdef ( Hidden, Sealed ) PointerManager < handle
     %uix.PointerManager  Pointer manager
     
     %  Copyright 2016 The MathWorks, Inc.
-    %  $Revision: 115 $ $Date: 2015-07-29 05:03:09 +0100 (Wed, 29 Jul 2015) $
+    %  $Revision: 1435 $ $Date: 2016-11-17 17:50:34 +0000 (Thu, 17 Nov 2016) $
     
     properties( SetAccess = private )
         Figure % figure

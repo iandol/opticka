@@ -4,8 +4,8 @@ classdef ( Hidden, Sealed ) FigureObserver < handle
     %  A figure observer raises an event FigureChanged when the figure
     %  ancestor of a subject changes.
     
-    %  Copyright 2014 The MathWorks, Inc.
-    %  $Revision: 115 $ $Date: 2015-07-29 05:03:09 +0100 (Wed, 29 Jul 2015) $
+    %  Copyright 2014-2015 The MathWorks, Inc.
+    %  $Revision: 1435 $ $Date: 2016-11-17 17:50:34 +0000 (Thu, 17 Nov 2016) $
     
     properties( SetAccess = private )
         Subject % subject

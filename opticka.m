@@ -403,7 +403,7 @@ classdef opticka < optickaCore
 			obj.r.debug = obj.r.screen.debug;
 			obj.r.screen.visualDebug = obj.r.screen.debug;
 			obj.r.screen.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
-			obj.r.screen.nativeBeamPosition = logical(obj.gv(obj.h.OKNativeBeamPosition));
+			%deprecated obj.r.screen.nativeBeamPosition = logical(obj.gv(obj.h.OKNativeBeamPosition));
 			
 			if strcmpi(get(obj.h.OKuseLabJack,'Checked'),'on')
 				obj.r.useLabJack = true;

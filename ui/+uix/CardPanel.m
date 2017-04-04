@@ -9,8 +9,8 @@ classdef CardPanel < uix.Container & uix.mixin.Panel
     %
     %  See also: uix.Panel, uix.BoxPanel, uix.TabPanel, uicontainer
     
-    %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1426 $ $Date: 2016-11-16 07:12:06 +0000 (Wed, 16 Nov 2016) $
+    %  Copyright 2009-2016 The MathWorks, Inc.
+    %  $Revision: 1436 $ $Date: 2016-11-17 17:53:29 +0000 (Thu, 17 Nov 2016) $
     
     methods
         

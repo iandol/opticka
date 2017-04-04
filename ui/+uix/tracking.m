@@ -16,7 +16,7 @@ function varargout = tracking( varargin )
 %  [t,s] = tracking('query') returns the tracking state t and settings s.
 
 %  Copyright 2016 The MathWorks, Inc.
-%  $Revision: 1262 $ $Date: 2016-02-25 01:13:37 +0000 (Thu, 25 Feb 2016) $
+%  $Revision: 1435 $ $Date: 2016-11-17 17:50:34 +0000 (Thu, 17 Nov 2016) $
 
 persistent STATE USERNAME DOMAIN LANGUAGE CLIENT MATLAB OS
 if isempty( STATE )

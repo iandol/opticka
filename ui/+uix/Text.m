@@ -11,7 +11,7 @@ classdef Text < matlab.mixin.SetGet
     %  See also: uicontrol
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
+    %  $Revision: 1435 $ $Date: 2016-11-17 17:50:34 +0000 (Thu, 17 Nov 2016) $
     
     properties( Dependent )
         BackgroundColor
