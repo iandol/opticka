@@ -60,8 +60,8 @@ classdef sendSerial < optickaCore
 		function close(obj)
 			if isa(obj.device,'arduino')
 				obj.device = [];
-				s.deviceID = '';
-				s.availablePins = '';
+				obj.deviceID = '';
+				obj.availablePins = '';
 			end
 		end
 		
