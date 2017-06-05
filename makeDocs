@@ -6,9 +6,9 @@ rm -rf html/
 rm -rf docs/
 
 #Auto-run Matlab, publishing HTML output from optickatest.m
-MATLAB='/Applications/MATLAB_R2016b.app/bin/matlab'
+MATLAB='/Applications/MATLAB_R2017a.app/bin/matlab'
 if [ -f $MATLAB ]; then
-	$MATLAB -nodesktop -nosplash -r "publish('optickatest.m');pause(2);exit"
+	$MATLAB -nodesktop -nosplash -r "Screen('Preference', 'SkipSyncTests', 2);publish('optickatest.m');pause(2);exit"
 fi
 
 # We scrape the version number from the main opticka file
@@ -16,7 +16,7 @@ VER=$(grep -o -E -e "optickaVersion@char\ +=\ +'[0-9\.]+'" opticka.m | grep -o -
 echo; echo "---> Opticka version = $VER"; echo
 sleep 1
 # and then auto-edit the Doxygen file
-sed -i -e "s/^\(PROJECT_NUMBER\)[ ]*=.*/\1 = $VER/g" .doxyfile
+sed -i -E "s/^\(PROJECT_NUMBER\)[ ]*=.*/\1 = $VER/g" .doxyfile
 if [ $? -eq 0 ]; then
 	echo; echo "---> Edited .doxyfile"; echo
 else
