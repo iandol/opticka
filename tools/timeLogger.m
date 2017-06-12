@@ -8,13 +8,15 @@ classdef timeLogger < optickaCore
 		runLog		= struct()
 		trainingLog	= struct()
 		timer			= @GetSecs
-		vbl			= 0
+		vbl				= 0
 		show			= 0
 		flip			= 0
 		miss			= 0
-		stimTime		= 0
+		stimTime	= 0
+		tick			= 0
+		tickInfo	= 0
 		startTime	= 0
-		startRun		= 0
+		startRun	= 0
 		verbose		= true
 	end
 	
