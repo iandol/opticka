@@ -83,9 +83,15 @@ classdef timeLogger < optickaCore
 			
 			p(1,1).select();
 			hold on
-			plot(diff(vbl),'ro:')
-			plot(diff(show),'b--')
-			plot(diff(flip),'g-.')
+			vv=diff(vbl);
+			vv(vv>100)=100;
+			plot(vv,'ro:')
+			ss=diff(show);
+			ss(ss>100)=100;
+			plot(ss,'b--')
+			ff = diff(flip);
+			ff(ff>100)=100;
+			plot(ff,'g-.')
 			plot(stimTime(2:end)*100,'k-')
 			hold off
 			legend('VBL','Show','Flip','Stim ON')
