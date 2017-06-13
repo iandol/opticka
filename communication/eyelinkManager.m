@@ -365,6 +365,7 @@ classdef eyelinkManager < optickaCore
 					obj.x = obj.currentSample.gx(obj.eyeUsed+1); % +1 as we're accessing MATLAB array
 					obj.y = obj.currentSample.gy(obj.eyeUsed+1);
 					obj.pupil = obj.currentSample.pa(obj.eyeUsed+1);
+					if obj.verbose;fprintf('>X: %.2g | Y: %.2g | P: %.2g\n',obj.x,obj.y,obj.pupil);end
 				end
 			elseif obj.isDummy %lets use a mouse to simulate the eye signal
 				if ~isempty(obj.win)
@@ -450,12 +451,12 @@ classdef eyelinkManager < optickaCore
 				end
 				r = sqrt((obj.x - obj.fixationX).^2 + (obj.y - obj.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
 				window = find(r < obj.fixationRadius);
-				if any(window);
+				if any(window)
 					if obj.fixN == 0
 						obj.fixN = 1;
 						obj.fixSelection = window(1);
 					end
-					if obj.fixSelection == window(1);
+					if obj.fixSelection == window(1)
 						if obj.fixStartTime == 0
 							obj.fixStartTime = obj.currentSample.time;
 						end
@@ -467,7 +468,7 @@ classdef eyelinkManager < optickaCore
 						searching = false;
 						fixated = true;
 						obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
-						%if obj.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, obj.fixLength, obj.fixationTime, obj.fixTotal, obj.fixInitTotal);end
+						if obj.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, obj.fixLength, obj.fixationTime, obj.fixTotal, obj.fixInitTotal);end
 						return
 					else
 						fixated = false;
@@ -816,10 +817,10 @@ classdef eyelinkManager < optickaCore
 					syncTime(obj);
 					while yy == 0
 						err = checkRecording(obj);
-						if(err~=0); xx = 1; break; end;
+						if(err~=0); xx = 1; break; end
 						
 						[~, ~, keyCode] = KbCheck(-1);
-						if keyCode(stopkey); xx = 1; break;	end;
+						if keyCode(stopkey); xx = 1; break;	end
 						if keyCode(nextKey); yy = 1; break; end
 						if keyCode(calibkey); yy = 1; break; end
 						
