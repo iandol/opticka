@@ -324,7 +324,7 @@ classdef eyelinkAnalysis < analysisCore
 					end
 				end
 			end
-			if isnumeric(select)
+			if isnumeric(select) && ~isempty(select)
 				idx = select;
 				idxInternal = false;
 			else
@@ -340,6 +340,10 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				idxInternal = true;
 			end
+			if isempty(idx)
+				fprintf('No trials were selected to plot...\n')
+				return
+			end
 			if seperateVars == true && isempty(select)
 				vars = unique([me.trials(idx).id]);
 				for j = vars
@@ -348,16 +352,19 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				return
 			end
-			h=figure;
+			h1=figure;
 			set(gcf,'Color',[1 1 1],'Name',name);
 			figpos(1,[1200 1200]);
-			p = panel(h);
+			p = panel(h1);
 			p.fontsize = 12;
 			p.margin = [10 10 10 20]; %left bottom right top
 			p.pack('v',{2/3, []});
 			q = p(1);
 			q.margin = [20 20 10 25]; %left bottom right top
 			q.pack(2,2);
+			qq = p(2);
+			qq.margin = [20 20 10 25]; %left bottom right top
+			qq.pack(1,2);
 			a = 1;
 			stdex = [];
 			meanx = [];
@@ -463,8 +470,8 @@ classdef eyelinkAnalysis < analysisCore
 					end
 				end
 
-				p(2).select();
-				p(2).hold('on')
+				qq(1,1).select();
+				qq(1,1).hold('on')
 				for fix=1:length(thisTrial.fixations)
 					f=thisTrial.fixations(fix);
 					plot3([f.time/1e3 f.time/1e3+f.length/1e3],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
@@ -477,7 +484,11 @@ classdef eyelinkAnalysis < analysisCore
 						'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
 						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
 				end
-
+				
+				qq(1,2).select();
+				qq(1,2).hold('on')
+				plot(thisTrial.times,thisTrial.pa,'Color',c, 'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
+				
 				idxt = find(t >= t1 & t <= t2);
 
 				tvals{a} = t(idxt);
@@ -537,22 +548,29 @@ classdef eyelinkAnalysis < analysisCore
 			xlabel(q(1,2),'Time (s)');
 			ylabel(q(1,2),'Degrees');
 
-			p(2).select();
+			qq(1,1).select();
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
 			axis([me.plotRange(1) me.plotRange(2) -10 10 -10 10]);
 			view([5 5]);
-			xlabel(p(2),'Time (ms)');
-			ylabel(p(2),'X Position');
-			zlabel(p(2),'Y Position');
+			xlabel(qq(1,1),'Time (ms)');
+			ylabel(qq(1,1),'X Position');
+			zlabel(qq(1,1),'Y Position');
 			mn = nanmean(sacc);
 			md = nanmedian(sacc);
 			[~,er] = me.stderr(sacc,'SD');
 			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2g / %.2g ± %.2g SD [%.2g <> %.2g]',...
 				thisVarName,upper(type),mn,md,er,min(sacc),max(sacc)));
 			set(h,'BackgroundColor',[1 1 1]);
-			p(2).margin = [100 20 20 20]; %left bottom right top
+			
+			qq(1,2).select();
+			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			grid on;
+			box on;
+			title(qq(1,2),[thisVarName upper(type) ': Pupil Diameter']);
+			xlabel(qq(1,2),'Time (s)');
+			ylabel(qq(1,2),'Diameter');
 
 			q(2,1).select();
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
