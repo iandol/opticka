@@ -255,54 +255,54 @@ switch headerformat
     % also remember the original header details
     hdr.orig = orig;
     
-  case {'plexon_plx', 'plexon_plx_v2'}
-    ft_hastoolbox('PLEXON', 1);
-    
-    orig = plx_orig_header(filename);
-    
-    if orig.NumSlowChannels==0
-      error('file does not contain continuous channels');
-	end
-    for i=1:length(orig.SlowChannelHeader)
-      label{i} = deblank(orig.SlowChannelHeader(i).Name);
-    end
-    % continuous channels don't always contain data, remove the empty ones
-    [~, scounts] = plx_adchan_samplecounts(filename);
-    chansel = scounts > 0;
-    chansel = find(chansel); % this is required for timestamp selection
-	fsample = [orig.SlowChannelHeader.ADFreq];
-	fsample = fsample(chansel); %select non-empty channels only
-	if any(fsample~=fsample(1))
-      %warning('different sampling rates in continuous data not supported, please select channels carefully');
-    end
-    label = label(chansel);
-    % only the continuous channels are returned as visible
-    hdr.nChans      = length(label);
-	hdr.eventFs		= orig.ADFrequency;
-    hdr.Fs          = min(fsample);
-    hdr.label       = label;
-    % also remember the original header
-    hdr.orig        = orig;
-	hdr.fsample = fsample;
-    
-    hdr.nSamples = max(scounts);
-    hdr.nSamplesPre = 0;      % continuous
-    hdr.nTrials     = 1;      % continuous
-    hdr.TimeStampPerSample = double(orig.ADFrequency) / hdr.Fs;
-    
-    % also make the spike channels visible
-    for i=1:length(orig.ChannelHeader)
-      hdr.label{end+1} = deblank(orig.ChannelHeader(i).Name);
-    end
-    hdr.label = hdr.label(:);
-    hdr.nChans = length(hdr.label);
-
-  otherwise
-    if strcmp(fallback, 'biosig') && ft_hastoolbox('BIOSIG', 1)
-      hdr = read_biosig_header(filename);
-    else
-      error('unsupported header format (%s)', headerformat);
-    end
+	case {'plexon_plx', 'plexon_plx_v2'}
+		ft_hastoolbox('PLEXON', 1);
+		
+		orig = plx_orig_header(filename);
+		
+		if orig.NumSlowChannels==0
+			error('file does not contain continuous channels');
+		end
+		for i=1:length(orig.SlowChannelHeader)
+			label{i} = deblank(orig.SlowChannelHeader(i).Name);
+		end
+		% continuous channels don't always contain data, remove the empty ones
+		[~, scounts] = plx_adchan_samplecounts(filename);
+		chansel = scounts > 0;
+		chansel = find(chansel); % this is required for timestamp selection
+		fsample = [orig.SlowChannelHeader.ADFreq];
+		fsample = fsample(chansel); %select non-empty channels only
+		if any(fsample~=fsample(1))
+			%warning('different sampling rates in continuous data not supported, please select channels carefully');
+		end
+		label = label(chansel);
+		% only the continuous channels are returned as visible
+		hdr.nChans      = length(label);
+		hdr.eventFs		= orig.ADFrequency;
+		hdr.Fs          = min(fsample);
+		hdr.label       = label;
+		% also remember the original header
+		hdr.orig        = orig;
+		hdr.fsample = fsample;
+		
+		hdr.nSamples = max(scounts);
+		hdr.nSamplesPre = 0;      % continuous
+		hdr.nTrials     = 1;      % continuous
+		hdr.TimeStampPerSample = double(orig.ADFrequency) / hdr.Fs;
+		
+		% also make the spike channels visible
+		for i=1:length(orig.ChannelHeader)
+			hdr.label{end+1} = deblank(orig.ChannelHeader(i).Name);
+		end
+		hdr.label = hdr.label(:);
+		hdr.nChans = length(hdr.label);
+		
+	otherwise
+		if strcmp(fallback, 'biosig') && ft_hastoolbox('BIOSIG', 1)
+			hdr = read_biosig_header(filename);
+		else
+			error('unsupported header format (%s)', headerformat);
+		end
 end % switch headerformat
 
 

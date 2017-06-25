@@ -188,6 +188,7 @@ classdef LFPAnalysis < analysisCore
 				parse(me); 
 				return
 			end
+			checkPaths(me);
 			fprintf('\n<strong>:#:</strong> Reparsing LFP data...\n')
 			me.ft = struct();
 			me.results = struct();
@@ -286,6 +287,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parseSpikes(me, varargin)
+			checkPaths(me);
 			fprintf('\n<strong>:#:</strong> Syncing settings and reparsing Spike data...\n')
 			me.sp.p.saccadeRealign = me.p.saccadeRealign;
 			in.cutTrials = me.cutTrials;
@@ -362,7 +364,7 @@ classdef LFPAnalysis < analysisCore
 			getft = tic;
 			ft = struct();
 			olddir=pwd; cd(me.dir);
-			ft(1).hdr = ft_read_plxheader(me.lfpfile);
+			ft(1).hdr = ft_read_header(me.lfpfile,'headerformat','plexon_plx_v2');
 			cd(olddir);
 			ft.hdr.FirstTimeStamp = 0; %we use LFPs(1).sample-1 below to fake 0 start time
 			ft.label = {LFPs(:).name};
@@ -1149,9 +1151,10 @@ classdef LFPAnalysis < analysisCore
 			h=figure;figpos(1,[1000 1500]);set(h,'Color',[1 1 1],'NumberTitle','off',...
 				'Name',['Co-Plot ' me.lfpfile '+' me.spikefile ' > LFP: ' me.LFPs(me.selectedLFP).name ' | Unit: ' me.sp.names{me.sp.selectedUnit}]);
 			p=panel(h);
-			p.margin = [20 20 20 20]; %left bottom right top
+			p.margin = [25 20 20 20]; %left bottom right top
 			[row,col]=me.optimalLayout(me.nSelection);
 			p.pack(row,col);
+			mxF = 1;
 			for j = 1:length(me.selectedTrials)
 				[i1,i2] = ind2sub([row,col], j);
 				p(i1,i2).select();
@@ -1168,12 +1171,14 @@ classdef LFPAnalysis < analysisCore
 					'XAxisLocation','top',...
 					'YAxisLocation','right',...
 					'Color','none');
+				fax(j) = h2.axis;
 				set(h2.axis,'XColor','k','YColor','k','XTickLabel',{});
 				axis(h2.axis);
 				hold(h2.axis,'on');
 				
 				time2 = me.sp.results.sd{j}.time;
 				av2 = me.sp.results.sd{j}.avg;
+				mxF = max([mxF (max(av2))]);
 				er2 = me.var2SE(me.sp.results.sd{j}.var,me.sp.results.sd{j}.dof);
 				h=me.areabar(time2,av2,er2,[0.7 0.5 0.5],[],'r.-');
 				h2.axish = h;
@@ -1181,6 +1186,9 @@ classdef LFPAnalysis < analysisCore
 				ylabel(h2.axis,'Firing Rate (Hz)');
 				box(h2.axis,'off')
 				p(i1,i2).title(t);
+			end
+			for j = 1:length(me.selectedTrials)
+				fax(j).YLim = [0 ceil(mxF+(mxF/10))];
 			end
 			
 		end
@@ -1377,7 +1385,7 @@ classdef LFPAnalysis < analysisCore
 			
 			inbeh = {'correct','breakFix','incorrect','all'};
 			beh = 'r';
-			if ischar(me.selectedBehaviour);
+			if ischar(me.selectedBehaviour)
 				t = me.selectedBehaviour;
 				me.selectedBehaviour = cell(1);
 				me.selectedBehaviour{1} = t;
@@ -1598,7 +1606,7 @@ classdef LFPAnalysis < analysisCore
 		function chSpectrum(me,tapers)
 			if ~exist('mtspectrumc','file'); warning('Chronux Toolbox not installed...');return; end
 			if ~exist('tapers','var') || isempty(tapers)
-				if me.openUI; 
+				if me.openUI
 					answer=menuN('Chronux Spectrum:',{'t|[10 2]','Set Tapers [TW K] TW=time-bandwidth-product, K=#tapers:'});
 					if iscell(answer) && ~isempty(answer); tapers = str2num(answer{1}); 
 					elseif ischar(answer); tapers = str2num(answer);end
@@ -1670,7 +1678,7 @@ classdef LFPAnalysis < analysisCore
 					else
 						t1 = trials(k).t1;
 					end
-					[idx1, val1, dlta1] = findNrst(time, t1);
+					[idx1, val1, dlta1] = me.findNearest(time, t1);
 					trials(k).zeroTime = val1;
 					trials(k).zeroIndex = idx1; 
 					trials(k).zeroDelta = dlta1;
@@ -1702,11 +1710,6 @@ classdef LFPAnalysis < analysisCore
 			
 			if ~isempty(LFPs(1).trials)
 				me.LFPs = LFPs;
-			end
-			function [idx,val,delta]=findNrst(in,value)
-				[~,idx] = min(abs(in-value));
-				val = in(idx);
-				delta = abs(value - val);
 			end
 		end
 		
@@ -1861,7 +1864,7 @@ classdef LFPAnalysis < analysisCore
 				for k = 1:length(me.selectedTrials{j}.idx)
 					trial = LFP.trials(me.selectedTrials{j}.idx(k));
 					dat = [trial.variable,trial.index,trial.t1,trial.isCorrect,trial.isBreak];
-					if ismember(trial.index,cut);
+					if ismember(trial.index,cut)
 						ls = ':';cc=[0.5 0.5 0.5];
 					else
 						ls = '-';cc=c(k,:);
@@ -1909,15 +1912,15 @@ classdef LFPAnalysis < analysisCore
 				tg = get(src,'Tag');
 				disp(['Clicked on: ' tg]);
 				if ~isempty(ud) && length(ud) > 1
-					var = ud(1);
+					%var = ud(1);
 					trl = ud(2);
-					t1 = ud(3);
+					%t1 = ud(3);
 					
-					if intersect(trl, me.cutTrials);
+					if intersect(trl, me.cutTrials)
 						me.cutTrials(me.cutTrials == trl) = [];
 						set(src,'LineStyle','-','LineWidth',0.5);
 					else
-						me.cutTrials = [me.cutTrials trl];
+						me.cutTrials = [me.cutTrials int32(trl)];
 						set(src,'LineStyle',':','LineWidth',2);
 					end
 					disp(['Current Selected trials : ' num2str(me.cutTrials)]);
@@ -1935,7 +1938,7 @@ classdef LFPAnalysis < analysisCore
 		function drawAverageLFPs(me)
 			disp('Drawing Averaged (Reparsed) Timelocked LFPs...')
 			LFPs = me.LFPs;
-			if LFPs(1).reparse == true;
+			if LFPs(1).reparse == true
 				if isgraphics(me.plotDestination)
 					h = me.plotDestination;
 				else
@@ -2485,40 +2488,40 @@ classdef LFPAnalysis < analysisCore
 				h = me.plotDestination;
 			else
 				ho = figure;figpos(1,[1000 2000]);set(ho,'Color',[1 1 1],'Name',[me.lfpfile ' ' fq{1}.cfgUsed.channel]);
-				h = uipanel('Parent',ho,'units', 'normalized', 'position', [0 0 1 1],'BackgroundColor',[1 1 0],'BorderType','none');
+				%h = uipanel('Parent',ho,'units', 'normalized', 'position', [0 0 1 1],'BackgroundColor',[1 1 1],'BorderType','none');
 			end
-			p=panel(h);
-			p.margin = [15 15 30 20];%left bottom right top
+			p=panel(ho);
+			p.margin = [20 15 30 10];%left bottom right top
 			if isnumeric(gcf);	p.fontsize = 12; end
 			if ~exist('bl','var')
 				bl = {me.options.bline};
 			end
-			if length(bl) == 1;
+			if length(bl) == 1
 				[row,col] = me.optimalLayout(length(fq));
 			else
 				row = length(fq); col = length(bl);
 			end
-			p.pack(row,col);
+			p.pack(row,col); %#ok<*PROPLC>
 			hmin = cell(size(bl));
 			hmax = hmin;
 			h = hmin;
 			for jj = 1:length(bl)
 				for i = 1:length(fq)
-					if length(bl)==1;	
+					if length(bl) == 1
 						[aa,bb] = ind2sub([row, col],i);
 						p(aa,bb).select();
 					else
-						p(i,jj).select(); 
+						p(i,jj).select();
 					end
-					cfg							= [];
+					cfg									= [];
 					cfg.fontsize				= 13;
-					if strcmpi(bl{jj},'no');
+					if strcmpi(bl{jj},'no')
 						cfg.baseline			= 'no';
 					else
 						cfg.baseline			= me.baselineWindow;
-						cfg.baselinetype		= bl{jj};
+						cfg.baselinetype	= bl{jj};
 						if strcmpi(bl{jj},'relative') && exist('zlimi','var')
-							cfg.zlim					= zlimi;
+							cfg.zlim				= zlimi;
 						else
 							
 						end
@@ -2533,8 +2536,6 @@ classdef LFPAnalysis < analysisCore
 					cfgOut						= ft_singleplotTFR(cfg, fq{i});
 					grid on; box on;
 					set(gca,'Layer','top','TickDir','out')
-					%xlim(me.plotRange);
-					%axis square
 					h{jj}{i} = gca;
 					clim = get(gca,'clim');
 					hmin{jj} = min([hmin{jj} min(clim)]);
@@ -2542,16 +2543,15 @@ classdef LFPAnalysis < analysisCore
 					xlabel('Time (s)');
 					ylabel('Frequency (Hz)');
 					t = [bl{jj} '#' num2str(i) ' ' name ' |Mth:' fq{i}.cfgUsed.method ' |Tp:' fq{i}.cfgUsed.taper];
-					t = [t '\newlineWin:' num2str(fq{i}.cfgUsed.tw) ' |Cyc:' num2str(fq{i}.cfgUsed.cycles)];
+					t = [t ' |Win:' num2str(fq{i}.cfgUsed.tw) ' |Cyc:' num2str(fq{i}.cfgUsed.cycles)];
 					t = [t ' |Smth:' num2str(fq{i}.cfgUsed.smooth) ' | Wdth:' num2str(fq{i}.cfgUsed.width) ];
 					title(t,'FontSize',cfg.fontsize);
 				end
-				for i = 1:length(h{jj});
+				for i = 1:length(h{jj})
 					set(h{jj}{i},'clim', [hmin{jj} hmax{jj}]);
 					box on; grid on;
 				end
-				colormap default
-				colormap('jet');
+				colormap('parula');
 			end
 			me.panels.(name) = p;
 			clear fq p
@@ -2826,7 +2826,7 @@ classdef LFPAnalysis < analysisCore
 					 end
 				end
 				xlabel('f');
-				if strcmp(plt,'l'); ylabel('10*log10(X) dB'); else ylabel('X'); end;
+				if strcmp(plt,'l'); ylabel('10*log10(X) dB'); else ylabel('X'); end
 			end
 				
 		end
@@ -2853,7 +2853,7 @@ classdef LFPAnalysis < analysisCore
 		% ===================================================================
 		function makeUI(me, varargin)
 			if ~isempty(me.handles) && isfield(me.handles,'hbox') && isa(me.handles.hbox,'uix.HBoxFlex')
-				fprintf('---> UI already open!\n');
+				fprintf('--->>> UI already open!\n');
 				me.openUI = true;
 				return
 			end
@@ -2902,7 +2902,7 @@ classdef LFPAnalysis < analysisCore
 				'BackgroundColor',bgcolor);
 			handles.spikepanel = uix.Panel('Parent', handles.tabs,'Padding',0,...
 				'BackgroundColor',bgcolor);
-			handles.tabs.TabTitles = {'LFP Plexon File','Spikes Plexon file'};
+			handles.tabs.TabTitles = {'LFP Data','Spike Data'};
 			handles.hbox = uix.HBoxFlex('Parent', handles.lfppanel,'Padding',0,...
 				'Spacing', 5, 'BackgroundColor', bgcolor);
 			handles.lfpinfo = uicontrol('Parent', handles.hbox,'Style','edit','Units','normalized',...
@@ -3049,7 +3049,7 @@ classdef LFPAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function closeUI(me, varargin)
-			fprintf('--->>> Close UI for object: %s',me.fullName);
+			fprintf('--->>> Close UI for object: %s\n',me.fullName);
 			try me.sp.closeUI; end %#ok<TRYNC>
 			try delete(me.handles.parent); end %#ok<TRYNC>
 			me.handles = struct();
@@ -3067,7 +3067,7 @@ classdef LFPAnalysis < analysisCore
 				if me.nLFPs == 0
 					notifyUI(me,'You need to PARSE the data files first');
 				else
-					notifyUI(me,'Data seems to be parsed, try running an analysis');
+					notifyUI(me,'LFPs seems to be parsed, run an analysis...');
 				end
 				fs = 10;
 				if isa(me.p,'plxReader')

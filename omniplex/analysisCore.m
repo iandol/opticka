@@ -81,6 +81,8 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		function checkPaths(me,varargin)
 			if isprop(me,'dir')
+				oldDir = me.dir;
+				checkPaths@optickaCore(me);
 				if isprop(me,'file')
 					fn = me.file;
 				elseif isprop(me,'lfpfile')
@@ -88,7 +90,6 @@ classdef analysisCore < optickaCore
 				else
 					fn = '';
 				end
-				oldDir = me.dir;
 				rD = me.rootDirectory;
 				isDir = false;
 				if ~exist(me.dir,'dir')
@@ -119,17 +120,14 @@ classdef analysisCore < optickaCore
 				end
 				if isDir
 					fprintf('--->>> Found %s based on %s for %s file %s\n',me.dir,oldDir,me.className,fn)
-					if isprop(me,'p') && isa(me.p,'plxReader')
-						me.p.dir = me.dir;
-						me.p.matdir = me.dir;
-						checkPaths(me.p);
-					end
 					if isprop(me,'sp') && isa(me.sp,'spikeAnalysis')
 						me.sp.dir = me.dir;
 						if isprop(me.sp,'rootDirectory')
 							me.sp.rootDirectory = me.rootDirectory;
 						end
-						checkPaths(me.sp);
+						if isprop(me.sp,'p')
+							me.sp.p.dir = me.dir;
+						end
 					end
 				else
 					fprintf('---!!! Couldn''t find: %s, please copy file %s to correct folders\n',oldDir,fn);
@@ -814,9 +812,9 @@ classdef analysisCore < optickaCore
 				cspec = 'rgbwcmyk';
 				k = find(cspec==c(1));
 				if isempty(k); error('MATLAB:InvalidColorString','Unknown color string.');end
-				if k~=3 || length(c)==1,
+				if k~=3 || length(c)==1
 					c = rgbspec(k,:);
-				elseif length(c)>2,
+				elseif length(c)>2
 					if strcmpi(c(1:3),'bla')
 						c = [0 0 0];
 					elseif strcmpi(c(1:3),'blu')

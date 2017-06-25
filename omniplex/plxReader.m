@@ -95,7 +95,7 @@ classdef plxReader < optickaCore
 			me=me@optickaCore(varargin); %superclass constructor
 			if nargin>0; me.parseArgs(varargin, me.allowedProperties); end
 			if isempty(me.name); me.name = 'plxReader'; end
-			if isempty(me.file);
+			if isempty(me.file)
 				getFiles(me,false);
 			end
 		end
@@ -137,6 +137,7 @@ classdef plxReader < optickaCore
 		% ===================================================================
 		function reparse(me)
 			me.paths.oldDir = pwd;
+			checkPaths(me);
 			cd(me.dir);
 			getEvents(me);
 			if me.isEDF == true
@@ -154,10 +155,11 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function parseEvents(me)
+			checkPaths(me);
 			try
 				cd(me.dir);
 			catch
-				
+				warning("Could not find directory, please run checkPaths(), will try current dir");
 			end
 			if ~isa(me.rE,'runExperiment') || isempty(me.rE)
 				readMat(me);
@@ -187,6 +189,7 @@ classdef plxReader < optickaCore
 				getFiles(me);
 				if isempty(me.matfile); warning('No behavioural mat file selected'); return; end
 			end
+			checkPaths(me);
 			me.paths.oldDir = pwd;
 			cd(me.dir);
 			if ~isa(me.rE,'runExperiment') || isempty(me.rE)
@@ -217,8 +220,9 @@ classdef plxReader < optickaCore
 		%> @return
 		% ===================================================================
 		function LFPs = readLFPs(me)
+			checkPaths(me);
 			cd(me.dir);
-			if isempty(me.eventList); 
+			if isempty(me.eventList) 
 				getEvents(me); 
 			end
 			tlfp = tic;
@@ -560,10 +564,10 @@ classdef plxReader < optickaCore
 				otherwise
 					me.info{end+1} = sprintf('Data type : Unknown');
 			end
-			me.info{end+1} = sprintf('Spike Peak Voltage (mV) : %g', me.ic.SpikePeakV);
-			me.info{end+1} = sprintf('Spike A/D Resolution (bits) : %g', me.ic.SpikeADResBits);
-			me.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', me.ic.SlowPeakV);
-			me.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', me.ic.SlowADResBits);
+			try me.info{end+1} = sprintf('Spike Peak Voltage (mV) : %g', me.ic.SpikePeakV);end
+			try me.info{end+1} = sprintf('Spike A/D Resolution (bits) : %g', me.ic.SpikeADResBits);end
+			try me.info{end+1} = sprintf('Slow A/D Peak Voltage (mV) : %g', me.ic.SlowPeakV);end
+			try me.info{end+1} = sprintf('Slow A/D Resolution (bits) : %g', me.ic.SlowADResBits);end
 
 			if ~isempty(me.eventList)
 				generateMeta(me);
@@ -805,7 +809,7 @@ classdef plxReader < optickaCore
 				force = false;
 			end
 			if force == true || isempty(me.file)
-				[f,p] = uigetfile({'*.plx;*.pl2';'PlexonFiles'},'Load Plexon File');
+				[f,p] = uigetfile({'*.pl2;*.plx';'PlexonFiles'},'Load Plexon File');
 				if ischar(f) && ~isempty(f)
 					me.file = f;
 					me.dir = p;

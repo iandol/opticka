@@ -465,7 +465,6 @@ classdef spikeAnalysis < analysisCore
 			me.results(1).sd = sd;
 			getRates(me);
 			
-			
 			if me.doPlots 
 				plot(me,'waves',me.measureRange);
 				plot(me,'density'); 
@@ -929,7 +928,7 @@ classdef spikeAnalysis < analysisCore
 			if length(sd) <4; figpos(1,[1000 1500]); else figpos(1,[2000 2000]); end
 			p=panel(h);
 			p.fontsize = fs;
-			p.margin = [12 12 12 6]; %left bottom right top
+			p.margin = [20 12 12 6]; %left bottom right top
 			p.pack('v', {3/4 []})
 			q = p(1);
 			len = me.nSelection;
@@ -957,6 +956,7 @@ classdef spikeAnalysis < analysisCore
 				q(i1,i2).title([me.names{me.selectedUnit} ' VAR: ' num2str(j)])
 				if isfield(cfgUsed{j}.hdl,'axTopPlot'); set(cfgUsed{j}.hdl.axTopPlot,'Color','none'); end
 				me.appendTrialNames(cfgUsed{j}.hdl.axRaster,cfgUsed{j}.trials);
+				box on;grid on
 			end
 			
 			p(2).select();

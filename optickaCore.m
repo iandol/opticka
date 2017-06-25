@@ -292,22 +292,39 @@ classdef optickaCore < handle
 		%> @return
 		% ===================================================================
 		function checkPaths(ego)
+			samePath = false;
 			if isprop(ego,'dir')
+				
+				%if our object wraps a plxReader, try to use its paths
+				if isprop(ego,'p') && isa(ego.p,'plxReader')
+					checkPaths(ego.p);
+					ego.dir = ego.p.dir; %inherit the path
+				end
+				
+				if isprop(ego,'matdir') %normally they are the same
+					if ~isempty(ego.dir) && strcmpi(ego.dir, ego.matdir)
+						samePath = true; 
+					end
+				end
+				
 				if ~exist(ego.dir,'dir')
 					if isprop(ego,'file')
 						fn = ego.file;
 					else
 						fn = '';
 					end
+					fprintf('Please find new directory for: %s\n',fn);
 					p = uigetdir('',['Please find new directory for: ' fn]);
 					if p ~= 0
 						ego.dir = p;
+						
 					else
 						warning('Can''t find valid source directory')
 					end
 				end
 			end
 			if isprop(ego,'matdir')
+				if samePath; ego.matdir = ego.dir; return; end
 				if ~exist(ego.matdir,'dir')
 					if exist(ego.dir,'dir')
 						ego.matdir = ego.file;
@@ -317,7 +334,7 @@ classdef optickaCore < handle
 						else
 							fn = '';
 						end
-
+						fprintf('Please find new directory for: %s\n',fn);
 						p = uigetdir('',['Please find new directory for: ' fn]);
 						if p ~= 0
 							ego.matdir = p;
@@ -325,6 +342,11 @@ classdef optickaCore < handle
 							warning('Can''t find valid source directory')
 						end
 					end
+				end
+			end
+			if isa(ego,'plxReader')
+				if isprop(ego,'eA') && isa(ego.eA,'eyelinkAnalysis')
+					ego.eA.dir = ego.dir;
 				end
 			end
 		end

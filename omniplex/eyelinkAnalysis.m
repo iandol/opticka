@@ -373,7 +373,7 @@ classdef eyelinkAnalysis < analysisCore
 			sacc = [];
 			xvals = [];
 			yvals = [];
-			tvals = [];
+			tvals = {};
 			medx = [];
 			medy = [];
 			early = 0;
@@ -430,10 +430,12 @@ classdef eyelinkAnalysis < analysisCore
 				ip = find((t >= me.plotRange(1)) & (t <= me.plotRange(2)));
 				tm = t(ix);
 				tp = t(ip);
-				x = thisTrial.gx(ix) / me.ppd_;
-				y = thisTrial.gy(ix) / me.ppd_;
-				xp = thisTrial.gx(ip) / me.ppd_;
-				yp = thisTrial.gy(ip) / me.ppd_;
+				xa = thisTrial.gx / me.ppd_;
+				ya = thisTrial.gy / me.ppd_;
+				x = xa(ix);
+				y = ya(ix) ;
+				xp = xa(ip);
+				yp = ya(ip);
 
 				if min(x) < -20 || max(x) > 20 || min(y) < -20 || max(y) > 20
 					x(x < -20) = -20; x(x > 20) = 20; y(y < -20) = -20; y(y > 20) = 20;
@@ -492,17 +494,17 @@ classdef eyelinkAnalysis < analysisCore
 				idxt = find(t >= t1 & t <= t2);
 
 				tvals{a} = t(idxt);
-				xvals{a} = x(idxt);
-				yvals{a} = y(idxt);
+				xvals{a} = xa(idxt);
+				yvals{a} = ya(idxt);
 				if isfield(thisTrial,'firstSaccade') && thisTrial.firstSaccade > 0
 					sacc = [sacc thisTrial.firstSaccade/1e3];
 				end
-				meanx = [meanx mean(x(idxt))];
-				meany = [meany mean(y(idxt))];
-				medx = [medx median(x(idxt))];
-				medy = [medy median(y(idxt))];
-				stdex = [stdex std(x(idxt))];
-				stdey = [stdey std(y(idxt))];
+				meanx = [meanx mean(xa(idxt))];
+				meany = [meany mean(ya(idxt))];
+				medx = [medx median(xa(idxt))];
+				medy = [medy median(ya(idxt))];
+				stdex = [stdex std(xa(idxt))];
+				stdey = [stdey std(ya(idxt))];
 
 				udt = [thisTrial.idx thisTrial.correctedIndex thisTrial.variable];
 				q(2,1).select();
