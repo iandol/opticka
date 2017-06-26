@@ -1160,7 +1160,7 @@ classdef LFPAnalysis < analysisCore
 				p(i1,i2).select();
 				t = ['LFP: ' me.LFPs(me.selectedLFP).name ' | Unit: ' me.sp.names{me.sp.selectedUnit} ' | Sel:' me.selectedTrials{j}.name];
 				[time,av,er]=getAverageTuningCurve(me,me.selectedTrials{j}.idx, me.selectedLFP);
-				h1 = me.areabar(time,av,er,[],[],'k.-');
+				h1 = me.areabar(time,av,er,[],[],'k-');
 				axis(h1.axis,[me.plotRange(1) me.plotRange(2) -inf inf]);
 				ylabel(h1.axis,'Voltage (mV)');
 				xlabel(h1.axis,'Time (s)');
@@ -2023,7 +2023,7 @@ classdef LFPAnalysis < analysisCore
 						tlout(i).se = feval(tlout(i).fe,tlout(i).t);
 						me.areabar(tlout(i).t, tlout(i).s, tlout(i).se, [.5 .5 .5],0.3,'LineWidth',1);
 					else
-						me.areabar(tlout(i).t, tlout(i).d, tlout(i).e, [.5 .5 .5],0.3,'b.-','LineWidth',1,'Color',cl(i,:));
+						me.areabar(tlout(i).t, tlout(i).d, tlout(i).e, [.5 .5 .5],0.3,'b-','LineWidth',1,'Color',cl(i,:));
 					end
 				end
 				legend(namestr,'Location','southwest');
@@ -2551,7 +2551,7 @@ classdef LFPAnalysis < analysisCore
 					set(h{jj}{i},'clim', [hmin{jj} hmax{jj}]);
 					box on; grid on;
 				end
-				colormap('parula');
+				colormap('jet');
 			end
 			me.panels.(name) = p;
 			clear fq p
