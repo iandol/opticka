@@ -987,7 +987,7 @@ classdef opticka < optickaCore
 					set(obj.h.OKscreenXOffset,'String', num2str(tmp.r.screen.screenXOffset));
 					set(obj.h.OKscreenYOffset,'String', num2str(tmp.r.screen.screenYOffset));
 					
-					set(obj.h.OKNativeBeamPosition,'Value', tmp.r.screen.nativeBeamPosition);
+					%set(obj.h.OKNativeBeamPosition,'Value', tmp.r.screen.nativeBeamPosition);
 					
 					list = obj.gs(obj.h.OKGLSrc);
 					val = obj.findValue(list,tmp.r.screen.srcMode);

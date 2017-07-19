@@ -261,7 +261,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			end
 		end
 		
-				% ===================================================================
+		% ===================================================================
 		%> @brief Initialise the properties used to track the run
 		%>
 		%> Initialise the properties used to track the run. These are dynamic
