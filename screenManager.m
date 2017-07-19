@@ -331,9 +331,20 @@ classdef screenManager < optickaCore
 				elseif isa(obj.gammaTable,'calibrateLuminance') && (obj.gammaTable.choice > 0)
 					choice = obj.gammaTable.choice;
 					obj.screenVals.resetGamma = true;
-					gTmp = repmat(obj.gammaTable.gammaTable{choice},1,3);
+					if size(obj.gammaTable.gammaTable,2) > 1
+						if isprop(obj.gammaTable,'finalCLUT') && ~isempty(obj.gammaTable.finalCLUT)
+							gTmp = obj.gammaTable.finalCLUT;
+						else
+							gTmp = [obj.gammaTable.gammaTable{choice,2:4}];
+						end
+					else
+						gTmp = repmat(obj.gammaTable.gammaTable{choice,1},1,3);
+					end
 					Screen('LoadNormalizedGammaTable', obj.screen, gTmp);
 					fprintf('\n---> screenManager: SET GAMMA CORRECTION using: %s\n', obj.gammaTable.modelFit{choice}.method);
+					if isprop(obj.gammaTable,'correctColour') && obj.gammaTable.correctColour == true
+						fprintf('---> screenManager: GAMMA CORRECTION used independent RGB Correction \n');
+					end
 				else
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 					%obj.screenVals.oldCLUT = LoadIdentityClut(obj.win);

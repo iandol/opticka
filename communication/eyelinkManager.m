@@ -373,7 +373,7 @@ classdef eyelinkManager < optickaCore
 				else
 					[obj.x, obj.y] = GetMouse([]);
 				end
-				obj.pupil = 1000;
+				obj.pupil = 800 + randi(20);
 				obj.currentSample.gx = obj.x;
 				obj.currentSample.gy = obj.y;
 				obj.currentSample.pa = obj.pupil;
