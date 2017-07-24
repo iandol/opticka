@@ -151,14 +151,14 @@ switch eyecmd
 	case 2
 		% Eyelink Keyboard query:
 		[rc, el] = EyelinkGetKey(el);
-% 		if rc == 32 %space key
-% 			clearScreen = 1;
-% 			needsupdate = 1;
-% 			calxy = [];
-% 			if isa(lJ,'labJack') %this is why we need lJ to be universal
-% 				lJ.timedTTL(0,160);
-% 			end
-% 		end
+		if rc == 32 %space key
+			clearScreen = 1;
+			needsupdate = 1;
+			calxy = [];
+			if isa(lJ,'labJack') %this is why we need lJ to be universal
+				lJ.timedTTL(0,160);
+			end
+		end
 		if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
 	case 3
 		% Alert message:

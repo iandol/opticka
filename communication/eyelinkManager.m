@@ -54,6 +54,8 @@ classdef eyelinkManager < optickaCore
 		win = []
 		%> verbosity level
 		verbosityLevel = 4
+		%> force drift correction?
+		forceDriftCorrect = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -330,14 +332,18 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function success = driftCorrection(obj)
 			success = false;
+			if obj.forceDriftCorrect
+				Eyelink('command', 'driftcorrect_cr_disable = ON');
+			end
 			if obj.isConnected
 				success = EyelinkDoDriftCorrection(obj.defaults, obj.fixationX, obj.fixationY);
 				%success = Eyelink('DriftCorrStart', obj.screen.xCenter, obj.screen.yCenter, 1, 1, 1);
-				fprintf('Drift Correct RETURN: %.2g', success);
+				fprintf('Drift Correct at %.2g %.2g RETURN: %.2g\n', obj.fixationX, obj.fixationY, success);
 			end
 			if success == -1
 				obj.salutation('Drift Correct','FAILED',true);
-			else
+			elseif obj.forceDriftCorrect
+				obj.salutation('Drift Correct','TRY TO APPLY',true);
 				Eyelink('ApplyDriftCorr');
 			end
 		end
