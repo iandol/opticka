@@ -65,7 +65,7 @@ persistent inDrift;
 offscreen = 0;
 newImage = 0;
 
-verbose = true;
+verbose = false;
 
 if 0 == Screen('WindowKind', eyelinktex)
 	eyelinktex = []; % got persisted from a previous ptb window which has now been closed; needs to be recreated
