@@ -549,12 +549,39 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief Set method for verbosityLevel
+		%>
+		%> @param
+		% ===================================================================
+		function set.verbosityLevel(obj,value)
+			obj.verbosityLevel = value;
+			Screen('Preference', 'Verbosity', obj.verbosityLevel); %errors and warnings
+		end
+		
+		% ===================================================================
 		%> @brief Screen('DrawingFinished')
 		%>
 		%> @param
 		% ===================================================================
 		function finishDrawing(obj)
 			Screen('DrawingFinished', obj.win); 
+		end
+		
+		% ===================================================================
+		%> @brief Screen('DrawingFinished')
+		%>
+		%> @param
+		% ===================================================================
+		function testWindowOpen(obj)
+			if obj.isOpen			
+				wk = Screen(obj.win, 'WindowKind');
+				if wk == 0
+					warning(['===>>> ' obj.fullName ' PTB Window is actually INVALID!']);
+					obj.isOpen = 0;
+				else
+					fprintf('===>>> %s VALID WindowKind = %i\n',obj.fullName,wk);
+				end
+			end
 		end
 		
 		% ===================================================================

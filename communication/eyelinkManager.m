@@ -52,6 +52,8 @@ classdef eyelinkManager < optickaCore
 	properties (Hidden = true)
 		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
 		win = []
+		%> verbosity level
+		verbosityLevel = 4
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -167,7 +169,7 @@ classdef eyelinkManager < optickaCore
 			end
 			
 			rect=obj.screen.winRect;
-			Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
+			Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3)-1,rect(4)-1);
 			if ~isempty(obj.callback) && exist(obj.callback,'file')
 				obj.defaults.callback = obj.callback;
 			end
@@ -268,7 +270,7 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function trackerSetup(obj)
 			if obj.isConnected
-				Eyelink('Verbosity',4);
+				Eyelink('Verbosity',obj.verbosityLevel);
 				Eyelink('Command','calibration_type = %s', obj.calibrationStyle);
 				Eyelink('Command','normal_click_dcorr = ON');
 				Eyelink('Command','randomize_calibration_order = NO');
@@ -296,7 +298,7 @@ classdef eyelinkManager < optickaCore
 				end
 				EyelinkDoTrackerSetup(obj.defaults);
 				[~,out] = Eyelink('CalMessage');
-				obj.salutation('SETUP',out);
+				obj.salutation('SETUP calibration message: ',out);
 			end
 	end
 		

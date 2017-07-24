@@ -65,7 +65,7 @@ persistent inDrift;
 offscreen = 0;
 newImage = 0;
 
-verbose = false;
+verbose = true;
 
 if 0 == Screen('WindowKind', eyelinktex)
 	eyelinktex = []; % got persisted from a previous ptb window which has now been closed; needs to be recreated
@@ -277,7 +277,7 @@ switch eyecmd
 			rc = [width , height, x , y , dw , dh , 0];
 		end
 		% add by NJ to prevent flashing of text in drift correct
-	case 17,
+	case 17
 		inDrift = 1;
 	otherwise
 		% Unknown command:
@@ -351,15 +351,15 @@ return;
 
 
 function EyelinkDrawInstructions(eyewin, el,msg,verbose)
-oldFont=Screen(eyewin,'TextFont',el.msgfont);
-oldFontSize=Screen(eyewin,'TextSize',el.msgfontsize);
-DrawFormattedText(eyewin, el.helptext, 20, 20, el.msgfontcolour, [], [], [], 1);
+%oldFont=Screen(eyewin,'TextFont',el.msgfont);
+%oldFontSize=Screen(eyewin,'TextSize',el.msgfontsize);
+DrawFormattedText(eyewin, el.helptext, 20, 20, el.msgfontcolour);
 if el.displayCalResults && ~isempty(msg)
 	DrawFormattedText(eyewin, msg, 20, 150, el.msgfontcolour, [], [], [], 1);
 end
 if verbose; fprintf('--->>> EYELINKCALLBACK : drawn-instructions\n'); end
-Screen(eyewin,'TextFont',oldFont);
-Screen(eyewin,'TextSize',oldFontSize);
+%Screen(eyewin,'TextFont',oldFont);
+%Screen(eyewin,'TextSize',oldFontSize);
 
 function  imgtitle=EyelinkDrawCameraImage(eyewin, el, eyelinktex, imgtitle,newImage,verbose)
 persistent lasttitle;
@@ -400,8 +400,8 @@ try
 			sn = Screen('WindowScreenNumber', eyewin);
 			offscreen = Screen('OpenOffscreenWindow', sn, el.backgroundcolour);
 			
-			Screen(offscreen,'TextFont',el.imgtitlefont);
-			Screen(offscreen,'TextSize',el.imgtitlefontsize);
+			%Screen(offscreen,'TextFont',el.imgtitlefont);
+			%Screen(offscreen,'TextSize',el.imgtitlefontsize);
 			Screen('DrawText', offscreen, imgtitle, width/2-dw/2, heigth/2+dh/2+h2, el.imgtitlecolour);
 			
 			Screen('DrawTexture',eyewin,offscreen,  [width/2-dw/2 heigth/2+dh/2+h2 width/2-dw/2+500 heigth/2+dh/2+h2+500], [width/2-dw/2 heigth/2+dh/2+h2 width/2-dw/2+500 heigth/2+dh/2+h2+500]);
