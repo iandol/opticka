@@ -186,6 +186,8 @@ classdef eyelinkManager < optickaCore
 				end
 			end
 			
+			obj.defaults.verbose = obj.verbose;
+			
 			obj.updateDefaults();
 			
 			[~, obj.version] = Eyelink('GetTrackerVersion');
@@ -230,7 +232,6 @@ classdef eyelinkManager < optickaCore
 		function setup(obj)
 			if obj.isConnected
 				trackerSetup(obj); % Calibrate the eye tracker
-				%driftCorrection(obj);
 				checkEye(obj);
 			end
 		end

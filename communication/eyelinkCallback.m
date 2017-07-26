@@ -157,6 +157,8 @@ switch eyecmd
 			calxy = [];
 			if isa(lJ,'labJack') %this is why we need lJ to be universal
 				lJ.timedTTL(0,160);
+			elseif isa(lJ,'sendSerial')
+				lJ.timedTTL(9,160)
 			end
 		end
 		if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end

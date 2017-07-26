@@ -35,7 +35,6 @@ classdef sendSerial < optickaCore
 					end
 					obj.deviceID = obj.device.Port;
 					obj.availablePins = obj.device.AvailablePins;
-					
 					for i = 2:13
 						configurePin(obj.device,['D' num2str(i)],'unset')
 						writeDigitalPin(obj.device,['D' num2str(i)],0);
@@ -47,11 +46,20 @@ classdef sendSerial < optickaCore
 			end
 		end
 		
-		%===============SEND================%
+		%===============SEND TTL================%
 		function sendTTL(obj, line, time)
+			obj.timedTTL(line,time)
+		end
+		
+		%===============SEND TTL================%
+		function timedTTL(obj, line, time)
 			if obj.silentMode==0
+				if ~exist('line','var') || isempty(line); line = 9; end
+				if ~exist('time','var') || isempty(time); time = 500; end
+				time = time - 30; %there is an arduino 30ms delay
+				if time < 0; time = 0; warning('Arduino TTLs >= ~30ms!');end
 				writeDigitalPin(obj.device,['D' num2str(line)],1);
-				WaitSecs(time);
+				WaitSecs(time/1e3);
 				writeDigitalPin(obj.device,['D' num2str(line)],0);
 			end
 		end
@@ -66,7 +74,6 @@ classdef sendSerial < optickaCore
 		end
 		
 	end
-	
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
 		%===========Delete Method==========%
