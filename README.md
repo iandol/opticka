@@ -6,7 +6,7 @@ Opticka Stimulus Generator is an object oriented framework with optional GUI for
 
 ![Opticka Screenshot](https://github.com/iandol/opticka/raw/gh-pages/images/opticka.png)
 ## Example hardware setup
-![Example hardware setup to run Opticka](http://i62.tinypic.com/fxqq12.png)
+![Example hardware setup to run Opticka](https://github.com/iandol/opticka/raw/gh-pages/images/setup.png)
 
 # Quick Documentation
 optickatest.m is a self-documenting minimal toy example showing a mini method of constants (MOC) experiment with 10 different stimuli. Read the Matlab-generated HTML for ``optickatest.m`` here: [optickatest.m Report](http://iandol.github.io/OptickaDocs/optickatest.html).
