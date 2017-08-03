@@ -158,7 +158,8 @@ switch eyecmd
 			if isa(lJ,'labJack') %this is why we need lJ to be universal
 				lJ.timedTTL(0,160);
 			elseif isa(lJ,'sendSerial')
-				lJ.timedTTL(9,160)
+                fprintf('--->>> Send REWARD\n')
+				lJ.timedTTL(2,160)
 			end
 		end
 		if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
@@ -467,7 +468,7 @@ end
 
 % function Beeper(frequency, [fVolume], [durationSec]);
 if doBeep==1
-	Beeper(f, v, d);
+	%Beeper(f, v, d);
 end
 
 function EyelinkDrawCalibrationTarget(eyewin, el, calxy,verbose)

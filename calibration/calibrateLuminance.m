@@ -906,7 +906,8 @@ classdef calibrateLuminance < handle
 			end
 			if max(in) > 1
 				in(in>1) = 1;
-			end
+            end
+            out = in;
 		end
 		
 		%===========Salutation==========%
