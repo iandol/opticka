@@ -432,20 +432,20 @@ classdef eyelinkAnalysis < analysisCore
 				tp = t(ip);
 				xa = thisTrial.gx / me.ppd_;
 				ya = thisTrial.gy / me.ppd_;
+				lim = 20; %max degrees in data
+				xa(xa < -lim) = -lim; xa(xa > lim) = lim; 
+				ya(ya < -lim) = -lim; ya(ya > lim) = lim;
+				pupilAll = thisTrial.pa;
+				
 				x = xa(ix);
-				y = ya(ix) ;
+				y = ya(ix);
+				pupilMeasure = pupilAll(ix);
+				
 				xp = xa(ip);
 				yp = ya(ip);
-
-				if min(x) < -20 || max(x) > 20 || min(y) < -20 || max(y) > 20
-					x(x < -20) = -20; x(x > 20) = 20; y(y < -20) = -20; y(y > 20) = 20;
-				end
-				if min(xp) < -20 || max(xp) > 20 || min(yp) < -20 || max(yp) > 20
-					xp(xp < -20) = -20;	xp(xp > 20) = 20;	yp(yp < -20) = -20; yp(yp > 20) = 20;
-				end
+				pupilPlot = pupilAll(ip);
 
 				q(1,1).select();
-
 				q(1,1).hold('on')
 				plot(xp, yp,'k-','Color',c,'LineWidth',1,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				if isfield(thisTrial,'microSaccades') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
@@ -460,9 +460,9 @@ classdef eyelinkAnalysis < analysisCore
 				
 				q(1,2).select();
 				q(1,2).hold('on');
-				plot(tm,abs(x),'k-x','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
+				plot(tp,abs(xp),'k-','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
-				plot(tm,abs(y),'k-o','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
+				plot(tp,abs(yp),'k.-','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				maxv = max([maxv, max(abs(x)), max(abs(y))]) + 0.1;
 				if isfield(thisTrial,'microSaccades') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
@@ -489,7 +489,7 @@ classdef eyelinkAnalysis < analysisCore
 				
 				qq(1,2).select();
 				qq(1,2).hold('on')
-				plot(thisTrial.times,thisTrial.pa,'Color',c, 'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
+				plot(tp,pupilPlot,'Color',c, 'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				
 				idxt = find(t >= t1 & t <= t2);
 
@@ -545,17 +545,18 @@ classdef eyelinkAnalysis < analysisCore
 				mean(abs(meany)), mean(abs(stdey)));
 			ti2 = sprintf('ABS Median/SD %g - %g s: X=%.2g / %.2g | Y=%.2g / %.2g', t1,t2,median(abs(medx)), median(abs(stdex)), ...
 				median(abs(medy)), median(abs(stdey)));
-			h=title(sprintf('X(square) & Y(cross) Position vs. Time\n%s\n%s', ti,ti2));
+			h=title(sprintf('X & Y(dot) Position vs. Time\n%s\n%s', ti,ti2));
 			set(h,'BackgroundColor',[1 1 1]);
 			xlabel(q(1,2),'Time (s)');
 			ylabel(q(1,2),'Degrees');
 
 			qq(1,1).select();
+			qq(1,1).margin = [30 20 10 35]; %left bottom right top
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
 			axis([me.plotRange(1) me.plotRange(2) -10 10 -10 10]);
-			view([5 5]);
+			view([35 35]);
 			xlabel(qq(1,1),'Time (ms)');
 			ylabel(qq(1,1),'X Position');
 			zlabel(qq(1,1),'Y Position');
@@ -568,6 +569,7 @@ classdef eyelinkAnalysis < analysisCore
 			
 			qq(1,2).select();
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
+			axis([me.plotRange(1) me.plotRange(2) -inf inf]);
 			grid on;
 			box on;
 			title(qq(1,2),[thisVarName upper(type) ': Pupil Diameter']);
@@ -621,7 +623,7 @@ classdef eyelinkAnalysis < analysisCore
 				end
 			end
 			function spawnMe(src, ~)
-				fnew = figure;
+				fnew = figure('Color',[1 1 1]);
 				na = copyobj(src,fnew);
 				na.Position = [0.1 0.1 0.8 0.8];
 			end
