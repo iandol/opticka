@@ -1,10 +1,9 @@
-classdef sendSerial < optickaCore
-	%SENDSERIAL Connects and manages Serial port communication
-	%   Connects and manages Serial port communication
+classdef arduinoManager < optickaCore
+	%ARDUINOMANAGER Connects and manages arduino communication
 	properties
 		port					= ''
 		board					= ''
-		silentMode		= false %this allows us to be called even if no serial port is attached
+		silentMode		= false %this allows us to be called even if no arduino is attached
 		verbose				= true
 	end
 	properties (SetAccess = private, GetAccess = public)
@@ -18,15 +17,19 @@ classdef sendSerial < optickaCore
 	methods%------------------PUBLIC METHODS--------------%
 		
 		%==============CONSTRUCTOR============%
-		function obj = sendSerial(varargin)
+		function obj = arduinoManager(varargin)
 			if nargin>0
 				obj.parseArgs(varargin,obj.allowedProperties);
-			end
+            end
+            if ~exist('arduino','file')
+               obj.comment = 'You need to Install Arduino Support files!';
+               obj.silentMode = true;
+            end
 		end
 		
 		%===============OPEN DEVICE================%
 		function open(obj)
-			if obj.silentMode==0 && ~isa(obj.device,'arduino')
+			if obj.silentMode==false && ~isa(obj.device,'arduino')
 				try
 					if ~isempty(obj.port)
 						obj.device = arduino(obj.port);
@@ -38,10 +41,11 @@ classdef sendSerial < optickaCore
 					for i = 2:13
 						configurePin(obj.device,['D' num2str(i)],'unset')
 						writeDigitalPin(obj.device,['D' num2str(i)],0);
-					end
+                    end
+                    obj.silentMode = false;
 				catch ME
 					fprintf('\n\nCouldn''t open Arduino, try a valid name')
-					rethrow(ME)
+					obj.silentMode = true;
 				end
 			end
 		end
@@ -53,7 +57,7 @@ classdef sendSerial < optickaCore
 		
 		%===============SEND TTL================%
 		function timedTTL(obj, line, time)
-			if obj.silentMode==0
+			if obj.silentMode==false
 				if ~exist('line','var') || isempty(line); line = 9; end
 				if ~exist('time','var') || isempty(time); time = 500; end
 				time = time - 30; %there is an arduino 30ms delay
@@ -66,7 +70,7 @@ classdef sendSerial < optickaCore
 		
 		%===============CLOSE PORT================%
 		function close(obj)
-			if isa(obj.device,'arduino')
+			if obj.silentMode==false
 				obj.device = [];
 				obj.deviceID = '';
 				obj.availablePins = '';
