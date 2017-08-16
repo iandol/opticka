@@ -275,13 +275,13 @@ classdef discStimulus < baseStimulus
 			if obj.mouseOverride && obj.mouseValid
 					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
 			else
-				if isempty(obj.findprop('angleOut'));
+				if isempty(obj.findprop('angleOut'))
 					[sx, sy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
 				else
 					[sx, sy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
 				end
 				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
-				if isempty(obj.findprop('xPositionOut'));
+				if isempty(obj.findprop('xPositionOut'))
 					obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
 				else
 					obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));

@@ -225,42 +225,36 @@ if nargin < 7
 	synchronous = 0;
 end
 
+if nargin < 9
+	screenNumber = [];
+end
+
 try
-	% This script calls Psychtoolbox commands available only in OpenGL-based
-	% versions of the Psychtoolbox. (So far, the OS X Psychtoolbox is the
-	% only OpenGL-base Psychtoolbox.)  The Psychtoolbox command AssertPsychOpenGL will issue
-	% an error message if someone tries to execute this script on a computer without
-	% an OpenGL Psychtoolbox
-	AssertOpenGL;
+	PsychDefaultSetup(2);
 	
+	% try to load labJack, more realistic workload
 	lj = labJack('verbose',0);
 	lj.prepareStrobe(2000);
 	WaitSecs(0.01)
 	
+	RestrictKeysForKbCheck(KbName('ESCAPE'));
+	
+	if IsWin && 0
+		% Enforce use of DWM on Windows-Vista and later: This simulates the
+		% situation of Windows-8 or later on Windows-Vista and Windows-7:
+		Screen('Preference','ConserveVRAM', 16384); % Force use of DWM.
+	end
+	
 	% Get the list of Screens and choose the one with the highest screen number.
 	% Screen 0 is, by definition, the display with the menu bar. Often when
 	% two monitors are connected the one without the menu bar is used as
-	% the stimulus display.  Chosing the display with the highest dislay number is
+	% the stimulus display.  Chosing the display with the highest display number is
 	% a best guess about where you want the stimulus displayed.
 	screens=Screen('Screens');
-	screenNumber=max(screens);
-	%screenNumber = 1;
-	if screenNumber==2; screenNumber = 1; end
-	screensize=Screen('Rect', screenNumber);
-	%my normal screen prep
-	%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
-	%Screen('Preference', 'VBLTimestampingMode', 1);
-	%force screentohead mapping
-	if screenNumber == 1
-% 		Screen('Preference','ScreenToHead',0,0,3);
-% 		Screen('Preference','ScreenToHead',1,1,4);
+	if isempty(screenNumber)
+		screenNumber=max(screens);
 	end
-	%override VTOTAL?
-	%Screen('Preference', 'VBLEndlineOverride', 1066);
-	Screen('Preference', 'SkipSyncTests', 0);
-	Screen('Preference', 'VisualDebugLevel', 3);
-	Screen('Preference', 'Verbosity', 4); %errors and warnings
-	Screen('Preference', 'SuppressAllWarnings', 0);
+	screensize=Screen('Rect', screenNumber);
 	
 	% Query size of screen:
 	screenheight=screensize(4);
@@ -268,21 +262,28 @@ try
 	%my psychimaging setup
 	PsychImaging('PrepareConfiguration');
 	PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-	% FloatingPoint16Bit FloatingPoint32Bit 
-	PsychImaging('AddTask', 'General', 'FloatingPoint32Bit');
+	% 8bit FloatingPoint16Bit FloatingPoint32Bit FloatingPoint32BitIfPossible
 	PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
-	normalize=255;
+	PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 	
 	% Open double-buffered window: Optionally enable stereo output if
 	% stereo == 1.
-	%w=Screen('OpenWindow',screenNumber, 0,[],32,2, stereo);
-	w=PsychImaging('OpenWindow',screenNumber, 0,[],[],2, stereo);
+	w=PsychImaging('OpenWindow',screenNumber, 0.5,[],[],[], stereo,[]);
+	[oldSrc,oldDst]=Screen('BlendFunction', w, 'GL_ONE','GL_ZERO');
+	fprintf('\n---> Previous OpenGL blending was %s | %s\n', oldSrc, oldDst);
+	fprintf('---> Initial OpenGL blending set to %s | %s\n', 'GL_ONE','GL_ZERO');
+					
+	% Query effective stereo mode, as Screen() could have changed it behind our
+	% back, e.g., if we asked for mode 1 but Screen() had to fallback to
+	% mode 11:
+	winfo = Screen('GetWindowInfo', w);
+	stereo = winfo.StereoMode;
 	
 	% Clear screen to black background color: If in stereo mode, we only
 	% clear the left-eye buffer...
-	%Screen('SelectStereoDrawBuffer', w, 0);
-	%Screen('FillRect', w, 0);
-	%Screen('Flip', w);
+	Screen('SelectStereoDrawBuffer', w, 0);
+	Screen('FillRect', w, 0);
+	Screen('Flip', w);
 	
 	% Switch to realtime-priority to reduce timing jitter and interruptions
 	% caused by other applications and the operating system itself:
@@ -294,22 +295,22 @@ try
 	framerate=Screen('NominalFramerate', w);
 	if (framerate==0)
 		framerate=60;
-	end;
+	end
 	
-	ifinominal = 1 / framerate;
+	ifinominal=1 / framerate;
 	fprintf('The refresh interval reported by the operating system is %2.5f ms.\n', ifinominal*1000);
 	
 	% Perform a calibration loop to determine the "real" interframe interval
 	% for the given gfx-card + monitor combination:
-	%Screen('TextSize', w, 24);
-	%Screen('DrawText', w, 'Measuring monitor refresh interval... This can take up to 20 seconds...', 10, 10, 255);
+	Screen('TextSize', w, 24);
+	Screen('DrawText', w, 'Measuring monitor refresh interval... This can take up to 20 seconds...', 10, 10, 255);
 	
 	if (stereo>0)
 		% Show something for the right eye as well in stereo mode:
-		%Screen('SelectStereoDrawBuffer', w, 1);
-		%Screen('FillRect', w, 0);
-		%Screen('DrawText', w, 'Stereo yeah!!!', 10, 40, 255);
-	end;
+		Screen('SelectStereoDrawBuffer', w, 1);
+		Screen('FillRect', w, 0);
+		Screen('DrawText', w, 'Stereo yeah!!!', 10, 40, 255);
+	end
 	
 	% Measure monitor refresh interval again, just for fun...
 	% This will trigger a calibration loop of minimum 100 valid samples and return the
@@ -317,7 +318,7 @@ try
 	% secs. If this level of accuracy can't be reached, we time out after
 	% 20 seconds...
 	%[ ifi nvalid stddev ]= Screen('GetFlipInterval', w, 100, 0.0001, 5);
-	[ ifi nvalid stddev ]= Screen('GetFlipInterval', w);
+	[ ifi, nvalid, stddev ]= Screen('GetFlipInterval', w);
 	fprintf('Measured refresh interval, as reported by "GetFlipInterval" is %2.5f ms. (nsamples = %i, stddev = %2.5f ms)\n', ifi*1000, nvalid, stddev*1000);
 	
 	% Init data-collection arrays for collection of n samples:
@@ -325,9 +326,17 @@ try
 	beampos=ts;
 	missest=ts;
 	flipfin=ts;
+	dpixxdelay=ts;
 	td=ts;
 	so=ts;
 	tSecondary = ts;
+	sodpixx = ts;
+	boxTime = ts;
+	a = zeros(n,1);
+	clog = zeros(n,1);
+	b = a;
+	normalize=255;
+	cstep=1/normalize;
 	
 	% Compute random load distribution for provided loadjitter value:
 	wt=rand(1,n)*(loadjitter*ifi);
@@ -338,9 +347,6 @@ try
 	% emulation:
 	tvbl=Screen('Flip', w);
 	
-	a = zeros(n,1);
-	b = a;
-	
 	% Test-loop: Collects n samples.
 	for i=1:n
 		% Draw some simple stim for next frame of animation: We draw a
@@ -349,20 +355,17 @@ try
 		% display is requested:
 		Screen('SelectStereoDrawBuffer', w, 0);
 		pos=mod(i, screenheight);
-		Screen('FillRect', w, mod(i, 255)/normalize, [pos+20 pos+20 pos+400 pos+400]);
-		if mod(i,2) == 1
-			c = 1;
-		else
-			c = 0;
-		end
-		clog(i) = c;
-		Screen('FillRect', w, c+0.2, [0 0 50 50]);
-		% Screen('FillRect', w, mod(i, 2)*255);
+		col=mod(i*cstep, 1);
+		Screen('FillRect', w, col, [pos+20 pos+20 pos+400 pos+400]);
+		
+		clog(i) = mod(i, 2);
+		Screen('FillRect', w, clog(i), [0 0 50 50]);
+		
 		if (stereo>0)
 			% Show something for the right eye as well in stereo mode:
 			Screen('SelectStereoDrawBuffer', w, 1);
-			Screen('FillRect', w, mod(i, 255)/normalize, [pos+40 pos+20 pos+420 pos+400]);
-		end;
+			Screen('FillRect', w, col, [pos+40 pos+20 pos+420 pos+400]);
+		end
 		
 		winfo=Screen('Getwindowinfo', w);
 		a(i) = winfo.VBLCount;
@@ -385,7 +388,7 @@ try
 			% real experiments as it will significantly degrade
 			% performance and can *cause* deadline misses.
 			td(i)=Screen('DrawingFinished', w, clearmode, synchronous);
-		end;
+		end
 		
 		% Sleep a random amount of time, just to simulate some work being
 		% done in the Matlab loop:
@@ -416,7 +419,7 @@ try
 			% will actually ignore the deadline and just Flip at the next
 			% possible retrace...
 			tdeadline=0;
-		end;
+		end
 		
 		%add in a bit of I/O work into the loop
 		%if c == 1; lj.prepareStrobe(2000); end
@@ -446,9 +449,10 @@ try
 		% And give user a chance to abort the test by pressing any key:
 		if KbCheck
 			break;
-		end;
-	end; % Draw next frame...
-	
+		end
+	end % Draw next frame...
+	Screen('BlendFunction', w, oldSrc,oldDst);
+	RestrictKeysForKbCheck([]);
 	% Shutdown realtime scheduling:
 	Priority(0);
 	
@@ -459,7 +463,6 @@ try
 	
 	% Plot all our measurement results:
 	
-	
 	% Figure 1 shows time deltas between successive flips in milliseconds:
 	% This should equal the product numifis * ifi:
 	figure('Position',[0 0 1024 800],'Name','Performance Results');
@@ -469,12 +472,11 @@ try
 	ni=numifis;
 	if (numifis==0)
 		ni=1;
-	end;
+	end
 	plot(ones(1,n)*ifi*ni*1000);
 	title('Succesive Flip Delta');
 	ylabel('Time (ms)');
 	hold off; box on; grid on;
-	
 	
 	% Figure 3 shows estimated size of presentation deadline-miss in
 	% milliseconds:
@@ -528,7 +530,7 @@ try
 		figure
 		plot(td*1000,'k.');
 		title('Total duration of all drawing commands in milliseconds:');
-	end;
+	end
 	
 	% Count and output number of missed flip on VBL deadlines:
 	numbermisses=0;
@@ -536,15 +538,15 @@ try
 		for i=2:n
 			if (ts(i)-ts(i-1) > ifi*(numifis+0.5))
 				numbermisses=numbermisses+1;
-			end;
-		end;
+			end
+		end
 	else
 		for i=2:n
 			if (ts(i)-ts(i-1) > ifi*1.5)
 				numbermisses=numbermisses+1;
-			end;
-		end;
-	end;
+			end
+		end
+	end
 	
 	% Output some summary and say goodbye...
 	fprintf('PTB missed %i out of %i stimulus presentation deadlines.\n', numbermisses, n);

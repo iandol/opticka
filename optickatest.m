@@ -150,7 +150,7 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
 	'windowed', [ ],... %set to a widthxheight for debugging i.e. [800 600]; set to false for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on OS X ATI 5870
-	'bitDepth', '8bit',... %try 8bit, FloatingPoint16bit FloatingPoint32bit
+	'bitDepth', 'FloatingPoint32bit',... %try 8bit, FloatingPoint16bit FloatingPoint32bit
 	'hideFlash', false); %mario's gamma trick
 
 %% Setup runExperiment Object
@@ -160,7 +160,7 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 rExp = runExperiment('stimuli', myStim,... %stimulus objects
 	'task', myTask,... %task design object
 	'screen', myScreen,... %screen manager object
-	'debug', true,... %setup screen to complain about sync errors etc.
+	'debug', false,... %setup screen to complain about sync errors etc.
 	'verbose', false); %minimal verbosity
 
 %%

@@ -238,6 +238,7 @@ classdef screenManager < optickaCore
 				tL = struct;
 			end
 			try
+				PsychDefaultSetup(2); 
 				obj.screenVals.resetGamma = false;
 				
 				obj.hideScreenFlash();
@@ -253,20 +254,20 @@ classdef screenManager < optickaCore
 				end
 				
 				%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
-				Screen('Preference', 'VBLTimestampingMode', obj.timestampingMode);
+				%Screen('Preference', 'VBLTimestampingMode', obj.timestampingMode);
 				
 				if debug == true || (length(obj.windowed)==1 && obj.windowed ~= 0)
 					fprintf('\n---> screenManager: Skipping Sync Tests etc.\n');
-					Screen('Preference', 'SkipSyncTests', 2);
-					Screen('Preference', 'VisualDebugLevel', 0);
-					Screen('Preference', 'Verbosity', 2);
-					Screen('Preference', 'SuppressAllWarnings', 0);
+					Screen('Preference', 'SkipSyncTests', 1);
+					%Screen('Preference', 'VisualDebugLevel', 0);
+					%Screen('Preference', 'Verbosity', 2);
+					%Screen('Preference', 'SuppressAllWarnings', 0);
 				else
 					fprintf('\n---> screenManager: Sync Tests enabled.\n');
 					Screen('Preference', 'SkipSyncTests', 0);
-					Screen('Preference', 'VisualDebugLevel', 3);
-					Screen('Preference', 'Verbosity', obj.verbosityLevel); %errors and warnings
-					Screen('Preference', 'SuppressAllWarnings', 0);
+					%Screen('Preference', 'VisualDebugLevel', 3);
+					%Screen('Preference', 'Verbosity', obj.verbosityLevel); %errors and warnings
+					%Screen('Preference', 'SuppressAllWarnings', 0);
 				end
 				
 				tL.screenLog.preOpenWindow=GetSecs;
@@ -274,11 +275,11 @@ classdef screenManager < optickaCore
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
-				if obj.useRetina == true
-					PsychImaging('AddTask', 'General', 'UseRetinaResolution');
-				end
 				if ischar(obj.bitDepth) && ~strcmpi(obj.bitDepth,'8bit')
 					PsychImaging('AddTask', 'General', obj.bitDepth);
+				end
+				if obj.useRetina == true
+					PsychImaging('AddTask', 'General', 'UseRetinaResolution');
 				end
 				
 				if isempty(obj.windowed); obj.windowed = false; end
@@ -293,6 +294,7 @@ classdef screenManager < optickaCore
 						winSize=[0 0 800 600];
 					end
 				end
+				
 				[obj.win] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, winSize, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				
 				tL.screenLog.postOpenWindow=GetSecs;
@@ -308,10 +310,15 @@ classdef screenManager < optickaCore
 				obj.screenVals.win = obj.win; %make a copy
 				
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
-				%find our fps if not defined before
+	
 				obj.screenVals.ifi = Screen('GetFlipInterval', obj.win);
+				obj.screenVals.fps=Screen('NominalFramerate', obj.win);
+				%find our fps if not defined above
 				if obj.screenVals.fps==0
 					obj.screenVals.fps=round(1/obj.screenVals.ifi);
+					if obj.screenVals.fps==0
+						obj.screenVals.fps=60;
+					end
 				end
 				if obj.windowed == false %fullscreen
 					obj.screenVals.halfisi=obj.screenVals.ifi/2;
@@ -346,22 +353,24 @@ classdef screenManager < optickaCore
 						fprintf('---> screenManager: GAMMA CORRECTION used independent RGB Correction \n');
 					end
 				else
-					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
+					%Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 					%obj.screenVals.oldCLUT = LoadIdentityClut(obj.win);
 					obj.screenVals.resetGamma = false;
 				end
 				
-				Priority(0); %be lazy for a while and let other things get done
-				
 				% Enable alpha blending.
 				if obj.blend==1
-					Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
+					[obj.screenVals.oldSrc,obj.screenVals.oldDst,obj.screenVals.oldMask]...
+						= Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
+					fprintf('\n---> screenManager: Previous OpenGL blending was %s | %s\n', obj.screenVals.oldSrc, obj.screenVals.oldDst);
 					fprintf('\n---> screenManager: Initial OpenGL blending set to %s | %s\n', obj.srcMode, obj.dstMode);
 				end
 				
-				if ismac == 0 && isunix == 1
-					Screen('TextFont', obj.win, obj.linuxFontName);
-				end
+				Priority(0); %be lazy for a while and let other things get done
+				
+				%if IsLinux
+				%	Screen('TextFont', obj.win, obj.linuxFontName);
+				%end
 				
 				obj.screenVals.white = WhiteIndex(obj.screen);
 				obj.screenVals.black = BlackIndex(obj.screen);
@@ -379,6 +388,31 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief Small demo
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function demo(obj)
+			if ~obj.isOpen
+				stim = textureStimulus('speed',2,'xPosition',-6,'yPosition',0,'size',1);
+				prepareScreen(obj);
+				open(obj);
+				obj.screenVals
+				setup(stim, obj);
+				flip(obj);
+				for i = 1:600
+					draw(stim);
+					finishDrawing(obj);
+					animate(stim);
+					flip(obj);
+				end
+				WaitSecs(1);
+				close(obj);
+			end
+		end
+		
+		% ===================================================================
 		%> @brief Flip the screen
 		%>
 		%> @param
@@ -389,7 +423,7 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Flip the screen
+		%> @brief force this object to use antother window
 		%>
 		%> @param
 		%> @return
@@ -438,6 +472,13 @@ classdef screenManager < optickaCore
 				if isfield(obj.screenVals,'originalGammaTable') && ~isempty(obj.screenVals.originalGammaTable)
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.originalGammaTable);
 					fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
+				end
+				wk = Screen(obj.win, 'WindowKind');
+				if obj.blend == true && wk ~= 0 
+					%this needs to be done to not trigger a Linux+Polaris bug
+					%matlab bug
+					Screen('BlendFunction', obj.win, 'GL_ONE','GL_ZERO');
+					fprintf('---> screenManager: RESET OPENGL BLEND MODE to GL_ONE & GL_ZERO\n');
 				end
 				Screen('Close');
 				Screen('CloseAll');
@@ -568,7 +609,7 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Screen('DrawingFinished')
+		%> @brief Test if window is actully open
 		%>
 		%> @param
 		% ===================================================================
@@ -578,6 +619,7 @@ classdef screenManager < optickaCore
 				if wk == 0
 					warning(['===>>> ' obj.fullName ' PTB Window is actually INVALID!']);
 					obj.isOpen = 0;
+					obj.win = [];
 				else
 					fprintf('===>>> %s VALID WindowKind = %i\n',obj.fullName,wk);
 				end

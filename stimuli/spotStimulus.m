@@ -266,7 +266,9 @@ classdef spotStimulus < baseStimulus
 			end
 			obj.colourOutTemp = value;
 			obj.colourOut = value;
-			if obj.stopLoop == false; notify(obj,'changeColour'); end
+			if ~isempty(obj.findprop('contrastOut')) && obj.contrastOut < 1 && obj.stopLoop == false
+				notify(obj,'changeColour');
+			end
 		end
 		
 		% ===================================================================
@@ -276,7 +278,7 @@ classdef spotStimulus < baseStimulus
 		function set_contrastOut(obj, value)
 			if iscell(value); value = value{1}; end
 			obj.contrastOut = value;
-			notify(obj,'changeColour');
+			if obj.contrastOut < 1; notify(obj,'changeColour'); end
 		end
 		
 		% ===================================================================
