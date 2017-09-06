@@ -16,9 +16,8 @@ function [discid, discrect] = CreateProceduralSmoothDisc(windowPtr, width, heigh
 % color to add to the final RGBA colors of the drawn grating, prior to
 % drawing it.
 %
-% 'radius' Optional parameter. If specified, a circular aperture of
-% 'radius' pixels is applied to the grating. By default, no aperture is
-% applied.
+% 'radius' If specified, a circular aperture of
+% 'radius' pixels is applied to the grating. By default, aperture == width.
 %
 % 'sigma' smoothing value in pixels
 %
@@ -75,7 +74,7 @@ else
 end
 
 if nargin < 5 || isempty(radius)
-	radius = inf;
+	radius = width;
 end
 
 if nargin < 6 || isempty(sigma)

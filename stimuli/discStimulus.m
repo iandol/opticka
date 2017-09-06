@@ -79,7 +79,11 @@ classdef discStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Setup an structure for runExperiment
+		%> @brief Setup the stimulus object. The major purpose of this is to create a series
+		%> of properties that are copies of the user controlled ones. The user specifies
+		%> properties in degrees etc., but internally we must convert to pixels etc. So the
+		%> setup function uses dynamic transient properties, for each property we create a temporary 
+		%> propertyOut which is used for the actual drawing/animation.
 		%>
 		%> @param sM handle to the current screenManager object
 		% ===================================================================
@@ -122,11 +126,11 @@ classdef discStimulus < baseStimulus
 			
 			if obj.speedOut > 0; obj.doMotion = true; end
 			
-			if isempty(obj.findprop('gratingSize'));p=obj.addprop('gratingSize');p.Transient=true;end
-			obj.gratingSize = round(obj.ppd*obj.size);
+			if isempty(obj.findprop('discSize'));p=obj.addprop('discSize');p.Transient=true;end
+			obj.discSize = round(obj.ppd*obj.size);
 			
 			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
-			obj.res = round([obj.gratingSize obj.gratingSize]);
+			obj.res = round([obj.discSize obj.discSize]);
 			
 			if isempty(obj.findprop('radius'));p=obj.addprop('radius');p.Transient=true;end
 			obj.radius = floor((obj.ppd*obj.size)/2);
