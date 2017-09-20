@@ -365,6 +365,9 @@ classdef calibrateLuminance < handle
 					else
 						gTmp = repmat(obj.gammaTable{obj.choice},1,3);
 					end
+					gTmp(1,1) = 0;
+					gTmp(1,2) = 0;
+					gTmp(1,3) = 0;
 					Screen('LoadNormalizedGammaTable', obj.win, gTmp);
 				end
 				
@@ -833,6 +836,9 @@ classdef calibrateLuminance < handle
 				else
 					obj.finalCLUT = repmat(obj.gammaTable{obj.choice,1},1,3);
 				end
+				obj.finalCLUT(1,1) = 0;
+				obj.finalCLUT(1,2) = 0;
+				obj.finalCLUT(1,3) = 0;
 				disp('--->>> calibrateLumiance: finalCLUT generated...')	
 			end
 		end

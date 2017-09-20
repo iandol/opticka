@@ -1364,7 +1364,7 @@ classdef LFPAnalysis < analysisCore
 			lfp = 'p';
 			for i = 1:me.nLFPs
 				if i == me.selectedLFP
-					lfp = [lfp '|¤' me.LFPs(i).name];
+					lfp = [lfp '|ï¿½' me.LFPs(i).name];
 				else
 					lfp = [lfp '|' me.LFPs(i).name];
 				end
@@ -1376,7 +1376,7 @@ classdef LFPAnalysis < analysisCore
 			else
 				for i = 1:me.sp.nUnits
 					if i == me.sp.selectedUnit
-						spk = [spk '|¤' me.sp.names{i}];
+						spk = [spk '|ï¿½' me.sp.names{i}];
 					else
 						spk = [spk '|'  me.sp.names{i}];
 					end
@@ -1392,7 +1392,7 @@ classdef LFPAnalysis < analysisCore
 			end
 			for i = 1:length(inbeh)
 				if strcmpi(inbeh{i}, me.selectedBehaviour{1})
-					beh = [beh '|¤' inbeh{i}];
+					beh = [beh '|ï¿½' inbeh{i}];
 				else
 					beh = [beh '|' inbeh{i}];
 				end
@@ -1856,7 +1856,7 @@ classdef LFPAnalysis < analysisCore
 				p(i1,i2).select();
 				p(i1,i2).title(['LFP & EVENT PLOT: File:' me.lfpfile ' | Channel:' LFP.name ' | Group:' num2str(j) ' | Name:' me.selectedTrials{j}.name]);
 				p(i1,i2).xlabel('Time (s)');
-				p(i1,i2).ylabel('LFP Raw Amplitude (mV) ±2SD');
+				p(i1,i2).ylabel('LFP Raw Amplitude (mV) ï¿½2SD');
 				p(i1,i2).hold('on');
 				c = me.optimalColours(length(me.selectedTrials{j}.idx));
 				[time,avg,err]=getAverageTuningCurve(me, me.selectedTrials{j}.idx, me.selectedLFP,'2SD');
@@ -1953,7 +1953,7 @@ classdef LFPAnalysis < analysisCore
 					p(i1,i2).select();
 					p(i1,i2).title(['TIMELOCK AVERAGES: File:' me.lfpfile ' | Channel:' LFPs(j).name]);
 					p(i1,i2).xlabel('Time (s)');
-					p(i1,i2).ylabel('LFP Raw Amplitude (mV) ±1SE');
+					p(i1,i2).ylabel('LFP Raw Amplitude (mV) ï¿½1SE');
 					grid on; box on
 					set(gca,'Layer','bottom')
 					hold on
@@ -2055,8 +2055,8 @@ classdef LFPAnalysis < analysisCore
 					[pval]=ranksum(av{1}.cov,av{2}.cov,'alpha',me.options.stats.alpha);
 				end
 				xlabel('Time (s)');
-				ylabel('LFP Raw Amplitude (mV) ±SE');
-				t=sprintf('COV = %.2g±%.2g <-> %.2g±%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
+				ylabel('LFP Raw Amplitude (mV) ï¿½SE');
+				t=sprintf('COV = %.2gï¿½%.2g <-> %.2gï¿½%.2g [p = %.3g]',c1,c1e,c2,c2e,pval);
 				tt=sprintf('%s | Ch: %s | %s p = %.3g [%s : %s (alpha=%.2g)]\n%s', me.lfpfile, av{1}.label{:}, avstat.cfg.statistic, avstatavg.prob, avstat.cfg.method, avstat.cfg.correctm, me.options.stats.alpha, t);
 				title(tt,'FontSize',12);
 				
@@ -2872,9 +2872,13 @@ classdef LFPAnalysis < analysisCore
 			end
 			me.handles(1).parent = parent;
 			
-			fs = 11;
-			SansFont = 'Avenir Next';
-			MonoFont = 'Consolas';
+			fs = 10;
+			if ismac
+				SansFont = 'Avenir Next';
+			else
+				SansFont = 'DejaVu Sans';
+			end
+			MonoFont = 'Fira Code';
 			bgcolor = [0.89 0.89 0.89];
 			bgcoloredit = [0.9 0.9 0.9];
 			
