@@ -384,8 +384,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 			bgcolor = [0.91 0.91 0.91];
 			bgcoloredit = [0.95 0.95 0.95];
 			fsmall = 10;
-			SansFont = 'Calibri';
-			MonoFont = 'Menlo';
+			if ismac
+				SansFont = 'avenir next';
+				MonoFont = 'menlo';
+			elseif ispc
+				SansFont = 'calibri';
+				MonoFont = 'consolas';
+			else %linux
+				SansFont = 'DejaVu Sans'; %get(0,'defaultAxesFontName');
+				MonoFont = 'DejaVu Mono';
+			end
 			
 			handles.parent = parent;
 			handles.root = uiextras.BoxPanel('Parent',parent,...
