@@ -20,11 +20,12 @@ classdef arduinoManager < optickaCore
 		function obj = arduinoManager(varargin)
 			if nargin>0
 				obj.parseArgs(varargin,obj.allowedProperties);
-            end
-            if ~exist('arduino','file')
-               obj.comment = 'You need to Install Arduino Support files!';
-               obj.silentMode = true;
-            end
+			end
+			if ~exist('arduino','file')
+				obj.comment = 'You need to Install Arduino Support files!';
+				warning(obj.comment)
+				obj.silentMode = true;
+			end
 		end
 		
 		%===============OPEN DEVICE================%
@@ -41,11 +42,12 @@ classdef arduinoManager < optickaCore
 					for i = 2:13
 						configurePin(obj.device,['D' num2str(i)],'unset')
 						writeDigitalPin(obj.device,['D' num2str(i)],0);
-                    end
-                    obj.silentMode = false;
+					end
+					obj.silentMode = false;
 				catch ME
-					fprintf('\n\nCouldn''t open Arduino, try a valid name')
 					obj.silentMode = true;
+					fprintf('\n\nCouldn''t open Arduino, try a valid name?')
+					getReport(ME)
 				end
 			end
 		end
@@ -65,16 +67,17 @@ classdef arduinoManager < optickaCore
 				writeDigitalPin(obj.device,['D' num2str(line)],1);
 				WaitSecs(time/1e3);
 				writeDigitalPin(obj.device,['D' num2str(line)],0);
+				if obj.verbose;fprintf('===>>> REWARD GIVEN: pin %i for %i ms\n',line,time);end
+			else
+				if obj.verbose;fprintf('===>>> REWARD GIVEN: Silent Mode\n');end
 			end
 		end
 		
 		%===============CLOSE PORT================%
 		function close(obj)
-			if obj.silentMode==false
-				obj.device = [];
-				obj.deviceID = '';
-				obj.availablePins = '';
-			end
+			obj.device = [];
+			obj.deviceID = '';
+			obj.availablePins = '';
 		end
 		
 	end
@@ -82,7 +85,7 @@ classdef arduinoManager < optickaCore
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
 		%===========Delete Method==========%
 		function delete(obj)
-			fprintf('sendSerial Delete method will automagically close connection if open...\n');
+			fprintf('arduinoManager Delete method will automagically close connection if open...\n');
 			obj.close;
 		end
 		

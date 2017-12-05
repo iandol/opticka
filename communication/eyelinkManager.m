@@ -537,11 +537,14 @@ classdef eyelinkManager < optickaCore
 		%> @brief Checks if we're looking for fixation a set time. Input is
 		%> 2 strings, either one is returned depending on success or
 		%> failure, 'searching' may also be returned meaning the fixation
-		%> window hasn't been entered yet...
+		%> window hasn't been entered yet, and 'fixing' means the fixation 
+		%> time is not yet met...
 		%>
 		%> @param yesString if this function succeeds return this string
 		%> @param noString if this function fails return this string
-		%> @return out the output string which is 'searching' if fixation is still being initiated, or yes or no string.
+		%> @return out the output string which is 'searching' if fixation is 
+		%>   still being initiated, 'fixing' if the fixation window was entered
+		%>   but not for the requisite fixation time, or the yes or no string.
 		% ===================================================================
 		function [out, window] = testSearchHoldFixation(obj, yesString, noString)
 			[fix, fixtime, searching, window] = obj.isFixated();

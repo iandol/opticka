@@ -258,14 +258,14 @@ classdef screenManager < optickaCore
 				
 				if debug == true || (length(obj.windowed)==1 && obj.windowed ~= 0)
 					fprintf('\n---> screenManager: Skipping Sync Tests etc.\n');
-					Screen('Preference', 'SkipSyncTests', 1);
-					%Screen('Preference', 'VisualDebugLevel', 0);
+					Screen('Preference', 'SkipSyncTests', 2);
+					Screen('Preference', 'VisualDebugLevel', 0);
 					%Screen('Preference', 'Verbosity', 2);
 					%Screen('Preference', 'SuppressAllWarnings', 0);
 				else
 					fprintf('\n---> screenManager: Sync Tests enabled.\n');
 					Screen('Preference', 'SkipSyncTests', 0);
-					%Screen('Preference', 'VisualDebugLevel', 3);
+					Screen('Preference', 'VisualDebugLevel', 3);
 					%Screen('Preference', 'Verbosity', obj.verbosityLevel); %errors and warnings
 					%Screen('Preference', 'SuppressAllWarnings', 0);
 				end
@@ -371,6 +371,10 @@ classdef screenManager < optickaCore
 				%if IsLinux
 				%	Screen('TextFont', obj.win, obj.linuxFontName);
 				%end
+				if IsLinux
+					Screen('Preference', 'TextRenderer', 1);
+					Screen('Preference', 'DefaultFontName', 'DejaVu Sans');
+				end
 				
 				obj.screenVals.white = WhiteIndex(obj.screen);
 				obj.screenVals.black = BlackIndex(obj.screen);
