@@ -1,5 +1,5 @@
-function [dpi, dpc] = calibrateSize(theScreen,distance, mSize)
-% dpi=MeasureDpi([theScreen])
+function [dpi, dpc] = calibrateSize(theScreen,distance, mSize, forceLCD)
+% dpi=calibrateSize([theScreen])
 % Helps the user to accurately measure the screen's dots per inch.
 %
 % Denis Pelli
@@ -28,6 +28,9 @@ end
 if nargin<3
 	mSize = 7.7;
 end
+if nargin<4
+	forceLCD = true;
+end
 
 AssertOpenGL;
 
@@ -40,7 +43,7 @@ try
 	disp('A small correction will be made for your viewing distance and the thickness of');
 	disp('the screen''s clear front plate, which separates your object from the screen''s');
 	disp('light emitting surface.');
-	if Screen('FrameRate',theScreen)==0
+	if forceLCD || Screen('FrameRate',theScreen)==0
 		thicknessInches=0.1;
 		fprintf('The zero nominal frame rate of your display suggests that it''s an LCD, \n');
 		fprintf('with a thin (%.1f inch) clear front plate.\n',thicknessInches);
@@ -50,7 +53,7 @@ try
 		fprintf('with a thick (%.1f inch) clear front plate.\n',thicknessInches);
 	end
 	distanceInches=distance*unitInches;
-	Screen('Preference', 'SkipSyncTests', 1);
+	Screen('Preference', 'SkipSyncTests', 2);
 	Screen('Preference', 'VisualDebugLevel', 0);
 	[window,screenRect]=Screen('OpenWindow',theScreen, 128);
 	white=WhiteIndex(window);
@@ -166,6 +169,7 @@ try
 		oldButton=any(button);
 	end
 	Screen('Close',window);
+	fprintf('\nRESULT: pixels per cm = %.2g | pixels per inch = %.2g\n',dpc,dpi);
 catch
 	ShowCursor;
 	Screen('CloseAll');
