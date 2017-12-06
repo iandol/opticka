@@ -1,6 +1,6 @@
 /*
  * File: smoothdisc.frag.txt
- * Shader for drawing of basic parameterized smoothed disc.
+ * Shader for drawing of basic parameterized smoothed discs.
  */
 
 const float halfpi = 0.5 * 3.141592654;

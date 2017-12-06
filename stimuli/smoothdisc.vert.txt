@@ -1,6 +1,6 @@
 /*
  * File: smoothdisc.vert.txt
- * Shader for drawing of basic parameterized smooth discs.
+ * Shader for drawing of basic parameterized smoothed discs.
  *
  * This is the vertex shader. It takes the attributes (parameters)
  * provided by the Screen('DrawTexture(s)') command, performs some

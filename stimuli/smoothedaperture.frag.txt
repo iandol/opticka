@@ -1,10 +1,10 @@
 /*
- * File: smoothedaperture.frag.txt
- * Shader for drawing of basic parameterized sine grating patches.
- * Applies a circular aperture of radius 'Radius'.
+ * File: smoothedaperture.frag.txt 
+ * Shader for drawing of basic parameterized smooth edge sine grating patches.
+ * Applies a circular aperture of radius 'Radius', smoothed by 'Sigma'.
  *
  * (c) 2010 by Mario Kleiner, licensed under GPL.
- *       
+ *
  */
 
 const float halfpi = 0.5 * 3.141592654;

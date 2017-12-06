@@ -55,9 +55,7 @@ function [gratingid, gratingrect] = CreateProceduralSineSquareGrating(windowPtr,
 %
 
 % History:
-% 11/25/2007 Written. (MK)
-% 08/09/2010 Add support for optional circular aperture. (MK)
-% 09/03/2010 Add 'contrastPreMultiplicator' as suggested by Xiangrui Li (MK).
+% 06/06/2011 Modified from PTB function (iandol).
 
 % Global GL struct: Will be initialized in the LoadGLSLProgramFromFiles
 % below:

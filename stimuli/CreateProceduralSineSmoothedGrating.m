@@ -25,6 +25,8 @@ function [gratingid, gratingrect] = CreateProceduralSineSmoothedGrating(windowPt
 % value will correspond to what practitioners of the field usually
 % understand to be the contrast value of a grating.
 %
+% 'sigma' smoothing SD in pixels
+%
 % 'useAlpha' whether to use colour (0) or alpha (1) for smoothing channel
 %
 % 'method' whether to use cosine (0) or smoothstep(1) functions
@@ -58,9 +60,7 @@ function [gratingid, gratingrect] = CreateProceduralSineSmoothedGrating(windowPt
 %
 
 % History:
-% 11/25/2007 Written. (MK)
-% 08/09/2010 Add support for optional circular aperture. (MK)
-% 09/03/2010 Add 'contrastPreMultiplicator' as suggested by Xiangrui Li (MK).
+% 06/06/2011 Modified from PTB function (iandol).
 
 % Global GL struct: Will be initialized in the LoadGLSLProgramFromFiles
 % below:

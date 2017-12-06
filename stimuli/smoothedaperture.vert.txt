@@ -1,6 +1,6 @@
 /*
  * File: smoothedaperture.vert.txt
- * Shader for drawing of basic parameterized sine grating patches.
+ * Shader for drawing of basic parameterized smoothed edge sine grating patches.
  *
  * This is the vertex shader. It takes the attributes (parameters)
  * provided by the Screen('DrawTexture(s)') command, performs some
@@ -11,7 +11,7 @@
  * to the fragment shader.
  *
  * (c) 2007 by Mario Kleiner, licensed under GPL.
- *       
+ *
  */
 
 /* Constants that we need 2*pi: */

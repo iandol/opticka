@@ -1,6 +1,6 @@
 /*
  * File: squareWaveApertureShader.frag.txt 
- * Shader for drawing of basic parameterized square grating patches.
+ * Shader for drawing of basic parameterized square wave grating patches.
  * Applies a circular aperture of radius 'Radius'.
  *
  * (c) 2010 by Mario Kleiner, licensed under GPL.
