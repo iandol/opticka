@@ -740,6 +740,20 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawText(obj,textIn)
+			if obj.isConnected
+				if exist('textIn','var') && ~isempty(textIn)
+					xDraw = toPixels(obj, 0, 'x');
+					yDraw = toPixels(obj, 0, 'y');
+					Eyelink('Command', 'draw_text %i %i %d %s', xDraw, yDraw, 5, textIn);
+				end
+			end
+		end
+		
+		% ===================================================================
 		%> @brief check what mode the eyelink is in
 		%>
 		% ===================================================================
