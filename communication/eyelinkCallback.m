@@ -156,9 +156,13 @@ switch eyecmd
 			needsupdate = 1;
 			calxy = [];
 			if isa(lJ,'labJack') %this is why we need lJ to be universal
+				fprintf('--->>> Send labJack REWARD\n')
 				lJ.timedTTL(0,160);
 			elseif isa(lJ,'sendSerial')
-                fprintf('--->>> Send REWARD\n')
+            fprintf('--->>> Send Serial REWARD\n')
+				lJ.timedTTL(2,160)
+			elseif isa(lJ,'arduinoManager')
+            fprintf('--->>> Send Arduino REWARD\n')
 				lJ.timedTTL(2,160)
 			end
 		end

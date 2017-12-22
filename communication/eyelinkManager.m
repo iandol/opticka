@@ -557,7 +557,12 @@ classdef eyelinkManager < optickaCore
 		%>   but not for the requisite fixation time, or the yes or no string.
 		% ===================================================================
 		function [out, window, exclusion] = testSearchHoldFixation(obj, yesString, noString)
-			[fix, fixtime, searching, window] = obj.isFixated();
+			[fix, fixtime, searching, window, exclusion] = obj.isFixated();
+			if exclusion
+				if obj.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation EXCLUSION ZONE ENTERED!\n');end
+				out = 'EXCLUDED!'; window = [];
+				return
+			end
 			if searching
 				if (obj.strictFixation==true && (obj.fixN == 0)) || obj.strictFixation==false
 					out = 'searching';
@@ -712,10 +717,13 @@ classdef eyelinkManager < optickaCore
 		%> @brief draw the stimuli boxes on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawStimuli(obj, ts)
+		function trackerDrawStimuli(obj, ts, clearScreen)
 			if obj.isConnected
 				if exist('ts','var') && isstruct(ts)
 					obj.stimulusPositions = ts;
+				end
+				if ~exist('clearScreen','var')
+					clearScreen = false;
 				end
 				for i = 1:length(obj.stimulusPositions)
 					x = toPixels(obj, obj.stimulusPositions(i).x,'x'); %#ok<PROPLC>
@@ -724,6 +732,7 @@ classdef eyelinkManager < optickaCore
 					if isempty(size); size = 1 * obj.ppd_; end
 					rect = [0 0 size size];
 					rect = round(CenterRectOnPoint(rect, x, y)); %#ok<PROPLC>
+					if clearScreen; Eyelink('Command', 'clear_screen 0'); end
 					if obj.stimulusPositions(i).selected == true
 						Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
 					else
