@@ -32,6 +32,8 @@ classdef eyelinkManager < optickaCore
 		strictFixation = true
 		%> time to initiate fixation in seconds
 		fixationInitTime = 0.25
+		%> exclusion zone no eye movement allowed inside
+		exclusionZone = []
 		%> tracker update speed (Hz), should be 250 500 1000 2000
 		sampleRate = 250
 		%> calibration style
@@ -452,11 +454,19 @@ classdef eyelinkManager < optickaCore
 		%> @return fixtime boolean if we're fixed for fixation time
 		%> @return searching boolean for if we are still searching for fixation
 		% ===================================================================
-		function [fixated, fixtime, searching, window] = isFixated(obj)
-			fixated = false; fixtime = false; searching = true; window = [];
+		function [fixated, fixtime, searching, window, exclusion] = isFixated(obj)
+			fixated = false; fixtime = false; searching = true; window = []; exclusion = false;
 			if (obj.isConnected || obj.isDummy) && ~isempty(obj.currentSample)
 				if obj.fixInitTotal == 0
 					obj.fixInitTotal = obj.currentSample.time;
+				end
+				if ~isempty(obj.exclusionZone)
+					eZ = obj.exclusionZone; x = obj.x; y = obj.y;
+					if (x >= eZ(1) && x <= eZ(2)) && (y >= eZ(3) && y <= eZ(4))
+						fixated = false; fixtime = false; searching = false; exclusion = true;
+						if obj.verbose;fprintf(' ==> EXCLUSION ZONE ENTERED!\n');end
+						return
+					end
 				end
 				r = sqrt((obj.x - obj.fixationX).^2 + (obj.y - obj.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
 				window = find(r < obj.fixationRadius);
@@ -546,7 +556,7 @@ classdef eyelinkManager < optickaCore
 		%>   still being initiated, 'fixing' if the fixation window was entered
 		%>   but not for the requisite fixation time, or the yes or no string.
 		% ===================================================================
-		function [out, window] = testSearchHoldFixation(obj, yesString, noString)
+		function [out, window, exclusion] = testSearchHoldFixation(obj, yesString, noString)
 			[fix, fixtime, searching, window] = obj.isFixated();
 			if searching
 				if (obj.strictFixation==true && (obj.fixN == 0)) || obj.strictFixation==false

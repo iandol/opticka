@@ -1,5 +1,5 @@
 function [gratingid, gratingrect] = CreateProceduralSineSmoothedGrating(windowPtr, width, height, backgroundColorOffset, radius, contrastPreMultiplicator, sigma, useAlpha, method)
-% [gratingid, gratingrect] = CreateProceduralSineGrating(windowPtr, width, height [, backgroundColorOffset =(0,0,0,0)] [, radius=inf][, contrastPreMultiplicator=1])
+% [gratingid, gratingrect] = CreateProceduralSineSmoothedGrating(windowPtr, width, height [, backgroundColorOffset =(0,0,0,0)] [, radius=inf][, contrastPreMultiplicator=1])
 %
 % Creates a procedural texture that allows to draw sine grating stimulus patches
 % in a very fast and efficient manner on modern graphics hardware.
@@ -29,7 +29,7 @@ function [gratingid, gratingrect] = CreateProceduralSineSmoothedGrating(windowPt
 %
 % 'useAlpha' whether to use colour (0) or alpha (1) for smoothing channel
 %
-% 'method' whether to use cosine (0) or smoothstep(1) functions
+% 'method' whether to use cosine (0) or smoothstep(1) smoothing functions
 %
 % The function returns a procedural texture handle 'gratingid' that you can
 % pass to the Screen('DrawTexture(s)', windowPtr, gratingid, ...) functions
@@ -109,8 +109,8 @@ if isinf(radius)
 	% Load standard grating shader:
 	gratingShader = LoadGLSLProgramFromFiles('BasicSineGratingShader', 1);
 else
-	% Load grating shader with circular aperture and smoothing support:
-	gratingShader = LoadGLSLProgramFromFiles({[p 'smoothedaperture.vert.txt'], [p 'smoothedaperture.frag.txt']}, 1);
+	% Load grating shader with smoothed circular aperture support:
+	gratingShader = LoadGLSLProgramFromFiles({[p 'SineGratingSmoothedAperture.vert.txt'], [p 'SineGratingSmoothedAperture.frag.txt']}, 1);
 end
 
 % Setup shader:
