@@ -1,7 +1,13 @@
+% ========================================================================
+%> @brief magstimManager - controls a MagStim Rapid TMS system using a LabJack
+%>
+%> Connects to and manages a TMS stimulator using a LabJack U3 / U6. 
+%>
+%> >> mM = magstimManager() %create magstim manager object
+%> >> mM.open %connect via a LabJack
+%> >> mM.stimulate % run a stimulation protocol
+% ========================================================================
 classdef magstimManager < optickaCore
-	%UNTITLED Summary of this class goes here
-	%   Detailed explanation goes here
-	
 	properties
 		%>which FIO line to use for the MagStim
 		defaultTTL = 2 
