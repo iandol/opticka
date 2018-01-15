@@ -462,9 +462,9 @@ classdef eyelinkManager < optickaCore
 				end
 				if ~isempty(obj.exclusionZone)
 					eZ = obj.exclusionZone; x = obj.x; y = obj.y;
-					if (x >= eZ(1) && x <= eZ(2)) && (y >= eZ(3) && y <= eZ(4))
+					if (x >= eZ(1) && x <= eZ(2)) && (y <= eZ(3) && y >= eZ(4))
 						fixated = false; fixtime = false; searching = false; exclusion = true;
-						if obj.verbose;fprintf(' ==> EXCLUSION ZONE ENTERED!\n');end
+						fprintf(' ==> EXCLUSION ZONE ENTERED!\n');
 						return
 					end
 				end
@@ -519,6 +519,23 @@ classdef eyelinkManager < optickaCore
 		%> @brief testFixation returns input yes or no strings based on
 		%> fixation state, useful for using via stateMachine
 		%>
+		% ===================================================================		
+		function out = testExclusion(obj)
+			out = false;
+			if (obj.isConnected || obj.isDummy) && ~isempty(obj.currentSample) && ~isempty(obj.exclusionZone)
+				eZ = obj.exclusionZone; x = obj.x; y = obj.y;
+				if (x >= eZ(1) && x <= eZ(2)) && (y <= eZ(3) && y >= eZ(4))
+					out = true;
+					fprintf(' ==> EXCLUSION ZONE ENTERED!\n');
+					return
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief testFixation returns input yes or no strings based on
+		%> fixation state, useful for using via stateMachine
+		%>
 		% ===================================================================
 		function out = testWithinFixationWindow(obj, yesString, noString)
 			if isFixated(obj)
@@ -559,7 +576,7 @@ classdef eyelinkManager < optickaCore
 		function [out, window, exclusion] = testSearchHoldFixation(obj, yesString, noString)
 			[fix, fixtime, searching, window, exclusion] = obj.isFixated();
 			if exclusion
-				if obj.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation EXCLUSION ZONE ENTERED!\n');end
+				fprintf('-+-+-> Eyelink:testSearchHoldFixation EXCLUSION ZONE ENTERED!\n')
 				out = 'EXCLUDED!'; window = [];
 				return
 			end
@@ -755,6 +772,17 @@ classdef eyelinkManager < optickaCore
 				y = toPixels(obj, obj.fixationY, 'y');
 				rect = round(CenterRectOnPoint(rect, x, y));
 				Eyelink('Command', 'draw_box %d %d %d %d 4', rect(1), rect(2), rect(3), rect(4));
+			end
+		end
+		
+		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawExclusion(obj)
+			if obj.isConnected && ~isempty(obj.exclusionZone) && length(obj.exclusionZone)==4
+				rect = toPixels(obj, obj.exclusionZone);
+				Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
 		
@@ -975,6 +1003,9 @@ classdef eyelinkManager < optickaCore
 					if length(in)==2
 						out(1) = (in(1) * obj.ppd_) + obj.screen.xCenter;
 						out(2) = (in(2) * obj.ppd_) + obj.screen.yCenter;
+					elseif length(in)==4
+						out(1:2) = (in(1:2) * obj.ppd_) + obj.screen.xCenter;
+						out(3:4) = (in(3:4) * obj.ppd_) + obj.screen.yCenter;
 					else
 						out = 0;
 					end
