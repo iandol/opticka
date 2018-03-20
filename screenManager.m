@@ -478,7 +478,7 @@ classdef screenManager < optickaCore
 					fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 				end
 				wk = Screen(obj.win, 'WindowKind');
-				if obj.blend == true && wk ~= 0 
+				if obj.blend == true & wk ~= 0 
 					%this needs to be done to not trigger a Linux+Polaris bug
 					%matlab bug
 					Screen('BlendFunction', obj.win, 'GL_ONE','GL_ZERO');
