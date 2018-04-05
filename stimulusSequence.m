@@ -40,7 +40,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	properties (SetAccess = private, GetAccess = public)
 		%> structure of variable values
 		outValues 
-		%> variable values wrapped in trial cell
+		%> variable values wrapped in a per-block cell
 		outVars 
 		%> the unique identifier for each stimulus
 		outIndex = 1
@@ -48,6 +48,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		outMap
 		%> minimum number of blocks
 		minBlocks
+		%> log of with block resets
+		resetLog
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true, Hidden = true)
@@ -221,7 +223,11 @@ classdef stimulusSequence < optickaCore & dynamicprops
 						mx=i*obj.minBlocks;
 						idxm = mn:mx;
 						for j = 1:length(idxm)
-							obj.outValues{idxm(j),f}=obj.outVars{i,f}(j);
+							if iscell(obj.outVars{i,f}(j))
+								obj.outValues{idxm(j),f}=obj.outVars{i,f}{j};
+							else
+								obj.outValues{idxm(j),f}=obj.outVars{i,f}(j);
+							end
 						end
 					end
 					offset=offset+obj.minBlocks;
@@ -231,13 +237,15 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					for g = 1:length(obj.nVar(f).values)
 						for hh = 1:length(obj.outValues(:,f))
 							if iscell(obj.nVar(f).values(g))
-								if ischar(obj.nVar(f).values{g}) && strcmpi(obj.outValues{hh,f}{:},obj.nVar(f).values{g})
+								if (ischar(obj.nVar(f).values{g}) && ischar(obj.outValues{hh,f})) && strcmpi(obj.outValues{hh,f},obj.nVar(f).values{g})
 									obj.outMap(hh,f) = g;
-								elseif ~ischar(obj.nVar(f).values{g}) && min(obj.outValues{hh,f}{:} == obj.nVar(f).values{g}) == 1;
+								elseif (isnumeric(obj.nVar(f).values{g}) && isnumeric(obj.outValues{hh,f})) && isequal(obj.outValues{hh,f}, obj.nVar(f).values{g})
 									obj.outMap(hh,f) = g;
+								%elseif ~ischar(obj.nVar(f).values{g}) && isequal(obj.outValues{hh,f}, obj.nVar(f).values{g})
+								%	obj.outMap(hh,f) = g;
 								end
 							else
-								if obj.outValues{hh,f} == obj.nVar(f).values(g);
+								if obj.outValues{hh,f} == obj.nVar(f).values(g)
 									obj.outMap(hh,f) = g;
 								end
 							end
@@ -255,10 +263,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function initialise(obj)
-			if isempty(obj.outValues)
-				obj.randomiseStimuli();
-				obj.initialiseTask();
-			end
+			obj.randomiseStimuli();
+			obj.initialiseTask();
 		end
 		
 		% ===================================================================
@@ -297,13 +303,75 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				obj.responseInfo{obj.thisRun} = info;
 				obj.runTimeList(obj.thisRun) = runTime - obj.startTime;
 				
-				if obj.verbose
-					obj.salutation(sprintf('Task Run %i: response = %.2g @ %.2g secs',obj.thisRun, thisResponse, obj.runTimeList(obj.thisRun)));
-				end
+				obj.salutation(sprintf('Task Run %i: response = %.2g @ %.2g secs',obj.thisRun, thisResponse, obj.runTimeList(obj.thisRun)));
+				
 				obj.thisRun = obj.thisRun + 1;
 				if obj.thisRun > obj.minBlocks * obj.thisBlock
 					obj.thisBlock = obj.thisBlock + 1;
 				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief we want to re-randomise the current run, replace it with
+		%> another run in the same block. This adds some randomisation if a
+		%> run needs to be rerun for a subject and you do not want the same
+		%> stimulus repeatedly until there is a correct response...
+		%>
+		% ===================================================================
+		function success = resetRun(obj)
+			success = false;
+			if obj.taskInitialised
+				iLow = obj.thisRun; % select from this run...
+				iHigh = obj.thisBlock * obj.minBlocks; %...to the last run in the current block
+				iRange = (iHigh - iLow) + 1;
+				if iRange < 2
+					return
+				end
+				randomChoice = randi(iRange); %random from 0 to range
+				trialToSwap = obj.thisRun + (randomChoice - 1);
+				
+				blockOffset = ((obj.thisBlock-1) * obj.minBlocks);
+				blockSource = obj.thisRun - blockOffset;
+				blockDestination = trialToSwap - blockOffset;
+				
+				%outValues
+				aTrial = obj.outValues(obj.thisRun,:);
+				bTrial = obj.outValues(trialToSwap,:);
+				obj.outValues(obj.thisRun,:) = bTrial;
+				obj.outValues(trialToSwap,:) = aTrial;
+				
+				%outVars
+				for i = 1:obj.nVars
+					aVal = obj.outVars{obj.thisBlock,i}(blockSource);
+					bVal = obj.outVars{obj.thisBlock,i}(blockDestination);
+					obj.outVars{obj.thisBlock,i}(blockSource) = bVal;
+					obj.outVars{obj.thisBlock,i}(blockDestination) = aVal;
+				end
+				
+				%outIndex
+				aIdx = obj.outIndex(obj.thisRun,1);
+				bIdx = obj.outIndex(trialToSwap,1);
+				obj.outIndex(obj.thisRun,1) = bIdx;
+				obj.outIndex(trialToSwap,1) = aIdx;
+				
+				%outMap
+				aMap = obj.outMap(obj.thisRun,:);
+				bMap = obj.outMap(trialToSwap,:);
+				obj.outMap(obj.thisRun,:) = bMap;
+				obj.outMap(trialToSwap,:) = aMap;
+				
+				%log this change
+				if isempty(obj.resetLog); myN = 1; else myN = length(obj.resetLog)+1; end
+				obj.resetLog(myN).randomChoice = randomChoice;
+				obj.resetLog(myN).thisRun = obj.thisRun;
+				obj.resetLog(myN).trialToSwap = trialToSwap;
+				obj.resetLog(myN).blockSource = blockSource;
+				obj.resetLog(myN).blockDestination = blockDestination;
+				obj.resetLog(myN).aTrial = aTrial;
+				obj.resetLog(myN).bTrial = bTrial;
+				success = true;
+				obj.salutation(sprintf('Task %i: swap with = %i (random choice=%i)',obj.thisRun, trialToSwap, randomChoice));
 			end
 		end
 		

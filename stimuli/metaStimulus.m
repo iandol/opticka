@@ -62,7 +62,7 @@ classdef metaStimulus < optickaCore
 	end
 	
 	%--------------------VISIBLE PROPERTIES----------%
-	properties (SetAccess = private, GetAccess = public, Transient = true); 
+	properties (SetAccess = private, GetAccess = public, Transient = true)
 		lastXPosition = 0
 		lastYPosition = 0
 	end

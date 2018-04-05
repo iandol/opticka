@@ -1003,7 +1003,8 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
 	if v > 0 && isobject(o.r.stimuli{v})
-		run(o.r.stimuli{v}, false, [], o.r.screen);
+		trialTime = str2num(get(handles.OKtrialTime,'String'));
+		run(o.r.stimuli{v}, false, trialTime, o.r.screen);
 	end
 	set(handles.OKStimulusRunAll,'Enable','on');
 end
@@ -1017,7 +1018,11 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
 	if v > 0 && isa(o.r.stimuli{v},'baseStimulus')
-		run(o.r.stimuli{v}, true, [], o.r.screen);
+		if isa(o.r.screen,'screenManager')
+			run(o.r.stimuli{v}, true, 5, o.r.screen);
+		else
+			run(o.r.stimuli{v}, true, 5);
+		end
 	end
 end
 
@@ -1029,11 +1034,12 @@ function OKStimulusRunAll_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	if isa(o.r.stimuli,'metaStimulus') && o.r.stimuli.n > 0
+		trialTime = str2num(get(handles.OKtrialTime,'String'));
 		o.r.stimuli.choice = [];
 		if isa(o.r.screen,'screenManager')
-			run(o.r.stimuli, [], [], o.r.screen);
+			run(o.r.stimuli, false, trialTime, o.r.screen);
 		else
-			run(o.r.stimuli);
+			run(o.r.stimuli, false, trialTime);
 		end
 	end
 end
@@ -1050,7 +1056,7 @@ if isappdata(handles.output,'o')
 		if isa(o.r.screen,'screenManager')
 			run(o.r.stimuli, true, 5, o.r.screen);
 		else
-			run(o.r.stimuli, true);
+			run(o.r.stimuli, true, 5);
 		end
 	end
 end
@@ -1064,7 +1070,11 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	if isa(o.r.stimuli,'metaStimulus') && o.r.stimuli.n > 0
 		o.r.stimuli.choice = [];
-		runSingle(o.r.stimuli, o.r.screen);
+		if isa(o.r.screen,'screenManager')
+			runSingle(o.r.stimuli, o.r.screen);
+		else
+			runSingle(o.r.stimuli, o.r.screen);
+		end
 	end
 end
 
@@ -1074,7 +1084,7 @@ function OKInspectStimulus_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	v = get(handles.OKStimList,'Value');
-	if v > 0;
+	if v > 0
 		uiinspect(o.r.stimuli{v});
 	end
 end

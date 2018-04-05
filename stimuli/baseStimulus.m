@@ -303,11 +303,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 						'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
 						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
 				end
-				oldwindowed = s.windowed;
+				oldWindowed = s.windowed;
+				oldScreen = s.screen;
 				if benchmark
 					s.windowed = false;
 				else
-					wR = Screen('Rect',0);
+					s.screen = 0;
+					wR = Screen('Rect',s.screen);
 					s.windowed = [wR(3)/2 wR(4)/2];
 				end
 				open(s); %open PTB screen
@@ -315,10 +317,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 				draw(obj); %draw stimulus
 				drawGrid(s); %draw +-5 degree dot grid
 				drawScreenCenter(s); %centre spot
-				if benchmark; 
-					Screen('DrawText', s.win, 'Benchmark, screen will not update properly, see FPS on command window at end.', 5,5,[0 0 0]);
+				if benchmark
+					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS on command window at end.', 5,5,[0 0 0]);
 				else
-					Screen('DrawText', s.win, 'Stimulus unanimated for 1 second, animated for 2, then unanimated for a final second...', 5,5,[0 0 0]);
+					Screen('DrawText', s.win, 'Stim will be drawn, then animated...', 5,5,[0 0 0]);
 				end
 				Screen('Flip',s.win);
 				WaitSecs(1);
@@ -345,7 +347,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 					fps = (s.screenVals.fps*runtime) / (bb-b);
 					fprintf('\n------> SPEED = %g fps\n', fps);
 				end
-				s.windowed = oldwindowed;
+				s.windowed = oldWindowed;
+				s.screen = oldScreen;
 				reset(obj); %reset our stimulus ready for use again
 				close(s); %close screen
 				clear s fps benchmark runtime b bb i; %clear up a bit

@@ -285,6 +285,7 @@ classdef screenManager < optickaCore
 				if isempty(obj.windowed); obj.windowed = false; end
 				if obj.windowed == false %fullscreen
 					winSize = [];
+					thisScreen = obj.screen;
 				else %windowed
 					if length(obj.windowed) == 2
 						winSize = [0 0 obj.windowed(1) obj.windowed(2)];
@@ -293,9 +294,10 @@ classdef screenManager < optickaCore
 					else
 						winSize=[0 0 800 600];
 					end
+					thisScreen = 0;
 				end
 				
-				[obj.win] = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, winSize, [], obj.doubleBuffer+1,[],obj.antiAlias);
+				[obj.win] = PsychImaging('OpenWindow', thisScreen, obj.backgroundColour, winSize, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				
 				tL.screenLog.postOpenWindow=GetSecs;
 				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
