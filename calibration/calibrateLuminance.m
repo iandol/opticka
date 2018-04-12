@@ -217,9 +217,9 @@ classdef calibrateLuminance < handle
 					WaitSecs(0.01);
 				end
 			elseif obj.useSpectroCal2
-				SpectroCalLaser(true)
+				SpectroCALLaserOn(obj.port)
 				input('Align Laser then press enter to start...')
-				SpectroCalLaser(false)
+				SpectroCALLaserOff(obj.port)
 			end
 			
 			obj.initialCLUT = repmat([0:1/(obj.tableLength-1):1]',1,3); %#ok<NBRAK>
@@ -233,7 +233,7 @@ classdef calibrateLuminance < handle
 				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 				if obj.screen == 0
-					rec = [0 0 800 600];
+					rec = [0 0 1000 1000];
 				else
 					rec = [];
 				end
@@ -288,7 +288,7 @@ classdef calibrateLuminance < handle
 					for i = 1:valsl
 						Screen('FillRect',obj.win,cout(i,:));
 						Screen('Flip',obj.win);
-						if ~obj.useCCal2 && ~obj.useI1Pro
+						if ~obj.useSpectroCal2 && ~obj.useCCal2 && ~obj.useI1Pro
 							WaitSecs('YieldSecs',1);
 							obj.inputValues(col).in(a) = input(['Enter luminance for value=' num2str(cout(i,:)) ': ']);
 							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(a));
@@ -310,7 +310,7 @@ classdef calibrateLuminance < handle
 								sp = I1('GetSpectrum')';
 								obj.spectrum(col).in(:,a) = sp;
 							end
-							fprintf('---> Testing value: %g: SC2/CC2:%g / I1Pro:%g cd/m2\n', i, obj.inputValues(col).in(a), obj.inputValuesI1(col).in(a));
+							fprintf('---> Testing value: %g: SC2/CC2:%g cd/m2\n', i, obj.inputValues(col).in(a));
 						end
 						a = a + 1;
 					end
@@ -360,7 +360,7 @@ classdef calibrateLuminance < handle
 					PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'SimpleGamma');
 				end
 				if obj.screen == 0
-					rec = [0 0 800 600];
+					rec = [0 0 1000 1000];
 				else
 					rec = [];
 				end
@@ -419,15 +419,15 @@ classdef calibrateLuminance < handle
 					for i = 1:valsl
 						Screen('FillRect',obj.win,cout(i,:));
 						Screen('Flip',obj.win);
-						if ~obj.useCCal2 && ~obj.useI1Pro
+						if ~obj.useSpectroCal2 && ~obj.useCCal2 && ~obj.useI1Pro
 							WaitSecs('YieldSecs',1);
 							obj.inputValuesTest(col).in(a) = input(['LUM: ' num2str(cout(i,:)) ' = ']);
 							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(a));
 						else
 							WaitSecs('YieldSecs',0.1);
 							if obj.useSpectroCal2 == true
-								[obj.thisx,obj.thisy,obj.thisY] = obj.getSpectroCalValues;
-								obj.inputValues(col).in(a) = obj.thisY;
+								[obj.thisx, obj.thisy, obj.thisY] = obj.getSpectroCalValues;
+								obj.inputValuesTest(col).in(a) = obj.thisY;
 							end
 							if obj.useCCal2 == true
 								[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
@@ -554,7 +554,7 @@ classdef calibrateLuminance < handle
 					x = obj.makeUnique(x);
 					[fittedmodel,gof] = fit(x',rampNorm',method);
 					g = fittedmodel([0:1/(obj.tableLength-1):1]');
-					g = obj.normalize(g); %make sure we are from 0 to 1
+					%g = obj.normalize(g); %make sure we are from 0 to 1
 					obj.gammaTable{i+1,loop} = g;
 				end
 
