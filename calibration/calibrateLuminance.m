@@ -31,10 +31,14 @@ classdef calibrateLuminance < handle
 		verbose = false
 		%> allows the constructor to run the open method immediately
 		runNow = false
-		%> number of measures (default = 30)
+		%> number of measures 
 		nMeasures = 15
 		%> screen to calibrate
 		screen
+		%> use SpectroCal II automatically
+		useSpectroCal2 = false
+		%> specify port to connect to
+		port = 'COM3'
 		%> use ColorCalII automatically
 		useCCal2 = false
 		%> use i1Pro?
@@ -59,7 +63,7 @@ classdef calibrateLuminance < handle
 		%> wavelengths to test with i1Pro
 		wavelengths = 380:10:730
 	end
-	
+
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		finalCLUT = []
@@ -98,7 +102,7 @@ classdef calibrateLuminance < handle
 		win
 		p
 		plotHandle
-		allowedPropertiesBase='^(preferI1Pro|useCCal2|useI1Pro|correctColour|testColour|filename|tableLength|verbose|runNow|screen|nMeasures)$'
+		allowedPropertiesBase='^(useSpectroCal2|port|preferI1Pro|useCCal2|useI1Pro|correctColour|testColour|filename|tableLength|verbose|runNow|screen|nMeasures)$'
 	end
 	
 	%=======================================================================
@@ -152,7 +156,9 @@ classdef calibrateLuminance < handle
 			if ~strcmpi(reply,'y')
 				return;
 			end
-			if obj.useI1Pro == true
+			if obj.useSpectroCal2 == true
+				resetAll(obj)
+			elseif obj.useI1Pro == true
 				if I1('IsConnected') == 0
 					obj.useI1Pro = false;
 					fprintf('---> Couldn''t connect to I1Pro!!!\n');
@@ -200,7 +206,7 @@ classdef calibrateLuminance < handle
 		% ===================================================================
 		function run(obj)
 			resetAll(obj)
-			if ~obj.useCCal2 && ~obj.useI1Pro
+			if ~obj.useCCal2 && ~obj.useI1Pro && ~obj.useSpectroCal2
 				input(sprintf(['When black screen appears, point photometer, \n' ...
 					'get reading in cd/m^2, input reading using numpad and press enter. \n' ...
 					'A screen of higher luminance will be shown. Repeat %d times. ' ...
@@ -210,8 +216,10 @@ classdef calibrateLuminance < handle
 				while I1('KeyPressed') == 0
 					WaitSecs(0.01);
 				end
-			elseif obj.useI1Pro == true && obj.useCCal2 == false
-				input('Please place i1Pro in front of monitor then press enter...');
+			elseif obj.useSpectroCal2
+				SpectroCalLaser(true)
+				input('Align Laser then press enter to start...')
+				SpectroCalLaser(false)
 			end
 			
 			obj.initialCLUT = repmat([0:1/(obj.tableLength-1):1]',1,3); %#ok<NBRAK>
@@ -286,6 +294,10 @@ classdef calibrateLuminance < handle
 							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(a));
 						else
 							WaitSecs('YieldSecs',0.1);
+							if obj.useSpectroCal2 == true
+								[obj.thisx,obj.thisy,obj.thisY] = obj.getSpectroCalValues;
+								obj.inputValues(col).in(a) = obj.thisY;
+							end
 							if obj.useCCal2 == true
 								[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
 								obj.inputValues(col).in(a) = obj.thisY;
@@ -298,7 +310,7 @@ classdef calibrateLuminance < handle
 								sp = I1('GetSpectrum')';
 								obj.spectrum(col).in(:,a) = sp;
 							end
-							fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValues(col).in(a), obj.inputValuesI1(col).in(a));
+							fprintf('---> Testing value: %g: SC2/CC2:%g / I1Pro:%g cd/m2\n', i, obj.inputValues(col).in(a), obj.inputValuesI1(col).in(a));
 						end
 						a = a + 1;
 					end
@@ -413,6 +425,10 @@ classdef calibrateLuminance < handle
 							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(a));
 						else
 							WaitSecs('YieldSecs',0.1);
+							if obj.useSpectroCal2 == true
+								[obj.thisx,obj.thisy,obj.thisY] = obj.getSpectroCalValues;
+								obj.inputValues(col).in(a) = obj.thisY;
+							end
 							if obj.useCCal2 == true
 								[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
 								obj.inputValuesTest(col).in(a) = obj.thisY;
@@ -790,12 +806,37 @@ classdef calibrateLuminance < handle
 			x = X / (X + Y + Z);
 			y = Y / (X + Y + Z);
 		end
+		
+		% ===================================================================
+		%> @brief getCCalxyY
+		%>	Uses the ColorCalII to return the current xyY values
+		%>
+		% ===================================================================
+		function [x, y, Y, wavelengths, spectrum] = getSpectroCalValues(obj)
+			[CIEXY, CIEUV, Luminance, Lambda, Radiance, errorString] = SpectroCALMakeSPDMeasurement(obj.port, 380, 780, 1);
+			x = CIEXY(1);
+			y = CIEXY(2);
+			Y = Luminance;
+			wavelengths = Lambda;
+			spectrum = Radiance;
+		end
+		
+		%===============reset======================%
+			function spectroCalLaser(obj,state)
+			if ~exist('state','var') || isempty(state); state = false; end
+			VCP = serial(obj.port, 'BaudRate', 921600,'DataBits', 8, 'StopBits', 1, 'FlowControl', 'none', 'Parity', 'none', 'Terminator', 'CR','Timeout', 5, 'InputBufferSize', 16000);
+			fopen(VCP);
+			fprintf(VCP,['*CONTR:LASER 1', num2str(state), char(13)]);
+			error=fread(VCP,1);
+			fclose(VCP);
+		end
 
 	end
 	
 	%=======================================================================
 	methods ( Access = private ) % PRIVATE METHODS
-		%=======================================================================
+	%=======================================================================
+		
 		
 		%===============reset======================%
 		function resetTested(obj)
