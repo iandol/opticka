@@ -37,14 +37,14 @@ classdef calibrateLuminance < handle
 		screen
 		%> use SpectroCal II automatically
 		useSpectroCal2 = false
-		%> specify port to connect to
-		port = 'COM3'
 		%> use ColorCalII automatically
 		useCCal2 = false
 		%> use i1Pro?
 		useI1Pro = false
 		%> choose I1Pro over CCal if both connected?
 		preferI1Pro = false
+		%> specify port to connect to
+		port = 'COM3'
 		%> test R G and B as seperate curves?
 		testColour = false
 		%> correct overall luminance or the R G B seperately
@@ -53,7 +53,9 @@ classdef calibrateLuminance < handle
 		%> 2:n are the analysisMethods chosen
 		choice = 2
 		%> methods list to fit to raw luminance values
-		analysisMethods = {'pchipinterp';'smoothingspline'}
+		analysisMethods = {'pchipinterp';'linearinterp'}
+		%> background screen colour
+		backgroundColour = [ 0.5 0.5 0.5];
 		%> filename this was saved as
 		filename
 		%> EXTERNAL data as a N x 2 matrix
@@ -233,17 +235,18 @@ classdef calibrateLuminance < handle
 				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 				if obj.screen == 0
-					rec = [0 0 1000 1000];
+					rect = [0 0 1000 1000];
 				else
-					rec = [];
+					rect = [];
 				end
-				obj.win = PsychImaging('OpenWindow', obj.screen, 0, rec);
+				obj.win = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, rect);
+				winRect = Screen('Rect',obj.win);
+				targetRect = CenterRect([0 0 900 900],winRect);
 				[obj.oldCLUT, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
 				BackupCluts;
-				%Screen('LoadNormalizedGammaTable', obj.win, obj.initialCLUT);
+				Screen('LoadNormalizedGammaTable', obj.win, obj.initialCLUT);
 				
 				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
-				obj.ramp(end) = 1;
 				
 				obj.inputValues(1).in = zeros(1,length(obj.ramp));
 				obj.inputValues(2).in = obj.inputValues(1).in; 
@@ -285,32 +288,32 @@ classdef calibrateLuminance < handle
 						cout(:,3) = vals;
 					end
 					a=1;
+					[~, randomIndex] = sort(rand(valsl, 1));
 					for i = 1:valsl
-						Screen('FillRect',obj.win,cout(i,:));
+						Screen('FillRect',obj.win,cout(randomIndex(i),:),targetRect);
 						Screen('Flip',obj.win);
+						WaitSecs('YieldSecs',1);
 						if ~obj.useSpectroCal2 && ~obj.useCCal2 && ~obj.useI1Pro
-							WaitSecs('YieldSecs',1);
-							obj.inputValues(col).in(a) = input(['Enter luminance for value=' num2str(cout(i,:)) ': ']);
-							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(a));
+							obj.inputValues(col).in(randomIndex(a)) = input(['Enter luminance for value=' num2str(cout(randomIndex(i),:)) ': ']);
+							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(randomIndex(a)));
 						else
-							WaitSecs('YieldSecs',0.1);
 							if obj.useSpectroCal2 == true
 								[obj.thisx,obj.thisy,obj.thisY] = obj.getSpectroCalValues;
-								obj.inputValues(col).in(a) = obj.thisY;
+								obj.inputValues(col).in(randomIndex(a)) = obj.thisY;
 							end
 							if obj.useCCal2 == true
 								[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
-								obj.inputValues(col).in(a) = obj.thisY;
+								obj.inputValues(col).in(randomIndex(a)) = obj.thisY;
 							end
 							if obj.useI1Pro == true
 								I1('TriggerMeasurement');
 								Lxy = I1('GetTriStimulus');
-								obj.inputValuesI1(col).in(a) = Lxy(1);
+								obj.inputValuesI1(col).in(randomIndex(a)) = Lxy(1);
 								%obj.inputValues(col).in(a) = obj.inputValuesI1(col).in(a);
 								sp = I1('GetSpectrum')';
-								obj.spectrum(col).in(:,a) = sp;
+								obj.spectrum(col).in(:,randomIndex(a)) = sp;
 							end
-							fprintf('---> Testing value: %g: SC2/CC2:%g cd/m2\n', i, obj.inputValues(col).in(a));
+							fprintf('---> Tested value %i: %g = %g cd/m2\n\n', i, vals(randomIndex(i)), obj.inputValues(col).in(randomIndex(a)));
 						end
 						a = a + 1;
 					end
@@ -356,17 +359,16 @@ classdef calibrateLuminance < handle
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
-				if doPipeline == true
-					PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'SimpleGamma');
-				end
 				if obj.screen == 0
-					rec = [0 0 1000 1000];
+					rect = [0 0 1000 1000];
 				else
-					rec = [];
+					rect = [];
 				end
-				obj.win = PsychImaging('OpenWindow', obj.screen, 0, rec);
+				obj.win = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, rect);
+				winRect = Screen('Rect',obj.win);
+				targetRect = CenterRect([0 0 900 900],winRect);
 				[obj.oldCLUT, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
-				BackupCluts;
+				
 				if doPipeline == true
 					PsychColorCorrection('SetEncodingGamma', obj.win, 1/obj.displayGamma);
 					fprintf('LOAD SetEncodingGamma using PsychColorCorrection to: %g\n',1/obj.displayGamma)
@@ -377,14 +379,10 @@ classdef calibrateLuminance < handle
 					else
 						gTmp = repmat(obj.gammaTable{obj.choice},1,3);
 					end
-					gTmp(1,1) = 0;
-					gTmp(1,2) = 0;
-					gTmp(1,3) = 0;
 					Screen('LoadNormalizedGammaTable', obj.win, gTmp);
 				end
 				
 				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
-				obj.ramp(end) = 1;
 				
 				obj.inputValuesTest(1).in = zeros(1,length(obj.ramp));
 				obj.inputValuesTest(2).in = obj.inputValuesTest(1).in; obj.inputValuesTest(3).in = obj.inputValuesTest(1).in; obj.inputValuesTest(4).in = obj.inputValuesTest(1).in;
@@ -416,15 +414,15 @@ classdef calibrateLuminance < handle
 						cout(:,3) = vals;
 					end
 					a=1;
+					[~, randomIndex] = sort(rand(valsl, 1));
 					for i = 1:valsl
-						Screen('FillRect',obj.win,cout(i,:));
+						Screen('FillRect',obj.win,cout(randomIndex(i),:),targetRect);
 						Screen('Flip',obj.win);
+						WaitSecs('YieldSecs',1);
 						if ~obj.useSpectroCal2 && ~obj.useCCal2 && ~obj.useI1Pro
-							WaitSecs('YieldSecs',1);
 							obj.inputValuesTest(col).in(a) = input(['LUM: ' num2str(cout(i,:)) ' = ']);
 							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(a));
 						else
-							WaitSecs('YieldSecs',0.1);
 							if obj.useSpectroCal2 == true
 								[obj.thisx, obj.thisy, obj.thisY] = obj.getSpectroCalValues;
 								obj.inputValuesTest(col).in(a) = obj.thisY;
@@ -664,7 +662,7 @@ classdef calibrateLuminance < handle
 			end
 			
 			colors = {[0 0 0], [0.7 0 0],[0 0.7 0],[0 0 0.7]};
-			linestyles = {':','-','-.','-.d',':.',':x',':*',':^'};
+			linestyles = {':','-','-.','--',':.',':c',':y',':m'};
 			if isstruct(obj.inputValuesI1)
 				ii = length(obj.inputValuesI1);
 			elseif obj.correctColour
@@ -813,7 +811,10 @@ classdef calibrateLuminance < handle
 		%>
 		% ===================================================================
 		function [x, y, Y, wavelengths, spectrum] = getSpectroCalValues(obj)
-			[CIEXY, CIEUV, Luminance, Lambda, Radiance, errorString] = SpectroCALMakeSPDMeasurement(obj.port, 380, 780, 1);
+			[CIEXY, ~, Luminance, Lambda, Radiance, errorString] = SpectroCALMakeSPDMeasurement(obj.port, 380, 780, 1);
+			if ~isempty(errorString)
+				fprintf('\n===>>> SpectroCal error: %s\n', errorString);
+			end
 			x = CIEXY(1);
 			y = CIEXY(2);
 			Y = Luminance;
