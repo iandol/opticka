@@ -62,8 +62,8 @@ classdef calibrateLuminance < handle
 		externalInput
 		%> length of gamma table
 		tableLength = 1024
-		%> wavelengths to test with i1Pro
-		wavelengths = 380:10:730
+		%> wavelengths to test (SpectroCal2 is 380:1:780 | I1Pro is 380:10:730)
+		wavelengths = 380:1:780
 	end
 
 	%--------------------VISIBLE PROPERTIES-----------%
@@ -76,6 +76,7 @@ classdef calibrateLuminance < handle
 		thisx = []
 		thisy = []
 		thisY = []
+		thisSpectrum = []
 		ramp = []
 		inputValues = []
 		inputValuesI1 = []
@@ -420,26 +421,26 @@ classdef calibrateLuminance < handle
 						Screen('Flip',obj.win);
 						WaitSecs('YieldSecs',1);
 						if ~obj.useSpectroCal2 && ~obj.useCCal2 && ~obj.useI1Pro
-							obj.inputValuesTest(col).in(a) = input(['LUM: ' num2str(cout(i,:)) ' = ']);
-							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(a));
+							obj.inputValuesTest(col).in(randomIndex(a)) = input(['LUM: ' num2str(cout(i,:)) ' = ']);
+							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(randomIndex(a)));
 						else
 							if obj.useSpectroCal2 == true
 								[obj.thisx, obj.thisy, obj.thisY] = obj.getSpectroCalValues;
-								obj.inputValuesTest(col).in(a) = obj.thisY;
+								obj.inputValuesTest(col).in(randomIndex(a)) = obj.thisY;
 							end
 							if obj.useCCal2 == true
 								[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
-								obj.inputValuesTest(col).in(a) = obj.thisY;
+								obj.inputValuesTest(col).in(randomIndex(a)) = obj.thisY;
 							end
 							if obj.useI1Pro == true
 								I1('TriggerMeasurement');
 								Lxy = I1('GetTriStimulus');
-								obj.inputValuesI1Test(col).in(a) = Lxy(1);
+								obj.inputValuesI1Test(col).in(randomIndex(a)) = Lxy(1);
 								%obj.inputValuesTest(col).in(a) = obj.inputValuesI1Test(col).in(a);
 								sp = I1('GetSpectrum')';
-								obj.spectrumTest(col).in(:,a) = sp;
+								obj.spectrumTest(col).in(:,randomIndex(a)) = sp;
 							end
-							fprintf('---> Testing value: %g: CCAL:%g / I1Pro:%g cd/m2\n', i, obj.inputValuesI1Test(col).in(a), obj.inputValuesI1Test(col).in(a));
+							fprintf('---> Tested value %i: %g = %g (was %.2g) cd/m2\n\n', i, vals(randomIndex(i)), obj.inputValuesTest(col).in(randomIndex(a)), obj.inputValues(col).in(randomIndex(a)));
 						end
 						a = a + 1;
 					end
@@ -811,7 +812,8 @@ classdef calibrateLuminance < handle
 		%>
 		% ===================================================================
 		function [x, y, Y, wavelengths, spectrum] = getSpectroCalValues(obj)
-			[CIEXY, ~, Luminance, Lambda, Radiance, errorString] = SpectroCALMakeSPDMeasurement(obj.port, 380, 780, 1);
+			[CIEXY, ~, Luminance, Lambda, Radiance, errorString] = SpectroCALMakeSPDMeasurement(obj.port, ...
+				obj.wavelengths(1), obj.wavelengths(end), obj.wavelengths(2)-obj.wavelengths(1));
 			if ~isempty(errorString)
 				fprintf('\n===>>> SpectroCal error: %s\n', errorString);
 			end
@@ -930,9 +932,9 @@ classdef calibrateLuminance < handle
 		end
 		
 		% ===================================================================
-		%> @brief Converts properties to a structure
+		%> @brief make unique
 		%>
-		%> @return out the structure
+		%> @return x
 		% ===================================================================
 		function x = makeUnique(obj,x)
 			for i = 1:length(x)
@@ -944,9 +946,9 @@ classdef calibrateLuminance < handle
 		end
 		
 		% ===================================================================
-		%> @brief Converts properties to a structure
+		%> @brief normalise values 0 < > 1
 		%>
-		%> @return out the structure
+		%> @return out normalised data
 		% ===================================================================
 		function out = normalize(obj,in)
 			if min(in) < 0
@@ -954,8 +956,8 @@ classdef calibrateLuminance < handle
 			end
 			if max(in) > 1
 				in(in>1) = 1;
-            end
-            out = in;
+			end
+			out = in;
 		end
 		
 		%===========Salutation==========%
@@ -967,7 +969,7 @@ classdef calibrateLuminance < handle
 				if exist('message','var')
 					fprintf([message ' | ' in '\n']);
 				else
-					fprintf(['\nHello from ' obj.name ' | labJack\n\n']);
+					fprintf(['\nHello from ' obj.name ' | calibrateLuminance\n\n']);
 				end
 			end
 		end
