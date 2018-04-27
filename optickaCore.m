@@ -10,57 +10,57 @@ classdef optickaCore < handle
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		%> object name
-		name@char = ''
+		name char = ''
 		%> comment
-		comment@char = ''
+		comment char = ''
 	end
 	
 	%--------------------ABSTRACT PROPERTIES----------%
 	properties (Abstract = true)
 		%> verbose logging, subclasses must assign this. This is normally logical true/false
-		verbose
+		verbose logical
 	end
 	
 	%--------------------HIDDEN PROPERTIES------------%
 	properties (SetAccess = protected, Hidden = true)
 		%> are we cloning this from another object
-		cloning@logical = false
+		cloning logical = false
 	end
 	
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> clock() dateStamp set on construction
-		dateStamp@double
+		dateStamp double
 		%> universal ID
-		uuid@char
+		uuid char
 		%> storage of various paths
-		paths@struct
+		paths struct
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%
 	properties (Dependent = true)
 		%> The fullName is the object name combined with its uuid and class name
-		fullName@char
+		fullName char
 	end
 	
 	%--------------------TRANSIENT PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected, Transient = true)
 		%> Matlab version number, this is transient so it is not saved
-		mversion@double = 0
+		mversion double = 0
 	end
 	
 	%--------------------PROTECTED PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected)
 		%> class name
-		className@char = ''
+		className char = ''
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'name|cloning'
+		allowedProperties char = 'name|cloning'
 		%> cached full name
-		fullName_@char
+		fullName_ char
 	end
 	
 	%=======================================================================

@@ -8,24 +8,24 @@ classdef opticka < optickaCore
 	
 	properties
 		%> this is the main runExperiment object
-		r@runExperiment
+		r runExperiment
 		%> run in verbose mode?
 		verbose = false
 	end
 	
 	properties (SetAccess = public, GetAccess = public, Transient = true)
 		%> general store for misc properties
-		store@struct = struct()
+		store struct = struct()
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> all of the handles to the opticka_ui GUI
-		h@struct
+		h struct
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion@char = '1.021'
+		optickaVersion char = '1.021'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -36,9 +36,9 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> used to sanitise passed values on construction
-		allowedProperties@char='verbose'
+		allowedProperties char='verbose'
 		%> which UI settings should be saved locally to the machine?
-		uiPrefsList@cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
+		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina','OKHideFlash','OKTrainingResearcherName',...
 			'OKTrainingName'};
 	end

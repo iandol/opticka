@@ -10,52 +10,54 @@ classdef screenManager < optickaCore
 	
 	properties
 		%> MBP 1440x900 is 33.2x20.6cm so approx 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
-		pixelsPerCm@double = 44
+		pixelsPerCm double = 44
 		%> distance of subject from CRT -- rad2ang(2*(atan((0.5*1cm)/57.3cm))) equals 1deg
-		distance@double = 57.3
+		distance double = 57.3
 		%> hide the black flash as PTB tests its refresh timing, uses a gamma
 		%> trick from Mario
-		hideFlash@logical = false
+		hideFlash logical = false
 		%> windowed: when FALSE use fullscreen; set to TRUE and it is windowed 800x600pixels or you
 		%> can add in a window width and height i.e. [800 600] to specify windowed size. Remember
 		%> that windowed presentation should never be used for real experimental
 		%> presentation due to poor timing...
 		windowed = false
 		%> true = change the debug parameters for poorer temporal fidelity but no sync testing etc.
-		debug@logical = false
+		debug logical = false
 		%> true = shows the info text and position grid during stimulus presentation
-		visualDebug = false
+		visualDebug logical = false
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
-		doubleBuffer = 1
-		%> bitDepth of framebuffer, '8bit' is best for old GPUs
-		bitDepth = 'FloatingPoint32BitIfPossible'
+		doubleBuffer uint8 = 1
+		%> bitDepth of framebuffer, '8bit' is best for old GPUs, can also
+		%> pass otpions to enable Display++ modes EnableBits++Bits++Output
+		%> EnableBits++Mono++Output EnableBits++Color++Output
+		bitDepth char = 'FloatingPoint32BitIfPossible'
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
-		timestampingMode = 1
+		timestampingMode double = 1
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8
 		%> and 16 -- useful for textures to minimise aliasing, but this
 		%> does provide extra work for the GPU
-		antiAlias = []
+		antiAlias double = []
 		%> background RGBA of display during stimulus presentation
-		backgroundColour = [0.5 0.5 0.5 0]
+		backgroundColour(1,4) double = [0.5 0.5 0.5 0]
 		%> shunt screen center by X degrees
-		screenXOffset = 0
+		screenXOffset double = 0
 		%> shunt screen center by Y degrees
-		screenYOffset = 0
+		screenYOffset double = 0
 		%> the monitor to use, 0 is the main display
-		screen = []
+		screen double = []
 		%> use OpenGL blending mode
-		blend = false
+		blend logical = false
 		%> GL_ONE %src mode
-		srcMode = 'GL_SRC_ALPHA'
+		srcMode char = 'GL_SRC_ALPHA'
 		%> GL_ONE % dst mode
-		dstMode = 'GL_ONE_MINUS_SRC_ALPHA'
+		dstMode char = 'GL_ONE_MINUS_SRC_ALPHA'
 		%> show a white square in the top-left corner to trigger a
 		%> photodiode attached to screen. This is only displayed when the
 		%> stimulus is shown, not during the blank and can therefore be used
 		%> for timing validation
-		photoDiode = false
+		photoDiode logical = false
 		%> gamma correction info saved as a calibrateLuminance object
-		gammaTable
+		gammaTable calibrateLuminance
 		%> settings for movie output
 		movieSettings = []
 		%> useful screen info and initial gamma tables and the like
@@ -65,7 +67,7 @@ classdef screenManager < optickaCore
 		%> level of PTB verbosity, set to 10 for full PTB logging
 		verbosityLevel = 4
 		%> Use retina resolution natively
-		useRetina = false
+		useRetina logical = false
 		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc);
 		%> Each N should be a different display
 		screenToHead = []
@@ -78,28 +80,28 @@ classdef screenManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = public)
 		%> do we have a working PTB, if not go into a silent mode
-		isPTB = false
+		isPTB logical = false
 		%> is a PTB currently open?
-		isOpen = false
+		isOpen logical = false
 		%> the handle returned by opening a PTB window
 		win
 		%> the window rectangle
 		winRect
 		%> computed X center
-		xCenter = 0
+		xCenter double = 0
 		%> computed Y center
-		yCenter = 0
+		yCenter double = 0
 		%> set automatically on construction
 		maxScreen
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> linux font name;
-		linuxFontName = '-adobe-helvetica-bold-o-normal--11-80-100-100-p-60-iso8859-1'
+		linuxFontName char = '-adobe-helvetica-bold-o-normal--11-80-100-100-p-60-iso8859-1'
 		%> properties allowed to be modified during construction
-		allowedProperties='screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
+		allowedProperties char = 'screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
-		photoDiodeRect = [0;0;50;50]
+		photoDiodeRect(1,4) double = [0, 0, 50, 50]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
 		grid
 		%> the movie pointer
@@ -275,8 +277,17 @@ classdef screenManager < optickaCore
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
-				if ischar(obj.bitDepth) && ~strcmpi(obj.bitDepth,'8bit')
-					PsychImaging('AddTask', 'General', obj.bitDepth);
+				if ~strcmpi(obj.bitDepth,'8bit')
+					switch obj.bitDepth
+						case 'EnableBits++Color++Output'
+							PsychImaging('AddTask', 'General', 'EnableBits++Color++Output', 2);
+						case 'EnableBits++Bits++Output'
+							PsychImaging('AddTask', 'General', 'EnableBits++Bits++Output');
+						case 'EnableBits++Mono++Output'
+							PsychImaging('AddTask', 'General', 'EnableBits++Mono++Output');
+						otherwise
+							PsychImaging('AddTask', 'General', obj.bitDepth);
+					end
 				end
 				if obj.useRetina == true
 					PsychImaging('AddTask', 'General', 'UseRetinaResolution');
@@ -337,7 +348,7 @@ classdef screenManager < optickaCore
 				if obj.hideFlash == true && isempty(obj.gammaTable)
 					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
 					obj.screenVals.resetGamma = false;
-				elseif isa(obj.gammaTable,'calibrateLuminance') && (obj.gammaTable.choice > 0)
+				elseif ~isempty(obj.gammaTable) && (obj.gammaTable.choice > 0)
 					choice = obj.gammaTable.choice;
 					obj.screenVals.resetGamma = true;
 					if size(obj.gammaTable.gammaTable,2) > 1
@@ -829,7 +840,7 @@ classdef screenManager < optickaCore
 			end
 		end
 		
-				% ===================================================================
+		% ===================================================================
 		%> @brief prepare the recording of stimulus frames
 		%>
 		%> @param
