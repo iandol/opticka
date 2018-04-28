@@ -177,13 +177,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function value = get.dX(obj)
 			if ~isempty(obj.findprop('motionAngle'))
-				if isempty(obj.findprop('motionAngleOut'));
+				if isempty(obj.findprop('motionAngleOut'))
 					[value,~]=obj.updatePosition(obj.delta,obj.motionAngle);
 				else
 					[value,~]=obj.updatePosition(obj.delta,obj.motionAngleOut);
 				end
 			else
-				if isempty(obj.findprop('angleOut'));
+				if isempty(obj.findprop('angleOut'))
 					[value,~]=obj.updatePosition(obj.delta,obj.angle);
 				else
 					[value,~]=obj.updatePosition(obj.delta,obj.angleOut);
@@ -197,13 +197,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function value = get.dY(obj)
 			if ~isempty(obj.findprop('motionAngle'))
-				if isempty(obj.findprop('motionAngleOut'));
+				if isempty(obj.findprop('motionAngleOut'))
 					[~,value]=obj.updatePosition(obj.delta,obj.motionAngle);
 				else
 					[~,value]=obj.updatePosition(obj.delta,obj.motionAngleOut);
 				end
 			else
-				if isempty(obj.findprop('angleOut'));
+				if isempty(obj.findprop('angleOut'))
 					[~,value]=obj.updatePosition(obj.delta,obj.angle);
 				else
 					[~,value]=obj.updatePosition(obj.delta,obj.angleOut);
@@ -355,14 +355,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 				s.screen = oldScreen;
 				reset(obj); %reset our stimulus ready for use again
 				close(s); %close screen
-				clear s fps benchmark runtime b bb i; %clear up a bit
+				clear fps benchmark runtime b bb i; %clear up a bit
 				warning on
 			catch ME
 				if exist('s','var')
 					close(s);
 				end
 				warning on
-				clear s fps benchmark runtime b bb i; %clear up a bit
+				clear fps benchmark runtime b bb i; %clear up a bit
 				reset(obj); %reset our stimulus ready for use again
 				rethrow(ME)				
 			end

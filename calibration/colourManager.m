@@ -12,7 +12,7 @@ classdef colourManager < optickaCore
 		%> verbosity
 		verbose logical = false
 		%>
-		deviceSPD char = '~/MatlabFiles/Calibration/PhosphorsDispaly++.mat'
+		deviceSPD char = '~/MatlabFiles/Calibration/PhosphorsDisplay++.mat'
 		%>
 		sensitivities char = 'ConeSensitivities_SS_2degELin3908301.mat'
 		%> background colour
