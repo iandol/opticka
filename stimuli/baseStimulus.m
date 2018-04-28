@@ -299,20 +299,24 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				if ~exist('s','var') || ~isa(s,'screenManager')
 					s = screenManager('verbose',false,'blend',true,...
-						'bitDepth','8bit','debug',false,...
+						'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
 						'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
 						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+					prepareScreen(s);
 				end
 				oldWindowed = s.windowed;
 				oldScreen = s.screen;
 				if benchmark
 					s.windowed = false;
 				else
-					s.screen = 0;
-					wR = Screen('Rect',s.screen);
-					s.windowed = [wR(3)/2 wR(4)/2];
+					if s.screen == 0
+						wR = Screen('Rect',s.screen);
+						s.windowed = [wR(3)/2 wR(4)/2];
+					end
 				end
-				open(s); %open PTB screen
+				if ~s.isOpen
+					open(s); %open PTB screen
+				end
 				setup(obj,s); %setup our stimulus object
 				draw(obj); %draw stimulus
 				drawGrid(s); %draw +-5 degree dot grid
@@ -325,7 +329,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				Screen('Flip',s.win);
 				WaitSecs(1);
 				if benchmark; b=GetSecs; end
-				for i = 1:(s.screenVals.fps*runtime) %should be 2 seconds worth of flips
+				for i = 1:(s.screenVals.fps*runtime) %should be X seconds worth of flips
 					draw(obj); %draw stimulus
 					if s.visualDebug
 						drawGrid(s); %draw +-5 degree dot grid
