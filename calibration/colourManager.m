@@ -30,8 +30,7 @@ classdef colourManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
-		%> dependent pixels per degree property calculated from distance and pixelsPerCm
-		ppd
+
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -41,8 +40,7 @@ classdef colourManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties string ='verbose|deviceSPD|sensitivities'
-		ppd_
+		allowedProperties string ='verbose|deviceSPD|sensitivities|backgroundColour|autoPlot|axisPriority|gamutLimit'
 	end
 	
 	%=======================================================================
@@ -85,7 +83,7 @@ classdef colourManager < optickaCore
 			
 			loop = 0;
 			wTrigger = true;
-			axisPriority = obj.axisPriority;
+			axisPriority = obj.axisPriority; %#ok<*PROPLC>
 			if ErrorCode == -1
 				warning('THE REQUESTED COLOUR IS OUT OF RANGE, will shrink %s',axisPriority);
 				while ErrorCode == -1 && loop < obj.gamutLimit
@@ -120,11 +118,11 @@ classdef colourManager < optickaCore
 				end
 			end
 			if obj.verbose
-				fprintf('\n--->>> DKL source: radius=%f azimuth=%f elevation=%f]\n'  , source(1), source(2), source(3));
+				fprintf('\n--->>> DKL source: radius=%f azimuth=%f elevation=%f]\n', source(1), source(2), source(3));
 				fprintf('--->>> RGB out: [%f %f %f]\n', to(1), to(2), to(3));
 				if loop > 0;fprintf('------>>> Gamut search took %i iterations...\n',loop);end
 			end
-			
+			to = to';
 			obj.lastDKL = source;
 			obj.lastRGB = to;
 			if obj.autoPlot; obj.plot; end
@@ -172,13 +170,15 @@ classdef colourManager < optickaCore
 			if ~obj.screen.isOpen
 				obj.screen.debug = true;
 				obj.screen.backgroundColour = [obj.backgroundColour 1];
-				obj.screen.windowed = [0 0 600 600];
+                if obj.screen.maxScreen > 0
+                    obj.screen.windowed = false;
+                end
 				prepareScreen(obj.screen);
-				open(obj.screen);
+				open(obj.screen,[],[],obj.screen.maxScreen);
 			end
 			obj.screen.backgroundColour = [obj.backgroundColour 1];
 			drawBackground(obj.screen);
-			drawSpot(obj.screen,5,obj.lastRGB);
+			drawSpot(obj.screen,10,obj.lastRGB);
 			flip(obj.screen);
 		end
 		
