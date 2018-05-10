@@ -289,7 +289,8 @@ classdef screenManager < optickaCore
                         case 'EnableBits++Bits++Output'
                             PsychImaging('AddTask', 'General', 'EnableBits++Bits++Output');
                         case 'EnableBits++Mono++Output'
-                            PsychImaging('AddTask', 'General', 'EnableBits++Mono++Output');
+									PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
+                           PsychImaging('AddTask', 'General', 'EnableBits++Mono++Output');
                         otherwise
                             PsychImaging('AddTask', 'General', obj.bitDepth);
                     end
