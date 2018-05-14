@@ -44,7 +44,7 @@ classdef calibrateLuminance < handle
 		%> choose I1Pro over CCal if both connected?
 		preferI1Pro = false
 		%> specify port to connect to
-		port = 'COM3'
+		port = '/dev/ttyUSB0'
 		%> test R G and B as seperate curves?
 		testColour = false
 		%> correct overall luminance or the R G B seperately
@@ -99,6 +99,7 @@ classdef calibrateLuminance < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+        spCAL
 		isTested = false
 		isAnalyzed = false
 		canAnalyze = false
@@ -825,7 +826,7 @@ classdef calibrateLuminance < handle
 		end
 		
 		%===============reset======================%
-			function spectroCalLaser(obj,state)
+		function spectroCalLaser(obj,state)
 			if ~exist('state','var') || isempty(state); state = false; end
 			VCP = serial(obj.port, 'BaudRate', 921600,'DataBits', 8, 'StopBits', 1, 'FlowControl', 'none', 'Parity', 'none', 'Terminator', 'CR','Timeout', 5, 'InputBufferSize', 16000);
 			fopen(VCP);
@@ -840,6 +841,97 @@ classdef calibrateLuminance < handle
 	methods ( Access = private ) % PRIVATE METHODS
 	%=======================================================================
 		
+    
+        %===============init======================%
+        function openSpectroCAL(obj)
+            obj.spCAL = serial(obj.port, 'BaudRate', 921600,'DataBits', 8, 'StopBits', 1, 'FlowControl', 'none', 'Parity', 'none', 'Terminator', 'CR','Timeout', 240, 'InputBufferSize', 16000);
+        end
+    
+    
+        %===============init======================%
+        function [refreshRate] = configureSpectroCAL(obj,s1,intgrTime,doSynchonised,doHorBarPTB,reps,freq,whichScreen)
+            %  intgrTime is the optional integration time in mS
+            if ~isempty(obj.spCAL)
+                
+            end
+            % set the range to be fit the CIE 1931 2-deg CMFs
+            start = 380; stop = 780; step = 1;
+
+            if nargin==2; intgrTime = []; end
+            if nargin<4; doSynchonised=false; end
+            if nargin<5; doHorBarPTB=false; end
+            if nargin<6; reps=1; end
+            if nargin<7; freq=[]; end
+
+            if isempty(intgrTime)
+                % Set automatic adaption to exposure
+                fprintf(s1,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
+                checkreturn(s1);
+                if doSynchonised
+                    fprintf(s1,['*CONF:CYCMOD 1', char(13)]); %switching to synchronized measuring mode
+                    checkreturn(s1);
+                    while reps
+                        reps=reps-1;
+                        fprintf(s1,['*CONTR:CYCTIM 200 4000', char(13)]); %measurement of cycle time 
+                        % read the return
+                        data = fscanf(s1);
+                        disp(data);
+                        tint = str2double(data(13:end)); % in mS
+                        refreshRate = 1/tint*1000;
+                        disp(['Refresh rate is: ',num2str(refreshRate)]);
+                        if ~isnan(tint)
+                            fprintf(s1,['*CONF:CYCTIM ',num2str(tint*1000), char(13)]);  %setting: cycle time to measured value (in us)
+                            checkreturn(s1);
+                        else
+                            % reset
+                            fprintf(s1,['*RST', char(13)]); % software reset
+                            pause(2);
+                            if s1.BytesAvailable>0
+                                data = fread(s1,s1.BytesAvailable)';
+                                disp(char(data));
+                            end
+                            % Set automatic adaption to exposure
+                            fprintf(s1,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
+                            checkreturn(s1);
+                        end
+                        if ~isempty(freq)
+                            if abs(refreshRate-freq)<1;reps=0;end
+                        end
+                    end
+                end
+
+            else
+                % Set integration time to intgrTime
+                fprintf(s1,['*CONF:TINT ',num2str(intgrTime), char(13)]);
+                checkreturn(s1);
+                refreshRate = NaN;
+
+                % Set manual adaption to exposure
+                fprintf(s1,['*CONF:EXPO 2', char(13)]);
+                checkreturn(s1);
+            end
+
+            % Radiometric spectra in nm / value 
+            fprintf(s1,['*CONF:FUNC 6', char(13)]);
+            checkreturn(s1);
+
+            % Set wavelength range and resolution
+            fprintf(s1,['*CONF:WRAN ',num2str(start),' ',num2str(stop),' ',num2str(step), char(13)]);
+            checkreturn(s1);
+
+            disp('SpectroCAL initialised.');
+
+            function checkreturn(s1)
+                CheckReturn=fread(s1,1); % This should return 6
+                if CheckReturn~=6
+                    pause(0.2);
+                    if s1.BytesAvailable>0
+                        data = fread(s1,s1.BytesAvailable)'; disp(char(data));
+                    end
+                    error('error initialising SpectroCAL');
+                end
+            end
+        end
 		
 		%===============reset======================%
 		function resetTested(obj)

@@ -271,14 +271,13 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> @brief Initialise the properties used to track the run
 		%>
 		%> Initialise the properties used to track the run. These are dynamic
-		%> props and are set to be transient so they are not saved.
+		%> props.
 		% ===================================================================
 		function initialiseTask(obj)
 			resetTask(obj);
 			for i = 1:2:length(obj.taskProperties)
 				if isempty(obj.findprop(obj.taskProperties{i}))
-					p=obj.addprop(obj.taskProperties{i}); %add new dynamic property
-					p.Transient = true;
+					p = obj.addprop(obj.taskProperties{i}); %add new dynamic property
 				end
 				obj.(obj.taskProperties{i}) = obj.taskProperties{i+1}; %#ok<*MCNPR>
 			end
@@ -297,7 +296,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					return
 				end
 				if ~exist('thisResponse','var'); thisResponse = NaN; end
-				if ~exist('runTime','var'); runTime = GetSecs; end
+				if ~exist('runTime','var') || isempty(runTime); runTime = GetSecs; end
 				if ~exist('info','var'); info = 'none'; end
 				obj.response(obj.thisRun) = thisResponse;
 				obj.responseInfo{obj.thisRun} = info;
@@ -310,8 +309,29 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					obj.thisBlock = obj.thisBlock + 1;
 				end
 			end
-		end
+        end
 		
+        % ===================================================================
+		%> @brief the opposite of updateTask, step back one run
+		%>
+		% ===================================================================
+        function rewindTask(obj)
+            if obj.taskInitialised
+                
+                obj.response(obj.thisRun) = [];
+                obj.responseInfo{obj.thisRun} = [];
+                obj.runTimeList(obj.thisRun) = [];
+                obj.thisRun = obj.thisRun - 1;
+                
+                if obj.thisRun > obj.minBlocks * (obj.thisBlock - 1)
+                    obj.thisBlock = obj.thisBlock - 1;
+                end
+                
+                obj.salutation(sprintf('===!!! REWIND Run to %i:',obj.thisRun));
+                
+            end
+        end
+        
 		% ===================================================================
 		%> @brief we want to re-randomise the current run, replace it with
 		%> another run in the same block. This adds some randomisation if a

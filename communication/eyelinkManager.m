@@ -300,12 +300,13 @@ classdef eyelinkManager < optickaCore
 				else
 					Eyelink('Command', 'generate_default_targets = YES');
 					Eyelink('Command','remote_cal_enable = 0');
-				end
+                end
+                fprintf('\n===>>> CALIBRATE EYELINK <<<===\n');
 				EyelinkDoTrackerSetup(obj.defaults);
 				[~,out] = Eyelink('CalMessage');
-				obj.salutation('SETUP calibration message: ',out);
-			end
-	end
+				fprintf('Calibration message: %s\n',out);
+            end
+        end
 		
 		% ===================================================================
 		%> @brief wrapper for StartRecording
