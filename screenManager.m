@@ -71,8 +71,15 @@ classdef screenManager < optickaCore
 		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc);
 		%> Each N should be a different display
 		screenToHead = []
-	end
+    end
 	
+    properties (Hidden = true)
+       %> for some development macOS machines we have to disable sync tests,
+       %> but we hide this as we should remember this is for development
+       %> ONLY!
+       disableSyncTests = false 
+    end
+    
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
 		%> dependent pixels per degree property calculated from distance and pixelsPerCm
 		ppd
@@ -264,17 +271,22 @@ classdef screenManager < optickaCore
                 end
                 
                 if debug == true || (length(obj.windowed)==1 && obj.windowed ~= 0)
-                    fprintf('\n---> screenManager: Skipping Sync Tests etc.\n');
+                    fprintf('\n---> screenManager: Skipping Sync Tests etc. - ONLY FOR DEVELOPMENT!\n');
                     Screen('Preference', 'SkipSyncTests', 2);
                     Screen('Preference', 'VisualDebugLevel', 0);
-                    %Screen('Preference', 'Verbosity', 2);
-                    %Screen('Preference', 'SuppressAllWarnings', 0);
+                    Screen('Preference', 'Verbosity', 2);
+                    Screen('Preference', 'SuppressAllWarnings', 0);
                 else
-                    fprintf('\n---> screenManager: Sync Tests enabled.\n');
-                    Screen('Preference', 'SkipSyncTests', 0);
+                    if obj.disableSyncTests
+                        fprintf('\n---> screenManager: Sync Tests OVERRIDDEN, do not use during experiments!\n');
+                        Screen('Preference', 'SkipSyncTests', 1);
+                    else
+                        fprintf('\n---> screenManager: Normal Screen Preferences used.\n');
+                        Screen('Preference', 'SkipSyncTests', 0);
+                    end
                     Screen('Preference', 'VisualDebugLevel', 3);
-                    %Screen('Preference', 'Verbosity', obj.verbosityLevel); %errors and warnings
-                    %Screen('Preference', 'SuppressAllWarnings', 0);
+                    Screen('Preference', 'Verbosity', obj.verbosityLevel); %errors and warnings
+                    Screen('Preference', 'SuppressAllWarnings', 0);
                 end
                 
                 tL.screenLog.preOpenWindow=GetSecs;

@@ -288,7 +288,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
-		function run(obj,benchmark,runtime,s)
+		function run(obj,benchmark,runtime,s,forceFullscreen)
 			try
 				warning off
 				if ~exist('benchmark','var') || isempty(benchmark)
@@ -303,13 +303,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 						'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
 						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
 					prepareScreen(s);
-				end
+                end
+                if ~exist('forceFullscreen','var') || isempty(forceFullscreen)
+                    forceFullscreen = false;
+                end
 				oldWindowed = s.windowed;
 				oldScreen = s.screen;
 				if benchmark
 					s.windowed = false;
 				else
-					if s.screen == 0
+					if s.screen == 0 && ~forceFullscreen
 						wR = Screen('Rect',s.screen);
 						s.windowed = [wR(3)/2 wR(4)/2];
 					end
