@@ -46,6 +46,7 @@ classdef discStimulus < baseStimulus
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
 		stopLoop = false
+		scale = 1
 		allowedProperties='type|flashTime|flashOn|flashOffColour|sigma|useAlpha|smoothMethod'
 		ignoreProperties = 'type|name|flashSwitch|FlashOn';
 	end
@@ -127,13 +128,13 @@ classdef discStimulus < baseStimulus
 			if obj.speedOut > 0; obj.doMotion = true; end
 			
 			if isempty(obj.findprop('discSize'));p=obj.addprop('discSize');p.Transient=true;end
-			obj.discSize = round(obj.ppd*obj.size);
+			obj.discSize = obj.ppd * obj.size;
 			
 			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
 			obj.res = round([obj.discSize obj.discSize]);
 			
 			if isempty(obj.findprop('radius'));p=obj.addprop('radius');p.Transient=true;end
-			obj.radius = floor((obj.ppd*obj.size)/2);
+			obj.radius = floor(obj.discSize/2);
 			
 			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
 			
@@ -275,7 +276,8 @@ classdef discStimulus < baseStimulus
 		%> requirements.
 		% ===================================================================
 		function setRect(obj)
-			obj.dstRect=Screen('Rect',obj.texture);
+			dstRect=Screen('Rect',obj.texture);
+			obj.dstRect = ScaleRect(Screen('Rect',obj.texture), obj.scale, obj.scale);
 			if obj.mouseOverride && obj.mouseValid
 					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
 			else
@@ -301,6 +303,10 @@ classdef discStimulus < baseStimulus
 		% ===================================================================
 		function set_sizeOut(obj,value)
 			obj.sizeOut = value * obj.ppd; %divide by 2 to get diameter
+			if isprop(obj,'discSize')
+				obj.scale = obj.sizeOut / obj.discSize;
+				setRect(obj)
+			end
 		end
 		
 		% ===================================================================
