@@ -288,7 +288,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
-		function run(obj,benchmark,runtime,s,forceFullscreen)
+		function run(obj, benchmark, runtime, s, forceFullscreen)
+		% RUN the stimulus. run(benchmark, runtime, s, forceFullscreen)
 			try
 				warning off
 				if ~exist('benchmark','var') || isempty(benchmark)

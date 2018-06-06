@@ -241,8 +241,12 @@ classdef discStimulus < baseStimulus
 		% ===================================================================
 		function reset(obj)
 			resetTicks(obj);
-			obj.texture=[];
+			if isprop(obj,'texture'); obj.texture = []; end
+			if isprop(obj,'discSize'); obj.discSize = []; end
+			if isprop(obj,'radius'); obj.radius = []; end
+			if isprop(obj,'res'); obj.res = []; end
 			obj.removeTmpProperties;
+			%if ~isempty(obj.findprop('discSize'));delete(obj.findprop('discSize'));end
 		end
 		
 		% ===================================================================
@@ -276,7 +280,7 @@ classdef discStimulus < baseStimulus
 		%> requirements.
 		% ===================================================================
 		function setRect(obj)
-			dstRect=Screen('Rect',obj.texture);
+			dstRect=Screen('Rect', obj.texture);
 			obj.dstRect = ScaleRect(Screen('Rect',obj.texture), obj.scale, obj.scale);
 			if obj.mouseOverride && obj.mouseValid
 					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
@@ -303,9 +307,9 @@ classdef discStimulus < baseStimulus
 		% ===================================================================
 		function set_sizeOut(obj,value)
 			obj.sizeOut = value * obj.ppd; %divide by 2 to get diameter
-			if isprop(obj,'discSize')
+			if isprop(obj,'discSize') && ~isempty(obj.discSize) && ~isempty(obj.texture)
 				obj.scale = obj.sizeOut / obj.discSize;
-				setRect(obj)
+				setRect(obj);
 			end
 		end
 		
