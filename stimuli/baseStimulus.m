@@ -12,41 +12,41 @@ classdef baseStimulus < optickaCore & dynamicprops
 	
 	properties (Abstract = true, SetAccess = protected)
 		%> the stimulus family (grating, dots etc.)
-		family
+		family char
 	end
 	
 	properties
 		%> X Position +- in degrees relative to screen center (0,0)
-		xPosition = 0
+		xPosition double = 0
 		%> Y Position +- in degrees relative to screen center (0,0)
-		yPosition = 0
+		yPosition double = 0
 		%> Size in degrees
-		size = 4
+		size double = 4
 		%> Colour as a 0-1 range RGB or RGBA
-		colour = [0.5 0.5 0.5]
+		colour double = [0.5 0.5 0.5]
 		%> Alpha as a 0-1 range, this gets added to the RGB colour
-		alpha = 1
+		alpha double = 1
 		%> Do we print details to the commandline?
-		verbose = false
+		verbose logical = false
 		%> For moving stimuli do we start "before" our initial position? THis allows you to
 		%> center a stimulus at a screen location, but then drift it across that location, so
 		%> if xyPosition is 0,0 and startPosition is -2 then the stimulus will start at -2 drifing
 		%> towards 0.
-		startPosition = 0
+		startPosition double = 0
 		%> speed in degs/s
-		speed = 0
+		speed double = 0
 		%> angle in degrees
-		angle = 0
+		angle double = 0
 		%> delay time to display relative to stimulus onset, can set upper and lower range
 		%> for random interval. This allows for a goup of stimuli some to be delayed relative
 		%> to others for a global stimulus onset time.
-		delayTime = 0
+		delayTime double = 0
 		%> time to turn stimulus off, relative to stimulus onset
-		offTime = Inf
+		offTime double = Inf
 		%> override X and Y position with mouse input? Useful for RF mapping
-		mouseOverride = false
+		mouseOverride logical = false
 		%> true or false, whether to draw() this object
-		isVisible = true
+		isVisible logical = true
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -94,7 +94,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> ticks before stimulus turns off
 		offTicks = Inf
 		%>are we setting up?
-		inSetup = false
+		inSetup logical = false
 		%> delta cache
 		delta_
 		%> dX cache
@@ -103,12 +103,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dY_
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase='handles|ppd|sM|name|comment|fullName|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|paths|uuid|tick';
+		ignorePropertiesBase char = 'handles|ppd|sM|name|comment|fullName|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|paths|uuid|tick';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be passed on construction
-		allowedProperties='xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed|delayTime|mouseOverride|isVisible'
+		allowedProperties char = 'xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed|delayTime|mouseOverride|isVisible'
 	end
 	
 	events
@@ -164,7 +164,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> delta is the normalised number of pixels per frame to move a stimulus
 		% ===================================================================
 		function value = get.delta(obj)
-			if isempty(obj.findprop('speedOut'));
+			if isempty(obj.findprop('speedOut'))
 				value = (obj.speed * obj.ppd) * obj.sM.screenVals.ifi;
 			else
 				value = (obj.speedOut * obj.ppd) * obj.sM.screenVals.ifi;
@@ -289,7 +289,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function run(obj, benchmark, runtime, s, forceFullscreen)
-		% RUN the stimulus. run(benchmark, runtime, s, forceFullscreen)
+		% RUN stimulus: run(benchmark, runtime, s, forceFullscreen)
 			try
 				warning off
 				if ~exist('benchmark','var') || isempty(benchmark)
@@ -696,6 +696,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function r = d2r(degrees)
+		% d2r(degrees)
 			r=degrees*(pi/180);
 		end
 		
@@ -703,7 +704,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief radians2degrees
 		%>
 		% ===================================================================
-		function degrees=r2d(r)
+		function degrees = r2d(r)
+		% r2d(radians)
 			degrees=r*(180/pi);
 		end
 		
@@ -711,7 +713,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief findDistance in X and Y coordinates
 		%>
 		% ===================================================================
-		function distance=findDistance(x1,y1,x2,y2)
+		function distance = findDistance(x1, y1, x2, y2)
+		% findDistance(x1, y1, x2, y2)
 			dx = x2 - x1;
 			dy = y2 - y1;
 			distance=sqrt(dx^2 + dy^2);
@@ -722,6 +725,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function [dX, dY] = updatePosition(delta,angle)
+		% updatePosition(delta, angle)
 			dX = delta .* cos(baseStimulus.d2r(angle));
 			dY = delta .* sin(baseStimulus.d2r(angle));
 		end

@@ -61,11 +61,11 @@ classdef screenManager < optickaCore
 		%> settings for movie output
 		movieSettings = []
 		%> useful screen info and initial gamma tables and the like
-		screenVals
+		screenVals struct
 		%> verbosity
-		verbose = false
+		verbose logical = false
 		%> level of PTB verbosity, set to 10 for full PTB logging
-		verbosityLevel = 4
+		verbosityLevel double = 4
 		%> Use retina resolution natively
 		useRetina logical = false
 		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc);
@@ -77,7 +77,7 @@ classdef screenManager < optickaCore
        %> for some development macOS machines we have to disable sync tests,
        %> but we hide this as we should remember this is for development
        %> ONLY!
-       disableSyncTests = false 
+       disableSyncTests logical = false 
     end
     
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -724,6 +724,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawCross(obj,size,colour,x,y,lineWidth)
+		% drawCross(obj,size,colour,x,y,lineWidth)
 			if nargin < 6 || isempty(lineWidth); lineWidth = 2; end
 			if nargin < 5 || isempty(y); y = 0; end
 			if nargin < 4 || isempty(x); x = 0; end
@@ -753,6 +754,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawTimedSpot(obj,size,colour,time,reset)
+		% drawTimedSpot(obj,size,colour,time,reset)
 			if nargin < 5; reset = false; end
 			if nargin < 4; time = 0.2; end
 			if nargin < 3; colour = [1 1 1 1]; end
@@ -781,6 +783,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawGreenSpot(obj,size)
+		% drawGreenSpot(obj,size)
 			if ~exist('size','var')
 				size = 1;
 			end
@@ -795,6 +798,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawRedSpot(obj,size)
+		% drawRedSpot(obj,size)
 			if ~exist('size','var')
 				size = 1;
 			end
