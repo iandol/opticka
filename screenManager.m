@@ -182,6 +182,8 @@ classdef screenManager < optickaCore
 				obj.screen = obj.maxScreen;
 			end
 			
+			obj.screenVals = struct();
+			
 			% initialise our movie settings
 			obj.movieSettings.loop = Inf;
 			obj.movieSettings.record = 0;
