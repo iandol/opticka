@@ -1,10 +1,5 @@
 % ========================================================================
-%> @brief colourManager Manages a Screen object
-%> screenManager manages PTB screen settings for opticka. You can set many
-%> properties of this class to control PTB screens, and use it to open and
-%> close the screen based on those properties. It also manages movie
-%> recording of the screen buffer and some basic drawing commands like grids,
-%> spots and the hide flash trick from Mario.
+%> @brief colourManager manages colours wrapping the CRS Color Toolbox
 % ========================================================================
 classdef colourManager < optickaCore
 	
@@ -36,6 +31,7 @@ classdef colourManager < optickaCore
 	properties (SetAccess = private, GetAccess = public)
 		lastRGB(1,3) double = [1 0 0]
 		lastDKL(1,3) double = [0.05 0 0]
+		lastxyY(1,3) double = [0 0 0]
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -146,13 +142,49 @@ classdef colourManager < optickaCore
 			end
 			[to, ErrorCode] = ctGetColourTrival('CS_RGB','CS_DKL',[background,source],obj.deviceSPD,obj.sensitivities);
 			
+			if ErrorCode == -1
+				warning('OUT OF GAMUT!!!')
+			end 
+			
 			if obj.verbose
-				fprintf('\n--->>> RGB out: [%f %f %f]\n', source(1), source(2), source(3));
+				fprintf('\n--->>> RGB source: [%f %f %f]\n', source(1), source(2), source(3));
 				fprintf('--->>> DKL out: radius=%f azimuth=%f elevation=%f]\n'  , to(1), to(2), to(3));
 			end
 			
 			obj.lastDKL = to;
 			obj.lastRGB = source;
+			if obj.autoPlot; obj.plot; end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> 
+		%> @param 
+		%> @return 
+		% ===================================================================
+		function to = xyYtoRGB(obj, source, background)
+			if ~exist('source','var')
+				error('You must specify a source xyY colour!');
+			end
+			if ~exist('background','var')
+				background = obj.backgroundColour;
+			else
+				obj.backgroundColour = background;
+			end
+			[to, ErrorCode] = ctGetColourTrival('CS_CIE1931xyY','CS_RGB',[background,source],obj.deviceSPD,obj.sensitivities);
+			
+			if ErrorCode == -1
+				warning('OUT OF GAMUT!!!')
+			end
+			
+			if obj.verbose
+				fprintf('\n--->>> xyY source: [%f %f %f]\n', source(1), source(2), source(3));
+				fprintf('--->>> RGB out: radius=%f azimuth=%f elevation=%f]\n'  , to(1), to(2), to(3));
+			end
+			
+			obj.lastRGB = to;
+			obj.lastxyY = source;
 			if obj.autoPlot; obj.plot; end
 		end
 		
@@ -170,11 +202,13 @@ classdef colourManager < optickaCore
 			if ~obj.screen.isOpen
 				obj.screen.debug = true;
 				obj.screen.backgroundColour = [obj.backgroundColour 1];
-                if obj.screen.maxScreen > 0
+                if obj.screen.screen > 0
                     obj.screen.windowed = false;
+				else
+					obj.screen.windowed = [0 0 600 600];
                 end
 				prepareScreen(obj.screen);
-				open(obj.screen,[],[],obj.screen.maxScreen);
+				open(obj.screen,[],[]);
 			end
 			obj.screen.backgroundColour = [obj.backgroundColour 1];
 			drawBackground(obj.screen);

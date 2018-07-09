@@ -87,14 +87,19 @@ classdef rfMapper < barStimulus
 		%>
 		% ===================================================================
 		function run(obj,rE)
-			if exist('rE','var')
-				obj.sM = rE.screen;
+			if exist('rE','var') 
+				if isa(rE,'runExperiment')
+					obj.sM = rE.screen;
+				elseif isa(rE,'screenManager')
+					obj.sM = rE;
+				end
 			end
 			
 			%obj.sM.windowed = [];
 			
 			try
 				obj.sM.debug = true;
+				
 				open(obj.sM);
 				
 				obj.setup(obj.sM);

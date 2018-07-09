@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '1.021'
+		optickaVersion char = '1.031'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -376,7 +376,7 @@ classdef opticka < optickaCore
 			obj.r.screen.blend = obj.gv(obj.h.OKOpenGLBlending);
 			
 			value = obj.gv(obj.h.OKUseGamma);
-			if isa(obj.r.screen.gammaTable,'calibrateLuminance')
+			if isa(obj.r.screen.gammaTable,'calibrateLuminance') && ~isempty(obj.r.screen.gammaTable)
 				obj.r.screen.gammaTable.choice = value - 1;
 			end
 			
@@ -405,15 +405,30 @@ classdef opticka < optickaCore
 			obj.r.screen.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
 			%deprecated obj.r.screen.nativeBeamPosition = logical(obj.gv(obj.h.OKNativeBeamPosition));
 			
-			if strcmpi(get(obj.h.OKuseLabJack,'Checked'),'on')
-				obj.r.useLabJack = true;
+			if strcmpi(get(obj.h.OKuseLabJackStrobe,'Checked'),'on')
+				obj.r.useLabJackStrobe = true;
 			else
-				obj.r.useLabJack = false;
+				obj.r.useLabJackStrobe = false;
+			end
+			if strcmpi(get(obj.h.OKuseLabJackReward,'Checked'),'on')
+				obj.r.useLabJackReward = true;
+			else
+				obj.r.useLabJackReward = false;
 			end
 			if strcmpi(get(obj.h.OKuseDataPixx,'Checked'),'on')
 				obj.r.useDataPixx = true;
 			else
 				obj.r.useDataPixx = false;
+			end
+			if strcmpi(get(obj.h.OKuseDisplayPP,'Checked'),'on')
+				obj.r.useDisplayPP = true;
+			else
+				obj.r.useDisplayPP = false;
+			end
+			if strcmpi(get(obj.h.OKuseArduino,'Checked'),'on')
+				obj.r.useArduino = true;
+			else
+				obj.r.useArduino = false;
 			end
 			if strcmpi(get(obj.h.OKuseEyeLink,'Checked'),'on')
 				obj.r.useEyeLink = true;

@@ -10,6 +10,7 @@ classdef screenManager < optickaCore
 	
 	properties
 		%> MBP 1440x900 is 33.2x20.6cm so approx 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
+		%> use calibrateSize.m to measure this value
 		pixelsPerCm double = 44
 		%> distance of subject from CRT -- rad2ang(2*(atan((0.5*1cm)/57.3cm))) equals 1deg
 		distance double = 57.3
@@ -71,15 +72,15 @@ classdef screenManager < optickaCore
 		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc);
 		%> Each N should be a different display
 		screenToHead = []
-    end
+	end
 	
-    properties (Hidden = true)
-       %> for some development macOS machines we have to disable sync tests,
-       %> but we hide this as we should remember this is for development
-       %> ONLY!
-       disableSyncTests logical = false 
-    end
-    
+	properties (Hidden = true)
+		%> for some development macOS machines we have to disable sync tests,
+		%> but we hide this as we should remember this is for development
+		%> ONLY!
+		disableSyncTests logical = false
+	end
+	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
 		%> dependent pixels per degree property calculated from distance and pixelsPerCm
 		ppd
@@ -90,6 +91,8 @@ classdef screenManager < optickaCore
 		isPTB logical = false
 		%> is a PTB currently open?
 		isOpen logical = false
+		%> did we ask for a bitsPlusPlus mode?
+		isPlusPlus logical = false
 		%> the handle returned by opening a PTB window
 		win
 		%> the window rectangle
@@ -172,7 +175,7 @@ classdef screenManager < optickaCore
 				obj.screenVals.width = 0;
 				obj.screenVals.height = 0;
 				obj.makeGrid;
-				screenVals = obj.screenVals;				
+				screenVals = obj.screenVals;
 				return
 			end
 			obj.maxScreen=max(Screen('Screens'));
@@ -234,198 +237,202 @@ classdef screenManager < optickaCore
 		%> @param tL timeLog object to add timing info on screen construction
 		%> @return screenVals structure of basic info from the opened screen
 		% ===================================================================
-        function screenVals = open(obj,debug,tL,forceScreen)
-            if obj.isPTB == false
-                screenVals = obj.screenVals;
-                return;
-            end
-            if ~exist('debug','var') || isempty(debug)
-                debug = obj.debug;
-            end
-            if ~exist('tL','var') || isempty(tL)
-                tL = struct;
-            end
-            if ~exist('forceScreen','var')
-                forceScreen = [];
-            end
-            
-            try
-                PsychDefaultSetup(2);
-                obj.screenVals.resetGamma = false;
-                
-                obj.hideScreenFlash();
-                
-                if ~isempty(obj.screenToHead) && isnumeric(obj.screenToHead)
-                    for i = 1:size(obj.screenToHead,1)
-                        sth = obj.screenToHead(i,:);
-                        if lengtht(stc) == 3
-                            fprintf('\n---> screenManager: Custom Screen to Head: %i %i %i\n',sth(1), sth(2), sth(3));
-                            Screen('Preference', 'ScreenToHead', sth(1), sth(2), sth(3));
-                        end
-                    end
-                end
-                
-                %1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
-                %Screen('Preference', 'VBLTimestampingMode', obj.timestampingMode);
-                
-                if ~islogical(obj.windowed) && isnumeric(obj.windowed) %force debug for windowed stimuli!
-                    debug = true;
-                end
-                
-                if debug == true || (length(obj.windowed)==1 && obj.windowed ~= 0)
-                    fprintf('\n---> screenManager: Skipping Sync Tests etc. - ONLY FOR DEVELOPMENT!\n');
-                    Screen('Preference', 'SkipSyncTests', 2);
-                    Screen('Preference', 'VisualDebugLevel', 0);
-                    Screen('Preference', 'Verbosity', 2);
-                    Screen('Preference', 'SuppressAllWarnings', 0);
-                else
-                    if obj.disableSyncTests
-                        fprintf('\n---> screenManager: Sync Tests OVERRIDDEN, do not use during experiments!\n');
-                        Screen('Preference', 'SkipSyncTests', 1);
-                    else
-                        fprintf('\n---> screenManager: Normal Screen Preferences used.\n');
-                        Screen('Preference', 'SkipSyncTests', 0);
-                    end
-                    Screen('Preference', 'VisualDebugLevel', 3);
-                    Screen('Preference', 'Verbosity', obj.verbosityLevel); %errors and warnings
-                    Screen('Preference', 'SuppressAllWarnings', 0);
-                end
-                
-                tL.screenLog.preOpenWindow=GetSecs;
-                
-                PsychImaging('PrepareConfiguration');
-                PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-                PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
-                if ~strcmpi(obj.bitDepth,'8bit')
-                    switch obj.bitDepth
-                        case 'EnableBits++Color++Output'
-                            PsychImaging('AddTask', 'General', 'EnableBits++Color++Output', 2);
-                        case 'EnableBits++Bits++Output'
-                            PsychImaging('AddTask', 'General', 'EnableBits++Bits++Output');
-                        case 'EnableBits++Mono++Output'
-									PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
-                           PsychImaging('AddTask', 'General', 'EnableBits++Mono++Output');
-                        otherwise
-                            PsychImaging('AddTask', 'General', obj.bitDepth);
-                    end
-                end
-                if obj.useRetina == true
-                    PsychImaging('AddTask', 'General', 'UseRetinaResolution');
-                end
-                
-                if isempty(obj.windowed); obj.windowed = false; end
-                if obj.windowed == false %fullscreen
-                    winSize = [];
-                    thisScreen = obj.screen;
-                else %windowed
-                    if length(obj.windowed) == 2
-                        winSize = [0 0 obj.windowed(1) obj.windowed(2)];
-                    elseif length(obj.windowed) == 4
-                        winSize = obj.windowed;
-                    else
-                        winSize=[0 0 800 600];
-                    end
-                    thisScreen = 0;
-                end
-                if ~isempty(forceScreen)
-                    thisScreen = forceScreen;
-                end
-                
-                [obj.win] = PsychImaging('OpenWindow', thisScreen, obj.backgroundColour, winSize, [], obj.doubleBuffer+1,[],obj.antiAlias);
-                
-                tL.screenLog.postOpenWindow=GetSecs;
-                tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
-                
-                try
-                    AssertGLSL;
-                catch
-                    obj.close();
-                    error('GLSL Shading support is required for Opticka!');
-                end
-                
-                obj.screenVals.win = obj.win; %make a copy
-                
-                Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
-                
-                obj.screenVals.ifi = Screen('GetFlipInterval', obj.win);
-                obj.screenVals.fps=Screen('NominalFramerate', obj.win);
-                %find our fps if not defined above
-                if obj.screenVals.fps==0
-                    obj.screenVals.fps=round(1/obj.screenVals.ifi);
-                    if obj.screenVals.fps==0
-                        obj.screenVals.fps=60;
-                    end
-                end
-                if obj.windowed == false %fullscreen
-                    obj.screenVals.halfisi=obj.screenVals.ifi/2;
-                else
-                    % windowed presentation doesn't handle the preferred method
-                    % of specifying lastvbl+halfisi properly so we set halfisi to 0 which
-                    % effectively makes flip occur ASAP.
-                    obj.screenVals.halfisi = 0;
-                end
-                
-                %get screen dimensions -- check !!!!!
-                setScreenSize(obj);
-                
-                if obj.hideFlash == true && isempty(obj.gammaTable)
-                    Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
-                    obj.screenVals.resetGamma = false;
-                elseif ~isempty(obj.gammaTable) && (obj.gammaTable.choice > 0)
-                    choice = obj.gammaTable.choice;
-                    obj.screenVals.resetGamma = true;
-                    if size(obj.gammaTable.gammaTable,2) > 1
-                        if isprop(obj.gammaTable,'finalCLUT') && ~isempty(obj.gammaTable.finalCLUT)
-                            gTmp = obj.gammaTable.finalCLUT;
-                        else
-                            gTmp = [obj.gammaTable.gammaTable{choice,2:4}];
-                        end
-                    else
-                        gTmp = repmat(obj.gammaTable.gammaTable{choice,1},1,3);
-                    end
-                    Screen('LoadNormalizedGammaTable', obj.screen, gTmp);
-                    fprintf('\n---> screenManager: SET GAMMA CORRECTION using: %s\n', obj.gammaTable.modelFit{choice}.method);
-                    if isprop(obj.gammaTable,'correctColour') && obj.gammaTable.correctColour == true
-                        fprintf('---> screenManager: GAMMA CORRECTION used independent RGB Correction \n');
-                    end
-                else
-                    %Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
-                    %obj.screenVals.oldCLUT = LoadIdentityClut(obj.win);
-                    obj.screenVals.resetGamma = false;
-                end
-                
-                % Enable alpha blending.
-                if obj.blend==1
-                    [obj.screenVals.oldSrc,obj.screenVals.oldDst,obj.screenVals.oldMask]...
-                        = Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
-                    fprintf('\n---> screenManager: Previous OpenGL blending was %s | %s\n', obj.screenVals.oldSrc, obj.screenVals.oldDst);
-                    fprintf('\n---> screenManager: Initial OpenGL blending set to %s | %s\n', obj.srcMode, obj.dstMode);
-                end
-                
-                Priority(0); %be lazy for a while and let other things get done
-                
-                %if IsLinux
-                %	Screen('TextFont', obj.win, obj.linuxFontName);
-                %end
-                if IsLinux
-                    Screen('Preference', 'TextRenderer', 1);
-                    Screen('Preference', 'DefaultFontName', 'DejaVu Sans');
-                end
-                
-                obj.screenVals.white = WhiteIndex(obj.screen);
-                obj.screenVals.black = BlackIndex(obj.screen);
-                obj.screenVals.gray = GrayIndex(obj.screen);
-                
-                obj.isOpen = true;
-                screenVals = obj.screenVals;
-                
-            catch ME
-                obj.close();
-                screenVals = obj.prepareScreen();
-                rethrow(ME)
-            end
-            
-        end
+		function screenVals = open(obj,debug,tL,forceScreen)
+			if obj.isPTB == false
+				screenVals = obj.screenVals;
+				return;
+			end
+			if ~exist('debug','var') || isempty(debug)
+				debug = obj.debug;
+			end
+			if ~exist('tL','var') || isempty(tL)
+				tL = struct;
+			end
+			if ~exist('forceScreen','var')
+				forceScreen = [];
+			end
+			
+			try
+				PsychDefaultSetup(2);
+				obj.screenVals.resetGamma = false;
+				
+				obj.hideScreenFlash();
+				
+				if ~isempty(obj.screenToHead) && isnumeric(obj.screenToHead)
+					for i = 1:size(obj.screenToHead,1)
+						sth = obj.screenToHead(i,:);
+						if lengtht(stc) == 3
+							fprintf('\n---> screenManager: Custom Screen to Head: %i %i %i\n',sth(1), sth(2), sth(3));
+							Screen('Preference', 'ScreenToHead', sth(1), sth(2), sth(3));
+						end
+					end
+				end
+				
+				%1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
+				%Screen('Preference', 'VBLTimestampingMode', obj.timestampingMode);
+				
+				if ~islogical(obj.windowed) && isnumeric(obj.windowed) %force debug for windowed stimuli!
+					debug = true;
+				end
+				
+				if debug == true || (length(obj.windowed)==1 && obj.windowed ~= 0)
+					fprintf('\n---> screenManager: Skipping Sync Tests etc. - ONLY FOR DEVELOPMENT!\n');
+					Screen('Preference', 'SkipSyncTests', 2);
+					Screen('Preference', 'VisualDebugLevel', 0);
+					Screen('Preference', 'Verbosity', 2);
+					Screen('Preference', 'SuppressAllWarnings', 0);
+				else
+					if obj.disableSyncTests
+						fprintf('\n---> screenManager: Sync Tests OVERRIDDEN, do not use during experiments!\n');
+						Screen('Preference', 'SkipSyncTests', 1);
+					else
+						fprintf('\n---> screenManager: Normal Screen Preferences used.\n');
+						Screen('Preference', 'SkipSyncTests', 0);
+					end
+					Screen('Preference', 'VisualDebugLevel', 3);
+					Screen('Preference', 'Verbosity', obj.verbosityLevel); %errors and warnings
+					Screen('Preference', 'SuppressAllWarnings', 0);
+				end
+				
+				tL.screenLog.preOpenWindow=GetSecs;
+				
+				PsychImaging('PrepareConfiguration');
+				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
+				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
+				if ~strcmpi(obj.bitDepth,'8bit')
+					switch obj.bitDepth
+						case 'EnableBits++Color++Output'
+							PsychImaging('AddTask', 'General', 'EnableBits++Color++Output', 2);
+							obj.isPlusPlus = true;
+						case 'EnableBits++Bits++Output'
+							PsychImaging('AddTask', 'General', 'EnableBits++Bits++Output');
+							obj.isPlusPlus = true;
+						case 'EnableBits++Mono++Output'
+							PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
+							PsychImaging('AddTask', 'General', 'EnableBits++Mono++Output');
+							obj.isPlusPlus = true;
+						otherwise
+							PsychImaging('AddTask', 'General', obj.bitDepth);
+							obj.isPlusPlus = false;
+					end
+				end
+				if obj.useRetina == true
+					PsychImaging('AddTask', 'General', 'UseRetinaResolution');
+				end
+				
+				if isempty(obj.windowed); obj.windowed = false; end
+				if obj.windowed == false %fullscreen
+					winSize = [];
+					thisScreen = obj.screen;
+				else %windowed
+					if length(obj.windowed) == 2
+						winSize = [0 0 obj.windowed(1) obj.windowed(2)];
+					elseif length(obj.windowed) == 4
+						winSize = obj.windowed;
+					else
+						winSize=[0 0 800 600];
+					end
+					thisScreen = 0;
+				end
+				if ~isempty(forceScreen)
+					thisScreen = forceScreen;
+				end
+				
+				[obj.win] = PsychImaging('OpenWindow', thisScreen, obj.backgroundColour, winSize, [], obj.doubleBuffer+1,[],obj.antiAlias);
+				
+				tL.screenLog.postOpenWindow=GetSecs;
+				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
+				
+				try
+					AssertGLSL;
+				catch
+					obj.close();
+					error('GLSL Shading support is required for Opticka!');
+				end
+				
+				obj.screenVals.win = obj.win; %make a copy
+				
+				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
+				
+				obj.screenVals.ifi = Screen('GetFlipInterval', obj.win);
+				obj.screenVals.fps=Screen('NominalFramerate', obj.win);
+				%find our fps if not defined above
+				if obj.screenVals.fps==0
+					obj.screenVals.fps=round(1/obj.screenVals.ifi);
+					if obj.screenVals.fps==0
+						obj.screenVals.fps=60;
+					end
+				end
+				if obj.windowed == false %fullscreen
+					obj.screenVals.halfisi=obj.screenVals.ifi/2;
+				else
+					% windowed presentation doesn't handle the preferred method
+					% of specifying lastvbl+halfisi properly so we set halfisi to 0 which
+					% effectively makes flip occur ASAP.
+					obj.screenVals.halfisi = 0;
+				end
+				
+				%get screen dimensions -- check !!!!!
+				setScreenSize(obj);
+				
+				if obj.hideFlash == true && isempty(obj.gammaTable)
+					Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
+					obj.screenVals.resetGamma = false;
+				elseif ~isempty(obj.gammaTable) && (obj.gammaTable.choice > 0)
+					choice = obj.gammaTable.choice;
+					obj.screenVals.resetGamma = true;
+					if size(obj.gammaTable.gammaTable,2) > 1
+						if isprop(obj.gammaTable,'finalCLUT') && ~isempty(obj.gammaTable.finalCLUT)
+							gTmp = obj.gammaTable.finalCLUT;
+						else
+							gTmp = [obj.gammaTable.gammaTable{choice,2:4}];
+						end
+					else
+						gTmp = repmat(obj.gammaTable.gammaTable{choice,1},1,3);
+					end
+					Screen('LoadNormalizedGammaTable', obj.screen, gTmp);
+					fprintf('\n---> screenManager: SET GAMMA CORRECTION using: %s\n', obj.gammaTable.modelFit{choice}.method);
+					if isprop(obj.gammaTable,'correctColour') && obj.gammaTable.correctColour == true
+						fprintf('---> screenManager: GAMMA CORRECTION used independent RGB Correction \n');
+					end
+				else
+					%Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.gammaTable);
+					%obj.screenVals.oldCLUT = LoadIdentityClut(obj.win);
+					obj.screenVals.resetGamma = false;
+				end
+				
+				% Enable alpha blending.
+				if obj.blend==1
+					[obj.screenVals.oldSrc,obj.screenVals.oldDst,obj.screenVals.oldMask]...
+						= Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
+					fprintf('\n---> screenManager: Previous OpenGL blending was %s | %s\n', obj.screenVals.oldSrc, obj.screenVals.oldDst);
+					fprintf('\n---> screenManager: Initial OpenGL blending set to %s | %s\n', obj.srcMode, obj.dstMode);
+				end
+				
+				Priority(0); %be lazy for a while and let other things get done
+				
+				%if IsLinux
+				%	Screen('TextFont', obj.win, obj.linuxFontName);
+				%end
+				if IsLinux
+					Screen('Preference', 'TextRenderer', 1);
+					Screen('Preference', 'DefaultFontName', 'DejaVu Sans');
+				end
+				
+				obj.screenVals.white = WhiteIndex(obj.screen);
+				obj.screenVals.black = BlackIndex(obj.screen);
+				obj.screenVals.gray = GrayIndex(obj.screen);
+				
+				obj.isOpen = true;
+				screenVals = obj.screenVals;
+				
+			catch ME
+				obj.close();
+				screenVals = obj.prepareScreen();
+				rethrow(ME)
+			end
+			
+		end
 		
 		% ===================================================================
 		%> @brief Small demo
@@ -460,6 +467,17 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function vbl = flip(obj)
 			vbl = Screen('Flip',obj.win);
+		end
+		
+		
+		% ===================================================================
+		%> @brief Flip the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function bitsSwitchStatusScreen(obj)
+			BitsPlusPlus('SwitchToStatusScreen');
 		end
 		
 		% ===================================================================
@@ -514,7 +532,7 @@ classdef screenManager < optickaCore
 					fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 				end
 				wk = Screen(obj.win, 'WindowKind');
-				if obj.blend == true & wk ~= 0 
+				if obj.blend == true & wk ~= 0
 					%this needs to be done to not trigger a Linux+Polaris bug
 					%matlab bug
 					Screen('BlendFunction', obj.win, 'GL_ONE','GL_ZERO');
@@ -524,6 +542,7 @@ classdef screenManager < optickaCore
 				Screen('CloseAll');
 				obj.win=[];
 				obj.isOpen = false;
+				obj.isPlusPlus = false;
 				Priority(0);
 				ListenChar(0);
 				ShowCursor;
@@ -531,7 +550,7 @@ classdef screenManager < optickaCore
 			end
 		end
 		
-
+		
 		% ===================================================================
 		%> @brief reset the gamma table
 		%>
@@ -555,7 +574,6 @@ classdef screenManager < optickaCore
 				value = 57.3;
 			end
 			obj.distance = value;
-			obj.ppd; %recalculate ppd and cache it
 			obj.makeGrid();
 		end
 		
@@ -569,10 +587,8 @@ classdef screenManager < optickaCore
 				value = 44;
 			end
 			obj.pixelsPerCm = value;
-			obj.ppd; %recalculate ppd and cache it
 			obj.makeGrid();
-			%obj.salutation(['set pixelsPerCm: ' num2str(obj.pixelsPerCm) '|ppd: ' num2str(obj.ppd)],'Custom set method')
-		end		
+		end
 		
 		% ===================================================================
 		%> @brief Get method for ppd (a dependent property)
@@ -606,7 +622,7 @@ classdef screenManager < optickaCore
 				obj.windowed = false;
 			else
 				obj.windowed = false;
-			end	
+			end
 		end
 		
 		% ===================================================================
@@ -645,7 +661,7 @@ classdef screenManager < optickaCore
 		%> @param
 		% ===================================================================
 		function finishDrawing(obj)
-			Screen('DrawingFinished', obj.win); 
+			Screen('DrawingFinished', obj.win);
 		end
 		
 		% ===================================================================
@@ -654,7 +670,7 @@ classdef screenManager < optickaCore
 		%> @param
 		% ===================================================================
 		function testWindowOpen(obj)
-			if obj.isOpen			
+			if obj.isOpen
 				wk = Screen(obj.win, 'WindowKind');
 				if wk == 0
 					warning(['===>>> ' obj.fullName ' PTB Window is actually INVALID!']);
@@ -671,8 +687,8 @@ classdef screenManager < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function flashScreen(obj,interval)			
-			if obj.isOpen			
+		function flashScreen(obj,interval)
+			if obj.isOpen
 				int = round(interval / obj.screenVals.ifi);
 				KbReleaseWait;
 				while ~KbCheck(-1)
@@ -726,15 +742,15 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawCross(obj,size,colour,x,y,lineWidth)
-		% drawCross(obj,size,colour,x,y,lineWidth)
+			% drawCross(obj,size,colour,x,y,lineWidth)
 			if nargin < 6 || isempty(lineWidth); lineWidth = 2; end
 			if nargin < 5 || isempty(y); y = 0; end
 			if nargin < 4 || isempty(x); x = 0; end
 			if nargin < 3 || isempty(colour)
 				if mean(obj.backgroundColour(1:3)) <= 0.5
-					colour = [1 1 1 1]; 
+					colour = [1 1 1 1];
 				elseif  mean(obj.backgroundColour(1:3)) > 0.5
-					colour = [0 0 0 1]; 
+					colour = [0 0 0 1];
 				elseif length(colour) < 4
 					colour = [0 0 0 1];
 				end
@@ -756,7 +772,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawTimedSpot(obj,size,colour,time,reset)
-		% drawTimedSpot(obj,size,colour,time,reset)
+			% drawTimedSpot(obj,size,colour,time,reset)
 			if nargin < 5; reset = false; end
 			if nargin < 4; time = 0.2; end
 			if nargin < 3; colour = [1 1 1 1]; end
@@ -785,7 +801,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawGreenSpot(obj,size)
-		% drawGreenSpot(obj,size)
+			% drawGreenSpot(obj,size)
 			if ~exist('size','var')
 				size = 1;
 			end
@@ -800,7 +816,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawRedSpot(obj,size)
-		% drawRedSpot(obj,size)
+			% drawRedSpot(obj,size)
 			if ~exist('size','var')
 				size = 1;
 			end
@@ -830,7 +846,7 @@ classdef screenManager < optickaCore
 		
 		% ===================================================================
 		%> @brief draw a white square in top-left of screen to trigger photodiode
-		%> 
+		%>
 		%> @param colour colour of square
 		%> @return
 		% ===================================================================
@@ -979,17 +995,16 @@ classdef screenManager < optickaCore
 				obj.close();
 				obj.salutation('DELETE method','Screen closed');
 			end
-		end
-		
+		end	
 	end
-		
+	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
 	%=======================================================================
-	
+		
 		% ===================================================================
 		%> @brief Sets screen size, taking retina mode into account
-		%>  
+		%>
 		% ===================================================================
 		function setScreenSize(obj)
 			%get screen dimensions
@@ -1004,7 +1019,7 @@ classdef screenManager < optickaCore
 		end
 		% ===================================================================
 		%> @brief Makes a 15x15 1deg dot grid for debug mode
-		%> This is always updated on setting distance or pixelsPerCm 
+		%> This is always updated on setting distance or pixelsPerCm
 		% ===================================================================
 		function makeGrid(obj)
 			obj.grid = [];
@@ -1012,7 +1027,7 @@ classdef screenManager < optickaCore
 			for i=rnge
 				obj.grid = horzcat(obj.grid, [rnge;ones(1,length(rnge))*i]);
 			end
-			obj.grid = obj.grid .* obj.ppd_;
+			obj.grid = obj.grid .* obj.ppd;
 		end
 		
 		% ===================================================================
@@ -1028,7 +1043,7 @@ classdef screenManager < optickaCore
 				obj.yCenter = obj.yCenter + (obj.screenYOffset * obj.ppd_);
 			end
 		end
-	
+		
 	end
 	
 end

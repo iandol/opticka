@@ -27,41 +27,46 @@ classdef runExperiment < optickaCore
 		task
 		%> screen manager object
 		screen
-		%> use dataPixx for digital I/O
-		useDataPixx@logical = false
-		%> use LabJack for digital I/O
-		useLabJack@logical = false
+		%> use dataPixx for strobed digital I/O
+		useDataPixx logical = false
+		%> use dataPixx for strobed digital I/O
+		useDisplayPP logical = false
+		%> use LabJack for strobed digital I/O
+		useLabJackStrobe logical = false
+		%> use LabJack for reward TTL
+		useLabJackReward logical = false
+		%> use Arduino for reward TTL
+		useArduino logical = false
 		%> use eyelink?
-		useEyeLink@logical = false
+		useEyeLink logical = false
 		%> this lets the opticka UI leave commands to runExperiment
-		uiCommand@char = ''
+		uiCommand char = ''
 		%> do we flip or not?
-		doFlip@logical = true
+		doFlip logical = true
 		%> log all frame times, gets slow for > 1e6 frames
-		logFrames@logical = true
+		logFrames logical = true
 		%> enable debugging? (poorer temporal fidelity)
-		debug@logical = false
+		debug logical = false
 		%> shows the info text and position grid during stimulus presentation
-		visualDebug@logical = false
+		visualDebug logical = false
 		%> flip as fast as possible?
-		benchmark@logical = false
+		benchmark logical = false
 		%> verbose logging to command window?
 		verbose = false
 		%> strobed word value
-		strobeValue = []
+		strobeValue
 		%> send strobe on next flip?
-		sendStrobe@logical = false
+		sendStrobe logical = false
 		%> subject name
-		subjectName@char = 'Simulcra'
+		subjectName char = 'Simulcra'
 		%> researcher name
-		researcherName@char = 'John Doe'
+		researcherName char = 'Joanna Doe'
 		%> structure for screenManager on initialisation and info from opticka
 		screenSettings = struct()
 	end
 	
 	properties (Hidden = true)
-		%> our old stimulus structure used to be a simple cell, now use
-		%> stimuli
+		%> our old stimulus structure used to be a simple cell, now we use metaStimulus
 		stimulus
 		%> used to select single stimulus in training mode
 		stimList = []
@@ -82,22 +87,26 @@ classdef runExperiment < optickaCore
 		%> stateMachine
 		stateMachine
 		%> eyelink manager object
-		eyeLink
-		%> data pixx control
-		dPixx
-		%> LabJack object
-		lJack
+		eyeLink 
+		%> DataPixx control object
+		dPixx 
+		%> Display++ control object
+		dPP 
+		%> LabJack control object
+		lJack 
+		%> Arduino control object
+		ardunioManager 
 		%> state machine control cell array
 		stateInfo = {}
 		%> general computer info
 		computer
 		%> PTB info
 		ptb
-		%> gamma tables and the like
+		%> gamma tables and the like from screenManager
 		screenVals
 		%> log times during display
 		runLog
-		%> training log
+		%> task log
 		taskLog
 		%> training log
 		trainingLog
@@ -176,27 +185,37 @@ classdef runExperiment < optickaCore
 			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
 
 			%-------Set up Digital I/O for this run...
-			%obj.serialP=sendSerial(struct('name',obj.serialPortName,'openNow',1,'verbosity',obj.verbose));
-			%obj.serialP.setDTR(0);
-			if obj.useDataPixx
-				if isa(obj.dPixx,'dPixxManager')
+			if obj.useDisplayPP 
+				if isa(obj.dPixx,'dPixxManager') && ~isempty(obj.dPixx)
 					open(obj.dPixx)
 					io = obj.dPixx;
 				else
 					obj.dPixx = dPixxManager('name','runinstance');
 					open(obj.dPixx)
 					io = obj.dPixx;
-					obj.useLabJack = false;
 				end
+				obj.useLabJackStrobe = false;
+				obj.useDisplayPP = false;
 				if obj.useEyeLink
 					obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
 				end
-			elseif obj.useLabJack 
-				obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
-				io = obj.lJack;
-			else
+			elseif obj.useDataPixx 
+				if isa(obj.dPP,'plusplusManager') && ~isempty(obj.dPixx)
+					open(obj.dPP)
+					io = obj.dPP;
+				else
+					obj.dPP = plusplusManager();
+					open(obj.dPixx)
+					io = obj.dPP;
+				end
+				obj.useLabJackStrobe = false;
+				obj.useDataPixx = false;
+			elseif obj.useLabJackStrobe
 				obj.lJack = labJack('verbose',false,'openNow',0,'name','null','silentMode',1);
 				io = obj.lJack;
+				obj.useLabJackStrobe = true;
+				obj.useDataPixx = false;
+				obj.useDisplayPP = false;
 			end
 			lJ = obj.lJack;
 
@@ -213,7 +232,9 @@ classdef runExperiment < optickaCore
 				
 				if obj.useDataPixx
 					io.sendTTL(7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
-				elseif obj.useLabJack
+				elseif obj.useDisplayPP
+					%TODO why isn't the plexon responding to strobe value to start/stop?
+				elseif obj.useLabJackStrobe
 					%Trigger the omniplex (TTL on FIO1) into paused mode
 					io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
 				end
@@ -241,8 +262,12 @@ classdef runExperiment < optickaCore
 				
 				%--------------this is RSTART (unpauses Plexon)
 				if obj.useDataPixx 
-					io.rstart();
-				elseif obj.useLabJack
+					rstart(io);
+				elseif obj.useDisplayPP
+					resetStrobe(io);
+					flip(s);
+					%TODO why isn't the plexon responding to strobe value to start/stop?
+				elseif obj.useLabJackStrobe
 					io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 				end
 				
@@ -258,20 +283,19 @@ classdef runExperiment < optickaCore
 				% some of the frames lost on first presentation for very complex
 				% stimuli using 32bit computation buffers...
 				obj.salutation('Warming up GPU...')
-				vbl = 0;
 				for i = 1:s.screenVals.fps
 					draw(obj.stimuli);
-					s.drawBackground;
-					s.drawScreenCenter;
+					drawBackground(s);
+					drawScreenCenter(s);
 					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
 					Screen('DrawingFinished', s.win);
-					vbl = Screen('Flip', s.win, vbl+0.001);
+					Screen('Flip', s.win);
 				end
 				if obj.logFrames == true
 					tL.screenLog.stimTime(1) = 1;
 				end
 				obj.salutation('TASK Starting...')
-				tL.vbl(1) = vbl;
+				tL.vbl(1) = GetSecs;
 				tL.startTime = tL.vbl(1);
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -300,12 +324,12 @@ classdef runExperiment < optickaCore
 						obj.infoText;
 					end
 					
-					if obj.useEyeLink;drawEyePosition(obj.eyeLink);end
+					%if obj.useEyeLink;drawEyePosition(obj.eyeLink);end
 					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
 					[~, ~, buttons]=GetMouse(s.screen);
-					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on any mouse click, needs to change
+					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on mouse click 2, needs to change
 					if strcmpi(obj.uiCommand,'stop');break;end
 					%if KbCheck;notify(obj,'abortRun');break;end;
 					
@@ -314,8 +338,14 @@ classdef runExperiment < optickaCore
 					
 					obj.updateTask(); %update our task structure
 					
-					if obj.useDataPixx && obj.sendStrobe
-						io.triggerStrobe(); %send our word; datapixx syncs to next vertical trace
+					if obj.useDisplayPP && obj.sendStrobe
+						prepareStrobe(io);
+						flip(s);
+						sendStrobe(io);
+						flip(s);
+						obj.sendStrobe = false;
+					elseif obj.useDataPixx && obj.sendStrobe
+						triggerStrobe(io); %send our word; datapixx syncs to next vertical trace
 						obj.sendStrobe = false;
 					end
 					%======= FLIP: Show it at correct retrace: ========%
@@ -328,7 +358,7 @@ classdef runExperiment < optickaCore
 						tL.vbl = Screen('Flip', s.win, nextvbl);
 					end
 					%==================================================%
-					if obj.useLabJack && obj.sendStrobe
+					if obj.useLabJackStrobe && obj.sendStrobe
 						obj.lJack.strobeWord; %send our word out to the LabJack
 						obj.sendStrobe = false;
 					end
@@ -361,6 +391,8 @@ classdef runExperiment < optickaCore
 				tL.screenLog.afterDisplay=vbl;
 				if obj.useDataPixx
 					io.rstop();
+				elseif obj.useDisplayPP
+					%
 				else
 					io.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				end
@@ -390,6 +422,8 @@ classdef runExperiment < optickaCore
 				if obj.useDataPixx
 					io.sendTTL(7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
 					close(io);
+				elseif obj.useDisplayPP
+					%
 				else
 					obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
 					obj.lJack.close;
@@ -643,7 +677,7 @@ classdef runExperiment < optickaCore
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
 					% the EDF this is just a backup wrapped in the PTB loop. Good to have a copy (even if
 					% it is sampled at the refresh rate), but make cause a small performance hit.
-					if obj.useEyeLink;
+					if obj.useEyeLink
 						getSample(eL);
 						if tS.recordEyePosition == true
 							switch sM.currentName
@@ -1270,7 +1304,7 @@ classdef runExperiment < optickaCore
 					% because the update happens before the flip, but the drawing of the update happens
 					% only in the next loop, we have to send the strobe one loop after we set switched
 					% to true
-					if obj.task.switched == true;
+					if obj.task.switched == true
 						obj.sendStrobe = true;
 					end
 					
@@ -1291,7 +1325,7 @@ classdef runExperiment < optickaCore
 					% because the update happens before the flip, but the drawing of the update happens
 					% only in the next loop, we have to send the strobe one loop after we set switched
 					% to true
-					if obj.task.switched == true;
+					if obj.task.switched == true
 						obj.sendStrobe = true;
 					end
 					% now update our stimuli, we do it after the first blank as less
