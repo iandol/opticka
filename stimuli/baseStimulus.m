@@ -394,7 +394,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			bgcolor = [0.91 0.91 0.91];
 			bgcoloredit = [0.95 0.95 0.95];
-			fsmall = 10;
+			fsmall = 9;
 			if ismac
 				SansFont = 'avenir next';
 				MonoFont = 'menlo';
@@ -402,8 +402,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				SansFont = 'calibri';
 				MonoFont = 'consolas';
 			else %linux
-				SansFont = 'DejaVu Sans'; %get(0,'defaultAxesFontName');
-				MonoFont = 'DejaVu Mono';
+				SansFont = 'Liberation Sans'; %get(0,'defaultAxesFontName');
+				MonoFont = 'Fira Code';
 			end
 			
 			handles.parent = parent;

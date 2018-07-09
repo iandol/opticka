@@ -151,7 +151,13 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
-				Screen('DrawTexture',obj.sM.win, obj.texture,[ ], obj.mvRect, obj.angleOut, [], [], obj.modulateColourOut);
+				if isempty(obj.modulateColourOut)
+					colour = obj.colourOut;
+				else
+					colour = obj.modulateColourOut;
+				end
+				Screen('DrawTexture',obj.sM.win, obj.texture,[ ],...
+					obj.mvRect, obj.angleOut, [], [], colour);
 			end
 			obj.tick = obj.tick + 1;
 		end

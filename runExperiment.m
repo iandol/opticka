@@ -393,7 +393,7 @@ classdef runExperiment < optickaCore
 					io.rstop();
 				elseif obj.useDisplayPP
 					%
-				else
+				elseif obj.useLabJackStrobe
 					io.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				end
 				notify(obj,'endRun');
@@ -424,7 +424,7 @@ classdef runExperiment < optickaCore
 					close(io);
 				elseif obj.useDisplayPP
 					%
-				else
+				elseif obj.useLabJackStrobe
 					obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
 					obj.lJack.close;
 					obj.lJack=[];
@@ -1246,15 +1246,16 @@ classdef runExperiment < optickaCore
 				ix = []; valueList = []; oValueList = []; %#ok<NASGU>
 				ix = obj.task.nVar(i).stimulus; %which stimuli
 				value=obj.task.outVars{thisBlock,i}(thisRun);
-				valueList(1,1:size(ix,2)) = value;
+				if iscell(value); value = value{1}; end
+				valueList = repmat({value},length(ix),1);
 				name=[obj.task.nVar(i).name 'Out']; %which parameter
+				
 				offsetix = obj.task.nVar(i).offsetstimulus;
 				offsetvalue = obj.task.nVar(i).offsetvalue;
-				
 				if ~isempty(offsetix)
 					ix = [ix offsetix];
-					ovalueList(1,1:size(offsetix,2)) = offsetvalue;
-					valueList = [valueList ovalueList];
+					offsetvalue = value + offsetvalue;
+					valueList = [valueList; offsetvalue];
 				end
 				
 				if obj.task.blankTick > 2 && obj.task.blankTick <= obj.stimuli.n + 2
@@ -1263,7 +1264,7 @@ classdef runExperiment < optickaCore
 					a = 1;
 					for j = ix %loop through our stimuli references for this variable
 						if obj.verbose==true;tic;end
-						obj.stimuli{j}.(name)=valueList(a);
+						obj.stimuli{j}.(name)=valueList{a};
 						if thisBlock == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
 							update(obj.stimuli, j);
 						end
