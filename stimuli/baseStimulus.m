@@ -776,7 +776,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if obj.mouseOverride && obj.mouseValid
 				obj.xOut = obj.mouseX; obj.yOut = obj.mouseY;
 			else
-				if isempty(obj.findprop('angleOut'));
+				if isempty(obj.findprop('angleOut'))
 					[dx, dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
 				else
 					[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);

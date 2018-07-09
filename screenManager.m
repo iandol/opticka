@@ -37,7 +37,7 @@ classdef screenManager < optickaCore
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8
 		%> and 16 -- useful for textures to minimise aliasing, but this
 		%> does provide extra work for the GPU
-		antiAlias double = []
+		antiAlias double = 0
 		%> background RGBA of display during stimulus presentation
 		backgroundColour double = [0.5 0.5 0.5 0]
 		%> shunt screen center by X degrees
@@ -337,6 +337,7 @@ classdef screenManager < optickaCore
 				if ~isempty(forceScreen)
 					thisScreen = forceScreen;
 				end
+				
 				
 				[obj.win] = PsychImaging('OpenWindow', thisScreen, obj.backgroundColour, winSize, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				

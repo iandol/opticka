@@ -185,7 +185,7 @@ classdef runExperiment < optickaCore
 			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
 
 			%-------Set up Digital I/O for this run...
-			if obj.useDisplayPP 
+			if obj.useDataPixx 
 				if isa(obj.dPixx,'dPixxManager') && ~isempty(obj.dPixx)
 					open(obj.dPixx)
 					io = obj.dPixx;
@@ -199,7 +199,7 @@ classdef runExperiment < optickaCore
 				if obj.useEyeLink
 					obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
 				end
-			elseif obj.useDataPixx 
+			elseif obj.useDisplayPP
 				if isa(obj.dPP,'plusplusManager') && ~isempty(obj.dPixx)
 					open(obj.dPP)
 					io = obj.dPP;
