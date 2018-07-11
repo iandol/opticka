@@ -53,10 +53,8 @@ classdef runExperiment < optickaCore
 		benchmark logical = false
 		%> verbose logging to command window?
 		verbose = false
-		%> strobed word value
-		strobeValue
-		%> send strobe on next flip?
-		sendStrobe logical = false
+		%> what value to send on stimulus OFF
+		stimOFFValue double = 32767
 		%> subject name
 		subjectName char = 'Simulcra'
 		%> researcher name
@@ -76,7 +74,7 @@ classdef runExperiment < optickaCore
 		stateInfoFile = ''
 		%> tS is the runtime settings structure, saved here as a backup
 		tS
-		%>
+		%> 
 		lastXPosition = 0
 		lastYPosition = 0
 		lastSize = 1
@@ -84,6 +82,8 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> send strobe on next flip?
+		sendStrobe logical = false
 		%> stateMachine
 		stateMachine
 		%> eyelink manager object
@@ -182,6 +182,7 @@ classdef runExperiment < optickaCore
 
 			%make a handle to the screenManager, so lazy!
 			s = obj.screen;
+			obj.screenVals = s.open(obj.debug,obj.runLog);
 			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
 
 			%-------Set up Digital I/O for this run...
@@ -204,8 +205,7 @@ classdef runExperiment < optickaCore
 					open(obj.dPP)
 					io = obj.dPP;
 				else
-					obj.dPP = plusplusManager();
-					open(obj.dPixx)
+					obj.dPP = plusplusManager('sM',s,'verbose',true);
 					io = obj.dPP;
 				end
 				obj.useLabJackStrobe = false;
@@ -224,7 +224,6 @@ classdef runExperiment < optickaCore
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------	
-				obj.screenVals = s.open(obj.debug,obj.runLog);
 				
 				%the metastimulus wraps our stimulus cell array
 				obj.stimuli.screen = s;
@@ -233,6 +232,7 @@ classdef runExperiment < optickaCore
 				if obj.useDataPixx
 					io.sendTTL(7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
 				elseif obj.useDisplayPP
+					open(io)
 					%TODO why isn't the plexon responding to strobe value to start/stop?
 				elseif obj.useLabJackStrobe
 					%Trigger the omniplex (TTL on FIO1) into paused mode
@@ -339,10 +339,7 @@ classdef runExperiment < optickaCore
 					obj.updateTask(); %update our task structure
 					
 					if obj.useDisplayPP && obj.sendStrobe
-						prepareStrobe(io);
-						flip(s);
 						sendStrobe(io);
-						flip(s);
 						obj.sendStrobe = false;
 					elseif obj.useDataPixx && obj.sendStrobe
 						triggerStrobe(io); %send our word; datapixx syncs to next vertical trace
@@ -1032,7 +1029,9 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function setStrobeValue(obj, value)
 			if obj.useDataPixx == true
-				prepareStrobe(obj.dPixx, value);			
+				prepareStrobe(obj.dPixx, value);
+			elseif obj.useDisplayPP == true
+				prepareStrobe(obj.dPP, value);
 			elseif isa(obj.lJack,'labJack') && obj.lJack.isOpen == true
 				prepareStrobe(obj.lJack, value)
 			end
@@ -1046,6 +1045,8 @@ classdef runExperiment < optickaCore
 		function doStrobe(obj, value)
 			if value == true
 				obj.sendStrobe = true;
+			else
+				obj.sendStrobe = false;
 			end
 		end
 		
@@ -1299,7 +1300,7 @@ classdef runExperiment < optickaCore
 				trigger = obj.task.tick < obj.task.switchTick;
 			end
 			
-			if trigger == true
+			if trigger == true %no need to switch state
 				
 				if obj.task.isBlank == false %showing stimulus, need to call animate for each stimulus
 					% because the update happens before the flip, but the drawing of the update happens
@@ -1369,7 +1370,7 @@ classdef runExperiment < optickaCore
 						obj.task.switchTick=obj.task.switchTick+(obj.task.isTime*ceil(obj.screenVals.fps));
 					end
 					
-					setStrobeValue(obj,32767);%get the strobe word to signify stimulus OFF ready
+					setStrobeValue(obj,obj.stimOFFValue);%get the strobe word to signify stimulus OFF ready
 					%obj.logMe('OutaBlank');
 					
 				else %we have to show the new run on the next flip
