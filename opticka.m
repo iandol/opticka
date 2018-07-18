@@ -40,7 +40,7 @@ classdef opticka < optickaCore
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina','OKHideFlash','OKTrainingResearcherName',...
-			'OKTrainingName'};
+			'OKTrainingName'}
 	end
 	
 	%=======================================================================

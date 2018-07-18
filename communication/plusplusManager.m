@@ -105,10 +105,12 @@ classdef plusplusManager < optickaCore
 						zeros(1,248-3)];
 					BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, mask, data, obj.command);
 				otherwise
-					data = [value, value, value, zeros(1,248-3)];
+					nWindows = 30;
+					data = [repmat(value,1,nWindows), zeros(1,248-nWindows)];
 					BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, mask, data, obj.command);
 			end
 			obj.lastValue = value;
+			obj.sendValue = 0;
 			if obj.verbose == true
 				fprintf('===>>> sendStrobe VALUE: %i\t| mode: %s\t| mask: %s\n', value, obj.strobeMode, dec2bin(obj.mask));
 			end
@@ -120,11 +122,10 @@ classdef plusplusManager < optickaCore
 		%> @param value 
 		% ===================================================================
 		function prepareStrobe(obj, value)
-
 			obj.lastValue = obj.sendValue;
 			obj.sendValue = value;
-			
 		end
+		
 		% ===================================================================
 		%> @brief Prepare and send a strobed word
 		%> 
@@ -140,6 +141,26 @@ classdef plusplusManager < optickaCore
 			
 			if obj.verbose == true
 				fprintf('===>>> sendStrobeAndFlip VALUE: %i\t| mode: %s\t| mask: %s\n', value, obj.strobeMode, dec2bin(mask));
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Prepare and send a TTL
+		%> 
+		%> @param 
+		% ===================================================================
+		function sendTTL(obj, value, mask)
+			if obj.silentMode==true;return;end
+			if ~exist('value','var') || isempty(value)
+				warning('No value specified, abort sending TTL')
+				return
+			end
+			if ~exist('mask','var') || isempty(mask); mask = obj.mask; end
+			data = [repmat(value,1,10),zeros(1,248-10)];
+			BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, mask, data, obj.command);
+			
+			if obj.verbose == true
+				fprintf('===>>> SEND TTL: %i - mask: %s\n', value, dec2bin(mask));
 			end
 		end
 		
@@ -175,7 +196,7 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function bitsmode(obj)
+		function bitsMode(obj)
 			if obj.silentMode==true;return;end
 			BitsPlusPlus('SwitchToBits++');
 			if obj.verbose == true
@@ -188,7 +209,7 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function monomode(obj)
+		function monoMode(obj)
 			if obj.silentMode==true;return;end
 			BitsPlusPlus('SwitchToMono++');
 			if obj.verbose == true
@@ -201,7 +222,7 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function colourmode(obj)
+		function colourMode(obj)
 			if obj.silentMode==true;return;end
 			BitsPlusPlus('SwitchToColour++');
 			if obj.verbose == true
@@ -220,28 +241,7 @@ classdef plusplusManager < optickaCore
 			if obj.verbose == true
 				fprintf('===>>> Closing Display++\n');
 			end
-		end
-		
-		% ===================================================================
-		%> @brief Prepare and send a TTL
-		%> 
-		%> @param 
-		% ===================================================================
-		function sendTTL(obj, value, mask)
-			if obj.silentMode==true;return;end
-			if ~exist('value','var') || isempty(value)
-				warning('No value specified, abort sending strobe')
-				return
-			end
-			if ~exist('mask','var') || isempty(mask); mask = obj.mask; end
-			
-			BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, mask, value, obj.command);
-			
-			if obj.verbose == true
-				fprintf('===>>> SEND TTL: %i - mask: %s\n', value, dec2bin(mask));
-			end
-		end
-		
+		end	
 		
 		% ===================================================================
 		%> @brief Get method 
