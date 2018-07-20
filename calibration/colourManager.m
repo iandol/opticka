@@ -10,6 +10,8 @@ classdef colourManager < optickaCore
 		deviceSPD char = '~/MatlabFiles/Calibration/PhosphorsDisplay++.mat'
 		%>
 		sensitivities char = 'ConeSensitivities_SS_2degELin3908301.mat'
+		%> 
+		sensitivitiesCIE char = 'CMF_CIE1931_2deg3608301.mat'
 		%> background colour
 		backgroundColour(1,3) double = [0.5 0.5 0.5]
 		%> screen
@@ -22,6 +24,9 @@ classdef colourManager < optickaCore
 		autoPlot logical = false
 		%> the step to modify radius to get into gamut
 		modifyRadius = 0.001;
+		lastRGB(1,3) double = [1 0 0]
+		lastDKL(1,3) double = [0.05 0 0]
+		lastxyY(1,3) double = [0 0 0]
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -29,9 +34,7 @@ classdef colourManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		lastRGB(1,3) double = [1 0 0]
-		lastDKL(1,3) double = [0.05 0 0]
-		lastxyY(1,3) double = [0 0 0]
+		
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -133,7 +136,7 @@ classdef colourManager < optickaCore
 		% ===================================================================
 		function to = RGBtoDKL(obj, source, background)
 			if ~exist('source','var')
-				error('You must specify a source DKL colour!');
+				error('You must specify a source RGB colour!');
 			end
 			if ~exist('background','var')
 				background = obj.backgroundColour;
@@ -148,7 +151,7 @@ classdef colourManager < optickaCore
 			
 			if obj.verbose
 				fprintf('\n--->>> RGB source: [%f %f %f]\n', source(1), source(2), source(3));
-				fprintf('--->>> DKL out: radius=%f azimuth=%f elevation=%f]\n'  , to(1), to(2), to(3));
+				fprintf('--->>> DKL out: radius=%f azimuth=%f elevation=%f\n'  , to(1), to(2), to(3));
 			end
 			
 			obj.lastDKL = to;
@@ -163,16 +166,44 @@ classdef colourManager < optickaCore
 		%> @param 
 		%> @return 
 		% ===================================================================
-		function to = xyYtoRGB(obj, source, background)
+		function to = DKLtoxyY(obj, source, background)
 			if ~exist('source','var')
-				error('You must specify a source xyY colour!');
+				error('You must specify a source DKL colour!');
 			end
 			if ~exist('background','var')
 				background = obj.backgroundColour;
 			else
 				obj.backgroundColour = background;
 			end
-			[to, ErrorCode] = ctGetColourTrival('CS_CIE1931xyY','CS_RGB',[background,source],obj.deviceSPD,obj.sensitivities);
+			
+			rgb = obj.DKLtoRGB(source,background);
+			to = obj.RGBtoxyY(rgb);
+			
+			if obj.verbose
+				fprintf('\n--->>> DKL source:\t\tradius=%f azimuth=%f elevation=%f\n', source(1), source(2), source(3));
+				fprintf('--->>> RGB intermediate:\t\t[%f %f %f]\n', rgb(1), rgb(2), rgb(3));
+				fprintf('--->>> xyY out:\t\tx=%f y=%f Y=%f\n', to(1), to(2), to(3));
+			end
+			
+			obj.lastRGB = rgb;
+			obj.lastxyY = to;
+			obj.lastDKL = source;
+			if obj.autoPlot; obj.plot; end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		%> 
+		%> @param 
+		%> @return 
+		% ===================================================================
+		function to = xyYtoRGB(obj, source)
+			if ~exist('source','var')
+				error('You must specify a source xyY colour!');
+			end
+			
+			[to, ErrorCode] = ctGetColourTrival('CS_CIE1931xyY','CS_RGB',source,obj.deviceSPD,obj.sensitivitiesCIE);
 			
 			if ErrorCode == -1
 				warning('OUT OF GAMUT!!!')
@@ -180,7 +211,35 @@ classdef colourManager < optickaCore
 			
 			if obj.verbose
 				fprintf('\n--->>> xyY source: [%f %f %f]\n', source(1), source(2), source(3));
-				fprintf('--->>> RGB out: radius=%f azimuth=%f elevation=%f]\n'  , to(1), to(2), to(3));
+				fprintf('--->>> RGB out: [%f %f %f]\n'  , to(1), to(2), to(3));
+			end
+			
+			obj.lastRGB = to;
+			obj.lastxyY = source;
+			if obj.autoPlot; obj.plot; end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		%> 
+		%> @param 
+		%> @return 
+		% ===================================================================
+		function to = RGBtoxyY(obj, source)
+			if ~exist('source','var')
+				error('You must specify a source xyY colour!');
+			end
+			
+			[to, ErrorCode] = ctGetColourTrival('CS_RGB','CS_CIE1931xyY',source,obj.deviceSPD,obj.sensitivitiesCIE);
+			
+			if ErrorCode == -1
+				warning('OUT OF GAMUT!!!')
+			end
+			
+			if obj.verbose
+				fprintf('\n--->>> RGB source: [%f %f %f]\n', source(1), source(2), source(3));
+				fprintf('--->>> xyY out: x=%f y=%f Y=%f\n'  , to(1), to(2), to(3));
 			end
 			
 			obj.lastRGB = to;
@@ -210,9 +269,10 @@ classdef colourManager < optickaCore
 				prepareScreen(obj.screen);
 				open(obj.screen,[],[]);
 			end
-			obj.screen.backgroundColour = [obj.backgroundColour 1];
+			%obj.screen.backgroundColour = [obj.backgroundColour 1];
+			obj.screen.backgroundColour = [obj.lastRGB 1];
 			drawBackground(obj.screen);
-			drawSpot(obj.screen,10,obj.lastRGB);
+			%drawSpot(obj.screen,15,obj.lastRGB);
 			flip(obj.screen);
 		end
 		

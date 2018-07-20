@@ -382,7 +382,7 @@ classdef opticka < optickaCore
 			
 			s=str2num(get(obj.h.OKWindowSize,'String')); %#ok<ST2NM>
 			if isempty(s)
-				obj.r.screen.windowed = 0;
+				obj.r.screen.windowed = false;
 			else
 				obj.r.screen.windowed = s;
 			end
@@ -391,6 +391,7 @@ classdef opticka < optickaCore
 			obj.r.benchmark = logical(obj.gv(obj.h.OKbenchmark));
 			obj.r.screen.hideFlash = logical(obj.gv(obj.h.OKHideFlash));
 			obj.r.screen.useRetina = logical(obj.gv(obj.h.OKUseRetina));
+			obj.r.drawFixation = logical(obj.gv(obj.h.OKDrawFixation));
 			if strcmpi(obj.r.screen.bitDepth,'8bit')
 				set(obj.h.OKAntiAliasing,'String','0');
 			end
@@ -422,6 +423,7 @@ classdef opticka < optickaCore
 			end
 			if strcmpi(get(obj.h.OKuseDisplayPP,'Checked'),'on')
 				obj.r.useDisplayPP = true;
+				obj.r.dPPMode = get(obj.h.OKdPPMode,'String');
 			else
 				obj.r.useDisplayPP = false;
 			end
@@ -988,12 +990,21 @@ classdef opticka < optickaCore
 						end							
 						obj.getStateInfo();
 					end
-					obj.h.OKuseLabJack.Checked = 'off';	obj.h.OKuseDataPixx.Checked = 'off'; obj.h.OKuseEyeLink.Checked = 'off';
-					obj.r.useLabJack = tmp.r.useLabJack;
-					if obj.r.useLabJack == true; obj.h.OKuseLabJack.Checked = 'on'; end
-					obj.r.useDataPixx = tmp.r.useDataPixx;
+					obj.h.OKuseLabJackStrobe.Checked = 'off';
+					obj.h.OKuseDataPixx.Checked = 'off';
+					obj.h.OKuseDisplayPP.Checked = 'off';
+					obj.h.OKuseEyeLink.Checked = 'off';
+					
+					if isprop(tmp.r,'useLabJackStrobe'); obj.r.useLabJackStrobe = tmp.r.useLabJackStrobe;end
+					if obj.r.useLabJackStrobe == true; obj.h.OKuseLabJackStrobe.Checked = 'on'; end
+					
+					if isprop(tmp.r,'useDisplayPP'); obj.r.useDisplayPP = tmp.r.useDisplayPP; end
+					if obj.r.useDisplayPP == true; obj.h.OKuseDisplayPP.Checked = 'on'; end
+					
+					if isprop(tmp.r,'useDataPixx'); obj.r.useDataPixx = tmp.r.useDataPixx; end
 					if obj.r.useDataPixx == true; obj.h.OKuseDataPixx.Checked = 'on'; end
-					obj.r.useEyeLink = tmp.r.useEyeLink;
+					
+					if isprop(tmp.r,'useEyeLink'); obj.r.useEyeLink = tmp.r.useEyeLink; end
 					if obj.r.useEyeLink == true; obj.h.OKuseEyeLink.Checked = 'on'; end
 				end
 				

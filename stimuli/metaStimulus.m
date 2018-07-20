@@ -393,7 +393,9 @@ classdef metaStimulus < optickaCore
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
-		function run(obj,benchmark,runtime,s)
+		function run(obj, benchmark, runtime, s, forceScreen)
+		% RUN stimulus: run(benchmark, runtime, s, forceFullscreen)
+			warning off
 			if ~exist('benchmark','var') || isempty(benchmark)
 				benchmark=false;
 			end
@@ -401,36 +403,54 @@ classdef metaStimulus < optickaCore
 				runtime = 2; %seconds to run
 			end
 			if ~exist('s','var') || ~isa(s,'screenManager')
-				s = screenManager('verbose',false,'blend',true,'screen',1,...
-				'bitDepth','8bit','debug',false,...
-				'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+				s = screenManager('verbose',false,'blend',true,...
+					'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
+					'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
+					'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+				prepareScreen(s);
 			end
+			if ~exist('forceScreen','var'); forceScreen = -1; end
 			
+			oldscreen = s.screen;
+			oldbitdepth = s.bitDepth;
+			if forceScreen >= 0
+				s.screen = forceScreen;
+				if forceScreen == 0
+					s.bitDepth = '8bit';
+				end
+			end
+			prepareScreen(s);
+
 			oldwindowed = s.windowed;
 			if benchmark
 				s.windowed = false;
-			else
-				%s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2];
-				%s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
+			elseif forceScreen > -1
+				s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
 			end
-			open(s); s.visualDebug = false; %open PTB screen
-			s.windowed = oldwindowed;
+			
+			if ~s.isOpen
+				open(s);
+			end
 			setup(obj,s); %setup our stimulus object
-			draw(obj); %draw stimulus
+			draw(obj); %draw stimuli
+			
 			if s.visualDebug
 				drawGrid(s); %draw +-5 degree dot grid
 				drawScreenCenter(s); %centre spot
 			end
+			
 			if benchmark
 				Screen('DrawText', s.win, 'Benchmark, screen will not update properly, see FPS on command window at end.', 5,5,[0 0 0]);
 			elseif s.visualDebug
 				Screen('DrawText', s.win, 'Stimulus unanimated for 1 second, animated for 2, then unanimated for a final second...', 5,5,[0 0 0]);
 			end
+			
 			Screen('Flip',s.win);
 			WaitSecs(1);
+			
 			if benchmark; b=GetSecs; end
-			for i = 1:(s.screenVals.fps*runtime) %should be 2 seconds worth of flips
-				draw(obj); %draw stimulus
+			for i = 1:(s.screenVals.fps*runtime) 
+				draw(obj); %draw stimuli
 				if ~benchmark && s.visualDebug
 					drawGrid(s); %draw +-5 degree dot grid
 					drawScreenCenter(s); %centre spot
@@ -452,8 +472,12 @@ classdef metaStimulus < optickaCore
 				fprintf('\n------> SPEED = %g fps\n', fps);
 			end
 			close(s); %close screen
-			clear s fps benchmark runtime b bb i; %clear up a bit
+			s.screen = oldscreen;
+			s.windowed = oldwindowed;
+			s.bitDepth = oldbitdepth;
 			reset(obj); %reset our stimulus ready for use again
+			clear s fps benchmark runtime b bb i; %clear up a bit
+			warning on
 		end
 		
 		

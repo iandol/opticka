@@ -288,8 +288,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
-		function run(obj, benchmark, runtime, s, forceFullscreen)
-		% RUN stimulus: run(benchmark, runtime, s, forceFullscreen)
+		function run(obj, benchmark, runtime, s, forceScreen)
+		% RUN stimulus: run(benchmark, runtime, s, forceScreen)
 			try
 				warning off
 				if ~exist('benchmark','var') || isempty(benchmark)
@@ -299,43 +299,53 @@ classdef baseStimulus < optickaCore & dynamicprops
 					runtime = 2; %seconds to run
 				end
 				if ~exist('s','var') || ~isa(s,'screenManager')
-					s = screenManager('verbose',false,'blend',true,...
-						'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
-						'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
-						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
-					prepareScreen(s);
-                end
-                if ~exist('forceFullscreen','var') || isempty(forceFullscreen)
-                    forceFullscreen = false;
-                end
-				oldWindowed = s.windowed;
-				oldScreen = s.screen;
-				if benchmark
-					s.windowed = false;
-				else
-					if s.screen == 0 && ~forceFullscreen
-						wR = Screen('Rect',s.screen);
-						s.windowed = [wR(3)/2 wR(4)/2];
+					s = screenManager('verbose',false,'blend',true,'screen',1,...
+					'bitDepth','8bit','debug',false,...
+					'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+				end
+				if ~exist('forceScreen','var'); forceScreen = -1; end
+
+				oldscreen = s.screen;
+				oldbitdepth = s.bitDepth;
+				if forceScreen >= 0
+					s.screen = forceScreen;
+					if forceScreen == 0
+						s.bitDepth = '8bit';
 					end
 				end
+				prepareScreen(s);
+				
+				oldwindowed = s.windowed;
+				if benchmark
+					s.windowed = false;
+				elseif forceScreen > -1
+					s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
+				end
+				
 				if ~s.isOpen
 					open(s); %open PTB screen
 				end
 				setup(obj,s); %setup our stimulus object
 				draw(obj); %draw stimulus
-				drawGrid(s); %draw +-5 degree dot grid
-				drawScreenCenter(s); %centre spot
+				
+				if s.visualDebug
+					drawGrid(s); %draw +-5 degree dot grid
+					drawScreenCenter(s); %centre spot
+				end
+				
 				if benchmark
 					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS on command window at end.', 5,5,[0 0 0]);
 				else
 					Screen('DrawText', s.win, 'Stim will be drawn, then animated...', 5,5,[0 0 0]);
 				end
+				
 				Screen('Flip',s.win);
 				WaitSecs(1);
+				
 				if benchmark; b=GetSecs; end
-				for i = 1:(s.screenVals.fps*runtime) %should be X seconds worth of flips
+				for i = 1:(s.screenVals.fps*runtime)
 					draw(obj); %draw stimulus
-					if s.visualDebug
+					if ~benchmark && s.visualDebug
 						drawGrid(s); %draw +-5 degree dot grid
 						drawScreenCenter(s); %centre spot
 					end
@@ -355,10 +365,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 					fps = (s.screenVals.fps*runtime) / (bb-b);
 					fprintf('\n------> SPEED = %g fps\n', fps);
 				end
-				s.windowed = oldWindowed;
-				s.screen = oldScreen;
-				reset(obj); %reset our stimulus ready for use again
 				close(s); %close screen
+				s.screen = oldscreen;
+				s.windowed = oldwindowed;
+				s.bitDepth = oldbitdepth;
+				reset(obj); %reset our stimulus ready for use again
 				clear fps benchmark runtime b bb i; %clear up a bit
 				warning on
 			catch ME

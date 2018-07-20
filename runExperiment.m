@@ -49,12 +49,14 @@ classdef runExperiment < optickaCore
 		debug logical = false
 		%> shows the info text and position grid during stimulus presentation
 		visualDebug logical = false
+		%> draw simple fixation cross during trial?
+		drawFixation logical = false
 		%> flip as fast as possible?
 		benchmark logical = false
 		%> verbose logging to command window?
 		verbose = false
 		%> what value to send on stimulus OFF
-		stimOFFValue double = 32767
+		stimOFFValue double = 255
 		%> subject name
 		subjectName char = 'Simulcra'
 		%> researcher name
@@ -79,6 +81,7 @@ classdef runExperiment < optickaCore
 		lastYPosition = 0
 		lastSize = 1
 		lastIndex = 0
+		dPPMode char = 'plexon'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -182,6 +185,7 @@ classdef runExperiment < optickaCore
 
 			%make a handle to the screenManager, so lazy!
 			s = obj.screen;
+			prepareScreen(s);
 			obj.screenVals = s.open(obj.debug,obj.runLog);
 			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
 
@@ -202,7 +206,7 @@ classdef runExperiment < optickaCore
 				end
 			elseif obj.useDisplayPP
 				if isa(obj.dPP,'plusplusManager') && ~isempty(obj.dPixx)
-					open(obj.dPP)
+					othisScreen = obj.screen;pen(obj.dPP)
 					io = obj.dPP;
 				else
 					obj.dPP = plusplusManager('sM',s,'verbose',true);
@@ -309,34 +313,31 @@ classdef runExperiment < optickaCore
 							s.drawPhotoDiodeSquare([0 0 0 1]);
 						end
 					else
-						if ~isempty(s.backgroundColour)
-							s.drawBackground;
-						end
+						if ~isempty(s.backgroundColour);s.drawBackground;end
 						
 						draw(obj.stimuli);
 						
-						if s.photoDiode == true
-							s.drawPhotoDiodeSquare([1 1 1 1]);
-						end
+						if s.photoDiode;s.drawPhotoDiodeSquare([1 1 1 1]);end
+						
+						if obj.drawFixation;s.drawCross(0.4,[1 1 1 1]);end
 					end
 					if s.visualDebug == true
 						s.drawGrid;
 						obj.infoText;
 					end
 					
-					%if obj.useEyeLink;drawEyePosition(obj.eyeLink);end
-					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
-					[~, ~, buttons]=GetMouse(s.screen);
-					if buttons(2)==1;notify(obj,'abortRun');break;end; %break on mouse click 2, needs to change
-					if strcmpi(obj.uiCommand,'stop');break;end
-					%if KbCheck;notify(obj,'abortRun');break;end;
+					if obj.task.isBlank
+						[~, ~, buttons]=GetMouse(s.screen);
+						if buttons(2)==1;notify(obj,'abortRun');break;end %break on mouse click 2, needs to change
+						if strcmpi(obj.uiCommand,'stop');break;end
+					end
 					
 					%check eye position
 					if obj.useEyeLink; getSample(obj.eyeLink); end
 					
-					obj.updateTask(); %update our task structure
+					updateTask(obj); %update our task structure
 					
 					if obj.useDisplayPP && obj.sendStrobe
 						sendStrobe(io);
@@ -844,8 +845,11 @@ classdef runExperiment < optickaCore
 				obj.task = stimulusSequence();
 			end
 			
-			if obj.useDataPixx == true
-				obj.useLabJack = false;
+			if obj.useDisplayPP == true
+				obj.useLabJackStrobe = false;
+				obj.dPP = plusplusManager();
+			elseif obj.useDataPixx == true
+				obj.useLabJackStrobe = false;
 				obj.dPixx = dPixxManager();
 			end
 			
@@ -966,6 +970,9 @@ classdef runExperiment < optickaCore
 			end
 			if isa(obj.dPixx,'dPixxManager')
 				obj.dPixx.verbose = value;
+			end
+			if isa(obj.dPP,'plusplusManager')
+				obj.dPP.verbose = value;
 			end
 			if isa(obj.stimuli,'metaStimulus') && obj.stimuli.n > 0
 				for i = 1:obj.stimuli.n
@@ -1225,8 +1232,6 @@ classdef runExperiment < optickaCore
 			if isempty(obj.task) %we have no task setup, so we generate one.
 				obj.task=stimulusSequence;
 			end
-			%find out how many stimuli there are, wrapped in the obj.stimuli
-			%structure
 			obj.task.initialiseTask();
 		end
 		
@@ -1269,7 +1274,9 @@ classdef runExperiment < optickaCore
 						if thisBlock == 1 && thisRun == 1 %make sure we update if this is the first run, otherwise the variables may not update properly
 							update(obj.stimuli, j);
 						end
-						if obj.verbose==true;fprintf('=-> updateVars() block/trial %i/%i: Variable:%i %s = %g | Stimulus %g -> %g ms\n',thisBlock,thisRun,i,name,valueList(a),j,toc*1000);end
+						if obj.verbose==true
+							fprintf('=-> updateVars() block/trial %i/%i: Variable:%i %s = %s | Stimulus %g -> %g ms\n',thisBlock,thisRun,i,name,num2str(valueList{a}),j,toc*1000);
+						end
 						a = a + 1;
 					end
 				end
@@ -1285,11 +1292,12 @@ classdef runExperiment < optickaCore
 			obj.task.timeNow = GetSecs;
 			obj.sendStrobe = false;
 			if obj.task.tick==1 %first frame
+				obj.task.thisRun = 1; obj.task.totalRuns = 1;
 				obj.task.isBlank = false;
 				obj.task.startTime = obj.task.timeNow;
 				obj.task.switchTime = obj.task.trialTime; %first ever time is for the first trial
 				obj.task.switchTick = obj.task.trialTime*ceil(obj.screenVals.fps);
-				setStrobeValue(obj,obj.task.outIndex(obj.task.totalRuns));
+				setStrobeValue(obj,obj.task.outIndex(obj.task.thisRun));
 				obj.sendStrobe = true;
 			end
 			
@@ -1388,7 +1396,7 @@ classdef runExperiment < optickaCore
 							obj.task.thisRun = obj.task.thisRun + 1;
 						end
 						if obj.task.totalRuns <= length(obj.task.outIndex)
-							setStrobeValue(obj,obj.task.outIndex(obj.task.totalRuns)); %get the strobe word ready
+							setStrobeValue(obj,obj.task.outIndex(obj.task.thisRun)); %get the strobe word ready
 						else
 							
 						end

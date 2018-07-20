@@ -8,33 +8,33 @@
 classdef stimulusSequence < optickaCore & dynamicprops
 	properties
 		%> whether to randomise (true) or run sequentially (false)
-		randomise = true
+		randomise logical = true
 		%> structure holding each independant variable
 		nVar
 		%> number of repeat blocks to present
-		nBlocks = 1
+		nBlocks double = 1
 		%> time stimulus trial is shown
-		trialTime = 2
+		trialTime double = 2
 		%> inter stimulus trial time
-		isTime = 1 
+		isTime double = 1 
 		%> inter block time
-		ibTime = 2
+		ibTime double = 2
 		%> what do we show in the blank?
 		isStimulus
 		%> do we follow real time or just number of ticks to get to a known time
-		realTime = true
+		realTime logical = true
 		%> random seed value, we can use this to set the RNG to a known state
 		randomSeed
 		%> mersenne twister default
-		randomGenerator='mt19937ar' 
+		randomGenerator char = 'mt19937ar' 
 		%> used for dynamically estimating total number of frames
-		fps = 60 
+		fps double = 60 
 		%> will be used when we extend each trial to have sub-segments
-		nSegments = 1 
+		nSegments double = 1 
 		%> segment info
 		nSegment
 		%> verbose or not
-		verbose = false
+		verbose logical = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -281,7 +281,6 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				end
 				obj.(obj.taskProperties{i}) = obj.taskProperties{i+1}; %#ok<*MCNPR>
 			end
-			obj.totalRuns = obj.minBlocks * obj.nBlocks;
 			obj.taskInitialised = true;
 		end
 		
@@ -291,22 +290,25 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		% ===================================================================
 		function updateTask(obj, thisResponse, runTime, info)
 			if obj.taskInitialised
-				if obj.thisRun > obj.totalRuns
+				if obj.totalRuns > obj.nRuns
 					obj.salutation('Task FINISHED, no more updates allowed');
 					return
 				end
 				if ~exist('thisResponse','var'); thisResponse = NaN; end
 				if ~exist('runTime','var') || isempty(runTime); runTime = GetSecs; end
 				if ~exist('info','var'); info = 'none'; end
-				obj.response(obj.thisRun) = thisResponse;
-				obj.responseInfo{obj.thisRun} = info;
-				obj.runTimeList(obj.thisRun) = runTime - obj.startTime;
+				obj.response(obj.totalRuns) = thisResponse;
+				obj.responseInfo{obj.totalRuns} = info;
+				obj.runTimeList(obj.totalRuns) = runTime - obj.startTime;
 				
-				obj.salutation(sprintf('Task Run %i: response = %.2g @ %.2g secs',obj.thisRun, thisResponse, obj.runTimeList(obj.thisRun)));
+				if obj.verbose;obj.salutation(sprintf('Task Run %i: response = %.2g @ %.2g secs',obj.totalRuns, thisResponse, obj.runTimeList(obj.totalRuns)));end
 				
-				obj.thisRun = obj.thisRun + 1;
+				obj.totalRuns = obj.totalRuns + 1;
 				if obj.thisRun > obj.minBlocks * obj.thisBlock
 					obj.thisBlock = obj.thisBlock + 1;
+					obj.thisRun = 1;
+				else
+					obj.thisRun = obj.thisRun + 1;
 				end
 			end
         end
@@ -318,16 +320,17 @@ classdef stimulusSequence < optickaCore & dynamicprops
         function rewindTask(obj)
             if obj.taskInitialised
                 
-                obj.response(obj.thisRun) = [];
-                obj.responseInfo{obj.thisRun} = [];
-                obj.runTimeList(obj.thisRun) = [];
-                obj.thisRun = obj.thisRun - 1;
+                obj.response(obj.totalRuns) = [];
+                obj.responseInfo{obj.totalRuns} = [];
+                obj.runTimeList(obj.totalRuns) = [];
+                obj.totalRuns = obj.totalRuns - 1;
+				obj.thisRun = obj.thisRun - 1;
                 
                 if obj.thisRun > obj.minBlocks * (obj.thisBlock - 1)
                     obj.thisBlock = obj.thisBlock - 1;
                 end
                 
-                obj.salutation(sprintf('===!!! REWIND Run to %i:',obj.thisRun));
+                obj.salutation(sprintf('===!!! REWIND Run to %i:',obj.totalRuns));
                 
             end
         end
@@ -342,23 +345,23 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		function success = resetRun(obj)
 			success = false;
 			if obj.taskInitialised
-				iLow = obj.thisRun; % select from this run...
+				iLow = obj.totalRuns; % select from this run...
 				iHigh = obj.thisBlock * obj.minBlocks; %...to the last run in the current block
 				iRange = (iHigh - iLow) + 1;
 				if iRange < 2
 					return
 				end
 				randomChoice = randi(iRange); %random from 0 to range
-				trialToSwap = obj.thisRun + (randomChoice - 1);
+				trialToSwap = obj.totalRuns + (randomChoice - 1);
 				
 				blockOffset = ((obj.thisBlock-1) * obj.minBlocks);
-				blockSource = obj.thisRun - blockOffset;
+				blockSource = obj.totalRuns - blockOffset;
 				blockDestination = trialToSwap - blockOffset;
 				
 				%outValues
-				aTrial = obj.outValues(obj.thisRun,:);
+				aTrial = obj.outValues(obj.totalRuns,:);
 				bTrial = obj.outValues(trialToSwap,:);
-				obj.outValues(obj.thisRun,:) = bTrial;
+				obj.outValues(obj.totalRuns,:) = bTrial;
 				obj.outValues(trialToSwap,:) = aTrial;
 				
 				%outVars
@@ -370,28 +373,28 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				end
 				
 				%outIndex
-				aIdx = obj.outIndex(obj.thisRun,1);
+				aIdx = obj.outIndex(obj.totalRuns,1);
 				bIdx = obj.outIndex(trialToSwap,1);
-				obj.outIndex(obj.thisRun,1) = bIdx;
+				obj.outIndex(obj.totalRuns,1) = bIdx;
 				obj.outIndex(trialToSwap,1) = aIdx;
 				
 				%outMap
-				aMap = obj.outMap(obj.thisRun,:);
+				aMap = obj.outMap(obj.totalRuns,:);
 				bMap = obj.outMap(trialToSwap,:);
-				obj.outMap(obj.thisRun,:) = bMap;
+				obj.outMap(obj.totalRuns,:) = bMap;
 				obj.outMap(trialToSwap,:) = aMap;
 				
 				%log this change
 				if isempty(obj.resetLog); myN = 1; else myN = length(obj.resetLog)+1; end
 				obj.resetLog(myN).randomChoice = randomChoice;
-				obj.resetLog(myN).thisRun = obj.thisRun;
+				obj.resetLog(myN).totalRuns = obj.totalRuns;
 				obj.resetLog(myN).trialToSwap = trialToSwap;
 				obj.resetLog(myN).blockSource = blockSource;
 				obj.resetLog(myN).blockDestination = blockDestination;
 				obj.resetLog(myN).aTrial = aTrial;
 				obj.resetLog(myN).bTrial = bTrial;
 				success = true;
-				obj.salutation(sprintf('Task %i: swap with = %i (random choice=%i)',obj.thisRun, trialToSwap, randomChoice));
+				obj.salutation(sprintf('Task %i: swap with = %i (random choice=%i)',obj.totalRuns, trialToSwap, randomChoice));
 			end
 		end
 		
@@ -468,9 +471,13 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			build_gui();
 			if iscell(obj.outValues)
 				outvals = cell2mat(obj.outValues);
-				data = [outvals obj.outIndex obj.outMap];
+				if length(outvals(1,:)) > 1
+					data = {num2str(outvals) obj.outIndex obj.outMap};
+				else
+					data = {outvals obj.outIndex obj.outMap};
+				end
 			else
-				data = [obj.outValues obj.outIndex obj.outMap];
+				data = {obj.outValues obj.outIndex obj.outMap};
 			end
 			if isempty(data)
 				data = 'No variables!';
