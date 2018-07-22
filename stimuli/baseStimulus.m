@@ -319,7 +319,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if benchmark
 					s.windowed = false;
 				elseif forceScreen > -1
-					s.windowed = CenterRect([0 0 s.screenVals.width/2 s.screenVals.height/2], s.winRect); %middle of screen
+					s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2]; %middle of screen
 				end
 				
 				if ~s.isOpen

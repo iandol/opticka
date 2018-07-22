@@ -205,8 +205,9 @@ classdef runExperiment < optickaCore
 					obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
 				end
 			elseif obj.useDisplayPP
-				if isa(obj.dPP,'plusplusManager') && ~isempty(obj.dPixx)
-					othisScreen = obj.screen;pen(obj.dPP)
+				if isa(obj.dPP,'plusplusManager') && ~isempty(obj.dPP)
+					obj.dPP.sM = s;
+					open(obj.dPP)
 					io = obj.dPP;
 				else
 					obj.dPP = plusplusManager('sM',s,'verbose',true);
@@ -328,7 +329,7 @@ classdef runExperiment < optickaCore
 					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
-					if obj.task.isBlank
+					if obj.task.isBlank == true
 						[~, ~, buttons]=GetMouse(s.screen);
 						if buttons(2)==1;notify(obj,'abortRun');break;end %break on mouse click 2, needs to change
 						if strcmpi(obj.uiCommand,'stop');break;end
@@ -1416,16 +1417,20 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function infoText(obj)
 			if obj.logFrames == true && obj.task.tick > 1
-				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
+				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
 					(obj.runLog.vbl(obj.task.tick-1)-obj.runLog.startTime),obj.task.tick);
 			else
-				t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
+				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
 					(obj.runLog.vbl-obj.runLog.startTime),obj.task.tick);
 			end
 			for i=1:obj.task.nVars
-				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))];
+				if iscell(obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))
+					t=[t sprintf(' -- %s = %s',obj.task.nVar(i).name,num2str(obj.task.outVars{obj.task.thisBlock,i}{obj.task.thisRun}))];
+				else
+					t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))];
+				end
 			end
 			Screen('DrawText',obj.screen.win,t,50,1,[1 1 1 1],[0 0 0 1]);
 		end
