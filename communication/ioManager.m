@@ -10,7 +10,9 @@ classdef ioManager < optickaCore
 		%> verbosity
 		verbose = true
 		%> the hardware object
-		h
+		io
+		%>
+		silentMode logical = true
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -24,7 +26,7 @@ classdef ioManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='h|verbose'
+		allowedProperties char = 'io|verbose'
 	end
 	
 	methods
@@ -39,6 +41,15 @@ classdef ioManager < optickaCore
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
 		end
 
+		% ===================================================================
+		%> @brief reset strobed word
+		%> 
+		%> @param value of the 15bit strobed word
+		% ===================================================================
+		function open(obj)
+
+		end
+		
 		% ===================================================================
 		%> @brief reset strobed word
 		%> 
@@ -81,10 +92,16 @@ classdef ioManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function type = get.type(obj)
-			if isempty(obj.h)
+			if isempty(obj.io)
 				type = 'undefined';
 			else
-				type = 'present';
+				if isa(obj.io,'plusplusManager')
+					type = 'Display++';
+				elseif isa(obj.io,'dPixxManager')
+					type = 'DataPixx';
+				elseif isa(obj.io,'arduinoManager')
+					type = 'Arduino';
+				end
 			end
 		end
 			
@@ -94,7 +111,7 @@ classdef ioManager < optickaCore
 		% ===================================================================
 		function delete(obj)
 			try
-				close(obj.h);
+				close(obj.io);
 			catch
 				warning('IO Manager Couldn''t close hardware')
 			end

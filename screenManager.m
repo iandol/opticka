@@ -22,7 +22,7 @@ classdef screenManager < optickaCore
 		%> that windowed presentation should never be used for real experimental
 		%> presentation due to poor timing...
 		windowed = false
-		%> true = change the debug parameters for poorer temporal fidelity but no sync testing etc.
+		%> change the debug parameters for poorer temporal fidelity but no sync testing etc.
 		debug logical = false
 		%> true = shows the info text and position grid during stimulus presentation
 		visualDebug logical = false
@@ -34,7 +34,7 @@ classdef screenManager < optickaCore
 		bitDepth char = 'FloatingPoint32BitIfPossible'
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 		timestampingMode double = 1
-		%> multisampling sent to the graphics card, try values []=disabled, 4, 8
+		%> multisampling sent to the graphics card, try values 0[disabled], 4, 8
 		%> and 16 -- useful for textures to minimise aliasing, but this
 		%> does provide extra work for the GPU
 		antiAlias double = 0

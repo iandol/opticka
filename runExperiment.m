@@ -27,18 +27,20 @@ classdef runExperiment < optickaCore
 		task
 		%> screen manager object
 		screen
-		%> use dataPixx for strobed digital I/O
-		useDataPixx logical = false
-		%> use dataPixx for strobed digital I/O
+		%> use Display++ for strobed digital I/O?
 		useDisplayPP logical = false
-		%> use LabJack for strobed digital I/O
+		%> use dataPixx for strobed digital I/O?
+		useDataPixx logical = false
+		%> use LabJack for strobed digital I/O?
 		useLabJackStrobe logical = false
-		%> use LabJack for reward TTL
+		%> use LabJack for reward TTL?
 		useLabJackReward logical = false
-		%> use Arduino for reward TTL
+		%> use Arduino for reward TTL?
 		useArduino logical = false
-		%> use eyelink?
+		%> use Eyelink?
 		useEyeLink logical = false
+		%> use eye occluder for LGN work (custom arduino device)?
+		useEyeOccluder logical = false
 		%> this lets the opticka UI leave commands to runExperiment
 		uiCommand char = ''
 		%> do we flip or not?
@@ -91,6 +93,8 @@ classdef runExperiment < optickaCore
 		stateMachine
 		%> eyelink manager object
 		eyeLink 
+		%> generic IO manager
+		io
 		%> DataPixx control object
 		dPixx 
 		%> Display++ control object
@@ -100,7 +104,7 @@ classdef runExperiment < optickaCore
 		%> Arduino control object
 		ardunioManager 
 		%> state machine control cell array
-		stateInfo = {}
+		stateInfo cell = {}
 		%> general computer info
 		computer
 		%> PTB info
@@ -118,7 +122,7 @@ classdef runExperiment < optickaCore
 		%> info on the current run
 		currentInfo
 		%> previous info populated during load of a saved object
-		previousInfo = struct()
+		previousInfo struct = struct()
 		%> save prefix generated from clock time
 		savePrefix
 	end
@@ -517,34 +521,42 @@ classdef runExperiment < optickaCore
 			initialiseTask(t);
 			
 			%-----try to open eyeOccluder
-			if ~isfield(tS,'eO') || ~isa(tS.eO,'eyeOccluder')
-				tS.eO = eyeOccluder;
-			end
-			if tS.eO.isOpen == true
-				pause(0.1);
-				tS.eO.bothEyesOpen;
-			else
-				tS.eO = [];
-				tS=rmfield(tS,'eO');
+			if obj.useEyeOccluder
+				if ~isfield(tS,'eO') || ~isa(tS.eO,'eyeOccluder')
+					tS.eO = eyeOccluder;
+				end
+				if tS.eO.isOpen == true
+					pause(0.1);
+					tS.eO.bothEyesOpen;
+				else
+					tS.eO = [];
+					tS=rmfield(tS,'eO');
+				end
 			end
 			
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
-			if isa(obj.dPixx,'dPixxManager')
+			if obj.useDisplayPP
+				if ~isa(obj.dPPP,'plusplusManager')
+					obj.dPP = plusplusManager('verbose',obj.verbose);
+				end
+				io = obj.dPP; 
+				io.sM = s;
+				io.name = obj.name;
+				open(io);
+			elseif obj.useDataPixx
+				if ~isa(obj.dPixx,'dPixxManager')
+					obj.dPixx = dPixxManager('verbose',obj.verbose);
+				end
 				io = obj.dPixx; io.name = obj.name;
-			else
-				obj.dPixx = dPixxManager('verbose',obj.verbose,'name',obj.name);
-				io = obj.dPixx;
-			end
-			if obj.useDataPixx
 				io.silentMode = false;
 				io.verbose = obj.verbose;
 				io.name = 'runinstance';
 				open(io);
 			else
+				io = ioManager();
 				io.silentMode = true;
 				io.verbose = false;
 				io.name = 'silentruninstance';
-				open(io);
 			end
 			obj.lJack = labJack('name',obj.name,'readResponse', false,'verbose',obj.verbose);
 			lJ = obj.lJack;
@@ -619,7 +631,7 @@ classdef runExperiment < optickaCore
 				%-----premptive save in case of crash or error SAVE IN /TMP
 				rE = obj;
 				htmp = obj.screenSettings.optickahandle; obj.screenSettings.optickahandle = [];
-            save([tempdir filesep obj.name '.mat'],'rE','tS');
+				save([tempdir filesep obj.name '.mat'],'rE','tS');
 				obj.screenSettings.optickahandle = htmp;
 				
             %-----set up our behavioural plot
@@ -631,7 +643,7 @@ classdef runExperiment < optickaCore
 					rstop(io); %make sure this is set low first
 					sendTTL(io, 7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
 					WaitSecs(0.1);
-            end
+				end
 				
             %-----initialise out various counters
 				t.tick = 1;
@@ -801,7 +813,7 @@ classdef runExperiment < optickaCore
 				end
 				%profile off; profile clear
 				warning('on') %#ok<WNON>
-				if isfield(tS,'eO')
+				if obj.useEyeOccluder && isfield(tS,'eO')
 					close(tS.eO)
 					tS.eO=[];
 				end
@@ -1036,10 +1048,10 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 		function setStrobeValue(obj, value)
-			if obj.useDataPixx == true
-				prepareStrobe(obj.dPixx, value);
-			elseif obj.useDisplayPP == true
+			if obj.useDisplayPP == true
 				prepareStrobe(obj.dPP, value);
+			elseif obj.useDataPixx == true
+				prepareStrobe(obj.dPixx, value);
 			elseif isa(obj.lJack,'labJack') && obj.lJack.isOpen == true
 				prepareStrobe(obj.lJack, value)
 			end
@@ -1436,15 +1448,15 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief infoText - draws text about frame to screen
+		%> @brief infoTextUI - info string
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
 		function t = infoTextUI(obj)
-			t=sprintf('T: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
-				obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-				(obj.runLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
+			t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
+				obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,...
+				obj.task.isBlank,(obj.runLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
 			for i=1:obj.task.nVars
 				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))];
 			end
@@ -1461,7 +1473,9 @@ classdef runExperiment < optickaCore
 				if ~exist('tag','var')
 					tag='#';
 				end
-				fprintf('%s -- B: %i | T: %i [%i] | TT: %i | Tick: %i | Time: %5.8g\n',tag,obj.task.thisBlock,obj.task.thisRun,obj.task.totalRuns,obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
+				fprintf('%s -- B: %i | R: %i [%i/%i] | TT: %i | Tick: %i | Time: %5.8g\n',tag,...
+					obj.task.thisBlock,obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,...
+					obj.task.isBlank,obj.task.tick,obj.task.timeNow-obj.task.startTime);
 			end
 		end
 		

@@ -437,6 +437,11 @@ classdef opticka < optickaCore
 			else
 				obj.r.useEyeLink = false;
 			end
+			if strcmpi(get(obj.h.OKuseEyeOccluder,'Checked'),'on')
+				obj.r.useEyeOccluder = true;
+			else
+				obj.r.useEyeOccluder = false;
+			end
 			
 		end
 		
