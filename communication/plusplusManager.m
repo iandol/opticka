@@ -251,6 +251,25 @@ classdef plusplusManager < optickaCore
 		function shift = get.strobeShift(obj)
 			shift = 2^(obj.strobeLine-1);
 		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function rstart(obj,varargin)
+
+		end
+		
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function rstop(obj,varargin)
+
+		end
 			
 		% ===================================================================
 		%> @brief Delete method, closes DataPixx gracefully

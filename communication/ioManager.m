@@ -46,7 +46,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function open(obj)
+		function open(obj,varargin)
 
 		end
 		
@@ -55,7 +55,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function resetStrobe(obj)
+		function resetStrobe(obj,varargin)
 
 		end
 		
@@ -64,7 +64,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function prepareStrobe(obj)
+		function prepareStrobe(obj,varargin)
 
 		end
 		
@@ -73,16 +73,35 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param value 
 		% ===================================================================
-		function sendStrobe(obj)
+		function sendStrobe(obj,varargin)
 
 		end
 		
 		% ===================================================================
-		%> @brief Prepare and send a TTL
+		%> @brief 
 		%> 
 		%> @param 
 		% ===================================================================
-		function sendTTL(obj)
+		function sendTTL(obj,varargin)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function rstart(obj,varargin)
+
+		end
+		
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function rstop(obj,varargin)
 
 		end
 		

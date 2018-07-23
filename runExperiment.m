@@ -536,7 +536,7 @@ classdef runExperiment < optickaCore
 			
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
 			if obj.useDisplayPP
-				if ~isa(obj.dPPP,'plusplusManager')
+				if ~isa(obj.dPP,'plusplusManager')
 					obj.dPP = plusplusManager('verbose',obj.verbose);
 				end
 				io = obj.dPP; 
@@ -807,6 +807,7 @@ classdef runExperiment < optickaCore
 				end
 				clear rE tL s tS bR lJ eL io sM			
 			catch ME
+				getReport(ME)
 				if obj.useDataPixx
 					rstop(io); %pause plexon
 					close(io); %close io
@@ -824,8 +825,9 @@ classdef runExperiment < optickaCore
 				close(obj.eyeLink);
 				obj.eyeLink = [];
 				obj.behaviouralRecord = [];
-				obj.lJack.close;
+				close(lJ);
 				obj.lJack=[];
+				obj.io = [];
 				clear tL s tS bR lJ eL io sM
 				rethrow(ME)
 			end
