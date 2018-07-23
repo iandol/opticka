@@ -311,7 +311,17 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					obj.thisRun = obj.thisRun + 1;
 				end
 			end
-        end
+		end
+		
+		% ===================================================================
+		%> @brief returns block and run from number of runs
+		%>
+		% ===================================================================
+		function [block, run] = findRun(obj, index)
+			if ~exist('index','var') || isempty(index); index = obj.totalRuns; end
+			block = floor( (index - 1) / obj.minBlocks ) + 1;
+			run = index - (obj.minBlocks * (block - 1));
+		end
 		
         % ===================================================================
 		%> @brief the opposite of updateTask, step back one run
@@ -394,7 +404,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				obj.resetLog(myN).aTrial = aTrial;
 				obj.resetLog(myN).bTrial = bTrial;
 				success = true;
-				obj.salutation(sprintf('Task %i: swap with = %i (random choice=%i)',obj.totalRuns, trialToSwap, randomChoice));
+				obj.salutation(sprintf('Task %i: swap with = %i (random choice=%i)',obj.totalRuns, trialToSwap, randomChoice),[],true);
 			end
 		end
 		

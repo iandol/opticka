@@ -539,24 +539,32 @@ classdef runExperiment < optickaCore
 				if ~isa(obj.dPP,'plusplusManager')
 					obj.dPP = plusplusManager('verbose',obj.verbose);
 				end
-				io = obj.dPP; 
+				io = obj.dPP;  %#ok<*PROP>
 				io.sM = s;
 				io.name = obj.name;
 				open(io);
+				obj.useLabJackStrobe = false;
+				obj.useDataPixx = false;
 			elseif obj.useDataPixx
 				if ~isa(obj.dPixx,'dPixxManager')
 					obj.dPixx = dPixxManager('verbose',obj.verbose);
 				end
 				io = obj.dPixx; io.name = obj.name;
+				obj.stimOFFValue = 2^15;
 				io.silentMode = false;
 				io.verbose = obj.verbose;
 				io.name = 'runinstance';
 				open(io);
+				obj.useLabJackStrobe = false;
+				obj.useDisplayPP = false;
 			else
 				io = ioManager();
 				io.silentMode = true;
 				io.verbose = false;
 				io.name = 'silentruninstance';
+				obj.useDataPixx = false;
+				obj.useLabJackStrobe = false;
+				obj.useDisplayPP = false;
 			end
 			obj.lJack = labJack('name',obj.name,'readResponse', false,'verbose',obj.verbose);
 			lJ = obj.lJack;
@@ -1050,6 +1058,7 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 		function setStrobeValue(obj, value)
+			if value == Inf; value = obj.stimOFFValue; end
 			if obj.useDisplayPP == true
 				prepareStrobe(obj.dPP, value);
 			elseif obj.useDataPixx == true
@@ -1097,9 +1106,8 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 		function updateTaskIndex(obj)
-			if obj.task.totalRuns < obj.task.nRuns
-				obj.task.totalRuns = obj.task.totalRuns + 1;
-			else
+			updateTask(obj.task);
+			if obj.task.totalRuns > obj.task.nRuns
 				obj.currentInfo.stopTraining = true;
 			end
 		end
@@ -1110,12 +1118,18 @@ classdef runExperiment < optickaCore
 		%> 
 		% ===================================================================
 		function trial = getTaskIndex(obj, index)
-			trial = -1;
-			if ~exist('index','var') && isprop(obj.task,'totalRuns')
-				index = obj.task.totalRuns;	
+			if ~exist('index','var') || isempty(index)
+				if isprop(obj.task,'totalRuns')
+					index = obj.task.totalRuns;
+				else
+					index = -1;
+				end
+			end
+			if index > 0
 				trial = obj.task.outIndex(index);
-				fprintf('getTaskIndex: GOT TRIAL NUMBER = %g \n',trial)
-				return
+				if obj.verbose; fprintf('--->>> getTaskIndex run:%i -> trial # = %g \n',index,trial); end
+			else
+				trial = -1;
 			end
 		end
 		
@@ -1129,7 +1143,7 @@ classdef runExperiment < optickaCore
 				update = false;
 			end
 			if update == true
-				updateTaskIndex(obj); %do this before getting index
+				updateTask(obj.task,true,GetSecs); %do this before getting index
 			end
 			if ~exist('index','var') || isempty(index)
 				index = obj.task.totalRuns;
@@ -1141,13 +1155,7 @@ classdef runExperiment < optickaCore
 				setStrobeValue(obj, obj.task.outIndex(index));
 			end
 			if (index > obj.lastIndex) || override == true
-				if rem(index, obj.task.minBlocks) == 0
-					thisBlock = (index / obj.task.minBlocks);
-					thisRun = obj.task.minBlocks;
-				else
-					thisBlock = floor(index / obj.task.minBlocks) + 1;
-					thisRun = mod(index, obj.task.minBlocks);
-				end
+				[thisBlock, thisRun] = obj.task.findRun(index);
 				t = sprintf('Index#%g|Block#%g|Run#%g = ',index,thisBlock,thisRun);
 				for i=1:obj.task.nVars
 					ix = []; valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
@@ -1170,7 +1178,6 @@ classdef runExperiment < optickaCore
 						obj.lastYPosition = value;
 					elseif regexpi(name,'^sizeOut','once')
 						obj.lastSize = value;
-					
 					end
 					
 					offsetix = obj.task.nVar(i).offsetstimulus;
