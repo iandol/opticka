@@ -39,7 +39,7 @@ function rc = eyelinkCallback(callArgs, msg)
 % Cached texture handle for eyelink texture:
 persistent eyelinktex;
 % add by NJ
-global dw dh offscreen lJ;
+global dw dh offscreen rM;
 
 % Cached window handle for target onscreen window:
 persistent eyewin;
@@ -155,15 +155,15 @@ switch eyecmd
 			clearScreen = 1;
 			needsupdate = 1;
 			calxy = [];
-			if isa(lJ,'labJack') %this is why we need lJ to be universal
+			if isa(rM,'labJack') %this is why we need rM to be universal
 				fprintf('--->>> Send labJack REWARD\n')
-				lJ.timedTTL(0,160);
-			elseif isa(lJ,'sendSerial')
-            fprintf('--->>> Send Serial REWARD\n')
-				lJ.timedTTL(2,160)
-			elseif isa(lJ,'arduinoManager')
-            fprintf('--->>> Send Arduino REWARD\n')
-				lJ.timedTTL(2,160)
+				rM.timedTTL(0,160);
+			elseif isa(rM,'sendSerial')
+				fprintf('--->>> Send Serial REWARD\n')
+				rM.timedTTL(2,160)
+			elseif isa(rM,'arduinoManager')
+				fprintf('--->>> Send Arduino REWARD\n')
+				rM.timedTTL(2,160)
 			end
 		end
 		if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end

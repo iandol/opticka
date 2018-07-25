@@ -372,8 +372,8 @@ classdef calibrateLuminance < handle
 				[obj.oldCLUT, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
 				
 				if doPipeline == true
-					PsychColorCorrection('SetEncodingGamma', obj.win, 1/obj.displayGamma);
-					fprintf('LOAD SetEncodingGamma using PsychColorCorrection to: %g\n',1/obj.displayGamma)
+					PsychColorCorrection('SetEncodingGamma', obj.win, 1/obj.displayGamma(1));
+					fprintf('LOAD SetEncodingGamma using PsychColorCorrection to: %g\n',1/obj.displayGamma(1))
 				else
 					fprintf('LOAD GammaTable Model: %i\n',obj.choice)
 					if isprop(obj,'finalCLUT') && ~isempty(obj.finalCLUT)
@@ -533,10 +533,13 @@ classdef calibrateLuminance < handle
 					'Display','iter','MaxIter',1000,...
 					'Upper',3,'Lower',0,'StartPoint',1.5);
 				[fittedmodel, gof, output] = fit(rampNorm',inputValuesNorm',g,fo);
-				obj.displayGamma = fittedmodel.g;
+				obj.displayGamma(loop) = fittedmodel.g;
 				obj.gammaTable{1,loop} = ((([0:1/(obj.tableLength-1):1]'))).^(1/fittedmodel.g);
 
 				obj.modelFit{1,loop}.method = 'Gamma';
+				obj.modelFit{1,loop}.model = fittedmodel;
+				obj.modelFit{1,loop}.g = fittedmodel.g;
+				obj.modelFit{1,loop}.ci = confint(fittedmodel);
 				obj.modelFit{1,loop}.table = fittedmodel([0:1/(obj.tableLength-1):1]');
 				obj.modelFit{1,loop}.gof = gof;
 				obj.modelFit{1,loop}.output = output;
@@ -546,6 +549,7 @@ classdef calibrateLuminance < handle
 					%fo = fitoptions('MaxIter',1000);
 					[fittedmodel,gof,output] = fit(rampNorm',inputValuesNorm', method);
 					obj.modelFit{i+1,loop}.method = method;
+					obj.modelFit{i+1,loop}.model = fittedmodel;
 					obj.modelFit{i+1,loop}.table = fittedmodel([0:1/(obj.tableLength-1):1]');
 					obj.modelFit{i+1,loop}.gof = gof;
 					obj.modelFit{i+1,loop}.output = output;
@@ -695,7 +699,12 @@ classdef calibrateLuminance < handle
 				xlabel('Normalised Luminance Input');
 				ylabel('Normalised Luminance Output');
 				legend(legendtext,'Location','NorthWest');
-				title(sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma));
+				if length(obj.displayGamma) == 1
+					t=sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma(1));
+				else
+					t=sprintf('Gamma model x^{%.2f} | r=^{%.2f} g=^{%.2f} b=^{%.2f}', obj.displayGamma(1),obj.displayGamma(2),obj.displayGamma(3),obj.displayGamma(4));
+				end
+				title(t);
 
 				legendtext={};
 				obj.p(2,1).select();

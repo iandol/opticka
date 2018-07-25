@@ -64,13 +64,12 @@ classdef plusplusManager < optickaCore
 		function open(obj)
 			try
 				ret = BitsPlusPlus('OpenBits#');
-				if isempty(obj.sM) || obj.sM.isOpen == false
-					warning('SCREEN is CLOSED, no commands will work')
+				if ret == 1
 					obj.isAttached = true;
 					obj.silentMode = false;
-				elseif ret == 1
-					obj.isAttached = true;
-					obj.silentMode = false;
+					if isempty(obj.sM) || obj.sM.isOpen == false
+						warning('SCREEN is CLOSED, no commands will work');
+					end
 				else
 					warning('Cannot find Display++, going into Silent mode...')
 					obj.isAttached = true;
@@ -89,7 +88,7 @@ classdef plusplusManager < optickaCore
 		%> @param value 
 		% ===================================================================
 		function sendStrobe(obj, value, mask)
-			if obj.silentMode==true;return;end
+			if obj.silentMode || obj.sM.isOpen == false; return; end
 			if ~exist('value','var') || isempty(value)
 				if ~isempty(obj.sendValue) && obj.sendValue >= 0
 					value = obj.sendValue;
@@ -131,14 +130,21 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value 
 		% ===================================================================
+		function triggerStrobe(obj)
+			sendStrobe(obj);
+		end
+		
+		% ===================================================================
+		%> @brief Prepare and send a strobed word
+		%> 
+		%> @param value 
+		% ===================================================================
 		function sendStrobeAndFlip(obj, value, mask)
-			if obj.silentMode==true;return;end
+			if obj.silentMode || obj.sM.isOpen == false; return; end
+			if isempty(obj.sM) || obj.sM.isOpen == false; return; end
 			if ~exist('mask','var') || isempty(mask); mask = obj.mask; end
-
 			sendStrobe(obj,value,mask);
-			flip(obj.sM);
-			flip(obj.sM);
-			
+			flip(obj.sM); flip(obj.sM);
 			if obj.verbose == true
 				fprintf('===>>> sendStrobeAndFlip VALUE: %i\t| mode: %s\t| mask: %s\n', value, obj.strobeMode, dec2bin(mask));
 			end
@@ -150,7 +156,7 @@ classdef plusplusManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function sendTTL(obj, value, mask)
-			if obj.silentMode==true;return;end
+			if obj.silentMode || obj.sM.isOpen == false; return; end
 			if ~exist('value','var') || isempty(value)
 				warning('No value specified, abort sending TTL')
 				return
@@ -257,10 +263,97 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function rstart(obj,varargin)
-
+		function startRecording(obj,value)
+			if obj.silentMode==true;return;end
+			if strcmpi(obj.strobeMode,'plexon')
+				if ~exist('value','var') || isempty(value);value=500;end
+				sendStrobeAndFlip(obj,value);
+			end
 		end
 		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function resumeRecording(obj,value)
+			if obj.silentMode==true;return;end
+			if strcmpi(obj.strobeMode,'plexon')
+				if ~exist('value','var') || isempty(value);value=501;end
+				sendStrobeAndFlip(obj,value);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function pauseRecording(obj,value)
+			if obj.silentMode==true;return;end
+			if strcmpi(obj.strobeMode,'plexon')
+				if ~exist('value','var') || isempty(value);value=502;end
+				sendStrobeAndFlip(obj,value);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function stopRecording(obj,value)
+			if obj.silentMode==true;return;end
+			if strcmpi(obj.strobeMode,'plexon')
+				if ~exist('value','var') || isempty(value);value=503;end
+				sendStrobeAndFlip(obj,value);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function startFixation(obj)
+			sendStrobe(obj,248); 
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function correct(obj)
+			sendStrobe(obj,251); 
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function incorrect(obj)
+			sendStrobe(obj,252); 
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function breakFixation(obj)
+			sendStrobe(obj,249); 
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function rstart(obj,varargin)
+			resumeRecording(obj);
+		end
 		
 		% ===================================================================
 		%> @brief 
@@ -268,8 +361,10 @@ classdef plusplusManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function rstop(obj,varargin)
-
+			pauseRecording(obj);
 		end
+		
+		
 			
 		% ===================================================================
 		%> @brief Delete method, closes DataPixx gracefully

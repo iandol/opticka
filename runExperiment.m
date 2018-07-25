@@ -39,13 +39,13 @@ classdef runExperiment < optickaCore
 		useArduino logical = false
 		%> use Eyelink?
 		useEyeLink logical = false
-		%> use eye occluder for LGN work (custom arduino device)?
+		%> use eye occluder (custom arduino device) for LGN work ?
 		useEyeOccluder logical = false
 		%> this lets the opticka UI leave commands to runExperiment
 		uiCommand char = ''
 		%> do we flip or not?
 		doFlip logical = true
-		%> log all frame times, gets slow for > 1e6 frames
+		%> log all frame times?
 		logFrames logical = true
 		%> enable debugging? (poorer temporal fidelity)
 		debug logical = false
@@ -83,6 +83,7 @@ classdef runExperiment < optickaCore
 		lastYPosition = 0
 		lastSize = 1
 		lastIndex = 0
+		%> what mode to run the DPP in?
 		dPPMode char = 'plexon'
 	end
 	
@@ -102,7 +103,7 @@ classdef runExperiment < optickaCore
 		%> LabJack control object
 		lJack 
 		%> Arduino control object
-		ardunioManager 
+		arduino 
 		%> state machine control cell array
 		stateInfo cell = {}
 		%> general computer info
@@ -135,7 +136,7 @@ classdef runExperiment < optickaCore
 	events
 		runInfo
 		abortRun
-		endRun
+		endAllRuns
 	end
 	
 	%=======================================================================
@@ -169,7 +170,7 @@ classdef runExperiment < optickaCore
 		%> @param obj required class object
 		% ===================================================================
 		function run(obj)
-			global lJ %eyelink calibration needs access to labjack for reward
+			global rM %eyelink calibration needs access to labjack for reward
 			initialiseSaveFile(obj) %get a sensible default name
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
@@ -193,56 +194,22 @@ classdef runExperiment < optickaCore
 			obj.screenVals = s.open(obj.debug,obj.runLog);
 			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
 
-			%-------Set up Digital I/O for this run...
-			if obj.useDataPixx 
-				if isa(obj.dPixx,'dPixxManager') && ~isempty(obj.dPixx)
-					open(obj.dPixx)
-					io = obj.dPixx;
-				else
-					obj.dPixx = dPixxManager('name','runinstance');
-					open(obj.dPixx)
-					io = obj.dPixx;
-				end
-				obj.useLabJackStrobe = false;
-				obj.useDisplayPP = false;
-				if obj.useEyeLink
-					obj.lJack = labJack('name','runinstance','readResponse', false,'verbose',obj.verbose);
-				end
-			elseif obj.useDisplayPP
-				if isa(obj.dPP,'plusplusManager') && ~isempty(obj.dPP)
-					obj.dPP.sM = s;
-					open(obj.dPP)
-					io = obj.dPP;
-				else
-					obj.dPP = plusplusManager('sM',s,'verbose',true);
-					io = obj.dPP;
-				end
-				obj.useLabJackStrobe = false;
-				obj.useDataPixx = false;
-			elseif obj.useLabJackStrobe
-				obj.lJack = labJack('verbose',false,'openNow',0,'name','null','silentMode',1);
-				io = obj.lJack;
-				obj.useLabJackStrobe = true;
-				obj.useDataPixx = false;
-				obj.useDisplayPP = false;
-			end
-			lJ = obj.lJack;
-
 			%-----------------------------------------------------------
 
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------	
 				
+				%configure IO
+				io = configureIO(obj);
+				
 				%the metastimulus wraps our stimulus cell array
 				obj.stimuli.screen = s;
 				obj.stimuli.verbose = obj.verbose;
 				
-				if obj.useDataPixx
-					io.sendTTL(7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
-				elseif obj.useDisplayPP
-					open(io)
-					%TODO why isn't the plexon responding to strobe value to start/stop?
+				if obj.useDataPixx || obj.useDisplayPP
+					startRecording(io);
+					WaitSecs(0.5);
 				elseif obj.useLabJackStrobe
 					%Trigger the omniplex (TTL on FIO1) into paused mode
 					io.setDIO([2,0,0]);WaitSecs(0.001);io.setDIO([0,0,0]);
@@ -261,7 +228,6 @@ classdef runExperiment < optickaCore
 				
 				setup(obj.stimuli);
 				
-				obj.salutation('Initial variable setup predisplay...')
 				obj.updateVars(1,1); %set the variables for the very first run;
 				
 				KbReleaseWait; %make sure keyboard keys are all released
@@ -269,13 +235,9 @@ classdef runExperiment < optickaCore
 				%bump our priority to maximum allowed
 				Priority(MaxPriority(s.win));
 				
-				%--------------this is RSTART (unpauses Plexon)
-				if obj.useDataPixx 
-					rstart(io);
-				elseif obj.useDisplayPP
-					resetStrobe(io);
-					flip(s);
-					%TODO why isn't the plexon responding to strobe value to start/stop?
+				%--------------unpause Plexon-------------------------
+				if obj.useDataPixx || obj.useDisplayPP
+					resumeRecording(io);
 				elseif obj.useLabJackStrobe
 					io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 				end
@@ -307,11 +269,11 @@ classdef runExperiment < optickaCore
 				tL.vbl(1) = GetSecs;
 				tL.startTime = tL.vbl(1);
 				
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%==================================================================%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				% Our main display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%==================================================================%
 				while obj.task.thisBlock <= obj.task.nBlocks
 					if obj.task.isBlank == true
 						if s.photoDiode == true
@@ -328,29 +290,29 @@ classdef runExperiment < optickaCore
 					end
 					if s.visualDebug == true
 						s.drawGrid;
-						obj.infoText;
+						obj.infoTextScreen;
 					end
 					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
 					if obj.task.isBlank == true
-						[~, ~, buttons]=GetMouse(s.screen);
-						if buttons(2)==1;notify(obj,'abortRun');break;end %break on mouse click 2, needs to change
 						if strcmpi(obj.uiCommand,'stop');break;end
+						[~,~,kc] = KbCheck(-1);
+						if strcmpi(KbName(kc),'q');notify(obj,'abortRun');break;end
 					end
 					
-					%check eye position
+					%============== Get eye position==================%
 					if obj.useEyeLink; getSample(obj.eyeLink); end
 					
-					updateTask(obj); %update our task structure
+					%================= UPDATE TASK ===================%
+					updateMOCTask(obj); %update our task structure
 					
-					if obj.useDisplayPP && obj.sendStrobe
-						sendStrobe(io);
-						obj.sendStrobe = false;
-					elseif obj.useDataPixx && obj.sendStrobe
-						triggerStrobe(io); %send our word; datapixx syncs to next vertical trace
+					%============== Send Strobe =======================%
+					if (obj.useDisplayPP || obj.useDataPixx) && obj.sendStrobe
+						triggerStrobe(io);
 						obj.sendStrobe = false;
 					end
+					
 					%======= FLIP: Show it at correct retrace: ========%
 					nextvbl = tL.vbl(end) + obj.screenVals.halfisi;
 					if obj.logFrames == true
@@ -360,18 +322,13 @@ classdef runExperiment < optickaCore
 					else
 						tL.vbl = Screen('Flip', s.win, nextvbl);
 					end
-					%==================================================%
-					if obj.useLabJackStrobe && obj.sendStrobe
-						obj.lJack.strobeWord; %send our word out to the LabJack
-						obj.sendStrobe = false;
-					end
 					
+					%===================Logging=======================%
 					if obj.task.tick == 1
 						if obj.benchmark == false
 							tL.startTime=tL.vbl(1); %respecify this with actual stimulus vbl
 						end
 					end
-					
 					if obj.logFrames == true
 						if obj.task.isBlank == false
 							tL.stimTime(obj.task.tick)=1+obj.task.switched;
@@ -379,27 +336,29 @@ classdef runExperiment < optickaCore
 							tL.stimTime(obj.task.tick)=0-obj.task.switched;
 						end
 					end
-					
 					if (s.movieSettings.loop <= s.movieSettings.nFrames) && obj.task.isBlank == false
 						s.addMovieFrame();
 					end
 					
+					%===================Tick tock!=======================%
 					obj.task.tick=obj.task.tick+1;
 					
 				end
-				%=================================================Finished display loop
+				%==================================================================%
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				% Finished display loop
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				%==================================================================%
 				
 				s.drawBackground;
 				vbl=Screen('Flip', s.win);
 				tL.screenLog.afterDisplay=vbl;
-				if obj.useDataPixx
-					io.rstop();
-				elseif obj.useDisplayPP
-					%
+				if obj.useDataPixx || obj.useDisplayPP
+					pauseRecording(io);
 				elseif obj.useLabJackStrobe
 					io.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				end
-				notify(obj,'endRun');
+				notify(obj,'endAllRuns');
 				
 				tL.screenLog.deltaDispay=tL.screenLog.afterDisplay - tL.screenLog.beforeDisplay;
 				tL.screenLog.deltaUntilDisplay=tL.startTime - tL.screenLog.beforeDisplay;
@@ -422,11 +381,9 @@ classdef runExperiment < optickaCore
 				
 				s.close();
 				
-				if obj.useDataPixx
-					io.sendTTL(7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
+				if obj.useDataPixx || obj.useDisplayPP
+					stopRecording(io);
 					close(io);
-				elseif obj.useDisplayPP
-					%
 				elseif obj.useLabJackStrobe
 					obj.lJack.setDIO([2,0,0]);WaitSecs(0.05);obj.lJack.setDIO([0,0,0]); %we stop recording mode completely
 					obj.lJack.close;
@@ -441,31 +398,29 @@ classdef runExperiment < optickaCore
 				s.playMovie();
 				
 			catch ME
-				if obj.useEyeLink
-					close(obj.eyeLink);
-					obj.eyeLink = [];
+				fprintf('\n---!!! ERROR in runExperiment.run()\n');
+				getReport(ME)
+				if obj.useDataPixx || obj.useDisplayPP
+					pauseRecording(io); %pause plexon
+					WaitSecs(0.25)
+					stopRecording(io);
+					close(io);
 				end
-				if isa(obj.dPixx,'dPixxManager') && obj.dPixx.isOpen
-					close(obj.dPixx)
-				end
-				if ~isempty(obj.lJack) && isa(obj.lJack,'labJack')
-					obj.lJack.setDIO([0,0,0]);
-					obj.lJack.close;
-					obj.lJack=[];
-				end
-				
-				s.resetScreenGamma();
-				
-				s.finaliseMovie(true);
-				
-				s.close();
-
-				rethrow(ME)
-				
-			end
-			
-			if obj.verbose==1
-				tL.printRunLog;
+				%profile off; profile clear
+				warning('on') %#ok<WNON>
+				Priority(0);
+				ListenChar(0);
+				ShowCursor;
+				resetScreenGamma(s);
+				close(s);
+				close(obj.eyeLink);
+				obj.eyeLink = [];
+				obj.behaviouralRecord = [];
+				close(rM);
+				obj.lJack=[];
+				obj.io = [];
+				clear tL s tS bR rM eL io sM
+				rethrow(ME)	
 			end
 		end
 	
@@ -475,7 +430,7 @@ classdef runExperiment < optickaCore
 		%> @param obj required class object
 		% ===================================================================
 		function runTask(obj)
-			global lJ %eyelink calibration needs access to labjack for reward
+			global rM %eyelink calibration needs access for reward
 			global tS %tS is our simple settings structure
 			if isempty(regexpi(obj.comment, '^Protocol','once'))
 				obj.comment = '';
@@ -534,40 +489,7 @@ classdef runExperiment < optickaCore
 				end
 			end
 			
-			%-------Set up Digital I/O (dPixx and labjack) for this task run...
-			if obj.useDisplayPP
-				if ~isa(obj.dPP,'plusplusManager')
-					obj.dPP = plusplusManager('verbose',obj.verbose);
-				end
-				io = obj.dPP;  %#ok<*PROP>
-				io.sM = s;
-				io.name = obj.name;
-				open(io);
-				obj.useLabJackStrobe = false;
-				obj.useDataPixx = false;
-			elseif obj.useDataPixx
-				if ~isa(obj.dPixx,'dPixxManager')
-					obj.dPixx = dPixxManager('verbose',obj.verbose);
-				end
-				io = obj.dPixx; io.name = obj.name;
-				obj.stimOFFValue = 2^15;
-				io.silentMode = false;
-				io.verbose = obj.verbose;
-				io.name = 'runinstance';
-				open(io);
-				obj.useLabJackStrobe = false;
-				obj.useDisplayPP = false;
-			else
-				io = ioManager();
-				io.silentMode = true;
-				io.verbose = false;
-				io.name = 'silentruninstance';
-				obj.useDataPixx = false;
-				obj.useLabJackStrobe = false;
-				obj.useDisplayPP = false;
-			end
-			obj.lJack = labJack('name',obj.name,'readResponse', false,'verbose',obj.verbose);
-			lJ = obj.lJack;
+			configureIO(obj);
 			
 			%-----------------------------------------------------------
 			try %-----This is our main TRY CATCH experiment display loop
@@ -646,11 +568,11 @@ classdef runExperiment < optickaCore
 				createPlot(bR, eL);
 				drawnow;
 				
-            %-----set up the datapixx, put it into paused mode
-				if obj.useDataPixx
+            %-----Start Plexon in paused mode
+				if obj.useDisplayPP || obj.useDataPixx
 					rstop(io); %make sure this is set low first
-					sendTTL(io, 7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
-					WaitSecs(0.1);
+					startRecording(io);
+					WaitSecs(0.5);
 				end
 				
             %-----initialise out various counters
@@ -737,7 +659,7 @@ classdef runExperiment < optickaCore
 					end
 					
 					%------Tell DataPixx to send strobe on next screen flip
-					if obj.useDataPixx && obj.sendStrobe						
+					if (obj.useDataPixx || obj.useDisplayPP) && obj.sendStrobe						
 						triggerStrobe(io); %send our word; datapixx syncs to next vertical trace
 						obj.sendStrobe = false;
 					end
@@ -769,14 +691,14 @@ classdef runExperiment < optickaCore
 				ListenChar(0);
 				fprintf('\n===>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
 				
-				if obj.useDataPixx
-					rstop(io); %pause plexon
-					WaitSecs(0.1)
-					sendTTL(io, 7); % we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
+				if obj.useDataPixx || obj.useDisplayPP
+					pauseRecording(io); %pause plexon
+					WaitSecs(0.25)
+					stopRecording(io);
 					close(io);
 				end
 				
-				notify(obj,'endRun');
+				notify(obj,'endAllRuns');
 				
 				%profile off; profile report; profile clear
 				ShowCursor;
@@ -789,7 +711,7 @@ classdef runExperiment < optickaCore
 				
 				close(s); %screen
 				close(eL); obj.eyeLink = []; %eyelink, should save the EDF for us we've already given it our name and folder
-				close(lJ); obj.lJack=[]; %labjack
+				close(rM); obj.lJack=[]; %labjack
 				
 				if tS.askForComments
 					comment = inputdlg('Final Comment for this Run?','Run Comment');
@@ -813,12 +735,14 @@ classdef runExperiment < optickaCore
 					save([obj.paths.savedData filesep obj.name '.mat'],'rE','bR','tL','tS','sM');
                warning('on')
 				end
-				clear rE tL s tS bR lJ eL io sM			
+				clear rE tL s tS bR rM eL io sM			
 			catch ME
 				getReport(ME)
-				if obj.useDataPixx
-					rstop(io); %pause plexon
-					close(io); %close io
+				if obj.useDataPixx || obj.useDisplayPP
+					pauseRecording(io); %pause plexon
+					WaitSecs(0.25)
+					stopRecording(io);
+					close(io);
 				end
 				%profile off; profile clear
 				warning('on') %#ok<WNON>
@@ -833,10 +757,10 @@ classdef runExperiment < optickaCore
 				close(obj.eyeLink);
 				obj.eyeLink = [];
 				obj.behaviouralRecord = [];
-				close(lJ);
+				close(rM);
 				obj.lJack=[];
 				obj.io = [];
-				clear tL s tS bR lJ eL io sM
+				clear tL s tS bR rM eL io sM
 				rethrow(ME)
 			end
 
@@ -1151,7 +1075,7 @@ classdef runExperiment < optickaCore
 			if ~exist('override','var') || isempty(override)
 				override = false;
 			end
-			if obj.useDataPixx == true
+			if obj.useDataPixx || obj.useDisplayPP
 				setStrobeValue(obj, obj.task.outIndex(index));
 			end
 			if (index > obj.lastIndex) || override == true
@@ -1246,6 +1170,60 @@ classdef runExperiment < optickaCore
 	%=======================================================================
 		
 		% ===================================================================
+		%> @brief configureIO
+		%> Configures the IO devices.
+		%> @param
+		% ===================================================================
+		function io = configureIO(obj)
+			global rM
+			%-------Set up Digital I/O (dPixx and labjack) for this task run...
+			if obj.useDisplayPP
+				if ~isa(obj.dPP,'plusplusManager')
+					obj.dPP = plusplusManager();
+				end
+				io = obj.dPP;  %#ok<*PROP>
+				io.sM = obj.screen;
+				io.strobeMode = obj.dPPMode;
+				obj.stimOFFValue = 255;
+				io.name = obj.name;
+				io.verbose = true;
+				io.name = 'runinstance';
+				open(io);
+				obj.useLabJackStrobe = false;
+				obj.useDataPixx = false;
+			elseif obj.useDataPixx
+				if ~isa(obj.dPixx,'dPixxManager')
+					obj.dPixx = dPixxManager('verbose',obj.verbose);
+				end
+				io = obj.dPixx; io.name = obj.name;
+				io.stimOFFValue = 2^15;
+				io.silentMode = false;
+				io.verbose = obj.verbose;
+				io.name = 'runinstance';
+				open(io);
+				obj.useLabJackStrobe = false;
+				obj.useDisplayPP = false;
+			else
+				io = ioManager();
+				io.silentMode = true;
+				io.verbose = false;
+				io.name = 'silentruninstance';
+				obj.useDataPixx = false;
+				obj.useLabJackStrobe = false;
+				obj.useDisplayPP = false;
+			end
+			if obj.useArduino
+				obj.arduino = arduinoManager('port',ana.arduinoPort);
+				rM = obj.arduino;
+			elseif obj.useLabJackReward
+				obj.lJack = labJack('name',obj.name,'readResponse', false,'verbose',obj.verbose);
+				rM = obj.lJack;
+			else
+				rM = [];
+			end
+		end
+		
+		% ===================================================================
 		%> @brief InitialiseTask
 		%> Sets up the task structure with dynamic properties
 		%> @param
@@ -1306,20 +1284,21 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief updateTask
+		%> @brief updateMOCTask
 		%> Updates the stimulus run state; update the stimulus values for the
 		%> current trial and increments the switchTime and switchTick timer
 		% ===================================================================
-		function updateTask(obj)
+		function updateMOCTask(obj)
 			obj.task.timeNow = GetSecs;
 			obj.sendStrobe = false;
-			if obj.task.tick==1 %first frame
-				obj.task.thisRun = 1; obj.task.totalRuns = 1;
+			
+			%--------------first run-----------------
+			if obj.task.tick==1 
 				obj.task.isBlank = false;
 				obj.task.startTime = obj.task.timeNow;
 				obj.task.switchTime = obj.task.trialTime; %first ever time is for the first trial
 				obj.task.switchTick = obj.task.trialTime*ceil(obj.screenVals.fps);
-				setStrobeValue(obj,obj.task.outIndex(obj.task.thisRun));
+				setStrobeValue(obj,obj.task.outIndex(obj.task.totalRuns));
 				obj.sendStrobe = true;
 			end
 			
@@ -1345,13 +1324,14 @@ classdef runExperiment < optickaCore
 % 						obj.stimuli{i}.animate;
 % 					end
 					animate(obj.stimuli);
-					%if obj.verbose==true;fprintf('=-> updateTask() Stimuli animation: %g ms\n',toc*1000);end
+					%if obj.verbose==true;fprintf('=-> updateMOCTask() Stimuli animation: %g ms\n',toc*1000);end
 					
 				else %this is a blank stimulus
 					obj.task.blankTick = obj.task.blankTick + 1;
 					%this causes the update of the stimuli, which may take more than one refresh, to
 					%occur during the second blank flip, thus we don't lose any timing.
 					if obj.task.blankTick == 2
+						fprintf('@%s\n',infoText(obj));
 						obj.task.doUpdate = true;
 					end
 					% because the update happens before the flip, but the drawing of the update happens
@@ -1378,7 +1358,7 @@ classdef runExperiment < optickaCore
 					if obj.task.blankTick > 2 && obj.task.blankTick <= obj.stimuli.n + 2
 						%if obj.verbose==true;tic;end
 						update(obj.stimuli, obj.task.blankTick-2);
-						%if obj.verbose==true;fprintf('=-> updateTask() Blank-frame %i: stimulus %i update = %g ms\n',obj.task.blankTick,obj.task.blankTick-2,toc*1000);end
+						%if obj.verbose==true;fprintf('=-> updateMOCTask() Blank-frame %i: stimulus %i update = %g ms\n',obj.task.blankTick,obj.task.blankTick-2,toc*1000);end
 					end
 					
 				end
@@ -1388,7 +1368,7 @@ classdef runExperiment < optickaCore
 			else %need to switch to next trial or blank
 				obj.task.switched = true;
 				if obj.task.isBlank == false %we come from showing a stimulus
-					%obj.logMe('IntoBlank');
+					obj.logMe('IntoBlank');
 					obj.task.isBlank = true;
 					obj.task.blankTick = 0;
 					
@@ -1401,50 +1381,48 @@ classdef runExperiment < optickaCore
 					end
 					
 					setStrobeValue(obj,obj.stimOFFValue);%get the strobe word to signify stimulus OFF ready
-					%obj.logMe('OutaBlank');
+					obj.logMe('OutaBlank');
 					
 				else %we have to show the new run on the next flip
-
-					%obj.logMe('IntoTrial');
-					if obj.task.thisBlock <= obj.task.nBlocks
-						obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
-						obj.task.switchTick=obj.task.switchTick+(obj.task.trialTime*round(obj.screenVals.fps)); %update our timer
-						obj.task.isBlank = false;
-						obj.task.totalRuns = obj.task.totalRuns + 1;
-						if ~mod(obj.task.thisRun,obj.task.minBlocks) %are we rolling over into a new trial?
-							obj.task.thisBlock=obj.task.thisBlock+1;
-							obj.task.thisRun = 1;
-						else
-							obj.task.thisRun = obj.task.thisRun + 1;
-						end
-						if obj.task.totalRuns <= length(obj.task.outIndex)
-							setStrobeValue(obj,obj.task.outIndex(obj.task.thisRun)); %get the strobe word ready
-						else
-							
-						end
-					else
-						obj.task.thisBlock = obj.task.nBlocks + 1;
+					obj.logMe('IntoTrial');
+					obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
+					obj.task.switchTick=obj.task.switchTick+(obj.task.trialTime*round(obj.screenVals.fps)); %update our timer
+					obj.task.isBlank = false;
+					updateTask(obj.task);
+					if obj.task.totalRuns <= obj.task.nRuns
+						setStrobeValue(obj,obj.task.outIndex(obj.task.totalRuns)); %get the strobe word ready
 					end
-					%obj.logMe('OutaTrial');
+					obj.logMe('OutaTrial');
 				end
 			end
 		end
 		
 		% ===================================================================
-		%> @brief infoText - draws text about frame to screen
+		%> @brief infoTextScreen - draws text about frame to screen
 		%>
 		%> @param
 		%> @return
 		% ===================================================================
-		function infoText(obj)
+		function infoTextScreen(obj)
+			t=infoText();
+			Screen('DrawText',obj.screen.win,t,50,1,[1 1 1 1],[0 0 0 1]);
+		end
+		
+		% ===================================================================
+		%> @brief infoText - info string
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function t = infoText(obj)
 			if obj.logFrames == true && obj.task.tick > 1
-				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
+				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i',obj.task.thisBlock,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-					(obj.runLog.vbl(obj.task.tick-1)-obj.runLog.startTime),obj.task.tick);
+					(obj.runLog.vbl(obj.task.tick-1)-obj.runLog.startTime),obj.task.tick,obj.task.outIndex(obj.task.totalRuns));
 			else
-				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
+				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i',obj.task.thisBlock,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-					(obj.runLog.vbl-obj.runLog.startTime),obj.task.tick);
+					(obj.runLog.vbl-obj.runLog.startTime),obj.task.tick,obj.task.outIndex(obj.task.totalRuns));
 			end
 			for i=1:obj.task.nVars
 				if iscell(obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))
@@ -1452,22 +1430,6 @@ classdef runExperiment < optickaCore
 				else
 					t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))];
 				end
-			end
-			Screen('DrawText',obj.screen.win,t,50,1,[1 1 1 1],[0 0 0 1]);
-		end
-		
-		% ===================================================================
-		%> @brief infoTextUI - info string
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function t = infoTextUI(obj)
-			t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i)',obj.task.thisBlock,...
-				obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,...
-				obj.task.isBlank,(obj.runLog.vbl(obj.task.tick)-obj.task.startTime),obj.task.tick);
-			for i=1:obj.task.nVars
-				t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))];
 			end
 		end
 		

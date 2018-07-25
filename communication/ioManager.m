@@ -64,6 +64,15 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
+		function triggerStrobe(obj,varargin)
+
+		end
+		
+		% ===================================================================
+		%> @brief Prepare and send a strobed word
+		%> 
+		%> @param value of the 15bit strobed word
+		% ===================================================================
 		function prepareStrobe(obj,varargin)
 
 		end
@@ -83,6 +92,42 @@ classdef ioManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function sendTTL(obj,varargin)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function startRecording(obj,value)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function resumeRecording(obj,value)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function pauseRecording(obj,value)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function stopRecording(obj,value)
 
 		end
 		

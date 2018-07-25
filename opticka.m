@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '1.102'
+		optickaVersion char = '1.103'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -66,7 +66,7 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Route calls to private methods (yeah, I know...)
+		%> @brief Route calls to private methods
 		%>
 		%> @param in switch to route to correct method.
 		%> @param vars additional vars to pass.
@@ -76,6 +76,8 @@ classdef opticka < optickaCore
 				vars=[];
 			end
 			switch in
+				case 'saveData'
+					obj.saveData();
 				case 'saveProtocol'
 					obj.saveProtocol();
 				case 'loadProtocol'
@@ -301,7 +303,7 @@ classdef opticka < optickaCore
 				obj.loadCalibration();
 				obj.refreshProtocolsList();
 				addlistener(obj.r,'abortRun',@obj.abortRunEvent);
-				addlistener(obj.r,'endRun',@obj.endRunEvent);
+				addlistener(obj.r,'endAllRuns',@obj.endRunEvent);
 				addlistener(obj.r,'runInfo',@obj.runInfoEvent);
 				
 				if exist([obj.paths.protocols filesep 'DefaultStateInfo.m'],'file')
@@ -900,6 +902,33 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief Save Data
+		%> Save Data
+		%> @param 
+		% ===================================================================
+		function saveData(obj)
+			obj.paths.currentPath = pwd;
+			cd(obj.paths.savedData);
+			[f,p] = uiputfile('*.mat','Save Last Run Data','Data.mat');
+			if f ~= 0
+				cd(p);
+				data = clone(obj);
+				data.r.paths.stateInfoFile = obj.r.paths.stateInfoFile;
+				data.h = struct(); %remove the handles to the UI which will not be valid on reload
+				if isfield(data.r.screenSettings,'optickahandle'); data.r.screenSettings.optickahandle = []; end %!!!this fixes matlab bug 01255186
+				for i = 1:data.r.stimuli.n
+					cleanHandles(data.r.stimuli{i}); %just in case!
+				end
+				save(f,'data'); %this is the original code -- MAT CRASH on load, it is the same if i save obj directly or the cloned variant tmp
+				obj.refreshStimulusList;
+				obj.refreshVariableList;
+				obj.refreshProtocolsList;
+				clear data f p
+			end
+			cd(obj.paths.currentPath);
+		end
+		
+		% ===================================================================
 		%> @brief Load State Info 
 		%> Save Protocol
 		%> @param 
@@ -995,19 +1024,29 @@ classdef opticka < optickaCore
 						end							
 						obj.getStateInfo();
 					end
+					
+					if isprop(tmp.r,'drawFixation');obj.r.drawFixation=tmp.r.drawFixation;obj.h.OKdrawFixation.Value=obj.r.drawFixation;end
+					if isprop(tmp.r,'dPPMode'); obj.r.dPPMode = tmp.r.dPPMode; obj.h.OKdPPMode.String=obj.r.dPPMode;end
+					if isprop(tmp.r,'subjectName');obj.r.subjectName = tmp.r.subjectName;obj.h.OKTrainingName.String = obj.r.subjectName;end
+					if isprop(tmp.r,'researcherName');obj.r.researcherName = tmp.r.researcherName;obj.h.OKTrainingResearcherName.String=obj.r.researcherName;end
+					
+					set(obj.h.OKTrainingResearcherName, 'String', obj.r.researcherName);
+					
 					obj.h.OKuseLabJackStrobe.Checked = 'off';
 					obj.h.OKuseDataPixx.Checked = 'off';
 					obj.h.OKuseDisplayPP.Checked = 'off';
 					obj.h.OKuseEyeLink.Checked = 'off';
-					
-					if isprop(tmp.r,'useLabJackStrobe'); obj.r.useLabJackStrobe = tmp.r.useLabJackStrobe;end
-					if obj.r.useLabJackStrobe == true; obj.h.OKuseLabJackStrobe.Checked = 'on'; end
+					obj.h.OKuseLabJackReward.Checked = 'off';
+					obj.h.OKuseArduino.Checked = 'off';
 					
 					if isprop(tmp.r,'useDisplayPP'); obj.r.useDisplayPP = tmp.r.useDisplayPP; end
 					if obj.r.useDisplayPP == true; obj.h.OKuseDisplayPP.Checked = 'on'; end
 					
 					if isprop(tmp.r,'useDataPixx'); obj.r.useDataPixx = tmp.r.useDataPixx; end
 					if obj.r.useDataPixx == true; obj.h.OKuseDataPixx.Checked = 'on'; end
+					
+					if isprop(tmp.r,'useArduino'); obj.r.useArduino = tmp.r.useArduino; end
+					if obj.r.useArduino == true; obj.h.OKuseArduino.Checked = 'on'; end
 					
 					if isprop(tmp.r,'useEyeLink'); obj.r.useEyeLink = tmp.r.useEyeLink; end
 					if obj.r.useEyeLink == true; obj.h.OKuseEyeLink.Checked = 'on'; end
@@ -1095,7 +1134,7 @@ classdef opticka < optickaCore
 			end
 			obj.refreshProtocolsList;
 			o = getappdata(obj.h.output,'o');
-			salutation(obj,sprintf('GUI routed from %s to %s\n',o.fullName,obj.fullName));
+			salutation(obj,sprintf('GUI routed from %s to %s\n',o.fullName,obj.fullName),[],true);
 			setappdata(obj.h.output,'o',obj)
 		end
 		

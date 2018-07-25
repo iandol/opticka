@@ -149,6 +149,84 @@ classdef dPixxManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function startRecording(obj,value)
+			if obj.silentMode==true;return;end
+			sendTTL(obj, 7); %we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function resumeRecording(obj,value)
+			if obj.silentMode==true;return;end
+			rstart(obj);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function pauseRecording(obj,value)
+			if obj.silentMode==true;return;end
+			rstop(obj); %pause plexon
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function stopRecording(obj,value)
+			if obj.silentMode==true;return;end
+			sendTTL(obj, 7); % we are using dataPixx bit 7 > plexon evt23 to toggle start/stop
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function startFixation(obj)
+			sendTTL(obj,3); %send TTL on line 3 (pin 19)
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function correct(obj)
+			sendTTL(obj,4);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function incorrect(obj)
+			sendTTL(obj,6);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function breakFixation(obj)
+			sendTTL(obj,5);
+		end
+		
+		
+		
+		% ===================================================================
 		%> @brief Send TTL
 		%> 
 		%> @param line 1-8 (pins 17-24) are available on dataPixx only!

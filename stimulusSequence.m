@@ -291,25 +291,22 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		function updateTask(obj, thisResponse, runTime, info)
 			if obj.taskInitialised
 				if obj.totalRuns > obj.nRuns
-					obj.salutation('Task FINISHED, no more updates allowed');
+					fprintf('---> stimulusSequence.updateTask: Task FINISHED, no more updates allowed\n');
 					return
 				end
-				if ~exist('thisResponse','var'); thisResponse = NaN; end
-				if ~exist('runTime','var') || isempty(runTime); runTime = GetSecs; end
-				if ~exist('info','var'); info = 'none'; end
-				obj.response(obj.totalRuns) = thisResponse;
-				obj.responseInfo{obj.totalRuns} = info;
-				obj.runTimeList(obj.totalRuns) = runTime - obj.startTime;
+				if nargin > 1
+					if isempty(thisResponse); thisResponse = NaN; end
+					if ~exist('runTime','var') || isempty(runTime); runTime = GetSecs; end
+					if ~exist('info','var') || isempty(info); info = 'none'; end
+					obj.response(obj.totalRuns) = thisResponse;
+					obj.responseInfo{obj.totalRuns} = info;
+					obj.runTimeList(obj.totalRuns) = runTime - obj.startTime;
+				end
 				
 				if obj.verbose;obj.salutation(sprintf('Task Run %i: response = %.2g @ %.2g secs',obj.totalRuns, thisResponse, obj.runTimeList(obj.totalRuns)));end
-				
+			
 				obj.totalRuns = obj.totalRuns + 1;
-				if obj.thisRun > obj.minBlocks * obj.thisBlock
-					obj.thisBlock = obj.thisBlock + 1;
-					obj.thisRun = 1;
-				else
-					obj.thisRun = obj.thisRun + 1;
-				end
+				[obj.thisBlock, obj.thisRun] = findRun(obj);
 			end
 		end
 		
