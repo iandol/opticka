@@ -77,13 +77,13 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> have we initialised the dynamic task properties?
-		taskInitialised = false
+		taskInitialised logical = false
 		%> cache value for nVars
 		nVars_
 		%> handles from obj.showLog
 		h
 		%> properties allowed during initial construction
-		allowedProperties='randomise|nVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'
+		allowedProperties char ='randomise|nVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'
 		%> used to handle problems with dependant property nVar: the problem is
 		%> that set.nVar gets called before static loadobj, and therefore we need
 		%> to handle this differently. Initially set to empty, set to true when
@@ -91,14 +91,19 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		isLoading = []
 		%> properties used by loadobj when a structure is passed during load.
 		%> this stops loading old randstreams etc.
-		loadProperties = {'randomise','nVar','nBlocks','trialTime','isTime','ibTime','isStimulus','verbose',...
+		loadProperties cell = {'randomise','nVar','nBlocks','trialTime','isTime','ibTime','isStimulus','verbose',...
 			'realTime','randomSeed','randomGenerator','nSegments','nSegment','outValues','outVars', ...
             'outIndex', 'outMap', 'minBlocks','states','nState','name'}
 		%> nVar template and default values
-		varTemplate = struct('name','','stimulus',[],'values',[],'offsetstimulus',[],'offsetvalue',[])
+		varTemplate struct = struct('name','','stimulus',[],'values',[],'offsetstimulus',[],'offsetvalue',[])
 		%Set up the task structures needed
-		taskProperties = {'response',[],'responseInfo',{},'tick',0,'blankTick',0,'thisRun',1,...
-			'thisBlock',1,'totalRuns',1,'isBlank',false,...
+		taskProperties cell = {'response',[],'responseInfo',{},'tick',0,'blankTick',0,'thisRun',1,...
+			'thisBlock',1,'totalRuns',1,'isBlank',false,'isTimeNow',1,'ibTimeNow',1,...
+			'switched',false,'strobeThisFrame',false,'doUpdate',false,'startTime',0,'switchTime',0,...
+			'switchTick',0,'timeNow',0,'runTimeList',[],'stimIsDrifting',[],'stimIsMoving',[],...
+			'stimIsDots',[],'stimIsFlashing',[]}
+		tProp cell = {'response',[],'responseInfo',{},'tick',0,'blankTick',0,'thisRun',1,...
+			'thisBlock',1,'totalRuns',1,'isBlank',false,'isTimeNow',1,'ibTimeNow',1,...
 			'switched',false,'strobeThisFrame',false,'doUpdate',false,'startTime',0,'switchTime',0,...
 			'switchTick',0,'timeNow',0,'runTimeList',[],'stimIsDrifting',[],'stimIsMoving',[],...
 			'stimIsDots',[],'stimIsFlashing',[]}
@@ -275,13 +280,15 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		% ===================================================================
 		function initialiseTask(obj)
 			resetTask(obj);
-			for i = 1:2:length(obj.taskProperties)
-				if isempty(obj.findprop(obj.taskProperties{i}))
-					p = obj.addprop(obj.taskProperties{i}); %add new dynamic property
+			t = obj.tProp;
+			for i = 1:2:length(t)
+				if isempty(obj.findprop(t{i}))
+					p = obj.addprop(t{i}); %add new dynamic property
 				end
-				obj.(obj.taskProperties{i}) = obj.taskProperties{i+1}; %#ok<*MCNPR>
+				obj.(t{i}) = t{i+1}; %#ok<*MCNPR>
 			end
 			obj.taskInitialised = true;
+			randomiseTimes(obj);
 		end
 		
 		% ===================================================================
@@ -289,24 +296,29 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function updateTask(obj, thisResponse, runTime, info)
-			if obj.taskInitialised
-				if obj.totalRuns > obj.nRuns
-					fprintf('---> stimulusSequence.updateTask: Task FINISHED, no more updates allowed\n');
-					return
+			if ~obj.taskInitialised; return; end
+			if obj.totalRuns > obj.nRuns
+				fprintf('---> stimulusSequence.updateTask: Task FINISHED, no more updates allowed\n');
+				return
+			end
+
+			if nargin > 1
+				if isempty(thisResponse); thisResponse = NaN; end
+				if ~exist('runTime','var') || isempty(runTime); runTime = GetSecs; end
+				if ~exist('info','var') || isempty(info); info = 'none'; end
+				obj.response(obj.totalRuns) = thisResponse;
+				obj.responseInfo{obj.totalRuns} = info;
+				obj.runTimeList(obj.totalRuns) = runTime - obj.startTime;
+				if obj.verbose
+					obj.salutation(sprintf('Task Run %i: response = %.2g @ %.2g secs',...
+						obj.totalRuns, thisResponse, obj.runTimeList(obj.totalRuns)));
 				end
-				if nargin > 1
-					if isempty(thisResponse); thisResponse = NaN; end
-					if ~exist('runTime','var') || isempty(runTime); runTime = GetSecs; end
-					if ~exist('info','var') || isempty(info); info = 'none'; end
-					obj.response(obj.totalRuns) = thisResponse;
-					obj.responseInfo{obj.totalRuns} = info;
-					obj.runTimeList(obj.totalRuns) = runTime - obj.startTime;
-				end
-				
-				if obj.verbose;obj.salutation(sprintf('Task Run %i: response = %.2g @ %.2g secs',obj.totalRuns, thisResponse, obj.runTimeList(obj.totalRuns)));end
-			
+			end
+
+			if obj.totalRuns < obj.nRuns
 				obj.totalRuns = obj.totalRuns + 1;
 				[obj.thisBlock, obj.thisRun] = findRun(obj);
+				randomiseTimes(obj);
 			end
 		end
 		
@@ -619,14 +631,34 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> 
 		% ===================================================================
 		function resetTask(obj)
-			for i = 1:2:length(obj.taskProperties)
-				p = obj.findprop(obj.taskProperties{i});
+			t = obj.tProp;
+			for i = 1:2:length(t)
+				p = obj.findprop(t{i});
 				if ~isempty(p)
 					delete(p);
 				end
 			end
 			obj.taskInitialised = false;
 		end	
+		
+		% ===================================================================
+		%> @brief reset dynamic task properties
+		%> 
+		%> 
+		% ===================================================================
+		function randomiseTimes(obj)
+			if ~obj.taskInitialised;return;end
+			if length(obj.isTime) == 2 %randomise isTime within a range
+				t = obj.isTime;
+				obj.isTimeNow = (rand * (t(2)-t(1))) + t(1);
+				obj.isTimeNow = round(obj.isTimeNow*100)/100;
+			end
+			if length(obj.ibTime) == 2 %randomise ibTime within a range
+				t = obj.ibTime;
+				obj.ibTimeNow = (rand * (t(2)-t(1))) + t(1);
+				obj.ibTimeNow = round(obj.ibTimeNow*100)/100;
+			end
+		end
 		
 		
 	end

@@ -224,7 +224,7 @@ classdef runExperiment < optickaCore
 					setup(eL);
 				end
 				
-				obj.initialiseTask; %set up our task structure 
+				obj.initialiseTask(); %set up our task structure 
 				
 				setup(obj.stimuli);
 				
@@ -279,6 +279,7 @@ classdef runExperiment < optickaCore
 						if s.photoDiode == true
 							s.drawPhotoDiodeSquare([0 0 0 1]);
 						end
+						if obj.drawFixation;s.drawCross(0.4,[0.3 0.3 0.3 1]);end
 					else
 						if ~isempty(s.backgroundColour);s.drawBackground;end
 						
@@ -1232,7 +1233,7 @@ classdef runExperiment < optickaCore
 			if isempty(obj.task) %we have no task setup, so we generate one.
 				obj.task=stimulusSequence;
 			end
-			obj.task.initialiseTask();
+			initialiseTask(obj.task);
 		end
 		
 		% ===================================================================
@@ -1331,7 +1332,7 @@ classdef runExperiment < optickaCore
 					%this causes the update of the stimuli, which may take more than one refresh, to
 					%occur during the second blank flip, thus we don't lose any timing.
 					if obj.task.blankTick == 2
-						fprintf('@%s\n',infoText(obj));
+						fprintf('@%s\n\n',infoText(obj));
 						obj.task.doUpdate = true;
 					end
 					% because the update happens before the flip, but the drawing of the update happens
@@ -1368,23 +1369,25 @@ classdef runExperiment < optickaCore
 			else %need to switch to next trial or blank
 				obj.task.switched = true;
 				if obj.task.isBlank == false %we come from showing a stimulus
-					obj.logMe('IntoBlank');
+					%obj.logMe('IntoBlank');
 					obj.task.isBlank = true;
 					obj.task.blankTick = 0;
 					
-					if ~mod(obj.task.thisRun,obj.task.minBlocks) %are we within a trial block or not? we add the required time to our switch timer
-						obj.task.switchTime=obj.task.switchTime+obj.task.ibTime;
-						obj.task.switchTick=obj.task.switchTick+(obj.task.ibTime*ceil(obj.screenVals.fps));
+					if obj.task.thisRun == obj.task.minBlocks %are we within a trial block or not? we add the required time to our switch timer
+						obj.task.switchTime=obj.task.switchTime+obj.task.ibTimeNow;
+						obj.task.switchTick=obj.task.switchTick+(obj.task.ibTimeNow*ceil(obj.screenVals.fps));
+						fprintf('IB TIME: %g\n',obj.task.ibTimeNow);
 					else
-						obj.task.switchTime=obj.task.switchTime+obj.task.isTime;
-						obj.task.switchTick=obj.task.switchTick+(obj.task.isTime*ceil(obj.screenVals.fps));
+						obj.task.switchTime=obj.task.switchTime+obj.task.isTimeNow;
+						obj.task.switchTick=obj.task.switchTick+(obj.task.isTimeNow*ceil(obj.screenVals.fps));
+						fprintf('IS TIME: %g\n',obj.task.isTimeNow);
 					end
 					
 					setStrobeValue(obj,obj.stimOFFValue);%get the strobe word to signify stimulus OFF ready
-					obj.logMe('OutaBlank');
+					%obj.logMe('OutaBlank');
 					
 				else %we have to show the new run on the next flip
-					obj.logMe('IntoTrial');
+					%obj.logMe('IntoTrial');
 					obj.task.switchTime=obj.task.switchTime+obj.task.trialTime; %update our timer
 					obj.task.switchTick=obj.task.switchTick+(obj.task.trialTime*round(obj.screenVals.fps)); %update our timer
 					obj.task.isBlank = false;
@@ -1392,7 +1395,7 @@ classdef runExperiment < optickaCore
 					if obj.task.totalRuns <= obj.task.nRuns
 						setStrobeValue(obj,obj.task.outIndex(obj.task.totalRuns)); %get the strobe word ready
 					end
-					obj.logMe('OutaTrial');
+					%obj.logMe('OutaTrial');
 				end
 			end
 		end
