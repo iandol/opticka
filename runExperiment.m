@@ -182,6 +182,9 @@ classdef runExperiment < optickaCore
 				errordlg('There is no working PTB available!')
 				error('There is no working PTB available!')
 			end
+			
+			initialiseSaveFile(obj); %generate a savePrefix for this run
+			obj.name = [obj.subjectName '-' obj.savePrefix]; %give us a run name
 
 			%initialise runLog for this run
 			obj.previousInfo.runLog = obj.runLog;
@@ -490,7 +493,7 @@ classdef runExperiment < optickaCore
 				end
 			end
 			
-			configureIO(obj);
+			io = configureIO(obj);
 			
 			%-----------------------------------------------------------
 			try %-----This is our main TRY CATCH experiment display loop
@@ -571,7 +574,7 @@ classdef runExperiment < optickaCore
 				
             %-----Start Plexon in paused mode
 				if obj.useDisplayPP || obj.useDataPixx
-					rstop(io); %make sure this is set low first
+					pauseRecording(io); %make sure this is set low first
 					startRecording(io);
 					WaitSecs(0.5);
 				end
@@ -1116,7 +1119,7 @@ classdef runExperiment < optickaCore
 
 					a = 1;
 					for j = ix %loop through our stimuli references for this variable
-						t = [t sprintf('S%g: %s = %s ',j,name,num2str(valueList{a}))];
+						t = [t sprintf('S%i: %s = %s ',j,name,num2str(valueList{a}))];
 						if ~doXY
 							obj.stimuli{j}.(name)=valueList{a};
 						else
@@ -1220,7 +1223,7 @@ classdef runExperiment < optickaCore
 				obj.lJack = labJack('name',obj.name,'readResponse', false,'verbose',obj.verbose);
 				rM = obj.lJack;
 			else
-				rM = [];
+				rM = ioManager();
 			end
 		end
 		

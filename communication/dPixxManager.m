@@ -223,9 +223,7 @@ classdef dPixxManager < optickaCore
 		function breakFixation(obj)
 			sendTTL(obj,5);
 		end
-		
-		
-		
+
 		% ===================================================================
 		%> @brief Send TTL
 		%> 

@@ -233,7 +233,7 @@ classdef labJack < handle
 					end
 				end
 				obj.handle = calllib('liblabjackusb','LJUSB_OpenDevice',obj.device,0,obj.deviceID);
-				if obj.validHandle();
+				if obj.validHandle()
 					obj.version = calllib('liblabjackusb','LJUSB_GetDeviceDescriptorReleaseNumber',obj.handle);
 					if obj.deviceID == 3 %respecify the time quantum for the U3
 						obj.timeShort = 128e-6;
@@ -411,7 +411,7 @@ classdef labJack < handle
 		%> @param sync optional logical flag whether to use blocking (true) command
 		% ===================================================================
 		function timedTTL(obj,line,time)
-			if (~exist('line','var') || ~exist('time','var'));
+			if (~exist('line','var') || ~exist('time','var'))
 				if ~isempty(obj.timedTTLCache)
 					obj.outp = obj.rawWrite(obj.timedTTLCache);
 					if obj.readResponse; obj.inp = obj.rawRead(zeros(1,10),10); end
