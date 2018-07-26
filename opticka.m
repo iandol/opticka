@@ -966,13 +966,18 @@ classdef opticka < optickaCore
 
 			if ui == true
 				v = obj.gv(obj.h.OKProtocolsList);
-				file = obj.gs(obj.h.OKProtocolsList,v);
-				p = obj.paths.protocols;
+				if isempty(v)
+					[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)');
+				else
+					file = obj.gs(obj.h.OKProtocolsList,v);
+					p = obj.paths.protocols;
+				end
 			else
 				[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)'); %cd([obj.paths.root filesep 'CoreProtocols'])
 			end
 			
 			if isempty(file) | file == 0
+				disp('No file specified...')
 				return
 			end
 			cd(p);
@@ -1029,8 +1034,6 @@ classdef opticka < optickaCore
 					if isprop(tmp.r,'dPPMode'); obj.r.dPPMode = tmp.r.dPPMode; obj.h.OKdPPMode.String=obj.r.dPPMode;end
 					if isprop(tmp.r,'subjectName');obj.r.subjectName = tmp.r.subjectName;obj.h.OKTrainingName.String = obj.r.subjectName;end
 					if isprop(tmp.r,'researcherName');obj.r.researcherName = tmp.r.researcherName;obj.h.OKTrainingResearcherName.String=obj.r.researcherName;end
-					
-					set(obj.h.OKTrainingResearcherName, 'String', obj.r.researcherName);
 					
 					obj.h.OKuseLabJackStrobe.Checked = 'off';
 					obj.h.OKuseDataPixx.Checked = 'off';
