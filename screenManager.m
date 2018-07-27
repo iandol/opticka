@@ -854,6 +854,16 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief conditionally draw a white square to trigger photodiode
+		%>
+		%> @param colour colour of square
+		%> @return
+		% ===================================================================
+		function drawPhotoDiode(obj,colour)
+			if obj.photoDiode;Screen('FillRect',obj.win,colour,obj.photoDiodeRect);end
+		end
+		
+		% ===================================================================
 		%> @brief Draw the background colour
 		%>
 		%> @param

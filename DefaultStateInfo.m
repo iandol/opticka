@@ -16,12 +16,12 @@
 % tS = general simple struct to hold variables for this run
 
 %------------General Settings-----------------
-tS.rewardTime = 150; %TTL time in milliseconds
-tS.useTask = true; %use stimulusSequence (randomised variable task object)
+tS.rewardTime = 150; %==TTL time in milliseconds
+tS.useTask = true; %==use stimulusSequence (randomised variable task object)
 tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
-tS.recordEyePosition = true; %==record eye position within PTB, **in addition** to the EDF?
+tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = true; %==little UI requestor asks for comments before/after run
-tS.saveData = true; %==save behavioural and eye movement data?
+tS.saveData = false; %==save behavioural and eye movement data?
 obj.useDataPixx = false; %==use datapixx to send strobe words?
 obj.useDisplayPP = false; %==use display++ to send strobe words?
 obj.useLabJackReward = false; %==used for rewards and to control magstim
@@ -44,7 +44,7 @@ tS.fixY = 0;
 tS.firstFixInit = 1;
 tS.firstFixTime = [0.5 0.8];
 tS.firstFixRadius = 2;
-tS.stimulusFixTime = 1;
+tS.stimulusFixTime = 1.25;
 obj.lastXPosition = tS.fixX;
 obj.lastYPosition = tS.fixY;
 tS.strict = true; %do we forbid eye to enter-exit-reenter fixation window?
@@ -78,7 +78,7 @@ obj.stimuli.tableChoice = 1;
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
-obj.stimuli.stimulusSets = {[1,2]}; %EDIT THIS TO SAY WHICH STMULI TO SHOW
+obj.stimuli.stimulusSets = {[1,2],2}; %EDIT THIS TO SAY WHICH STMULI TO SHOW
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
@@ -93,33 +93,32 @@ pauseEntryFcn = { @()hide(obj.stimuli); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
-	@()fprintf('\n===>>>ENTER PAUSE STATE\n');
+	@()fprintf('\n===>>>ENTER PAUSE STATE\n'); ...
 	@()disableFlip(obj); ...
 	};
 
 %pause exit
 pauseExitFcn = @()resumeRecording(io);%lets unpause the plexon!...
 
-prefixEntryFcn = { @()enableFlip(obj); };
-prefixFcn = []; %@()draw(obj.stimuli);
+prefixEntryFcn = @()enableFlip(obj);
+prefixFcn = [];
 
 %fixate entry
 fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
 	@()startFixation(io); ...
-	@()resetFixation(eL); ... %reset the fixation counters ready for a new trial
-	@()updateFixationValues(eL,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset 
+	@()updateFixationValues(eL,tS.fixX,tS.fixY,[],tS.firstFixTime); ... %reset 
 	@()setOffline(eL); ... %make sure offline before start recording
 	@()show(obj.stimuli{2}); ...
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
 	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(obj))]); ...
+	@()prepareStrobe(io,getTaskIndex(obj)); ...
+	@()draw(obj.stimuli); ... %draw stimulus
 	@()startRecording(eL); ... %fire up eyelink
 	@()syncTime(eL); ... %EDF sync message
-	@()draw(obj.stimuli); ... %draw stimulus
 	};
 
 %fix within
-fixFcn = {@()draw(obj.stimuli); ... %draw stimulus
-	};
+fixFcn = { @()draw(obj.stimuli); @()drawPhotoDiode(s,[0 0 0]) };
 
 %test we are fixated for a certain length of time
 initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
@@ -136,6 +135,7 @@ stimEntryFcn = @()doStrobe(obj,true);
 
 %what to run when we are showing stimuli
 stimFcn =  { @()draw(obj.stimuli); ...
+	@()drawPhotoDiode(s,[1 1 1]); ...
 	@()finishDrawing(s); ...
 	@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
 	};
@@ -144,7 +144,9 @@ stimFcn =  { @()draw(obj.stimuli); ...
 maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
 
 %as we exit stim presentation state
-stimExitFcn = { @()setStrobeValue(obj,inf); @()doStrobe(obj,true) };
+stimExitFcn = { @()setStrobeValue(obj,inf); ...
+	@()doStrobe(obj,true); ...
+	};
 
 %if the subject is correct (small reward)
 correctEntryFcn = { @()timedTTL(rM,0,tS.rewardTime); ... % labjack sends a TTL to Crist reward system
@@ -154,7 +156,7 @@ correctEntryFcn = { @()timedTTL(rM,0,tS.rewardTime); ... % labjack sends a TTL t
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT 1'); ...
 	@()hide(obj.stimuli); ...
-	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
+	@()drawTimedSpot(s, 0.5, [1 1 0 1]); ...
 	};
 
 %correct stimulus
@@ -199,7 +201,7 @@ incExitFcn = {
 
 %break entry
 breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message on eyelink
-	@()breakFixation(io);
+	@()breakFixation(io); ...
 	@()edfMessage(eL,'END_RT'); ...
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -1'); ...

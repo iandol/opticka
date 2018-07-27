@@ -493,32 +493,32 @@ classdef runExperiment < optickaCore
 				end
 			end
 			
-			%-----------------------------------------------------------
-			try %-----This is our main TRY CATCH experiment display loop
-			%-----------------------------------------------------------
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			try %================This is our main TASK loop=====================
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			%-----open the eyelink interface
 				obj.useEyeLink = true; %we always need the eyelink, even if we run a dummy mode
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
+					eL.verbose = obj.verbose;
 					eL.saveFile = [obj.paths.savedData filesep obj.subjectName '-' obj.savePrefix '.edf'];
 				end
-				
 				
 				if isfield(tS,'rewardTime')
 					bR.rewardTime = tS.rewardTime;
 				end
 				
-			%------open the PTB screen
+				%------open the PTB screen
 				obj.screenVals = s.open(obj.debug,tL);
 				obj.stimuli.screen = s; %make sure our stimuli use the same screen
 				obj.stimuli.verbose = obj.verbose;
 				setup(obj.stimuli); %run setup() for each stimulus
 				
-			%---------configure io
+				%---------configure io
 				io = configureIO(obj);
 				
-			%-----initialise the state machine
+				%-----initialise the state machine
 				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',obj.name); 
 				sM = obj.stateMachine;
 				sM.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
@@ -532,30 +532,32 @@ classdef runExperiment < optickaCore
 					addStates(sM, obj.stateInfo);
 				end
 				
-			%--------get pre-run comments for this data collection
+				%--------get pre-run comments for this data collection
 				if tS.askForComments
 					comment = inputdlg({'CHECK: ARM PLEXON!!! Initial Comment for this Run?'},['Run Comment for ' obj.name]);
-					comment = comment{1};
-					obj.comment = [obj.name ':' comment];
-					bR.comment = obj.comment;
-					eL.comment = obj.comment;
-					sM.comment = obj.comment;
-					io.comment = obj.comment;
-					tL.comment = obj.comment;
-					tS.comment = obj.comment;
+					if ~isempty(comment)
+						comment = comment{1};
+						obj.comment = [obj.name ':' comment];
+						bR.comment = obj.comment;
+						eL.comment = obj.comment;
+						sM.comment = obj.comment;
+						io.comment = obj.comment;
+						tL.comment = obj.comment;
+						tS.comment = obj.comment;
+					end
 				end
 				
-			%-----set up the eyelink interface
+				%-----set up the eyelink interface
 				if obj.useEyeLink
 					fprintf('===>>> Handing over to eyelink for calibration & validation...\n')
 					initialise(eL, s);
 					setup(eL);
 				end
 				
-			%-----take over the keyboard!
+				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
 				if obj.debug == false
-					HideCursor;
+					%HideCursor;
 					warning('off'); %#ok<*WNOFF>
 					ListenChar(2); %2=capture all keystrokes
 				else
@@ -564,24 +566,24 @@ classdef runExperiment < optickaCore
 				
 				fprintf('\n===>>> Checking variables & Setting up Equipment, please wait...\n\n')
 				
-			%-----premptive save in case of crash or error SAVE IN /TMP
+				%-----premptive save in case of crash or error SAVE IN /TMP
 				rE = obj;
 				htmp = obj.screenSettings.optickahandle; obj.screenSettings.optickahandle = [];
 				save([tempdir filesep obj.name '.mat'],'rE','tS');
 				obj.screenSettings.optickahandle = htmp;
 				
-            %-----set up our behavioural plot
+				%-----set up our behavioural plot
 				createPlot(bR, eL);
 				drawnow;
 				
-            %-----Start Plexon in paused mode
+				%-----Start Plexon in paused mode
 				if obj.useDisplayPP || obj.useDataPixx
 					pauseRecording(io); %make sure this is set low first
 					startRecording(io);
 					WaitSecs(0.5);
 				end
 				
-            %-----initialise out various counters
+				%-----initialise out various counters
 				t.tick = 1;
 				t.switched = 1;
 				t.totalRuns = 1;
@@ -598,27 +600,28 @@ classdef runExperiment < optickaCore
 				
 				%profile clear; profile on;
                 
-			%-----check initial eye position
+				%-----check initial eye position
 				if obj.useEyeLink; getSample(eL); end
 				
-            %-----initialise our vbl's
+				%-----initialise our vbl's
 				tL.screenLog.beforeDisplay = GetSecs;
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				vbl = Screen('Flip', s.win);
 				tL.vbl(1) = vbl;
 				tL.startTime = vbl;
-				sM.verbose = true;
-            %-----ignite the stateMachine!
+				
+				%-----ignite the stateMachine!
 				start(sM); 
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				% Our main display loop
+				% Our display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				while tS.stopTask == false
 					
 					%------run the stateMachine one tick forward
+					if obj.useEyeLink; getSample(eL); end
 					update(sM);
 					
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
@@ -641,10 +644,12 @@ classdef runExperiment < optickaCore
 					end
 					
 					%------Tell I/O to send strobe on next screen flip
-					if (obj.useDisplayPP || obj.useDataPixx) && obj.sendStrobe						
-						triggerStrobe(io); %send our word; datapixx syncs to next vertical trace, display++ next+1
-						obj.sendStrobe = false;
+					if obj.useDisplayPP && obj.sendStrobe	
+						sendStrobe(io);
+					elseif obj.useDataPixx && obj.sendStrobe	
+						triggerStrobe(io);
 					end
+					obj.sendStrobe = false;
 					
 					%======= FLIP: Show it at correct retrace: ========%
 					if obj.doFlip
@@ -659,11 +664,10 @@ classdef runExperiment < optickaCore
 						
 						tS.totalTicks = tS.totalTicks + 1;
 				
-					end
-					%==================================================%
+					end %----------end of display loop
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				end %=========================END OF MAIN LOOP======================
+				end %===========================END OF TASK=========================
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				
 				show(obj.stimuli); %make all stimuli visible again, useful for editing 
@@ -699,14 +703,16 @@ classdef runExperiment < optickaCore
 				
 				if tS.askForComments
 					comment = inputdlg('Final Comment for this Run?','Run Comment');
-					comment = comment{1};
-					obj.comment = [obj.comment ' | Final Comment: ' comment];
-					bR.comment = obj.comment;
-					eL.comment = obj.comment;
-					sM.comment = obj.comment;
-					io.comment = obj.comment;
-					tL.comment = obj.comment;
-					tS.comment = obj.comment;
+					if ~isempty(comment)
+						comment = comment{1};
+						obj.comment = [obj.comment ' | Final Comment: ' comment];
+						bR.comment = obj.comment;
+						eL.comment = obj.comment;
+						sM.comment = obj.comment;
+						io.comment = obj.comment;
+						tL.comment = obj.comment;
+						tS.comment = obj.comment;
+					end
 				end
 				
 				obj.tS = tS; %copy our tS structure for backup
@@ -876,7 +882,7 @@ classdef runExperiment < optickaCore
 			clear ii
 			dbclear in clear
 			ListenChar(2); %capture keystrokes
-			HideCursor;
+			%HideCursor;
 		end
 		
 		% ===================================================================

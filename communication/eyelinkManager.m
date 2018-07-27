@@ -369,7 +369,7 @@ classdef eyelinkManager < optickaCore
 		%> the mouse as an eye signal
 		%>
 		% ===================================================================
-		function evt = getSample(obj)
+		function sample = getSample(obj)
 			obj.currentSample = [];
 			if obj.isConnected && Eyelink('NewFloatSampleAvailable') > 0
 				obj.currentSample = Eyelink('NewestFloatSample');% get the sample in the form of an event structure
@@ -390,9 +390,8 @@ classdef eyelinkManager < optickaCore
 				obj.currentSample.gy = obj.y;
 				obj.currentSample.pa = obj.pupil;
 				obj.currentSample.time = GetSecs*1000;
-				%if obj.verbose;fprintf('Dummy X: %.2g | Y: %.2g\n',obj.x,obj.y);end
 			end
-			evt = obj.currentSample;
+			sample = obj.currentSample;
 		end
 		
 		% ===================================================================
@@ -488,7 +487,7 @@ classdef eyelinkManager < optickaCore
 						searching = false;
 						fixated = true;
 						obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
-						if obj.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, obj.fixLength, obj.fixationTime, obj.fixTotal, obj.fixInitTotal);end
+						%if obj.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, obj.fixLength, obj.fixationTime, obj.fixTotal, obj.fixInitTotal);end
 						return
 					else
 						fixated = false;
