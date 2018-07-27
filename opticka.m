@@ -1310,7 +1310,7 @@ classdef opticka < optickaCore
 		function value = findValue(obj,list,entry)
 			value = 1;
 			for i=1:length(list)
-				if regexpi(list{i},entry)
+				if strcmpi(list{i},entry)
 					value = i;
 					return
 				end

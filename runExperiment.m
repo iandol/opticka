@@ -257,6 +257,7 @@ classdef runExperiment < optickaCore
 				% some of the frames lost on first presentation for very complex
 				% stimuli using 32bit computation buffers...
 				obj.salutation('Warming up GPU...')
+				show(obj.stimuli);
 				for i = 1:s.screenVals.fps
 					draw(obj.stimuli);
 					drawBackground(s);
@@ -515,13 +516,30 @@ classdef runExperiment < optickaCore
 				obj.stimuli.verbose = obj.verbose;
 				setup(obj.stimuli); %run setup() for each stimulus
 				
-				%---------configure io
+				%---------initialise and set up I/O
 				io = configureIO(obj);
 				
+				%------------------------------------------------------------
+				% lets draw 1 seconds worth of the stimuli we will be using
+				% covered by a blank. this lets us prime the GPU with the sorts
+				% of stimuli it will be using and this does appear to minimise
+				% some of the frames lost on first presentation for very complex
+				% stimuli using 32bit computation buffers...
+				fprintf('\n===>>> Warming up the GPU and I/O systems... <<<===\n')
+				show(obj.stimuli);
+				for i = 1:s.screenVals.fps
+					draw(obj.stimuli);
+					drawBackground(s);
+					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
+					finishDrawing(s);
+					if ~mod(i,10); io.sendStrobe(255); end
+					s.flip;
+				end
+				io.resetStrobe;flip(s);flip(s);
+				
 				%-----initialise the state machine
-				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'name',obj.name); 
+				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'timeDelta',1e-4,'name',obj.name); 
 				sM = obj.stateMachine;
-				sM.timeDelta = obj.screenVals.ifi; %tell it the screen IFI
 				if isempty(obj.paths.stateInfoFile) || ~exist(obj.paths.stateInfoFile,'file')
 					errordlg('Please specify a valid State Machine file...')
 				else
@@ -672,11 +690,13 @@ classdef runExperiment < optickaCore
 				
 				show(obj.stimuli); %make all stimuli visible again, useful for editing 
 				drawBackground(s);
+				trackerClearScreen(eL);
+				trackerDrawText(eL,['FINISHED TASK:' obj.name]);
 				Screen('Flip', s.win);
 				Priority(0);
 				ListenChar(0);
 				ShowCursor;
-				warning('on'); %#ok<WNON>
+				warning('on');
 				fprintf('\n===>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
 				
 				notify(obj,'endAllRuns');
@@ -726,6 +746,8 @@ classdef runExperiment < optickaCore
 					warning('on')
 					fprintf('\n===>>> SAVED DATA to: %s\n',[obj.paths.savedData filesep obj.name '.mat'])
 				end
+				
+				sM.plotLogs(sM.log);
 				
 				clear rE tL s tS bR rM eL io sM	
 				

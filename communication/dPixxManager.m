@@ -125,6 +125,19 @@ classdef dPixxManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief reset the strobe
+		%> 
+		%> @param 
+		% ===================================================================
+		function resetStrobe(obj)
+			if obj.isOpen
+				Datapixx('StopAllSchedules');
+				Datapixx('RegWrRd');
+			end
+		end
+		
+		
+		% ===================================================================
 		%> @brief Send RSTART to the Plexon
 		%> 
 		%> @param 
