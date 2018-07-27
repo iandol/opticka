@@ -12,13 +12,13 @@ classdef plusplusManager < optickaCore
 		strobeMode char = 'plexon'
 		%> which digital I/O to use for the strobe trigger
 		strobeLine double = 10
-		%>
+		%> screen manager that handles opening the display++
 		sM screenManager
-		%>
+		%> default mask
 		mask double = (2^10) -1
-		%>
+		%> repetitions of DIO
 		repetitions double = 1
-		%>
+		%> command
 		command double = 0
 	end
 	
@@ -28,8 +28,12 @@ classdef plusplusManager < optickaCore
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
-		%> send a value for the next sendStrobe
-		sendValue double = []
+		%> computed data packet
+		sendData double = []
+		%> computed mask
+		sendMask double = (2^10) -1
+		%> send this value for the next sendStrobe
+		sendValue double = 0
 		%> run even if there is not Display++ attached
 		silentMode logical = true
 		%> is there a Display++ attached?
@@ -88,30 +92,18 @@ classdef plusplusManager < optickaCore
 		%> @param value 
 		% ===================================================================
 		function sendStrobe(obj, value, mask)
-			if obj.silentMode || obj.sM.isOpen == false; return; end
-			if ~exist('value','var') || isempty(value)
-				if ~isempty(obj.sendValue) && obj.sendValue >= 0
-					value = obj.sendValue;
+			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
+			if exist('value','var')
+				if exist('mask','var')
+					prepareStrobe(obj,value,mask)
 				else
-					warning('No value specified, abort sending strobe')
-					return
+					prepareStrobe(obj,value,obj.mask)
 				end
 			end
-			if ~exist('mask','var') || isempty(mask); mask = obj.mask; end
-			switch obj.strobeMode
-				case 'plexon'
-					data = [value, value + obj.strobeShift, value + obj.strobeShift,...
-						zeros(1,248-3)];
-					BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, mask, data, obj.command);
-				otherwise
-					nWindows = 30;
-					data = [repmat(value,1,nWindows), zeros(1,248-nWindows)];
-					BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, mask, data, obj.command);
-			end
-			obj.lastValue = value;
-			obj.sendValue = 0;
+			BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, obj.sendMask, obj.sendData, obj.command);
 			if obj.verbose == true
-				fprintf('===>>> sendStrobe VALUE: %i\t| mode: %s\t| mask: %s\n', value, obj.strobeMode, dec2bin(obj.mask));
+				fprintf('===>>> sendStrobe VALUE: %i\t| mode:%s\t| mask:%s\n',...
+					obj.sendValue, obj.strobeMode, dec2bin(obj.mask));
 			end
 		end
 		
@@ -120,9 +112,28 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value 
 		% ===================================================================
-		function prepareStrobe(obj, value)
+		function prepareStrobe(obj, value, mask)
+			if ~exist('value','var') || isempty(value)
+				value = obj.sendValue;
+			end
+			if ~exist('mask','var') || isempty(mask); mask = obj.mask; end
+			
 			obj.lastValue = obj.sendValue;
 			obj.sendValue = value;
+			obj.sendMask = mask;
+			
+			switch obj.strobeMode
+				case 'plexon'
+					obj.sendData = [value, value + obj.strobeShift, value + obj.strobeShift,...
+						zeros(1,248-3)];
+				otherwise
+					nWindows = 30;
+					obj.sendData = [repmat(value,1,nWindows), zeros(1,248-nWindows)];
+			end
+			if obj.verbose == true
+				fprintf('===>>> prepareStrobe VALUE: %i\t| mode: %s\t| mask:%s\n', ...
+					obj.sendValue, obj.strobeMode, dec2bin(obj.mask));
+			end
 		end
 		
 		% ===================================================================
@@ -140,8 +151,7 @@ classdef plusplusManager < optickaCore
 		%> @param value 
 		% ===================================================================
 		function sendStrobeAndFlip(obj, value, mask)
-			if obj.silentMode || obj.sM.isOpen == false; return; end
-			if isempty(obj.sM) || obj.sM.isOpen == false; return; end
+			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
 			if ~exist('mask','var') || isempty(mask); mask = obj.mask; end
 			sendStrobe(obj,value,mask);
 			flip(obj.sM); flip(obj.sM);
@@ -156,7 +166,7 @@ classdef plusplusManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function sendTTL(obj, value, mask)
-			if obj.silentMode || obj.sM.isOpen == false; return; end
+			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
 			if ~exist('value','var') || isempty(value)
 				warning('No value specified, abort sending TTL')
 				return
@@ -169,7 +179,6 @@ classdef plusplusManager < optickaCore
 				fprintf('===>>> SEND TTL: %i - mask: %s\n', value, dec2bin(mask));
 			end
 		end
-		
 		
 		% ===================================================================
 		%> @brief reset strobed word

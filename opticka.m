@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '1.103'
+		optickaVersion char = '1.11'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -36,10 +36,11 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> used to sanitise passed values on construction
-		allowedProperties char='verbose'
+		allowedProperties char = 'verbose'
 		%> which UI settings should be saved locally to the machine?
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
-			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina','OKHideFlash','OKTrainingResearcherName',...
+			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
+			'OKHideFlash','OKUsePhotoDiode','OKTrainingResearcherName',...
 			'OKTrainingName'}
 	end
 	
@@ -463,7 +464,7 @@ classdef opticka < optickaCore
 			obj.r.task.randomSeed = obj.gn(obj.h.OKRandomSeed);
 			v = obj.gv(obj.h.OKrandomGenerator);
 			obj.r.task.randomGenerator = obj.gs(obj.h.OKrandomGenerator,v);
-			obj.r.task.ibTime = obj.gn(obj.h.OKitTime);
+			obj.r.task.ibTime = obj.gn(obj.h.OKibTime);
 			obj.r.task.randomise = logical(obj.gv(obj.h.OKRandomise));
 			obj.r.task.isTime = obj.gn(obj.h.OKisTime);
 			obj.r.task.nBlocks = obj.gd(obj.h.OKnBlocks);
@@ -1103,8 +1104,8 @@ classdef opticka < optickaCore
 				
 				set(obj.h.OKtrialTime, 'String', num2str(obj.r.task.trialTime));
 				set(obj.h.OKRandomSeed, 'String', num2str(obj.r.task.randomSeed));
-				set(obj.h.OKitTime,'String',num2str(obj.r.task.ibTime));
-				set(obj.h.OKisTime,'String',num2str(obj.r.task.isTime));
+				set(obj.h.OKisTime,'String',sprintf('%g ',obj.r.task.isTime));
+				set(obj.h.OKibTime,'String',sprintf('%g ',obj.r.task.ibTime));
 				set(obj.h.OKnBlocks,'String',num2str(obj.r.task.nBlocks));
 				
 				obj.getScreenVals;

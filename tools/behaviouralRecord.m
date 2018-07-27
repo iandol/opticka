@@ -77,6 +77,16 @@ classdef behaviouralRecord < optickaCore
 			t{end+1} = ' ';
 			t{end+1} = ['INIT TIME = ' num2str(eL.fixationInitTime)];
 			
+			if ismac
+				nfont = 'avenir next';
+				mfont = 'menlo';
+			elseif ispc
+				nfont = 'calibri';
+				mfont = 'consolas';
+			else %linux
+				nfont = 'Liberation Sans'; %get(0,'defaultAxesFontName');
+				mfont = 'Fira Code';
+			end
 			obj.h.root = figure('NumberTitle', 'off', 'Toolbar', 'none');
 			obj.h.panel = uiextras.BoxPanel('Parent',obj.h.root, ...
 				'Title',obj.fullName, ...
@@ -92,8 +102,8 @@ classdef behaviouralRecord < optickaCore
 				'BackgroundColor', [1 1 1], ...
 				'HorizontalAlignment', 'center', ...
 				'Max', 100, ...
-				'FontSize', 14, ...
-				'FontName','Menlo');
+				'FontSize', 12, ...
+				'FontName',mfont);
 			obj.h.vbox2 = uiextras.VBox('Parent', obj.h.hbox);
 			obj.h.axis1 = axes('Parent', obj.h.vbox2,'Units','pixels');
 			obj.h.axis4 = axes('Parent', obj.h.vbox2,'Units','pixels');

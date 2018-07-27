@@ -1,6 +1,6 @@
 % ======================================================================
 %> @brief Input Output manager, provides single interface to different
-%> hardware
+%> hardware, currently just a dummy class
 %>
 %> 
 % ======================================================================
@@ -42,45 +42,54 @@ classdef ioManager < optickaCore
 		end
 
 		% ===================================================================
-		%> @brief reset strobed word
+		%> @brief 
 		%> 
-		%> @param value of the 15bit strobed word
+		%> @param 
 		% ===================================================================
 		function open(obj,varargin)
 
 		end
 		
 		% ===================================================================
-		%> @brief reset strobed word
+		%> @brief 
 		%> 
-		%> @param value of the 15bit strobed word
+		%> @param 
+		% ===================================================================
+		function close(obj,varargin)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
 		% ===================================================================
 		function resetStrobe(obj,varargin)
 
 		end
 		
 		% ===================================================================
-		%> @brief Prepare and send a strobed word
+		%> @brief 
 		%> 
-		%> @param value of the 15bit strobed word
+		%> @param 
 		% ===================================================================
 		function triggerStrobe(obj,varargin)
 
 		end
 		
 		% ===================================================================
-		%> @brief Prepare and send a strobed word
+		%> @brief 
 		%> 
-		%> @param value of the 15bit strobed word
+		%> @param 
 		% ===================================================================
 		function prepareStrobe(obj,varargin)
 
 		end
 		
 		% ===================================================================
-		%> @brief Prepare and send a strobed word
+		%> @brief 
 		%> 
-		%> @param value 
+		%> @param 
 		% ===================================================================
 		function sendStrobe(obj,varargin)
 
