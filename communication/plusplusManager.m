@@ -61,7 +61,6 @@ classdef plusplusManager < optickaCore
 			if nargin == 0; varargin.name = 'Display++ Manager'; end
 			obj=obj@optickaCore(varargin); %superclass constructor
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
-			open(obj);
 		end
 		
 		% ===================================================================
@@ -81,8 +80,8 @@ classdef plusplusManager < optickaCore
 					end
 				else
 					warning('Cannot find Display++, going into Silent mode...')
-					obj.isAttached = true;
-					obj.silentMode = false;
+					obj.isAttached = false;
+					obj.silentMode = true;
 				end
 			catch
 				warning('Problem searching for Display++, entering silentMode')

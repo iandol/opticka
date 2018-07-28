@@ -967,10 +967,11 @@ classdef opticka < optickaCore
 
 			if ui == true
 				v = obj.gv(obj.h.OKProtocolsList);
-				if isempty(v)
+				s = obj.h.OKProtocolsList.String;
+				if isempty(s)
 					[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)');
 				else
-					file = obj.gs(obj.h.OKProtocolsList,v);
+					file = s{v};
 					p = obj.paths.protocols;
 				end
 			else

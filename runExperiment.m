@@ -465,8 +465,8 @@ classdef runExperiment < optickaCore
 			tS.useMagStim = false;
 	
 			%------initialise time logs for this run
-			obj.trainingLog = timeLogger;
-			tL = obj.trainingLog; %short handle to log
+			obj.taskLog = timeLogger;
+			tL = obj.taskLog; %short handle to log
 			
 			%-----behavioural record
 			obj.behaviouralRecord = behaviouralRecord('name',obj.name); %#ok<*CPROP>
@@ -740,7 +740,7 @@ classdef runExperiment < optickaCore
 				if tS.saveData
 					rE = obj;
 					%assignin('base', 'rE', obj);
-					%assignin('base', 'tS', tS);
+					assignin('base', 'tS', tS);
 					warning('off')
 					save([obj.paths.savedData filesep obj.name '.mat'],'rE','bR','tL','tS','sM');
 					warning('on')
@@ -753,7 +753,7 @@ classdef runExperiment < optickaCore
 				
 			catch ME
 				getReport(ME)
-				if obj.useDataPixx || obj.useDisplayPP
+				if exist('io','var') && (obj.useDataPixx || obj.useDisplayPP)
 					pauseRecording(io); %pause plexon
 					WaitSecs(0.25)
 					stopRecording(io);
@@ -849,8 +849,10 @@ classdef runExperiment < optickaCore
 		function getRunLog(obj)
 			if isa(obj.runLog,'timeLogger')
 				obj.runLog.printRunLog;
-			elseif isa(obj.trainingLog,'timeLogger')
-				obj.trainingLog.printRunLog;
+			elseif isa(obj.taskLog,'timeLogger')
+				obj.taskLog.printRunLog;
+			else
+				warndlg('No log available yet...');
 			end
 		end
 		
@@ -1154,8 +1156,8 @@ classdef runExperiment < optickaCore
 			if isa(obj.runLog,'timeLogger')
 				obj.runLog = [];
 			end
-			if isa(obj.trainingLog,'timeLogger')
-				obj.trainingLog = [];
+			if isa(obj.taskLog,'timeLogger')
+				obj.taskLog = [];
 			end
 		end
 		

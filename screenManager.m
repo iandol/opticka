@@ -28,9 +28,10 @@ classdef screenManager < optickaCore
 		visualDebug logical = false
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer uint8 = 1
-		%> bitDepth of framebuffer, '8bit' is best for old GPUs, can also
-		%> pass otpions to enable Display++ modes EnableBits++Bits++Output
-		%> EnableBits++Mono++Output EnableBits++Color++Output
+		%> bitDepth of framebuffer, '8bit' is best for old GPUs, but prefer
+		%> 'FloatingPoint32BitIfPossible' for newer GPUS, and can pass 
+		%> options to enable Display++ modes 'EnableBits++Bits++Output'
+		%> 'EnableBits++Mono++Output' or 'EnableBits++Color++Output'
 		bitDepth char = 'FloatingPoint32BitIfPossible'
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 		timestampingMode double = 1
@@ -156,7 +157,7 @@ classdef screenManager < optickaCore
 				obj.isPTB = false;
 				obj.salutation('OpenGL support needed by PTB!')
 			end
-			obj.prepareScreen;
+			prepareScreen(obj);
 		end
 		
 		% ===================================================================
@@ -217,6 +218,9 @@ classdef screenManager < optickaCore
 			
 			if obj.debug == true %we yoke these together but they can then be overridden
 				obj.visualDebug = true;
+			end
+			if ismac
+				obj.disableSyncTests = true;
 			end
 			
 			obj.ppd; %generate our dependent propertie and caches it to ppd_ for speed
@@ -299,22 +303,24 @@ classdef screenManager < optickaCore
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
-				if ~strcmpi(obj.bitDepth,'8bit')
-					switch obj.bitDepth
-						case 'EnableBits++Color++Output'
-							PsychImaging('AddTask', 'General', 'EnableBits++Color++Output', 2);
-							obj.isPlusPlus = true;
-						case 'EnableBits++Bits++Output'
-							PsychImaging('AddTask', 'General', 'EnableBits++Bits++Output');
-							obj.isPlusPlus = true;
-						case 'EnableBits++Mono++Output'
-							PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
-							PsychImaging('AddTask', 'General', 'EnableBits++Mono++Output');
-							obj.isPlusPlus = true;
-						otherwise
-							PsychImaging('AddTask', 'General', obj.bitDepth);
-							obj.isPlusPlus = false;
+				if regexpi(obj.bitDepth, '^EnableBits')
+					ret = BitsPlusPlus('OpenBits#');
+					if ret == 1
+						obj.isPlusPlus = true;
+						PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
+						if regexp(obj.bitDepth, 'Color')
+							PsychImaging('AddTask', 'General', obj.bitDepth, 2);
+						else
+							PsychImaging('AddTask', 'General', obj.bitDepth, 2);
+						end
+					else
+						fprintf('\n---> screenManager: No Bits# found, revert to FloatingPoint32Bit mode.\n');
+						PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+						obj.isPlusPlus = false;
 					end
+				else
+					PsychImaging('AddTask', 'General', obj.bitDepth);
+					obj.isPlusPlus = false;
 				end
 				if obj.useRetina == true
 					PsychImaging('AddTask', 'General', 'UseRetinaResolution');

@@ -664,6 +664,7 @@ classdef stateMachine < optickaCore
 		%>
 		% ===================================================================
 		function plotLogs(log)
+			if isempty(log);warndlg('No log data yet...');return;end
 			try
 				for i = 1:length(log)
 					names{i} = log(i).name;
@@ -690,6 +691,7 @@ classdef stateMachine < optickaCore
 					h = plot(int,'ko','MarkerSize',12);
 					hold on
 					plot(outt,'ro','MarkerSize',12)
+					set(gca,'YScale','log');
 					set(gca,'XTick',1:length(log));
 					set(gca,'XTickLabel',names);
 					try set(gca,'XTickLabelRotation',45); end
