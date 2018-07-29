@@ -1,6 +1,7 @@
 %Isoluminant Colour task
 %The following class objects (easily named handle copies) are already loaded and available to
 %use: 
+% obj = runExperiment object
 % io = digital I/O to recording system
 % s = screen manager
 % sM = State Machine
@@ -18,20 +19,12 @@ tS.recordEyePosition = false; %==record eye position within PTB, **in addition**
 tS.askForComments = false; %==little UI requestor asks for comments before/after run
 tS.saveData = false; %==save behavioural and eye movement data?
 obj.useDataPixx = false; %==use datapixx to send strobe words?
-obj.useDisplayPP = false; %==use display++ to send strobe words?
+obj.useDisplayPP = true; %==use display++ to send strobe words?
 obj.useLabJackReward = false; %==used for rewards and to control magstim
-tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+obj.useEyeLink = true; %==eye tracking
+tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
-tS.name = 'default'; %==name of this protocol
-
-%-----enable the magstimManager which uses FOI2 of the LabJack
-if tS.useMagStim
-	mS = magstimManager('lJ',lJ,'defaultTTL',2);
-	mS.stimulateTime	= 240;
-	mS.frequency		= 0.7;
-	mS.rewardTime		= 25;
-	open(mS);
-end
+tS.name = 'isolum-color'; %==name of this protocol
 
 %------------Eyetracker Settings-----------------
 tS.fixX = 0;
@@ -73,7 +66,7 @@ obj.stimuli.tableChoice = 1;
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
-obj.stimuli.stimulusSets = {[1,2],[2]}; %EDIT THIS TO SAY WHICH STMULI TO SHOW
+obj.stimuli.stimulusSets = {[1,2],[2]};
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
@@ -95,14 +88,16 @@ pauseEntryFcn = { @()hide(obj.stimuli); ...
 %pause exit
 pauseExitFcn = { @()enableFlip(obj); @()resumeRecording(io); };
 
+%prefixate entry
 prefixEntryFcn = {
-	@()trackerClearScreen(eL); ... 
+	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
+	@()trackerClearScreen(eL); ...
 	@()hide(obj.stimuli); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 	};
 
-%fixate entry
+%prefixate exit
 prefixExitFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
 	@()resetFixation(eL); ... %reset the fixation counters ready for a new trial
 	@()updateFixationValues(eL,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset 
@@ -113,11 +108,9 @@ prefixExitFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text 
 	@()startRecording(eL); ... %fire up eyelink
 	};
 
-
 %fixate entry
 fixEntryFcn = { @()startFixation(io); ...
 	@()syncTime(eL); ... %EDF sync message
-	@()draw(obj.stimuli); ... %draw stimulus
 	};
 
 %fix within
@@ -129,7 +122,7 @@ initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 %exit fixation phase
 fixExitFcn = {@()prepareStrobe(io,getTaskIndex(obj)); ...
 	@()updateFixationValues(eL,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
-	@()showSet(obj.stimuli); ...
+	@()show(obj.stimuli); ...
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edfMessage(eL,'END_FIX'); ...
 	}; 
@@ -151,9 +144,8 @@ maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
 stimExitFcn = @()sendStrobe(io,255);
 
 %if the subject is correct (small reward)
-correctEntryFcn = { 
-	@()trackerDrawText(eL,'CORRECT!'); ...
-	@()drawSpot(s, 0.3, [1 1 0 1]); ...
+correctEntryFcn =  { @()trackerDrawText(eL,'CORRECT!'); ...
+	@()statusMessage(eL,'Correct :-)'); ... %status message on eyelink
 	};
 
 %correct stimulus
@@ -168,13 +160,12 @@ correctExitFcn = { @()edfMessage(eL,'END_RT'); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
-	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
+	@()checkTaskEnded(obj); ... %check if task is finished
 	};
 
 %incorrect entry
 incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eyelink
-	%@()incorrect(io); ...
 	@()edfMessage(eL,'END_RT'); ...
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ...
 	@()trackerDrawText(eL,'INCORRECT!'); ...
@@ -185,22 +176,34 @@ incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eye
 incFcn = [];
 
 %incorrect / break exit
-incExitFcn = { @()stopRecording(eL); ...
+incExitFcn = { @()incorrect(io); ...
+	@()stopRecording(eL); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()resetRun(t);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(obj,[],[],false); ...
-	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
 	@()update(obj.stimuli); ... %update our stimuli ready for display
+	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
+	@()checkTaskEnded(obj); ... %check if task is finished
 	};
 
 %break entry
 breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message on eyelink
-	@()breakFixation(io);
 	@()edfMessage(eL,'END_RT'); ...
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -1'); ...
 	@()trackerDrawText(eL,'BREAK FIX!'); ...
 	@()hide(obj.stimuli); ...
+	};
+
+%incorrect / break exit
+breakExitFcn = { @()breakFixation(io); ...
+	@()stopRecording(eL); ...
+	@()setOffline(eL); ... %set eyelink offline
+	@()resetRun(t);... %we randomise the run within this block to make it harder to guess next trial
+	@()updateVariables(obj,[],[],false); ...
+	@()update(obj.stimuli); ... %update our stimuli ready for display
+	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
+	@()checkTaskEnded(obj); ... %check if task is finished
 	};
 
 %calibration function
@@ -223,6 +226,12 @@ magstimFcn = { @()drawBackground(s); ...
 %show 1deg size grid
 gridFcn = @()drawGrid(s);
 
+% N x 2 cell array of regexpi strings, list to skip the current -> next state's exit functions; for example
+% skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
+% 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
+% state. Add multiple rows for skipping multiple state's exit states.
+sM.skipExitStates = {'fixate','incorrect|breakfix'};
+
 %==================================================================
 %----------------------State Machine Table-------------------------
 disp('================>> Building state info file <<================')
@@ -244,12 +253,6 @@ stateInfoTmp = { ...
 };
 %----------------------State Machine Table-------------------------
 %==================================================================
-
-% N x 2 cell array of regexp strings, list to skip the current -> next state's exit functions; for example
-% skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
-% 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
-% state. Add multiple rows for skipping multiple state's exit states.
-sM.skipExitStates = {'fixate','incorrect|breakfix'};
 
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')

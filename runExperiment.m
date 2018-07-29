@@ -129,6 +129,8 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> should we stop the task?
+		stopTask logical = false
 		%> properties allowed to be modified during construction
 		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|useDataPixx|logFrames|debug|verbose|screenSettings|benchmark'
 	end
@@ -567,7 +569,7 @@ classdef runExperiment < optickaCore
 				
 				%-----set up the eyelink interface
 				if obj.useEyeLink
-					fprintf('===>>> Handing over to eyelink for calibration & validation...\n')
+					fprintf('\n===>>> Handing over to eyelink for calibration & validation...\n')
 					initialise(eL, s);
 					setup(eL);
 				end
@@ -609,7 +611,6 @@ classdef runExperiment < optickaCore
 					updateVariables(obj, t.totalRuns, true, false); % set to first variable
 					%updateFixationTarget(obj, true);
 				end
-				tS.stopTask = false; %used to break main while loop
 				tS.keyTicks = 0; %tick counter for reducing sensitivity of keyboard
 				tS.keyHold = 1; %a small loop to stop overeager key presses
 				tS.totalTicks = 1; % a tick counter
@@ -624,27 +625,26 @@ classdef runExperiment < optickaCore
 				%-----initialise our vbl's
 				tL.screenLog.beforeDisplay = GetSecs;
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
-				vbl = Screen('Flip', s.win);
-				tL.vbl(1) = vbl;
-				tL.startTime = vbl;
-				
+				tL.vbl(1) = Screen('Flip', s.win);
+				tL.startTime = tL.vbl(1);
+				obj.task.verbose = true;
+				obj.stopTask = false;
 				%-----ignite the stateMachine!
 				start(sM); 
 
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				% Our display loop
+				% Our task display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				while tS.stopTask == false
+				while obj.stopTask == false
 					
 					%------run the stateMachine one tick forward
 					if obj.useEyeLink; getSample(eL); end
 					update(sM);
 					
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
-					% the EDF this is just a backup wrapped in the PTB loop. Good to have a copy (even if
-					% it is sampled at the refresh rate), but make cause a small performance hit.
+					% the EDF this is just a backup wrapped in the PTB loop. 
 					if obj.useEyeLink && tS.recordEyePosition == true
 						saveEyeInfo(obj, sM, eL, tS);
 					end
@@ -669,7 +669,7 @@ classdef runExperiment < optickaCore
 					end
 					obj.sendStrobe = false;
 					
-					%======= FLIP: Show it at correct retrace: ========%
+					%----- FLIP: Show it at correct retrace: -----%
 					if obj.doFlip
 						nextvbl = tL.vbl(end) + obj.screenVals.halfisi;
 						if obj.logFrames == true
@@ -679,13 +679,11 @@ classdef runExperiment < optickaCore
 						else
 							tL.vbl = Screen('Flip', s.win, nextvbl);
 						end
-						
 						tS.totalTicks = tS.totalTicks + 1;
-				
-					end %----------end of display loop
+					end 
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				end %===========================END OF TASK=========================
+				end %======================END OF TASK LOOP=========================
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				
 				show(obj.stimuli); %make all stimuli visible again, useful for editing 
@@ -835,10 +833,23 @@ classdef runExperiment < optickaCore
 		
 			obj.screenVals = obj.screen.screenVals;
 			
+			obj.stopTask = false;
+			
 			if isa(obj.runLog,'timeLogger')
 				obj.runLog.screenLog.prepTime=obj.runLog.timer()-obj.runLog.screenLog.construct;
 			end
 			
+		end
+		
+		% ===================================================================
+		%> @brief check if stateMachine has finished, set tS.stopTask true
+		%>
+		%> @param
+		% ===================================================================
+		function checkTaskEnded(obj)
+			if obj.stateMachine.isRunning && obj.task.taskFinished
+				obj.stopTask = true;
+			end
 		end
 		
 		% ===================================================================
@@ -1515,7 +1526,7 @@ classdef runExperiment < optickaCore
 				if iscell(rchar);rchar=rchar{1};end
 				switch rchar
 					case 'q' %quit
-						tS.stopTask = true;
+						obj.stopTask = true;
 					case {'UpArrow','up'} %give a reward at any time
 						if tS.keyTicks > tS.keyHold
 							if ~isempty(obj.stimuli.controlTable)

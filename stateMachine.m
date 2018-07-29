@@ -46,7 +46,7 @@ classdef stateMachine < optickaCore
 		%> skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
 		%> 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
 		%> state. Add multiple rows for skipping multiple state's exit states.
-		skipExitStates char = ''
+		skipExitStates cell
 		%> verbose logging to command window?
 		verbose = false
 	end
@@ -514,6 +514,7 @@ classdef stateMachine < optickaCore
 		function enterStateAtIndex(obj, thisIndex)
 			obj.currentIndex = thisIndex;
 			if length(obj.stateList) >= thisIndex
+				tt=tic;
 				%obj.notify('enterState');
 				thisState = obj.stateList(obj.currentIndex);
 				obj.currentEntryTime = feval(obj.clockFcn);
@@ -532,10 +533,8 @@ classdef stateMachine < optickaCore
 					obj.nextTimeOut = obj.currentEntryTime + thisState.time;
 				end
 				obj.nextTickOut = round(thisState.time / obj.timeDelta);
-				
-				if obj.verbose; obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false); end
-				
-				tic;
+								
+				%run our enter state functions
 				if isa(thisState.entryFcn,'function_handle') %function handle, lets feval it
 					feval(thisState.entryFcn);
 				elseif iscell(thisState.entryFcn) %nested class of function handles
@@ -543,8 +542,19 @@ classdef stateMachine < optickaCore
 						feval(thisState.entryFcn{i});
 					end
 				end
-				obj.fevalTime.enter = toc*1000;
 				
+				%run our within state functions
+				if isa(obj.currentWithinFcn,'function_handle') %function handle, lets feval it
+					feval(obj.currentWithinFcn);
+				elseif iscell(obj.currentWithinFcn)
+					for i = 1:size(obj.currentWithinFcn,1) %nested class
+						feval(obj.currentWithinFcn{i});
+					end
+				end
+				obj.fevalTime.enter = toc(tt)*1000;
+				
+				if obj.verbose; obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false); end
+
 			else
 				if obj.verbose; obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length'); end
 				obj.finish();
@@ -560,7 +570,7 @@ classdef stateMachine < optickaCore
 		function transitionToStateWithName(obj, nextName)
 			[isState, index] = isStateName(obj, nextName);
 			if isState
-				if iscell(obj.skipExitStates)
+				if ~isempty(obj.skipExitStates)
 					for i=1:size(obj.skipExitStates,1)
 						if ~isempty(regexpi(obj.currentName,obj.skipExitStates{i,1})) && ~isempty(regexpi(nextName,obj.skipExitStates{i,2}))
 							obj.currentState.skipExitFcn = true;
@@ -568,7 +578,6 @@ classdef stateMachine < optickaCore
 					end
 				end
 				exitCurrentState(obj);
-				if obj.verbose; obj.salutation(['Transition @ ' num2str(feval(obj.clockFcn)-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false); end
 				enterStateAtIndex(obj, index);
 			else
 				obj.salutation('transitionToStateWithName method', 'ERROR, default to return to first state!!!\n',true)

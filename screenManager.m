@@ -305,6 +305,8 @@ classdef screenManager < optickaCore
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
 				if regexpi(obj.bitDepth, '^EnableBits')
 					ret = BitsPlusPlus('OpenBits#');
+					WaitSecs(0.1);
+					BitsPlusPlus('Close');
 					if ret == 1
 						obj.isPlusPlus = true;
 						PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');

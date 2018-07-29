@@ -50,6 +50,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		minBlocks
 		%> log of with block resets
 		resetLog
+		%> has task finished
+		taskFinished logical = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Transient = true, Hidden = true)
@@ -298,6 +300,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		function updateTask(obj, thisResponse, runTime, info)
 			if ~obj.taskInitialised; return; end
 			if obj.totalRuns > obj.nRuns
+				obj.taskFinished = true;
 				fprintf('---> stimulusSequence.updateTask: Task FINISHED, no more updates allowed\n');
 				return
 			end
@@ -319,6 +322,9 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				obj.totalRuns = obj.totalRuns + 1;
 				[obj.thisBlock, obj.thisRun] = findRun(obj);
 				randomiseTimes(obj);
+			elseif obj.totalRuns == obj.nRuns
+				obj.taskFinished = true;
+				fprintf('---> stimulusSequence.updateTask: Task FINISHED, no more updates allowed\n');
 			end
 		end
 		
@@ -343,13 +349,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
                 obj.responseInfo{obj.totalRuns} = [];
                 obj.runTimeList(obj.totalRuns) = [];
                 obj.totalRuns = obj.totalRuns - 1;
-				obj.thisRun = obj.thisRun - 1;
-                
-                if obj.thisRun > obj.minBlocks * (obj.thisBlock - 1)
-                    obj.thisBlock = obj.thisBlock - 1;
-                end
-                
-                obj.salutation(sprintf('===!!! REWIND Run to %i:',obj.totalRuns));
+				[obj.thisBlock, obj.thisRun] = findRun(obj);
+                fprintf('===!!! REWIND Run to %i:',obj.totalRuns);
                 
             end
         end
@@ -413,7 +414,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				obj.resetLog(myN).aTrial = aTrial;
 				obj.resetLog(myN).bTrial = bTrial;
 				success = true;
-				obj.salutation(sprintf('Task %i: swap with = %i (random choice=%i)',obj.totalRuns, trialToSwap, randomChoice),[],true);
+				fprintf('--->>> stimulusSequence.resetRun() Task %i: swap with = %i (random choice=%i)',obj.totalRuns, trialToSwap, randomChoice);
 			end
 		end
 		
@@ -639,6 +640,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				end
 			end
 			obj.taskInitialised = false;
+			obj.taskFinished = false;
 		end	
 		
 		% ===================================================================
