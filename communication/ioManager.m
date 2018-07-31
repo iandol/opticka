@@ -82,7 +82,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function prepareStrobe(obj,varargin)
+		function prepareStrobe(obj,value)
 
 		end
 		
@@ -100,7 +100,7 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function sendTTL(obj,varargin)
+		function sendTTL(obj,value)
 
 		end
 		

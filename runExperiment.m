@@ -193,17 +193,14 @@ classdef runExperiment < optickaCore
 			obj.runLog = timeLogger();
 			tL = obj.runLog;
 
-			%make a handle to the screenManager, so lazy!
-			s = obj.screen;
-			prepareScreen(s);
-			obj.screenVals = s.open(obj.debug,obj.runLog);
-			%if s.windowed(1)==0 && obj.debug == false;HideCursor;end
-
-			%-----------------------------------------------------------
-
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------	
+				
+				%make a handle to the screenManager, so lazy!
+				s = obj.screen;
+				prepareScreen(s);
+				obj.screenVals = s.open(obj.debug,obj.runLog);
 				
 				%configure IO
 				io = configureIO(obj);
