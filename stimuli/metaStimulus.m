@@ -368,8 +368,8 @@ classdef metaStimulus < optickaCore
 				sets = obj.stimulusSets{obj.setChoice};
 				if max(sets) <= obj.n
 					hide(obj)
-					for i = 1:length(sets)
-						show(obj.stimuli{sets(i)});
+					for i = sets
+						show(obj.stimuli{i});
 					end
 				end
 			end

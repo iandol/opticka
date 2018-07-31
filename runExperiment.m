@@ -266,6 +266,7 @@ classdef runExperiment < optickaCore
 					drawScreenCenter(s);
 					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
 					Screen('DrawingFinished', s.win);
+					if obj.useEyeLink; getSample(obj.eyeLink); end
 					Screen('Flip', s.win);
 				end
 				if obj.logFrames == true
@@ -521,24 +522,6 @@ classdef runExperiment < optickaCore
 				%---------initialise and set up I/O
 				io = configureIO(obj);
 				
-				%------------------------------------------------------------
-				% lets draw 1 seconds worth of the stimuli we will be using
-				% covered by a blank. this lets us prime the GPU with the sorts
-				% of stimuli it will be using and this does appear to minimise
-				% some of the frames lost on first presentation for very complex
-				% stimuli using 32bit computation buffers...
-				fprintf('\n===>>> Warming up the GPU and I/O systems... <<<===\n')
-				show(obj.stimuli);
-				for i = 1:s.screenVals.fps
-					draw(obj.stimuli);
-					drawBackground(s);
-					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
-					finishDrawing(s);
-					if ~mod(i,10); io.sendStrobe(255); end
-					s.flip;
-				end
-				io.resetStrobe;flip(s);flip(s);
-				
 				%-----initialise the state machine
 				obj.stateMachine = stateMachine('verbose',obj.verbose,'realTime',true,'timeDelta',1e-4,'name',obj.name); 
 				sM = obj.stateMachine;
@@ -558,12 +541,7 @@ classdef runExperiment < optickaCore
 					if ~isempty(comment)
 						comment = comment{1};
 						obj.comment = [obj.name ':' comment];
-						bR.comment = obj.comment;
-						eL.comment = obj.comment;
-						sM.comment = obj.comment;
-						io.comment = obj.comment;
-						tL.comment = obj.comment;
-						tS.comment = obj.comment;
+						bR.comment = obj.comment; eL.comment = obj.comment; sM.comment = obj.comment; io.comment = obj.comment; tL.comment = obj.comment; tS.comment = obj.comment;
 					end
 				end
 				
@@ -577,24 +555,43 @@ classdef runExperiment < optickaCore
 				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
 				if obj.debug == false
-					%HideCursor;
-					warning('off'); %#ok<*WNOFF>
+					%warning('off'); %#ok<*WNOFF>
 					ListenChar(2); %2=capture all keystrokes
 				else
 					ListenChar(1); %1=listen
 				end
 				
+				%-----set up our behavioural plot
+				createPlot(bR, eL);
+				drawnow;
+				
+				
 				fprintf('\n===>>> Checking variables & Setting up Equipment, please wait...\n\n')
+				
+				%------------------------------------------------------------
+				% lets draw 1 seconds worth of the stimuli we will be using
+				% covered by a blank. this lets us prime the GPU with the sorts
+				% of stimuli it will be using and this does appear to minimise
+				% some of the frames lost on first presentation for very complex
+				% stimuli using 32bit computation buffers...
+				fprintf('\n===>>> Warming up the GPU, Eyelink and I/O systems... <<<===\n')
+				show(obj.stimuli);
+				for i = 1:s.screenVals.fps
+					draw(obj.stimuli);
+					drawBackground(s);
+					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
+					finishDrawing(s);
+					if obj.useEyeLink; getSample(obj.eyeLink); end
+					if ~mod(i,10); io.sendStrobe(255); end
+					s.flip;
+				end
+				io.resetStrobe;flip(s);flip(s);
 				
 				%-----premptive save in case of crash or error SAVE IN /TMP
 				rE = obj;
 				htmp = obj.screenSettings.optickahandle; obj.screenSettings.optickahandle = [];
 				save([tempdir filesep obj.name '.mat'],'rE','tS');
 				obj.screenSettings.optickahandle = htmp;
-				
-				%-----set up our behavioural plot
-				createPlot(bR, eL);
-				drawnow;
 				
 				%-----Start Plexon in paused mode
 				if obj.useDisplayPP || obj.useDataPixx
@@ -1108,7 +1105,7 @@ classdef runExperiment < optickaCore
 			end
 			if (index > obj.lastIndex) || override == true
 				[thisBlock, thisRun] = obj.task.findRun(index);
-				t = sprintf('Index#%g|Block#%g|Run#%g = ',index,thisBlock,thisRun);
+				t = sprintf('Total#%g|Block#%g|Run#%g = ',index,thisBlock,thisRun);
 				for i=1:obj.task.nVars
 					ix = []; valueList = cell(1); oValueList = cell(1); %#ok<NASGU>
 					doXY = false;
@@ -1651,7 +1648,7 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'r'
-						timedTTL(obj.lJack,0,150);
+						timedTTL(rM,0,150);
 					case '=+'
 						if tS.keyTicks > tS.keyHold
 							obj.screen.screenXOffset = obj.screen.screenXOffset + 1;
