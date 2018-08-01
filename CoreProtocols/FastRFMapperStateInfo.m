@@ -15,8 +15,6 @@ tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = false;
 tS.askForComments = false;
 tS.saveData = false; %*** save behavioural and eye movement data? ***
-obj.useDataPixx = false; %*** drive plexon to collect data? ***
-obj.useLabJack = false; %used for rewards and to control magstim
 tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
 tS.name = 'jordirfmapper';

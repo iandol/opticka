@@ -14,6 +14,8 @@ classdef dPixxManager < optickaCore
 		verbose = true
 		%> which digital I/O to use for the strobe trigger
 		strobeLine@double = 16
+		%> what value to send for stimulus off / inf
+		stimOFFValue = 2^15
 		%> silentMode allows one to gracefully fail methods without a dataPixx connected
 		silentMode@logical = false
 	end

@@ -2061,7 +2061,7 @@ classdef runExperiment < optickaCore
 						lobj.debug = in.debug;
 					end
 					if ~isObject && isfield(in,'useLabJack')
-						lobj.useLabJack = in.useLabJack;
+						lobj.useLabJackReward = in.useLabJack;
 					end
 				end
 				try

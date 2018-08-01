@@ -12,13 +12,13 @@
 % tS = general simple struct to hold variables for this run
 
 %------------General Settings-----------------
-tS.rewardTime = 150; %TTL time in milliseconds
-tS.useTask = true; %use stimulusSequence (randomised variable task object)
+tS.rewardTime = 150; %==TTL time in milliseconds
+tS.useTask = true; %==use stimulusSequence (randomised variable task object)
 tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = false; %==little UI requestor asks for comments before/after run
 tS.saveData = false; %==save behavioural and eye movement data?
-tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
 tS.name = 'isolum-color'; %==name of this protocol
 
@@ -80,7 +80,7 @@ pauseEntryFcn = { @()hide(obj.stimuli); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
-	@()fprintf('\n===>>>ENTER PAUSE STATE\n');
+	@()fprintf('\n===>>>ENTER PAUSE STATE\n'); ...
 	@()disableFlip(obj); ...
 	};
 
@@ -133,7 +133,7 @@ stimEntryFcn = @()sendStrobe(io);
 stimFcn =  { @()draw(obj.stimuli); ...
 	@()drawPhotoDiode(s,[1 1 1]); ...
 	@()finishDrawing(s); ...
-	@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
+	%@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
 	};
 
 %test we are maintaining fixation

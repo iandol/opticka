@@ -379,7 +379,7 @@ classdef opticka < optickaCore
 			obj.r.screen.blend = obj.gv(obj.h.OKOpenGLBlending);
 			
 			value = obj.gv(obj.h.OKUseGamma);
-			if isa(obj.r.screen.gammaTable,'calibrateLuminance') && ~isempty(obj.r.screen.gammaTable)
+			if isprop(obj.r.screen,'gammaTable') && isa(obj.r.screen.gammaTable,'calibrateLuminance') && ~isempty(obj.r.screen.gammaTable)
 				obj.r.screen.gammaTable.choice = value - 1;
 			end
 			

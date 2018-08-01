@@ -15,10 +15,8 @@ tS.checkKeysDuringStimulus = false;
 tS.recordEyePosition = true;
 tS.askForComments = true;
 tS.saveData = true; %*** save behavioural and eye movement data? ***
-obj.useDataPixx = true; %*** drive plexon to collect data? ***
-obj.useLabJack = true; %used for rewards and to control magstim
-tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
-tS.useMagStim = true; %enable the magstim manager
+tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.useMagStim = false; %enable the magstim manager
 tS.name = 'dot-colour';
 
 %-----enable the magstimManager which uses FOI2 of the LabJack

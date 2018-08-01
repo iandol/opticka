@@ -6,8 +6,6 @@ tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in per
 tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = false; %==little UI requestor asks for comments before/after run
 tS.saveData = false; %we don't want to save any data
-obj.useDataPixx = false; %make sure we don't trigger the plexon
-obj.useLabJack = true; %used for rewards and to control magstim
 tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
 tS.name = 'RF Localiser'; %==name of this protocol

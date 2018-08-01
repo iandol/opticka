@@ -97,14 +97,12 @@ classdef plusplusManager < optickaCore
 		% ===================================================================
 		function sendStrobe(obj, value)
 			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
-			if exist('value','var')
-				prepareStrobe(obj,value,obj.mask)
-			end
+			if exist('value','var'); prepareStrobe(obj,value,obj.mask);	end
 			BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, obj.sendMask, obj.sendData, obj.command);
-% 			if obj.verbose == true
-% 				fprintf('===>>> sendStrobe VALUE: %i\t| mode:%s\t| mask:%s\n',...
-% 					obj.sendValue, obj.strobeMode, dec2bin(obj.mask));
-% 			end
+			if obj.verbose == true
+				fprintf('===>>> sendStrobe VALUE: %i\t| mode:%s\t| mask:%s\n',...
+					obj.sendValue, obj.strobeMode, dec2bin(obj.mask));
+			end
 		end
 		
 		% ===================================================================
@@ -147,11 +145,12 @@ classdef plusplusManager < optickaCore
 		% ===================================================================
 		function sendStrobeAndFlip(obj, value)
 			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
-			prepareStrobe(obj,value);
+			if exist('value','var'); prepareStrobe(obj,value,obj.mask);	end
 			sendStrobe(obj);
 			flip(obj.sM); flip(obj.sM);
 			if obj.verbose == true
-				fprintf('===>>> sendStrobeAndFlip VALUE: %i\t| mode: %s\t| mask: %s\n', value, obj.strobeMode, dec2bin(mask));
+				fprintf('===>>> sendStrobeAndFlip VALUE: %i\t| mode: %s\t| mask: %s\n', ...
+					obj.sendValue, obj.strobeMode, dec2bin(obj.mask));
 			end
 		end
 		

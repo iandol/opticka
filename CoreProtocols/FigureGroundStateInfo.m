@@ -17,9 +17,6 @@ tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in pe
 tS.recordEyePosition = true; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = true; %==little UI requestor asks for comments before/after run
 tS.saveData = true; %==save behavioural and eye movement data?
-obj.useDataPixx = false; %==drive plexon to collect data?
-obj.useDisplayPP = false;
-obj.useLabJackReward = false; %==used for rewards and to control magstim
 tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
 tS.name = 'figure-ground'; %==name of this protocol
