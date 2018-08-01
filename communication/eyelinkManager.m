@@ -430,14 +430,14 @@ classdef eyelinkManager < optickaCore
 					obj.fixationRadius = inittime{3};
 					obj.strictFixation = inittime{4};
 				elseif length(inittime) == 2
-					obj.fixationInitTime = randi(inittime*1000)/1000;
+					obj.fixationInitTime = randi(inittime.*1000)/1000;
 				elseif length(inittime)==1
 					obj.fixationInitTime = inittime;
 				end
 			end
 			if nargin > 4 && ~isempty(fixtime)
 				if length(fixtime) == 2
-					obj.fixationTime = randi(fixtime*1000)/1000;
+					obj.fixationTime = randi(fixtime.*1000)/1000;
 				elseif length(fixtime) == 1
 					obj.fixationTime = fixtime;
 				end

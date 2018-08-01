@@ -18,7 +18,7 @@ tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in pe
 tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = false; %==little UI requestor asks for comments before/after run
 tS.saveData = false; %==save behavioural and eye movement data?
-tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
 tS.name = 'isolum-color'; %==name of this protocol
 
@@ -120,7 +120,7 @@ fixFcn = { @()draw(obj.stimuli); @()drawPhotoDiode(s,[0 0 0]) };
 initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 
 %exit fixation phase
-fixExitFcn = {@()updateFixationValues(eL,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
+fixExitFcn = {@()updateFixationValues(eL,[],[],0,tS.stimulusFixTime); %reset a maintained fixation of 1 second
 	@()show(obj.stimuli); ...
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edfMessage(eL,'END_FIX'); ...
