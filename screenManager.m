@@ -832,6 +832,19 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief draw text and flip immediately
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawTextNow(obj,text)
+			% drawTextNow(obj,text)
+			if ~exist('text','var');return;end
+			Screen('DrawText',obj.win,text,0,0,[1 1 1],[0.5 0.5 0.5]);
+			flip(obj);
+		end
+		
+		% ===================================================================
 		%> @brief draw small spot centered on the screen
 		%>
 		%> @param
@@ -852,12 +865,13 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief draw a white square in top-left of screen to trigger photodiode
+		%> @brief draw a square in top-left of screen to trigger photodiode
 		%>
 		%> @param colour colour of square
 		%> @return
 		% ===================================================================
 		function drawPhotoDiodeSquare(obj,colour)
+			% drawPhotoDiodeSquare(obj,colour)
 			Screen('FillRect',obj.win,colour,obj.photoDiodeRect);
 		end
 		
@@ -868,6 +882,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawPhotoDiode(obj,colour)
+			% drawPhotoDiode(obj,colour)
 			if obj.photoDiode;Screen('FillRect',obj.win,colour,obj.photoDiodeRect);end
 		end
 		

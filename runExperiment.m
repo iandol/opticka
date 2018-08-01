@@ -495,9 +495,9 @@ classdef runExperiment < optickaCore
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-			try %================This is our main TASK loop=====================
+			try %================This is our main TASK setup=====================
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-			%-----open the eyelink interface
+				%-----open the eyelink interface
 				obj.useEyeLink = true; %we always need the eyelink, even if we run a dummy mode
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
@@ -549,22 +549,10 @@ classdef runExperiment < optickaCore
 					setup(eL);
 				end
 				
-				%-----take over the keyboard!
-				KbReleaseWait; %make sure keyboard keys are all released
-				if obj.debug == false
-					%warning('off'); %#ok<*WNOFF>
-					ListenChar(2); %2=capture all keystrokes
-				else
-					ListenChar(1); %1=listen
-				end
-				
 				%-----set up our behavioural plot
 				createPlot(bR, eL);
 				drawnow;
-				
-				
-				fprintf('\n===>>> Checking variables & Setting up Equipment, please wait...\n\n')
-				
+
 				%------------------------------------------------------------
 				% lets draw 1 seconds worth of the stimuli we will be using
 				% covered by a blank. this lets us prime the GPU with the sorts
@@ -592,6 +580,7 @@ classdef runExperiment < optickaCore
 				
 				%-----Start Plexon in paused mode
 				if obj.useDisplayPP || obj.useDataPixx
+					fprintf('\n===>>> Triggering I/O systems... <<<===\n')
 					pauseRecording(io); %make sure this is set low first
 					startRecording(io);
 					WaitSecs(0.5);
@@ -616,13 +605,23 @@ classdef runExperiment < optickaCore
 				%-----check initial eye position
 				if obj.useEyeLink; getSample(eL); end
 				
+				%-----take over the keyboard!
+				KbReleaseWait; %make sure keyboard keys are all released
+				if obj.debug == false
+					%warning('off'); %#ok<*WNOFF>
+					ListenChar(2); %2=capture all keystrokes
+					Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+				else
+					ListenChar(1); %1=listen
+				end
+				
 				%-----initialise our vbl's
 				tL.screenLog.beforeDisplay = GetSecs;
-				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				tL.vbl(1) = Screen('Flip', s.win);
 				tL.startTime = tL.vbl(1);
 				obj.task.verbose = true;
 				obj.stopTask = false;
+				
 				%-----ignite the stateMachine!
 				start(sM); 
 
@@ -1983,13 +1982,10 @@ classdef runExperiment < optickaCore
 				if isprop(lobj,'fullName')
 					name = [name 'NEW:' lobj.fullName];
 				end
-				if isprop(in,'fullName')
-					name = [name ' <-- OLD:' in.fullName];
-				end
 				fprintf('---> runExperiment loadobj: %s\n',name);
 				isObject = true;
 				setPaths(lobj);
-				lobj = rebuild(lobj, in, isObject);
+				rebuild();
 				return
 			else
 				lobj = runExperiment;
@@ -1997,22 +1993,25 @@ classdef runExperiment < optickaCore
 				if isprop(lobj,'fullName')
 					name = [name 'NEW:' lobj.fullName];
 				end
+				if isprop(in,'name')
+					name = [name '<--OLD:' in.name];
+				end
 				fprintf('---> runExperiment loadobj %s: Loading legacy structure...\n',name);
 				isObject = false;
 				lobj.initialise('notask noscreen nostimuli');
-				lobj = rebuild(lobj, in, isObject);
+				rebuild();
 			end
 			
 			
-			function obj = rebuild(obj,in,inObject)
+			function obj = rebuild()
 				fprintf('------> ');
 				try %#ok<*TRYNC>
 					if (isprop(in,'stimuli') || isfield(in,'stimuli')) && isa(in.stimuli,'metaStimulus')
-						if ~strcmpi(in.stimuli.uuid,lobj.stimuli.uuid)
+						if ~isObject
 							lobj.stimuli = in.stimuli;
-							fprintf('Stimuli = metaStimulus object loaded | ');
+							fprintf('metaStimulus object loaded | ');
 						else
-							fprintf('Stimuli = metaStimulus object present | ');
+							fprintf('metaStimulus object present | ');
 						end
 					elseif isfield(in,'stimulus') || isprop(in,'stimulus')
 						if iscell(in.stimulus) && isa(in.stimulus{1},'baseStimulus')
@@ -2028,7 +2027,7 @@ classdef runExperiment < optickaCore
 					end
 					if isfield(in.paths,'stateInfoFile') 
 						if exist(in.paths.stateInfoFile,'file')
-							lobj.paths.stateInfoFile = in.paths.stateInfoFile;
+							if ~isObject; lobj.paths.stateInfoFile = in.paths.stateInfoFile;end
 							fprintf('stateInfoFile assigned');
 						else
 							tp = in.paths.stateInfoFile;
@@ -2044,9 +2043,9 @@ classdef runExperiment < optickaCore
 							fprintf('stateInfoFile assigned');
 						end
 					end
-					if isa(in.task,'stimulusSequence') && ~strcmpi(in.task.uuid,lobj.task.uuid)
+					if isa(in.task,'stimulusSequence') && ~isObject
 						lobj.task = in.task;
-						lobj.previousInfo.task = in.task;
+						%lobj.previousInfo.task = in.task;
 						fprintf(' | loaded stimulusSequence');
 					elseif isa(lobj.task,'stimulusSequence')
 						lobj.previousInfo.task = in.task;
@@ -2055,17 +2054,14 @@ classdef runExperiment < optickaCore
 						lobj.task = stimulusSequence();
 						fprintf(' | new stimulusSequence');
 					end
-					if inObject == true || isfield('in','verbose')
+					if ~isObject && isfield(in,'verbose')
 						lobj.verbose = in.verbose;
 					end
-					if inObject == true || isfield('in','debug')
+					if ~isObject && isfield(in,'debug')
 						lobj.debug = in.debug;
 					end
-					if inObject == true || isfield('in','useLabJack')
+					if ~isObject && isfield(in,'useLabJack')
 						lobj.useLabJack = in.useLabJack;
-					end
-					if inObject == true || isfield('in','runLog')
-						lobj.previousInfo.runLog = in.runLog;
 					end
 				end
 				try
@@ -2094,6 +2090,7 @@ classdef runExperiment < optickaCore
 					end
 				end
 				try
+					lobj.previousInfo.runLog = in.runLog;
 					lobj.previousInfo.computer = in.computer;
 					lobj.previousInfo.ptb = in.ptb;
 					lobj.previousInfo.screenVals = in.screenVals;

@@ -18,11 +18,7 @@ tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in pe
 tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = false; %==little UI requestor asks for comments before/after run
 tS.saveData = false; %==save behavioural and eye movement data?
-obj.useDataPixx = false; %==use datapixx to send strobe words?
-obj.useDisplayPP = true; %==use display++ to send strobe words?
-obj.useLabJackReward = false; %==used for rewards and to control magstim
-obj.useEyeLink = true; %==eye tracking
-tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
 tS.name = 'isolum-color'; %==name of this protocol
 
@@ -77,6 +73,7 @@ showSet(obj.stimuli);
 %pause entry
 pauseEntryFcn = { @()hide(obj.stimuli); ...
 	@()drawBackground(s); ... %blank the display
+	@()drawTextNow(s,'Paused, press [p] to resume...'); ...
 	@()pauseRecording(io); ...
 	@()trackerClearScreen(eL); ... 
 	@()trackerDrawText(eL,'PAUSED, press [P] to resume...'); ...

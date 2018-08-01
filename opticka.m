@@ -886,6 +886,8 @@ classdef opticka < optickaCore
 			if f ~= 0
 				cd(p);
 				tmp = clone(obj);
+				tmp.name = f;
+				tmp.r.name = f;
 				tmp.r.paths.stateInfoFile = obj.r.paths.stateInfoFile;
 				tmp.store = struct(); %lets just nuke this incase some rogue handles are lurking
 				tmp.h = struct(); %remove the handles to the UI which will not be valid on reload
@@ -986,8 +988,10 @@ classdef opticka < optickaCore
 			load(file);
 			obj.paths.protocols = p;
 			
-			obj.comment = ['Protocol: ' file];
-			obj.r.comment = obj.comment;
+			obj.comment = ['Prt: ' file];
+			
+			salutation(obj,sprintf('Routing Protocol from %s to %s',tmp.fullName,obj.fullName),[],true);
+			
 			
 			if exist('tmp','var') && isa(tmp,'opticka')
 				if isprop(tmp.r,'stimuli')
@@ -1017,9 +1021,9 @@ classdef opticka < optickaCore
 				%copy rE parameters
 				if isa(tmp.r,'runExperiment')
 					if strcmpi(obj.r.name,'runExperiment')
-						obj.r.name = [obj.comment];
+						obj.r.name = [tmp.r.comment];
 					else
-						obj.r.name = [obj.r.name ':' obj.comment];
+						obj.r.name = [tmp.r.name];
 					end
 					if isfield(tmp.r.paths,'stateInfoFile')
 						obj.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
@@ -1138,9 +1142,7 @@ classdef opticka < optickaCore
 				
 			end
 			obj.refreshProtocolsList;
-			o = getappdata(obj.h.output,'o');
-			salutation(obj,sprintf('GUI routed from %s to %s\n',o.fullName,obj.fullName),[],true);
-			setappdata(obj.h.output,'o',obj)
+			setappdata(obj.h.output,'o',obj);
 		end
 		
 		% ======================================================================
