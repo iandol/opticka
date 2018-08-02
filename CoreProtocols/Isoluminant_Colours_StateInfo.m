@@ -17,17 +17,18 @@ tS.useTask = true; %==use stimulusSequence (randomised variable task object)
 tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = false; %==little UI requestor asks for comments before/after run
-tS.saveData = false; %==save behavioural and eye movement data?
-tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.saveData = true; %==save behavioural and eye movement data?
+tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
 tS.name = 'isolum-color'; %==name of this protocol
+io.verbose = true;
 
 %------------Eyetracker Settings-----------------
 tS.fixX = 0;
 tS.fixY = 0;
 tS.firstFixInit = 1;
 tS.firstFixTime = [0.5 0.8];
-tS.firstFixRadius = 3;
+tS.firstFixRadius = 3.5;
 tS.stimulusFixTime = 1;
 obj.lastXPosition = tS.fixX;
 obj.lastYPosition = tS.fixY;
@@ -109,7 +110,6 @@ prefixExitFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text 
 
 %fixate entry
 fixEntryFcn = { @()startFixation(io); ...
-	@()prepareStrobe(io,getTaskIndex(obj)); ...
 	@()syncTime(eL); ... %EDF sync message
 	};
 
@@ -127,11 +127,11 @@ fixExitFcn = {@()updateFixationValues(eL,[],[],0,tS.stimulusFixTime); %reset a m
 	}; 
 
 %what to run when we enter the stim presentation state
-stimEntryFcn = @()sendStrobe(io);
+stimEntryFcn = @()doStrobe(obj,true);
 
 %what to run when we are showing stimuli
 stimFcn =  { @()draw(obj.stimuli); ...
-	@()drawPhotoDiode(s,[1 1 1]); ...
+	%@()drawPhotoDiode(s,[1 1 1]); ...
 	@()finishDrawing(s); ...
 	%@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
 	};
@@ -151,9 +151,9 @@ correctFcn = @()drawSpot(s, 0.3, [1 1 0 1]);
 %when we exit the correct state
 correctExitFcn = { @()correct(io); ...
 	@()edfMessage(eL,'END_RT'); ...
+	@()stopRecording(eL); ... %this MUST be BEFORE we send TRIAL_RESULT message
 	@()edfMessage(eL,'TRIAL_RESULT 1'); ...
 	@()timedTTL(rM,0,tS.rewardTime); ... % labjack sends a TTL to Crist reward system
-	@()stopRecording(eL); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
@@ -167,8 +167,8 @@ incEntryFcn = @()trackerDrawText(eL,'INCORRECT!');
 %incorrect / break exit
 incExitFcn = { @()incorrect(io); ...
 	@()edfMessage(eL,'END_RT'); ...
+	@()stopRecording(eL); ... %this MUST be BEFORE we send TRIAL_RESULT message
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ...
-	@()stopRecording(eL); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()resetRun(t);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(obj,[],true,false); ... %need to set override=true to visualise the randomised run
@@ -185,8 +185,8 @@ breakEntryFcn = { @()trackerDrawText(eL,'BREAK FIXATION!');
 %incorrect / break exit
 breakExitFcn = { @()breakFixation(io); ...
 	@()edfMessage(eL,'END_RT'); ...
+	@()stopRecording(eL); ...  %this MUST be BEFORE we send TRIAL_RESULT message
 	@()edfMessage(eL,'TRIAL_RESULT -1'); ...
-	@()stopRecording(eL); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()resetRun(t);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(obj,[],true,false); ...  %need to set override=true to visualise the randomised run

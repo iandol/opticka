@@ -566,9 +566,9 @@ classdef runExperiment < optickaCore
 					drawBackground(s);
 					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
 					finishDrawing(s);
-					if obj.useEyeLink; getSample(obj.eyeLink); end
 					if ~mod(i,10); io.sendStrobe(255); end
-					s.flip;
+					if obj.useEyeLink; getSample(obj.eyeLink); Eyelink('Message','testflip'); end
+					flip(s);
 				end
 				io.resetStrobe;flip(s);flip(s);
 				
@@ -583,7 +583,7 @@ classdef runExperiment < optickaCore
 					fprintf('\n===>>> Triggering I/O systems... <<<===\n')
 					pauseRecording(io); %make sure this is set low first
 					startRecording(io);
-					WaitSecs(0.5);
+					WaitSecs(1);
 				end
 				
 				%-----initialise out various counters
@@ -607,10 +607,10 @@ classdef runExperiment < optickaCore
 				
 				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
+				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				if obj.debug == false
 					%warning('off'); %#ok<*WNOFF>
-					ListenChar(2); %2=capture all keystrokes
-					Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+					ListenChar(1); %2=capture all keystrokes
 				else
 					ListenChar(1); %1=listen
 				end
@@ -633,14 +633,14 @@ classdef runExperiment < optickaCore
 				while obj.stopTask == false
 					
 					%------run the stateMachine one tick forward
-					if obj.useEyeLink; getSample(eL); end
+					getSample(eL);
 					update(sM);
 					
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
 					% the EDF this is just a backup wrapped in the PTB loop. 
-					if obj.useEyeLink && tS.recordEyePosition == true
-						saveEyeInfo(obj, sM, eL, tS);
-					end
+					%if obj.useEyeLink && tS.recordEyePosition == true
+					%	saveEyeInfo(obj, sM, eL, tS);
+					%end
 					
 					%------Check keyboard for commands
 					if ~strcmpi(sM.currentName,'stimulus') || (tS.checkKeysDuringStimulus == true && strcmpi(sM.currentName,'stimulus'))
@@ -672,8 +672,8 @@ classdef runExperiment < optickaCore
 							tL.vbl = Screen('Flip', s.win, nextvbl);
 						end
 						%----- Send EDF message if strobe sent with value and VBL time
-						if obj.useEyelink && obj.sendStrobe
-							Eyelink('Message', sprintf('SYNCSTROBE: value:%i @ vbl:%5.5g', io.sendValue, tL.vbl(end)));
+						if obj.sendStrobe
+							Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g', io.sendValue, tL.vbl(end)));
 							obj.sendStrobe = false;
 						end
 						tS.totalTicks = tS.totalTicks + 1;
@@ -696,8 +696,6 @@ classdef runExperiment < optickaCore
 				ListenChar(0);
 				ShowCursor;
 				warning('on');
-				fprintf('\n===>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
-				fprintf('===>>> Tracker Time: %g | PTB time: %g\n', tL.screenLog.trackerEndTime-tL.screenLog.trackerstartTime, tL.screenLog.afterDisplay-tL.screenLog.beforeDisplay);
 				
 				notify(obj,'endAllRuns');
 				
@@ -707,6 +705,12 @@ classdef runExperiment < optickaCore
 				close(eL); % eyelink, should save the EDF for us we've already given it our name and folder
 				WaitSecs(0.25);
 				close(rM); 
+				
+				fprintf('\n\n===>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
+				fprintf('===>>> Tracker Time: %g | PTB time: %g | Drift Offset: %g\n', ...
+					tL.screenLog.trackerEndTime-tL.screenLog.trackerStartTime, ...
+					tL.screenLog.afterDisplay-tL.screenLog.beforeDisplay, ...
+					tL.screenLog.trackerEndOffset-tL.screenLog.trackerStartOffset);
 				
 				if obj.useDisplayPP || obj.useDataPixx
 					pauseRecording(io); %pause plexon
@@ -1216,7 +1220,7 @@ classdef runExperiment < optickaCore
 				io.strobeMode = obj.dPPMode;
 				obj.stimOFFValue = 255;
 				io.name = obj.name;
-				io.verbose = true;
+				io.verbose = obj.verbose;
 				io.name = 'runinstance';
 				open(io);
 				obj.useLabJackStrobe = false;

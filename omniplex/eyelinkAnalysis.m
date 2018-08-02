@@ -9,93 +9,95 @@ classdef eyelinkAnalysis < analysisCore
 	% eyelinkAnalysis offers a set of methods to load, parse & plot raw EDF files.
 	properties
 		%> file name
-		file@char												= ''
+		file char									= ''
 		%> directory
-		dir@char												= ''
+		dir char									= ''
 		%> which EDF message contains the trial start tag
-		trialStartMessageName@char			= 'TRIALID'
+		trialStartMessageName char					= 'TRIALID'
 		%> which EDF message contains the variable name or value
-		variableMessageName@char				= 'TRIALID'
+		variableMessageName char					= 'TRIALID'
 		%> the EDF message name to start measuring stimulus presentation
-		rtStartMessage@char							= 'END_FIX'
+		rtStartMessage char							= 'END_FIX'
 		%> EDF message name to end the stimulus presentation
-		rtEndMessage@char								= 'END_RT'
+		rtEndMessage char							= 'END_RT'
 		%> EDF message name to signal end of the trial, also parses a passed number, so
 		%> e.g. "TRIAL_RESULT -1" sets the trial.result to -1, these are used to label trials
 		%> as correct, incorrect, breakfix etc.
-		trialEndMessage@char						= 'TRIAL_RESULT'
+		trialEndMessage char						= 'TRIAL_RESULT'
+		%> override the rtStart time with a custom message?
+		rtOverrideMessage char						= 'SYNCSTROBE'
 		%> minimum saccade distance in degrees
-		minSaccadeDistance@double				= 0.99
+		minSaccadeDistance double					= 0.99
 		%> relative velocity threshold
-		VFAC@double											= 5
+		VFAC double									= 5
 		%> minimum saccade duration
-		MINDUR@double										= 2  %equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
+		MINDUR double								= 2  %equivalent to 6 msec at 500Hz sampling rate  (cf E&R 2006)
 		%> the temporary experiement structure which contains the eyePos recorded from opticka
-		tS@struct
+		tS struct
 		%> exclude incorrect trials when indexing (trials contain an idx and correctedIdx value and you can use either)
-		excludeIncorrect@logical				= true
+		excludeIncorrect logical					= true
 		%> region of interest?
-		ROI@double											= [ ]
+		ROI double									= [ ]
 		%> time of interest?
-		TOI@double											= [ ]
+		TOI double									= [ ]
 		%> verbose output?
-		verbose													= false
+		verbose										= false
 	end
 
 	properties (Hidden = true)
 		%TRIAL_RESULT message values, optional but tags trials with these identifiers.
-		correctValue@double							= 1
-		incorrectValue@double						= 0
-		breakFixValue@double						= -1
+		correctValue double							= 1
+		incorrectValue double						= 0
+		breakFixValue double						= -1
 		%occasionally we have some trials in the EDF not in the plx, this prunes them out
-		trialsToPrune@double						= []
+		trialsToPrune double						= []
 		%> these are used for spikes spike saccade time correlations
-		rtLimits@double
-		rtDivision@double
+		rtLimits double
+		rtDivision double
 		%> trial list from the saved behavioural data, used to fix trial name bug old files
-		trialOverride@struct
+		trialOverride struct
 		%> screen resolution
-		pixelsPerCm@double							= 32
+		pixelsPerCm double							= 32
 		%> screen distance
-		distance@double									= 57.3
+		distance double									= 57.3
 		%> screen X center in pixels
-		xCenter@double									= 640
+		xCenter double									= 640
 		%> screen Y center in pixels
-		yCenter@double									= 512
+		yCenter double									= 512
 		%>57.3 bug override
 		override573											= false
 	end
 
 	properties (SetAccess = private, GetAccess = public)
 		%> have we parsed the EDF yet?
-		isParsed@logical							= false
+		isParsed logical							= false
 		%> sample rate
-		sampleRate@double							= 250
+		sampleRate double							= 250
 		%> raw data
-		raw@struct
+		raw struct
 		%> inidividual trials
-		trials@struct
+		trials struct
 		%> eye data parsed into invdividual variables
-		vars@struct
+		vars struct
 		%> the trial variable identifier, negative values were breakfix/incorrect trials
-		trialList@double
+		trialList double
 		%> correct indices
-		correct@struct								= struct()
+		correct struct								= struct()
 		%> breakfix indices
-		breakFix@struct							= struct()
+		breakFix struct							= struct()
 		%> incorrect indices
-		incorrect@struct							= struct()
+		incorrect struct							= struct()
 		%> the display dimensions parsed from the EDF
-		display@double
+		display double
 		%> for some early EDF files, there is no trial variable ID so we
 		%> recreate it from the other saved data
-		needOverride@logical						= false;
+		needOverride logical						= false;
 		%>ROI info
 		ROIInfo
 		%>TOI info
 		TOIInfo
 		%> does the trial variable list match the other saved data?
-		validation@struct
+		validation struct
 	end
 
 	properties (Dependent = true, SetAccess = private)
@@ -312,6 +314,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function plot(me,select,type,seperateVars,name)
+			% plot(me,select,type,seperateVars,name)
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
 			if ~exist('type','var') || isempty(type); type = 'correct'; end
 			if ~exist('seperateVars','var') || ~islogical(seperateVars); seperateVars = false; end
@@ -563,7 +566,7 @@ classdef eyelinkAnalysis < analysisCore
 			mn = nanmean(sacc);
 			md = nanmedian(sacc);
 			[~,er] = me.stderr(sacc,'SD');
-			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2g / %.2g ± %.2g SD [%.2g <> %.2g]',...
+			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2g / %.2g ï¿½ %.2g SD [%.2g <> %.2g]',...
 				thisVarName,upper(type),mn,md,er,min(sacc),max(sacc)));
 			set(h,'BackgroundColor',[1 1 1]);
 			
@@ -1244,6 +1247,7 @@ classdef eyelinkAnalysis < analysisCore
 						me.trials(tri).correctedIndex = [];
 						me.trials(tri).time = double(evt.time);
 						me.trials(tri).rt = false;
+						me.trials(tri).rtoverride = false;
 						me.trials(tri).fixations = [];
 						me.trials(tri).nfix = 2;
 						me.trials(tri).saccades = [];
@@ -1266,6 +1270,12 @@ classdef eyelinkAnalysis < analysisCore
 						me.trials(tri).synctime = NaN;
 						me.trials(tri).deltaT = NaN;
 						me.trials(tri).rttime = NaN;
+						me.trials(tri).times = [];
+						me.trials(tri).gx = [];
+						me.trials(tri).gy = [];
+						me.trials(tri).hx = [];
+						me.trials(tri).hy = [];
+						me.trials(tri).pa = [];
 
 						continue
 					end
@@ -1395,12 +1405,32 @@ classdef eyelinkAnalysis < analysisCore
 							continue
 						end
 
-						msg = regexpi(evt.message,'^MSG:(?<MSG>[\w]+) *(?<VAL>.*)','names');
+						msg = regexpi(evt.message,'^MSG:\s?(?<MSG>[\w]+) *(?<VAL>.*)','names');
 						if ~isempty(msg) && ~isempty(msg.MSG)
 							if isfield(me.trials(tri).messages,msg.MSG)
 								me.trials(tri).messages.(msg.MSG){end+1} = msg.VAL;
+								me.trials(tri).messages.([msg.MSG 'TIME']){end+1} = double(evt.sttime);
 							else
 								me.trials(tri).messages.(msg.MSG){1} = msg.VAL;
+								me.trials(tri).messages.([msg.MSG 'TIME']){1} = double(evt.sttime);
+							end
+							if strcmpi(msg.MSG, me.rtOverrideMessage)
+								me.trials(tri).rtstarttimeOLD = me.trials(tri).rtstarttime;
+								me.trials(tri).rtstarttime = double(evt.sttime);
+								me.trials(tri).rtoverride = true;
+								if ~isempty(me.trials(tri).fixations)
+									for lf = 1 : length(me.trials(tri).fixations)
+										me.trials(tri).fixations(lf).time = me.trials(tri).fixations(lf).sttime - me.trials(tri).rtstarttime;
+										me.trials(tri).fixations(lf).rt = true;
+									end
+								end
+								if ~isempty(me.trials(tri).saccades)
+									for lf = 1 : length(me.trials(tri).saccades)
+										me.trials(tri).saccades(lf).time = me.trials(tri).saccades(lf).sttime - me.trials(tri).rtstarttime;
+										me.trials(tri).saccades(lf).rt = true;
+										me.trials(tri).saccadeTimes(lf) = me.trials(tri).saccades(lf).time;
+									end
+								end
 							end
 							continue
 						end

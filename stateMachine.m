@@ -514,7 +514,6 @@ classdef stateMachine < optickaCore
 		function enterStateAtIndex(obj, thisIndex)
 			obj.currentIndex = thisIndex;
 			if length(obj.stateList) >= thisIndex
-				tt=tic;
 				%obj.notify('enterState');
 				thisState = obj.stateList(obj.currentIndex);
 				obj.currentEntryTime = feval(obj.clockFcn);
@@ -533,7 +532,7 @@ classdef stateMachine < optickaCore
 					obj.nextTimeOut = obj.currentEntryTime + thisState.time;
 				end
 				obj.nextTickOut = round(thisState.time / obj.timeDelta);
-								
+				tt=tic;				
 				%run our enter state functions
 				if isa(thisState.entryFcn,'function_handle') %function handle, lets feval it
 					feval(thisState.entryFcn);

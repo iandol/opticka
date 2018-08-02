@@ -34,6 +34,10 @@ classdef plusplusManager < optickaCore
 		sendData double = []
 		%> computed mask
 		sendMask double = (2^10) -1
+		%> computed data packet
+		tempData double = []
+		%> computed mask
+		tempMask double = (2^10) -1
 		%> send this value for the next sendStrobe
 		sendValue double = 0
 		%> run even if there is not Display++ attached
@@ -97,35 +101,54 @@ classdef plusplusManager < optickaCore
 		% ===================================================================
 		function sendStrobe(obj, value)
 			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
-			if exist('value','var'); prepareStrobe(obj,value,obj.mask);	end
-			BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, obj.sendMask, obj.sendData, obj.command);
-			if obj.verbose == true
-				fprintf('===>>> sendStrobe VALUE: %i\t| mode:%s\t| mask:%s\n',...
-					obj.sendValue, obj.strobeMode, dec2bin(obj.mask));
+			if exist('value','var'); 
+				prepareStrobe(obj, value, obj.mask, true);
+				data = obj.tempData;
+				mask = obj.tempMask;
+			else
+				data = obj.sendData;
+				mask = obj.sendMask;
 			end
+			BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, mask, data, obj.command);
 		end
 		
 		% ===================================================================
 		%> @brief Prepare and send a strobed word
 		%> 
-		%> @param value 
+		%> @param value the strobe word value
+		%> @param mask the mask to send
+		%> @param temporary if true we don't change sendStrobe value
 		% ===================================================================
-		function prepareStrobe(obj, value, mask)
+		function prepareStrobe(obj, value, mask, temporary)
 			if ~exist('value','var') || isempty(value)
 				value = obj.sendValue;
 			end
 			if ~exist('mask','var') || isempty(mask); mask = obj.mask; end
+			if ~exist('temporary','var'); temporary = false; end
 			
-			obj.lastValue = obj.sendValue;
-			obj.sendValue = value;
-			obj.sendMask = mask;
+			if temporary
+				obj.lastValue = value;
+				obj.tempMask = mask;
+			else
+				obj.lastValue = obj.sendValue;
+				obj.sendValue = value;
+			end
 			
 			switch obj.strobeMode
 				case 'plexon'
-					obj.sendData = [value, value + obj.strobeShift_, value + obj.strobeShift_,...
+					data = [value, value + obj.strobeShift_, value + obj.strobeShift_,...
 						zeros(1,248-3)];
 				otherwise
-					obj.sendData = [repmat(value,1,obj.nWindows), zeros(1,248-obj.nWindows)];
+					data = [repmat(value,1,obj.nWindows), zeros(1,248-obj.nWindows)];
+			end
+			if temporary
+				obj.tempData = data;
+			else
+				obj.sendData = data;
+			end
+			if obj.verbose == true
+				fprintf('===>>> prepareStrobe VALUE: %i\t| mode:%s\t| mask:%s | %i\n',...
+					value, obj.strobeMode, dec2bin(obj.mask), temporary);
 			end
 		end
 		

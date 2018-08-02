@@ -197,7 +197,8 @@ classdef eyelinkManager < optickaCore
 			obj.updateDefaults();
 			
 			[~, obj.version] = Eyelink('GetTrackerVersion');
-			obj.salutation(['Initialise Method', 'Running on a ' obj.version]);
+			getTrackerTime(obj)
+			obj.salutation('Initialise Method', sprintf('Running on a %s @ %2.5g', obj.version, obj.trackerTime));
 			
 			% try to open file to record data to
 			if obj.isConnected && obj.recordData
