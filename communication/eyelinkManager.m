@@ -835,6 +835,8 @@ classdef eyelinkManager < optickaCore
 			if obj.isConnected
 				offset = Eyelink('TimeOffset');
 				obj.currentOffset = offset;
+			else
+				offset = 0;
 			end
 		end
 		
@@ -846,6 +848,8 @@ classdef eyelinkManager < optickaCore
 			if obj.isConnected
 				time = Eyelink('TrackerTime');
 				obj.trackerTime = time;
+			else
+				time = 0;
 			end
 		end
 

@@ -17,8 +17,8 @@ tS.useTask = true; %==use stimulusSequence (randomised variable task object)
 tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = false; %==little UI requestor asks for comments before/after run
-tS.saveData = true; %==save behavioural and eye movement data?
-tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.saveData = false; %==save behavioural and eye movement data?
+tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
 tS.name = 'isolum-color'; %==name of this protocol
 io.verbose = true;
