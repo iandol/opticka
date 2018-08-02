@@ -9,44 +9,44 @@ classdef eyelinkManager < optickaCore
 		%> the PTB screen to work on, passed in during initialise
 		screen = []
 		%> eyetracker defaults structure
-		defaults = struct()
+		defaults struct = struct()
 		%> IP address of host
-		IP = ''
+		IP char = ''
 		%> start eyetracker in dummy mode?
-		isDummy = false
+		isDummy logical = false
 		%> do we record and retrieve eyetracker EDF file?
-		recordData = false;
+		recordData logical = false;
 		%> name of eyetracker EDF file
-		saveFile = 'myData.edf'
+		saveFile char = 'myData.edf'
 		%> do we log messages to the command window?
-		verbose = false
+		verbose logical = false
 		%> fixation X position(s) in degrees
-		fixationX = 0
+		fixationX double = 0
 		%> fixation Y position(s) in degrees
-		fixationY = 0
+		fixationY double = 0
 		%> fixation radius in degrees
-		fixationRadius = 1
+		fixationRadius double = 1
 		%> fixation time in seconds
-		fixationTime = 1
+		fixationTime double = 1
 		%> only allow 1 entry to fixation window?
-		strictFixation = true
+		strictFixation logical = true
 		%> time to initiate fixation in seconds
-		fixationInitTime = 0.25
+		fixationInitTime double = 0.25
 		%> exclusion zone no eye movement allowed inside
 		exclusionZone = []
 		%> tracker update speed (Hz), should be 250 500 1000 2000
-		sampleRate = 250
+		sampleRate double = 250
 		%> calibration style
-		calibrationStyle = 'HV5'
+		calibrationStyle char = 'HV5'
 		%> use manual remote calibration
-		remoteCalibration = false
+		remoteCalibration logical = false
 		% use callbacks
-		enableCallbacks = true
+		enableCallbacks logical = true
 		%> cutom calibration callback (enables better handling of
 		%> calibration)
-		callback = 'eyelinkCallback'
+		callback char = 'eyelinkCallback'
 		%> eyelink defaults modifiers as a struct()
-		modify = struct()
+		modify struct = struct()
 		%> stimulus positions to draw on screen
 		stimulusPositions = []
 	end
@@ -55,9 +55,9 @@ classdef eyelinkManager < optickaCore
 		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
 		win = []
 		%> verbosity level
-		verbosityLevel = 4
+		verbosityLevel double = 4
 		%> force drift correction?
-		forceDriftCorrect = false
+		forceDriftCorrect logical = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -68,9 +68,9 @@ classdef eyelinkManager < optickaCore
 		%> pupil size
 		pupil = []
 		% are we connected to eyelink?
-		isConnected = false
+		isConnected logical = false
 		% are we recording to an EDF file?
-		isRecording = false
+		isRecording logical = false
 		% which eye is the tracker using?
 		eyeUsed = -1
 		%current sample taken from eyelink
@@ -91,18 +91,22 @@ classdef eyelinkManager < optickaCore
 		fixInitTotal = 0
 		%> total time searching and holding fixation
 		fixTotal = 0
+		%> last time offset betweeen tracker and display computers
+		currentOffset = 0
+		%> tracker time stamp
+		trackerTime = 0
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		ppd_@double = 35
-		tempFile = 'MYDATA.edf'
-		fixN = 0
+		ppd_ double = 35
+		tempFile char = 'MYDATA.edf'
+		fixN double = 0
 		fixSelection = []
 		error = []
 		%> previous message sent to eyelink
-		previousMessage = ''
+		previousMessage char = ''
 		%> allowed properties passed to object upon construction
-		allowedProperties = 'IP|fixationX|fixationY|fixationRadius|fixationTime|fixationInitTime|sampleRate|calibrationStyle|enableCallbacks|callback|name|verbose|isDummy|remoteCalibration'
+		allowedProperties char = 'IP|fixationX|fixationY|fixationRadius|fixationTime|fixationInitTime|sampleRate|calibrationStyle|enableCallbacks|callback|name|verbose|isDummy|remoteCalibration'
 	end
 	
 	methods
@@ -822,8 +826,28 @@ classdef eyelinkManager < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief Get offset between tracker and display computers
+		%>
+		% ===================================================================
+		function offset = getTimeOffset(obj)
+			if obj.isConnected
+				offset = Eyelink('TimeOffset');
+				obj.currentOffset = offset;
+			end
+		end
 		
-		
+		% ===================================================================
+		%> @brief Get offset between tracker and display computers
+		%>
+		% ===================================================================
+		function time = getTrackerTime(obj)
+			if obj.isConnected
+				time = Eyelink('TrackerTime');
+				obj.trackerTime = time;
+			end
+		end
+
 		% ===================================================================
 		%> @brief set into offline / idle mode
 		%>

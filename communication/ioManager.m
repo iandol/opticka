@@ -1,6 +1,5 @@
 % ======================================================================
-%> @brief Input Output manager, provides single interface to different
-%> hardware, currently just a dummy class
+%> @brief Input Output manager, currently just a dummy class
 %>
 %> 
 % ======================================================================
@@ -21,7 +20,9 @@ classdef ioManager < optickaCore
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
-		
+		isOpen logical = false
+		sendValue
+		lastValue
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -47,7 +48,8 @@ classdef ioManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function open(obj,varargin)
-
+			obj.silentMode = true;
+			obj.isOpen = false;
 		end
 		
 		% ===================================================================
@@ -83,7 +85,8 @@ classdef ioManager < optickaCore
 		%> @param 
 		% ===================================================================
 		function prepareStrobe(obj,value)
-
+			obj.lastValue = obj.sendValue;
+			obj.sendValue = value;
 		end
 		
 		% ===================================================================
@@ -91,8 +94,9 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function sendStrobe(obj,varargin)
-
+		function sendStrobe(obj,value)
+			obj.lastValue = obj.sendValue;
+			obj.sendValue = value;
 		end
 		
 		% ===================================================================
@@ -205,7 +209,7 @@ classdef ioManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Prepare and send a TTL
+		%> @brief 
 		%> 
 		%> @param 
 		% ===================================================================
@@ -224,12 +228,14 @@ classdef ioManager < optickaCore
 		end
 			
 		% ===================================================================
-		%> @brief Delete method, closes DataPixx gracefully
+		%> @brief Delete method, closes gracefully
 		%>
 		% ===================================================================
 		function delete(obj)
 			try
-				close(obj.io);
+				if ~isempty(obj.io)
+					close(obj);
+				end
 			catch
 				warning('IO Manager Couldn''t close hardware')
 			end

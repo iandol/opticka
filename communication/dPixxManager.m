@@ -13,21 +13,23 @@ classdef dPixxManager < optickaCore
 		%> verbosity
 		verbose = true
 		%> which digital I/O to use for the strobe trigger
-		strobeLine@double = 16
+		strobeLine double = 16
 		%> what value to send for stimulus off / inf
-		stimOFFValue = 2^15
+		stimOFFValue double= 2^15
 		%> silentMode allows one to gracefully fail methods without a dataPixx connected
-		silentMode@logical = false
+		silentMode logical = false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
-		nBits = 0
-		isOpen = false
+		nBits double = 0
+		isOpen logical = false
+		sendValue
+		lastValue
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be modified during construction
-		allowedProperties='silentMode|verbose|strobeLine'
+		allowedProperties char = 'silentMode|verbose|strobeLine|stimOFFValue'
 	end
 	
 	methods
@@ -93,6 +95,8 @@ classdef dPixxManager < optickaCore
 				Datapixx('StartDoutSchedule');
 				Datapixx('RegWr');
 				if obj.verbose; fprintf('>>>STROBE Value %g sent!\n',value); end
+				obj.lastValue = obj.sendValue;
+				obj.sendValue = value;
 			end
 		end
 		
@@ -110,6 +114,8 @@ classdef dPixxManager < optickaCore
 				Datapixx('WriteDoutBuffer', strobe, bufferAddress);
 				Datapixx('SetDoutSchedule', 0, [1e5,1], length(strobe), bufferAddress, length(strobe));
 				if obj.verbose; fprintf('>>>STROBE Value %g prepared!\n',value); end
+				obj.lastValue = obj.sendValue;
+				obj.sendValue = value;
 			end
 		end
 		

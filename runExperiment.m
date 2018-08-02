@@ -616,12 +616,12 @@ classdef runExperiment < optickaCore
 				end
 				
 				%-----initialise our vbl's
-				tL.screenLog.beforeDisplay = GetSecs;
-				tL.vbl(1) = Screen('Flip', s.win);
-				tL.startTime = tL.vbl(1);
-				obj.task.verbose = true;
 				obj.stopTask = false;
-				
+				tL.screenLog.beforeDisplay = GetSecs;
+				tL.screenLog.trackerStartTime = getTrackerTime(eL);
+				tL.screenLog.trackerStartOffset = getTimeOffset(eL);
+				tL.startTime = Screen('Flip', s.win);
+				tL.startTime = tL.startTime;
 				%-----ignite the stateMachine!
 				start(sM); 
 
@@ -655,12 +655,11 @@ classdef runExperiment < optickaCore
 					end
 					
 					%------Tell I/O to send strobe on next screen flip
-					if obj.useDisplayPP && obj.sendStrobe	
+					if obj.sendStrobe && obj.useDisplayPP
 						sendStrobe(io);
-					elseif obj.useDataPixx && obj.sendStrobe	
+					elseif obj.sendStrobe && obj.useDataPixx
 						triggerStrobe(io);
 					end
-					obj.sendStrobe = false;
 					
 					%----- FLIP: Show it at correct retrace: -----%
 					if obj.doFlip
@@ -672,12 +671,21 @@ classdef runExperiment < optickaCore
 						else
 							tL.vbl = Screen('Flip', s.win, nextvbl);
 						end
+						%----- Send EDF message if strobe sent with value and VBL time
+						if obj.useEyelink && obj.sendStrobe
+							Eyelink('Message', sprintf('SYNCSTROBE: value:%i @ vbl:%5.5g', io.sendValue, tL.vbl(end)));
+							obj.sendStrobe = false;
+						end
 						tS.totalTicks = tS.totalTicks + 1;
-					end 
+					end
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				end %======================END OF TASK LOOP=========================
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				
+				tL.screenLog.afterDisplay = GetSecs;
+				tL.screenLog.trackerEndTime = getTrackerTime(eL);
+				tL.screenLog.trackerEndOffset = getTimeOffset(eL);
 				
 				show(obj.stimuli); %make all stimuli visible again, useful for editing 
 				drawBackground(s);
@@ -689,6 +697,7 @@ classdef runExperiment < optickaCore
 				ShowCursor;
 				warning('on');
 				fprintf('\n===>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
+				fprintf('===>>> Tracker Time: %g | PTB time: %g\n', tL.screenLog.trackerEndTime-tL.screenLog.trackerstartTime, tL.screenLog.afterDisplay-tL.screenLog.beforeDisplay);
 				
 				notify(obj,'endAllRuns');
 				
