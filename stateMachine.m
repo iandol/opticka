@@ -20,7 +20,7 @@
 %> >> runDemo(sm);
 %>
 %> To see how to run the stateMacine from a PTB loop, see
-%> runExperiment.runTrainingSession()
+%> runExperiment.runTask()
 % ========================================================================
 classdef stateMachine < optickaCore
 	
@@ -63,9 +63,9 @@ classdef stateMachine < optickaCore
 		%> current state
 		currentState
 		%> current state name
-		currentName
+		currentName char
 		%> current state uuid
-		currentUUID
+		currentUUID char
 		%> current state index
 		currentIndex
 		%> ticks within the current state

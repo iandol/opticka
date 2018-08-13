@@ -680,7 +680,7 @@ classdef dataConnection < handle
 		%> Check if the user has hit escape
 		% ===================================================================
 		function waitNotBusy(obj)
-			while strcmp(obj.flushStatus,'busy'),
+			while strcmp(obj.flushStatus,'busy')
 				pause(0.01);
 			end
 			return
@@ -692,7 +692,7 @@ classdef dataConnection < handle
 		% ===================================================================
 		function out = checkForEscape(obj)
 			out=false;
-			[~,~,key]=KbCheck;
+			[~,~,key] = KbCheck(-1);
 			key=KbName(key);
 			if strcmpi(key,'escape') %allow keyboard break
 				out=true;
@@ -801,7 +801,7 @@ classdef dataConnection < handle
 		function stat=flushStatus(obj)
 			while 1 % Loop that finds, returns and leaves last text line in buffer.
 				str=pnet(obj.conn,'read', 1024,'view','noblock');
-				if length(regexp([str,' '],'\n'))<=1,
+				if length(regexp([str,' '],'\n'))<=1
 					stat=pnet(obj.conn,'readline',1024,'view','noblock'); % The return
 					stat=stat(3:end-2);
 					return;
@@ -824,7 +824,7 @@ classdef dataConnection < handle
 				VAR=varargin;
 				switch obj.protocol
 					case 'udp'
-						switch class(VAR),
+						switch class(VAR)
 							case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
 								pnet(obj.conn,'printf','%s',class(VAR));
 								obj.status = pnet(obj.conn, 'writepacket', obj.rAddress, obj.rPort);
@@ -856,7 +856,7 @@ classdef dataConnection < handle
 								end
 						end
 					case 'tcp'
-						switch class(VAR),
+						switch class(VAR)
 							case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
 								pnet(obj.conn,'printf','\n%s\n',class(VAR));
 								pnet(obj.conn,'Write',uint32(ndims(VAR)));
@@ -940,7 +940,7 @@ classdef dataConnection < handle
 					while lp > 0 
 						lp = lp - 1;
 						dataclass=pnet(thisConnection,'readline',1024);
-						switch dataclass,
+						switch dataclass
 							case {'double' 'char' 'int8' 'int16' 'int32' 'uint8' 'uint16' 'uint32'}
 								datadims=double(pnet(thisConnection,'Read',1,'uint32'));
 								datasize=double(pnet(thisConnection,'Read',datadims,'uint32'));
@@ -1028,7 +1028,7 @@ classdef dataConnection < handle
 			end
 			if nargin>0 && isstruct(varargin)
 				fnames = fieldnames(varargin); %find our argument names
-				for i=1:length(fnames);
+				for i=1:length(fnames)
 					if regexp(fnames{i},obj.allowedProperties) %only set if allowed property
 						obj.salutation(fnames{i},'Configuring setting in constructor');
 						obj.(fnames{i})=varargin.(fnames{i}); %we set up the properies from the arguments as a structure

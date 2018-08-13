@@ -90,6 +90,8 @@ classdef runExperiment < optickaCore
 	properties (SetAccess = private, GetAccess = public)
 		%> send strobe on next flip?
 		sendStrobe logical = false
+		%> need eyelink sample on next flip?
+		needSample logical = false
 		%> stateMachine
 		stateMachine
 		%> eyelink manager object
@@ -498,7 +500,6 @@ classdef runExperiment < optickaCore
 			try %================This is our main TASK setup=====================
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%-----open the eyelink interface
-				obj.useEyeLink = true; %we always need the eyelink, even if we run a dummy mode
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
 					eL = obj.eyeLink;
@@ -616,6 +617,7 @@ classdef runExperiment < optickaCore
 				end
 				
 				%-----initialise our vbl's
+				obj.needSample = false;
 				obj.stopTask = false;
 				tL.screenLog.beforeDisplay = GetSecs;
 				tL.screenLog.trackerStartTime = getTrackerTime(eL);
@@ -633,7 +635,7 @@ classdef runExperiment < optickaCore
 				while obj.stopTask == false
 					
 					%------run the stateMachine one tick forward
-					getSample(eL);
+					if obj.needSample; getSample(eL); end
 					update(sM);
 					
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
@@ -673,7 +675,7 @@ classdef runExperiment < optickaCore
 						end
 						%----- Send EDF message if strobe sent with value and VBL time
 						if obj.sendStrobe
-							Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g', io.sendValue, tL.vbl(end)));
+							Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g / totalTicks: %i', io.sendValue, tL.vbl(end), tS.totalTicks));
 							obj.sendStrobe = false;
 						end
 						tS.totalTicks = tS.totalTicks + 1;
@@ -1162,6 +1164,15 @@ classdef runExperiment < optickaCore
 				obj.behaviouralRecord.info = t;
 				obj.lastIndex = index;
 			end
+		end
+		
+		% ===================================================================
+		%> @brief do we use eyelinkManager getSample on current flip?
+		%>
+		%> @param
+		% ===================================================================
+		function needEyelinkSample(obj,value)
+			obj.needSample = value;
 		end
 		
 		% ===================================================================

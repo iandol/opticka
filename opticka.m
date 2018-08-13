@@ -97,7 +97,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function amIRemote(obj)
 			if ~ishandle(obj.h.output)
-				obj.remote = 1;
+				obj.remote = true;
 			end
 		end
 

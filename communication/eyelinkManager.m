@@ -52,8 +52,6 @@ classdef eyelinkManager < optickaCore
 	end
 	
 	properties (Hidden = true)
-		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
-		win = []
 		%> verbosity level
 		verbosityLevel double = 4
 		%> force drift correction?
@@ -98,6 +96,8 @@ classdef eyelinkManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
+		win = []
 		ppd_ double = 35
 		tempFile char = 'MYDATA.edf'
 		fixN double = 0
@@ -120,18 +120,17 @@ classdef eyelinkManager < optickaCore
 			end
 			obj.defaults = EyelinkInitDefaults();
 			try % is eyelink interface working
-				Eyelink('GetTrackerVersion');
+				obj.version = Eyelink('GetTrackerVersion');
 			catch %#ok<CTCH>
-				obj.isDummy = true;
+				obj.version = 0;
 			end
 			obj.modify.calibrationtargetcolour = [1 1 1];
 			obj.modify.calibrationtargetsize = 0.8;
 			obj.modify.calibrationtargetwidth = 0.04;
 			obj.modify.displayCalResults = 1;
-			%obj.modify.targetbeep = 0;
-			%obj.modify.devicenumber = -1;
-			%obj.modify.waitformodereadytime = 500;
-			obj.tempFile = 'MYDATA.edf';
+			obj.modify.targetbeep = 0;
+			obj.modify.devicenumber = -1;
+			obj.modify.waitformodereadytime = 500;
 		end
 		
 		% ===================================================================
@@ -197,17 +196,17 @@ classdef eyelinkManager < optickaCore
 			obj.updateDefaults();
 			
 			[~, obj.version] = Eyelink('GetTrackerVersion');
-			getTrackerTime(obj)
+			getTrackerTime(obj);
 			obj.salutation('Initialise Method', sprintf('Running on a %s @ %2.5g', obj.version, obj.trackerTime));
 			
 			% try to open file to record data to
 			if obj.isConnected && obj.recordData
 				err = Eyelink('Openfile', obj.tempFile);
 				if err ~= 0
-					obj.salutation('Initialise Method', 'Cannot setup data file, aborting data recording');
+					obj.salutation('Initialise Method', 'Cannot setup data file, aborting data recording',true);
 					obj.isRecording = false;
 				else
-					Eyelink('Command', ['add_file_preamble_text ''Recorded by:' obj.fullName ' tracker''']);
+					Eyelink('Command', ['add_file_preamble_text ''Recorded by:' obj.fullName ' tracker'''],true);
 					obj.isRecording = true;
 				end
 			end
@@ -279,39 +278,38 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerSetup(obj)
-			if obj.isConnected
-				Eyelink('Verbosity',obj.verbosityLevel);
-				Eyelink('Command','calibration_type = %s', obj.calibrationStyle);
-				Eyelink('Command','normal_click_dcorr = ON');
-				Eyelink('Command','randomize_calibration_order = NO');
-				Eyelink('Command','randomize_validation_order = NO');
-				Eyelink('Command','cal_repeat_first_target = YES');
-				Eyelink('Command','val_repeat_first_target = YES');
-				Eyelink('Command','validation_online_fixup  = NO');
-				if obj.remoteCalibration
-					Eyelink('Command', 'generate_default_targets = YES');
-					Eyelink('Command','remote_cal_enable = 1');
-					Eyelink('Command','key_function 1 ''remote_cal_target 1''');
-					Eyelink('Command','key_function 2 ''remote_cal_target 2''');
-					Eyelink('Command','key_function 3 ''remote_cal_target 3''');
-					Eyelink('Command','key_function 4 ''remote_cal_target 4''');
-					Eyelink('Command','key_function 5 ''remote_cal_target 5''');
-					Eyelink('Command','key_function 6 ''remote_cal_target 6''');
-					Eyelink('Command','key_function 7 ''remote_cal_target 7''');
-					Eyelink('Command','key_function 8 ''remote_cal_target 8''');
-					Eyelink('Command','key_function 9 ''remote_cal_target 9''');
-					Eyelink('Command','key_function 0 ''remote_cal_target 0''');
-					Eyelink('Command','key_function q ''remote_cal_complete''');
-				else
-					Eyelink('Command', 'generate_default_targets = YES');
-					Eyelink('Command','remote_cal_enable = 0');
-                end
-                fprintf('\n===>>> CALIBRATE EYELINK <<<===\n');
-				EyelinkDoTrackerSetup(obj.defaults);
-				[~,out] = Eyelink('CalMessage');
-				fprintf('Calibration message: %s\n',out);
-            end
-        end
+			if ~obj.isConnected; return; end
+			Eyelink('Verbosity',obj.verbosityLevel);
+			Eyelink('Command','calibration_type = %s', obj.calibrationStyle);
+			Eyelink('Command','normal_click_dcorr = ON');
+			Eyelink('Command','randomize_calibration_order = NO');
+			Eyelink('Command','randomize_validation_order = NO');
+			Eyelink('Command','cal_repeat_first_target = YES');
+			Eyelink('Command','val_repeat_first_target = YES');
+			Eyelink('Command','validation_online_fixup  = NO');
+			if obj.remoteCalibration
+				Eyelink('Command', 'generate_default_targets = YES');
+				Eyelink('Command','remote_cal_enable = 1');
+				Eyelink('Command','key_function 1 ''remote_cal_target 1''');
+				Eyelink('Command','key_function 2 ''remote_cal_target 2''');
+				Eyelink('Command','key_function 3 ''remote_cal_target 3''');
+				Eyelink('Command','key_function 4 ''remote_cal_target 4''');
+				Eyelink('Command','key_function 5 ''remote_cal_target 5''');
+				Eyelink('Command','key_function 6 ''remote_cal_target 6''');
+				Eyelink('Command','key_function 7 ''remote_cal_target 7''');
+				Eyelink('Command','key_function 8 ''remote_cal_target 8''');
+				Eyelink('Command','key_function 9 ''remote_cal_target 9''');
+				Eyelink('Command','key_function 0 ''remote_cal_target 0''');
+				Eyelink('Command','key_function q ''remote_cal_complete''');
+			else
+				Eyelink('Command', 'generate_default_targets = YES');
+				Eyelink('Command','remote_cal_enable = 0');
+			end
+			fprintf('\n===>>> CALIBRATE EYELINK <<<===\n');
+			EyelinkDoTrackerSetup(obj.defaults);
+			[result,out] = Eyelink('CalMessage');
+			fprintf('\t===>>>Calibration result %.2g | message: %s\n',result,out);
+		end
 		
 		% ===================================================================
 		%> @brief wrapper for StartRecording
@@ -375,14 +373,13 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function sample = getSample(obj)
-			obj.currentSample = [];
 			if obj.isConnected && Eyelink('NewFloatSampleAvailable') > 0
 				obj.currentSample = Eyelink('NewestFloatSample');% get the sample in the form of an event structure
-				if ~isempty(obj.currentSample)
+				if ~isempty(obj.currentSample) && isstruct(obj.currentSample)
 					obj.x = obj.currentSample.gx(obj.eyeUsed+1); % +1 as we're accessing MATLAB array
 					obj.y = obj.currentSample.gy(obj.eyeUsed+1);
 					obj.pupil = obj.currentSample.pa(obj.eyeUsed+1);
-					if obj.verbose;fprintf('>X: %.2g | Y: %.2g | P: %.2g\n',obj.x,obj.y,obj.pupil);end
+					%if obj.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',obj.x,obj.y,obj.pupil);end
 				end
 			elseif obj.isDummy %lets use a mouse to simulate the eye signal
 				if ~isempty(obj.win)
@@ -394,7 +391,8 @@ classdef eyelinkManager < optickaCore
 				obj.currentSample.gx = obj.x;
 				obj.currentSample.gy = obj.y;
 				obj.currentSample.pa = obj.pupil;
-				obj.currentSample.time = GetSecs*1000;
+				obj.currentSample.time = GetSecs * 1000;
+				%if obj.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',obj.x,obj.y,obj.pupil);end
 			end
 			sample = obj.currentSample;
 		end
