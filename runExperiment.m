@@ -92,6 +92,8 @@ classdef runExperiment < optickaCore
 		sendStrobe logical = false
 		%> need eyelink sample on next flip?
 		needSample logical = false
+		%> send eyelink SYNCTIME after next flip?
+		sendSyncTime logical = false
 		%> stateMachine
 		stateMachine
 		%> eyelink manager object
@@ -128,6 +130,8 @@ classdef runExperiment < optickaCore
 		previousInfo struct = struct()
 		%> save prefix generated from clock time
 		savePrefix
+		%> check if runExperiment is running or not
+		isRunning logical = false
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -175,7 +179,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function run(obj)
 			global rM %eyelink calibration needs access to labjack for reward
-			initialiseSaveFile(obj) %get a sensible default name
+						
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -198,7 +202,8 @@ classdef runExperiment < optickaCore
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------	
-				
+				obj.isRunning = true;
+
 				%make a handle to the screenManager, so lazy!
 				s = obj.screen;
 				prepareScreen(s);
@@ -404,8 +409,11 @@ classdef runExperiment < optickaCore
 				
 				s.playMovie();
 				
+				obj.isRunning = false;
+				
 			catch ME
-				fprintf('\n---!!! ERROR in runExperiment.run()\n');
+				obj.isRunning = false;
+				fprintf('\n\n---!!! ERROR in runExperiment.run()\n');
 				getReport(ME)
 				if obj.useDataPixx || obj.useDisplayPP
 					pauseRecording(io); %pause plexon
@@ -439,6 +447,7 @@ classdef runExperiment < optickaCore
 		function runTask(obj)
 			global rM %eyelink calibration needs access for reward
 			global tS %tS is our simple settings structure
+			
 			if isempty(regexpi(obj.comment, '^Protocol','once'))
 				obj.comment = '';
 			end
@@ -452,6 +461,8 @@ classdef runExperiment < optickaCore
 				errordlg('There is no working PTB available!')
 				error('There is no working PTB available!')
 			end
+			
+			fprintf('\n\n\n===>>> Start task: %s <<<===\n\n\n',obj.name);
 			
 			%------a general structure to hold various parameters, 
 			% will be saved after the run; prefer structure over class 
@@ -499,6 +510,7 @@ classdef runExperiment < optickaCore
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			try %================This is our main TASK setup=====================
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				obj.isRunning = true;
 				%-----open the eyelink interface
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
@@ -562,7 +574,7 @@ classdef runExperiment < optickaCore
 				% stimuli using 32bit computation buffers...
 				fprintf('\n===>>> Warming up the GPU, Eyelink and I/O systems... <<<===\n')
 				show(obj.stimuli);
-				for i = 1:s.screenVals.fps
+				for i = 1:s.screenVals.fps*2
 					draw(obj.stimuli);
 					drawBackground(s);
 					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
@@ -593,7 +605,7 @@ classdef runExperiment < optickaCore
 				t.totalRuns = 1;
 				if tS.useTask == true
 					updateVariables(obj, t.totalRuns, true, false); % set to first variable
-					%updateFixationTarget(obj, true);
+					update(obj.stimuli); %update our stimuli ready for display
 				end
 				tS.keyTicks = 0; %tick counter for reducing sensitivity of keyboard
 				tS.keyHold = 1; %a small loop to stop overeager key presses
@@ -645,7 +657,7 @@ classdef runExperiment < optickaCore
 					%end
 					
 					%------Check keyboard for commands
-					if ~strcmpi(sM.currentName,'stimulus') || (tS.checkKeysDuringStimulus == true && strcmpi(sM.currentName,'stimulus'))
+					if ~strcmpi(sM.currentName,'stimulus') || ~strcmpi(sM.currentName,'fixate') || tS.checkKeysDuringStimulus == true
 						tS = obj.checkFixationKeys(tS);
 					end
 					
@@ -673,11 +685,16 @@ classdef runExperiment < optickaCore
 						else
 							tL.vbl = Screen('Flip', s.win, nextvbl);
 						end
-						%----- Send EDF message if strobe sent with value and VBL time
-						if obj.sendStrobe
-							Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g / totalTicks: %i', io.sendValue, tL.vbl(end), tS.totalTicks));
+						%----- Send Eyelink messages
+						if obj.sendStrobe %if strobe sent with value and VBL time
+							%Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g / totalTicks: %i', io.sendValue, tL.vbl(end), tS.totalTicks));
 							obj.sendStrobe = false;
 						end
+						if obj.sendSyncTime % sends SYNCTIME message to eyelink
+							syncTime(eL);
+							obj.sendSyncTime = false;
+						end
+						%----- increment our global tick counter
 						tS.totalTicks = tS.totalTicks + 1;
 					end
 					
@@ -700,8 +717,17 @@ classdef runExperiment < optickaCore
 				warning('on');
 				
 				notify(obj,'endAllRuns');
+				obj.isRunning = false;
 				
 				%profile off; profile report; profile clear
+				
+				if obj.useDisplayPP || obj.useDataPixx
+					pauseRecording(io); %pause plexon
+					WaitSecs(0.5);
+					stopRecording(io);
+					WaitSecs(0.5);
+					close(io);
+				end
 				
 				close(s); %screen
 				close(eL); % eyelink, should save the EDF for us we've already given it our name and folder
@@ -713,15 +739,7 @@ classdef runExperiment < optickaCore
 					tL.screenLog.trackerEndTime-tL.screenLog.trackerStartTime, ...
 					tL.screenLog.afterDisplay-tL.screenLog.beforeDisplay, ...
 					tL.screenLog.trackerEndOffset-tL.screenLog.trackerStartOffset);
-				
-				if obj.useDisplayPP || obj.useDataPixx
-					pauseRecording(io); %pause plexon
-					WaitSecs(0.5);
-					stopRecording(io);
-					WaitSecs(0.5);
-					close(io);
-				end
-				
+		
 				if isfield(tS,'eO')
 					close(tS.eO)
 					tS.eO=[];
@@ -758,8 +776,10 @@ classdef runExperiment < optickaCore
 				clear rE tL s tS bR rM eL io sM	
 				
 			catch ME
+				obj.isRunning = false;
+				fprintf('\n\n===!!! ERROR in runExperiment.runTask()\n');
 				getReport(ME)
-				if exist('io','var') && (obj.useDataPixx || obj.useDisplayPP)
+				if exist('io','var')
 					pauseRecording(io); %pause plexon
 					WaitSecs(0.25)
 					stopRecording(io);
@@ -775,7 +795,7 @@ classdef runExperiment < optickaCore
 				ListenChar(0);
 				ShowCursor;
 				close(s);
-				close(obj.eyeLink);
+				close(eL);
 				obj.eyeLink = [];
 				obj.behaviouralRecord = [];
 				close(rM);
@@ -1029,7 +1049,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief set strobe on next flip
+		%> @brief set strobe to trigger on next flip
 		%>
 		%> 
 		% ===================================================================
@@ -1039,6 +1059,15 @@ classdef runExperiment < optickaCore
 			else
 				obj.sendStrobe = false;
 			end
+		end
+		
+		% ===================================================================
+		%> @brief send SYNCTIME message to eyelink after flip
+		%>
+		%> 
+		% ===================================================================
+		function doSyncTime(obj)
+			obj.sendSyncTime = true;
 		end
 		
 		% ===================================================================
@@ -1079,15 +1108,10 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function trial = getTaskIndex(obj, index)
 			if ~exist('index','var') || isempty(index)
-				if isprop(obj.task,'totalRuns')
-					index = obj.task.totalRuns;
-				else
-					index = -1;
-				end
+				index = obj.task.totalRuns;
 			end
 			if index > 0
 				trial = obj.task.outIndex(index);
-				if obj.verbose; fprintf('--->>> getTaskIndex run:%i -> trial # = %g \n',index,trial); end
 			else
 				trial = -1;
 			end

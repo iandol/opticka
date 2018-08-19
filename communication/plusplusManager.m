@@ -82,6 +82,9 @@ classdef plusplusManager < optickaCore
 					if isempty(obj.sM) || obj.sM.isOpen == false
 						warning('SCREEN is CLOSED, no commands will work');
 					end
+					if ~isempty(obj.sM) && regexpi(obj.sM.bitDepth,'^EnableBits')
+						warning('SCREEN is not set to use Bits++ mode, I/O WILL FAIL!');
+					end
 				else
 					warning('Cannot find Display++, going into Silent mode...')
 					obj.isAttached = false;
@@ -101,7 +104,7 @@ classdef plusplusManager < optickaCore
 		% ===================================================================
 		function sendStrobe(obj, value)
 			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
-			if exist('value','var'); 
+			if exist('value','var')
 				prepareStrobe(obj, value, obj.mask, true);
 				data = obj.tempData;
 				mask = obj.tempMask;

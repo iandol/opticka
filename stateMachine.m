@@ -46,7 +46,7 @@ classdef stateMachine < optickaCore
 		%> skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
 		%> 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
 		%> state. Add multiple rows for skipping multiple state's exit states.
-		skipExitStates cell
+		skipExitStates cell = {}
 		%> verbose logging to command window?
 		verbose = false
 	end
@@ -267,9 +267,9 @@ classdef stateMachine < optickaCore
 				%that the eye is fixated for the fixation time, returning
 				%an empty string until that is met, then return the name of
 				%a state to transition to.
-				if ~isempty(obj.currentTransitionFcn) && isa(obj.currentTransitionFcn,'function_handle') %function handle, lets feval it
-					tname = feval(obj.currentTransitionFcn);
-					[tname, ~] = strtok(tname,' ');
+				if ~isempty(obj.currentTransitionFcn)
+					tname = feval(obj.currentTransitionFcn{1});
+					tname = strtok(tname);
 					if ischar(tname) && isStateName(obj,tname) % a valid name was returned, time to transition
 						obj.transitionToStateWithName(tname);
 						return
@@ -279,7 +279,7 @@ classdef stateMachine < optickaCore
 				%run our within state functions
 				if isa(obj.currentWithinFcn,'function_handle') %function handle, lets feval it
 					feval(obj.currentWithinFcn);
-				elseif iscell(obj.currentWithinFcn)
+				else
 					for i = 1:size(obj.currentWithinFcn,1) %nested class
 						feval(obj.currentWithinFcn{i});
 					end
@@ -532,23 +532,15 @@ classdef stateMachine < optickaCore
 					obj.nextTimeOut = obj.currentEntryTime + thisState.time;
 				end
 				obj.nextTickOut = round(thisState.time / obj.timeDelta);
+				
 				tt=tic;				
 				%run our enter state functions
-				if isa(thisState.entryFcn,'function_handle') %function handle, lets feval it
-					feval(thisState.entryFcn);
-				elseif iscell(thisState.entryFcn) %nested class of function handles
-					for i = 1:size(thisState.entryFcn,1)
-						feval(thisState.entryFcn{i});
-					end
+				for i = 1:length(thisState.entryFcn)
+					feval(thisState.entryFcn{i});
 				end
-				
 				%run our within state functions
-				if isa(obj.currentWithinFcn,'function_handle') %function handle, lets feval it
-					feval(obj.currentWithinFcn);
-				elseif iscell(obj.currentWithinFcn)
-					for i = 1:size(obj.currentWithinFcn,1) %nested class
-						feval(obj.currentWithinFcn{i});
-					end
+				for i = 1:length(obj.currentWithinFcn) %nested class
+					feval(obj.currentWithinFcn{i});
 				end
 				obj.fevalTime.enter = toc(tt)*1000;
 				
@@ -595,16 +587,12 @@ classdef stateMachine < optickaCore
 			tt=tic;
 			if thisState.skipExitFcn == false
 				%obj.notify('exitState');
-				if iscell(thisState.exitFcn) %nested class of function handles
-					for i = 1:size(thisState.exitFcn, 1) %nested class
-						feval(thisState.exitFcn{i});
-					end
-				elseif isa(thisState.exitFcn,'function_handle') %function handle, lets feval it
-					feval(thisState.exitFcn);
+				for i = 1:size(thisState.exitFcn, 1) %nested class
+					feval(thisState.exitFcn{i});
 				end
 			end
-			
 			obj.fevalTime.exit = toc(tt)*1000;
+			
 			storeCurrentStateInfo(obj);
 			
 			obj.currentEntryFcn = {};

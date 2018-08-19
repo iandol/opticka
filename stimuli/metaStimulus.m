@@ -202,7 +202,7 @@ classdef metaStimulus < optickaCore
 				end
 				
 			else
-				
+	
 				for i = 1:obj.n
 					animate(obj.stimuli{i});
 				end
@@ -339,17 +339,25 @@ classdef metaStimulus < optickaCore
 			out = [];
 			obj.stimulusPositions = out;
 			for i = 1:obj.n
-				if obj.stimuli{i}.isVisible == true
+				if obj.stimuli{i}.isVisible == true && obj.stimuli{i}.showOnTracker == true
 					if isprop(obj.stimuli{i},'sizeOut')
-						obj.stimulusPositions(a).x = obj.stimuli{i}.xPositionOut;
-						obj.stimulusPositions(a).y = obj.stimuli{i}.yPositionOut;
+						if ~isempty(obj.stimuli{i}.xOut)
+							obj.stimulusPositions(a).x = obj.stimuli{i}.xOut;
+							obj.stimulusPositions(a).y = obj.stimuli{i}.yOut;
+						elseif ~isempty(obj.stimuli{i}.mvRect)
+							r = obj.stimuli{i}.mvRect;
+							obj.stimulusPositions(a).x = r(3)-r(1);
+							obj.stimulusPositions(a).y = r(4)-r(2);
+						else
+							obj.stimulusPositions(a).x = obj.stimuli{i}.xPositionOut;
+							obj.stimulusPositions(a).y = obj.stimuli{i}.yPositionOut;
+						end
 						obj.stimulusPositions(a).size = obj.stimuli{i}.sizeOut;
 						if any(obj.fixationChoice == i) 
 							obj.stimulusPositions(a).selected = true;
 						else
 							obj.stimulusPositions(a).selected = false;
 						end
-						if obj.verbose==true; fprintf('Stim%i = X: %.2f Y: %.2f Size: %.2f\n',i, obj.stimulusPositions(a).x,obj.stimulusPositions(a).y,obj.stimulusPositions(a).size); end
 						a = a + 1;
 					end
 				end

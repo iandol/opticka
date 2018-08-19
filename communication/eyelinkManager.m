@@ -176,7 +176,7 @@ classdef eyelinkManager < optickaCore
 			end
 			
 			rect=obj.screen.winRect;
-			Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3)-1,rect(4)-1);
+			Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
 			if ~isempty(obj.callback) && exist(obj.callback,'file')
 				obj.defaults.callback = obj.callback;
 			end
@@ -203,7 +203,7 @@ classdef eyelinkManager < optickaCore
 			if obj.isConnected && obj.recordData
 				err = Eyelink('Openfile', obj.tempFile);
 				if err ~= 0
-					obj.salutation('Initialise Method', 'Cannot setup data file, aborting data recording',true);
+					warning('eyelinkManager Cannot setup Eyelink data file, aborting data recording');
 					obj.isRecording = false;
 				else
 					Eyelink('Command', ['add_file_preamble_text ''Recorded by:' obj.fullName ' tracker'''],true);
@@ -212,13 +212,13 @@ classdef eyelinkManager < optickaCore
 			end
 			
 			Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
+			Eyelink('Message', 'FRAMERATE %ld',round(obj.screen.screenVals.fps));
 			Eyelink('Message', 'DISPLAY_PPD %ld', round(obj.ppd_));
 			Eyelink('Message', 'DISPLAY_DISTANCE %ld', round(obj.screen.distance));
 			Eyelink('Command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
 			Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
 			Eyelink('Command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
 			Eyelink('Command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,AREA,GAZERES,STATUS');
-			
 			%Eyelink('Command', 'use_ellipse_fitter = no');
 			Eyelink('Command', 'sample_rate = %d',obj.sampleRate);
 		end
@@ -308,7 +308,7 @@ classdef eyelinkManager < optickaCore
 			fprintf('\n===>>> CALIBRATE EYELINK <<<===\n');
 			EyelinkDoTrackerSetup(obj.defaults);
 			[result,out] = Eyelink('CalMessage');
-			fprintf('\t===>>>Calibration result %.2g | message: %s\n',result,out);
+			fprintf('\t===>>> RESULT =  %.2g | message: %s\n\n',result,out);
 		end
 		
 		% ===================================================================
@@ -659,7 +659,7 @@ classdef eyelinkManager < optickaCore
 			if ~strcmpi(message,obj.previousMessage) && obj.isConnected
 				obj.previousMessage = message;
 				Eyelink('Command',['record_status_message ''' message '''']);
-				if obj.verbose; fprintf('-+-+->Eyelink status message: %s',message);end
+				if obj.verbose; fprintf('-+-+->Eyelink status message: %s\n',message);end
 			end
 		end
 		
@@ -746,9 +746,9 @@ classdef eyelinkManager < optickaCore
 					clearScreen = false;
 				end
 				for i = 1:length(obj.stimulusPositions)
-					x = toPixels(obj, obj.stimulusPositions(i).x,'x'); %#ok<PROPLC>
-					y = toPixels(obj, obj.stimulusPositions(i).y,'y');%#ok<PROPLC>
-					size = obj.stimulusPositions(i).size * obj.ppd_;
+					x = obj.stimulusPositions(i).x; %#ok<PROPLC>
+					y = obj.stimulusPositions(i).y; %#ok<PROPLC>
+					size = obj.stimulusPositions(i).size;
 					if isempty(size); size = 1 * obj.ppd_; end
 					rect = [0 0 size size];
 					rect = round(CenterRectOnPoint(rect, x, y)); %#ok<PROPLC>
@@ -758,8 +758,7 @@ classdef eyelinkManager < optickaCore
 					else
 						Eyelink('Command', 'draw_box %d %d %d %d 11', rect(1), rect(2), rect(3), rect(4));
 					end
-				end
-				
+				end			
 			end
 		end
 		
@@ -774,7 +773,7 @@ classdef eyelinkManager < optickaCore
 				x = toPixels(obj, obj.fixationX, 'x');
 				y = toPixels(obj, obj.fixationY, 'y');
 				rect = round(CenterRectOnPoint(rect, x, y));
-				Eyelink('Command', 'draw_box %d %d %d %d 4', rect(1), rect(2), rect(3), rect(4));
+				Eyelink('Command', 'draw_filled_box %d %d %d %d 12', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
 		
@@ -798,20 +797,29 @@ classdef eyelinkManager < optickaCore
 				if exist('textIn','var') && ~isempty(textIn)
 					xDraw = toPixels(obj, 0, 'x');
 					yDraw = toPixels(obj, 0, 'y');
-					Eyelink('Command', 'draw_text %i %i %d %s', xDraw, yDraw, 5, textIn);
+					Eyelink('Command', 'draw_text %i %i %d %s', xDraw, yDraw, 3, textIn);
 				end
 			end
 		end
 		
 		% ===================================================================
 		%> @brief check what mode the eyelink is in
-		%>
+		%> ##define IN_UNKNOWN_MODE 0
+		%> #define IN_IDLE_MODE 1
+		%> #define IN_SETUP_MODE 2
+		%> #define IN_RECORD_MODE 4
+		%> #define IN_TARGET_MODE 8
+		%> #define IN_DRIFTCORR_MODE 16
+		%> #define IN_IMAGE_MODE 32
+		%> #define IN_USER_MENU 64
+		%> #define IN_PLAYBACK_MODE 256
+		%> #define LINK_TERMINATED_RESULT -100
 		% ===================================================================
 		function mode = currentMode(obj)
 			if obj.isConnected
 				mode = Eyelink('CurrentMode');
 			else
-				mode = -1;
+				mode = -100;
 			end
 		end
 		

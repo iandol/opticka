@@ -1249,6 +1249,7 @@ function OKToolbarRun_ClickedCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
+	if o.r.isRunning == true;return;end
 	if ~isempty(o.oc) && o.oc.isOpen == 1 && o.r.useLabJack == 1
 		o.oc.write('--GO!--');
 		pause(0.5);
@@ -1752,7 +1753,7 @@ function OKStartTask_ClickedCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
-	if isa(o.r,'runExperiment')
+	if isa(o.r,'runExperiment') && ~o.r.isRunning
 		%o.r.screenSettings.optickahandle = handles.output;
 		initialiseSave(o.r, o.paths.savedData)
 		if ~isempty(regexp(o.comment, '^Protocol','once'))

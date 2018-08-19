@@ -47,17 +47,23 @@ classdef baseStimulus < optickaCore & dynamicprops
 		mouseOverride logical = false
 		%> true or false, whether to draw() this object
 		isVisible logical = true
+		%> show the position on the Eyelink display?
+		showOnTracker logical = true
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> Our source screen rectangle position in PTB format
-		dstRect
+		dstRect double = []
 		%> Our screen rectangle position in PTB format, update during animations
-		mvRect
+		mvRect double = []
+		%> computed X position for stimuli that don't use rects
+		xOut double = []
+		%> computed Y position for stimuli that don't use rects
+		yOut double = []
 		%> tick updates +1 on each draw, resets on each update
-		tick = 1
+		tick double = 1
 		%> pixels per degree (normally inhereted from screenManager)
-		ppd = 44
+		ppd double = 44
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -71,20 +77,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
 		%> What our per-frame motion delta is
-		delta
+		delta double
 		%> X update which is computed from our speed and angle
-		dX
+		dX double
 		%> X update which is computed from our speed and angle
-		dY
+		dY double
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
-		%> computed X position for stimuli that don't use rects
-		xOut = 0
-		%> computed Y position for stimuli that don't use rects
-		yOut = 0
 		%> is mouse position within screen co-ordinates?
-		mouseValid = false
+		mouseValid logical = false
 		%> mouse X position
 		mouseX = 0
 		%> mouse Y position
@@ -103,7 +105,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dY_
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase char = 'handles|ppd|sM|name|comment|fullName|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|isVisible|dateStamp|paths|uuid|tick';
+		ignorePropertiesBase char = 'handles|ppd|sM|name|comment|fullName|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|xOut|yOut|isVisible|dateStamp|paths|uuid|tick';
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -405,7 +407,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			bgcolor = [0.91 0.91 0.91];
 			bgcoloredit = [0.95 0.95 0.95];
-			fsmall = 9;
+			fsmall = 8;
 			if ismac
 				SansFont = 'avenir next';
 				MonoFont = 'menlo';
@@ -446,7 +448,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			for i = 1:2
 				for j = 1:lp
 					cur = lp*(i-1)+j;
-					if cur <= length(pr);
+					if cur <= length(pr)
 						val = obj.(pr{cur});
 						if ischar(val)
 							if isprop(obj,[pr{cur} 'List'])
@@ -500,7 +502,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				for j = 1:lp
 					cur = lp*(i-1)+j;
-					if cur <= length(pr);
+					if cur <= length(pr)
 						if isprop(obj,[pr{cur} 'List'])
 							if strcmp(obj.([pr{cur} 'List']),'filerequestor')
 								uicontrol('Style','pushbutton',...
@@ -848,7 +850,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function removeTmpProperties(obj)
 			fn=fieldnames(obj);
 			for i=1:length(fn)
-				if ~isempty(regexp(fn{i},'Out$','once'))
+				if ~isempty(regexp(fn{i},'[^x|^y]Out$','once'))
 					delete(obj.findprop(fn{i}));
 				end
 			end
