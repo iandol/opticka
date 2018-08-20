@@ -277,12 +277,8 @@ classdef stateMachine < optickaCore
 				end
 				
 				%run our within state functions
-				if isa(obj.currentWithinFcn,'function_handle') %function handle, lets feval it
-					feval(obj.currentWithinFcn);
-				else
-					for i = 1:size(obj.currentWithinFcn,1) %nested class
-						feval(obj.currentWithinFcn{i});
-					end
+				for i = 1:size(obj.currentWithinFcn,1) %nested class
+					obj.currentWithinFcn{i}();
 				end
 				
 				%TODO lets assume to update a tick here, we may miss a tick on
@@ -307,8 +303,6 @@ classdef stateMachine < optickaCore
 					%obj.salutation('forceTransition method',['stateMachine forced to: ' stateName],false)
 					transitionToStateWithName(obj, stateName)
 					return
-				else
-					%if obj.verbose;obj.salutation('forceTransition method',['state: ' stateName ' not found...'],false);end
 				end
 			else
 				obj.salutation('forceTransition method','stateMachine has not been started yet',true)
@@ -454,19 +448,19 @@ classdef stateMachine < optickaCore
 			oldTimeDelta = obj.timeDelta;
 			obj.timeDelta = 1e-4;
 			obj.verbose = true;
-			beginFcn = @()disp('Hello there!');
-			middleFcn = @()disp('Still here?');
-			endFcn = @()disp('See you soon!');
-			surpriseFcn = @()disp('SURPRISE!!!');
-			withinFcn = []; %don't run anything within the state
-			transitionFcn = @()sprintf('surprise'); %returns a valid state name and thus triggers a transition
+			beginFcn = {@()disp('Hello there!');};
+			middleFcn = {@()disp('Still here?');};
+			endFcn = {@()disp('See you soon!');};
+			surpriseFcn = {@()disp('SURPRISE!!!');};
+			withinFcn = {}; %don't run anything within the state
+			transitionFcn = {@()sprintf('surprise');}; %returns a valid state name and thus triggers a transition
 			exitFcn = { @()fprintf('\t--->>exit state'); @()fprintf('\n') };
 			statesInfo = { ...
 				'name'		'next'		'time'	'entryFcn'	'withinFcn'	'transitionFcn'	'exitFcn'; ...
-				'begin'		'middle'	2		beginFcn	withinFcn	[]				exitFcn; ...
+				'begin'		'middle'	2		beginFcn	withinFcn	{}				exitFcn; ...
 				'middle'	'end'		2		middleFcn	withinFcn	transitionFcn	exitFcn; ...
-				'end'		''			2		endFcn		withinFcn	[]				exitFcn; ...
-				'surprise'	'end'		2		surpriseFcn	withinFcn	[]				exitFcn; ...
+				'end'		''			2		endFcn		withinFcn	{}				exitFcn; ...
+				'surprise'	'end'		2		surpriseFcn	withinFcn	{}				exitFcn; ...
 				};
 			addStates(obj,statesInfo);
 			disp('>--------------------------------------------------')
@@ -536,11 +530,11 @@ classdef stateMachine < optickaCore
 				tt=tic;				
 				%run our enter state functions
 				for i = 1:length(thisState.entryFcn)
-					feval(thisState.entryFcn{i});
+					thisState.entryFcn{i}();
 				end
 				%run our within state functions
 				for i = 1:length(obj.currentWithinFcn) %nested class
-					feval(obj.currentWithinFcn{i});
+					obj.currentWithinFcn{i}();
 				end
 				obj.fevalTime.enter = toc(tt)*1000;
 				

@@ -122,7 +122,7 @@ prefixEntryFcn = { @()setOffline(eL); ... %make sure offline before start record
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 	@()statusMessage(eL,'Prefixation...'); ...
-	@()edit(obj.stimuli,4,'colourOut',[0.6 0.6 0.5]); ... %dim fix spotq
+	@()edit(obj.stimuli,4,'colourOut',[0.5 0.5 0.5]); ... %dim fix spotq
 };
 
 %prefixate
@@ -158,12 +158,12 @@ fixExitFcn = { @()updateFixationTarget(obj, tS.useTask, tS.targetFixInit, tS.tar
 };
 
 %what to run when we enter the stim presentation state
-stimEntryFcn = { @()doStrobe(obj,true); }; %@()doSyncTime(obj); 
+stimEntryFcn = { @()doStrobe(obj,true); }; %@()doStrobe(obj,true);@()doSyncTime(obj); 
 
 %what to run when we are showing stimuli
 stimFcn =  { @()draw(obj.stimuli); ...
 	%@()finishDrawing(s); ...
-	%@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
+	@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
 };
 
 %test we are finding target
@@ -177,7 +177,6 @@ correctEntryFcn = { @()edfMessage(eL,'END_RT'); ...
 	@()timedTTL(rM,0,tS.rewardTime); ... % labjack sends a TTL to Crist reward system
 	@()statusMessage(eL,'Correct! :-)'); ...
 	@()hide(obj.stimuli{4}); ...
-	%@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()edfMessage(eL,'TRIAL_RESULT 1'); ...
 	@()edfMessage(eL,'TRIAL OK'); ...
 	@()stopRecording(eL); ...
@@ -194,7 +193,7 @@ correctExitFcn = { @()correct(io); ...
 	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
-	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
+	%@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 };
 
 %incorrect entry
@@ -228,7 +227,6 @@ breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message 
 %incorrect / break exit
 breakExitFcn = { @()breakFixation(io); ...
 	%@()edit(obj.stimuli,2,'modulateColourOut',[0.5 0.5 0.5]); ... %luminance pedestal
-	@()setOffline(eL); ... %set eyelink offline
 	@()resetRun(t);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(obj,[],true,false); ... %update the variables
 	@()update(obj.stimuli); ... %update our stimuli ready for display

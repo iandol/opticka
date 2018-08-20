@@ -405,7 +405,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				obj.outMap(trialToSwap,:) = aMap;
 				
 				%log this change
-				if isempty(obj.resetLog); myN = 1; else myN = length(obj.resetLog)+1; end
+				if isempty(obj.resetLog); myN = 1; else; myN = length(obj.resetLog)+1; end
 				obj.resetLog(myN).randomChoice = randomChoice;
 				obj.resetLog(myN).totalRuns = obj.totalRuns;
 				obj.resetLog(myN).trialToSwap = trialToSwap;
@@ -414,7 +414,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				obj.resetLog(myN).aTrial = aTrial;
 				obj.resetLog(myN).bTrial = bTrial;
 				success = true;
-				fprintf('--->>> stimulusSequence.resetRun() Task %i: swap with = %i (random choice=%i)',obj.totalRuns, trialToSwap, randomChoice);
+				if obj.verbose;fprintf('--->>> stimulusSequence.resetRun() Task %i: swap with = %i (random choice=%i)\n',obj.totalRuns, trialToSwap, randomChoice);end
 			end
 		end
 		

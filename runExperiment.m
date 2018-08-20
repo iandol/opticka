@@ -613,6 +613,7 @@ classdef runExperiment < optickaCore
 				tS.pauseToggle = 1; %toggle pause/unpause
 				tS.eyePos = []; %locally record eye position
 				
+				%-----profiling starts here
 				%profile clear; profile on;
                 
 				%-----check initial eye position
@@ -620,7 +621,11 @@ classdef runExperiment < optickaCore
 				
 				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
-				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+				if isunix
+					Priority(50); %bump our priority to maximum allowed
+				else
+					Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+				end
 				if obj.debug == false
 					%warning('off'); %#ok<*WNOFF>
 					ListenChar(1); %2=capture all keystrokes
@@ -636,6 +641,7 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerStartOffset = getTimeOffset(eL);
 				tL.startTime = Screen('Flip', s.win);
 				tL.startTime = tL.startTime;
+				
 				%-----ignite the stateMachine!
 				start(sM); 
 
@@ -691,7 +697,7 @@ classdef runExperiment < optickaCore
 							obj.sendStrobe = false;
 						end
 						if obj.sendSyncTime % sends SYNCTIME message to eyelink
-							syncTime(eL);
+							%syncTime(eL);
 							obj.sendSyncTime = false;
 						end
 						%----- increment our global tick counter
@@ -719,6 +725,7 @@ classdef runExperiment < optickaCore
 				notify(obj,'endAllRuns');
 				obj.isRunning = false;
 				
+				%-----get our profiling report for our task loop
 				%profile off; profile report; profile clear
 				
 				if obj.useDisplayPP || obj.useDataPixx
@@ -1230,6 +1237,16 @@ classdef runExperiment < optickaCore
 		function refreshScreen(obj)
 			obj.screenVals = obj.screen.prepareScreen();
 		end
+		
+		% ===================================================================
+		%> @brief no operation
+		%>
+		%> @param
+		% ===================================================================
+		function noop(obj)
+			% used to test any overhead of simply calling a method
+		end
+		
 		
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
