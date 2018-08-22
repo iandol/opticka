@@ -27,14 +27,14 @@ classdef stateMachine < optickaCore
 	properties
 		%> our main state list, stored as a structure
 		stateList struct = struct([])
-		%> timedelta for time > ticks calculation, assume 1KHz by default
-		%> but set to correct IFI of display before use.
+		%> timedelta for time > ticks calculation, assume 1e-4 by default
+		%> can set to IFI of display.
 		timeDelta double = 1e-4
 		%> use real time (true) or ticks (false) to mark state time. Real time is more
 		%> accurate, and robust against unexpected delays. Ticks uses timeDelta per tick and a
 		%> tick timer (each loop is 1 tick) for time measurement. This is simpler, can be
-		%> controlled by an external driver that deals with timing, but without supervision
-		%> but delays will accumulate vs real timer.
+		%> controlled by an external driver that deals with timing, and without supervision
+		%> but delays may accumulate vs real timer.
 		realTime logical = false
 		%> clock function to use
 		clockFcn function_handle = @GetSecs
@@ -42,8 +42,8 @@ classdef stateMachine < optickaCore
 		waitFcn function_handle = @WaitSecs
 		%> transition function run globally between transitions
 		globalTransitionFcn cell = {}
-		%> N x 2 cell array of regexp strings, list to skip the current -> next state's exit functions; for example
-		%> skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
+		%> N x 2 cell array of strings to compare, list to skip the current -> next state's exit functions; for example
+		%> skipExitStates = {'fixate',{'incorrect','breakfix'}}; means that if the currentstate is
 		%> 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
 		%> state. Add multiple rows for skipping multiple state's exit states.
 		skipExitStates cell = {}
@@ -479,10 +479,8 @@ classdef stateMachine < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief TODO!!!! skip exit management, this tests an N x 2 cell array if the first
-		%> regex matches currentName and the second regex matches next state then skip running
-		%> the exit function, this is an optimisation.
-		%> @param list Nx2 cell array list of regexes for
+		%> @brief skip exit state functions: sets an N x 2 cell array 
+		%> @param list Nx2 cell array list of strings to compare
 		%> @return
 		% ===================================================================
 		function set.skipExitStates(obj,list)
@@ -501,52 +499,6 @@ classdef stateMachine < optickaCore
 	%=======================================================================
 		
 		% ===================================================================
-		%> @brief enters a particular state
-		%> @param
-		%> @return
-		% ===================================================================
-		function enterStateAtIndex(obj, thisIndex)
-			obj.currentIndex = thisIndex;
-			if length(obj.stateList) >= thisIndex
-				tt=tic;	
-				%obj.notify('enterState');
-				thisState = obj.stateList(obj.currentIndex);
-				obj.currentEntryTime = feval(obj.clockFcn);
-				obj.currentTick = 1;
-				obj.currentName = thisState.name;
-				obj.currentUUID = num2str(dec2hex(floor((now - floor(now))*1e10)));
-				obj.currentEntryFcn = thisState.entryFcn;
-				obj.currentWithinFcn = thisState.withinFcn;
-				obj.currentTransitionFcn = thisState.transitionFcn;
-				obj.currentState = thisState;
-				
-				if length(thisState.time) == 1
-					obj.nextTimeOut = obj.currentEntryTime + thisState.time;
-				else
-					thisState.time = randi([thisState.time(1)*1e3, thisState.time(2)*1e3]) / 1e3;
-					obj.nextTimeOut = obj.currentEntryTime + thisState.time;
-				end
-				obj.nextTickOut = round(thisState.time / obj.timeDelta);
-					
-				%run our enter state functions
-				for i = 1:length(thisState.entryFcn)
-					thisState.entryFcn{i}();
-				end
-				%run our within state functions
-				for i = 1:length(obj.currentWithinFcn) %nested class
-					obj.currentWithinFcn{i}();
-				end
-				obj.fevalTime.enter = toc(tt)*1000;
-				
-				if obj.verbose; obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false); end
-
-			else
-				if obj.verbose; obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length'); end
-				obj.finish();
-			end
-		end
-		
-		% ===================================================================
 		%> @brief transition to a named state
 		%> @param
 		%> @return
@@ -557,9 +509,10 @@ classdef stateMachine < optickaCore
 			if isState
 				if ~isempty(obj.skipExitStates)
 					for i=1:size(obj.skipExitStates,1)
-						if ~isempty(regexpi(obj.currentName,obj.skipExitStates{i,1})) && ~isempty(regexpi(nextName,obj.skipExitStates{i,2}))
+						if strcmpi(obj.currentName,obj.skipExitStates{i,1}) && any(strcmpi(nextName,obj.skipExitStates{i,2}))
 							obj.currentState.skipExitFcn = true;
 						end
+						if obj.currentState.skipExitFcn; break; end
 					end
 				end
 				exitCurrentState(obj);
@@ -578,10 +531,9 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function exitCurrentState(obj)
 			tt=tic;
-			thisState = obj.currentState;
-			if thisState.skipExitFcn == false
-				for i = 1:length(thisState.exitFcn) %nested class
-					thisState.exitFcn{i}();
+			if ~obj.currentState.skipExitFcn 
+				for i = 1:length(obj.currentState.exitFcn) %nested class
+					obj.currentState.exitFcn{i}();
 				end
 			end
 			obj.fevalTime.exit = toc(tt)*1000;
@@ -593,9 +545,53 @@ classdef stateMachine < optickaCore
 			obj.nextTickOut = [];
 			obj.nextTimeOut = [];
 			
-			if obj.verbose; obj.salutation(['Exit state:' thisState.name ' @ ' num2str(obj.log(end).tnow-obj.startTime) 's | ' num2str(obj.log(end).stateTimeToNow) 'secs | ' num2str(obj.log(end).tick) '/' num2str(obj.totalTicks) 'ticks'],'',false); end
+			%if obj.verbose; obj.salutation(['Exit state:' obj.currentState.name ' @ ' num2str(obj.log(end).tnow-obj.startTime) 's | ' num2str(obj.log(end).stateTimeToNow) 'secs | ' num2str(obj.log(end).tick) '/' num2str(obj.totalTicks) 'ticks'],'',false); end
 		end
 		
+		% ===================================================================
+		%> @brief enters a particular state
+		%> @param thisIndex, the index number of the state 
+		%> @return
+		% ===================================================================
+		function enterStateAtIndex(obj, thisIndex)
+			obj.currentIndex = thisIndex;
+			if length(obj.stateList) >= thisIndex
+				
+				%obj.notify('enterState');
+				thisState = obj.stateList(obj.currentIndex);
+				obj.currentEntryTime = feval(obj.clockFcn);
+				obj.currentTick = 1;
+				obj.currentName = thisState.name;
+				obj.currentUUID = num2str(dec2hex(floor((now - floor(now))*1e10)));
+				obj.currentEntryFcn = thisState.entryFcn;
+				obj.currentWithinFcn = thisState.withinFcn;
+				obj.currentTransitionFcn = thisState.transitionFcn;
+				obj.currentState = thisState;
+				
+				if length(thisState.time) == 2
+					thisState.time = randi([thisState.time(1)*1e3, thisState.time(2)*1e3]) / 1e3;
+				end
+				obj.nextTimeOut = obj.currentEntryTime + thisState.time;
+				obj.nextTickOut = round(thisState.time / obj.timeDelta);
+					
+				tt=tic;	%run our enter state functions
+				for i = 1:length(thisState.entryFcn)
+					thisState.entryFcn{i}();
+				end
+				%run our within state functions
+				for i = 1:length(thisState.withinFcn) %nested class
+					thisState.withinFcn{i}();
+				end
+				obj.fevalTime.enter = toc(tt)*1000;
+				
+				%if obj.verbose; obj.salutation(['Enter state: ' obj.currentName ' @ ' num2str(obj.currentEntryTime-obj.startTime) 'secs / ' num2str(obj.totalTicks) 'ticks'],'',false); end
+
+			else
+				if obj.verbose; obj.salutation('enterStateAtIndex method', 'newIndex is greater than stateList length'); end
+				obj.finish();
+			end
+		end
+
 		% ===================================================================
 		%> @brief clear current properties but leave currentIndex so it's checkable
 		%> @param

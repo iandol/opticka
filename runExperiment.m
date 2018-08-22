@@ -135,6 +135,8 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> is it run (false) or runTask (true)?
+		isRunTask logical = true
 		%> should we stop the task?
 		stopTask logical = false
 		%> properties allowed to be modified during construction
@@ -179,7 +181,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function run(obj)
 			global rM %eyelink calibration needs access to labjack for reward
-						
+					
 			if isempty(obj.screen) || isempty(obj.task)
 				obj.initialise;
 			end
@@ -204,7 +206,7 @@ classdef runExperiment < optickaCore
 			try%======This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------	
 				obj.isRunning = true;
-
+				obj.isRunTask = false;
 				%make a handle to the screenManager, so lazy!
 				s = obj.screen;
 				prepareScreen(s);
@@ -354,7 +356,7 @@ classdef runExperiment < optickaCore
 					end
 					
 					%===================Tick tock!=======================%
-					obj.task.tick=obj.task.tick+1;
+					obj.task.tick=obj.task.tick+1; tL.tick = obj.task.tick;
 					
 				end
 				%==================================================================%
@@ -447,7 +449,6 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function runTask(obj)
 			global rM %eyelink calibration needs access for reward
-			global tS %tS is our simple settings structure
 			
 			if isempty(regexpi(obj.comment, '^Protocol','once'))
 				obj.comment = '';
@@ -515,6 +516,7 @@ classdef runExperiment < optickaCore
 			try %================This is our main TASK setup=====================
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				obj.isRunning = true;
+				obj.isRunTask = true;
 				%-----open the eyelink interface
 				if obj.useEyeLink
 					obj.eyeLink = eyelinkManager();
@@ -571,9 +573,9 @@ classdef runExperiment < optickaCore
 				drawnow;
 
 				%------------------------------------------------------------
-				% lets draw 1 seconds worth of the stimuli we will be using
-				% covered by a blank. this lets us prime the GPU with the sorts
-				% of stimuli it will be using and this does appear to minimise
+				% lets draw 2 seconds worth of the stimuli we will be using
+				% covered by a blank. Primes the GPU and other components with the sorts
+				% of stimuli/tasks used and this does appear to minimise
 				% some of the frames lost on first presentation for very complex
 				% stimuli using 32bit computation buffers...
 				fprintf('\n===>>> Warming up the GPU, Eyelink and I/O systems... <<<===\n')
@@ -581,8 +583,9 @@ classdef runExperiment < optickaCore
 				for i = 1:s.screenVals.fps*2
 					draw(obj.stimuli);
 					drawBackground(s);
-					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
+					s.drawPhotoDiodeSquare([0 0 0 1]);
 					finishDrawing(s);
+					animate(obj.stimuli);
 					if ~mod(i,10); io.sendStrobe(255); end
 					if obj.useEyeLink
 						getSample(eL); 
@@ -591,6 +594,7 @@ classdef runExperiment < optickaCore
 					end
 					flip(s);
 				end
+				update(obj.stimuli); %make sure stimuli are set back to their start state
 				io.resetStrobe;flip(s);flip(s);
 				
 				%-----premptive save in case of crash or error SAVE IN /TMP
@@ -622,12 +626,12 @@ classdef runExperiment < optickaCore
 				tS.eyePos = []; %locally record eye position
 				
 				%-----profiling starts here
-				%profile clear; profile on;
+				profile clear; profile on;
 				
 				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
-				if isunix
-					Priority(50); %bump our priority to maximum allowed
+				if IsLinux
+					Priority(2); %bump our priority to maximum allowed
 				else
 					Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				end
@@ -705,7 +709,7 @@ classdef runExperiment < optickaCore
 							tL.stimTime(tS.totalTicks)=0;
 						end
 						%----- increment our global tick counter
-						tS.totalTicks = tS.totalTicks + 1;
+						tS.totalTicks = tS.totalTicks + 1; tL.tick = tS.totalTicks;
 					end
 					
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -730,7 +734,7 @@ classdef runExperiment < optickaCore
 				obj.isRunning = false;
 				
 				%-----get our profiling report for our task loop
-				%profile off; profile report; profile clear
+				profile off; profile report; profile clear
 				
 				if obj.useDisplayPP || obj.useDataPixx
 					pauseRecording(io); %pause plexon
@@ -781,8 +785,6 @@ classdef runExperiment < optickaCore
 					warning('on')
 					fprintf('\n===>>> SAVED DATA to: %s\n',[obj.paths.savedData filesep obj.name '.mat'])
 				end
-				
-				sM.plotLogs(sM.log);
 				
 				clear rE tL s tS bR rM eL io sM	
 				
@@ -1211,26 +1213,13 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief getrunLog Prints out the frame time plots from a run
+		%> @brief deletes the run logs
 		%>
 		%> @param
 		% ===================================================================
 		function deleteRunLog(obj)
-			if isa(obj.runLog,'timeLogger')
-				obj.runLog = [];
-			end
-			if isa(obj.taskLog,'timeLogger')
-				obj.taskLog = [];
-			end
-		end
-		
-		% ===================================================================
-		%> @brief getTimeLog Prints out the frame time plots from a run
-		%>
-		%> @param
-		% ===================================================================
-		function restoreRunLog(obj,tLog)
-			if isstruct(tLog);obj.runLog = tLog;end
+			obj.runLog = [];
+			obj.taskLog = [];
 		end
 		
 		% ===================================================================
@@ -1243,28 +1232,26 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief no operation
-		%>
-		%> @param
-		% ===================================================================
-		function noop(obj)
-			% used to test any overhead of simply calling a method
-		end
-		
-		% ===================================================================
 		%> @brief print run info to command window
 		%>
 		%> @param
 		% ===================================================================
 		function logRun(obj,tag)
-			if obj.isRunning && obj.task.tick > 1
+			if obj.isRunning
 				if ~exist('tag','var'); tag = '#'; end
 				t = obj.infoText;
-				fprintf('%s - %s\n',tag,t);
+				fprintf('===> %s: %s\n',tag,t);
 			end			
 		end
-		
-		
+
+		% ===================================================================
+		%> @brief no operation, tests method call overhead
+		%>
+		%> @param
+		% ===================================================================
+		function noop(obj)
+			% used to test any overhead of simply calling an empty method
+		end
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
@@ -1520,20 +1507,27 @@ classdef runExperiment < optickaCore
 		%> @return
 		% ===================================================================
 		function t = infoText(obj)
-			if obj.logFrames == true && obj.task.tick > 1
-				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i',obj.task.thisBlock,...
-					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-					(obj.runLog.vbl(obj.task.tick-1)-obj.runLog.startTime),obj.task.tick,obj.task.outIndex(obj.task.totalRuns));
-			elseif obj.task.tick > 1qq
-				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i',obj.task.thisBlock,...
-					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
-					(obj.runLog.vbl-obj.runLog.startTime),obj.task.tick,obj.task.outIndex(obj.task.totalRuns));
+			if obj.isRunTask; log = obj.taskLog; else; log = obj.runLog; end
+			if obj.logFrames == true && log.tick > 1
+				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i |',...
+					obj.task.thisBlock, obj.task.thisRun,obj.task.totalRuns,...
+					obj.task.nRuns,obj.task.isBlank, ...
+					(log.vbl(end)-log.startTime),...
+					log.tick,obj.task.outIndex(obj.task.totalRuns));
+			else
+				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i |',...
+					obj.task.thisBlock,obj.task.thisRun,obj.task.totalRuns,...
+					obj.task.nRuns,obj.task.isBlank, ...
+					(log.vbl(1)-log.startTime),log.tick,...
+					obj.task.outIndex(obj.task.totalRuns));
 			end
 			for i=1:obj.task.nVars
 				if iscell(obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))
-					t=[t sprintf(' -- %s = %s',obj.task.nVar(i).name,num2str(obj.task.outVars{obj.task.thisBlock,i}{obj.task.thisRun}))];
+					t=[t sprintf(' / %s: %s',obj.task.nVar(i).name,...
+						num2str(obj.task.outVars{obj.task.thisBlock,i}{obj.task.thisRun}))];
 				else
-					t=[t sprintf(' -- %s = %2.2f',obj.task.nVar(i).name,obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))];
+					t=[t sprintf(' / %s: %2.2f',obj.task.nVar(i).name,...
+						obj.task.outVars{obj.task.thisBlock,i}(obj.task.thisRun))];
 				end
 			end
 		end

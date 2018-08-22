@@ -38,7 +38,7 @@ tS.fixX = 0;
 tS.fixY = 0;
 tS.firstFixInit = 1;
 tS.firstFixTime = 0.6;
-tS.firstFixRadius = 3.5;
+tS.firstFixRadius = 1;
 obj.lastXPosition = tS.fixX;
 obj.lastYPosition = tS.fixY;
 tS.strict = true; %do we allow (strict==false) multiple entry/exits of fix window within the time limit
@@ -118,27 +118,26 @@ pauseExitFcn = {
 prefixEntryFcn = { 
 	@()setOffline(eL); ... %make sure offline before start recording
 	@()resetFixation(eL); ... %reset the fixation counters ready for a new trial
-	@()updateFixationValues(eL,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime); %reset 
+	@()updateFixationValues(eL,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius); %reset 
 	@()show(obj.stimuli); ...
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()trackerClearScreen(eL); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
-	@()statusMessage(eL,'Prefixation...'); ...
 	@()edit(obj.stimuli,4,'colourOut',[0.5 0.5 0.5]); ... %dim fix spot
-	@()logRun(obj,'prefixation'); ... %fprintf current trial info
+	@()logRun(obj,'PREFIX'); ... %fprintf current trial info
 };
 
 %--------------------prefixate
 prefixFcn = { @()draw(obj.stimuli); };
 
 %--------------------prefixate exit
-prefixExitFcn = { 
-	%@()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
+prefixExitFcn = {
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
 	@()edfMessage(eL,sprintf('TRIALID %i',getTaskIndex(obj))); ...
 	@()edfMessage(eL,['UUID ' UUID(sM)]); ... %add in the uuid of the current state for good measure
 	@()startRecording(eL); ... %start eyelink recording eye data
+	@()statusMessage(eL,'Get Fixation...'); ... %status text on the eyelink
 	@()needEyelinkSample(obj,true); ...
 };
 
@@ -288,10 +287,10 @@ stateInfoTmp = { ...
 %----------------------State Machine Table-------------------------
 
 % N x 2 cell array of regexp strings, list to skip the current -> next state's exit functions; for example
-% skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
+% skipExitStates = {'fixate',{'incorrect','breakfix'}}; means that if the currentstate is
 % 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
 % state. Add multiple rows for skipping multiple state's exit states.
-sM.skipExitStates = {'fixate','incorrect|breakfix'};
+sM.skipExitStates = {'fixate',{'incorrect','breakfix'}};
 
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')

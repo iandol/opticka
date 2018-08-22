@@ -5,18 +5,16 @@ classdef timeLogger < optickaCore
 	
 	properties
 		screenLog	= struct()
-		runLog		= struct()
-		trainingLog	= struct()
-		timer			= @GetSecs
+		timer		= @GetSecs
 		vbl			= 0
-		show			= 0
-		flip			= 0
-		miss			= 0
-		stimTime		= 0
-		tick			= 0
-		tickInfo		= 0
+		show		= 0
+		flip		= 0
+		miss		= 0
+		stimTime	= 0
+		tick		= 0
+		tickInfo	= 0
 		startTime	= 0
-		startRun		= 0
+		startRun	= 0
 		verbose		= true
 	end
 	
@@ -26,6 +24,8 @@ classdef timeLogger < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		runLog		= struct()
+		trainingLog	= struct()
 		%> allowed properties passed to object upon construction
 		allowedProperties = 'timer'
 	end
@@ -51,6 +51,41 @@ classdef timeLogger < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief Preallocate array a bit more efficient
+		%>
+		%> @param varargin
+		%> @return
+		% ===================================================================
+		function preAllocate(obj,n)
+			obj.vbl = zeros(1,n);
+			obj.show = obj.vbl;
+			obj.flip = obj.vbl;
+			obj.miss = obj.vbl;
+			obj.stimTime = obj.vbl;
+		end
+		
+		% ===================================================================
+		%> @brief if we preallocated, remove empty 0 values
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function removeEmptyValues(obj)
+			idx = find(obj.vbl == 0);
+			obj.vbl(idx) = [];
+			obj.show(idx) = [];
+			obj.flip(idx) = [];
+			obj.miss(idx) = [];
+			obj.stimTime(idx) = [];
+			index=min([length(obj.vbl) length(obj.flip) length(obj.show)]);
+			obj.vbl=obj.vbl(1:index);
+			obj.show=obj.show(1:index);
+			obj.flip=obj.flip(1:index);
+			obj.miss=obj.miss(1:index);
+			obj.stimTime=obj.stimTime(1:index);
+		end
+		
+		% ===================================================================
 		%> @brief print Log of the frame timings
 		%>
 		%> @param
@@ -61,17 +96,16 @@ classdef timeLogger < optickaCore
 				disp('No timing data available...')
 				return
 			end
-			vbl=obj.vbl*1000;
-			show=obj.show*1000;
-			flip=obj.flip*1000;
-			index=min([length(vbl) length(flip) length(show)]);
-			vbl=vbl(1:index);
-			show=show(1:index);
-			flip=flip(1:index);
-			miss=obj.miss(1:index);
-			stimTime=obj.stimTime(1:index);
 			
-			calculateMisses(obj)
+			removeEmptyValues(obj)
+			
+			vbl=obj.vbl.*1000; %#ok<*PROP>
+			show=obj.show.*1000;
+			flip=obj.flip.*1000; 
+			miss=obj.miss;
+			stimTime=obj.stimTime;
+			
+			calculateMisses(obj,miss,stimTime)
 			
 			figure;
 			set(gcf,'Name',obj.name,'NumberTitle','off','Color',[1 1 1]);
@@ -141,7 +175,7 @@ classdef timeLogger < optickaCore
 			miss(miss > 0.05) = 0.05;
 			plot(miss,'k.-');
 			plot(obj.missImportant,'ro','MarkerFaceColor',[1 0 0]);
-			plot(stimTime/100,'k');
+			plot(stimTime/30,'k','linewidth',1);
 			hold off
 			p(3,1).title(['Missed frames = ' num2str(obj.nMissed) ' (RED > 0 means missed frame)']);
 			p(3,1).xlabel('Frame number');
@@ -159,15 +193,11 @@ classdef timeLogger < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function calculateMisses(obj)
-			index=min([length(obj.vbl) length(obj.flip) length(obj.show)]);
-			miss=obj.miss(1:index); %#ok<*PROP>
-			stimTime=obj.stimTime(1:index);
-			
+		function calculateMisses(obj,miss,stimTime)
 			obj.missImportant = miss;
 			obj.missImportant(obj.missImportant <= 0) = -inf;
 			obj.missImportant(stimTime < 1) = -inf;
-			obj.missImportant(1:2) = -inf; %ignore first frame
+			obj.missImportant(1) = -inf; %ignore first frame
 			obj.nMissed = length(find(obj.missImportant > 0));
 		end
 	end %---END PUBLIC METHODS---%
