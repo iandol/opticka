@@ -68,7 +68,10 @@ classdef metaStimulus < optickaCore
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
-	properties (SetAccess = private, GetAccess = private) 
+	properties (SetAccess = private, GetAccess = private)
+		%> cache our dependent values for a bit more speed...
+		n_
+		nMask_
 		%> allowed properties passed to object upon construction
 		allowedProperties = 'showMask|maskStimuli|verbose|stimuli|screen|choice'
 	end
@@ -134,7 +137,7 @@ classdef metaStimulus < optickaCore
 				
 				update(obj.stimuli{obj.choice});
 				
-			elseif mask && obj.showMask == true && obj.nMask > 0 %draw mask instead
+			elseif mask && obj.showMask == true && obj.nMask_ > 0 %draw mask instead
 				
 				for i = 1:obj.nMask
 					update(obj.maskStimuli{i});
@@ -142,7 +145,7 @@ classdef metaStimulus < optickaCore
 				
 			else
 		
-				for i = 1:obj.n
+				for i = 1:obj.n_
 					update(obj.stimuli{i});
 				end
 				
@@ -165,15 +168,15 @@ classdef metaStimulus < optickaCore
 				
 				draw(obj.stimuli{obj.choice});
 				
-			elseif obj.showMask == true && obj.nMask > 0 %draw mask instead
+			elseif obj.showMask == true && obj.nMask_ > 0 %draw mask instead
 				
-				for i = 1:obj.nMask
+				for i = 1:obj.nMask_
 					draw(obj.maskStimuli{i});
 				end
 				
 			else
 				
-				for i = 1:obj.n
+				for i = 1:obj.n_
 					draw(obj.stimuli{i});
 				end
 				
@@ -195,15 +198,15 @@ classdef metaStimulus < optickaCore
 				
 				animate(obj.stimuli{obj.choice});
 				
-			elseif obj.showMask == true && obj.nMask > 0 %draw mask instead
+			elseif obj.showMask == true && obj.nMask_ > 0 %draw mask instead
 				
-				for i = 1:obj.nMask
+				for i = 1:obj.nMask_
 					animate(obj.maskStimuli{i});
 				end
 				
 			else
 	
-				for i = 1:obj.n
+				for i = 1:obj.n_
 					animate(obj.stimuli{i});
 				end
 				
@@ -282,7 +285,7 @@ classdef metaStimulus < optickaCore
 		%>
 		% ===================================================================
 		function show(obj)
-			for i = 1:obj.n
+			for i = 1:obj.n_
 				show(obj.stimuli{i});
 			end
 		end
@@ -292,7 +295,7 @@ classdef metaStimulus < optickaCore
 		%>
 		% ===================================================================
 		function hide(obj)
-			for i = 1:obj.n
+			for i = 1:obj.n_
 				hide(obj.stimuli{i});
 			end
 		end
@@ -321,6 +324,7 @@ classdef metaStimulus < optickaCore
 		function [x,y] = getFixationPositions(obj)
 			x = 0; y = 0;
 			if ~isempty(obj.fixationChoice)
+				x=zeros(length(obj.fixationChoice)); y = x;
 				for i=1:length(obj.fixationChoice)
 					x(i) = obj.stimuli{obj.fixationChoice(i)}.xPositionOut / obj.screen.ppd;
 					y(i) = obj.stimuli{obj.fixationChoice(i)}.yPositionOut / obj.screen.ppd;
@@ -338,7 +342,7 @@ classdef metaStimulus < optickaCore
 			a=1;
 			out = [];
 			obj.stimulusPositions = out;
-			for i = 1:obj.n
+			for i = 1:obj.n_
 				if obj.stimuli{i}.isVisible == true && obj.stimuli{i}.showOnTracker == true
 					if isprop(obj.stimuli{i},'sizeOut')
 						if ~isempty(obj.stimuli{i}.xOut)
@@ -374,7 +378,7 @@ classdef metaStimulus < optickaCore
 		function showSet(obj)
 			if ~isempty(obj.stimulusSets) && obj.setChoice > 0
 				sets = obj.stimulusSets{obj.setChoice};
-				if max(sets) <= obj.n
+				if max(sets) <= obj.n_
 					hide(obj)
 					for i = sets
 						show(obj.stimuli{i});
@@ -592,6 +596,7 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function n = get.n(obj)
 			n = length(obj.stimuli);
+			obj.n_ = n;
 		end
 		
 		% ===================================================================
@@ -601,6 +606,7 @@ classdef metaStimulus < optickaCore
 		% ===================================================================
 		function nMask = get.nMask(obj)
 			nMask = length(obj.maskStimuli);
+			obj.nMask_ = nMask;
 		end
 		
 		

@@ -114,7 +114,7 @@ classdef screenManager < optickaCore
 		%> properties allowed to be modified during construction
 		allowedProperties char = 'screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
-		photoDiodeRect(1,4) double = [0, 0, 50, 50]
+		photoDiodeRect(1,4) double = [0, 0, 60, 60]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
 		grid
 		%> the movie pointer
@@ -321,7 +321,7 @@ classdef screenManager < optickaCore
 							PsychImaging('AddTask', 'General', obj.bitDepth, 2);
 						end
 					else
-						fprintf('\n---> screenManager: No Bits# found, revert to FloatingPoint32Bit mode.\n');
+						fprintf('---> screenManager: No Bits# found, revert to FloatingPoint32Bit mode.\n');
 						PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 						obj.isPlusPlus = false;
 					end
@@ -418,17 +418,14 @@ classdef screenManager < optickaCore
 					[obj.screenVals.oldSrc,obj.screenVals.oldDst,obj.screenVals.oldMask]...
 						= Screen('BlendFunction', obj.win, obj.srcMode, obj.dstMode);
 					fprintf('\n---> screenManager: Previous OpenGL blending was %s | %s\n', obj.screenVals.oldSrc, obj.screenVals.oldDst);
-					fprintf('\n---> screenManager: Initial OpenGL blending set to %s | %s\n', obj.srcMode, obj.dstMode);
+					fprintf('---> screenManager: OpenGL blending now set to %s | %s\n', obj.srcMode, obj.dstMode);
 				end
 				
 				Priority(0); %be lazy for a while and let other things get done
 				
-				%if IsLinux
-				%	Screen('TextFont', obj.win, obj.linuxFontName);
-				%end
 				if IsLinux
-					Screen('Preference', 'TextRenderer', 1);
-					Screen('Preference', 'DefaultFontName', 'DejaVu Sans');
+					%Screen('Preference', 'TextRenderer', 1);
+					%Screen('Preference', 'DefaultFontName', 'DejaVu Sans');
 				end
 				
 				obj.screenVals.white = WhiteIndex(obj.screen);

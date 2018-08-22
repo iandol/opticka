@@ -251,13 +251,13 @@ classdef stateMachine < optickaCore
 				end
 				if trigger == true %we have exceeded the time (real|ticks), so time to transition or exit
 					nextName = obj.stateList(obj.currentIndex).next;
-					if isempty(nextName) %no next state, exit the statemachine
+					if ~isempty(nextName) %if no next state, exit the statemachine
+						obj.transitionToStateWithName(nextName);
+					else
 						obj.exitCurrentState;
 						obj.isRunning = false;
 						obj.isFinishing = true;
 						finish(obj);
-					else
-						obj.transitionToStateWithName(nextName);
 					end
 					return
 				end
@@ -277,7 +277,7 @@ classdef stateMachine < optickaCore
 				end
 				
 				%run our within state functions
-				for i = 1:size(obj.currentWithinFcn,1) %nested class
+				for i = 1:length(obj.currentWithinFcn) %nested class
 					obj.currentWithinFcn{i}();
 				end
 				
@@ -508,6 +508,7 @@ classdef stateMachine < optickaCore
 		function enterStateAtIndex(obj, thisIndex)
 			obj.currentIndex = thisIndex;
 			if length(obj.stateList) >= thisIndex
+				tt=tic;	
 				%obj.notify('enterState');
 				thisState = obj.stateList(obj.currentIndex);
 				obj.currentEntryTime = feval(obj.clockFcn);
@@ -526,8 +527,8 @@ classdef stateMachine < optickaCore
 					obj.nextTimeOut = obj.currentEntryTime + thisState.time;
 				end
 				obj.nextTickOut = round(thisState.time / obj.timeDelta);
+					
 				
-				tt=tic;				
 				%run our enter state functions
 				for i = 1:length(thisState.entryFcn)
 					thisState.entryFcn{i}();
@@ -577,12 +578,11 @@ classdef stateMachine < optickaCore
 		%> @return
 		% ===================================================================
 		function exitCurrentState(obj)
-			thisState = obj.currentState;
 			tt=tic;
+			thisState = obj.currentState;
 			if thisState.skipExitFcn == false
-				%obj.notify('exitState');
-				for i = 1:size(thisState.exitFcn, 1) %nested class
-					feval(thisState.exitFcn{i});
+				for i = 1:length(thisState.exitFcn) %nested class
+					thisState.exitFcn{i}();
 				end
 			end
 			obj.fevalTime.exit = toc(tt)*1000;

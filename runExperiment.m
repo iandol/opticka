@@ -580,7 +580,11 @@ classdef runExperiment < optickaCore
 					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
 					finishDrawing(s);
 					if ~mod(i,10); io.sendStrobe(255); end
-					if obj.useEyeLink; getSample(obj.eyeLink); Eyelink('Message','testflip'); end
+					if obj.useEyeLink
+						getSample(eL); 
+						trackerDrawText(eL,'Warming Up System');
+						edfMessage(eL,'Warmup test');
+					end
 					flip(s);
 				end
 				io.resetStrobe;flip(s);flip(s);
@@ -615,9 +619,6 @@ classdef runExperiment < optickaCore
 				
 				%-----profiling starts here
 				%profile clear; profile on;
-                
-				%-----check initial eye position
-				if obj.useEyeLink; getSample(eL); end
 				
 				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
@@ -663,8 +664,8 @@ classdef runExperiment < optickaCore
 					%end
 					
 					%------Check keyboard for commands
-					if ~strcmpi(sM.currentName,'stimulus') || ~strcmpi(sM.currentName,'fixate') || tS.checkKeysDuringStimulus == true
-						tS = obj.checkFixationKeys(tS);
+					if (~strcmpi(sM.currentName,'prefix') && ~strcmpi(sM.currentName,'stimulus'))
+						tS = checkFixationKeys(obj,tS);
 					end
 					
 					%------Log stim / no stim condition to log
@@ -1247,6 +1248,19 @@ classdef runExperiment < optickaCore
 			% used to test any overhead of simply calling a method
 		end
 		
+		% ===================================================================
+		%> @brief print run info to command window
+		%>
+		%> @param
+		% ===================================================================
+		function logRun(obj,tag)
+			if obj.isRunning && obj.task.tick > 1
+				if ~exist('tag','var'); tag = '#'; end
+				t = obj.infoText;
+				fprintf('%s - %s\n',tag,t);
+			end			
+		end
+		
 		
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
@@ -1507,7 +1521,7 @@ classdef runExperiment < optickaCore
 				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i',obj.task.thisBlock,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
 					(obj.runLog.vbl(obj.task.tick-1)-obj.runLog.startTime),obj.task.tick,obj.task.outIndex(obj.task.totalRuns));
-			else
+			elseif obj.task.tick > 1qq
 				t=sprintf('B: %i | R: %i [%i/%i] | isBlank: %i | Time: %3.3f (%i) | V: %i',obj.task.thisBlock,...
 					obj.task.thisRun,obj.task.totalRuns,obj.task.nRuns,obj.task.isBlank, ...
 					(obj.runLog.vbl-obj.runLog.startTime),obj.task.tick,obj.task.outIndex(obj.task.totalRuns));
