@@ -57,7 +57,7 @@ classdef timeLogger < optickaCore
 		%> @return
 		% ===================================================================
 		function printRunLog(obj)
-			if length(obj.vbl) <= 2
+			if length(obj.vbl) <= 5
 				disp('No timing data available...')
 				return
 			end
@@ -74,7 +74,7 @@ classdef timeLogger < optickaCore
 			calculateMisses(obj)
 			
 			figure;
-			set(gcf,'Color',[1 1 1]);
+			set(gcf,'Name',obj.name,'NumberTitle','off','Color',[1 1 1]);
 			p = panel('defer');
 			p.pack(3,1)
 			

@@ -134,7 +134,7 @@ prefixFcn = { @()draw(obj.stimuli); };
 
 %--------------------prefixate exit
 prefixExitFcn = { 
-	@()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
+	%@()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
 	@()edfMessage(eL,sprintf('TRIALID %i',getTaskIndex(obj))); ...
 	@()edfMessage(eL,['UUID ' UUID(sM)]); ... %add in the uuid of the current state for good measure
@@ -157,14 +157,14 @@ initFixFcn = { @()testSearchHoldFixation(eL,'stimulus','incorrect'); };
 %--------------------exit fixation phase
 fixExitFcn = { 
 	@()updateFixationTarget(obj, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %use our stimuli values for next fix X and Y
-	%@()edit(obj.stimuli,4,'colourOut',[0.6 0.6 0.5]); ... %dim fix spot
+	@()edit(obj.stimuli,4,'colourOut',[0.6 0.6 0.5]); ... %dim fix spot
 	%@()statusMessage(eL,'Show Stimulus...'); ...
-	%@()trackerDrawFixation(eL); ... 
-	%@()edfMessage(eL,'END_FIX'); ...
+	@()trackerDrawFixation(eL); ... 
+	@()edfMessage(eL,'END_FIX'); ...
 };
 
 %--------------------what to run when we enter the stim presentation state
-stimEntryFcn = {  }; %@()doStrobe(obj,true);@()doSyncTime(obj); 
+stimEntryFcn = { @()doStrobe(obj,true);@()doSyncTime(obj); };  
 
 %--------------------what to run when we are showing stimuli
 stimFcn =  { 
@@ -177,7 +177,7 @@ stimFcn =  {
 testFixFcn = { @()testSearchHoldFixation(eL,'correct','breakfix'); };
 
 %--------------------as we exit stim presentation state
-stimExitFcn = { }; %@()sendStrobe(io,255);
+stimExitFcn = { @()sendStrobe(io,255); };
 
 %--------------------if the subject is correct (small reward)
 correctEntryFcn = { 
@@ -199,11 +199,10 @@ correctFcn = {
 %--------------------when we exit the correct state
 correctExitFcn = { 
 	@()correct(io); ...
-	%@()edit(obj.stimuli,2,'modulateColourOut',[0.5 0.5 0.5]); ... %luminance pedestal
 	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
-	%@()updatePlot(bR, eL, sM); ... %update our behavioural plot
+	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 };
 
 %--------------------incorrect entry
@@ -221,7 +220,6 @@ incFcn = { @()draw(obj.stimuli); };
 %--------------------incorrect / break exit
 incExitFcn = { 
 	@()incorrect(io); ...
-	%@()edit(obj.stimuli,2,'modulateColourOut',[0.5 0.5 0.5]); ... %luminance pedestal
 	@()resetRun(t);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(obj,[],true,false); ... %update the variables
 	@()update(obj.stimuli); ... %update our stimuli ready for display
@@ -240,7 +238,6 @@ breakEntryFcn = {
 %--------------------incorrect / break exit
 breakExitFcn = { 
 	@()breakFixation(io); ...
-	%@()edit(obj.stimuli,2,'modulateColourOut',[0.5 0.5 0.5]); ... %luminance pedestal
 	@()resetRun(t);... %we randomise the run within this block to make it harder to guess next trial
 	@()updateVariables(obj,[],true,false); ... %update the variables
 	@()update(obj.stimuli); ... %update our stimuli ready for display

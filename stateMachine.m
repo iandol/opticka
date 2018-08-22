@@ -528,7 +528,6 @@ classdef stateMachine < optickaCore
 				end
 				obj.nextTickOut = round(thisState.time / obj.timeDelta);
 					
-				
 				%run our enter state functions
 				for i = 1:length(thisState.entryFcn)
 					thisState.entryFcn{i}();

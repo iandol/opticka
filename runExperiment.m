@@ -196,6 +196,7 @@ classdef runExperiment < optickaCore
 
 			%initialise runLog for this run
 			obj.previousInfo.runLog = obj.runLog;
+			obj.taskLog = timeLogger();
 			obj.runLog = timeLogger();
 			tL = obj.runLog;
 
@@ -478,8 +479,11 @@ classdef runExperiment < optickaCore
 			tS.useMagStim = false;
 	
 			%------initialise time logs for this run
-			obj.taskLog = timeLogger;
+			obj.previousInfo.taskLog = obj.taskLog;
+			obj.runLog = timeLogger();
+			obj.taskLog = timeLogger();
 			tL = obj.taskLog; %short handle to log
+			tL.name = obj.name;
 			
 			%-----behavioural record
 			obj.behaviouralRecord = behaviouralRecord('name',obj.name); %#ok<*CPROP>
@@ -640,8 +644,8 @@ classdef runExperiment < optickaCore
 				tL.screenLog.beforeDisplay = GetSecs;
 				tL.screenLog.trackerStartTime = getTrackerTime(eL);
 				tL.screenLog.trackerStartOffset = getTimeOffset(eL);
-				tL.startTime = Screen('Flip', s.win);
-				tL.startTime = tL.startTime;
+				tL.vbl(1) = Screen('Flip', s.win);
+				tL.startTime = tL.vbl(1);
 				
 				%-----ignite the stateMachine!
 				start(sM); 
@@ -664,18 +668,11 @@ classdef runExperiment < optickaCore
 					%end
 					
 					%------Check keyboard for commands
-					if (~strcmpi(sM.currentName,'prefix') && ~strcmpi(sM.currentName,'stimulus'))
+					if (~strcmpi(sM.currentName,'fixate') && ~strcmpi(sM.currentName,'stimulus'))
 						tS = checkFixationKeys(obj,tS);
 					end
 					
-					%------Log stim / no stim condition to log
-					if strcmpi(sM.currentName,'stimulus')
-						tL.stimTime(tS.totalTicks)=1;
-					else
-						tL.stimTime(tS.totalTicks)=0;
-					end
-					
-					%------Tell I/O to send strobe on next screen flip
+					%------Tell I/O to send strobe on this screen flip
 					if obj.sendStrobe && obj.useDisplayPP
 						sendStrobe(io);
 					elseif obj.sendStrobe && obj.useDataPixx
@@ -700,6 +697,12 @@ classdef runExperiment < optickaCore
 						if obj.sendSyncTime % sends SYNCTIME message to eyelink
 							%syncTime(eL);
 							obj.sendSyncTime = false;
+						end
+						%------Log stim / no stim condition to log
+						if strcmpi(sM.currentName,'stimulus')
+							tL.stimTime(tS.totalTicks)=1;
+						else
+							tL.stimTime(tS.totalTicks)=0;
 						end
 						%----- increment our global tick counter
 						tS.totalTicks = tS.totalTicks + 1;
@@ -894,10 +897,10 @@ classdef runExperiment < optickaCore
 		%> @param
 		% ===================================================================
 		function getRunLog(obj)
-			if isa(obj.runLog,'timeLogger')
-				obj.runLog.printRunLog;
-			elseif isa(obj.taskLog,'timeLogger')
+			if isa(obj.taskLog,'timeLogger') && obj.taskLog.vbl(1) ~= 0
 				obj.taskLog.printRunLog;
+			elseif isa(obj.runLog,'timeLogger') && obj.runLog.vbl(1) ~= 0
+				obj.runLog.printRunLog;
 			else
 				warndlg('No log available yet...');
 			end
