@@ -626,7 +626,7 @@ classdef runExperiment < optickaCore
 				tS.eyePos = []; %locally record eye position
 				
 				%-----profiling starts here
-				profile clear; profile on;
+				%profile clear; profile on;
 				
 				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
@@ -699,7 +699,7 @@ classdef runExperiment < optickaCore
 							obj.sendStrobe = false;
 						end
 						if obj.sendSyncTime % sends SYNCTIME message to eyelink
-							%syncTime(eL);
+							syncTime(eL);
 							obj.sendSyncTime = false;
 						end
 						%------Log stim / no stim condition to log
@@ -734,7 +734,7 @@ classdef runExperiment < optickaCore
 				obj.isRunning = false;
 				
 				%-----get our profiling report for our task loop
-				profile off; profile report; profile clear
+				%profile off; profile report; profile clear
 				
 				if obj.useDisplayPP || obj.useDataPixx
 					pauseRecording(io); %pause plexon
@@ -1822,12 +1822,14 @@ classdef runExperiment < optickaCore
 							if obj.eyeLink.fixationInitTime < 0.01
 								obj.eyeLink.fixationInitTime = 0.01;
 							end
+							tS.firstFixInit = obj.eyeLink.fixationInitTime;
 							fprintf('===>>> FIXATION INIT TIME: %g\n',obj.eyeLink.fixationInitTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'x' 
 						if tS.keyTicks > tS.keyHold
 							obj.eyeLink.fixationInitTime = obj.eyeLink.fixationInitTime + 0.1;
+							tS.firstFixInit = obj.eyeLink.fixationInitTime;
 							fprintf('===>>> FIXATION INIT TIME: %g\n',obj.eyeLink.fixationInitTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
@@ -1837,12 +1839,14 @@ classdef runExperiment < optickaCore
 							if obj.eyeLink.fixationTime < 0.01
 								obj.eyeLink.fixationTime = 0.01;
 							end
+							tS.firstFixTime = obj.eyeLink.fixationTime;
 							fprintf('===>>> FIXATION TIME: %g\n',obj.eyeLink.fixationTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'v'
 						if tS.keyTicks > tS.keyHold
 							obj.eyeLink.fixationTime = obj.eyeLink.fixationTime + 0.1;
+							tS.firstFixTime = obj.eyeLink.fixationTime;
 							fprintf('===>>> FIXATION TIME: %g\n',obj.eyeLink.fixationTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
@@ -1852,12 +1856,14 @@ classdef runExperiment < optickaCore
 							if obj.eyeLink.fixationRadius < 0.1
 								obj.eyeLink.fixationRadius = 0.1;
 							end
+							tS.firstFixRadius = obj.eyeLink.fixationRadius;
 							fprintf('===>>> FIXATION RADIUS: %g\n',obj.eyeLink.fixationRadius)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'n'
 						if tS.keyTicks > tS.keyHold
 							obj.eyeLink.fixationRadius = obj.eyeLink.fixationRadius + 0.1;
+							tS.firstFixRadius = obj.eyeLink.fixationRadius;
 							fprintf('===>>> FIXATION RADIUS: %g\n',obj.eyeLink.fixationRadius)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
