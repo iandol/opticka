@@ -10,7 +10,7 @@ classdef dotsStimulus < baseStimulus
 		type		= 'simple'
 		%> dots per degree
 		density		= 100
-		%> how to colour the dots: random, randomN, randomBW, randomNBW, binary
+		%> how to colour the dots: simple, random, randomN, randomBW, randomNBW, binary
 		colourType	= 'randomBW'
 		%> width of dot (deg)
 		dotSize		= 0.05

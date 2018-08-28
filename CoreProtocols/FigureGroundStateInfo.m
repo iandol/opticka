@@ -39,7 +39,7 @@ tS.fixX = 0;
 tS.fixY = 0;
 tS.firstFixInit = 1;
 tS.firstFixTime = 0.6;
-tS.firstFixRadius = 3;
+tS.firstFixRadius = 3.3;
 obj.lastXPosition = tS.fixX;
 obj.lastYPosition = tS.fixY;
 tS.strict = true; %do we allow (strict==false) multiple entry/exits of fix window within the time limit

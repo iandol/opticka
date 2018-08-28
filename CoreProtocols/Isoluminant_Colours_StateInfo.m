@@ -28,7 +28,7 @@ tS.fixX = 0;
 tS.fixY = 0;
 tS.firstFixInit = 1;
 tS.firstFixTime = 1;
-tS.firstFixRadius = 3.75;
+tS.firstFixRadius = 3.25;
 tS.stimulusFixTime = 1;
 obj.lastXPosition = tS.fixX;
 obj.lastYPosition = tS.fixY;
@@ -39,11 +39,11 @@ eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end %===save EDF file?
 if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
 eL.sampleRate = 250;
-eL.remoteCalibration = false; %===manual calibration
+eL.remoteCalibration = true; %===manual calibration
 eL.calibrationStyle = 'HV5'; %===5 point calibration
 eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 1;
-eL.modify.calibrationtargetwidth = 0.05;
+eL.modify.calibrationtargetsize = 0.5;
+eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1 == use any keyboard
 
@@ -177,7 +177,7 @@ correctEntryFcn = {
 %--------------------correct stimulus
 correctFcn = { 
 	@()draw(obj.stimuli); ...
-	@()drawPhotoDiode(s,[1 1 1]); ...
+	@()drawPhotoDiode(s,[0 0 0]); ...
 	@()finishDrawing(s); ...
 };
 
@@ -270,7 +270,7 @@ disp('================>> Building state info file <<================')
 stateInfoTmp = { ...
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'prefix'	inf		pauseEntryFcn	{}				{}				pauseExitFcn; ...
-'prefix'	'fixate'	3		prefixEntryFcn	{}				{}				prefixExitFcn; ...
+'prefix'	'fixate'	2		prefixEntryFcn	{}				{}				prefixExitFcn; ...
 'fixate'	'incorrect'	2	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
 'stimulus'  'incorrect'	2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'correct'	'prefix'	1		correctEntryFcn	correctFcn		{}				correctExitFcn; ...

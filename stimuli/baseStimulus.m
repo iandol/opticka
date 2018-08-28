@@ -302,7 +302,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				if ~exist('s','var') || ~isa(s,'screenManager')
 					s = screenManager('verbose',false,'blend',true,'screen',1,...
-					'bitDepth','8bit','debug',false,...
+					'bitDepth','Floating32BitIfPossible','debug',false,...
 					'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
 				end
 				if ~exist('forceScreen','var'); forceScreen = -1; end
@@ -312,7 +312,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if forceScreen >= 0
 					s.screen = forceScreen;
 					if forceScreen == 0
-						s.bitDepth = '8bit';
+						s.bitDepth = 'Floating32BitIfPossible';
 					end
 				end
 				prepareScreen(s);
@@ -342,7 +342,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				
 				Screen('Flip',s.win);
-				WaitSecs(1);
+				WaitSecs('YieldSecs',2);
 				
 				if benchmark; b=GetSecs; end
 				for i = 1:(s.screenVals.fps*runtime)
