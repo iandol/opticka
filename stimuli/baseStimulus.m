@@ -301,9 +301,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 					runtime = 2; %seconds to run
 				end
 				if ~exist('s','var') || ~isa(s,'screenManager')
-					s = screenManager('verbose',false,'blend',true,'screen',1,...
-					'bitDepth','Floating32BitIfPossible','debug',false,...
-					'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+					s = screenManager('verbose',false,'blend',true,...
+						'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
+						'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
+						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+					prepareScreen(s);
 				end
 				if ~exist('forceScreen','var'); forceScreen = -1; end
 
@@ -312,7 +314,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if forceScreen >= 0
 					s.screen = forceScreen;
 					if forceScreen == 0
-						s.bitDepth = 'Floating32BitIfPossible';
+						s.bitDepth = 'FloatingPoint32BitIfPossible';
 					end
 				end
 				prepareScreen(s);
@@ -363,18 +365,19 @@ classdef baseStimulus < optickaCore & dynamicprops
 				WaitSecs(1);
 				Screen('Flip',s.win);
 				WaitSecs(0.25);
-				if benchmark
-					fps = (s.screenVals.fps*runtime) / (bb-b);
-					fprintf('\n------> SPEED = %g fps\n', fps);
-				end
 				close(s); %close screen
 				s.screen = oldscreen;
 				s.windowed = oldwindowed;
 				s.bitDepth = oldbitdepth;
 				reset(obj); %reset our stimulus ready for use again
+				if benchmark
+					fps = (s.screenVals.fps*runtime) / (bb-b);
+					fprintf('\n\n======> SPEED = %g fps <=======\n', fps);
+				end
 				clear fps benchmark runtime b bb i; %clear up a bit
 				warning on
 			catch ME
+				getReport(ME)
 				if exist('s','var')
 					close(s);
 				end

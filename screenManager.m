@@ -73,8 +73,8 @@ classdef screenManager < optickaCore
 		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc);
 		%> Each N should be a different display
 		screenToHead = []
-		%> framerate for Display++ (120Hz or 100Hz)
-		displayPPRefresh double = 100
+		%> framerate for Display++ (120Hz or 100Hz, empty leaves as is)
+		displayPPRefresh double = []
 	end
 	
 	properties (Hidden = true)
@@ -312,8 +312,11 @@ classdef screenManager < optickaCore
 					BitsPlusPlus('Close');
 					if ret == 1
 						obj.isPlusPlus = true;
-						fprintf('\n---> screenManager: Set Display++ to %iHz\n',obj.displayPPRefresh);
-						Screen('Resolution',obj.screen,1920,1080,obj.displayPPRefresh);
+						if ~isempty(obj.displayPPRefresh)
+							outputID = 0;
+							fprintf('\n---> screenManager: Set Display++ to %iHz\n',obj.displayPPRefresh);
+							Screen('ConfigureDisplay','Scanout',obj.screen,outputID,[],[],obj.displayPPRefresh);
+						end
 						PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
 						if regexp(obj.bitDepth, 'Color')
 							PsychImaging('AddTask', 'General', obj.bitDepth, 2);

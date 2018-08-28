@@ -428,7 +428,7 @@ classdef metaStimulus < optickaCore
 			if forceScreen >= 0
 				s.screen = forceScreen;
 				if forceScreen == 0
-					s.bitDepth = '8bit';
+					s.bitDepth = 'FloatingPoint32BitIfPossible';
 				end
 			end
 			prepareScreen(s);
@@ -479,15 +479,15 @@ classdef metaStimulus < optickaCore
 			WaitSecs(1);
 			Screen('Flip',s.win);
 			WaitSecs(0.25);
-			if benchmark
-				fps = (s.screenVals.fps*runtime) / (bb-b);
-				fprintf('\n------> SPEED = %g fps\n', fps);
-			end
 			close(s); %close screen
 			s.screen = oldscreen;
 			s.windowed = oldwindowed;
 			s.bitDepth = oldbitdepth;
 			reset(obj); %reset our stimulus ready for use again
+			if benchmark
+				fps = (s.screenVals.fps*runtime) / (bb-b);
+				fprintf('\n\n======> SPEED = %g fps <=======\n', fps);
+			end
 			clear s fps benchmark runtime b bb i; %clear up a bit
 			warning on
 		end
@@ -502,12 +502,12 @@ classdef metaStimulus < optickaCore
 				eL = eyelinkManager();
 			end
 			if ~exist('s','var') || ~isa(s,'screenManager')
-				s = screenManager('verbose',false,'blend',true,'screen',0,...
-				'bitDepth','8bit','debug',true,...
+				s = screenManager('verbose',false,'blend',true,...
+				'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
 				'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
 			end
 			if ~exist('runtime','var') || isempty(runtime)
-				runtime = 2; %seconds to run
+				runtime = 5; %seconds to run
 			end
 			
 			try
