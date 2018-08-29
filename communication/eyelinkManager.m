@@ -65,18 +65,10 @@ classdef eyelinkManager < optickaCore
 		y = []
 		%> pupil size
 		pupil = []
-		% are we connected to eyelink?
-		isConnected logical = false
-		% are we recording to an EDF file?
-		isRecording logical = false
-		% which eye is the tracker using?
-		eyeUsed = -1
 		%current sample taken from eyelink
 		currentSample = []
 		%current event taken from eyelink
 		currentEvent = []
-		%version of eyelink
-		version = ''
 		%> Initiate fixation length
 		fixInitLength = 0
 		%how long have we been fixated?
@@ -93,6 +85,14 @@ classdef eyelinkManager < optickaCore
 		currentOffset = 0
 		%> tracker time stamp
 		trackerTime = 0
+		% are we connected to eyelink?
+		isConnected logical = false
+		% are we recording to an EDF file?
+		isRecording logical = false
+		% which eye is the tracker using?
+		eyeUsed = -1
+		%version of eyelink
+		version = ''
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -197,7 +197,8 @@ classdef eyelinkManager < optickaCore
 			
 			[~, obj.version] = Eyelink('GetTrackerVersion');
 			getTrackerTime(obj);
-			obj.salutation('Initialise Method', sprintf('Running on a %s @ %2.5g', obj.version, obj.trackerTime));
+			getTimeOffset(obj);
+			obj.salutation('Initialise Method', sprintf('Running on a %s @ %2.5g (time offset: %2.5g)', obj.version, obj.trackerTime,obj.currentOffset));
 			
 			% try to open file to record data to
 			if obj.isConnected && obj.recordData
@@ -252,6 +253,7 @@ classdef eyelinkManager < optickaCore
 			obj.fixInitStartTime = 0;
 			obj.fixInitLength = 0;
 			obj.fixInitTotal = 0;
+			obj.fixTotal = 0;
 			obj.fixN = 0;
 			obj.fixSelection = 0;
 		end
@@ -331,7 +333,6 @@ classdef eyelinkManager < optickaCore
 				Eyelink('StopRecording');
 			end
 		end
-		
 		
 		% ===================================================================
 		%> @brief wrapper for EyelinkDoDriftCorrection
@@ -567,12 +568,12 @@ classdef eyelinkManager < optickaCore
 		%> @brief Checks if we're looking for fixation a set time. Input is
 		%> 2 strings, either one is returned depending on success or
 		%> failure, 'searching' may also be returned meaning the fixation
-		%> window hasn't been entered yet, and 'fixing' means the fixation 
+		%> window hasn't been entered yet, and 'fixing' means the fixation
 		%> time is not yet met...
 		%>
 		%> @param yesString if this function succeeds return this string
 		%> @param noString if this function fails return this string
-		%> @return out the output string which is 'searching' if fixation is 
+		%> @return out the output string which is 'searching' if fixation is
 		%>   still being initiated, 'fixing' if the fixation window was entered
 		%>   but not for the requisite fixation time, or the yes or no string.
 		% ===================================================================
@@ -611,6 +612,43 @@ classdef eyelinkManager < optickaCore
 				out = '';
 			end
 			return
+		end
+		
+		% ===================================================================
+		%> @brief Checks if we're still within fix window. Input is
+		%> 2 strings, either one is returned depending on success or
+		%> failure, 'fixing' means the fixation time is not yet met...
+		%>
+		%> @param yesString if this function succeeds return this string
+		%> @param noString if this function fails return this string
+		%> @return out the output string which is 'fixing' if the fixation window was entered
+		%>   but not for the requisite fixation time, or the yes or no string.
+		% ===================================================================
+		function [out, window, exclusion] = testHoldFixation(obj, yesString, noString)
+			[fix, fixtime, searching, window, exclusion] = obj.isFixated();
+			if exclusion
+				fprintf('-+-+-> Eyelink:testHoldFixation EXCLUSION ZONE ENTERED!\n')
+				out = 'EXCLUDED!'; window = [];
+				return
+			end
+			if fix
+				if (obj.strictFixation==true && ~(obj.fixN == -100)) || obj.strictFixation==false
+					if fixtime
+						out = yesString;
+						if obj.verbose; fprintf('-+-+-> Eyelink:testHoldFixation FIXATION SUCCESSFUL!: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+					else
+						out = 'fixing';
+					end
+				else
+					out = noString;
+					if obj.verbose;fprintf('-+-+-> Eyelink:testHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+				end
+				return
+			else
+				out = noString;
+				if obj.verbose; fprintf('-+-+-> Eyelink:testHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+				return
+			end
 		end
 		
 		% ===================================================================
