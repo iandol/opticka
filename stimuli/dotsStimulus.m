@@ -226,18 +226,14 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
-				try
-					if obj.mask == true
-						Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
-						Screen('DrawDots', obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,...
-							[obj.xOut obj.yOut],obj.dotTypeOut);
-						Screen('DrawTexture', obj.sM.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
-						Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
-					else
-						Screen('DrawDots',obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,[obj.xOut obj.yOut],obj.dotTypeOut);
-					end
-				catch ME
-					ple(ME)
+				if obj.mask == true
+					Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
+					Screen('DrawDots', obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,...
+						[obj.xOut obj.yOut],obj.dotTypeOut);
+					Screen('DrawTexture', obj.sM.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
+					Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
+				else
+					Screen('DrawDots',obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,[obj.xOut obj.yOut],obj.dotTypeOut);
 				end
 			end
 			obj.tick = obj.tick + 1;
@@ -248,7 +244,7 @@ classdef dotsStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function animate(obj)
-			if obj.isVisible == true && obj.tick > obj.delayTicks && obj.tick < obj.offTicks
+			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
 				if obj.mouseOverride
 					getMousePosition(obj);
 					if obj.mouseValid

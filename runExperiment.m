@@ -580,6 +580,7 @@ classdef runExperiment < optickaCore
 				% stimuli using 32bit computation buffers...
 				fprintf('\n===>>> Warming up the GPU, Eyelink and I/O systems... <<<===\n')
 				show(obj.stimuli);
+				if obj.useEyeLink; trackerClearScreen(eL); end
 				for i = 1:s.screenVals.fps*2
 					draw(obj.stimuli);
 					drawBackground(s);

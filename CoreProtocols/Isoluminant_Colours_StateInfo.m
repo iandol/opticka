@@ -123,7 +123,7 @@ prefixExitFcn = {
 %--------------------fixate entry
 fixEntryFcn = { 
 	@()startFixation(io); ...
-	};
+};
 
 %--------------------fix within
 fixFcn = { 
@@ -242,20 +242,28 @@ calibrateFcn = { @()drawBackground(s); ... %blank the display
 	@()setOffline(eL); @()pauseRecording(io); @()trackerSetup(eL) }; %enter tracker calibrate/validate setup mode
 
 %--------------------debug override
-overrideFcn = { @()pauseRecording(io); @()setOffline(eL); @()keyOverride(obj); }; %a special mode which enters a matlab debug state so we can manually edit object values
+overrideFcn = { 
+	@()pauseRecording(io); ...
+	@()setOffline(eL); ...
+	@()keyOverride(obj); ...
+}; %a special mode which enters a matlab debug state so we can manually edit object values
 
 %--------------------screenflash
-flashFcn = { @()drawBackground(s); ...
-	@()flashScreen(s, 0.2); % fullscreen flash mode for visual background activity detection
+flashFcn = {
+	@()drawBackground(s); ...
+	@()flashScreen(s, 0.2); ...% fullscreen flash mode for visual background activity detection
 };
 
 %--------------------magstim
-magstimFcn = { @()drawBackground(s); ...
-	@()stimulate(mS); % run the magstim
+magstimFcn = { 
+	@()drawBackground(s); ...
+	@()stimulate(mS); ...% run the magstim
 };
 
 %--------------------show 1deg size grid
-gridFcn = { @()drawGrid(s); };
+gridFcn = { 
+	@()drawGrid(s); 
+};
 
 % N x 2 cell array of regexpi strings, list to skip the current -> next state's exit functions; for example
 % skipExitStates = {'fixate',{'incorrect','breakfix'}}; means that if the currentstate is
