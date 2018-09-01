@@ -50,6 +50,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		minBlocks
 		%> log of with block resets
 		resetLog
+		%> have we initialised the dynamic task properties?
+		taskInitialised logical = false
 		%> has task finished
 		taskFinished logical = false
 	end
@@ -78,8 +80,6 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		%> have we initialised the dynamic task properties?
-		taskInitialised logical = false
 		%> cache value for nVars
 		nVars_
 		%> handles from obj.showLog

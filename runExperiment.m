@@ -201,23 +201,24 @@ classdef runExperiment < optickaCore
 			obj.taskLog = timeLogger();
 			obj.runLog = timeLogger();
 			tL = obj.runLog;
+			s = obj.screen;
+			t = obj.task;
 
 			%-----------------------------------------------------------
 			try%======This is our main TRY CATCH experiment display loop
 			%-----------------------------------------------------------	
 				obj.isRunning = true;
 				obj.isRunTask = false;
-				%make a handle to the screenManager, so lazy!
-				s = obj.screen;
-				prepareScreen(s);
-				obj.screenVals = s.open(obj.debug,obj.runLog);
+				
+				%------open the PTB screen
+				obj.screenVals = s.open(obj.debug,tL);
+				obj.stimuli.screen = s; %make sure our stimuli use the same screen
+				obj.stimuli.verbose = obj.verbose;
+				t.fps = obj.screenVals.fps;
+				setup(obj.stimuli); %run setup() for each stimulus
 				
 				%configure IO
 				io = configureIO(obj);
-				
-				%the metastimulus wraps our stimulus cell array
-				obj.stimuli.screen = s;
-				obj.stimuli.verbose = obj.verbose;
 				
 				if obj.useDataPixx || obj.useDisplayPP
 					startRecording(io);
@@ -238,8 +239,6 @@ classdef runExperiment < optickaCore
 				
 				obj.initialiseTask(); %set up our task structure 
 				
-				setup(obj.stimuli);
-				
 				obj.updateVars(1,1); %set the variables for the very first run;
 				
 				KbReleaseWait; %make sure keyboard keys are all released
@@ -254,33 +253,46 @@ classdef runExperiment < optickaCore
 					io.setDIO([3,0,0],[3,0,0])%(Set HIGH FIO0->Pin 24), unpausing the omniplex
 				end
 				
-				obj.task.tick = 1;
-				obj.task.switched = 1;
-				tL.screenLog.beforeDisplay = GetSecs();
-				
 				if obj.useEyeLink; startRecording(eL); end
 				
-				% lets draw 1 seconds worth of the stimuli we will be using
-				% covered by a blank. this lets us prime the GPU with the sorts
-				% of stimuli it will be using and this does appear to minimise
+				%------------------------------------------------------------
+				% lets draw 2 seconds worth of the stimuli we will be using
+				% covered by a blank. Primes the GPU and other components with the sorts
+				% of stimuli/tasks used and this does appear to minimise
 				% some of the frames lost on first presentation for very complex
 				% stimuli using 32bit computation buffers...
-				obj.salutation('Warming up GPU...')
+				fprintf('\n===>>> Warming up the GPU and I/O systems... <<<===\n')
 				show(obj.stimuli);
-				for i = 1:s.screenVals.fps
+				if obj.useEyeLink; trackerClearScreen(eL); end
+				for i = 1:s.screenVals.fps*2
 					draw(obj.stimuli);
 					drawBackground(s);
-					drawScreenCenter(s);
-					if s.photoDiode == true;s.drawPhotoDiodeSquare([0 0 0 1]);end
-					Screen('DrawingFinished', s.win);
-					if obj.useEyeLink; getSample(obj.eyeLink); end
-					Screen('Flip', s.win);
+					s.drawPhotoDiodeSquare([0 0 0 1]);
+					finishDrawing(s);
+					animate(obj.stimuli);
+					if ~mod(i,10); io.sendStrobe(255); end
+					if obj.useEyeLink
+						getSample(eL); 
+						trackerDrawText(eL,'Warming Up System');
+						edfMessage(eL,'Warmup test');
+					end
+					flip(s);
 				end
+				update(obj.stimuli); %make sure stimuli are set back to their start state
+				io.resetStrobe;flip(s);flip(s);
+				tL.screenLog.beforeDisplay = GetSecs();
+				
+				%-----profiling starts here
+				%profile clear; profile on;
+				
+				%-----final setup
+				obj.task.tick = 1;
+				obj.task.switched = 0;
+				obj.task.isBlank = true; %lets start in a blank
 				if obj.logFrames == true
 					tL.screenLog.stimTime(1) = 1;
 				end
-				obj.salutation('TASK Starting...')
-				tL.vbl(1) = GetSecs;
+				tL.vbl(1) = GetSecs();
 				tL.startTime = tL.vbl(1);
 				
 				%==================================================================%
@@ -288,8 +300,8 @@ classdef runExperiment < optickaCore
 				% Our main display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%==================================================================%
-				while obj.task.thisBlock <= obj.task.nBlocks
-					if obj.task.isBlank == true
+				while ~obj.task.taskFinished
+					if obj.task.isBlank
 						if s.photoDiode == true
 							s.drawPhotoDiodeSquare([0 0 0 1]);
 						end
@@ -310,7 +322,7 @@ classdef runExperiment < optickaCore
 					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
-					if obj.task.isBlank == true
+					if obj.task.isBlank
 						if strcmpi(obj.uiCommand,'stop');break;end
 						[~,~,kc] = KbCheck(-1);
 						if strcmpi(KbName(kc),'q');notify(obj,'abortRun');break;end
@@ -374,6 +386,9 @@ classdef runExperiment < optickaCore
 					io.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				end
 				notify(obj,'endAllRuns');
+				
+				%-----get our profiling report for our task loop
+				%profile off; profile report; profile clear
 				
 				tL.screenLog.deltaDispay=tL.screenLog.afterDisplay - tL.screenLog.beforeDisplay;
 				tL.screenLog.deltaUntilDisplay=tL.startTime - tL.screenLog.beforeDisplay;
@@ -492,7 +507,7 @@ classdef runExperiment < optickaCore
 		
 			%------make a short handle to the screenManager
 			s = obj.screen; 
-			obj.stimuli.screen = [];
+			obj.stimuli.screen = s;
 			
 			%------initialise task
 			t = obj.task;
@@ -529,11 +544,11 @@ classdef runExperiment < optickaCore
 					bR.rewardTime = tS.rewardTime;
 				end
 				
-				%------open the PTB screen
+				%------open the PTB screen and setup stimuli
 				obj.screenVals = s.open(obj.debug,tL);
-				obj.stimuli.screen = s; %make sure our stimuli use the same screen
 				obj.stimuli.verbose = obj.verbose;
 				setup(obj.stimuli); %run setup() for each stimulus
+				t.fps = s.screenVals.fps;
 				
 				%---------initialise and set up I/O
 				io = configureIO(obj);
@@ -631,11 +646,7 @@ classdef runExperiment < optickaCore
 				
 				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
-				if IsLinux
-					Priority(2); %bump our priority to maximum allowed
-				else
-					Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
-				end
+				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				if obj.debug == false
 					%warning('off'); %#ok<*WNOFF>
 					ListenChar(1); %2=capture all keystrokes
@@ -1384,34 +1395,34 @@ classdef runExperiment < optickaCore
 			obj.sendStrobe = false;
 			
 			%--------------first run-----------------
-			if obj.task.tick==1 
-				obj.task.isBlank = false;
+			if obj.task.tick == 1 
+				fprintf('START @%s\n\n',infoText(obj));
+				obj.task.isBlank = true;
 				obj.task.startTime = obj.task.timeNow;
-				obj.task.switchTime = obj.task.trialTime; %first ever time is for the first trial
-				obj.task.switchTick = obj.task.trialTime*ceil(obj.screenVals.fps);
+				obj.task.switchTime = obj.task.isTime; %first ever time is for the first trial
+				obj.task.switchTick = obj.task.isTime*ceil(obj.screenVals.fps);
 				setStrobeValue(obj,obj.task.outIndex(obj.task.totalRuns));
-				obj.sendStrobe = true;
 			end
 			
 			%-------------------------------------------------------------------
-			if obj.task.realTime == true %we measure real time
-				trigger = obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime);
+			if obj.task.realTime %we measure real time
+				maintain = obj.task.timeNow <= (obj.task.startTime+obj.task.switchTime);
 			else %we measure frames, prone to error build-up
-				trigger = obj.task.tick < obj.task.switchTick;
+				maintain = obj.task.tick < obj.task.switchTick;
 			end
 			
-			if trigger == true %no need to switch state
+			if maintain == true %no need to switch state
 				
 				if obj.task.isBlank == false %showing stimulus, need to call animate for each stimulus
+					
 					% because the update happens before the flip, but the drawing of the update happens
 					% only in the next loop, we have to send the strobe one loop after we set switched
 					% to true
 					if obj.task.switched == true
 						obj.sendStrobe = true;
 					end
-					
 					%if obj.verbose==true;tic;end
-% 					for i = 1:obj.stimuli.n %parfor appears faster here for 6 stimuli at least
+% 					parfor i = 1:obj.stimuli.n %parfor appears faster here for 6 stimuli at least
 % 						obj.stimuli{i}.animate;
 % 					end
 					animate(obj.stimuli);
@@ -1421,7 +1432,7 @@ classdef runExperiment < optickaCore
 					obj.task.blankTick = obj.task.blankTick + 1;
 					%this causes the update of the stimuli, which may take more than one refresh, to
 					%occur during the second blank flip, thus we don't lose any timing.
-					if obj.task.blankTick == 2
+					if obj.task.blankTick == 2 && obj.task.tick > 1
 						fprintf('@%s\n\n',infoText(obj));
 						obj.task.doUpdate = true;
 					end

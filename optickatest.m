@@ -6,7 +6,7 @@
 % or Linux, and can interface via strobed words (using a cheap and 
 % very reliable LabJack) and ethernet with external harware for 
 % recording neurophysiological data.
-% In this example, Stimulus objects (myStim class cell array), 
+% In this example, Stimulus objects (myStims class cell array), 
 % stimulus sequence variables (myTask object), and 
 % screenManager (myScreen object) are passed to the
 % runExperiment object for final display. Opticka also has a UI (type
@@ -22,7 +22,7 @@
 
 %% Initial clear up of previous runs
 % Make sure we start in a clean environment, not essential
-clear myStim myTask myScreen rExp
+clear myStims myTask myScreen rExp
 sca %PTB screen clear all
 
 %% Stimulus Initialisation
@@ -39,26 +39,26 @@ sca %PTB screen clear all
 % stimuli as if they were a single 'thing', so for example when you use the
 % draw method on a stimulus manager, it tells each of its child stimuli to
 % draw in turn
-myStim = metaStimulus();
+myStims = metaStimulus();
 
 %%
 % The first six stimuli are gratings / gabors of varying kinds.
-myStim{1}=gratingStimulus('sf',1,'contrast',0.5,'size',1,'tf',0,'angle',30,...
+myStims{1}=gratingStimulus('sf',1,'contrast',0.5,'size',1,'tf',0,'angle',30,...
 	'gabor', 0, 'mask', 1);
 
-myStim{2}=gratingStimulus('sf',3,'contrast',0.5,'tf',1,'size',3,'xPosition',-3,...
+myStims{2}=gratingStimulus('sf',3,'contrast',0.5,'tf',1,'size',3,'xPosition',-3,...
 	'yPosition',-4,'gabor',1,'mask',0);
 
-myStim{3}=gratingStimulus('sf',1,'contrast',0.5,'size',3,'angle',45,'xPosition',-2,...
+myStims{3}=gratingStimulus('sf',1,'contrast',0.5,'size',3,'angle',45,'xPosition',-2,...
 	'yPosition',2,'gabor',0,'mask',1,'sigma',15,'speed',2);
 
-myStim{4}=gratingStimulus('sf',1,'contrast',0.5,'tf',0,'size',2,'xPosition',-3,...
+myStims{4}=gratingStimulus('sf',1,'contrast',0.5,'tf',0,'size',2,'xPosition',-3,...
 	'yPosition',-3,'gabor',0,'mask',1,'speed',2);
 
-myStim{5}=gratingStimulus('sf',1,'contrast',0.25,'colour',[0.6 0.3 0.3],'tf',0.1,...
+myStims{5}=gratingStimulus('sf',1,'contrast',0.25,'colour',[0.6 0.3 0.3],'tf',0.1,...
 	'size',2,'xPosition',3,'yPosition',0,'gabor',0,'mask',0);
 
-myStim{6}=gratingStimulus('sf',1,'contrast',0.5,'colour',[0.4 0.4 0.6],'tf',1,...
+myStims{6}=gratingStimulus('sf',1,'contrast',0.5,'colour',[0.4 0.4 0.6],'tf',1,...
 	'driftDirection',-1,'size',2,'xPosition',4,'yPosition',-4,'gabor',0,'mask',1);
 
 %%
@@ -70,24 +70,24 @@ myStim{6}=gratingStimulus('sf',1,'contrast',0.5,'colour',[0.4 0.4 0.6],'tf',1,..
 % 4degrees behind then 4 degrees past the X and Y position. Also note as we
 % will change the angle of this stimulus the geometry is calculated for you
 % automatically!
-myStim{7}=barStimulus('type','solid','barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
+myStims{7}=barStimulus('type','solid','barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
 	'yPosition',0,'startPosition',-4,'colour',[.7 .7 .7]);
 
 %%
 % coherent dot stimulus; 200 dots moving at 1deg/s with coherence set to 0.5
-myStim{8}=dotsStimulus('density',50,'speed',1,'coherence',0.5,'xPosition',4,...
-	'yPosition',6,'colour',[1 1 1],'dotSize',0.1,'colorType','randomBW');
+myStims{8}=dotsStimulus('density',50,'speed',1,'coherence',0.5,'xPosition',4,...
+	'yPosition',6,'colour',[1 1 1],'dotType',3,'dotSize',0.1,'colorType','randomBW');
 
 %%
 % a simple circular spot, spots can also flash if needed
-myStim{9}=discStimulus('speed',2,'xPosition',4,'type','flash',...
+myStims{9}=discStimulus('speed',2,'xPosition',4,'type','flash',...
 	'yPosition',4,'colour',[1 1 1],'size',2,'flashTime',[0.2 0.2]);
 
 %%
 % a texture stimulus, by default this loads a picture from the opticka
 % stimulus directory; you can rotate it, scale it etc and drift it across screen as
 % in this case
-myStim{10}=textureStimulus('speed',2,'xPosition',-6,...
+myStims{10}=textureStimulus('speed',2,'xPosition',-6,...
 	'yPosition',6,'size',0.5);
 
 %% Task Initialisation
@@ -100,7 +100,8 @@ myTask = stimulusSequence; %new stimulusSequence object instance
 myTask.nBlocks = 2; %number of blocks
 myTask.trialTime = 2; %time of stimulus display: 2 seconds
 myTask.isTime = 0.25; %inter trial time: 0.25 seconds
-myTask.ibTime=1; %inter block time: 1 second
+myTask.ibTime=0.5; %inter block time: 1 second
+myTask.realTime = false; %we use real time for switching trials, false uses a tick timer updated every flip
 
 %% Variable 1
 % Our first variable is angle, applied to stimulus 1 3 7 and 10, randomly
@@ -146,26 +147,26 @@ showLog(myTask);
 % task background colour so you don't see the black flash on PTB screen
 % initialisation.
 myScreen = screenManager('distance', 57.3,... %display distance from observer
-	'pixelsPerCm', 44,... %calibration value for screen size/pixel density
+	'pixelsPerCm', 27.5,... %calibration value for screen size/pixel density, see calibrateSize()
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
 	'windowed', [ ],... %set to a widthxheight for debugging i.e. [800 600]; set to false for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on OS X ATI 5870
-	'bitDepth', 'FloatingPoint32bit',... %try 8bit, FloatingPoint16bit FloatingPoint32bit
+	'bitDepth', 'FloatingPoint32bitIfPossible',... %try 8bit, FloatingPoint16bit FloatingPoint32bit etc.
+	'displayPPRefresh', 100, ... %set refresh to 100Hz only if Dispay++ attached
 	'hideFlash', false); %mario's gamma trick
 
 %% Setup runExperiment Object
 % We now pass our stimulus screen and sequence objects to the
-% runExperiment class. runExperiment contains the run class that actually
+% runExperiment class. runExperiment contains the run() method that actually
 % runs the task.
-rExp = runExperiment('stimuli', myStim,... %stimulus objects
+rExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'task', myTask,... %task design object
 	'screen', myScreen,... %screen manager object
 	'debug', false,... %setup screen to complain about sync errors etc.
 	'verbose', false); %minimal verbosity
 
 %%
-% run our experiment, to exit early, press the right (OS X) or middle (Win/Linux) mouse
-% button
+% run our experiment, to exit early, press [q] during the blank
 run(rExp);
 
 %%

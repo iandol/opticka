@@ -60,7 +60,7 @@ classdef analysisCore < optickaCore
 		% ==================================================================
 		%> @brief Class constructor
 		%>
-		%> @param args are passed as a set of properties which is
+		%> @param varargin args are passed as a set of properties which is
 		%> parsed by optickaCore.parseArgs
 		%> @return instance of class.
 		% ==================================================================
@@ -76,7 +76,7 @@ classdef analysisCore < optickaCore
 		%> source files may be wrong. If so then allows us to find a new directory for the
 		%> source files.
 		%>
-		%> @param
+		%> @param varargin
 		%> @return
 		% ===================================================================
 		function checkPaths(me,varargin)
@@ -191,7 +191,7 @@ classdef analysisCore < optickaCore
 			mt = 'p';
 			for i = 1:length(mlist1)
 				if strcmpi(mlist1{i},me.options.stats.method)
-					mt = [mt '|¤' mlist1{i}];
+					mt = [mt '|ï¿½' mlist1{i}];
 				else
 					mt = [mt '|' mlist1{i}];
 				end
@@ -201,7 +201,7 @@ classdef analysisCore < optickaCore
 			statistic = 'p';
 			for i = 1:length(mlist2)
 				if strcmpi(mlist2{i},me.options.stats.statistic)
-					statistic = [statistic '|¤' mlist2{i}];
+					statistic = [statistic '|ï¿½' mlist2{i}];
 				else
 					statistic = [statistic '|' mlist2{i}];
 				end
@@ -211,7 +211,7 @@ classdef analysisCore < optickaCore
 			mc = 'p';
 			for i = 1:length(mlist3)
 				if strcmpi(mlist3{i},me.options.stats.correctm)
-					mc = [mc '|¤' mlist3{i}];
+					mc = [mc '|ï¿½' mlist3{i}];
 				else
 					mc = [mc '|' mlist3{i}];
 				end
@@ -221,7 +221,7 @@ classdef analysisCore < optickaCore
 			rs = 'p';
 			for i = 1:length(mlist4)
 				if strcmpi(mlist4{i},me.options.stats.resampling)
-					rs = [rs '|¤' mlist4{i}];
+					rs = [rs '|ï¿½' mlist4{i}];
 				else
 					rs = [rs '|' mlist4{i}];
 				end
@@ -231,7 +231,7 @@ classdef analysisCore < optickaCore
 			tail = 'p';
 			for i = 1:length(mlist5)
 				if strcmpi(mlist5{i},num2str(me.options.stats.tail))
-					tail = [tail '|¤' mlist5{i}];
+					tail = [tail '|ï¿½' mlist5{i}];
 				else
 					tail = [tail '|' mlist5{i}];
 				end
@@ -249,7 +249,7 @@ classdef analysisCore < optickaCore
 			interp = 'p';
 			for i = 1:length(mlist6)
 				if strcmpi(mlist6{i},num2str(me.options.stats.interp))
-					interp = [interp '|¤' mlist6{i}];
+					interp = [interp '|ï¿½' mlist6{i}];
 				else
 					interp = [interp '|' mlist6{i}];
 				end
@@ -259,7 +259,7 @@ classdef analysisCore < optickaCore
 			ploterror = 'p';
 			for i = 1:length(mlist7)
 				if strcmpi(mlist7{i},me.options.stats.ploterror)
-					ploterror = [ploterror '|¤' mlist7{i}];
+					ploterror = [ploterror '|ï¿½' mlist7{i}];
 				else
 					ploterror = [ploterror '|' mlist7{i}];
 				end
@@ -394,7 +394,7 @@ classdef analysisCore < optickaCore
 			mt = 'p';
 			for i = 1:length(mlist1)
 				if strcmpi(mlist1{i},me.options.method)
-					mt = [mt '|¤' mlist1{i}];
+					mt = [mt '|ï¿½' mlist1{i}];
 				else
 					mt = [mt '|' mlist1{i}];
 				end
@@ -404,7 +404,7 @@ classdef analysisCore < optickaCore
 			bline = 'p';
 			for i = 1:length(mlist2)
 				if strcmpi(mlist2{i},me.options.bline)
-					bline = [bline '|¤' mlist2{i}];
+					bline = [bline '|ï¿½' mlist2{i}];
 				else
 					bline = [bline '|' mlist2{i}];
 				end
@@ -1065,6 +1065,7 @@ classdef analysisCore < optickaCore
 		% ===================================================================
 		%> @brief Area under ROC
 		%>
+		%> @param me - object
 		%> @param data - [class , score] matrix
 		%> @param alpha    - level for confidence intervals (eg., enter 0.05 if you want 95% CIs)
 		%> @param flag     - 'hanley' yields Hanley-McNeil (1982) asymptotic CI; 'maxvar' yields maximum variance CI;'mann-whitney';'logit';'boot' yields bootstrapped CI (DEFAULT)

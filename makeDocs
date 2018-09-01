@@ -1,22 +1,29 @@
 #!/bin/zsh
 # This script builds the documentation
 
-echo; echo "---> Deleting old html directory"; echo
+echo; echo "---> Deleting old directories"; echo
 rm -rf html/
 rm -rf docs/
 
 #Auto-run Matlab, publishing HTML output from optickatest.m
-MATLAB='/Applications/MATLAB_R2017a.app/bin/matlab'
-if [ -f $MATLAB ]; then
-	$MATLAB -nodesktop -nosplash -r "Screen('Preference', 'SkipSyncTests', 2);publish('optickatest.m');pause(2);exit"
+if [[ "$(uname -s)" = "Darwin" ]]; then 
+	MATLAB='/Applications/MATLAB_R2018a.app/bin/matlab'
+	if [ -f $MATLAB ]; then
+		$MATLAB -nodesktop -nosplash -r "Screen('Preference', 'SkipSyncTests', 2);publish('optickatest.m');pause(2);exit"
+	fi
+else
+	MATLAB='/usr/local/MATLAB/R2018a/bin/matlab'
+	if [ -f $MATLAB ]; then
+		$MATLAB -nodesktop -nosplash -r "publish('optickatest.m');pause(2);exit"
+	fi
 fi
 
 # We scrape the version number from the main opticka file
-VER=$(grep -o -E -e "optickaVersion@char\ +=\ +'[0-9\.]+'" opticka.m | grep -o -E -e "[0-9\.]+")
+VER=$(grep -o -E -e "optickaVersion char\ +=\ +'[0-9\.]+'" opticka.m | grep -o -E -e "[0-9\.]+")
 echo; echo "---> Opticka version = $VER"; echo
 sleep 1
 # and then auto-edit the Doxygen file
-sed -i -E "s/^\(PROJECT_NUMBER\)[ ]*=.*/\1 = $VER/g" .doxyfile
+[ -n $VER ] && sed -i -E "s/^PROJECT_NUMBER.*/PROJECT_NUMBER = $VER/g" .doxyfile
 if [ $? -eq 0 ]; then
 	echo; echo "---> Edited .doxyfile"; echo
 else
@@ -27,12 +34,17 @@ echo; echo "---> Will run DOXYGEN"; echo
 doxygen .doxyfile
 echo; echo "---> Ran doxygen"
 #a little cleanup if rogue files are produced...
-rm .doxyfilee
-rm .doxyfile-e
-rm debug.txt
+[ -f .doxyfilee ] && rm .doxyfilee
+[ -f .doxyfile-e ] && rm .doxyfile-e
+[ -f debug.txt ] && rm debug.txt
 sleep 1
 mv html/ docs/
-open docs/index.html
-open docs/optickatest.html
+if [[ "$(uname -s)" = "Darwin" ]]; then 
+	open docs/index.html
+	open docs/optickatest.html
+else
+	xdg-open docs/index.html
+	xdg-open docs/optickatest.html
+fi
 echo; echo "---> FINISHED!"
 exit 0

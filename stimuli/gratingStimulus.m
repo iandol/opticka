@@ -289,10 +289,10 @@ classdef gratingStimulus < baseStimulus
 						obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
 					end
 				end
-				if obj.doMotion == true
+				if obj.doMotion
 					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
 				end
-				if obj.doDrift == true
+				if obj.doDrift
 					obj.driftPhase = obj.driftPhase + obj.phaseIncrement;
 				end
 				if mod(obj.tick,obj.phaseCounter) == 0

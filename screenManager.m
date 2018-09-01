@@ -112,7 +112,11 @@ classdef screenManager < optickaCore
 		%> linux font name;
 		linuxFontName char = '-adobe-helvetica-bold-o-normal--11-80-100-100-p-60-iso8859-1'
 		%> properties allowed to be modified during construction
-		allowedProperties char = 'screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
+		allowedProperties char = 'displayPPRefresh|screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
+		%> possible bitDepths
+		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; 'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output'; 'EnablePseudoGrayOutput'; 'EnableNative10BitFramebuffer' }
+		%> possible blend modes
+		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR'; 'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA'; 'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' }
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect(1,4) double = [0, 0, 60, 60]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
@@ -232,6 +236,14 @@ classdef screenManager < optickaCore
 			obj.screenVals.black = BlackIndex(obj.screen);
 			obj.screenVals.gray = GrayIndex(obj.screen);
 			
+			if IsLinux
+				d=Screen('ConfigureDisplay','Scanout',obj.screen,0);
+				obj.screenVals.name = d.name;
+				obj.screenVals.widthMM = d.displayWidthMM;
+				obj.screenVals.heightMM = d.displayHeightMM;
+				obj.screenVals.display = d;
+			end
+			
 			screenVals = obj.screenVals;
 			
 		end
@@ -245,6 +257,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function screenVals = open(obj,debug,tL,forceScreen)
 			if obj.isPTB == false
+				warning('No PTB found!')
 				screenVals = obj.screenVals;
 				return;
 			end
@@ -305,35 +318,39 @@ classdef screenManager < optickaCore
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
+				fprintf('---> screenManager: Probing for a Display++...\n');
+				bitsCheckOpen(obj);
+				if obj.isPlusPlus; fprintf('---> screenManager: Found Display++...\n'); else; fprintf('no Display++...\n'); end
 				if regexpi(obj.bitDepth, '^EnableBits')
-					fprintf('\n---> screenManager: Probing for a Display++...\n');
-					ret = BitsPlusPlus('OpenBits#');
-					WaitSecs(0.1);
-					BitsPlusPlus('Close');
-					if ret == 1
-						obj.isPlusPlus = true;
-						if ~isempty(obj.displayPPRefresh)
-							outputID = 0;
-							fprintf('\n---> screenManager: Set Display++ to %iHz\n',obj.displayPPRefresh);
-							Screen('ConfigureDisplay','Scanout',obj.screen,outputID,[],[],obj.displayPPRefresh);
-						end
+					if obj.isPlusPlus
+						fprintf('\t-> Display++ mode: %s\n', obj.bitDepth);
 						PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
 						if regexp(obj.bitDepth, 'Color')
 							PsychImaging('AddTask', 'General', obj.bitDepth, 2);
 						else
-							PsychImaging('AddTask', 'General', obj.bitDepth, 2);
+							PsychImaging('AddTask', 'General', obj.bitDepth);
 						end
 					else
-						fprintf('---> screenManager: No Bits# found, revert to FloatingPoint32Bit mode.\n');
+						fprintf('---> screenManager: No Display++ found, revert to FloatingPoint32Bit mode.\n');
 						PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 						obj.isPlusPlus = false;
 					end
 				else
+					fprintf('\n---> screenManager: Bit Depth mode set to: %s\n', obj.bitDepth);
 					PsychImaging('AddTask', 'General', obj.bitDepth);
 					obj.isPlusPlus = false;
 				end
 				if obj.useRetina == true
+					fprintf('---> screenManager: Retina mode enabled\n');
 					PsychImaging('AddTask', 'General', 'UseRetinaResolution');
+				end
+				
+				try %#ok<*TRYNC>
+					if obj.isPlusPlus && ~isempty(obj.displayPPRefresh) && IsLinux
+						outputID = 0;
+						fprintf('\n---> screenManager: Set Display++ to %iHz\n',obj.displayPPRefresh);
+						Screen('ConfigureDisplay','Scanout',obj.screen,outputID,[],[],obj.displayPPRefresh);
+					end
 				end
 				
 				if isempty(obj.windowed); obj.windowed = false; end
@@ -363,6 +380,14 @@ classdef screenManager < optickaCore
 				catch
 					obj.close();
 					error('GLSL Shading support is required for Opticka!');
+				end
+				
+				if IsLinux
+					d=Screen('ConfigureDisplay','Scanout',obj.screen,0);
+					obj.screenVals.name = d.name;
+					obj.screenVals.widthMM = d.displayWidthMM;
+					obj.screenVals.heightMM = d.displayHeightMM;
+					obj.screenVals.display = d;
 				end
 				
 				obj.screenVals.win = obj.win; %make a copy
@@ -481,6 +506,28 @@ classdef screenManager < optickaCore
 			vbl = Screen('Flip',obj.win);
 		end
 		
+		% ===================================================================
+		%> @brief check for display++, and keep open or close again
+		%>
+		%> @param port optional serial USB port
+		%> @return keepOpen should we keep it open after check (default yes)
+		% ===================================================================
+		function connected = bitsCheckOpen(obj,port,keepOpen)
+			connected = false;
+			if ~exist('keepOpen','var') || isempty(keepOpen)
+				keepOpen = true;
+			end
+			if ~exist('port','var')
+				ret = BitsPlusPlus('OpenBits#');
+				if ret == 1; connected = true; end
+				if ~keepOpen; BitsPlusPlus('Close'); end
+			else
+				ret = BitsPlusPlus('OpenBits#',port);
+				if ret == 1; connected = true; end
+				if ~keepOpen; BitsPlusPlus('Close'); end
+			end
+			obj.isPlusPlus = connected;
+		end
 		
 		% ===================================================================
 		%> @brief Flip the screen
@@ -550,9 +597,13 @@ classdef screenManager < optickaCore
 					Screen('BlendFunction', obj.win, 'GL_ONE','GL_ZERO');
 					fprintf('---> screenManager: RESET OPENGL BLEND MODE to GL_ONE & GL_ZERO\n');
 				end
+				if obj.isPlusPlus
+					BitsPlusPlus('Close');
+				end
 				Screen('Close');
 				Screen('CloseAll');
-				obj.win=[];
+				obj.win=[]; 
+				if isfield(obj.screenVals,'win');rmfield(obj.screenVals,'win');end
 				obj.isOpen = false;
 				obj.isPlusPlus = false;
 				Priority(0);
@@ -573,6 +624,21 @@ classdef screenManager < optickaCore
 			if obj.hideFlash == true || obj.windowed(1) ~= 1 || (~isempty(obj.screenVals) && obj.screenVals.resetGamma == true && ~isempty(obj.screenVals.originalGammaTable))
 				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 				Screen('LoadNormalizedGammaTable', obj.screen, obj.screenVals.originalGammaTable);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Set method for bitDepth
+		%>
+		%> @param
+		% ===================================================================
+		function set.bitDepth(obj,value)
+			check = strcmpi(value,obj.bitDepths);
+			if any(check)
+				obj.bitDepth = obj.bitDepths{check};
+			else
+				warning('Wrong Value given, select from list below')
+				disp(obj.bitDepths)
 			end
 		end
 		
@@ -609,9 +675,9 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function ppd = get.ppd(obj)
 			if obj.useRetina %note pixelsPerCm is normally recorded using non-retina mode so we fix that here if we are now in retina mode
-				ppd = round( (obj.pixelsPerCm*2) * (obj.distance / 57.3) ); %set the pixels per degree
+				ppd = ( (obj.pixelsPerCm*2) * (obj.distance / 57.3) ); %set the pixels per degree
 			else
-				ppd = round( obj.pixelsPerCm * (obj.distance / 57.3) ); %set the pixels per degree
+				ppd = ( obj.pixelsPerCm * (obj.distance / 57.3) ); %set the pixels per degree
 			end
 			obj.ppd_ = ppd; %cache value for speed!!!
 		end

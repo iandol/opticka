@@ -87,6 +87,13 @@ classdef timeLogger < optickaCore
 		
 		% ===================================================================
 		%> @brief print Log of the frame timings
+		% ===================================================================
+		function plot(obj)
+			obj.printRunLog();
+		end
+		
+		% ===================================================================
+		%> @brief print Log of the frame timings
 		%>
 		%> @param
 		%> @return
@@ -111,9 +118,6 @@ classdef timeLogger < optickaCore
 			set(gcf,'Name',obj.name,'NumberTitle','off','Color',[1 1 1]);
 			p = panel('defer');
 			p.pack(3,1)
-			
-			scnsize = get(0,'ScreenSize');
-			pos=get(gcf,'Position');
 			
 			p(1,1).select();
 			hold on
@@ -181,8 +185,8 @@ classdef timeLogger < optickaCore
 			p(3,1).xlabel('Frame number');
 			p(3,1).ylabel('Miss Value');
 			
-			newpos = [pos(1) 1 pos(3) scnsize(4)];
-			set(gcf,'Position',newpos);
+			scnsize = get(0,'ScreenSize');
+			set(gcf,'Position', [10 1 round(scnsize(3)/3) scnsize(4)]);
 			p.refresh();
 			clear vbl show flip index miss stimTime
 		end
@@ -194,6 +198,11 @@ classdef timeLogger < optickaCore
 		%> @return
 		% ===================================================================
 		function calculateMisses(obj,miss,stimTime)
+			removeEmptyValues(obj)
+			if nargin == 1
+				miss = obj.miss;
+				stimTime = obj.stimTime;
+			end
 			obj.missImportant = miss;
 			obj.missImportant(obj.missImportant <= 0) = -inf;
 			obj.missImportant(stimTime < 1) = -inf;
