@@ -237,16 +237,20 @@ breakExitFcn = {
 	@()checkTaskEnded(obj); ... %check if task is finished
 };
 
-%--------------------calibration function
-calibrateFcn = { @()drawBackground(s); ... %blank the display
-	@()setOffline(eL); @()pauseRecording(io); @()trackerSetup(eL) }; %enter tracker calibrate/validate setup mode
+%--------------------enter tracker calibrate/validate setup mode
+calibrateFcn = { 
+	@()drawBackground(s); ... %blank the display
+	@()setOffline(eL); ...
+	@()pauseRecording(io); ...
+	@()trackerSetup(eL); ...
+}; 
 
-%--------------------debug override
+%--------------------debug override special mode which enters a matlab debug state so we can manually edit object values
 overrideFcn = { 
 	@()pauseRecording(io); ...
 	@()setOffline(eL); ...
 	@()keyOverride(obj); ...
-}; %a special mode which enters a matlab debug state so we can manually edit object values
+};
 
 %--------------------screenflash
 flashFcn = {
