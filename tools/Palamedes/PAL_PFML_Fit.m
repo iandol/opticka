@@ -57,13 +57,13 @@
 %   'output': message containing some information concerning fitting
 %       process.
 %
-%User may constrain the lapse rate to fall within limited range using 
-%   the optional argument 'lapseLimits', followed by two-element vector 
-%   containing lower and upper limit respectively. See full example below.
+%User may constrain the lapse rate to fall within a limited range using 
+%   the optional argument 'lapseLimits', followed by a two-element vector 
+%   containing lower and upper limit respectively. Default: [0 1]
 %
-%User may constrain the guess rate to fall within limited range using 
-%   the optional argument 'guessLimits', followed by two-element vector 
-%   containing lower and upper limit respectively. See full example below.
+%User may constrain the guess rate to fall within a limited range using 
+%   the optional argument 'guessLimits', followed by a two-element vector 
+%   containing lower and upper limit respectively. Default: [0 1]
 %
 %Different fitting schemes may be specified using the optional argument
 %   'lapseFits'. Default value is 'nAPLE' (non-Asymptotic Performance Lapse 
@@ -101,7 +101,8 @@
 %
 %Full example:
 %
-%   options = PAL_minimize('options')
+%   options = PAL_minimize('options') %options structure containing default
+%                                       %values            
 %   PF = @PAL_Logistic;
 %   StimLevels = [-3:1:3];
 %   NumPos = [0 13 28 56 73 91 93];    %observer data
@@ -123,14 +124,14 @@
 %       [0 1], 'searchOptions',options)
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.0.2, 1.2.0, 1.3.0, 1.3.1, 1.4.0, 1.6.3
-%   (see History.m)
+% Modified: Palamedes version 1.0.2, 1.2.0, 1.3.0, 1.3.1, 1.4.0, 1.6.3,
+%   1.8.1, 1.9.0 (see History.m)
 
 function [paramsValues, LL, exitflag, output] = PAL_PFML_Fit(StimLevels, NumPos, OutOfNum, searchGrid, paramsFree, PF, varargin)
 
 options = [];
-lapseLimits = [];
-guessLimits = [];
+lapseLimits = [0 1];
+guessLimits = [0 1];
 lapseFit = 'default';
 gammaEQlambda = logical(false);
 
@@ -178,7 +179,7 @@ end
 
 if ~isempty(guessLimits) && gammaEQlambda
     warning('PALAMEDES:invalidOption','Guess rate is constrained to equal lapse rate: ''guessLimits'' argument ignored');
-    guessLimits = [];
+    guessLimits = lapseLimits;
 end
 
 [StimLevels, NumPos, OutOfNum] = PAL_PFML_GroupTrialsbyX(StimLevels, NumPos, OutOfNum);
@@ -243,4 +244,5 @@ if gammaEQlambda
     paramsValues(3) = paramsValues(4);
 end
 
+output.seed = ['Nelder-Mead Simplex search seed: [' num2str(searchGrid) ']'];
 LL = -1*negLL;

@@ -3,11 +3,13 @@
 %
 %PAL_inverseLogistic is no longer functional.
 %
-%Use x = PAL_CumulativeLogistic(params,y,'inverse'); instead of 
+%Use x = PAL_Logistic(params,y,'inverse'); instead of 
 %   x = PAL_inverseLogistic(params,y);
 %
 % Introduced: Palamedes version 1.0.0 (NP)
 % Modified: Palamedes version 1.2.0, 1.4.0 (see History.m)
+
+%Fixed error in help comments
 
 function out = PAL_inverseLogistic(params, y)
 

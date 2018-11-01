@@ -170,7 +170,7 @@ l = permute(l, [2 1 3]);
 vizLUT = squeeze(PAL_AMPM_CreateLUT(alphas,betas,gammas,lambdas,stimRange,PF,false));
 vizLUT = permute(vizLUT,[2 1 3 4]);
 vizprior = PAL_pdfNormal(a,0,1).*PAL_pdfNormal(b,0,1);
-posterior = vizprior;%ones(size(a));
+posterior = vizprior;
 
 %totals keeps track of number of trials presented at each value of stimRange
 totals = zeros(size(stimRange));

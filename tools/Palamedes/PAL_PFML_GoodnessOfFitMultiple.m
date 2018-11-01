@@ -55,12 +55,11 @@
 %   PAL_PFML_GoodnessOfFitMultiple will accept a few optional arguments:
 %
 %       By default, PAL_PFML_GoodnessOfFitMultiple will test the goodness-
-%       of-fit of a model which assumes that thresholds are equal between
-%       datasets, slopes are equal between datasets and guess-rates and 
-%       lapse-rates are fixed. User may specify alternative models in a 
-%       manner similar to that in PAL_PFML_FitMultiple. Type 'help
-%       PAL_PFML_FitMultiple' for more informations. Also see example
-%       below.
+%       of-fit of a model which allows thresholds and slopes to differ 
+%       between datasets but fixes guess-rates and lapse-rates are fixed. 
+%       User may specify alternative models in a manner similar to that in 
+%       PAL_PFML_FitMultiple. Type 'help PAL_PFML_FitMultiple' for more 
+%       information. Also see example below.
 %
 %   If highest entries in 'StimLevels' are so high that it can be assumed 
 %       that errors observed there can be due only to lapses, use 
@@ -161,7 +160,7 @@
 % 
 %Introduced: Palemedes version 1.0.0 (NP)
 % Modified: Palamedes version 1.0.2, 1.1.0, 1.2.0, 1.3.0, 1.4.0, 1.6.0, 
-%   1.6.3 (see History.m)
+%   1.6.3, 1.8.1 (see History.m)
 
 function [Dev, pDev, DevSim, converged] = PAL_PFML_GoodnessOfFitMultiple(StimLevels, NumPos, OutOfNum, paramsValues, B, PF, varargin)
 
@@ -206,19 +205,19 @@ if ~isempty(varargin)
             valid = 1;
         end
         if strncmpi(varargin{n}, 'Thresh',6)
-            MC.argsAlesser = varargin{n+1};
+            MC.argsAfuller = varargin{n+1};
             valid = 1;            
         end
         if strncmpi(varargin{n}, 'Slopes',6)
-            MC.argsBlesser = varargin{n+1};
+            MC.argsBfuller = varargin{n+1};
             valid = 1;            
         end
         if strncmpi(varargin{n}, 'GuessR',6)
-            MC.argsGlesser = varargin{n+1};
+            MC.argsGfuller = varargin{n+1};
             valid = 1;            
         end
         if strncmpi(varargin{n}, 'LapseR',6)
-            MC.argsLlesser = varargin{n+1};
+            MC.argsLfuller = varargin{n+1};
             valid = 1;            
         end
         if strncmpi(varargin{n}, 'lapseFit',6)
@@ -235,17 +234,17 @@ if ~isempty(varargin)
     end            
 end
 
-if (strncmpi(lapseFit,'iap',3) || strncmpi(lapseFit,'jap',3)) && ((PAL_whatIs(MC.argsLlesser) == 2 && strncmpi(MC.argsLlesser,'fix',3)) || isempty(MC.argsLlesser))
+if (strncmpi(lapseFit,'iap',3) || strncmpi(lapseFit,'jap',3)) && ((PAL_whatIs(MC.argsLfuller) == 2 && strncmpi(MC.argsLfuller,'fix',3)) || isempty(MC.argsLfuller))
     warning('PALAMEDES:invalidOption','Lapses rates are not free: ''LapseFit'' argument ignored');
     lapseFit = 'nap';
 end
-if (strncmpi(lapseFit,'iap',3) || strncmpi(lapseFit,'jap',3)) && PAL_whatIs(MC.argsLlesser) == 4
+if (strncmpi(lapseFit,'iap',3) || strncmpi(lapseFit,'jap',3)) && PAL_whatIs(MC.argsLfuller) == 4
     warning('PALAMEDES:invalidOption','Lapse rates custom-reparameterized: ''lapseFit'' argument ignored');
     lapseFit = 'nap';
 end
 
 if gammaEQlambda
-    MC.argsGlesser = [];
+    MC.argsGfuller = [];
     if ~isempty(guessLimits)
         warning('PALAMEDES:invalidOption','Guess rates constrained to equal lapse rates: ''guessLimits'' ignored');
         guessLimits = [];
@@ -259,22 +258,22 @@ for b = 1:B
     for cond = 1:size(StimLevels,1)
         NumPos(cond,:) = PAL_PF_SimulateObserverParametric(paramsValues(cond,:), StimLevels(cond,:), OutOfNum(cond,:), PF,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
     end
-    [paramsValuesSim, LL, converged(b)] = PAL_PFML_FitMultiple(StimLevels,NumPos, OutOfNum, paramsValues, PF, 'Thresh', MC.argsAlesser, 'Slopes', MC.argsBlesser,'GuessR',MC.argsGlesser,'LapseR',MC.argsLlesser,'searchoptions',options, 'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+    [paramsValuesSim, LL, converged(b)] = PAL_PFML_FitMultiple(StimLevels,NumPos, OutOfNum, paramsValues, PF, 'Thresh', MC.argsAfuller, 'Slopes', MC.argsBfuller,'GuessR',MC.argsGfuller,'LapseR',MC.argsLfuller,'searchoptions',options, 'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
 
     tries = 1;
     
     while converged(b) == 0 && tries < maxTries
         paramsTry = paramsValues;
-        ArgsATry = MC.argsAlesser;
-        ArgsBTry = MC.argsBlesser;
-        ArgsGTry = MC.argsGlesser;
-        ArgsLTry = MC.argsLlesser;
+        ArgsATry = MC.argsAfuller;
+        ArgsBTry = MC.argsBfuller;
+        ArgsGTry = MC.argsGfuller;
+        ArgsLTry = MC.argsLfuller;
         if ~isstruct(rangeTries)
-            multiplier = PAL_PFML_rangeTries(MC.argsAlesser,MC.argsBlesser,MC.argsGlesser,MC.argsLlesser, repmat(rangeTries,[size(paramsValues,1) 1]));
+            multiplier = PAL_PFML_rangeTries(MC.argsAfuller,MC.argsBfuller,MC.argsGfuller,MC.argsLfuller, repmat(rangeTries,[size(paramsValues,1) 1]));
             paramsTry = paramsValues + multiplier.*repmat(rangeTries,size(paramsValues,1),1);
         else
             if isfield(rangeTries,'rangeTries')
-                multiplier = PAL_PFML_rangeTries(MC.argsAlesser,MC.argsBlesser,MC.argsGlesser,MC.argsLlesser, repmat(rangeTries.rangeTries,[size(paramsValues,1) 1]));
+                multiplier = PAL_PFML_rangeTries(MC.argsAfuller,MC.argsBfuller,MC.argsGfuller,MC.argsLfuller, repmat(rangeTries.rangeTries,[size(paramsValues,1) 1]));
                 paramsTry = paramsValues + multiplier.*repmat(rangeTries.rangeTries,size(paramsValues,1),1);
             end
             if isstruct(ArgsATry) && isfield(rangeTries,'paramsValuesA');

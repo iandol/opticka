@@ -74,7 +74,8 @@
 %       OutOfNum, searchGrid, PF)
 %
 % Introduced: Palamedes version 1.2.0 (NP)
-% Modified: Palamedes version 1.3.0, 1.3.1, 1.6.0, 1.6.3 (see History.m)
+% Modified: Palamedes version 1.3.0, 1.3.1, 1.6.0, 1.6.3, 1.9.0 
+% (see History.m)
 
 function [ paramsValues, maxim, LLspace] = PAL_PFML_BruteForceFit(StimLevels,NumPos, OutOfNum, searchGrid, PF, varargin)
 
@@ -157,5 +158,5 @@ function [ paramsValues, maxim, LLspace] = PAL_PFML_BruteForceFit(StimLevels,Num
     if gammaEQlambda
         paramsValues(3) = paramsValues(4);
     end
-    
+    LLspace(isnan(LLspace)) = -Inf;
 end

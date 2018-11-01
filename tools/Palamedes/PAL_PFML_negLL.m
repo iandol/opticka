@@ -8,8 +8,8 @@
 %Internal Function
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.3.0, 1.3.1, 1.4.0, 1.4.1, 1.4.2, 1.6.3
-%   (see History.m)
+% Modified: Palamedes version 1.3.0, 1.3.1, 1.4.0, 1.4.1, 1.4.2, 1.6.3,
+%   1.8.1, 1.9.0 (see History.m)
 
 function negLL = PAL_PFML_negLL(paramsFreeVals, paramsFixedVals, paramsFree, StimLevels, NumPos, OutOfNum, PF, varargin)
 
@@ -53,7 +53,7 @@ end
 
 pcorrect = PF(params, StimLevels);
 
-if (~isempty(lapseLimits) && (params(4) < lapseLimits(1) || params(4) > lapseLimits(2))) || (~isempty(guessLimits) && (params(3) < guessLimits(1) || params(3) > guessLimits(2)))
+if (params(2) < 0 || ~isempty(lapseLimits) && (params(4) < lapseLimits(1) || params(4) > lapseLimits(2))) || (~isempty(guessLimits) && (params(3) < guessLimits(1) || params(3) > guessLimits(2)))
     negLL = Inf;
 else    
     switch lower(lapseFit(1:3))
@@ -68,4 +68,8 @@ else
             negLL = negLL + sum(PAL_nansum(NumPos(1+gammaEQlambda:len-1).*log(pcorrect(1+gammaEQlambda:len-1))+(OutOfNum(1+gammaEQlambda:len-1)-NumPos(1+gammaEQlambda:len-1)).*log(1 - pcorrect(1+gammaEQlambda:len-1))));
     end    
     negLL = -negLL;
+end
+
+if ~isreal(negLL) | isnan(negLL)
+    negLL = Inf;
 end

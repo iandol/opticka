@@ -99,7 +99,7 @@ if exist('OCTAVE_VERSION');
     if strcmp(cont,'y')
         fprintf('\n\n');
     else
-        break;
+        return;
     end
 end
 

@@ -40,13 +40,11 @@
 %       Value of stop criterion (trials or reversals) after which to
 %       terminate run.
 %
-%   'xMin'                scalar or empty array {[]}
-%       minimum value to be assigned to stimulus magnitude. If empty matrix
-%       is assigned, range of stimulus magnitude has no lower bound.
+%   'xMin'                scalar or empty array {-Inf}
+%       minimum value to be assigned to stimulus magnitude.
 %
-%   'xMax'                scalar or empty array {[]}
-%       maximum value to be assigned to stimulus magnitude. If empty matrix
-%       is assigned, range of stimulus magnitude has no upper bound.
+%   'xMax'                scalar or empty array {Inf}
+%       maximum value to be assigned to stimulus magnitude.
 %
 %   'meanmode'            string {'mean'}
 %       Stimulus placement rule. Stimulus magnitude on any trial will be 
@@ -85,7 +83,7 @@
 %       'RF.stop' will be set to 1.
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.2.0, 1.4.0, 1.6.3 (see History.m)
+% Modified: Palamedes version 1.2.0, 1.4.0, 1.6.3, 1.8.1 (see History.m)
 
 function RF = PAL_AMRF_setupRF(varargin)
 
@@ -108,8 +106,8 @@ if mod(NumOpts,2) == 0
     RF.beta = 2;
     RF.gamma = 0.5;
     RF.lambda = 0.02;
-    RF.xMin = [];
-    RF.xMax = [];
+    RF.xMin = -Inf;
+    RF.xMax = Inf;
     RF.direction = [];
     RF.reversal = 0;
     RF.meanmode = 'mean';

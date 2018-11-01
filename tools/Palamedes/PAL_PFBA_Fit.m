@@ -90,7 +90,7 @@
 %Introduced: Palamedes version 1.0.0 (NP)
 %Modified: Palamedes version 1.6.3, 1.8.1 (see History.m)
 
-function [paramsValues, posterior] = PAL_PFBA_Fit(StimLevels, NumPos, OutOfNum, varargin)
+function [paramsValues, posterior] = PAL_PFBA_Fit(StimLevels, NumPos, OutOfNum, varargin);
 
 if isstruct(varargin{1})    %Using 'new style' (version 1.8.1 onwards)
     grid = varargin{1};    

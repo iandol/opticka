@@ -2,7 +2,7 @@
 %PAL_MLDS_SimulateObserver  Generate simulated responses in MLDS setting
 %
 %syntax: NumGreater = PAL_MLDS_SimulateObserver(Stim, OutOfNum, ...
-%   PsiValues, SDnoise)
+%   PsiValues, SDnoise, {optional arguments})
 %
 %Input:
 %   'Stim': Stimulus set (see e.g., PAL_MLDS_GenerateStimList)
@@ -16,6 +16,21 @@
 %Output:
 %   'NumGreater': For each row in 'Stim' the number of 'greater than'
 %       responses.
+%
+%By default, PAL_MLDS_SimulateObserver considers the noise magnitude 
+%   (quantified by the input argument SDnoise) to be the standard deviation
+%   of the Gaussian distributed noise that is added to the difference 
+%   scores (as Maloney and Yang do in: 
+%   http://jov.arvojournals.org/article.aspx?articleid=2192635). 
+%   However, it is also possible to consider the noise magnitude to be the
+%   standard deviation of the Gaussian distributed noise that is added to 
+%   each individual stimulus in the pair, triple, or quadruple (as Devinck 
+%   and Knoblauch do in: 
+%   http://jov.arvojournals.org/article.aspx?articleid=2121211).
+%   In order to treat the noise magnitude as Devinck and Knoblauch do, use:
+%
+%   NumGreater = PAL_MLDS_SimulateObserver(Stim, OutOfNum, ...
+%       PsiValues, SDnoise, 'parameterization','devinck');
 %
 %Example:
 %
@@ -35,9 +50,34 @@
 %   Tip: use PAL_MLDS_GroupTrialsbyX to combine like trials.
 %
 %Introduced: Palamedes version 1.0.0 (NP)
-%Modified: Palamedes version 1.6.3 (see History.m)
+%Modified: Palamedes version 1.6.3, 1.9.0 (see History.m)
 
-function NumGreater = PAL_MLDS_SimulateObserver(Stim, OutOfNum, PsiValues, SDnoise)
+function NumGreater = PAL_MLDS_SimulateObserver(Stim, OutOfNum, PsiValues, SDnoise, varargin)
+
+if ~isempty(varargin)
+    NumOpts = length(varargin);
+    for n = 1:2:NumOpts
+        valid = 0;
+        if strncmpi(varargin{n}, 'param',3)
+            if strncmpi(varargin{n+1}, 'dev',3)
+                if ~isempty(SDnoise) & SDnoise ~= 1
+                    message =  'Using Devinck & Knoblauch parameterization of MLDS, noise SD is defined to equal 1. User supplied value will be ignored. ';
+                    message = [message 'In order to avoid seeing this message again, use either the value 1 or an empty matrix in function call.'];
+                    warning('PALAMEDES:DevinckKnoblauchSDignored',message);
+                end
+                if size(Stim,2) == 2
+                    SDnoise = sqrt(2);  %Noise amplitude on difference score.
+                else
+                    SDnoise = 2;        %ditto
+                end
+            end
+            valid = 1;
+        end        
+        if valid == 0
+            warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
+        end        
+    end            
+end
 
 if size(Stim,2) == 4
     D = (PsiValues(Stim(:,2))-PsiValues(Stim(:,1)))-(PsiValues(Stim(:,4))-PsiValues(Stim(:,3)));

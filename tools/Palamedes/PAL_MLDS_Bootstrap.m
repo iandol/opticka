@@ -43,6 +43,14 @@
 %
 %   PAL_MLDS_Bootstrap will accept a few optional arguments:
 %
+%       In order to use Devinck & Knoblauch's conceptualization (as 
+%       opposed to the default Maloney & Yang conceptualization, type:
+%       help PAL_MLDS_Fit for more information), use (something like):
+%
+%       [SD_PsiValues SD_SDnoise paramsSim LLSim converged] = 
+%           PAL_MLDS_Bootstrap(Stim, OutOfNum, PsiValues, [], B, ...
+%           'parameterization','Devinck')
+%
 %       In case not all fits converge succesfully, use optional argument 
 %       'maxTries' to set the maximum number of times each fit will be 
 %       attempted. The first try uses initial search values equal to 
@@ -88,22 +96,27 @@
 %       PsiValues, SDnoise, 100, 'maxTries',4,'rangeTries',.1);
 %
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.1.0, 1.2.0, 1.4.0, 1.6.3 (see History.m)
+% Modified: Palamedes version 1.1.0, 1.2.0, 1.4.0, 1.6.3, 1.9.0 (see 
+%   History.m)
 
 function [SD_PsiValues, SD_SDnoise, paramsSim, LLSim, converged] = PAL_MLDS_Bootstrap(Stim, OutOfNum, PsiValues, SDnoise, B, varargin)
 
 options = [];
+parameterization = 'maloney';
 maxTries = 1;
 rangeTries = .1;
 converged = false(B,1);
 LLSim = zeros(B,1);
 paramsSim = zeros(B,length(PsiValues)-1);
-size(paramsSim);
 
 if ~isempty(varargin)
     NumOpts = length(varargin);
     for n = 1:2:NumOpts
         valid = 0;
+        if strncmpi(varargin{n}, 'parameterization',5)
+            parameterization = varargin{n+1};
+            valid = 1;
+        end        
         if strncmpi(varargin{n}, 'SearchOptions',7)
             options = varargin{n+1};
             valid = 1;
@@ -122,18 +135,30 @@ if ~isempty(varargin)
     end            
 end
 
+if strncmpi(parameterization,'dev',3)
+    FreeParams = PsiValues(2:end);
+    if ~isempty(SDnoise) & SDnoise ~= 1
+        message =  'Using Devinck & Knoblauch parameterization of MLDS, noise SD is defined to equal 1. User supplied value will be ignored. ';
+        message = [message 'In order to avoid seeing this message again, use either the value 1 or an empty matrix in function call.'];
+        warning('PALAMEDES:DevinckKnoblauchSDignored',message);
+        warning('off','PALAMEDES:DevinckKnoblauchSDignored');
+    end
+else
+    FreeParams = [PsiValues(2:end-1) SDnoise];
+end
+
 NumLevels = length(PsiValues);
 
 for b = 1:B
 
-    NumGreater = PAL_MLDS_SimulateObserver(Stim, OutOfNum, PsiValues, SDnoise);
+    NumGreater = PAL_MLDS_SimulateObserver(Stim, OutOfNum, PsiValues, SDnoise,'param',parameterization);
 
-    [paramsSim(b,:), LLSim(b), converged(b)] = PAL_minimize(@PAL_MLDS_negLL,[PsiValues(2:NumLevels-1) SDnoise], options, Stim, NumGreater, OutOfNum);
+    [paramsSim(b,:), LLSim(b), converged(b)] = PAL_minimize(@PAL_MLDS_negLL,FreeParams, options, Stim, NumGreater, OutOfNum,'param',parameterization);
 
     tries = 1;
     while converged(b) == 0 && tries < maxTries        
-        NewSearchInitials = [PsiValues(2:NumLevels-1) SDnoise]+(rand(1,length(PsiValues)-1)-.5).*rangeTries;
-        [paramsSim(b,:), LLSim(b,:), converged(b)] = PAL_minimize(@PAL_MLDS_negLL,NewSearchInitials, options, Stim, NumGreater, OutOfNum);
+        NewSearchInitials = FreeParams+(rand(1,length(PsiValues)-1)-.5).*rangeTries;
+        [paramsSim(b,:), LLSim(b,:), converged(b)] = PAL_minimize(@PAL_MLDS_negLL,NewSearchInitials, options, Stim, NumGreater, OutOfNum,'param',parameterization);
         tries = tries + 1;
     end    
     if ~converged(b)
@@ -141,13 +166,24 @@ for b = 1:B
     end    
 end
 
-paramsSim = [zeros(B,1) paramsSim(:,1:size(paramsSim,2)-1) ones(B,1) paramsSim(:,size(paramsSim,2))];
+if strncmpi(parameterization,'dev',3)
+    paramsSim = [zeros(B,1) paramsSim(:,1:size(paramsSim,2)) ones(B,1)];
+else
+    paramsSim = [zeros(B,1) paramsSim(:,1:size(paramsSim,2)-1) ones(B,1) paramsSim(:,size(paramsSim,2))];
+end
 
 [Mean, SD] = PAL_MeanSDSSandSE(paramsSim);
-SD_PsiValues = SD(1:length(SD)-1);
-SD_SDnoise = SD(length(SD));
+
+if strncmpi(parameterization,'dev',3)
+    SD_PsiValues = SD(1:end-1);
+    SD_SDnoise = 0;
+else
+    SD_PsiValues = SD(1:end-1);
+    SD_SDnoise = SD(end);
+end
 LLSim = -LLSim;
 exitflag = sum(converged) == B;
 if exitflag ~= 1
     warning('PALAMEDES:convergeFail','Only %s of %s simulations converged',int2str(sum(converged)),int2str(B));
 end
+warning('on','PALAMEDES:DevinckKnoblauchSDignored');

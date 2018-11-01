@@ -1428,7 +1428,7 @@
 % values for slope parameter.
 %
 % PAL_PFML_setupParametrizationStruct:
-% Introduced: Palamedes version 1.81. (NP)
+% Introduced: Palamedes version 1.8.1 (NP)
 % Allows alternative spelling of PAL_PFML_setupParametrizationStruct
 %
 % PAL_PFML_setupParametrizationStruct:
@@ -1450,5 +1450,61 @@
 % PAL_AMPM_setupPM was a previously existing structure, e.g.: 
 % PM = PAL_AMPM_setupPM(PM, 'prior',prior) %prior was ignored
 % PM = PAL_AMPM_setupPM('prior',prior)     %prior was not ignored
-
-
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.9.0 Release September 18, 2018
+%
+% Purpose: (1) Introduce PAL_PFML_CheckLimits.m which checks whether fit
+% performed by PAL_PFML_Fit.m corresponds to true global maximum or 
+% whether a step function or constant function (either of which can be 
+% approached to any degree of precision by sigmoidal function) exists that 
+% has higher log likelihood. (2) Add option to MLDS routines to use Devinck 
+% & Knoblauch's  2012 (JoV, 12, 19) version of model. (3) Minor 
+% maintenance.
+%
+% PAL_PFML_BruteForceFit.m:
+% Modified: Palamedes version 1.9.0 (NP)
+% Added line to avoid LLspace containing NaNs
+%
+% PAL_PFML_CheckLimits.m:
+% Introduced: Palamedes vesrion 1.9.0 (NP)
+% Check whether the parameter estimates found by PAL_PFML_Fit correspond to 
+% global maximum or whether a step function or constant function (each of 
+% which may be approached to any arbitrary degree of precision by model to 
+% be fitted) exists that has higher likelihood.
+%
+% PAL_PFML_Fit.m:
+% Modified: Palamedes version 1.9.0 (NP)
+% Default limits for guess and lapse rate changed to [0 1] (from [] in 
+% earlier versions)
+%
+% PAL_PFML_negLL.m:
+% Modified: Palamedes version 1.9.0 (NP)
+% Avoids failed fits due to imaginary or NaN Log Likelihood values (that
+% may arise e.g., when a negative value for threshold is used and a Weibull
+% if fitted). This issue was brought to our attention by David H. Brainard.
+%
+% PAL_PFML_negLLMultiple.m:
+% Modified: Palamedes version 1.9.0 (NP)
+% See comment on PAL_PFML_negLL.m
+%
+% PAL_MLDS_Bootstrap.m:
+% Modified: Palamedes version 1.9.0 (NP)
+% Allow Devinck & Knoblauch's 2012 (JoV, 12, 19) version of model. Type
+% help PAL_MLDS_Fit for more detail.
+%
+% PAL_MLDS_Fit.m:
+% Modified: Palamedes version 1.9.0 (NP)
+% Allow Devinck & Knoblauch's 2012 (JoV, 12, 19) version of model. Type
+% help PAL_MLDS_Fit for more detail.
+%
+% PAL_MLDS_negLL.m:
+% Modified: Palamedes version 1.9.0 (NP)
+% Allow Devinck & Knoblauch's 2012 (JoV, 12, 19) version of model. Type
+% help PAL_MLDS_Fit for more detail.
+%
+% PAL_MLDS_SimulateObserver.m:
+% Modified: Palamedes version 1.9.0 (NP)
+% Allow Devinck & Knoblauch's 2012 (JoV, 12, 19) version of model. Type
+% help PAL_MLDS_SimulateObserver for more detail.
+%

@@ -15,6 +15,9 @@
 %-PAL_Logistic
 %-PAL_Scale0to1
 %
+%Consult examples in PAL_MLDS_Fit to find out how to fit data a la Devinck 
+%and Knoblauch (2012).
+%
 %More information on any of these functions may be found by typing
 %help followed by the name of the function. e.g., help PAL_MLDS_Fit
 %

@@ -1,6 +1,7 @@
 %
 %PAL_MLDS_Fit   Fit scaling data using the method developed by Maloney & 
-%   Yang (2003) Journal of Vision, 3, 573-585.
+%   Yang (2003) Journal of Vision, 3, 5 or Devinck & Knoblauch's 2012
+%   variation (Journal of Vision, 12, 19) on this method.
 %
 %syntax: [PsiValues SDnoise LL exitflag output] = PAL_MLDS_Fit(Stim, ...
 %   NumGreater, OutOfNum, PsiValues, SDnoise, {optional arguments})
@@ -21,15 +22,20 @@
 %
 %   'PsiValues' is a vector containing initial guesses for the values of 
 %       Psi. Must have as many elements as there are stimulus levels in
-%       'Stim', first entry must be 0, last entry must be 1.
+%       'Stim', first entry must be 0. If using the Maloney and Yang 
+%       implementation (default, see below), the last entry must be 1.
 %
 %   'SDnoise' is a scalar containing initial guess for magnitude of
-%       internal noise.
+%       internal noise. If using Devinck & Knoblauch implementation (see 
+%       below), SDnoise is defined to equal 1 and user should pass an empty 
+%       matrix.
 %
 %Output:
 %   'PsiValues': Best-fitting values for Psi.
 %
-%   'SDnoise': Best-fitting value for internal noise.
+%   'SDnoise': Best-fitting value for internal noise. In Devinck and
+%       Knoblauch implementation SDnoise is not fitted but defined to equal 
+%       1.
 %
 %   'LL': Log likelihood associated with the fit.
 %
@@ -38,6 +44,27 @@
 %
 %   'output': message containing some information concerning fitting
 %       process.
+%
+%   By default, PAL_MLDS_Fit uses Maloney & Yang's (2003) conceptualization
+%       of the fitting problem. M&Y anchor the lowest and highest internal 
+%       stimulus intensities (at 0 and 1 respectively) and estimate the 
+%       remaining internal stimulus intensities relative to the anchors as
+%       well as the internal noise magnitude. User may also opt to use
+%       Devinck & Knoblauch's (2012) conceptualization. D&K anchor the
+%       lowest internal stimulus intensity (at 0) as well as the internal
+%       noise magnitude (at 1) and estimate the remaining internal stimulus
+%       intensities. One advantage of D&K's conceptualization is that it
+%       does not assume that the last stimulus intensity is associated with
+%       a higher internal stimulus intensity, allowing the fitting of a 
+%       control condition in which the stimuli are not expected to 
+%       correspond to different internal stimulus intensities. Also, D&K
+%       quantify the noise magnitude differently compared to M&Y, see
+%       original sources for more detail. In order to fit data according to 
+%       D&K conceptualization, use (something like):
+%
+%   [PsiValues SDnoise LL exitflag output] = PAL_MLDS_Fit(Stim, ...
+%       NumGreater, OutOfNum, PsiValues, [], ...
+%       'parameterization','Devinck')
 %
 %   PAL_MLDS_Fit uses Nelder-Mead Simplex method. The default search 
 %       options may be changed by using the following syntax:
@@ -61,23 +88,39 @@
 %   NumGreater = PAL_MLDS_SimulateObserver(Stim, OutOfNum, PsiValues, ...
 %      SDnoise);
 %  
-%   %Fit hypothetical data:
 %   options = PAL_minimize('options');
 %   options.TolX = 1e-9;    %increase desired precision
-%   [PsiValues SDnoise] = PAL_MLDS_Fit(Stim, NumGreater, OutOfNum, ...
+%
+%   %Fit hypothetical data Maloney & Yang style:
+%   [PsiValuesMY SDnoiseMY] = PAL_MLDS_Fit(Stim, NumGreater, OutOfNum, ...
 %       PsiValues, SDnoise,'SearchOptions',options);
 %
+%   %Fit hypothetical data Devinck & Knoblauch style:
+%   [PsiValuesDK SDnoiseDK] = PAL_MLDS_Fit(Stim, NumGreater, OutOfNum, ...
+%       PsiValues, [],'SearchOptions',options,'parameterization',...
+%       'devinck');
+%
+% %Note that PsiValuesMY and PsiValuesDK are merely scaled versions of each
+% %other:
+%
+%   scatter(PsiValuesMY, PsiValuesDK);
+%
 % Introduced: Palamedes version 1.0.0 (NP)
-% Modified: Palamedes version 1.4.0, 1.6.3 (NP): (see History.m)
+% Modified: Palamedes version 1.4.0, 1.6.3, 1.9.0 (NP): (see History.m)
 
 function [PsiValues, SDnoise, LL, exitflag, output] = PAL_MLDS_Fit(Stim, NumGreater, OutOfNum, PsiValues, SDnoise, varargin)
 
 options = [];
+parameterization = 'maloney';
 
 if ~isempty(varargin)
     NumOpts = length(varargin);
     for n = 1:2:NumOpts
         valid = 0;
+        if strncmpi(varargin{n}, 'parameterization',5)
+            parameterization = varargin{n+1};
+            valid = 1;
+        end        
         if strncmpi(varargin{n}, 'SearchOptions',7)
             options = varargin{n+1};
             valid = 1;
@@ -90,9 +133,25 @@ end
 
 NumLevels = length(PsiValues);
 
-[FreeParams, negLL, exitflag, output] = PAL_minimize(@PAL_MLDS_negLL,[PsiValues(2:NumLevels-1) SDnoise], options, Stim, NumGreater, OutOfNum);
+if strncmpi(parameterization,'dev',3)
+    FreeParams = PsiValues(2:NumLevels);
+    if ~isempty(SDnoise) & SDnoise ~= 1
+        message =  'Using Devinck & Knoblauch parameterization of MLDS, noise SD is defined to equal 1. User supplied value will be ignored. ';
+        message = [message 'In order to avoid seeing this message again, use either the value 1 or an empty matrix in function call.'];
+        warning('PALAMEDES:DevinckKnoblauchSDignored',message);
+    end
+else
+    FreeParams = [PsiValues(2:NumLevels-1) SDnoise];
+end
+
+[FreeParams, negLL, exitflag, output] = PAL_minimize(@PAL_MLDS_negLL,FreeParams, options, Stim, NumGreater, OutOfNum,'param',parameterization);
 
 LL = -negLL;
 
-PsiValues(2:NumLevels-1) = FreeParams(1:NumLevels-2);
-SDnoise = FreeParams(NumLevels-1);
+if strncmpi(parameterization,'dev',3)
+    PsiValues(2:NumLevels) = FreeParams;
+    SDnoise = 1;
+else
+    PsiValues(2:NumLevels-1) = FreeParams(1:NumLevels-2);
+    SDnoise = FreeParams(NumLevels-1);
+end

@@ -18,9 +18,9 @@
 %       might be used to obtain parameter values characterizing observer's
 %       psychometric function.
 %
-%   'paramsFree': 1x4 vector coding which of the four parameters in 
-%       paramsValue are free parameters and which are fixed parameters 
-%       (1: free, 0: fixed).
+%   'paramsFree': 1x4 vector coding which of the four parameters of the PF 
+%       (in the order: [threshold slope guess-rate lapse-rate]) are free 
+%       parameters and which are fixed parameters (1: free, 0: fixed, ).
 %
 %   'B': number of bootstrap simulations to perform.
 %
@@ -63,15 +63,22 @@
 %       be scalars equal to the fixed parameter value. Note that all fields 
 %       may be scalars in which case no brute-force search will precede the 
 %       iterative parameter search. For more information, see example 
-%       below. Note that choices made here have a large effect on 
-%       processing time and memory usage. In some future version of 
-%       Palamedes this argument will be required.
+%       below. Note that choices made here may have a large effect on 
+%       processing time and memory usage. Note that usage of the 
+%       'searchGrid' option will generally reduce processing time ((because
+%       the serial iterative Nelder-Mead search will be shorter). Usage of 
+%       the 'searchGrid' option will also reduce the chances of a fit 
+%       failing (see: www.palamedestoolbox.org/understandingfitting.html).
+%       In some future version of Palamedes the 'searchGrid' argument will 
+%       be required. 
 %
 %       If highest entry in 'StimLevels' is so high that it can be 
-%       assumed that errors observed there can be due only to lapses, use 
-%       'lapseFit' argument to specify alternative fitting scheme. Options: 
-%       'nAPLE' (default), 'iAPLE', and 'jAPLE'. Type help 
-%       PAl_PFML_FitMultiple for more information.
+%       assumed that errors observed there can be due only to lapses, one 
+%       may use 'lapseFit' argument to specify alternative fitting scheme. 
+%       Options: 'nAPLE' (default), 'iAPLE', and 'jAPLE'. Type help 
+%       PAL_PFML_Fit or go to: 
+%       http://www.journalofvision.org/content/12/6/25 for more 
+%       information.
 %
 %       The guess rate and lapse rate parameter can be constrained to be 
 %       equal, as would be appropriate, for example, in a bistable percept 
@@ -80,24 +87,12 @@
 %       be fit according to options set for the lapse rate parameter. Entry
 %       for guess rate in searchGrid needs to be made but will be ignored.
 %
-%       Retrying failed fits when 'searchGrid' (see above) is not used:
-%
-%       In case not all fits converge succesfully, use optional argument 
-%       'maxTries' to set the maximum number of times each fit will be 
-%       attempted. The first try uses initial search values equal to 
-%       paramsValues provided in function call, subsequent tries use these 
-%       search values plus some random 'jitter'. The range of the random 
-%       jitter can be set for each of the four parameters separately using 
-%       the optional argument 'rangeTries'. 'rangeTries' should be set to
-%       a 1 x 4 vector containing the range of jitter to be applied to 
-%       initial guesses of parameters [alpha beta gamma lambda]. Default 
-%       value for 'maxTries' is 1, default value for 'rangeTries' is the 
-%       entirely arbitrary and in most cases inappropriate [1 1 1 1].
-%       Jitter will be selected randomly from rectangular distribution
-%       centered on guesses in 'paramsValues' with range in 'rangeTries'.
-%
-%       (Note that some simulated data sets may never be fit succesfully 
-%           regardless of value of 'maxTries' and 'rangeTries')
+%       Options 'maxTries' and 'rangeTries' were operational up to and
+%       including Palamedes version 1.7.0. Usage of these arguments will
+%       result in a warning stating that the arguments will be ignored and
+%       will encourage users to utilize the 'searchGrid' options (see
+%       above), which is a much superior manner in which to avoid failed
+%       fits.
 %
 %       User may constrain the lapse rate to fall within limited range 
 %       using the optional argument 'lapseLimits', followed by a two-
@@ -111,9 +106,9 @@
 %   PAL_PFML_BootstrapNonParametric uses Nelder-Mead Simplex method to find 
 %   the maximum in the likelihood function. The default search options may 
 %   be changed by using the optional argument 'SearchOptions' followed by 
-%   an options structure created using options = PAL_minimize('options'). 
-%   See example of usage in PAL_PFML_Fit. For more information type
-%   PAL_minimize('options','help').
+%   an options structure created using options = PAL_minimize('options'), 
+%   then modified. See example of usage in PAL_PFML_Fit. For more 
+%   information type PAL_minimize('options','help').
 %
 %Example:
 %
@@ -121,14 +116,13 @@
 %   StimLevels = [-3:1:3];
 %   NumPos = [55 55 66 75 91 94 97];    %Human data
 %   OutOfNum = 100.*ones(size(StimLevels));
-%   paramsGen = [0 1 .5 0.01];
 %   paramsFree = [1 1 0 1];
 %   searchGrid.alpha = [-1:.1:1];    %structure defining grid to
 %   searchGrid.beta = 10.^[-1:.1:2]; %search for initial values
 %   searchGrid.gamma = .5;
 %   searchGrid.lambda = [0:.005:.03];
 %
-%   %Fit data:
+%   %First fit data:
 %
 %   paramsValues = PAL_PFML_Fit(StimLevels, NumPos, OutOfNum, ...
 %       searchGrid, paramsFree, PF,'lapseLimits',[0 .03]);
@@ -144,15 +138,13 @@
 %
 % Introduced: Palamedes version 1.0.0 (NP)
 % Modified: Palamedes version 1.0.2, 1.1.0, 1.2.0, 1.3.0, 1.3.1, 1.4.0, 
-%   1.6.3 (see History.m)
+%   1.6.3, 1.8.1 (see History.m)
 
 function [SD, paramsSim, LLSim, converged] = PAL_PFML_BootstrapParametric(StimLevels, OutOfNum, paramsValues, paramsFree, B, PF, varargin)
 
 searchGrid = paramsValues;
 
 options = [];
-maxTries = 1;
-rangeTries = [1 1 1 1];
 lapseLimits = [];
 guessLimits = [];
 lapseFit = 'default';
@@ -161,6 +153,8 @@ gammaEQlambda = logical(false);
 paramsSim = zeros(B,4);
 LLSim = zeros(B,1);
 converged = false(B,1);
+
+mTrTflag = false;
 
 if ~isempty(varargin)
     NumOpts = length(varargin);
@@ -171,11 +165,11 @@ if ~isempty(varargin)
             valid = 1;
         end
         if strncmpi(varargin{n}, 'maxTries',4)
-            maxTries = varargin{n+1};
+            mTrTflag = true;
             valid = 1;
         end
         if strncmpi(varargin{n}, 'rangeTries',6)
-            rangeTries = varargin{n+1};
+            mTrTflag = true;
             valid = 1;
         end
         if strncmpi(varargin{n}, 'lapseLimits',6)
@@ -220,6 +214,14 @@ if ~isempty(varargin)
             warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end
     end            
+end
+
+if mTrTflag
+    message = ['''maxTries'' and ''rangeTries'' options are obsolete and '];
+    message = [message 'will be ignored. Use ''searchGrid'' option instead. See: '];
+    message = [message 'www.palamedestoolbox.org/understandingfitting.html '];
+    message = [message 'for more information.'];
+    warning('PALAMEDES:invalidOption',message);
 end
 
 if ~isempty(guessLimits) && gammaEQlambda
@@ -327,23 +329,19 @@ for b = 1:B
     
     [paramsSim(b,:), LLSim(b,:), converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, paramsGuess, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
 
-    if ~isstruct(searchGrid) 
-        tries = 1;
-        while converged(b) == 0 && tries < maxTries
-                NewSearchInitials = searchGrid+(rand(1,4)-.5).*rangeTries.*paramsFree;
-                [paramsSim(b,:), LLSim(b,:), converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, NewSearchInitials, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
-                tries = tries + 1;            
-        end
-    end    
     if ~converged(b)
-        warning('PALAMEDES:convergeFail','Fit to simulation %s of %s did not converge.',int2str(b), int2str(B));
+        warning('PALAMEDES:convergeFail','Fit to simulation %s of %s did not converge.',int2str(b), int2str(B));        
     end
     
 end
 
 exitflag = sum(converged) == B;
 if exitflag ~= 1
-    warning('PALAMEDES:convergeFail','Only %s of %s simulations converged.',int2str(sum(converged)), int2str(B));
+    message = ['Use (or adjust use of) ''searchGrid'' option. In case this does not work, '];
+    message = [message 'a global maximum in the likelihood function may not exist.'];
+    message = [message 'See www.palamedestoolbox.org/understandingfitting.html for more '];
+    message = [message 'information'];
+    warning('PALAMEDES:convergeFail',['Only %s of %s simulations converged. ' message],int2str(sum(converged)), int2str(B));
 end
 
 [Mean, SD] = PAL_MeanSDSSandSE(paramsSim);
