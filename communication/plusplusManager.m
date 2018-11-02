@@ -107,7 +107,7 @@ classdef plusplusManager < optickaCore
 			if exist('value','var')
 				prepareStrobe(obj, value, obj.mask, true);
 				data = obj.tempData;
-				mask = obj.tempMask;
+				mask = obj.tempMask; %#ok<*PROPLC>
 			else
 				data = obj.sendData;
 				mask = obj.sendMask;

@@ -1,7 +1,7 @@
 % ========================================================================
-%> @brief metaStimulus is a  wrapper for opticka stimuli
-%> METASTIMULUS a collection of stimuli, wrapped in one structure. It
-%> allows you to treat a group of heterogenous stimuli as if it is a single
+%> @brief metaStimulus is a wrapper object for opticka stimuli
+%> METASTIMULUS a collection of stimuli, wrapped in one object. It
+%> allows you to treat a group of heterogenous stimuli as if they are a single
 %> stimulus, so for example animate(metaStimulus) will run the animate method
 %> for all stimuli in the group without having to call it for each stimulus.
 %> You can also pick individual stimuli by using cell indexing of this
@@ -406,7 +406,7 @@ classdef metaStimulus < optickaCore
 		%>
 		% ===================================================================
 		function run(obj, benchmark, runtime, s, forceScreen)
-		% RUN stimulus: run(benchmark, runtime, s, forceFullscreen)
+		% RUN stimulus: run(benchmark, runtime, screenManager, forceFullscreen)
 			warning off
 			if ~exist('benchmark','var') || isempty(benchmark)
 				benchmark=false;
@@ -427,7 +427,7 @@ classdef metaStimulus < optickaCore
 			oldbitdepth = s.bitDepth;
 			if forceScreen >= 0
 				s.screen = forceScreen;
-				if forceScreen == 0
+				if forceScreen == 0 % make sure screen 0 does not trigger bits++ etc.
 					s.bitDepth = 'FloatingPoint32BitIfPossible';
 				end
 			end
@@ -443,7 +443,7 @@ classdef metaStimulus < optickaCore
 			if ~s.isOpen
 				open(s);
 			end
-			setup(obj,s); %setup our stimulus object
+			setup(obj,s); %setup our stimulus objects
 			draw(obj); %draw stimuli
 			
 			if s.visualDebug
@@ -468,7 +468,7 @@ classdef metaStimulus < optickaCore
 					drawScreenCenter(s); %centre spot
 				end
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
-				animate(obj); %animate stimulus, will be seen on next draw
+				animate(obj); %animate stimuli, ready for next draw();
 				if benchmark
 					Screen('Flip',s.win,0,2,2);
 				else

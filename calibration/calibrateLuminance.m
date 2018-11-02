@@ -27,10 +27,6 @@ classdef calibrateLuminance < handle
 	properties
 		%> comments to note about this calibration
 		comments = {''}
-		%> logging to the commandline?
-		verbose = false
-		%> allows the constructor to run the open method immediately
-		runNow = false
 		%> number of measures 
 		nMeasures = 15
 		%> screen to calibrate
@@ -41,6 +37,8 @@ classdef calibrateLuminance < handle
 		useCCal2 = false
 		%> use i1Pro?
 		useI1Pro = false
+		%> length of gamma table
+		tableLength = 1024
 		%> choose I1Pro over CCal if both connected?
 		preferI1Pro = false
 		%> specify port to connect to
@@ -55,15 +53,19 @@ classdef calibrateLuminance < handle
 		%> methods list to fit to raw luminance values
 		analysisMethods = {'pchipinterp';'linearinterp'}
 		%> background screen colour
-		backgroundColour = [ 0.5 0.5 0.5];
+		backgroundColour = [ 0.5 0.5 0.5 ];
 		%> filename this was saved as
 		filename
 		%> EXTERNAL data as a N x 2 matrix
 		externalInput
-		%> length of gamma table
-		tableLength = 1024
 		%> wavelengths to test (SpectroCal2 is 380:1:780 | I1Pro is 380:10:730)
 		wavelengths = 380:1:780
+		%>use monitor sync for SpectroCal2?
+		monitorSync@logical = true
+		%> logging to the commandline?
+		verbose = false
+		%> allows the constructor to run the open method immediately
+		runNow = false
 	end
 
 	%--------------------VISIBLE PROPERTIES-----------%
@@ -96,6 +98,7 @@ classdef calibrateLuminance < handle
 		dateStamp@double
 		%> universal ID
 		uuid@char
+		screenVals@struct = []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -138,6 +141,10 @@ classdef calibrateLuminance < handle
 			obj.uuid = num2str(dec2hex(floor((now - floor(now))*1e10))); %obj.uuid = char(java.util.UUID.randomUUID)%128bit uuid
 			if isempty(obj.screen)
 				obj.screen = max(Screen('Screens'));
+			end
+			if ispc
+				obj.tableLength = 256;
+				obj.port = 'COM4';
 			end
 			if obj.useI1Pro && I1('IsConnected') == 0
 				obj.useI1Pro = false;
@@ -230,20 +237,7 @@ classdef calibrateLuminance < handle
 			psychlasterror('reset');
 			
 			try
-				Screen('Preference', 'SkipSyncTests', 2);
-				Screen('Preference', 'VisualDebugLevel', 0);
-				PsychImaging('PrepareConfiguration');
-				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
-				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
-				if obj.screen == 0
-					rect = [0 0 1000 1000];
-				else
-					rect = [];
-				end
-				obj.win = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, rect);
-				winRect = Screen('Rect',obj.win);
-				targetRect = CenterRect([0 0 900 900],winRect);
+				openScreen(obj);
 				[obj.oldCLUT, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
 				BackupCluts;
 				Screen('LoadNormalizedGammaTable', obj.win, obj.initialCLUT);
@@ -355,20 +349,8 @@ classdef calibrateLuminance < handle
 					doPipeline = false;
 					obj.choice = reply;
 				end
-				Screen('Preference', 'SkipSyncTests', 2);
-				Screen('Preference', 'VisualDebugLevel', 0);
-				PsychImaging('PrepareConfiguration');
-				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-				PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
-				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
-				if obj.screen == 0
-					rect = [0 0 1000 1000];
-				else
-					rect = [];
-				end
-				obj.win = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, rect);
-				winRect = Screen('Rect',obj.win);
-				targetRect = CenterRect([0 0 900 900],winRect);
+				
+				openScreen(obj);
 				[obj.oldCLUT, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
 				
 				if doPipeline == true
@@ -850,58 +832,80 @@ classdef calibrateLuminance < handle
 	methods ( Access = private ) % PRIVATE METHODS
 	%=======================================================================
 		
+		%===============init======================%
+		function openScreen(obj)
+			Screen('Preference', 'SkipSyncTests', 2);
+			Screen('Preference', 'VisualDebugLevel', 0);
+			PsychImaging('PrepareConfiguration');
+			PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
+			PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+			PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
+			if obj.screen == 0
+				rect = [0 0 1000 1000];
+			else
+				rect = [];
+			end
+			obj.win = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, rect);
+			obj.screenVals.winRect = Screen('Rect',obj.win);
+			obj.screenVals.targetRect = CenterRect([0 0 900 900],obj.screenVals.winRect);
+
+			obj.screenVals.ifi = Screen('GetFlipInterval', obj.screenVals.win);
+			obj.screenVals.fps=Screen('NominalFramerate', obj.screenVals.win);
+			%find our fps if not defined above
+			if obj.screenVals.fps==0
+				obj.screenVals.fps=round(1/obj.screenVals.ifi);
+				if obj.screenVals.fps==0
+					obj.screenVals.fps=60;
+				end
+			end
+		end
     
         %===============init======================%
         function openSpectroCAL(obj)
             obj.spCAL = serial(obj.port, 'BaudRate', 921600,'DataBits', 8, 'StopBits', 1, 'FlowControl', 'none', 'Parity', 'none', 'Terminator', 'CR','Timeout', 240, 'InputBufferSize', 16000);
-        end
+			obj.configureSpectroCAL();
+		end
     
     
         %===============init======================%
-        function [refreshRate] = configureSpectroCAL(obj,s1,intgrTime,doSynchonised,doHorBarPTB,reps,freq,whichScreen)
-            %  intgrTime is the optional integration time in mS
-            if ~isempty(obj.spCAL)
-                
-            end
+        function [refreshRate] = configureSpectroCAL(obj)
+			intgrTime = [];
+			doSynchonised = obj.monitorSync;
+			doHorBarPTB = false;
+			reps = 1;
+			freq = [];
             % set the range to be fit the CIE 1931 2-deg CMFs
-            start = 380; stop = 780; step = 1;
-
-            if nargin==2; intgrTime = []; end
-            if nargin<4; doSynchonised=false; end
-            if nargin<5; doHorBarPTB=false; end
-            if nargin<6; reps=1; end
-            if nargin<7; freq=[]; end
-
+            start = obj.wavelengths(1); stop = obj.wavelengths(end); step = obj.wavelengths(2) - obj.wavelengths(1);
             if isempty(intgrTime)
                 % Set automatic adaption to exposure
-                fprintf(s1,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
-                checkreturn(s1);
+                fprintf(obj.spCAL,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
+                errorString = checkACK(obj.spCAL,'setting exposure'); if ~isempty(errorString), fclose(obj.spCAL); return; end
                 if doSynchonised
-                    fprintf(s1,['*CONF:CYCMOD 1', char(13)]); %switching to synchronized measuring mode
-                    checkreturn(s1);
+                    fprintf(obj.spCAL,['*CONF:CYCMOD 1', char(13)]); %switching to synchronized measuring mode
+                    errorString = checkACK(obj.spCAL,'setting SYNC'); if ~isempty(errorString), fclose(obj.spCAL); return; end
                     while reps
                         reps=reps-1;
-                        fprintf(s1,['*CONTR:CYCTIM 200 4000', char(13)]); %measurement of cycle time 
+                        fprintf(obj.spCAL,['*CONTR:CYCTIM 200 4000', char(13)]); %measurement of cycle time 
                         % read the return
-                        data = fscanf(s1);
+                        data = fscanf(obj.spCAL);
                         disp(data);
                         tint = str2double(data(13:end)); % in mS
                         refreshRate = 1/tint*1000;
                         disp(['Refresh rate is: ',num2str(refreshRate)]);
                         if ~isnan(tint)
-                            fprintf(s1,['*CONF:CYCTIM ',num2str(tint*1000), char(13)]);  %setting: cycle time to measured value (in us)
-                            checkreturn(s1);
+                            fprintf(obj.spCAL,['*CONF:CYCTIM ',num2str(tint*1000), char(13)]);  %setting: cycle time to measured value (in us)
+                            errorString = checkACK(obj.spCAL,'setting Cycle Time'); if ~isempty(errorString), fclose(obj.spCAL); return; end
                         else
                             % reset
-                            fprintf(s1,['*RST', char(13)]); % software reset
+                            fprintf(obj.spCAL,['*RST', char(13)]); % software reset
                             pause(2);
                             if s1.BytesAvailable>0
-                                data = fread(s1,s1.BytesAvailable)';
+                                data = fread(obj.spCAL,obj.spCAL.BytesAvailable)';
                                 disp(char(data));
                             end
                             % Set automatic adaption to exposure
-                            fprintf(s1,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
-                            checkreturn(s1);
+                            fprintf(obj.spCAL,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
+                            errorString = checkACK(obj.spCAL,'setting exposure'); if ~isempty(errorString), fclose(obj.spCAL); return; end
                         end
                         if ~isempty(freq)
                             if abs(refreshRate-freq)<1;reps=0;end
@@ -911,36 +915,157 @@ classdef calibrateLuminance < handle
 
             else
                 % Set integration time to intgrTime
-                fprintf(s1,['*CONF:TINT ',num2str(intgrTime), char(13)]);
-                checkreturn(s1);
+                fprintf(obj.spCAL,['*CONF:TINT ',num2str(intgrTime), char(13)]);
+                checkACK(obj.spCAL);
                 refreshRate = NaN;
 
                 % Set manual adaption to exposure
-                fprintf(s1,['*CONF:EXPO 2', char(13)]);
-                checkreturn(s1);
-            end
-
+                fprintf(obj.spCAL,['*CONF:EXPO 2', char(13)]);
+                checkACK(obj.spCAL);
+			end
             % Radiometric spectra in nm / value 
-            fprintf(s1,['*CONF:FUNC 6', char(13)]);
-            checkreturn(s1);
-
+            fprintf(obj.spCAL,['*CONF:FUNC 6', char(13)]);
+            errorString = checkACK(obj.spCAL,'setting spectra'); if ~isempty(errorString), fclose(obj.spCAL); return; end
             % Set wavelength range and resolution
-            fprintf(s1,['*CONF:WRAN ',num2str(start),' ',num2str(stop),' ',num2str(step), char(13)]);
-            checkreturn(s1);
-
+            fprintf(obj.spCAL,['*CONF:WRAN ',num2str(start),' ',num2str(stop),' ',num2str(step), char(13)]);
+            errorString = checkACK(obj.spCAL,'setting wavelength'); if ~isempty(errorString), fclose(obj.spCAL); return; end
             disp('SpectroCAL initialised.');
+            function errorString = checkACK(spCAL,string)
+				if ~exist('string','var') || isempty(string); string = 'GENERAL';end
+				tic;
+				while 1
+					if VCP.BytesAvailable>0
+						sReturn = fread(spCAL,1)';
+						if sReturn(1)~=6 % if the return is not 6
+							warning(['error initialising SpectroCAL: returned error code ',num2str(sReturn(1))]);
+							errorString = ['SpectroCAL: ',string];
+							return
+						else
+							errorString = '';
+							return; % command acknowledged
+						end
 
-            function checkreturn(s1)
-                CheckReturn=fread(s1,1); % This should return 6
-                if CheckReturn~=6
-                    pause(0.2);
-                    if s1.BytesAvailable>0
-                        data = fread(s1,s1.BytesAvailable)'; disp(char(data));
-                    end
-                    error('error initialising SpectroCAL');
-                end
+					end
+					if toc>2
+						warning('error initialising SpectroCAL: timeout. No response received within 2 seconds.');
+						errorString = 'SpectroCAL: timeout. No response received within 2 seconds.';
+						return
+					end
+					pause(0.01);
+				end
             end
-        end
+		end
+		
+		%===============init======================%
+		function [xy, Y, Lambda, Radiance] = takeSpectroCALMeasurement()
+			
+			% request a measurement
+			fprintf(obj.spCAL,['*INIT', char(13)]);
+			errorString = checkACK(obj.spCAL,'request measurement'); if ~isempty(errorString), fclose(obj.spCAL); return; end
+			% wait while measuring 
+			tic;
+			while 1
+				if obj.spCAL.BytesAvailable>0
+					sReturn = fread(obj.spCAL,obj.spCAL.BytesAvailable)';
+					if sReturn(1)~=7 % if the return is not 7
+						warning(['SpectroCAL: returned error code ',num2str(sReturn(1))]);
+						errorString = {['SpectroCAL: returned error code ',num2str(sReturn(1))],'Check for overexposure.'};
+						fclose(obj.spCAL);
+						return % abort the measurement and exit the function
+					else
+						break; % measurement succesfully completed
+					end
+
+				end
+				if toc>240
+					warning('SpectroCAL: timeout. No response received within 240 seconds.');
+					errorString = 'SpectroCAL: timeout. No response received within 240 seconds.';
+					fclose(obj.spCAL);
+					return % abort the measurement and exit the function
+				end
+				pause(0.01);
+			end  
+
+			% retrieve the measurement
+			fprintf(obj.spCAL,['*FETCH:SPRAD 7', char(13)]);
+			% the returned data will be a header followed by two consecutive carriage
+			% returns and then the data followed by two consecutive carriage returns
+			% read head and data
+			data = [];
+			while 1
+				if obj.spCAL.BytesAvailable>0
+					data =  [data;fread(obj.spCAL, obj.spCAL.BytesAvailable)]; %#ok<AGROW>
+					if length(data)>40 % read until both header and data is retrieved
+						if data(end)==13 && data(end-1)==13
+							break
+						end
+					end
+				end
+			end
+
+			% extract the measurement
+			cr = find(data==13);
+			mes = data(cr(2)+1:cr(end-1));
+			% extract wave length (WL) and radiance from measurement
+			tmp = sscanf(char(mes), '%d %g',[2,inf]);
+			Lambda = tmp(1,:);
+			Radiance = tmp(2,:);
+			
+			% Get the luminance
+			fprintf(obj.spCAL,['*FETCH:PHOTO 7', char(13)]);
+
+			% Find and strip the Luminance header
+			found=false;
+			while found==false
+				letter = fread(obj.spCAL, 1);
+				if letter == 9
+					found=true;
+				end
+			end
+
+			% Extract the Luminance
+			found=false;
+			Y=[];
+			while found==false
+				LUMval = fread(obj.spCAL, 1);
+				Y = [Y LUMval];
+				if LUMval == 13
+					found=true;
+				end
+			end
+
+			% Get CIE xy chromaticity coordinates
+			fprintf(obj.spCAL,['*FETCH:CHROMXY 7', char(13)]);
+			% Find and strip the x header
+			found=false;
+			while found==false
+				letter = fread(obj.spCAL, 1);
+				if letter == 9;found=true;end
+			end
+			% Extract x
+			found=false;
+			CIEx=[];
+			while found==false
+				xval = fread(obj.spCAL, 1);
+				CIEx = [CIEx xval];
+				if xval == 13;found=true;end
+			end
+			% Find and strip the y header
+			found=false;
+			while found==false
+				letter = fread(obj.spCAL, 1);
+				if letter == 9;found=true;end
+			end
+			% Extract y
+			found=false;
+			CIEy=[];
+			while found==false
+				yval = fread(obj.spCAL, 1);
+				CIEy = [CIEy yval];
+				if yval == 13;found=true;end
+			end
+			xy = [CIEx CIEy];
+		end
 		
 		%===============reset======================%
 		function resetTested(obj)
