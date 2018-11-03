@@ -1120,12 +1120,11 @@ if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
 	if isa(o.r.stimuli,'metaStimulus') && o.r.stimuli.n > 0
 		trialTime = str2num(get(handles.OKtrialTime,'String'));
-		forceScreen = 0;
 		o.r.stimuli.choice = [];
 		if isa(o.r.screen,'screenManager') && ~isempty(o.r.screen)
-			run(o.r.stimuli, false, trialTime, o.r.screen, forceScreen);
+			run(o.r.stimuli, false, trialTime, o.r.screen);
 		else
-			run(o.r.stimuli, false, trialTime, [], forceScreen);
+			run(o.r.stimuli, false, trialTime, []);
 		end
 	end
 end
