@@ -34,7 +34,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> segment info
 		nSegment
 		%> verbose or not
-		verbose logical = false
+		verbose = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)

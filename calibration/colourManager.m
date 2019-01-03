@@ -5,7 +5,7 @@ classdef colourManager < optickaCore
 	
 	properties
 		%> verbosity
-		verbose logical = false
+		verbose = false
 		%>
 		deviceSPD char = '~/MatlabFiles/Calibration/PhosphorsDisplay++.mat'
 		%>

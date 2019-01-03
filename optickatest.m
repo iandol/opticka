@@ -136,7 +136,7 @@ myTask.nVar(3).offsetvalue = [1];
 randomiseStimuli(myTask);
 
 %% Visual Trial List
-% Lets print out a log of the stimulus properties for every trial
+% Lets print out a table of the stimulus properties for every trial
 showLog(myTask);
 
 %% Setup screenManager Object
@@ -151,7 +151,7 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
 	'windowed', [ ],... %set to a widthxheight for debugging i.e. [800 600]; set to false for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on OS X ATI 5870
-	'bitDepth', 'FloatingPoint32bitIfPossible',... %try 8bit, FloatingPoint16bit FloatingPoint32bit etc.
+	'bitDepth', 'FloatingPoint32bitIfPossible',... %8bit, FloatingPoint16bit FloatingPoint32bit etc.
 	'displayPPRefresh', 100, ... %set refresh to 100Hz only if Dispay++ attached
 	'hideFlash', false); %mario's gamma trick
 
@@ -166,7 +166,7 @@ rExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'verbose', false); %minimal verbosity
 
 %%
-% run our experiment, to exit early, press [q] during the blank
+% run our experiment, to exit early, press [q] during the blank period.
 run(rExp);
 
 %%

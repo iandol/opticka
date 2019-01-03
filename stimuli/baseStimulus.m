@@ -27,7 +27,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> Alpha as a 0-1 range, this gets added to the RGB colour
 		alpha double = 1
 		%> Do we print details to the commandline?
-		verbose logical = false
+		verbose = false
 		%> For moving stimuli do we start "before" our initial position? THis allows you to
 		%> center a stimulus at a screen location, but then drift it across that location, so
 		%> if xyPosition is 0,0 and startPosition is -2 then the stimulus will start at -2 drifing

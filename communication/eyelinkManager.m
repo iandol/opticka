@@ -19,7 +19,7 @@ classdef eyelinkManager < optickaCore
 		%> name of eyetracker EDF file
 		saveFile char = 'myData.edf'
 		%> do we log messages to the command window?
-		verbose logical = false
+		verbose = false
 		%> fixation X position(s) in degrees
 		fixationX double = 0
 		%> fixation Y position(s) in degrees
