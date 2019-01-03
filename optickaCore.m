@@ -18,7 +18,7 @@ classdef optickaCore < handle
 	%--------------------ABSTRACT PROPERTIES----------%
 	properties (Abstract = true)
 		%> verbose logging, subclasses must assign this. This is normally logical true/false
-		verbose logical
+		verbose
 	end
 	
 	%--------------------HIDDEN PROPERTIES------------%
