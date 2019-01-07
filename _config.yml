@@ -2,7 +2,7 @@ title: Opticka
 description: Visual Stimulus Generator
 google_analytics: 
 show_downloads: true
-theme: jekyll-theme-dinky
+theme: jekyll-theme-minimal
 
 gems:
   - jekyll-mentions
