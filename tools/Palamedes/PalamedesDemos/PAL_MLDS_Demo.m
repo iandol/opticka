@@ -128,7 +128,7 @@ if exist('OCTAVE_VERSION')
     text(1.5,1.03,'Response generating function','fontsize',12);
     rectangle('Position',[.3 .98 6.8 .19])
 else
-    [h o] = legend('Parameter estimates','Response generating function',2);
+    [h o] = legend('Parameter estimates','Response generating function');
     set(h,'Interpreter','none','fontsize',12,'Location','Northwest');
     set(o(5),'color',[0 .7 0],'LineWidth',2);
 end

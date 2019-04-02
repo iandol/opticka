@@ -1508,3 +1508,62 @@
 % Allow Devinck & Knoblauch's 2012 (JoV, 12, 19) version of model. Type
 % help PAL_MLDS_SimulateObserver for more detail.
 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.9.1 Release December 21, 2018
+%
+% Purpose: (1) Have functions PAL_PFML_Fit, PAL_PFML_BootstrapParametric,
+% PAL_PFML_BootstrapNonParametric, PAL_PFMLGoodnessOfFit check whether
+% likelihood function contains a true maximum by default. See (updated)
+% page www.palamedestoolbox.org/understandingfitting.html for more 
+% information. Thing to note: output argument 'exitflag' of PAL_PFML_Fit 
+% and output argument 'converged' of PAL_PFML_BootstrapParametric,
+% PAL_PFML_BootstrapNonParametric, PAL_PFMLGoodnessOfFit are no longer of
+% type logical and can contain values -1, -2, and -3. This may cause hard 
+% to spot erratic behavior in cases where convergence is checked by
+% something like: if(exitflag == true). Instead, use something like 
+% if(exitflag == 1) (2) Extend capability to check likelihood function for 
+% true maximum to 'jAPLE' fitting scheme. (3) Disable 'iAPLE' fitting 
+% scheme. Reasons: Including this option made the code real bulky to begin 
+% with. Extending new functionality to 'iAPLE' would have been a huge
+% undertaking with likely zero users ever making use of this. Finally, 
+% 'iAPLE' fitting instead of 'jAPLE' fitting is hard to defend.
+%
+% PAL_PFML_Fit.m:
+% Modified: Palamedes version 1.9.1 (NP)
+% Modified to check whether likelihood function contains true maximum. If
+% not, function will identify which limiting function can be approached by
+% psychometric function. 'iAPLE' fitting scheme disabled.
+%
+% PAL_PFML_BootstrapParametric.m:
+% Modified: Palamedes version 1.9.1 (NP)
+% Modified to check whether likelihood functions of bootstrap simulations
+% contain true maximum. If not, function will identify which limiting 
+% function can be approached by psychometric function. If any simulation
+% does not have true maximum, a finite value cannot be assigned to some
+% parameters and no SE can be determined. 'iAPLE' fitting scheme disabled.
+%
+% PAL_PFML_BootstrapNonParametric.m:
+% Modified: Palamedes version 1.9.1 (NP)
+% Modified to check whether likelihood functions of bootstrap simulations
+% contain true maximum. If not, function will identify which limiting 
+% function can be approached by psychometric function. If any simulation
+% does not have true maximum, a finite value cannot be assigned to some
+% parameters and no SE can be determined. 'iAPLE' fitting scheme disabled.
+%
+% PAL_PFML_GoodnessOfFit.m:
+% Modified: Palamedes version 1.9.1 (NP)
+% Modified to check whether likelihood functions of MS simulations
+% contain true maximum. If not, function will identify which limiting 
+% function can be approached by psychometric function. These will have
+% finite-valued and meaningful log-likelihood values and pDev can be
+% determined even if some simulated fits 'fail'.  'iAPLE' fitting scheme 
+% disabled.
+%
+% PAL_PFML_CheckLimits.m:
+% Modified: Palamedes version 1.9.1 (NP)
+% The actual work done by this function now happens in sub-routine
+% PAL_PFML_CheckLimitsEngine.m
+%
+% PAL_PFML_CheckLimitsEngine.m:
+% Introduced: Palamedes version 1.9.1 (NP)
+% See previous entry

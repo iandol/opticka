@@ -40,14 +40,11 @@ if strncmpi(wish,'S',1)
     disp(['slopes, and lapse rates, in the manner advocated by Wichmann & Hill (2001a).']);
     disp(['''jAPLE'' is identical to ''nAPLE'' except that it assumes that the highest']);
     disp(['stimulus intensity is at an asymptotic level and thus that an error observed']);
-    disp(['at this intensity can only be due to lapses. ''iAPLE'' assumes the asymptotic']);
-    disp(['level also, estimates the lapse rate from errors made at this intensity only, ']);
-    disp(['then uses observations made at other intensities to estimate threshold and']);    
-    disp(['slope while fixing the lapse rate at the obtained estimate.' sprintf('\n')]);    
+    disp(['at this intensity can only be due to lapses.' sprintf('\n')]);    
     
     lapseFit = '';
-    while ~strncmpi(lapseFit,'nAPLE',3) && ~strncmpi(lapseFit,'iAPLE',3) && ~strncmpi(lapseFit,'jAPLE',3)
-        lapseFit = input('How do you wish to fit lapse rates? [nAPLE/iAPLE/jAPLE]?: ','s');
+    while ~strncmpi(lapseFit,'nAPLE',3) && ~strncmpi(lapseFit,'jAPLE',3)
+        lapseFit = input('How do you wish to fit lapse rates? [nAPLE/jAPLE]?: ','s');
     end
 
     %prepare plot
@@ -84,7 +81,7 @@ if strncmpi(wish,'S',1)
 
     if ~exitflag
         disp('Psychometric Function Fit failed! Exiting...');
-        break
+        return
     end
     
     plot(h,-2.5:.01:10.5,PF(paramsFitted,-2.5:.01:10.5),'-','color',[0 .7 0],'linewidth',2);
@@ -150,15 +147,12 @@ if strncmpi(wish,'M',1)
     disp(['slopes, and lapse rates, in the manner advocated by Wichmann & Hill (2001a).']);
     disp(['''jAPLE'' is identical to ''nAPLE'' except that it assumes that the highest']);
     disp(['stimulus intensity is at an asymptotic level and thus that an error observed']);
-    disp(['at this intensity can only be due to lapses. ''iAPLE'' assumes the asymptotic']);
-    disp(['level also, estimates the lapse rate from errors made at this intensity only, ']);
-    disp(['then uses observations made at other intensities to estimate threshold and']);    
-    disp(['slope while fixing the lapse rate at the obtained estimate.' sprintf('\n')]);    
+    disp(['at this intensity can only be due to lapses.' sprintf('\n')]);    
     
 
     lapseFit = '';
-    while ~strncmpi(lapseFit,'nAPLE',3) && ~strncmpi(lapseFit,'iAPLE',3) && ~strncmpi(lapseFit,'jAPLE',3)
-        lapseFit = input('How do you wish to fit lapse rates? [nAPLE/iAPLE/jAPLE]?: ','s');
+    while ~strncmpi(lapseFit,'nAPLE',3) && ~strncmpi(lapseFit,'jAPLE',3)
+        lapseFit = input('How do you wish to fit lapse rates? [nAPLE/jAPLE]?: ','s');
     end
 
     %prepare plots
@@ -211,7 +205,7 @@ if strncmpi(wish,'M',1)
   
     if ~exitflag
         disp('Fit to fuller model failed! Exiting...');
-        break
+        return
     end
     
     
@@ -246,7 +240,7 @@ if strncmpi(wish,'M',1)
 
     if ~exitflag
         disp('Fit to lesser model failed! Exiting...');
-        break
+        return
     end
     
     disp(sprintf('\n'))

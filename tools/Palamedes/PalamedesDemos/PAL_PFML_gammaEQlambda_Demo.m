@@ -29,7 +29,7 @@ rand('state',sum(100*clock));
 disp([sprintf('\n')  'A Psychometric Function model will be fit in several ways: (1) All 4']);
 disp(['parameters are free to vary [green curve] (2)guess and lapse rate are']);
 disp(['constrained to be equal [red curve] (3) guess and lapse rate are constrained']);
-disp(['to be equal and ''iAPLE'' option to incorporate lapse rates is used [blue']);
+disp(['to be equal and ''jAPLE'' option to incorporate lapse rates is used [blue']);
 disp(['curve]. Curves are in most cases here near identical.']);
 disp(['This demo will generate a new set of data each time it is run. Occassionally,']);
 disp(['fits may fail.']);
@@ -81,7 +81,7 @@ paramsFree = [1 1 1 1]; %[threshold slope guess lapse] 1: free, 0:fixed
 
 if ~exitflag
     disp('Psychometric Function Fit failed! Exiting...');
-    break
+    return
 end
 
 %Add fitted model to plot
@@ -107,7 +107,7 @@ gammaEQlambda = logical(true); %or: gammaEQlambda = 1;
 
 if ~exitflag
     disp('Psychometric Function Fit failed! Exiting...');
-    break
+    return
 end
 
 %Add fitted model to plot
@@ -123,21 +123,18 @@ disp(['Guess Rate: ' num2str(paramsFitted(3),'%4.3f')]);
 disp(['Lapse Rate: ' num2str(paramsFitted(4),'%4.3f')]);
 disp(sprintf('\n'));    
 
-%Fit model with 'gammaEQlambda' set to TRUE and 'lapseFit' set to 'iAPLE':
-%'iAPLE': Highest stimulus intensities (and lowest when gammaEQlambda is set
+%Fit model with 'gammaEQlambda' set to TRUE and 'lapseFit' set to 'jAPLE':
+%'jAPLE': Highest stimulus intensities (and lowest when gammaEQlambda is set
 %to TRUE are assumed to be at asymptotic levels. Negative responses at the 
 %highest intensity (and positive responses at the lowest intensity) are
-%assumed to have happened due to lapses exclusively. Lapses are fit based
-%on highest (and lowest) intensities, then lapse (and guess) rate is fixed
-%while threshold and slope are estimated based on responses at other
-%intensities.
+%assumed to have happened due to lapses exclusively.
 %(the vector assigned to searchGrid.gamma above will now be ignored).
 [paramsFitted LL exitflag] = PAL_PFML_Fit(StimLevels, NumPos, OutOfNum, searchGrid, ...
-    paramsFree, PF,'lapseLimits',[0 1],'searchOptions',options,'gammaEQlambda',gammaEQlambda,'lapseFit','iAPLE');
+    paramsFree, PF,'lapseLimits',[0 1],'searchOptions',options,'gammaEQlambda',gammaEQlambda,'lapseFit','jAPLE');
 
 if ~exitflag
     disp('Psychometric Function Fit failed! Exiting...');
-    break
+    return
 end
 
 %Add fitted model to plot
@@ -146,7 +143,7 @@ plot(h,-10.5:.01:10.5,PF(paramsFitted,-10.5:.01:10.5),'-','color',[0 0 0.7],'lin
 %report parameter estimates
 disp(sprintf('\n'));
 disp(['Parameter estimates when fitted with gamma and lambda constrained']);
-disp(['to be equal and ''lapseFit'' set to ''iAPLE'':']);
+disp(['to be equal and ''lapseFit'' set to ''jAPLE'':']);
 disp(['Threshold: ' num2str(paramsFitted(1),'%4.3f')]);
 disp(['Slope: ' num2str(paramsFitted(2),'%4.3f')]);
 disp(['Guess Rate: ' num2str(paramsFitted(3),'%4.3f')]);
@@ -159,7 +156,7 @@ if strcmpi(wish,'y')
     B = input('Type number of desired simulations B (try low, things take a while): ');
 
     [SD paramsSim LLSim converged] = PAL_PFML_BootstrapNonParametric(StimLevels, NumPos, OutOfNum, ...
-    [],paramsFree, B, PF, 'lapseLimits',[0 1], 'searchGrid', searchGrid,'gammaEQlambda',gammaEQlambda,'lapseFit','iAPLE');
+    [],paramsFree, B, PF, 'lapseLimits',[0 1], 'searchGrid', searchGrid,'gammaEQlambda',gammaEQlambda,'lapseFit','jAPLE');
 
     disp([ sprintf('\n') 'SE for the threshold: ' num2str(SD(1),'%4.3f')]);
     disp(['SE for the slope: ' num2str(SD(2),'%4.3f')]);
@@ -172,7 +169,7 @@ if strcmpi(wish,'y')
     B = input('Type number of desired simulations B (try low, things take a while): ');
 
     [SD paramsSim LLSim converged] = PAL_PFML_BootstrapParametric(StimLevels, OutOfNum, ...
-    paramsFitted, paramsFree, B, PF, 'lapseLimits',[0 1], 'searchGrid', searchGrid,'gammaEQlambda',gammaEQlambda,'lapseFit','iAPLE');
+    paramsFitted, paramsFree, B, PF, 'lapseLimits',[0 1], 'searchGrid', searchGrid,'gammaEQlambda',gammaEQlambda,'lapseFit','jAPLE');
 
     disp([ sprintf('\n') 'SE for the threshold: ' num2str(SD(1),'%4.3f')]);
     disp(['SE for the slope: ' num2str(SD(2),'%4.3f')]);
@@ -185,7 +182,7 @@ if strcmpi(wish,'y')
     B = input('Type number of desired simulations B (try low, things take a while): ');
 
     [Dev pDev DevSim converged] = PAL_PFML_GoodnessOfFit(StimLevels, NumPos, OutOfNum, ...
-    paramsFitted, paramsFree, B, PF, 'searchGrid', searchGrid, 'lapseLimits',[0 1],'gammaEQlambda',gammaEQlambda,'lapseFit','iAPLE');
+    paramsFitted, paramsFree, B, PF, 'searchGrid', searchGrid, 'lapseLimits',[0 1],'gammaEQlambda',gammaEQlambda,'lapseFit','jAPLE');
 
     disp([sprintf('\n') 'Goodness-of-fit by Monte Carlo: ' num2str(pDev,'%4.4f')])
 

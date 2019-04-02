@@ -111,6 +111,33 @@
 %   then modified. See example of usage in PAL_PFML_Fit. For more 
 %   information type PAL_minimize('options','help').
 %
+%       If the likelihood function contains a global maximum (and assuming 
+%       that an appropriate search grid is used), the fitting procedure 
+%       will find the global maximum. However, sometimes the likelihood 
+%       function does not contain a global maximum. This situation would 
+%       occasionally result in 'false' convergences (procedure claims to 
+%       have found global maximum but has not). Starting in Palamedes 
+%       version 1.10.0 fitting procedures will, by default, check whether a 
+%       fit corresponds to a global maximum. If not, the procedure will 
+%       identify the best-fitting function that can be asymptotically 
+%       approached by the PF (this will be either a step function or a 
+%       constant function). Even though this poses problems for assigning 
+%       finite values to maximum-likelihood parameter estimates, the log-
+%       likelihood value for such a function is finite and can be 
+%       asymptotically approached by a psychometric function. Thus,
+%       the absence of a true maximum is not really a problem for 
+%       determining Goodness-of-Fit based on simulated log-likelihood
+%       values (see www.palamedestoolbox.understandingfitting.html for
+%       more information). Even though there is really no reason to do so, 
+%       user may override the default behavior of checking whether true 
+%       maximum exists by using the 'checkLimits' option followed by 0 (or 
+%       logical false). It is important to note that the lack of a true
+%       maximum in the likelihood may be the result of 'Too much model, too 
+%       little data' (i.e., one is trying to estimate parameters that the 
+%       data do not contain enough information on). A better solution
+%       is to either get more data or fit a simpler model. Another option
+%       is to use a Bayesian fitting approach.
+%
 %Example:
 %
 %   PF = @PAL_Logistic;
@@ -139,7 +166,7 @@
 %
 % Introduced: Palemedes version 1.0.0 (NP)
 % Modified: Palamedes version 1.0.2, 1.1.0, 1.2.0, 1.3.9, 1.3.1, 1.4.0,
-%   1.6.3, 1.8.1 (see History.m)
+%   1.6.3, 1.8.1, 1.9.1 (see History.m)
 
 function [Dev, pDev, DevSim, converged] = PAL_PFML_GoodnessOfFit(StimLevels, NumPos, OutOfNum, paramsValues, paramsFree, B, PF, varargin)
 
@@ -150,8 +177,9 @@ lapseLimits = [];
 guessLimits = [];
 lapseFit = 'default';
 gammaEQlambda = logical(false);
+checkLimits = paramsFree(2);
 
-converged = false(B,1);
+converged = zeros(B,1);
 DevSim = zeros(B,1);
 
 mTrTflag = false;
@@ -193,11 +221,19 @@ if ~isempty(varargin)
             valid = 1;
         end        
         if strncmpi(varargin{n}, 'lapseFit',6)
-            if paramsFree(4) == 0
-                warning('PALAMEDES:invalidOption','Lapse rate is not a free parameter: ''LapseFit'' argument ignored');
+            if paramsFree(4) == 0  && ~strncmp(varargin{n+1},'def',3)
+                warning('PALAMEDES:invalidOption','Lapse rate is not a free parameter: ''LapseFit'' argument ignored');   
             else
-                lapseFit = varargin{n+1};
-            end
+                if strncmpi(varargin{n+1}, 'nAPLE',5) || strncmpi(varargin{n+1}, 'jAPLE',5) || strncmpi(varargin{n+1}, 'default',5)
+                    lapseFit = varargin{n+1};
+                else 
+                    if strncmpi(varargin{n+1}, 'iAPLE',5)
+                        warning('PALAMEDES:invalidOption','iAPLE fitting no longer supported, using jAPLE fitting instead (iAPLE instead of jAPLE fitting is hard to justify anyway).');
+                    else
+                        warning('PALAMEDES:invalidOption','%s is not a valid option for ''lapseFit''. ignored', varargin{n+1});   
+                    end
+                end                
+            end 
             valid = 1;
         end
         if strncmpi(varargin{n}, 'gammaEQlambda',6)
@@ -209,6 +245,10 @@ if ~isempty(varargin)
                 end                
             valid = 1;
             end
+        end  
+        if strncmpi(varargin{n}, 'checkLimits',6)
+            checkLimits = varargin{n+1};
+            valid = 1;
         end        
         if valid == 0
             warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
@@ -329,24 +369,42 @@ for b = 1:B
 
     end    
     
-    [paramsValuesSim, trash, converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, paramsGuess, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
+    [paramsValuesSim, trash, converged(b)] = PAL_PFML_Fit(StimLevels, NumPosSim, OutOfNum, paramsGuess, paramsFree, PF, 'SearchOptions', options,'lapseLimits',lapseLimits,'guessLimits',guessLimits,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda,'checkLimits',checkLimits);
 
     negLLConSim = PAL_PFML_negLL([], paramsValuesSim, [0 0 0 0], StimLevels, NumPosSim, OutOfNum, PF,'lapseFit',lapseFit,'gammaEQlambda',gammaEQlambda);
     negLLAugSim = PAL_PFML_negLLNonParametric(NumPosSim, OutOfNum);
     DevSim(b) = 2*(negLLConSim-negLLAugSim);
-    if ~converged(b)
+    if converged(b) ~= 1
         warning('PALAMEDES:convergeFail','Fit to simulation %s of %s did not converge.',int2str(b), int2str(B));
     end
 
 end
 
-exitflag = sum(converged) == B;
-if exitflag ~= 1
-    message = ['Use (or adjust use of) ''searchGrid'' option. In case this does not work, '];
-    message = ['a global maximum in the likelihood function may not exist.'];
-    message = [message 'See www.palamedestoolbox.org/understandingfitting.html for more '];
-    message = [message 'information'];
-    warning('PALAMEDES:convergeFail',['Only %s of %s simulations converged. ' message],int2str(sum(converged)), int2str(B));
+if any(converged ~= 1)
+    exitflag = 0;
+    message = [char(10), char(10), 'Only %s of %s simulations converged successfully. ', char(10)];
+    message = [message, 'Only fits for which entry in ''converged'' equals 1 were successful (i.e.,', char(10)];
+    message = [message, 'a global maximum in likelihood function was found).', char(10)];
+    message = [message, '%s simulations resulted in scenario -1', char(10)];
+    message = [message, '%s simulations resulted in scenario -2', char(10)];
+    message = [message, '%s simulations resulted in scenario -3', char(10)];
+    message = [message, 'However, this is not really a problem for interpretation of Dev or pDev', char(10)];
+    message = [message, 'values (all simulated log-likelihood values can be approached asymptotically ', char(10)];
+    message = [message, 'by the model).', char(10)];
+    message = [message, 'Nevertheless, particularly elegant it is not.', char(10)];
+    message = [message, 'See www.palamedestoolbox.org/understandingfitting.html for more '];
+    message = [message, 'information', char(10)];
+    message = [message, 'Some possible solutions:', char(10)];
+    message = [message, '-Adjust the searchGrid option.', char(10)];
+    message = [message, '-Fix one or more parameters (lapse rate is a good first choice)', char(10)];
+    message = [message, '-Collect more data', char(10)];
+    if ~checkLimits
+        message = [message, 'Use ''checkLimits'' option in this function to get a better', char(10)];    
+        message = [message, 'idea of why fits failed (type ''help PAL_PFML_GoodnessOfFit'').', char(10)];    
+    end
+    warning('PALAMEDES:convergeFail',message,int2str(sum(converged == 1)), int2str(B),int2str(sum(converged == -1)),int2str(sum(converged == -2)),int2str(sum(converged == -3)));
+else
+    exitflag = 1;    
 end
 
 pDev = length(DevSim(DevSim>Dev))/B;
