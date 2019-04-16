@@ -517,14 +517,16 @@ classdef screenManager < optickaCore
 			if ~exist('keepOpen','var') || isempty(keepOpen)
 				keepOpen = true;
 			end
-			if ~exist('port','var')
-				ret = BitsPlusPlus('OpenBits#');
-				if ret == 1; connected = true; end
-				if ~keepOpen; BitsPlusPlus('Close'); end
-			else
-				ret = BitsPlusPlus('OpenBits#',port);
-				if ret == 1; connected = true; end
-				if ~keepOpen; BitsPlusPlus('Close'); end
+			try
+				if ~exist('port','var')
+					ret = BitsPlusPlus('OpenBits#');
+					if ret == 1; connected = true; end
+					if ~keepOpen; BitsPlusPlus('Close'); end
+				else
+					ret = BitsPlusPlus('OpenBits#',port);
+					if ret == 1; connected = true; end
+					if ~keepOpen; BitsPlusPlus('Close'); end
+				end
 			end
 			obj.isPlusPlus = connected;
 		end
