@@ -370,7 +370,7 @@ classdef screenManager < optickaCore
 					thisScreen = forceScreen;
 				end
 				
-				[obj.win] = PsychImaging('OpenWindow', thisScreen, obj.backgroundColour, winSize, [], obj.doubleBuffer+1,[],obj.antiAlias);
+				[obj.win, obj.winRect] = PsychImaging('OpenWindow', thisScreen, obj.backgroundColour, winSize, [], obj.doubleBuffer+1,[],obj.antiAlias);
 				
 				tL.screenLog.postOpenWindow=GetSecs;
 				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
@@ -391,6 +391,7 @@ classdef screenManager < optickaCore
 				end
 				
 				obj.screenVals.win = obj.win; %make a copy
+				obj.screenVals.winRect = obj.winRect; %make a copy
 				
 				Priority(MaxPriority(obj.win)); %bump our priority to maximum allowed
 				
@@ -1010,8 +1011,8 @@ classdef screenManager < optickaCore
 				end
 				if ~exist([homep filesep 'MatlabFiles' filesep 'Movie' filesep],'dir')
 					mkdir([homep filesep 'MatlabFiles' filesep 'Movie' filesep])
-					obj.movieSettings.moviepath = [homep filesep 'MatlabFiles' filesep 'Movie' filesep];
 				end
+				obj.movieSettings.moviepath = [homep filesep 'MatlabFiles' filesep 'Movie' filesep];
 				switch obj.movieSettings.type
 					case 1
 						if ispc || isunix || isempty(obj.movieSettings.codec)
@@ -1019,11 +1020,9 @@ classdef screenManager < optickaCore
 						else
 							settings = ['EncodingQuality=1; CodecFOURCC=' obj.movieSettings.codec];
 						end
-						obj.movieSettings.movieFile = [obj.movieSettings.moviepath 'Movie' datestr(clock) '.mov'];
+						obj.movieSettings.movieFile = [obj.movieSettings.moviepath 'Movie' datestr(now,'dd-mm-yyyy-HH-MM-SS') '.mov'];
 						obj.moviePtr = Screen('CreateMovie', obj.win,...
-							obj.movieSettings.movieFile,...
-							obj.movieSettings.size(1), obj.movieSettings.size(2), ...
-							obj.screenVals.fps, settings);
+							obj.movieSettings.movieFile);
 					case 2
 						obj.movieMat = zeros(obj.movieSettings.size(2),obj.movieSettings.size(1),3,obj.movieSettings.nFrames);
 				end
@@ -1082,7 +1081,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function playMovie(obj)
-			if obj.movieSettings.record == 1  && obj.movieSettings.type == 2 && exist('implay','file') && ~isempty(obj.movieSettings.movieFile)
+			if obj.movieSettings.record == true  && obj.movieSettings.type == 2 && exist('implay','file') && ~isempty(obj.movieSettings.movieFile)
 				try %#ok<TRYNC>
 					mimg = load(obj.movieSettings.movieFile);
 					implay(mimg);
