@@ -194,14 +194,6 @@ classdef screenManager < optickaCore
 			
 			obj.screenVals = struct();
 			
-			% initialise our movie settings
-			obj.movieSettings.loop = Inf;
-			obj.movieSettings.record = 0;
-			obj.movieSettings.size = [400 400];
-			obj.movieSettings.quality = 0;
-			obj.movieSettings.nFrames = 100;
-			obj.movieSettings.type = 1;
-			obj.movieSettings.codec = 'rle '; %space is important for 'rle '
 			
 			%get the gammatable and dac information
 			[obj.screenVals.gammaTable,obj.screenVals.dacBits,obj.screenVals.lutSize]=Screen('ReadNormalizedGammaTable', obj.screen);
@@ -219,6 +211,16 @@ classdef screenManager < optickaCore
 				obj.screenVals.fps = 60;
 			end
 			obj.screenVals.ifi=1/obj.screenVals.fps;
+			
+			% initialise our movie settings
+			obj.movieSettings.loop = Inf;
+			obj.movieSettings.record = false;
+			obj.movieSettings.size = [600 600];
+			obj.movieSettings.fps = 30;
+			obj.movieSettings.quality = 0.7;
+			obj.movieSettings.nFrames = obj.screenVals.fps * 2;
+			obj.movieSettings.type = 1;
+			obj.movieSettings.codec = 'x264enc'; %space is important for 'rle '
 			
 			%Screen('Preference', 'TextRenderer', 0); %fast text renderer
 			
@@ -603,6 +605,7 @@ classdef screenManager < optickaCore
 				if obj.isPlusPlus
 					BitsPlusPlus('Close');
 				end
+				obj.finaliseMovie(); obj.moviePtr = [];
 				Screen('Close');
 				Screen('CloseAll');
 				obj.win=[]; 
@@ -1015,14 +1018,17 @@ classdef screenManager < optickaCore
 				obj.movieSettings.moviepath = [homep filesep 'MatlabFiles' filesep 'Movie' filesep];
 				switch obj.movieSettings.type
 					case 1
-						if ispc || isunix || isempty(obj.movieSettings.codec)
-							settings = 'EncodingQuality=1';
+						if IsLinux || IsOSX
+							settings = [':CodecType=DEFAULTencoder Videoquality=' num2str(obj.movieSettings.quality)];
 						else
-							settings = ['EncodingQuality=1; CodecFOURCC=' obj.movieSettings.codec];
+							settings = ':CodecType=theoraenc';
 						end
 						obj.movieSettings.movieFile = [obj.movieSettings.moviepath 'Movie' datestr(now,'dd-mm-yyyy-HH-MM-SS') '.mov'];
 						obj.moviePtr = Screen('CreateMovie', obj.win,...
-							obj.movieSettings.movieFile);
+							obj.movieSettings.movieFile,...
+							obj.movieSettings.size(1), obj.movieSettings.size(2),...
+							obj.movieSettings.fps, settings);
+						fprintf(['\n---> screenManager: Movie will be saved to ' obj.movieSettings.movieFile '\n']);
 					case 2
 						obj.movieMat = zeros(obj.movieSettings.size(2),obj.movieSettings.size(1),3,obj.movieSettings.nFrames);
 				end
@@ -1040,7 +1046,7 @@ classdef screenManager < optickaCore
 				if obj.movieSettings.loop <= obj.movieSettings.nFrames
 					switch obj.movieSettings.type
 						case 1
-							Screen('AddFrameToMovie', obj.win, obj.movieSettings.outsize, 'frontBuffer', obj.movieSettings.quality, 3);
+							Screen('AddFrameToMovie', obj.win, [], 'frontBuffer', obj.moviePtr);
 						case 2
 							obj.movieMat(:,:,:,obj.movieSettings.loop)=Screen('GetImage', obj.win, obj.movieSettings.outsize, 'frontBuffer', obj.movieSettings.quality, 3);
 					end
@@ -1056,22 +1062,23 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function finaliseMovie(obj,wasError)
-			if obj.movieSettings.record == 1
+			if obj.movieSettings.record == true
 				switch obj.movieSettings.type
 					case 1
 						if ~isempty(obj.moviePtr)
 							Screen('FinalizeMovie', obj.moviePtr);
+							fprintf(['\n---> screenManager: movie saved to ' obj.movieSettings.movieFile '\n']);
 						end
 					case 2
-						if wasError == true
-							
-						else
-							save([obj.movieSettings.moviepath 'Movie' datestr(clock) '.mat'],'mimg');
-						end
+% 						if wasError == true
+% 							
+% 						else
+% 							save([obj.movieSettings.moviepath 'Movie' datestr(clock) '.mat'],'mimg');
+% 						end
 				end
-				obj.moviePtr = [];
-				obj.movieMat = [];
 			end
+			obj.moviePtr = [];
+			obj.movieMat = [];
 		end
 		
 		% ===================================================================
