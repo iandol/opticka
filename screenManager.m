@@ -608,7 +608,6 @@ classdef screenManager < optickaCore
 				end
 				obj.finaliseMovie(); obj.moviePtr = [];
 				Screen('Close');
-				Screen('CloseAll');
 				obj.win=[]; 
 				if isfield(obj.screenVals,'win');rmfield(obj.screenVals,'win');end
 				obj.isOpen = false;
@@ -1017,8 +1016,13 @@ classdef screenManager < optickaCore
 				obj.movieSettings.moviepath = [homep filesep 'MatlabFiles' filesep 'Movie' filesep];
 				switch obj.movieSettings.type
 					case 1
-						settings = sprintf(':CodecType=%s Profile=3 Keyframe=%g Videoquality=%g',...
-							obj.movieSettings.codec, obj.movieSettings.keyframe, obj.movieSettings.quality);
+						if isempty(obj.movieSettings.codec)
+							settings = sprintf(':CodecSettings= Profile=3 Keyframe=%g Videoquality=%g',...
+								obj.movieSettings.keyframe, obj.movieSettings.quality);
+						else
+							settings = sprintf(':CodecType=%s Profile=3 Keyframe=%g Videoquality=%g',...
+								obj.movieSettings.codec, obj.movieSettings.keyframe, obj.movieSettings.quality);
+						end
 						obj.movieSettings.movieFile = [obj.movieSettings.moviepath 'Movie' datestr(now,'dd-mm-yyyy-HH-MM-SS') '.mov'];
 						obj.moviePtr = Screen('CreateMovie', obj.win,...
 							obj.movieSettings.movieFile,...
