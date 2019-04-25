@@ -218,6 +218,7 @@ classdef screenManager < optickaCore
 			obj.movieSettings.size = [600 600];
 			obj.movieSettings.fps = 30;
 			obj.movieSettings.quality = 0.7;
+			obj.movieSettings.keyframe = 5;
 			obj.movieSettings.nFrames = obj.screenVals.fps * 2;
 			obj.movieSettings.type = 1;
 			obj.movieSettings.codec = 'x264enc'; %space is important for 'rle '
@@ -1002,8 +1003,6 @@ classdef screenManager < optickaCore
 			% Set up the movie settings
 			if obj.movieSettings.record == true
 				obj.movieSettings.outsize=CenterRect([0 0 obj.movieSettings.size(1) obj.movieSettings.size(2)],obj.winRect);
-				disp(num2str(obj.movieSettings.outsize));
-				disp('---');
 				obj.movieSettings.loop=1;
 				if ismac || isunix
 					oldp = cd('~');
@@ -1018,17 +1017,15 @@ classdef screenManager < optickaCore
 				obj.movieSettings.moviepath = [homep filesep 'MatlabFiles' filesep 'Movie' filesep];
 				switch obj.movieSettings.type
 					case 1
-						if IsLinux || IsOSX
-							settings = [':CodecType=DEFAULTencoder Videoquality=' num2str(obj.movieSettings.quality)];
-						else
-							settings = ':CodecType=theoraenc';
-						end
+						settings = sprintf(':CodecType=%s Profile=3 Keyframe=%g Videoquality=%g',...
+							obj.movieSettings.codec, obj.movieSettings.keyframe, obj.movieSettings.quality);
 						obj.movieSettings.movieFile = [obj.movieSettings.moviepath 'Movie' datestr(now,'dd-mm-yyyy-HH-MM-SS') '.mov'];
 						obj.moviePtr = Screen('CreateMovie', obj.win,...
 							obj.movieSettings.movieFile,...
 							obj.movieSettings.size(1), obj.movieSettings.size(2),...
 							obj.movieSettings.fps, settings);
-						fprintf(['\n---> screenManager: Movie will be saved to ' obj.movieSettings.movieFile '\n']);
+						fprintf('\n---> screenManager: Movie [enc:%s] [rect:%s] will be saved to:\n\t%s\n',settings,...
+							num2str(obj.movieSettings.outsize),obj.movieSettings.movieFile);
 					case 2
 						obj.movieMat = zeros(obj.movieSettings.size(2),obj.movieSettings.size(1),3,obj.movieSettings.nFrames);
 				end
@@ -1046,9 +1043,10 @@ classdef screenManager < optickaCore
 				if obj.movieSettings.loop <= obj.movieSettings.nFrames
 					switch obj.movieSettings.type
 						case 1
-							Screen('AddFrameToMovie', obj.win, [], 'frontBuffer', obj.moviePtr);
+							Screen('AddFrameToMovie', obj.win, obj.movieSettings.outsize, 'frontBuffer', obj.moviePtr);
 						case 2
-							obj.movieMat(:,:,:,obj.movieSettings.loop)=Screen('GetImage', obj.win, obj.movieSettings.outsize, 'frontBuffer', obj.movieSettings.quality, 3);
+							obj.movieMat(:,:,:,obj.movieSettings.loop)=Screen('GetImage', obj.win,...
+								obj.movieSettings.outsize, 'frontBuffer', obj.movieSettings.quality, 3);
 					end
 					obj.movieSettings.loop=obj.movieSettings.loop+1;
 				end
