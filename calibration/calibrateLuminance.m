@@ -43,15 +43,15 @@ classdef calibrateLuminance < handle
 		preferI1Pro = false
 		%> specify port to connect to
 		port = '/dev/ttyUSB0'
-		%> test R G and B as seperate curves?
-		testColour = false
-		%> correct overall luminance or the R G B seperately
+		%> test L, R, G and B as seperate curves?
+		testColour = true
+		%> correct R G B seperately (true) or overall luminance (false) 
 		correctColour = false
-		%> which gamma model should opticka select: 1 is simple gamma,
-		%> 2:n are the analysisMethods chosen
-		choice = 2
 		%> methods list to fit to raw luminance values
 		analysisMethods = {'pchipinterp';'linearinterp'}
+		%> which gamma model should opticka select: 1 is simple gamma,
+		%> 2:n are the analysisMethods chosen; 2=pchipinterp
+		choice = 2
 		%> background screen colour
 		backgroundColour = [ 0.5 0.5 0.5 ];
 		%> filename this was saved as
@@ -240,12 +240,13 @@ classdef calibrateLuminance < handle
 				obj.spectroCalLaser(false)
 			end
 			
-			obj.initialCLUT = repmat([0:1/(obj.tableLength-1):1]',1,3); %#ok<NBRAK>
 			psychlasterror('reset');
 			
 			try
 				[obj.oldCLUT, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
+				obj.tableLength = obj.lutSize;
 				BackupCluts;
+				obj.initialCLUT = repmat([0:1/(obj.tableLength-1):1]',1,3); %#ok<NBRAK>
 				Screen('LoadNormalizedGammaTable', obj.win, obj.initialCLUT);
 				
 				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
@@ -277,15 +278,16 @@ classdef calibrateLuminance < handle
 					valsl = length(vals);
 					cout = zeros(valsl,3);
 					if col == 1
+						testname = 'Gray';
 						cout(:,1) = vals;
 						cout(:,2) = vals;
 						cout(:,3) = vals;
 					elseif col == 2
-						cout(:,1) = vals;
+						cout(:,1) = vals;testname = 'Red';
 					elseif col == 3
-						cout(:,2) = vals;
+						cout(:,2) = vals;testname = 'Green';
 					elseif col == 4
-						cout(:,3) = vals;
+						cout(:,3) = vals;testname = 'Blue';
 					end
 					a=1;
 					[~, randomIndex] = sort(rand(valsl, 1));
@@ -314,7 +316,7 @@ classdef calibrateLuminance < handle
 								sp = I1('GetSpectrum')';
 								obj.spectrum(col).in(:,randomIndex(a)) = sp;
 							end
-							fprintf('---> Test #%i: Fraction %g = %g cd/m2\n\n', i, vals(randomIndex(i)), obj.inputValues(col).in(randomIndex(a)));
+							fprintf('---> Test %s #%i: Fraction %g = %g cd/m2\n\n', testname, i, vals(randomIndex(i)), obj.inputValues(col).in(randomIndex(a)));
 						end
 						a = a + 1;
 					end
