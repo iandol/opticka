@@ -24,28 +24,28 @@ classdef getDensity < handle
 		x = []
 		%> our second data group, plotted along the ordinate
 		y = []
+        %> a cell of names for each row
+		xrownames = []
+		%> a cell of names for each row
+		yrownames = []
 		%> number of bootstrap iterations default: 1000
 		nboot = 1000
 		%> function handle to bootstrap default: @mean
-		avgFunction = @nanmean
+		avgFunction = @mean
 		%> P value to use for all statistics
 		alpha = 0.05
 		%> A cell list of the main X and Y data, i.e. {'Control','Drug'}
 		legendtxt = {'Group1','Group2'}
-		%> Add gaussian fits to the histograms? default: true
-		dogauss = true
 		%> if X/Y have more than 1 column, you can detail column names here
 		columnlabels = {'DataSet1'}
+        %> Add gaussian fits to the histograms? default: true
+		dogauss = true
 		%> add jitter to scatterplot? 'x', 'y', 'both', 'equal', 'none'
 		addjitter = 'none'
 		%>  celllist of case names the same length as X/Y
 		cases = []
 		%> are our cases nominal or ordinal?
 		nominalcases = true
-		%> a cell of names for each row
-		xrownames = []
-		%> a cell of names for each row
-		yrownames = []
 		%> remove outliers using 'grubb', 'rosner', 'limit', '3SD' or 'none'
 		dooutlier = 'none'
 		%> rosner outlier number of outliers
@@ -80,7 +80,7 @@ classdef getDensity < handle
 		densityKernel = 'normal'
 		%> density function, 'pdf', 'cdf','icdf', 'survivor', 'cumhazard'
 		densityFunction = 'pdf'
-		%> density bounds; 'unbounded', 'positiive' or 2-element vector for lower and upper
+		%> density bounds; 'unbounded', 'positive' or 2-element vector for lower and upper
 		densityBounds = 'unbounded'
 		%> for multiple columns only run a subset; empty runs all.
 		index = []
@@ -88,6 +88,8 @@ classdef getDensity < handle
 		normaliseScatter = false
 		%> show distribution plot underneath box plot?
 		doDistribution = true
+        %> do a median CI, takes longer if dataset is large...
+        doMedianCI = true
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
@@ -179,7 +181,7 @@ classdef getDensity < handle
 			end
 			for i = 1:nVals
 				idx=obj.workindex(i);
-				tic
+				t0 = tic;
 				xcol=obj.x(:,idx);
 				ycol=obj.y(:,idx);
 				c1 = [0.2 0.2 0.2];
@@ -199,19 +201,18 @@ classdef getDensity < handle
 				h=figure;
 				outs.(fieldn).h = h;
 				set(h,'Color',[1 1 1]);
-				if exist('figpos','file'); figpos(1,[1400 1200]); end
 				t = [obj.columnlabels{:}];
 				set(h,'name',t);
 				
 				pn = panel(h);
 				if obj.isDataEqualLength == false
-					figpos(1,[1000,1000]);
+					if exist('figpos','file'); figpos(1,[1000 1000]); end
 					delete(gca)
 					pn.pack('v',[0.5 0.5]);
 					pn(1).pack('h',[1/3 1/3 -1])
 					pn(2).pack('h',[1/3 -1])
 				else
-					figpos(1,[1200,1000]);
+					if exist('figpos','file'); figpos(1,[1200 1000]); end
 					delete(gca)
 					pn.pack('v',[0.5 0.5]);
 					pn(1).pack('h',[1/3 1/3 -1])
@@ -301,6 +302,7 @@ classdef getDensity < handle
 				pn(py,px).xlabel(obj.columnlabels{idx});
 				pn(py,px).ylabel('Number of Units');
 				pn(py,px).title('Histogram');
+                drawnow;
 				
 				
 				%==========================================DO BOX PLOTS
@@ -310,23 +312,23 @@ classdef getDensity < handle
 				if exist('distributionPlot','file') && obj.doDistribution
 					hold on
 					distributionPlot({xcol,ycol},'colormap',parula,'showMM',2,...
-						'xValues',[0.625 1.625],'histOri','center','distWidth',0.2);
+						'xValues',[0.625 1.625],'histOri','center','distWidth',0.25);
 				end
 				if obj.isDataEqualLength
-					boxplot([xcol ycol],'positions',[1 2],'notch','on','whisker',1,...
+					boxplot([xcol ycol],'positions',[1 2],'notch','on','whisker',1.5,...
 						'labels',obj.legendtxt,'colors','k',...
-						'boxstyle','outline','medianstyle','target',...
-						'widths',0.5,'symbol','ko','OutlierSize',4,'Jitter',0.5);
+						'boxstyle','outline','medianstyle','line',...
+						'widths',0.5,'symbol','k.','OutlierSize',2,'Jitter',0.25);
 				else
 					hold on
-					boxplot(xcol,'positions',1,'notch','on','whisker',1,...
+					boxplot(xcol,'positions',1,'notch','on','whisker',1.5,...
 						'labels',obj.legendtxt{1},'colors',c1,...
-						'boxstyle','outline','medianstyle','target',...
-						'widths',0.5,'symbol','ko','OutlierSize',4,'Jitter',0.5);
-					boxplot(ycol,'positions',2,'notch','on','whisker',1,...
+						'boxstyle','outline','medianstyle','line',...
+						'widths',0.5,'symbol','k.','OutlierSize',2,'Jitter',0.25);
+					boxplot(ycol,'positions',2,'notch','on','whisker',1.5,...
 						'labels',obj.legendtxt{2},'colors',c2,...
-						'boxstyle','outline','medianstyle','target',...
-						'widths',0.5,'symbol','ko','OutlierSize',4,'Jitter',0.5);
+						'boxstyle','outline','medianstyle','line',...
+						'widths',0.5,'symbol','k.','OutlierSize',2,'Jitter',0.25);
 				end
 				pn(py,px).ylabel(obj.columnlabels{idx});
 				axis tight
@@ -336,6 +338,7 @@ classdef getDensity < handle
 				hold off
 				grid on; box on
 				yl1 = ylim; %we check this against the next plot below
+                drawnow;
 				
 				%==========================================DO SCATBOX PLOTS
 				px = 3;
@@ -379,6 +382,7 @@ classdef getDensity < handle
 				ylim([ym1 ym2]);
 				pn(1,3).select()
 				ylim([ym1 ym2]);
+                drawnow;
 				
 				%==========================================DO Correlation SCATTER
 				xcolout = xcol;
@@ -488,6 +492,7 @@ classdef getDensity < handle
 					hold off
 					grid on; box on
 					set(gca,'Layer','top');
+                    drawnow;
 				end
 				
 				%============================Lets measure statistics
@@ -563,36 +568,54 @@ classdef getDensity < handle
 				t=[t 'Lilliefors: ' sprintf('%0.3g', p8) ' / ' sprintf('%0.3g', p9) '\newline'];
 				t=[t 'KSTest: ' sprintf('%0.3g', p10) '\newline'];
 				
-				[xci,xpop]=bootci(obj.nboot,{obj.avgFunction,xcol},'alpha',obj.alpha);
-				[yci,ypop]=bootci(obj.nboot,{obj.avgFunction,ycol},'alpha',obj.alpha);
+                disp('Calculating bootstrap CI...')
+                options = statset('UseParallel',true);
+                t1 = tic;
+				[xci,xpop]=bootci(obj.nboot,{obj.avgFunction,xcol},'alpha',obj.alpha,'Options',options);
+				[yci,ypop]=bootci(obj.nboot,{obj.avgFunction,ycol},'alpha',obj.alpha,'Options',options);
+                fprintf('---> took: %.2g seconds\n',toc(t1));
+                disp('Calculating bootstrap mean...')
+                t1b = tic;
 				xmean = obj.avgFunction(xpop);
 				ymean = obj.avgFunction(ypop);
+                fprintf('---> took: %.2g seconds\n',toc(t1b));
+                
+                t=[t 'BootStrap: ' sprintf('%0.3g', xci(1)) ' < ' sprintf('%0.3g', xmean) ' > ' sprintf('%0.3g', xci(2)) ' | ' sprintf('%0.3g', yci(1)) ' < ' sprintf('%0.3g', ymean) ' > ' sprintf('%0.3g', yci(2))];
 				
-				try
-					[xxci,xxpop]=bootci(obj.nboot,{@median,xcol},'alpha',obj.alpha);
-					[yyci,yypop]=bootci(obj.nboot,{@median,ycol},'alpha',obj.alpha);
-					xxmean = median(xxpop);
-					yymean = median(yypop);
-				end
-				try
-					[xxxci,xxxpop]=bootci(obj.nboot,{@geomean,xcol},'alpha',obj.alpha);
-					[yyyci,yyypop]=bootci(obj.nboot,{@geomean,ycol},'alpha',obj.alpha);
-					xxxmean = geomean(xxxpop);
-					yyymean = geomean(yyypop);
-				end
+                if obj.doMedianCI
+                    try %#ok<*TRYNC>
+                        disp('Calculating median bootstrap CI...')
+                        t2 = tic;
+                        [xxci,xxpop]=bootci(obj.nboot,{@median,xcol},'alpha',obj.alpha,'Options',options);
+                        [yyci,yypop]=bootci(obj.nboot,{@median,ycol},'alpha',obj.alpha,'Options',options);
+                        disp('Calculating bootstrap median...')
+                        xxmean = median(xxpop);
+                        yymean = median(yypop);
+                        fprintf('---> took: %.2g seconds\n',toc(t2));
+                        t=[t '\newlineMedian BS: ' sprintf('%0.3g', xxci(1)) ' < ' sprintf('%0.3g', xxmean) ' > ' sprintf('%0.3g', xxci(2)) ' | ' sprintf('%0.3g', yyci(1)) ' < ' sprintf('%0.3g', yymean) ' > ' sprintf('%0.3g', yyci(2))];
+                    end   
+                    try
+                        disp('Calculating geomean bootstrap CI...')
+                        t3 = tic;
+                        [xxxci,xxxpop]=bootci(obj.nboot,{@geomean,xcol},'alpha',obj.alpha,'Options',options);
+                        [yyyci,yyypop]=bootci(obj.nboot,{@geomean,ycol},'alpha',obj.alpha,'Options',options);
+                        disp('Calculating bootstrap geomean...')
+                        xxxmean = geomean(xxxpop);
+                        yyymean = geomean(yyypop);
+                        fprintf('---> took: %.2g seconds\n',toc(t3));
+                        t=[t '\newlineGeomean BS: ' sprintf('%0.3g', xxxci(1)) ' < ' sprintf('%0.3g', xxxmean) ' > ' sprintf('%0.3g', xxxci(2)) ' | ' sprintf('%0.3g', yyyci(1)) ' < ' sprintf('%0.3g', yyymean) ' > ' sprintf('%0.3g', yyyci(2))];
+                    end
+                end
 				
-				t=[t 'BootStrap: ' sprintf('%0.3g', xci(1)) ' < ' sprintf('%0.3g', xmean) ' > ' sprintf('%0.3g', xci(2)) ' | ' sprintf('%0.3g', yci(1)) ' < ' sprintf('%0.3g', ymean) ' > ' sprintf('%0.3g', yci(2))];
-				if exist('xxci','var') && exist('yyci','var')
-					t=[t '\newlineMedian BS: ' sprintf('%0.3g', xxci(1)) ' < ' sprintf('%0.3g', xxmean) ' > ' sprintf('%0.3g', xxci(2)) ' | ' sprintf('%0.3g', yyci(1)) ' < ' sprintf('%0.3g', yymean) ' > ' sprintf('%0.3g', yyci(2))];
-				end
-				if exist('xxxci','var') && exist('yyyci','var')
-					t=[t '\newlineGeomean BS: ' sprintf('%0.3g', xxxci(1)) ' < ' sprintf('%0.3g', xxxmean) ' > ' sprintf('%0.3g', xxxci(2)) ' | ' sprintf('%0.3g', yyyci(1)) ' < ' sprintf('%0.3g', yyymean) ' > ' sprintf('%0.3g', yyyci(2))];
-				end
-				
+                disp('Calculating KS Density function...')
+                t4 = tic;
 				[fx,xax]=ksdensity(xpop, 'kernel', obj.densityKernel,...
 					'function', obj.densityFunction, 'support', obj.densityBounds);
 				[fy,yax]=ksdensity(ypop, 'kernel', obj.densityKernel,...
 					'function', obj.densityFunction, 'support', obj.densityBounds);
+                fprintf('---> took: %.2g seconds\n',toc(t4));
+                
+                clear xpop ypop xxpop yypop xxxpop yyypop
 				
 				%==========================================DO CDF
 				if obj.isDataEqualLength
@@ -604,26 +627,21 @@ classdef getDensity < handle
 				end
 				pn(py,px).select();
 				
-				% 				h = cdfplot(xcol);
-				% 				set(h,'Color',[0 0 0])
-				% 				hold on
-				% 				h = cdfplot(ycol);
-				% 				set(h,'Color',[1 0 0])
-				% 				hold off
 				hold on
 				[f,x,flo,fup] = ecdf(xcol,'alpha',obj.alpha);
 				flo(1)=0;flo(end)=flo(end-1); fup(1)=0; fup(end)=fup(end-1);
-				patch('XData',[x;flipud(x)],'YData',[flo;flipud(fup)],'FaceColor',[0 0 0],'FaceAlpha',0.1,'EdgeColor','none');
+				patch('XData',[x;flipud(x)],'YData',[flo;flipud(fup)],'FaceColor',[0 0 0],'FaceAlpha',0.2,'EdgeColor','none');
 				stairs(x,f,'k','LineWidth',2);
 				[f,x,flo,fup] = ecdf(ycol,'alpha',obj.alpha);
 				flo(1)=0;flo(end)=flo(end-1); fup(1)=0; fup(end)=fup(end-1);
-				patch('XData',[x;flipud(x)],'YData',[flo;flipud(fup)],'FaceColor',[1 0 0],'FaceAlpha',0.1,'EdgeColor','none');
+				patch('XData',[x;flipud(x)],'YData',[flo;flipud(fup)],'FaceColor',[1 0 0],'FaceAlpha',0.2,'EdgeColor','none');
 				stairs(x,f,'r','LineWidth',2);
 				hold off
 				
 				grid on; box on
 				pn(py,px).title(['Cumulative Distribution Function, p=' num2str(obj.alpha)]);
 				pn(py,px).xlabel(obj.columnlabels{idx});
+                drawnow;
 				
 				%==========================================Do DENSITY
 				if obj.isDataEqualLength
@@ -697,7 +715,7 @@ classdef getDensity < handle
 				outs.(fieldn).ycolout = ycolout;
 				outs.(fieldn).text = t;
 				
-				fprintf('\n---> getDensity Computation time took: %.2g seconds\n',toc);
+				fprintf('\n---> getDensity Total Computation time took: %.2g seconds\n',toc(t0));
 				
 				obj.pn = pn;
 				
@@ -898,9 +916,10 @@ classdef getDensity < handle
 				for i = 1:length(f)
 					col = value.(f{i});
 					if isnumeric(col) && isvector(col)
-						if ~iscolumn(col)
+                        if any(size(col)==1) && ~iscolumn(col)
 							col = col';
-						end
+                        end
+                        
 						if isempty(firstLength)
 							firstLength = length(col);
 						end
@@ -915,9 +934,9 @@ classdef getDensity < handle
 					obj.columnlabels = names;
 				end
 			elseif isnumeric(value)
-				if ~iscolumn(value)
-					value=value';
-				end
+                if any(size(value)==1) && ~iscolumn(value)
+                    value=value';
+                end
 				value(isnan(value)) = []; %purge nans
 				obj.x = value;
 			elseif istable(value)
@@ -942,7 +961,7 @@ classdef getDensity < handle
 				for i = 1:length(f)
 					col = value.(f{i});
 					if isnumeric(col) && isvector(col)
-						if ~iscolumn(col)
+						if any(size(col)==1) && ~iscolumn(col)
 							col = col';
 						end
 						if isempty(firstLength)
@@ -959,7 +978,7 @@ classdef getDensity < handle
 					obj.columnlabels = names;
 				end
 			elseif isnumeric(value)
-				if ~iscolumn(value)
+				if any(size(value)==1) && ~iscolumn(value)
 					value=value';
 				end
 				value(isnan(value)) = []; %purge nans
@@ -992,7 +1011,7 @@ classdef getDensity < handle
 		%> @param obj this instance object
 		% ===================================================================
 		function set.cases(obj,value)
-			if length(value) ~= length(obj.x(:,1))
+			if isempty(value) || (length(value) ~= length(obj.x(:,1)))
 				obj.cases = [];
 			else
 				if size(value,2) > size(value,1)
@@ -1021,7 +1040,24 @@ classdef getDensity < handle
 			else
 				ret = true;
 			end
-		end
+        end
+        
+        % ===================================================================
+		%> @brief reset the data to empty
+		%>
+		%> @param obj this instance object
+		% ===================================================================
+		function reset(obj)
+			obj.x = [];
+            obj.y = [];
+            obj.xrownames = {};
+            obj.yrownames = {};
+            obj.cases = [];
+            obj.columnlabels = {};
+            obj.runStructure = [];
+            obj.xdata = [];
+            obj.ydata = [];
+        end
 		
 		% ===================================================================
 		%> @brief
@@ -1034,7 +1070,7 @@ classdef getDensity < handle
 			hei = 800;
 			minp = 0.01;
 			maxp = 0.925;
-			if obj.isDataEqualLength;
+			if obj.isDataEqualLength
 				h = figure;
 				figpos(1,[wid hei]);
 				set(h,'Color',[0.9 0.9 0.9])
@@ -1120,54 +1156,65 @@ classdef getDensity < handle
 		% ===================================================================
 		function doCheckData(obj, src, evnt)
 			obj.salutation([evnt.EventName ' event'],'Event is running...',true);
-			if isempty(obj.y)
+            
+            if size(obj.x,2) > 100
+                error('Too many colums of data, remember rows are data and columns are groups!')
+            end
+            
+			if isempty(obj.y) && ~isempty(obj.x)
 				obj.y = zeros(size(obj.x));
-			end
+            end
+            
+            %autogenerate group names
 			if size(obj.x,2) > length(obj.columnlabels)
 				for i = length(obj.columnlabels)+1 : size(obj.x,2)
 					obj.columnlabels{i} = ['DataSet' num2str(i)];
 				end
-			end
+            end
+            
 			if isempty(obj.cases) && ~isempty(obj.uniquecases)
 				obj.uniquecases = [];
-			end
-			if isempty(obj.xrownames) || (length(obj.x) ~= length(obj.xrownames))
-				ntmp = cell(length(obj.x),1);
-				for i = 1:length(obj.x)
-					ntmp{i} = ['Obs_' num2str(i)];
-				end
-				obj.xrownames = ntmp;
-			end
-			if isempty(obj.yrownames) || (length(obj.y) ~= length(obj.yrownames))
-				ntmp = cell(length(obj.y),1);
-				for i = 1:length(obj.y)
-					ntmp{i} = ['Obs_' num2str(i)];
-				end
-				obj.yrownames = ntmp;
-			end
-			warning off
-			if ~isempty(obj.x)
-				if ~isempty(obj.cases) && obj.isDataEqualLength
-					obj.xdata = dataset({obj.x,obj.columnlabels{:}},'ObsNames',obj.xrownames);
-					ntmp = dataset({obj.cases,'Groups'});
-					obj.xdata = horzcat(obj.xdata, ntmp);
-				else
-					obj.xdata = dataset({obj.x,obj.columnlabels{:}},'ObsNames',obj.xrownames);
-				end
-			end
-			if ~isempty(obj.y)
-				if ~isempty(obj.cases) && obj.isDataEqualLength
-					obj.ydata = dataset({obj.y,obj.columnlabels{:}},'ObsNames',obj.yrownames);
-					ntmp = dataset({obj.cases,'Groups'});
-					obj.ydata = horzcat(obj.ydata, ntmp);
-				else
-					obj.ydata = dataset({obj.y,obj.columnlabels{:}},'ObsNames',obj.yrownames);
-				end
-			end
+            end
+            
+            %autogenerate row names
+% 			if isempty(obj.xrownames) || (length(obj.x) ~= length(obj.xrownames))
+% 				ntmp = cell(length(obj.x),1);
+% 				for i = 1:length(obj.x)
+% 					ntmp{i} = ['Obs_' num2str(i)];
+% 				end
+% 				obj.xrownames = ntmp;
+%             end
+% 			if isempty(obj.yrownames) || (length(obj.y) ~= length(obj.yrownames))
+% 				ntmp = cell(length(obj.y),1);
+% 				for i = 1:length(obj.y)
+% 					ntmp{i} = ['Obs_' num2str(i)];
+% 				end
+% 				obj.yrownames = ntmp;
+%             end
+            
+			
+% 			if ~isempty(obj.x)
+% 				if ~isempty(obj.cases) && obj.isDataEqualLength
+% 					obj.xdata = dataset({obj.x,obj.columnlabels{:}},'ObsNames',obj.xrownames);
+% 					ntmp = dataset({obj.cases,'Groups'});
+% 					obj.xdata = horzcat(obj.xdata, ntmp);
+% 				else
+% 					obj.xdata = dataset({obj.x,obj.columnlabels{:}},'ObsNames',obj.xrownames);
+% 				end
+% 			end
+% 			if ~isempty(obj.y)
+% 				if ~isempty(obj.cases) && obj.isDataEqualLength
+% 					obj.ydata = dataset({obj.y,obj.columnlabels{:}},'ObsNames',obj.yrownames);
+% 					ntmp = dataset({obj.cases,'Groups'});
+% 					obj.ydata = horzcat(obj.ydata, ntmp);
+% 				else
+% 					obj.ydata = dataset({obj.y,obj.columnlabels{:}},'ObsNames',obj.yrownames);
+% 				end
+% 			end
 			if length(obj.index) > size(obj.x,2)
 				obj.index = [];
 			end
-			warning on
+			
 		end
 		
 		% ===================================================================
@@ -1590,7 +1637,7 @@ classdef getDensity < handle
 				%location
 				cols=hsv(length(X)+1)*0.5;
 				cols(1,:)=0;
-				jitScale=jitter*0.55; %To scale the patch by the width of the jitter
+				jitScale=jitter*0.9; %To scale the patch by the width of the jitter
 				
 				for k=1:length(X)
 					thisY=Y(:,k);
