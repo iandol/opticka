@@ -147,24 +147,11 @@
 %
 % Introduced: Palamedes version 1.0.0 (NP)
 % Modified: Palamedes version 1.1.1, 1.2.0, 1.4.0, 1.5.0, 1.6.0, 1.6.1, 
-%   1.6.3, 1.8.2 (see History.m)
+%   1.6.3, 1.8.2, 1.10.0 (see History.m)
 
 function PM = PAL_AMPM_setupPM(varargin)
 
 NumOpts = length(varargin);
-
-message = 'As of Palamedes 1.5.0, alpha values vary across rows and beta values vary ';
-message = [message 'across columns of a 2-D (alpha x beta) PM.pdf (in earlier versions this was '];
-message = [message 'vice versa). This will affect behavior of code written for previous versions '];
-message = [message 'ONLY if a user-supplied prior was used and/or if code performed operations '];
-message = [message 'on PM.pdf (e.g., if PM.pdf was plotted using for example ''surf''). Code written for '];
-message = [message 'earlier versions of Palamedes can be made compatible simply '];
-message = [message 'by transposing any user-supplied prior (i.e., prior = prior'';) before passing it to '];
-message = [message 'PAL_AMPM_setupPM and transposing PM.pdf before plotting it '];
-message = [message '(e.g., surf(PM.pdf'') instead of surf(PM.pdf)). Visit '];
-message = [message 'www.palamedestoolbox.org/pal_ampm_incompatibility.html.'];
-warning('PALAMEDES:AMPM_setupPM:priorTranspose',message);
-warning('off','PALAMEDES:AMPM_setupPM:priorTranspose');
 
 if mod(NumOpts,2) == 0
 

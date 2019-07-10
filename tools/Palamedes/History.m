@@ -1567,3 +1567,155 @@
 % PAL_PFML_CheckLimitsEngine.m:
 % Introduced: Palamedes version 1.9.1 (NP)
 % See previous entry
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.10.0 Release May 6, 2019
+%
+% Purpose: (1) Introduce Hierarchical Bayesian fitting of psychometric
+% functions functionality (2) minor maintenance
+%
+%PAL_contains:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Emulates (some) functionality of Matlab's 'contains' function.
+%
+%PAL_environment:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Returns 'octave' or 'matlab' depending on environment from which it is 
+% called.
+%
+%PAL_kde:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Kernel Density Estimation
+%
+%PAL_mat2Rdump:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Write (numeric) matlab structure to R dump format file
+%
+%PAL_mmType:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Simple function that can identify some basic forms of model matrices.
+%
+%PAL_PFHB_buildStan:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Issues OS-appropriate directive to build executable Stan model.
+%
+%PAL_PFHB_data2Rdump:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Add fields .finite, .pInf, and .nInf to 'data' structure, indicating, 
+% respectively, whether values in field x are finite-valued, equal to +Inf 
+% or to -Inf, then writes 'data' to R dump format.
+%
+%PAL_PFHB_dataSortandGroup:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Combines and sorts like trials (i.e., those with identical entries in .x, 
+% .s, and .c fields) in data structure containing fields .x, (stimulus 
+% levels), .y (number of positive responses), .n (number of trials), .s 
+% (integer [1:Number of subjects] identifying subject), and .c (integer 
+% [1:Number of conditions] identifying subject).
+%
+%PAL_PFHB_engineFinished:  
+% Introduced: Palamedes version 1.10.0 (NP)
+% Waits for Stan or JAGS to finish its work.
+%
+%PAL_PFHB_figureInits:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Find reasonable initials for MCMC sampling based on distribution of 
+% trials across stimulus intensities (unless initials were provided by 
+% user).
+%
+%PAL_PFHB_findEngine:  
+% Introduced: Palamedes version 1.10.0 (NP)
+% Find path to Stan or Jags
+%
+%PAL_PFHB_findJagsinFolder:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Find most recent version of JAGS in given folder.
+%
+%PAL_PFHB_findStaninFolderList:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Find Stan in (list of) given folder.
+%
+%PAL_PFHB_fitModel:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Fit psychometric function(s) to single set of data or simultaneously to 
+% multiple sets of data obtained from multiple subjects and/or in multiple 
+% conditions using Bayesian criterion. Requires that JAGS 
+% (http://mcmc-jags.sourceforge.net/) or cmdSTAN ('command Stan')
+% (https://mc-stan.org/users/interfaces/cmdstan.html) is installed.
+% Compatible with Linux, MAC, Windows, Octave and Matlab. Please cite JAGS 
+% or Stan (as well as Palamedes) when you use this function in your 
+% research.
+%
+%PAL_PFHB_getESS:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Determines the effective sample size for MCMC chain.
+%
+%PAL_PFHB_getRhat:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Determines Gelman & Rubin's Rhat statistic (aka, 'potential scale 
+% reduction factor, psrf) based on multiple MCMC chains.
+%
+%PAL_PFHB_getSummaryStats:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Calculates summary statistics for parameters in Bayesian analysis.
+%
+%PAL_PFHB_inspectFit:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Graph data and fit for single subject/condition combination.
+%
+%PAL_PFHB_inspectParam:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Display posterior and diagnostic plots for individual parameters or 
+% difference parameters, return summary statistics.
+%
+%PAL_PFHB_organizeSamples:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Resizes MCMC samples to appropriate sizes and creates a messssage listing 
+% the sampled and derived parameters.
+%
+%PAL_PFHB_readCODA:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Read JAGS output.
+%
+%PAL_PFHB_readStanOutput:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Read Stan output.
+%
+%PAL_PFHB_runEngine:  
+% Introduced: Palamedes version 1.10.0 (NP)
+% Issue OS and engine (stan, JAGS) appropriate command to OS to start MCMC 
+% sampling and wait for sampling to be finished.
+%
+%PAL_PFHB_setupModel:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Set up and initialize 'pfhb' structure based on contents of data 
+% structure and optional arguments.
+%
+%PAL_PFHB_writeInits:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Write sampler initiation values to file.
+%
+%PAL_PFHB_writeModel:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Write Stan or JAGS model according to specifications.
+%
+%PAL_PFHB_writeModelJags:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Write JAGS model according to specifications.
+%
+%PAL_PFHB_writeModelStan:  
+% Introduced: Palamedes version 1.10.0 (NP)
+% Write stan model according to specifications.
+%
+%PAL_PFHB_PAL_PFHB_writeScript:  
+% Introduced: Palamedes version 1.10.0 (NP)
+% Write script for JAGS.
+%
+%PAL_removeSpaces:
+% Introduced: Palamedes version 1.10.0 (NP)
+% Remove superfluous spaces from string
+%
+% PAL_AMPM_setupPM.m:
+% Modified: Palamedes version 1.10.0 (NP)
+% Removed incompatibility message/warning that was introduced in version 
+% 1.5.0
