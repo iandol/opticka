@@ -13,6 +13,8 @@ classdef behaviouralRecord < optickaCore
 		rt2 = []
 		date = []
 		info = ''
+		correctStateName = 'correct'
+		breakStateName = 'breakfix'
 		rewardTime = 150;
 		rewardVolume = 3.6067e-04; %for 1ms
 	end
@@ -154,11 +156,11 @@ classdef behaviouralRecord < optickaCore
 				obj.startTime = clock;
 			end
 			if exist('eL','var') && exist('sM','var')
-				if strcmpi(sM.currentName,'correct')
+				if strcmpi(sM.currentName,obj.correctStateName)
 					obj.response(end+1) = 1;
 					obj.rt1(end+1) = sM.log(end).totalTime;
 					obj.rt2(end+1) = eL.fixInitLength;
-				elseif strcmpi(sM.currentName,'breakfix')
+				elseif strcmpi(sM.currentName,obj.breakStateName)
 					obj.response(end+1) = -1;
 				else
 					obj.response(end+1) = 0;
