@@ -35,7 +35,7 @@ classdef eyelinkManager < optickaCore
 		%> exclusion zone no eye movement allowed inside
 		exclusionZone = []
 		%> tracker update speed (Hz), should be 250 500 1000 2000
-		sampleRate double = 250
+		sampleRate double = 500
 		%> calibration style
 		calibrationStyle char = 'HV5'
 		%> use manual remote calibration
@@ -128,7 +128,7 @@ classdef eyelinkManager < optickaCore
 			obj.modify.calibrationtargetsize = 0.8;
 			obj.modify.calibrationtargetwidth = 0.04;
 			obj.modify.displayCalResults = 1;
-			obj.modify.targetbeep = 0;
+			obj.modify.targetbeep = 1;
 			obj.modify.devicenumber = -1;
 			obj.modify.waitformodereadytime = 500;
 		end

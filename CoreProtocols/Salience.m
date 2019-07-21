@@ -12,48 +12,42 @@
 % tS = general simple struct to hold variables for this run
 
 %------------General Settings-----------------
-tS.rewardTime = 150; %==TTL time in milliseconds
-tS.useTask = true; %==use stimulusSequence (randomised variable task object)
+tS.rewardTime			= 150; %==TTL time in milliseconds
+tS.useTask				= true; %==use stimulusSequence (randomised variable task object)
 tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
-tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
-tS.askForComments = false; %==little UI requestor asks for comments before/after run
-tS.saveData = true; %==save behavioural and eye movement data?
-tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
-tS.name = 'figure-ground'; %==name of this protocol
-%io.verbose = true; %==show the triggers sent in the command window
-%eL.verbose=true;
-bR.correctStateName = 'post';
-
-%-----enable the magstimManager which uses FOI2 of the LabJack
-if tS.useMagStim
-	mS = magstimManager('lJ',rM,'defaultTTL',2);
-	mS.stimulateTime	= 240;
-	mS.frequency		= 0.7;
-	mS.rewardTime		= 25;
-	open(mS);
-end
+tS.recordEyePosition	= false; %==record eye position within PTB, **in addition** to the EDF?
+tS.askForComments		= false; %==little UI requestor asks for comments before/after run
+tS.saveData				= true; %==save behavioural and eye movement data?
+tS.dummyEyelink			= false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.name					= 'salience-task'; %==name of this protocol
+%io.verbose				= true; %==show the triggers sent in the command window
+%eL.verbose				= true;
+bR.correctStateName		= 'post';
 				
 %------------Eyetracker Settings-----------------
-tS.fixX = 0;
-tS.fixY = 0;
-tS.firstFixInit = 1;
-tS.firstFixTime = 0.4;
-tS.firstFixRadius = 2;
-obj.lastXPosition = tS.fixX;
-obj.lastYPosition = tS.fixY;
-tS.strict = true; %do we allow (strict==false) multiple entry/exits of fix window within the time limit
+tS.fixX				= 0;
+tS.fixY				= 0;
+tS.firstFixInit		= 1;
+tS.firstFixTime		= 0.4;
+tS.firstFixRadius	= 2;
+tS.keepFixInit		= 0;
+tS.keepFixTime		= 0.6;
+tS.strict			= true; %do we allow (strict==false) multiple entry/exits of fix window within the time limit
+obj.lastXPosition	= tS.fixX;
+obj.lastYPosition	= tS.fixY;
 
 %------------------------Eyelink setup--------------------------
 eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end %===save EDF file?
 if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
-eL.sampleRate = 250;
+eL.sampleRate = 500;
 eL.calibrationStyle = 'HV5'; %===5 point calibration
 eL.remoteCalibration = false; % manual calibration?
 eL.modify.calibrationtargetcolour = [1 1 1];
 eL.modify.calibrationtargetsize = 1;
 eL.modify.calibrationtargetwidth = 0.05;
 eL.modify.waitformodereadytime = 500;
+eL.modify.targetbeep = 1;
 eL.modify.devicenumber = -1; % -1 = use any keyboard
 
 %Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
@@ -73,20 +67,17 @@ obj.stimuli.tableChoice = 1;
 % this allows us to enable subsets from our stimulus list. So each set is a
 % particular display like fixation spot only, background. During the trial you can
 % use the showSet method of obj.stimuli to change to a particular stimulus set.
-% numbers are the stimuli in the opticka UI
 obj.stimuli.stimulusSets = {[3],[1 2 3],[1 2]};
 obj.stimuli.setChoice = 1;
 showSet(obj.stimuli);
 
-%which stimulus in the list is used for a fixation target? For this protocol it means
-%the subject must fixate this stimulus (the figure is #3 in the list) to get the
-%reward.
+%which stimulus in the list is used for a fixation target? 
 obj.stimuli.fixationChoice = 3;
 
 %----------------------State Machine States-------------------------
 % these are our functions that will execute as the stateMachine runs,
 % in the scope of the runExperiemnt object.
-% each statemachine "function" is a cell array of anonymous functions that enables
+% each "function" is a cell array of anonymous function handles that enables
 % each state to perform a set of actions on entry, during and on exit of that state.
 
 %--------------------pause entry
@@ -117,7 +108,7 @@ prefixEntryFcn = {
 	@()updateFixationValues(eL,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius); %reset 
 	@()hide(obj.stimuli); ...
 	@()trackerClearScreen(eL); ...
-	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
+	@()statusMessage(eL,'Prefixation...'); ... %status text on the eyelink
 	@()logRun(obj,'PREFIX'); ... %fprintf current trial info
 };
 
@@ -132,14 +123,15 @@ prefixExitFcn = {
 	@()edfMessage(eL,'MSG:Hello there! '); ... 
 	@()startRecording(eL); ... %start eyelink recording eye data
 	@()statusMessage(eL,'Get Fixation...'); ... %status text on the eyelink
+	@()trackerDrawFixation(eL); ... 
 	@()needEyelinkSample(obj,true); ...
 	@()changeSet(obj.stimuli,1); ...
 };
 
+%--------------------------------
 %--------------------fixate entry
 fixEntryFcn = { 
 	@()startFixation(io);
-	@()logRun(obj,'FIX'); ... %fprintf current trial info
 };
 
 %--------------------fix within
@@ -154,20 +146,18 @@ initFixFcn = {
 
 %--------------------exit fixation phase
 fixExitFcn = { 
-	@()updateFixationValues(eL,[],[],0,0.6); %reset
-	@()trackerDrawFixation(eL); ... 
-	@()edfMessage(eL,'END_FIX'); ...
+	@()updateFixationValues(eL,[],[],tS.keepFixInit,tS.keepFixTime); %reset
 	@()changeSet(obj.stimuli,2); ...
 	@()trackerClearScreen(eL); ...
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 };
 
-%--------------------what to run when we enter the stim presentation state
+%--------------------------------
+%--------------------STIMFIX
 stimfixEntryFcn = { 
 	@()doStrobe(obj,true);
 	@()doSyncTime(obj); 
-	@()logRun(obj,'STIMFIX'); ... %fprintf current trial info
 };  
 
 %--------------------what to run when we are showing stimuli
@@ -176,21 +166,22 @@ stimfixFcn =  {
 	@()finishDrawing(s); ...
 };
 
+%--------------------test we maintaining fixation
+testFixFcn = { 
+	@()testSearchHoldFixation(eL,'stimonly','incorrect'); 
+};
+
 %--------------------as we exit stim presentation state
 stimfixExitFcn = { 
 	@()sendStrobe(io,255); 
 	@()timedTTL(rM,0,tS.rewardTime); ... % labjack sends a TTL to Crist reward system
 };
 
-%--------------------test we maintaining fixation
-testFixFcn = { 
-	@()testSearchHoldFixation(eL,'stimonly','incorrect'); 
-};
-
-%--------------------what to run when we enter the stim presentation state
-stim2EntryFcn = { 
+%--------------------------------
+%--------------------STIMONLY
+stim2EntryFcn = {
 	@()changeSet(obj.stimuli,3); ...
-	@()logRun(obj,'STIMONLY'); ... %fprintf current trial info
+	@()edfMessage(eL,'END_FIX'); ...
 };  
 
 %--------------------what to run when we are showing stimuli
@@ -204,7 +195,8 @@ stim2ExitFcn = {
 	@()sendStrobe(io,255); 
 };
 
-%--------------------if the subject is correct (small reward)
+%--------------------------------
+%--------------------POST
 postEntryFcn = { 
 	@()edfMessage(eL,'END_RT'); ...
 	@()hide(obj.stimuli); ...
@@ -224,22 +216,24 @@ postExitFcn = {
 	@()statusMessage(eL,'Ending post...'); ... %status text on the eyelink
 	@()edfMessage(eL,'TRIAL_RESULT 1'); ...
 	@()edfMessage(eL,'TRIAL OK'); ...
-	@()stopRecording(eL); ...
+	@()stopRecording(eL); ...stimfix
 	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 	@()checkTaskEnded(obj); ... %check if task is finished
 };
 
-%--------------------incorrect entry
+%--------------------------------
+%--------------------INCORRECT
 incEntryFcn = { 
 	@()edfMessage(eL,'END_RT'); ... %send END_RT to eyelink
+	@()trackerClearScreen(eL); ...
 	@()trackerDrawText(eL,'Incorrect! :-(');
 	@()hide(obj.stimuli); ... %hide fixation spot
 	@()logRun(obj,'INCORRECT'); ... %fprintf current trial info
 }; 
 
-%--------------------our incorrect stimulus
+%--------------------
 incFcn = { 
 
 };
@@ -281,6 +275,7 @@ gridFcn = { @()drawGrid(s); };
 % state. Add multiple rows for skipping multiple state's exit states.
 sM.skipExitStates = {'fixate',{'incorrect','breakfix'}};
 
+
 %==================================================================
 %----------------------State Machine Table-------------------------
 disp('================>> Building state info file <<================')
@@ -302,8 +297,10 @@ stateInfoTmp = { ...
 %----------------------State Machine Table-------------------------
 %==================================================================
 
+
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')
 clear pauseEntryFcn fixEntryFcn fixFcn initFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
 	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
-	calibrateFcn overrideFcn flashFcn gridFcn
+	calibrateFcn overrideFcn flashFcn gridFcn stimfixEntryFcn stimfixFcn testFixFcn stimfixExitFcn ...
+	postEntryFcn postFcn postExitFcn prefixEntryFcn	prefixFcn

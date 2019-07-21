@@ -48,7 +48,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		outMap
 		%> minimum number of blocks
 		minBlocks
-		%> log of with block resets
+		%> log of within block resets
 		resetLog
 		%> have we initialised the dynamic task properties?
 		taskInitialised logical = false
@@ -127,7 +127,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			obj=obj@optickaCore(varargin); %superclass constructor
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
 			obj.nVar = obj.varTemplate;
-			obj.initialiseRandom();
+			obj.initialiseGenerator();
 			obj.isLoading = false;
 		end
 
@@ -136,7 +136,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%> set up the random number generator
 		% ===================================================================
-		function initialiseRandom(obj)
+		function initialiseGenerator(obj)
 			if isnan(obj.mversion) || obj.mversion == 0
 				obj.mversion = str2double(regexp(version,'(?<ver>^\d+\.\d+)','match','once'));
 			end
@@ -272,6 +272,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		function initialise(obj)
 			obj.randomiseStimuli();
 			obj.initialiseTask();
+			fprintf('---> stimulusSequence.initialise: Randomised and Initialised!\n');
 		end
 		
 		% ===================================================================
@@ -521,7 +522,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			
 			set(obj.h.uitable1,'Data',data)
 			set(obj.h.uitable1,'ColumnName',cnames);
-			set(obj.h.uitable1,'ColumnWidth',{60});
+			%set(obj.h.uitable1,'ColumnWidth',{60});
 			set(obj.h.uitable1,'RowStriping','on')
 			
 			function build_gui()
@@ -641,6 +642,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					delete(p);
 				end
 			end
+			obj.resetLog = [];
 			obj.taskInitialised = false;
 			obj.taskFinished = false;
 		end	

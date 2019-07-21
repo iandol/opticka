@@ -63,6 +63,9 @@ classdef runExperiment < optickaCore
 		subjectName char = 'Simulcra'
 		%> researcher name
 		researcherName char = 'Joanna Doe'
+	end
+	
+	properties (Transient = true)
 		%> structure for screenManager on initialisation and info from opticka
 		screenSettings = struct()
 	end
@@ -78,7 +81,7 @@ classdef runExperiment < optickaCore
 		stateInfoFile = ''
 		%> tS is the runtime settings structure, saved here as a backup
 		tS
-		%> 
+		%> keep track of several task values
 		lastXPosition = 0
 		lastYPosition = 0
 		lastSize = 1
@@ -144,9 +147,11 @@ classdef runExperiment < optickaCore
 	end
 	
 	events
-		runInfo
-		abortRun
-		endAllRuns
+		%runInfo
+		%calls when we quit
+		%abortRun
+		%calls after all runs finish
+		%endAllRuns
 	end
 	
 	%=======================================================================
@@ -325,7 +330,10 @@ classdef runExperiment < optickaCore
 					if obj.task.isBlank
 						if strcmpi(obj.uiCommand,'stop');break;end
 						[~,~,kc] = KbCheck(-1);
-						if strcmpi(KbName(kc),'q');notify(obj,'abortRun');break;end
+						if strcmpi(KbName(kc),'q')
+							%notify(obj,'abortRun');
+							break;
+						end
 					end
 					
 					%============== Get eye position==================%
@@ -385,7 +393,7 @@ classdef runExperiment < optickaCore
 				elseif obj.useLabJackStrobe
 					io.setDIO([0,0,0],[1,0,0]); %this is RSTOP, pausing the omniplex
 				end
-				notify(obj,'endAllRuns');
+				%notify(obj,'endAllRuns');
 				
 				%-----get our profiling report for our task loop
 				%profile off; profile report; profile clear
@@ -488,6 +496,7 @@ classdef runExperiment < optickaCore
 			tS.name = 'generic'; %==name of this protocol
 			tS.useTask = false; %use stimulusSequence (randomised variable task object)
 			tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
+			tS.keyExclusionPattern = '^(fixate|stim)';
 			tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 			tS.askForComments = false; %==little UI requestor asks for comments before/after run
 			tS.saveData = false; %==save behavioural and eye movement data?
@@ -511,7 +520,7 @@ classdef runExperiment < optickaCore
 			
 			%------initialise task
 			t = obj.task;
-			initialiseTask(t);
+			initialise(t);
 			
 			%-----try to open eyeOccluder
 			if obj.useEyeOccluder
@@ -684,8 +693,8 @@ classdef runExperiment < optickaCore
 					%end
 					
 					%------Check keyboard for commands
-					if (~strcmpi(sM.currentName,'fixate') && ~strcmpi(sM.currentName,'stimulus'))
-						tS = checkFixationKeys(obj,tS);
+					if isempty(regexpi(sM.currentName,tS.keyExclusionPattern))
+						tS = checkKeys(obj,tS);
 					end
 					
 					%------Tell I/O to send strobe on this screen flip
@@ -742,7 +751,7 @@ classdef runExperiment < optickaCore
 				ShowCursor;
 				warning('on');
 				
-				notify(obj,'endAllRuns');
+				%notify(obj,'endAllRuns');
 				obj.isRunning = false;
 				
 				%-----get our profiling report for our task loop
@@ -790,11 +799,11 @@ classdef runExperiment < optickaCore
 				
 				if tS.saveData
 					rE = obj;
-					%assignin('base', 'rE', obj);
+					bR.clearHandles();
+					htmp = obj.screenSettings.optickahandle; obj.screenSettings.optickahandle = [];
 					assignin('base', 'tS', tS);
-					warning('off')
-					save([obj.paths.savedData filesep obj.name '.mat'],'rE','bR','tL','tS','sM');
-					warning('on')
+					save([obj.paths.savedData filesep obj.name '.mat'],'rE','tS');
+					obj.screenSettings.optickahandle = htmp;
 					fprintf('\n===>>> SAVED DATA to: %s\n',[obj.paths.savedData filesep obj.name '.mat'])
 				end
 				
@@ -1264,6 +1273,17 @@ classdef runExperiment < optickaCore
 		function noop(obj)
 			% used to test any overhead of simply calling an empty method
 		end
+		
+		% ===================================================================
+		%> @brief called on save, removes opticka handle
+		%>
+		%> @param
+		% ===================================================================
+		function out = saveobj(obj)
+			obj.screenSettings.optickahandle = [];
+			fprintf('===> Saving runExperiment object...\n')
+			out = obj;
+		end
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
@@ -1334,7 +1354,7 @@ classdef runExperiment < optickaCore
 			if isempty(obj.task) %we have no task setup, so we generate one.
 				obj.task=stimulusSequence;
 			end
-			initialiseTask(obj.task);
+			obj.task.initialise();
 		end
 		
 		% ===================================================================
@@ -1596,7 +1616,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param args input structure
 		% ===================================================================
-		function tS = checkFixationKeys(obj,tS)
+		function tS = checkKeys(obj,tS)
 			%frame increment to stop keys being too sensitive
 			fInc = 6;
 			tS.keyTicks = tS.keyTicks + 1;

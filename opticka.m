@@ -303,9 +303,10 @@ classdef opticka < optickaCore
 				obj.getTaskVals();
 				obj.loadCalibration();
 				obj.refreshProtocolsList();
-				addlistener(obj.r,'abortRun',@obj.abortRunEvent);
-				addlistener(obj.r,'endAllRuns',@obj.endRunEvent);
-				addlistener(obj.r,'runInfo',@obj.runInfoEvent);
+				
+				%addlistener(obj.r,'abortRun',@obj.abortRunEvent);
+				%addlistener(obj.r,'endAllRuns',@obj.endRunEvent);
+				%addlistener(obj.r,'runInfo',@obj.runInfoEvent);
 				
 				if exist([obj.paths.protocols filesep 'DefaultStateInfo.m'],'file')
 					obj.paths.stateInfoFile = [obj.paths.protocols filesep 'DefaultStateInfo.m'];
@@ -1520,10 +1521,10 @@ classdef opticka < optickaCore
 		function resizeFigure(position,size,mult)
 			oldunits = get(gcf,'Units');
 			set(gcf,'Units','pixels');
-			if nargin<1 || isempty(position);
+			if nargin<1 || isempty(position)
 				position=1;
 			end
-			if nargin<2 || isempty(size);
+			if nargin<2 || isempty(size)
 				pos=get(gcf,'Position');
 				size=[pos(3) pos(4)];
 			end

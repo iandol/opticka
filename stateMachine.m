@@ -52,6 +52,11 @@ classdef stateMachine < optickaCore
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
+		%> true or false, whether this object is currently busy running
+		isRunning = false
+	end
+	
+	properties (SetAccess = protected, GetAccess = public)
 		%> total number of ticks, updated via runBriefly() and update()
 		totalTicks double
 		%> time at start of stateMachine
@@ -88,8 +93,6 @@ classdef stateMachine < optickaCore
 		nextTimeOut
 		%> Index with name and index number for each state
 		stateListIndex
-		%> true or false, whether this object is currently busy running
-		isRunning = false
 		%> previous state information
 		log = struct([])
 	end
@@ -109,16 +112,16 @@ classdef stateMachine < optickaCore
 		allowedProperties char = 'name|realTime|verbose|clockFcn|waitFcn|timeDelta|globalTransitionFcn'
 	end
 	
-	events
+	%events
 		%> called at run start
-		runStart
+		%runStart
 		%> called at run end
-		runFinish
+		%runFinish
 		%> entering state
-		enterState
+		%enterState
 		%> exiting state
-		exitState
-	end
+		%exitState
+	%end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
@@ -323,7 +326,7 @@ classdef stateMachine < optickaCore
 				obj.totalTicks = 1;
 				obj.currentTick = 1;
 				obj.finalTime = [];
-				obj.notify('runStart');
+				%obj.notify('runStart');
 				obj.startTime = feval(obj.clockFcn);
 				obj.enterStateAtIndex(1);
 			else
@@ -338,7 +341,7 @@ classdef stateMachine < optickaCore
 		% ===================================================================
 		function finish(obj)
 			if obj.isFinishing == true
-				obj.notify('runFinish');
+				%obj.notify('runFinish');
 				obj.finalTime = feval(obj.clockFcn) - obj.startTime;
 				obj.finalTick = obj.totalTicks;
 				obj.isRunning = false;
