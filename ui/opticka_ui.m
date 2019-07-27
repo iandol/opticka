@@ -1752,6 +1752,9 @@ function OKStartTask_ClickedCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
+	if o.r.checkScreenError()
+		fprintf('>>> A previous task did not finish properly, resetting!\n')
+	end
 	if isa(o.r,'runExperiment') && ~o.r.isRunning
 		%o.r.screenSettings.optickahandle = handles.output;
 		initialiseSave(o.r, o.paths.savedData)

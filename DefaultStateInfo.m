@@ -17,8 +17,8 @@
 % tS = general simple struct to hold variables for this run
 
 %------------General Settings-----------------
-tS.rewardTime = 150; %==TTL time in milliseconds
 tS.useTask = true; %==use stimulusSequence (randomised variable task object)
+tS.rewardTime = 150; %==TTL time in milliseconds
 tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = false; %==little UI requestor asks for comments before/after run
@@ -76,8 +76,8 @@ obj.stimuli.tableChoice = 1;
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
-obj.stimuli.stimulusSets = {[1,2],2}; %EDIT THIS TO SAY WHICH STMULI TO SHOW
-obj.stimuli.setChoice = 1;
+obj.stimuli.stimulusSets = {[1,2],2}; 
+obj.stimuli.setChoice = 1; %EDIT THIS TO SAY WHICH STIMULI TO SHOW BY DEFAULT
 showSet(obj.stimuli);
 
 %----------------------State Machine States-------------------------
@@ -85,7 +85,8 @@ showSet(obj.stimuli);
 % in the scope of the runExperiemnt object.
 
 %pause entry
-pauseEntryFcn = { @()hide(obj.stimuli); ...
+pauseEntryFcn = { 
+	@()hide(obj.stimuli); ...
 	@()drawBackground(s); ... %blank the display
 	@()drawTextNow(s,'Paused, press [p] to resume...'); ...
 	@()pauseRecording(io); ...
@@ -96,10 +97,13 @@ pauseEntryFcn = { @()hide(obj.stimuli); ...
 	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
 	@()fprintf('\n===>>>ENTER PAUSE STATE\n'); ...
 	@()disableFlip(obj); ...
-	};
+};
 
-%pause exit
-pauseExitFcn = { @()enableFlip(obj); @()resumeRecording(io); };
+	%pause exit
+	pauseExitFcn = { 
+		@()enableFlip(obj); ...
+		@()resumeRecording(io); ...
+	};
 
 %prefixate entry
 prefixEntryFcn = {
@@ -127,20 +131,26 @@ prefixExitFcn = {
 fixEntryFcn = { 
 	@()startFixation(io); ...
 	@()prepareStrobe(io,getTaskIndex(obj)); ...
-	};
+};
 
 %fix within
-fixFcn = { @()draw(obj.stimuli); @()drawPhotoDiode(s,[0 0 0]) };
+fixFcn = { 
+	@()draw(obj.stimuli); ...
+	@()drawPhotoDiode(s,[0 0 0]); ...
+};
 
 %test we are fixated for a certain length of time
-initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
+initFixFcn = {
+	@()testSearchHoldFixation(eL,'stimulus','incorrect'); ...
+};
 
 %exit fixation phase
-fixExitFcn = {@()updateFixationValues(eL,[],[],0,tS.stimulusFixTime); %reset a maintained fixation of 1 second
+fixExitFcn = {
+	@()updateFixationValues(eL,[],[],0,tS.stimulusFixTime); %reset a maintained fixation of 1 second
 	@()show(obj.stimuli); ...
 	@()statusMessage(eL,'Show Stimulus...'); ...
 	@()edfMessage(eL,'END_FIX'); ...
-	}; 
+}; 
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = {
@@ -153,19 +163,23 @@ stimFcn =  {
 	@()draw(obj.stimuli); ...
 	@()drawPhotoDiode(s,[1 1 1]); ...
 	@()finishDrawing(s); ...
-	%@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
+	@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
 };
 
 %test we are maintaining fixation
-maintainFixFcn = { @()testSearchHoldFixation(eL,'correct','breakfix'); };
+maintainFixFcn = { 
+	@()testSearchHoldFixation(eL,'correct','breakfix'); ...
+};
 
 %as we exit stim presentation state
-stimExitFcn = { @()sendStrobe(io,255); }
+stimExitFcn = { 
+	@()sendStrobe(io,255); ...
+};
 
 %if the subject is correct (small reward)
 correctEntryFcn =  { 
 	@()hide(obj.stimuli); ...
-	@()trackerDrawText(eL,'CORRECT :-)'); 
+	@()trackerDrawText(eL,'CORRECT :-)'); ... 
 };
 
 %correct stimulus
@@ -202,13 +216,13 @@ incExitFcn = { @()incorrect(io); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
 	@()checkTaskEnded(obj); ... %check if task is finished
-	};
+};
 
 %break entry
 breakEntryFcn = { 
-	@()trackerDrawText(eL,'BREAK FIXATION!');
+	@()trackerDrawText(eL,'BREAK FIXATION!'); ...
 	@()hide(obj.stimuli); ...
-	};
+};
 
 %incorrect / break exit
 breakExitFcn = { @()breakFixation(io); ...
@@ -221,27 +235,39 @@ breakExitFcn = { @()breakFixation(io); ...
 	@()update(obj.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
 	@()checkTaskEnded(obj); ... %check if task is finished
-	};
+};
 
 %calibration function
-calibrateFcn = { @()drawBackground(s); ... %blank the display
-	@()setOffline(eL); @()pauseRecording(io); @()trackerSetup(eL) }; %enter tracker calibrate/validate setup mode
+calibrateFcn = { 
+	@()drawBackground(s); ... %blank the display
+	@()setOffline(eL); ...
+	@()pauseRecording(io); ...
+	@()trackerSetup(eL); ...
+}; %enter tracker calibrate/validate setup mode
 
 %debug override
-overrideFcn = { @()pauseRecording(io); @()setOffline(eL); @()keyOverride(obj); }; %a special mode which enters a matlab debug state so we can manually edit object values
+overrideFcn = { 
+	@()pauseRecording(io); ...
+	@()setOffline(eL); ...
+	@()keyOverride(obj); ...
+}; %a special mode which enters a matlab debug state so we can manually edit object values
 
 %screenflash
-flashFcn = { @()drawBackground(s); ...
-	@()flashScreen(s, 0.2); % fullscreen flash mode for visual background activity detection
+flashFcn = { 
+	@()drawBackground(s); ...
+	@()flashScreen(s, 0.2); ...% fullscreen flash mode for visual background activity detection
 };
 
 %magstim
-magstimFcn = { @()drawBackground(s); ...
+magstimFcn = { 
+	@()drawBackground(s); ...
 	@()stimulate(mS); % run the magstim
 };
 
 %show 1deg size grid
-gridFcn = @()drawGrid(s);
+gridFcn = { 
+	@()drawGrid(s); 
+};
 
 % N x 2 cell array of regexpi strings, list to skip the current -> next state's exit functions; for example
 % skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is

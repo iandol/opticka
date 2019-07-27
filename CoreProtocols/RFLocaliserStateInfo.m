@@ -18,6 +18,7 @@ if tS.useMagStim
 	mS.rewardTime		= 25;
 	open(mS);
 end
+
 %------------Eyelink Settings----------------
 eL.isDummy = false; %use dummy or real eyelink?
 tS.fixX = 0;
@@ -119,10 +120,14 @@ showSet(obj.stimuli);
 % bR = behavioural record plot
 %--------------------------------------------------------------------
 %pause entry
-pauseEntryFcn = {@()setOffline(eL); @()fprintf('\n===>>>ENTER PAUSE STATE\n');};
+pauseEntryFcn = {
+	@()setOffline(eL); 
+	@()fprintf('\n===>>>ENTER PAUSE STATE\n');
+};
 
 %prestim entry
-psEntryFcn = { @()setOffline(eL); ...
+psEntryFcn = { 
+	@()setOffline(eL); ...
 	@()randomise(obj.stimuli); ...
 	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()trackerClearScreen(eL); ... 
@@ -133,84 +138,98 @@ psEntryFcn = { @()setOffline(eL); ...
 	};
 
 %prestimulus blank
-prestimulusFcn = @()drawBackground(s);
+prestimulusFcn = { 
+	@()drawBackground(s); ...
+};
 
 %exiting prestimulus state
-psExitFcn = { @()update(obj.stimuli); ...
+psExitFcn = { 
+	@()update(obj.stimuli); ...
 	@()show(obj.stimuli{11}); ...
 	@()statusMessage(eL,'Showing Fixation Spot...'); ...
-	};
+};
 
 %what to run when we enter the stim presentation state
-stimEntryFcn = [];
+stimEntryFcn = {};
 
 %what to run when we are showing stimuli
-stimFcn = { @()draw(obj.stimuli); ...	@()drawEyePosition(eL); ...
+stimFcn = { 
+	@()draw(obj.stimuli); ...	@()drawEyePosition(eL); ...
 	@()finishDrawing(s); ...
 	@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
-	};
+};
 
 %test we are maintaining fixation
-maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
+maintainFixFcn = {
+	@()testSearchHoldFixation(eL,'correct','breakfix');
+};
 
 %as we exit stim presentation state
-stimExitFcn = @()mousePosition(s,true);
+stimExitFcn = {
+	@()mousePosition(s,true);
+	};
 
 %if the subject is correct (small reward)
-correctEntryFcn = { @()timedTTL(lJ,0,tS.rewardTime); ...
+correctEntryFcn = { 
+	@()timedTTL(lJ,0,tS.rewardTime); ...
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
 	@()stopRecording(eL); ...
 	};
 
 %correct stimulus
-correctFcn = { @()drawTimedSpot(s, 0.5, [0 1 0 1]); };
+correctFcn = { 
+	@()drawTimedSpot(s, 0.5, [0 1 0 1]); 
+};
 
 %when we exit the correct state
-ExitFcn = { @()updatePlot(bR, eL, sM); ...
+ExitFcn = { 
+	@()updatePlot(bR, eL, sM); ...
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
-	};
+};
 
 %break entry
-breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...
+breakEntryFcn = { 
+	@()statusMessage(eL,'Broke Fixation :-('); ...
 	@()stopRecording(eL); ...
-	};
+};
 
 %incorrect entry
-incorrEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ...
+incorrEntryFcn = { 
+	@()statusMessage(eL,'Incorrect :-('); ...
 	@()stopRecording(eL); ...
-	};
+};
 
 %our incorrect stimulus
-breakFcn =  @()drawBackground(s);
+breakFcn =  {@()drawBackground(s);};
 
 %calibration function
-calibrateFcn = @()trackerSetup(eL);
+calibrateFcn = {@()trackerSetup(eL);};
 
 %flash function
-flashFcn = @()flashScreen(s,0.2);
+flashFcn = {@()flashScreen(s,0.2);};
 
 % allow override
-overrideFcn = @()keyOverride(obj,tS);
+overrideFcn = {@()keyOverride(obj,tS);};
 
 %show 1deg size grid
-gridFcn = @()drawGrid(s);
+gridFcn = {@()drawGrid(s);};
 
 %----------------------State Machine Table-------------------------
 disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
-'pause'		'blank'			[inf] 	pauseEntryFcn	[]				[]				[]; ...
-'blank'		'stimulus'		0.5		psEntryFcn		prestimulusFcn	[]				psExitFcn; ...
+'pause'		'blank'			inf 	pauseEntryFcn	[]				[]				[]; ...
+'blank'		'stimulus'		0.5	psEntryFcn		prestimulusFcn	[]			psExitFcn; ...
 'stimulus'  'incorrect'		3		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'incorrect'	'blank'			1		incorrEntryFcn	breakFcn		[]				ExitFcn; ...
 'breakfix'	'blank'			1		breakEntryFcn	breakFcn		[]				ExitFcn; ...
-'correct'	'blank'			0.5		correctEntryFcn	correctFcn		[]				ExitFcn; ...
-'calibrate' 'pause'			0.5		calibrateFcn	[]				[]				[]; ...
-'flash'		'pause'			0.5		[]				flashFcn		[]				[]; ...
-'override'	'pause'			0.5		[]				overrideFcn		[]				[]; ...
-'showgrid'	'pause'			1		[]				gridFcn			[]				[]; ...
+'correct'	'blank'			0.5	correctEntryFcn	correctFcn		[]		ExitFcn; ...
+'calibrate' 'pause'			0.5	calibrateFcn	[]				[]				[]; ...
+'flash'		'pause'			0.5	[]					flashFcn		[]				[]; ...
+'override'	'pause'			0.5	[]					overrideFcn		[]			[]; ...
+'showgrid'	'pause'			1		[]					gridFcn			[]			[]; ...
 };
 disp(stateInfoTmp)
 disp('================>> Building state info file <<================')

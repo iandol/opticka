@@ -542,11 +542,12 @@ classdef runExperiment < optickaCore
 				obj.isRunning = true;
 				obj.isRunTask = true;
 				%-----open the eyelink interface
-				if obj.useEyeLink
-					obj.eyeLink = eyelinkManager();
-					eL = obj.eyeLink;
-					eL.verbose = obj.verbose;
-					eL.saveFile = [obj.paths.savedData filesep obj.subjectName '-' obj.savePrefix '.edf'];
+				obj.eyeLink = eyelinkManager();
+				eL = obj.eyeLink;
+				eL.verbose = obj.verbose;
+				eL.saveFile = [obj.paths.savedData filesep obj.subjectName '-' obj.savePrefix '.edf'];
+				if ~obj.useEyeLink
+					eL.isDummy = true;
 				end
 				
 				if isfield(tS,'rewardTime')
@@ -609,6 +610,7 @@ classdef runExperiment < optickaCore
 					draw(obj.stimuli);
 					drawBackground(s);
 					s.drawPhotoDiodeSquare([0 0 0 1]);
+					Screen('DrawText',s.win,'Warming up...',60,10);
 					finishDrawing(s);
 					animate(obj.stimuli);
 					if ~mod(i,10); io.sendStrobe(255); end
@@ -658,7 +660,7 @@ classdef runExperiment < optickaCore
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				if obj.debug == false
 					%warning('off'); %#ok<*WNOFF>
-					ListenChar(1); %2=capture all keystrokes
+					ListenChar(2); %2=capture all keystrokes
 				else
 					ListenChar(1); %1=listen
 				end
@@ -693,7 +695,7 @@ classdef runExperiment < optickaCore
 					%end
 					
 					%------Check keyboard for commands
-					if isempty(regexpi(sM.currentName,tS.keyExclusionPattern))
+					if tS.checkKeysDuringStimulus || isempty(regexpi(sM.currentName,tS.keyExclusionPattern))
 						tS = checkKeys(obj,tS);
 					end
 					
@@ -820,7 +822,7 @@ classdef runExperiment < optickaCore
 					close(io);
 				end
 				%profile off; profile clear
-				warning('on') %#ok<WNON>
+				warning('on') 
 				if obj.useEyeOccluder && isfield(tS,'eO')
 					close(tS.eO)
 					tS.eO=[];
@@ -828,11 +830,11 @@ classdef runExperiment < optickaCore
 				Priority(0);
 				ListenChar(0);
 				ShowCursor;
-				close(s);
-				close(eL);
+				try close(s); end
+				try close(eL); end
 				obj.eyeLink = [];
 				obj.behaviouralRecord = [];
-				close(rM);
+				try close(rM); end
 				obj.lJack=[];
 				obj.io = [];
 				clear tL s tS bR rM eL io sM
@@ -911,6 +913,21 @@ classdef runExperiment < optickaCore
 		function checkTaskEnded(obj)
 			if obj.stateMachine.isRunning && obj.task.taskFinished
 				obj.stopTask = true;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief check if screenManager is in a good state
+		%>
+		%> @param
+		% ===================================================================
+		function error = checkScreenError(obj)
+			testWindowOpen(obj.screen);
+			if obj.isRunning && ~obj.screen.isOpen
+				obj.isRunning = false;
+				error = true;
+			else
+				error = false;
 			end
 		end
 		

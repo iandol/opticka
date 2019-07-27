@@ -470,7 +470,7 @@ classdef opticka < optickaCore
 			obj.r.task.isTime = obj.gn(obj.h.OKisTime);
 			obj.r.task.nBlocks = obj.gd(obj.h.OKnBlocks);
 			obj.r.task.realTime = obj.gv(obj.h.OKrealTime);
-			if isempty(obj.r.task.taskStream); obj.r.task.initialiseRandom; end
+			if isempty(obj.r.task.taskStream); obj.r.task.initialiseGenerator; end
 			obj.r.task.randomiseStimuli;
 		end
 		
