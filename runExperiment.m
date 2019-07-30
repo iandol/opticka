@@ -1680,7 +1680,7 @@ classdef runExperiment < optickaCore
 					
 					case {'LeftArrow','left'} %previous variable 1 value
 						if tS.keyTicks > tS.keyHold
-							if ~isempty(obj.stimuli.controlTable.variable)
+							if ~isempty(obj.stimuli.controlTable) && ~isempty(obj.stimuli.controlTable.variable)
 								choice = obj.stimuli.tableChoice;
 								if isempty(choice)
 									choice = 1;
@@ -1716,7 +1716,7 @@ classdef runExperiment < optickaCore
 						end
 					case {'RightArrow','right'} %next variable 1 value
 						if tS.keyTicks > tS.keyHold
-							if ~isempty(obj.stimuli.controlTable.variable)
+							if ~isempty(obj.stimuli.controlTable) && ~isempty(obj.stimuli.controlTable.variable)
 								choice = obj.stimuli.tableChoice;
 								if isempty(choice)
 									choice = 1;

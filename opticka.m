@@ -824,7 +824,7 @@ classdef opticka < optickaCore
 					end
 				end	
 			end
-			drawnow
+			%drawnow
 		end
 		
 		% ===================================================================

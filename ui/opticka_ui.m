@@ -1524,12 +1524,13 @@ if isappdata(handles.output,'o')
 		o.savePrefs;
 		rmappdata(handles.output,'o');
 		clear o;
+		fprintf('>>> Opticka saved its preferences...\n');
 	catch ME
-		fprintf('>>> Opticka failed to clear all data on close...');
+		fprintf('>>> Opticka failed to clear all data on close...\n');
 		rethrow ME
 	end
 end
-close(gcf);
+try; warning off; close(gcf); warning on; end
 
 % --------------------------------------------------------------------
 function OKMenuNewProtocol_Callback(hObject, eventdata, handles)
@@ -1850,6 +1851,7 @@ h1 = figure(...
 'InvertHardcopy',get(0,'defaultfigureInvertHardcopy'),...
 'PaperOrientation','landscape',...
 'HandleVisibility','callback',...
+'CloseRequestFcn',@(hObject,eventdata)opticka_ui('OKMenuQuit_Callback',hObject,eventdata,guidata(hObject)),...
 'Tag','OKRoot',...
 'UserData',[]);
 
