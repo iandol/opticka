@@ -221,6 +221,7 @@ classdef eyelinkManager < optickaCore
 			Eyelink('Message', 'FRAMERATE %ld',round(obj.screen.screenVals.fps));
 			Eyelink('Message', 'DISPLAY_PPD %ld', round(obj.ppd_));
 			Eyelink('Message', 'DISPLAY_DISTANCE %ld', round(obj.screen.distance));
+			Eyelink('Message', 'DISPLAY_PIXELSPERCM %ld', round(obj.screen.pixelsPerCm));
 			Eyelink('Command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
 			Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
 			Eyelink('Command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');

@@ -35,13 +35,17 @@ classdef eyelinkAnalysis < analysisCore
 		%> the temporary experiement structure which contains the eyePos recorded from opticka
 		tS struct
 		%> exclude incorrect trials when indexing (trials contain an idx and correctedIdx value and you can use either)
-		excludeIncorrect logical					= true
+		excludeIncorrect logical					= false
 		%> region of interest?
 		ROI double									= [ ]
 		%> time of interest?
 		TOI double									= [ ]
 		%> verbose output?
 		verbose										= false
+		%> screen resolution
+		pixelsPerCm double							= 32
+		%> screen distance
+		distance double								= 57.3
 	end
 
 	properties (Hidden = true)
@@ -54,18 +58,14 @@ classdef eyelinkAnalysis < analysisCore
 		%> these are used for spikes spike saccade time correlations
 		rtLimits double
 		rtDivision double
-		%> trial list from the saved behavioural data, used to fix trial name bug old files
+		%> trial list from the saved behavioural data, used to fix trial name bug in old files
 		trialOverride struct
-		%> screen resolution
-		pixelsPerCm double							= 32
-		%> screen distance
-		distance double									= 57.3
 		%> screen X center in pixels
-		xCenter double									= 640
+		xCenter double								= 640
 		%> screen Y center in pixels
-		yCenter double									= 512
+		yCenter double								= 512
 		%>57.3 bug override
-		override573											= false
+		override573									= false
 	end
 
 	properties (SetAccess = private, GetAccess = public)
@@ -81,14 +81,18 @@ classdef eyelinkAnalysis < analysisCore
 		vars struct
 		%> the trial variable identifier, negative values were breakfix/incorrect trials
 		trialList double
-		%> correct indices
+		%> correct trials indices
 		correct struct								= struct()
-		%> breakfix indices
-		breakFix struct							= struct()
-		%> incorrect indices
+		%> breakfix trials indices
+		breakFix struct								= struct()
+		%> incorrect trials indices
 		incorrect struct							= struct()
+		%> unknown trials indices
+		unknown struct								= struct()
 		%> the display dimensions parsed from the EDF
 		display double
+		%> other display info parsed from the EDF
+		otherinfo struct							= struct()
 		%> for some early EDF files, there is no trial variable ID so we
 		%> recreate it from the other saved data
 		needOverride logical						= false;
@@ -134,7 +138,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> pixels per degree calculated from pixelsPerCm and distance (cache)
 		ppd_
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = ['correctValue|incorrectValue|breakFixValue|'...
+		allowedProperties char = ['correctValue|incorrectValue|breakFixValue|'...
 			'trialStartMessageName|variableMessageName|trialEndMessage|file|dir|'...
 			'verbose|pixelsPerCm|distance|xCenter|yCenter|rtStartMessage|minSaccadeDistance|'...
 			'rtEndMessage|trialOverride|rtDivision|rtLimits|tS|ROI|TOI|VFAC|MINDUR']
@@ -329,6 +333,7 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			if isnumeric(select) && ~isempty(select)
 				idx = select;
+				type = '';
 				idxInternal = false;
 			else
 				switch lower(type)
@@ -388,11 +393,11 @@ classdef eyelinkAnalysis < analysisCore
 			end
 
 			if isempty(select)
-				thisVarName = 'ALL VARS ';
+				thisVarName = 'ALL VARS';
 			elseif length(select) > 1
-				thisVarName = 'SELECTION ';
+				thisVarName = 'SELECTION';
 			else
-				thisVarName = ['VAR' num2str(select) ' '];
+				thisVarName = ['VAR' num2str(select)];
 			end
 
 			maxv = 1;
@@ -435,7 +440,7 @@ classdef eyelinkAnalysis < analysisCore
 				tp = t(ip);
 				xa = thisTrial.gx / me.ppd_;
 				ya = thisTrial.gy / me.ppd_;
-				lim = 20; %max degrees in data
+				lim = 50; %max degrees in data
 				xa(xa < -lim) = -lim; xa(xa > lim) = lim; 
 				ya(ya < -lim) = -lim; ya(ya > lim) = lim;
 				pupilAll = thisTrial.pa;
@@ -467,7 +472,7 @@ classdef eyelinkAnalysis < analysisCore
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
 				plot(tp,abs(yp),'k.-','Color',c,'MarkerSize',3,'MarkerEdgeColor',c,...
 					'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe);
-				maxv = max([maxv, max(abs(x)), max(abs(y))]) + 0.1;
+				maxv = max([maxv, max(abs(xp)), max(abs(yp))]) + 0.1;
 				if isfield(thisTrial,'microSaccades') & ~isnan(thisTrial.microSaccades) & ~isempty(thisTrial.microSaccades)
 					if any(thisTrial.microSaccades >= me.plotRange(1) & thisTrial.microSaccades <= me.plotRange(2))
 						plot(thisTrial.microSaccades,-0.1,'ko','Color',c,'MarkerSize',4,'MarkerEdgeColor',[0 0 0],...
@@ -531,7 +536,7 @@ classdef eyelinkAnalysis < analysisCore
 			axis ij;
 			grid on;
 			box on;
-			axis(round([-display(1)/3 display(1)/3 -display(2)/3 display(2)/3]));
+			axis(round([-display(1)/2 display(1)/2 -display(2)/2 display(2)/2]));
 			title(q(1,1),[thisVarName upper(type) ': X vs. Y Eye Position']);
 			xlabel(q(1,1),'X Deg');
 			ylabel(q(1,1),'Y Deg');
@@ -1195,7 +1200,13 @@ classdef eyelinkAnalysis < analysisCore
 			me.correct.fixations = [];
 			me.breakFix = me.correct;
 			me.incorrect = me.correct;
+			me.unknown = me.correct;
 			me.trialList = [];
+			this.FrameRate = [];
+			this.ppd = [];
+			this.distance = [];
+			this.pixelspercm = [];
+			this.display = [];
 
 			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
 
@@ -1225,6 +1236,24 @@ classdef eyelinkAnalysis < analysisCore
 					xy = regexpi(evt.message,'^DISPLAY_COORDS \d? \d? (?<x>\d+) (?<y>\d+)','names');
 					if ~isempty(xy)  && ~isempty(xy.x)
 						me.display = [str2double(xy.x) str2double(xy.y)];
+						this.display = me.display;
+						me.xCenter = me.display(1) / 2;
+						me.yCenter = me.display(2) / 2;
+						continue
+					end
+					
+					ms = regexpi(evt.message,'^(?<t>FRAMERATE|DISPLAY_PPD|DISPLAY_DISTANCE|DISPLAY_PIXELSPERCM) (?<n>\d+)','names');
+					if ~isempty(ms) && ~isempty(ms.t) && ~isempty(ms.n)
+						switch ms.t
+							case 'FRAMERATE'
+								this.FrameRate = str2double(ms.n);
+							case 'DISPLAY_PPD'
+								this.ppd = str2double(ms.n);
+							case 'DISPLAY_DISTANCE'
+								this.distance = str2double(ms.n);
+							case 'DISPLAY_PIXELSPERCM'
+								this.pixelspercm = str2double(ms.n);
+						end
 						continue
 					end
 
@@ -1259,6 +1288,7 @@ classdef eyelinkAnalysis < analysisCore
 						me.trials(tri).correct = false;
 						me.trials(tri).breakFix = false;
 						me.trials(tri).incorrect = false;
+						me.trials(tri).unknown = false;
 						me.trials(tri).messages = [];
 						me.trials(tri).sttime = double(evt.sttime);
 						me.trials(tri).entime = NaN;
@@ -1276,7 +1306,6 @@ classdef eyelinkAnalysis < analysisCore
 						me.trials(tri).hx = [];
 						me.trials(tri).hy = [];
 						me.trials(tri).pa = [];
-
 						continue
 					end
 				end
@@ -1504,8 +1533,7 @@ classdef eyelinkAnalysis < analysisCore
 								else
 									me.breakFix.saccTimes = [me.breakFix.saccTimes NaN];
 								end
-								me.trials(tri).correctedIndex = tri2;
-								tri2 = tri2 + 1;
+								me.trials(tri).correctedIndex = [];
 							elseif any(find(me.trials(tri).result == me.incorrectValue))
 								me.trials(tri).incorrect = true;
 								me.incorrect.idx = [me.incorrect.idx tri];
@@ -1515,7 +1543,17 @@ classdef eyelinkAnalysis < analysisCore
 								else
 									me.incorrect.saccTimes = [me.incorrect.saccTimes NaN];
 								end
-								me.trials(tri).correctedIndex = NaN;
+								me.trials(tri).correctedIndex = [];
+							else
+								me.trials(tri).unknown = true;
+								me.unknown.idx = [me.unknown.idx tri];
+								me.trialList(tri) = -me.trials(tri).variable;
+								if ~isempty(sT) && sT > 0
+									me.unknown.saccTimes = [me.unknown.saccTimes sT];
+								else
+									me.unknown.saccTimes = [me.unknown.saccTimes NaN];
+								end
+								me.trials(tri).correctedIndex = [];
 							end
 							me.trials(tri).deltaT = me.trials(tri).entime - me.trials(tri).sttime;
 							isTrial = false;
@@ -1527,6 +1565,8 @@ classdef eyelinkAnalysis < analysisCore
 				pb(i);
 			end
 			pb(i);
+			
+			me.otherinfo = this;
 
 			%prune the end trial if invalid
 			if ~me.trials(end).correct && ~me.trials(end).breakFix && ~me.trials(end).incorrect
@@ -1703,7 +1743,7 @@ classdef eyelinkAnalysis < analysisCore
 			pb = textprogressbar(length(me.trials),'startmsg','Loading trials to compute microsaccades: ','showactualnum',true);
 			cms = tic;
 			for jj = 1:length(me.trials)
-				if me.trials(jj).incorrect == true || me.trials(jj).breakFix == true;	continue;	end
+				if me.trials(jj).incorrect == true || me.trials(jj).breakFix == true || me.trials(jj).unknown == true;	continue;	end
 				samples = []; sac = []; radius = []; monol=[]; monor=[];
 				me.trials(jj).msacc = struct();
 				me.trials(jj).sampleSaccades = [];
@@ -1752,6 +1792,7 @@ classdef eyelinkAnalysis < analysisCore
 					else
 						me.trials(jj).sampleSaccades = NaN;
 						me.trials(jj).microSaccades = NaN;
+					
 					end
 					if isempty(me.trials(jj).microSaccades); me.trials(jj).microSaccades = NaN; end
 				catch ME
