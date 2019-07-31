@@ -144,7 +144,12 @@ classdef eyelinkManager < optickaCore
 				return
 			end
 			
-			Eyelink('Shutdown'); %just make sure link is closed
+			try
+				Eyelink('Shutdown'); %just make sure link is closed
+			catch ME
+				warning('Problems with Eyelink initialise, make sure you install Eyelink Developer libraries!');
+				obj.isDummy = true;
+			end
 			obj.screen = sM;
 			
 			if ~isempty(obj.IP) && ~obj.isDummy

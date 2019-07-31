@@ -1242,11 +1242,11 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief do we use eyelinkManager getSample on current flip?
+		%> @brief do we use eyeManager getSample on current flip?
 		%>
 		%> @param
 		% ===================================================================
-		function needEyelinkSample(obj,value)
+		function needEyeSample(obj,value)
 			obj.needSample = value;
 		end
 		

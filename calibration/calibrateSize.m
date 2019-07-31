@@ -1,4 +1,4 @@
-function [dpi, dpc] = calibrateSize(theScreen,distance, mSize, forceLCD)
+function [dpi, dpc] = calibrateSize(theScreen, distance, mSize, forceLCD)
 % dpi=calibrateSize([theScreen])
 % Helps the user to accurately measure the screen's dots per inch.
 %
@@ -16,8 +16,8 @@ function [dpi, dpc] = calibrateSize(theScreen,distance, mSize, forceLCD)
 %             both Mac and Windows
 % 11/6/06 dgp Updated from PTB-2 to PTB-3.
 
-if nargin>3 || nargout>2
-	error('Usage: [dpi,dpc]=calibrateSize(screen,distance,mSize)');
+if nargin>4 || nargout>2
+	error('Usage: [dpi, dpc] = calibrateSize(theScreen, distance, mSize, forceLCD)');
 end
 if nargin<1
 	theScreen=0;

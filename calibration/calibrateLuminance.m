@@ -26,32 +26,32 @@ classdef calibrateLuminance < handle
 	
 	properties
 		%> comments to note about this calibration
-		comments = {''}
+		comments cell = {''}
 		%> number of measures
-		nMeasures = 15
+		nMeasures double = 15
 		%> screen to calibrate
 		screen
 		%> use SpectroCal II automatically
-		useSpectroCal2 = false
+		useSpectroCal2 logical = false
 		%> use ColorCalII automatically
-		useCCal2 = false
+		useCCal2 logical = false
 		%> use i1Pro?
-		useI1Pro = false
+		useI1Pro logical = false
 		%> length of gamma table
-		tableLength = 1024
+		tableLength double = 1024
 		%> choose I1Pro over CCal if both connected?
-		preferI1Pro = false
+		preferI1Pro logical = false
 		%> specify port to connect to
-		port = '/dev/ttyUSB0'
+		port char = '/dev/ttyUSB0'
 		%> test L, R, G and B as seperate curves?
-		testColour = true
+		testColour logical = true
 		%> correct R G B seperately (true) or overall luminance (false) 
-		correctColour = false
+		correctColour logical = false
 		%> methods list to fit to raw luminance values
-		analysisMethods = {'pchipinterp';'linearinterp'}
+		analysisMethods cell = {'pchipinterp';'linearinterp'}
 		%> which gamma model should opticka select: 1 is simple gamma,
 		%> 2:n are the analysisMethods chosen; 2=pchipinterp
-		choice = 2
+		choice double = 2
 		%> background screen colour
 		backgroundColour = [ 0.5 0.5 0.5 ];
 		%> filename this was saved as
@@ -61,11 +61,11 @@ classdef calibrateLuminance < handle
 		%> wavelengths to test (SpectroCal2 is 380:1:780 | I1Pro is 380:10:730)
 		wavelengths = 380:1:780
 		%>use monitor sync for SpectroCal2?
-		monitorSync@logical = true
+		monitorSync logical = true
 		%> logging to the commandline?
-		verbose = false
+		verbose logical = false
 		%> allows the constructor to run the open method immediately
-		runNow = false
+		runNow logical = false
 	end
 	
 	%--------------------VISIBLE PROPERTIES-----------%
@@ -96,9 +96,9 @@ classdef calibrateLuminance < handle
 		displayRange = []
 		displayBaseline = []
 		%> clock() dateStamp set on construction
-		dateStamp@double
+		dateStamp double
 		%> universal ID
-		uuid@char
+		uuid char
 		screenVals = []
 		%spectroCAL serial object
 		spCAL
@@ -111,7 +111,7 @@ classdef calibrateLuminance < handle
 		win
 		p
 		plotHandle
-		allowedPropertiesBase='^(useSpectroCal2|port|preferI1Pro|useCCal2|useI1Pro|correctColour|testColour|filename|tableLength|verbose|runNow|screen|nMeasures)$'
+		allowedPropertiesBase = '^(useSpectroCal2|port|preferI1Pro|useCCal2|useI1Pro|correctColour|testColour|filename|tableLength|verbose|runNow|screen|nMeasures)$'
 	end
 	
 	%=======================================================================

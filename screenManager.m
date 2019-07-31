@@ -194,7 +194,6 @@ classdef screenManager < optickaCore
 			
 			obj.screenVals = struct();
 			
-			
 			%get the gammatable and dac information
 			[obj.screenVals.gammaTable,obj.screenVals.dacBits,obj.screenVals.lutSize]=Screen('ReadNormalizedGammaTable', obj.screen);
 			obj.screenVals.originalGammaTable = obj.screenVals.gammaTable;
