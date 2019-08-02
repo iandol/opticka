@@ -40,7 +40,7 @@ obj.lastYPosition	= tS.fixY;
 eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end %===save EDF file?
 if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
-eL.sampleRate = 500;
+eL.sampleRate = 1000;
 eL.calibrationStyle = 'HV5'; %===5 point calibration
 eL.remoteCalibration = false; % manual calibration?
 eL.modify.calibrationtargetcolour = [1 1 1];

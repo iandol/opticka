@@ -200,9 +200,8 @@ classdef eyelinkAnalysis < analysisCore
 			tmain = tic;
 			parseEvents(me);
 			parseAsVars(me);
-
+			
 			me.isParsed = true;
-
 			fprintf('\tOverall Simple Parsing of EDF Trials took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
 		end
 
@@ -213,6 +212,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> @return
 		% ===================================================================
 		function parse(me)
+			if isempty(me.raw); me.load(); end
 			me.isParsed = false;
 			tmain = tic;
 			parseEvents(me);
@@ -225,7 +225,6 @@ classdef eyelinkAnalysis < analysisCore
 			parseSaccades(me);
 
 			me.isParsed = true;
-
 			fprintf('\tOverall Parsing of EDF Trials took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
 		end
 
