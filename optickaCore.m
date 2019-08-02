@@ -76,16 +76,16 @@ classdef optickaCore < handle
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = optickaCore(args)
-			obj.className = class(obj);
-			obj.dateStamp = clock();
-			obj.uuid = num2str(dec2hex(floor((now - floor(now))*1e10))); %obj.uuid = char(java.util.UUID.randomUUID)%128bit uuid
-			obj.fullName_ = obj.fullName; %cache fullName
+		function me = optickaCore(args)
+			me.className = class(me);
+			me.dateStamp = clock();
+			me.uuid = num2str(dec2hex(floor((now - floor(now))*1e10))); %me.uuid = char(java.util.UUID.randomUUID)%128bit uuid
+			me.fullName_ = me.fullName; %cache fullName
 			if nargin>0
-				obj.parseArgs(args,obj.allowedProperties);
+				me.parseArgs(args,me.allowedProperties);
 			end
-			obj.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
-			setPaths(obj)
+			me.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
+			setPaths(me)
 		end
 		
 		% ===================================================================
@@ -93,13 +93,13 @@ classdef optickaCore < handle
 		%> @param
 		%> @return name the concatenated name
 		% ===================================================================
-		function name = get.fullName(obj)
-			if isempty(obj.name)
-				obj.fullName_ = [obj.className '#' obj.uuid];
+		function name = get.fullName(me)
+			if isempty(me.name)
+				me.fullName_ = [me.className '#' me.uuid];
 			else
-				obj.fullName_ = [obj.name ' <' obj.className '#' obj.uuid '>'];
+				me.fullName_ = [me.name ' <' me.className '#' me.uuid '>'];
 			end
-			name = obj.fullName_;
+			name = me.fullName_;
 		end
 		
 		% ===================================================================
@@ -107,9 +107,9 @@ classdef optickaCore < handle
 		%>
 		%> @param path path to save
 		% ===================================================================
-		function initialiseSave(obj,path)
+		function initialiseSave(me,path)
 			if exist('path','var') && exist(path,'dir')
-				obj.paths.savedData = path;
+				me.paths.savedData = path;
 			end
 		end
 		
@@ -120,12 +120,12 @@ classdef optickaCore < handle
 		%> @param attrValue value of that attribute, i.e. public, true
 		%> @return list of properties that match that attribute
 		% ===================================================================
-		function [list, mplist] = findAttributes(obj, attrName, attrValue)
+		function [list, mplist] = findAttributes(me, attrName, attrValue)
 			% Determine if first input is object or class name
-			if ischar(obj)
-				mc = meta.class.fromName(obj);
-			elseif isobject(obj)
-				mc = metaclass(obj);
+			if ischar(me)
+				mc = meta.class.fromName(me);
+			elseif isobject(me)
+				mc = metaclass(me);
 			end
 			
 			% Initial size and preallocate
@@ -181,12 +181,12 @@ classdef optickaCore < handle
 		%> @param type logical, notlogical, string or number
 		%> @return list of properties that match that attribute
 		% ===================================================================
-		function list = findAttributesandType(obj, attrName, attrValue, type)
+		function list = findAttributesandType(me, attrName, attrValue, type)
 			% Determine if first input is object or class name
-			if ischar(obj)
-				mc = meta.class.fromName(obj);
-			elseif isobject(obj)
-				mc = metaclass(obj);
+			if ischar(me)
+				mc = meta.class.fromName(me);
+			elseif isobject(me)
+				mc = metaclass(me);
 			end
 			
 			% Initial size and preallocate
@@ -209,7 +209,7 @@ classdef optickaCore < handle
 				% save its name in cell array
 				if attrValue
 					if islogical(attrValue) || strcmp(attrValue,thisValue)
-						val = obj.(mp.Name);
+						val = me.(mp.Name);
 						if exist('val','var')
 							if islogical(val) && strcmpi(type,'logical')
 								ii = ii + 1;
@@ -236,22 +236,22 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
-		%> @brief Use this syntax to make a deep copy of an object OBJ,
-		%> i.e. OBJ_OUT has the same field values, but will not behave as a handle-copy of OBJ anymore.
+		%> @brief Use this syntax to make a deep copy of an object me,
+		%> i.e. OBJ_OUT has the same field values, but will not behave as a handle-copy of me anymore.
 		%>
 		%> @return obj_out  cloned object
 		% ===================================================================
-		function obj_out = clone(obj)
-			meta = metaclass(obj);
-			obj_out = feval(class(obj),'cloning',true);
+		function obj_out = clone(me)
+			meta = metaclass(me);
+			obj_out = feval(class(me),'cloning',true);
 			for i = 1:length(meta.Properties)
 				prop = meta.Properties{i};
-				if strcmpi(prop.SetAccess,'Public') && ~(prop.Dependent || prop.Constant) && ~(isempty(obj.(prop.Name)) && isempty(obj_out.(prop.Name)))
-					if isobject(obj.(prop.Name)) && isa(obj.(prop.Name),'optickaCore')
-						obj_out.(prop.Name) = obj.(prop.Name).clone;
+				if strcmpi(prop.SetAccess,'Public') && ~(prop.Dependent || prop.Constant) && ~(isempty(me.(prop.Name)) && isempty(obj_out.(prop.Name)))
+					if isobject(me.(prop.Name)) && isa(me.(prop.Name),'optickaCore')
+						obj_out.(prop.Name) = me.(prop.Name).clone;
 					else
 						try
-							obj_out.(prop.Name) = obj.(prop.Name);
+							obj_out.(prop.Name) = me.(prop.Name);
 						catch %#ok<CTCH>
 							warning('optickaCore:clone', 'Problem copying property "%s"',prop.Name)
 						end
@@ -273,7 +273,7 @@ classdef optickaCore < handle
 					for jj=1:length(List.SuperclassList(ii).PropertyList(:))
 						prop_super = List.SuperclassList(ii).PropertyList(jj).Name;
 						if ~strcmp(prop_super, props_child)
-							obj_out.(prop_super) = obj.(prop_super);
+							obj_out.(prop_super) = me.(prop_super);
 						end
 					end
 				end
@@ -361,20 +361,20 @@ classdef optickaCore < handle
 		%>
 		%> @param
 		% ===================================================================
-		function setPaths(obj)
-			obj.paths(1).whatami = obj.className;
-			obj.paths.root = fileparts(which(mfilename));
-			obj.paths.whereami = obj.paths.root;
-			if ~isfield(obj.paths, 'stateInfoFile')
-				obj.paths.stateInfoFile = '';
+		function setPaths(me)
+			me.paths(1).whatami = me.className;
+			me.paths.root = fileparts(which(mfilename));
+			me.paths.whereami = me.paths.root;
+			if ~isfield(me.paths, 'stateInfoFile')
+				me.paths.stateInfoFile = '';
 			end
 			if ismac || isunix
-				[~, obj.paths.home] = system('echo $HOME');
-				obj.paths.home = regexprep(obj.paths.home,'\n','');
+				[~, me.paths.home] = system('echo $HOME');
+				me.paths.home = regexprep(me.paths.home,'\n','');
 			else
-				obj.paths.home = 'c:';
+				me.paths.home = 'c:';
 			end
-			obj.paths.savedData = [obj.paths.home filesep 'MatlabFiles' filesep 'SavedData'];
+			me.paths.savedData = [me.paths.home filesep 'MatlabFiles' filesep 'SavedData'];
 		end
 		
 		% ===================================================================
@@ -384,7 +384,7 @@ classdef optickaCore < handle
 		%> @param args input structure
 		%> @param allowedProperties properties possible to set on construction
 		% ===================================================================
-		function parseArgs(obj, args, allowedProperties)
+		function parseArgs(me, args, allowedProperties)
 			allowedProperties = ['^(' allowedProperties ')$'];
 			
 			while iscell(args) && length(args) == 1
@@ -404,8 +404,8 @@ classdef optickaCore < handle
 				fnames = fieldnames(args); %find our argument names
 				for i=1:length(fnames)
 					if regexpi(fnames{i},allowedProperties) %only set if allowed property
-						obj.salutation(fnames{i},'Constructor parsing input argument');
-						obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+						me.salutation(fnames{i},'Constructor parsing input argument');
+						me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 					end
 				end
 			end
@@ -416,18 +416,18 @@ classdef optickaCore < handle
 		%> @brief Prints messages dependent on verbosity
 		%>
 		%> Prints messages dependent on verbosity
-		%> @param obj this instance object
+		%> @param me this instance object
 		%> @param in the calling function or main info
 		%> @param message additional message that needs printing to command window
 		%> @param override force logging if true even if verbose is false
 		% ===================================================================
-		function salutation(obj,in,message,override)
+		function salutation(me,in,message,override)
 			if ~exist('override','var');override = false;end
-			if obj.verbose==true || override == true
+			if me.verbose==true || override == true
 				if ~exist('message','var') || isempty(message)
-					fprintf(['---> ' obj.fullName_ ': ' in '\n']);
+					fprintf(['---> ' me.fullName_ ': ' in '\n']);
 				else
-					fprintf(['---> ' obj.fullName_ ': ' message ' | ' in '\n']);
+					fprintf(['---> ' me.fullName_ ': ' message ' | ' in '\n']);
 				end
 			end
 		end

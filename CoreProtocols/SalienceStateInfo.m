@@ -1,15 +1,16 @@
 %SALIENCE state configuration file, this gets loaded by opticka via
-%runExperiment class. The following class objects are already loaded and available to
+%runExperiment class. The following class objects are loaded and available to
 %use: 
-% obj = runExperiment object
+% me = runExperiment object
 % io = digital I/O to recording system
-% s = screen manager
+% s  = PTB screenManager
 % sM = State Machine
-% eL = eyelink manager
+% eL = eyetracker manager
+% t  = task sequence (stimulusSequence class)
 % rM = Reward Manager (LabJack or Arduino TTL trigger to Crist reward system/Magstim)
-% bR = behavioural record plot
-% obj.stimuli = our list of stimuli
-% tS = general simple struct to hold variables for this run
+% bR = behavioural record plot (on screen GUI during task run)
+% me.stimuli = our list of stimuli
+% tS = general struct to hold variables for this run
 
 %------------General Settings-----------------
 tS.rewardTime			= 150; %==TTL time in milliseconds
@@ -18,7 +19,7 @@ tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in pe
 tS.recordEyePosition	= false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments		= false; %==little UI requestor asks for comments before/after run
 tS.saveData				= true; %==save behavioural and eye movement data?
-tS.dummyEyelink			= false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.dummyEyelink			= true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.name					= 'salience-task'; %==name of this protocol
 %io.verbose				= true; %==show the triggers sent in the command window
 %eL.verbose				= true;
@@ -33,8 +34,8 @@ tS.firstFixRadius	= 2;
 tS.keepFixInit		= 0;
 tS.keepFixTime		= 0.6;
 tS.strict			= true; %do we allow (strict==false) multiple entry/exits of fix window within the time limit
-obj.lastXPosition	= tS.fixX;
-obj.lastYPosition	= tS.fixY;
+me.lastXPosition	= tS.fixX;
+me.lastYPosition	= tS.fixY;
 
 %------------------------Eyelink setup--------------------------
 eL.name = tS.name;
@@ -55,24 +56,24 @@ eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.f
 
 %randomise stimulus variables every trial? useful during initial training but not for
 %data collection.
-obj.stimuli.choice = [];
-obj.stimuli.stimulusTable = [];
+me.stimuli.choice = [];
+me.stimuli.stimulusTable = [];
 
 % allows using arrow keys to control this table during the main loop
 % ideal for mapping receptive fields so we can twiddle parameters, normally not used
 % for normal tasks
-obj.stimuli.controlTable = [];
-obj.stimuli.tableChoice = 1;
+me.stimuli.controlTable = [];
+me.stimuli.tableChoice = 1;
 
 % this allows us to enable subsets from our stimulus list. So each set is a
 % particular display like fixation spot only, background. During the trial you can
-% use the showSet method of obj.stimuli to change to a particular stimulus set.
-obj.stimuli.stimulusSets = {[3],[1 2 3],[1 2]};
-obj.stimuli.setChoice = 1;
-showSet(obj.stimuli);
+% use the showSet method of me.stimuli to change to a particular stimulus set.
+me.stimuli.stimulusSets = {[3],[1 2 3],[1 2]};
+me.stimuli.setChoice = 1;
+showSet(me.stimuli);
 
 %which stimulus in the list is used for a fixation target? 
-obj.stimuli.fixationChoice = 3;
+me.stimuli.fixationChoice = 3;
 
 %----------------------State Machine States-------------------------
 % these are our functions that will execute as the stateMachine runs,
@@ -82,7 +83,7 @@ obj.stimuli.fixationChoice = 3;
 
 %--------------------pause entry
 pauseEntryFcn = {
-	@()hide(obj.stimuli); ...
+	@()hide(me.stimuli); ...
 	@()drawBackground(s); ... %blank the display
 	@()pauseRecording(io); ...
 	@()drawTextNow(s,'Paused, press [p] to resume...'); ...
@@ -91,13 +92,13 @@ pauseEntryFcn = {
 	@()trackerDrawText(eL,'PAUSED, press [P] to resume...'); ...
 	@()edfMessage(eL,'TRIAL_RESULT -100'); ... %store message in EDF
 	@()stopRecording(eL); ... %stop eye position recording
-	@()disableFlip(obj); ... %stop screen updates
-	@()needEyeSample(obj,false); ...
+	@()disableFlip(me); ... %stop screen updates
+	@()needEyeSample(me,false); ...
 }; 
 
 %--------------------pause exit
 pauseExitFcn = { 
-	@()enableFlip(obj); ...
+	@()enableFlip(me); ...
 	@()resumeRecording(io); ...
 };
 
@@ -106,10 +107,10 @@ prefixEntryFcn = {
 	@()setOffline(eL); ... %make sure offline before start recording
 	@()resetFixation(eL); ... %reset the fixation counters ready for a new trial
 	@()updateFixationValues(eL,tS.fixX,tS.fixY,tS.firstFixInit,tS.firstFixTime,tS.firstFixRadius); %reset 
-	@()hide(obj.stimuli); ...
+	@()hide(me.stimuli); ...
 	@()trackerClearScreen(eL); ...
 	@()statusMessage(eL,'Prefixation...'); ... %status text on the eyelink
-	@()logRun(obj,'PREFIX'); ... %fprintf current trial info
+	@()logRun(me,'PREFIX'); ... %fprintf current trial info
 };
 
 %--------------------prefixate
@@ -118,14 +119,14 @@ prefixFcn = {  };
 %--------------------prefixate exit
 prefixExitFcn = {
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
-	@()edfMessage(eL,sprintf('TRIALID %i',getTaskIndex(obj))); ...
+	@()edfMessage(eL,sprintf('TRIALID %i',getTaskIndex(me))); ...
 	@()edfMessage(eL,['UUID ' UUID(sM)]); ... %add in the uuid of the current state for good measure
 	@()edfMessage(eL,'MSG:Hello there! '); ... 
 	@()startRecording(eL); ... %start eyelink recording eye data
 	@()statusMessage(eL,'Get Fixation...'); ... %status text on the eyelink
 	@()trackerDrawFixation(eL); ... 
-	@()needEyeSample(obj,true); ...
-	@()changeSet(obj.stimuli,1); ...
+	@()needEyeSample(me,true); ...
+	@()changeSet(me.stimuli,1); ...
 };
 
 %--------------------------------
@@ -136,7 +137,7 @@ fixEntryFcn = {
 
 %--------------------fix within
 fixFcn = { 
-	@()draw(obj.stimuli); 
+	@()draw(me.stimuli); 
 };
 
 %--------------------test we are fixated for a certain length of time
@@ -147,22 +148,22 @@ initFixFcn = {
 %--------------------exit fixation phase
 fixExitFcn = { 
 	@()updateFixationValues(eL,[],[],tS.keepFixInit,tS.keepFixTime); %reset
-	@()changeSet(obj.stimuli,2); ...
+	@()changeSet(me.stimuli,2); ...
 	@()trackerClearScreen(eL); ...
-	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
-	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
+	@()getStimulusPositions(me.stimuli); ... %make a struct the eL can use for drawing stim positions
+	@()trackerDrawStimuli(eL,me.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 };
 
 %--------------------------------
 %--------------------STIMFIX
 stimfixEntryFcn = { 
-	@()doStrobe(obj,true);
-	@()doSyncTime(obj); 
+	@()doStrobe(me,true);
+	@()doSyncTime(me); 
 };  
 
 %--------------------what to run when we are showing stimuli
 stimfixFcn =  { 
-	@()draw(obj.stimuli); ...
+	@()draw(me.stimuli); ...
 	@()finishDrawing(s); ...
 };
 
@@ -180,13 +181,13 @@ stimfixExitFcn = {
 %--------------------------------
 %--------------------STIMONLY
 stim2EntryFcn = {
-	@()changeSet(obj.stimuli,3); ...
+	@()changeSet(me.stimuli,3); ...
 	@()edfMessage(eL,'END_FIX'); ...
 };  
 
 %--------------------what to run when we are showing stimuli
 stim2Fcn =  { 
-	@()draw(obj.stimuli); ...
+	@()draw(me.stimuli); ...
 	@()finishDrawing(s); ...
 };
 
@@ -199,8 +200,8 @@ stim2ExitFcn = {
 %--------------------POST
 postEntryFcn = { 
 	@()edfMessage(eL,'END_RT'); ...
-	@()hide(obj.stimuli); ...
-	@()logRun(obj,'POST'); ... %fprintf current trial info
+	@()hide(me.stimuli); ...
+	@()logRun(me,'POST'); ... %fprintf current trial info
 };
 
 %--------------------correct stimulus
@@ -211,16 +212,16 @@ postFcn = {
 %--------------------when we exit the correct state
 postExitFcn = { 
 	@()correct(io); ...
-	@()needEyeSample(obj,false); ...
+	@()needEyeSample(me,false); ...
 	@()trackerClearScreen(eL); ...
 	@()statusMessage(eL,'Ending post...'); ... %status text on the eyelink
 	@()edfMessage(eL,'TRIAL_RESULT 1'); ...
 	@()edfMessage(eL,'TRIAL OK'); ...
 	@()stopRecording(eL); ...stimfix
-	@()updateVariables(obj,[],[],true); ... %randomise our stimuli, set strobe value too
-	@()update(obj.stimuli); ... %update our stimuli ready for display
+	@()updateVariables(me,[],[],true); ... %randomise our stimuli, set strobe value too
+	@()update(me.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
-	@()checkTaskEnded(obj); ... %check if task is finished
+	@()checkTaskEnded(me); ... %check if task is finished
 };
 
 %--------------------------------
@@ -229,8 +230,8 @@ incEntryFcn = {
 	@()edfMessage(eL,'END_RT'); ... %send END_RT to eyelink
 	@()trackerClearScreen(eL); ...
 	@()trackerDrawText(eL,'Incorrect! :-(');
-	@()hide(obj.stimuli); ... %hide fixation spot
-	@()logRun(obj,'INCORRECT'); ... %fprintf current trial info
+	@()hide(me.stimuli); ... %hide fixation spot
+	@()logRun(me,'INCORRECT'); ... %fprintf current trial info
 }; 
 
 %--------------------
@@ -241,15 +242,15 @@ incFcn = {
 %--------------------incorrect / break exit
 incExitFcn = { 
 	@()incorrect(io); ...
-	@()needEyeSample(obj,false); ...
+	@()needEyeSample(me,false); ...
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ... %trial incorrect message
 	@()stopRecording(eL); ... %stop eyelink recording data
 	@()setOffline(eL); ... %set eyelink offline
 	@()resetRun(t);... %we randomise the run within this block to make it harder to guess next trial
-	@()updateVariables(obj,[],true,false); ... %update the variables
-	@()update(obj.stimuli); ... %update our stimuli ready for display
+	@()updateVariables(me,[],true,false); ... %update the variables
+	@()update(me.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
-	@()checkTaskEnded(obj); ... %check if task is finished
+	@()checkTaskEnded(me); ... %check if task is finished
 };
 
 %--------------------calibration function
@@ -258,7 +259,7 @@ calibrateFcn = {
 	@()setOffline(eL); @()rstop(io); @()trackerSetup(eL) }; %enter tracker calibrate/validate setup mode
 
 %--------------------debug override
-overrideFcn = { @()keyOverride(obj); }; %a special mode which enters a matlab debug state so we can manually edit object values
+overrideFcn = { @()keyOverride(me); }; %a special mode which enters a matlab debug state so we can manually edit object values
 
 %--------------------screenflash
 flashFcn = { 

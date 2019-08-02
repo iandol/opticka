@@ -4,14 +4,14 @@
 %Adjust eyetracker setting values over training to refine behaviour
 %The following class objects (easily named handle copies) are already loaded and available to
 %use: 
-% obj = runExperiment object
+% me = runExperiment object
 % io = digital I/O to recording system
 % s = screenManager
 % sM = State Machine
 % eL = eyelink manager
 % rM = reward manager (trigger to reward system)
 % bR = behavioural record plot
-% obj.stimuli = our list of stimuli
+% me.stimuli = our list of stimuli
 % tS = general simple struct to hold variables for this run
 
 %------------General Settings-----------------
@@ -24,7 +24,7 @@ tS.saveData = false; %==save behavioural and eye movement data?
 tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
 tS.name = 'default'; %==name of this protocol
-obj.useDataPixx = false; %make sure we don't trigger the plexon
+me.useDataPixx = false; %make sure we don't trigger the plexon
 
 %------------Eyetracker Settings-----------------
 tS.fixX = 0;
@@ -33,8 +33,8 @@ tS.firstFixInit = 1.5;
 tS.firstFixTime = [0.5 0.8];
 tS.firstFixRadius = 7;
 tS.stimulusFixTime = 1.25;
-obj.lastXPosition = tS.fixX;
-obj.lastYPosition = tS.fixY;
+me.lastXPosition = tS.fixX;
+me.lastYPosition = tS.fixY;
 tS.strict = false; %do we forbid eye to enter-exit-reenter fixation window?
 
 %------------------------Eyelink setup--------------------------
@@ -54,28 +54,28 @@ eL.modify.devicenumber = -1; % -1==use any keyboard
 eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
 %randomise stimulus variables every trial?
-% obj.stimuli.choice = [];
+% me.stimuli.choice = [];
 % n = 1;
 % in(n).name = 'xyPosition';
 % in(n).values = [0 0];
 % in(n).stimuli = 1;
 % in(n).offset = [];
-% obj.stimuli.stimulusTable = in;
-obj.stimuli.choice = [];
-obj.stimuli.stimulusTable = [];
+% me.stimuli.stimulusTable = in;
+me.stimuli.choice = [];
+me.stimuli.stimulusTable = [];
 
 %allows using arrow keys to control this table
-obj.stimuli.tableChoice = 1;
+me.stimuli.tableChoice = 1;
 n=1;
-obj.stimuli.controlTable(n).variable = 'size';
-obj.stimuli.controlTable(n).delta = 1;
-obj.stimuli.controlTable(n).stimuli = 1;
-obj.stimuli.controlTable(n).limits = [0.25 20];
+me.stimuli.controlTable(n).variable = 'size';
+me.stimuli.controlTable(n).delta = 1;
+me.stimuli.controlTable(n).stimuli = 1;
+me.stimuli.controlTable(n).limits = [0.25 20];
 
 %this allows us to enable subsets from our stimulus list
-obj.stimuli.stimulusSets = {1};
-obj.stimuli.setChoice = 1;
-showSet(obj.stimuli);
+me.stimuli.stimulusSets = {1};
+me.stimuli.setChoice = 1;
+showSet(me.stimuli);
 
 %----------------------State Machine States-------------------------
 
@@ -86,7 +86,7 @@ pauseEntryFcn = {
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
 	@()fprintf('\n===>>>ENTER PAUSE STATE\n'); ...
-	@()disableFlip(obj); ...
+	@()disableFlip(me); ...
 };
 
 %prestim entry
@@ -102,9 +102,9 @@ prestimulusFcn = {  };
 
 %exiting prestimulus state
 psExitFcn = {
-	@()update(obj.stimuli); ...
-	@()show(obj.stmuli); ...
-	@()logRun(obj,'SHOW FIX'); ... %fprintf current trial info
+	@()update(me.stimuli); ...
+	@()show(me.stmuli); ...
+	@()logRun(me,'SHOW FIX'); ... %fprintf current trial info
 	@()statusMessage(eL,'Showing Fixation Spot...'); ...
 };
 
@@ -113,7 +113,7 @@ stimEntryFcn = {};
 
 %what to run when we are showing stimuli
 stimFcn = { 
-	@()draw(obj.stimuli); ... 
+	@()draw(me.stimuli); ... 
 	%@()drawEyePosition(eL); ...
 	@()finishDrawing(s); ...
 };
@@ -130,7 +130,7 @@ stimExitFcn = {};
 correctEntryFcn = { 
 	@()timedTTL(lJ,0,tS.rewardTime); ... 
 	@()statusMessage(eL,'Correct! :-)');
-	@()logRun(obj,'CORRECT'); ... %fprintf current trial info
+	@()logRun(me,'CORRECT'); ... %fprintf current trial info
 	@()updatePlot(bR, eL, sM); ...
 };
 
@@ -146,14 +146,14 @@ correctExitFcn = { };
 %break entry
 breakEntryFcn = { 
 	@()statusMessage(eL,'Broke Fixation :-(') 
-	@()logRun(obj,'BREAKFIX'); ... %fprintf current trial info
+	@()logRun(me,'BREAKFIX'); ... %fprintf current trial info
 	@()updatePlot(bR, eL, sM); ...
 };
 
 %break entry
 incEntryFcn = { 
 	@()statusMessage(eL,'Incorrect :-('); ...
-	@()logRun(obj,'INCORRECT'); ... %fprintf current trial info
+	@()logRun(me,'INCORRECT'); ... %fprintf current trial info
 	@()updatePlot(bR, eL, sM); ...
 };
 
@@ -167,7 +167,7 @@ calibrateFcn = { @()trackerSetup(eL); };
 flashFcn = { @()flashScreen(s,0.25); };
 
 % allow override
-overrideFcn = { @()keyOverride(obj); };
+overrideFcn = { @()keyOverride(me); };
 
 %show 1deg size grid
 gridFcn = { @()drawGrid(s); @()drawScreenCenter(s) };

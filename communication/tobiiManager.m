@@ -13,7 +13,7 @@ classdef tobiiManager < optickaCore
 		%> start eyetracker in dummy mode?
 		isDummy logical = false
 		%> do we log messages to the command window?
-		verbose = false
+		verbose = true
 		%> fixation X position(s) in degrees
 		fixationX double = 0
 		%> fixation Y position(s) in degrees
@@ -77,6 +77,8 @@ classdef tobiiManager < optickaCore
 		currentOffset = 0
 		%> tracker time stamp
 		trackerTime = 0
+		%> tracker time stamp
+		systemTime = 0
 		% which eye is the tracker using?
 		eyeUsed = -1
 		%version of tobii SDK
@@ -107,24 +109,19 @@ classdef tobiiManager < optickaCore
 		%> @brief This is the constructor for this class
 		%>
 		% ===================================================================
-		function obj = tobiiManager(varargin)
+		function me = tobiiManager(varargin)
 			if nargin>0
-				obj.parseArgs(varargin,obj.allowedProperties);
+				me.parseArgs(varargin,me.allowedProperties);
 			end
 			try % is tobii sdk working
-				obj.tobiiOps = EyeTrackingOperations();
-				obj.version = obj.tobiiOps.get_sdk_version();
-				obj.eyetrackers = obj.tobiiOps.find_all_eyetrackers();
-				if size(obj.eyetrackers,2) == 1
-					obj.IP = obj.eyetrackers(1).Address; 
-					obj.name = [obj.eyetrackers(1).Model '[' obj.eyetrackers(1).Name ']'];
-				end
+				initTracker(me);
+				me.isDummy = false;
 			catch ME
-				obj.tobii = [];
-				obj.tobiiOps = [];
-				obj.eyetrackers = [];
-				obj.isDummy = true;
-				obj.version = '-1';
+				me.tobii = [];
+				me.tobiiOps = [];
+				me.eyetrackers = [];
+				me.isDummy = true;
+				me.version = '-1';
 				getReport(ME);
 			end
 		end
@@ -133,53 +130,39 @@ classdef tobiiManager < optickaCore
 		%> @brief initialise the tobii.
 		%>
 		% ===================================================================
-		function initialise(obj,sM)
+		function initialise(me,sM)
 			if ~exist('sM','var') || isempty(sM)
 				sM = screenManager();
 			end
-			
-			obj.tobii = obj.tobiiOps.get_eyetracker(obj.IP);
-			if ~isa(obj.tobii,'EyeTracker')
+			initTracker(me);
+			me.tobii = me.tobiiOps.get_eyetracker(me.IP);
+			if ~isa(me.tobii,'EyeTracker')
 				error('CANNOT INITIALISE TOBII');
 			end
-			obj.isConnected	= true;
-			obj.stopRecording();
-			obj.tobii.get_time_sync_data();
+			me.isConnected	= true;
+			me.stopRecording();
+			me.data = [];
+			me.tobii.get_time_sync_data();
 
+			me.screen		= sM;
+			me.ppd_			= me.screen.ppd;
 			if sM.isOpen == true
-				obj.win = obj.screen.win;
+				me.win = me.screen.win;
 			end
-			obj.screen			= sM;
-			obj.ppd_			= obj.screen.ppd;
-			obj.displayArea		= obj.tobii.get_display_area();
-			obj.trackBox		= obj.tobii.get_track_box();
+			me.displayArea	= me.tobii.get_display_area();
+			me.trackBox		= me.tobii.get_track_box();
 			
-			result = obj.tobii.get_time_sync_data();
-
-			if isa(result,'StreamError')
-				fprintf('Error: %s\n',char(result.Error));
-				fprintf('Source: %s\n',char(result.Source));
-				fprintf('SystemTimeStamp: %d\n',result.SystemTimeStamp);
-				fprintf('Message: %s\n',result.Message);
-			elseif isa(result,'TimeSynchronizationReference')
-				fprintf('TOBII Collected %d data points\n',size(result,1));
-				latest_time_sync_data = result(end);
-				fprintf('SystemRequestTimeStamp: %d\n',latest_time_sync_data.SystemRequestTimeStamp);
-				fprintf('DeviceTimeStamp: %d\n',latest_time_sync_data.DeviceTimeStamp);
-				fprintf('SystemResponseTimeStamp: %d\n',latest_time_sync_data.SystemResponseTimeStamp);
-				obj.trackerTime = double(latest_time_sync_data.DeviceTimeStamp);
-				obj.currentOffset = double(latest_time_sync_data.SystemResponseTimeStamp);
-			end
+			syncTrackerTime(me);
 			
-			obj.salutation('Initialise Method', sprintf('Running on a %s @ %2.5g (time offset: %2.5g)', obj.version, obj.trackerTime,obj.currentOffset));
-			obj.stopRecording();
+			me.salutation('Initialise Method', sprintf('Running on a %s @ %2.5g (time offset: %2.5g)', me.version, me.trackerTime,me.currentOffset));
+			me.stopRecording();
 		end
 		
 		% ===================================================================
 		%> @brief
 		%>
 		% ===================================================================
-		function updateDefaults(obj)
+		function updateDefaults(me)
 			
 		end
 		
@@ -187,8 +170,8 @@ classdef tobiiManager < optickaCore
 		%> @brief
 		%>
 		% ===================================================================
-		function setup(obj)
-			if obj.isConnected
+		function setup(me)
+			if me.isConnected
 				
 			end
 		end
@@ -197,29 +180,29 @@ classdef tobiiManager < optickaCore
 		%> @brief reset the fixation counters ready for a new trial
 		%>
 		% ===================================================================
-		function resetFixation(obj)
-			obj.fixStartTime = 0;
-			obj.fixLength = 0;
-			obj.fixInitStartTime = 0;
-			obj.fixInitLength = 0;
-			obj.fixInitTotal = 0;
-			obj.fixTotal = 0;
-			obj.fixN = 0;
-			obj.fixSelection = 0;
+		function resetFixation(me)
+			me.fixStartTime = 0;
+			me.fixLength = 0;
+			me.fixInitStartTime = 0;
+			me.fixInitLength = 0;
+			me.fixInitTotal = 0;
+			me.fixTotal = 0;
+			me.fixN = 0;
+			me.fixSelection = 0;
 		end
 		
 		% ===================================================================
 		%> @brief check the connection with the eyelink
 		%>
 		% ===================================================================
-		function connected = checkConnection(obj)
+		function connected = checkConnection(me)
 			connected = false;
-			if isa(obj.tobii,'EyeTracker')
-				obj.tobii.get_time_sync_data();
-				result = obj.tobii.get_time_sync_data();
+			if isa(me.tobii,'EyeTracker')
+				me.tobii.get_time_sync_data();
+				result = me.tobii.get_time_sync_data();
 				if isa(result,'TimeSynchronizationReference')
-					obj.isConnected = true;
-					connected = obj.isConnected;
+					me.isConnected = true;
+					connected = me.isConnected;
 				end
 			end
 		end
@@ -228,17 +211,22 @@ classdef tobiiManager < optickaCore
 		%> @brief sets up the calibration and validation
 		%>
 		% ===================================================================
-		function trackerSetup(obj)
-			
+		function trackerSetup(me)
+			if me.isConnected && me.screen.isOpen
+				resetFixation(me);
+				checkHeadPosition(me);
+				doCalibration(me);
+			end
 		end
 		
 		% ===================================================================
 		%> @brief wrapper for StartRecording
 		%>
 		% ===================================================================
-		function startRecording(obj)
-			if obj.isConnected
-				
+		function startRecording(me,trialInfo)
+			if me.isConnected
+				me.tobii.get_gaze_data();
+				me.isRecording = true;
 			end
 		end
 		
@@ -246,11 +234,12 @@ classdef tobiiManager < optickaCore
 		%> @brief wrapper for StopRecording
 		%>
 		% ===================================================================
-		function stopRecording(obj)
-			if obj.isConnected
-				obj.tobii.stop_gaze_data();
-				obj.tobii.stop_time_sync_data();
-				obj.tobii.stop_eye_image();
+		function stopRecording(me)
+			if me.isConnected
+				me.tobii.stop_gaze_data();
+				me.tobii.stop_time_sync_data();
+				me.tobii.stop_eye_image();
+				me.isRecording = false;
 			end
 		end
 		
@@ -258,7 +247,7 @@ classdef tobiiManager < optickaCore
 		%> @brief wrapper for EyelinkDoDriftCorrection
 		%>
 		% ===================================================================
-		function success = driftCorrection(obj)
+		function success = driftCorrection(me)
 			success = false;
 		end
 		
@@ -266,8 +255,8 @@ classdef tobiiManager < optickaCore
 		%> @brief wrapper for CheckRecording
 		%>
 		% ===================================================================
-		function error = checkRecording(obj)
-			error = true;
+		function error = checkRecording(me)
+			error = false;
 		end
 		
 		% ===================================================================
@@ -275,36 +264,47 @@ classdef tobiiManager < optickaCore
 		%> the mouse as an eye signal
 		%>
 		% ===================================================================
-		function sample = getSample(obj)
-			if obj.isConnected && Eyelink('NewFloatSampleAvailable') > 0
-				obj.currentSample = Eyelink('NewestFloatSample');% get the sample in the form of an event structure
-				if ~isempty(obj.currentSample) && isstruct(obj.currentSample)
-					obj.x = obj.currentSample.gx(obj.eyeUsed+1); % +1 as we're accessing MATLAB array
-					obj.y = obj.currentSample.gy(obj.eyeUsed+1);
-					obj.pupil = obj.currentSample.pa(obj.eyeUsed+1);
-					%if obj.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',obj.x,obj.y,obj.pupil);end
+		function sample = getSample(me)
+			me.currentSample = [];
+			if me.isConnected && me.isRecording
+				cdata = me.tobii.get_gaze_data();
+				if ~isempty(cdata) && isa(cdata(1),'GazeData') && cdata(1).LeftEye.GazePoint.Validity.Valid
+					thisdata = cdata(end);
+					me.currentSample.gx = thisdata.LeftEye.GazePoint.OnDisplayArea(1);
+					me.currentSample.gy = thisdata.LeftEye.GazePoint.OnDisplayArea(2);
+					me.currentSample.pa = thisdata.LeftEye.Pupil.Diameter;
+					me.currentSample.time = double(thisdata.SystemTimeStamp);
+					me.x = me.currentSample.gx * me.screen.screenVals.width; 
+					me.y = me.currentSample.gy * me.screen.screenVals.height;
+					me.pupil = me.currentSample.pa;
+					if me.x < 0; me.x = 0; end
+					if me.y < 0; me.y = 0; end
+					%if me.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',me.x,me.y,me.pupil);end
 				end
-			elseif obj.isDummy %lets use a mouse to simulate the eye signal
-				if ~isempty(obj.win)
-					[obj.x, obj.y] = GetMouse(obj.win);
+			elseif me.isDummy %lets use a mouse to simulate the eye signal
+				if ~isempty(me.win)
+					[me.x, me.y] = GetMouse(me.win);
 				else
-					[obj.x, obj.y] = GetMouse([]);
+					[me.x, me.y] = GetMouse([]);
 				end
-				obj.pupil = 800 + randi(20);
-				obj.currentSample.gx = obj.x;
-				obj.currentSample.gy = obj.y;
-				obj.currentSample.pa = obj.pupil;
-				obj.currentSample.time = GetSecs * 1000;
-				%if obj.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',obj.x,obj.y,obj.pupil);end
+				me.pupil = 800 + randi(20);
+				me.currentSample.gx = me.x;
+				me.currentSample.gy = me.y;
+				me.currentSample.pa = me.pupil;
+				me.currentSample.time = GetSecs * 1000;
+				%if me.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',me.x,me.y,me.pupil);end
 			end
-			sample = obj.currentSample;
+			if me.isConnected && me.isRecording && ~me.isDummy
+				me.data = [me.data;cdata];
+			end
+			sample = me.currentSample;
 		end
 		
 		% ===================================================================
 		%> @brief TODO
 		%>
 		% ===================================================================
-		function evt = getEvent(obj)
+		function evt = getEvent(me)
 			
 		end
 		
@@ -312,48 +312,48 @@ classdef tobiiManager < optickaCore
 		%> @brief Function interface to update the fixation parameters
 		%>
 		% ===================================================================
-		function updateFixationValues(obj,x,y,inittime,fixtime,radius,strict)
+		function updateFixationValues(me,x,y,inittime,fixtime,radius,strict)
 			%tic
-			resetFixation(obj)
+			resetFixation(me)
 			if nargin > 1 && ~isempty(x)
 				if isinf(x)
-					obj.fixationX = obj.screen.screenXOffset;
+					me.fixationX = me.screen.screenXOffset;
 				else
-					obj.fixationX = x;
+					me.fixationX = x;
 				end
 			end
 			if nargin > 2 && ~isempty(y)
 				if isinf(y)
-					obj.fixationY = obj.screen.screenYOffset;
+					me.fixationY = me.screen.screenYOffset;
 				else
-					obj.fixationY = y;
+					me.fixationY = y;
 				end
 			end
 			if nargin > 3 && ~isempty(inittime)
 				if iscell(inittime) && length(inittime)==4
-					obj.fixationInitTime = inittime{1};
-					obj.fixationTime = inittime{2};
-					obj.fixationRadius = inittime{3};
-					obj.strictFixation = inittime{4};
+					me.fixationInitTime = inittime{1};
+					me.fixationTime = inittime{2};
+					me.fixationRadius = inittime{3};
+					me.strictFixation = inittime{4};
 				elseif length(inittime) == 2
-					obj.fixationInitTime = randi(inittime.*1000)/1000;
+					me.fixationInitTime = randi(inittime.*1000)/1000;
 				elseif length(inittime)==1
-					obj.fixationInitTime = inittime;
+					me.fixationInitTime = inittime;
 				end
 			end
 			if nargin > 4 && ~isempty(fixtime)
 				if length(fixtime) == 2
-					obj.fixationTime = randi(fixtime.*1000)/1000;
+					me.fixationTime = randi(fixtime.*1000)/1000;
 				elseif length(fixtime) == 1
-					obj.fixationTime = fixtime;
+					me.fixationTime = fixtime;
 				end
 			end
-			if nargin > 5 && ~isempty(radius); obj.fixationRadius = radius; end
-			if nargin > 6 && ~isempty(strict); obj.strictFixation = strict; end
-			if obj.verbose
+			if nargin > 5 && ~isempty(radius); me.fixationRadius = radius; end
+			if nargin > 6 && ~isempty(strict); me.strictFixation = strict; end
+			if me.verbose
 				fprintf('-+-+-> eyelinkManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g\n', ...
-					obj.fixationX, obj.fixationY, num2str(obj.fixationInitTime), num2str(obj.fixationTime), ...
-					obj.fixationRadius);
+					me.fixationX, me.fixationY, num2str(me.fixationInitTime), num2str(me.fixationTime), ...
+					me.fixationRadius);
 			end
 		end
 		
@@ -364,40 +364,40 @@ classdef tobiiManager < optickaCore
 		%> @return fixtime boolean if we're fixed for fixation time
 		%> @return searching boolean for if we are still searching for fixation
 		% ===================================================================
-		function [fixated, fixtime, searching, window, exclusion] = isFixated(obj)
+		function [fixated, fixtime, searching, window, exclusion] = isFixated(me)
 			fixated = false; fixtime = false; searching = true; window = []; exclusion = false;
-			if (obj.isConnected || obj.isDummy) && ~isempty(obj.currentSample)
-				if obj.fixInitTotal == 0
-					obj.fixInitTotal = obj.currentSample.time;
+			if (me.isConnected || me.isDummy) && ~isempty(me.currentSample)
+				if me.fixInitTotal == 0
+					me.fixInitTotal = me.currentSample.time;
 				end
-				if ~isempty(obj.exclusionZone)
-					eZ = obj.exclusionZone; x = obj.x; y = obj.y;
+				if ~isempty(me.exclusionZone)
+					eZ = me.exclusionZone; x = me.x; y = me.y;
 					if (x >= eZ(1) && x <= eZ(2)) && (y <= eZ(3) && y >= eZ(4))
 						fixated = false; fixtime = false; searching = false; exclusion = true;
 						fprintf(' ==> EXCLUSION ZONE ENTERED!\n');
 						return
 					end
 				end
-				r = sqrt((obj.x - obj.fixationX).^2 + (obj.y - obj.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',obj.x, obj.fixationX, obj.y, obj.fixationY,r,obj.fixationRadius);
-				window = find(r < obj.fixationRadius);
+				r = sqrt((me.x - me.fixationX).^2 + (me.y - me.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixationRadius);
+				window = find(r < me.fixationRadius);
 				if any(window)
-					if obj.fixN == 0
-						obj.fixN = 1;
-						obj.fixSelection = window(1);
+					if me.fixN == 0
+						me.fixN = 1;
+						me.fixSelection = window(1);
 					end
-					if obj.fixSelection == window(1)
-						if obj.fixStartTime == 0
-							obj.fixStartTime = obj.currentSample.time;
+					if me.fixSelection == window(1)
+						if me.fixStartTime == 0
+							me.fixStartTime = me.currentSample.time;
 						end
-						obj.fixLength = (obj.currentSample.time - obj.fixStartTime) / 1000;
-						if obj.fixLength > obj.fixationTime
+						me.fixLength = (me.currentSample.time - me.fixStartTime) / 1000;
+						if me.fixLength > me.fixationTime
 							fixtime = true;
 						end
-						obj.fixInitStartTime = 0;
+						me.fixInitStartTime = 0;
 						searching = false;
 						fixated = true;
-						obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
-						%if obj.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, obj.fixLength, obj.fixationTime, obj.fixTotal, obj.fixInitTotal);end
+						me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1000;
+						%if me.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, me.fixLength, me.fixationTime, me.fixTotal, me.fixInitTotal);end
 						return
 					else
 						fixated = false;
@@ -405,21 +405,21 @@ classdef tobiiManager < optickaCore
 						searching = false;
 					end
 				else
-					if obj.fixN == 1
-						obj.fixN = -100;
+					if me.fixN == 1
+						me.fixN = -100;
 					end
-					if obj.fixInitStartTime == 0
-						obj.fixInitStartTime = obj.currentSample.time;
+					if me.fixInitStartTime == 0
+						me.fixInitStartTime = me.currentSample.time;
 					end
-					obj.fixInitLength = (obj.currentSample.time - obj.fixInitStartTime) / 1000;
-					if obj.fixInitLength <= obj.fixationInitTime
+					me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1000;
+					if me.fixInitLength <= me.fixationInitTime
 						searching = true;
 					else
 						searching = false;
 					end
-					obj.fixStartTime = 0;
-					obj.fixLength = 0;
-					obj.fixTotal = (obj.currentSample.time - obj.fixInitTotal) / 1000;
+					me.fixStartTime = 0;
+					me.fixLength = 0;
+					me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1000;
 					return
 				end
 			end
@@ -430,10 +430,10 @@ classdef tobiiManager < optickaCore
 		%> fixation state, useful for using via stateMachine
 		%>
 		% ===================================================================
-		function out = testExclusion(obj)
+		function out = testExclusion(me)
 			out = false;
-			if (obj.isConnected || obj.isDummy) && ~isempty(obj.currentSample) && ~isempty(obj.exclusionZone)
-				eZ = obj.exclusionZone; x = obj.x; y = obj.y;
+			if (me.isConnected || me.isDummy) && ~isempty(me.currentSample) && ~isempty(me.exclusionZone)
+				eZ = me.exclusionZone; x = me.x; y = me.y;
 				if (x >= eZ(1) && x <= eZ(2)) && (y <= eZ(3) && y >= eZ(4))
 					out = true;
 					fprintf(' ==> EXCLUSION ZONE ENTERED!\n');
@@ -447,8 +447,8 @@ classdef tobiiManager < optickaCore
 		%> fixation state, useful for using via stateMachine
 		%>
 		% ===================================================================
-		function out = testWithinFixationWindow(obj, yesString, noString)
-			if isFixated(obj)
+		function out = testWithinFixationWindow(me, yesString, noString)
+			if isFixated(me)
 				out = yesString;
 			else
 				out = noString;
@@ -461,10 +461,10 @@ classdef tobiiManager < optickaCore
 		%> external code to quickly select a string based on this.
 		%>
 		% ===================================================================
-		function out = testFixationTime(obj, yesString, noString)
-			[fix,fixtime] = isFixated(obj);
+		function out = testFixationTime(me, yesString, noString)
+			[fix,fixtime] = isFixated(me);
 			if fix && fixtime
-				out = yesString; %obj.salutation(sprintf('Fixation Time: %g',obj.fixLength),'TESTFIXTIME');
+				out = yesString; %me.salutation(sprintf('Fixation Time: %g',me.fixLength),'TESTFIXTIME');
 			else
 				out = noString;
 			end
@@ -483,37 +483,37 @@ classdef tobiiManager < optickaCore
 		%>   still being initiated, 'fixing' if the fixation window was entered
 		%>   but not for the requisite fixation time, or the yes or no string.
 		% ===================================================================
-		function [out, window, exclusion] = testSearchHoldFixation(obj, yesString, noString)
-			[fix, fixtime, searching, window, exclusion] = obj.isFixated();
+		function [out, window, exclusion] = testSearchHoldFixation(me, yesString, noString)
+			[fix, fixtime, searching, window, exclusion] = me.isFixated();
 			if exclusion
 				fprintf('-+-+-> Tobii:testSearchHoldFixation EXCLUSION ZONE ENTERED!\n')
 				out = 'EXCLUDED!'; window = [];
 				return
 			end
 			if searching
-				if (obj.strictFixation==true && (obj.fixN == 0)) || obj.strictFixation==false
+				if (me.strictFixation==true && (me.fixN == 0)) || me.strictFixation==false
 					out = 'searching';
 				else
 					out = noString;
-					if obj.verbose; fprintf('-+-+-> Tobii:testSearchHoldFixation STRICT SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+					if me.verbose; fprintf('-+-+-> Tobii:testSearchHoldFixation STRICT SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 				end
 				return
 			elseif fix
-				if (obj.strictFixation==true && ~(obj.fixN == -100)) || obj.strictFixation==false
+				if (me.strictFixation==true && ~(me.fixN == -100)) || me.strictFixation==false
 					if fixtime
 						out = yesString;
-						if obj.verbose; fprintf('-+-+-> Tobii:testSearchHoldFixation FIXATION SUCCESSFUL!: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+						if me.verbose; fprintf('-+-+-> Tobii:testSearchHoldFixation FIXATION SUCCESSFUL!: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 					else
 						out = 'fixing';
 					end
 				else
 					out = noString;
-					if obj.verbose;fprintf('-+-+-> Tobii:testSearchHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+					if me.verbose;fprintf('-+-+-> Tobii:testSearchHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 				end
 				return
 			elseif searching == false
 				out = noString;
-				if obj.verbose;fprintf('-+-+-> Tobii:testSearchHoldFixation SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+				if me.verbose;fprintf('-+-+-> Tobii:testSearchHoldFixation SEARCH FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 			else
 				out = '';
 			end
@@ -530,29 +530,29 @@ classdef tobiiManager < optickaCore
 		%> @return out the output string which is 'fixing' if the fixation window was entered
 		%>   but not for the requisite fixation time, or the yes or no string.
 		% ===================================================================
-		function [out, window, exclusion] = testHoldFixation(obj, yesString, noString)
-			[fix, fixtime, searching, window, exclusion] = obj.isFixated();
+		function [out, window, exclusion] = testHoldFixation(me, yesString, noString)
+			[fix, fixtime, searching, window, exclusion] = me.isFixated();
 			if exclusion
 				fprintf('-+-+-> Tobii:testHoldFixation EXCLUSION ZONE ENTERED!\n')
 				out = 'EXCLUDED!'; window = [];
 				return
 			end
 			if fix
-				if (obj.strictFixation==true && ~(obj.fixN == -100)) || obj.strictFixation==false
+				if (me.strictFixation==true && ~(me.fixN == -100)) || me.strictFixation==false
 					if fixtime
 						out = yesString;
-						if obj.verbose; fprintf('-+-+-> Tobii:testHoldFixation FIXATION SUCCESSFUL!: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+						if me.verbose; fprintf('-+-+-> Tobii:testHoldFixation FIXATION SUCCESSFUL!: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 					else
 						out = 'fixing';
 					end
 				else
 					out = noString;
-					if obj.verbose;fprintf('-+-+-> Tobii:testHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+					if me.verbose;fprintf('-+-+-> Tobii:testHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 				end
 				return
 			else
 				out = noString;
-				if obj.verbose; fprintf('-+-+-> Tobii:testHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+				if me.verbose; fprintf('-+-+-> Tobii:testHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
 				return
 			end
 		end
@@ -562,8 +562,8 @@ classdef tobiiManager < optickaCore
 		%> binocular is enabled
 		%>
 		% ===================================================================
-		function eyeUsed = checkEye(obj)
-			if obj.isConnected
+		function eyeUsed = checkEye(me)
+			if me.isConnected
 				
 			end
 		end
@@ -572,17 +572,15 @@ classdef tobiiManager < optickaCore
 		%> @brief draw the current eye position on the PTB display
 		%>
 		% ===================================================================
-		function drawEyePosition(obj)
-			if (obj.isDummy || obj.isConnected) && obj.screen.isOpen && ~isempty(obj.x) && ~isempty(obj.y)
-				x = obj.toPixels(obj.x,'x');
-				y = obj.toPixels(obj.y,'y');
-				if obj.isFixated
-					Screen('DrawDots', obj.win, [x y], 8, [1 0.5 1 1], [], 1);
-					if obj.fixLength > obj.fixationTime
-						Screen('DrawText', obj.win, 'FIX', x, y, [1 1 1]);
+		function drawEyePosition(me)
+			if (me.isDummy || me.isConnected) && me.screen.isOpen && ~isempty(me.x) && ~isnan(me.x) && ~isempty(me.y) && ~isnan(me.y)
+				if me.isFixated
+					Screen('DrawDots', me.win, [me.x me.y], 8, [1 0.5 1 1], [], 1);
+					if me.fixLength > me.fixationTime
+						Screen('DrawText', me.win, 'FIX', me.x, me.y, [1 1 1]);
 					end
 				else
-					Screen('DrawDots', obj.win, [x y], 6, [1 0.5 0 1], [], 1);
+					Screen('DrawDots', me.win, [30 30], 6, [1 0.5 0 1], [], 1);
 				end
 			end
 		end
@@ -592,9 +590,9 @@ classdef tobiiManager < optickaCore
 		%> message is not the previous message, so loop safe.
 		%>
 		% ===================================================================
-		function statusMessage(obj,message)
-			if obj.isConnected
-				if obj.verbose; fprintf('-+-+->Eyelink status message: %s\n',message);end
+		function statusMessage(me,message)
+			if me.isConnected
+				if me.verbose; fprintf('-+-+->Tobii status message: %s\n',message);end
 			end
 		end
 		
@@ -603,9 +601,9 @@ classdef tobiiManager < optickaCore
 		%>
 		%>
 		% ===================================================================
-		function edfMessage(obj, message)
-			if obj.isConnected
-				if obj.verbose; fprintf('-+-+->EDF Message: %s\n',message);end
+		function edfMessage(me, message)
+			if me.isConnected
+				if me.verbose; fprintf('-+-+->EDF Message: %s\n',message);end
 			end
 		end
 		
@@ -614,28 +612,29 @@ classdef tobiiManager < optickaCore
 		%> is enabled
 		%>
 		% ===================================================================
-		function close(obj)
+		function close(me)
 			try
-				
+				stopRecording(me)
+				me.tobii = [];
+				me.tobiiOps = [];
 			catch ME
-				obj.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
-				obj.error = ME;
-				obj.salutation(ME.message);
+				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
+				me.error = ME;
+				me.salutation(ME.message);
 			end
-			Eyelink('Shutdown');
-			obj.isConnected = false;
-			obj.isDummy = false;
-			obj.isRecording = false;
-			obj.eyeUsed = -1;
-			obj.screen = [];
+			me.isConnected = false;
+			me.isDummy = false;
+			me.isRecording = false;
+			me.eyeUsed = -1;
+			me.screen = [];
 		end
 		
 		% ===================================================================
 		%> @brief draw the background colour
 		%>
 		% ===================================================================
-		function trackerClearScreen(obj)
-			if obj.isConnected
+		function trackerClearScreen(me)
+			if me.isConnected
 				
 			end
 		end
@@ -644,8 +643,8 @@ classdef tobiiManager < optickaCore
 		%> @brief draw the stimuli boxes on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawStimuli(obj, ts, clearScreen)
-			if obj.isConnected
+		function trackerDrawStimuli(me, ts, clearScreen)
+			if me.isConnected
 				
 			end
 		end
@@ -654,8 +653,8 @@ classdef tobiiManager < optickaCore
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawFixation(obj)
-			if obj.isConnected
+		function trackerDrawFixation(me)
+			if me.isConnected
 				
 			end
 		end
@@ -664,8 +663,8 @@ classdef tobiiManager < optickaCore
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawExclusion(obj)
-			if obj.isConnected && ~isempty(obj.exclusionZone) && length(obj.exclusionZone)==4
+		function trackerDrawExclusion(me)
+			if me.isConnected && ~isempty(me.exclusionZone) && length(me.exclusionZone)==4
 				
 			end
 		end
@@ -674,38 +673,55 @@ classdef tobiiManager < optickaCore
 		%> @brief draw the fixation box on the tracker display
 		%>
 		% ===================================================================
-		function trackerDrawText(obj,textIn)
-			if obj.isConnected
+		function trackerDrawText(me,textIn)
+			if me.isConnected
 				
 			end
 		end
 		
 		% ===================================================================
-		%> @brief check what mode the eyelink is in
-		%> ##define IN_UNKNOWN_MODE 0
-		%> #define IN_IDLE_MODE 1
-		%> #define IN_SETUP_MODE 2
-		%> #define IN_RECORD_MODE 4
-		%> #define IN_TARGET_MODE 8
-		%> #define IN_DRIFTCORR_MODE 16
-		%> #define IN_IMAGE_MODE 32
-		%> #define IN_USER_MENU 64
-		%> #define IN_PLAYBACK_MODE 256
-		%> #define LINK_TERMINATED_RESULT -100
+		%> @brief check what mode the tobii is in
+		%> 
 		% ===================================================================
-		function mode = currentMode(obj)
-			if obj.isConnected
-				mode = obj.tobii.get_eye_tracking_mode();
+		function mode = currentMode(me)
+			if me.isConnected
+				mode = me.tobii.get_eye_tracking_mode();
 			end
 		end
 		
+		
 		% ===================================================================
-		%> @brief Sync time message for EDF file
+		%> @brief Sync time with tracker
 		%>
 		% ===================================================================
-		function syncTime(obj)
-			if obj.isConnected
-				
+		function syncTime(me)
+			
+		end
+			
+			
+		% ===================================================================
+		%> @brief Sync time with tracker
+		%>
+		% ===================================================================
+		function syncTrackerTime(me)
+			if me.isConnected
+				me.tobii.get_time_sync_data();
+				result = me.tobii.get_time_sync_data();
+				me.tobii.stop_time_sync_data();
+				if isa(result,'StreamError')
+					fprintf('Error: %s\n',char(result.Error));
+					fprintf('Source: %s\n',char(result.Source));
+					fprintf('SystemTimeStamp: %d\n',result.SystemTimeStamp);
+					fprintf('Message: %s\n',result.Message);
+				elseif isa(result,'TimeSynchronizationReference')
+					fprintf('TOBII Collected %d data points\n',size(result,1));
+					latest_time_sync_data = result(end);
+					fprintf('SystemRequestTimeStamp: %d\n',latest_time_sync_data.SystemRequestTimeStamp);
+					fprintf('DeviceTimeStamp: %d\n',latest_time_sync_data.DeviceTimeStamp);
+					fprintf('SystemResponseTimeStamp: %d\n',latest_time_sync_data.SystemResponseTimeStamp);
+					me.trackerTime = double(latest_time_sync_data.DeviceTimeStamp);
+					me.currentOffset = me.trackerTime - double(latest_time_sync_data.SystemResponseTimeStamp);
+				end
 			end
 		end
 		
@@ -713,25 +729,26 @@ classdef tobiiManager < optickaCore
 		%> @brief Get offset between tracker and display computers
 		%>
 		% ===================================================================
-		function offset = getTimeOffset(obj)
-			if obj.isConnected
-				offset = Eyelink('TimeOffset');
-				obj.currentOffset = offset;
+		function offset = getTimeOffset(me)
+			if me.isConnected
+				offset = 0;
+				me.currentOffset = offset;
 			else
 				offset = 0;
 			end
 		end
 		
 		% ===================================================================
-		%> @brief Get offset between tracker and display computers
+		%> @brief Get tracker time
 		%>
 		% ===================================================================
-		function time = getTrackerTime(obj)
-			if obj.isConnected
-				time = Eyelink('TrackerTime');
-				obj.trackerTime = time;
+		function [trackertime, systemtime] = getTrackerTime(me)
+			if me.isConnected
+				trackertime = 0;
+				me.systemTime = me.tobiiOps.get_system_time_stamp();
 			else
-				time = 0;
+				trackertime = 0;
+				systemtime = 0;
 			end
 		end
 		
@@ -739,9 +756,9 @@ classdef tobiiManager < optickaCore
 		%> @brief set into offline / idle mode
 		%>
 		% ===================================================================
-		function setOffline(obj)
-			if obj.isConnected
-				
+		function setOffline(me)
+			if me.isConnected
+				stopRecording(me);
 			end
 		end
 		
@@ -749,58 +766,54 @@ classdef tobiiManager < optickaCore
 		%> @brief automagically turn pixels to degrees
 		%>
 		% ===================================================================
-		function set.x(obj,in)
-			obj.x = toDegrees(obj,in,'x');
+		function set.x(me,in)
+			me.x = toDegrees(me,in,'x');
 		end
 		
 		% ===================================================================
 		%> @brief automagically turn pixels to degrees
 		%>
 		% ===================================================================
-		function set.y(obj,in)
-			obj.y = toDegrees(obj,in,'y');
+		function set.y(me,in)
+			me.y = toDegrees(me,in,'y');
 		end
 		
 		% ===================================================================
 		%> @brief runs a demo of the eyelink, tests this class
 		%>
 		% ===================================================================
-		function runDemo(obj)
-			stopkey=KbName('ESCAPE');
-			nextKey=KbName('SPACE');
+		function runDemo(me)
+			KbName('UnifyKeyNames')
+			stopkey=KbName('escape');
+			nextKey=KbName('space');
 			calibkey=KbName('C');
 			validkey=KbName('V');
 			driftkey=KbName('D');
-			obj.recordData = true;
 			try
-				s = screenManager('debug',true);
+				s = screenManager('debug',true,'blend',true);
 				s.backgroundColour = [0.5 0.5 0.5 0];
-				o = dotsStimulus('size',obj.fixationRadius*2,'speed',2,'mask',false,'density',30);
+				o = dotsStimulus('size',me.fixationRadius*2,'speed',2,'mask',false,'density',30);
 				open(s); %open out screen
 				setup(o,s); %setup our stimulus with open screen
 				
 				ListenChar(1);
-				initialise(obj,s); %initialise eyelink with our screen
-				setup(obj); %setup eyelink
+				initialise(me,s); %initialise eyelink with our screen
+				trackerSetup(me);
 				
-				obj.statusMessage('DEMO Running'); %
-				setOffline(obj); %Eyelink('Command', 'set_idle_mode');
-				trackerClearScreen(obj);
-				trackerDrawFixation(obj);
+				me.statusMessage('DEMO Running'); %
+				setOffline(me);
+				
 				xx = 0;
 				a = 1;
-				
 				while xx == 0
 					yy = 0;
 					b = 1;
-					edfMessage(obj,'V_RT MESSAGE END_FIX END_RT');
-					edfMessage(obj,['TRIALID ' num2str(a)]);
-					startRecording(obj);
+					startRecording(me);
 					WaitSecs(0.1);
-					vbl=Screen('Flip',s.win);
-					syncTime(obj);
+					vbl=flip(s);
+					syncTime(me);
 					while yy == 0
-						err = checkRecording(obj);
+						err = checkRecording(me);
 						if(err~=0); xx = 1; break; end
 						
 						[~, ~, keyCode] = KbCheck(-1);
@@ -808,20 +821,18 @@ classdef tobiiManager < optickaCore
 						if keyCode(nextKey); yy = 1; break; end
 						if keyCode(calibkey); yy = 1; break; end
 						
-						if b == 30; edfMessage(obj,'END_FIX');end
+						if b == 30; edfMessage(me,'END_FIX');end
 						
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
 						
-						getSample(obj);
+						getSample(me);
 						
-						if ~isempty(obj.currentSample)
-							x = obj.toPixels(obj.x,'x'); %#ok<*PROP>
-							y = obj.toPixels(obj.y,'y');
-							txt = sprintf('Press ESC to finish \n X = %g / %g | Y = %g / %g \n RADIUS = %g | FIXATION = %g', x, obj.x, y, obj.y, obj.fixationRadius, obj.fixLength);
+						if ~isempty(me.currentSample)
+							txt = sprintf('Press ESC to finish \n X = %g / %g | Y = %g / %g \n RADIUS = %g | FIXATION = %g', me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.fixationRadius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
-							drawEyePosition(obj);
+							drawEyePosition(me);
 						end
 						
 						Screen('DrawingFinished', s.win);
@@ -829,44 +840,40 @@ classdef tobiiManager < optickaCore
 						vbl=Screen('Flip',s.win, vbl+(s.screenVals.ifi * 0.5));
 						b=b+1;
 					end
-					edfMessage(obj,'END_RT');
-					stopRecording(obj)
-					edfMessage(obj,'TRIAL_RESULT 1')
-					if xx ~=1; driftCorrection(obj); end
-					obj.fixationX = randi([-5 5]);
-					obj.fixationY = randi([-5 5]);
-					obj.fixationRadius = randi([1 5]);
-					o.sizeOut = obj.fixationRadius*2;
-					o.xPositionOut = obj.fixationX;
-					o.yPositionOut = obj.fixationY;
-					ts.x = obj.fixationX;
-					ts.y = obj.fixationY;
+					edfMessage(me,'END_RT');
+					stopRecording(me)
+					edfMessage(me,'TRIAL_RESULT 1')
+					
+					me.fixationX = randi([-5 5]);
+					me.fixationY = randi([-5 5]);
+					me.fixationRadius = randi([1 5]);
+					o.sizeOut = me.fixationRadius*2;
+					o.xPositionOut = me.fixationX;
+					o.yPositionOut = me.fixationY;
+					ts.x = me.fixationX;
+					ts.y = me.fixationY;
 					ts.size = o.sizeOut;
 					ts.selected = true;
-					setOffline(obj); %Eyelink('Command', 'set_idle_mode');
-					statusMessage(obj,sprintf('X Pos = %g | Y Pos = %g | Radius = %g',obj.fixationX,obj.fixationY,obj.fixationRadius));
-					trackerClearScreen(obj);
-					trackerDrawFixation(obj);
-					trackerDrawStimuli(obj,ts);
+					setOffline(me); %Eyelink('Command', 'set_idle_mode');
+					statusMessage(me,sprintf('X Pos = %g | Y Pos = %g | Radius = %g',me.fixationX,me.fixationY,me.fixationRadius));
 					update(o);
 					WaitSecs(0.3)
 					a=a+1;
 				end
 				ListenChar(0);
 				close(s);
-				close(obj);
+				close(me);
 				clear s o
-				
 			catch ME
+				getReport(ME);
 				ListenChar(0);
-				obj.salutation('runDemo ERROR!!!')
-				Eyelink('Shutdown');
+				Priority(0);
+				me.salutation('runDemo ERROR!!!')
 				close(s);
 				sca;
-				close(obj);
+				close(me);
 				clear s o
-				obj.error = ME;
-				obj.salutation(ME.message);
+				me.salutation(ME.message);
 				rethrow(ME);
 			end
 			
@@ -876,23 +883,201 @@ classdef tobiiManager < optickaCore
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief
 		%>
 		% ===================================================================
-		function out = toDegrees(obj,in,axis)
+		function checkHeadPosition(me)
+			if ~me.isConnected; return; end
+			me.tobii.get_gaze_data();
+			while ~KbCheck
+				DrawFormattedText(me.screen.win, 'When correctly positioned press any key to start the calibration.', 'center', me.screen.screenVals.height * 0.1, me.screen.screenVals.white);
+				distance = [];
+				gaze_data = me.tobii.get_gaze_data();
+				if ~isempty(gaze_data)
+					last_gaze = gaze_data(end);
+					validityColor = [0.8 0 0];
+					% Check if user has both eyes inside a reasonable tacking area.
+					if last_gaze.LeftEye.GazeOrigin.Validity.Valid && last_gaze.RightEye.GazeOrigin.Validity.Valid
+						left_validity = all(last_gaze.LeftEye.GazeOrigin.InTrackBoxCoordinateSystem(1:2) < 0.85) ...
+							&& all(last_gaze.LeftEye.GazeOrigin.InTrackBoxCoordinateSystem(1:2) > 0.15);
+						right_validity = all(last_gaze.RightEye.GazeOrigin.InTrackBoxCoordinateSystem(1:2) < 0.85) ...
+							&& all(last_gaze.RightEye.GazeOrigin.InTrackBoxCoordinateSystem(1:2) > 0.15);
+						if left_validity && right_validity
+							validityColor = [0 0.8 0];
+						end
+					end
+					origin = [me.screen.screenVals.width/4 me.screen.screenVals.height/4];
+					size = [me.screen.screenVals.width/2 me.screen.screenVals.height/2];
+					
+					baseRect = [0 0 size(1) size(2)];
+					frame = CenterRectOnPointd(baseRect, me.screen.screenVals.width/2, me.screen.screenVals.height/2);
+					
+					Screen('FrameRect', me.screen.win, validityColor, frame, 5);
+					% Left Eye
+					if last_gaze.LeftEye.GazeOrigin.Validity.Valid
+						distance = [distance; round(last_gaze.LeftEye.GazeOrigin.InUserCoordinateSystem(3)/10,1)];
+						left_eye_pos_x = double(1-last_gaze.LeftEye.GazeOrigin.InTrackBoxCoordinateSystem(1))*size(1) + origin(1);
+						left_eye_pos_y = double(last_gaze.LeftEye.GazeOrigin.InTrackBoxCoordinateSystem(2))*size(2) + origin(2);
+						Screen('DrawDots', me.screen.win, [left_eye_pos_x left_eye_pos_y], 30, validityColor, [], 2);
+					end
+					% Right Eye
+					if last_gaze.RightEye.GazeOrigin.Validity.Valid
+						distance = [distance;round(last_gaze.RightEye.GazeOrigin.InUserCoordinateSystem(3)/10,1)];
+						right_eye_pos_x = double(1-last_gaze.RightEye.GazeOrigin.InTrackBoxCoordinateSystem(1))*size(1) + origin(1);
+						right_eye_pos_y = double(last_gaze.RightEye.GazeOrigin.InTrackBoxCoordinateSystem(2))*size(2) + origin(2);
+						Screen('DrawDots', me.screen.win, [right_eye_pos_x right_eye_pos_y], 30, validityColor, [], 2);
+					end
+				end
+				DrawFormattedText(me.screen.win, sprintf('Current distance to the eye tracker: %.2f cm.',mean(distance)), 'center', me.screen.screenVals.height * 0.85, me.screen.screenVals.white);
+				flip(me.screen);
+			end
+			me.tobii.stop_gaze_data();
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function doCalibration(me)
+			
+			spaceKey = KbName('escape');
+			RKey = KbName('C');
+			
+			dotSizePix = 20;
+			
+			dotColor = [[1 0 0];[1 1 1]]; % Red and white
+			
+			leftColor = [0.8 0 0]; 
+			rightColor = [0 0.8 0]; 
+			
+			% Calibration points
+			lb = 0.15;  % left bound
+			xc = 0.5;  % horizontal center
+			rb = 0.85;  % right bound
+			ub = 0.15;  % upper bound
+			yc = 0.5;  % vertical center
+			bb = 0.85;  % bottom bound
+			
+			points_to_calibrate = [[xc,yc];[lb,ub];[rb,ub];[lb,bb];[rb,bb]];
+			
+			% Create calibration object
+			calib = ScreenBasedCalibration(me.tobii);
+			calib.leave_calibration_mode();
+			calibrating = true;
+			
+			DrawFormattedText(me.screen.win, 'Get ready to fixate...', 'center', 'center', me.screen.screenVals.white);
+			flip(me.screen);
+			WaitSecs(0.5);
+			spx = [me.screen.screenVals.width me.screen.screenVals.height];
+			
+			while calibrating
+				% Enter calibration mode
+				calib.enter_calibration_mode();
+				
+				for i=1:length(points_to_calibrate)
+					
+					Screen('DrawDots', me.screen.win, points_to_calibrate(i,:).*spx, dotSizePix, dotColor(1,:), [], 2);
+					Screen('DrawDots', me.screen.win, points_to_calibrate(i,:).*spx, dotSizePix*0.3, dotColor(2,:), [], 2);
+					
+					Screen('Flip', me.screen.win);
+					
+					% Wait a moment to allow the user to focus on the point
+					WaitSecs(1);
+					
+					if calib.collect_data(points_to_calibrate(i,:)) ~= CalibrationStatus.Success
+						% Try again if it didn't go well the first time.
+						% Not all eye tracker models will fail at this point, but instead fail on ComputeAndApply.
+						calib.collect_data(points_to_calibrate(i,:));
+					end
+					
+					flip(me.screen);
+					WaitSecs(0.2);
+					
+				end
+				
+				DrawFormattedText(me.screen.win, 'Calculating calibration result....', 'center', 'center', me.screen.screenVals.white);
+				
+				flip(me.screen);
+				
+				% Blocking call that returns the calibration result
+				calibration_result = calib.compute_and_apply();
+				
+				calib.leave_calibration_mode();
+				
+				if calibration_result.Status ~= CalibrationStatus.Success
+					break
+				end
+				
+				% Calibration Result
+				WaitSecs(0.5);
+				flip(me.screen);
+				points = calibration_result.CalibrationPoints;
+				
+				for i=1:length(points)
+					Screen('DrawDots', me.screen.win, points(i).PositionOnDisplayArea.*spx, dotSizePix*0.5, dotColor(2,:), [], 2);
+					for j=1:length(points(i).RightEye)
+						if points(i).LeftEye(j).Validity == CalibrationEyeValidity.ValidAndUsed
+							Screen('DrawDots', me.screen.win, points(i).LeftEye(j).PositionOnDisplayArea.*spx, dotSizePix*0.3, leftColor, [], 2);
+							Screen('DrawLines', me.screen.win, ([points(i).LeftEye(j).PositionOnDisplayArea; points(i).PositionOnDisplayArea].*spx)', 2, leftColor, [0 0], 2);
+						end
+						if points(i).RightEye(j).Validity == CalibrationEyeValidity.ValidAndUsed
+							Screen('DrawDots', me.screen.win, points(i).RightEye(j).PositionOnDisplayArea.*spx, dotSizePix*0.3, rightColor, [], 2);
+							Screen('DrawLines', me.screen.win, ([points(i).RightEye(j).PositionOnDisplayArea; points(i).PositionOnDisplayArea].*spx)', 2, rightColor, [0 0], 2);
+						end
+					end
+					
+				end
+				
+				DrawFormattedText(me.screen.win, 'Press the ''C'' key to recalibrate or ''Escape'' to continue....', 'center', me.screen.screenVals.height * 0.95, me.screen.screenVals.white)
+				flip(me.screen);
+				
+				while true
+					[ keyIsDown, seconds, keyCode ] = KbCheck;
+					keyCode = find(keyCode, 1);
+					if keyIsDown
+						if keyCode == spaceKey
+							calibrating = false;
+							break;
+						elseif keyCode == RKey
+							break;
+						end
+						KbReleaseWait;
+					end
+				end
+			end
+			
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function initTracker(me)
+			me.tobiiOps = EyeTrackingOperations();
+			me.version = me.tobiiOps.get_sdk_version();
+			me.eyetrackers = me.tobiiOps.find_all_eyetrackers();
+			me.IP = me.eyetrackers(1).Address; 
+			me.name = [me.eyetrackers(1).Model '[' me.eyetrackers(1).Name ']'];
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function out = toDegrees(me,in,axis)
 			if ~exist('axis','var');axis='';end
 			switch axis
 				case 'x'
-					out = (in - obj.screen.xCenter) / obj.ppd_;
+					out = (in - me.screen.xCenter) / me.ppd_;
 				case 'y'
-					out = (in - obj.screen.yCenter) / obj.ppd_;
+					out = (in - me.screen.yCenter) / me.ppd_;
 				otherwise
 					if length(in)==2
-						out(1) = (in(1) - obj.screen.xCenter) / obj.ppd_;
-						out(2) = (in(2) - obj.screen.yCenter) / obj.ppd_;
+						out(1) = (in(1) - me.screen.xCenter) / me.ppd_;
+						out(2) = (in(2) - me.screen.yCenter) / me.ppd_;
 					else
 						out = 0;
 					end
@@ -903,20 +1088,20 @@ classdef tobiiManager < optickaCore
 		%> @brief
 		%>
 		% ===================================================================
-		function out = toPixels(obj,in,axis)
+		function out = toPixels(me,in,axis)
 			if ~exist('axis','var');axis='';end
 			switch axis
 				case 'x'
-					out = (in * obj.ppd_) + obj.screen.xCenter;
+					out = (in * me.ppd_) + me.screen.xCenter;
 				case 'y'
-					out = (in * obj.ppd_) + obj.screen.yCenter;
+					out = (in * me.ppd_) + me.screen.yCenter;
 				otherwise
 					if length(in)==2
-						out(1) = (in(1) * obj.ppd_) + obj.screen.xCenter;
-						out(2) = (in(2) * obj.ppd_) + obj.screen.yCenter;
+						out(1) = (in(1) * me.ppd_) + me.screen.xCenter;
+						out(2) = (in(2) * me.ppd_) + me.screen.yCenter;
 					elseif length(in)==4
-						out(1:2) = (in(1:2) * obj.ppd_) + obj.screen.xCenter;
-						out(3:4) = (in(3:4) * obj.ppd_) + obj.screen.yCenter;
+						out(1:2) = (in(1:2) * me.ppd_) + me.screen.xCenter;
+						out(3:4) = (in(3:4) * me.ppd_) + me.screen.yCenter;
 					else
 						out = 0;
 					end

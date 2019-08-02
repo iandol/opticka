@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '1.12'
+		optickaVersion char = '1.13'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -55,14 +55,14 @@ classdef opticka < optickaCore
 		%> parsed.
 		%> @return instance of opticka class.
 		% ===================================================================
-		function obj = opticka(varargin)
+		function me = opticka(varargin)
 			if nargin == 0; varargin.name = 'opticka'; end
-			obj=obj@optickaCore(varargin); %superclass constructor
+			me=me@optickaCore(varargin); %superclass constructor
 			if nargin>0
-				obj.parseArgs(varargin, obj.allowedProperties);
+				me.parseArgs(varargin, me.allowedProperties);
 			end
-			if obj.cloning == false
-				obj.initialiseUI;
+			if me.cloning == false
+				me.initialiseUI;
 			end
 		end
 		
@@ -72,32 +72,32 @@ classdef opticka < optickaCore
 		%> @param in switch to route to correct method.
 		%> @param vars additional vars to pass.
 		% ===================================================================
-		function router(obj,in,vars)
+		function router(me,in,vars)
 			if ~exist('vars','var')
 				vars=[];
 			end
 			switch in
 				case 'saveData'
-					obj.saveData();
+					me.saveData();
 				case 'saveProtocol'
-					obj.saveProtocol();
+					me.saveProtocol();
 				case 'loadProtocol'
-					obj.loadProtocol(vars);
+					me.loadProtocol(vars);
 				case 'deleteProtocol'
-					obj.deleteProtocol()
+					me.deleteProtocol()
 				case 'LoadStateInfo'
-					obj.loadStateInfo();
+					me.loadStateInfo();
 			end
 		end
 		
 		% ===================================================================
 		%> @brief Check if we are remote by checking existance of UI
 		%>
-		%> @param obj self object
+		%> @param me self object
 		% ===================================================================
-		function amIRemote(obj)
-			if ~ishandle(obj.h.output)
-				obj.remote = true;
+		function amIRemote(me)
+			if ~ishandle(me.h.output)
+				me.remote = true;
 			end
 		end
 
@@ -106,45 +106,45 @@ classdef opticka < optickaCore
 		%> Gets the settings from the UI and connects to omniplex
 		%> @param 
 		% ===================================================================
-		function connectToOmniplex(obj)
-			rPort = obj.gn(obj.h.OKOmniplexPort);
-			rAddress = obj.gs(obj.h.OKOmniplexIP);
-			status = obj.ping(rAddress);
+		function connectToOmniplex(me)
+			rPort = me.gn(me.h.OKOmniplexPort);
+			rAddress = me.gs(me.h.OKOmniplexIP);
+			status = me.ping(rAddress);
 			if status > 0
-				set(obj.h.OKOmniplexStatus,'String','Omniplex: machine ping ERROR!')
+				set(me.h.OKOmniplexStatus,'String','Omniplex: machine ping ERROR!')
 					errordlg('Cannot ping Omniplex machine, please ensure it is connected!!!')
 				error('Cannot ping Omniplex, please ensure it is connected!!!')
 			end
-			if isempty(obj.oc)
+			if isempty(me.oc)
 				in = struct('verbosity',0,'rPort',rPort,'rAddress',rAddress,'protocol','tcp');
-				obj.oc = dataConnection(in);
+				me.oc = dataConnection(in);
 			else
-				obj.oc.rPort = obj.gn(obj.h.OKOmniplexPort);
-				obj.oc.rAddress = obj.gs(obj.h.OKOmniplexIP);
+				me.oc.rPort = me.gn(me.h.OKOmniplexPort);
+				me.oc.rAddress = me.gs(me.h.OKOmniplexIP);
 			end
-			if obj.oc.checkStatus < 1
+			if me.oc.checkStatus < 1
 				loop = 1;
 				while loop <= 10
-					obj.oc.close('conn',1);
+					me.oc.close('conn',1);
 					fprintf('\nTrying to connect...\n');
-					obj.oc.open;
-					if obj.oc.checkStatus > 0
+					me.oc.open;
+					if me.oc.checkStatus > 0
 						break
 					end
 					pause(0.1);
 				end
-				obj.oc.write('--ping--');
+				me.oc.write('--ping--');
 				loop = 1;
 				while loop < 8
-					in = obj.oc.read(0);
+					in = me.oc.read(0);
 					fprintf('\n{opticka said: %s}\n',in)
 					if regexpi(in,'(opened|ping)')
 						fprintf('\nWe can ping omniplex master on try: %d\n',loop)
-						set(obj.h.OKOmniplexStatus,'String','Omniplex: connected via TCP')
+						set(me.h.OKOmniplexStatus,'String','Omniplex: connected via TCP')
 						break
 					else
 						fprintf('\nOmniplex master not responding, try: %d\n',loop)
-						set(obj.h.OKOmniplexStatus,'String','Omniplex: not responding')
+						set(me.h.OKOmniplexStatus,'String','Omniplex: not responding')
 					end
 					loop=loop+1;
 					pause(0.2);
@@ -158,37 +158,37 @@ classdef opticka < optickaCore
 		%> Gets the settings from the UI and connects to omniplex
 		%> @param 
 		% ===================================================================
-		function sendOmniplexStimulus(obj,sendLog)
+		function sendOmniplexStimulus(me,sendLog)
 			if ~exist('sendLog','var')
 				sendLog = false;
 			end
-			if obj.oc.checkStatus > 0
+			if me.oc.checkStatus > 0
 				%flush read buffer
-				data=obj.oc.read('all');
+				data=me.oc.read('all');
 				tLog=[];
-				if obj.oc.checkStatus > 0 %check again to make sure we are still open
-					obj.oc.write('--readStimulus--');
+				if me.oc.checkStatus > 0 %check again to make sure we are still open
+					me.oc.write('--readStimulus--');
 					pause(0.25);
 					tic
 					if sendLog == false
-						if ~isempty(obj.r.runLog);tLog = obj.r.runLog;end
-						obj.r.deleteRunLog; %so we don't send too much data over TCP
+						if ~isempty(me.r.runLog);tLog = me.r.runLog;end
+						me.r.deleteRunLog; %so we don't send too much data over TCP
 					end
-					tmpobj=obj.r;
-					obj.oc.writeVar('o',tmpobj);
+					tmpobj=me.r;
+					me.oc.writeVar('o',tmpobj);
 					if sendLog == false
-						if ~isempty(tLog);obj.r.restoreRunLog(tLog);end
+						if ~isempty(tLog);me.r.restoreRunLog(tLog);end
 					end
 					fprintf('>>>Opticka: It took %g seconds to write and send stimulus to Omniplex machine\n',toc);
 					loop = 1;
 				while loop < 10
-					in = obj.oc.read(0);
+					in = me.oc.read(0);
 					fprintf('\n{omniplex said: %s}\n',in)
 					if regexpi(in,'(stimulusReceived)')
-						set(obj.h.OKOmniplexStatus,'String','Omniplex: connected+stimulus received')
+						set(me.h.OKOmniplexStatus,'String','Omniplex: connected+stimulus received')
 						break
 					elseif regexpi(in,'(stimulusFailed)')
-						set(obj.h.OKOmniplexStatus,'String','Omniplex: connected, stimulus ERROR!')
+						set(me.h.OKOmniplexStatus,'String','Omniplex: connected, stimulus ERROR!')
 					end
 					loop=loop+1;
 					pause(0.2);
@@ -208,128 +208,128 @@ classdef opticka < optickaCore
 		%>
 		%> @param 
 		% ===================================================================
-		function initialiseUI(obj)
+		function initialiseUI(me)
 			try
-				obj.paths.whoami = mfilename;
-				obj.paths.whereami = fileparts(which(mfilename));
-				obj.paths.startServer = [obj.paths.whereami filesep 'udpserver' filesep 'launchDataConnection'];
+				me.paths.whoami = mfilename;
+				me.paths.whereami = fileparts(which(mfilename));
+				me.paths.startServer = [me.paths.whereami filesep 'udpserver' filesep 'launchDataConnection'];
 
 				if ismac
-					obj.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -r \"runServer\""'' -e ''end tell'''];
-					obj.paths.temp=tempdir;
+					me.store.serverCommand = ['!osascript -e ''tell application "Terminal"'' -e ''activate'' -e ''do script "matlab -nodesktop -r \"runServer\""'' -e ''end tell'''];
+					me.paths.temp=tempdir;
 					
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);
 					end
-					obj.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
-					cd(obj.paths.protocols);
-					obj.paths.currentPath = pwd;
+					me.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
+					cd(me.paths.protocols);
+					me.paths.currentPath = pwd;
 					
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'Calibration'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'Calibration']);
 					end
-					obj.paths.calibration = ['~' filesep 'MatlabFiles' filesep 'Calibration'];
+					me.paths.calibration = ['~' filesep 'MatlabFiles' filesep 'Calibration'];
 					
-					if ~exist([obj.paths.temp 'History'],'dir')
-						mkdir([obj.paths.temp 'History']);
+					if ~exist([me.paths.temp 'History'],'dir')
+						mkdir([me.paths.temp 'History']);
 					end
-					obj.paths.historypath=[obj.paths.temp 'History'];
+					me.paths.historypath=[me.paths.temp 'History'];
 					
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'SavedData'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'SavedData']);
 					end
-					obj.paths.savedData = ['~' filesep 'MatlabFiles' filesep 'SavedData'];
+					me.paths.savedData = ['~' filesep 'MatlabFiles' filesep 'SavedData'];
 					
 				elseif isunix
-					obj.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
-					obj.paths.temp=tempdir;
+					me.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
+					me.paths.temp=tempdir;
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'Protocols'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'Protocols']);
 					end
-					obj.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
-					cd(obj.paths.protocols);
-					obj.paths.currentPath = pwd;
+					me.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
+					cd(me.paths.protocols);
+					me.paths.currentPath = pwd;
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'Calibration'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'Calibration']);
 					end
-					obj.paths.calibration = ['~' filesep 'MatlabFiles' filesep 'Calibration'];
-					if ~exist([obj.paths.temp 'History'],'dir')
-						mkdir([obj.paths.temp 'History']);
+					me.paths.calibration = ['~' filesep 'MatlabFiles' filesep 'Calibration'];
+					if ~exist([me.paths.temp 'History'],'dir')
+						mkdir([me.paths.temp 'History']);
 					end
-					obj.paths.historypath=[obj.paths.temp 'History'];
+					me.paths.historypath=[me.paths.temp 'History'];
 					
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'SavedData'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'SavedData']);
 					end
-					obj.paths.savedData = ['~' filesep 'MatlabFiles' filesep 'SavedData'];
+					me.paths.savedData = ['~' filesep 'MatlabFiles' filesep 'SavedData'];
 				
 				elseif ispc
 					%root = 'c:\MatlabFiles';
 					root = 'c:\Users\Public\MatlabFiles\';
-					obj.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
-					obj.paths.temp=tempdir;
+					me.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
+					me.paths.temp=tempdir;
 					if ~exist([root 'Protocols'],'dir')
 						mkdir([root 'Protocols'])
 					end
-					obj.paths.protocols = [root 'Protocols'];
-					cd(obj.paths.protocols);
-					obj.paths.currentPath = pwd;
+					me.paths.protocols = [root 'Protocols'];
+					cd(me.paths.protocols);
+					me.paths.currentPath = pwd;
 					if ~exist([root 'Calibration'],'dir')
 						mkdir([root 'Calibration'])
 					end
-					obj.paths.calibration = [root 'Calibration'];
+					me.paths.calibration = [root 'Calibration'];
 					if ~exist([root 'History'],'dir')
 						mkdir([root 'History']);
 					end
-					obj.paths.historypath=[root 'History'];
+					me.paths.historypath=[root 'History'];
 					
 					if ~exist([root 'SavedData'],'dir')
 						mkdir([root 'SavedData']);
 					end
-					obj.paths.savedData = [root 'SavedData'];
+					me.paths.savedData = [root 'SavedData'];
 				end
 
 				uihandle = opticka_ui; %our GUI file
-				obj.centerGUI(uihandle);
-				obj.h=guidata(uihandle);
-				guidata(uihandle,obj.h); %save back this change
-				setappdata(obj.h.output,'o',obj); %we stash our object in the root appdata store for retirieval from the UI
-				set(obj.h.OKOptickaVersion,'String','Initialising GUI, please wait...');
-				set(obj.h.OKRoot,'Name',['Opticka Stimulus Generator V' obj.optickaVersion]);
+				me.centerGUI(uihandle);
+				me.h=guidata(uihandle);
+				guidata(uihandle,me.h); %save back this change
+				setappdata(me.h.output,'o',me); %we stash our object in the root appdata store for retirieval from the UI
+				set(me.h.OKOptickaVersion,'String','Initialising GUI, please wait...');
+				set(me.h.OKRoot,'Name',['Opticka Stimulus Generator V' me.optickaVersion]);
 				drawnow;
 					
-				obj.loadPrefs();
-				obj.getScreenVals();
-				obj.getTaskVals();
-				obj.loadCalibration();
-				obj.refreshProtocolsList();
+				me.loadPrefs();
+				me.getScreenVals();
+				me.getTaskVals();
+				me.loadCalibration();
+				me.refreshProtocolsList();
 				
-				%addlistener(obj.r,'abortRun',@obj.abortRunEvent);
-				%addlistener(obj.r,'endAllRuns',@obj.endRunEvent);
-				%addlistener(obj.r,'runInfo',@obj.runInfoEvent);
+				%addlistener(me.r,'abortRun',@me.abortRunEvent);
+				%addlistener(me.r,'endAllRuns',@me.endRunEvent);
+				%addlistener(me.r,'runInfo',@me.runInfoEvent);
 				
-				if exist([obj.paths.protocols filesep 'DefaultStateInfo.m'],'file')
-					obj.paths.stateInfoFile = [obj.paths.protocols filesep 'DefaultStateInfo.m'];
-					obj.r.stateInfoFile = obj.paths.stateInfoFile;
+				if exist([me.paths.protocols filesep 'DefaultStateInfo.m'],'file')
+					me.paths.stateInfoFile = [me.paths.protocols filesep 'DefaultStateInfo.m'];
+					me.r.stateInfoFile = me.paths.stateInfoFile;
 				else
-					obj.paths.stateInfoFile = [obj.paths.whereami filesep 'DefaultStateInfo.m'];
-					obj.r.stateInfoFile = obj.paths.stateInfoFile;
+					me.paths.stateInfoFile = [me.paths.whereami filesep 'DefaultStateInfo.m'];
+					me.r.stateInfoFile = me.paths.stateInfoFile;
 				end
 				
-				obj.h.OKTrainingResearcherName.String = obj.r.researcherName;
-				obj.h.OKTrainingName.String = obj.r.subjectName;
-				getStateInfo(obj);
+				me.h.OKTrainingResearcherName.String = me.r.researcherName;
+				me.h.OKTrainingName.String = me.r.subjectName;
+				getStateInfo(me);
 
-				set(obj.h.OKVarList,'String','');
-				set(obj.h.OKStimList,'String','');
-				set(obj.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' obj.optickaVersion]);
+				set(me.h.OKVarList,'String','');
+				set(me.h.OKStimList,'String','');
+				set(me.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' me.optickaVersion]);
 				
 			catch ME
-				if  isfield(obj.h,'output') && ~isempty(obj.h.output) && isappdata(obj.h.output,'o')
-					rmappdata(obj.h.output,'o');
+				if  isfield(me.h,'output') && ~isempty(me.h.output) && isappdata(me.h.output,'o')
+					rmappdata(me.h.output,'o');
 					clear o;
 				end
-				if isfield(obj.h,'output'); close(obj.h.output); end
+				if isfield(me.h,'output'); close(me.h.output); end
 				errordlg('Problem initialising Opticka UI, please check errors on the commandline!')
 				rethrow(ME)
 			end
@@ -341,110 +341,117 @@ classdef opticka < optickaCore
 		%> Gets the settings from the UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function getScreenVals(obj)
+		function getScreenVals(me)
 			
-			if isempty(obj.r)
-				olds = get(obj.h.OKOptickaVersion,'String');
-				set(obj.h.OKOptickaVersion,'String','Initialising Stimulus and Task objects...')
+			if isempty(me.r)
+				olds = get(me.h.OKOptickaVersion,'String');
+				set(me.h.OKOptickaVersion,'String','Initialising Stimulus and Task objects...')
 				%drawnow
-				obj.r = runExperiment();
-				initialise(obj.r); % set up the runExperiment object
-				s=cell(obj.r.screen.maxScreen+1,1);
-				for i=0:obj.r.screen.maxScreen
+				me.r = runExperiment();
+				initialise(me.r); % set up the runExperiment object
+				s=cell(me.r.screen.maxScreen+1,1);
+				for i=0:me.r.screen.maxScreen
 					s{i+1} = num2str(i);
 				end
-				set(obj.h.OKSelectScreen,'String', s);
-				set(obj.h.OKSelectScreen, 'Value', obj.r.screen.screen+1);
+				set(me.h.OKSelectScreen,'String', s);
+				set(me.h.OKSelectScreen, 'Value', me.r.screen.screen+1);
 				clear s;
-				set(obj.h.OKOptickaVersion,'String',olds)
+				set(me.h.OKOptickaVersion,'String',olds)
 			end
 			
-			obj.r.screenSettings.optickahandle = obj.h.output;
+			me.r.screenSettings.optickahandle = me.h.output;
 			
-			obj.r.screen.screen = obj.gv(obj.h.OKSelectScreen)-1;
+			me.r.screen.screen = me.gv(me.h.OKSelectScreen)-1;
 			
-			obj.r.screen.distance = obj.gd(obj.h.OKMonitorDistance);
-			obj.r.screen.pixelsPerCm = obj.gd(obj.h.OKpixelsPerCm);
-			obj.r.screen.screenXOffset = obj.gd(obj.h.OKscreenXOffset);
-			obj.r.screen.screenYOffset = obj.gd(obj.h.OKscreenYOffset);
+			me.r.screen.distance = me.gd(me.h.OKMonitorDistance);
+			me.r.screen.pixelsPerCm = me.gd(me.h.OKpixelsPerCm);
+			me.r.screen.screenXOffset = me.gd(me.h.OKscreenXOffset);
+			me.r.screen.screenYOffset = me.gd(me.h.OKscreenYOffset);
 			
-			value = obj.gv(obj.h.OKGLSrc);
-			obj.r.screen.srcMode = obj.gs(obj.h.OKGLSrc, value);
+			value = me.gv(me.h.OKGLSrc);
+			me.r.screen.srcMode = me.gs(me.h.OKGLSrc, value);
 			
-			value = obj.gv(obj.h.OKGLDst);
-			obj.r.screen.dstMode = obj.gs(obj.h.OKGLDst, value);
+			value = me.gv(me.h.OKGLDst);
+			me.r.screen.dstMode = me.gs(me.h.OKGLDst, value);
 			
-			value = obj.gv(obj.h.OKbitDepth);
-			obj.r.screen.bitDepth = obj.gs(obj.h.OKbitDepth, value);
+			value = me.gv(me.h.OKbitDepth);
+			me.r.screen.bitDepth = me.gs(me.h.OKbitDepth, value);
 			
-			obj.r.screen.blend = obj.gv(obj.h.OKOpenGLBlending);
+			me.r.screen.blend = me.gv(me.h.OKOpenGLBlending);
 			
-			value = obj.gv(obj.h.OKUseGamma);
-			if isprop(obj.r.screen,'gammaTable') && isa(obj.r.screen.gammaTable,'calibrateLuminance') && ~isempty(obj.r.screen.gammaTable)
-				obj.r.screen.gammaTable.choice = value - 1;
+			value = me.gv(me.h.OKUseGamma);
+			if isprop(me.r.screen,'gammaTable') && isa(me.r.screen.gammaTable,'calibrateLuminance') && ~isempty(me.r.screen.gammaTable)
+				me.r.screen.gammaTable.choice = value - 1;
 			end
 			
-			s=str2num(get(obj.h.OKWindowSize,'String')); %#ok<ST2NM>
+			s=str2num(get(me.h.OKWindowSize,'String')); %#ok<ST2NM>
 			if isempty(s)
-				obj.r.screen.windowed = false;
+				me.r.screen.windowed = false;
 			else
-				obj.r.screen.windowed = s;
+				me.r.screen.windowed = s;
 			end
 			
-			obj.r.logFrames = logical(obj.gv(obj.h.OKlogFrames));
-			obj.r.benchmark = logical(obj.gv(obj.h.OKbenchmark));
-			obj.r.screen.hideFlash = logical(obj.gv(obj.h.OKHideFlash));
-			obj.r.screen.useRetina = logical(obj.gv(obj.h.OKUseRetina));
-			obj.r.drawFixation = logical(obj.gv(obj.h.OKDrawFixation));
-			if strcmpi(obj.r.screen.bitDepth,'8bit')
-				set(obj.h.OKAntiAliasing,'String','0');
+			me.r.logFrames = logical(me.gv(me.h.OKlogFrames));
+			me.r.benchmark = logical(me.gv(me.h.OKbenchmark));
+			me.r.screen.hideFlash = logical(me.gv(me.h.OKHideFlash));
+			me.r.screen.useRetina = logical(me.gv(me.h.OKUseRetina));
+			me.r.drawFixation = logical(me.gv(me.h.OKDrawFixation));
+			if strcmpi(me.r.screen.bitDepth,'8bit')
+				set(me.h.OKAntiAliasing,'String','0');
 			end
-			obj.r.screen.antiAlias = obj.gd(obj.h.OKAntiAliasing);
-			obj.r.screen.photoDiode = logical(obj.gv(obj.h.OKUsePhotoDiode));
-			obj.r.screen.movieSettings.record = logical(obj.gv(obj.h.OKrecordMovie));
-			obj.r.verbose = logical(obj.gv(obj.h.OKVerbose)); %set method
-			obj.verbose = obj.r.verbose;
-			obj.r.screen.debug = logical(obj.gv(obj.h.OKDebug));
-			obj.r.debug = obj.r.screen.debug;
-			obj.r.screen.visualDebug = obj.r.screen.debug;
-			obj.r.screen.backgroundColour = obj.gn(obj.h.OKbackgroundColour);
-			%deprecated obj.r.screen.nativeBeamPosition = logical(obj.gv(obj.h.OKNativeBeamPosition));
+			me.r.screen.antiAlias = me.gd(me.h.OKAntiAliasing);
+			me.r.screen.photoDiode = logical(me.gv(me.h.OKUsePhotoDiode));
+			me.r.screen.movieSettings.record = logical(me.gv(me.h.OKrecordMovie));
+			me.r.verbose = logical(me.gv(me.h.OKVerbose)); %set method
+			me.verbose = me.r.verbose;
+			me.r.screen.debug = logical(me.gv(me.h.OKDebug));
+			me.r.debug = me.r.screen.debug;
+			me.r.screen.visualDebug = me.r.screen.debug;
+			me.r.screen.backgroundColour = me.gn(me.h.OKbackgroundColour);
+			%deprecated me.r.screen.nativeBeamPosition = logical(me.gv(me.h.OKNativeBeamPosition));
 			
-			if strcmpi(get(obj.h.OKuseLabJackStrobe,'Checked'),'on')
-				obj.r.useLabJackStrobe = true;
+			if strcmpi(get(me.h.OKuseLabJackStrobe,'Checked'),'on')
+				me.r.useLabJackStrobe = true;
 			else
-				obj.r.useLabJackStrobe = false;
+				me.r.useLabJackStrobe = false;
 			end
-			if strcmpi(get(obj.h.OKuseLabJackReward,'Checked'),'on')
-				obj.r.useLabJackReward = true;
+			if strcmpi(get(me.h.OKuseLabJackReward,'Checked'),'on')
+				me.r.useLabJackReward = true;
 			else
-				obj.r.useLabJackReward = false;
+				me.r.useLabJackReward = false;
 			end
-			if strcmpi(get(obj.h.OKuseDataPixx,'Checked'),'on')
-				obj.r.useDataPixx = true;
+			if strcmpi(get(me.h.OKuseDataPixx,'Checked'),'on')
+				me.r.useDataPixx = true;
 			else
-				obj.r.useDataPixx = false;
+				me.r.useDataPixx = false;
 			end
-			if strcmpi(get(obj.h.OKuseDisplayPP,'Checked'),'on')
-				obj.r.useDisplayPP = true;
-				obj.r.dPPMode = get(obj.h.OKdPPMode,'String');
+			if strcmpi(get(me.h.OKuseDisplayPP,'Checked'),'on')
+				me.r.useDisplayPP = true;
+				me.r.dPPMode = get(me.h.OKdPPMode,'String');
 			else
-				obj.r.useDisplayPP = false;
+				me.r.useDisplayPP = false;
 			end
-			if strcmpi(get(obj.h.OKuseArduino,'Checked'),'on')
-				obj.r.useArduino = true;
+			if strcmpi(get(me.h.OKuseArduino,'Checked'),'on')
+				me.r.useArduino = true;
 			else
-				obj.r.useArduino = false;
+				me.r.useArduino = false;
 			end
-			if strcmpi(get(obj.h.OKuseEyeLink,'Checked'),'on')
-				obj.r.useEyeLink = true;
+			if strcmpi(get(me.h.OKuseEyelink,'Checked'),'on')
+				me.r.useEyeLink = true;
+				me.r.useTobii = false;
 			else
-				obj.r.useEyeLink = false;
+				me.r.useEyeLink = false;
 			end
-			if strcmpi(get(obj.h.OKuseEyeOccluder,'Checked'),'on')
-				obj.r.useEyeOccluder = true;
+			if strcmpi(get(me.h.OKuseTobii,'Checked'),'on')
+				me.r.useEyeLink = false;
+				me.r.useTobii = true;
 			else
-				obj.r.useEyeOccluder = false;
+				me.r.useTobii = false;
+			end
+			if strcmpi(get(me.h.OKuseEyeOccluder,'Checked'),'on')
+				me.r.useEyeOccluder = true;
+			else
+				me.r.useEyeOccluder = false;
 			end
 			
 		end
@@ -454,24 +461,24 @@ classdef opticka < optickaCore
 		%> Gets the settings from th UI and updates our task object
 		%> @param 
 		% ===================================================================
-		function getTaskVals(obj)
-			if isempty(obj.r.task)
-				obj.r.task = stimulusSequence;
+		function getTaskVals(me)
+			if isempty(me.r.task)
+				me.r.task = stimulusSequence;
 			end
-			if isfield(obj.r.screenVals,'fps')
-				obj.r.task.fps = obj.r.screenVals.fps;
+			if isfield(me.r.screenVals,'fps')
+				me.r.task.fps = me.r.screenVals.fps;
 			end
-			obj.r.task.trialTime = obj.gd(obj.h.OKtrialTime);
-			obj.r.task.randomSeed = obj.gn(obj.h.OKRandomSeed);
-			v = obj.gv(obj.h.OKrandomGenerator);
-			obj.r.task.randomGenerator = obj.gs(obj.h.OKrandomGenerator,v);
-			obj.r.task.ibTime = obj.gn(obj.h.OKibTime);
-			obj.r.task.randomise = logical(obj.gv(obj.h.OKRandomise));
-			obj.r.task.isTime = obj.gn(obj.h.OKisTime);
-			obj.r.task.nBlocks = obj.gd(obj.h.OKnBlocks);
-			obj.r.task.realTime = obj.gv(obj.h.OKrealTime);
-			if isempty(obj.r.task.taskStream); obj.r.task.initialiseGenerator; end
-			obj.r.task.randomiseStimuli;
+			me.r.task.trialTime = me.gd(me.h.OKtrialTime);
+			me.r.task.randomSeed = me.gn(me.h.OKRandomSeed);
+			v = me.gv(me.h.OKrandomGenerator);
+			me.r.task.randomGenerator = me.gs(me.h.OKrandomGenerator,v);
+			me.r.task.ibTime = me.gn(me.h.OKibTime);
+			me.r.task.randomise = logical(me.gv(me.h.OKRandomise));
+			me.r.task.isTime = me.gn(me.h.OKisTime);
+			me.r.task.nBlocks = me.gd(me.h.OKnBlocks);
+			me.r.task.realTime = me.gv(me.h.OKrealTime);
+			if isempty(me.r.task.taskStream); me.r.task.initialiseGenerator; end
+			me.r.task.randomiseStimuli;
 		end
 		
 		% ===================================================================
@@ -479,22 +486,25 @@ classdef opticka < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function getStateInfo(obj)
-			if ~isempty(obj.r.paths.stateInfoFile) && ischar(obj.r.paths.stateInfoFile) && exist(obj.r.paths.stateInfoFile,'file')
-				fid = fopen(obj.r.paths.stateInfoFile);
-				tline = fgetl(fid);
-				i=1;
-				while ischar(tline)
-					o.store.statetext{i} = tline;
+		function getStateInfo(me)
+			if ~isempty(me.r.paths.stateInfoFile) && ischar(me.r.paths.stateInfoFile) 
+				[p,f,e] = fileparts(me.r.paths.stateInfoFile);
+				if exist([f e],'file')
+					fid = fopen([f e]);
 					tline = fgetl(fid);
-					i=i+1;
+					i=1;
+					while ischar(tline)
+						o.store.statetext{i} = tline;
+						tline = fgetl(fid);
+						i=i+1;
+					end
+					fclose(fid);
+					set(me.h.OKTrainingText,'String',o.store.statetext);
+					set(me.h.OKTrainingFileName,'String',['FileName:' me.r.paths.stateInfoFile]);
+				else
+					set(me.h.OKTrainingText,'String','');
+					set(me.h.OKTrainingFileName,'String','No File Specified...');
 				end
-				fclose(fid);
-				set(obj.h.OKTrainingText,'String',o.store.statetext);
-				set(obj.h.OKTrainingFileName,'String',['FileName:' obj.r.paths.stateInfoFile]);
-			else
-				set(obj.h.OKTrainingText,'String','');
-				set(obj.h.OKTrainingFileName,'String','No File Specified...');
 			end
 		end
 		
@@ -503,27 +513,27 @@ classdef opticka < optickaCore
 		%> Erase any stimuli in the list.
 		%> @param 
 		% ===================================================================
-		function clearStimulusList(obj)
-			if ~isempty(obj.r)
-				if ~isempty(obj.r.stimuli)
-					obj.r.stimuli = metaStimulus();
+		function clearStimulusList(me)
+			if ~isempty(me.r)
+				if ~isempty(me.r.stimuli)
+					me.r.stimuli = metaStimulus();
 				end
 			end
-			fn = fieldnames(obj.store);
+			fn = fieldnames(me.store);
 			for i = 1:length(fn)
 				if isa(fn{i},'baseStimulus')
-					closePanel(obj.r.stimuli{i})
+					closePanel(me.r.stimuli{i})
 				end
 			end
-			ch = get(obj.h.OKPanelStimulus,'Children');
+			ch = get(me.h.OKPanelStimulus,'Children');
 			for i = 1:length(ch)
 				if strcmpi(get(ch(i),'Type'),'uipanel')
 					delete(ch(i))
 				end
 			end
-			set(obj.h.OKPanelStimulusText,'String','Stimulus Properties here...')
-			set(obj.h.OKStimList,'Value',1);
-			set(obj.h.OKStimList,'String','');			
+			set(me.h.OKPanelStimulusText,'String','Stimulus Properties here...')
+			set(me.h.OKStimList,'Value',1);
+			set(me.h.OKStimList,'String','');			
 		end
 		
 		% ===================================================================
@@ -531,14 +541,14 @@ classdef opticka < optickaCore
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function clearVariableList(obj)
-			if ~isempty(obj.r)
-				if ~isempty(obj.r.task)
-					obj.r.task = [];
+		function clearVariableList(me)
+			if ~isempty(me.r)
+				if ~isempty(me.r.task)
+					me.r.task = [];
 				end
 			end
-			set(obj.h.OKVarList,'Value',1);
-			set(obj.h.OKVarList,'String','');
+			set(me.h.OKVarList,'Value',1);
+			set(me.h.OKVarList,'String','');
 		end
 		
 		% ===================================================================
@@ -546,19 +556,19 @@ classdef opticka < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function deleteStimulus(obj)
-			if ~isempty(obj.r.stimuli.n) && obj.r.stimuli.n > 0
-				v=obj.gv(obj.h.OKStimList);
-				if isfield(obj.store,'visibleStimulus');
-					if strcmp(obj.store.visibleStimulus.uuid,obj.r.stimuli{v}.uuid)
-						closePanel(obj.r.stimuli{v})
+		function deleteStimulus(me)
+			if ~isempty(me.r.stimuli.n) && me.r.stimuli.n > 0
+				v=me.gv(me.h.OKStimList);
+				if isfield(me.store,'visibleStimulus');
+					if strcmp(me.store.visibleStimulus.uuid,me.r.stimuli{v}.uuid)
+						closePanel(me.r.stimuli{v})
 					end
 				end
-				obj.r.stimuli(v) = [];
-				obj.refreshStimulusList;
+				me.r.stimuli(v) = [];
+				me.refreshStimulusList;
 			else
-				set(obj.h.OKStimList,'Value',1);
-				set(obj.h.OKStimList,'String','');
+				set(me.h.OKStimList,'Value',1);
+				set(me.h.OKStimList,'String','');
 			end
 		end
 		
@@ -567,20 +577,20 @@ classdef opticka < optickaCore
 		%> Run when we've added a new stimulus
 		%> @param 
 		% ===================================================================
-		function addStimulus(obj)
-			obj.refreshStimulusList;
-			nidx = obj.r.stimuli.n;
-			set(obj.h.OKStimList,'Value',nidx);
-			if isfield(obj.store,'evnt') %delete our previous event
-				delete(obj.store.evnt);
-				obj.store = rmfield(obj.store,'evnt');
+		function addStimulus(me)
+			me.refreshStimulusList;
+			nidx = me.r.stimuli.n;
+			set(me.h.OKStimList,'Value',nidx);
+			if isfield(me.store,'evnt') %delete our previous event
+				delete(me.store.evnt);
+				me.store = rmfield(me.store,'evnt');
 			end
-			obj.store.evnt = addlistener(obj.r.stimuli{nidx},'readPanelUpdate',@obj.readPanel);
-			if isfield(obj.store,'visibleStimulus');
-				obj.store.visibleStimulus.closePanel();
+			me.store.evnt = addlistener(me.r.stimuli{nidx},'readPanelUpdate',@me.readPanel);
+			if isfield(me.store,'visibleStimulus');
+				me.store.visibleStimulus.closePanel();
 			end
-			makePanel(obj.r.stimuli{nidx},obj.h.OKPanelStimulus);
-			obj.store.visibleStimulus = obj.r.stimuli{nidx};
+			makePanel(me.r.stimuli{nidx},me.h.OKPanelStimulus);
+			me.store.visibleStimulus = me.r.stimuli{nidx};
 		end
 		
 		% ===================================================================
@@ -588,9 +598,9 @@ classdef opticka < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function readPanel(obj,src,evnt)
-			obj.salutation('readPanel',['Triggered by: ' src.fullName],true);
-			obj.refreshStimulusList;
+		function readPanel(me,src,evnt)
+			me.salutation('readPanel',['Triggered by: ' src.fullName],true);
+			me.refreshStimulusList;
 		end
 		 
 		% ===================================================================
@@ -598,32 +608,32 @@ classdef opticka < optickaCore
 		%> Gets the settings from the UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function editStimulus(obj)
-			if obj.r.stimuli.n > 0
+		function editStimulus(me)
+			if me.r.stimuli.n > 0
 				skip = false;
-				if ~isfield(obj.store,'visibleStimulus') || ~isa(obj.store.visibleStimulus,'baseStimulus')
+				if ~isfield(me.store,'visibleStimulus') || ~isa(me.store.visibleStimulus,'baseStimulus')
 					v = 1;
-					obj.store.visibleStimulus = obj.r.stimuli{1};
+					me.store.visibleStimulus = me.r.stimuli{1};
 				else
-					v = get(obj.h.OKStimList,'Value');
-					if strcmpi(obj.r.stimuli{v}.uuid,obj.store.visibleStimulus.uuid)
+					v = get(me.h.OKStimList,'Value');
+					if strcmpi(me.r.stimuli{v}.uuid,me.store.visibleStimulus.uuid)
 						skip = false;
 					end
 				end
-				if v <= obj.r.stimuli.n && skip == false
-					if isfield(obj.store,'evnt')
-						delete(obj.store.evnt);
-						obj.store = rmfield(obj.store,'evnt');
+				if v <= me.r.stimuli.n && skip == false
+					if isfield(me.store,'evnt')
+						delete(me.store.evnt);
+						me.store = rmfield(me.store,'evnt');
 					end
-					if isfield(obj.store,'visibleStimulus') && isa(obj.store.visibleStimulus,'baseStimulus')
-						obj.store.visibleStimulus.closePanel();
-						obj.store = rmfield(obj.store,'visibleStimulus');
+					if isfield(me.store,'visibleStimulus') && isa(me.store.visibleStimulus,'baseStimulus')
+						me.store.visibleStimulus.closePanel();
+						me.store = rmfield(me.store,'visibleStimulus');
 					end
-					closePanel(obj.r.stimuli{v});
-					makePanel(obj.r.stimuli{v},obj.h.OKPanelStimulus);
-					obj.store.evnt = addlistener(obj.r.stimuli{v},'readPanelUpdate',@obj.readPanel);
-					obj.store.visibleStimulus = obj.r.stimuli{v};
-					obj.refreshStimulusList;
+					closePanel(me.r.stimuli{v});
+					makePanel(me.r.stimuli{v},me.h.OKPanelStimulus);
+					me.store.evnt = addlistener(me.r.stimuli{v},'readPanelUpdate',@me.readPanel);
+					me.store.visibleStimulus = me.r.stimuli{v};
+					me.refreshStimulusList;
 				end
 			end
 		end
@@ -633,8 +643,8 @@ classdef opticka < optickaCore
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function modifyStimulus(obj)
-			obj.refreshStimulusList;
+		function modifyStimulus(me)
+			me.refreshStimulusList;
 		end
 		
 		% ===================================================================
@@ -642,31 +652,31 @@ classdef opticka < optickaCore
 		%> Gets the settings from th UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function addVariable(obj)		
-			validate(obj.r.task);
-			revertN = obj.r.task.nVars;
+		function addVariable(me)		
+			validate(me.r.task);
+			revertN = me.r.task.nVars;
 			try
-				obj.r.task.nVar(revertN+1).name = obj.gs(obj.h.OKVariableName);
-				s = obj.gs(obj.h.OKVariableValues);
+				me.r.task.nVar(revertN+1).name = me.gs(me.h.OKVariableName);
+				s = me.gs(me.h.OKVariableValues);
 				if isempty(regexpi(s,'^\{'))
-					obj.r.task.nVar(revertN+1).values = str2num(s);
+					me.r.task.nVar(revertN+1).values = str2num(s);
 				else
-					obj.r.task.nVar(revertN+1).values = eval(s);
+					me.r.task.nVar(revertN+1).values = eval(s);
 				end
-				%obj.r.task.nVar(revertN+1).values = obj.gn(obj.h.OKVariableValues);
-				obj.r.task.nVar(revertN+1).stimulus = obj.gn(obj.h.OKVariableStimuli);
-				offset = obj.gn(obj.h.OKVariableOffset);
+				%me.r.task.nVar(revertN+1).values = me.gn(me.h.OKVariableValues);
+				me.r.task.nVar(revertN+1).stimulus = me.gn(me.h.OKVariableStimuli);
+				offset = me.gn(me.h.OKVariableOffset);
 				if isempty(offset)
-					obj.r.task.nVar(revertN+1).offsetstimulus = [];
-					obj.r.task.nVar(revertN+1).offsetvalue = [];
+					me.r.task.nVar(revertN+1).offsetstimulus = [];
+					me.r.task.nVar(revertN+1).offsetvalue = [];
 				else
-					obj.r.task.nVar(revertN+1).offsetstimulus = offset(1);
-					obj.r.task.nVar(revertN+1).offsetvalue = offset(2);
+					me.r.task.nVar(revertN+1).offsetstimulus = offset(1);
+					me.r.task.nVar(revertN+1).offsetvalue = offset(2);
 				end
-				validate(obj.r.task);
-				obj.r.task.randomiseStimuli;
+				validate(me.r.task);
+				me.r.task.randomiseStimuli;
 
-				obj.refreshVariableList;
+				me.refreshVariableList;
 			
 			catch ME
 				getReport(ME)
@@ -679,20 +689,20 @@ classdef opticka < optickaCore
 		%> Gets the settings from the UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function deleteVariable(obj)
-			if isobject(obj.r.task)
-				nV = obj.r.task.nVar;
-				val = obj.gv(obj.h.OKVarList);
+		function deleteVariable(me)
+			if isobject(me.r.task)
+				nV = me.r.task.nVar;
+				val = me.gv(me.h.OKVarList);
 				if isempty(val);val=1;end %sometimes guide disables list, need workaround
-				if val <= length(obj.r.task.nVar);
+				if val <= length(me.r.task.nVar);
 					nV(val)=[];
-					obj.r.task.nVar = [];
-					obj.r.task.nVar = nV;
-					if obj.r.task.nVars > 0
-						obj.r.task.randomiseStimuli;
+					me.r.task.nVar = [];
+					me.r.task.nVar = nV;
+					if me.r.task.nVars > 0
+						me.r.task.randomiseStimuli;
 					end
 				end
-				obj.refreshVariableList;
+				me.refreshVariableList;
 			end
 		end
 		
@@ -701,26 +711,26 @@ classdef opticka < optickaCore
 		%> Gets the settings from the UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function editVariable(obj)
+		function editVariable(me)
 			
-			if isobject(obj.r.task)
-				val = obj.gv(obj.h.OKVarList);
-				set(obj.h.OKVariableName,'String', obj.r.task.nVar(val).name);
-				v=obj.r.task.nVar(val).values;
+			if isobject(me.r.task)
+				val = me.gv(me.h.OKVarList);
+				set(me.h.OKVariableName,'String', me.r.task.nVar(val).name);
+				v=me.r.task.nVar(val).values;
 				if iscell(v)
-					v = obj.cell2str(v);
+					v = me.cell2str(v);
 				else
-					v = num2str(obj.r.task.nVar(val).values);
+					v = num2str(me.r.task.nVar(val).values);
 				end
 				str = v;
 				str = regexprep(str,'\s+',' ');
-				set(obj.h.OKVariableValues,'String', str);
-				str = num2str(obj.r.task.nVar(val).stimulus);
+				set(me.h.OKVariableValues,'String', str);
+				str = num2str(me.r.task.nVar(val).stimulus);
 				str = regexprep(str,'\s+',' ');
-				set(obj.h.OKVariableStimuli, 'String', str);
-				str=[num2str(obj.r.task.nVar(val).offsetstimulus) ';' num2str(obj.r.task.nVar(val).offsetvalue)];
-				set(obj.h.OKVariableOffset,'String',str);
-				obj.deleteVariable
+				set(me.h.OKVariableStimuli, 'String', str);
+				str=[num2str(me.r.task.nVar(val).offsetstimulus) ';' num2str(me.r.task.nVar(val).offsetvalue)];
+				set(me.h.OKVariableOffset,'String',str);
+				me.deleteVariable
 			end
 			
 		end
@@ -730,11 +740,11 @@ classdef opticka < optickaCore
 		%> Gets the settings from the UI and updates our runExperiment object
 		%> @param 
 		% ===================================================================
-		function copyVariable(obj)
-			if isobject(obj.r.task)
-				val = obj.gv(obj.h.OKVarList);
-				obj.r.task.nVar(end+1)=obj.r.task.nVar(val);
-				obj.refreshVariableList;
+		function copyVariable(me)
+			if isobject(me.r.task)
+				val = me.gv(me.h.OKVarList);
+				me.r.task.nVar(end+1)=me.r.task.nVar(val);
+				me.refreshVariableList;
 			end
 		end
 		
@@ -742,8 +752,8 @@ classdef opticka < optickaCore
 		%> @brief loadPrefs Load prefs better left local to the machine
 		%> 
 		% ===================================================================
-		function loadCalibration(obj)
-			d = dir(obj.paths.calibration);
+		function loadCalibration(me)
+			d = dir(me.paths.calibration);
 			for i = 1:length(d)
 				if isempty(regexp(d(i).name,'^\.+', 'once')) && d(i).isdir == false && d(i).bytes > 0
 					ftime(i) = d(i).datenum;
@@ -753,18 +763,18 @@ classdef opticka < optickaCore
 			end
 			if max(ftime) > 0
 				[~,idx]=max(ftime);
-				tmp = load([obj.paths.calibration filesep d(idx).name]);
+				tmp = load([me.paths.calibration filesep d(idx).name]);
 				if isstruct(tmp)
 					fn = fieldnames(tmp);
 					tmp = tmp.(fn{1});
 				end
 				if isa(tmp,'calibrateLuminance')
-					tmp.filename = [obj.paths.calibration filesep d(idx).name];
-					if isa(obj.r,'runExperiment') && isa(obj.r.screen,'screenManager')
-						obj.r.screen.gammaTable = tmp;
-						set(obj.h.OKUseGamma,'Value',1);
-						set(obj.h.OKUseGamma,'String',['None'; 'Gamma'; obj.r.screen.gammaTable.analysisMethods]);
-						obj.r.screen.gammaTable.choice = 2;
+					tmp.filename = [me.paths.calibration filesep d(idx).name];
+					if isa(me.r,'runExperiment') && isa(me.r.screen,'screenManager')
+						me.r.screen.gammaTable = tmp;
+						set(me.h.OKUseGamma,'Value',1);
+						set(me.h.OKUseGamma,'String',['None'; 'Gamma'; me.r.screen.gammaTable.analysisMethods]);
+						me.r.screen.gammaTable.choice = 2;
 					end
 				end
 			end
@@ -774,11 +784,11 @@ classdef opticka < optickaCore
 		%> @brief loadPrefs Load prefs better left local to the machine
 		%> 
 		% ===================================================================
-		function saveCalibration(obj)
-			if isa(obj.r.screen.gammaTable,'calibrateLuminance')
+		function saveCalibration(me)
+			if isa(me.r.screen.gammaTable,'calibrateLuminance')
 				saveThis = true;
-				tmp = obj.r.screen.gammaTable;
-				d = dir(obj.paths.calibration);
+				tmp = me.r.screen.gammaTable;
+				d = dir(me.paths.calibration);
 				for i = 1:length(d)
 					if isempty(regexp(d(i).name,'^\.+', 'once')) && d(i).isdir == false && d(i).bytes > 0
 						if strcmp(d(i).name, tmp.filename)
@@ -787,7 +797,7 @@ classdef opticka < optickaCore
 					end
 				end
 				if saveThis == true
-					save([obj.paths.calibration filesep 'calibration-' date],'tmp');
+					save([me.paths.calibration filesep 'calibration-' date],'tmp');
 				end
 			end
 		end
@@ -796,12 +806,12 @@ classdef opticka < optickaCore
 		%> @brief loadPrefs Load prefs better left local to the machine
 		%> 
 		% ===================================================================
-		function loadPrefs(obj)
-			for i = 1:length(obj.uiPrefsList)
-				prfname = obj.uiPrefsList{i};
+		function loadPrefs(me)
+			for i = 1:length(me.uiPrefsList)
+				prfname = me.uiPrefsList{i};
 				if ispref('opticka',prfname) %pref exists
-					if isfield(obj.h, prfname) %ui widget exists
-						myhandle = obj.h.(prfname);
+					if isfield(me.h, prfname) %ui widget exists
+						myhandle = me.h.(prfname);
 						prf = getpref('opticka',prfname);
 						uiType = get(myhandle,'Style');
 						switch uiType
@@ -831,10 +841,10 @@ classdef opticka < optickaCore
 		%> @brief savePrefs Save prefs better left local to the machine
 		%> 
 		% ===================================================================
-		function savePrefs(obj)
-			for i = 1:length(obj.uiPrefsList)
-				prfname = obj.uiPrefsList{i};
-				myhandle = obj.h.(prfname);
+		function savePrefs(me)
+			for i = 1:length(me.uiPrefsList)
+				prfname = me.uiPrefsList{i};
+				myhandle = me.h.(prfname);
 				uiType = get(myhandle,'Style');
 				switch uiType
 					case 'edit'
@@ -862,17 +872,17 @@ classdef opticka < optickaCore
 		%> Delete Protocol
 		%> @param 
 		% ===================================================================
-		function deleteProtocol(obj)
-			v = obj.gv(obj.h.OKProtocolsList);
-			file = obj.gs(obj.h.OKProtocolsList,v);
-			obj.paths.currentPath = pwd;
-			cd(obj.paths.protocols);
+		function deleteProtocol(me)
+			v = me.gv(me.h.OKProtocolsList);
+			file = me.gs(me.h.OKProtocolsList,v);
+			me.paths.currentPath = pwd;
+			cd(me.paths.protocols);
 			out=questdlg(['Are you sure you want to delete ' file '?'],'Protocol Delete');
 			if strcmpi(out,'yes')
 				delete(file);
 			end
-			obj.refreshProtocolsList;
-			cd(obj.paths.currentPath);
+			me.refreshProtocolsList;
+			cd(me.paths.currentPath);
 		end
 		
 		% ===================================================================
@@ -880,29 +890,29 @@ classdef opticka < optickaCore
 		%> Save Protocol
 		%> @param 
 		% ===================================================================
-		function saveProtocol(obj)
-			obj.paths.currentPath = pwd;
-			cd(obj.paths.protocols);
+		function saveProtocol(me)
+			me.paths.currentPath = pwd;
+			cd(me.paths.protocols);
 			[f,p] = uiputfile('*.mat','Save Opticka Protocol','Protocol.mat');
 			if f ~= 0
 				cd(p);
-				tmp = clone(obj);
+				tmp = clone(me);
 				tmp.name = f;
 				tmp.r.name = f;
-				tmp.r.paths.stateInfoFile = obj.r.paths.stateInfoFile;
+				tmp.r.paths.stateInfoFile = me.r.paths.stateInfoFile;
 				tmp.store = struct(); %lets just nuke this incase some rogue handles are lurking
 				tmp.h = struct(); %remove the handles to the UI which will not be valid on reload
 				if isfield(tmp.r.screenSettings,'optickahandle'); tmp.r.screenSettings.optickahandle = []; end %!!!this fixes matlab bug 01255186
 				for i = 1:tmp.r.stimuli.n
 					cleanHandles(tmp.r.stimuli{i}); %just in case!
 				end
-				save(f,'tmp'); %this is the original code -- MAT CRASH on load, it is the same if i save obj directly or the cloned variant tmp
-				obj.refreshStimulusList;
-				obj.refreshVariableList;
-				obj.refreshProtocolsList;
+				save(f,'tmp'); %this is the original code -- MAT CRASH on load, it is the same if i save me directly or the cloned variant tmp
+				me.refreshStimulusList;
+				me.refreshVariableList;
+				me.refreshProtocolsList;
 				clear tmp f p
 			end
-			cd(obj.paths.currentPath);
+			cd(me.paths.currentPath);
 		end
 		
 		% ===================================================================
@@ -910,26 +920,26 @@ classdef opticka < optickaCore
 		%> Save Data
 		%> @param 
 		% ===================================================================
-		function saveData(obj)
-			obj.paths.currentPath = pwd;
-			cd(obj.paths.savedData);
+		function saveData(me)
+			me.paths.currentPath = pwd;
+			cd(me.paths.savedData);
 			[f,p] = uiputfile('*.mat','Save Last Run Data','Data.mat');
 			if f ~= 0
 				cd(p);
-				data = clone(obj);
-				data.r.paths.stateInfoFile = obj.r.paths.stateInfoFile;
+				data = clone(me);
+				data.r.paths.stateInfoFile = me.r.paths.stateInfoFile;
 				data.h = struct(); %remove the handles to the UI which will not be valid on reload
 				if isfield(data.r.screenSettings,'optickahandle'); data.r.screenSettings.optickahandle = []; end %!!!this fixes matlab bug 01255186
 				for i = 1:data.r.stimuli.n
 					cleanHandles(data.r.stimuli{i}); %just in case!
 				end
-				save(f,'data'); %this is the original code -- MAT CRASH on load, it is the same if i save obj directly or the cloned variant tmp
-				obj.refreshStimulusList;
-				obj.refreshVariableList;
-				obj.refreshProtocolsList;
+				save(f,'data'); %this is the original code -- MAT CRASH on load, it is the same if i save me directly or the cloned variant tmp
+				me.refreshStimulusList;
+				me.refreshVariableList;
+				me.refreshProtocolsList;
 				clear data f p
 			end
-			cd(obj.paths.currentPath);
+			cd(me.paths.currentPath);
 		end
 		
 		% ===================================================================
@@ -937,16 +947,16 @@ classdef opticka < optickaCore
 		%> Save Protocol
 		%> @param 
 		% ===================================================================
-		function loadStateInfo(obj)
-			obj.paths.currentPath = pwd;
-			cd(obj.paths.protocols);
+		function loadStateInfo(me)
+			me.paths.currentPath = pwd;
+			cd(me.paths.protocols);
 			[fname,fpath] = uigetfile({'.m'},'Load State Info file (.m)');
 			if ~ischar(fname) || isempty(fname)
 				disp('No file selected...')
 				return
 			end
-			obj.paths.stateInfoFile = [fpath fname];
-			obj.r.paths.stateInfoFile = obj.paths.stateInfoFile;
+			me.paths.stateInfoFile = [fpath fname];
+			me.r.paths.stateInfoFile = me.paths.stateInfoFile;
 		end
 		
 		% ===================================================================
@@ -954,8 +964,8 @@ classdef opticka < optickaCore
 		%> Save Protocol
 		%> @param 
 		% ===================================================================
-		%function delete(obj)
-			%fprintf('---> %s DESTRUCTOR CALLED <---\n',obj.fullName)
+		%function delete(me)
+			%fprintf('---> %s DESTRUCTOR CALLED <---\n',me.fullName)
 		%end
 		
 		% ===================================================================
@@ -963,22 +973,22 @@ classdef opticka < optickaCore
 		%> Load Protocol
 		%> @param ui do we show a uiload dialog?
 		% ===================================================================
-		function loadProtocol(obj,ui)
+		function loadProtocol(me,ui)
 			
 			if ~exist('ui','var') || isempty(ui);	ui = true; end
-			obj.paths.currentPath = pwd;
+			me.paths.currentPath = pwd;
 
 			if ui == true
-				v = obj.gv(obj.h.OKProtocolsList);
-				s = obj.h.OKProtocolsList.String;
+				v = me.gv(me.h.OKProtocolsList);
+				s = me.h.OKProtocolsList.String;
 				if isempty(s)
 					[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)');
 				else
 					file = s{v};
-					p = obj.paths.protocols;
+					p = me.paths.protocols;
 				end
 			else
-				[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)'); %cd([obj.paths.root filesep 'CoreProtocols'])
+				[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)'); %cd([me.paths.root filesep 'CoreProtocols'])
 			end
 			
 			if isempty(file) | file == 0
@@ -987,20 +997,19 @@ classdef opticka < optickaCore
 			end
 			cd(p);
 			load(file);
-			obj.paths.protocols = p;
+			me.paths.protocols = p;
 			
-			obj.comment = ['Prt: ' file];
+			me.comment = ['Prt: ' file];
 			
-			salutation(obj,sprintf('Routing Protocol from %s to %s',tmp.fullName,obj.fullName),[],true);
-			
+			salutation(me,sprintf('Routing Protocol from %s to %s',tmp.fullName,me.fullName),[],true);
 			
 			if exist('tmp','var') && isa(tmp,'opticka')
 				if isprop(tmp.r,'stimuli')
 					if isa(tmp.r.stimuli,'metaStimulus')
-						obj.r.stimuli = tmp.r.stimuli;
+						me.r.stimuli = tmp.r.stimuli;
 					elseif iscell(tmp.r.stimuli)
-						obj.r.stimuli = metaStimulus();
-						obj.r.stimuli.stimuli = tmp.r.stimuli;
+						me.r.stimuli = metaStimulus();
+						me.r.stimuli.stimuli = tmp.r.stimuli;
 					else
 						clear tmp;
 						warndlg('Sorry, this protocol is appears to have no stimulus objects, please remake');
@@ -1008,10 +1017,10 @@ classdef opticka < optickaCore
 					end
 				elseif isprop(tmp.r,'stimulus')
 					if iscell(tmp.r.stimulus)
-						obj.r.stimuli = metaStimulus();
-						obj.r.stimuli.stimuli = tmp.r.stimulus;
+						me.r.stimuli = metaStimulus();
+						me.r.stimuli.stimuli = tmp.r.stimulus;
 					elseif isa(tmp.r.stimulus,'metaStimulus')
-						obj.r.stimuli = tmp.r.stimulus;
+						me.r.stimuli = tmp.r.stimulus;
 					end
 				else
 					clear tmp;
@@ -1021,129 +1030,133 @@ classdef opticka < optickaCore
 				
 				%copy rE parameters
 				if isa(tmp.r,'runExperiment')
-					if strcmpi(obj.r.name,'runExperiment')
-						obj.r.name = [tmp.r.comment];
+					if strcmpi(me.r.name,'runExperiment')
+						me.r.name = [tmp.r.comment];
 					else
-						obj.r.name = [tmp.r.name];
+						me.r.name = [tmp.r.name];
 					end
 					if isfield(tmp.r.paths,'stateInfoFile')
-						obj.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
-						obj.getStateInfo();
-					elseif isprop(obj.r,'stateInfoFile') && isprop(tmp.r,'stateInfoFile')
-						obj.r.paths.stateInfoFile = tmp.r.stateInfoFile;
-						if ~exist(obj.r.paths.stateInfoFile,'file')
-							obj.r.paths.stateInfoFile=regexprep(tmp.r.stateInfoFile,'(.+)(.Code.opticka.+)','~$2','ignorecase','once');
+						me.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
+						me.getStateInfo();
+					elseif isprop(me.r,'stateInfoFile') && isprop(tmp.r,'stateInfoFile')
+						me.r.paths.stateInfoFile = tmp.r.stateInfoFile;
+						if ~exist(me.r.paths.stateInfoFile,'file')
+							me.r.paths.stateInfoFile=regexprep(tmp.r.stateInfoFile,'(.+)(.Code.opticka.+)','~$2','ignorecase','once');
 						end							
-						obj.getStateInfo();
+						me.getStateInfo();
 					end
 					
-					if isprop(tmp.r,'drawFixation');obj.r.drawFixation=tmp.r.drawFixation;obj.h.OKdrawFixation.Value=obj.r.drawFixation;end
-					if isprop(tmp.r,'dPPMode'); obj.r.dPPMode = tmp.r.dPPMode; obj.h.OKdPPMode.String=obj.r.dPPMode;end
-					if isprop(tmp.r,'subjectName');obj.r.subjectName = tmp.r.subjectName;obj.h.OKTrainingName.String = obj.r.subjectName;end
-					if isprop(tmp.r,'researcherName');obj.r.researcherName = tmp.r.researcherName;obj.h.OKTrainingResearcherName.String=obj.r.researcherName;end
+					if isprop(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;me.h.OKdrawFixation.Value=me.r.drawFixation;end
+					if isprop(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; me.h.OKdPPMode.String=me.r.dPPMode;end
+					if isprop(tmp.r,'subjectName');me.r.subjectName = tmp.r.subjectName;me.h.OKTrainingName.String = me.r.subjectName;end
+					if isprop(tmp.r,'researcherName');me.r.researcherName = tmp.r.researcherName;me.h.OKTrainingResearcherName.String=me.r.researcherName;end
 					
-					obj.h.OKuseLabJackStrobe.Checked = 'off';
-					obj.h.OKuseDataPixx.Checked = 'off';
-					obj.h.OKuseDisplayPP.Checked = 'off';
-					obj.h.OKuseEyeLink.Checked = 'off';
-					obj.h.OKuseLabJackReward.Checked = 'off';
-					obj.h.OKuseArduino.Checked = 'off';
+					me.h.OKuseLabJackStrobe.Checked = 'off';
+					me.h.OKuseDataPixx.Checked = 'off';
+					me.h.OKuseDisplayPP.Checked = 'off';
+					me.h.OKuseEyelink.Checked = 'off';
+					me.h.OKuseTobii.Checked = 'on';
+					me.h.OKuseLabJackReward.Checked = 'off';
+					me.h.OKuseArduino.Checked = 'off';
 					
-					if isprop(tmp.r,'useDisplayPP'); obj.r.useDisplayPP = tmp.r.useDisplayPP; end
-					if obj.r.useDisplayPP == true; obj.h.OKuseDisplayPP.Checked = 'on'; end
+					if isprop(tmp.r,'useDisplayPP'); me.r.useDisplayPP = tmp.r.useDisplayPP; end
+					if me.r.useDisplayPP == true; me.h.OKuseDisplayPP.Checked = 'on'; end
 					
-					if isprop(tmp.r,'useDataPixx'); obj.r.useDataPixx = tmp.r.useDataPixx; end
-					if obj.r.useDataPixx == true; obj.h.OKuseDataPixx.Checked = 'on'; end
+					if isprop(tmp.r,'useDataPixx'); me.r.useDataPixx = tmp.r.useDataPixx; end
+					if me.r.useDataPixx == true; me.h.OKuseDataPixx.Checked = 'on'; end
 					
-					if isprop(tmp.r,'useArduino'); obj.r.useArduino = tmp.r.useArduino; end
-					if obj.r.useArduino == true; obj.h.OKuseArduino.Checked = 'on'; end
+					if isprop(tmp.r,'useArduino'); me.r.useArduino = tmp.r.useArduino; end
+					if me.r.useArduino == true; me.h.OKuseArduino.Checked = 'on'; end
 					
-					if isprop(tmp.r,'useEyeLink'); obj.r.useEyeLink = tmp.r.useEyeLink; end
-					if obj.r.useEyeLink == true; obj.h.OKuseEyeLink.Checked = 'on'; end
+					if isprop(tmp.r,'useEyeLink'); me.r.useEyeLink = tmp.r.useEyeLink; end
+					if me.r.useEyeLink == true; me.h.OKuseEyelink.Checked = 'on'; me.h.OKuseTobii.Checked = 'off';end
+					
+					if isprop(tmp.r,'useTobii'); me.r.useTobii = tmp.r.useTobii; end
+					if me.r.useTobii == true; me.h.OKuseTobii.Checked = 'on'; me.h.OKuseEyelink.Checked = 'off';end
 				end
 				
 				%copy screen parameters
 				if isa(tmp.r.screen,'screenManager')
-					set(obj.h.OKscreenXOffset,'String', num2str(tmp.r.screen.screenXOffset));
-					set(obj.h.OKscreenYOffset,'String', num2str(tmp.r.screen.screenYOffset));
+					set(me.h.OKscreenXOffset,'String', num2str(tmp.r.screen.screenXOffset));
+					set(me.h.OKscreenYOffset,'String', num2str(tmp.r.screen.screenYOffset));
 					
-					%set(obj.h.OKNativeBeamPosition,'Value', tmp.r.screen.nativeBeamPosition);
+					%set(me.h.OKNativeBeamPosition,'Value', tmp.r.screen.nativeBeamPosition);
 					
-					list = obj.gs(obj.h.OKGLSrc);
-					val = obj.findValue(list,tmp.r.screen.srcMode);
-					obj.r.screen.srcMode = list{val};
-					set(obj.h.OKGLSrc,'Value',val);
+					list = me.gs(me.h.OKGLSrc);
+					val = me.findValue(list,tmp.r.screen.srcMode);
+					me.r.screen.srcMode = list{val};
+					set(me.h.OKGLSrc,'Value',val);
 					
-					list = obj.gs(obj.h.OKGLDst);
-					val = obj.findValue(list,tmp.r.screen.dstMode);
-					obj.r.screen.dstMode = list{val};
-					set(obj.h.OKGLDst,'Value',val);
+					list = me.gs(me.h.OKGLDst);
+					val = me.findValue(list,tmp.r.screen.dstMode);
+					me.r.screen.dstMode = list{val};
+					set(me.h.OKGLDst,'Value',val);
 					
-					list = obj.gs(obj.h.OKbitDepth);
-					val = obj.findValue(list,tmp.r.screen.bitDepth);
-					obj.r.screen.bitDepth = list{val};
-					set(obj.h.OKbitDepth,'Value',val);
+					list = me.gs(me.h.OKbitDepth);
+					val = me.findValue(list,tmp.r.screen.bitDepth);
+					me.r.screen.bitDepth = list{val};
+					set(me.h.OKbitDepth,'Value',val);
 					
-					set(obj.h.OKOpenGLBlending,'Value', tmp.r.screen.blend);
-					set(obj.h.OKAntiAliasing,'String', num2str(tmp.r.screen.antiAlias));
-					set(obj.h.OKHideFlash,'Value', tmp.r.screen.hideFlash);
-					set(obj.h.OKUseRetina,'Value', tmp.r.screen.useRetina);
+					set(me.h.OKOpenGLBlending,'Value', tmp.r.screen.blend);
+					set(me.h.OKAntiAliasing,'String', num2str(tmp.r.screen.antiAlias));
+					set(me.h.OKHideFlash,'Value', tmp.r.screen.hideFlash);
+					set(me.h.OKUseRetina,'Value', tmp.r.screen.useRetina);
 					string = num2str(tmp.r.screen.backgroundColour);
 					string = regexprep(string,'\s+',' '); %collapse spaces
-					set(obj.h.OKbackgroundColour,'String',string);
+					set(me.h.OKbackgroundColour,'String',string);
 				else
-					obj.salutation('No screenManager settings loaded!','',true);
+					me.salutation('No screenManager settings loaded!','',true);
 				end
 				%copy task parameters
 				if isempty(tmp.r.task)
-					obj.r.task = stimulusSequence;
-					obj.r.task.randomiseStimuli;
+					me.r.task = stimulusSequence;
+					me.r.task.randomiseStimuli;
 				else
-					obj.r.task = tmp.r.task;
-					for i=1:obj.r.task.nVars
-						if ~isfield(obj.r.task.nVar(i),'offsetstimulus') %add these to older protocols that may not contain them
-							obj.r.task.nVar(i).offsetstimulus = [];
-							obj.r.task.nVar(i).offsetvalue = [];
+					me.r.task = tmp.r.task;
+					for i=1:me.r.task.nVars
+						if ~isfield(me.r.task.nVar(i),'offsetstimulus') %add these to older protocols that may not contain them
+							me.r.task.nVar(i).offsetstimulus = [];
+							me.r.task.nVar(i).offsetvalue = [];
 						end
 					end
 				end
 				
-				set(obj.h.OKtrialTime, 'String', num2str(obj.r.task.trialTime));
-				set(obj.h.OKRandomSeed, 'String', num2str(obj.r.task.randomSeed));
-				set(obj.h.OKisTime,'String',sprintf('%g ',obj.r.task.isTime));
-				set(obj.h.OKibTime,'String',sprintf('%g ',obj.r.task.ibTime));
-				set(obj.h.OKnBlocks,'String',num2str(obj.r.task.nBlocks));
+				set(me.h.OKtrialTime, 'String', num2str(me.r.task.trialTime));
+				set(me.h.OKRandomSeed, 'String', num2str(me.r.task.randomSeed));
+				set(me.h.OKisTime,'String',sprintf('%g ',me.r.task.isTime));
+				set(me.h.OKibTime,'String',sprintf('%g ',me.r.task.ibTime));
+				set(me.h.OKnBlocks,'String',num2str(me.r.task.nBlocks));
 				
-				obj.getScreenVals;
-				obj.getTaskVals;
-				obj.refreshStimulusList;
-				obj.refreshVariableList;
-				obj.getScreenVals;
-				obj.getTaskVals;
+				me.getScreenVals;
+				me.getTaskVals;
+				me.refreshStimulusList;
+				me.refreshVariableList;
+				me.getScreenVals;
+				me.getTaskVals;
 				
-				if obj.r.task.nVars > 0
-					set(obj.h.OKDeleteVariable,'Enable','on');
-					set(obj.h.OKCopyVariable,'Enable','on');
-					set(obj.h.OKEditVariable,'Enable','on');
+				if me.r.task.nVars > 0
+					set(me.h.OKDeleteVariable,'Enable','on');
+					set(me.h.OKCopyVariable,'Enable','on');
+					set(me.h.OKEditVariable,'Enable','on');
 				end
-				if obj.r.stimuli.n > 0
-					set(obj.h.OKDeleteStimulus,'Enable','on');
-					set(obj.h.OKModifyStimulus,'Enable','on');
-					set(obj.h.OKInspectStimulus,'Enable','on');
-					set(obj.h.OKStimulusUp,'Enable','on');
-					set(obj.h.OKStimulusDown,'Enable','on');
-					set(obj.h.OKStimulusRun,'Enable','on');
-					set(obj.h.OKStimulusRunBenchmark,'Enable','on');
-					set(obj.h.OKStimulusRunAll,'Enable','on');
-					set(obj.h.OKStimulusRunAllBenchmark,'Enable','on');
-					set(obj.h.OKStimulusRunSingle,'Enable','on');
-					obj.store.visibleStimulus.uuid='';
-					obj.editStimulus;
+				if me.r.stimuli.n > 0
+					set(me.h.OKDeleteStimulus,'Enable','on');
+					set(me.h.OKModifyStimulus,'Enable','on');
+					set(me.h.OKInspectStimulus,'Enable','on');
+					set(me.h.OKStimulusUp,'Enable','on');
+					set(me.h.OKStimulusDown,'Enable','on');
+					set(me.h.OKStimulusRun,'Enable','on');
+					set(me.h.OKStimulusRunBenchmark,'Enable','on');
+					set(me.h.OKStimulusRunAll,'Enable','on');
+					set(me.h.OKStimulusRunAllBenchmark,'Enable','on');
+					set(me.h.OKStimulusRunSingle,'Enable','on');
+					me.store.visibleStimulus.uuid='';
+					me.editStimulus;
 				end
 				
 			end
-			obj.refreshProtocolsList;
-			setappdata(obj.h.output,'o',obj);
+			me.refreshProtocolsList;
+			setappdata(me.h.output,'o',me);
 		end
 		
 		% ======================================================================
@@ -1151,16 +1164,16 @@ classdef opticka < optickaCore
 		%> Refresh the UI list of Protocols
 		%> @param
 		% ======================================================================
-		function refreshProtocolsList(obj)
+		function refreshProtocolsList(me)
 			
-			set(obj.h.OKProtocolsList,'String',{''});
-			obj.paths.currentPath = pwd;
-			cd(obj.paths.protocols);
+			set(me.h.OKProtocolsList,'String',{''});
+			me.paths.currentPath = pwd;
+			cd(me.paths.protocols);
 			
 			% Generate path based on given root directory
 			files = dir(pwd);
 			if isempty(files)
-				set(obj.h.OKProtocolsList,'String',{''});
+				set(me.h.OKProtocolsList,'String',{''});
 				return
 			end
 			
@@ -1178,9 +1191,9 @@ classdef opticka < optickaCore
 				end
 			end
 			
-			set(obj.h.OKProtocolsList,'Value', 1);
-			set(obj.h.OKProtocolsList,'String',filelist);
-			cd(obj.paths.currentPath);
+			set(me.h.OKProtocolsList,'Value', 1);
+			set(me.h.OKProtocolsList,'String',filelist);
+			cd(me.paths.currentPath);
 		end
 		
 		% ===================================================================
@@ -1188,11 +1201,11 @@ classdef opticka < optickaCore
 		%> refreshes the stimulus list in the UI after add/remove new stimulus
 		%> @param 
 		% ===================================================================
-		function refreshStimulusList(obj)
-			pos = get(obj.h.OKStimList, 'Value');
-			str = cell(obj.r.stimuli.n,1);
-			for i=1:obj.r.stimuli.n
-				s = obj.r.stimuli{i};
+		function refreshStimulusList(me)
+			pos = get(me.h.OKStimList, 'Value');
+			str = cell(me.r.stimuli.n,1);
+			for i=1:me.r.stimuli.n
+				s = me.r.stimuli{i};
 				if isempty(s.name)
 					name = s.family;
 				else
@@ -1271,8 +1284,8 @@ classdef opticka < optickaCore
 			if isempty(pos) || pos > length(str)
 				pos = 1;
 			end
-			set(obj.h.OKStimList,'String', str);
-			set(obj.h.OKStimList, 'Value', pos);
+			set(me.h.OKStimList,'String', str);
+			set(me.h.OKStimList, 'Value', pos);
 		end
 		
 		% ===================================================================
@@ -1280,13 +1293,13 @@ classdef opticka < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function refreshVariableList(obj)
-			pos = get(obj.h.OKVarList, 'Value');
-			str = cell(obj.r.task.nVars,1);
-			V = obj.r.task.nVar;
-			for i=1:obj.r.task.nVars
+		function refreshVariableList(me)
+			pos = get(me.h.OKVarList, 'Value');
+			str = cell(me.r.task.nVars,1);
+			V = me.r.task.nVar;
+			for i=1:me.r.task.nVars
 				if iscell(V(i).values)
-					v = obj.cell2str(V(i).values);
+					v = me.cell2str(V(i).values);
 				else
 					v = num2str(V(i).values);
 				end
@@ -1296,14 +1309,14 @@ classdef opticka < optickaCore
 				end
 				str{i}=regexprep(str{i},'\s+',' ');
 			end
-			set(obj.h.OKVarList,'String',str);
-			if pos > obj.r.task.nVars
-				pos = obj.r.task.nVars;
+			set(me.h.OKVarList,'String',str);
+			if pos > me.r.task.nVars
+				pos = me.r.task.nVars;
 			end
 			if isempty(pos) || pos <= 0
 				pos = 1;
 			end
-			set(obj.h.OKVarList,'Value',pos);
+			set(me.h.OKVarList,'Value',pos);
 		end
 		
 		% ===================================================================
@@ -1311,7 +1324,7 @@ classdef opticka < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function value = findValue(obj,list,entry)
+		function value = findValue(me,list,entry)
 			value = 1;
 			for i=1:length(list)
 				if strcmpi(list{i},entry)
@@ -1326,10 +1339,10 @@ classdef opticka < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function value = abortRunEvent(obj,src,evtdata)
+		function value = abortRunEvent(me,src,evtdata)
 			fprintf('---> Opticka: abortRun triggered!!!\n')
-			if isa(obj.oc,'dataConnection') && obj.oc.isOpen == 1
-				obj.oc.write('--abort--');
+			if isa(me.oc,'dataConnection') && me.oc.isOpen == 1
+				me.oc.write('--abort--');
 			end
 		end
 		
@@ -1338,7 +1351,7 @@ classdef opticka < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function value = endRunEvent(obj,src,evtdata)
+		function value = endRunEvent(me,src,evtdata)
 			fprintf('---> Opticka: endRun triggered!!!\n')
 		end
 		
@@ -1347,7 +1360,7 @@ classdef opticka < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function value = runInfoEvent(obj,src,evtdata)
+		function value = runInfoEvent(me,src,evtdata)
 			fprintf('---> Opticka: runInfo triggered!!!\n')
 		end
 		
@@ -1355,9 +1368,9 @@ classdef opticka < optickaCore
 		%> @brief fixUI Try to work around GUIDE OS X bugs
 		%> 
 		% ===================================================================
-		function fixUI(obj)
-			ch = findall(obj.h.output);
-			set(obj.h.output,'Units','pixels');
+		function fixUI(me)
+			ch = findall(me.h.output);
+			set(me.h.output,'Units','pixels');
 			for k = 1:length(ch)
 				if isprop(ch(k),'Units')
 					set(ch(k),'Units','pixels');
@@ -1371,10 +1384,10 @@ classdef opticka < optickaCore
 		% ===================================================================
 		%> @brief saveobj Our custom save method to prepare object for safe saving
 		%> 
-		%> @param obj
+		%> @param me
 		% ===================================================================
- 		function sobj = saveobj(obj)
- 			sobj = obj;
+ 		function sobj = saveobj(me)
+ 			sobj = me;
 % 			if isfield(sobj.store,'evnt') %delete our previous event
 % 				delete(sobj.store.evnt);
 % 				sobj.store.evnt = [];
