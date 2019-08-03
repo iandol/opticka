@@ -945,7 +945,7 @@ classdef eyelinkManager < optickaCore
 			driftkey=KbName('D');
 			me.recordData = true;
 			try
-				s = screenManager('debug',true);
+				s = screenManager('debug',true,'pixelsPerCm',27,'distance',66);
 				s.backgroundColour = [0.5 0.5 0.5 0];
 				o = dotsStimulus('size',me.fixationRadius*2,'speed',2,'mask',false,'density',30);
 				open(s); %open out screen
@@ -976,7 +976,7 @@ classdef eyelinkManager < optickaCore
 						if(err~=0); xx = 1; break; end
 						
 						[~, ~, keyCode] = KbCheck(-1);
-						if keyCode(stopkey); xx = 1; break;	end
+						if keyCode(stopkey); yy = 1; xx = 1; break;	end
 						if keyCode(nextKey); yy = 1; break; end
 						if keyCode(calibkey); yy = 1; break; end
 						

@@ -91,6 +91,7 @@ classdef plusplusManager < optickaCore
 					obj.silentMode = true;
 				end
 			catch
+				obj.sM.checkWindowValid();
 				warning('Problem searching for Display++, entering silentMode')
 				obj.isAttached = false;
 				obj.silentMode = true;

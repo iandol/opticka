@@ -397,7 +397,7 @@ classdef screenManager < optickaCore
 				me.screenVals.win = me.win; %make a copy
 				me.screenVals.winRect = me.winRect; %make a copy
 				
-				Priority(MaxPriority(me.win)); %bump our priority to maximum allowed
+				%Priority(MaxPriority(me.win)); %bump our priority to maximum allowed
 				
 				me.screenVals.ifi = Screen('GetFlipInterval', me.win);
 				me.screenVals.fps=Screen('NominalFramerate', me.win);
@@ -454,7 +454,7 @@ classdef screenManager < optickaCore
 					fprintf('---> screenManager: OpenGL blending now set to %s | %s\n', me.srcMode, me.dstMode);
 				end
 				
-				Priority(0); %be lazy for a while and let other things get done
+				%Priority(0); %be lazy for a while and let other things get done
 				
 				if IsLinux
 					%Screen('Preference', 'TextRenderer', 1);
@@ -1004,7 +1004,7 @@ classdef screenManager < optickaCore
 					Screen('WindowSize',me.win);
 					check = true;
 				catch
-					fprintf('\nInvalid Window handle, cleaning up...\n');
+					fprintf('\n!!! Invalid Window handle, cleaning up...\n');
 					me.isOpen = false;
 					me.win = [];
 					me.screenVals.win = [];
