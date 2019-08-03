@@ -117,6 +117,7 @@ classdef tobiiManager < optickaCore
 				initTracker(me);
 				me.isDummy = false;
 			catch ME
+                fprintf('!!! Error initialising Tobii: %s\n',ME.message);
 				me.tobii = [];
 				me.tobiiOps = [];
 				me.eyetrackers = [];
@@ -797,7 +798,7 @@ classdef tobiiManager < optickaCore
 				setup(o,s); %setup our stimulus with open screen
 				
 				ListenChar(1);
-				initialise(me,s); %initialise eyelink with our screen
+				initialise(me,s); %initialise tobii with our screen
 				trackerSetup(me);
 				
 				me.statusMessage('DEMO Running'); %
@@ -965,7 +966,7 @@ classdef tobiiManager < optickaCore
 			
 			% Create calibration object
 			calib = ScreenBasedCalibration(me.tobii);
-			calib.leave_calibration_mode();
+			try calib.leave_calibration_mode(); end
 			calibrating = true;
 			
 			DrawFormattedText(me.screen.win, 'Get ready to fixate...', 'center', 'center', me.screen.screenVals.white);
@@ -1056,6 +1057,9 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function initTracker(me)
+            if ~ exist('EyeTrackingOperations','file') == 2
+                error('Tobii SDK isn''t installed!!!')
+            end
 			me.tobiiOps = EyeTrackingOperations();
 			me.version = me.tobiiOps.get_sdk_version();
 			me.eyetrackers = me.tobiiOps.find_all_eyetrackers();
