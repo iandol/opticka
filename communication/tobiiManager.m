@@ -46,7 +46,7 @@ classdef tobiiManager < optickaCore
 		% are we recording to matrix?
 		isRecording logical = false
 		%> data streamed from the Tobii
-		data
+		data struct = struct()
 		%> all connected eyetrackers
 		eyetrackers
 		%> calibration data
@@ -98,6 +98,8 @@ classdef tobiiManager < optickaCore
 		ppd_ double = 35
 		fixN double = 0
 		fixSelection = []
+		%> event N
+		eventN = 1
 		%> previous message sent to eyelink
 		previousMessage char = ''
 		%> allowed properties passed to object upon construction
@@ -141,8 +143,7 @@ classdef tobiiManager < optickaCore
 				error('CANNOT INITIALISE TOBII');
 			end
 			me.isConnected	= true;
-			me.stopRecording();
-			me.data = [];
+			me.setOffline();
 			me.tobii.get_time_sync_data();
 
 			me.screen		= sM;
@@ -154,9 +155,14 @@ classdef tobiiManager < optickaCore
 			me.trackBox		= me.tobii.get_track_box();
 			
 			syncTrackerTime(me);
+			me.eventN = 1;
+			me.data = struct();
+			me.data.events(me.eventN) = struct();
+			        me.data.startTime = me.trackerTime;
+			me.data.startOffset = me.currentOffset;
 			
 			me.salutation('Initialise Method', sprintf('Running on a %s @ %2.5g (time offset: %2.5g)', me.version, me.trackerTime,me.currentOffset));
-			me.stopRecording();
+			me.setOffline();
 		end
 		
 		% ===================================================================
@@ -172,9 +178,7 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function setup(me)
-			if me.isConnected
-				
-			end
+			
 		end
 		
 		% ===================================================================
@@ -225,7 +229,11 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function startRecording(me,trialInfo)
-			if me.isConnected
+			if ~exist('trialInfo','var'); trialInfo = struct(); end
+			if me.isConnected && ~me.isRecording
+				me.data.events(me.eventN).starttime = me.tobiiOps.get_system_time_stamp();
+				me.data.events(me.eventN).startInfo = trialInfo;
+				me.data.events(me.eventN).in = {};
 				me.tobii.get_gaze_data();
 				me.isRecording = true;
 			end
@@ -235,7 +243,22 @@ classdef tobiiManager < optickaCore
 		%> @brief wrapper for StopRecording
 		%>
 		% ===================================================================
-		function stopRecording(me)
+		function stopRecording(me,trialInfo)
+			if ~exist('trialInfo','var'); trialInfo = struct(); end
+			if me.isConnected && me.isRecording
+				setOffline(me);
+				me.data.events(me.eventN).stoptime = me.tobiiOps.get_system_time_stamp();
+				me.data.events(me.eventN).delta = (me.data.events(me.eventN).stoptime - me.data.events(me.eventN).starttime) / 1e3;
+				me.data.events(me.eventN).endInfo = trialInfo;
+				me.eventN = me.eventN + 1;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief set into offline / idle mode
+		%>
+		% ===================================================================
+		function setOffline(me)
 			if me.isConnected
 				me.tobii.stop_gaze_data();
 				me.tobii.stop_time_sync_data();
@@ -249,7 +272,7 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function success = driftCorrection(me)
-			success = false;
+			success = true;
 		end
 		
 		% ===================================================================
@@ -271,32 +294,35 @@ classdef tobiiManager < optickaCore
 				cdata = me.tobii.get_gaze_data();
 				if ~isempty(cdata) && isa(cdata(1),'GazeData') && cdata(1).LeftEye.GazePoint.Validity.Valid
 					thisdata = cdata(end);
-					me.currentSample.gx = thisdata.LeftEye.GazePoint.OnDisplayArea(1);
-					me.currentSample.gy = thisdata.LeftEye.GazePoint.OnDisplayArea(2);
+					xy = fromRelative(me, double(thisdata.LeftEye.GazePoint.OnDisplayArea));
+					me.currentSample.gx = xy(1);
+					me.currentSample.gy = xy(2);
 					me.currentSample.pa = thisdata.LeftEye.Pupil.Diameter;
 					me.currentSample.time = double(thisdata.SystemTimeStamp);
-					me.x = me.currentSample.gx * me.screen.screenVals.width; 
-					me.y = me.currentSample.gy * me.screen.screenVals.height;
+					me.currentSample.timeD = double(thisdata.DeviceTimeStamp);
+					xy = me.toDegrees(xy);
+					me.x = xy(1);
+					me.y = xy(2);
 					me.pupil = me.currentSample.pa;
-					if me.x < 0; me.x = 0; end
-					if me.y < 0; me.y = 0; end
 					%if me.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',me.x,me.y,me.pupil);end
 				end
 			elseif me.isDummy %lets use a mouse to simulate the eye signal
 				if ~isempty(me.win)
-					[me.x, me.y] = GetMouse(me.win);
+					[x, y] = GetMouse(me.win);
 				else
-					[me.x, me.y] = GetMouse([]);
+					[x, y] = GetMouse([]);
 				end
 				me.pupil = 800 + randi(20);
 				me.currentSample.gx = me.x;
 				me.currentSample.gy = me.y;
 				me.currentSample.pa = me.pupil;
 				me.currentSample.time = GetSecs * 1000;
+				me.x = me.toDegrees(me.currentSample.gx,'x');
+				me.y = me.toDegrees(me.currentSample.gy,'y');
 				%if me.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',me.x,me.y,me.pupil);end
 			end
-			if me.isConnected && me.isRecording && ~me.isDummy
-				me.data = [me.data;cdata];
+			if me.isConnected && me.isRecording && ~me.isDummy && ~isempty(cdata)
+				me.data.events(me.eventN).in{end+1} = cdata;
 			end
 			sample = me.currentSample;
 		end
@@ -576,12 +602,12 @@ classdef tobiiManager < optickaCore
 		function drawEyePosition(me)
 			if (me.isDummy || me.isConnected) && me.screen.isOpen && ~isempty(me.x) && ~isnan(me.x) && ~isempty(me.y) && ~isnan(me.y)
 				if me.isFixated
-					Screen('DrawDots', me.win, [me.x me.y], 8, [1 0.5 1 1], [], 1);
+					Screen('DrawDots', me.win, [toPixels(me,me.x,'x') toPixels(me,me.y,'y')], 8, [1 0.5 1 1], [], 3);
 					if me.fixLength > me.fixationTime
 						Screen('DrawText', me.win, 'FIX', me.x, me.y, [1 1 1]);
 					end
 				else
-					Screen('DrawDots', me.win, [30 30], 6, [1 0.5 0 1], [], 1);
+					Screen('DrawDots', me.win, [toPixels(me,me.x,'x') toPixels(me,me.y,'y')], 8, [1 0.5 0 1], [], 3);
 				end
 			end
 		end
@@ -754,46 +780,21 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief set into offline / idle mode
-		%>
-		% ===================================================================
-		function setOffline(me)
-			if me.isConnected
-				stopRecording(me);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief automagically turn pixels to degrees
-		%>
-		% ===================================================================
-		function set.x(me,in)
-			me.x = toDegrees(me,in,'x');
-		end
-		
-		% ===================================================================
-		%> @brief automagically turn pixels to degrees
-		%>
-		% ===================================================================
-		function set.y(me,in)
-			me.y = toDegrees(me,in,'y');
-		end
-		
-		% ===================================================================
 		%> @brief runs a demo of the eyelink, tests this class
 		%>
 		% ===================================================================
-		function runDemo(me)
+		function runDemo(me,forcescreen)
 			KbName('UnifyKeyNames')
 			stopkey=KbName('escape');
 			nextKey=KbName('space');
 			calibkey=KbName('C');
-			validkey=KbName('V');
-			driftkey=KbName('D');
 			try
-				s = screenManager('debug',true,'blend',true);
+				s = screenManager('blend',true,'pixelsPerCm',36,'distance',60);
+				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
-				o = dotsStimulus('size',me.fixationRadius*2,'speed',2,'mask',false,'density',30);
+				o = dotsStimulus('size',me.fixationRadius,'speed',1,'mask',true,'density',30);
+				%x,y,inittime,fixtime,radius,strict)
+				updateFixationValues(me,0,0,1,1,2,1);
 				open(s); %open out screen
 				setup(o,s); %setup our stimulus with open screen
 				
@@ -809,54 +810,47 @@ classdef tobiiManager < optickaCore
 				while xx == 0
 					yy = 0;
 					b = 1;
-					startRecording(me);
-					WaitSecs(0.1);
+					info = struct();
+					info.name = 'trial';
+					info.n = a;
+					startRecording(me,info);
+					flip(s)
+					WaitSecs(0.2);
 					vbl=flip(s);
-					syncTime(me);
 					while yy == 0
-						err = checkRecording(me);
-						if(err~=0); xx = 1; break; end
-						
-						[~, ~, keyCode] = KbCheck(-1);
-						if keyCode(stopkey); xx = 1; break;	end
-						if keyCode(nextKey); yy = 1; break; end
-						if keyCode(calibkey); yy = 1; break; end
-						
-						if b == 30; edfMessage(me,'END_FIX');end
-						
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
-						
 						getSample(me);
-						
 						if ~isempty(me.currentSample)
-							txt = sprintf('Press ESC to finish \n X = %g / %g | Y = %g / %g \n RADIUS = %g | FIXATION = %g', me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.fixationRadius, me.fixLength);
+							txt = sprintf('Press ESC to finish \n X = %.2g / %.2g | Y = %.2g / %.2g \n RADIUS = %g | FIXATION = %g', me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.fixationRadius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
 						end
-						
 						Screen('DrawingFinished', s.win);
 						animate(o);
-						vbl=Screen('Flip',s.win, vbl+(s.screenVals.ifi * 0.5));
+						vbl=Screen('Flip',s.win, vbl+s.screenVals.halfisi);
+						[~, ~, keyCode] = KbCheck(-1);
+						if keyCode(stopkey); yy = 1; xx = 1; break;	end
+						if keyCode(nextKey); yy = 1; break; end
+						if keyCode(calibkey); yy = 1; break; end
 						b=b+1;
 					end
+					info.nn = b;
 					edfMessage(me,'END_RT');
-					stopRecording(me)
+					stopRecording(me,info)
 					edfMessage(me,'TRIAL_RESULT 1')
 					
 					me.fixationX = randi([-5 5]);
 					me.fixationY = randi([-5 5]);
 					me.fixationRadius = randi([1 5]);
-					o.sizeOut = me.fixationRadius*2;
+					o.sizeOut = me.fixationRadius;
 					o.xPositionOut = me.fixationX;
 					o.yPositionOut = me.fixationY;
 					ts.x = me.fixationX;
 					ts.y = me.fixationY;
 					ts.size = o.sizeOut;
 					ts.selected = true;
-					setOffline(me); %Eyelink('Command', 'set_idle_mode');
-					statusMessage(me,sprintf('X Pos = %g | Y Pos = %g | Radius = %g',me.fixationX,me.fixationY,me.fixationRadius));
 					update(o);
 					WaitSecs(0.3)
 					a=a+1;
@@ -1087,6 +1081,31 @@ classdef tobiiManager < optickaCore
 					end
 			end
 		end
+
+		% ===================================================================
+		%> @brief tobii coordinates are relative 0 - 1, convert to pixels
+		%>
+		% ===================================================================
+		function out = fromRelative(me,in,axis)
+			if ~exist('axis','var');axis='';end
+			switch axis
+				case 'x'
+					out = in * me.screen.screenVals.width;
+				case 'y'
+					out = in * me.screen.screenVals.height;
+				otherwise
+					if length(in)==2
+						out(1) = in(1) * me.screen.screenVals.width;
+						out(2) = in(2) * me.screen.screenVals.height;
+					elseif length(in)==4
+						out(1:2) = in(1:2) * me.screen.screenVals.width;
+						out(3:4) = in(3:4) * me.screen.screenVals.height;
+					else
+						out = 0;
+					end
+			end
+		end
+		
 		
 		% ===================================================================
 		%> @brief

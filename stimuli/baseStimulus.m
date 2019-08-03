@@ -305,7 +305,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 						'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
 						'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
 						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
-					prepareScreen(s);
 				end
 				if ~exist('forceScreen','var'); forceScreen = -1; end
 
@@ -330,8 +329,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 					open(s); %open PTB screen
 				end
 				setup(obj,s); %setup our stimulus object
-				draw(obj); %draw stimulus
 				
+				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+				
+				draw(obj); %draw stimulus
 				if s.visualDebug
 					drawGrid(s); %draw +-5 degree dot grid
 					drawScreenCenter(s); %centre spot
@@ -340,7 +341,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if benchmark
 					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS on command window at end.', 5,5,[0 0 0]);
 				else
-					Screen('DrawText', s.win, 'Stim will be drawn, then animated...', 5,5,[0 0 0]);
+					Screen('DrawText', s.win, 'Stim will be static for 2 seconds, then animated...', 5,5,[0 0 0]);
 				end
 				
 				Screen('Flip',s.win);
@@ -364,8 +365,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if benchmark; bb=GetSecs; end
 				WaitSecs(1);
 				Screen('Flip',s.win);
-				WaitSecs(0.25);
+				WaitSecs(0.2);
 				close(s); %close screen
+				Priority(0);
 				s.screen = oldscreen;
 				s.windowed = oldwindowed;
 				s.bitDepth = oldbitdepth;
@@ -377,7 +379,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 				clear fps benchmark runtime b bb i; %clear up a bit
 				warning on
 			catch ME
+				warning on
 				getReport(ME)
+				Priority(0);
 				if exist('s','var')
 					close(s);
 				end

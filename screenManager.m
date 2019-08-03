@@ -484,13 +484,13 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function demo(me)
 			if ~me.isOpen
-				stim = textureStimulus('speed',2,'xPosition',-6,'yPosition',0,'size',1);
+				stim = textureStimulus('speed',4,'xPosition',-6,'yPosition',0,'size',1);
 				prepareScreen(me);
 				open(me);
 				me.screenVals
 				setup(stim, me);
 				flip(me);
-				for i = 1:600
+				for i = 1:me.screenVals.fps*2
 					draw(stim);
 					finishDrawing(me);
 					animate(stim);
