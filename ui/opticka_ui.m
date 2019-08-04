@@ -1099,7 +1099,11 @@ if isappdata(handles.output,'o')
 	v = get(handles.OKStimList,'Value');
 	if v > 0 && isobject(o.r.stimuli{v})
 		trialTime = str2num(get(handles.OKtrialTime,'String'));
-		forceScreen = 0;
+		if IsWin
+			forceScreen = 1;
+		else
+			forceScreen = 0;
+		end
 		if isa(o.r.screen,'screenManager') && ~isempty(o.r.screen)
 			run(o.r.stimuli{v}, false, trialTime, o.r.screen, forceScreen);
 		else

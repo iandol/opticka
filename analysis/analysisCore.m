@@ -8,49 +8,49 @@ classdef analysisCore < optickaCore
 	%--------------------PUBLIC PROPERTIES----------%
 	properties
 		%> generate plots?
-		doPlots@logical = true
+		doPlots logical = true
 		%> +- time window (s) for baseline estimation/removal
-		baselineWindow@double = [-0.2 0]
+		baselineWindow double = [-0.2 0]
 		%> default range (s) to measure values from
-		measureRange@double = [0.1 0.2]
+		measureRange double = [0.1 0.2]
 		%> default range to plot data
-		plotRange@double = [-0.2 0.4]
+		plotRange double = [-0.2 0.4]
 		%> root directory to check for data if files can't be found
-		rootDirectory@char = ''
+		rootDirectory char = ''
 	end
 	
 	%------------------PUBLIC TRANSIENT PROPERTIES----------%
 	properties (Transient = true)
 		%>getDensity stats object, used for group comparisons
-		gd@getDensity
+		gd getDensity
 	end
 	
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		%> various stats values in a structure for different analyses
-		options@struct
+		options struct
 	end
 	
 	%------------------TRANSIENT PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = protected, Transient = true)
 		%> UI panels
-		panels@struct = struct()
+		panels struct = struct()
 		%> do we yoke the selection to the parent object (e.g. LFPAnalysis > spikeAnalysis)
-		yokedSelection@logical = false
+		yokedSelection logical = false
 		%> handles for the GUI
-		handles@struct
+		handles struct
 	end
 	
 	%------------------VISIBLE TRANSIENT PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> is the UI opened?
-		openUI@logical = false
+		openUI logical = false
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'doPlots|baselineWindow|measureRange|plotRange|rootDirectory'
+		allowedProperties char = 'doPlots|baselineWindow|measureRange|plotRange|rootDirectory'
 	end
 	
 	%=======================================================================

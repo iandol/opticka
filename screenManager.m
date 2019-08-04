@@ -197,8 +197,14 @@ classdef screenManager < optickaCore
 			checkWindowValid(me);
 			
 			%get the gammatable and dac information
+			try
 			[me.screenVals.gammaTable,me.screenVals.dacBits,me.screenVals.lutSize]=Screen('ReadNormalizedGammaTable', me.screen);
 			me.screenVals.originalGammaTable = me.screenVals.gammaTable;
+			catch
+				me.screenVals.gammaTable = [];
+				me.screenVals.dacBits = [];
+				me.screenVals.lutSize = 256;
+			end
 			
 			%get screen dimensions
 			setScreenSize(me);
@@ -382,7 +388,7 @@ classdef screenManager < optickaCore
 				try
 					AssertGLSL;
 				catch
-					me.close();
+					close(me);
 					error('GLSL Shading support is required for Opticka!');
 				end
 				
@@ -469,8 +475,8 @@ classdef screenManager < optickaCore
 				screenVals = me.screenVals;
 				
 			catch ME
-				me.close();
-				screenVals = me.prepareScreen();
+				close(me);
+				screenVals = prepareScreen(me);
 				rethrow(ME)
 			end
 			

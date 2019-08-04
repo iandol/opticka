@@ -1,7 +1,7 @@
 % ========================================================================
 %> @brief eyelinkAnalysis offers a set of methods to load, parse & plot raw EDF files. It
 %> understands opticka trials (where EDF messages TRIALID start a trial and TRIAL_RESULT
-%> ends a trial) so can parse eye data and plot it for trial groups. You
+%> ends a trial by default) so can parse eye data and plot it for trial groups. You
 %> can also manually find microsaccades, and perform ROI/TOI filtering on the eye
 %> movements.
 % ========================================================================

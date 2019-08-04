@@ -283,7 +283,15 @@
 % 02/04/15
 % Release Version 2.12
 % ############################################################
-
+%
+% 30/07/19
+% Fixed bug in dereferencing 'children' field, not sure when
+% this was introduced but behaviour is now correct.
+%
+% ############################################################
+% 30/07/19
+% Release Version 2.13
+% ############################################################
 
 
 classdef (Sealed = true) panel < handle
@@ -1557,7 +1565,7 @@ classdef (Sealed = true) panel < handle
 
 					otherwise
 						error('panel:InvalidArgument', ...
-							['invalid argument "' argtext '", option is not recognised']);
+							['invalid argument "' arg '", option is not recognised']);
 
 				end
 				
@@ -2660,7 +2668,7 @@ classdef (Sealed = true) panel < handle
 		end
 		
 		function out = subsref(p, refs)
-			
+
 			% handle () indexing
 			if strcmp(refs(1).type, '()')
 				p = p.descend(refs(1).subs);
@@ -2721,7 +2729,10 @@ classdef (Sealed = true) panel < handle
 					% get the set
 					switch refs(1).subs
 						case {'children' 'ch'}
-							out = p.m_children;
+							out = {};
+							for n = 1:length(p.m_children)
+								out{n} = p.m_children(n);
+							end
 						case {'descendants' 'de'}
 							out = p.getPanels('*');
 							for c = 1:length(out)
