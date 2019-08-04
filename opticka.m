@@ -41,7 +41,7 @@ classdef opticka < optickaCore
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
 			'OKHideFlash','OKUsePhotoDiode','OKTrainingResearcherName',...
-			'OKTrainingName'}
+			'OKTrainingName','OKarduinoPort','OKdPPMode'}
 	end
 	
 	%=======================================================================
@@ -434,6 +434,7 @@ classdef opticka < optickaCore
 			end
 			if strcmpi(get(me.h.OKuseArduino,'Checked'),'on')
 				me.r.useArduino = true;
+				me.r.arduinoPort = get(me.h.OKarduinoPort,'String');
 			else
 				me.r.useArduino = false;
 			end

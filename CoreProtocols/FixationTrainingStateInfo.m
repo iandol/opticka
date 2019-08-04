@@ -17,22 +17,23 @@
 %------------General Settings-----------------
 tS.useTask = false; %==use stimulusSequence (randomised variable task object)
 tS.rewardTime = 500; %==TTL time in milliseconds
-tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
+tS.rewardPin = 2; %==Output pin, 2 by default with Arduino.
+tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = false; %==little UI requestor asks for comments before/after run
 tS.saveData = false; %==save behavioural and eye movement data?
 tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
-tS.name = 'default'; %==name of this protocol
+tS.name = 'fixation-training'; %==name of this protocol
 me.useDataPixx = false; %make sure we don't trigger the plexon
+me.useArduino = true; %use arduino for reward
 
 %------------Eyetracker Settings-----------------
 tS.fixX = 0;
 tS.fixY = 0;
 tS.firstFixInit = 1.5;
 tS.firstFixTime = [0.5 0.8];
-tS.firstFixRadius = 7;
-tS.stimulusFixTime = 1.25;
+tS.firstFixRadius = 10;
 me.lastXPosition = tS.fixX;
 me.lastYPosition = tS.fixY;
 tS.strict = false; %do we forbid eye to enter-exit-reenter fixation window?
@@ -103,7 +104,7 @@ prestimulusFcn = {  };
 %exiting prestimulus state
 psExitFcn = {
 	@()update(me.stimuli); ...
-	@()show(me.stmuli); ...
+	@()show(me.stimuli); ...
 	@()logRun(me,'SHOW FIX'); ... %fprintf current trial info
 	@()statusMessage(eL,'Showing Fixation Spot...'); ...
 };
@@ -114,7 +115,7 @@ stimEntryFcn = {};
 %what to run when we are showing stimuli
 stimFcn = { 
 	@()draw(me.stimuli); ... 
-	%@()drawEyePosition(eL); ...
+	@()drawEyePosition(eL); ...
 	@()finishDrawing(s); ...
 };
 
@@ -128,10 +129,9 @@ stimExitFcn = {};
 
 %if the subject is correct (small reward)
 correctEntryFcn = { 
-	@()timedTTL(lJ,0,tS.rewardTime); ... 
+	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); ... 
 	@()statusMessage(eL,'Correct! :-)');
 	@()logRun(me,'CORRECT'); ... %fprintf current trial info
-	@()updatePlot(bR, eL, sM); ...
 };
 
 %correct stimulus
@@ -141,24 +141,24 @@ correctFcn = {
 };
 
 %when we exit the correct state
-correctExitFcn = { };
+correctExitFcn = { @()updatePlot(bR, eL, sM) };
 
 %break entry
 breakEntryFcn = { 
 	@()statusMessage(eL,'Broke Fixation :-(') 
 	@()logRun(me,'BREAKFIX'); ... %fprintf current trial info
-	@()updatePlot(bR, eL, sM); ...
 };
 
 %break entry
 incEntryFcn = { 
 	@()statusMessage(eL,'Incorrect :-('); ...
 	@()logRun(me,'INCORRECT'); ... %fprintf current trial info
-	@()updatePlot(bR, eL, sM); ...
 };
 
 %our incorrect stimulus
 breakFcn =  { @()drawBackground(s); }; % @()drawGreenSpot(s,1) };
+
+breakExitFcn = { @()updatePlot(bR, eL, sM); };
 
 %calibration function
 calibrateFcn = { @()trackerSetup(eL); };
@@ -186,8 +186,8 @@ stateInfoTmp = { ...
 'pause'		'blank'		inf	pauseEntryFcn	[]					[]					[]; ...
 'blank'		'stimulus'	[2 6]	psEntryFcn		prestimulusFcn	[]					psExitFcn; ...
 'stimulus'  'incorrect'	4		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
-'incorrect'	'blank'		3		incEntryFcn		breakFcn			[]					[]; ...
-'breakfix'	'blank'		3		breakEntryFcn	breakFcn			[]					[]; ...
+'incorrect'	'blank'		3		incEntryFcn		breakFcn			[]					breakExitFcn; ...
+'breakfix'	'blank'		3		breakEntryFcn	breakFcn			[]					breakExitFcn; ...
 'correct'	'blank'		1		correctEntryFcn	correctFcn	[]					correctExitFcn; ...
 'calibrate' 'pause'		0.5	calibrateFcn	[]					[]					[]; ...
 'flash'		'pause'		0.5	[]					flashFcn			[]					[]; ...

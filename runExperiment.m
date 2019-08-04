@@ -90,6 +90,8 @@ classdef runExperiment < optickaCore
 		lastIndex = 0
 		%> what mode to run the DPP in?
 		dPPMode char = 'plexon'
+		%> which port is the arduino on?
+		arduinoPort char = 'COM4'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -504,6 +506,8 @@ classdef runExperiment < optickaCore
 			tS.saveData = false; %==save behavioural and eye movement data?
 			tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 			tS.useMagStim = false;
+			tS.rewardTime = 250; %==TTL time in milliseconds
+			tS.rewardPin = 2; %==Output pin, 2 by default with Arduino.
 	
 			%------initialise time logs for this run
 			me.previousInfo.taskLog = me.taskLog;
@@ -626,11 +630,20 @@ classdef runExperiment < optickaCore
 				update(me.stimuli); %make sure stimuli are set back to their start state
 				io.resetStrobe;flip(s);flip(s);
 				
-				%-----premptive save in case of crash or error SAVE IN /TMP
+				%-----Premptive save in case of crash or error SAVE IN /TMP
 				rE = me;
 				htmp = me.screenSettings.optickahandle; me.screenSettings.optickahandle = [];
 				save([tempdir filesep me.name '.mat'],'rE','tS');
 				me.screenSettings.optickahandle = htmp;
+				
+				%-----open the reward manager
+				if me.useArduino && isa('rM','arduinoManager')
+					fprintf('===>>> Opening Arduino for sending reward TTLs\n')
+					open(rM);
+				elseif  me.useLabJackReward && isa('rM','labJack')
+					fprintf('===>>> Opening LabJack for sending reward TTLs\n')
+					open(rM);
+				end
 				
 				%-----Start Plexon in paused mode
 				if me.useDisplayPP || me.useDataPixx
@@ -1354,7 +1367,7 @@ classdef runExperiment < optickaCore
 				me.useDisplayPP = false;
 			end
 			if me.useArduino
-				me.arduino = arduinoManager('port',ana.arduinoPort);
+				me.arduino = arduinoManager('port',me.arduinoPort);
 				rM = me.arduino;
 			elseif me.useLabJackReward
 				me.lJack = labJack('name',me.name,'readResponse', false,'verbose',me.verbose);
