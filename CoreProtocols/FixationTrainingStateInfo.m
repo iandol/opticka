@@ -26,6 +26,7 @@ tS.dummyEyelink             = false; %==use mouse as a dummy eyelink, good for t
 tS.useMagStim				= false; %enable the magstim manager
 tS.name						= 'fixation-training'; %==name of this protocol
 me.useDataPixx				= false; %make sure we don't trigger the plexon
+me.useEyeLink				= true;
 me.useArduino				= true; %use arduino for reward
 
 %------------Eyetracker Settings-----------------
@@ -43,11 +44,17 @@ eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end %===save EDF file?
 if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
 eL.sampleRate = 250;
-eL.remoteCalibration = true; %manual calibration
+%===========================
+% remote calibration enables manual control and selection of each fixation
+% this is useful for a baby or monkey who has not been trained for fixation
+% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
+% accept calibration!
+eL.remoteCalibration = true; 
+%===========================
 eL.calibrationStyle = 'HV5'; % calibration style
-eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 4;
-eL.modify.calibrationtargetwidth = 0.01;
+eL.modify.calibrationtargetcolour = [1 0 0];
+eL.modify.calibrationtargetsize = 2; % size of calibration target as percentage of screen
+eL.modify.calibrationtargetwidth = 0.5; % width of calibration target's border as percentage of screen
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
 eL.modify.targetbeep = 1;
@@ -240,11 +247,11 @@ disp('================>> Building state info file <<================')
 stateInfoTmp = { ...
 'name'      'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'blank'		inf	pauseEntryFcn	[]					[]					pauseExitFcn; ...
-'blank'		'stimulus'	[2 6]	psEntryFcn		prestimulusFcn	[]					psExitFcn; ...
+'blank'		'stimulus'	[1 2]	psEntryFcn		prestimulusFcn	[]					psExitFcn; ...
 'stimulus'  'incorrect'	3		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'incorrect'	'blank'		2		incEntryFcn		breakFcn			[]					breakExitFcn; ...
 'breakfix'	'blank'		2		breakEntryFcn	breakFcn			[]					breakExitFcn; ...
-'correct'	'blank'		1		correctEntryFcn	correctFcn	[]					correctExitFcn; ...
+'correct'	'blank'		0.5		correctEntryFcn	correctFcn	[]					correctExitFcn; ...
 'calibrate' 'pause'		0.5	calibrateFcn	[]					[]					[]; ...
 'flash'		'pause'		0.5	[]					flashFcn			[]					[]; ...
 'override'	'pause'		0.5	[]					overrideFcn		[]					[]; ...

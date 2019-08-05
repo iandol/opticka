@@ -61,7 +61,7 @@ classdef opticka < optickaCore
 			if nargin>0
 				me.parseArgs(varargin, me.allowedProperties);
 			end
-			try addoptickapaths; end
+			try; addoptickapaths; end
 			if me.cloning == false
 				me.initialiseUI;
 			end
@@ -489,10 +489,21 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function getStateInfo(me)
-			if ~isempty(me.r.paths.stateInfoFile) && ischar(me.r.paths.stateInfoFile) 
-				[p,f,e] = fileparts(me.r.paths.stateInfoFile);
-				if exist([f e],'file')
-					fid = fopen([f e]);
+			if ~isempty(me.r.paths.stateInfoFile) && ischar(me.r.paths.stateInfoFile)
+				if ~exist(me.r.paths.stateInfoFile,'file')
+					if ~isempty(regexpi(me.r.paths.stateInfoFile,'^\w:\\')) %is it a windows path?
+						f = split(me.r.paths.stateInfoFile,'\');
+						f = f{end};
+					else
+						[~,f,e] = fileparts(me.r.paths.stateInfoFile);
+						f = [f e];
+					end
+				else 
+					f = me.r.paths.stateInfoFile;
+				end
+				if exist(f,'file')
+					me.r.paths.stateInfoFile = [pwd filesep f];
+					fid = fopen(f);
 					tline = fgetl(fid);
 					i=1;
 					while ischar(tline)

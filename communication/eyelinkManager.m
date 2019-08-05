@@ -181,7 +181,7 @@ classdef eyelinkManager < optickaCore
 			end
 			
 			rect=me.screen.winRect;
-			Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
+			Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3)-1,rect(4)-1);
 			if ~isempty(me.callback) && exist(me.callback,'file')
 				me.defaults.callback = me.callback;
 			end
@@ -216,8 +216,7 @@ classdef eyelinkManager < optickaCore
 					me.isRecording = true;
 				end
 			end
-			
-			Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
+			Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld',rect(1),rect(2),rect(3)-1,rect(4)-1);
 			Eyelink('Message', 'FRAMERATE %ld',round(me.screen.screenVals.fps));
 			Eyelink('Message', 'DISPLAY_PPD %ld', round(me.ppd_));
 			Eyelink('Message', 'DISPLAY_DISTANCE %ld', round(me.screen.distance));
@@ -308,12 +307,13 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command','key_function 8 ''remote_cal_target 8''');
 				Eyelink('Command','key_function 9 ''remote_cal_target 9''');
 				Eyelink('Command','key_function 0 ''remote_cal_target 0''');
-				Eyelink('Command','key_function q ''remote_cal_complete''');
+				Eyelink('Command','key_function - ''remote_cal_complete''');
+				fprintf('\n===>>> REMOTE CALIBRATION ENABLED: 1-9 show point, space to choose point.\nINS key ON EYELINK == accept calibration!!!\n');
 			else
 				Eyelink('Command', 'generate_default_targets = YES');
 				Eyelink('Command','remote_cal_enable = 0');
 			end
-			fprintf('\n===>>> CALIBRATE EYELINK <<<===\n');
+			fprintf('===>>> CALIBRATING EYELINK... <<<===\n');
 			EyelinkDoTrackerSetup(me.defaults);
 			[result,out] = Eyelink('CalMessage');
 			fprintf('\t===>>> RESULT =  %.2g | message: %s\n\n',result,out);

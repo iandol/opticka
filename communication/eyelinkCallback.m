@@ -24,17 +24,18 @@ function rc = eyelinkCallback(callArgs, msg)
 % This function fetches the most recent live image from the Eylink eye
 % camera and displays it in the previously assigned onscreen window.
 %
-% History:ed
-% 15.3.2009 Derived from MemoryBuffer2TextureDemo.m (MK).
-%  4.4.2009 Updated to use EyelinkGetKey + fixed eyelinktex persistence crash (edf).
-% 11.4.2009 Cleaned up. Should be ready for 1st release, although still
-%           pretty alpha quality. (MK).
-% 15.6.2010 Added some drawing routines to get standard behaviour back. Enabled
-%           use of the callback by default. Clarified in helptext that user
-%           normally should not have to worry about calling this file. (fwc)
-% 20.7.2010 drawing of instructions, eye-image+title, playing sounds in seperate functions
+% History:
+% 15.3.2009   Derived from MemoryBuffer2TextureDemo.m (MK).
+%  4.4.2009   Updated to use EyelinkGetKey + fixed eyelinktex persistence crash (edf).
+% 11.4.2009   Cleaned up. Should be ready for 1st release, although still
+%             pretty alpha quality. (MK).
+% 15.6.2010   Added some drawing routines to get standard behaviour back. Enabled
+%             use of the callback by default. Clarified in helptext that user
+%             normally should not have to worry about calling this file. (fwc)
+% 20.7.2010   drawing of instructions, eye-image+title, playing sounds in seperate functions
 %
-% 1.2.2010 nj modified to allow for cross hair and fix bugs
+%  1.2.2010   modified to allow for cross hair and fix bugs. (nj)
+% 29.10.2018  Drop 'DrawDots' for calibration target. Some white-space fixes.
 
 % Cached texture handle for eyelink texture:
 persistent eyelinktex;
@@ -50,7 +51,7 @@ persistent eyeheight;
 
 % Cached(!) eyelink stucture containing keycodes
 persistent el;
-persistent lastImageTime; %#ok<PUSE>
+persistent lastImageTime;
 persistent drawcount;
 persistent ineyeimagemodedisplay;
 persistent clearScreen;
@@ -65,7 +66,7 @@ persistent inDrift;
 offscreen = 0;
 newImage = 0;
 
-verbose = false;
+verbose = true;
 
 if 0 == Screen('WindowKind', eyelinktex)
 	eyelinktex = []; % got persisted from a previous ptb window which has now been closed; needs to be recreated
@@ -147,31 +148,30 @@ switch eyecmd
 		% New videoframe received. See code below for actual processing.
 		newcamimage = 1;
 		needsupdate = 1;
-		if verbose; fprintf('--->>> EYELINKCALLBACK:1 New frame!\n'); end
+		%if verbose; fprintf('--->>> EYELINKCALLBACK:1 New frame!\n'); end
 	case 2
 		% Eyelink Keyboard query:
 		[rc, el] = EyelinkGetKey(el);
-		if rc == 32 %space key
+		if rc == 32
 			clearScreen = 1;
 			needsupdate = 1;
 			calxy = [];
 			if isa(rM,'labJack') %this is why we need rM to be universal
-				fprintf('--->>> Send labJack REWARD\n')
-				rM.timedTTL(0,160);
+				fprintf('--->>> Send labJack REWARD during eyelink calibration...\n')
+				%timedTTL(rM,0,160);
 			elseif isa(rM,'sendSerial')
-				fprintf('--->>> Send Serial REWARD\n')
-				rM.timedTTL(2,160)
+				fprintf('--->>> Send Serial REWARD during eyelink calibration...\n')
+				%timedTTL(rM,2,160)
 			elseif isa(rM,'arduinoManager')
-				fprintf('--->>> Send Arduino REWARD\n')
-				rM.timedTTL(2,160)
+				fprintf('--->>> Send Arduino REWARD during eyelink calibration...\n')
+				%timedTTL(rM,2,160)
 			end
 		end
 		if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
 	case 3
 		% Alert message:
-		if verbose; fprintf('--->>> EYELINKCALLBACK:3 Eyelink Alert: %s.\n', msg); end
+		fprintf('--->>> EYELINKCALLBACK:3 Eyelink Alert: %s.\n', msg);
 		needsupdate = 1;
-		% TODO FIXME: Implement some reasonable behaviour...
 	case 4
 		% Image title of camera image transmitted from Eyelink:
 		if verbose; fprintf('--->>> EYELINKCALLBACK:4 Eyelink image title is %s. [Threshold = %f]\n', msg, callArgs(2)); end
@@ -234,12 +234,12 @@ switch eyecmd
 		clearScreen=1;
 		needsupdate = 1;
 	case 11
-		if verbose;
+		if verbose
 			fprintf('--->>> EYELINKCALLBACK:11 exit_cal_display.\n');
 			fprintf('--->>> EYELINKCALLBACK AVG FPS = %f Hz\n', drawcount / (GetSecs - lastImageTime));
 		end
 		clearScreen=1;
-		%drawInstructions=1;
+		drawInstructions=1;
 		needsupdate = 1;
 	case 12
 		% New calibration target sound:
@@ -356,23 +356,20 @@ drawcount = drawcount + 1;
 % Done. Return from callback:
 return;
 
-
+%=========================================================================================
 function EyelinkDrawInstructions(eyewin, el,msg,verbose)
-%oldFont=Screen(eyewin,'TextFont',el.msgfont);
-%oldFontSize=Screen(eyewin,'TextSize',el.msgfontsize);
 DrawFormattedText(eyewin, el.helptext, 20, 20, el.msgfontcolour);
 if el.displayCalResults && ~isempty(msg)
-	DrawFormattedText(eyewin, msg, 20, 150, el.msgfontcolour, [], [], [], 1);
+	DrawFormattedText(eyewin, msg, 20, 100, el.msgfontcolour, [], [], [], 1);
 end
 if verbose; fprintf('--->>> EYELINKCALLBACK : drawn-instructions\n'); end
-%Screen(eyewin,'TextFont',oldFont);
-%Screen(eyewin,'TextSize',oldFontSize);
 
+
+%=========================================================================================
 function  imgtitle=EyelinkDrawCameraImage(eyewin, el, eyelinktex, imgtitle,newImage,verbose)
 persistent lasttitle;
 global dh dw offscreen;
 
-if verbose; fprintf('--->>> EYELINKCALLBACK EyelinkDrawCameraImage\n'); end
 try
 	
 	if ~isempty(eyelinktex)
@@ -405,17 +402,12 @@ try
 			end
 			
 			sn = Screen('WindowScreenNumber', eyewin);
-			offscreen = Screen('OpenOffscreenWindow', sn, el.backgroundcolour);
-			
-			%Screen(offscreen,'TextFont',el.imgtitlefont);
-			%Screen(offscreen,'TextSize',el.imgtitlefontsize);
+			offscreen = Screen('OpenOffscreenWindow', sn, el.backgroundcolour, [], [], 32);
+			Screen(offscreen,'TextFont',el.imgtitlefont);
+			Screen(offscreen,'TextSize',el.imgtitlefontsize);
 			Screen('DrawText', offscreen, imgtitle, width/2-dw/2, heigth/2+dh/2+h2, el.imgtitlecolour);
-			
 			Screen('DrawTexture',eyewin,offscreen,  [width/2-dw/2 heigth/2+dh/2+h2 width/2-dw/2+500 heigth/2+dh/2+h2+500], [width/2-dw/2 heigth/2+dh/2+h2 width/2-dw/2+500 heigth/2+dh/2+h2+500]);
-			
-			
 			Screen('Close',offscreen);
-			
 			newImage = 0;
 		end
 		%imgtitle=[]; % return empty title, so it doesn't get drawn over and over again.
@@ -427,6 +419,7 @@ catch ME
 	ple(ME);
 end
 
+%=========================================================================================
 function EyelinkMakeSound(el, s)
 % set all sounds in one place, sound params defined in
 % eyelinkInitDefaults
@@ -443,28 +436,28 @@ switch(s)
 		v=el.drift_correction_target_beep(2);
 		d=el.drift_correction_target_beep(3);
 	case 'calibration_failed_beep'
-		doBeep=1;
+		doBeep=el.feedbackbeep;
 		f=el.calibration_failed_beep(1);
 		v=el.calibration_failed_beep(2);
 		d=el.calibration_failed_beep(3);
 	case 'calibration_success_beep'
-		doBeep=1;
+		doBeep=el.feedbackbeep;
 		f=el.calibration_success_beep(1);
 		v=el.calibration_success_beep(2);
 		d=el.calibration_success_beep(3);
 	case 'drift_correction_failed_beep'
-		doBeep=1;
+		doBeep=el.feedbackbeep;
 		f=el.drift_correction_failed_beep(1);
 		v=el.drift_correction_failed_beep(2);
 		d=el.drift_correction_failed_beep(3);
 	case 'drift_correction_success_beep'
-		doBeep=1;
+		doBeep=el.feedbackbeep;
 		f=el.drift_correction_success_beep(1);
 		v=el.drift_correction_success_beep(2);
 		d=el.drift_correction_success_beep(3);
 	otherwise
 		% some defaults
-		doBeep=1;
+		doBeep=el.feedbackbeep;
 		f=500;
 		v=0.5;
 		d=1.5;
@@ -472,20 +465,21 @@ end
 
 % function Beeper(frequency, [fVolume], [durationSec]);
 if doBeep==1
-	%Beeper(f, v, d);
+	Beeper(f, v, d);
 end
 
+%=========================================================================================
 function EyelinkDrawCalibrationTarget(eyewin, el, calxy,verbose)
 try
-	[width, heigth]=Screen('WindowSize', eyewin);
+	[width, ~]=Screen('WindowSize', eyewin);
 	size=round(el.calibrationtargetsize/100*width);
 	inset=round(el.calibrationtargetwidth/100*width);
 	insetSize = floor(size-2*inset);
 	if insetSize < 1
-		insetSize = 4;
+		insetSize = 2;
 	end
 	
-	if sum(el.calibrationtargetcolour) > 0.6
+	if sum(el.calibrationtargetcolour) < 0.6
 		insetColour = [1 1 1];
 	else
 		insetColour = [0 0 0];
@@ -498,7 +492,7 @@ try
 		Screen('FillOval', eyewin, el.calibrationtargetcolour, [calxy(1)-size/2 calxy(2)-size/2 calxy(1)+size/2 calxy(2)+size/2], size+2);
 		Screen('FillOval', eyewin, insetColour, [calxy(1)-inset/2 calxy(2)-inset/2 calxy(1)+inset/2 calxy(2)+inset/2], inset+2);
 	end
-	if verbose; fprintf('--->>> EYELINKCALLBACK EyelinkDrawCalibrationTarget\n'); end
+	if verbose; fprintf('--->>> EYELINKCALLBACK EyelinkDrawCalibrationTarget: %.5g %.5g\n',calxy(1),calxy(2)); end
 catch ME
 	ple(ME)
 end
