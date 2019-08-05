@@ -391,8 +391,10 @@ classdef eyelinkManager < optickaCore
 			elseif me.isDummy %lets use a mouse to simulate the eye signal
 				if ~isempty(me.win)
 					[me.x, me.y] = GetMouse(me.win);
+				elseif ~isempty(me.screen) && ~isempty(me.screen.screen)
+					[me.x, me.y] = GetMouse(me.screen.screen);
 				else
-					[me.x, me.y] = GetMouse([]);
+					[me.x, me.y] = GetMouse();
 				end
 				me.pupil = 800 + randi(20);
 				me.currentSample.gx = me.x;
@@ -501,7 +503,7 @@ classdef eyelinkManager < optickaCore
 						searching = false;
 						fixated = true;
 						me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1000;
-						%if me.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, me.fixLength, me.fixationTime, me.fixTotal, me.fixInitTotal);end
+						if me.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, me.fixLength, me.fixationTime, me.fixTotal, me.fixInitTotal);end
 						return
 					else
 						fixated = false;
@@ -684,7 +686,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function drawEyePosition(me)
-			if (me.isDummy || me.isConnected) && me.screen.isOpen && ~isempty(me.x) && ~isempty(me.y)
+			if (me.isDummy || me.isConnected) && isa(me.screen,'screenManager') && me.screen.isOpen && ~isempty(me.x) && ~isempty(me.y)
 				x = me.toPixels(me.x,'x');
 				y = me.toPixels(me.y,'y');
 				if me.isFixated

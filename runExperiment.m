@@ -612,7 +612,7 @@ classdef runExperiment < optickaCore
 				fprintf('\n===>>> Warming up the GPU, Eyelink and I/O systems... <<<===\n')
 				show(me.stimuli);
 				if me.useEyeLink; trackerClearScreen(eL); end
-				for i = 1:s.screenVals.fps*2
+				for i = 1:s.screenVals.fps*1
 					draw(me.stimuli);
 					drawBackground(s);
 					s.drawPhotoDiodeSquare([0 0 0 1]);
@@ -637,10 +637,10 @@ classdef runExperiment < optickaCore
 				me.screenSettings.optickahandle = htmp;
 				
 				%-----open the reward manager
-				if me.useArduino && isa('rM','arduinoManager')
+				if me.useArduino && isa(rM,'arduinoManager')
 					fprintf('===>>> Opening Arduino for sending reward TTLs\n')
 					open(rM);
-				elseif  me.useLabJackReward && isa('rM','labJack')
+				elseif  me.useLabJackReward && isa(rM,'labJack')
 					fprintf('===>>> Opening LabJack for sending reward TTLs\n')
 					open(rM);
 				end
@@ -675,7 +675,7 @@ classdef runExperiment < optickaCore
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				if me.debug == false
 					%warning('off'); %#ok<*WNOFF>
-					ListenChar(2); %2=capture all keystrokes
+					ListenChar(1); %2=capture all keystrokes
 				else
 					ListenChar(1); %1=listen
 				end
