@@ -16,13 +16,13 @@
 
 %------------General Settings-----------------
 tS.useTask					= false; %==use stimulusSequence (randomised variable task object)
-tS.rewardTime				= 500; %==TTL time in milliseconds
+tS.rewardTime				= 150; %==TTL time in milliseconds
 tS.rewardPin				= 2; %==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
+tS.checkKeysDuringStimulus  = false; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition		= false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= false; %==save behavioural and eye movement data?
-tS.dummyEyelink			= true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.dummyEyelink             = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim				= false; %enable the magstim manager
 tS.name						= 'fixation-training'; %==name of this protocol
 me.useDataPixx				= false; %make sure we don't trigger the plexon
@@ -31,19 +31,19 @@ me.useArduino				= true; %use arduino for reward
 %------------Eyetracker Settings-----------------
 tS.fixX						= 0;
 tS.fixY						= 0;
-tS.firstFixInit			= 1.5;
-tS.firstFixTime			= [0.5 0.8];
-tS.firstFixRadius			= 10;
+tS.firstFixInit             = 1.5;
+tS.firstFixTime             = 1;
+tS.firstFixRadius			= 3;
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
-tS.strict = false; %do we forbid eye to enter-exit-reenter fixation window?
+tS.strict = true; %do we forbid eye to enter-exit-reenter fixation window?
 
 %------------------------Eyelink setup--------------------------
 eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end %===save EDF file?
 if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
 eL.sampleRate = 250;
-%eL.remoteCalibration = true; %manual calibration
+eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV5'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 0];
 eL.modify.calibrationtargetsize = 4;

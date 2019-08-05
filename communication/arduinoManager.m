@@ -23,9 +23,9 @@ classdef arduinoManager < optickaCore
 			if nargin>0
 				me.parseArgs(varargin,me.allowedProperties);
 			end
-			if IsWin
+			if isempty(me.port) && IsWin
 				me.port = 'COM4';
-			else
+            elseif isempty(me.port)
 				me.port = '/dev/ttyACM1';
 			end
 			switch me.mode

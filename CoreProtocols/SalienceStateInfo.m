@@ -13,25 +13,27 @@
 % tS = general struct to hold variables for this run
 
 %------------General Settings-----------------
-tS.useTask = true; %==use stimulusSequence (randomised variable task object)
-tS.rewardTime = 150; %==TTL time in milliseconds
-tS.rewardPin = 2; %==Output pin, 2 by default with Arduino.
+tS.useTask              = true; %==use stimulusSequence (randomised variable task object)
+tS.rewardTime           = 150; %==TTL time in milliseconds
+tS.rewardPin            = 2; %==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition	= false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments		= false; %==little UI requestor asks for comments before/after run
 tS.saveData				= true; %==save behavioural and eye movement data?
-tS.dummyEyelink		= true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.dummyEyelink         = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.name					= 'salience-task'; %==name of this protocol
 %io.verbose				= true; %==show the triggers sent in the command window
 %eL.verbose				= true;
 bR.correctStateName		= 'post';
+me.useEyeLink           = true;
+me.useArduino           = true;
 				
 %------------Eyetracker Settings-----------------
 tS.fixX				= 0;
 tS.fixY				= 0;
 tS.firstFixInit		= 1;
 tS.firstFixTime		= 0.4;
-tS.firstFixRadius	= 2;
+tS.firstFixRadius	= 3;
 tS.keepFixInit		= 0;
 tS.keepFixTime		= 0.6;
 tS.strict			= true; %do we allow (strict==false) multiple entry/exits of fix window within the time limit
@@ -177,7 +179,7 @@ testFixFcn = {
 %--------------------as we exit stim presentation state
 stimfixExitFcn = { 
 	@()sendStrobe(io,255); 
-	@()timedTTL(rM,0,tS.rewardTime); ... % labjack sends a TTL to Crist reward system
+	@()timedTTL(rM,tS.rewardPin,tS.rewardTime); ... % labjack sends a TTL to Crist reward system
 };
 
 %--------------------------------

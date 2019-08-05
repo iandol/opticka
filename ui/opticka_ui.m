@@ -1776,6 +1776,7 @@ if isappdata(handles.output,'o')
 		fprintf('>>> A previous task did not finish properly, resetting!\n')
 	end
 	if isa(o.r,'runExperiment') && ~o.r.isRunning
+        o.getScreenVals;
 		%o.r.screenSettings.optickahandle = handles.output;
 		initialiseSave(o.r, o.paths.savedData)
 		if ~isempty(regexp(o.comment, '^Protocol','once'))

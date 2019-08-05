@@ -578,7 +578,7 @@ classdef runExperiment < optickaCore
 					cd(fileparts(me.paths.stateInfoFile))
 					me.paths.stateInfoFile = regexprep(me.paths.stateInfoFile,'\s+','\\ ');
 					run(me.paths.stateInfoFile)
-					me.stateInfo = stateInfoTmp; clear stateInfoTmp
+					me.stateInfo = stateInfoTmp;
 					addStates(sM, me.stateInfo);
 				end
 				
@@ -1367,8 +1367,11 @@ classdef runExperiment < optickaCore
 				me.useDisplayPP = false;
 			end
 			if me.useArduino
-				me.arduino = arduinoManager('port',me.arduinoPort);
-				rM = me.arduino;
+                if ~isa(rM,'arduinoManager')
+                    rM = arduinoManager();
+                end
+                rM.port = me.arduinoPort;
+				me.arduino = rM;
 			elseif me.useLabJackReward
 				me.lJack = labJack('name',me.name,'readResponse', false,'verbose',me.verbose);
 				rM = me.lJack;
