@@ -1543,7 +1543,6 @@ if ~isempty(handles) && isappdata(handles.output,'o')
 		o.savePrefs;
 		rmappdata(handles.output,'o');
 		clear o;
-		fprintf('>>> Opticka saved its preferences...\n');
 	catch ME
 		getReport(ME)
 		fprintf('!!!>>> Opticka failed to clear all data on close...\n');

@@ -167,7 +167,6 @@ stimExitFcn = {
 
 %if the subject is correct (small reward)
 correctEntryFcn = {
-	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); ... 
 	@()statusMessage(eL,'Correct! :-)');
 	@()logRun(me,'CORRECT'); ... %fprintf current trial info
 	@()hide(me.stimuli); ...
@@ -175,6 +174,8 @@ correctEntryFcn = {
 	@()edfMessage(eL,'TRIAL OK'); ...
 	@()update(me.stimuli); ... %update our stimuli ready for display
 	@()stopRecording(eL); ...stimfix
+	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); ... 
+	@()Beeper(1000); ...
 };
 
 %correct stimulus

@@ -498,12 +498,10 @@ classdef opticka < optickaCore
 						[~,f,e] = fileparts(me.r.paths.stateInfoFile);
 						f = [f e];
 					end
-				else 
-					f = me.r.paths.stateInfoFile;
-				end
-				if exist(f,'file')
 					me.r.paths.stateInfoFile = [pwd filesep f];
-					fid = fopen(f);
+				end
+				if exist(me.r.paths.stateInfoFile,'file')
+					fid = fopen(me.r.paths.stateInfoFile);
 					tline = fgetl(fid);
 					i=1;
 					while ischar(tline)
@@ -872,6 +870,7 @@ classdef opticka < optickaCore
 						setpref('opticka', prfname, prf);
 				end
 			end
+			fprintf('>>> Opticka saved its preferences...\n');
 		end
 		
 	end
