@@ -46,6 +46,7 @@ classdef arduinoManager < optickaCore
 		
 		%===============OPEN DEVICE================%
 		function open(me)
+            close(me);
 			if me.silentMode==false && isempty(me.device)
 				try
 					switch me.mode

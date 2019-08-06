@@ -476,9 +476,9 @@ try
 	inset=round(el.calibrationtargetwidth/100*width);
 	insetSize = floor(size-2*inset);
 	if insetSize < 1
-		insetSize = 2;
+		insetSize = 0.2;
 	end
-	
+	ShowCursor;
 	if sum(el.calibrationtargetcolour) < 0.6
 		insetColour = [1 1 1];
 	else
