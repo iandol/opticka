@@ -307,7 +307,7 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command','key_function 8 ''remote_cal_target 8''');
 				Eyelink('Command','key_function 9 ''remote_cal_target 9''');
 				Eyelink('Command','key_function 0 ''remote_cal_target 0''');
-				Eyelink('Command','key_function - ''remote_cal_complete''');
+				Eyelink('Command','key_function ins ''remote_cal_complete''');
 				fprintf('\n===>>> REMOTE CALIBRATION ENABLED: 1-9 show point, space to choose point.\nINS key ON EYELINK == accept calibration!!!\n');
 			else
 				Eyelink('Command', 'generate_default_targets = YES');
