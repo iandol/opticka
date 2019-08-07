@@ -61,7 +61,6 @@ classdef opticka < optickaCore
 			if nargin>0
 				me.parseArgs(varargin, me.allowedProperties);
 			end
-			try; addoptickapaths; end
 			if me.cloning == false
 				me.initialiseUI;
 			end

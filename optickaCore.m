@@ -84,6 +84,7 @@ classdef optickaCore < handle
 			if nargin>0
 				me.parseArgs(args,me.allowedProperties);
 			end
+			try; if ~exist('metaStimulus','file'); addoptickapaths; end; end
 			me.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
 			setPaths(me)
 		end

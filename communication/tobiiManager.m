@@ -291,7 +291,7 @@ classdef tobiiManager < optickaCore
 		function sample = getSample(me)
 			me.currentSample = [];
 			if me.isConnected && me.isRecording
-				cdata = me.tobii.get_gaze_data();
+				cdata = me.tobii.get_gaze_data('flat');
 				if ~isempty(cdata) && isa(cdata(1),'GazeData') && cdata(1).LeftEye.GazePoint.Validity.Valid
 					thisdata = cdata(end);
 					xy = fromRelative(me, double(thisdata.LeftEye.GazePoint.OnDisplayArea));
