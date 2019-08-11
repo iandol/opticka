@@ -14,7 +14,7 @@
 
 %------------General Settings-----------------
 tS.useTask              = true; %==use stimulusSequence (randomised variable task object)
-tS.rewardTime           = 150; %==TTL time in milliseconds
+tS.rewardTime           = 300; %==TTL time in milliseconds
 tS.rewardPin            = 2; %==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition	= false; %==record eye position within PTB, **in addition** to the EDF?
@@ -33,7 +33,7 @@ tS.fixX				= 0;
 tS.fixY				= 0;
 tS.firstFixInit		= 1;
 tS.firstFixTime		= 0.4;
-tS.firstFixRadius	= 2;
+tS.firstFixRadius	= 3;
 tS.keepFixInit		= 0;
 tS.keepFixTime		= 0.6;
 tS.strict			= true; %do we allow (strict==false) multiple entry/exits of fix window within the time limit
@@ -55,7 +55,7 @@ eL.remoteCalibration = true;
 %===========================
 eL.modify.calibrationtargetcolour = [1 1 1];
 eL.modify.calibrationtargetsize = 2;
-eL.modify.calibrationtargetwidth = 0.01;
+eL.modify.calibrationtargetwidth = 0;
 eL.modify.waitformodereadytime = 500;
 eL.modify.targetbeep = 1;
 eL.modify.devicenumber = -1; % -1 = use any keyboard
@@ -94,7 +94,7 @@ me.stimuli.fixationChoice = 3;
 pauseEntryFcn = {
 	@()hide(me.stimuli); ...
 	@()drawBackground(s); ... %blank the display
-	@()pauseRecording(io); ...
+	%@()pauseRecording(io); ...
 	@()drawTextNow(s,'Paused, press [p] to resume...'); ...
 	@()disp('Paused, press [p] to resume...'); ...
 	@()trackerClearScreen(eL); ... 
@@ -109,7 +109,7 @@ pauseEntryFcn = {
 pauseExitFcn = { 
 	@()enableFlip(me); ...
 	@()needEyeSample(me,true); ...
-	@()resumeRecording(io); ...
+	%@()resumeRecording(io); ...
 };
 
 %--------------------prefixate entry
@@ -167,8 +167,9 @@ fixExitFcn = {
 %--------------------------------
 %--------------------STIMFIX
 stimfixEntryFcn = { 
-	@()doStrobe(me,true);
-	@()doSyncTime(me); 
+    @()prepareStrobe(io,10); ...
+	@()doStrobe(me,true); ...
+	@()doSyncTime(me); ...
 };  
 
 %--------------------what to run when we are showing stimuli
@@ -184,7 +185,7 @@ testFixFcn = {
 
 %--------------------as we exit stim presentation state
 stimfixExitFcn = { 
-	@()sendStrobe(io,255); 
+	%@()sendStrobe(io,255); 
 };
 
 %--------------------------------
@@ -203,7 +204,7 @@ stim2Fcn =  {
 
 %--------------------as we exit stim presentation state
 stim2ExitFcn = { 
-	@()sendStrobe(io,255); 
+	%@()sendStrobe(io,255); 
 };
 
 %--------------------------------
@@ -221,7 +222,7 @@ postFcn = {
 
 %--------------------when we exit the correct state
 postExitFcn = { 
-	@()correct(io); ...
+	%@()correct(io); ...
 	@()needEyeSample(me,false); ...
 	@()trackerClearScreen(eL); ...
 	@()statusMessage(eL,'Ending post...'); ... %status text on the eyelink
@@ -251,7 +252,7 @@ incFcn = {
 
 %--------------------incorrect / break exit
 incExitFcn = { 
-	@()incorrect(io); ...
+	%@()incorrect(io); ...
 	@()needEyeSample(me,false); ...
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ... %trial incorrect message
 	@()stopRecording(eL); ... %stop eyelink recording data
@@ -266,7 +267,9 @@ incExitFcn = {
 %--------------------calibration function
 calibrateFcn = { 
 	@()drawBackground(s); ... %blank the display
-	@()setOffline(eL); @()rstop(io); @()trackerSetup(eL) 
+	@()setOffline(eL); ...
+    %@()rstop(io); ...
+    @()trackerSetup(eL) 
 }; %enter tracker calibrate/validate setup mode
 
 %--------------------debug override

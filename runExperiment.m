@@ -688,7 +688,7 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerStartOffset = getTimeOffset(eL);
 				tL.vbl(1) = Screen('Flip', s.win);
 				tL.startTime = tL.vbl(1);
-				
+				io.verbose=true;
 				%-----ignite the stateMachine!
 				start(sM); 
 

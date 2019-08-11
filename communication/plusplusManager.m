@@ -61,10 +61,10 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function obj = plusplusManager(varargin)
+		function me = plusplusManager(varargin)
 			if nargin == 0; varargin.name = 'Display++ Manager'; end
-			obj=obj@optickaCore(varargin); %superclass constructor
-			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
+			me=me@optickaCore(varargin); %superclass constructor
+			if nargin > 0; me.parseArgs(varargin,me.allowedProperties); end
 		end
 		
 		% ===================================================================
@@ -72,29 +72,30 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function open(obj)
+		function open(me)
 			try
 				ret = BitsPlusPlus('OpenBits#');
 				if ret == 1
-					obj.isAttached = true;
-					obj.silentMode = false;
-					obj.strobeShift_ = obj.strobeShift; % cache value
-					if isempty(obj.sM) || obj.sM.isOpen == false
+					me.isAttached = true;
+					me.silentMode = false;
+					me.strobeShift_ = me.strobeShift; % cache value
+					if isempty(me.sM) || me.sM.isOpen == false
 						warning('SCREEN is CLOSED, no commands will work');
 					end
-					if ~isempty(obj.sM) && regexpi(obj.sM.bitDepth,'^EnableBits')
+					if ~isempty(me.sM) && ~regexpi(me.sM.bitDepth,'^EnableBits')
 						warning('SCREEN is not set to use Bits++ mode, I/O WILL FAIL!');
 					end
 				else
 					warning('Cannot find Display++, going into Silent mode...')
-					obj.isAttached = false;
-					obj.silentMode = true;
+					me.isAttached = false;
+					me.silentMode = true;
 				end
 			catch
-				obj.sM.checkWindowValid();
+				me.sM.checkWindowValid();
 				warning('Problem searching for Display++, entering silentMode')
-				obj.isAttached = false;
-				obj.silentMode = true;
+				me.isAttached = false;
+				me.silentMode = true;
+                fprintf('--->>> plusplusManager: make sure your serial port is set up and you''ve validated with BitsPlusIdentityClutTest(2) etc\n');
 			end
 		end
 		
@@ -103,17 +104,18 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value 
 		% ===================================================================
-		function sendStrobe(obj, value)
-			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
+		function sendStrobe(me, value)
+			if me.silentMode || isempty(me.sM) || me.sM.isOpen == false; return; end
 			if exist('value','var')
-				prepareStrobe(obj, value, obj.mask, true);
-				data = obj.tempData;
-				mask = obj.tempMask; %#ok<*PROPLC>
+				prepareStrobe(me, value, me.mask, true);
+				data = me.tempData;
+				mask = me.tempMask; %#ok<*PROPLC>
 			else
-				data = obj.sendData;
-				mask = obj.sendMask;
+				data = me.sendData;
+				mask = me.sendMask;
 			end
-			BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, mask, data, obj.command);
+			BitsPlusPlus('DIOCommand', me.sM.win, me.repetitions, mask, data, me.command);
+            if me.verbose; fprintf('===>>> sendStrobe: %i\n', value); end
 		end
 		
 		% ===================================================================
@@ -123,36 +125,36 @@ classdef plusplusManager < optickaCore
 		%> @param mask the mask to send
 		%> @param temporary if true we don't change sendStrobe value
 		% ===================================================================
-		function prepareStrobe(obj, value, mask, temporary)
+		function prepareStrobe(me, value, mask, temporary)
 			if ~exist('value','var') || isempty(value)
-				value = obj.sendValue;
+				value = me.sendValue;
 			end
-			if ~exist('mask','var') || isempty(mask); mask = obj.mask; end
+			if ~exist('mask','var') || isempty(mask); mask = me.mask; end
 			if ~exist('temporary','var'); temporary = false; end
 			
 			if temporary
-				obj.lastValue = value;
-				obj.tempMask = mask;
+				me.lastValue = value;
+				me.tempMask = mask;
 			else
-				obj.lastValue = obj.sendValue;
-				obj.sendValue = value;
+				me.lastValue = me.sendValue;
+				me.sendValue = value;
 			end
 			
-			switch obj.strobeMode
+			switch me.strobeMode
 				case 'plexon'
-					data = [value, value + obj.strobeShift_, value + obj.strobeShift_,...
+					data = [value, value + me.strobeShift_, value + me.strobeShift_,...
 						zeros(1,248-3)];
 				otherwise
-					data = [repmat(value,1,obj.nWindows), zeros(1,248-obj.nWindows)];
+					data = [repmat(value,1,me.nWindows), zeros(1,248-me.nWindows)];
 			end
 			if temporary
-				obj.tempData = data;
+				me.tempData = data;
 			else
-				obj.sendData = data;
+				me.sendData = data;
 			end
-			if obj.verbose == true
+			if me.verbose == true
 				fprintf('===>>> prepareStrobe VALUE: %i\t| mode:%s\t| mask:%s | %i\n',...
-					value, obj.strobeMode, dec2bin(obj.mask), temporary);
+					value, me.strobeMode, dec2bin(me.mask), temporary);
 			end
 		end
 		
@@ -161,8 +163,8 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value 
 		% ===================================================================
-		function triggerStrobe(obj)
-			sendStrobe(obj);
+		function triggerStrobe(me)
+			sendStrobe(me);
 		end
 		
 		% ===================================================================
@@ -170,14 +172,14 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value 
 		% ===================================================================
-		function sendStrobeAndFlip(obj, value)
-			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
-			if exist('value','var'); prepareStrobe(obj,value,obj.mask);	end
-			sendStrobe(obj);
-			flip(obj.sM); flip(obj.sM);
-			if obj.verbose == true
+		function sendStrobeAndFlip(me, value)
+			if me.silentMode || isempty(me.sM) || me.sM.isOpen == false; return; end
+			if exist('value','var'); prepareStrobe(me,value,me.mask);	end
+			sendStrobe(me);
+			flip(me.sM); flip(me.sM);
+			if me.verbose == true
 				fprintf('===>>> sendStrobeAndFlip VALUE: %i\t| mode: %s\t| mask: %s\n', ...
-					obj.sendValue, obj.strobeMode, dec2bin(obj.mask));
+					me.sendValue, me.strobeMode, dec2bin(me.mask));
 			end
 		end
 		
@@ -186,17 +188,17 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function sendTTL(obj, value, mask)
-			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
+		function sendTTL(me, value, mask)
+			if me.silentMode || isempty(me.sM) || me.sM.isOpen == false; return; end
 			if ~exist('value','var') || isempty(value)
 				warning('No value specified, abort sending TTL')
 				return
 			end
-			if ~exist('mask','var') || isempty(mask); mask = obj.mask; end
+			if ~exist('mask','var') || isempty(mask); mask = me.mask; end
 			data = [repmat(value,1,10),zeros(1,248-10)];
-			BitsPlusPlus('DIOCommand', obj.sM.win, obj.repetitions, mask, data, obj.command);
+			BitsPlusPlus('DIOCommand', me.sM.win, me.repetitions, mask, data, me.command);
 			
-			if obj.verbose == true
+			if me.verbose == true
 				fprintf('===>>> SEND TTL: %i - mask: %s\n', value, dec2bin(mask));
 			end
 		end
@@ -206,10 +208,10 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function resetStrobe(obj)
-			if obj.silentMode==true;return;end
-			BitsPlusPlus('DIOCommandReset', obj.sM.win);
-			if obj.verbose == true
+		function resetStrobe(me)
+			if me.silentMode==true;return;end
+			BitsPlusPlus('DIOCommandReset', me.sM.win);
+			if me.verbose == true
 				fprintf('===>>> RESET STROBE\n');
 			end
 		end
@@ -219,10 +221,10 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function statusScreen(obj)
-			if obj.silentMode==true;return;end
+		function statusScreen(me)
+			if me.silentMode==true;return;end
 			BitsPlusPlus('SwitchToStatusScreen');
-			if obj.verbose == true
+			if me.verbose == true
 				fprintf('===>>> Showing Status Screen\n');
 			end
 		end
@@ -232,10 +234,10 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function bitsMode(obj)
-			if obj.silentMode==true;return;end
+		function bitsMode(me)
+			if me.silentMode==true;return;end
 			BitsPlusPlus('SwitchToBits++');
-			if obj.verbose == true
+			if me.verbose == true
 				fprintf('===>>> Switch to Bits++ mode\n');
 			end
 		end
@@ -245,10 +247,10 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function monoMode(obj)
-			if obj.silentMode==true;return;end
+		function monoMode(me)
+			if me.silentMode==true;return;end
 			BitsPlusPlus('SwitchToMono++');
-			if obj.verbose == true
+			if me.verbose == true
 				fprintf('===>>> Switch to Mono++ mode\n');
 			end
 		end
@@ -258,10 +260,10 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function colourMode(obj)
-			if obj.silentMode==true;return;end
+		function colourMode(me)
+			if me.silentMode==true;return;end
 			BitsPlusPlus('SwitchToColour++');
-			if obj.verbose == true
+			if me.verbose == true
 				fprintf('===>>> Switch to Colour++ mode\n');
 			end
 		end
@@ -271,10 +273,10 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param value of the 15bit strobed word
 		% ===================================================================
-		function close(obj)
-			if obj.silentMode==true;return;end
+		function close(me)
+			if me.silentMode==true;return;end
 			BitsPlusPlus('Close');
-			if obj.verbose == true
+			if me.verbose == true
 				fprintf('===>>> Closing Display++\n');
 			end
 		end	
@@ -284,9 +286,9 @@ classdef plusplusManager < optickaCore
 		%>
 		%> @param
 		% ===================================================================
-		function shift = get.strobeShift(obj)
-			shift = 2^(obj.strobeLine-1);
-			obj.strobeShift_ = shift;
+		function shift = get.strobeShift(me)
+			shift = 2^(me.strobeLine-1);
+			me.strobeShift_ = shift;
 		end
 		
 		% ===================================================================
@@ -294,11 +296,11 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function startRecording(obj,value)
-			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
-			if strcmpi(obj.strobeMode,'plexon')
+		function startRecording(me,value)
+			if me.silentMode || isempty(me.sM) || me.sM.isOpen == false; return; end
+			if strcmpi(me.strobeMode,'plexon')
 				if ~exist('value','var') || isempty(value);value=500;end
-				sendStrobeAndFlip(obj,value);
+				sendStrobeAndFlip(me,value);
 			end
 		end
 		
@@ -307,11 +309,11 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function resumeRecording(obj,value)
-			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
-			if strcmpi(obj.strobeMode,'plexon')
+		function resumeRecording(me,value)
+			if me.silentMode || isempty(me.sM) || me.sM.isOpen == false; return; end
+			if strcmpi(me.strobeMode,'plexon')
 				if ~exist('value','var') || isempty(value);value=501;end
-				sendStrobeAndFlip(obj,value);
+				sendStrobeAndFlip(me,value);
 			end
 		end
 		
@@ -320,11 +322,11 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function pauseRecording(obj,value)
-			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
-			if strcmpi(obj.strobeMode,'plexon')
+		function pauseRecording(me,value)
+			if me.silentMode || isempty(me.sM) || me.sM.isOpen == false; return; end
+			if strcmpi(me.strobeMode,'plexon')
 				if ~exist('value','var') || isempty(value);value=502;end
-				sendStrobeAndFlip(obj,value);
+				sendStrobeAndFlip(me,value);
 			end
 		end
 		
@@ -333,11 +335,11 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function stopRecording(obj,value)
-			if obj.silentMode || isempty(obj.sM) || obj.sM.isOpen == false; return; end
-			if strcmpi(obj.strobeMode,'plexon')
+		function stopRecording(me,value)
+			if me.silentMode || isempty(me.sM) || me.sM.isOpen == false; return; end
+			if strcmpi(me.strobeMode,'plexon')
 				if ~exist('value','var') || isempty(value);value=503;end
-				sendStrobeAndFlip(obj,value);
+				sendStrobeAndFlip(me,value);
 			end
 		end
 		
@@ -346,8 +348,8 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function startFixation(obj)
-			sendStrobe(obj,248); 
+		function startFixation(me)
+			sendStrobe(me,248); 
 		end
 		
 		% ===================================================================
@@ -355,8 +357,8 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function correct(obj)
-			sendStrobe(obj,251); 
+		function correct(me)
+			sendStrobe(me,251); 
 		end
 		
 		% ===================================================================
@@ -364,8 +366,8 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function incorrect(obj)
-			sendStrobe(obj,252); 
+		function incorrect(me)
+			sendStrobe(me,252); 
 		end
 		
 		% ===================================================================
@@ -373,8 +375,8 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function breakFixation(obj)
-			sendStrobe(obj,249); 
+		function breakFixation(me)
+			sendStrobe(me,249); 
 		end
 		
 		% ===================================================================
@@ -382,8 +384,8 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function rstart(obj,varargin)
-			resumeRecording(obj);
+		function rstart(me,varargin)
+			resumeRecording(me);
 		end
 		
 		% ===================================================================
@@ -391,20 +393,55 @@ classdef plusplusManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function rstop(obj,varargin)
-			pauseRecording(obj);
+		function rstop(me,varargin)
+			pauseRecording(me);
 		end
-		
-		
 			
 		% ===================================================================
 		%> @brief Delete method, closes DataPixx gracefully
 		%>
 		% ===================================================================
-		function delete(obj)
-			close(obj);
-			obj.salutation('DELETE method',[obj.fullName ' has been closed/reset...']);
-		end
+		function delete(me)
+			close(me);
+			me.salutation('DELETE method',[me.fullName ' has been closed/reset...']);
+        end
+        
+        % ===================================================================
+		%> @brief Test strobes vis Display++ screen
+		%>
+		% ===================================================================
+        function runTests(me)
+            if isempty(me.sM)
+                me.sM = screenManager();
+            end
+            me.sM.backgroundColour = [0.8 0.2 0.2];
+            me.sM.bitDepth = 'EnableBits++Bits++Output';
+            me.sM.blend = true;
+            me.sM.open();
+            
+            me.open();
+            
+            fprintf('\nAttempting to send some strobes...\n')
+            WaitSecs(0.5)
+            
+            strobeVals = [1 : 30];
+            for i =1:length(strobeVals)
+                t=sprintf('Testing strobe %i', strobeVals(i));
+                DrawFormattedText(me.sM.win, t, 10, 50);
+                me.sendStrobe(strobeVals(i));
+                me.sM.flip();
+                if i < 20
+                    DrawFormattedText(me.sM.win, [t ' ... '], 10, 50);
+                    me.sM.flip();
+                end
+                WaitSecs(0.25);
+                me.resetStrobe();
+            end
+            
+            WaitSecs(0.5);
+            me.sM.close();
+            me.close();
+        end
 		
 	end
 	

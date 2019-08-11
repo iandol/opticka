@@ -1,14 +1,18 @@
 %=====RF Localiser state configuration file=====
 %------------General Settings-----------------
-tS.rewardTime = 140; %TTL time in milliseconds
+tS.rewardTime           = 150; %==TTL time in milliseconds
+tS.rewardPin            = 2; %==Output pin, 2 by default with Arduino.
 tS.useTask = false; %use stimulusSequence (randomised variable task object)
 tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = false; %==little UI requestor asks for comments before/after run
 tS.saveData = false; %we don't want to save any data
-tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
 tS.name = 'RF Localiser'; %==name of this protocol
+me.useEyeLink = true;
+me.useArduino = true;
+rM.verbose = true;
 
 %-----enable the magstimManager which uses FOI1 of the LabJack
 if tS.useMagStim
@@ -24,7 +28,7 @@ eL.isDummy = false; %use dummy or real eyelink?
 tS.fixX = 0;
 tS.fixY = 0;
 tS.firstFixInit = 0.75;
-tS.firstFixTime = 1;
+tS.firstFixTime = 1.5;
 tS.firstFixRadius = 4;
 
 % X, Y, FixInitTime, FixTime, Radius, StrictFix
@@ -41,73 +45,73 @@ eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
 
 %-------randomise stimulus variables every trial?
-% obj.stimuli.choice = [];
+% me.stimuli.choice = [];
 % n = 1;
 % in(n).name = 'xyPosition';
 % in(n).values = [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
 % in(n).stimuli = [7 8];
 % in(n).offset = [];
-% obj.stimuli.stimulusTable = in;
-obj.stimuli.choice = [];
-obj.stimuli.stimulusTable = [];
+% me.stimuli.stimulusTable = in;
+me.stimuli.choice = [];
+me.stimuli.stimulusTable = [];
 
 %--------allows using arrow keys to control this table during presentation
-obj.stimuli.tableChoice = 1;
+me.stimuli.tableChoice = 1;
 n=1;
-obj.stimuli.controlTable(n).variable = 'angle';
-obj.stimuli.controlTable(n).delta = 15;
-obj.stimuli.controlTable(n).stimuli = [6 7 8 9 10];
-obj.stimuli.controlTable(n).limits = [0 360];
+me.stimuli.controlTable(n).variable = 'angle';
+me.stimuli.controlTable(n).delta = 15;
+me.stimuli.controlTable(n).stimuli = [6 7 8 9 10];
+me.stimuli.controlTable(n).limits = [0 360];
 n=n+1;
-obj.stimuli.controlTable(n).variable = 'size';
-obj.stimuli.controlTable(n).delta = 0.25;
-obj.stimuli.controlTable(n).stimuli = [2 3 4 5 6 7 8 10];
-obj.stimuli.controlTable(n).limits = [0.25 20];
+me.stimuli.controlTable(n).variable = 'size';
+me.stimuli.controlTable(n).delta = 0.25;
+me.stimuli.controlTable(n).stimuli = [2 3 4 5 6 7 8 10];
+me.stimuli.controlTable(n).limits = [0.25 20];
 n=n+1;
-obj.stimuli.controlTable(n).variable = 'flashTime';
-obj.stimuli.controlTable(n).delta = 0.1;
-obj.stimuli.controlTable(n).stimuli = [1 2 3 4 5 6];
-obj.stimuli.controlTable(n).limits = [0.1 1];
+me.stimuli.controlTable(n).variable = 'flashTime';
+me.stimuli.controlTable(n).delta = 0.1;
+me.stimuli.controlTable(n).stimuli = [1 2 3 4 5 6];
+me.stimuli.controlTable(n).limits = [0.1 1];
 n=n+1;
-obj.stimuli.controlTable(n).variable = 'barLength';
-obj.stimuli.controlTable(n).delta = 1;
-obj.stimuli.controlTable(n).stimuli = [9];
-obj.stimuli.controlTable(n).limits = [0.5 15];
+me.stimuli.controlTable(n).variable = 'barLength';
+me.stimuli.controlTable(n).delta = 1;
+me.stimuli.controlTable(n).stimuli = [9];
+me.stimuli.controlTable(n).limits = [0.5 15];
 n=n+1;
-obj.stimuli.controlTable(n).variable = 'barWidth';
-obj.stimuli.controlTable(n).delta = 0.25;
-obj.stimuli.controlTable(n).stimuli = [9];
-obj.stimuli.controlTable(n).limits = [0.25 8.25];
+me.stimuli.controlTable(n).variable = 'barWidth';
+me.stimuli.controlTable(n).delta = 0.25;
+me.stimuli.controlTable(n).stimuli = [9];
+me.stimuli.controlTable(n).limits = [0.25 8.25];
 n=n+1;
-obj.stimuli.controlTable(n).variable = 'tf';
-obj.stimuli.controlTable(n).delta = 0.1;
-obj.stimuli.controlTable(n).stimuli = [7 8];
-obj.stimuli.controlTable(n).limits = [0 12];
+me.stimuli.controlTable(n).variable = 'tf';
+me.stimuli.controlTable(n).delta = 0.1;
+me.stimuli.controlTable(n).stimuli = [7 8];
+me.stimuli.controlTable(n).limits = [0 12];
 n=n+1;
-obj.stimuli.controlTable(n).variable = 'sf';
-obj.stimuli.controlTable(n).delta = 0.1;
-obj.stimuli.controlTable(n).stimuli = [7 8];
-obj.stimuli.controlTable(n).limits = [0.1 8];
+me.stimuli.controlTable(n).variable = 'sf';
+me.stimuli.controlTable(n).delta = 0.1;
+me.stimuli.controlTable(n).stimuli = [7 8];
+me.stimuli.controlTable(n).limits = [0.1 8];
 n=n+1;
-obj.stimuli.controlTable(n).variable = 'speed';
-obj.stimuli.controlTable(n).delta = 0.5;
-obj.stimuli.controlTable(n).stimuli = [10];
-obj.stimuli.controlTable(n).limits = [0.5 8.5];
+me.stimuli.controlTable(n).variable = 'speed';
+me.stimuli.controlTable(n).delta = 0.5;
+me.stimuli.controlTable(n).stimuli = [10];
+me.stimuli.controlTable(n).limits = [0.5 8.5];
 n=n+1;
-obj.stimuli.controlTable(n).variable = 'density';
-obj.stimuli.controlTable(n).delta = 5;
-obj.stimuli.controlTable(n).stimuli = [10];
-obj.stimuli.controlTable(n).limits = [1 151];
+me.stimuli.controlTable(n).variable = 'density';
+me.stimuli.controlTable(n).delta = 5;
+me.stimuli.controlTable(n).stimuli = [10];
+me.stimuli.controlTable(n).limits = [1 151];
 n=n+1;
-obj.stimuli.controlTable(n).variable = 'dotSize';
-obj.stimuli.controlTable(n).delta = 0.01;
-obj.stimuli.controlTable(n).stimuli = [10];
-obj.stimuli.controlTable(n).limits = [0.04 0.51];
+me.stimuli.controlTable(n).variable = 'dotSize';
+me.stimuli.controlTable(n).delta = 0.01;
+me.stimuli.controlTable(n).stimuli = [10];
+me.stimuli.controlTable(n).limits = [0.04 0.51];
 
 %------this allows us to enable subsets from our stimulus list
-obj.stimuli.stimulusSets = {[11], [2 11], [3 11], [4 11], [5 11], [6 11], [7 11], [8 11], [9 11], [10 11]};
-obj.stimuli.setChoice = 1;
-showSet(obj.stimuli);
+me.stimuli.stimulusSets = {[11], [2 11], [3 11], [4 11], [5 11], [6 11], [7 11], [8 11], [9 11], [10 11]};
+me.stimuli.setChoice = 1;
+showSet(me.stimuli);
 
 %-------------------State Machine Control Functions------------------
 % these are our functions that will execute as the stateMachine runs,
@@ -128,11 +132,11 @@ pauseEntryFcn = {
 %prestim entry
 psEntryFcn = { 
 	@()setOffline(eL); ...
-	@()randomise(obj.stimuli); ...
-	@()getStimulusPositions(obj.stimuli); ... %make a struct the eL can use for drawing stim positions
+	@()randomise(me.stimuli); ...
+	@()getStimulusPositions(me.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()trackerClearScreen(eL); ... 
 	@()trackerDrawFixation(eL); ...
-	@()trackerDrawStimuli(eL,obj.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
+	@()trackerDrawStimuli(eL,me.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 	@()resetFixation(eL); ...
 	@()startRecording(eL); ...
 	};
@@ -144,8 +148,8 @@ prestimulusFcn = {
 
 %exiting prestimulus state
 psExitFcn = { 
-	@()update(obj.stimuli); ...
-	@()show(obj.stimuli{11}); ...
+	@()update(me.stimuli); ...
+	@()show(me.stimuli{11}); ...
 	@()statusMessage(eL,'Showing Fixation Spot...'); ...
 };
 
@@ -154,9 +158,9 @@ stimEntryFcn = {};
 
 %what to run when we are showing stimuli
 stimFcn = { 
-	@()draw(obj.stimuli); ...	@()drawEyePosition(eL); ...
+	@()draw(me.stimuli); ...	@()drawEyePosition(eL); ...
 	@()finishDrawing(s); ...
-	@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
+	@()animate(me.stimuli); ... % animate stimuli for subsequent draw
 };
 
 %test we are maintaining fixation
@@ -171,7 +175,7 @@ stimExitFcn = {
 
 %if the subject is correct (small reward)
 correctEntryFcn = { 
-	@()timedTTL(lJ,0,tS.rewardTime); ...
+	@()timedTTL(rM,tS.rewardPin,tS.rewardTime); ... % labjack sends a TTL to Crist reward system
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
 	@()stopRecording(eL); ...
@@ -210,7 +214,7 @@ calibrateFcn = {@()trackerSetup(eL);};
 flashFcn = {@()flashScreen(s,0.2);};
 
 % allow override
-overrideFcn = {@()keyOverride(obj,tS);};
+overrideFcn = {@()keyOverride(me,tS);};
 
 %show 1deg size grid
 gridFcn = {@()drawGrid(s);};
