@@ -510,18 +510,24 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief Flip the screen
 		%>
-		%> @param
-		%> @return
+		%> @param vbl - a vbl time from a previous flip
+		%> @return vbl - a vbl from this flip
 		% ===================================================================
-		function vbl = flip(me)
-			vbl = Screen('Flip',me.win);
+		function vbl = flip(me,vbl)
+			if ~me.isOpen; return; end
+			if exist('vbl','var')
+				vbl = Screen('Flip',me.win, vbl + me.screenVals.halfisi);
+			else
+				vbl = Screen('Flip',me.win);
+			end
 		end
 		
 		% ===================================================================
 		%> @brief check for display++, and keep open or close again
 		%>
 		%> @param port optional serial USB port
-		%> @return keepOpen should we keep it open after check (default yes)
+		%> @param keepOpen should we keep it open after check (default yes)
+		%> @return connected - is the Display++ connected?
 		% ===================================================================
 		function connected = bitsCheckOpen(me,port,keepOpen)
 			connected = false;
@@ -531,13 +537,12 @@ classdef screenManager < optickaCore
 			try
 				if ~exist('port','var')
 					ret = BitsPlusPlus('OpenBits#');
-					if ret == 1; connected = true; end
-					if ~keepOpen; BitsPlusPlus('Close'); end
 				else
 					ret = BitsPlusPlus('OpenBits#',port);
-					if ret == 1; connected = true; end
-					if ~keepOpen; BitsPlusPlus('Close'); end
 				end
+				if ret == 1; connected = true; end
+				if ~keepOpen; BitsPlusPlus('Close'); end
+				return;
 			end
 			me.isPlusPlus = connected;
 		end
@@ -555,7 +560,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief force this object to use antother window
 		%>
-		%> @param
+		%> @param win - the window handle to bind to
 		%> @return
 		% ===================================================================
 		function forceWin(me,win)
@@ -571,7 +576,8 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief This is the trick Mario told us to "hide" the colour changes as PTB starts -- we could use backgroundcolour here to be even better
+		%> @brief This is the trick Mario told us to "hide" the colour changes
+		%> as PTB starts -- we could use backgroundcolour here to be even better
 		%>
 		%> @param
 		%> @return
@@ -598,32 +604,31 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function close(me)
-			if me.isPTB == true
-				if isfield(me.screenVals,'originalGammaTable') && ~isempty(me.screenVals.originalGammaTable)
-					Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.originalGammaTable);
-					fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
-				end
-				wk = Screen(me.win, 'WindowKind');
-				if me.blend == true & wk ~= 0
-					%this needs to be done to not trigger a Linux+Polaris bug
-					%matlab bug
-					Screen('BlendFunction', me.win, 'GL_ONE','GL_ZERO');
-					fprintf('---> screenManager: RESET OPENGL BLEND MODE to GL_ONE & GL_ZERO\n');
-				end
-				if me.isPlusPlus
-					BitsPlusPlus('Close');
-				end
-				me.finaliseMovie(); me.moviePtr = [];
-				Screen('CloseAll');
-				me.win=[]; 
-				if isfield(me.screenVals,'win');me.screenVals=rmfield(me.screenVals,'win');end
-				me.isOpen = false;
-				me.isPlusPlus = false;
-				Priority(0);
-				ListenChar(0);
-				ShowCursor;
-				sca;
+			if ~me.isPTB; return; end
+			Priority(0);
+			ListenChar(0);
+			ShowCursor;
+			if isfield(me.screenVals,'originalGammaTable') && ~isempty(me.screenVals.originalGammaTable)
+				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.originalGammaTable);
+				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 			end
+			wk = Screen(me.win, 'WindowKind');
+			if me.blend == true & wk ~= 0
+				%this needs to be done to not trigger a Linux+Polaris bug
+				%matlab bug
+				Screen('BlendFunction', me.win, 'GL_ONE','GL_ZERO');
+				fprintf('---> screenManager: RESET OPENGL BLEND MODE to GL_ONE & GL_ZERO\n');
+			end
+			if me.isPlusPlus
+				BitsPlusPlus('Close');
+			end
+			me.finaliseMovie(); me.moviePtr = [];
+			Screen('CloseAll');
+			me.win=[]; 
+			if isfield(me.screenVals,'win');me.screenVals=rmfield(me.screenVals,'win');end
+			me.isOpen = false;
+			me.isPlusPlus = false;
+			sca; % PTB function also run just in case ;-)
 		end
 		
 		

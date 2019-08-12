@@ -1,48 +1,64 @@
-%=====RF Localiser state configuration file=====
+%RFLOCALISER state configuration file, this gets loaded by opticka via
+%runExperiment class. The following class objects are loaded and available to
+%use: 
+% me = runExperiment object
+% io = digital I/O to recording system
+% s  = PTB screenManager
+% sM = State Machine
+% eL = eyetracker manager
+% t  = task sequence (stimulusSequence class)
+% rM = Reward Manager (LabJack or Arduino TTL trigger to Crist reward system/Magstim)
+% bR = behavioural record plot (on screen GUI during task run)
+% me.stimuli = our list of stimuli
+% tS = general struct to hold variables for this run
+
 %------------General Settings-----------------
+tS.useTask              = false; %==use stimulusSequence (randomised variable task object)
 tS.rewardTime           = 150; %==TTL time in milliseconds
 tS.rewardPin            = 2; %==Output pin, 2 by default with Arduino.
-tS.useTask = false; %use stimulusSequence (randomised variable task object)
 tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
-tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
-tS.askForComments = false; %==little UI requestor asks for comments before/after run
-tS.saveData = false; %we don't want to save any data
-tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
-tS.useMagStim = false; %enable the magstim manager
-tS.name = 'RF Localiser'; %==name of this protocol
+tS.recordEyePosition	= false; %==record eye position within PTB, **in addition** to the EDF?
+tS.askForComments		= false; %==little UI requestor asks for comments before/after run
+tS.saveData				= false; %we don't want to save any data
+tS.dummyEyelink			= false; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.useMagStim			= false; %enable the magstim manager
+tS.name					= 'RF Localiser'; %==name of this protocol
 me.useEyeLink = true;
 me.useArduino = true;
 rM.verbose = true;
 
-%-----enable the magstimManager which uses FOI1 of the LabJack
-if tS.useMagStim
-	mS = magstimManager('lJ',lJ,'defaultTTL',2);
-	mS.stimulateTime	= 240;
-	mS.frequency		= 0.7;
-	mS.rewardTime		= 25;
-	open(mS);
-end
-
 %------------Eyelink Settings----------------
-eL.isDummy = false; %use dummy or real eyelink?
 tS.fixX = 0;
 tS.fixY = 0;
 tS.firstFixInit = 0.75;
 tS.firstFixTime = 1.5;
 tS.firstFixRadius = 4;
+tS.strict			= true; %do we allow (strict==false) multiple entry/exits of fix window within the time limit
+me.lastXPosition	= tS.fixX;
+me.lastYPosition	= tS.fixY;
 
-% X, Y, FixInitTime, FixTime, Radius, StrictFix
-eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, true);
+%------------------------Eyelink setup--------------------------
+eL.name = tS.name;
 if tS.saveData == true; eL.recordData = true; end %===save EDF file?
 if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
 eL.sampleRate = 250;
-eL.remoteCalibration = true; %manual calibration
-eL.calibrationStyle = 'HV5'; % calibration style
+eL.calibrationStyle = 'HV5'; %===5 point calibration
+%===========================
+% remote calibration enables manual control and selection of each fixation
+% this is useful for a baby or monkey who has not been trained for fixation
+% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
+% accept calibration!
+eL.remoteCalibration = true; 
+%===========================
 eL.modify.calibrationtargetcolour = [1 1 1];
 eL.modify.calibrationtargetsize = 2;
 eL.modify.calibrationtargetwidth = 0.01;
 eL.modify.waitformodereadytime = 500;
-eL.modify.devicenumber = -1; % -1==use any keyboard
+eL.modify.targetbeep = 1;
+eL.modify.devicenumber = -1; % -1 = use any keyboard
+
+% X, Y, FixInitTime, FixTime, Radius, StrictFix
+eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, true);
 
 %-------randomise stimulus variables every trial?
 % me.stimuli.choice = [];
@@ -113,33 +129,48 @@ me.stimuli.stimulusSets = {[11], [2 11], [3 11], [4 11], [5 11], [6 11], [7 11],
 me.stimuli.setChoice = 1;
 showSet(me.stimuli);
 
-%-------------------State Machine Control Functions------------------
+%----------------------State Machine States-------------------------
 % these are our functions that will execute as the stateMachine runs,
 % in the scope of the runExperiemnt object.
-% io = datapixx (digital I/O to plexon)
-% s = screenManager
-% sM = State Machine
-% eL = eyelink manager
-% lJ = LabJack (reward trigger to Crist reward system)
-% bR = behavioural record plot
-%--------------------------------------------------------------------
-%pause entry
+% each "function" is a cell array of anonymous function handles that enables
+% each state to perform a set of actions on entry, during and on exit of that state.
+
+%--------------------pause entry
 pauseEntryFcn = {
+	@()drawTextNow(s,'Paused, press [p] to resume...'); ...
+	@()disp('Paused, press [p] to resume...'); ...
+	@()trackerDrawText(eL,'PAUSED, press [P] to resume...'); ...
+	@()edfMessage(eL,'TRIAL_RESULT -100'); ... %store message in EDF
+	@()trackerClearScreen(eL); ... 
+	@()trackerDrawText(eL,'PAUSED, press [P] to resume...'); ...
+	@()edfMessage(eL,'TRIAL_RESULT -100'); ... %store message in EDF
 	@()setOffline(eL); 
-	@()fprintf('\n===>>>ENTER PAUSE STATE\n');
+	@()stopRecording(eL); ... %stop eye position recording
+	@()disableFlip(me); ... %stop screen updates
+	@()needEyeSample(me,false); ...
+};
+
+%--------------------pause exit
+pauseExitFcn = { 
+	@()enableFlip(me); ...
+	@()needEyeSample(me,true); ...
 };
 
 %prestim entry
 psEntryFcn = { 
-	@()setOffline(eL); ...
+	@()hide(me.stimuli); ...
+	@()drawBackground(s); ... %blank the display
 	@()randomise(me.stimuli); ...
+	@()resetFixation(eL); ... %reset the fixation counters ready for a new trial
 	@()getStimulusPositions(me.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()trackerClearScreen(eL); ... 
 	@()trackerDrawFixation(eL); ...
 	@()trackerDrawStimuli(eL,me.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 	@()resetFixation(eL); ...
 	@()startRecording(eL); ...
-	};
+	@()statusMessage(eL,'Prefixation...'); ... %status text on the eyelink
+	@()logRun(me,'PREFIX'); ... %fprintf current trial info
+};
 
 %prestimulus blank
 prestimulusFcn = { 
@@ -171,7 +202,7 @@ maintainFixFcn = {
 %as we exit stim presentation state
 stimExitFcn = {
 	@()mousePosition(s,true);
-	};
+};
 
 %if the subject is correct (small reward)
 correctEntryFcn = { 
@@ -179,7 +210,7 @@ correctEntryFcn = {
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
 	@()stopRecording(eL); ...
-	};
+};
 
 %correct stimulus
 correctFcn = { 
@@ -194,12 +225,14 @@ ExitFcn = {
 
 %break entry
 breakEntryFcn = { 
+	@()trackerClearScreen(eL); ... 
 	@()statusMessage(eL,'Broke Fixation :-('); ...
 	@()stopRecording(eL); ...
 };
 
 %incorrect entry
 incorrEntryFcn = { 
+	@()trackerClearScreen(eL); ... 
 	@()statusMessage(eL,'Incorrect :-('); ...
 	@()stopRecording(eL); ...
 };
@@ -207,8 +240,11 @@ incorrEntryFcn = {
 %our incorrect stimulus
 breakFcn =  {@()drawBackground(s);};
 
-%calibration function
-calibrateFcn = {@()trackerSetup(eL);};
+%--------------------calibration function
+calibrateFcn = { 
+	@()drawBackground(s); ... %blank the display
+	@()setOffline(eL); @()trackerSetup(eL) 
+}; %enter tracker calibrate/validate setup mode
 
 %flash function
 flashFcn = {@()flashScreen(s,0.2);};
@@ -217,26 +253,31 @@ flashFcn = {@()flashScreen(s,0.2);};
 overrideFcn = {@()keyOverride(me,tS);};
 
 %show 1deg size grid
-gridFcn = {@()drawGrid(s);};
+gridFcn = { @()drawGrid(s); @()drawScreenCenter(s) };
 
+
+%==================================================================
 %----------------------State Machine Table-------------------------
 disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'blank'			inf 	pauseEntryFcn	[]				[]				[]; ...
-'blank'		'stimulus'		0.5	psEntryFcn		prestimulusFcn	[]			psExitFcn; ...
+'blank'		'stimulus'		0.5		psEntryFcn		prestimulusFcn	[]			psExitFcn; ...
 'stimulus'  'incorrect'		3		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
 'incorrect'	'blank'			1		incorrEntryFcn	breakFcn		[]				ExitFcn; ...
 'breakfix'	'blank'			1		breakEntryFcn	breakFcn		[]				ExitFcn; ...
-'correct'	'blank'			0.5	correctEntryFcn	correctFcn		[]		ExitFcn; ...
-'calibrate' 'pause'			0.5	calibrateFcn	[]				[]				[]; ...
-'flash'		'pause'			0.5	[]					flashFcn		[]				[]; ...
-'override'	'pause'			0.5	[]					overrideFcn		[]			[]; ...
-'showgrid'	'pause'			1		[]					gridFcn			[]			[]; ...
+'correct'	'blank'			0.5		correctEntryFcn	correctFcn		[]		ExitFcn; ...
+'calibrate' 'pause'			0.5		calibrateFcn	[]				[]				[]; ...
+'flash'		'pause'			0.5		[]				flashFcn		[]				[]; ...
+'override'	'pause'			0.5		[]				overrideFcn		[]			[]; ...
+'showgrid'	'pause'			1		[]				gridFcn			[]			[]; ...
 };
+%----------------------State Machine Table-------------------------
+%==================================================================
+
 disp(stateInfoTmp)
-disp('================>> Building state info file <<================')
+disp('================>> Loaded state info file <<================')
 clear maintainFixFcn prestimulusFcn singleStimulus ...
 	prestimulusFcn stimFcn stimEntryFcn stimExitfcn correctEntry correctWithin correctExit ...
 	incorrectFcn calibrateFcn gridFcn overrideFcn flashFcn breakFcn

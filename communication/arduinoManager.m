@@ -7,11 +7,11 @@ classdef arduinoManager < optickaCore
 		silentMode		= false %this allows us to be called even if no arduino is attached
 		verbose			= true
 		mode			= 'original'
+		availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
 	end
 	properties (SetAccess = private, GetAccess = public)
 		device = []
 		deviceID = ''
-		availablePins = {}
 	end
 	properties (SetAccess = private, GetAccess = private)
 		allowedProperties='mode|port|silentMode|verbose'
@@ -59,7 +59,7 @@ classdef arduinoManager < optickaCore
 							me.board = 'Generic';
 							me.deviceID = me.port;
 							me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
-							for i = 2:13
+							for i = me.availablePins{1} : me.availablePins{end}
 								me.device.pinMode(i,'output');
 								me.device.digitalWrite(i,0);
 							end

@@ -452,7 +452,7 @@ classdef runExperiment < optickaCore
 					close(io);
 				end
 				%profile off; profile clear
-				warning('on') %#ok<WNON>
+				warning('on')
 				Priority(0);
 				ListenChar(0);
 				ShowCursor;
@@ -616,14 +616,14 @@ classdef runExperiment < optickaCore
 					draw(me.stimuli);
 					drawBackground(s);
 					s.drawPhotoDiodeSquare([0 0 0 1]);
-					Screen('DrawText',s.win,'Warming up...',60,10);
+					Screen('DrawText',s.win,'Warming up...',65,10);
 					finishDrawing(s);
 					animate(me.stimuli);
 					if ~mod(i,10); io.sendStrobe(255); end
 					if me.useEyeLink
 						getSample(eL); 
-						trackerDrawText(eL,'Warming Up System');
-						edfMessage(eL,'Warmup test');
+						if i == 1; trackerDrawText(eL,'Warming Up System'); end
+						if i == 1; edfMessage(eL,'Warmup test'); end
 					end
 					flip(s);
 				end

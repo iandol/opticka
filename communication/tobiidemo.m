@@ -21,7 +21,7 @@ else
 	disp('Eye tracker not found!');
 end
 
-sM = screenManager('debug',false,'blend',true,'screen',1);
+sM = screenManager('debug',false,'blend',true,'screen',2);
 Screen('Preference', 'SkipSyncTests', 0)
 screenVals = sM.open();
 window = sM.win;
@@ -31,7 +31,7 @@ black = sM.screenVals.black;
 screen_pixels = [width height];
 [xCenter, yCenter] = RectCenter(sM.winRect);
 % Dot size in pixels
-dotSizePix = 30;
+dotSizePix = 15;
 
 Screen('TextSize', window, 20);
 
@@ -222,7 +222,8 @@ for i=1:pointCount
 	events{1,i} = {Tobii.get_system_time_stamp, points(i,:)};
 	tlen = randi(8)+1;
 	for j = 1:(screenVals.fps * randi(8))
-		Screen('DrawDots', window, points(i,:).*screen_pixels, dotSizePix, dotColor(2,:), [], 3);
+		Screen('DrawDots', window, points(i,:).*screen_pixels, dotSizePix/2, dotColor(2,:), [], 3);
+		%sM.drawCross(0.5,[1 1 0], points(i,1)*screen_pixels(1), points(i,2)*screen_pixels(2));
 		if i > 3
 			t1=tic;
 			k{j} = eyetracker.get_gaze_data('flat');
@@ -245,7 +246,7 @@ for i=1:pointCount
 	end
 	if i > 3 
 		data{i} = k;
-		fprintf('Mean loop = %.5g +- %.5g ms\n', mean(tt), analysisCore.stderr(tt,'SE',true));
+		fprintf('Mean loop = %.5g +- %.5g ms for %i samples\n', mean(tt), analysisCore.stderr(tt,'SE',true),length(tt));
 	else
 		t=tic;
 		data{i} = eyetracker.get_gaze_data('flat');
