@@ -291,20 +291,19 @@ classdef tobiiManager < optickaCore
 		function sample = getSample(me)
 			me.currentSample = [];
 			if me.isConnected && me.isRecording
-				cdata = me.tobii.get_gaze_data('flat');
-				if ~isempty(cdata) && isa(cdata(1),'GazeData') && cdata(1).LeftEye.GazePoint.Validity.Valid
-					thisdata = cdata(end);
-					xy = fromRelative(me, double(thisdata.LeftEye.GazePoint.OnDisplayArea));
-					me.currentSample.gx = xy(1);
-					me.currentSample.gy = xy(2);
-					me.currentSample.pa = thisdata.LeftEye.Pupil.Diameter;
-					me.currentSample.time = double(thisdata.SystemTimeStamp);
-					me.currentSample.timeD = double(thisdata.DeviceTimeStamp);
+				td = me.tobii.get_gaze_data('flat');
+				         if ~isempty(td.left_gaze_point_validity) && td.left_gaze_point_validity(end)
+					xy = fromRelative(me, double(td.left_gaze_point_on_display_area(end,:)));
+					me.currentSample.gx		= xy(1);
+					me.currentSample.gy		= xy(2);
+					me.currentSample.pa		= double(td.left_pupil_diameter(end));
+					me.currentSample.time	= double(td.system_time_stamp(end));
+					me.currentSample.timeD	= double(td.device_time_stamp(end));
 					xy = me.toDegrees(xy);
 					me.x = xy(1);
 					me.y = xy(2);
 					me.pupil = me.currentSample.pa;
-					%if me.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',me.x,me.y,me.pupil);end
+					%if me.verbose;fprintf('>>X: %2.2f | Y: %2.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 				end
 			elseif me.isDummy %lets use a mouse to simulate the eye signal
 				if ~isempty(me.win)
@@ -313,16 +312,16 @@ classdef tobiiManager < optickaCore
 					[x, y] = GetMouse([]);
 				end
 				me.pupil = 800 + randi(20);
-				me.currentSample.gx = me.x;
-				me.currentSample.gy = me.y;
+				me.currentSample.gx = x;
+				me.currentSample.gy = y;
 				me.currentSample.pa = me.pupil;
 				me.currentSample.time = GetSecs * 1000;
 				me.x = me.toDegrees(me.currentSample.gx,'x');
 				me.y = me.toDegrees(me.currentSample.gy,'y');
-				%if me.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',me.x,me.y,me.pupil);end
+				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 			end
-			if me.isConnected && me.isRecording && ~me.isDummy && ~isempty(cdata)
-				me.data.events(me.eventN).in{end+1} = cdata;
+			if me.isConnected && me.isRecording && ~me.isDummy && exist('td','var') && ~isempty(td.left_gaze_point_validity)
+				%me.data.events(me.eventN).in{end+1} = td;
 			end
 			sample = me.currentSample;
 		end
@@ -602,12 +601,12 @@ classdef tobiiManager < optickaCore
 		function drawEyePosition(me)
 			if (me.isDummy || me.isConnected) && me.screen.isOpen && ~isempty(me.x) && ~isnan(me.x) && ~isempty(me.y) && ~isnan(me.y)
 				if me.isFixated
-					Screen('DrawDots', me.win, [toPixels(me,me.x,'x') toPixels(me,me.y,'y')], 8, [1 0.5 1 1], [], 3);
+					Screen('DrawDots', me.win, toPixels(me,[me.x me.y]), 8, [1 0.5 1 1], [], 3);
 					if me.fixLength > me.fixationTime
 						Screen('DrawText', me.win, 'FIX', me.x, me.y, [1 1 1]);
 					end
 				else
-					Screen('DrawDots', me.win, [toPixels(me,me.x,'x') toPixels(me,me.y,'y')], 8, [1 0.5 0 1], [], 3);
+					Screen('DrawDots', me.win, toPixels(me,[me.x me.y]), 8, [1 0.5 0.5 1], [], 3);
 				end
 			end
 		end
@@ -787,14 +786,14 @@ classdef tobiiManager < optickaCore
 			KbName('UnifyKeyNames')
 			stopkey=KbName('escape');
 			nextKey=KbName('space');
-			calibkey=KbName('C');
+			calibkey=KbName('c');
 			try
 				s = screenManager('blend',true,'pixelsPerCm',36,'distance',60);
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
 				o = dotsStimulus('size',me.fixationRadius,'speed',1,'mask',true,'density',30);
 				%x,y,inittime,fixtime,radius,strict)
-				updateFixationValues(me,0,0,1,1,2,1);
+				updateFixationValues(me,0,0,1,1,1,true);
 				open(s); %open out screen
 				setup(o,s); %setup our stimulus with open screen
 				
@@ -818,12 +817,13 @@ classdef tobiiManager < optickaCore
 					WaitSecs(0.2);
 					vbl=flip(s);
 					while yy == 0
-						draw(o);
+						getSample(me);
+						drawSpot(s,1,[0.6 0.6 0.6],0,0);
 						drawGrid(s);
 						drawScreenCenter(s);
-						getSample(me);
+						draw(o);
 						if ~isempty(me.currentSample)
-							txt = sprintf('Press ESC to finish \n X = %.2g / %.2g | Y = %.2g / %.2g \n RADIUS = %g | FIXATION = %g', me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.fixationRadius, me.fixLength);
+							txt = sprintf('Press ESC to finish \n X = %3.1f / %2.2f | Y = %3.1f / %2.2f \n RADIUS = %g | FIXATION = %g', me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.fixationRadius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
 						end
@@ -833,27 +833,29 @@ classdef tobiiManager < optickaCore
 						[~, ~, keyCode] = KbCheck(-1);
 						if keyCode(stopkey); yy = 1; xx = 1; break;	end
 						if keyCode(nextKey); yy = 1; break; end
-						if keyCode(calibkey); yy = 1; break; end
+						if keyCode(calibkey); me.doCalibration; end
 						b=b+1;
 					end
-					info.nn = b;
-					edfMessage(me,'END_RT');
-					stopRecording(me,info)
-					edfMessage(me,'TRIAL_RESULT 1')
-					
-					me.fixationX = randi([-5 5]);
-					me.fixationY = randi([-5 5]);
-					me.fixationRadius = randi([1 5]);
-					o.sizeOut = me.fixationRadius;
-					o.xPositionOut = me.fixationX;
-					o.yPositionOut = me.fixationY;
-					ts.x = me.fixationX;
-					ts.y = me.fixationY;
-					ts.size = o.sizeOut;
-					ts.selected = true;
-					update(o);
-					WaitSecs(0.3)
-					a=a+1;
+					if xx == 0
+						info.nn = b;
+						edfMessage(me,'END_RT');
+						stopRecording(me,info)
+						edfMessage(me,'TRIAL_RESULT 1')
+						resetFixation(me);
+						me.fixationX = randi([-5 5]);
+						me.fixationY = randi([-5 5]);
+						me.fixationRadius = randi([1 5]);
+						o.sizeOut = me.fixationRadius;
+						o.xPositionOut = me.fixationX;
+						o.yPositionOut = me.fixationY;
+						ts.x = me.fixationX;
+						ts.y = me.fixationY;
+						ts.size = o.sizeOut;
+						ts.selected = true;
+						update(o);
+						WaitSecs(0.3)
+						a=a+1;
+					end
 				end
 				ListenChar(0);
 				close(s);
@@ -938,7 +940,7 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function doCalibration(me)
 			
-			spaceKey = KbName('escape');
+			spaceKey = KbName('space');
 			RKey = KbName('C');
 			
 			dotSizePix = 20;
@@ -1003,7 +1005,7 @@ classdef tobiiManager < optickaCore
 				calib.leave_calibration_mode();
 				
 				if calibration_result.Status ~= CalibrationStatus.Success
-					break
+					continue
 				end
 				
 				% Calibration Result
@@ -1026,7 +1028,7 @@ classdef tobiiManager < optickaCore
 					
 				end
 				
-				DrawFormattedText(me.screen.win, 'Press the ''C'' key to recalibrate or ''Escape'' to continue....', 'center', me.screen.screenVals.height * 0.95, me.screen.screenVals.white)
+				DrawFormattedText(me.screen.win, 'Press the ''C'' key to recalibrate or ''Space'' to continue....', 'center', me.screen.screenVals.height * 0.95, me.screen.screenVals.white)
 				flip(me.screen);
 				
 				while true

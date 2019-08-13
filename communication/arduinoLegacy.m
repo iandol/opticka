@@ -145,14 +145,14 @@ classdef arduinoLegacy < handle
             
         end % arduino
         
-        % distructor, deletes the object
+        % destructor, deletes the object
         function delete(a)
 
             % Use delete(a) or a.delete to delete the arduino object
             
             % if it is a serial, valid and open then close it
             if isa(a.aser,'serial') && isvalid(a.aser) && strcmpi(get(a.aser,'Status'),'open'),
-                if ~isempty(a.aser.Tag),
+                if ~isempty(a.aser.Tag)
                     try
                         % trying to leave it in a known unharmful state
                         for i=2:69
@@ -403,7 +403,7 @@ classdef arduinoLegacy < handle
                 % store 0 for input and 1 for output
                 a.pins(pin)=val;
                 
-            elseif nargin==2,
+            elseif nargin==2
                 % print pin mode for the requested pin
                 
                 mode={'UNASSIGNED','set as INPUT','set as OUTPUT'};
@@ -531,14 +531,14 @@ classdef arduinoLegacy < handle
                 if isempty(inputname(1)), name='object'; else name=inputname(1); end
                 
                 % pin should be configured as output
-                if a.pins(pin)~=1,
+                if a.pins(pin)~=1
                     warning('MATLAB:Arduino:digitalWrite',['If digital pin ' num2str(pin) ' is set as input, digital output takes place only after using ' name' '.pinMode(' num2str(pin) ',''output''); ']);
                 end
                 
             end
             
             % check a.aser for validity if a.chks is true
-            if a.chks,
+            if a.chks
                 errstr=arduinoLegacy.checkser(a.aser,'valid');
                 if ~isempty(errstr), error(errstr); end
             end
@@ -1642,7 +1642,7 @@ classdef arduinoLegacy < handle
             else
                 
                 % check a.aser for openness if a.chks is true
-                if a.chks,
+                if a.chks
                     errstr=arduinoLegacy.checkser(a.aser,'open');
                     if ~isempty(errstr), error(errstr); end
                 end
@@ -1677,10 +1677,10 @@ classdef arduinoLegacy < handle
             %%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             % check arguments if a.chkp is true
-            if a.chkp,
+            if a.chkp
                 
                 % check nargin
-                if nargin~=2,
+                if nargin~=2
                     error('Function must have one argument');
                 end
                 
@@ -1691,14 +1691,14 @@ classdef arduinoLegacy < handle
             end
             
             % check a.aser for validity if a.chks is true
-            if a.chks,
+            if a.chks
                 errstr=arduinoLegacy.checkser(a.aser,'valid');
                 if ~isempty(errstr), error(errstr); end
             end
             
             %%%%%%%%%%%%%%%%%%%%%%%%% SEND ARGUMENT ALONG %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
-            if strcmpi(get(a.aser,'Port'),'DEMO'),
+            if strcmpi(get(a.aser,'Port'),'DEMO')
                 % handle demo mode
                 
                 % minimum analog output delay

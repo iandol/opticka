@@ -808,7 +808,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief draw small spot centered on the screen
 		%>
-		%> @param size in degrees
+		%> @param radius size in degrees
 		%> @param colour of spot
 		%> @param x position in degrees relative to screen center
 		%> @param y position in degrees relative to screen center
@@ -824,7 +824,7 @@ classdef screenManager < optickaCore
 			y = me.yCenter + (y * me.ppd_);
 			size = size/2 * me.ppd_;
 			
-			Screen('gluDisk', me.win, colour, x, y, size);
+			Screen('gluDisk', me.win, colour, x, y, size*2);
 		end
 		
 		% ===================================================================

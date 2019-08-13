@@ -8,6 +8,8 @@ Tobii = EyeTrackingOperations();
 
 eyetrackers = Tobii.find_all_eyetrackers();
 
+if isempty(eyetrackers);disp('No eyetrackers are connected!');return;end
+
 eyetracker = Tobii.get_eyetracker(eyetrackers(1).Address);
 eyetracker.stop_gaze_data();
 if isa(eyetracker,'EyeTracker')
