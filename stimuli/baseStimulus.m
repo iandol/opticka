@@ -346,6 +346,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				Screen('Flip',s.win);
 				WaitSecs('YieldSecs',2);
+				vbl = Screen('Flip',s.win);
 				
 				if benchmark; b=GetSecs; end
 				for i = 1:(s.screenVals.fps*runtime)
@@ -359,13 +360,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 					if benchmark
 						Screen('Flip',s.win,0,2,2);
 					else
-						Screen('Flip',s.win); %flip the buffer
+						vbl = Screen('Flip',s.win, vbl + s.screenVals.halfisi); %flip the buffer
 					end
 				end
 				if benchmark; bb=GetSecs; end
 				WaitSecs(1);
 				Screen('Flip',s.win);
 				WaitSecs(0.2);
+				if ~isempty(obj.texture); try; Screen('Close',obj.texture); end; end
 				close(s); %close screen
 				Priority(0);
 				s.screen = oldscreen;
@@ -382,7 +384,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				warning on
 				getReport(ME)
 				Priority(0);
-				if exist('s','var')
+				if exist('s','var') && isa(s,'screenManager')
 					close(s);
 				end
 				warning on
@@ -861,6 +863,25 @@ classdef baseStimulus < optickaCore & dynamicprops
 					delete(obj.findprop(fn{i}));
 				end
 			end
+		end
+		
+		% ===================================================================
+		%> @brief Delete method
+		%>
+		%> @param obj
+		%> @return
+		% ===================================================================
+		function delete(obj)
+			obj.handles = [];
+			obj.sM = [];
+			if ~isempty(obj.texture)
+				try
+					for i = 1:length(obj.texture)
+						Screen('Close',obj.texture)
+					end
+				end
+			end
+			fprintf('--->>> Delete method called on stimulus: %s\n',obj.fullName);
 		end
 		
 	end%---END PRIVATE METHODS---%
