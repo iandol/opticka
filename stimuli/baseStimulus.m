@@ -332,7 +332,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
-				%draw(obj); %draw stimulus
+				if ~strcmpi(obj.family,'movie'); draw(obj); end
 				if s.visualDebug
 					drawGrid(s); %draw +-5 degree dot grid
 					drawScreenCenter(s); %centre spot
@@ -346,8 +346,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				Screen('Flip',s.win);
 				WaitSecs('YieldSecs',2);
+				vbl = Screen('Flip',s.win); vbl = b;
 				
-				b=GetSecs; vbl = b;
 				while vbl <= b + runtime
 					draw(obj); %draw stimulus
 					if ~benchmark && s.visualDebug
@@ -367,6 +367,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				WaitSecs(1);
 				Screen('Flip',s.win);
 				WaitSecs(0.2);
+				
 				Priority(0);
 				ShowCursor;
 				ListenChar(0);
@@ -385,7 +386,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				warning on
 				getReport(ME)
 				Priority(0);
-				if exist('s','var')
+				if exist('s','var') && isa(s,'screenManager')
 					close(s);
 				end
 				warning on
@@ -864,6 +865,25 @@ classdef baseStimulus < optickaCore & dynamicprops
 					delete(obj.findprop(fn{i}));
 				end
 			end
+		end
+		
+		% ===================================================================
+		%> @brief Delete method
+		%>
+		%> @param obj
+		%> @return
+		% ===================================================================
+		function delete(obj)
+			obj.handles = [];
+			obj.sM = [];
+			if ~isempty(obj.texture)
+				try
+					for i = 1:length(obj.texture)
+						Screen('Close',obj.texture)
+					end
+				end
+			end
+			fprintf('--->>> Delete method called on stimulus: %s\n',obj.fullName);
 		end
 		
 	end%---END PRIVATE METHODS---%

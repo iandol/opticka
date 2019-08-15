@@ -493,16 +493,18 @@ classdef screenManager < optickaCore
 				stim = textureStimulus('speed',4,'xPosition',-6,'yPosition',0,'size',1);
 				prepareScreen(me);
 				open(me);
-				me.screenVals
+				disp('--->>> screenManager running a quick demo...')
+				disp(me.screenVals);
 				setup(stim, me);
-				flip(me);
+				vbl = flip(me);
 				for i = 1:me.screenVals.fps*2
 					draw(stim);
 					finishDrawing(me);
 					animate(stim);
-					flip(me);
+					vbl = flip(me, vbl);
 				end
 				WaitSecs(1);
+				clear stim;
 				close(me);
 			end
 		end
