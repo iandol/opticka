@@ -985,6 +985,32 @@ classdef screenManager < optickaCore
 			Screen('FillRect',me.win,me.backgroundColour,[]);
 		end
 		
+		
+		% ===================================================================
+		%> @brief Identify screens
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function identifyScreens(me)
+			screens = Screen('Screens');
+			olds = Screen('Preference', 'SkipSyncTests', 2);
+			PsychDefaultSetup(2)
+			wins = [];
+			a = 1;
+			for i = screens
+				wins(a) = PsychImaging('OpenWindow', i, 0.5, [0 0 100 100]);
+				Screen('DrawText',wins(a),['W:' num2str(i)], 0, 0);
+				Screen('Flip',wins(a));
+				a = a + 1;
+			end
+			WaitSecs(2)
+			for i = 1:length(wins)
+				Screen('Close',wins(i));
+			end
+			Screen('Preference', 'SkipSyncTests', olds);
+		end
+		
 		% ===================================================================
 		%> @brief return mouse position in degrees
 		%>

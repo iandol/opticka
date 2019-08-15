@@ -61,7 +61,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> computed Y position for stimuli that don't use rects
 		yOut double = []
 		%> tick updates +1 on each draw, resets on each update
-		tick double = 1
+		tick double = 0
 		%> pixels per degree (normally inhereted from screenManager)
 		ppd double = 44
 	end
@@ -332,7 +332,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
-				draw(obj); %draw stimulus
+				%draw(obj); %draw stimulus
 				if s.visualDebug
 					drawGrid(s); %draw +-5 degree dot grid
 					drawScreenCenter(s); %centre spot
@@ -347,8 +347,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				Screen('Flip',s.win);
 				WaitSecs('YieldSecs',2);
 				
-				if benchmark; b=GetSecs; end
-				for i = 1:(s.screenVals.fps*runtime)
+				b=GetSecs; vbl = b;
+				while vbl <= b + runtime
 					draw(obj); %draw stimulus
 					if ~benchmark && s.visualDebug
 						drawGrid(s); %draw +-5 degree dot grid
@@ -357,21 +357,24 @@ classdef baseStimulus < optickaCore & dynamicprops
 					Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 					animate(obj); %animate stimulus, will be seen on next draw
 					if benchmark
-						Screen('Flip',s.win,0,2,2);
+						vbl = Screen('Flip',s.win,0,2,2);
 					else
-						Screen('Flip',s.win); %flip the buffer
+						vbl = Screen('Flip',s.win, vbl + s.screenVals.halfisi); %flip the buffer
 					end
 				end
+				
 				if benchmark; bb=GetSecs; end
 				WaitSecs(1);
 				Screen('Flip',s.win);
 				WaitSecs(0.2);
-				close(s); %close screen
 				Priority(0);
+				ShowCursor;
+				ListenChar(0);
+				reset(obj); %reset our stimulus ready for use again
+				close(s); %close screen
 				s.screen = oldscreen;
 				s.windowed = oldwindowed;
 				s.bitDepth = oldbitdepth;
-				reset(obj); %reset our stimulus ready for use again
 				if benchmark
 					fps = (s.screenVals.fps*runtime) / (bb-b);
 					fprintf('\n\n======> SPEED = %g fps <=======\n', fps);

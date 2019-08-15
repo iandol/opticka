@@ -272,27 +272,27 @@ eyetracker.stop_gaze_data();
 
 close(sM);
 
-% OK, so I've taken a look at the get_gaze_data() code, and see that there is a lot of overhead when using GazeData objects. I've just tried using 'flat' data structures and the performance is much better in a tight loop:
-% 
-% 
-% 
-% ~20 samples = 0.061225 +- 0.0053961 ms
-% 
-% 
-% 
-% 'flat' is 60X faster than when using GazeData in a tight loop!!!
-% 
-% 
-% 
-% At trial end getting 9600 samples = 1.1837 ms -- this is 590X faster!!!
-% 
-% 
-% 
-% This should really be made more clear in the SDK documentation...
-% 
-% 
-% 
-% But there is still a problem that constantly managing the flat data and storing it in cell arrays on every refresh takes some time (I only timed get_gaze_data()). There is still a solid argument for having a sample_gaze_data() alongside get_gaze_data()...
+OK, so I've taken a look at the get_gaze_data() code, and see that there is a lot of overhead when using GazeData objects. I've just tried using 'flat' data structures and the performance is much better in a tight loop:
+
+
+
+~20 samples = 0.061225 +- 0.0053961 ms
+
+
+
+'flat' is 60X faster than when using GazeData in a tight loop!!!
+
+
+
+At trial end getting 9600 samples = 1.1837 ms -- this is 590X faster!!!
+
+
+
+This should really be made more clear in the SDK documentation...
+
+
+
+But there is still a problem that constantly managing the flat data and storing it in cell arrays on every refresh takes some time (I only timed get_gaze_data()). There is still a solid argument for having a sample_gaze_data() alongside get_gaze_data()...
 
 
 

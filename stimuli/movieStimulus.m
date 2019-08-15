@@ -14,6 +14,11 @@ classdef movieStimulus < baseStimulus
 		scale = 1
 		family = 'texture'
 		movie
+		duration
+		fps
+		width
+		height
+		count
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
@@ -24,9 +29,9 @@ classdef movieStimulus < baseStimulus
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties='type|fileName|contrast|interpMethod|pixelScale';
+		allowedProperties='type|fileName';
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'scale|fileName|interpMethod|pixelScale'
+		ignoreProperties = 'movie|duration|fps|width|height|count|scale|fileName|interpMethod|pixelScale'
 	end
 	
 	%=======================================================================
@@ -52,7 +57,9 @@ classdef movieStimulus < baseStimulus
 			end
 			
 			if isempty(obj.fileName) %use our default
-				obj.fileName = [ PsychtoolboxRoot 'PsychDemos/MovieDemos/DualDiscs.mov' ];
+				p = mfilename('fullpath');
+				p = fileparts(p);
+				obj.fileName = [p filesep 'monkey.mp4'];
 			end
 			
 			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
@@ -106,8 +113,6 @@ classdef movieStimulus < baseStimulus
 				end
 			end
 			
-			obj.movie = Screen('OpenMovie', obj.sM.win, obj.fileName);
-			
 			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
 			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
 			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
@@ -124,13 +129,17 @@ classdef movieStimulus < baseStimulus
 				obj.doMotion=false;
 			end
 			
-			obj.scale = obj.sizeOut;
+			[obj.movie, obj.duration, obj.fps, obj.width, obj.height] = Screen('OpenMovie', obj.sM.win, obj.fileName);
+			
+			
+			wdeg = obj.width / obj.ppd;
+			hdeg = obj.height / obj.ppd;
+			
+			obj.scale = obj.sizeOut / wdeg;
 			
 			obj.inSetup = false;
-			
-			%computePosition(obj);
-			%setRect(obj);
-			Screen('PlayMovie', obj.movie, 1, 1);
+			computePosition(obj)
+			setRect(obj);
 		end
 
 		% ===================================================================
@@ -151,8 +160,9 @@ classdef movieStimulus < baseStimulus
 		% ===================================================================
 		function draw(obj)
 			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
+				if obj.tick == 0; Screen('PlayMovie', obj.movie, 1, 1); end
 				obj.texture = Screen('GetMovieImage', obj.sM.win, obj.movie);
-				Screen('DrawTexture',obj.sM.win,obj.texture);
+				Screen('DrawTexture',obj.sM.win,obj.texture,[],obj.mvRect);
 				Screen('Close',obj.texture);
 				obj.tick = obj.tick + 1;
 			end
@@ -182,7 +192,7 @@ classdef movieStimulus < baseStimulus
 		% ===================================================================
 		function reset(obj)
 			resetTicks(obj);
-			obj.texture=[];
+			obj.texture = [];
 			obj.scale = 1;
 			obj.mvRect = [];
 			obj.dstRect = [];
@@ -206,9 +216,8 @@ classdef movieStimulus < baseStimulus
 		%>  using the size value
 		% ===================================================================
 		function setRect(obj)
-			if ~isempty(obj.texture)
-				%setRect@baseStimulus(obj) %call our superclass version first
-				obj.dstRect=Screen('Rect',obj.texture);
+			if ~isempty(obj.movie)
+				obj.dstRect = CenterRect([0 0 obj.width obj.height],obj.sM.winRect);
 				obj.dstRect = ScaleRect(obj.dstRect, obj.scale, obj.scale);
 				if obj.mouseOverride && obj.mouseValid
 					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
