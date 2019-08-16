@@ -35,7 +35,7 @@ classdef eyelinkManager < optickaCore
 		%> exclusion zone no eye movement allowed inside
 		exclusionZone = []
 		%> tracker update speed (Hz), should be 250 500 1000 2000
-		sampleRate double = 500
+		sampleRate double = 1000
 		%> calibration style
 		calibrationStyle char = 'HV5'
 		%> use manual remote calibration
@@ -55,7 +55,7 @@ classdef eyelinkManager < optickaCore
 		%> verbosity level
 		verbosityLevel double = 4
 		%> force drift correction?
-		forceDriftCorrect logical = false
+		forceDriftCorrect logical = true
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -286,6 +286,7 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function trackerSetup(me)
 			if ~me.isConnected; return; end
+			fprintf('\n===>>> CALIBRATING EYELINK... <<<===\n');
 			Eyelink('Verbosity',me.verbosityLevel);
 			Eyelink('Command','calibration_type = %s', me.calibrationStyle);
 			Eyelink('Command','normal_click_dcorr = ON');
@@ -295,7 +296,7 @@ classdef eyelinkManager < optickaCore
 			Eyelink('Command','val_repeat_first_target = YES');
 			Eyelink('Command','validation_online_fixup  = NO');
 			if me.remoteCalibration
-				Eyelink('Command', 'generate_default_targets = YES');
+				Eyelink('Command','generate_default_targets = YES');
 				Eyelink('Command','remote_cal_enable = 1');
 				Eyelink('Command','key_function 1 ''remote_cal_target 1''');
 				Eyelink('Command','key_function 2 ''remote_cal_target 2''');
@@ -310,13 +311,12 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command','key_function ins ''remote_cal_complete''');
 				fprintf('\n===>>> REMOTE CALIBRATION ENABLED: 1-9 show point, space to choose point.\nINS key ON EYELINK == accept calibration!!!\n');
 			else
-				Eyelink('Command', 'generate_default_targets = YES');
+				Eyelink('Command','generate_default_targets = YES');
 				Eyelink('Command','remote_cal_enable = 0');
 			end
-			fprintf('===>>> CALIBRATING EYELINK... <<<===\n');
 			EyelinkDoTrackerSetup(me.defaults);
 			[result,out] = Eyelink('CalMessage');
-			fprintf('\t===>>> RESULT =  %.2g | message: %s\n\n',result,out);
+			fprintf('===>>> RESULT =  %.2g | message: %s\n\n',result,out);
 		end
 		
 		% ===================================================================
@@ -344,21 +344,30 @@ classdef eyelinkManager < optickaCore
 		%> @brief wrapper for EyelinkDoDriftCorrection
 		%>
 		% ===================================================================
-		function success = driftCorrection(me)
+		function success = driftCorrection(me,force)
+			if ~exist('force','var');force = false;end
 			success = false;
-			if me.forceDriftCorrect
+			if me.forceDriftCorrect || force
 				Eyelink('command', 'driftcorrect_cr_disable = ON');
+			else
+				Eyelink('command', 'driftcorrect_cr_disable = OFF');
 			end
 			if me.isConnected
-				success = EyelinkDoDriftCorrection(me.defaults, me.fixationX, me.fixationY);
-				%success = Eyelink('DriftCorrStart', me.screen.xCenter, me.screen.yCenter, 1, 1, 1);
-				fprintf('Drift Correct at %.2g %.2g RETURN: %.2g\n', me.fixationX, me.fixationY, success);
+				x=me.toPixels(me.fixationX,'x'); %#ok<*PROPLC>
+				y=me.toPixels(me.fixationY,'y');
+				fprintf('Drift Correct @ %.2f/%.2f px (%.2f/%.2f deg)\n', x,y, me.fixationX, me.fixationY);
+				Screen('DrawText',me.screen.win,'Drift Correction...');
+				Screen('gluDisk',me.screen.win,[1 0 0 0.5],x,y,8)
+				Screen('Flip',me.screen.win);
+				WaitSecs(0.25);
+				success = EyelinkDoDriftCorrect(me.defaults, round(x), round(y), 1, 0);
 			end
-			if success == -1
+			if success ~= 0 
 				me.salutation('Drift Correct','FAILED',true);
 			elseif me.forceDriftCorrect
 				me.salutation('Drift Correct','TRY TO APPLY',true);
-				Eyelink('ApplyDriftCorr');
+				res=Eyelink('ApplyDriftCorr');
+				me.salutation('Drift Correct',sprintf('Result: %f\n',res),true);
 			end
 		end
 		
@@ -940,10 +949,9 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function runDemo(me)
-			stopkey=KbName('ESCAPE');
+			stopkey=KbName('Q');
 			nextKey=KbName('SPACE');
 			calibkey=KbName('C');
-			validkey=KbName('V');
 			driftkey=KbName('D');
 			me.recordData = true;
 			try
@@ -957,10 +965,23 @@ classdef eyelinkManager < optickaCore
 				initialise(me,s); %initialise eyelink with our screen
 				setup(me); %setup eyelink
 				
-  				me.statusMessage('DEMO Running'); %
+				me.fixationX = 0;
+				me.fixationY = 0;
+				me.fixationRadius = 1;
+				o.sizeOut = me.fixationRadius*2;
+				o.xPositionOut = me.fixationX;
+				o.yPositionOut = me.fixationY;
+				ts.x = me.fixationX;
+				ts.y = me.fixationY;
+				ts.size = o.sizeOut;
+				ts.selected = true;
+				
 				setOffline(me); %Eyelink('Command', 'set_idle_mode');
 				trackerClearScreen(me);
 				trackerDrawFixation(me);
+				trackerDrawStimuli(me,ts);
+				statusMessage(me,'DEMO Running Trial=1');
+				
 				xx = 0;
 				a = 1;
 				
@@ -970,43 +991,40 @@ classdef eyelinkManager < optickaCore
 					edfMessage(me,'V_RT MESSAGE END_FIX END_RT');
 					edfMessage(me,['TRIALID ' num2str(a)]);
 					startRecording(me);
+					statusMessage(me,sprintf('DEMO Running Trial=%i',a));
 					WaitSecs(0.1);
 					vbl=Screen('Flip',s.win);
 					syncTime(me);
 					while yy == 0
-						err = checkRecording(me);
-						if(err~=0); xx = 1; break; end
-						
-						[~, ~, keyCode] = KbCheck(-1);
-						if keyCode(stopkey); yy = 1; xx = 1; break;	end
-						if keyCode(nextKey); yy = 1; break; end
-						if keyCode(calibkey); yy = 1; break; end
-						
-						if b == 30; edfMessage(me,'END_FIX');end
-						
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
-						
+						drawCross(s,0.3,[1 1 0],me.fixationX,me.fixationY);
 						getSample(me);
 						
 						if ~isempty(me.currentSample)
 							x = me.toPixels(me.x,'x'); %#ok<*PROP>
 							y = me.toPixels(me.y,'y');
-							txt = sprintf('Press ESC to finish \n X = %g / %g | Y = %g / %g \n RADIUS = %g | FIXATION = %g', x, me.x, y, me.y, me.fixationRadius, me.fixLength);
+							txt = sprintf('Press Q to finish. X = %3.2f / %2.2f | Y = %3.2f / %2.2f \n RADIUS = %.1f | FIXATION = %.1f', x, me.x, y, me.y, me.fixationRadius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
 						end
 						
 						Screen('DrawingFinished', s.win);
 						animate(o);
-						vbl=Screen('Flip',s.win, vbl+(s.screenVals.ifi * 0.5));
+						vbl=Screen('Flip',s.win, vbl + s.screenVals.halfisi);
+						
+						[~, ~, keyCode] = KbCheck(-1);
+						if keyCode(stopkey); yy = 1; xx = 1; break;	end
+						if keyCode(nextKey); yy = 1; break; end
+						if keyCode(calibkey); trackerSetup(me); end
+						if keyCode(driftkey); driftCorrection(me); end
+						if b == 60; edfMessage(me,'END_FIX');end
 						b=b+1;
 					end
 					edfMessage(me,'END_RT');
 					stopRecording(me)
 					edfMessage(me,'TRIAL_RESULT 1')
-					if xx ~=1; driftCorrection(me); end
 					me.fixationX = randi([-5 5]);
 					me.fixationY = randi([-5 5]);
 					me.fixationRadius = randi([1 5]);
