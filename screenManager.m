@@ -112,7 +112,7 @@ classdef screenManager < optickaCore
 		%> linux font name;
 		linuxFontName char = '-adobe-helvetica-bold-o-normal--11-80-100-100-p-60-iso8859-1'
 		%> properties allowed to be modified during construction
-		allowedProperties char = 'displayPPRefresh|screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
+		allowedProperties char = 'disableSyncTests|displayPPRefresh|screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> possible bitDepths
 		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; 'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output'; 'EnablePseudoGrayOutput'; 'EnableNative10BitFramebuffer' }
 		%> possible blend modes
@@ -312,7 +312,7 @@ classdef screenManager < optickaCore
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				else
 					if me.disableSyncTests
-						fprintf('\n---> screenManager: Sync Tests OVERRIDDEN, do not use during experiments!\n');
+						fprintf('\n---> screenManager: Sync Tests OVERRIDDEN, do not use for real experiments!!!\n');
 						Screen('Preference', 'SkipSyncTests', 2);
 					else
 						fprintf('\n---> screenManager: Normal Screen Preferences used.\n');
@@ -328,9 +328,9 @@ classdef screenManager < optickaCore
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
-				fprintf('---> screenManager: Probing for a Display++...\n');
+				fprintf('---> screenManager: Probing for a Display++... ');
 				bitsCheckOpen(me);
-				if me.isPlusPlus; fprintf('---> screenManager: Found Display++...\n'); else; fprintf('no Display++...\n'); end
+				if me.isPlusPlus; fprintf('Found Display++...\n'); else; fprintf('NO Display++...\n'); end
 				if regexpi(me.bitDepth, '^EnableBits')
 					if me.isPlusPlus
 						fprintf('\t-> Display++ mode: %s\n', me.bitDepth);

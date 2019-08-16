@@ -303,6 +303,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if ~exist('s','var') || ~isa(s,'screenManager')
 					s = screenManager('verbose',false,'blend',true,...
 						'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
+						'disableSyncTests',true,...
 						'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
 						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
 				end
@@ -332,7 +333,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
-				if ~strcmpi(obj.family,'movie'); draw(obj); end
+				if ~strcmpi(obj.type,'movie'); draw(obj); end
 				if s.visualDebug
 					drawGrid(s); %draw +-5 degree dot grid
 					drawScreenCenter(s); %centre spot
@@ -346,7 +347,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				Screen('Flip',s.win);
 				WaitSecs('YieldSecs',2);
-				vbl = Screen('Flip',s.win); vbl = b;
+				vbl = Screen('Flip',s.win); b = vbl;
 				
 				while vbl <= b + runtime
 					draw(obj); %draw stimulus

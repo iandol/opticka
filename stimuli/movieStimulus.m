@@ -130,12 +130,15 @@ classdef movieStimulus < baseStimulus
 			end
 			
 			[obj.movie, obj.duration, obj.fps, obj.width, obj.height] = Screen('OpenMovie', obj.sM.win, obj.fileName);
-			
+			fprintf('--->>> movieStimulus: %s  : %f seconds duration, %f fps, w x h = %i x %i...\n', obj.fileName, obj.duration, bj.fps, obj.imgw, obj.imgh);
+
 			
 			wdeg = obj.width / obj.ppd;
 			hdeg = obj.height / obj.ppd;
 			
-			obj.scale = obj.sizeOut / wdeg;
+			if obj.size > 0
+				obj.scale = obj.sizeOut / wdeg;
+			end
 			
 			obj.inSetup = false;
 			computePosition(obj)
@@ -201,6 +204,13 @@ classdef movieStimulus < baseStimulus
 				try Screen('CloseMovie', obj.movie); end
 			end
 			obj.movie = [];
+		end
+		
+		function findFile(me)
+			[f,p] = uigetfile({ '*.*',  'All Files (*.*)'},'Select Movie File');
+			if ischar(f)
+				me.fileName = [p f];
+			end
 		end
 		
 	end %---END PUBLIC METHODS---%

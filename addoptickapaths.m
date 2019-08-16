@@ -1,4 +1,4 @@
-opath		= fileparts(mfilename('fullpath'));
+opath			= fileparts(mfilename('fullpath'));
 opaths		= genpath(opath); 
 opaths		= strsplit(opaths,pathsep);
 newopaths	= {};
