@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '1.13'
+		optickaVersion char = '1.15'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -1285,6 +1285,13 @@ classdef opticka < optickaCore
 						sp=s.speed;
 						p=s.fileName;
 						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' c=' num2str(c) ' sp=' num2str(sp) ' [' p ']'];
+					case 'movie'
+						x=s.xPosition;
+						y=s.yPosition;
+						sz=s.size;
+						sp=s.speed;
+						p=s.fileName;
+						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' sp=' num2str(sp) ' [' p ']'];
 					otherwise
 						x=s.xPosition;
 						y=s.yPosition;

@@ -12,7 +12,7 @@ classdef movieStimulus < baseStimulus
 	properties (SetAccess = protected, GetAccess = public)
 		%> scale is set by size
 		scale = 1
-		family = 'texture'
+		family = 'movie'
 		movie
 		duration
 		fps
@@ -129,10 +129,14 @@ classdef movieStimulus < baseStimulus
 				obj.doMotion=false;
 			end
 			
-			[obj.movie, obj.duration, obj.fps, obj.width, obj.height] = Screen('OpenMovie', obj.sM.win, obj.fileName);
-			fprintf('--->>> movieStimulus: %s  : %f seconds duration, %f fps, w x h = %i x %i...\n', obj.fileName, obj.duration, bj.fps, obj.imgw, obj.imgh);
+			t=tic;
+			preloadsecs = 2;
+			flags1 = [];
+			pixelformat = 4;
+			[obj.movie, obj.duration, obj.fps, obj.width, obj.height] = Screen('OpenMovie', ...
+				obj.sM.win, obj.fileName, [], preloadsecs, flags1, pixelformat);WaitSecs(0.5);
+			fprintf('--->>> movieStimulus: %s  : %f seconds duration, %f fps, w x h = %i x %i, in %ims\n', obj.fileName, obj.duration, obj.fps, obj.width, obj.height, round(toc(t)*1e3));
 
-			
 			wdeg = obj.width / obj.ppd;
 			hdeg = obj.height / obj.ppd;
 			
@@ -210,6 +214,107 @@ classdef movieStimulus < baseStimulus
 			[f,p] = uigetfile({ '*.*',  'All Files (*.*)'},'Select Movie File');
 			if ischar(f)
 				me.fileName = [p f];
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Run Stimulus in a window to preview
+		%>
+		% ===================================================================
+		function run(obj, benchmark, runtime, s, forceScreen)
+		% RUN stimulus: run(benchmark, runtime, s, forceScreen)
+			try
+				warning off
+				if ~exist('benchmark','var') || isempty(benchmark)
+					benchmark=false;
+				end
+				if ~exist('runtime','var') || isempty(runtime)
+					runtime = 2; %seconds to run
+				end
+				if ~exist('s','var') || ~isa(s,'screenManager')
+					s = screenManager('verbose',false,'blend',true,...
+						'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
+						'disableSyncTests',true,...
+						'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
+						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+				end
+				if ~exist('forceScreen','var'); forceScreen = -1; end
+
+				oldscreen = s.screen;
+				oldbitdepth = s.bitDepth;
+				if forceScreen >= 0
+					s.screen = forceScreen;
+					if forceScreen == 0
+						s.bitDepth = 'FloatingPoint32BitIfPossible';
+					end
+				end
+				prepareScreen(s);
+				
+				oldwindowed = s.windowed;
+				if benchmark
+					s.windowed = false;
+				elseif forceScreen > -1
+					s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2]; %middle of screen
+				end
+				
+				if ~s.isOpen
+					open(s); %open PTB screen
+				end
+				setup(obj,s); %setup our stimulus object
+				
+				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+				
+				if benchmark
+					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS on command window at end.', 5,5,[0 0 0]);
+				else
+					Screen('DrawText', s.win, 'Stim will be static for 2 seconds, then animated...', 5,5,[0 0 0]);
+				end
+				
+				Screen('Flip',s.win);
+				WaitSecs('YieldSecs',2);
+				vbl = Screen('Flip',s.win); b = vbl;
+				
+				while vbl <= b + runtime
+					draw(obj); %draw stimulus
+					Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
+					%animate(obj); %animate stimulus, will be seen on next draw
+					if benchmark
+						vbl = Screen('Flip',s.win,0,2,2);
+					else
+						vbl = Screen('Flip',s.win, vbl + s.screenVals.halfisi); %flip the buffer
+					end
+				end
+				
+				if benchmark; bb=GetSecs; end
+				WaitSecs(1);
+				Screen('Flip',s.win);
+				WaitSecs(0.2);
+				
+				Priority(0);
+				ShowCursor;
+				ListenChar(0);
+				reset(obj); %reset our stimulus ready for use again
+				close(s); %close screen
+				s.screen = oldscreen;
+				s.windowed = oldwindowed;
+				s.bitDepth = oldbitdepth;
+				if benchmark
+					fps = (s.screenVals.fps*runtime) / (bb-b);
+					fprintf('\n\n======> SPEED = %g fps <=======\n', fps);
+				end
+				clear fps benchmark runtime b bb i; %clear up a bit
+				warning on
+			catch ME
+				warning on
+				getReport(ME)
+				Priority(0);
+				if exist('s','var') && isa(s,'screenManager')
+					close(s);
+				end
+				warning on
+				clear fps benchmark runtime b bb i; %clear up a bit
+				reset(obj); %reset our stimulus ready for use again
+				rethrow(ME)				
 			end
 		end
 		
