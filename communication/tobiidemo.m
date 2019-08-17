@@ -125,7 +125,6 @@ points_to_calibrate = [[xc,yc];[lb,ub];[rb,ub];[lb,bb];[rb,bb]];
 
 % Create calibration object
 calib = ScreenBasedCalibration(eyetracker);
-calib.leave_calibration_mode();
 calibrating = true;
 
 while calibrating
@@ -225,7 +224,6 @@ for i=1:pointCount
 	tlen = randi(8)+1;
 	for j = 1:(screenVals.fps * randi(8))
 		Screen('DrawDots', window, points(i,:).*screen_pixels, dotSizePix/2, dotColor(2,:), [], 3);
-		%sM.drawCross(0.5,[1 1 0], points(i,1)*screen_pixels(1), points(i,2)*screen_pixels(2));
 		if i > 3
 			t1=tic;
 			k{j} = eyetracker.get_gaze_data('flat');
@@ -263,39 +261,17 @@ for i=1:pointCount
 	% Event when stopping to show the stimulus
 	events{2,i} = {Tobii.get_system_time_stamp, points(i,:)};
 end
+Screen('DrawText', window, 'Finished...')
+Screen('Flip', window')
+WaitSecs(1);
 
 % Retreive data collected during experiment
 collected_gaze_data = eyetracker.get_gaze_data();
 
 eyetracker.stop_gaze_data();
 
-
+Priority(0);ShowCursor;ListenChar(0)
 close(sM);
-
-OK, so I've taken a look at the get_gaze_data() code, and see that there is a lot of overhead when using GazeData objects. I've just tried using 'flat' data structures and the performance is much better in a tight loop:
-
-
-
-~20 samples = 0.061225 +- 0.0053961 ms
-
-
-
-'flat' is 60X faster than when using GazeData in a tight loop!!!
-
-
-
-At trial end getting 9600 samples = 1.1837 ms -- this is 590X faster!!!
-
-
-
-This should really be made more clear in the SDK documentation...
-
-
-
-But there is still a problem that constantly managing the flat data and storing it in cell arrays on every refresh takes some time (I only timed get_gaze_data()). There is still a solid argument for having a sample_gaze_data() alongside get_gaze_data()...
-
-
-
 
 
 

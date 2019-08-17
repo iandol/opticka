@@ -11,15 +11,19 @@ classdef tobiiManager < optickaCore
 		%> the PTB screen to work on, passed in during initialise
 		screen = []
 		%> Titta settings
-		settings
+		settings struct = []
 		%> # samples to average in getSample
-		nSamples = 5
+		nSamples double = 6
+		%> smoothing method
+		smoothMethod function_handle = @movmedian
+		%> smooth window
+		smoothWindow double = 3
 		%> start eyetracker in dummy mode?
 		isDummy logical = false
 		%> do we log messages to the command window?
 		verbose = true
 		%> fixation X position(s) in degrees
-		fixation struct = struct('X',0,'Y',0,'Radius',1,'InitTime',0.25,'Time',1,'strictFixation',true)
+		fixation struct = struct('X',0,'Y',0,'Radius',1,'InitTime',1,'Time',1,'strictFixation',true)
 		%> tracker update speed (Hz), should be 250 500 1000 2000
 		sampleRate double = 1200
 		%> main tobii classes
@@ -88,12 +92,12 @@ classdef tobiiManager < optickaCore
 	properties (SetAccess = private, GetAccess = private)
 		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
 		win = []
-		ppd_ double = 35
+		ppd_ double = 36
 		fixN double = 0
 		fixSelection = []
 		%> event N
 		eventN = 1
-		%> previous message sent to eyelink
+		%> previous message sent to tobii
 		previousMessage char = ''
 		%> allowed properties passed to object upon construction
 		allowedProperties char = 'model|IP|fixation|sampleRate|name|verbose|isDummy'
@@ -109,7 +113,7 @@ classdef tobiiManager < optickaCore
 				me.parseArgs(varargin,me.allowedProperties);
 			end
 			try % is tobii working?
-				assert(exist('Titta','class')==8,'TOBIIMANAGER:NOTITTA','Cannot find Titta toolbox, please install instead of Tobii SDK; exiting...');
+				assert(exist('Titta','class')==8,'TOBIIMANAGER:NO-TITTA','Cannot find Titta toolbox, please install instead of Tobii SDK; exiting...');
 				initTracker(me);
 			catch ME
 				ME.getReport
@@ -149,8 +153,8 @@ classdef tobiiManager < optickaCore
 			if sM.isOpen == true
 				me.win = me.screen.win;
 			end
-			me.displayArea	= [];
-			me.trackBox		= [];
+			me.displayArea	= me.tobii.geom.displayArea;
+			me.trackBox		= me.tobii.geom.trackBox;
 			
 			syncTrackerTime(me);
 			
@@ -192,7 +196,7 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief check the connection with the eyelink
+		%> @brief check the connection with the tobii
 		%>
 		% ===================================================================
 		function connected = checkConnection(me)
@@ -208,9 +212,10 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function trackerSetup(me)
 			if me.isConnected && me.screen.isOpen
-				resetFixation(me);
-				calinfo = me.tobii.calibrate(me.screen.win);
+				updateDefaults(me); % make sure we send any other settings changes
+				calinfo = me.tobii.calibrate(me.screen.win); %start calibration
 				disp(calinfo);
+				resetFixation(me);
 			end
 		end
 		
@@ -280,13 +285,23 @@ classdef tobiiManager < optickaCore
 			if me.isConnected && me.isRecording
 				td = me.tobii.buffer.peekN('gaze',me.nSamples);
 				if td.left.gazePoint.valid 
-					xy = fromRelative(me, mean(td.left.gazePoint.onDisplayArea, 2));
+					if me.nSamples > 1
+						if ~isempty(me.smoothMethod)
+							data = me.smoothMethod(td.left.gazePoint.onDisplayArea,me.smoothWindow,2);
+						else 
+							data = td.left.gazePoint.onDisplayArea;
+						end
+						data = median(data,2);
+					else
+						data = td.left.gazePoint.onDisplayArea;
+					end
+					xy = toPixels(me, data,'','relative');
 					me.currentSample.gx		= xy(1);
 					me.currentSample.gy		= xy(2);
 					me.currentSample.pa		= mean(td.left.pupil.diameter);
 					me.currentSample.time	= double(td.systemTimeStamp(end));
 					me.currentSample.timeD	= double(td.deviceTimeStamp(end));
-					xy = me.toDegrees(xy);
+					    xy = me.toDegrees(xy);
 					me.x = xy(1);
 					me.y = xy(2);
 					me.pupil = me.currentSample.pa;
@@ -584,13 +599,14 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function drawEyePosition(me)
 			if (me.isDummy || me.isConnected) && me.screen.isOpen && ~isempty(me.x) && ~isnan(me.x) && ~isempty(me.y) && ~isnan(me.y)
+				xy = toPixels(me,[me.x me.y]);
 				if me.isFixated
-					Screen('DrawDots', me.win, toPixels(me,[me.x me.y]), 8, [1 0.5 1 1], [], 3);
+					Screen('DrawDots', me.win, xy, 10, [1 0.5 1 1], [], 3);
 					if me.fixLength > me.fixation.Time
-						Screen('DrawText', me.win, 'FIX', me.x, me.y, [1 1 1]);
+						Screen('DrawText', me.win, 'FIX', xy(1),xy(2), [1 1 1]);
 					end
 				else
-					Screen('DrawDots', me.win, toPixels(me,[me.x me.y]), 8, [1 0.5 0.5 1], [], 3);
+					Screen('DrawDots', me.win, xy, 8, [1 0.5 0 1], [], 3);
 				end
 			end
 		end
@@ -607,13 +623,23 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief send message to store in EDF data
+		%> @brief send message to store in tracker data (compatibility)
 		%>
 		%>
 		% ===================================================================
 		function edfMessage(me, message)
+			trackerMessage(me,message)
+		end
+		
+		% ===================================================================
+		%> @brief send message to store in tracker data
+		%>
+		%>
+		% ===================================================================
+		function trackerMessage(me, message)
 			if me.isConnected
-				if me.verbose; fprintf('-+-+->EDF Message: %s\n',message);end
+				me.tobii.sendMessage(message);
+				if me.verbose; fprintf('-+-+->TOBII Message: %s\n',message);end
 			end
 		end
 		
@@ -735,7 +761,7 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function [trackertime, systemtime] = getTrackerTime(me)
 			if me.isConnected
-				trackertime = 0;
+				me.trackerTime = 0;
 				me.systemTime = 0;
 				trackertime = 0;
 				systemtime = 0;
@@ -748,59 +774,71 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function runDemo(me,forcescreen)
 			KbName('UnifyKeyNames')
-			stopkey=KbName('escape');
+			stopkey=KbName('q');
 			nextKey=KbName('space');
 			upKey=KbName('uparrow');
 			downKey=KbName('downarrow');
 			calibkey=KbName('c');
 			ofixation = me.fixation; me.sampletime = [];
-			try
-				s = screenManager('blend',true,'pixelsPerCm',36,'distance',60);
+			try  
+				s = screenManager('disableSyncTests',true,'blend',true,'pixelsPerCm',36,'distance',60);
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
-				o = dotsStimulus('size',me.fixation.Radius,'speed',1,'mask',true,'density',30);
-				%x,y,inittime,fixtime,radius,strict)
-				updateFixationValues(me,0,0,1,1,1,true);
+				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',false,'density',50);
 				open(s); %open out screen
 				setup(o,s); %setup our stimulus with open screen
 				
 				ListenChar(1);
 				initialise(me,s); %initialise tobii with our screen
-				me.settings.cal.autoPace = 0;
+				calViz								= AnimatedCalibrationDisplay();
+				me.settings.cal.drawFunction	= @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
+				calViz.bgColor						= 127;
+				calViz.fixBackColor				= 0;
+				calViz.fixFrontColor				= 255;
+				me.settings.cal.autoPace		= 0;
 				me.settings.cal.doRandomPointOrder = false;
-				me.settings.UI.setup.showEyes = true;
-				updateDefaults(me);
-				trackerSetup(me);ShowCursor;
+				me.settings.UI.setup.eyeClr	= 200;
+				me.settings.cal.pointNotifyFunction = @demoCalCompletionFun;
+				trackerSetup(me); 
+				ShowCursor; %titta fails to show cursor so we must do it
 				
-				me.statusMessage('DEMO Running'); %
-				setOffline(me);
+				o.sizeOut = me.fixation.Radius*2;
+				o.xPositionOut = me.fixation.X;
+				o.yPositionOut = me.fixation.Y;
+				ts.x = me.fixation.X;
+				ts.y = me.fixation.Y;
+				ts.size = o.sizeOut;
+				ts.selected = true;
 				
 				xx = 0;
 				a = 1;
+				
+				startRecording(me);
+				trackerMessage(me,'Starting Demo...')
+				
 				while xx == 0
 					yy = 0;
 					b = 1;
-					info = struct();
-					info.name = 'trial';
-					info.n = a;
-					startRecording(me);
 					flip(s)
 					WaitSecs(0.5);
 					vbl=flip(s);
 					while yy == 0
-						getSample(me);
-						drawSpot(s,1,[0.6 0.6 0.6],0,0);
+						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
-						draw(o);
+						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
+						getSample(me);
+						
 						if ~isempty(me.currentSample)
-							txt = sprintf('Press ESC to finish \n X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %i | RADIUS = %.2f | FIXATION = %i', me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.nSamples, me.fixation.Radius, me.fixLength);
+							txt = sprintf('Press Q to finish \n X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %i | RADIUS = %.1f | FIXATION = %i', me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.nSamples, me.fixation.Radius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
 						end
-						Screen('DrawingFinished', s.win);
+						
+						finishDrawing(s);
 						animate(o);
-						vbl=Screen('Flip',s.win, vbl+s.screenVals.halfisi);
+						vbl=flip(s,vbl+s.screenVals.halfisi);
+						
 						[~, ~, keyCode] = KbCheck(-1);
 						if keyCode(stopkey); yy = 1; xx = 1; break;	end
 						if keyCode(nextKey); yy = 1; break; end
@@ -810,15 +848,13 @@ classdef tobiiManager < optickaCore
 						b=b+1;
 					end
 					if xx == 0
-						info.nn = b;
-						edfMessage(me,'END_RT');
-						stopRecording(me)
-						edfMessage(me,'TRIAL_RESULT 1')
+						trackerMessage(me,'END_RT');
+						trackerMessage(me,'TRIAL_RESULT 1')
 						resetFixation(me);
-						me.fixation.X = randi([-5 5]);
-						me.fixation.Y = randi([-5 5]);
-						me.fixation.Radius = randi([1 5]);
-						o.sizeOut = me.fixation.Radius;
+						me.fixation.X = randi([-7 7]);
+						me.fixation.Y = randi([-7 7]);
+						me.fixation.Radius = randi([1 3]);
+						o.sizeOut = me.fixation.Radius*2;
 						o.xPositionOut = me.fixation.X;
 						o.yPositionOut = me.fixation.Y;
 						ts.x = me.fixation.X;
@@ -1044,75 +1080,90 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function initTracker(me)
          me.settings = Titta.getDefaults(me.model);
+			me.settings.cal.bgColor = [255 0 0];
 			me.tobii = Titta(me.settings);
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief to visual degrees from pixels
 		%>
 		% ===================================================================
-		function out = toDegrees(me,in,axis)
-			if ~exist('axis','var');axis='';end
+		function out = toDegrees(me,in,axis,inputtype)
+			if ~exist('axis','var') || isempty(axis); axis=''; end
+			if ~exist('inputtype','var') || isempty(inputtype); inputtype = 'pixels'; end
+			out = 0;
+			if length(in)>2; return; end
 			switch axis
 				case 'x'
-					out = (in - me.screen.xCenter) / me.ppd_;
+					in = in(1);
+					switch inputtype
+						case 'pixels'
+							out = (in - me.screen.xCenter) / me.ppd_;
+						case 'relative'
+							out = (in - 0.5) * (me.screen.screenVals.width /me.ppd_);
+					end
 				case 'y'
-					out = (in - me.screen.yCenter) / me.ppd_;
+					in = in(1);
+					switch inputtype
+						case 'pixels'
+							out = (in - me.screen.yCenter) / me.ppd_; return
+						case 'relative'
+							out = (in - 0.5) * (me.screen.screenVals.height /me.ppd_);
+					end
 				otherwise
-					if length(in)==2
-						out(1) = (in(1) - me.screen.xCenter) / me.ppd_;
-						out(2) = (in(2) - me.screen.yCenter) / me.ppd_;
-					else
-						out = 0;
+					switch inputtype
+						case 'pixels'
+							out(1) = (in(1) - me.screen.xCenter) / me.ppd_;
+							out(2) = (in(2) - me.screen.yCenter) / me.ppd_;
+						case 'relative'
+							out(1) = (in - 0.5) * (me.screen.screenVals.width /me.ppd_);
+							out(2) = (in - 0.5) * (me.screen.screenVals.height /me.ppd_);
 					end
 			end
 		end
 
 		% ===================================================================
-		%> @brief tobii coordinates are relative 0 - 1, convert to pixels
+		%> @brief to pixels from visual degrees / relative
 		%>
 		% ===================================================================
-		function out = fromRelative(me,in,axis)
-			if ~exist('axis','var');axis='';end
+		function out = toPixels(me,in,axis,inputtype)
+			if ~exist('axis','var') || isempty(axis); axis=''; end
+			if ~exist('inputtype','var') || isempty(inputtype); inputtype = 'degrees'; end
+			out = 0;
+			if length(in)>4; return; end
 			switch axis
 				case 'x'
-					out = in * me.screen.screenVals.width;
-				case 'y'
-					out = in * me.screen.screenVals.height;
-				otherwise
-					if length(in)==2
-						out(1) = in(1) * me.screen.screenVals.width;
-						out(2) = in(2) * me.screen.screenVals.height;
-					elseif length(in)==4
-						out(1:2) = in(1:2) * me.screen.screenVals.width;
-						out(3:4) = in(3:4) * me.screen.screenVals.height;
-					else
-						out = 0;
+					switch inputtype
+						case 'degrees'
+							out = (in * me.ppd_) + me.screen.xCenter;
+						case 'relative'
+							out = in * me.screen.screenVals.width;
 					end
-			end
-		end
-		
-		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function out = toPixels(me,in,axis)
-			if ~exist('axis','var');axis='';end
-			switch axis
-				case 'x'
-					out = (in * me.ppd_) + me.screen.xCenter;
 				case 'y'
-					out = (in * me.ppd_) + me.screen.yCenter;
+					switch inputtype
+						case 'degrees'
+							out = (in * me.ppd_) + me.screen.yCenter;
+						case 'relative'
+							out = in * me.screen.screenVals.height;
+					end
 				otherwise
-					if length(in)==2
-						out(1) = (in(1) * me.ppd_) + me.screen.xCenter;
-						out(2) = (in(2) * me.ppd_) + me.screen.yCenter;
-					elseif length(in)==4
-						out(1:2) = (in(1:2) * me.ppd_) + me.screen.xCenter;
-						out(3:4) = (in(3:4) * me.ppd_) + me.screen.yCenter;
-					else
-						out = 0;
+					switch inputtype
+						case 'degrees'
+							if length(in)==2
+								out(1) = (in(1) * me.ppd_) + me.screen.xCenter;
+								out(2) = (in(2) * me.ppd_) + me.screen.yCenter;
+							elseif length(in)==4
+								out(1:2) = (in(1:2) * me.ppd_) + me.screen.xCenter;
+								out(3:4) = (in(3:4) * me.ppd_) + me.screen.yCenter;
+							end
+						case 'relative'
+							if length(in)==2
+								out(1) = in(1) * me.screen.screenVals.width;
+								out(2) = in(2) * me.screen.screenVals.height;
+							elseif length(in)==4
+								out(1:2) = in(1:2) * me.screen.screenVals.width;
+								out(3:4) = in(3:4) * me.screen.screenVals.height;
+							end
 					end
 			end
 		end

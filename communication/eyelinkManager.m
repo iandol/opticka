@@ -696,15 +696,14 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function drawEyePosition(me)
 			if (me.isDummy || me.isConnected) && isa(me.screen,'screenManager') && me.screen.isOpen && ~isempty(me.x) && ~isempty(me.y)
-				x = me.toPixels(me.x,'x');
-				y = me.toPixels(me.y,'y');
+				xy = toPixels(me,[me.x me.y]);
 				if me.isFixated
-					Screen('DrawDots', me.win, [x y], 8, [1 0.5 1 1], [], 1);
+					Screen('DrawDots', me.win, xy, 10, [1 0.5 1 1], [], 1);
 					if me.fixLength > me.fixationTime
-						Screen('DrawText', me.win, 'FIX', x, y, [1 1 1]);
+						Screen('DrawText', me.win, 'FIX', xy(1), xy(2), [1 1 1]);
 					end
 				else
-					Screen('DrawDots', me.win, [x y], 6, [1 0.5 0 1], [], 1);
+					Screen('DrawDots', me.win, xy, 8, [1 0.5 0 1], [], 1);
 				end
 			end
 		end
@@ -948,7 +947,7 @@ classdef eyelinkManager < optickaCore
 		%> @brief runs a demo of the eyelink, tests this class
 		%>
 		% ===================================================================
-		function runDemo(me)
+		function runDemo(me,forcescreen)
 			stopkey=KbName('Q');
 			nextKey=KbName('SPACE');
 			calibkey=KbName('C');
@@ -956,9 +955,11 @@ classdef eyelinkManager < optickaCore
 			me.recordData = true;
 			try
 				s = screenManager('debug',true,'pixelsPerCm',27,'distance',66);
+				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
 				o = dotsStimulus('size',me.fixationRadius*2,'speed',2,'mask',false,'density',30);
-				open(s); %open out screen
+				%x,y,inittime,fixtime,radius,strict)
+				updateFixationValues(me,0,0,1,1,1,true);open(s); %open out screen
 				setup(o,s); %setup our stimulus with open screen
 				
 				ListenChar(1);
@@ -993,19 +994,19 @@ classdef eyelinkManager < optickaCore
 					startRecording(me);
 					statusMessage(me,sprintf('DEMO Running Trial=%i',a));
 					WaitSecs(0.1);
-					vbl=Screen('Flip',s.win);
+					vbl=flip(s);
 					syncTime(me);
 					while yy == 0
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
-						drawCross(s,0.3,[1 1 0],me.fixationX,me.fixationY);
+						drawCross(s,0.5,[1 1 0],me.fixationX,me.fixationY);
 						getSample(me);
 						
 						if ~isempty(me.currentSample)
 							x = me.toPixels(me.x,'x'); %#ok<*PROP>
 							y = me.toPixels(me.y,'y');
-							txt = sprintf('Press Q to finish. X = %3.2f / %2.2f | Y = %3.2f / %2.2f \n RADIUS = %.1f | FIXATION = %.1f', x, me.x, y, me.y, me.fixationRadius, me.fixLength);
+							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | RADIUS = %.1f | FIXATION = %.1f', x, me.x, y, me.y, me.fixationRadius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
 						end
