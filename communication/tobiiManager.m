@@ -769,7 +769,7 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief runs a demo of the eyelink, tests this class
+		%> @brief runs a demo of the tobii, testing this class
 		%>
 		% ===================================================================
 		function runDemo(me,forcescreen)
@@ -784,7 +784,7 @@ classdef tobiiManager < optickaCore
 				s = screenManager('disableSyncTests',true,'blend',true,'pixelsPerCm',36,'distance',60);
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
-				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',false,'density',50);
+				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',false,'density',50); %test stimulus
 				open(s); %open out screen
 				setup(o,s); %setup our stimulus with open screen
 				
@@ -799,6 +799,7 @@ classdef tobiiManager < optickaCore
 				me.settings.cal.doRandomPointOrder = false;
 				me.settings.UI.setup.eyeClr	= 200;
 				me.settings.cal.pointNotifyFunction = @demoCalCompletionFun;
+				me.settings.val.pointNotifyFunction = @demoCalCompletionFun;
 				trackerSetup(me); 
 				ShowCursor; %titta fails to show cursor so we must do it
 				
