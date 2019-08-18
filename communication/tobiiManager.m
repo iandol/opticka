@@ -1,6 +1,7 @@
 % ========================================================================
-%> @brief eyelinkManager wraps around the Titta toolbox functions
-%> offering a consistent interface
+%> @brief tobiiManager wraps around the Titta toolbox functions
+%> offering a consistent interface to eyelinkManager, and offers 
+%> methods to check fixation windows easily.
 %>
 % ========================================================================
 classdef tobiiManager < optickaCore
@@ -8,29 +9,27 @@ classdef tobiiManager < optickaCore
 	properties
 		%> model of eyetracker, Spectrum Pro default
 		model char = 'Tobii Pro Spectrum'
+		%> tracker update speed (Hz), should be 250 500 1000 2000
+		sampleRate double = 1200
+		%> fixation X position(s) in degrees
+		fixation struct = struct('X',0,'Y',0,'Radius',1,'InitTime',1,...
+			'Time',1,'strictFixation',true)
+		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
+		smoothing struct = struct('nSamples',8,'method','median','window',3,...
+			'eyes','both')
+		%> main tobii (Titta) object
+		tobii
 		%> the PTB screen to work on, passed in during initialise
 		screen = []
 		%> Titta settings
 		settings struct = []
-		%> # samples to average in getSample
-		nSamples double = 6
-		%> smoothing method
-		smoothMethod function_handle = @movmedian
-		%> smooth window
-		smoothWindow double = 3
 		%> start eyetracker in dummy mode?
 		isDummy logical = false
-		%> do we log messages to the command window?
-		verbose = true
-		%> fixation X position(s) in degrees
-		fixation struct = struct('X',0,'Y',0,'Radius',1,'InitTime',1,'Time',1,'strictFixation',true)
-		%> tracker update speed (Hz), should be 250 500 1000 2000
-		sampleRate double = 1200
-		%> main tobii classes
-		tobii
 	end
 	
 	properties (Hidden = true)
+		%> do we log messages to the command window?
+		verbose = true
 		%> stimulus positions to draw on screen
 		stimulusPositions = []
 		%> exclusion zone no eye movement allowed inside
@@ -42,7 +41,6 @@ classdef tobiiManager < optickaCore
 		% are we recording to matrix?
 		isRecording logical = false
 	end
-	
 	
 	properties (SetAccess = private, GetAccess = public)
 		%> display area
@@ -85,8 +83,6 @@ classdef tobiiManager < optickaCore
 		systemTime = 0
 		% which eye is the tracker using?
 		eyeUsed = 'both'
-		% version
-		version
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -120,7 +116,6 @@ classdef tobiiManager < optickaCore
             fprintf('!!! Error initialising Tobii: %s\n\t going into Dummy mode...\n',ME.message);
 				me.tobii = [];
 				me.isDummy = true;
-				me.version = '-1';
 			end
 		end
 		
@@ -130,17 +125,21 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function initialise(me,sM)
 			if ~exist('sM','var') || isempty(sM)
-				sM = screenManager();
+				if isempty(me.screen) || ~isa(me.screen,'screenManager')
+					me.screen = screenManager();
+				end
+			else
+				me.screen = sM;
 			end
 			if ~isa(me.tobii, 'Titta'); initTracker(me); end
 			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
 			
 			if me.isDummy
-				me.tobii.setDummyMode();
+				me.tobii = me.tobii.setDummyMode();
 			end
 			
 			me.settings.freq = me.sampleRate;
-			me.settings.cal.bgColor = floor(sM.backgroundColour*255);
+			me.settings.cal.bgColor = floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor = me.settings.cal.bgColor;
 			updateDefaults(me);
 			me.tobii.init();
@@ -148,18 +147,19 @@ classdef tobiiManager < optickaCore
 			
 			me.systemTime = me.tobii.getSystemTime;
 			
-			me.screen		= sM;
 			me.ppd_			= me.screen.ppd;
-			if sM.isOpen == true
+			if me.screen.isOpen == true
 				me.win = me.screen.win;
 			end
 			me.displayArea	= me.tobii.geom.displayArea;
 			me.trackBox		= me.tobii.geom.trackBox;
 			
-			syncTrackerTime(me);
-			
-			me.salutation('Initialise Method', sprintf('Running on a %s @ %2.5g (time offset: %2.5g)', me.version, me.trackerTime,me.currentOffset));
-			
+			me.salutation('Initialise Method', ...
+				sprintf('Running on a %s @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
+				me.tobii.systemInfo.model, me.tobii.systemInfo.samplerate,...
+				me.tobii.systemInfo.trackingMode,...
+				me.screen.screen,me.screen.winRect(3),me.screen.winRect(4),...
+				me.screen.screenVals.fps),true);
 		end
 		
 		% ===================================================================
@@ -283,25 +283,16 @@ classdef tobiiManager < optickaCore
 		function sample = getSample(me)
 			me.currentSample = [];
 			if me.isConnected && me.isRecording
-				td = me.tobii.buffer.peekN('gaze',me.nSamples);
+				td = me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
 				if td.left.gazePoint.valid 
-					if me.nSamples > 1
-						if ~isempty(me.smoothMethod)
-							data = me.smoothMethod(td.left.gazePoint.onDisplayArea,me.smoothWindow,2);
-						else 
-							data = td.left.gazePoint.onDisplayArea;
-						end
-						data = median(data,2);
-					else
-						data = td.left.gazePoint.onDisplayArea;
-					end
+					data = doSmoothing(me,td.left.gazePoint.onDisplayArea);
 					xy = toPixels(me, data,'','relative');
 					me.currentSample.gx		= xy(1);
 					me.currentSample.gy		= xy(2);
 					me.currentSample.pa		= mean(td.left.pupil.diameter);
 					me.currentSample.time	= double(td.systemTimeStamp(end));
 					me.currentSample.timeD	= double(td.deviceTimeStamp(end));
-					    xy = me.toDegrees(xy);
+					xy = me.toDegrees(xy);
 					me.x = xy(1);
 					me.y = xy(2);
 					me.pupil = me.currentSample.pa;
@@ -778,6 +769,8 @@ classdef tobiiManager < optickaCore
 			nextKey=KbName('space');
 			upKey=KbName('uparrow');
 			downKey=KbName('downarrow');
+			leftKey=KbName('leftarrow');
+			rightKey=KbName('rightarrow');
 			calibkey=KbName('c');
 			ofixation = me.fixation; me.sampletime = [];
 			try  
@@ -813,7 +806,9 @@ classdef tobiiManager < optickaCore
 				
 				xx = 0;
 				a = 1;
-				
+				m=1;
+				methods={'median','heuristic','sg','simple'};
+				Screen('TextFont',s.win,'Consolas');
 				startRecording(me);
 				trackerMessage(me,'Starting Demo...')
 				
@@ -828,24 +823,26 @@ classdef tobiiManager < optickaCore
 						drawGrid(s);
 						drawScreenCenter(s);
 						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
-						getSample(me);
 						
+						getSample(me);
 						if ~isempty(me.currentSample)
-							txt = sprintf('Press Q to finish \n X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %i | RADIUS = %.1f | FIXATION = %i', me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.nSamples, me.fixation.Radius, me.fixLength);
+							txt = sprintf('Press Q to finish \n X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %i %s | RADIUS = %.1f | FIXATION = %i', me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.smoothing.nSamples, me.smoothing.method, me.fixation.Radius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
 						end
 						
 						finishDrawing(s);
 						animate(o);
-						vbl=flip(s,vbl+s.screenVals.halfisi);
+						vbl=flip(s,vbl);
 						
 						[~, ~, keyCode] = KbCheck(-1);
 						if keyCode(stopkey); yy = 1; xx = 1; break;	end
 						if keyCode(nextKey); yy = 1; break; end
 						if keyCode(calibkey); me.doCalibration; end
-						if keyCode(upKey); me.nSamples = me.nSamples + 2; if me.nSamples >250; me.nSamples=1;end; end
-						if keyCode(downKey); me.nSamples = me.nSamples - 2; if me.nSamples <1; me.nSamples=1;end;	end
+						if keyCode(upKey); me.smoothing.nSamples = me.smoothing.nSamples + 1; if me.smoothing.nSamples > 400; me.smoothing.nSamples=400;end; end
+						if keyCode(downKey); me.smoothing.nSamples = me.smoothing.nSamples - 1; if me.smoothing.nSamples < 1; me.smoothing.nSamples=1;end;	end
+						if keyCode(leftKey); m=m+1; if m>4;m=1;end; me.smoothing.method=methods{m};end
+							
 						b=b+1;
 					end
 					if xx == 0
@@ -903,6 +900,136 @@ classdef tobiiManager < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief Stampe 1993 heuristic filter as used by Eyelink
+		%>
+		%> @param indata - input data
+		%> @param level - 1 = filter level 1, 2 = filter level 1+2
+		%> @param steps - we step every # steps along the in data, changes the filter characteristics, 3 is the default (filter 2 is #+1)
+		%> @out out - smoothed data
+		% ===================================================================
+		function out = heuristicFilter(~,indata,level,steps)
+			if ~exist('level','var'); level = 1; end %filter level 1 [std] or 2 [extra]
+			if ~exist('steps','var'); steps = 3; end %step along the data every n steps
+			out=zeros(size(indata));
+			for k = 1:2 % x (row1) and y (row2) eye samples
+				in = indata(k,:);
+				%filter 1 from Stampe 1993
+				if level > 0
+					for i = 1:steps:length(in)-2
+						x = in(i); x1 = in(i+1); x2 = in(i+2); %#ok<*PROPLC>
+						if ((x2 > x1) && (x1 < x)) || ((x2 < x1) && (x1 > x))
+							if abs(x1-x) < abs(x2-x1) %i is closest
+								x1 = x;
+							else
+								x1 = x2;
+							end
+						end
+						x2 = x1;
+						x1 = x;
+						in(i)=x; in(i+1) = x1; in(i+2) = x2;
+					end
+				end
+				%filter2 from Stampe 1993
+				if level > 1
+					for i = 1:steps+1:length(in)-3
+						x = in(i); x1 = in(i+1); x2 = in(i+2); x3 = in(i+3);
+						if x2 == x1 && (x == x1 || x2 == x3)
+							x3 = x2;
+							x2 = x1;
+							x1 = x;
+						else %x2 and x1 are the same, find closest of x2 or x
+							if abs(x1 - x3) < abs(x1 - x)
+								x2 = x3;
+								x1 = x3;
+							else
+								x2 = x;
+								x1 = x;
+							end
+						end
+						in(i)=x; in(i+1) = x1; in(i+2) = x2; in(i+3) = x3;
+					end
+				end
+				out(k,:) = in;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function out = doSmoothing(me,in)
+			if size(in,2) > me.smoothing.window
+				switch me.smoothing.method
+					case 'median'
+						out = movmedian(in,me.smoothing.window,2);
+						out = median(out, 2);
+					case 'heuristic'
+						out = me.heuristicFilter(in,1);
+						out = median(out, 2);
+					case 'sg' %savitzky-golay
+						out(1,:) = sgolayfilt(in(1,:),1,me.smoothing.window);
+						out(2,:) = sgolayfilt(in(2,:),1,me.smoothing.window);
+						out = median(out, 2);
+					otherwise
+						out = median(in, 2);
+				end
+			elseif size(in, 2) > 1
+				out = median(in, 2);
+			else
+				out = in;
+			end
+		end
+		
+		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function initTracker(me)
+         me.settings = Titta.getDefaults(me.model);
+			me.settings.cal.bgColor = [255 0 0];
+			me.tobii = Titta(me.settings);
+		end
+		
+		% ===================================================================
+		%> @brief to visual degrees from pixels
+		%>
+		% ===================================================================
+		function out = toDegrees(me,in,axis,inputtype)
+			if ~exist('axis','var') || isempty(axis); axis=''; end
+			if ~exist('inputtype','var') || isempty(inputtype); inputtype = 'pixels'; end
+			out = 0;
+			if length(in)>2; return; end
+			switch axis
+				case 'x'
+					in = in(1);
+					switch inputtype
+						case 'pixels'
+							out = (in - me.screen.xCenter) / me.ppd_;
+						case 'relative'
+							out = (in - 0.5) * (me.screen.screenVals.width /me.ppd_);
+					end
+				case 'y'
+					in = in(1);
+					switch inputtype
+						case 'pixels'
+							out = (in - me.screen.yCenter) / me.ppd_; return
+						case 'relative'
+							out = (in - 0.5) * (me.screen.screenVals.height /me.ppd_);
+					end
+				otherwise
+					switch inputtype
+						case 'pixels'
+							out(1) = (in(1) - me.screen.xCenter) / me.ppd_;
+							out(2) = (in(2) - me.screen.yCenter) / me.ppd_;
+						case 'relative'
+							out(1) = (in - 0.5) * (me.screen.screenVals.width /me.ppd_);
+							out(2) = (in - 0.5) * (me.screen.screenVals.height /me.ppd_);
+					end
+			end
+		end
+		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 	
 	%=======================================================================
@@ -910,7 +1037,7 @@ classdef tobiiManager < optickaCore
 	%=======================================================================
 		
 		% ===================================================================
-		%> @brief
+		%> @brief original Tobii SDK head pos check
 		%>
 		% ===================================================================
 		function checkHeadPosition(me)
@@ -962,21 +1089,16 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief originl Tobii SDK calibration
 		%>
 		% ===================================================================
 		function simpleCalibration(me)
-			
 			spaceKey = KbName('space');
 			RKey = KbName('C');
-			
-			dotSizePix = 20;
-			
+			dotSizePix = 15;
 			dotColor = [[1 0 0];[1 1 1]]; % Red and white
-			
-			leftColor = [0.8 0 0]; 
-			rightColor = [0 0.8 0]; 
-			
+			leftColor = [1 0.5 0]; 
+			rightColor = [0 0.4 0.75]; 
 			% Calibration points
 			lb = 0.15;  % left bound
 			xc = 0.5;  % horizontal center
@@ -1071,55 +1193,6 @@ classdef tobiiManager < optickaCore
 						KbReleaseWait;
 					end
 				end
-			end
-			
-		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function initTracker(me)
-         me.settings = Titta.getDefaults(me.model);
-			me.settings.cal.bgColor = [255 0 0];
-			me.tobii = Titta(me.settings);
-		end
-		
-		% ===================================================================
-		%> @brief to visual degrees from pixels
-		%>
-		% ===================================================================
-		function out = toDegrees(me,in,axis,inputtype)
-			if ~exist('axis','var') || isempty(axis); axis=''; end
-			if ~exist('inputtype','var') || isempty(inputtype); inputtype = 'pixels'; end
-			out = 0;
-			if length(in)>2; return; end
-			switch axis
-				case 'x'
-					in = in(1);
-					switch inputtype
-						case 'pixels'
-							out = (in - me.screen.xCenter) / me.ppd_;
-						case 'relative'
-							out = (in - 0.5) * (me.screen.screenVals.width /me.ppd_);
-					end
-				case 'y'
-					in = in(1);
-					switch inputtype
-						case 'pixels'
-							out = (in - me.screen.yCenter) / me.ppd_; return
-						case 'relative'
-							out = (in - 0.5) * (me.screen.screenVals.height /me.ppd_);
-					end
-				otherwise
-					switch inputtype
-						case 'pixels'
-							out(1) = (in(1) - me.screen.xCenter) / me.ppd_;
-							out(2) = (in(2) - me.screen.yCenter) / me.ppd_;
-						case 'relative'
-							out(1) = (in - 0.5) * (me.screen.screenVals.width /me.ppd_);
-							out(2) = (in - 0.5) * (me.screen.screenVals.height /me.ppd_);
-					end
 			end
 		end
 

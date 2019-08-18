@@ -214,7 +214,7 @@ classdef screenManager < optickaCore
 			%this is just a rough initial setting, it will be recalculated when we
 			%open the screen before showing stimuli.
 			me.screenVals.fps=Screen('FrameRate',me.screen);
-			if me.screenVals.fps == 0
+			if me.screenVals.fps == 0 || (me.screenVals.fps == 59 && IsWin)
 				me.screenVals.fps = 60;
 			end
 			me.screenVals.ifi=1/me.screenVals.fps;
@@ -229,8 +229,6 @@ classdef screenManager < optickaCore
 			me.movieSettings.nFrames = me.screenVals.fps * 2;
 			me.movieSettings.type = 1;
 			me.movieSettings.codec = 'x264enc'; %space is important for 'rle '
-			
-			%Screen('Preference', 'TextRenderer', 0); %fast text renderer
 			
 			if me.debug == true %we yoke these together but they can then be overridden
 				me.visualDebug = true;
@@ -403,16 +401,17 @@ classdef screenManager < optickaCore
 				me.screenVals.win = me.win; %make a copy
 				me.screenVals.winRect = me.winRect; %make a copy
 				
-				%Priority(MaxPriority(me.win)); %bump our priority to maximum allowed
-				
 				me.screenVals.ifi = Screen('GetFlipInterval', me.win);
 				me.screenVals.fps=Screen('NominalFramerate', me.win);
 				%find our fps if not defined above
-				if me.screenVals.fps==0
+				if me.screenVals.fps == 0
 					me.screenVals.fps=round(1/me.screenVals.ifi);
-					if me.screenVals.fps==0
-						me.screenVals.fps=60;
+					if me.screenVals.fps == 0 || (me.screenVals.fps == 59 && IsWin)
+						me.screenVals.fps = 60;
 					end
+				elseif me.screenVals.fps == 59 && IsWin
+					me.screenVals.fps = 60;
+					me.screenVals.ifi = 1 / 60;
 				end
 				if me.windowed == false %fullscreen
 					me.screenVals.halfisi=me.screenVals.ifi/2;
@@ -460,11 +459,8 @@ classdef screenManager < optickaCore
 					fprintf('---> screenManager: OpenGL blending now set to %s | %s\n', me.srcMode, me.dstMode);
 				end
 				
-				%Priority(0); %be lazy for a while and let other things get done
-				
 				if IsLinux
-					%Screen('Preference', 'TextRenderer', 1);
-					%Screen('Preference', 'DefaultFontName', 'DejaVu Sans');
+					Screen('Preference', 'DefaultFontName', 'DejaVu Sans');
 				end
 				
 				me.screenVals.white = WhiteIndex(me.screen);
@@ -476,7 +472,8 @@ classdef screenManager < optickaCore
 				
 			catch ME
 				close(me);
-				screenVals = prepareScreen(me);
+				Priority(0);
+				prepareScreen(me);
 				rethrow(ME)
 			end
 			

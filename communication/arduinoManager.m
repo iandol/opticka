@@ -2,12 +2,14 @@ classdef arduinoManager < optickaCore
 	%ARDUINOMANAGER Connects and manages arduino communication, uses matlab
 	%hardware package
 	properties
-		port			= ''
-		board			= ''
+		port				= ''
+		board				= ''
 		silentMode		= false %this allows us to be called even if no arduino is attached
 		verbose			= true
 		openGUI			= true
-		mode			= 'original'
+		mode				= 'original' %original is built-in, otherwise needs matlab hardware package
+		rewardPin		= 2
+		rewardTime		= 150
 		availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
 	end
 	properties (SetAccess = private, GetAccess = public)
@@ -67,6 +69,7 @@ classdef arduinoManager < optickaCore
 								me.device.pinMode(i,'output');
 								me.device.digitalWrite(i,0);
 							end
+							me.isOpen = true;
 						otherwise
 							if ~isempty(me.port)
 								me.device = arduino(me.port);
@@ -81,11 +84,12 @@ classdef arduinoManager < optickaCore
 								configurePin(me.device,['D' num2str(i)],'unset')
 								writeDigitalPin(me.device,['D' num2str(i)],0);
 							end
+							me.isOpen = true;
 					end
 					if me.openGUI; GUI(me); end
 					me.silentMode = false;
 				catch ME
-					me.silentMode = true;
+					me.silentMode = true; me.isOpen = false;
 					fprintf('\n\nCouldn''t open Arduino, try a valid name?')
 					getReport(ME)
 				end
@@ -102,8 +106,8 @@ classdef arduinoManager < optickaCore
 		%===============TIMED TTL================%
 		function timedTTL(me, line, time)
 			if me.silentMode==false
-				if ~exist('line','var') || isempty(line); line = 2; end
-				if ~exist('time','var') || isempty(time); time = 500; end
+				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
+				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
 				if ~strcmp(me.mode,'original')
 					time = time - 30; %there is an arduino 30ms delay
 				end
@@ -127,8 +131,8 @@ classdef arduinoManager < optickaCore
 		%===============TIMED DOUBLE TTL================%
 		function timedDoubleTTL(me, line, time)
 			if me.silentMode==false
-				if ~exist('line','var') || isempty(line); line = 2; end
-				if ~exist('time','var') || isempty(time); time = 500; end
+				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
+				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
 				if ~strcmp(me.mode,'original')
 					time = time - 30; %there is an arduino 30ms delay
 				end
@@ -237,11 +241,11 @@ classdef arduinoManager < optickaCore
 				method = get(me.handles.menu,'Value');
 				if method == 1
 					try
-						me.timedTTL(2,val);
+						me.timedTTL(me.rewardPin,val);
 					end
 				elseif method == 2
 					try
-						me.timedDoubleTTL(2,val);
+						me.timedDoubleTTL(me.rewardPin,val);
 					end
 				end
 			end
@@ -253,6 +257,7 @@ classdef arduinoManager < optickaCore
 			me.device = [];
 			me.deviceID = '';
 			me.availablePins = '';
+			me.isOpen = false;
 			me.silentMode = false;
 		end
 		
