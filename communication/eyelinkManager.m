@@ -147,6 +147,7 @@ classdef eyelinkManager < optickaCore
 			try
 				Eyelink('Shutdown'); %just make sure link is closed
 			catch ME
+				getReport(ME)
 				warning('Problems with Eyelink initialise, make sure you install Eyelink Developer libraries!');
 				me.isDummy = true;
 			end
@@ -698,12 +699,12 @@ classdef eyelinkManager < optickaCore
 			if (me.isDummy || me.isConnected) && isa(me.screen,'screenManager') && me.screen.isOpen && ~isempty(me.x) && ~isempty(me.y)
 				xy = toPixels(me,[me.x me.y]);
 				if me.isFixated
-					Screen('DrawDots', me.win, xy, 10, [1 0.5 1 1], [], 1);
+					Screen('DrawDots', me.win, xy, 14, [1 0.5 1 1], [], 1);
 					if me.fixLength > me.fixationTime
 						Screen('DrawText', me.win, 'FIX', xy(1), xy(2), [1 1 1]);
 					end
 				else
-					Screen('DrawDots', me.win, xy, 8, [1 0.5 0 1], [], 1);
+					Screen('DrawDots', me.win, xy, 10, [1 0.5 0 1], [], 1);
 				end
 			end
 		end
@@ -805,12 +806,12 @@ classdef eyelinkManager < optickaCore
 					clearScreen = false;
 				end
 				for i = 1:length(me.stimulusPositions)
-					x = me.stimulusPositions(i).x; %#ok<PROPLC>
-					y = me.stimulusPositions(i).y; %#ok<PROPLC>
+					x = me.stimulusPositions(i).x; 
+					y = me.stimulusPositions(i).y; 
 					size = me.stimulusPositions(i).size;
 					if isempty(size); size = 1 * me.ppd_; end
 					rect = [0 0 size size];
-					rect = round(CenterRectOnPoint(rect, x, y)); %#ok<PROPLC>
+					rect = round(CenterRectOnPoint(rect, x, y)); 
 					if clearScreen; Eyelink('Command', 'clear_screen 0'); end
 					if me.stimulusPositions(i).selected == true
 						Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
@@ -1019,8 +1020,8 @@ classdef eyelinkManager < optickaCore
 						[~, ~, keyCode] = KbCheck(-1);
 						if keyCode(stopkey); yy = 1; xx = 1; break;	end
 						if keyCode(nextKey); yy = 1; break; end
-						if keyCode(calibkey); trackerSetup(me); end
-						if keyCode(driftkey); driftCorrection(me); end
+						if keyCode(calibkey); trackerSetup(me); break; end
+						if keyCode(driftkey); driftCorrection(me); break; end
 						if b == 60; edfMessage(me,'END_FIX');end
 						b=b+1;
 					end

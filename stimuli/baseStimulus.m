@@ -290,8 +290,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
-		function run(me, benchmark, runtime, s, forceScreen)
-		% RUN stimulus: run(benchmark, runtime, s, forceScreen)
+		function run(me, benchmark, runtime, s, forceScreen, showVBL)
+		% RUN stimulus: run(benchmark, runtime, s, forceScreen, showVBL)
 			try
 				warning off
 				if ~exist('benchmark','var') || isempty(benchmark)
@@ -303,9 +303,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if ~exist('s','var') || ~isa(s,'screenManager')
 					s = me.sM;
 					s.blend = true; 
-					s.disableSyncTests = true;
+					s.disableSyncTests = false;
 				end
 				if ~exist('forceScreen','var') || isempty(forceScreen); forceScreen = -1; end
+				if ~exist('showVBL','var') || isempty(showVBL); showVBL = false; end
 
 				oldscreen = s.screen;
 				oldbitdepth = s.bitDepth;
@@ -343,27 +344,33 @@ classdef baseStimulus < optickaCore & dynamicprops
 					Screen('DrawText', s.win, 'Stim will be static for 2 seconds, then animated...', 5,5,[0 0 0]);
 				end
 				
-				Screen('Flip',s.win);
+				flip(s);
 				WaitSecs('YieldSecs',2);
 				a = 1;
-				vbl(a) = Screen('Flip',s.win); b = vbl(a);
+				vbl(a) = flip(s); b = vbl(a);
 				
 				while vbl(end) <= b + runtime
 					draw(me); %draw stimulus
 					finishDrawing(s); %tell PTB/GPU to draw
  					animate(me); %animate stimulus, will be seen on next draw
 					if benchmark
-						vbl(a) = Screen('Flip',s.win,0,2,2);
+						vbl(a) = flip(s,0,2,2);
 					else
-						vbl(a) = Screen('Flip',s.win, vbl(end) + s.screenVals.halfisi); %flip the buffer
+						vbl(a) = flip(s, vbl(end)); %flip the buffer
 					end
 					a = a + 1;
 				end
 				
 				if benchmark; bb=GetSecs; end
-				Screen('Flip',s.win);
+				flip(s);
 				WaitSecs(1);
-				figure;plot(diff(vbl)*1e3);title('VBL Times');ylabel('Time (ms)')
+				if showVBL
+					figure;
+					plot(diff(vbl)*1e3);
+					title(sprintf('VBL Times, should be ~%.2f ms',s.screenVals.ifi*1e3));
+					ylabel('Time (ms)')
+					xlabel('Frames')
+				end
 				Priority(0);
 				ShowCursor;
 				ListenChar(0);

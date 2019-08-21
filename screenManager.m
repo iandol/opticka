@@ -514,10 +514,10 @@ classdef screenManager < optickaCore
 		%> @param vbl - a vbl time from a previous flip
 		%> @return vbl - a vbl from this flip
 		% ===================================================================
-		function vbl = flip(me,vbl)
+		function vbl = flip(me,vbl,varargin)
 			if ~me.isOpen; return; end
 			if exist('vbl','var')
-				vbl = Screen('Flip',me.win, vbl + me.screenVals.halfisi);
+				vbl = Screen('Flip',me.win, vbl + me.screenVals.halfisi,varargin);
 			else
 				vbl = Screen('Flip',me.win);
 			end
