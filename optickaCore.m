@@ -373,9 +373,14 @@ classdef optickaCore < handle
 				[~, me.paths.home] = system('echo $HOME');
 				me.paths.home = regexprep(me.paths.home,'\n','');
 			else
-				me.paths.home = 'c:';
+				me.paths.home = 'C:';
 			end
-			me.paths.savedData = [me.paths.home filesep 'MatlabFiles' filesep 'SavedData'];
+			me.paths.parent = [me.paths.home filesep 'MatlabFiles'];
+			me.paths.savedData = [me.paths.parent filesep 'SavedData'];
+			if ~isfolder(me.paths.savedData)
+				status = mkdir(me.paths.savedData);
+				if status == 0;warning('Could not create savedData folder');end
+			end
 		end
 		
 		% ===================================================================
@@ -406,7 +411,11 @@ classdef optickaCore < handle
 				for i=1:length(fnames)
 					if regexpi(fnames{i},allowedProperties) %only set if allowed property
 						me.salutation(fnames{i},'Constructor parsing input argument');
-						me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+						try
+							me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+						catch
+							me.salutation(fnames{i},'Propery invalid!',true);
+						end
 					end
 				end
 			end

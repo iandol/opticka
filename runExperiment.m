@@ -1,11 +1,18 @@
 % ========================================================================
 %> @brief runExperiment is the main Experiment manager; Inherits from optickaCore
 %>
-%>RUNEXPERIMENT The main class which accepts a task and stimulus object
-%>and runs the stimuli based on the task object passed. The class
-%>controls the fundamental configuration of the screen (calibration, size
-%>etc. via screenManager), and manages communication to the DAQ system using TTL pulses out
-%>and communication over a UDP client<->server socket (via dataConnection).
+%>RUNEXPERIMENT The main class which accepts a task (stimulusSequence) and 
+%>stimulus (metaStimulus) object and runs the stimuli based on the task object passed.
+%>This class uses the fundamental configuration of the screen (calibration, size
+%>etc. via screenManager), and manages communication to the DAQ systems
+%using digital I/O and communication over a UDP client<->server socket (via dataConnection).
+%>
+%> There are 2 main experiment types:
+%>  1) MOC (method of constants) tasks -- uses stimuli and task objects directly to run standard
+%>     randomised variable tasks. See optickatest.m for an example. Does not use the stateMachine.
+%>  2) Behavioural tasks that use state machines for control logic. These
+%>     tasks still use stimuli and task objects to provide stimuli and variable lists), 
+%>but use a state machine to control the task structure.
 %>
 %>  stimuli must be metaStimulus class managing gratingStimulus and friends,
 %>  so for example:
@@ -55,6 +62,8 @@ classdef runExperiment < optickaCore
 		visualDebug logical = false
 		%> draw simple fixation cross during trial?
 		drawFixation logical = false
+		%> draw a photodiode square in a MOC run. For state machine tasks,
+		%> you just add the drawing command
 		%> flip as fast as possible?
 		benchmark logical = false
 		%> verbose logging to command window?
@@ -97,9 +106,9 @@ classdef runExperiment < optickaCore
 	properties (SetAccess = private, GetAccess = public)
 		%> send strobe on next flip?
 		sendStrobe logical = false
-		%> need eyelink sample on next flip?
+		%> need eyetracker sample on next flip?
 		needSample logical = false
-		%> send eyelink SYNCTIME after next flip?
+		%> send eyetracker SYNCTIME after next flip?
 		sendSyncTime logical = false
 		%> stateMachine
 		stateMachine
@@ -142,7 +151,7 @@ classdef runExperiment < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		%> is it run (false) or runTask (true)?
+		%> is it MOC run (false) or stateMachine runTask (true)?
 		isRunTask logical = true
 		%> should we stop the task?
 		stopTask logical = false
@@ -150,7 +159,7 @@ classdef runExperiment < optickaCore
 		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|useDataPixx|logFrames|debug|verbose|screenSettings|benchmark'
 	end
 	
-	events
+	events %causing a major MATLAB 2019a crash when loading .mat files that contain events, removed for the moment
 		%runInfo
 		%calls when we quit
 		%abortRun
@@ -178,7 +187,7 @@ classdef runExperiment < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief The main run loop
+		%> @brief The main run loop for MOC type experiments
 		%>
 		%> run uses built-in loop for experiment control and runs a
 		%> methods-of-constants experiment with the settings passed to it (stimuli,task

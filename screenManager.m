@@ -9,9 +9,13 @@
 classdef screenManager < optickaCore
 	
 	properties
+		%> the monitor to use, 0 is the main display on macOS/Linux
+		%> default value will be set to max(Screen('Screens'))
+		screen double = []
 		%> MBP 1440x900 is 33.2x20.6cm so approx 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
-		%> use calibrateSize.m to measure this value
-		pixelsPerCm double = 44
+		%> use calibrateSize.m to measure this value for each monitor you
+		%> will use.
+		pixelsPerCm double = 36
 		%> distance of subject from CRT -- rad2ang(2*(atan((0.5*1cm)/57.3cm))) equals 1deg
 		distance double = 57.3
 		%> hide the black flash as PTB tests its refresh timing, uses a gamma
@@ -24,7 +28,7 @@ classdef screenManager < optickaCore
 		windowed = false
 		%> change the debug parameters for poorer temporal fidelity but no sync testing etc.
 		debug logical = false
-		%> true = shows the info text and position grid during stimulus presentation
+		%> shows the info text and position grid during stimulus presentation if true
 		visualDebug logical = false
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer uint8 = 1
@@ -41,12 +45,10 @@ classdef screenManager < optickaCore
 		antiAlias double = 0
 		%> background RGBA of display during stimulus presentation
 		backgroundColour double = [0.5 0.5 0.5 0]
-		%> shunt screen center by X degrees
+		%> shunt center by X degrees (coordinates are in degrees from centre of monitor)
 		screenXOffset double = 0
-		%> shunt screen center by Y degrees
+		%> shunt center by Y degrees (coordinates are in degrees from centre of monitor)
 		screenYOffset double = 0
-		%> the monitor to use, 0 is the main display
-		screen double = []
 		%> use OpenGL blending mode
 		blend logical = false
 		%> GL_ONE %src mode
@@ -73,7 +75,7 @@ classdef screenManager < optickaCore
 		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc);
 		%> Each N should be a different display
 		screenToHead = []
-		%> framerate for Display++ (120Hz or 100Hz, empty leaves as is)
+		%> framerate for Display++ (120Hz or 100Hz, empty uses the default OS setup)
 		displayPPRefresh double = []
 	end
 	
@@ -837,16 +839,14 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawCross(me,size,colour,x,y,lineWidth)
-			% drawCross(me,size,colour,x,y,lineWidth)
+			% drawCross(me, size, colour, x, y, lineWidth)
 			if nargin < 6 || isempty(lineWidth); lineWidth = 2; end
 			if nargin < 5 || isempty(y); y = 0; end
 			if nargin < 4 || isempty(x); x = 0; end
 			if nargin < 3 || isempty(colour)
 				if mean(me.backgroundColour(1:3)) <= 0.5
 					colour = [1 1 1 1];
-				elseif  mean(me.backgroundColour(1:3)) > 0.5
-					colour = [0 0 0 1];
-				elseif length(colour) < 4
+				else
 					colour = [0 0 0 1];
 				end
 			end

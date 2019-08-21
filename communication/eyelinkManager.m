@@ -744,6 +744,7 @@ classdef eyelinkManager < optickaCore
 				me.isDummy = false;
 				me.eyeUsed = -1;
 				me.screen = [];
+				trackerClearScreen(me);
 				if me.isRecording == true && ~isempty(me.saveFile)
 					Eyelink('StopRecording');
 					Eyelink('CloseFile');
@@ -758,6 +759,7 @@ classdef eyelinkManager < optickaCore
 							status = movefile(me.tempFile, me.saveFile,'f');
 							if status == 1
 								me.salutation('Close Method',sprintf('Data file copied to ''%s''', me.saveFile),true);
+								trackerDrawText(me,sprintf('Data file copied to ''%s''', me.saveFile));
 							end
 						end
 					catch ME
@@ -765,7 +767,6 @@ classdef eyelinkManager < optickaCore
 						disp(ME.message);
 					end
 				end
-				trackerClearScreen(me);
 			catch ME
 				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
 				trackerClearScreen(me);

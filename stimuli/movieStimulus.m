@@ -7,12 +7,31 @@ classdef movieStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		type = 'movie'
 		fileName = ''
+		%> do we block when getting a frame? This is important, as if it is 1
+		%> then you will drop frames waiting for the the synced video frame.
+		%> Set to 0 this class uses double buffering to keep drawing the previous frame
+		%> unitl a new frame is ready, ensuring other stimuli animate
+		%> smoothly alongside the video. 
+		blocking double = 0
+		%> pixel format for opening movie? 6 is more efficient if H264 used
+		pixelFormat double = []
+		%> how many seconds to preload, -1 tries all
+		preloadSecs double = -1
+		%> additional special flags
+		specialFlags1 double = []
+		%> how to handle looping (1=PTB default)
+		loopStrategy double = 1
+		%> mask out a colour? e.g. [0 0 0]
+		mask double = []
+		%> mask tolerance
+		maskTolerance double = [];
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
-		%> scale is set by size
+		%> scale is dependent on stimulus size and movie width
 		scale = 1
 		family = 'movie'
+		%> handle from OpenMovie
 		movie
 		duration
 		fps
@@ -24,14 +43,18 @@ classdef movieStimulus < baseStimulus
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
 		typeList = {'movie'}
 		fileNameList = 'filerequestor';
-		interpMethodList = {'nearest','linear','spline','cubic'}
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> shader for masking
+		shader
+		%> texture buffer for non-blocking movie playback, this is the
+		%> previous frame until a new frame is available
+		buffertex = -1
 		%> allowed properties passed to object upon construction
-		allowedProperties='type|fileName';
+		allowedProperties='fileName|blocking|pixelFormat|preloadSecs|specialFlags1|loopStrategy|mask|maskTolerance';
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'movie|duration|fps|width|height|count|scale|fileName|interpMethod|pixelScale'
+		ignoreProperties = 'movie|duration|fps|width|height|count|scale|fileName|pixelFormat|preloadSecs|specialFlags1|loopStrategy'
 	end
 	
 	%=======================================================================
@@ -48,30 +71,31 @@ classdef movieStimulus < baseStimulus
 		%>
 		%> @return instance of opticka class.
 		% ===================================================================
-		function obj = movieStimulus(varargin)
+		function me = movieStimulus(varargin)
 			if nargin == 0;varargin.family = 'texture';end
-			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
-			obj.size = 1; %override default
+			me=me@baseStimulus(varargin); %we call the superclass constructor first
+			me.size = 0; %override default
+			me.texture = -1; %override default
 			if nargin>0
-				obj.parseArgs(varargin, obj.allowedProperties);
+				me.parseArgs(varargin, me.allowedProperties);
 			end
 			
-			if isempty(obj.fileName) %use our default
+			if isempty(me.fileName) %use our default
 				p = mfilename('fullpath');
 				p = fileparts(p);
-				obj.fileName = [p filesep 'monkey.mp4'];
+				me.fileName = [p filesep 'monkey-dance.mp4'];
 			end
 			
-			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			obj.salutation('constructor','Texture Stimulus initialisation complete');
+			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.salutation('constructor','Texture Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
 		%> @brief Setup this object in preperation for use
 		%> When displaying a stimulus object, the main properties that are to be
 		%> modified are copied into cache copies of the property, both to convert from 
-		%> visual description (c/d, Hz, degrees) to
-		%> computer metrics; and to be animated and modified as independant
+		%> user-friendly visual description (c/d, Hz, degrees) to
+		%> computer pixels metrics; and to be animated and modified as independant
 		%> variables. So xPosition is copied to xPositionOut and converted from
 		%> degrees to pixels. The animation and drawing functions use these modified
 		%> properties, and when they are updated, for example to change to a new
@@ -79,99 +103,113 @@ classdef movieStimulus < baseStimulus
 		%> properties. This method initialises the object in preperation for display.
 		%>
 		%> @param sM screenManager object for reference
-		%> @param in matrix for conversion to a PTB texture
 		% ===================================================================
-		function setup(obj,sM,in)
+		function setup(me, sM)
 			
-			reset(obj);
-			obj.inSetup = true;
-			if isempty(obj.isVisible)
-				obj.show;
+			reset(me);
+			me.inSetup = true;
+			if isempty(me.isVisible)
+				me.show;
 			end
 			
-			if ~exist('in','var')
-				in = [];
+			if isempty(me.isVisible)
+				me.show;
 			end
 			
-			if isempty(obj.isVisible)
-				obj.show;
-			end
-			
-			obj.sM = sM;
-			obj.ppd=sM.ppd;
+			me.sM = sM;
+			me.ppd=sM.ppd;
 
-			fn = fieldnames(movieStimulus);
+			fn = fieldnames(me);
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=obj.addprop([fn{j} 'Out']);
+				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
+					p=me.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 				end
-				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
-					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
-			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
-			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
-			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
-			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			obj.doDots = false;
-			obj.doMotion = false;
-			obj.doDrift = false;
-			obj.doFlash = false;
+			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
+			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
+			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
+			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
+			me.doDots = false;
+			me.doMotion = false;
+			me.doDrift = false;
+			me.doFlash = false;
 			
-			if obj.speed>0 %we need to say this needs animating
-				obj.doMotion=true;
- 				%sM.task.stimIsMoving=[sM.task.stimIsMoving i];
+			if me.speed>0 %we need to say this needs animating
+				me.doMotion=true;
 			else
-				obj.doMotion=false;
+				me.doMotion=false;
 			end
 			
-			t=tic;
-			preloadsecs = 2;
-			flags1 = [];
-			pixelformat = 4;
-			[obj.movie, obj.duration, obj.fps, obj.width, obj.height] = Screen('OpenMovie', ...
-				obj.sM.win, obj.fileName, [], preloadsecs, flags1, pixelformat);WaitSecs(0.5);
-			fprintf('--->>> movieStimulus: %s  : %f seconds duration, %f fps, w x h = %i x %i, in %ims\n', obj.fileName, obj.duration, obj.fps, obj.width, obj.height, round(toc(t)*1e3));
+			tic;
+			[me.movie, me.duration, me.fps, me.width, me.height] = Screen('OpenMovie', ...
+				me.sM.win, me.fileName, [], me.preloadSecs, me.specialFlags1,...
+				me.pixelFormat);
+			fprintf('\n--->>> movieStimulus: %s\n\t%.2f seconds duration, %f fps, w x h = %i x %i, in %ims\n', ...
+				me.fileName, me.duration, me.fps, me.width, me.height, round(toc*1e3));
+			fprintf('\tBlocking: %i | Loop: %i | Preloadsecs: %i | Pixelformat: %i | Flags: %i\n', me.blocking, ...
+				me.loopStrategy, me.preloadSecs, me.pixelFormat, me.specialFlags1);
 
-			wdeg = obj.width / obj.ppd;
-			hdeg = obj.height / obj.ppd;
+			wdeg = me.width / me.ppd;
+			hdeg = me.height / me.ppd;
 			
-			if obj.size > 0
-				obj.scale = obj.sizeOut / wdeg;
+			if me.size > 0
+				me.scale = me.sizeOut / wdeg;
 			end
 			
-			obj.inSetup = false;
-			computePosition(obj)
-			setRect(obj);
+			me.shader = [];
+			if ~isempty(me.mask)
+				me.shader = CreateSinglePassImageProcessingShader(me.sM.win, 'BackgroundMaskOut', me.mask, me.maskTolerance);
+			end
+			
+			me.inSetup = false;
+			computePosition(me)
+			setRect(me);
 		end
 
 		% ===================================================================
 		%> @brief Update this stimulus object structure for screenManager
 		%>
 		% ===================================================================
-		function update(obj)
-			obj.scale = obj.sizeOut;
-			resetTicks(obj);
-			computePosition(obj);
-			setRect(obj);
-			Screen('SetMovieTimeIndex', obj.movie, 0); %reset movie
+		function update(me)
+			Screen('PlayMovie', me.movie, 0);
+			Screen('SetMovieTimeIndex', me.movie, 0); %reset movie
+			if ~isempty(me.texture) && me.texture > 0
+				try Screen('Close',me.texture); end %#ok<*TRYNC>
+			elseif ~isempty(me.buffertex) && me.buffertex ~= me.texture
+				try Screen('Close',me.buffertex); end 
+			end
+			me.texture = []; me.buffertex = [];
+			me.scale = me.sizeOut;
+			resetTicks(me);
+			computePosition(me);
+			setRect(me);
 		end
 		
 		% ===================================================================
 		%> @brief Draw this stimulus object
 		%>
 		% ===================================================================
-		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
-				if obj.tick == 0; Screen('PlayMovie', obj.movie, 1, 1); end
-				obj.texture = Screen('GetMovieImage', obj.sM.win, obj.movie);
-				Screen('DrawTexture',obj.sM.win,obj.texture,[],obj.mvRect);
-				Screen('Close',obj.texture);
-				obj.tick = obj.tick + 1;
+		function draw(me)
+			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
+				if me.tick == 0 || (me.delayTicks > 0 && me.tick == me.delayTicks) 
+					Screen('PlayMovie', me.movie, 1, me.loopStrategy); 
+				end
+				me.texture = Screen('GetMovieImage', me.sM.win, me.movie, me.blocking);
+				if me.texture > 0
+					if me.buffertex > 0; try Screen('Close', me.buffertex); end; me.buffertex=-1; end
+					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,[],[],[],[],me.shader);
+					me.buffertex = me.texture; %copy new texture to buffer
+				elseif me.buffertex > 0
+					Screen('DrawTexture', me.sM.win, me.buffertex, [], me.mvRect,[],[],[],[],me.shader)
+				end
+				me.tick = me.tick + 1;
 			end
 		end
 		
@@ -179,16 +217,16 @@ classdef movieStimulus < baseStimulus
 		%> @brief Animate an structure for screenManager
 		%>
 		% ===================================================================
-		function animate(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
-				if obj.mouseOverride
-					getMousePosition(obj);
-					if obj.mouseValid
-						obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+		function animate(me)
+			if me.isVisible && me.tick >= me.delayTicks
+				if me.mouseOverride
+					getMousePosition(me);
+					if me.mouseValid
+						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
 					end
 				end
-				if obj.doMotion == 1
-					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
+				if me.doMotion == 1
+					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 			end
 		end
@@ -197,124 +235,36 @@ classdef movieStimulus < baseStimulus
 		%> @brief Reset an structure for screenManager
 		%>
 		% ===================================================================
-		function reset(obj)
-			resetTicks(obj);
-			obj.texture = [];
-			obj.scale = 1;
-			obj.mvRect = [];
-			obj.dstRect = [];
-			obj.removeTmpProperties;
-			if ~isempty(obj.movie)
-				try Screen('CloseMovie', obj.movie); end
+		function reset(me)
+			resetTicks(me);
+			me.scale = 1;
+			me.mvRect = [];
+			me.dstRect = [];
+			me.removeTmpProperties;
+			ndrop=-1;
+			if ~isempty(me.texture) && me.texture>0 
+				try Screen('Close',me.texture); end
+				if me.texture ~= me.buffertex
+					if ~isempty(me.buffertex) && me.buffertex>0; try Screen('Close',me.buffertex); end;	end
+				end
+				me.buffertex = []; me.texture = [];
 			end
-			obj.movie = [];
+			if ~isempty(me.movie)
+				try ndrop=Screen('Playmovie', me.movie, 0); end %#ok<*TRYNC>
+				fprintf('---> Number of dropped movie frames: %i\n',ndrop)
+				try Screen('CloseMovie', me.movie); end
+			end
+			me.movie = [];
 		end
 		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
 		function findFile(me)
 			[f,p] = uigetfile({ '*.*',  'All Files (*.*)'},'Select Movie File');
 			if ischar(f)
 				me.fileName = [p f];
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Run Stimulus in a window to preview
-		%>
-		% ===================================================================
-		function run(obj, benchmark, runtime, s, forceScreen)
-		% RUN stimulus: run(benchmark, runtime, s, forceScreen)
-			try
-				warning off
-				if ~exist('benchmark','var') || isempty(benchmark)
-					benchmark=false;
-				end
-				if ~exist('runtime','var') || isempty(runtime)
-					runtime = 2; %seconds to run
-				end
-				if ~exist('s','var') || ~isa(s,'screenManager')
-					s = screenManager('verbose',false,'blend',true,...
-						'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
-						'disableSyncTests',true,...
-						'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
-						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
-				end
-				if ~exist('forceScreen','var'); forceScreen = -1; end
-
-				oldscreen = s.screen;
-				oldbitdepth = s.bitDepth;
-				if forceScreen >= 0
-					s.screen = forceScreen;
-					if forceScreen == 0
-						s.bitDepth = 'FloatingPoint32BitIfPossible';
-					end
-				end
-				prepareScreen(s);
-				
-				oldwindowed = s.windowed;
-				if benchmark
-					s.windowed = false;
-				elseif forceScreen > -1
-					s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2]; %middle of screen
-				end
-				
-				if ~s.isOpen
-					open(s); %open PTB screen
-				end
-				setup(obj,s); %setup our stimulus object
-				
-				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
-				
-				if benchmark
-					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS on command window at end.', 5,5,[0 0 0]);
-				else
-					Screen('DrawText', s.win, 'Stim will be static for 2 seconds, then animated...', 5,5,[0 0 0]);
-				end
-				
-				Screen('Flip',s.win);
-				WaitSecs('YieldSecs',2);
-				vbl = Screen('Flip',s.win); b = vbl;
-				
-				while vbl <= b + runtime
-					draw(obj); %draw stimulus
-					Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
-					%animate(obj); %animate stimulus, will be seen on next draw
-					if benchmark
-						vbl = Screen('Flip',s.win,0,2,2);
-					else
-						vbl = Screen('Flip',s.win, vbl + s.screenVals.halfisi); %flip the buffer
-					end
-				end
-				
-				if benchmark; bb=GetSecs; end
-				WaitSecs(1);
-				Screen('Flip',s.win);
-				WaitSecs(0.2);
-				
-				Priority(0);
-				ShowCursor;
-				ListenChar(0);
-				reset(obj); %reset our stimulus ready for use again
-				close(s); %close screen
-				s.screen = oldscreen;
-				s.windowed = oldwindowed;
-				s.bitDepth = oldbitdepth;
-				if benchmark
-					fps = (s.screenVals.fps*runtime) / (bb-b);
-					fprintf('\n\n======> SPEED = %g fps <=======\n', fps);
-				end
-				clear fps benchmark runtime b bb i; %clear up a bit
-				warning on
-			catch ME
-				warning on
-				getReport(ME)
-				Priority(0);
-				if exist('s','var') && isa(s,'screenManager')
-					close(s);
-				end
-				warning on
-				clear fps benchmark runtime b bb i; %clear up a bit
-				reset(obj); %reset our stimulus ready for use again
-				rethrow(ME)				
 			end
 		end
 		
@@ -330,19 +280,19 @@ classdef movieStimulus < baseStimulus
 		%>  This is overridden from parent class so we can scale texture
 		%>  using the size value
 		% ===================================================================
-		function setRect(obj)
-			if ~isempty(obj.movie)
-				obj.dstRect = CenterRect([0 0 obj.width obj.height],obj.sM.winRect);
-				obj.dstRect = ScaleRect(obj.dstRect, obj.scale, obj.scale);
-				if obj.mouseOverride && obj.mouseValid
-					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
+		function setRect(me)
+			if ~isempty(me.movie)
+				me.dstRect = CenterRect([0 0 me.width me.height],me.sM.winRect);
+				me.dstRect = ScaleRect(me.dstRect, me.scale, me.scale);
+				if me.mouseOverride && me.mouseValid
+					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				else
-					obj.dstRect=CenterRectOnPointd(obj.dstRect, obj.xOut, obj.yOut);
+					me.dstRect=CenterRectOnPointd(me.dstRect, me.xOut, me.yOut);
 				end
-				if obj.verbose
-					fprintf('---> stimulus TEXTURE dstRect = %5.5g %5.5g %5.5g %5.5g\n',obj.dstRect(1), obj.dstRect(2),obj.dstRect(3),obj.dstRect(4));
+				if me.verbose
+					fprintf('---> stimulus TEXTURE dstRect = %5.5g %5.5g %5.5g %5.5g\n',me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4));
 				end
-				obj.mvRect = obj.dstRect;
+				me.mvRect = me.dstRect;
 			end
 		end
 		

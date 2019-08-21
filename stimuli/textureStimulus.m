@@ -7,9 +7,9 @@
 classdef textureStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		type = 'picture'
+		fileName = ''
 		contrast = 1
 		interpMethod = 'nearest'
-		fileName = ''
 		%>scale up the texture in the bar
 		pixelScale = 1 
 	end

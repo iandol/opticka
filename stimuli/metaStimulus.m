@@ -41,6 +41,7 @@ classdef metaStimulus < optickaCore
 		setChoice = 0;
 		%>
 		flashRate = 0.25
+		%>
 	end
 	
 	%--------------------DEPENDENT PROPERTIES----------%

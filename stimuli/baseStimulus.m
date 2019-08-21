@@ -130,15 +130,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = baseStimulus(varargin)
+		function me = baseStimulus(varargin)
 			if nargin == 0; varargin.name = 'baseStimulus'; end
-			obj=obj@optickaCore(varargin); %superclass constructor
+			me=me@optickaCore(varargin); %superclass constructor
 			
-			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
+			if nargin > 0; me.parseArgs(varargin,me.allowedProperties); end
 			
-			if isempty(obj.sM) %add a default screenManager, overwritten on setup
-				obj.sM = screenManager('verbose',false,'name','default');
-				obj.ppd = obj.sM.ppd;
+			if isempty(me.sM) %add a default screenManager, overwritten on setup
+				me.sM = screenManager('verbose',false,'name','default');
+				me.ppd = me.sM.ppd;
 			end
 		end
 		
@@ -146,17 +146,17 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief colour Get method
 		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
 		% ===================================================================
-		function value = get.colour(obj)
-			len=length(obj.colour);
+		function value = get.colour(me)
+			len=length(me.colour);
 			if len == 4 || len == 3
-				value = [obj.colour(1:3) obj.alpha]; %force our alpha to override
+				value = [me.colour(1:3) me.alpha]; %force our alpha to override
 			elseif len == 1
-				value = [obj.colour obj.colour obj.colour obj.alpha]; %construct RGBA
+				value = [me.colour me.colour me.colour me.alpha]; %construct RGBA
 			else
-				if isa(obj,'gaborStimulus') || isa(obj,'gratingStimulus')
+				if isa(me,'gaborStimulus') || isa(me,'gratingStimulus')
 					value = []; %return no colour to procedural gratings
 				else
-					value = [1 1 1 obj.alpha]; %return white for everything else
+					value = [1 1 1 me.alpha]; %return white for everything else
 				end
 			end
 		end
@@ -165,11 +165,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief delta Get method
 		%> delta is the normalised number of pixels per frame to move a stimulus
 		% ===================================================================
-		function value = get.delta(obj)
-			if isempty(obj.findprop('speedOut'))
-				value = (obj.speed * obj.ppd) * obj.sM.screenVals.ifi;
+		function value = get.delta(me)
+			if isempty(me.findprop('speedOut'))
+				value = (me.speed * me.ppd) * me.sM.screenVals.ifi;
 			else
-				value = (obj.speedOut * obj.ppd) * obj.sM.screenVals.ifi;
+				value = (me.speedOut * me.ppd) * me.sM.screenVals.ifi;
 			end
 		end
 		
@@ -177,18 +177,18 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief dX Get method
 		%> X position increment for a given delta and angle
 		% ===================================================================
-		function value = get.dX(obj)
-			if ~isempty(obj.findprop('motionAngle'))
-				if isempty(obj.findprop('motionAngleOut'))
-					[value,~]=obj.updatePosition(obj.delta,obj.motionAngle);
+		function value = get.dX(me)
+			if ~isempty(me.findprop('motionAngle'))
+				if isempty(me.findprop('motionAngleOut'))
+					[value,~]=me.updatePosition(me.delta,me.motionAngle);
 				else
-					[value,~]=obj.updatePosition(obj.delta,obj.motionAngleOut);
+					[value,~]=me.updatePosition(me.delta,me.motionAngleOut);
 				end
 			else
-				if isempty(obj.findprop('angleOut'))
-					[value,~]=obj.updatePosition(obj.delta,obj.angle);
+				if isempty(me.findprop('angleOut'))
+					[value,~]=me.updatePosition(me.delta,me.angle);
 				else
-					[value,~]=obj.updatePosition(obj.delta,obj.angleOut);
+					[value,~]=me.updatePosition(me.delta,me.angleOut);
 				end
 			end
 		end
@@ -197,18 +197,18 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief dY Get method
 		%> Y position increment for a given delta and angle
 		% ===================================================================
-		function value = get.dY(obj)
-			if ~isempty(obj.findprop('motionAngle'))
-				if isempty(obj.findprop('motionAngleOut'))
-					[~,value]=obj.updatePosition(obj.delta,obj.motionAngle);
+		function value = get.dY(me)
+			if ~isempty(me.findprop('motionAngle'))
+				if isempty(me.findprop('motionAngleOut'))
+					[~,value]=me.updatePosition(me.delta,me.motionAngle);
 				else
-					[~,value]=obj.updatePosition(obj.delta,obj.motionAngleOut);
+					[~,value]=me.updatePosition(me.delta,me.motionAngleOut);
 				end
 			else
-				if isempty(obj.findprop('angleOut'))
-					[~,value]=obj.updatePosition(obj.delta,obj.angle);
+				if isempty(me.findprop('angleOut'))
+					[~,value]=me.updatePosition(me.delta,me.angle);
 				else
-					[~,value]=obj.updatePosition(obj.delta,obj.angleOut);
+					[~,value]=me.updatePosition(me.delta,me.angleOut);
 				end
 			end
 		end
@@ -217,49 +217,49 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief Shorthand to set isVisible=true.
 		%>
 		% ===================================================================
-		function show(obj)
-			obj.isVisible = true;
+		function show(me)
+			me.isVisible = true;
 		end
 		
 		% ===================================================================
 		%> @brief Shorthand to set isVisible=false.
 		%>
 		% ===================================================================
-		function hide(obj)
-			obj.isVisible = false;
+		function hide(me)
+			me.isVisible = false;
 		end
 		
 		% ===================================================================
 		%> @brief we reset the various tick counters for our stimulus
 		%>
 		% ===================================================================
-		function resetTicks(obj)
+		function resetTicks(me)
 			global mouseTick %shared across all stimuli
-			if max(obj.delayTime) > 0 %delay display a number of frames 
-				if length(obj.delayTime) == 1
-					obj.delayTicks = round(obj.delayTime/obj.sM.screenVals.ifi);
-				elseif length(obj.delayTime) == 2
-					time = randi([obj.delayTime(1)*1000 obj.delayTime(2)*1000])/1000;
-					obj.delayTicks = round(time/obj.sM.screenVals.ifi);
+			if max(me.delayTime) > 0 %delay display a number of frames 
+				if length(me.delayTime) == 1
+					me.delayTicks = round(me.delayTime/me.sM.screenVals.ifi);
+				elseif length(me.delayTime) == 2
+					time = randi([me.delayTime(1)*1000 me.delayTime(2)*1000])/1000;
+					me.delayTicks = round(time/me.sM.screenVals.ifi);
 				end
 			else
-				obj.delayTicks = 0;
+				me.delayTicks = 0;
 			end
-			if min(obj.offTime) < Inf %delay display a number of frames 
-				if length(obj.offTime) == 1
-					obj.offTicks = round(obj.offTime/obj.sM.screenVals.ifi);
-				elseif length(obj.offTime) == 2
-					time = randi([obj.offTime(1)*1000 obj.offTime(2)*1000])/1000;
-					obj.offTicks = round(time/obj.sM.screenVals.ifi);
+			if min(me.offTime) < Inf %delay display a number of frames 
+				if length(me.offTime) == 1
+					me.offTicks = round(me.offTime/me.sM.screenVals.ifi);
+				elseif length(me.offTime) == 2
+					time = randi([me.offTime(1)*1000 me.offTime(2)*1000])/1000;
+					me.offTicks = round(time/me.sM.screenVals.ifi);
 				end
 			else
-				obj.offTicks = Inf;
+				me.offTicks = Inf;
 			end
 			mouseTick = 1;
-			if obj.mouseOverride
-				getMousePosition(obj);
+			if me.mouseOverride
+				getMousePosition(me);
 			end
-			obj.tick = 0; 
+			me.tick = 0; 
 		end
 		
 		% ===================================================================
@@ -270,19 +270,19 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> This sets mouseX and mouseY and mouseValid if mouse is within
 		%> PTB screen (useful for mouse override positioning for stimuli)
 		% ===================================================================
-		function getMousePosition(obj)
+		function getMousePosition(me)
 			global mouseTick
-			obj.mouseValid = false;
-			if obj.tick > mouseTick
-				if isa(obj.sM,'screenManager') && obj.sM.isOpen
-					[obj.mouseX,obj.mouseY] = GetMouse(obj.sM.win);
-					if obj.mouseX <= obj.sM.screenVals.width && obj.mouseY <= obj.sM.screenVals.height
-						obj.mouseValid = true;
+			me.mouseValid = false;
+			if me.tick > mouseTick
+				if isa(me.sM,'screenManager') && me.sM.isOpen
+					[me.mouseX,me.mouseY] = GetMouse(me.sM.win);
+					if me.mouseX <= me.sM.screenVals.width && me.mouseY <= me.sM.screenVals.height
+						me.mouseValid = true;
 					end
 				else
-					[obj.mouseX,obj.mouseY] = GetMouse;
+					[me.mouseX,me.mouseY] = GetMouse;
 				end
-				mouseTick = obj.tick; %set global so no other object with same tick number can call this again
+				mouseTick = me.tick; %set global so no other object with same tick number can call this again
 			end
 		end
 		
@@ -290,7 +290,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
-		function run(obj, benchmark, runtime, s, forceScreen)
+		function run(me, benchmark, runtime, s, forceScreen)
 		% RUN stimulus: run(benchmark, runtime, s, forceScreen)
 			try
 				warning off
@@ -301,13 +301,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 					runtime = 2; %seconds to run
 				end
 				if ~exist('s','var') || ~isa(s,'screenManager')
-					s = screenManager('verbose',false,'blend',true,...
-						'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
-						'disableSyncTests',true,...
-						'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
-						'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
+					s = me.sM;
+					s.blend = true; 
+					s.disableSyncTests = true;
 				end
-				if ~exist('forceScreen','var'); forceScreen = -1; end
+				if ~exist('forceScreen','var') || isempty(forceScreen); forceScreen = -1; end
 
 				oldscreen = s.screen;
 				oldbitdepth = s.bitDepth;
@@ -329,11 +327,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if ~s.isOpen
 					open(s); %open PTB screen
 				end
-				setup(obj,s); %setup our stimulus object
+				setup(me,s); %setup our stimulus object
 				
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
-				if ~strcmpi(obj.type,'movie'); draw(obj); end
+				if ~strcmpi(me.type,'movie'); draw(me); end
 				if s.visualDebug
 					drawGrid(s); %draw +-5 degree dot grid
 					drawScreenCenter(s); %centre spot
@@ -347,32 +345,29 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				Screen('Flip',s.win);
 				WaitSecs('YieldSecs',2);
-				vbl = Screen('Flip',s.win); b = vbl;
+				a = 1;
+				vbl(a) = Screen('Flip',s.win); b = vbl(a);
 				
-				while vbl <= b + runtime
-					draw(obj); %draw stimulus
-					if ~benchmark && s.visualDebug
-						drawGrid(s); %draw +-5 degree dot grid
-						drawScreenCenter(s); %centre spot
-					end
-					Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
-					animate(obj); %animate stimulus, will be seen on next draw
+				while vbl(end) <= b + runtime
+					draw(me); %draw stimulus
+					finishDrawing(s); %tell PTB/GPU to draw
+ 					animate(me); %animate stimulus, will be seen on next draw
 					if benchmark
-						vbl = Screen('Flip',s.win,0,2,2);
+						vbl(a) = Screen('Flip',s.win,0,2,2);
 					else
-						vbl = Screen('Flip',s.win, vbl + s.screenVals.halfisi); %flip the buffer
+						vbl(a) = Screen('Flip',s.win, vbl(end) + s.screenVals.halfisi); %flip the buffer
 					end
+					a = a + 1;
 				end
 				
 				if benchmark; bb=GetSecs; end
-				WaitSecs(1);
 				Screen('Flip',s.win);
-				WaitSecs(0.2);
-				
+				WaitSecs(1);
+				figure;plot(diff(vbl)*1e3);title('VBL Times');ylabel('Time (ms)')
 				Priority(0);
 				ShowCursor;
 				ListenChar(0);
-				reset(obj); %reset our stimulus ready for use again
+				reset(me); %reset our stimulus ready for use again
 				close(s); %close screen
 				s.screen = oldscreen;
 				s.windowed = oldwindowed;
@@ -392,7 +387,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				warning on
 				clear fps benchmark runtime b bb i; %clear up a bit
-				reset(obj); %reset our stimulus ready for use again
+				reset(me); %reset our stimulus ready for use again
 				rethrow(ME)				
 			end
 		end
@@ -401,17 +396,17 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief make a GUI properties panel for this object
 		%>
 		% ===================================================================
-		function handles = makePanel(obj, parent)
+		function handles = makePanel(me, parent)
 			
-			if ~isempty(obj.handles) && isa(obj.handles.root,'uiextras.BoxPanel') && ishandle(obj.handles.root)
-				fprintf('---> Panel already open for %s\n', obj.fullName);
+			if ~isempty(me.handles) && isa(me.handles.root,'uiextras.BoxPanel') && ishandle(me.handles.root)
+				fprintf('---> Panel already open for %s\n', me.fullName);
 				return
 			end
 			
 			if ~exist('parent','var')
 				parent = figure('Tag','gFig',...
-					'Name', [obj.fullName 'Properties'], ...
-					'CloseRequestFcn', @obj.closePanel,...
+					'Name', [me.fullName 'Properties'], ...
+					'CloseRequestFcn', @me.closePanel,...
 					'MenuBar', 'none', ...
 					'NumberTitle', 'off');
 				figpos(1,[800 300]);
@@ -433,7 +428,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			handles.parent = parent;
 			handles.root = uiextras.BoxPanel('Parent',parent,...
-				'Title',obj.fullName,...
+				'Title',me.fullName,...
 				'FontName',SansFont,...
 				'FontSize',fsmall,...
 				'FontWeight','normal',...
@@ -449,11 +444,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 			
 			idx = {'handles.grid1','handles.grid2','handles.grid3'};
 			
-			pr = findAttributesandType(obj,'SetAccess','public','notlogical');
+			pr = findAttributesandType(me,'SetAccess','public','notlogical');
 			pr = sort(pr);
 			lp = ceil(length(pr)/2);
 			
-			pr2 = findAttributesandType(obj,'SetAccess','public','logical');
+			pr2 = findAttributesandType(me,'SetAccess','public','logical');
 			pr2 = sort(pr2);
 			lp2 = length(pr2);
 
@@ -461,27 +456,27 @@ classdef baseStimulus < optickaCore & dynamicprops
 				for j = 1:lp
 					cur = lp*(i-1)+j;
 					if cur <= length(pr)
-						val = obj.(pr{cur});
+						val = me.(pr{cur});
 						if ischar(val)
-							if isprop(obj,[pr{cur} 'List'])
-								if strcmp(obj.([pr{cur} 'List']),'filerequestor')
+							if isprop(me,[pr{cur} 'List'])
+								if strcmp(me.([pr{cur} 'List']),'filerequestor')
 									val = regexprep(val,'\s+',' ');
 									handles.([pr{cur} '_char']) = uicontrol('Style','edit',...
 										'Parent',eval(idx{i}),...
 										'Tag',['panel' pr{cur}],...
-										'Callback',@obj.readPanel,...
+										'Callback',@me.readPanel,...
 										'String',val,...
 										'FontName',MonoFont,...
 										'BackgroundColor',bgcoloredit);
 								else
-									txt=obj.([pr{cur} 'List']);
-									fidx = strcmpi(txt,obj.(pr{cur}));
+									txt=me.([pr{cur} 'List']);
+									fidx = strcmpi(txt,me.(pr{cur}));
 									fidx = find(fidx > 0);
 									handles.([pr{cur} '_list']) = uicontrol('Style','popupmenu',...
 										'Parent',eval(idx{i}),...
 										'Tag',['panel' pr{cur} 'List'],...
 										'String',txt,...
-										'Callback',@obj.readPanel,...
+										'Callback',@me.readPanel,...
 										'Value',fidx,...
 										'BackgroundColor',bgcolor);
 								end
@@ -490,7 +485,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 								handles.([pr{cur} '_char']) = uicontrol('Style','edit',...
 									'Parent',eval(idx{i}),...
 									'Tag',['panel' pr{cur}],...
-									'Callback',@obj.readPanel,...
+									'Callback',@me.readPanel,...
 									'String',val,...
 									'BackgroundColor',bgcoloredit);
 							end
@@ -501,7 +496,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 								'Parent',eval(idx{i}),...
 								'Tag',['panel' pr{cur}],...
 								'String',val,...
-								'Callback',@obj.readPanel,...
+								'Callback',@me.readPanel,...
 								'FontName',MonoFont,...
 								'BackgroundColor',bgcoloredit);
 						else
@@ -515,15 +510,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 				for j = 1:lp
 					cur = lp*(i-1)+j;
 					if cur <= length(pr)
-						if isprop(obj,[pr{cur} 'List'])
-							if strcmp(obj.([pr{cur} 'List']),'filerequestor')
+						if isprop(me,[pr{cur} 'List'])
+							if strcmp(me.([pr{cur} 'List']),'filerequestor')
 								uicontrol('Style','pushbutton',...
 								'Parent',eval(idx{i}),...
 								'HorizontalAlignment','left',...
 								'String','Select file...',...
 								'FontName',SansFont,...
 								'Tag',[pr{cur} '_button'],...
-								'Callback',@obj.selectFilePanel,...
+								'Callback',@me.selectFilePanel,...
 								'FontSize', fsmall);
 							else
 								uicontrol('Style','text',...
@@ -551,7 +546,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				set(eval(idx{i}),'ColumnSizes',[-2 -1]);
 			end
 			for j = 1:lp2
-				val = obj.(pr2{j});
+				val = me.(pr2{j});
 				if j <= length(pr2)
 					handles.([pr2{j} '_bool']) = uicontrol('Style','checkbox',...
 						'Parent',eval(idx{end}),...
@@ -566,9 +561,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 			handles.readButton = uicontrol('Style','pushbutton',...
 				'Parent',eval(idx{end}),...
 				'Tag','readButton',...
-				'Callback',@obj.readPanel,...
+				'Callback',@me.readPanel,...
 				'String','Update');
-			obj.handles = handles;
+			me.handles = handles;
 			
 		end
 		
@@ -576,13 +571,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief read values from a GUI properties panel for this object
 		%>
 		% ===================================================================
-		function selectFilePanel(obj,varargin)
+		function selectFilePanel(me,varargin)
 			if nargin > 0
 				hin = varargin{1};
 				if ishandle(hin)
 					[f,p] = uigetfile('*.*','Select File:');
 					re = regexp(get(hin,'Tag'),'(.+)_button','tokens','once');
-					hout = obj.handles.([re{1} '_char']);
+					hout = me.handles.([re{1} '_char']);
 					if ishandle(hout)
 						set(hout,'String', [p f]);
 					end
@@ -594,15 +589,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @brief read values from a GUI properties panel for this object
 		%>
 		% ===================================================================
-		function readPanel(obj,varargin)
-			if isempty(obj.handles) || ~isa(obj.handles.root,'uiextras.BoxPanel')
+		function readPanel(me,varargin)
+			if isempty(me.handles) || ~isa(me.handles.root,'uiextras.BoxPanel')
 				return
 			end
 				
-			pList = findAttributes(obj,'SetAccess','public'); %our public properties
-			dList = findAttributes(obj,'Dependent', true); %find dependent properties
+			pList = findAttributes(me,'SetAccess','public'); %our public properties
+			dList = findAttributes(me,'Dependent', true); %find dependent properties
 			pList = setdiff(pList,dList); %remove dependent properties as we don't want to set them!
-			handleList = fieldnames(obj.handles); %the handle name list
+			handleList = fieldnames(me.handles); %the handle name list
 			handleListMod = regexprep(handleList,'_.+$',''); %we remove the suffix so names are equivalent
 			outList = intersect(pList,handleListMod);
 			
@@ -614,70 +609,70 @@ classdef baseStimulus < optickaCore & dynamicprops
 				while iscell(handleType);handleType=handleType{1};end
 				switch handleType
 					case 'list'
-						str = get(obj.handles.(handleName),'String');
-						v = get(obj.handles.(handleName),'Value');
-						obj.(handleNameOut) = str{v};
+						str = get(me.handles.(handleName),'String');
+						v = get(me.handles.(handleName),'Value');
+						me.(handleNameOut) = str{v};
 					case 'bool'
-						obj.(handleNameOut) = logical(get(obj.handles.(handleName),'Value'));
-						if isempty(obj.(handleNameOut))
-							obj.(handleNameOut) = false;
+						me.(handleNameOut) = logical(get(me.handles.(handleName),'Value'));
+						if isempty(me.(handleNameOut))
+							me.(handleNameOut) = false;
 						end
 					case 'num'
-						val = get(obj.handles.(handleName),'String');
+						val = get(me.handles.(handleName),'String');
 						if strcmpi(val,'true') %convert to logical
-							obj.(handleNameOut) = true;
+							me.(handleNameOut) = true;
 						elseif strcmpi(val,'false') %convert to logical
-							obj.(handleNameOut) = true;
+							me.(handleNameOut) = true;
 						else
-							obj.(handleNameOut) = str2num(val); %#ok<ST2NM>
+							me.(handleNameOut) = str2num(val); %#ok<ST2NM>
 						end
 					case 'char'
-						obj.(handleNameOut) = get(obj.handles.(handleName),'String');
+						me.(handleNameOut) = get(me.handles.(handleName),'String');
 				end
 			end
-			notify(obj,'readPanelUpdate');
+			notify(me,'readPanelUpdate');
 		end
 			
 		% ===================================================================
 		%> @brief show GUI properties panel for this object
 		%>
 		% ===================================================================
-		function showPanel(obj)
-			if isempty(obj.handles)
+		function showPanel(me)
+			if isempty(me.handles)
 				return
 			end
-			set(obj.handles.root,'Enable','on');
-			set(obj.handles.root,'Visible','on');
+			set(me.handles.root,'Enable','on');
+			set(me.handles.root,'Visible','on');
 		end
 		
 		% ===================================================================
 		%> @brief hide GUI properties panel for this object
 		%>
 		% ===================================================================
-		function hidePanel(obj)
-			if isempty(obj.handles)
+		function hidePanel(me)
+			if isempty(me.handles)
 				return
 			end
-			set(obj.handles.root,'Enable','off');
-			set(obj.handles.root,'Visible','off');
+			set(me.handles.root,'Enable','off');
+			set(me.handles.root,'Visible','off');
 		end
 		
 		% ===================================================================
 		%> @brief close GUI panel for this object
 		%>
 		% ===================================================================
-		function closePanel(obj,varargin)
-			if isempty(obj.handles)
+		function closePanel(me,varargin)
+			if isempty(me.handles)
 				return
 			end
-			if isfield(obj.handles,'root') && isgraphics(obj.handles.root)
-				readPanel(obj);
-				delete(obj.handles.root);
+			if isfield(me.handles,'root') && isgraphics(me.handles.root)
+				readPanel(me);
+				delete(me.handles.root);
 			end
-			if isfield(obj.handles,'parent') && isgraphics(obj.handles.parent,'figure')
-				delete(obj.handles.parent)
+			if isfield(me.handles,'parent') && isgraphics(me.handles.parent,'figure')
+				delete(me.handles.parent)
 			end
-			obj.handles = [];
+			me.handles = [];
 		end
 		
 		% ===================================================================
@@ -686,12 +681,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @param
 		%> @return
 		% ===================================================================
-		function varargout=cleanHandles(obj,varargin)
-			if isprop(obj,'handles')
-				obj.handles = [];
+		function varargout=cleanHandles(me,varargin)
+			if isprop(me,'handles')
+				me.handles = [];
 			end
-			if isprop(obj,'h')
-				obj.handles = [];
+			if isprop(me,'h')
+				me.handles = [];
 			end
 		end
 		
@@ -767,15 +762,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> values, you should call computePosition() first to get xOut and
 		%> yOut
 		% ===================================================================
-		function setRect(obj)
-			if ~isempty(obj.texture)
-				obj.dstRect=Screen('Rect',obj.texture);
-				if obj.mouseOverride && obj.mouseValid
-					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
+		function setRect(me)
+			if ~isempty(me.texture)
+				me.dstRect=Screen('Rect',me.texture);
+				if me.mouseOverride && me.mouseValid
+					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				else
-					obj.dstRect=CenterRectOnPointd(obj.dstRect, obj.xOut, obj.yOut);
+					me.dstRect=CenterRectOnPointd(me.dstRect, me.xOut, me.yOut);
 				end
-				obj.mvRect=obj.dstRect;
+				me.mvRect=me.dstRect;
 			end
 		end
 		
@@ -787,68 +782,68 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> public versions. This method simply copies the properties to their cached
 		%> equivalents.
 		% ===================================================================
-		function setAnimationDelta(obj)
-			obj.delta_ = obj.delta;
-			obj.dX_ = obj.dX;
-			obj.dY_ = obj.dY;
+		function setAnimationDelta(me)
+			me.delta_ = me.delta;
+			me.dX_ = me.dX;
+			me.dY_ = me.dY;
 		end
 		
 		% ===================================================================
 		%> @brief compute xOut and yOut
 		%>
 		% ===================================================================
-		function computePosition(obj)
-			if obj.mouseOverride && obj.mouseValid
-				obj.xOut = obj.mouseX; obj.yOut = obj.mouseY;
+		function computePosition(me)
+			if me.mouseOverride && me.mouseValid
+				me.xOut = me.mouseX; me.yOut = me.mouseY;
 			else
-				if isempty(obj.findprop('angleOut'))
-					[dx, dy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+				if isempty(me.findprop('angleOut'))
+					[dx, dy]=pol2cart(me.d2r(me.angle),me.startPosition);
 				else
-					[dx, dy]=pol2cart(obj.d2r(obj.angleOut),obj.startPositionOut);
+					[dx, dy]=pol2cart(me.d2r(me.angleOut),me.startPositionOut);
 				end
-				obj.xOut = obj.xPositionOut + (dx * obj.ppd) + obj.sM.xCenter;
-				obj.yOut = obj.yPositionOut + (dy * obj.ppd) + obj.sM.yCenter;
-				if obj.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',obj.fullName, obj.xOut, obj.xPositionOut, dx, obj.yOut, obj.yPositionOut, dy); end
+				me.xOut = me.xPositionOut + (dx * me.ppd) + me.sM.xCenter;
+				me.yOut = me.yPositionOut + (dy * me.ppd) + me.sM.yCenter;
+				if me.verbose; fprintf('---> computePosition: %s X = %gpx / %gpx / %gdeg | Y = %gpx / %gpx / %gdeg\n',me.fullName, me.xOut, me.xPositionOut, dx, me.yOut, me.yPositionOut, dy); end
 			end
-			setAnimationDelta(obj);
+			setAnimationDelta(me);
 		end
 		
 		% ===================================================================
 		%> @brief xPositionOut Set method
 		%>
 		% ===================================================================
-		function set_xPositionOut(obj,value)
-			obj.xPositionOut = value*obj.ppd;
-			if ~obj.inSetup; obj.setRect; end
+		function set_xPositionOut(me,value)
+			me.xPositionOut = value*me.ppd;
+			if ~me.inSetup; me.setRect; end
 		end
 		
 		% ===================================================================
 		%> @brief yPositionOut Set method
 		%>
 		% ===================================================================
-		function set_yPositionOut(obj,value)
-			obj.yPositionOut = value*obj.ppd;
-			if ~obj.inSetup; obj.setRect; end
+		function set_yPositionOut(me,value)
+			me.yPositionOut = value*me.ppd;
+			if ~me.inSetup; me.setRect; end
 		end
 		
 		% ===================================================================
 		%> @brief Converts properties to a structure
 		%>
 		%>
-		%> @param obj this instance object
+		%> @param me this instance object
 		%> @param tmp is whether to use the temporary or permanent properties
 		%> @return out the structure
 		% ===================================================================
-		function out=toStructure(obj,tmp)
+		function out=toStructure(me,tmp)
 			if ~exist('tmp','var')
 				tmp = 0; %copy real properties, not temporary ones
 			end
-			fn = fieldnames(obj);
+			fn = fieldnames(me);
 			for j=1:length(fn)
 				if tmp == 0
-					out.(fn{j}) = obj.(fn{j});
+					out.(fn{j}) = me.(fn{j});
 				else
-					out.(fn{j}) = obj.([fn{j} 'Out']);
+					out.(fn{j}) = me.([fn{j} 'Out']);
 				end
 			end
 		end
@@ -856,14 +851,14 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		%> @brief Finds and removes transient properties
 		%>
-		%> @param obj
+		%> @param me
 		%> @return
 		% ===================================================================
-		function removeTmpProperties(obj)
-			fn=fieldnames(obj);
+		function removeTmpProperties(me)
+			fn=fieldnames(me);
 			for i=1:length(fn)
 				if ~isempty(regexp(fn{i},'[^x|^y]Out$','once'))
-					delete(obj.findprop(fn{i}));
+					delete(me.findprop(fn{i}));
 				end
 			end
 		end
@@ -871,20 +866,20 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		%> @brief Delete method
 		%>
-		%> @param obj
+		%> @param me
 		%> @return
 		% ===================================================================
-		function delete(obj)
-			obj.handles = [];
-			obj.sM = [];
-			if ~isempty(obj.texture)
+		function delete(me)
+			me.handles = [];
+			me.sM = [];
+			if ~isempty(me.texture)
 				try
-					for i = 1:length(obj.texture)
-						Screen('Close',obj.texture)
+					for i = 1:length(me.texture)
+						Screen('Close',me.texture)
 					end
 				end
 			end
-			fprintf('--->>> Delete method called on stimulus: %s\n',obj.fullName);
+			fprintf('--->>> Delete method called on stimulus: %s\n',me.fullName);
 		end
 		
 	end%---END PRIVATE METHODS---%

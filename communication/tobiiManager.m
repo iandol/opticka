@@ -1,7 +1,7 @@
 % ========================================================================
 %> @brief tobiiManager wraps around the Titta toolbox functions
-%> offering a consistent interface to eyelinkManager, and offers 
-%> methods to check fixation windows easily.
+%> offering a interface consistent with the previous eyelinkManager, offering
+%> methods to check and change fixation windows gaze contingent tasks easily.
 %>
 % ========================================================================
 classdef tobiiManager < optickaCore
@@ -9,9 +9,9 @@ classdef tobiiManager < optickaCore
 	properties
 		%> model of eyetracker, Spectrum Pro default
 		model char = 'Tobii Pro Spectrum'
-		%> tracker update speed (Hz), should be 250 500 1000 2000
+		%> tracker update speed (Hz), should be 150 300 600 1200
 		sampleRate double = 1200
-		%> fixation X position(s) in degrees
+		%> fixation window details
 		fixation struct = struct('X',0,'Y',0,'Radius',1,'InitTime',1,...
 			'Time',1,'strictFixation',true)
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
@@ -23,6 +23,8 @@ classdef tobiiManager < optickaCore
 		screen = []
 		%> Titta settings
 		settings struct = []
+		%> name of eyetracker file
+		saveFile char = 'myData.mat'
 		%> start eyetracker in dummy mode?
 		isDummy logical = false
 	end
@@ -39,17 +41,15 @@ classdef tobiiManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
 		% are we recording to matrix?
-		isRecording logical = false
+		isRecording logical
+		% calculates the smoothing in ms
+		smoothingTime double
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		%> display area
-		displayArea
-		%> track box
-		trackBox
 		% are we connected to Tobii?
 		isConnected logical = false
-		%> data streamed from the Tobii
+		%> data streamed out from the Tobii
 		data struct = struct()
 		%> calibration data
 		calibration = []
@@ -113,7 +113,7 @@ classdef tobiiManager < optickaCore
 				initTracker(me);
 			catch ME
 				ME.getReport
-            fprintf('!!! Error initialising Tobii: %s\n\t going into Dummy mode...\n',ME.message);
+				fprintf('!!! Error initialising Tobii: %s\n\t going into Dummy mode...\n',ME.message);
 				me.tobii = [];
 				me.isDummy = true;
 			end
@@ -122,37 +122,34 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		%> @brief initialise the tobii.
 		%>
+		%> @param sM - screenManager object we will use
 		% ===================================================================
 		function initialise(me,sM)
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
-					me.screen = screenManager();
+					me.screen	= screenManager();
 				end
 			else
-				me.screen = sM;
+				me.screen		= sM;
 			end
 			if ~isa(me.tobii, 'Titta'); initTracker(me); end
 			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
 			
 			if me.isDummy
-				me.tobii = me.tobii.setDummyMode();
+				me.tobii			= me.tobii.setDummyMode();
 			end
 			
-			me.settings.freq = me.sampleRate;
+			me.settings.freq	= me.sampleRate;
 			me.settings.cal.bgColor = floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor = me.settings.cal.bgColor;
 			updateDefaults(me);
 			me.tobii.init();
-			me.isConnected = true;
-			
-			me.systemTime = me.tobii.getSystemTime;
-			
-			me.ppd_			= me.screen.ppd;
+			me.isConnected		= true;
+			me.systemTime		= me.tobii.getSystemTime;
+			me.ppd_				= me.screen.ppd;
 			if me.screen.isOpen == true
-				me.win = me.screen.win;
+				me.win			= me.screen.win;
 			end
-			me.displayArea	= me.tobii.geom.displayArea;
-			me.trackBox		= me.tobii.geom.trackBox;
 			
 			me.salutation('Initialise Method', ...
 				sprintf('Running on a %s @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
@@ -171,28 +168,20 @@ classdef tobiiManager < optickaCore
 				me.tobii.setOptions(me.settings);
 			end
 		end
-		
-		% ===================================================================
-		%> @brief
-		%>
-		% ===================================================================
-		function setup(me)
-			updateDefaults(me)
-		end
-		
+
 		% ===================================================================
 		%> @brief reset the fixation counters ready for a new trial
 		%>
 		% ===================================================================
 		function resetFixation(me)
-			me.fixStartTime = 0;
-			me.fixLength = 0;
-			me.fixInitStartTime = 0;
-			me.fixInitLength = 0;
-			me.fixInitTotal = 0;
-			me.fixTotal = 0;
-			me.fixN = 0;
-			me.fixSelection = 0;
+			me.fixStartTime		= 0;
+			me.fixLength			= 0;
+			me.fixInitStartTime	= 0;
+			me.fixInitLength		= 0;
+			me.fixInitTotal		= 0;
+			me.fixTotal				= 0;
+			me.fixN					= 0;
+			me.fixSelection		= 0;
 		end
 		
 		% ===================================================================
@@ -250,29 +239,16 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief set into offline / idle mode
+		%> @brief Save the data
 		%>
 		% ===================================================================
-		function setOffline(me)
-			if me.isConnected
-				
-			end
-		end
-		
-		% ===================================================================
-		%> @brief wrapper for EyelinkDoDriftCorrection
-		%>
-		% ===================================================================
-		function success = driftCorrection(me)
-			success = true;
-		end
-		
-		% ===================================================================
-		%> @brief wrapper for CheckRecording
-		%>
-		% ===================================================================
-		function error = checkRecording(me)
-			error = false;
+		function saveData(me,tofile)
+			if ~exist('tofile','var') || isempty(tofile); tofile = true; end
+			tic
+			me.data = me.tobii.collectSessionData();
+			tobii = me;
+			save(me.saveFile,'tobii')
+			me.salutation('saveData',sprintf('Data has been saved to %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc*1e3),true);
 		end
 		
 		% ===================================================================
@@ -284,9 +260,9 @@ classdef tobiiManager < optickaCore
 			me.currentSample = [];
 			if me.isConnected && me.isRecording
 				td = me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
-				if td.left.gazePoint.valid 
-					data = doSmoothing(me,td.left.gazePoint.onDisplayArea);
-					xy = toPixels(me, data,'','relative');
+				if td.left.gazePoint.valid
+					xy = doSmoothing(me,td.left.gazePoint.onDisplayArea);
+					xy = toPixels(me, xy,'','relative');
 					me.currentSample.gx		= xy(1);
 					me.currentSample.gy		= xy(2);
 					me.currentSample.pa		= mean(td.left.pupil.diameter);
@@ -314,14 +290,6 @@ classdef tobiiManager < optickaCore
 				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 			end
 			sample = me.currentSample;
-		end
-		
-		% ===================================================================
-		%> @brief TODO
-		%>
-		% ===================================================================
-		function evt = getEvent(me)
-			
 		end
 		
 		% ===================================================================
@@ -574,17 +542,6 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief checks which eye is available, force left eye if
-		%> binocular is enabled
-		%>
-		% ===================================================================
-		function eyeUsed = checkEye(me)
-			if me.isConnected
-				
-			end
-		end
-		
-		% ===================================================================
 		%> @brief draw the current eye position on the PTB display
 		%>
 		% ===================================================================
@@ -600,26 +557,6 @@ classdef tobiiManager < optickaCore
 					Screen('DrawDots', me.win, xy, 8, [1 0.5 0 1], [], 3);
 				end
 			end
-		end
-		
-		% ===================================================================
-		%> @brief displays status message on tracker, only sets it if
-		%> message is not the previous message, so loop safe.
-		%>
-		% ===================================================================
-		function statusMessage(me,message)
-			if me.isConnected
-				if me.verbose; fprintf('-+-+->Tobii status message: %s\n',message);end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief send message to store in tracker data (compatibility)
-		%>
-		%>
-		% ===================================================================
-		function edfMessage(me, message)
-			trackerMessage(me,message)
 		end
 		
 		% ===================================================================
@@ -654,108 +591,12 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief draw the background colour
-		%>
-		% ===================================================================
-		function trackerClearScreen(me)
-			if me.isConnected
-				
-			end
-		end
-		
-		% ===================================================================
-		%> @brief draw the stimuli boxes on the tracker display
-		%>
-		% ===================================================================
-		function trackerDrawStimuli(me, ts, clearScreen)
-			if me.isConnected
-				
-			end
-		end
-		
-		% ===================================================================
-		%> @brief draw the fixation box on the tracker display
-		%>
-		% ===================================================================
-		function trackerDrawFixation(me)
-			if me.isConnected
-				
-			end
-		end
-		
-		% ===================================================================
-		%> @brief draw the fixation box on the tracker display
-		%>
-		% ===================================================================
-		function trackerDrawExclusion(me)
-			if me.isConnected && ~isempty(me.exclusionZone) && length(me.exclusionZone)==4
-				
-			end
-		end
-		
-		% ===================================================================
-		%> @brief draw the fixation box on the tracker display
-		%>
-		% ===================================================================
-		function trackerDrawText(me,textIn)
-			if me.isConnected
-				
-			end
-		end
-		
-		% ===================================================================
-		%> @brief check what mode the tobii is in
-		%> 
-		% ===================================================================
-		function mode = currentMode(me)
-			if me.isConnected
-				mode = 0;
-			end
-		end
-		
-		
-		% ===================================================================
-		%> @brief Sync time with tracker
-		%>
-		% ===================================================================
-		function syncTime(me)
-			
-		end
-			
-			
-		% ===================================================================
 		%> @brief Sync time with tracker
 		%>
 		% ===================================================================
 		function syncTrackerTime(me)
 			if me.isConnected
 				me.tobii.getSystemTime;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Get offset between tracker and display computers
-		%>
-		% ===================================================================
-		function offset = getTimeOffset(me)
-			if me.isConnected
-				offset = 0;
-				me.currentOffset = offset;
-			else
-				offset = 0;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Get tracker time
-		%>
-		% ===================================================================
-		function [trackertime, systemtime] = getTrackerTime(me)
-			if me.isConnected
-				me.trackerTime = 0;
-				me.systemTime = 0;
-				trackertime = 0;
-				systemtime = 0;
 			end
 		end
 		
@@ -773,7 +614,10 @@ classdef tobiiManager < optickaCore
 			rightKey=KbName('rightarrow');
 			calibkey=KbName('c');
 			ofixation = me.fixation; me.sampletime = [];
-			try  
+			ofilename = me.saveFile;
+			c = fix(clock);c = num2str(c(1:5));c = regexprep(c,' +','-');
+			me.saveFile = [me.paths.savedData filesep c '-runDemo.mat'];
+			try
 				s = screenManager('disableSyncTests',true,'blend',true,'pixelsPerCm',36,'distance',60);
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
@@ -788,12 +632,12 @@ classdef tobiiManager < optickaCore
 				calViz.bgColor						= 127;
 				calViz.fixBackColor				= 0;
 				calViz.fixFrontColor				= 255;
-				me.settings.cal.autoPace		= 0;
+				me.settings.cal.autoPace		= 1;
 				me.settings.cal.doRandomPointOrder = false;
 				me.settings.UI.setup.eyeClr	= 200;
 				me.settings.cal.pointNotifyFunction = @demoCalCompletionFun;
 				me.settings.val.pointNotifyFunction = @demoCalCompletionFun;
-				trackerSetup(me); 
+				trackerSetup(me);
 				ShowCursor; %titta fails to show cursor so we must do it
 				
 				o.sizeOut = me.fixation.Radius*2;
@@ -804,21 +648,25 @@ classdef tobiiManager < optickaCore
 				ts.size = o.sizeOut;
 				ts.selected = true;
 				
-				xx = 0;
+				endExp = 0;
 				a = 1;
 				m=1;
+				vbl=[];
 				methods={'median','heuristic','sg','simple'};
 				Screen('TextFont',s.win,'Consolas');
 				startRecording(me);
 				trackerMessage(me,'Starting Demo...')
 				
-				while xx == 0
-					yy = 0;
+				while endExp == 0
+					endTrial = 0;
 					b = 1;
+					trackerMessage(me,sprintf('Settings for Trial %i, X=%.2f Y=%.2f, SZ=%.2f',a,me.fixation.X,me.fixation.Y,o.sizeOut))
 					flip(s)
 					WaitSecs(0.5);
-					vbl=flip(s);
-					while yy == 0
+					vbl(end+1)=flip(s);
+					%me.tobii.sendMessage(sprintf('%.6f',a,vbl(end)));
+					trackerMessage(me,sprintf('%.6f',vbl(end)));
+					while endTrial == 0
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
@@ -833,19 +681,20 @@ classdef tobiiManager < optickaCore
 						
 						finishDrawing(s);
 						animate(o);
-						vbl=flip(s,vbl);
+						vbl(end+1)=flip(s,vbl(end));
 						
 						[~, ~, keyCode] = KbCheck(-1);
-						if keyCode(stopkey); yy = 1; xx = 1; break;	end
-						if keyCode(nextKey); yy = 1; break; end
+						if keyCode(stopkey); endTrial = 1; endExp = 1; break;	end
+						if keyCode(nextKey); endTrial = 1; break; end
 						if keyCode(calibkey); me.doCalibration; end
 						if keyCode(upKey); me.smoothing.nSamples = me.smoothing.nSamples + 1; if me.smoothing.nSamples > 400; me.smoothing.nSamples=400;end; end
 						if keyCode(downKey); me.smoothing.nSamples = me.smoothing.nSamples - 1; if me.smoothing.nSamples < 1; me.smoothing.nSamples=1;end;	end
 						if keyCode(leftKey); m=m+1; if m>4;m=1;end; me.smoothing.method=methods{m};end
-							
+						
 						b=b+1;
 					end
-					if xx == 0
+					if endExp == 0
+						trackerMessage(me,sprintf('Ending trial %i @ %i',a,int64(round(vbl(end)*1e6))))
 						trackerMessage(me,'END_RT');
 						trackerMessage(me,'TRIAL_RESULT 1')
 						resetFixation(me);
@@ -864,15 +713,19 @@ classdef tobiiManager < optickaCore
 						a=a+1;
 					end
 				end
+				assignin('base','vbl',vbl)
+				figure;plot(diff(vbl));
 				stopRecording(me);
-				me.data = me.tobii.collectSessionData();
+				saveData(me);
 				me.fixation = ofixation;
+				me.saveFile = ofilename;
 				ListenChar(0);
 				close(s);
 				close(me);
 				clear s o
 			catch ME
 				me.fixation = ofixation;
+				me.saveFile = ofilename;
 				getReport(ME);
 				ShowCursor;
 				ListenChar(0);
@@ -886,71 +739,13 @@ classdef tobiiManager < optickaCore
 			
 		end
 		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
 		function doCalibration(me)
 			if me.isConnected
 				me.trackerSetup();
-			end
-		end
-		
-		function value = get.isRecording(me)
-			if me.isConnected
-				value = me.tobii.buffer.isRecording('gaze');
-			else
-				value = false;
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Stampe 1993 heuristic filter as used by Eyelink
-		%>
-		%> @param indata - input data
-		%> @param level - 1 = filter level 1, 2 = filter level 1+2
-		%> @param steps - we step every # steps along the in data, changes the filter characteristics, 3 is the default (filter 2 is #+1)
-		%> @out out - smoothed data
-		% ===================================================================
-		function out = heuristicFilter(~,indata,level,steps)
-			if ~exist('level','var'); level = 1; end %filter level 1 [std] or 2 [extra]
-			if ~exist('steps','var'); steps = 3; end %step along the data every n steps
-			out=zeros(size(indata));
-			for k = 1:2 % x (row1) and y (row2) eye samples
-				in = indata(k,:);
-				%filter 1 from Stampe 1993
-				if level > 0
-					for i = 1:steps:length(in)-2
-						x = in(i); x1 = in(i+1); x2 = in(i+2); %#ok<*PROPLC>
-						if ((x2 > x1) && (x1 < x)) || ((x2 < x1) && (x1 > x))
-							if abs(x1-x) < abs(x2-x1) %i is closest
-								x1 = x;
-							else
-								x1 = x2;
-							end
-						end
-						x2 = x1;
-						x1 = x;
-						in(i)=x; in(i+1) = x1; in(i+2) = x2;
-					end
-				end
-				%filter2 from Stampe 1993
-				if level > 1
-					for i = 1:steps+1:length(in)-3
-						x = in(i); x1 = in(i+1); x2 = in(i+2); x3 = in(i+3);
-						if x2 == x1 && (x == x1 || x2 == x3)
-							x3 = x2;
-							x2 = x1;
-							x1 = x;
-						else %x2 and x1 are the same, find closest of x2 or x
-							if abs(x1 - x3) < abs(x1 - x)
-								x2 = x3;
-								x1 = x3;
-							else
-								x2 = x;
-								x1 = x;
-							end
-						end
-						in(i)=x; in(i+1) = x1; in(i+2) = x2; in(i+3) = x3;
-					end
-				end
-				out(k,:) = in;
 			end
 		end
 		
@@ -981,15 +776,289 @@ classdef tobiiManager < optickaCore
 			end
 		end
 		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function value = get.isRecording(me)
+			if me.isConnected
+				value = me.tobii.buffer.isRecording('gaze');
+			else
+				value = false;
+			end
+		end
 		
 		% ===================================================================
 		%> @brief
 		%>
 		% ===================================================================
-		function initTracker(me)
-         me.settings = Titta.getDefaults(me.model);
-			me.settings.cal.bgColor = [255 0 0];
-			me.tobii = Titta(me.settings);
+		function value = get.smoothingTime(me)
+			value = (1000 / me.sampleRate) * me.smoothing.nSamples;
+		end
+		
+	end%-------------------------END PUBLIC METHODS--------------------------------%
+	
+	%============================================================================
+	methods (Hidden = true) %--HIDDEN METHODS (compatibility with eyelinkManager)
+	%============================================================================
+		
+		% ===================================================================
+		%> @brief checks which eye is available, force left eye if
+		%> binocular is enabled
+		%>
+		% ===================================================================
+		function eyeUsed = checkEye(me)
+			if me.isConnected
+				eyeUsed = me.eyeUsed;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief displays status message on tracker, only sets it if
+		%> message is not the previous message, so loop safe.
+		%>
+		% ===================================================================
+		function statusMessage(me,message)
+			if me.isConnected
+				if me.verbose; fprintf('-+-+->Tobii status message: %s\n',message);end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief send message to store in tracker data (compatibility)
+		%>
+		%>
+		% ===================================================================
+		function edfMessage(me, message)
+			trackerMessage(me,message)
+		end
+		
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function setup(me)
+			updateDefaults(me)
+		end
+		
+		% ===================================================================
+		%> @brief set into offline / idle mode
+		%>
+		% ===================================================================
+		function setOffline(me)
+			
+		end
+		
+		% ===================================================================
+		%> @brief wrapper for EyelinkDoDriftCorrection
+		%>
+		% ===================================================================
+		function success = driftCorrection(me)
+			success = true;
+		end
+		
+		% ===================================================================
+		%> @brief wrapper for CheckRecording
+		%>
+		% ===================================================================
+		function error = checkRecording(me)
+			error = false;
+		end
+		
+		% ===================================================================
+		%> @brief draw the background colour
+		%>
+		% ===================================================================
+		function trackerClearScreen(me)
+			if me.isConnected
+				
+			end
+		end
+		
+		% ===================================================================
+		%> @brief draw the stimuli boxes on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawStimuli(me, ts, clearScreen)
+			
+		end
+		
+		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawFixation(me)
+			
+		end
+		
+		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawExclusion(me)
+			if me.isConnected && ~isempty(me.exclusionZone) && length(me.exclusionZone)==4
+				
+			end
+		end
+		
+		% ===================================================================
+		%> @brief draw the fixation box on the tracker display
+		%>
+		% ===================================================================
+		function trackerDrawText(me,textIn)
+			
+		end
+		
+		% ===================================================================
+		%> @brief check what mode the tobii is in
+		%>
+		% ===================================================================
+		function mode = currentMode(me)
+			if me.isConnected
+				mode = 0;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Sync time with tracker
+		%>
+		% ===================================================================
+		function syncTime(me)
+			
+		end
+		
+		
+		% ===================================================================
+		%> @brief Get offset between tracker and display computers
+		%>
+		% ===================================================================
+		function offset = getTimeOffset(me)
+			
+		end
+		
+		% ===================================================================
+		%> @brief Get tracker time
+		%>
+		% ===================================================================
+		function [trackertime, systemtime] = getTrackerTime(me)
+			if me.isConnected
+				trackertime = 0;
+				systemtime = 0;
+			end
+		end
+
+		% ===================================================================
+		%> @brief TODO
+		%>
+		% ===================================================================
+		function evt = getEvent(me)
+			
+		end
+
+	end%-------------------------END HIDDEN METHODS--------------------------------%
+	
+	%=======================================================================
+	methods (Access = private) %------------------PRIVATE METHODS
+	%=======================================================================
+		
+		% ===================================================================
+		%> @brief Stampe 1993 heuristic filter as used by Eyelink
+		%>
+		%> @param indata - input data
+		%> @param level - 1 = filter level 1, 2 = filter level 1+2
+		%> @param steps - we step every # steps along the in data, changes the filter characteristics, 3 is the default (filter 2 is #+1)
+		%> @out out - smoothed data
+		% ===================================================================
+		function out = heuristicFilter(~,indata,level,steps)
+			if ~exist('level','var'); level = 1; end %filter level 1 [std] or 2 [extra]
+			if ~exist('steps','var'); steps = 3; end %step along the data every n steps
+			out=zeros(size(indata));
+			for k = 1:2 % x (row1) and y (row2) eye samples
+				in = indata(k,:);
+				%filter 1 from Stampe 1993, see Fig. 2a
+				if level > 0
+					for i = 1:steps:length(in)-2
+						x = in(i); x1 = in(i+1); x2 = in(i+2); %#ok<*PROPLC>
+						if ((x2 > x1) && (x1 < x)) || ((x2 < x1) && (x1 > x))
+							if abs(x1-x) < abs(x2-x1) %i is closest
+								x1 = x;
+							else
+								x1 = x2;
+							end
+						end
+						x2 = x1;
+						x1 = x;
+						in(i)=x; in(i+1) = x1; in(i+2) = x2;
+					end
+				end
+				%filter2 from Stampe 1993, see Fig. 2b
+				if level > 1
+					for i = 1:steps+1:length(in)-3
+						x = in(i); x1 = in(i+1); x2 = in(i+2); x3 = in(i+3);
+						if x2 == x1 && (x == x1 || x2 == x3)
+							x3 = x2;
+							x2 = x1;
+							x1 = x;
+						else %x2 and x1 are the same, find closest of x2 or x
+							if abs(x1 - x3) < abs(x1 - x)
+								x2 = x3;
+								x1 = x3;
+							else
+								x2 = x;
+								x1 = x;
+							end
+						end
+						in(i)=x; in(i+1) = x1; in(i+2) = x2; in(i+3) = x3;
+					end
+				end
+				out(k,:) = in;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief to pixels from visual degrees / relative
+		%>
+		% ===================================================================
+		function out = toPixels(me,in,axis,inputtype)
+			if ~exist('axis','var') || isempty(axis); axis=''; end
+			if ~exist('inputtype','var') || isempty(inputtype); inputtype = 'degrees'; end
+			out = 0;
+			if length(in)>4; return; end
+			switch axis
+				case 'x'
+					switch inputtype
+						case 'degrees'
+							out = (in * me.ppd_) + me.screen.xCenter;
+						case 'relative'
+							out = in * me.screen.screenVals.width;
+					end
+				case 'y'
+					switch inputtype
+						case 'degrees'
+							out = (in * me.ppd_) + me.screen.yCenter;
+						case 'relative'
+							out = in * me.screen.screenVals.height;
+					end
+				otherwise
+					switch inputtype
+						case 'degrees'
+							if length(in)==2
+								out(1) = (in(1) * me.ppd_) + me.screen.xCenter;
+								out(2) = (in(2) * me.ppd_) + me.screen.yCenter;
+							elseif length(in)==4
+								out(1:2) = (in(1:2) * me.ppd_) + me.screen.xCenter;
+								out(3:4) = (in(3:4) * me.ppd_) + me.screen.yCenter;
+							end
+						case 'relative'
+							if length(in)==2
+								out(1) = in(1) * me.screen.screenVals.width;
+								out(2) = in(2) * me.screen.screenVals.height;
+							elseif length(in)==4
+								out(1:2) = in(1:2) * me.screen.screenVals.width;
+								out(3:4) = in(3:4) * me.screen.screenVals.height;
+							end
+					end
+			end
 		end
 		
 		% ===================================================================
@@ -1030,11 +1099,15 @@ classdef tobiiManager < optickaCore
 			end
 		end
 		
-	end%-------------------------END PUBLIC METHODS--------------------------------%
-	
-	%=======================================================================
-	methods (Access = private) %------------------PRIVATE METHODS
-	%=======================================================================
+		% ===================================================================
+		%> @brief
+		%>
+		% ===================================================================
+		function initTracker(me)
+			me.settings = Titta.getDefaults(me.model);
+			me.settings.cal.bgColor = [255 0 0];
+			me.tobii = Titta(me.settings);
+		end
 		
 		% ===================================================================
 		%> @brief original Tobii SDK head pos check
@@ -1097,8 +1170,8 @@ classdef tobiiManager < optickaCore
 			RKey = KbName('C');
 			dotSizePix = 15;
 			dotColor = [[1 0 0];[1 1 1]]; % Red and white
-			leftColor = [1 0.5 0]; 
-			rightColor = [0 0.4 0.75]; 
+			leftColor = [1 0.5 0];
+			rightColor = [0 0.4 0.75];
 			% Calibration points
 			lb = 0.15;  % left bound
 			xc = 0.5;  % horizontal center
@@ -1195,54 +1268,7 @@ classdef tobiiManager < optickaCore
 				end
 			end
 		end
-
-		% ===================================================================
-		%> @brief to pixels from visual degrees / relative
-		%>
-		% ===================================================================
-		function out = toPixels(me,in,axis,inputtype)
-			if ~exist('axis','var') || isempty(axis); axis=''; end
-			if ~exist('inputtype','var') || isempty(inputtype); inputtype = 'degrees'; end
-			out = 0;
-			if length(in)>4; return; end
-			switch axis
-				case 'x'
-					switch inputtype
-						case 'degrees'
-							out = (in * me.ppd_) + me.screen.xCenter;
-						case 'relative'
-							out = in * me.screen.screenVals.width;
-					end
-				case 'y'
-					switch inputtype
-						case 'degrees'
-							out = (in * me.ppd_) + me.screen.yCenter;
-						case 'relative'
-							out = in * me.screen.screenVals.height;
-					end
-				otherwise
-					switch inputtype
-						case 'degrees'
-							if length(in)==2
-								out(1) = (in(1) * me.ppd_) + me.screen.xCenter;
-								out(2) = (in(2) * me.ppd_) + me.screen.yCenter;
-							elseif length(in)==4
-								out(1:2) = (in(1:2) * me.ppd_) + me.screen.xCenter;
-								out(3:4) = (in(3:4) * me.ppd_) + me.screen.yCenter;
-							end
-						case 'relative'
-							if length(in)==2
-								out(1) = in(1) * me.screen.screenVals.width;
-								out(2) = in(2) * me.screen.screenVals.height;
-							elseif length(in)==4
-								out(1:2) = in(1:2) * me.screen.screenVals.width;
-								out(3:4) = in(3:4) * me.screen.screenVals.height;
-							end
-					end
-			end
-		end
 		
 	end
 	
 end
-

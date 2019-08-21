@@ -249,10 +249,12 @@ classdef opticka < optickaCore
 					me.paths.protocols = ['~' filesep 'MatlabFiles' filesep 'Protocols'];
 					cd(me.paths.protocols);
 					me.paths.currentPath = pwd;
+					
 					if ~exist(['~' filesep 'MatlabFiles' filesep 'Calibration'],'dir')
 						mkdir(['~' filesep 'MatlabFiles' filesep 'Calibration']);
 					end
 					me.paths.calibration = ['~' filesep 'MatlabFiles' filesep 'Calibration'];
+					
 					if ~exist([me.paths.temp 'History'],'dir')
 						mkdir([me.paths.temp 'History']);
 					end
@@ -264,20 +266,22 @@ classdef opticka < optickaCore
 					me.paths.savedData = ['~' filesep 'MatlabFiles' filesep 'SavedData'];
 				
 				elseif ispc
-					%root = 'c:\MatlabFiles';
-					root = 'c:\Users\Public\MatlabFiles\';
+					root = me.paths.parent;
 					me.store.serverCommand = '!matlab -nodesktop -nosplash -r "d=dataConnection(struct(''autoServer'',1,''lPort'',5678));" &';
 					me.paths.temp=tempdir;
+					
 					if ~exist([root 'Protocols'],'dir')
 						mkdir([root 'Protocols'])
 					end
 					me.paths.protocols = [root 'Protocols'];
 					cd(me.paths.protocols);
 					me.paths.currentPath = pwd;
+					
 					if ~exist([root 'Calibration'],'dir')
 						mkdir([root 'Calibration'])
 					end
 					me.paths.calibration = [root 'Calibration'];
+					
 					if ~exist([root 'History'],'dir')
 						mkdir([root 'History']);
 					end
