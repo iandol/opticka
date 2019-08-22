@@ -260,8 +260,8 @@ classdef tobiiManager < optickaCore
 			me.currentSample = [];
 			if me.isConnected && me.isRecording
 				td = me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
-				if td.left.gazePoint.valid
-					xy = doSmoothing(me,td.left.gazePoint.onDisplayArea);
+				if td.left.gazePoint.valid(end) || td.right.gazePoint.valid(end)
+					xy = doSmoothing(me,td);
 					xy = toPixels(me, xy,'','relative');
 					me.currentSample.gx		= xy(1);
 					me.currentSample.gy		= xy(2);
@@ -750,24 +750,26 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief
+		%> @brief smooth data in M x N where M = 2 (x&y trace)
 		%>
 		% ===================================================================
 		function out = doSmoothing(me,in)
-			if size(in,2) > me.smoothing.window
+			if size(ld,2) > me.smoothing.window
 				switch me.smoothing.method
 					case 'median'
-						out = movmedian(in,me.smoothing.window,2);
+						out = movmedian(ld,me.smoothing.window,2);
 						out = median(out, 2);
-					case 'heuristic'
-						out = me.heuristicFilter(in,1);
+					case {'heuristic','heuristic1'}
+						out = me.heuristicFilter(ld,1);
+						out = median(out, 2);
+					case 'heuristic2'
+						out = me.heuristicFilter(ld,1);
 						out = median(out, 2);
 					case 'sg' %savitzky-golay
-						out(1,:) = sgolayfilt(in(1,:),1,me.smoothing.window);
-						out(2,:) = sgolayfilt(in(2,:),1,me.smoothing.window);
+						out = sgolayfilt(ld,1,me.smoothing.window,[],2);
 						out = median(out, 2);
 					otherwise
-						out = median(in, 2);
+						out = median(ld, 2);
 				end
 			elseif size(in, 2) > 1
 				out = median(in, 2);

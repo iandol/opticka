@@ -203,7 +203,10 @@ classdef movieStimulus < baseStimulus
 				end
 				me.texture = Screen('GetMovieImage', me.sM.win, me.movie, me.blocking);
 				if me.texture > 0
-					if me.buffertex > 0; try Screen('Close', me.buffertex); end; me.buffertex=-1; end
+					if ~isempty(me.buffertex) && me.buffertex > 0 && me.buffertex ~= me.texture
+						try Screen('Close', me.buffertex); end
+						me.buffertex=[]; 
+					end
 					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,[],[],[],[],me.shader);
 					me.buffertex = me.texture; %copy new texture to buffer
 				elseif me.buffertex > 0
