@@ -261,7 +261,21 @@ classdef tobiiManager < optickaCore
 			if me.isConnected && me.isRecording
 				td = me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
 				if td.left.gazePoint.valid(end) || td.right.gazePoint.valid(end)
-					xy = doSmoothing(me,td);
+					switch me.smoothing.eyes
+						case 'left'
+							xy = td.left.gazePoint.onDisplayArea(:,td.left.gazePoint.valid);
+						case 'right'
+							xy = td.right.gazePoint.onDisplayArea(:,td.right.gazePoint.valid);
+						otherwise
+							ll=td.left.gazePoint.onDisplayArea(:,td.left.gazePoint.valid);
+							rr=td.right.gazePoint.onDisplayArea(:,td.right.gazePoint.valid);
+							if size(ll,2) == size(rr,2)
+								xy = [ll;rr];
+							else
+								xy = ll; %switch temporarily to left eye only
+							end
+					end
+					xy = doSmoothing(me,xy);
 					xy = toPixels(me, xy,'','relative');
 					me.currentSample.gx		= xy(1);
 					me.currentSample.gy		= xy(2);
@@ -650,9 +664,10 @@ classdef tobiiManager < optickaCore
 				
 				endExp = 0;
 				a = 1;
-				m=1;
+				m=1;n=1;
 				vbl=[];
-				methods={'median','heuristic','sg','simple'};
+				methods={'median','heuristic1','heuristic2','sg','simple'};
+				eyes={'both','left','right'};
 				Screen('TextFont',s.win,'Consolas');
 				startRecording(me);
 				trackerMessage(me,'Starting Demo...')
@@ -674,7 +689,9 @@ classdef tobiiManager < optickaCore
 						
 						getSample(me);
 						if ~isempty(me.currentSample)
-							txt = sprintf('Press Q to finish \n X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %i %s | RADIUS = %.1f | FIXATION = %i', me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.smoothing.nSamples, me.smoothing.method, me.fixation.Radius, me.fixLength);
+							txt = sprintf('Press Q to finish \n X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %i %s %s | RADIUS = %.1f | FIXATION = %i',...
+								me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.smoothing.nSamples,...
+								me.smoothing.method, me.smoothing.eyes, me.fixation.Radius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
 						end
@@ -689,7 +706,8 @@ classdef tobiiManager < optickaCore
 						if keyCode(calibkey); me.doCalibration; end
 						if keyCode(upKey); me.smoothing.nSamples = me.smoothing.nSamples + 1; if me.smoothing.nSamples > 400; me.smoothing.nSamples=400;end; end
 						if keyCode(downKey); me.smoothing.nSamples = me.smoothing.nSamples - 1; if me.smoothing.nSamples < 1; me.smoothing.nSamples=1;end;	end
-						if keyCode(leftKey); m=m+1; if m>4;m=1;end; me.smoothing.method=methods{m};end
+						if keyCode(leftKey); m=m+1; if m>5;m=1;end; me.smoothing.method=methods{m};end
+						if keyCode(rightKey); n=n+1; if n>3;n=1;end; me.smoothing.eyes=eyes{n};end
 						
 						b=b+1;
 					end
@@ -750,31 +768,38 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief smooth data in M x N where M = 2 (x&y trace)
+		%> @brief smooth data in M x N where M = 2 (x&y trace) or M = 4 is x&y
+		%> for both eyes. Output is 2 x 1 x&y averages position
 		%>
 		% ===================================================================
 		function out = doSmoothing(me,in)
-			if size(ld,2) > me.smoothing.window
+			if size(in,2) > me.smoothing.window * 2
 				switch me.smoothing.method
 					case 'median'
-						out = movmedian(ld,me.smoothing.window,2);
+						out = movmedian(in,me.smoothing.window,2);
 						out = median(out, 2);
 					case {'heuristic','heuristic1'}
-						out = me.heuristicFilter(ld,1);
+						out = me.heuristicFilter(in,1);
 						out = median(out, 2);
 					case 'heuristic2'
-						out = me.heuristicFilter(ld,1);
+						out = me.heuristicFilter(in,2);
 						out = median(out, 2);
 					case 'sg' %savitzky-golay
-						out = sgolayfilt(ld,1,me.smoothing.window,[],2);
+						out = sgolayfilt(in,1,me.smoothing.window,[],2);
 						out = median(out, 2);
 					otherwise
-						out = median(ld, 2);
+						out = median(in, 2);
 				end
 			elseif size(in, 2) > 1
 				out = median(in, 2);
 			else
 				out = in;
+			end
+			if size(out,1)==4 % XY for both eyes, combine together.
+				out = [mean([out(1) out(3)]); mean([out(2) out(4)])];
+			end
+			if length(out) ~= 2
+				out = [0.5 0.5];
 			end
 		end
 		
