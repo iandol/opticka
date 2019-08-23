@@ -1,6 +1,6 @@
 % ========================================================================
 %> @brief eyelinkManager wraps around the eyelink toolbox functions
-%> offering a simpler interface
+%> offering a simpler interface, with methods for fixation window control
 %>
 % ========================================================================
 classdef eyelinkManager < optickaCore
@@ -135,7 +135,7 @@ classdef eyelinkManager < optickaCore
 		
 		% ===================================================================
 		%> @brief initialise the eyelink, setting up the proper settings
-		%> and opening the EDF file if isRecording = true
+		%> and opening the EDF file if me.recordData is true
 		%>
 		% ===================================================================
 		function initialise(me,sM)
@@ -425,11 +425,11 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Function interface to update the fixation parameters
+		%> @brief Sinlge method to update the fixation parameters
 		%>
 		% ===================================================================
 		function updateFixationValues(me,x,y,inittime,fixtime,radius,strict)
-			%tic
+			
 			resetFixation(me)
 			if nargin > 1 && ~isempty(x)
 				if isinf(x)
@@ -542,8 +542,8 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief testFixation returns input yes or no strings based on
-		%> fixation state, useful for using via stateMachine
+		%> @brief testExclusion 
+		%> 
 		%>
 		% ===================================================================		
 		function out = testExclusion(me)
@@ -559,8 +559,8 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief testFixation returns input yes or no strings based on
-		%> fixation state, useful for using via stateMachine
+		%> @brief testWithinFixationWindow simply tests we are in fixwindow
+		%> 
 		%>
 		% ===================================================================
 		function out = testWithinFixationWindow(me, yesString, noString)
@@ -954,7 +954,7 @@ classdef eyelinkManager < optickaCore
 			nextKey=KbName('SPACE');
 			calibkey=KbName('C');
 			driftkey=KbName('D');
-			me.recordData = true;
+			me.recordData = true; %lets save an EDF file
 			try
 				s = screenManager('debug',true,'pixelsPerCm',27,'distance',66);
 				if exist('forcescreen','var'); s.screen = forcescreen; end
@@ -983,7 +983,6 @@ classdef eyelinkManager < optickaCore
 				trackerClearScreen(me);
 				trackerDrawFixation(me);
 				trackerDrawStimuli(me,ts);
-				statusMessage(me,'DEMO Running Trial=1');
 				
 				xx = 0;
 				a = 1;
@@ -995,7 +994,7 @@ classdef eyelinkManager < optickaCore
 					edfMessage(me,['TRIALID ' num2str(a)]);
 					startRecording(me);
 					statusMessage(me,sprintf('DEMO Running Trial=%i',a));
-					WaitSecs(0.1);
+					WaitSecs(0.25);
 					vbl=flip(s);
 					syncTime(me);
 					while yy == 0
