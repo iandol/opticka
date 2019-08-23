@@ -327,7 +327,7 @@ classdef screenManager < optickaCore
 				
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-				PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
+				%PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
 				fprintf('---> screenManager: Probing for a Display++... ');
 				bitsCheckOpen(me);
 				if me.isPlusPlus; fprintf('Found Display++...\n'); else; fprintf('NO Display++...\n'); end
