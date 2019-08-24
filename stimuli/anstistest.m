@@ -6,18 +6,27 @@ screenSize = [];
 
 ptb = mySetup(screen,bgColour,screenSize);
 
-resolution = [400 400];
+resolution = [500 500];
 phase = 0;
 angle = 0;
 sf = 1 / ptb.ppd; %1c/d
 contrast = 1; 
 sigma = -1; % >=0 become a square wave smoothed with sigma. <0 = sinewave grating.
+radius = 0; %if radius > 0 then we create a circular aperture radius pixels wide
 
-% this procedural texture is a pseudo yellow square wave, used in Anstis & Cavanaugh 1983
-[anstis, arect] = CreateProceduralPseudoYellowGrating(ptb.win, resolution(1), resolution(2),[1 0 0 1],[0 1 0 1],[0.7 0 0 1],[0 0.7 0 1]);
+colorA = [1 0 0 1];
+colorB = [0 1 0 1];
 
-% this is a two color grating, passing in red and green.
-[cgrat, crect] = CreateProceduralColorGrating(ptb.win, resolution(1), resolution(2),[1 0 0 1],[0 1 0 1]);
+% this is a two color grating, passing in colorA and colorB.
+[cgrat, ~] = CreateProceduralColorGrating(ptb.win, resolution(1), resolution(2),...
+	colorA, colorB, radius);
+
+colorC = [0.6 0 0 1];
+colorD = [0 0.6 0 1];
+
+% procedural pseudo yellow square wave, see Anstis & Cavanaugh 1983
+[anstis, arect] = CreateProceduralPseudoYellowGrating(ptb.win, resolution(1), resolution(2),...
+	colorA,colorB,colorC,colorD,radius);
 
 Priority(MaxPriority(ptb.win)); %bump our priority to maximum allowed
 
@@ -28,9 +37,6 @@ mvcRect = OffsetRect(mvaRect,-resolution(1),0);
 mvccRect = OffsetRect(mvaRect,resolution(1),0);
 
 while vbl(end) < vbl(1) + 4
-	%Screen('DrawTexture', windowPointer, texturePointer,[,sourceRect] [,destinationRect] [,rotationAngle],...
-	%[, filterMode] [, globalAlpha] [, modulateColor],[, textureShader] [, specialFlags] [, auxParameters]);
-	
 	%if contrast < 1, then modulateColor is used as the middle point, so for
 	%example if color1=red & color2=green & modulateColor=[0.5 0.5 0.5] then
 	%as we decrease contrast, we blend red and green each with mid-grey.
@@ -41,7 +47,7 @@ while vbl(end) < vbl(1) + 4
 		[phase, sf, contrast, sigma]);
 	Screen('DrawTexture', ptb.win, cgrat, [], mvccRect,...
 		angle, [], [], [0.5 0.5 0.5 1], [], [],...
-		[phase, sf, 0.25, 0.1]); % this is a square wave grating
+		[phase, sf, 0.25, 0.1]); % this is a 0.25contrast smoothed square wave grating
 				
 	%only auxParameters phase and sf are used
 	Screen('DrawTexture', ptb.win, anstis, [], mvaRect,...

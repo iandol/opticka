@@ -8,7 +8,6 @@
 
 uniform float radius;
 uniform vec2  center;
-float dist;
 uniform vec4 color1;
 uniform vec4 color2;
 
@@ -25,7 +24,7 @@ void main() {
 
 	/* find our distance from center, if distance to center (aka radius of pixel) > Radius, discard this pixel: */
 	if (radius > 0.0) {
-		dist = distance(pos, center);
+		float dist = distance(pos, center);
 		if (dist > radius) discard;
 	}
 
@@ -40,14 +39,16 @@ void main() {
 		sv = (sv + 1.0) / 2.0; //simply get sv into 0 - 1 range;
 	}
 
+	vec3 colorA = color1.rgb;
+	vec3 colorB = color2.rgb;
 	//we first blend our colours from base using 0-1 contrast range
 	if (contrast < 1.0) {
-		color1.rgb = mix(baseColor, color1.rgb, contrast);
-		color2.rgb = mix(baseColor, color2.rgb, contrast);
+		colorA = mix(baseColor, colorA, contrast);
+		colorB = mix(baseColor, colorB, contrast);
 	}
 	
 	// and then mix our two colors using our grating position
-	vec3 color = mix(color1.rgb, color2.rgb, sv);
+	vec3 color = mix(colorA, colorB, sv);
 	
 	// off to the display, bye little pixel!
 	gl_FragColor = vec4(color,alpha);
