@@ -1,5 +1,9 @@
 /*
- * File: anstis.vert
+ * File: colorgrating.vert
+ * Shader for drawing of color gratings.
+ *
+ * Copyright 2014, Ian Andolina <http://github.com/iandol>, licenced under the MIT Licence
+ *
  */
 
 /* Constants that we need 2*pi: */
@@ -45,4 +49,5 @@ void main()
     
     /* global alpha */
     alpha = modulateColor.a;
+
 }

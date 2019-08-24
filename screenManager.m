@@ -681,7 +681,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function set.pixelsPerCm(me,value)
 			if ~(value > 0)
-				value = 44;
+				value = 36;
 			end
 			me.pixelsPerCm = value;
 			me.makeGrid();

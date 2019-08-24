@@ -403,7 +403,7 @@ classdef gratingStimulus < baseStimulus
 				obj.sfOut = value;
 				obj.sfRecurse = false;
 			end
-			%fprintf('\nSET SFOut: %d | cachce: %d | in: %d\n', obj.sfOut, obj.sfCache, value);
+			%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', obj.sfOut, obj.sfCache, value);
 		end
 		
 		% ===================================================================
