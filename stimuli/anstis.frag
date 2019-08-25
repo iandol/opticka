@@ -1,5 +1,5 @@
 // Author: iandol
-// Title: anstis+cavanaugh 1983 shader
+// Title: anstis+cavanaugh 1983 pseudo color shader
 
 #ifdef GL_ES
 precision mediump float;
@@ -7,13 +7,12 @@ precision mediump float;
 
 uniform float radius;
 uniform vec2  center;
-float dist;
 uniform vec4 color1;
 uniform vec4 color2;
 uniform vec4 color3;
 uniform vec4 color4;
 
-varying vec4  baseColor;
+varying vec3 baseColor;
 varying float phase;
 varying float frequency;
 varying float sigma;
@@ -25,7 +24,7 @@ void main() {
 
 	/* find our distance from center, if distance to center (aka radius of pixel) > Radius, discard this pixel: */
 	if (radius > 0.0) {
-		dist = distance(pos, center);
+		float dist = distance(pos, center);
 		if (dist > radius) discard;
 	}
 
