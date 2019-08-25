@@ -31,8 +31,13 @@ classdef arduinoManager < optickaCore
 			end
 			if isempty(me.port)
 				me.ports = seriallist;
-				me.port = char(me.ports(1));
-				fprintf('Ports available: %s\n',me.ports);
+				if ~isempty(me.ports)
+					me.port = char(me.ports(1));
+					fprintf('Ports available: %s\n',me.ports);
+				else
+					fprintf('No Serial Ports are available, going into silemt mode\n');
+					me.silentMode = true;
+				end
 			end
 			switch me.mode
 				case 'original'

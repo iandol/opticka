@@ -88,7 +88,7 @@ p = mfilename('fullpath');
 p = [fileparts(p) filesep];
 
 % Load grating shader with circular aperture and smoothing support:
-discShader = LoadGLSLProgramFromFiles({[p 'smoothdisc.vert.txt'], [p 'smoothdisc.frag.txt']}, 1);
+discShader = LoadGLSLProgramFromFiles({[p 'smoothdisc.vert'], [p 'smoothdisc.frag']}, 1);
 
 % Setup shader:
 glUseProgram(discShader);
