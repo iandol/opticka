@@ -63,7 +63,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> tick updates +1 on each draw, resets on each update
 		tick double = 0
 		%> pixels per degree (normally inhereted from screenManager)
-		ppd double = 44
+		ppd double = 36
 	end
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
@@ -214,7 +214,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief Shorthand to set isVisible=true.
+		%> @brief Method/function shorthand to set isVisible=true.
 		%>
 		% ===================================================================
 		function show(me)
@@ -222,7 +222,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief Shorthand to set isVisible=false.
+		%> @brief Method/function shorthand to set isVisible=false.
 		%>
 		% ===================================================================
 		function hide(me)
@@ -230,7 +230,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief we reset the various tick counters for our stimulus
+		%> @brief reset the various tick counters for our stimulus
 		%>
 		% ===================================================================
 		function resetTicks(me)

@@ -15,9 +15,9 @@ classdef discStimulus < baseStimulus
 		flashOffColour = []
 		%> cosine smoothing sigma in pixels for mask
 		sigma = 11.0
-		%> use colour or alpha channel for smoothing?
+		%> use colour or alpha [default] channel for smoothing?
 		useAlpha = true
-		%> use cosine (0) or hermite interpolation (1, default)
+		%> use cosine (0), hermite (1, default), or inverse hermite (2)
 		smoothMethod = 1
 	end
 	
@@ -64,19 +64,19 @@ classdef discStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function obj = discStimulus(varargin)
+		function me = discStimulus(varargin)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0; varargin.family = 'disc'; end
 			
-			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
-			obj.colour = [1 1 1];
+			me=me@baseStimulus(varargin); %we call the superclass constructor first
+			me.colour = [1 1 1];
 			
 			if nargin>0
-				obj.parseArgs(varargin, obj.allowedProperties);
+				me.parseArgs(varargin, me.allowedProperties);
 			end
 			
-			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			obj.salutation('constructor','Stimulus initialisation complete');
+			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.salutation('constructor','Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
@@ -88,73 +88,73 @@ classdef discStimulus < baseStimulus
 		%>
 		%> @param sM handle to the current screenManager object
 		% ===================================================================
-		function setup(obj,sM)
+		function setup(me,sM)
 			
-			reset(obj);
-			obj.inSetup = true;
-			if isempty(obj.isVisible)
-				obj.show;
+			reset(me);
+			me.inSetup = true;
+			if isempty(me.isVisible)
+				me.show;
 			end
 			
-			obj.sM = sM;
-			obj.ppd=sM.ppd;
+			me.sM = sM;
+			me.ppd=sM.ppd;
 			
-			obj.texture = []; %we need to reset this
+			me.texture = []; %we need to reset this
 			
 			fn = fieldnames(discStimulus);
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
-					p=obj.addprop([fn{j} 'Out']);
+				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
+					p=me.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
 				end
-				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
-					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
-			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
-			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
-			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
-			obj.doDots = false;
-			obj.doMotion = false;
-			obj.doDrift = false;
-			obj.doFlash = false;
+			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
+			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
+			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
+			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
+			me.doDots = false;
+			me.doMotion = false;
+			me.doDrift = false;
+			me.doFlash = false;
 			
-			if obj.speedOut > 0; obj.doMotion = true; end
+			if me.speedOut > 0; me.doMotion = true; end
 			
-			if isempty(obj.findprop('discSize'));p=obj.addprop('discSize');p.Transient=true;end
-			obj.discSize = obj.ppd * obj.size;
+			if isempty(me.findprop('discSize'));p=me.addprop('discSize');p.Transient=true;end
+			me.discSize = me.ppd * me.size;
 			
-			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
-			obj.res = round([obj.discSize obj.discSize]);
+			if isempty(me.findprop('res'));p=me.addprop('res');p.Transient=true;end
+			me.res = round([me.discSize me.discSize]);
 			
-			if isempty(obj.findprop('radius'));p=obj.addprop('radius');p.Transient=true;end
-			obj.radius = floor(obj.discSize/2);
+			if isempty(me.findprop('radius'));p=me.addprop('radius');p.Transient=true;end
+			me.radius = floor(me.discSize/2);
 			
-			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
+			if isempty(me.findprop('texture'));p=me.addprop('texture');p.Transient=true;end
 			
-			obj.texture = CreateProceduralSmoothDisc(obj.sM.win, obj.res(1), ...
-						obj.res(2), [0 0 0 0], obj.radius, obj.sigmaOut, ...
-						obj.useAlpha, obj.smoothMethod);
+			me.texture = CreateProceduralSmoothedDisc(me.sM.win, me.res(1), ...
+						me.res(2), [0 0 0 0], me.radius, me.sigmaOut, ...
+						me.useAlpha, me.smoothMethod);
 			
-			if strcmpi(obj.type,'flash')
-				obj.doFlash = true;
-				if ~isempty(obj.flashOffColour)
-					obj.flashBG = [obj.flashOffColour(1:3) 0];
+			if strcmpi(me.type,'flash')
+				me.doFlash = true;
+				if ~isempty(me.flashOffColour)
+					me.flashBG = [me.flashOffColour(1:3) 0];
 				else
-					obj.flashBG = [obj.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
+					me.flashBG = [me.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
 				end
-				setupFlash(obj);
+				setupFlash(me);
 			end
 			
-			obj.inSetup = false;
-			computePosition(obj);
-			setRect(obj);
+			me.inSetup = false;
+			computePosition(me);
+			setRect(me);
 			
 		end
 		
@@ -164,12 +164,12 @@ classdef discStimulus < baseStimulus
 		%> @param
 		%> @return
 		% ===================================================================
-		function update(obj)
-			resetTicks(obj);
-			computePosition(obj);
-			setRect(obj);
-			if obj.doFlash
-				obj.resetFlash;
+		function update(me)
+			resetTicks(me);
+			computePosition(me);
+			setRect(me);
+			if me.doFlash
+				me.resetFlash;
 			end
 		end
 		
@@ -179,24 +179,24 @@ classdef discStimulus < baseStimulus
 		%> @param sM runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
+		function draw(me)
+			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				%Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] 
 				%[,rotationAngle] [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] 
 				%[, specialFlags] [, auxParameters]);
-				Screen('BlendFunction', obj.sM.win, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');
-				if obj.doFlash == false
-					Screen('DrawTexture', obj.sM.win, obj.texture, [], obj.mvRect,...
-					obj.angleOut, [], [], obj.colourOut, [], [],...
+				Screen('BlendFunction', me.sM.win, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');
+				if me.doFlash == false
+					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
+					me.angleOut, [], [], me.colourOut, [], [],...
 					[]);
 				else
-					Screen('DrawTexture', obj.sM.win, obj.texture, [], obj.mvRect,...
-					obj.angleOut, [], [], obj.currentColour, [], [],...
+					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
+					me.angleOut, [], [], me.currentColour, [], [],...
 					[]);
 				end
-				Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
+				Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
 			end
-			obj.tick = obj.tick + 1;
+			me.tick = me.tick + 1;
 		end
 		
 		% ===================================================================
@@ -205,28 +205,28 @@ classdef discStimulus < baseStimulus
 		%> @param sM runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function animate(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
-				if obj.mouseOverride
-					getMousePosition(obj);
-					if obj.mouseValid
-						obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+		function animate(me)
+			if me.isVisible && me.tick >= me.delayTicks
+				if me.mouseOverride
+					getMousePosition(me);
+					if me.mouseValid
+						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
 					end
 				end
-				if obj.doMotion == true
-					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
+				if me.doMotion == true
+					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
-				if obj.doFlash == true
-					if obj.flashCounter <= obj.flashSwitch
-						obj.flashCounter=obj.flashCounter+1;
+				if me.doFlash == true
+					if me.flashCounter <= me.flashSwitch
+						me.flashCounter=me.flashCounter+1;
 					else
-						obj.flashCounter = 1;
-						obj.flashOnOut = ~obj.flashOnOut;
-						if obj.flashOnOut == true
-							obj.currentColour = obj.flashFG;
+						me.flashCounter = 1;
+						me.flashOnOut = ~me.flashOnOut;
+						if me.flashOnOut == true
+							me.currentColour = me.flashFG;
 						else
-							obj.currentColour = obj.flashBG;
-							%fprintf('Current: %s | %s\n',num2str(obj.colourOut), num2str(obj.flashOnOut));
+							me.currentColour = me.flashBG;
+							%fprintf('Current: %s | %s\n',num2str(me.colourOut), num2str(me.flashOnOut));
 						end
 					end
 				end
@@ -239,30 +239,30 @@ classdef discStimulus < baseStimulus
 		%> @param sM runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function reset(obj)
-			resetTicks(obj);
-			if isprop(obj,'texture'); obj.texture = []; end
-			if isprop(obj,'discSize'); obj.discSize = []; end
-			if isprop(obj,'radius'); obj.radius = []; end
-			if isprop(obj,'res'); obj.res = []; end
-			obj.removeTmpProperties;
-			%if ~isempty(obj.findprop('discSize'));delete(obj.findprop('discSize'));end
+		function reset(me)
+			resetTicks(me);
+			if isprop(me,'texture'); me.texture = []; end
+			if isprop(me,'discSize'); me.discSize = []; end
+			if isprop(me,'radius'); me.radius = []; end
+			if isprop(me,'res'); me.res = []; end
+			me.removeTmpProperties;
+			%if ~isempty(me.findprop('discSize'));delete(me.findprop('discSize'));end
 		end
 		
 		% ===================================================================
 		%> @brief flashSwitch Get method
 		%>
 		% ===================================================================
-		function flashSwitch = get.flashSwitch(obj)
-			if isempty(obj.findprop('flashOnOut'))
-				trigger = obj.flashOn;
+		function flashSwitch = get.flashSwitch(me)
+			if isempty(me.findprop('flashOnOut'))
+				trigger = me.flashOn;
 			else
-				trigger = obj.flashOnOut;
+				trigger = me.flashOnOut;
 			end
 			if trigger
-				flashSwitch = round(obj.flashTimeOut(1) / obj.sM.screenVals.ifi);
+				flashSwitch = round(me.flashTimeOut(1) / me.sM.screenVals.ifi);
 			else
-				flashSwitch = round(obj.flashTimeOut(2) / obj.sM.screenVals.ifi);
+				flashSwitch = round(me.flashTimeOut(2) / me.sM.screenVals.ifi);
 			end
 		end
 		
@@ -279,37 +279,37 @@ classdef discStimulus < baseStimulus
 		%> this is modified over parent method as textures have slightly different
 		%> requirements.
 		% ===================================================================
-		function setRect(obj)
-			dstRect=Screen('Rect', obj.texture);
-			obj.dstRect = ScaleRect(Screen('Rect',obj.texture), obj.scale, obj.scale);
-			if obj.mouseOverride && obj.mouseValid
-					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
+		function setRect(me)
+			dstRect=Screen('Rect', me.texture);
+			me.dstRect = ScaleRect(Screen('Rect',me.texture), me.scale, me.scale);
+			if me.mouseOverride && me.mouseValid
+					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 			else
-				if isempty(obj.findprop('angleOut'))
-					[sx, sy]=pol2cart(obj.d2r(obj.angle),obj.startPosition);
+				if isempty(me.findprop('angleOut'))
+					[sx, sy]=pol2cart(me.d2r(me.angle),me.startPosition);
 				else
-					[sx, sy]=pol2cart(obj.d2r(obj.angleOut),obj.startPosition);
+					[sx, sy]=pol2cart(me.d2r(me.angleOut),me.startPosition);
 				end
-				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
-				if isempty(obj.findprop('xPositionOut'))
-					obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
+				me.dstRect=CenterRectOnPointd(me.dstRect,me.sM.xCenter,me.sM.yCenter);
+				if isempty(me.findprop('xPositionOut'))
+					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
 				else
-					obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));
+					me.dstRect=OffsetRect(me.dstRect,me.xPositionOut+(sx*me.ppd),me.yPositionOut+(sy*me.ppd));
 				end
 			end
-			obj.mvRect=obj.dstRect;
-			obj.setAnimationDelta();
+			me.mvRect=me.dstRect;
+			me.setAnimationDelta();
 		end
 		
 		% ===================================================================
 		%> @brief sizeOut Set method
 		%>
 		% ===================================================================
-		function set_sizeOut(obj,value)
-			obj.sizeOut = value * obj.ppd; %divide by 2 to get diameter
-			if isprop(obj,'discSize') && ~isempty(obj.discSize) && ~isempty(obj.texture)
-				obj.scale = obj.sizeOut / obj.discSize;
-				setRect(obj);
+		function set_sizeOut(me,value)
+			me.sizeOut = value * me.ppd; %divide by 2 to get diameter
+			if isprop(me,'discSize') && ~isempty(me.discSize) && ~isempty(me.texture)
+				me.scale = me.sizeOut / me.discSize;
+				setRect(me);
 			end
 		end
 		
@@ -317,14 +317,14 @@ classdef discStimulus < baseStimulus
 		%> @brief colourOut SET method
 		%>
 		% ===================================================================
-		function set_colourOut(obj, value)
+		function set_colourOut(me, value)
 			if length(value) == 1
-				value = [value value value obj.alphaOut];
+				value = [value value value me.alphaOut];
 			elseif length(value) == 3
-				value = [value obj.alphaOut];
+				value = [value me.alphaOut];
 			end
-			obj.colourOutTemp = value;
-			obj.colourOut = value;
+			me.colourOutTemp = value;
+			me.colourOut = value;
 		end
 		
 		
@@ -332,13 +332,13 @@ classdef discStimulus < baseStimulus
 		%> @brief setupFlash
 		%>
 		% ===================================================================
-		function setupFlash(obj)
-			obj.flashFG = obj.colourOut;
-			obj.flashCounter = 1;
-			if obj.flashOnOut == true
-				obj.currentColour = obj.flashFG;
+		function setupFlash(me)
+			me.flashFG = me.colourOut;
+			me.flashCounter = 1;
+			if me.flashOnOut == true
+				me.currentColour = me.flashFG;
 			else
-				obj.currentColour = obj.flashBG;
+				me.currentColour = me.flashBG;
 			end
 		end
 		
@@ -346,15 +346,15 @@ classdef discStimulus < baseStimulus
 		%> @brief resetFlash
 		%>
 		% ===================================================================
-		function resetFlash(obj)
-			obj.flashFG = obj.colourOut;
-			obj.flashOnOut = obj.flashOn;
-			if obj.flashOnOut == true
-				obj.currentColour = obj.flashFG;
+		function resetFlash(me)
+			me.flashFG = me.colourOut;
+			me.flashOnOut = me.flashOn;
+			if me.flashOnOut == true
+				me.currentColour = me.flashFG;
 			else
-				obj.currentColour = obj.flashBG;
+				me.currentColour = me.flashBG;
 			end
-			obj.flashCounter = 1;
+			me.flashCounter = 1;
 		end
 	end
 end

@@ -33,9 +33,11 @@ classdef arduinoManager < optickaCore
 				me.ports = seriallist;
 				if ~isempty(me.ports)
 					me.port = char(me.ports(1));
-					fprintf('Ports available: %s\n',me.ports);
+					fprintf('--->arduinoManager: Ports available: %s\n',me.ports);
+					if isempty(me.port); me.port = me.ports{1}; end
 				else
-					fprintf('No Serial Ports are available, going into silemt mode\n');
+					me.comment = 'No Serial Ports are available, going into silent mode';
+					fprintf('--->arduinoManager: %s\n',me.comment);
 					me.silentMode = true;
 				end
 			end
@@ -63,18 +65,27 @@ classdef arduinoManager < optickaCore
 					switch me.mode
 						case 'original'
 							if ~isempty(me.port)
+								if IsWin && ~isempty(regexp(me.port, '^/dev/', 'once'))
+									warning('--->arduinoManager: Linux/macOS port specified but running on windows!')
+									me.port = '';
+								elseif (IsLinux||IsOSX) && ~isempty(regexp(me.port, '^COM', 'once'))
+									warning('--->arduinoManager: Windows port specified but running on Linux/macOS!')
+									me.port = '';
+								end
 								me.device = arduinoLegacy(me.port);
+								me.board = 'Generic';
+								me.deviceID = me.port;
+								me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
+								for i = me.availablePins{1} : me.availablePins{end}
+									me.device.pinMode(i,'output');
+									me.device.digitalWrite(i,0);
+								end
+								me.isOpen = true;
 							else
-								error('Please specify the port to use!')
+								warning('--->arduinoManager: Please specify the port to use, going into silent mode!')
+								me.isOpen = false; me.silentMode = true;
 							end
-							me.board = 'Generic';
-							me.deviceID = me.port;
-							me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
-							for i = me.availablePins{1} : me.availablePins{end}
-								me.device.pinMode(i,'output');
-								me.device.digitalWrite(i,0);
-							end
-							me.isOpen = true;
+							
 						otherwise
 							if ~isempty(me.port)
 								me.device = arduino(me.port);
@@ -95,7 +106,7 @@ classdef arduinoManager < optickaCore
 					me.silentMode = false;
 				catch ME
 					me.silentMode = true; me.isOpen = false;
-					fprintf('\n\nCouldn''t open Arduino, try a valid name?')
+					fprintf('\n\nCouldn''t open Arduino: %s\n',ME.message)
 					getReport(ME)
 				end
 			elseif ~isempty(me.device)
@@ -169,25 +180,25 @@ classdef arduinoManager < optickaCore
 		
 		%===============TEST TTL================%
 		function test(me,line)
-			if me.silentMode==false && ~isempty(me.device)
-				if ~exist('line','var') || isempty(line); line = 2; end
-				switch me.mode
-					case 'original'
-						digitalWrite(me.device, line, 0);
-						for ii = 1:20
-							digitalWrite(me.device, line, mod(ii,2));
-						end
-					otherwise
-						writeDigitalPin(me.device,['D' num2str(line)],0);
-						for ii = 1:20
-							writeDigitalPin(me.device,['D' num2str(line)],mod(ii,2));
-						end
-				end
+			if me.silentMode || isempty(me.device); return; end
+			if ~exist('line','var') || isempty(line); line = 2; end
+			switch me.mode
+				case 'original'
+					digitalWrite(me.device, line, 0);
+					for ii = 1:20
+						digitalWrite(me.device, line, mod(ii,2));
+					end
+				otherwise
+					writeDigitalPin(me.device,['D' num2str(line)],0);
+					for ii = 1:20
+						writeDigitalPin(me.device,['D' num2str(line)],mod(ii,2));
+					end
 			end
 		end
 		
 		%===============Manual Reward GUI================%
 		function GUI(me)
+			if me.silentMode; return; end
 			if ~isempty(me.handles) && isfield(me.handles,'parent') && ishandle(me.handles.parent)
 				disp('--->>> arduinoManager: GUI already open...\n')
 				return;
