@@ -465,16 +465,16 @@ try
 	
 	% Figure 1 shows time deltas between successive flips in milliseconds:
 	% This should equal the product numifis * ifi:
-	figure('Position',[0 0 1024 800],'Name','Performance Results');
+	figure('Position',[0 0 1200 1000],'Name','Performance Results');
 	subplot(2,3,1);
 	hold on;
-	plot((ts(2:n) - ts(1:n-1)) * 1000,'k.','MarkerSize',8);
+	plot(diff(ts) * 1e3,'k.','MarkerSize',10);
 	ni=numifis;
 	if (numifis==0)
 		ni=1;
 	end
 	plot(ones(1,n)*ifi*ni*1000);
-	title('Succesive Flip Delta');
+	title('Delta between VBL values');
 	ylabel('Time (ms)');
 	hold off; box on; grid on;
 	
@@ -482,7 +482,7 @@ try
 	% milliseconds:
 	subplot(2,3,2);
 	hold on;
-	plot(missest*1000,'k.','MarkerSize',8);
+	plot(missest*1e3,'k.','MarkerSize',8);
 	plot(zeros(1,n));
 	title('Estimate missed deadlines (+ = miss)');
 	ylabel('Time (ms)');
@@ -492,12 +492,12 @@ try
 	% start of VBL time:
 	subplot(2,3,3);
 	hold on
-	plot((flipfin - ts)*1000,'k.','MarkerSize',8);
+	plot((flipfin - ts)*1e3,'k.','MarkerSize',8);
 	stairs(clog,'k-','Color',[0.4 0.4 0.4]);
 	ylim([-5 5]);
 	hold off
 	box on; grid on;
-	title('Delta between start of VBL and return of Flip:');
+	title('Return of Flip - VBL');
 	ylabel('Time (ms)');
 	legend({'Deltas','Flicker Value'})
 	
@@ -505,7 +505,7 @@ try
 	% stimulus-onset:
 	subplot(2,3,4);
 	plot((flipfin - so)*1000,'k.','MarkerSize',8);
-	title('Delta between stimulus onset and return of Flip:');
+	title('Return of Flip - Estimated Start');
 	ylabel('Time (ms)');
 	% Figure 2 shows the recorded beam positions:
 	subplot(2,3,5);
