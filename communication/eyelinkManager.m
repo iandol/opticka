@@ -416,13 +416,6 @@ classdef eyelinkManager < optickaCore
 			sample = me.currentSample;
 		end
 		
-		% ===================================================================
-		%> @brief TODO
-		%>
-		% ===================================================================
-		function evt = getEvent(me)
-			
-		end
 		
 		% ===================================================================
 		%> @brief Sinlge method to update the fixation parameters
@@ -720,20 +713,20 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command',['record_status_message ''' message '''']);
 				if me.verbose; fprintf('-+-+->Eyelink status message: %s\n',message);end
 			end
-		end
+        end
 		
-		% ===================================================================
+        % ===================================================================
 		%> @brief send message to store in EDF data
 		%>
 		%>
 		% ===================================================================
-		function edfMessage(me, message)
+		function trackerMessage(me, message)
 			if me.isConnected
 				Eyelink('Message', message );
 				if me.verbose; fprintf('-+-+->EDF Message: %s\n',message);end
 			end
-		end
-		
+        end
+        
 		% ===================================================================
 		%> @brief close the eyelink and cleanup, send EDF file if recording
 		%> is enabled
@@ -1067,10 +1060,38 @@ classdef eyelinkManager < optickaCore
 		end
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
+    
+    %=======================================================================
+	methods (Hidden = true) %------------------HIDDEN METHODS
+	%=======================================================================
+    
+        % ===================================================================
+		%> @brief TODO
+		%>
+		% ===================================================================
+		function evt = getEvent(me)
+			
+        end
+		
+        % ===================================================================
+		%> @brief send message to store in EDF data
+		%>
+		%>
+		% ===================================================================
+		function edfMessage(me, message)
+			if me.isConnected
+				Eyelink('Message', message );
+				if me.verbose; fprintf('-+-+->EDF Message: %s\n',message);end
+			end
+		end
+		
+    
+    end
+    
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
-		%=======================================================================
+	%=======================================================================
 		
 		% ===================================================================
 		%> @brief
