@@ -54,7 +54,7 @@ while vbl(end) < vbl(1) + 4
 		angle, [], [], [], [], [],...
 		[phase, sf, 0, 0]);
 	Screen('DrawingFinished',ptb.win);
-	phase = phase + 20; 
+	phase = phase + 10; 
 	vbl(end+1) = Screen('Flip', ptb.win, vbl(end) + ptb.ifi/2);
 end
 

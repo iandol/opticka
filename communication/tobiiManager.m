@@ -9,7 +9,7 @@ classdef tobiiManager < optickaCore
 	properties
 		%> model of eyetracker, Spectrum Pro default
 		model char = 'Tobii Pro Spectrum'
-		%> tracker update speed (Hz), should be 150 300 600 1200
+		%> tracker update speed (Hz), should be 60, 120, 150, 300, 600 or 1200
 		sampleRate double = 1200
 		%> fixation window details
 		fixation struct = struct('X',0,'Y',0,'Radius',1,'InitTime',1,...
@@ -145,7 +145,7 @@ classdef tobiiManager < optickaCore
 			updateDefaults(me);
 			me.tobii.init();
 			me.isConnected		= true;
-			me.systemTime		= me.tobii.getSystemTime;
+			me.systemTime		= me.tobii.getTimeAsSystemTime;
 			me.ppd_				= me.screen.ppd;
 			if me.screen.isOpen == true
 				me.win			= me.screen.win;
@@ -601,7 +601,6 @@ classdef tobiiManager < optickaCore
 			me.isConnected = false;
 			me.isDummy = false;
 			me.eyeUsed = -1;
-			me.screen = [];
 		end
 		
 		% ===================================================================
@@ -632,11 +631,15 @@ classdef tobiiManager < optickaCore
 			c = fix(clock);c = num2str(c(1:5));c = regexprep(c,' +','-');
 			me.saveFile = [me.paths.savedData filesep c '-runDemo.mat'];
 			try
-				s = screenManager('disableSyncTests',true,'blend',true,'pixelsPerCm',36,'distance',60);
-				if exist('forcescreen','var'); s.screen = forcescreen; end
+                if isa(me.screen,'screenManager')
+                    s = me.screen; 
+                else
+                    s = screenManager('disableSyncTests',true,'blend',true,'pixelsPerCm',36,'distance',60);
+                end
+                if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
 				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',false,'density',50); %test stimulus
-				open(s); %open out screen
+				open(s); %open our screen
 				setup(o,s); %setup our stimulus with open screen
 				
 				ListenChar(1);
@@ -679,8 +682,7 @@ classdef tobiiManager < optickaCore
 					flip(s)
 					WaitSecs(0.5);
 					vbl(end+1)=flip(s);
-					%me.tobii.sendMessage(sprintf('%.6f',a,vbl(end)));
-					trackerMessage(me,sprintf('%.6f',vbl(end)));
+					%trackerMessage(me,sprintf('%.6f',vbl(end)));
 					while endTrial == 0
 						draw(o);
 						drawGrid(s);
@@ -1132,7 +1134,7 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function initTracker(me)
 			me.settings = Titta.getDefaults(me.model);
-			me.settings.cal.bgColor = [255 0 0];
+			me.settings.cal.bgColor = 127;
 			me.tobii = Titta(me.settings);
 		end
 		

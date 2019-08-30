@@ -2,12 +2,12 @@ classdef arduinoManager < optickaCore
 	%ARDUINOMANAGER Connects and manages arduino communication, uses matlab
 	%hardware package
 	properties
-		port				= ''
-		board				= ''
+		port			= ''
+		board			= ''
 		silentMode		= false %this allows us to be called even if no arduino is attached
 		verbose			= true
 		openGUI			= true
-		mode				= 'original' %original is built-in, otherwise needs matlab hardware package
+		mode			= 'original' %original is built-in, otherwise needs matlab hardware package
 		rewardPin		= 2
 		rewardTime		= 150
 		availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
@@ -32,9 +32,8 @@ classdef arduinoManager < optickaCore
 			if isempty(me.port)
 				me.ports = seriallist;
 				if ~isempty(me.ports)
-					me.port = char(me.ports(1));
 					fprintf('--->arduinoManager: Ports available: %s\n',me.ports);
-					if isempty(me.port); me.port = me.ports{1}; end
+					if isempty(me.port); me.port = char(me.ports{end}); end
 				else
 					me.comment = 'No Serial Ports are available, going into silent mode';
 					fprintf('--->arduinoManager: %s\n',me.comment);
@@ -59,6 +58,7 @@ classdef arduinoManager < optickaCore
 		
 		%===============OPEN DEVICE================%
 		function open(me)
+            if me.isOpen;disp('-->arduinoManager: Already open!');return;end
 			close(me);
 			if me.silentMode==false && isempty(me.device)
 				try
