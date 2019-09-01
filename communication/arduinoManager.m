@@ -111,6 +111,8 @@ classdef arduinoManager < optickaCore
 				end
 			elseif ~isempty(me.device)
 				fprintf('--->>> arduinoManager: arduino appears open already...\n');
+			else
+				fprintf('--->>> arduinoManager open: silentMode engaged...\n');
 			end
 		end
 		
@@ -274,7 +276,7 @@ classdef arduinoManager < optickaCore
 			me.deviceID = '';
 			me.availablePins = '';
 			me.isOpen = false;
-			me.silentMode = false;
+			%me.silentMode = false;
 		end
 		
 	end

@@ -6,7 +6,7 @@ precision mediump float;
 #endif
 
 uniform float radius;
-uniform vec2  center;
+uniform vec2 center;
 uniform vec4 color1;
 uniform vec4 color2;
 uniform vec4 color3;
