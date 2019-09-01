@@ -272,7 +272,7 @@ try
 	[oldSrc,oldDst]=Screen('BlendFunction', w, 'GL_ONE','GL_ZERO');
 	fprintf('\n---> Previous OpenGL blending was %s | %s\n', oldSrc, oldDst);
 	fprintf('---> Initial OpenGL blending set to %s | %s\n', 'GL_ONE','GL_ZERO');
-					
+	
 	% Query effective stereo mode, as Screen() could have changed it behind our
 	% back, e.g., if we asked for mode 1 but Screen() had to fallback to
 	% mode 11:
@@ -346,7 +346,7 @@ try
 	% started. We need it as a reference value for our WaitBlanking
 	% emulation:
 	tvbl=Screen('Flip', w);
-	
+	ptoggle = true;
 	% Test-loop: Collects n samples.
 	for i=1:n
 		% Draw some simple stim for next frame of animation: We draw a
@@ -358,8 +358,11 @@ try
 		col=mod(i*cstep, 1);
 		Screen('FillRect', w, col, [pos+20 pos+20 pos+400 pos+400]);
 		
-		clog(i) = mod(i, 2);
-		Screen('FillRect', w, clog(i), [0 0 50 50]);
+		% toggle photodiode square every 10 frames
+		f = mod(i, 10);
+		if f == 0; ptoggle = ~ptoggle;end
+		if ptoggle; clog(i) = 1; else; clog(i) = 0; end
+		Screen('FillRect', w, clog(i), [0 0 45 45]);
 		
 		if (stereo>0)
 			% Show something for the right eye as well in stereo mode:
@@ -451,7 +454,7 @@ try
 			break;
 		end
 	end % Draw next frame...
-    Screen('Flip', w);
+	Screen('Flip', w);
 	Screen('BlendFunction', w, oldSrc,oldDst);
 	RestrictKeysForKbCheck([]);
 	% Shutdown realtime scheduling:
@@ -466,7 +469,7 @@ try
 	
 	% Figure 1 shows time deltas between successive flips in milliseconds:
 	% This should equal the product numifis * ifi:
-	figure('Position',[0 0 1000 1500],'Name','Performance Results');
+	figure('Position',[0 0 1500 1000],'Name','Performance Results');
 	subplot(2,3,1);
 	hold on;
 	plot(diff(ts) * 1e3,'k.','MarkerSize',10);
@@ -493,7 +496,7 @@ try
 	% start of VBL time:
 	subplot(2,3,3);
 	hold on
-    stairs(clog,'-','Color',[0.5 0.5 0.5]);
+	stairs(clog,'-','Color',[0.5 0.5 0.5]);
 	plot((flipfin - ts)*1e3,'k.','MarkerSize',10);
 	ylim([-2 2]);
 	hold off
@@ -505,29 +508,30 @@ try
 	% Figure 5 shows difference in ms between finish of Flip and estimated
 	% stimulus-onset:
 	subplot(2,3,4);
-    hold on
+	hold on
 	plot((flipfin - stimonset)*1000,'k.','MarkerSize',10);
-    plot((ts - stimonset)*1000,'r.','MarkerSize',10);
+	plot((ts - stimonset)*1000,'r.','MarkerSize',10);
 	title('Flip finish - Stim start | vbl - Stim start');
 	ylabel('Time (ms)');
-    legend({'flipfin - stimonset','vbl - stimonset'})
-    
+	legend({'flipfin - stimonset','vbl - stimonset'})
+	box on; grid on;
+	
 	% Figure 2 shows the recorded beam positions:
 	subplot(2,3,5);
 	plot(beampos,'k-','MarkerSize',8);
 	title('Rasterbeam position (in scanlines):');
 	box on; grid on;
-    
-    assignin('base','vbl',ts);
+	
+	assignin('base','vbl',ts);
 	assignin('base','stimonset',stimonset);
-    assignin('base','flipreturn',flipfin);
+	assignin('base','flipreturn',flipfin);
 	
 	if max(a) >= 0
 		subplot(2,3,6);
 		ax = plotyy(1:length(a), a, 1:length(b), b);
 		axis tight
 		%set(ax,'YScale','log')
-		title(['GETWINDOWINFO:\nMax-VBLCount:' num2str(max(a)) ' | Mean-LastVBLTime:' num2str(mean(diff(b)))]);
+		title({'GETWINDOWINFO:', ['Max-VBLCount:' num2str(max(a)) ' | Mean-LastVBLTime:' num2str(mean(diff(b)))]});
 		assignin('base','VBLCount',a);
 		assignin('base','LastVBLTime',b);
 		drawnow;

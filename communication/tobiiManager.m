@@ -662,12 +662,12 @@ classdef tobiiManager < optickaCore
 			c = fix(clock);c = num2str(c(1:5));c = regexprep(c,' +','-');
 			me.saveFile = [me.paths.savedData filesep c '-runDemo.mat'];
 			try
-                if isa(me.screen,'screenManager')
-                    s = me.screen; 
-                else
-                    s = screenManager('disableSyncTests',true,'blend',true,'pixelsPerCm',36,'distance',60);
-                end
-                if exist('forcescreen','var'); s.screen = forcescreen; end
+				if isa(me.screen,'screenManager')
+					s = me.screen;
+				else
+					s = screenManager('disableSyncTests',true,'blend',true,'pixelsPerCm',36,'distance',60);
+				end
+				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
 				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',false,'density',50); %test stimulus
 				open(s); %open our screen
@@ -688,17 +688,17 @@ classdef tobiiManager < optickaCore
 				trackerSetup(me);
 				ShowCursor; %titta fails to show cursor so we must do it
 				drawPhotoDiodeSquare(s,[0 0 0 1]); %make sure our photodiode patch is black
-                flip(s)
-                
-                % set up the size and position of the stimulus
+				flip(s)
+				
+				% set up the size and position of the stimulus
 				o.sizeOut = me.fixation.Radius*2;
 				o.xPositionOut = me.fixation.X;
 				o.yPositionOut = me.fixation.Y;
 				
-                Priority(MaxPriority(s.win));
+				Priority(MaxPriority(s.win));
 				endExp = 0;
 				trialn = 1;
-                maxTrials = 10;
+				maxTrials = 10;
 				m=1; n=1;
 				methods={'median','heuristic1','heuristic2','sg','simple'};
 				eyes={'both','left','right'};
@@ -709,10 +709,10 @@ classdef tobiiManager < optickaCore
 				while trialn <= maxTrials && endExp == 0
 					trialtick = 1;
 					trackerMessage(me,sprintf('Settings for Trial %i, X=%.2f Y=%.2f, SZ=%.2f',trialn,me.fixation.X,me.fixation.Y,o.sizeOut))
-                    drawPhotoDiodeSquare(s,[0 0 0 1]);
-                    flip(s)
-                    WaitSecs('YieldSecs',1);
-                    drawPhotoDiodeSquare(s,[0 0 0 1]);
+					drawPhotoDiodeSquare(s,[0 0 0 1]);
+					flip(s)
+					WaitSecs('YieldSecs',1);
+					drawPhotoDiodeSquare(s,[0 0 0 1]);
 					vbl = flip(s); tstart=vbl;
 					trackerMessage(me,'STARTING',vbl);
 					while vbl < tstart + 4
@@ -720,7 +720,7 @@ classdef tobiiManager < optickaCore
 						drawGrid(s);
 						drawScreenCenter(s);
 						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
-                        drawPhotoDiodeSquare(s,[1 1 1 1]);
+						drawPhotoDiodeSquare(s,[1 1 1 1]);
 						
 						getSample(me);
 						if ~isempty(me.currentSample)
@@ -729,13 +729,13 @@ classdef tobiiManager < optickaCore
 								me.smoothing.method, me.smoothing.eyes, me.fixation.Radius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
-                        end
+						end
 						finishDrawing(s);
 						animate(o);
-                        
+						
 						[vbl, when] = Screen('Flip', s.win, vbl + s.screenVals.halfifi);
 						if trialtick==1; me.tobii.sendMessage('SYNC = 255', vbl);end
-                        
+						
 						[~, ~, keyCode] = KbCheck(-1);
 						if keyCode(stopkey); endExp = 1; break; end
 						if keyCode(calibkey); me.doCalibration; end
@@ -746,11 +746,11 @@ classdef tobiiManager < optickaCore
 						trialtick=trialtick+1;
 					end
 					if endExp == 0
-                        drawPhotoDiodeSquare(s,[0 0 0 1]);
-                        vbl = flip(s);
+						drawPhotoDiodeSquare(s,[0 0 0 1]);
+						vbl = flip(s);
 						trackerMessage(me,'END_RT',vbl);
 						trackerMessage(me,'TRIAL_RESULT 1')
-                        trackerMessage(me,sprintf('Ending trial %i @ %i',trialn,int64(round(vbl*1e6))))
+						trackerMessage(me,sprintf('Ending trial %i @ %i',trialn,int64(round(vbl*1e6))))
 						resetFixation(me);
 						me.fixation.X = randi([-7 7]);
 						me.fixation.Y = randi([-7 7]);
@@ -761,14 +761,14 @@ classdef tobiiManager < optickaCore
 						update(o);
 						WaitSecs(0.3)
 						trialn = trialn + 1;
-                    else
-                        drawPhotoDiodeSquare(s,[0 0 0 1]);
-                        vbl = flip(s);
+					else
+						drawPhotoDiodeSquare(s,[0 0 0 1]);
+						vbl = flip(s);
 						trackerMessage(me,'END_RT',vbl);
 						trackerMessage(me,'TRIAL_RESULT 0 ABORT')
-                        trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))))
+						trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))))
 					end
-                end
+				end
 				stopRecording(me);
 				saveData(me);
 				me.fixation = ofixation;
@@ -1117,7 +1117,7 @@ classdef tobiiManager < optickaCore
 								out(1:2) = in(1:2) * me.screen.screenVals.width;
 								out(3:4) = in(3:4) * me.screen.screenVals.height;
 							end
-					enda
+					end
 			end
 		end
 		
@@ -1307,7 +1307,6 @@ classdef tobiiManager < optickaCore
 							Screen('DrawLines', me.screen.win, ([points(i).RightEye(j).PositionOnDisplayArea; points(i).PositionOnDisplayArea].*spx)', 2, rightColor, [0 0], 2);
 						end
 					end
-					
 				end
 				
 				DrawFormattedText(me.screen.win, 'Press the ''C'' key to recalibrate or ''Space'' to continue....', 'center', me.screen.screenVals.height * 0.95, me.screen.screenVals.white)
@@ -1326,9 +1325,8 @@ classdef tobiiManager < optickaCore
 						KbReleaseWait;
 					end
 				end
+				
 			end
 		end
-		
-	end
-	
+	end %------------------END PRIVATE METHODS
 end
