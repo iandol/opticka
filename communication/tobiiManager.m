@@ -216,9 +216,23 @@ classdef tobiiManager < optickaCore
 			if me.isConnected && ~me.isRecording
 				success = me.tobii.buffer.start('gaze');
 				if success
-					me.statusMessage('Starting to record...');
+					me.statusMessage('Starting to record gaze...');
 				else
-					warning('Can''t START buffer() recording!!!')
+					warning('Can''t START buffer() gazerecording!!!')
+                end
+                
+                success = me.tobii.buffer.start('externalSignal');
+				if success
+					me.statusMessage('Starting to record TTLs...');
+				else
+					warning('Can''t START buffer() TTL recording!!!')
+                end
+                
+                success = me.tobii.buffer.start('timeSync');
+				if success
+					me.statusMessage('Starting to record timeSync...');
+				else
+					warning('Can''t START buffer() TTL recording!!!')
 				end
 			end
 		end
@@ -227,16 +241,30 @@ classdef tobiiManager < optickaCore
 		%> @brief wrapper for StopRecording
 		%>
 		% ===================================================================
-		function stopRecording(me)
-			if me.isConnected && me.isRecording
-				success = me.tobii.buffer.stop('gaze');
-				if success
-					me.statusMessage('Stopping to record...');
-				else
-					warning('Can''t STOP buffer() recording!!!')
-				end
-			end
-		end
+        function stopRecording(me)
+            if me.isConnected && me.isRecording
+                success = me.tobii.buffer.stop('gaze');
+                if success
+                    me.statusMessage('Stopping to record Gaze...');
+                else
+                    warning('Can''t STOP buffer() recording!!!')
+                end
+                
+                success = me.tobii.buffer.stop('externalSignal');
+                if success
+                    me.statusMessage('Stopping to record TTLs...');
+                else
+                    warning('Can''t STOP buffer() recording!!!')
+                end
+                
+                success = me.tobii.buffer.stop('timeSync');
+                if success
+                    me.statusMessage('Stopping to record timeSync...');
+                else
+                    warning('Can''t STOP buffer() recording!!!')
+                end
+            end
+        end
 		
 		% ===================================================================
 		%> @brief Save the data
@@ -578,9 +606,13 @@ classdef tobiiManager < optickaCore
 		%>
 		%>
 		% ===================================================================
-		function trackerMessage(me, message)
+		function trackerMessage(me, message, vbl)
 			if me.isConnected
-				me.tobii.sendMessage(message);
+                if exist('vbl','var')
+                    me.tobii.sendMessage(message, vbl);
+                else
+                    me.tobii.sendMessage(message);
+                end
 				if me.verbose; fprintf('-+-+->TOBII Message: %s\n',message);end
 			end
 		end
@@ -614,13 +646,12 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief runs a demo of the tobii, testing this class
+		%> @brief runs a demo of the tobii workflow, testing this class
 		%>
 		% ===================================================================
 		function runDemo(me,forcescreen)
 			KbName('UnifyKeyNames')
 			stopkey=KbName('q');
-			nextKey=KbName('space');
 			upKey=KbName('uparrow');
 			downKey=KbName('downarrow');
 			leftKey=KbName('leftarrow');
@@ -645,111 +676,111 @@ classdef tobiiManager < optickaCore
 				ListenChar(1);
 				initialise(me,s); %initialise tobii with our screen
 				calViz								= AnimatedCalibrationDisplay();
-				me.settings.cal.drawFunction	= @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
+				me.settings.cal.drawFunction        = @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
 				calViz.bgColor						= 127;
-				calViz.fixBackColor				= 0;
+				calViz.fixBackColor                 = 0;
 				calViz.fixFrontColor				= 255;
-				me.settings.cal.autoPace		= 1;
-				me.settings.cal.doRandomPointOrder = false;
-				me.settings.UI.setup.eyeClr	= 200;
+				me.settings.cal.autoPace            = 1;
+				me.settings.cal.doRandomPointOrder  = false;
+				me.settings.UI.setup.eyeClr         = 255;
 				me.settings.cal.pointNotifyFunction = @demoCalCompletionFun;
 				me.settings.val.pointNotifyFunction = @demoCalCompletionFun;
 				trackerSetup(me);
 				ShowCursor; %titta fails to show cursor so we must do it
-				
+				drawPhotoDiodeSquare(s,[0 0 0 1]); %make sure our photodiode patch is black
+                flip(s)
+                
+                % set up the size and position of the stimulus
 				o.sizeOut = me.fixation.Radius*2;
 				o.xPositionOut = me.fixation.X;
 				o.yPositionOut = me.fixation.Y;
-				ts.x = me.fixation.X;
-				ts.y = me.fixation.Y;
-				ts.size = o.sizeOut;
-				ts.selected = true;
 				
+                Priority(MaxPriority(s.win));
 				endExp = 0;
-				a = 1;
-				m=1;n=1;
-				vbl=[];
+				trialn = 1;
+                maxTrials = 10;
+				m=1; n=1;
 				methods={'median','heuristic1','heuristic2','sg','simple'};
 				eyes={'both','left','right'};
 				Screen('TextFont',s.win,'Consolas');
 				startRecording(me);
 				trackerMessage(me,'Starting Demo...')
 				
-				while endExp == 0
-					endTrial = 0;
-					b = 1;
-					trackerMessage(me,sprintf('Settings for Trial %i, X=%.2f Y=%.2f, SZ=%.2f',a,me.fixation.X,me.fixation.Y,o.sizeOut))
-					flip(s)
-					WaitSecs(0.5);
-					vbl(end+1)=flip(s);
-					%trackerMessage(me,sprintf('%.6f',vbl(end)));
-					while endTrial == 0
+				while trialn <= maxTrials && endExp == 0
+					trialtick = 1;
+					trackerMessage(me,sprintf('Settings for Trial %i, X=%.2f Y=%.2f, SZ=%.2f',trialn,me.fixation.X,me.fixation.Y,o.sizeOut))
+                    drawPhotoDiodeSquare(s,[0 0 0 1]);
+                    flip(s)
+                    WaitSecs('YieldSecs',1);
+                    drawPhotoDiodeSquare(s,[0 0 0 1]);
+					vbl = flip(s); tstart=vbl;
+					trackerMessage(me,'STARTING',vbl);
+					while vbl < tstart + 4
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
 						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
+                        drawPhotoDiodeSquare(s,[1 1 1 1]);
 						
 						getSample(me);
 						if ~isempty(me.currentSample)
-							txt = sprintf('Press Q to finish \n X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %i %s %s | RADIUS = %.1f | FIXATION = %i',...
+							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %i %s %s | RADIUS = %.1f | FIXATION = %i',...
 								me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.smoothing.nSamples,...
 								me.smoothing.method, me.smoothing.eyes, me.fixation.Radius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
-						end
-						
+                        end
 						finishDrawing(s);
 						animate(o);
-						vbl(end+1)=flip(s,vbl(end));
-						
+                        
+						[vbl, when] = Screen('Flip', s.win, vbl + s.screenVals.halfifi);
+						if trialtick==1; me.tobii.sendMessage('SYNC = 255', vbl);end
+                        
 						[~, ~, keyCode] = KbCheck(-1);
-						if keyCode(stopkey); endTrial = 1; endExp = 1; break;	end
-						if keyCode(nextKey); endTrial = 1; break; end
+						if keyCode(stopkey); endExp = 1; break; end
 						if keyCode(calibkey); me.doCalibration; end
 						if keyCode(upKey); me.smoothing.nSamples = me.smoothing.nSamples + 1; if me.smoothing.nSamples > 400; me.smoothing.nSamples=400;end; end
 						if keyCode(downKey); me.smoothing.nSamples = me.smoothing.nSamples - 1; if me.smoothing.nSamples < 1; me.smoothing.nSamples=1;end;	end
 						if keyCode(leftKey); m=m+1; if m>5;m=1;end; me.smoothing.method=methods{m};end
 						if keyCode(rightKey); n=n+1; if n>3;n=1;end; me.smoothing.eyes=eyes{n};end
-						
-						b=b+1;
+						trialtick=trialtick+1;
 					end
 					if endExp == 0
-						trackerMessage(me,sprintf('Ending trial %i @ %i',a,int64(round(vbl(end)*1e6))))
-						trackerMessage(me,'END_RT');
+                        drawPhotoDiodeSquare(s,[0 0 0 1]);
+                        vbl = flip(s);
+						trackerMessage(me,'END_RT',vbl);
 						trackerMessage(me,'TRIAL_RESULT 1')
+                        trackerMessage(me,sprintf('Ending trial %i @ %i',trialn,int64(round(vbl*1e6))))
 						resetFixation(me);
 						me.fixation.X = randi([-7 7]);
 						me.fixation.Y = randi([-7 7]);
 						me.fixation.Radius = randi([1 3]);
-						o.sizeOut = me.fixation.Radius*2;
+						o.sizeOut = me.fixation.Radius * 2;
 						o.xPositionOut = me.fixation.X;
 						o.yPositionOut = me.fixation.Y;
-						ts.x = me.fixation.X;
-						ts.y = me.fixation.Y;
-						ts.size = o.sizeOut;
-						ts.selected = true;
 						update(o);
 						WaitSecs(0.3)
-						a=a+1;
+						trialn = trialn + 1;
+                    else
+                        drawPhotoDiodeSquare(s,[0 0 0 1]);
+                        vbl = flip(s);
+						trackerMessage(me,'END_RT',vbl);
+						trackerMessage(me,'TRIAL_RESULT 0 ABORT')
+                        trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))))
 					end
-				end
-				assignin('base','vbl',vbl)
-				figure;plot(diff(vbl));
+                end
 				stopRecording(me);
 				saveData(me);
 				me.fixation = ofixation;
 				me.saveFile = ofilename;
-				ListenChar(0);
+				ListenChar(0); Priority(0); ShowCursor;
 				close(s);
 				close(me);
 				clear s o
 			catch ME
 				me.fixation = ofixation;
 				me.saveFile = ofilename;
-				getReport(ME);
-				ShowCursor;
-				ListenChar(0);
-				Priority(0);
+				ListenChar(0);Priority(0);ShowCursor;
 				close(s);
 				sca;
 				close(me);
@@ -911,7 +942,7 @@ classdef tobiiManager < optickaCore
 		function trackerDrawStimuli(me, ts, clearScreen)
 			
 		end
-		
+		a
 		% ===================================================================
 		%> @brief draw the fixation box on the tracker display
 		%>
@@ -941,7 +972,7 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		%> @brief check what mode the tobii is in
 		%>
-		% ===================================================================
+		% ========================a===========================================
 		function mode = currentMode(me)
 			if me.isConnected
 				mode = 0;
@@ -1086,7 +1117,7 @@ classdef tobiiManager < optickaCore
 								out(1:2) = in(1:2) * me.screen.screenVals.width;
 								out(3:4) = in(3:4) * me.screen.screenVals.height;
 							end
-					end
+					enda
 			end
 		end
 		

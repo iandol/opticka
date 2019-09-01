@@ -328,7 +328,7 @@ try
 	flipfin=ts;
 	dpixxdelay=ts;
 	td=ts;
-	so=ts;
+	stimonset=ts;
 	tSecondary = ts;
 	sodpixx = ts;
 	boxTime = ts;
@@ -441,7 +441,7 @@ try
 		% beampos > screen height means that flip returned during the VBL
 		% interval. Small values << screen height are also ok,
 		% they just indicate either a slower machine or some types of flat-panels...
-		[ tvbl, so(i), flipfin(i), missest(i), beampos(i)]=Screen('Flip', w, tdeadline, clearmode);
+		[ tvbl, stimonset(i), flipfin(i), missest(i), beampos(i)]=Screen('Flip', w, tdeadline, clearmode);
 		%if c == 1; lj.strobeWord; end
 		% Record timestamp for later use:
 		ts(i) = tvbl;
@@ -451,6 +451,7 @@ try
 			break;
 		end
 	end % Draw next frame...
+    Screen('Flip', w);
 	Screen('BlendFunction', w, oldSrc,oldDst);
 	RestrictKeysForKbCheck([]);
 	% Shutdown realtime scheduling:
@@ -465,7 +466,7 @@ try
 	
 	% Figure 1 shows time deltas between successive flips in milliseconds:
 	% This should equal the product numifis * ifi:
-	figure('Position',[0 0 1200 1000],'Name','Performance Results');
+	figure('Position',[0 0 1000 1500],'Name','Performance Results');
 	subplot(2,3,1);
 	hold on;
 	plot(diff(ts) * 1e3,'k.','MarkerSize',10);
@@ -484,7 +485,7 @@ try
 	hold on;
 	plot(missest*1e3,'k.','MarkerSize',8);
 	plot(zeros(1,n));
-	title('Estimate missed deadlines (+ = miss)');
+	title('Estimate missed deadlines (>0 = miss)');
 	ylabel('Time (ms)');
 	hold off; box on; grid on;
 	
@@ -492,35 +493,43 @@ try
 	% start of VBL time:
 	subplot(2,3,3);
 	hold on
-	plot((flipfin - ts)*1e3,'k.','MarkerSize',8);
-	stairs(clog,'k-','Color',[0.4 0.4 0.4]);
-	ylim([-5 5]);
+    stairs(clog,'-','Color',[0.5 0.5 0.5]);
+	plot((flipfin - ts)*1e3,'k.','MarkerSize',10);
+	ylim([-2 2]);
 	hold off
 	box on; grid on;
 	title('Return of Flip - VBL');
 	ylabel('Time (ms)');
-	legend({'Deltas','Flicker Value'})
+	legend({'Photodiode','Flip Finish - flip'})
 	
 	% Figure 5 shows difference in ms between finish of Flip and estimated
 	% stimulus-onset:
 	subplot(2,3,4);
-	plot((flipfin - so)*1000,'k.','MarkerSize',8);
-	title('Return of Flip - Estimated Start');
+    hold on
+	plot((flipfin - stimonset)*1000,'k.','MarkerSize',10);
+    plot((ts - stimonset)*1000,'r.','MarkerSize',10);
+	title('Flip finish - Stim start | vbl - Stim start');
 	ylabel('Time (ms)');
+    legend({'flipfin - stimonset','vbl - stimonset'})
+    
 	% Figure 2 shows the recorded beam positions:
 	subplot(2,3,5);
 	plot(beampos,'k-','MarkerSize',8);
 	title('Rasterbeam position (in scanlines):');
 	box on; grid on;
+    
+    assignin('base','vbl',ts);
+	assignin('base','stimonset',stimonset);
+    assignin('base','flipreturn',flipfin);
 	
 	if max(a) >= 0
 		subplot(2,3,6);
 		ax = plotyy(1:length(a), a, 1:length(b), b);
 		axis tight
 		%set(ax,'YScale','log')
-		title(['GETWINDOWINFO: Max VBLCount: ' num2str(max(a)) ' | Mean LastVBLTime: ' num2str(mean(diff(b)))]);
-		assignin('base','a',a);
-		assignin('base','b',b);
+		title(['GETWINDOWINFO:\nMax-VBLCount:' num2str(max(a)) ' | Mean-LastVBLTime:' num2str(mean(diff(b)))]);
+		assignin('base','VBLCount',a);
+		assignin('base','LastVBLTime',b);
 		drawnow;
 	end
 	

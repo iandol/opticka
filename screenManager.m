@@ -120,7 +120,7 @@ classdef screenManager < optickaCore
 		%> possible blend modes
 		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR'; 'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA'; 'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' }
 		%> the photoDiode rectangle in pixel values
-		photoDiodeRect(1,4) double = [0, 0, 60, 60]
+		photoDiodeRect(1,4) double = [0, 0, 45, 45]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
 		grid
 		%> the movie pointer
@@ -416,12 +416,13 @@ classdef screenManager < optickaCore
 					me.screenVals.ifi = 1 / 60;
 				end
 				if me.windowed == false %fullscreen
-					me.screenVals.halfisi=me.screenVals.ifi/2;
+					me.screenVals.halfifi = me.screenVals.ifi/2;
+                    me.screenVals.halfisi = me.screenVals.halfifi;
 				else
 					% windowed presentation doesn't handle the preferred method
-					% of specifying lastvbl+halfisi properly so we set halfisi to 0 which
+					% of specifying lastvbl+halfifi properly so we set halfifi to 0 which
 					% effectively makes flip occur ASAP.
-					me.screenVals.halfisi = 0;
+					me.screenVals.halfifi = 0; me.screenVals.halfisi = 0;
 				end
 				
 				%get screen dimensions -- check !!!!!
@@ -514,12 +515,12 @@ classdef screenManager < optickaCore
 		%> @param vbl - a vbl time from a previous flip
 		%> @return vbl - a vbl from this flip
 		% ===================================================================
-		function vbl = flip(me,vbl,varargin)
+		function [vbl, when] = flip(me,vbl,varargin)
 			if ~me.isOpen; return; end
 			if exist('vbl','var')
-				vbl = Screen('Flip',me.win, vbl + me.screenVals.halfisi,varargin);
+				[vbl, when] = Screen('Flip',me.win, vbl + me.screenVals.halfifi,varargin);
 			else
-				vbl = Screen('Flip',me.win);
+				[vbl, when] = Screen('Flip',me.win);
 			end
 		end
 		
