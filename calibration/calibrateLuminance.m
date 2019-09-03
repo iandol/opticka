@@ -626,21 +626,21 @@ classdef calibrateLuminance < handle
 					end
 				else
 					plot(obj.ramp, inputValues(1).in, 'k.-',obj.ramp, inputValues(2).in, 'r.-',obj.ramp, inputValues(3).in, 'g.-',obj.ramp, inputValues(4).in, 'b.-');
-					leg = {'Luminance','Red','Green','Blue'};
+					leg = {'L','R','G','B'};
 					if ~isempty(inputTest)
 						obj.p(1,1).hold('on')
 						plot(obj.ramp, inputTest(1).in, 'ko-',obj.ramp, inputTest(2).in, 'ro-',obj.ramp, inputTest(3).in, 'go-',obj.ramp, inputTest(4).in, 'bo-');
 						obj.p(1,1).hold('off')
-						leg = [leg,{'CLum','CRed','CGreen','CBlue'}];
+						leg = [leg,{'C:L','C:R','C:G','C:B'}];
 					end
 				end
 				
 				legend(leg,'Location','northwest')
 				axis tight; grid on; grid minor; box on
 				
-				xlabel('Indexed Values');
+				xlabel('Values (0-1)');
 				ylabel('Luminance cd/m^2');
-				title('Input -> Output / Tested Luminance');
+				title('Input->Output, Raw/Corrected');
 			else %legacy plot
 				plot(obj.ramp, obj.inputValues, 'k.-');
 				legend('CCal')
@@ -699,13 +699,13 @@ classdef calibrateLuminance < handle
 				ylim([0 1])
 				xlabel('Normalised Luminance Input');
 				ylabel('Normalised Luminance Output');
-				legend(legendtext,'Location','NorthWest');
+				legend(legendtext,'Location','SouthEast');
 				if length(obj.displayGamma) == 1
-					t=sprintf('Gamma model x^{%.2f} vs. Interpolation', obj.displayGamma(1));
+					t=sprintf('Gamma: L^{%.2f}', obj.displayGamma(1));
 				else
-					t=sprintf('Gamma model x^{%.2f} | r=^{%.2f} g=^{%.2f} b=^{%.2f}', obj.displayGamma(1),obj.displayGamma(2),obj.displayGamma(3),obj.displayGamma(4));
+					t=sprintf('Gamma: L^{%.2f} R^{%.2f} G^{%.2f} B^{%.2f}', obj.displayGamma(1),obj.displayGamma(2),obj.displayGamma(3),obj.displayGamma(4));
 				end
-				title(t);
+				text(0.01,0.95,t);
 				
 				legendtext={};
 				obj.p(2,1).select();
@@ -720,7 +720,7 @@ classdef calibrateLuminance < handle
 				xlabel('Indexed Values')
 				ylabel('Normalised Luminance Output');
 				legend(legendtext,'Location','NorthWest');
-				title('Plot of output Gamma curves');
+				title('Output Gamma curves');
 				
 				obj.p(2,2).select();
 				obj.p(2,2).hold('on');
@@ -757,19 +757,19 @@ classdef calibrateLuminance < handle
 				obj.p(1,3).select();
 				hold on
 				surf(obj.ramp,obj.wavelengths,spectrum,'EdgeAlpha',0.1);
-				title('Original Spectrum')
+				title('Original Spectrum: L')
 				xlabel('Indexed Values')
 				ylabel('Wavelengths');
-				view([60 30]);
+				view([60 10]);
 				axis tight; grid on; box on;
 			end
 			if (obj.useI1Pro || obj.useSpectroCal2) && ~isempty(spectrumTest)
 				obj.p(2,3).select();
-				surf(obj.ramp,obj.wavelengths,spectrumTest);
-				title('Corrected Spectrum')
+				surf(obj.ramp,obj.wavelengths,spectrumTest,'EdgeAlpha',0.1);
+				title('Corrected Spectrum: L')
 				xlabel('Indexed Values')
 				ylabel('Wavelengths');
-				view([60 30]);
+				view([60 10]);
 				axis tight; grid on; box on;
 			end
 			
