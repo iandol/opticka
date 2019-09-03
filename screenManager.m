@@ -471,6 +471,7 @@ classdef screenManager < optickaCore
 				me.screenVals.gray = GrayIndex(me.screen);
 				
 				me.isOpen = true;
+				flip(me);
 				screenVals = me.screenVals;
 				
 			catch ME

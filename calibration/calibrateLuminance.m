@@ -243,9 +243,10 @@ classdef calibrateLuminance < handle
 			psychlasterror('reset');
 			
 			try
+				Screen('Flip',obj.win);
 				[obj.oldCLUT, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
 				obj.tableLength = obj.lutSize;
-				BackupCluts;
+				if ~IsWin; BackupCluts; end
 				obj.initialCLUT = repmat([0:1/(obj.tableLength-1):1]',1,3); %#ok<NBRAK>
 				Screen('LoadNormalizedGammaTable', obj.win, obj.initialCLUT);
 				
@@ -326,13 +327,13 @@ classdef calibrateLuminance < handle
 						obj.inputValues(4).in = obj.inputValues(1).in;
 					end
 				end
-				RestoreCluts;
+				if ~IsWin; RestoreCluts; end
 				if obj.useSpectroCal2;obj.closeSpectroCAL();end
 				Screen('CloseAll');
 				obj.canAnalyze = true;
 			catch %#ok<CTCH>
 				resetAll(obj);
-				RestoreCluts;
+				if ~IsWin; RestoreCluts; end
 				Screen('CloseAll');
 				psychrethrow(psychlasterror);
 			end
@@ -443,13 +444,14 @@ classdef calibrateLuminance < handle
 						a = a + 1;
 					end
 				end
-				RestoreCluts;
+				if ~IsWin; RestoreCluts; end
+				if obj.useSpectroCal2;obj.closeSpectroCAL();end
 				Screen('CloseAll');
 				obj.isTested = true;
 				plot(obj);
 			catch %#ok<CTCH>
 				resetTested(obj);
-				RestoreCluts;
+				if ~IsWin; RestoreCluts; end
 				Screen('CloseAll');
 				psychrethrow(psychlasterror);
 			end
@@ -569,7 +571,7 @@ classdef calibrateLuminance < handle
 				end
 				cmt = inputdlg('Please enter a description for this calibration run:','Gamma Calibration',10,cmts);
 				if ~isempty(cmt)
-					obj.comments = cmt{1};
+					obj.comments{1} = cmt{1};
 				end
 			end
 			obj.isAnalyzed = true;
@@ -587,6 +589,8 @@ classdef calibrateLuminance < handle
 				disp('You must use the run() then analyse() methods first...')
 				return;
 			end
+			
+			if obj.useSpectroCal2;obj.closeSpectroCAL();end %just in case not closed yet
 			
 			obj.plotHandle = figure;
 			figpos(1,[1200 1200]);
@@ -852,9 +856,9 @@ classdef calibrateLuminance < handle
 		
 		%===============reset======================%
 		function close(obj)
-			obj.resetTested;
-			obj.resetAll;
-			obj.closeSpectroCAL
+			obj.resetTested();
+			obj.resetAll();
+			obj.closeSpectroCAL();
 		end
 		
 	end
@@ -896,14 +900,14 @@ classdef calibrateLuminance < handle
 			if ~isa(obj.spCAL,'serial')
 				obj.spCAL = serial(obj.port, 'BaudRate', 921600,'DataBits', 8, 'StopBits', 1, 'FlowControl', 'none', 'Parity', 'none', 'Terminator', 'CR','Timeout', 240, 'InputBufferSize', 16000);
 			end
-			try;fopen(obj.spCAL);catch;warning('Port Already Open...');end
+			try fopen(obj.spCAL);catch;warning('Port Already Open...');end
 			obj.configureSpectroCAL();
 		end
 		
 		%===============init======================%
 		function closeSpectroCAL(obj)
 			if isa(obj.spCAL,'serial')
-				fclose(obj.spCAL)
+				try fclose(obj.spCAL); end
 				obj.spCAL = [];
 			end
 		end
