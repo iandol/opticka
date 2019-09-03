@@ -126,10 +126,6 @@ classdef arduinoManager < optickaCore
 			if me.silentMode==false
 				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
 				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
-				if ~strcmp(me.mode,'original')
-					time = time - 30; %there is an arduino 30ms delay
-				end
-				if time < 0; time = 0; end
 				switch me.mode
 					case 'original'
 						timedTTL(me.device, line, time);
@@ -137,6 +133,8 @@ classdef arduinoManager < optickaCore
 						%WaitSecs(time/1e3);
 						%digitalWrite(me.device, line, 0);
 					otherwise
+						time = time - 30; %there is an arduino 30ms delay
+						if time < 0; time = 0; end
 						writeDigitalPin(me.device,['D' num2str(line)],1);
 						WaitSecs(time/1e3);
 						writeDigitalPin(me.device,['D' num2str(line)],0);
