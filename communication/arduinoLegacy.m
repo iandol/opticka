@@ -489,9 +489,8 @@ classdef arduinoLegacy < handle
             
         end % digitalread
         
-        % digital write
+        %==========================================digital write
         function digitalWrite(a,pin,val)
-            
             % digitalWrite(a,pin,val); performs digital output on a given pin.
             % The first argument, a, is the arduino object.
             % The second argument, pin, is the number of the digital pin 
@@ -510,31 +509,24 @@ classdef arduinoLegacy < handle
             %
             
             %%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
             % check arguments if a.chkp is true
-            if a.chkp
-                
+            if a.chkp 
                 % check nargin
                 if nargin~=3
                     error('Function must have the "pin" and "val" arguments');
-                end
-                
+					 end
                 % check pin
                 errstr=arduinoLegacy.checknum(pin,'pin number',2:69);
                 if ~isempty(errstr), error(errstr); end
-                
                 % check val
                 errstr=arduinoLegacy.checknum(val,'value',0:1);
                 if ~isempty(errstr), error(errstr); end
-                
                 % get object name
                 if isempty(inputname(1)), name='object'; else name=inputname(1); end
-                
                 % pin should be configured as output
                 if a.pins(pin)~=1
                     warning('MATLAB:Arduino:digitalWrite',['If digital pin ' num2str(pin) ' is set as input, digital output takes place only after using ' name' '.pinMode(' num2str(pin) ',''output''); ']);
-                end
-                
+					 end
             end
             
             % check a.aser for validity if a.chks is true
@@ -544,31 +536,58 @@ classdef arduinoLegacy < handle
             end
             
             %%%%%%%%%%%%%%%%%%%%%%%%% PERFORM DIGITAL OUTPUT %%%%%%%%%%%%%%%%%%%%%%%%%%
-            
             if strcmpi(get(a.aser,'Port'),'DEMO')
-                % handle demo mode
-                
+                % handle demo mode      
                 % minimum digital output delay
-                pause(0.0014);
-                
-            else
-                
+                pause(0.0014); 
+				else    
                 % check a.aser for openness if a.chks is true
                 if a.chks
                     errstr=arduinoLegacy.checkser(a.aser,'open');
                     if ~isempty(errstr), error(errstr); end
-                end
-                
+					 end
                 % send mode, pin and value
                 fwrite(a.aser,[50 97+pin 48+val],'uchar');
-                
-            end
-            
+				end 
         end % digitalwrite
+		  
+		  %===================================================timedTTL
+		  function timedTTL(a,pin,time)
+			  if a.chkp
+				  if ~exist('pin','var') || isempty(pin); pin = 13;end
+				  if ~exist('time','var') || isempty(time); time = 500;end
+				  % check pin
+				  errstr=arduinoLegacy.checknum(pin,'analog input pin number',0:15);
+				  if ~isempty(errstr), error(errstr); end
+			  end
+			  % check a.aser for validity if a.chks is true
+			  if a.chks
+				  errstr=arduinoLegacy.checkser(a.aser,'valid');
+				  if ~isempty(errstr), error(errstr); end
+			  end
+			  %%%%%%%%%%%%%%%%%%%%%%%%% PERFORM ANALOG INPUT %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			  if strcmpi(get(a.aser,'Port'),'DEMO')
+				  % handle demo mode
+				  % minimum analog input delay
+				  pause(0.0074);
+				  % output a random value between 0 and 1023
+				  val=round(1023*rand);
+			  else
+				  % check a.aser for openness if a.chks is true
+				  if a.chks
+					  errstr=arduinoLegacy.checkser(a.aser,'open');
+					  if ~isempty(errstr), error(errstr); end
+				  end
+				  if time < 0; time = 0; end
+				  if time > 2550; time = 2550; end
+				  time = round(time/10);
+				  % send mode and pin
+				  fwrite(a.aser,[53 97+pin time],'uchar');
+			  end
+		  end % timedTTL
         
         % analog read
         function val=analogRead(a,pin)
-            
             % val=analogRead(a,pin); Performs analog input on a given arduino pin.
             % The first argument, a, is the arduino object. The second argument, 
             % pin, is the number of the analog input pin (0 to 15) from which the 
@@ -587,8 +606,6 @@ classdef arduinoLegacy < handle
             % val=analogRead(a,0); % reads analog input pin # 0
             % val=a.analogRead(0); % just as above, reads analog input pin # 0
             %
-            
-            
             %%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             % check arguments if a.chkp is true
@@ -2204,32 +2221,32 @@ classdef arduinoLegacy < handle
             errstr=[];
             
             % check num for type
-            if ~isnumeric(num),
+            if ~isnumeric(num)
                 errstr=['The ' description ' must be numeric'];
                 return
             end
             
             % check num for size
-            if numel(num)~=1,
+            if numel(num)~=1
                 errstr=['The ' description ' must be a scalar'];
                 return
             end
             
             % check num for realness
-            if ~isreal(num),
+            if ~isreal(num)
                 errstr=['The ' description ' must be a real value'];
                 return
             end
             
             % check num against allowed values
-            if ~any(allowed==num),
+            if ~any(allowed==num)
                 
                 % form right error string
-                if numel(allowed)==1,
+                if numel(allowed)==1
                     errstr=['Unallowed value for ' description ', the value must be exactly ' num2str(allowed(1))];
-                elseif numel(allowed)==2,
+                elseif numel(allowed)==2
                     errstr=['Unallowed value for ' description ', the value must be either ' num2str(allowed(1)) ' or ' num2str(allowed(2))];
-                elseif max(diff(allowed))==1,
+                elseif max(diff(allowed))==1
                     errstr=['Unallowed value for ' description ', the value must be an integer going from ' num2str(allowed(1)) ' to ' num2str(allowed(end))];
                 else
                     errstr=['Unallowed value for ' description ', the value must be one of the following: ' mat2str(allowed)];
@@ -2253,25 +2270,25 @@ classdef arduinoLegacy < handle
             errstr=[];
             
             % check string for type
-            if ~ischar(str),
+            if ~ischar(str)
                 errstr=['The ' description ' argument must be a string'];
                 return
             end
             
             % check string for size
-            if numel(str)<1,
+            if numel(str)<1
                 errstr=['The ' description ' argument cannot be empty'];
                 return
             end
             
             % check str against allowed values
-            if ~any(strcmpi(str,allowed)),
+            if ~any(strcmpi(str,allowed))
                 
                 % make sure this is a hozizontal vector
                 allowed=allowed(:)';
                 
                 % add a comma at the end of each value
-                for i=1:length(allowed)-1,
+                for i=1:length(allowed)-1
                     allowed{i}=['''' allowed{i} ''', '];
                 end
                 
@@ -2295,21 +2312,21 @@ classdef arduinoLegacy < handle
             errstr=[];
             
             % check serial connection
-            switch lower(chk),
+            switch lower(chk)
                 
-                case 'valid',
+                case 'valid'
                     
                     % make sure is valid
-                    if ~isvalid(ser),
+                    if ~isvalid(ser)
                         disp('Serial connection invalid, please recreate the object to reconnect to a serial port.');
                         errstr='Serial connection invalid';
                         return
                     end
                     
-                case 'open',
+                case 'open'
                     
                     % check openness
-                    if ~strcmpi(get(ser,'Status'),'open'),
+                    if ~strcmpi(get(ser,'Status'),'open')
                         disp('Serial connection not opened, please recreate the object to reconnect to a serial port.');
                         errstr='Serial connection not opened';
                         return

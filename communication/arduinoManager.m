@@ -132,15 +132,16 @@ classdef arduinoManager < optickaCore
 				if time < 0; time = 0; end
 				switch me.mode
 					case 'original'
-						digitalWrite(me.device, line, 1);
-						WaitSecs(time/1e3);
-						digitalWrite(me.device, line, 0);
+						timedTTL(me.device, line, time);
+						%digitalWrite(me.device, line, 1);
+						%WaitSecs(time/1e3);
+						%digitalWrite(me.device, line, 0);
 					otherwise
 						writeDigitalPin(me.device,['D' num2str(line)],1);
 						WaitSecs(time/1e3);
 						writeDigitalPin(me.device,['D' num2str(line)],0);
 				end	
-				if me.verbose;fprintf('===>>> REWARD GIVEN: pin %i for %i ms\n',line,time);end
+				if me.verbose;fprintf('===>>> REWARD GIVEN: TTL pin %i for %i ms\n',line,time);end
 			else
 				if me.verbose;fprintf('===>>> REWARD GIVEN: Silent Mode\n');end
 			end
@@ -157,13 +158,16 @@ classdef arduinoManager < optickaCore
 				if time < 0; time = 0;end
 				switch me.mode
 					case 'original'
-						digitalWrite(me.device, line, 1);
-						WaitSecs(0.01);
-						digitalWrite(me.device, line, 0);
-						WaitSecs(time/1e3);
-						digitalWrite(me.device, line, 1);
-						WaitSecs(0.01);
-						digitalWrite(me.device, line, 0);
+						timedTTL(me.device, line, 10);
+						WaitSecs('Yieldsecs',time/1e3);
+						timedTTL(me.device, line, 10);
+% 						digitalWrite(me.device, line, 1);
+% 						WaitSecs(0.01);
+% 						digitalWrite(me.device, line, 0);
+% 						WaitSecs(time/1e3);
+% 						digitalWrite(me.device, line, 1);
+% 						WaitSecs(0.01);
+% 						digitalWrite(me.device, line, 0);
 					otherwise
 						writeDigitalPin(me.device,['D' num2str(line)],1);
 						WaitSecs(0.03);
@@ -174,7 +178,7 @@ classdef arduinoManager < optickaCore
 						writeDigitalPin(me.device,['D' num2str(line)],0);
 				end
 				
-				if me.verbose;fprintf('===>>> REWARD GIVEN: pin %i for %i ms\n',line,time);end
+				if me.verbose;fprintf('===>>> REWARD GIVEN: double TTL pin %i for %i ms\n',line,time);end
 			else
 				if me.verbose;fprintf('===>>> REWARD GIVEN: Silent Mode\n');end
 			end
@@ -205,24 +209,26 @@ classdef arduinoManager < optickaCore
 				disp('--->>> arduinoManager: GUI already open...\n')
 				return;
 			end
-			handles.parent = figure('Tag','aFig',...
-				'Name', 'arduinoManager GUI', ...
-				'MenuBar', 'none', ...
-				'Position',[0 0 200 140],...
-				'NumberTitle', 'off');
 			
 			bgcolor = [0.91 0.91 0.91];
 			bgcoloredit = [0.95 0.95 0.95];
 			if ismac
-				SansFont = 'avenir next';
-				MonoFont = 'menlo';
+				SansFont = 'Avenir next';
+				MonoFont = 'Menlo';
 			elseif ispc
 				SansFont = 'calibri';
 				MonoFont = 'consolas';
 			else %linux
-				SansFont = 'Liberation Sans'; %get(0,'defaultAxesFontName');
-				MonoFont = 'Fira Code';
+				SansFont = 'Liberation Sans';
+				MonoFont = 'Liberation Mono';
 			end
+			
+			handles.parent = figure('Tag','aFig',...
+				'Name', 'arduinoManager GUI', ...
+				'MenuBar', 'none', ...
+				'Color', bgcolor, ...
+				'Position',[0 0 213 140],...
+				'NumberTitle', 'off');
 			
 			handles.value = uicontrol('Style','edit',...
 				'Parent',handles.parent,...
@@ -230,14 +236,39 @@ classdef arduinoManager < optickaCore
 				'String',200,...
 				'FontName',MonoFont,...
 				'FontSize', 12,...
-				'Position',[5 110 195 20],...
+				'Position',[5 115 95 25],...
 				'BackgroundColor',bgcoloredit);
+			
+			handles.t1 = uicontrol('Style','text',...
+				'Parent',handles.parent,...
+				'String','Time (ms)',...
+				'FontName',SansFont,...
+				'FontSize', 8,...
+				'Position',[10 95 90 20],...
+				'BackgroundColor',bgcolor);
+			
+			handles.pin = uicontrol('Style','edit',...
+				'Parent',handles.parent,...
+				'Tag','RewardPin',...
+				'String',2,...
+				'FontName',MonoFont,...
+				'FontSize', 12,...
+				'Position',[100 115 95 25],...
+				'BackgroundColor',bgcoloredit);
+			
+			handles.t1 = uicontrol('Style','text',...
+				'Parent',handles.parent,...
+				'String','Pin',...
+				'FontName',SansFont,...
+				'FontSize', 8,...
+				'Position',[105 95 90 20],...
+				'BackgroundColor',bgcolor);
 			
 			handles.menu = uicontrol('Style','popupmenu',...
 				'Parent',handles.parent,...
 				'Tag','TTLMethod',...
 				'String',{'Single TTL','Double TTL'},...
-				'Value',2,...
+				'Value',1,...
 				'Position',[5 80 195 20],...
 				'BackgroundColor',bgcolor);
 			
@@ -256,14 +287,15 @@ classdef arduinoManager < optickaCore
 			function doReward(varargin)
 				if me.silentMode;disp('Not open!');return;end
 				val = str2num(get(me.handles.value,'String'));
+				pin = str2num(get(me.handles.pin,'String'));
 				method = get(me.handles.menu,'Value');
 				if method == 1
 					try
-						me.timedTTL(me.rewardPin,val);
+						me.timedTTL(pin,val);
 					end
 				elseif method == 2
 					try
-						me.timedDoubleTTL(me.rewardPin,val);
+						me.timedDoubleTTL(pin,val);
 					end
 				end
 			end
@@ -276,6 +308,7 @@ classdef arduinoManager < optickaCore
 			me.deviceID = '';
 			me.availablePins = '';
 			me.isOpen = false;
+			me.ports = seriallist;
 			%me.silentMode = false;
 		end
 		

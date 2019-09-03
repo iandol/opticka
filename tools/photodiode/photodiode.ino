@@ -13,7 +13,7 @@
 //unsigned long timebefore = 0;
 //unsigned long timedifference = 0;
 const int ledPin = 13;
-  const int analogInPin = 0;  // Analog input pin that the potentiometer is attached to
+const int analogInPin = 0;  // Analog input pin that the photodiode is attached to
 const int potPin = 1;
 //const int analogOutPin = 9; // Analog output pin that the LED is attached to
 //int ledState = LOW;
@@ -26,7 +26,7 @@ void setup(){
   sbi(ADCSRA, ADPS2); //analogRead multiplier is 16, much faster...
   cbi(ADCSRA, ADPS1); 
   cbi(ADCSRA, ADPS0);
-  Serial.begin(2400);
+  Serial.begin(9600);
   pinMode(ledPin, OUTPUT); 
   //Events.addHandler(blinky, 13);  // Every 13ms, equivalent to a 75hz signal
 }
@@ -101,5 +101,3 @@ void blinky() {
   on = !on;
 
 }
-
-

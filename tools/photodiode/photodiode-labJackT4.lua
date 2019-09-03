@@ -8,7 +8,7 @@ local mbWrite=MB.W
 local outPin = 2005;    --FIO5
 
 LJ.IntervalConfig(0, 0.2)   --set interval to 0.1ms
-LJ.IntervalConfig(1, 2)   --set interval to 0.1ms
+--LJ.IntervalConfig(1, 2)   --set interval to 0.1ms
 local checkInterval=LJ.CheckInterval
 
 mbWrite(48006, 0, 4) -- Manual LED Control
