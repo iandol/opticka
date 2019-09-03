@@ -1,13 +1,13 @@
 print("Set a DIO based on voltage. Digital I/O is FIO5, voltage measured on AIN0.")
 local InputVoltage = 0
-local ThresholdVoltage = 1.25
+local ThresholdVoltage = 1.2
 
 local mbRead=MB.R			--local functions for faster processing
 local mbWrite=MB.W
 
 local outPin = 2005;    --FIO5
 
-LJ.IntervalConfig(0, 0.1)   --set interval to 0.1ms
+LJ.IntervalConfig(0, 0.2)   --set interval to 0.1ms
 LJ.IntervalConfig(1, 2)   --set interval to 0.1ms
 local checkInterval=LJ.CheckInterval
 

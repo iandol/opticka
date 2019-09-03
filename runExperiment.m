@@ -144,8 +144,6 @@ classdef runExperiment < optickaCore
 		currentInfo
 		%> previous info populated during load of a saved object
 		previousInfo struct = struct()
-		%> save prefix generated from clock time
-		savePrefix
 		%> check if runExperiment is running or not
 		isRunning logical = false
 	end
@@ -1076,23 +1074,6 @@ classdef runExperiment < optickaCore
 			elseif iscell(in)
 				me.stimuli.stimuli = in;
 			end
-		end
-		
-		% ===================================================================
-		%> @brief Initialise Save Dir
-		%>
-		%> For single stimulus presentation, randomise stimulus choice
-		% ===================================================================
-		function initialiseSaveFile(me,path)
-			if ~exist('path','var')
-				path = me.paths.savedData;
-			else
-				me.paths.savedData = path;
-			end
-			c = fix(clock);
-			c = num2str(c(1:5));
-			c = regexprep(c,' +','-');
-			me.savePrefix = c;
 		end
 		
 		% ===================================================================

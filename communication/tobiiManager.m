@@ -9,7 +9,9 @@ classdef tobiiManager < optickaCore
 	properties
 		%> model of eyetracker, Spectrum Pro default
 		model char = 'Tobii Pro Spectrum'
-		%> tracker update speed (Hz), should be 60, 120, 150, 300, 600 or 1200
+		%> tracker update speed (Hz) 
+		%> Spectrum Pro: [60, 120, 150, 300, 600 or 1200]
+		%> 4C: 90
 		sampleRate double = 1200
 		%> fixation window details
 		fixation struct = struct('X',0,'Y',0,'Radius',1,'InitTime',1,...
@@ -24,7 +26,7 @@ classdef tobiiManager < optickaCore
 		%> Titta settings
 		settings struct = []
 		%> name of eyetracker file
-		saveFile char = 'myData.mat'
+		saveFile char = 'tobiiData.mat'
 		%> start eyetracker in dummy mode?
 		isDummy logical = false
 	end
@@ -117,6 +119,10 @@ classdef tobiiManager < optickaCore
 				me.tobii = [];
 				me.isDummy = true;
 			end
+			p = fileparts(me.saveFile);
+			if isempty(p)
+				me.saveFile = [me.paths.savedData filesep me.saveFile];
+			end
 		end
 		
 		% ===================================================================
@@ -151,7 +157,7 @@ classdef tobiiManager < optickaCore
 				me.win			= me.screen.win;
 			end
 			
-			me.salutation('Initialise Method', ...
+			me.salutation('Initialise', ...
 				sprintf('Running on a %s @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
 				me.tobii.systemInfo.model, me.tobii.systemInfo.samplerate,...
 				me.tobii.systemInfo.trackingMode,...
@@ -168,7 +174,7 @@ classdef tobiiManager < optickaCore
 				me.tobii.setOptions(me.settings);
 			end
 		end
-
+		
 		% ===================================================================
 		%> @brief reset the fixation counters ready for a new trial
 		%>
@@ -219,16 +225,16 @@ classdef tobiiManager < optickaCore
 					me.statusMessage('Starting to record gaze...');
 				else
 					warning('Can''t START buffer() gazerecording!!!')
-                end
-                
-                success = me.tobii.buffer.start('externalSignal');
+				end
+				
+				success = me.tobii.buffer.start('externalSignal');
 				if success
 					me.statusMessage('Starting to record TTLs...');
 				else
 					warning('Can''t START buffer() TTL recording!!!')
-                end
-                
-                success = me.tobii.buffer.start('timeSync');
+				end
+				
+				success = me.tobii.buffer.start('timeSync');
 				if success
 					me.statusMessage('Starting to record timeSync...');
 				else
@@ -241,30 +247,30 @@ classdef tobiiManager < optickaCore
 		%> @brief wrapper for StopRecording
 		%>
 		% ===================================================================
-        function stopRecording(me)
-            if me.isConnected && me.isRecording
-                success = me.tobii.buffer.stop('gaze');
-                if success
-                    me.statusMessage('Stopping to record Gaze...');
-                else
-                    warning('Can''t STOP buffer() recording!!!')
-                end
-                
-                success = me.tobii.buffer.stop('externalSignal');
-                if success
-                    me.statusMessage('Stopping to record TTLs...');
-                else
-                    warning('Can''t STOP buffer() recording!!!')
-                end
-                
-                success = me.tobii.buffer.stop('timeSync');
-                if success
-                    me.statusMessage('Stopping to record timeSync...');
-                else
-                    warning('Can''t STOP buffer() recording!!!')
-                end
-            end
-        end
+		function stopRecording(me)
+			if me.isConnected && me.isRecording
+				success = me.tobii.buffer.stop('gaze');
+				if success
+					me.statusMessage('Stopping to record Gaze...');
+				else
+					warning('Can''t STOP buffer() recording!!!')
+				end
+				
+				success = me.tobii.buffer.stop('externalSignal');
+				if success
+					me.statusMessage('Stopping to record TTLs...');
+				else
+					warning('Can''t STOP buffer() recording!!!')
+				end
+				
+				success = me.tobii.buffer.stop('timeSync');
+				if success
+					me.statusMessage('Stopping to record timeSync...');
+				else
+					warning('Can''t STOP buffer() recording!!!')
+				end
+			end
+		end
 		
 		% ===================================================================
 		%> @brief Save the data
@@ -272,11 +278,24 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function saveData(me,tofile)
 			if ~exist('tofile','var') || isempty(tofile); tofile = true; end
-			tic
-			me.data = me.tobii.collectSessionData();
-			tobii = me;
-			save(me.saveFile,'tobii')
-			me.salutation('saveData',sprintf('Data has been saved to %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc*1e3),true);
+			ts = tic;
+			if me.isConnected
+				me.data = me.tobii.collectSessionData();
+			end
+			me.initialiseSaveFile();
+			if ~isempty(me.data)
+				tobii = me;
+				if exist(me.saveFile,'file')
+					[p,f,e] = fileparts(me.saveFile);
+					me.saveFile = [p f me.savePrefix e];
+				end
+				save(me.saveFile,'tobii')
+				disp('===========================')
+				me.salutation('saveData',sprintf('Data has been saved to %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3),true);
+				disp('===========================')
+			else
+				me.salutation('saveData',sprintf('NO data available: %s (%.1fms)...\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3),true);
+			end
 		end
 		
 		% ===================================================================
@@ -608,11 +627,11 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function trackerMessage(me, message, vbl)
 			if me.isConnected
-                if exist('vbl','var')
-                    me.tobii.sendMessage(message, vbl);
-                else
-                    me.tobii.sendMessage(message);
-                end
+				if exist('vbl','var')
+					me.tobii.sendMessage(message, vbl);
+				else
+					me.tobii.sendMessage(message);
+				end
 				if me.verbose; fprintf('-+-+->TOBII Message: %s\n',message);end
 			end
 		end
@@ -659,14 +678,16 @@ classdef tobiiManager < optickaCore
 			calibkey=KbName('c');
 			ofixation = me.fixation; me.sampletime = [];
 			ofilename = me.saveFile;
-			c = fix(clock);c = num2str(c(1:5));c = regexprep(c,' +','-');
-			me.saveFile = [me.paths.savedData filesep c '-runDemo.mat'];
+			me.initialiseSaveFile();
+			[p,f,e]=fileparts(me.saveFile);
+			me.saveFile = [p filesep 'tobiiRunDemo-' me.savePrefix e];
 			try
 				if isa(me.screen,'screenManager')
 					s = me.screen;
 				else
-					s = screenManager('disableSyncTests',true,'blend',true,'pixelsPerCm',36,'distance',60);
+					s = screenManager('disableSyncTests',false,'blend',true,'pixelsPerCm',36,'distance',60);
 				end
+				s.disableSyncTests = false;
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
 				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',false,'density',50); %test stimulus
@@ -770,12 +791,12 @@ classdef tobiiManager < optickaCore
 					end
 				end
 				stopRecording(me);
+				close(s);
 				saveData(me);
+				close(me);
+				ListenChar(0); Priority(0); ShowCursor;
 				me.fixation = ofixation;
 				me.saveFile = ofilename;
-				ListenChar(0); Priority(0); ShowCursor;
-				close(s);
-				close(me);
 				clear s o
 			catch ME
 				me.fixation = ofixation;
@@ -1006,7 +1027,7 @@ classdef tobiiManager < optickaCore
 				systemtime = 0;
 			end
 		end
-
+		
 		% ===================================================================
 		%> @brief TODO
 		%>
@@ -1014,7 +1035,7 @@ classdef tobiiManager < optickaCore
 		function evt = getEvent(me)
 			
 		end
-
+		
 	end%-------------------------END HIDDEN METHODS--------------------------------%
 	
 	%=======================================================================

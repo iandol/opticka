@@ -53,6 +53,8 @@ classdef optickaCore < handle
 	properties (SetAccess = protected, GetAccess = protected)
 		%> class name
 		className char = ''
+		%> save prefix generated from clock time
+		savePrefix
 	end
 	
 	%--------------------PRIVATE PROPERTIES----------%
@@ -104,14 +106,20 @@ classdef optickaCore < handle
 		end
 		
 		% ===================================================================
-		%> @brief initialise save directory path
+		%> @brief Initialise Save Dir
 		%>
-		%> @param path path to save
+		%> For single stimulus presentation, randomise stimulus choice
 		% ===================================================================
-		function initialiseSave(me,path)
-			if exist('path','var') && exist(path,'dir')
+		function initialiseSaveFile(me,path)
+			if ~exist('path','var')
+				path = me.paths.savedData;
+			else
 				me.paths.savedData = path;
 			end
+			c = fix(clock);
+			c = num2str(c(1:5));
+			c = regexprep(c,' +','-');
+			me.savePrefix = c;
 		end
 		
 		% ===================================================================
