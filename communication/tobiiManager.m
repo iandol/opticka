@@ -307,6 +307,7 @@ classdef tobiiManager < optickaCore
 			me.currentSample = [];
 			if me.isConnected && me.isRecording
 				td = me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
+				if isempty(td); return; end;
 				if td.left.gazePoint.valid(end) || td.right.gazePoint.valid(end)
 					switch me.smoothing.eyes
 						case 'left'
@@ -677,6 +678,7 @@ classdef tobiiManager < optickaCore
 			rightKey=KbName('rightarrow');
 			calibkey=KbName('c');
 			ofixation = me.fixation; me.sampletime = [];
+			osmoothing = me.smoothing;
 			ofilename = me.saveFile;
 			me.initialiseSaveFile();
 			[p,f,e]=fileparts(me.saveFile);
@@ -690,19 +692,21 @@ classdef tobiiManager < optickaCore
 				s.disableSyncTests = false;
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
-				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',false,'density',50); %test stimulus
+				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',true,'density',50); %test stimulus
 				open(s); %open our screen
 				setup(o,s); %setup our stimulus with open screen
 				
 				ListenChar(1);
 				initialise(me,s); %initialise tobii with our screen
-				calViz								= AnimatedCalibrationDisplay();
+				calViz										= AnimatedCalibrationDisplay();
 				me.settings.cal.drawFunction        = @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
-				calViz.bgColor						= 127;
+				calViz.bgColor								= 127;
 				calViz.fixBackColor                 = 0;
-				calViz.fixFrontColor				= 255;
+				calViz.fixFrontColor						= 255;
 				me.settings.cal.autoPace            = 1;
 				me.settings.cal.doRandomPointOrder  = false;
+				me.settings.val.pointPos				= [.15 .15; .15 .85; .5 .5; .85 .15; .85 .85];
+				%me.settings.val.pointPos				= [.1 .1;.1 .9;.5 .5;.9 .1;.9 .9];
 				me.settings.UI.setup.eyeClr         = 255;
 				me.settings.cal.pointNotifyFunction = @demoCalCompletionFun;
 				me.settings.val.pointNotifyFunction = @demoCalCompletionFun;
@@ -724,6 +728,21 @@ classdef tobiiManager < optickaCore
 				methods={'median','heuristic1','heuristic2','sg','simple'};
 				eyes={'both','left','right'};
 				Screen('TextFont',s.win,'Consolas');
+				fprintf('\n===>>> Warming up the GPU, Eyetracker etc... <<<===\n')
+				for i = 1:s.screenVals.fps*1
+					draw(o);
+					drawBackground(s);
+					s.drawPhotoDiodeSquare([0 0 0 1]);
+					Screen('DrawText',s.win,'Warming up...',65,10);
+					finishDrawing(s);
+					animate(o);
+					sgolayfilt(rand(10,1),1,3); %warm it up
+					me.heuristicFilter(rand(10,1), 2);
+					getSample(me); 
+					flip(s);
+				end
+				update(o); %make sure stimuli are set back to their start state
+				flip(s);
 				startRecording(me);
 				trackerMessage(me,'Starting Demo...')
 				
@@ -731,15 +750,16 @@ classdef tobiiManager < optickaCore
 					trialtick = 1;
 					trackerMessage(me,sprintf('Settings for Trial %i, X=%.2f Y=%.2f, SZ=%.2f',trialn,me.fixation.X,me.fixation.Y,o.sizeOut))
 					drawPhotoDiodeSquare(s,[0 0 0 1]);
-					flip(s)
-					WaitSecs('YieldSecs',1);
+					vbl=flip(s);
+					getSample(me); isFixated(me); resetFixation(me);
+					WaitSecs('UntilTime',1+vbl);
 					drawPhotoDiodeSquare(s,[0 0 0 1]);
 					vbl = flip(s); tstart=vbl;
-					trackerMessage(me,'STARTING',vbl);
+					trackerMessage(me,'STARTING');
+					trackerMessage(me,'STARTVBL',vbl);
 					while vbl < tstart + 4
 						draw(o);
 						drawGrid(s);
-						drawScreenCenter(s);
 						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
 						drawPhotoDiodeSquare(s,[1 1 1 1]);
 						
@@ -780,7 +800,7 @@ classdef tobiiManager < optickaCore
 						o.xPositionOut = me.fixation.X;
 						o.yPositionOut = me.fixation.Y;
 						update(o);
-						WaitSecs(0.3)
+						WaitSecs(0.3);
 						trialn = trialn + 1;
 					else
 						drawPhotoDiodeSquare(s,[0 0 0 1]);
@@ -797,10 +817,12 @@ classdef tobiiManager < optickaCore
 				ListenChar(0); Priority(0); ShowCursor;
 				me.fixation = ofixation;
 				me.saveFile = ofilename;
+				me.smoothing = osmoothing;
 				clear s o
 			catch ME
 				me.fixation = ofixation;
 				me.saveFile = ofilename;
+				me.smoothing = osmoothing;
 				ListenChar(0);Priority(0);ShowCursor;
 				close(s);
 				sca;

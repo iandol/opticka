@@ -611,7 +611,7 @@ classdef runExperiment < optickaCore
 				drawnow;
 
 				%------------------------------------------------------------
-				% lets draw 2 seconds worth of the stimuli we will be using
+				% lets draw 1 seconds worth of the stimuli we will be using
 				% covered by a blank. Primes the GPU and other components with the sorts
 				% of stimuli/tasks used and this does appear to minimise
 				% some of the frames lost on first presentation for very complex

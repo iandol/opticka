@@ -553,6 +553,7 @@ classdef arduinoLegacy < handle
 		  
 		  %===================================================timedTTL
 		  function timedTTL(a,pin,time)
+			  %timedTTL(a, pin, time)
 			  if a.chkp
 				  if ~exist('pin','var') || isempty(pin); pin = 13;end
 				  if ~exist('time','var') || isempty(time); time = 500;end
@@ -565,7 +566,7 @@ classdef arduinoLegacy < handle
 				  errstr=arduinoLegacy.checkser(a.aser,'valid');
 				  if ~isempty(errstr), error(errstr); end
 			  end
-			  %%%%%%%%%%%%%%%%%%%%%%%%% PERFORM ANALOG INPUT %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			  %%%%%%%%%%%%%%%%%%%%%%%%% PERFORM DIGITAL OUTPUT %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			  if strcmpi(get(a.aser,'Port'),'DEMO')
 				  % handle demo mode
 				  % minimum analog input delay
