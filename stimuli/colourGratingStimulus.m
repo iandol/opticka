@@ -29,7 +29,7 @@ classdef colourGratingStimulus < baseStimulus
 		%> temporal frequency of the grating
 		tf double= 1
 		%> second colour of a colour grating stimulus
-		colour2 double = [0 0 0 1]
+		colour2 double = [0 1 0 1]
 		%> base colour from which colour and colour2 are blended via contrast value
 		%> if empty [default], uses the background colour from screenManager
 		baseColour double = []
@@ -82,7 +82,7 @@ classdef colourGratingStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['sf|tf|angle|motionAngle|phase|rotateTexture|' ... 
+		allowedProperties = ['colour2|sf|tf|angle|motionAngle|phase|rotateTexture|' ... 
 			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ... 
 			'sigma|correctPhase|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
@@ -95,6 +95,8 @@ classdef colourGratingStimulus < baseStimulus
 		gabor = false
 		%> mask value
 		maskValue
+		%> the raw shader, we can try to change colours.
+		shader
 	end
 	
 	events (ListenAccess = 'protected', NotifyAccess = 'protected') %only this class can access these
@@ -117,20 +119,29 @@ classdef colourGratingStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = colourGratingStimulus(varargin)
+		function me = colourGratingStimulus(varargin)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
 				varargin.family = 'grating';
 			end
 			
-			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
+			me=me@baseStimulus(varargin); %we call the superclass constructor first
 			
 			if nargin>0
-				obj.parseArgs(varargin, obj.allowedProperties);
+				if ~any(cellfun(@(s) strcmp(s,'colour'),varargin)) %change default colours
+					me.colour = [1 0 0 1];
+				end
+				if ~any(cellfun(@(s) strcmp(s,'colour2'),varargin))
+					me.colour = [0 1 0 1];
+				end
+				me.parseArgs(varargin, me.allowedProperties);
+			else
+				me.colour = [1 0 0 1];
+				me.colour2 = [0 1 0 1];
 			end
 			
-			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			obj.salutation('constructor method','Stimulus initialisation complete');
+			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.salutation('constructor method','Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
@@ -147,25 +158,25 @@ classdef colourGratingStimulus < baseStimulus
 		%>
 		%> @param sM screenManager object for reference
 		% ===================================================================
-		function setup(obj,sM)
+		function setup(me,sM)
 			
-			reset(obj); %reset it back to its initial state
-			obj.inSetup = true;
-			if isempty(obj.isVisible)
-				show(obj);
+			reset(me); %reset it back to its initial state
+			me.inSetup = true;
+			if isempty(me.isVisible)
+				show(me);
 			end
-			addlistener(obj,'changeScale',@obj.calculateScale); %use an event to keep scale accurate
-			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
+			addlistener(me,'changeScale',@me.calculateScale); %use an event to keep scale accurate
+			addlistener(me,'changePhaseIncrement',@me.calculatePhaseIncrement);
 			
-			obj.sM = sM;
-			obj.ppd=sM.ppd;			
+			me.sM = sM;
+			me.ppd=sM.ppd;			
 
-			obj.texture = []; %we need to reset this
+			me.texture = []; %we need to reset this
 
-			fn = fieldnames(gratingStimulus);
+			fn = fieldnames(colourGratingStimulus);
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=obj.addprop([fn{j} 'Out']);
+				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
+					p=me.addprop([fn{j} 'Out']);
 					p.Transient = true;p.Hidden = true;
 					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
 					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
@@ -174,79 +185,86 @@ classdef colourGratingStimulus < baseStimulus
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 				end
-				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
-					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
-			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
-			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
-			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
-			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			obj.doDots = false;
-			obj.doMotion = false;
-			obj.doDrift = false;
-			obj.doFlash = false;
+			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
+			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
+			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
+			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
+			me.doDots = false;
+			me.doMotion = false;
+			me.doDrift = false;
+			me.doFlash = false;
 			
-			if obj.tf > 0;obj.doDrift = true;end
-			if obj.speed > 0; obj.doMotion = true;end
+			if me.tf > 0;me.doDrift = true;end
+			if me.speed > 0; me.doMotion = true;end
 			
-			if isempty(obj.findprop('rotateMode'));p=obj.addprop('rotateMode');p.Transient=true;p.Hidden=true;end
-			if obj.rotateTexture
-				obj.rotateMode = kPsychUseTextureMatrixForRotation;
+			if isempty(me.findprop('rotateMode'));p=me.addprop('rotateMode');p.Transient=true;p.Hidden=true;end
+			if me.rotateTexture
+				me.rotateMode = kPsychUseTextureMatrixForRotation;
 			else
-				obj.rotateMode = [];
+				me.rotateMode = [];
 			end
 			
-			if isempty(obj.findprop('gratingSize'));p=obj.addprop('gratingSize');p.Transient=true;end
-			obj.gratingSize = round(obj.ppd*obj.size);
+			if isempty(me.findprop('gratingSize'));p=me.addprop('gratingSize');p.Transient=true;end
+			me.gratingSize = round(me.ppd*me.size); %virtual support larger than initial size
 			
-			if isempty(obj.findprop('phaseIncrement'));
-				p=obj.addprop('phaseIncrement');
+			if isempty(me.findprop('phaseIncrement'))
+				p=me.addprop('phaseIncrement');
 			end
 			
-			if isempty(obj.findprop('driftPhase'));p=obj.addprop('driftPhase');p.Transient=true;end
-			if obj.correctPhase
-				ps=obj.calculatePhase;
-				obj.driftPhase=obj.phaseOut-ps;
+			if isempty(me.findprop('driftPhase'));p=me.addprop('driftPhase');p.Transient=true;end
+			if me.correctPhase
+				ps=me.calculatePhase;
+				me.driftPhase=me.phaseOut-ps;
 			else
-				obj.driftPhase=obj.phaseOut;
+				me.driftPhase=me.phaseOut;
 			end
 			
-			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
-			if obj.aspectRatio < 1
-				obj.res = round([obj.gratingSize*obj.aspectRatio obj.gratingSize]);
+			if isempty(me.findprop('res'));p=me.addprop('res');p.Transient=true;end
+			
+			switch length(me.aspectRatio)
+				case 1
+					me.res = round([me.gratingSize*me.aspectRatio me.gratingSize]);
+				case 2
+					me.res = round([me.gratingSize*me.aspectRatio(1) me.gratingSize*me.aspectRatio(2)]);
+			end
+			if max(me.res) > me.sM.screenVals.width %scale to be no larger than screen width
+				me.res = floor( me.res / (max(me.res) / me.sM.screenVals.width));
+			end
+			
+			if me.mask == true
+				me.maskValue = floor((me.ppd*me.size))/2;
 			else
-				obj.res = round([obj.gratingSize obj.gratingSize*obj.aspectRatio]);
+				me.maskValue = [];
 			end
 			
-			if obj.mask == true
-				obj.maskValue = floor((obj.ppd*obj.size)/2);
+			if isempty(me.findprop('texture'));p=me.addprop('texture');p.Transient=true;end
+			
+			if me.phaseReverseTime > 0
+				me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
+			end
+			
+			if isempty(me.baseColour)
+				me.baseColourOut = me.sM.backgroundColour;
+			end
+			
+			if strcmpi(me.type,'square')
+				if me.sigma < 0; me.sigma = 0.05;me.sigmaOut=me.sigma;end
 			else
-				obj.maskValue = [];
-			end
-			
-			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
-			
-			if obj.phaseReverseTime > 0
-				obj.phaseCounter = round(obj.phaseReverseTime / obj.sM.screenVals.ifi);
-			end
-			
-			if strcmpi(obj.type,'square')
-				if obj.sigma < 0; obj.sigma = 0.05;obj.sigmaOut=obj.sigma;end
+				me.sigmaOut = -1; %just make sure type overrides sigma if conflict
 			end
 				
 			% this is a two color grating, passing in colorA and colorB.
-			[cgrat, ~] = CreateProceduralColorGrating(ptb.win, resolution(1), resolution(2),...
-				colorA, colorB, radius);
-
-			obj.texture = CreateProceduralSineGrating(obj.sM.win, obj.res(1),...
-				obj.res(2), obj.colourOut, obj.maskValue, obj.contrastMult);
-
+			[me.texture, ~, me.shader] = CreateProceduralColorGrating(me.sM.win, me.res(1),...
+				me.res(2), me.colour, me.colour2, me.maskValue);
 			
-			obj.inSetup = false;
-			computePosition(obj);
-			setRect(obj);
+			me.inSetup = false;
+			computePosition(me);
+			setRect(me);
 			
 		end
 		
@@ -254,16 +272,28 @@ classdef colourGratingStimulus < baseStimulus
 		%> @brief Update this stimulus object for display
 		%>
 		% ===================================================================
-		function update(obj)
-			resetTicks(obj);
-			if obj.correctPhase
-				ps=obj.calculatePhase;
-				obj.driftPhase=obj.phaseOut-ps;
+		function update(me)
+			resetTicks(me);
+			if me.correctPhase
+				ps=me.calculatePhase;
+				me.driftPhase=me.phaseOut-ps;
 			else
-				obj.driftPhase=obj.phaseOut;
+				me.driftPhase=me.phaseOut;
 			end
-			computePosition(obj);
-			setRect(obj);
+			glUseProgram(me.shader);
+			glUniform4f(glGetUniformLocation(me.shader, 'color1'),...
+				me.colourOut(1),me.colourOut(2),me.colourOut(3),me.colourOut(4));
+			glUniform4f(glGetUniformLocation(me.shader, 'color2'),...
+				me.colour2Out(1),me.colour2Out(2),me.colour2Out(3),me.colour2Out(4));
+			if me.mask == true
+				me.maskValue = me.sizeOut/2;
+			else
+				me.maskValue = 0;
+			end
+			glUniform1f(glGetUniformLocation(me.shader, 'radius'), me.maskValue);
+			glUseProgram(0);
+			computePosition(me);
+			setRect(me);
 		end
 		
 		% ===================================================================
@@ -271,35 +301,35 @@ classdef colourGratingStimulus < baseStimulus
 		%>
 		%> 
 		% ===================================================================
-		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
-				Screen('DrawTexture', obj.sM.win, obj.texture, [],obj.mvRect,...
-					obj.angleOut, [], [], [], [], obj.rotateMode,...
-					[obj.driftPhase, obj.sfOut, obj.contrastOut, obj.sigmaOut]);
+		function draw(me)
+			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
+				Screen('DrawTexture', me.sM.win, me.texture, [],me.mvRect,...
+					me.angleOut, [], [], me.baseColourOut, [], me.rotateMode,...
+					[me.driftPhase, me.sfOut, me.contrastOut, me.sigmaOut]);
 			end
-			obj.tick = obj.tick + 1;
+			me.tick = me.tick + 1;
 		end
 		
 		% ===================================================================
 		%> @brief Animate this object for runExperiment
 		%>
 		% ===================================================================
-		function animate(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
-				if obj.mouseOverride
-					getMousePosition(obj);
-					if obj.mouseValid
-						obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+		function animate(me)
+			if me.isVisible && me.tick >= me.delayTicks
+				if me.mouseOverride
+					getMousePosition(me);
+					if me.mouseValid
+						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
 					end
 				end
-				if obj.doMotion
-					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
+				if me.doMotion
+					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
-				if obj.doDrift
-					obj.driftPhase = obj.driftPhase + obj.phaseIncrement;
+				if me.doDrift
+					me.driftPhase = me.driftPhase + me.phaseIncrement;
 				end
-				if mod(obj.tick,obj.phaseCounter) == 0
-					obj.driftPhase = obj.driftPhase + obj.phaseOfReverse;
+				if mod(me.tick,me.phaseCounter) == 0
+					me.driftPhase = me.driftPhase + me.phaseOfReverse;
 				end
 			end
 		end
@@ -310,38 +340,78 @@ classdef colourGratingStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function reset(obj)
-			resetTicks(obj);
-			obj.texture=[];
-			if obj.mask > 0
-				obj.mask = true;
+		function reset(me)
+			resetTicks(me);
+			if ~isempty(me.texture) && Screen(me.texture,'WindowKind') == -1
+				try Screen('Close',me.texture); end
 			end
-			obj.maskValue = [];
-			obj.removeTmpProperties;
+			me.texture=[];
+			me.shader=[];
+			if me.mask > 0
+				me.mask = true;
+			end
+			me.maskValue = [];
+			me.removeTmpProperties;
 		end
 		
 		% ===================================================================
 		%> @brief sf Set method
 		%>
 		% ===================================================================
-		function set.sf(obj,value)
+		function set.sf(me,value)
 			if value <= 0
 				value = 0.05;
 			end
-			obj.sf = value;
-			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
+			me.sf = value;
+			me.salutation(['set sf: ' num2str(value)],'Custom set method')
 		end
 		
+		% ===================================================================
+		%> @brief SET Colour2 method
+		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
+		% ===================================================================
+		function set.colour2(me,value)
+			len=length(value);
+			switch len
+				case {4,3}
+					me.colour2 = [value(1:3) me.alpha]; %force our alpha to override
+				case 1
+					me.colour2 = [value value value me.alpha]; %construct RGBA
+				otherwise
+					me.colour2 = [1 1 1 me.alpha]; %return white for everything else
+			end
+			me.colour2(me.colour2<0)=0; me.colour2(me.colour2>1)=1;
+		end
+		
+		% ===================================================================
+		%> @brief SET baseColour method
+		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
+		% ===================================================================
+		function set.baseColour(me,value)
+			len=length(value);
+			switch len
+				case 4
+					me.baseColour = value;
+				case 3
+					me.baseColour = [value(1:3) me.alpha]; %force our alpha to override
+				case 1
+					me.baseColour = [value value value me.alpha]; %construct RGBA
+				otherwise
+					me.baseColour = [1 1 1 me.alpha]; %return white for everything else	
+			end
+			me.baseColour(me.baseColour<0)=0; me.baseColour(me.baseColour>1)=1;
+		end
+			
 		% ===================================================================
 		%> @brief calculate phase offset
 		%>
 		% ===================================================================
-		function phase = calculatePhase(obj)
+		function phase = calculatePhase(me)
 			phase = 0;
-			if obj.correctPhase > 0
-				ppd = obj.ppd;
-				size = (obj.sizeOut/2); %divide by 2 to get the 0 point
-				sfTmp = (obj.sfOut/obj.scale)*obj.ppd;
+			if me.correctPhase > 0
+				ppd = me.ppd;
+				size = (me.sizeOut/2); %divide by 2 to get the 0 point
+				sfTmp = (me.sfOut/me.scale)*me.ppd;
 				md = size / (ppd/sfTmp);
 				md=md-floor(md);
 				phase = (360*md);
@@ -352,10 +422,10 @@ classdef colourGratingStimulus < baseStimulus
 		%> @brief sfOut Pseudo Get method
 		%>
 		% ===================================================================
-		function sf = getsfOut(obj)
+		function sf = getsfOut(me)
 			sf = 0;
-			if ~isempty(obj.sfCache)
-				sf = obj.sfCache * obj.ppd;
+			if ~isempty(me.sfCache)
+				sf = me.sfCache * me.ppd;
 			end
 		end
 		
@@ -372,59 +442,59 @@ classdef colourGratingStimulus < baseStimulus
 		%> this is modified over parent method as gratings have slightly different
 		%> requirements.
 		% ===================================================================
-		function setRect(obj)
-			obj.dstRect=Screen('Rect',obj.texture);
-			obj.dstRect=ScaleRect(obj.dstRect,obj.scale,obj.scale);
-			if obj.mouseOverride && obj.mouseValid
-					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
+		function setRect(me)
+			%me.dstRect=Screen('Rect',me.texture);
+			me.dstRect=ScaleRect([0 0 me.res(1) me.res(2)],me.scale,me.scale);
+			if me.mouseOverride && me.mouseValid
+					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 			else
-				if isempty(obj.findprop('motionAngleOut'));
-					[sx, sy]=pol2cart(obj.d2r(obj.motionAngle),obj.startPosition);
+				if isempty(me.findprop('motionAngleOut'))
+					[sx, sy]=pol2cart(me.d2r(me.motionAngle),me.startPosition);
 				else
-					[sx, sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
+					[sx, sy]=pol2cart(me.d2r(me.motionAngleOut),me.startPosition);
 				end
-				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
-				if isempty(obj.findprop('xPositionOut'));
-					obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
+				me.dstRect=CenterRectOnPointd(me.dstRect,me.sM.xCenter,me.sM.yCenter);
+				if isempty(me.findprop('xPositionOut'))
+					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
 				else
-					obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));
+					me.dstRect=OffsetRect(me.dstRect,me.xPositionOut+(sx*me.ppd),me.yPositionOut+(sy*me.ppd));
 				end
 			end
-			obj.mvRect=obj.dstRect;
-			obj.setAnimationDelta();
+			me.mvRect=me.dstRect;
+			me.setAnimationDelta();
 		end
 		
 		% ===================================================================
 		%> @brief sfOut Set method
 		%>
 		% ===================================================================
-		function set_sfOut(obj,value)
-			if obj.sfRecurse == false
-				obj.sfCache = (value/obj.ppd);
-				obj.sfOut = obj.sfCache * obj.scale;
+		function set_sfOut(me,value)
+			if me.sfRecurse == false
+				me.sfCache = (value/me.ppd);
+				me.sfOut = me.sfCache * me.scale;
 			else
-				obj.sfOut = value;
-				obj.sfRecurse = false;
+				me.sfOut = value;
+				me.sfRecurse = false;
 			end
-			%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', obj.sfOut, obj.sfCache, value);
+			%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', me.sfOut, me.sfCache, value);
 		end
 		
 		% ===================================================================
 		%> @brief tfOut Set method
 		%>
 		% ===================================================================
-		function set_tfOut(obj,value)
-			obj.tfOut = value;
-			notify(obj,'changePhaseIncrement');
+		function set_tfOut(me,value)
+			me.tfOut = value;
+			notify(me,'changePhaseIncrement');
 		end
 		
 		% ===================================================================
 		%> @brief reverseDirectionOut Set method
 		%>
 		% ===================================================================
-		function set_reverseDirectionOut(obj,value)
-			obj.reverseDirectionOut = value;
-			notify(obj,'changePhaseIncrement');
+		function set_reverseDirectionOut(me,value)
+			me.reverseDirectionOut = value;
+			notify(me,'changePhaseIncrement');
 		end
 		
 		% ===================================================================
@@ -432,11 +502,12 @@ classdef colourGratingStimulus < baseStimulus
 		%> Use an event to recalculate scale as get method is slower (called
 		%> many more times), than an event which is only called on update
 		% ===================================================================
-		function calculateScale(obj,~,~)
-			obj.scale = obj.sizeOut/(obj.size*obj.ppd);
-			obj.sfRecurse = true;
-			obj.sfOut = obj.sfCache * obj.scale;
-			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', obj.sfOut, obj.sfCache, obj.scale);
+		function calculateScale(me,~,~)
+			me.scale = me.sizeOut/(me.size*me.ppd);
+			me.maskValue = me.sizeOut / 2;
+			me.sfRecurse = true;
+			me.sfOut = me.sfCache * me.scale;
+			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', me.sfOut, me.sfCache, me.scale);
 		end
 		
 		% ===================================================================
@@ -444,12 +515,12 @@ classdef colourGratingStimulus < baseStimulus
 		%> Use an event to recalculate as get method is slower (called
 		%> many more times), than an event which is only called on update
 		% ===================================================================
-		function calculatePhaseIncrement(obj,~,~)
-			if ~isempty(obj.findprop('tfOut'))
-				obj.phaseIncrement = (obj.tfOut * 360) * obj.sM.screenVals.ifi;
-				if ~isempty(obj.findprop('reverseDirectionOut'))
-					if obj.reverseDirectionOut == false
-						obj.phaseIncrement = -obj.phaseIncrement;
+		function calculatePhaseIncrement(me,~,~)
+			if ~isempty(me.findprop('tfOut'))
+				me.phaseIncrement = (me.tfOut * 360) * me.sM.screenVals.ifi;
+				if ~isempty(me.findprop('reverseDirectionOut'))
+					if me.reverseDirectionOut == false
+						me.phaseIncrement = -me.phaseIncrement;
 					end
 				end
 			end
@@ -460,9 +531,9 @@ classdef colourGratingStimulus < baseStimulus
 		%> we also need to change scale when sizeOut is changed, used for both
 		%setting sfOut and the dstRect properly
 		% ===================================================================
-		function set_sizeOut(obj,value)
-			obj.sizeOut = value*obj.ppd;
-			notify(obj,'changeScale');
+		function set_sizeOut(me,value)
+			me.sizeOut = value*me.ppd;
+			notify(me,'changeScale');
 		end
 		
 	end

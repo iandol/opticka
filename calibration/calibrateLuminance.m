@@ -222,7 +222,8 @@ classdef calibrateLuminance < handle
 		function run(obj)
 			resetAll(obj)
 			openScreen(obj);
-			
+			Screen('FillRect',obj.win,[0.7 0.7 0.3],obj.screenVals.targetRect);
+			Screen('Flip',obj.win);
 			if ~obj.useCCal2 && ~obj.useI1Pro && ~obj.useSpectroCal2
 				input(sprintf(['When black screen appears, point photometer, \n' ...
 					'get reading in cd/m^2, input reading using numpad and press enter. \n' ...
@@ -874,7 +875,7 @@ classdef calibrateLuminance < handle
 			PsychImaging('PrepareConfiguration');
 			PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 			PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
-			PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
+			%PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 			if obj.screen == 0
 				rect = [0 0 1000 1000];
 			else
@@ -882,7 +883,7 @@ classdef calibrateLuminance < handle
 			end
 			obj.win = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, rect);
 			obj.screenVals.winRect = Screen('Rect',obj.win);
-			obj.screenVals.targetRect = CenterRect([0 0 900 900],obj.screenVals.winRect);
+			obj.screenVals.targetRect = CenterRect([0 0 1000 1000],obj.screenVals.winRect);
 			
 			obj.screenVals.ifi = Screen('GetFlipInterval', obj.win);
 			obj.screenVals.fps=Screen('NominalFramerate', obj.win);

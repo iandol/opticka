@@ -23,7 +23,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> Size in degrees
 		size double = 4
 		%> Colour as a 0-1 range RGB or RGBA
-		colour double = [0.5 0.5 0.5]
+		colour double = [1 1 1 1]
 		%> Alpha as a 0-1 range, this gets added to the RGB colour
 		alpha double = 1
 		%> Do we print details to the commandline?
@@ -124,7 +124,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		
 		% ===================================================================
 		%> @brief Class constructor
-		
 		%>
 		%> @param varargin are passed as a structure / cell of properties which is
 		%> parsed.
@@ -143,21 +142,36 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief colour Get method
+		%> @brief colour set method
 		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
 		% ===================================================================
-		function value = get.colour(me)
-			len=length(me.colour);
-			if len == 4 || len == 3
-				value = [me.colour(1:3) me.alpha]; %force our alpha to override
-			elseif len == 1
-				value = [me.colour me.colour me.colour me.alpha]; %construct RGBA
-			else
-				if isa(me,'gaborStimulus') || isa(me,'gratingStimulus')
-					value = []; %return no colour to procedural gratings
-				else
-					value = [1 1 1 me.alpha]; %return white for everything else
-				end
+		function set.colour(me,value)
+			len=length(value);
+			switch len
+				case {4,3}
+					me.colour = [value(1:3) me.alpha]; %force our alpha to override
+				case 1
+					me.colour = [value value value me.alpha]; %construct RGBA
+				otherwise
+					if isa(me,'gaborStimulus') || isa(me,'gratingStimulus')
+						me.colour = []; %return no colour to procedural gratings
+					else
+						me.colour = [1 1 1 me.alpha]; %return white for everything else
+					end		
+			end
+			me.colour(me.colour<0)=0; me.colour(me.colour>1)=1;
+		end
+		
+		% ===================================================================
+		%> @brief alpha set method
+		%> 
+		% ===================================================================
+		function set.alpha(me,value)
+			if value<0; value=0;elseif value>1; value=1; end
+			me.alpha = value;
+			me.colour = me.colour(1:3); %force colour to be regenerated
+			if isprop(me,'colour2')
+				me.colour2 = me.colour2(1:3);
 			end
 		end
 		

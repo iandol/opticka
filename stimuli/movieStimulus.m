@@ -179,10 +179,10 @@ classdef movieStimulus < baseStimulus
 		function update(me)
 			Screen('PlayMovie', me.movie, 0);
 			Screen('SetMovieTimeIndex', me.movie, 0); %reset movie
-			if ~isempty(me.texture) && me.texture > 0
-				try Screen('Close',me.texture); end %#ok<*TRYNC>
-			elseif ~isempty(me.buffertex) && me.buffertex ~= me.texture
-				try Screen('Close',me.buffertex); end 
+			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+					try Screen('Close',me.texture); end %#ok<*TRYNC>
+			elseif ~isempty(me.buffertex) && me.buffertex ~= me.texture && Screen(me.buffertex,'WindowKind') == -1
+					try Screen('Close',me.buffertex); end 
 			end
 			me.texture = []; me.buffertex = [];
 			me.scale = me.sizeOut;
@@ -202,7 +202,9 @@ classdef movieStimulus < baseStimulus
 				end
 				me.texture = Screen('GetMovieImage', me.sM.win, me.movie, me.blocking);
 				if me.texture > 0
-					if ~isempty(me.buffertex) && me.buffertex > 0 && me.buffertex ~= me.texture
+					if ~isempty(me.buffertex) && ...
+							me.buffertex > 0 && ...
+							me.buffertex ~= me.texture && Screen(me.buffertex,'WindowKind') == -1
 						try Screen('Close', me.buffertex); end
 						me.buffertex=[]; 
 					end

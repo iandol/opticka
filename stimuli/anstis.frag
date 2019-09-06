@@ -33,7 +33,7 @@ void main() {
 
 	vec3 color = vec3(0.0);
 
-	if (mod(pos.x,2.0) > 1.0) { //we will be red
+	if (mod(pos.x,2.0) > 1.0) { //we will be color1/3
 		if (sv > 0.5) {
 			color = color1.rgb; //bright
 		}
@@ -41,7 +41,7 @@ void main() {
 			color = color3.rgb; //dark
 		}
 	}
-	else { // we will be green
+	else { // we will be color2/4
 		if (sv > 0.5) {
 			color = color2.rgb; //bright
 		}
