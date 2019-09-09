@@ -328,24 +328,31 @@ classdef screenManager < optickaCore
 				PsychImaging('PrepareConfiguration');
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				%PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
-				fprintf('---> screenManager: Probing for a Display++...\n');
+				fprintf('---> screenManager: Probing for a Display++...');
 				bitsCheckOpen(me);
-				if me.isPlusPlus; fprintf('Found Display++...\n'); else; fprintf('NO Display++...\n'); end
-				if regexpi(me.bitDepth, '^EnableBits')
-					if me.isPlusPlus
-						fprintf('\t-> Display++ mode: %s\n', me.bitDepth);
-						PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
-						if regexp(me.bitDepth, 'Color')
-							PsychImaging('AddTask', 'General', me.bitDepth, 2);
+				if me.isPlusPlus
+					fprintf('\tFound Display++ ');
+					if regexpi(me.bitDepth, '^EnableBits')
+						if me.isPlusPlus
+							fprintf('-> mode: %s\n', me.bitDepth);
+							PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
+							if regexp(me.bitDepth, 'Color')
+								PsychImaging('AddTask', 'General', me.bitDepth, 2);
+							else
+								PsychImaging('AddTask', 'General', me.bitDepth);
+							end
 						else
-							PsychImaging('AddTask', 'General', me.bitDepth);
+							fprintf('---> screenManager: No Display++ found, revert to FloatingPoint32Bit mode.\n');
+							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+							me.isPlusPlus = false;
 						end
 					else
-						fprintf('---> screenManager: No Display++ found, revert to FloatingPoint32Bit mode.\n');
-						PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+						fprintf('\n---> screenManager: Bit Depth mode set to: %s\n', me.bitDepth);
+						PsychImaging('AddTask', 'General', me.bitDepth);
 						me.isPlusPlus = false;
 					end
 				else
+					fprintf('\tNO Display++...\n'); 
 					fprintf('\n---> screenManager: Bit Depth mode set to: %s\n', me.bitDepth);
 					PsychImaging('AddTask', 'General', me.bitDepth);
 					me.isPlusPlus = false;
@@ -458,12 +465,12 @@ classdef screenManager < optickaCore
 				if me.blend==1
 					[me.screenVals.oldSrc,me.screenVals.oldDst,me.screenVals.oldMask]...
 						= Screen('BlendFunction', me.win, me.srcMode, me.dstMode);
-					fprintf('\n---> screenManager: Previous OpenGL blending was %s | %s\n', me.screenVals.oldSrc, me.screenVals.oldDst);
-					fprintf('---> screenManager: OpenGL blending now set to %s | %s\n', me.srcMode, me.dstMode);
+					fprintf('\n---> screenManager: Previous OpenGL blending: %s | %s\n', me.screenVals.oldSrc, me.screenVals.oldDst);
+					fprintf('---> screenManager: OpenGL blending now: %s | %s\n', me.srcMode, me.dstMode);
 				end
 				
 				if IsLinux
-					Screen('Preference', 'DefaultFontName', 'DejaVu Sans');
+					Screen('Preference', 'DefaultFontName', 'Liberation Sans');
 				end
 				
 				me.screenVals.white = WhiteIndex(me.screen);
