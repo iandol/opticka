@@ -318,6 +318,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 					s = me.sM;
 					s.blend = true; 
 					s.disableSyncTests = false;
+					s.visualDebug = true;
+					s.bitDepth = '8bit';
 				end
 				if ~exist('forceScreen','var') || isempty(forceScreen); forceScreen = -1; end
 				if ~exist('showVBL','var') || isempty(showVBL); showVBL = false; end
@@ -340,7 +342,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				end
 				
 				if ~s.isOpen
-					open(s); %open PTB screen
+					sv=open(s); %open PTB screen
 				end
 				setup(me,s); %setup our stimulus object
 				
@@ -360,43 +362,47 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				flip(s);
 				WaitSecs('YieldSecs',2);
-				a = 1;
-				vbl(a) = flip(s); b = vbl(a);
+				nFrames = 0;
+				notFinished = true;
+				benchmarkFrames = sv.fps * runtime;
+				vbl(1) = flip(s); startT = vbl(1);
 				
-				while vbl(end) <= b + runtime
+				while notFinished
+					nFrames = nFrames + 1;
 					draw(me); %draw stimulus
+					if ~benchmark&&s.visualDebug;drawGrid(s);end
 					finishDrawing(s); %tell PTB/GPU to draw
  					animate(me); %animate stimulus, will be seen on next draw
 					if benchmark
-						vbl(a) = flip(s,0,2,2);
+						Screen('Flip',s.win,0,2,2);
 					else
-						vbl(a) = flip(s, vbl(end)); %flip the buffer
+						vbl(nFrames) = flip(s, vbl(end)); %flip the buffer
 					end
-					a = a + 1;
+					if benchmark
+						notFinished =  nFrames <= benchmarkFrames;
+					else
+						notFinished = vbl(end) <= startT + runtime;
+					end	
 				end
 				
-				if benchmark; bb=GetSecs; end
-				flip(s);
-				WaitSecs(1);
+				endT = flip(s);
+				WaitSecs(0.5);
 				if showVBL
 					figure;
 					plot(diff(vbl)*1e3);
-					title(sprintf('VBL Times, should be ~%.2f ms',s.screenVals.ifi*1e3));
+					line([0 length(vbl-1)],[sv.ifi*1e3 sv.ifi*1e3]);
+					title(sprintf('VBL Times, should be ~%.2f ms',sv.ifi*1e3));
 					ylabel('Time (ms)')
 					xlabel('Frames')
 				end
-				Priority(0);
-				ShowCursor;
-				ListenChar(0);
+				Priority(0); ShowCursor; ListenChar(0);
 				reset(me); %reset our stimulus ready for use again
 				close(s); %close screen
 				s.screen = oldscreen;
 				s.windowed = oldwindowed;
 				s.bitDepth = oldbitdepth;
-				if benchmark
-					fps = (s.screenVals.fps*runtime) / (bb-b);
-					fprintf('\n\n======> SPEED = %g fps <=======\n', fps);
-				end
+					fps = nFrames / (endT-startT);
+					fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.2f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, endT-startT, fps);
 				clear fps benchmark runtime b bb i; %clear up a bit
 				warning on
 			catch ME

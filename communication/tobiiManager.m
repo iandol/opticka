@@ -148,6 +148,15 @@ classdef tobiiManager < optickaCore
 			me.settings.freq	= me.sampleRate;
 			me.settings.cal.bgColor = floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor = me.settings.cal.bgColor;
+            if IsLinux
+                settings.UI.setup.instruct.font = 'Liberation Sans';
+                settings.UI.button.setup.text.font = 'Liberation Sans';
+                settings.UI.button.val.text.font = 'Liberation Sans';
+                settings.UI.val.avg.text.font = 'Liberation Mono';
+                settings.UI.val.hover.text.font = 'Liberation Mono';
+                settings.UI.val.menu.text.font = 'Liberation Mono';
+                settings.UI.val.avg.text.color = 200;
+            end
 			updateDefaults(me);
 			me.tobii.init();
 			me.isConnected		= true;
@@ -693,20 +702,21 @@ classdef tobiiManager < optickaCore
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
 				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',true,'density',50); %test stimulus
-				open(s); %open our screen
+				sv=open(s); %open our screen
 				setup(o,s); %setup our stimulus with open screen
 				
 				ListenChar(1);
 				initialise(me,s); %initialise tobii with our screen
-				calViz										= AnimatedCalibrationDisplay();
+				calViz								= AnimatedCalibrationDisplay();
 				me.settings.cal.drawFunction        = @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
-				calViz.bgColor								= 127;
+				calViz.bgColor						= round(s.backgroundColour .* 255);
 				calViz.fixBackColor                 = 0;
-				calViz.fixFrontColor						= 255;
+				calViz.fixFrontColor				= 255;
+                me.settings.cal.bgColor             = calViz.bgColor;
 				me.settings.cal.autoPace            = 1;
 				me.settings.cal.doRandomPointOrder  = false;
-				me.settings.val.pointPos				= [.15 .15; .15 .85; .5 .5; .85 .15; .85 .85];
-				%me.settings.val.pointPos				= [.1 .1;.1 .9;.5 .5;.9 .1;.9 .9];
+				me.settings.val.pointPos			= [.15 .15; .15 .85; .5 .5; .85 .15; .85 .85];
+				%me.settings.val.pointPos			= [.1 .1;.1 .9;.5 .5;.9 .1;.9 .9];
 				me.settings.UI.setup.eyeClr         = 255;
 				me.settings.cal.pointNotifyFunction = @demoCalCompletionFun;
 				me.settings.val.pointNotifyFunction = @demoCalCompletionFun;
@@ -723,27 +733,31 @@ classdef tobiiManager < optickaCore
 				Priority(MaxPriority(s.win));
 				endExp = 0;
 				trialn = 1;
-				maxTrials = 10;
+				maxTrials = 5;
 				m=1; n=1;
 				methods={'median','heuristic1','heuristic2','sg','simple'};
 				eyes={'both','left','right'};
 				Screen('TextFont',s.win,'Consolas');
 				fprintf('\n===>>> Warming up the GPU, Eyetracker etc... <<<===\n')
-				for i = 1:s.screenVals.fps*1
-					draw(o);
-					drawBackground(s);
-					s.drawPhotoDiodeSquare([0 0 0 1]);
-					Screen('DrawText',s.win,'Warming up...',65,10);
-					finishDrawing(s);
-					animate(o);
-					sgolayfilt(rand(10,1),1,3); %warm it up
-					me.heuristicFilter(rand(10,1), 2);
-					getSample(me); 
-					flip(s);
-				end
+                sgolayfilt(rand(10,1),1,3); %warm it up
+                me.heuristicFilter(rand(10,1), 2);
+                startRecording(me);
+                WaitSecs(0.5);
+                mc = true;
+                for i = 1 : s.screenVals.fps
+                    draw(o);
+                    drawBackground(s);
+                    s.drawPhotoDiodeSquare([double(mc) double(mc) double(mc) 1]);
+                    Screen('DrawText',s.win,['Warming up frame ' num2str(i)],65,10);
+                    finishDrawing(s);
+                    animate(o);
+                    getSample(me);
+                    flip(s);
+                    if mod(i,6)==0; mc = ~mc; end
+                end
+                s.drawPhotoDiodeSquare([0 0 0 1]);
 				update(o); %make sure stimuli are set back to their start state
 				flip(s);
-				startRecording(me);
 				trackerMessage(me,'Starting Demo...')
 				
 				while trialn <= maxTrials && endExp == 0
@@ -757,7 +771,7 @@ classdef tobiiManager < optickaCore
 					vbl = flip(s); tstart=vbl;
 					trackerMessage(me,'STARTING');
 					trackerMessage(me,'STARTVBL',vbl);
-					while vbl < tstart + 4
+					while vbl < tstart + 2
 						draw(o);
 						drawGrid(s);
 						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
@@ -806,7 +820,7 @@ classdef tobiiManager < optickaCore
 						drawPhotoDiodeSquare(s,[0 0 0 1]);
 						vbl = flip(s);
 						trackerMessage(me,'END_RT',vbl);
-						trackerMessage(me,'TRIAL_RESULT 0 ABORT')
+						trackerMessage(me,'TRIAL_RESULT -10 ABORT')
 						trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))))
 					end
 				end

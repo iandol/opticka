@@ -1,10 +1,10 @@
 % ========================================================================
 %> @brief dotsStimulus simple variable coherence dots stimulus, inherits from baseStimulus
 %>
-%> 
+%>
 % ========================================================================
 classdef dotsStimulus < baseStimulus
-
+	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> dot type, only simple supported at present
 		type		= 'simple'
@@ -21,16 +21,18 @@ classdef dotsStimulus < baseStimulus
 		%> fraction of dots to kill each frame  (limited lifetime)
 		kill		= 0
 		%> type of dot (integer, where 0 means filled square, 1
-		%> means filled circle, and 2 means filled circle with high-quality
+		%> means filled circle, and 2/3 means filled circle with high-quality
 		%> anti-aliasing)
-		dotType		= 2
+		dotType		= 3
 		%> whether to use a circular mask or not
 		mask		= false
+		%> whether to use a procedural (true) or texture (false) mask
+		maskIsProcedural = true
 		%> colour of the mask, empty sets mask colour to = background of screen
 		maskColour	= []
 		%> smooth the alpha edge of the mask by this number of pixels, 0 is
 		%> off
-		maskSmoothing = 0
+		maskSmoothing = 21
 		%> mask OpenGL blend modes
 		msrcMode	= 'GL_SRC_ALPHA'
 		mdstMode	= 'GL_ONE_MINUS_SRC_ALPHA'
@@ -68,9 +70,9 @@ classdef dotsStimulus < baseStimulus
 	properties (SetAccess = private, GetAccess = private)
 		%nDots cache
 		nDots_
-		%> we must scale the dots lager than the mask by this factor
-		fieldScale	= 1.15
-		%> resultant size of the dotfield after scaling
+		%> we must scale the dots larger than the mask by this factor
+		fieldScale	= 1.05
+		%> resultant size of the mask after scaling
 		fieldSize
 		%> this holds the mask texture
 		maskTexture
@@ -85,18 +87,18 @@ classdef dotsStimulus < baseStimulus
 		%> used during updateDots calculations
 		dxs
 		dys
-		%> the smoothing kernel for the mask
+		%> the smoothing kernel for the texture mask
 		kernel		= []
 		shader		= 0
 		%> regexes for object management during construction
-		allowedProperties='msrcMode|mdstMode|type|density|dotSize|colourType|coherence|dotType|kill|mask|maskSmoothing|maskColour';
+		allowedProperties='msrcMode|mdstMode|type|density|dotSize|colourType|coherence|dotType|kill|mask|maskIsProcedural|maskSmoothing|maskColour';
 		%> regexes for object management during setup
-		ignoreProperties='name|family|xy|dxdy|colours|mask|maskTexture|maskColour|colourType|msrcMode|mdstMode'
+		ignoreProperties='name|family|xy|dxdy|colours|mask|maskTexture|maskIsProcedural|maskColour|colourType|msrcMode|mdstMode'
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief Class constructor
@@ -107,7 +109,7 @@ classdef dotsStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = dotsStimulus(varargin)
+		function me = dotsStimulus(varargin)
 			%Initialise for superclass, stops a noargs error
 			if nargin == 0
 				varargin.family = 'dots';
@@ -115,36 +117,36 @@ classdef dotsStimulus < baseStimulus
 				varargin.speed = 2;
 			end
 			
-			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
+			me=me@baseStimulus(varargin); %we call the superclass constructor first
 			
 			if nargin>0
-				obj.parseArgs(varargin, obj.allowedProperties);
+				me.parseArgs(varargin, me.allowedProperties);
 			end
 			
-			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			obj.salutation('constructor','Dots Stimulus initialisation complete');
+			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.salutation('constructor','Dots Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
-		%> @brief Setup the stimulus object 
+		%> @brief Setup the stimulus object
 		%>
 		%> @param sM screenManager object for reference
 		% ===================================================================
-		function setup(obj,sM)
+		function setup(me,sM)
 			
-			obj.reset; %reset it back to its initial state
-			obj.inSetup = true;
-			if isempty(obj.isVisible)
-				obj.show;
+			me.reset; %reset it back to its initial state
+			me.inSetup = true;
+			if isempty(me.isVisible)
+				me.show;
 			end
 			
-			obj.sM = sM;
-			obj.ppd=sM.ppd;
+			me.sM = sM;
+			me.ppd=sM.ppd;
 			
 			fn = sort(properties('dotsStimulus'));
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=obj.addprop([fn{j} 'Out']);
+				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
+					p=me.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'dotSize');p.SetMethod = @set_dotSizeOut;end
@@ -152,60 +154,29 @@ classdef dotsStimulus < baseStimulus
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'density');p.SetMethod = @set_densityOut;end
 				end
-				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
-					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
-			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
-			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
-			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
-			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			obj.doDots = true;
-			obj.doMotion = false;
-			obj.doDrift = false;
-			obj.doFlash = false;
+			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
+			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
+			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
+			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
+			me.doDots = true;
+			me.doMotion = false;
+			me.doDrift = false;
+			me.doFlash = false;
 			
 			%build the mask
-			if obj.mask == true
-				if isempty(obj.maskColour)
-					obj.wasMaskColourBlank = true;
-					obj.maskColour = obj.sM.backgroundColour;
-					obj.maskColour(4) = 0; %set alpha to 0
-				else
-					obj.wasMaskColourBlank = false;
-				end
-				wrect = SetRect(0, 0, obj.fieldSize, obj.fieldSize);
-				mrect = SetRect(0, 0, obj.sizeOut, obj.sizeOut);
-				mrect = CenterRect(mrect,wrect);
-				bg = [obj.sM.backgroundColour(1:3) 1];
-				obj.maskTexture = Screen('OpenOffscreenwindow', obj.sM.win, bg, wrect);
-				Screen('FillOval', obj.maskTexture, obj.maskColour, mrect);
-				obj.maskRect = CenterRectOnPointd(wrect,obj.xPositionOut,obj.yPositionOut);
-				if obj.maskSmoothing > 0
-					if ~rem(obj.maskSmoothing, 2)
-						obj.maskSmoothing = obj.maskSmoothing + 1;
-					end
-					if exist('fspecial','file')
-						obj.kernel = fspecial('gaussian',obj.maskSmoothing,obj.maskSmoothing);
-						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
-					else
-						p = mfilename('fullpath');
-						p = fileparts(p);
-						ktmp = load([p filesep 'gaussian52kernel.mat']); %'gaussian73kernel.mat' 'disk5kernel.mat'
-						obj.kernel = ktmp.kernel;
-						obj.shader = EXPCreateStatic2DConvolutionShader(obj.kernel, 4, 4, 0, 2);
-						obj.salutation('No fspecial, had to use precompiled kernel');
-					end
-				else
-					obj.kernel = [];
-					obj.shader = 0;
-				end
+			if me.mask == true
+				makeMask(me);
 			end
 			
-			obj.inSetup = false;
-			computePosition(obj);
-			updateDots(obj);
+			me.inSetup = false;
+			computePosition(me);
+			setRect(me);
+			updateDots(me);
 			
 		end
 		
@@ -214,57 +185,68 @@ classdef dotsStimulus < baseStimulus
 		%>  We update the object once per trial (if we change parameters
 		%>  for example)
 		% ===================================================================
-		function update(obj)
-			resetTicks(obj);
-			computePosition(obj);
-			updateDots(obj);
+		function update(me)
+			resetTicks(me);
+			computePosition(me);
+			setRect(me);
+			updateDots(me);
 		end
 		
 		% ===================================================================
 		%> @brief Draw our stimulus structure
 		%>
 		% ===================================================================
-		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
-				if obj.mask == true
-					Screen('BlendFunction', obj.sM.win, obj.msrcMode, obj.mdstMode);
-					Screen('DrawDots', obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,...
-						[obj.xOut obj.yOut],obj.dotTypeOut);
-					Screen('DrawTexture', obj.sM.win, obj.maskTexture, [], obj.maskRect, [], [], [], [], obj.shader);
-					Screen('BlendFunction', obj.sM.win, obj.sM.srcMode, obj.sM.dstMode);
+		function draw(me)
+			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
+				if me.mask
+					if me.maskIsProcedural
+						Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode);
+						Screen('DrawDots', me.sM.win,me.xy,me.dotSizeOut,me.colours,...
+							[me.xOut me.yOut],me.dotTypeOut);
+						Screen('DrawTexture', me.sM.win, me.maskTexture, [], me.maskRect,...
+							[], [], 1, me.maskColour);
+						Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
+					else
+						Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode);
+						Screen('DrawDots', me.sM.win,me.xy,me.dotSizeOut,me.colours,...
+							[me.xOut me.yOut],me.dotTypeOut);
+						Screen('DrawTexture', me.sM.win, me.maskTexture, [], me.maskRect,...
+							[], [], [], [], me.shader);
+						Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
+					end
 				else
-					Screen('DrawDots',obj.sM.win,obj.xy,obj.dotSizeOut,obj.colours,[obj.xOut obj.yOut],obj.dotTypeOut);
+					Screen('DrawDots',me.sM.win,me.xy,me.dotSizeOut,me.colours,[me.xOut me.yOut],me.dotTypeOut);
 				end
 			end
-			obj.tick = obj.tick + 1;
+			me.tick = me.tick + 1;
 		end
 		
 		% ===================================================================
 		%> @brief Animate this object by one frame
 		%>
 		% ===================================================================
-		function animate(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
-				if obj.mouseOverride
-					getMousePosition(obj);
-					if obj.mouseValid
-						obj.xOut = obj.mouseX;
-						obj.yOut = obj.mouseY;
+		function animate(me)
+			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
+				if me.mouseOverride
+					getMousePosition(me);
+					if me.mouseValid
+						me.xOut = me.mouseX;
+						me.yOut = me.mouseY;
 					end
 				end
-				obj.xy = obj.xy + obj.dxdy; %increment position
-				sz = obj.sizeOut/2;
-				fix = find(obj.xy > sz); %cull positive
-				obj.xy(fix) = obj.xy(fix) - obj.sizeOut;
-				fix = find(obj.xy < -sz);  %cull negative
-				obj.xy(fix) = obj.xy(fix) + obj.sizeOut;
-				%obj.xy(obj.xy > sz) = obj.xy(obj.xy > sz) - obj.sizeOut; % this is not faster
-				%obj.xy(obj.xy < -sz) = obj.xy(obj.xy < -sz) + obj.sizeOut; % this is not faster
-				if obj.killOut > 0 && obj.tick > 1
-					kidx = rand(obj.nDots,1) <  obj.killOut;
+				me.xy = me.xy + me.dxdy; %increment position
+				sz = me.sizeOut/2;
+				fix = find(me.xy > sz); %cull positive
+				me.xy(fix) = me.xy(fix) - me.sizeOut;
+				fix = find(me.xy < -sz);  %cull negative
+				me.xy(fix) = me.xy(fix) + me.sizeOut;
+				%me.xy(me.xy > sz) = me.xy(me.xy > sz) - me.sizeOut; % this is not faster
+				%me.xy(me.xy < -sz) = me.xy(me.xy < -sz) + me.sizeOut; % this is not faster
+				if me.killOut > 0 && me.tick > 1
+					kidx = rand(me.nDots,1) <  me.killOut;
 					ks = length(find(kidx > 0));
-					obj.xy(:,kidx) = (obj.sizeOut .* rand(2,ks)) - obj.sizeOut/2;
-					%obj.colours(3,kidx) = ones(1,ks); 
+					me.xy(:,kidx) = (me.sizeOut .* rand(2,ks)) - me.sizeOut/2;
+					%me.colours(3,kidx) = ones(1,ks);
 				end
 			end
 		end
@@ -273,110 +255,174 @@ classdef dotsStimulus < baseStimulus
 		%> @brief reset the object, deleting the temporary .Out properties
 		%>
 		% ===================================================================
-		function reset(obj)
-			obj.removeTmpProperties;
-			if obj.wasMaskColourBlank;	obj.maskColour = []; end
-			obj.angles = [];
-			obj.xy = [];
-			obj.dxs = [];
-			obj.dys = [];
-			obj.dxdy = [];
-			obj.colours = [];
-			resetTicks(obj);
+		function reset(me)
+			me.removeTmpProperties;
+			if me.wasMaskColourBlank;me.maskColour=[];end
+			me.wasMaskColourBlank=false;
+			me.angles = [];
+			me.xy = [];
+			me.dxs = [];
+			me.dys = [];
+			me.dxdy = [];
+			me.colours = [];
+			resetTicks(me);
 		end
 		
 		% ===================================================================
 		%> @brief density set method
 		%>
-		%> We need to update nDots if density is changed 
+		%> We need to update nDots if density is changed
 		% ===================================================================
-		function set.density(obj,value)
-			obj.density = value;
-			obj.nDots; %#ok<MCSUP>
+		function set.density(me,value)
+			me.density = value;
+			me.nDots; %#ok<MCSUP>
 		end
 		
 		% ===================================================================
 		%> @brief nDots is dependant property, this get method also caches
-		%> the value in obj.nDots_ fo speed
+		%> the value in me.nDots_ fo speed
 		%>
 		% ===================================================================
-		function value = get.nDots(obj)
-			if ~obj.inSetup && isprop(obj,'sizeOut')
-				obj.nDots_ = round(obj.densityOut * (obj.sizeOut/obj.ppd)^2);
+		function value = get.nDots(me)
+			if ~me.inSetup && isprop(me,'sizeOut')
+				me.nDots_ = round(me.densityOut * (me.sizeOut/me.ppd)^2);
 			else
-				obj.nDots_ = round(obj.density * obj.size^2);
+				me.nDots_ = round(me.density * me.size^2);
 			end
-			value = obj.nDots_;
+			value = me.nDots_;
 		end
 		
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
-	%=======================================================================
+		%=======================================================================
 		
+		% ===================================================================
+		%> @brief setRect
+		%> setRect makes the PsychRect based on the texture and screen
+		%> values, you should call computePosition() first to get xOut and
+		%> yOut
+		% ===================================================================
+		function setRect(me)
+			if ~isempty(me.maskTexture)
+				me.dstRect= [ 0 0 me.fieldSize me.fieldSize];
+				if me.mouseOverride && me.mouseValid
+					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
+				else
+					me.dstRect=CenterRectOnPointd(me.dstRect, me.xOut, me.yOut);
+				end
+				me.mvRect=me.dstRect; me.maskRect=me.dstRect;
+			end
+		end
 		% ===================================================================
 		%> @brief Update the dots based on current variable settings
 		%>
 		% ===================================================================
-		function updateDots(obj)
-			makeColours(obj)
+		function updateDots(me)
+			makeColours(me)
 			%sort out our angles and percent incoherent
-			obj.angles = ones(obj.nDots_,1) .* obj.angleOut;
-			if obj.angleProbability < 1
-				n = round(obj.nDots_*obj.angleProbability);
-				obj.angles(1:n) = obj.angleOut + 180;
+			me.angles = ones(me.nDots_,1) .* me.angleOut;
+			if me.angleProbability < 1
+				n = round(me.nDots_*me.angleProbability);
+				me.angles(1:n) = me.angleOut + 180;
 			end
-			obj.rDots=obj.nDots_-floor(obj.nDots_*(obj.coherenceOut));
-			if obj.rDots>0
-				obj.angles(1:obj.rDots) = obj.r2d((2*pi).*rand(1,obj.rDots));
-				obj.angles = Shuffle(obj.angles(1:obj.nDots_)); %if we don't shuffle them, all coherent dots show on top!
+			me.rDots=me.nDots_-floor(me.nDots_*(me.coherenceOut));
+			if me.rDots>0
+				me.angles(1:me.rDots) = me.r2d((2*pi).*rand(1,me.rDots));
+				me.angles = Shuffle(me.angles(1:me.nDots_)); %if we don't shuffle them, all coherent dots show on top!
 			end
 			%calculate positions and vector offsets
-			obj.xy = obj.sizeOut .* rand(2,obj.nDots_);
-			obj.xy = obj.xy - obj.sizeOut/2; %so we are centered for -xy to +xy
-			[obj.dxs, obj.dys] = obj.updatePosition(repmat(obj.delta,size(obj.angles)),obj.angles);
-			obj.dxdy=[obj.dxs';obj.dys'];
-			if obj.mask == true
-				obj.maskRect = CenterRectOnPointd(obj.maskRect,obj.xOut,obj.yOut);
-			end
+			me.xy = me.sizeOut .* rand(2,me.nDots_);
+			me.xy = me.xy - me.sizeOut/2; %so we are centered for -xy to +xy
+			[me.dxs, me.dys] = me.updatePosition(repmat(me.delta,size(me.angles)),me.angles);
+			me.dxdy=[me.dxs';me.dys'];
 		end
 		
 		% ===================================================================
 		%> @brief Make colour matrix for dots
 		%>
 		% ===================================================================
-		function makeColours(obj)
-			switch obj.colourType
+		function makeColours(me)
+			switch me.colourType
 				case 'simple'
-					obj.colours = repmat(obj.colourOut',1,obj.nDots_);
-					obj.colours(4,:) = obj.alphaOut;
+					me.colours = repmat(me.colourOut',1,me.nDots_);
+					me.colours(4,:) = me.alphaOut;
 				case 'random'
-					obj.colours = rand(4,obj.nDots_);
-					obj.colours(4,:) = obj.alphaOut;
+					me.colours = rand(4,me.nDots_);
+					me.colours(4,:) = me.alphaOut;
 				case 'randomN'
-					obj.colours = randn(4,obj.nDots_);
-					obj.colours(4,:) = obj.alphaOut;
+					me.colours = randn(4,me.nDots_);
+					me.colours(4,:) = me.alphaOut;
 				case 'randomBW'
-					obj.colours=zeros(4,obj.nDots_);
-					for i = 1:obj.nDots_
-						obj.colours(:,i)=rand;
+					me.colours=zeros(4,me.nDots_);
+					for i = 1:me.nDots_
+						me.colours(:,i)=rand;
 					end
-					obj.colours(4,:)=obj.alphaOut;
+					me.colours(4,:)=me.alphaOut;
 				case 'randomNBW'
-					obj.colours=zeros(4,obj.nDots_);
-					for i = 1:obj.nDots_
-						obj.colours(:,i)=randn;
+					me.colours=zeros(4,me.nDots_);
+					for i = 1:me.nDots_
+						me.colours(:,i)=randn;
 					end
-					obj.colours(4,:)=obj.alphaOut;
+					me.colours(4,:)=me.alphaOut;
 				case 'binary'
-					obj.colours=zeros(4,obj.nDots_);
-					rix = round(rand(obj.nDots_,1)) > 0;
-					obj.colours(:,rix) = 1;
-					obj.colours(4,:)=obj.alphaOut; %set the alpha level
+					me.colours=zeros(4,me.nDots_);
+					rix = round(rand(me.nDots_,1)) > 0;
+					me.colours(:,rix) = 1;
+					me.colours(4,:)=me.alphaOut; %set the alpha level
 				otherwise
-					obj.colours = repmat(obj.colourOut',1,obj.nDots_);
-					obj.colours(4,:) = obj.alphaOut;
+					me.colours = repmat(me.colourOut',1,me.nDots_);
+					me.colours(4,:) = me.alphaOut;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Make circular mask 
+		%>
+		% ===================================================================
+		function makeMask(me)
+			if isempty(me.maskColour)
+				me.wasMaskColourBlank = true;
+				me.maskColour = me.sM.backgroundColour;
+				if me.maskIsProcedural
+					me.maskColour(4) = 1; %set alpha to 1
+				else
+					me.maskColour(4) = 0; %set alpha to 0
+				end
+			else
+				me.wasMaskColourBlank = false;
+			end
+			if me.maskIsProcedural
+				[me.maskTexture, me.maskRect] = CreateProceduralSmoothedDisc(me.sM.win,...
+					me.fieldSize, me.fieldSize, [], round(me.sizeOut/2 + (me.maskSmoothing/2)), me.maskSmoothing, true, 2);
+			else
+				wrect = SetRect(0, 0, me.fieldSize, me.fieldSize);
+				mrect = SetRect(0, 0, me.sizeOut, me.sizeOut);
+				mrect = CenterRect(mrect,wrect);
+				bg = [me.sM.backgroundColour(1:3) 1];
+				me.maskTexture = Screen('OpenOffscreenwindow', me.sM.win, bg, wrect);
+				Screen('FillOval', me.maskTexture, me.maskColour, mrect);
+				me.maskRect = CenterRectOnPointd(wrect,me.xPositionOut,me.yPositionOut);
+				if me.maskSmoothing > 0
+					if ~rem(me.maskSmoothing, 2)
+						me.maskSmoothing = me.maskSmoothing + 1;
+					end
+					if exist('fspecial','file')
+						me.kernel = fspecial('gaussian',me.maskSmoothing,me.maskSmoothing);
+						me.shader = EXPCreateStatic2DConvolutionShader(me.kernel, 4, 4, 0, 2);
+					else
+						p = mfilename('fullpath');
+						p = fileparts(p);
+						ktmp = load([p filesep 'gaussian52kernel.mat']); %'gaussian73kernel.mat' 'disk5kernel.mat'
+						me.kernel = ktmp.kernel;
+						me.shader = EXPCreateStatic2DConvolutionShader(me.kernel, 4, 4, 0, 2);
+						me.salutation('No fspecial, had to use precompiled kernel');
+					end
+				else
+					me.kernel = [];
+					me.shader = 0;
+				end
 			end
 		end
 		
@@ -384,32 +430,32 @@ classdef dotsStimulus < baseStimulus
 		%> @brief sizeOut Set method
 		%>
 		% ===================================================================
-		function set_sizeOut(obj,value)
-			obj.sizeOut = value * obj.ppd;
-			if obj.mask == 1
-				obj.fieldSize = (obj.sizeOut * obj.fieldScale) ; %for masking!
+		function set_sizeOut(me,value)
+			me.sizeOut = value * me.ppd;
+			if me.mask == true
+				me.fieldSize = round(me.sizeOut + me.maskSmoothing); %mask needs to be bigger!
 			else
-				obj.fieldSize = obj.sizeOut;
+				me.fieldSize = me.sizeOut;
 			end
-			obj.nDots; %remake our cache
+			me.nDots; %remake our cache
 		end
 		
 		% ===================================================================
 		%> @brief dotSizeOut Set method
 		%>
 		% ===================================================================
-		function set_dotSizeOut(obj,value)
-			obj.dotSizeOut = value * obj.ppd;
+		function set_dotSizeOut(me,value)
+			me.dotSizeOut = value * me.ppd;
 		end
 		
 		% ===================================================================
 		%> @brief density Set method
 		%>
 		% ===================================================================
-		function set_densityOut(obj,value)
-			obj.densityOut = value;
-			obj.nDots; %remake our cache
+		function set_densityOut(me,value)
+			me.densityOut = value;
+			me.nDots; %remake our cache
 		end
-
+		
 	end
 end
