@@ -453,21 +453,20 @@ classdef metaStimulus < optickaCore
 			end
 			
 			if benchmark
-				Screen('DrawText', s.win, 'Benchmark, screen will not update properly, see FPS on command window at end.', 5,5,[0 0 0]);
-			elseif s.visualDebug
-				Screen('DrawText', s.win, 'Stimulus unanimated for 1 second, animated for 2, then unanimated for a final second...', 5,5,[0 0 0]);
+				Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS on command window at end.', 5,5,[0 0 0]);
+			else
+				Screen('DrawText', s.win, 'Stim will be static for 2 seconds, then animated...', 5,5,[0 0 0]);
 			end
 			
+			nFrames = 0
 			Screen('Flip',s.win);
 			WaitSecs(1);
 			
-			if benchmark; b=GetSecs; end
+			startT=GetSecs;
 			for i = 1:(s.screenVals.fps*runtime) 
+				nFrames = nFrames + 1;
 				draw(obj); %draw stimuli
-				if ~benchmark && s.visualDebug
-					drawGrid(s); %draw +-5 degree dot grid
-					drawScreenCenter(s); %centre spot
-				end
+				if ~benchmark&&s.visualDebug;drawGrid(s);end
 				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 				animate(obj); %animate stimuli, ready for next draw();
 				if benchmark
@@ -476,19 +475,15 @@ classdef metaStimulus < optickaCore
 					Screen('Flip',s.win); %flip the buffer
 				end
 			end
-			if benchmark; bb=GetSecs; end
-			WaitSecs(1);
-			Screen('Flip',s.win);
-			WaitSecs(0.25);
+			endT=GetSecs;
+			WaitSecs(0.5);
 			close(s); %close screen
 			s.screen = oldscreen;
 			s.windowed = oldwindowed;
 			s.bitDepth = oldbitdepth;
 			reset(obj); %reset our stimulus ready for use again
-			if benchmark
-				fps = (s.screenVals.fps*runtime) / (bb-b);
-				fprintf('\n\n======> SPEED = %g fps <=======\n', fps);
-			end
+			fps = nFrames / (endT-startT);
+			fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.2f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, endT-startT, fps);
 			clear s fps benchmark runtime b bb i; %clear up a bit
 			warning on
 		end

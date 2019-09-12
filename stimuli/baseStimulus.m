@@ -401,8 +401,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				s.screen = oldscreen;
 				s.windowed = oldwindowed;
 				s.bitDepth = oldbitdepth;
-					fps = nFrames / (endT-startT);
-					fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.2f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, endT-startT, fps);
+				fps = nFrames / (endT-startT);
+				fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.2f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, endT-startT, fps);
 				clear fps benchmark runtime b bb i; %clear up a bit
 				warning on
 			catch ME

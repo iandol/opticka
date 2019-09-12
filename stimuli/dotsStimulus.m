@@ -7,35 +7,35 @@ classdef dotsStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> dot type, only simple supported at present
-		type		= 'simple'
+		type				= 'simple'
 		%> dots per degree
-		density		= 100
+		density			= 100
 		%> how to colour the dots: simple, random, randomN, randomBW, randomNBW, binary
-		colourType	= 'randomBW'
+		colourType		= 'randomBW'
 		%> width of dot (deg)
-		dotSize		= 0.05
+		dotSize			= 0.05
 		%> dot coherence from 0 - 1, non-coherent dots are given a random direction
-		coherence	= 0.5
+		coherence		= 0.5
 		%> what proportion of dots are in the same direction, other dots are given the opposite direction
 		angleProbability = 1
 		%> fraction of dots to kill each frame  (limited lifetime)
-		kill		= 0
+		kill				= 0
 		%> type of dot (integer, where 0 means filled square, 1
 		%> means filled circle, and 2/3 means filled circle with high-quality
 		%> anti-aliasing)
-		dotType		= 3
+		dotType			= 3
 		%> whether to use a circular mask or not
-		mask		= false
+		mask				= false
 		%> whether to use a procedural (true) or texture (false) mask
 		maskIsProcedural = true
 		%> colour of the mask, empty sets mask colour to = background of screen
-		maskColour	= []
+		maskColour		= []
 		%> smooth the alpha edge of the mask by this number of pixels, 0 is
 		%> off
-		maskSmoothing = 21
+		maskSmoothing	= 11
 		%> mask OpenGL blend modes
-		msrcMode	= 'GL_SRC_ALPHA'
-		mdstMode	= 'GL_ONE_MINUS_SRC_ALPHA'
+		msrcMode			= 'GL_SRC_ALPHA'
+		mdstMode			= 'GL_ONE_MINUS_SRC_ALPHA'
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
