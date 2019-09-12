@@ -235,11 +235,11 @@ classdef dotsStimulus < baseStimulus
 					end
 				end
 				me.xy = me.xy + me.dxdy; %increment position
-				sz = me.sizeOut/2;
-				fix = find(me.xy > sz); %cull positive
-				me.xy(fix) = me.xy(fix) - me.sizeOut;
-				fix = find(me.xy < -sz);  %cull negative
-				me.xy(fix) = me.xy(fix) + me.sizeOut;
+				sz = me.sizeOut + me.maskSmoothing-(me.dotSizeOut*1.5);
+				fix = find(me.xy > sz/2); %cull positive
+				me.xy(fix) = me.xy(fix) - sz;
+				fix = find(me.xy < -sz/2);  %cull negative
+				me.xy(fix) = me.xy(fix) + sz;
 				%me.xy(me.xy > sz) = me.xy(me.xy > sz) - me.sizeOut; % this is not faster
 				%me.xy(me.xy < -sz) = me.xy(me.xy < -sz) + me.sizeOut; % this is not faster
 				if me.killOut > 0 && me.tick > 1
@@ -285,7 +285,8 @@ classdef dotsStimulus < baseStimulus
 		% ===================================================================
 		function value = get.nDots(me)
 			if ~me.inSetup && isprop(me,'sizeOut')
-				me.nDots_ = round(me.densityOut * (me.sizeOut/me.ppd)^2);
+				sz = me.sizeOut + me.maskSmoothing - (me.dotSizeOut*1.5);
+				me.nDots_ = round(me.densityOut * (sz/me.ppd)^2);
 			else
 				me.nDots_ = round(me.density * me.size^2);
 			end
@@ -333,8 +334,9 @@ classdef dotsStimulus < baseStimulus
 				me.angles = Shuffle(me.angles(1:me.nDots_)); %if we don't shuffle them, all coherent dots show on top!
 			end
 			%calculate positions and vector offsets
-			me.xy = me.sizeOut .* rand(2,me.nDots_);
-			me.xy = me.xy - me.sizeOut/2; %so we are centered for -xy to +xy
+			sz=me.sizeOut+me.maskSmoothing-(me.dotSizeOut*1.5);
+			me.xy = sz .* rand(2,me.nDots_);
+			me.xy = me.xy - sz / 2; %so we are centered for -xy to +xy
 			[me.dxs, me.dys] = me.updatePosition(repmat(me.delta,size(me.angles)),me.angles);
 			me.dxdy=[me.dxs';me.dys'];
 		end
