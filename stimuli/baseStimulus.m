@@ -884,7 +884,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function removeTmpProperties(me)
 			fn=fieldnames(me);
 			for i=1:length(fn)
-				if ~isempty(regexp(fn{i},'[^x|^y]Out$','once'))
+				if isempty(regexp(fn{i},'^xOut$|^yOut$','once')) && ~isempty(regexp(fn{i},'Out$','once'))
 					delete(me.findprop(fn{i}));
 				end
 			end
