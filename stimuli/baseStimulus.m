@@ -317,7 +317,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if ~exist('s','var') || ~isa(s,'screenManager')
 					s = me.sM;
 					s.blend = true; 
-					s.disableSyncTests = false;
+					s.disableSyncTests = true;
 					s.visualDebug = true;
 					s.bitDepth = '8bit';
 				end

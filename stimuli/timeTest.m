@@ -1,17 +1,17 @@
 function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchronous)
 % timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchronous)
 %
-% Tests syncing of PTB-OSX to the vertical retrace (VBL) and demonstrates
+% Tests syncing of Psychtoolbox to the vertical retrace (VBL) and demonstrates
 % how to implement the old Screen('WaitBlanking') behaviour with
 % Screen('Flip')...
 %
-% This script provides a means to test, how well PTB on OS-X synchronizes
-% stimulus onset and execution of Matlab with the vertical retrace
+% This script provides a means to test, how well PTB synchronizes
+% stimulus onset and execution of Matlab/Octave with the vertical retrace
 % (also known as vertical blank or VBL) on your specific hardware setup.
 %
 % The script first opens a double-buffered fullscreen window. Then it
 % performs a monitor calibration timing loop to estimate the real monitor refresh
-% interval (aka IFI): While the formula ifi = 1.0 / Screen('NominalFramerate') will
+% interval (aka IFI): While the formula ifi = 1.0 / Scresen('NominalFramerate') will
 % return an ifi that is close to the real IFI, it will be a little bit off
 % from the real value. The reason is unavoidable jitter in the manufacturing of
 % graphics cards internal clock circuits, as well as some drift and jitter
@@ -66,7 +66,7 @@ function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchron
 % clearmode = 0 will clear your stimulus drawing surface to background color after flip.
 % This is the behaviour as found in PTB 1.0.50. After Flip you start with an
 % empty image and can draw a completely new stim.
-%
+% 
 % clearmode = 1 will not clear after a flip, but keep the contents of your stimulus
 % image after the Flip: This allows you to incrementally update/draw stimuli.
 %
@@ -78,7 +78,7 @@ function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchron
 % clearmode 2 will allow you to update the back side, which was the front
 % side before the flip happened! This mode is useful if you want to save
 % about 0.5-2 ms of time needed for mode 1 or 2 if you draw stimuli on very
-% tight deadlines.
+% tight deadlines. 
 %
 %
 % stereo = Test timing of display of stereoscopic stimuli.
@@ -88,7 +88,7 @@ function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchron
 % one for the left-eye, one for the right-eye, while generating proper
 % control signals for LCD shutter glasses. This should work with MacOS-X
 % compatible stereo display hardware, e.g., CrystalEyes shutter glasses.
-%
+
 %
 %
 % flushpipe = Mark end of drawing commands to improve presentation timing.
@@ -104,6 +104,16 @@ function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchron
 % synchronous = 0 Don't wait for drawing completion in Screen('DrawingFinished')
 % synchronous = 1 Wait for completion - Useful for benchmarking and debugging,
 % but degrades performance significantly in real experiments.
+%
+%
+% usedpixx = 1 Use a DataPixx/ViewPixx/ProPixx device for external
+% timestamping of stimulus onset, as a correctness test for Screen('Flip')
+% timestamping. Disabled (0) by default.
+% usedpixx = 2 Additionally correct for the clock skew between the computer
+% and DataPixx device.
+%
+%
+% screenNumber =  Use a screen other than the default (max) for testing .
 %
 %
 % EXAMPLES:
@@ -134,7 +144,7 @@ function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchron
 % Flip, e.g., you set numifis=0 or numifis=1 on a 100 Hz monitor. Then
 % delta should be close to 1000 ms / 100 Hz = 10 ms. If numifis=2, it
 % should be close to two monitor refresh intervals = 20 ms...
-%
+% 
 % The green horizontal line denotes the proper delta value for your monitor
 % refresh rate and 'numifis' value. The blue graph shows measured deltas. A
 % jitter of less than +/- 1 ms indicates proper stimulus presentation timing -
@@ -194,35 +204,41 @@ function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchron
 %
 %
 % Date:   05/09/05
-% Author: Mario Kleiner  (mario.kleiner at tuebingen.mpg.de)
+% Author: Mario Kleiner  (mario.kleiner.de@gmail.com)
 %
 
-if nargin < 1
-	n = 600;
+%%% VBLSyncTest(1000, 0, 0.6, 0, 0, 1, 0)
+
+if nargin < 1 || isempty(n)
+    n = 600;
 end
 
-if nargin < 2
-	numifis = 1;
+if nargin < 2 || isempty(numifis)
+    numifis = 1;
 end
 
-if nargin < 3
-	loadjitter = 0;
+if nargin < 3 || isempty(loadjitter)
+    loadjitter = 0;
 end
 
-if nargin < 4
-	clearmode = 0;
+if nargin < 4 || isempty(clearmode)
+    clearmode = 0;
 end
 
-if nargin < 5
-	stereo = 0;
+if nargin < 5 || isempty(stereo)
+    stereo = 0;
 end
 
-if nargin < 6
-	flushpipe = 1;
+if nargin < 6 || isempty(flushpipe)
+    flushpipe = 0;
 end
 
-if nargin < 7
-	synchronous = 0;
+if nargin < 7 || isempty(synchronous)
+    synchronous = 0;
+end
+
+if nargin < 8 || isempty(usedpixx)
+    usedpixx = 0;
 end
 
 if nargin < 9

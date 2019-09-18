@@ -1803,7 +1803,7 @@ if isappdata(handles.output,'o')
 	if isa(o.r,'runExperiment') && ~o.r.isRunning
         o.getScreenVals;
 		%o.r.screenSettings.optickahandle = handles.output;
-		initialiseSave(o.r, o.paths.savedData)
+		initialiseSaveFile(o.r, o.paths.savedData)
 		if ~isempty(regexp(o.comment, '^Protocol','once'))
 			o.r.comment = o.comment;
 		end

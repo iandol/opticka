@@ -290,7 +290,7 @@ classdef runExperiment < optickaCore
 					if me.useEyeLink
 						getSample(eL); 
 						trackerDrawText(eL,'Warming Up System');
-						edfMessage(eL,'Warmup test');
+						trackerMessage(eL,'Warmup test');
 					end
 					flip(s);
 				end
@@ -555,11 +555,15 @@ classdef runExperiment < optickaCore
 				me.isRunning = true;
 				me.isRunTask = true;
 				%-----open the eyelink interface
-				me.eyeLink = eyelinkManager();
+				if me.useEyeLink
+					me.eyeLink = eyelinkManager();
+				else
+					me.eyeLink = tobiiManager();
+				end
 				eL = me.eyeLink;
 				eL.verbose = me.verbose;
 				eL.saveFile = [me.paths.savedData filesep me.subjectName '-' me.savePrefix '.edf'];
-				if ~me.useEyeLink
+				if ~me.useEyeLink && ~me.useTobii
 					eL.isDummy = true;
 				end
 				
@@ -627,10 +631,10 @@ classdef runExperiment < optickaCore
 					finishDrawing(s);
 					animate(me.stimuli);
 					if ~mod(i,10); io.sendStrobe(255); end
-					if me.useEyeLink
+					if me.useEyeLink || me.useTobii
 						getSample(eL); 
 						if i == 1; trackerDrawText(eL,'Warming Up System'); end
-						if i == 1; edfMessage(eL,'Warmup test'); end
+						if i == 1; trackerMessage(eL,'Warmup test'); end
 					end
 					flip(s);
 				end

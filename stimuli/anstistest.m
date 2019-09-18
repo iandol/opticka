@@ -74,7 +74,7 @@ function ptb = mySetup(screen, bgColour, ws)
 
 ptb.cleanup = onCleanup(@myCleanup);
 PsychDefaultSetup(2);
-Screen('Preference', 'SkipSyncTests', 0);
+Screen('Preference', 'SkipSyncTests', 1);
 if isempty(screen); screen = max(Screen('Screens')); end
 ptb.ScreenID = screen;
 PsychImaging('PrepareConfiguration');

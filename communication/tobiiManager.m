@@ -316,7 +316,7 @@ classdef tobiiManager < optickaCore
 			me.currentSample = [];
 			if me.isConnected && me.isRecording
 				td = me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
-				if isempty(td); return; end;
+				if isempty(td); return; end
 				if td.left.gazePoint.valid(end) || td.right.gazePoint.valid(end)
 					switch me.smoothing.eyes
 						case 'left'
@@ -334,6 +334,7 @@ classdef tobiiManager < optickaCore
 					end
 					xy = doSmoothing(me,xy);
 					xy = toPixels(me, xy,'','relative');
+					me.currentSample.raw	= td;
 					me.currentSample.gx		= xy(1);
 					me.currentSample.gy		= xy(2);
 					me.currentSample.pa		= mean(td.left.pupil.diameter);
@@ -630,6 +631,35 @@ classdef tobiiManager < optickaCore
 			end
 		end
 		
+		function drawEyePositions(me,dataDur)
+			if (~me.isDummy || me.isConnected) && me.screen.isOpen
+				nDataPoint  = ceil(dataDur/1000*fs);
+				eyeData     = me.tobii.buffer.peekN('gaze',nDataPoint);
+				pointSz		= 4;
+				point       = pointSz.*[0 0 1 1];
+				if ~isempty(eyeData.systemTimeStamp)
+					age=double(abs(eyeData.systemTimeStamp-eyeData.systemTimeStamp(end)))/1000;
+					if qShowLeft
+						qValid = eyeData.left.gazePoint.valid;
+						lE = bsxfun(@times,eyeData.left.gazePoint.onDisplayArea(:,qValid),me.screen.screenVals.winRect(3:4));
+						if ~isempty(lE)
+							clrs = interp1([0;dataDur],[1 0 1 1],age(qValid)).';
+							lE = CenterRectOnPointd(point,lE(1,:).',lE(2,:).');
+							Screen('FillOval', me.win, clrs, lE.', 2*pi*pointSz);
+						end
+					end
+					if qShowRight
+						qValid = eyeData.right.gazePoint.valid;
+						rE = bsxfun(@times,eyeData.right.gazePoint.onDisplayArea(:,qValid),me.screen.screenVals.winRect(3:4));
+						if ~isempty(rE)
+							clrs = interp1([0;dataDur],[1 1 0 1],age(qValid)).';
+							rE = CenterRectOnPointd(point,rE(1,:).',rE(2,:).');
+							Screen('FillOval', me.win, clrs, rE.', 2*pi*pointSz);
+						end
+					end
+			end
+		end
+		
 		% ===================================================================
 		%> @brief send message to store in tracker data
 		%>
@@ -674,6 +704,216 @@ classdef tobiiManager < optickaCore
 			end
 		end
 		
+		function runTraining(me,forcescreen)
+			KbName('UnifyKeyNames')
+			stopkey=KbName('q');
+			upKey=KbName('uparrow');
+			downKey=KbName('downarrow');
+			leftKey=KbName('leftarrow');
+			rightKey=KbName('rightarrow');
+			calibkey=KbName('c');
+			ofixation = me.fixation; me.sampletime = [];
+			osmoothing = me.smoothing;
+			ofilename = me.saveFile;
+			me.initialiseSaveFile();
+			[p,f,e]=fileparts(me.saveFile);
+			me.saveFile = [p filesep 'tobiiRunDemo-' me.savePrefix e];
+			global rM
+			if ~exist('rM','var') || isempty(rM)
+				 rM = arduinoManager;
+			end
+			open(rM) %open our reward manager
+
+			fixTime                 = .5;
+			imageTime               = 4;
+			scrPresenter            = 2;
+			scrOperator             = 1;
+			
+			
+	
+	Screen('Preference', 'SyncTestSettings', 0.002);    % the systems are a little noisy, give the test a little more leeway
+	[wpntP,winRectP] = PsychImaging('OpenWindow', scrPresenter, bgClr, [], [], [], [], 4);
+	[wpntO,winRectO] = PsychImaging('OpenWindow', scrOperator , bgClr, [0 0 1100 1000], [], [], [], 4);
+	hz=Screen('NominalFrameRate', wpntP);
+	Priority(1);
+	Screen('BlendFunction', wpntP, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	Screen('Preference', 'TextAlphaBlending', 1);
+	Screen('Preference', 'TextAntiAliasing', 2);
+	% This preference setting selects the high quality text renderer on
+	% each operating system: It is not really needed, as the high quality
+	% renderer is the default on all operating systems, so this is more of
+	% a "better safe than sorry" setting.
+	Screen('Preference', 'TextRenderer', 1);
+	KbName('UnifyKeyNames');    % for correct operation of the setup/calibration interface, calling this is required
+	
+	% do calibration
+	if doBimonocularCalibration
+		% do sequential monocular calibrations for the two eyes
+		settings                = EThndl.getOptions();
+		settings.calibrateEye   = 'left';
+		settings.UI.button.setup.cal.string = 'calibrate left eye (<i>spacebar<i>)';
+		str = settings.UI.button.val.continue.string;
+		settings.UI.button.val.continue.string = 'calibrate other eye (<i>spacebar<i>)';
+		EThndl.setOptions(settings);
+		tobii.calVal{1}         = EThndl.calibrate([wpntP wpntO],1);
+		if ~tobii.calVal{1}.wasSkipped
+			settings.calibrateEye   = 'right';
+			settings.UI.button.setup.cal.string = 'calibrate right eye (<i>spacebar<i>)';
+			settings.UI.button.val.continue.string = str;
+			EThndl.setOptions(settings);
+			tobii.calVal{2}         = EThndl.calibrate([wpntP wpntO],2);
+		end
+	else
+		tobii.calVal{1}         = EThndl.calibrate([wpntP wpntO]);
+	end
+	
+	i = 1;
+	breakLoop = false;
+	% later:
+	EThndl.buffer.start('gaze');
+	WaitSecs(.8);   % wait for eye tracker to start and gaze to be picked up
+	
+	% send message into ET data file
+	EThndl.sendMessage('test');
+	
+	
+	while ~breakLoop
+		% First draw a fixation point
+		Screen('gluDisk',wpntP,fixClrs(1),winRectP(3)/2,winRectP(4)/2,round(winRectP(3)/100));
+		startT = Screen('Flip',wpntP);
+		% log when fixation dot appeared in eye-tracker time. NB:
+		% system_timestamp of the Tobii data uses the same clock as
+		% PsychToolbox, so startT as returned by Screen('Flip') can be used
+		% directly to segment eye tracking data
+		EThndl.sendMessage('FIX ON',startT);
+		
+		% read in konijntjes image (may want to preload this before the trial
+		% to ensure good timing)
+		stimFName   = ['th' num2str(randi(6)) '.jpg'];
+		stimDir     = fullfile(PsychtoolboxRoot,'PsychHardware','EyelinkToolbox','EyelinkDemos','GazeContingentDemos');
+		stimFullName= fullfile(stimDir,stimFName);
+		im          = imread(stimFullName);
+		tex         = Screen('MakeTexture',wpntP,im);
+		nextFlipT   = startT+fixTime-1/hz/2;
+		
+		% now update also operator screen, once timing critical bit is done
+		% if we still have enough time till next flipT, update operator display
+		while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
+			Screen('gluDisk',wpntO,fixClrs(1),winRectO(3)/2,winRectO(4)/2,round(winRectO(3)/100));
+			drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
+			Screen('Flip',wpntO);
+		end
+		
+		% show on screen and log when it was shown in eye-tracker time.
+		% NB: by setting a deadline for the flip, we ensure that the previous
+		% screen (fixation point) stays visible for the indicated amount of
+		% time. See PsychToolbox demos for further elaboration on this way of
+		% timing your script.
+		Screen('DrawTexture',wpntP,tex);                    % draw centered on the screen
+		imgT = Screen('Flip',wpntP,nextFlipT);   % bit of slack to make sure requested presentation time can be achieved
+		EThndl.sendMessage(sprintf('STIM ON: %s',stimFName),imgT);
+		nextFlipT = imgT+imageTime-1/hz/2;
+		rM.timedTTL(2,rTime);Beeper(600,0.1,0.2)
+		
+		% now update also operator screen, once timing critical bit is done
+		% if we still have enough time till next flipT, update operator display
+		while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
+			Screen('DrawTexture',wpntO,tex);
+			drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
+			Screen('Flip',wpntO);
+		end
+		rM.timedTTL(2,rTime);Beeper(600,0.1,0.2)
+		
+		% record x seconds of data, then clear screen. Indicate stimulus
+		% removed, clean up
+		endT = Screen('Flip',wpntP,nextFlipT);
+		EThndl.sendMessage(sprintf('STIM OFF: %s',stimFName),endT);
+		Screen('Close',tex);
+		nextFlipT = endT+1; % lees precise, about 1s give or take a frame, is fine
+		
+		% now update also operator screen, once timing critical bit is done
+		% if we still have enough time till next flipT, update operator display
+		while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
+			drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
+			Screen('Flip',wpntO);
+		end
+		
+		[keyIsDown, ~, keyCode] = KbCheck(-1);
+		if keyIsDown == 1
+			rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end
+			switch lower(rchar)
+				case {'q'}
+					fprintf('===>>> runEquiMotion Q pressed!!!\n');
+					breakLoop = true;
+			end
+		end
+		
+		i = i + 1;
+		fprintf('Run %i\n',i);
+		WaitSecs(2)
+		
+	end
+	
+	% repeat the above but show a different image. lets also record some
+	% eye images, if supported on connected eye tracker
+	if EThndl.buffer.hasStream('eyeImage')
+		EThndl.buffer.start('eyeImage');
+	end
+	% 1. fixation point
+	Screen('gluDisk',wpntP,fixClrs(1),winRectP(3)/2,winRectP(4)/2,round(winRectP(3)/100));
+	startT      = Screen('Flip',wpntP,nextFlipT);
+	EThndl.sendMessage('FIX ON',startT);
+	nextFlipT   = startT+fixTime-1/hz/2;
+	while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
+		Screen('gluDisk',wpntO,fixClrs(1),winRectO(3)/2,winRectO(4)/2,round(winRectO(3)/100));
+		drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
+		Screen('Flip',wpntO);
+	end
+	% 2. image
+	stimFNameBlur   = 'konijntjes1024x768blur.jpg';
+	stimFullNameBlur= fullfile(stimDir,stimFNameBlur);
+	im              = imread(stimFullNameBlur);
+	tex             = Screen('MakeTexture',wpntP,im);
+	Screen('DrawTexture',wpntP,tex);                    % draw centered on the screen
+	imgT = Screen('Flip',wpntP,nextFlipT);   % bit of slack to make sure requested presentation time can be achieved
+	EThndl.sendMessage(sprintf('STIM ON: %s',stimFNameBlur),imgT);
+	nextFlipT = imgT+imageTime-1/hz/2;
+	while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
+		Screen('DrawTexture',wpntO,tex);
+		drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
+		Screen('Flip',wpntO);
+	end
+	
+	% 3. end recording after x seconds of data again, clear screen.
+	endT = Screen('Flip',wpntP,nextFlipT);
+	EThndl.sendMessage(sprintf('STIM OFF: %s',stimFNameBlur),endT);
+	Screen('Close',tex);
+	Screen('Flip',wpntO);
+	
+	% stop recording
+	if EThndl.buffer.hasStream('eyeImage')
+		EThndl.buffer.stop('eyeImage');
+	end
+	EThndl.buffer.stop('gaze');
+	
+	% save data to mat file, adding info about the experiment
+	dat = EThndl.collectSessionData();
+	dat.expt.winRect = winRectP;
+	dat.expt.stimDir = stimDir;
+	save(EThndl.getFileName(fullfile(cd,'t'), true),'-struct','dat');
+	% NB: if you don't want to add anything to the saved data, you can use
+	% EThndl.saveData directly
+	
+	% shut down
+	EThndl.deInit();
+catch me
+	sca
+	rethrow(me)
+end
+sca
+			
+		end
+		
 		% ===================================================================
 		%> @brief runs a demo of the tobii workflow, testing this class
 		%>
@@ -712,14 +952,14 @@ classdef tobiiManager < optickaCore
 				calViz.bgColor						= round(s.backgroundColour .* 255);
 				calViz.fixBackColor                 = 0;
 				calViz.fixFrontColor				= 255;
-                me.settings.cal.bgColor             = calViz.bgColor;
-				me.settings.cal.autoPace            = 1;
+				me.settings.cal.bgColor             = calViz.bgColor;
+				me.settings.cal.autoPace            = 0;
 				me.settings.cal.doRandomPointOrder  = false;
 				me.settings.val.pointPos			= [.15 .15; .15 .85; .5 .5; .85 .15; .85 .85];
 				%me.settings.val.pointPos			= [.1 .1;.1 .9;.5 .5;.9 .1;.9 .9];
 				me.settings.UI.setup.eyeClr         = 255;
-				me.settings.cal.pointNotifyFunction = @demoCalCompletionFun;
-				me.settings.val.pointNotifyFunction = @demoCalCompletionFun;
+				me.settings.cal.pointNotifyFunction = @tittaCalCallback;
+				me.settings.val.pointNotifyFunction = @tittaCalCallback;
 				trackerSetup(me);
 				ShowCursor; %titta fails to show cursor so we must do it
 				drawPhotoDiodeSquare(s,[0 0 0 1]); %make sure our photodiode patch is black
@@ -987,9 +1227,7 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerClearScreen(me)
-			if me.isConnected
-				
-			end
+			
 		end
 		
 		% ===================================================================
@@ -1013,9 +1251,7 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawExclusion(me)
-			if me.isConnected && ~isempty(me.exclusionZone) && length(me.exclusionZone)==4
-				
-			end
+			
 		end
 		
 		% ===================================================================
