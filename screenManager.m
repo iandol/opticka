@@ -12,11 +12,11 @@ classdef screenManager < optickaCore
 		%> the monitor to use, 0 is the main display on macOS/Linux
 		%> default value will be set to max(Screen('Screens'))
 		screen double = []
-		%> MBP 1440x900 is 33.2x20.6cm so approx 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
-		%> use calibrateSize.m to measure this value for each monitor you
-		%> will use.
+		%> MBP 1440x900 is 33.2x20.6cm so 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
+		%> Display++ is 27px/cm @1920x1080
+		%> Use calibrateSize.m function to measure this value accurately for each monitor you will use.
 		pixelsPerCm double = 36
-		%> distance of subject from CRT -- rad2ang(2*(atan((0.5*1cm)/57.3cm))) equals 1deg
+		%> distance of subject from Display -- rad2ang(2 * atan( sz=1cm / (2 * dis=57.3cm) ) ) == 1deg
 		distance double = 57.3
 		%> hide the black flash as PTB tests its refresh timing, uses a gamma
 		%> trick from Mario
@@ -702,7 +702,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function ppd = get.ppd(me)
 			if me.useRetina %note pixelsPerCm is normally recorded using non-retina mode so we fix that here if we are now in retina mode
-				ppd = ( (me.pixelsPerCm*2) * (me.distance / 57.3) ); %set the pixels per degree
+				ppd = ( (me.pixelsPerCm * 2 ) * (me.distance / 57.3) ); %set the pixels per degree
 			else
 				ppd = ( me.pixelsPerCm * (me.distance / 57.3) ); %set the pixels per degree
 			end
