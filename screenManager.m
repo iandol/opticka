@@ -16,7 +16,8 @@ classdef screenManager < optickaCore
 		%> Display++ is 27px/cm @1920x1080
 		%> Use calibrateSize.m function to measure this value accurately for each monitor you will use.
 		pixelsPerCm double = 36
-		%> distance of subject from Display -- rad2ang(2 * atan( sz=1cm / (2 * dis=57.3cm) ) ) == 1deg
+		%> distance of subject from Display -- rad2ang(2 * atan( sz / (2 * dis) ) ) = Xdeg
+		%> when sz == 1cm and dis == 57.3cm, X == 1deg
 		distance double = 57.3
 		%> hide the black flash as PTB tests its refresh timing, uses a gamma
 		%> trick from Mario
