@@ -31,6 +31,11 @@ classdef calibrateLuminance < handle
 		nMeasures double = 15
 		%> screen to calibrate
 		screen
+		%> bitDepth of framebuffer, '8bit' is best for old GPUs, but prefer
+		%> 'FloatingPoint32BitIfPossible' for newer GPUS, and can pass 
+		%> options to enable Display++ modes 'EnableBits++Bits++Output'
+		%> 'EnableBits++Mono++Output' or 'EnableBits++Color++Output'
+		bitDepth char = 'FloatingPoint32BitIfPossible'
 		%> use SpectroCal II automatically
 		useSpectroCal2 logical = false
 		%> use ColorCalII automatically
@@ -52,6 +57,8 @@ classdef calibrateLuminance < handle
 		%> which gamma model should opticka select: 1 is simple gamma,
 		%> 2:n are the analysisMethods chosen; 2=pchipinterp
 		choice double = 2
+        %> Target (centered square that will be measured) size in pixels
+        targetSize = 1000;
 		%> background screen colour
 		backgroundColour = [ 0.5 0.5 0.5 ];
 		%> filename this was saved as
@@ -100,6 +107,7 @@ classdef calibrateLuminance < handle
 		%> universal ID
 		uuid char
 		screenVals = []
+        SPD struct
 		%spectroCAL serial object
 		spCAL
 	end
@@ -211,6 +219,7 @@ classdef calibrateLuminance < handle
 			calibrate(obj);
 			run(obj);
 			analyze(obj);
+			WaitSecs(2);
 			test(obj);
 		end
 		
@@ -294,11 +303,12 @@ classdef calibrateLuminance < handle
 					a=1;
 					[~, randomIndex] = sort(rand(valsl, 1));
 					for i = 1:valsl
-						Screen('FillRect',obj.win,cout(randomIndex(i),:),obj.screenVals.targetRect);
+                        testColour = cout(randomIndex(i),:);
+						Screen('FillRect',obj.win,testColour,obj.screenVals.targetRect);
 						Screen('Flip',obj.win);
 						WaitSecs('YieldSecs',1);
 						if ~obj.useSpectroCal2 && ~obj.useCCal2 && ~obj.useI1Pro
-							obj.inputValues(col).in(randomIndex(a)) = input(['Enter luminance for value=' num2str(cout(randomIndex(i),:)) ': ']);
+							obj.inputValues(col).in(randomIndex(a)) = input(['Enter luminance for value=' num2str(testColour) ': ']);
 							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(randomIndex(a)));
 						else
 							if obj.useSpectroCal2 == true
@@ -403,15 +413,16 @@ classdef calibrateLuminance < handle
 					valsl = length(vals);
 					cout = zeros(valsl,3);
 					if col == 1
+                        testname = 'Gray';
 						cout(:,1) = vals;
 						cout(:,2) = vals;
 						cout(:,3) = vals;
 					elseif col == 2
-						cout(:,1) = vals;
+						cout(:,1) = vals;testname = 'Red';
 					elseif col == 3
-						cout(:,2) = vals;
+						cout(:,2) = vals;testname = 'Green';
 					elseif col == 4
-						cout(:,3) = vals;
+						cout(:,3) = vals;testname = 'Blue';
 					end
 					a=1;
 					[~, randomIndex] = sort(rand(valsl, 1));
@@ -744,9 +755,9 @@ classdef calibrateLuminance < handle
 			end
 			
 			if (obj.useI1Pro || obj.useSpectroCal2)
-				spectrum = obj.spectrum(loop).in;
+				spectrum = obj.spectrum(1).in;
 				if ~isempty(obj.spectrumTest)
-					spectrumTest = obj.spectrumTest(loop).in;
+					spectrumTest = obj.spectrumTest(1).in;
 				else
 					spectrumTest = [];
 				end
@@ -772,12 +783,35 @@ classdef calibrateLuminance < handle
 				ylabel('Wavelengths');
 				view([60 10]);
 				axis tight; grid on; box on;
-			end
-			
+            end
 			
 			obj.p.title(t);
 			obj.p.refresh();
-			
+            cnames = {'Gray';'Red';'Green';'Blue'};
+            if obj.useSpectroCal2 && ~isempty(obj.spectrum)
+                figure;figpos(1,[900 900])
+                for i = 1:length(obj.spectrum)
+                    subplot(2,2,i);
+                    surf(obj.ramp,obj.wavelengths, obj.spectrum(i).in,'EdgeAlpha',0.1);
+                    title(['Original Spectrum: ' cnames{i}])
+                    xlabel('Indexed Values')
+                    ylabel('Wavelengths');
+                    view([60 10]);
+                    axis tight; grid on; box on;
+                end
+            end
+            if obj.useSpectroCal2 && ~isempty(obj.spectrumTest)
+                figure;figpos(1,[900 900]);
+                for i = 1:length(obj.spectrumTest)
+                    subplot(2,2,i);
+                    surf(obj.ramp,obj.wavelengths, obj.spectrumTest(i).in,'EdgeAlpha',0.1);
+                    title(['Corrected Spectrum: ' cnames{i}])
+                    xlabel('Indexed Values')
+                    ylabel('Wavelengths');
+                    view([60 10]);
+                    axis tight; grid on; box on;
+                end
+            end
 		end
 		
 		% ===================================================================
@@ -848,8 +882,8 @@ classdef calibrateLuminance < handle
 			else
 				doClose = false;
 				VCP = obj.spCAL;
-			end
-			try;fopen(VCP);catch;warning('Port already open');end
+            end
+            try fopen(VCP); catch; warning('Port already open'); end
 			fprintf(VCP,['*CONTR:LASER ', num2str(state), char(13)]);
 			error=fread(VCP,1);
 			if doClose; fclose(VCP); end
@@ -874,7 +908,17 @@ classdef calibrateLuminance < handle
 			Screen('Preference', 'VisualDebugLevel', 0);
 			PsychImaging('PrepareConfiguration');
 			PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-			PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+			if regexpi(obj.bitDepth, '^EnableBits')
+				PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
+				if regexp(obj.bitDepth, 'Color')
+					PsychImaging('AddTask', 'General', obj.bitDepth, 2);
+				else
+					PsychImaging('AddTask', 'General', obj.bitDepth);
+				end
+			else
+				PsychImaging('AddTask', 'General', obj.bitDepth);
+			end
+			fprintf('\n---> screenManager: Bit Depth mode set to: %s\n', obj.bitDepth);
 			%PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 			if obj.screen == 0
 				rect = [0 0 1000 1000];
@@ -883,7 +927,7 @@ classdef calibrateLuminance < handle
 			end
 			obj.win = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, rect);
 			obj.screenVals.winRect = Screen('Rect',obj.win);
-			obj.screenVals.targetRect = CenterRect([0 0 1000 1000],obj.screenVals.winRect);
+			obj.screenVals.targetRect = CenterRect([0 0 obj.targetSize obj.targetSize],obj.screenVals.winRect);
 			
 			obj.screenVals.ifi = Screen('GetFlipInterval', obj.win);
 			obj.screenVals.fps=Screen('NominalFramerate', obj.win);

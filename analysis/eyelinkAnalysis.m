@@ -1404,6 +1404,10 @@ classdef eyelinkAnalysis < analysisCore
 
 							me.trials(tri).times = double(me.raw.FSAMPLE.time(idx));
 							me.trials(tri).times = me.trials(tri).times - me.trials(tri).rtstarttime;
+							if me.sampleRate == 2000
+								evenidx=fliplr(logical(mod(1:length(me.trials(tri).times),2)));
+								me.trials(tri).times(evenidx) = me.trials(tri).times(evenidx) + 0.5;
+							end
 
 							me.trials(tri).gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
 							me.trials(tri).gx = me.trials(tri).gx - me.display(1)/2;
@@ -1555,6 +1559,32 @@ classdef eyelinkAnalysis < analysisCore
 								me.trials(tri).correctedIndex = [];
 							end
 							me.trials(tri).deltaT = me.trials(tri).entime - me.trials(tri).sttime;
+							%just in case END_TRIAL occurs before
+							%EVENT_TYPES.ENDSAMPLES, save the eyedata
+							if isempty(me.trials(tri).times)
+								me.trials(tri).endsampletime = me.trials(tri).entime;
+								idx = me.raw.FSAMPLE.time >= me.trials(tri).startsampletime & ...
+									me.raw.FSAMPLE.time <= me.trials(tri).endsampletime;
+
+								me.trials(tri).times = double(me.raw.FSAMPLE.time(idx));
+								me.trials(tri).times = me.trials(tri).times - me.trials(tri).rtstarttime;
+								if me.sampleRate == 2000
+									evenidx=fliplr(logical(mod(1:length(me.trials(tri).times),2)));
+									me.trials(tri).times(evenidx) = me.trials(tri).times(evenidx) + 0.5;
+								end
+
+								me.trials(tri).gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
+								me.trials(tri).gx = me.trials(tri).gx - me.display(1)/2;
+
+								me.trials(tri).gy = me.raw.FSAMPLE.gy(eyeUsed, idx);
+								me.trials(tri).gy = me.trials(tri).gy - me.display(2)/2;
+
+								me.trials(tri).hx = me.raw.FSAMPLE.hx(eyeUsed, idx);
+
+								me.trials(tri).hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
+
+								me.trials(tri).pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
+							end
 							isTrial = false;
 							tri = tri + 1;
 							continue

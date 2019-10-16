@@ -86,7 +86,7 @@ classdef arduinoLegacy < handle
                 % it takes several seconds before any operation could be attempted
                 fprintf(1,'Attempting connection .');
                 for i=1:8
-                    pause(0.4);
+                    pause(0.8);
                     fprintf(1,'.');
                 end
                 fprintf(1,'\n');

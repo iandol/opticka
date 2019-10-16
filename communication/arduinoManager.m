@@ -59,7 +59,7 @@ classdef arduinoManager < optickaCore
 		%===============OPEN DEVICE================%
 		function open(me)
             if me.isOpen;disp('-->arduinoManager: Already open!');return;end
-			close(me);
+			close(me); me.ports = seriallist;
 			if me.silentMode==false && isempty(me.device)
 				try
 					switch me.mode
@@ -308,6 +308,12 @@ classdef arduinoManager < optickaCore
 			me.isOpen = false;
 			me.ports = seriallist;
 			%me.silentMode = false;
+		end
+		
+		%===============RESET================%
+		function reset(me)
+			close(me);
+			me.silentMode = false;
 		end
 		
 	end

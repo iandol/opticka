@@ -435,6 +435,8 @@ classdef screenManager < optickaCore
 				
 				%get screen dimensions -- check !!!!!
 				setScreenSize(me);
+                
+                me.photoDiodeRect = [me.winRect(3)-45 0 me.winRect(3) 45];
 				
 				if me.hideFlash == true && isempty(me.gammaTable)
 					Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.gammaTable);

@@ -469,14 +469,13 @@ if doBeep==1
 end
 
 %=========================================================================================
-function EyelinkDrawCalibrationTarget(eyewin, el, calxy,verbose)
+function EyelinkDrawCalibrationTarget(eyewin, el, calxy, verbose)
 try
 	[width, ~]=Screen('WindowSize', eyewin);
 	size=round(el.calibrationtargetsize/100*width);
-	inset=round(el.calibrationtargetwidth/100*width);
-	insetSize = floor(size-2*inset);
-	if insetSize < 1
-		insetSize = 0.2;
+	insetSize=round(el.calibrationtargetwidth/100*width);
+	if el.calibrationtargetwidth == 0 
+		insetSize = 0;
 	end
 	ShowCursor;
 	if sum(el.calibrationtargetcolour) < 0.6
@@ -487,12 +486,12 @@ try
 	
 	if size <= 64
 		Screen('DrawDots', eyewin, calxy, size, el.calibrationtargetcolour, [], 2,1);
-		Screen('DrawDots', eyewin, calxy, insetSize, insetColour, [], 2,1);
+		if insetSize>0; Screen('DrawDots', eyewin, calxy, insetSize, insetColour, [], 2,1); end
 	else
 		Screen('FillOval', eyewin, el.calibrationtargetcolour, [calxy(1)-size/2 calxy(2)-size/2 calxy(1)+size/2 calxy(2)+size/2], size+2);
-		Screen('FillOval', eyewin, insetColour, [calxy(1)-inset/2 calxy(2)-inset/2 calxy(1)+inset/2 calxy(2)+inset/2], inset+2);
+		if insetSize>0; Screen('FillOval', eyewin, insetColour, [calxy(1)-insetSize/2 calxy(2)-inset/2 calxy(1)+inset/2 calxy(2)+inset/2], inset+2);end
 	end
-	if verbose; fprintf('--->>> EYELINKCALLBACK EyelinkDrawCalibrationTarget: %.5g %.5g\n',calxy(1),calxy(2)); end
+	if verbose; fprintf('--->>> EYELINKCALLBACK EyelinkDrawCalibrationTarget: %.5g %.5g | size:%i / %i px\n',calxy(1),calxy(2),size,insetSize); end
 catch ME
 	ple(ME)
 end
