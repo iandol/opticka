@@ -37,7 +37,7 @@ classdef calibrateLuminance < handle
 		%> 'EnableBits++Mono++Output' or 'EnableBits++Color++Output'
 		bitDepth char = 'FloatingPoint32BitIfPossible'
 		%> use SpectroCal II automatically
-		useSpectroCal2 logical = false
+		useSpectroCal2 logical = true
 		%> use ColorCalII automatically
 		useCCal2 logical = false
 		%> use i1Pro?
@@ -113,6 +113,7 @@ classdef calibrateLuminance < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		isRunAll = false
 		isTested = false
 		isAnalyzed = false
 		canAnalyze = false
@@ -215,12 +216,15 @@ classdef calibrateLuminance < handle
 		%>
 		% ===================================================================
 		function runAll(obj)
-			resetAll(obj)
+			obj.isRunAll = true;
+			resetAll(obj);
+			addComments(obj);
 			calibrate(obj);
 			run(obj);
 			analyze(obj);
 			WaitSecs(2);
 			test(obj);
+			obj.isRunAll = false;
 		end
 		
 		% ===================================================================
@@ -231,7 +235,7 @@ classdef calibrateLuminance < handle
 		function run(obj)
 			resetAll(obj)
 			openScreen(obj);
-			Screen('FillRect',obj.win,[0.7 0.7 0.3],obj.screenVals.targetRect);
+			Screen('FillRect',obj.win,[0.7 0.7 0.7],obj.screenVals.targetRect);
 			Screen('Flip',obj.win);
 			if ~obj.useCCal2 && ~obj.useI1Pro && ~obj.useSpectroCal2
 				input(sprintf(['When black screen appears, point photometer, \n' ...
@@ -362,12 +366,17 @@ classdef calibrateLuminance < handle
 			end
 			try
 				resetTested(obj)
-				reply = input('Set 0 for SimpleGamma or a Model number 1:N for the standard correction: ');
-				if reply == 0
-					doPipeline = true;
-				else
+				if obj.isRunAll
 					doPipeline = false;
-					obj.choice = reply;
+					obj.choice = 1;
+				else
+					reply = input('Set 0 for SimpleGamma or a Model number 1:N for the standard correction: ');
+					if reply == 0
+						doPipeline = true;
+					else
+						doPipeline = false;
+						obj.choice = reply;
+					end
 				end
 				
 				openScreen(obj);
@@ -573,18 +582,6 @@ classdef calibrateLuminance < handle
 					obj.gammaTable{i+1,loop} = g;
 				end
 				
-			end
-			ans = questdlg('Do you want to add comments to this calibration?');
-			if strcmpi(ans,'Yes')
-				if iscell(obj.comments)
-					cmts = obj.comments;
-				else
-					cmts = {obj.comments};
-				end
-				cmt = inputdlg('Please enter a description for this calibration run:','Gamma Calibration',10,cmts);
-				if ~isempty(cmt)
-					obj.comments{1} = cmt{1};
-				end
 			end
 			obj.isAnalyzed = true;
 			makeFinalCLUT(obj);
@@ -1240,6 +1237,26 @@ classdef calibrateLuminance < handle
 				in(in>1) = 1;
 			end
 			out = in;
+		end
+		
+		% ===================================================================
+		%> @brief add a comment
+		%>
+		%>
+		% ===================================================================
+		function addComments(obj)
+			ans = questdlg('Do you want to add comments to this calibration?');
+			if strcmpi(ans,'Yes')
+				if iscell(obj.comments)
+					cmts = obj.comments;
+				else
+					cmts = {obj.comments};
+				end
+				cmt = inputdlg('Please enter a description for this calibration run:','Luminance Calibration',10,cmts);
+				if ~isempty(cmt)
+					obj.comments{1} = cmt{1};
+				end
+			end
 		end
 		
 		%===========Salutation==========%
