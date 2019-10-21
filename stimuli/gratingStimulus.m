@@ -13,7 +13,7 @@
 %> See docs for more property details
 % ========================================================================
 classdef gratingStimulus < baseStimulus
-	
+
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> family type, can be 'sinusoid' or 'square'
 		type = 'sinusoid'
@@ -55,7 +55,7 @@ classdef gratingStimulus < baseStimulus
 		%> aspect ratio of the grating, can be [x y] to select width height differently
 		aspectRatio = 1;
 	end
-	
+
 	properties (SetAccess = protected, GetAccess = public)
 		%stimulus family
 		family = 'grating'
@@ -64,11 +64,11 @@ classdef gratingStimulus < baseStimulus
 		%> the phase amount we need to add for each frame of animation
 		phaseIncrement = 0
 	end
-	
+
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
 		typeList = {'sinusoid';'square'}
 	end
-	
+
 	properties (SetAccess = protected, GetAccess = protected)
 		%> as get methods are slow, we cache sf, then recalculate sf whenever
 		%> changeScale event is called
@@ -76,8 +76,8 @@ classdef gratingStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['sf|tf|angle|motionAngle|phase|rotateTexture|' ... 
-			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ... 
+		allowedProperties = ['sf|tf|angle|motionAngle|phase|rotateTexture|' ...
+			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ...
 			'contrastMult|sigma|useAlpha|smoothMethod|' ...
 			'correctPhase|phaseReverseTime|phaseOfReverse']
 		%>properties to not create transient copies of during setup phase
@@ -91,18 +91,18 @@ classdef gratingStimulus < baseStimulus
 		%> mask value
 		maskValue
 	end
-	
+
 	events (ListenAccess = 'protected', NotifyAccess = 'protected') %only this class can access these
 		%> triggered when changing size, so we can change sf etc to compensate
-		changeScale 
+		changeScale
 		%> triggered when changing tf or drift direction
-		changePhaseIncrement 
+		changePhaseIncrement
 	end
-	
+
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
-		
+
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -117,21 +117,21 @@ classdef gratingStimulus < baseStimulus
 			if nargin == 0
 				varargin.family = 'grating';
 			end
-			
+
 			me=me@baseStimulus(varargin); %we call the superclass constructor first
-			
+
 			if nargin>0
 				me.parseArgs(varargin, me.allowedProperties);
 			end
-			
+
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor method','Stimulus initialisation complete');
 		end
-		
+
 		% ===================================================================
 		%> @brief Setup this object in preperation for use
 		%> When displaying a stimulus object, the main properties that are to be
-		%> modified are copied into cache copies of the property, both to convert from 
+		%> modified are copied into cache copies of the property, both to convert from
 		%> visual description (c/d, Hz, degrees) to
 		%> computer metrics, and to be animated and modified as independant
 		%> variables. So xPosition is copied to xPositionOut and converyed from
@@ -143,7 +143,7 @@ classdef gratingStimulus < baseStimulus
 		%> @param sM screenManager object for reference
 		% ===================================================================
 		function setup(me,sM)
-			
+
 			reset(me); %reset it back to its initial state
 			me.inSetup = true;
 			if isempty(me.isVisible)
@@ -151,9 +151,9 @@ classdef gratingStimulus < baseStimulus
 			end
 			addlistener(me,'changeScale',@me.calculateScale); %use an event to keep scale accurate
 			addlistener(me,'changePhaseIncrement',@me.calculatePhaseIncrement);
-			
+
 			me.sM = sM;
-			me.ppd=sM.ppd;			
+			me.ppd=sM.ppd;
 
 			me.texture = []; %we need to reset this
 
@@ -173,7 +173,7 @@ classdef gratingStimulus < baseStimulus
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
-			
+
 			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
 			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
 			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
@@ -182,24 +182,24 @@ classdef gratingStimulus < baseStimulus
 			me.doMotion = false;
 			me.doDrift = false;
 			me.doFlash = false;
-			
+
 			if me.tf > 0;me.doDrift = true;end
 			if me.speed > 0; me.doMotion = true;end
-			
+
 			if isempty(me.findprop('rotateMode'));p=me.addprop('rotateMode');p.Transient=true;p.Hidden=true;end
 			if me.rotateTexture
 				me.rotateMode = kPsychUseTextureMatrixForRotation;
 			else
 				me.rotateMode = [];
 			end
-			
+
 			if isempty(me.findprop('gratingSize'));p=me.addprop('gratingSize');p.Transient=true;end
 			me.gratingSize = round(me.ppd*me.size);
-			
+
 			if isempty(me.findprop('phaseIncrement'))
 				p=me.addprop('phaseIncrement');
 			end
-			
+
 			if isempty(me.findprop('driftPhase'));p=me.addprop('driftPhase');p.Transient=true;end
 			if me.correctPhase
 				ps=me.calculatePhase;
@@ -207,28 +207,28 @@ classdef gratingStimulus < baseStimulus
 			else
 				me.driftPhase=me.phaseOut;
 			end
-			
+
 			if isempty(me.findprop('res'));p=me.addprop('res');p.Transient=true;end
-			
+
 			switch length(me.aspectRatio)
 				case 1
 					me.res = round([me.gratingSize*me.aspectRatio me.gratingSize]);
 				case 2
 					me.res = round([me.gratingSize*me.aspectRatio(1) me.gratingSize*me.aspectRatio(2)]);
 			end
-			
+
 			if me.mask == true
 				me.maskValue = floor((me.ppd*me.size)/2);
 			else
 				me.maskValue = [];
 			end
-			
+
 			if isempty(me.findprop('texture'));p=me.addprop('texture');p.Transient=true;end
-			
+
 			if me.phaseReverseTime > 0
 				me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
 			end
-			
+
 			if strcmpi(me.type,'square')
 				me.texture = CreateProceduralSquareWaveGrating(me.sM.win, me.res(1),...
 					me.res(2), me.colourOut, me.maskValue, me.contrastMult);
@@ -242,13 +242,13 @@ classdef gratingStimulus < baseStimulus
 						me.res(2), me.colourOut, me.maskValue, me.contrastMult);
 				end
 			end
-			
+
 			me.inSetup = false;
 			computePosition(me);
 			setRect(me);
-			
+
 		end
-		
+
 		% ===================================================================
 		%> @brief Update this stimulus object for display
 		%>
@@ -264,11 +264,11 @@ classdef gratingStimulus < baseStimulus
 			computePosition(me);
 			setRect(me);
 		end
-		
+
 		% ===================================================================
 		%> @brief Draw this stimulus object for display
 		%>
-		%> 
+		%>
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
@@ -278,7 +278,7 @@ classdef gratingStimulus < baseStimulus
 			end
 			me.tick = me.tick + 1;
 		end
-		
+
 		% ===================================================================
 		%> @brief Animate this object for runExperiment
 		%>
@@ -302,7 +302,7 @@ classdef gratingStimulus < baseStimulus
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief Reset an structure for runExperiment
 		%>
@@ -318,7 +318,7 @@ classdef gratingStimulus < baseStimulus
 			me.maskValue = [];
 			me.removeTmpProperties;
 		end
-		
+
 		% ===================================================================
 		%> @brief sf Set method
 		%>
@@ -330,7 +330,7 @@ classdef gratingStimulus < baseStimulus
 			me.sf = value;
 			me.salutation(['set sf: ' num2str(value)],'Custom set method')
 		end
-		
+
 		% ===================================================================
 		%> @brief calculate phase offset
 		%>
@@ -346,7 +346,7 @@ classdef gratingStimulus < baseStimulus
 				phase = (360*md);
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief sfOut Pseudo Get method
 		%>
@@ -357,14 +357,14 @@ classdef gratingStimulus < baseStimulus
 				sf = me.sfCache * me.ppd;
 			end
 		end
-		
+
 	end %---END PUBLIC METHODS---%
-	
-	
+
+
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
-	
+
 		% ===================================================================
 		%> @brief setRect
 		%> setRect makes the PsychRect based on the texture and screen values
@@ -392,7 +392,7 @@ classdef gratingStimulus < baseStimulus
 			me.mvRect=me.dstRect;
 			me.setAnimationDelta();
 		end
-		
+
 		% ===================================================================
 		%> @brief sfOut Set method
 		%>
@@ -407,7 +407,7 @@ classdef gratingStimulus < baseStimulus
 			end
 			%fprintf('\nSET SFOut: %d | cache: %d | in: %d\n', me.sfOut, me.sfCache, value);
 		end
-		
+
 		% ===================================================================
 		%> @brief tfOut Set method
 		%>
@@ -416,7 +416,7 @@ classdef gratingStimulus < baseStimulus
 			me.tfOut = value;
 			notify(me,'changePhaseIncrement');
 		end
-		
+
 		% ===================================================================
 		%> @brief reverseDirectionOut Set method
 		%>
@@ -425,9 +425,9 @@ classdef gratingStimulus < baseStimulus
 			me.reverseDirectionOut = value;
 			notify(me,'changePhaseIncrement');
 		end
-		
+
 		% ===================================================================
-		%> @brief calculateScale 
+		%> @brief calculateScale
 		%> Use an event to recalculate scale as get method is slower (called
 		%> many more times), than an event which is only called on update
 		% ===================================================================
@@ -437,7 +437,7 @@ classdef gratingStimulus < baseStimulus
 			me.sfOut = me.sfCache * me.scale;
 			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', me.sfOut, me.sfCache, me.scale);
 		end
-		
+
 		% ===================================================================
 		%> @brief calculatePhaseIncrement
 		%> Use an event to recalculate as get method is slower (called
@@ -453,7 +453,7 @@ classdef gratingStimulus < baseStimulus
 				end
 			end
 		end
-		
+
 		% ===================================================================
 		%> @brief sizeOut Set method
 		%> we also need to change scale when sizeOut is changed, used for both
@@ -463,6 +463,6 @@ classdef gratingStimulus < baseStimulus
 			me.sizeOut = value*me.ppd;
 			notify(me,'changeScale');
 		end
-		
+
 	end
 end

@@ -713,9 +713,9 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command',['record_status_message ''' message '''']);
 				if me.verbose; fprintf('-+-+->Eyelink status message: %s\n',message);end
 			end
-        end
+		end
 		
-        % ===================================================================
+		% ===================================================================
 		%> @brief send message to store in EDF data
 		%>
 		%>
@@ -725,8 +725,8 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Message', message );
 				if me.verbose; fprintf('-+-+->EDF Message: %s\n',message);end
 			end
-        end
-        
+		end
+		
 		% ===================================================================
 		%> @brief close the eyelink and cleanup, send EDF file if recording
 		%> is enabled
@@ -1060,20 +1060,20 @@ classdef eyelinkManager < optickaCore
 		end
 		
 	end%-------------------------END PUBLIC METHODS--------------------------------%
-    
-    %=======================================================================
+	
+	%=======================================================================
 	methods (Hidden = true) %------------------HIDDEN METHODS
 	%=======================================================================
-    
-        % ===================================================================
+	
+		% ===================================================================
 		%> @brief TODO
 		%>
 		% ===================================================================
 		function evt = getEvent(me)
 			
-        end
+		end
 		
-        % ===================================================================
+		% ===================================================================
 		%> @brief send message to store in EDF data
 		%>
 		%>
@@ -1085,9 +1085,9 @@ classdef eyelinkManager < optickaCore
 			end
 		end
 		
-    
-    end
-    
+	
+	end
+	
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
