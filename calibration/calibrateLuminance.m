@@ -28,7 +28,7 @@ classdef calibrateLuminance < handle
 		%> comments to note about this calibration
 		comments cell = {''}
 		%> number of measures
-		nMeasures double = 15
+		nMeasures double = 30
 		%> screen to calibrate
 		screen
 		%> bitDepth of framebuffer, '8bit' is best for old GPUs, but prefer
@@ -51,7 +51,7 @@ classdef calibrateLuminance < handle
 		%> test L, R, G and B as seperate curves?
 		testColour logical = true
 		%> correct R G B seperately (true) or overall luminance (false) 
-		correctColour logical = false
+		correctColour logical = true
 		%> methods list to fit to raw luminance values
 		analysisMethods cell = {'pchipinterp';'linearinterp'}
 		%> which gamma model should opticka select: 1 is simple gamma,
@@ -120,7 +120,7 @@ classdef calibrateLuminance < handle
 		win
 		p
 		plotHandle
-		allowedPropertiesBase = '^(useSpectroCal2|port|preferI1Pro|useCCal2|useI1Pro|correctColour|testColour|filename|tableLength|verbose|runNow|screen|nMeasures)$'
+		allowedPropertiesBase = '^(bitDepth|useSpectroCal2|port|preferI1Pro|useCCal2|useI1Pro|correctColour|testColour|filename|tableLength|verbose|runNow|screen|nMeasures)$'
 	end
 	
 	%=======================================================================
