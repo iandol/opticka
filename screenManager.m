@@ -330,7 +330,7 @@ classdef screenManager < optickaCore
 				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				%PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
 				fprintf('---> screenManager: Probing for a Display++...');
-				bitsCheckOpen(me);
+				me.isPlusPlus = screenManager.bitsCheckOpen(me);
 				if me.isPlusPlus
 					fprintf('\tFound Display++ ');
 					if regexpi(me.bitDepth, '^EnableBits')
@@ -533,40 +533,6 @@ classdef screenManager < optickaCore
 			else
 				[vbl, when] = Screen('Flip',me.win);
 			end
-		end
-		
-		% ===================================================================
-		%> @brief check for display++, and keep open or close again
-		%>
-		%> @param port optional serial USB port
-		%> @param keepOpen should we keep it open after check (default yes)
-		%> @return connected - is the Display++ connected?
-		% ===================================================================
-		function connected = bitsCheckOpen(me,port,keepOpen)
-			connected = false;
-			if ~exist('keepOpen','var') || isempty(keepOpen)
-				keepOpen = true;
-			end
-			try
-				if ~exist('port','var')
-					ret = BitsPlusPlus('OpenBits#');
-				else
-					ret = BitsPlusPlus('OpenBits#',port);
-				end
-				if ret == 1; connected = true; end
-				if ~keepOpen; BitsPlusPlus('Close'); end
-			end
-			me.isPlusPlus = connected;
-		end
-		
-		% ===================================================================
-		%> @brief Flip the screen
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function bitsSwitchStatusScreen(me)
-			BitsPlusPlus('SwitchToStatusScreen');
 		end
 		
 		% ===================================================================
@@ -1176,6 +1142,55 @@ classdef screenManager < optickaCore
 				me.salutation('DELETE method','Screen closed');
 			end
 		end	
+	end
+	
+	%=======================================================================
+	methods (Static = true) %------------------STATIC METHODS
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief Run validation for Display++
+		%>
+		% ===================================================================
+		function validateDisplayPlusPlus()
+			screenManager.bitsCheckOpen([],false)
+			BitsPlusImagingPipelineTest
+			BitsPlusIdentityClutTest
+		end
+		
+		% ===================================================================
+		%> @brief check for display++, and keep open or close again
+		%>
+		%> @param port optional serial USB port
+		%> @param keepOpen should we keep it open after check (default yes)
+		%> @return connected - is the Display++ connected?
+		% ===================================================================
+		function connected = bitsCheckOpen(port,keepOpen)
+			connected = false;
+			if ~exist('keepOpen','var') || isempty(keepOpen)
+				keepOpen = true;
+			end
+			try
+				if ~exist('port','var') || isempty(port)
+					ret = BitsPlusPlus('OpenBits#');
+				else
+					ret = BitsPlusPlus('OpenBits#',port);
+				end
+				if ret == 1; connected = true; end
+				if ~keepOpen; BitsPlusPlus('Close'); end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Flip the screen
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function bitsSwitchStatusScreen()
+			BitsPlusPlus('SwitchToStatusScreen');
+		end
+	
 	end
 	
 	%=======================================================================

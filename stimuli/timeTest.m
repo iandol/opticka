@@ -260,6 +260,7 @@ try
 		% situation of Windows-8 or later on Windows-Vista and Windows-7:
 		Screen('Preference','ConserveVRAM', 16384); % Force use of DWM.
 	end
+	Screen('Preference', 'Verbosity', 4);
 	
 	% Get the list of Screens and choose the one with the highest screen number.
 	% Screen 0 is, by definition, the display with the menu bar. Often when
