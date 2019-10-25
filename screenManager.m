@@ -38,6 +38,9 @@ classdef screenManager < optickaCore
 		%> options to enable Display++ modes 'EnableBits++Bits++Output'
 		%> 'EnableBits++Mono++Output' or 'EnableBits++Color++Output'
 		bitDepth char = 'FloatingPoint32BitIfPossible'
+		%> The acceptable variance in flip timing tests performed when
+		%> screen opens, set with Screen('Preference', 'SyncTestSettings', syncVariance)
+		syncVariance double = 0.0008
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 		timestampingMode double = 1
 		%> multisampling sent to the graphics card, try values 0[disabled], 4, 8
@@ -307,6 +310,7 @@ classdef screenManager < optickaCore
 				
 				if debug == true || (length(me.windowed)==1 && me.windowed ~= 0)
 					fprintf('\n---> screenManager: Skipping Sync Tests etc. - ONLY FOR DEVELOPMENT!\n');
+					Screen('Preference','SyncTestSettings', 0.002); %up to 2ms variability
 					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
 					Screen('Preference', 'Verbosity', 2);
@@ -319,6 +323,7 @@ classdef screenManager < optickaCore
 						fprintf('\n---> screenManager: Normal Screen Preferences used.\n');
 						Screen('Preference', 'SkipSyncTests', 0);
 					end
+					Screen('Preference','SyncTestSettings', me.syncVariance); %set acceptable variability
 					Screen('Preference', 'VisualDebugLevel', 3);
 					Screen('Preference', 'Verbosity', me.verbosityLevel); %errors and warnings
 					Screen('Preference', 'SuppressAllWarnings', 0);
@@ -585,6 +590,7 @@ classdef screenManager < optickaCore
 			if ~me.isPTB; return; end
 			Priority(0);
 			ListenChar(0);
+			Screen('Preference','SyncTestSettings', 0.0002); %default 0.2ms variability
 			ShowCursor;
 			if isfield(me.screenVals,'originalGammaTable') && ~isempty(me.screenVals.originalGammaTable)
 				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.originalGammaTable);

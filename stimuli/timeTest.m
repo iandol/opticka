@@ -261,6 +261,7 @@ try
 		Screen('Preference','ConserveVRAM', 16384); % Force use of DWM.
 	end
 	Screen('Preference', 'Verbosity', 4);
+	Screen('Preference','SyncTestSettings', 0.001);
 	
 	% Get the list of Screens and choose the one with the highest screen number.
 	% Screen 0 is, by definition, the display with the menu bar. Often when
@@ -285,7 +286,7 @@ try
 	
 	% Open double-buffered window: Optionally enable stereo output if
 	% stereo == 1.
-	w=PsychImaging('OpenWindow',screenNumber, 0.5,[],[],[], stereo,[]);
+	[w,winRect]=PsychImaging('OpenWindow',screenNumber, 0.5,[],[],[], stereo,[]);
 	[oldSrc,oldDst]=Screen('BlendFunction', w, 'GL_ONE','GL_ZERO');
 	fprintf('\n---> Previous OpenGL blending was %s | %s\n', oldSrc, oldDst);
 	fprintf('---> Initial OpenGL blending set to %s | %s\n', 'GL_ONE','GL_ZERO');
@@ -379,7 +380,7 @@ try
 		f = mod(i, 10);
 		if f == 0; ptoggle = ~ptoggle;end
 		if ptoggle; clog(i) = 1; else; clog(i) = 0; end
-		Screen('FillRect', w, clog(i), [0 0 45 45]);
+		Screen('FillRect', w, clog(i), [winRect(3)-45 0 winRect(3) 45]);
 		
 		if (stereo>0)
 			% Show something for the right eye as well in stereo mode:

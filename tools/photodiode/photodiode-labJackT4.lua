@@ -1,6 +1,6 @@
 print("Set a DIO based on voltage. Digital I/O is FIO5, voltage measured on AIN0.")
 local InputVoltage = 0
-local ThresholdVoltage = 1.2
+local ThresholdVoltage = 0.5
 
 local mbRead=MB.R			--local functions for faster processing
 local mbWrite=MB.W
