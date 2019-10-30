@@ -1,5 +1,6 @@
 .gitattributes text eol=lf
 .gitignore text eol=lf
+.doxyfile text eol=lf
 *.build text eol=lf
 *.c text eol=lf
 *.cmake text eol=lf
@@ -13,3 +14,11 @@
 *.sh text eol=lf
 *.txt text eol=lf
 *.yml text eol=lf
+*.frag text eol=lf
+*.vert text eol=lf
+*.ino text eol=lf
+*.mat binary
+*.mexa64 binary
+*.mexmaci64 binary
+*.mexw64 binary
+*.zip binary

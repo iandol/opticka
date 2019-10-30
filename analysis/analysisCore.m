@@ -590,57 +590,63 @@ classdef analysisCore < optickaCore
 		%>
 		%> Switches: SE 2SE SD 2SD 3SD V FF CV AF
 		% ===================================================================
-		function [avg,error] = stderr(data,type,onlyerror,alpha)
+		function [avg,error] = stderr(data,type,onlyerror,alpha,dim)
+			if nargin<5; dim=1; end
 			if nargin<4; alpha=0.05; end
-			if nargin<3; onlyerror=0; end
+			if nargin<3; onlyerror=false; end
 			if nargin<2; type='SE';	end
 			if size(type,1)>1; type=reshape(type,1,size(type,1));	end
-			if size(data,1) > 1 && size(data,2) > 1; nvals = size(data,1);
-			else nvals = length(data); end
-			avg=nanmean(data);
+			if size(data,1) > 1 && size(data,2) > 1 
+				nvals = size(data,dim);
+			else
+				nvals = length(data); 
+			end
+			avg=nanmean(data,dim);
 			switch(type)
 				case 'SE'
-					err=nanstd(data);
+					err=nanstd(data,0,dim);
 					error=sqrt(err.^2/nvals);
 				case '2SE'
-					err=nanstd(data);
+					err=nanstd(data,0,dim);
 					error=sqrt(err.^2/nvals);
 					error = error*2;
 				case 'CIMEAN'
+					if dim == 2;data = data';end
 					[error, raw] = bootci(1000,{@nanmean,data},'alpha',alpha);
 					avg = nanmean(raw);
 				case 'CIMEDIAN'
+					if dim == 2;data = data';end
 					[error, raw] = bootci(1000,{@nanmedian,data},'alpha',alpha);
 					avg = nanmedian(raw);
 				case 'SD'
-					error=nanstd(data);
+					error=nanstd(data,0,dim);
 				case '2SD'
-					error=(nanstd(data))*2;
+					error=(nanstd(data,0,dim))*2;
 				case '3SD'
-					error=(nanstd(data))*3;
+					error=(nanstd(data,0,dim))*3;
 				case 'V'
-					error=nanstd(data).^2;
+					error=nanstd(data,0,dim).^2;
 				case 'F'
 					if max(data)==0
 						error=0;
 					else
-						error=nanvar(data)/nanmean(data);
+						error=nanvar(data,0,dim)/nanmean(data,dim);
 					end
 				case 'C'
 					if max(data)==0
 						error=0;
 					else
-						error=nanstd(data)/nanmean(data);
+						error=nanstd(data,0,dim)/nanmean(data,dim);
 					end
 				case 'A'
 					if max(data)==0
 						error=0;
 					else
-						error=nanvar(diff(data))/(2*nanmean(data));
+						error=nanvar(diff(data),0,dim)/(2*nanmean(data,dim));
 					end
 			end
-			if onlyerror==1
-				avg=error;
+			if onlyerror
+				avg=error; clear error;
 			end
 		end
 		
