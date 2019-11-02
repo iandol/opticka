@@ -703,7 +703,7 @@ classdef arduinoLegacy < handle
             
             %%%%%%%%%%%%%%%%%%%%%%%%% PERFORM ANALOG OUTPUT %%%%%%%%%%%%%%%%%%%%%%%%%%%
             
-            if strcmpi(get(a.aser,'Port'),'DEMO'),
+            if strcmpi(get(a.aser,'Port'),'DEMO')
                 % handle demo mode
                 
                 % minimum analog output delay
@@ -712,7 +712,7 @@ classdef arduinoLegacy < handle
             else
                 
                 % check a.aser for openness if a.chks is true
-                if a.chks,
+                if a.chks
                     errstr=arduinoLegacy.checkser(a.aser,'open');
                     if ~isempty(errstr), error(errstr); end
                 end

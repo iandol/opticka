@@ -116,6 +116,15 @@ classdef arduinoManager < optickaCore
 			end
 		end
 		
+		%===============ANALOG WRITE================%
+		function analogWrite(me,line,value)
+			if me.silentMode == false
+				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
+				if ~exist('value','var') || isempty(value); value = 255; end
+				analogWrite(me.device, line, value);
+			end			
+		end
+		
 		%===============SEND TTL (legacy)================%
 		function sendTTL(me, line, time)
 			timedTTL(me, line, time)

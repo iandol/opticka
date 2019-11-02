@@ -60,7 +60,7 @@ classdef optickaCore < handle
 	%--------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties char = 'name|cloning'
+		allowedProperties char = 'name|comment|cloning'
 		%> cached full name
 		fullName_ char
 	end
@@ -86,7 +86,7 @@ classdef optickaCore < handle
 			if nargin>0
 				me.parseArgs(args,me.allowedProperties);
 			end
-			try; if ~exist('metaStimulus','file'); addoptickapaths; end; end
+			try if exist('metaStimulus','file') == 0; addoptickapaths; end; end
 			me.mversion = str2double(regexp(version,'(?<ver>^\d\.\d[\d]?)','match','once'));
 			setPaths(me)
 		end
@@ -362,8 +362,89 @@ classdef optickaCore < handle
 	end
 	
 	%=======================================================================
+	methods ( Static = true ) %-------STATIC METHODS-----%
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief Converts cell args to structure
+		%> 
+		%>
+		%> @param args input structure
+		%> @return args
+		% ===================================================================
+		function args = makeArgs(args)
+			
+			if isstruct(args); return; end
+			
+			while iscell(args) && length(args) == 1
+				args = args{1};
+			end
+			
+			if iscell(args)
+				if mod(length(args),2) == 1 % odd
+					args = args(1:end-1); %remove last arg
+				end
+				odd = logical(mod(1:length(args),2));
+				even = logical(abs(odd-1));
+				args = cell2struct(args(even),args(odd),2);
+			end
+			
+		end
+		
+		% ===================================================================
+		%> @brief add default options to arg input
+		%> 
+		%>
+		%> @param args input structure
+		%> @return args
+		% ===================================================================
+		function args = addDefaults(args,defs)
+			if iscell(args); args = optickaCore.makeArgs(args); end
+			if iscell(defs); defs = optickaCore.makeArgs(defs); end
+			
+			fnameDef = fieldnames(defs); %find our argument names
+			fnameArg = fieldnames(args); %find our argument names
+			for i=1:length(fnameDef)
+				id=cell2mat(cellfun(@(c) strcmp(c,fnameDef{i}),fnameArg,'UniformOutput',false));
+				if ~any(id)
+					args.(fnameDef{i}) = defs.(fnameDef{i});
+				end
+			end
+		end
+		
+	end
+	
+	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%
 	%=======================================================================
+		
+		% ===================================================================
+		%> @brief Sets properties from a structure or normal arguments pairs,
+		%> ignores invalid or non-allowed properties
+		%>
+		%> @param args input structure
+		%> @param allowedProperties properties possible to set on construction
+		% ===================================================================
+		function parseArgs(me, args, allowedProperties)
+			allowedProperties = ['^(' allowedProperties ')$'];
+			
+			args = optickaCore.makeArgs(args);
+
+			if isstruct(args)
+				fnames = fieldnames(args); %find our argument names
+				for i=1:length(fnames)
+					if regexpi(fnames{i},allowedProperties) %only set if allowed property
+						me.salutation(fnames{i},'Constructor parsing input argument');
+						try
+							me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+						catch
+							me.salutation(fnames{i},'Propery invalid!',true);
+						end
+					end
+				end
+			end
+			
+		end
 		
 		% ===================================================================
 		%> @brief set paths for object
@@ -391,44 +472,6 @@ classdef optickaCore < handle
 			end
 		end
 		
-		% ===================================================================
-		%> @brief Sets properties from a structure or normal arguments pairs,
-		%> ignores invalid or non-allowed properties
-		%>
-		%> @param args input structure
-		%> @param allowedProperties properties possible to set on construction
-		% ===================================================================
-		function parseArgs(me, args, allowedProperties)
-			allowedProperties = ['^(' allowedProperties ')$'];
-			
-			while iscell(args) && length(args) == 1
-				args = args{1};
-			end
-			
-			if iscell(args)
-				if mod(length(args),2) == 1 % odd
-					args = args(1:end-1); %remove last arg
-				end
-				odd = logical(mod(1:length(args),2));
-				even = logical(abs(odd-1));
-				args = cell2struct(args(even),args(odd),2);
-			end
-			
-			if isstruct(args)
-				fnames = fieldnames(args); %find our argument names
-				for i=1:length(fnames)
-					if regexpi(fnames{i},allowedProperties) %only set if allowed property
-						me.salutation(fnames{i},'Constructor parsing input argument');
-						try
-							me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
-						catch
-							me.salutation(fnames{i},'Propery invalid!',true);
-						end
-					end
-				end
-			end
-			
-		end
 		
 		% ===================================================================
 		%> @brief Prints messages dependent on verbosity

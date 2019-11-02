@@ -174,7 +174,7 @@ classdef eyelinkAnalysis < analysisCore
 				warning('No EDF file specified...');
 				return
 			end
-			tic
+			tmain = tic;
 			if isempty(me.raw) || force == true
 				oldpath = pwd;
 				cd(me.dir)
@@ -185,7 +185,7 @@ classdef eyelinkAnalysis < analysisCore
 				fprintf('\n');
 				cd(oldpath)
 			end
-			fprintf('<strong>:#:</strong> Loading Raw EDF Data took <strong>%g ms</strong>\n',round(toc*1000));
+			fprintf('<strong>:#:</strong> Loading Raw EDF Data took <strong>%.2f secs</strong>\n',toc(tmain));
 		end
 
 		% ===================================================================
@@ -200,9 +200,8 @@ classdef eyelinkAnalysis < analysisCore
 			tmain = tic;
 			parseEvents(me);
 			parseAsVars(me);
-			
 			me.isParsed = true;
-			fprintf('\tOverall Simple Parsing of EDF Trials took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
+			fprintf('\tOverall Simple Parsing of EDF Trials took <strong>%.2f secs</strong>\n',toc(tmain));
 		end
 
 		% ===================================================================
@@ -223,9 +222,8 @@ classdef eyelinkAnalysis < analysisCore
 			parseSecondaryEyePos(me);
 			parseFixationPositions(me);
 			parseSaccades(me);
-
 			me.isParsed = true;
-			fprintf('\tOverall Parsing of EDF Trials took <strong>%g ms</strong>\n',round(toc(tmain)*1000));
+			fprintf('\tOverall Parsing of EDF Trials took <strong>%.2f secs</strong>\n',toc(tmain));
 		end
 
 		% ===================================================================
@@ -683,7 +681,7 @@ classdef eyelinkAnalysis < analysisCore
 				me.ROIInfo(i).breakFix = me.trials(i).breakFix;
 				me.ROIInfo(i).incorrect = me.trials(i).incorrect;
 			end
-			fprintf('<strong>:#:</strong> Parsing eyelink region of interest (ROI) took <strong>%g ms</strong>\n', round(toc(tROI)*1000))
+			fprintf('<strong>:#:</strong> Parsing eyelink region of interest (ROI) took <strong>%g secs</strong>\n', round(toc(tROI)))
 		end
 
 		% ===================================================================
@@ -741,7 +739,7 @@ classdef eyelinkAnalysis < analysisCore
 				me.TOIInfo(i).breakFix = me.trials(i).breakFix;
 				me.TOIInfo(i).incorrect = me.trials(i).incorrect;
 			end
-			fprintf('<strong>:#:</strong> Parsing eyelink time of interest (TOI) took <strong>%g ms</strong>\n', round(toc(tTOI)*1000))
+			fprintf('<strong>:#:</strong> Parsing eyelink time of interest (TOI) took <strong>%g secs</strong>\n', round(toc(tTOI)))
 		end
 
 		% ===================================================================
@@ -1028,12 +1026,19 @@ classdef eyelinkAnalysis < analysisCore
 				me.trialOverride = struct();
 			end
 		end
+		
+		function removeRawData(me)
+			
+			me.raw = [];
+			
+		end
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
 
 	%=======================================================================
 	methods (Static = true) %------------------STATIC METHODS
-		%=======================================================================
+	%=======================================================================
+		
 		% ===================================================================
 		%> @brief we also collect eye position within the main PTB loop (sampled at every
 		%> screen refresh) and this is a lower resolution backup of the eye position data if we
@@ -1829,7 +1834,7 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				pb(jj)
 			end
-			fprintf('<strong>:#:</strong> Parsing MicroSaccades took <strong>%g ms</strong>\n', round(toc(cms)*1000))
+			fprintf('<strong>:#:</strong> Parsing MicroSaccades took <strong>%g secs</strong>\n', round(toc(cms)))
 
 			function v = vecvel(xx,SAMPLING,TYPE)
 				%------------------------------------------------------------
