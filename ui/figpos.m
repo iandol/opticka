@@ -1,18 +1,21 @@
-function figpos(position,size,mult)
-
+function figpos(position,size,mult,units)
+% figpos(position,size,mult,units)
 oldunits = get(gcf,'Units');
 set(gcf,'Units','pixels');
 
 
-if nargin<1 || isempty(position);
+if nargin<1 || isempty(position)
 	position=1;
 end
-if nargin<2 || isempty(size);
+if nargin<2 || isempty(size)
 	pos=get(gcf,'Position');
 	size=[pos(3) pos(4)];
 end
-if nargin < 3
+if nargin < 3 || isempty(mult)
 	mult=1;
+end
+if nargin < 4 || isempty(units)
+	units = 'pixels';
 end
 
 if mult ~=1
@@ -25,6 +28,11 @@ scr=get(0,'ScreenSize');
 width=scr(3);
 height=scr(4);
 set(0,'Units',oldsunits);
+
+if ~strcmpi(units,'pixels')
+	size(1) = width * size(1);
+	size(2) = height * size(2);
+end
 
 if size(1) > width;	size(1) = width;	end
 if size(2) > height;	size(2) = height;	end

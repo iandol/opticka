@@ -595,7 +595,7 @@ classdef analysisCore < optickaCore
 			if nargin<4; alpha=0.05; end
 			if nargin<3; onlyerror=false; end
 			if nargin<2; type='SE';	end
-			if size(type,1)>1; type=reshape(type,1,size(type,1));	end
+			if size(data,1)==1 && size(data,2)>1; data=reshape(data,size(data,2),1); end
 			if size(data,1) > 1 && size(data,2) > 1 
 				nvals = size(data,dim);
 			else

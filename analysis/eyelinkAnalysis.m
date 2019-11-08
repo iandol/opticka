@@ -359,9 +359,9 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			h1=figure;
 			set(gcf,'Color',[1 1 1],'Name',name);
-			figpos(1,[1200 1200]);
+			figpos(1,[0.8 0.8],1,'%');
 			p = panel(h1);
-			p.fontsize = 12;
+			p.fontsize = 10;
 			p.margin = [10 10 10 20]; %left bottom right top
 			p.pack('v',{2/3, []});
 			q = p(1);
@@ -502,7 +502,7 @@ classdef eyelinkAnalysis < analysisCore
 				xvals{a} = xa(idxt);
 				yvals{a} = ya(idxt);
 				if isfield(thisTrial,'firstSaccade') && thisTrial.firstSaccade > 0
-					sacc = [sacc thisTrial.firstSaccade/1e3];
+					sacc = [sacc double(thisTrial.firstSaccade)/1e3];
 				end
 				meanx = [meanx mean(xa(idxt))];
 				meany = [meany mean(ya(idxt))];
@@ -565,9 +565,8 @@ classdef eyelinkAnalysis < analysisCore
 			xlabel(qq(1,1),'Time (ms)');
 			ylabel(qq(1,1),'X Position');
 			zlabel(qq(1,1),'Y Position');
-			mn = nanmean(sacc);
+			[mn,er] = me.stderr(sacc,'SD');
 			md = nanmedian(sacc);
-			[~,er] = me.stderr(sacc,'SD');
 			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2g / %.2g � %.2g SD [%.2g <> %.2g]',...
 				thisVarName,upper(type),mn,md,er,min(sacc),max(sacc)));
 			set(h,'BackgroundColor',[1 1 1]);
@@ -1198,7 +1197,6 @@ classdef eyelinkAnalysis < analysisCore
 			tri2 = 1; %trial ignoring incorrects
 			eventN = 0;
 			me.comment = me.raw.HEADER;
-			me.trials = struct();
 			me.correct.idx = [];
 			me.correct.saccTimes = [];
 			me.correct.fixations = [];
@@ -1211,6 +1209,43 @@ classdef eyelinkAnalysis < analysisCore
 			this.distance = [];
 			this.pixelspercm = [];
 			this.display = [];
+			
+			trialDef.variable = [];
+			trialDef.variableMessageName = [];
+			trialDef.idx = [];
+			trialDef.correctedIndex = [];
+			trialDef.time = [];
+			trialDef.rt = false;
+			trialDef.rtoverride = false;
+			trialDef.fixations = [];
+			trialDef.nfix = 0;
+			trialDef.saccades = [];
+			trialDef.nsacc = [];
+			trialDef.saccadeTimes = [];
+			trialDef.firstSaccade = NaN;
+			trialDef.uuid = [];
+			trialDef.result = [];
+			trialDef.correct = false;
+			trialDef.breakFix = false;
+			trialDef.incorrect = false;
+			trialDef.unknown = false;
+			trialDef.messages = [];
+			trialDef.sttime = NaN;
+			trialDef.entime = NaN;
+			trialDef.totaltime = 0;
+			trialDef.startsampletime = NaN;
+			trialDef.endsampletime = NaN;
+			trialDef.rtstarttime = NaN;
+			trialDef.rtendtime = NaN;
+			trialDef.synctime = NaN;
+			trialDef.deltaT = NaN;
+			trialDef.rttime = NaN;
+			trialDef.times = [];
+			trialDef.gx = [];
+			trialDef.gy = [];
+			trialDef.hx = [];
+			trialDef.hy = [];
+			trialDef.pa = [];
 
 			me.ppd; %faster to cache this now (dependant property sets ppd_ too)
 
@@ -1220,10 +1255,10 @@ classdef eyelinkAnalysis < analysisCore
 			else
 				eyeUsed = 1; %left eye index
 			end
-
+			
 			FEVENTN = length(me.raw.FEVENT);
 			pb = textprogressbar(FEVENTN, 'startmsg', 'Parsing Eyelink Events: ',...
-				'showactualnum', true,'updatestep', round(FEVENTN/100));
+				'showactualnum', true,'updatestep', round(FEVENTN/500));
 			for i = 1:FEVENTN
 				isMessage = false;
 				evt = me.raw.FEVENT(i);
@@ -1273,43 +1308,17 @@ classdef eyelinkAnalysis < analysisCore
 						if isempty(id.ID) %we have a bug in early EDF files with an empty TRIALID!!!
 							id.ID = '1010';
 						end
-						isTrial = true;
 						eventN=1;
-						me.trials(tri).variable = str2double(id.ID);
-						me.trials(tri).idx = tri;
-						me.trials(tri).correctedIndex = [];
-						me.trials(tri).time = double(evt.time);
-						me.trials(tri).rt = false;
-						me.trials(tri).rtoverride = false;
-						me.trials(tri).fixations = [];
-						me.trials(tri).nfix = 2;
-						me.trials(tri).saccades = [];
-						me.trials(tri).nsacc = [];
-						me.trials(tri).saccadeTimes = [];
-						me.trials(tri).firstSaccade = NaN;
-						me.trials(tri).uuid = [];
-						me.trials(tri).result = [];
-						me.trials(tri).correct = false;
-						me.trials(tri).breakFix = false;
-						me.trials(tri).incorrect = false;
-						me.trials(tri).unknown = false;
-						me.trials(tri).messages = [];
-						me.trials(tri).sttime = double(evt.sttime);
-						me.trials(tri).entime = NaN;
-						me.trials(tri).totaltime = (me.trials(tri).sttime - me.trials(1).sttime)/1e3;
-						me.trials(tri).startsampletime = NaN;
-						me.trials(tri).endsampletime = NaN;
-						me.trials(tri).rtstarttime = double(evt.sttime);
-						me.trials(tri).rtendtime = NaN;
-						me.trials(tri).synctime = NaN;
-						me.trials(tri).deltaT = NaN;
-						me.trials(tri).rttime = NaN;
-						me.trials(tri).times = [];
-						me.trials(tri).gx = [];
-						me.trials(tri).gy = [];
-						me.trials(tri).hx = [];
-						me.trials(tri).hy = [];
-						me.trials(tri).pa = [];
+						thisTrial = trialDef;
+						thisTrial.variable = str2double(id.ID);
+						thisTrial.idx = tri;
+						thisTrial.time = evt.time;
+						thisTrial.sttime = evt.sttime;
+						if tri > 1
+							thisTrial.totaltime = (thisTrial.sttime - me.trials(1).sttime)/1e3;
+						end
+						thisTrial.rtstarttime = evt.sttime;
+						isTrial = true;
 						continue
 					end
 				end
@@ -1317,31 +1326,38 @@ classdef eyelinkAnalysis < analysisCore
 				if isTrial
 
 					if ~isMessage
-
-						if evt.type == me.EVENT_TYPES.STARTSAMPLES
-							me.trials(tri).startsampletime = double(evt.sttime);
+						
+						if evt.type == me.EVENT_TYPES.STARTEVENTS || ...
+								evt.type == me.EVENT_TYPES.STARTFIX || ...
+								evt.type == me.EVENT_TYPES.STARTSACC || ...
+								evt.type == me.EVENT_TYPES.STARTBLINK
 							continue
 						end
-
+						
+						if evt.type == me.EVENT_TYPES.STARTSAMPLES
+							thisTrial.startsampletime = evt.sttime;
+							continue
+						end
+						
 						if evt.type == me.EVENT_TYPES.ENDFIX
 							fixa = [];
-							if isempty(me.trials(tri).fixations)
+							if isempty(thisTrial.fixations)
 								fix = 1;
 							else
-								fix = length(me.trials(tri).fixations)+1;
+								fix = length(thisTrial.fixations)+1;
 							end
-							if me.trials(tri).rt == true
-								rel = me.trials(tri).rtstarttime;
+							if thisTrial.rt == true
+								rel = thisTrial.rtstarttime;
 								fixa.rt = true;
 							else
-								rel = me.trials(tri).sttime;
+								rel = thisTrial.sttime;
 								fixa.rt = false;
 							end
 							fixa.n = eventN;
 							fixa.ppd = me.ppd_;
-							fixa.sttime = double(evt.sttime);
-							fixa.entime = double(evt.entime);
-							fixa.time = fixa.sttime - rel;
+							fixa.sttime = evt.sttime;
+							fixa.entime = evt.entime;
+							fixa.time = double(fixa.sttime) - double(rel);
 							fixa.length = fixa.entime - fixa.sttime;
 							fixa.rel = rel;
 
@@ -1352,34 +1368,34 @@ classdef eyelinkAnalysis < analysisCore
 							fixa.theta = me.rad2ang(fixa.theta);
 
 							if fix == 1
-								me.trials(tri).fixations = fixa;
+								thisTrial.fixations = fixa;
 							else
-								me.trials(tri).fixations(fix) = fixa;
+								thisTrial.fixations(fix) = fixa;
 							end
-							me.trials(tri).nfix = fix;
+							thisTrial.nfix = fix;
 							eventN = eventN + 1;
 							continue
 						end
 
 						if evt.type == me.EVENT_TYPES.ENDSACC % strcmpi(evt.codestring,'ENDSACC')
 							sacc = [];
-							if isempty(me.trials(tri).saccades)
+							if isempty(thisTrial.saccades)
 								nsacc = 1;
 							else
-								nsacc = length(me.trials(tri).saccades)+1;
+								nsacc = length(thisTrial.saccades)+1;
 							end
-							if me.trials(tri).rt == true
-								rel = me.trials(tri).rtstarttime;
+							if thisTrial.rt == true
+								rel = thisTrial.rtstarttime;
 								sacc.rt = true;
 							else
-								rel = me.trials(tri).sttime;
+								rel = thisTrial.sttime;
 								sacc.rt = false;
 							end
 							sacc.n = eventN;
 							sacc.ppd = me.ppd_;
-							sacc.sttime = double(evt.sttime);
-							sacc.entime = double(evt.entime);
-							sacc.time = sacc.sttime - rel;
+							sacc.sttime = evt.sttime;
+							sacc.entime = evt.entime;
+							sacc.time = double(sacc.sttime) - rel;
 							sacc.length = sacc.entime - sacc.sttime;
 							sacc.rel = rel;
 
@@ -1393,106 +1409,107 @@ classdef eyelinkAnalysis < analysisCore
 							else sacc.microSaccade = true; end
 
 							if nsacc == 1
-								me.trials(tri).saccades = sacc;
+								thisTrial.saccades = sacc;
 							else
-								me.trials(tri).saccades(nsacc) = sacc;
+								thisTrial.saccades(nsacc) = sacc;
 							end
-							me.trials(tri).nsacc = nsacc;
+							thisTrial.nsacc = nsacc;
 							eventN = eventN + 1;
 							continue
 						end
 
 						if evt.type ==  me.EVENT_TYPES.ENDSAMPLES %strcmpi(evt.codestring,'ENDSAMPLES')
-							me.trials(tri).endsampletime = double(evt.sttime);
-							idx = me.raw.FSAMPLE.time >= me.trials(tri).startsampletime & ...
-								me.raw.FSAMPLE.time <= me.trials(tri).endsampletime;
+							thisTrial.endsampletime = evt.sttime;
+							idx = me.raw.FSAMPLE.time >= thisTrial.startsampletime & ...
+								me.raw.FSAMPLE.time <= thisTrial.endsampletime;
 
-							me.trials(tri).times = double(me.raw.FSAMPLE.time(idx));
-							me.trials(tri).times = me.trials(tri).times - me.trials(tri).rtstarttime;
+							thisTrial.times = double(me.raw.FSAMPLE.time(idx));
+							thisTrial.times = thisTrial.times - double(thisTrial.rtstarttime);
 							if me.sampleRate == 2000
-								evenidx=fliplr(logical(mod(1:length(me.trials(tri).times),2)));
-								me.trials(tri).times(evenidx) = me.trials(tri).times(evenidx) + 0.5;
+								evenidx=fliplr(logical(mod(1:length(thisTrial.times),2)));
+								thisTrial.times(evenidx) = thisTrial.times(evenidx) + 0.5;
 							end
 
-							me.trials(tri).gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
-							me.trials(tri).gx = me.trials(tri).gx - me.display(1)/2;
+							thisTrial.gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
+							thisTrial.gx = thisTrial.gx - me.display(1)/2;
 
-							me.trials(tri).gy = me.raw.FSAMPLE.gy(eyeUsed, idx);
-							me.trials(tri).gy = me.trials(tri).gy - me.display(2)/2;
+							thisTrial.gy = me.raw.FSAMPLE.gy(eyeUsed, idx);
+							thisTrial.gy = thisTrial.gy - me.display(2)/2;
 
-							me.trials(tri).hx = me.raw.FSAMPLE.hx(eyeUsed, idx);
+							thisTrial.hx = me.raw.FSAMPLE.hx(eyeUsed, idx);
 
-							me.trials(tri).hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
+							thisTrial.hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
 
-							me.trials(tri).pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
+							thisTrial.pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
 							continue
 						end
 
 					else
-						vari = regexpi(evt.message,['^(MSG:)?' me.variableMessageName ' (?<VARI>[0-9\.]+)'],'names');
-						if ~isempty(vari) && ~isempty(vari.VARI)
-							me.trials(tri).variable = str2double(vari.VARI);
-							me.trials(tri).variableMessageName = me.variableMessageName;
-							continue
-						end
-
-						uuid = regexpi(evt.message,'^(MSG:)?UUID (?<UUID>[\w]+)','names');
-						if ~isempty(uuid) && ~isempty(uuid.UUID)
-							me.trials(tri).uuid = uuid.UUID;
-							continue
-						end
 
 						msg = regexpi(evt.message,'^MSG:\s?(?<MSG>[\w]+) *(?<VAL>.*)','names');
 						if ~isempty(msg) && ~isempty(msg.MSG)
-							if isfield(me.trials(tri).messages,msg.MSG)
-								me.trials(tri).messages.(msg.MSG){end+1} = msg.VAL;
-								me.trials(tri).messages.([msg.MSG 'TIME']){end+1} = double(evt.sttime);
+							if isfield(thisTrial.messages,msg.MSG)
+								thisTrial.messages.(msg.MSG){end+1} = msg.VAL;
+								thisTrial.messages.([msg.MSG 'TIME']){end+1} = evt.sttime;
 							else
-								me.trials(tri).messages.(msg.MSG){1} = msg.VAL;
-								me.trials(tri).messages.([msg.MSG 'TIME']){1} = double(evt.sttime);
+								thisTrial.messages.(msg.MSG){1} = msg.VAL;
+								thisTrial.messages.([msg.MSG 'TIME']){1} = evt.sttime;
 							end
 							if strcmpi(msg.MSG, me.rtOverrideMessage)
-								me.trials(tri).rtstarttimeOLD = me.trials(tri).rtstarttime;
-								me.trials(tri).rtstarttime = double(evt.sttime);
-								me.trials(tri).rtoverride = true;
-								if ~isempty(me.trials(tri).fixations)
-									for lf = 1 : length(me.trials(tri).fixations)
-										me.trials(tri).fixations(lf).time = me.trials(tri).fixations(lf).sttime - me.trials(tri).rtstarttime;
-										me.trials(tri).fixations(lf).rt = true;
+								thisTrial.rtstarttimeOLD = thisTrial.rtstarttime;
+								thisTrial.rtstarttime = evt.sttime;
+								thisTrial.rtoverride = true;
+								if ~isempty(thisTrial.fixations)
+									for lf = 1 : length(thisTrial.fixations)
+										thisTrial.fixations(lf).time = thisTrial.fixations(lf).sttime - thisTrial.rtstarttime;
+										thisTrial.fixations(lf).rt = true;
 									end
 								end
-								if ~isempty(me.trials(tri).saccades)
-									for lf = 1 : length(me.trials(tri).saccades)
-										me.trials(tri).saccades(lf).time = me.trials(tri).saccades(lf).sttime - me.trials(tri).rtstarttime;
-										me.trials(tri).saccades(lf).rt = true;
-										me.trials(tri).saccadeTimes(lf) = me.trials(tri).saccades(lf).time;
+								if ~isempty(thisTrial.saccades)
+									for lf = 1 : length(thisTrial.saccades)
+										thisTrial.saccades(lf).time = thisTrial.saccades(lf).sttime - thisTrial.rtstarttime;
+										thisTrial.saccades(lf).rt = true;
+										thisTrial.saccadeTimes(lf) = thisTrial.saccades(lf).time;
 									end
 								end
 							end
+							continue
+						end
+						
+						vari = regexpi(evt.message,['^(MSG:)?' me.variableMessageName ' (?<VARI>[0-9\.]+)'],'names');
+						if ~isempty(vari) && ~isempty(vari.VARI)
+							thisTrial.variable = str2double(vari.VARI);
+							thisTrial.variableMessageName = me.variableMessageName;
+							continue
+						end
+						
+						uuid = regexpi(evt.message,'^(MSG:)?UUID (?<UUID>[\w]+)','names');
+						if ~isempty(uuid) && ~isempty(uuid.UUID)
+							thisTrial.uuid = uuid.UUID;
 							continue
 						end
 
 						synct = regexpi(evt.message,'^SYNCTIME','match');
 						if ~isempty(synct)
-							me.trials(tri).synctime = evt.sttime;
+							thisTrial.synctime = evt.sttime;
 							continue
 						end
 
 						endfix = regexpi(evt.message,['^' me.rtStartMessage],'match');
 						if ~isempty(endfix)
-							me.trials(tri).rtstarttime = double(evt.sttime);
-							me.trials(tri).rt = true;
-							if ~isempty(me.trials(tri).fixations)
-								for lf = 1 : length(me.trials(tri).fixations)
-									me.trials(tri).fixations(lf).time = me.trials(tri).fixations(lf).sttime - me.trials(tri).rtstarttime;
-									me.trials(tri).fixations(lf).rt = true;
+							thisTrial.rtstarttime = evt.sttime;
+							thisTrial.rt = true;
+							if ~isempty(thisTrial.fixations)
+								for lf = 1 : length(thisTrial.fixations)
+									thisTrial.fixations(lf).time = thisTrial.fixations(lf).sttime - thisTrial.rtstarttime;
+									thisTrial.fixations(lf).rt = true;
 								end
 							end
-							if ~isempty(me.trials(tri).saccades)
-								for lf = 1 : length(me.trials(tri).saccades)
-									me.trials(tri).saccades(lf).time = me.trials(tri).saccades(lf).sttime - me.trials(tri).rtstarttime;
-									me.trials(tri).saccades(lf).rt = true;
-									me.trials(tri).saccadeTimes(lf) = me.trials(tri).saccades(lf).time;
+							if ~isempty(thisTrial.saccades)
+								for lf = 1 : length(thisTrial.saccades)
+									thisTrial.saccades(lf).time = thisTrial.saccades(lf).sttime - thisTrial.rtstarttime;
+									thisTrial.saccades(lf).rt = true;
+									thisTrial.saccadeTimes(lf) = thisTrial.saccades(lf).time;
 								end
 							end
 							continue
@@ -1500,95 +1517,102 @@ classdef eyelinkAnalysis < analysisCore
 
 						endrt = regexpi(evt.message,['^' me.rtEndMessage],'match');
 						if ~isempty(endrt)
-							me.trials(tri).rtendtime = double(evt.sttime);
+							thisTrial.rtendtime = evt.sttime;
 							if isfield(me.trials,'rtstarttime')
-								me.trials(tri).rttime = me.trials(tri).rtendtime - me.trials(tri).rtstarttime;
+								thisTrial.rttime = thisTrial.rtendtime - thisTrial.rtstarttime;
 							end
 							continue
 						end
 
 						id = regexpi(evt.message,['^' me.trialEndMessage ' (?<ID>(\-|\+|\d)+)'],'names');
 						if ~isempty(id) && ~isempty(id.ID)
-							me.trials(tri).entime = double(evt.sttime);
-							me.trials(tri).result = str2num(id.ID);
+							thisTrial.entime = evt.sttime;
+							thisTrial.result = str2num(id.ID);
 							sT=[];
-							me.trials(tri).saccadeTimes = [];
-							for ii = 1:me.trials(tri).nsacc
-								t = me.trials(tri).saccades(ii).time;
-								me.trials(tri).saccadeTimes(ii) = t;
-								if isnan(me.trials(tri).firstSaccade) && t > 0 && me.trials(tri).saccades(ii).microSaccade == false
-									me.trials(tri).firstSaccade = t;
-									sT=t;
+							if ~isempty(thisTrial.nsacc)
+								thisTrial.saccadeTimes = zeros(thisTrial.nsacc);
+								for ii = 1:thisTrial.nsacc
+									t = thisTrial.saccades(ii).time;
+									thisTrial.saccadeTimes(ii) = t;
+									if isnan(thisTrial.firstSaccade) && t > 0 && thisTrial.saccades(ii).microSaccade == false
+										thisTrial.firstSaccade = t;
+										sT=t;
+									end
 								end
 							end
-							if any(find(me.trials(tri).result == me.correctValue))
-								me.trials(tri).correct = true;
+							if any(find(thisTrial.result == me.correctValue))
+								thisTrial.correct = true;
 								me.correct.idx = [me.correct.idx tri];
-								me.trialList(tri) = me.trials(tri).variable;
+								me.trialList(tri) = thisTrial.variable;
 								if ~isempty(sT) && sT > 0
 									me.correct.saccTimes = [me.correct.saccTimes sT];
 								else
 									me.correct.saccTimes = [me.correct.saccTimes NaN];
 								end
-								me.trials(tri).correctedIndex = tri2;
+								thisTrial.correctedIndex = tri2;
 								tri2 = tri2 + 1;
-							elseif any(find(me.trials(tri).result == me.breakFixValue))
-								me.trials(tri).breakFix = true;
+							elseif any(find(thisTrial.result == me.breakFixValue))
+								thisTrial.breakFix = true;
 								me.breakFix.idx = [me.breakFix.idx tri];
-								me.trialList(tri) = -me.trials(tri).variable;
+								me.trialList(tri) = -thisTrial.variable;
 								if ~isempty(sT) && sT > 0
 									me.breakFix.saccTimes = [me.breakFix.saccTimes sT];
 								else
 									me.breakFix.saccTimes = [me.breakFix.saccTimes NaN];
 								end
-								me.trials(tri).correctedIndex = [];
-							elseif any(find(me.trials(tri).result == me.incorrectValue))
-								me.trials(tri).incorrect = true;
+								thisTrial.correctedIndex = [];
+							elseif any(find(thisTrial.result == me.incorrectValue))
+								thisTrial.incorrect = true;
 								me.incorrect.idx = [me.incorrect.idx tri];
-								me.trialList(tri) = -me.trials(tri).variable;
+								me.trialList(tri) = -thisTrial.variable;
 								if ~isempty(sT) && sT > 0
 									me.incorrect.saccTimes = [me.incorrect.saccTimes sT];
 								else
 									me.incorrect.saccTimes = [me.incorrect.saccTimes NaN];
 								end
-								me.trials(tri).correctedIndex = [];
+								thisTrial.correctedIndex = [];
 							else
-								me.trials(tri).unknown = true;
+								thisTrial.unknown = true;
 								me.unknown.idx = [me.unknown.idx tri];
-								me.trialList(tri) = -me.trials(tri).variable;
+								me.trialList(tri) = -thisTrial.variable;
 								if ~isempty(sT) && sT > 0
 									me.unknown.saccTimes = [me.unknown.saccTimes sT];
 								else
 									me.unknown.saccTimes = [me.unknown.saccTimes NaN];
 								end
-								me.trials(tri).correctedIndex = [];
+								thisTrial.correctedIndex = [];
 							end
-							me.trials(tri).deltaT = me.trials(tri).entime - me.trials(tri).sttime;
+							thisTrial.deltaT = thisTrial.entime - thisTrial.sttime;
 							%just in case END_TRIAL occurs before
 							%EVENT_TYPES.ENDSAMPLES, save the eyedata
-							if isempty(me.trials(tri).times)
-								me.trials(tri).endsampletime = me.trials(tri).entime;
-								idx = me.raw.FSAMPLE.time >= me.trials(tri).startsampletime & ...
-									me.raw.FSAMPLE.time <= me.trials(tri).endsampletime;
+							if isempty(thisTrial.times)
+								thisTrial.endsampletime = thisTrial.entime;
+								idx = me.raw.FSAMPLE.time >= thisTrial.startsampletime & ...
+									me.raw.FSAMPLE.time <= thisTrial.endsampletime;
 
-								me.trials(tri).times = double(me.raw.FSAMPLE.time(idx));
-								me.trials(tri).times = me.trials(tri).times - me.trials(tri).rtstarttime;
+								thisTrial.times = double(me.raw.FSAMPLE.time(idx));
+								thisTrial.times = thisTrial.times - double(thisTrial.rtstarttime);
 								if me.sampleRate == 2000
-									evenidx=fliplr(logical(mod(1:length(me.trials(tri).times),2)));
-									me.trials(tri).times(evenidx) = me.trials(tri).times(evenidx) + 0.5;
+									evenidx=fliplr(logical(mod(1:length(thisTrial.times),2)));
+									thisTrial.times(evenidx) = thisTrial.times(evenidx) + 0.5;
 								end
 
-								me.trials(tri).gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
-								me.trials(tri).gx = me.trials(tri).gx - me.display(1)/2;
+								thisTrial.gx = me.raw.FSAMPLE.gx(eyeUsed, idx);
+								thisTrial.gx = thisTrial.gx - me.display(1)/2;
 
-								me.trials(tri).gy = me.raw.FSAMPLE.gy(eyeUsed, idx);
-								me.trials(tri).gy = me.trials(tri).gy - me.display(2)/2;
+								thisTrial.gy = me.raw.FSAMPLE.gy(eyeUsed, idx);
+								thisTrial.gy = thisTrial.gy - me.display(2)/2;
 
-								me.trials(tri).hx = me.raw.FSAMPLE.hx(eyeUsed, idx);
+								thisTrial.hx = me.raw.FSAMPLE.hx(eyeUsed, idx);
 
-								me.trials(tri).hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
+								thisTrial.hy = me.raw.FSAMPLE.hy(eyeUsed, idx);
 
-								me.trials(tri).pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
+								thisTrial.pa = me.raw.FSAMPLE.pa(eyeUsed, idx);
+							end
+							if tri == 1
+								me.trials = thisTrial;
+							else
+								me.trials(tri) = thisTrial;
 							end
 							isTrial = false;
 							tri = tri + 1;
@@ -1601,7 +1625,7 @@ classdef eyelinkAnalysis < analysisCore
 			pb(i);
 			
 			me.otherinfo = this;
-
+			
 			%prune the end trial if invalid
 			if ~me.trials(end).correct && ~me.trials(end).breakFix && ~me.trials(end).incorrect
 				me.trials(end) = [];
@@ -1635,6 +1659,8 @@ classdef eyelinkAnalysis < analysisCore
 			me.vars(1).variable = [];
 			me.vars(1).idx = [];
 			me.vars(1).correctedidx = [];
+			me.vars(1).correct = [];
+			me.vars(1).result = [];
 			me.vars(1).trial = [];
 			me.vars(1).sTime = [];
 			me.vars(1).sT = [];
@@ -1657,6 +1683,8 @@ classdef eyelinkAnalysis < analysisCore
 				me.vars(idx).varidx = [me.vars(idx).varidx idx];
 				me.vars(idx).variable = [me.vars(idx).variable var];
 				me.vars(idx).idx = [me.vars(idx).idx i];
+				me.vars(idx).correct = [me.vars(idx).correct trial.correct];
+				me.vars(idx).result = [me.vars(idx).result trial.result];
 				me.vars(idx).correctedidx = [me.vars(idx).correctedidx i];
 				me.vars(idx).trial = [me.vars(idx).trial; trial];
 				me.vars(idx).uuid = [me.vars(idx).uuid, trial.uuid];
