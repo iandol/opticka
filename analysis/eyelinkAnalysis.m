@@ -1258,7 +1258,7 @@ classdef eyelinkAnalysis < analysisCore
 			
 			FEVENTN = length(me.raw.FEVENT);
 			pb = textprogressbar(FEVENTN, 'startmsg', 'Parsing Eyelink Events: ',...
-				'showactualnum', true,'updatestep', round(FEVENTN/500));
+				'showactualnum', true,'updatestep', round(FEVENTN/(FEVENTN/20)));
 			for i = 1:FEVENTN
 				isMessage = false;
 				evt = me.raw.FEVENT(i);
