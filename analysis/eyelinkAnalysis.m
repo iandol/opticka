@@ -314,7 +314,7 @@ classdef eyelinkAnalysis < analysisCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function plot(me,select,type,seperateVars,name)
+		function handle = plot(me,select,type,seperateVars,name)
 			% plot(me,select,type,seperateVars,name)
 			if ~exist('select','var') || ~isnumeric(select); select = []; end
 			if ~exist('type','var') || isempty(type); type = 'correct'; end
@@ -357,10 +357,10 @@ classdef eyelinkAnalysis < analysisCore
 				end
 				return
 			end
-			h1=figure;
+			handle=figure;
 			set(gcf,'Color',[1 1 1],'Name',name);
 			figpos(1,[0.8 0.8],1,'%');
-			p = panel(h1);
+			p = panel(handle);
 			p.fontsize = 10;
 			p.margin = [10 10 10 20]; %left bottom right top
 			p.pack('v',{2/3, []});
