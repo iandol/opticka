@@ -55,14 +55,15 @@ classdef screenManager < optickaCore
 		screenYOffset double = 0
 		%> use OpenGL blending mode
 		blend logical = false
-		%> GL_ONE %src mode
+		%> OpenGL blending source mode
 		srcMode char = 'GL_SRC_ALPHA'
-		%> GL_ONE % dst mode
+		%> OpenGL blending dst mode
 		dstMode char = 'GL_ONE_MINUS_SRC_ALPHA'
-		%> show a white square in the top-left corner to trigger a
+		%> show a white square in the top-right corner to trigger a
 		%> photodiode attached to screen. This is only displayed when the
 		%> stimulus is shown, not during the blank and can therefore be used
-		%> for timing validation
+		%> for timing validation. For statemachine tasks you also need to
+		%> pass in the drawing command for this to take effect.
 		photoDiode logical = false
 		%> gamma correction info saved as a calibrateLuminance object
 		gammaTable calibrateLuminance
@@ -70,23 +71,22 @@ classdef screenManager < optickaCore
 		movieSettings = []
 		%> useful screen info and initial gamma tables and the like
 		screenVals struct
-		%> verbosity
+		%> verbose output?
 		verbose = false
 		%> level of PTB verbosity, set to 10 for full PTB logging
 		verbosityLevel double = 4
-		%> Use retina resolution natively
+		%> Use retina resolution natively (worse performance but double resolution)
 		useRetina logical = false
 		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc);
 		%> Each N should be a different display
 		screenToHead = []
-		%> framerate for Display++ (120Hz or 100Hz, empty uses the default OS setup)
+		%> force framerate for Display++ (120Hz or 100Hz, empty uses the default OS setup)
 		displayPPRefresh double = []
 	end
 	
 	properties (Hidden = true)
-		%> for some development macOS machines we have to disable sync tests,
-		%> but we hide this as we should remember this is for development
-		%> ONLY!
+		%> for some development macOS and windows machines we have to disable sync tests,
+		%> but we hide this as we should remember this is for development ONLY!
 		disableSyncTests logical = false
 	end
 	
@@ -967,32 +967,6 @@ classdef screenManager < optickaCore
 			Screen('FillRect',me.win,me.backgroundColour,[]);
 		end
 		
-		
-		% ===================================================================
-		%> @brief Identify screens
-		%>
-		%> @param
-		%> @return
-		% ===================================================================
-		function identifyScreens(me)
-			screens = Screen('Screens');
-			olds = Screen('Preference', 'SkipSyncTests', 2);
-			PsychDefaultSetup(2)
-			wins = [];
-			a = 1;
-			for i = screens
-				wins(a) = PsychImaging('OpenWindow', i, 0.5, [0 0 100 100]);
-				Screen('DrawText',wins(a),['W:' num2str(i)], 0, 0);
-				Screen('Flip',wins(a));
-				a = a + 1;
-			end
-			WaitSecs(2)
-			for i = 1:length(wins)
-				Screen('Close',wins(i));
-			end
-			Screen('Preference', 'SkipSyncTests', olds);
-		end
-		
 		% ===================================================================
 		%> @brief return mouse position in degrees
 		%>
@@ -1162,6 +1136,33 @@ classdef screenManager < optickaCore
 			screenManager.bitsCheckOpen([],false)
 			BitsPlusImagingPipelineTest
 			BitsPlusIdentityClutTest
+		end
+		
+		% ===================================================================
+		%> @brief Identify screens
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function identifyScreens()
+			screens = Screen('Screens');
+			olds = Screen('Preference', 'SkipSyncTests', 2);
+			oldv = Screen('Preference', 'VisualDebugLevel', 0);
+			wins = [];
+			a = 1;
+			for i = screens
+				wins(a) = PsychImaging('OpenWindow', i, 0.5, [0 0 100 100]);
+				os=Screen('TextSize', wins(a),  50)
+				Screen('DrawText',wins(a),['W:' num2str(i)], 5, 30,[1 0 1]);
+				Screen('Flip',wins(a));
+				a = a + 1;
+			end
+			WaitSecs(2)
+			for i = 1:length(wins)
+				Screen('Close',wins(i));
+			end
+			Screen('Preference', 'SkipSyncTests', olds);
+			Screen('Preference', 'VisualDebugLevel', oldv);
 		end
 		
 		% ===================================================================
