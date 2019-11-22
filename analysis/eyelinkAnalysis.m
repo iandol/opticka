@@ -66,6 +66,7 @@ classdef eyelinkAnalysis < analysisCore
 		yCenter double								= 512
 		%>57.3 bug override
 		override573									= false
+		downSample logical							= true
 	end
 
 	properties (SetAccess = private, GetAccess = public)
@@ -359,7 +360,7 @@ classdef eyelinkAnalysis < analysisCore
 			end
 			handle=figure;
 			set(gcf,'Color',[1 1 1],'Name',name);
-			figpos(1,[0.8 0.8],1,'%');
+			figpos(1,[0.6 0.9],1,'%');
 			p = panel(handle);
 			p.fontsize = 10;
 			p.margin = [10 10 10 20]; %left bottom right top
@@ -368,7 +369,7 @@ classdef eyelinkAnalysis < analysisCore
 			q.margin = [20 20 10 25]; %left bottom right top
 			q.pack(2,2);
 			qq = p(2);
-			qq.margin = [20 20 10 25]; %left bottom right top
+			qq.margin = [50 20 10 35]; %left bottom right top
 			qq.pack(1,2);
 			a = 1;
 			stdex = [];
@@ -390,7 +391,7 @@ classdef eyelinkAnalysis < analysisCore
 			end
 
 			if isempty(select)
-				thisVarName = 'ALL VARS';
+				thisVarName = 'ALL';
 			elseif length(select) > 1
 				thisVarName = 'SELECTION';
 			else
@@ -402,7 +403,7 @@ classdef eyelinkAnalysis < analysisCore
 			if ~isempty(me.TOI)
 				t1 = me.TOI(1); t2 = me.TOI(2);
 			else
-				t1 = 0; t2 = 0.1;
+				t1 = me.baselineWindow(1); t2 = me.baselineWindow(2);
 			end
 
 			for i = idx
@@ -437,18 +438,27 @@ classdef eyelinkAnalysis < analysisCore
 				tp = t(ip);
 				xa = thisTrial.gx / me.ppd_;
 				ya = thisTrial.gy / me.ppd_;
-				lim = 50; %max degrees in data
+				lim = 30; %max degrees in data
 				xa(xa < -lim) = -lim; xa(xa > lim) = lim; 
 				ya(ya < -lim) = -lim; ya(ya > lim) = lim;
 				pupilAll = thisTrial.pa;
 				
-				x = xa(ix);
-				y = ya(ix);
-				pupilMeasure = pupilAll(ix);
+				%x = xa(ix);
+				%y = ya(ix);
+				%pupilMeasure = pupilAll(ix);
 				
 				xp = xa(ip);
 				yp = ya(ip);
 				pupilPlot = pupilAll(ip);
+				
+				if me.downSample && me.sampleRate > 500
+					ds = floor(me.sampleRate/200);
+					idx = circshift(logical(mod(1:length(tp), ds)), -(ds-1)); %downsample every N as less points to draw
+					tp(idx) = [];
+					xp(idx) = [];
+					yp(idx) = [];
+					pupilPlot(idx) = [];
+				end
 
 				q(1,1).select();
 				q(1,1).hold('on')
@@ -481,15 +491,23 @@ classdef eyelinkAnalysis < analysisCore
 				qq(1,1).hold('on')
 				for fix=1:length(thisTrial.fixations)
 					f=thisTrial.fixations(fix);
-					plot3([f.time/1e3 f.time/1e3+f.length/1e3],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
+					ti = f.time/1e3; le = double(f.length)/1e3;
+					if ti >= me.plotRange(1) && ti <= me.plotRange(2)
+						plot3([ti ti+le],[f.gstx f.genx],[f.gsty f.geny],'k-o',...
 						'LineWidth',1,'MarkerSize',5,'MarkerEdgeColor',[0 0 0],...
-						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
+						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],...
+						'ButtonDownFcn', @clickMe)
+					end
 				end
 				for sac=1:length(thisTrial.saccades)
 					s=thisTrial.saccades(sac);
-					plot3([s.time/1e3 s.time/1e3+s.length/1e3],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
+					ti = f.time/1e3; le = double(f.length)/1e3;
+					if ti >= me.plotRange(1) && ti <= me.plotRange(2)
+						plot3([ti ti+le],[s.gstx s.genx],[s.gsty s.geny],'r-o',...
 						'LineWidth',1.5,'MarkerSize',5,'MarkerEdgeColor',[1 0 0],...
-						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],'ButtonDownFcn', @clickMe)
+						'MarkerFaceColor',c,'UserData',[thisTrial.idx thisTrial.correctedIndex thisTrial.variable],...
+						'ButtonDownFcn', @clickMe)
+					end
 				end
 				
 				qq(1,2).select();
@@ -530,6 +548,7 @@ classdef eyelinkAnalysis < analysisCore
 			q(1,1).select();
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			ah.DataAspectRatio = [1 1 1];
+			axis equal;
 			axis ij;
 			grid on;
 			box on;
@@ -544,11 +563,11 @@ classdef eyelinkAnalysis < analysisCore
 			box on;
 			axis tight;
 			if maxv > 10; maxv = 10; end
-			axis([me.plotRange(1) me.plotRange(2) -0.2 maxv])
-			ti=sprintf('ABS Mean/SD %g - %g s: X=%.2g / %.2g | Y=%.2g / %.2g', t1,t2,...
+			axis([me.plotRange(1) me.plotRange(2) -0.2 maxv*2])
+			ti=sprintf('ABS Mean/SD %.2f - %.2f s: X=%.2f / %.2f | Y=%.2f / %.2f', t1,t2,...
 				mean(abs(meanx)), mean(abs(stdex)), ...
 				mean(abs(meany)), mean(abs(stdey)));
-			ti2 = sprintf('ABS Median/SD %g - %g s: X=%.2g / %.2g | Y=%.2g / %.2g', t1,t2,median(abs(medx)), median(abs(stdex)), ...
+			ti2 = sprintf('ABS Median/SD %.2f - %.2f s: X=%.2f / %.2f | Y=%.2f / %.2f', t1,t2,median(abs(medx)), median(abs(stdex)), ...
 				median(abs(medy)), median(abs(stdey)));
 			h=title(sprintf('X & Y(dot) Position vs. Time\n%s\n%s', ti,ti2));
 			set(h,'BackgroundColor',[1 1 1]);
@@ -556,18 +575,19 @@ classdef eyelinkAnalysis < analysisCore
 			ylabel(q(1,2),'Degrees');
 
 			qq(1,1).select();
-			qq(1,1).margin = [30 20 10 35]; %left bottom right top
+			qq(1,1).margin = [50 20 10 35]; %left bottom right top
 			ah = gca; ah.ButtonDownFcn = @spawnMe;
 			grid on;
 			box on;
 			axis([me.plotRange(1) me.plotRange(2) -10 10 -10 10]);
-			view([35 35]);
+			view([35 20]);
+			set(gca,'PlotBoxAspectRatio',[2 1 1])
 			xlabel(qq(1,1),'Time (ms)');
 			ylabel(qq(1,1),'X Position');
 			zlabel(qq(1,1),'Y Position');
 			[mn,er] = me.stderr(sacc,'SD');
 			md = nanmedian(sacc);
-			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2g / %.2g � %.2g SD [%.2g <> %.2g]',...
+			h=title(sprintf('%s %s: Saccades (red) & Fixation (black) | First Saccade mean/median: %.2f / %.2f +- %.2f SD [%.2f <> %.2f]',...
 				thisVarName,upper(type),mn,md,er,min(sacc),max(sacc)));
 			set(h,'BackgroundColor',[1 1 1]);
 			
@@ -586,8 +606,9 @@ classdef eyelinkAnalysis < analysisCore
 			grid on;
 			box on;
 			axis tight;
+			axis square;
 			axis([-1 1 -1 1])
-			h=title(sprintf('X & Y %g-%gs MD/MN/STD: \nX : %.2g / %.2g / %.2g | Y : %.2g / %.2g / %.2g', ...
+			h=title(sprintf('X & Y %.2f-%.2fs MD/MN/STD: \nX : %.2f / %.2f / %.2f | Y : %.2f / %.2f / %.2f', ...
 				t1,t2,mean(meanx), median(medx),mean(stdex),mean(meany),median(medy),mean(stdey)));
 			set(h,'BackgroundColor',[1 1 1]);
 			xlabel(q(2,1),'X Degrees');
@@ -600,8 +621,8 @@ classdef eyelinkAnalysis < analysisCore
 			axis tight;
 			axis([-1 1 -1 1]);
 			%axis square
-			view(47,15);
-			title(sprintf('%s %s Mean X & Y Pos %g-%g-s over time',thisVarName,upper(type),t1,t2));
+			view([50 30]);
+			title(sprintf('%s %s Mean X & Y Pos %.2f-%.2fs over time',thisVarName,upper(type),t1,t2));
 			xlabel(q(2,2),'X Degrees');
 			ylabel(q(2,2),'Y Degrees');
 			zlabel(q(2,2),'Trial');
@@ -1030,6 +1051,10 @@ classdef eyelinkAnalysis < analysisCore
 			
 			me.raw = [];
 			
+		end
+		
+		function reparseVars(me)
+			me.parseAsVars;
 		end
 
 	end%-------------------------END PUBLIC METHODS--------------------------------%
@@ -1461,13 +1486,15 @@ classdef eyelinkAnalysis < analysisCore
 								thisTrial.rtoverride = true;
 								if ~isempty(thisTrial.fixations)
 									for lf = 1 : length(thisTrial.fixations)
-										thisTrial.fixations(lf).time = thisTrial.fixations(lf).sttime - thisTrial.rtstarttime;
+										thisTrial.fixations(lf).rel = thisTrial.rtstarttime;
+										thisTrial.fixations(lf).time = double(thisTrial.fixations(lf).sttime) - double(thisTrial.rtstarttime);
 										thisTrial.fixations(lf).rt = true;
 									end
 								end
 								if ~isempty(thisTrial.saccades)
 									for lf = 1 : length(thisTrial.saccades)
-										thisTrial.saccades(lf).time = thisTrial.saccades(lf).sttime - thisTrial.rtstarttime;
+										thisTrial.saccades(lf).rel = thisTrial.rtstarttime;
+										thisTrial.saccades(lf).time = double(thisTrial.saccades(lf).sttime) - double(thisTrial.rtstarttime);
 										thisTrial.saccades(lf).rt = true;
 										thisTrial.saccadeTimes(lf) = thisTrial.saccades(lf).time;
 									end
@@ -1501,13 +1528,15 @@ classdef eyelinkAnalysis < analysisCore
 							thisTrial.rt = true;
 							if ~isempty(thisTrial.fixations)
 								for lf = 1 : length(thisTrial.fixations)
-									thisTrial.fixations(lf).time = thisTrial.fixations(lf).sttime - thisTrial.rtstarttime;
+									thisTrial.fixations(lf).rel = thisTrial.rtstarttime;
+									thisTrial.fixations(lf).time = double(thisTrial.fixations(lf).sttime) - double(thisTrial.rtstarttime);
 									thisTrial.fixations(lf).rt = true;
 								end
 							end
 							if ~isempty(thisTrial.saccades)
 								for lf = 1 : length(thisTrial.saccades)
-									thisTrial.saccades(lf).time = thisTrial.saccades(lf).sttime - thisTrial.rtstarttime;
+									thisTrial.saccades(lf).rel = thisTrial.rtstarttime;
+									thisTrial.saccades(lf).time = double(thisTrial.saccades(lf).sttime) - double(thisTrial.rtstarttime);
 									thisTrial.saccades(lf).rt = true;
 									thisTrial.saccadeTimes(lf) = thisTrial.saccades(lf).time;
 								end
@@ -1658,6 +1687,7 @@ classdef eyelinkAnalysis < analysisCore
 			me.vars(1).varidx = [];
 			me.vars(1).variable = [];
 			me.vars(1).idx = [];
+			me.vars(1).idxcorrect = [];
 			me.vars(1).correctedidx = [];
 			me.vars(1).correct = [];
 			me.vars(1).result = [];
@@ -1684,6 +1714,9 @@ classdef eyelinkAnalysis < analysisCore
 				me.vars(idx).variable = [me.vars(idx).variable var];
 				me.vars(idx).idx = [me.vars(idx).idx i];
 				me.vars(idx).correct = [me.vars(idx).correct trial.correct];
+				if trial.correct > 0
+					me.vars(idx).idxcorrect = [me.vars(idx).idxcorrect i];
+				end
 				me.vars(idx).result = [me.vars(idx).result trial.result];
 				me.vars(idx).correctedidx = [me.vars(idx).correctedidx i];
 				me.vars(idx).trial = [me.vars(idx).trial; trial];
