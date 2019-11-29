@@ -113,6 +113,8 @@ classdef calibrateLuminance < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		saveName
+		savePath
 		isRunAll = false
 		isTested = false
 		isAnalyzed = false
@@ -219,11 +221,13 @@ classdef calibrateLuminance < handle
 			obj.isRunAll = true;
 			resetAll(obj);
 			addComments(obj);
+			[obj.saveName, obj.savePath] = uiputfile('*.mat');
 			calibrate(obj);
 			run(obj);
 			analyze(obj);
 			WaitSecs(2);
 			test(obj);
+			obj.save;
 			obj.isRunAll = false;
 		end
 		
@@ -884,6 +888,24 @@ classdef calibrateLuminance < handle
 			fprintf(VCP,['*CONTR:LASER ', num2str(state), char(13)]);
 			error=fread(VCP,1);
 			if doClose; fclose(VCP); end
+		end
+		
+		function fullCalibration(obj)
+			obj.close;
+			obj.nMeasures = 30;
+			obj.bitDepth = 'EnableBits++Color++Output';
+			obj.useSpectroCal2 = true;
+			obj.testColour = true;
+			obj.correctColour = true;
+			obj.runAll;
+		end
+		
+		function save(obj)
+			c = obj;
+			if isempty(obj.saveName)
+				[obj.saveName, obj.savePath] = uiputfile('*.mat');
+			end
+			save([obj.savePath filesep obj.saveName],'c');			
 		end
 		
 		%===============reset======================%

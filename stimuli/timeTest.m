@@ -286,7 +286,7 @@ try
 	
 	% Open double-buffered window: Optionally enable stereo output if
 	% stereo == 1.
-	[w,winRect]=PsychImaging('OpenWindow',screenNumber, 0.5,[],[],[], stereo,[]);
+	[w, winRect]=PsychImaging('OpenWindow',screenNumber, 0.5,[],[],[], stereo,[]);
 	[oldSrc,oldDst]=Screen('BlendFunction', w, 'GL_ONE','GL_ZERO');
 	fprintf('\n---> Previous OpenGL blending was %s | %s\n', oldSrc, oldDst);
 	fprintf('---> Initial OpenGL blending set to %s | %s\n', 'GL_ONE','GL_ZERO');
@@ -377,10 +377,10 @@ try
 		Screen('FillRect', w, col, [pos+20 pos+20 pos+400 pos+400]);
 		
 		% toggle photodiode square every 10 frames
-		f = mod(i, 10);
+		f = mod(i, 6);
 		if f == 0; ptoggle = ~ptoggle;end
 		if ptoggle; clog(i) = 1; else; clog(i) = 0; end
-		Screen('FillRect', w, clog(i), [winRect(3)-45 0 winRect(3) 45]);
+		Screen('FillRect', w, clog(i), [winRect(3)-50 0 winRect(3) 50]);
 		
 		if (stereo>0)
 			% Show something for the right eye as well in stereo mode:
@@ -593,6 +593,6 @@ catch %#ok<CTCH>
 	% Disable realtime-priority in case of errors.
 	Priority(0);
 	psychrethrow(psychlasterror);
-end %try..catch..
+end %try.catch.
 
 return

@@ -80,7 +80,7 @@ classdef plusplusManager < optickaCore
 					me.silentMode = false;
 					me.strobeShift_ = me.strobeShift; % cache value
 					if isempty(me.sM) || me.sM.isOpen == false
-						warning('SCREEN is CLOSED, no commands will work');
+						warning('SCREEN is CLOSED, no I/O commands will work');
 					end
 					if ~isempty(me.sM) && ~regexpi(me.sM.bitDepth,'^EnableBits')
 						warning('SCREEN is not set to use Bits++ mode, I/O WILL FAIL!');
