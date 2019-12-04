@@ -234,7 +234,7 @@ classdef arduinoManager < optickaCore
 				'Name', 'arduinoManager GUI', ...
 				'MenuBar', 'none', ...
 				'Color', bgcolor, ...
-				'Position',[0 0 213 140],...
+				'Position',[0 0 210 140],...
 				'NumberTitle', 'off');
 			
 			handles.value = uicontrol('Style','edit',...
@@ -260,7 +260,7 @@ classdef arduinoManager < optickaCore
 				'String',2,...
 				'FontName',MonoFont,...
 				'FontSize', 12,...
-				'Position',[100 115 95 25],...
+				'Position',[110 115 95 25],...
 				'BackgroundColor',bgcoloredit);
 			
 			handles.t1 = uicontrol('Style','text',...
@@ -285,14 +285,24 @@ classdef arduinoManager < optickaCore
 				'Callback',@doReward,...
 				'FontName',SansFont,...
 				'ForegroundColor',[1 0 0],...
-				'FontSize',20,...
-				'Position',[5 5 195 60],...
+				'FontSize',18,...
+				'Position',[5 5 115 60],...
 				'String','REWARD!');
+			
+			handles.loopButton = uicontrol('Style','pushbutton',...
+				'Parent',handles.parent,...
+				'Tag','goButtosn',...
+				'Callback',@doLoop,...
+				'FontName',SansFont,...
+				'ForegroundColor',[1 0.5 0],...
+				'FontSize',18,...
+				'Position',[120 5 80 60],...
+				'String','Loop!');
 			
 			me.handles = handles;
 			
 			function doReward(varargin)
-				if me.silentMode;disp('Not open!');return;end
+				if me.silentMode || ~me.isOpen; disp('Not open!'); return; end
 				val = str2num(get(me.handles.value,'String'));
 				pin = str2num(get(me.handles.pin,'String'));
 				method = get(me.handles.menu,'Value');
@@ -305,6 +315,51 @@ classdef arduinoManager < optickaCore
 						me.timedDoubleTTL(pin,val);
 					end
 				end
+			end
+			
+			function doLoop(varargin)
+				if me.silentMode || ~me.isOpen; disp('Not open!'); return; end
+				fprintf('===>>> Entering Loop mode, press 0 to exit!!!\n');
+				set(handles.loopButton,'ForegroundColor',[0.2 0.7 0]);drawnow;
+				pin = str2num(get(me.handles.pin,'String'));
+				nl = [];
+				for nn = 0:9
+					nl = [nl KbName(num2str(nn))];
+				end
+				oldkeys=RestrictKeysForKbCheck(nl);
+				doLoop = true;
+				ListenChar(2);
+				while doLoop
+					[~, keyCode] = KbWait(-1);
+					if any(keyCode)
+						rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end
+						switch lower(rchar)
+							case {'0'}
+								doLoop = false;
+							case{'1'}
+								me.timedTTL(pin,100);
+							case{'2'}
+								me.timedTTL(pin,200);
+							case{'3'}
+								me.timedTTL(pin,300);
+							case{'4'}
+								me.timedTTL(pin,400);
+							case{'5'}
+								me.timedTTL(pin,500);
+							case{'6'}
+								me.timedTTL(pin,600);
+							case{'7'}
+								me.timedTTL(pin,700);
+							case{'8'}
+								me.timedTTL(pin,800);
+						end
+					end
+					WaitSecs(0.2);
+				end
+				ListenChar(0);
+				fprintf('===>>> Exit pressed!!!\n');
+				RestrictKeysForKbCheck(oldkeys);
+				set(handles.loopButton,'ForegroundColor',[1 0.5 0]);
 			end
 		end
 		
