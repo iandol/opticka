@@ -75,6 +75,11 @@ classdef calibrateLuminance < handle
 		runNow logical = false
 	end
 	
+	properties (Hidden = true)
+		%keep spectrocal open 
+		keepOpen logical = false
+	end
+	
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		finalCLUT = []
@@ -858,38 +863,56 @@ classdef calibrateLuminance < handle
 		function [x, y, Y, wavelengths, spectrum] = getSpectroCALValues(obj)
 			%[CIEXY, ~, Luminance, Lambda, Radiance, errorString] = SpectroCALMakeSPDMeasurement(obj.port, ...
 			%	obj.wavelengths(1), obj.wavelengths(end), obj.wavelengths(2)-obj.wavelengths(1));
-			if ~isa(obj.spCAL,'serial') || isempty(obj.spCAL)
+			if ~isa(obj.spCAL,'serial') || isempty(obj.spCAL) || strcmp(obj.spCAL.Status,'closed')
 				doClose = true;
-				obj.openSpectroCAL()
+				obj.openSpectroCAL();
 			else
 				doClose = false;
 			end
 			[x, y, Y, wavelengths, spectrum] = obj.takeSpectroCALMeasurement();
-			[Radiance, WL, XYZ] = SpectroCALtakeMeas(obj.spCAL);
+			%[Radiance, WL, XYZ] = SpectroCALtakeMeas(obj.spCAL);
 			obj.thisx = x;
 			obj.thisy = y;
 			obj.thisY = Y;
 			obj.thisWavelengths = wavelengths;
 			obj.thisSpectrum = spectrum;
-			if doClose; obj.closeSpectroCAL(); end
+			if doClose && ~obj.keepOpen; obj.closeSpectroCAL(); end
 		end
 		
 		%===============reset======================%
 		function spectroCalLaser(obj,state)
 			if ~exist('state','var') || isempty(state); state = false; end
-			if ~isa(obj.spCAL,'serial') || isempty(obj.spCAL)
+			if ~isa(obj.spCAL,'serial') || isempty(obj.spCAL) || strcmp(obj.spCAL.Status,'closed')
 				doClose = true;
-				VCP = serial(obj.port, 'BaudRate', 921600,'DataBits', 8, 'StopBits', 1, 'FlowControl', 'none', 'Parity', 'none', 'Terminator', 'CR','Timeout', 5, 'InputBufferSize', 16000);
+				obj.openSpectroCAL();
 			else
 				doClose = false;
-				VCP = obj.spCAL;
-            end
-            try fopen(VCP); catch; warning('Port already open'); end
-			fprintf(VCP,['*CONTR:LASER ', num2str(state), char(13)]);
-			error=fread(VCP,1);
-			if doClose; fclose(VCP); end
+			end
+			fprintf(obj.spCAL,['*CONTR:LASER ', num2str(state), char(13)]);
+			error=fread(obj.spCAL,1);
+			if doClose && ~obj.keepOpen; obj.closeSpectroCAL(); end
 		end
 		
+		%===============reset======================%
+		function Phosphors = makeSPD(obj)
+			if obj.isTested && ~isempty(obj.spectrumTest)
+				Phosphors.wavelength = obj.wavelengths';
+				nm = {'Red','Green','Blue'};
+				for i = 1:3
+					Phosphors.(nm{i}) = obj.spectrumTest(i+1).in(:,end);
+				end
+				figure;
+				hold on
+				plot(Phosphors.wavelength, Phosphors.Red, 'r')
+				plot(Phosphors.wavelength, Phosphors.Green, 'g')
+				plot(Phosphors.wavelength, Phosphors.Blue, 'b')
+				xlabel('Wavelength');box on;grid on;
+				title(['SPD for ' obj.comments])
+				fprintf('Phosphors SPD exported!\n');
+			end
+		end
+		
+		%===============reset======================%
 		function fullCalibration(obj)
 			obj.close;
 			obj.nMeasures = 30;
@@ -900,12 +923,14 @@ classdef calibrateLuminance < handle
 			obj.runAll;
 		end
 		
+		%===============reset======================%
 		function save(obj)
 			c = obj;
 			if isempty(obj.saveName)
 				[obj.saveName, obj.savePath] = uiputfile('*.mat');
 			end
-			save([obj.savePath filesep obj.saveName],'c');			
+			save([obj.savePath filesep obj.saveName],'c');
+			clear c;
 		end
 		
 		%===============reset======================%
@@ -915,6 +940,22 @@ classdef calibrateLuminance < handle
 			obj.closeSpectroCAL();
 		end
 		
+		%===============init======================%
+		function openSpectroCAL(obj)
+			if ~isa(obj.spCAL,'serial')
+				obj.spCAL = serial(obj.port, 'BaudRate', 921600,'DataBits', 8, 'StopBits', 1, 'FlowControl', 'none', 'Parity', 'none', 'Terminator', 'CR','Timeout', 240, 'InputBufferSize', 16000);
+			end
+			try fopen(obj.spCAL);catch;warning('Port Already Open...');end
+			obj.configureSpectroCAL();
+		end
+		
+		%===============init======================%
+		function closeSpectroCAL(obj)
+			if isa(obj.spCAL,'serial') && strcmp(obj.spCAL.Status,'open')
+				try fclose(obj.spCAL); end
+				obj.spCAL = [];
+			end
+		end
 	end
 	
 	%=======================================================================
@@ -956,23 +997,6 @@ classdef calibrateLuminance < handle
 				if obj.screenVals.fps==0
 					obj.screenVals.fps=60;
 				end
-			end
-		end
-		
-		%===============init======================%
-		function openSpectroCAL(obj)
-			if ~isa(obj.spCAL,'serial')
-				obj.spCAL = serial(obj.port, 'BaudRate', 921600,'DataBits', 8, 'StopBits', 1, 'FlowControl', 'none', 'Parity', 'none', 'Terminator', 'CR','Timeout', 240, 'InputBufferSize', 16000);
-			end
-			try fopen(obj.spCAL);catch;warning('Port Already Open...');end
-			obj.configureSpectroCAL();
-		end
-		
-		%===============init======================%
-		function closeSpectroCAL(obj)
-			if isa(obj.spCAL,'serial')
-				try fclose(obj.spCAL); end
-				obj.spCAL = [];
 			end
 		end
 		
