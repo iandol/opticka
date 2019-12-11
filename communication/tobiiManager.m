@@ -12,7 +12,9 @@ classdef tobiiManager < optickaCore
 		%> tracker update speed (Hz) 
 		%> Spectrum Pro: [60, 120, 150, 300, 600 or 1200]
 		%> 4C: 90
-		sampleRate double = 1200
+		sampleRate double {mustBeMember(sampleRate,[60 90 120 150 300 600 1200])} = 1200
+		%> use human or macaque tracking mode
+		trackingMode char {mustBeMember(trackingMode,{'human','macaque'})} = 'macaque'
 		%> fixation window details
 		fixation struct = struct('X',0,'Y',0,'Radius',1,'InitTime',1,...
 			'Time',1,'strictFixation',true)
@@ -20,9 +22,9 @@ classdef tobiiManager < optickaCore
 		smoothing struct = struct('nSamples',8,'method','median','window',3,...
 			'eyes','both')
 		%> main tobii (Titta) object
-		tobii
+		tobii Titta
 		%> the PTB screen to work on, passed in during initialise
-		screen = []
+		screen screenManager = []
 		%> Titta settings
 		settings struct = []
 		%> name of eyetracker file
@@ -84,7 +86,7 @@ classdef tobiiManager < optickaCore
 		%> tracker time stamp
 		systemTime = 0
 		% which eye is the tracker using?
-		eyeUsed = 'both'
+		eyeUsed char {mustBeMember(eyeUsed,{'both','left','right'})}= 'both'
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -146,6 +148,7 @@ classdef tobiiManager < optickaCore
 			end
 			
 			me.settings.freq	= me.sampleRate;
+			me.settings.trackingMode = me.trackingMode;
 			me.settings.cal.bgColor = floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor = me.settings.cal.bgColor;
             if IsLinux
@@ -192,12 +195,12 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function resetFixation(me)
 			me.fixStartTime		= 0;
-			me.fixLength			= 0;
+			me.fixLength		= 0;
 			me.fixInitStartTime	= 0;
-			me.fixInitLength		= 0;
+			me.fixInitLength	= 0;
 			me.fixInitTotal		= 0;
-			me.fixTotal				= 0;
-			me.fixN					= 0;
+			me.fixTotal			= 0;
+			me.fixN				= 0;
 			me.fixSelection		= 0;
 		end
 		
@@ -339,8 +342,8 @@ classdef tobiiManager < optickaCore
 					me.currentSample.raw	= td;
 					me.currentSample.gx		= xy(1);
 					me.currentSample.gy		= xy(2);
-					me.currentSample.pa		= mean(td.left.pupil.diameter);
-					me.currentSample.time	= double(td.systemTimeStamp(end));
+					me.currentSample.pa		= nanmean(td.left.pupil.diameter);
+					me.currentSample.time	= double(td.systemTimeStamp(end)); %remember these are in microseconds
 					me.currentSample.timeD	= double(td.deviceTimeStamp(end));
 					xy = me.toDegrees(xy);
 					me.x = xy(1);
@@ -429,8 +432,8 @@ classdef tobiiManager < optickaCore
 					me.fixInitTotal = me.currentSample.time;
 				end
 				if ~isempty(me.exclusionZone)
-					eZ = me.exclusionZone; x = me.x; y = me.y;
-					if (x >= eZ(1) && x <= eZ(2)) && (y <= eZ(3) && y >= eZ(4))
+					eZ = me.exclusionZone; xe = me.x; ye = me.y;
+					if (xe >= eZ(1) && xe <= eZ(2)) && (ye <= eZ(3) && ye >= eZ(4))
 						fixated = false; fixtime = false; searching = false; exclusion = true;
 						fprintf(' ==> EXCLUSION ZONE ENTERED!\n');
 						return
@@ -447,14 +450,14 @@ classdef tobiiManager < optickaCore
 						if me.fixStartTime == 0
 							me.fixStartTime = me.currentSample.time;
 						end
-						me.fixLength = (me.currentSample.time - me.fixStartTime) / 1000;
+						me.fixLength = (me.currentSample.time - me.fixStartTime) / 1e6;
 						if me.fixLength > me.fixation.Time
 							fixtime = true;
 						end
 						me.fixInitStartTime = 0;
 						searching = false;
 						fixated = true;
-						me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1000;
+						me.fixTotal = me.currentSample.time - me.fixInitTotal;
 						%if me.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, me.fixLength, me.fixation.Time, me.fixTotal, me.fixInitTotal);end
 						return
 					else
@@ -469,7 +472,7 @@ classdef tobiiManager < optickaCore
 					if me.fixInitStartTime == 0
 						me.fixInitStartTime = me.currentSample.time;
 					end
-					me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1000;
+					me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1e6;
 					if me.fixInitLength <= me.fixation.InitTime
 						searching = true;
 					else
@@ -477,7 +480,7 @@ classdef tobiiManager < optickaCore
 					end
 					me.fixStartTime = 0;
 					me.fixLength = 0;
-					me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1000;
+					me.fixTotal = me.currentSample.time - me.fixInitTotal;
 					return
 				end
 			end
@@ -491,8 +494,8 @@ classdef tobiiManager < optickaCore
 		function out = testExclusion(me)
 			out = false;
 			if (me.isConnected || me.isDummy) && ~isempty(me.currentSample) && ~isempty(me.exclusionZone)
-				eZ = me.exclusionZone; x = me.x; y = me.y;
-				if (x >= eZ(1) && x <= eZ(2)) && (y <= eZ(3) && y >= eZ(4))
+				eZ = me.exclusionZone; xe = me.x; ye = me.y;
+				if (xe >= eZ(1) && xe <= eZ(2)) && (ye <= eZ(3) && ye >= eZ(4))
 					out = true;
 					fprintf(' ==> EXCLUSION ZONE ENTERED!\n');
 					return
@@ -621,14 +624,15 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function drawEyePosition(me)
 			if (me.isDummy || me.isConnected) && me.screen.isOpen && ~isempty(me.x) && ~isnan(me.x) && ~isempty(me.y) && ~isnan(me.y)
-				xy = toPixels(me,[me.x me.y]);
+				%xy = toPixels(me,[me.x me.y]);
+				xy = [me.currentSample.gx me.currentSample.gy];
 				if me.isFixated
-					Screen('DrawDots', me.win, xy, 10, [1 0.5 1 1], [], 3);
+					Screen('DrawDots', me.win, xy, me.pupil*5, [1 0.5 1 1], [], 3);
 					if me.fixLength > me.fixation.Time
 						Screen('DrawText', me.win, 'FIX', xy(1),xy(2), [1 1 1]);
 					end
 				else
-					Screen('DrawDots', me.win, xy, 8, [1 0.5 0 1], [], 3);
+					Screen('DrawDots', me.win, xy, me.pupil*5, [1 0.5 0 1], [], 3);
 				end
 			end
 		end
@@ -715,213 +719,7 @@ classdef tobiiManager < optickaCore
 		%> @brief Train to use tracker
 		%>
 		% ===================================================================
-		function runTraining(me,forcescreen)
-% 			KbName('UnifyKeyNames')
-% 			stopkey=KbName('q');
-% 			upKey=KbName('uparrow');
-% 			downKey=KbName('downarrow');
-% 			leftKey=KbName('leftarrow');
-% 			rightKey=KbName('rightarrow');
-% 			calibkey=KbName('c');
-% 			ofixation = me.fixation; me.sampletime = [];
-% 			osmoothing = me.smoothing;
-% 			ofilename = me.saveFile;
-% 			me.initialiseSaveFile();
-% 			[p,f,e]=fileparts(me.saveFile);
-% 			me.saveFile = [p filesep 'tobiiRunDemo-' me.savePrefix e];
-% 			global rM
-% 			if ~exist('rM','var') || isempty(rM)
-% 				rM = arduinoManager;
-% 			end
-% 			open(rM) %open our reward manager
-% 			
-% 			fixTime                 = .5;
-% 			imageTime               = 4;
-% 			scrPresenter            = 2;
-% 			scrOperator             = 1;
-% 			
-% 			
-% 			
-% 			Screen('Preference', 'SyncTestSettings', 0.002);    % the systems are a little noisy, give the test a little more leeway
-% 			[wpntP,winRectP] = PsychImaging('OpenWindow', scrPresenter, bgClr, [], [], [], [], 4);
-% 			[wpntO,winRectO] = PsychImaging('OpenWindow', scrOperator , bgClr, [0 0 1100 1000], [], [], [], 4);
-% 			hz=Screen('NominalFrameRate', wpntP);
-% 			Priority(1);
-% 			Screen('BlendFunction', wpntP, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-% 			Screen('Preference', 'TextAlphaBlending', 1);
-% 			Screen('Preference', 'TextAntiAliasing', 2);
-% 			% This preference setting selects the high quality text renderer on
-% 			% each operating system: It is not really needed, as the high quality
-% 			% renderer is the default on all operating systems, so this is more of
-% 			% a "better safe than sorry" setting.
-% 			Screen('Preference', 'TextRenderer', 1);
-% 			KbName('UnifyKeyNames');    % for correct operation of the setup/calibration interface, calling this is required
-% 			
-% 			% do calibration
-% 			if doBimonocularCalibration
-% 				% do sequential monocular calibrations for the two eyes
-% 				settings                = EThndl.getOptions();
-% 				settings.calibrateEye   = 'left';
-% 				settings.UI.button.setup.cal.string = 'calibrate left eye (<i>spacebar<i>)';
-% 				str = settings.UI.button.val.continue.string;
-% 				settings.UI.button.val.continue.string = 'calibrate other eye (<i>spacebar<i>)';
-% 				EThndl.setOptions(settings);
-% 				tobii.calVal{1}         = EThndl.calibrate([wpntP wpntO],1);
-% 				if ~tobii.calVal{1}.wasSkipped
-% 					settings.calibrateEye   = 'right';
-% 					settings.UI.button.setup.cal.string = 'calibrate right eye (<i>spacebar<i>)';
-% 					settings.UI.button.val.continue.string = str;
-% 					EThndl.setOptions(settings);
-% 					tobii.calVal{2}         = EThndl.calibrate([wpntP wpntO],2);
-% 				end
-% 			else
-% 				tobii.calVal{1}         = EThndl.calibrate([wpntP wpntO]);
-% 			end
-% 			
-% 			i = 1;
-% 			breakLoop = false;
-% 			% later:
-% 			EThndl.buffer.start('gaze');
-% 			WaitSecs(.8);   % wait for eye tracker to start and gaze to be picked up
-% 			
-% 			% send message into ET data file
-% 			EThndl.sendMessage('test');
-% 			
-% 			
-% 			while ~breakLoop
-% 				% First draw a fixation point
-% 				Screen('gluDisk',wpntP,fixClrs(1),winRectP(3)/2,winRectP(4)/2,round(winRectP(3)/100));
-% 				startT = Screen('Flip',wpntP);
-% 				% log when fixation dot appeared in eye-tracker time. NB:
-% 				% system_timestamp of the Tobii data uses the same clock as
-% 				% PsychToolbox, so startT as returned by Screen('Flip') can be used
-% 				% directly to segment eye tracking data
-% 				EThndl.sendMessage('FIX ON',startT);
-% 				
-% 				% read in konijntjes image (may want to preload this before the trial
-% 				% to ensure good timing)
-% 				stimFName   = ['th' num2str(randi(6)) '.jpg'];
-% 				stimDir     = fullfile(PsychtoolboxRoot,'PsychHardware','EyelinkToolbox','EyelinkDemos','GazeContingentDemos');
-% 				stimFullName= fullfile(stimDir,stimFName);
-% 				im          = imread(stimFullName);
-% 				tex         = Screen('MakeTexture',wpntP,im);
-% 				nextFlipT   = startT+fixTime-1/hz/2;
-% 				
-% 				% now update also operator screen, once timing critical bit is done
-% 				% if we still have enough time till next flipT, update operator display
-% 				while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
-% 					Screen('gluDisk',wpntO,fixClrs(1),winRectO(3)/2,winRectO(4)/2,round(winRectO(3)/100));
-% 					drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
-% 					Screen('Flip',wpntO);
-% 				end
-% 				
-% 				% show on screen and log when it was shown in eye-tracker time.
-% 				% NB: by setting a deadline for the flip, we ensure that the previous
-% 				% screen (fixation point) stays visible for the indicated amount of
-% 				% time. See PsychToolbox demos for further elaboration on this way of
-% 				% timing your script.
-% 				Screen('DrawTexture',wpntP,tex);                    % draw centered on the screen
-% 				imgT = Screen('Flip',wpntP,nextFlipT);   % bit of slack to make sure requested presentation time can be achieved
-% 				EThndl.sendMessage(sprintf('STIM ON: %s',stimFName),imgT);
-% 				nextFlipT = imgT+imageTime-1/hz/2;
-% 				rM.timedTTL(2,rTime);Beeper(600,0.1,0.2)
-% 				
-% 				% now update also operator screen, once timing critical bit is done
-% 				% if we still have enough time till next flipT, update operator display
-% 				while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
-% 					Screen('DrawTexture',wpntO,tex);
-% 					drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
-% 					Screen('Flip',wpntO);
-% 				end
-% 				rM.timedTTL(2,rTime);Beeper(600,0.1,0.2)
-% 				
-% 				% record x seconds of data, then clear screen. Indicate stimulus
-% 				% removed, clean up
-% 				endT = Screen('Flip',wpntP,nextFlipT);
-% 				EThndl.sendMessage(sprintf('STIM OFF: %s',stimFName),endT);
-% 				Screen('Close',tex);
-% 				nextFlipT = endT+1; % lees precise, about 1s give or take a frame, is fine
-% 				
-% 				% now update also operator screen, once timing critical bit is done
-% 				% if we still have enough time till next flipT, update operator display
-% 				while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
-% 					drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
-% 					Screen('Flip',wpntO);
-% 				end
-% 				
-% 				[keyIsDown, ~, keyCode] = KbCheck(-1);
-% 				if keyIsDown == 1
-% 					rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end
-% 					switch lower(rchar)
-% 						case {'q'}
-% 							fprintf('===>>> runEquiMotion Q pressed!!!\n');
-% 							breakLoop = true;
-% 					end
-% 				end
-% 				
-% 				i = i + 1;
-% 				fprintf('Run %i\n',i);
-% 				WaitSecs(2)
-% 				
-% 			end
-% 			
-% 			% repeat the above but show a different image. lets also record some
-% 			% eye images, if supported on connected eye tracker
-% 			if EThndl.buffer.hasStream('eyeImage')
-% 				EThndl.buffer.start('eyeImage');
-% 			end
-% 			% 1. fixation point
-% 			Screen('gluDisk',wpntP,fixClrs(1),winRectP(3)/2,winRectP(4)/2,round(winRectP(3)/100));
-% 			startT      = Screen('Flip',wpntP,nextFlipT);
-% 			EThndl.sendMessage('FIX ON',startT);
-% 			nextFlipT   = startT+fixTime-1/hz/2;
-% 			while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
-% 				Screen('gluDisk',wpntO,fixClrs(1),winRectO(3)/2,winRectO(4)/2,round(winRectO(3)/100));
-% 				drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
-% 				Screen('Flip',wpntO);
-% 			end
-% 			% 2. image
-% 			stimFNameBlur   = 'konijntjes1024x768blur.jpg';
-% 			stimFullNameBlur= fullfile(stimDir,stimFNameBlur);
-% 			im              = imread(stimFullNameBlur);
-% 			tex             = Screen('MakeTexture',wpntP,im);
-% 			Screen('DrawTexture',wpntP,tex);                    % draw centered on the screen
-% 			imgT = Screen('Flip',wpntP,nextFlipT);   % bit of slack to make sure requested presentation time can be achieved
-% 			EThndl.sendMessage(sprintf('STIM ON: %s',stimFNameBlur),imgT);
-% 			nextFlipT = imgT+imageTime-1/hz/2;
-% 			while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
-% 				Screen('DrawTexture',wpntO,tex);
-% 				drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
-% 				Screen('Flip',wpntO);
-% 			end
-% 			
-% 			% 3. end recording after x seconds of data again, clear screen.
-% 			endT = Screen('Flip',wpntP,nextFlipT);
-% 			EThndl.sendMessage(sprintf('STIM OFF: %s',stimFNameBlur),endT);
-% 			Screen('Close',tex);
-% 			Screen('Flip',wpntO);
-% 			
-% 			% stop recording
-% 			if EThndl.buffer.hasStream('eyeImage')
-% 				EThndl.buffer.stop('eyeImage');
-% 			end
-% 			EThndl.buffer.stop('gaze');
-% 			
-% 			% save data to mat file, adding info about the experiment
-% 			dat = EThndl.collectSessionData();
-% 			dat.expt.winRect = winRectP;
-% 			dat.expt.stimDir = stimDir;
-% 			save(EThndl.getFileName(fullfile(cd,'t'), true),'-struct','dat');
-% 			% NB: if you don't want to add anything to the saved data, you can use
-% 			% EThndl.saveData directly
-% 			
-% 			% shut down
-% 			EThndl.deInit();
-% 			catch me
-% 				sca
-% 				rethrow(me)
-% 		end
-% 		sca
+		function runTraining(me)
 			
 		end
 		
@@ -941,7 +739,7 @@ classdef tobiiManager < optickaCore
 			osmoothing = me.smoothing;
 			ofilename = me.saveFile;
 			me.initialiseSaveFile();
-			[p,f,e]=fileparts(me.saveFile);
+			[p,~,e]=fileparts(me.saveFile);
 			me.saveFile = [p filesep 'tobiiRunDemo-' me.savePrefix e];
 			try
 				if isa(me.screen,'screenManager')
@@ -959,13 +757,16 @@ classdef tobiiManager < optickaCore
 				ListenChar(1);
 				initialise(me,s); %initialise tobii with our screen
 				calViz								= AnimatedCalibrationDisplay();
+				calViz.moveTime						= 0.75;
+				calViz.oscillatePeriod				= 1;
+				calViz.blinkCount					= 4;
 				me.settings.cal.drawFunction        = @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
 				calViz.bgColor						= round(s.backgroundColour .* 255);
 				calViz.fixBackColor                 = 0;
 				calViz.fixFrontColor				= 255;
 				me.settings.cal.bgColor             = calViz.bgColor;
-				me.settings.cal.autoPace            = 0;
-				me.settings.cal.doRandomPointOrder  = false;
+				me.settings.cal.autoPace            = 1;
+				me.settings.cal.doRandomPointOrder  = true;
 				me.settings.val.pointPos			= [.15 .15; .15 .85; .5 .5; .85 .15; .85 .85];
 				%me.settings.val.pointPos			= [.1 .1;.1 .9;.5 .5;.9 .1;.9 .9];
 				me.settings.UI.setup.eyeClr         = 255;
@@ -1014,15 +815,12 @@ classdef tobiiManager < optickaCore
 				while trialn <= maxTrials && endExp == 0
 					trialtick = 1;
 					trackerMessage(me,sprintf('Settings for Trial %i, X=%.2f Y=%.2f, SZ=%.2f',trialn,me.fixation.X,me.fixation.Y,o.sizeOut))
-					drawPhotoDiodeSquare(s,[0 0 0 1]);
-					vbl=flip(s);
 					getSample(me); isFixated(me); resetFixation(me);
-					WaitSecs('UntilTime',1+vbl);
 					drawPhotoDiodeSquare(s,[0 0 0 1]);
 					vbl = flip(s); tstart=vbl;
 					trackerMessage(me,'STARTING');
 					trackerMessage(me,'STARTVBL',vbl);
-					while vbl < tstart + 2
+					while vbl < tstart + 6
 						draw(o);
 						drawGrid(s);
 						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
@@ -1043,12 +841,13 @@ classdef tobiiManager < optickaCore
 						if trialtick==1; me.tobii.sendMessage('SYNC = 255', vbl);end
 						
 						[~, ~, keyCode] = KbCheck(-1);
-						if keyCode(stopkey); endExp = 1; break; end
-						if keyCode(calibkey); me.doCalibration; end
-						if keyCode(upKey); me.smoothing.nSamples = me.smoothing.nSamples + 1; if me.smoothing.nSamples > 400; me.smoothing.nSamples=400;end; end
-						if keyCode(downKey); me.smoothing.nSamples = me.smoothing.nSamples - 1; if me.smoothing.nSamples < 1; me.smoothing.nSamples=1;end;	end
-						if keyCode(leftKey); m=m+1; if m>5;m=1;end; me.smoothing.method=methods{m};end
-						if keyCode(rightKey); n=n+1; if n>3;n=1;end; me.smoothing.eyes=eyes{n};end
+						if keyCode(stopkey); endExp = 1; break;
+						elseif keyCode(calibkey); me.doCalibration;
+						elseif keyCode(upKey); me.smoothing.nSamples = me.smoothing.nSamples + 1; if me.smoothing.nSamples > 400; me.smoothing.nSamples=400;end
+						elseif keyCode(downKey); me.smoothing.nSamples = me.smoothing.nSamples - 1; if me.smoothing.nSamples < 1; me.smoothing.nSamples=1;end
+						elseif keyCode(leftKey); m=m+1; if m>5;m=1;end; me.smoothing.method=methods{m};
+						elseif keyCode(rightKey); n=n+1; if n>3;n=1;end; me.smoothing.eyes=eyes{n};
+						end
 						trialtick=trialtick+1;
 					end
 					if endExp == 0

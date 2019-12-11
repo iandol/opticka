@@ -952,7 +952,7 @@ classdef eyelinkManager < optickaCore
 				s = screenManager('debug',true,'pixelsPerCm',27,'distance',66);
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
-				o = dotsStimulus('size',me.fixationRadius*2,'speed',2,'mask',false,'density',30);
+				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',true,'density',50); %test stimulus
 				%x,y,inittime,fixtime,radius,strict)
 				updateFixationValues(me,0,0,1,1,1,true);open(s); %open out screen
 				setup(o,s); %setup our stimulus with open screen

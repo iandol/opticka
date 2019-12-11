@@ -445,7 +445,8 @@ classdef metaStimulus < optickaCore
 				open(s);
 			end
 			setup(obj,s); %setup our stimulus objects
-			draw(obj); %draw stimuli
+			
+			Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 			
 			if s.visualDebug
 				drawGrid(s); %draw +-5 degree dot grid
@@ -458,16 +459,16 @@ classdef metaStimulus < optickaCore
 				Screen('DrawText', s.win, 'Stim will be static for 2 seconds, then animated...', 5,5,[0 0 0]);
 			end
 			
-			nFrames = 0
-			Screen('Flip',s.win);
-			WaitSecs(1);
+			flip(s);
+			WaitSecs('YieldSecs',2);
+			nFrames = 0;
 			
-			startT=GetSecs;
+			vbl(1) = flip(s); startT = vbl(1);
 			for i = 1:(s.screenVals.fps*runtime) 
 				nFrames = nFrames + 1;
 				draw(obj); %draw stimuli
 				if ~benchmark&&s.visualDebug;drawGrid(s);end
-				Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
+				finishDrawing(s); %tell PTB/GPU to draw
 				animate(obj); %animate stimuli, ready for next draw();
 				if benchmark
 					Screen('Flip',s.win,0,2,2);
@@ -475,8 +476,9 @@ classdef metaStimulus < optickaCore
 					Screen('Flip',s.win); %flip the buffer
 				end
 			end
-			endT=GetSecs;
+			endT = flip(s);
 			WaitSecs(0.5);
+			Priority(0); ShowCursor; ListenChar(0);
 			close(s); %close screen
 			s.screen = oldscreen;
 			s.windowed = oldwindowed;

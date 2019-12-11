@@ -506,7 +506,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function demo(me)
 			if ~me.isOpen
-				stim = textureStimulus('speed',4,'xPosition',-6,'yPosition',0,'size',1);
+				stim = textureStimulus('speed',4,'xPosition',-3,'yPosition',0);
 				prepareScreen(me);
 				open(me);
 				disp('--->>> screenManager running a quick demo...')

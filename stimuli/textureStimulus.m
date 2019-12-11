@@ -297,16 +297,21 @@ classdef textureStimulus < baseStimulus
 			end
 		end
 		
+		% ===================================================================
+		%> @brief findFiles
+		%>  
+		% ===================================================================
 		function findFiles(me)	
 			if exist(me.fileName,'dir') == 7
 				d = dir(me.fileName);
 				n = 0;
 				for i = 1: length(d)
 					if d(i).isdir;continue;end
-					[~,f,e]=fileparts(d(i).name)
-					if regexpi(e,'png|jpeg|jpg|bmp|tif');
+					[~,f,e]=fileparts(d(i).name);
+					if regexpi(e,'png|jpeg|jpg|bmp|tif')
 						n = n + 1;
-						me.fileNames{n} = [me.fileName filesep 
+						me.fileNames{n} = [me.fileName filesep ];
+					end
 				end
 			end
 		end

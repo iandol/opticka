@@ -15,8 +15,13 @@ doBimonocularCalibration= false;
 % task parameters
 fixTime                 = .5;
 imageTime               = 4;
-scrPresenter            = 2;
-scrOperator             = 1;
+if IsWin
+	scrPresenter            = 2;
+	scrOperator             = 1;
+else
+	scrPresenter            = 1;
+	scrOperator             = 0;
+end
 rTime = 200;
 
 addpath(genpath(fullfile(fileparts(mfilename('fullpath')),'..')));
@@ -27,7 +32,7 @@ try
 	% get setup struct (can edit that of course):
 	settings = Titta.getDefaults('Tobii Pro Spectrum');
 	settings.debugMode				= false;	
-	settings.freq					= 600;
+	settings.freq					= 300;
 	settings.trackingMode			= 'macaque';
 	settings.cal.autoPace            = 0;
 	settings.cal.doRandomPointOrder  = false;
@@ -84,7 +89,7 @@ try
 	end
 	Screen('Preference', 'SyncTestSettings', 0.002);    % the systems are a little noisy, give the test a little more leeway
 	[wpntP,winRectP] = PsychImaging('OpenWindow', scrPresenter, bgClr, [], [], [], [], 4);
-	[wpntO,winRectO] = PsychImaging('OpenWindow', scrOperator , bgClr, [0 0 1100 1000], [], [], [], 4);
+	[wpntO,winRectO] = PsychImaging('OpenWindow', scrOperator , bgClr, [0 0 1920 1080], [], [], [], 4);
 	hz=Screen('NominalFrameRate', wpntP);
 	Priority(1);
 	Screen('BlendFunction', wpntP, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -140,8 +145,8 @@ try
 		
 		% read in konijntjes image (may want to preload this before the trial
 		% to ensure good timing)
-		stimFName   = ['th' num2str(randi(6)) '.jpg'];
-		stimDir     = fullfile(PsychtoolboxRoot,'PsychHardware','EyelinkToolbox','EyelinkDemos','GazeContingentDemos');
+		stimFName   = ['th' num2str(randi(28)) '.jpg'];
+		stimDir		= '/media/cog1/Main_Data/Monkey_Images/';
 		stimFullName= fullfile(stimDir,stimFName);
 		im          = imread(stimFullName);
 		tex         = Screen('MakeTexture',wpntP,im);
@@ -203,36 +208,6 @@ try
 		fprintf('Run %i\n',i);
 		WaitSecs(2)
 		
-	end
-	
-	% repeat the above but show a different image. lets also record some
-	% eye images, if supported on connected eye tracker
-	if EThndl.buffer.hasStream('eyeImage')
-		EThndl.buffer.start('eyeImage');
-	end
-	% 1. fixation point
-	Screen('gluDisk',wpntP,fixClrs(1),winRectP(3)/2,winRectP(4)/2,round(winRectP(3)/100));
-	startT      = Screen('Flip',wpntP,nextFlipT);
-	EThndl.sendMessage('FIX ON',startT);
-	nextFlipT   = startT+fixTime-1/hz/2;
-	while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
-		Screen('gluDisk',wpntO,fixClrs(1),winRectO(3)/2,winRectO(4)/2,round(winRectO(3)/100));
-		drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
-		Screen('Flip',wpntO);
-	end
-	% 2. image
-	stimFNameBlur   = 'konijntjes1024x768blur.jpg';
-	stimFullNameBlur= fullfile(stimDir,stimFNameBlur);
-	im              = imread(stimFullNameBlur);
-	tex             = Screen('MakeTexture',wpntP,im);
-	Screen('DrawTexture',wpntP,tex);                    % draw centered on the screen
-	imgT = Screen('Flip',wpntP,nextFlipT);   % bit of slack to make sure requested presentation time can be achieved
-	EThndl.sendMessage(sprintf('STIM ON: %s',stimFNameBlur),imgT);
-	nextFlipT = imgT+imageTime-1/hz/2;
-	while nextFlipT-GetSecs()>.08   % arbitrarily decide 80ms is enough headway
-		Screen('DrawTexture',wpntO,tex);
-		drawLiveData(wpntO,EThndl.buffer,500,settings.freq,eyeColors{:},4,winRectO(3:4));
-		Screen('Flip',wpntO);
 	end
 	
 	% 3. end recording after x seconds of data again, clear screen.
