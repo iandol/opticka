@@ -812,7 +812,10 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief draw small cross
+		%> @brief draw fixation cross from Thaler L, Schütz AC, 
+		%>  Goodale MA, & Gegenfurtner KR (2013) “What is the best fixation target? 
+		%>  The effect of target shape on stability of fixational eye movements.” 
+		%>  Vision research 76, 31-42 <http://doi.org/10.1016/j.visres.2012.10.012>
 		%>
 		%> @param size size in degrees
 		%> @param colour of cross
@@ -823,6 +826,46 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function drawCross(me,size,colour,x,y,lineWidth)
 			% drawCross(me, size, colour, x, y, lineWidth)
+			if nargin < 6 || isempty(lineWidth); lineWidth = 0.1; end
+			if nargin < 5 || isempty(y); y = 0; end
+			if nargin < 4 || isempty(x); x = 0; end
+			if nargin < 3 || isempty(colour)
+				if mean(me.backgroundColour(1:3)) <= 0.333
+					colour = [1 1 1 1];
+				else
+					colour = [0 0 0 1];
+				end
+			end
+			if mean(colour(1:3)) <= 0.5
+				lineColour = [1 1 1];
+			else
+				lineColour = [0 0 0];
+			end
+			if nargin < 2 || isempty(size); size = 0.6; end
+			x = me.xCenter + (x * me.ppd_);
+			y = me.yCenter + (y * me.ppd_);
+			size = size * me.ppd_;
+			dotSize = lineWidth * me.ppd_;
+			for p = 1:length(x)
+				Screen('gluDisk', me.win, colour, x, y, size/2);
+				Screen('FillRect', me.win, lineColour, CenterRectOnPointd([0 0 size dotSize], x(p), y(p)));
+				Screen('fillRect', me.win, lineColour, CenterRectOnPointd([0 0 dotSize size], x(p), y(p)));
+				Screen('gluDisk', me.win, colour, x, y, dotSize/2);
+			end	
+		end
+		
+		% ===================================================================
+		%> @brief draw small cross
+		%>
+		%> @param size size in degrees
+		%> @param colour of cross
+		%> @param x position in degrees relative to screen center
+		%> @param y position in degrees relative to screen center
+		%> @param lineWidth of lines
+		%> @return
+		% ===================================================================
+		function drawSimpleCross(me,size,colour,x,y,lineWidth)
+			% drawSimpleCross(me, size, colour, x, y, lineWidth)
 			if nargin < 6 || isempty(lineWidth); lineWidth = 2; end
 			if nargin < 5 || isempty(y); y = 0; end
 			if nargin < 4 || isempty(x); x = 0; end
