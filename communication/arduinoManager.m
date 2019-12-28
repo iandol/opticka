@@ -2,25 +2,26 @@ classdef arduinoManager < optickaCore
 	%ARDUINOMANAGER Connects and manages arduino communication, uses matlab
 	%hardware package
 	properties
-		port			= ''
-		board			= ''
-		silentMode		= false %this allows us to be called even if no arduino is attached
-		verbose			= true
-		openGUI			= true
-		mode			= 'original' %original is built-in, otherwise needs matlab hardware package
-		rewardPin		= 2
-		rewardTime		= 150
-		availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
+		port char			= ''
+		board char			= ''
+		silentMode logical	= false %this allows us to be called even if no arduino is attached
+		verbose				= true
+		openGUI	logical		= true
+		mode char			= 'original' %original is built-in, otherwise needs matlab hardware package
+		rewardPin double	= 2
+		rewardTime double	= 150
+		availablePins cell	= {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
 	end
 	properties (SetAccess = private, GetAccess = public)
-		ports
+		ports 
 		isOpen logical = false
 		device = []
 		deviceID = ''
 	end
 	properties (SetAccess = private, GetAccess = private)
 		handles = []
-		allowedProperties='mode|port|silentMode|verbose'
+		screen screenManager
+		allowedProperties char ='mode|port|silentMode|verbose'
 	end
 	methods%------------------PUBLIC METHODS--------------%
 		
@@ -281,7 +282,7 @@ classdef arduinoManager < optickaCore
 			
 			handles.readButton = uicontrol('Style','pushbutton',...
 				'Parent',handles.parent,...
-				'Tag','goButtosn',...
+				'Tag','goButton',...
 				'Callback',@doReward,...
 				'FontName',SansFont,...
 				'ForegroundColor',[1 0 0],...
@@ -291,13 +292,23 @@ classdef arduinoManager < optickaCore
 			
 			handles.loopButton = uicontrol('Style','pushbutton',...
 				'Parent',handles.parent,...
-				'Tag','goButtosn',...
+				'Tag','l1Button',...
 				'Callback',@doLoop,...
 				'FontName',SansFont,...
 				'ForegroundColor',[1 0.5 0],...
 				'FontSize',18,...
-				'Position',[120 5 80 60],...
-				'String','Loop!');
+				'Position',[120 5 40 60],...
+				'String','L1');
+			
+			handles.loop2Button = uicontrol('Style','pushbutton',...
+				'Parent',handles.parent,...
+				'Tag','l2Button',...
+				'Callback',@doLoop2,...
+				'FontName',SansFont,...
+				'ForegroundColor',[1 0.5 0],...
+				'FontSize',18,...
+				'Position',[160 5 40 60],...
+				'String','L2');
 			
 			me.handles = handles;
 			
@@ -361,6 +372,51 @@ classdef arduinoManager < optickaCore
 				RestrictKeysForKbCheck(oldkeys);
 				set(handles.loopButton,'ForegroundColor',[1 0.5 0]);
 			end
+			
+			function doLoop2(varargin)
+				if me.silentMode || ~me.isOpen; disp('Not open!'); return; end
+				fprintf('===>>> Entering Loop mode, press 0 to exit!!!\n');
+				set(handles.loop2Button,'ForegroundColor',[0.2 0.7 0]);drawnow;
+				pin = str2num(get(me.handles.pin,'String'));
+				nl = [];
+				for nn = 0:9
+					nl = [nl KbName(num2str(nn))];
+				end
+				oldkeys=RestrictKeysForKbCheck(nl);
+				doLoop = true;
+				ListenChar(2);
+				while doLoop
+					[~, keyCode] = KbWait(-1);
+					if any(keyCode)
+						rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end
+						switch lower(rchar)
+							case {'0'}
+								doLoop = false;
+							case{'1'}
+								me.timedTTL(pin,100);
+							case{'2'}
+								me.timedTTL(pin,200);
+							case{'3'}
+								me.timedTTL(pin,300);
+							case{'4'}
+								me.timedTTL(pin,400);
+							case{'5'}
+								me.timedTTL(pin,500);
+							case{'6'}
+								me.timedTTL(pin,600);
+							case{'7'}
+								me.timedTTL(pin,700);
+							case{'8'}
+								me.timedTTL(pin,800);
+						end
+					end
+					WaitSecs(0.2);
+				end
+				ListenChar(0);
+				fprintf('===>>> Exit pressed!!!\n');
+				RestrictKeysForKbCheck(oldkeys);
+				set(handles.loop2Button,'ForegroundColor',[1 0.5 0]);
+			end
 		end
 		
 		%===============CLOSE PORT================%
@@ -383,6 +439,8 @@ classdef arduinoManager < optickaCore
 	end
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
+		
+		
 		
 		%===========Delete Method==========%
 		function delete(me)
