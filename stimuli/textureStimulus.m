@@ -6,19 +6,19 @@
 % ========================================================================	
 classdef textureStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		type = 'picture'
+		type char = 'picture'
 		%> filename to load
-		fileName = ''
+		fileName char = ''
 		%> if N > 0, then this is a number of images from 1:N, e.g.
 		%> fileName = base.jpg, multipleImages=5, then base1.jpg - base5.jpg
 		%> update() will randomly select one from this group.
-		multipleImages = 0
+		multipleImages double = 0
 		%> contrast multiplier
-		contrast = 1
+		contrast double = 1
 		%>
-		interpMethod = 'nearest'
+		interpMethod char = 'nearest'
 		%>scale up the texture in the bar
-		pixelScale = 1 
+		pixelScale double = 1 
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -74,7 +74,7 @@ classdef textureStimulus < baseStimulus
 				p = fileparts(p);
 				me.fileName = [p filesep 'Bosch.jpeg'];
 				me.fileNames{1} = me.fileName;
-			elseif exist(me.filename,'dir') == 7
+			elseif exist(me.fileName,'dir') == 7
 				findFiles(me);
 			end
 			
@@ -258,7 +258,7 @@ classdef textureStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-					try Screen('Close',me.texture); end %#ok<*TRYNC>
+				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			end
 			resetTicks(me);
 			me.texture=[];
@@ -310,7 +310,7 @@ classdef textureStimulus < baseStimulus
 					[~,f,e]=fileparts(d(i).name);
 					if regexpi(e,'png|jpeg|jpg|bmp|tif')
 						n = n + 1;
-						me.fileNames{n} = [me.fileName filesep ];
+						me.fileNames{n} = [me.fileName filesep f e];
 					end
 				end
 			end
