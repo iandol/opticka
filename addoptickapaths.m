@@ -8,5 +8,5 @@ for i=1:length(opaths)
 	end
 end
 newopaths = strjoin(newopaths,pathsep);
-addpath(newopaths);
+addpath(newopaths);savepath;
 clear opath opaths newopaths

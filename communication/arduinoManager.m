@@ -336,7 +336,7 @@ classdef arduinoManager < optickaCore
 			function doLoop(varargin)
 				if me.silentMode || ~me.isOpen; disp('Not open!'); return; end
 				fprintf('===>>> Entering Loop mode, press - to exit!!!\n');
-				set(handles.loopButton,'ForegroundColor',[0.2 0.7 0]);drawnow;
+				set(me.handles.loopButton,'ForegroundColor',[0.2 0.7 0]);drawnow;
 				pin = str2num(get(me.handles.pin,'String'));
 				nl = [];
 				for nn = 0:9
@@ -375,15 +375,14 @@ classdef arduinoManager < optickaCore
 				ListenChar(0);
 				fprintf('===>>> Exit pressed!!!\n');
 				RestrictKeysForKbCheck(oldkeys);
-				set(handles.loopButton,'ForegroundColor',[1 0.5 0]);
+				set(me.handles.loopButton,'ForegroundColor',[1 0.5 0]);
 			end
 			
 			function doLoop2(varargin)
 				if me.silentMode || ~me.isOpen; disp('Not open!'); return; end
 				PsychDefaultSetup(2);
-				openScreen(me);
 				fprintf('===>>> Entering Loop mode, press - to exit!!!\n');
-				set(handles.loop2Button,'ForegroundColor',[0.2 0.7 0]);drawnow;
+				set(me.handles.loop2Button,'ForegroundColor',[0.2 0.7 0]);drawnow;
 				pin = str2num(get(me.handles.pin,'String'));
 				nl = [];
 				for nn = 0:9
@@ -391,39 +390,109 @@ classdef arduinoManager < optickaCore
 				end
 				oldkeys=RestrictKeysForKbCheck(nl);
 				doLoop = true;
+                
+                sM = screenManager();
+                sM.backgroundColour = [0.1 0.1 0.1];
+                sM.open();
+                
+                ad = audioManager();ad.close();
+                ad.device = 1;
+                ad.setup();
+                
+                mv = movieStimulus();
+                mv.mask = [0 0 0];
+                mv.setup(sM);
+                
 				ListenChar(2);
 				while doLoop
-					[~, keyCode] = KbWait(-1);
-					if any(keyCode)
+					[isDown, ~, keyCode] = KbCheck(-1);
+					if isDown
 						rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end
 						switch lower(rchar)
-							case {'-'}
+							case {'0','-'}
 								doLoop = false;
-							case{'1','KP_End'}
-								
+							case{'1','kp_end'}
+								mv.xPositionOut = 0;
+                                mv.yPositionOut = 0;
+                                update(mv);
+                                start = flip(sM); vbl = start;
+                                play(ad);
+                                %me.timedTTL(pin,100);
+                                while vbl < start + 2
+                                    draw(mv); sM.drawCross([],[],0,0);
+                                    finishDrawing(sM);
+                                    vbl = flip(sM);
+                                end
 								me.timedTTL(pin,100);
-							case{'2','KP_Down'}
-								
-							case{'3','KP_Next'}
-								me.timedTTL(pin,300);
-							case{'4','KP_Left'}
-								me.timedTTL(pin,400);
-							case{'5','KP_Begin'}
-								me.timedTTL(pin,500);
-							case{'6','KP_Right'}
+							case{'2','kp_down'}
+								mv.xPositionOut = 16;
+                                mv.yPositionOut = 10;
+                                update(mv);
+                                start = flip(sM); vbl = start;
+                                play(ad);
+                                %me.timedTTL(pin,200);
+                                while vbl < start + 2
+                                    draw(mv); sM.drawCross([],[],16,10);
+                                    sM.finishDrawing;
+                                    vbl = flip(sM);
+                                end
+								me.timedTTL(pin,200);
+							case{'3','kp_next'}
+								mv.xPositionOut = -16;
+                                mv.yPositionOut = -10;
+                                update(mv);
+                                start = flip(sM); vbl = start;
+                                play(ad);
+                                %me.timedTTL(pin,200);
+                                while vbl < start + 2
+                                    draw(mv); sM.drawCross([],[],-16,-10);
+                                    sM.finishDrawing;
+                                    vbl = flip(sM);
+                                end
+								me.timedTTL(pin,200);
+							case{'4','kp_left'}
+								mv.xPositionOut = 16;
+                                mv.yPositionOut = -10;
+                                update(mv);
+                                start = flip(sM); vbl = start;
+                                play(ad);
+                                %me.timedTTL(pin,200);
+                                while vbl < start + 2
+                                    draw(mv); sM.drawCross([],[],16,-10);
+                                    sM.finishDrawing;
+                                    vbl = flip(sM);
+                                end
+								me.timedTTL(pin,200);
+							case{'5','kp_begin'}
+								mv.xPositionOut = -16;
+                                mv.yPositionOut = 10;
+                                update(mv);
+                                start = flip(sM); vbl = start;
+                                play(ad);
+                                %me.timedTTL(pin,200);
+                                while vbl < start + 2
+                                    draw(mv); sM.drawCross([],[],-16,10);
+                                    sM.finishDrawing;
+                                    vbl = flip(sM);
+                                end
+                                me.timedTTL(pin,200);
+							case{'6','kp_right'}
 								me.timedTTL(pin,600);
-							case{'7','KP_Home'}
+							case{'7','kp_home'}
 								me.timedTTL(pin,700);
-							case{'8','KP_Up'}
+							case{'8','kp_up'}
 								me.timedTTL(pin,800);
-						end
-					end
-					WaitSecs(0.2);
+                        end
+                    else
+                        flip(sM);
+                    end	
 				end
 				ListenChar(0);
+                ad.close;mv.reset;
+                sM.close;
 				fprintf('===>>> Exit pressed!!!\n');
 				RestrictKeysForKbCheck(oldkeys);
-				set(handles.loop2Button,'ForegroundColor',[1 0.5 0]);
+				set(me.handles.loop2Button,'ForegroundColor',[1 0.5 0]);
 			end
 		end
 		

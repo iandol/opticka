@@ -185,7 +185,9 @@ classdef movieStimulus < baseStimulus
 					try Screen('Close',me.buffertex); end 
 			end
 			me.texture = []; me.buffertex = [];
-			me.scale = me.sizeOut;
+			if me.sizeOut > 0
+				me.scale = me.sizeOut / (me.width / me.ppd);
+			end
 			resetTicks(me);
 			computePosition(me);
 			setRect(me);

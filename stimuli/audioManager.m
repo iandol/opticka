@@ -158,11 +158,11 @@ classdef audioManager < optickaCore
 		
 	end %---END PROTECTED METHODS---%
 	
-		
-	
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-		
-	end %---END PRIVATE METHODS---%
+        function delete(me)			
+            close(me);
+        end
+    end %---END PRIVATE METHODS---%
 end
