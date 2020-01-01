@@ -1,8 +1,7 @@
 classdef audioManager < optickaCore
-	%ARDUINOMANAGER Connects and manages arduino communication, uses matlab
-	%hardware package
+	%AUDIOMANAGER Connects and manages audio playback
 	properties
-		device 			= []
+		device				= []
 		fileName char		= ''
 		numChannels double	= 2
 		lowLatency logical	= true
@@ -10,17 +9,18 @@ classdef audioManager < optickaCore
 		verbose				= true
 	end
 	properties (SetAccess = private, GetAccess = public)
-		isBuffered logical = false
+		isBuffered logical	= false
 		aHandle
 		status
 		frequency
 		%> list of names if multipleImages > 0
-		fileNames = {};
+		fileNames			= {};
+		devices
 	end
 	properties (SetAccess = private, GetAccess = private)
-		handles = []
-		isFiles logical = false
-		isSetup logical = false
+		handles				= []
+		isFiles logical		= false
+		isSetup logical		= false
 		screen screenManager
 		allowedProperties char ='device|fileName|silentMode|verbose'
 	end
@@ -40,6 +40,7 @@ classdef audioManager < optickaCore
 			if ~isValid
 				me.salutation('constructor','Please ensure valid file/dir name');
 			end
+			me.devices = PsychPortAudio('GetDevices');
 			me.salutation('constructor','Audio Manager initialisation complete');
 		end
 		
@@ -53,6 +54,7 @@ classdef audioManager < optickaCore
 				warning('NO valid file/dir name');
 			end
 			InitializePsychSound(me.lowLatency);
+			me.devices = PsychPortAudio('GetDevices');
 			suggestedLatency = [];
 			me.aHandle = PsychPortAudio('Open', me.device);
 			me.status = PsychPortAudio('GetStatus', me.aHandle);
@@ -68,20 +70,29 @@ classdef audioManager < optickaCore
 			
 		end
 		
+		
+		% ===================================================================
+		%> @brief  
+		%>
+		% ===================================================================
 		function play(me,when)
+			if ~exist('when','var'); when = []; end
 			if ~me.isSetup
 				setup(me);
 			end
 			if me.isSetup
-				PsychPortAudio('Start', me.aHandle);
+				PsychPortAudio('Start', me.aHandle,[],when);
 			end
 		end
 		
+		% ===================================================================
+		%> @brief  
+		%>
+		% ===================================================================
 		function run(me)
 			tic;setup(me);toc
 			play(me);
-			tic;reset(me);toc
-			
+			tic;reset(me);toc	
 		end
 		
 		% ===================================================================
@@ -110,6 +121,13 @@ classdef audioManager < optickaCore
 			reset(me);
 		end
 		
+		% ===================================================================
+		%> @brief Close 
+		%>
+		% ===================================================================
+		function delete(me)			
+            close(me);
+		end
 		
 	end %---END PUBLIC METHODS---%
 	
@@ -161,8 +179,6 @@ classdef audioManager < optickaCore
 	%=======================================================================
 	methods ( Access = private ) %-------PRIVATE METHODS-----%
 	%=======================================================================
-        function delete(me)			
-            close(me);
-        end
+        
     end %---END PRIVATE METHODS---%
 end
