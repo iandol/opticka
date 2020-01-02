@@ -56,7 +56,7 @@ classdef audioManager < optickaCore
 			InitializePsychSound(me.lowLatency);
 			me.devices = PsychPortAudio('GetDevices');
             if isempty(me.aHandle)
-                me.aHandle = PsychPortAudio('Open', me.device, 1, 1, me.frequency);
+                me.aHandle = PsychPortAudio('Open', me.device, 1, 1);
             end
             Snd('Open',me.aHandle);
             oldVol=PsychPortAudio('Volume', me.aHandle, 1);
@@ -203,7 +203,7 @@ classdef audioManager < optickaCore
 			if isempty(me.fileName) || ~exist(me.fileName,'file')
 				p = mfilename('fullpath');
 				p = fileparts(p);
-				me.fileName = [p filesep 'Coo.wav'];
+				me.fileName = [p filesep 'Coo2.wav'];
 				me.fileNames{1} = me.fileName;
 			elseif exist(me.fileName,'dir') == 7
 				findFiles(me);

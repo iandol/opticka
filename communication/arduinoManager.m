@@ -343,6 +343,7 @@ classdef arduinoManager < optickaCore
 				for nn = 0:9
 					nl = [nl KbName(num2str(nn))];
 				end
+				nl = [nl KbName('0)') KbName('-_') KbName('1!')];
 				oldkeys=RestrictKeysForKbCheck(nl);
 				doLoop = true;
 				ListenChar(2);
@@ -351,19 +352,19 @@ classdef arduinoManager < optickaCore
 					if any(keyCode)
 						rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end
 						switch lower(rchar)
-							case {'-'}
+							case {'0','0)','-_','-'}
 								doLoop = false;
-							case{'1'}
+							case{'1','1!'}
 								me.timedTTL(pin,100);
-							case{'2'}
+							case{'2','2@'}
 								me.timedTTL(pin,200);
-							case{'3'}
+							case{'3','3#'}
 								me.timedTTL(pin,300);
-							case{'4'}
+							case{'4','4$'}
 								me.timedTTL(pin,400);
-							case{'5'}
+							case{'5','5%'}
 								me.timedTTL(pin,500);
-							case{'6'}
+							case{'6','6^'}
 								me.timedTTL(pin,600);
 							case{'7'}
 								me.timedTTL(pin,700);
@@ -390,6 +391,7 @@ classdef arduinoManager < optickaCore
 				for nn = 0:9
 					nl = [nl KbName(num2str(nn))];
 				end
+				nl = [nl KbName('-') KbName('+') KbName('0)') KbName('-_') KbName('1!')];
 				oldkeys=RestrictKeysForKbCheck(nl);
 				doLoop = true;
                 
@@ -399,9 +401,9 @@ classdef arduinoManager < optickaCore
                 
                 ad = audioManager();ad.close();
 				if IsLinux
-					ad.device = 1; 
+					ad.device = 1;
 				elseif IsWin 
-					ad.device = 3;
+					ad.device = 6;
 				end
                 ad.setup();
                 
@@ -415,9 +417,9 @@ classdef arduinoManager < optickaCore
 					if isDown
 						rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end
 						switch lower(rchar)
-							case {'0','-'}
+							case {'0','0)','-_','-'}
 								doLoop = false;
-							case{'1','kp_end'}
+							case{'1','1!','kp_end'}
 								mv.xPositionOut = 0;
                                 mv.yPositionOut = 0;
                                 update(mv);
@@ -432,9 +434,8 @@ classdef arduinoManager < optickaCore
 									if i == 60; me.timedTTL(pin,val); end
 									i=i+1;
                                 end
-								me.timedTTL(pin,val);
-								me.timedTTL(pin,200);
-							case{'2','kp_down'}
+								me.timedTTL(pin,val*2);
+							case{'2','2@','kp_down'}
 								mv.xPositionOut = 16;
                                 mv.yPositionOut = 10;
                                 update(mv);
@@ -449,9 +450,8 @@ classdef arduinoManager < optickaCore
 									if i == 60; me.timedTTL(pin,val); end
 									i=i+1;
                                 end
-								me.timedTTL(pin,200);
-								me.timedTTL(pin,200);
-							case{'3','kp_next'}
+								me.timedTTL(pin,val*2);
+							case{'3','3#','kp_next'}
 								mv.xPositionOut = -16;
                                 mv.yPositionOut = -10;
                                 update(mv);
@@ -465,8 +465,8 @@ classdef arduinoManager < optickaCore
 									if i == 60; me.timedTTL(pin,val); end
 									i=i+1;
                                 end
-								me.timedTTL(pin,val);
-							case{'4','kp_left'}
+								me.timedTTL(pin,val*2);
+							case{'4','4$','kp_left'}
 								mv.xPositionOut = 16;
                                 mv.yPositionOut = -10;
                                 update(mv);
@@ -482,7 +482,7 @@ classdef arduinoManager < optickaCore
 									i=i+1;
                                 end
 								me.timedTTL(pin,val);
-							case{'5','kp_begin'}
+							case{'5','5%','kp_begin'}
 								mv.xPositionOut = -16;
                                 mv.yPositionOut = 10;
                                 update(mv);
@@ -498,12 +498,12 @@ classdef arduinoManager < optickaCore
 									i=i+1;
                                 end
                                 me.timedTTL(pin,val);
-							case{'6','kp_right'}
-								me.timedTTL(pin,600);
-							case{'7','kp_home'}
-								me.timedTTL(pin,700);
-							case{'8','kp_up'}
-								me.timedTTL(pin,800);
+							case{'6','6^','kp_right'}
+								me.timedTTL(pin,val*2);
+							case{'7','7&','kp_home'}
+								me.timedTTL(pin,val*2);
+							case{'8','8*','kp_up'}
+								me.timedTTL(pin,val*2);
                         end
                     else
                         flip(sM);
