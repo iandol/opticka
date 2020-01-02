@@ -4,6 +4,7 @@ classdef audioManager < optickaCore
 		device				= []
 		fileName char		= ''
 		numChannels double	= 2
+		frequency double	= 44100
 		lowLatency logical	= true
 		silentMode logical	= false %this allows us to be called even if no arduino is attached
 		verbose				= true
@@ -12,7 +13,6 @@ classdef audioManager < optickaCore
 		isBuffered logical	= false
 		aHandle
 		status
-		frequency
 		%> list of names if multipleImages > 0
 		fileNames			= {};
 		devices
@@ -55,8 +55,7 @@ classdef audioManager < optickaCore
 			end
 			InitializePsychSound(me.lowLatency);
 			me.devices = PsychPortAudio('GetDevices');
-			suggestedLatency = [];
-			me.aHandle = PsychPortAudio('Open', me.device);
+			me.aHandle = PsychPortAudio('Open', me.device, 1, 2, me.frequency, me.numChannels);
 			me.status = PsychPortAudio('GetStatus', me.aHandle);
 			me.frequency = me.status.SampleRate;
 			if me.isFiles
@@ -105,11 +104,13 @@ classdef audioManager < optickaCore
 					PsychPortAudio('Stop', me.aHandle, 0, 1); 
 				end
 				PsychPortAudio('DeleteBuffer');
-				PsychPortAudio('Close');
+				try PsychPortAudio('Close'); end
 				me.aHandle = [];
 				me.status = [];
-				me.freq = [];
+				me.frequency = [];
 				me.isSetup = false;
+			catch ME
+				getReport(ME)
 			end
 		end
 		
@@ -144,7 +145,7 @@ classdef audioManager < optickaCore
 			if isempty(me.fileName) || ~exist(me.fileName,'file')
 				p = mfilename('fullpath');
 				p = fileparts(p);
-				me.fileName = [p filesep 'Coo.wav'];
+				me.fileName = [p filesep 'Coo2.wav'];
 				me.fileNames{1} = me.fileName;
 			elseif exist(me.fileName,'dir') == 7
 				findFiles(me);
