@@ -145,7 +145,6 @@ classdef tobiiManager < optickaCore
 			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
 			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
 			
-			
 			if me.isDummy
 				me.tobii			= me.tobii.setDummyMode();
 			end
@@ -156,15 +155,15 @@ classdef tobiiManager < optickaCore
 			me.settings.cal.bgColor = floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor = me.settings.cal.bgColor;
             if IsLinux
-                settings.UI.setup.instruct.font = 'Liberation Sans';
-                settings.UI.button.setup.text.font = 'Liberation Sans';
-                settings.UI.button.val.text.font = 'Liberation Sans';
-				settings.UI.cal.errMsg.font = 'Liberation Sans';
-				settings.UI.val.waitMsg.font = 'Liberation Sans';
-				settings.UI.val.menu.text.font  = 'Liberation Sans';
-                settings.UI.val.avg.text.font = 'Liberation Mono';
-                settings.UI.val.hover.text.font = 'Liberation Mono';
-                settings.UI.val.avg.text.color = 200;
+                me.settings.UI.setup.instruct.font = 'Liberation Sans';
+                me.settings.UI.button.setup.text.font = 'Liberation Sans';
+                me.settings.UI.button.val.text.font = 'Liberation Sans';
+				me.settings.UI.cal.errMsg.font = 'Liberation Sans';
+				me.settings.UI.val.waitMsg.font = 'Liberation Sans';
+				me.settings.UI.val.menu.text.font  = 'Liberation Sans';
+                me.settings.UI.val.avg.text.font = 'Liberation Mono';
+                me.settings.UI.val.hover.text.font = 'Liberation Mono';
+                me.settings.UI.val.avg.text.color = 200;
             end
 			updateDefaults(me);
 			me.tobii.init();
@@ -175,13 +174,17 @@ classdef tobiiManager < optickaCore
 				me.win			= me.screen.win;
 			end
 			
-			me.salutation('Initialise', ...
+			if ~me.isDummy
+				me.salutation('Initialise', ...
 				sprintf('Running on a %s (%s) @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
 				me.tobii.systemInfo.model, me.tobii.systemInfo.deviceName,...
 				me.tobii.systemInfo.frequency,...
 				me.tobii.systemInfo.trackingMode,...
 				me.screen.screen,me.screen.winRect(3),me.screen.winRect(4),...
 				me.screen.screenVals.fps),true);
+			else
+				me.salutation('Initialise', 'Running in Dummy Mode', true);
+			end
 		end
 		
 		% ===================================================================
@@ -371,7 +374,7 @@ classdef tobiiManager < optickaCore
 				else
 					[mx, my] = GetMouse([]);
 				end
-				me.pupil		= 800 + randi(20);
+				me.pupil		= 5 + randn;
 				sample.gx		= mx;
 				sample.gy		= my;
 				sample.pa		= me.pupil;
@@ -714,7 +717,6 @@ classdef tobiiManager < optickaCore
 				getReport(ME)
 			end
 			me.isConnected = false;
-			me.isDummy = false;
 			me.eyeUsed = 'both';
 		end
 		

@@ -87,9 +87,7 @@ classdef audioManager < optickaCore
 		% ===================================================================
 		function play(me,when)
 			if ~exist('when','var'); when = []; end
-			if ~me.isSetup
-				setup(me);
-			end
+			if ~me.isSetup; setup(me);end
 			if me.isSetup
 				PsychPortAudio('Start', me.aHandle, [], when);
 			end
@@ -110,42 +108,37 @@ classdef audioManager < optickaCore
         %>
         % ===================================================================
         function beep(me,freq,durationSec,fVolume)
-            if me.isSetup
-                if ~exist('freq', 'var')
-                    freq = 400;
-                end
-                
-                if ~exist('durationSec', 'var')
-                    durationSec = 0.15;
-                end
-                
-                if ~exist('fVolume', 'var')
-                    fVolume = 0.5;
-                else
-                    % Clamp if necessary
-                    if (fVolume > 1.0)
-                        fVolume = 1.0;
-                    elseif (fVolume < 0)
-                        fVolume = 0;
-                    end
-                end
-                if ischar(freq)
-                    if strcmpi(freq, 'high') freq = 1000;
-                    elseif strcmpi(freq, 'med') freq = 400;
-                    elseif strcmpi(freq, 'medium') freq = 400;
-                    elseif strcmpi(freq, 'low') freq = 300;
-                    end
-                    
-                end
-                nSample = me.frequency*durationSec;
-                soundVec = sin(2*pi*freq*(1:nSample)/me.frequency);
-                soundVec = [soundVec;soundVec];
+			if ~me.isSetup; setup(me);end
+            
+			if ~exist('freq', 'var');freq = 400;end
+			if ~exist('durationSec', 'var');durationSec = 0.15;	end
+			if ~exist('fVolume', 'var')
+				fVolume = 0.5;
+			else
+				% Clamp if necessary
+				if (fVolume > 1.0)
+					fVolume = 1.0;
+				elseif (fVolume < 0)
+					fVolume = 0;
+				end
+			end
+			if ischar(freq)
+				if strcmpi(freq, 'high') freq = 1000;
+				elseif strcmpi(freq, 'med') freq = 400;
+				elseif strcmpi(freq, 'medium') freq = 400;
+				elseif strcmpi(freq, 'low') freq = 300;
+				end
 
-                % Scale down the volume
-                soundVec = soundVec * fVolume;
-                PsychPortAudio('FillBuffer', me.aHandle, soundVec);
-                PsychPortAudio('Start', me.aHandle);
-            end
+			end
+			nSample = me.frequency*durationSec;
+			soundVec = sin(2*pi*freq*(1:nSample)/me.frequency);
+			soundVec = [soundVec;soundVec];
+
+			% Scale down the volume
+			soundVec = soundVec * fVolume;
+			PsychPortAudio('FillBuffer', me.aHandle, soundVec);
+			PsychPortAudio('Start', me.aHandle);
+
         end
    
 		% ===================================================================
