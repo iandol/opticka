@@ -55,21 +55,32 @@ classdef audioManager < optickaCore
 			end
 			InitializePsychSound(me.lowLatency);
 			me.devices = PsychPortAudio('GetDevices');
-			me.aHandle = PsychPortAudio('Open', me.device, 1, 2, me.frequency, me.numChannels);
+            if isempty(me.aHandle)
+                me.aHandle = PsychPortAudio('Open', me.device, 1, 1, me.frequency);
+            end
+            Snd('Open',me.aHandle);
+            oldVol=PsychPortAudio('Volume', me.aHandle, 1);
 			me.status = PsychPortAudio('GetStatus', me.aHandle);
 			me.frequency = me.status.SampleRate;
-			if me.isFiles
+			
+            loadSamples(me);
+			me.isSetup = true;
+			
+        end
+        
+        % ===================================================================
+		%> @brief setup
+		%>  
+		% ===================================================================
+		function loadSamples(me)
+            if me.isFiles
 				
 			else
 				[audiodata, infreq] = psychwavread(me.fileName);
-			end
-			
+            end
 			PsychPortAudio('FillBuffer', me.aHandle, audiodata');
-			me.isSetup = true;
-			
-		end
-		
-		
+        end
+
 		% ===================================================================
 		%> @brief  
 		%>
@@ -80,18 +91,72 @@ classdef audioManager < optickaCore
 				setup(me);
 			end
 			if me.isSetup
-				PsychPortAudio('Start', me.aHandle,[],when);
+				PsychPortAudio('Start', me.aHandle, [], when);
 			end
-		end
-		
+        end
+        
+        % ===================================================================
+		%> @brief  
+		%>
+		% ===================================================================
+		function waitUntilStopped(me)
+			if me.isSetup
+				PsychPortAudio('Stop', me.aHandle, 1, 1);
+			end
+        end
+        
+        % ===================================================================
+		%> @brief  
+        %>
+        % ===================================================================
+        function beep(me,freq,durationSec,fVolume)
+            if me.isSetup
+                if ~exist('freq', 'var')
+                    freq = 400;
+                end
+                
+                if ~exist('durationSec', 'var')
+                    durationSec = 0.15;
+                end
+                
+                if ~exist('fVolume', 'var')
+                    fVolume = 0.5;
+                else
+                    % Clamp if necessary
+                    if (fVolume > 1.0)
+                        fVolume = 1.0;
+                    elseif (fVolume < 0)
+                        fVolume = 0;
+                    end
+                end
+                if ischar(freq)
+                    if strcmpi(freq, 'high') freq = 1000;
+                    elseif strcmpi(freq, 'med') freq = 400;
+                    elseif strcmpi(freq, 'medium') freq = 400;
+                    elseif strcmpi(freq, 'low') freq = 300;
+                    end
+                    
+                end
+                nSample = me.frequency*durationSec;
+                soundVec = sin(2*pi*freq*(1:nSample)/me.frequency);
+                soundVec = [soundVec;soundVec];
+
+                % Scale down the volume
+                soundVec = soundVec * fVolume;
+                PsychPortAudio('FillBuffer', me.aHandle, soundVec);
+                PsychPortAudio('Start', me.aHandle);
+            end
+        end
+   
 		% ===================================================================
 		%> @brief  
 		%>
 		% ===================================================================
 		function run(me)
-			tic;setup(me);toc
+			setup(me)
 			play(me);
-			tic;reset(me);toc	
+            waitUntilStopped(me);
+			reset(me);
 		end
 		
 		% ===================================================================
@@ -145,7 +210,7 @@ classdef audioManager < optickaCore
 			if isempty(me.fileName) || ~exist(me.fileName,'file')
 				p = mfilename('fullpath');
 				p = fileparts(p);
-				me.fileName = [p filesep 'Coo2.wav'];
+				me.fileName = [p filesep 'Coo.wav'];
 				me.fileNames{1} = me.fileName;
 			elseif exist(me.fileName,'dir') == 7
 				findFiles(me);
