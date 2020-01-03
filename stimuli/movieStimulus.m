@@ -80,11 +80,7 @@ classdef movieStimulus < baseStimulus
 				me.parseArgs(varargin, me.allowedProperties);
 			end
 			
-			if isempty(me.fileName) %use our default
-				p = mfilename('fullpath');
-				p = fileparts(p);
-				me.fileName = [p filesep 'monkey-dance.mp4'];
-			end
+			checkFileName(me);
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor','Texture Stimulus initialisation complete');
@@ -108,9 +104,8 @@ classdef movieStimulus < baseStimulus
 			
 			reset(me);
 			me.inSetup = true;
-			if isempty(me.isVisible)
-				me.show;
-			end
+			
+			checkFileName(me);
 			
 			if isempty(me.isVisible)
 				me.show;
@@ -154,12 +149,9 @@ classdef movieStimulus < baseStimulus
 				me.fileName, me.duration, me.fps, me.width, me.height, round(toc*1e3));
 			fprintf('\tBlocking: %i | Loop: %i | Preloadsecs: %i | Pixelformat: %i | Flags: %i\n', me.blocking, ...
 				me.loopStrategy, me.preloadSecs, me.pixelFormat, me.specialFlags1);
-
-			wdeg = me.width / me.ppd;
-			hdeg = me.height / me.ppd;
 			
-			if me.size > 0
-				me.scale = me.sizeOut / wdeg;
+			if me.sizeOut > 0
+				me.scale = me.sizeOut / (me.width / me.ppd);
 			end
 			
 			me.shader = [];
@@ -299,6 +291,18 @@ classdef movieStimulus < baseStimulus
 					fprintf('---> stimulus TEXTURE dstRect = %5.5g %5.5g %5.5g %5.5g\n',me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4));
 				end
 				me.mvRect = me.dstRect;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function checkFileName(me)
+			if isempty(me.fileName) || exist(me.fileName,'file') ~= 2
+				p = mfilename('fullpath');
+				p = fileparts(p);
+				me.fileName = [p filesep 'monkey-dance.mp4'];
 			end
 		end
 		

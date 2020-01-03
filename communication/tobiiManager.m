@@ -387,7 +387,7 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Function interface to update the fixation parameters
+		%> @brief Method to update the fixation parameters
 		%>
 		% ===================================================================
 		function updateFixationValues(me,x,y,inittime,fixtime,radius,strict)
@@ -861,8 +861,7 @@ classdef tobiiManager < optickaCore
 				me.settings.val.pointNotifyFunction = @tittaCalCallback;
 				trackerSetup(me);
 				ShowCursor; %titta fails to show cursor so we must do it
-				drawPhotoDiodeSquare(s,[0 0 0 1]); %make sure our photodiode patch is black
-				flip(s)
+				drawPhotoDiodeSquare(s,[0 0 0 1]); flip(s); %make sure our photodiode patch is black
 				
 				% set up the size and position of the stimulus
 				o.sizeOut = me.fixation.Radius*2;
@@ -886,13 +885,11 @@ classdef tobiiManager < optickaCore
                 for i = 1 : s.screenVals.fps
                     draw(o);
                     drawBackground(s);
-                    s.drawPhotoDiodeSquare([double(mc) double(mc) double(mc) 1]);
                     Screen('DrawText',s.win,['Warming up frame ' num2str(i)],65,10);
                     finishDrawing(s);
                     animate(o);
                     getSample(me);
                     flip(s);
-                    if mod(i,6)==0; mc = ~mc; end
                 end
                 s.drawPhotoDiodeSquare([0 0 0 1]);
 				flip(s);

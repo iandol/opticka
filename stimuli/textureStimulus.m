@@ -30,6 +30,8 @@ classdef textureStimulus < baseStimulus
 		matrix
 		%> current randomly selected image
 		currentImage = ''
+		width
+		height
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
@@ -64,19 +66,12 @@ classdef textureStimulus < baseStimulus
 		function me = textureStimulus(varargin)
 			if nargin == 0;varargin.family = 'texture';end
 			me=me@baseStimulus(varargin); %we call the superclass constructor first
-			me.size = 1; %override default
+			me.size = 0; %override default
 			if nargin>0
 				me.parseArgs(varargin, me.allowedProperties);
 			end
 			
-			if isempty(me.fileName) %use our default
-				p = mfilename('fullpath');
-				p = fileparts(p);
-				me.fileName = [p filesep 'Bosch.jpeg'];
-				me.fileNames{1} = me.fileName;
-			elseif exist(me.fileName,'dir') == 7
-				findFiles(me);
-			end
+			checkFileName(me);
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor','Texture Stimulus initialisation complete');
@@ -101,6 +96,9 @@ classdef textureStimulus < baseStimulus
 			
 			reset(me);
 			me.inSetup = true;
+			
+			checkFileName(me);
+			
 			if isempty(me.isVisible)
 				me.show;
 			end
@@ -156,7 +154,9 @@ classdef textureStimulus < baseStimulus
 				me.doMotion=false;
 			end
 			
-			me.scale = me.sizeOut;
+			if me.sizeOut > 0
+				me.scale = me.sizeOut / (me.width / me.ppd);
+			end
 			
 			me.inSetup = false;
 			
@@ -186,6 +186,9 @@ classdef textureStimulus < baseStimulus
 				me.currentImage = '';
 			end
 			
+			me.width = size(me.matrix,2);
+			me.height = size(me.matrix,1);
+			
 			me.salutation('loadImage',['Load: ' regexprep(me.currentImage,'\','/')],true);
 			
 			me.matrix = me.matrix .* me.contrast;
@@ -209,7 +212,6 @@ classdef textureStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function update(me)
-			tic
 			if me.multipleImages > 0
 				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 					try Screen('Close',me.texture); end %#ok<*TRYNC>
@@ -220,7 +222,6 @@ classdef textureStimulus < baseStimulus
 			resetTicks(me);
 			computePosition(me);
 			setRect(me);
-			toc
 		end
 		
 		% ===================================================================
@@ -296,6 +297,23 @@ classdef textureStimulus < baseStimulus
 				me.mvRect = me.dstRect;
 			end
 		end
+		
+		% ===================================================================
+		%> @brief 
+		%>
+		% ===================================================================
+		function checkFileName(me)
+			if isempty(me.fileName) || exist(me.fileName,'file') ~= 2 %use our default
+				p = mfilename('fullpath');
+				p = fileparts(p);
+				me.fileName = [p filesep 'Bosch.jpeg'];
+				me.fileNames{1} = me.fileName;
+			elseif exist(me.fileName,'dir') == 7
+				findFiles(me);
+			end
+		end
+		
+		
 		
 		% ===================================================================
 		%> @brief findFiles

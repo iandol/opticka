@@ -112,6 +112,11 @@ classdef screenManager < optickaCore
 		yCenter double = 0
 		%> set automatically on construction
 		maxScreen
+		%> possible bitDepths
+		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; 'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output'; 'EnablePseudoGrayOutput'; 'EnableNative10BitFramebuffer' }
+		%> possible blend modes
+		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR'; 'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA'; 'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' }
+
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -119,10 +124,6 @@ classdef screenManager < optickaCore
 		linuxFontName char = '-adobe-helvetica-bold-o-normal--11-80-100-100-p-60-iso8859-1'
 		%> properties allowed to be modified during construction
 		allowedProperties char = 'disableSyncTests|displayPPRefresh|screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
-		%> possible bitDepths
-		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; 'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output'; 'EnablePseudoGrayOutput'; 'EnableNative10BitFramebuffer' }
-		%> possible blend modes
-		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR'; 'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA'; 'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' }
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect(1,4) double = [0, 0, 45, 45]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
