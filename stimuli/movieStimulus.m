@@ -72,18 +72,16 @@ classdef movieStimulus < baseStimulus
 		%> @return instance of opticka class.
 		% ===================================================================
 		function me = movieStimulus(varargin)
-			if nargin == 0;varargin.family = 'texture';end
-			me=me@baseStimulus(varargin); %we call the superclass constructor first
-			me.size = 0; %override default
-			me.texture = -1; %override default
-			if nargin>0
-				me.parseArgs(varargin, me.allowedProperties);
-			end
+			if nargin == 0;varargin.family = 'movie';end
+			args = optickaCore.addDefaults(varargin,...
+				struct('family','movie','size',0));
+			me=me@baseStimulus(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 			
 			checkFileName(me);
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
-			me.salutation('constructor','Texture Stimulus initialisation complete');
+			me.salutation('constructor','Movie Stimulus initialisation complete');
 		end
 		
 		% ===================================================================

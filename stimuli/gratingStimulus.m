@@ -33,7 +33,7 @@ classdef gratingStimulus < baseStimulus
 		%This switch can be accomplished simply setting angle, but this control enables
 		%simple reverse direction protocols.
 		reverseDirection = false
-		%> the angle which the direction of the grating object is moving - the object can
+		%> the angle whic'contrast',0.75,h the direction of the grating object is moving - the object can
 		%> move as well as the grating texture within the object.
 		motionAngle = 0
 		%> PTB Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure (see PTB docs)
@@ -76,7 +76,7 @@ classdef gratingStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['sf|tf|angle|motionAngle|phase|rotateTexture|' ...
+		allowedProperties = ['type|sf|tf|angle|motionAngle|phase|rotateTexture|' ...
 			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ...
 			'contrastMult|sigma|useAlpha|smoothMethod|' ...
 			'correctPhase|phaseReverseTime|phaseOfReverse']
@@ -113,16 +113,11 @@ classdef gratingStimulus < baseStimulus
 		%> @return instance of class.
 		% ===================================================================
 		function me = gratingStimulus(varargin)
-			%Initialise for superclass, stops a noargs error
-			if nargin == 0
-				varargin.family = 'grating';
-			end
-
-			me=me@baseStimulus(varargin); %we call the superclass constructor first
-
-			if nargin>0
-				me.parseArgs(varargin, me.allowedProperties);
-			end
+			if nargin == 0;varargin.name = 'grating';end
+			args = optickaCore.addDefaults(varargin,...
+				struct('colour',[0.5 0.5 0.5]));
+			me=me@baseStimulus(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor method','Stimulus initialisation complete');

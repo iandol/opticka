@@ -37,31 +37,32 @@ sca %PTB screen clear all
 %%
 % First we create a stimulus manager that collects and handles groups of
 % stimuli as if they were a single 'thing', so for example when you use the
-% draw method on a stimulus manager, it tells each of its child stimuli to
-% draw in turn
+% draw method on myStims, it tells each of its child stimuli to
+% draw in order
 myStims = metaStimulus();
 
 %%
 % The first six stimuli are gratings / gabors of varying kinds.
-myStims{1}=gratingStimulus('sf',1,'contrast',1,'size',1,'tf',0,'angle',30,...
-	'gabor', false, 'mask', true);
+myStims{1}=gratingStimulus('sf',1,'contrast',1,'size',1,'tf',0,'angle',0,...
+	'gabor', true, 'mask', true);
 
-myStims{2}=gratingStimulus('sf',3,'contrast',0.5,'tf',1,'size',3,'xPosition',-3,...
-	'yPosition',-4,'gabor', false,'mask', false);
+myStims{2}=gratingStimulus('sf',3,'contrast',0.75,'tf',1,'size',3,'xPosition',-3,...
+	'yPosition',-5);
 
-myStims{3}=gratingStimulus('sf',1,'contrast',1,'size',3,'angle',45,'xPosition',5,...
-	'yPosition',5,'mask', true, 'sigma', 30);
+myStims{3}=gratingStimulus('sf',1,'tf',3,'contrast',1,'size',3,'angle',45,'xPosition',0,...
+	'yPosition',-10,'mask', true, 'sigma', 30);
 
-myStims{4}=gratingStimulus('sf',1,'contrast',0.5,'tf',0,'size',2,'xPosition',-3,...
-	'yPosition',-3,'gabor',false,'mask',true,'speed',2);
+myStims{4}=gratingStimulus('sf',1,'contrast',0.75,'tf',0,'size',2,'xPosition',-4,...
+	'yPosition',-4,'gabor',true);
 
-myStims{5}=gratingStimulus('sf',1,'contrast',0.25,'colour',[0.6 0.3 0.3],'tf',0.1,...
+myStims{5}=gratingStimulus('sf',1,'contrast',0.45,'colour',[0.6 0.3 0.3],'tf',0.1,...
 	'size',2,'xPosition',3,'yPosition',0);
 
 %%
-% This is a color grating where two colours can be specified
-myStims{6}=colourGratingStimulus('sf',1,'contrast',0.75,'colour',[1 0 0],'colour2',[0 1 0],...
-	'tf',1,'size',3,'xPosition',4,'yPosition',-4);
+% This is a colour grating where two independant colours can be modulated
+% relative to a base colour, in this case this is a red/green grating
+myStims{6}=colourGratingStimulus('sf',1,'contrast',1,'colour',[1 0 0 1],'colour2',[0 1 0 1],...
+	'baseColour',[0.5 0.5 0.5],'tf',1,'size',3,'xPosition',6,'yPosition',6);
 
 %%
 % A simple bar: bars can be solid in colour or have random texture 
@@ -73,15 +74,15 @@ myStims{6}=colourGratingStimulus('sf',1,'contrast',0.75,'colour',[1 0 0],'colour
 % will change the angle of this stimulus the geometry is calculated for you
 % automatically!
 myStims{7}=barStimulus('type','solid','barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
-	'yPosition',0,'startPosition',-4,'colour',[.9 .7 .5]);
+	'yPosition',0,'startPosition',-4);
 
 %%
-% coherent dot stimulus; 200 dots moving at 1deg/s with coherence set to 0.5
-myStims{8}=dotsStimulus('density',50,'speed',1,'coherence',0.5,'xPosition',4,...
-	'yPosition',6,'colour',[1 1 1],'dotType',3,'dotSize',0.1,'colorType','randomBW');
+% coherent dot stimulus; 200 dots moving at 2deg/s with coherence set to 0.25
+myStims{8}=dotsStimulus('density',50,'coherence',0.25,'xPosition',4,...
+	'yPosition',6,'dotType',3,'dotSize',0.1,'colorType','randomBW');
 
 %%
-% a simple circular spot, spots can also flash if needed
+% a simple smoothed spot, spots can also flash if needed
 myStims{9}=discStimulus('speed',2,'xPosition',4,'type','flash',...
 	'yPosition',4,'colour',[1 1 0],'size',2,'flashTime',[0.2 0.2]);
 
@@ -89,15 +90,15 @@ myStims{9}=discStimulus('speed',2,'xPosition',4,'type','flash',...
 % a texture stimulus, by default this loads a picture from the opticka
 % stimulus directory; you can rotate it, scale it etc and drift it across screen as
 % in this case. Size is in degrees, scaling the whole picture
-myStims{10}=textureStimulus('speed',2,'xPosition',-10,...
-	'yPosition',10,'size',1);
+myStims{10}=textureStimulus('speed',2,'xPosition',-10,'yPosition',10,...
+	'size',0.5);
 
 %%
 % a movie stimulus, by default this loads a movie from the opticka
 % stimulus directory; you can rotate it, scale it etc and drift it across screen as
 % in this case. Size is in degrees, scaling the whole movie
-myStims{11}=movieStimulus('speed',2,'xPosition',10,'yPosition',10,...
-	'mask',[0 0 0],'size',1);
+myStims{11}=movieStimulus('speed',1,'xPosition',-5,'yPosition',-10,...
+	'mask',[0 0 0],'size',3);
 
 %% Task Initialisation
 % The stimulusSequence class defines a stimulus sequence (task) which is composed
@@ -131,12 +132,12 @@ myTask.nVar(2).values = [0.1 0.4];
 % selected from values of -3 and 3 degrees from visual center of screen
 myTask.nVar(3).name = 'xPosition';
 myTask.nVar(3).stimulus = [2 8];
-myTask.nVar(3).values = [-5 5];
+myTask.nVar(3).values = [-6 6];
 % the next two parameters allow us to link a stimulus with
 % an offset; for example you could set stimulus 1 to values [1 2 3]
 % and if offsetvalue was 2 and offsetstimulus was 2 then the second
 % stimulus would change through [3 4 5]; in this case we offset stimulus 10
-% to +1 the values above i.e. [-2 4]
+% to +1 the values above i.e. [-5 7]
 myTask.nVar(3).offsetstimulus = [10];
 myTask.nVar(3).offsetvalue = [1];
 
@@ -157,10 +158,8 @@ showLog(myTask);
 % initialisation.
 myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'pixelsPerCm', 27.5,... %calibration value for screen size/pixel density, see calibrateSize()
-	'srcMode', 'GL_ONE',...
-	'dstMode', 'GL_ONE',...
-	'blend', false,... %enable OpenGL blending, you can also set blend modes when needed
-	'windowed', [ ],... %set to a widthxheight for debugging i.e. [800 600]; set to false for fullscreen
+	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
+	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to false for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on OS X ATI 5870
 	'bitDepth', 'FloatingPoint32bitIfPossible',... %8bit, FloatingPoint16bit FloatingPoint32bit etc.
 	'displayPPRefresh', 100, ... %set refresh to 100Hz only if Dispay++ attached

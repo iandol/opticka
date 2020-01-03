@@ -40,7 +40,9 @@ classdef screenManager < optickaCore
 		bitDepth char = 'FloatingPoint32BitIfPossible'
 		%> The acceptable variance in flip timing tests performed when
 		%> screen opens, set with Screen('Preference', 'SyncTestSettings', syncVariance)
-		syncVariance double = 0.0008
+		%> AMD cards under Ubuntu are very low variance, but even NVidia on
+		%> Ubuntu can be ~0.8ms, so we raise the threshold to 1ms variance
+		syncVariance double = 0.001
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 		timestampingMode double = 1
 		%> multisampling sent to the graphics card, try values 0[disabled], 4, 8

@@ -111,6 +111,8 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function me = tobiiManager(varargin)
+			if nargin == 0; varargin.name = ''; end
+			me=me@optickaCore(varargin); %superclass constructor
 			if nargin>0
 				me.parseArgs(varargin,me.allowedProperties);
 			end

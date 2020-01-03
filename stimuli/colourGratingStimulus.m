@@ -120,43 +120,30 @@ classdef colourGratingStimulus < baseStimulus
 		%> @return instance of class.
 		% ===================================================================
 		function me = colourGratingStimulus(varargin)
-			%Initialise for superclass, stops a noargs error
-			if nargin == 0
-				varargin.family = 'grating';
-			end
-			
-			me=me@baseStimulus(varargin); %we call the superclass constructor first
-			
-			if nargin>0
-				if ~any(cellfun(@(s) strcmp(s,'colour'),varargin)) %change default colours
-					me.colour = [1 0 0 1];
-				end
-				if ~any(cellfun(@(s) strcmp(s,'colour2'),varargin))
-					me.colour = [0 1 0 1];
-				end
-				me.parseArgs(varargin, me.allowedProperties);
-			else
-				me.colour = [1 0 0 1];
-				me.colour2 = [0 1 0 1];
-			end
+			if nargin == 0;varargin.name = 'colourGrating';end
+			args = optickaCore.addDefaults(varargin,...
+				struct('colour',[1 0 0 1],'colour2',[0 1 0 1],'family','grating'));
+			me=me@baseStimulus(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor method','Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
-		%> @brief Setup this object in preperation for use
+		%> @brief Setup this object in preparation for use
 		%> When displaying a stimulus object, the main properties that are to be
 		%> modified are copied into cache copies of the property, both to convert from 
 		%> visual description (c/d, Hz, degrees) to
 		%> computer metrics, and to be animated and modified as independant
-		%> variables. So xPosition is copied to xPositionOut and converyed from
+		%> variables. So xPosition is copied to xPositionOut and converted from
 		%> degrees to pixels. The animation and drawing functions use these modified
 		%> properties, and when they are updated, for example to change to a new
 		%> xPosition, internal methods ensure reconversion and update any dependent
-		%> properties. This method initialises the object for display.
+		%> properties. This method initialises the object with all the cache properties 
+		%> for display.
 		%>
-		%> @param sM screenManager object for reference
+		%> @param sM screenManager object to use
 		% ===================================================================
 		function setup(me,sM)
 			

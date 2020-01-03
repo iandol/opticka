@@ -110,18 +110,11 @@ classdef dotsStimulus < baseStimulus
 		%> @return instance of class.
 		% ===================================================================
 		function me = dotsStimulus(varargin)
-			%Initialise for superclass, stops a noargs error
-			if nargin == 0
-				varargin.family = 'dots';
-				varargin.colour = [1 1 1 1];
-				varargin.speed = 2;
-			end
-			
-			me=me@baseStimulus(varargin); %we call the superclass constructor first
-			
-			if nargin>0
-				me.parseArgs(varargin, me.allowedProperties);
-			end
+			if nargin == 0;varargin.name = 'dots stimulus';end
+			args = optickaCore.addDefaults(varargin,...
+				struct('colour',[1 1 1],'speed',2));
+			me=me@baseStimulus(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor','Dots Stimulus initialisation complete');

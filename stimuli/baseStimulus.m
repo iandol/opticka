@@ -72,7 +72,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> handles for the GUI
 		handles
 		%> our screen manager
-		sM
+		sM screenManager
 	end
 	
 	properties (Dependent = true, SetAccess = private, GetAccess = public)
@@ -110,7 +110,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be passed on construction
-		allowedProperties char = 'xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed|delayTime|mouseOverride|isVisible'
+		allowedProperties char = 'family|xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed|delayTime|mouseOverride|isVisible'
 	end
 	
 	events
@@ -130,15 +130,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @return instance of class.
 		% ===================================================================
 		function me = baseStimulus(varargin)
-			if nargin == 0; varargin.name = 'baseStimulus'; end
+			if nargin == 0;varargin.family = 'movie';end
 			me=me@optickaCore(varargin); %superclass constructor
-			
-			if nargin > 0; me.parseArgs(varargin,me.allowedProperties); end
-			
-			if isempty(me.sM) %add a default screenManager, overwritten on setup
-				me.sM = screenManager('verbose',false,'name','default');
-				me.ppd = me.sM.ppd;
-			end
+			me.parseArgs(varargin,me.allowedProperties);
+			%if isempty(me.sM) %add a default screenManager, overwritten on setup
+				%me.sM = screenManager('verbose',false,'name','default');
+				%me.ppd = me.sM.ppd;
+			%end
 		end
 		
 		% ===================================================================
@@ -212,7 +210,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> Y position increment for a given delta and angle
 		% ===================================================================
 		function value = get.dY(me)
-			if ~isempty(me.findprop('motionAngle'))
+			if ~isempty(me.findprop('mvararginotionAngle'))
 				if isempty(me.findprop('motionAngleOut'))
 					[~,value]=me.updatePosition(me.delta,me.motionAngle);
 				else
@@ -315,11 +313,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 					runtime = 2; %seconds to run
 				end
 				if ~exist('s','var') || ~isa(s,'screenManager')
+					if isempty(me.sM); me.sM=screenManager; end
 					s = me.sM;
 					s.blend = true; 
 					s.disableSyncTests = true;
 					s.visualDebug = true;
-					s.bitDepth = '8bit';
+					s.bitDepth = 'FloatingPoint32BitIfPossible';
 				end
 				if ~exist('forceScreen','var') || isempty(forceScreen); forceScreen = -1; end
 				if ~exist('showVBL','var') || isempty(showVBL); showVBL = false; end

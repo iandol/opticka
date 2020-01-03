@@ -64,12 +64,10 @@ classdef textureStimulus < baseStimulus
 		%> @return instance of opticka class.
 		% ===================================================================
 		function me = textureStimulus(varargin)
-			if nargin == 0;varargin.family = 'texture';end
-			me=me@baseStimulus(varargin); %we call the superclass constructor first
-			me.size = 0; %override default
-			if nargin>0
-				me.parseArgs(varargin, me.allowedProperties);
-			end
+			if nargin == 0;varargin.name = 'picture';end
+			args = optickaCore.addDefaults(varargin,struct('size',0,'family','texture'));
+			me=me@baseStimulus(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 			
 			checkFileName(me);
 			
