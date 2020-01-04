@@ -65,7 +65,7 @@ classdef textureStimulus < baseStimulus
 		% ===================================================================
 		function me = textureStimulus(varargin)
 			if nargin == 0;varargin.name = 'picture';end
-			args = optickaCore.addDefaults(varargin,struct('size',0,'family','texture'));
+			args = optickaCore.addDefaults(varargin,struct('size',0));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -216,7 +216,9 @@ classdef textureStimulus < baseStimulus
 				end
 				me.loadImage(me.fileNames{randi(me.multipleImages)});
 			end
-			me.scale = me.sizeOut;
+			if me.sizeOut > 0
+				me.scale = me.sizeOut / (me.width / me.ppd);
+			end
 			resetTicks(me);
 			computePosition(me);
 			setRect(me);

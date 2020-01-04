@@ -76,7 +76,7 @@ classdef screenManager < optickaCore
 		%> verbose output?
 		verbose = false
 		%> level of PTB verbosity, set to 10 for full PTB logging
-		verbosityLevel double = 4
+		verbosityLevel double = 3
 		%> Use retina resolution natively (worse performance but double resolution)
 		useRetina logical = false
 		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc);

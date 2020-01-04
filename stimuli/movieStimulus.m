@@ -72,9 +72,9 @@ classdef movieStimulus < baseStimulus
 		%> @return instance of opticka class.
 		% ===================================================================
 		function me = movieStimulus(varargin)
-			if nargin == 0;varargin.family = 'movie';end
+			if nargin == 0;varargin.name = 'movie stimulus';end
 			args = optickaCore.addDefaults(varargin,...
-				struct('family','movie','size',0));
+				struct('size',0));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			

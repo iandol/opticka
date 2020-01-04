@@ -61,24 +61,24 @@ myStims{5}=gratingStimulus('type', 'square', 'sf', 1, 'contrast', 1, 'colour', [
 % This is a colour grating where two independant colours can be modulated
 % relative to a base colour, in this case this is a red/green grating
 myStims{6}=colourGratingStimulus('colour', [1 0 0 1], 'colour2', [0 1 0 1],...
-	'baseColour', [0.5 0.5 0.5], 'tf', 1, 'size', 3, 'xPosition', 6, 'yPosition', 6);
-
-%%
-% A simple bar: bars can be solid in colour or have random texture 
-% (try setting 'type' to 'random'). This is an opaque solid yellow bar 
-% moving at 4deg/s. Notice the startPosition is -4; 
-% this means start -4 degrees "behind" start X and Y position, as
-% the stimulus is displayed for 2 seconds the bar therefore traverses
-% 4degrees behind then 4 degrees past the X and Y position. Also note as we
-% will change the angle of this stimulus the geometry is calculated for you
-% automatically!
-myStims{7}=barStimulus('type','solid','barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
-	'yPosition',0,'startPosition',-4);
+	'baseColour', [0.5 0.5 0.5], 'tf', 1, 'size', 3, 'xPosition', 0, 'yPosition', 6);
 
 %%
 % coherent dot stimulus; 200 dots moving at 2deg/s with coherence set to 0.25
-myStims{8}=dotsStimulus('density',50,'coherence',0.25,'xPosition',4,...
-	'yPosition',6,'dotType',3,'dotSize',0.1,'colorType','randomBW');
+myStims{7}=dotsStimulus('density',50,'coherence',0.25,'xPosition',4,...
+	'yPosition',6,'dotType',3,'dotSize',0.1,'colorType','randomBW','mask',true);
+
+%%
+% A simple bar: bars can be solid in colour or have random texture 
+% (try setting 'type' to 'random'). This is an opaque solid bar 
+% moving at 4deg/s. Notice the startPosition is -4; 
+% this means start -4 degrees "behind" start X and Y position, as
+% the stimulus is displayed for 2 seconds the bar therefore traverses
+% 4degrees behind then 4 degrees past the X and Y position (i.e. drift a bar over a RF location)
+% Also note as we will change the angle of this stimulus the geometry is calculated for you
+% automatically!
+myStims{8}=barStimulus('type','solid','barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
+	'yPosition',0,'startPosition',-4);
 
 %%
 % a simple smoothed spot, spots can also flash if needed
@@ -90,7 +90,7 @@ myStims{9}=discStimulus('speed',2,'xPosition',4,'type','flash',...
 % stimulus directory; you can rotate it, scale it etc and drift it across screen as
 % in this case. Size is in degrees, scaling the whole picture
 myStims{10}=textureStimulus('speed',2,'xPosition',-10,'yPosition',10,...
-	'size',0.5);
+	'size',4);
 
 %%
 % a movie stimulus, by default this loads a movie from the opticka
@@ -110,13 +110,13 @@ myTask.nBlocks = 2; %number of blocks
 myTask.trialTime = 2; %time of stimulus display: 2 seconds
 myTask.isTime = 0.25; %inter trial time: 0.25 seconds
 myTask.ibTime=0.5; %inter block time: 1 second
-myTask.realTime = false; %we use real time for switching trials, false uses a tick timer updated every flip
+myTask.realTime = true; %we use real time for switching trials, false uses a tick timer updated every flip
 
 %% Variable 1
 % Our first variable is angle, applied to stimulus 1 3 7 and 10, randomly
 % selected from values of 0 45 and 90 degrees
 myTask.nVar(1).name = 'angle';
-myTask.nVar(1).stimulus = [1 3 7 10];
+myTask.nVar(1).stimulus = [1 3 8 10];
 myTask.nVar(1).values = [0 45 90];
 % the next two parameters allow us to link a stimulus with
 % an offset; for example you could set stimulus 1 to values [1 2 3]
@@ -136,7 +136,7 @@ myTask.nVar(2).values = [0.1 0.4];
 % Our third variable is X position, applied to stimulus 2 and 8, randomly
 % selected from values of -3 and 3 degrees from visual center of screen
 myTask.nVar(3).name = 'xPosition';
-myTask.nVar(3).stimulus = [2 8];
+myTask.nVar(3).stimulus = [2 7];
 myTask.nVar(3).values = [-6 6];
 % the next two parameters allow us to link a stimulus with
 % an offset; for example you could set stimulus 1 to values [1 2 3]
@@ -162,7 +162,7 @@ showLog(myTask);
 % task background colour so you don't see the black flash on PTB screen
 % initialisation.
 myScreen = screenManager('distance', 57.3,... %display distance from observer
-	'pixelsPerCm', 27.5,... %calibration value for screen size/pixel density, see calibrateSize()
+	'pixelsPerCm', 32,... %calibration value for screen size/pixel density, see calibrateSize()
 	'backgroundColour', [0.5 0.5 0.5],... %initial background colour
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
 	'srcMode', 'GL_ONE',... %src blend mode
