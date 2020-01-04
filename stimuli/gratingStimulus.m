@@ -22,17 +22,17 @@ classdef gratingStimulus < baseStimulus
 		%> temporal frequency of the grating
 		tf = 1
 		%> rotate the grating patch (false) or the grating texture within the patch (true [default])?
-		rotateTexture = true
+		rotateTexture logical = true
 		%> phase of grating
 		phase = 0
 		%> contrast of grating
 		contrast = 0.5
 		%> use a circular mask for the grating (default = true), note this can also be smoothed at the edge.
-		mask = true
+		mask logical = true
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
 		%This switch can be accomplished simply setting angle, but this control enables
 		%simple reverse direction protocols.
-		reverseDirection = false
+		reverseDirection logical = false
 		%> the angle whic'contrast',0.75,h the direction of the grating object is moving - the object can
 		%> move as well as the grating texture within the object.
 		motionAngle = 0
@@ -41,17 +41,17 @@ classdef gratingStimulus < baseStimulus
 		%> Do we need to correct the phase to be relative to center not edge? This enables
 		%> centre surround stimuli are phase matched, and if we enlarge a grating object its
 		%> phase stays identical at the centre of the object (where we would imagine our RF)
-		correctPhase = false
+		correctPhase logical = false
 		%> Reverse phase of grating X times per second? Useful with a static grating for linearity testing
 		phaseReverseTime = 0
 		%> What phase to use for reverse?
 		phaseOfReverse = 180
 		%> If mask == true, cosine smoothing sigma in pixels for mask
-		sigma = 0.0
+		sigma = 0
 		%> If mask == true, use colour or alpha channel for smoothing?
-		useAlpha = false
-		%> If mask == true, use cosine (false) or hermite interpolation (true, default)
-		smoothMethod = true
+		useAlpha logical = false
+		%> If mask == true, use hermite interpolation (true, default) or cosine (false)
+		smoothMethod logical = true
 		%> aspect ratio of the grating, can be [x y] to select width height differently
 		aspectRatio = 1;
 	end
@@ -86,8 +86,6 @@ classdef gratingStimulus < baseStimulus
 		phaseCounter = 0
 		%> do we generate a square wave?
 		squareWave = false
-		%> do we generate a square wave?
-		gabor = false
 		%> mask value
 		maskValue
 	end

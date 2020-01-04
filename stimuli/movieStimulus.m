@@ -50,7 +50,7 @@ classdef movieStimulus < baseStimulus
 		shader
 		%> texture buffer for non-blocking movie playback, this is the
 		%> previous frame until a new frame is available
-		buffertex = -1
+		buffertex = []
 		%> allowed properties passed to object upon construction
 		allowedProperties='fileName|blocking|pixelFormat|preloadSecs|specialFlags1|loopStrategy|mask|maskTolerance';
 		%>properties to not create transient copies of during setup phase
@@ -171,7 +171,7 @@ classdef movieStimulus < baseStimulus
 			Screen('SetMovieTimeIndex', me.movie, 0); %reset movie
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 					try Screen('Close',me.texture); end %#ok<*TRYNC>
-			elseif ~isempty(me.buffertex) && me.buffertex ~= me.texture && Screen(me.buffertex,'WindowKind') == -1
+			elseif ~isempty(me.buffertex) && ~isempty(me.texture) && me.buffertex ~= me.texture && Screen(me.buffertex,'WindowKind') == -1
 					try Screen('Close',me.buffertex); end 
 			end
 			me.texture = []; me.buffertex = [];

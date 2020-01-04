@@ -9,6 +9,7 @@ classdef audioManager < optickaCore
 		silentMode logical	= false %this allows us to be called even if no arduino is attached
 		verbose				= true
 	end
+	
 	properties (SetAccess = private, GetAccess = public)
 		isBuffered logical	= false
 		aHandle
@@ -17,6 +18,7 @@ classdef audioManager < optickaCore
 		fileNames			= {};
 		devices
 	end
+	
 	properties (SetAccess = private, GetAccess = private)
 		handles				= []
 		isFiles logical		= false
@@ -31,11 +33,9 @@ classdef audioManager < optickaCore
 	
 		%==============CONSTRUCTOR============%
 		function me = audioManager(varargin)
-			if nargin == 0; varargin.name = ''; end
+			if nargin == 0; varargin.name = 'audio manager'; end
 			me=me@optickaCore(varargin); %superclass constructor
-			if nargin>0
-				me.parseArgs(varargin,me.allowedProperties);
-			end
+			me.parseArgs(varargin,me.allowedProperties);
 			isValid = checkFiles(me);
 			if ~isValid
 				me.salutation('constructor','Please ensure valid file/dir name');
@@ -58,14 +58,12 @@ classdef audioManager < optickaCore
             if isempty(me.aHandle)
                 me.aHandle = PsychPortAudio('Open', me.device, 1, 1);
             end
-            Snd('Open',me.aHandle);
-            oldVol=PsychPortAudio('Volume', me.aHandle, 1);
+            Snd('Open',me.aHandle); % chain Snd() to this instance
+            PsychPortAudio('Volume', me.aHandle, 1);
 			me.status = PsychPortAudio('GetStatus', me.aHandle);
 			me.frequency = me.status.SampleRate;
-			
             loadSamples(me);
 			me.isSetup = true;
-			
         end
         
         % ===================================================================
@@ -74,7 +72,7 @@ classdef audioManager < optickaCore
 		% ===================================================================
 		function loadSamples(me)
             if me.isFiles
-				
+				%TODO
 			else
 				[audiodata, infreq] = psychwavread(me.fileName);
             end
@@ -85,7 +83,7 @@ classdef audioManager < optickaCore
 		%> @brief  
 		%>
 		% ===================================================================
-		function play(me,when)
+		function play(me, when)
 			if ~exist('when','var'); when = []; end
 			if ~me.isSetup; setup(me);end
 			if me.isSetup
@@ -168,6 +166,10 @@ classdef audioManager < optickaCore
 				me.frequency = [];
 				me.isSetup = false;
 			catch ME
+				me.aHandle = [];
+				me.status = [];
+				me.frequency = [];
+				me.isSetup = false;
 				getReport(ME)
 			end
 		end
@@ -185,7 +187,7 @@ classdef audioManager < optickaCore
 		%>
 		% ===================================================================
 		function delete(me)			
-            close(me);
+            reset(me);
 		end
 		
 	end %---END PUBLIC METHODS---%

@@ -39,7 +39,7 @@ classdef colourGratingStimulus < baseStimulus
 		phase double = 0
 		%> contrast of grating
 		contrast double = 0.5
-		%> use a circular mask for the grating (default = true), note this can also be smoothed at the edge.
+		%> use a circular mask for the grating (default = true).
 		mask logical = true
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
 		%This switch can be accomplished simply setting angle, but this control enables
@@ -120,9 +120,9 @@ classdef colourGratingStimulus < baseStimulus
 		%> @return instance of class.
 		% ===================================================================
 		function me = colourGratingStimulus(varargin)
-			if nargin == 0;varargin.name = 'colourGrating';end
+			if nargin == 0;varargin.name = 'colour grating';end
 			args = optickaCore.addDefaults(varargin,...
-				struct('colour',[1 0 0 1],'colour2',[0 1 0 1],'family','grating'));
+				struct('colour',[1 0 0 1],'colour2',[0 1 0 1]));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			

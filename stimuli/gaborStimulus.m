@@ -39,7 +39,7 @@ classdef gaborStimulus < baseStimulus
 		%> should we disable normalisation of the gabor (generally TRUE)?
 		disableNorm = true
 		%> a divisor for the size for the gaussian envelope for a gabor
-		spatialConstant = 6
+		spatialConstant = 10
 		%> do we need to correct the phase to be relative to center not edge?
 		correctPhase = false
 		%> reverse phase of grating X times per second?
@@ -98,20 +98,15 @@ classdef gaborStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = gaborStimulus(varargin)
-			%Initialise for superclass, stops a noargs error
-			if nargin == 0
-				varargin.family = 'gabor';
-			end
+		function me = gaborStimulus(varargin)
+			if nargin == 0;varargin.name = 'gabor';end
+			args = optickaCore.addDefaults(varargin,...
+				struct('colour',[0.5 0.5 0.5]));
+			me=me@baseStimulus(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 			
-			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
-			
-			if nargin>0
-				obj.parseArgs(varargin, obj.allowedProperties);
-			end
-			
-			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			obj.salutation('constructor method','Stimulus initialisation complete');
+			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.salutation('constructor method','Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
@@ -128,25 +123,25 @@ classdef gaborStimulus < baseStimulus
 		%>
 		%> @param rE runExperiment object for reference
 		% ===================================================================
-		function setup(obj,sM)
+		function setup(me,sM)
 			
-			obj.reset(); %reset it back to its initial state
-			obj.inSetup = true;
-			if isempty(obj.isVisible)
-				obj.show();
+			me.reset(); %reset it back to its initial state
+			me.inSetup = true;
+			if isempty(me.isVisible)
+				me.show();
 			end
-			addlistener(obj,'changeScale',@obj.calculateScale); %use an event to keep scale accurate
-			addlistener(obj,'changePhaseIncrement',@obj.calculatePhaseIncrement);
+			addlistener(me,'changeScale',@me.calculateScale); %use an event to keep scale accurate
+			addlistener(me,'changePhaseIncrement',@me.calculatePhaseIncrement);
 			
-			obj.sM = sM;
-			obj.ppd=sM.ppd;
+			me.sM = sM;
+			me.ppd=sM.ppd;
 
-			obj.texture = []; %we need to reset this
+			me.texture = []; %we need to reset this
 
 			fn = fieldnames(gaborStimulus);
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once')) %create a temporary dynamic property
-					p=obj.addprop([fn{j} 'Out']);
+				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
+					p=me.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'sf');p.SetMethod = @set_sfOut;end
 					if strcmp(fn{j},'tf');p.SetMethod = @set_tfOut;end
@@ -155,66 +150,66 @@ classdef gaborStimulus < baseStimulus
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 				end
-				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
-					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
-			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
-			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
-			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
-			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			obj.doDots = false;
-			obj.doMotion = false;
-			obj.doDrift = false;
-			obj.doFlash = false;
+			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
+			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
+			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
+			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
+			me.doDots = false;
+			me.doMotion = false;
+			me.doDrift = false;
+			me.doFlash = false;
 			
-			if obj.tf > 0;obj.doDrift = true;end
-			if obj.speed > 0; obj.doMotion = true;end
+			if me.tf > 0;me.doDrift = true;end
+			if me.speed > 0; me.doMotion = true;end
 			
-			if isempty(obj.findprop('rotateMode'));p=obj.addprop('rotateMode');p.Transient=true;end
-			if obj.rotationMethod==1
-				obj.rotateMode = kPsychUseTextureMatrixForRotation;
+			if isempty(me.findprop('rotateMode'));p=me.addprop('rotateMode');p.Transient=true;end
+			if me.rotationMethod==1
+				me.rotateMode = kPsychUseTextureMatrixForRotation;
 			else
-				obj.rotateMode = [];
+				me.rotateMode = [];
 			end
 			
-			if isempty(obj.findprop('gratingSize'));p=obj.addprop('gratingSize');p.Transient=true;end
-			obj.gratingSize = round(obj.ppd*obj.size);
+			if isempty(me.findprop('gratingSize'));p=me.addprop('gratingSize');p.Transient=true;end
+			me.gratingSize = round(me.ppd*me.size);
 			
-			if isempty(obj.findprop('phaseIncrement'));
-				p=obj.addprop('phaseIncrement');
+			if isempty(me.findprop('phaseIncrement'));
+				p=me.addprop('phaseIncrement');
 			end
 			
-			if isempty(obj.findprop('driftPhase'));p=obj.addprop('driftPhase');p.Transient=true;end
-			if obj.correctPhase
-				ps=obj.calculatePhase;
-				obj.driftPhase=obj.phaseOut-ps;
+			if isempty(me.findprop('driftPhase'));p=me.addprop('driftPhase');p.Transient=true;end
+			if me.correctPhase
+				ps=me.calculatePhase;
+				me.driftPhase=me.phaseOut-ps;
 			else
-				obj.driftPhase=obj.phaseOut;
+				me.driftPhase=me.phaseOut;
 			end
 			
-			if isempty(obj.findprop('res'));p=obj.addprop('res');p.Transient=true;end
-			obj.res = [obj.gratingSize obj.gratingSize];
+			if isempty(me.findprop('res'));p=me.addprop('res');p.Transient=true;end
+			me.res = [me.gratingSize me.gratingSize];
 			
-			if isempty(obj.findprop('texture'));p=obj.addprop('texture');p.Transient=true;end
+			if isempty(me.findprop('texture'));p=me.addprop('texture');p.Transient=true;end
 			
-			if obj.phaseReverseTime > 0
-				obj.phaseCounter = round(obj.phaseReverseTime / obj.sM.screenVals.ifi);
+			if me.phaseReverseTime > 0
+				me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
 			end
 			
-			if obj.aspectRatio == 1
+			if me.aspectRatio == 1
 				nonSymmetric = 0;
 			else
 				nonSymmetric = 1;
 			end
-			obj.texture = CreateProceduralGabor(obj.sM.win, obj.res(1),...
-				obj.res(2), nonSymmetric, obj.colourOut, obj.disableNorm,...
-				obj.contrastMult);
+			me.texture = CreateProceduralGabor(me.sM.win, me.res(1),...
+				me.res(2), nonSymmetric, me.colourOut, me.disableNorm,...
+				me.contrastMult);
 			
-			obj.inSetup = false;
-			computePosition(obj);
-			obj.setRect();
+			me.inSetup = false;
+			computePosition(me);
+			me.setRect();
 			
 		end
 		
@@ -222,16 +217,16 @@ classdef gaborStimulus < baseStimulus
 		%> @brief Update this stimulus object for display
 		%>
 		% ===================================================================
-		function update(obj)
-			resetTicks(obj);
-			if obj.correctPhase
-				ps=obj.calculatePhase;
-				obj.driftPhase=obj.phaseOut-ps;
+		function update(me)
+			resetTicks(me);
+			if me.correctPhase
+				ps=me.calculatePhase;
+				me.driftPhase=me.phaseOut-ps;
 			else
-				obj.driftPhase=obj.phaseOut;
+				me.driftPhase=me.phaseOut;
 			end
-			computePosition(obj);
-			obj.setRect();
+			computePosition(me);
+			me.setRect();
 		end
 		
 		% ===================================================================
@@ -239,13 +234,13 @@ classdef gaborStimulus < baseStimulus
 		%>
 		%> 
 		% ===================================================================
-		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
-					Screen('DrawTexture', obj.sM.win, obj.texture, [],obj.mvRect,...
-					obj.angleOut, [], [], [], [], 2,...
-					[obj.driftPhase, obj.sfOut, obj.spatialConstantOut,...
-					obj.contrastOut, obj.aspectRatioOut, 0, 0, 0]); 
-				obj.tick = obj.tick + 1;
+		function draw(me)
+			if me.isVisible && me.tick >= me.delayTicks
+					Screen('DrawTexture', me.sM.win, me.texture, [],me.mvRect,...
+					me.angleOut, [], [], [], [], 2,...
+					[me.driftPhase, me.sfOut, me.spatialConstantOut,...
+					me.contrastOut, me.aspectRatioOut, 0, 0, 0]); 
+				me.tick = me.tick + 1;
 			end
 		end
 		
@@ -253,22 +248,22 @@ classdef gaborStimulus < baseStimulus
 		%> @brief Animate this object for runExperiment
 		%>
 		% ===================================================================
-		function animate(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
-				if obj.mouseOverride
-					getMousePosition(obj);
-					if obj.mouseValid
-						obj.mvRect = CenterRectOnPointd(obj.mvRect, obj.mouseX, obj.mouseY);
+		function animate(me)
+			if me.isVisible && me.tick >= me.delayTicks
+				if me.mouseOverride
+					getMousePosition(me);
+					if me.mouseValid
+						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
 					end
 				end
-				if obj.doMotion == true
-					obj.mvRect=OffsetRect(obj.mvRect,obj.dX_,obj.dY_);
+				if me.doMotion == true
+					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
-				if obj.doDrift == true
-					obj.driftPhase = obj.driftPhase + obj.phaseIncrement;
+				if me.doDrift == true
+					me.driftPhase = me.driftPhase + me.phaseIncrement;
 				end
-				if mod(obj.tick,obj.phaseCounter) == 0
-					obj.driftPhase = obj.driftPhase + obj.phaseOfReverse;
+				if mod(me.tick,me.phaseCounter) == 0
+					me.driftPhase = me.driftPhase + me.phaseOfReverse;
 				end
 			end
 		end
@@ -279,34 +274,34 @@ classdef gaborStimulus < baseStimulus
 		%> @param rE runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function reset(obj)
-			resetTicks(obj);
-			obj.texture=[];
-			obj.removeTmpProperties;
+		function reset(me)
+			resetTicks(me);
+			me.texture=[];
+			me.removeTmpProperties;
 		end
 		
 		% ===================================================================
 		%> @brief sf Set method
 		%>
 		% ===================================================================
-		function set.sf(obj,value)
+		function set.sf(me,value)
 			if value <= 0
 				value = 0.05;
 			end
-			obj.sf = value;
-			obj.salutation(['set sf: ' num2str(value)],'Custom set method')
+			me.sf = value;
+			me.salutation(['set sf: ' num2str(value)],'Custom set method')
 		end
 		
 		% ===================================================================
 		%> @brief calculate phase offset
 		%>
 		% ===================================================================
-		function phase = calculatePhase(obj)
+		function phase = calculatePhase(me)
 			phase = 0;
-			if obj.correctPhase > 0
-				ppd = obj.ppd;
-				size = (obj.sizeOut/2); %divide by 2 to get the 0 point
-				sfTmp = (obj.sfOut/obj.scale)*obj.ppd;
+			if me.correctPhase > 0
+				ppd = me.ppd;
+				size = (me.sizeOut/2); %divide by 2 to get the 0 point
+				sfTmp = (me.sfOut/me.scale)*me.ppd;
 				md = size / (ppd/sfTmp);
 				md=md-floor(md);
 				phase = (360*md);
@@ -326,28 +321,28 @@ classdef gaborStimulus < baseStimulus
 		%> this is modified over parent method as gratings have slightly different
 		%> requirements.
 		% ===================================================================
-		function setRect(obj)
-			obj.dstRect=Screen('Rect',obj.texture);
-			obj.dstRect=ScaleRect(obj.dstRect,obj.scale,obj.scale);
-			if obj.mouseOverride
-				if obj.mouseValid
-					obj.dstRect = CenterRectOnPointd(obj.dstRect, obj.mouseX, obj.mouseY);
+		function setRect(me)
+			me.dstRect=Screen('Rect',me.texture);
+			me.dstRect=ScaleRect(me.dstRect,me.scale,me.scale);
+			if me.mouseOverride
+				if me.mouseValid
+					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				end
 			else
-				if isempty(obj.findprop('motionAngleOut'));
-					[sx sy]=pol2cart(obj.d2r(obj.motionAngle),obj.startPosition);
+				if isempty(me.findprop('motionAngleOut'));
+					[sx sy]=pol2cart(me.d2r(me.motionAngle),me.startPosition);
 				else
-					[sx sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
+					[sx sy]=pol2cart(me.d2r(me.motionAngleOut),me.startPosition);
 				end
-				obj.dstRect=CenterRectOnPointd(obj.dstRect,obj.sM.xCenter,obj.sM.yCenter);
-				if isempty(obj.findprop('xPositionOut'));
-					obj.dstRect=OffsetRect(obj.dstRect,(obj.xPosition)*obj.ppd,(obj.yPosition)*obj.ppd);
+				me.dstRect=CenterRectOnPointd(me.dstRect,me.sM.xCenter,me.sM.yCenter);
+				if isempty(me.findprop('xPositionOut'));
+					me.dstRect=OffsetRect(me.dstRect,(me.xPosition)*me.ppd,(me.yPosition)*me.ppd);
 				else
-					obj.dstRect=OffsetRect(obj.dstRect,obj.xPositionOut+(sx*obj.ppd),obj.yPositionOut+(sy*obj.ppd));
+					me.dstRect=OffsetRect(me.dstRect,me.xPositionOut+(sx*me.ppd),me.yPositionOut+(sy*me.ppd));
 				end
 			end
-			obj.mvRect=obj.dstRect;
-			obj.setAnimationDelta();
+			me.mvRect=me.dstRect;
+			me.setAnimationDelta();
 		end
 	
 	end %---END PROTECTED METHODS---%
@@ -360,33 +355,33 @@ classdef gaborStimulus < baseStimulus
 		%> @brief sfOut Set method
 		%>
 		% ===================================================================
-		function set_sfOut(obj,value)
-			if obj.sfRecurse == false
-				obj.sfCache = (value/obj.ppd);
-				obj.sfOut = obj.sfCache * obj.scale;
+		function set_sfOut(me,value)
+			if me.sfRecurse == false
+				me.sfCache = (value/me.ppd);
+				me.sfOut = me.sfCache * me.scale;
 			else
-				obj.sfOut = value;
-				obj.sfRecurse = false;
+				me.sfOut = value;
+				me.sfRecurse = false;
 			end
-			%fprintf('\nSET SFOut: %d | cachce: %d | in: %d\n', obj.sfOut, obj.sfCache, value);
+			%fprintf('\nSET SFOut: %d | cachce: %d | in: %d\n', me.sfOut, me.sfCache, value);
 		end
 		
 		% ===================================================================
 		%> @brief tfOut Set method
 		%>
 		% ===================================================================
-		function set_tfOut(obj,value)
-			obj.tfOut = value;
-			notify(obj,'changePhaseIncrement');
+		function set_tfOut(me,value)
+			me.tfOut = value;
+			notify(me,'changePhaseIncrement');
 		end
 		
 		% ===================================================================
 		%> @brief driftDirectionOut Set method
 		%>
 		% ===================================================================
-		function set_driftDirectionOut(obj,value)
-			obj.driftDirectionOut = value;
-			notify(obj,'changePhaseIncrement');
+		function set_driftDirectionOut(me,value)
+			me.driftDirectionOut = value;
+			notify(me,'changePhaseIncrement');
 		end
 		
 		% ===================================================================
@@ -394,12 +389,12 @@ classdef gaborStimulus < baseStimulus
 		%> Use an event to recalculate scale as get method is slower (called
 		%> many more times), than an event which is only called on update
 		% ===================================================================
-		function calculateScale(obj,~,~)
-			obj.scale = obj.sizeOut/(obj.size*obj.ppd);
-			obj.sfRecurse = true;
-			obj.sfOut = obj.sfCache * obj.scale;
-			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', obj.sfOut, obj.sfCache, obj.scale);
-			obj.spatialConstantOut=obj.sizeOut/obj.spatialConstant;
+		function calculateScale(me,~,~)
+			me.scale = me.sizeOut/(me.size*me.ppd);
+			me.sfRecurse = true;
+			me.sfOut = me.sfCache * me.scale;
+			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', me.sfOut, me.sfCache, me.scale);
+			me.spatialConstantOut=me.sizeOut/me.spatialConstant;
 		end
 		
 		% ===================================================================
@@ -407,15 +402,14 @@ classdef gaborStimulus < baseStimulus
 		%> Use an event to recalculate as get method is slower (called
 		%> many more times), than an event which is only called on update
 		% ===================================================================
-		function calculatePhaseIncrement(obj,~,~)
-			if ~isempty(obj.findprop('tfOut'))
-				obj.phaseIncrement = (obj.tfOut * 360) * obj.sM.screenVals.ifi;
-				if ~isempty(obj.findprop('driftDirectionOut'))
-					if obj.driftDirectionOut == false
-						obj.phaseIncrement = -obj.phaseIncrement;
+		function calculatePhaseIncrement(me,~,~)
+			if ~isempty(me.findprop('tfOut'))
+				me.phaseIncrement = (me.tfOut * 360) * me.sM.screenVals.ifi;
+				if ~isempty(me.findprop('driftDirectionOut'))
+					if me.driftDirectionOut == false
+						me.phaseIncrement = -me.phaseIncrement;
 					end
 				end
-				fprintf('CALPhase: %g (%g)\n',obj.driftPhase, obj.phaseIncrement)
 			end
 		end
 		
@@ -424,9 +418,9 @@ classdef gaborStimulus < baseStimulus
 		%> we also need to change scale when sizeOut is changed, used for both
 		%setting sfOut and the dstRect properly
 		% ===================================================================
-		function set_sizeOut(obj,value)
-			obj.sizeOut = value*obj.ppd;
-			notify(obj,'changeScale');
+		function set_sizeOut(me,value)
+			me.sizeOut = value*me.ppd;
+			notify(me,'changeScale');
 		end
 		
 	end

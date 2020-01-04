@@ -302,6 +302,7 @@ classdef runExperiment < optickaCore
 				%profile clear; profile on;
 				
 				%-----final setup
+				ListenChar(2);
 				me.task.tick = 1;
 				me.task.switched = 0;
 				me.task.isBlank = true; %lets start in a blank
@@ -395,7 +396,7 @@ classdef runExperiment < optickaCore
 				% Finished display loop
 				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				%==================================================================%
-				
+				ListenChar(0);
 				s.drawBackground;
 				vbl=Screen('Flip', s.win);
 				tL.screenLog.afterDisplay=vbl;
@@ -1412,7 +1413,7 @@ classdef runExperiment < optickaCore
 				if ~isempty(offsetix)
 					ix = [ix offsetix];
 					offsetvalue = value + offsetvalue;
-					valueList = [valueList; offsetvalue];
+					valueList = [valueList; repmat({offsetvalue},length(offsetix),1)];
 				end
 				
 				if me.task.blankTick > 2 && me.task.blankTick <= me.stimuli.n + 2

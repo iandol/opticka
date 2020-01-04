@@ -42,7 +42,7 @@ classdef screenManager < optickaCore
 		%> screen opens, set with Screen('Preference', 'SyncTestSettings', syncVariance)
 		%> AMD cards under Ubuntu are very low variance, but even NVidia on
 		%> Ubuntu can be ~0.8ms, so we raise the threshold to 1ms variance
-		syncVariance double = 0.001
+		syncVariance double = 0.0015
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 		timestampingMode double = 1
 		%> multisampling sent to the graphics card, try values 0[disabled], 4, 8

@@ -35,34 +35,33 @@ sca %PTB screen clear all
 % If you do not pass any properties, default values will be used without problems.
 
 %%
-% First we create a stimulus manager that collects and handles groups of
+% First we create a stimulus manager object that collects and handles groups of
 % stimuli as if they were a single 'thing', so for example when you use the
-% draw method on myStims, it tells each of its child stimuli to
-% draw in order
+% draw method on myStims, it tells each of its child stimuli to draw in order
 myStims = metaStimulus();
 
 %%
-% The first six stimuli are gratings / gabors of varying kinds.
-myStims{1}=gratingStimulus('sf',1,'contrast',1,'size',1,'tf',0,'angle',0,...
-	'gabor', true, 'mask', true);
+% The first five stimuli are gratings / gabors of varying kinds.
+myStims{1}=gratingStimulus('sf', 1, 'tf', 0, 'contrast', 0.7, 'size', 2, 'angle', -45,...
+	'mask', true);
 
-myStims{2}=gratingStimulus('sf',3,'contrast',0.75,'tf',1,'size',3,'xPosition',-3,...
-	'yPosition',-5);
+myStims{2}=gaborStimulus('sf', 1, 'contrast', 0.75, 'tf', 3, 'size', 3, 'angle', -70,...
+	'aspectRatio', 0.5, 'xPosition', 5, 'yPosition', -5);
 
-myStims{3}=gratingStimulus('sf',1,'tf',3,'contrast',1,'size',3,'angle',45,'xPosition',0,...
-	'yPosition',-10,'mask', true, 'sigma', 30);
+myStims{3}=gratingStimulus('sf', 1, 'tf', 4, 'contrast', 0.7, 'size', 3, 'angle', 45,...
+	'xPosition', 0, 'yPosition', -10, 'mask', true, 'sigma', 30);
 
-myStims{4}=gratingStimulus('sf',1,'contrast',0.75,'tf',0,'size',2,'xPosition',-4,...
-	'yPosition',-4,'gabor',true);
+myStims{4}=gratingStimulus('sf', 3, 'contrast', 0.75, 'tf', 1, 'size', 3, 'xPosition', -3,...
+	'yPosition', -5);
 
-myStims{5}=gratingStimulus('sf',1,'contrast',0.45,'colour',[0.6 0.3 0.3],'tf',0.1,...
-	'size',2,'xPosition',3,'yPosition',0);
+myStims{5}=gratingStimulus('type', 'square', 'sf', 1, 'contrast', 1, 'colour', [0.5 0.5 0.5], 'tf', 0,...
+	'size', 3, 'xPosition', 3, 'yPosition', 0, 'useAlpha', true);
 
 %%
 % This is a colour grating where two independant colours can be modulated
 % relative to a base colour, in this case this is a red/green grating
-myStims{6}=colourGratingStimulus('sf',1,'contrast',1,'colour',[1 0 0 1],'colour2',[0 1 0 1],...
-	'baseColour',[0.5 0.5 0.5],'tf',1,'size',3,'xPosition',6,'yPosition',6);
+myStims{6}=colourGratingStimulus('colour', [1 0 0 1], 'colour2', [0 1 0 1],...
+	'baseColour', [0.5 0.5 0.5], 'tf', 1, 'size', 3, 'xPosition', 6, 'yPosition', 6);
 
 %%
 % A simple bar: bars can be solid in colour or have random texture 
@@ -119,6 +118,12 @@ myTask.realTime = false; %we use real time for switching trials, false uses a ti
 myTask.nVar(1).name = 'angle';
 myTask.nVar(1).stimulus = [1 3 7 10];
 myTask.nVar(1).values = [0 45 90];
+% the next two parameters allow us to link a stimulus with
+% an offset; for example you could set stimulus 1 to values [1 2 3]
+% and if offsetvalue was 2 and offsetstimulus was 2 then the second
+% stimulus would change through [3 4 5]; 
+myTask.nVar(1).offsetstimulus = [6 11];
+myTask.nVar(1).offsetvalue = [90];
 
 %% Variable 2
 % Our second variable is contrast, applied to stimulus 2 and 3, randomly
@@ -139,7 +144,7 @@ myTask.nVar(3).values = [-6 6];
 % stimulus would change through [3 4 5]; in this case we offset stimulus 10
 % to +1 the values above i.e. [-5 7]
 myTask.nVar(3).offsetstimulus = [10];
-myTask.nVar(3).offsetvalue = [1];
+myTask.nVar(3).offsetvalue = [2];
 
 %% Randomisation
 % We call the method to randomise the trials in a block structure
@@ -153,17 +158,19 @@ showLog(myTask);
 % we initialise the object with parameter options to open the PTB screen
 % with. Note distance and pixels per cm define the resultant geometry >
 % pixel mappings. You can set several screen parameters, windowing,
-% blending etc. hideFlash uses a trick from Mario to set the CLUT to the
+% blending etc. hideFlash uses a trick from Mario to set the CLqUT to the
 % task background colour so you don't see the black flash on PTB screen
 % initialisation.
 myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'pixelsPerCm', 27.5,... %calibration value for screen size/pixel density, see calibrateSize()
+	'backgroundColour', [0.5 0.5 0.5],... %initial background colour
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
-	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to false for fullscreen
-	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on OS X ATI 5870
+	'srcMode', 'GL_ONE',... %src blend mode
+	'dstMode', 'GL_ZERO',... %dst blend mode
+	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
+	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on macOS ATI 5870
 	'bitDepth', 'FloatingPoint32bitIfPossible',... %8bit, FloatingPoint16bit FloatingPoint32bit etc.
-	'displayPPRefresh', 100, ... %set refresh to 100Hz only if Dispay++ attached
-	'hideFlash', false); %mario's gamma trick
+	'displayPPRefresh', 100); %set refresh to 100Hz only if Dispay++ attached
 
 %% Setup runExperiment Object
 % We now pass our stimulus screen and sequence objects to the
