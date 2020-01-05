@@ -70,19 +70,19 @@ myStims{7}=dotsStimulus('density',50,'coherence',0.25,'xPosition',4,...
 
 %%
 % A simple bar: bars can be solid in colour or have random texture 
-% (try setting 'type' to 'random'). This is an opaque solid bar 
+% (try setting 'type' to 'random'). This is a bar 
 % moving at 4deg/s. Notice the startPosition is -4; 
-% this means start -4 degrees "behind" start X and Y position, as
+% this means start -4 degrees "behind" X and Y position, as
 % the stimulus is displayed for 2 seconds the bar therefore traverses
-% 4degrees behind then 4 degrees past the X and Y position (i.e. drift a bar over a RF location)
+% 4 degrees behind then 4 degrees past the X and Y position (i.e. drift a bar over a RF location)
 % Also note as we will change the angle of this stimulus the geometry is calculated for you
 % automatically!
-myStims{8}=barStimulus('type','solid','barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
+myStims{8}=barStimulus('type','randomColour','barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
 	'yPosition',0,'startPosition',-4);
 
 %%
-% a simple smoothed spot, spots can also flash if needed
-myStims{9}=discStimulus('speed',2,'xPosition',4,'type','flash',...
+% an edge-smoothed spot; spots can also flash if needed
+myStims{9}=discStimulus('type','flash','speed',2,'xPosition',4,...
 	'yPosition',4,'colour',[1 1 0],'size',2,'flashTime',[0.2 0.2]);
 
 %%
@@ -167,7 +167,7 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
 	'srcMode', 'GL_ONE',... %src blend mode
 	'dstMode', 'GL_ZERO',... %dst blend mode
-	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
+	'windowed', [0 0 1000 1000],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on macOS ATI 5870
 	'bitDepth', 'FloatingPoint32bitIfPossible',... %8bit, FloatingPoint16bit FloatingPoint32bit etc.
 	'displayPPRefresh', 100); %set refresh to 100Hz only if Dispay++ attached

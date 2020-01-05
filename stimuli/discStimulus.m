@@ -65,15 +65,11 @@ classdef discStimulus < baseStimulus
 		%> @return instance of the class.
 		% ===================================================================
 		function me = discStimulus(varargin)
-			%Initialise for superclass, stops a noargs error
-			if nargin == 0; varargin.family = 'disc'; end
-			
-			me=me@baseStimulus(varargin); %we call the superclass constructor first
-			me.colour = [1 1 1];
-			
-			if nargin>0
-				me.parseArgs(varargin, me.allowedProperties);
-			end
+			if nargin == 0;varargin.name = 'disc stimulus';end
+			args = optickaCore.addDefaults(varargin,...
+				struct('colour',[1 1 0 1]));
+			me=me@baseStimulus(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor','Stimulus initialisation complete');
@@ -101,7 +97,7 @@ classdef discStimulus < baseStimulus
 			
 			me.texture = []; %we need to reset this
 			
-			fn = fieldnames(discStimulus);
+			fn = fieldnames(me);
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);

@@ -429,6 +429,7 @@ classdef runExperiment < optickaCore
 				
 				s.finaliseMovie(false);
 				
+				me.stimuli.reset();
 				s.close();
 				
 				if me.useDataPixx || me.useDisplayPP

@@ -40,17 +40,20 @@ classdef movieStimulus < baseStimulus
 		count
 	end
 	
-	properties (SetAccess = private, GetAccess = public, Hidden = true)
+	properties (SetAccess = protected, GetAccess = public, Hidden = true)
 		typeList = {'movie'}
 		fileNameList = 'filerequestor';
 	end
 	
-	properties (SetAccess = private, GetAccess = private)
-		%> shader for masking
-		shader
+	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> texture buffer for non-blocking movie playback, this is the
 		%> previous frame until a new frame is available
 		buffertex = []
+		%> shader for masking
+		shader
+	end
+	
+	properties (SetAccess = protected, GetAccess = protected)
 		%> allowed properties passed to object upon construction
 		allowedProperties='fileName|blocking|pixelFormat|preloadSecs|specialFlags1|loopStrategy|mask|maskTolerance';
 		%>properties to not create transient copies of during setup phase
@@ -250,6 +253,7 @@ classdef movieStimulus < baseStimulus
 				fprintf('---> Number of dropped movie frames: %i\n',ndrop)
 				try Screen('CloseMovie', me.movie); end
 			end
+			me.shader = [];
 			me.movie = [];
 		end
 		

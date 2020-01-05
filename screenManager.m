@@ -1150,7 +1150,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function playMovie(me)
 			if me.movieSettings.record == true  && me.movieSettings.type == 2 && exist('implay','file') && ~isempty(me.movieSettings.movieFile)
-				try %#ok<TRYNC>
+				try
 					mimg = load(me.movieSettings.movieFile);
 					implay(mimg);
 					clear mimg
@@ -1198,7 +1198,7 @@ classdef screenManager < optickaCore
 			a = 1;
 			for i = screens
 				wins(a) = PsychImaging('OpenWindow', i, 0.5, [0 0 100 100]);
-				os=Screen('TextSize', wins(a),  50)
+				os=Screen('TextSize', wins(a),  50);
 				Screen('DrawText',wins(a),['W:' num2str(i)], 5, 30,[1 0 1]);
 				Screen('Flip',wins(a));
 				a = a + 1;

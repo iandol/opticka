@@ -114,7 +114,7 @@ classdef textureStimulus < baseStimulus
 			
 			me.texture = []; %we need to reset this
 
-			fn = fieldnames(textureStimulus);
+			fn = fieldnames(me);
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);

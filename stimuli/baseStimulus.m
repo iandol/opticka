@@ -389,7 +389,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if showVBL
 					figure;
 					plot(diff(vbl)*1e3);
-					line([0 length(vbl-1)],[sv.ifi*1e3 sv.ifi*1e3]);
+					line([0 length(vbl)-1],[sv.ifi*1e3 sv.ifi*1e3]);
 					title(sprintf('VBL Times, should be ~%.2f ms',sv.ifi*1e3));
 					ylabel('Time (ms)')
 					xlabel('Frames')
@@ -707,7 +707,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @param
 		%> @return
 		% ===================================================================
-		function varargout=cleanHandles(me,varargin)
+		function cleanHandles(me,varargin)
 			if isprop(me,'handles')
 				me.handles = [];
 			end
@@ -899,11 +899,12 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.handles = [];
 			me.sM = [];
 			if ~isempty(me.texture)
-				try
-					for i = 1:length(me.texture)
-						Screen('Close',me.texture)
-					end
+				for i = 1:length(me.texture)
+					try Screen('Close',me.texture); end %#ok<*TRYNC>
 				end
+			end
+			if isprop(me,'buffertex') && ~isempty(me.buffertex)
+				try Screen('Close',me.buffertex); end
 			end
 			fprintf('--->>> Delete method called on stimulus: %s\n',me.fullName);
 		end

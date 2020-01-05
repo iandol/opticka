@@ -99,7 +99,7 @@ classdef gaborStimulus < baseStimulus
 		%> @return instance of class.
 		% ===================================================================
 		function me = gaborStimulus(varargin)
-			if nargin == 0;varargin.name = 'gabor';end
+			if nargin == 0;varargin.name = 'gabor stimulus';end
 			args = optickaCore.addDefaults(varargin,...
 				struct('colour',[0.5 0.5 0.5]));
 			me=me@baseStimulus(args); %we call the superclass constructor first
@@ -138,7 +138,7 @@ classdef gaborStimulus < baseStimulus
 
 			me.texture = []; %we need to reset this
 
-			fn = fieldnames(gaborStimulus);
+			fn = fieldnames(me);
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once')) %create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
