@@ -305,6 +305,7 @@ classdef gratingStimulus < baseStimulus
 		function reset(me)
 			resetTicks(me);
 			me.texture=[];
+			me.phaseCounter = 0;
 			if me.mask > 0
 				me.mask = true;
 			end
@@ -368,7 +369,7 @@ classdef gratingStimulus < baseStimulus
 			me.dstRect=Screen('Rect',me.texture);
 			me.dstRect=ScaleRect(me.dstRect,me.scale,me.scale);
 			if me.mouseOverride && me.mouseValid
-					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
+				me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 			else
 				if isempty(me.findprop('motionAngleOut'))
 					[sx, sy]=pol2cart(me.d2r(me.motionAngle),me.startPosition);

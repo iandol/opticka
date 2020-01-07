@@ -347,7 +347,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
-				if ~strcmpi(me.type,'movie'); draw(me); end
+				if ~strcmpi(me.type,'movie'); draw(me); resetTicks(me); end
 				if s.visualDebug
 					drawGrid(s); %draw +-5 degree dot grid
 					drawScreenCenter(s); %centre spot
@@ -721,15 +721,17 @@ classdef baseStimulus < optickaCore & dynamicprops
 	%=======================================================================
 	methods (Abstract)%------------------ABSTRACT METHODS
 	%=======================================================================
-		%> initialise the stimulus
+		%> initialise the stimulus with the PTB screenManager
 		out = setup(runObject)
-		%> update the stimulus
-		out = update(runObject)
-		%>draw to the screen buffer
+		%>draw to the screen buffer, ready for flip()
 		out = draw(runObject)
-		%> animate the settings
+		%> animate the stimulus, normally called after a draw
 		out = animate(runObject)
-		%> reset to default values
+		%> update the stimulus, normally called between trials if any
+		%>variables have changed
+		out = update(runObject)
+		%> reset back to pre-setup state (removes the transient cache
+		%> properties, resets the various timers etc.)
 		out = reset(runObject)
 	end %---END ABSTRACT METHODS---%
 	

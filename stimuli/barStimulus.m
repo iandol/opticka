@@ -2,49 +2,57 @@
 %> @brief barStimulus single bar stimulus, inherits from baseStimulus
 % ========================================================================
 classdef barStimulus < baseStimulus
-
-   properties %--------------------PUBLIC PROPERTIES----------%
-		type = 'solid'
-		%> scale up the texture in the bar
-		pixelScale = 1 
+	
+	properties %--------------------PUBLIC PROPERTIES----------%
+		%> type of bar: 'solid','checkerboard','random','randomColour','randomN','randomBW'
+		type char = 'solid'
 		%> width of bar
-		barWidth = 1
+		barWidth double = 1
 		%> length of bar
-		barLength = 4
+		barLength double= 4
 		%> contrast multiplier
-		contrast = 1
+		contrast double = 1
 		%> texture scale
-		scale = 1
-		%> texture interpolation
-		interpMethod = 'nearest'
-		%>
-		textureAspect = 1
+		scale double = 1
+		%> checkSize in degrees for checkerboard textures
+		checkSize double = 1
+		%> texture interpolation: 'nearest','linear','spline','cubic'
+		interpMethod char = 'nearest'
+		%> For checkerboard, allow timed phase reversal
+		phaseReverseTime double = 0
+		%> update() method also regenerates the texture, this can be slow, but 
+		%> normally update() is only called after a trial has finished
+		regenerateTexture logical = true
 		%> modulate the colour
-		modulateColour = []
+		modulateColour double = []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
-		family = 'bar'
+		family char = 'bar'
 		%> computed matrix for the bar
 		matrix
-		%> random matrix used for texture generation
-		rmatrix
 	end
 	
-	properties (SetAccess = private, GetAccess = public, Hidden = true)
-		typeList = {'solid','random','randomColour','randomN','randomBW'}
-		interpMethodList = {'nearest','linear','spline','cubic'}
+	properties (SetAccess = protected, GetAccess = public, Hidden = true)
+		typeList cell = {'solid','checkerboard','random','randomColour','randomN','randomBW'}
+		interpMethodList cell = {'nearest','linear','makima','spline','cubic'}
 	end
 	
-	properties (SetAccess = private, GetAccess = private)
-		allowedProperties='type|pixelScale|barWidth|barLength|angle|speed|contrast|scale|interpMethod';
-		ignoreProperties = 'interpMethod|matrix|rmatrix|pixelScale';
+	properties (SetAccess = protected, GetAccess = protected)
+		%> for phase reveral of checkerboard
+		matrix2
+		%> for phase reveral of checkerboard
+		texture2
+		%> how many frames between phase reverses
+		phaseCounter double = 0
+		allowedProperties = 'type|barWidth|barLength|angle|speed|contrast|scale|interpMethod|phaseReverseTime';
+		ignoreProperties = 'interpMethod|matrix|matrix2|phaseCounter|pixelScale';
 	end
 	
 	%=======================================================================
 	methods %------------------PUBLIC METHODS
 	%=======================================================================
-	
+		
 		% ===================================================================
 		%> @brief Class constructor
 		%>
@@ -54,7 +62,7 @@ classdef barStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of opticka class.
 		% ===================================================================
-		function me = barStimulus(varargin) 
+		function me = barStimulus(varargin)
 			if nargin == 0;varargin.name = 'bar stimulus';end
 			args = optickaCore.addDefaults(varargin,...
 				struct('colour',[1 1 1],'size',0,...
@@ -110,6 +118,11 @@ classdef barStimulus < baseStimulus
 			
 			constructMatrix(me) %make our matrix
 			me.texture=Screen('MakeTexture',me.sM.win,me.matrix,1,[],2);
+			if me.phaseReverseTime > 0
+				me.texture2=Screen('MakeTexture',me.sM.win,me.matrix2,1,[],2);
+				me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
+			end
+			
 			if me.speed>0 %we need to say this needs animating
 				me.doMotion=true;
 			else
@@ -130,9 +143,18 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
+			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+					try Screen('Close',me.texture); end %#ok<*TRYNC>
+			end
+			if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
+					try Screen('Close',me.texture2); end %#ok<*TRYNC>
+			end
 			constructMatrix(me) %make our matrix
-			
 			me.texture=Screen('MakeTexture',me.sM.win,me.matrix,1,[],2);
+			if me.phaseReverseTime > 0
+				me.texture2=Screen('MakeTexture',me.sM.win,me.matrix2,1,[],2);
+				me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
+			end
 			computePosition(me);
 			me.setRect();
 		end
@@ -174,6 +196,12 @@ classdef barStimulus < baseStimulus
 				if me.doMotion == 1
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
+				if me.phaseReverseTime > 0 && mod(me.tick,me.phaseCounter) == 0
+					tx = me.texture;
+					tx2 = me.texture2;
+					me.texture = tx2;
+					me.texture2 = tx;
+				end
 			end
 		end
 		
@@ -184,11 +212,61 @@ classdef barStimulus < baseStimulus
 		%> @return
 		% ===================================================================
 		function reset(me)
+			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+					try Screen('Close',me.texture); end %#ok<*TRYNC>
+			end
+			if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
+					try Screen('Close',me.texture2); end %#ok<*TRYNC>
+			end
 			me.texture=[];
 			me.mvRect = [];
 			me.dstRect = [];
 			me.removeTmpProperties;
 			resetTicks(me);
+		end
+		
+		% ===================================================================
+		%> @brief barLength set method
+		%>
+		%> @param length of bar
+		%> @return
+		% ===================================================================
+		function set.barLength(me,value)
+			if ~(value > 0)
+				value = 4;
+			end
+			me.barLength = value;
+		end
+		
+		% ===================================================================
+		%> @brief barWidth set method
+		%>
+		%> @param width of bar in degrees
+		%> @return
+		% ===================================================================
+		function set.barWidth(me,value)
+			if ~(value > 0)
+				value = 1;
+			end
+			me.barWidth = value;
+		end
+		
+	end %---END PUBLIC METHODS---%
+	
+	%=======================================================================
+	methods ( Access = protected ) %-------PROTECTED METHODS-----%
+	%=======================================================================
+		
+		% ===================================================================
+		%> @brief sizeOut Set method
+		%>
+		% ===================================================================
+		function set_sizeOut(me,value)
+			me.sizeOut = (value*me.ppd);
+			if ~me.inSetup
+				me.barLengthOut = me.sizeOut;
+				me.barWidthOut = me.sizeOut;
+			end
 		end
 		
 		% ===================================================================
@@ -198,26 +276,48 @@ classdef barStimulus < baseStimulus
 		%> the correct dimensions
 		% ===================================================================
 		function constructMatrix(me)
-			me.matrix=[]; %reset the matrix			
+			tic
+			me.matrix=[]; %reset the matrix
 			try
-				if isempty(me.findprop('barWidthOut'));
+				if isempty(me.findprop('barWidthOut'))
 					bwpixels = round(me.barWidth*me.ppd);
 				else
 					bwpixels = round(me.barWidthOut*me.ppd);
 				end
-				if isempty(me.findprop('barLengthOut'));
+				if isempty(me.findprop('barLengthOut'))
 					blpixels = round(me.barLength*me.ppd);
 				else
 					blpixels = round(me.barLengthOut*me.ppd);
 				end
-				if rem(bwpixels,2);bwpixels=bwpixels+1;end
-				if rem(blpixels,2);blpixels=blpixels+1;end
-				bwscale = round(bwpixels/me.scale)+1;
-				blscale = round(blpixels/me.scale)+1;
-
+				
+				if strcmpi(me.type,'checkerboard')
+					bwscale = round(((bwpixels/me.ppd) / me.checkSize));
+					blscale = round(((blpixels/me.ppd) / me.checkSize));
+				else
+					if rem(bwpixels,2);bwpixels=bwpixels+1;end
+					if rem(blpixels,2);blpixels=blpixels+1;end
+					bwscale = round(bwpixels/me.scale)+1;
+					blscale = round(blpixels/me.scale)+1;
+				end
+				
 				tmat = ones(blscale,bwscale,4); %allocate the size correctly
 				rmat=ones(blscale,bwscale);
+				if me.phaseReverseTime > 0; t2mat = tmat; end
 				switch me.type
+					case 'checkerboard'
+						for k = 1:size(rmat,1)
+							rmat(k,:) = mod(1:size(rmat,2),2);
+							if logical(mod(k,2))
+								rmat(k,:) = [0 rmat(k,1:end-1)];
+							end
+						end
+						r2mat = double(~rmat);
+						for i=1:3
+							tmat(:,:,i)=tmat(:,:,i).*rmat;
+							if me.phaseReverseTime > 0; t2mat(:,:,i)=t2mat(:,:,i).*r2mat; end
+						end
+						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
+						if me.phaseReverseTime > 0; t2mat(:,:,4)=ones(blscale,bwscale)*me.alpha; end
 					case 'random'
 						rmat=rand(blscale,bwscale);
 						for i=1:3
@@ -250,22 +350,33 @@ classdef barStimulus < baseStimulus
 						tmat(:,:,3)=ones(blscale,bwscale) * (me.colour(3) * me.contrastOut);
 						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
 				end
-				aw=0:me.scale:bwpixels;
-				al=0:me.scale:blpixels;
-				[a,b]=meshgrid(aw,al);
-				[A,B]=meshgrid(0:bwpixels,0:blpixels);
+				if ~strcmpi(me.type,'checkerboard')
+					aw=0:me.scale:bwpixels;
+					al=0:me.scale:blpixels;
+					[a,b]=meshgrid(aw,al);
+					[A,B]=meshgrid(0:bwpixels,0:blpixels);
+				else
+					aw=linspace(1,bwpixels,bwscale);
+					al=linspace(1,blpixels,blscale);
+					[a,b]=meshgrid(aw,al);
+					[A,B]=meshgrid(1:bwpixels,1:blpixels);
+				end
 				for i=1:4
 					outmat(:,:,i) = interp2(a,b,tmat(:,:,i),A,B,me.interpMethod);
+					if me.phaseReverseTime > 0
+						out2mat(:,:,i) = interp2(a,b,t2mat(:,:,i),A,B,me.interpMethod);
+					end
 				end
 				me.matrix = outmat(1:blpixels,1:bwpixels,:);
-				me.rmatrix = rmat;
-			catch %#ok<CTCH>
-				if isempty(me.findprop('barWidthOut'));
+				if me.phaseReverseTime > 0; me.matrix2 = out2mat(1:blpixels,1:bwpixels,:); end
+			catch ME %#ok<CTCH>
+				getReport(ME)
+				if isempty(me.findprop('barWidthOut'))
 					bwpixels = round(me.barWidth*me.ppd);
 				else
 					bwpixels = round(me.barWidthOut*me.ppd);
 				end
-				if isempty(me.findprop('barLengthOut'));
+				if isempty(me.findprop('barLengthOut'))
 					blpixels = round(me.barLength*me.ppd);
 				else
 					blpixels = round(me.barLengthOut*me.ppd);
@@ -277,54 +388,10 @@ classdef barStimulus < baseStimulus
 				tmat(:,:,4)=ones(blpixels,bwpixels)*me.colour(4);
 				rmat=ones(blpixels,bwpixels);
 				me.matrix=tmat;
-				me.rmatrix=rmat;
 			end
+			toc
 		end
 		
 		
-		% ===================================================================
-		%> @brief barLength set method
-		%>
-		%> @param length of bar
-		%> @return
-		% ===================================================================
-		function set.barLength(me,value)
-			if ~(value > 0)
-				value = 0.25;
-			end
-			me.barLength = value;
-		end
-		
-		% ===================================================================
-		%> @brief barWidth set method
-		%>
-		%> @param width of bar in degrees
-		%> @return
-		% ===================================================================
-		function set.barWidth(me,value)
-			if ~(value > 0)
-				value = 0.05;
-			end
-			me.barWidth = value;
-		end
-		
-	end %---END PUBLIC METHODS---%
-	
-	%=======================================================================
-	methods ( Access = protected ) %-------PROTECTED METHODS-----%
-	%=======================================================================
-	
-	% ===================================================================
-	%> @brief sizeOut Set method
-	%>
-	% ===================================================================
-	function set_sizeOut(me,value)
-		me.sizeOut = (value*me.ppd);
-		if ~me.inSetup
-			me.barLengthOut = me.sizeOut;
-			me.barWidthOut = me.sizeOut;
-		end
-	end
-	
 	end
 end

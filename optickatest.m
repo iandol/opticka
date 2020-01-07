@@ -37,11 +37,22 @@ sca %PTB screen clear all
 %%
 % First we create a stimulus manager object that collects and handles groups of
 % stimuli as if they were a single 'thing', so for example when you use the
-% draw method on myStims, it tells each of its child stimuli to draw in order
+% draw method on a metaStimulus, it tells each of its child stimuli to draw in order
 myStims = metaStimulus();
 
 %%
-% The first five stimuli are gratings / gabors of varying kinds.
+% Stimului are made using stimulus classes. Each class inherits from
+% baseStimulus, which has 5 abstract classes ALL stimuli must implement:
+% [1] SETUP(screenManager) - takes a screenManager and sets up the
+% properties ready for display.
+% [2] DRAW() - draws the stimulus
+% [3] ANIMATE() - for each stimulus class, animate takes speed or tf and
+% updates the position onscreen for the next flip.
+% [4] UPDATE() - if any parameters have changed (size, position, colour
+% etc.), then update ensures all properties are updated.
+% [5] RESET() - returns the object back to its pre-setup state.
+%
+%The first five stimuli are gratings / gabors of varying kinds.
 myStims{1}=gratingStimulus('sf', 1, 'tf', 0, 'contrast', 0.7, 'size', 2, 'angle', -45,...
 	'mask', true);
 
@@ -60,6 +71,7 @@ myStims{5}=gratingStimulus('type', 'square', 'sf', 1, 'contrast', 1, 'colour', [
 %%
 % This is a colour grating where two independant colours can be modulated
 % relative to a base colour, in this case this is a red/green grating
+% modulating from 0.5 background grey.
 myStims{6}=colourGratingStimulus('colour', [1 0 0 1], 'colour2', [0 1 0 1],...
 	'baseColour', [0.5 0.5 0.5], 'tf', 1, 'size', 3, 'xPosition', 0, 'yPosition', 6);
 
@@ -69,15 +81,14 @@ myStims{7}=dotsStimulus('density',50,'coherence',0.25,'xPosition',4,...
 	'yPosition',6,'dotType',3,'dotSize',0.1,'colorType','randomBW','mask',true);
 
 %%
-% A simple bar: bars can be solid in colour or have random texture 
-% (try setting 'type' to 'random'). This is a bar 
-% moving at 4deg/s. Notice the startPosition is -4; 
-% this means start -4 degrees "behind" X and Y position, as
+% A simple bar: bars can be solid in colour or have checkerboard/random texture 
+% (try setting 'type' to 'random'). This is a bar moving at 4deg/s. 
+% Notice the startPosition is -4; this means start -4 degrees "behind" X and Y position, as
 % the stimulus is displayed for 2 seconds the bar therefore traverses
 % 4 degrees behind then 4 degrees past the X and Y position (i.e. drift a bar over a RF location)
 % Also note as we will change the angle of this stimulus the geometry is calculated for you
 % automatically!
-myStims{8}=barStimulus('type','randomColour','barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
+myStims{8}=barStimulus('type','checkerboard','checkSize',0.2,'barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
 	'yPosition',0,'startPosition',-4);
 
 %%
@@ -179,11 +190,11 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 rExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'task', myTask,... %task design object
 	'screen', myScreen,... %screen manager object
-	'debug', false,... %setup screen to complain about sync errors etc.
+	'debug', false,... %disable debug mode
 	'verbose', false); %minimal verbosity
 
 %%
-% run our experiment, to exit early, press [q] during the blank period.
+% run our experiment, to exit early, press [q] during the interstimulus period.
 run(rExp);
 
 %%
@@ -199,4 +210,4 @@ getRunLog(rExp);
 % and subsequent frames of the inter trial blank, this forces any computation of
 % stimulus parameter to when it doesn't matter; but note
 % for complex stimuli a frame or two may be dropped during the blank and so
-% ensure you set the inter trial time > than the dropped frame delay!
+% ensure you set the inter trial time > than the dropped frames!
