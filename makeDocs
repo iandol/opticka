@@ -7,12 +7,12 @@ rm -rf docs/
 
 #Auto-run Matlab, publishing HTML output from optickatest.m
 if [[ "$(uname -s)" = "Darwin" ]]; then 
-	MATLAB='/Applications/MATLAB_R2018a.app/bin/matlab'
+	MATLAB='/Applications/MATLAB_R2019b.app/bin/matlab'
 	if [ -f $MATLAB ]; then
 		$MATLAB -nodesktop -nosplash -r "Screen('Preference', 'SkipSyncTests', 2);publish('optickatest.m');pause(2);exit"
 	fi
 else
-	MATLAB='/usr/local/MATLAB/R2018a/bin/matlab'
+	MATLAB='/usr/local/MATLAB/R2019b/bin/matlab'
 	if [ -f $MATLAB ]; then
 		$MATLAB -nodesktop -nosplash -r "publish('optickatest.m');pause(2);exit"
 	fi

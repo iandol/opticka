@@ -8,9 +8,9 @@ Opticka is an object oriented framework with optional GUI for the [Psychophysics
 
 ## Example hardware setup
 
-![Example hardware setup to run Opticka](http://i62.tinypic.com/fxqq12.png)
+![Example hardware setup to run Opticka](https://github.com/iandol/opticka/raw/gh-pages/images/Opticka-Setup.png)
 
-We have also recently got Opticka working well via the [Display++ developed by CRS](https://www.crsltd.com/tools-for-vision-science/calibrated-displays/displaypp-lcd-monitor/). This means we should now support both the VPixx and CRS display replacements for vision research, affording great bit depth display output and using their built-in I/O for more robust experimental control.
+We have also recently got Opticka working well via the [Display++ developed by CRS](https://www.crsltd.com/tools-for-vision-science/calibrated-displays/displaypp-lcd-monitor/). This means we now support both the VPixx and CRS display replacements for vision research, affording great bit depth display output and using their built-in I/O for more robust and temporally precise experimental control.
 
 # Quick Documentation
 `optickatest.m` is a self-documenting minimal toy example showing a mini method of constants (MOC) experiment with 10 different stimuli. Read the Matlab-generated documentation for `optickatest.m` here: [optickatest.m Report](http://iandol.github.io/OptickaDocs/optickatest.html).

@@ -44,17 +44,17 @@ myStims = metaStimulus();
 % Stimului are made using stimulus classes. Each class inherits from
 % baseStimulus, which has 5 abstract classes ALL stimuli must implement:
 % [1] SETUP(screenManager) - takes a screenManager and sets up the
-% properties ready for display.
+% stimulus properties ready for display.
 % [2] DRAW() - draws the stimulus
-% [3] ANIMATE() - for each stimulus class, animate takes speed or tf and
+% [3] ANIMATE() - for each stimulus class, animate takes speed, tf etc. and
 % updates the position onscreen for the next flip.
 % [4] UPDATE() - if any parameters have changed (size, position, colour
-% etc.), then update ensures all properties are updated.
+% etc.), then update ensures all properties are properly updated.
 % [5] RESET() - returns the object back to its pre-setup state.
 %
 %The first five stimuli are gratings / gabors of varying kinds.
-myStims{1}=gratingStimulus('sf', 1, 'tf', 0, 'contrast', 0.7, 'size', 2, 'angle', -45,...
-	'mask', true);
+myStims{1}=gratingStimulus('sf', 1, 'tf', 0, 'phase', 90, 'contrast', 0.7, 'size', 2, 'angle', -45,...
+	'mask', false);
 
 myStims{2}=gaborStimulus('sf', 1, 'contrast', 0.75, 'tf', 3, 'size', 3, 'angle', -70,...
 	'aspectRatio', 0.5, 'xPosition', 5, 'yPosition', -5);
@@ -66,7 +66,7 @@ myStims{4}=gratingStimulus('sf', 3, 'contrast', 0.75, 'tf', 1, 'size', 3, 'xPosi
 	'yPosition', -5);
 
 myStims{5}=gratingStimulus('type', 'square', 'sf', 1, 'contrast', 1, 'colour', [0.5 0.5 0.5], 'tf', 0,...
-	'size', 3, 'xPosition', 3, 'yPosition', 0, 'useAlpha', true);
+	'size', 3, 'xPosition', 3, 'yPosition', 0, 'sigma',30, 'useAlpha', true);
 
 %%
 % This is a colour grating where two independant colours can be modulated
@@ -88,20 +88,19 @@ myStims{7}=dotsStimulus('density',50,'coherence',0.25,'xPosition',4,...
 % 4 degrees behind then 4 degrees past the X and Y position (i.e. drift a bar over a RF location)
 % Also note as we will change the angle of this stimulus the geometry is calculated for you
 % automatically!
-myStims{8}=barStimulus('type','checkerboard','checkSize',0.2,'barWidth',1,'barLength',4,'speed',4,'xPosition',0,...
-	'yPosition',0,'startPosition',-4);
+myStims{8}=barStimulus('type','checkerboard','checkSize',0.25,'barWidth',1,'barLength',4,...
+	'speed',4,'xPosition',0,'yPosition',0,'startPosition',-4,'phaseReverseTime',0.5);
 
 %%
 % an edge-smoothed spot; spots can also flash if needed
 myStims{9}=discStimulus('type','flash','speed',2,'xPosition',4,...
-	'yPosition',4,'colour',[1 1 0],'size',2,'flashTime',[0.2 0.2]);
+	'yPosition',4,'colour',[1 1 0],'size',2,'flashTime',[0.2 0.15]);
 
 %%
 % a texture stimulus, by default this loads a picture from the opticka
 % stimulus directory; you can rotate it, scale it etc and drift it across screen as
 % in this case. Size is in degrees, scaling the whole picture
-myStims{10}=textureStimulus('speed',2,'xPosition',-10,'yPosition',10,...
-	'size',4);
+myStims{10}=textureStimulus('speed',2,'xPosition',-10,'yPosition',10,'size',4);
 
 %%
 % a movie stimulus, by default this loads a movie from the opticka
@@ -115,7 +114,10 @@ myStims{11}=movieStimulus('speed',1,'xPosition',-5,'yPosition',-10,...
 % of randomised stimulus parameter changes (called variables) repeated over
 % a set of blocks. A trial is an individual stimulus presentation. This
 % example has three different variables changing over 3*2*2 values (12 unique trials) which is
-% then repeated over 2 blocks for 24 trials in total
+% then repeated over 2 blocks for 24 trials in total.
+%
+% NOTE: for more complex behavioural tasks, Opticka uses a finite state machine to generate flexible
+% experimental protocols, see stateMachine() for more details.
 myTask = stimulusSequence; %new stimulusSequence object instance
 myTask.nBlocks = 2; %number of blocks
 myTask.trialTime = 2; %time of stimulus display: 2 seconds
@@ -140,8 +142,8 @@ myTask.nVar(1).offsetvalue = [90];
 % Our second variable is contrast, applied to stimulus 2 and 3, randomly
 % selected from values of 0.025 and 0.1
 myTask.nVar(2).name = 'contrast';
-myTask.nVar(2).stimulus = [2 3];
-myTask.nVar(2).values = [0.1 0.4];
+myTask.nVar(2).stimulus = [2 3 5];
+myTask.nVar(2).values = [0.15 0.55];
 
 %% Variable 3
 % Our third variable is X position, applied to stimulus 2 and 8, randomly
@@ -211,3 +213,19 @@ getRunLog(rExp);
 % stimulus parameter to when it doesn't matter; but note
 % for complex stimuli a frame or two may be dropped during the blank and so
 % ensure you set the inter trial time > than the dropped frames!
+
+%%
+% You don't need to use opticka's stimuli using runExperiment(), you can
+% use them in your own simple experiments, lets have a quick look here.
+WaitSecs('YieldSecs',2);
+myMovie = myStims{11}; % the movie stimulus from above
+open(myScreen); %open a screen
+setup(myMovie, myScreen); %setup the stimulus with the screen configuration
+for i = 1:myScreen.screenVals.fps
+	draw(myMovie);
+	finishDrawing(myScreen);
+	animate(myMovie);
+	flip(myScreen);
+end
+reset(myMovie);
+close(myScreen);

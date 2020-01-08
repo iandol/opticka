@@ -45,7 +45,7 @@ classdef barStimulus < baseStimulus
 		texture2
 		%> how many frames between phase reverses
 		phaseCounter double = 0
-		allowedProperties = 'type|barWidth|barLength|angle|speed|contrast|scale|interpMethod|phaseReverseTime';
+		allowedProperties = 'type|barWidth|barLength|angle|speed|contrast|scale|checkSize|interpMethod|phaseReverseTime';
 		ignoreProperties = 'interpMethod|matrix|matrix2|phaseCounter|pixelScale';
 	end
 	
@@ -276,7 +276,6 @@ classdef barStimulus < baseStimulus
 		%> the correct dimensions
 		% ===================================================================
 		function constructMatrix(me)
-			tic
 			me.matrix=[]; %reset the matrix
 			try
 				if isempty(me.findprop('barWidthOut'))
@@ -293,6 +292,8 @@ classdef barStimulus < baseStimulus
 				if strcmpi(me.type,'checkerboard')
 					bwscale = round(((bwpixels/me.ppd) / me.checkSize));
 					blscale = round(((blpixels/me.ppd) / me.checkSize));
+					if bwscale < 1; bwscale = 1; end
+					if blscale < 1; blscale = 1; end
 				else
 					if rem(bwpixels,2);bwpixels=bwpixels+1;end
 					if rem(blpixels,2);blpixels=blpixels+1;end
@@ -389,7 +390,6 @@ classdef barStimulus < baseStimulus
 				rmat=ones(blpixels,bwpixels);
 				me.matrix=tmat;
 			end
-			toc
 		end
 		
 		
