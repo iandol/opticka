@@ -6,14 +6,14 @@ Opticka Stimulus Generator is an object oriented framework with optional GUI for
 
 ![Opticka Screenshot](https://github.com/iandol/opticka/raw/gh-pages/images/opticka.png)
 ## Example hardware setup
-![Example hardware setup to run Opticka](https://github.com/iandol/opticka/raw/gh-pages/images/setup.png)
+![Example hardware setup to run Opticka](https://github.com/iandol/opticka/raw/gh-pages/images/Optick-Setup.png)
 
 # Quick Documentation
 optickatest.m is a self-documenting minimal toy example showing a mini method of constants (MOC) experiment with 10 different stimuli. Read the Matlab-generated HTML for ``optickatest.m`` here: [optickatest.m Report](http://iandol.github.io/OptickaDocs/optickatest.html).
 There is also auto-generated class documentation here: [Opticka Class Docs](http://iandol.github.io/OptickaDocs/inherits.html), however this is only as good as the comments in the code, which as always could be improved...
 
 # Install Instructions
-Opticka prefers the latest Psychophysics Toolbox (V3.0.12) and at least Matlab 2010a. It has been tested and is mostly used on 64bit Ubuntu 17.10 and macOS 10.12.x & Matlab 2017a. You can simply download the .ZIP from Github, and add the contents/subdirectories to Matlab path. Or if you have git installed, clone this Github repo and add to Matlab path (not the `.git` folder though).
+Opticka prefers the latest Psychophysics Toolbox (V3.0.16) and at least Matlab 2010a. It has been tested and is mostly used on 64bit Ubuntu 19.04 and macOS 10.14.x & Matlab 2019b. You can simply download the .ZIP from Github, and add the contents/subdirectories to Matlab path. Or if you have git installed, clone this Github repo and add to Matlab path (not the `.git` folder though).
 
 Opticka  currently works under macOS, Linux and Windows. LabJack control of the Omniplex currently only works under macOS and Linux (Labjack uses a different interface on windows and *nix, but this is a minor interface issue). I'm not really testing under Windows as in macOS and Linux. Linux is the preferred OS for PTB according the Mario Kleiner at the moment, and we are slowly transitioning over to it.
 ## Features

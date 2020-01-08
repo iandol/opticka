@@ -8,16 +8,16 @@ Opticka is an object oriented framework with optional GUI for the [Psychophysics
 
 ## Example hardware setup
 
-![Example hardware setup to run Opticka](http://i62.tinypic.com/fxqq12.png)
+![Example hardware setup to run Opticka](https://github.com/iandol/opticka/raw/gh-pages/images/Opticka-Setup.png)
 
-We have also recently got Opticka working well via the [Display++ developed by CRS](https://www.crsltd.com/tools-for-vision-science/calibrated-displays/displaypp-lcd-monitor/). This means we should now support both the VPixx and CRS display replacements for vision research, affording great bit depth display output and using their built-in I/O for more robust experimental control.
+We have also recently got Opticka working well via the [Display++ developed by CRS](https://www.crsltd.com/tools-for-vision-science/calibrated-displays/displaypp-lcd-monitor/). This means we now support both the VPixx and CRS display replacements for vision research, affording great bit depth display output and using their built-in I/O for more robust experimental control.
 
 # Quick Documentation
 `optickatest.m` is a self-documenting minimal toy example showing a mini method of constants (MOC) experiment with 10 different stimuli. Read the Matlab-generated documentation for `optickatest.m` here: [optickatest.m Report](http://iandol.github.io/OptickaDocs/optickatest.html).
 There is also auto-generated class documentation here: [Opticka Class Docs](http://iandol.github.io/OptickaDocs/inherits.html), however this is only as good as the comments in the code, which as always could be improved...  
 
 # Install Instructions
-Opticka prefers the latest Psychophysics Toolbox (V3.0.14+) and at least Matlab 2017a (it uses object-oriented property validation introduced in that version). It has been tested and is mostly used on 64bit Ubuntu 18.04 & macOS 10.14.x with Matlab 2018b. You can simply download the .ZIP from Github, and add the contents/subdirectories to Matlab path. Or if you have git installed, clone this Github repo and add to Matlab path.
+Opticka prefers the latest Psychophysics Toolbox (V3.0.16+) and at least Matlab 2017a (it uses object-oriented property validation introduced in that version). It has been tested and is mostly used on 64bit Ubuntu 18.04 & macOS 10.14.x with Matlab 2019b. You can simply download the .ZIP from Github, and add the contents/subdirectories to Matlab path. Or if you have git installed, clone this Github repo and add to Matlab path.
 
 Opticka currently works on Linux, macOS and Windows, though the LabJack interface currently only works under Linux and macOS (Labjack uses a different interface on windows and *nix, but this is a minor interface issue and would be a quick fix). Linux is by far the preferred OS according the PTB developer Mario Kleiner, and recieves the majority of development work, therefore it is strongly advised to use it for experiments.
 
