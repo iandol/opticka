@@ -1,11 +1,10 @@
 function tobiidemo2b()
 
-	bgColour = 0.5;
+	bgColour = 0.25;
 	screen = 2;
-	screenSize = [];
 
 	% ---- screenManager
-	ptb = mySetup(screen,bgColour,screenSize);
+	ptb = mySetup(screen,bgColour);
 
 	% ---- setup movie path
 	m=movieStimulus;
@@ -15,18 +14,20 @@ function tobiidemo2b()
 	
 	% ---- tobii manager
 	t = tobiiManager;
+	t.trackingMode = 'human';
+	t.sampleRate = 600;
 	initialise(t,ptb);
 	trackerSetup(t);
+	Priority(MaxPriority(ptb.win)); %bump our priority to maximum allowed
 	startRecording(t); WaitSecs(1);
 	trackerMessage(t,'!!! Starting Demo...')
 	
 	% ---- prepare variables
 	CloseWin = false;
 	quit = KbName('escape');
-	Priority(MaxPriority(ptb.win)); %bump our priority to maximum allowed
-	vbl = ptb.flip();
+	vbl = ptb.flip(); startT = vbl;
 	trackerMessage(t,'STARTVBL',vbl);
-	while ~CloseWin
+	while ~CloseWin || vbl <= startT+2
 		draw(m);
 		finishDrawing(ptb);
 		animate(m);
@@ -46,7 +47,7 @@ function tobiidemo2b()
 					%disp('Cant match key!')
 			end
 		end
-	end
+	end 
 	stopRecording(t);
 	ListenChar(0); Priority(0); ShowCursor;
 	close(ptb);
@@ -54,7 +55,7 @@ function tobiidemo2b()
 	close(t);
 end
 
-function ptb = mySetup(screen, bgColour, ws)
+function ptb = mySetup(screen, bgColour)
 	ptb.cleanup = onCleanup(@myCleanup);
 	ptb = screenManager('backgroundColour',bgColour,'screen',screen);
 	ptb.blend = true;

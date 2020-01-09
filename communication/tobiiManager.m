@@ -21,6 +21,8 @@ classdef tobiiManager < optickaCore
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
 		smoothing struct = struct('nSamples',8,'method','median','window',3,...
 			'eyes','both')
+		%> type of calibration stimulus
+		calibrationStimulus char = 'animated'
 		%> main tobii (Titta) object
 		tobii Titta
 		%> the PTB screen to work on, passed in during initialise
@@ -166,7 +168,34 @@ classdef tobiiManager < optickaCore
                 me.settings.UI.val.avg.text.font = 'Liberation Mono';
                 me.settings.UI.val.hover.text.font = 'Liberation Mono';
                 me.settings.UI.val.avg.text.color = 200;
-            end
+			end
+			me.settings.cal.bgColor             = round(me.screen.backgroundColour .* 255);
+			if strcmpi(me.calibrationStimulus,'animated')
+				calViz							= AnimatedCalibrationDisplay();
+				calViz.moveTime					= 0.75;
+				calViz.oscillatePeriod			= 1;
+				calViz.blinkCount				= 4;
+				calViz.bgColor					= me.settings.cal.bgColor;
+				calViz.fixBackColor             = 0;
+				calViz.fixFrontColor			= 255;
+				me.settings.cal.drawFunction    = @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
+			elseif strcmpi(me.calibrationStimulus,'movie')
+				calViz							= tittaCalMovieStimulus();
+				calViz.moveTime					= 0.75;
+				calViz.oscillatePeriod			= 1;
+				calViz.blinkCount				= 4;
+				calViz.bgColor					= me.settings.cal.bgColor;
+				calViz.fixBackColor             = 0;
+				calViz.fixFrontColor			= 255;
+				me.settings.cal.drawFunction    = @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
+			end
+			me.settings.cal.autoPace            = 1;
+			me.settings.cal.doRandomPointOrder  = true;
+			me.settings.val.pointPos			= [.15 .15; .15 .85; .5 .5; .85 .15; .85 .85];
+			%me.settings.val.pointPos			= [.1 .1;.1 .9;.5 .5;.9 .1;.9 .9];
+			me.settings.UI.setup.eyeClr         = 255;
+			me.settings.cal.pointNotifyFunction = @tittaCalCallback;
+			me.settings.val.pointNotifyFunction = @tittaCalCallback;
 			updateDefaults(me);
 			me.tobii.init();
 			me.isConnected		= true;
@@ -845,22 +874,6 @@ classdef tobiiManager < optickaCore
 				
 				ListenChar(1);
 				initialise(me,s); %initialise tobii with our screen
-				calViz								= AnimatedCalibrationDisplay();
-				calViz.moveTime						= 0.75;
-				calViz.oscillatePeriod				= 1;
-				calViz.blinkCount					= 4;
-				me.settings.cal.drawFunction        = @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
-				calViz.bgColor						= round(s.backgroundColour .* 255);
-				calViz.fixBackColor                 = 0;
-				calViz.fixFrontColor				= 255;
-				me.settings.cal.bgColor             = calViz.bgColor;
-				me.settings.cal.autoPace            = 1;
-				me.settings.cal.doRandomPointOrder  = true;
-				me.settings.val.pointPos			= [.15 .15; .15 .85; .5 .5; .85 .15; .85 .85];
-				%me.settings.val.pointPos			= [.1 .1;.1 .9;.5 .5;.9 .1;.9 .9];
-				me.settings.UI.setup.eyeClr         = 255;
-				me.settings.cal.pointNotifyFunction = @tittaCalCallback;
-				me.settings.val.pointNotifyFunction = @tittaCalCallback;
 				trackerSetup(me);
 				ShowCursor; %titta fails to show cursor so we must do it
 				drawPhotoDiodeSquare(s,[0 0 0 1]); flip(s); %make sure our photodiode patch is black

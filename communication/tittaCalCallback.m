@@ -4,15 +4,17 @@ if strcmpi(stage,'cal')
     % this demo function is no-op for validation mode
     if calState.status==0
         status = 'ok';
-		  if isa(rM,'arduinoManager')
+		  if isa(rM,'arduinoManager') && rM.isOpen
 			  timedTTL(rM);
+			  fprintf('Send a reward!\n');
 		  end
     else
         status = sprintf('failed (%s)',calState.statusString);
     end
     titta_instance.sendMessage(sprintf('Calibration data collection status result for point %d, positioned at (%.2f,%.2f): %s',currentPoint,posNorm,status));
 elseif strcmpi(stage,'val')
-	if isa(rM,'arduinoManager')
+	if isa(rM,'arduinoManager')  && rM.isOpen
 		timedTTL(rM);
+		fprintf('Send a reward!\n');
 	end
 end
