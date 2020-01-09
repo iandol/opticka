@@ -149,7 +149,7 @@ classdef barStimulus < baseStimulus
 			if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
 					try Screen('Close',me.texture2); end %#ok<*TRYNC>
 			end
-			constructMatrix(me) %make our matrix
+			constructMatrix(me); %make our matrix
 			me.texture=Screen('MakeTexture',me.sM.win,me.matrix,1,[],2);
 			if me.phaseReverseTime > 0
 				me.texture2=Screen('MakeTexture',me.sM.win,me.matrix2,1,[],2);

@@ -181,7 +181,8 @@ classdef labJack < handle
 						try
 							loadlibrary(obj.library,obj.header);
 						catch ME
-							obj.salutation('open method',['Loading the exodriver library failed: ' ME.message]);
+							obj.salutation('open method',['Loading the exodriver library failed: ' ME.message],true);
+							warning(['Loading the exodriver library failed: ' ME.message]);
 							obj.version = ['Library Load FAILED: ' ME.message];
 							obj.silentMode = true;
 							obj.verbose = true;
@@ -245,7 +246,7 @@ classdef labJack < handle
 					none=[0,0,0];
 					obj.setDIO(none); %Sink all our DIO to output LOW
 				else
-					obj.salutation('open method','LabJack failed to open, going into silent mode');
+					obj.salutation('open method','LabJack failed to open, going into silent mode',true);
 					obj.version = 'device opening FAILED';
 					obj.isOpen = false;
 					obj.handle = [];

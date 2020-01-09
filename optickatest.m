@@ -180,7 +180,7 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
 	'srcMode', 'GL_ONE',... %src blend mode
 	'dstMode', 'GL_ZERO',... %dst blend mode
-	'windowed', [0 0 1000 1000],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
+	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on macOS ATI 5870
 	'bitDepth', 'FloatingPoint32bitIfPossible',... %8bit, FloatingPoint16bit FloatingPoint32bit etc.
 	'displayPPRefresh', 100); %set refresh to 100Hz only if Dispay++ attached
