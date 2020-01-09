@@ -68,9 +68,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> Our texture pointer for texture-based stimuli
-		texture
+		texture double
 		%> handles for the GUI
-		handles
+		handles struct
 		%> our screen manager
 		sM screenManager
 	end
@@ -88,13 +88,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> is mouse position within screen co-ordinates?
 		mouseValid logical = false
 		%> mouse X position
-		mouseX = 0
+		mouseX double = 0
 		%> mouse Y position
-		mouseY = 0
+		mouseY double = 0
 		%> delay ticks to wait until display
-		delayTicks = 0
+		delayTicks double = 0
 		%> ticks before stimulus turns off
-		offTicks = Inf
+		offTicks double = Inf
 		%>are we setting up?
 		inSetup logical = false
 		%> delta cache
@@ -130,7 +130,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> @return instance of class.
 		% ===================================================================
 		function me = baseStimulus(varargin)
-			if nargin == 0;varargin.family = 'movie';end
+			if nargin == 0;varargin.name = 'base stimulus';end
 			me=me@optickaCore(varargin); %superclass constructor
 			me.parseArgs(varargin,me.allowedProperties);
 			%if isempty(me.sM) %add a default screenManager, overwritten on setup

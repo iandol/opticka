@@ -153,23 +153,22 @@ classdef tobiiManager < optickaCore
 				me.tobii			= me.tobii.setDummyMode();
 			end
 			
-			me.settings = Titta.getDefaults(me.model);
-			me.settings.freq	= me.sampleRate;
+			me.settings				= Titta.getDefaults(me.model);
+			me.settings.freq		= me.sampleRate;
 			me.settings.trackingMode = me.trackingMode;
 			me.settings.cal.bgColor = floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor = me.settings.cal.bgColor;
-            if IsLinux
-                me.settings.UI.setup.instruct.font = 'Liberation Sans';
-                me.settings.UI.button.setup.text.font = 'Liberation Sans';
-                me.settings.UI.button.val.text.font = 'Liberation Sans';
+			if IsLinux
+				me.settings.UI.setup.instruct.font = 'Liberation Sans';
+				me.settings.UI.button.setup.text.font = 'Liberation Sans';
+				me.settings.UI.button.val.text.font = 'Liberation Sans';
 				me.settings.UI.cal.errMsg.font = 'Liberation Sans';
 				me.settings.UI.val.waitMsg.font = 'Liberation Sans';
 				me.settings.UI.val.menu.text.font  = 'Liberation Sans';
-                me.settings.UI.val.avg.text.font = 'Liberation Mono';
-                me.settings.UI.val.hover.text.font = 'Liberation Mono';
-                me.settings.UI.val.avg.text.color = 200;
+				me.settings.UI.val.avg.text.font = 'Liberation Mono';
+				me.settings.UI.val.hover.text.font = 'Liberation Mono';
+				me.settings.UI.val.avg.text.color = 200;
 			end
-			me.settings.cal.bgColor             = round(me.screen.backgroundColour .* 255);
 			if strcmpi(me.calibrationStimulus,'animated')
 				calViz							= AnimatedCalibrationDisplay();
 				calViz.moveTime					= 0.75;
@@ -184,10 +183,15 @@ classdef tobiiManager < optickaCore
 				calViz.moveTime					= 0.75;
 				calViz.oscillatePeriod			= 1;
 				calViz.blinkCount				= 4;
-				calViz.bgColor					= me.settings.cal.bgColor;
-				calViz.fixBackColor             = 0;
-				calViz.fixFrontColor			= 255;
 				me.settings.cal.drawFunction    = @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
+				if isempty(me.screen.audio)
+					me.screen.audio = audioManager();
+				end
+				m = movieStimulus;
+				m.mask = [0 0 0];
+				m.size = 4;
+				m.setup(me.screen);
+				calViz.initialise(m);
 			end
 			me.settings.cal.autoPace            = 1;
 			me.settings.cal.doRandomPointOrder  = true;

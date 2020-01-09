@@ -2,9 +2,10 @@ function tobiidemo2b()
 
 	bgColour = 0.25;
 	screen = 2;
+	windowed=[];
 
 	% ---- screenManager
-	ptb = mySetup(screen,bgColour);
+	ptb = mySetup(screen,bgColour,windowed);
 
 	% ---- setup movie path
 	m=movieStimulus;
@@ -13,9 +14,10 @@ function tobiidemo2b()
 	setup(m,ptb);
 	
 	% ---- tobii manager
-	t = tobiiManager;
+	t = tobiiManager();
 	t.trackingMode = 'human';
 	t.sampleRate = 600;
+	t.calibrationStimulus = 'movie';
 	initialise(t,ptb);
 	trackerSetup(t);
 	Priority(MaxPriority(ptb.win)); %bump our priority to maximum allowed
@@ -55,9 +57,9 @@ function tobiidemo2b()
 	close(t);
 end
 
-function ptb = mySetup(screen, bgColour)
+function ptb = mySetup(screen, bgColour, win)
 	ptb.cleanup = onCleanup(@myCleanup);
-	ptb = screenManager('backgroundColour',bgColour,'screen',screen);
+	ptb = screenManager('backgroundColour',bgColour,'screen',screen,'windowed',win);
 	ptb.blend = true;
 	ptb.open();
 end

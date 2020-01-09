@@ -187,6 +187,16 @@ classdef movieStimulus < baseStimulus
 		end
 		
 		% ===================================================================
+		%> @brief Update only position info, faster and doesn't reset movie
+		%>
+		% ===================================================================
+		function updatePositions(me,x,y)
+			me.xOut = x;
+			me.yOut = y;
+			me.mvRect=CenterRectOnPointd(me.mvRect, me.xOut, me.yOut);
+		end
+		
+		% ===================================================================
 		%> @brief Draw this stimulus object
 		%>
 		% ===================================================================

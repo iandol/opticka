@@ -87,6 +87,9 @@ classdef screenManager < optickaCore
 	end
 	
 	properties (Hidden = true)
+		%> an audioManager that experiments can use, you can pass device
+		%and samples etc.
+		audio audioManager
 		%> for some development macOS and windows machines we have to disable sync tests,
 		%> but we hide this as we should remember this is for development ONLY!
 		disableSyncTests logical = false
@@ -593,8 +596,11 @@ classdef screenManager < optickaCore
 			if ~me.isPTB; return; end
 			Priority(0);
 			ListenChar(0);
-			Screen('Preference','SyncTestSettings', 0.0002); %default 0.2ms variability
 			ShowCursor;
+			Screen('Preference','SyncTestSettings', 0.0005); %default 0.2ms variability
+			if ~isempty(me.audio)
+				me.audio.reset();
+			end
 			if isfield(me.screenVals,'originalGammaTable') && ~isempty(me.screenVals.originalGammaTable)
 				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.originalGammaTable);
 				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
@@ -817,7 +823,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief draw fixation cross from Thaler L, Schütz AC, 
 		%>  Goodale MA, & Gegenfurtner KR (2013) “What is the best fixation target? 
-		%>  The effect of target shape on stability of fixational eye movements.” 
+		%>  The effect of target shape on stability of fixational eye movements.�? 
 		%>  Vision research 76, 31-42 <http://doi.org/10.1016/j.visres.2012.10.012>
 		%>
 		%> @param size size in degrees
