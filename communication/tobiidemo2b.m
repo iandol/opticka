@@ -6,6 +6,12 @@ function tobiidemo2b()
 
 	% ---- screenManager
 	ptb = mySetup(screen,bgColour,windowed);
+	s = screenManager;
+	s.screen = 1;
+	s.windowed = [0 0 1000 1000];
+	s.bitDepth = '8bit';
+	s.blend = true;
+	s.disableSyncTests = true;
 
 	% ---- setup movie path
 	m=movieStimulus;
@@ -18,8 +24,9 @@ function tobiidemo2b()
 	t.trackingMode = 'human';
 	t.sampleRate = 600;
 	t.calibrationStimulus = 'movie';
-	initialise(t,ptb);
+	initialise(t,ptb,s2);
 	trackerSetup(t);
+	s2.close;
 	Priority(MaxPriority(ptb.win)); %bump our priority to maximum allowed
 	startRecording(t); WaitSecs(1);
 	trackerMessage(t,'!!! Starting Demo...')

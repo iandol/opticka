@@ -32,7 +32,7 @@ try
 	% get setup struct (can edit that of course):
 	settings = Titta.getDefaults('Tobii Pro Spectrum');
 	settings.debugMode				= false;	
-	settings.freq					= 300;
+	settings.freq					= 150;
 	settings.trackingMode			= 'macaque';
 	settings.cal.autoPace            = 0;
 	settings.cal.doRandomPointOrder  = false;

@@ -616,12 +616,11 @@ classdef screenManager < optickaCore
 				BitsPlusPlus('Close');
 			end
 			me.finaliseMovie(); me.moviePtr = [];
-			Screen('CloseAll');
+			Screen('Close',me.win);
 			me.win=[]; 
 			if isfield(me.screenVals,'win');me.screenVals=rmfield(me.screenVals,'win');end
 			me.isOpen = false;
 			me.isPlusPlus = false;
-			sca; % PTB function also run just in case ;-)
 		end
 		
 		
@@ -823,7 +822,7 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief draw fixation cross from Thaler L, Schütz AC, 
 		%>  Goodale MA, & Gegenfurtner KR (2013) “What is the best fixation target? 
-		%>  The effect of target shape on stability of fixational eye movements.�? 
+		%>  The effect of target shape on stability of fixational eye movements.�? 
 		%>  Vision research 76, 31-42 <http://doi.org/10.1016/j.visres.2012.10.012>
 		%>
 		%> @param size size in degrees

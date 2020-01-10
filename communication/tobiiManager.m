@@ -26,7 +26,7 @@ classdef tobiiManager < optickaCore
 		%> main tobii (Titta) object
 		tobii Titta
 		%> the PTB screen to work on, passed in during initialise
-		screen screenManager = []
+		screen screenManager
 		%> Titta settings
 		settings struct = []
 		%> name of eyetracker file
@@ -43,6 +43,7 @@ classdef tobiiManager < optickaCore
 		%> exclusion zone no eye movement allowed inside
 		exclusionZone = []
 		sampletime = []
+		screen2 screenManager
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -92,6 +93,7 @@ classdef tobiiManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		secondScreen logical = false;
 		%> currentSample template
 		sampleTemplate struct = struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,'pa',NaN)
 		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
@@ -138,13 +140,19 @@ classdef tobiiManager < optickaCore
 		%>
 		%> @param sM - screenManager object we will use
 		% ===================================================================
-		function initialise(me,sM)
+		function initialise(me,sM,sM2)
 			if ~exist('sM','var') || isempty(sM)
 				if isempty(me.screen) || ~isa(me.screen,'screenManager')
 					me.screen	= screenManager();
 				end
 			else
 				me.screen		= sM;
+			end
+			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
+				me.secondScreen = false;
+			else
+				me.screen2 = sM2;
+				me.secondScreen = true;
 			end
 			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
 			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
@@ -265,8 +273,16 @@ classdef tobiiManager < optickaCore
 		function trackerSetup(me)
 			if me.isConnected && me.screen.isOpen
 				updateDefaults(me); % make sure we send any other settings changes
-				calinfo = me.tobii.calibrate(me.screen.win); %start calibration
-				disp(calinfo);
+				if me.secondScreen
+					if ~me.screen2.isOpen
+						me.screen2.open();
+					end
+					me.calibration = me.tobii.calibrate([me.screen.win me.screen2.win]); %start calibration
+				else
+					me.calibration = me.tobii.calibrate(me.screen.win); %start calibration
+				end
+				
+				disp(me.calibration);
 				resetFixation(me);
 			end
 		end
