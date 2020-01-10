@@ -22,15 +22,17 @@ function tobiidemo2b()
 	
 	% ---- tobii manager
 	t = tobiiManager();
-	t.trackingMode = 'human';
+	t.name = 'Tobii Demo 2b';
+	t.trackingMode = 'macaque';
 	t.sampleRate = 600;
 	t.calibrationStimulus = 'movie';
 	initialise(t,ptb,s);
 	
-	t.settings.cal.pointPos = [0.3 0.3;0.5 0.5;0.7 0.7];
+	t.settings.cal.pointPos = [0.3 0.3; 0.7 0.7];
 	t.settings.val.pointPos = [0.5 0.5];
-	trackerSetup(t);
-	Screen('Close',s.win);
+	
+	trackerSetup(t); ShowCursor();
+	Screen('Close',s.win); WaitSecs('YieldSecs',1);
 	
 	% ---- prepare tracker
 	Priority(MaxPriority(ptb.win)); %bump our priority to maximum allowed
@@ -42,7 +44,7 @@ function tobiidemo2b()
 	quit = KbName('escape');
 	vbl = ptb.flip(); startT = vbl;
 	trackerMessage(t,'STARTVBL',vbl);
-	while ~CloseWin || vbl <= startT+2
+	while ~CloseWin && vbl <= startT + 4
 		draw(m);
 		finishDrawing(ptb);
 		animate(m);
@@ -63,6 +65,7 @@ function tobiidemo2b()
 			end
 		end
 	end 
+	ptb.flip();
 	stopRecording(t);
 	ListenChar(0); Priority(0); ShowCursor;
 	close(ptb);

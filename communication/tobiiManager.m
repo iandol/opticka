@@ -362,7 +362,7 @@ classdef tobiiManager < optickaCore
 				tobii = me;
 				if exist(me.saveFile,'file')
 					[p,f,e] = fileparts(me.saveFile);
-					me.saveFile = [p f me.savePrefix e];
+					me.saveFile = [p filesep f me.savePrefix e];
 				end
 				save(me.saveFile,'tobii')
 				disp('===========================')
