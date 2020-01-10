@@ -1,7 +1,7 @@
 function tobiidemo2b()
 
 	bgColour = 0.25;
-	screen = 2;
+	screen = 1;
 	windowed=[];
 
 	% ---- screenManager
@@ -9,7 +9,7 @@ function tobiidemo2b()
 	ptb.audio = audioManager();
 	ptb.audio.setup();
 	s = screenManager;
-	s.screen = 1;
+	s.screen = ptb.screen-1;
 	s.windowed = [];
 	s.bitDepth = '8bit';
 	s.blend = true;
@@ -44,7 +44,7 @@ function tobiidemo2b()
 	quit = KbName('escape');
 	vbl = ptb.flip(); startT = vbl;
 	trackerMessage(t,'STARTVBL',vbl);
-	while ~CloseWin && vbl <= startT + 4
+	while ~CloseWin && vSbl <= startT + 4
 		draw(m);
 		finishDrawing(ptb);
 		animate(m);
@@ -68,9 +68,9 @@ function tobiidemo2b()
 	ptb.flip();
 	stopRecording(t);
 	ListenChar(0); Priority(0); ShowCursor;
-	close(ptb);
+	reset(m);
 	saveData(t);
-	close(t);
+	close(t); close(ptb);
 end
 
 function ptb = mySetup(screen, bgColour, win)

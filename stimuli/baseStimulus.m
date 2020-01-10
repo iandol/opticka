@@ -902,11 +902,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 			me.sM = [];
 			if ~isempty(me.texture)
 				for i = 1:length(me.texture)
-					try Screen('Close',me.texture); end %#ok<*TRYNC>
+					if Screen(me.texture, 'WindowKind')~=0 ;try Screen('Close',me.texture); end; end %#ok<*TRYNC>
 				end
 			end
 			if isprop(me,'buffertex') && ~isempty(me.buffertex)
-				try Screen('Close',me.buffertex); end
+				if Screen(me.buffertex, 'WindowKind')~=0 ; try Screen('Close',me.buffertex); end; end
 			end
 			fprintf('--->>> Delete method called on stimulus: %s\n',me.fullName);
 		end

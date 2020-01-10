@@ -253,11 +253,11 @@ classdef movieStimulus < baseStimulus
 			ndrop=-1;
 			if ~isempty(me.texture) && me.texture>0 
 				try Screen('Close',me.texture); end
-				if me.texture ~= me.buffertex
-					if ~isempty(me.buffertex) && me.buffertex>0; try Screen('Close',me.buffertex); end;	end
-				end
-				me.buffertex = []; me.texture = [];
 			end
+			if ~isempty(me.buffertex) && me.buffertex>0 && me.texture ~= me.buffertex
+				try Screen('Close',me.buffertex); end
+			end
+			me.buffertex = []; me.texture = [];
 			if ~isempty(me.movie)
 				try ndrop=Screen('Playmovie', me.movie, 0); end %#ok<*TRYNC>
 				fprintf('---> Number of dropped movie frames: %i\n',ndrop)

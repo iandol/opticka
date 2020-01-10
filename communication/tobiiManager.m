@@ -93,6 +93,7 @@ classdef tobiiManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		calStim
 		secondScreen logical = false;
 		%> currentSample template
 		sampleTemplate struct = struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,'pa',NaN)
@@ -179,20 +180,19 @@ classdef tobiiManager < optickaCore
 				me.settings.UI.val.avg.text.color = 200;
 			end
 			if strcmpi(me.calibrationStimulus,'animated')
-				calViz							= AnimatedCalibrationDisplay();
-				calViz.moveTime					= 0.75;
-				calViz.oscillatePeriod			= 1;
-				calViz.blinkCount				= 4;
-				calViz.bgColor					= me.settings.cal.bgColor;
-				calViz.fixBackColor             = 0;
-				calViz.fixFrontColor			= 255;
-				me.settings.cal.drawFunction    = @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
+				me.calStim							= AnimatedCalibrationDisplay();
+				me.calStim.moveTime					= 0.75;
+				me.calStim.oscillatePeriod			= 1;
+				me.calStim.blinkCount				= 4;
+				me.calStim.bgColor					= me.settings.cal.bgColor;
+				me.calStim.fixBackColor             = 0;
+				me.calStim.fixFrontColor			= 255;
+				me.settings.cal.drawFunction    = @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 			elseif strcmpi(me.calibrationStimulus,'movie')
-				calViz							= tittaCalMovieStimulus();
-				calViz.moveTime					= 0.75;
-				calViz.oscillatePeriod			= 1;
-				calViz.blinkCount				= 4;
-				me.settings.cal.drawFunction    = @(a,b,c,d,e,f) calViz.doDraw(a,b,c,d,e,f);
+				me.calStim							= tittaCalMovieStimulus();
+				me.calStim.moveTime					= 0.75;
+				me.calStim.oscillatePeriod			= 1;
+				me.calStim.blinkCount				= 4;
 				if isempty(me.screen.audio)
 					me.screen.audio = audioManager();
 				end
@@ -200,7 +200,8 @@ classdef tobiiManager < optickaCore
 				m.mask = [0 0 0];
 				m.size = 4;
 				m.setup(me.screen);
-				calViz.initialise(m);
+				me.calStim.initialise(m); 
+				me.settings.cal.drawFunction    = @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 			end
 			me.settings.cal.autoPace            = 1;
 			me.settings.cal.doRandomPointOrder  = true;
@@ -222,7 +223,7 @@ classdef tobiiManager < optickaCore
 				me.salutation('Initialise', ...
 				sprintf('Running on a %s (%s) @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
 				me.tobii.systemInfo.model, me.tobii.systemInfo.deviceName,...
-				me.tobii.systemInfo.samplerate,...
+				me.tobii.systemInfo.frequency,...
 				me.tobii.systemInfo.trackingMode,...
 				me.screen.screen,me.screen.winRect(3),me.screen.winRect(4),...
 				me.screen.screenVals.fps),true);
@@ -282,7 +283,7 @@ classdef tobiiManager < optickaCore
 				else
 					me.calibration = me.tobii.calibrate(me.screen.win); %start calibration
 				end
-				
+				if strcmpi(me.calibrationStimulus,'movie');me.calStim.movie.reset();end
 				disp(me.calibration);
 				resetFixation(me);
 			end

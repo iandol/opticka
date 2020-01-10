@@ -244,7 +244,7 @@ classdef arduinoManager < optickaCore
 			handles.value = uicontrol('Style','edit',...
 				'Parent',handles.parent,...
 				'Tag','RewardValue',...
-				'String',200,...
+				'String',300,...
 				'FontName',MonoFont,...
 				'FontSize', fontSize,...
 				'Position',[5 115 95 25],...
@@ -355,21 +355,21 @@ classdef arduinoManager < optickaCore
 							case {'0','0)','-_','-'}
 								doLoop = false;
 							case{'1','1!'}
-								me.timedTTL(pin,100);
-							case{'2','2@'}
 								me.timedTTL(pin,200);
-							case{'3','3#'}
+							case{'2','2@'}
 								me.timedTTL(pin,300);
-							case{'4','4$'}
+							case{'3','3#'}
 								me.timedTTL(pin,400);
-							case{'5','5%'}
+							case{'4','4$'}
 								me.timedTTL(pin,500);
-							case{'6','6^'}
+							case{'5','5%'}
 								me.timedTTL(pin,600);
-							case{'7'}
+							case{'6','6^'}
 								me.timedTTL(pin,700);
-							case{'8'}
+							case{'7'}
 								me.timedTTL(pin,800);
+							case{'8'}
+								me.timedTTL(pin,900);
 						end
 					end
 					WaitSecs(0.2);
@@ -401,7 +401,7 @@ classdef arduinoManager < optickaCore
                 
                 ad = audioManager();ad.close();
 				if IsLinux
-					ad.device = 1;
+					ad.device = [];
 				elseif IsWin 
 					ad.device = 6;
 				end
@@ -458,6 +458,7 @@ classdef arduinoManager < optickaCore
                                 start = flip(sM); vbl = start;
                                 play(ad);
                                 me.timedTTL(pin,val);
+                                i=1;
                                 while vbl < start + 2
                                     draw(mv); sM.drawCross([],[],-16,-10);
                                     sM.finishDrawing;
@@ -499,7 +500,7 @@ classdef arduinoManager < optickaCore
                                 end
                                 me.timedTTL(pin,val);
 							case{'6','6^','kp_right'}
-								me.timedTTL(pin,val*2);
+								me.timedTTL(pin,val);
 							case{'7','7&','kp_home'}
 								me.timedTTL(pin,val*2);
 							case{'8','8*','kp_up'}
@@ -520,7 +521,7 @@ classdef arduinoManager < optickaCore
 		
 		%===============CLOSE PORT================%
 		function close(me)
-			try;close(me.handles.parent);me.handles=[];end
+			try close(me.handles.parent);me.handles=[];end
 			me.device = [];
 			me.deviceID = '';
 			me.availablePins = '';

@@ -617,9 +617,9 @@ classdef screenManager < optickaCore
 			end
 			me.finaliseMovie(); me.moviePtr = [];
 			try
-				Screen('Close',me.win); 
+				if wk ~= 0; Screen('Close',me.win); end
 			catch ME
-				getReport(ME);
+				if me.verbose; getReport(ME); end
 			end
 			me.win=[]; 
 			if isfield(me.screenVals,'win');me.screenVals=rmfield(me.screenVals,'win');end
