@@ -9,7 +9,7 @@ function tobiidemo2b()
 	ptb.audio = audioManager();
 	ptb.audio.setup();
 	s = screenManager;
-	s.screen = ptb.screen-1;
+	s.screen = ptb.screen - 1;
 	s.windowed = [];
 	s.bitDepth = '8bit';
 	s.blend = true;
@@ -44,7 +44,7 @@ function tobiidemo2b()
 	quit = KbName('escape');
 	vbl = ptb.flip(); startT = vbl;
 	trackerMessage(t,'STARTVBL',vbl);
-	while ~CloseWin && vSbl <= startT + 4
+	while ~CloseWin && vbl <= startT + 4
 		draw(m);
 		finishDrawing(ptb);
 		animate(m);

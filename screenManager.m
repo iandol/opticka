@@ -232,8 +232,8 @@ classdef screenManager < optickaCore
 			me.screenVals.ifi=1/me.screenVals.fps;
 			
 			% initialise our movie settings
-			me.movieSettings.loop = Inf;
 			me.movieSettings.record = false;
+			me.movieSettings.loop = Inf;
 			me.movieSettings.size = [600 600];
 			me.movieSettings.fps = 30;
 			me.movieSettings.quality = 0.7;
@@ -492,7 +492,6 @@ classdef screenManager < optickaCore
 				me.screenVals.gray = GrayIndex(me.screen);
 				
 				me.isOpen = true;
-				flip(me);
 				screenVals = me.screenVals;
 				
 			catch ME
@@ -1147,6 +1146,7 @@ classdef screenManager < optickaCore
 % 						end
 				end
 			end
+			me.movieSettings.loop = 1;
 			me.moviePtr = [];
 			me.movieMat = [];
 		end

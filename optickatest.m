@@ -219,6 +219,7 @@ getRunLog(rExp);
 % use them in your own simple experiments, lets have a quick look here.
 WaitSecs('YieldSecs',2);
 myMovie = myStims{11}; % the movie stimulus from above
+myMovie.size = 0; %if size is zero, then native dimensions are used.
 open(myScreen); %open a screen
 setup(myMovie, myScreen); %setup the stimulus with the screen configuration
 for i = 1:myScreen.screenVals.fps

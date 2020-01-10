@@ -232,6 +232,7 @@ classdef runExperiment < optickaCore
 				me.stimuli.verbose = me.verbose;
 				t.fps = me.screenVals.fps;
 				setup(me.stimuli); %run setup() for each stimulus
+				if s.movieSettings.record; prepareMovie(s); end
 				
 				%configure IO
 				io = configureIO(me);
@@ -383,7 +384,7 @@ classdef runExperiment < optickaCore
 							tL.stimTime(me.task.tick)=0-me.task.switched;
 						end
 					end
-					if (s.movieSettings.loop <= s.movieSettings.nFrames) && me.task.isBlank == false
+					if s.movieSettings.record && ~me.task.isBlank && (s.movieSettings.loop <= s.movieSettings.nFrames)
 						s.addMovieFrame();
 					end
 					
@@ -910,13 +911,6 @@ classdef runExperiment < optickaCore
 					me.paths.stateInfoFile = [me.paths.root filesep 'DefaultStateInfo.m'];
 				end
 			end
-			
-			me.screen.movieSettings.record = 0;
-			me.screen.movieSettings.size = [400 400];
-			me.screen.movieSettings.quality = 0;
-			me.screen.movieSettings.nFrames = 100;
-			me.screen.movieSettings.type = 1;
-			me.screen.movieSettings.codec = 'rle ';
 				
 			if me.screen.isPTB == true
 				me.computer=Screen('computer');
