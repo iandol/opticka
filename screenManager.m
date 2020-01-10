@@ -616,7 +616,11 @@ classdef screenManager < optickaCore
 				BitsPlusPlus('Close');
 			end
 			me.finaliseMovie(); me.moviePtr = [];
-			Screen('Close',me.win);
+			try
+				Screen('Close',me.win); 
+			catch ME
+				getReport(ME);
+			end
 			me.win=[]; 
 			if isfield(me.screenVals,'win');me.screenVals=rmfield(me.screenVals,'win');end
 			me.isOpen = false;

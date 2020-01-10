@@ -139,6 +139,7 @@ classdef tobiiManager < optickaCore
 		%> @brief initialise the tobii.
 		%>
 		%> @param sM - screenManager object we will use
+		%> @param sM2 - a second screenManager used during calibration
 		% ===================================================================
 		function initialise(me,sM,sM2)
 			if ~exist('sM','var') || isempty(sM)
@@ -768,6 +769,7 @@ classdef tobiiManager < optickaCore
 				getReport(ME)
 			end
 			me.isConnected = false;
+			resetFixation(me);
 			me.eyeUsed = 'both';
 		end
 		

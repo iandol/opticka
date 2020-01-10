@@ -6,9 +6,11 @@ function tobiidemo2b()
 
 	% ---- screenManager
 	ptb = mySetup(screen,bgColour,windowed);
+	ptb.audio = audioManager();
+	ptb.audio.setup();
 	s = screenManager;
 	s.screen = 1;
-	s.windowed = [0 0 1000 1000];
+	s.windowed = [];
 	s.bitDepth = '8bit';
 	s.blend = true;
 	s.disableSyncTests = true;
@@ -16,7 +18,6 @@ function tobiidemo2b()
 	% ---- setup movie path
 	m=movieStimulus;
 	m.mask = [0 0 0];
-	m.maskTolerance = 0.005;
 	setup(m,ptb);
 	
 	% ---- tobii manager
@@ -24,9 +25,14 @@ function tobiidemo2b()
 	t.trackingMode = 'human';
 	t.sampleRate = 600;
 	t.calibrationStimulus = 'movie';
-	initialise(t,ptb,s2);
+	initialise(t,ptb,s);
+	
+	t.settings.cal.pointPos = [0.3 0.3;0.5 0.5;0.7 0.7];
+	t.settings.val.pointPos = [0.5 0.5];
 	trackerSetup(t);
-	s2.close;
+	Screen('Close',s.win);
+	
+	% ---- prepare tracker
 	Priority(MaxPriority(ptb.win)); %bump our priority to maximum allowed
 	startRecording(t); WaitSecs(1);
 	trackerMessage(t,'!!! Starting Demo...')
@@ -67,6 +73,7 @@ end
 function ptb = mySetup(screen, bgColour, win)
 	ptb.cleanup = onCleanup(@myCleanup);
 	ptb = screenManager('backgroundColour',bgColour,'screen',screen,'windowed',win);
+	ptb.bitDepth = '8bit';
 	ptb.blend = true;
 	ptb.open();
 end
