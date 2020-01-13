@@ -6,15 +6,16 @@ if strcmpi(stage,'cal')
         status = 'ok';
 		  if isa(rM,'arduinoManager') && rM.isOpen
 			  timedTTL(rM);
-			  fprintf('Send a reward!\n');
+			  fprintf('\n---!!!Calibration reward!\n');
 		  end
     else
         status = sprintf('failed (%s)',calState.statusString);
+		fprintf('\n---!!!NO Calibration reward!\n');
     end
     titta_instance.sendMessage(sprintf('Calibration data collection status result for point %d, positioned at (%.2f,%.2f): %s',currentPoint,posNorm,status));
 elseif strcmpi(stage,'val')
 	if isa(rM,'arduinoManager')  && rM.isOpen
 		timedTTL(rM);
-		fprintf('Send a reward!\n');
+		fprintf('\n---!!!Send a reward!\n');
 	end
 end

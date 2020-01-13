@@ -220,6 +220,7 @@ classdef tobiiManager < optickaCore
 				me.win							= me.screen.win;
 			end
 			
+			
 			if ~me.isDummy
 				me.salutation('Initialise', ...
 				sprintf('Running on a %s (%s) @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
