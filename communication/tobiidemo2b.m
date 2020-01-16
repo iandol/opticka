@@ -1,7 +1,13 @@
 function tobiidemo2b()
 
+	global rM
+	if ~exist('rM','var') || isempty(rM)
+		 rM = arduinoManager;
+	end
+	open(rM) %open our reward manager
+
 	bgColour = 0.25;
-	screen = 1;
+	screen = 2;
 	windowed=[];
 
 	% ---- screenManager
@@ -10,6 +16,7 @@ function tobiidemo2b()
 	ptb.audio.setup();
 	s = screenManager;
 	s.screen = ptb.screen - 1;
+	s.backgroundColour = bgColour;
 	s.windowed = [];
 	s.bitDepth = '8bit';
 	s.blend = true;
@@ -65,6 +72,7 @@ function tobiidemo2b()
 			end
 		end
 	end 
+	rM.timedTTL();
 	ptb.flip();
 	stopRecording(t);
 	ListenChar(0); Priority(0); ShowCursor;
