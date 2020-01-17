@@ -1,8 +1,13 @@
 function VEPTest()
 
-	global rM
-	if ~exist('rM','var') || isempty(rM)
-		 rM = labJackT;
+	global lM
+	if ~exist('lM','var') || isempty(lM) || ~isa(lM,'labJackT')
+		 lM = labJackT;
+	end
+	if ~lM.isOpen; open(lM); end %open our strobe word manager
+    global rM
+	if ~exist('rM','var') || isempty(rM) || ~isa(rM,'arduinoManager')
+		 rM = arduinoManager;
 	end
 	if ~rM.isOpen; open(rM); end %open our reward manager
 
@@ -29,9 +34,9 @@ function VEPTest()
 	b.barWidth			= 120;
 	b.barLength			= 100;
 	b.type				= 'checkerboard';
-	b.phaseReverseTime	= 0.4;
+	b.phaseReverseTime	= 0.3;
 	b.checkSize			= 2;
-	setup(m,ptb);
+	setup(b,ptb);
 	
 	% ---- tobii manager
 	t					= tobiiManager();
@@ -43,7 +48,7 @@ function VEPTest()
 	t.fixation.X		= 0;
 	t.fixation.Y		= 0;
 	t.fixation.Radius	= 20;
-	if exist('s','var')
+	if exist('s','var') && ~t.isDummy
 		initialise(t,ptb,s);
 	else
 		initialise(t,ptb);
@@ -53,7 +58,8 @@ function VEPTest()
 	t.settings.val.pointPos = [0.5 0.5];
 	
 	trackerSetup(t); ShowCursor();
-	Screen('Close',s.win); WaitSecs('YieldSecs',1);
+	if exist('s','var') && ~t.isDummy;try Screen('Close',s.win);end;end
+    WaitSecs('YieldSecs',1);
 	
 	% ---- prepare tracker
 	Priority(MaxPriority(ptb.win)); %bump our priority to maximum allowed
@@ -64,56 +70,61 @@ function VEPTest()
 	endExp				= false;
 	stopkey				= KbName('q');
 	trialn				= 1;
-	maxTrials			= 100;
-	trialLength			= 4;
-	ITDelay				= 3;
+	maxTrials			= 500;
+	trialLength			= 6;
+	ITDelay				= 2;
 	
 	ptb.drawPhotoDiodeSquare([0 0 0 1]);
-	flip(s);
+	flip(ptb);
 	WaitSecs('YieldSecs',0.5);
+    ListenChar(2);
 	
 	while trialn <= maxTrials && endExp == 0
 		trialtick = 1;
-		trackerMessage(me,sprintf('TRIALID %i',trialn))
-		drawPhotoDiodeSquare(s,[0 0 0 1]);
+		trackerMessage(t,sprintf('TRIALID %i',trialn))
+		drawPhotoDiodeSquare(ptb,[0 0 0 1]);
 		vbl = flip(ptb); tstart=vbl;
 		trackerMessage(t,'STARTVBL',tstart);
-		s.audio.play();
+		ptb.audio.play();
 		while vbl < tstart + trialLength
 			draw(b);
-			drawCross(ptb,1,[1 1 0]);
+			drawCross(ptb,2,[1 1 0]);
 			ptb.drawPhotoDiodeSquare([1 1 1 1]);
 			finishDrawing(ptb);
 			animate(b);
 			getSample(t);
 		
 			vbl = ptb.flip(vbl);
-			if trialtick == 1; rM.strobeServer(trialn); end
+			if trialtick == 1; lM.strobeServer(1); end
 			trialtick = trialtick + 1;
-			
-			% ---- handle keyboard
-			[~, ~, keyCode] = KbCheck(-1);
-			if keyCode(stopkey); endExp = 1; break; end
 		end
 		if endExp == 0
-			rM.strobeServer(257);
-			drawPhotoDiodeSquare(s,[0 0 0 1]);
-			vbl = flip(s);
-			trackerMessage(me,'END_RT',vbl);
-			trackerMessage(me,'TRIAL_RESULT 1')
-			trackerMessage(me,sprintf('Ending trial %i @ %i',trialn,int64(round(vbl*1e6))))
-			resetFixation(me);
+            drawPhotoDiodeSquare(ptb,[0 0 0 1]);
+			vbl = flip(ptb); endt = vbl;
+			lM.strobeServer(1);lM.strobeServer(1);
+            rM.timedTTL(2,300);
+			trackerMessage(t,'END_RT',vbl);
+			trackerMessage(t,'TRIAL_RESULT 1')
+			trackerMessage(t,sprintf('Ending trial %i @ %i',trialn,int64(round(vbl*1e6))))
+			resetFixation(t);
 			update(b);
-			WaitSecs('YieldSecs',ITDelay);
+            while vbl < endt + ITDelay
+                drawPhotoDiodeSquare(ptb,[0 0 0 1]);
+                % ---- handle keyboard
+                [~, ~, keyCode] = KbCheck(-1);
+                if keyCode(stopkey); endExp = 1; break; end
+                vbl = ptb.flip();
+            end
 			trialn = trialn + 1;
 		else
-			drawPhotoDiodeSquare(s,[0 0 0 1]);
-			vbl = flip(s);
-			trackerMessage(me,'END_RT',vbl);
-			trackerMessage(me,'TRIAL_RESULT -10 ABORT')
-			trackerMessage(me,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))))
+			drawPhotoDiodeSquare(ptb,[0 0 0 1]);
+			vbl = flip(ptb);
+			trackerMessage(t,'END_RT',vbl);
+			trackerMessage(t,'TRIAL_RESULT -10 ABORT')
+			trackerMessage(t,sprintf('Aborting %i @ %i', trialn, int64(round(vbl*1e6))))
 		end
-	end 
+    end 
+    reset(b);
 	stopRecording(t);
 	close(ptb);
 	saveData(t);
