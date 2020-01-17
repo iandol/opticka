@@ -885,20 +885,36 @@ classdef tobiiManager < optickaCore
 			[p,~,e]=fileparts(me.saveFile);
 			me.saveFile = [p filesep 'tobiiRunDemo-' me.savePrefix e];
 			try
-				if isa(me.screen,'screenManager')
+				if isa(me.screen,'screenManager') && ~isempty(me.screen)
 					s = me.screen;
 				else
 					s = screenManager('disableSyncTests',false,'blend',true,'pixelsPerCm',36,'distance',60);
 				end
-				s.disableSyncTests = false;
+				s.disableSyncTests		= false;
+				s.audio					= audioManager();
+				s.audio.setup();
 				if exist('forcescreen','var'); s.screen = forcescreen; end
-				s.backgroundColour = [0.5 0.5 0.5 0];
+				s.backgroundColour		= [0.5 0.5 0.5 0];
+				if length(Screen('Screens'))>1
+					s2					= screenManager;
+					s2.screen			= s.screen - 1;
+					s2.backgroundColour	= bgColour;
+					s2.windowed			= [];
+					s2.bitDepth			= '8bit';
+					s2.blend			= true;
+					s2.disableSyncTests	= true;
+				end
+				
 				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',true,'density',50); %test stimulus
 				sv=open(s); %open our screen
 				setup(o,s); %setup our stimulus with open screen
 				
 				ListenChar(1);
-				initialise(me,s); %initialise tobii with our screen
+				if exist('s2','var')
+					initialise(me, s, s2); %initialise tobii with our screen
+				else
+					initialise(me, s); %initialise tobii with our screen
+				end
 				trackerSetup(me);
 				ShowCursor; %titta fails to show cursor so we must do it
 				drawPhotoDiodeSquare(s,[0 0 0 1]); flip(s); %make sure our photodiode patch is black
@@ -915,7 +931,7 @@ classdef tobiiManager < optickaCore
 				m=1; n=1;
 				methods={'median','heuristic1','heuristic2','sg','simple'};
 				eyes={'both','left','right'};
-				Screen('TextFont',s.win,'Consolas');
+				if ispc; Screen('TextFont',s.win,'Consolas'); end
 				fprintf('\n===>>> Warming up the GPU, Eyetracker etc... <<<===\n')
                 sgolayfilt(rand(10,1),1,3); %warm it up
                 me.heuristicFilter(rand(10,1), 2);

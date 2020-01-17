@@ -51,6 +51,8 @@ classdef labJackT < handle
 		dateStamp = []
 		%> raw command 
 		command
+		%> last error found
+		lastError
 	end
 	
 	properties (SetAccess = private, Dependent = true)
@@ -128,13 +130,12 @@ classdef labJackT < handle
 		% ===================================================================
 		function open(me)
 			if me.silentMode || me.isOpen; return; end
-			if IsLinux || IsOSX
+			if isunix || ismac
 				if ~libisloaded(me.libName)
 					try
 						warning off; loadlibrary(me.library,me.header); warning on;
 					catch ME
-						me.salutation('open method',['Loading the LJM library failed: ' ME.message],true);
-						warning(['versionLoading the LJM library failed: ' ME.message]);
+						warning(['Loading the LJM library failed: ' ME.message]);
 						me.version = ['Library Load FAILED: ' ME.message];
 						me.silentMode = true;
 						me.verbose = true;
@@ -142,33 +143,36 @@ classdef labJackT < handle
 					end
 				end
 				me.functionList = libfunctions(me.libName, '-full'); %store our raw lib functions
-				[error,me.devCount,me.devTypes] = calllib(me.libName,'LJM_ListAll',0,0,0,0,[],[],[]);
-				if error > 0
-					ename = calllib(me.libName,'LJM_ErrorToString',error,'');
-					warning(['Error found: ' ename]);
-				end
-				[error, ~, thandle] = calllib(me.libName,'LJM_Open',0,0,'ANY',0);
-				if error > 0
-					ename = calllib(me.libName,'LJM_ErrorToString',error,'');
+				
+				[err,me.devCount,me.devTypes] = calllib(me.libName,'LJM_ListAll',0,0,0,0,[],[],[]);
+				me.checkError(err);
+				
+				[err, ~, thandle] = calllib(me.libName,'LJM_Open',0,0,'ANY',0);
+				me.checkError(err);
+				if err > 0
 					me.close();
 					me.silentMode = true;
-					warning(['Error found: ' ename]);
+				else
+					me.handle = thandle;
+					me.isOpen = true;
+					me.silentMode = false;
 				end
-				me.handle = thandle;
-				me.isOpen = true;
-				me.silentMode = false;
-				error = calllib(me.libName, 'LJM_WriteLibraryConfigS', 'LJM_SEND_RECEIVE_TIMEOUT_MS', 500);
-				if error == 0; me.salutation('OPEN method','Set timeout to 500ms!'); end
+				
+				err = calllib(me.libName, 'LJM_WriteLibraryConfigS', 'LJM_SEND_RECEIVE_TIMEOUT_MS', 500);
+				if err == 0; me.salutation('OPEN method','Set timeout to 500ms!'); end
+				
 				[~, ~, vals] = calllib(me.libName, 'LJM_eReadNames', me.handle,...
 					3, {'SERIAL_NUMBER','FIRMWARE_VERSION','TEST'}, [0 0 0], 0);
 				me.serialNumber = uint32(vals(1));
 				me.version = vals(2);
 				me.testValue = uint32(vals(3));
-				calllib(me.libName, 'LJM_eWriteName', me.handle, 'EIO_DIRECTION', 255);
-				calllib(me.libName, 'LJM_eWriteName', me.handle, 'EIO_STATE', 0);
-				calllib(me.libName, 'LJM_eWriteName', me.handle, 'CIO_DIRECTION', 255);
-				calllib(me.libName, 'LJM_eWriteName', me.handle, 'CIO_STATE', 0);
-				me.salutation('OPEN method','Loading the LabJackT is a success!');
+				
+				%initialise EIO and CIO
+				err = calllib(me.libName, 'LJM_eWriteNames', me.handle, 4, {'EIO_DIRECTION','CIO_DIRECTION',...
+					'EIO_STATE','CIO_STATE'}, [255 255 0 0], 0);
+				me.checkError(err);
+				
+				if ~me.silentMode;me.salutation('OPEN method','Loading the LabJackT is a success!');end
 			else 
 				ljmAsm = NET.addAssembly('LabJack.LJM');
 				% Creating an object to nested class LabJack.LJM.CONSTANTS
@@ -186,11 +190,11 @@ classdef labJackT < handle
 		% ===================================================================
 		function close(me)
 			if ~isempty(me.handle)
-				if IsWin
+				if ispc
 					LabJack.LJM.Close(me.handle);
 				else
-					error =  calllib(me.libName,'LJM_Close',me.handle);
-					if error > 0 
+					err =  calllib(me.libName,'LJM_Close',me.handle);
+					if err > 0 
 						me.salutation('CLOSE method','LabJack Handle not valid');
 					else
 						me.salutation('CLOSE method','LabJack Handle has been closed');
@@ -212,11 +216,51 @@ classdef labJackT < handle
 		% ===================================================================
 		function result = isHandleValid(me)
 			if me.silentMode || isempty(me.handle); return; end
-			[error, ~, val] = calllib(me.libName, 'LJM_eReadName', me.handle, 'TEST', 0);
-			if error == 0 && uint32(val) == me.LJM_TESTRESULT
+			[err, ~, val] = calllib(me.libName, 'LJM_eReadName', me.handle, 'TEST', 0);
+			if err == 0 && uint32(val) == me.LJM_TESTRESULT
 				me.isValid = true;
 			end
 			result = me.isValid;
+		end
+		
+		
+		% ===================================================================
+		%> @brief 
+		%>	
+		% ===================================================================
+		function initialiseServer(me)
+			if me.silentMode || isempty(me.handle); return; end
+			
+			%prepare string
+			str = sprintf([me.miniServer]); %0byte terminator
+			strN = length(str);
+			
+			
+			%stop server
+			err = calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
+			WaitSecs(0.5);
+			err = calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
+			
+			str = double(sprintf('LJ.IntervalConfig(0,1000)while true do if LJ.CheckInterval(0)then print(LJ.Tick())end end\0'));
+			strN = length(str);
+			
+			%upload new script		
+			%err = calllib(me.libName, 'LJM_eWriteNameByteArray', me.handle, 'LUA_SOURCE_WRITE', strN, str, 0);
+			err = calllib(me.libName, 'LJM_eWriteNameArray', me.handle, 'LUA_SOURCE_WRITE', strN, str, 0);
+			me.checkError(err);
+			[~, ~, len] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_SOURCE_SIZE', 0);
+			if len ~= strN; error('Problem with the upload...'); end
+			
+			%copy to flash
+			err = calllib(me.libName, 'LJM_eWriteNames', me.handle, 2, {'LUA_SAVE_TO_FLASH','LUA_RUN_DEFAULT'}, ...
+				[1 1], 0);
+			
+			%start the server
+			err = calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 1);
+			if err > 0
+				error('Cannot start server, please check!')
+			end
+			
 		end
 		
 		% ===================================================================
@@ -266,13 +310,10 @@ classdef labJackT < handle
 		function prepareStrobe(me,value)
 			if me.silentMode || isempty(me.handle); return; end
 			cmd = zeros(64,1);
-			[error,~,~,~,~,~,~,cmd] = calllib(me.libName, 'LJM_AddressesToMBFB',...
+			[err,~,~,~,~,~,~,cmd] = calllib(me.libName, 'LJM_AddressesToMBFB',...
 				64, [2501 61590 2501], [0 1 0], [1 1 1], [1 1 1], [value me.strobeTime*1000 0], 3, cmd);
 			me.command = cmd;
-			if error > 0
-				ename = calllib(me.libName,'LJM_ErrorToString',error,'');
-				fprintf('test() Error found: %s\n', ename);
-			end
+			me.checkError(err);
 		end
 		
 		% ===================================================================
@@ -286,49 +327,6 @@ classdef labJackT < handle
 		end
 		
 		% ===================================================================
-		%> @brief Write formatted command string to LabJack
-		%> 		unsigned long LJUSB_Write(HANDLE hDevice, BYTE *pBuff, unsigned long count);
-		%> 		// Writes to a device. Returns the number of bytes written, or -1 on error.
-		%> 		// hDevice = The handle for your device
-		%> 		// pBuff = The buffer to be written to the device.
-		%> 		// count = The number of bytes to write.
-		%> 		// This function replaces the deprecated LJUSB_BulkWrite, which required the endpoint
-		%>
-		%> @param byte The raw hex encoded command packet to send
-		% ===================================================================
-		function error = rawWrite(me, name, value)
-			if me.silentMode || isempty(me.handle); return; end
-			error = calllib(me.libName, 'LJM_eWriteName', me.handle, name, value);
-			if error > 0
-				ename = calllib(me.libName,'LJM_ErrorToString',error,'');
-				fprintf('Error found: %s', ename);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Read response string back from LabJack
-		%> 		unsigned long LJUSB_Read(HANDLE hDevice, BYTE *pBuff, unsigned long count);
-		%> 		// Reads from a device. Returns the number of bytes read, or -1 on error.
-		%> 		// hDevice = The handle for your device
-		%> 		// pBuff = The buffer to filled in with bytes from the device.
-		%> 		// count = The number of bytes expected to be read.
-		%> 		// This function replaces the deprecated LJUSB_BulkRead, which required the endpoint
-		%>
-		%> @param bytein
-		%> @param count
-		% ===================================================================
-		function value = rawRead(me, name)
-			if me.silentMode || isempty(me.handle); return; end
-			[error, ~, value] = calllib(me.libName, 'LJM_eReadName', me.handle, name, 0);
-			if error > 0
-				value = [];
-				ename = calllib(me.libName,'LJM_ErrorToString',error,'');
-				warning(['Error found: ' ename]);
-			end
-		end
-		
-		
-		% ===================================================================
 		%> @brief timedTTL Send a TTL with a defined time of pulse
 		%>
 		%> @param line 0-7=FIO, 8-15=EIO, or 16-19=CIO
@@ -340,8 +338,6 @@ classdef labJackT < handle
 				return
 			end
 			if me.silentMode || isempty(me.handle); return; end
-			
-			
 			
 			me.salutation('timedTTL method',sprintf('Line:%g Tlong:%g Tshort:%g output time = %g ms', line, time1, time2, otime*1000))
 			
@@ -416,11 +412,20 @@ classdef labJackT < handle
 	methods ( Access = private ) % PRIVATE METHODS
 	%=======================================================================
 	
+		function checkError(me,err)
+			if err > 0
+				me.lastError = calllib(me.libName,'LJM_ErrorToString',err,'');
+			else
+				me.lastError='';
+			end
+			if err > 0 && me.verbose; warning('labJackT error %i: %s',err,me.lastError); end	
+		end
+	
 		function writeCmd(me)
 			if me.silentMode || isempty(me.handle) || isempty(me.command); return; end
-			error = calllib(me.libName, 'LJM_MBFBComm', me.handle, 1, me.command, 0);
-			if error > 0
-				ename = calllib(me.libName,'LJM_ErrorToString',error,'');
+			err = calllib(me.libName, 'LJM_MBFBComm', me.handle, 1, me.command, 0);
+			if err > 0
+				ename = calllib(me.libName,'LJM_ErrorToString',err,'');
 				fprintf('writeCmd() Error found: %s\n', ename);
 			end
 		end
@@ -428,21 +433,13 @@ classdef labJackT < handle
 		function writeCmd2(me)
 			% WILL CRASH MATLAB!
 			if me.silentMode || isempty(me.handle) || isempty(me.command); return; end
-			tic;error = calllib(me.libName, 'LJM_WriteRaw', me.handle, me.command, length(me.command));fprintf('%.2f\n',toc*1000)
-			if error > 0
-				ename = calllib(me.libName,'LJM_ErrorToString',error,'');
+			tic;err = calllib(me.libName, 'LJM_WriteRaw', me.handle, me.command, length(me.command));fprintf('%.2f\n',toc*1000)
+			if err > 0
+				ename = calllib(me.libName,'LJM_ErrorToString',err,'');
 				fprintf('writeCmd2() Error found: %s\n', ename);
 			end
 		end
 		
-		
-		function startServer(me)
-			if me.silentMode || isempty(me.handle); return; end
-			error = calllib(me.libName, 'LJM_eWriteAddress', me.handle, 6012, me.LJM_UINT32, length(me.miniServer));
-			error = calllib(me.libName, 'LJM_eWriteAddress', me.handle, 6014, me.LJM_UINT16, uint16(me.miniServer));
-			WaitSecs(0.01);
-			error = calllib(me.libName, 'LJM_eWriteAddress', me.handle, 6000, me.LJM_UINT32, 1);
-		end
 		
 		function writeRAMValue(me,value)
 			if me.silentMode || isempty(me.handle); return; end

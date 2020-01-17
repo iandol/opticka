@@ -93,6 +93,11 @@ classdef barStimulus < baseStimulus
 			me.sM = sM;
 			me.ppd = sM.ppd;
 			
+			if me.size > 0
+				me.barLength = me.size;
+				me.barWidth = me.size;
+			end
+			
 			fn = fieldnames(me);
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexpi(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
