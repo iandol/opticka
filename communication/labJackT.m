@@ -178,7 +178,7 @@ classdef labJackT < handle
 				% Creating an object to nested class LabJack.LJM.CONSTANTS
 				t = ljmAsm.AssemblyHandle.GetType('LabJack.LJM+CONSTANTS');
 				LJM_CONSTANTS = System.Activator.CreateInstance(t); 
-				[ljmError, me.handle] = LabJack.LJM.OpenS('ANY', 'ANY', 'ANY', 0);
+				[err, me.handle] = LabJack.LJM.OpenS('ANY', 'ANY', 'ANY', 0);
 			end
 				
 		end
@@ -216,7 +216,9 @@ classdef labJackT < handle
 		% ===================================================================
 		function result = isHandleValid(me)
 			if me.silentMode || isempty(me.handle); return; end
+			me.isValid = false;
 			[err, ~, val] = calllib(me.libName, 'LJM_eReadName', me.handle, 'TEST', 0);
+			me.checkError(err);
 			if err == 0 && uint32(val) == me.LJM_TESTRESULT
 				me.isValid = true;
 			end
@@ -232,34 +234,30 @@ classdef labJackT < handle
 			if me.silentMode || isempty(me.handle); return; end
 			
 			%prepare string
-			str = sprintf([me.miniServer]); %0byte terminator
+			str = sprintf([me.miniServer '\0']); %0byte terminator
 			strN = length(str);
-			
 			
 			%stop server
-			err = calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
+			calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
 			WaitSecs(0.5);
-			err = calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
+			calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
 			
-			str = double(sprintf('LJ.IntervalConfig(0,1000)while true do if LJ.CheckInterval(0)then print(LJ.Tick())end end\0'));
-			strN = length(str);
-			
-			%upload new script		
-			%err = calllib(me.libName, 'LJM_eWriteNameByteArray', me.handle, 'LUA_SOURCE_WRITE', strN, str, 0);
-			err = calllib(me.libName, 'LJM_eWriteNameArray', me.handle, 'LUA_SOURCE_WRITE', strN, str, 0);
-			me.checkError(err);
+			%upload new script	
+			err = calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_SOURCE_SIZE', strN);
+			me.checkError(err,true);
+			err = calllib(me.libName, 'LJM_eWriteNameByteArray', me.handle, 'LUA_SOURCE_WRITE', strN, str, 0);
+			me.checkError(err,true);
+			%err = calllib(me.libName, 'LJM_eWriteNameArray', me.handle, 'LUA_SOURCE_WRITE', strN, str, 0);
 			[~, ~, len] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_SOURCE_SIZE', 0);
 			if len ~= strN; error('Problem with the upload...'); end
 			
 			%copy to flash
-			err = calllib(me.libName, 'LJM_eWriteNames', me.handle, 2, {'LUA_SAVE_TO_FLASH','LUA_RUN_DEFAULT'}, ...
+			calllib(me.libName, 'LJM_eWriteNames', me.handle, 2, {'LUA_SAVE_TO_FLASH','LUA_RUN_DEFAULT'}, ...
 				[1 1], 0);
 			
 			%start the server
 			err = calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 1);
-			if err > 0
-				error('Cannot start server, please check!')
-			end
+			me.checkError(err,true);
 			
 		end
 		
@@ -279,7 +277,7 @@ classdef labJackT < handle
 		% ===================================================================
 		function result = isServerRunning(me)
 			if me.silentMode || isempty(me.handle); return; end
-			[~, value] = calllib(me.libName, 'LJM_eReadAddress', me.handle, 6000, me.LJM_UINT32, 0);
+			[~, value] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_RUN',0);
 			result = logical(value);
 		end
 
@@ -301,7 +299,6 @@ classdef labJackT < handle
 			calllib(me.libName, 'LJM_eWriteAddresses', me.handle,...
  				3, [2502 61590 2502], [me.LJM_UINT16 me.LJM_UINT32 me.LJM_UINT16], [value me.strobeTime*1000 0], 0);
 		end
-		
 		
 		% ===================================================================
 		%> @brief Prepare Strobe Word
@@ -337,7 +334,7 @@ classdef labJackT < handle
 				fprintf('\ntimedTTL Input options: \n\tline (single value 0-7=FIO, 8-15=EIO, or 16-19=CIO), time (in ms)\n\n');
 				return
 			end
-			if me.silentMode || isempty(me.handle); return; end
+			
 			
 			me.salutation('timedTTL method',sprintf('Line:%g Tlong:%g Tshort:%g output time = %g ms', line, time1, time2, otime*1000))
 			
@@ -412,34 +409,32 @@ classdef labJackT < handle
 	methods ( Access = private ) % PRIVATE METHODS
 	%=======================================================================
 	
-		function checkError(me,err)
+		function checkError(me,err,halt)
+			if ~exist('halt','var'); halt = false; end
 			if err > 0
 				me.lastError = calllib(me.libName,'LJM_ErrorToString',err,'');
 			else
 				me.lastError='';
 			end
-			if err > 0 && me.verbose; warning('labJackT error %i: %s',err,me.lastError); end	
+			if err > 0 && me.verbose
+				warning('labJackT error %i: %s',err,me.lastError); 
+			elseif err > 0 && halt 
+				error('labJackT error %i: %s',err,me.lastError); 
+			end	
 		end
 	
 		function writeCmd(me)
 			if me.silentMode || isempty(me.handle) || isempty(me.command); return; end
 			err = calllib(me.libName, 'LJM_MBFBComm', me.handle, 1, me.command, 0);
-			if err > 0
-				ename = calllib(me.libName,'LJM_ErrorToString',err,'');
-				fprintf('writeCmd() Error found: %s\n', ename);
-			end
+			me.checkError(err);
 		end
 		
 		function writeCmd2(me)
 			% WILL CRASH MATLAB!
 			if me.silentMode || isempty(me.handle) || isempty(me.command); return; end
 			tic;err = calllib(me.libName, 'LJM_WriteRaw', me.handle, me.command, length(me.command));fprintf('%.2f\n',toc*1000)
-			if err > 0
-				ename = calllib(me.libName,'LJM_ErrorToString',err,'');
-				fprintf('writeCmd2() Error found: %s\n', ename);
-			end
+			me.checkError(err);
 		end
-		
 		
 		function writeRAMValue(me,value)
 			if me.silentMode || isempty(me.handle); return; end
@@ -450,7 +445,6 @@ classdef labJackT < handle
 			if me.silentMode || isempty(me.handle); return; end
 			[~, value] = calllib(me.libName, 'LJM_eReadAddress', me.handle, me.RAMAddress, me.LJM_FLOAT32, 0);
 		end
-		
 		
 		% ===================================================================
 		%> @brief delete is the object Destructor

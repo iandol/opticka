@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12293.svg)](https://doi.org/10.5281/zenodo.592253)  
 
-Opticka is an object oriented framework with optional GUI for the [Psychophysics toolbox (PTB)](http://psychtoolbox.org/wikka.php?wakka=HomePage), allowing randomised interleaved presentation of complex visual stimuli. It is designed to work on macOS, Linux, or Windows and interfaces via strobed words (using either a [Display++](https://www.crsltd.com/tools-for-vision-science/calibrated-displays/displaypp-lcd-monitor/), [DataPixx/ViewPixx](http://vpixx.com/products/tools-for-vision-sciences/) or a [LabJack](https://labjack.com/)) and ethernet for recording neurophysiological and behavioural data. Behavioural control uses the Eyelink eye tracker and a full behavioural repertoire is available by using a [Finite State-Machine](http://iandol.github.io/OptickaDocs/classstate_machine.html#details) controller. Opticka uses the TCP interface to the Eyelink affording much better control, reliability and data recording over using analog voltages alone. The various base classes can be used without the need to run the GUI (see [optickatest.m](http://iandol.github.io/OptickaDocs/optickatest.html) for an example), and plug-n-play stimuli provide a unified interface (setup, animate, draw, update, reset) to integrate into existing/other PTB routines. The various object methods take care of all the background geometry and normalization, meaning stimuli are much easier to use than “raw” PTB. Analysis routines are also present for taking the raw Plexon files (.PL2 or .PLX), Eyelink files (.EDF) and behavioural responses and parsing them into a consistent structure, interfacing directly with [Fieldtrip](http://fieldtrip.fcdonders.nl/start) for further spike, LFP, and spike-LFP analysis. The data structures allow the use of Jonathan Victor's [STA toolkit](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2818590/), and [nStat toolbox](http://www.neurostat.mit.edu/nstat/) (a pp-GLM modelling approach to analysing neural data). Opticka affords much better graphics control and is far more modular than [MonkeyLogic](http://www.brown.edu/Research/monkeylogic/).  
+Opticka is an object oriented framework with optional GUI for the [Psychophysics toolbox (PTB)](http://psychtoolbox.org/wikka.php?wakka=HomePage), allowing randomised interleaved presentation of complex visual stimuli. It is designed to work on Linux, macOS or Windows and interfaces via strobed words and ethernet for recording neurophysiological and behavioural data. Behavioural control with a full behavioural repertoire is available by use of a [Finite State-Machine](http://iandol.github.io/OptickaDocs/classstate_machine.html#details) controller. Opticka uses the TCP interface to the Eyelink affording much better control, reliability and data recording over using analog voltages alone. The various base classes can be used without the need to run the GUI (see [optickatest.m](http://iandol.github.io/OptickaDocs/optickatest.html) for an example), and plug-n-play stimuli provide a unified interface (setup, animate, draw, update, reset) to integrate into existing/other PTB routines. The various object methods take care of all the background geometry and normalization, meaning stimuli are much easier to use than “raw” PTB. Analysis routines are also present for taking the raw Plexon files (.PL2 or .PLX), Eyelink files (.EDF) and behavioural responses and parsing them into a consistent structure, interfacing directly with [Fieldtrip](http://fieldtrip.fcdonders.nl/start) for further spike, LFP, and spike-LFP analysis. The data structures allow the use of Jonathan Victor's [STA toolkit](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2818590/), and [nStat toolbox](http://www.neurostat.mit.edu/nstat/) (a pp-GLM modelling approach to analysing neural data). Opticka affords much better graphics control and is far more modular than [MonkeyLogic](http://www.brown.edu/Research/monkeylogic/).  
 
 ![Opticka Screenshot](https://github.com/iandol/opticka/raw/gh-pages/images/opticka.png)  
 
@@ -10,10 +10,20 @@ Opticka is an object oriented framework with optional GUI for the [Psychophysics
 
 ![Example hardware setup to run Opticka](https://github.com/iandol/opticka/raw/gh-pages/images/Opticka-Setup.png)
 
-We have also recently got Opticka working well via the [Display++ developed by CRS](https://www.crsltd.com/tools-for-vision-science/calibrated-displays/displaypp-lcd-monitor/). This means we now support both the VPixx and CRS display replacements for vision research, affording great bit depth display output and using their built-in I/O for more robust and temporally precise experimental control.
+### Hardware supported: ##
+
+* **Display + digital I/O**: high quality display (high bit depths, great colour management) and microsecond precise frame-locked digital I/O: [Display++ developed by CRS](https://www.crsltd.com/tools-for-vision-science/calibrated-displays/displaypp-lcd-monitor/).
+* **Display + digital I/O**: high quality display (high bit depths) and microsecond precise digital I/O: [DataPixx / ViewPixx / ProPixx](http://vpixx.com/products/tools-for-vision-sciences/).
+* **Display**: any normal monitor.
+* **Digital I/O**: [LabJack](https://labjack.com/) USB U3/U6/T4 DAQs, strobed words up to 12bits.
+* **Digital I/O**: [Arduino]() boards for simple TTL triggers for reward systems, MagStim etc.
+* **Eyetracking**: [Eyelink 1000]() -- uses the native ethernet link. This affords much better control, drawing stimuli and experiment values onto the eyelink screen. EDF files are stored and we use native EDF loading for full trial-by-trial analysis.
+* **Eyetracking**: [Tobii Pro Spectrum 1200]() -- uses the excellent [Titta toolbox]() to manage calibration and recording.
+* **Electrophysiology**: in theory any system that accepts digital triggers and strobed words, but I've only really used Plexon Omniplex systems (which require specific strobe-line triggers). Opticka can use TCP communication over ethernet to transmit current variable data to allow online data visualisation (PSTHs etc. for each experiment variable) on the Omniplex machine.
+* **Photodiode boxes**: we prefer TSL251R light-to-voltage photodiodes, which can be recorded directy into your electrophysiology system or can generate digital triggers via an Arduino.
 
 # Quick Documentation
-`optickatest.m` is a self-documenting minimal toy example showing a mini method of constants (MOC) experiment with 10 different stimuli. Read the Matlab-generated documentation for `optickatest.m` here: [optickatest.m Report](http://iandol.github.io/OptickaDocs/optickatest.html).
+`optickatest.m` is a minimal example showing a simple method of constants (MOC) experiment with 11 different animated stimuli varying along angle, contrast and orientation. Read the Matlab-generated documentation for `optickatest.m` here: [optickatest.m Report](http://iandol.github.io/OptickaDocs/optickatest.html). More complex behavioural control uses a state machine, you can see examples in the [CoreProtocols]()
 There is also auto-generated class documentation here: [Opticka Class Docs](http://iandol.github.io/OptickaDocs/inherits.html), however this is only as good as the comments in the code, which as always could be improved...  
 
 # Install Instructions
@@ -44,8 +54,9 @@ Opticka currently works on Linux, macOS and Windows, though the LabJack interfac
    * Square wave gratings, also using a procedural texture, i.e. very fast.
    * Gabors
 * Coherent dot stimuli, coherence expressed from 0-1. Either square or round dots. Colours can be simple, random, random luminance or binary. Kill rates allow random replacement rates for dots. Circularly smoothed masked aperture option. Newsroom style dots with motion distributions etc.
-* Bars, either solid colour or random noise texture. Bars can be animated, direction can be independent of their angle.
-* Flashing/pulsing spots.
+* Bars, either solid colour or checkerboard / random noise texture. Bars can be animated, direction can be independent of their angle.
+* Flashing/pulsing smoothed edge spots.
 * Pictures/Images that can drift and rotate.
+* Movies that can be scaled and drift. Movie playback is double-buffered to allow them to work alongside other stimuli.
 * Hand-mapping module - use mouse controlled dynamic bar / texture / colour to handmap receptive fields; includes logging of clicked position and later printout / storage of hand maps. These maps are in screen co-ordinates for quick subsequent stimulus placement.  
 

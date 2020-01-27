@@ -40,9 +40,9 @@ classdef screenManager < optickaCore
 		bitDepth char = 'FloatingPoint32BitIfPossible'
 		%> The acceptable variance in flip timing tests performed when
 		%> screen opens, set with Screen('Preference', 'SyncTestSettings', syncVariance)
-		%> AMD cards under Ubuntu are very low variance, but even NVidia on
-		%> Ubuntu can be ~0.8ms, so we raise the threshold to 1ms variance
-		syncVariance double = 0.0015
+		%> AMD cards under Ubuntu are very low variance, but even Linux+NVidia
+		%> can be ~0.9ms, let alone Windows, so default threshold is 1.1ms variance
+		syncVariance double = 1.5e-3
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 		timestampingMode double = 1
 		%> multisampling sent to the graphics card, try values 0[disabled], 4, 8
@@ -86,9 +86,16 @@ classdef screenManager < optickaCore
 		displayPPRefresh double = []
 	end
 	
+	properties (Constant)
+		%> possible bitDepths
+		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; 'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output'; 'EnablePseudoGrayOutput'; 'EnableNative10BitFramebuffer' }
+		%> possible blend modes
+		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR'; 'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA'; 'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' }
+	end
+	
 	properties (Hidden = true)
-		%> an audioManager that experiments can use, you can pass device
-		%and samples etc.
+		%> an optional audioManager that experiments can use. can play
+		%> samples or simple beeps
 		audio audioManager
 		%> for some development macOS and windows machines we have to disable sync tests,
 		%> but we hide this as we should remember this is for development ONLY!
@@ -117,16 +124,11 @@ classdef screenManager < optickaCore
 		yCenter double = 0
 		%> set automatically on construction
 		maxScreen
-		%> possible bitDepths
-		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; 'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output'; 'EnablePseudoGrayOutput'; 'EnableNative10BitFramebuffer' }
-		%> possible blend modes
-		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR'; 'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA'; 'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' }
-
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		%> linux font name;
-		linuxFontName char = '-adobe-helvetica-bold-o-normal--11-80-100-100-p-60-iso8859-1'
+		%> we cache ppd as it is used frequently
+		ppd_
 		%> properties allowed to be modified during construction
 		allowedProperties char = 'disableSyncTests|displayPPRefresh|screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
@@ -145,7 +147,6 @@ classdef screenManager < optickaCore
 		timedSpotTime = 0
 		timedSpotTick = 0
 		timedSpotNextTick = 0
-		ppd_
 	end
 	
 	methods
@@ -166,14 +167,10 @@ classdef screenManager < optickaCore
 			try
 				AssertOpenGL
 				me.isPTB = true;
-				if strcmpi(computer,'MACI64')
-					me.salutation('64bit OS X PTB currently supported!')
-				else
-					me.salutation('PTB currently supported!')
-				end
+				me.salutation('PTB + OpenGL supported!')
 			catch %#ok<*CTCH>
 				me.isPTB = false;
-				me.salutation('OpenGL support needed by PTB!')
+				me.salutation('CONSTRUCTOR','OpenGL support needed by PTB!!!',true)
 			end
 			prepareScreen(me);
 		end
@@ -593,11 +590,9 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function close(me)
 			if ~me.isPTB; return; end
-			Priority(0);
-			ListenChar(0);
-			ShowCursor;
-			Screen('Preference','SyncTestSettings', 0.0005); %default 0.2ms variability
-			if ~isempty(me.audio)
+			Priority(0); ListenChar(0); ShowCursor;
+			Screen('Preference','SyncTestSettings', 0.0008); %lets be a bit more generous
+			if ~isempty(me.audio) && isa(me.audio, 'audioManager')
 				me.audio.reset();
 			end
 			if isfield(me.screenVals,'originalGammaTable') && ~isempty(me.screenVals.originalGammaTable)
@@ -605,7 +600,7 @@ classdef screenManager < optickaCore
 				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 			end
 			wk = Screen(me.win, 'WindowKind');
-			if me.blend == true & wk ~= 0
+			if me.blend & wk ~= 0
 				%this needs to be done to not trigger a Linux+Polaris bug
 				%matlab bug
 				Screen('BlendFunction', me.win, 'GL_ONE','GL_ZERO');
@@ -643,15 +638,42 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief Set method for bitDepth
 		%>
-		%> @param
 		% ===================================================================
 		function set.bitDepth(me,value)
 			check = strcmpi(value,me.bitDepths);
 			if any(check)
 				me.bitDepth = me.bitDepths{check};
 			else
-				warning('Wrong Value given, select from list below')
+				warning('Wrong value given, select from list below')
 				disp(me.bitDepths)
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Set method for GL blending src
+		%>
+		% ===================================================================
+		function set.srcMode(me,value)
+			check = strcmpi(value,me.blendModes);
+			if any(check)
+				me.srcMode = me.blendModes{check};
+			else
+				warning('Wrong value given, select from list below')
+				disp(me.blendModes)
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Set method for GL blending dst
+		%>
+		% ===================================================================
+		function set.dstMode(me,value)
+			check = strcmpi(value,me.blendModes);
+			if any(check)
+				me.dstMode = me.blendModes{check};
+			else
+				warning('Wrong value given, select from list below')
+				disp(me.blendModes)
 			end
 		end
 		
@@ -752,6 +774,7 @@ classdef screenManager < optickaCore
 		%> @param
 		% ===================================================================
 		function finishDrawing(me)
+			if ~me.isOpen; return; end
 			Screen('DrawingFinished', me.win);
 		end
 		
@@ -779,25 +802,24 @@ classdef screenManager < optickaCore
 		%> @param
 		% ===================================================================
 		function flashScreen(me,interval)
-			if me.isOpen
-				int = round(interval / me.screenVals.ifi);
-				KbReleaseWait;
-				while ~KbCheck(-1)
-					if mod(me.flashTick,int) == 0
-						me.flashOn = not(me.flashOn);
-						me.flashTick = 0;
-					end
-					if me.flashOn == 0
-						Screen('FillRect',me.win,[0 0 0 1]);
-					else
-						Screen('FillRect',me.win,[1 1 1 1]);
-					end
-					Screen('Flip',me.win);
-					me.flashTick = me.flashTick + 1;
+			if ~me.isOpen; return; end
+			int = round(interval / me.screenVals.ifi);
+			KbReleaseWait;
+			while ~KbCheck(-1)
+				if mod(me.flashTick,int) == 0
+					me.flashOn = not(me.flashOn);
+					me.flashTick = 0;
 				end
-				drawBackground(me);
+				if me.flashOn == 0
+					Screen('FillRect',me.win,[0 0 0 1]);
+				else
+					Screen('FillRect',me.win,[1 1 1 1]);
+				end
 				Screen('Flip',me.win);
+				me.flashTick = me.flashTick + 1;
 			end
+			drawBackground(me);
+			Screen('Flip',me.win);
 		end
 		
 		% ===================================================================
@@ -858,10 +880,10 @@ classdef screenManager < optickaCore
 			size = size * me.ppd_;
 			dotSize = lineWidth * me.ppd_;
 			for p = 1:length(x)
-				Screen('gluDisk', me.win, colour, x, y, size/2);
+				Screen('gluDisk', me.win, colour, x(p), y(p), size/2);
 				Screen('FillRect', me.win, lineColour, CenterRectOnPointd([0 0 size dotSize], x(p), y(p)));
 				Screen('fillRect', me.win, lineColour, CenterRectOnPointd([0 0 dotSize size], x(p), y(p)));
-				Screen('gluDisk', me.win, colour, x, y, dotSize/2);
+				Screen('gluDisk', me.win, colour, x(p), y(p), dotSize/2);
 			end	
 		end
 		
