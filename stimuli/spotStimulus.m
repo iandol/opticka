@@ -1,6 +1,6 @@
 % ========================================================================
 %> @brief single disc stimulus, inherits from baseStimulus
-%> SPOTSTIMULUS single disc stimulus, inherits from baseStimulus
+%> SPOTSTIMULUS single spot stimulus, inherits from baseStimulus
 %>   The current properties are:
 % ========================================================================
 classdef spotStimulus < baseStimulus
@@ -66,19 +66,16 @@ classdef spotStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function obj = spotStimulus(varargin)
-			%Initialise for superclass, stops a noargs error
-			if nargin == 0; varargin.family = 'spot'; end
+		function me = spotStimulus(varargin)
+			args = optickaCore.addDefaults(varargin,...
+				struct('name','spot','colour',[1 1 0 1]));
+			me=me@baseStimulus(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 			
-			obj=obj@baseStimulus(varargin); %we call the superclass constructor first
-			obj.colour = [1 1 1];
-			
-			if nargin>0
-				obj.parseArgs(varargin, obj.allowedProperties);
-			end
-			
-			obj.ignoreProperties = ['^(' obj.ignorePropertiesBase '|' obj.ignoreProperties ')$'];
-			obj.salutation('constructor','Stimulus initialisation complete');
+			me.isRect = false; %uses a rect for drawing
+
+			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
+			me.salutation('constructor','Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
@@ -86,24 +83,24 @@ classdef spotStimulus < baseStimulus
 		%>
 		%> @param sM handle to the current screenManager object
 		% ===================================================================
-		function setup(obj,sM)
+		function setup(me,sM)
 			
-			reset(obj);
-			obj.inSetup = true;
-			if isempty(obj.isVisible)
-				obj.show;
+			reset(me);
+			me.inSetup = true;
+			if isempty(me.isVisible)
+				me.show;
 			end
 			
-			addlistener(obj,'changeColour',@obj.computeColour);
+			addlistener(me,'changeColour',@me.computeColour);
 			
-			obj.sM = [];
-			obj.sM = sM;
-			obj.ppd=sM.ppd;
+			me.sM = [];
+			me.sM = sM;
+			me.ppd=sM.ppd;
 			
 			fn = fieldnames(spotStimulus);
 			for j=1:length(fn)
-				if isempty(obj.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},obj.ignoreProperties, 'once'))%create a temporary dynamic property
-					p=obj.addprop([fn{j} 'Out']);
+				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
+					p=me.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
@@ -111,36 +108,36 @@ classdef spotStimulus < baseStimulus
 					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
 					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
 				end
-				if isempty(regexp(fn{j},obj.ignoreProperties, 'once'))
-					obj.([fn{j} 'Out']) = obj.(fn{j}); %copy our property value to our tempory copy
+				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
+					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
 			
-			if isempty(obj.findprop('doFlash'));p=obj.addprop('doFlash');p.Transient = true;end
-			if isempty(obj.findprop('doDots'));p=obj.addprop('doDots');p.Transient = true;end
-			if isempty(obj.findprop('doMotion'));p=obj.addprop('doMotion');p.Transient = true;end
-			if isempty(obj.findprop('doDrift'));p=obj.addprop('doDrift');p.Transient = true;end
-			obj.doDots = false;
-			obj.doMotion = false;
-			obj.doDrift = false;
-			obj.doFlash = false;
+			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
+			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
+			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
+			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
+			me.doDots = false;
+			me.doMotion = false;
+			me.doDrift = false;
+			me.doFlash = false;
 			
-			if obj.speedOut > 0; obj.doMotion = true; end
+			if me.speedOut > 0; me.doMotion = true; end
 			
-			if strcmpi(obj.type,'flash')
-				obj.doFlash = true;
-				if ~isempty(obj.flashOffColour)
-					obj.flashBG = [obj.flashOffColour(1:3) 0];
+			if strcmpi(me.type,'flash')
+				me.doFlash = true;
+				if ~isempty(me.flashOffColour)
+					me.flashBG = [me.flashOffColour(1:3) 0];
 				else
-					obj.flashBG = [obj.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
+					me.flashBG = [me.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
 				end
-				setupFlash(obj);
+				setupFlash(me);
 			end
 			
-			obj.inSetup = false;
+			me.inSetup = false;
 			
-			computePosition(obj);
-			setAnimationDelta(obj);
+			computePosition(me);
+			setAnimationDelta(me);
 		end
 		
 		% ===================================================================
@@ -149,12 +146,12 @@ classdef spotStimulus < baseStimulus
 		%> @param
 		%> @return
 		% ===================================================================
-		function update(obj)
-			resetTicks(obj);
-			computePosition(obj);
-			setAnimationDelta(obj);
-			if obj.doFlash
-				obj.resetFlash;
+		function update(me)
+			resetTicks(me);
+			computePosition(me);
+			setAnimationDelta(me);
+			if me.doFlash
+				me.resetFlash;
 			end
 		end
 		
@@ -164,15 +161,15 @@ classdef spotStimulus < baseStimulus
 		%> @param sM runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function draw(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks && obj.tick < obj.offTicks
-				if obj.doFlash == false
-					Screen('gluDisk',obj.sM.win,obj.colourOut,obj.xOut,obj.yOut,obj.sizeOut/2);
+		function draw(me)
+			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
+				if me.doFlash == false
+					Screen('gluDisk',me.sM.win,me.colourOut,me.xOut,me.yOut,me.sizeOut/2);
 				else
-					Screen('gluDisk',obj.sM.win,obj.currentColour,obj.xOut,obj.yOut,obj.sizeOut/2);
+					Screen('gluDisk',me.sM.win,me.currentColour,me.xOut,me.yOut,me.sizeOut/2);
 				end
 			end
-			obj.tick = obj.tick + 1;
+			me.tick = me.tick + 1;
 		end
 		
 		% ===================================================================
@@ -181,30 +178,30 @@ classdef spotStimulus < baseStimulus
 		%> @param sM runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function animate(obj)
-			if obj.isVisible && obj.tick >= obj.delayTicks
-				if obj.mouseOverride
-					getMousePosition(obj);
-					if obj.mouseValid
-						obj.xOut = obj.mouseX;
-						obj.yOut = obj.mouseY;
+		function animate(me)
+			if me.isVisible && me.tick >= me.delayTicks
+				if me.mouseOverride
+					getMousePosition(me);
+					if me.mouseValid
+						me.xOut = me.mouseX;
+						me.yOut = me.mouseY;
 					end
 				end
-				if obj.doMotion == true
-					obj.xOut = obj.xOut + obj.dX_;
-					obj.yOut = obj.yOut + obj.dY_;
+				if me.doMotion == true
+					me.xOut = me.xOut + me.dX_;
+					me.yOut = me.yOut + me.dY_;
 				end
-				if obj.doFlash == true
-					if obj.flashCounter <= obj.flashSwitch
-						obj.flashCounter=obj.flashCounter+1;
+				if me.doFlash == true
+					if me.flashCounter <= me.flashSwitch
+						me.flashCounter=me.flashCounter+1;
 					else
-						obj.flashCounter = 1;
-						obj.flashOnOut = ~obj.flashOnOut;
-						if obj.flashOnOut == true
-							obj.currentColour = obj.flashFG;
+						me.flashCounter = 1;
+						me.flashOnOut = ~me.flashOnOut;
+						if me.flashOnOut == true
+							me.currentColour = me.flashFG;
 						else
-							obj.currentColour = obj.flashBG;
-							%fprintf('Current: %s | %s\n',num2str(obj.colourOut), num2str(obj.flashOnOut));
+							me.currentColour = me.flashBG;
+							%fprintf('Current: %s | %s\n',num2str(me.colourOut), num2str(me.flashOnOut));
 						end
 					end
 				end
@@ -217,26 +214,26 @@ classdef spotStimulus < baseStimulus
 		%> @param sM runExperiment object for reference
 		%> @return stimulus structure.
 		% ===================================================================
-		function reset(obj)
-			resetTicks(obj);
-			obj.texture=[];
-			obj.removeTmpProperties;
+		function reset(me)
+			resetTicks(me);
+			me.texture=[];
+			me.removeTmpProperties;
 		end
 		
 		% ===================================================================
 		%> @brief flashSwitch Get method
 		%>
 		% ===================================================================
-		function flashSwitch = get.flashSwitch(obj)
-			if isempty(obj.findprop('flashOnOut'))
-				trigger = obj.flashOn;
+		function flashSwitch = get.flashSwitch(me)
+			if isempty(me.findprop('flashOnOut'))
+				trigger = me.flashOn;
 			else
-				trigger = obj.flashOnOut;
+				trigger = me.flashOnOut;
 			end
 			if trigger
-				flashSwitch = round(obj.flashTimeOut(1) / obj.sM.screenVals.ifi);
+				flashSwitch = round(me.flashTimeOut(1) / me.sM.screenVals.ifi);
 			else
-				flashSwitch = round(obj.flashTimeOut(2) / obj.sM.screenVals.ifi);
+				flashSwitch = round(me.flashTimeOut(2) / me.sM.screenVals.ifi);
 			end
 		end
 		
@@ -250,24 +247,24 @@ classdef spotStimulus < baseStimulus
 		%> @brief sizeOut Set method
 		%>
 		% ===================================================================
-		function set_sizeOut(obj,value)
-			obj.sizeOut = value * obj.ppd; %divide by 2 to get diameter
+		function set_sizeOut(me,value)
+			me.sizeOut = value * me.ppd; %divide by 2 to get diameter
 		end
 		
 		% ===================================================================
 		%> @brief colourOut SET method
 		%>
 		% ===================================================================
-		function set_colourOut(obj, value)
+		function set_colourOut(me, value)
 			if length(value) == 1
-				value = [value value value obj.alphaOut];
+				value = [value value value me.alphaOut];
 			elseif length(value) == 3
-				value = [value obj.alphaOut];
+				value = [value me.alphaOut];
 			end
-			obj.colourOutTemp = value;
-			obj.colourOut = value;
-			if ~isempty(obj.findprop('contrastOut')) && obj.contrastOut < 1 && obj.stopLoop == false
-				notify(obj,'changeColour');
+			me.colourOutTemp = value;
+			me.colourOut = value;
+			if ~isempty(me.findprop('contrastOut')) && me.contrastOut < 1 && me.stopLoop == false
+				notify(me,'changeColour');
 			end
 		end
 		
@@ -275,10 +272,10 @@ classdef spotStimulus < baseStimulus
 		%> @brief contrastOut SET method
 		%>
 		% ===================================================================
-		function set_contrastOut(obj, value)
+		function set_contrastOut(me, value)
 			if iscell(value); value = value{1}; end
-			obj.contrastOut = value;
-			if obj.contrastOut < 1; notify(obj,'changeColour'); end
+			me.contrastOut = value;
+			if me.contrastOut < 1; notify(me,'changeColour'); end
 		end
 		
 		% ===================================================================
@@ -286,12 +283,12 @@ classdef spotStimulus < baseStimulus
 		%> Use an event to recalculate as get method is slower (called
 		%> many more times), than an event which is only called on update
 		% ===================================================================
-		function computeColour(obj,~,~)
-			if ~isempty(obj.findprop('contrastOut')) && ~isempty(obj.findprop('colourOut'))
-				obj.stopLoop = true;
-				obj.colourOut = [(obj.colourOutTemp(1:3) .* obj.contrastOut) obj.alpha];
-				obj.stopLoop = false;
-				if obj.verbose; fprintf('Contrast: %g | Colour out is: %g %g %g \n',obj.contrastOut,obj.colourOut(1),obj.colourOut(2),obj.colourOut(3)); end
+		function computeColour(me,~,~)
+			if ~isempty(me.findprop('contrastOut')) && ~isempty(me.findprop('colourOut'))
+				me.stopLoop = true;
+				me.colourOut = [(me.colourOutTemp(1:3) .* me.contrastOut) me.alpha];
+				me.stopLoop = false;
+				if me.verbose; fprintf('Contrast: %g | Colour out is: %g %g %g \n',me.contrastOut,me.colourOut(1),me.colourOut(2),me.colourOut(3)); end
 			end
 		end
 		
@@ -299,13 +296,13 @@ classdef spotStimulus < baseStimulus
 		%> @brief setupFlash
 		%>
 		% ===================================================================
-		function setupFlash(obj)
-			obj.flashFG = obj.colourOut;
-			obj.flashCounter = 1;
-			if obj.flashOnOut == true
-				obj.currentColour = obj.flashFG;
+		function setupFlash(me)
+			me.flashFG = me.colourOut;
+			me.flashCounter = 1;
+			if me.flashOnOut == true
+				me.currentColour = me.flashFG;
 			else
-				obj.currentColour = obj.flashBG;
+				me.currentColour = me.flashBG;
 			end
 		end
 		
@@ -313,15 +310,15 @@ classdef spotStimulus < baseStimulus
 		%> @brief resetFlash
 		%>
 		% ===================================================================
-		function resetFlash(obj)
-			obj.flashFG = obj.colourOut;
-			obj.flashOnOut = obj.flashOn;
-			if obj.flashOnOut == true
-				obj.currentColour = obj.flashFG;
+		function resetFlash(me)
+			me.flashFG = me.colourOut;
+			me.flashOnOut = me.flashOn;
+			if me.flashOnOut == true
+				me.currentColour = me.flashFG;
 			else
-				obj.currentColour = obj.flashBG;
+				me.currentColour = me.flashBG;
 			end
-			obj.flashCounter = 1;
+			me.flashCounter = 1;
 		end
 	end
 end

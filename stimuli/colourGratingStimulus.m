@@ -5,7 +5,7 @@
 %>   type = 'sinusoid' or 'square', if square you should set sigma which
 %>     smoothes the interface and stops pixel motion artifacts that normally
 %>     inflict square wave gratings, set sigma to 0 to remove smoothing.
-%>	  colour = first grating colour
+%>	 colour = first grating colour
 %>   colour2 = second grating colour
 %>   baseColour = the midpoint between the two from where contrast works,
 %        defult just inherits the background colour from screenManager
@@ -120,11 +120,12 @@ classdef colourGratingStimulus < baseStimulus
 		%> @return instance of class.
 		% ===================================================================
 		function me = colourGratingStimulus(varargin)
-			if nargin == 0;varargin.name = 'colour grating';end
 			args = optickaCore.addDefaults(varargin,...
-				struct('colour',[1 0 0 1],'colour2',[0 1 0 1]));
+				struct('name','colour-grating','colour',[1 0 0 1],'colour2',[0 1 0 1]));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
+			
+			me.isRect = true; %uses a rect for drawing
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor method','Stimulus initialisation complete');

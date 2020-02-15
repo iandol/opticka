@@ -65,11 +65,12 @@ classdef discStimulus < baseStimulus
 		%> @return instance of the class.
 		% ===================================================================
 		function me = discStimulus(varargin)
-			if nargin == 0;varargin.name = 'disc stimulus';end
 			args = optickaCore.addDefaults(varargin,...
-				struct('colour',[1 1 0 1]));
+				struct('name','Disc','colour',[1 1 0 1]));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
+			
+			me.isRect = true;
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor','Stimulus initialisation complete');
@@ -112,16 +113,9 @@ classdef discStimulus < baseStimulus
 				end
 			end
 			
-			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
-			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
-			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
-			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
-			me.doDots = false;
-			me.doMotion = false;
-			me.doDrift = false;
-			me.doFlash = false;
+			doProperties(me); % create transient runtime action properties
 			
-			if me.speedOut > 0; me.doMotion = true; end
+			if me.speed > 0; me.doMotion = true; end
 			
 			if isempty(me.findprop('discSize'));p=me.addprop('discSize');p.Transient=true;end
 			me.discSize = me.ppd * me.size;
@@ -152,6 +146,11 @@ classdef discStimulus < baseStimulus
 			computePosition(me);
 			setRect(me);
 			
+			if ~isempty(me.animator) && isa(me.animator,'animationManager')
+				me.doAnimator = true;
+				setup(me.animator, me);
+			end
+			
 		end
 		
 		% ===================================================================
@@ -164,9 +163,8 @@ classdef discStimulus < baseStimulus
 			resetTicks(me);
 			computePosition(me);
 			setRect(me);
-			if me.doFlash
-				me.resetFlash;
-			end
+			if me.doFlash; me.resetFlash; end
+			if me.doAnimator; me.animator.reset(); end
 		end
 		
 		% ===================================================================
@@ -208,9 +206,14 @@ classdef discStimulus < baseStimulus
 					if me.mouseValid
 						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
 					end
+					return
 				end
 				if me.doMotion == true
-					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
+					if me.doAnimator
+						me.mvRect = update(me.animator);
+					else
+						me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
+					end
 				end
 				if me.doFlash == true
 					if me.flashCounter <= me.flashSwitch

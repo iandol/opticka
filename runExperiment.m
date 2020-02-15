@@ -48,7 +48,7 @@ classdef runExperiment < optickaCore
 		useEyeLink logical = false
 		%> use Tobii eyetracker?
 		useTobii logical = false
-		%> use eye occluder (custom arduino device) for LGN work ?
+		%> use eye occluder (custom arduino device) for monocular stimulation?
 		useEyeOccluder logical = false
 		%> this lets the opticka UI leave commands to runExperiment
 		uiCommand char = ''
@@ -60,10 +60,8 @@ classdef runExperiment < optickaCore
 		debug logical = false
 		%> shows the info text and position grid during stimulus presentation
 		visualDebug logical = false
-		%> draw simple fixation cross during trial?
+		%> draw simple fixation cross during trial for MOC tasks?
 		drawFixation logical = false
-		%> draw a photodiode square in a MOC run. For state machine tasks,
-		%> you just add the drawing command
 		%> flip as fast as possible?
 		benchmark logical = false
 		%> verbose logging to command window?
@@ -97,7 +95,9 @@ classdef runExperiment < optickaCore
 		lastYPosition = 0
 		lastSize = 1
 		lastIndex = 0
-		%> what mode to run the DPP in?
+		%> what mode to run the Display++ digital I/O in? Plexon requires
+		%the use of a strobe trigger line, whereas most other equipment
+		%just uses simple threshold reading
 		dPPMode char = 'plexon'
 		%> which port is the arduino on?
 		arduinoPort char = 'COM4'
@@ -112,8 +112,8 @@ classdef runExperiment < optickaCore
 		sendSyncTime logical = false
 		%> stateMachine
 		stateMachine
-		%> eyelink manager object
-		eyeLink 
+		%> eyetracker manager object
+		eyeTracker 
 		%> generic IO manager
 		io
 		%> DataPixx control object
@@ -247,8 +247,8 @@ classdef runExperiment < optickaCore
 
 				% set up the eyelink interface
 				if me.useEyeLink
-					me.eyeLink = eyelinkManager();
-					eL = me.eyeLink;
+					me.eyeTracker = eyelinkManager();
+					eL = me.eyeTracker;
 					eL.saveFile = [me.paths.savedData pathsep me.savePrefix 'RUN.edf'];
 					initialise(eL, s);
 					setup(eL);
@@ -303,7 +303,7 @@ classdef runExperiment < optickaCore
 				%profile clear; profile on;
 				
 				%-----final setup
-				ListenChar(2);
+				ListenChar(-1);
 				me.task.tick = 1;
 				me.task.switched = 0;
 				me.task.isBlank = true; %lets start in a blank
@@ -320,37 +320,30 @@ classdef runExperiment < optickaCore
 				%==================================================================%
 				while ~me.task.taskFinished
 					if me.task.isBlank
-						if s.photoDiode == true
-							s.drawPhotoDiodeSquare([0 0 0 1]);
-						end
+						if s.photoDiode;s.drawPhotoDiodeSquare([0 0 0 1]);end
 						if me.drawFixation;s.drawCross(0.4,[0.3 0.3 0.3 1]);end
 					else
 						if ~isempty(s.backgroundColour);s.drawBackground;end
-						
 						draw(me.stimuli);
-						
 						if s.photoDiode;s.drawPhotoDiodeSquare([1 1 1 1]);end
-						
 						if me.drawFixation;s.drawCross(0.4,[1 1 1 1]);end
 					end
-					if s.visualDebug == true
-						s.drawGrid;
-						me.infoTextScreen;
-					end
+					if s.visualDebug;s.drawGrid;me.infoTextScreen;end
 					
 					Screen('DrawingFinished', s.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
+					%========= check for keyboard if in blank ========%
 					if me.task.isBlank
 						if strcmpi(me.uiCommand,'stop');break;end
 						[~,~,kc] = KbCheck(-1);
 						if strcmpi(KbName(kc),'q')
 							%notify(me,'abortRun');
-							break;
+							break; %break the while loop
 						end
 					end
 					
 					%============== Get eye position==================%
-					if me.useEyeLink; getSample(me.eyeLink); end
+					if me.useEyeLink; getSample(me.eyeTracker); end
 					
 					%================= UPDATE TASK ===================%
 					updateMOCTask(me); %update our task structure
@@ -384,10 +377,11 @@ classdef runExperiment < optickaCore
 							tL.stimTime(me.task.tick)=0-me.task.switched;
 						end
 					end
-					if s.movieSettings.record && ~me.task.isBlank && (s.movieSettings.loop <= s.movieSettings.nFrames)
+					if s.movieSettings.record ...
+							&& ~me.task.isBlank ...
+							&& (s.movieSettings.loop <= s.movieSettings.nFrames)
 						s.addMovieFrame();
 					end
-					
 					%===================Tick tock!=======================%
 					me.task.tick=me.task.tick+1; tL.tick = me.task.tick;
 					
@@ -424,8 +418,8 @@ classdef runExperiment < optickaCore
 				s.resetScreenGamma();
 				
 				if me.useEyeLink
-					close(me.eyeLink);
-					me.eyeLink = [];
+					close(me.eyeTracker);
+					me.eyeTracker = [];
 				end
 				
 				s.finaliseMovie(false);
@@ -468,8 +462,8 @@ classdef runExperiment < optickaCore
 				ShowCursor;
 				resetScreenGamma(s);
 				close(s);
-				close(me.eyeLink);
-				me.eyeLink = [];
+				close(me.eyeTracker);
+				me.eyeTracker = [];
 				me.behaviouralRecord = [];
 				close(rM);
 				me.lJack=[];
@@ -559,11 +553,11 @@ classdef runExperiment < optickaCore
 				me.isRunTask = true;
 				%-----open the eyelink interface
 				if me.useEyeLink
-					me.eyeLink = eyelinkManager();
+					me.eyeTracker = eyelinkManager();
 				else
-					me.eyeLink = tobiiManager();
+					me.eyeTracker = tobiiManager();
 				end
-				eL = me.eyeLink;
+				eL = me.eyeTracker;
 				eL.verbose = me.verbose;
 				eL.saveFile = [me.paths.savedData filesep me.subjectName '-' me.savePrefix '.edf'];
 				if ~me.useEyeLink && ~me.useTobii
@@ -689,9 +683,7 @@ classdef runExperiment < optickaCore
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				if me.debug == false
 					%warning('off'); %#ok<*WNOFF>
-					ListenChar(1); %2=capture all keystrokes
-				else
-					ListenChar(1); %1=listen
+					ListenChar(-1); %2=capture all keystrokes
 				end
 				
 				%-----initialise our vbl's
@@ -861,7 +853,7 @@ classdef runExperiment < optickaCore
 				ShowCursor;
 				try close(s); end
 				try close(eL); end
-				me.eyeLink = [];
+				me.eyeTracker = [];
 				me.behaviouralRecord = [];
 				try close(rM); end
 				me.lJack=[];
@@ -976,10 +968,10 @@ classdef runExperiment < optickaCore
 		function updateFixationTarget(me, useTask, varargin)
 			if ~exist('useTask','var');	useTask = false; end
 			if useTask == false
-				updateFixationValues(me.eyeLink, me.stimuli.lastXPosition, me.stimuli.lastYPosition)
+				updateFixationValues(me.eyeTracker, me.stimuli.lastXPosition, me.stimuli.lastYPosition)
 			else
 				[me.lastXPosition,me.lastYPosition] = getFixationPositions(me.stimuli);
-				updateFixationValues(me.eyeLink, me.lastXPosition, me.lastYPosition, varargin);
+				updateFixationValues(me.eyeTracker, me.lastXPosition, me.lastYPosition, varargin);
 			end
 		end
 		
@@ -999,7 +991,7 @@ classdef runExperiment < optickaCore
 			if ~isempty(stimuluschoice)
 				me.stimuli.fixationChoice = stimuluschoice;
 				[me.lastXPosition,me.lastYPosition] = getFixationPositions(me.stimuli);
-				updateFixationValues(me.eyeLink, me.lastXPosition, me.lastYPosition, varargin);
+				updateFixationValues(me.eyeTracker, me.lastXPosition, me.lastYPosition, varargin);
 			end
 		end
 		
@@ -1017,7 +1009,7 @@ classdef runExperiment < optickaCore
 			%uiinspect(me)
 			clear ii
 			dbclear in clear
-			ListenChar(2); %capture keystrokes
+			ListenChar(-1); %capture keystrokes
 			%HideCursor;
 		end
 		
@@ -1038,8 +1030,11 @@ classdef runExperiment < optickaCore
 			if isa(me.stateMachine,'stateMachine')
 				me.stateMachine.verbose = value;
 			end
-			if isa(me.eyeLink,'eyelinkManager')
-				me.eyeLink.verbose = value;
+			if isa(me.eyeTracker,'eyelinkManager')
+				me.eyeTracker.verbose = value;
+			end
+			if isa(me.eyeTracker,'tobiiManager')
+				me.eyeTracker.verbose = value;
 			end
 			if isa(me.lJack,'labJack')
 				me.lJack.verbose = value;
@@ -1323,7 +1318,7 @@ classdef runExperiment < optickaCore
 			%-------Set up Digital I/O (dPixx and labjack) for this task run...
 			if me.useDisplayPP
 				if ~isa(me.dPP,'plusplusManager')
-					me.dPP = plusplusManager();
+					me.dPP = plusplusManager('verbose',me.verbose);
 				end
 				io = me.dPP;  %#ok<*PROP>
 				io.sM = me.screen;
@@ -1875,53 +1870,53 @@ classdef runExperiment < optickaCore
 						end		
 					case 'z' 
 						if tS.keyTicks > tS.keyHold
-							me.eyeLink.fixationInitTime = me.eyeLink.fixationInitTime - 0.1;
-							if me.eyeLink.fixationInitTime < 0.01
-								me.eyeLink.fixationInitTime = 0.01;
+							me.eyeTracker.fixationInitTime = me.eyeTracker.fixationInitTime - 0.1;
+							if me.eyeTracker.fixationInitTime < 0.01
+								me.eyeTracker.fixationInitTime = 0.01;
 							end
-							tS.firstFixInit = me.eyeLink.fixationInitTime;
-							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeLink.fixationInitTime)
+							tS.firstFixInit = me.eyeTracker.fixationInitTime;
+							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixationInitTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'x' 
 						if tS.keyTicks > tS.keyHold
-							me.eyeLink.fixationInitTime = me.eyeLink.fixationInitTime + 0.1;
-							tS.firstFixInit = me.eyeLink.fixationInitTime;
-							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeLink.fixationInitTime)
+							me.eyeTracker.fixationInitTime = me.eyeTracker.fixationInitTime + 0.1;
+							tS.firstFixInit = me.eyeTracker.fixationInitTime;
+							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixationInitTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'c' 
 						if tS.keyTicks > tS.keyHold
-							me.eyeLink.fixationTime = me.eyeLink.fixationTime - 0.1;
-							if me.eyeLink.fixationTime < 0.01
-								me.eyeLink.fixationTime = 0.01;
+							me.eyeTracker.fixationTime = me.eyeTracker.fixationTime - 0.1;
+							if me.eyeTracker.fixationTime < 0.01
+								me.eyeTracker.fixationTime = 0.01;
 							end
-							tS.firstFixTime = me.eyeLink.fixationTime;
-							fprintf('===>>> FIXATION TIME: %g\n',me.eyeLink.fixationTime)
+							tS.firstFixTime = me.eyeTracker.fixationTime;
+							fprintf('===>>> FIXATION TIME: %g\n',me.eyeTracker.fixationTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'v'
 						if tS.keyTicks > tS.keyHold
-							me.eyeLink.fixationTime = me.eyeLink.fixationTime + 0.1;
-							tS.firstFixTime = me.eyeLink.fixationTime;
-							fprintf('===>>> FIXATION TIME: %g\n',me.eyeLink.fixationTime)
+							me.eyeTracker.fixationTime = me.eyeTracker.fixationTime + 0.1;
+							tS.firstFixTime = me.eyeTracker.fixationTime;
+							fprintf('===>>> FIXATION TIME: %g\n',me.eyeTracker.fixationTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'b'
 						if tS.keyTicks > tS.keyHold
-							me.eyeLink.fixationRadius = me.eyeLink.fixationRadius - 0.1;
-							if me.eyeLink.fixationRadius < 0.1
-								me.eyeLink.fixationRadius = 0.1;
+							me.eyeTracker.fixationRadius = me.eyeTracker.fixationRadius - 0.1;
+							if me.eyeTracker.fixationRadius < 0.1
+								me.eyeTracker.fixationRadius = 0.1;
 							end
-							tS.firstFixRadius = me.eyeLink.fixationRadius;
-							fprintf('===>>> FIXATION RADIUS: %g\n',me.eyeLink.fixationRadius)
+							tS.firstFixRadius = me.eyeTracker.fixationRadius;
+							fprintf('===>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixationRadius)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'n'
 						if tS.keyTicks > tS.keyHold
-							me.eyeLink.fixationRadius = me.eyeLink.fixationRadius + 0.1;
-							tS.firstFixRadius = me.eyeLink.fixationRadius;
-							fprintf('===>>> FIXATION RADIUS: %g\n',me.eyeLink.fixationRadius)
+							me.eyeTracker.fixationRadius = me.eyeTracker.fixationRadius + 0.1;
+							tS.firstFixRadius = me.eyeTracker.fixationRadius;
+							fprintf('===>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixationRadius)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'p' %pause the display

@@ -99,11 +99,12 @@ classdef gaborStimulus < baseStimulus
 		%> @return instance of class.
 		% ===================================================================
 		function me = gaborStimulus(varargin)
-			if nargin == 0;varargin.name = 'gabor stimulus';end
 			args = optickaCore.addDefaults(varargin,...
-				struct('colour',[0.5 0.5 0.5]));
+				struct('name','gabor','colour',[0.5 0.5 0.5]));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
+			
+			me.isRect = true; %uses a rect for drawing
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor method','Stimulus initialisation complete');
@@ -155,14 +156,7 @@ classdef gaborStimulus < baseStimulus
 				end
 			end
 			
-			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
-			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
-			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
-			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
-			me.doDots = false;
-			me.doMotion = false;
-			me.doDrift = false;
-			me.doFlash = false;
+			doProperties(me);
 			
 			if me.tf > 0;me.doDrift = true;end
 			if me.speed > 0; me.doMotion = true;end
@@ -177,7 +171,7 @@ classdef gaborStimulus < baseStimulus
 			if isempty(me.findprop('gratingSize'));p=me.addprop('gratingSize');p.Transient=true;end
 			me.gratingSize = round(me.ppd*me.size);
 			
-			if isempty(me.findprop('phaseIncrement'));
+			if isempty(me.findprop('phaseIncrement'))
 				p=me.addprop('phaseIncrement');
 			end
 			

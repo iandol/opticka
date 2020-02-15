@@ -75,11 +75,12 @@ classdef movieStimulus < baseStimulus
 		%> @return instance of opticka class.
 		% ===================================================================
 		function me = movieStimulus(varargin)
-			if nargin == 0;varargin.name = 'movie stimulus';end
 			args = optickaCore.addDefaults(varargin,...
-				struct('size',0));
+				struct('name','movie','size',0));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
+			
+			me.isRect = true; %uses a rect for drawing
 			
 			checkFileName(me);
 			

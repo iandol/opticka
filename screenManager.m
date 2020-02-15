@@ -72,7 +72,7 @@ classdef screenManager < optickaCore
 		%> settings for movie output
 		movieSettings = []
 		%> useful screen info and initial gamma tables and the like
-		screenVals struct
+		screenVals struct = struct('ifi',1/60,'fps',60,'winRect',[0 0 1920 1080])
 		%> verbose output?
 		verbose = false
 		%> level of PTB verbosity, set to 10 for full PTB logging
@@ -182,18 +182,7 @@ classdef screenManager < optickaCore
 		%> @return screenVals structure of screen values
 		% ===================================================================
 		function screenVals = prepareScreen(me)
-			if me.isPTB == false
-				me.maxScreen = 0;
-				me.screen = 0;
-				me.screenVals.resetGamma = false;
-				me.screenVals.fps = 60;
-				me.screenVals.ifi = 1/60;
-				me.screenVals.width = 0;
-				me.screenVals.height = 0;
-				me.makeGrid;
-				screenVals = me.screenVals;
-				return
-			end
+			if me.isPTB == false;warning('No PTB!!!');return;end
 			me.maxScreen=max(Screen('Screens'));
 			
 			%by default choose the (largest number) screen
@@ -201,43 +190,37 @@ classdef screenManager < optickaCore
 				me.screen = me.maxScreen;
 			end
 			
-			me.screenVals = struct();
+			sv = struct();
 			
 			checkWindowValid(me);
 			
 			%get the gammatable and dac information
 			try
-			[me.screenVals.gammaTable,me.screenVals.dacBits,me.screenVals.lutSize]=Screen('ReadNormalizedGammaTable', me.screen);
-			me.screenVals.originalGammaTable = me.screenVals.gammaTable;
+				[sv.gammaTable,sv.dacBits,sv.lutSize]=Screen('ReadNormalizedGammaTable', me.screen);
+				sv.originalGammaTable = sv.gammaTable;
 			catch
-				me.screenVals.gammaTable = [];
-				me.screenVals.dacBits = [];
-				me.screenVals.lutSize = 256;
+				sv.gammaTable = [];
+				sv.dacBits = [];
+				sv.lutSize = 256;
 			end
 			
 			%get screen dimensions
-			setScreenSize(me);
+			sv = setScreenSize(me, sv);
 			
-			me.screenVals.resetGamma = false;
+			sv.resetGamma = false;
 			
 			%this is just a rough initial setting, it will be recalculated when we
 			%open the screen before showing stimuli.
-			me.screenVals.fps=Screen('FrameRate',me.screen);
-			if me.screenVals.fps == 0 || (me.screenVals.fps == 59 && IsWin)
-				me.screenVals.fps = 60;
+			sv.fps=Screen('FrameRate',me.screen);
+			if sv.fps == 0 || (sv.fps == 59 && IsWin)
+				sv.fps = 60;
 			end
-			me.screenVals.ifi=1/me.screenVals.fps;
+			sv.ifi=1/sv.fps;
 			
 			% initialise our movie settings
-			me.movieSettings.record = false;
-			me.movieSettings.loop = Inf;
-			me.movieSettings.size = [600 600];
-			me.movieSettings.fps = 30;
-			me.movieSettings.quality = 0.7;
-			me.movieSettings.keyframe = 5;
-			me.movieSettings.nFrames = me.screenVals.fps * 2;
-			me.movieSettings.type = 1;
-			me.movieSettings.codec = 'x264enc'; %space is important for 'rle '
+			me.movieSettings = struct('record',false,'loop',inf,'size',[600 600],...
+				'fps',30,'quality',0.7,'keyframe',5,...
+				'nFrames',sv.fps * 2,'type',1,'codec','x264enc');
 			
 			if me.debug == true %we yoke these together but they can then be overridden
 				me.visualDebug = true;
@@ -249,18 +232,19 @@ classdef screenManager < optickaCore
 			me.ppd; %generate our dependent propertie and caches it to ppd_ for speed
 			me.makeGrid; %our visualDebug size grid
 			
-			me.screenVals.white = WhiteIndex(me.screen);
-			me.screenVals.black = BlackIndex(me.screen);
-			me.screenVals.gray = GrayIndex(me.screen);
+			sv.white = WhiteIndex(me.screen);
+			sv.black = BlackIndex(me.screen);
+			sv.gray = GrayIndex(me.screen);
 			
 			if IsLinux
 				d=Screen('ConfigureDisplay','Scanout',me.screen,0);
-				me.screenVals.name = d.name;
-				me.screenVals.widthMM = d.displayWidthMM;
-				me.screenVals.heightMM = d.displayHeightMM;
-				me.screenVals.display = d;
+				sv.name = d.name;
+				sv.widthMM = d.displayWidthMM;
+				sv.heightMM = d.displayHeightMM;
+				sv.display = d;
 			end
 			
+			me.screenVals = sv;
 			screenVals = me.screenVals;
 			
 		end
@@ -401,6 +385,8 @@ classdef screenManager < optickaCore
 				tL.screenLog.postOpenWindow=GetSecs;
 				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
 				
+				me.screenVals = setScreenSize(me, me.screenVals);
+				
 				try
 					AssertGLSL;
 				catch
@@ -440,9 +426,6 @@ classdef screenManager < optickaCore
 					% effectively makes flip occur ASAP.
 					me.screenVals.halfifi = 0; me.screenVals.halfisi = 0;
 				end
-				
-				%get screen dimensions -- check !!!!!
-				setScreenSize(me);
                 
                 me.photoDiodeRect = [me.winRect(3)-45 0 me.winRect(3) 45];
 				
@@ -556,7 +539,7 @@ classdef screenManager < optickaCore
 			me.screenVals.white = WhiteIndex(me.win);
 			me.screenVals.black = BlackIndex(me.win);
 			me.screenVals.gray = GrayIndex(me.win);
-			setScreenSize(me);
+			me.screenVals = setScreenSize(me, me.screenVals);
 			fprintf('---> screenManager slaved to external win: %i\n',win);
 		end
 		
@@ -1285,16 +1268,26 @@ classdef screenManager < optickaCore
 		%> @brief Sets screen size, taking retina mode into account
 		%>
 		% ===================================================================
-		function setScreenSize(me)
+		function sv = setScreenSize(me, sv)
 			%get screen dimensions
 			if ~isempty(me.win)
 				swin = me.win;
 			else
 				swin = me.screen;
 			end
-			[me.screenVals.width, me.screenVals.height] = Screen('WindowSize',swin);
-			me.winRect = Screen('Rect',swin);
+			[sv.screenWidth, sv.screenHeight] = Screen('WindowSize',swin);
+			if ~isempty(me.windowed) && length(me.windowed)==4
+				sv.width = me.windowed(end-1);
+				sv.height = me.windowed(end);
+				me.winRect = me.windowed;
+			else
+				sv.width = sv.screenWidth;
+				sv.height = sv.screenHeight;
+				me.winRect = Screen('Rect',swin);
+			end
 			updateCenter(me);
+			sv.xCenter = me.xCenter;
+			sv.yCenter = me.yCenter;
 		end
 		
 		% ===================================================================
@@ -1303,9 +1296,9 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function makeGrid(me)
 			me.grid = [];
-			rnge = -15:15;
-			for i=rnge
-				me.grid = horzcat(me.grid, [rnge;ones(1,length(rnge))*i]);
+			rn = -15:15;
+			for i=rn
+				me.grid = horzcat(me.grid, [rn;ones(1,length(rn))*i]);
 			end
 			me.grid = me.grid .* me.ppd;
 		end
@@ -1313,7 +1306,6 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief update our screen centre to use any offsets we've defined
 		%>
-		%> @param
 		% ===================================================================
 		function updateCenter(me)
 			if length(me.winRect) == 4
@@ -1321,6 +1313,10 @@ classdef screenManager < optickaCore
 				[me.xCenter, me.yCenter] = RectCenter(me.winRect);
 				me.xCenter = me.xCenter + (me.screenXOffset * me.ppd_);
 				me.yCenter = me.yCenter + (me.screenYOffset * me.ppd_);
+				if ~isempty(me.screenVals)
+					me.screenVals.xCenter = me.xCenter;
+					me.screenVals.yCenter = me.yCenter;
+				end
 			end
 		end
 		

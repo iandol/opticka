@@ -412,7 +412,7 @@ classdef optickaCore < handle
 			end
 		end
 		
-	end
+	end %--------END STATIC METHODS
 	
 	%=======================================================================
 	methods ( Access = protected ) %-------PROTECTED METHODS-----%

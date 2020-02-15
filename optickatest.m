@@ -22,12 +22,12 @@
 
 %% Initial clear up of previous runs
 % Make sure we start in a clean environment, not essential
-clear myStims myTask myScreen rExp
+clear myStims myTask rExp myScreen
 sca %PTB screen clear all
 
 %% Stimulus Initialisation
-% These set up the 10 different stimuli. Please note that values are in
-% degrees, cycles/deg, deg/s etc. Colour is repestend using floating point
+% Set up 11 different stimuli. Values are in
+% degrees, cycles/deg, deg/s etc. Colour is represented using floating point
 % values from 0 - 1 and all objects accept an opacity (alpha) value.
 % Each stimulus is a class object with a series of properties ('sf',
 % 'colour' etc.) that you can set up by simply passing property name : value pairs 
@@ -37,7 +37,7 @@ sca %PTB screen clear all
 %%
 % First we create a stimulus manager object that collects and handles groups of
 % stimuli as if they were a single 'thing', so for example when you use the
-% draw method on a metaStimulus, it tells each of its child stimuli to draw in order
+% draw method on a metaStimulus myStims.draw(), it tells each of its child stimuli to draw in order
 myStims = metaStimulus();
 
 %%
@@ -54,31 +54,33 @@ myStims = metaStimulus();
 %
 %The first five stimuli are gratings / gabors of varying kinds.
 myStims{1}=gratingStimulus('sf', 1, 'tf', 0, 'phase', 90, 'contrast', 0.7, 'size', 2, 'angle', -45,...
-	'mask', false);
+	'mask', false, 'name', 'Grating-1');
 
 myStims{2}=gaborStimulus('sf', 1, 'contrast', 0.75, 'tf', 3, 'size', 3, 'angle', -70,...
-	'aspectRatio', 0.5, 'xPosition', 5, 'yPosition', -5);
+	'aspectRatio', 0.5, 'xPosition', 5, 'yPosition', -5, 'name', 'Gabor');
 
 myStims{3}=gratingStimulus('sf', 1, 'tf', 4, 'contrast', 0.7, 'size', 3, 'angle', 45,...
-	'xPosition', 0, 'yPosition', -10, 'mask', true, 'sigma', 30);
+	'xPosition', 0, 'yPosition', -10, 'mask', true, 'sigma', 30, 'name', 'Smooth-edged grating');
 
 myStims{4}=gratingStimulus('sf', 3, 'contrast', 0.75, 'tf', 1, 'size', 3, 'xPosition', -3,...
-	'yPosition', -5);
+	'yPosition', -5, 'name', 'Grating sf=3');
 
 myStims{5}=gratingStimulus('type', 'square', 'sf', 1, 'contrast', 1, 'colour', [0.5 0.5 0.5], 'tf', 0,...
-	'size', 3, 'xPosition', 3, 'yPosition', 0, 'sigma',30, 'useAlpha', true);
+	'size', 3, 'xPosition', 3, 'yPosition', 0, 'sigma',30, 'useAlpha', true, 'name', 'Squarewave grating');
 
 %%
 % This is a colour grating where two independant colours can be modulated
 % relative to a base colour, in this case this is a red/green grating
 % modulating from 0.5 background grey.
 myStims{6}=colourGratingStimulus('colour', [1 0 0 1], 'colour2', [0 1 0 1],...
-	'baseColour', [0.5 0.5 0.5], 'tf', 1, 'size', 3, 'xPosition', 0, 'yPosition', 6);
+	'baseColour', [0.5 0.5 0.5], 'tf', 1, 'size', 3, 'xPosition', 0, 'yPosition', 6,...
+	'name', 'Red/green grating');
 
 %%
 % coherent dot stimulus; 200 dots moving at 2deg/s with coherence set to 0.25
 myStims{7}=dotsStimulus('density',50,'coherence',0.25,'xPosition',4,...
-	'yPosition',6,'dotType',3,'dotSize',0.1,'colorType','randomBW','mask',true);
+	'yPosition',6,'dotType',3,'dotSize',0.1,'colorType','randomBW','mask',true,...
+	'name','Coherent dots');
 
 %%
 % A simple bar: bars can be solid in colour or have checkerboard/random texture 
@@ -89,25 +91,29 @@ myStims{7}=dotsStimulus('density',50,'coherence',0.25,'xPosition',4,...
 % Also note as we will change the angle of this stimulus the geometry is calculated for you
 % automatically!
 myStims{8}=barStimulus('type','checkerboard','checkSize',0.25,'barWidth',1,'barLength',4,...
-	'speed',4,'xPosition',0,'yPosition',0,'startPosition',-4,'phaseReverseTime',0.5);
+	'speed',4,'xPosition',0,'yPosition',0,'startPosition',-4,'phaseReverseTime',0.5,...
+	'name','Checkerboard bar');
 
 %%
 % an edge-smoothed spot; spots can also flash if needed
 myStims{9}=discStimulus('type','flash','speed',2,'xPosition',4,...
-	'yPosition',4,'colour',[1 1 0],'size',2,'flashTime',[0.2 0.15]);
+	'yPosition',4,'colour',[1 1 0],'size',2,'flashTime',[0.2 0.15],...
+	'name','Flashing disc');
 
 %%
-% a texture stimulus, by default this loads a picture from the opticka
+% a picture stimulus, by default this loads a picture from the opticka
 % stimulus directory; you can rotate it, scale it etc and drift it across screen as
 % in this case. Size is in degrees, scaling the whole picture
-myStims{10}=textureStimulus('speed',2,'xPosition',-10,'yPosition',10,'size',4);
+myStims{10}=imageStimulus('speed',2,'xPosition',-10,'yPosition',10,'size',4,...
+	'name','Image');
 
 %%
 % a movie stimulus, by default this loads a movie from the opticka
 % stimulus directory; you can rotate it, scale it etc and drift it across screen as
 % in this case. Size is in degrees, scaling the whole movie
 myStims{11}=movieStimulus('speed',1,'xPosition',-5,'yPosition',-10,...
-	'mask',[0 0 0],'size',3);
+	'mask',[0 0 0],'size',3,...
+	'name','mp4 movie');
 
 %% Task Initialisation
 % The stimulusSequence class defines a stimulus sequence (task) which is composed
@@ -121,12 +127,12 @@ myStims{11}=movieStimulus('speed',1,'xPosition',-5,'yPosition',-10,...
 myTask = stimulusSequence; %new stimulusSequence object instance
 myTask.nBlocks = 2; %number of blocks
 myTask.trialTime = 2; %time of stimulus display: 2 seconds
-myTask.isTime = 0.25; %inter trial time: 0.25 seconds
-myTask.ibTime=0.5; %inter block time: 1 second
+myTask.isTime = 0.25; %inter-trial time: 0.25 seconds
+myTask.ibTime=0.5; %inter-block time: 1 second
 myTask.realTime = true; %we use real time for switching trials, false uses a tick timer updated every flip
 
 %% Variable 1
-% Our first variable is angle, applied to stimulus 1 3 7 and 10, randomly
+% Our first variable is angle, applied to 4 stimuli, randomly
 % selected from values of 0 45 and 90 degrees
 myTask.nVar(1).name = 'angle';
 myTask.nVar(1).stimulus = [1 3 8 10];
@@ -139,14 +145,14 @@ myTask.nVar(1).offsetstimulus = [6 11];
 myTask.nVar(1).offsetvalue = [90];
 
 %% Variable 2
-% Our second variable is contrast, applied to stimulus 2 and 3, randomly
+% Our second variable is contrast, applied to stimuli 2 / 3 / 5, randomly
 % selected from values of 0.025 and 0.1
 myTask.nVar(2).name = 'contrast';
 myTask.nVar(2).stimulus = [2 3 5];
 myTask.nVar(2).values = [0.15 0.55];
 
 %% Variable 3
-% Our third variable is X position, applied to stimulus 2 and 8, randomly
+% Our third variable is X position, applied to stimulus 2 and 7, randomly
 % selected from values of -3 and 3 degrees from visual center of screen
 myTask.nVar(3).name = 'xPosition';
 myTask.nVar(3).stimulus = [2 7];
@@ -175,7 +181,7 @@ showLog(myTask);
 % task background colour so you don't see the black flash on PTB screen
 % initialisation.
 myScreen = screenManager('distance', 57.3,... %display distance from observer
-	'pixelsPerCm', 32,... %calibration value for screen size/pixel density, see calibrateSize()
+	'pixelsPerCm', 32,... %calibration value for pixel density, measure using calibrateSize()
 	'backgroundColour', [0.5 0.5 0.5],... %initial background colour
 	'blend', true,... %enable OpenGL blending, you can also set blend modes when needed
 	'srcMode', 'GL_ONE',... %src blend mode
@@ -183,7 +189,7 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on macOS ATI 5870
 	'bitDepth', 'FloatingPoint32bitIfPossible',... %8bit, FloatingPoint16bit FloatingPoint32bit etc.
-	'displayPPRefresh', 100); %set refresh to 100Hz only if Dispay++ attached
+	'displayPPRefresh', 100); %set refresh to 100Hz if a Display++ is attached
 
 %% Setup runExperiment Object
 % We now pass our stimulus screen and sequence objects to the
@@ -215,7 +221,7 @@ getRunLog(rExp);
 % ensure you set the inter trial time > than the dropped frames!
 
 %%
-% You don't need to use opticka's stimuli using runExperiment(), you can
+% You don't need to use opticka's stimuli via runExperiment(), you can
 % use them in your own simple experiments, lets have a quick look here.
 WaitSecs('YieldSecs',2);
 myMovie = myStims{11}; % the movie stimulus from above

@@ -1,8 +1,8 @@
 % ======================================================================
-%> @brief Opticka stimulus generator class
+%> @brief Opticka stimulus generator GUI
 %>
 %> Opticka is an object oriented stimulus generator based on Psychophysics toolbox
-%> See http://iandol.github.com/opticka/ for more details
+%> See http://iandol.github.com/opticka/ for more details. This class builds the %> main GUI.
 % ======================================================================
 classdef opticka < optickaCore
 	
@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '1.16'
+		optickaVersion char = '1.18'
 		%> history of display objects
 		history
 		%> is this a remote instance?

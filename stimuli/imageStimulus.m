@@ -1,10 +1,10 @@
 % ========================================================================
-%> @brief textureStimulus is the superclass for texture based stimulus objects
+%> @brief textureStimulus 
 %>
 %> Superclass providing basic structure for texture stimulus classes
 %>
 % ========================================================================	
-classdef textureStimulus < baseStimulus	
+classdef imageStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		type char = 'picture'
 		%> filename to load
@@ -15,10 +15,6 @@ classdef textureStimulus < baseStimulus
 		multipleImages double = 0
 		%> contrast multiplier
 		contrast double = 1
-		%>
-		interpMethod char = 'nearest'
-		%>scale up the texture in the bar
-		pixelScale double = 1 
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -44,9 +40,9 @@ classdef textureStimulus < baseStimulus
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties='type|fileName|multipleImages|contrast|scale|interpMethod|pixelScale';
+		allowedProperties='type|fileName|multipleImages|contrast|scale';
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'scale|fileName|interpMethod|pixelScale'
+		ignoreProperties = 'type|scale|fileName|multipleImages'
 	end
 	
 	%=======================================================================
@@ -63,16 +59,18 @@ classdef textureStimulus < baseStimulus
 		%>
 		%> @return instance of opticka class.
 		% ===================================================================
-		function me = textureStimulus(varargin)
-			if nargin == 0;varargin.name = 'picture';end
-			args = optickaCore.addDefaults(varargin,struct('size',0));
+		function me = imageStimulus(varargin)
+			args = optickaCore.addDefaults(varargin,struct('size',0,...
+				'name','Image'));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
+			
+			me.isRect = true; %uses a rect for drawing
 			
 			checkFileName(me);
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
-			me.salutation('constructor','Texture Stimulus initialisation complete');
+			me.salutation('constructor','Image Stimulus initialisation complete');
 		end
 		
 		% ===================================================================
@@ -187,7 +185,7 @@ classdef textureStimulus < baseStimulus
 			me.width = size(me.matrix,2);
 			me.height = size(me.matrix,1);
 			
-			me.salutation('loadImage',['Load: ' regexprep(me.currentImage,'\','/')],true);
+			me.salutation('loadImage',['Load: ' regexprep(me.currentImage,'\','/')]);
 			
 			me.matrix = me.matrix .* me.contrast;
 			
@@ -307,6 +305,8 @@ classdef textureStimulus < baseStimulus
 				p = mfilename('fullpath');
 				p = fileparts(p);
 				me.fileName = [p filesep 'Bosch.jpeg'];
+				me.fileNames{1} = me.fileName;
+			elseif exist(me.fileName,'file') == 2
 				me.fileNames{1} = me.fileName;
 			elseif exist(me.fileName,'dir') == 7
 				findFiles(me);

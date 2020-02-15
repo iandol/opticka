@@ -63,17 +63,18 @@ classdef barStimulus < baseStimulus
 		%> @return instance of opticka class.
 		% ===================================================================
 		function me = barStimulus(varargin)
-			if nargin == 0;varargin.name = 'bar stimulus';end
 			args = optickaCore.addDefaults(varargin,...
-				struct('colour',[1 1 1],'size',0,...
+				struct('name','Bar','colour',[1 1 1],'size',0,...
 				'speed',2,'startPosition',-2));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
-			if me.size > 0
+			if me.size > 0 %size overrides 
 				me.barLength = me.size;
 				me.barWidth = me.size;
 			end
+			
+			me.isRect = true; %uses a rect for drawing
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor','Bar Stimulus initialisation complete');
@@ -112,14 +113,7 @@ classdef barStimulus < baseStimulus
 				end
 			end
 			
-			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
-			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
-			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
-			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
-			me.doDots = false;
-			me.doMotion = false;
-			me.doDrift = false;
-			me.doFlash = false;
+			doProperties(me);
 			
 			constructMatrix(me) %make our matrix
 			me.texture=Screen('MakeTexture',me.sM.win,me.matrix,1,[],2);

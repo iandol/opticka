@@ -6,7 +6,7 @@ classdef labJackT < handle
 	
 	properties
 		%> friendly object name, setting this to 'null' will force silentMode=1
-		name char = 'LabJackT'
+		name char = 'labJackT'
 		%> what LabJack device to use; 3 = U3, 6 = U6
 		deviceID = 4
 		%> if more than one labJack connected, which one to open?

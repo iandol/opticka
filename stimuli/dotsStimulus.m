@@ -45,7 +45,7 @@ classdef dotsStimulus < baseStimulus
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> stimulus family
-		family		= 'dots'
+		family			= 'dots'
 		%> row are x and y and columns are each dot
 		xy
 		%> delta x and y for each dot
@@ -110,11 +110,12 @@ classdef dotsStimulus < baseStimulus
 		%> @return instance of class.
 		% ===================================================================
 		function me = dotsStimulus(varargin)
-			if nargin == 0;varargin.name = 'dots stimulus';end
 			args = optickaCore.addDefaults(varargin,...
-				struct('colour',[1 1 1],'speed',2));
+				struct('name','dots','colour',[1 1 1],'speed',2));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
+			
+			me.isRect = false; %uses a point for drawing
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor','Dots Stimulus initialisation complete');
@@ -152,17 +153,14 @@ classdef dotsStimulus < baseStimulus
 				end
 			end
 			
-			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
-			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
-			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
-			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
-			me.doDots = true;
-			me.doMotion = false;
-			me.doDrift = false;
-			me.doFlash = false;
+			doProperties(me);
+			
+			if me.speed > 0
+				me.doMotion = true;
+			end
 			
 			%build the mask
-			if me.mask == true
+			if me.mask
 				makeMask(me);
 			end
 			
@@ -192,21 +190,17 @@ classdef dotsStimulus < baseStimulus
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				if me.mask
+					Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode);
+					Screen('DrawDots', me.sM.win,me.xy,me.dotSizeOut,me.colours,...
+						[me.xOut me.yOut],me.dotTypeOut);
 					if me.maskIsProcedural
-						Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode);
-						Screen('DrawDots', me.sM.win,me.xy,me.dotSizeOut,me.colours,...
-							[me.xOut me.yOut],me.dotTypeOut);
 						Screen('DrawTexture', me.sM.win, me.maskTexture, [], me.maskRect,...
-							[], [], 1, me.maskColour);
-						Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
+						[], [], 1, me.maskColour);
 					else
-						Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode);
-						Screen('DrawDots', me.sM.win,me.xy,me.dotSizeOut,me.colours,...
-							[me.xOut me.yOut],me.dotTypeOut);
 						Screen('DrawTexture', me.sM.win, me.maskTexture, [], me.maskRect,...
-							[], [], [], [], me.shader);
-						Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
+						[], [], [], [], me.shader);
 					end
+					Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
 				else
 					Screen('DrawDots',me.sM.win,me.xy,me.dotSizeOut,me.colours,[me.xOut me.yOut],me.dotTypeOut);
 				end
@@ -226,6 +220,17 @@ classdef dotsStimulus < baseStimulus
 						me.xOut = me.mouseX;
 						me.yOut = me.mouseY;
 					end
+				end
+				if me.doMotion == true
+					if me.doAnimator
+						out = update(me.animator);
+						me.xOut = out(1);
+						me.xOut = out(2);
+					else
+						me.xOut = me.xOut + me.dX_;
+						me.yOut = me.yOut + me.dY_;
+					end
+					me.maskRect=CenterRectOnPointd(me.maskRect,me.xOut,me.yOut);
 				end
 				me.xy = me.xy + me.dxdy; %increment position
 				sz = me.sizeOut + me.maskSmoothing-(me.dotSizeOut*1.5);
