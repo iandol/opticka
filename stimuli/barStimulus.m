@@ -122,12 +122,6 @@ classdef barStimulus < baseStimulus
 				me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
 			end
 			
-			if me.speed>0 %we need to say this needs animating
-				me.doMotion=true;
-			else
-				me.doMotion=false;
-			end
-			
 			me.inSetup = false;
 			computePosition(me);
 			setRect(me);

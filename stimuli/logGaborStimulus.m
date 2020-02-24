@@ -1,13 +1,14 @@
 % ========================================================================
-%> @brief logGaborStimulus
+%> @brief logGaborStimulus: orientation & SF band-pass limited filter
 %>
+%> If you use this in published research please cite  "Horizontal information drives the
+%> behavioral signatures of face processing" Goffaux & Dakin (2010) Frontiers in Perception
+%> Science v1, 143 | May 2015,  Steven Dakin, s.dakin@auckland.ac.nz
 % ========================================================================	
 classdef logGaborStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> filename to load, if empty use random noise
 		fileName char = ''
-		%> contrast multiplier
-		contrast double = 1
 		%> peak frequency
 		freqPeak double = 1;
 		%> frequency SD 
@@ -16,6 +17,14 @@ classdef logGaborStimulus < baseStimulus
 		thetaPeak double = 0;
 		%> orientation SD
 		thetaSigma double = 10;
+		%> contrast multiplier
+		contrast double = 1
+		%> the direction of the whole grating object - i.e. the object can
+		%> move (speed property) as well as the grating texture rotate within the object.
+		direction = 0
+		%> do we lock the angle to the direction? If so what is the offset
+		%> (0 = parallel, 90 = orthogonal etc.)
+		lockAngle double = []
 		%> seed for random textures
 		seed uint32
 		%> use mask?
@@ -24,13 +33,13 @@ classdef logGaborStimulus < baseStimulus
 		maskColour		= []
 		%> smooth the alpha edge of the mask by this number of pixels
 		maskSmoothing	= 55
+		%> type
+		type = 'logGabor'
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> scale is set by size
 		scale = 1
-		%> type
-		type = 'logGabor'
 		%>
 		family = 'texture'
 		%>
@@ -63,9 +72,10 @@ classdef logGaborStimulus < baseStimulus
 		wasMaskColourBlank = false
 		randomTexture = true;
 		%> allowed properties passed to object upon construction
-		allowedProperties='type|fileName|multipleImages|contrast|scale|interpMethod|pixelScale';
+		allowedProperties=['type|direction|lockAngle|fileName|contrast|'...
+			'freqPeak|freqSigma|thetaPeak|thetaSigma|scale|seed|mask|maskColour|maskSmoothing'];
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'scale|fileName|interpMethod|pixelScale'
+		ignoreProperties = 'scale|fileName|interpMethod|pixelScale|mask'
 	end
 	
 	%=======================================================================
@@ -140,7 +150,7 @@ classdef logGaborStimulus < baseStimulus
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
-			
+
 			loadImage(me, in);
 			
 			%build the mask
@@ -148,31 +158,91 @@ classdef logGaborStimulus < baseStimulus
 				makeMask(me);
 			end
 			
-			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
-			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
-			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
-			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
-			me.doDots = false;
-			me.doMotion = false;
-			me.doDrift = false;
-			me.doFlash = false;
-			
-			if me.speed>0 %we need to say this needs animating
-				me.doMotion=true;
- 				%sM.task.stimIsMoving=[sM.task.stimIsMoving i];
-			else
-				me.doMotion=false;
-			end
+			doProperties(me);
 			
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
 			end
 			
 			me.inSetup = false;
-			
 			computePosition(me);
 			setRect(me);
-			
+			if me.doAnimator; setup(me.animator,me); end
+		end
+		
+		% ===================================================================
+		%> @brief Update this stimulus object structure for screenManager
+		%>
+		% ===================================================================
+		function update(me)
+			if me.sizeOut > 0
+				%me.scale = me.sizeOut / (me.width / me.ppd);
+			end
+			resetTicks(me);
+			computePosition(me);
+			setRect(me);
+		end
+		
+		% ===================================================================
+		%> @brief Draw this stimulus object
+		%>
+		% ===================================================================
+		function draw(me)
+			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
+				if ~isempty(me.lockAngle); angle = me.directionOut+me.lockAngle; else; angle = me.angleOut; end
+				if me.mask
+					Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode);
+					Screen('DrawTexture',me.sM.win,me.texture,[],me.mvRect,angle);
+					Screen('DrawTexture', me.sM.win, me.maskTexture, [], me.maskRect,...
+							angle, [], 1, me.maskColour);
+					Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
+				else
+					Screen('DrawTexture',me.sM.win,me.texture,[],me.mvRect,angle);
+				end
+			end
+			me.tick = me.tick + 1;
+		end
+		
+		% ===================================================================
+		%> @brief Animate an structure for screenManager
+		%>
+		% ===================================================================
+		function animate(me)
+			if me.isVisible && me.tick >= me.delayTicks
+				if me.mouseOverride
+					getMousePosition(me);
+					if me.mouseValid
+						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
+					end
+				end
+				if me.doMotion && me.doAnimator
+					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
+					me.maskRect=OffsetRect(me.maskRect,me.dX_,me.dY_);
+				elseif me.doMotion && ~me.doAnimator
+					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
+					me.maskRect=OffsetRect(me.maskRect,me.dX_,me.dY_);
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Reset an structure for screenManager
+		%>
+		% ===================================================================
+		function reset(me)
+			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+				try Screen('Close',me.texture); end %#ok<*TRYNC>
+			end
+			if ~isempty(me.maskTexture) && me.maskTexture > 0 && Screen(me.maskTexture,'WindowKind') == -1
+				try Screen('Close',me.maskTexture); end %#ok<*TRYNC>
+			end
+			if me.wasMaskColourBlank;me.maskColour=[];end
+			resetTicks(me);
+			me.texture=[];
+			me.scale = 1;
+			me.mvRect = [];
+			me.dstRect = [];
+			me.removeTmpProperties;
 		end
 		
 		% ===================================================================
@@ -206,17 +276,10 @@ classdef logGaborStimulus < baseStimulus
 			
 			mul = me.width / me.ppd;
 			
-			out = me.doLogGabor(in,me.freqPeak*me.size,me.freqSigma*10,deg2rad(me.thetaPeak),deg2rad(me.thetaSigma));
+			out = me.doLogGabor(in,me.freqPeak*me.size,me.freqSigma*10,deg2rad(me.thetaPeak+90),deg2rad(me.thetaSigma));
 			out = real(out);
 			out = me.scaleRange(out); %handles contrast and scale to 0 - 1
 			me.matrix = out;
-			
-% 			figure;
-% 			tiledlayout(1,2,'TileSpacing','compact');
-% 			nexttile;
-% 			imagesc(in); colormap(gray(256)); colorbar;
-% 			nexttile;
-% 			imagesc(me.matrix); colormap(gray(256)); colorbar;
 			
 			if isinteger(me.matrix(1))
 				specialFlags = 4; %4 is optimization for uint8 textures. 0 is default
@@ -227,82 +290,9 @@ classdef logGaborStimulus < baseStimulus
 		end
 
 		% ===================================================================
-		%> @brief Update this stimulus object structure for screenManager
+		%> @brief Load an image
 		%>
 		% ===================================================================
-		function update(me)
-			if me.multipleImages > 0
-				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-					try Screen('Close',me.texture); end %#ok<*TRYNC>
-				end
-				me.loadImage(me.fileNames{randi(me.multipleImages)});
-			end
-			if me.sizeOut > 0
-				%me.scale = me.sizeOut / (me.width / me.ppd);
-			end
-			resetTicks(me);
-			computePosition(me);
-			setRect(me);
-		end
-		
-		% ===================================================================
-		%> @brief Draw this stimulus object
-		%>
-		% ===================================================================
-		function draw(me)
-			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				if me.mask
-					Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode);
-					Screen('DrawTexture',me.sM.win,me.texture,[],me.mvRect,me.angleOut);
-					Screen('DrawTexture', me.sM.win, me.maskTexture, [], me.maskRect,...
-							[], [], 1, me.maskColour);
-					Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
-				else
-					Screen('DrawTexture',me.sM.win,me.texture,[],me.mvRect,me.angleOut);
-				end
-			end
-			me.tick = me.tick + 1;
-		end
-		
-		% ===================================================================
-		%> @brief Animate an structure for screenManager
-		%>
-		% ===================================================================
-		function animate(me)
-			if me.isVisible && me.tick >= me.delayTicks
-				if me.mouseOverride
-					getMousePosition(me);
-					if me.mouseValid
-						me.mvRect = CenterRectOnPointd(me.mvRect, me.mouseX, me.mouseY);
-					end
-				end
-				if me.doMotion == 1
-					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
-					me.maskRect=OffsetRect(me.maskRect,me.dX_,me.dY_);
-				end
-			end
-		end
-		
-		% ===================================================================
-		%> @brief Reset an structure for screenManager
-		%>
-		% ===================================================================
-		function reset(me)
-			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-				try Screen('Close',me.texture); end %#ok<*TRYNC>
-			end
-			if ~isempty(me.maskTexture) && me.maskTexture > 0 && Screen(me.maskTexture,'WindowKind') == -1
-				try Screen('Close',me.maskTexture); end %#ok<*TRYNC>
-			end
-			if me.wasMaskColourBlank;me.maskColour=[];end
-			resetTicks(me);
-			me.texture=[];
-			me.scale = 1;
-			me.mvRect = [];
-			me.dstRect = [];
-			me.removeTmpProperties;
-		end
-		
 		function out = scaleRange(me, in)
 			out = rescale(in, -1, 1);
 			out = out * me.contrast;
@@ -412,16 +402,11 @@ classdef logGaborStimulus < baseStimulus
 		% ===================================================================
 		function setRect(me)
 			if ~isempty(me.texture)
-				%setRect@baseStimulus(me) %call our superclass version first
 				me.dstRect=Screen('Rect',me.texture);
-				%me.dstRect = ScaleRect(me.dstRect, me.scale, me.scale);
 				if me.mouseOverride && me.mouseValid
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				else
 					me.dstRect=CenterRectOnPointd(me.dstRect, me.xOut, me.yOut);
-				end
-				if me.verbose
-					fprintf('---> stimulus TEXTURE dstRect = %5.5g %5.5g %5.5g %5.5g\n',me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4));
 				end
 				me.mvRect = me.dstRect;
 				if ~isempty(me.maskTexture)

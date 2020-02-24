@@ -6,11 +6,27 @@ classdef animationManager < optickaCore
 	
 	properties
 		%> type of animation path, linear | brownian | circular
-		type char = 'linear'
+		type char ...
+			{mustBeMember(type,{'linear','brownian','circular'})} = 'linear'
 		%> length of the animation in seconds
 		length double = 2
+		%> for random walks what is the variance in angle?
+		angleVariance double = 0
+		%> what happens at edge of screen [wrap | bounce | none]
+		boundsCheck char ...
+			{mustBeMember(boundsCheck,{'wrap','bounce','none'})} = 'wrap'
+		%> verbose?
+		verbose = true
+		%> seed for random walks
+		seed uint32
+	end
+	
+	properties (SetAccess = private, GetAccess = public)
 		%> speed in deg/s
 		speed double = 1
+		%> the direction of the whole grating object - i.e. the object can
+		%> move (speed property) as well as the grating texture rotate within the object.
+		direction = 0
 		%> angle in deg, if animation is circular, this is added 
 		angle double = 0
 		%> For moving stimuli do we start "before" our initial position? THis allows you to
@@ -18,17 +34,9 @@ classdef animationManager < optickaCore
 		%> if xyPosition is 0,0 and startPosition is -2 then the stimulus will start at -2 drifing
 		%> towards 0.
 		startPosition double = 0
-		%> for random walks what is the variance in angle?
-		angleVariance double = 0
-		%> wrap when leaving the screen?
-		wrap logical = false
-		%> bounce when hitting the edge?
-		bounce logical = false
-		%> verbose?
-		verbose = true
-	end
-	
-	properties (SetAccess = private, GetAccess = public)
+		%> do we lock the angle to the direction? If so what is the offset
+		%> (0 = parallel, 90 = orthogonal etc.)
+		lockAngle double = []
 		%> tick updates +1 on each draw, resets on each update
 		tick double = 0
 		%> computed X position 
@@ -43,7 +51,7 @@ classdef animationManager < optickaCore
 		dstRect double = []
 		%> current screen rectangle position [LEFT TOP RIGHT BOTTOM]
 		mvRect double = []
-		%> pixels per degree (normally inhereted from screenManager)
+		%> pixels per degree, inhereted from a screenManager
 		ppd double = 36
 		%> stimulus position defined as rect [true] or point [false]
 		isRect logical = true
@@ -87,8 +95,8 @@ classdef animationManager < optickaCore
 			me.mvRect = stimulus.mvRect;
 			me.tick = 0;
 			me.speed = stimulus.speed;
-			if ~isempty(me.findprop('motionAngle'))
-				me.angle = stimulus.motionAngle;
+			if ~isempty(me.findprop('direction'))
+				me.angle = stimulus.direction;
 			else
 				me.angle = stimulus.angle;
 			end
@@ -160,6 +168,17 @@ classdef animationManager < optickaCore
 		% updatePosition(delta, angle)
 			dX = delta .* cos(baseStimulus.d2r(angle));
 			dY = delta .* sin(baseStimulus.d2r(angle));
+		end
+		
+		% ===================================================================
+		%> @brief bezier function
+		%>
+		% ===================================================================
+		function bez = bezier(t,P)
+			bez = bsxfun(@times,(1-t).^3,P(1,:)) + ...
+			bsxfun(@times,3*(1-t).^2.*t,P(2,:)) + ...
+			bsxfun(@times,3*(1-t).^1.*t.^2,P(3,:)) + ...
+			bsxfun(@times,t.^3,P(4,:));
 		end
 		
 	end % END STATIC METHODS

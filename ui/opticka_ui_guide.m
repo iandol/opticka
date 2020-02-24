@@ -786,7 +786,7 @@ switch string
 		string = num2str(-90:45:90);
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);
-	case 'motionAngle'
+	case 'direction'
 		string = num2str(-90:45:90);
 		string = regexprep(string,'\s+',' '); %collapse spaces
 		set(handles.OKVariableValues,'String',string);

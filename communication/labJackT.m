@@ -65,6 +65,8 @@ classdef labJackT < handle
 		RAMAddress uint32 = 46000
 		%> minimal lua server to allow fast asynchronous strobing of EIO
 		miniServer char = 'LJ.setLuaThrottle(100)LJ.IntervalConfig(0,500)local a=LJ.CheckInterval;local b=MB.R;local c=MB.W;local d=-1;local e=-1;c(2601,0,255)c(2602,0,255)c(46000,3,0)c(2501,0,0)c(2502,0,0)while true do d=b(46000,3)if d~=e and(d>=1 and d<=255)then c(2501,0,d)c(61590,1,2000)c(2501,0,0)e=d elseif d~=e and(d>=256 and d<=271)then c(2502,0,d-256)c(61590,1,100000)c(61590,1,100000)c(61590,1,100000)c(2502,0,0)e=d elseif d~=e and d==0 then c(2501,0,0)e=d end;if a(0)then c(46000,3,0)end end'
+		%> test Lua server, just spits out time every second
+		testServer char = 'LJ.IntervalConfig(0,1000)while true do if LJ.CheckInterval(0)then print(LJ.Tick())end end'
 		%> constants
 		LJM_dtANY int32		= 0
 		LJM_dt4 int32		= 4
@@ -172,6 +174,8 @@ classdef labJackT < handle
 					'EIO_STATE','CIO_STATE'}, [255 255 0 0], 0);
 				me.checkError(err);
 				
+				me.isValid = me.isHandleValid;
+				
 				if ~me.silentMode;me.salutation('OPEN method','Loading the LabJackT is a success!');end
 			else 
 				ljmAsm = NET.addAssembly('LabJack.LJM');
@@ -227,41 +231,6 @@ classdef labJackT < handle
 		
 		
 		% ===================================================================
-		%> @brief 
-		%>	
-		% ===================================================================
-		function initialiseServer(me)
-			if me.silentMode || isempty(me.handle); return; end
-			
-			%prepare string
-			str = sprintf([me.miniServer '\0']); %0byte terminator
-			strN = length(str);
-			
-			%stop server
-			calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
-			WaitSecs(0.5);
-			calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
-			
-			%upload new script	
-			err = calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_SOURCE_SIZE', strN);
-			me.checkError(err,true);
-			err = calllib(me.libName, 'LJM_eWriteNameByteArray', me.handle, 'LUA_SOURCE_WRITE', strN, str, 0);
-			me.checkError(err,true);
-			%err = calllib(me.libName, 'LJM_eWriteNameArray', me.handle, 'LUA_SOURCE_WRITE', strN, str, 0);
-			[~, ~, len] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_SOURCE_SIZE', 0);
-			if len ~= strN; error('Problem with the upload...'); end
-			
-			%copy to flash
-			calllib(me.libName, 'LJM_eWriteNames', me.handle, 2, {'LUA_SAVE_TO_FLASH','LUA_RUN_DEFAULT'}, ...
-				[1 1], 0);
-			
-			%start the server
-			err = calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 1);
-			me.checkError(err,true);
-			
-		end
-		
-		% ===================================================================
 		%> @brief sends a value to RAMAddress, requires the Lua server to
 		%> be running, 0-255 control EIO, 256-271 controls CIO
 		%>	
@@ -277,7 +246,8 @@ classdef labJackT < handle
 		% ===================================================================
 		function result = isServerRunning(me)
 			if me.silentMode || isempty(me.handle); return; end
-			[~, value] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_RUN',0);
+			[err, ~, value] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_RUN',0);
+			me.checkError(err);
 			result = logical(value);
 		end
 
@@ -321,6 +291,44 @@ classdef labJackT < handle
 		function strobeWord(me)
 			if me.silentMode || isempty(me.handle) || isempty(me.command); return; end
 			me.writeCmd();
+		end
+		
+		% ===================================================================
+		%> @brief upload the Lua server to the LabJack and start it
+		%>	
+		% ===================================================================
+		function initialiseServer(me)
+			if me.silentMode || isempty(me.handle); return; end
+			%prepare string
+			str = sprintf([me.miniServer '\0']); %0byte terminator
+			strN = length(str);
+			
+			%stop server
+			calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
+			WaitSecs(0.75);
+			calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
+			
+			%upload new script	
+			err = calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_SOURCE_SIZE', strN);
+			me.checkError(err,true);
+			err = calllib(me.libName, 'LJM_eWriteNameByteArray', me.handle, 'LUA_SOURCE_WRITE', strN, str, 0);
+			me.checkError(err,true);
+			[~, ~, len] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_SOURCE_SIZE', 0);
+			if len < strN; error('Problem with the upload...'); end
+			
+			%copy to flash
+			calllib(me.libName, 'LJM_eWriteNames', me.handle, 2, {'LUA_SAVE_TO_FLASH','LUA_RUN_DEFAULT'}, ...
+				[1 1], 0);
+			
+			%start the server
+			err = calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 1);
+			me.checkError(err);
+			WaitSecs('YieldSecs',1);
+			
+			%check it is running
+			[err, ~, val] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_RUN', 0);
+			me.checkError(err,true);
+			if val ~= 1; warning('Could not start server again...'); end
 		end
 		
 		% ===================================================================
@@ -416,10 +424,10 @@ classdef labJackT < handle
 			else
 				me.lastError='';
 			end
-			if err > 0 && me.verbose
-				warning('labJackT error %i: %s',err,me.lastError); 
-			elseif err > 0 && halt 
+			if err > 0 && halt
 				error('labJackT error %i: %s',err,me.lastError); 
+			elseif err > 0 && me.verbose 
+				warning('labJackT error %i: %s',err,me.lastError); 
 			end	
 		end
 	

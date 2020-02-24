@@ -52,28 +52,37 @@ myStims = metaStimulus();
 % etc.), then update ensures all properties are properly updated.
 % [5] RESET() - returns the object back to its pre-setup state.
 %
-%The first five stimuli are gratings / gabors of varying kinds.
+%The first few stimuli are gratings / gabors of varying kinds.
 myStims{1}=gratingStimulus('sf', 1, 'tf', 0, 'phase', 90, 'contrast', 0.7, 'size', 2, 'angle', -45,...
-	'mask', false, 'name', 'Grating-1');
+	'mask', false,...
+	'name', 'Standard grating');
 
 myStims{2}=gaborStimulus('sf', 1, 'contrast', 0.75, 'tf', 3, 'size', 3, 'angle', -70,...
-	'aspectRatio', 0.5, 'xPosition', 5, 'yPosition', -5, 'name', 'Gabor');
+	'aspectRatio', 0.5, 'xPosition', 5, 'yPosition', -5,...
+	'name', 'Gabor');
 
-myStims{3}=gratingStimulus('sf', 1, 'tf', 4, 'contrast', 0.7, 'size', 3, 'angle', 45,...
-	'xPosition', 0, 'yPosition', -10, 'mask', true, 'sigma', 30, 'name', 'Smooth-edged grating');
+myStims{3}=gratingStimulus('sf', 2, 'tf', 4, 'contrast', 0.7, 'size', 3, 'angle', 45,...
+	'xPosition', 0, 'yPosition', -10, 'mask', true, 'sigma', 30,...
+	'name', 'Edge-smoothed grating');
 
-myStims{4}=gratingStimulus('sf', 3, 'contrast', 0.75, 'tf', 1, 'size', 3, 'xPosition', -3,...
-	'yPosition', -5, 'name', 'Grating sf=3');
+myStims{4}=gratingStimulus('type', 'square', 'sf', 1, 'contrast', 1, 'colour', [0.5 0.5 0.5], 'tf', 0,...
+	'size', 3, 'xPosition', 6, 'yPosition', 0, 'sigma',30, 'useAlpha', true,...
+	'name', 'Squarewave grating');
 
-myStims{5}=gratingStimulus('type', 'square', 'sf', 1, 'contrast', 1, 'colour', [0.5 0.5 0.5], 'tf', 0,...
-	'size', 3, 'xPosition', 3, 'yPosition', 0, 'sigma',30, 'useAlpha', true, 'name', 'Squarewave grating');
+%%
+% This is log gabor filtered noise, based on code shared by Steve Dakin
+% You can control the orientation / SF filtering, and pass an image
+% through it. 
+myStims{5}=logGaborStimulus('size', 3, 'xPosition', 0,'yPosition', -5,...
+	'freqPeak', 3, 'freqSigma', 0.05, 'thetaSigma', 20, 'seed', 5,...
+	'name', 'Log Gabor Filtered Noise');
 
 %%
 % This is a colour grating where two independant colours can be modulated
 % relative to a base colour, in this case this is a red/green grating
 % modulating from 0.5 background grey.
 myStims{6}=colourGratingStimulus('colour', [1 0 0 1], 'colour2', [0 1 0 1],...
-	'baseColour', [0.5 0.5 0.5], 'tf', 1, 'size', 3, 'xPosition', 0, 'yPosition', 6,...
+	'baseColour', [0.5 0.5 0.5], 'tf', 1, 'size', 3, 'xPosition', -6, 'yPosition', 0,...
 	'name', 'Red/green grating');
 
 %%
@@ -111,9 +120,9 @@ myStims{10}=imageStimulus('speed',2,'xPosition',-10,'yPosition',10,'size',4,...
 % a movie stimulus, by default this loads a movie from the opticka
 % stimulus directory; you can rotate it, scale it etc and drift it across screen as
 % in this case. Size is in degrees, scaling the whole movie
-myStims{11}=movieStimulus('speed',1,'xPosition',-5,'yPosition',-10,...
-	'mask',[0 0 0],'size',3,...
-	'name','mp4 movie');
+myStims{11}=movieStimulus('speed', 1, 'xPosition', -7, 'yPosition', -10,...
+	'size', 4, 'enforceBlending', true,...
+	'name', 'AVI transparency movie');
 
 %% Task Initialisation
 % The stimulusSequence class defines a stimulus sequence (task) which is composed
@@ -135,14 +144,14 @@ myTask.realTime = true; %we use real time for switching trials, false uses a tic
 % Our first variable is angle, applied to 4 stimuli, randomly
 % selected from values of 0 45 and 90 degrees
 myTask.nVar(1).name = 'angle';
-myTask.nVar(1).stimulus = [1 3 8 10];
+myTask.nVar(1).stimulus = [1 3 8 10 11];
 myTask.nVar(1).values = [0 45 90];
 % the next two parameters allow us to link a stimulus with
 % an offset; for example you could set stimulus 1 to values [1 2 3]
 % and if offsetvalue was 2 and offsetstimulus was 2 then the second
 % stimulus would change through [3 4 5]; 
-myTask.nVar(1).offsetstimulus = [6 11];
-myTask.nVar(1).offsetvalue = [90];
+myTask.nVar(1).offsetstimulus = [5 6];
+myTask.nVar(1).offsetvalue = 90;
 
 %% Variable 2
 % Our second variable is contrast, applied to stimuli 2 / 3 / 5, randomly
@@ -161,9 +170,9 @@ myTask.nVar(3).values = [-6 6];
 % an offset; for example you could set stimulus 1 to values [1 2 3]
 % and if offsetvalue was 2 and offsetstimulus was 2 then the second
 % stimulus would change through [3 4 5]; in this case we offset stimulus 10
-% to +1 the values above i.e. [-5 7]
-myTask.nVar(3).offsetstimulus = [10];
-myTask.nVar(3).offsetvalue = [2];
+% to +1 the values above i.e. [-4 8]
+myTask.nVar(3).offsetstimulus = 10;
+myTask.nVar(3).offsetvalue = 2;
 
 %% Randomisation
 % We call the method to randomise the trials in a block structure
@@ -202,7 +211,7 @@ rExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'verbose', false); %minimal verbosity
 
 %%
-% run our experiment, to exit early, press [q] during the interstimulus period.
+% run our experiment; to exit early, press [q] during the interstimulus period.
 run(rExp);
 
 %%
@@ -222,13 +231,23 @@ getRunLog(rExp);
 
 %%
 % You don't need to use opticka's stimuli via runExperiment(), you can
-% use them in your own simple experiments, lets have a quick look here.
+% use them in your own experiments, lets have a quick look here.
+% We'll use the movie stimulus, and run it on its own, using its methods
+% to draw() and animate() in a standard PTB loop
 WaitSecs('YieldSecs',2);
+reset(myStims); % reset them back to their defaults
 myMovie = myStims{11}; % the movie stimulus from above
+myMovie.xPosition = 0; myMovie.yPosition = 0;
+myMovie.speed = 5;
 myMovie.size = 0; %if size is zero, then native dimensions are used.
+myMovie.direction = 45; %you can specify the motion direction seperate from texture angle
+myMovie.enforceBlending = false; %not needed as screen will use correct blending mode
+myScreen.backgroundColour = [1 0 0];
+myScreen.srcMode = 'GL_SRC_ALPHA';
+myScreen.dstMode = 'GL_ONE_MINUS_SRC_ALPHA';
 open(myScreen); %open a screen
 setup(myMovie, myScreen); %setup the stimulus with the screen configuration
-for i = 1:myScreen.screenVals.fps
+for i = 1:myScreen.screenVals.fps*2
 	draw(myMovie);
 	finishDrawing(myScreen);
 	animate(myMovie);

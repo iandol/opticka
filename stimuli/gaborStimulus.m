@@ -16,8 +16,6 @@
 classdef gaborStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		%> family type
-		type = 'procedural'
 		%> spatial frequency
 		sf = 1
 		%> temporal frequency
@@ -31,7 +29,7 @@ classdef gaborStimulus < baseStimulus
 		%> reverse the drift direction?
 		driftDirection = false
 		%> the angle which the direction of the grating patch is moving
-		motionAngle = 0
+		direction = 0
 		%> Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure
 		contrastMult = 0.5
 		%> aspect ratio of the gabor
@@ -46,6 +44,8 @@ classdef gaborStimulus < baseStimulus
 		phaseReverseTime = 0
 		%> What phase to use for reverse?
 		phaseOfReverse = 180
+		%> type
+		type = 'procedural'
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -68,7 +68,7 @@ classdef gaborStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['sf|tf|method|angle|motionAngle|phase|rotationMethod|' ... 
+		allowedProperties = ['sf|tf|method|angle|direction|phase|rotationMethod|' ... 
 			'contrast|driftDirection|speed|startPosition|aspectRatio|' ... 
 			'disableNorm|contrastMult|spatialConstant|' ...
 			'correctPhase|phaseReverseTime|phaseOfReverse']
@@ -158,8 +158,6 @@ classdef gaborStimulus < baseStimulus
 			
 			doProperties(me);
 			
-			if me.tf > 0;me.doDrift = true;end
-			if me.speed > 0; me.doMotion = true;end
 			
 			if isempty(me.findprop('rotateMode'));p=me.addprop('rotateMode');p.Transient=true;end
 			if me.rotationMethod==1
@@ -323,10 +321,10 @@ classdef gaborStimulus < baseStimulus
 					me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 				end
 			else
-				if isempty(me.findprop('motionAngleOut'));
-					[sx sy]=pol2cart(me.d2r(me.motionAngle),me.startPosition);
+				if isempty(me.findprop('directionOut'));
+					[sx sy]=pol2cart(me.d2r(me.direction),me.startPosition);
 				else
-					[sx sy]=pol2cart(me.d2r(me.motionAngleOut),me.startPosition);
+					[sx sy]=pol2cart(me.d2r(me.directionOut),me.startPosition);
 				end
 				me.dstRect=CenterRectOnPointd(me.dstRect,me.sM.xCenter,me.sM.yCenter);
 				if isempty(me.findprop('xPositionOut'));

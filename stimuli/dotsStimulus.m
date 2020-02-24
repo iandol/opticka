@@ -155,10 +155,6 @@ classdef dotsStimulus < baseStimulus
 			
 			doProperties(me);
 			
-			if me.speed > 0
-				me.doMotion = true;
-			end
-			
 			%build the mask
 			if me.mask
 				makeMask(me);

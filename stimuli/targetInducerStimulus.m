@@ -30,7 +30,7 @@ classdef targetInducerStimulus < baseStimulus
 		%> reverse the drift direction?
 		driftDirection = false
 		%> the angle which the direction of the grating patch is moving
-		motionAngle = 0
+		direction = 0
 		%> Contrast Multiplier, 0.5 gives "standard" 0-1 contrast range
 		contrastMult = 0.5
 		%> do we need to correct the phase to be relative to center not edge?
@@ -69,7 +69,7 @@ classdef targetInducerStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['sf|tf|sfi|tfi|angle|motionAngle|phase|phasei|rotationMethod|' ...
+		allowedProperties = ['sf|tf|sfi|tfi|angle|direction|phase|phasei|rotationMethod|' ...
 			'inducerHeight|inducerPosition|inducerContrast|phaseOffset' ...
 			'contrast|mask|driftDirection|speed|startPosition|aspectRatio|' ... 
 			'contrastMult|sigma|useAlpha|smoothMethod|' ...
@@ -364,10 +364,10 @@ classdef targetInducerStimulus < baseStimulus
 		%> requirements.
 		% ===================================================================
 		function setRect(obj)
-			if isempty(obj.findprop('motionAngleOut'));
-				[sx sy]=pol2cart(obj.d2r(obj.motionAngle),obj.startPosition);
+			if isempty(obj.findprop('directionOut'));
+				[sx sy]=pol2cart(obj.d2r(obj.direction),obj.startPosition);
 			else
-				[sx sy]=pol2cart(obj.d2r(obj.motionAngleOut),obj.startPosition);
+				[sx sy]=pol2cart(obj.d2r(obj.directionOut),obj.startPosition);
 			end
 			obj.dstRect=Screen('Rect',obj.texture{1});
 			obj.dstRect=ScaleRect(obj.dstRect,obj.scale,obj.scale);

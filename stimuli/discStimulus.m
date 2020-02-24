@@ -89,9 +89,7 @@ classdef discStimulus < baseStimulus
 			
 			reset(me);
 			me.inSetup = true;
-			if isempty(me.isVisible)
-				me.show;
-			end
+			if isempty(me.isVisible); me.show; end
 			
 			me.sM = sM;
 			me.ppd=sM.ppd;
@@ -115,8 +113,6 @@ classdef discStimulus < baseStimulus
 			
 			doProperties(me); % create transient runtime action properties
 			
-			if me.speed > 0; me.doMotion = true; end
-			
 			if isempty(me.findprop('discSize'));p=me.addprop('discSize');p.Transient=true;end
 			me.discSize = me.ppd * me.size;
 			
@@ -132,8 +128,7 @@ classdef discStimulus < baseStimulus
 						me.res(2), [0 0 0 0], me.radius, me.sigmaOut, ...
 						me.useAlpha, me.smoothMethod);
 			
-			if strcmpi(me.type,'flash')
-				me.doFlash = true;
+			if me.doFlash
 				if ~isempty(me.flashOffColour)
 					me.flashBG = [me.flashOffColour(1:3) 0];
 				else
@@ -145,11 +140,7 @@ classdef discStimulus < baseStimulus
 			me.inSetup = false;
 			computePosition(me);
 			setRect(me);
-			
-			if ~isempty(me.animator) && isa(me.animator,'animationManager')
-				me.doAnimator = true;
-				setup(me.animator, me);
-			end
+			if me.doAnimator;setup(me.animator, me);end
 			
 		end
 		
@@ -208,12 +199,10 @@ classdef discStimulus < baseStimulus
 					end
 					return
 				end
-				if me.doMotion == true
-					if me.doAnimator
-						me.mvRect = update(me.animator);
-					else
-						me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
-					end
+				if me.doMotion && me.doAnimator
+					me.mvRect = update(me.animator);
+				elseif me.doMotion && ~me.doAnimator	
+					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 				end
 				if me.doFlash == true
 					if me.flashCounter <= me.flashSwitch
@@ -225,7 +214,6 @@ classdef discStimulus < baseStimulus
 							me.currentColour = me.flashFG;
 						else
 							me.currentColour = me.flashBG;
-							%fprintf('Current: %s | %s\n',num2str(me.colourOut), num2str(me.flashOnOut));
 						end
 					end
 				end

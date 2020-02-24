@@ -4,8 +4,8 @@ function VEPTest()
 	if ~exist('lM','var') || isempty(lM) || ~isa(lM,'labJackT')
 		 lM = labJackT;
 	end
-	if ~lM.isOpen; open(lM); end %open our strobe word manager
-    global rM
+	if ~lM.isOpen; open(lM); end %open our strobed word manager
+	global rM
 	if ~exist('rM','var') || isempty(rM) || ~isa(rM,'arduinoManager')
 		 rM = arduinoManager;
 	end
@@ -84,7 +84,6 @@ function VEPTest()
 		trackerMessage(t,sprintf('TRIALID %i',trialn))
 		drawPhotoDiodeSquare(ptb,[0 0 0 1]);
 		vbl = flip(ptb); tstart=vbl;
-		trackerMessage(t,'STARTVBL',tstart);
 		ptb.audio.play();
 		while vbl < tstart + trialLength
 			draw(b);
@@ -93,9 +92,8 @@ function VEPTest()
 			finishDrawing(ptb);
 			animate(b);
 			getSample(t);
-		
 			vbl = ptb.flip(vbl);
-			if trialtick == 1; lM.strobeServer(1); end
+			if trialtick == 1; lM.strobeServer(1); trackerMessage(t,'STARTVBL',tstart); end
 			trialtick = trialtick + 1;
 		end
 		if endExp == 0

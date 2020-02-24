@@ -6,18 +6,40 @@
 classdef movieStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		type = 'movie'
-		fileName = ''
+		%> the direction of the whole object - i.e. the motion direction 
+		%> object can move in (different to the angle).
+		direction double  = 0
+		%> do we lock the texture angle to the direction? If so what is the offset
+		%(0 = parallel, 90 = orthogonal etc.)
+		lockAngle double = []
+		%> the name and path of the movie file, if empty a default will be used
+		fileName char = ''
 		%> do we block when getting a frame? This is important, as if it is 1
 		%> then you will drop frames waiting for the the synced video frame.
 		%> Set to 0 this class uses double buffering to keep drawing the previous frame
 		%> unitl a new frame is ready, ensuring other stimuli animate
 		%> smoothly alongside the video. 
 		blocking double = 0
-		%> pixel format for opening movie? 6 is more efficient if H264 used
+		%> pixel format for opening movie? 6 is more efficient if H264
+		%> used. 1 = Luminance/Greyscale image, 2 = Luminance+Alpha, 
+		%> 3 = RGB 8 bit per channel, 4 = RGBA8, 5 = YUV 4:2:2 packed pixel format 
+		%> on some graphics hardware, 6 = YUV-I420 planar format, using GLSL shaders 
+		%> for color space conversion on suitable graphics cards. 
+		%> 7 or 8 = Y8-Y800 planar format, using GLSL shaders, 
+		%> 9 = 16 bit Luminance, 10 = 16 bpc RGBA image
 		pixelFormat double = []
 		%> how many seconds to preload, -1 tries all
 		preloadSecs double = -1
-		%> additional special flags
+		%> additional special flags, numbers can be added together
+		%> 1 = Use YUV video decoding instead of RGBA
+		%> 2 = linux with psychportaudio
+		%> 4 = draw motion vectors on top of decoded video frames
+		%> 8 = skip all B-Frames during decoding to reduce processor load on very slow machines
+		%> 16 = convert all video textures immediately into a format which makes them useable as offscreen windows
+		%> 32,64,128 = different loop strategies
+		%> 256 = revent automatic deinterlacing of video
+		%> 512 = marks the movie as encoded in Psychtoolbox's own proprietary 16 bpc high precision format
+		%> 1024 = video frames are encoded as raw Bayer sensor data
 		specialFlags1 double = []
 		%> how to handle looping (1=PTB default)
 		loopStrategy double = 1
@@ -25,6 +47,8 @@ classdef movieStimulus < baseStimulus
 		mask double = []
 		%> mask tolerance
 		maskTolerance double = [];
+		%> if movie has transparency, enforce opengl blending?
+		enforceBlending logical = false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -54,8 +78,10 @@ classdef movieStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+		msrcMode			= 'GL_SRC_ALPHA'
+		mdstMode			= 'GL_ONE_MINUS_SRC_ALPHA'
 		%> allowed properties passed to object upon construction
-		allowedProperties='fileName|blocking|pixelFormat|preloadSecs|specialFlags1|loopStrategy|mask|maskTolerance';
+		allowedProperties='fileName|blocking|pixelFormat|preloadSecs|specialFlags1|loopStrategy|mask|maskTolerance|enforceBlending|direction';
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = 'movie|duration|fps|width|height|count|scale|fileName|pixelFormat|preloadSecs|specialFlags1|loopStrategy'
 	end
@@ -129,20 +155,7 @@ classdef movieStimulus < baseStimulus
 				end
 			end
 			
-			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
-			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
-			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
-			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
-			me.doDots = false;
-			me.doMotion = false;
-			me.doDrift = false;
-			me.doFlash = false;
-			
-			if me.speed>0 %we need to say this needs animating
-				me.doMotion=true;
-			else
-				me.doMotion=false;
-			end
+			doProperties(me);
 			
 			tic;
 			[me.movie, me.duration, me.fps, me.width, me.height] = Screen('OpenMovie', ...
@@ -206,6 +219,8 @@ classdef movieStimulus < baseStimulus
 				if me.tick == 0 || (me.delayTicks > 0 && me.tick == me.delayTicks) 
 					Screen('PlayMovie', me.movie, 1, me.loopStrategy); 
 				end
+				if ~isempty(me.lockAngle); angle = me.directionOut+me.lockAngle; else; angle = me.angleOut; end
+				if me.enforceBlending; Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode); end
 				me.texture = Screen('GetMovieImage', me.sM.win, me.movie, me.blocking);
 				if me.texture > 0
 					if ~isempty(me.buffertex) && ...
@@ -214,11 +229,14 @@ classdef movieStimulus < baseStimulus
 						try Screen('Close', me.buffertex); end
 						me.buffertex=[]; 
 					end
-					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,[],[],[],[],me.shader);
+					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
+						angle,[],[],[],me.shader);
 					me.buffertex = me.texture; %copy new texture to buffer
 				elseif me.buffertex > 0
-					Screen('DrawTexture', me.sM.win, me.buffertex, [], me.mvRect,[],[],[],[],me.shader)
+					Screen('DrawTexture', me.sM.win, me.buffertex, [], me.mvRect,...
+						angle,[],[],[],me.shader)
 				end
+				if me.enforceBlending; Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode); end
 				me.tick = me.tick + 1;
 			end
 		end
@@ -315,7 +333,7 @@ classdef movieStimulus < baseStimulus
 			if isempty(me.fileName) || exist(me.fileName,'file') ~= 2
 				p = mfilename('fullpath');
 				p = fileparts(p);
-				me.fileName = [p filesep 'monkey-dance.mp4'];
+				me.fileName = [p filesep 'monkey-dance.avi'];
 			end
 		end
 		

@@ -33,9 +33,9 @@ classdef gratingStimulus < baseStimulus
 		%This switch can be accomplished simply setting angle, but this control enables
 		%simple reverse direction protocols.
 		reverseDirection logical = false
-		%> the angle whic'contrast',0.75,h the direction of the grating object is moving - the object can
-		%> move as well as the grating texture within the object.
-		motionAngle = 0
+		%> the direction of the whole grating object - i.e. the object can
+		%> move as well as the grating texture rotate within the object.
+		direction = 0
 		%> PTB Contrast Multiplier, 0.5 gives "standard" 0-1 contrast measure (see PTB docs)
 		contrastMult = 0.5
 		%> Do we need to correct the phase to be relative to center not edge? This enables
@@ -76,7 +76,7 @@ classdef gratingStimulus < baseStimulus
 		%>to stop a loop between set method and an event
 		sfRecurse = false
 		%> allowed properties passed to object upon construction
-		allowedProperties = ['type|sf|tf|angle|motionAngle|phase|rotateTexture|' ...
+		allowedProperties = ['type|sf|tf|angle|direction|phase|rotateTexture|' ...
 			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ...
 			'contrastMult|sigma|useAlpha|smoothMethod|' ...
 			'correctPhase|phaseReverseTime|phaseOfReverse']
@@ -169,9 +169,6 @@ classdef gratingStimulus < baseStimulus
 			end
 
 			doProperties(me);
-
-			if me.tf > 0;me.doDrift = true;end
-			if me.speed > 0; me.doMotion = true;end
 
 			if isempty(me.findprop('rotateMode'));p=me.addprop('rotateMode');p.Transient=true;p.Hidden=true;end
 			if me.rotateTexture
@@ -365,10 +362,10 @@ classdef gratingStimulus < baseStimulus
 			if me.mouseOverride && me.mouseValid
 				me.dstRect = CenterRectOnPointd(me.dstRect, me.mouseX, me.mouseY);
 			else
-				if isempty(me.findprop('motionAngleOut'))
-					[sx, sy]=pol2cart(me.d2r(me.motionAngle),me.startPosition);
+				if isempty(me.findprop('directionOut'))
+					[sx, sy]=pol2cart(me.d2r(me.direction),me.startPosition);
 				else
-					[sx, sy]=pol2cart(me.d2r(me.motionAngleOut),me.startPosition);
+					[sx, sy]=pol2cart(me.d2r(me.directionOut),me.startPosition);
 				end
 				me.dstRect=CenterRectOnPointd(me.dstRect,me.sM.xCenter,me.sM.yCenter);
 				if isempty(me.findprop('xPositionOut'))

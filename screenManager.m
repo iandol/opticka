@@ -128,7 +128,7 @@ classdef screenManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> we cache ppd as it is used frequently
-		ppd_
+		ppd_ double
 		%> properties allowed to be modified during construction
 		allowedProperties char = 'disableSyncTests|displayPPRefresh|screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
@@ -300,7 +300,7 @@ classdef screenManager < optickaCore
 					Screen('Preference','SyncTestSettings', 0.002); %up to 2ms variability
 					Screen('Preference', 'SkipSyncTests', 2);
 					Screen('Preference', 'VisualDebugLevel', 0);
-					Screen('Preference', 'Verbosity', 2);
+					Screen('Preference', 'Verbosity', me.verbosityLevel);
 					Screen('Preference', 'SuppressAllWarnings', 0);
 				else
 					if me.disableSyncTests

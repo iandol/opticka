@@ -10,6 +10,11 @@
 % ========================================================================
 classdef baseStimulus < optickaCore & dynamicprops
 	
+	properties (Abstract = true)
+		%> stimulus type
+		type char
+	end
+	
 	properties (Abstract = true, SetAccess = protected)
 		%> the stimulus family (grating, dots etc.)
 		family char
@@ -26,8 +31,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		colour double = [1 1 1]
 		%> Alpha as a 0-1 range, this gets added to the RGB colour
 		alpha double = 1
-		%> Do we print details to the commandline?
-		verbose = false
 		%> For moving stimuli do we start "before" our initial position? This allows you to
 		%> center a stimulus at a screen location, but then drift it across that location, so
 		%> if xyPosition is 0,0 and startPosition is -2 then the stimulus will start at -2 drifing
@@ -52,6 +55,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		isVisible logical = true
 		%> show the position on the Eyelink display?
 		showOnTracker logical = true
+		%> Do we print details to the commandline?
+		verbose = false
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -112,12 +117,16 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dY_
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
-		ignorePropertiesBase char = 'handles|ppd|sM|name|comment|fullName|family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|xOut|yOut|isVisible|dateStamp|paths|uuid|tick';
+		ignorePropertiesBase char = ['handles|ppd|sM|name|comment|fullName|'...
+			'family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|xOut|'...
+			'yOut|isVisible|dateStamp|paths|uuid|tick'];
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> properties allowed to be passed on construction
-		allowedProperties char = 'isRect|family|xPosition|yPosition|size|colour|verbose|alpha|startPosition|angle|speed|delayTime|mouseOverride|isVisible'
+		allowedProperties char = ['xPosition|yPosition|size|colour|verbose|'...
+			'alpha|startPosition|angle|speed|delayTime|mouseOverride|isVisible'...
+			'showOnTracker|animator'];
 	end
 	
 	events
@@ -209,18 +218,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> X position increment for a given delta and angle
 		% ===================================================================
 		function value = get.dX(me)
-			if ~isempty(me.findprop('motionAngle'))
-				if isempty(me.findprop('motionAngleOut'))
-					[value,~]=me.updatePosition(me.delta,me.motionAngle);
-				else
-					[value,~]=me.updatePosition(me.delta,me.motionAngleOut);
-				end
-			else
-				if isempty(me.findprop('angleOut'))
-					[value,~]=me.updatePosition(me.delta,me.angle);
-				else
-					[value,~]=me.updatePosition(me.delta,me.angleOut);
-				end
+			value = 0;
+			if ~isempty(me.findprop('directionOut'))
+				[value,~]=me.updatePosition(me.delta,me.directionOut);
+			elseif ~isempty(me.findprop('angleOut'))
+				[value,~]=me.updatePosition(me.delta,me.angleOut);
 			end
 		end
 		
@@ -229,18 +231,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> Y position increment for a given delta and angle
 		% ===================================================================
 		function value = get.dY(me)
-			if ~isempty(me.findprop('motionAngle'))
-				if isempty(me.findprop('motionAngleOut'))
-					[~,value]=me.updatePosition(me.delta,me.motionAngle);
-				else
-					[~,value]=me.updatePosition(me.delta,me.motionAngleOut);
-				end
-			else
-				if isempty(me.findprop('angleOut'))
-					[~,value]=me.updatePosition(me.delta,me.angle);
-				else
-					[~,value]=me.updatePosition(me.delta,me.angleOut);
-				end
+			value = 0;
+			if ~isempty(me.findprop('directionOut'))
+				[~,value]=me.updatePosition(me.delta,me.directionOut);
+			elseif ~isempty(me.findprop('angleOut'))
+				[~,value]=me.updatePosition(me.delta,me.angleOut);
 			end
 		end
 		
@@ -383,27 +378,25 @@ classdef baseStimulus < optickaCore & dynamicprops
 				nFrames = 0;
 				notFinished = true;
 				benchmarkFrames = sv.fps * runtime;
-				startT = GetSecs; vbl = startT;
+				startT = GetSecs+sv.ifi; vbl = startT;
 				
 				while notFinished
 					nFrames = nFrames + 1;
 					draw(me); %draw stimulus
-					if ~benchmark&&s.visualDebug;drawGrid(s);end
+					if s.visualDebug&&~benchmark; drawGrid(s); end
 					finishDrawing(s); %tell PTB/GPU to draw
  					animate(me); %animate stimulus, will be seen on next draw
 					if benchmark
 						Screen('Flip',s.win,0,2,2);
-					else
-						vbl(nFrames) = flip(s, vbl(end)); %flip the buffer
-					end
-					if benchmark
 						notFinished =  nFrames <= benchmarkFrames;
 					else
+						vbl(nFrames) = flip(s, vbl(end)); %flip the buffer
 						notFinished = vbl(end) <= startT + runtime;
-					end	
+					end
 				end
 				
-				endT = flip(s);
+				endT = GetSecs;
+				flip(s);
 				WaitSecs(0.5);
 				if showVBL
 					figure;
@@ -796,11 +789,20 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
 			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
 			if isempty(me.findprop('doAnimator'));p=me.addprop('doAnimator');p.Transient = true;end
+			
 			me.doDots		= false;
 			me.doMotion		= false;
 			me.doDrift		= false;
 			me.doFlash		= false;
 			me.doAnimator	= false;
+			
+			if ~isempty(me.findprop('tf')) && me.tf > 0; me.doDrift = true; end
+			if me.speed > 0; me.doMotion = true; end
+			if strcmpi(me.family,'dots'); me.doDots = true; end
+			if strcmpi(me.type,'flash'); me.doFlash = true; end
+			if ~isempty(me.animator) && isa(me.animator,'animationManager')
+				me.doAnimator = true; 
+			end
 		end
 			
 		% ===================================================================

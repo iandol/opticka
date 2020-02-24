@@ -113,19 +113,9 @@ classdef spotStimulus < baseStimulus
 				end
 			end
 			
-			if isempty(me.findprop('doFlash'));p=me.addprop('doFlash');p.Transient = true;end
-			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
-			if isempty(me.findprop('doMotion'));p=me.addprop('doMotion');p.Transient = true;end
-			if isempty(me.findprop('doDrift'));p=me.addprop('doDrift');p.Transient = true;end
-			me.doDots = false;
-			me.doMotion = false;
-			me.doDrift = false;
-			me.doFlash = false;
+			doProperties(me);
 			
-			if me.speedOut > 0; me.doMotion = true; end
-			
-			if strcmpi(me.type,'flash')
-				me.doFlash = true;
+			if me.doFlash
 				if ~isempty(me.flashOffColour)
 					me.flashBG = [me.flashOffColour(1:3) 0];
 				else
