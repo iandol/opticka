@@ -217,17 +217,17 @@ classdef dotsStimulus < baseStimulus
 						me.yOut = me.mouseY;
 					end
 				end
-				if me.doMotion == true
-					if me.doAnimator
-						out = update(me.animator);
-						me.xOut = out(1);
-						me.xOut = out(2);
-					else
-						me.xOut = me.xOut + me.dX_;
-						me.yOut = me.yOut + me.dY_;
-					end
-					me.maskRect=CenterRectOnPointd(me.maskRect,me.xOut,me.yOut);
-				end
+% 				if me.doMotion == true
+% 					if me.doAnimator
+% 						out = update(me.animator);
+% 						me.xOut = out(1);
+% 						me.xOut = out(2);
+% 					else
+% 						me.xOut = me.xOut + me.dX_;
+% 						me.yOut = me.yOut + me.dY_;
+% 					end
+% 					me.maskRect=CenterRectOnPointd(me.maskRect,me.xOut,me.yOut);
+% 				end
 				me.xy = me.xy + me.dxdy; %increment position
 				sz = me.sizeOut + me.maskSmoothing-(me.dotSizeOut*1.5);
 				fix = find(me.xy > sz/2); %cull positive

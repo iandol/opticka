@@ -22,7 +22,7 @@ classdef tobiiManager < optickaCore
 		smoothing struct = struct('nSamples',8,'method','median','window',3,...
 			'eyes','both')
 		%> type of calibration stimulus
-		calibrationStimulus char = 'animated'
+		calibrationStimulus char {mustBeMember(calibrationStimulus,{'animated','movie','normal'})} = 'animated'
 		%> main tobii (Titta) object
 		tobii Titta
 		%> the PTB screen to work on, passed in during initialise
@@ -33,6 +33,14 @@ classdef tobiiManager < optickaCore
 		saveFile char = 'tobiiData.mat'
 		%> start eyetracker in dummy mode?
 		isDummy logical = false
+		%> custom calibration positions, e.g. [ .1 .5; .5 .5; .8 .5]
+		calPositions = []
+		%> custom validation positions
+		valPositions = []
+		%> does calibration pace automatically?
+		autoPace logical = true
+		% which eye is the tracker using?
+		eyeUsed char {mustBeMember(eyeUsed,{'both','left','right'})}= 'both'
 	end
 	
 	properties (Hidden = true)
@@ -88,8 +96,6 @@ classdef tobiiManager < optickaCore
 		trackerTime = 0
 		%> tracker time stamp
 		systemTime = 0
-		% which eye is the tracker using?
-		eyeUsed char {mustBeMember(eyeUsed,{'both','left','right'})}= 'both'
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -107,7 +113,7 @@ classdef tobiiManager < optickaCore
 		%> previous message sent to tobii
 		previousMessage char = ''
 		%> allowed properties passed to object upon construction
-		allowedProperties char = 'model|IP|fixation|sampleRate|name|verbose|isDummy'
+		allowedProperties char = 'dualScreens|tobii|screen|isDummy|saveFile|settings|calPositions|valPositions|model|trackingMode|fixation|sampleRate|smoothing|calibrationStimulus|verbose|isDummy'
 	end
 	
 	methods
@@ -116,11 +122,10 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function me = tobiiManager(varargin)
-			if nargin == 0; varargin.name = ''; end
-			me=me@optickaCore(varargin); %superclass constructor
-			if nargin>0
-				me.parseArgs(varargin,me.allowedProperties);
-			end
+			args = optickaCore.addDefaults(varargin,struct('name','tobii manager'));
+			me=me@optickaCore(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
+			
 			try % is tobii working?
 				assert(exist('Titta','class')==8,'TOBIIMANAGER:NO-TITTA','Cannot find Titta toolbox, please install instead of Tobii SDK; exiting...');
 				initTracker(me);
@@ -166,6 +171,7 @@ classdef tobiiManager < optickaCore
 			
 			me.settings						= Titta.getDefaults(me.model);
 			me.settings.freq				= me.sampleRate;
+			me.settings.calibrateEye		= me.eyeUsed;
 			me.settings.trackingMode		= me.trackingMode;
 			me.settings.cal.bgColor			= floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor	= me.settings.cal.bgColor;
@@ -188,7 +194,7 @@ classdef tobiiManager < optickaCore
 				me.calStim.bgColor					= me.settings.cal.bgColor;
 				me.calStim.fixBackColor             = 0;
 				me.calStim.fixFrontColor			= 255;
-				me.settings.cal.drawFunction    = @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 			elseif strcmpi(me.calibrationStimulus,'movie')
 				me.calStim							= tittaCalMovieStimulus();
 				me.calStim.moveTime					= 0.75;
@@ -197,30 +203,36 @@ classdef tobiiManager < optickaCore
 				if isempty(me.screen.audio)
 					me.screen.audio = audioManager();
 				end
-				m								= movieStimulus;
-				m.mask							= [0 0 0];
-				m.size							= 4;
+				m									= movieStimulus;
 				m.setup(me.screen);
-				me.calStim.initialise(m); 
-				me.settings.cal.drawFunction    = @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				me.calStim.initialise(m);
+				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 			end
-			me.settings.cal.autoPace            = 1;
-			me.settings.cal.doRandomPointOrder  = true;
-			me.settings.val.pointPos			= [.15 .15; .15 .85; .5 .5; .85 .15; .85 .85];
-			%me.settings.val.pointPos			= [.1 .1;.1 .9;.5 .5;.9 .1;.9 .9];
-			me.settings.UI.setup.eyeClr         = 255;
-			me.settings.cal.pointNotifyFunction = @tittaCalCallback;
-			me.settings.val.pointNotifyFunction = @tittaCalCallback;
+			me.settings.cal.autoPace				= me.autoPace;
+			if me.autoPace
+				me.settings.cal.doRandomPointOrder  = true;
+			else
+				me.settings.cal.doRandomPointOrder  = false;
+			end
+			if ~isempty(me.calPositions)
+				me.settings.cal.pointPos			= me.calPositions;
+			 
+			end
+			if ~isempty(me.valPositions)
+				me.settings.val.pointPos			= me.valPositions;
+			end
+			me.settings.UI.setup.eyeClr				= 255;
+			me.settings.cal.pointNotifyFunction		= @tittaCalCallback;
+			me.settings.val.pointNotifyFunction		= @tittaCalCallback;
 			updateDefaults(me);
 			me.tobii.init();
-			me.isConnected						= true;
-			me.systemTime						= me.tobii.getTimeAsSystemTime;
-			me.ppd_								= me.screen.ppd;
+			me.isConnected							= true;
+			me.systemTime							= me.tobii.getTimeAsSystemTime;
+			me.ppd_									= me.screen.ppd;
 			if me.screen.isOpen == true
-				me.win							= me.screen.win;
+				me.win								= me.screen.win;
 			end
-			
-			
+
 			if ~me.isDummy
 				me.salutation('Initialise', ...
 				sprintf('Running on a %s (%s) @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
@@ -268,7 +280,7 @@ classdef tobiiManager < optickaCore
 			if isa(me.tobii,'Titta')
 				connected = true;
 			end
-		end
+		end  
 		
 		% ===================================================================
 		%> @brief sets up the calibration and validation
@@ -286,7 +298,15 @@ classdef tobiiManager < optickaCore
 					me.calibration = me.tobii.calibrate(me.screen.win); %start calibration
 				end
 				if strcmpi(me.calibrationStimulus,'movie');me.calStim.movie.reset();end
-				disp(me.calibration);
+				if ~isempty(me.calibration) && me.calibration.wasSkipped ~= 1
+					if isfield(me.calibration,'selectedCal') && ~isnan(me.calibration.selectedCal)
+						msg = me.tobii.getValidationQualityMessage(me.calibration);
+						disp(msg);
+					end
+				else
+					disp('---!!! The calibration was unsuccesful or skipped !!!---')
+				end
+				if me.screen2.isOpen; close(me.screen2); end
 				resetFixation(me);
 			end
 		end
@@ -773,7 +793,6 @@ classdef tobiiManager < optickaCore
 			end
 			me.isConnected = false;
 			resetFixation(me);
-			me.eyeUsed = 'both';
 		end
 		
 		% ===================================================================
@@ -898,8 +917,8 @@ classdef tobiiManager < optickaCore
 				if length(Screen('Screens'))>1
 					s2					= screenManager;
 					s2.screen			= s.screen - 1;
-					s2.backgroundColour	= bgColour;
-					s2.windowed			= [];
+					s2.backgroundColour	= s.backgroundColour;
+					s2.windowed			= [0 0 1400 1000];
 					s2.bitDepth			= '8bit';
 					s2.blend			= true;
 					s2.disableSyncTests	= true;
@@ -916,6 +935,7 @@ classdef tobiiManager < optickaCore
 					initialise(me, s); %initialise tobii with our screen
 				end
 				trackerSetup(me);
+				if exist('s2','var'); s2.close; end
 				ShowCursor; %titta fails to show cursor so we must do it
 				drawPhotoDiodeSquare(s,[0 0 0 1]); flip(s); %make sure our photodiode patch is black
 				
@@ -937,7 +957,6 @@ classdef tobiiManager < optickaCore
                 me.heuristicFilter(rand(10,1), 2);
                 startRecording(me);
                 WaitSecs('YieldSecs',1);
-                mc = true;
                 for i = 1 : s.screenVals.fps
                     draw(o);
                     drawBackground(s);
@@ -1016,6 +1035,7 @@ classdef tobiiManager < optickaCore
 				end
 				stopRecording(me);
 				close(s);
+				try; close(s2); end
 				saveData(me);
 				close(me);
 				ListenChar(0); Priority(0); ShowCursor;
