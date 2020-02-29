@@ -408,7 +408,6 @@ classdef arduinoManager < optickaCore
                 ad.setup();
                 
                 mv = movieStimulus();
-                mv.mask = [0 0 0];
                 mv.setup(sM);
                 
 				ListenChar(2);
