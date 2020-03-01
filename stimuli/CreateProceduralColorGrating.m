@@ -1,5 +1,5 @@
 function [id, rect, shader] = CreateProceduralColorGrating(windowPtr, width, height, ...
-	color1, color2, radius)
+	color1, color2, radius, normalise)
 % [id, rect, shader] = CreateProceduralColorGrating(windowPtr, width, height [, color1=[1 0 0]]  [, color2=[0 1 0]] [, radius=0])
 %
 % A procedural color grating shader that can generate either sinusoidal or square gratings varying between two colors. Initial parameters are color1, color2 and radius. When drawing the shader using Screen('DrawTexture|s'), you can pass additional values:
@@ -9,7 +9,8 @@ function [id, rect, shader] = CreateProceduralColorGrating(windowPtr, width, hei
 % ====INPUT VALUES
 % width, height = "virtual size" of the GLSL shader.
 % color1 & color2 = two colors for the grating peaks to vary between. When running (see ColorGratingDemo), you can pass baseColor parameter, from which color1 and color2 will be modulated via the contrast parameter. When contrast == 0, then Color1 and color2 are the same as baseColor. As contrast increases each color is mixed with baseColor until at contrast == 1 the grating peaks are color1 and color2 exactly.Color mixing uses OpenGL's mix command. 
-% radius is an optional hard-edged circular mask sized in pixels
+% radius = optional hard-edged circular mask sized in pixels
+% normalise = do we use pow() to correct for a 2.2 gamma?
 %
 % ====RETURN VALUES
 % id = texture pointer
@@ -26,12 +27,15 @@ AssertGLSL;
 if nargin < 1 || isempty(windowPtr) 
 	error('You must provide a PTB window pointer!');
 end
+
 if nargin < 2 || isempty(width) 
-	width = 500
+	width = 500;
 end
+
 if nargin < 3 || isempty(height) 
-	height = width
+	height = width;
 end
+
 if nargin < 4 || isempty(color1)
 	color1 = [1 0 0 1];
 elseif length(color1) == 3
@@ -42,6 +46,7 @@ else
 	warning('color1 must be a 4 component RGBA vector [red green blue alpha], resetting color1 to red!');
 	color1 = [1 0 0 1];
 end
+
 if nargin < 5 || isempty(color2)
 	color2 = [0 1 0 1];
 elseif length(color2) == 3
@@ -52,8 +57,13 @@ else
 	warning('color2 must be a 4 component RGBA vector [red green blue alpha], resetting color2 to green!');
 	color2 = [0 1 0 1];
 end
+
 if nargin < 6 || isempty(radius)
 	radius = 0;
+end
+
+if nargin < 7 || isempty(normalise)
+	normalise = 0;
 end
 
 % Switch to windowPtr OpenGL context:
@@ -72,6 +82,7 @@ glUniform4f(glGetUniformLocation(shader, 'color2'), color2(1),color2(2),color2(3
 if radius>0
 	glUniform1f(glGetUniformLocation(shader, 'radius'), radius); 
 end
+glUniform1f(glGetUniformLocation(shader, 'normalise'), normalise);
 glUseProgram(0);
 
 % Create a purely virtual procedural texture 'id' of size width x height virtual pixels.

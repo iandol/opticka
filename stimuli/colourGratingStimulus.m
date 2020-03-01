@@ -1,5 +1,5 @@
 % ========================================================================
-%> @brief coliur grating stimulus, inherits from baseStimulus
+%> @brief colour grating stimulus, inherits from baseStimulus
 %> COLOURGRATINGSTIMULUS colour grating stimulus, inherits from baseStimulus
 %>   The basic properties are:
 %>   type = 'sinusoid' or 'square', if square you should set sigma which
@@ -23,63 +23,65 @@ classdef colourGratingStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> family type, can be 'sinusoid' or 'square'
-		type char = 'sinusoid'
+		type char				= 'sinusoid'
 		%> spatial frequency of the grating
-		sf double = 1
+		sf double				= 1
 		%> temporal frequency of the grating
-		tf double= 1
+		tf double				= 1
 		%> second colour of a colour grating stimulus
-		colour2 double = [0 1 0 1]
+		colour2 double			= [0 1 0 1]
 		%> base colour from which colour and colour2 are blended via contrast value
 		%> if empty [default], uses the background colour from screenManager
-		baseColour double = []
-		%> rotate the grating patch (false) or the grating texture within the patch (true [default])?
-		rotateTexture logical = true
+		baseColour double		= []
+		%> rotate the grating patch (false) or the grating texture within the patch (default = true)?
+		rotateTexture logical	= true
 		%> phase of grating
-		phase double = 0
-		%> contrast of grating
-		contrast double = 0.5
+		phase double			= 0
+		%> contrast of grating (technically the contrast from the baseColour)
+		contrast double			= 0.5
 		%> use a circular mask for the grating (default = true).
-		mask logical = true
+		mask logical			= true
+		%> do we normalise to a 2.2 gamma if the screen is not linear (default = false)?
+		normalise logical		= false
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
 		%This switch can be accomplished simply setting angle, but this control enables
 		%simple reverse direction protocols.
 		reverseDirection logical = false
 		%> the direction of the grating object if moving.
-		direction double = 0
+		direction double		= 0
 		%> Do we need to correct the phase to be relative to center not edge? This enables
 		%> centre surround stimuli are phase matched, and if we enlarge a grating object its
 		%> phase stays identical at the centre of the object (where we would imagine our RF)
-		correctPhase logical = false
+		correctPhase logical	= false
 		%> Reverse phase of grating X times per second? Useful with a static grating for linearity testing
 		phaseReverseTime double = 0
 		%> What phase to use for reverse?
-		phaseOfReverse double = 180
+		phaseOfReverse double	= 180
 		%> sigma of square wave smoothing, use -1 for sinusoidal gratings
-		sigma double = -1
+		sigma double			= -1
 		%> aspect ratio of the grating
-		aspectRatio double = 1;
+		aspectRatio double		= 1;
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%stimulus family
-		family char = 'grating'
+		family char				= 'grating'
 		%> scale is used when changing size as an independent variable to keep sf accurate
-		scale double = 1
+		scale double			= 1
 		%> the phase amount we need to add for each frame of animation
-		phaseIncrement double = 0
+		phaseIncrement double	= 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
-		typeList cell = {'sinusoid';'square'}
+		typeList cell			= {'sinusoid';'square'}
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
 		%> as get methods are slow, we cache sf, then recalculate sf whenever
 		%> changeScale event is called
-		sfCache = []
+		sfCache					= []
 		%>to stop a loop between set method and an event
-		sfRecurse = false
+		sfRecurse				= false
 		%> allowed properties passed to object upon construction
 		allowedProperties = ['colour2|sf|tf|angle|direction|phase|rotateTexture|' ... 
 			'contrast|mask|reverseDirection|speed|startPosition|aspectRatio|' ... 
@@ -87,12 +89,8 @@ classdef colourGratingStimulus < baseStimulus
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = 'name|type|scale|phaseIncrement|correctPhase|contrastMult|mask'
 		%> how many frames between phase reverses
-		phaseCounter = 0
-		%> do we generate a square wave?
-		squareWave = false
-		%> do we generate a gabor?
-		gabor = false
-		%> mask value
+		phaseCounter			= 0
+		%> mask value (radius for the procedural shader)
 		maskValue
 		%> the raw shader, we can try to change colours.
 		shader
@@ -219,14 +217,13 @@ classdef colourGratingStimulus < baseStimulus
 				me.maskValue = [];
 			end
 			
-			if isempty(me.findprop('texture'));p=me.addprop('texture');p.Transient=true;end
-			
 			if me.phaseReverseTime > 0
 				me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
 			end
 			
 			if isempty(me.baseColour)
 				me.baseColourOut = me.sM.backgroundColour;
+				me.baseColourOut(4) = me.alpha;
 			end
 			
 			if strcmpi(me.type,'square')
@@ -237,7 +234,7 @@ classdef colourGratingStimulus < baseStimulus
 				
 			% this is a two color grating, passing in colorA and colorB.
 			[me.texture, ~, me.shader] = CreateProceduralColorGrating(me.sM.win, me.res(1),...
-				me.res(2), me.colour, me.colour2, me.maskValue);
+				me.res(2), me.colour, me.colour2, me.maskValue, me.normalise);
 			
 			me.inSetup = false;
 			computePosition(me);

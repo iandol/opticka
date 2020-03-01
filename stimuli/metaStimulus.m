@@ -90,9 +90,9 @@ classdef metaStimulus < optickaCore
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = metaStimulus(varargin)
+		function me = metaStimulus(varargin)
 			if nargin == 0; varargin.name = 'metaStimulus';end
-			if nargin>0; obj.parseArgs(varargin,obj.allowedProperties); end
+			if nargin>0; me.parseArgs(varargin,me.allowedProperties); end
 		end
 		
 		% ===================================================================
@@ -101,20 +101,20 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function setup(obj,s)
+		function setup(me,s)
 			if ~exist('s','var') || ~isa(s,'screenManager')
-				if isa(obj.screen,'screenManager')
-					s = obj.screen;
+				if isa(me.screen,'screenManager')
+					s = me.screen;
 				else
 					s = [];
 				end
 			end	
 			if isa(s,'screenManager')
-				for i = 1:obj.n
-					setup(obj.stimuli{i},s);
+				for i = 1:me.n
+					setup(me.stimuli{i},s);
 				end
-				for i = 1:obj.nMask
-					setup(obj.maskStimuli{i},s);
+				for i = 1:me.nMask
+					setup(me.maskStimuli{i},s);
 				end
 			else
 				error('metaStimulus setup: no screenManager has been provided!!!')
@@ -127,31 +127,31 @@ classdef metaStimulus < optickaCore
 		%> @param choice override a single choice
 		%> @return
 		% ===================================================================
-		function update(obj,choice,mask)
+		function update(me,choice,mask)
 			%tic
 			if ~exist('mask','var');mask=false;end
 			if exist('choice','var') %user forces a single stimulus
 				
-				update(obj.stimuli{choice});
+				update(me.stimuli{choice});
 				
-			elseif ~isempty(obj.choice) %object forces a single stimulus
+			elseif ~isempty(me.choice) %object forces a single stimulus
 				
-				update(obj.stimuli{obj.choice});
+				update(me.stimuli{me.choice});
 				
-			elseif mask && obj.showMask == true && obj.nMask_ > 0 %draw mask instead
+			elseif mask && me.showMask == true && me.nMask_ > 0 %draw mask instead
 				
-				for i = 1:obj.nMask
-					update(obj.maskStimuli{i});
+				for i = 1:me.nMask
+					update(me.maskStimuli{i});
 				end
 				
 			else
 		
-				for i = 1:obj.n_
-					update(obj.stimuli{i});
+				for i = 1:me.n_
+					update(me.stimuli{i});
 				end
 				
 			end
-			%obj.updateLog = [obj.updateLog toc*1000];
+			%me.updateLog = [me.updateLog toc*1000];
 		end
 		
 		% ===================================================================
@@ -160,25 +160,25 @@ classdef metaStimulus < optickaCore
 		%> @param choice override a single choice
 		%> @return
 		% ===================================================================
-		function draw(obj,choice)
+		function draw(me,choice)
 			if exist('choice','var') %user forces a single stimulus
 				
-				draw(obj.stimuli{choice});
+				draw(me.stimuli{choice});
 				
-			elseif ~isempty(obj.choice) %object forces a single stimulus
+			elseif ~isempty(me.choice) %object forces a single stimulus
 				
-				draw(obj.stimuli{obj.choice});
+				draw(me.stimuli{me.choice});
 				
-			elseif obj.showMask == true && obj.nMask_ > 0 %draw mask instead
+			elseif me.showMask == true && me.nMask_ > 0 %draw mask instead
 				
-				for i = 1:obj.nMask_
-					draw(obj.maskStimuli{i});
+				for i = 1:me.nMask_
+					draw(me.maskStimuli{i});
 				end
 				
 			else
 				
-				for i = 1:obj.n_
-					draw(obj.stimuli{i});
+				for i = 1:me.n_
+					draw(me.stimuli{i});
 				end
 				
 			end
@@ -190,25 +190,25 @@ classdef metaStimulus < optickaCore
 		%> @param choice allow a single selected stimulus
 		%> @return
 		% ===================================================================
-		function animate(obj,choice)
+		function animate(me,choice)
 			if exist('choice','var') %user forces a single stimulus
 				
-				animate(obj.stimuli{choice});
+				animate(me.stimuli{choice});
 				
-			elseif ~isempty(obj.choice) %object forces a single stimulus
+			elseif ~isempty(me.choice) %object forces a single stimulus
 				
-				animate(obj.stimuli{obj.choice});
+				animate(me.stimuli{me.choice});
 				
-			elseif obj.showMask == true && obj.nMask_ > 0 %draw mask instead
+			elseif me.showMask == true && me.nMask_ > 0 %draw mask instead
 				
-				for i = 1:obj.nMask_
-					animate(obj.maskStimuli{i});
+				for i = 1:me.nMask_
+					animate(me.maskStimuli{i});
 				end
 				
 			else
 	
-				for i = 1:obj.n_
-					animate(obj.stimuli{i});
+				for i = 1:me.n_
+					animate(me.stimuli{i});
 				end
 				
 			end
@@ -220,14 +220,14 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function reset(obj)
+		function reset(me)
 
-			for i = 1:obj.n
-				reset(obj.stimuli{i});
+			for i = 1:me.n
+				reset(me.stimuli{i});
 			end
 				
-			for i = 1:obj.nMask
-				reset(obj.maskStimuli{i});
+			for i = 1:me.nMask
+				reset(me.maskStimuli{i});
 			end
 			
 		end
@@ -238,38 +238,38 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function randomise(obj)
-			if ~isempty(obj.stimulusTable)
+		function randomise(me)
+			if ~isempty(me.stimulusTable)
 				logs = '--->>> RANDOMISE Stimulus: ';
-				for i = 1:length(obj.stimulusTable)
+				for i = 1:length(me.stimulusTable)
 					
-					stims = obj.stimulusTable(i).stimuli;
-					name = obj.stimulusTable(i).name;
-					offset = obj.stimulusTable(i).offset;
+					stims = me.stimulusTable(i).stimuli;
+					name = me.stimulusTable(i).name;
+					offset = me.stimulusTable(i).offset;
 					
 					if ~isempty(stims) && ~isempty(name)
 	
-						[r,c] = size(obj.stimulusTable(i).values);
+						[r,c] = size(me.stimulusTable(i).values);
 						if r > 1 && c > 1
-							values = obj.stimulusTable(i).values(randi(r),:);
+							values = me.stimulusTable(i).values(randi(r),:);
 						elseif r > 1
-							values = obj.stimulusTable(i).values(randi(r),1);
+							values = me.stimulusTable(i).values(randi(r),1);
 						else
-							values = obj.stimulusTable(i).values(1,randi(c));
+							values = me.stimulusTable(i).values(1,randi(c));
 						end
 
 						for j=1:length(stims)
 							if strcmpi(name,'xyPosition')
-								obj.stimuli{stims(j)}.xPositionOut = values(1);
-								obj.stimuli{stims(j)}.yPositionOut = values(2);
-								obj.lastXPosition = values(1);
-								obj.lastYPosition = values(2);
+								me.stimuli{stims(j)}.xPositionOut = values(1);
+								me.stimuli{stims(j)}.yPositionOut = values(2);
+								me.lastXPosition = values(1);
+								me.lastYPosition = values(2);
 								logs = [logs 'XY: ' num2str(stims(j)) ];
-							elseif isprop(obj.stimuli{stims(j)}, [name 'Out'])
-								obj.stimuli{stims(j)}.([name 'Out']) = values;
+							elseif isprop(me.stimuli{stims(j)}, [name 'Out'])
+								me.stimuli{stims(j)}.([name 'Out']) = values;
 								logs = [logs ' || ' name 'Out: ' num2str(values)];
 								if ~isempty(offset)
-									obj.stimuli{offset(1)}.([name 'Out']) = values + offset(2);
+									me.stimuli{offset(1)}.([name 'Out']) = values + offset(2);
 									logs = [logs ' || OFFSET' name 'Out: ' num2str(values + offset(2))];
 								end
 							end
@@ -277,7 +277,7 @@ classdef metaStimulus < optickaCore
 					
 					end
 				end
-				obj.salutation(logs);
+				me.salutation(logs);
 			end
 		end
 		
@@ -285,9 +285,9 @@ classdef metaStimulus < optickaCore
 		%> @brief Shorthand to set isVisible=true.
 		%>
 		% ===================================================================
-		function show(obj)
-			for i = 1:obj.n_
-				show(obj.stimuli{i});
+		function show(me)
+			for i = 1:me.n_
+				show(me.stimuli{i});
 			end
 		end
 				
@@ -295,9 +295,9 @@ classdef metaStimulus < optickaCore
 		%> @brief Shorthand to set isVisible=false.
 		%>
 		% ===================================================================
-		function hide(obj)
-			for i = 1:obj.n_
-				hide(obj.stimuli{i});
+		function hide(me)
+			for i = 1:me.n_
+				hide(me.stimuli{i});
 			end
 		end
 		
@@ -305,15 +305,15 @@ classdef metaStimulus < optickaCore
 		%> @brief Edit -- fast change a particular value.
 		%>
 		% ===================================================================
-		function edit(obj, stims, var, value, mask)
+		function edit(me, stims, var, value, mask)
 			if ~exist('mask','var'); mask = false; end
 			if mask == false
 				for i = 1:length(stims)
-					obj.stimuli{stims(i)}.(var) = value;
+					me.stimuli{stims(i)}.(var) = value;
 				end
 			else
 				for i = 1:length(stims)
-					obj.maskStimuli{stims(i)}.(var) = value;
+					me.maskStimuli{stims(i)}.(var) = value;
 				end
 			end
 		end
@@ -322,15 +322,15 @@ classdef metaStimulus < optickaCore
 		%> @brief Return the stimulus fixation position
 		%>s
 		% ===================================================================
-		function [x,y] = getFixationPositions(obj)
+		function [x,y] = getFixationPositions(me)
 			x = 0; y = 0;
-			if ~isempty(obj.fixationChoice)
-				x=zeros(length(obj.fixationChoice)); y = x;
-				for i=1:length(obj.fixationChoice)
-					x(i) = obj.stimuli{obj.fixationChoice(i)}.xPositionOut / obj.screen.ppd;
-					y(i) = obj.stimuli{obj.fixationChoice(i)}.yPositionOut / obj.screen.ppd;
-					obj.lastXPosition = x;
-					obj.lastYPosition = y;
+			if ~isempty(me.fixationChoice)
+				x=zeros(length(me.fixationChoice)); y = x;
+				for i=1:length(me.fixationChoice)
+					x(i) = me.stimuli{me.fixationChoice(i)}.xPositionOut / me.screen.ppd;
+					y(i) = me.stimuli{me.fixationChoice(i)}.yPositionOut / me.screen.ppd;
+					me.lastXPosition = x;
+					me.lastYPosition = y;
 				end
 			end
 		end
@@ -339,36 +339,36 @@ classdef metaStimulus < optickaCore
 		%> @brief Return the stimulus positions
 		%>
 		% ===================================================================
-		function out = getStimulusPositions(obj)
+		function out = getStimulusPositions(me)
 			a=1;
 			out = [];
-			obj.stimulusPositions = out;
-			for i = 1:obj.n_
-				if obj.stimuli{i}.isVisible == true && obj.stimuli{i}.showOnTracker == true
-					if isprop(obj.stimuli{i},'sizeOut')
-						if ~isempty(obj.stimuli{i}.xOut)
-							obj.stimulusPositions(a).x = obj.stimuli{i}.xOut;
-							obj.stimulusPositions(a).y = obj.stimuli{i}.yOut;
-						elseif ~isempty(obj.stimuli{i}.mvRect)
-							r = obj.stimuli{i}.mvRect;
-							obj.stimulusPositions(a).x = r(3)-r(1);
-							obj.stimulusPositions(a).y = r(4)-r(2);
+			me.stimulusPositions = out;
+			for i = 1:me.n_
+				if me.stimuli{i}.isVisible == true && me.stimuli{i}.showOnTracker == true
+					if isprop(me.stimuli{i},'sizeOut')
+						if ~isempty(me.stimuli{i}.xOut)
+							me.stimulusPositions(a).x = me.stimuli{i}.xOut;
+							me.stimulusPositions(a).y = me.stimuli{i}.yOut;
+						elseif ~isempty(me.stimuli{i}.mvRect)
+							r = me.stimuli{i}.mvRect;
+							me.stimulusPositions(a).x = r(3)-r(1);
+							me.stimulusPositions(a).y = r(4)-r(2);
 						else
-							obj.stimulusPositions(a).x = obj.stimuli{i}.xPositionOut;
-							obj.stimulusPositions(a).y = obj.stimuli{i}.yPositionOut;
+							me.stimulusPositions(a).x = me.stimuli{i}.xPositionOut;
+							me.stimulusPositions(a).y = me.stimuli{i}.yPositionOut;
 						end
-						obj.stimulusPositions(a).size = obj.stimuli{i}.sizeOut;
-						if any(obj.fixationChoice == i) 
-							obj.stimulusPositions(a).selected = true;
+						me.stimulusPositions(a).size = me.stimuli{i}.sizeOut;
+						if any(me.fixationChoice == i) 
+							me.stimulusPositions(a).selected = true;
 						else
-							obj.stimulusPositions(a).selected = false;
+							me.stimulusPositions(a).selected = false;
 						end
 						a = a + 1;
 					end
 				end
 			end
-			if ~isempty(obj.stimulusPositions)
-				out = obj.stimulusPositions;
+			if ~isempty(me.stimulusPositions)
+				out = me.stimulusPositions;
 			end
 		end
 		
@@ -376,13 +376,13 @@ classdef metaStimulus < optickaCore
 		%> @brief Toggle show/hide for particular sets of stimuli
 		%>
 		% ===================================================================
-		function showSet(obj)
-			if ~isempty(obj.stimulusSets) && obj.setChoice > 0
-				sets = obj.stimulusSets{obj.setChoice};
-				if max(sets) <= obj.n_
-					hide(obj)
+		function showSet(me)
+			if ~isempty(me.stimulusSets) && me.setChoice > 0
+				sets = me.stimulusSets{me.setChoice};
+				if max(sets) <= me.n_
+					hide(me)
 					for i = sets
-						show(obj.stimuli{i});
+						show(me.stimuli{i});
 					end
 				end
 			end
@@ -392,12 +392,12 @@ classdef metaStimulus < optickaCore
 		%> @brief Toggle show/hide for particular sets of stimuli
 		%>
 		% ===================================================================
-		function changeSet(obj,value)
+		function changeSet(me,value)
 			if ~exist('value','var'); value = 0; end
-			if ~isempty(obj.stimulusSets) && value > 0
-				if value <= length(obj.stimulusSets)
-					obj.setChoice = value;
-					showSet(obj);
+			if ~isempty(me.stimulusSets) && value > 0
+				if value <= length(me.stimulusSets)
+					me.setChoice = value;
+					showSet(me);
 				end
 			end
 		end
@@ -406,88 +406,102 @@ classdef metaStimulus < optickaCore
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
-		function run(obj, benchmark, runtime, s, forceScreen)
-		% RUN stimulus: run(benchmark, runtime, screenManager, forceFullscreen)
-			warning off
-			if ~exist('benchmark','var') || isempty(benchmark)
-				benchmark=false;
-			end
-			if ~exist('runtime','var') || isempty(runtime)
-				runtime = 2; %seconds to run
-			end
-			if ~exist('s','var') || ~isa(s,'screenManager')
-				s = screenManager('verbose',false,'blend',true,...
-					'bitDepth','FloatingPoint32BitIfPossible','debug',false,...
-					'srcMode','GL_SRC_ALPHA', 'dstMode', 'GL_ONE_MINUS_SRC_ALPHA',...
-					'backgroundColour',[0.5 0.5 0.5 0]); %use a temporary screenManager object
-				prepareScreen(s);
-			end
-			if ~exist('forceScreen','var'); forceScreen = -1; end
-			
-			oldscreen = s.screen;
-			oldbitdepth = s.bitDepth;
-			if forceScreen >= 0
-				s.screen = forceScreen;
-				if forceScreen == 0 % make sure screen 0 does not trigger bits++ etc.
+		function run(me, benchmark, runtime, s, forceScreen)
+		% run(benchmark, runtime, screenManager, forceFullscreen)
+			try
+				warning off
+				if ~exist('benchmark','var') || isempty(benchmark)
+					benchmark=false;
+				end
+				if ~exist('runtime','var') || isempty(runtime)
+					runtime = 2; %seconds to run
+				end
+				if ~exist('s','var') || ~isa(s,'screenManager')
+					if isempty(me.sM); me.sM=screenManager; end
+					s = me.sM;
+					s.blend = true; 
+					s.disableSyncTests = true;
+					s.visualDebug = true;
 					s.bitDepth = 'FloatingPoint32BitIfPossible';
 				end
-			end
-			prepareScreen(s);
+				if ~exist('forceScreen','var'); forceScreen = -1; end
 
-			oldwindowed = s.windowed;
-			if benchmark
-				s.windowed = false;
-			elseif forceScreen > -1
-				s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2]; %middle of screen
-			end
-			
-			if ~s.isOpen
-				open(s);
-			end
-			setup(obj,s); %setup our stimulus objects
-			
-			Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
-			
-			if s.visualDebug
-				drawGrid(s); %draw +-5 degree dot grid
-				drawScreenCenter(s); %centre spot
-			end
-			
-			if benchmark
-				Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS on command window at end.', 5,5,[0 0 0]);
-			else
-				Screen('DrawText', s.win, 'Stim will be static for 2 seconds, then animated...', 5,5,[0 0 0]);
-			end
-			
-			flip(s);
-			WaitSecs('YieldSecs',2);
-			nFrames = 0;
-			
-			vbl(1) = flip(s); startT = vbl(1);
-			for i = 1:(s.screenVals.fps*runtime) 
-				nFrames = nFrames + 1;
-				draw(obj); %draw stimuli
-				if ~benchmark&&s.visualDebug;drawGrid(s);end
-				finishDrawing(s); %tell PTB/GPU to draw
-				animate(obj); %animate stimuli, ready for next draw();
-				if benchmark
-					Screen('Flip',s.win,0,2,2);
-				else
-					Screen('Flip',s.win); %flip the buffer
+				oldscreen = s.screen;
+				oldbitdepth = s.bitDepth;
+				if forceScreen >= 0
+					s.screen = forceScreen;
+					if forceScreen == 0 % make sure screen 0 does not trigger bits++ etc.
+						s.bitDepth = 'FloatingPoint32BitIfPossible';
+					end
 				end
+				prepareScreen(s);
+
+				oldwindowed = s.windowed;
+				if benchmark
+					s.windowed = false;
+				elseif forceScreen > -1
+					s.windowed = [0 0 s.screenVals.width/2 s.screenVals.height/2]; %middle of screen
+				end
+			
+				if ~s.isOpen
+					sv=open(s);
+				end
+				setup(me,s); %setup our stimulus objects
+
+				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+
+				
+				if s.visualDebug
+					drawGrid(s); %draw +-5 degree dot grid
+					drawScreenCenter(s); %centre spot
+				end
+
+				if benchmark
+					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.', 5,5,[0 0 0]);
+				else
+					Screen('DrawText', s.win, 'Stim will be static for 1 seconds, then animate...', 5,5,[0 0 0]);
+				end
+
+				flip(s);
+				WaitSecs('YieldSecs',1);
+				nFrames = 0;
+			
+				vbl(1) = flip(s); startT = vbl(1)+sv.ifi;
+				for i = 1:(s.screenVals.fps*runtime) 
+					nFrames = nFrames + 1;
+					draw(me); %draw stimuli
+					if s.visualDebug&&~benchmark; drawGrid(s); end
+					finishDrawing(s); %tell PTB/GPU to draw
+					animate(me); %animate stimuli, ready for next draw();
+					if benchmark
+						Screen('Flip',s.win,0,2,2);
+					else
+						Screen('Flip',s.win); %flip the buffer
+					end
+				end
+				endT = flip(s)-sv.ifi;
+				WaitSecs(0.25);
+				Priority(0); ShowCursor; ListenChar(0);
+				reset(me); %reset our stimulus ready for use again
+				close(s); %close screen
+				s.screen = oldscreen;
+				s.windowed = oldwindowed;
+				s.bitDepth = oldbitdepth;
+				fps = nFrames / (endT-startT);
+				fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.2f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, endT-startT, fps);
+				clear s fps benchmark runtime b bb i; %clear up a bit
+				warning on
+			catch ME
+				warning on
+				getReport(ME)
+				Priority(0);
+				if exist('s','var') && isa(s,'screenManager')
+					close(s);
+				end
+				clear fps benchmark runtime b bb i; %clear up a bit
+				reset(me); %reset our stimulus ready for use again
+				rethrow(ME)				
 			end
-			endT = flip(s);
-			WaitSecs(0.5);
-			Priority(0); ShowCursor; ListenChar(0);
-			close(s); %close screen
-			s.screen = oldscreen;
-			s.windowed = oldwindowed;
-			s.bitDepth = oldbitdepth;
-			reset(obj); %reset our stimulus ready for use again
-			fps = nFrames / (endT-startT);
-			fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.2f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, endT-startT, fps);
-			clear s fps benchmark runtime b bb i; %clear up a bit
-			warning on
 		end
 		
 		
@@ -495,7 +509,7 @@ classdef metaStimulus < optickaCore
 		%> @brief Run Stimulus in a window to preview
 		%>
 		% ===================================================================
-		function runSingle(obj,s,eL,runtime)
+		function runSingle(me,s,eL,runtime)
 			if ~exist('eL','var') || ~isa(eL,'eyelinkManager')
 				eL = eyelinkManager();
 			end
@@ -511,7 +525,7 @@ classdef metaStimulus < optickaCore
 			try
 				lJ = labJack('name','runSingle','readResponse', false,'verbose',false);
 				open(s); %open PTB screen
-				setup(obj,s); %setup our stimulus object
+				setup(me,s); %setup our stimulus object
 
 				fixX = 0;
 				fixY = 0;
@@ -538,7 +552,7 @@ classdef metaStimulus < optickaCore
 				syncTime(eL);
 				Screen('Flip',s.win);
 				while breakloop == false
-					draw(obj); %draw stimulus
+					draw(me); %draw stimulus
 					Screen('DrawingFinished', s.win); %tell PTB/GPU to draw
 
 					getSample(eL);
@@ -555,7 +569,7 @@ classdef metaStimulus < optickaCore
 						break;
 					end
 
-					animate(obj); %animate stimulus, will be seen on next draw
+					animate(me); %animate stimulus, will be seen on next draw
 
 					Screen('Flip',s.win); %flip the buffer
 				end
@@ -565,14 +579,14 @@ classdef metaStimulus < optickaCore
 				close(s); %close screen
 				close(eL);
 				close(lJ)
-				reset(obj); %reset our stimulus ready for use again
+				reset(me); %reset our stimulus ready for use again
 			catch ME
 				ListenChar(0);
 				Eyelink('Shutdown');
 				close(s);
 				close(eL);
 				close(lJ);
-				reset(obj); %reset our stimulus ready for use again
+				reset(me); %reset our stimulus ready for use again
 				rethrow(ME);
 			end
 			
@@ -583,8 +597,8 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return
 		% ===================================================================
-		function printChoice(obj)
-			fprintf('%s current choice is: %g\n',obj.fullName,obj.choice)
+		function printChoice(me)
+			fprintf('%s current choice is: %g\n',me.fullName,me.choice)
 		end
 		
 		% ===================================================================
@@ -592,9 +606,9 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return n number of stimuli
 		% ===================================================================
-		function n = get.n(obj)
-			n = length(obj.stimuli);
-			obj.n_ = n;
+		function n = get.n(me)
+			n = length(me.stimuli);
+			me.n_ = n;
 		end
 		
 		% ===================================================================
@@ -602,9 +616,9 @@ classdef metaStimulus < optickaCore
 		%> @param
 		%> @return nMask number of mask stimuli
 		% ===================================================================
-		function nMask = get.nMask(obj)
-			nMask = length(obj.maskStimuli);
-			obj.nMask_ = nMask;
+		function nMask = get.nMask(me)
+			nMask = length(me.maskStimuli);
+			me.nMask_ = nMask;
 		end
 		
 		
@@ -613,16 +627,16 @@ classdef metaStimulus < optickaCore
 		%> @param in a stimuli group
 		%> @return 
 		% ===================================================================
-		function set.stimuli(obj,in)
+		function set.stimuli(me,in)
 			if iscell(in) % a cell array of stimuli
-				obj.stimuli = [];
-				obj.stimuli = in;
+				me.stimuli = [];
+				me.stimuli = in;
 			elseif isa(in,'baseStimulus') %we are a single opticka stimulus
-				obj.stimuli = {in};
+				me.stimuli = {in};
 			elseif isempty(in)
-				obj.stimuli = {};
+				me.stimuli = {};
 			else
-				error([obj.name ':set stimuli | not a cell array or baseStimulus child']);
+				error([me.name ':set stimuli | not a cell array or baseStimulus child']);
 			end
 		end
 		
@@ -632,16 +646,16 @@ classdef metaStimulus < optickaCore
 		%> @param  s is the subsref struct
 		%> @return varargout any output for the reference
 		% ===================================================================
-		function varargout = subsref(obj,s)
+		function varargout = subsref(me,s)
 			switch s(1).type
 				% Use the built-in subsref for dot notation
 				case '.'
-					[varargout{1:nargout}] = builtin('subsref',obj,s);
+					[varargout{1:nargout}] = builtin('subsref',me,s);
 				case '()'
-					%error([obj.name ':subsref'],'Not a supported subscripted reference')
-					[varargout{1:nargout}] = builtin('subsref',obj.stimuli,s);
+					%error([me.name ':subsref'],'Not a supported subscripted reference')
+					[varargout{1:nargout}] = builtin('subsref',me.stimuli,s);
 				case '{}'
-					[varargout{1:nargout}] = builtin('subsref',obj.stimuli,s);
+					[varargout{1:nargout}] = builtin('subsref',me.stimuli,s);
 			end
 		end
 		
@@ -650,30 +664,30 @@ classdef metaStimulus < optickaCore
 		%>
 		%> @param  s is the subsref struct
 		%> @param val is the value to assign
-		%> @return obj object
+		%> @return me object
 		% ===================================================================
-		function obj = subsasgn(obj,s,val)
+		function me = subsasgn(me,s,val)
 			switch s(1).type
 				% Use the built-in subsref for dot notation
 				case '.'
-					obj = builtin('subsasgn',obj,s,val);
+					me = builtin('subsasgn',me,s,val);
 				case '()'
-					%error([obj.name ':subsasgn'],'Not a supported subscripted reference')
-					sout = builtin('subsasgn',obj.stimuli,s,val);
+					%error([me.name ':subsasgn'],'Not a supported subscripted reference')
+					sout = builtin('subsasgn',me.stimuli,s,val);
 					if ~isempty(sout)
-						obj.stimuli = sout;
+						me.stimuli = sout;
 					else
-						obj.stimuli = {};
+						me.stimuli = {};
 					end
 				case '{}'
-					sout = builtin('subsasgn',obj.stimuli,s,val);
+					sout = builtin('subsasgn',me.stimuli,s,val);
 					if ~isempty(sout)
 						if max(size(sout)) == 1
 							sout = sout{1};
 						end
-						obj.stimuli = sout;
+						me.stimuli = sout;
 					else
-						obj.stimuli = {};
+						me.stimuli = {};
 					end
 			end
 		end

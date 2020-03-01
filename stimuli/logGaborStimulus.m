@@ -8,33 +8,33 @@
 classdef logGaborStimulus < baseStimulus	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> filename to load, if empty use random noise
-		fileName char = ''
-		%> peak frequency
-		freqPeak double = 1;
-		%> frequency SD 
-		freqSigma double= 0.01;
+		fileName char		= ''
+		%> peak spatial frequency
+		sfPeak double		= 1;
+		%> spatial frequency SD 
+		sfSigma double		= 0.01;
 		%> peak orientation
-		thetaPeak double = 0;
+		anglePeak double	= 0;
 		%> orientation SD
-		thetaSigma double = 10;
+		angleSigma double	= 10;
 		%> contrast multiplier
-		contrast double = 1
+		contrast double		= 1
 		%> the direction of the whole grating object - i.e. the object can
 		%> move (speed property) as well as the grating texture rotate within the object.
-		direction = 0
+		direction double	= 0
 		%> do we lock the angle to the direction? If so what is the offset
 		%> (0 = parallel, 90 = orthogonal etc.)
-		lockAngle double = []
+		lockAngle double	= []
 		%> seed for random textures
 		seed uint32
 		%> use mask?
-		mask logical = true
+		mask logical		= true
 		%> colour of the mask, empty sets mask colour to = screen manager background
-		maskColour		= []
+		maskColour			= []
 		%> smooth the alpha edge of the mask by this number of pixels
-		maskSmoothing	= 55
+		maskSmoothing		= 55
 		%> type
-		type = 'logGabor'
+		type char			= 'logGabor'
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -51,9 +51,6 @@ classdef logGaborStimulus < baseStimulus
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
 		typeList = {'image'}
 		fileNameList = 'filerequestor';
-		interpMethodList = {'nearest','linear','spline','cubic'}
-		%> list of imagenames if multipleImages > 0
-		fileNames = {};
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -73,7 +70,7 @@ classdef logGaborStimulus < baseStimulus
 		randomTexture = true;
 		%> allowed properties passed to object upon construction
 		allowedProperties=['type|direction|lockAngle|fileName|contrast|'...
-			'freqPeak|freqSigma|thetaPeak|thetaSigma|scale|seed|mask|maskColour|maskSmoothing'];
+			'sfPeak|sfSigma|anglePeak|angleSigma|scale|seed|mask|maskColour|maskSmoothing'];
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = 'scale|fileName|interpMethod|pixelScale|mask'
 	end
@@ -276,7 +273,7 @@ classdef logGaborStimulus < baseStimulus
 			
 			mul = me.width / me.ppd;
 			
-			out = me.doLogGabor(in,me.freqPeak*me.size,me.freqSigma*10,deg2rad(me.thetaPeak+90),deg2rad(me.thetaSigma));
+			out = me.doLogGabor(in,me.sfPeak*me.size,me.sfSigma*10,deg2rad(me.anglePeak+90),deg2rad(me.angleSigma));
 			out = real(out);
 			out = me.scaleRange(out); %handles contrast and scale to 0 - 1
 			me.matrix = out;

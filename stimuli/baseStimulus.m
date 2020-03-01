@@ -414,7 +414,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				s.bitDepth = oldbitdepth;
 				fps = nFrames / (endT-startT);
 				fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.2f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, endT-startT, fps);
-				clear fps benchmark runtime b bb i; %clear up a bit
+				clear s fps benchmark runtime b bb i; %clear up a bit
 				warning on
 			catch ME
 				warning on
@@ -423,7 +423,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if exist('s','var') && isa(s,'screenManager')
 					close(s);
 				end
-				warning on
 				clear fps benchmark runtime b bb i; %clear up a bit
 				reset(me); %reset our stimulus ready for use again
 				rethrow(ME)				

@@ -50,7 +50,7 @@ classdef screenManager < optickaCore
 		%> does provide extra work for the GPU
 		antiAlias double = 0
 		%> background RGBA of display during stimulus presentation
-		backgroundColour double = [0.5 0.5 0.5 0]
+		backgroundColour double = [0.5 0.5 0.5 1.0]
 		%> shunt center by X degrees (coordinates are in degrees from centre of monitor)
 		screenXOffset double = 0
 		%> shunt center by Y degrees (coordinates are in degrees from centre of monitor)

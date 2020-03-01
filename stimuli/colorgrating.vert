@@ -7,22 +7,22 @@
  */
 
 /* Constants that we need 2*pi: */
-const float twopi = 6.2831853072;
+const float     twopi = 6.2831853072;
 
 /* Conversion factor from degrees to radians: */
-const float deg2rad = 3.141592654 / 180.0;
+const float     deg2rad = 3.141592654 / 180.0;
 
 /* Attributes passed from Screen(): See the ProceduralShadingAPI.m file for infos: */
-attribute vec4 modulateColor;
-attribute vec4 auxParameters0;
+attribute vec4  modulateColor;
+attribute vec4  auxParameters0;
 
 /* Information passed to the fragment shader: Attributes and precalculated per patch constants: */
-varying vec3 baseColor;
-varying float alpha;
-varying float phase;
-varying float frequency;
-varying float contrast;
-varying float sigma;
+varying vec3    baseColor;
+varying float   alpha;
+varying float   phase;
+varying float   frequency;
+varying float   contrast;
+varying float   sigma;
 
 void main()
 {
@@ -30,12 +30,12 @@ void main()
     gl_Position = ftransform();
 
     /* Don't pass real texture coordinates, but ones corrected for hardware offsets (-0.5,0.5) */
-    gl_TexCoord[0] = (gl_TextureMatrix[0] * gl_MultiTexCoord0) + vec4(-0.5, 0.5, 0.0, 0.0);
+    gl_TexCoord[0] = ( gl_TextureMatrix[0] * gl_MultiTexCoord0 ) + vec4( -0.5, 0.5, 0.0, 0.0 );
 
     /* Convert Phase from degrees to radians: */
     phase = deg2rad * auxParameters0[0];
 
-    /* Precalc a couple of per-patch constant parameters: */
+    /* frequency is stored in auxParameters0[1] */
     frequency = auxParameters0[1] * twopi;
 
     /* Contrast value is stored in auxParameters0[2]: */
