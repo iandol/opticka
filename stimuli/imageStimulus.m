@@ -125,12 +125,7 @@ classdef imageStimulus < baseStimulus
 				end
 			end
 			
-			if me.multipleImages > 0 && ~isempty(me.fileName)
-				[p,f,e]=fileparts(me.fileName);
-				for i = 1:me.multipleImages
-					me.fileNames{i} = [p filesep f num2str(i) e];
-				end
-			end
+			
 			
 			loadImage(me, in);
 			
@@ -301,15 +296,20 @@ classdef imageStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function checkFileName(me)
-			if isempty(me.fileName) || exist(me.fileName,'file') ~= 2 %use our default
+			if isempty(me.fileName) || (me.multipleImages==0 &&	exist(me.fileName,'file') ~= 2 && exist(me.fileName,'file') ~= 7)%use our default
 				p = mfilename('fullpath');
 				p = fileparts(p);
 				me.fileName = [p filesep 'Bosch.jpeg'];
 				me.fileNames{1} = me.fileName;
+			elseif exist(me.fileName,'dir') == 7
+				findFiles(me);	
 			elseif exist(me.fileName,'file') == 2
 				me.fileNames{1} = me.fileName;
-			elseif exist(me.fileName,'dir') == 7
-				findFiles(me);
+			elseif exist(me.fileName,'file') ~= 2 && me.multipleImages>1
+				[p,f,e]=fileparts(me.fileName);
+				for i = 1:me.multipleImages
+					me.fileNames{i} = [p filesep f num2str(i) e];
+				end
 			end
 		end
 		
@@ -329,7 +329,9 @@ classdef imageStimulus < baseStimulus
 					if regexpi(e,'png|jpeg|jpg|bmp|tif')
 						n = n + 1;
 						me.fileNames{n} = [me.fileName filesep f e];
+						me.fileNames{n} = regexprep(me.fileNames{n},'\/\/','/');
 					end
+					me.multipleImages = length(me.fileNames);
 				end
 			end
 		end
