@@ -267,7 +267,7 @@ classdef calibrateLuminance < handle
 			
 			try
 				Screen('Flip',obj.win);
-				[obj.oldCLUT, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
+				[obj.oldCLUT, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.win);
 				obj.tableLength = obj.lutSize;
 				if ~IsWin; BackupCluts; end
 				obj.initialCLUT = repmat([0:1/(obj.tableLength-1):1]',1,3); %#ok<NBRAK>
@@ -353,6 +353,7 @@ classdef calibrateLuminance < handle
 				end
 				if ~IsWin; RestoreCluts; end
 				if obj.useSpectroCal2;obj.closeSpectroCAL();end
+				Screen('LoadNormalizedGammaTable', obj.win, obj.oldCLUT);
 				Screen('CloseAll');
 				obj.canAnalyze = true;
 			catch %#ok<CTCH>
@@ -389,7 +390,6 @@ classdef calibrateLuminance < handle
 				end
 				
 				openScreen(obj);
-				[obj.oldCLUT, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.screen);
 				
 				if obj.useSpectroCal2
 					obj.openSpectroCAL();
@@ -476,6 +476,7 @@ classdef calibrateLuminance < handle
 				end
 				if ~IsWin; RestoreCluts; end
 				if obj.useSpectroCal2;obj.closeSpectroCAL();end
+				Screen('LoadNormalizedGammaTable', obj.win, obj.oldCLUT);
 				Screen('CloseAll');
 				obj.isTested = true;
 				plot(obj);
@@ -592,6 +593,7 @@ classdef calibrateLuminance < handle
 				end
 				
 			end
+			obj.choice = 2;
 			obj.isAnalyzed = true;
 			makeFinalCLUT(obj);
 			plot(obj);
@@ -964,6 +966,7 @@ classdef calibrateLuminance < handle
 		
 		%===============init======================%
 		function openScreen(obj)
+			PsychDefaultSetup(2);
 			Screen('Preference', 'SkipSyncTests', 2);
 			Screen('Preference', 'VisualDebugLevel', 0);
 			PsychImaging('PrepareConfiguration');
@@ -991,6 +994,10 @@ classdef calibrateLuminance < handle
 			
 			obj.screenVals.ifi = Screen('GetFlipInterval', obj.win);
 			obj.screenVals.fps=Screen('NominalFramerate', obj.win);
+			
+			obj.screenVals.white = WhiteIndex(obj.screen);
+			obj.screenVals.black = BlackIndex(obj.screen);
+			obj.screenVals.gray = GrayIndex(obj.screen);
 			%find our fps if not defined above
 			if obj.screenVals.fps==0
 				obj.screenVals.fps=round(1/obj.screenVals.ifi);
@@ -1197,14 +1204,20 @@ classdef calibrateLuminance < handle
 		% ===================================================================
 		function makeFinalCLUT(obj)
 			if obj.isAnalyzed == true
-				if obj.correctColour
+				if obj.choice == 0 
+					obj.finalCLUT = repmat(linspace(0,1,obj.tableLength)',1,3);
+				elseif obj.correctColour
 					obj.finalCLUT = [obj.gammaTable{obj.choice,2:4}];
 				else
 					obj.finalCLUT = repmat(obj.gammaTable{obj.choice,1},1,3);
 				end
+				len = size(obj.finalCLUT,1);
 				obj.finalCLUT(1,1) = 0;
 				obj.finalCLUT(1,2) = 0;
 				obj.finalCLUT(1,3) = 0;
+				obj.finalCLUT(len,1) = 1;
+				obj.finalCLUT(len,2) = 1;
+				obj.finalCLUT(len,3) = 1;
 				disp('--->>> calibrateLumiance: finalCLUT generated...')
 			end
 		end

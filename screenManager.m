@@ -196,8 +196,9 @@ classdef screenManager < optickaCore
 			
 			%get the gammatable and dac information
 			try
-				[sv.gammaTable,sv.dacBits,sv.lutSize]=Screen('ReadNormalizedGammaTable', me.screen);
-				sv.originalGammaTable = sv.gammaTable;
+				[sv.originalGamma,sv.dacBits,sv.lutSize]=Screen('ReadNormalizedGammaTable', me.screen);
+				sv.linearGamma = repmat(linspace(0,1,sv.lutSize)',1,3);
+				sv.gammaTable = sv.linearGamma;
 			catch
 				sv.gammaTable = [];
 				sv.dacBits = [];
@@ -430,9 +431,9 @@ classdef screenManager < optickaCore
                 me.photoDiodeRect = [me.winRect(3)-45 0 me.winRect(3) 45];
 				
 				if me.hideFlash == true && isempty(me.gammaTable)
-					Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.gammaTable);
+					Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.linearGamma);
 					me.screenVals.resetGamma = false;
-				elseif ~isempty(me.gammaTable) && (me.gammaTable.choice > 0)
+				elseif ~isempty(me.gammaTable) && ~isempty(me.gammaTable.gammaTable) && (me.gammaTable.choice > 0)
 					choice = me.gammaTable.choice;
 					me.screenVals.resetGamma = true;
 					if size(me.gammaTable.gammaTable,2) > 1
@@ -447,10 +448,11 @@ classdef screenManager < optickaCore
 					Screen('LoadNormalizedGammaTable', me.screen, gTmp);
 					fprintf('\n---> screenManager: SET GAMMA CORRECTION using: %s\n', me.gammaTable.modelFit{choice}.method);
 					if isprop(me.gammaTable,'correctColour') && me.gammaTable.correctColour == true
-						fprintf('---> screenManager: GAMMA CORRECTION used independent RGB Correction \n');
+						fprintf('---> screenManager: GAMMA CORRECTION used independent R, G & B Correction \n');
 					end
 				else
-					%Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.gammaTable);
+					me.screenVals.linearGamma = repmat(linspace(0,1,me.screenVals.lutSize)',1,3);
+					Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.linearGamma);
 					%me.screenVals.oldCLUT = LoadIdentityClut(me.win);
 					me.screenVals.resetGamma = false;
 				end

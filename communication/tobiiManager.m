@@ -293,9 +293,11 @@ classdef tobiiManager < optickaCore
 					if ~me.screen2.isOpen
 						me.screen2.open();
 					end
-					me.calibration = me.tobii.calibrate([me.screen.win me.screen2.win]); %start calibration
+					      me.calibration = me.tobii.calibrate([me.screen.win me.screen2.win]); %start calibration
 				else
+					ListenChar(-1);
 					me.calibration = me.tobii.calibrate(me.screen.win); %start calibration
+					Listenchar(0);
 				end
 				if strcmpi(me.calibrationStimulus,'movie');me.calStim.movie.reset();end
 				if ~isempty(me.calibration) && me.calibration.wasSkipped ~= 1
