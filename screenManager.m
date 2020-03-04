@@ -40,9 +40,8 @@ classdef screenManager < optickaCore
 		bitDepth char = 'FloatingPoint32BitIfPossible'
 		%> The acceptable variance in flip timing tests performed when
 		%> screen opens, set with Screen('Preference', 'SyncTestSettings', syncVariance)
-		%> AMD cards under Ubuntu are very low variance, but even Linux+NVidia
-		%> can be ~0.9ms, let alone Windows, so default threshold is 1.1ms variance
-		syncVariance double = 1.5e-3
+		%> AMD cards under Ubuntu are very low variance, PTB default is 2e-04
+		syncVariance double = 2e-04
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
 		timestampingMode double = 1
 		%> multisampling sent to the graphics card, try values 0[disabled], 4, 8
@@ -64,7 +63,7 @@ classdef screenManager < optickaCore
 		%> show a white square in the top-right corner to trigger a
 		%> photodiode attached to screen. This is only displayed when the
 		%> stimulus is shown, not during the blank and can therefore be used
-		%> for timing validation. For statemachine tasks you also need to
+		%> for timing validation. For stateMachine tasks you need to
 		%> pass in the drawing command for this to take effect.
 		photoDiode logical = false
 		%> gamma correction info saved as a calibrateLuminance object
@@ -110,7 +109,7 @@ classdef screenManager < optickaCore
 	properties (SetAccess = private, GetAccess = public)
 		%> do we have a working PTB, if not go into a silent mode
 		isPTB logical = false
-		%> is a PTB currently open?
+		%> is a window currently open?
 		isOpen logical = false
 		%> did we ask for a bitsPlusPlus mode?
 		isPlusPlus logical = false
@@ -130,7 +129,7 @@ classdef screenManager < optickaCore
 		%> we cache ppd as it is used frequently
 		ppd_ double
 		%> properties allowed to be modified during construction
-		allowedProperties char = 'disableSyncTests|displayPPRefresh|screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
+		allowedProperties char = 'syncVariance|disableSyncTests|displayPPRefresh|screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect(1,4) double = [0, 0, 45, 45]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
@@ -170,7 +169,7 @@ classdef screenManager < optickaCore
 				me.salutation('PTB + OpenGL supported!')
 			catch %#ok<*CTCH>
 				me.isPTB = false;
-				me.salutation('CONSTRUCTOR','OpenGL support needed by PTB!!!',true)
+				me.salutation('CONSTRUCTOR','OpenGL support needed for PTB!!!',true)
 			end
 			prepareScreen(me);
 		end
@@ -195,6 +194,7 @@ classdef screenManager < optickaCore
 			checkWindowValid(me);
 			
 			%get the gammatable and dac information
+			sv.resetGamma = false;
 			try
 				[sv.originalGamma,sv.dacBits,sv.lutSize]=Screen('ReadNormalizedGammaTable', me.screen);
 				sv.linearGamma = repmat(linspace(0,1,sv.lutSize)',1,3);
@@ -207,8 +207,6 @@ classdef screenManager < optickaCore
 			
 			%get screen dimensions
 			sv = setScreenSize(me, sv);
-			
-			sv.resetGamma = false;
 			
 			%this is just a rough initial setting, it will be recalculated when we
 			%open the screen before showing stimuli.
@@ -255,12 +253,13 @@ classdef screenManager < optickaCore
 		%>
 		%> @param debug, whether we show debug status, called from runExperiment
 		%> @param tL timeLog object to add timing info on screen construction
-		%> @return screenVals structure of basic info from the opened screen
+		%> @param forceScreen force a particular screen number to open
+		%> @return sv structure of basic info from the opened screen
 		% ===================================================================
-		function screenVals = open(me,debug,tL,forceScreen)
+		function sv = open(me,debug,tL,forceScreen)
 			if me.isPTB == false
 				warning('No PTB found!')
-				screenVals = me.screenVals;
+				sv = me.screenVals;
 				return;
 			end
 			if ~exist('debug','var') || isempty(debug)
@@ -273,9 +272,11 @@ classdef screenManager < optickaCore
 				forceScreen = [];
 			end
 			
+			sv = me.screenVals;
+			
 			try
 				PsychDefaultSetup(2);
-				me.screenVals.resetGamma = false;
+				sv.resetGamma = false;
 				
 				me.hideScreenFlash();
 				
@@ -397,45 +398,45 @@ classdef screenManager < optickaCore
 				
 				if IsLinux
 					d=Screen('ConfigureDisplay','Scanout',me.screen,0);
-					me.screenVals.name = d.name;
-					me.screenVals.widthMM = d.displayWidthMM;
-					me.screenVals.heightMM = d.displayHeightMM;
-					me.screenVals.display = d;
+					sv.name = d.name;
+					sv.widthMM = d.displayWidthMM;
+					sv.heightMM = d.displayHeightMM;
+					sv.display = d;
 				end
 				
-				me.screenVals.win = me.win; %make a copy
-				me.screenVals.winRect = me.winRect; %make a copy
+				sv.win = me.win; %make a copy
+				sv.winRect = me.winRect; %make a copy
 				
-				me.screenVals.ifi = Screen('GetFlipInterval', me.win);
-				me.screenVals.fps=Screen('NominalFramerate', me.win);
+				sv.ifi = Screen('GetFlipInterval', me.win);
+				sv.fps=Screen('NominalFramerate', me.win);
 				%find our fps if not defined above
-				if me.screenVals.fps == 0
-					me.screenVals.fps=round(1/me.screenVals.ifi);
-					if me.screenVals.fps == 0 || (me.screenVals.fps == 59 && IsWin)
-						me.screenVals.fps = 60;
+				if sv.fps == 0
+					sv.fps=round(1/sv.ifi);
+					if sv.fps == 0 || (sv.fps == 59 && IsWin)
+						sv.fps = 60;
 					end
-				elseif me.screenVals.fps == 59 && IsWin
-					me.screenVals.fps = 60;
-					me.screenVals.ifi = 1 / 60;
+				elseif sv.fps == 59 && IsWin
+					sv.fps = 60;
+					sv.ifi = 1 / 60;
 				end
 				if me.windowed == false %fullscreen
-					me.screenVals.halfifi = me.screenVals.ifi/2;
-                    me.screenVals.halfisi = me.screenVals.halfifi;
+					sv.halfifi = sv.ifi/2;
+                    sv.halfisi = sv.halfifi;
 				else
 					% windowed presentation doesn't handle the preferred method
 					% of specifying lastvbl+halfifi properly so we set halfifi to 0 which
 					% effectively makes flip occur ASAP.
-					me.screenVals.halfifi = 0; me.screenVals.halfisi = 0;
+					sv.halfifi = 0; sv.halfisi = 0;
 				end
                 
                 me.photoDiodeRect = [me.winRect(3)-45 0 me.winRect(3) 45];
 				
 				if me.hideFlash == true && isempty(me.gammaTable)
-					Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.linearGamma);
-					me.screenVals.resetGamma = false;
+					Screen('LoadNormalizedGammaTable', me.screen, sv.linearGamma);
+					sv.resetGamma = false;
 				elseif ~isempty(me.gammaTable) && ~isempty(me.gammaTable.gammaTable) && (me.gammaTable.choice > 0)
 					choice = me.gammaTable.choice;
-					me.screenVals.resetGamma = true;
+					sv.resetGamma = true;
 					if size(me.gammaTable.gammaTable,2) > 1
 						if isprop(me.gammaTable,'finalCLUT') && ~isempty(me.gammaTable.finalCLUT)
 							gTmp = me.gammaTable.finalCLUT;
@@ -451,17 +452,17 @@ classdef screenManager < optickaCore
 						fprintf('---> screenManager: GAMMA CORRECTION used independent R, G & B Correction \n');
 					end
 				else
-					me.screenVals.linearGamma = repmat(linspace(0,1,me.screenVals.lutSize)',1,3);
-					Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.linearGamma);
-					%me.screenVals.oldCLUT = LoadIdentityClut(me.win);
-					me.screenVals.resetGamma = false;
+					sv.linearGamma = repmat(linspace(0,1,sv.lutSize)',1,3);
+					Screen('LoadNormalizedGammaTable', me.screen, sv.linearGamma);
+					%sv.oldCLUT = LoadIdentityClut(me.win);
+					sv.resetGamma = false;
 				end
 				
 				% Enable alpha blending.
 				if me.blend==1
-					[me.screenVals.oldSrc,me.screenVals.oldDst,me.screenVals.oldMask]...
+					[sv.oldSrc,sv.oldDst,sv.oldMask]...
 						= Screen('BlendFunction', me.win, me.srcMode, me.dstMode);
-					fprintf('\n---> screenManager: Previous OpenGL blending: %s | %s\n', me.screenVals.oldSrc, me.screenVals.oldDst);
+					fprintf('\n---> screenManager: Previous OpenGL blending: %s | %s\n', sv.oldSrc, sv.oldDst);
 					fprintf('---> screenManager: OpenGL blending now: %s | %s\n', me.srcMode, me.dstMode);
 				end
 				
@@ -469,13 +470,12 @@ classdef screenManager < optickaCore
 					Screen('Preference', 'DefaultFontName', 'Liberation Sans');
 				end
 				
-				me.screenVals.white = WhiteIndex(me.screen);
-				me.screenVals.black = BlackIndex(me.screen);
-				me.screenVals.gray = GrayIndex(me.screen);
+				sv.white = WhiteIndex(me.screen);
+				sv.black = BlackIndex(me.screen);
+				sv.gray = GrayIndex(me.screen);
 				
+				me.screenVals = sv;
 				me.isOpen = true;
-				screenVals = me.screenVals;
-				
 			catch ME
 				close(me);
 				Priority(0);
@@ -576,21 +576,19 @@ classdef screenManager < optickaCore
 		function close(me)
 			if ~me.isPTB; return; end
 			Priority(0); ListenChar(0); ShowCursor;
-			Screen('Preference','SyncTestSettings', 0.0008); %lets be a bit more generous
 			if ~isempty(me.audio) && isa(me.audio, 'audioManager')
 				me.audio.reset();
 			end
-			if isfield(me.screenVals,'originalGammaTable') && ~isempty(me.screenVals.originalGammaTable)
-				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.originalGammaTable);
-				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
+			if me.screenVals.resetGamma && isfield(me.screenVals,'originalGamma') && ~isempty(me.screenVals.originalGamma)
+				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.originalGamma);
+				fprintf('\n---> screenManager: REVERT GAMMA TABLES\n');
 			end
 			wk = Screen(me.win, 'WindowKind');
-			if me.blend & wk ~= 0
-				%this needs to be done to not trigger a Linux+Polaris bug
-				%matlab bug
-				Screen('BlendFunction', me.win, 'GL_ONE','GL_ZERO');
-				fprintf('---> screenManager: RESET OPENGL BLEND MODE to GL_ONE & GL_ZERO\n');
-			end
+			%if me.blend && wk ~= 0
+			%this needs to be done to not trigger a Linux+Polaris bug
+			%	Screen('BlendFunction', me.win, 'GL_ONE','GL_ZERO');
+			%	fprintf('---> screenManager: RESET OPENGL BLEND MODE to GL_ONE & GL_ZERO\n');
+			%end
 			if me.isPlusPlus
 				BitsPlusPlus('Close');
 			end
@@ -598,7 +596,9 @@ classdef screenManager < optickaCore
 			try
 				if wk ~= 0; Screen('Close',me.win); end
 			catch ME
-				if me.verbose; getReport(ME); end
+				if me.verbose 
+					getReport(ME) 
+				end
 			end
 			me.win=[]; 
 			if isfield(me.screenVals,'win');me.screenVals=rmfield(me.screenVals,'win');end

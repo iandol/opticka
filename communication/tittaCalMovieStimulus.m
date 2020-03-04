@@ -36,8 +36,9 @@ classdef tittaCalMovieStimulus < handle
 		fixBackSizeMaxOsc   = 35
 		fixBackSizeMin      = 15
 		fixFrontSize        = 5
-		movie
-		sM
+		movie				= []
+		sM					= [];
+		oldpos				= [];
 	end
 	
 	methods
@@ -46,19 +47,32 @@ classdef tittaCalMovieStimulus < handle
 		end
 		
 		function setCleanState(obj)
+			obj.oldpos = [];
 			obj.calState = obj.calStateEnum.undefined;
 			obj.currentPoint= nan(1,3);
 			obj.lastPoint= nan(1,3);
-			if isa(obj.movie,'movieStimulus')
+			if ~isempty(obj.movie) && isa(obj.movie,'movieStimulus')
 				obj.movie.reset();
+				if ~isempty(obj.sM)
+					obj.movie.setup(obj.sM);
+					fprintf('!!!>>>SET-CLEAN-STATE SETUP MOVIE\n')
+				end
 			end
+			fprintf('!!!>>>SET-CLEAN-STATE DONE\n');
 		end
 		
 		function initialise(obj,m)
+			obj.oldpos = [];
 			obj.movie = m;
 			obj.sM = m.sM;
-			obj.sM.audio.setup();
+			if ~isempty(obj.sM) && isa(obj.movie,'movieStimulus')
+				obj.movie.setup(obj.sM);
+			end
+			if ~isempty(obj.sM) && isa(obj.sM.audio,'audioManager')
+				obj.sM.audio.setup();
+			end
 			obj.scrSize = obj.sM.winRect(3:4);
+			fprintf('!!!>>>SET INITIAL STATE\n');
 		end
 		
 		function qAllowAcceptKey = doDraw(obj,wpnt,drawCmd,currentPoint,pos,~,~)
@@ -69,6 +83,7 @@ classdef tittaCalMovieStimulus < handle
 			% calibration/validation is done, and cleanup can occur if
 			% wanted
 			if strcmp(drawCmd,'cleanUp')
+				fprintf('!!!>>>RUN CLEAN STATE\n');
 				obj.setCleanState();
 				return;
 			end
@@ -97,7 +112,6 @@ classdef tittaCalMovieStimulus < handle
 					obj.calState = obj.calStateEnum.waiting;
 					obj.oscillStartT = curT;
 				end
-				
 				obj.lastPoint       = obj.currentPoint;
 				obj.currentPoint    = [currentPoint pos];
 			elseif strcmp(drawCmd,'redo')
@@ -157,7 +171,10 @@ classdef tittaCalMovieStimulus < handle
 	
 	methods (Access = private, Hidden)
 		function drawMovie(obj,pos)
-			obj.movie.updatePositions(pos(1),pos(2));
+			if isempty(obj.oldpos) || ~all(pos==obj.oldpos)
+				obj.oldpos = pos;
+				obj.movie.updatePositions(pos(1),pos(2));
+			end
 			obj.movie.draw();
 		end
 	end

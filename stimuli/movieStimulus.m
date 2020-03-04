@@ -130,6 +130,8 @@ classdef movieStimulus < baseStimulus
 		% ===================================================================
 		function setup(me, sM)
 			
+			if ~exist('sM','var') && ~isempty(me.sM); sM = me.sM; end
+			
 			reset(me);
 			me.inSetup = true;
 			
@@ -207,7 +209,11 @@ classdef movieStimulus < baseStimulus
 		function updatePositions(me,x,y)
 			me.xOut = x;
 			me.yOut = y;
-			me.mvRect=CenterRectOnPointd(me.mvRect, me.xOut, me.yOut);
+			if length(me.mvRect) == 4
+				me.mvRect=CenterRectOnPointd(me.mvRect, me.xOut, me.yOut);
+			else
+				fprintf('--->>> movieStimulus invalid mvRect\n');
+			end
 		end
 		
 		% ===================================================================

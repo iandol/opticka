@@ -203,7 +203,7 @@ classdef tobiiManager < optickaCore
 				if isempty(me.screen.audio)
 					me.screen.audio = audioManager();
 				end
-				m									= movieStimulus;
+				m									= movieStimulus('size',4);
 				m.setup(me.screen);
 				me.calStim.initialise(m);
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
@@ -293,13 +293,18 @@ classdef tobiiManager < optickaCore
 					if ~me.screen2.isOpen
 						me.screen2.open();
 					end
-					      me.calibration = me.tobii.calibrate([me.screen.win me.screen2.win]); %start calibration
+					ListenChar(-1);
+					me.calibration = me.tobii.calibrate([me.screen.win me.screen2.win]); %start calibration
+					ListenChar(0);
 				else
 					ListenChar(-1);
 					me.calibration = me.tobii.calibrate(me.screen.win); %start calibration
 					Listenchar(0);
 				end
-				if strcmpi(me.calibrationStimulus,'movie');me.calStim.movie.reset();end
+				if strcmpi(me.calibrationStimulus,'movie')
+					me.calStim.movie.reset();
+					me.calStim.movie.setup(me.screen);
+				end
 				if ~isempty(me.calibration) && me.calibration.wasSkipped ~= 1
 					if isfield(me.calibration,'selectedCal') && ~isnan(me.calibration.selectedCal)
 						msg = me.tobii.getValidationQualityMessage(me.calibration);
