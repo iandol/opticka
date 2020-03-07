@@ -614,9 +614,9 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function resetScreenGamma(me)
-			if me.hideFlash == true || me.windowed(1) ~= 1 || (~isempty(me.screenVals) && me.screenVals.resetGamma == true && ~isempty(me.screenVals.originalGammaTable))
+			if me.hideFlash == true || me.windowed(1) ~= 1 || (~isempty(me.screenVals) && me.screenVals.resetGamma == true && ~isempty(me.screenVals.linearGamma))
 				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
-				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.originalGammaTable);
+				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.linearGamma);
 			end
 		end
 		

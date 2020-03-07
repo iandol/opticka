@@ -37,8 +37,9 @@ classdef tittaCalMovieStimulus < handle
 		fixBackSizeMin      = 15
 		fixFrontSize        = 5
 		movie				= []
-		sM					= [];
-		oldpos				= [];
+		sM					= []
+		oldpos				= []
+		verbose				= true
 	end
 	
 	methods
@@ -55,10 +56,10 @@ classdef tittaCalMovieStimulus < handle
 				obj.movie.reset();
 				if ~isempty(obj.sM)
 					obj.movie.setup(obj.sM);
-					fprintf('!!!>>>SET-CLEAN-STATE SETUP MOVIE\n')
+					if obj.verbose;fprintf('!!!>>>SET-CLEAN-STATE SETUP MOVIE\n');end
 				end
 			end
-			fprintf('!!!>>>SET-CLEAN-STATE DONE\n');
+			if obj.verbose;fprintf('!!!>>>SET-CLEAN-STATE DONE\n');end
 		end
 		
 		function initialise(obj,m)
@@ -72,7 +73,7 @@ classdef tittaCalMovieStimulus < handle
 				obj.sM.audio.setup();
 			end
 			obj.scrSize = obj.sM.winRect(3:4);
-			fprintf('!!!>>>SET INITIAL STATE\n');
+			if obj.verbose;fprintf('!!!>>>SET INITIAL STATE\n');end
 		end
 		
 		function qAllowAcceptKey = doDraw(obj,wpnt,drawCmd,currentPoint,pos,~,~)
@@ -83,7 +84,7 @@ classdef tittaCalMovieStimulus < handle
 			% calibration/validation is done, and cleanup can occur if
 			% wanted
 			if strcmp(drawCmd,'cleanUp')
-				fprintf('!!!>>>RUN CLEAN STATE\n');
+				if obj.verbose;fprintf('!!!>>>RUN CLEANUP\n');end
 				obj.setCleanState();
 				return;
 			end

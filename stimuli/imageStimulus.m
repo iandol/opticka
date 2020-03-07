@@ -124,9 +124,7 @@ classdef imageStimulus < baseStimulus
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 				end
 			end
-			
-			
-			
+
 			loadImage(me, in);
 			
 			if isempty(me.findprop('doDots'));p=me.addprop('doDots');p.Transient = true;end
@@ -285,7 +283,9 @@ classdef imageStimulus < baseStimulus
 					me.dstRect=CenterRectOnPointd(me.dstRect, me.xOut, me.yOut);
 				end
 				if me.verbose
-					fprintf('---> stimulus TEXTURE dstRect = %5.5g %5.5g %5.5g %5.5g\n',me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4));
+					fprintf('---> stimulus TEXTURE dstRect = %5.5g %5.5g %5.5g %5.5g width = %.2f height = %.2f\n',...
+						me.dstRect(1), me.dstRect(2),me.dstRect(3),me.dstRect(4),...
+						me.dstRect(3)-me.dstRect(1),me.dstRect(4)-me.dstRect(2));
 				end
 				me.mvRect = me.dstRect;
 			end

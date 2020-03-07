@@ -41,6 +41,8 @@ classdef tobiiManager < optickaCore
 		autoPace logical = true
 		% which eye is the tracker using?
 		eyeUsed char {mustBeMember(eyeUsed,{'both','left','right'})}= 'both'
+		%> which movie to use for calibration, empty uses default
+		calibrationMovie movieStimulus
 	end
 	
 	properties (Hidden = true)
@@ -203,9 +205,12 @@ classdef tobiiManager < optickaCore
 				if isempty(me.screen.audio)
 					me.screen.audio = audioManager();
 				end
-				m									= movieStimulus('size',4);
-				m.setup(me.screen);
-				me.calStim.initialise(m);
+				if isempty(me.calibrationMovie)
+					me.calibrationMovie				= movieStimulus('size',4);
+				end
+				reset(me.calibrationMovie);
+				setup(me.calibrationMovie, me.screen);
+				me.calStim.initialise(me.calibrationMovie);
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 			end
 			me.settings.cal.autoPace				= me.autoPace;
@@ -935,14 +940,12 @@ classdef tobiiManager < optickaCore
 				sv=open(s); %open our screen
 				setup(o,s); %setup our stimulus with open screen
 				
-				ListenChar(1);
 				if exist('s2','var')
 					initialise(me, s, s2); %initialise tobii with our screen
 				else
 					initialise(me, s); %initialise tobii with our screen
 				end
 				trackerSetup(me);
-				if exist('s2','var'); s2.close; end
 				ShowCursor; %titta fails to show cursor so we must do it
 				drawPhotoDiodeSquare(s,[0 0 0 1]); flip(s); %make sure our photodiode patch is black
 				
@@ -951,6 +954,7 @@ classdef tobiiManager < optickaCore
 				o.xPositionOut = me.fixation.X;
 				o.yPositionOut = me.fixation.Y;
 				
+				fprintf('\n===>>> Warming up the GPU, Eyetracker etc... <<<===\n')
 				Priority(MaxPriority(s.win));
 				endExp = 0;
 				trialn = 1;
@@ -959,32 +963,31 @@ classdef tobiiManager < optickaCore
 				methods={'median','heuristic1','heuristic2','sg','simple'};
 				eyes={'both','left','right'};
 				if ispc; Screen('TextFont',s.win,'Consolas'); end
-				fprintf('\n===>>> Warming up the GPU, Eyetracker etc... <<<===\n')
-                sgolayfilt(rand(10,1),1,3); %warm it up
+				sgolayfilt(rand(10,1),1,3); %warm it up
                 me.heuristicFilter(rand(10,1), 2);
                 startRecording(me);
                 WaitSecs('YieldSecs',1);
                 for i = 1 : s.screenVals.fps
                     draw(o);
                     drawBackground(s);
-                    Screen('DrawText',s.win,['Warming up frame ' num2str(i)],65,10);
+                    Screen('DrawText',s.win,['Warm up frame: ' num2str(i)],65,10);
                     finishDrawing(s);
                     animate(o);
-                    getSample(me);
+                    getSample(me); isFixated(me); resetFixation(me);
                     flip(s);
                 end
                 s.drawPhotoDiodeSquare([0 0 0 1]);
 				flip(s);
 				update(o); %make sure stimuli are set back to their start state
 				WaitSecs('YieldSecs',0.5);
-				trackerMessage(me,'!!! Starting Demo...')
 				
+				
+				trackerMessage(me,'!!! Starting Demo...')
 				while trialn <= maxTrials && endExp == 0
 					trialtick = 1;
 					trackerMessage(me,sprintf('Settings for Trial %i, X=%.2f Y=%.2f, SZ=%.2f',trialn,me.fixation.X,me.fixation.Y,o.sizeOut))
-					getSample(me); isFixated(me); resetFixation(me);
 					drawPhotoDiodeSquare(s,[0 0 0 1]);
-					vbl = flip(s); tstart=vbl;
+					vbl = flip(s); tstart=vbl+sv.ifi;
 					trackerMessage(me,'STARTVBL',vbl);
 					while vbl < tstart + 6
 						draw(o);
@@ -1006,13 +1009,15 @@ classdef tobiiManager < optickaCore
 						[vbl, when] = Screen('Flip', s.win, vbl + s.screenVals.halfifi);
 						if trialtick==1; me.tobii.sendMessage('SYNC = 255', vbl);end
 						
-						[~, ~, keyCode] = KbCheck(-1);
-						if keyCode(stopkey); endExp = 1; break;
-						elseif keyCode(calibkey); me.doCalibration;
-						elseif keyCode(upKey); me.smoothing.nSamples = me.smoothing.nSamples + 1; if me.smoothing.nSamples > 400; me.smoothing.nSamples=400;end
-						elseif keyCode(downKey); me.smoothing.nSamples = me.smoothing.nSamples - 1; if me.smoothing.nSamples < 1; me.smoothing.nSamples=1;end
-						elseif keyCode(leftKey); m=m+1; if m>5;m=1;end; me.smoothing.method=methods{m};
-						elseif keyCode(rightKey); n=n+1; if n>3;n=1;end; me.smoothing.eyes=eyes{n};
+						[keyDown, ~, keyCode] = KbCheck(-1);
+						if keyDown
+							if keyCode(stopkey); endExp = 1; break;
+							elseif keyCode(calibkey); me.doCalibration;
+							elseif keyCode(upKey); me.smoothing.nSamples = me.smoothing.nSamples + 1; if me.smoothing.nSamples > 400; me.smoothing.nSamples=400;end
+							elseif keyCode(downKey); me.smoothing.nSamples = me.smoothing.nSamples - 1; if me.smoothing.nSamples < 1; me.smoothing.nSamples=1;end
+							elseif keyCode(leftKey); m=m+1; if m>5;m=1;end; me.smoothing.method=methods{m};
+							elseif keyCode(rightKey); n=n+1; if n>3;n=1;end; me.smoothing.eyes=eyes{n};
+							end
 						end
 						trialtick=trialtick+1;
 					end
@@ -1042,7 +1047,6 @@ classdef tobiiManager < optickaCore
 				end
 				stopRecording(me);
 				close(s);
-				try; close(s2); end
 				saveData(me);
 				close(me);
 				ListenChar(0); Priority(0); ShowCursor;
@@ -1050,6 +1054,7 @@ classdef tobiiManager < optickaCore
 				me.saveFile = ofilename;
 				me.smoothing = osmoothing;
 				clear s o
+				sca
 			catch ME
 				me.fixation = ofixation;
 				me.saveFile = ofilename;
