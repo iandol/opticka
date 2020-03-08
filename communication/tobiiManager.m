@@ -23,13 +23,13 @@ classdef tobiiManager < optickaCore
 			'eyes','both')
 		%> type of calibration stimulus
 		calibrationStimulus char {mustBeMember(calibrationStimulus,{'animated','movie','normal'})} = 'animated'
-		%> main tobii (Titta) object
+		%> Titta class object
 		tobii Titta
-		%> the PTB screen to work on, passed in during initialise
+		%> the PTB screen to work with, passed in during initialise
 		screen screenManager
-		%> Titta settings
+		%> Titta settings structure
 		settings struct = []
-		%> name of eyetracker file
+		%> name of eyetracker data file
 		saveFile char = 'tobiiData.mat'
 		%> start eyetracker in dummy mode?
 		isDummy logical = false
@@ -53,7 +53,8 @@ classdef tobiiManager < optickaCore
 		%> exclusion zone no eye movement allowed inside
 		exclusionZone = []
 		sampletime = []
-		screen2 screenManager
+		%> operator screen used during calibration
+		operatorScreen screenManager
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -161,7 +162,7 @@ classdef tobiiManager < optickaCore
 			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
 				me.secondScreen		= false;
 			else
-				me.screen2			= sM2;
+				me.operatorScreen			= sM2;
 				me.secondScreen		= true;
 			end
 			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
@@ -184,7 +185,7 @@ classdef tobiiManager < optickaCore
 				me.settings.UI.cal.errMsg.font			= 'Liberation Sans';
 				me.settings.UI.val.waitMsg.font			= 'Liberation Sans';
 				me.settings.UI.val.menu.text.font		= 'Liberation Sans';
-				me.settings.UI.val.avg.text.font		= 'Liberation Mono';
+				me.settings.UI.val.avg.text.font			= 'Liberation Mono';
 				me.settings.UI.val.hover.text.font		= 'Liberation Mono';
 				me.settings.UI.val.avg.text.color		= 200;
 			end
@@ -295,12 +296,13 @@ classdef tobiiManager < optickaCore
 			if me.isConnected && me.screen.isOpen
 				updateDefaults(me); % make sure we send any other settings changes
 				if me.secondScreen
-					if ~me.screen2.isOpen
-						me.screen2.open();
+					if ~me.operatorScreen.isOpen
+						me.operatorScreen.open();
 					end
 					ListenChar(-1);
-					me.calibration = me.tobii.calibrate([me.screen.win me.screen2.win]); %start calibration
+					me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win]); %start calibration
 					ListenChar(0);
+					      
 				else
 					ListenChar(-1);
 					me.calibration = me.tobii.calibrate(me.screen.win); %start calibration
@@ -318,7 +320,7 @@ classdef tobiiManager < optickaCore
 				else
 					disp('---!!! The calibration was unsuccesful or skipped !!!---')
 				end
-				if me.screen2.isOpen; close(me.screen2); end
+				if me.operatorScreen.isOpen; close(me.operatorScreen); end
 				resetFixation(me);
 			end
 		end
