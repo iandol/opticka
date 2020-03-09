@@ -55,6 +55,11 @@ classdef audioManager < optickaCore
 			end
 			InitializePsychSound(me.lowLatency);
 			me.devices = PsychPortAudio('GetDevices');
+            if me.device > length(me.devices)
+               fprintf('You have specified a non-existant device, trying first available device!\n');
+               me.device = me.devices(1).DeviceIndex;
+               fprintf('Using device %i: %s\n',me.device,me.devices(1).DeviceName);
+            end
             if isempty(me.aHandle)
                 me.aHandle = PsychPortAudio('Open', me.device, 1, 1);
             end
