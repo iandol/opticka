@@ -7,14 +7,14 @@
 classdef tobiiManager < optickaCore
 	
 	properties
-		%> model of eyetracker, Spectrum Pro default
+		%> model of eyetracker, e.g. Tobii TX300; Spectrum Pro is default
 		model char = 'Tobii Pro Spectrum'
 		%> tracker update speed (Hz) 
 		%> Spectrum Pro: [60, 120, 150, 300, 600 or 1200]
 		%> 4C: 90
-		sampleRate double {mustBeMember(sampleRate,[60 90 120 150 300 600 1200])} = 600
+		sampleRate double {mustBeMember(sampleRate,[60 90 120 150 300 600 1200])} = 300
 		%> use human or macaque tracking mode
-		trackingMode char {mustBeMember(trackingMode,{'human','macaque'})} = 'human'
+		trackingMode char {mustBeMember(trackingMode,{'human','macaque','Default', 'Infant', 'Bright light'})} = 'human'
 		%> fixation window details
 		fixation struct = struct('X',0,'Y',0,'Radius',1,'InitTime',1,...
 			'Time',1,'strictFixation',true)
