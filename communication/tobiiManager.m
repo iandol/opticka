@@ -16,8 +16,8 @@ classdef tobiiManager < optickaCore
 		%> use human or macaque tracking mode
 		trackingMode char {mustBeMember(trackingMode,{'human','macaque','Default', 'Infant', 'Bright light'})} = 'human'
 		%> fixation window details
-		fixation struct = struct('X',0,'Y',0,'Radius',1,'InitTime',1,...
-			'Time',1,'strictFixation',true)
+		fixation struct = struct('X',0,'Y',0,'initTime',1,'fixTime',1,...
+			'radius',1,'strictFixation',true)
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
 		smoothing struct = struct('nSamples',8,'method','median','window',3,...
 			'eyes','both')
@@ -306,7 +306,7 @@ classdef tobiiManager < optickaCore
 				else
 					ListenChar(-1);
 					me.calibration = me.tobii.calibrate(me.screen.win); %start calibration
-					Listenchar(0);
+					ListenChar(0);
 				end
 				if strcmpi(me.calibrationStimulus,'movie')
 					me.calStim.movie.reset();
@@ -320,7 +320,7 @@ classdef tobiiManager < optickaCore
 				else
 					disp('---!!! The calibration was unsuccesful or skipped !!!---')
 				end
-				if me.operatorScreen.isOpen; close(me.operatorScreen); end
+				if me.secondScreen && me.operatorScreen.isOpen; close(me.operatorScreen); end
 				resetFixation(me);
 			end
 		end
@@ -498,29 +498,29 @@ classdef tobiiManager < optickaCore
 			end
 			if nargin > 3 && ~isempty(inittime)
 				if iscell(inittime) && length(inittime)==4
-					me.fixation.InitTime = inittime{1};
-					me.fixation.Time = inittime{2};
-					me.fixation.Radius = inittime{3};
+					me.fixation.initTime = inittime{1};
+					me.fixation.fixTime = inittime{2};
+					me.fixation.radius = inittime{3};
 					me.fixation.strictFixation = inittime{4};
 				elseif length(inittime) == 2
-					me.fixation.InitTime = randi(inittime.*1000)/1000;
+					me.fixation.initTime = randi(inittime.*1000)/1000;
 				elseif length(inittime)==1
-					me.fixation.InitTime = inittime;
+					me.fixation.initTime = inittime;
 				end
 			end
 			if nargin > 4 && ~isempty(fixtime)
 				if length(fixtime) == 2
-					me.fixation.Time = randi(fixtime.*1000)/1000;
+					me.fixation.fixTime = randi(fixtime.*1000)/1000;
 				elseif length(fixtime) == 1
-					me.fixation.Time = fixtime;
+					me.fixation.fixTime = fixtime;
 				end
 			end
-			if nargin > 5 && ~isempty(radius); me.fixation.Radius = radius; end
+			if nargin > 5 && ~isempty(radius); me.fixation.radius = radius; end
 			if nargin > 6 && ~isempty(strict); me.fixation.strictFixation = strict; end
 			if me.verbose
 				fprintf('-+-+-> eyelinkManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g\n', ...
-					me.fixation.X, me.fixation.Y, num2str(me.fixation.InitTime), num2str(me.fixation.Time), ...
-					me.fixation.Radius);
+					me.fixation.X, me.fixation.Y, num2str(me.fixation.initTime), num2str(me.fixation.fixTime), ...
+					me.fixation.radius);
 			end
 		end
 		
@@ -545,8 +545,8 @@ classdef tobiiManager < optickaCore
 						return
 					end
 				end
-				r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixation.Radius);
-				window = find(r < me.fixation.Radius);
+				r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixation.radius);
+				window = find(r < me.fixation.radius);
 				if any(window)
 					if me.fixN == 0
 						me.fixN = 1;
@@ -557,14 +557,14 @@ classdef tobiiManager < optickaCore
 							me.fixStartTime = me.currentSample.time;
 						end
 						me.fixLength = (me.currentSample.time - me.fixStartTime) / 1e6;
-						if me.fixLength > me.fixation.Time
+						if me.fixLength > me.fixation.fixTime
 							fixtime = true;
 						end
 						me.fixInitStartTime = 0;
 						searching = false;
 						fixated = true;
 						me.fixTotal = me.currentSample.time - me.fixInitTotal;
-						%if me.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, me.fixLength, me.fixation.Time, me.fixTotal, me.fixInitTotal);end
+						%if me.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, me.fixLength, me.fixation.fixTime, me.fixTotal, me.fixInitTotal);end
 						return
 					else
 						fixated = false;
@@ -579,7 +579,7 @@ classdef tobiiManager < optickaCore
 						me.fixInitStartTime = me.currentSample.time;
 					end
 					me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1e6;
-					if me.fixInitLength <= me.fixation.InitTime
+					if me.fixInitLength <= me.fixation.initTime
 						searching = true;
 					else
 						searching = false;
@@ -631,7 +631,7 @@ classdef tobiiManager < optickaCore
 		function out = testFixationTime(me, yesString, noString)
 			[fix,fixtime] = isFixated(me);
 			if fix && fixtime
-				out = yesString; %me.salutation(sprintf('Fixation Time: %g',me.fixLength),'TESTFIXTIME');
+				out = yesString; %me.salutation(sprintf('Fixation time: %g',me.fixLength),'TESTFIXTIME');
 			else
 				out = noString;
 			end
@@ -734,7 +734,7 @@ classdef tobiiManager < optickaCore
 				xy = [me.currentSample.gx me.currentSample.gy];
 				if me.isFixated
 					Screen('DrawDots', me.win, xy, me.pupil*5, [1 0.5 1 1], [], 3);
-					if me.fixLength > me.fixation.Time
+					if me.fixLength > me.fixation.fixTime
 						Screen('DrawText', me.win, 'FIX', xy(1),xy(2), [1 1 1]);
 					end
 				else
@@ -751,7 +751,7 @@ classdef tobiiManager < optickaCore
 			if (~me.isDummy || me.isConnected) && me.screen.isOpen
 				nDataPoint  = ceil(dataDur/1000*fs);
 				eyeData     = me.tobii.buffer.peekN('gaze',nDataPoint);
-				pointSz		= 4;
+				pointSz		= 3;
 				point       = pointSz.*[0 0 1 1];
 				if ~isempty(eyeData.systemTimeStamp)
 					age=double(abs(eyeData.systemTimeStamp-eyeData.systemTimeStamp(end)))/1000;
@@ -938,7 +938,7 @@ classdef tobiiManager < optickaCore
 					s2.disableSyncTests	= true;
 				end
 				
-				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',true,'density',50); %test stimulus
+				o = dotsStimulus('size',me.fixation.radius*2,'speed',2,'mask',true,'density',50); %test stimulus
 				sv=open(s); %open our screen
 				setup(o,s); %setup our stimulus with open screen
 				
@@ -952,7 +952,7 @@ classdef tobiiManager < optickaCore
 				drawPhotoDiodeSquare(s,[0 0 0 1]); flip(s); %make sure our photodiode patch is black
 				
 				% set up the size and position of the stimulus
-				o.sizeOut = me.fixation.Radius*2;
+				o.sizeOut = me.fixation.radius*2;
 				o.xPositionOut = me.fixation.X;
 				o.yPositionOut = me.fixation.Y;
 				
@@ -1001,7 +1001,7 @@ classdef tobiiManager < optickaCore
 						if ~isempty(me.currentSample)
 							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %i %s %s | RADIUS = %.1f | FIXATION = %i',...
 								me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.smoothing.nSamples,...
-								me.smoothing.method, me.smoothing.eyes, me.fixation.Radius, me.fixLength);
+								me.smoothing.method, me.smoothing.eyes, me.fixation.radius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
 						end
@@ -1032,8 +1032,8 @@ classdef tobiiManager < optickaCore
 						resetFixation(me);
 						me.fixation.X = randi([-7 7]);
 						me.fixation.Y = randi([-7 7]);
-						me.fixation.Radius = randi([1 3]);
-						o.sizeOut = me.fixation.Radius * 2;
+						me.fixation.radius = randi([1 3]);
+						o.sizeOut = me.fixation.radius * 2;
 						o.xPositionOut = me.fixation.X;
 						o.yPositionOut = me.fixation.Y;
 						update(o);
