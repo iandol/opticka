@@ -9,7 +9,7 @@ classdef tobiiManager < optickaCore
 	properties
 		%> model of eyetracker, e.g. Tobii TX300; Spectrum Pro is default
 		model char = 'Tobii Pro Spectrum'
-		%> tracker update speed (Hz) 
+		%> tracker update speed (Hz)
 		%> Spectrum Pro: [60, 120, 150, 300, 600 or 1200]
 		%> 4C: 90
 		sampleRate double {mustBeMember(sampleRate,[60 90 120 150 300 600 1200])} = 300
@@ -159,10 +159,10 @@ classdef tobiiManager < optickaCore
 			else
 				me.screen			= sM;
 			end
-			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
+			if ~exist('sM2','var') || ~isa(sM2,'screenManager') || me.isDummy
 				me.secondScreen		= false;
 			else
-				me.operatorScreen			= sM2;
+				me.operatorScreen	= sM2;
 				me.secondScreen		= true;
 			end
 			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
@@ -222,7 +222,7 @@ classdef tobiiManager < optickaCore
 			end
 			if ~isempty(me.calPositions)
 				me.settings.cal.pointPos			= me.calPositions;
-			 
+				
 			end
 			if ~isempty(me.valPositions)
 				me.settings.val.pointPos			= me.valPositions;
@@ -238,15 +238,15 @@ classdef tobiiManager < optickaCore
 			if me.screen.isOpen == true
 				me.win								= me.screen.win;
 			end
-
+			
 			if ~me.isDummy
 				me.salutation('Initialise', ...
-				sprintf('Running on a %s (%s) @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
-				me.tobii.systemInfo.model, me.tobii.systemInfo.deviceName,...
-				me.tobii.systemInfo.frequency,...
-				me.tobii.systemInfo.trackingMode,...
-				me.screen.screen,me.screen.winRect(3),me.screen.winRect(4),...
-				me.screen.screenVals.fps),true);
+					sprintf('Running on a %s (%s) @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
+					me.tobii.systemInfo.model, me.tobii.systemInfo.deviceName,...
+					me.tobii.systemInfo.frequency,...
+					me.tobii.systemInfo.trackingMode,...
+					me.screen.screen,me.screen.winRect(3),me.screen.winRect(4),...
+					me.screen.screenVals.fps),true);
 			else
 				me.salutation('Initialise', 'Running in Dummy Mode', true);
 			end
@@ -286,7 +286,7 @@ classdef tobiiManager < optickaCore
 			if isa(me.tobii,'Titta')
 				connected = true;
 			end
-		end  
+		end
 		
 		% ===================================================================
 		%> @brief sets up the calibration and validation
@@ -302,7 +302,6 @@ classdef tobiiManager < optickaCore
 					ListenChar(-1);
 					me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win]); %start calibration
 					ListenChar(0);
-					      
 				else
 					ListenChar(-1);
 					me.calibration = me.tobii.calibrate(me.screen.win); %start calibration
@@ -467,7 +466,7 @@ classdef tobiiManager < optickaCore
 				sample.gx		= mx;
 				sample.gy		= my;
 				sample.pa		= me.pupil;
-				sample.time		= GetSecs * 1000;
+				sample.time		= GetSecs * 1e6;
 				me.x			= me.toDegrees(sample.gx,'x');
 				me.y			= me.toDegrees(sample.gy,'y');
 				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
@@ -555,20 +554,22 @@ classdef tobiiManager < optickaCore
 					if me.fixSelection == window(1)
 						if me.fixStartTime == 0
 							me.fixStartTime = me.currentSample.time;
+							me.fixInitStartTime = 0;
+							fprintf('\n.STARTfix.');
 						end
+						fixated = true; searching = false;
 						me.fixLength = (me.currentSample.time - me.fixStartTime) / 1e6;
 						if me.fixLength > me.fixation.fixTime
+							fprintf('o');
 							fixtime = true;
+						else
+							fprintf('x');
+							fixtime = false;
 						end
-						me.fixInitStartTime = 0;
-						searching = false;
-						fixated = true;
 						me.fixTotal = me.currentSample.time - me.fixInitTotal;
 						%if me.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, me.fixLength, me.fixation.fixTime, me.fixTotal, me.fixInitTotal);end
 						return
 					else
-						fixated = false;
-						fixtime = false;
 						searching = false;
 					end
 				else
@@ -577,16 +578,19 @@ classdef tobiiManager < optickaCore
 					end
 					if me.fixInitStartTime == 0
 						me.fixInitStartTime = me.currentSample.time;
+						me.fixStartTime = 0;
+						me.fixLength = 0;
+						me.fixTotal = me.currentSample.time - me.fixInitTotal;
+						fprintf('\n.STARTsearch.');
 					end
 					me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1e6;
 					if me.fixInitLength <= me.fixation.initTime
 						searching = true;
+						fprintf('.');
 					else
 						searching = false;
+						fprintf('FAIL');
 					end
-					me.fixStartTime = 0;
-					me.fixLength = 0;
-					me.fixTotal = me.currentSample.time - me.fixInitTotal;
 					return
 				end
 			end
@@ -728,17 +732,22 @@ classdef tobiiManager < optickaCore
 		%> @brief draw the current eye position on the PTB display
 		%>
 		% ===================================================================
-		function drawEyePosition(me)
-			if (me.isDummy || me.isConnected) && me.screen.isOpen && ~isempty(me.x) && ~isnan(me.x) && ~isempty(me.y) && ~isnan(me.y)
-				%xy = toPixels(me,[me.x me.y]);
+		function drawEyePosition(me,details)
+			if ~exist('details','var'); details = false; end
+			if (me.isDummy || me.isConnected) && me.screen.isOpen ...
+					&& ~isempty(me.currentSample) && ~isnan(me.currentSample.gx) && ~isnan(me.currentSample.gy)
 				xy = [me.currentSample.gx me.currentSample.gy];
-				if me.isFixated
-					Screen('DrawDots', me.win, xy, me.pupil*5, [1 0.5 1 1], [], 3);
-					if me.fixLength > me.fixation.fixTime
-						Screen('DrawText', me.win, 'FIX', xy(1),xy(2), [1 1 1]);
+				if details
+					if me.isFixated
+						Screen('DrawDots', me.win, xy, me.pupil*3, [1 0.5 1 1], [], 3);
+						if me.fixLength > me.fixation.fixTime
+							Screen('DrawText', me.win, 'FIX', xy(1),xy(2), [1 1 1]);
+						end
+					else
+						Screen('DrawDots', me.win, xy, me.pupil*3, [1 0.5 0 1], [], 3);
 					end
 				else
-					Screen('DrawDots', me.win, xy, me.pupil*5, [1 0.5 0 1], [], 3);
+					Screen('DrawDots', me.win, xy, me.pupil*3, [1 0.5 0 1], [], 3)
 				end
 			end
 		end
@@ -842,8 +851,8 @@ classdef tobiiManager < optickaCore
 				trackerSetup(me);
 				ShowCursor; %titta fails to show cursor so we must do it
 				Priority(MaxPriority(s.win));
-                startRecording(me);
-                WaitSecs('YieldSecs',1);
+				startRecording(me);
+				WaitSecs('YieldSecs',1);
 				drawCross(s);
 				vbl = flip(s);
 				trackerMessage(me,'STARTVBL',vbl);
@@ -852,10 +861,10 @@ classdef tobiiManager < optickaCore
 				ti = zeros(nSamples,1) * NaN;
 				tx = zeros(nSamples,1) * NaN;
 				tj = zeros(nSamples,1);
-                for i = 1 : nSamples
+				for i = 1 : nSamples
 					td = me.tobii.buffer.peekN('gaze',1);
 					if ~isempty(td)
-						ti(i) = double(td.systemTimeStamp); 
+						ti(i) = double(td.systemTimeStamp);
 						tx(i) = td.left.gazePoint.onDisplayArea(1);
 					end
 					tj(i) = WaitSecs(sampleInterval);
@@ -871,7 +880,7 @@ classdef tobiiManager < optickaCore
 				assignin('base','tj',tj);
 				assignin('base','ti',ti);
 				assignin('base','tx',tx);
-				figure; 
+				figure;
 				subplot(2,1,1);
 				plot(diff(tj),'LineWidth',1.5);set(gca,'YScale','linear');ylabel('Time Delta (ms)');xlabel(['PTB Timestamp SD=' num2str(sdj) 'ms']);
 				ylim([0 max(diff(ti))]);line([0 nSamples],[sampleInterval*1e3 sampleInterval*1e3],'LineStyle','-.','LineWidth',1,'Color','red');
@@ -966,19 +975,19 @@ classdef tobiiManager < optickaCore
 				eyes={'both','left','right'};
 				if ispc; Screen('TextFont',s.win,'Consolas'); end
 				sgolayfilt(rand(10,1),1,3); %warm it up
-                me.heuristicFilter(rand(10,1), 2);
-                startRecording(me);
-                WaitSecs('YieldSecs',1);
-                for i = 1 : s.screenVals.fps
-                    draw(o);
-                    drawBackground(s);
-                    Screen('DrawText',s.win,['Warm up frame: ' num2str(i)],65,10);
-                    finishDrawing(s);
-                    animate(o);
-                    getSample(me); isFixated(me); resetFixation(me);
-                    flip(s);
-                end
-                s.drawPhotoDiodeSquare([0 0 0 1]);
+				me.heuristicFilter(rand(10,1), 2);
+				startRecording(me);
+				WaitSecs('YieldSecs',1);
+				for i = 1 : s.screenVals.fps
+					draw(o);
+					drawBackground(s);
+					Screen('DrawText',s.win,['Warm up frame: ' num2str(i)],65,10);
+					finishDrawing(s);
+					animate(o);
+					getSample(me); isFixated(me); resetFixation(me);
+					flip(s);
+				end
+				s.drawPhotoDiodeSquare([0 0 0 1]);
 				flip(s);
 				update(o); %make sure stimuli are set back to their start state
 				WaitSecs('YieldSecs',0.5);
@@ -1008,7 +1017,7 @@ classdef tobiiManager < optickaCore
 						finishDrawing(s);
 						animate(o);
 						
-						[vbl, when] = Screen('Flip', s.win, vbl + s.screenVals.halfifi);
+						vbl = Screen('Flip', s.win, vbl + s.screenVals.halfifi);
 						if trialtick==1; me.tobii.sendMessage('SYNC = 255', vbl);end
 						
 						[keyDown, ~, keyCode] = KbCheck(-1);
@@ -1142,7 +1151,7 @@ classdef tobiiManager < optickaCore
 	
 	%============================================================================
 	methods (Hidden = true) %--HIDDEN METHODS (compatibility with eyelinkManager)
-	%============================================================================
+		%============================================================================
 		
 		% ===================================================================
 		%> @brief checks which eye is available, force left eye if
@@ -1297,7 +1306,7 @@ classdef tobiiManager < optickaCore
 	
 	%=======================================================================
 	methods (Access = private) %------------------PRIVATE METHODS
-	%=======================================================================
+		%=======================================================================
 		
 		% ===================================================================
 		%> @brief Stampe 1993 heuristic filter as used by Eyelink
