@@ -404,6 +404,25 @@ classdef labJackT < handle
 			end
 		end
 		
+		% ===================================================================
+		%> @brief 
+		%> @param
+		%> @return 
+		% ===================================================================
+		function test(me)
+			if me.silentMode || isempty(me.handle); return; end
+			while true
+				WaitSecs('YieldSecs', 1);
+				me.sendStrobedEIO(1); fprintf('Send 1\n');
+				WaitSecs('YieldSecs', 1);
+				me.sendStrobedEIO(255); fprintf('Send 255\n');
+				WaitSecs('YieldSecs', 1);
+				me.sendStrobedEIO(0); fprintf('Send 0\n');
+				[~,~,buttons] = GetMouse(0);
+				if any(buttons); break; end
+			end
+		end
+		
 	end
 	
 	%=======================================================================
