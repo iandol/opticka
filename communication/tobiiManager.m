@@ -555,15 +555,12 @@ classdef tobiiManager < optickaCore
 						if me.fixStartTime == 0
 							me.fixStartTime = me.currentSample.time;
 							me.fixInitStartTime = 0;
-							fprintf('\n.STARTfix.');
 						end
 						fixated = true; searching = false;
 						me.fixLength = (me.currentSample.time - me.fixStartTime) / 1e6;
-						if me.fixLength > me.fixation.fixTime
-							fprintf('o');
+						if me.fixLength >= me.fixation.fixTime
 							fixtime = true;
 						else
-							fprintf('x');
 							fixtime = false;
 						end
 						me.fixTotal = me.currentSample.time - me.fixInitTotal;
@@ -581,15 +578,12 @@ classdef tobiiManager < optickaCore
 						me.fixStartTime = 0;
 						me.fixLength = 0;
 						me.fixTotal = me.currentSample.time - me.fixInitTotal;
-						fprintf('\n.STARTsearch.');
 					end
 					me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1e6;
 					if me.fixInitLength <= me.fixation.initTime
 						searching = true;
-						fprintf('.');
 					else
 						searching = false;
-						fprintf('FAIL');
 					end
 					return
 				end
@@ -738,7 +732,7 @@ classdef tobiiManager < optickaCore
 					&& ~isempty(me.currentSample) && ~isnan(me.currentSample.gx) && ~isnan(me.currentSample.gy)
 				xy = [me.currentSample.gx me.currentSample.gy];
 				if details
-					if me.isFixated
+					if me.fixLength > 0
 						Screen('DrawDots', me.win, xy, me.pupil*3, [1 0.5 1 1], [], 3);
 						if me.fixLength > me.fixation.fixTime
 							Screen('DrawText', me.win, 'FIX', xy(1),xy(2), [1 1 1]);
