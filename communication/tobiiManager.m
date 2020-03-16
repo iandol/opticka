@@ -292,36 +292,38 @@ classdef tobiiManager < optickaCore
 		%> @brief sets up the calibration and validation
 		%>
 		% ===================================================================
-		function trackerSetup(me)
-			if me.isConnected && me.screen.isOpen
-				updateDefaults(me); % make sure we send any other settings changes
-				if me.secondScreen
-					if ~me.operatorScreen.isOpen
-						me.operatorScreen.open();
-					end
-					ListenChar(-1);
-					me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win]); %start calibration
-					ListenChar(0);
-				else
-					ListenChar(-1);
-					me.calibration = me.tobii.calibrate(me.screen.win); %start calibration
-					ListenChar(0);
+		function cal = trackerSetup(me,incal)
+			if ~exist('incal','var');incal=[];end
+			cal = [];
+			if ~me.isConnected && ~me.screen.isOpen; return; end
+			updateDefaults(me); % make sure we send any other settings changes
+			if me.secondScreen
+				if ~me.operatorScreen.isOpen
+					me.operatorScreen.open();
 				end
-				if strcmpi(me.calibrationStimulus,'movie')
-					me.calStim.movie.reset();
-					me.calStim.movie.setup(me.screen);
-				end
-				if ~isempty(me.calibration) && me.calibration.wasSkipped ~= 1
-					if isfield(me.calibration,'selectedCal') && ~isnan(me.calibration.selectedCal)
-						msg = me.tobii.getValidationQualityMessage(me.calibration);
-						disp(msg);
-					end
-				else
-					disp('---!!! The calibration was unsuccesful or skipped !!!---')
-				end
-				if me.secondScreen && me.operatorScreen.isOpen; close(me.operatorScreen); end
-				resetFixation(me);
+				ListenChar(-1);
+				me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win],[],incal); %start calibration
+				ListenChar(0);
+			else
+				ListenChar(-1);
+				me.calibration = me.tobii.calibrate(me.screen.win,[],incal); %start calibration
+				ListenChar(0);
 			end
+			if strcmpi(me.calibrationStimulus,'movie')
+				me.calStim.movie.reset();
+				me.calStim.movie.setup(me.screen);
+			end
+			if ~isempty(me.calibration) && me.calibration.wasSkipped ~= 1
+				cal = me.calibration;
+				if isfield(me.calibration,'selectedCal') && ~isnan(me.calibration.selectedCal)
+					msg = me.tobii.getValidationQualityMessage(me.calibration);
+					disp(msg);
+				end
+			else
+				disp('---!!! The calibration was unsuccesful or skipped !!!---')
+			end
+			if me.secondScreen && me.operatorScreen.isOpen; close(me.operatorScreen); WaitSecs(0.2); end
+			resetFixation(me);
 		end
 		
 		% ===================================================================
@@ -544,6 +546,7 @@ classdef tobiiManager < optickaCore
 						return
 					end
 				end
+				me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1e6;
 				r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixation.radius);
 				window = find(r < me.fixation.radius);
 				if any(window)
@@ -563,9 +566,6 @@ classdef tobiiManager < optickaCore
 						else
 							fixtime = false;
 						end
-						me.fixTotal = me.currentSample.time - me.fixInitTotal;
-						%if me.verbose;fprintf(' | %g:%g LENGTH: %g/%g TOTAL: %g/%g | ',fixated,fixtime, me.fixLength, me.fixation.fixTime, me.fixTotal, me.fixInitTotal);end
-						return
 					else
 						searching = false;
 					end
@@ -577,7 +577,6 @@ classdef tobiiManager < optickaCore
 						me.fixInitStartTime = me.currentSample.time;
 						me.fixStartTime = 0;
 						me.fixLength = 0;
-						me.fixTotal = me.currentSample.time - me.fixInitTotal;
 					end
 					me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1e6;
 					if me.fixInitLength <= me.fixation.initTime
@@ -585,7 +584,6 @@ classdef tobiiManager < optickaCore
 					else
 						searching = false;
 					end
-					return
 				end
 			end
 		end
