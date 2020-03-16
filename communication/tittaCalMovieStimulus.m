@@ -55,7 +55,7 @@ classdef tittaCalMovieStimulus < handle
 			if ~isempty(obj.movie) && isa(obj.movie,'movieStimulus')
 				obj.movie.reset();
 				if ~isempty(obj.sM)
-					obj.movie.setup(obj.sM);
+					if ~obj.movie.isSetup; obj.movie.setup(obj.sM); end
 					if obj.verbose;fprintf('!!!>>>SET-CLEAN-STATE SETUP MOVIE\n');end
 				end
 			end
@@ -67,13 +67,13 @@ classdef tittaCalMovieStimulus < handle
 			obj.movie = m;
 			obj.sM = m.sM;
 			if ~isempty(obj.sM) && isa(obj.movie,'movieStimulus')
-				obj.movie.setup(obj.sM);
+				if ~obj.movie.isSetup; obj.movie.setup(obj.sM); end
 			end
-			if ~isempty(obj.sM) && isa(obj.sM.audio,'audioManager')
+			if ~isempty(obj.sM) && isa(obj.sM.audio,'audioManager') && ~obj.sM.audio.isSetup
 				obj.sM.audio.setup();
 			end
 			obj.scrSize = obj.sM.winRect(3:4);
-			if obj.verbose;fprintf('!!!>>>SET INITIAL STATE\n');end
+			if obj.verbose;fprintf('!!!>>>CALMOVIESTIM SET INITIAL STATE\n');end
 		end
 		
 		function qAllowAcceptKey = doDraw(obj,wpnt,drawCmd,currentPoint,pos,~,~)

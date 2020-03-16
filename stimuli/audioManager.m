@@ -17,12 +17,12 @@ classdef audioManager < optickaCore
 		%> list of names if multipleImages > 0
 		fileNames			= {};
 		devices
+		isSetup logical		= false
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		handles				= []
 		isFiles logical		= false
-		isSetup logical		= false
 		screen screenManager
 		allowedProperties char ='device|fileName|silentMode|verbose'
 	end

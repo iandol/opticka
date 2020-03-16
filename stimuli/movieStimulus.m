@@ -83,7 +83,7 @@ classdef movieStimulus < baseStimulus
 		%> allowed properties passed to object upon construction
 		allowedProperties='fileName|blocking|pixelFormat|preloadSecs|specialFlags1|loopStrategy|mask|maskTolerance|enforceBlending|direction';
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'movie|duration|fps|width|height|count|scale|fileName|pixelFormat|preloadSecs|specialFlags1|loopStrategy'
+		ignoreProperties = 'buffertex|shader|screenVals|movie|duration|fps|width|height|count|scale|fileName|pixelFormat|preloadSecs|specialFlags1|loopStrategy'
 	end
 	
 	%=======================================================================
@@ -177,6 +177,7 @@ classdef movieStimulus < baseStimulus
 			end
 			
 			me.inSetup = false;
+			me.isSetup = true;
 			computePosition(me)
 			setRect(me);
 		end
@@ -290,6 +291,11 @@ classdef movieStimulus < baseStimulus
 			end
 			me.shader = [];
 			me.movie = [];
+			me.duration = [];
+			me.fps = [];
+			me.width = [];
+			me.height = [];
+			me.isSetup = false;
 		end
 		
 		% ===================================================================

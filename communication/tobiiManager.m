@@ -178,17 +178,6 @@ classdef tobiiManager < optickaCore
 			me.settings.trackingMode		= me.trackingMode;
 			me.settings.cal.bgColor			= floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor	= me.settings.cal.bgColor;
-			if IsLinux
-				me.settings.UI.setup.instruct.font		= 'Liberation Sans';
-				me.settings.UI.button.setup.text.font	= 'Liberation Sans';
-				me.settings.UI.button.val.text.font		= 'Liberation Sans';
-				me.settings.UI.cal.errMsg.font			= 'Liberation Sans';
-				me.settings.UI.val.waitMsg.font			= 'Liberation Sans';
-				me.settings.UI.val.menu.text.font		= 'Liberation Sans';
-				me.settings.UI.val.avg.text.font			= 'Liberation Mono';
-				me.settings.UI.val.hover.text.font		= 'Liberation Mono';
-				me.settings.UI.val.avg.text.color		= 200;
-			end
 			if strcmpi(me.calibrationStimulus,'animated')
 				me.calStim							= AnimatedCalibrationDisplay();
 				me.calStim.moveTime					= 0.75;
@@ -202,7 +191,7 @@ classdef tobiiManager < optickaCore
 				me.calStim							= tittaCalMovieStimulus();
 				me.calStim.moveTime					= 0.75;
 				me.calStim.oscillatePeriod			= 1;
-				me.calStim.blinkCount				= 4;
+				me.calStim.blinkCount				= 3;
 				if isempty(me.screen.audio)
 					me.screen.audio = audioManager();
 				end
@@ -311,7 +300,7 @@ classdef tobiiManager < optickaCore
 			end
 			if strcmpi(me.calibrationStimulus,'movie')
 				me.calStim.movie.reset();
-				me.calStim.movie.setup(me.screen);
+				%me.calStim.movie.setup(me.screen);
 			end
 			if ~isempty(me.calibration) && me.calibration.wasSkipped ~= 1
 				cal = me.calibration;
