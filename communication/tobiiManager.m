@@ -408,7 +408,21 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function sample = getSample(me)
 			sample = me.sampleTemplate;
-			if me.isConnected && me.isRecording
+			if me.isDummy %lets use a mouse to simulate the eye signal
+				if ~isempty(me.win)
+					[mx, my] = GetMouse(me.win);
+				else
+					[mx, my] = GetMouse([]);
+				end
+				me.pupil		= 5 + randn;
+				sample.gx		= mx;
+				sample.gy		= my;
+				sample.pa		= me.pupil;
+				sample.time		= GetSecs * 1e6;
+				me.x			= me.toDegrees(sample.gx,'x');
+				me.y			= me.toDegrees(sample.gy,'y');
+				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+			elseif me.isConnected && me.isRecording
 				td = me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
 				if isempty(td);me.currentSample=sample;return;end
 				sample.raw	= td;
@@ -447,20 +461,8 @@ classdef tobiiManager < optickaCore
 					me.y		= NaN;
 					me.pupil	= NaN;
 				end
-			elseif me.isDummy %lets use a mouse to simulate the eye signal
-				if ~isempty(me.win)
-					[mx, my] = GetMouse(me.win);
-				else
-					[mx, my] = GetMouse([]);
-				end
-				me.pupil		= 5 + randn;
-				sample.gx		= mx;
-				sample.gy		= my;
-				sample.pa		= me.pupil;
-				sample.time		= GetSecs * 1e6;
-				me.x			= me.toDegrees(sample.gx,'x');
-				me.y			= me.toDegrees(sample.gy,'y');
-				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
+			else
+				fprintf('--->>> tobiiManager getSample(): are you sure you are recording?\n');
 			end
 			me.currentSample = sample;
 		end
@@ -523,56 +525,59 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function [fixated, fixtime, searching, window, exclusion] = isFixated(me)
 			fixated = false; fixtime = false; searching = true; window = []; exclusion = false;
-			if (me.isConnected || me.isDummy) && ~isempty(me.currentSample)
-				if me.fixInitTotal == 0
-					me.fixInitTotal = me.currentSample.time;
+			
+			if isempty(me.currentSample) || isnan(me.currentSample.time);return;end
+			
+			if me.fixInitTotal == 0
+				me.fixInitTotal = me.currentSample.time;
+			end
+			
+			if ~isempty(me.exclusionZone)
+				eZ = me.exclusionZone; xe = me.x; ye = me.y;
+				if (xe >= eZ(1) && xe <= eZ(2)) && (ye <= eZ(3) && ye >= eZ(4))
+					fixated = false; fixtime = false; searching = false; exclusion = true;
+					fprintf(' ==> EXCLUSION ZONE ENTERED!\n');
+					return
 				end
-				if ~isempty(me.exclusionZone)
-					eZ = me.exclusionZone; xe = me.x; ye = me.y;
-					if (xe >= eZ(1) && xe <= eZ(2)) && (ye <= eZ(3) && ye >= eZ(4))
-						fixated = false; fixtime = false; searching = false; exclusion = true;
-						fprintf(' ==> EXCLUSION ZONE ENTERED!\n');
-						return
-					end
+			end
+			
+			me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1e6;
+			r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixation.radius);
+			window = find(r < me.fixation.radius);
+			if any(window)
+				if me.fixN == 0
+					me.fixN = 1;
+					me.fixSelection = window(1);
 				end
-				me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1e6;
-				r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixation.radius);
-				window = find(r < me.fixation.radius);
-				if any(window)
-					if me.fixN == 0
-						me.fixN = 1;
-						me.fixSelection = window(1);
+				if me.fixSelection == window(1)
+					if me.fixStartTime == 0
+						me.fixStartTime = me.currentSample.time;
+						me.fixInitStartTime = 0;
 					end
-					if me.fixSelection == window(1)
-						if me.fixStartTime == 0
-							me.fixStartTime = me.currentSample.time;
-							me.fixInitStartTime = 0;
-						end
-						fixated = true; searching = false;
-						me.fixLength = (me.currentSample.time - me.fixStartTime) / 1e6;
-						if me.fixLength >= me.fixation.fixTime
-							fixtime = true;
-						else
-							fixtime = false;
-						end
+					fixated = true; searching = false;
+					me.fixLength = (me.currentSample.time - me.fixStartTime) / 1e6;
+					if me.fixLength >= me.fixation.fixTime
+						fixtime = true;
 					else
-						searching = false;
+						fixtime = false;
 					end
 				else
-					if me.fixN == 1
-						me.fixN = -100;
-					end
-					if me.fixInitStartTime == 0
-						me.fixInitStartTime = me.currentSample.time;
-						me.fixStartTime = 0;
-						me.fixLength = 0;
-					end
-					me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1e6;
-					if me.fixInitLength <= me.fixation.initTime
-						searching = true;
-					else
-						searching = false;
-					end
+					searching = false;
+				end
+			else
+				if me.fixN == 1
+					me.fixN = -100;
+				end
+				if me.fixInitStartTime == 0
+					me.fixInitStartTime = me.currentSample.time;
+					me.fixStartTime = 0;
+					me.fixLength = 0;
+				end
+				me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1e6;
+				if me.fixInitLength <= me.fixation.initTime
+					searching = true;
+				else
+					searching = false;
 				end
 			end
 		end
