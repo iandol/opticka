@@ -6,8 +6,9 @@
 %Internal Function
 %
 % Introduced: Palamedes version 1.10.0 (NP)
+% Modified: Palamedes version 1.10.4 (See History.m)
 
-function [samples, nodeName, nodeIndex]= PAL_PFHB_readStanOutput(engine)
+function [samples, nodeName, nodeIndex, stan_version]= PAL_PFHB_readStanOutput(engine)
 
 filename = [engine.dirout,'/samples'];
 nochains = engine.nchains;
@@ -15,8 +16,12 @@ nochains = engine.nchains;
 samples = [];
 
 fi = fopen(strcat(filename,'1.csv'),'r');
+for versionpart = 1:3
+    line = fgetl(fi);
+    stan_version(versionpart) = sscanf(line(24:end),'%d');
+end
 line(1) = '#';
-lineno = 0;
+lineno = 3;
 while line(1) == '#'
     line = fgetl(fi);
     lineno = lineno+1;

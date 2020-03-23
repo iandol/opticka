@@ -1719,3 +1719,122 @@
 % Modified: Palamedes version 1.10.0 (NP)
 % Removed incompatibility message/warning that was introduced in version 
 % 1.5.0
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.10.1 Release August 19, 2019
+%
+% Purpose: (1) Bug fixes (2) restore compatibility with old Matlab versions
+% (tested on Matlab 7.9.1 (R2009b) Service Pack 1). Also tested on Octave 
+% (version 5.1.0, 2019) (3) Make PAL_PFHB_fitModel more user-friendly by
+% throwing error if build of Stan fails or execution of JAGS or Stan
+% fails.
+%
+%PAL_mmType:
+% Modified: Palamedes version 1.10.1 (NP)
+% Fixed incompatibility with older versions of Matlab (specifically:
+% Matlab function 'isdiag')
+%
+%PAL_PFHB_buildStan:
+% Modified: Palamedes version 1.10.1 (NP)
+% Added return argument 'status' that signals whether build was successful
+% Added return argument 'OSsays' that contains any message from OS
+% regarding call to 'make'.
+%
+%PAL_PFHB_findEngine:
+% Modified: Palamedes version 1.10.1 (NP)
+% Fixed error in call to PAL_PFHB_findStaninFolderList in what is current
+% line 91.
+%
+%PAL_PFHB_findStaninFolderList:
+% Modified: Palamedes version 1.10.1 (NP)
+% Improved the manner in which routine looks for Stan in Windows
+% OS (original method failed in Octave).
+%
+%PAL_PFHB_fitModel:
+% Modified: Palamedes version 1.10.1 (NP)
+% Will now throw error when (1) chosen sampler (JAGS or Stan) cannot be
+% found (did this in version 1.10.0 also but error now has ID), (2) build 
+% of Stan executable fails, or (3) execution of JAGS or Stan fails.
+%
+%PAL_PFHB_runEngine:
+% Modified: Palamedes version 1.10.1 (NP)
+% Added return argument 'status' that signals whether call to sampler (JAGS 
+% or Stan) terminated successfully.
+% Added return argument 'OSsays' that contains any message from OS
+% regarding execution of sampler.
+%
+%PAL_PFML_CheckLimitsEngine:
+% Modified: Palamedes version 1.10.1 (NP)
+% Fixed incompatibility with older versions of Matlab (specifically:
+% Matlab function 'round')
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.10.2 Release September 4, 2019
+%
+% Purpose: Bug fixes
+%
+%PAL_PFHB_findEngine:
+% Modified: Palamedes version 1.10.2 (NP)
+% Fixed incorrect call to PAL_PFHB_findStaninFolderList in what is current
+% line 43.
+%
+%PAL_PFHB_fitModel:
+% Modified: Palamedes version 1.10.2 (NP)
+% Fixed typo in message generated in what is current line 304
+%
+%PAL_PFHB_setupModel:
+% Modified: Palamedes version 1.10.2 (NP)
+% Fixed bug that would lead to aborting search for Stan path if a Stan 
+% executable sampler exists in current folder regardless of whether 
+% engine.recyclestan is set to 'true' or 'false' (should only happen when 
+% engine.recylcestan is 'true').
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.10.3 Release October 2, 2019
+%
+% Purpose: Bug fixes
+%
+%PAL_PFHB_writeModelStan:
+% Modified: Palamedes version 1.10.3 (NP)
+% Used JAGS 'pnorm' instead of Stan's 'phi' to evaluate normal in current
+% line 378 
+%
+%PAL_PFHB_inspectFit:
+% Modified: Palamedes version 1.10.3 (NP)
+% Potentially tried to plot PF at x < 0 even in case of 'Weibull' and
+% 'Quick'
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.10.4 Release February 26, 2020
+%
+% Purpose: Minor upgrades & Bug fixes
+%
+%PAL_PFHB_fitModel:
+% Modified: Palamedes version 1.10.4 (NP)
+% (1) Changed error message after Stan build fail (2) Report Rhat with 5
+% decimals (even if all decimals are 0) (3) Add engine (stan/jags) version
+% number to pfhb structure (in field engine.version). May not always work
+% for JAGS depending on OS/environment(matlab/octave)/parallel(yes/no)
+% combination
+%
+%PAL_PFHB_getESS:
+% Modified: Palamedes version 1.10.4 (NP)
+% Bug fix: added line autoc = []; (line 41), otherwise earlier longer
+% vectors will carry over to later short ones.
+%
+%PAL_PFHB_readStanOutput:
+% Modified: Palamedes version 1.10.4 (NP)
+% Read Stan version number from Stan's samples file and return.
+%
+%PAL_PFHB_setupModel:
+% Modified: Palamedes version 1.10.4 (NP)
+% (1) Added fields .palamedes_version and .environment_version to 
+% pfhb.machine (2) environment (matlab/octave) random number generator is 
+% now seeded with same seed as engine (JAGS/Stan) when generating initial 
+% values for MCMC sampler. After generating initial values random number 
+% generator is returned to state it was in. May not work in Octave.
+%
+%PAL_version:
+% Modified: Palamedes version 1.10.4 (NP)
+% Added option to 'silently' (no command window output) return Palamedes
+% version number either as text or 3-element vector.

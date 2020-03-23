@@ -73,41 +73,41 @@ figure('name','Individual Psychometric Functions','units','pixels',...
     'position',[50 50 1000 400]); 
 
 
-subplot(1,2,1);
+h1 = axes('units','normalized','position',[.1 .15 .3 .75]);
 axis([1 8 .4 1.0]); axis square;
-set(gca, 'Xtick',1:1:10);
-set(gca, 'Ytick',.4:.1:1);
+set(h1, 'Xtick',1:1:10);
+set(h1, 'Ytick',.4:.1:1);
 m(1,1,:)=StimLevels(1,1,:);
 StimLevelsPlot=squeeze(m);
-a=plot(StimLevelsPlot,PC(1,:),'ro','markersize',8,'markerfacecolor','r'); 
+a=plot(h1,StimLevelsPlot,PC(1,:),'ro','markersize',8,'markerfacecolor','r'); 
 hold on;
 m(1,1,:)=StimLevels(2,2,:);
 StimLevelsPlot=squeeze(m);
-b=plot(StimLevelsPlot,PC(2,:),'bo','markersize',8,'markerfacecolor','b');
+b=plot(h1,StimLevelsPlot,PC(2,:),'bo','markersize',8,'markerfacecolor','b');
 hold on;
-c=plot(StimLevelsABindex,PC(3,:),'go','markersize',8,'markerfacecolor','g');
+c=plot(h1,StimLevelsABindex,PC(3,:),'go','markersize',8,'markerfacecolor','g');
 hold on;
-set(gca, 'fontsize',18);
+set(h1, 'fontsize',14);
 xlabel('Stimulus level');
 ylabel('Proportion correct');
 title('Probability summation');
 
-subplot(1,2,2);
 
+h2 = axes('units','normalized','position',[.6 .15 .3 .75]);
 axis([1 8 .4 1.0]); axis square;
-set(gca, 'Xtick',1:1:10);
-set(gca, 'Ytick',.4:.1:1);
+set(h2, 'Xtick',1:1:10);
+set(h2, 'Ytick',.4:.1:1);
 m(1,1,:)=StimLevels(1,1,:);
 StimLevelsPlot=squeeze(m);
-plot(StimLevelsPlot,PC(1,:),'ro','markersize',8,'markerfacecolor','r'); 
+plot(h2,StimLevelsPlot,PC(1,:),'ro','markersize',8,'markerfacecolor','r'); 
 hold on;
 m(1,1,:)=StimLevels(2,2,:);
 StimLevelsPlot=squeeze(m);
-plot(StimLevelsPlot,PC(2,:),'bo','markersize',8,'markerfacecolor','b');
+plot(h2,StimLevelsPlot,PC(2,:),'bo','markersize',8,'markerfacecolor','b');
 hold on;
-plot(StimLevelsABindex,PC(3,:),'go','markersize',8,'markerfacecolor','g');
+plot(h2,StimLevelsABindex,PC(3,:),'go','markersize',8,'markerfacecolor','g');
 hold on;
-set(gca, 'fontsize',18);
+set(h2, 'fontsize',14);
 xlabel('Stimulus level');
 ylabel('Proportion correct');
 title('Additive summation');
@@ -142,17 +142,30 @@ for i=1:length(StimLevelsFineGrainABindex)
 PCfromPSfineGrain(3,i) = PAL_SDT_PS_uneqSLtoPC([StimLevelsFineGrain(3,i) StimLevelsFineGrain(4,i)],PSgParams,PSpParams,M,Q);
 end
 
-subplot(1,2,1);
-d=plot(StimLevelsFineGrain(1,:),PCfromPSfineGrain(1,:),'r-','linewidth',2);
+d=plot(h1,StimLevelsFineGrain(1,:),PCfromPSfineGrain(1,:),'r-','linewidth',2);
 hold on;
-e=plot(StimLevelsFineGrain(2,:),PCfromPSfineGrain(2,:),'b-','linewidth',2);
+e=plot(h1,StimLevelsFineGrain(2,:),PCfromPSfineGrain(2,:),'b-','linewidth',2);
 hold on;
-f=plot(StimLevelsFineGrainABindex,PCfromPSfineGrain(3,:),'g-','linewidth',2);
+f=plot(h1,StimLevelsFineGrainABindex,PCfromPSfineGrain(3,:),'g-','linewidth',2);
 drawnow
 hold on;
 
-h = legend([a b c d e f],'Data A','Data B','Data A+B','Model A','Model B','Model A+B');
-set(h,'Interpreter','none','fontsize',16,'Location','SouthEast');
+h1legend = axes('units','normalized','position',[.25 .17 .14 .4]);
+hold on
+set(h1legend, 'xtick',[],'ytick',[],'box','on','xlim',[0 1], 'ylim',[0 1])
+plot(h1legend,.1,11/12, 'o','MarkerEdgeColor','r','MarkerFaceColor','r','Markersize',8,'Linewidth',2);
+text(h1legend, .22,11/12,'Data A','FontSize',14);
+plot(h1legend,.1,9/12, 'o','MarkerEdgeColor','b','MarkerFaceColor','b','Markersize',8,'Linewidth',2);
+text(h1legend, .22,9/12,'Data B','FontSize',14);
+plot(h1legend,.1,7/12, 'o','MarkerEdgeColor','g','MarkerFaceColor','g','Markersize',8,'Linewidth',2);
+text(h1legend, .22,7/12,'Data A+B','FontSize',14);
+plot(h1legend,[.02 .18],[5/12 5/12], 'r-','LineWidth',2)
+text(h1legend, .22,5/12,'Model A','FontSize',14);
+plot(h1legend,[.02 .18],[3/12 3/12], 'b-','LineWidth',2)
+text(h1legend, .22,3/12,'Model B','FontSize',14);
+plot(h1legend,[.02 .18],[1/12 1/12], 'g-','LineWidth',2)
+text(h1legend, .22,1/12,'Model A+B','FontSize',14);
+
 drawnow
 
 %-----------Calculate PF for additive summation model----------------------
@@ -176,14 +189,14 @@ for i=1:length(StimLevelsFineGrainABindex)
 PCfromASfineGrain(3,i) = PAL_SDT_AS_uneqSLtoPC([StimLevelsFineGrain(3,i) StimLevelsFineGrain(4,i)],ASgParams,ASpParams,M,Q);
 end
 
-subplot(1,2,2);
-d=plot(StimLevelsFineGrain(1,:),PCfromASfineGrain(1,:),'r-','linewidth',2);
+d=plot(h2,StimLevelsFineGrain(1,:),PCfromASfineGrain(1,:),'r-','linewidth',2);
 hold on;
-e=plot(StimLevelsFineGrain(2,:),PCfromASfineGrain(2,:),'b-','linewidth',2);
+e=plot(h2,StimLevelsFineGrain(2,:),PCfromASfineGrain(2,:),'b-','linewidth',2);
 hold on;
-f=plot(StimLevelsFineGrainABindex,PCfromASfineGrain(3,:),'g-','linewidth',2);
+f=plot(h2,StimLevelsFineGrainABindex,PCfromASfineGrain(3,:),'g-','linewidth',2);
 drawnow
 hold on;
+
 
 %---------Determine bootstrap errors on fitted g and p parameters--------
 

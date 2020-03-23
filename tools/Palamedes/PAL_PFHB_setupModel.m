@@ -7,6 +7,7 @@
 % Internal Function
 %
 % Introduced: Palamedes version 1.10.0 (NP)
+% Modified: Palamedes version 1.10.2, 1.10.4 (See History.m)
 
 function [pfhb] = PAL_PFHB_setupModel(data, varargin)
 
@@ -16,6 +17,7 @@ data.Ncond = max(data.c);
 data.Nsubj = max(data.s);
 
 engine.engine = 'jags';
+engine.version = [];
 engine.path = [];
 engine.recyclestan = false;
 engine.found = false;
@@ -31,6 +33,8 @@ engine.parallel = false;
 machines = {'GLNXA64','MACI64','PCWIN64'};
 machine.machine = char(machines(find([isunix ismac ispc],1,'last')));
 machine.environment = PAL_environment;
+machine.environment_version = version;
+machine.palamedes_version = PAL_version('version_text');
 
 model.PF = 'logistic';
 model.Ncond = data.Ncond;
@@ -180,7 +184,7 @@ if ~isempty(varargin)
                                model.(varargin{n+1}).priorParams(:,1:size(paramVals,2)) = paramVals;
                                 
                                valid = 1;
-                               add = 4;
+                               add = 4;                               
                             end
                         end
                     case {'g','l','gmu','lmu'}
@@ -336,7 +340,7 @@ for param = list
     end
 end
 
-if strcmpi(engine.engine,'stan') && ((strcmpi(machine.machine,'PCWIN64') && exist('stanModel.exe','file')) || (any(strcmpi(machine.machine,{'MACI64','GLNXA64'})) && exist('stanModel','file')))
+if strcmpi(engine.engine,'stan') && ((strcmpi(machine.machine,'PCWIN64') && exist('stanModel.exe','file') && engine.recyclestan) || (any(strcmpi(machine.machine,{'MACI64','GLNXA64'})) && exist('stanModel','file')  && engine.recyclestan))
     engine.found = true;
 end
 if ~engine.found
@@ -391,7 +395,19 @@ for contrast = 1:model.l.Nc
     end
 end
 
+if strcmp(machine.environment,'matlab')
+    s = rng;
+    rng(engine.seed);
+else
+    s = rand("state");
+    rand("state",engine.seed);
+end
 [engine] = PAL_PFHB_figureInits(engine,model,data);
+if strcmp(machine.environment,'matlab')
+    rng(s);
+else
+    rand("state",s);
+end
 
 data.Nblocks = length(data.x);
 data.Nca = model.a.Nc;

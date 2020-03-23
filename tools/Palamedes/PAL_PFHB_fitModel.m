@@ -59,8 +59,8 @@
 %       Options: 'logistic' (default), 'cumulativenormal', 'weibull',
 %       'gumbel' (i.e., log-Weibull), 'quick', 'logquick',
 %       'hyperbolicsecant'. Note: Instead of using Weibull or Quick it is
-%       recommended to log-transform stimulus intensities and use the 
-%       log-forms of these functions instead (gumbel and logquick,
+%       strongly recommended to log-transform stimulus intensities and use 
+%       the log-forms of these functions instead (gumbel and logquick,
 %       respectively). See www.palamedestoolbox.org/weibullandfriends.html
 %
 %   'a','location', or 'threshold': Specify constraint on the PFs location
@@ -74,7 +74,7 @@
 %               matrix. Model matrix must have as many columns as there are
 %               conditions. Each row of the matrix defines a to-be- 
 %               estimated parameter as some linear combination of location 
-%               parameters (using e.g., a so-called 'contrast'. See 
+%               parameters (using e.g., a so-called 'contrast'). See 
 %               examples in PalamedesDemos folder. 
 %           'fixed': fixed value is used for parameter. Option 'fixed' 
 %               should be followed by a third argument: a scalar value that 
@@ -117,29 +117,37 @@
 %       'beta'; [lower_bound, upper_bound] for 'unif'; [shape, rate] for
 %       gamma). Parameter values for 'a', 'b', 'g', and 'l' will be ignored
 %       if data from multiple subjects are modelled, but must still be
-%       supplied (use, e.g., [0 0])
+%       supplied (use, e.g., [0 0]). See
+%       www.palamedestoolbox.org/hierarchicalbayesian.html for key to the
+%       interpretation of the various parameters.
 %
 %   'engine': when followed by 'stan', Stan MCMC sampler will be used. If
 %       followed by 'jags', JAGS MCMC sampler will be used. Default:
-%       'jags'.
+%       'jags'. Either must be installed from third party first. 
 %
-%   'enginepath', 'stanpath', or 'jagspath': If not used, 
+%   'enginepath', 'stanpath', or 'jagspath' (interchangeable): If not used, 
 %       PAL_PFHB_fitModel will look for Stan or JAGS in a few locations 
 %       where they may be expected to reside (e.g., /opt directory in 
-%       Linux). This process may fail to find Stan or JAGS or may find a
-%       version that is not the latest installed. To specify path yourself
-%       use this argument (e.g., 'stanpath') followed by the path to 
-%       directory (e.g., '/opt/cmdstan-2.18.1').
+%       Linux, in MS Windows Palamedes will check whether path is included 
+%       in Windows PATH variable). Palamedes will make some effort to
+%       locate and use the latest version of sampler software if multiple 
+%       versions are installed, but may not select the newest version if 
+%       different versions reside on different branches of your file 
+%       structure. Palamedes may also fail to find any version of Stan or 
+%       JAGS. To specify path yourself use this argument followed by the 
+%       path to directory (e.g., 'enginepath','/opt/cmdstan-2.18.1').
 %
-%   'seed': followed by integer makes MCMC sampler use the specified
-%       integer as seed for the random number generator. Can be used to
-%       exactly repeat MCMC sampler.
+%   'seed': followed by positive integer makes MCMC sampler use the 
+%       specified integer as seed for the random number generator. The 
+%       environment's (Matlab or Octave) random number generator will also 
+%       be seeded with this number (the environment used generator to
+%       jitter initial values to be used by MCMC sampler.
 %
 %   'keep': when followed by 1 (or logical true) stores some temporary 
 %       JAGS/STAN specific files in a (created) subfolder of the current 
-%       folder from which PAL_PFHB_fitModel is called. When followed by 0 
-%       (or logical false) JAGS/STAN files will be deleted after run. 
-%       Default: false.
+%       folder (i.e., folder from which PAL_PFHB_fitModel is called0. When 
+%       followed by 0 (or logical false) JAGS/STAN files will be deleted 
+%       after run. Default: false.
 %
 %   'recyclestan': If followed by logical false or 0 (default) and Stan is 
 %       used, a new executable Stan sampler will be compiled and build. 
@@ -156,18 +164,18 @@
 %
 %   'parallel': when followed by logical true (or non-zero scalar) MCMC
 %       chains will run in parallel (no parallel toolbox required). When 
-%       followed by logical false (or 0) MCMC chains will run in series.
-%       Depending on your OS and whether you're using Octave or Matlab
-%       messages from sampler may either not be visible at all or appear in 
-%       various ways (in Matlab or Octave command window or in OS windows). 
-%       Note that when 'parallel' is set to true, force-quitting 
+%       followed by logical false (or 0) MCMC chains will run in series 
+%       (default). Depending on your OS and whether you're using Octave or 
+%       Matlab messages from sampler may either not be visible at all or 
+%       appear in various ways (in Matlab or Octave command window or in OS 
+%       windows). Note that when 'parallel' is set to true, force-quitting 
 %       PAL_PFHB_fitModel or even quitting Octave/Matlab will not terminate 
 %       MCMC sampling once it has started. In case you force-quit 
 %       PAL_PFHB_fitModel before sampling is completed, terminate any MCMC 
 %       processes that are still using OS. When 'parallel' is set to true, 
-%       PAL_PFHB_fitModel will use either all processor cores the machine 
-%       has available or as many processor cores as there are MCMC chains 
-%       to be run (whichever is the lower number).
+%       PAL_PFHB_fitModel will (simultaneously) use either all processor 
+%       cores the machine has available or as many processor cores as there 
+%       are MCMC chains to be run (whichever is the lower number).
 %
 %   'nchains': followed by a positive integer specifies the number of MCMC
 %       chains JAGS or Stan should run. Default: 3.
@@ -183,9 +191,10 @@
 %       MCMC adaptation samples should be taken per chain. Default: 1000.
 %
 %   'initialize': allows user to provide starting values for MCMC samples.
-%       This would be the first attempt to remedy poor convergence. By
-%       default, PAL_PFHB_fitModel uses the distribution of trials across 
-%       stimulus intensities to find intial values that should be okay. To 
+%       This should be the first attempt to remedy poor convergence of a 
+%       given model and dataset. By default, PAL_PFHB_fitModel uses the 
+%       distribution of trials across stimulus intensities to find intial 
+%       values that should at least be somewhere in the ballpark. To 
 %       override this, use the 'initialize' option. Three arguments must be 
 %       provided to change initial values. The first is 'initialize', the 
 %       second specifies the parameter to be initialized ('a', 'b', 'g', 
@@ -219,9 +228,12 @@
 %       uncertainty in the lapse rate and concomitantly in the location and 
 %       slope parameters. See equation (2) in Prins (2012) Journal of 
 %       Vision, 12(6), 25 for the model that is fitted when this option is 
-%       used. A stimulus intensity equal to -Inf may also be used when a 
-%       stimulus intensity equal to 0 was used but stimulus intensities in 
-%       data.x are log-transformed.
+%       used. Above generalizes to tasks for which a positive responce at a 
+%       very low stimulus value can be safely assumed to be the result of a 
+%       lapse. In that case, -Inf should be assigned to the very low 
+%       stimulus value. A stimulus intensity equal to -Inf may also be used 
+%       when a stimulus intensity equal to 0 was used but stimulus 
+%       intensities in data.x are log-transformed.
 %
 %
 %Example of simple, one condition, one subject PF fit:
@@ -237,16 +249,15 @@
 %other examples are included in the PalamedesDemos folder.
 %
 %Introduced: Palamedes version 1.10.0 (NP)
-
+%Modified: Palamedes version 1.10.1, 1.10.2, 1.10.4 (See History.m)
 
 function [pfhb] = PAL_PFHB_fitModel(data, varargin)
-
 
 disp([char(10),'Prepping ....']);
 
 pfhb = PAL_PFHB_setupModel(data, varargin{:});
 if ~pfhb.engine.found
-    error('No sampler (or way to build it) found. Exiting');
+    error('PALAMEDES:noMCMCSamplerfound','No sampler (or way to build it) found. Exiting');
 end
 if strcmp(pfhb.machine.environment,'octave')    
     confirm_recursive_rmdir(0, 'local');
@@ -263,18 +274,39 @@ if strcmp(pfhb.engine.engine,'stan')
         disp('Recycling existing Stan executable ...');
      else
         disp('Stan is building executable ...');
-        PAL_PFHB_buildStan(pfhb.engine,pfhb.machine);
+        [status, OSsays, syscmd] = PAL_PFHB_buildStan(pfhb.engine,pfhb.machine);
+        if status ~= 0
+            message = ['Building Stan executable failed. Palamedes issued the command: ',char(10), syscmd, char(10), 'to your OS and your OS said: ',char(10), OSsays, char(10)];
+            message = [message, 'First thing to do is to try and find out whether CmdStan is in working order:',char(10)];             
+            message = [message, 'Q1: Does PAL_PFHB_SinglePF_Demo (in PalamedesDemos folder) complete without error when you select Stan?', char(10)];
+            message = [message, 'If you answered ''yes'' to Q1: This is possibly a Palamedes bug. Send us an e-mail: palamedes@palamedestoolbox.org.', char(10)];
+            message = [message, 'If you answered ''no'' to Q1, move to Q2.', char(10)];
+            message = [message, 'Q2: Can you get the CmdStan bernoulli example (see CmdStan User''s guide) to work? (if you have multiple versions of CmdStan use the same version Palamedes is trying to use): ', char(10)]; 
+            message = [message, 'If you answered ''yes'' to Q2: This is possibly a Palamedes bug. Send us an e-mail: palamedes@palamedestoolbox.org.', char(10)]; 
+            message = [message, 'If you answered ''no'' to Q2: Get bernoulli example to work, then try again.']; 
+            error('PALAMEDES:StanBuildFail',message);
+        end
      end
 end
 
 disp(['Waiting for ',upper(pfhb.engine.engine),' to complete ....',char(10)]);    
-pfhb.engine.syscmd = PAL_PFHB_runEngine(pfhb.engine,pfhb.machine);
+[status OSsays pfhb.engine.syscmd] = PAL_PFHB_runEngine(pfhb.engine,pfhb.machine);
+if status ~= 0
+    message = ['Execution of ',upper(pfhb.engine.engine), ' failed. Palamedes issued the command: ',char(10), pfhb.engine.syscmd, char(10), 'to your OS and your OS (or ',upper(pfhb.engine.engine),') said: ',char(10), OSsays, char(10)];
+    error('PALAMEDES:SamplerExecuteFail',message);
+else
+    if strcmpi(pfhb.engine.engine,'jags') && ~isempty(OSsays)
+        temp = find(OSsays == ' ', 4);
+        pfhb.engine.version = OSsays(temp(3)+1:temp(4)-1);
+    end
+end
+
 
 disp(['Reading and analyzing samples ....',char(10)]);
 if strcmp(pfhb.engine.engine,'jags')
     pfhb.samples = PAL_PFHB_readCODA(pfhb.engine);
 else
-    pfhb.samples = PAL_PFHB_readStanOutput(pfhb.engine);
+    [pfhb.samples trash trash pfhb.engine.version] = PAL_PFHB_readStanOutput(pfhb.engine);    
 end
 if ~pfhb.engine.keep
     rmdir(pfhb.engine.dirout,'s');
@@ -284,7 +316,7 @@ pfhb = PAL_PFHB_organizeSamples(pfhb);
 pfhb.summStats = PAL_PFHB_getSummaryStats(pfhb);
 
 [maxRhat] = PAL_findMax(pfhb.summStats.linList.Rhat); 
-pfhb.model.message = [char(10),char(10),'Fit completed using ',pfhb.engine.engine,' sampler. The maximum value of Gelman and Rubin''s Rhat diagnostic (or psrf',char(10),'[''Potential Scale Reduction Factor'']) observed was ', num2str(maxRhat), ' (a value smaller than 1.05 is generally considered',char(10)','to suggest successful convergence). In order to inspect parameters in decreasing order of Rhat value, type',char(10), '''PAL_PFHB_inspectParams([name of model structure],''Rhat'').',char(10),char(10)];
+pfhb.model.message = [char(10),char(10),'Fit completed using ',pfhb.engine.engine,' sampler. The maximum value of Gelman and Rubin''s Rhat diagnostic (or psrf',char(10),'[''Potential Scale Reduction Factor'']) observed was ', num2str(maxRhat,'%.5f'), ' (a value smaller than 1.05 is generally considered',char(10)','to suggest successful convergence). In order to inspect parameters in decreasing order of Rhat value, type',char(10), '''PAL_PFHB_inspectParam([name of model structure],''Rhat'').',char(10),char(10)];
 disp(pfhb.model.message);
 disp(pfhb.model.paramsList);
 

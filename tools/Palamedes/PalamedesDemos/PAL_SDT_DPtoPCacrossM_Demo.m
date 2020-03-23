@@ -53,7 +53,7 @@ pcMAFCoddity=zeros(1,6);
 for n=1:length(M)
 pcMAFCstandard(n)=PAL_SDT_MAFC_DPtoPC(dP,M(n));
 pcMAFCmatchSample(n)=PAL_SDT_MAFCmatchSample_DiffMod_DPtoPC(dP,M(n));
-pcMAFCoddity(n)=PAL_SDT_MAFCoddity_DPtoPC(dP,M(n));
+pcMAFCoddity(n)=PAL_SDT_MAFCoddity_DiffMod_DPtoPC(dP,M(n));
 end
 
 % Type out results
@@ -66,6 +66,7 @@ disp(output);
 
 % Plot a graph of the results
 figure('name','Pc from d-prime as a function of M');
+h = axes('units','normalized','position',[.15 .15 .8 .8]);
 set(gca, 'fontsize',16);
 plot(M,pcMAFCstandard, 'g-s','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'LineWidth',2);
 hold on;
@@ -78,5 +79,15 @@ set(gca,'xtick',M);
 % Add some labeling
 xlabel('Number of alternatives M','FontSize',18);
 ylabel('Proportion correct','FontSize',18);
-h = legend('Standard','Match-to-Sample','Oddity',2);
-set(h,'Interpreter','none','fontsize',16,'Location','NorthEast');
+h2 = axes('units','normalized','position',[.5 .73 .43 .2]);
+hold on
+set(h2, 'xtick',[],'ytick',[],'box','on','xlim',[0 1], 'ylim',[0 1])
+plot(h2,[.02 .18],[5/6 5/6], 'g-','LineWidth',2)
+plot(h2,.1,5/6, 's','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h2, .22,5/6,'Standard','FontSize',16);
+plot(h2,[.02 .18],[3/6 3/6], 'g-','LineWidth',2)
+plot(h2,.1,3/6, 'd','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h2, .22,3/6,'Match-to-Sample','FontSize',16);
+plot(h2,[.02 .18],[1/6 1/6], 'g-','LineWidth',2)
+plot(h2,.1,1/6, 'x','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h2, .22,1/6,'Oddity','FontSize',16);

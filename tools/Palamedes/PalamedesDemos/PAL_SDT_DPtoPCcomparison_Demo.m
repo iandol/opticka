@@ -75,6 +75,7 @@ disp(output);
 
 % Plot a graph of the results
 figure('name','Pc versus d-prime for various tasks');
+h = axes('units','normalized','position',[.15 .15 .8 .8]);
 set(gca, 'fontsize',18);
 plot(dP,pc2AFC, 'g-s','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'LineWidth',2);
 hold on;
@@ -88,5 +89,18 @@ plot(dP,pc2AFCsameDiff, 'g-o','MarkerEdgeColor','k','MarkerFaceColor','k','Marke
 % Add some labeling
 xlabel('d-prime','FontSize',18);
 ylabel('Proportion correct','FontSize',18);
-h = legend('2AFC','1AFC','2AFC match-to-sample','2AFC same-different',2);
-set(h,'Interpreter','none','fontsize',16,'Location','SouthEast');
+h2 = axes('units','normalized','position',[.4 .17 .53 .3]);
+hold on
+set(h2, 'xtick',[],'ytick',[],'box','on','xlim',[0 1], 'ylim',[0 1])
+plot(h2,[.02 .18],[7/8 7/8], 'g-','LineWidth',2)
+plot(h2,.1,7/8, 's','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h2, .22,7/8,'2AFC','FontSize',14);
+plot(h2,[.02 .18],[5/8 5/8], 'g-','LineWidth',2)
+plot(h2,.1,5/8, 'd','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h2, .22,5/8,'1AFC','FontSize',14);
+plot(h2,[.02 .18],[3/8 3/8], 'g-','LineWidth',2)
+plot(h2,.1,3/8, 'x','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h2, .22,3/8,'2AFC match-to-sample','FontSize',14);
+plot(h2,[.02 .18],[1/8 1/8], 'g-','LineWidth',2)
+plot(h2,.1,1/8, 'o','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h2, .22,1/8,'2AFC same-different','FontSize',14);

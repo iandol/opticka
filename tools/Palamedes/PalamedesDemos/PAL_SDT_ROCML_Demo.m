@@ -89,8 +89,8 @@ lineZHF_3 = PAL_PtoZ(linePHF_3);
 % Create 1st figure for curves of prop. hits versus false alarms
 figure('name','Prop. Hits v. False alarms, and z(H) v. z(F), for various d-prime and SD ratios','units','pixels',...
     'position',[50 50 1000 400]);
-subplot(1,2,1);
-set(gca, 'fontsize',16);
+h1 = axes('units','normalized','position',[.15 .15 .3 .8]);
+set(h1, 'fontsize',16);
 a = plot(linePHF_1(:,2),linePHF_1(:,1),'g-','linewidth',2);
 hold on;
 b = plot(pHF_1(:,2),pHF_1(:,1), 'o','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',8);
@@ -113,6 +113,9 @@ ylabel('Proportion hits','FontSize',16);
 xlabel('Proportion false alarms','FontSize',16);
 
 % Add in legend
+h1legend = axes('units','normalized','position',[.2 .2 .24 .3]);
+hold on
+set(h1legend, 'xtick',[],'ytick',[],'box','on','xlim',[0 1], 'ylim',[0 1])
 DPstrng1 = num2str(dP_1,'%5.2f');
 DPstrng2 = num2str(dP_2,'%5.2f');
 DPstrng3 = num2str(dP_3,'%5.2f');
@@ -122,12 +125,18 @@ Rstrng3 = num2str(R_3,'%5.2f');
 string1 = strcat('dp=',DPstrng1,'  R=',Rstrng1);
 string2 = strcat('dp=',DPstrng2,'  R=',Rstrng2);
 string3 = strcat('dp=',DPstrng3,'  R=',Rstrng3);
-h = legend([a b c d],'fits',string1,string2,string3,2);
-set(h,'Interpreter','none','fontsize',16,'Location','SouthEast');
+plot(h1legend,[.02 .18],[7/8 7/8], 'g-','LineWidth',2)
+text(h1legend, .22,7/8,'fits','FontSize',14);
+plot(h1legend,.1,5/8, 'o','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h1legend, .22,5/8,string1,'FontSize',14);
+plot(h1legend,.1,3/8, 's','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h1legend, .22,3/8,string2,'FontSize',14);
+plot(h1legend,.1,1/8, '*','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h1legend, .22,1/8,string3,'FontSize',14);
 
 % Create 2nd figure for curves of z(H) versus z(F)
-subplot(1,2,2);
-set(gca, 'fontsize',16);
+h2 = axes('units','normalized','position',[.6 .15 .3 .8]);
+set(h2, 'fontsize',16);
 a = plot(lineZHF_1(:,2),lineZHF_1(:,1),'g-','linewidth',2);
 hold on;
 b = plot(ZHF_1(:,2),ZHF_1(:,1), 'o','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',8);

@@ -128,11 +128,12 @@ end
 
 % Plot data thresholds
 figure('name','Individual Psychometric Functions','units','pixels',...
-    'position',[50 50 400 400]); 
+    'position',[50 50 600 600]); 
 
-a=plot(threshX,threshY,'ko','markersize',8,'markerfacecolor','k');
+h1 = axes('units','normalized','position',[.15 .15 .8 .8]);
+plot(h1,threshX,threshY,'ko','markersize',8,'markerfacecolor','k');
 hold on;
-set(gca, 'fontsize',18);
+set(gca, 'fontsize',14);
 set(gca, 'Xtick',0:0.5:3.5);
 set(gca, 'Ytick',0:0.5:3.5);
 axis([0 3.5 0 3.5]); axis square;
@@ -240,17 +241,20 @@ end
 
 
 % Plot model predictions on graph
-b=plot(PSthresh(1,:),PSthresh(2,:),'-','linewidth',2,'color',[0 .9 0]);
+plot(h1,PSthresh(1,:),PSthresh(2,:),'-','linewidth',2,'color',[0 .9 0]);
 hold on;
-c=plot(ASthresh(1,:),ASthresh(2,:),'-','linewidth',2,'color',[.9 0 0]);
+plot(h1,ASthresh(1,:),ASthresh(2,:),'-','linewidth',2,'color',[.9 0 0]);
 
-% Add in legend
-h = legend([a b c],'Data','PS Model','AS model');
-set(h,'Interpreter','none','fontsize',16,'Location','NorthEast');
+h1legend = axes('units','normalized','position',[.6 .8 .3 .13]);
+hold on
+set(h1legend, 'xtick',[],'ytick',[],'box','on','xlim',[0 1], 'ylim',[0 1])
+plot(h1legend,.1,5/6, 'o','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',8,'Linewidth',2);
+text(h1legend, .22,5/6,'Data','FontSize',14);
+plot(h1legend,[.02 .18],[3/6 3/6], '-','LineWidth',2,'color',[0 .9 0])
+text(h1legend, .22,3/6,'PS Model','FontSize',14);
+plot(h1legend,[.02 .18],[1/6 1/6], '-','LineWidth',2,'color',[.9 0 0])
+text(h1legend, .22,1/6,'AS Model','FontSize',14);
 drawnow
-
-
-
 
 %---------Determine bootstrap errors on fitted g and p parameters--------
 

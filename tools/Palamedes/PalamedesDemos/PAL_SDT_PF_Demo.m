@@ -50,10 +50,10 @@ PC=NumPos./OutOfNum;
 
 % Plot proportion correct against stimulus levels
 figure('name','Individual Psychometric Functions','units','pixels',...
-    'position',[50 50 900 300]); 
+    'position',[50 50 1200 400]); 
 
-sp1 = subplot(1,3,1);
-set(gca, 'fontsize',16);
+h1 = axes('units','normalized','position',[.1 .15 .2 .8]);
+set(h1, 'fontsize',16);
 axis([1 8 .4 1.0]); axis square;
 set(gca, 'Xtick',1:1:8);
 set(gca, 'Ytick',.4:.1:1);
@@ -61,7 +61,17 @@ hold on;
 a=plot(StimLevels,PC,'ko','markersize',8,'markerfacecolor','k'); 
 xlabel('Stimulus level');
 ylabel('Proportion correct');
-drawnow
+
+h1legend = axes('units','normalized','position',[.105 .63 .12 .2]);
+hold on
+set(h1legend, 'xtick',[],'ytick',[],'box','on','xlim',[0 1], 'ylim',[0 1])
+plot(h1legend,.1,5/6, 'o','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h1legend, .22,5/6,'Data','FontSize',14);
+plot(h1legend,[.02 .18],[3/6 3/6], '-','LineWidth',2,'color',[0 .9 0])
+text(h1legend, .22,3/6,'SDT fit','FontSize',14);
+plot(h1legend,[.02 .18],[1/6 1/6], 'r-','LineWidth',2)
+text(h1legend, .22,1/6,'Weibull fit','FontSize',14);
+
 
 %---------------------------- SDT model------------------------------
 
@@ -108,7 +118,7 @@ StimLevelsFineGrain = linspace(min(StimLevels),max(StimLevels),1000);
 PCfromSDTfineGrain = PAL_SDT_SLtoPC(StimLevelsFineGrain,g,p,SDTfunc,M);
 
 % Add fine grain PF
-b=plot(StimLevelsFineGrain,PCfromSDTfineGrain,'-','linewidth',2,'color',[0 .9 0]);
+b=plot(h1,StimLevelsFineGrain,PCfromSDTfineGrain,'-','linewidth',2,'color',[0 .9 0]);
 drawnow
 % set params to fitted params
 SDTparams=SDTparamsOut;
@@ -119,10 +129,6 @@ disp(message);
 
 [gSE, pSE] = PAL_SDT_PFML_BootstrapParametric(StimLevels,SDTparams,OutOfNum,SDTfunc,M,Bse);
 
-
-
-
-
 % --------------calculate d-primes from raw PC data for second graph --------------------
 if isempty(M) 
     DP = invSDTfunc(PC);
@@ -131,8 +137,8 @@ else
 end
 
 % plot d prime against stimulus level for raw data on separate graph
-subplot(1,3,2);
-set(gca, 'fontsize',16);
+h2 = axes('units','normalized','position',[.4 .15 .2 .8]);
+set(h2, 'fontsize',16);
 axis([1 8 -1 4.0]); axis square;
 set(gca, 'Xtick',1:1:8);
 set(gca, 'Ytick',-1:1:4);
@@ -147,15 +153,19 @@ DPfineGrain=(g.*StimLevelsFineGrain).^p;
 e=plot(StimLevelsFineGrain,DPfineGrain,'-','linewidth',2,'color',[0 .9 0]);
 hold on;
 
-
-h = legend([d e],'Data','SDT fit');
-set(h,'Interpreter','none','fontsize',16,'Location','NorthWest');
+h2legend = axes('units','normalized','position',[.405 .68 .12 .15]);
+hold on
+set(h2legend, 'xtick',[],'ytick',[],'box','on','xlim',[0 1], 'ylim',[0 1])
+plot(h2legend,.1,3/4, 'o','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h2legend, .22,3/4,'Data','FontSize',14);
+plot(h2legend,[.02 .18],[1/4 1/4], '-','LineWidth',2,'color',[0 .9 0])
+text(h2legend, .22,1/4,'SDT fit','FontSize',14);
 drawnow
 
 
 % plot log d prime against log stimulus level for raw data on separate graph
-subplot(1,3,3);
-set(gca, 'fontsize',16);
+h3 = axes('units','normalized','position',[.7 .15 .2 .8]);
+set(h3, 'fontsize',16);
 axis([0 1 -2 1]); axis square;
 set(gca, 'Xtick',0:.25:1);
 set(gca, 'Ytick',-2:.5:1);
@@ -171,8 +181,13 @@ linFit=pCoeff(2)+pCoeff(1).*log10(StimLevelsFineGrain);
 e=plot(log10(StimLevelsFineGrain),linFit,'-','linewidth',2,'color',[0 .9 0]);
 hold on;
 
-h = legend([f e],'Data','SDT fit');
-set(h,'Interpreter','none','fontsize',16,'Location','NorthWest');
+h3legend = axes('units','normalized','position',[.705 .68 .12 .15]);
+hold on
+set(h3legend, 'xtick',[],'ytick',[],'box','on','xlim',[0 1], 'ylim',[0 1])
+plot(h3legend,.1,3/4, 'o','MarkerEdgeColor','k','MarkerFaceColor','k','Markersize',10,'Linewidth',2);
+text(h3legend, .22,3/4,'Data','FontSize',14);
+plot(h3legend,[.02 .18],[1/4 1/4], '-','LineWidth',2,'color',[0 .9 0])
+text(h3legend, .22,1/4,'SDT fit','FontSize',14);
 drawnow
 
 p2=pCoeff(1);
@@ -230,13 +245,9 @@ options.Display = 'off';    %suppress fminsearch messages
 PCfromPFfineGrain=PAL_Weibull(PFparams,StimLevelsFineGrain);
 
 %subplot(1,3,1);
-c=plot(sp1,StimLevelsFineGrain,PCfromPFfineGrain,'-','linewidth',2,'color',[.9 0 0]);
+c=plot(h1,StimLevelsFineGrain,PCfromPFfineGrain,'-','linewidth',2,'color',[.9 0 0]);
 hold on
 
-% label graph
-h = legend([a b c],'Data','SDT fit','Weibull fit');
-set(h,'Interpreter','none','fontsize',16,'Location','NorthWest');
-drawnow
 
 % Determine standard PF model bootstrap errors and goodness-of-fit
 message = sprintf('\rDetermining standard PF model bootstrap errors and goodness-of-fit......');

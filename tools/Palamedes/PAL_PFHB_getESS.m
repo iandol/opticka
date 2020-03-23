@@ -16,6 +16,7 @@
 %   optional argument 'autocorrelation'.       
 %
 %Introduced: Palamedes version 1.10.0 (NP)
+%Modified: Palamedes version 1.10.4 (See History.m)
 
 function [ess] = PAL_PFHB_getESS(sample,varargin)
 
@@ -37,6 +38,7 @@ end
 
 if method == 1      %autocorrelation method
     for chain = 1:size(sample,1)
+        autoc = [];
         lag = 0;
         cc = ones(2);
         while cc(1,2) > .05
