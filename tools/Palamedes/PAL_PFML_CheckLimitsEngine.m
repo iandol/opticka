@@ -10,6 +10,7 @@
 %Internal Function
 %
 % Introduced: Palamedes version 1.9.1 (NP)
+%Modified: Palamedes version 1.10.1 (See History.m)
 
 function [paramsValues, LL, scenario, message] = PAL_PFML_CheckLimitsEngine(StimLevels, NumPos, OutOfNum, paramsValues, LLparams, paramsFree, guessLimits, lapseLimits, gammaEQlambda)
 
@@ -96,7 +97,7 @@ LLhor = PAL_nansum(NumPos.*log(phor))+PAL_nansum((OutOfNum-NumPos).*log(1-phor))
 [maxW IW] = max(LLstepW);
 [maxWO IWO] = max(LLstepWO);
 
-[LLscenario Iscenario] = sort(round([LLparams maxWO maxW LLhor],12));
+[LLscenario Iscenario] = sort(round(1e12*[LLparams maxWO maxW LLhor])/1e12);
 
 switch Iscenario(4)
     case 1

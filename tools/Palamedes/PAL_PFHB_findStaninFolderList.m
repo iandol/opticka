@@ -6,6 +6,8 @@
 %Internal Function
 %
 % Introduced: Palamedes version 1.10.0 (NP)
+% Modified: Palamedes version 1.10.1 (see History.m)
+
 
 function [found, path] = PAL_PFHB_findStaninFolderList(list,maxdepth,machine)
 
@@ -40,20 +42,16 @@ else
     [notfound,paths] = system(['dir ',list,'*runCmdStanTests.py /s /b']);
     if ~notfound
         newls = [0 strfind(paths,char(10))];
-        if length(newls) == 2
-            path = paths(1:end-19);
-            found = true;
-        else
-            potpathno = 0;
-            for line = 1:length(newls)-1
-                potpath = paths(newls(line)+1:newls(line+1)-19);
-                potpathno = potpathno+1;
-                path{potpathno} = potpath;                    
-                versions(potpathno,:) = sscanf(potpath(strfind(potpath,'cmdstan-'):end-1),'cmdstan-%d.%d.%d')';
-            end
-            [trash, I] = sortrows(versions,[-1 -2 -3]);
-            path = char(path(I(1)));
-            found = true;
+        potpathno = 0;
+        for line = 1:length(newls)-1
+            potpath = paths(newls(line)+1:newls(line+1));
+            potpath = potpath(1:find(potpath == '\',1,'last'));
+            potpathno = potpathno+1;
+            path{potpathno} = potpath;                    
+            versions(potpathno,:) = sscanf(potpath(strfind(potpath,'cmdstan-'):end-1),'cmdstan-%d.%d.%d')';
         end
+        [trash, I] = sortrows(versions,[-1 -2 -3]);
+        path = char(path(I(1)));
+        found = true;
     end
 end

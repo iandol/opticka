@@ -26,6 +26,7 @@
 %       enter to quit.
 %   
 %Introduced: Palamedes version 1.10.0 (NP)
+%Modified: Palamedes version 1.10.3 (See History.m)
 
 function [] = PAL_PFHB_inspectFit(pfhb, varargin)
 
@@ -120,8 +121,11 @@ for loop = 1:number
     minx = min(x(~isinf(x)));
     maxx = max(x(~isinf(x)));
     xlimcurve = [minx-(maxx-minx)/5,maxx+(maxx-minx)/5];
+    if any(strcmpi(pfhb.model.PF,{'weibull','quick'})) && xlimcurve(1) < 0
+        xlimcurve(1) = 0;
+    end
     xcurve = linspace(xlimcurve(1),xlimcurve(end),1001);
-
+    
     sampI = [randi(pfhb.engine.nchains,[1 hiDensityCurves]); randi(pfhb.engine.nsamples,[1 hiDensityCurves])];
 
     for hdc = 1:hiDensityCurves

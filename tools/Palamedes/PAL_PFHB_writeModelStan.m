@@ -6,6 +6,7 @@
 %Internal Function
 %
 % Introduced: Palamedes version 1.10.0 (NP)
+% Modified: Palamedes version 1.10.3 (See History.m)
 
 function [parameters] = PAL_PFHB_writeModelStan(model,engine)
 
@@ -374,7 +375,7 @@ switch model.PF
     case 'logistic'
         modelText = [modelText,'(1/(1+exp(-1*10^beta[i]*(x[i]-alpha[i]))))));'];
     case 'cumulativenormal'
-        modelText = [modelText,'pnorm((x[i]-alpha[i])*10^beta[i],0,1)));'];
+        modelText = [modelText,'Phi((x[i]-alpha[i])*10^beta[i])));'];
     case 'weibull'
         modelText = [modelText,'(1 - exp(-1*(x[i]/alpha[i])^10^beta[i]))));'];
     case 'gumbel'

@@ -2,13 +2,14 @@
 %PAL_PFHB_runEngine  Issue OS and engine (stan, JAGS) appropriate command 
 %   to OS to start MCMC sampling and wait for sampling to be finished.
 %   
-%   syntax: [syscmd] = PAL_PFHB_runEngine(engine,machine)
+%   syntax: [status, OSsays, syscmd] = PAL_PFHB_runEngine(engine,machine)
 %
 %Internal Function
 %
 % Introduced: Palamedes version 1.10.0 (NP)
+% Modified: Palamedes version 1.10.1 (See History.m)
 
-function [syscmd] = PAL_PFHB_runEngine(engine,machine)
+function [status, OSsays, syscmd] = PAL_PFHB_runEngine(engine,machine)
 
 if strcmp(engine.engine,'stan')
     if strcmpi(machine.machine,'PCWIN64')
@@ -22,7 +23,10 @@ if strcmp(engine.engine,'stan')
             if engine.parallel
                 syscmd = [syscmd, '  && exit &'];
             end
-            system(syscmd);
+            [status, OSsays] = system(syscmd);
+            if status ~= 0
+                return;
+            end
         end
     else    
         if engine.recyclestan
@@ -35,7 +39,10 @@ if strcmp(engine.engine,'stan')
             if engine.parallel
                 syscmd = [syscmd, ' &'];
             end
-            system(syscmd);
+            [status, OSsays] = system(syscmd);
+            if status ~= 0
+                return;
+            end
         end        
     end        
 end
@@ -53,7 +60,10 @@ if strcmp(engine.engine,'jags')
                 syscmd = [syscmd, ' &'];
             end            
         end
-        system(syscmd);       
+        [status, OSsays] = system(syscmd);
+        if status ~= 0
+            return;
+        end
     end   
 end
 if engine.parallel

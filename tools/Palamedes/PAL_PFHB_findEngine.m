@@ -6,6 +6,7 @@
 %Internal Function
 %
 % Introduced: Palamedes version 1.10.0 (NP)
+% Modified: Palamedes version 1.10.1, 1.10.2 (see History.m)
 
 function [engine] = PAL_PFHB_findEngine(engine,machine)
 
@@ -39,7 +40,7 @@ if strcmpi(engine.engine,'stan') && any(strcmpi(machine.machine,{'MACI64','GLNXA
                 username = list(pos+6:find(list(pos+7:end)==filesep,1)+7);
                 list = ['/Users/',username];
             end                
-            [engine.found,engine.path] = PAL_PFHB_findStaninFolderList(list,4);
+            [engine.found,engine.path] = PAL_PFHB_findStaninFolderList(list,4,machine);
         end
     end
 end
@@ -87,7 +88,7 @@ if strcmpi(engine.engine,'stan') && strcmpi(machine.machine,'PCWIN64')
         end
     else
         disp(['Did not find a valid Stan path in Windows PATH variable, will attempt to find Stan myself.',char(10),'This will take a while. To improve speed, consider adding Stan path to Windows PATH variable or use ''enginepath''',char(10),'argument (type help PAL_PFHB_fitModel)']);
-        [engine.found, engine.path] = PAL_PFHB_findStaninFolderList('c:\',[]);
+        [engine.found, engine.path] = PAL_PFHB_findStaninFolderList('c:\',[],machine);
     end
 end
 
