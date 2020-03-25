@@ -675,8 +675,12 @@ classdef getDensity < handle
 				
 				supt = [supt '\newline' obj.comments];
 				
-				h = suptitle(supt);
-				set(h,'FontName','Consolas','FontSize',14,'FontWeight','bold')
+				if exist('suptitle','file')
+					h = suptitle(supt);
+					set(h,'FontName','Consolas','FontSize',14,'FontWeight','bold')
+				else
+					disp(supt);
+				end
 				
 				xl=xlim;
 				yl=ylim;
@@ -690,12 +694,12 @@ classdef getDensity < handle
 				h=line([yci(1),ymean,yci(2);yci(1),ymean,yci(2);],[yl(1),yl(1),yl(1);yl(2),yl(2),yl(2)]);
 				set(h,'Color',[1 0.5 0.5],'LineStyle',':');
 				
-				text(xl(1)+xfrag,yl(2)-yfrag,t,'FontSize',13,'FontName','Consolas','FontWeight','bold','VerticalAlignment','top');
+				text(xl(1)+xfrag,yl(2)-yfrag,t,'FontSize',10,'FontName','Menlo','FontWeight','bold','VerticalAlignment','top');
 				%legend(obj.legendtxt);
 				
 				pn.select('all')
-				pn.fontname = 'Calibri';
-				pn.fontsize = 12;
+				pn.fontname = 'Menlo';
+				pn.fontsize = 10;
 				pn.margin = 20;
 				
 				outs.(fieldn).pn = pn;
