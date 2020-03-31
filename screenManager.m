@@ -983,7 +983,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawScreenCenter(me)
-			Screen('gluDisk',me.win,[1 1 0 1],me.xCenter,me.yCenter,2);
+			Screen('gluDisk',me.win,[1 0 1 1],me.xCenter,me.yCenter,2);
 		end
 		
 		% ===================================================================

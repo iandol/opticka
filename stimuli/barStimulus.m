@@ -142,11 +142,13 @@ classdef barStimulus < baseStimulus
 			if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
 					try Screen('Close',me.texture2); end %#ok<*TRYNC>
 			end
-			constructMatrix(me); %make our matrix
-			me.texture=Screen('MakeTexture',me.sM.win,me.matrix,1,[],2);
-			if me.phaseReverseTime > 0
-				me.texture2=Screen('MakeTexture',me.sM.win,me.matrix2,1,[],2);
-				me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
+			if me.regenerateTexture
+				constructMatrix(me); %make our matrix
+				me.texture=Screen('MakeTexture',me.sM.win,me.matrix,1,[],2);
+				if me.phaseReverseTime > 0
+					me.texture2=Screen('MakeTexture',me.sM.win,me.matrix2,1,[],2);
+					me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
+				end
 			end
 			computePosition(me);
 			me.setRect();
@@ -281,37 +283,23 @@ classdef barStimulus < baseStimulus
 				else
 					blpixels = round(me.barLengthOut*me.ppd);
 				end
-				
-				if strcmpi(me.type,'checkerboard')
-					bwscale = round(((bwpixels/me.ppd) / me.checkSize));
-					blscale = round(((blpixels/me.ppd) / me.checkSize));
-					if bwscale < 1; bwscale = 1; end
-					if blscale < 1; blscale = 1; end
+				if isempty(me.findprop('checkSizeOut'))
+					checkSize = me.checkSize;
 				else
+					checkSize = me.checkSizeOut;
+				end
+				if ~strcmpi(me.type,'checkerboard')
 					if rem(bwpixels,2);bwpixels=bwpixels+1;end
 					if rem(blpixels,2);blpixels=blpixels+1;end
 					bwscale = round(bwpixels/me.scale)+1;
 					blscale = round(blpixels/me.scale)+1;
+					rmat = ones(blscale,bwscale);
+					tmat = repmat(rmat,1,1,4); 
 				end
 				
-				tmat = ones(blscale,bwscale,4); %allocate the size correctly
-				rmat=ones(blscale,bwscale);
-				if me.phaseReverseTime > 0; t2mat = tmat; end
 				switch me.type
 					case 'checkerboard'
-						for k = 1:size(rmat,1)
-							rmat(k,:) = mod(1:size(rmat,2),2);
-							if logical(mod(k,2))
-								rmat(k,:) = [0 rmat(k,1:end-1)];
-							end
-						end
-						r2mat = double(~rmat);
-						for i=1:3
-							tmat(:,:,i)=tmat(:,:,i).*rmat;
-							if me.phaseReverseTime > 0; t2mat(:,:,i)=t2mat(:,:,i).*r2mat; end
-						end
-						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
-						if me.phaseReverseTime > 0; t2mat(:,:,4)=ones(blscale,bwscale)*me.alpha; end
+						tmat = me.makeCheckerBoard(blpixels,bwpixels,checkSize);
 					case 'random'
 						rmat=rand(blscale,bwscale);
 						for i=1:3
@@ -349,20 +337,21 @@ classdef barStimulus < baseStimulus
 					al=0:me.scale:blpixels;
 					[a,b]=meshgrid(aw,al);
 					[A,B]=meshgrid(0:bwpixels,0:blpixels);
-				else
-					aw=linspace(1,bwpixels,bwscale);
-					al=linspace(1,blpixels,blscale);
-					[a,b]=meshgrid(aw,al);
-					[A,B]=meshgrid(1:bwpixels,1:blpixels);
-				end
-				for i=1:4
-					outmat(:,:,i) = interp2(a,b,tmat(:,:,i),A,B,me.interpMethod);
-					if me.phaseReverseTime > 0
-						out2mat(:,:,i) = interp2(a,b,t2mat(:,:,i),A,B,me.interpMethod);
+					for i=1:3
+						outmat(:,:,i) = interp2(a,b,tmat(:,:,i),A,B,me.interpMethod);
 					end
+					outmat(:,:,4) = ones(size(outmat,1),size.outmat(2)).*me.alpha;
+					outmat = outmat(1:blpixels,1:bwpixels,:);
+				else
+					outmat(:,:,1:3) = tmat;
+					outmat(:,:,4) = ones(size(outmat,1),size(outmat,2)).*me.alpha;
 				end
-				me.matrix = outmat(1:blpixels,1:bwpixels,:);
-				if me.phaseReverseTime > 0; me.matrix2 = out2mat(1:blpixels,1:bwpixels,:); end
+				me.matrix = outmat;
+				if me.phaseReverseTime > 0
+					out2mat = outmat;
+					out2mat(:,:,1:3) = double(~outmat(:,:,1:3));
+					me.matrix2 = out2mat; 
+				end
 			catch ME %#ok<CTCH>
 				getReport(ME)
 				if isempty(me.findprop('barWidthOut'))
@@ -382,6 +371,42 @@ classdef barStimulus < baseStimulus
 				tmat(:,:,4)=ones(blpixels,bwpixels)*me.colour(4);
 				rmat=ones(blpixels,bwpixels);
 				me.matrix=tmat;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief make the checkerboard
+		%>
+		% ===================================================================
+		function matrixOut = makeCheckerBoard(me,hh,ww,c)
+			cppd = round(c * me.ppd);
+			if cppd < 1; cppd = 1; end
+			blockB = zeros(cppd,cppd);
+			blockW = ones(cppd,cppd);
+			hscale = ceil(hh / cppd);
+			wscale = ceil(ww / cppd);
+			if hscale < 1; hscale = 1; end
+			if wscale < 1; wscale = 1; end
+			matrix = {};
+			for i = 1 : wscale
+				for j = 1: hscale
+					if (mod(j,2) && mod(i,2)) || (~mod(j,2) && ~mod(i,2))
+						matrix{j,i} = blockB;
+					else
+						matrix{j,i} = blockW;
+					end
+				end
+			end
+			matrix = cell2mat(matrix);
+			matrix = matrix(1:hh,1:ww);
+			if isempty(me.findprop('colourOut'))
+				colour = me.colour;
+			else
+				colour = me.colourOut;
+			end
+			matrixOut = [];
+			for i = 1 : 3
+				matrixOut(:,:,i) = matrix(:,:,1) .* colour(i);
 			end
 		end
 		
