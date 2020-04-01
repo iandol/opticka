@@ -9,7 +9,7 @@ classdef barStimulus < baseStimulus
 		%> width of bar
 		barWidth double = 1
 		%> length of bar
-		barLength double= 4
+		barHeight double= 4
 		%> contrast multiplier
 		contrast double = 1
 		%> texture scale
@@ -45,7 +45,7 @@ classdef barStimulus < baseStimulus
 		texture2
 		%> how many frames between phase reverses
 		phaseCounter double = 0
-		allowedProperties = 'type|barWidth|barLength|angle|speed|contrast|scale|checkSize|interpMethod|phaseReverseTime';
+		allowedProperties = 'type|barWidth|barHeight|angle|speed|contrast|scale|checkSize|interpMethod|phaseReverseTime';
 		ignoreProperties = 'interpMethod|matrix|matrix2|phaseCounter|pixelScale';
 	end
 	
@@ -65,12 +65,12 @@ classdef barStimulus < baseStimulus
 		function me = barStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
 				struct('name','Bar','colour',[1 1 1],'size',0,...
-				'speed',2,'startPosition',-2));
+				'speed',2,'startPosition',0));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
 			if me.size > 0 %size overrides 
-				me.barLength = me.size;
+				me.barHeight = me.size;
 				me.barWidth = me.size;
 			end
 			
@@ -95,7 +95,7 @@ classdef barStimulus < baseStimulus
 			me.ppd = sM.ppd;
 			
 			if me.size > 0
-				me.barLength = me.size;
+				me.barHeight = me.size;
 				me.barWidth = me.size;
 			end
 			
@@ -116,10 +116,10 @@ classdef barStimulus < baseStimulus
 			doProperties(me);
 			
 			constructMatrix(me) %make our matrix
-			me.texture=Screen('MakeTexture',me.sM.win,me.matrix,1,[],2);
+			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, [], 2);
 			if me.phaseReverseTime > 0
-				me.texture2=Screen('MakeTexture',me.sM.win,me.matrix2,1,[],2);
-				me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
+				me.texture2 = Screen('MakeTexture', me.sM.win, me.matrix2, 1, [], 2);
+				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 			end
 			
 			me.inSetup = false;
@@ -136,18 +136,19 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
-			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-					try Screen('Close',me.texture); end %#ok<*TRYNC>
-			end
-			if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
-					try Screen('Close',me.texture2); end %#ok<*TRYNC>
-			end
+			if me.sizeOut > 0; me.barLengthOut = me.sizeOut/me.ppd; me.barWidthOut = me.sizeOut/me.ppd; end
 			if me.regenerateTexture
-				constructMatrix(me); %make our matrix
-				me.texture=Screen('MakeTexture',me.sM.win,me.matrix,1,[],2);
+				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+					try Screen('Close',me.texture); end %#ok<*TRYNC>
+				end
+				if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
+						try Screen('Close', me.texture2); end %#ok<*TRYNC>
+				end
+				constructMatrix(me);%make our matrix
+				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, [], 2);
 				if me.phaseReverseTime > 0
-					me.texture2=Screen('MakeTexture',me.sM.win,me.matrix2,1,[],2);
-					me.phaseCounter = round(me.phaseReverseTime / me.sM.screenVals.ifi);
+					me.texture2=Screen('MakeTexture', me.sM.win, me.matrix2, 1, [], 2);
+					me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 				end
 			end
 			computePosition(me);
@@ -221,16 +222,16 @@ classdef barStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief barLength set method
+		%> @brief barHeight set method
 		%>
 		%> @param length of bar
 		%> @return
 		% ===================================================================
-		function set.barLength(me,value)
+		function set.barHeight(me,value)
 			if ~(value > 0)
 				value = 4;
 			end
-			me.barLength = value;
+			me.barHeight = value;
 		end
 		
 		% ===================================================================
@@ -279,7 +280,7 @@ classdef barStimulus < baseStimulus
 					bwpixels = round(me.barWidthOut*me.ppd);
 				end
 				if isempty(me.findprop('barLengthOut'))
-					blpixels = round(me.barLength*me.ppd);
+					blpixels = round(me.barHeight*me.ppd);
 				else
 					blpixels = round(me.barLengthOut*me.ppd);
 				end
@@ -340,7 +341,7 @@ classdef barStimulus < baseStimulus
 					for i=1:3
 						outmat(:,:,i) = interp2(a,b,tmat(:,:,i),A,B,me.interpMethod);
 					end
-					outmat(:,:,4) = ones(size(outmat,1),size.outmat(2)).*me.alpha;
+					outmat(:,:,4) = ones(size(outmat,1),size(outmat,2)).*me.alpha;
 					outmat = outmat(1:blpixels,1:bwpixels,:);
 				else
 					outmat(:,:,1:3) = tmat;
@@ -360,7 +361,7 @@ classdef barStimulus < baseStimulus
 					bwpixels = round(me.barWidthOut*me.ppd);
 				end
 				if isempty(me.findprop('barLengthOut'))
-					blpixels = round(me.barLength*me.ppd);
+					blpixels = round(me.barHeight*me.ppd);
 				else
 					blpixels = round(me.barLengthOut*me.ppd);
 				end
@@ -379,15 +380,17 @@ classdef barStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function matrixOut = makeCheckerBoard(me,hh,ww,c)
+			tic
+			type = 'uint8';
 			cppd = round(c * me.ppd);
 			if cppd < 1; cppd = 1; end
-			blockB = zeros(cppd,cppd);
-			blockW = ones(cppd,cppd);
+			blockB = zeros(cppd,cppd,type);
+			blockW = ones(cppd,cppd,type);
 			hscale = ceil(hh / cppd);
 			wscale = ceil(ww / cppd);
 			if hscale < 1; hscale = 1; end
 			if wscale < 1; wscale = 1; end
-			matrix = {};
+			matrix = cell(hscale,wscale);
 			for i = 1 : wscale
 				for j = 1: hscale
 					if (mod(j,2) && mod(i,2)) || (~mod(j,2) && ~mod(i,2))
@@ -404,10 +407,12 @@ classdef barStimulus < baseStimulus
 			else
 				colour = me.colourOut;
 			end
-			matrixOut = [];
+			matrixOut = zeros(hh,ww,3,type);
 			for i = 1 : 3
 				matrixOut(:,:,i) = matrix(:,:,1) .* colour(i);
 			end
+			matrixOut = double(matrixOut);
+			toc
 		end
 		
 		

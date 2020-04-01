@@ -13,7 +13,7 @@ classdef apparentMotionStimulus < baseStimulus
 		%> width of bar
 		barWidth = 1
 		%> length of bar
-		barLength = 4
+		barHeight = 4
 		%>number of bars
 		nBars = 4
 		%> spacing
@@ -57,7 +57,7 @@ classdef apparentMotionStimulus < baseStimulus
 	
 	properties (SetAccess = private, GetAccess = private)
 		firstDraw = false
-		allowedProperties='barSpacing|nBars|timing|direction|type|pixelScale|barWidth|barLength|angle|speed|contrast|scale|interpMethod';
+		allowedProperties='barSpacing|nBars|timing|direction|type|pixelScale|barWidth|barHeight|angle|speed|contrast|scale|interpMethod';
 		ignoreProperties = 'interpMethod|matrix|rmatrix|pixelScale';
 	end
 	
@@ -89,7 +89,7 @@ classdef apparentMotionStimulus < baseStimulus
 			end
 			
 			if obj.size > 0
-				obj.barLength = obj.size;
+				obj.barHeight = obj.size;
 				obj.barWidth = obj.size;
 			end
 			
@@ -246,7 +246,7 @@ classdef apparentMotionStimulus < baseStimulus
 					bwpixels = round(obj.barWidthOut*obj.ppd);
 				end
 				if isempty(obj.findprop('barLengthOut'));
-					blpixels = round(obj.barLength*obj.ppd);
+					blpixels = round(obj.barHeight*obj.ppd);
 				else
 					blpixels = round(obj.barLengthOut*obj.ppd);
 				end
@@ -306,7 +306,7 @@ classdef apparentMotionStimulus < baseStimulus
 					bwpixels = round(obj.barWidthOut*obj.ppd);
 				end
 				if isempty(obj.findprop('barLengthOut'));
-					blpixels = round(obj.barLength*obj.ppd);
+					blpixels = round(obj.barHeight*obj.ppd);
 				else
 					blpixels = round(obj.barLengthOut*obj.ppd);
 				end
@@ -323,16 +323,16 @@ classdef apparentMotionStimulus < baseStimulus
 		
 		
 		% ===================================================================
-		%> @brief barLength set method
+		%> @brief barHeight set method
 		%>
 		%> @param length of bar
 		%> @return
 		% ===================================================================
-		function set.barLength(obj,value)
+		function set.barHeight(obj,value)
 			if ~(value > 0)
 				value = 0.25;
 			end
-			obj.barLength = value;
+			obj.barHeight = value;
 		end
 		
 		% ===================================================================

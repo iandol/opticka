@@ -476,7 +476,7 @@ classdef rfMapper < barStimulus
 							case 'bar'
 								obj.textureIndex = obj.textureIndex + 1;
 								obj.barWidth = obj.dstRect(3)/obj.ppd;
-								obj.barLength = obj.dstRect(4)/obj.ppd;
+								obj.barHeight = obj.dstRect(4)/obj.ppd;
 								obj.type = obj.textureList{obj.textureIndex};
 								obj.regenerate;
 							case 'grating'
