@@ -725,15 +725,17 @@ classdef tobiiManager < optickaCore
 				xy = [me.currentSample.gx me.currentSample.gy];
 				if details
 					if me.fixLength > 0
-						Screen('DrawDots', me.win, xy, me.pupil*3, [1 0.5 1 1], [], 3);
 						if me.fixLength > me.fixation.fixTime
-							Screen('DrawText', me.win, 'fix', xy(1),xy(2), [1 1 1]);
+							%Screen('DrawText', me.win, 'fix', xy(1),xy(2), [0.7 0.7 0.7]);
+							Screen('DrawDots', me.win, xy, me.pupil*2, [1 0.5 1 1], [], 0);
+						else
+							Screen('DrawDots', me.win, xy, me.pupil*2, [1 0 1 1], [], 0);
 						end
 					else
-						Screen('DrawDots', me.win, xy, me.pupil*3, [1 0.5 0 1], [], 3);
+						Screen('DrawDots', me.win, xy, me.pupil*2, [0.7 0.5 0 1], [], 0);
 					end
 				else
-					Screen('DrawDots', me.win, xy, me.pupil*3, [1 0.5 0 1], [], 3);
+					Screen('DrawDots', me.win, xy, me.pupil*2, [0.7 0.5 0 1], [], 0);
 				end
 			end
 		end
