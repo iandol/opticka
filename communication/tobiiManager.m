@@ -105,7 +105,7 @@ classdef tobiiManager < optickaCore
 		calStim
 		secondScreen logical = false;
 		%> currentSample template
-		sampleTemplate struct = struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,'pa',NaN)
+		sampleTemplate struct = struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,'pa',NaN,'valid',false)
 		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
 		win = []
 		ppd_ double = 36
@@ -407,13 +407,14 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function sample = getSample(me)
-			sample = me.sampleTemplate;
+			sample				= me.sampleTemplate;
 			if me.isDummy %lets use a mouse to simulate the eye signal
 				if ~isempty(me.win)
-					[mx, my] = GetMouse(me.win);
+					[mx, my]	= GetMouse(me.win);
 				else
-					[mx, my] = GetMouse([]);
+					[mx, my]	= GetMouse([]);
 				end
+				sample.valid	= true;
 				me.pupil		= 5 + randn;
 				sample.gx		= mx;
 				sample.gy		= my;
@@ -423,26 +424,31 @@ classdef tobiiManager < optickaCore
 				me.y			= me.toDegrees(sample.gy,'y');
 				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 			elseif me.isConnected && me.isRecording
-				td = me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
+				xy				= [];
+				td				= me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
 				if isempty(td);me.currentSample=sample;return;end
-				sample.raw	= td;
-				sample.time	= double(td.systemTimeStamp(end)); %remember these are in microseconds
+				sample.raw		= td;
+				sample.time		= double(td.systemTimeStamp(end)); %remember these are in microseconds
 				sample.timeD	= double(td.deviceTimeStamp(end));
-				if td.left.gazePoint.valid(end) || td.right.gazePoint.valid(end)
+				if any(td.left.gazePoint.valid) || any(td.right.gazePoint.valid)
 					switch me.smoothing.eyes
 						case 'left'
-							xy = td.left.gazePoint.onDisplayArea(:,td.left.gazePoint.valid);
+							xy	= td.left.gazePoint.onDisplayArea(:,td.left.gazePoint.valid);
 						case 'right'
-							xy = td.right.gazePoint.onDisplayArea(:,td.right.gazePoint.valid);
+							xy	= td.right.gazePoint.onDisplayArea(:,td.right.gazePoint.valid);
 						otherwise
-							ll=td.left.gazePoint.onDisplayArea(:,td.left.gazePoint.valid);
-							rr=td.right.gazePoint.onDisplayArea(:,td.right.gazePoint.valid);
-							if size(ll,2) == size(rr,2)
-								xy = [ll;rr];
+							if all(td.left.gazePoint.valid & td.right.gazePoint.valid)
+								v = td.left.gazePoint.valid & td.right.gazePoint.valid;
+								xy = [td.left.gazePoint.onDisplayArea(:,v);...
+									td.right.gazePoint.onDisplayArea(:,v)];
 							else
-								xy = ll; %switch temporarily to left eye only
+								xy = [td.left.gazePoint.onDisplayArea(:,td.left.gazePoint.valid),...
+									td.right.gazePoint.onDisplayArea(:,td.right.gazePoint.valid)];
 							end
 					end
+				end
+				if ~isempty(xy)
+					sample.valid = true;
 					xy			= doSmoothing(me,xy);
 					xy			= toPixels(me, xy,'','relative');
 					sample.gx	= xy(1);
@@ -464,7 +470,7 @@ classdef tobiiManager < optickaCore
 			else
 				fprintf('--->>> tobiiManager getSample(): are you sure you are recording?\n');
 			end
-			me.currentSample = sample;
+			me.currentSample	= sample;
 		end
 		
 		% ===================================================================
@@ -721,21 +727,21 @@ classdef tobiiManager < optickaCore
 		function drawEyePosition(me,details)
 			if ~exist('details','var'); details = false; end
 			if (me.isDummy || me.isConnected) && me.screen.isOpen ...
-					&& ~isempty(me.currentSample) && ~isnan(me.currentSample.gx) && ~isnan(me.currentSample.gy)
+					&& ~isempty(me.currentSample) && me.currentSample.valid
 				xy = [me.currentSample.gx me.currentSample.gy];
 				if details
 					if me.fixLength > 0
 						if me.fixLength > me.fixation.fixTime
 							%Screen('DrawText', me.win, 'fix', xy(1),xy(2), [0.7 0.7 0.7]);
-							Screen('DrawDots', me.win, xy, me.pupil*2, [1 0.5 1 1], [], 0);
+							Screen('DrawDots', me.win, xy, 2, [0.2 1 0.5 1], [], 0);
 						else
-							Screen('DrawDots', me.win, xy, me.pupil*2, [1 0 1 1], [], 0);
+							Screen('DrawDots', me.win, xy, 2, [1 0 1 1], [], 0);
 						end
 					else
-						Screen('DrawDots', me.win, xy, me.pupil*2, [0.7 0.5 0 1], [], 0);
+						Screen('DrawDots', me.win, xy, 2, [0.7 0.5 0 1], [], 0);
 					end
 				else
-					Screen('DrawDots', me.win, xy, me.pupil*2, [0.7 0.5 0 1], [], 0);
+					Screen('DrawDots', me.win, xy, 2, [0.7 0.5 0 1], [], 0);
 				end
 			end
 		end
@@ -1096,7 +1102,7 @@ classdef tobiiManager < optickaCore
 					case 'heuristic2'
 						out = me.heuristicFilter(in,2);
 						out = median(out, 2);
-					case 'sg' %savitzky-golay
+					case {'sg','savitzky-golay'}
 						out = sgolayfilt(in,1,me.smoothing.window,[],2);
 						out = median(out, 2);
 					otherwise
@@ -1111,7 +1117,7 @@ classdef tobiiManager < optickaCore
 				out = [mean([out(1) out(3)]); mean([out(2) out(4)])];
 			end
 			if length(out) ~= 2
-				out = [0.5 0.5];
+				out = [NaN NaN];
 			end
 		end
 		
@@ -1444,164 +1450,5 @@ classdef tobiiManager < optickaCore
 			me.tobii = Titta(me.settings);
 		end
 		
-		% ===================================================================
-		%> @brief original Tobii SDK head pos check
-		%>
-		% ===================================================================
-		function checkHeadPosition(me)
-			if ~me.isConnected; return; end
-			me.tobii.get_gaze_data();
-			while ~KbCheck
-				DrawFormattedText(me.screen.win, 'When correctly positioned press any key to start the calibration.', 'center', me.screen.screenVals.height * 0.1, me.screen.screenVals.white);
-				distance = [];
-				gaze_data = me.tobii.get_gaze_data();
-				if ~isempty(gaze_data)
-					last_gaze = gaze_data(end);
-					validityColor = [0.8 0 0];
-					% Check if user has both eyes inside a reasonable tacking area.
-					if last_gaze.LeftEye.GazeOrigin.Validity.Valid && last_gaze.RightEye.GazeOrigin.Validity.Valid
-						left_validity = all(last_gaze.LeftEye.GazeOrigin.InTrackBoxCoordinateSystem(1:2) < 0.85) ...
-							&& all(last_gaze.LeftEye.GazeOrigin.InTrackBoxCoordinateSystem(1:2) > 0.15);
-						right_validity = all(last_gaze.RightEye.GazeOrigin.InTrackBoxCoordinateSystem(1:2) < 0.85) ...
-							&& all(last_gaze.RightEye.GazeOrigin.InTrackBoxCoordinateSystem(1:2) > 0.15);
-						if left_validity && right_validity
-							validityColor = [0 0.8 0];
-						end
-					end
-					origin = [me.screen.screenVals.width/4 me.screen.screenVals.height/4];
-					size = [me.screen.screenVals.width/2 me.screen.screenVals.height/2];
-					
-					baseRect = [0 0 size(1) size(2)];
-					frame = CenterRectOnPointd(baseRect, me.screen.screenVals.width/2, me.screen.screenVals.height/2);
-					
-					Screen('FrameRect', me.screen.win, validityColor, frame, 5);
-					% Left Eye
-					if last_gaze.LeftEye.GazeOrigin.Validity.Valid
-						distance = [distance; round(last_gaze.LeftEye.GazeOrigin.InUserCoordinateSystem(3)/10,1)];
-						left_eye_pos_x = double(1-last_gaze.LeftEye.GazeOrigin.InTrackBoxCoordinateSystem(1))*size(1) + origin(1);
-						left_eye_pos_y = double(last_gaze.LeftEye.GazeOrigin.InTrackBoxCoordinateSystem(2))*size(2) + origin(2);
-						Screen('DrawDots', me.screen.win, [left_eye_pos_x left_eye_pos_y], 30, validityColor, [], 2);
-					end
-					% Right Eye
-					if last_gaze.RightEye.GazeOrigin.Validity.Valid
-						distance = [distance;round(last_gaze.RightEye.GazeOrigin.InUserCoordinateSystem(3)/10,1)];
-						right_eye_pos_x = double(1-last_gaze.RightEye.GazeOrigin.InTrackBoxCoordinateSystem(1))*size(1) + origin(1);
-						right_eye_pos_y = double(last_gaze.RightEye.GazeOrigin.InTrackBoxCoordinateSystem(2))*size(2) + origin(2);
-						Screen('DrawDots', me.screen.win, [right_eye_pos_x right_eye_pos_y], 30, validityColor, [], 2);
-					end
-				end
-				DrawFormattedText(me.screen.win, sprintf('Current distance to the eye tracker: %.2f cm.',mean(distance)), 'center', me.screen.screenVals.height * 0.85, me.screen.screenVals.white);
-				flip(me.screen);
-			end
-			me.tobii.stop_gaze_data();
-		end
-		
-		% ===================================================================
-		%> @brief originl Tobii SDK calibration
-		%>
-		% ===================================================================
-		function simpleCalibration(me)
-			spaceKey = KbName('space');
-			RKey = KbName('C');
-			dotSizePix = 15;
-			dotColor = [[1 0 0];[1 1 1]]; % Red and white
-			leftColor = [1 0.5 0];
-			rightColor = [0 0.4 0.75];
-			% Calibration points
-			lb = 0.15;  % left bound
-			xc = 0.5;  % horizontal center
-			rb = 0.85;  % right bound
-			ub = 0.15;  % upper bound
-			yc = 0.5;  % vertical center
-			bb = 0.85;  % bottom bound
-			
-			points_to_calibrate = [[xc,yc];[lb,ub];[rb,ub];[lb,bb];[rb,bb]];
-			
-			% Create calibration object
-			calib = ScreenBasedCalibration(me.tobii);
-			try calib.leave_calibration_mode(); end
-			calibrating = true;
-			
-			DrawFormattedText(me.screen.win, 'Get ready to fixate...', 'center', 'center', me.screen.screenVals.white);
-			flip(me.screen);
-			WaitSecs(0.5);
-			spx = [me.screen.screenVals.width me.screen.screenVals.height];
-			
-			while calibrating
-				% Enter calibration mode
-				calib.enter_calibration_mode();
-				
-				for i=1:length(points_to_calibrate)
-					
-					Screen('DrawDots', me.screen.win, points_to_calibrate(i,:).*spx, dotSizePix, dotColor(1,:), [], 2);
-					Screen('DrawDots', me.screen.win, points_to_calibrate(i,:).*spx, dotSizePix*0.3, dotColor(2,:), [], 2);
-					
-					Screen('Flip', me.screen.win);
-					
-					% Wait a moment to allow the user to focus on the point
-					WaitSecs(1);
-					
-					if calib.collect_data(points_to_calibrate(i,:)) ~= CalibrationStatus.Success
-						% Try again if it didn't go well the first time.
-						% Not all eye tracker models will fail at this point, but instead fail on ComputeAndApply.
-						calib.collect_data(points_to_calibrate(i,:));
-					end
-					
-					flip(me.screen);
-					WaitSecs(0.2);
-					
-				end
-				
-				DrawFormattedText(me.screen.win, 'Calculating calibration result....', 'center', 'center', me.screen.screenVals.white);
-				
-				flip(me.screen);
-				
-				% Blocking call that returns the calibration result
-				calibration_result = calib.compute_and_apply();
-				
-				calib.leave_calibration_mode();
-				
-				if calibration_result.Status ~= CalibrationStatus.Success
-					continue
-				end
-				
-				% Calibration Result
-				WaitSecs(0.5);
-				flip(me.screen);
-				points = calibration_result.CalibrationPoints;
-				
-				for i=1:length(points)
-					Screen('DrawDots', me.screen.win, points(i).PositionOnDisplayArea.*spx, dotSizePix*0.5, dotColor(2,:), [], 2);
-					for j=1:length(points(i).RightEye)
-						if points(i).LeftEye(j).Validity == CalibrationEyeValidity.ValidAndUsed
-							Screen('DrawDots', me.screen.win, points(i).LeftEye(j).PositionOnDisplayArea.*spx, dotSizePix*0.3, leftColor, [], 2);
-							Screen('DrawLines', me.screen.win, ([points(i).LeftEye(j).PositionOnDisplayArea; points(i).PositionOnDisplayArea].*spx)', 2, leftColor, [0 0], 2);
-						end
-						if points(i).RightEye(j).Validity == CalibrationEyeValidity.ValidAndUsed
-							Screen('DrawDots', me.screen.win, points(i).RightEye(j).PositionOnDisplayArea.*spx, dotSizePix*0.3, rightColor, [], 2);
-							Screen('DrawLines', me.screen.win, ([points(i).RightEye(j).PositionOnDisplayArea; points(i).PositionOnDisplayArea].*spx)', 2, rightColor, [0 0], 2);
-						end
-					end
-				end
-				
-				DrawFormattedText(me.screen.win, 'Press the ''C'' key to recalibrate or ''Space'' to continue....', 'center', me.screen.screenVals.height * 0.95, me.screen.screenVals.white)
-				flip(me.screen);
-				
-				while true
-					[ keyIsDown, seconds, keyCode ] = KbCheck;
-					keyCode = find(keyCode, 1);
-					if keyIsDown
-						if keyCode == spaceKey
-							calibrating = false;
-							break;
-						elseif keyCode == RKey
-							break;
-						end
-						KbReleaseWait;
-					end
-				end
-				
-			end
-		end
 	end %------------------END PRIVATE METHODS
 end
