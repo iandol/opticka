@@ -115,10 +115,10 @@ classdef barStimulus < baseStimulus
 			
 			doProperties(me);
 			
-			constructMatrix(me) %make our matrix
-			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, [], 2);
+			constructMatrix(me); %make our matrix
+			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 0, [], 2);
 			if me.phaseReverseTime > 0
-				me.texture2 = Screen('MakeTexture', me.sM.win, me.matrix2, 1, [], 2);
+				me.texture2 = Screen('MakeTexture', me.sM.win, me.matrix2, 0, [], 2);
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 			end
 			
@@ -380,41 +380,19 @@ classdef barStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function matrixOut = makeCheckerBoard(me,hh,ww,c)
-			tic
-			type = 'uint8';
 			cppd = round(c * me.ppd);
 			if cppd < 1; cppd = 1; end
-			blockB = zeros(cppd,cppd,type);
-			blockW = ones(cppd,cppd,type);
-			hscale = ceil(hh / cppd);
-			wscale = ceil(ww / cppd);
-			if hscale < 1; hscale = 1; end
-			if wscale < 1; wscale = 1; end
-			matrix = cell(hscale,wscale);
-			for i = 1 : wscale
-				for j = 1: hscale
-					if (mod(j,2) && mod(i,2)) || (~mod(j,2) && ~mod(i,2))
-						matrix{j,i} = blockB;
-					else
-						matrix{j,i} = blockW;
-					end
-				end
-			end
-			matrix = cell2mat(matrix);
-			matrix = matrix(1:hh,1:ww);
-			if isempty(me.findprop('colourOut'))
-				colour = me.colour;
-			else
-				colour = me.colourOut;
-			end
-			matrixOut = zeros(hh,ww,3,type);
+			hscale = ceil((hh / cppd) / 2); if hscale < 1; hscale = 1; end
+			wscale = ceil((ww / cppd) / 2); if wscale < 1; wscale = 1; end
+			tile = repelem([0 1; 1 0], cppd, cppd);
+			mx = repmat(tile, hscale, wscale);
+			mx = mx(1:hh,1:ww);
+			matrixOut = zeros(hh,ww,3,'uint8');
 			for i = 1 : 3
-				matrixOut(:,:,i) = matrix(:,:,1) .* colour(i);
+				matrixOut(:,:,i) = mx(:,:,1) .* me.colourOut(i);
 			end
 			matrixOut = double(matrixOut);
-			toc
 		end
-		
 		
 	end
 end
