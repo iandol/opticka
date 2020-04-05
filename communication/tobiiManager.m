@@ -178,6 +178,10 @@ classdef tobiiManager < optickaCore
 			me.settings.trackingMode		= me.trackingMode;
 			me.settings.cal.bgColor			= floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor	= me.settings.cal.bgColor;
+			me.settings.UI.setup.showFixPointsToSubject		= false;
+			me.settings.UI.setup.showHeadToSubject			= true;   
+            me.settings.UI.setup.showInstructionToSubject	= false;
+			me.settings.UI.setup.eyeClr						= 255;
 			if strcmpi(me.calibrationStimulus,'animated')
 				me.calStim							= AnimatedCalibrationDisplay();
 				me.calStim.moveTime					= 0.75;
@@ -216,7 +220,7 @@ classdef tobiiManager < optickaCore
 			if ~isempty(me.valPositions)
 				me.settings.val.pointPos			= me.valPositions;
 			end
-			me.settings.UI.setup.eyeClr				= 255;
+			
 			me.settings.cal.pointNotifyFunction		= @tittaCalCallback;
 			me.settings.val.pointNotifyFunction		= @tittaCalCallback;
 			updateDefaults(me);
