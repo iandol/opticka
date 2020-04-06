@@ -149,11 +149,20 @@ classdef labJackT < handle
 				[err,me.devCount,me.devTypes] = calllib(me.libName,'LJM_ListAll',0,0,0,0,[],[],[]);
 				me.checkError(err);
 				
+				if me.devCount == 0
+					me.salutation('OPEN','No LabJack devices attached, entering silentMode...',true);
+					me.close();
+					me.silentMode = true;
+					return
+				end
+				
 				[err, ~, thandle] = calllib(me.libName,'LJM_Open',0,0,'ANY',0);
 				me.checkError(err);
 				if err > 0
+					me.salutation('OPEN','Error opening device, entering silentMode...',true);
 					me.close();
 					me.silentMode = true;
+					return
 				else
 					me.handle = thandle;
 					me.isOpen = true;
@@ -211,6 +220,11 @@ classdef labJackT < handle
 				end
 			else
 				me.salutation('CLOSE method','No handle to close...');
+				me.devCount = [];
+				me.devTypes = [];
+				me.handle=[];
+				me.isOpen = false;
+				me.isValid = false;
 			end
 		end
 		
