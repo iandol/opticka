@@ -180,7 +180,7 @@ classdef tobiiManager < optickaCore
 			me.settings.UI.setup.bgColor	= me.settings.cal.bgColor;
 			me.settings.UI.setup.showFixPointsToSubject		= false;
 			me.settings.UI.setup.showHeadToSubject			= true;   
-            me.settings.UI.setup.showInstructionToSubject	= false;
+            me.settings.UI.setup.showInstructionToSubject	= true;
 			me.settings.UI.setup.eyeClr						= 255;
 			if strcmpi(me.calibrationStimulus,'animated')
 				me.calStim							= AnimatedCalibrationDisplay();
