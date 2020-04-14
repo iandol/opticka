@@ -102,6 +102,8 @@ classdef tobiiManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> cache this to save time in tight loops
+		isRecording_ = false;
 		calStim
 		secondScreen logical = false;
 		%> currentSample template
@@ -288,6 +290,8 @@ classdef tobiiManager < optickaCore
 		function cal = trackerSetup(me,incal)
 			if ~exist('incal','var');incal=[];end
 			cal = [];
+			wasRecording = me.isRecording;
+			if wasRecording; stopRecording(me);	end
 			if ~me.isConnected && ~me.screen.isOpen; return; end
 			updateDefaults(me); % make sure we send any other settings changes
 			if me.secondScreen
@@ -317,6 +321,8 @@ classdef tobiiManager < optickaCore
 			end
 			if me.secondScreen && me.operatorScreen.isOpen; close(me.operatorScreen); WaitSecs(0.2); end
 			resetFixation(me);
+			if wasRecording; startRecording(me); end
+			me.isRecording_ = me.isRecording;
 		end
 		
 		% ===================================================================
@@ -329,7 +335,7 @@ classdef tobiiManager < optickaCore
 				if success
 					me.statusMessage('Starting to record gaze...');
 				else
-					warning('Can''t START buffer() gazerecording!!!')
+					warning('Can''t START buffer() GAZE recording!!!')
 				end
 				
 				success = me.tobii.buffer.start('externalSignal');
@@ -346,6 +352,7 @@ classdef tobiiManager < optickaCore
 					warning('Can''t START buffer() timeSync recording!!!')
 				end
 			end
+			me.isRecording_ = me.isRecording;
 		end
 		
 		% ===================================================================
@@ -358,23 +365,24 @@ classdef tobiiManager < optickaCore
 				if success
 					me.statusMessage('Stopping to record Gaze...');
 				else
-					warning('Can''t STOP buffer() recording!!!')
+					warning('Can''t STOP buffer() GAZE recording!!!')
 				end
 				
 				success = me.tobii.buffer.stop('externalSignal');
 				if success
 					me.statusMessage('Stopping to record TTLs...');
 				else
-					warning('Can''t STOP buffer() recording!!!')
+					warning('Can''t STOP buffer() TTL recording!!!')
 				end
 				
 				success = me.tobii.buffer.stop('timeSync');
 				if success
 					me.statusMessage('Stopping to record timeSync...');
 				else
-					warning('Can''t STOP buffer() recording!!!')
+					warning('Can''t STOP buffer() timeSync recording!!!')
 				end
 			end
+			me.isRecording_ = me.isRecording;
 		end
 		
 		% ===================================================================
@@ -400,8 +408,10 @@ classdef tobiiManager < optickaCore
 				me.salutation('saveData',sprintf('Save: %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3),true);
 				disp('===========================')
 				clear tobii
-			else
-				me.salutation('saveData',sprintf('NO data available: %s (%.1fms)...\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3),true);
+			elseif isempty(me.data)
+				me.salutation('saveData',sprintf('NO data available... (%.1fms)...\n',toc(ts)*1e3),true);
+			elseif ~isempty(me.data)
+				me.salutation('saveData',sprintf('Data retrieved to object in %.1fms)...\n',toc(ts)*1e3),true);
 			end
 		end
 		
@@ -427,7 +437,7 @@ classdef tobiiManager < optickaCore
 				me.x			= me.toDegrees(sample.gx,'x');
 				me.y			= me.toDegrees(sample.gy,'y');
 				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
-			elseif me.isConnected && me.isRecording
+			elseif me.isConnected && me.isRecording_
 				xy				= [];
 				td				= me.tobii.buffer.peekN('gaze',me.smoothing.nSamples);
 				if isempty(td);me.currentSample=sample;return;end
@@ -472,7 +482,7 @@ classdef tobiiManager < optickaCore
 					me.pupil	= NaN;
 				end
 			else
-				fprintf('--->>> tobiiManager getSample(): are you sure you are recording?\n');
+				if me.verbose;fprintf('--->>> tobiiManager getSample(): are you sure you are recording?\n');end
 			end
 			me.currentSample	= sample;
 		end
