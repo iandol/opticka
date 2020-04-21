@@ -92,6 +92,8 @@ classdef labJackT < handle
 		className = ''
 		%> timedTTL cache
 		timedTTLCache = []
+		winLibrary = 'C:\Windows\System32\LabJackM'
+		winHeader = 'C:\Program Files (x86)\LabJack\Drivers\LabJackM.h'
 	end
 	
 	%=======================================================================
@@ -120,6 +122,11 @@ classdef labJackT < handle
 				me.openNow		= false;
 				me.salutation('CONSTRUCTOR Method','labJack running in silent mode...')
 			end
+			if IsWin
+				me.header = me.winHeader;
+				me.library = me.winLibrary;
+				me.libName = 'LabJackM';
+			end
 			if me.openNow == true
 				open(me);
 			end
@@ -132,68 +139,60 @@ classdef labJackT < handle
 		% ===================================================================
 		function open(me)
 			if me.silentMode || me.isOpen; return; end
-			if isunix || ismac
-				if ~libisloaded(me.libName)
-					try
-						warning off; loadlibrary(me.library,me.header); warning on;
-					catch ME
-						warning(['Loading the LJM library failed: ' ME.message]);
-						me.version = ['Library Load FAILED: ' ME.message];
-						me.silentMode = true;
-						me.verbose = true;
-						return
-					end
-				end
-				me.functionList = libfunctions(me.libName, '-full'); %store our raw lib functions
-				
-				[err,me.devCount,me.devTypes] = calllib(me.libName,'LJM_ListAll',0,0,0,0,[],[],[]);
-				me.checkError(err);
-				
-				if me.devCount == 0
-					me.salutation('OPEN','No LabJack devices attached, entering silentMode...',true);
-					me.close();
+
+			if ~libisloaded(me.libName)
+				try
+					warning off; loadlibrary(me.library,me.header); warning on;
+				catch ME
+					warning(['Loading the LJM library failed: ' ME.message]);
+					me.version = ['Library Load FAILED: ' ME.message];
 					me.silentMode = true;
+					me.verbose = true;
 					return
 				end
-				
-				[err, ~, thandle] = calllib(me.libName,'LJM_Open',0,0,'ANY',0);
-				me.checkError(err);
-				if err > 0
-					me.salutation('OPEN','Error opening device, entering silentMode...',true);
-					me.close();
-					me.silentMode = true;
-					return
-				else
-					me.handle = thandle;
-					me.isOpen = true;
-					me.silentMode = false;
-				end
-				
-				err = calllib(me.libName, 'LJM_WriteLibraryConfigS', 'LJM_SEND_RECEIVE_TIMEOUT_MS', 500);
-				if err == 0; me.salutation('OPEN method','Set timeout to 500ms!'); end
-				
-				[~, ~, vals] = calllib(me.libName, 'LJM_eReadNames', me.handle,...
-					3, {'SERIAL_NUMBER','FIRMWARE_VERSION','TEST'}, [0 0 0], 0);
-				me.serialNumber = uint32(vals(1));
-				me.version = vals(2);
-				me.testValue = uint32(vals(3));
-				
-				%initialise EIO and CIO
-				err = calllib(me.libName, 'LJM_eWriteNames', me.handle, 4, {'EIO_DIRECTION','CIO_DIRECTION',...
-					'EIO_STATE','CIO_STATE'}, [255 255 0 0], 0);
-				me.checkError(err);
-				
-				me.isValid = me.isHandleValid;
-				
-				if ~me.silentMode;me.salutation('OPEN method','Loading the LabJackT is a success!');end
-			else 
-				ljmAsm = NET.addAssembly('LabJack.LJM');
-				% Creating an object to nested class LabJack.LJM.CONSTANTS
-				t = ljmAsm.AssemblyHandle.GetType('LabJack.LJM+CONSTANTS');
-				LJM_CONSTANTS = System.Activator.CreateInstance(t); 
-				[err, me.handle] = LabJack.LJM.OpenS('ANY', 'ANY', 'ANY', 0);
 			end
-				
+			me.functionList = libfunctions(me.libName, '-full'); %store our raw lib functions
+
+			[err,me.devCount,me.devTypes] = calllib(me.libName,'LJM_ListAll',0,0,0,0,[],[],[]);
+			me.checkError(err);
+
+			if me.devCount == 0
+				me.salutation('OPEN','No LabJack devices attached, entering silentMode...',true);
+				me.close();
+				me.silentMode = true;
+				return
+			end
+
+			[err, ~, thandle] = calllib(me.libName,'LJM_Open',0,0,'ANY',0);
+			me.checkError(err);
+			if err > 0
+				me.salutation('OPEN','Error opening device, entering silentMode...',true);
+				me.close();
+				me.silentMode = true;
+				return
+			else
+				me.handle = thandle;
+				me.isOpen = true;
+				me.silentMode = false;
+			end
+
+			err = calllib(me.libName, 'LJM_WriteLibraryConfigS', 'LJM_SEND_RECEIVE_TIMEOUT_MS', 500);
+			if err == 0; me.salutation('OPEN method','Set timeout to 500ms!'); end
+
+			[~, ~, vals] = calllib(me.libName, 'LJM_eReadNames', me.handle,...
+				3, {'SERIAL_NUMBER','FIRMWARE_VERSION','TEST'}, [0 0 0], 0);
+			me.serialNumber = uint32(vals(1));
+			me.version = vals(2);
+			me.testValue = uint32(vals(3));
+
+			%initialise EIO and CIO
+			err = calllib(me.libName, 'LJM_eWriteNames', me.handle, 4, {'EIO_DIRECTION','CIO_DIRECTION',...
+				'EIO_STATE','CIO_STATE'}, [255 255 0 0], 0);
+			me.checkError(err);
+
+			me.isValid = me.isHandleValid;
+
+			if ~me.silentMode;me.salutation('OPEN method','Loading the LabJackT is a success!');end	
 		end
 		
 		% ===================================================================
@@ -202,22 +201,18 @@ classdef labJackT < handle
 		%>	//Closes the handle of a LabJack USB device.
 		% ===================================================================
 		function close(me)
-			if ~isempty(me.handle)
-				if ispc
-					LabJack.LJM.Close(me.handle);
+			if ~isempty(me.handle)				
+				err =  calllib(me.libName,'LJM_Close',me.handle);
+				if err > 0 
+					me.salutation('CLOSE method','LabJack Handle not valid');
 				else
-					err =  calllib(me.libName,'LJM_Close',me.handle);
-					if err > 0 
-						me.salutation('CLOSE method','LabJack Handle not valid');
-					else
-						me.salutation('CLOSE method','LabJack Handle has been closed');
-					end
-					me.devCount = [];
-					me.devTypes = [];
-					me.handle=[];
-					me.isOpen = false;
-					me.isValid = false;
+					me.salutation('CLOSE method','LabJack Handle has been closed');
 				end
+				me.devCount = [];
+				me.devTypes = [];
+				me.handle=[];
+				me.isOpen = false;
+				me.isValid = false;
 			else
 				me.salutation('CLOSE method','No handle to close...');
 				me.devCount = [];
@@ -314,7 +309,8 @@ classdef labJackT < handle
 		function initialiseServer(me)
 			if me.silentMode || isempty(me.handle); return; end
 			%prepare string
-			str = sprintf([me.miniServer '\0']); %0byte terminator
+			mS = regexprep(me.miniServer,'61590,1,2000',['61590,1,' num2str(me.strobeTime*1e3)]); %modify strobe time
+			str = sprintf([mS '\0']); %0byte terminator
 			strN = length(str);
 			
 			%stop server
@@ -356,10 +352,7 @@ classdef labJackT < handle
 				fprintf('\ntimedTTL Input options: \n\tline (single value 0-7=FIO, 8-15=EIO, or 16-19=CIO), time (in ms)\n\n');
 				return
 			end
-			
-			
-			me.salutation('timedTTL method',sprintf('Line:%g Tlong:%g Tshort:%g output time = %g ms', line, time1, time2, otime*1000))
-			
+			me.salutation('timedTTL method',sprintf('Line:%g Tlong:%g Tshort:%g output time = %g ms', line, time1, time2, otime*1000));
 		end
 		
 		% ===================================================================
@@ -376,7 +369,6 @@ classdef labJackT < handle
 			if ~exist('value','var');fprintf('\nsetDIO Input options: \n\tvalue, [mask], [value direction], [mask direction]\n\n');return;end
 			if ~exist('mask','var');mask=[255,255,255];end %all DIO by default
 			if ~exist('valuedir','var');valuedir=[255,255,255];maskdir=valuedir;end %all DIO set to output
-			
 		end
 		
 		% ===================================================================
@@ -389,7 +381,6 @@ classdef labJackT < handle
 			if me.silentMode || isempty(me.handle); return; end
 			if ~exist('value','var');fprintf('\nsetDIODirection Input options: \n\t\tvalue, [mask]\n\n');return;end
 			if ~exist('mask','var');mask=[255,255,255];end
-
 		end
 		
 		% ===================================================================
@@ -402,7 +393,6 @@ classdef labJackT < handle
 			if me.silentMode || isempty(me.handle); return; end
 			if ~exist('value','var');fprintf('\nSetDIOValue Input options: \n\t\tvalue, [mask]\n\n');return;end
 			if ~exist('mask','var');mask=[255,255,255];end
-			
 		end
 		
 		% ===================================================================
@@ -426,14 +416,14 @@ classdef labJackT < handle
 		function test(me)
 			if me.silentMode || isempty(me.handle); return; end
 			while true
+				me.strobeServer(1); fprintf('Send 1\n');
 				WaitSecs('YieldSecs', 1);
-				me.sendStrobedEIO(1); fprintf('Send 1\n');
+				me.strobeServer(255); fprintf('Send 255\n');
 				WaitSecs('YieldSecs', 1);
-				me.sendStrobedEIO(255); fprintf('Send 255\n');
-				WaitSecs('YieldSecs', 1);
-				me.sendStrobedEIO(0); fprintf('Send 0\n');
+				me.strobeServer(0); fprintf('Send 0\n');
 				[~,~,buttons] = GetMouse(0);
 				if any(buttons); break; end
+				WaitSecs('YieldSecs', 1);
 			end
 		end
 		
