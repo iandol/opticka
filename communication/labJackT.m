@@ -63,8 +63,8 @@ classdef labJackT < handle
 	properties (SetAccess = private, GetAccess = private)
 		%> RAM address for communication
 		RAMAddress uint32 = 46000
-		%> minimal lua server to allow fast asynchronous strobing of EIO
-		miniServer char = 'LJ.setLuaThrottle(100)LJ.IntervalConfig(0,500)local a=LJ.CheckInterval;local b=MB.R;local c=MB.W;local d=-1;local e=-1;c(2601,0,255)c(2602,0,255)c(46000,3,0)c(2501,0,0)c(2502,0,0)while true do d=b(46000,3)if d~=e and(d>=1 and d<=255)then c(2501,0,d)c(61590,1,2000)c(2501,0,0)e=d elseif d~=e and(d>=256 and d<=271)then c(2502,0,d-256)c(61590,1,100000)c(61590,1,100000)c(61590,1,100000)c(2502,0,0)e=d elseif d~=e and d==0 then c(2501,0,0)e=d end;if a(0)then c(46000,3,0)end end'
+		%> minimal lua server to allow fast asynchronous strobing of EIO & CIO
+		miniServer char = 'LJ.setLuaThrottle(100)local a=MB.R;local b=MB.W;local c=-1;b(2601,0,255)b(2602,0,255)b(2501,0,0)b(2502,0,0)b(46000,3,0)while true do c=a(46000,3)if c>=1 and c<=255 then b(2501,0,c)b(61590,1,2000)b(2501,0,0)elseif c>=256 and c<=271 then b(2502,0,c-256)b(61590,1,100000)b(61590,1,100000)b(61590,1,100000)b(2502,0,0)elseif c==0 then b(2501,0,0)end;if c>-1 then b(46000,3,-1)end end'
 		%> test Lua server, just spits out time every second
 		testServer char = 'LJ.IntervalConfig(0,1000)while true do if LJ.CheckInterval(0)then print(LJ.Tick())end end'
 		%> constants
@@ -315,7 +315,7 @@ classdef labJackT < handle
 			
 			%stop server
 			calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
-			WaitSecs(0.75);
+			WaitSecs('YieldSecs',0.75);
 			calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
 			
 			%upload new script	
@@ -324,6 +324,7 @@ classdef labJackT < handle
 			err = calllib(me.libName, 'LJM_eWriteNameByteArray', me.handle, 'LUA_SOURCE_WRITE', strN, str, 0);
 			me.checkError(err,true);
 			[~, ~, len] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_SOURCE_SIZE', 0);
+			if me.verbose; fprintf('===>>> LUA Server init code sent: %i | recieved: %i | strobe length: %i\n',strN,len,me.strobeTime*1e3); end
 			if len < strN; error('Problem with the upload...'); end
 			
 			%copy to flash
@@ -337,6 +338,7 @@ classdef labJackT < handle
 			
 			%check it is running
 			[err, ~, val] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_RUN', 0);
+			if me.verbose && val==1; disp('===>>> LUA Server is now Running...'); end
 			me.checkError(err,true);
 			if val ~= 1; warning('Could not start server again...'); end
 		end
