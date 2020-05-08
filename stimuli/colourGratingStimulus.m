@@ -41,8 +41,6 @@ classdef colourGratingStimulus < baseStimulus
 		contrast double			= 0.5
 		%> use a circular mask for the grating (default = true).
 		mask logical			= true
-		%> do we normalise to a 2.2 gamma if the screen is not linear (default = false)?
-		normalise logical		= false
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
 		%This switch can be accomplished simply setting angle, but this control enables
 		%simple reverse direction protocols.
@@ -234,7 +232,7 @@ classdef colourGratingStimulus < baseStimulus
 				
 			% this is a two color grating, passing in colorA and colorB.
 			[me.texture, ~, me.shader] = CreateProceduralColorGrating(me.sM.win, me.res(1),...
-				me.res(2), me.colour, me.colour2, me.maskValue, me.normalise);
+				me.res(2), me.colour, me.colour2, me.maskValue);
 			
 			me.inSetup = false;
 			computePosition(me);
