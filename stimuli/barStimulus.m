@@ -14,7 +14,7 @@ classdef barStimulus < baseStimulus
 		contrast double = 1
 		%> texture scale
 		scale double = 1
-		%> checkSize in degrees for checkerboard textures
+		%> checkSize in cycles per degree for checkerboard textures
 		checkSize double = 1
 		%> texture interpolation: 'nearest','linear','spline','cubic'
 		interpMethod char = 'nearest'
@@ -25,6 +25,8 @@ classdef barStimulus < baseStimulus
 		regenerateTexture logical = true
 		%> modulate the colour
 		modulateColour double = []
+		%> for checkerboard the second colour
+		colour2 double = [0 0 0 1];
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -39,6 +41,9 @@ classdef barStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
+		baseColour
+		screenWidth
+		screenHeight
 		%> for phase reveral of checkerboard
 		matrix2
 		%> for phase reveral of checkerboard
@@ -64,7 +69,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function me = barStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','Bar','colour',[1 1 1],'size',0,...
+				struct('name','Bar','colour',[1 1 1 1],'size',0,...
 				'speed',2,'startPosition',0));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
@@ -93,6 +98,9 @@ classdef barStimulus < baseStimulus
 			
 			me.sM = sM;
 			me.ppd = sM.ppd;
+			me.baseColour = sM.backgroundColour;
+			me.screenWidth = sM.screenVals.screenWidth;
+			me.screenHeight = sM.screenVals.screenHeight;
 			
 			if me.size > 0
 				me.barHeight = me.size;
@@ -115,6 +123,9 @@ classdef barStimulus < baseStimulus
 			
 			doProperties(me);
 			
+			if me.barWidthOut > me.screenWidth; me.barWidthOut=me.screenWidth; end
+			if me.barHeightOut > me.screenHeight; me.barHeightOut=me.screenHeight; end
+			
 			constructMatrix(me); %make our matrix
 			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 0, [], 2);
 			if me.phaseReverseTime > 0
@@ -136,7 +147,7 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
-			if me.sizeOut > 0; me.barLengthOut = me.sizeOut/me.ppd; me.barWidthOut = me.sizeOut/me.ppd; end
+			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
 			if me.regenerateTexture
 				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
 					try Screen('Close',me.texture); end %#ok<*TRYNC>
@@ -163,10 +174,10 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				if isempty(me.modulateColourOut)
-					colour = me.colourOut;
-				else
+				if ~isempty(me.modulateColourOut)
 					colour = me.modulateColourOut;
+				else
+					colour = [];
 				end
 				Screen('DrawTexture',me.sM.win, me.texture,[ ],...
 					me.mvRect, me.angleOut, [], [], colour);
@@ -217,6 +228,9 @@ classdef barStimulus < baseStimulus
 			me.texture=[];
 			me.mvRect = [];
 			me.dstRect = [];
+			me.screenWidth = [];
+			me.screenHeight = [];
+			me.ppd = [];
 			me.removeTmpProperties;
 			resetTicks(me);
 		end
@@ -247,6 +261,23 @@ classdef barStimulus < baseStimulus
 			me.barWidth = value;
 		end
 		
+		% ===================================================================
+		%> @brief SET Colour2 method
+		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
+		% ===================================================================
+		function set.colour2(me,value)
+			len=length(value);
+			switch len
+				case {4,3}
+					me.colour2 = [value(1:3) me.alpha]; %force our alpha to override
+				case 1
+					me.colour2 = [value value value me.alpha]; %construct RGBA
+				otherwise
+					me.colour2 = [1 1 1 me.alpha]; %return white for everything else
+			end
+			me.colour2(me.colour2<0)=0; me.colour2(me.colour2>1)=1;
+		end
+		
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================
@@ -258,9 +289,9 @@ classdef barStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_sizeOut(me,value)
-			me.sizeOut = (value*me.ppd);
+			me.sizeOut = value;
 			if ~me.inSetup
-				me.barLengthOut = me.sizeOut;
+				me.barHeightOut = me.sizeOut;
 				me.barWidthOut = me.sizeOut;
 			end
 		end
@@ -274,21 +305,11 @@ classdef barStimulus < baseStimulus
 		function constructMatrix(me)
 			me.matrix=[]; %reset the matrix
 			try
-				if isempty(me.findprop('barWidthOut'))
-					bwpixels = round(me.barWidth*me.ppd);
-				else
-					bwpixels = round(me.barWidthOut*me.ppd);
-				end
-				if isempty(me.findprop('barLengthOut'))
-					blpixels = round(me.barHeight*me.ppd);
-				else
-					blpixels = round(me.barLengthOut*me.ppd);
-				end
-				if isempty(me.findprop('checkSizeOut'))
-					checkSize = me.checkSize;
-				else
-					checkSize = me.checkSizeOut;
-				end
+				bwpixels = round(me.barWidthOut*me.ppd);
+				blpixels = round(me.barHeightOut*me.ppd);
+				if bwpixels>me.screenWidth;bwpixels=me.screenWidth;end
+				if blpixels>me.screenHeight;blpixels=me.screenHeight;end
+	
 				if ~strcmpi(me.type,'checkerboard')
 					if rem(bwpixels,2);bwpixels=bwpixels+1;end
 					if rem(blpixels,2);blpixels=blpixels+1;end
@@ -300,7 +321,7 @@ classdef barStimulus < baseStimulus
 				
 				switch me.type
 					case 'checkerboard'
-						tmat = me.makeCheckerBoard(blpixels,bwpixels,checkSize);
+						tmat = me.makeCheckerBoard(blpixels,bwpixels,me.checkSizeOut);
 					case 'random'
 						rmat=rand(blscale,bwscale);
 						for i=1:3
@@ -349,29 +370,29 @@ classdef barStimulus < baseStimulus
 				end
 				me.matrix = outmat;
 				if me.phaseReverseTime > 0
-					out2mat = outmat;
-					out2mat(:,:,1:3) = double(~outmat(:,:,1:3));
-					me.matrix2 = out2mat; 
+					out = zeros(size(outmat));
+					for i = 1:3
+						tmp = outmat(:,:,i);
+						u = unique(tmp);
+						if length(u) >= 2
+							idx1 = tmp == u(1);
+							idx2 = tmp == u(2);
+							tmp(idx1) = u(2);
+							tmp(idx2) = u(1);
+						end
+						out(:,:,i) = tmp;
+					end
+					out(:,:,4) = ones(size(out,1),size(out,2)).*me.alpha;
+					me.matrix2 = out;
 				end
 			catch ME %#ok<CTCH>
+				warning('--->>> barStimulus texture generation failed, making plain texture...')
 				getReport(ME)
-				if isempty(me.findprop('barWidthOut'))
-					bwpixels = round(me.barWidth*me.ppd);
-				else
-					bwpixels = round(me.barWidthOut*me.ppd);
-				end
-				if isempty(me.findprop('barLengthOut'))
-					blpixels = round(me.barHeight*me.ppd);
-				else
-					blpixels = round(me.barLengthOut*me.ppd);
-				end
-				tmat = ones(blpixels,bwpixels,4); %allocate the size correctly
-				tmat(:,:,1)=ones(blpixels,bwpixels)*me.colour(1);
-				tmat(:,:,2)=ones(blpixels,bwpixels)*me.colour(2);
-				tmat(:,:,3)=ones(blpixels,bwpixels)*me.colour(3);
-				tmat(:,:,4)=ones(blpixels,bwpixels)*me.colour(4);
-				rmat=ones(blpixels,bwpixels);
-				me.matrix=tmat;
+				bwpixels = round(me.barWidthOut*me.ppd);
+				blpixels = round(me.barHeightOut*me.ppd);
+				if bwpixels>me.screenWidth;bwpixels=me.screenWidth;end
+				if blpixels>me.screenHeight;blpixels=me.screenHeight;end
+				me.matrix=ones(blpixels,bwpixels,4);
 			end
 		end
 		
@@ -379,19 +400,38 @@ classdef barStimulus < baseStimulus
 		%> @brief make the checkerboard
 		%>
 		% ===================================================================
-		function matrixOut = makeCheckerBoard(me,hh,ww,c)
-			cppd = round(c * me.ppd);
-			if cppd < 1; cppd = 1; end
+		function mx = makeCheckerBoard(me,hh,ww,c)
+			cppd = ( me.ppd / c ) / 2; %convert to sf cycles per degree
+			if cppd < 1
+				warning('--->>> Checkerboard spatial frequency exceeds resolution of monitor...');
+				mx = zeros(hh,ww,3);
+				mx = mx .* me.baseColour;
+				return
+			end
 			hscale = ceil((hh / cppd) / 2); if hscale < 1; hscale = 1; end
 			wscale = ceil((ww / cppd) / 2); if wscale < 1; wscale = 1; end
 			tile = repelem([0 1; 1 0], cppd, cppd);
 			mx = repmat(tile, hscale, wscale);
 			mx = mx(1:hh,1:ww);
-			matrixOut = zeros(hh,ww,3,'uint8');
-			for i = 1 : 3
-				matrixOut(:,:,i) = mx(:,:,1) .* me.colourOut(i);
+			idx1 = find(mx == 0);
+			idx2 = find(mx == 1);
+			mx = repmat(mx,1,1,3);
+			c1 = me.mix(me.colourOut);
+			c2 = me.mix(me.colour2Out);
+			for i = 1:3
+				tmp = mx(:,:,i);
+				tmp(idx1) = c1(i);
+				tmp(idx2) = c2(i);
+				mx(:,:,i) = tmp;
 			end
-			matrixOut = double(matrixOut);
+		end
+		
+		% ===================================================================
+		%> @brief linear interpolation between two arays
+		%>
+		% ===================================================================
+		function out = mix(me,c)
+			out = me.baseColour(1:3) * (1 - me.contrastOut) + c(1:3) * me.contrastOut;
 		end
 		
 	end

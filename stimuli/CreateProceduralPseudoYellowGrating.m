@@ -48,7 +48,7 @@ else
 end
 
 if nargin < 8 || isempty(radius)
-    radius = 0;
+    radius = inf;
 end
 
 % Switch to windowPtr OpenGL context:
