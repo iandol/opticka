@@ -50,7 +50,7 @@ classdef barStimulus < baseStimulus
 		texture2
 		%> how many frames between phase reverses
 		phaseCounter double = 0
-		allowedProperties = 'type|barWidth|barHeight|angle|speed|contrast|scale|checkSize|interpMethod|phaseReverseTime';
+		allowedProperties = 'modulateColour|colour2|regenerateTexture|type|barWidth|barHeight|angle|speed|contrast|scale|checkSize|interpMethod|phaseReverseTime';
 		ignoreProperties = 'interpMethod|matrix|matrix2|phaseCounter|pixelScale';
 	end
 	
@@ -401,11 +401,13 @@ classdef barStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function mx = makeCheckerBoard(me,hh,ww,c)
-			cppd = ( me.ppd / c ) / 2; %convert to sf cycles per degree
-			if cppd < 1
+			cppd = round(( me.ppd / 2 / c )); %convert to sf cycles per degree
+			if cppd < 1 || cppd == Inf
 				warning('--->>> Checkerboard spatial frequency exceeds resolution of monitor...');
 				mx = zeros(hh,ww,3);
-				mx = mx .* me.baseColour;
+				for i = 1:3
+					mx(:,:,i) = mx(:,:,i) + me.baseColour(i);
+				end
 				return
 			end
 			hscale = ceil((hh / cppd) / 2); if hscale < 1; hscale = 1; end
