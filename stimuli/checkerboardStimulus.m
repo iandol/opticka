@@ -222,7 +222,7 @@ classdef checkerboardStimulus < baseStimulus
 				me.baseColourOut(4) = me.alpha;
 			end
 				
-			% this is a two color grating, passing in colorA and colorB.
+			% this is a checkerboard shader
 			[me.texture, ~, me.shader] = CreateProceduralCheckerboard(me.sM.win, ...
 				me.res(1), me.res(2), me.maskValue);
 			
@@ -288,6 +288,7 @@ classdef checkerboardStimulus < baseStimulus
 				end
 				if me.doDrift
 					me.driftPhase = me.driftPhase + me.phaseIncrement;
+					fprintf('Drift Phase: %.2f\n',me.driftPhase);
 				end
 				if mod(me.tick,me.phaseCounter) == 0
 					tmp = me.colourOut;
@@ -422,9 +423,9 @@ classdef checkerboardStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_sfOut(me,value)
-			me.sfCache = (me.ppd/value);
+			me.sfCache = value;
 			me.sfOut = me.sfCache;
-			fprintf('SET SFOut: %.2f | in: %.2f | scale: %.2f | size: %.2f\n', me.sfOut, me.sfCache, me.scale, me.sizeOut);
+			%fprintf('SET SFOut: %.2f | in: %.2f | scale: %.2f | size: %.2f\n', me.sfOut, me.sfCache, me.scale, me.sizeOut);
 		end
 		
 		% ===================================================================
