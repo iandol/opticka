@@ -66,16 +66,17 @@ myStims{3}=gratingStimulus('sf', 2, 'tf', 4, 'contrast', 0.7, 'size', 3, 'angle'
 	'name', 'Edge-smoothed grating');
 
 myStims{4}=gratingStimulus('type', 'square', 'sf', 1, 'contrast', 1, 'colour', [0.5 0.5 0.5], 'tf', 0,...
-	'size', 3, 'xPosition', 6, 'yPosition', 0, 'sigma',30, 'useAlpha', true,...
-	'name', 'Squarewave grating');
+	'size', 3, 'xPosition', 6, 'yPosition', 0, ...
+	'phaseReverseTime',0.33,'name', 'Squarewave grating');
 
 %%
 % This is log gabor filtered noise, based on code shared by Steve Dakin
 % You can control the orientation / SF filtering, and pass an image
-% through it. 
+% through it, or let it create a random texture. It can phase reverse using
+% an invert GLSL shader on the texture.
 myStims{5}=logGaborStimulus('size', 3, 'xPosition', 0,'yPosition', -5,...
 	'sfPeak', 3, 'sfSigma', 0.05, 'angleSigma', 20, 'seed', 5,...
-	'name', 'Log Gabor Filtered Noise');
+	'phaseReverseTime',0.33,'name', 'Log Gabor Filtered Noise');
 
 %%
 % This is a colour grating where two independant colours can be modulated
@@ -93,13 +94,13 @@ myStims{7}=dotsStimulus('density',50,'coherence',0.25,'xPosition',4,...
 
 %%
 % A simple bar: bars can be solid in colour or have checkerboard/random texture 
-% (try setting 'type' to 'random'). This is a bar moving at 4deg/s. 
+% (try setting 'type' to 'random' etc.). This is a bar moving at 4deg/s. 
 % Notice the startPosition is -4; this means start -4 degrees "behind" X and Y position, as
 % the stimulus is displayed for 2 seconds the bar therefore traverses
 % 4 degrees behind then 4 degrees past the X and Y position (i.e. drift a bar over a RF location)
 % Also note as we will change the angle of this stimulus the geometry is calculated for you
 % automatically!
-myStims{8}=barStimulus('type','checkerboard','checkSize',2,'barWidth',1,'barHeight',4,...
+myStims{8}=barStimulus('type','checkerboard','sf',2,'barWidth',1,'barHeight',4,...
 	'speed',4,'xPosition',0,'yPosition',0,'startPosition',-4,'phaseReverseTime',0.33,...
 	'name','Checkerboard bar');
 

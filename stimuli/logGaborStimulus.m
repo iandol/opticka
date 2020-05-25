@@ -10,11 +10,9 @@ classdef logGaborStimulus < baseStimulus
 		%> filename to load, if empty use random noise
 		fileName char		= ''
 		%> peak spatial frequency
-		sfPeak double		= 1;
+		sf double			= 1;
 		%> spatial frequency SD 
 		sfSigma double		= 0.01;
-		%> peak orientation
-		anglePeak double	= 0;
 		%> orientation SD
 		angleSigma double	= 10;
 		%> contrast multiplier
@@ -35,6 +33,12 @@ classdef logGaborStimulus < baseStimulus
 		maskSmoothing		= 55
 		%> type
 		type char			= 'logGabor'
+		modulateColour		= []
+		%> update() method also regenerates the texture, this can be slow but 
+		%> normally update() is only called after a trial has finished
+		regenerateTexture logical = true
+		%> For checkerboard, allow timed phase reversal
+		phaseReverseTime double = 0
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -54,6 +58,10 @@ classdef logGaborStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		reversePhase
+		%> how many frames between phase reverses
+		phaseCounter double = 0
+		shader
 		%> mask OpenGL blend modes
 		msrcMode			= 'GL_SRC_ALPHA'
 		mdstMode			= 'GL_ONE_MINUS_SRC_ALPHA'
@@ -70,7 +78,8 @@ classdef logGaborStimulus < baseStimulus
 		randomTexture = true;
 		%> allowed properties passed to object upon construction
 		allowedProperties=['type|direction|lockAngle|fileName|contrast|'...
-			'sfPeak|sfSigma|anglePeak|angleSigma|scale|seed|mask|maskColour|maskSmoothing'];
+			'sf|sfSigma|angleSigma|scale|seed|mask|maskColour|'...
+			'maskSmoothing|modulateColour|regenerateTexture|phaseReverseTime'];
 		%>properties to not create transient copies of during setup phase
 		ignoreProperties = 'scale|fileName|interpMethod|pixelScale|mask'
 	end
@@ -161,6 +170,16 @@ classdef logGaborStimulus < baseStimulus
 				me.scale = me.sizeOut / (me.width / me.ppd);
 			end
 			
+			if me.phaseReverseTime > 0
+				me.reversePhase = false;
+				shader = LoadGLSLProgramFromFiles(which('Invert.frag'), 1);
+				glUseProgram(shader);
+				glUniform1i(glGetUniformLocation(shader, 'Image'), 0);
+				glUseProgram(0);
+				me.shader = shader;
+				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
+			end
+			
 			me.inSetup = false;
 			computePosition(me);
 			setRect(me);
@@ -174,6 +193,15 @@ classdef logGaborStimulus < baseStimulus
 		function update(me)
 			if me.sizeOut > 0
 				%me.scale = me.sizeOut / (me.width / me.ppd);
+			end
+			if me.regenerateTexture
+				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+					try Screen('Close',me.texture); end %#ok<*TRYNC>
+				end
+				loadImage(me, []);
+			end
+			if me.phaseReverseTime > 0
+				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 			end
 			resetTicks(me);
 			computePosition(me);
@@ -189,12 +217,24 @@ classdef logGaborStimulus < baseStimulus
 				if ~isempty(me.lockAngle); angle = me.directionOut+me.lockAngle; else; angle = me.angleOut; end
 				if me.mask
 					Screen('BlendFunction', me.sM.win, me.msrcMode, me.mdstMode);
-					Screen('DrawTexture',me.sM.win,me.texture,[],me.mvRect,angle);
+					if me.reversePhase
+						Screen('DrawTexture',me.sM.win,me.texture,[],me.mvRect,angle,...
+							me.alphaOut,me.modulateColourOut,[],me.shader);
+					else
+						Screen('DrawTexture',me.sM.win,me.texture,[],me.mvRect,angle,...
+							me.alphaOut,me.modulateColourOut);
+					end
 					Screen('DrawTexture', me.sM.win, me.maskTexture, [], me.maskRect,...
 							angle, [], 1, me.maskColour);
 					Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
 				else
-					Screen('DrawTexture',me.sM.win,me.texture,[],me.mvRect,angle);
+					if me.reversePhase
+						Screen('DrawTexture',me.sM.win,me.texture,[],me.mvRect,angle,[],...
+						me.alphaOut,me.modulateColourOut,[],me.shader);
+					else
+						Screen('DrawTexture',me.sM.win,me.texture,[],me.mvRect,angle,[],...
+						me.alphaOut,me.modulateColourOut);
+					end
 				end
 			end
 			me.tick = me.tick + 1;
@@ -218,6 +258,9 @@ classdef logGaborStimulus < baseStimulus
 				elseif me.doMotion && ~me.doAnimator
 					me.mvRect=OffsetRect(me.mvRect,me.dX_,me.dY_);
 					me.maskRect=OffsetRect(me.maskRect,me.dX_,me.dY_);
+				end
+				if me.phaseReverseTime > 0 && mod(me.tick,me.phaseCounter) == 0
+					me.reversePhase = ~me.reversePhase;
 				end
 			end
 		end
@@ -251,7 +294,11 @@ classdef logGaborStimulus < baseStimulus
 			if ~exist('in','var'); in = []; end
 			if me.randomTexture
 				if ~isempty(me.seed) && isnumeric(me.seed); rng(me.seed);end
-				in = randn(me.ppd * me.size);
+				if isprop(me,'sizeOut')
+					in = randn(round(me.ppd * me.size));
+				else
+					in = randn(me.size);
+				end
 				if ~isempty(me.seed) && isnumeric(me.seed); rng('shuffle'); end
 				%in = me.makeGrating(me.ppd*me.size);
 			end
@@ -273,7 +320,11 @@ classdef logGaborStimulus < baseStimulus
 			
 			mul = me.width / me.ppd;
 			
-			out = me.doLogGabor(in,me.sfPeak*me.size,me.sfSigma*10,deg2rad(me.anglePeak+90),deg2rad(me.angleSigma));
+			if isprop(me,'sfOut')
+				out = me.doLogGabor(in,me.sfOut*me.size,me.sfSigma*10,deg2rad(me.angleOut+90),deg2rad(me.angleSigma));
+			else
+				out = me.doLogGabor(in,me.sf*me.size,me.sfSigma*10,deg2rad(me.angle+90),deg2rad(me.angleSigma));		
+			end
 			out = real(out);
 			out = me.scaleRange(out); %handles contrast and scale to 0 - 1
 			me.matrix = out;

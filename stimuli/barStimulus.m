@@ -14,8 +14,8 @@ classdef barStimulus < baseStimulus
 		contrast double = 1
 		%> texture scale
 		scale double = 1
-		%> checkSize in cycles per degree for checkerboard textures
-		checkSize double = 1
+		%> sf in cycles per degree for checkerboard textures
+		sf double = 1
 		%> texture interpolation: 'nearest','linear','spline','cubic'
 		interpMethod char = 'nearest'
 		%> For checkerboard, allow timed phase reversal
@@ -50,7 +50,7 @@ classdef barStimulus < baseStimulus
 		texture2
 		%> how many frames between phase reverses
 		phaseCounter double = 0
-		allowedProperties = 'modulateColour|colour2|regenerateTexture|type|barWidth|barHeight|angle|speed|contrast|scale|checkSize|interpMethod|phaseReverseTime';
+		allowedProperties = 'modulateColour|colour2|regenerateTexture|type|barWidth|barHeight|angle|speed|contrast|scale|sf|interpMethod|phaseReverseTime';
 		ignoreProperties = 'interpMethod|matrix|matrix2|phaseCounter|pixelScale';
 	end
 	
@@ -321,7 +321,7 @@ classdef barStimulus < baseStimulus
 				
 				switch me.type
 					case 'checkerboard'
-						tmat = me.makeCheckerBoard(blpixels,bwpixels,me.checkSizeOut);
+						tmat = me.makeCheckerBoard(blpixels,bwpixels,me.sfOut);
 					case 'random'
 						rmat=rand(blscale,bwscale);
 						for i=1:3

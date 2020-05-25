@@ -1,56 +1,41 @@
 % ========================================================================
-%> @brief colour grating stimulus, inherits from baseStimulus
-%> COLOURGRATINGSTIMULUS colour grating stimulus, inherits from baseStimulus
-%>   The basic properties are:
-%>   type = 'sinusoid' or 'square', if square you should set sigma which
-%>     smoothes the interface and stops pixel motion artifacts that normally
-%>     inflict square wave gratings, set sigma to 0 to remove smoothing.
-%>	 colour = first grating colour
-%>   colour2 = second grating colour
-%>   baseColour = the midpoint between the two from where contrast works,
-%        defult just inherits the background colour from screenManager
-%>   contrast = contrast from 0 - 1
-%>   sf = spatial frequency in degrees
-%>   tf = temporal frequency in degs/s
-%>   angle = angle in degrees
-%>   rotateTexture = do we rotate the grating texture (true) or the patch itself (false)
-%>   phase = phase of grating
-%>   mask = use circular mask (true) or not (false)
+%> @brief checkerBoardStimulus -- using a GLSL shader to make the
+%> checkerboard
 %>
 %> See docs for more property details
 % ========================================================================
 classdef checkerboardStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
-		%> family type, can be 'sinusoid' or 'square'
-		type char				= 'checkerboard'
-		%> spatial frequency of the grating
-		sf double				= 1
-		%> temporal frequency of the grating
-		tf double				= 1
-		%> second colour of a colour grating stimulus
-		colour2 double			= [0 1 0 1]
+		%> family type
+		type char					= 'checkerboard'
+		%> spatial frequency of the checkerboard
+		sf double					= 1
+		%> temporal frequency of the checkerboard
+		tf double					= 1
+		%> second colour of the checkerboard
+		colour2 double				= [0 1 0 1]
 		%> base colour from which colour and colour2 are blended via contrast value
 		%> if empty [default], uses the background colour from screenManager
-		baseColour double		= []
+		baseColour double			= []
 		%> rotate the grating patch (false) or the grating texture within the patch (default = true)?
 		rotateTexture logical	= true
 		%> phase of grating
-		phase double			= 0
+		phase double				= 0
 		%> contrast of grating (technically the contrast from the baseColour)
 		contrast double			= 0.5
 		%> use a circular mask for the grating (default = true).
-		mask logical			= true
+		mask logical				= true
 		%> direction of the drift; default = false means drift left>right when angle is 0deg.
 		%This switch can be accomplished simply setting angle, but this control enables
 		%simple reverse direction protocols.
 		reverseDirection logical = false
 		%> the direction of the grating object if moving.
-		direction double		= 0
+		direction double			= 0
 		%> Do we need to correct the phase to be relative to center not edge? This enables
 		%> centre surround stimuli are phase matched, and if we enlarge a grating object its
 		%> phase stays identical at the centre of the object (where we would imagine our RF)
-		correctPhase logical	= false
+		correctPhase logical		= false
 		%> Reverse phase of grating X times per second? Useful with a static grating for linearity testing
 		phaseReverseTime double = 0
 		%> What phase to use for reverse?
@@ -61,15 +46,15 @@ classdef checkerboardStimulus < baseStimulus
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%stimulus family
-		family char				= 'checkerboard'
+		family char					= 'checkerboard'
 		%> scale is used when changing size as an independent variable to keep sf accurate
-		scale double			= 1
+		scale double				= 1
 		%> the phase amount we need to add for each frame of animation
 		phaseIncrement double	= 0
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
-		typeList cell			= {'checkerboard'}
+		typeList cell				= {'checkerboard'}
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
