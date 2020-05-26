@@ -33,6 +33,8 @@ classdef tobiiManager < optickaCore
 		saveFile char = 'tobiiData.mat'
 		%> start eyetracker in dummy mode?
 		isDummy logical = false
+		%> do we use manual calibration mode?
+		manualCalibration logical = false
 		%> custom calibration positions, e.g. [ .1 .5; .5 .5; .8 .5]
 		calPositions = []
 		%> custom validation positions
@@ -298,13 +300,17 @@ classdef tobiiManager < optickaCore
 				if ~me.operatorScreen.isOpen
 					me.operatorScreen.open();
 				end
-				ListenChar(-1);
-				me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win],[],incal); %start calibration
-				ListenChar(0);
+				if me.manualCalibration
+					me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]); %start calibration
+				else
+					me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win],[],incal); %start calibration
+				end
 			else
-				ListenChar(-1);
-				me.calibration = me.tobii.calibrate(me.screen.win,[],incal); %start calibration
-				ListenChar(0);
+				if me.manualCalibration
+					me.calibration = me.tobii.calibrateManual(me.screen.win); %start calibration
+				else
+					me.calibration = me.tobii.calibrate(me.screen.win,[],incal); %start calibration
+				end
 			end
 			if strcmpi(me.calibrationStimulus,'movie')
 				me.calStim.movie.reset();
