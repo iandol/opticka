@@ -129,7 +129,9 @@ classdef screenManager < optickaCore
 		%> we cache ppd as it is used frequently
 		ppd_ double
 		%> properties allowed to be modified during construction
-		allowedProperties char = 'syncVariance|disableSyncTests|displayPPRefresh|screenToHead|gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash'
+		allowedProperties char = ['syncVariance|disableSyncTests|displayPPRefresh|screenToHead|'...
+			'gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|'...
+			'screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash']
 		%> the photoDiode rectangle in pixel values
 		photoDiodeRect(1,4) double = [0, 0, 45, 45]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode

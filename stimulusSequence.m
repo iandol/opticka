@@ -19,8 +19,6 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		isTime double = 1 
 		%> inter block time
 		ibTime double = 2
-		%> what do we show in the blank?
-		isStimulus
 		%> do we follow real time or just number of ticks to get to a known time
 		realTime logical = true
 		%> random seed value, we can use this to set the RNG to a known state
@@ -29,12 +27,10 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		randomGenerator char = 'mt19937ar' 
 		%> used for dynamically estimating total number of frames
 		fps double = 60 
-		%> will be used when we extend each trial to have sub-segments
-		nSegments double = 1 
-		%> segment info
-		nSegment
 		%> verbose or not
 		verbose = false
+		%> insert a blank condition?
+		addBlank logical = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -43,7 +39,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> variable values wrapped in a per-block cell
 		outVars 
 		%> the unique identifier for each stimulus
-		outIndex = 1
+		outIndex 
 		%> mapping the stimulus to the number as a X Y and Z etc position for display
 		outMap
 		%> minimum number of blocks
@@ -85,7 +81,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> handles from obj.showLog
 		h
 		%> properties allowed during initial construction
-		allowedProperties char ='randomise|nVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'
+		allowedProperties char = ['randomise|nVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'...
+			'randomGenerator|verbose|addBlank']
 		%> used to handle problems with dependant property nVar: the problem is
 		%> that set.nVar gets called before static loadobj, and therefore we need
 		%> to handle this differently. Initially set to empty, set to true when
@@ -94,16 +91,11 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> properties used by loadobj when a structure is passed during load.
 		%> this stops loading old randstreams etc.
 		loadProperties cell = {'randomise','nVar','nBlocks','trialTime','isTime','ibTime','isStimulus','verbose',...
-			'realTime','randomSeed','randomGenerator','nSegments','nSegment','outValues','outVars', ...
+			'realTime','randomSeed','randomGenerator','outValues','outVars','addBlank', ...
             'outIndex', 'outMap', 'minBlocks','states','nState','name'}
 		%> nVar template and default values
 		varTemplate struct = struct('name','','stimulus',[],'values',[],'offsetstimulus',[],'offsetvalue',[])
-		%Set up the task structures needed
-		taskProperties cell = {'response',[],'responseInfo',{},'tick',0,'blankTick',0,'thisRun',1,...
-			'thisBlock',1,'totalRuns',1,'isBlank',false,'isTimeNow',1,'ibTimeNow',1,...
-			'switched',false,'strobeThisFrame',false,'doUpdate',false,'startTime',0,'switchTime',0,...
-			'switchTick',0,'timeNow',0,'runTimeList',[],'stimIsDrifting',[],'stimIsMoving',[],...
-			'stimIsDots',[],'stimIsFlashing',[]}
+		%> Set up the task structures needed
 		tProp cell = {'response',[],'responseInfo',{},'tick',0,'blankTick',0,'thisRun',1,...
 			'thisBlock',1,'totalRuns',1,'isBlank',false,'isTimeNow',1,'ibTimeNow',1,...
 			'switched',false,'strobeThisFrame',false,'doUpdate',false,'startTime',0,'switchTime',0,...
@@ -181,64 +173,81 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			if obj.nVars > 0 %no need unless we have some variables
 				if obj.verbose==true;rSTime = tic;end
 				obj.currentState=obj.taskStream.State;
-				%obj.states(obj.nstates) = obj.currentState;
-				%obj.nstates = obj.nstates + 1;
-
-				nLevels = zeros(obj.nVars, 1);
-				for f = 1:obj.nVars
+				nLevels = zeros(obj.nVars_, 1);
+				for f = 1:obj.nVars_
 					nLevels(f) = length(obj.nVar(f).values);
 				end
-
-				obj.minBlocks = prod(nLevels);
+				obj.minBlocks = prod(nLevels); 
+ 				if obj.addBlank
+ 					obj.minBlocks = obj.minBlocks + 1;
+ 				end
 				if isempty(obj.minBlocks)
 					obj.minBlocks = 1;
 				end
-				if obj.minBlocks > 2046
-					warndlg('WARNING: You are exceeding the number of stimuli the Plexon can identify!')
+				if obj.minBlocks > 255
+					warning('WARNING: You are exceeding the number of stimulus numbers in an 8bit strbed word!')
 				end
 
 				% initialize cell array that will hold balanced variables
-				obj.outVars = cell(obj.nBlocks, obj.nVars_);
-				obj.outValues = cell(obj.nBlocks*obj.minBlocks, obj.nVars_);
-				obj.outIndex = [];
-
+				Vars = cell(obj.nBlocks, obj.nVars_);
+				Vals = cell(obj.nBlocks*obj.minBlocks, obj.nVars_);
+				Indx = [];
 				% the following initializes and runs the main loop in the function, which
 				% generates enough repetitions of each factor, ensuring a balanced design,
 				% and randomizes them
-				offset=0;
 				for i = 1:obj.nBlocks
-					len1 = obj.minBlocks;
-					len2 = 1;
 					if obj.randomise == true
 						[~, index] = sort(rand(obj.minBlocks, 1));
 					else
 						index = (1:obj.minBlocks)';
 					end
-					obj.outIndex = [obj.outIndex; index];
-					for f = 1:obj.nVars
-						len1 = len1 / nLevels(f);
+					Indx = [Indx; index];
+					if obj.addBlank
+						pos1 = obj.minBlocks - 1;
+					else
+						pos1 = obj.minBlocks;
+					end
+					pos2 = 1;
+					for f = 1:obj.nVars_
+						pos1 = pos1 / nLevels(f);
 						if size(obj.nVar(f).values, 1) ~= 1
 							% ensure that factor levels are arranged in one row
 							obj.nVar(f).values = reshape(obj.nVar(f).values, 1, numel(obj.nVar(1).values));
 						end
 						% this is the critical line: it ensures there are enough repetitions
 						% of the current factor in the correct order
-						obj.outVars{i,f} = repmat(reshape(repmat(obj.nVar(f).values, len1, len2), obj.minBlocks, 1), obj.nVars_, 1);
-						obj.outVars{i,f} = obj.outVars{i,f}(index);
-						len2 = len2 * nLevels(f);
-						mn=offset+1;
-						mx=i*obj.minBlocks;
-						idxm = mn:mx;
-						for j = 1:length(idxm)
-							if iscell(obj.outVars{i,f}(j))
-								obj.outValues{idxm(j),f}=obj.outVars{i,f}{j};
+						mb = obj.minBlocks;
+						if obj.addBlank; mb = mb - 1; end
+						Vars{i,f} = repmat(reshape(repmat(obj.nVar(f).values, pos1, pos2), mb, 1), obj.nVars_, 1);
+						Vars{i,f} = Vars{i,f}(index);
+						pos2 = pos2 * nLevels(f);
+						if obj.addBlank 
+							if iscell(Vars{i,f})
+								Vars{i,f}{index==max(index)} = NaN;
 							else
-								obj.outValues{idxm(j),f}=obj.outVars{i,f}(j);
+								Vars{i,f}(index==max(index)) = NaN;
 							end
 						end
 					end
-					offset=offset+obj.minBlocks;
 				end
+				
+				% generate obj.outValues
+				offset = 0;
+				for i = 1:size(Vars,1)
+					for j = 1:size(Vars,2)
+						for k = 1:length(Vars{i,j})
+							Vals{offset+k,j} = Vars{i,j}(k);
+						end
+					end
+					offset = offset + obj.minBlocks;
+				end
+				
+				% assign to properties
+				obj.outVars = Vars;
+				obj.outValues = Vals;
+				obj.outIndex = Indx;
+				
+				% generate outMap
 				obj.outMap=zeros(size(obj.outValues));
 				for f = 1:obj.nVars_
 					for g = 1:length(obj.nVar(f).values)
@@ -496,8 +505,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			data = cell(size(outvals,1),size(outvals,2)+2);
 			for i = 1:size(outvals,1)
 				for j = 1:obj.nVars
-					if length(outvals{i,j}) > 1
-						data{i,j} = num2str(outvals{i,j},'%2.3g ');
+					if iscell(outvals{i,j})
+						data{i,j} = num2str(outvals{i,j}{1},'%2.3g ');
 					else
 						data{i,j} = outvals{i,j};
 					end
@@ -515,18 +524,16 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				cnames{ii} = obj.nVar(ii).name;
 			end
 			cnames{end+1} = 'outIndex';
-			cnames{end+1} = 'Var1Index';
-			cnames{end+1} = 'Var2Index';
-			cnames{end+1} = 'Var3Index';
-			cnames{end+1} = 'Var4Index';
+			for ii = 1:size(obj.outMap,2)
+				cnames{end+1} = ['Var' num2str(ii) 'Index'];
+			end
 			
-			set(obj.h.uitable1,'Data',data)
+			set(obj.h.uitable1,'Data',data);
 			set(obj.h.uitable1,'ColumnName',cnames);
-			%set(obj.h.uitable1,'ColumnWidth',{60});
-			set(obj.h.uitable1,'RowStriping','on')
+			set(obj.h.uitable1,'RowStriping','on');
 			
 			function build_gui()
-				fsmall = 10;
+				fsmall = 12;
 				if ismac
 					mfont = 'menlo';
 				elseif ispc
@@ -538,7 +545,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					'Tag', 'sSLog', ...
 					'Units', 'normalized', ...
 					'Position', [0 0.2 0.25 0.7], ...
-					'Name', ['stimulusSequence Presentation Order: ' obj.fullName], ...
+					'Name', ['Log: ' obj.fullName], ...
 					'MenuBar', 'none', ...
 					'NumberTitle', 'off', ...
 					'Color', [0.94 0.94 0.94], ...
@@ -547,18 +554,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					'Parent', obj.h.figure1, ...
 					'Tag', 'uitable1', ...
 					'Units', 'normalized', ...
-					'Position', [0 0 1 0.98], ...
-					'FontName', mfont, ...
-					'FontSize', fsmall, ...
-					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
-					'ColumnEditable', [false,false], ...
-					'ColumnFormat', {'char'}, ...
-					'ColumnWidth', {'auto'});
-				obj.h.uitable2 = uitable( ...
-					'Parent', obj.h.figure1, ...
-					'Tag', 'uitable1', ...
-					'Units', 'normalized', ...
-					'Position', [0 0.98 1 0.02], ...
+					'Position', [0 0 1 1], ...
 					'FontName', mfont, ...
 					'FontSize', fsmall, ...
 					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
