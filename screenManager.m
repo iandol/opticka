@@ -585,18 +585,16 @@ classdef screenManager < optickaCore
 				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.originalGamma);
 				fprintf('\n---> screenManager: REVERT GAMMA TABLES\n');
 			end
-			wk = Screen(me.win, 'WindowKind');
-			%if me.blend && wk ~= 0
-			%this needs to be done to not trigger a Linux+Polaris bug
-			%	Screen('BlendFunction', me.win, 'GL_ONE','GL_ZERO');
-			%	fprintf('---> screenManager: RESET OPENGL BLEND MODE to GL_ONE & GL_ZERO\n');
-			%end
+			kind = Screen(me.win, 'WindowKind');
 			if me.isPlusPlus
 				BitsPlusPlus('Close');
 			end
 			me.finaliseMovie(); me.moviePtr = [];
 			try
-				if wk ~= 0; Screen('Close',me.win); end
+				if kind == 1 
+					Screen('Close',me.win);
+					if me.verbose; fprintf('!!!>>>Closing Win: %i kind: %i\n',me.win,kind); end
+				end
 			catch ME
 				if me.verbose 
 					getReport(ME) 
@@ -974,7 +972,7 @@ classdef screenManager < optickaCore
 		function drawTextNow(me,text)
 			% drawTextNow(me,text)
 			if ~exist('text','var');return;end
-			Screen('DrawText',me.win,text,0,0,[1 1 1],[0.5 0.5 0.5]);
+			Screen('DrawText',me.win,text,10,10,[1 1 1],[0.5 0.5 0.5]);
 			flip(me);
 		end
 		

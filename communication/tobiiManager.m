@@ -176,32 +176,33 @@ classdef tobiiManager < optickaCore
 				me.tobii			= me.tobii.setDummyMode();
 			end
 			
-			me.settings						= Titta.getDefaults(me.model);
-			me.settings.freq				= me.sampleRate;
-			me.settings.calibrateEye		= me.eyeUsed;
-			me.settings.trackingMode		= me.trackingMode;
-			me.settings.cal.bgColor			= floor(me.screen.backgroundColour*255);
-			me.settings.UI.setup.bgColor	= me.settings.cal.bgColor;
+			me.settings									= Titta.getDefaults(me.model);
+			me.settings.freq							= me.sampleRate;
+			me.settings.calibrateEye				= me.eyeUsed;
+			me.settings.trackingMode				= me.trackingMode;
+			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
+			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
 			me.settings.UI.setup.showFixPointsToSubject		= false;
-			me.settings.UI.setup.showHeadToSubject			= true;   
-            me.settings.UI.setup.showInstructionToSubject	= true;
-			me.settings.UI.setup.eyeClr						= 255;
+			me.settings.UI.setup.showHeadToSubject				= true;   
+			me.settings.UI.setup.showInstructionToSubject	= true;
+			me.settings.UI.setup.eyeClr							= 255;
 			if strcmpi(me.calibrationStimulus,'animated')
-				me.calStim							= AnimatedCalibrationDisplay();
+				me.calStim								= AnimatedCalibrationDisplay();
 				me.calStim.moveTime					= 0.75;
 				me.calStim.oscillatePeriod			= 1;
 				me.calStim.blinkCount				= 4;
 				me.calStim.bgColor					= me.settings.cal.bgColor;
-				me.calStim.fixBackColor             = 0;
+				me.calStim.fixBackColor          = 0;
 				me.calStim.fixFrontColor			= 255;
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
 			elseif strcmpi(me.calibrationStimulus,'movie')
-				me.calStim							= tittaCalMovieStimulus();
+				me.calStim								= tittaCalMovieStimulus();
 				me.calStim.moveTime					= 0.75;
 				me.calStim.oscillatePeriod			= 1;
 				me.calStim.blinkCount				= 3;
 				if isempty(me.screen.audio)
-					me.screen.audio = audioManager();
+					me.screen.audio					= audioManager();
 				end
 				if isempty(me.calibrationMovie)
 					me.calibrationMovie				= movieStimulus('size',4);
@@ -210,30 +211,39 @@ classdef tobiiManager < optickaCore
 				setup(me.calibrationMovie, me.screen);
 				me.calStim.initialise(me.calibrationMovie);
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
+				if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
 			end
 			me.settings.cal.autoPace				= me.autoPace;
 			if me.autoPace
-				me.settings.cal.doRandomPointOrder  = true;
+				me.settings.cal.doRandomPointOrder = true;
 			else
-				me.settings.cal.doRandomPointOrder  = false;
+				me.settings.cal.doRandomPointOrder = false;
 			end
 			if ~isempty(me.calPositions)
 				me.settings.cal.pointPos			= me.calPositions;
-				
 			end
 			if ~isempty(me.valPositions)
 				me.settings.val.pointPos			= me.valPositions;
 			end
 			
-			me.settings.cal.pointNotifyFunction		= @tittaCalCallback;
-			me.settings.val.pointNotifyFunction		= @tittaCalCallback;
+			me.settings.cal.pointNotifyFunction	= @tittaCalCallback;
+			me.settings.val.pointNotifyFunction	= @tittaCalCallback;
+			
+			if me.manualCalibration
+				me.settings.mancal.cal.pointPos		= me.calPositions;
+				me.settings.mancal.val.pointPos		= me.valPositions;
+				me.settings.UI.mancal.showHead		= false;
+				me.settings.UI.mancal.headScale		= 0.4;
+				me.settings.mancal.pointNotifyFunction		= @tittaCalCallback;
+				me.settings.mancal.val.pointNotifyFunction= @tittaCalCallback;
+			end
 			updateDefaults(me);
 			me.tobii.init();
-			me.isConnected							= true;
-			me.systemTime							= me.tobii.getTimeAsSystemTime;
-			me.ppd_									= me.screen.ppd;
+			me.isConnected								= true;
+			me.systemTime								= me.tobii.getTimeAsSystemTime;
+			me.ppd_										= me.screen.ppd;
 			if me.screen.isOpen == true
-				me.win								= me.screen.win;
+				me.win									= me.screen.win;
 			end
 			
 			if ~me.isDummy
@@ -290,12 +300,13 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function cal = trackerSetup(me,incal)
+			if ~me.isConnected && ~me.screen.isOpen; return; end
 			if ~exist('incal','var');incal=[];end
 			cal = [];
 			wasRecording = me.isRecording;
 			if wasRecording; stopRecording(me);	end
-			if ~me.isConnected && ~me.screen.isOpen; return; end
 			updateDefaults(me); % make sure we send any other settings changes
+			ListenChar(-1);
 			if me.secondScreen
 				if ~me.operatorScreen.isOpen
 					me.operatorScreen.open();
@@ -312,20 +323,23 @@ classdef tobiiManager < optickaCore
 					me.calibration = me.tobii.calibrate(me.screen.win,[],incal); %start calibration
 				end
 			end
+			ListenChar(0);
 			if strcmpi(me.calibrationStimulus,'movie')
 				me.calStim.movie.reset();
 				%me.calStim.movie.setup(me.screen);
 			end
 			if ~isempty(me.calibration) && me.calibration.wasSkipped ~= 1
 				cal = me.calibration;
-				if isfield(me.calibration,'selectedCal') && ~isnan(me.calibration.selectedCal)
-					msg = me.tobii.getValidationQualityMessage(me.calibration);
-					disp(msg);
+				if isfield(me.calibration,'selectedCal') && ~any(isnan(me.calibration.selectedCal)) && length(me.calibration.selectedCal)==1
+					try
+						calMsg = me.tobii.getValidationQualityMessage(me.calibration);
+						disp(calMsg);
+					end
 				end
 			else
 				disp('---!!! The calibration was unsuccesful or skipped !!!---')
 			end
-			if me.secondScreen && me.operatorScreen.isOpen; close(me.operatorScreen); WaitSecs(0.2); end
+			if me.secondScreen && me.operatorScreen.isOpen; close(me.operatorScreen); WaitSecs('YieldSecs',0.2); end
 			resetFixation(me);
 			if wasRecording; startRecording(me); end
 			me.isRecording_ = me.isRecording;

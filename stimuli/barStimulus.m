@@ -23,10 +23,10 @@ classdef barStimulus < baseStimulus
 		%> update() method also regenerates the texture, this can be slow, but 
 		%> normally update() is only called after a trial has finished
 		regenerateTexture logical = true
-		%> modulate the colour
-		modulateColour double = []
 		%> for checkerboard the second colour
 		colour2 double = [0 0 0 1];
+		%> modulate the colour
+		modulateColour double = []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -86,10 +86,9 @@ classdef barStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Generate an structure for runExperiment
+		%> @brief Setup stimulus using a screenManager object
 		%>
 		%> @param sM screenManager object for reference
-		%> @return stimulus structure.
 		% ===================================================================
 		function setup(me,sM)
 			
@@ -140,37 +139,9 @@ classdef barStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Update an structure for runExperiment
+		%> @brief Draw this stimulus
 		%>
-		%> @param in runExperiment object for reference
-		%> @return stimulus structure.
-		% ===================================================================
-		function update(me)
-			resetTicks(me);
-			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
-			if me.regenerateTexture
-				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-					try Screen('Close',me.texture); end %#ok<*TRYNC>
-				end
-				if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
-						try Screen('Close', me.texture2); end %#ok<*TRYNC>
-				end
-				constructMatrix(me);%make our matrix
-				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, [], 2);
-				if me.phaseReverseTime > 0
-					me.texture2=Screen('MakeTexture', me.sM.win, me.matrix2, 1, [], 2);
-					me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
-				end
-			end
-			computePosition(me);
-			me.setRect();
-		end
-		
-		% ===================================================================
-		%> @brief Draw an structure for runExperiment
-		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
+		%> 
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
@@ -186,10 +157,36 @@ classdef barStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Animate an structure for runExperiment
+		%> @brief Update our stimulus
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return stimulus structure.
+		%> 
+		% ===================================================================
+		function update(me)
+			resetTicks(me);
+			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
+			if me.regenerateTexture && Screen(me.sM.win,'WindowKind') == 1
+				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+					if me.verbose; fprintf('Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
+					try Screen('Close',me.texture); me.texture=[]; end %#ok<*TRYNC>
+				end
+				if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
+					try Screen('Close', me.texture2); me.texture2=[]; end 
+				end
+				constructMatrix(me);%make our texture matrix
+				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, [], 2);
+				if me.phaseReverseTime > 0
+					me.texture2=Screen('MakeTexture', me.sM.win, me.matrix2, 1, [], 2);
+					me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
+				end
+			end
+			computePosition(me);
+			setRect(me);
+		end
+		
+		% ===================================================================
+		%> @brief Animate this stimulus
+		%>
+		%> 
 		% ===================================================================
 		function animate(me)
 			if me.isVisible && me.tick >= me.delayTicks
@@ -213,17 +210,18 @@ classdef barStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief Reset an structure for runExperiment
+		%> @brief Reset the stimulus back to a default state
 		%>
-		%> @param rE runExperiment object for reference
-		%> @return
+		%> 
 		% ===================================================================
 		function reset(me)
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-					try Screen('Close',me.texture); end %#ok<*TRYNC>
+				if me.verbose; fprintf('Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
+				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			end
 			if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
-					try Screen('Close',me.texture2); end %#ok<*TRYNC>
+				if me.verbose; fprintf('Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
+				try Screen('Close',me.texture2); end %#ok<*TRYNC>
 			end
 			me.texture=[];
 			me.mvRect = [];
@@ -429,7 +427,7 @@ classdef barStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief linear interpolation between two arays
+		%> @brief linear interpolation between two arrays
 		%>
 		% ===================================================================
 		function out = mix(me,c)
