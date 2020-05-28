@@ -242,7 +242,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief Method/function shorthand to set isVisible=true.
+		%> @brief Method to set isVisible=true.
 		%>
 		% ===================================================================
 		function show(me)
@@ -250,7 +250,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief Method/function shorthand to set isVisible=false.
+		%> @brief Method to set isVisible=false.
 		%>
 		% ===================================================================
 		function hide(me)

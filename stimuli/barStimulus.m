@@ -127,8 +127,10 @@ classdef barStimulus < baseStimulus
 			
 			constructMatrix(me); %make our matrix
 			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 0, [], 2);
+			if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
 			if me.phaseReverseTime > 0
 				me.texture2 = Screen('MakeTexture', me.sM.win, me.matrix2, 0, [], 2);
+				if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 			end
 			
@@ -166,16 +168,19 @@ classdef barStimulus < baseStimulus
 			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
 			if me.regenerateTexture && Screen(me.sM.win,'WindowKind') == 1
 				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-					if me.verbose; fprintf('Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
+					if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
 					try Screen('Close',me.texture); me.texture=[]; end %#ok<*TRYNC>
 				end
 				if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
+					if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
 					try Screen('Close', me.texture2); me.texture2=[]; end 
 				end
 				constructMatrix(me);%make our texture matrix
 				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, [], 2);
+				if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
 				if me.phaseReverseTime > 0
 					me.texture2=Screen('MakeTexture', me.sM.win, me.matrix2, 1, [], 2);
+					if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
 					me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 				end
 			end
@@ -216,11 +221,11 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-				if me.verbose; fprintf('Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
+				if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
 				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			end
 			if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
-				if me.verbose; fprintf('Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
+				if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
 				try Screen('Close',me.texture2); end %#ok<*TRYNC>
 			end
 			me.texture=[];

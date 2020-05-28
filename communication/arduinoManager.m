@@ -2,26 +2,26 @@ classdef arduinoManager < optickaCore
 	%ARDUINOMANAGER Connects and manages arduino communication, uses matlab
 	%hardware package
 	properties
-		port char			= ''
-		board char			= ''
+		port char				= ''
+		board char				= ''
 		silentMode logical	= false %this allows us to be called even if no arduino is attached
-		verbose				= true
-		openGUI	logical		= true
-		mode char			= 'original' %original is built-in, otherwise needs matlab hardware package
-		rewardPin double	= 2
-		rewardTime double	= 150
+		verbose					= true
+		openGUI logical		= true
+		mode char				= 'original' %original is built-in, otherwise needs matlab hardware package
+		rewardPin double		= 2
+		rewardTime double		= 150
 		availablePins cell	= {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
 	end
 	properties (SetAccess = private, GetAccess = public)
-		ports 
-		isOpen logical = false
-		device = []
-		deviceID = ''
+		ports
+		isOpen logical			= false
+		device					= []
+		deviceID					= ''
 	end
 	properties (SetAccess = private, GetAccess = private)
-		handles = []
+		handles					= []
 		screen screenManager
-		allowedProperties char ='mode|port|silentMode|verbose'
+		allowedProperties char = 'availablePins|rewardPin|rewardTime|openGUI|board|mode|port|silentMode|verbose'
 	end
 	methods%------------------PUBLIC METHODS--------------%
 		
@@ -59,7 +59,7 @@ classdef arduinoManager < optickaCore
 		
 		%===============OPEN DEVICE================%
 		function open(me)
-            if me.isOpen;disp('-->arduinoManager: Already open!');return;end
+			if me.isOpen;disp('-->arduinoManager: Already open!');return;end
 			close(me); me.ports = seriallist;
 			if me.silentMode==false && isempty(me.device)
 				try
@@ -114,6 +114,7 @@ classdef arduinoManager < optickaCore
 				fprintf('--->>> arduinoManager: arduino appears open already...\n');
 			else
 				fprintf('--->>> arduinoManager open: silentMode engaged...\n');
+				me.isOpen = false;
 			end
 		end
 		
@@ -123,7 +124,7 @@ classdef arduinoManager < optickaCore
 				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
 				if ~exist('value','var') || isempty(value); value = 255; end
 				analogWrite(me.device, line, value);
-			end			
+			end
 		end
 		
 		%===============SEND TTL (legacy)================%
@@ -133,7 +134,7 @@ classdef arduinoManager < optickaCore
 		
 		%===============TIMED TTL================%
 		function timedTTL(me, line, time)
-			if me.silentMode==false
+			if me.silentMode == false
 				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
 				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
 				switch me.mode
@@ -148,7 +149,7 @@ classdef arduinoManager < optickaCore
 						writeDigitalPin(me.device,['D' num2str(line)],1);
 						WaitSecs(time/1e3);
 						writeDigitalPin(me.device,['D' num2str(line)],0);
-				end	
+				end
 				if me.verbose;fprintf('===>>> REWARD GIVEN: TTL pin %i for %i ms\n',line,time);end
 			else
 				if me.verbose;fprintf('===>>> REWARD GIVEN: Silent Mode\n');end
@@ -157,7 +158,7 @@ classdef arduinoManager < optickaCore
 		
 		%===============TIMED DOUBLE TTL================%
 		function timedDoubleTTL(me, line, time)
-			if me.silentMode==false
+			if me.silentMode == false
 				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
 				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
 				if ~strcmp(me.mode,'original')
@@ -169,13 +170,13 @@ classdef arduinoManager < optickaCore
 						timedTTL(me.device, line, 10);
 						WaitSecs('Yieldsecs',time/1e3);
 						timedTTL(me.device, line, 10);
-% 						digitalWrite(me.device, line, 1);
-% 						WaitSecs(0.01);
-% 						digitalWrite(me.device, line, 0);
-% 						WaitSecs(time/1e3);
-% 						digitalWrite(me.device, line, 1);
-% 						WaitSecs(0.01);
-% 						digitalWrite(me.device, line, 0);
+						% 						digitalWrite(me.device, line, 1);
+						% 						WaitSecs(0.01);
+						% 						digitalWrite(me.device, line, 0);
+						% 						WaitSecs(time/1e3);
+						% 						digitalWrite(me.device, line, 1);
+						% 						WaitSecs(0.01);
+						% 						digitalWrite(me.device, line, 0);
 					otherwise
 						writeDigitalPin(me.device,['D' num2str(line)],1);
 						WaitSecs(0.03);
@@ -394,22 +395,22 @@ classdef arduinoManager < optickaCore
 				nl = [nl KbName('-') KbName('+') KbName('0)') KbName('-_') KbName('1!')];
 				oldkeys=RestrictKeysForKbCheck(nl);
 				doLoop = true;
-                
-                sM = screenManager();
-                sM.backgroundColour = [0.1 0.1 0.1];
-                sM.open();
-                
-                ad = audioManager();ad.close();
+				
+				sM = screenManager();
+				sM.backgroundColour = [0.1 0.1 0.1];
+				sM.open();
+				
+				ad = audioManager();ad.close();
 				if IsLinux
 					ad.device = [];
-				elseif IsWin 
+				elseif IsWin
 					ad.device = 6;
 				end
-                ad.setup();
-                
-                mv = movieStimulus();
-                mv.setup(sM);
-                
+				ad.setup();
+				
+				mv = movieStimulus();
+				mv.setup(sM);
+				
 				ListenChar(2);
 				while doLoop
 					[isDown, ~, keyCode] = KbCheck(-1);
@@ -420,98 +421,98 @@ classdef arduinoManager < optickaCore
 								doLoop = false;
 							case{'1','1!','kp_end'}
 								mv.xPositionOut = 0;
-                                mv.yPositionOut = 0;
-                                update(mv);
-                                start = flip(sM); vbl = start;
-                                play(ad);
-                                me.timedTTL(pin,val);
+								mv.yPositionOut = 0;
+								update(mv);
+								start = flip(sM); vbl = start;
+								play(ad);
+								me.timedTTL(pin,val);
 								i=1;
-                                while vbl < start + 2
-                                    draw(mv); sM.drawCross([],[],0,0);
-                                    finishDrawing(sM);
-                                    vbl = flip(sM);
+								while vbl < start + 2
+									draw(mv); sM.drawCross([],[],0,0);
+									finishDrawing(sM);
+									vbl = flip(sM);
 									if i == 60; me.timedTTL(pin,val); end
 									i=i+1;
-                                end
+								end
 								me.timedTTL(pin,val*2);
 							case{'2','2@','kp_down'}
 								mv.xPositionOut = 16;
-                                mv.yPositionOut = 10;
-                                update(mv);
-                                start = flip(sM); vbl = start;
-                                play(ad);
-                                me.timedTTL(pin,val);
+								mv.yPositionOut = 10;
+								update(mv);
+								start = flip(sM); vbl = start;
+								play(ad);
+								me.timedTTL(pin,val);
 								i=1;
-                                while vbl < start + 2
-                                    draw(mv); sM.drawCross([],[],16,10);
-                                    sM.finishDrawing;
-                                    vbl = flip(sM);
+								while vbl < start + 2
+									draw(mv); sM.drawCross([],[],16,10);
+									sM.finishDrawing;
+									vbl = flip(sM);
 									if i == 60; me.timedTTL(pin,val); end
 									i=i+1;
-                                end
+								end
 								me.timedTTL(pin,val*2);
 							case{'3','3#','kp_next'}
 								mv.xPositionOut = -16;
-                                mv.yPositionOut = -10;
-                                update(mv);
-                                start = flip(sM); vbl = start;
-                                play(ad);
-                                me.timedTTL(pin,val);
-                                i=1;
-                                while vbl < start + 2
-                                    draw(mv); sM.drawCross([],[],-16,-10);
-                                    sM.finishDrawing;
-                                    vbl = flip(sM);
+								mv.yPositionOut = -10;
+								update(mv);
+								start = flip(sM); vbl = start;
+								play(ad);
+								me.timedTTL(pin,val);
+								i=1;
+								while vbl < start + 2
+									draw(mv); sM.drawCross([],[],-16,-10);
+									sM.finishDrawing;
+									vbl = flip(sM);
 									if i == 60; me.timedTTL(pin,val); end
 									i=i+1;
-                                end
+								end
 								me.timedTTL(pin,val*2);
 							case{'4','4$','kp_left'}
 								mv.xPositionOut = 16;
-                                mv.yPositionOut = -10;
-                                update(mv);
-                                start = flip(sM); vbl = start;
-                                play(ad);
-                                me.timedTTL(pin,200);
+								mv.yPositionOut = -10;
+								update(mv);
+								start = flip(sM); vbl = start;
+								play(ad);
+								me.timedTTL(pin,200);
 								i=1;
-                                while vbl < start + 2
-                                    draw(mv); sM.drawCross([],[],16,-10);
-                                    sM.finishDrawing;
-                                    vbl = flip(sM);
+								while vbl < start + 2
+									draw(mv); sM.drawCross([],[],16,-10);
+									sM.finishDrawing;
+									vbl = flip(sM);
 									if i == 60; me.timedTTL(pin,val); end
 									i=i+1;
-                                end
+								end
 								me.timedTTL(pin,val);
 							case{'5','5%','kp_begin'}
 								mv.xPositionOut = -16;
-                                mv.yPositionOut = 10;
-                                update(mv);
-                                start = flip(sM); vbl = start;
-                                play(ad);
-                                me.timedTTL(pin,200);
+								mv.yPositionOut = 10;
+								update(mv);
+								start = flip(sM); vbl = start;
+								play(ad);
+								me.timedTTL(pin,200);
 								i=1;
-                                while vbl < start + 2
-                                    draw(mv); sM.drawCross([],[],-16,10);
-                                    sM.finishDrawing;
-                                    vbl = flip(sM);
+								while vbl < start + 2
+									draw(mv); sM.drawCross([],[],-16,10);
+									sM.finishDrawing;
+									vbl = flip(sM);
 									if i == 60; me.timedTTL(pin,val); end
 									i=i+1;
-                                end
-                                me.timedTTL(pin,val);
+								end
+								me.timedTTL(pin,val);
 							case{'6','6^','kp_right'}
 								me.timedTTL(pin,val);
 							case{'7','7&','kp_home'}
 								me.timedTTL(pin,val*2);
 							case{'8','8*','kp_up'}
 								me.timedTTL(pin,val*2);
-                        end
-                    else
-                        flip(sM);
-                    end	
+						end
+					else
+						flip(sM);
+					end
 				end
 				ListenChar(0);
-                ad.close;mv.reset;
-                sM.close;
+				ad.close;mv.reset;
+				sM.close;
 				fprintf('===>>> Exit pressed!!!\n');
 				RestrictKeysForKbCheck(oldkeys);
 				set(me.handles.loop2Button,'ForegroundColor',[1 0.5 0]);

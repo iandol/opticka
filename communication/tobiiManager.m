@@ -41,6 +41,8 @@ classdef tobiiManager < optickaCore
 		valPositions = []
 		%> does calibration pace automatically?
 		autoPace logical = true
+		%> pace duration
+		paceDuration double = 0.8
 		% which eye is the tracker using?
 		eyeUsed char {mustBeMember(eyeUsed,{'both','left','right'})}= 'both'
 		%> which movie to use for calibration, empty uses default
@@ -214,6 +216,7 @@ classdef tobiiManager < optickaCore
 				if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
 			end
 			me.settings.cal.autoPace				= me.autoPace;
+			me.settings.cal.paceDuration			= me.paceDuration;
 			if me.autoPace
 				me.settings.cal.doRandomPointOrder = true;
 			else
@@ -230,9 +233,12 @@ classdef tobiiManager < optickaCore
 			me.settings.val.pointNotifyFunction	= @tittaCalCallback;
 			
 			if me.manualCalibration
+				me.settings.UI.mancal.bgColor			= floor(me.screen.backgroundColour*255);
+				me.settings.mancal.bgColor				= floor(me.screen.backgroundColour*255);
 				me.settings.mancal.cal.pointPos		= me.calPositions;
 				me.settings.mancal.val.pointPos		= me.valPositions;
-				me.settings.UI.mancal.showHead		= false;
+				me.settings.mancal.paceDuration		= me.paceDuration;
+				me.settings.UI.mancal.showHead		= true;
 				me.settings.UI.mancal.headScale		= 0.4;
 				me.settings.mancal.pointNotifyFunction		= @tittaCalCallback;
 				me.settings.mancal.val.pointNotifyFunction= @tittaCalCallback;
@@ -330,7 +336,7 @@ classdef tobiiManager < optickaCore
 			end
 			if ~isempty(me.calibration) && me.calibration.wasSkipped ~= 1
 				cal = me.calibration;
-				if isfield(me.calibration,'selectedCal') && ~any(isnan(me.calibration.selectedCal)) && length(me.calibration.selectedCal)==1
+				if isfield(me.calibration,'selectedCal')
 					try
 						calMsg = me.tobii.getValidationQualityMessage(me.calibration);
 						disp(calMsg);

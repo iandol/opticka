@@ -385,7 +385,7 @@ classdef screenManager < optickaCore
 				end
 				
 				[me.win, me.winRect] = PsychImaging('OpenWindow', thisScreen, me.backgroundColour, winSize, [], me.doubleBuffer+1,[],me.antiAlias);
-				
+				if me.verbose; fprintf('===>>>Made win: %i kind: %i\n',me.win,Screen(me.win,'WindowKind')); end
 				tL.screenLog.postOpenWindow=GetSecs;
 				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
 				
