@@ -54,8 +54,9 @@ classdef calibrateLuminance < handle
 		testColour logical = true
 		%> correct R G B seperately (true) or overall luminance (false) 
 		correctColour logical = false
-		%> methods list to fit to raw luminance values
-		analysisMethods cell = {'pchipinterp';'linearinterp'}
+		%> methods list to fit to raw luminance values, first is always
+		%> gamma
+		analysisMethods cell = {'gamma';'pchipinterp';'cubicspline'}
 		%> which gamma model should opticka select: 1 is simple gamma,
 		%> 2:n are the analysisMethods chosen; 2=pchipinterp
 		choice double = 2
@@ -84,6 +85,7 @@ classdef calibrateLuminance < handle
 	
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
+		info struct
 		finalCLUT = []
 		displayGamma = []
 		gammaTable = []
@@ -246,6 +248,13 @@ classdef calibrateLuminance < handle
 		function run(obj)
 			resetAll(obj)
 			openScreen(obj);
+			try
+				obj.info(1).version = Screen('Version');
+				obj.info(1).comp = Screen('Computer');
+				if IsLinux
+					obj.info(1).display = Screen('ConfigureDisplay','Scanout',obj.screen,0);
+				end
+			end
 			Screen('FillRect',obj.win,[0.7 0.7 0.7],obj.screenVals.targetRect);
 			Screen('Flip',obj.win);
 			if ~obj.useCCal2 && ~obj.useI1Pro && ~obj.useSpectroCal2
@@ -373,16 +382,16 @@ classdef calibrateLuminance < handle
 		% ===================================================================
 		function test(obj)
 			if obj.isAnalyzed == false
-				disp('Cannot test until you run analyze() first...')
+				warning('Cannot test until you run analyze() first...')
 				return
 			end
 			try
 				resetTested(obj)
 				if obj.isRunAll
 					doPipeline = false;
-					obj.choice = 1;
+					obj.choice = 2;
 				else
-					reply = input('Set 0 for SimpleGamma or a Model number 1:N for the standard correction: ');
+					reply = input('Set 0 for SimpleGamma or a Model number 2:N for the standard correction: ');
 					if reply == 0
 						doPipeline = true;
 					else
@@ -393,15 +402,24 @@ classdef calibrateLuminance < handle
 				
 				openScreen(obj);
 				
+				try
+					obj.info(1).version = Screen('Version');
+					obj.info(1).comp = Screen('Computer');
+					if IsLinux
+						obj.info(1).display = Screen('ConfigureDisplay','Scanout',obj.screen,0);
+					end
+				end
+				
 				if obj.useSpectroCal2
 					obj.openSpectroCAL();
 				end
 				
+				makeFinalCLUT(obj);
 				if doPipeline == true
 					PsychColorCorrection('SetEncodingGamma', obj.win, 1/obj.displayGamma(1));
 					fprintf('LOAD SetEncodingGamma using PsychColorCorrection to: %g\n',1/obj.displayGamma(1))
 				else
-					fprintf('LOAD GammaTable Model: %i\n',obj.choice)
+					fprintf('LOAD GammaTable Model: %i = %s\n',obj.choice,obj.analysisMethods{obj.choice})
 					if isprop(obj,'finalCLUT') && ~isempty(obj.finalCLUT)
 						gTmp = obj.finalCLUT;
 					else
@@ -482,7 +500,7 @@ classdef calibrateLuminance < handle
 				Screen('CloseAll');
 				obj.isTested = true;
 				plot(obj);
-			catch %#ok<CTCH>
+			catch ME %#ok<CTCH>
 				resetTested(obj);
 				if ~IsWin; RestoreCluts; end
 				Screen('CloseAll');
@@ -563,7 +581,7 @@ classdef calibrateLuminance < handle
 				g = fittype('x^g');
 				fo = fitoptions('Method','NonlinearLeastSquares',...
 					'Display','iter','MaxIter',1000,...
-					'Upper',3,'Lower',0,'StartPoint',1.5);
+					'Upper',4,'Lower',0.1,'StartPoint',2);
 				[fittedmodel, gof, output] = fit(rampNorm',inputValuesNorm',g,fo);
 				obj.displayGamma(loop) = fittedmodel.g;
 				obj.gammaTable{1,loop} = ((([0:1/(obj.tableLength-1):1]'))).^(1/fittedmodel.g);
@@ -576,9 +594,9 @@ classdef calibrateLuminance < handle
 				obj.modelFit{1,loop}.gof = gof;
 				obj.modelFit{1,loop}.output = output;
 				
-				for i = 1:length(obj.analysisMethods)
-					method = obj.analysisMethods{i};
-					%fo = fitoptions('MaxIter',1000);
+				for i = 1:length(obj.analysisMethods)-1
+					method = obj.analysisMethods{i+1};
+					%fo = fitoptions('Display','iter','MaxIter',1000);
 					[fittedmodel,gof,output] = fit(rampNorm',inputValuesNorm', method);
 					obj.modelFit{i+1,loop}.method = method;
 					obj.modelFit{i+1,loop}.model = fittedmodel;
@@ -595,7 +613,7 @@ classdef calibrateLuminance < handle
 				end
 				
 			end
-			obj.choice = 2;
+			obj.choice = 2; %default is pchipinterp
 			obj.isAnalyzed = true;
 			makeFinalCLUT(obj);
 			plot(obj);
@@ -798,7 +816,7 @@ classdef calibrateLuminance < handle
 			obj.p.title(t);
 			obj.p.refresh();
             cnames = {'Gray';'Red';'Green';'Blue'};
-            if obj.useSpectroCal2 && ~isempty(obj.spectrum)
+            if obj.useSpectroCal2 && ~isempty(obj.spectrum) && obj.testColour
                 figure;figpos(1,[900 900])
                 for i = 1:length(obj.spectrum)
                     subplot(2,2,i);
@@ -810,7 +828,7 @@ classdef calibrateLuminance < handle
                     axis tight; grid on; box on;
                 end
             end
-            if obj.useSpectroCal2 && ~isempty(obj.spectrumTest)
+            if obj.useSpectroCal2 && ~isempty(obj.spectrumTest) && obj.testColour
                 figure;figpos(1,[900 900]);
                 for i = 1:length(obj.spectrumTest)
                     subplot(2,2,i);
@@ -983,7 +1001,7 @@ classdef calibrateLuminance < handle
 			else
 				PsychImaging('AddTask', 'General', obj.bitDepth);
 			end
-			fprintf('\n---> screenManager: Bit Depth mode set to: %s\n', obj.bitDepth);
+			fprintf('\n---> Bit Depth mode set to: %s\n', obj.bitDepth);
 			%PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 			if obj.screen == 0
 				rect = [0 0 1000 1000];
@@ -1128,9 +1146,9 @@ classdef calibrateLuminance < handle
 			fprintf(obj.spCAL,['*FETCH:XYZ', char(13)]);
 			data = [];
 			while 1
-				if obj.spCAL.BytesAvailable>0,
+				if obj.spCAL.BytesAvailable>0
 					data =  [data;fread(obj.spCAL, obj.spCAL.BytesAvailable)]; %#ok<AGROW>
-					if length(find(data==13))>=3, % wait for all three cr
+					if length(find(data==13))>=3 % wait for all three cr
 						break
 					end
 				end
@@ -1207,10 +1225,13 @@ classdef calibrateLuminance < handle
 		function makeFinalCLUT(obj)
 			if obj.isAnalyzed == true
 				if obj.choice == 0 
+					fprintf('--->>> calibrateLumiance: Making Linear Table...\n')
 					obj.finalCLUT = repmat(linspace(0,1,obj.tableLength)',1,3);
-				elseif obj.correctColour
+				elseif obj.correctColour && size(obj.gammaTable,2)>1
+					fprintf('--->>> calibrateLumiance: Making Colour-corrected Table from gammaTable: %i...\n',obj.choice);
 					obj.finalCLUT = [obj.gammaTable{obj.choice,2:4}];
 				else
+					fprintf('--->>> calibrateLumiance: Making luminance-corrected Table from gammaTable: %i...\n',obj.choice);
 					obj.finalCLUT = repmat(obj.gammaTable{obj.choice,1},1,3);
 				end
 				len = size(obj.finalCLUT,1);
