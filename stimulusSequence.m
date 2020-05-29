@@ -1,8 +1,8 @@
 % ========================================================================
 %> @brief stimulusSequence a method of constanst variable manager
-%> 
-%> This class takes a series of visual variables (contrast, angle etc) with 
-%> a set of values and randomly interleves them into a pseudorandom variable 
+%>
+%> This class takes a series of visual variables (contrast, angle etc) with
+%> a set of values and randomly interleves them into a pseudorandom variable
 %> list each of which has a unique index number
 % ========================================================================
 classdef stimulusSequence < optickaCore & dynamicprops
@@ -16,7 +16,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> time stimulus trial is shown
 		trialTime double = 2
 		%> inter stimulus trial time
-		isTime double = 1 
+		isTime double = 1
 		%> inter block time
 		ibTime double = 2
 		%> do we follow real time or just number of ticks to get to a known time
@@ -24,9 +24,9 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> random seed value, we can use this to set the RNG to a known state
 		randomSeed
 		%> mersenne twister default
-		randomGenerator char = 'mt19937ar' 
+		randomGenerator char = 'mt19937ar'
 		%> used for dynamically estimating total number of frames
-		fps double = 60 
+		fps double = 60
 		%> verbose or not
 		verbose = false
 		%> insert a blank condition?
@@ -35,13 +35,15 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	
 	properties (SetAccess = private, GetAccess = public)
 		%> structure of variable values
-		outValues 
+		outValues
 		%> variable values wrapped in a per-block cell
-		outVars 
+		outVars
 		%> the unique identifier for each stimulus
-		outIndex 
+		outIndex
 		%> mapping the stimulus to the number as a X Y and Z etc position for display
 		outMap
+		%> variable labels
+		varLabels
 		%> minimum number of blocks
 		minBlocks
 		%> log of within block resets
@@ -67,10 +69,10 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	
 	properties (Dependent = true,  SetAccess = private)
 		%> number of blocks, need to rename!
-		nRuns 
+		nRuns
 		%> estimate of the total number of frames this task will occupy,
-		%> requires accurate fps 
-		nFrames 
+		%> requires accurate fps
+		nFrames
 		%> number of independant variables
 		nVars = 0
 	end
@@ -92,7 +94,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> this stops loading old randstreams etc.
 		loadProperties cell = {'randomise','nVar','nBlocks','trialTime','isTime','ibTime','isStimulus','verbose',...
 			'realTime','randomSeed','randomGenerator','outValues','outVars','addBlank', ...
-            'outIndex', 'outMap', 'minBlocks','states','nState','name'}
+			'outIndex', 'outMap', 'minBlocks','states','nState','name'}
 		%> nVar template and default values
 		varTemplate struct = struct('name','','stimulus',[],'values',[],'offsetstimulus',[],'offsetvalue',[])
 		%> Set up the task structures needed
@@ -114,7 +116,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function obj = stimulusSequence(varargin) 
+		function obj = stimulusSequence(varargin)
 			if nargin == 0; varargin.name = 'stimulusSequence'; end
 			obj=obj@optickaCore(varargin); %superclass constructor
 			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
@@ -122,7 +124,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			obj.initialiseGenerator();
 			obj.isLoading = false;
 		end
-
+		
 		% ===================================================================
 		%> @brief set up the random number generator
 		%>
@@ -177,17 +179,17 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				for f = 1:obj.nVars_
 					nLevels(f) = length(obj.nVar(f).values);
 				end
-				obj.minBlocks = prod(nLevels); 
- 				if obj.addBlank
- 					obj.minBlocks = obj.minBlocks + 1;
- 				end
+				obj.minBlocks = prod(nLevels);
+				if obj.addBlank
+					obj.minBlocks = obj.minBlocks + 1;
+				end
 				if isempty(obj.minBlocks)
 					obj.minBlocks = 1;
 				end
 				if obj.minBlocks > 255
 					warning('WARNING: You are exceeding the number of stimulus numbers in an 8bit strbed word!')
 				end
-
+				
 				% initialize cell array that will hold balanced variables
 				Vars = cell(obj.nBlocks, obj.nVars_);
 				Vals = cell(obj.nBlocks*obj.minBlocks, obj.nVars_);
@@ -221,7 +223,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 						Vars{i,f} = repmat(reshape(repmat(obj.nVar(f).values, pos1, pos2), mb, 1), obj.nVars_, 1);
 						Vars{i,f} = Vars{i,f}(index);
 						pos2 = pos2 * nLevels(f);
-						if obj.addBlank 
+						if obj.addBlank
 							if iscell(Vars{i,f})
 								Vars{i,f}{index==max(index)} = NaN;
 							else
@@ -257,8 +259,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 									obj.outMap(hh,f) = g;
 								elseif (isnumeric(obj.nVar(f).values{g}) && isnumeric(obj.outValues{hh,f})) && isequal(obj.outValues{hh,f}, obj.nVar(f).values{g})
 									obj.outMap(hh,f) = g;
-								%elseif ~ischar(obj.nVar(f).values{g}) && isequal(obj.outValues{hh,f}, obj.nVar(f).values{g})
-								%	obj.outMap(hh,f) = g;
+									%elseif ~ischar(obj.nVar(f).values{g}) && isequal(obj.outValues{hh,f}, obj.nVar(f).values{g})
+									%	obj.outMap(hh,f) = g;
 								end
 							else
 								if obj.outValues{hh,f} == obj.nVar(f).values(g)
@@ -300,6 +302,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				obj.(t{i}) = t{i+1}; %#ok<*MCNPR>
 			end
 			obj.taskInitialised = true;
+			obj.makeLabels();
 			randomiseTimes(obj);
 		end
 		
@@ -314,7 +317,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				fprintf('---> stimulusSequence.updateTask: Task FINISHED, no more updates allowed\n');
 				return
 			end
-
+			
 			if nargin > 1
 				if isempty(thisResponse); thisResponse = NaN; end
 				if ~exist('runTime','var') || isempty(runTime); runTime = GetSecs; end
@@ -327,7 +330,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 						obj.totalRuns, thisResponse, obj.runTimeList(obj.totalRuns)));
 				end
 			end
-
+			
 			if obj.totalRuns < obj.nRuns
 				obj.totalRuns = obj.totalRuns + 1;
 				[obj.thisBlock, obj.thisRun] = findRun(obj);
@@ -348,23 +351,22 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			run = index - (obj.minBlocks * (block - 1));
 		end
 		
-        % ===================================================================
+		% ===================================================================
 		%> @brief the opposite of updateTask, step back one run
 		%>
 		% ===================================================================
-        function rewindTask(obj)
-            if obj.taskInitialised
-                
-                obj.response(obj.totalRuns) = [];
-                obj.responseInfo{obj.totalRuns} = [];
-                obj.runTimeList(obj.totalRuns) = [];
-                obj.totalRuns = obj.totalRuns - 1;
+		function rewindTask(obj)
+			if obj.taskInitialised
+				obj.response(obj.totalRuns) = [];
+				obj.responseInfo{obj.totalRuns} = [];
+				obj.runTimeList(obj.totalRuns) = [];
+				obj.totalRuns = obj.totalRuns - 1;
 				[obj.thisBlock, obj.thisRun] = findRun(obj);
-                fprintf('===!!! REWIND Run to %i:',obj.totalRuns);
-                
-            end
-        end
-        
+				fprintf('===!!! REWIND Run to %i:',obj.totalRuns);
+				
+			end
+		end
+		
 		% ===================================================================
 		%> @brief we want to re-randomise the current run, replace it with
 		%> another run in the same block. This adds some randomisation if a
@@ -454,9 +456,9 @@ classdef stimulusSequence < optickaCore & dynamicprops
 							obj.nVar(ii).(fn{i}) = invalue(ii).(fn{i});
 						end
 					end
-%  					if isempty(obj.nVar(idx).(fnTemplate{1})) || obj.nVar(idx).(fnTemplate{2}) == 0 || isempty(obj.nVar(idx).(fnTemplate{3}))
-%  						fprintf('---> Variable %g is not properly formed!!!\n',idx);
-%  					end
+					%  					if isempty(obj.nVar(idx).(fnTemplate{1})) || obj.nVar(idx).(fnTemplate{2}) == 0 || isempty(obj.nVar(idx).(fnTemplate{3}))
+					%  						fprintf('---> Variable %g is not properly formed!!!\n',idx);
+					%  					end
 				end
 			end
 		end
@@ -499,6 +501,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> Generates a table with the randomised stimulus values
 		% ===================================================================
 		function showLog(obj)
+			obj.makeLabels();
 			obj.h = struct();
 			build_gui();
 			outvals = obj.outValues;
@@ -624,11 +627,39 @@ classdef stimulusSequence < optickaCore & dynamicprops
 	%=======================================================================
 	methods ( Access = private ) %------PRIVATE METHODS
 	%=======================================================================
-			
+		
 		% ===================================================================
 		%> @brief reset dynamic task properties
-		%> 
-		%> 
+		%>
+		%>
+		% ===================================================================
+		function makeLabels(obj)
+			if ~obj.taskInitialised; return; end
+			varIndex = unique(obj.outIndex);
+			for i = 1:length(varIndex)
+				st = '';
+				idx = find(obj.outIndex==varIndex(i));
+				idx = idx(1);
+				for j = 1:obj.nVars
+					if iscell(obj.outValues{i,j})
+						st = [st ' : ' num2str([obj.outValues{i,j}{:}])];
+					else
+						st = [st ' : ' num2str(obj.outValues{i,j})];
+					end
+				end
+				st = regexprep(st,'\s+',' ');
+				st = regexprep(st,'^ : ','');
+				str{i} = [num2str(varIndex(i)) ' = ' st];
+			end
+			[varIndex,res] = sort(varIndex);
+			str = str(res);
+			obj.varLabels = str;
+		end
+		
+		% ===================================================================
+		%> @brief reset dynamic task properties
+		%>
+		%>
 		% ===================================================================
 		function resetTask(obj)
 			t = obj.tProp;
@@ -641,12 +672,12 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			obj.resetLog = [];
 			obj.taskInitialised = false;
 			obj.taskFinished = false;
-		end	
+		end
 		
 		% ===================================================================
 		%> @brief reset dynamic task properties
-		%> 
-		%> 
+		%>
+		%>
 		% ===================================================================
 		function randomiseTimes(obj)
 			if ~obj.taskInitialised;return;end
@@ -671,8 +702,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		
 		% ===================================================================
 		%> @brief make a matrix from a cell array
-		%> 
-		%> 
+		%>
+		%>
 		% ===================================================================
 		function out=cellStruct(in)
 			out = [];
