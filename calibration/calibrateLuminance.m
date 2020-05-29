@@ -1,25 +1,27 @@
 % ========================================================================
-%> @brief calibrateLuminance manaul / automatic luminance calibration
+%> @brief calibrateLuminance: automatic luminance calibration
 %>
-%> calibrateLuminance manaul / automatic luminance calibration
-%> To enter settings use a structure:
+%> calibrateLuminance automatic luminance calibration:
+%> To enter settings:
 %>
-%> >> mycal = calibrateLuminance(struct('nMeasures',25,'useCCal2',true))
+%> >> c = calibrateLuminance()
+%> >> c.nMeasures = 40
+%> >> c.useSpectroCal2 = true
+%> >> c.run(); %collect uncalibrated data
+%> >> c.analyse(); %fit models to the raw data
+%> >> c.test() %test the fitted model for linearity
+%> >> c.plot() % plot the final result
+%> >> c.save() % save the data
+%> >> c.finalCAL % this holds the corrected table you can pass to PTB Screen('LoadNormalizedGammaTable')
 %>
-%> calibrateLuminance will ask if you need to zero calibrate, you only need
-%> to do this after first plugging in the ColorCal. Then simply place the
-%> ColorCalII in front of the monitor and follow instructions. After doing
+%> calibrateLuminance will ask if you need to zero calibrate (e.g. ColorCal2, you only need
+%> to do this after first plugging in the ColorCal). Then simply place the
+%> meter in front of the monitor and follow instructions. After doing
 %> nMeasures of luminance steps, it will fit the raw luminance values using a
 %> variety of methods and then plot these out to a figure (it will ask you for
 %> comments to enter for the calibration, you should enter monitor type,
 %> lighting conditions etc). You can then save mycal to disk for later use by
-%> your programs. To use in PTB, choose the preffered fit (1 is the gamma
-%> function and the rest are the various model options listed in analysisMethods).
-%> you may need to expand the selected model fit to 3 columns before passing to
-%> LoadNormalizedGammaTable:
-%>
-%> gTmp = repmat(mycal.gammaTable{choiceofmodel},1,3);
-%> Screen('LoadNormalizedGammaTable', theScreen, gTmp);
+%> your programs. 
 %>
 % ========================================================================
 classdef calibrateLuminance < handle
@@ -36,29 +38,29 @@ classdef calibrateLuminance < handle
 		%> options to enable Display++ modes 'EnableBits++Bits++Output'
 		%> 'EnableBits++Mono++Output' or 'EnableBits++Color++Output'
 		bitDepth char = 'FloatingPoint32BitIfPossible'
+		%> specify port to connect to
+		port char = '/dev/ttyUSB0'
 		%> use SpectroCal II automatically
 		useSpectroCal2 logical = true
 		%> use ColorCalII automatically
 		useCCal2 logical = false
 		%> use i1Pro?
 		useI1Pro logical = false
-		%> length of gamma table
+		%> length of gamma table, 1024 for Linux/macOS, 256 for Windows
 		tableLength double = 1024
 		%> choose I1Pro over CCal if both connected?
 		preferI1Pro logical = false
-		%> specify port to connect to
-		port char = '/dev/ttyUSB0'
-		%> test L, R, G and B as seperate curves?
+		%> test Lum, R, G and B as seperate curves?
 		testColour logical = true
 		%> correct R G B seperately (true) or overall luminance (false) 
-		correctColour logical = true
+		correctColour logical = false
 		%> methods list to fit to raw luminance values
 		analysisMethods cell = {'pchipinterp';'linearinterp'}
 		%> which gamma model should opticka select: 1 is simple gamma,
 		%> 2:n are the analysisMethods chosen; 2=pchipinterp
 		choice double = 2
-        %> Target (centered square that will be measured) size in pixels
-        targetSize = 1000;
+		%> Target (centered square that will be measured) size in pixels
+		targetSize = 1000;
 		%> background screen colour
 		backgroundColour = [ 0.5 0.5 0.5 ];
 		%> filename this was saved as
@@ -69,7 +71,7 @@ classdef calibrateLuminance < handle
 		wavelengths = 380:1:780
 		%>use monitor sync for SpectroCal2?
 		monitorSync logical = true
-		%> logging to the commandline?
+		%> more logging to the commandline?
 		verbose logical = false
 		%> allows the constructor to run the open method immediately
 		runNow logical = false
