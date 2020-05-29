@@ -635,24 +635,24 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		% ===================================================================
 		function makeLabels(obj)
 			if ~obj.taskInitialised; return; end
-			varIndex = unique(obj.outIndex);
+			varIndex = sort(unique(obj.outIndex));
 			for i = 1:length(varIndex)
 				st = '';
 				idx = find(obj.outIndex==varIndex(i));
 				idx = idx(1);
 				for j = 1:obj.nVars
 					if iscell(obj.outValues{i,j})
-						st = [st ' : ' num2str([obj.outValues{i,j}{:}])];
+						st = [st ' | ' obj.nVar(j).name ':' num2str([obj.outValues{idx,j}{:}])];
 					else
-						st = [st ' : ' num2str(obj.outValues{i,j})];
+						st = [st ' | ' obj.nVar(j).name ':' num2str(obj.outValues{idx,j})];
 					end
 				end
-				st = regexprep(st,'\s+',' ');
-				st = regexprep(st,'^ : ','');
+				st = regexprep(st,'^\s+\|\s+','');
 				str{i} = [num2str(varIndex(i)) ' = ' st];
 			end
 			[varIndex,res] = sort(varIndex);
 			str = str(res);
+			if size(str,1) < size(str,2); str = str'; end
 			obj.varLabels = str;
 		end
 		
