@@ -8,19 +8,19 @@ classdef LFPAnalysis < analysisCore
 	%------------------PUBLIC PROPERTIES----------%
 	properties
 		%> plexon file containing the LFP data
-		lfpfile@char
+		lfpfile char
 		%> plexon file containing the spike data
-		spikefile@char
+		spikefile char
 		%> data directory
-		dir@char
+		dir char
 		%> remove the mean voltage offset from the individual trials?
-		demeanLFP@logical = true
+		demeanLFP logical = true
 		%> default LFP channel
-		selectedLFP@double
+		selectedLFP double
 		%> time window around the trigger we wish to load
-		LFPWindow@double = 0.8
+		LFPWindow double = 0.8
 		%> default behavioural type
-		selectedBehaviour@cell = {'correct'}
+		selectedBehaviour cell = {'correct'}
 		%> plot verbosity
 		verbose = true
 	end
@@ -28,30 +28,30 @@ classdef LFPAnalysis < analysisCore
 	%------------------DEPENDENT PROPERTIES--------%
 	properties (SetAccess = protected, Dependent = true)
 		%> number of LFP channels
-		nLFPs@double = 0
+		nLFPs double = 0
 		%> selected LFP channel
-		nSelection@double = 0
+		nSelection double = 0
 	end
 	
 	%------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = {?analysisCore}, GetAccess = public)
 		%> LFP plxReader object
-		p@plxReader
+		p plxReader
 		%> spike analysis object
-		sp@spikeAnalysis
+		sp spikeAnalysis
 		%> trial parsed LFPs
-		LFPs@struct
+		LFPs struct
 		%> fieldtrip structure parsed from .LFPs
-		ft@struct
+		ft struct
 		%> fieldtrip parsed results
-		results@struct
+		results struct
 		%> selectedTrials: each cell is a trial list grouping
-		selectedTrials@cell
+		selectedTrials cell
 		%> trials to remove in reparsing. Our raw data plot allows us to visually remove
 		%> trials, we can also call fieldtrip preprocessing code too.
-		cutTrials@int32
+		cutTrials int32
 		%> variable selection map for the analysis groups
-		map@cell
+		map cell
 	end
 	
 	%------------------CLASS PROPERTIES----------%
@@ -65,15 +65,15 @@ classdef LFPAnalysis < analysisCore
 	%------------------HIDDEN PROPERTIES----------%
 	properties (SetAccess = protected, GetAccess = public, Hidden = true)
 		%> bandpass frequencies
-		bpfreq@cell = {[1 4], [4 7], [7 14], [15 30], [30 50], [50 100], [1 250]}
+		bpfreq cell = {[1 4], [4 7], [7 14], [15 30], [30 50], [50 100], [1 250]}
 		%> bandpass frequency names
-		bpnames@cell = {'\delta','\theta','\alpha','\beta','\gamma low','\gamma high','all'}
+		bpnames cell = {'\delta','\theta','\alpha','\beta','\gamma low','\gamma high','all'}
 	end
 	
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction, see parseArgs
-		allowedProperties@char = 'lfpfile|spikefile|dir|demeanLFP|selectedLFP|LFPWindow|selectedBehaviour|verbose'
+		allowedProperties char = 'lfpfile|spikefile|dir|demeanLFP|selectedLFP|LFPWindow|selectedBehaviour|verbose'
 	end
 	
 	%=======================================================================
@@ -259,7 +259,7 @@ classdef LFPAnalysis < analysisCore
 			if me.p.saccadeRealign == true
 				t = ['Saccade Realign ENABLED @ ' datestr(now)];
 				fprintf(['\n<strong>:#:</strong> ' t '\n']);
-				if me.openUI; 
+				if me.openUI
 					t = {' '; t; ' '};
 					s=get(me.handles.list,'String');
 					s = [s; t];
@@ -268,7 +268,7 @@ classdef LFPAnalysis < analysisCore
 			else
 				t = ['Saccade Realign DISABLED @ ' datestr(now)];
 				fprintf(['\n<strong>:#:</strong> ' t '\n']);
-				if me.openUI; 
+				if me.openUI
 					t = {' '; t; ' '};
 					s=get(me.handles.list,'String');
 					s = [s; t];
@@ -302,7 +302,7 @@ classdef LFPAnalysis < analysisCore
 			syncData(me.sp.p, me.p, 'tsList'); %copy any parsed data, exclude tsList
 			lazyParse(me.sp); %lazy parse the spikes
 			syncData(me.p, me.sp.p, 'tsList'); %copy any new parsed data back, exclude tsList
-			if me.openUI; 
+			if me.openUI
 				updateUI(me.sp)
 				updateUI(me);
 			elseif me.doPlots
@@ -380,7 +380,7 @@ classdef LFPAnalysis < analysisCore
 			ft.cfg.eventformat = ft.cfg.headerformat;
 			ft.cfg.trl = [];
 			a=1;
-			if ~isfield(LFPs,'nTrials'); 
+			if ~isfield(LFPs,'nTrials') 
 				for jj = 1:length(LFPs); LFPs(jj).nTrials = me.p.eventList.nTrials; end
 			end
 			for k = 1:LFPs(1).nTrials
@@ -423,7 +423,7 @@ classdef LFPAnalysis < analysisCore
 			else
 				ft = me.ft;
 			end
-			if removeLineNoise == true;
+			if removeLineNoise == true
 				cfg.padding = 0.2;
 				cfg.dftfilter = 'yes';
 				cfg.dftfreq = [80 160 240];
@@ -455,36 +455,36 @@ classdef LFPAnalysis < analysisCore
 		function cfg=ftTimeLockAnalysis(me, cfg, statcfg)
 			if isempty(fieldnames(me.ft)); warning('Fieldtrip structure is empty, regenerating...');me.getFieldTripLFPs;end
 			ft = me.ft;	
-			if isfield(ft,'uniquetrials');
+			if isfield(ft,'uniquetrials')
 				ft = rmfield(ft,'uniquetrials'); %ft_timelockanalysis > ft_selectdata generates a warning as this is an unofficial field, so remove it here
 			end
 			if ~exist('cfg','var') || isempty(cfg); cfg = []; end
 			if isnumeric(cfg) && length(cfg) == 2; w=cfg;cfg=[];cfg.covariancewindow=w; end
 			if ~isfield(cfg,'covariancewindow');cfg.covariancewindow = me.measureRange;end
-			if ~isfield(cfg,'keeptrials'); cfg.keeptrials = 'yes'; end
+			if ~isfield(cfg,'keeptrials'); cfg.keeptrials	= 'yes'; end
 			if ~isfield(cfg,'removemean'); cfg.removemean	= 'yes'; end
 			if ~isfield(cfg,'covariance'); cfg.covariance	= 'yes'; end
 			cfg.channel						= ft.label{me.selectedLFP};
-			me.results(1).av = [];
+			me.results(1).av				= [];
 			if strcmp(cfg.keeptrials, 'yes')
-				me.results(1).avstat = [];
-				me.results(1).avstatavg = [];
+				me.results(1).avstat		= [];
+				me.results(1).avstatavg		= [];
 			end 
 			for i = 1:me.nSelection
 				cfg.trials					= me.selectedTrials{i}.idx;
-				av{i}							= ft_timelockanalysis(cfg, ft);
+				av{i}						= ft_timelockanalysis(cfg, ft);
 				av{i}.cfgUsed				= cfg;
 				av{i}.name					= me.selectedTrials{i}.name;
-				idx1							= me.findNearest(av{i}.time, me.baselineWindow(1));
-				idx2							= me.findNearest(av{i}.time, me.baselineWindow(2));
+				idx1						= me.findNearest(av{i}.time, me.baselineWindow(1));
+				idx2						= me.findNearest(av{i}.time, me.baselineWindow(2));
 				av{i}.baselineWindow		= me.baselineWindow;
 				%tr = squeeze(av{i}.trial(:,:,idx1:idx2)); tr=mean(tr');
 				tr = av{i}.avg(idx1:idx2);
-				[av{i}.baseline, err]	= me.stderr(tr(:),'2SD');
+				[av{i}.baseline, err]		= me.stderr(tr(:),'2SD');
 				if length(err) == 1
-					av{i}.baselineCI			= [av{i}.baseline - err, av{i}.baseline + err];
+					av{i}.baselineCI		= [av{i}.baseline - err, av{i}.baseline + err];
 				else
-					av{i}.baselineCI			= [err(1), err(2)];
+					av{i}.baselineCI		= [err(1), err(2)];
 				end
 			end
 			
@@ -493,38 +493,38 @@ classdef LFPAnalysis < analysisCore
 			sv = me.options.stats;
 			
 			if strcmp(cfg.keeptrials, 'yes') %keeptrials was ON
-				if exist('statcfg','var');	cfg					= statcfg;
-				else cfg													= []; end
-				cfg.channel												= ft.label{me.selectedLFP};
+				if exist('statcfg','var');	cfg				= statcfg;
+				else cfg									= []; end
+				cfg.channel									= ft.label{me.selectedLFP};
 				if ~isfield(cfg,'latency'); cfg.latency		= me.measureRange; end
-				cfg.avgovertime										= 'no'; 
-				cfg.parameter											= 'trial';
-				if ~isfield(cfg,'method');cfg.method			= sv.method; end %'analytic'; % 'montecarlo'
+				cfg.avgovertime								= 'no'; 
+				cfg.parameter								= 'trial';
+				if ~isfield(cfg,'method');cfg.method		= sv.method; end %'analytic'; % 'montecarlo'
 				if ~isfield(cfg,'statistic'); cfg.statistic	= sv.statistic; end %'indepsamplesT'
-				if ~isfield(cfg,'alpha'); cfg.alpha				= sv.alpha; end
-				cfg.numrandomization									= sv.nrand;
-				cfg.resampling											= sv.resampling; %bootstrap
-				cfg.tail													= sv.tail; %two tail
-				cfg.correcttail										= 'prob';
-				cfg.correctm											= sv.correctm; %holm fdr hochberg bonferroni
+				if ~isfield(cfg,'alpha'); cfg.alpha			= sv.alpha; end
+				cfg.numrandomization						= sv.nrand;
+				cfg.resampling								= sv.resampling; %bootstrap
+				cfg.tail									= sv.tail; %two tail
+				cfg.correcttail								= 'prob';
+				cfg.correctm								= sv.correctm; %holm fdr hochberg bonferroni
 				if strcmpi(cfg.correctm,'cluster')
 					if strcmpi(cfg.method,'montecarlo') %cluster only valid with monte carlo
-						cfg.neighbours										= [];
-						cfg.clustertail									= cfg.tail;
-						cfg.clusteralpha									= 0.05;
-						cfg.clusterstatistic								= 'maxsum';
+						cfg.neighbours						= [];
+						cfg.clustertail						= cfg.tail;
+						cfg.clusteralpha					= 0.05;
+						cfg.clusterstatistic				= 'maxsum';
 					else
 						warning('Switched to Bonferroni correction cluster requires monte carlo method.');
 						cfg.correctm = 'bonferroni';
 					end
 				end
-				cfg.ivar													= 1;
-				cfg.design												= [ones(size(av{1}.trial,1),1); 2*ones(size(av{2}.trial,1),1)]';
-				stat														= ft_timelockstatistics(cfg, av{1}, av{2});
-				me.results.avstat									= stat;
-				cfg.avgovertime										= 'yes'; 
-				stat														= ft_timelockstatistics(cfg, av{1}, av{2});
-				me.results.avstatavg								= stat;
+				cfg.ivar									= 1;
+				cfg.design									= [ones(size(av{1}.trial,1),1); 2*ones(size(av{2}.trial,1),1)]';
+				stat										= ft_timelockstatistics(cfg, av{1}, av{2});
+				me.results.avstat							= stat;
+				cfg.avgovertime								= 'yes'; 
+				stat										= ft_timelockstatistics(cfg, av{1}, av{2});
+				me.results.avstatavg						= stat;
 			end
 			if me.doPlots; drawTimelockLFPs(me); end
 		end
@@ -1483,7 +1483,7 @@ classdef LFPAnalysis < analysisCore
 
 			randPhaseRange			= 2*pi; %how much to randomise phase?
 			rphase					= 0; %default phase
-			basef						= 5; % base frequency
+			basef					= 5; % base frequency
 			onsetf					= 10; %an onset at 0 frequency
 			onsetDivisor			= 0.5; %scale the onset frequency
 			burstf					= 30; %small burst frequency
