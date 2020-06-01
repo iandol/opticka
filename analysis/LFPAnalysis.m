@@ -59,7 +59,7 @@ classdef LFPAnalysis < analysisCore
 		%> external plot destination handle (see LFPMeta for an example)
 		plotDestination = [];
 		%> last freq method used
-		lastFrequencyMethod@char
+		lastFrequencyMethod char
 	end
 	
 	%------------------HIDDEN PROPERTIES----------%
