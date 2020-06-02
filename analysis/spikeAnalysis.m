@@ -4,31 +4,31 @@ classdef spikeAnalysis < analysisCore
 	%------------------PUBLIC PROPERTIES----------%
 	properties
 		%> plexon file containing the spike data
-		file@char
+		file char
 		%> data directory
-		dir@char
-		%> ± time window around the trigger, if empty use event off
-		spikeWindow@double						= 0.8
+		dir char
+		%> ï¿½ time window around the trigger, if empty use event off
+		spikeWindow double						= 0.8
 		%> used by legacy spikes to allow negative time offsets
-		startOffset@double						= 0
+		startOffset double						= 0
 		%> bin size
-		binSize@double								= 0.01
+		binSize double								= 0.01
 		%> gaussian/smooth window for density plots
-		densityWindow@double						= [-0.015 0.015]
+		densityWindow double						= [-0.015 0.015]
 		%> density plots smooth function
-		densityFunction@char						= 'gauss'
+		densityFunction char						= 'gauss'
 		%> default Spike channel
-		selectedUnit@double						= 1
+		selectedUnit double						= 1
 		%> saccadeFilter, if empty ignore
-		filterFirstSaccades@double				= [ ]
+		filterFirstSaccades double				= [ ]
 		%> default behavioural type
-		selectedBehaviour@cell					= {'correct'}
+		selectedBehaviour cell					= {'correct'}
 		%> region of interest for eye location [x y radius include], if empty ignore
-		ROI@double									= []
+		ROI double									= []
 		%> time of interest for fixation, if empty ignore
-		TOI@double									= []
+		TOI double									= []
 		%> inset raster plot?
-		insetRasterPlot@logical					= false
+		insetRasterPlot logical					= false
 		%> plot verbosity
 		verbose										= true
 	end
@@ -36,39 +36,39 @@ classdef spikeAnalysis < analysisCore
 	%------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = {?analysisCore}, GetAccess = public)
 		%> spike plxReader object; can be the same or different due to spike resorting
-		p@plxReader
+		p plxReader
 		%> spike trial structure
-		spike@cell
+		spike cell
 		%> names of spike channels
-		names@cell
+		names cell
 		%> fieldtrip reparse
-		ft@struct
+		ft struct
 		%> fieldtrip parsed results
-		results@struct
+		results struct
 		%> chronux reparse, cell is condition, struct is trials
-		chronux@cell
+		chronux cell
 		%> chronux parsed results
 		chresults@struct
 		%> trials to remove in reparsing
-		cutTrials@int32
+		cutTrials int32
 		%> selectedTrials: each cell is a trial list grouping
-		selectedTrials@cell
+		selectedTrials cell
 		%> variable selection map for 3 analysis groups
-		map@cell
+		map cell
 	end
 		
 	%------------------DEPENDENT PROPERTIES--------%
 	properties (SetAccess = protected, Dependent = true)
 		%> number of LFP channels
-		nUnits@double = 0
+		nUnits double = 0
 		%> number of selected trial sets
-		nSelection@double = 0
+		nSelection double = 0
 	end
 	
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%> allowed properties passed to object upon construction
-		allowedProperties@char = 'file|dir|plotRange|demeanLFP|selectedLFP|spikeWindow|verbose'
+		allowedProperties char = 'file|dir|plotRange|demeanLFP|selectedLFP|spikeWindow|verbose'
 	end
 	
 	%=======================================================================
@@ -279,7 +279,7 @@ classdef spikeAnalysis < analysisCore
 			unit = 'p';
 			for i = 1:me.nUnits
 				if i == me.selectedUnit
-					unit = [unit '|¤' me.names{i}];
+					unit = [unit '|ï¿½' me.names{i}];
 				else
 					unit = [unit '|'  me.names{i}];
 				end
@@ -294,7 +294,7 @@ classdef spikeAnalysis < analysisCore
 			end
 			for i = 1:length(inbeh)
 				if strcmpi(inbeh{i}, me.selectedBehaviour{1})
-					beh = [beh '|¤' inbeh{i}];
+					beh = [beh '|ï¿½' inbeh{i}];
 				else
 					beh = [beh '|' inbeh{i}];
 				end
@@ -304,7 +304,7 @@ classdef spikeAnalysis < analysisCore
 			denf = 'r';
 			for i = 1:length(inDenFcn)
 				if strcmpi(inDenFcn{i}, me.densityFunction)
-					denf = [denf '|¤' inDenFcn{i}];
+					denf = [denf '|ï¿½' inDenFcn{i}];
 				else
 					denf = [denf '|' inDenFcn{i}];
 				end
@@ -326,8 +326,8 @@ classdef spikeAnalysis < analysisCore
 				['t|' cuttrials],'Enter Trials to exclude:';   ...
 				[unit],'Choose Default Spike Channel to View:';...
 				[beh],'Behavioural response type:';...
-				['t|' pr],'Plot Range (±seconds):';   ...
-				['t|' rr],'Measure Firing Rate Range (±seconds):';   ...
+				['t|' pr],'Plot Range (ï¿½seconds):';   ...
+				['t|' rr],'Measure Firing Rate Range (ï¿½seconds):';   ...
 				['t|' bw],'Binwidth (PSTH) & Smooth Window (Density) [BINWIDTH -WINDOW +WINDOW] (seconds):';   ...
 				[denf],'Smoothing function for Density Plots:';...
 				['t|' roi],'Stimulus Region of Interest [X Y RADIUS INCLUDE[0|1]] (blank = ignore):';   ...
@@ -976,7 +976,7 @@ classdef spikeAnalysis < analysisCore
 				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
 				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
 				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-				blineText = sprintf('%s  Group:%i %.4g ± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
+				blineText = sprintf('%s  Group:%i %.4g ï¿½ %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
 			end
 			disp(blineText);
 			
@@ -992,7 +992,7 @@ classdef spikeAnalysis < analysisCore
 				me.areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
-				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
+				t = [t sprintf(' R%i: %.4g ï¿½ %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t);
@@ -1037,7 +1037,7 @@ classdef spikeAnalysis < analysisCore
 				yp = [baseline{j}.CI(1) baseline{j}.CI(1) baseline{j}.CI(2) baseline{j}.CI(2)];
 				me1 = patch(xp,yp,c(j,:),'FaceAlpha',0.1,'EdgeColor','none');
 				set(get(get(me1,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-				blineText = sprintf('%s  Group:%i %.4g ± %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
+				blineText = sprintf('%s  Group:%i %.4g ï¿½ %.3g<>%.3g',blineText,j,baseline{j}.avg,baseline{j}.CI(1),baseline{j}.CI(2));
 			end
 			disp(blineText);
 			
@@ -1047,7 +1047,7 @@ classdef spikeAnalysis < analysisCore
 				me.areabar(sd{j}.time, sd{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
-				t = [t sprintf(' R%i: %.4g ± %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
+				t = [t sprintf(' R%i: %.4g ï¿½ %.3g %.3g<>%.3g', j, rate{j}.avg, e, rate{j}.CI(1), rate{j}.CI(2))];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',14);
@@ -1129,7 +1129,7 @@ classdef spikeAnalysis < analysisCore
 				me.areabar(psth{j}.time, psth{j}.avg, e, c(j,:)/2, 0.2, 'k.-','Color',c(j,:),'MarkerFaceColor',c(j,:),'LineWidth',1);
 				leg{j,1} = me.selectedTrials{j}.name;
 				e = me.var2SE(rate{j}.var,rate{j}.dof);
-				t = [t sprintf(' R%i: %.4g ± %.3g', j, rate{j}.avg, e)];
+				t = [t sprintf(' R%i: %.4g ï¿½ %.3g', j, rate{j}.avg, e)];
 			end
 			disp([t sprintf(' | measureRange: %s', num2str(rate{1}.cfg.latency))]);
 			title(t,'FontSize',13);

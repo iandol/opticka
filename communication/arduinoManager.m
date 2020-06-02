@@ -4,24 +4,25 @@ classdef arduinoManager < optickaCore
 	properties
 		port char				= ''
 		board char				= ''
-		silentMode logical	= false %this allows us to be called even if no arduino is attached
+		silentMode logical		= false %this allows us to be called even if no arduino is attached
 		verbose					= true
-		openGUI logical		= true
+		openGUI logical			= true
 		mode char				= 'original' %original is built-in, otherwise needs matlab hardware package
 		rewardPin double		= 2
 		rewardTime double		= 150
-		availablePins cell	= {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
+		availablePins cell		= {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
 	end
 	properties (SetAccess = private, GetAccess = public)
 		ports
 		isOpen logical			= false
 		device					= []
-		deviceID					= ''
+		deviceID				= ''
 	end
 	properties (SetAccess = private, GetAccess = private)
 		handles					= []
 		screen screenManager
-		allowedProperties char = 'availablePins|rewardPin|rewardTime|openGUI|board|mode|port|silentMode|verbose'
+		allowedProperties char	= ['availablePins|rewardPin|rewardTime|openGUI|board|mode|'...
+			'port|silentMode|verbose']
 	end
 	methods%------------------PUBLIC METHODS--------------%
 		
