@@ -14,7 +14,8 @@ classdef tobiiManager < optickaCore
 		%> 4C: 90
 		sampleRate double {mustBeMember(sampleRate,[60 90 120 150 300 600 1200])} = 300
 		%> use human or macaque tracking mode
-		trackingMode char {mustBeMember(trackingMode,{'human','macaque','Default', 'Infant', 'Bright light'})} = 'human'
+		trackingMode char {mustBeMember(trackingMode,{'human','macaque','Default', ...
+			'Infant', 'Bright light'})} = 'human'
 		%> fixation window details
 		fixation struct = struct('X',0,'Y',0,'initTime',1,'fixTime',1,...
 			'radius',1,'strictFixation',true)
@@ -22,7 +23,8 @@ classdef tobiiManager < optickaCore
 		smoothing struct = struct('nSamples',8,'method','median','window',3,...
 			'eyes','both')
 		%> type of calibration stimulus
-		calibrationStimulus char {mustBeMember(calibrationStimulus,{'animated','movie','normal'})} = 'animated'
+		calibrationStimulus char {mustBeMember(calibrationStimulus,{'animated',...
+			'movie','normal'})} = 'animated'
 		%> Titta class object
 		tobii Titta
 		%> the PTB screen to work with, passed in during initialise
@@ -59,6 +61,7 @@ classdef tobiiManager < optickaCore
 		sampletime = []
 		%> operator screen used during calibration
 		operatorScreen screenManager
+		secondScreen logical = false
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -107,11 +110,11 @@ classdef tobiiManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> cache this to save time in tight loops
-		isRecording_ = false;
+		isRecording_ = false
 		calStim
-		secondScreen logical = false;
 		%> currentSample template
-		sampleTemplate struct = struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,'pa',NaN,'valid',false)
+		sampleTemplate struct = struct('raw',[],'time',NaN,'timeD',NaN,'gx',NaN,'gy',NaN,...
+			'pa',NaN,'valid',false)
 		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
 		win = []
 		ppd_ double = 36
@@ -122,7 +125,9 @@ classdef tobiiManager < optickaCore
 		%> previous message sent to tobii
 		previousMessage char = ''
 		%> allowed properties passed to object upon construction
-		allowedProperties char = 'dualScreens|tobii|screen|isDummy|saveFile|settings|calPositions|valPositions|model|trackingMode|fixation|sampleRate|smoothing|calibrationStimulus|verbose|isDummy'
+		allowedProperties char = ['dualScreens|tobii|screen|isDummy|saveFile|settings|calPositions|'...
+			'valPositions|model|trackingMode|fixation|sampleRate|smoothing|calibrationStimulus|'...
+			'verbose|isDummy']
 	end
 	
 	methods
@@ -178,28 +183,28 @@ classdef tobiiManager < optickaCore
 				me.tobii			= me.tobii.setDummyMode();
 			end
 			
-			me.settings									= Titta.getDefaults(me.model);
-			me.settings.freq							= me.sampleRate;
+			me.settings								= Titta.getDefaults(me.model);
+			me.settings.freq						= me.sampleRate;
 			me.settings.calibrateEye				= me.eyeUsed;
 			me.settings.trackingMode				= me.trackingMode;
 			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
 			me.settings.UI.setup.showFixPointsToSubject		= false;
-			me.settings.UI.setup.showHeadToSubject				= true;   
+			me.settings.UI.setup.showHeadToSubject			= true;   
 			me.settings.UI.setup.showInstructionToSubject	= true;
-			me.settings.UI.setup.eyeClr							= 255;
+			me.settings.UI.setup.eyeClr						= 255;
 			if strcmpi(me.calibrationStimulus,'animated')
-				me.calStim								= AnimatedCalibrationDisplay();
+				me.calStim							= AnimatedCalibrationDisplay();
 				me.calStim.moveTime					= 0.75;
 				me.calStim.oscillatePeriod			= 1;
 				me.calStim.blinkCount				= 4;
 				me.calStim.bgColor					= me.settings.cal.bgColor;
-				me.calStim.fixBackColor          = 0;
+				me.calStim.fixBackColor				= 0;
 				me.calStim.fixFrontColor			= 255;
 				me.settings.cal.drawFunction		= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);
 				if me.manualCalibration;me.settings.mancal.drawFunction	= @(a,b,c,d,e,f) me.calStim.doDraw(a,b,c,d,e,f);end
 			elseif strcmpi(me.calibrationStimulus,'movie')
-				me.calStim								= tittaCalMovieStimulus();
+				me.calStim							= tittaCalMovieStimulus();
 				me.calStim.moveTime					= 0.75;
 				me.calStim.oscillatePeriod			= 1;
 				me.calStim.blinkCount				= 3;
@@ -218,9 +223,9 @@ classdef tobiiManager < optickaCore
 			me.settings.cal.autoPace				= me.autoPace;
 			me.settings.cal.paceDuration			= me.paceDuration;
 			if me.autoPace
-				me.settings.cal.doRandomPointOrder = true;
+				me.settings.cal.doRandomPointOrder	= true;
 			else
-				me.settings.cal.doRandomPointOrder = false;
+				me.settings.cal.doRandomPointOrder	= false;
 			end
 			if ~isempty(me.calPositions)
 				me.settings.cal.pointPos			= me.calPositions;
@@ -233,23 +238,23 @@ classdef tobiiManager < optickaCore
 			me.settings.val.pointNotifyFunction	= @tittaCalCallback;
 			
 			if me.manualCalibration
-				me.settings.UI.mancal.bgColor			= floor(me.screen.backgroundColour*255);
-				me.settings.mancal.bgColor				= floor(me.screen.backgroundColour*255);
+				me.settings.UI.mancal.bgColor		= floor(me.screen.backgroundColour*255);
+				me.settings.mancal.bgColor			= floor(me.screen.backgroundColour*255);
 				me.settings.mancal.cal.pointPos		= me.calPositions;
 				me.settings.mancal.val.pointPos		= me.valPositions;
 				me.settings.mancal.paceDuration		= me.paceDuration;
 				me.settings.UI.mancal.showHead		= true;
 				me.settings.UI.mancal.headScale		= 0.4;
 				me.settings.mancal.pointNotifyFunction		= @tittaCalCallback;
-				me.settings.mancal.val.pointNotifyFunction= @tittaCalCallback;
+				me.settings.mancal.val.pointNotifyFunction	= @tittaCalCallback;
 			end
 			updateDefaults(me);
 			me.tobii.init();
-			me.isConnected								= true;
-			me.systemTime								= me.tobii.getTimeAsSystemTime;
-			me.ppd_										= me.screen.ppd;
+			me.isConnected							= true;
+			me.systemTime							= me.tobii.getTimeAsSystemTime;
+			me.ppd_									= me.screen.ppd;
 			if me.screen.isOpen == true
-				me.win									= me.screen.win;
+				me.win								= me.screen.win;
 			end
 			
 			if ~me.isDummy
@@ -313,7 +318,7 @@ classdef tobiiManager < optickaCore
 			if wasRecording; stopRecording(me);	end
 			updateDefaults(me); % make sure we send any other settings changes
 			ListenChar(-1);
-			if me.secondScreen
+			if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
 				if ~me.operatorScreen.isOpen
 					me.operatorScreen.open();
 				end
