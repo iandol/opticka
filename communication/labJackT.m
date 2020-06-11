@@ -7,11 +7,11 @@ classdef labJackT < handle
 	properties
 		%> friendly object name, setting this to 'null' will force silentMode=1
 		name char = 'labJackT'
-		%> what LabJack device to use; 3 = U3, 6 = U6
+		%> what LabJack device to use; 4 = T3, 7 = T7
 		deviceID = 4
 		%> if more than one labJack connected, which one to open?
 		device = 1
-		%> silentMode allows one to gracefully fail methods without a labJack connected
+		%> silentMode=true allows one to gracefully fail methods without a labJack connected
 		silentMode logical = false
 		%> header needed by loadlib
 		header char = '/usr/local/include/LabJackM.h'
@@ -85,7 +85,8 @@ classdef labJackT < handle
 		%> library name
 		libName char = 'libLabJackM'
 		%> what properties are allowed to be passed on construction
-		allowedProperties='device|deviceID|name|silentMode|verbose|openNow|header|library'
+		allowedProperties = ['device|deviceID|name|silentMode|verbose|openNow|'...
+			'header|library']
 		%>document what our strobed word is actually setting, shown to user if verbose = true
 		strobeComment = ''
 		%> class name
@@ -94,6 +95,7 @@ classdef labJackT < handle
 		timedTTLCache = []
 		winLibrary = 'C:\Windows\System32\LabJackM'
 		winHeader = 'C:\Program Files (x86)\LabJack\Drivers\LabJackM.h'
+		winLibName = 'LabJackM'
 	end
 	
 	%=======================================================================
@@ -125,7 +127,7 @@ classdef labJackT < handle
 			if IsWin
 				me.header = me.winHeader;
 				me.library = me.winLibrary;
-				me.libName = 'LabJackM';
+				me.libName = me.winLibName;
 			end
 			if me.openNow == true
 				open(me);

@@ -5,10 +5,10 @@
 %> you need to install libusb and the exodriver. The easiest way to do this
 %> is to use homebrew on OS X, a light-weight package manager to install
 %> universal builds of these:
-%>     bash$ brew install libusb exodriver --universal
+%>     bash$ brew install libusb exodriver 
 %> For linux, see instructions on the labjack site.
 %> With the exodriver installed, you create a new labJack object and you
-%> can then dend figital I/O commands and strobed words. labJack ises a 12bit
+%> can then send digital I/O commands and strobed words. labJack uses a 12bit
 %> word across EIO and CIO, using CIO0 as the strobe bit so one has a
 %> resultant 11bits of values in the strobed word. For example:
 %>
@@ -93,7 +93,7 @@ classdef labJack < handle
 	
 	properties (SetAccess = private, Dependent = true)
 		%> The fullName is the object name combined with its uuid and class name
-		fullName = ''
+		fullName
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
