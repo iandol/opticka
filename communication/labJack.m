@@ -598,7 +598,7 @@ classdef labJack < handle
 				ovalue2(1) = 0; %fio will be 0
 				ovalue2(2) = eio2;
 				ovalue2(3) = cio2;
-				mask = [0,255,255]; %lock fio, allow all of eio and cio
+				if isempty(mask); mask = [0, 255, 255]; end
 				obj.strobeComment = [obj.strobeComment 'FIO EIO & CIO: ' num2str(0) ' ' num2str(eio2) ' ' num2str(cio2)];
 				
 				cmd=zeros(30,1);
@@ -776,6 +776,18 @@ classdef labJack < handle
 			end
 		end
 		
+	end
+	
+	%============================================================================
+	methods (Hidden = true) %--HIDDEN METHODS 
+	%============================================================================
+	
+		function strobeServer(obj, value)
+
+			obj.prepareStrobe(value,[],true);
+
+		end
+	
 	end
 	
 	%=======================================================================
