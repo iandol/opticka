@@ -44,6 +44,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		outMap
 		%> variable labels
 		varLabels
+		%> variable list
+		varList
 		%> minimum number of blocks
 		minBlocks
 		%> log of within block resets
@@ -547,7 +549,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				obj.h.figure1 = figure( ...
 					'Tag', 'sSLog', ...
 					'Units', 'normalized', ...
-					'Position', [0 0.2 0.25 0.7], ...
+					'Position', [0 0.2 0.2 0.7], ...
 					'Name', ['Log: ' obj.fullName], ...
 					'MenuBar', 'none', ...
 					'NumberTitle', 'off', ...
@@ -620,6 +622,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			if obj.nVars == 0
 				obj.outIndex = 1; %there is only one stimulus, no variables
 			end
+			makeLabels(obj);
 		end
 		
 	end % END METHODS
@@ -636,24 +639,30 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		function makeLabels(obj)
 			if ~obj.taskInitialised; return; end
 			varIndex = sort(unique(obj.outIndex));
+			list = cell(length(varIndex),obj.nVars+2);
 			for i = 1:length(varIndex)
 				st = '';
 				idx = find(obj.outIndex==varIndex(i));
+				list{i,1} = varIndex(i);
+				list{i,2} = idx;
 				idx = idx(1);
 				for j = 1:obj.nVars
 					if iscell(obj.outValues{i,j})
 						st = [st ' | ' obj.nVar(j).name ':' num2str([obj.outValues{idx,j}{:}])];
+						list{i,j+2} = obj.outValues{idx,j}{:};
 					else
 						st = [st ' | ' obj.nVar(j).name ':' num2str(obj.outValues{idx,j})];
+						list{i,j+2} = obj.outValues{idx,j};
 					end
 				end
 				st = regexprep(st,'^\s+\|\s+','');
 				str{i} = [num2str(varIndex(i)) ' = ' st];
 			end
-			[varIndex,res] = sort(varIndex);
+			[~,res] = sort(varIndex);
 			str = str(res);
 			if size(str,1) < size(str,2); str = str'; end
 			obj.varLabels = str;
+			obj.varList = list;
 		end
 		
 		% ===================================================================
