@@ -7,7 +7,8 @@
 classdef tobiiManager < optickaCore
 	
 	properties
-		%> model of eyetracker, e.g. Tobii TX300; Spectrum Pro is default
+		%> model of eyetracker:
+		%> 'Tobi Pro Spectrum' - 'IS4_Large_Peripheral' - 'Tobii TX300'
 		model char = 'Tobii Pro Spectrum'
 		%> tracker update speed (Hz)
 		%> Spectrum Pro: [60, 120, 150, 300, 600 or 1200]
@@ -46,7 +47,7 @@ classdef tobiiManager < optickaCore
 		%> pace duration
 		paceDuration double = 0.8
 		% which eye is the tracker using?
-		eyeUsed char {mustBeMember(eyeUsed,{'both','left','right'})}= 'both'
+		eyeUsed char {mustBeMember(eyeUsed,{'both','left','right'})} = 'both'
 		%> which movie to use for calibration, empty uses default
 		calibrationMovie movieStimulus
 	end
@@ -149,6 +150,10 @@ classdef tobiiManager < optickaCore
 				fprintf('!!! Error initialising Tobii: %s\n\t going into Dummy mode...\n',ME.message);
 				me.tobii = [];
 				me.isDummy = true;
+			end
+			if contains(me.model,'IS4_Large_Peripheral'); 
+				me.sampleRate = 90; 
+				me.trackingMode = 'Default';
 			end
 			p = fileparts(me.saveFile);
 			if isempty(p)
