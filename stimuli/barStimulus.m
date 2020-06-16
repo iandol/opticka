@@ -373,6 +373,7 @@ classdef barStimulus < baseStimulus
 				end
 				me.matrix = outmat;
 				if me.phaseReverseTime > 0
+					c2 = me.mix(me.colour2Out);
 					out = zeros(size(outmat));
 					for i = 1:3
 						tmp = outmat(:,:,i);
@@ -382,6 +383,8 @@ classdef barStimulus < baseStimulus
 							idx2 = tmp == u(2);
 							tmp(idx1) = u(2);
 							tmp(idx2) = u(1);
+						elseif length(u) == 1 %only 1 colour, probably low sf
+							tmp(tmp == u(1)) = c2(i);
 						end
 						out(:,:,i) = tmp;
 					end
@@ -403,13 +406,20 @@ classdef barStimulus < baseStimulus
 		%> @brief make the checkerboard
 		%>
 		% ===================================================================
-		function mx = makeCheckerBoard(me,hh,ww,c)
+		function mout = makeCheckerBoard(me,hh,ww,c)
+			c1 = me.mix(me.colourOut);
+			c2 = me.mix(me.colour2Out);
 			cppd = round(( me.ppd / 2 / c )); %convert to sf cycles per degree
-			if cppd < 1 || cppd == Inf
+			if cppd == 1; warning('--->>> Checkerboard at resolution limit of monitor (1px) ...'); end
+			if cppd < 1 || cppd >= max(me.sM.winRect) || cppd == Inf 
 				warning('--->>> Checkerboard spatial frequency exceeds resolution of monitor...');
-				mx = zeros(hh,ww,3);
+				mout = zeros(hh,ww,3);
 				for i = 1:3
-					mx(:,:,i) = mx(:,:,i) + me.baseColour(i);
+					if cppd < 1
+						mout(:,:,i) = mout(:,:,i) + me.baseColour(i);
+					else
+						mout(:,:,i) = mout(:,:,i) + c1(i);
+					end
 				end
 				return
 			end
@@ -418,16 +428,12 @@ classdef barStimulus < baseStimulus
 			tile = repelem([0 1; 1 0], cppd, cppd);
 			mx = repmat(tile, hscale, wscale);
 			mx = mx(1:hh,1:ww);
-			idx1 = find(mx == 0);
-			idx2 = find(mx == 1);
-			mx = repmat(mx,1,1,3);
-			c1 = me.mix(me.colourOut);
-			c2 = me.mix(me.colour2Out);
+			mout = repmat(mx,1,1,3);
 			for i = 1:3
-				tmp = mx(:,:,i);
-				tmp(idx1) = c1(i);
-				tmp(idx2) = c2(i);
-				mx(:,:,i) = tmp;
+				tmp = mout(:,:,i);
+				tmp(mx==0) = c1(i);
+				tmp(mx==1) = c2(i);
+				mout(:,:,i) = tmp;
 			end
 		end
 		
