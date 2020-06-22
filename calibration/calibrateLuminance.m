@@ -365,7 +365,7 @@ classdef calibrateLuminance < handle
 				if ~IsWin; RestoreCluts; end
 				if obj.useSpectroCal2;obj.closeSpectroCAL();end
 				Screen('LoadNormalizedGammaTable', obj.win, obj.oldCLUT);
-				Screen('CloseAll');
+				obj.closeScreen();
 				obj.canAnalyze = true;
 			catch %#ok<CTCH>
 				resetAll(obj);
@@ -497,7 +497,7 @@ classdef calibrateLuminance < handle
 				if ~IsWin; RestoreCluts; end
 				if obj.useSpectroCal2;obj.closeSpectroCAL();end
 				Screen('LoadNormalizedGammaTable', obj.win, obj.oldCLUT);
-				Screen('CloseAll');
+				obj.closeScreen();
 				obj.isTested = true;
 				plot(obj);
 			catch ME %#ok<CTCH>
@@ -1028,6 +1028,24 @@ classdef calibrateLuminance < handle
 		end
 		
 		%===============init======================%
+		function closeScreen(obj)
+			if ~isempty(obj.win) && obj.win > 0
+				kind = Screen(me.win, 'WindowKind');
+				try
+					if kind == 1 
+						Screen('Close',me.win);
+						if me.verbose; fprintf('!!!>>>Closing Win: %i kind: %i\n',me.win,kind); end
+					end
+				catch ME
+					Screen('CloseAll');
+					if me.verbose 
+						getReport(ME);
+					end
+				end
+			end
+		end
+		
+		%===============init======================%
 		function [refreshRate] = configureSpectroCAL(obj)
 			intgrTime = [];
 			doSynchonised = obj.monitorSync;
@@ -1263,8 +1281,8 @@ classdef calibrateLuminance < handle
 		function delete(obj)
 			obj.verbose=true;
 			obj.closeSpectroCAL();
-			sca
-			obj.salutation('DELETE Method','Closing calibrateLuminance')
+			obj.closeScreen();
+			obj.salutation('DELETE Method','Closing calibrateLuminance');
 			obj.plotHandle = [];
 			obj.p = [];
 		end

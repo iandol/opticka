@@ -602,6 +602,20 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
+		%> @brief get a meta matrix compatible with vs parsed data,
+		%  unwrapping cell arrays
+		%>
+		%> Generates a table with the randomised stimulus values
+		% ===================================================================
+		function [labels, list] = getLabels(obj)
+			labels = [];
+			list = [];
+			obj.makeLabels()
+			if ~isempty(obj.varLabels); labels = obj.varLabels; end
+			if ~isempty(obj.varList); list = obj.varList; end
+		end
+		
+		% ===================================================================
 		%> @brief validate the stimulusSequence is ok
 		%>
 		%> Check we have a minimal task structure
