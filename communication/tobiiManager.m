@@ -247,10 +247,11 @@ classdef tobiiManager < optickaCore
 				me.settings.mancal.bgColor			= floor(me.screen.backgroundColour*255);
 				me.settings.mancal.cal.pointPos		= me.calPositions;
 				me.settings.mancal.val.pointPos		= me.valPositions;
-				me.settings.mancal.paceDuration		= me.paceDuration;
+				me.settings.mancal.cal.paceDuration	= me.paceDuration;
+				me.settings.mancal.val.paceDuration	= me.paceDuration;
 				me.settings.UI.mancal.showHead		= true;
 				me.settings.UI.mancal.headScale		= 0.4;
-				me.settings.mancal.pointNotifyFunction		= @tittaCalCallback;
+				me.settings.mancal.cal.pointNotifyFunction	= @tittaCalCallback;
 				me.settings.mancal.val.pointNotifyFunction	= @tittaCalCallback;
 			end
 			updateDefaults(me);
