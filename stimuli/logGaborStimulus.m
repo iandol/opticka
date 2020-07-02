@@ -172,7 +172,7 @@ classdef logGaborStimulus < baseStimulus
 			
 			if me.phaseReverseTime > 0
 				me.reversePhase = false;
-				shader = LoadGLSLProgramFromFiles(which('Invert.frag'), 1);
+				shader = LoadGLSLProgramFromFiles(which('invert.frag'), 1);
 				glUseProgram(shader);
 				glUniform1i(glGetUniformLocation(shader, 'Image'), 0);
 				glUseProgram(0);

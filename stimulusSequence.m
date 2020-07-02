@@ -240,7 +240,11 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				for i = 1:size(Vars,1)
 					for j = 1:size(Vars,2)
 						for k = 1:length(Vars{i,j})
-							Vals{offset+k,j} = Vars{i,j}(k);
+							if iscell(Vars{i,j})
+								Vals{offset+k,j} = Vars{i,j}{k};
+							else
+								Vals{offset+k,j} = Vars{i,j}(k);
+							end
 						end
 					end
 					offset = offset + obj.minBlocks;
