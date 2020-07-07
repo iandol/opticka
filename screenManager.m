@@ -1190,6 +1190,27 @@ classdef screenManager < optickaCore
 	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
 	
+		
+		% ===================================================================
+		%> @brief Set Refresh
+		%> Screen('ConfigureDisplay', setting, screenNumber, outputId 
+		%>   [, newwidth][, newheight][, newHz][, newX][, newY]);
+		% ===================================================================
+		function setRefresh(value)
+			if IsLinux
+				if ~exist('value','var'); value = 144; end
+				inf=Screen('ConfigureDisplay','Scanout',1,0);
+				disp('Previous Settings:');
+				disp(inf);
+
+				Screen('ConfigureDisplay','Scanout',1,0,[],[],value);
+
+				inf=Screen('ConfigureDisplay','Scanout',1,0);
+				disp('New Settings:');
+				disp(inf);
+			end
+		end
+	
 		% ===================================================================
 		%> @brief Run validation for Display++
 		%>

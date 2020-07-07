@@ -1030,14 +1030,14 @@ classdef calibrateLuminance < handle
 		%===============init======================%
 		function closeScreen(obj)
 			if ~isempty(obj.win) && obj.win > 0
-				kind = Screen(me.win, 'WindowKind');
 				try
+					kind = Screen(obj.win, 'WindowKind');
 					if kind == 1 
-						Screen('Close',me.win);
-						if me.verbose; fprintf('!!!>>>Closing Win: %i kind: %i\n',me.win,kind); end
+						Screen('Close',obj.win);
+						if obj.verbose; fprintf('!!!>>>Closing Win: %i kind: %i\n',me.win,kind); end
 					end
 				catch ME
-					Screen('CloseAll');
+					%Screen('CloseAll');
 					if me.verbose 
 						getReport(ME);
 					end
