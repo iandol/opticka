@@ -329,9 +329,17 @@ classdef tobiiManager < optickaCore
 					me.operatorScreen.open();
 				end
 				if me.manualCalibration
-					me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]); %start calibration
+					if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'manual')
+						me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win], incal); 
+					else
+						me.calibration = me.tobii.calibrateManual([me.screen.win me.operatorScreen.win]);
+					end
 				else
-					me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win],[],incal); %start calibration
+					if ~isempty(incal) && isstruct(incal) && isfield(incal,'type') && contains(incal.type,'standard')
+						me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win], [], incal); 
+					else
+						me.calibration = me.tobii.calibrate([me.screen.win me.operatorScreen.win]);
+					end
 				end
 			else
 				if me.manualCalibration

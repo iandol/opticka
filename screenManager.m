@@ -842,22 +842,24 @@ classdef screenManager < optickaCore
 		%> @param lineWidth of lines
 		%> @return
 		% ===================================================================
-		function drawCross(me,size,colour,x,y,lineWidth)
+		function drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha)
 			% drawCross(me, size, colour, x, y, lineWidth)
-			if nargin < 6 || isempty(lineWidth); lineWidth = 0.1; end
+			if nargin < 8 || isempty(alpha); alpha = 1; end
+			if nargin < 7 || isempty(showDisk); showDisk = true; end
+			if nargin < 6 || isempty(lineWidth); lineWidth = 0.01; end
 			if nargin < 5 || isempty(y); y = 0; end
 			if nargin < 4 || isempty(x); x = 0; end
 			if nargin < 3 || isempty(colour)
 				if mean(me.backgroundColour(1:3)) <= 0.333
-					colour = [1 1 1 1];
+					colour = [1 1 1 alpha];
 				else
-					colour = [0 0 0 1];
+					colour = [0 0 0 alpha];
 				end
 			end
 			if mean(colour(1:3)) <= 0.5
-				lineColour = [1 1 1];
+				lineColour = [1 1 1 1];
 			else
-				lineColour = [0 0 0];
+				lineColour = [0 0 0 1];
 			end
 			if nargin < 2 || isempty(size); size = 0.6; end
 			x = me.xCenter + (x * me.ppd_);
@@ -865,9 +867,9 @@ classdef screenManager < optickaCore
 			size = size * me.ppd_;
 			dotSize = lineWidth * me.ppd_;
 			for p = 1:length(x)
-				Screen('gluDisk', me.win, colour, x(p), y(p), size/2);
+				if showDisk;Screen('gluDisk', me.win, colour, x(p), y(p), size/2);end
 				Screen('FillRect', me.win, lineColour, CenterRectOnPointd([0 0 size dotSize], x(p), y(p)));
-				Screen('fillRect', me.win, lineColour, CenterRectOnPointd([0 0 dotSize size], x(p), y(p)));
+				Screen('FillRect', me.win, lineColour, CenterRectOnPointd([0 0 dotSize size], x(p), y(p)));
 				Screen('gluDisk', me.win, colour, x(p), y(p), dotSize/2);
 			end	
 		end
