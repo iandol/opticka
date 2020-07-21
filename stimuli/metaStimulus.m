@@ -75,6 +75,7 @@ classdef metaStimulus < optickaCore
 		nMask_
 		%> allowed properties passed to object upon construction
 		allowedProperties = 'showMask|maskStimuli|verbose|stimuli|screen|choice'
+		sM
 	end
 	
 	%=======================================================================
@@ -417,8 +418,7 @@ classdef metaStimulus < optickaCore
 					runtime = 2; %seconds to run
 				end
 				if ~exist('s','var') || ~isa(s,'screenManager')
-					if isempty(me.sM); me.sM=screenManager; end
-					s = me.sM;
+					s = screenManager;
 					s.blend = true; 
 					s.disableSyncTests = true;
 					s.visualDebug = true;
@@ -670,7 +670,19 @@ classdef metaStimulus < optickaCore
 			switch s(1).type
 				% Use the built-in subsref for dot notation
 				case '.'
-					me = builtin('subsasgn',me,s,val);
+					if length(s) == 2
+						sout=cell(me.n,1);
+						for i = 1:me.n
+							sout{i} = builtin('subsasgn',me.stimuli{i},s(2),val);
+						end
+						if ~isempty(sout)
+							me.stimuli = sout;
+						else
+							me.stimuli = {};
+						end	
+					else
+						me = builtin('subsasgn',me,s,val);
+					end
 				case '()'
 					%error([me.name ':subsasgn'],'Not a supported subscripted reference')
 					sout = builtin('subsasgn',me.stimuli,s,val);
