@@ -891,7 +891,7 @@ classdef tobiiManager < optickaCore
 			[p,~,e]=fileparts(me.saveFile);
 			me.saveFile = [p filesep 'tobiiTimingTest-' me.savePrefix e];
 			try
-				if isa(me.screen,'screenManager')
+				if isa(me.screen,'screenManager') && ~isempty(me.screen)
 					s = me.screen;
 				else
 					s = screenManager('blend',true,'pixelsPerCm',36,'distance',60);
@@ -899,7 +899,7 @@ classdef tobiiManager < optickaCore
 				s.disableSyncTests = false;
 				s.backgroundColour = [0.5 0.5 0.5 0];
 				me.sampleRate = sRate;
-				open(s); %open our screen
+				sv=open(s); %open our screen
 				initialise(me,s); %initialise tobii with our screen
 				trackerSetup(me);
 				ShowCursor; %titta fails to show cursor so we must do it
