@@ -670,19 +670,7 @@ classdef metaStimulus < optickaCore
 			switch s(1).type
 				% Use the built-in subsref for dot notation
 				case '.'
-					if length(s) == 2
-						sout=cell(me.n,1);
-						for i = 1:me.n
-							sout{i} = builtin('subsasgn',me.stimuli{i},s(2),val);
-						end
-						if ~isempty(sout)
-							me.stimuli = sout;
-						else
-							me.stimuli = {};
-						end	
-					else
-						me = builtin('subsasgn',me,s,val);
-					end
+					me = builtin('subsasgn',me,s,val);
 				case '()'
 					%error([me.name ':subsasgn'],'Not a supported subscripted reference')
 					sout = builtin('subsasgn',me.stimuli,s,val);
