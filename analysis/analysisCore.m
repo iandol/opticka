@@ -536,7 +536,7 @@ classdef analysisCore < optickaCore
 			val = in(idx);
 			delta = abs(value - val);
 		end
-		
+
 		% ===================================================================
 		%> @brief convert variance to standard error
 		%>
@@ -590,8 +590,9 @@ classdef analysisCore < optickaCore
 		%>
 		%> Switches: SE 2SE SD 2SD 3SD V FF CV AF
 		% ===================================================================
-		function [avg,error] = stderr(data,type,onlyerror,alpha,dim)
+		function [avg,error] = stderr(data,type,onlyerror,alpha,dim,avgfn)
 			if nargin==0;disp('[avg,error]=stderr(data,type,onlyerror,alpha,dim)');return;end
+			if nargin<6 || isempty(avgfn); avgfn = @nanmean; end
 			if nargin<5 || isempty(dim); dim=1; end
 			if nargin<4 || isempty(alpha); alpha=0.05; end
 			if nargin<3 || isempty(onlyerror); onlyerror=false; end
@@ -602,7 +603,7 @@ classdef analysisCore < optickaCore
 			else
 				nvals = length(data); 
 			end
-			avg=nanmean(data,dim);
+			avg=avgfn(data,dim);
 			switch(type)
 				case 'SE'
 					err=nanstd(data,0,dim);
@@ -664,13 +665,11 @@ classdef analysisCore < optickaCore
 				warning('Sorry, you can only plot vector data.')
 				return;
 			end
-			if strcmpi(get(gca,'NextPlot'),'add'); NextPlot = 'add';
-			else NextPlot = 'replacechildren'; end
-			if nargin <4 || isempty(c1); c1=[0.5 0.5 0.5]; end
-			if nargin < 5 || isempty(alpha); alpha = 0.25;end
+			if strcmpi(get(gca,'NextPlot'),'add');NextPlot = 'add';else NextPlot = 'replacechildren';end
+			if nargin <4 || isempty(c1) || length(c1)~=3; c1=[0.3 0.3 0.3]; end
+			if nargin < 5 || isempty(alpha); alpha = 0.2;end
 			x=size(xvalues); y=size(ydata); e=size(error);
-			%need to organise to rows
-			if x(1) < x(2); xvalues=xvalues'; end
+			if x(1) < x(2); xvalues=xvalues'; end %need to organise to rows
 			if y(1) < y(2); ydata=ydata'; end
 			if e(1) < e(2); error=error'; end
 			idx=find(isnan(ydata));
@@ -695,7 +694,7 @@ classdef analysisCore < optickaCore
 			set(get(get(handles.fill,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			handles.axis = (gca);
 			set(gca,'NextPlot','add');
-			handles.plot = plot(xvalues, ydata, 'Color', c1, varargin{:});
+			handles.plot = plot(xvalues, ydata, 'Color', c1/1.2, varargin{:});
 			set(gca,'NextPlot',NextPlot);
 			uistack(handles.plot,'top')
 			set(gca,'Layer','bottom');
