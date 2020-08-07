@@ -659,42 +659,40 @@ classdef analysisCore < optickaCore
 		%>     where c1 is the colour of the shaded options and plotoptions are
 		%>     passed to the line plot
 		% ===================================================================
-		function handles = areabar(xvalues,ydata,error,c1,alpha,varargin)
+		function handles = areabar(xv, yv, ev, c1, alpha, varargin)
 			if nargin==0;disp('handles = areabar(x,y,error,c1,alpha,varargin)');return;end
-			if min(size(xvalues)) > 1 || min(size(ydata)) > 1 || min(size(error)) > 2
+			if min(size(xv)) > 1 || min(size(yv)) > 1 || min(size(ev)) > 2
 				warning('Sorry, you can only plot vector data.')
 				return;
 			end
-			if strcmpi(get(gca,'NextPlot'),'add');NextPlot = 'add';else NextPlot = 'replacechildren';end
+			if strcmpi(get(gca,'NextPlot'),'add');NextPlot = 'add';else;NextPlot = 'replacechildren';end
 			if nargin <4 || isempty(c1) || length(c1)~=3; c1=[0.3 0.3 0.3]; end
 			if nargin < 5 || isempty(alpha); alpha = 0.2;end
-			x=size(xvalues); y=size(ydata); e=size(error);
-			if x(1) < x(2); xvalues=xvalues'; end %need to organise to rows
-			if y(1) < y(2); ydata=ydata'; end
-			if e(1) < e(2); error=error'; end
-			idx=find(isnan(ydata));
-			ydata(idx)=[]; xvalues(idx)=[]; error(idx,:)=[];
-			error(isnan(error)) = 0;
-			x=length(xvalues);
-			if size(error,2) == 2
+			if size(xv,1) < size(xv,2); xv=xv'; end %need to organise to rows
+			if size(yv,1) < size(yv,2); yv=yv'; ev=ev'; end %err is expected to share same structure as y
+			idx=find(isnan(yv));
+			yv(idx)=[]; xv(idx)=[]; ev(idx,:)=[];
+			ev(isnan(ev)) = 0;
+			x=length(xv);
+			if size(ev,2) == 2
 				err=zeros(x+x,1);
-				err(1:x,1)=error(:,1);
-				err(x+1:x+x,1)=flipud(error(:,2));
+				err(1:x,1)=ev(1,:);
+				err(x+1:x+x,1)=flipud(ev(2,:));
 			else
 				err=zeros(x+x,1);
-				err(1:x,1)=ydata+error;
-				err(x+1:x+x,1)=flipud(ydata-error);
+				err(1:x,1)=yv+ev;
+				err(x+1:x+x,1)=flipud(yv-ev);
 			end
 			areax=zeros(x+x,1);
-			areax(1:x,1)=xvalues;
-			areax(x+1:x+x,1)=flipud(xvalues);
+			areax(1:x,1)=xv;
+			areax(x+1:x+x,1)=flipud(xv);
 			axis auto
 			if max(c1) > 1; c1 = c1 / max(c1); end
 			handles.fill = fill(areax,err,c1,'EdgeColor','none','FaceAlpha',alpha);
 			set(get(get(handles.fill,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			handles.axis = (gca);
 			set(gca,'NextPlot','add');
-			handles.plot = plot(xvalues, ydata, 'Color', c1/1.2, varargin{:});
+			handles.plot = plot(xv, yv, 'Color', c1/1.2, varargin{:});
 			set(gca,'NextPlot',NextPlot);
 			uistack(handles.plot,'top')
 			set(gca,'Layer','bottom');
