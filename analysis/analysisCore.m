@@ -665,7 +665,6 @@ classdef analysisCore < optickaCore
 				warning('Sorry, you can only plot vector data.')
 				return;
 			end
-			if strcmpi(get(gca,'NextPlot'),'add');NextPlot = 'add';else;NextPlot = 'replacechildren';end
 			if nargin <4 || isempty(c1) || length(c1)~=3; c1=[0.3 0.3 0.3]; end
 			if nargin < 5 || isempty(alpha); alpha = 0.2;end
 			if size(xv,1) < size(xv,2); xv=xv'; end %need to organise to rows
@@ -688,10 +687,11 @@ classdef analysisCore < optickaCore
 			areax(x+1:x+x,1)=flipud(xv);
 			axis auto
 			if max(c1) > 1; c1 = c1 / max(c1); end
+			NextPlot = get(gca,'NextPlot');
+			set(gca,'NextPlot','add');
 			handles.fill = fill(areax,err,c1,'EdgeColor','none','FaceAlpha',alpha);
 			set(get(get(handles.fill,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			handles.axis = (gca);
-			set(gca,'NextPlot','add');
 			handles.plot = plot(xv, yv, 'Color', c1/1.2, varargin{:});
 			set(gca,'NextPlot',NextPlot);
 			uistack(handles.plot,'top')
