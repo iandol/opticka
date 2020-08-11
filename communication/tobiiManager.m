@@ -277,6 +277,24 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief close the tobii and cleanup
+		%> is enabled
+		%>
+		% ===================================================================
+		function close(me)
+			try
+				stopRecording(me);
+			catch ME
+				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
+				getReport(ME)
+			end
+			me.tobii.deInit();
+			me.isConnected = false;
+			me.isRecording_ = false;
+			resetFixation(me);
+		end
+		
+		% ===================================================================
 		%> @brief
 		%>
 		% ===================================================================
@@ -307,7 +325,7 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function connected = checkConnection(me)
 			connected = false;
-			if isa(me.tobii,'Titta')
+			if isa(me.tobii,'Titta') && me.tobii.isInitialized
 				connected = true;
 			end
 		end
@@ -382,21 +400,18 @@ classdef tobiiManager < optickaCore
 				else
 					warning('Can''t START buffer() GAZE recording!!!')
 				end
-				
 				success = me.tobii.buffer.start('externalSignal');
 				if success
 					me.statusMessage('Starting to record TTLs...');
 				else
 					warning('Can''t START buffer() TTL recording!!!')
 				end
-				
-				success = me.tobii.buffer.start('positioning');
-				if success
-					me.statusMessage('Starting to record Position...');
-				else
-					warning('Can''t START buffer() Position recording!!!')
-				end
-				
+% 				success = me.tobii.buffer.start('positioning');
+% 				if success
+% 					me.statusMessage('Starting to record Position...');
+% 				else
+% 					warning('Can''t START buffer() Position recording!!!')
+% 				end
 				success = me.tobii.buffer.start('timeSync');
 				if success
 					me.statusMessage('Starting to record timeSync...');
@@ -419,21 +434,18 @@ classdef tobiiManager < optickaCore
 				else
 					warning('Can''t STOP buffer() GAZE recording!!!')
 				end
-				
 				success = me.tobii.buffer.stop('externalSignal');
 				if success
 					me.statusMessage('Stopping to record TTLs...');
 				else
 					warning('Can''t STOP buffer() TTL recording!!!')
 				end
-				
-				success = me.tobii.buffer.stop('positioning');
-				if success
-					me.statusMessage('Stopping to record Position...');
-				else
-					warning('Can''t STOP buffer() TTL recording!!!')
-				end
-				
+% 				success = me.tobii.buffer.stop('positioning');
+% 				if success
+% 					me.statusMessage('Stopping to record Position...');
+% 				else
+% 					warning('Can''t STOP buffer() TTL recording!!!')
+% 				end
 				success = me.tobii.buffer.stop('timeSync');
 				if success
 					me.statusMessage('Stopping to record timeSync...');
@@ -870,22 +882,6 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief close the tobii and cleanup
-		%> is enabled
-		%>
-		% ===================================================================
-		function close(me)
-			try
-				stopRecording(me)
-			catch ME
-				me.salutation('Close Method','Couldn''t stop recording, forcing shutdown...',true)
-				getReport(ME)
-			end
-			me.isConnected = false;
-			resetFixation(me);
-		end
-		
-		% ===================================================================
 		%> @brief Sync time with tracker
 		%>
 		% ===================================================================
@@ -1008,7 +1004,7 @@ classdef tobiiManager < optickaCore
 					s2					= screenManager;
 					s2.screen			= s.screen - 1;
 					s2.backgroundColour	= s.backgroundColour;
-					s2.windowed			= [0 0 1400 1000];
+					s2.windowed			= [0 0 1600 1000];
 					s2.bitDepth			= '8bit';
 					s2.blend			= true;
 					s2.disableSyncTests	= true;
@@ -1058,8 +1054,6 @@ classdef tobiiManager < optickaCore
 				flip(s);
 				update(o); %make sure stimuli are set back to their start state
 				WaitSecs('YieldSecs',0.5);
-				
-				
 				trackerMessage(me,'!!! Starting Demo...')
 				while trialn <= maxTrials && endExp == 0
 					trialtick = 1;
@@ -1074,12 +1068,14 @@ classdef tobiiManager < optickaCore
 						drawPhotoDiodeSquare(s,[1 1 1 1]);
 						
 						getSample(me);
+						
 						if ~isempty(me.currentSample)
 							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %i %s %s | RADIUS = %.1f | FIXATION = %i',...
 								me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.smoothing.nSamples,...
 								me.smoothing.method, me.smoothing.eyes, me.fixation.radius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
+							psn{trialn} = me.tobii.buffer.peekN('positioning',1);
 						end
 						finishDrawing(s);
 						animate(o);
@@ -1126,6 +1122,8 @@ classdef tobiiManager < optickaCore
 				stopRecording(me);
 				close(s);
 				saveData(me);
+				assignin('base','psn',psn);
+				assignin('base','data',me.data);
 				close(me);
 				ListenChar(0); Priority(0); ShowCursor;
 				me.fixation = ofixation;
