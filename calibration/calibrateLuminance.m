@@ -111,6 +111,7 @@ classdef calibrateLuminance < handle
 		lutSize = []
 		displayRange = []
 		displayBaseline = []
+		maxLuminances = []
 		%> clock() dateStamp set on construction
 		dateStamp double
 		%> universal ID
@@ -567,6 +568,8 @@ classdef calibrateLuminance < handle
 					obj.displayBaseline = min(inputValues);
 				end
 				
+				obj.maxLuminances(loop) = max(inputValues);
+				
 				%Normalize values
 				obj.inputValuesNorm(loop).in = (inputValues - obj.displayBaseline)/(max(inputValues) - min(inputValues));
 				obj.rampNorm(loop).in = obj.ramp;
@@ -680,7 +683,7 @@ classdef calibrateLuminance < handle
 				
 				xlabel('Values (0-1)');
 				ylabel('Luminance cd/m^2');
-				title('Input->Output, Raw/Corrected');
+				t=title('Input->Output, Raw/Corrected');
 			else %legacy plot
 				plot(obj.ramp, obj.inputValues, 'k.-');
 				legend('CCal')
@@ -705,8 +708,9 @@ classdef calibrateLuminance < handle
 				axis tight; grid on; grid minor; box on
 				xlabel('Indexed Values');
 				ylabel('Luminance cd/m^2');
-				title('Input -> Output Raw Data');
+				t=title('Input -> Output Raw Data');
 			end
+			t.ButtonDownFcn = @cloneAxes;
 			
 			colors = {[0 0 0], [0.7 0 0],[0 0.7 0],[0 0 0.7]};
 			linestyles = {':','-','-.','--',':.',':c',':y',':m'};
@@ -745,7 +749,8 @@ classdef calibrateLuminance < handle
 				else
 					t=sprintf('Gamma: L^{%.2f} R^{%.2f} G^{%.2f} B^{%.2f}', obj.displayGamma(1),obj.displayGamma(2),obj.displayGamma(3),obj.displayGamma(4));
 				end
-				text(0.01,0.95,t);
+				t=text(0.01,0.95,t);
+				t.ButtonDownFcn = @cloneAxes;
 				
 				legendtext={};
 				obj.p(2,1).select();
@@ -760,7 +765,8 @@ classdef calibrateLuminance < handle
 				xlabel('Indexed Values')
 				ylabel('Normalised Luminance Output');
 				legend(legendtext,'Location','NorthWest');
-				title('Output Gamma curves');
+				t=title('Output Gamma curves');
+				t.ButtonDownFcn = @cloneAxes;
 				
 				obj.p(2,2).select();
 				obj.p(2,2).hold('on');
@@ -773,7 +779,8 @@ classdef calibrateLuminance < handle
 				xlabel('Indexed Values')
 				ylabel('Residual Values');
 				legend(legendtext,'Location','Best');
-				title('Model Residuals');
+				t=title('Model Residuals');
+				t.ButtonDownFcn = @cloneAxes;
 			end
 			
 			if isempty(obj.comments)
@@ -839,7 +846,19 @@ classdef calibrateLuminance < handle
                     view([60 10]);
                     axis tight; grid on; box on;
                 end
-            end
+			end
+			
+			function cloneAxes(src,~)
+				disp('Cloning axis!')
+				if ~isa(src,'matlab.graphics.axis.Axes')
+					if isa(src.Parent,'matlab.graphics.axis.Axes')
+						src = src.Parent;
+					end
+				end
+				f=figure;
+				nsrc = copyobj(src,f);
+				nsrc.OuterPosition = [0.05 0.05 0.9 0.9];
+			end
 		end
 		
 		% ===================================================================

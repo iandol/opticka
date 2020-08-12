@@ -839,14 +839,14 @@ classdef screenManager < optickaCore
 		%> @param colour of cross
 		%> @param x position in degrees relative to screen center
 		%> @param y position in degrees relative to screen center
-		%> @param lineWidth of lines
+		%> @param lineWidth of lines in degrees (1px minimum)
 		%> @return
 		% ===================================================================
 		function drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha)
 			% drawCross(me, size, colour, x, y, lineWidth)
 			if nargin < 8 || isempty(alpha); alpha = 1; end
 			if nargin < 7 || isempty(showDisk); showDisk = true; end
-			if nargin < 6 || isempty(lineWidth); lineWidth = 0.01; end
+			if nargin < 6 || isempty(lineWidth); lineWidth = 0.05; end
 			if nargin < 5 || isempty(y); y = 0; end
 			if nargin < 4 || isempty(x); x = 0; end
 			if nargin < 3 || isempty(colour)
@@ -866,11 +866,14 @@ classdef screenManager < optickaCore
 			y = me.yCenter + (y * me.ppd_);
 			size = size * me.ppd_;
 			dotSize = lineWidth * me.ppd_;
+			if dotSize < 1; dotSize = 1; end
+			spotSize = dotSize/2;
+			if spotSize < 1; spotSize = 1; end
 			for p = 1:length(x)
 				if showDisk;Screen('gluDisk', me.win, colour, x(p), y(p), size/2);end
 				Screen('FillRect', me.win, lineColour, CenterRectOnPointd([0 0 size dotSize], x(p), y(p)));
 				Screen('FillRect', me.win, lineColour, CenterRectOnPointd([0 0 dotSize size], x(p), y(p)));
-				Screen('gluDisk', me.win, colour, x(p), y(p), dotSize/2);
+				Screen('gluDisk', me.win, colour, x(p), y(p), spotSize);
 			end	
 		end
 		
