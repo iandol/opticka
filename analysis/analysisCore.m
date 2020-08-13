@@ -676,8 +676,8 @@ classdef analysisCore < optickaCore
 			x=length(xv);
 			if size(ev,2) == 2
 				err=zeros(x+x,1);
-				err(1:x,1)=ev(1,:);
-				err(x+1:x+x,1)=flipud(ev(2,:));
+				err(1:x,1)=ev(:,1);
+				err(x+1:x+x,1)=flipud(ev(:,2));
 			else
 				err=zeros(x+x,1);
 				err(1:x,1)=yv+ev;
