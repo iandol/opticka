@@ -665,8 +665,9 @@ classdef analysisCore < optickaCore
 				warning('Sorry, you can only plot vector data.')
 				return;
 			end
-			if nargin <4 || isempty(c1) || length(c1)~=3; c1=[0.3 0.3 0.3]; end
+			if nargin < 6; varargin = {}; end
 			if nargin < 5 || isempty(alpha); alpha = 0.2;end
+			if nargin <4 || isempty(c1) || length(c1)~=3; c1=[0.3 0.3 0.3]; end
 			if size(xv,1) < size(xv,2); xv=xv'; end %need to organise to rows
 			if size(yv,1) < size(yv,2); yv=yv'; ev=ev'; end %err is expected to share same structure as y
 			idx=find(isnan(yv));
@@ -692,9 +693,14 @@ classdef analysisCore < optickaCore
 			handles.fill = fill(areax,err,c1,'EdgeColor','none','FaceAlpha',alpha);
 			set(get(get(handles.fill,'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 			handles.axis = (gca);
-			handles.plot = plot(xv, yv, 'Color', c1/1.2, varargin{:});
+			if ~any(cellfun(@(x) contains(num2str(x),'Color'), varargin))
+				varargin = ['Color', c1/1.2, varargin(:)'];
+			end
+			if ~any(cellfun(@(x) contains(num2str(x),'LineStyle'), varargin))
+				varargin = ['LineStyle', '-', varargin(:)'];
+			end
+			handles.plot = plot(xv, yv, varargin{:});
 			set(gca,'NextPlot',NextPlot);
-			uistack(handles.plot,'top')
 			set(gca,'Layer','bottom');
 			if alpha == 1; set(gcf,'Renderer','painters'); end
 		end
