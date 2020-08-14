@@ -81,6 +81,7 @@ classdef calibrateLuminance < handle
 	properties (Hidden = true)
 		%keep spectrocal open 
 		keepOpen logical = false
+		screenVals = []
 	end
 	
 	%--------------------VISIBLE PROPERTIES-----------%
@@ -116,7 +117,6 @@ classdef calibrateLuminance < handle
 		dateStamp double
 		%> universal ID
 		uuid char
-		screenVals = []
         SPD struct
 		%spectroCAL serial object
 		spCAL
