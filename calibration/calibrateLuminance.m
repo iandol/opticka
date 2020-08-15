@@ -84,6 +84,12 @@ classdef calibrateLuminance < handle
 		screenVals = []
 	end
 	
+	properties (Dependent = true)
+		maxLuminances
+		displayRange
+		displayBaseline
+	end
+	
 	%--------------------VISIBLE PROPERTIES-----------%
 	properties (SetAccess = protected, GetAccess = public)
 		info struct
@@ -110,9 +116,6 @@ classdef calibrateLuminance < handle
 		oldCLUT = []
 		dacBits = []
 		lutSize = []
-		displayRange = []
-		displayBaseline = []
-		maxLuminances = []
 		%> clock() dateStamp set on construction
 		dateStamp double
 		%> universal ID
@@ -219,6 +222,53 @@ classdef calibrateLuminance < handle
 			else
 				input('Please run manual calibration, then press enter to continue');
 				resetAll(obj)
+			end
+		end
+		
+		% ===================================================================
+		%> @brief get max luminance values for each channel
+		%>	
+		% ===================================================================
+		function value = get.maxLuminances(me)
+			value = [];
+			if me.canAnalyze
+				if isstruct(me.inputValues)
+					for i = 1:length(me.inputValues)
+						value(i) = max(me.inputValues(i).in);
+					end
+				else
+					value = max(me.inputValues);
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief get max luminance values for each channel
+		%>	
+		% ===================================================================
+		function value = get.displayBaseline(me)
+			value = [];
+			if me.canAnalyze
+				if isstruct(me.inputValues)
+					value = min(me.inputValues(1).in);
+				else
+					value = min(me.inputValues);
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief get max luminance values for each channel
+		%>	
+		% ===================================================================
+		function value = get.displayRange(me)
+			value = [];
+			if me.canAnalyze
+				if isstruct(me.inputValues)
+					value = max(me.inputValues(1).in) - min(me.inputValues(1).in);
+				else
+					value = max(me.inputValues) - min(me.inputValues);
+				end
 			end
 		end
 		
@@ -562,13 +612,6 @@ classdef calibrateLuminance < handle
 						inputValues = obj.inputValues;
 					end
 				end
-				
-				if loop == 1
-					obj.displayRange = (max(inputValues) - min(inputValues));
-					obj.displayBaseline = min(inputValues);
-				end
-				
-				obj.maxLuminances(loop) = max(inputValues);
 				
 				%Normalize values
 				obj.inputValuesNorm(loop).in = (inputValues - obj.displayBaseline)/(max(inputValues) - min(inputValues));
@@ -1250,8 +1293,6 @@ classdef calibrateLuminance < handle
 			obj.rampNorm = [];
 			obj.inputValuesNorm = [];
 			obj.ramp = [];
-			obj.displayRange = [];
-			obj.displayBaseline = [];
 		end
 		
 		% ===================================================================
