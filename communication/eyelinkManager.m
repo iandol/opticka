@@ -316,6 +316,9 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command','remote_cal_enable = 0');
 			end
 			EyelinkDoTrackerSetup(me.defaults);
+			if ~isempty(me.screen) && me.screen.isOpen
+				Screen('Flip',me.screen.win);
+			end
 			[result,out] = Eyelink('CalMessage');
 			fprintf('===>>> RESULT =  %.2g | message: %s\n\n',result,out);
 		end
