@@ -199,7 +199,7 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on macOS ATI 5870
 	'bitDepth', 'FloatingPoint32bitIfPossible',... %8bit, FloatingPoint16bit FloatingPoint32bit etc.
-	'displayPPRefresh', 100); %set refresh to 100Hz if a Display++ is attached
+	'displayPPRefresh', 120); %ensure refresh is 120Hz if a Display++ is attached
 
 %% Setup runExperiment Object
 % We now pass our stimulus screen and sequence objects to the
