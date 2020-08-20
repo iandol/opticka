@@ -151,36 +151,36 @@ classdef calibrateLuminance < handle
 		%> parsed.
 		%> @return instance of class.
 		% ===================================================================
-		function obj = calibrateLuminance(args)
+		function me = calibrateLuminance(args)
 			if nargin>0 && isstruct(args)
 				if nargin>0 && isstruct(args)
 					fnames = fieldnames(args); %find our argument names
 					for i=1:length(fnames)
-						if regexp(fnames{i},obj.allowedPropertiesBase) %only set if allowed property
-							obj.salutation(fnames{i},'Configuring property constructor');
-							obj.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
+						if regexp(fnames{i},me.allowedPropertiesBase) %only set if allowed property
+							me.salutation(fnames{i},'Configuring property constructor');
+							me.(fnames{i})=args.(fnames{i}); %we set up the properies from the arguments as a structure
 						end
 					end
 				end
 			end
-			obj.dateStamp = clock();
-			obj.uuid = num2str(dec2hex(floor((now - floor(now))*1e10))); %obj.uuid = char(java.util.UUID.randomUUID)%128bit uuid
-			if isempty(obj.screen)
-				obj.screen = max(Screen('Screens'));
+			me.dateStamp = clock();
+			me.uuid = num2str(dec2hex(floor((now - floor(now))*1e10))); %me.uuid = char(java.util.UUID.randomUUID)%128bit uuid
+			if isempty(me.screen)
+				me.screen = max(Screen('Screens'));
 			end
-			obj.screenVals.fps =  Screen('NominalFrameRate',obj.screen);
+			me.screenVals.fps =  Screen('NominalFrameRate',me.screen);
 			if ispc
-				obj.tableLength = 256;
-				obj.port = 'COM4';
+				me.tableLength = 256;
+				me.port = 'COM4';
 			end
-			if obj.useI1Pro && I1('IsConnected') == 0
-				obj.useI1Pro = false;
+			if me.useI1Pro && I1('IsConnected') == 0
+				me.useI1Pro = false;
 				fprintf('---> Couldn''t connect to I1Pro!!!\n');
 			end
-			if obj.runNow == true
-				obj.calibrate();
-				obj.run();
-				obj.analyze();
+			if me.runNow == true
+				me.calibrate();
+				me.run();
+				me.analyze();
 			end
 		end
 		
@@ -189,17 +189,17 @@ classdef calibrateLuminance < handle
 		%>	run the calibration loop, uses the max # screen by default
 		%>
 		% ===================================================================
-		function calibrate(obj)
-			obj.screenVals.fps =  Screen('NominalFrameRate',obj.screen);
+		function calibrate(me)
+			me.screenVals.fps =  Screen('NominalFrameRate',me.screen);
 			reply = input('Do you need to calibrate sensors (Y/N) = ','s');
 			if ~strcmpi(reply,'y')
 				return;
 			end
-			if obj.useSpectroCal2 == true
-				resetAll(obj)
-			elseif obj.useI1Pro == true
+			if me.useSpectroCal2 == true
+				resetAll(me)
+			elseif me.useI1Pro == true
 				if I1('IsConnected') == 0
-					obj.useI1Pro = false;
+					me.useI1Pro = false;
 					fprintf('---> Couldn''t connect to I1Pro!!!\n');
 					return
 				end
@@ -210,18 +210,18 @@ classdef calibrateLuminance < handle
 				fprintf('Calibrating ... ');
 				I1('Calibrate');
 				fprintf('FINISHED\n');
-				resetAll(obj)
-			elseif obj.useCCal2 == true
-				obj.cMatrix = ColorCal2('ReadColorMatrix');
-				if isempty(obj.cMatrix)
-					obj.useCCal2 = false;
+				resetAll(me)
+			elseif me.useCCal2 == true
+				me.cMatrix = ColorCal2('ReadColorMatrix');
+				if isempty(me.cMatrix)
+					me.useCCal2 = false;
 				else
-					obj.zeroCalibration;
+					me.zeroCalibration;
 				end
-				resetAll(obj)
+				resetAll(me)
 			else
 				input('Please run manual calibration, then press enter to continue');
-				resetAll(obj)
+				resetAll(me)
 			end
 		end
 		
@@ -277,18 +277,18 @@ classdef calibrateLuminance < handle
 		%>	runs,  analyzes (fits) and tests the monitor
 		%>
 		% ===================================================================
-		function runAll(obj)
-			obj.isRunAll = true;
-			resetAll(obj);
-			addComments(obj);
-			[obj.saveName, obj.savePath] = uiputfile('*.mat');
-			calibrate(obj);
-			run(obj);
-			analyze(obj);
+		function runAll(me)
+			me.isRunAll = true;
+			resetAll(me);
+			addComments(me);
+			[me.saveName, me.savePath] = uiputfile('*.mat');
+			calibrate(me);
+			run(me);
+			analyze(me);
 			WaitSecs(2);
-			test(obj);
-			obj.save;
-			obj.isRunAll = false;
+			test(me);
+			me.save;
+			me.isRunAll = false;
 		end
 		
 		% ===================================================================
@@ -296,71 +296,71 @@ classdef calibrateLuminance < handle
 		%>	run the main calibration loop, uses the max # screen by default
 		%>
 		% ===================================================================
-		function run(obj)
-			resetAll(obj)
-			openScreen(obj);
+		function run(me)
+			resetAll(me)
+			openScreen(me);
 			try
-				obj.info(1).version = Screen('Version');
-				obj.info(1).comp = Screen('Computer');
+				me.info(1).version = Screen('Version');
+				me.info(1).comp = Screen('Computer');
 				if IsLinux
-					obj.info(1).display = Screen('ConfigureDisplay','Scanout',obj.screen,0);
+					me.info(1).display = Screen('ConfigureDisplay','Scanout',me.screen,0);
 				end
 			end
-			Screen('FillRect',obj.win,[0.7 0.7 0.7],obj.screenVals.targetRect);
-			Screen('Flip',obj.win);
-			if ~obj.useCCal2 && ~obj.useI1Pro && ~obj.useSpectroCal2
+			Screen('FillRect',me.win,[0.7 0.7 0.7],me.screenVals.targetRect);
+			Screen('Flip',me.win);
+			if ~me.useCCal2 && ~me.useI1Pro && ~me.useSpectroCal2
 				input(sprintf(['When black screen appears, point photometer, \n' ...
 					'get reading in cd/m^2, input reading using numpad and press enter. \n' ...
 					'A screen of higher luminance will be shown. Repeat %d times. ' ...
-					'Press enter to start'], obj.nMeasures));
-			elseif obj.useI1Pro == true && obj.useCCal2 == true
+					'Press enter to start'], me.nMeasures));
+			elseif me.useI1Pro == true && me.useCCal2 == true
 				fprintf('\nPlace i1 and Cal over light source, then press i1 button to measure: ');
 				while I1('KeyPressed') == 0
 					WaitSecs(0.01);
 				end
-			elseif obj.useSpectroCal2
-				obj.openSpectroCAL();
-				obj.spectroCalLaser(true)
+			elseif me.useSpectroCal2
+				me.openSpectroCAL();
+				me.spectroCalLaser(true)
 				input('Align Laser then press enter to start...')
-				obj.spectroCalLaser(false)
+				me.spectroCalLaser(false)
 			end
 			
 			psychlasterror('reset');
 			
 			try
-				Screen('Flip',obj.win);
-				[obj.oldCLUT, obj.dacBits, obj.lutSize] = Screen('ReadNormalizedGammaTable', obj.win);
-				obj.tableLength = obj.lutSize;
+				Screen('Flip',me.win);
+				[me.oldCLUT, me.dacBits, me.lutSize] = Screen('ReadNormalizedGammaTable', me.win);
+				me.tableLength = me.lutSize;
 				if ~IsWin; BackupCluts; end
-				obj.initialCLUT = repmat([0:1/(obj.tableLength-1):1]',1,3); %#ok<NBRAK>
-				Screen('LoadNormalizedGammaTable', obj.win, obj.initialCLUT);
+				me.initialCLUT = repmat([0:1/(me.tableLength-1):1]',1,3); %#ok<NBRAK>
+				Screen('LoadNormalizedGammaTable', me.win, me.initialCLUT);
 				
-				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
+				me.ramp = [0:1/(me.nMeasures - 1):1]; %#ok<NBRAK>
 				
-				obj.inputValues(1).in = zeros(1,length(obj.ramp));
-				obj.inputValues(2).in = obj.inputValues(1).in;
-				obj.inputValues(3).in = obj.inputValues(1).in;
-				obj.inputValues(4).in = obj.inputValues(1).in;
+				me.inputValues(1).in = zeros(1,length(me.ramp));
+				me.inputValues(2).in = me.inputValues(1).in;
+				me.inputValues(3).in = me.inputValues(1).in;
+				me.inputValues(4).in = me.inputValues(1).in;
 				
-				if obj.useI1Pro
-					obj.inputValuesI1(1).in = zeros(1,length(obj.ramp));
-					obj.inputValuesI1(2).in = obj.inputValuesI1(1).in;
-					obj.inputValuesI1(3).in = obj.inputValuesI1(1).in;
-					obj.inputValuesI1(4).in = obj.inputValuesI1(1).in;
+				if me.useI1Pro
+					me.inputValuesI1(1).in = zeros(1,length(me.ramp));
+					me.inputValuesI1(2).in = me.inputValuesI1(1).in;
+					me.inputValuesI1(3).in = me.inputValuesI1(1).in;
+					me.inputValuesI1(4).in = me.inputValuesI1(1).in;
 				end
 				
-				obj.spectrum(1).in = zeros(length(obj.wavelengths),length(obj.ramp));
-				if obj.testColour
-					obj.spectrum(2).in = obj.spectrum(1).in; obj.spectrum(3).in = obj.spectrum(1).in; obj.spectrum(4).in = obj.spectrum(1).in;
+				me.spectrum(1).in = zeros(length(me.wavelengths),length(me.ramp));
+				if me.testColour
+					me.spectrum(2).in = me.spectrum(1).in; me.spectrum(3).in = me.spectrum(1).in; me.spectrum(4).in = me.spectrum(1).in;
 				end
 				
-				if obj.testColour
+				if me.testColour
 					loop=1:4;
 				else
 					loop = 1;
 				end
 				for col = loop
-					vals = obj.ramp';
+					vals = me.ramp';
 					valsl = length(vals);
 					cout = zeros(valsl,3);
 					if col == 1
@@ -379,47 +379,47 @@ classdef calibrateLuminance < handle
 					[~, randomIndex] = sort(rand(valsl, 1));
 					for i = 1:valsl
                         testColour = cout(randomIndex(i),:);
-						Screen('FillRect',obj.win,testColour,obj.screenVals.targetRect);
-						Screen('Flip',obj.win);
+						Screen('FillRect',me.win,testColour,me.screenVals.targetRect);
+						Screen('Flip',me.win);
 						WaitSecs('YieldSecs',1);
-						if ~obj.useSpectroCal2 && ~obj.useCCal2 && ~obj.useI1Pro
-							obj.inputValues(col).in(randomIndex(a)) = input(['Enter luminance for value=' num2str(testColour) ': ']);
-							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(randomIndex(a)));
+						if ~me.useSpectroCal2 && ~me.useCCal2 && ~me.useI1Pro
+							me.inputValues(col).in(randomIndex(a)) = input(['Enter luminance for value=' num2str(testColour) ': ']);
+							fprintf('\t--->>> Result: %.3g cd/m2\n', me.inputValues(col).in(randomIndex(a)));
 						else
-							if obj.useSpectroCal2 == true
-								[obj.thisx, obj.thisy, obj.thisY, lambda, radiance] = obj.takeSpectroCALMeasurement();
-								obj.inputValues(col).in(randomIndex(a)) = obj.thisY;
-								obj.spectrum(col).in(:,randomIndex(a)) = radiance;
+							if me.useSpectroCal2 == true
+								[me.thisx, me.thisy, me.thisY, lambda, radiance] = me.takeSpectroCALMeasurement();
+								me.inputValues(col).in(randomIndex(a)) = me.thisY;
+								me.spectrum(col).in(:,randomIndex(a)) = radiance;
 							end
-							if obj.useCCal2 == true
-								[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
-								obj.inputValues(col).in(randomIndex(a)) = obj.thisY;
+							if me.useCCal2 == true
+								[me.thisx,me.thisy,me.thisY] = me.getCCalxyY;
+								me.inputValues(col).in(randomIndex(a)) = me.thisY;
 							end
-							if obj.useI1Pro == true
+							if me.useI1Pro == true
 								I1('TriggerMeasurement');
 								Lxy = I1('GetTriStimulus');
-								obj.inputValuesI1(col).in(randomIndex(a)) = Lxy(1);
-								%obj.inputValues(col).in(a) = obj.inputValuesI1(col).in(a);
+								me.inputValuesI1(col).in(randomIndex(a)) = Lxy(1);
+								%me.inputValues(col).in(a) = me.inputValuesI1(col).in(a);
 								sp = I1('GetSpectrum')';
-								obj.spectrum(col).in(:,randomIndex(a)) = sp;
+								me.spectrum(col).in(:,randomIndex(a)) = sp;
 							end
-							fprintf('---> Test %s #%i: Fraction %g = %g cd/m2\n\n', testname, i, vals(randomIndex(i)), obj.inputValues(col).in(randomIndex(a)));
+							fprintf('---> Test %s #%i: Fraction %g = %g cd/m2\n\n', testname, i, vals(randomIndex(i)), me.inputValues(col).in(randomIndex(a)));
 						end
 						a = a + 1;
 					end
 					if col == 1 % assign the RGB values to each channel by default
-						obj.inputValues(2).in = obj.inputValues(1).in;
-						obj.inputValues(3).in = obj.inputValues(1).in;
-						obj.inputValues(4).in = obj.inputValues(1).in;
+						me.inputValues(2).in = me.inputValues(1).in;
+						me.inputValues(3).in = me.inputValues(1).in;
+						me.inputValues(4).in = me.inputValues(1).in;
 					end
 				end
 				if ~IsWin; RestoreCluts; end
-				if obj.useSpectroCal2;obj.closeSpectroCAL();end
-				Screen('LoadNormalizedGammaTable', obj.win, obj.oldCLUT);
-				obj.closeScreen();
-				obj.canAnalyze = true;
+				if me.useSpectroCal2;me.closeSpectroCAL();end
+				Screen('LoadNormalizedGammaTable', me.win, me.oldCLUT);
+				me.closeScreen();
+				me.canAnalyze = true;
 			catch %#ok<CTCH>
-				resetAll(obj);
+				resetAll(me);
 				if ~IsWin; RestoreCluts; end
 				Screen('CloseAll');
 				psychrethrow(psychlasterror);
@@ -431,74 +431,74 @@ classdef calibrateLuminance < handle
 		%>	once the models are analyzed, lets test the corrected luminance
 		%>
 		% ===================================================================
-		function test(obj)
-			if obj.isAnalyzed == false
+		function test(me)
+			if me.isAnalyzed == false
 				warning('Cannot test until you run analyze() first...')
 				return
 			end
 			try
-				resetTested(obj)
-				if obj.isRunAll
+				resetTested(me)
+				if me.isRunAll
 					doPipeline = false;
-					obj.choice = 2;
+					me.choice = 2;
 				else
 					reply = input('Set 0 for SimpleGamma or a Model number 2:N for the standard correction: ');
 					if reply == 0
 						doPipeline = true;
 					else
 						doPipeline = false;
-						obj.choice = reply;
+						me.choice = reply;
 					end
 				end
 				
-				openScreen(obj);
+				openScreen(me);
 				
 				try
-					obj.info(1).version = Screen('Version');
-					obj.info(1).comp = Screen('Computer');
+					me.info(1).version = Screen('Version');
+					me.info(1).comp = Screen('Computer');
 					if IsLinux
-						obj.info(1).display = Screen('ConfigureDisplay','Scanout',obj.screen,0);
+						me.info(1).display = Screen('ConfigureDisplay','Scanout',me.screen,0);
 					end
 				end
 				
-				if obj.useSpectroCal2
-					obj.openSpectroCAL();
+				if me.useSpectroCal2
+					me.openSpectroCAL();
 				end
 				
-				makeFinalCLUT(obj);
+				makeFinalCLUT(me);
 				if doPipeline == true
-					PsychColorCorrection('SetEncodingGamma', obj.win, 1/obj.displayGamma(1));
-					fprintf('LOAD SetEncodingGamma using PsychColorCorrection to: %g\n',1/obj.displayGamma(1))
+					PsychColorCorrection('SetEncodingGamma', me.win, 1/me.displayGamma(1));
+					fprintf('LOAD SetEncodingGamma using PsychColorCorrection to: %g\n',1/me.displayGamma(1))
 				else
-					fprintf('LOAD GammaTable Model: %i = %s\n',obj.choice,obj.analysisMethods{obj.choice})
-					if isprop(obj,'finalCLUT') && ~isempty(obj.finalCLUT)
-						gTmp = obj.finalCLUT;
+					fprintf('LOAD GammaTable Model: %i = %s\n',me.choice,me.analysisMethods{me.choice})
+					if isprop(me,'finalCLUT') && ~isempty(me.finalCLUT)
+						gTmp = me.finalCLUT;
 					else
-						gTmp = repmat(obj.gammaTable{obj.choice},1,3);
+						gTmp = repmat(me.gammaTable{me.choice},1,3);
 					end
-					Screen('LoadNormalizedGammaTable', obj.win, gTmp);
+					Screen('LoadNormalizedGammaTable', me.win, gTmp);
 				end
 				
-				obj.ramp = [0:1/(obj.nMeasures - 1):1]; %#ok<NBRAK>
+				me.ramp = [0:1/(me.nMeasures - 1):1]; %#ok<NBRAK>
 				
-				obj.inputValuesTest(1).in = zeros(1,length(obj.ramp));
-				obj.inputValuesTest(2).in = obj.inputValuesTest(1).in; obj.inputValuesTest(3).in = obj.inputValuesTest(1).in; obj.inputValuesTest(4).in = obj.inputValuesTest(1).in;
+				me.inputValuesTest(1).in = zeros(1,length(me.ramp));
+				me.inputValuesTest(2).in = me.inputValuesTest(1).in; me.inputValuesTest(3).in = me.inputValuesTest(1).in; me.inputValuesTest(4).in = me.inputValuesTest(1).in;
 				
-				obj.inputValuesI1Test(1).in = zeros(1,length(obj.ramp));
-				obj.inputValuesI1Test(2).in = obj.inputValuesI1Test(1).in; obj.inputValuesI1Test(3).in = obj.inputValuesI1Test(1).in; obj.inputValuesI1Test(4).in = obj.inputValuesI1Test(1).in;
+				me.inputValuesI1Test(1).in = zeros(1,length(me.ramp));
+				me.inputValuesI1Test(2).in = me.inputValuesI1Test(1).in; me.inputValuesI1Test(3).in = me.inputValuesI1Test(1).in; me.inputValuesI1Test(4).in = me.inputValuesI1Test(1).in;
 				
-				obj.spectrumTest(1).in = zeros(length(obj.wavelengths),length(obj.ramp));
-				if obj.testColour
-					obj.spectrumTest(2).in = obj.spectrumTest(1).in; obj.spectrumTest(3).in = obj.spectrumTest(1).in; obj.spectrumTest(4).in = obj.spectrumTest(1).in;
+				me.spectrumTest(1).in = zeros(length(me.wavelengths),length(me.ramp));
+				if me.testColour
+					me.spectrumTest(2).in = me.spectrumTest(1).in; me.spectrumTest(3).in = me.spectrumTest(1).in; me.spectrumTest(4).in = me.spectrumTest(1).in;
 				end
 				
-				if obj.testColour
+				if me.testColour
 					loop=1:4;
 				else
 					loop = 1;
 				end
 				for col = loop
-					vals = obj.ramp';
+					vals = me.ramp';
 					valsl = length(vals);
 					cout = zeros(valsl,3);
 					if col == 1
@@ -516,43 +516,43 @@ classdef calibrateLuminance < handle
 					a=1;
 					[~, randomIndex] = sort(rand(valsl, 1));
 					for i = 1:valsl
-						Screen('FillRect',obj.win,cout(randomIndex(i),:),obj.screenVals.targetRect);
-						Screen('Flip',obj.win);
+						Screen('FillRect',me.win,cout(randomIndex(i),:),me.screenVals.targetRect);
+						Screen('Flip',me.win);
 						WaitSecs('YieldSecs',1);
-						if ~obj.useSpectroCal2 && ~obj.useCCal2 && ~obj.useI1Pro
-							obj.inputValuesTest(col).in(randomIndex(a)) = input(['LUM: ' num2str(cout(i,:)) ' = ']);
-							fprintf('\t--->>> Result: %.3g cd/m2\n', obj.inputValues(col).in(randomIndex(a)));
+						if ~me.useSpectroCal2 && ~me.useCCal2 && ~me.useI1Pro
+							me.inputValuesTest(col).in(randomIndex(a)) = input(['LUM: ' num2str(cout(i,:)) ' = ']);
+							fprintf('\t--->>> Result: %.3g cd/m2\n', me.inputValues(col).in(randomIndex(a)));
 						else
-							if obj.useSpectroCal2 == true
-								[obj.thisx, obj.thisy, obj.thisY, lambda, radiance] = obj.takeSpectroCALMeasurement();
-								obj.inputValuesTest(col).in(randomIndex(a)) = obj.thisY;
-								obj.spectrumTest(col).in(:,randomIndex(a)) = radiance;
+							if me.useSpectroCal2 == true
+								[me.thisx, me.thisy, me.thisY, lambda, radiance] = me.takeSpectroCALMeasurement();
+								me.inputValuesTest(col).in(randomIndex(a)) = me.thisY;
+								me.spectrumTest(col).in(:,randomIndex(a)) = radiance;
 							end
-							if obj.useCCal2 == true
-								[obj.thisx,obj.thisy,obj.thisY] = obj.getCCalxyY;
-								obj.inputValuesTest(col).in(randomIndex(a)) = obj.thisY;
+							if me.useCCal2 == true
+								[me.thisx,me.thisy,me.thisY] = me.getCCalxyY;
+								me.inputValuesTest(col).in(randomIndex(a)) = me.thisY;
 							end
-							if obj.useI1Pro == true
+							if me.useI1Pro == true
 								I1('TriggerMeasurement');
 								Lxy = I1('GetTriStimulus');
-								obj.inputValuesI1Test(col).in(randomIndex(a)) = Lxy(1);
-								%obj.inputValuesTest(col).in(a) = obj.inputValuesI1Test(col).in(a);
+								me.inputValuesI1Test(col).in(randomIndex(a)) = Lxy(1);
+								%me.inputValuesTest(col).in(a) = me.inputValuesI1Test(col).in(a);
 								sp = I1('GetSpectrum')';
-								obj.spectrumTest(col).in(:,randomIndex(a)) = sp;
+								me.spectrumTest(col).in(:,randomIndex(a)) = sp;
 							end
-							fprintf('---> Tested value %i: %g = %g (was %.2g) cd/m2\n\n', i, vals(randomIndex(i)), obj.inputValuesTest(col).in(randomIndex(a)), obj.inputValues(col).in(randomIndex(a)));
+							fprintf('---> Tested value %i: %g = %g (was %.2g) cd/m2\n\n', i, vals(randomIndex(i)), me.inputValuesTest(col).in(randomIndex(a)), me.inputValues(col).in(randomIndex(a)));
 						end
 						a = a + 1;
 					end
 				end
 				if ~IsWin; RestoreCluts; end
-				if obj.useSpectroCal2;obj.closeSpectroCAL();end
-				Screen('LoadNormalizedGammaTable', obj.win, obj.oldCLUT);
-				obj.closeScreen();
-				obj.isTested = true;
-				plot(obj);
+				if me.useSpectroCal2;me.closeSpectroCAL();end
+				Screen('LoadNormalizedGammaTable', me.win, me.oldCLUT);
+				me.closeScreen();
+				me.isTested = true;
+				plot(me);
 			catch ME %#ok<CTCH>
-				resetTested(obj);
+				resetTested(me);
 				if ~IsWin; RestoreCluts; end
 				Screen('CloseAll');
 				psychrethrow(psychlasterror);
@@ -565,59 +565,59 @@ classdef calibrateLuminance < handle
 		%>	once the raw data is collected, this analyzes (fits) the data
 		%>
 		% ===================================================================
-		function analyze(obj)
-			if ~obj.canAnalyze && isempty(obj.inputValues)
+		function analyze(me)
+			if ~me.canAnalyze && isempty(me.inputValues)
 				disp('You must use the run() method first!')
 				return;
 			end
 			
-			obj.modelFit = [];
-			obj.gammaTable = []; obj.inputValuesNorm = []; obj.rampNorm = [];
-			resetTested(obj);
+			me.modelFit = [];
+			me.gammaTable = []; me.inputValuesNorm = []; me.rampNorm = [];
+			resetTested(me);
 			
-			obj.inputValuesNorm = struct('in',[]);
-			obj.rampNorm = struct('in',[]);
+			me.inputValuesNorm = struct('in',[]);
+			me.rampNorm = struct('in',[]);
 			
-			if isstruct(obj.inputValuesI1)
-				ii = length(obj.inputValuesI1);
-			elseif obj.correctColour
-				ii = length(obj.inputValues);
+			if isstruct(me.inputValuesI1)
+				ii = length(me.inputValuesI1);
+			elseif me.correctColour
+				ii = length(me.inputValues);
 			else
 				ii = 1;
 			end
 			
 			for loop = 1:ii
-				if obj.preferI1Pro == true
-					if isstruct(obj.inputValuesI1)
-						inputValues = obj.inputValuesI1(loop).in;
+				if me.preferI1Pro == true
+					if isstruct(me.inputValuesI1)
+						inputValues = me.inputValuesI1(loop).in;
 					else
-						inputValues = obj.inputValuesI1;
+						inputValues = me.inputValuesI1;
 					end
-				elseif ~obj.useCCal2 && ~obj.correctColour
-					if isstruct(obj.inputValues)
-						inputValues = obj.inputValues(loop).in;
+				elseif ~me.useCCal2 && ~me.correctColour
+					if isstruct(me.inputValues)
+						inputValues = me.inputValues(loop).in;
 					else
-						inputValues = obj.inputValues;
+						inputValues = me.inputValues;
 					end
-				elseif ~obj.useCCal2 && obj.correctColour
-					if isstruct(obj.inputValues)
-						inputValues = obj.inputValues(loop).in;
+				elseif ~me.useCCal2 && me.correctColour
+					if isstruct(me.inputValues)
+						inputValues = me.inputValues(loop).in;
 					else
-						inputValues = obj.inputValues;
+						inputValues = me.inputValues;
 					end
 				else
-					if isstruct(obj.inputValues)
-						inputValues = obj.inputValues(loop).in;
+					if isstruct(me.inputValues)
+						inputValues = me.inputValues(loop).in;
 					else
-						inputValues = obj.inputValues;
+						inputValues = me.inputValues;
 					end
 				end
 				
 				%Normalize values
-				obj.inputValuesNorm(loop).in = (inputValues - obj.displayBaseline)/(max(inputValues) - min(inputValues));
-				obj.rampNorm(loop).in = obj.ramp;
-				inputValuesNorm = obj.inputValuesNorm(loop).in; %#ok<*NASGU>
-				rampNorm = obj.rampNorm(loop).in;
+				me.inputValuesNorm(loop).in = (inputValues - me.displayBaseline)/(max(inputValues) - min(inputValues));
+				me.rampNorm(loop).in = me.ramp;
+				inputValuesNorm = me.inputValuesNorm(loop).in; %#ok<*NASGU>
+				rampNorm = me.rampNorm(loop).in;
 				
 				if ~exist('fittype') %#ok<EXIST>
 					error('This function needs fittype() for automatic fitting. This function is missing on your setup.\n');
@@ -629,40 +629,40 @@ classdef calibrateLuminance < handle
 					'Display','iter','MaxIter',1000,...
 					'Upper',4,'Lower',0.1,'StartPoint',2);
 				[fittedmodel, gof, output] = fit(rampNorm',inputValuesNorm',g,fo);
-				obj.displayGamma(loop) = fittedmodel.g;
-				obj.gammaTable{1,loop} = ((([0:1/(obj.tableLength-1):1]'))).^(1/fittedmodel.g);
+				me.displayGamma(loop) = fittedmodel.g;
+				me.gammaTable{1,loop} = ((([0:1/(me.tableLength-1):1]'))).^(1/fittedmodel.g);
 				
-				obj.modelFit{1,loop}.method = 'Gamma';
-				obj.modelFit{1,loop}.model = fittedmodel;
-				obj.modelFit{1,loop}.g = fittedmodel.g;
-				obj.modelFit{1,loop}.ci = confint(fittedmodel);
-				obj.modelFit{1,loop}.table = fittedmodel([0:1/(obj.tableLength-1):1]');
-				obj.modelFit{1,loop}.gof = gof;
-				obj.modelFit{1,loop}.output = output;
+				me.modelFit{1,loop}.method = 'Gamma';
+				me.modelFit{1,loop}.model = fittedmodel;
+				me.modelFit{1,loop}.g = fittedmodel.g;
+				me.modelFit{1,loop}.ci = confint(fittedmodel);
+				me.modelFit{1,loop}.table = fittedmodel([0:1/(me.tableLength-1):1]');
+				me.modelFit{1,loop}.gof = gof;
+				me.modelFit{1,loop}.output = output;
 				
-				for i = 1:length(obj.analysisMethods)-1
-					method = obj.analysisMethods{i+1};
+				for i = 1:length(me.analysisMethods)-1
+					method = me.analysisMethods{i+1};
 					%fo = fitoptions('Display','iter','MaxIter',1000);
 					[fittedmodel,gof,output] = fit(rampNorm',inputValuesNorm', method);
-					obj.modelFit{i+1,loop}.method = method;
-					obj.modelFit{i+1,loop}.model = fittedmodel;
-					obj.modelFit{i+1,loop}.table = fittedmodel([0:1/(obj.tableLength-1):1]');
-					obj.modelFit{i+1,loop}.gof = gof;
-					obj.modelFit{i+1,loop}.output = output;
+					me.modelFit{i+1,loop}.method = method;
+					me.modelFit{i+1,loop}.model = fittedmodel;
+					me.modelFit{i+1,loop}.table = fittedmodel([0:1/(me.tableLength-1):1]');
+					me.modelFit{i+1,loop}.gof = gof;
+					me.modelFit{i+1,loop}.output = output;
 					%Invert interpolation
 					x = inputValuesNorm;
-					x = obj.makeUnique(x);
+					x = me.makeUnique(x);
 					[fittedmodel,gof] = fit(x',rampNorm',method);
-					g = fittedmodel([0:1/(obj.tableLength-1):1]');
-					%g = obj.normalize(g); %make sure we are from 0 to 1
-					obj.gammaTable{i+1,loop} = g;
+					g = fittedmodel([0:1/(me.tableLength-1):1]');
+					%g = me.normalize(g); %make sure we are from 0 to 1
+					me.gammaTable{i+1,loop} = g;
 				end
 				
 			end
-			obj.choice = 2; %default is pchipinterp
-			obj.isAnalyzed = true;
-			makeFinalCLUT(obj);
-			plot(obj);
+			me.choice = 2; %default is pchipinterp
+			me.isAnalyzed = true;
+			makeFinalCLUT(me);
+			plot(me);
 		end
 		
 		% ===================================================================
@@ -670,53 +670,53 @@ classdef calibrateLuminance < handle
 		%>	This plots the calibration results
 		%>
 		% ===================================================================
-		function plot(obj)
-			if ~obj.isAnalyzed
+		function plot(me)
+			if ~me.isAnalyzed
 				disp('You must use the run() then analyse() methods first...')
 				return;
 			end
 			
-			if obj.useSpectroCal2;obj.closeSpectroCAL();end %just in case not closed yet
+			if me.useSpectroCal2;me.closeSpectroCAL();end %just in case not closed yet
 			
-			obj.plotHandle = figure;
+			me.plotHandle = figure;
 			figpos(1,[1200 1200]);
-			obj.p = panel(obj.plotHandle);
+			me.p = panel(me.plotHandle);
 			
-			if obj.useI1Pro || obj.useSpectroCal2
-				obj.p.pack(2,3);
+			if me.useI1Pro || me.useSpectroCal2
+				me.p.pack(2,3);
 			else
-				obj.p.pack(2,2);
+				me.p.pack(2,2);
 			end
-			obj.p.margin = [15 20 10 15];
-			obj.p.fontsize = 12;
+			me.p.margin = [15 20 10 15];
+			me.p.fontsize = 12;
 			
 			
-			obj.p(1,1).select();
+			me.p(1,1).select();
 			
-			if  isstruct(obj.inputValues) || obj.useI1Pro
-				if obj.useI1Pro == true
-					inputValues = obj.inputValuesI1; %#ok<*PROP>
-					inputTest = obj.inputValuesI1Test;
+			if  isstruct(me.inputValues) || me.useI1Pro
+				if me.useI1Pro == true
+					inputValues = me.inputValuesI1; %#ok<*PROP>
+					inputTest = me.inputValuesI1Test;
 				else
-					inputValues = obj.inputValues;
-					inputTest = obj.inputValuesTest;
+					inputValues = me.inputValues;
+					inputTest = me.inputValuesTest;
 				end
-				if ~obj.testColour
-					plot(obj.ramp, inputValues(1).in, 'k.-');
+				if ~me.testColour
+					plot(me.ramp, inputValues(1).in, 'k.-');
 					leg = {'RAW'};
 					if ~isempty(inputTest)
-						obj.p(1,1).hold('on')
-						plot(obj.ramp, inputTest(1).in, 'ko-');
-						obj.p(1,1).hold('off')
+						me.p(1,1).hold('on')
+						plot(me.ramp, inputTest(1).in, 'ko-');
+						me.p(1,1).hold('off')
 						leg = [leg,{'Corrected'}];
 					end
 				else
-					plot(obj.ramp, inputValues(1).in, 'k.-',obj.ramp, inputValues(2).in, 'r.-',obj.ramp, inputValues(3).in, 'g.-',obj.ramp, inputValues(4).in, 'b.-');
+					plot(me.ramp, inputValues(1).in, 'k.-',me.ramp, inputValues(2).in, 'r.-',me.ramp, inputValues(3).in, 'g.-',me.ramp, inputValues(4).in, 'b.-');
 					leg = {'L','R','G','B'};
 					if ~isempty(inputTest)
-						obj.p(1,1).hold('on')
-						plot(obj.ramp, inputTest(1).in, 'ko-',obj.ramp, inputTest(2).in, 'ro-',obj.ramp, inputTest(3).in, 'go-',obj.ramp, inputTest(4).in, 'bo-');
-						obj.p(1,1).hold('off')
+						me.p(1,1).hold('on')
+						plot(me.ramp, inputTest(1).in, 'ko-',me.ramp, inputTest(2).in, 'ro-',me.ramp, inputTest(3).in, 'go-',me.ramp, inputTest(4).in, 'bo-');
+						me.p(1,1).hold('off')
 						leg = [leg,{'C:L','C:R','C:G','C:B'}];
 					end
 				end
@@ -728,24 +728,24 @@ classdef calibrateLuminance < handle
 				ylabel('Luminance cd/m^2');
 				t=title('Input->Output, Raw/Corrected');
 			else %legacy plot
-				plot(obj.ramp, obj.inputValues, 'k.-');
+				plot(me.ramp, me.inputValues, 'k.-');
 				legend('CCal')
-				if max(obj.inputValuesI1) > 0
-					obj.p(1,1).hold('on')
-					plot(obj.ramp, obj.inputValuesI1, 'b.-');
-					obj.p(1,1).hold('on')
+				if max(me.inputValuesI1) > 0
+					me.p(1,1).hold('on')
+					plot(me.ramp, me.inputValuesI1, 'b.-');
+					me.p(1,1).hold('on')
 					legend('CCal','I1Pro')
 				end
-				if max(obj.inputValuesTest) > 0
-					obj.p(1,1).hold('on')
-					plot(obj.ramp, obj.inputValuesTest, 'r.-');
-					obj.p(1,1).hold('on')
+				if max(me.inputValuesTest) > 0
+					me.p(1,1).hold('on')
+					plot(me.ramp, me.inputValuesTest, 'r.-');
+					me.p(1,1).hold('on')
 					legend('CCal','CCalCorrected')
 				end
-				if max(obj.inputValuesI1Test) > 0
-					obj.p(1,1).hold('on')
-					plot(obj.ramp, obj.inputValuesI1Test, 'g.-');
-					obj.p(1,1).hold('on')
+				if max(me.inputValuesI1Test) > 0
+					me.p(1,1).hold('on')
+					plot(me.ramp, me.inputValuesI1Test, 'g.-');
+					me.p(1,1).hold('on')
 					legend('CCal','I1Pro','CCalCorrected','I1ProCorrected')
 				end
 				axis tight; grid on; grid minor; box on
@@ -757,52 +757,52 @@ classdef calibrateLuminance < handle
 			
 			colors = {[0 0 0], [0.7 0 0],[0 0.7 0],[0 0 0.7]};
 			linestyles = {':','-','-.','--',':.',':c',':y',':m'};
-			if isstruct(obj.inputValuesI1)
-				ii = length(obj.inputValuesI1);
-			elseif obj.correctColour
-				ii = length(obj.inputValues);
+			if isstruct(me.inputValuesI1)
+				ii = length(me.inputValuesI1);
+			elseif me.correctColour
+				ii = length(me.inputValues);
 			else
 				ii = 1;
 			end
 			for loop = 1:ii
-				if isstruct(obj.inputValues)
-					rampNorm = obj.rampNorm(loop).in;
-					inputValuesNorm = obj.inputValuesNorm(loop).in;
+				if isstruct(me.inputValues)
+					rampNorm = me.rampNorm(loop).in;
+					inputValuesNorm = me.inputValuesNorm(loop).in;
 				else
-					rampNorm = obj.rampNorm;
-					inputValuesNorm = obj.inputValuesNorm;
+					rampNorm = me.rampNorm;
+					inputValuesNorm = me.inputValuesNorm;
 				end
-				obj.p(1,2).select();
-				obj.p(1,2).hold('on');
+				me.p(1,2).select();
+				me.p(1,2).hold('on');
 				legendtext = cell(1);
-				for i=1:size(obj.modelFit,1)
-					plot([0:1/(obj.tableLength-1):1]', obj.modelFit{i,loop}.table,linestyles{i},'Color',colors{loop});
-					legendtext{i} = obj.modelFit{i,loop}.method;
+				for i=1:size(me.modelFit,1)
+					plot([0:1/(me.tableLength-1):1]', me.modelFit{i,loop}.table,linestyles{i},'Color',colors{loop});
+					legendtext{i} = me.modelFit{i,loop}.method;
 				end
 				plot(rampNorm, inputValuesNorm,'-.o','Color',[0.5 0.5 0.5])
 				legendtext{end+1} = 'RAW';
-				obj.p(1,2).hold('off')
+				me.p(1,2).hold('off')
 				axis tight; grid on; box on; if loop == 1; grid minor; end
 				ylim([0 1])
 				xlabel('Normalised Luminance Input');
 				ylabel('Normalised Luminance Output');
 				legend(legendtext,'Location','SouthEast');
-				if length(obj.displayGamma) == 1
-					t=sprintf('Gamma: L^{%.2f}', obj.displayGamma(1));
+				if length(me.displayGamma) == 1
+					t=sprintf('Gamma: L^{%.2f}', me.displayGamma(1));
 				else
-					t=sprintf('Gamma: L^{%.2f} R^{%.2f} G^{%.2f} B^{%.2f}', obj.displayGamma(1),obj.displayGamma(2),obj.displayGamma(3),obj.displayGamma(4));
+					t=sprintf('Gamma: L^{%.2f} R^{%.2f} G^{%.2f} B^{%.2f}', me.displayGamma(1),me.displayGamma(2),me.displayGamma(3),me.displayGamma(4));
 				end
 				t=text(0.01,0.95,t);
 				t.ButtonDownFcn = @cloneAxes;
 				
 				legendtext={};
-				obj.p(2,1).select();
-				obj.p(2,1).hold('on');
-				for i=1:size(obj.gammaTable,1)
-					plot(1:length(obj.gammaTable{i,loop}),obj.gammaTable{i,loop},linestyles{i},'Color',colors{loop});
-					legendtext{i} = obj.modelFit{i}.method;
+				me.p(2,1).select();
+				me.p(2,1).hold('on');
+				for i=1:size(me.gammaTable,1)
+					plot(1:length(me.gammaTable{i,loop}),me.gammaTable{i,loop},linestyles{i},'Color',colors{loop});
+					legendtext{i} = me.modelFit{i}.method;
 				end
-				obj.p(2,1).hold('off');
+				me.p(2,1).hold('off');
 				axis tight; grid on; box on; if loop == 1; grid minor; end
 				ylim([0 1])
 				xlabel('Indexed Values')
@@ -811,13 +811,13 @@ classdef calibrateLuminance < handle
 				t=title('Output Gamma curves');
 				t.ButtonDownFcn = @cloneAxes;
 				
-				obj.p(2,2).select();
-				obj.p(2,2).hold('on');
-				for i=1:size(obj.gammaTable,1)
-					plot(obj.modelFit{i,loop}.output.residuals,linestyles{i},'Color',colors{loop});
-					legendtext{i} = obj.modelFit{i}.method;
+				me.p(2,2).select();
+				me.p(2,2).hold('on');
+				for i=1:size(me.gammaTable,1)
+					plot(me.modelFit{i,loop}.output.residuals,linestyles{i},'Color',colors{loop});
+					legendtext{i} = me.modelFit{i}.method;
 				end
-				obj.p(2,2).hold('off');
+				me.p(2,2).hold('off');
 				axis tight; grid on; box on; if loop == 1; grid minor; end
 				xlabel('Indexed Values')
 				ylabel('Residual Values');
@@ -826,36 +826,36 @@ classdef calibrateLuminance < handle
 				t.ButtonDownFcn = @cloneAxes;
 			end
 			
-			if isempty(obj.comments)
-				t = obj.filename;
+			if isempty(me.comments)
+				t = me.filename;
 			else
-				t = [obj.filename obj.comments];
+				t = [me.filename me.comments];
 			end
 			
-			if (obj.useI1Pro || obj.useSpectroCal2)
-				spectrum = obj.spectrum(1).in;
-				if ~isempty(obj.spectrumTest)
-					spectrumTest = obj.spectrumTest(1).in;
+			if (me.useI1Pro || me.useSpectroCal2)
+				spectrum = me.spectrum(1).in;
+				if ~isempty(me.spectrumTest)
+					spectrumTest = me.spectrumTest(1).in;
 				else
 					spectrumTest = [];
 				end
 			else
-				spectrum = obj.spectrum;
-				spectrumTest = obj.spectrumTest;
+				spectrum = me.spectrum;
+				spectrumTest = me.spectrumTest;
 			end
-			if (obj.useI1Pro || obj.useSpectroCal2) && ~isempty(spectrum)
-				obj.p(1,3).select();
+			if (me.useI1Pro || me.useSpectroCal2) && ~isempty(spectrum)
+				me.p(1,3).select();
 				hold on
-				surf(obj.ramp,obj.wavelengths,spectrum,'EdgeAlpha',0.1);
+				surf(me.ramp,me.wavelengths,spectrum,'EdgeAlpha',0.1);
 				title('Original Spectrum: L')
 				xlabel('Indexed Values')
 				ylabel('Wavelengths');
 				view([60 10]);
 				axis tight; grid on; box on;
 			end
-			if (obj.useI1Pro || obj.useSpectroCal2) && ~isempty(spectrumTest)
-				obj.p(2,3).select();
-				surf(obj.ramp,obj.wavelengths,spectrumTest,'EdgeAlpha',0.1);
+			if (me.useI1Pro || me.useSpectroCal2) && ~isempty(spectrumTest)
+				me.p(2,3).select();
+				surf(me.ramp,me.wavelengths,spectrumTest,'EdgeAlpha',0.1);
 				title('Corrected Spectrum: L')
 				xlabel('Indexed Values')
 				ylabel('Wavelengths');
@@ -863,14 +863,14 @@ classdef calibrateLuminance < handle
 				axis tight; grid on; box on;
             end
 			
-			obj.p.title(t);
-			obj.p.refresh();
+			me.p.title(t);
+			me.p.refresh();
             cnames = {'Gray';'Red';'Green';'Blue'};
-            if obj.useSpectroCal2 && ~isempty(obj.spectrum) && obj.testColour
+            if me.useSpectroCal2 && ~isempty(me.spectrum) && me.testColour
                 figure;figpos(1,[900 900])
-                for i = 1:length(obj.spectrum)
+                for i = 1:length(me.spectrum)
                     subplot(2,2,i);
-                    surf(obj.ramp,obj.wavelengths, obj.spectrum(i).in,'EdgeAlpha',0.1);
+                    surf(me.ramp,me.wavelengths, me.spectrum(i).in,'EdgeAlpha',0.1);
                     title(['Original Spectrum: ' cnames{i}])
                     xlabel('Indexed Values')
                     ylabel('Wavelengths');
@@ -878,11 +878,11 @@ classdef calibrateLuminance < handle
                     axis tight; grid on; box on;
                 end
             end
-            if obj.useSpectroCal2 && ~isempty(obj.spectrumTest) && obj.testColour
+            if me.useSpectroCal2 && ~isempty(me.spectrumTest) && me.testColour
                 figure;figpos(1,[900 900]);
-                for i = 1:length(obj.spectrumTest)
+                for i = 1:length(me.spectrumTest)
                     subplot(2,2,i);
-                    surf(obj.ramp,obj.wavelengths, obj.spectrumTest(i).in,'EdgeAlpha',0.1);
+                    surf(me.ramp,me.wavelengths, me.spectrumTest(i).in,'EdgeAlpha',0.1);
                     title(['Corrected Spectrum: ' cnames{i}])
                     xlabel('Indexed Values')
                     ylabel('Wavelengths');
@@ -905,21 +905,21 @@ classdef calibrateLuminance < handle
 		end
 		
 		% ===================================================================
-		%> @brief getCCalxyY
-		%>	Uses the ColorCalII to return the current xyY values
+		%> @brief set the model choice
+		%>	
 		%>
 		% ===================================================================
-		function set.choice(obj,in)
+		function set.choice(me,in)
 			
-			if in > length(obj.analysisMethods)+1
+			if in > length(me.analysisMethods)+1
 				warning('Choice greater than model options, setting to 2')
-				obj.choice = 2;
+				me.choice = 2;
 			else
-				obj.choice = in;
+				me.choice = in;
 			end
 			
-			if obj.isAnalyzed %#ok<*MCSUP>
-				makeFinalCLUT(obj);
+			if me.isAnalyzed %#ok<*MCSUP>
+				makeFinalCLUT(me);
 			end
 			
 		end
@@ -929,9 +929,9 @@ classdef calibrateLuminance < handle
 		%>	Uses the ColorCalII to return the current xyY values
 		%>
 		% ===================================================================
-		function [x,y,Y] = getCCalxyY(obj)
+		function [x,y,Y] = getCCalxyY(me)
 			s = ColorCal2('MeasureXYZ');
-			correctedValues = obj.cMatrix(1:3,:) * [s.x s.y s.z]';
+			correctedValues = me.cMatrix(1:3,:) * [s.x s.y s.z]';
 			X = correctedValues(1);
 			Y = correctedValues(2);
 			Z = correctedValues(3);
@@ -944,46 +944,46 @@ classdef calibrateLuminance < handle
 		%>	Uses the SpectroCAL2 to return the current xyY values
 		%>
 		% ===================================================================
-		function [x, y, Y, wavelengths, spectrum] = getSpectroCALValues(obj)
-			%[CIEXY, ~, Luminance, Lambda, Radiance, errorString] = SpectroCALMakeSPDMeasurement(obj.port, ...
-			%	obj.wavelengths(1), obj.wavelengths(end), obj.wavelengths(2)-obj.wavelengths(1));
-			if ~isa(obj.spCAL,'serial') || isempty(obj.spCAL) || strcmp(obj.spCAL.Status,'closed')
+		function [x, y, Y, wavelengths, spectrum] = getSpectroCALValues(me)
+			%[CIEXY, ~, Luminance, Lambda, Radiance, errorString] = SpectroCALMakeSPDMeasurement(me.port, ...
+			%	me.wavelengths(1), me.wavelengths(end), me.wavelengths(2)-me.wavelengths(1));
+			if ~isa(me.spCAL,'serial') || isempty(me.spCAL) || strcmp(me.spCAL.Status,'closed')
 				doClose = true;
-				obj.openSpectroCAL();
+				me.openSpectroCAL();
 			else
 				doClose = false;
 			end
-			[x, y, Y, wavelengths, spectrum] = obj.takeSpectroCALMeasurement();
-			%[Radiance, WL, XYZ] = SpectroCALtakeMeas(obj.spCAL);
-			obj.thisx = x;
-			obj.thisy = y;
-			obj.thisY = Y;
-			obj.thisWavelengths = wavelengths;
-			obj.thisSpectrum = spectrum;
-			if doClose && ~obj.keepOpen; obj.closeSpectroCAL(); end
+			[x, y, Y, wavelengths, spectrum] = me.takeSpectroCALMeasurement();
+			%[Radiance, WL, XYZ] = SpectroCALtakeMeas(me.spCAL);
+			me.thisx = x;
+			me.thisy = y;
+			me.thisY = Y;
+			me.thisWavelengths = wavelengths;
+			me.thisSpectrum = spectrum;
+			if doClose && ~me.keepOpen; me.closeSpectroCAL(); end
 		end
 		
 		%===============reset======================%
-		function spectroCalLaser(obj,state)
+		function spectroCalLaser(me,state)
 			if ~exist('state','var') || isempty(state); state = false; end
-			if ~isa(obj.spCAL,'serial') || isempty(obj.spCAL) || strcmp(obj.spCAL.Status,'closed')
+			if ~isa(me.spCAL,'serial') || isempty(me.spCAL) || strcmp(me.spCAL.Status,'closed')
 				doClose = true;
-				obj.openSpectroCAL();
+				me.openSpectroCAL();
 			else
 				doClose = false;
 			end
-			fprintf(obj.spCAL,['*CONTR:LASER ', num2str(state), char(13)]);
-			error=fread(obj.spCAL,1);
-			if doClose && ~obj.keepOpen; obj.closeSpectroCAL(); end
+			fprintf(me.spCAL,['*CONTR:LASER ', num2str(state), char(13)]);
+			error=fread(me.spCAL,1);
+			if doClose && ~me.keepOpen; me.closeSpectroCAL(); end
 		end
 		
 		%===============reset======================%
-		function Phosphors = makeSPD(obj)
-			if obj.isTested && ~isempty(obj.spectrumTest)
-				Phosphors.wavelength = obj.wavelengths';
+		function Phosphors = makeSPD(me)
+			if me.isTested && ~isempty(me.spectrumTest)
+				Phosphors.wavelength = me.wavelengths';
 				nm = {'Red','Green','Blue'};
 				for i = 1:3
-					Phosphors.(nm{i}) = obj.spectrumTest(i+1).in(:,end);
+					Phosphors.(nm{i}) = me.spectrumTest(i+1).in(:,end);
 				end
 				figure;
 				hold on
@@ -991,53 +991,53 @@ classdef calibrateLuminance < handle
 				plot(Phosphors.wavelength, Phosphors.Green, 'g')
 				plot(Phosphors.wavelength, Phosphors.Blue, 'b')
 				xlabel('Wavelength');box on;grid on;
-				title(['SPD for ' obj.comments])
+				title(['SPD for ' me.comments])
 				fprintf('Phosphors SPD exported!\n');
 			end
 		end
 		
 		%===============reset======================%
-		function fullCalibration(obj)
-			obj.close;
-			obj.nMeasures = 30;
-			obj.bitDepth = 'EnableBits++Color++Output';
-			obj.useSpectroCal2 = true;
-			obj.testColour = true;
-			obj.correctColour = true;
-			obj.runAll;
+		function fullCalibration(me)
+			me.close;
+			me.nMeasures = 30;
+			me.bitDepth = 'EnableBits++Color++Output';
+			me.useSpectroCal2 = true;
+			me.testColour = true;
+			me.correctColour = true;
+			me.runAll;
 		end
 		
 		%===============reset======================%
-		function save(obj)
-			c = obj;
-			if isempty(obj.saveName)
-				[obj.saveName, obj.savePath] = uiputfile('*.mat');
+		function save(me)
+			c = me;
+			if isempty(me.saveName)
+				[me.saveName, me.savePath] = uiputfile('*.mat');
 			end
-			save([obj.savePath filesep obj.saveName],'c');
+			save([me.savePath filesep me.saveName],'c');
 			clear c;
 		end
 		
 		%===============reset======================%
-		function close(obj)
-			obj.resetTested();
-			obj.resetAll();
-			obj.closeSpectroCAL();
+		function close(me)
+			me.resetTested();
+			me.resetAll();
+			me.closeSpectroCAL();
 		end
 		
 		%===============init======================%
-		function openSpectroCAL(obj)
-			if ~isa(obj.spCAL,'serial')
-				obj.spCAL = serial(obj.port, 'BaudRate', 921600,'DataBits', 8, 'StopBits', 1, 'FlowControl', 'none', 'Parity', 'none', 'Terminator', 'CR','Timeout', 240, 'InputBufferSize', 16000);
+		function openSpectroCAL(me)
+			if ~isa(me.spCAL,'serial')
+				me.spCAL = serial(me.port, 'BaudRate', 921600,'DataBits', 8, 'StopBits', 1, 'FlowControl', 'none', 'Parity', 'none', 'Terminator', 'CR','Timeout', 240, 'InputBufferSize', 16000);
 			end
-			try fopen(obj.spCAL);catch;warning('Port Already Open...');end
-			obj.configureSpectroCAL();
+			try fopen(me.spCAL);catch;warning('Port Already Open...');end
+			me.configureSpectroCAL();
 		end
 		
 		%===============init======================%
-		function closeSpectroCAL(obj)
-			if isa(obj.spCAL,'serial') && strcmp(obj.spCAL.Status,'open')
-				try fclose(obj.spCAL); end
-				obj.spCAL = [];
+		function closeSpectroCAL(me)
+			if isa(me.spCAL,'serial') && strcmp(me.spCAL.Status,'open')
+				try fclose(me.spCAL); end
+				me.spCAL = [];
 			end
 		end
 	end
@@ -1047,56 +1047,71 @@ classdef calibrateLuminance < handle
 	%=======================================================================
 		
 		%===============init======================%
-		function openScreen(obj)
+		function openScreen(me)
 			PsychDefaultSetup(2);
 			Screen('Preference', 'SkipSyncTests', 2);
 			Screen('Preference', 'VisualDebugLevel', 0);
 			PsychImaging('PrepareConfiguration');
-			PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-			if regexpi(obj.bitDepth, '^EnableBits')
+			
+			if regexpi(me.bitDepth, '^EnableBits')
 				PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
-				if regexp(obj.bitDepth, 'Color')
-					PsychImaging('AddTask', 'General', obj.bitDepth, 2);
+				if regexp(me.bitDepth, 'Color')
+					PsychImaging('AddTask', 'General', me.bitDepth, 2);
 				else
-					PsychImaging('AddTask', 'General', obj.bitDepth);
+					PsychImaging('AddTask', 'General', me.bitDepth);
 				end
+				fprintf('\n---> Bit Depth mode set to: %s\n', me.bitDepth);
 			else
-				PsychImaging('AddTask', 'General', obj.bitDepth);
+				switch me.bitDepth
+					case {'Native10Bit','Native11Bit','Native16Bit'}
+						PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+						PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'Framebuffer']);
+						fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
+					case {'Native16BitFloat'}
+						PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+						PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'ingPointFramebuffer']);
+						fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
+					case {'PeudoGray'}
+						PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+						PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
+						fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
+					otherwise
+						PsychImaging('AddTask', 'General', me.bitDepth);
+						fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
+				end
 			end
-			fprintf('\n---> Bit Depth mode set to: %s\n', obj.bitDepth);
-			%PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
-			if obj.screen == 0
+			if me.screen == 0
 				rect = [0 0 1000 1000];
 			else
 				rect = [];
 			end
-			obj.win = PsychImaging('OpenWindow', obj.screen, obj.backgroundColour, rect);
-			obj.screenVals.winRect = Screen('Rect',obj.win);
-			obj.screenVals.targetRect = CenterRect([0 0 obj.targetSize obj.targetSize],obj.screenVals.winRect);
+			me.win = PsychImaging('OpenWindow', me.screen, me.backgroundColour, rect);
+			me.screenVals.winRect = Screen('Rect',me.win);
+			me.screenVals.targetRect = CenterRect([0 0 me.targetSize me.targetSize],me.screenVals.winRect);
 			
-			obj.screenVals.ifi = Screen('GetFlipInterval', obj.win);
-			obj.screenVals.fps=Screen('NominalFramerate', obj.win);
+			me.screenVals.ifi = Screen('GetFlipInterval', me.win);
+			me.screenVals.fps=Screen('NominalFramerate', me.win);
 			
-			obj.screenVals.white = WhiteIndex(obj.screen);
-			obj.screenVals.black = BlackIndex(obj.screen);
-			obj.screenVals.gray = GrayIndex(obj.screen);
+			me.screenVals.white = WhiteIndex(me.screen);
+			me.screenVals.black = BlackIndex(me.screen);
+			me.screenVals.gray = GrayIndex(me.screen);
 			%find our fps if not defined above
-			if obj.screenVals.fps==0
-				obj.screenVals.fps=round(1/obj.screenVals.ifi);
-				if obj.screenVals.fps==0
-					obj.screenVals.fps=60;
+			if me.screenVals.fps==0
+				me.screenVals.fps=round(1/me.screenVals.ifi);
+				if me.screenVals.fps==0
+					me.screenVals.fps=60;
 				end
 			end
 		end
 		
 		%===============init======================%
-		function closeScreen(obj)
-			if ~isempty(obj.win) && obj.win > 0
+		function closeScreen(me)
+			if ~isempty(me.win) && me.win > 0
 				try
-					kind = Screen(obj.win, 'WindowKind');
+					kind = Screen(me.win, 'WindowKind');
 					if kind == 1 
-						Screen('Close',obj.win);
-						if obj.verbose; fprintf('!!!>>>Closing Win: %i kind: %i\n',me.win,kind); end
+						Screen('Close',me.win);
+						if me.verbose; fprintf('!!!>>>Closing Win: %i kind: %i\n',me.win,kind); end
 					end
 				catch ME
 					%Screen('CloseAll');
@@ -1108,44 +1123,44 @@ classdef calibrateLuminance < handle
 		end
 		
 		%===============init======================%
-		function [refreshRate] = configureSpectroCAL(obj)
+		function [refreshRate] = configureSpectroCAL(me)
 			intgrTime = [];
-			doSynchonised = obj.monitorSync;
+			doSynchonised = me.monitorSync;
 			doHorBarPTB = false;
 			reps = 1;
-			freq = obj.screenVals.fps;
+			freq = me.screenVals.fps;
 			% set the range to be fit the CIE 1931 2-deg CMFs
-			start = obj.wavelengths(1); stop = obj.wavelengths(end); step = obj.wavelengths(2) - obj.wavelengths(1);
+			start = me.wavelengths(1); stop = me.wavelengths(end); step = me.wavelengths(2) - me.wavelengths(1);
 			if isempty(intgrTime)
 				% Set automatic adaption to exposure
-				fprintf(obj.spCAL,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
-				errorString = obj.checkACK('setting exposure'); if ~isempty(errorString), fclose(obj.spCAL); return; end
+				fprintf(me.spCAL,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
+				errorString = me.checkACK('setting exposure'); if ~isempty(errorString), fclose(me.spCAL); return; end
 				if doSynchonised
-					fprintf(obj.spCAL,['*CONF:CYCMOD 1', char(13)]); %switching to synchronized measuring mode
-					errorString = obj.checkACK('setting SYNC'); if ~isempty(errorString), fclose(obj.spCAL); return; end
+					fprintf(me.spCAL,['*CONF:CYCMOD 1', char(13)]); %switching to synchronized measuring mode
+					errorString = me.checkACK('setting SYNC'); if ~isempty(errorString), fclose(me.spCAL); return; end
 					while reps
 						reps=reps-1;
-						fprintf(obj.spCAL,['*CONTR:CYCTIM 200 4000', char(13)]); %measurement of cycle time
+						fprintf(me.spCAL,['*CONTR:CYCTIM 200 4000', char(13)]); %measurement of cycle time
 						% read the return
-						data = fscanf(obj.spCAL);
+						data = fscanf(me.spCAL);
 						disp(data);
 						tint = str2double(data(13:end)); % in mS
 						refreshRate = 1/tint*1000;
 						disp(['Refresh rate is: ',num2str(refreshRate)]);
 						if ~isnan(tint)
-							fprintf(obj.spCAL,['*CONF:CYCTIM ',num2str(tint*1000), char(13)]);  %setting: cycle time to measured value (in us)
-							errorString = obj.checkACK('setting Cycle Time'); if ~isempty(errorString), fclose(obj.spCAL); return; end
+							fprintf(me.spCAL,['*CONF:CYCTIM ',num2str(tint*1000), char(13)]);  %setting: cycle time to measured value (in us)
+							errorString = me.checkACK('setting Cycle Time'); if ~isempty(errorString), fclose(me.spCAL); return; end
 						else
 							% reset
-							fprintf(obj.spCAL,['*RST', char(13)]); % software reset
+							fprintf(me.spCAL,['*RST', char(13)]); % software reset
 							pause(2);
-							if obj.spCAL.BytesAvailable>0
-								data = fread(obj.spCAL,obj.spCAL.BytesAvailable)';
+							if me.spCAL.BytesAvailable>0
+								data = fread(me.spCAL,me.spCAL.BytesAvailable)';
 								disp(char(data));
 							end
 							% Set automatic adaption to exposure
-							fprintf(obj.spCAL,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
-							errorString = obj.checkACK('setting exposure'); if ~isempty(errorString), fclose(obj.spCAL); return; end
+							fprintf(me.spCAL,['*CONF:EXPO 1', char(13)]); % setting: adaption of tint
+							errorString = me.checkACK('setting exposure'); if ~isempty(errorString), fclose(me.spCAL); return; end
 						end
 						if ~isempty(freq)
 							if abs(refreshRate-freq)<1;reps=0;end
@@ -1155,36 +1170,36 @@ classdef calibrateLuminance < handle
 				
 			else
 				% Set integration time to intgrTime
-				fprintf(obj.spCAL,['*CONF:TINT ',num2str(intgrTime), char(13)]);
-				obj.checkACK('set integration time');
+				fprintf(me.spCAL,['*CONF:TINT ',num2str(intgrTime), char(13)]);
+				me.checkACK('set integration time');
 				refreshRate = NaN;
 				% Set manual adaption to exposure
-				fprintf(obj.spCAL,['*CONF:EXPO 2', char(13)]);
-				obj.checkACK('set manual exposure');
+				fprintf(me.spCAL,['*CONF:EXPO 2', char(13)]);
+				me.checkACK('set manual exposure');
 			end
 			% Radiometric spectra in nm / value
-			fprintf(obj.spCAL,['*CONF:FUNC 6', char(13)]);
-			errorString = obj.checkACK('setting spectra'); if ~isempty(errorString), fclose(obj.spCAL); return; end
+			fprintf(me.spCAL,['*CONF:FUNC 6', char(13)]);
+			errorString = me.checkACK('setting spectra'); if ~isempty(errorString), fclose(me.spCAL); return; end
 			% Set wavelength range and resolution
-			fprintf(obj.spCAL,['*CONF:WRAN ',num2str(start),' ',num2str(stop),' ',num2str(step), char(13)]);
-			errorString = obj.checkACK('setting wavelength'); if ~isempty(errorString), fclose(obj.spCAL); return; end
+			fprintf(me.spCAL,['*CONF:WRAN ',num2str(start),' ',num2str(stop),' ',num2str(step), char(13)]);
+			errorString = me.checkACK('setting wavelength'); if ~isempty(errorString), fclose(me.spCAL); return; end
 			disp('SpectroCAL initialised.');
 		end
 		
 		%===============init======================%
-		function [CIEx, CIEy, Y, Lambda, Radiance] = takeSpectroCALMeasurement(obj)
+		function [CIEx, CIEy, Y, Lambda, Radiance] = takeSpectroCALMeasurement(me)
 			% request a measurement
-			fprintf(obj.spCAL,['*INIT', char(13)]);
-			errorString = obj.checkACK('request measurement'); if ~isempty(errorString), fclose(obj.spCAL); return; end
+			fprintf(me.spCAL,['*INIT', char(13)]);
+			errorString = me.checkACK('request measurement'); if ~isempty(errorString), fclose(me.spCAL); return; end
 			% wait while measuring
 			tic;
 			while 1
-				if obj.spCAL.BytesAvailable>0
-					sReturn = fread(obj.spCAL,obj.spCAL.BytesAvailable)';
+				if me.spCAL.BytesAvailable>0
+					sReturn = fread(me.spCAL,me.spCAL.BytesAvailable)';
 					if sReturn(1)~=7 % if the return is not 7
 						warning(['SpectroCAL: returned error code ',num2str(sReturn(1))]);
 						errorString = {['SpectroCAL: returned error code ',num2str(sReturn(1))],'Check for overexposure.'};
-						fclose(obj.spCAL);
+						fclose(me.spCAL);
 						return % abort the measurement and exit the function
 					else
 						break; % measurement succesfully completed
@@ -1194,20 +1209,20 @@ classdef calibrateLuminance < handle
 				if toc>240
 					warning('SpectroCAL: timeout. No response received within 240 seconds.');
 					errorString = 'SpectroCAL: timeout. No response received within 240 seconds.';
-					fclose(obj.spCAL);
+					fclose(me.spCAL);
 					return % abort the measurement and exit the function
 				end
 				pause(0.01);
 			end
 			% retrieve the measurement
-			fprintf(obj.spCAL,['*FETCH:SPRAD 7', char(13)]);
+			fprintf(me.spCAL,['*FETCH:SPRAD 7', char(13)]);
 			% the returned data will be a header followed by two consecutive carriage
 			% returns and then the data followed by two consecutive carriage returns
 			% read head and data
 			data = [];
 			while 1
-				if obj.spCAL.BytesAvailable>0
-					data =  [data;fread(obj.spCAL, obj.spCAL.BytesAvailable)]; %#ok<AGROW>
+				if me.spCAL.BytesAvailable>0
+					data =  [data;fread(me.spCAL, me.spCAL.BytesAvailable)]; %#ok<AGROW>
 					if length(data)>40 % read until both header and data is retrieved
 						if data(end)==13 && data(end-1)==13
 							break
@@ -1223,11 +1238,11 @@ classdef calibrateLuminance < handle
 			Radiance = tmp(2,:);
 			
 			% Get XYZ tristimulus values
-			fprintf(obj.spCAL,['*FETCH:XYZ', char(13)]);
+			fprintf(me.spCAL,['*FETCH:XYZ', char(13)]);
 			data = [];
 			while 1
-				if obj.spCAL.BytesAvailable>0
-					data =  [data;fread(obj.spCAL, obj.spCAL.BytesAvailable)]; %#ok<AGROW>
+				if me.spCAL.BytesAvailable>0
+					data =  [data;fread(me.spCAL, me.spCAL.BytesAvailable)]; %#ok<AGROW>
 					if length(find(data==13))>=3 % wait for all three cr
 						break
 					end
@@ -1245,12 +1260,12 @@ classdef calibrateLuminance < handle
 		end
 		
 		%===============reset======================%
-		function errorString = checkACK(obj,string)
+		function errorString = checkACK(me,string)
 			if ~exist('string','var') || isempty(string); string = 'GENERAL';end
 			tic;
 			while 1
-				if obj.spCAL.BytesAvailable>0
-					sReturn = fread(obj.spCAL,1)';
+				if me.spCAL.BytesAvailable>0
+					sReturn = fread(me.spCAL,1)';
 					if sReturn(1)~=6 % if the return is not 6
 						warning(['error initialising SpectroCAL: returned error code ',num2str(sReturn(1))]);
 						errorString = ['SpectroCAL: ',string];
@@ -1271,28 +1286,28 @@ classdef calibrateLuminance < handle
 		end
 		
 		%===============reset======================%
-		function resetTested(obj)
-			obj.isTested = false;
-			obj.inputValuesTest = [];
-			obj.inputValuesI1Test = [];
-			obj.spectrumTest = [];
+		function resetTested(me)
+			me.isTested = false;
+			me.inputValuesTest = [];
+			me.inputValuesI1Test = [];
+			me.spectrumTest = [];
 		end
 		
 		%===============reset======================%
-		function resetAll(obj)
-			obj.isTested = false;
-			obj.isAnalyzed = false;
-			obj.canAnalyze = false;
-			obj.modelFit = [];
-			obj.inputValues = [];
-			obj.inputValuesI1 = [];
-			obj.inputValuesTest = [];
-			obj.inputValuesI1Test = [];
-			obj.spectrum = [];
-			obj.spectrumTest = [];
-			obj.rampNorm = [];
-			obj.inputValuesNorm = [];
-			obj.ramp = [];
+		function resetAll(me)
+			me.isTested = false;
+			me.isAnalyzed = false;
+			me.canAnalyze = false;
+			me.modelFit = [];
+			me.inputValues = [];
+			me.inputValuesI1 = [];
+			me.inputValuesTest = [];
+			me.inputValuesI1Test = [];
+			me.spectrum = [];
+			me.spectrumTest = [];
+			me.rampNorm = [];
+			me.inputValuesNorm = [];
+			me.ramp = [];
 		end
 		
 		% ===================================================================
@@ -1300,26 +1315,29 @@ classdef calibrateLuminance < handle
 		%> make the CLUT from the gammaTable model fits
 		%>
 		% ===================================================================
-		function makeFinalCLUT(obj)
-			if obj.isAnalyzed == true
-				if obj.choice == 0 
+		function makeFinalCLUT(me)
+			if me.isAnalyzed == true
+				if me.choice == 0 
 					fprintf('--->>> calibrateLumiance: Making Linear Table...\n')
-					obj.finalCLUT = repmat(linspace(0,1,obj.tableLength)',1,3);
-				elseif obj.correctColour && size(obj.gammaTable,2)>1
-					fprintf('--->>> calibrateLumiance: Making Colour-corrected Table from gammaTable: %i...\n',obj.choice);
-					obj.finalCLUT = [obj.gammaTable{obj.choice,2:4}];
+					me.finalCLUT = repmat(linspace(0,1,me.tableLength)',1,3);
+				elseif me.correctColour && size(me.gammaTable,2)>1
+					fprintf('--->>> calibrateLumiance: Making Colour-corrected Table from gammaTable: %i...\n',me.choice);
+					me.finalCLUT = [me.gammaTable{me.choice,2:4}];
 				else
-					fprintf('--->>> calibrateLumiance: Making luminance-corrected Table from gammaTable: %i...\n',obj.choice);
-					obj.finalCLUT = repmat(obj.gammaTable{obj.choice,1},1,3);
+					fprintf('--->>> calibrateLumiance: Making luminance-corrected Table from gammaTable: %i...\n',me.choice);
+					me.finalCLUT = repmat(me.gammaTable{me.choice,1},1,3);
 				end
-				len = size(obj.finalCLUT,1);
-				obj.finalCLUT(1,1) = 0;
-				obj.finalCLUT(1,2) = 0;
-				obj.finalCLUT(1,3) = 0;
-				obj.finalCLUT(len,1) = 1;
-				obj.finalCLUT(len,2) = 1;
-				obj.finalCLUT(len,3) = 1;
-				disp('--->>> calibrateLumiance: finalCLUT generated...')
+				len = size(me.finalCLUT,1);
+				me.finalCLUT(1,1) = 0;
+				me.finalCLUT(1,2) = 0;
+				me.finalCLUT(1,3) = 0;
+				me.finalCLUT(len,1) = 1;
+				me.finalCLUT(len,2) = 1;
+				me.finalCLUT(len,3) = 1;
+				disp('--->>> calibrateLumiance: finalCLUT generated...');
+			else
+				fprintf('--->>> calibrateLumiance: Making Linear Table...\n')
+				me.finalCLUT = repmat(linspace(0,1,me.tableLength)',1,3);
 			end
 		end
 		
@@ -1329,7 +1347,7 @@ classdef calibrateLuminance < handle
 		%> time the ColorCalII is plugged in
 		%>
 		% ===================================================================
-		function zeroCalibration(obj)
+		function zeroCalibration(me)
 			reply = input('*ZERO CALIBRATION* -- please cover the ColorCalII then press enter...','s');
 			if isempty(reply)
 				ColorCal2('ZeroCalibration');
@@ -1338,13 +1356,13 @@ classdef calibrateLuminance < handle
 		end
 		
 		%===============Destructor======================%
-		function delete(obj)
-			obj.verbose=true;
-			obj.closeSpectroCAL();
-			obj.closeScreen();
-			obj.salutation('DELETE Method','Closing calibrateLuminance');
-			obj.plotHandle = [];
-			obj.p = [];
+		function delete(me)
+			me.verbose=true;
+			me.closeSpectroCAL();
+			me.closeScreen();
+			me.salutation('DELETE Method','Closing calibrateLuminance');
+			me.plotHandle = [];
+			me.p = [];
 		end
 		
 		% ===================================================================
@@ -1352,10 +1370,10 @@ classdef calibrateLuminance < handle
 		%>
 		%>
 		% ===================================================================
-		function obj = saveobj(obj)
-			obj.salutation('SAVE Method','Saving calibrateLuminance object')
-			obj.plotHandle = [];
-			obj.p = []; %remove the panel object, useless on reload
+		function me = saveobj(me)
+			me.salutation('SAVE Method','Saving calibrateLuminance object')
+			me.plotHandle = [];
+			me.p = []; %remove the panel object, useless on reload
 		end
 		
 		% ===================================================================
@@ -1363,10 +1381,10 @@ classdef calibrateLuminance < handle
 		%>
 		%> @return out the structure
 		% ===================================================================
-		function out=toStructure(obj)
-			fn = fieldnames(obj);
+		function out=toStructure(me)
+			fn = fieldnames(me);
 			for j=1:length(fn)
-				out.(fn{j}) = obj.(fn{j});
+				out.(fn{j}) = me.(fn{j});
 			end
 		end
 		
@@ -1375,7 +1393,7 @@ classdef calibrateLuminance < handle
 		%>
 		%> @return x
 		% ===================================================================
-		function x = makeUnique(obj,x)
+		function x = makeUnique(me,x)
 			for i = 1:length(x)
 				idx = find(x==x(i));
 				if length(idx) > 1
@@ -1389,7 +1407,7 @@ classdef calibrateLuminance < handle
 		%>
 		%> @return out normalised data
 		% ===================================================================
-		function out = normalize(obj,in)
+		function out = normalize(me,in)
 			if min(in) < 0
 				in(in<0) = 0;
 			end
@@ -1404,31 +1422,31 @@ classdef calibrateLuminance < handle
 		%>
 		%>
 		% ===================================================================
-		function addComments(obj)
+		function addComments(me)
 			ans = questdlg('Do you want to add comments to this calibration?');
 			if strcmpi(ans,'Yes')
-				if iscell(obj.comments)
-					cmts = obj.comments;
+				if iscell(me.comments)
+					cmts = me.comments;
 				else
-					cmts = {obj.comments};
+					cmts = {me.comments};
 				end
 				cmt = inputdlg('Please enter a description for this calibration run:','Luminance Calibration',10,cmts);
 				if ~isempty(cmt)
-					obj.comments{1} = cmt{1};
+					me.comments{1} = cmt{1};
 				end
 			end
 		end
 		
 		%===========Salutation==========%
-		function salutation(obj,in,message)
-			if obj.verbose > 0
+		function salutation(me,in,message)
+			if me.verbose > 0
 				if ~exist('in','var')
 					in = 'General Message';
 				end
 				if exist('message','var')
 					fprintf([message ' | ' in '\n']);
 				else
-					fprintf(['\nHello from ' obj.name ' | calibrateLuminance\n\n']);
+					fprintf(['\nHello from ' me.name ' | calibrateLuminance\n\n']);
 				end
 			end
 		end

@@ -33,10 +33,12 @@ classdef screenManager < optickaCore
 		visualDebug logical = false
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer uint8 = 1
-		%> bitDepth of framebuffer, '8bit' is best for old GPUs, but prefer
-		%> 'FloatingPoint32BitIfPossible' for newer GPUS, and can pass 
-		%> options to enable Display++ modes 'EnableBits++Bits++Output'
-		%> 'EnableBits++Mono++Output' or 'EnableBits++Color++Output'
+		%> float precision and bitDepth of framebuffer/output:  
+		%>  '8bit' is best for old GPUs, but prefer 'FloatingPoint32BitIfPossible' for newer GPUs. 
+		%> Native high bitdepths (assumes FloatingPoint32Bit internal processing): 
+		%>   'PseudoGray', 'Native10Bit', 'Native11Bit', 'Native16Bit', 'Native16BitFloat'
+		%> Options to enable Display++ modes: 
+		%>  'EnableBits++Bits++Output', 'EnableBits++Mono++Output' or 'EnableBits++Color++Output'
 		bitDepth char = 'FloatingPoint32BitIfPossible'
 		%> The acceptable variance in flip timing tests performed when
 		%> screen opens, set with Screen('Preference', 'SyncTestSettings', syncVariance)
@@ -87,7 +89,7 @@ classdef screenManager < optickaCore
 	
 	properties (Constant)
 		%> possible bitDepths
-		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; 'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output'; 'EnablePseudoGrayOutput'; 'EnableNative10BitFramebuffer' }
+		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; 'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'PseudoGray'; 'Native10Bit'; 'Native11Bit'; 'Native16Bit'; 'Native16BitFloat'; 'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output' }
 		%> possible blend modes
 		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR'; 'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA'; 'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' }
 	end
@@ -350,8 +352,24 @@ classdef screenManager < optickaCore
 					end
 				else
 					fprintf('\tNO Display++...\n'); 
-					fprintf('\n---> screenManager: Bit Depth mode set to: %s\n', me.bitDepth);
-					PsychImaging('AddTask', 'General', me.bitDepth);
+					switch me.bitDepth
+						case {'Native10Bit','Native11Bit','Native16Bit'}
+							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+							PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'Framebuffer']);
+							fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
+						case {'Native16BitFloat'}
+							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+							PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'ingPointFramebuffer']);
+							fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
+						case {'PeudoGray'}
+							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+							PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
+							fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
+						otherwise
+							PsychImaging('AddTask', 'General', me.bitDepth);
+							fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
+					end
+					
 					me.isPlusPlus = false;
 				end
 				if me.useRetina == true
@@ -1203,12 +1221,12 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function setRefresh(value)
 			if IsLinux
-				if ~exist('value','var'); value = 144; end
+				if ~exist('value','var'); value = 120; end
 				inf=Screen('ConfigureDisplay','Scanout',1,0);
 				disp('Previous Settings:');
 				disp(inf);
-
-				Screen('ConfigureDisplay','Scanout',1,0,[],[],value);
+				
+				try;Screen('ConfigureDisplay','Scanout',1,0,[],[],value);end
 
 				inf=Screen('ConfigureDisplay','Scanout',1,0);
 				disp('New Settings:');
