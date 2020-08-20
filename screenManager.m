@@ -326,28 +326,36 @@ classdef screenManager < optickaCore
 				
 				PsychImaging('PrepareConfiguration');
 				%PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-				%PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange'); %we always want 0-1 colour range!
 				fprintf('---> screenManager: Probing for a Display++...');
 				me.isPlusPlus = screenManager.bitsCheckOpen();
 				if me.isPlusPlus
 					fprintf('\tFound Display++ ');
 					if regexpi(me.bitDepth, '^EnableBits')
-						if me.isPlusPlus
-							fprintf('-> mode: %s\n', me.bitDepth);
-							PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
-							if regexp(me.bitDepth, 'Color')
-								PsychImaging('AddTask', 'General', me.bitDepth, 2);
-							else
-								PsychImaging('AddTask', 'General', me.bitDepth);
-							end
+						fprintf('-> mode: %s\n', me.bitDepth);
+						PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
+						if regexp(me.bitDepth, 'Color')
+							PsychImaging('AddTask', 'General', me.bitDepth, 2);
 						else
-							fprintf('---> screenManager: No Display++ found, revert to FloatingPoint32Bit mode.\n');
-							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
-							me.isPlusPlus = false;
+							PsychImaging('AddTask', 'General', me.bitDepth);
 						end
 					else
-						fprintf('\n---> screenManager: Bit Depth mode set to: %s\n', me.bitDepth);
-						PsychImaging('AddTask', 'General', me.bitDepth);
+						switch me.bitDepth
+							case {'Native10Bit','Native11Bit','Native16Bit'}
+								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+								PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'Framebuffer']);
+								fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
+							case {'Native16BitFloat'}
+								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+								PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'ingPointFramebuffer']);
+								fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
+							case {'PeudoGray'}
+								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+								PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
+								fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
+							otherwise
+								PsychImaging('AddTask', 'General', me.bitDepth);
+								fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
+						end
 						me.isPlusPlus = false;
 					end
 				else

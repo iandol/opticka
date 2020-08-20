@@ -34,7 +34,7 @@ classdef calibrateLuminance < handle
 		%> screen to calibrate
 		screen
 		%> bitDepth of framebuffer, '8bit' is best for old GPUs, but prefer
-		%> 'FloatingPoint32BitIfPossible' for newer GPUS, and can pass 
+		%> 'FloatingPoint32BitIfPossible' for newer GPUS, 'Native10Bit' and can pass 
 		%> options to enable Display++ modes 'EnableBits++Bits++Output'
 		%> 'EnableBits++Mono++Output' or 'EnableBits++Color++Output'
 		bitDepth char = 'FloatingPoint32BitIfPossible'
