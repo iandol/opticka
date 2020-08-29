@@ -604,7 +604,7 @@ classdef screenManager < optickaCore
 		function close(me)
 			if ~me.isPTB; return; end
 			Priority(0); ListenChar(0); ShowCursor;
-			if ~isempty(me.audio) && isa(me.audio, 'audioManager')
+			if ~isempty(me.audio) && isa(me.audio, 'audioManager') && me.audio.isSetup
 				me.audio.reset();
 			end
 			if me.screenVals.resetGamma && isfield(me.screenVals,'originalGamma') && ~isempty(me.screenVals.originalGamma)

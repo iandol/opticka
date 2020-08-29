@@ -163,9 +163,9 @@ classdef audioManager < optickaCore
 			try 
 				if ~isempty(me.aHandle)
 					PsychPortAudio('Stop', me.aHandle, 0, 1); 
+					PsychPortAudio('DeleteBuffer');
+					try PsychPortAudio('Close'); end
 				end
-				PsychPortAudio('DeleteBuffer');
-				try PsychPortAudio('Close'); end
 				me.aHandle = [];
 				me.status = [];
 				me.frequency = [];

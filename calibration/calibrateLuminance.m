@@ -1019,9 +1019,9 @@ classdef calibrateLuminance < handle
 		
 		%===============reset======================%
 		function close(me)
+			me.closeSpectroCAL();
 			me.resetTested();
 			me.resetAll();
-			me.closeSpectroCAL();
 		end
 		
 		%===============init======================%
@@ -1360,7 +1360,7 @@ classdef calibrateLuminance < handle
 			me.verbose=true;
 			me.closeSpectroCAL();
 			me.closeScreen();
-			me.salutation('DELETE Method','Closing calibrateLuminance');
+			me.salutation('DELETE Method',['Closing: ' me.uuid]);
 			me.plotHandle = [];
 			me.p = [];
 		end
@@ -1438,15 +1438,14 @@ classdef calibrateLuminance < handle
 		end
 		
 		%===========Salutation==========%
-		function salutation(me,in,message)
-			if me.verbose > 0
-				if ~exist('in','var')
-					in = 'General Message';
-				end
+		function salutation(me,in,message,override)
+			if ~exist('override','var') || isempty(override); override == false; end
+			if me.verbose > 0 || override
+				if ~exist('in','var') || isempty(in); in = 'General Message'; end
 				if exist('message','var')
-					fprintf([message ' | ' in '\n']);
+					fprintf(['calibrateLuminance<' me.uuid '> ' message ' | ' in '\n']);
 				else
-					fprintf(['\nHello from ' me.name ' | calibrateLuminance\n\n']);
+					fprintf(['calibrateLuminance<' me.uuid '> ' in '\n']);
 				end
 			end
 		end

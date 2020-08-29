@@ -603,6 +603,10 @@ classdef analysisCore < optickaCore
 			else
 				nvals = length(data); 
 			end
+			if nvals == 2 && contains(type,'CI')
+				warning('Bootstrap will fails with such a small sample, switching to 2*SD')
+				type = '2SD';
+			end
 			avg=avgfn(data,dim);
 			switch(type)
 				case 'SE'
