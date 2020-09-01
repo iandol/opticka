@@ -1360,7 +1360,7 @@ classdef calibrateLuminance < handle
 			me.verbose=true;
 			me.closeSpectroCAL();
 			me.closeScreen();
-			me.salutation('DELETE Method',['Closing: ' me.uuid]);
+			me.salutation('DELETE Method',['Deleting: ' me.uuid],true);
 			me.plotHandle = [];
 			me.p = [];
 		end
@@ -1439,7 +1439,7 @@ classdef calibrateLuminance < handle
 		
 		%===========Salutation==========%
 		function salutation(me,in,message,override)
-			if ~exist('override','var') || isempty(override); override == false; end
+			if ~exist('override','var') || isempty(override); override = false; end
 			if me.verbose > 0 || override
 				if ~exist('in','var') || isempty(in); in = 'General Message'; end
 				if exist('message','var')
