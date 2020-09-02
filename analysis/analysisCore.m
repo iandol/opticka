@@ -802,8 +802,9 @@ classdef analysisCore < optickaCore
 				lastlab = lab(index,:);  % prepare for next iteration
 			end
 			colors = [0 0 0; colors]; %add black to front
-			colors(2,:) = [1 0 0]; colors(3,:) = [0 0 1]; %swap red and blue entries
-			colors(5,:) = [0.2 0.2 0.2]; %not too different to black!
+			colors(2,:) = [0.8 0 0]; colors(3,:) = [0 0 0.8]; %swap red and blue entries
+			colors(4,:) = [0 0.8 0];
+			colors(5,:) = [0.25 0.25 0.25]; %not too different to black!
 			function c = parsecolor(s)
 				if ischar(s)
 					c = colorstr2rgb(s);
@@ -814,7 +815,7 @@ classdef analysisCore < optickaCore
 				end
 			end
 			function c = colorstr2rgb(c) % Convert a color string to an RGB value.This is cribbed from Matlab's whitebg function.Why don't they make this a stand-alone function?
-				rgbspec = [1 0 0;0 1 0;0 0 1;1 1 1;0 1 1;1 0 1;1 1 0;0 0 0];
+				rgbspec = [0.8 0 0;0 0.8 0;0 0 0.8;1 1 1;0 1 1;1 0 1;1 1 0;0 0 0];
 				cspec = 'rgbwcmyk';
 				k = find(cspec==c(1));
 				if isempty(k); error('MATLAB:InvalidColorString','Unknown color string.');end
@@ -824,7 +825,7 @@ classdef analysisCore < optickaCore
 					if strcmpi(c(1:3),'bla')
 						c = [0 0 0];
 					elseif strcmpi(c(1:3),'blu')
-						c = [0 0 1];
+						c = [0 0 0.8];
 					else
 						error('MATLAB:UnknownColorString', 'Unknown color string.');
 					end
