@@ -1,6 +1,6 @@
 % ========================================================================
-%> @brief screenManager Manages a Screen object
-%> screenManager manages PTB screen settings for opticka. You can set many
+%> @brief screenManager 
+%> screenManager manages (wraps) the PTB screen settings. You can set many
 %> properties of this class to control PTB screens, and use it to open and
 %> close the screen based on those properties. It also manages movie
 %> recording of the screen buffer and some basic drawing commands like grids,
@@ -1221,7 +1221,6 @@ classdef screenManager < optickaCore
 	methods (Static = true) %------------------STATIC METHODS
 	%=======================================================================
 	
-		
 		% ===================================================================
 		%> @brief Set Refresh
 		%> Screen('ConfigureDisplay', setting, screenNumber, outputId 
@@ -1234,11 +1233,38 @@ classdef screenManager < optickaCore
 				disp('Previous Settings:');
 				disp(inf);
 				
-				try;Screen('ConfigureDisplay','Scanout',1,0,[],[],value);end
+				try Screen('ConfigureDisplay','Scanout',1,0,[],[],value); end
 
 				inf=Screen('ConfigureDisplay','Scanout',1,0);
 				disp('New Settings:');
 				disp(inf);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Set Resolution and refresh
+		%> Screen('ConfigureDisplay', setting, screenNumber, outputId 
+		%>   [, newwidth][, newheight][, newHz][, newX][, newY]);
+		% ===================================================================
+		function setResolution(w,h,f)
+			if IsLinux
+				inf=Screen('ConfigureDisplay','Scanout',1,0);
+				disp('Previous Settings:');
+				disp(inf);
+				
+				if exist('w','var') && exist('h','var')
+					try
+						if exist('f','var')
+							Screen('ConfigureDisplay','Scanout',1,0,w,h,f);
+						else
+							Screen('ConfigureDisplay','Scanout',1,0,w,f);
+						end
+
+						inf=Screen('ConfigureDisplay','Scanout',1,0);
+						disp('New Settings:');
+						disp(inf);
+					end
+				end
 			end
 		end
 	
