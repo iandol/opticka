@@ -1,16 +1,16 @@
 % ========================================================================
 %> @brief LABJACKT Connects and manages a LabJack T4 / T7
-%>
+%> This class handles digital I/O and analog streaming.
 % ========================================================================
 classdef labJackT < handle
 	
 	properties
 		%> friendly object name, setting this to 'null' will force silentMode=1
 		name char = 'labJackT'
-		%> what LabJack device to use; 4 = T3, 7 = T7
-		deviceID = 4
+		%> what LabJack device to use; 4 = T4, 7 = T7
+		deviceID double = 4
 		%> if more than one labJack connected, which one to open?
-		device = 1
+		device double = []
 		%> silentMode=true allows one to gracefully fail methods without a labJack connected
 		silentMode logical = false
 		%> header needed by loadlib
@@ -22,7 +22,13 @@ classdef labJackT < handle
 		%> allows the constructor to run the open method immediately (default)
 		openNow logical = true
 		%> strobeTime is time of strobe in ms; max = 100ms
-		strobeTime = 5
+		strobeTime double = 5
+		%> streamChannels
+		streamChannels double = 0
+		%> stream samples
+		streamSamples double = 250
+		%> stream sample rate (Hz)
+		streamSampleRate double = 2000;
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -139,33 +145,43 @@ classdef labJackT < handle
 		%>
 		%> Open the LabJack device
 		% ===================================================================
-		function open(me)
+		function open(me, serial)
 			if me.silentMode || me.isOpen; return; end
-
+			if ~exist('serial','var') || isempty(serial); serial = 'ALL'; end
+			if isnumeric(serial); serial = num2str(serial); end
+			tS=tic;
 			if ~libisloaded(me.libName)
 				try
 					warning off; loadlibrary(me.library,me.header); warning on;
+					me.functionList = libfunctions(me.libName, '-full'); %store our raw lib functions
 				catch ME
 					warning(['Loading the LJM library failed: ' ME.message]);
-					me.version = ['Library Load FAILED: ' ME.message];
+					me.version = ['l.star	Library Load FAILED: ' ME.message];
 					me.silentMode = true;
 					me.verbose = true;
 					return
 				end
 			end
-			me.functionList = libfunctions(me.libName, '-full'); %store our raw lib functions
 
-			[err,me.devCount,me.devTypes] = calllib(me.libName,'LJM_ListAll',0,0,0,0,[],[],[]);
-			me.checkError(err);
+			if isempty(me.device)
+				[err,me.devCount,me.devTypes] = calllib(me.libName,'LJM_ListAll',0,0,0,0,[],[],[]);
+				me.checkError(err);
+			end
 
 			if me.devCount == 0
 				me.salutation('OPEN','No LabJack devices attached, entering silentMode...',true);
 				me.close();
 				me.silentMode = true;
+				me.device = [];
 				return
+			else
+				if isempty(me.device)
+					me.device = 1; %default to first device
+					me.deviceID = me.devTypes(1);
+				end
 			end
 
-			[err, ~, thandle] = calllib(me.libName,'LJM_Open',0,0,'ANY',0);
+			[err, ~, thandle] = calllib(me.libName,'LJM_Open',0,0,serial,0);
 			me.checkError(err);
 			if err > 0
 				me.salutation('OPEN','Error opening device, entering silentMode...',true);
@@ -194,7 +210,7 @@ classdef labJackT < handle
 
 			me.isValid = me.isHandleValid;
 
-			if ~me.silentMode;me.salutation('OPEN method','Loading the LabJackT is a success!');end	
+			if ~me.silentMode;me.salutation('OPEN method',sprintf('Loading the LabJackT in %.2fsecs: success!',toc(tS)));end	
 		end
 		
 		% ===================================================================
@@ -305,6 +321,99 @@ classdef labJackT < handle
 		end
 		
 		% ===================================================================
+		%> @brief setAIO
+		%>	setAIO sets the value for FIO, 
+		%>	@param channels AIN channels 0-3
+		%>  @return out voltages
+		% ===================================================================
+		function out = getAIN(me,channels)
+			if me.silentMode || isempty(me.handle); return; end
+			if ~exist('channels','var')||isempty(channels);fprintf('\ngetAIN Input options: \n\t\tchannels 0-3\n\n');return;end
+			names = {};
+			channels = channels .* 2; %float32 returns are sequential addresses
+			[err, ~, ~, out] = calllib(me.libName, 'LJM_eReadAddresses', me.handle,...
+				length(channels), channels, repmat(me.LJM_FLOAT32,1,length(channels)), zeros(length(channels)), 0);
+			%me.checkError(err);
+			out = out(:,1)';
+		end
+		
+		% ===================================================================
+		%> @brief startStream
+		%>	
+		% ===================================================================
+		function startStream(me)
+			if me.silentMode || isempty(me.handle); return; end
+			stopStream(me);
+			channels = me.streamChannels .* 2; %AIN float32 returns are sequential addresses
+			[err] = calllib(me.libName, 'LJM_eStreamStart', me.handle,...
+				me.streamSamples, length(channels), channels, me.streamSampleRate);
+			me.checkError(err,true);
+			fprintf('===>>> Stream %s Started: sample rate: %i, # samples: %i\n',num2str(me.streamChannels),me.streamSampleRate,me.streamSamples);
+		end
+		
+		% ===================================================================
+		%> @brief stopStream
+		%>	
+		% ===================================================================
+		function stopStream(me)
+			if me.silentMode || isempty(me.handle); return; end
+			[err] = calllib(me.libName, 'LJM_eStreamStop', me.handle);
+			me.checkError(err);
+			fprintf('===>>> Stream Stopped...\n');
+		end
+		
+		% ===================================================================
+		%> @brief plotStream
+		%>	This plots the last X seconds worth of Analog data (AIN 0-3)
+		% ===================================================================
+		function plotStream(me,time)
+			if ~exist('time','var'); time = 10; end
+			h = figure('Name','LabJack AIN Stream','Units','normalized',...
+				'Position',[0.25 0.25 0.5 0.6],...		
+				'Color',[1 1 1],...
+				'PaperType','A4','PaperUnits','centimeters',...
+				'CloseRequestFcn',{@closeHandler});
+			fprintf('===>>> Starting Stream plot last %.2f secs, close figure to stop plotting...\n',time)
+			dBL = int32(0);
+			lBL = int32(0);
+			f = me.streamSampleRate;
+			n = me.streamSamples;
+			nCh = length(me.streamChannels);
+			iLen = n * nCh;
+			dLen = f * time;
+			time = 0:1/f:dLen/f; time = time(1:dLen)';
+			dt = zeros(iLen,1);
+			data = zeros(dLen,nCh);
+			plot(time,data);drawnow;
+			stop = 0;
+			while ~stop
+				[err, dt, dBL, lBL] = calllib(me.libName, 'LJM_eStreamRead', me.handle,...
+					dt, dBL, lBL);
+				data(1:dLen - n,:) = data(n+1:end,:);
+				if size(data,2) > 1
+					m = mod(1:iLen,nCh);
+					m( m == 0 ) = nCh;
+					for i = 1:nCh
+						data((dLen - n)+1:end,i) = dt(m==i);
+					end
+				else
+					data((dLen - iLen)+1:end) = dt;
+				end
+				plot(time,data);
+				title(sprintf('Dev Backlog: %i | Lib Backlog: %i | Err: %i', dBL, lBL, err));
+				drawnow;
+			end
+			
+			assignin('base','data',table(time,data,'VariableNames',{'Time','AnalogData'}));
+			fprintf('===>>> Stopping plotting, data exported to base workspace, remember to stopStream...\n')
+			
+			function closeHandler (src,evnt)
+				delete(h);
+				stop=1;
+			end
+		end
+		
+		% ===================================================================
 		%> @brief upload the Lua server to the LabJack and start it
 		%>	
 		% ===================================================================
@@ -346,57 +455,16 @@ classdef labJackT < handle
 		end
 		
 		% ===================================================================
-		%> @brief timedTTL Send a TTL with a defined time of pulse
-		%>
-		%> @param line 0-7=FIO, 8-15=EIO, or 16-19=CIO
-		%> @param time time in ms
+		%> @brief upload the Lua server to the LabJack and start it
+		%>	
 		% ===================================================================
-		function timedTTL(me,line,time)
-			if (~exist('line','var') || ~exist('time','var'))
-				fprintf('\ntimedTTL Input options: \n\tline (single value 0-7=FIO, 8-15=EIO, or 16-19=CIO), time (in ms)\n\n');
-				return
-			end
-			me.salutation('timedTTL method',sprintf('Line:%g Tlong:%g Tshort:%g output time = %g ms', line, time1, time2, otime*1000));
-		end
-		
-		% ===================================================================
-		%> @brief setDIO
-		%>	setDIO sets the direction/value for FIO, EIO and CIO
-		%>  If only value supplied, set all others to [255,255,255]
-		%>  @param value is binary identifier for 0-7 bit range
-		%>  @param mask is the mask to apply the command
-		%>  @param valuedir binary identifier for input (0) or output (1) default=[255, 255, 255]
-		%>  @param maskdir is the mask to apply the command. default=[255, 255,255]
-		% ===================================================================
-		function setDIO(me,value,mask,valuedir,maskdir)
+		function stopServer(me)
 			if me.silentMode || isempty(me.handle); return; end
-			if ~exist('value','var');fprintf('\nsetDIO Input options: \n\tvalue, [mask], [value direction], [mask direction]\n\n');return;end
-			if ~exist('mask','var');mask=[255,255,255];end %all DIO by default
-			if ~exist('valuedir','var');valuedir=[255,255,255];maskdir=valuedir;end %all DIO set to output
-		end
-		
-		% ===================================================================
-		%> @brief setDIODirection
-		%>	setDIODirection sets the direction for FIO, EIO and CIO as read or write
-		%>	@param value is binary identifier for 0-7 bit range
-		%> @param mask is the mask to apply the command
-		% ===================================================================
-		function setDIODirection(me,value,mask)
-			if me.silentMode || isempty(me.handle); return; end
-			if ~exist('value','var');fprintf('\nsetDIODirection Input options: \n\t\tvalue, [mask]\n\n');return;end
-			if ~exist('mask','var');mask=[255,255,255];end
-		end
-		
-		% ===================================================================
-		%> @brief setDIOValue
-		%>	setDIOValue sets the value for FIO, EIO and CIO as HIGH or LOW
-		%>	@param value is binary identifier for 0-7 bit range
-		%>  @param mask is the mask to apply the command
-		% ===================================================================
-		function setDIOValue(me,value,mask)
-			if me.silentMode || isempty(me.handle); return; end
-			if ~exist('value','var');fprintf('\nSetDIOValue Input options: \n\t\tvalue, [mask]\n\n');return;end
-			if ~exist('mask','var');mask=[255,255,255];end
+			calllib(me.libName, 'LJM_eWriteName', me.handle, 'LUA_RUN', 0);
+			WaitSecs('YieldSecs',0.1);
+			[err, ~, val] = calllib(me.libName, 'LJM_eReadName', me.handle, 'LUA_RUN', 0);
+			if val==0; disp('===>>> LUA Server is Stopped...'); end
+			me.checkError(err,true);
 		end
 		
 		% ===================================================================
@@ -412,11 +480,18 @@ classdef labJackT < handle
 			end
 		end
 		
-		% ===================================================================
-		%> @brief 
-		%> @param
-		%> @return 
-		% ===================================================================
+	end
+	
+	%=======================================================================
+	methods ( Static ) % STATIC METHODS
+	%=======================================================================
+		
+	end % END STATIC METHODS
+	
+	%=======================================================================
+	methods ( Hidden = true ) % HIDDEN METHODS
+	%=======================================================================
+		
 		function test(me)
 			if me.silentMode || isempty(me.handle); return; end
 			while true
@@ -431,11 +506,21 @@ classdef labJackT < handle
 			end
 		end
 		
-	end
-	
-	%=======================================================================
-	methods ( Static ) % STATIC METHODS
-	%=======================================================================
+		function testAIN(me,channels)
+			stopStream(me);
+			nSamples = 2000;
+			data = zeros(nSamples,length(channels));
+			ti=tic;
+			for i = 1:length(data)
+				smp = me.getAIN(channels);
+				data(i,:) = smp;
+			end
+			fprintf('Time per sample: %.3f ms\n',(toc(ti)/nSamples)*1e3);
+			tic;
+			plot(data);
+			drawnow;
+			toc
+		end
 		
 	end % END STATIC METHODS
 	

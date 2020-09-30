@@ -56,9 +56,9 @@ classdef dataConnection < handle
 		%> server can 'put' or 'eval'
 		autoServer = false
 		%> default read timeout
-		readTimeOut = 0.1
+		readTimeOut = 0
 		%> default write timeout
-		writeTimeOut = 0.1
+		writeTimeOut = 0
 		%> sometimes we shouldn't cleanup connections on delete, e.g. when we pass this
 		%> object to another matlab instance as we will close the wrong connections!!!
 		cleanup = true
