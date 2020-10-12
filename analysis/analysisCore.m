@@ -451,6 +451,50 @@ classdef analysisCore < optickaCore
 		%> @return angX - phase X, degrees
 		%> @return angY - phase Y, degrees
 		% ===================================================================
+		function [P, f, A, p0, p1, p2] = doFFT(p,fs,ff,normalise,useHanning)
+			if nargin < 2; disp('doFFT(p,sample-frequency,[fundamental-frequency],[normalise],[useHanning])');return;end
+			if ~exist('ff','var')||isempty(ff); ff = 10; end
+			if ~exist('normalise','var')||isempty(normalise); normalise = true; end
+			if ~exist('useHanning','var')||isempty(useHanning); useHanning = false; end
+
+			L = length(p);
+
+			if useHanning
+				win = hanning(L, 'periodic');
+				Pi = fft(p.*win'); 
+			else
+				Pi = fft(p);
+			end
+
+			if normalise
+				P2 = abs(Pi/L);
+				P=P2(1:floor(L/2)+1);
+				P(2:end-1) = P(2:end-1)*2;
+				f = fs * (0:(L/2))/L;
+			else
+				NumUniquePts = ceil((L+1)/2);
+				P = abs(Pi(1:NumUniquePts));
+				f = (0:NumUniquePts-1)*fs/L;
+			end
+
+			idx = analysisCore.findNearest(f, ff);
+			p1 = P(idx);
+			A = angle(Pi(idx));
+			idx = analysisCore.findNearest(f, 0);
+			p0 = P(idx);
+			idx = analysisCore.findNearest(f, ff*2);
+			p2 = P(idx);
+		end
+		
+		% ===================================================================
+		%> @brief phaseDifference basic phase diff measurement
+		%>
+		%> @param x - first signal in the time domain
+		%> @param y - second signal in the time domain
+		%> @return phase - phase difference Y -> X, degrees
+		%> @return angX - phase X, degrees
+		%> @return angY - phase Y, degrees
+		% ===================================================================
 		function [PhDiff, angX, angY] = phaseDifference(x,y)	
 			if size(x, 2) > 1 ; x = x'; end% represent x as column-vector if it is not
 			if size(y, 2) > 1; y = y';	end% represent y as column-vector if it is not

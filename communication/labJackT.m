@@ -147,7 +147,7 @@ classdef labJackT < handle
 		% ===================================================================
 		function open(me, serial)
 			if me.silentMode || me.isOpen; return; end
-			if ~exist('serial','var') || isempty(serial); serial = 'ALL'; end
+			if ~exist('serial','var') || isempty(serial); serial = 'ANY'; end
 			if isnumeric(serial); serial = num2str(serial); end
 			tS=tic;
 			if ~libisloaded(me.libName)
@@ -186,7 +186,7 @@ classdef labJackT < handle
 			if err > 0
 				me.salutation('OPEN','Error opening device, entering silentMode...',true);
 				me.close();
-				me.silentMode = true;
+				me.silentMode = true; me.device = [];
 				return
 			else
 				me.handle = thandle;
@@ -223,6 +223,7 @@ classdef labJackT < handle
 				err =  calllib(me.libName,'LJM_Close',me.handle);
 				if err > 0 
 					me.salutation('CLOSE method','LabJack Handle not valid');
+					calllib(me.libName,'LJM_CloseAll');
 				else
 					me.salutation('CLOSE method','LabJack Handle has been closed');
 				end
@@ -232,13 +233,24 @@ classdef labJackT < handle
 				me.isOpen = false;
 				me.isValid = false;
 			else
-				me.salutation('CLOSE method','No handle to close...');
+				me.salutation('CLOSE method','No handle to close, closeAll called...');
+				calllib(me.libName,'LJM_CloseAll');
 				me.devCount = [];
 				me.devTypes = [];
 				me.handle=[];
 				me.isOpen = false;
 				me.isValid = false;
 			end
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%>	
+		% ===================================================================
+		function reset(me)
+			me.close;
+			me.silentMode=false;
+			me.device = [];
 		end
 		
 		% ===================================================================
