@@ -103,11 +103,11 @@ classdef logGaborStimulus < baseStimulus
 				'name','logGabor'));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
-			
+
 			me.isRect = true; %uses a rect for drawing
-			
+
 			checkFileName(me);
-			
+
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor','logGabor Stimulus initialisation complete');
 		end
@@ -131,16 +131,16 @@ classdef logGaborStimulus < baseStimulus
 			if ~exist('in','var'); in = []; end
 			reset(me);
 			me.inSetup = true;
-			
+
 			checkFileName(me);
-			
+
 			if isempty(me.isVisible)
 				me.show;
 			end
-			
+
 			me.sM = sM;
 			me.ppd=sM.ppd;
-			
+
 			me.texture = []; %we need to reset this
 
 			fn = fieldnames(me);
@@ -157,29 +157,31 @@ classdef logGaborStimulus < baseStimulus
 				end
 			end
 
+			if me.angleSigma == 0; me.angleSigmaOut = 0.001; end
+
 			loadImage(me, in);
-			
+
 			%build the mask
 			if me.mask
 				makeMask(me);
 			end
-			
+
 			doProperties(me);
-			
+
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
 			end
-			
+
 			if me.phaseReverseTime > 0
 				me.reversePhase = false;
-				shader = LoadGLSLProgramFromFiles(which('invert.frag'), 1);
-				glUseProgram(shader);
-				glUniform1i(glGetUniformLocation(shader, 'Image'), 0);
+				shad = LoadGLSLProgramFromFiles(which('invert.frag'), 1);
+				glUseProgram(shad);
+				glUniform1i(glGetUniformLocation(shad, 'Image'), 0);
 				glUseProgram(0);
-				me.shader = shader;
+				me.shader = shad;
 				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
 			end
-			
+
 			me.inSetup = false;
 			computePosition(me);
 			setRect(me);
@@ -320,8 +322,8 @@ classdef logGaborStimulus < baseStimulus
 			
 			mul = me.width / me.ppd;
 			
-			if isprop(me,'sfOut')
-				out = me.doLogGabor(in,me.sfOut*me.size,me.sfSigma*10,deg2rad(me.angleOut+90),deg2rad(me.angleSigma));
+			if isprop(me,'sfOut') && isprop(me,'angleSigmaOut')
+				out = me.doLogGabor(in,me.sfOut*me.size,me.sfSigmaOut*10,deg2rad(me.angleOut+90),deg2rad(me.angleSigmaOut));
 			else
 				out = me.doLogGabor(in,me.sf*me.size,me.sfSigma*10,deg2rad(me.angle+90),deg2rad(me.angleSigma));		
 			end
