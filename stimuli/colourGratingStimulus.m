@@ -92,13 +92,17 @@ classdef colourGratingStimulus < baseStimulus
 		maskValue
 		%> the raw shader, we can try to change colours.
 		shader
+		%> these store the current colour so we can check if update needs
+		%to regenerate the shader
+		colourCache
+		colour2Cache
 	end
 	
 	events (ListenAccess = 'protected', NotifyAccess = 'protected') %only this class can access these
 		%> triggered when changing size, so we can change sf etc to compensate
 		changeScale 
 		%> triggered when changing tf or drift direction
-		changePhaseIncrement 
+		changePhaseIncrement
 	end
 	
 	%=======================================================================
@@ -232,7 +236,8 @@ classdef colourGratingStimulus < baseStimulus
 				
 			% this is a two color grating, passing in colorA and colorB.
 			[me.texture, ~, me.shader] = CreateProceduralColorGrating(me.sM.win, me.res(1),...
-				me.res(2), me.colour, me.colour2, me.maskValue);
+				me.res(2), me.colourOut, me.colour2Out, me.maskValue);
+			me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 			
 			me.inSetup = false;
 			computePosition(me);
@@ -252,18 +257,22 @@ classdef colourGratingStimulus < baseStimulus
 			else
 				me.driftPhase=me.phaseOut;
 			end
-			glUseProgram(me.shader);
-			glUniform4f(glGetUniformLocation(me.shader, 'color1'),...
-				me.colourOut(1),me.colourOut(2),me.colourOut(3),me.colourOut(4));
-			glUniform4f(glGetUniformLocation(me.shader, 'color2'),...
-				me.colour2Out(1),me.colour2Out(2),me.colour2Out(3),me.colour2Out(4));
-			if me.mask == true
-				me.maskValue = me.sizeOut/2;
-			else
-				me.maskValue = 0;
+			if ~all(me.colourCache(1:3) == me.colourOut(1:3)) || ...
+				~all(me.colourCache(1:3) == me.colourOut(1:3))
+				glUseProgram(me.shader);
+				glUniform4f(glGetUniformLocation(me.shader, 'color1'),...
+					me.colourOut(1),me.colourOut(2),me.colourOut(3),me.colourOut(4));
+				glUniform4f(glGetUniformLocation(me.shader, 'color2'),...
+					me.colour2Out(1),me.colour2Out(2),me.colour2Out(3),me.colour2Out(4));
+				if me.mask == true
+					me.maskValue = me.sizeOut/2;
+				else
+					me.maskValue = 0;
+				end
+				glUniform1f(glGetUniformLocation(me.shader, 'radius'), me.maskValue);
+				glUseProgram(0);
+				me.colourCache = me.colourOut; me.colour2Cache = me.colour2Out;
 			end
-			glUniform1f(glGetUniformLocation(me.shader, 'radius'), me.maskValue);
-			glUseProgram(0);
 			computePosition(me);
 			setRect(me);
 		end
