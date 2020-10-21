@@ -358,6 +358,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				if ~s.isOpen
 					sv=open(s); %open PTB screen
+				else
+					sv = s.screenVals;
 				end
 				setup(me,s); %setup our stimulus object
 				
