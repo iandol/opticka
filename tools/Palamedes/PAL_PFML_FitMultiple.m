@@ -207,13 +207,13 @@
 %
 %Introduced: Palamedes version 1.0.0 (NP)
 %Modified: Palamedes version 1.0.2, 1.1.0, 1.3.0, 1.4.0, 1.4.2, 1.6.0,
-%   1.6.3 (see History.m)
+%   1.6.3, 1.10.8 (see History.m)
 
 function [paramsValues, LL, exitflag, output, funcParams, numParams] = PAL_PFML_FitMultiple(StimLevels, NumPos, OutOfNum, paramsValues, PF, varargin)
 
 options = [];
-lapseLimits = [];
-guessLimits = [];
+lapseLimits = [0 1];
+guessLimits = [0 1];
 lapseFit = 'nAPLE';
 gammaEQlambda = logical(false);
 funcParams = PAL_PFML_setupParametrizationStruct;

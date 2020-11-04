@@ -86,6 +86,13 @@
 %       list at any point during a trial run. For more information see: 
 %       www.palamedestoolbox.org/psimarginal.html
 %
+%   'gpu'                   logical {false}
+%       If set to true, the heavy duty number crunching will be performed
+%       in parallel by the GPU (Graphical Processing Unit). This can
+%       dramatically decrease the completion time of a call to 
+%       PAL_AMPM_updatePM. This requires Matlab's parallel computing 
+%       toolbox and a compatible GPU.
+%
 %   Example: PM = PAL_AMPM_setupPM('numTrials',100, 'PriorLambdaRange', ...
 %   [0:.01:.1],'marginalize','lapse') creates a new structure using default 
 %   settings for all fields except numTrials, priorLambdaRange, and 
@@ -147,7 +154,7 @@
 %
 % Introduced: Palamedes version 1.0.0 (NP)
 % Modified: Palamedes version 1.1.1, 1.2.0, 1.4.0, 1.5.0, 1.6.0, 1.6.1, 
-%   1.6.3, 1.8.2, 1.10.0 (see History.m)
+%   1.6.3, 1.8.2, 1.10.0, 1.10.5 (see History.m)
 
 function PM = PAL_AMPM_setupPM(varargin)
 
@@ -176,6 +183,7 @@ if mod(NumOpts,2) == 0
     PM.response = [];
     PM.stop = 0;
     PM.marginalize = [];
+    PM.gpu = 0;
 else 
     PM = varargin{1};
 end
@@ -195,6 +203,7 @@ if NumOpts > 1
     opts(10) = cellstr('lambda');           %for compatibility with older usage
     opts(11) = cellstr('gammaEQlambda');
     opts(12) = cellstr('marginalize');
+    opts(13) = cellstr('GPU');
     supplied = logical(false(size(opts)));
 
     for n = 1:2:NumOpts-mod(NumOpts,2)
@@ -289,6 +298,11 @@ if NumOpts > 1
             valid = 1;
             supplied(12) = true;
         end
+        if strncmpi(varargin{n}, opts(13),3)
+            PM.gpu = logical(varargin{n+1});
+            valid = 1;
+            supplied(13) = true;
+        end
         if valid == 0
             warning('PALAMEDES:invalidOption','%s is not a valid option. Ignored.',varargin{n});
         end        
@@ -339,4 +353,15 @@ if PM.firstsession == 1
     PM.seSlopeUniformPrior = [];
     PM.seGuessUniformPrior = [];
     PM.seLapseUniformPrior = [];
+end
+
+if PM.gpu
+    PM.pdf = gpuArray(PM.pdf);
+    PM.prior = gpuArray(PM.prior);
+    PM.LUT = gpuArray(PM.LUT);
+    PM.marginalize = gpuArray(PM.marginalize);
+    PM.priorAlphas = gpuArray(PM.priorAlphas);
+    PM.priorBetas = gpuArray(PM.priorBetas);
+    PM.priorGammas = gpuArray(PM.priorGammas);
+    PM.priorLambdas = gpuArray(PM.priorLambdas);
 end

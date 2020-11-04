@@ -17,8 +17,8 @@
 
 function [version] = PAL_version(varargin)
 
-version_number = [1 10 4];
-date_of_release = 'February 26, 2020';
+version_number = [1 10 8];
+date_of_release = 'October 8, 2020';
 version_text = [int2str(version_number(1)),'.',int2str(version_number(2)),'.',int2str(version_number(3))];
 
 if ~isempty(varargin)

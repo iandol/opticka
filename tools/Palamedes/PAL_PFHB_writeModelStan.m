@@ -6,7 +6,7 @@
 %Internal Function
 %
 % Introduced: Palamedes version 1.10.0 (NP)
-% Modified: Palamedes version 1.10.3 (See History.m)
+% Modified: Palamedes version 1.10.3, 1.10.5 (See History.m)
 
 function [parameters] = PAL_PFHB_writeModelStan(model,engine)
 
@@ -126,7 +126,11 @@ for param = 1:4
                 else
                     entry_txt = ['[',int2str(c),']'];
                 end
-                modelText = [modelText,'   ',params{param},entry_txt,' ~ ',dist_txt,open_txt,num2str(model.(params{param}).priorParams(c,1)),',',num2str(model.(params{param}).priorParams(c,2)),');',char(10)];
+                if strcmp(dist_txt,'beta')
+                    modelText = [modelText,'   ',params{param},entry_txt,' ~ ',dist_txt,open_txt,num2str(model.(params{param}).priorParams(c,1).*model.(params{param}).priorParams(c,2)),',',num2str((1-model.(params{param}).priorParams(c,1)).*model.(params{param}).priorParams(c,2)),');',char(10)];
+                else
+                    modelText = [modelText,'   ',params{param},entry_txt,' ~ ',dist_txt,open_txt,num2str(model.(params{param}).priorParams(c,1)),',',num2str(model.(params{param}).priorParams(c,2)),');',char(10)];
+                end
             end
             
         else
@@ -223,7 +227,7 @@ if model.Nsubj > 1
                             case 'gamm'
                                 kappa_dist = 'gamma';
                         end                                                
-                        modelText = [modelText,'   ',params{param},'mu',entry_txt,' ~ beta(',num2str(model.(strcat(params{param},'mu')).priorParams(c,1)),',',num2str(model.(strcat(params{param},'mu')).priorParams(c,2)),');',char(10)];
+                        modelText = [modelText,'   ',params{param},'mu',entry_txt,' ~ beta(',num2str(model.(strcat(params{param},'mu')).priorParams(c,1).*model.(strcat(params{param},'mu')).priorParams(c,2)),',',num2str((1-model.(strcat(params{param},'mu')).priorParams(c,1)).*model.(strcat(params{param},'mu')).priorParams(c,2)),');',char(10)];
                         modelText = [modelText,'   ',params{param},'kappa',entry_txt,' ~ ',kappa_dist,'(',num2str(model.(strcat(params{param},'kappa')).priorParams(c,1)),',',num2str(model.(strcat(params{param},'kappa')).priorParams(c,2)),');',char(10)];
                     end
                     paramCounter = paramCounter + 1;

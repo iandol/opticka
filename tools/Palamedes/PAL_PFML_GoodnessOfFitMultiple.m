@@ -160,7 +160,7 @@
 % 
 %Introduced: Palemedes version 1.0.0 (NP)
 % Modified: Palamedes version 1.0.2, 1.1.0, 1.2.0, 1.3.0, 1.4.0, 1.6.0, 
-%   1.6.3, 1.8.1 (see History.m)
+%   1.6.3, 1.8.1, 1.10.8 (see History.m)
 
 function [Dev, pDev, DevSim, converged] = PAL_PFML_GoodnessOfFitMultiple(StimLevels, NumPos, OutOfNum, paramsValues, B, PF, varargin)
 
@@ -172,8 +172,8 @@ rangeTries = [1 1 1 .1];
 gammaEQlambda = logical(false);
 lapseFit = 'nAPLE';
 
-lapseLimits = [];
-guessLimits = [];
+lapseLimits = [0 1];
+guessLimits = [0 1];
 
 converged = false(B,1);
 DevSim = zeros(B,1);

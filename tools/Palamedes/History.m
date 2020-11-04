@@ -1812,7 +1812,7 @@
 %PAL_PFHB_fitModel:
 % Modified: Palamedes version 1.10.4 (NP)
 % (1) Changed error message after Stan build fail (2) Report Rhat with 5
-% decimals (even if all decimals are 0) (3) Add engine (stan/jags) version
+% decimals (even if all 5 decimals are 0) (3) Add engine (stan/jags) version
 % number to pfhb structure (in field engine.version). May not always work
 % for JAGS depending on OS/environment(matlab/octave)/parallel(yes/no)
 % combination
@@ -1838,3 +1838,82 @@
 % Modified: Palamedes version 1.10.4 (NP)
 % Added option to 'silently' (no command window output) return Palamedes
 % version number either as text or 3-element vector.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.10.5 Release June 6, 2020
+%
+% Purpose: Minor upgrades & bug fix
+%
+%PAL_AMPM_setupPM:
+% Modified: Palamedes version 1.10.5 (NP)
+% Added option to move the heavy duty computations to GPU (if present and
+%   Parallel Computing Toolbox is installed)
+%
+%PAL_AMPM_updatePM:
+% Modified: Palamedes version 1.10.5 (NP)
+% See PAL_AMPM_setupPM above
+%
+%PAL_PFHB_inspectFit:
+% Modified: Palamedes version 1.10.5 (NP)
+% Added options to display posterior predictive distributions of 
+%   proportions correct for each stimulus intensity used.
+%
+%PAL_PFHB_writeModelStan:
+% Modified: Palamedes version 1.10.5 (NP)
+% Prior parameters for beta were given to Stan as [mean, concentration], 
+%   but Stan expects [a, b]
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.10.6 Release June 7, 2020
+%
+% Purpose: bug fix
+%
+%PAL_PFHB_inspectFit:
+% Modified: Palamedes version 1.10.6 (NP)
+% Bug fix
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.10.7 Release August 24, 2020
+%
+% Purpose: bug fix
+%
+%PAL_PFHB_figureInits:
+% Modified: Palamedes version 1.10.7 (NP)
+% Under certain circumstances the initial values for MCMC for asigma and 
+%   bsigma parameters could be set to zero, which would lead to error.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Version 1.10.8 Release October 8, 2020
+%
+% Purpose: bug fix
+%
+%PAL_PFLR_ModelComparison:
+% Modified: Palamedes version 1.10.8 (NP)
+% Make default lapseLimits and guessLimits [0 1] rather than [] to avoid
+%   possible trouble down the line.
+%
+%PAL_PFML_BootstrapNonParametricMultiple:
+% Modified: Palamedes version 1.10.8 (NP)
+% Make default lapseLimits and guessLimits [0 1] rather than [] to avoid
+%   possible trouble down the line.
+%
+%PAL_PFML_BootstrapParametricMultiple:
+% Modified: Palamedes version 1.10.8 (NP)
+% Make default lapseLimits and guessLimits [0 1] rather than [] to avoid
+%   possible trouble down the line.
+%
+%PAL_PFML_FitMultiple:
+% Modified: Palamedes version 1.10.8 (NP)
+% Make default lapseLimits and guessLimits [0 1] rather than [] to avoid
+%   possible trouble down the line.
+%
+%PAL_PFML_GoodnessOfFit:
+% Modified: Palamedes version 1.10.8 (NP)
+% Make default lapseLimits and guessLimits [0 1] rather than [] to avoid
+%   possible trouble down the line.
+%
+%PAL_PFML_GoodnessOfFitMultiple:
+% Modified: Palamedes version 1.10.8 (NP)
+% Make default lapseLimits and guessLimits [0 1] rather than [] to avoid
+%   possible trouble down the line.
+%

@@ -37,7 +37,8 @@
 %   For more information see: www.palamedestoolbox.org/psimarginal.html
 %
 %Introduced: Palamedes version 1.0.0 (NP)
-%Modified: Palamedes version 1.5.0, 1.6.0, 1.6.1, 1.6.3 (see History.m)
+%Modified: Palamedes version 1.5.0, 1.6.0, 1.6.1, 1.6.3, 1.10.5 (see 
+%   History.m)
 
 function PM = PAL_AMPM_updatePM(PM,response,varargin)
 
@@ -71,23 +72,47 @@ PM.pdf = PM.pdf./sum(sum(sum(sum(PM.pdf))));
 PM.xCurrent = PM.stimRange(PM.I);
 PM.x(trial+1) = PM.xCurrent;
 
-PM.threshold(trial) = sum(sum(sum(sum(PM.priorAlphas.*PM.pdf))));
-PM.slope(trial) = sum(sum(sum(sum(PM.priorBetas.*PM.pdf))));
-PM.guess(trial) = sum(sum(sum(sum(PM.priorGammas.*PM.pdf))));
-PM.lapse(trial) = sum(sum(sum(sum(PM.priorLambdas.*PM.pdf))));
-PM.seThreshold(trial) = sqrt(sum(sum(sum(sum(((PM.priorAlphas-PM.threshold(trial)).^2).*PM.pdf)))));
-PM.seSlope(trial) = sqrt(sum(sum(sum(sum(((PM.priorBetas-PM.slope(trial)).^2).*PM.pdf)))));
-PM.seGuess(trial) = sqrt(sum(sum(sum(sum(((PM.priorGammas-PM.guess(trial)).^2).*PM.pdf)))));
-PM.seLapse(trial) = sqrt(sum(sum(sum(sum(((PM.priorLambdas-PM.lapse(trial)).^2).*PM.pdf)))));
+a = sum(sum(sum(sum(PM.priorAlphas.*PM.pdf))));
+b = sum(sum(sum(sum(PM.priorBetas.*PM.pdf))));
+g = sum(sum(sum(sum(PM.priorGammas.*PM.pdf))));
+l = sum(sum(sum(sum(PM.priorLambdas.*PM.pdf))));
 
-PM.thresholdUniformPrior(trial) = sum(sum(sum(sum(PM.priorAlphas.*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior))));
-PM.slopeUniformPrior(trial) = sum(sum(sum(sum(PM.priorBetas.*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior))));
-PM.guessUniformPrior(trial) = sum(sum(sum(sum(PM.priorGammas.*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior))));
-PM.lapseUniformPrior(trial) = sum(sum(sum(sum(PM.priorLambdas.*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior))));
-PM.seThresholdUniformPrior(trial) = sqrt(sum(sum(sum(sum(((PM.priorAlphas-PM.thresholdUniformPrior(trial)).^2).*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior)))));
-PM.seSlopeUniformPrior(trial) = sqrt(sum(sum(sum(sum(((PM.priorBetas-PM.slopeUniformPrior(trial)).^2).*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior)))));
-PM.seGuessUniformPrior(trial) = sqrt(sum(sum(sum(sum(((PM.priorGammas-PM.guessUniformPrior(trial)).^2).*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior)))));
-PM.seLapseUniformPrior(trial) = sqrt(sum(sum(sum(sum(((PM.priorLambdas-PM.lapseUniformPrior(trial)).^2).*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior)))));
+se_a = sqrt(sum(sum(sum(sum(((PM.priorAlphas-a).^2).*PM.pdf)))));
+se_b = sqrt(sum(sum(sum(sum(((PM.priorBetas-b).^2).*PM.pdf)))));
+se_g = sqrt(sum(sum(sum(sum(((PM.priorGammas-g).^2).*PM.pdf)))));
+se_l = sqrt(sum(sum(sum(sum(((PM.priorLambdas-l).^2).*PM.pdf)))));
+
+aUP = sum(sum(sum(sum(PM.priorAlphas.*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior))));
+bUP = sum(sum(sum(sum(PM.priorBetas.*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior))));
+gUP = sum(sum(sum(sum(PM.priorGammas.*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior))));
+lUP = sum(sum(sum(sum(PM.priorLambdas.*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior))));
+
+se_aUP = sqrt(sum(sum(sum(sum(((PM.priorAlphas-aUP).^2).*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior)))));
+se_bUP = sqrt(sum(sum(sum(sum(((PM.priorBetas-bUP).^2).*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior)))));
+se_gUP = sqrt(sum(sum(sum(sum(((PM.priorGammas-gUP).^2).*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior)))));
+se_lUP = sqrt(sum(sum(sum(sum(((PM.priorLambdas-lUP).^2).*PM.pdf./PM.prior))))./sum(sum(sum(sum(PM.pdf./PM.prior)))));
+
+if PM.gpu
+    [PM.threshold(trial), PM.slope(trial), PM.guess(trial), PM.lapse(trial), PM.seThreshold(trial), PM.seSlope(trial), PM.seGuess(trial), PM.seLapse(trial), PM.thresholdUniformPrior(trial), PM.slopeUniformPrior(trial), PM.guessUniformPrior(trial), PM.lapseUniformPrior(trial), PM.seThresholdUniformPrior(trial), PM.seSlopeUniformPrior(trial), PM.seGuessUniformPrior(trial), PM.seLapseUniformPrior(trial)] = ...
+        gather(a, b, g, l, se_a, se_b, se_g, se_l, aUP, bUP, gUP, lUP, se_aUP, se_bUP, se_gUP, se_lUP);
+else
+    PM.threshold(trial) = a;
+    PM.slope(trial) = b;
+    PM.guess(trial) = g;
+    PM.lapse(trial) = l;
+    PM.seThreshold(trial) = se_a;
+    PM.seSlope(trial) = se_b;
+    PM.seGuess(trial) = se_g;
+    PM.seLapse(trial) = se_l;
+    PM.thresholdUniformPrior(trial) = aUP;
+    PM.slopeUniformPrior(trial) = bUP;
+    PM.guessUniformPrior(trial) = gUP;
+    PM.lapseUniformPrior(trial) = lUP; 
+    PM.seThresholdUniformPrior(trial) = se_aUP;
+    PM.seSlopeUniformPrior(trial) = se_bUP;
+    PM.seGuessUniformPrior(trial) = se_gUP;
+    PM.seLapseUniformPrior(trial) = se_lUP;
+end
 
 if PM.gammaEQlambda
     PM.guess(trial) = PM.lapse(trial);

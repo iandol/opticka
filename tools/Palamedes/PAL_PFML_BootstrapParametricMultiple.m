@@ -181,7 +181,7 @@
 %    
 %Introduced: Palamedes version 1.0.0 (NP)
 %Modified: Palamedes version 1.0.2, 1.1.0, 1.2.0, 1.3.0, 1.4.0, 1.4.2, 
-%   1.6.0, 1.6.3 (see History.m)
+%   1.6.0, 1.6.3, 1.10.8 (see History.m)
 
 function [SD, paramsSim, LLSim, converged, SDfunc, funcParamsSim] = PAL_PFML_BootstrapParametricMultiple(StimLevels, OutOfNum, paramsValues, B, PF, varargin)
 
@@ -192,8 +192,8 @@ maxTries = 1;
 rangeTries = [1 1 1 .1];
 lapseFit = 'nAPLE';
 gammaEQlambda = logical(false);
-lapseLimits = [];
-guessLimits = [];
+lapseLimits = [0 1];
+guessLimits = [0 1];
 
 SDfunc = [];
 paramsSim = zeros(B,size(paramsValues,1),size(paramsValues,2));

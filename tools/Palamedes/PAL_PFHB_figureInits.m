@@ -8,6 +8,7 @@
 %Internal Function
 %
 % Introduced: Palamedes version 1.10.0 (NP)
+% Modified: Palamedes version 1.10.7 (See History.m)
 
 function [engine] = PAL_PFHB_figureInits(engine,model,data)
 
@@ -44,6 +45,8 @@ switch model.PF
 end
 
 if (model.a.Nc > 0 && ~isfield(engine.inits,'a')) || (model.b.Nc > 0 && ~isfield(engine.inits,'b'))
+    maxx = -Inf;
+    minx = Inf;
     m = zeros(model.Ncond,model.Nsubj);
     sd = zeros(model.Ncond,model.Nsubj);
     for s = 1:model.Nsubj
@@ -52,21 +55,24 @@ if (model.a.Nc > 0 && ~isfield(engine.inits,'a')) || (model.b.Nc > 0 && ~isfield
             n = data.n(data.s == s & data.c == c);
             x = x(2:end-1);
             n = n(2:end-1);
+            maxx = max(maxx,max(x));
+            minx = min(minx,min(x));
             m(c,s) = sum(x.*n)/sum(n);
             sd(c,s) = sqrt(sum(n.*(x-m(c,s)).^2)./sum(n));
         end
     end
-end
-    
-if (model.a.Nc > 0 && ~isfield(engine.inits,'a'))
-    engine.inits.a = (model.a.c*(m+sd.*randn(size(m))/5))';    
-    if model.Nsubj > 1
-        [engine.inits.amu, engine.inits.asigma] = PAL_MeanSDSSandSE(engine.inits.a);
+    if (model.a.Nc > 0 && ~isfield(engine.inits,'a'))
+        engine.inits.a = (model.a.c*(m+sd.*randn(size(m))/5))';    
+        if model.Nsubj > 1
+            engine.inits.amu = mean(engine.inits.a);
+            engine.inits.asigma = repmat((maxx-minx)/2,[1,model.Ncond]);
+        end
     end
-end
-if (model.b.Nc > 0 && ~isfield(engine.inits,'b'))
-    engine.inits.b = (model.b.c*(slopeAdjust+(1.5-sd)/2.5))';
-    if model.Nsubj > 1
-        [engine.inits.bmu, engine.inits.bsigma] = PAL_MeanSDSSandSE(engine.inits.b);
+    if (model.b.Nc > 0 && ~isfield(engine.inits,'b'))
+        engine.inits.b = (model.b.c*(slopeAdjust+(1.5-sd)/2.5))';
+        if model.Nsubj > 1
+            engine.inits.bmu = mean(engine.inits.b);
+            engine.inits.bsigma = ones(1,model.Ncond)./4;
+        end    
     end    
 end

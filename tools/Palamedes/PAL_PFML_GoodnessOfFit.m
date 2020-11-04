@@ -166,15 +166,15 @@
 %
 % Introduced: Palemedes version 1.0.0 (NP)
 % Modified: Palamedes version 1.0.2, 1.1.0, 1.2.0, 1.3.9, 1.3.1, 1.4.0,
-%   1.6.3, 1.8.1, 1.9.1 (see History.m)
+%   1.6.3, 1.8.1, 1.9.1, 1.10.8 (see History.m)
 
 function [Dev, pDev, DevSim, converged] = PAL_PFML_GoodnessOfFit(StimLevels, NumPos, OutOfNum, paramsValues, paramsFree, B, PF, varargin)
 
 searchGrid = paramsValues;
 
 options = [];
-lapseLimits = [];
-guessLimits = [];
+lapseLimits = [0 1];
+guessLimits = [0 1];
 lapseFit = 'default';
 gammaEQlambda = logical(false);
 checkLimits = paramsFree(2);
