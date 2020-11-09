@@ -76,10 +76,11 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> requires accurate fps
 		nFrames
 		%> number of independant variables
-		nVars = 0
+		nVars
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		isStimulus
 		%> cache value for nVars
 		nVars_
 		%> handles from obj.showLog

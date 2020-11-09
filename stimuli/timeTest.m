@@ -376,7 +376,7 @@ try
 		col=mod(i*cstep, 1);
 		Screen('FillRect', w, col, [pos+20 pos+20 pos+400 pos+400]);
 		
-		% toggle photodiode square every 10 frames
+		% toggle photodiode square every 6 frames
 		f = mod(i, 6);
 		if f == 0; ptoggle = ~ptoggle;end
 		if ptoggle; clog(i) = 1; else; clog(i) = 0; end

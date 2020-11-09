@@ -6,7 +6,7 @@ classdef audioManager < optickaCore
 		numChannels double	= 2
 		frequency double	= 44100
 		lowLatency logical	= true
-		silentMode logical	= false %this allows us to be called even if no arduino is attached
+		silentMode logical	= false %this allows us to be called even if no sound is attached
 		verbose				= true
 	end
 	
@@ -59,16 +59,21 @@ classdef audioManager < optickaCore
                fprintf('You have specified a non-existant device, trying first available device!\n');
                me.device = me.devices(1).DeviceIndex;
                fprintf('Using device %i: %s\n',me.device,me.devices(1).DeviceName);
-            end
-            if isempty(me.aHandle)
-                me.aHandle = PsychPortAudio('Open', me.device, 1, 1);
-            end
-            Snd('Open',me.aHandle); % chain Snd() to this instance
-            PsychPortAudio('Volume', me.aHandle, 1);
-			me.status = PsychPortAudio('GetStatus', me.aHandle);
-			me.frequency = me.status.SampleRate;
-            loadSamples(me);
-			me.isSetup = true;
+			end
+			try
+				if isempty(me.aHandle)
+					me.aHandle = PsychPortAudio('Open', me.device, 1, 1);
+				end
+				Snd('Open',me.aHandle); % chain Snd() to this instance
+				PsychPortAudio('Volume', me.aHandle, 1);
+				me.status = PsychPortAudio('GetStatus', me.aHandle);
+				me.frequency = me.status.SampleRate;
+				loadSamples(me);
+				me.isSetup = true;
+			catch 
+				me.reset();
+				me.silentMode = true;
+			end
         end
         
         % ===================================================================
@@ -76,6 +81,7 @@ classdef audioManager < optickaCore
 		%>  
 		% ===================================================================
 		function loadSamples(me)
+			if me.silentMode; return; end
             if me.isFiles
 				%TODO
 			else
@@ -89,6 +95,7 @@ classdef audioManager < optickaCore
 		%>
 		% ===================================================================
 		function play(me, when)
+			if me.silentMode; return; end
 			if ~exist('when','var'); when = []; end
 			if ~me.isSetup; setup(me);end
 			if me.isSetup
@@ -101,6 +108,7 @@ classdef audioManager < optickaCore
 		%>
 		% ===================================================================
 		function waitUntilStopped(me)
+			if me.silentMode; return; end
 			if me.isSetup
 				PsychPortAudio('Stop', me.aHandle, 1, 1);
 			end
@@ -111,6 +119,7 @@ classdef audioManager < optickaCore
         %>
         % ===================================================================
         function beep(me,freq,durationSec,fVolume)
+			if me.silentMode; return; end
 			if ~me.isSetup; setup(me);end
             
 			if ~exist('freq', 'var');freq = 400;end
