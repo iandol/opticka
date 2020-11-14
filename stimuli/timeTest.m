@@ -210,7 +210,7 @@ function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchron
 %%% VBLSyncTest(1000, 0, 0.6, 0, 0, 1, 0)
 
 if nargin < 1 || isempty(n)
-    n = 600;
+    n = 1000;
 end
 
 if nargin < 2 || isempty(numifis)
@@ -245,12 +245,17 @@ if nargin < 9
 	screenNumber = [];
 end
 
+timeON = 100; %ms
+timeOFF = 100; %ms
+
 try
 	PsychDefaultSetup(2);
 	
-	% try to load labJack, more realistic workload
-	lj = labJack('verbose',0);
-	lj.prepareStrobe(2000);
+	% try to load labJackT, more realistic workload
+	global lM
+	if ~isa(lM,'labJackT');lM = labJackT('openNow',false);end
+	if ~lM.isOpen; open(lM); end %open our strobed word manager
+	
 	WaitSecs(0.01)
 	
 	RestrictKeysForKbCheck(KbName('ESCAPE'));
@@ -261,8 +266,8 @@ try
 		Screen('Preference','ConserveVRAM', 16384); % Force use of DWM.
 	end
 	Screen('Preference', 'Verbosity', 4);
-	Screen('Preference','SyncTestSettings', 0.001);
-	
+	Screen('Preference','SyncTestSettings', 0.0001);
+	Screen('Preference', 'VisualDebugLevel', 3)
 	% Get the list of Screens and choose the one with the highest screen number.
 	% Screen 0 is, by definition, the display with the menu bar. Often when
 	% two monitors are connected the one without the menu bar is used as
@@ -280,13 +285,11 @@ try
 	%my psychimaging setup
 	PsychImaging('PrepareConfiguration');
 	PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-	% 8bit FloatingPoint16Bit FloatingPoint32Bit FloatingPoint32BitIfPossible
-	PsychImaging('AddTask', 'General', 'NormalizedHighresColorRange');
 	PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 	
 	% Open double-buffered window: Optionally enable stereo output if
 	% stereo == 1.
-	[w, winRect]=PsychImaging('OpenWindow',screenNumber, 0.5,[],[],[], stereo,[]);
+	[w, winRect]=PsychImaging('OpenWindow',screenNumber, 0,[],[],[], stereo,[]);
 	[oldSrc,oldDst]=Screen('BlendFunction', w, 'GL_ONE','GL_ZERO');
 	fprintf('\n---> Previous OpenGL blending was %s | %s\n', oldSrc, oldDst);
 	fprintf('---> Initial OpenGL blending set to %s | %s\n', 'GL_ONE','GL_ZERO');
@@ -312,10 +315,16 @@ try
 	% fixed 60 Hz refresh interval.
 	framerate=Screen('NominalFramerate', w);
 	if (framerate==0)
-		framerate=60;
+		framerate = 60;
 	end
 	
-	ifinominal=1 / framerate;
+	nFramesON = round(timeON / (1000/framerate));
+	nFramesOFF = round(timeOFF / (1000/framerate));
+	timeON = nFramesON * (1000/framerate);
+	timeOFF = nFramesOFF * (1000/framerate);
+	fprintf('Photodiode: on = %i frames %.2f ms | off = %i frames %.2f ms.\n', nFramesON,timeON,nFramesOFF,timeOFF);
+	
+	ifinominal = 1 / framerate;
 	fprintf('The refresh interval reported by the operating system is %2.5f ms.\n', ifinominal*1000);
 	
 	% Perform a calibration loop to determine the "real" interframe interval
@@ -351,11 +360,14 @@ try
 	sodpixx = ts;
 	boxTime = ts;
 	a = zeros(n,1);
+	b = zeros(n,1);
 	clog = zeros(n,1);
-	b = a;
 	normalize=255;
 	cstep=1/normalize;
-	
+	photodiodeFrame = 1;
+	photodiodeLum = 1;
+	ptoggle = true;
+	sendStrobe = true;
 	% Compute random load distribution for provided loadjitter value:
 	wt=rand(1,n)*(loadjitter*ifi);
 	
@@ -364,7 +376,7 @@ try
 	% started. We need it as a reference value for our WaitBlanking
 	% emulation:
 	tvbl=Screen('Flip', w);
-	ptoggle = true;
+	
 	% Test-loop: Collects n samples.
 	for i=1:n
 		% Draw some simple stim for next frame of animation: We draw a
@@ -376,11 +388,20 @@ try
 		col=mod(i*cstep, 1);
 		Screen('FillRect', w, col, [pos+20 pos+20 pos+400 pos+400]);
 		
-		% toggle photodiode square every 6 frames
-		f = mod(i, 6);
-		if f == 0; ptoggle = ~ptoggle;end
-		if ptoggle; clog(i) = 1; else; clog(i) = 0; end
-		Screen('FillRect', w, clog(i), [winRect(3)-50 0 winRect(3) 50]);
+		% toggle photodiode square 
+		if photodiodeFrame == nFramesON+1
+			ptoggle = false; sendStrobe = true;
+			photodiodeLum = 0;
+		end
+		clog(i) = ptoggle;
+		Screen('FillRect', w, photodiodeLum, [winRect(3)-70 0 winRect(3) 70]);
+		photodiodeFrame = photodiodeFrame + 1;
+		if photodiodeFrame > nFramesON+nFramesOFF
+			ptoggle = true; 
+			photodiodeFrame = 1;
+			photodiodeLum = 1;
+			sendStrobe = true;
+		end
 		
 		if (stereo>0)
 			% Show something for the right eye as well in stereo mode:
@@ -466,11 +487,7 @@ try
 		%if c == 1; lj.strobeWord; end
 		% Record timestamp for later use:
 		ts(i) = tvbl;
-		
-		% And give user a chance to abort the test by pressing any key:
-		if KbCheck
-			break;
-		end
+		if sendStrobe; lM.strobeServer(255); sendStrobe = false; end
 	end % Draw next frame...
 	Screen('Flip', w);
 	Screen('BlendFunction', w, oldSrc,oldDst);

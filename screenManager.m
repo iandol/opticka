@@ -36,7 +36,7 @@ classdef screenManager < optickaCore
 		%> float precision and bitDepth of framebuffer/output:  
 		%>  '8bit' is best for old GPUs, but prefer 'FloatingPoint32BitIfPossible' for newer GPUs. 
 		%> Native high bitdepths (assumes FloatingPoint32Bit internal processing): 
-		%>   'PseudoGray', 'Native10Bit', 'Native11Bit', 'Native16Bit', 'Native16BitFloat'
+		%>   'PseudoGray', 'HDR', 'Native10Bit', 'Native11Bit', 'Native16Bit', 'Native16BitFloat'
 		%> Options to enable Display++ modes: 
 		%>  'EnableBits++Bits++Output', 'EnableBits++Mono++Output' or 'EnableBits++Color++Output'
 		bitDepth char = 'FloatingPoint32BitIfPossible'
@@ -89,9 +89,14 @@ classdef screenManager < optickaCore
 	
 	properties (Constant)
 		%> possible bitDepths
-		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit'; 'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'PseudoGray'; 'Native10Bit'; 'Native11Bit'; 'Native16Bit'; 'Native16BitFloat'; 'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output' }
+		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit';...
+			'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'PseudoGray';...
+			'HDR'; 'Native10Bit'; 'Native11Bit'; 'Native16Bit'; 'Native16BitFloat';...
+			'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output' }
 		%> possible blend modes
-		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR'; 'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA'; 'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' }
+		blendModes cell = {'GL_ZERO'; 'GL_ONE'; 'GL_DST_COLOR'; 'GL_ONE_MINUS_DST_COLOR';...
+			'GL_SRC_ALPHA'; 'GL_ONE_MINUS_SRC_ALPHA'; 'GL_DST_ALPHA';...
+			'GL_ONE_MINUS_DST_ALPHA'; 'GL_SRC_ALPHA_SATURATE' }
 	end
 	
 	properties (Hidden = true)
@@ -185,32 +190,32 @@ classdef screenManager < optickaCore
 		%> @return screenVals structure of screen values
 		% ===================================================================
 		function screenVals = prepareScreen(me)
-			if me.isPTB == false;warning('No PTB!!!');return;end
-			me.maxScreen=max(Screen('Screens'));
+			if me.isPTB == false; warning('No PTB!!!'); return; end
+			me.maxScreen		= max(Screen('Screens'));
 			
 			%by default choose the (largest number) screen
 			if isempty(me.screen) || me.screen > me.maxScreen
-				me.screen = me.maxScreen;
+				me.screen		= me.maxScreen;
 			end
 			
-			sv = struct();
+			sv					= struct();
 			
 			checkWindowValid(me);
 			
 			%get the gammatable and dac information
-			sv.resetGamma = false;
+			sv.resetGamma		= false;
 			try
 				[sv.originalGamma,sv.dacBits,sv.lutSize]=Screen('ReadNormalizedGammaTable', me.screen);
-				sv.linearGamma = repmat(linspace(0,1,sv.lutSize)',1,3);
-				sv.gammaTable = sv.linearGamma;
+				sv.linearGamma  = repmat(linspace(0,1,sv.lutSize)',1,3);
+				sv.gammaTable	= sv.linearGamma;
 			catch
-				sv.gammaTable = [];
-				sv.dacBits = [];
-				sv.lutSize = 256;
+				sv.gammaTable	= [];
+				sv.dacBits		= [];
+				sv.lutSize		= 256;
 			end
 			
 			%get screen dimensions
-			sv = setScreenSize(me, sv);
+			sv					= setScreenSize(me, sv);
 			
 			%this is just a rough initial setting, it will be recalculated when we
 			%open the screen before showing stimuli.
@@ -218,7 +223,7 @@ classdef screenManager < optickaCore
 			if sv.fps == 0 || (sv.fps == 59 && IsWin)
 				sv.fps = 60;
 			end
-			sv.ifi=1/sv.fps;
+			sv.ifi				= 1/sv.fps;
 			
 			% initialise our movie settings
 			me.movieSettings = struct('record',false,'loop',inf,'size',[600 600],...
@@ -226,7 +231,7 @@ classdef screenManager < optickaCore
 				'nFrames',sv.fps * 2,'type',1,'codec','x264enc');
 			
 			if me.debug == true %we yoke these together but they can then be overridden
-				me.visualDebug = true;
+				me.visualDebug	= true;
 			end
 			if ismac
 				me.disableSyncTests = true;
@@ -235,20 +240,19 @@ classdef screenManager < optickaCore
 			me.ppd; %generate our dependent propertie and caches it to ppd_ for speed
 			me.makeGrid; %our visualDebug size grid
 			
-			sv.white = WhiteIndex(me.screen);
-			sv.black = BlackIndex(me.screen);
-			sv.gray = GrayIndex(me.screen);
+			sv.white			= WhiteIndex(me.screen);
+			sv.black			= BlackIndex(me.screen);
+			sv.gray				= GrayIndex(me.screen);
 			
 			if IsLinux
-				d=Screen('ConfigureDisplay','Scanout',me.screen,0);
-				sv.name = d.name;
-				sv.widthMM = d.displayWidthMM;
-				sv.heightMM = d.displayHeightMM;
-				sv.display = d;
+				sv.display		= Screen('ConfigureDisplay','Scanout',me.screen,0);
+				sv.name			= sv.display.name;
+				sv.widthMM		= sv.display.displayWidthMM;
+				sv.heightMM		= sv.display.displayHeightMM;
 			end
 			
-			me.screenVals = sv;
-			screenVals = me.screenVals;
+			me.screenVals		= sv;
+			screenVals			= sv;
 			
 		end
 		
@@ -324,8 +328,16 @@ classdef screenManager < optickaCore
 				
 				tL.screenLog.preOpenWindow=GetSecs;
 				
+				%check if system supports HDR mode
+				isHDR = PsychHDR('Supported');
+				if strcmpi(me.bitDepth,'HDR') && ~isHDR
+					warning('---> screenManager: tried to use HDR but it is not supported!');
+					me.bitDepth = 'Native10Bit';
+				end
+				
+				% start to set up PTB screen
 				PsychImaging('PrepareConfiguration');
-				%PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
+				PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
 				fprintf('---> screenManager: Probing for a Display++...');
 				me.isPlusPlus = screenManager.bitsCheckOpen();
 				if me.isPlusPlus
@@ -339,16 +351,19 @@ classdef screenManager < optickaCore
 							PsychImaging('AddTask', 'General', me.bitDepth);
 						end
 					else
-						switch me.bitDepth
-							case {'Native10Bit','Native11Bit','Native16Bit'}
+						switch lower(me.bitDepth)
+							case {'hdr'}
+								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+								PsychImaging('AddTask', 'General', 'EnableHDR');
+							case {'native10bit','native11bit','native16bit'}
 								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 								PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'Framebuffer']);
 								fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
-							case {'Native16BitFloat'}
+							case {'native16bitfloat'}
 								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 								PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'ingPointFramebuffer']);
 								fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
-							case {'PeudoGray'}
+							case {'peudogray'}
 								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 								PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
 								fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
@@ -360,16 +375,19 @@ classdef screenManager < optickaCore
 					end
 				else
 					fprintf('\tNO Display++...\n'); 
-					switch me.bitDepth
-						case {'Native10Bit','Native11Bit','Native16Bit'}
+					switch lower(me.bitDepth)
+						case {'hdr'}
+							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+							PsychImaging('AddTask', 'General', 'EnableHDR');
+						case {'native10bit','native11bit','native16bit'}
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 							PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'Framebuffer']);
 							fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
-						case {'Native16BitFloat'}
+						case {'native16bitfloat'}
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 							PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'ingPointFramebuffer']);
 							fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
-						case {'PeudoGray'}
+						case {'peudogray'}
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 							PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
 							fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
@@ -380,6 +398,7 @@ classdef screenManager < optickaCore
 					
 					me.isPlusPlus = false;
 				end
+				
 				if me.useRetina == true
 					fprintf('---> screenManager: Retina mode enabled\n');
 					PsychImaging('AddTask', 'General', 'UseRetinaResolution');
@@ -416,6 +435,13 @@ classdef screenManager < optickaCore
 				tL.screenLog.deltaOpenWindow=(tL.screenLog.postOpenWindow-tL.screenLog.preOpenWindow)*1000;
 				
 				me.screenVals = setScreenSize(me, me.screenVals);
+			
+				if strcmpi(me.bitDepth,'HDR') && isHDR
+					sv.hdrProperties = PsychHDR('GetHDRProperties', me.win);
+					if IsWin; oldDim = PsychHDR('HDRLocalDimming', me.win, 0); end
+				else 
+					sv.hdrProperties = [];
+				end
 				
 				try
 					AssertGLSL;
@@ -424,19 +450,19 @@ classdef screenManager < optickaCore
 					error('GLSL Shading support is required for Opticka!');
 				end
 				
-				if IsLinux
+				if IsLinux & ~isHDR
 					d=Screen('ConfigureDisplay','Scanout',me.screen,0);
-					sv.name = d.name;
-					sv.widthMM = d.displayWidthMM;
+					sv.name		= d.name;
+					sv.widthMM	= d.displayWidthMM;
 					sv.heightMM = d.displayHeightMM;
-					sv.display = d;
+					sv.display	= d;
 				end
 				
-				sv.win = me.win; %make a copy
-				sv.winRect = me.winRect; %make a copy
+				sv.win			= me.win; %make a copy
+				sv.winRect		= me.winRect; %make a copy
 				
-				sv.ifi = Screen('GetFlipInterval', me.win);
-				sv.fps=Screen('NominalFramerate', me.win);
+				sv.ifi			= Screen('GetFlipInterval', me.win);
+				sv.fps			= Screen('NominalFramerate', me.win);
 				%find our fps if not defined above
 				if sv.fps == 0
 					sv.fps=round(1/sv.ifi);
@@ -481,7 +507,7 @@ classdef screenManager < optickaCore
 					end
 				else
 					sv.linearGamma = repmat(linspace(0,1,sv.lutSize)',1,3);
-					Screen('LoadNormalizedGammaTable', me.screen, sv.linearGamma);
+					%Screen('LoadNormalizedGammaTable', me.screen, sv.linearGamma);
 					%sv.oldCLUT = LoadIdentityClut(me.win);
 					sv.resetGamma = false;
 				end
@@ -643,6 +669,23 @@ classdef screenManager < optickaCore
 			if me.hideFlash == true || me.windowed(1) ~= 1 || (~isempty(me.screenVals) && me.screenVals.resetGamma == true && ~isempty(me.screenVals.linearGamma))
 				fprintf('\n---> screenManager: RESET GAMMA TABLES\n');
 				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.linearGamma);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Set method for bitDepth
+		%>
+		% ===================================================================
+		function set.backgroundColour(me,value)
+			switch length(value)
+				case 1
+					me.backgroundColour = [value value value 1];
+				case 3
+					me.backgroundColour = [value 1];
+				case 4
+					me.backgroundColour = value;
+				otherwise
+					warning('Wrong colour values given, enter 1, 3 or 4 values')
 			end
 		end
 		
@@ -1228,13 +1271,11 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		function setRefresh(value)
 			if IsLinux
-				if ~exist('value','var'); value = 120; end
 				inf=Screen('ConfigureDisplay','Scanout',1,0);
 				disp('Previous Settings:');
 				disp(inf);
-				
+				if ~exist('value','var'); return; end
 				try Screen('ConfigureDisplay','Scanout',1,0,[],[],value); end
-
 				inf=Screen('ConfigureDisplay','Scanout',1,0);
 				disp('New Settings:');
 				disp(inf);
