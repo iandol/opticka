@@ -1,6 +1,7 @@
 % ========================================================================
 %> @brief LABJACKT Connects and manages a LabJack T4 / T7
-%> This class handles digital I/O and analog streaming.
+%> This class handles digital I/O and analog I/O and analog streaming.
+%> Connection can be USB or network.
 % ========================================================================
 classdef labJackT < handle
 	
@@ -11,8 +12,20 @@ classdef labJackT < handle
 		deviceID double = 4
 		%> if more than one labJack connected, which one to open?
 		device double = []
-		%> silentMode=true allows one to gracefully fail methods without a labJack connected
-		silentMode logical = false
+		%> Connection type: ANY, USB, TCP, ETHERNET, WIFI
+		connectType char = 'ANY'
+		%> IP address if using network
+		IP char = '192.168.1.100'
+		%> strobeTime is time of strobe in ms; max = 100ms
+		strobeTime double = 5
+		%> streamChannels which channels to stream
+		streamChannels double = 0
+		%> stream sample rate (Hz)
+		streamSampleRate double = 2000;
+		%> number of stream samples to collect in each read
+		streamSamples double = 500;
+		%> resolution of the stream 0-5 for T4, 0 is default (=1), 5 being best/slowest
+		streamResolution double = 0
 		%> header needed by loadlib
 		header char = '/usr/local/include/LabJackM.h'
 		%> the library itself
@@ -21,20 +34,23 @@ classdef labJackT < handle
 		verbose logical = true
 		%> allows the constructor to run the open method immediately (default)
 		openNow logical = true
-		%> strobeTime is time of strobe in ms; max = 100ms
-		strobeTime double = 5
-		%> streamChannels
-		streamChannels double = 0
-		%> stream samples
-		streamSamples double = 250
-		%> stream sample rate (Hz)
-		streamSampleRate double = 2000;
+		%> silentMode=true allows one to gracefully fail methods without a labJack connected
+		silentMode logical = false
+	end
+	
+	properties (Hidden = true)
+		winLibrary = 'C:\Windows\System32\LabJackM'
+		winHeader = 'C:\Program Files (x86)\LabJack\Drivers\LabJackM.h'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> have we successfully opened the labjack?
+		isOpen = false
+		%> is streaming?
+		isStreaming logical = false
 		%> function list returned from loading LJM
 		functionList
-		%> library version returned on first open
+		%> firmware library version returned on first open
 		version
 		%> device serial number
 		serialNumber
@@ -46,8 +62,6 @@ classdef labJackT < handle
 		devTypes int32
 		%> handle to the opened device itself
 		handle int32 = []
-		%> have we successfully opened the labjack?
-		isOpen = false
 		%> Is our handle a valid one, this is a cache so we save a bit of
 		%> time on calling the method each time
 		isValid = 0
@@ -67,12 +81,6 @@ classdef labJackT < handle
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
-		%> RAM address for communication
-		RAMAddress uint32 = 46000
-		%> minimal lua server to allow fast asynchronous strobing of EIO & CIO
-		miniServer char = 'LJ.setLuaThrottle(100)local a=MB.R;local b=MB.W;local c=-1;b(2601,0,255)b(2602,0,255)b(2501,0,0)b(2502,0,0)b(46000,3,0)while true do c=a(46000,3)if c>=1 and c<=255 then b(2501,0,c)b(61590,1,2000)b(2501,0,0)elseif c>=256 and c<=271 then b(2502,0,c-256)b(61590,1,100000)b(61590,1,100000)b(61590,1,100000)b(2502,0,0)elseif c==0 then b(2501,0,0)end;if c>-1 then b(46000,3,-1)end end'
-		%> test Lua server, just spits out time every second
-		testServer char = 'LJ.IntervalConfig(0,1000)while true do if LJ.CheckInterval(0)then print(LJ.Tick())end end'
 		%> constants
 		LJM_dtANY int32		= 0
 		LJM_dt4 int32		= 4
@@ -88,19 +96,24 @@ classdef labJackT < handle
 		LJM_INT32 int32		= 2
 		LJM_FLOAT32 int32	= 3
 		LJM_TESTRESULT uint32 = 1122867
+		%> RAM address for communication
+		RAMAddress uint32 = 46000
+		%> minimal lua server to allow fast asynchronous strobing of EIO & CIO
+		miniServer char = 'LJ.setLuaThrottle(100)local a=MB.R;local b=MB.W;local c=-1;b(2601,0,255)b(2602,0,255)b(2501,0,0)b(2502,0,0)b(46000,3,0)while true do c=a(46000,3)if c>=1 and c<=255 then b(2501,0,c)b(61590,1,2000)b(2501,0,0)elseif c>=256 and c<=271 then b(2502,0,c-256)b(61590,1,100000)b(61590,1,100000)b(61590,1,100000)b(2502,0,0)elseif c==0 then b(2501,0,0)end;if c>-1 then b(46000,3,-1)end end'
+		%> test Lua server, just spits out time every second
+		testServer char = 'LJ.IntervalConfig(0,1000)while true do if LJ.CheckInterval(0)then print(LJ.Tick())end end'
 		%> library name
 		libName char = 'libLabJackM'
 		%> what properties are allowed to be passed on construction
 		allowedProperties = ['device|deviceID|name|silentMode|verbose|openNow|'...
-			'header|library']
+			'header|library|IP|connectType|'...
+			'streamChannels|streamSamples|streamSampleRate|streamResolution']
 		%>document what our strobed word is actually setting, shown to user if verbose = true
 		strobeComment = ''
 		%> class name
 		className = ''
 		%> timedTTL cache
 		timedTTLCache = []
-		winLibrary = 'C:\Windows\System32\LabJackM'
-		winHeader = 'C:\Program Files (x86)\LabJack\Drivers\LabJackM.h'
 		winLibName = 'LabJackM'
 	end
 	
@@ -153,14 +166,22 @@ classdef labJackT < handle
 			if ~libisloaded(me.libName)
 				try
 					warning off; loadlibrary(me.library,me.header); warning on;
-					me.functionList = libfunctions(me.libName, '-full'); %store our raw lib functions
 				catch ME
+					warning on;
 					warning(['Loading the LJM library failed: ' ME.message]);
-					me.version = ['l.star	Library Load FAILED: ' ME.message];
+					txt = ME.getReport();
+					fprintf('%s\n',txt);
+					fprintf('\nOn Windows, you need to install MINGW to use loadlibrary, check Add-on manager...\n')
+					me.version = 'unknown';
+					me.lastError = ['Library Load FAILED: ' ME.message];
 					me.silentMode = true;
 					me.verbose = true;
 					return
 				end
+			end
+			
+			if isempty(me.functionList)
+				me.functionList = libfunctions(me.libName, '-full'); %store our raw lib functions
 			end
 
 			if isempty(me.device)
@@ -180,8 +201,24 @@ classdef labJackT < handle
 					me.deviceID = me.devTypes(1);
 				end
 			end
-
-			[err, ~, thandle] = calllib(me.libName,'LJM_Open',0,0,serial,0);
+			
+			switch lower(me.connectType)
+				case {'usb'}
+					[err, ~, thandle] = calllib(me.libName,'LJM_Open',...
+						0,me.LJM_ctUSB,serial,0);
+				case {'ethernet'}
+					[err, ~, thandle] = calllib(me.libName,'LJM_Open',...
+						0,me.LJM_ctETHERNET,me.IP,0);
+				case {'tcp'}
+					[err, ~, thandle] = calllib(me.libName,'LJM_Open',...
+						0,me.LJM_ctTCP,me.IP,0);
+				case {'wifi'}
+					[err, ~, thandle] = calllib(me.libName,'LJM_Open',...
+						0,me.LJM_ctWIFI,me.IP,0);
+				otherwise
+					[err, ~, thandle] = calllib(me.libName,'LJM_Open',...
+						0,me.LJM_ctANY,serial,0);
+			end
 			me.checkError(err);
 			if err > 0
 				me.salutation('OPEN','Error opening device, entering silentMode...',true);
@@ -219,13 +256,15 @@ classdef labJackT < handle
 		%>	//Closes the handle of a LabJack USB device.
 		% ===================================================================
 		function close(me)
-			if ~isempty(me.handle)				
-				err =  calllib(me.libName,'LJM_Close',me.handle);
-				if err > 0 
-					me.salutation('CLOSE method','LabJack Handle not valid');
-					calllib(me.libName,'LJM_CloseAll');
-				else
-					me.salutation('CLOSE method','LabJack Handle has been closed');
+			if ~isempty(me.handle)
+				if ~isempty(me.functionList)
+					err =  calllib(me.libName,'LJM_Close',me.handle);
+					if err > 0 
+						me.salutation('CLOSE method','LabJack Handle not valid');
+						try calllib(me.libName,'LJM_CloseAll'); end %#ok<*TRYNC,NOSEMI>
+					else
+						me.salutation('CLOSE method','LabJack Handle has been closed');
+					end
 				end
 				me.devCount = [];
 				me.devTypes = [];
@@ -234,7 +273,7 @@ classdef labJackT < handle
 				me.isValid = false;
 			else
 				me.salutation('CLOSE method','No handle to close, closeAll called...');
-				calllib(me.libName,'LJM_CloseAll');
+				try calllib(me.libName,'LJM_CloseAll');end
 				me.devCount = [];
 				me.devTypes = [];
 				me.handle=[];
@@ -355,12 +394,17 @@ classdef labJackT < handle
 		% ===================================================================
 		function startStream(me)
 			if me.silentMode || isempty(me.handle); return; end
+			oldV = me.verbose; me.verbose = false;
 			stopStream(me);
+			me.verbose = oldV;
+			[err] = calllib(me.libName, 'LJM_eWriteName',me.handle,...
+				'STREAM_RESOLUTION_INDEX', me.streamResolution);
 			channels = me.streamChannels .* 2; %AIN float32 returns are sequential addresses
-			[err] = calllib(me.libName, 'LJM_eStreamStart', me.handle,...
+			[err,~,outrate] = calllib(me.libName, 'LJM_eStreamStart', me.handle,...
 				me.streamSamples, length(channels), channels, me.streamSampleRate);
 			me.checkError(err,true);
-			fprintf('===>>> Stream %s Started: sample rate: %i, # samples: %i\n',num2str(me.streamChannels),me.streamSampleRate,me.streamSamples);
+			me.isStreaming = true;
+			if me.verbose;fprintf('===>>> Stream %s Started: sample rate: %i, # samples: %i, Update time required: %.2f seconds\n',num2str(me.streamChannels),outrate,me.streamSamples,(me.streamSamples/outrate));end
 		end
 		
 		% ===================================================================
@@ -371,36 +415,57 @@ classdef labJackT < handle
 			if me.silentMode || isempty(me.handle); return; end
 			[err] = calllib(me.libName, 'LJM_eStreamStop', me.handle);
 			me.checkError(err);
+			me.isStreaming = false;
 			fprintf('===>>> Stream Stopped...\n');
 		end
 		
 		% ===================================================================
 		%> @brief plotStream
 		%>	This plots the last X seconds worth of Analog data (AIN 0-3)
+		%>
+		%> @param timeL - time in seconds to record
+		%> @param updateN - refresh plot every N loops (too many refreshes slows down recording)
 		% ===================================================================
-		function plotStream(me,time)
-			if ~exist('time','var'); time = 10; end
-			h = figure('Name','LabJack AIN Stream','Units','normalized',...
-				'Position',[0.25 0.25 0.5 0.6],...		
+		function plotStream(me,timeL,updateN)
+			if me.silentMode || isempty(me.handle); return; end
+			if ~exist('time','var'); timeL = 10; end
+			if ~exist('updates','var'); updateN = 5; end
+			h = figure('Name','LabJack AIN Stream (close figure to stop streaming)','Units','normalized',...
+				'Position',[0.2 0.2 0.5 0.6],...		
 				'Color',[1 1 1],...
 				'PaperType','A4','PaperUnits','centimeters',...
 				'CloseRequestFcn',{@closeHandler});
-			fprintf('===>>> Starting Stream plot last %.2f secs, close figure to stop plotting...\n',time)
+			fprintf('===>>> Starting Stream plot of last %.2f secs, close figure to stop plotting...\n',timeL)
+			drawnow;
+			pause(0.3);
+			if ~me.isStreaming;me.startStream();end
+			fprintf('\n...........');
+			%Priority(1);
 			dBL = int32(0);
 			lBL = int32(0);
 			f = me.streamSampleRate;
 			n = me.streamSamples;
 			nCh = length(me.streamChannels);
 			iLen = n * nCh;
-			dLen = f * time;
-			time = 0:1/f:dLen/f; time = time(1:dLen)';
+			dLen = f * timeL;
+			time = 0:1/f:dLen/f; 
+			time = time(1:dLen)';
 			dt = zeros(iLen,1);
 			data = zeros(dLen,nCh);
-			plot(time,data);drawnow;
+			ax = axes(h);
+			plot(ax,time,data);drawnow;
+			ax.HitTest = 'off';
+			ax.Interactions=[];
+			ax.Toolbar = [];
+			plotLoop = 0;
+			dBList = zeros(15,1);
+			lBList = zeros(15,1);
 			stop = 0;
 			while ~stop
 				[err, dt, dBL, lBL] = calllib(me.libName, 'LJM_eStreamRead', me.handle,...
 					dt, dBL, lBL);
+				dBList(1:14) = dBList(2:15); dBList(end) = dBL;
+				lBList(1:14) = lBList(2:15); lBList(end) = lBL;
 				data(1:dLen - n,:) = data(n+1:end,:);
 				if size(data,2) > 1
 					m = mod(1:iLen,nCh);
@@ -411,14 +476,30 @@ classdef labJackT < handle
 				else
 					data((dLen - iLen)+1:end) = dt;
 				end
-				plot(time,data);
-				title(sprintf('Dev Backlog: %i | Lib Backlog: %i | Err: %i', dBL, lBL, err));
-				drawnow;
+				if mod(plotLoop,updateN) == 0
+					plot(ax,time,data);
+					ax.HitTest = 'off';
+					title(sprintf('Dev Backlog: %s | Lib Backlog: %s | Err: %i', ...
+						sprintf('%i ',dBList), sprintf('%i ',lBList), err));
+					drawnow;
+					fprintf('\b\b\b\b\b\b\b\b\b\b\bLoop: %5i',plotLoop)
+				end
+				plotLoop = plotLoop + 1;
 			end
-			
-			assignin('base','data',table(time,data,'VariableNames',{'Time','AnalogData'}));
-			fprintf('===>>> Stopping plotting, data exported to base workspace, remember to stopStream...\n')
-			
+			%Priority(0);
+			assignin('base','streamdata',table(time,data,'VariableNames',{'Time','AnalogData'}));
+			fprintf('===>>> Stopped recording, data exported to base workspace...\n')
+			figure('Name','LabJack AIN Stream Data','Units','normalized',...
+				'Position',[0.2 0.2 0.5 0.6],...		
+				'Color',[1 1 1],...
+				'PaperType','A4','PaperUnits','centimeters');
+			plot(time*1e3,smoothdata(data,'movmedian',3),'k.-');
+			%xlim([1000 2000]);
+			grid on; grid minor
+			xlabel('Time (ms)')
+			ylabel('Voltage (v)');
+			title(sprintf('Stream data recorded @ %i Hz for %i seconds',me.streamSampleRate,timeL));
+			me.stopStream();
 			function closeHandler (src,evnt)
 				delete(h);
 				stop=1;
