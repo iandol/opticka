@@ -209,6 +209,14 @@ function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchron
 
 %%% VBLSyncTest(1000, 0, 0.6, 0, 0, 1, 0)
 
+	% try to load labJackT, more realistic workload
+% 	global lM
+% 	if ~isa(lM,'labJackT');lM = labJackT('openNow',false);end
+% 	if ~lM.isOpen; open(lM); end %open our strobed word manager
+	global aM
+	if ~isa(aM,'arduinoManager');aM = arduinoManager('verbose',false);end
+	if ~aM.isOpen; open(aM); end %open our strobed word manager
+
 if nargin < 1 || isempty(n)
     n = 1000;
 end
@@ -245,18 +253,13 @@ if nargin < 9
 	screenNumber = [];
 end
 
-timeON = 100; %ms
-timeOFF = 100; %ms
+timeON = 25; %ms
+timeOFF = 50; %ms
 
 try
 	PsychDefaultSetup(2);
 	
-	% try to load labJackT, more realistic workload
-	global lM
-	if ~isa(lM,'labJackT');lM = labJackT('openNow',false);end
-	if ~lM.isOpen; open(lM); end %open our strobed word manager
-	
-	WaitSecs(0.01)
+	WaitSecs(0.1);
 	
 	RestrictKeysForKbCheck(KbName('ESCAPE'));
 	
@@ -266,7 +269,7 @@ try
 		Screen('Preference','ConserveVRAM', 16384); % Force use of DWM.
 	end
 	Screen('Preference', 'Verbosity', 4);
-	Screen('Preference','SyncTestSettings', 0.0001);
+	Screen('Preference','SyncTestSettings', 0.0005);
 	Screen('Preference', 'VisualDebugLevel', 3)
 	% Get the list of Screens and choose the one with the highest screen number.
 	% Screen 0 is, by definition, the display with the menu bar. Often when
@@ -284,8 +287,8 @@ try
 	
 	%my psychimaging setup
 	PsychImaging('PrepareConfiguration');
-	PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
-	PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
+	%PsychImaging('AddTask', 'General', 'UseFastOffscreenWindows');
+	%PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 	
 	% Open double-buffered window: Optionally enable stereo output if
 	% stereo == 1.
@@ -365,12 +368,11 @@ try
 	normalize=255;
 	cstep=1/normalize;
 	photodiodeFrame = 1;
-	photodiodeLum = 1;
 	ptoggle = true;
+	photodiodeLum = double(ptoggle);
 	sendStrobe = true;
 	% Compute random load distribution for provided loadjitter value:
 	wt=rand(1,n)*(loadjitter*ifi);
-	
 	% Perform some initial Flip to get us in sync with retrace:
 	% tvbl is the timestamp (system time in seconds) when the retrace
 	% started. We need it as a reference value for our WaitBlanking
@@ -386,21 +388,24 @@ try
 		Screen('SelectStereoDrawBuffer', w, 0);
 		pos=mod(i, screenheight);
 		col=mod(i*cstep, 1);
-		Screen('FillRect', w, col, [pos+20 pos+20 pos+400 pos+400]);
+		Screen('FillRect', w, col, [pos+20 pos+20 pos+520 pos+520]);
 		
 		% toggle photodiode square 
-		if photodiodeFrame == nFramesON+1
-			ptoggle = false; sendStrobe = true;
-			photodiodeLum = 0;
-		end
 		clog(i) = ptoggle;
 		Screen('FillRect', w, photodiodeLum, [winRect(3)-70 0 winRect(3) 70]);
-		photodiodeFrame = photodiodeFrame + 1;
-		if photodiodeFrame > nFramesON+nFramesOFF
-			ptoggle = true; 
-			photodiodeFrame = 1;
-			photodiodeLum = 1;
+		
+		if photodiodeFrame == nFramesON
+			photodiodeFrame = photodiodeFrame + 1;
+			ptoggle = false; 
+			photodiodeLum = double(ptoggle);
 			sendStrobe = true;
+		elseif photodiodeFrame == nFramesON+nFramesOFF
+			ptoggle = true;
+			photodiodeLum = double(ptoggle);
+			sendStrobe = true;
+			photodiodeFrame = 1;
+		else
+			photodiodeFrame = photodiodeFrame + 1;
 		end
 		
 		if (stereo>0)
@@ -487,7 +492,11 @@ try
 		%if c == 1; lj.strobeWord; end
 		% Record timestamp for later use:
 		ts(i) = tvbl;
-		if sendStrobe; lM.strobeServer(255); sendStrobe = false; end
+		if sendStrobe
+			aM.timedTTL(2,5);
+			%lM.strobeServer(255); 
+			sendStrobe = false; 
+		end
 	end % Draw next frame...
 	Screen('Flip', w);
 	Screen('BlendFunction', w, oldSrc,oldDst);

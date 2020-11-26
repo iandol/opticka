@@ -528,13 +528,23 @@ classdef arduinoManager < optickaCore
 			me.availablePins = '';
 			me.isOpen = false;
 			me.ports = seriallist;
-			%me.silentMode = false;
 		end
 		
 		%===============RESET================%
 		function reset(me)
 			close(me);
 			me.silentMode = false;
+			notinlist = true;
+			if ~isempty(me.ports)
+				for i = 1:length(me.ports)
+					if strcmpi(me.port,me.ports{i})
+						notinlist = false;
+					end
+				end
+			end
+			if notinlist && ~isempty(me.ports)
+				me.port = me.ports{end};
+			end
 		end
 		
 	end

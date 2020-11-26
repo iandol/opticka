@@ -215,7 +215,7 @@ void loop() {
 		case 51:
 			/* the third received value indicates the time in ms  */
 			digitalWrite(pin,HIGH);     /* perform Digital Output */
-			delay((unsigned long)val*10);
+			delay((unsigned long)val);
 			digitalWrite(pin,LOW);     /* perform Digital Output */
 			s=-1;  /* we are done with AO so next state is -1      */
 			break; /* s=51 taken care of                           */

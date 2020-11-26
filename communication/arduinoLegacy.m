@@ -18,6 +18,10 @@ classdef arduinoLegacy < handle
 		chkp = true;   % Checks parameters before every operation
 	end
 	
+	properties (SetAccess=private,GetAccess=private)
+		isDemo = false
+	end
+	
 	methods
 		
 		% constructor, connects to the board and creates an arduino object
@@ -26,6 +30,7 @@ classdef arduinoLegacy < handle
 			% check nargin
 			if nargin<1
 				comPort='DEMO';
+				isDemo = true;
 				disp('Note: a DEMO connection will be created');
 				disp('Use a the com port, e.g. ''COM5'' as input argument to connect to the real board');
 			end
@@ -570,13 +575,7 @@ classdef arduinoLegacy < handle
 				if ~isempty(errstr), error(errstr); end
 			end
 			%%%%%%%%%%%%%%%%%%%%%%%%% PERFORM DIGITAL OUTPUT %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-			if strcmpi(get(a.aser,'Port'),'DEMO')
-				% handle demo mode
-				% minimum analog input delay
-				pause(0.0074);
-				% output a random value between 0 and 1023
-				val=round(1023*rand);
-			else
+			if ~a.isDemo
 				% check a.aser for openness if a.chks is true
 				if a.chks
 					errstr=arduinoLegacy.checkser(a.aser,'open');
@@ -584,9 +583,15 @@ classdef arduinoLegacy < handle
 				end
 				if time < 0; time = 0; end
 				if time > 2550; time = 2550; end
-				time = round(time/10);
+				time = round(time);
 				% send mode and pin
 				fwrite(a.aser,[53 97+pin time],'uchar');
+			else
+				% handle demo mode
+				% minimum analog input delay
+				pause(0.0074);
+				% output a random value between 0 and 1023
+				val=round(1023*rand);
 			end
 		end % timedTTL
 		
