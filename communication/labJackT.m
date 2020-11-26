@@ -453,10 +453,11 @@ classdef labJackT < handle
 			dt = zeros(iLen,1);
 			data = zeros(dLen,nCh);
 			ax = axes(h);
-			plot(ax,time,data);drawnow;
+			plot(ax,time,data);
 			ax.HitTest = 'off';
 			ax.Interactions=[];
 			ax.Toolbar = [];
+			drawnow;
 			plotLoop = 0;
 			dBList = zeros(15,1);
 			lBList = zeros(15,1);
@@ -490,12 +491,18 @@ classdef labJackT < handle
 			assignin('base','streamdata',table(time,data,'VariableNames',{'Time','AnalogData'}));
 			fprintf('===>>> Stopped recording, data exported to base workspace...\n')
 			figure('Name','LabJack AIN Stream Data','Units','normalized',...
-				'Position',[0.2 0.2 0.5 0.6],...		
+				'Position',[0.2 0.2 0.7 0.7],...		
 				'Color',[1 1 1],...
 				'PaperType','A4','PaperUnits','centimeters');
-			plot(time*1e3,smoothdata(data,'movmedian',3),'k.-');
+			if size(data,2)>1
+				maxa = max(data(:,1));
+				maxb = max(data(:,2));
+				divi = maxa / maxb;
+				data(:,2) = data(:,2) .* divi;
+			end
+			plot(time*1e3,smoothdata(data,'movmedian',3),'.-');
 			%xlim([1000 2000]);
-			grid on; grid minor
+			grid on; grid minor;
 			xlabel('Time (ms)')
 			ylabel('Voltage (v)');
 			title(sprintf('Stream data recorded @ %i Hz for %i seconds',me.streamSampleRate,timeL));
