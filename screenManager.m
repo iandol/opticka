@@ -11,80 +11,80 @@ classdef screenManager < optickaCore
 	properties
 		%> the monitor to use, 0 is the main display on macOS/Linux
 		%> default value will be set to max(Screen('Screens'))
-		screen double = []
+		screen double							= []
 		%> MBP 1440x900 is 33.2x20.6cm so 44px/cm, Flexscan is 32px/cm @1280 26px/cm @ 1024
 		%> Display++ is 27px/cm @1920x1080
 		%> Use calibrateSize.m function to measure this value accurately for each monitor you will use.
-		pixelsPerCm double = 36
+		pixelsPerCm double						= 36
 		%> distance of subject from Display -- rad2ang(2 * atan( sz / (2 * dis) ) ) = Xdeg
 		%> when sz == 1cm and dis == 57.3cm, X == 1deg
-		distance double = 57.3
+		distance double							= 57.3
 		%> hide the black flash as PTB tests its refresh timing, uses a gamma
 		%> trick from Mario
-		hideFlash logical = false
+		hideFlash logical						= false
 		%> windowed: when FALSE use fullscreen; set to TRUE and it is windowed 800x600pixels or you
 		%> can add in a window width and height i.e. [800 600] to specify windowed size. Remember
 		%> that windowed presentation should never be used for real experimental
 		%> presentation due to poor timing...
-		windowed = false
+		windowed								= false
 		%> change the debug parameters for poorer temporal fidelity but no sync testing etc.
-		debug logical = false
+		debug logical							= false
 		%> shows the info text and position grid during stimulus presentation if true
-		visualDebug logical = false
+		visualDebug logical						= false
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
-		doubleBuffer uint8 = 1
+		doubleBuffer uint8						= 1
 		%> float precision and bitDepth of framebuffer/output:  
 		%>  '8bit' is best for old GPUs, but prefer 'FloatingPoint32BitIfPossible' for newer GPUs. 
 		%> Native high bitdepths (assumes FloatingPoint32Bit internal processing): 
 		%>   'PseudoGray', 'HDR', 'Native10Bit', 'Native11Bit', 'Native16Bit', 'Native16BitFloat'
 		%> Options to enable Display++ modes: 
 		%>  'EnableBits++Bits++Output', 'EnableBits++Mono++Output' or 'EnableBits++Color++Output'
-		bitDepth char = 'FloatingPoint32BitIfPossible'
+		bitDepth char							= 'FloatingPoint32BitIfPossible'
 		%> The acceptable variance in flip timing tests performed when
 		%> screen opens, set with Screen('Preference', 'SyncTestSettings', syncVariance)
 		%> AMD cards under Ubuntu are very low variance, PTB default is 2e-04
-		syncVariance double = 2e-04
+		syncVariance double						= 2e-04
 		%> timestamping mode 1=beamposition,kernel fallback | 2=beamposition crossvalidate with kernel
-		timestampingMode double = 1
+		timestampingMode double					= 1
 		%> multisampling sent to the graphics card, try values 0[disabled], 4, 8
 		%> and 16 -- useful for textures to minimise aliasing, but this
 		%> does provide extra work for the GPU
-		antiAlias double = 0
+		antiAlias double						= 0
 		%> background RGBA of display during stimulus presentation
-		backgroundColour double = [0.5 0.5 0.5 1.0]
+		backgroundColour double					= [0.5 0.5 0.5 1.0]
 		%> shunt center by X degrees (coordinates are in degrees from centre of monitor)
-		screenXOffset double = 0
+		screenXOffset double					= 0
 		%> shunt center by Y degrees (coordinates are in degrees from centre of monitor)
-		screenYOffset double = 0
+		screenYOffset double					= 0
 		%> use OpenGL blending mode
-		blend logical = false
+		blend logical							= false
 		%> OpenGL blending source mode
-		srcMode char = 'GL_SRC_ALPHA'
+		srcMode char							= 'GL_SRC_ALPHA'
 		%> OpenGL blending dst mode
-		dstMode char = 'GL_ONE_MINUS_SRC_ALPHA'
+		dstMode char							= 'GL_ONE_MINUS_SRC_ALPHA'
 		%> show a white square in the top-right corner to trigger a
 		%> photodiode attached to screen. This is only displayed when the
 		%> stimulus is shown, not during the blank and can therefore be used
 		%> for timing validation. For stateMachine tasks you need to
 		%> pass in the drawing command for this to take effect.
-		photoDiode logical = false
+		photoDiode logical						= false
 		%> gamma correction info saved as a calibrateLuminance object
 		gammaTable calibrateLuminance
 		%> settings for movie output
-		movieSettings = []
+		movieSettings							= []
 		%> useful screen info and initial gamma tables and the like
-		screenVals struct = struct('ifi',1/60,'fps',60,'winRect',[0 0 1920 1080])
+		screenVals struct						= struct('ifi',1/60,'fps',60,'winRect',[0 0 1920 1080])
 		%> verbose output?
-		verbose = false
+		verbose									= false
 		%> level of PTB verbosity, set to 10 for full PTB logging
-		verbosityLevel double = 3
+		verbosityLevel double					= 3
 		%> Use retina resolution natively (worse performance but double resolution)
-		useRetina logical = false
+		useRetina logical						= false
 		%> Screen To Head Mapping, a Nx3 vector: Screen('Preference', 'ScreenToHead', screen, head, crtc);
 		%> Each N should be a different display
-		screenToHead = []
+		screenToHead							= []
 		%> force framerate for Display++ (120Hz or 100Hz, empty uses the default OS setup)
-		displayPPRefresh double = []
+		displayPPRefresh double					= []
 	end
 	
 	properties (Constant)
@@ -105,7 +105,7 @@ classdef screenManager < optickaCore
 		audio audioManager
 		%> for some development macOS and windows machines we have to disable sync tests,
 		%> but we hide this as we should remember this is for development ONLY!
-		disableSyncTests logical = false
+		disableSyncTests logical				= false
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -115,19 +115,19 @@ classdef screenManager < optickaCore
 	
 	properties (SetAccess = private, GetAccess = public)
 		%> do we have a working PTB, if not go into a silent mode
-		isPTB logical = false
+		isPTB logical							= false
 		%> is a window currently open?
-		isOpen logical = false
+		isOpen logical							= false
 		%> did we ask for a bitsPlusPlus mode?
-		isPlusPlus logical = false
+		isPlusPlus logical						= false
 		%> the handle returned by opening a PTB window
 		win
 		%> the window rectangle
 		winRect
 		%> computed X center
-		xCenter double = 0
+		xCenter double							= 0
 		%> computed Y center
-		yCenter double = 0
+		yCenter double							= 0
 		%> set automatically on construction
 		maxScreen
 	end
@@ -140,21 +140,21 @@ classdef screenManager < optickaCore
 			'gammaTable|useRetina|bitDepth|pixelsPerCm|distance|screen|windowed|backgroundColour|'...
 			'screenXOffset|screenYOffset|blend|srcMode|dstMode|antiAlias|debug|photoDiode|verbose|hideFlash']
 		%> the photoDiode rectangle in pixel values
-		photoDiodeRect(1,4) double = [0, 0, 45, 45]
+		photoDiodeRect(1,4) double				= [0, 0, 45, 45]
 		%> the values computed to draw the 1deg dotted grid in visualDebug mode
 		grid
 		%> the movie pointer
-		moviePtr = []
+		moviePtr								= []
 		%> movie mat structure
-		movieMat = []
+		movieMat								= []
 		%screen flash logic
-		flashInterval = 20
-		flashTick = 0
-		flashOn = 1
+		flashInterval							= 20
+		flashTick								= 0
+		flashOn									= 1
 		% timed spot logic
-		timedSpotTime = 0
-		timedSpotTick = 0
-		timedSpotNextTick = 0
+		timedSpotTime							= 0
+		timedSpotTick							= 0
+		timedSpotNextTick						= 0
 	end
 	
 	methods

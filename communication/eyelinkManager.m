@@ -7,106 +7,118 @@ classdef eyelinkManager < optickaCore
 	
 	properties
 		%> the PTB screen to work on, passed in during initialise
-		screen = []
+		screen						= []
 		%> eyetracker defaults structure
-		defaults struct = struct()
+		defaults struct				= struct()
 		%> IP address of host
-		IP char = ''
+		IP char						= ''
 		%> start eyetracker in dummy mode?
-		isDummy logical = false
+		isDummy logical				= false
 		%> do we record and retrieve eyetracker EDF file?
-		recordData logical = false;
+		recordData logical			= false;
 		%> name of eyetracker EDF file
-		saveFile char = 'myData.edf'
+		saveFile char				= 'myData.edf'
 		%> do we log messages to the command window?
-		verbose = false
+		verbose						= false
 		%> fixation X position(s) in degrees
-		fixationX double = 0
+		fixationX double			= 0
 		%> fixation Y position(s) in degrees
-		fixationY double = 0
+		fixationY double			= 0
 		%> fixation radius in degrees
-		fixationRadius double = 1
+		fixationRadius double		= 1
 		%> fixation time in seconds
-		fixationTime double = 1
+		fixationTime double			= 1
 		%> only allow 1 entry to fixation window?
-		strictFixation logical = true
+		strictFixation logical		= true
+		%> do we ignore blinks, if true then we do not update X and Y position from
+		%> previous eye location, meaning the various methods will maintain position,
+		%> e.g. if you are fixated and blink, the within-fixation X and Y position are
+		%> retained so that a blink does not "break" fixation. a blink is difined as
+		%a state whre gx and gy are MISSING and pa is 0.
+		ignoreBlinks logical		= false
 		%> time to initiate fixation in seconds
-		fixationInitTime double = 0.25
+		fixationInitTime double		= 0.25
 		%> exclusion zone no eye movement allowed inside
-		exclusionZone = []
+		exclusionZone				= []
 		%> tracker update speed (Hz), should be 250 500 1000 2000
-		sampleRate double = 1000
+		sampleRate double			= 1000
 		%> calibration style
-		calibrationStyle char = 'HV5'
+		calibrationStyle char		= 'HV5'
 		%> use manual remote calibration
-		remoteCalibration logical = false
+		remoteCalibration logical	= false
 		% use callbacks
-		enableCallbacks logical = true
+		enableCallbacks logical		= true
 		%> cutom calibration callback (enables better handling of
 		%> calibration)
-		callback char = 'eyelinkCallback'
+		callback char				= 'eyelinkCallback'
 		%> eyelink defaults modifiers as a struct()
-		modify struct = struct()
+		modify struct				= struct()
 		%> stimulus positions to draw on screen
-		stimulusPositions = []
+		stimulusPositions			= []
 	end
 	
 	properties (Hidden = true)
 		%> verbosity level
-		verbosityLevel double = 4
+		verbosityLevel double		= 4
 		%> force drift correction?
-		forceDriftCorrect logical = true
+		forceDriftCorrect logical	= true
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
 		%> Gaze X position in degrees
-		x = []
+		x							= []
 		%> Gaze Y position in degrees
-		y = []
+		y							= []
 		%> pupil size
-		pupil = []
+		pupil						= []
+		%> do we assume a blink?
+		isBlink						= false
 		%current sample taken from eyelink
-		currentSample = []
+		currentSample				= []
 		%current event taken from eyelink
-		currentEvent = []
+		currentEvent				= []
 		%> Initiate fixation length
-		fixInitLength = 0
+		fixInitLength				= 0
 		%how long have we been fixated?
-		fixLength = 0
+		fixLength					= 0
 		%> Initiate fixation time
-		fixInitStartTime = 0
+		fixInitStartTime			= 0
 		%the first timestamp fixation was true
-		fixStartTime = 0
+		fixStartTime				= 0
 		%> total time searching and holding fixation
-		fixInitTotal = 0
+		fixInitTotal				= 0
 		%> total time searching and holding fixation
-		fixTotal = 0
+		fixTotal					= 0
 		%> last time offset betweeen tracker and display computers
-		currentOffset = 0
+		currentOffset				= 0
 		%> tracker time stamp
-		trackerTime = 0
+		trackerTime					= 0
 		% are we connected to eyelink?
-		isConnected logical = false
+		isConnected logical			= false
 		% are we recording to an EDF file?
-		isRecording logical = false
+		isRecording logical			= false
 		% which eye is the tracker using?
-		eyeUsed = -1
+		eyeUsed						= -1
 		%version of eyelink
-		version = ''
+		version						= ''
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		% value for missing data
+		MISSING_DATA				= -32768
 		%> the PTB screen handle, normally set by screenManager but can force it to use another screen
-		win = []
-		ppd_ double = 35
-		tempFile char = 'MYDATA.edf'
-		fixN double = 0
-		fixSelection = []
-		error = []
+		win							= []
+		ppd_ double					= 35
+		tempFile char				= 'MYDATA.edf'
+		fixN double					= 0
+		fixSelection				= []
+		error						= []
 		%> previous message sent to eyelink
-		previousMessage char = ''
+		previousMessage char		= ''
 		%> allowed properties passed to object upon construction
-		allowedProperties char = 'IP|fixationX|fixationY|fixationRadius|fixationTime|fixationInitTime|sampleRate|calibrationStyle|enableCallbacks|callback|name|verbose|isDummy|remoteCalibration'
+		allowedProperties char		= ['IP|strictFixation|fixationX|fixationY|fixationRadius|' ...
+			'fixationTime|fixationInitTime|ignoreBlink|sampleRate|calibrationStyle|' ...
+			'enableCallbacks|callback|name|verbose|isDummy|remoteCalibration']
 	end
 	
 	methods
@@ -396,10 +408,21 @@ classdef eyelinkManager < optickaCore
 			if me.isConnected && Eyelink('NewFloatSampleAvailable') > 0
 				me.currentSample = Eyelink('NewestFloatSample');% get the sample in the form of an event structure
 				if ~isempty(me.currentSample) && isstruct(me.currentSample)
-					me.x = me.currentSample.gx(me.eyeUsed+1); % +1 as we're accessing MATLAB array
-					me.y = me.currentSample.gy(me.eyeUsed+1);
-					me.pupil = me.currentSample.pa(me.eyeUsed+1);
-					%if me.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',me.x,me.y,me.pupil);end
+					if me.currentSample.gx(me.eyeUsed+1) == me.MISSING_DATA ...
+					&& me.currentSample.gy(me.eyeUsed+1) == me.MISSING_DATA ...
+					&& me.currentSample.pa(me.eyeUsed+1) == 0 ...
+					&& me.ignoreBlinks
+						me.x = toPixels(me,me.fixationX,'x');
+						me.y = toPixels(me,me.fixationY,'y');
+						me.pupil = 0;
+						me.isBlink = true;
+					else
+						me.x = me.currentSample.gx(me.eyeUsed+1); % +1 as we're accessing MATLAB array
+						me.y = me.currentSample.gy(me.eyeUsed+1);
+						me.pupil = me.currentSample.pa(me.eyeUsed+1);
+						me.isBlink = false;
+					end
+					%if me.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g | isBlink: %i\n',me.x,me.y,me.pupil,me.isBlink);end
 				end
 			elseif me.isDummy %lets use a mouse to simulate the eye signal
 				if ~isempty(me.win)
@@ -695,12 +718,20 @@ classdef eyelinkManager < optickaCore
 			if (me.isDummy || me.isConnected) && isa(me.screen,'screenManager') && me.screen.isOpen && ~isempty(me.x) && ~isempty(me.y)
 				xy = toPixels(me,[me.x me.y]);
 				if me.isFixated
-					Screen('DrawDots', me.win, xy, 14, [1 0.5 1 1], [], 1);
+					if ~me.isBlink
+						Screen('DrawDots', me.win, xy, 14, [1 0.5 1 1], [], 1);
+					else
+						Screen('DrawDots', me.win, xy, 7, [0.75 0 0 1], [], 1);
+					end
 					if me.fixLength > me.fixationTime
 						Screen('DrawText', me.win, 'FIX', xy(1), xy(2), [1 1 1]);
 					end
 				else
-					Screen('DrawDots', me.win, xy, 10, [1 0.5 0 1], [], 1);
+					if ~me.isBlink
+						Screen('DrawDots', me.win, xy, 10, [1 0.5 0 1], [], 1);
+					else
+						Screen('DrawDots', me.win, xy, 7, [0.75 0 0 1], [], 1);
+					end
 				end
 			end
 		end
@@ -955,7 +986,7 @@ classdef eyelinkManager < optickaCore
 				s = screenManager('debug',true,'pixelsPerCm',27,'distance',66);
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
-				o = dotsStimulus('size',me.fixation.Radius*2,'speed',2,'mask',true,'density',50); %test stimulus
+				o = dotsStimulus('size',me.fixationRadius*2,'speed',2,'mask',true,'density',50); %test stimulus
 				%x,y,inittime,fixtime,radius,strict)
 				updateFixationValues(me,0,0,1,1,1,true);open(s); %open out screen
 				setup(o,s); %setup our stimulus with open screen
@@ -1003,7 +1034,8 @@ classdef eyelinkManager < optickaCore
 						if ~isempty(me.currentSample)
 							x = me.toPixels(me.x,'x'); %#ok<*PROP>
 							y = me.toPixels(me.y,'y');
-							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | RADIUS = %.1f | FIXATION = %.1f', x, me.x, y, me.y, me.fixationRadius, me.fixLength);
+							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | RADIUS = %.1f | FIXATION = %.1f | BLINK = %i',...
+								x, me.x, y, me.y, me.fixationRadius, me.fixLength, me.isBlink);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me);
 						end
