@@ -209,13 +209,13 @@ function timeTest(n, numifis, loadjitter, clearmode, stereo, flushpipe, synchron
 
 %%% VBLSyncTest(1000, 0, 0.6, 0, 0, 1, 0)
 
-	% try to load labJackT, more realistic workload
-% 	global lM
-% 	if ~isa(lM,'labJackT');lM = labJackT('openNow',false);end
-% 	if ~lM.isOpen; open(lM); end %open our strobed word manager
-	global aM
-	if ~isa(aM,'arduinoManager');aM = arduinoManager('verbose',false);end
-	if ~aM.isOpen; open(aM); end %open our strobed word manager
+% Load a DIO manager to send TTLs for timing tests
+% global lM
+% if ~isa(lM,'labJackT');lM = labJackT('openNow',false);end
+% if ~lM.isOpen; open(lM); end %open our strobed word manager
+% global aM
+% if ~isa(aM,'arduinoManager');aM = arduinoManager('verbose',false);end
+% if ~aM.isOpen; open(aM); end %open our strobed word manager
 
 if nargin < 1 || isempty(n)
     n = 1000;
@@ -493,8 +493,8 @@ try
 		% Record timestamp for later use:
 		ts(i) = tvbl;
 		if sendStrobe
-			aM.timedTTL(2,5);
-			%lM.strobeServer(255); 
+			%aM.timedTTL(2,2);
+			%lM.strobeServer(255);      
 			sendStrobe = false; 
 		end
 	end % Draw next frame...

@@ -171,13 +171,6 @@ classdef arduinoManager < optickaCore
 						timedTTL(me.device, line, 10);
 						WaitSecs('Yieldsecs',time/1e3);
 						timedTTL(me.device, line, 10);
-						% 						digitalWrite(me.device, line, 1);
-						% 						WaitSecs(0.01);
-						% 						digitalWrite(me.device, line, 0);
-						% 						WaitSecs(time/1e3);
-						% 						digitalWrite(me.device, line, 1);
-						% 						WaitSecs(0.01);
-						% 						digitalWrite(me.device, line, 0);
 					otherwise
 						writeDigitalPin(me.device,['D' num2str(line)],1);
 						WaitSecs(0.03);
@@ -550,9 +543,7 @@ classdef arduinoManager < optickaCore
 	end
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
-		
-		
-		
+
 		%===========Delete Method==========%
 		function delete(me)
 			fprintf('arduinoManager Delete method will automagically close connection if open...\n');

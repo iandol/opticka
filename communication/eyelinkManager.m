@@ -34,7 +34,9 @@ classdef eyelinkManager < optickaCore
 		%> previous eye location, meaning the various methods will maintain position,
 		%> e.g. if you are fixated and blink, the within-fixation X and Y position are
 		%> retained so that a blink does not "break" fixation. a blink is difined as
-		%a state whre gx and gy are MISSING and pa is 0.
+		%> a state whre gx and gy are MISSING and pa is 0. Technically we can't 
+		%> really tell if a subject is blinking or has removed their head using the 
+		%> float data.
 		ignoreBlinks logical		= false
 		%> time to initiate fixation in seconds
 		fixationInitTime double		= 0.25
@@ -71,7 +73,7 @@ classdef eyelinkManager < optickaCore
 		y							= []
 		%> pupil size
 		pupil						= []
-		%> do we assume a blink?
+		%> are we in a blink?
 		isBlink						= false
 		%current sample taken from eyelink
 		currentSample				= []
@@ -412,8 +414,8 @@ classdef eyelinkManager < optickaCore
 					&& me.currentSample.gy(me.eyeUsed+1) == me.MISSING_DATA ...
 					&& me.currentSample.pa(me.eyeUsed+1) == 0 ...
 					&& me.ignoreBlinks
-						me.x = toPixels(me,me.fixationX,'x');
-						me.y = toPixels(me,me.fixationY,'y');
+						%me.x = toPixels(me,me.fixationX,'x');
+						%me.y = toPixels(me,me.fixationY,'y');
 						me.pupil = 0;
 						me.isBlink = true;
 					else
