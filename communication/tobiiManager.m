@@ -9,12 +9,13 @@ classdef tobiiManager < optickaCore
 	properties
 		%> model of eyetracker:
 		%> 'Tobi Pro Spectrum' - 'IS4_Large_Peripheral' - 'Tobii TX300'
-		model char = 'Tobii Pro Spectrum'
+		model char {mustBeMember(model,{'Tobii Pro Spectrum','Tobii TX300',...
+			'IS4_Large_Peripheral', 'Tobii Pro Nano'})}= 'Tobii Pro Spectrum'
 		%> tracker update speed (Hz)
 		%> Spectrum Pro: [60, 120, 150, 300, 600 or 1200]
 		%> 4C: 90
 		sampleRate double {mustBeMember(sampleRate,[60 90 120 150 300 600 1200])} = 300
-		%> use human or macaque tracking mode
+		%> use human, macaque, Default or other tracking mode
 		trackingMode char {mustBeMember(trackingMode,{'human','macaque','Default', ...
 			'Infant', 'Bright light'})} = 'human'
 		%> fixation window details
@@ -63,6 +64,8 @@ classdef tobiiManager < optickaCore
 		%> operator screen used during calibration
 		operatorScreen screenManager
 		secondScreen logical = false
+		%> size to draw eye position on screen
+		eyeSize double  = 6
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)
@@ -180,6 +183,10 @@ classdef tobiiManager < optickaCore
 			else
 				me.operatorScreen	= sM2;
 				me.secondScreen		= true;
+			end
+			if contains(me.model,'IS4_Large_Peripheral'); 
+				me.sampleRate = 90; 
+				me.trackingMode = 'Default';
 			end
 			if ~isa(me.tobii, 'Titta') || isempty(me.tobii); initTracker(me); end
 			assert(isa(me.tobii,'Titta'),'TOBIIMANAGER:INIT-ERROR','Cannot Initialise...')
@@ -815,18 +822,20 @@ classdef tobiiManager < optickaCore
 					&& ~isempty(me.currentSample) && me.currentSample.valid
 				xy = [me.currentSample.gx me.currentSample.gy];
 				if details
-					if me.fixLength > 0
+					if me.isFixated
 						if me.fixLength > me.fixation.fixTime
-							%Screen('DrawText', me.win, 'fix', xy(1),xy(2), [0.7 0.7 0.7]);
-							Screen('DrawDots', me.win, xy, 2, [0.2 1 0.5 1], [], 0);
+							Screen('DrawText', me.win, 'fix', xy(1),xy(2), [0.7 0.7 0.7]);
+							Screen('DrawDots', me.win, xy, me.eyeSize, [0 1 0.25 1], [], 0);
 						else
-							Screen('DrawDots', me.win, xy, 2, [1 0 1 1], [], 0);
+							Screen('DrawText', me.win, 'nofix', xy(1),xy(2), [0.7 0.7 0.7]);
+							Screen('DrawDots', me.win, xy, me.eyeSize, [0.75 0 0.75 1], [], 0);
 						end
 					else
-						Screen('DrawDots', me.win, xy, 2, [0.7 0.5 0 1], [], 0);
+						Screen('DrawText', me.win, 'nofix', xy(1),xy(2), [0.7 0.7 0.7]);
+						Screen('DrawDots', me.win, xy, me.eyeSize, [0.7 0.5 0 1], [], 0);
 					end
 				else
-					Screen('DrawDots', me.win, xy, 2, [0.7 0.5 0 1], [], 0);
+					Screen('DrawDots', me.win, xy, me.eyeSize, [0.7 0.5 0 1], [], 0);
 				end
 			end
 		end
@@ -1000,7 +1009,7 @@ classdef tobiiManager < optickaCore
 				s.audio.setup();
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour		= [0.5 0.5 0.5 0];
-				if length(Screen('Screens'))>1
+				if length(Screen('Screens'))>1 && s.screen - 1 >= 0
 					s2					= screenManager;
 					s2.screen			= s.screen - 1;
 					s2.backgroundColour	= s.backgroundColour;
@@ -1033,6 +1042,7 @@ classdef tobiiManager < optickaCore
 				endExp = 0;
 				trialn = 1;
 				maxTrials = 10;
+				psn = cell(maxTrials,1);
 				m=1; n=1;
 				methods={'median','heuristic1','heuristic2','sg','simple'};
 				eyes={'both','left','right'};
@@ -1070,12 +1080,12 @@ classdef tobiiManager < optickaCore
 						getSample(me);
 						
 						if ~isempty(me.currentSample)
-							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %i %s %s | RADIUS = %.1f | FIXATION = %i',...
+							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %2i %s %s | RADIUS = %1.1f | FIX LENGTH = %3i',...
 								me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.smoothing.nSamples,...
 								me.smoothing.method, me.smoothing.eyes, me.fixation.radius, me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
-							drawEyePosition(me);
-							psn{trialn} = me.tobii.buffer.peekN('positioning',1);
+							drawEyePosition(me,true);
+							%psn{trialn} = me.tobii.buffer.peekN('positioning',1);
 						end
 						finishDrawing(s);
 						animate(o);
