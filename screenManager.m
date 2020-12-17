@@ -245,10 +245,12 @@ classdef screenManager < optickaCore
 			sv.gray				= GrayIndex(me.screen);
 			
 			if IsLinux
-				sv.display		= Screen('ConfigureDisplay','Scanout',me.screen,0);
-				sv.name			= sv.display.name;
-				sv.widthMM		= sv.display.displayWidthMM;
-				sv.heightMM		= sv.display.displayHeightMM;
+				try
+					sv.display		= Screen('ConfigureDisplay','Scanout',me.screen,0);
+					sv.name			= sv.display.name;
+					sv.widthMM		= sv.display.displayWidthMM;
+					sv.heightMM		= sv.display.displayHeightMM;
+				end
 			end
 			
 			me.screenVals		= sv;
