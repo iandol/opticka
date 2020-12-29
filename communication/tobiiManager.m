@@ -824,14 +824,14 @@ classdef tobiiManager < optickaCore
 				if details
 					if me.isFixated
 						if me.fixLength > me.fixation.fixTime
-							Screen('DrawText', me.win, 'fix', xy(1),xy(2), [0.7 0.7 0.7]);
+							%Screen('DrawText', me.win, 'fix', xy(1),xy(2), [0.7 0.7 0.7]);
 							Screen('DrawDots', me.win, xy, me.eyeSize, [0 1 0.25 1], [], 0);
 						else
-							Screen('DrawText', me.win, 'nofix', xy(1),xy(2), [0.7 0.7 0.7]);
+							%Screen('DrawText', me.win, 'nofix', xy(1),xy(2), [0.7 0.7 0.7]);
 							Screen('DrawDots', me.win, xy, me.eyeSize, [0.75 0 0.75 1], [], 0);
 						end
 					else
-						Screen('DrawText', me.win, 'nofix', xy(1),xy(2), [0.7 0.7 0.7]);
+						%Screen('DrawText', me.win, 'nofix', xy(1),xy(2), [0.7 0.7 0.7]);
 						Screen('DrawDots', me.win, xy, me.eyeSize, [0.7 0.5 0 1], [], 0);
 					end
 				else
