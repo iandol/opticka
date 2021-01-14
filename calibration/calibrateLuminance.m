@@ -303,7 +303,7 @@ classdef calibrateLuminance < handle
 				me.info(1).version = Screen('Version');
 				me.info(1).comp = Screen('Computer');
 				if IsLinux
-					me.info(1).display = Screen('ConfigureDisplay','Scanout',me.screen,0);
+					try me.info(1).display = Screen('ConfigureDisplay','Scanout',me.screen,0); end
 				end
 			end
 			Screen('FillRect',me.win,[0.7 0.7 0.7],me.screenVals.targetRect);

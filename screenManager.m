@@ -523,7 +523,7 @@ classdef screenManager < optickaCore
 				end
 				
 				if IsLinux
-					Screen('Preference', 'DefaultFontName', 'Liberation Sans');
+					Screen('Preference', 'DefaultFontName', 'Source Sans 3');
 				end
 				
 				sv.white = WhiteIndex(me.screen);
