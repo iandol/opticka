@@ -640,8 +640,19 @@ classdef tobiiManager < optickaCore
 			end
 			
 			me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1e6;
-			r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixation.radius);
-			window = find(r < me.fixation.radius);
+			if length(me.fixation.radius) > 1 %use X + Y rectangle
+				fprintf('X = %1.1f Y = %1.1f | x = %1.1f y = %1.1f | dx = %1.1f dy = %1.1f\n',...
+					me.fixation.X,me.fixation.Y,me.x,me.y,me.fixation.radius(1)/2,me.fixation.radius(2)/2);
+				if ((me.fixation.X + me.x) >= -me.fixation.radius(1)/2 && ...
+				(me.fixation.X + me.x) <= me.fixation.radius(1)/2) ...
+				&& ((me.fixation.Y + me.y) >= -me.fixation.radius(2)/2 && ...
+				(me.fixation.Y + me.y) <= me.fixation.radius(2)/2)
+					window = 1;
+				end	
+			else
+				r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixation.radius);
+				window = find(r < me.fixation.radius);
+			end
 			if any(window)
 				if me.fixN == 0
 					me.fixN = 1;
@@ -650,7 +661,7 @@ classdef tobiiManager < optickaCore
 				if me.fixSelection == window(1)
 					if me.fixStartTime == 0
 						me.fixStartTime = me.currentSample.time;
-						me.fixInitStartTime = 0;
+						ccme.fixInitStartTime = 0;
 					end
 					fixated = true; searching = false;
 					me.fixLength = (me.currentSample.time - me.fixStartTime) / 1e6;
@@ -1019,9 +1030,8 @@ classdef tobiiManager < optickaCore
 					s2.disableSyncTests	= true;
 				end
 				
-				o = dotsStimulus('size',me.fixation.radius*2,'speed',2,'mask',true,'density',50); %test stimulus
+								
 				sv=open(s); %open our screen
-				setup(o,s); %setup our stimulus with open screen
 				
 				if exist('s2','var')
 					initialise(me, s, s2); %initialise tobii with our screen
@@ -1033,12 +1043,25 @@ classdef tobiiManager < optickaCore
 				drawPhotoDiodeSquare(s,[0 0 0 1]); flip(s); %make sure our photodiode patch is black
 				
 				% set up the size and position of the stimulus
-				o.sizeOut = me.fixation.radius*2;
+				o = dotsStimulus('size',me.fixation.radius(1)*2,'speed',2,'mask',true,'density',50); %test stimulus
+				if length(me.fixation.radius) == 1
+					f = discStimulus('size',me.fixation.radius(1)*2);
+				else
+					f = barStimulus('barWidth',me.fixation.radius(1),'barHeight',me.fixation.radius(2));
+				end
+				setup(o,s); %setup our stimulus with open screen
+				setup(f,s); %setup our stimulus with open screen
+				o.sizeOut = me.fixation.radius(1)*2;
 				o.xPositionOut = me.fixation.X;
 				o.yPositionOut = me.fixation.Y;
-				
+				f.colourOut = [0.45 0.45 0.45 1];
+				f.xPositionOut = me.fixation.X;
+				f.xPositionOut = me.fixation.X;
+
+				% warm up
 				fprintf('\n===>>> Warming up the GPU, Eyetracker etc... <<<===\n')
 				Priority(MaxPriority(s.win));
+				HideCursor(s.win);
 				endExp = 0;
 				trialn = 1;
 				maxTrials = 10;
@@ -1063,6 +1086,7 @@ classdef tobiiManager < optickaCore
 				s.drawPhotoDiodeSquare([0 0 0 1]);
 				flip(s);
 				update(o); %make sure stimuli are set back to their start state
+				update(f);
 				WaitSecs('YieldSecs',0.5);
 				trackerMessage(me,'!!! Starting Demo...')
 				while trialn <= maxTrials && endExp == 0
@@ -1072,17 +1096,18 @@ classdef tobiiManager < optickaCore
 					vbl = flip(s); tstart=vbl+sv.ifi;
 					trackerMessage(me,'STARTVBL',vbl);
 					while vbl < tstart + 6
+						draw(f);
 						draw(o);
 						drawGrid(s);
 						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
 						drawPhotoDiodeSquare(s,[1 1 1 1]);
 						
-						getSample(me);
+						getSample(me); isFixated(me);
 						
 						if ~isempty(me.currentSample)
-							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %2i %s %s | RADIUS = %1.1f | FIX LENGTH = %3i',...
+							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | # = %2i %s %s | RADIUS = %s | FIX LENGTH = %3i',...
 								me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.smoothing.nSamples,...
-								me.smoothing.method, me.smoothing.eyes, me.fixation.radius, me.fixLength);
+								me.smoothing.method, me.smoothing.eyes, sprintf('%1.1f ',me.fixation.radius), me.fixLength);
 							Screen('DrawText', s.win, txt, 10, 10);
 							drawEyePosition(me,true);
 							%psn{trialn} = me.tobii.buffer.peekN('positioning',1);
@@ -1114,10 +1139,22 @@ classdef tobiiManager < optickaCore
 						resetFixation(me);
 						me.fixation.X = randi([-7 7]);
 						me.fixation.Y = randi([-7 7]);
-						me.fixation.radius = randi([1 3]);
-						o.sizeOut = me.fixation.radius * 2;
+						if length(me.fixation.radius) == 2
+							me.fixation.radius = [randi([1 3]) randi([1 3])];
+						else
+							me.fixation.radius = randi([1 3]);
+						end
+						o.sizeOut = me.fixation.radius(1) * 2;
 						o.xPositionOut = me.fixation.X;
 						o.yPositionOut = me.fixation.Y;
+						if length(me.fixation.radius) == 1
+							f.sizeOut = me.fixation.radius(1) * 2;
+						else
+							f.barWidth = me.fixation.radius(1);
+							f.barHeight = me.fixation.radius(2);
+						end
+						f.xPositionOut = me.fixation.X;
+						f.yPositionOut = me.fixation.Y;
 						update(o);
 						WaitSecs(0.3);
 						trialn = trialn + 1;

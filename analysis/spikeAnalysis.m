@@ -48,7 +48,7 @@ classdef spikeAnalysis < analysisCore
 		%> chronux reparse, cell is condition, struct is trials
 		chronux cell
 		%> chronux parsed results
-		chresults@struct
+		chresults struct
 		%> trials to remove in reparsing
 		cutTrials int32
 		%> selectedTrials: each cell is a trial list grouping
