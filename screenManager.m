@@ -89,7 +89,7 @@ classdef screenManager < optickaCore
 	
 	properties (Constant)
 		%> possible bitDepths
-		bitDepths cell = {'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit';...
+		bitDepths cell = {''; 'FloatingPoint32BitIfPossible'; 'FloatingPoint32Bit';...
 			'FixedPoint16Bit'; 'FloatingPoint16Bit'; '8bit'; 'PseudoGray';...
 			'HDR'; 'Native10Bit'; 'Native11Bit'; 'Native16Bit'; 'Native16BitFloat';...
 			'EnableBits++Bits++Output'; 'EnableBits++Mono++Output'; 'EnableBits++Color++Output' }
@@ -155,6 +155,8 @@ classdef screenManager < optickaCore
 		timedSpotTime							= 0
 		timedSpotTick							= 0
 		timedSpotNextTick						= 0
+		% async flip management
+		isInAsync								= false
 	end
 	
 	methods
@@ -310,7 +312,7 @@ classdef screenManager < optickaCore
 				if debug == true || (length(me.windowed)==1 && me.windowed ~= 0)
 					fprintf('\n---> screenManager: Skipping Sync Tests etc. - ONLY FOR DEVELOPMENT!\n');
 					Screen('Preference','SyncTestSettings', 0.002); %up to 2ms variability
-					Screen('Preference', 'SkipSyncTests', 2);
+					if me.disableSyncTests;Screen('Preference', 'SkipSyncTests', 2);end
 					Screen('Preference', 'VisualDebugLevel', 0);
 					Screen('Preference', 'Verbosity', me.verbosityLevel);
 					Screen('Preference', 'SuppressAllWarnings', 0);
@@ -365,7 +367,7 @@ classdef screenManager < optickaCore
 								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 								PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'ingPointFramebuffer']);
 								fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
-							case {'peudogray'}
+							case {'pseudogray'}
 								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 								PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
 								fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
@@ -393,9 +395,11 @@ classdef screenManager < optickaCore
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 							PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
 							fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
+						case {'8bit'}
+							PsychImaging('AddTask', 'General', 'UseVirtualFramebuffer');
+							fprintf('\n---> screenManager: Internal processing set to: %s\n', '8 bits');
 						otherwise
-							PsychImaging('AddTask', 'General', me.bitDepth);
-							fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
+							fprintf('\n---> screenManager: No imaging pipeline requested...\n');
 					end
 					
 					me.isPlusPlus = false;
@@ -574,12 +578,71 @@ classdef screenManager < optickaCore
 		%> @param vbl - a vbl time from a previous flip
 		%> @return vbl - a vbl from this flip
 		% ===================================================================
-		function [vbl, when] = flip(me,vbl,varargin)
+		function [vbl, when] = flip(me, vbl, varargin)
 			if ~me.isOpen; return; end
-			if exist('vbl','var')
-				[vbl, when] = Screen('Flip',me.win, vbl + me.screenVals.halfifi,varargin);
+			switch nargin
+				case 4
+					[vbl, when] = Screen('Flip',me.win,vbl,varargin{1},varargin{2});
+				case 3
+					[vbl, when] = Screen('Flip',me.win,vbl,varargin{1});
+				case 2
+					[vbl, when] = Screen('Flip',me.win,vbl);
+				otherwise
+					[vbl, when] = Screen('Flip',me.win);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief Flip the screen asynchrounously
+		%>
+		%> @param when - when to flip
+		%> @return vbl - a vbl from this flip
+		% ===================================================================
+		function vbl = asyncFlip(me, when, varargin)
+			if ~me.isOpen; return; end
+			if me.isInAsync
+				vbl = Screen('AsyncFlipCheckEnd', me.win);
+				if vbl == 0; return; end
+			end
+			if exist('when','var')
+				vbl = Screen('AsyncFlipBegin',me.win, when, varargin{:});
 			else
-				[vbl, when] = Screen('Flip',me.win);
+				vbl = Screen('AsyncFlipBegin',me.win);
+			end
+			me.isInAsync = true;
+		end
+		
+		% ===================================================================
+		%> @brief Check async state?
+		%>
+		%> 
+		%> @return result - is in async state?
+		% ===================================================================
+		function result = asyncCheck(me)
+			if ~me.isOpen; return; end
+			result = false;
+			if me.isInAsync
+				vbl = Screen('AsyncFlipCheckEnd', me.win);
+				if vbl == 0
+					result = true;
+				else
+					me.isInAsync = false;
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief end async state
+		%>
+		%> 
+		%> @return vbl - return time
+		% ===================================================================
+		function vbl = asyncEnd(me)
+			if ~me.isOpen; return; end
+			vbl = 0;
+			if me.isInAsync
+				vbl = Screen('AsyncFlipEnd', me.win);
+				me.isInAsync = false;
 			end
 		end
 		
@@ -639,15 +702,19 @@ classdef screenManager < optickaCore
 				Screen('LoadNormalizedGammaTable', me.screen, me.screenVals.originalGamma);
 				fprintf('\n---> screenManager: REVERT GAMMA TABLES\n');
 			end
-			kind = Screen(me.win, 'WindowKind');
+			if me.isInAsync 
+				Screen('ASyncFlipEnd',me.win);
+			end
+			me.isInAsync = false;
 			if me.isPlusPlus
 				BitsPlusPlus('Close');
 			end
 			me.finaliseMovie(); me.moviePtr = [];
+			kind = Screen(me.win, 'WindowKind');
 			try
 				if kind == 1 
+					fprintf('\n\n---> screenManager %s: Closing screen = %i, Win = %i, Kind = %i\n',me.uuid, me.screen,me.win,kind);
 					Screen('Close',me.win);
-					if me.verbose; fprintf('!!!>>>Closing Win: %i kind: %i\n',me.win,kind); end
 				end
 			catch ME
 				if me.verbose 
@@ -1049,7 +1116,51 @@ classdef screenManager < optickaCore
 			% drawTextNow(me,text)
 			if ~exist('text','var');return;end
 			Screen('DrawText',me.win,text,10,10,[1 1 1],[0.5 0.5 0.5]);
-			flip(me);
+			flip(me,[],[],2);
+		end
+		
+		% ===================================================================
+		%> @brief draw text and flip immediately
+		%>
+		%> @param
+		%> @return
+		% ===================================================================
+		function drawText(me,text)
+			% drawTextNow(me,text)
+			if ~exist('text','var');return;end
+			Screen('DrawText',me.win,text,10,10,[1 1 1],[0.5 0.5 0.5]);
+		end
+		
+		% ===================================================================
+		%> @brief draw lines specified in degrees to pixels
+		%>
+		%> @param xy x is row1 and y is row2
+		%> @return
+		% ===================================================================
+		function drawLines(me,xy,size,colour,center)
+			if ~exist('xy','var');return;end
+			if ~exist('size','var') || isempty(size); size = 2; end
+			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]; end
+			if ~exist('center','var') || isempty(center); center = [0 0]; end
+			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
+			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
+			Screen('DrawLines', me.win, xy);
+		end
+		
+		% ===================================================================
+		%> @brief draw dots specified in degrees to pixel coordinates
+		%>
+		%> @param xy x is row1 and y is row2
+		%> @return
+		% ===================================================================
+		function drawDots(me,xy,size,colour,center)
+			if ~exist('xy','var');return;end
+			if ~exist('size','var') || isempty(size); size = 5; end
+			if ~exist('colour','var') || isempty(colour); colour = [1 1 1]; end
+			if ~exist('center','var') || isempty(center); center = [0 0]; end
+			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
+			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
+			Screen('DrawDots', me.win, xy, size, colour, center);
 		end
 		
 		% ===================================================================
@@ -1059,7 +1170,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawScreenCenter(me)
-			Screen('gluDisk',me.win,[1 0 1 1],me.xCenter,me.yCenter,2);
+			Screen('gluDisk',me.win,[1 0 1 1],me.xCenter,me.yCenter,3);
 		end
 		
 		% ===================================================================

@@ -64,6 +64,7 @@ classdef tobiiManager < optickaCore
 		%> operator screen used during calibration
 		operatorScreen screenManager
 		secondScreen logical = false
+		closeSecondScreen logical = true
 		%> size to draw eye position on screen
 		eyeSize double  = 6
 	end
@@ -88,6 +89,12 @@ classdef tobiiManager < optickaCore
 		y = []
 		%> pupil size
 		pupil = []
+		%> All gaze X position in degrees reset using resetFixation
+		xAll = []
+		%> Last gaze Y position in degrees reset using resetFixation
+		yAll = []
+		%> all pupil size reset using resetFixation
+		pupilAll = []
 		%current sample taken from tobii
 		currentSample struct
 		%current event taken from tobii
@@ -176,6 +183,9 @@ classdef tobiiManager < optickaCore
 					me.screen		= screenManager();
 				end
 			else
+				if ~isempty(me.screen) && isa(me.screen,'screenManager') && me.screen.isOpen && ~strcmpi(sM.uuid,me.screen.uuid)
+					%close(me.screen); 
+				end
 				me.screen			= sM;
 			end
 			if ~exist('sM2','var') || ~isa(sM2,'screenManager') || me.isDummy
@@ -273,10 +283,13 @@ classdef tobiiManager < optickaCore
 			if ~me.isDummy
 				me.salutation('Initialise', ...
 					sprintf('Running on a %s (%s) @ %iHz mode:%s | Screen %i %i x %i @ %iHz', ...
-					me.tobii.systemInfo.model, me.tobii.systemInfo.deviceName,...
+					me.tobii.systemInfo.model, ...
+					me.tobii.systemInfo.deviceName,...
 					me.tobii.systemInfo.frequency,...
 					me.tobii.systemInfo.trackingMode,...
-					me.screen.screen,me.screen.winRect(3),me.screen.winRect(4),...
+					me.screen.screen,...
+					me.screen.winRect(3),...
+					me.screen.winRect(4),...
 					me.screen.screenVals.fps),true);
 			else
 				me.salutation('Initialise', 'Running in Dummy Mode', true);
@@ -324,6 +337,9 @@ classdef tobiiManager < optickaCore
 			me.fixTotal			= 0;
 			me.fixN				= 0;
 			me.fixSelection		= 0;
+			me.xAll				= [];
+			me.yAll				= [];
+			me.pupilAll			= [];
 		end
 		
 		% ===================================================================
@@ -389,7 +405,10 @@ classdef tobiiManager < optickaCore
 			else
 				disp('---!!! The calibration was unsuccesful or skipped !!!---')
 			end
-			if me.secondScreen && me.operatorScreen.isOpen; close(me.operatorScreen); WaitSecs('YieldSecs',0.2); end
+			if me.secondScreen && me.closeSecondScreen && me.operatorScreen.isOpen
+				close(me.operatorScreen); 
+				WaitSecs('YieldSecs',0.2); 
+			end
 			resetFixation(me);
 			if wasRecording; startRecording(me); end
 			me.isRecording_ = me.isRecording;
@@ -559,6 +578,9 @@ classdef tobiiManager < optickaCore
 					me.y		= NaN;
 					me.pupil	= NaN;
 				end
+				me.xAll			= [me.xAll me.x];
+				me.yAll			= [me.yAll me.y];
+				me.pupilAll		= [me.pupilAll me.pupil];
 			else
 				if me.verbose;fprintf('--->>> tobiiManager getSample(): are you sure you are recording?\n');end
 			end
@@ -622,7 +644,7 @@ classdef tobiiManager < optickaCore
 		%> @return searching boolean for if we are still searching for fixation
 		% ===================================================================
 		function [fixated, fixtime, searching, window, exclusion] = isFixated(me)
-			fixated = false; fixtime = false; searching = true; window = []; exclusion = false;
+			fixated = false; fixtime = false; searching = true; window = []; exclusion = false; window = 0;
 			
 			if isempty(me.currentSample) || isnan(me.currentSample.time);return;end
 			
@@ -638,19 +660,22 @@ classdef tobiiManager < optickaCore
 					return
 				end
 			end
-			
+	
 			me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1e6;
+			
 			if length(me.fixation.radius) > 1 %use X + Y rectangle
-				fprintf('X = %1.1f Y = %1.1f | x = %1.1f y = %1.1f | dx = %1.1f dy = %1.1f\n',...
-					me.fixation.X,me.fixation.Y,me.x,me.y,me.fixation.radius(1)/2,me.fixation.radius(2)/2);
 				if ((me.fixation.X + me.x) >= -me.fixation.radius(1)/2 && ...
 				(me.fixation.X + me.x) <= me.fixation.radius(1)/2) ...
 				&& ((me.fixation.Y + me.y) >= -me.fixation.radius(2)/2 && ...
 				(me.fixation.Y + me.y) <= me.fixation.radius(2)/2)
 					window = 1;
 				end	
-			else
-				r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixation.radius);
+				[~,~,b]=GetMouse();
+				dbstop if any(b)
+				fprintf('IN=%i -- Xo = %1.1f Yo = %1.1f | xR = %1.1f yR = %1.1f | dx = %1.1f dy = %1.1f\n',...
+					window,me.fixation.X,me.fixation.Y,me.x,me.y,me.fixation.radius(1)/2,me.fixation.radius(2)/2);
+			else % use circular window
+				r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); 
 				window = find(r < me.fixation.radius);
 			end
 			if any(window)
@@ -997,18 +1022,20 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function runDemo(me,forcescreen)
 			KbName('UnifyKeyNames')
-			stopkey=KbName('q');
-			upKey=KbName('uparrow');
-			downKey=KbName('downarrow');
-			leftKey=KbName('leftarrow');
-			rightKey=KbName('rightarrow');
-			calibkey=KbName('c');
-			ofixation = me.fixation; me.sampletime = [];
-			osmoothing = me.smoothing;
-			ofilename = me.saveFile;
+			stopkey				= KbName('q');
+			upKey				= KbName('uparrow');
+			downKey				= KbName('downarrow');
+			leftKey				= KbName('leftarrow');
+			rightKey			= KbName('rightarrow');
+			calibkey			= KbName('c');
+			ofixation			= me.fixation; me.sampletime = [];
+			osmoothing			= me.smoothing;
+			ofilename			= me.saveFile;
 			me.initialiseSaveFile();
-			[p,~,e]=fileparts(me.saveFile);
-			me.saveFile = [p filesep 'tobiiRunDemo-' me.savePrefix e];
+			[p,~,e]				= fileparts(me.saveFile);
+			me.saveFile			= [p filesep 'tobiiRunDemo-' me.savePrefix e];
+			useS2				= false;
+			t.screen = []
 			try
 				if isa(me.screen,'screenManager') && ~isempty(me.screen)
 					s = me.screen;
@@ -1021,19 +1048,22 @@ classdef tobiiManager < optickaCore
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour		= [0.5 0.5 0.5 0];
 				if length(Screen('Screens'))>1 && s.screen - 1 >= 0
+					useS2				= true;
+					s2.pixelsPerCm		= 45;
 					s2					= screenManager;
 					s2.screen			= s.screen - 1;
 					s2.backgroundColour	= s.backgroundColour;
-					s2.windowed			= [0 0 1600 1000];
+					[w,h]				= Screen('WindowSize',s2.screen);
+					s2.windowed			= [0 0 round(w/2) round(h/2)];
 					s2.bitDepth			= '8bit';
 					s2.blend			= true;
 					s2.disableSyncTests	= true;
 				end
-				
-								
+			
 				sv=open(s); %open our screen
 				
-				if exist('s2','var')
+				if useS2
+					me.closeSecondScreen = false;
 					initialise(me, s, s2); %initialise tobii with our screen
 				else
 					initialise(me, s); %initialise tobii with our screen
@@ -1084,6 +1114,7 @@ classdef tobiiManager < optickaCore
 					flip(s);
 				end
 				s.drawPhotoDiodeSquare([0 0 0 1]);
+				if useS2;flip(s2,[],[],2);end
 				flip(s);
 				update(o); %make sure stimuli are set back to their start state
 				update(f);
@@ -1093,6 +1124,7 @@ classdef tobiiManager < optickaCore
 					trialtick = 1;
 					trackerMessage(me,sprintf('Settings for Trial %i, X=%.2f Y=%.2f, SZ=%.2f',trialn,me.fixation.X,me.fixation.Y,o.sizeOut))
 					drawPhotoDiodeSquare(s,[0 0 0 1]);
+					flip(s2,[],[],2);
 					vbl = flip(s); tstart=vbl+sv.ifi;
 					trackerMessage(me,'STARTVBL',vbl);
 					while vbl < tstart + 6
@@ -1101,7 +1133,10 @@ classdef tobiiManager < optickaCore
 						drawGrid(s);
 						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
 						drawPhotoDiodeSquare(s,[1 1 1 1]);
-						
+						if useS2
+							drawGrid(s2);
+							drawSpot(s2,0.5,[1 1 0], me.x, me.y);
+						end
 						getSample(me); isFixated(me);
 						
 						if ~isempty(me.currentSample)
@@ -1117,7 +1152,7 @@ classdef tobiiManager < optickaCore
 						
 						vbl = Screen('Flip', s.win, vbl + s.screenVals.halfifi);
 						if trialtick==1; me.tobii.sendMessage('SYNC = 255', vbl);end
-						
+						if useS2; flip(s2,[],[],2); end
 						[keyDown, ~, keyCode] = KbCheck(-1);
 						if keyDown
 							if keyCode(stopkey); endExp = 1; break;
@@ -1167,7 +1202,7 @@ classdef tobiiManager < optickaCore
 					end
 				end
 				stopRecording(me);
-				close(s);
+				close(s); try;close(s2);end
 				saveData(me);
 				assignin('base','psn',psn);
 				assignin('base','data',me.data);
