@@ -533,6 +533,9 @@ classdef tobiiManager < optickaCore
 				sample.time		= GetSecs * 1e6;
 				me.x			= me.toDegrees(sample.gx,'x');
 				me.y			= me.toDegrees(sample.gy,'y');
+				me.xAll			= [me.xAll me.x];
+				me.yAll			= [me.yAll me.y];
+				me.pupilAll		= [me.pupilAll me.pupil];
 				%if me.verbose;fprintf('>>X: %.2f | Y: %.2f | P: %.2f\n',me.x,me.y,me.pupil);end
 			elseif me.isConnected && me.isRecording_
 				xy				= [];
