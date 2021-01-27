@@ -432,12 +432,12 @@ classdef tobiiManager < optickaCore
 				else
 					warning('Can''t START buffer() TTL recording!!!')
 				end
-% 				success = me.tobii.buffer.start('positioning');
-% 				if success
-% 					me.statusMessage('Starting to record Position...');
-% 				else
-% 					warning('Can''t START buffer() Position recording!!!')
-% 				end
+				success = me.tobii.buffer.start('positioning');
+				if success
+					me.statusMessage('Starting to record Position...');
+				else
+					warning('Can''t START buffer() Position recording!!!')
+				end
 				success = me.tobii.buffer.start('timeSync');
 				if success
 					me.statusMessage('Starting to record timeSync...');
@@ -466,12 +466,12 @@ classdef tobiiManager < optickaCore
 				else
 					warning('Can''t STOP buffer() TTL recording!!!')
 				end
-% 				success = me.tobii.buffer.stop('positioning');
-% 				if success
-% 					me.statusMessage('Stopping to record Position...');
-% 				else
-% 					warning('Can''t STOP buffer() TTL recording!!!')
-% 				end
+				success = me.tobii.buffer.stop('positioning');
+				if success
+					me.statusMessage('Stopping to record Position...');
+				else
+					warning('Can''t STOP buffer() TTL recording!!!')
+				end
 				success = me.tobii.buffer.stop('timeSync');
 				if success
 					me.statusMessage('Stopping to record timeSync...');

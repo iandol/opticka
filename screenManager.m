@@ -355,29 +355,10 @@ classdef screenManager < optickaCore
 							PsychImaging('AddTask', 'General', me.bitDepth);
 						end
 					else
-						switch lower(me.bitDepth)
-							case {'hdr'}
-								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
-								PsychImaging('AddTask', 'General', 'EnableHDR');
-							case {'native10bit','native11bit','native16bit'}
-								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
-								PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'Framebuffer']);
-								fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
-							case {'native16bitfloat'}
-								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
-								PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'ingPointFramebuffer']);
-								fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
-							case {'pseudogray'}
-								PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
-								PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
-								fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
-							otherwise
-								PsychImaging('AddTask', 'General', me.bitDepth);
-								fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
-						end
-						me.isPlusPlus = false;
+						me.isPlusPlus = false; %we just use a regular setup
 					end
-				else
+				end
+				if ~me.isPlusPlus
 					fprintf('\tNO Display++...\n'); 
 					switch lower(me.bitDepth)
 						case {'hdr'}
@@ -394,6 +375,9 @@ classdef screenManager < optickaCore
 						case {'peudogray'}
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 							PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
+							fprintf('\n---> screenManager: Internal processing set to: %s\n', 'PseudoGrayOutput');
+						case {'floatingpoint32bitifpossible','floatingpoint32bit'}
+							PsychImaging('AddTask', 'General', me.bitDepth);
 							fprintf('\n---> screenManager: Internal processing set to: %s\n', me.bitDepth);
 						case {'8bit'}
 							PsychImaging('AddTask', 'General', 'UseVirtualFramebuffer');
@@ -401,8 +385,6 @@ classdef screenManager < optickaCore
 						otherwise
 							fprintf('\n---> screenManager: No imaging pipeline requested...\n');
 					end
-					
-					me.isPlusPlus = false;
 				end
 				
 				if me.useRetina == true

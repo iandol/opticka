@@ -219,9 +219,10 @@ classdef imageStimulus < baseStimulus
 		%> @brief Draw this stimulus object
 		%>
 		% ===================================================================
-		function draw(me)
+		function draw(me,win)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
-				Screen('DrawTexture',me.sM.win,me.texture,[],me.mvRect,me.angleOut);
+				if ~exist('win','var');win = me.sM.win; end
+				Screen('DrawTexture',win,me.texture,[],me.mvRect,me.angleOut);
 			end
 			me.tick = me.tick + 1;
 		end
