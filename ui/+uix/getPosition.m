@@ -7,8 +7,7 @@ function p = getPosition( o, u )
 %  In contrast to getting the Position property directly, this function
 %  honors the ActivePositionProperty of axes.
 
-%  Copyright 2009-2016 The MathWorks, Inc.
-%  $Revision: 1435 $ $Date: 2016-11-17 17:50:34 +0000 (Thu, 17 Nov 2016) $
+%  Copyright 2009-2020 The MathWorks, Inc.
 
 % Get position
 if ~isempty( findprop( o, 'ActivePositionProperty' ) )

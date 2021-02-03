@@ -6,8 +6,7 @@ classdef ( Hidden ) Divider < matlab.mixin.SetGet
     %  d = uix.Divider(p1,v1,p2,v2,...) creates a divider and sets
     %  specified property p1 to value v1, etc.
     
-    %  Copyright 2009-2016 The MathWorks, Inc.
-    %  $Revision: 1601 $ $Date: 2018-05-01 10:22:53 +0100 (Tue, 01 May 2018) $
+    %  Copyright 2009-2020 The MathWorks, Inc.
     
     properties( Dependent )
         Parent % parent
@@ -258,7 +257,8 @@ classdef ( Hidden ) Divider < matlab.mixin.SetGet
             
             tf = isvalid( obj ); % initialize
             for ii = 1:numel( obj )
-                tf(ii) = tf(ii) && obj(ii).Control == eventData.HitObject;
+                tf(ii) = tf(ii) && ~isempty( eventData.HitObject ) && ...
+                    obj(ii).Control == eventData.HitObject;
             end
             
         end % isMouseOver

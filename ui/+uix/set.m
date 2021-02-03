@@ -6,8 +6,7 @@ function set( obj, varargin )
 %
 %  In contrast to builtin set, querying possible values is not supported.
 
-%  Copyright 2017 The MathWorks, Inc.
-%  $Revision: 1435 $ $Date: 2016-11-17 17:50:34 +0000 (Thu, 17 Nov 2016) $
+%  Copyright 2009-2020 The MathWorks, Inc.
 
 if nargin == 1, return, end
 assert( rem( nargin, 2 ) == 1, 'uix:InvalidArgument', ...

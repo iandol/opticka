@@ -13,8 +13,7 @@ classdef TabPanel < uix.Container & uix.mixin.Panel
     %
     %  See also: uitabgroup, uitab, uix.CardPanel
     
-    %  Copyright 2009-2016 The MathWorks, Inc.
-    %  $Revision: 1480 $ $Date: 2017-02-15 16:56:13 +0100 (Wed, 15 Feb 2017) $
+    %  Copyright 2009-2020 The MathWorks, Inc.
     
     properties( Access = public, Dependent, AbortSet )
         FontAngle % font angle
@@ -87,7 +86,7 @@ classdef TabPanel < uix.Container & uix.mixin.Panel
             % Create listeners
             backgroundColorListener = event.proplistener( obj, ...
                 findprop( obj, 'BackgroundColor' ), 'PostSet', ...
-                @obj.onBackgroundColorChange );
+                @obj.onBackgroundColorChanged );
             selectionChangedListener = event.listener( obj, ...
                 'SelectionChanged', @obj.onSelectionChanged );
             parentListener = event.proplistener( obj, ...
@@ -829,12 +828,12 @@ classdef TabPanel < uix.Container & uix.mixin.Panel
             
         end % onTabClicked
         
-        function onBackgroundColorChange( obj, ~, ~ )
+        function onBackgroundColorChanged( obj, ~, ~ )
             
             % Mark as dirty
             obj.Dirty = true;
             
-        end % onBackgroundColorChange
+        end % onBackgroundColorChanged
         
         function onSelectionChanged( obj, source, eventData )
             

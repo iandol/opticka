@@ -9,8 +9,7 @@ classdef Panel < matlab.ui.container.Panel & uix.mixin.Panel
     %
     %  See also: uix.CardPanel, uix.BoxPanel, uipanel
     
-    %  Copyright 2009-2016 The MathWorks, Inc.
-    %  $Revision: 1480 $ $Date: 2017-02-15 16:56:13 +0100 (Wed, 15 Feb 2017) $
+    %  Copyright 2009-2020 The MathWorks, Inc.
     
     methods
         

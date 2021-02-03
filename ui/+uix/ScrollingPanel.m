@@ -9,8 +9,7 @@ classdef ScrollingPanel < uix.Container & uix.mixin.Panel
     %
     %  See also: uix.Panel, uix.BoxPanel, uix.TabPanel, uicontainer
     
-    %  Copyright 2009-2016 The MathWorks, Inc.
-    %  $Revision: 1775 $ $Date: 2018-12-06 06:07:40 +0000 (Thu, 06 Dec 2018) $
+    %  Copyright 2009-2020 The MathWorks, Inc.
     
     properties( Dependent )
         Heights % heights of contents, in pixels and/or weights
@@ -38,9 +37,10 @@ classdef ScrollingPanel < uix.Container & uix.mixin.Panel
     
     properties( Access = private )
         MouseWheelListener = [] % mouse listener
-        MouseWheelEnabled_ = 'on' %
+        MouseWheelEnabled_ = 'on' % backing for MouseWheelEnabled
         ScrollingListener = [] % slider listener
         ScrolledListener = [] % slider listener
+        BackgroundColorListener % property listener
     end
     
     properties( Constant, Access = protected )
@@ -62,6 +62,14 @@ classdef ScrollingPanel < uix.Container & uix.mixin.Panel
             %
             %  p = uix.ScrollingPanel(p1,v1,p2,v2,...) sets parameter p1 to
             %  value v1, etc.
+            
+            % Create listeners
+            backgroundColorListener = event.proplistener( obj, ...
+                findprop( obj, 'BackgroundColor' ), 'PostSet', ...
+                @obj.onBackgroundColorChanged );
+            
+            % Store properties
+            obj.BackgroundColorListener = backgroundColorListener;
             
             % Set properties
             try
@@ -470,20 +478,28 @@ classdef ScrollingPanel < uix.Container & uix.mixin.Panel
             %
             %  c.addChild(d) adds the child d to the container c.
             
+            % Create decorations
+            verticalSlider = matlab.ui.control.UIControl( ...
+                'Internal', true, 'Parent', obj, ...
+                'Units', 'pixels', 'Style', 'slider', ...
+                'BackgroundColor', obj.BackgroundColor );
+            horizontalSlider = matlab.ui.control.UIControl( ...
+                'Internal', true, 'Parent', obj, ...
+                'Units', 'pixels', 'Style', 'slider', ...
+                'BackgroundColor', obj.BackgroundColor );
+            blankingPlate = matlab.ui.control.UIControl( ...
+                'Internal', true, 'Parent', obj, ...
+                'Units', 'pixels', 'Style', 'text', 'Enable', 'inactive', ...
+                'BackgroundColor', obj.BackgroundColor );
+            
             % Add to sizes
             obj.Widths_(end+1,:) = -1;
             obj.MinimumWidths_(end+1,:) = 1;
             obj.Heights_(end+1,:) = -1;
             obj.MinimumHeights_(end+1,:) = 1;
-            obj.VerticalSliders(end+1,:) = uicontrol( ...
-                'Internal', true, 'Parent', obj, 'Units', 'pixels', ...
-                'Style', 'slider' );
-            obj.HorizontalSliders(end+1,:) = uicontrol( ...
-                'Internal', true, 'Parent', obj, 'Units', 'pixels', ...
-                'Style', 'slider' );
-            obj.BlankingPlates(end+1,:) = uicontrol( ...
-                'Internal', true, 'Parent', obj, 'Units', 'pixels', ...
-                'Style', 'text', 'Enable', 'inactive' );
+            obj.VerticalSliders(end+1,:) = verticalSlider;
+            obj.HorizontalSliders(end+1,:) = horizontalSlider;
+            obj.BlankingPlates(end+1,:) = blankingPlate;
             obj.VerticalSteps_(end+1,:) = obj.SliderStep;
             obj.HorizontalSteps_(end+1,:) = obj.SliderStep;
             obj.updateSliderListeners()
@@ -498,8 +514,15 @@ classdef ScrollingPanel < uix.Container & uix.mixin.Panel
             %
             %  c.removeChild(d) removes the child d from the container c.
             
-            % Remove from sizes
+            % Identify child
             tf = obj.Contents_ == child;
+            
+            % Destroy decorations
+            delete( obj.VerticalSliders(tf,:) )
+            delete( obj.HorizontalSliders(tf,:) )
+            delete( obj.BlankingPlates(tf,:) )
+            
+            % Remove from sizes
             obj.Widths_(tf,:) = [];
             obj.MinimumWidths_(tf,:) = [];
             obj.Heights_(tf,:) = [];
@@ -639,6 +662,15 @@ classdef ScrollingPanel < uix.Container & uix.mixin.Panel
             end
             
         end % onMouseScrolled
+        
+        function onBackgroundColorChanged( obj, ~, ~ )
+            %onBackgroundColorChanged  Handler for BackgroundColor changes
+            
+            set( obj.HorizontalSliders, 'BackgroundColor', obj.BackgroundColor )
+            set( obj.VerticalSliders, 'BackgroundColor', obj.BackgroundColor )
+            set( obj.BlankingPlates, 'BackgroundColor', obj.BackgroundColor )
+            
+        end % onBackgroundColorChanged
         
     end % event handlers
     

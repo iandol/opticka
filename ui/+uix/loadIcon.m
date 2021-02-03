@@ -14,8 +14,7 @@ function cdata = loadIcon( filename, bgcol )
 %
 %   See also: imread
 
-%  Copyright 2009-2016 The MathWorks, Inc.
-%  $Revision: 1436 $ $Date: 2016-11-17 17:53:29 +0000 (Thu, 17 Nov 2016) $
+%  Copyright 2009-2020 The MathWorks, Inc.
 
 % Check inputs
 narginchk( 1, 2 )

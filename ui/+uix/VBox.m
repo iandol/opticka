@@ -8,8 +8,7 @@ classdef VBox < uix.Box
     %
     %  See also: uix.HBox, uix.Grid, uix.VButtonBox, uix.VBoxFlex
     
-    %  Copyright 2009-2016 The MathWorks, Inc.
-    %  $Revision: 1594 $ $Date: 2018-03-28 02:27:52 +1100 (Wed, 28 Mar 2018) $
+    %  Copyright 2009-2020 The MathWorks, Inc.
     
     properties( Access = public, Dependent, AbortSet )
         Heights % heights of contents, in pixels and/or weights

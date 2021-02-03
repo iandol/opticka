@@ -9,8 +9,7 @@ classdef VBoxFlex < uix.VBox & uix.mixin.Flex
     %
     %  See also: uix.HBoxFlex, uix.GridFlex, uix.VBox, uix.VButtonBox
     
-    %  Copyright 2009-2016 The MathWorks, Inc.
-    %  $Revision: 1682 $ $Date: 2018-06-11 16:57:09 +0100 (Mon, 11 Jun 2018) $
+    %  Copyright 2009-2020 The MathWorks, Inc.
     
     properties( Access = public, Dependent, AbortSet )
         DividerMarkings % divider markings [on|off]
@@ -48,7 +47,7 @@ classdef VBoxFlex < uix.VBox & uix.mixin.Flex
             % Create listeners
             backgroundColorListener = event.proplistener( obj, ...
                 findprop( obj, 'BackgroundColor' ), 'PostSet', ...
-                @obj.onBackgroundColorChange );
+                @obj.onBackgroundColorChanged );
             
             % Store properties
             obj.FrontDivider = frontDivider;
@@ -207,8 +206,8 @@ classdef VBoxFlex < uix.VBox & uix.mixin.Flex
             
         end % onMouseMotion
         
-        function onBackgroundColorChange( obj, ~, ~ )
-            %onBackgroundColorChange  Handler for BackgroundColor changes
+        function onBackgroundColorChanged( obj, ~, ~ )
+            %onBackgroundColorChanged  Handler for BackgroundColor changes
             
             backgroundColor = obj.BackgroundColor;
             highlightColor = min( [backgroundColor / 0.75; 1 1 1] );
@@ -223,7 +222,7 @@ classdef VBoxFlex < uix.VBox & uix.mixin.Flex
             frontDivider = obj.FrontDivider;
             frontDivider.BackgroundColor = shadowColor;
             
-        end % onBackgroundColorChange
+        end % onBackgroundColorChanged
         
     end % event handlers
     

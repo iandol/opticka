@@ -4,8 +4,7 @@ classdef Box < uix.Container & uix.mixin.Container
     %  uix.Box is a base class for containers with spacing between
     %  contents.
     
-    %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1594 $ $Date: 2018-03-28 02:27:52 +1100 (Wed, 28 Mar 2018) $
+    %  Copyright 2009-2020 The MathWorks, Inc.
     
     properties( Access = public, Dependent, AbortSet )
         Spacing = 0 % space between contents, in pixels

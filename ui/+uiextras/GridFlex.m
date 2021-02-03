@@ -32,8 +32,7 @@ classdef GridFlex < uix.GridFlex
     %             uiextras.VBoxFlex
     %             uiextras.Empty
     
-    %  Copyright 2009-2014 The MathWorks, Inc.
-    %  $Revision: 1062 $ $Date: 2014-10-30 13:30:17 +0000 (Thu, 30 Oct 2014) $
+    %  Copyright 2009-2020 The MathWorks, Inc.
     
     properties( Hidden, Access = public, Dependent )
         Enable % deprecated
