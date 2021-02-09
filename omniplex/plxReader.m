@@ -13,25 +13,25 @@ classdef plxReader < optickaCore
 	%------------------PUBLIC PROPERTIES----------%
 	properties
 		%> plx/pl2 file name
-		file@char
+		file char
 		%> file directory
-		dir@char
+		dir char
 		%> the opticka experimental object mat filename
-		matfile@char
+		matfile char
 		%> the opticka file directory
-		matdir@char
+		matdir char
 		%> Eyelink edf file name (should be same directory as opticka file).
-		edffile@char
+		edffile char
 		%> use the event on/off markers if empty, or a timerange around the event otherwise
-		eventWindow@double			= []
+		eventWindow double			= []
 		%> the window to check before/after trial end for a behavioural marker
-		eventSearchWindow@double	= 0.2
+		eventSearchWindow double	= 0.2
 		%> used by legacy spikes to allow negative time offsets
-		startOffset@double			= 0
+		startOffset double			= 0
 		%> Use first saccade to realign time 0 for data?
-		saccadeRealign@logical		= false
+		saccadeRealign logical		= false
 		%> reduce the duplicate tetrode channels?
-		channelReduction@logical	= true
+		channelReduction logical	= true
 		%> verbose?
 		verbose							= false
 	end
@@ -45,39 +45,39 @@ classdef plxReader < optickaCore
 	%------------------VISIBLE PROPERTIES----------%
 	properties (SetAccess = {?analysisCore}, GetAccess = public)
 		%> general info formatted as cellstrings for display
-		info@cell
+		info cell
 		%> parsed event list from plexon strobed words/TTLs
-		eventList@struct
+		eventList struct
 		%> parsed timestamped spikes
-		tsList@struct
+		tsList struct
 		%> general metadata (useful for legacy spikes analysis routines)
-		meta@struct
+		meta struct
 		%> the experimental runExperiment object (loaded from the matfile)
-		rE@runExperiment
+		rE runExperiment
 		%> the eyelink data parsed as an eyelinkAnalysis object (loaded from edffile)
-		eA@eyelinkAnalysis
+		eA eyelinkAnalysis
 		%> the raw pl2 structure if this is a plexon pl2 file
-		pl2@struct
+		pl2 struct
 	end
 	
 	%------------------DEPENDENT PROPERTIES--------%
 	properties (SetAccess = protected, Dependent = true)
 		%> is this a PL2 file?
-		isPL2@logical
+		isPL2 logical
 		%> is an EDF eyelink file present?
-		isEDF@logical
+		isEDF logical
 		%> is trodal?
-		trodality@double
+		trodality double
 	end
 	
 	%------------------PRIVATE PROPERTIES----------%
 	properties (SetAccess = private, GetAccess = private)
 		%>info box handles
-		ibhandles@struct				= struct()
+		ibhandles struct				= struct()
 		%> info cache to speed up generating info{}
-		ic@struct						= struct()
+		ic struct						= struct()
 		%> allowed properties passed to object upon construction, see optickaCore.parseArgs()
-		allowedProperties@char		= 'file|dir|matfile|matdir|edffile|startOffset|cellmap|verbose|eventWindow'
+		allowedProperties char		= 'file|dir|matfile|matdir|edffile|startOffset|cellmap|verbose|eventWindow'
 	end
 	
 	%=======================================================================
@@ -645,7 +645,7 @@ classdef plxReader < optickaCore
 				me.info{end+1} = ' ';
 				me.info{end+1} = ['Eyelink data Parsed trial total : ' num2str(length(me.eA.trials))];
 				me.info{end+1} = ['Eyelink trial bug override : ' num2str(me.eA.needOverride)];
-				me.info{end+1} = sprintf('Valid First Post-Stimulus Saccades (#%g): %.4g ± %.3g (range %g:%g )',ns,avgs/1e3,es/1e3,mins/1e3,maxs/1e3);
+				me.info{end+1} = sprintf('Valid First Post-Stimulus Saccades (#%g): %.4g ï¿½ %.3g (range %g:%g )',ns,avgs/1e3,es/1e3,mins/1e3,maxs/1e3);
 			end
 			fprintf('<strong>:#:</strong> Generating info for %s took <strong>%g ms</strong>\n',me.fullName,round(toc(infoTic)*1000))
 			me.info{end+1} = ' ';

@@ -5,6 +5,7 @@ classdef arduinoLegacy < handle
 	
 	properties (SetAccess=private,GetAccess=public)
 		aser   % Serial Connection
+		nPins = 69 % number of controllable pins
 		pins   % Pin Status Vector
 		srvs   % Servo Status Vector
 		mspd   % DC Motors Speed Status
@@ -25,7 +26,7 @@ classdef arduinoLegacy < handle
 	methods
 		
 		% constructor, connects to the board and creates an arduino object
-		function a=arduinoLegacy(comPort)
+		function a=arduinoLegacy(comPort,nPins)
 			
 			% check nargin
 			if nargin<1
@@ -33,6 +34,8 @@ classdef arduinoLegacy < handle
 				isDemo = true;
 				disp('Note: a DEMO connection will be created');
 				disp('Use a the com port, e.g. ''COM5'' as input argument to connect to the real board');
+			elseif nargin == 2
+				a.nPins = nPins;
 			end
 			
 			% check port
@@ -91,7 +94,7 @@ classdef arduinoLegacy < handle
 				% it takes several seconds before any operation could be attempted
 				fprintf(1,'Attempting connection .');
 				for i=1:8
-					pause(0.8);
+					pause(0.5);
 					fprintf(1,'.');
 				end
 				fprintf(1,'\n');
@@ -131,10 +134,10 @@ classdef arduinoLegacy < handle
 			a.aser.Tag='ok';
 			
 			% initialize pin vector (-1 is unassigned, 0 is input, 1 is output)
-			a.pins=-1*ones(1,69);
+			a.pins=-1*ones(1,a.nPins);
 			
 			% initialize servo vector (0 is detached, 1 is attached)
-			a.srvs=0*ones(1,69);
+			a.srvs=0*ones(1,a.nPins);
 			
 			% initialize encoder vector (0 is detached, 1 is attached)
 			a.encs=0*ones(1,3);
@@ -156,11 +159,11 @@ classdef arduinoLegacy < handle
 			% Use delete(a) or a.delete to delete the arduino object
 			
 			% if it is a serial, valid and open then close it
-			if isa(a.aser,'serial') && isvalid(a.aser) && strcmpi(get(a.aser,'Status'),'open'),
+			if isa(a.aser,'serial') && isvalid(a.aser) && strcmpi(get(a.aser,'Status'),'open')
 				if ~isempty(a.aser.Tag)
 					try
 						% trying to leave it in a known unharmful state
-						for i=2:69
+						for i=2:a.nPins
 							a.pinMode(i,'output');
 							a.digitalWrite(i,0);
 							a.pinMode(i,'input');
@@ -321,7 +324,7 @@ classdef arduinoLegacy < handle
 			
 			% pinMode(a,pin,str); reads or sets the I/O mode of a digital pin.
 			% The first argument, a, is the arduino object.
-			% The second argument, pin, is the number of the digital pin (2 to 69).
+			% The second argument, pin, is the number of the digital pin (2 to a.nPins).
 			% The third argument, str, is a string that can be 'input' or 'output',
 			% Called as pinMode(a,pin) it returns the mode of the digital pin,
 			% called as pinMode(a), it prints the mode of all the digital pins.
@@ -353,7 +356,7 @@ classdef arduinoLegacy < handle
 				
 				% if pin argument is there check it
 				if nargin>1
-					errstr=arduinoLegacy.checknum(pin,'pin number',2:69);
+					errstr=arduinoLegacy.checknum(pin,'pin number',2:a.nPins);
 					if ~isempty(errstr), error(errstr); end
 				end
 				
@@ -418,7 +421,7 @@ classdef arduinoLegacy < handle
 				% print pin mode for each pin
 				
 				mode={'UNASSIGNED','set as INPUT','set as OUTPUT'};
-				for i=2:69
+				for i=2:a.nPins
 					disp(['Digital Pin ' num2str(i,'%02d') ' is currently ' mode{2+a.pins(i)}]);
 				end
 				
@@ -431,7 +434,7 @@ classdef arduinoLegacy < handle
 			
 			% val=digitalRead(a,pin); performs digital input on a given arduino pin.
 			% The first argument, a, is the arduino object.
-			% The second argument, pin, is the number of the digital pin (2 to 69)
+			% The second argument, pin, is the number of the digital pin (2 to a.nPins)
 			% where the digital input needs to be performed. On the Arduino Uno
 			% the digital pins from 0 to 13 are located on the upper right part
 			% while the digital pins from 14 to 19 are better known as "analog input"
@@ -454,7 +457,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check pin
-				errstr=arduinoLegacy.checknum(pin,'pin number',2:69);
+				errstr=arduinoLegacy.checknum(pin,'pin number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
@@ -499,7 +502,7 @@ classdef arduinoLegacy < handle
 			% digitalWrite(a,pin,val); performs digital output on a given pin.
 			% The first argument, a, is the arduino object.
 			% The second argument, pin, is the number of the digital pin
-			% (2 to 69) where the digital output value needs to be written.
+			% (2 to a.nPins) where the digital output value needs to be written.
 			% The third argument, val, is the output value (either 0 or 1).
 			% On the Arduino Uno  the digital pins from 0 to 13 are located
 			% on the upper right part of the board, while the digital pins
@@ -521,7 +524,7 @@ classdef arduinoLegacy < handle
 					error('Function must have the "pin" and "val" arguments');
 				end
 				% check pin
-				errstr=arduinoLegacy.checknum(pin,'pin number',2:69);
+				errstr=arduinoLegacy.checknum(pin,'pin number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				% check val
 				errstr=arduinoLegacy.checknum(val,'value',0:1);
@@ -837,7 +840,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check pin
-				errstr=arduinoLegacy.checknum(pin,'servo number',2:69);
+				errstr=arduinoLegacy.checknum(pin,'servo number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
@@ -913,7 +916,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check servo number
-				errstr=arduinoLegacy.checknum(pin,'servo number',2:69);
+				errstr=arduinoLegacy.checknum(pin,'servo number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
@@ -987,13 +990,13 @@ classdef arduinoLegacy < handle
 			% with no arguments calls itself recursively for all servos
 			if nargin==1,
 				if nargout>0,
-					val=zeros(69,1);
-					for i=2:69,
+					val=zeros(a.nPins,1);
+					for i=2:a.nPins
 						val(i)=a.servoStatus(i);
 					end
 					return
 				else
-					for i=2:69,
+					for i=2:a.nPins
 						a.servoStatus(i);
 					end
 					return
@@ -1002,7 +1005,7 @@ classdef arduinoLegacy < handle
 			
 			% check servo number if a.chkp is true
 			if a.chkp,
-				errstr=arduinoLegacy.checknum(pin,'servo number',2:69);
+				errstr=arduinoLegacy.checknum(pin,'servo number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -1087,7 +1090,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check servo number
-				errstr=arduinoLegacy.checknum(pin,'servo number',2:69);
+				errstr=arduinoLegacy.checknum(pin,'servo number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				
 				% get object name
@@ -1167,7 +1170,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check servo number
-				errstr=arduinoLegacy.checknum(pin,'servo number',2:69);
+				errstr=arduinoLegacy.checknum(pin,'servo number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				
 				% check angle value
@@ -1301,7 +1304,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% send mode, encoder and pins
-				fwrite(a.aser,[69 48+enc 97+pinA 97+pinB],'uchar');
+				fwrite(a.aser,[a.nPins 48+enc 97+pinA 97+pinB],'uchar');
 				
 			end
 			
@@ -1623,7 +1626,7 @@ classdef arduinoLegacy < handle
 			if a.chkp,
 				
 				% check nargin
-				if nargin~=3,
+				if nargin~=3
 					error('Function must have both the encoder number and the delay value as arguments');
 				end
 				
@@ -1639,14 +1642,14 @@ classdef arduinoLegacy < handle
 				if isempty(inputname(1)), name='object'; else name=inputname(1); end
 				
 				% check status
-				if a.encs(1+enc)~=1,
+				if a.encs(1+enc)~=1
 					error(['Encoder ' num2str(enc) ' is not attached, please use ' name' '.encoderAttach(' num2str(enc) ') to attach it']);
 				end
 				
 			end
 			
 			% check a.aser for validity if a.chks is true
-			if a.chks,
+			if a.chks
 				errstr=arduinoLegacy.checkser(a.aser,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end

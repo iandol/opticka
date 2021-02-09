@@ -74,15 +74,18 @@ classdef arduinoManager < optickaCore
 									warning('--->arduinoManager: Windows port specified but running on Linux/macOS!')
 									me.port = '';
 								end
-								me.device = arduinoLegacy(me.port);
-								me.board = 'Generic';
-								me.deviceID = me.port;
-								me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
-								for i = me.availablePins{1} : me.availablePins{end}
-									me.device.pinMode(i,'output');
-									me.device.digitalWrite(i,0);
+								if isempty(me.board)
+									me.board = 'Uno';
 								end
-								me.isOpen = true;
+								switch me.board
+									case 'Seeduino'
+									otherwise
+										me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
+										nPins = max(cell2mat(me.availablePins));
+								end
+								me.device = arduinoLegacy(me.port,nPins);
+								me.deviceID = me.port;
+								me.isOpen = true;setLow(me);
 							else
 								warning('--->arduinoManager: Please specify the port to use, going into silent mode!')
 								me.isOpen = false; me.silentMode = true;
@@ -98,11 +101,7 @@ classdef arduinoManager < optickaCore
 							me.board = me.device.Board;
 							me.deviceID = me.device.Port;
 							me.availablePins = me.device.AvailablePins;
-							for i = 2:13
-								configurePin(me.device,['D' num2str(i)],'unset')
-								writeDigitalPin(me.device,['D' num2str(i)],0);
-							end
-							me.isOpen = true;
+							me.isOpen = true;setLow(me);
 					end
 					if me.openGUI; GUI(me); end
 					me.silentMode = false;
@@ -515,6 +514,7 @@ classdef arduinoManager < optickaCore
 		
 		%===============CLOSE PORT================%
 		function close(me)
+			setLow(me);
 			try close(me.handles.parent);me.handles=[];end
 			me.device = [];
 			me.deviceID = '';
@@ -543,6 +543,23 @@ classdef arduinoManager < optickaCore
 	end
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
+		
+		%===========Delete Method==========%
+		function setLow(me)
+			if me.silentMode || ~me.isOpen; return; end
+			switch me.mode
+				case 'original'
+					for i = me.availablePins{1} : me.availablePins{end}
+						me.device.pinMode(i,'output');
+						me.device.digitalWrite(i,0);
+					end
+				otherwise
+					for i = 2:13
+						configurePin(me.device,['D' num2str(i)],'unset')
+						writeDigitalPin(me.device,['D' num2str(i)],0);
+					end
+			end
+		end
 
 		%===========Delete Method==========%
 		function delete(me)

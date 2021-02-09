@@ -82,7 +82,7 @@ classdef plusplusManager < optickaCore
 					if isempty(me.sM) || me.sM.isOpen == false
 						warning('SCREEN is CLOSED, no I/O commands will work');
 					end
-					if ~isempty(me.sM) && ~regexpi(me.sM.bitDepth,'^EnableBits')
+					if ~isempty(me.sM) & ~isempty(regexpi(me.sM.bitDepth,'^EnableBits'))
 						warning('SCREEN is not set to use Bits++ mode, I/O WILL FAIL!');
 					end
 				else
@@ -90,7 +90,8 @@ classdef plusplusManager < optickaCore
 					me.isAttached = false;
 					me.silentMode = true;
 				end
-			catch
+			catch ME
+				Getreport(ME);
 				me.sM.checkWindowValid();
 				warning('Problem searching for Display++, entering silentMode')
 				me.isAttached = false;
