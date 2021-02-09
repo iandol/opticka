@@ -114,6 +114,8 @@ classdef barStimulus < baseStimulus
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
+					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
+					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
 					if isempty(regexpi(fn{j},me.ignoreProperties, 'once'))
 						me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 					end
@@ -267,16 +269,19 @@ classdef barStimulus < baseStimulus
 		% ===================================================================
 		%> @brief SET Colour2 method
 		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
+		%> alpha will not be updated is RGBA is used
 		% ===================================================================
 		function set.colour2(me,value)
 			len=length(value);
 			switch len
-				case {4,3}
+				case 4
+					me.colour2 = value(1:4);
+				case 3
 					me.colour2 = [value(1:3) me.alpha]; %force our alpha to override
 				case 1
 					me.colour2 = [value value value me.alpha]; %construct RGBA
 				otherwise
-					me.colour2 = [1 1 1 me.alpha]; %return white for everything else
+					me.colour = [1 1 1 me.alpha]; %return white for everything else
 			end
 			me.colour2(me.colour2<0)=0; me.colour2(me.colour2>1)=1;
 		end
@@ -296,6 +301,50 @@ classdef barStimulus < baseStimulus
 			if ~me.inSetup
 				me.barHeightOut = me.sizeOut;
 				me.barWidthOut = me.sizeOut;
+			end
+		end
+		
+		% ===================================================================
+		%> @brief colourOut SET method
+		%>
+		% ===================================================================
+		function set_colourOut(me, value)
+			me.isInSetColour = true;
+			if length(value)==4 
+				alpha = value(4);
+			elseif isempty(me.findprop('alphaOut'))
+				alpha = me.alpha;
+			else
+				alpha = me.alphaOut;
+			end
+			switch length(value)
+				case 4
+					if isempty(me.findprop('alphaOut'))
+						me.alpha = alpha;
+					else
+						me.alphaOut = alpha;
+					end
+				case 3
+					value = [value(1:3) alpha];
+				case 1
+					value = [value value value alpha];
+			end
+			me.colourOut = value;
+			me.isInSetColour = false;
+		end
+		
+		% ===================================================================
+		%> @brief alphaOut SET method
+		%>
+		% ===================================================================
+		function set_alphaOut(me, value)
+			me.alphaOut = value;
+			if ~me.isInSetColour
+				if isempty(me.findprop('colourOut'))
+					me.colour = [me.colour(1:3) me.alphaOut];
+				else
+					me.colourOut = [me.colourOut(1:3) me.alphaOut];
+				end
 			end
 		end
 		
@@ -352,10 +401,19 @@ classdef barStimulus < baseStimulus
 						end
 						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
 					otherwise
-						tmat(:,:,1)=ones(blscale,bwscale) * (me.colour(1) * me.contrastOut);
-						tmat(:,:,2)=ones(blscale,bwscale) * (me.colour(2) * me.contrastOut);
-						tmat(:,:,3)=ones(blscale,bwscale) * (me.colour(3) * me.contrastOut);
-						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
+						if isempty(me.findprop('colourOut'))
+							colour = me.colour;
+							alpha = me.alpha;
+							contrast = me.contrast;
+						else
+							colour = me.colourOut;
+							alpha = me.alphaOut;
+							contrast = me.contrastOut;
+						end
+						tmat(:,:,1)=ones(blscale,bwscale) * (colour(1) * contrast);
+						tmat(:,:,2)=ones(blscale,bwscale) * (colour(2) * contrast);
+						tmat(:,:,3)=ones(blscale,bwscale) * (colour(3) * contrast);
+						tmat(:,:,4)=ones(blscale,bwscale) * alpha;
 				end
 				if ~strcmpi(me.type,'checkerboard')
 					aw=0:me.scale:bwpixels;

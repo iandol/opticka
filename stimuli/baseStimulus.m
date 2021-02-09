@@ -117,6 +117,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		dX_
 		%> dY cache
 		dY_
+		% deal with interaction of colour and alpha
+		isInSetColour logical = false
 		%> Which properties to ignore to clone when making transient copies in
 		%> the setup method
 		ignorePropertiesBase char = ['handles|ppd|sM|name|comment|fullName|'...
@@ -174,9 +176,13 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
 		% ===================================================================
 		function set.colour(me,value)
+			me.isInSetColour = true;
 			len=length(value);
 			switch len
-				case {4,3}
+				case 4
+					me.colour = value(1:4);
+					me.alpha = value(4);
+				case 3
 					me.colour = [value(1:3) me.alpha]; %force our alpha to override
 				case 1
 					me.colour = [value value value me.alpha]; %construct RGBA
@@ -188,6 +194,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 					end		
 			end
 			me.colour(me.colour<0)=0; me.colour(me.colour>1)=1;
+			me.isInSetColour = false;
 		end
 		
 		% ===================================================================
@@ -197,9 +204,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 		function set.alpha(me,value)
 			if value<0; value=0;elseif value>1; value=1; end
 			me.alpha = value;
-			me.colour = me.colour(1:3); %force colour to be regenerated
-			if isprop(me,'colour2')
-				me.colour2 = me.colour2(1:3);
+			if ~me.isInSetColour
+				me.colour = me.colour(1:3); %force colour to be regenerated
+				if isprop(me,'colour2')
+					me.colour2 = me.colour2(1:3);
+				end
 			end
 		end
 		

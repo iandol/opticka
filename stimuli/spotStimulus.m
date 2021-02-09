@@ -107,6 +107,7 @@ classdef spotStimulus < baseStimulus
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
 					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
+					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
 				end
 				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
@@ -246,15 +247,47 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_colourOut(me, value)
-			if length(value) == 1
-				value = [value value value me.alphaOut];
-			elseif length(value) == 3
-				value = [value me.alphaOut];
+			me.isInSetColour = true;
+			if length(value)==4 
+				alpha = value(4);
+			elseif isempty(me.findprop('alphaOut'))
+				alpha = me.alpha;
+			else
+				alpha = me.alphaOut;
 			end
+			switch length(value)
+				case 4
+					if isempty(me.findprop('alphaOut'))
+						me.alpha = alpha;
+					else
+						me.alphaOut = alpha;
+					end
+				case 3
+					value = [value(1:3) alpha];
+				case 1
+					value = [value value value alpha];
+			end
+			
 			me.colourOutTemp = value;
 			me.colourOut = value;
+			me.isInSetColour = false;
 			if ~isempty(me.findprop('contrastOut')) && me.contrastOut < 1 && me.stopLoop == false
 				notify(me,'changeColour');
+			end
+		end
+		
+		% ===================================================================
+		%> @brief alphaOut SET method
+		%>
+		% ===================================================================
+		function set_alphaOut(me, value)
+			me.alphaOut = value;
+			if ~me.isInSetColour
+				if isempty(me.findprop('colourOut'))
+					me.colour = [me.colour(1:3) me.alphaOut];
+				else
+					me.colourOut = [me.colourOut(1:3) me.alphaOut];
+				end
 			end
 		end
 		
