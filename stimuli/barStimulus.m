@@ -160,6 +160,8 @@ classdef barStimulus < baseStimulus
 			me.tick = me.tick + 1;
 		end
 		
+		
+		
 		% ===================================================================
 		%> @brief Update our stimulus
 		%>
@@ -169,22 +171,7 @@ classdef barStimulus < baseStimulus
 			resetTicks(me);
 			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
 			if me.regenerateTexture && Screen(me.sM.win,'WindowKind') == 1
-				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-					if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
-					try Screen('Close',me.texture); me.texture=[]; end %#ok<*TRYNC>
-				end
-				if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
-					if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
-					try Screen('Close', me.texture2); me.texture2=[]; end 
-				end
-				constructMatrix(me);%make our texture matrix
-				me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, [], 2);
-				if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
-				if me.phaseReverseTime > 0
-					me.texture2=Screen('MakeTexture', me.sM.win, me.matrix2, 1, [], 2);
-					if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
-					me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
-				end
+				refreshTexture(me);
 			end
 			computePosition(me);
 			setRect(me);
@@ -238,6 +225,31 @@ classdef barStimulus < baseStimulus
 			me.ppd = [];
 			me.removeTmpProperties;
 			resetTicks(me);
+		end
+		
+		% ===================================================================
+		%> @brief Regenerate the texture for the bar, can be called outside
+		%> of update
+		%>
+		%> 
+		% ===================================================================
+		function refreshTexture(me)
+			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+				%if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
+				try Screen('Close',me.texture); me.texture=[]; end %#ok<*TRYNC>
+			end
+			if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
+				%if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
+				try Screen('Close', me.texture2); me.texture2=[]; end 
+			end
+			constructMatrix(me);%make our texture matrix
+			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, [], 2);
+			%if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
+			if me.phaseReverseTime > 0
+				me.texture2=Screen('MakeTexture', me.sM.win, me.matrix2, 1, [], 2);
+				%if me.verbose; fprintf('===>>>Made texture: %i kind: %i\n',me.texture2,Screen(me.texture2,'WindowKind')); end
+				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
+			end
 		end
 		
 		% ===================================================================
@@ -338,8 +350,8 @@ classdef barStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_alphaOut(me, value)
-			me.alphaOut = value;
 			if ~me.isInSetColour
+				me.alphaOut = value;
 				if isempty(me.findprop('colourOut'))
 					me.colour = [me.colour(1:3) me.alphaOut];
 				else
@@ -357,6 +369,17 @@ classdef barStimulus < baseStimulus
 		function constructMatrix(me)
 			me.matrix=[]; %reset the matrix
 			try
+				if isempty(me.findprop('colourOut'))
+					colour = me.colour;
+					alpha = me.alpha;
+					contrast = me.contrast;
+					scale = me.scale;
+				else
+					colour = me.colourOut;
+					alpha = me.alphaOut;
+					contrast = me.contrastOut; %#ok<*PROP>
+					scale = me.scaleOut;
+				end
 				bwpixels = round(me.barWidthOut*me.ppd);
 				blpixels = round(me.barHeightOut*me.ppd);
 				if bwpixels>me.screenWidth;bwpixels=me.screenWidth;end
@@ -365,10 +388,10 @@ classdef barStimulus < baseStimulus
 				if ~strcmpi(me.type,'checkerboard')
 					if rem(bwpixels,2);bwpixels=bwpixels+1;end
 					if rem(blpixels,2);blpixels=blpixels+1;end
-					bwscale = round(bwpixels/me.scale)+1;
-					blscale = round(blpixels/me.scale)+1;
+					bwscale = round(bwpixels/scale)+1;
+					blscale = round(blpixels/scale)+1;
 					rmat = ones(blscale,bwscale);
-					tmat = repmat(rmat,1,1,4); 
+					tmat = repmat(rmat,1,1,3); 
 				end
 				
 				switch me.type
@@ -379,19 +402,16 @@ classdef barStimulus < baseStimulus
 						for i=1:3
 							tmat(:,:,i)=tmat(:,:,i).*rmat;
 						end
-						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
 					case 'randomColour'
 						for i=1:3
 							rmat=rand(blscale,bwscale);
 							tmat(:,:,i)=tmat(:,:,i).*rmat;
 						end
-						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
 					case 'randomN'
 						rmat=randn(blscale,bwscale);
 						for i=1:3
 							tmat(:,:,i)=tmat(:,:,i).*rmat;
 						end
-						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
 					case 'randomBW'
 						rmat=rand(blscale,bwscale);
 						rmat(rmat < 0.5) = 0;
@@ -399,35 +419,24 @@ classdef barStimulus < baseStimulus
 						for i=1:3
 							tmat(:,:,i)=tmat(:,:,i).*rmat;
 						end
-						tmat(:,:,4)=ones(blscale,bwscale)*me.alpha;
 					otherwise
-						if isempty(me.findprop('colourOut'))
-							colour = me.colour;
-							alpha = me.alpha;
-							contrast = me.contrast;
-						else
-							colour = me.colourOut;
-							alpha = me.alphaOut;
-							contrast = me.contrastOut;
-						end
 						tmat(:,:,1)=ones(blscale,bwscale) * (colour(1) * contrast);
 						tmat(:,:,2)=ones(blscale,bwscale) * (colour(2) * contrast);
 						tmat(:,:,3)=ones(blscale,bwscale) * (colour(3) * contrast);
-						tmat(:,:,4)=ones(blscale,bwscale) * alpha;
 				end
 				if ~strcmpi(me.type,'checkerboard')
-					aw=0:me.scale:bwpixels;
-					al=0:me.scale:blpixels;
+					aw=0:scale:bwpixels;
+					al=0:scale:blpixels;
 					[a,b]=meshgrid(aw,al);
 					[A,B]=meshgrid(0:bwpixels,0:blpixels);
 					for i=1:3
 						outmat(:,:,i) = interp2(a,b,tmat(:,:,i),A,B,me.interpMethod);
 					end
-					outmat(:,:,4) = ones(size(outmat,1),size(outmat,2)).*me.alpha;
+					outmat(:,:,4) = ones(size(outmat,1),size(outmat,2)).*alpha;
 					outmat = outmat(1:blpixels,1:bwpixels,:);
 				else
 					outmat(:,:,1:3) = tmat;
-					outmat(:,:,4) = ones(size(outmat,1),size(outmat,2)).*me.alpha;
+					outmat(:,:,4) = ones(size(outmat,1),size(outmat,2)).*alpha;
 				end
 				me.matrix = outmat;
 				if me.phaseReverseTime > 0
@@ -446,7 +455,7 @@ classdef barStimulus < baseStimulus
 						end
 						out(:,:,i) = tmp;
 					end
-					out(:,:,4) = ones(size(out,1),size(out,2)).*me.alpha;
+					out(:,:,4) = ones(size(out,1),size(out,2)).*alpha;
 					me.matrix2 = out;
 				end
 			catch ME %#ok<CTCH>

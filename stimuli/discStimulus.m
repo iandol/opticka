@@ -336,8 +336,8 @@ classdef discStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_alphaOut(me, value)
-			me.alphaOut = value;
 			if ~me.isInSetColour
+				me.alphaOut = value;
 				if isempty(me.findprop('colourOut'))
 					me.colour = [me.colour(1:3) me.alphaOut];
 				else

@@ -501,7 +501,12 @@ classdef screenManager < optickaCore
 				end
 				
 				% Enable alpha blending.
+				sv.blending = false;
 				if me.blend==1
+					sv.newSrc = me.srcMode;
+					sv.newDst = me.dstMode;
+					sv.srcdst = [me.srcMode '|' me.dstMode];
+					sv.blending = true;
 					[sv.oldSrc,sv.oldDst,sv.oldMask]...
 						= Screen('BlendFunction', me.win, me.srcMode, me.dstMode);
 					fprintf('\n---> screenManager: Previous OpenGL blending: %s | %s\n', sv.oldSrc, sv.oldDst);
