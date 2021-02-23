@@ -15,6 +15,8 @@ classdef imageStimulus < baseStimulus
 		multipleImages double = 0
 		%> contrast multiplier
 		contrast double = 1
+		%> precision, 0 keeps 8bit, 1 16bit, 2 32bit
+		precision = 0
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -175,6 +177,10 @@ classdef imageStimulus < baseStimulus
 				me.currentImage = '';
 			end
 			
+			if me.precision > 0
+				me.matrix = double(me.matrix)/255;
+			end
+			
 			me.width = size(me.matrix,2);
 			me.height = size(me.matrix,1);
 			
@@ -183,9 +189,17 @@ classdef imageStimulus < baseStimulus
 			me.matrix = me.matrix .* me.contrast;
 			
 			if isempty(ialpha)
-				me.matrix(:,:,4) = uint8(me.alpha .* 255);
+				if isfloat(me.matrix)
+					me.matrix(:,:,4) = me.alphaOut;
+				else
+					me.matrix(:,:,4) = uint8(me.alphaOut .* 255);
+				end
 			else
-				me.matrix(:,:,4) = ialpha;
+				if isfloat(me.matrix)
+					me.matrix(:,:,4) = double(ialpha);
+				else
+					me.matrix(:,:,4) = ialpha;
+				end
 			end
 			
 			if isinteger(me.matrix(1))
@@ -193,7 +207,7 @@ classdef imageStimulus < baseStimulus
 			else
 				specialFlags = 0; %4 is optimization for uint8 textures. 0 is default
 			end
-			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, specialFlags);
+			me.texture = Screen('MakeTexture', me.sM.win, me.matrix, 1, specialFlags, me.precision);
 		end
 
 		% ===================================================================

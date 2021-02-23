@@ -383,7 +383,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if benchmark
 					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.', 5,5,[0 0 0]);
 				else
-					Screen('DrawText', s.win, 'Stim will be static for 2 seconds, then animate...', 5,5,[0 0 0]);
+					Screen('DrawText', s.win, sprintf('Stim will be static for 2.0 seconds, then animate for %.2f seconds',runtime), 5,5,[0 0 0]);
 				end
 				
 				flip(s);
@@ -391,8 +391,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				nFrames = 0;
 				notFinished = true;
 				benchmarkFrames = sv.fps * runtime;
-				startT = GetSecs+sv.ifi; vbl = startT;
-				
+				startT = GetSecs+sv.ifi;
+				vbl = zeros(benchmarkFrames+1,1);
 				while notFinished
 					nFrames = nFrames + 1;
 					draw(me); %draw stimulus
@@ -401,23 +401,24 @@ classdef baseStimulus < optickaCore & dynamicprops
  					animate(me); %animate stimulus, will be seen on next draw
 					if benchmark
 						Screen('Flip',s.win,0,2,2);
-						notFinished =  nFrames <= benchmarkFrames;
+						notFinished = nFrames < benchmarkFrames;
 					else
 						vbl(nFrames) = flip(s, vbl(end)); %flip the buffer
-						notFinished = vbl(end) <= startT + runtime;
+						notFinished = vbl(nFrames) < (vbl(1) + (runtime-sv.ifi));
 					end
 				end
-				
-				endT = GetSecs;
-				flip(s);
+				endT = flip(s);
+				if ~benchmark;startT = vbl(1);end
+				diffT = endT - startT;
 				WaitSecs(0.5);
-				if showVBL
+				vbl = vbl(1:nFrames);
+				if showVBL && ~benchmark
 					figure;
-					plot(diff(vbl)*1e3);
-					line([0 length(vbl)-1],[sv.ifi*1e3 sv.ifi*1e3]);
-					title(sprintf('VBL Times, should be ~%.2f ms',sv.ifi*1e3));
+					plot(diff(vbl)*1e3,'k*');
+					line([0 length(vbl)-1],[sv.ifi*1e3 sv.ifi*1e3],'Color',[0 0 0]);
+					title(sprintf('VBL Times, should be ~%.4f ms',sv.ifi*1e3));
 					ylabel('Time (ms)')
-					xlabel('Frames')
+					xlabel('Frame #')
 				end
 				Priority(0); ShowCursor; ListenChar(0);
 				reset(me); %reset our stimulus ready for use again
@@ -425,9 +426,10 @@ classdef baseStimulus < optickaCore & dynamicprops
 				s.screen = oldscreen;
 				s.windowed = oldwindowed;
 				s.bitDepth = oldbitdepth;
-				fps = nFrames / (endT-startT);
-				fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.2f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, endT-startT, fps);
-				clear s fps benchmark runtime b bb i; %clear up a bit
+				fps = nFrames / diffT;
+				fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.3f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, diffT, fps);
+				if ~benchmark;fprintf('======>>> Last frame time: %.3f\n',vbl(end)-startT);end
+				clear s fps benchmark runtime b bb i vbl; %clear up a bit
 				warning on
 			catch ME
 				warning on
