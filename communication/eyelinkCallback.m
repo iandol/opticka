@@ -283,6 +283,7 @@ switch eyecmd
 		else
 			rc = [width , height, x , y , dw , dh , 0];
 		end
+		if verbose; fprintf('--->>> EYELINKCALLBACK:16\n'); end
 		% add by NJ to prevent flashing of text in drift correct
 	case 17
 		inDrift = 1;
@@ -473,9 +474,11 @@ function EyelinkDrawCalibrationTarget(eyewin, el, calxy, verbose)
 try
 	[width, ~]=Screen('WindowSize', eyewin);
 	size=round(el.calibrationtargetsize/100*width);
-	insetSize=round(el.calibrationtargetwidth/100*width);
-	if el.calibrationtargetwidth == 0 
-		insetSize = 0;
+	if el.calibrationtargetwidth > 0
+		insetSize=round(el.calibrationtargetwidth/100*width);
+		if insetSize < 2; insetSize = 2;end
+	else
+		insetSize = 0; 
 	end
 	ShowCursor;
 	if sum(el.calibrationtargetcolour) < 0.6
@@ -483,14 +486,13 @@ try
 	else
 		insetColour = [0 0 0];
 	end
-	
-	if size <= 64
-		Screen('DrawDots', eyewin, calxy, size, el.calibrationtargetcolour, [], 2,1);
-		if insetSize>0; Screen('DrawDots', eyewin, calxy, insetSize, insetColour, [], 2,1); end
-	else
-		Screen('FillOval', eyewin, el.calibrationtargetcolour, [calxy(1)-size/2 calxy(2)-size/2 calxy(1)+size/2 calxy(2)+size/2], size+2);
-		if insetSize>0; Screen('FillOval', eyewin, insetColour, [calxy(1)-insetSize/2 calxy(2)-inset/2 calxy(1)+inset/2 calxy(2)+inset/2], inset+2);end
+	Screen('gluDisk', eyewin, el.calibrationtargetcolour, calxy(1), calxy(2), size/2);
+	if insetSize>0
+		Screen('FillRect', eyewin, insetColour, CenterRectOnPointd([0 0 size insetSize], calxy(1), calxy(2)));
+		Screen('FillRect', eyewin, insetColour, CenterRectOnPointd([0 0 insetSize size], calxy(1), calxy(2)));
+		Screen('gluDisk', eyewin, el.calibrationtargetcolour, calxy(1), calxy(2), insetSize);
 	end
+	
 	if verbose; fprintf('--->>> EYELINKCALLBACK EyelinkDrawCalibrationTarget: %.5g %.5g | size:%i / %i px\n',calxy(1),calxy(2),size,insetSize); end
 catch ME
 	ple(ME)

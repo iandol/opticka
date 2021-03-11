@@ -139,8 +139,8 @@ classdef eyelinkManager < optickaCore
 				me.version = 0;
 			end
 			me.modify.calibrationtargetcolour = [1 1 1];
-			me.modify.calibrationtargetsize = 0.8;
-			me.modify.calibrationtargetwidth = 0.04;
+			me.modify.calibrationtargetsize = 0.9;
+			me.modify.calibrationtargetwidth = 0.05;
 			me.modify.displayCalResults = 1;
 			me.modify.targetbeep = 1;
 			me.modify.devicenumber = -1;
@@ -258,8 +258,10 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function setup(me)
 			if me.isConnected
+				oldrk = RestrictKeysForKbCheck([]); %just in case someone has restricted keys
 				trackerSetup(me); % Calibrate the eye tracker
 				checkEye(me);
+				RestrictKeysForKbCheck(oldrk);
 			end
 		end
 		
@@ -984,6 +986,7 @@ classdef eyelinkManager < optickaCore
 			calibkey=KbName('C');
 			driftkey=KbName('D');
 			me.recordData = true; %lets save an EDF file
+			figure;plot(0,0,'ro');ax=gca;hold on;xlim([-20 20]);ylim([-20 20]);grid on;
 			try
 				s = screenManager('debug',true,'pixelsPerCm',27,'distance',66);
 				if exist('forcescreen','var'); s.screen = forcescreen; end
@@ -1019,6 +1022,9 @@ classdef eyelinkManager < optickaCore
 				while xx == 0
 					yy = 0;
 					b = 1;
+					xst = [];
+					yst = [];
+					correct = false;
 					edfMessage(me,'V_RT MESSAGE END_FIX END_RT');
 					edfMessage(me,['TRIALID ' num2str(a)]);
 					startRecording(me);
@@ -1031,7 +1037,7 @@ classdef eyelinkManager < optickaCore
 						drawGrid(s);
 						drawScreenCenter(s);
 						drawCross(s,0.5,[1 1 0],me.fixationX,me.fixationY);
-						getSample(me);
+						getSample(me); xst(b)=me.x; yst(b)=me.y;
 						
 						if ~isempty(me.currentSample)
 							x = me.toPixels(me.x,'x'); %#ok<*PROP>
@@ -1048,15 +1054,20 @@ classdef eyelinkManager < optickaCore
 						
 						[~, ~, keyCode] = KbCheck(-1);
 						if keyCode(stopkey); yy = 1; xx = 1; break;	end
-						if keyCode(nextKey); yy = 1; break; end
+						if keyCode(nextKey); yy = 1; correct = true; break; end
 						if keyCode(calibkey); trackerSetup(me); break; end
 						if keyCode(driftkey); driftCorrection(me); break; end
 						if b == 60; edfMessage(me,'END_FIX');end
 						b=b+1;
 					end
 					edfMessage(me,'END_RT');
-					stopRecording(me)
-					edfMessage(me,'TRIAL_RESULT 1')
+					stopRecording(me);
+					if correct
+						edfMessage(me,'TRIAL_RESULT 1');
+					else
+						edfMessage(me,'TRIAL_RESULT 1');
+					end
+					hold on;plot(ax,xst,yst);
 					me.fixationX = randi([-5 5]);
 					me.fixationY = randi([-5 5]);
 					me.fixationRadius = randi([1 5]);
@@ -1073,7 +1084,7 @@ classdef eyelinkManager < optickaCore
 					trackerDrawFixation(me);
 					trackerDrawStimuli(me,ts);
 					update(o);
-					WaitSecs(0.3)
+					WaitSecs(0.5)
 					a=a+1;
 				end
 				ListenChar(0);
