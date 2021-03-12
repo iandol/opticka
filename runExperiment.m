@@ -500,6 +500,7 @@ classdef runExperiment < optickaCore
 			%------a general structure to hold various parameters, 
 			% will be saved after the run; prefer structure over class 
 			% to keep it light. These defaults will be overwritten in StateFile.m
+			
 			tS = struct();
 			tS.name = 'generic'; %==name of this protocol
 			tS.useTask = false; %use stimulusSequence (randomised variable task object)
@@ -527,6 +528,11 @@ classdef runExperiment < optickaCore
 			%------make a short handle to the screenManager
 			s = me.screen; 
 			me.stimuli.screen = s;
+			
+			%------initialise an audioManager for beeps,playing sounds etc.
+			aM=audioManager;
+			aM.setup;
+			aM.beep(350,0.1,0.1);
 			
 			%------initialise task
 			t = me.task;
@@ -589,7 +595,7 @@ classdef runExperiment < optickaCore
 					me.stateInfo = stateInfoTmp;
 					addStates(sM, me.stateInfo);
 				end
-				
+
 				%--------get pre-run comments for this data collection
 				if tS.askForComments
 					comment = inputdlg({'CHECK: ARM PLEXON!!! Initial Comment for this Run?'},['Run Comment for ' me.name]);
@@ -852,6 +858,7 @@ classdef runExperiment < optickaCore
 				ListenChar(0);
 				ShowCursor;
 				try close(s); end
+				try close(aM); end
 				try close(eL); end
 				me.eyeTracker = [];
 				me.behaviouralRecord = [];
@@ -1357,6 +1364,13 @@ classdef runExperiment < optickaCore
                 end
                 rM.port = me.arduinoPort;
 				me.arduino = rM;
+			elseif ~me.useArduino && ~me.useLabJackReward
+				if isa(rM,'arduinoManager')
+					rM.close
+					rM.silentMode = true;
+				else
+					rM = ioManager();
+				end
 			elseif me.useLabJackReward
 				me.lJack = labJack('name',me.name,'readResponse', false,'verbose',me.verbose);
 				rM = me.lJack;

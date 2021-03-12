@@ -1051,8 +1051,18 @@ classdef opticka < optickaCore
 						me.r.name = [tmp.r.name];
 					end
 					if isfield(tmp.r.paths,'stateInfoFile')
-						me.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
-						me.getStateInfo();
+						if ~exist(tmp.r.paths.stateInfoFile,'file')
+							[~,f,e] = fileparts(tmp.r.paths.stateInfoFile);
+							newfile = [pwd filesep f e];
+							if exist(tmp.r.paths.stateInfoFile,'file')
+								me.r.paths.stateInfoFile =newfile;
+							else
+								me.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
+							end
+						else
+							me.r.paths.stateInfoFile = tmp.r.paths.stateInfoFile;
+							me.getStateInfo();
+						end
 					elseif isprop(me.r,'stateInfoFile') && isprop(tmp.r,'stateInfoFile')
 						me.r.paths.stateInfoFile = tmp.r.stateInfoFile;
 						if ~exist(me.r.paths.stateInfoFile,'file')

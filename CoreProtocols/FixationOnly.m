@@ -7,7 +7,7 @@ tS.checkKeysDuringStimulus = true;
 tS.recordEyePosition = false;
 tS.askForComments = false;
 tS.saveData = false; %we don't want to save any data
-obj.useDataPixx = false; %make sure we don't trigger the plexon
+me.useDataPixx = false; %make sure we don't trigger the plexon
 
 eL.isDummy = false; %use dummy or real eyelink?
 eL.sampleRate = 250;
@@ -15,8 +15,8 @@ eL.remoteCalibration = true; %manual calibration
 eL.calibrationStyle = 'HV5'; % calibration style
 eL.recordData = false; % don't save EDF fileo
 eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 4;
-eL.modify.calibrationtargetwidth = 0.01;
+eL.modify.calibrationtargetsize = 1;
+eL.modify.calibrationtargetwidth = 0.1;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
 
@@ -28,36 +28,38 @@ eL.fixationTime = 0.5;
 eL.strictFixation = false;
 
 %randomise stimulus variables every trial?
-obj.stimuli.choice = [];
+me.stimuli.choice = [];
 n = 1;
 in(n).name = 'xyPosition';
 in(n).values = [0 0;];
 in(n).stimuli = [1];
 in(n).offset = [];
-obj.stimuli.stimulusTable = in;
+me.stimuli.stimulusTable = in;
 
 %allows using arrow keys to control this table
-obj.stimuli.tableChoice = 1;
+me.stimuli.tableChoice = 1;
 n=1;
-obj.stimuli.controlTable(n).variable = 'size';
-obj.stimuli.controlTable(n).delta = 1;
-obj.stimuli.controlTable(n).stimuli = 1;
-obj.stimuli.controlTable(n).limits = [0.25 20];
+me.stimuli.controlTable(n).variable = 'size';
+me.stimuli.controlTable(n).delta = 1;
+me.stimuli.controlTable(n).stimuli = 1;
+me.stimuli.controlTable(n).limits = [0.25 20];
 
 %this allows us to enable subsets from our stimulus list
-obj.stimuli.stimulusSets = {[1],[1]};
-obj.stimuli.setChoice = 1;
-showSet(obj.stimuli);
+me.stimuli.stimulusSets = {[1],[1]};
+me.stimuli.setChoice = 1;
+showSet(me.stimuli);
 
 %----------------------State Machine States-------------------------
-% io = datapixx (digital I/O to plexon)
-% s = screenManager
+% me = runExperiment object
+% io = digital I/O to recording system
+% s  = PTB screenManager
 % sM = State Machine
-% eL = eyelink manager
-% lJ = LabJack (reward trigger to Crist reward system)
-% bR = behavioural record plot
-% these are our functions that will execute as the stateMachine runs,
-% in the scope of the runExperiemnt object.
+% eL = eyetracker manager
+% t  = task sequence (stimulusSequence class)
+% rM = Reward Manager (LabJack or Arduino TTL trigger to Crist reward system/Magstim)
+% bR = behavioural record plot (on screen GUI during task run)
+% me.stimuli = our list of stimuli
+% tS = general struct to hold variables for this run
 
 %pause entry
 pauseEntryFcn = @()setOffline(eL);
@@ -74,7 +76,7 @@ prestimulusFcn = @()drawBackground(s);
 
 %exiting prestimulus state
 psExitFcn = { 
-	@()update(obj.stimuli); ...
+	@()update(me.stimuli); ...
 	@()statusMessage(eL,'Showing Fixation Spot...'); ...
 };
 
@@ -82,10 +84,10 @@ psExitFcn = {
 stimEntryFcn = {};
 
 %what to run when we are showing stimuli
-stimFcn = { @()draw(obj.stimuli); ... 
+stimFcn = { @()draw(me.stimuli); ... 
 	%@()drawEyePosition(eL); ...
 	@()finishDrawing(s); ...
-	@()animate(obj.stimuli); ... % animate stimuli for subsequent draw
+	@()animate(me.stimuli); ... % animate stimuli for subsequent draw
 	};
 
 %test we are maintaining fixation
@@ -96,7 +98,7 @@ stimExitFcn = {};
 
 %if the subject is correct (small reward)
 correctEntryFcn = { 
-	@()timedTTL(lJ,0,tS.rewardTime); ... 
+	@()timedTTL(rM,2,tS.rewardTime); ... 
 	@()updatePlot(bR, eL, sM); ...
 	@()statusMessage(eL,'Correct! :-)');
 };
