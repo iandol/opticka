@@ -548,12 +548,12 @@ classdef eyelinkManager < optickaCore
 						fixated = true;
 						me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1000;
 						%if me.verbose;fprintf(' F: %i:%i LEN: %f/%f TOT: %f |',fixated,fixtime, me.fixLength, me.fixationTime, me.fixTotal);end
-						return
 					else
 						fixated = false;
 						fixtime = false;
 						searching = false;
 					end
+					me.fixTrue = fixated;
 				else
 					if me.fixN == 1
 						me.fixN = -100;
@@ -569,6 +569,7 @@ classdef eyelinkManager < optickaCore
 					end
 					me.fixStartTime = 0;
 					me.fixLength = 0;
+					me.fixTrue = false;
 					me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1000;
 					%if me.verbose;fprintf('<S fixN:%i search:%i: len:%.2f total:%.2f>\n',me.fixN,searching, me.fixInitLength, me.fixTotal);end
 					return
@@ -735,7 +736,7 @@ classdef eyelinkManager < optickaCore
 				xy = toPixels(me,[me.x me.y]);
 				if me.fixTrue
 					if ~me.isBlink
-						Screen('DrawDots', me.win, xy, 14, [1 0.5 1 1], [], 1);
+						Screen('DrawDots', me.win, xy, 10, [1 0.4 1 1], [], 1);
 					else
 						Screen('DrawDots', me.win, xy, 7, [0.75 0 0 1], [], 1);
 					end
@@ -744,7 +745,7 @@ classdef eyelinkManager < optickaCore
 					end
 				else
 					if ~me.isBlink
-						Screen('DrawDots', me.win, xy, 10, [1 0.5 0 1], [], 1);
+						Screen('DrawDots', me.win, xy, 10, [0.75 0.5 0 1], [], 1);
 					else
 						Screen('DrawDots', me.win, xy, 7, [0.75 0 0 1], [], 1);
 					end
