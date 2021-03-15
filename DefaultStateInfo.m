@@ -9,6 +9,7 @@
 % me = runExperiment object
 % io = digital I/O to recording system
 % s  = PTB screenManager
+% aM = audioManager
 % sM = State Machine
 % eL = eyetracker manager
 % t  = task sequence (stimulusSequence class)
@@ -18,15 +19,15 @@
 % tS = general struct to hold variables for this run
 
 %------------General Settings-----------------
-tS.useTask = true; %==use stimulusSequence (randomised variable task object)
-tS.rewardTime = 150; %==TTL time in milliseconds
+tS.useTask				= true; %==use stimulusSequence (randomised variable task object)
+tS.rewardTime			= 150; %==TTL time in milliseconds
 tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
-tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
-tS.askForComments = false; %==little UI requestor asks for comments before/after run
-tS.saveData = false; %==save behavioural and eye movement data?
-tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
-tS.useMagStim = false; %enable the magstim manager
-tS.name = 'default'; %==name of this protocol
+tS.recordEyePosition	= false; %==record eye position within PTB, **in addition** to the EDF?
+tS.askForComments		= false; %==little UI requestor asks for comments before/after run
+tS.saveData				= false; %==save behavioural and eye movement data?
+tS.dummyEyelink			= true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+tS.useMagStim			= false; %enable the magstim manager
+tS.name					= 'default'; %==name of this protocol
 
 %-----enable the magstimManager which uses FOI2 of the LabJack
 if tS.useMagStim
@@ -38,47 +39,54 @@ if tS.useMagStim
 end
 
 %------------Eyetracker Settings-----------------
-tS.fixX = 0;
-tS.fixY = 0;
-tS.firstFixInit = 1;
-tS.firstFixTime = [0.5 0.8];
-tS.firstFixRadius = 2;
-tS.stimulusFixTime = 1.25;
-me.lastXPosition = tS.fixX;
-me.lastYPosition = tS.fixY;
-tS.strict = true; %do we forbid eye to enter-exit-reenter fixation window?
+tS.fixX					= 0;
+tS.fixY					= 0;
+tS.firstFixInit			= 1;
+tS.firstFixTime			= [0.5 0.8];
+tS.firstFixRadius		= 2;
+tS.stimulusFixTime		= 1.25;
+me.lastXPosition		= tS.fixX;
+me.lastYPosition		= tS.fixY;
+tS.strict				= true; %do we forbid eye to enter-exit-reenter fixation window?
 
 %------------------------Eyelink setup--------------------------
-eL.name = tS.name;
+eL.name					= tS.name;
 if tS.saveData == true; eL.recordData = true; end %===save EDF file?
 if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
-eL.sampleRate = 250;
-eL.remoteCalibration = true; %===manual calibration
-eL.calibrationStyle = 'HV5'; %===5 point calibration
+eL.sampleRate			= 250;
+eL.strictFixation		= tS.strict;
+%===========================
+% remote calibration enables manual control and selection of each fixation
+% this is useful for a baby or monkey who has not been trained for fixation
+% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
+% accept calibration!
+eL.remoteCalibration	= false; 
+%===========================
+eL.calibrationStyle		= 'HV5'; %===5 point calibration
 eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 0.5;
-eL.modify.calibrationtargetwidth = 0.01;
+eL.modify.calibrationtargetsize = 1;
+eL.modify.calibrationtargetwidth = 0.1;
 eL.modify.waitformodereadytime = 500;
-eL.modify.devicenumber = -1; % -1 == use any keyboard
+eL.modify.devicenumber	= -1; % -1 == use any keyboard
 
 %Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
 %randomise stimulus variables every trial? useful during initial training but not for
 %data collection.
-me.stimuli.choice = [];
+me.stimuli.choice		= [];
 me.stimuli.stimulusTable = [];
 
 % allows using arrow keys to control this table during the main loop
 % ideal for mapping receptive fields so we can twiddle parameters, normally not used
 % for normal tasks
 me.stimuli.controlTable = [];
-me.stimuli.tableChoice = 1;
+me.stimuli.tableChoice	= 1;
 
 % this allows us to enable subsets from our stimulus list
 % numbers are the stimuli in the opticka UI
 me.stimuli.stimulusSets = {[1,2],2}; 
-me.stimuli.setChoice = 1; %EDIT THIS TO SAY WHICH STIMULI TO SHOW BY DEFAULT
+me.stimuli.setChoice	= 1; %EDIT THIS TO SAY WHICH STIMULI TO SHOW BY DEFAULT
 showSet(me.stimuli);
 
 %----------------------State Machine States-------------------------
@@ -96,22 +104,22 @@ pauseEntryFcn = {
 	@()setOffline(eL); ... %set eyelink offline
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
-	@()fprintf('\n===>>>ENTER PAUSE STATE\n'); ...
+	@()disp('Paused, press [p] to resume...'); ...
 	@()disableFlip(me); ...
+	@()needEyeSample(me,false); ...
 };
 
 	%pause exit
-	pauseExitFcn = { 
-		@()enableFlip(me); ...
-		@()resumeRecording(io); ...
-	};
+pauseExitFcn = { 
+	@()enableFlip(me); ...
+	@()resumeRecording(io); ...
+};
 
 %prefixate entry
 prefixEntryFcn = {
 	@()hide(me.stimuli); ...
 	@()getStimulusPositions(me.stimuli); ... %make a struct the eL can use for drawing stim positions
 	@()trackerClearScreen(eL); ...
-	@()hide(me.stimuli); ...
 	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL,me.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
 };
@@ -121,7 +129,6 @@ prefixExitFcn = {
 	@()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
 	@()resetFixation(eL); ... %reset the fixation counters ready for a new trial
 	@()updateFixationValues(eL,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset 
-	@()setOffline(eL); ... %make sure offline before start recording
 	@()show(me.stimuli{2}); ...
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
 	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(me))]); ...
@@ -191,7 +198,6 @@ correctExitFcn = {
 	@()correct(io); ...
 	@()edfMessage(eL,'END_RT'); ...
 	@()edfMessage(eL,'TRIAL_RESULT 1'); ...
-	%@()timedTTL(rM,0,tS.rewardTime); ... % labjack sends a TTL to Crist reward system
 	@()stopRecording(eL); ...
 	@()setOffline(eL); ... %set eyelink offline
 	@()updateVariables(me,[],[],true); ... %randomise our stimuli, set strobe value too
@@ -207,7 +213,8 @@ incEntryFcn ={
 };
 
 %incorrect / break exit
-incExitFcn = { @()incorrect(io); ...
+incExitFcn = { 
+	@()incorrect(io); ...
 	@()edfMessage(eL,'END_RT'); ...
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ...
 	@()stopRecording(eL); ...
@@ -226,7 +233,8 @@ breakEntryFcn = {
 };
 
 %incorrect / break exit
-breakExitFcn = { @()breakFixation(io); ...
+breakExitFcn = { 
+	@()breakFixation(io); ...
 	@()edfMessage(eL,'END_RT'); ...
 	@()edfMessage(eL,'TRIAL_RESULT -1'); ...
 	@()stopRecording(eL); ...

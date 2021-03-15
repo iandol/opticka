@@ -28,7 +28,9 @@ classdef eyelinkManager < optickaCore
 		fixationRadius double		= 1
 		%> fixation time in seconds
 		fixationTime double			= 1
-		%> only allow 1 entry to fixation window?
+		%> time to initiate fixation in seconds
+		fixationInitTime double		= 0.25
+		%> only allow 1 entry into fixation window?
 		strictFixation logical		= true
 		%> do we ignore blinks, if true then we do not update X and Y position from
 		%> previous eye location, meaning the various methods will maintain position,
@@ -38,8 +40,6 @@ classdef eyelinkManager < optickaCore
 		%> really tell if a subject is blinking or has removed their head using the 
 		%> float data.
 		ignoreBlinks logical		= false
-		%> time to initiate fixation in seconds
-		fixationInitTime double		= 0.25
 		%> exclusion zone no eye movement allowed inside
 		exclusionZone				= []
 		%> tracker update speed (Hz), should be 250 500 1000 2000
@@ -91,6 +91,8 @@ classdef eyelinkManager < optickaCore
 		fixInitTotal				= 0
 		%> total time searching and holding fixation
 		fixTotal					= 0
+		%> last isFixated treu/false result
+		fixTrue;
 		%> last time offset betweeen tracker and display computers
 		currentOffset				= 0
 		%> tracker time stamp
@@ -270,14 +272,15 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function resetFixation(me)
-			me.fixStartTime = 0;
-			me.fixLength = 0;
-			me.fixInitStartTime = 0;
-			me.fixInitLength = 0;
-			me.fixInitTotal = 0;
-			me.fixTotal = 0;
-			me.fixN = 0;
-			me.fixSelection = 0;
+			me.fixStartTime			= 0;
+			me.fixLength			= 0;
+			me.fixInitStartTime		= 0;
+			me.fixInitLength		= 0;
+			me.fixInitTotal			= 0;
+			me.fixTotal				= 0;
+			me.fixN					= 0;
+			me.fixSelection			= 0;
+			me.fixTrue				= false;
 			if me.verbose
 				fprintf('-+-+-> eyelinkManager:reset fixation: %i %i %i\n',me.fixLength,me.fixTotal,me.fixN);
 			end
@@ -430,7 +433,7 @@ classdef eyelinkManager < optickaCore
 						me.pupil = me.currentSample.pa(me.eyeUsed+1);
 						me.isBlink = false;
 					end
-					%if me.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g | isBlink: %i\n',me.x,me.y,me.pupil,me.isBlink);end
+					%if me.verbose;fprintf('<GS X: %.2g | Y: %.2g | P: %.2g | isBlink: %i>\n',me.x,me.y,me.pupil,me.isBlink);end
 				end
 			elseif me.isDummy %lets use a mouse to simulate the eye signal
 				if ~isempty(me.win)
@@ -445,7 +448,7 @@ classdef eyelinkManager < optickaCore
 				me.currentSample.gy = me.y;
 				me.currentSample.pa = me.pupil;
 				me.currentSample.time = GetSecs * 1000;
-				%if me.verbose;fprintf('>>X: %.2g | Y: %.2g | P: %.2g\n',me.x,me.y,me.pupil);end
+				%if me.verbose;fprintf('<DM X: %.2f | Y: %.2f | P: %.2f | T: %f>\n',me.x,me.y,me.pupil,me.currentSample.time);end
 			end
 			sample = me.currentSample;
 		end
@@ -512,6 +515,10 @@ classdef eyelinkManager < optickaCore
 			if (me.isConnected || me.isDummy) && ~isempty(me.currentSample)
 				if me.fixInitTotal == 0
 					me.fixInitTotal = me.currentSample.time;
+					me.fixInitLength = 0;
+					me.fixInitStartTime = 0;
+					me.fixTotal = 0;
+					me.fixTrue = false;
 				end
 				if ~isempty(me.exclusionZone)
 					eZ = me.exclusionZone; x = me.x; y = me.y;
@@ -533,14 +540,14 @@ classdef eyelinkManager < optickaCore
 							me.fixStartTime = me.currentSample.time;
 						end
 						me.fixLength = (me.currentSample.time - me.fixStartTime) / 1000;
-						if me.fixLength > me.fixationTime
+						if me.fixLength >= me.fixationTime
 							fixtime = true;
 						end
 						me.fixInitStartTime = 0;
 						searching = false;
 						fixated = true;
 						me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1000;
-						if me.verbose;fprintf(' %g:%g LEN: %g/%g TOT: %g |',fixated,fixtime, me.fixLength, me.fixationTime, me.fixTotal);end
+						%if me.verbose;fprintf(' F: %i:%i LEN: %f/%f TOT: %f |',fixated,fixtime, me.fixLength, me.fixationTime, me.fixTotal);end
 						return
 					else
 						fixated = false;
@@ -555,7 +562,7 @@ classdef eyelinkManager < optickaCore
 						me.fixInitStartTime = me.currentSample.time;
 					end
 					me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1000;
-					if me.fixInitLength <= me.fixationInitTime
+					if me.fixInitLength < me.fixationInitTime
 						searching = true;
 					else
 						searching = false;
@@ -563,7 +570,7 @@ classdef eyelinkManager < optickaCore
 					me.fixStartTime = 0;
 					me.fixLength = 0;
 					me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1000;
-					if me.verbose;fprintf('start and total: %g %g\n',me.fixInitStartTime,me.fixTotal);end
+					%if me.verbose;fprintf('<S fixN:%i search:%i: len:%.2f total:%.2f>\n',me.fixN,searching, me.fixInitLength, me.fixTotal);end
 					return
 				end
 			end
@@ -726,7 +733,7 @@ classdef eyelinkManager < optickaCore
 		function drawEyePosition(me)
 			if (me.isDummy || me.isConnected) && isa(me.screen,'screenManager') && me.screen.isOpen && ~isempty(me.x) && ~isempty(me.y)
 				xy = toPixels(me,[me.x me.y]);
-				if me.isFixated
+				if me.fixTrue
 					if ~me.isBlink
 						Screen('DrawDots', me.win, xy, 14, [1 0.5 1 1], [], 1);
 					else

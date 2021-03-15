@@ -9,11 +9,12 @@
 % s = screenManager
 % aM = audioManager
 % sM = State Machine
-% eL = eyelink manager
-% rM = reward manager (trigger to reward system)
-% bR = behavioural record plot
+% eL = eyetracker manager
+% t  = task sequence (stimulusSequence class)
+% rM = Reward Manager (LabJack or Arduino TTL trigger to Crist reward system/Magstim)
+% bR = behavioural record plot (on screen GUI during task run)
 % me.stimuli = our list of stimuli
-% tS = general simple struct to hold variables for this run
+% tS = general struct to hold variables for this run
 
 %------------General Settings-----------------
 tS.useTask					= false; %==use stimulusSequence (randomised variable task object)
@@ -23,10 +24,10 @@ tS.checkKeysDuringStimulus  = false; %==allow keyboard control? Slight drop in p
 tS.recordEyePosition		= false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= false; %==save behavioural and eye movement data?
-tS.dummyEyelink				= false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim				= false; %enable the magstim manager
 tS.name						= 'fixation-training'; %==name of this protocol
 me.useEyeLink				= true;
+tS.dummyEyelink				= true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 
 %------------Eyetracker Settings-----------------
 tS.fixX						= 0;
@@ -36,13 +37,14 @@ tS.firstFixTime				= 2;
 tS.firstFixRadius			= 3;
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
-tS.strict					= true; %do we forbid eye to enter-exit-reenter fixation window?
+tS.strict					= false; %do we forbid eye to enter-exit-reenter fixation window?
 
 %------------------------Eyelink setup--------------------------
 eL.name 					= tS.name;
 if tS.saveData == true; eL.recordData = true; end %===save EDF file?
 if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
 eL.sampleRate 				= 250;
+eL.strictFixation			= tS.strict;
 %===========================
 % remote calibration enables manual control and selection of each fixation
 % this is useful for a baby or monkey who has not been trained for fixation
@@ -95,7 +97,6 @@ me.stimuli.fixationChoice 		= 1;
 pauseEntryFcn = { 
 	@()hide(me.stimuli); ...
 	@()drawBackground(s); ... %blank the display
-	@()pauseRecording(io); ...
 	@()drawTextNow(s,'Paused, press [p] to resume...'); ...
 	@()disp('Paused, press [p] to resume...'); ...
 	@()trackerClearScreen(eL); ... 
@@ -104,25 +105,27 @@ pauseEntryFcn = {
 	@()setOffline(eL);
 	@()stopRecording(eL); ...
 	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
-	@()fprintf('\n===>>>ENTER PAUSE STATE\n'); ...
 	@()disableFlip(me); ...
 	@()needEyeSample(me,false); ...
 };
 
 %--------------------pause exit
 pauseExitFcn = { 
+	@()fprintf('\n===>>>EXIT PAUSE STATE\n')
 	@()enableFlip(me); ...
-	@()needEyeSample(me,true); ...
-	@()resumeRecording(io); ...
 };
 
 %prestim entry
 psEntryFcn = {
-	@()setOffline(eL); ...
 	@()resetFixation(eL); ... %reset the fixation counters ready for a new trial
 	@()startRecording(eL);
-	@()trackerClearScreen(eL); ...
 	@()statusMessage(eL,'Prefixation...'); ... %status text on the eyelink
+	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
+	@()edfMessage(eL,sprintf('TRIALID %i',getTaskIndex(me))); ...
+	@()edfMessage(eL,['UUID ' UUID(sM)]); ... %add in the uuid of the current state for good measure
+	@()trackerDrawFixation(eL); ... 
+	@()needEyeSample(me,true); ...
+	@()showSet(me.stimuli); ...
 	@()logRun(me,'PREFIX'); ... %fprintf current trial info
 };
 
@@ -130,21 +133,10 @@ psEntryFcn = {
 prestimulusFcn = { @()drawBackground(s); @()drawText(s,'Prefix'); };
 
 %exiting prestimulus state
-psExitFcn = {
-	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
-	@()edfMessage(eL,sprintf('TRIALID %i',getTaskIndex(me))); ...
-	@()edfMessage(eL,['UUID ' UUID(sM)]); ... %add in the uuid of the current state for good measure
-	@()edfMessage(eL,'MSG:Hello there! '); ... 
-	@()startRecording(eL); ... %start eyelink recording eye data
-	@()statusMessage(eL,'Get Fixation...'); ... %status text on the eyelink
-	@()trackerDrawFixation(eL); ... 
-	@()needEyeSample(me,true); ...
-	@()changeSet(me.stimuli,1); ...
-
-};
+psExitFcn = { };
 
 %what to run when we enter the stim presentation state
-stimEntryFcn = { @()startFixation(io); };
+stimEntryFcn = { @()logRun(me,'SHOW Fixation Spot') };
 
 %what to run when we are showing stimuli
 stimFcn = { 
@@ -169,13 +161,13 @@ stimExitFcn = {
 %if the subject is correct (small reward)
 correctEntryFcn = {
 	@()logRun(me,'CORRECT'); ... %fprintf current trial info
-	@()hide(me.stimuli); ...
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); ... 
 	@()beep(aM,2000); ...
 	@()edfMessage(eL,'TRIAL_RESULT 1'); ...
 	@()statusMessage(eL,'Correct! :-)'); ...
 	@()stopRecording(eL); ...
 	@()setOffline(eL); ... %set eyelink offline
+	@()needEyeSample(me,false); ...
 };
 
 %correct stimulus
@@ -186,44 +178,39 @@ correctFcn = {
 
 %when we exit the correct state
 correctExitFcn = { 
-	@()needEyeSample(me,false); ...
 	@()updatePlot(bR, eL, sM); ...
-	@()resetFixation(eL); ...
 	@()update(me.stimuli); ... 
 };
 
 %break entry
 breakEntryFcn = { 
 	@()logRun(me,'BREAKFIX'); ... %fprintf current trial info
-	@()hide(me.stimuli); ...
 	@()beep(aM,350,0.5,1); ...
 	@()trackerClearScreen(eL); ...
 	@()trackerDrawText(eL,'Broke fix! :-(');
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ... %trial incorrect message
 	@()stopRecording(eL); ... %stop eyelink recording data
 	@()setOffline(eL); ... %set eyelink offline
+	@()needEyeSample(me,false); ...
 };
 
 %break entry
 incEntryFcn = { 
 	@()logRun(me,'INCORRECT'); ... %fprintf current trial info
-	@()hide(me.stimuli); ...
 	@()beep(aM,350,0.5,1); ...
 	@()trackerClearScreen(eL); ...
 	@()trackerDrawText(eL,'Incorrect! :-(');
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ... %trial incorrect message
 	@()stopRecording(eL); ... %stop eyelink recording data
 	@()setOffline(eL); ... %set eyelink offline
+	@()needEyeSample(me,false); ...
 };
 
 %our incorrect stimulus
 breakFcn =  { @()drawBackground(s); @()drawText(s,'Wrong'); };
 
 breakExitFcn = { 
-	@()incorrect(io); ...
-	@()needEyeSample(me,false); ...
 	@()update(me.stimuli); ... %update our stimuli ready for display
-	@()resetFixation(eL); ...
 };
 
 %--------------------calibration function

@@ -340,7 +340,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if ~exist('s','var') || ~isa(s,'screenManager')
 					if isempty(me.sM); me.sM=screenManager; end
 					s = me.sM;
-					s.blend = true; 
+					s.blend = true;
 					s.disableSyncTests = true;
 					s.visualDebug = true;
 					s.bitDepth = 'FloatingPoint32BitIfPossible';
@@ -353,7 +353,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				if forceScreen >= 0
 					s.screen = forceScreen;
 					if forceScreen == 0
-						s.bitDepth = 'FloatingPoint32BitIfPossible';
+						s.bitDepth = '8bit';
 					end
 				end
 				prepareScreen(s);
@@ -388,10 +388,11 @@ classdef baseStimulus < optickaCore & dynamicprops
 				
 				flip(s);
 				WaitSecs('YieldSecs',2);
+				if runtime < sv.ifi; runtime = sv.ifi; end
 				nFrames = 0;
 				notFinished = true;
-				benchmarkFrames = sv.fps * runtime;
-				startT = GetSecs+sv.ifi;
+				benchmarkFrames = floor(sv.fps * runtime);
+				startT = GetSecs;
 				vbl = zeros(benchmarkFrames+1,1);
 				while notFinished
 					nFrames = nFrames + 1;
@@ -404,7 +405,9 @@ classdef baseStimulus < optickaCore & dynamicprops
 						notFinished = nFrames < benchmarkFrames;
 					else
 						vbl(nFrames) = flip(s, vbl(end)); %flip the buffer
-						notFinished = vbl(nFrames) < (vbl(1) + (runtime-sv.ifi));
+						% the calculation needs to take into account the
+						% first and last frame times, so we subtract ifi*2
+						notFinished = vbl(nFrames) < ( vbl(1) + ( runtime - (sv.ifi * 2) ) );
 					end
 				end
 				endT = flip(s);
@@ -428,7 +431,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 				s.bitDepth = oldbitdepth;
 				fps = nFrames / diffT;
 				fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.3f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, diffT, fps);
-				if ~benchmark;fprintf('======>>> Last frame time: %.3f\n',vbl(end)-startT);end
+				if ~benchmark;fprintf('\b======>>> First - Last frame time: %.3f\n\n',vbl(end)-startT);end
 				clear s fps benchmark runtime b bb i vbl; %clear up a bit
 				warning on
 			catch ME

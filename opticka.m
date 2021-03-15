@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '1.19'
+		optickaVersion char = '1.20'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -41,7 +41,7 @@ classdef opticka < optickaCore
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
 			'OKHideFlash','OKUsePhotoDiode','OKTrainingResearcherName',...
-			'OKTrainingName','OKarduinoPort','OKdPPMode'}
+			'OKTrainingName','OKarduinoPort','OKdPPMode','OKDummyMode'}
 	end
 	
 	%=======================================================================
@@ -400,6 +400,7 @@ classdef opticka < optickaCore
 			me.r.screen.hideFlash = logical(me.gv(me.h.OKHideFlash));
 			me.r.screen.useRetina = logical(me.gv(me.h.OKUseRetina));
 			me.r.drawFixation = logical(me.gv(me.h.OKDrawFixation));
+			me.r.dummyMode = logical(me.gv(me.h.OKDummyMode));
 			if strcmpi(me.r.screen.bitDepth,'8bit')
 				set(me.h.OKAntiAliasing,'String','0');
 			end

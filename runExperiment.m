@@ -50,6 +50,8 @@ classdef runExperiment < optickaCore
 		useTobii logical = false
 		%> use eye occluder (custom arduino device) for monocular stimulation?
 		useEyeOccluder logical = false
+		%> use a dummy mode for the eyetrackers?
+		dummyMode logical = false
 		%> this lets the opticka UI leave commands to runExperiment
 		uiCommand char = ''
 		%> do we flip or not?
@@ -196,7 +198,7 @@ classdef runExperiment < optickaCore
 		%> @param me required class object
 		% ===================================================================
 		function run(me)
-			global rM %eyelink calibration needs access to labjack for reward
+			global rM %eyetracker calibration needs access to reward manager
 					
 			if isempty(me.screen) || isempty(me.task)
 				me.initialise;
@@ -249,6 +251,7 @@ classdef runExperiment < optickaCore
 				if me.useEyeLink
 					me.eyeTracker = eyelinkManager();
 					eL = me.eyeTracker;
+					eL.isDummy = me.dummyMode;
 					eL.saveFile = [me.paths.savedData pathsep me.savePrefix 'RUN.edf'];
 					initialise(eL, s);
 					setup(eL);
@@ -568,6 +571,8 @@ classdef runExperiment < optickaCore
 				eL.saveFile = [me.paths.savedData filesep me.subjectName '-' me.savePrefix '.edf'];
 				if ~me.useEyeLink && ~me.useTobii
 					eL.isDummy = true;
+				else
+					eL.isDummy = me.dummyMode;
 				end
 				
 				if isfield(tS,'rewardTime')
@@ -717,9 +722,9 @@ classdef runExperiment < optickaCore
 					
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
 					% the EDF this is just a backup wrapped in the PTB loop. 
-					%if me.useEyeLink && tS.recordEyePosition == true
-					%	saveEyeInfo(me, sM, eL, tS);
-					%end
+					if me.useEyeLink && tS.recordEyePosition == true
+						saveEyeInfo(me, sM, eL, tS);
+					end
 					
 					%------Check keyboard for commands
 					if tS.checkKeysDuringStimulus || isempty(regexpi(sM.currentName,tS.keyExclusionPattern))
@@ -1255,6 +1260,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function needEyeSample(me,value)
 			me.needSample = value;
+			%if value;fprintf('***\n');else;fprintf('_-_\n');end
 		end
 		
 		% ===================================================================
@@ -1337,6 +1343,7 @@ classdef runExperiment < optickaCore
 				open(io);
 				me.useLabJackStrobe = false;
 				me.useDataPixx = false;
+				fprintf('===> Using Display++ for I/O...\n')
 			elseif me.useDataPixx
 				if ~isa(me.dPixx,'dPixxManager')
 					me.dPixx = dPixxManager('verbose',me.verbose);
@@ -1349,6 +1356,7 @@ classdef runExperiment < optickaCore
 				open(io);
 				me.useLabJackStrobe = false;
 				me.useDisplayPP = false;
+				fprintf('===> Using dataPixx for I/O...\n')
 			else
 				io = ioManager();
 				io.silentMode = true;
@@ -1357,6 +1365,7 @@ classdef runExperiment < optickaCore
 				me.useDataPixx = false;
 				me.useLabJackStrobe = false;
 				me.useDisplayPP = false;
+				fprintf('===> No strobe output I/O...\n')
 			end
 			if me.useArduino
                 if ~isa(rM,'arduinoManager')
@@ -1364,6 +1373,7 @@ classdef runExperiment < optickaCore
                 end
                 rM.port = me.arduinoPort;
 				me.arduino = rM;
+				fprintf('===> Using Arduino for reward TTLs...\n')
 			elseif ~me.useArduino && ~me.useLabJackReward
 				if isa(rM,'arduinoManager')
 					rM.close
@@ -1371,9 +1381,11 @@ classdef runExperiment < optickaCore
 				else
 					rM = ioManager();
 				end
+				fprintf('===> No reward TTLs will be sent...\n')
 			elseif me.useLabJackReward
 				me.lJack = labJack('name',me.name,'readResponse', false,'verbose',me.verbose);
 				rM = me.lJack;
+				fprintf('===> Using LabJack for reward TTLs...\n')
 			else
 				rM = ioManager();
 			end
