@@ -27,7 +27,6 @@ tS.saveData					= false; %==save behavioural and eye movement data?
 tS.useMagStim				= false; %enable the magstim manager
 tS.name						= 'fixation-training'; %==name of this protocol
 me.useEyeLink				= true;
-tS.dummyEyelink				= true; %==use mouse as a dummy eyelink, good for testing away from the lab.
 
 %------------Eyetracker Settings-----------------
 tS.fixX						= 0;
@@ -42,7 +41,7 @@ tS.strict					= false; %do we forbid eye to enter-exit-reenter fixation window?
 %------------------------Eyelink setup--------------------------
 eL.name 					= tS.name;
 if tS.saveData == true; eL.recordData = true; end %===save EDF file?
-if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
+if me.dummyMode; eL.isDummy = true; end %===use dummy or real eyelink? 
 eL.sampleRate 				= 250;
 eL.strictFixation			= tS.strict;
 %===========================
@@ -185,7 +184,7 @@ correctExitFcn = {
 %break entry
 breakEntryFcn = { 
 	@()logRun(me,'BREAKFIX'); ... %fprintf current trial info
-	@()beep(aM,350,0.5,1); ...
+	@()beep(aM,400,0.5,1); ...
 	@()trackerClearScreen(eL); ...
 	@()trackerDrawText(eL,'Broke fix! :-(');
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ... %trial incorrect message
@@ -197,7 +196,7 @@ breakEntryFcn = {
 %break entry
 incEntryFcn = { 
 	@()logRun(me,'INCORRECT'); ... %fprintf current trial info
-	@()beep(aM,350,0.5,1); ...
+	@()beep(aM,400,0.5,1); ...
 	@()trackerClearScreen(eL); ...
 	@()trackerDrawText(eL,'Incorrect! :-(');
 	@()edfMessage(eL,'TRIAL_RESULT 0'); ... %trial incorrect message

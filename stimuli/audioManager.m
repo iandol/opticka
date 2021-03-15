@@ -18,6 +18,7 @@ classdef audioManager < optickaCore
 		fileNames			= {};
 		devices
 		isSetup logical		= false
+		isOpen logical		= false
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -58,6 +59,7 @@ classdef audioManager < optickaCore
 		%>  
 		% ===================================================================
 		function setup(me)
+			if me.silentMode; return; end
 			isValid = checkFiles(me);
 			if ~isValid
 				warning('NO valid file/dir name');
@@ -77,8 +79,8 @@ classdef audioManager < optickaCore
 				PsychPortAudio('Volume', me.aHandle, 1);
 				me.status = PsychPortAudio('GetStatus', me.aHandle);
 				me.frequency = me.status.SampleRate;
-				loadSamples(me);
 				me.isSetup = true;
+				me.isOpen = true;
 			catch 
 				me.reset();
 				me.silentMode = true;
@@ -182,17 +184,17 @@ classdef audioManager < optickaCore
 				if ~isempty(me.aHandle)
 					PsychPortAudio('Stop', me.aHandle, 0, 1); 
 					PsychPortAudio('DeleteBuffer');
-					try PsychPortAudio('Close'); end
 				end
+				try PsychPortAudio('Close'); end
 				me.aHandle = [];
 				me.status = [];
 				me.frequency = [];
-				me.isSetup = false;
+				me.isSetup = false; me.isOpen = false;
 			catch ME
 				me.aHandle = [];
 				me.status = [];
 				me.frequency = [];
-				me.isSetup = false;
+				me.isSetup = false; me.isOpen = false;
 				getReport(ME)
 			end
 		end

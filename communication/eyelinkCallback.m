@@ -40,7 +40,7 @@ function rc = eyelinkCallback(callArgs, msg)
 % Cached texture handle for eyelink texture:
 persistent eyelinktex;
 % add by NJ
-global dw dh offscreen rM;
+global dw dh offscreen rM aM;
 
 % Cached window handle for target onscreen window:
 persistent eyewin;
@@ -459,14 +459,18 @@ switch(s)
 	otherwise
 		% some defaults
 		doBeep=el.feedbackbeep;
-		f=500;
+		f=1000;
 		v=0.5;
-		d=1.5;
+		d=1.0;
 end
 
 % function Beeper(frequency, [fVolume], [durationSec]);
-if doBeep==1
-	Beeper(f, v, d);
+if doBeep
+	if isa(aM,'audioManager')
+		aM.beep(f, d, v);
+	else
+		Beeper(f, d, v);
+	end
 end
 
 %=========================================================================================

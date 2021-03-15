@@ -483,6 +483,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function runTask(me)
 			global rM %eyelink calibration needs access for reward
+			global aM %audio manager we can use with eyelink
 			
 			if isempty(regexpi(me.comment, '^Protocol','once'))
 				me.comment = '';
@@ -533,9 +534,12 @@ classdef runExperiment < optickaCore
 			me.stimuli.screen = s;
 			
 			%------initialise an audioManager for beeps,playing sounds etc.
-			aM=audioManager;
-			aM.setup;
-			aM.beep(350,0.1,0.1);
+			if ~exist('aM','var') || isempty(aM) || ~isa(aM,'audioManager')
+				aM=audioManager;
+			end
+			aM.silentMode = false;
+			if ~aM.isSetup;	aM.setup; end
+			aM.beep(1000,0.1,0.1);
 			
 			%------initialise task
 			t = me.task;
@@ -620,7 +624,6 @@ classdef runExperiment < optickaCore
 				
 				%-----set up our behavioural plot
 				createPlot(bR, eL);
-				drawnow;
 
 				%------------------------------------------------------------
 				% lets draw 1 seconds worth of the stimuli we will be using
