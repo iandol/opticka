@@ -245,7 +245,6 @@ classdef behaviouralRecord < optickaCore
 			set(obj.h.info,'String', t')
 			
 			obj.tick = obj.tick + 1;
-			drawnow limitrate nocallbacks;
 			
 		end
 		

@@ -52,7 +52,7 @@ classdef eyelinkManager < optickaCore
 		enableCallbacks logical		= true
 		%> cutom calibration callback (enables better handling of
 		%> calibration)
-		callback char				= 'eyelinkCallback'
+		callback char				= 'eyelinkCustomCallback'
 		%> eyelink defaults modifiers as a struct()
 		modify struct				= struct()
 		%> stimulus positions to draw on screen
@@ -141,8 +141,8 @@ classdef eyelinkManager < optickaCore
 				me.version = 0;
 			end
 			me.modify.calibrationtargetcolour = [1 1 1];
-			me.modify.calibrationtargetsize = 0.9;
-			me.modify.calibrationtargetwidth = 0.05;
+			me.modify.calibrationtargetsize = 1;
+			me.modify.calibrationtargetwidth = 0.1;
 			me.modify.displayCalResults = 1;
 			me.modify.targetbeep = 1;
 			me.modify.devicenumber = -1;
@@ -217,7 +217,11 @@ classdef eyelinkManager < optickaCore
 			
 			me.updateDefaults();
 			
-			[~, me.version] = Eyelink('GetTrackerVersion');
+			if me.isDummy
+				me.version = 'Dummy Eyelink';
+			else
+				[~, me.version] = Eyelink('GetTrackerVersion');
+			end
 			getTrackerTime(me);
 			getTimeOffset(me);
 			me.salutation('Initialise Method', sprintf('Running on a %s @ %2.5g (time offset: %2.5g)', me.version, me.trackerTime,me.currentOffset));
@@ -547,7 +551,7 @@ classdef eyelinkManager < optickaCore
 						searching = false;
 						fixated = true;
 						me.fixTotal = (me.currentSample.time - me.fixInitTotal) / 1000;
-						%if me.verbose;fprintf(' F: %i:%i LEN: %f/%f TOT: %f |',fixated,fixtime, me.fixLength, me.fixationTime, me.fixTotal);end
+						%if me.verbose;fprintf('<F: %i:%i LEN: %f/%f TOT: %f>\n',fixated,fixtime, me.fixLength, me.fixationTime, me.fixTotal);end
 					else
 						fixated = false;
 						fixtime = false;
@@ -1029,11 +1033,11 @@ classdef eyelinkManager < optickaCore
 				trackerDrawFixation(me);
 				trackerDrawStimuli(me,ts);
 				
-				xx = 0;
+				blockLoop = true;
 				a = 1;
 				
-				while xx == 0
-					yy = 0;
+				while blockLoop 
+					trialLoop = true;
 					b = 1;
 					xst = [];
 					yst = [];
@@ -1045,7 +1049,7 @@ classdef eyelinkManager < optickaCore
 					WaitSecs(0.25);
 					vbl=flip(s);
 					syncTime(me);
-					while yy == 0
+					while trialLoop
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
@@ -1053,6 +1057,7 @@ classdef eyelinkManager < optickaCore
 						getSample(me); xst(b)=me.x; yst(b)=me.y;
 						
 						if ~isempty(me.currentSample)
+							isFixated(me);
 							x = me.toPixels(me.x,'x'); %#ok<*PROP>
 							y = me.toPixels(me.y,'y');
 							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | RADIUS = %.1f | FIXATION = %.1f | BLINK = %i',...
@@ -1066,8 +1071,8 @@ classdef eyelinkManager < optickaCore
 						vbl=Screen('Flip',s.win, vbl + s.screenVals.halfisi);
 						
 						[~, ~, keyCode] = KbCheck(-1);
-						if keyCode(stopkey); yy = 1; xx = 1; break;	end
-						if keyCode(nextKey); yy = 1; correct = true; break; end
+						if keyCode(stopkey); trialLoop = 0; blockLoop = 0; break;	end
+						if keyCode(nextKey); trialLoop = 0; correct = true; break; end
 						if keyCode(calibkey); trackerSetup(me); break; end
 						if keyCode(driftkey); driftCorrection(me); break; end
 						if b == 60; edfMessage(me,'END_FIX');end
@@ -1075,10 +1080,11 @@ classdef eyelinkManager < optickaCore
 					end
 					edfMessage(me,'END_RT');
 					stopRecording(me);
+					trackerClearScreen(me);
 					if correct
 						edfMessage(me,'TRIAL_RESULT 1');
 					else
-						edfMessage(me,'TRIAL_RESULT 1');
+						edfMessage(me,'TRIAL_RESULT 0');
 					end
 					hold on;plot(ax,xst,yst);
 					me.fixationX = randi([-5 5]);
@@ -1093,7 +1099,6 @@ classdef eyelinkManager < optickaCore
 					ts.selected = true;
 					setOffline(me); %Eyelink('Command', 'set_idle_mode');
 					statusMessage(me,sprintf('X Pos = %g | Y Pos = %g | Radius = %g',me.fixationX,me.fixationY,me.fixationRadius));
-					trackerClearScreen(me);
 					trackerDrawFixation(me);
 					trackerDrawStimuli(me,ts);
 					update(o);

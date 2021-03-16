@@ -147,8 +147,8 @@ classdef audioManager < optickaCore
 			end
 			if ischar(freq)
 				if strcmpi(freq, 'high') freq = 1000;
-				elseif strcmpi(freq, 'med') freq = 400;
-				elseif strcmpi(freq, 'medium') freq = 400;
+				elseif strcmpi(freq, 'med') freq = 500;
+				elseif strcmpi(freq, 'medium') freq = 500;
 				elseif strcmpi(freq, 'low') freq = 300;
 				end
 
@@ -161,7 +161,6 @@ classdef audioManager < optickaCore
 			soundVec = soundVec * fVolume;
 			PsychPortAudio('FillBuffer', me.aHandle, soundVec);
 			PsychPortAudio('Start', me.aHandle);
-
         end
    
 		% ===================================================================

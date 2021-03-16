@@ -31,17 +31,17 @@ me.useEyeLink				= true;
 %------------Eyetracker Settings-----------------
 tS.fixX						= 0;
 tS.fixY						= 0;
-tS.firstFixInit				= 1;
+tS.firstFixInit				= 2;
 tS.firstFixTime				= 2;
-tS.firstFixRadius			= 3;
+tS.firstFixRadius			= 2;
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
-tS.strict					= false; %do we forbid eye to enter-exit-reenter fixation window?
+tS.strict					= true; %do we forbid eye to enter-exit-reenter fixation window?
 
 %------------------------Eyelink setup--------------------------
 eL.name 					= tS.name;
-if tS.saveData == true; eL.recordData = true; end %===save EDF file?
-if me.dummyMode; eL.isDummy = true; end %===use dummy or real eyelink? 
+if tS.saveData == true;		eL.recordData = true; end %===save EDF file?
+if me.dummyMode;			eL.isDummy = true; end %===use dummy or real eyelink? 
 eL.sampleRate 				= 250;
 eL.strictFixation			= tS.strict;
 %===========================
@@ -52,13 +52,14 @@ eL.strictFixation			= tS.strict;
 eL.remoteCalibration			= false; 
 %===========================
 eL.calibrationStyle 			= 'HV5'; % calibration style
-eL.modify.calibrationtargetcolour = [1 0 0];
+eL.modify.calibrationtargetcolour = [1 1 1];
 eL.modify.calibrationtargetsize = 1; % size of calibration target as percentage of screen
 eL.modify.calibrationtargetwidth = 0.1; % width of calibration target's border as percentage of screen
-eL.modify.waitformodereadytime = 500;
+eL.modify.waitformodereadytime	= 500;
 eL.modify.devicenumber 			= -1; % -1==use any keyboard
 eL.modify.targetbeep 			= 1;
-eL.verbose 						= true;
+eL.verbose 						= false;
+%oldverb						= Eyelink('Verbosity',10);
 
 %Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
@@ -177,8 +178,9 @@ correctFcn = {
 
 %when we exit the correct state
 correctExitFcn = { 
-	@()updatePlot(bR, eL, sM); ...
 	@()update(me.stimuli); ... 
+	@()updatePlot(bR, eL, sM); ...
+	@()drawnow; ...
 };
 
 %break entry
@@ -210,6 +212,8 @@ breakFcn =  { @()drawBackground(s); @()drawText(s,'Wrong'); };
 
 breakExitFcn = { 
 	@()update(me.stimuli); ... %update our stimuli ready for display
+	@()updatePlot(bR, eL, sM); ...
+	@()drawnow; ...
 };
 
 %--------------------calibration function
@@ -243,9 +247,9 @@ stateInfoTmp = { ...
 'name'      'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'blank'		inf		pauseEntryFcn	[]					[]					pauseExitFcn; ...
 'blank'		'stimulus'	1		psEntryFcn		prestimulusFcn		[]					psExitFcn; ...
-'stimulus'  'incorrect'	3		stimEntryFcn	stimFcn				maintainFixFcn		stimExitFcn; ...
-'incorrect'	'blank'		1		incEntryFcn		breakFcn			[]					breakExitFcn; ...
-'breakfix'	'blank'		1		breakEntryFcn	breakFcn			[]					breakExitFcn; ...
+'stimulus'  'incorrect'	5		stimEntryFcn	stimFcn				maintainFixFcn		stimExitFcn; ...
+'incorrect'	'blank'		2		incEntryFcn		breakFcn			[]					breakExitFcn; ...
+'breakfix'	'blank'		2		breakEntryFcn	breakFcn			[]					breakExitFcn; ...
 'correct'	'blank'		0.5		correctEntryFcn	correctFcn			[]					correctExitFcn; ...
 'calibrate' 'pause'		0.5		calibrateFcn	[]					[]					[]; ...
 'flash'		'pause'		0.5		[]				flashFcn			[]					[]; ...

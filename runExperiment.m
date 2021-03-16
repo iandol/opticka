@@ -533,14 +533,6 @@ classdef runExperiment < optickaCore
 			s = me.screen; 
 			me.stimuli.screen = s;
 			
-			%------initialise an audioManager for beeps,playing sounds etc.
-			if ~exist('aM','var') || isempty(aM) || ~isa(aM,'audioManager')
-				aM=audioManager;
-			end
-			aM.silentMode = false;
-			if ~aM.isSetup;	aM.setup; end
-			aM.beep(1000,0.1,0.1);
-			
 			%------initialise task
 			t = me.task;
 			initialise(t);
@@ -564,6 +556,7 @@ classdef runExperiment < optickaCore
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				me.isRunning = true;
 				me.isRunTask = true;
+				
 				%-----open the eyelink interface
 				if me.useEyeLink
 					me.eyeTracker = eyelinkManager();
@@ -588,6 +581,21 @@ classdef runExperiment < optickaCore
 				me.stimuli.verbose = me.verbose;
 				setup(me.stimuli); %run setup() for each stimulus
 				t.fps = s.screenVals.fps;
+				
+				%------initialise an audioManager for beeps,playing sounds etc.
+				if ~exist('aM','var') || isempty(aM) || ~isa(aM,'audioManager')
+					aM=audioManager;
+				end
+				aM.silentMode = false;
+				if ~aM.isSetup;	aM.setup; end
+				aM.beep(1000,0.1,0.1);
+				
+				%-----set up the eyelink interface
+				if me.useEyeLink
+					fprintf('\n===>>> Handing over to eyelink for calibration & validation...\n')
+					initialise(eL, s);
+					setup(eL);
+				end
 				
 				%---------initialise and set up I/O
 				io = configureIO(me);
@@ -615,15 +623,10 @@ classdef runExperiment < optickaCore
 					end
 				end
 				
-				%-----set up the eyelink interface
-				if me.useEyeLink
-					fprintf('\n===>>> Handing over to eyelink for calibration & validation...\n')
-					initialise(eL, s);
-					setup(eL);
-				end
-				
 				%-----set up our behavioural plot
+				commandwindow;
 				createPlot(bR, eL);
+				drawnow;
 
 				%------------------------------------------------------------
 				% lets draw 1 seconds worth of the stimuli we will be using
@@ -694,11 +697,12 @@ classdef runExperiment < optickaCore
 				
 				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
-				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
+				commandwindow;
 				if me.debug == false
 					%warning('off'); %#ok<*WNOFF>
-					ListenChar(-1); %2=capture all keystrokes
+					%ListenChar(-1); %2=capture all keystrokes
 				end
+				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
 				%-----initialise our vbl's
 				me.needSample = false;
@@ -803,6 +807,7 @@ classdef runExperiment < optickaCore
 				end
 				
 				close(s); %screen
+				close(aM);
 				close(eL); % eyelink, should save the EDF for us we've already given it our name and folder
 				WaitSecs(0.25);
 				close(rM); 
