@@ -34,6 +34,8 @@ classdef runExperiment < optickaCore
 		task
 		%> screen manager object
 		screen
+		%> file to define the stateMachine state info
+		stateInfoFile = ''
 		%> use Display++ for strobed digital I/O?
 		useDisplayPP logical = false
 		%> use dataPixx for strobed digital I/O?
@@ -88,8 +90,6 @@ classdef runExperiment < optickaCore
 		stimList = []
 		%> which stimulus is selected?
 		thisStim = []
-		%> file to define the stateMachine state info
-		stateInfoFile = ''
 		%> tS is the runtime settings structure, saved here as a backup
 		tS
 		%> keep track of several task values
