@@ -65,7 +65,7 @@ persistent inDrift;
 offscreen = 0;
 newImage = 0;
 
-verbose = true;
+verbose = false;
 
 if 0 == Screen('WindowKind', eyelinktex)
     eyelinktex = []; % got persisted from a previous ptb window which has now been closed; needs to be recreated
@@ -160,7 +160,7 @@ switch eyecmd
         needsupdate = 1;
     case 4
         % Image title of camera image transmitted from Eyelink:
-        if verbose; fprintf('--->>> EYELINKCALLBACK:4 Eyelink image title is %s. [Threshold = %f]\n', msg, callArgs(2)); end
+        if verbose; fprintf('--->>> EYELINKCALLBACK:4 Eyelink image title is %s. [Threshold = %f]\n', msg, callArgs(2)); end %#ok<*UNRCH>
         if callArgs(2) ~= -1
             imgtitle = sprintf('Camera: %s [Threshold = %f]', msg, callArgs(2));
         else
