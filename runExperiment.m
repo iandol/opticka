@@ -485,6 +485,13 @@ classdef runExperiment < optickaCore
 			global rM %eyelink calibration needs access for reward
 			global aM %audio manager we can use with eyelink
 			
+			if ~isa(rM,'arduinoManager') 
+				rM=arduinoManager();
+			end
+			if ~rM.isOpen
+				rM.open
+			end
+			
 			if isempty(regexpi(me.comment, '^Protocol','once'))
 				me.comment = '';
 			end
@@ -563,6 +570,7 @@ classdef runExperiment < optickaCore
 				else
 					me.eyeTracker = tobiiManager();
 				end
+				
 				eL = me.eyeTracker;
 				eL.verbose = me.verbose;
 				eL.saveFile = [me.paths.savedData filesep me.subjectName '-' me.savePrefix '.edf'];
