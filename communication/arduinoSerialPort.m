@@ -1,17 +1,11 @@
-classdef arduinoLegacy < handle
+classdef arduinoSerialPort < handle
 	
 	% This class defines an "arduino" object
 	% Giampiero Campa, Aug 2013, Copyright 2013 The MathWorks, Inc.
+	% Modified for use with PTB
 	
-	properties (SetAccess=private,GetAccess=public)
-		aser   % Serial Connection
-		nPins = 69 % number of controllable pins
-		pins   % Pin Status Vector
-		srvs   % Servo Status Vector
-		mspd   % DC Motors Speed Status
-		sspd   % Stepper Motors Speed Status
-		encs   % Encoders Status
-		sktc   % Motor Server Running on the Arduino Board
+	properties
+		nPins = 13 % number of controllable pins
 	end
 	
 	properties (Hidden=true)
@@ -19,119 +13,108 @@ classdef arduinoLegacy < handle
 		chkp = true;   % Checks parameters before every operation
 	end
 	
-	properties (SetAccess=private,GetAccess=private)
+	properties (SetAccess=private,GetAccess=public)
+		port   % the assigned port
+		conn   % Serial Connection
+		pins   % Pin Status Vector
+		srvs   % Servo Status Vector
+		mspd   % DC Motors Speed Status
+		sspd   % Stepper Motors Speed Status
+		encs   % Encoders Status
+		sktc   % Motor Server Running on the Arduino Board
 		isDemo = false
 	end
 	
 	methods
 		
 		% constructor, connects to the board and creates an arduino object
-		function a=arduinoLegacy(comPort,nPins)
+		function a=arduinoSerialPort(port,nPins)
 			
 			% check nargin
 			if nargin<1
-				comPort='DEMO';
-				isDemo = true;
+				port='DEMO';
+				a.isDemo = true;
 				disp('Note: a DEMO connection will be created');
-				disp('Use a the com port, e.g. ''COM5'' as input argument to connect to the real board');
+				disp('Use a com port, e.g. ''/dev/ttyACM0'' as input argument to connect to the real board');
 			elseif nargin == 2
 				a.nPins = nPins;
 			end
 			
 			% check port
-			if ~ischar(comPort)
-				error('The input argument must be a string, e.g. ''COM8'' ');
+			if ~ischar(port)
+				error('The input argument must be a string, e.g. ''/dev/ttyACM0'' ');
 			end
 			
-			% check if we are already connected
-			if isa(a.aser,'serial') && isvalid(a.aser) && strcmpi(get(a.aser,'Status'),'open')
-				disp(['It looks like a board is already connected to port ' comPort ]);
-				disp('Delete the object to force disconnection');
-				disp('before attempting a connection to a different port.');
-				return;
+			if strcmp(port,'DEMO')
+				a.isDemo = true;
+				return
 			end
 			
-			% check whether serial port is currently used by MATLAB
-			if ~isempty(instrfind({'Port'},{comPort}))
-				disp(['The port ' comPort ' is already used by MATLAB']);
-				disp(['If you are sure that the board is connected to ' comPort]);
-				disp('then delete the object, execute:');
-				disp(['  delete(instrfind({''Port''},{''' comPort '''}))']);
-				disp('to delete the port, disconnect the cable, reconnect it,');
-				disp('and then create a new arduino object');
-				error(['Port ' comPort ' already used by MATLAB']);
+			allPorts = serialportlist('all');
+			avPorts = serialportlist('available');
+
+			fprintf('===> All possible serial ports:\n');
+			fprintf('%s\n',allPorts);
+			
+			if any(strcmpi(allPorts,port))
+				fprintf('===> Your specified port is present\n')
+			else
+				error('===> No port with the specified name is present on the system!');
+			end
+			
+			if any(strcmpi(avPorts,port))
+				fprintf('===> Your specified port is available\n')
+			else
+				error('===> The port is occupied, please release it first!');
 			end
 			
 			% define serial object
-			a.aser=serial(comPort,'BaudRate',115200);
+			a.conn=serialport(port,115200,'Timeout',5);
 			
-			% connection
-			if strcmpi(get(a.aser,'Port'),'DEMO')
-				% handle demo mode
-				
-				fprintf(1,'Demo mode connection .');
-				for i=1:6
-					pause(1);
-					fprintf(1,'.');
-				end
-				fprintf(1,'\n');
-				
-				% chk is equal to 4, (more general server running)
-				a.sktc=4;
-				
-			else
-				% actual connection
-				
-				% open port
-				try
-					fopen(a.aser);
-				catch ME
-					disp(ME.message)
-					delete(a);
-					error(['Could not open port: ' comPort]);
-				end
-				
-				% it takes several seconds before any operation could be attempted
-				fprintf(1,'Attempting connection .');
-				for i=1:8
-					pause(0.5);
-					fprintf(1,'.');
-				end
-				fprintf(1,'\n');
-				
-				% flush serial buffer before sending anything
-				flush(a);
-				
-				% query sketch type
-				fwrite(a.aser,[57 57],'uchar');
-				a.sktc=fscanf(a.aser,'%d');
-				
-				% exit if there was no answer
-				if isempty(a.sktc)
-					delete(a);
-					error('Connection unsuccessful, please make sure that the board is powered on, running a sketch provided with the package, and connected to the indicated serial port. You might also try to unplug and re-plug the USB cable before attempting a reconnection.');
-				end
-				
-			end
-			
-			% check returned value
-			if a.sktc==0
-				disp('Basic Analog and Digital I/O (adio.pde) sketch detected !');
-			elseif a.sktc==1
-				disp('Analog & Digital I/O + Encoders (adioe.pde) sketch detected !');
-			elseif a.sktc==2
-				disp('Analog & Digital I/O + Encoders + Servos (adioes.pde) sketch detected !');
-			elseif a.sktc==3
-				disp('Motor Shield V1 (plus adioes.pde functions) sketch detected !');
-			elseif a.sktc==4
-				disp('Motor Shield V2 (plus adioes.pde functions) sketch detected !');
-			else
+			% test connection
+			try
+				flush(a.conn);
+			catch ME
+				disp(ME.message)
+				delete(a.conn);
 				delete(a);
-				error('Unknown sketch. Please make sure that a sketch provided with the package is running on the board');
+				error(['Could not use port: ' port]);
 			end
-			
-			% set a.aser tag
-			a.aser.Tag='ok';
+
+			% query sketch type
+			r = []; tout = []; t = GetSecs;
+			while isempty(r) && GetSecs < t+2
+				write(a.conn,'99','char'); % send '99' command
+				pause(0.1);
+				if a.conn.NumBytesAvailable > 0
+					r = read(a.conn,a.conn.NumBytesAvailable,'uint8');
+					tout = GetSecs - t;
+				end
+			end
+			fprintf('===> It took %.3f secs to establish response: %i...\n',tout,r(1));
+			a.sktc = r(1);
+			% exit if there was no answer
+			if isempty(a.sktc)
+				delete(a.conn);
+				delete(a);
+				error('===> Connection unsuccessful, please make sure that the board is powered on, running a sketch provided with the package, and connected to the indicated serial port. You might also try to unplug and re-plug the USB cable before attempting a reconnection.');
+			end
+
+			% check returned value
+			if a.sktc==48
+				disp('===> Basic Analog and Digital I/O (adio.pde) sketch detected !');
+			elseif a.sktc==49
+				disp('===> Analog & Digital I/O + Encoders (adioe.pde) sketch detected !');
+			elseif a.sktc==50
+				disp('===> Analog & Digital I/O + Encoders + Servos (adioes.pde) sketch detected !');
+			elseif a.sktc==51
+				disp('===> Motor Shield V1 (plus adioes.pde functions) sketch detected !');
+			elseif a.sktc==52
+				disp('===> Motor Shield V2 (plus adioes.pde functions) sketch detected !');
+			else
+				delete(a.conn);
+				error('===> Unknown sketch. Please make sure that a sketch provided with the package is running on the board');
+			end
 			
 			% initialize pin vector (-1 is unassigned, 0 is input, 1 is output)
 			a.pins=-1*ones(1,a.nPins);
@@ -148,8 +131,15 @@ classdef arduinoLegacy < handle
 			% initialize stepper vector (0 to 255 is the speed)
 			a.sspd=0*ones(1,2);
 			
+			flush(a.conn);
+			for i=2:a.nPins
+				a.pinMode(i,'output');
+				a.digitalWrite(i,0);
+			end
+			
 			% notify successful installation
-			disp('Arduino successfully connected !');
+			a.port = port;
+			disp(['===> Arduino successfully connected to port ' a.port '!']);
 			
 		end % arduino
 		
@@ -159,8 +149,8 @@ classdef arduinoLegacy < handle
 			% Use delete(a) or a.delete to delete the arduino object
 			
 			% if it is a serial, valid and open then close it
-			if isa(a.aser,'serial') && isvalid(a.aser) && strcmpi(get(a.aser,'Status'),'open')
-				if ~isempty(a.aser.Tag)
+			if isa(a.conn,'serialport') && isvalid(a.conn)
+				if ~isempty(a.conn.Tag)
 					try
 						% trying to leave it in a known unharmful state
 						for i=2:a.nPins
@@ -173,17 +163,12 @@ classdef arduinoLegacy < handle
 						disp(ME.message);
 						disp('Proceeding to deletion anyway');
 					end
-					
 				end
-				fclose(a.aser);
 			end
-			
 			% if it's an object delete it
-			if isobject(a.aser)
-				delete(a.aser);
+			if isobject(a.conn)
+				delete(a.conn);
 			end
-			
-			
 		end % delete
 		
 		% disp, displays the object
@@ -198,105 +183,89 @@ classdef arduinoLegacy < handle
 			% str=evalc('a.disp'), (or str=evalc('a')), can be used to capture
 			% the output in the string 'str'.
 			
-			if isvalid(a)
-				if isa(a.aser,'serial') && isvalid(a.aser)
-					disp(['<a href="matlab:help arduino">arduino</a> object connected to ' a.aser.port ' port']);
-					if a.sktc==4
-						disp('Motor Shield sketch V2 (plus adioes.pde functions) running on the board');
-						disp(' ');
-						a.servoStatus
-						disp(' ');
-						disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
-						disp(' ');
-						a.encoderStatus
-						disp(' ');
-						disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
-						disp(' ');
-						a.motorSpeed
-						a.stepperSpeed
-						disp(' ');
-						disp('DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
-						disp(' ');
-						disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
-					elseif a.sktc==3
-						disp('Motor Shield sketch V1 (plus adioes.pde functions) running on the board');
-						disp(' ');
-						a.servoStatus
-						disp(' ');
-						disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
-						disp(' ');
-						a.encoderStatus
-						disp(' ');
-						disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
-						disp(' ');
-						a.motorSpeed
-						a.stepperSpeed
-						disp(' ');
-						disp('DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
-						disp(' ');
-						disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
-					elseif a.sktc==2
-						disp('Analog & Digital I/O + Encoders + Servos (adioes.pde) sketch running on the board');
-						disp(' ');
-						a.pinMode
-						disp(' ');
-						disp('Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
-						disp(' ');
-						a.servoStatus
-						disp(' ');
-						disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
-						disp(' ');
-						a.encoderStatus
-						disp(' ');
-						disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
-						disp(' ');
-						disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
-					elseif a.sktc==1
-						disp('Analog & Digital I/O + Encoders (adioe.pde) sketch running on the board');
-						disp(' ');
-						a.pinMode
-						disp(' ');
-						disp('Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
-						disp(' ');
-						a.encoderStatus
-						disp(' ');
-						disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
-						disp(' ');
-						disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
-					else
-						disp('Basic Analog & Digital I/O sketch (adio.pde) running on the board');
-						disp(' ');
-						a.pinMode
-						disp(' ');
-						disp('Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
-						disp(' ');
-						disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
-					end
-					disp(' ');
-				else
-					disp('<a href="matlab:help arduino">arduino</a> object connected to an invalid serial port');
-					disp('Please delete the arduino object');
-					disp(' ');
-				end
+			if a.isDemo; disp('Arduino is in DEMO mode');return;end
+
+			disp(['Arduino object connected to ' a.conn.Port ' port']);
+			if a.sktc==4
+				disp('Motor Shield sketch V2 (plus adioes.pde functions) running on the board');
+				disp(' ');
+				a.servoStatus
+				disp(' ');
+				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
+				disp(' ');
+				a.encoderStatus
+				disp(' ');
+				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp(' ');
+				a.motorSpeed
+				a.stepperSpeed
+				disp(' ');
+				disp('DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
+				disp(' ');
+				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+			elseif a.sktc==3
+				disp('Motor Shield sketch V1 (plus adioes.pde functions) running on the board');
+				disp(' ');
+				a.servoStatus
+				disp(' ');
+				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
+				disp(' ');
+				a.encoderStatus
+				disp(' ');
+				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp(' ');
+				a.motorSpeed
+				a.stepperSpeed
+				disp(' ');
+				disp('DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
+				disp(' ');
+				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+			elseif a.sktc==2
+				disp('Analog & Digital I/O + Encoders + Servos (adioes.pde) sketch running on the board');
+				disp(' ');
+				a.pinMode
+				disp(' ');
+				disp('Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
+				disp(' ');
+				a.servoStatus
+				disp(' ');
+				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
+				disp(' ');
+				a.encoderStatus
+				disp(' ');
+				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp(' ');
+				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+			elseif a.sktc==1
+				disp('Analog & Digital I/O + Encoders (adioe.pde) sketch running on the board');
+				disp(' ');
+				a.pinMode
+				disp(' ');
+				disp('Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
+				disp(' ');
+				a.encoderStatus
+				disp(' ');
+				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp(' ');
+				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
 			else
-				disp('Invalid <a href="matlab:help arduino">arduino</a> object');
-				disp('Please clear the object and instantiate another one');
+				disp('Basic Analog & Digital I/O sketch (adio.pde) running on the board');
+				disp(' ');
+				a.pinMode
 				disp(' ');
 			end
 		end
 		
 		% serial, returns the serial port
 		function str=serial(a)
-			
 			% serial(a) (or a.serial), returns the name of the serial port
 			% The first and only argument is the arduino object, the output
 			% is a string containing the name of the serial port to which
 			% the arduino board is connected (e.g. 'COM9', 'DEMO', or
 			% '/dev/ttyS101'). The string 'Invalid' is returned if
 			% the serial port is invalid
-			
-			if isvalid(a.aser)
-				str=a.aser.port;
+			if isvalid(a.conn)
+				str=a.conn.Port;
 			else
 				str='Invalid';
 			end
@@ -313,10 +282,7 @@ classdef arduinoLegacy < handle
 			% output is a vector of bytes that were still in the buffer.
 			% The value '-1' is returned if the buffer was already empty.
 			
-			val=-1;
-			if a.aser.BytesAvailable>0
-				val=fread(a.aser,a.aser.BytesAvailable);
-			end
+			flush(a.conn);
 		end  % flush
 		
 		% pin mode, changes pin mode
@@ -356,13 +322,13 @@ classdef arduinoLegacy < handle
 				
 				% if pin argument is there check it
 				if nargin>1
-					errstr=arduinoLegacy.checknum(pin,'pin number',2:a.nPins);
+					errstr=arduinoSerialPort.checknum(pin,'pin number',2:a.nPins);
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% if str argument is there check it
 				if nargin>2
-					errstr=arduinoLegacy.checkstr(str,'pin mode',{'input','output'});
+					errstr=arduinoSerialPort.checkstr(str,'pin mode',{'input','output'});
 					if ~isempty(errstr), error(errstr); end
 				end
 				
@@ -371,9 +337,9 @@ classdef arduinoLegacy < handle
 			% perform the requested action
 			if nargin==3
 				
-				% check a.aser for validity if a.chks is true
+				% check a.conn for validity if a.chks is true
 				if a.chks
-					errstr=arduinoLegacy.checkser(a.aser,'valid');
+					errstr=arduinoSerialPort.checkser(a.conn,'valid');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
@@ -382,23 +348,16 @@ classdef arduinoLegacy < handle
 				% assign value
 				if lower(str(1))=='o', val=1; else val=0; end
 				
-				if strcmpi(get(a.aser,'Port'),'DEMO')
+				if strcmpi(a.conn.Port,'DEMO')
 					% handle demo mode here
 					
 					% minimum digital output delay
 					pause(0.0014);
 					
 				else
-					% do the actual action here
-					
-					% check a.aser for openness if a.chks is true
-					if a.chks
-						errstr=arduinoLegacy.checkser(a.aser,'open');
-						if ~isempty(errstr), error(errstr); end
-					end
 					
 					% send mode, pin and value
-					fwrite(a.aser,[48 97+pin 48+val],'uchar');
+					write(a.conn,[48 97+pin 48+val],'char');
 					
 				end
 				
@@ -457,20 +416,14 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check pin
-				errstr=arduinoLegacy.checknum(pin,'pin number',2:a.nPins);
+				errstr=arduinoSerialPort.checknum(pin,'pin number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
-			if a.chks
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
-				if ~isempty(errstr), error(errstr); end
-			end
-			
 			%%%%%%%%%%%%%%%%%%%%%%%%% PERFORM DIGITAL INPUT %%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO')
+			if strcmpi(get(a.conn,'Port'),'DEMO')
 				% handle demo mode
 				
 				% minimum digital input delay
@@ -481,17 +434,11 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
-				if a.chks
-					errstr=arduinoLegacy.checkser(a.aser,'open');
-					if ~isempty(errstr), error(errstr); end
-				end
-				
 				% send mode and pin
-				fwrite(a.aser,[49 97+pin],'uchar');
+				write(a.conn,[49 97+pin],'char');
 				
 				% get value
-				val=fscanf(a.aser,'%d');
+				val=read(a.conn,1,'uint8');
 				
 			end
 			
@@ -524,10 +471,10 @@ classdef arduinoLegacy < handle
 					error('Function must have the "pin" and "val" arguments');
 				end
 				% check pin
-				errstr=arduinoLegacy.checknum(pin,'pin number',2:a.nPins);
+				errstr=arduinoSerialPort.checknum(pin,'pin number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				% check val
-				errstr=arduinoLegacy.checknum(val,'value',0:1);
+				errstr=arduinoSerialPort.checknum(val,'value',0:1);
 				if ~isempty(errstr), error(errstr); end
 				% get object name
 				if isempty(inputname(1)), name='object'; else name=inputname(1); end
@@ -537,25 +484,13 @@ classdef arduinoLegacy < handle
 				end
 			end
 			
-			% check a.aser for validity if a.chks is true
-			if a.chks
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
-				if ~isempty(errstr), error(errstr); end
-			end
-			
 			%%%%%%%%%%%%%%%%%%%%%%%%% PERFORM DIGITAL OUTPUT %%%%%%%%%%%%%%%%%%%%%%%%%%
-			if strcmpi(get(a.aser,'Port'),'DEMO')
+			if strcmpi(get(a.conn,'Port'),'DEMO')
 				% handle demo mode
 				% minimum digital output delay
 				pause(0.0014);
 			else
-				% check a.aser for openness if a.chks is true
-				if a.chks
-					errstr=arduinoLegacy.checkser(a.aser,'open');
-					if ~isempty(errstr), error(errstr); end
-				end
-				% send mode, pin and value
-				fwrite(a.aser,[50 97+pin 48+val],'uchar');
+				write(a.conn,[50 97+pin 48+val],'char');
 			end
 		end % digitalwrite
 		
@@ -567,35 +502,16 @@ classdef arduinoLegacy < handle
 			%%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			if a.chkp
 				if ~exist('pin','var') || isempty(pin); pin = 13;end
-				if ~exist('time','var') || isempty(time); time = 500;end
+				if ~exist('time','var') || isempty(time); time = 100;end
 				% check pin
-				errstr=arduinoLegacy.checknum(pin,'analog input pin number',0:15);
-				if ~isempty(errstr), error(errstr); end
-			end
-			% check a.aser for validity if a.chks is true
-			if a.chks
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checknum(pin,'analog input pin number',0:15);
 				if ~isempty(errstr), error(errstr); end
 			end
 			%%%%%%%%%%%%%%%%%%%%%%%%% PERFORM DIGITAL OUTPUT %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-			if ~a.isDemo
-				% check a.aser for openness if a.chks is true
-				if a.chks
-					errstr=arduinoLegacy.checkser(a.aser,'open');
-					if ~isempty(errstr), error(errstr); end
-				end
-				if time < 0; time = 0; end
-				if time > 2550; time = 2550; end
-				time = round(time);
-				% send mode and pin
-				fwrite(a.aser,[53 97+pin time],'uchar');
-			else
-				% handle demo mode
-				% minimum analog input delay
-				pause(0.0074);
-				% output a random value between 0 and 1023
-				val=round(1023*rand);
-			end
+			if time < 0; time = 0; end
+			if time > 65536; time = 65536; end
+			time = typecast(uint16(time),'uint8');
+			write(a.conn,[53 97+pin time(1) time(2)],'uint8');
 		end % timedTTL
 		
 		% analog read
@@ -629,41 +545,20 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check pin
-				errstr=arduinoLegacy.checknum(pin,'analog input pin number',0:15);
+				errstr=arduinoSerialPort.checknum(pin,'analog input pin number',0:15);
 				if ~isempty(errstr), error(errstr); end
 				
-			end
-			
-			% check a.aser for validity if a.chks is true
-			if a.chks
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
-				if ~isempty(errstr), error(errstr); end
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% PERFORM ANALOG INPUT %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO')
-				% handle demo mode
-				
-				% minimum analog input delay
-				pause(0.0074);
-				
-				% output a random value between 0 and 1023
-				val=round(1023*rand);
-				
+			if ~a.isDemo
+				% send mode and pin
+				write(a.conn,[51 97+pin],'char');
+				% get value
+				val=read(a.conn,a.conn.NumBytesAvailable,'uint8');
 			else
 				
-				% check a.aser for openness if a.chks is true
-				if a.chks
-					errstr=arduinoLegacy.checkser(a.aser,'open');
-					if ~isempty(errstr), error(errstr); end
-				end
-				
-				% send mode and pin
-				fwrite(a.aser,[51 97+pin],'uchar');
-				
-				% get value
-				val=fscanf(a.aser,'%d');
 				
 			end
 			
@@ -697,39 +592,24 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check pin
-				errstr=arduinoLegacy.checknum(pin,'pwm pin number',[2:13 44:46]);
+				errstr=arduinoSerialPort.checknum(pin,'pwm pin number',[2:13 44:46]);
 				if ~isempty(errstr), error(errstr); end
 				
 				% check val
-				errstr=arduinoLegacy.checknum(val,'analog output level',0:255);
+				errstr=arduinoSerialPort.checknum(val,'analog output level',0:255);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
-			
-			% check a.aser for validity if a.chks is true
-			if a.chks
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
-				if ~isempty(errstr), error(errstr); end
-			end
-			
+	
 			%%%%%%%%%%%%%%%%%%%%%%%%% PERFORM ANALOG OUTPUT %%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO')
-				% handle demo mode
+			if ~a.isDemo
 				
-				% minimum analog output delay
-				pause(0.0014);
+				% send mode, pin and value
+				write(a.conn,[52 97+pin val],'char');
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
-				if a.chks
-					errstr=arduinoLegacy.checkser(a.aser,'open');
-					if ~isempty(errstr), error(errstr); end
-				end
-				
-				% send mode, pin and value
-				fwrite(a.aser,[52 97+pin val],'uchar');
 				
 			end
 			
@@ -761,20 +641,14 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check val
-				errstr=arduinoLegacy.checkstr(str,'reference',{'default','internal','external'});
+				errstr=arduinoSerialPort.checkstr(str,'reference',{'default','internal','external'});
 				if ~isempty(errstr), error(errstr); end
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
-			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
-				if ~isempty(errstr), error(errstr); end
-			end
-			
 			%%%%%%%%%%%%%%%%%%%% CHANGE ANALOG INPUT REFERENCE %%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO'),
+			if strcmpi(get(a.conn,'Port'),'DEMO'),
 				% handle demo mode
 				
 				% minimum analog output delay
@@ -782,9 +656,9 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
@@ -794,7 +668,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% send mode, pin and value
-				fwrite(a.aser,[82 48+num],'uchar');
+				write(a.conn,[82 48+num],'char');
 				
 			end
 			
@@ -840,14 +714,14 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check pin
-				errstr=arduinoLegacy.checknum(pin,'servo number',2:a.nPins);
+				errstr=arduinoSerialPort.checknum(pin,'servo number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -859,7 +733,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% ATTACH SERVO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<2,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<2,
 				% handle demo mode
 				
 				% minimum digital output delay
@@ -867,14 +741,14 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode, pin and value (1 for attach)
-				fwrite(a.aser,[54 97+pin 48+1],'uchar');
+				write(a.conn,[54 97+pin 48+1],'char');
 				
 			end
 			
@@ -916,14 +790,14 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check servo number
-				errstr=arduinoLegacy.checknum(pin,'servo number',2:a.nPins);
+				errstr=arduinoSerialPort.checknum(pin,'servo number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -935,7 +809,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% DETACH SERVO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<2,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<2,
 				% handle demo mode
 				
 				% minimum digital output delay
@@ -943,14 +817,14 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode, pin and value (0 for detach)
-				fwrite(a.aser,[54 97+pin 48+0],'uchar');
+				write(a.conn,[54 97+pin 48+0],'char');
 				
 			end
 			
@@ -1005,13 +879,13 @@ classdef arduinoLegacy < handle
 			
 			% check servo number if a.chkp is true
 			if a.chkp,
-				errstr=arduinoLegacy.checknum(pin,'servo number',2:a.nPins);
+				errstr=arduinoSerialPort.checknum(pin,'servo number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -1023,7 +897,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% ASK SERVO STATUS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<2,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<2,
 				% handle demo mode
 				
 				% minimum digital input delay
@@ -1034,24 +908,24 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode and pin
-				fwrite(a.aser,[53 97+pin],'uchar');
+				write(a.conn,[53 97+pin],'char');
 				
 				% get value
-				val=fscanf(a.aser,'%d');
+				val = read(a.conn,a.conn.NumBytesAvailable,'uint8');
 				
 			end
 			
 			% updates the servo state vector
 			a.srvs(pin)=val;
 			
-			if nargout==0,
+			if nargout==0
 				str={'DETACHED','ATTACHED'};
 				disp(['Servo ' num2str(pin) ' is ' str{1+val}]);
 				clear val
@@ -1090,7 +964,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check servo number
-				errstr=arduinoLegacy.checknum(pin,'servo number',2:a.nPins);
+				errstr=arduinoSerialPort.checknum(pin,'servo number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				
 				% get object name
@@ -1103,9 +977,9 @@ classdef arduinoLegacy < handle
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -1117,7 +991,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% READ SERVO ANGLE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<2,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<2,
 				% handle demo mode
 				
 				% minimum analog input delay
@@ -1128,17 +1002,17 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode and pin
-				fwrite(a.aser,[55 97+pin],'uchar');
+				write(a.conn,[55 97+pin],'char');
 				
 				% get value
-				val=fscanf(a.aser,'%d');
+				val = read(a.conn,a.conn.NumBytesAvailable,'uint8');
 				
 			end
 			
@@ -1170,11 +1044,11 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check servo number
-				errstr=arduinoLegacy.checknum(pin,'servo number',2:a.nPins);
+				errstr=arduinoSerialPort.checknum(pin,'servo number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
 				
 				% check angle value
-				errstr=arduinoLegacy.checknum(val,'angle',0:180);
+				errstr=arduinoSerialPort.checknum(val,'angle',0:180);
 				if ~isempty(errstr), error(errstr); end
 				
 				% get object name
@@ -1187,9 +1061,9 @@ classdef arduinoLegacy < handle
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -1201,7 +1075,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% WRITE ANGLE TO SERVO %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<2,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<2,
 				% handle demo mode
 				
 				% minimum analog output delay
@@ -1209,14 +1083,14 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode, pin and value
-				fwrite(a.aser,[56 97+pin val],'uchar');
+				write(a.conn,[56 97+pin val],'char');
 				
 			end
 			
@@ -1255,22 +1129,22 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check encoder number
-				errstr=arduinoLegacy.checknum(enc,'encoder number',0:2);
+				errstr=arduinoSerialPort.checknum(enc,'encoder number',0:2);
 				if ~isempty(errstr), error(errstr); end
 				
 				% check pin A
-				errstr=arduinoLegacy.checknum(pinA,'pin A',[2 3 19 18 21 20]);
+				errstr=arduinoSerialPort.checknum(pinA,'pin A',[2 3 19 18 21 20]);
 				if ~isempty(errstr), error(errstr); end
 				
 				% check pin B
-				errstr=arduinoLegacy.checknum(pinB,'pin B',[2 3 19 18 21 20]);
+				errstr=arduinoSerialPort.checknum(pinB,'pin B',[2 3 19 18 21 20]);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -1289,7 +1163,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% ATTACH ENCODER %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<1,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<1,
 				% handle demo mode
 				
 				% minimum analog write delay
@@ -1297,14 +1171,14 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode, encoder and pins
-				fwrite(a.aser,[a.nPins 48+enc 97+pinA 97+pinB],'uchar');
+				write(a.conn,[a.nPins 48+enc 97+pinA 97+pinB],'char');
 				
 			end
 			
@@ -1341,14 +1215,14 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check encoder number
-				errstr=arduinoLegacy.checknum(enc,'encoder number',0:2);
+				errstr=arduinoSerialPort.checknum(enc,'encoder number',0:2);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -1360,7 +1234,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% DETACH ENCODER %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<1,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<1,
 				% handle demo mode
 				
 				% minimum digital output delay
@@ -1368,14 +1242,14 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode, encoder and value
-				fwrite(a.aser,[70 48+enc],'uchar');
+				write(a.conn,[70 48+enc],'char');
 				
 			end
 			
@@ -1428,7 +1302,7 @@ classdef arduinoLegacy < handle
 			
 			% check encoder number if a.chkp is true
 			if a.chkp,
-				errstr=arduinoLegacy.checknum(enc,'encoder number',0:2);
+				errstr=arduinoSerialPort.checknum(enc,'encoder number',0:2);
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -1473,7 +1347,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check encoder number
-				errstr=arduinoLegacy.checknum(enc,'encoder number',0:2);
+				errstr=arduinoSerialPort.checknum(enc,'encoder number',0:2);
 				if ~isempty(errstr), error(errstr); end
 				
 				% get object name
@@ -1486,9 +1360,9 @@ classdef arduinoLegacy < handle
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -1500,7 +1374,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% READ ENCODER POSITION %%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<1,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<1,
 				% handle demo mode
 				
 				% minimum analog input delay
@@ -1511,17 +1385,17 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode and enc
-				fwrite(a.aser,[71 48+enc],'uchar');
+				write(a.conn,[71 48+enc],'char');
 				
 				% get value
-				val=fscanf(a.aser,'%d');
+				val = read(a.conn,a.conn.NumBytesAvailable,'uint8');
 				
 			end
 			
@@ -1550,7 +1424,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check encoder number
-				errstr=arduinoLegacy.checknum(enc,'encoder number',0:2);
+				errstr=arduinoSerialPort.checknum(enc,'encoder number',0:2);
 				if ~isempty(errstr), error(errstr); end
 				
 				% get object name
@@ -1563,9 +1437,9 @@ classdef arduinoLegacy < handle
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -1577,7 +1451,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% RESET ENCODER POSITION %%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<1,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<1,
 				% handle demo mode
 				
 				% minimum analog output delay
@@ -1585,14 +1459,14 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode and encoder number
-				fwrite(a.aser,[72 48+enc],'uchar');
+				write(a.conn,[72 48+enc],'char');
 				
 			end
 			
@@ -1631,11 +1505,11 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check encoder number
-				errstr=arduinoLegacy.checknum(enc,'encoder number',0:2);
+				errstr=arduinoSerialPort.checknum(enc,'encoder number',0:2);
 				if ~isempty(errstr), error(errstr); end
 				
 				% check delay value
-				errstr=arduinoLegacy.checknum(del,'del',0:69);
+				errstr=arduinoSerialPort.checknum(del,'del',0:69);
 				if ~isempty(errstr), error(errstr); end
 				
 				% get object name
@@ -1648,9 +1522,9 @@ classdef arduinoLegacy < handle
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -1662,7 +1536,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% SETS DEBOUNCE DELAY %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<1,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<1,
 				% handle demo mode
 				
 				% minimum analog write delay
@@ -1670,14 +1544,14 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode, encoder and pins
-				fwrite(a.aser,[73 48+enc 97+del],'uchar');
+				write(a.conn,[73 48+enc 97+del],'char');
 				
 			end
 			
@@ -1714,20 +1588,20 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check argument (must be a byte)
-				errstr=arduinoLegacy.checknum(byte,'byte',0:255);
+				errstr=arduinoSerialPort.checknum(byte,'byte',0:255);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% SEND ARGUMENT ALONG %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO')
+			if strcmpi(get(a.conn,'Port'),'DEMO')
 				% handle demo mode
 				
 				% minimum analog output delay
@@ -1738,17 +1612,17 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode and byte
-				fwrite(a.aser,[88 byte],'uchar');
+				write(a.conn,[88 byte],'char');
 				
 				% get value back
-				val=fscanf(a.aser,'%d');
+				val = read(a.conn,a.conn.NumBytesAvailable,'uint8');
 				
 			end
 			
@@ -1793,13 +1667,13 @@ classdef arduinoLegacy < handle
 				
 				% if motor number is there check it
 				if nargin>1,
-					errstr=arduinoLegacy.checknum(num,'motor number',1:4);
+					errstr=arduinoSerialPort.checknum(num,'motor number',1:4);
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% if speed argument is there check it
 				if nargin>2,
-					errstr=arduinoLegacy.checknum(val,'speed',0:255);
+					errstr=arduinoSerialPort.checknum(val,'speed',0:255);
 					if ~isempty(errstr), error(errstr); end
 				end
 				
@@ -1808,9 +1682,9 @@ classdef arduinoLegacy < handle
 			% perform the requested action
 			if nargin==3,
 				
-				% check a.aser for validity if a.chks is true
+				% check a.conn for validity if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'valid');
+					errstr=arduinoSerialPort.checkser(a.conn,'valid');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
@@ -1822,7 +1696,7 @@ classdef arduinoLegacy < handle
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%% SET MOTOR SPEED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				
-				if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<3,
+				if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<3,
 					% handle demo mode
 					
 					% minimum analog output delay
@@ -1830,14 +1704,14 @@ classdef arduinoLegacy < handle
 					
 				else
 					
-					% check a.aser for openness if a.chks is true
+					% check a.conn for openness if a.chks is true
 					if a.chks,
-						errstr=arduinoLegacy.checkser(a.aser,'open');
+						errstr=arduinoSerialPort.checkser(a.conn,'open');
 						if ~isempty(errstr), error(errstr); end
 					end
 					
 					% send mode, num and value
-					fwrite(a.aser,[65 48+num val],'uchar');
+					write(a.conn,[65 48+num val],'char');
 					
 				end
 				
@@ -1907,7 +1781,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check motor number
-				errstr=arduinoLegacy.checknum(num,'motor number',1:4);
+				errstr=arduinoSerialPort.checknum(num,'motor number',1:4);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
@@ -1926,13 +1800,13 @@ classdef arduinoLegacy < handle
 			
 			% check direction if a.chkp is true
 			if a.chkp,
-				errstr=arduinoLegacy.checkstr(dir,'direction',{'forward','backward','release'});
+				errstr=arduinoSerialPort.checkstr(dir,'direction',{'forward','backward','release'});
 				if ~isempty(errstr), error(errstr); end
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -1944,7 +1818,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% RUN THE MOTOR %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<3,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<3,
 				% handle demo mode
 				
 				% minimum analog output delay
@@ -1952,14 +1826,14 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode, num and value
-				fwrite(a.aser,[66 48+num abs(dir(1))],'uchar');
+				write(a.conn,[66 48+num abs(dir(1))],'char');
 				
 			end
 			
@@ -2003,13 +1877,13 @@ classdef arduinoLegacy < handle
 				
 				% if stepper number is there check it
 				if nargin>1,
-					errstr=arduinoLegacy.checknum(num,'stepper number',1:2);
+					errstr=arduinoSerialPort.checknum(num,'stepper number',1:2);
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% if speed argument is there check it
 				if nargin>2,
-					errstr=arduinoLegacy.checknum(val,'speed',0:255);
+					errstr=arduinoSerialPort.checknum(val,'speed',0:255);
 					if ~isempty(errstr), error(errstr); end
 				end
 				
@@ -2018,9 +1892,9 @@ classdef arduinoLegacy < handle
 			% perform the requested action
 			if nargin==3,
 				
-				% check a.aser for validity if a.chks is true
+				% check a.conn for validity if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'valid');
+					errstr=arduinoSerialPort.checkser(a.conn,'valid');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
@@ -2032,7 +1906,7 @@ classdef arduinoLegacy < handle
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%% SET STEPPER SPEED %%%%%%%%%%%%%%%%%%%%%%%%%%%
 				
-				if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<3,
+				if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<3,
 					% handle demo mode
 					
 					% minimum analog output delay
@@ -2040,14 +1914,14 @@ classdef arduinoLegacy < handle
 					
 				else
 					
-					% check a.aser for openness if a.chks is true
+					% check a.conn for openness if a.chks is true
 					if a.chks,
-						errstr=arduinoLegacy.checkser(a.aser,'open');
+						errstr=arduinoSerialPort.checkser(a.conn,'open');
 						if ~isempty(errstr), error(errstr); end
 					end
 					
 					% send mode, num and value
-					fwrite(a.aser,[67 48+num val],'uchar');
+					write(a.conn,[67 48+num val],'char');
 					
 				end
 				
@@ -2127,7 +2001,7 @@ classdef arduinoLegacy < handle
 				end
 				
 				% check stepper number
-				errstr=arduinoLegacy.checknum(num,'stepper number',1:2);
+				errstr=arduinoSerialPort.checknum(num,'stepper number',1:2);
 				if ~isempty(errstr), error(errstr); end
 				
 			end
@@ -2148,7 +2022,7 @@ classdef arduinoLegacy < handle
 			if a.chkp,
 				
 				% check direction
-				errstr=arduinoLegacy.checkstr(dir,'direction',{'forward','backward','release'});
+				errstr=arduinoSerialPort.checkstr(dir,'direction',{'forward','backward','release'});
 				if ~isempty(errstr), error(errstr); end
 				
 				% if it is not released must have all arguments
@@ -2164,7 +2038,7 @@ classdef arduinoLegacy < handle
 				% check motion style
 				if nargin>3,
 					% check direction
-					errstr=arduinoLegacy.checkstr(sty,'motion style',{'single','double','interleave','microstep'});
+					errstr=arduinoSerialPort.checkstr(sty,'motion style',{'single','double','interleave','microstep'});
 					if ~isempty(errstr), error(errstr); end
 				else
 					sty='single';
@@ -2172,7 +2046,7 @@ classdef arduinoLegacy < handle
 				
 				% check number of steps
 				if nargin==5,
-					errstr=arduinoLegacy.checknum(steps,'number of steps',0:255);
+					errstr=arduinoSerialPort.checknum(steps,'number of steps',0:255);
 					if ~isempty(errstr), error(errstr); end
 				else
 					steps=0;
@@ -2180,9 +2054,9 @@ classdef arduinoLegacy < handle
 				
 			end
 			
-			% check a.aser for validity if a.chks is true
+			% check a.conn for validity if a.chks is true
 			if a.chks,
-				errstr=arduinoLegacy.checkser(a.aser,'valid');
+				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
@@ -2194,7 +2068,7 @@ classdef arduinoLegacy < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% ROTATE THE STEPPER %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.aser,'Port'),'DEMO') || a.sktc<3,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<3,
 				% handle demo mode
 				
 				% minimum analog output delay
@@ -2202,14 +2076,14 @@ classdef arduinoLegacy < handle
 				
 			else
 				
-				% check a.aser for openness if a.chks is true
+				% check a.conn for openness if a.chks is true
 				if a.chks,
-					errstr=arduinoLegacy.checkser(a.aser,'open');
+					errstr=arduinoSerialPort.checkser(a.conn,'open');
 					if ~isempty(errstr), error(errstr); end
 				end
 				
 				% send mode, num and value
-				fwrite(a.aser,[68 48+num abs(dir(1)) abs(sty(1)) steps],'uchar');
+				write(a.conn,[68 48+num abs(dir(1)) abs(sty(1)) steps],'char');
 				
 			end
 			
@@ -2221,7 +2095,7 @@ classdef arduinoLegacy < handle
 		
 		function errstr=checknum(num,description,allowed)
 			
-			% errstr=arduinoLegacy.checknum(num,description,allowed); Checks numeric argument.
+			% errstr=arduinoSerialPort.checknum(num,description,allowed); Checks numeric argument.
 			% This function checks the first argument, num, described in the string
 			% given as a second argument, to make sure that it is real, scalar,
 			% and that it is equal to one of the entries of the vector of allowed
@@ -2270,7 +2144,7 @@ classdef arduinoLegacy < handle
 		
 		function errstr=checkstr(str,description,allowed)
 			
-			% errstr=arduinoLegacy.checkstr(str,description,allowed); Checks string argument.
+			% errstr=arduinoSerialPort.checkstr(str,description,allowed); Checks string argument.
 			% This function checks the first argument, str, described in the string
 			% given as a second argument, to make sure that it is a string, and that
 			% its first character is equal to one of the entries in the cell of
@@ -2313,7 +2187,7 @@ classdef arduinoLegacy < handle
 		
 		function errstr=checkser(ser,chk)
 			
-			% errstr=arduinoLegacy.checkser(ser,chk); Checks serial connection argument.
+			% errstr=arduinoSerialPort.checkser(ser,chk); Checks serial connection argument.
 			% This function checks the first argument, ser, to make sure that either:
 			% 1) it is a valid serial connection (if the second argument is 'valid')
 			% 3) it is open (if the second argument is 'open')

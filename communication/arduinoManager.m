@@ -44,8 +44,8 @@ classdef arduinoManager < optickaCore
 			end
 			switch me.mode
 				case 'original'
-					if ~exist('arduinoLegacy','file')
-						me.comment = 'Cannot find arduinoLegacy, check opticka path!';
+					if ~exist('arduinoSerialPort','file')
+						me.comment = 'Cannot find arduinoSerialPort, check opticka path!';
 						warning(me.comment)
 						me.silentMode = true;
 					end
@@ -83,7 +83,7 @@ classdef arduinoManager < optickaCore
 										me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
 										nPins = max(cell2mat(me.availablePins));
 								end
-								me.device = arduinoLegacy(me.port,nPins);
+								me.device = arduinoSerialPort(me.port,nPins);
 								me.deviceID = me.port;
 								me.isOpen = true;setLow(me);
 							else
