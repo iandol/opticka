@@ -5,7 +5,7 @@ classdef arduinoSerial < handle
 	
 	properties (SetAccess=private,GetAccess=public)
 		aser   % Serial Connection
-		nPins = 69 % number of controllable pins
+		nPins = 13 % number of controllable pins
 		pins   % Pin Status Vector
 		srvs   % Servo Status Vector
 		mspd   % DC Motors Speed Status
@@ -160,20 +160,17 @@ classdef arduinoSerial < handle
 			
 			% if it is a serial, valid and open then close it
 			if isa(a.aser,'serial') && isvalid(a.aser) && strcmpi(get(a.aser,'Status'),'open')
-				if ~isempty(a.aser.Tag)
-					try
-						% trying to leave it in a known unharmful state
-						for i=2:a.nPins
-							a.pinMode(i,'output');
-							a.digitalWrite(i,0);
-							a.pinMode(i,'input');
-						end
-					catch ME
-						% disp but proceed anyway
-						disp(ME.message);
-						disp('Proceeding to deletion anyway');
+				try
+					% trying to leave it in a known unharmful state
+					for i=2:a.nPins
+						a.pinMode(i,'output');
+						a.digitalWrite(i,0);
+						a.pinMode(i,'input');
 					end
-					
+				catch ME
+					% disp but proceed anyway
+					disp(ME.message);
+					disp('Proceeding to deletion anyway');
 				end
 				fclose(a.aser);
 			end

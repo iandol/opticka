@@ -132,10 +132,10 @@ classdef arduinoSerialPort < handle
 			a.sspd=0*ones(1,2);
 			
 			flush(a.conn);
-			for i=2:a.nPins
-				a.pinMode(i,'output');
-				a.digitalWrite(i,0);
-			end
+			%for i=2:a.nPins
+			%	a.pinMode(i,'output');
+			%	a.digitalWrite(i,0);
+			%end
 			
 			% notify successful installation
 			a.port = port;
@@ -145,26 +145,6 @@ classdef arduinoSerialPort < handle
 		
 		% destructor, deletes the object
 		function delete(a)
-			
-			% Use delete(a) or a.delete to delete the arduino object
-			
-			% if it is a serial, valid and open then close it
-			if isa(a.conn,'serialport') && isvalid(a.conn)
-				if ~isempty(a.conn.Tag)
-					try
-						% trying to leave it in a known unharmful state
-						for i=2:a.nPins
-							a.pinMode(i,'output');
-							a.digitalWrite(i,0);
-							a.pinMode(i,'input');
-						end
-					catch ME
-						% disp but proceed anyway
-						disp(ME.message);
-						disp('Proceeding to deletion anyway');
-					end
-				end
-			end
 			% if it's an object delete it
 			if isobject(a.conn)
 				delete(a.conn);
