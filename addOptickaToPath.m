@@ -15,7 +15,7 @@ end
 opaths		= genpath(opath); 
 opaths		= strsplit(opaths,pathsep);
 sep 			= regexptranslate('escape',filesep);
-pathExceptions = [sep '\.git|' sep 'adio|' sep 'photodiode'];
+pathExceptions = [sep '\.git|' sep 'adio|' sep 'arduino|' sep 'photodiode'];
 qAdd 			= cellfun(@isempty,regexpi(opaths,pathExceptions)); % true where regexp _didn't_ match
 addpath(opaths{qAdd}); savepath;
 disp('--->>> Added opticka to the path...')
