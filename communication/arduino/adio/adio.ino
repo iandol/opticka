@@ -1,6 +1,8 @@
 
 /* Analog and Digital Input and Output Server for MATLAB     */
 /* Giampiero Campa, Copyright 2013 The MathWorks, Inc        */
+/*                                                           */
+/* This version is modified for timed TTLs (see command 50)  */
 
 /* This file is meant to be used with the MATLAB arduino IO
 	 package, however, it can be used from the IDE environment
@@ -21,7 +23,8 @@
 	 3a  : reads analog pin #0 (a)
 	 3f  : reads analog pin #5 (f)
 
-	 5c!! : sends a timed TTL to pin #12 (n) for ('!' = 33 in bytes, [33 33]) to uint16 = 8481
+	 5c!! : sends a timed TTL to pin #12 (n) for ('!' = 33 in bytes, [33 33]) = 8481ms
+        : Two bytes can encode a 16bit unsigned value 0 to 65536 ms
 
 	 R0    : sets analog reference to DEFAULT
 	 R1    : sets analog reference to INTERNAL
@@ -228,10 +231,10 @@ void loop() {
         s = 52;
         break; /* s=51 taken care of                           */
       case 52:
-        /* the third received value indicates the time in ms  */
+        /* combine two bytes into a 16bit (unsigned) word      */
         rbyte[1] = val;
         ttime = word(rbyte[1],rbyte[0]);
-        if ( ttime > 0) {
+        if (ttime > 0) {
           digitalWrite(pin, HIGH);    /* perform Digital Output */
           delay(ttime);
           digitalWrite(pin, LOW);    /* perform Digital Output */
@@ -250,7 +253,7 @@ void loop() {
           /* if string sent is 99  send script type via serial */
           Serial.println(0);
         }
-        s = -1; /* we are done with this so next state is -1    */
+        s = -1; /* we are done with this so next state is -1   */
         break; /* s=90 taken care of                           */
 
 
@@ -290,11 +293,11 @@ void loop() {
       /*=====================================================*/
       /* s=400 roundtrip example function (returns the input)*/
       case 400:
-        /* the second value (val) can really be anything here  */
-        /* This is an auxiliary function that returns the ASCII
-          value of its first argument. It is provided as an
-          example for people that want to add their own code  */
-        /* your own code goes here instead of the serial print */
+        /* The second value (val) can really be anything here. 
+           This is an auxiliary function that returns the ASCII
+           value of its first argument. It is provided as an
+           example for people that want to add their own code  
+           your own code goes here instead of the serial print */
         Serial.println(val);
         s = -1; /* we are done with the aux function so -1      */
         break; /* s=400 taken care of                          */

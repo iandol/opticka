@@ -3,10 +3,9 @@ classdef arduinoSerialPort < handle
 	% This class defines an "arduino" object
 	% Giampiero Campa, Aug 2013, Copyright 2013 The MathWorks, Inc.
 	% Modified for use with PTB
-	
-	properties
-		nPins = 13 % number of controllable pins
-	end
+	% This version uses serialport, requiring MATLAB 2019B
+	% or later. Also added a timedTTL function, requiring
+	% a compatible arduino sketch: adio.ino
 	
 	properties (Hidden=true)
 		chks = false;  % Checks serial connection before every operation
@@ -14,146 +13,135 @@ classdef arduinoSerialPort < handle
 	end
 	
 	properties (SetAccess=private,GetAccess=public)
-		port   % the assigned port
-		conn   % Serial Connection
-		pins   % Pin Status Vector
-		srvs   % Servo Status Vector
-		mspd   % DC Motors Speed Status
-		sspd   % Stepper Motors Speed Status
-		encs   % Encoders Status
-		sktc   % Motor Server Running on the Arduino Board
-		isDemo = false
+		nPins = 13		% number of controllable pins
+		port			% the assigned port
+		conn			% Serial Connection
+		pins			% Pin Status Vector
+		srvs			% Servo Status Vector
+		mspd			% DC Motors Speed Status
+		sspd			% Stepper Motors Speed Status
+		encs			% Encoders Status
+		sketchType = [] % Motor Server Running on the Arduino Board
+		isDemo = false	% Demo mode
 	end
 	
 	methods
 		
 		% constructor, connects to the board and creates an arduino object
 		function a=arduinoSerialPort(port,nPins)
-			
+			args = nargin;
+			if verLessThan('matlab','9.7')
+				warning('MATLAB 2019b or higher is required for serialport interface. Use arduinoSerial for legacy version.');
+				args = 0;
+			end
 			% check nargin
-			if nargin<1
-				port='DEMO';
+			if args < 1 || isempty(port) || strcmpi(port,'DEMO')
+				a.port='DEMO';
 				a.isDemo = true;
-				disp('Note: a DEMO connection will be created');
-				disp('Use a com port, e.g. ''/dev/ttyACM0'' as input argument to connect to the real board');
-			elseif nargin == 2
+			elseif args == 2
 				a.nPins = nPins;
 			end
-			
 			% check port
 			if ~ischar(port)
 				error('The input argument must be a string, e.g. ''/dev/ttyACM0'' ');
 			end
-			
-			if strcmp(port,'DEMO')
+			if a.isDemo
+				a.port='DEMO';
 				a.isDemo = true;
+				disp('Note: a DEMO connection will be created');
+				disp('Use a com port, e.g. ''/dev/ttyACM0'' as input argument to connect to the real board');
 				return
 			end
-			
+			% check if port is available
 			allPorts = serialportlist('all');
 			avPorts = serialportlist('available');
-
 			fprintf('===> All possible serial ports:\n');
 			fprintf('%s\n',allPorts);
-			
 			if any(strcmpi(allPorts,port))
 				fprintf('===> Your specified port is present\n')
 			else
 				error('===> No port with the specified name is present on the system!');
 			end
-			
 			if any(strcmpi(avPorts,port))
 				fprintf('===> Your specified port is available\n')
 			else
 				error('===> The port is occupied, please release it first!');
 			end
-			
 			% define serial object
+			tStart = GetSecs;
 			a.conn=serialport(port,115200,'Timeout',5);
-			
 			% test connection
 			try
 				flush(a.conn);
 			catch ME
-				disp(ME.message)
-				delete(a.conn);
-				delete(a);
-				error(['Could not use port: ' port]);
+				getReport(ME);
+				delete(a.conn); delete(a);
+				error(['===> Could not use port: ' port]);
 			end
-
 			% query sketch type
-			r = []; tout = []; t = GetSecs;
-			while isempty(r) && GetSecs < t+2
+			r = []; tOut = [];
+			while isempty(r) && GetSecs < tStart+2
 				write(a.conn,'99','char'); % send '99' command
-				pause(0.1);
+				WaitSecs(0.05);
 				if a.conn.NumBytesAvailable > 0
 					r = read(a.conn,a.conn.NumBytesAvailable,'uint8');
-					tout = GetSecs - t;
+					tOut = GetSecs - tStart;
 				end
 			end
-			fprintf('===> It took %.3f secs to establish response: %i...\n',tout,r(1));
-			a.sktc = r(1);
 			% exit if there was no answer
-			if isempty(a.sktc)
+			if isempty(r)
 				delete(a.conn);
 				delete(a);
 				error('===> Connection unsuccessful, please make sure that the board is powered on, running a sketch provided with the package, and connected to the indicated serial port. You might also try to unplug and re-plug the USB cable before attempting a reconnection.');
 			end
-
+			a.port = port;
+			fprintf('===> It took %.3f secs to establish response: %i...\n',tOut,r(1)-48);
+			a.sketchType = r(1)-48;
 			% check returned value
-			if a.sktc==48
+			if a.sketchType==0
 				disp('===> Basic Analog and Digital I/O (adio.pde) sketch detected !');
-			elseif a.sktc==49
+			elseif a.sketchType==1
 				disp('===> Analog & Digital I/O + Encoders (adioe.pde) sketch detected !');
-			elseif a.sktc==50
+			elseif a.sketchType==2
 				disp('===> Analog & Digital I/O + Encoders + Servos (adioes.pde) sketch detected !');
-			elseif a.sktc==51
+			elseif a.sketchType==3
 				disp('===> Motor Shield V1 (plus adioes.pde functions) sketch detected !');
-			elseif a.sktc==52
+			elseif a.sketchType==4
 				disp('===> Motor Shield V2 (plus adioes.pde functions) sketch detected !');
 			else
 				delete(a.conn);
 				error('===> Unknown sketch. Please make sure that a sketch provided with the package is running on the board');
 			end
-			
 			% initialize pin vector (-1 is unassigned, 0 is input, 1 is output)
 			a.pins=-1*ones(1,a.nPins);
-			
 			% initialize servo vector (0 is detached, 1 is attached)
 			a.srvs=0*ones(1,a.nPins);
-			
 			% initialize encoder vector (0 is detached, 1 is attached)
 			a.encs=0*ones(1,3);
-			
 			% initialize motor vector (0 to 255 is the speed)
 			a.mspd=0*ones(1,4);
-			
 			% initialize stepper vector (0 to 255 is the speed)
 			a.sspd=0*ones(1,2);
-			
 			flush(a.conn);
-			%for i=2:a.nPins
-			%	a.pinMode(i,'output');
-			%	a.digitalWrite(i,0);
-			%end
-			
+			for i=2:a.nPins
+				a.pinMode(i,'output');
+				a.digitalWrite(i,0);
+			end
 			% notify successful installation
-			a.port = port;
-			disp(['===> Arduino successfully connected to port ' a.port '!']);
-			
+			disp(['===> Arduino successfully connected to port ' a.port]);
 		end % arduino
 		
 		% destructor, deletes the object
 		function delete(a)
 			% if it's an object delete it
 			if isobject(a.conn)
+				fprintf('===> Deleting Arduino SerialPort object for port %s\n',a.port);
 				delete(a.conn);
 			end
 		end % delete
 		
 		% disp, displays the object
 		function disp(a)
-			
 			% disp(a) or a.disp, displays the arduino object properties
 			% The first and only argument is the arduino object, there is no
 			% output, but the basic information and properties of the arduino
@@ -162,77 +150,77 @@ classdef arduinoSerialPort < handle
 			% is typed on the command line, followed by enter. The command
 			% str=evalc('a.disp'), (or str=evalc('a')), can be used to capture
 			% the output in the string 'str'.
-			
 			if a.isDemo; disp('Arduino is in DEMO mode');return;end
-
-			disp(['Arduino object connected to ' a.conn.Port ' port']);
-			if a.sktc==4
-				disp('Motor Shield sketch V2 (plus adioes.pde functions) running on the board');
+			fprintf('===>>> Arduino object connected to %s with %i pins\n',a.port,a.nPins);
+			if a.sketchType==4
+				disp('===>>> Motor Shield sketch V2 (plus adioes.pde functions) running on the board');
 				disp(' ');
 				a.servoStatus
 				disp(' ');
-				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
+				disp('===>>> Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
 				disp(' ');
 				a.encoderStatus
 				disp(' ');
-				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp('===>>> Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
 				disp(' ');
 				a.motorSpeed
 				a.stepperSpeed
 				disp(' ');
-				disp('DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
+				disp('===>>> DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
 				disp(' ');
-				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
-			elseif a.sktc==3
-				disp('Motor Shield sketch V1 (plus adioes.pde functions) running on the board');
+				disp('===>>> Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+			elseif a.sketchType==3
+				disp('===>>> Motor Shield sketch V1 (plus adioes.pde functions) running on the board');
 				disp(' ');
 				a.servoStatus
 				disp(' ');
-				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
+				disp('===>>> Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
 				disp(' ');
 				a.encoderStatus
 				disp(' ');
-				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp('===>>> Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
 				disp(' ');
 				a.motorSpeed
 				a.stepperSpeed
 				disp(' ');
-				disp('DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
+				disp('===>>> DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
 				disp(' ');
-				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
-			elseif a.sktc==2
-				disp('Analog & Digital I/O + Encoders + Servos (adioes.pde) sketch running on the board');
+				disp('===>>> Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+			elseif a.sketchType==2
+				disp('===>>> Analog & Digital I/O + Encoders + Servos (adioes.pde) sketch running on the board');
 				disp(' ');
 				a.pinMode
 				disp(' ');
-				disp('Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
+				disp('===>>> Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
 				disp(' ');
 				a.servoStatus
 				disp(' ');
-				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
+				disp('===>>> Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
 				disp(' ');
 				a.encoderStatus
 				disp(' ');
-				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp('===>>> Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
 				disp(' ');
-				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
-			elseif a.sktc==1
-				disp('Analog & Digital I/O + Encoders (adioe.pde) sketch running on the board');
+				disp('===>>> Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+			elseif a.sketchType==1
+				disp('===>>> Analog & Digital I/O + Encoders (adioe.pde) sketch running on the board');
 				disp(' ');
 				a.pinMode
 				disp(' ');
-				disp('Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
+				disp('===>>> Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
 				disp(' ');
 				a.encoderStatus
 				disp(' ');
-				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
+				disp('===>>> Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
 				disp(' ');
-				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+				disp('===>>> Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
 			else
-				disp('Basic Analog & Digital I/O sketch (adio.pde) running on the board');
+				disp('===>>> Basic Analog & Digital I/O sketch (adio.pde) running on the board');
 				disp(' ');
 				a.pinMode
 				disp(' ');
+				disp('===>>> Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
+				disp('===>>> Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
 			end
 		end
 		
@@ -244,8 +232,9 @@ classdef arduinoSerialPort < handle
 			% the arduino board is connected (e.g. 'COM9', 'DEMO', or
 			% '/dev/ttyS101'). The string 'Invalid' is returned if
 			% the serial port is invalid
+			if a.isDemo; str = 'DEMO';return;end
 			if isvalid(a.conn)
-				str=a.conn.Port;
+				str=a.port;
 			else
 				str='Invalid';
 			end
@@ -253,21 +242,16 @@ classdef arduinoSerialPort < handle
 		end  % serial
 		
 		% flush, clears the pc's serial port buffer
-		function val=flush(a)
-			
+		function flush(a)
 			% val=flush(a) (or val=a.flush) reads all the bytes available
 			% (if any) in the computer's serial port buffer, therefore
 			% clearing said buffer.
-			% The first and only argument is the arduino object, the
-			% output is a vector of bytes that were still in the buffer.
-			% The value '-1' is returned if the buffer was already empty.
-			
+			% The first and only argument is the arduino object.
 			flush(a.conn);
 		end  % flush
 		
 		% pin mode, changes pin mode
 		function pinMode(a,pin,str)
-			
 			% pinMode(a,pin,str); reads or sets the I/O mode of a digital pin.
 			% The first argument, a, is the arduino object.
 			% The second argument, pin, is the number of the digital pin (2 to a.nPins).
@@ -285,87 +269,46 @@ classdef arduinoSerialPort < handle
 			% pinMode(a,11,'output') % sets digital pin #11 as output
 			% pinMode(a,10,'input')  % sets digital pin #10 as input
 			% a.pinMode(10,'input')  % same as pinMode(a,10,'input')
-			% val=pinMode(a,10);     % returns the status of digital pin #10
 			% pinMode(a,5);          % prints the status of digital pin #5
 			% pinMode(a);            % prints the status of all pins
 			%
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-			
+			if a.isDemo; return; end
 			% check arguments if a.chkp is true
 			if a.chkp
-				
-				% check nargin
-				if nargin>3
-					error('This function cannot have more than 3 arguments, object, pin and str');
-				end
-				
-				% if pin argument is there check it
+				if nargin>3;error('This function cannot have more than 3 arguments, object, pin and str');end
 				if nargin>1
 					errstr=arduinoSerialPort.checknum(pin,'pin number',2:a.nPins);
 					if ~isempty(errstr), error(errstr); end
 				end
-				
-				% if str argument is there check it
 				if nargin>2
 					errstr=arduinoSerialPort.checkstr(str,'pin mode',{'input','output'});
 					if ~isempty(errstr), error(errstr); end
 				end
-				
 			end
-			
 			% perform the requested action
 			if nargin==3
-				
-				% check a.conn for validity if a.chks is true
-				if a.chks
-					errstr=arduinoSerialPort.checkser(a.conn,'valid');
-					if ~isempty(errstr), error(errstr); end
-				end
-				
-				%%%%%%%%%%%%%%%%%%%%%%%%% CHANGE PIN MODE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				
 				% assign value
-				if lower(str(1))=='o', val=1; else val=0; end
-				
-				if strcmpi(a.conn.Port,'DEMO')
-					% handle demo mode here
-					
-					% minimum digital output delay
-					pause(0.0014);
-					
-				else
-					
-					% send mode, pin and value
-					write(a.conn,[48 97+pin 48+val],'char');
-					
+				if lower(str(1))=='o', val=1; else; val=0; end
+				write(a.conn,[48 97+pin 48+val],'char');
+				if a.sketchType>1 % silently detach servos on the correspinding pin
+					tmp=a.chkp;
+					a.chkp=0;
+					a.servoDetach(pin);
+					a.chkp=tmp;
 				end
-				
-				% silently detach servos on the correspinding pin
-				tmp=a.chkp;
-				a.chkp=0;
-				a.servoDetach(pin);
-				a.chkp=tmp;
-				
 				% store 0 for input and 1 for output
 				a.pins(pin)=val;
-				
 			elseif nargin==2
-				% print pin mode for the requested pin
-				
 				mode={'UNASSIGNED','set as INPUT','set as OUTPUT'};
 				disp(['Digital Pin ' num2str(pin) ' is currently ' mode{2+a.pins(pin)}]);
-				
 			else
-				% print pin mode for each pin
-				
 				mode={'UNASSIGNED','set as INPUT','set as OUTPUT'};
 				for i=2:a.nPins
 					disp(['Digital Pin ' num2str(i,'%02d') ' is currently ' mode{2+a.pins(i)}]);
 				end
-				
 			end
-			
 		end % pinmode
 		
 		% digital read
@@ -706,14 +649,14 @@ classdef arduinoSerialPort < handle
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<2
+			if a.chkp && a.sketchType<2
 				disp('Warning: the sketch running on the Arduino does not support servos');
 				disp('No operation will be performed on the Arduino board');
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% ATTACH SERVO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<2,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<2,
 				% handle demo mode
 				
 				% minimum digital output delay
@@ -762,34 +705,31 @@ classdef arduinoSerialPort < handle
 			%%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
 			% check arguments if a.chkp is true
-			if a.chkp,
-				
+			if a.chkp
 				% check nargin
-				if nargin~=2,
+				if nargin~=2
 					error('Function must have the "pin" argument');
 				end
-				
 				% check servo number
 				errstr=arduinoSerialPort.checknum(pin,'servo number',2:a.nPins);
 				if ~isempty(errstr), error(errstr); end
-				
 			end
 			
 			% check a.conn for validity if a.chks is true
-			if a.chks,
+			if a.chks
 				errstr=arduinoSerialPort.checkser(a.conn,'valid');
 				if ~isempty(errstr), error(errstr); end
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<2
+			if a.chkp && a.sketchType<2
 				disp('Warning: the sketch running on the Arduino does not support servos');
 				disp('No operation will be performed on the Arduino board');
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% DETACH SERVO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<2,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<2,
 				% handle demo mode
 				
 				% minimum digital output delay
@@ -870,14 +810,14 @@ classdef arduinoSerialPort < handle
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<2
+			if a.chkp && a.sketchType<2
 				disp('Warning: the sketch running on the Arduino does not support servos');
 				disp('No operation will be performed on the Arduino board');
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% ASK SERVO STATUS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<2,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<2,
 				% handle demo mode
 				
 				% minimum digital input delay
@@ -964,14 +904,14 @@ classdef arduinoSerialPort < handle
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<2
+			if a.chkp && a.sketchType<2
 				disp('Warning: the sketch running on the Arduino does not support servos');
 				disp('A random value will be returned');
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% READ SERVO ANGLE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<2,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<2,
 				% handle demo mode
 				
 				% minimum analog input delay
@@ -1048,14 +988,14 @@ classdef arduinoSerialPort < handle
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<2
+			if a.chkp && a.sketchType<2
 				disp('Warning: the sketch running on the Arduino does not support servos');
 				disp('No operation will be performed on the Arduino board');
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% WRITE ANGLE TO SERVO %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<2,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<2,
 				% handle demo mode
 				
 				% minimum analog output delay
@@ -1129,7 +1069,7 @@ classdef arduinoSerialPort < handle
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<1
+			if a.chkp && a.sketchType<1
 				disp('Warning: the sketch running on the Arduino does not support encoders');
 				disp('No operation will be performed on the Arduino board');
 			end
@@ -1143,7 +1083,7 @@ classdef arduinoSerialPort < handle
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% ATTACH ENCODER %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<1,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<1,
 				% handle demo mode
 				
 				% minimum analog write delay
@@ -1207,14 +1147,14 @@ classdef arduinoSerialPort < handle
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<1
+			if a.chkp && a.sketchType<1
 				disp('Warning: the sketch running on the Arduino does not support encoders');
 				disp('No operation will be performed on the Arduino board');
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% DETACH ENCODER %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<1,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<1,
 				% handle demo mode
 				
 				% minimum digital output delay
@@ -1347,14 +1287,14 @@ classdef arduinoSerialPort < handle
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<1
+			if a.chkp && a.sketchType<1
 				disp('Warning: the sketch running on the Arduino does not support encoders');
 				disp('A random value will be returned');
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% READ ENCODER POSITION %%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<1,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<1,
 				% handle demo mode
 				
 				% minimum analog input delay
@@ -1424,14 +1364,14 @@ classdef arduinoSerialPort < handle
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<1
+			if a.chkp && a.sketchType<1
 				disp('Warning: the sketch running on the Arduino does not support encoders');
 				disp('No operation will be performed on the Arduino board');
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% RESET ENCODER POSITION %%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<1,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<1,
 				% handle demo mode
 				
 				% minimum analog output delay
@@ -1509,14 +1449,14 @@ classdef arduinoSerialPort < handle
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<1
+			if a.chkp && a.sketchType<1
 				disp('Warning: the sketch running on the Arduino does not support encoders');
 				disp('No operation will be performed on the Arduino board');
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% SETS DEBOUNCE DELAY %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<1,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<1,
 				% handle demo mode
 				
 				% minimum analog write delay
@@ -1669,14 +1609,14 @@ classdef arduinoSerialPort < handle
 				end
 				
 				% warning if sketch is inadequate and a.chkp is true
-				if a.chkp && a.sktc<3
+				if a.chkp && a.sketchType<3
 					disp('Warning: the sketch running on the Arduino does not support the motor shield');
 					disp('No operation will be performed on the Arduino board');
 				end
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%% SET MOTOR SPEED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 				
-				if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<3,
+				if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<3,
 					% handle demo mode
 					
 					% minimum analog output delay
@@ -1791,14 +1731,14 @@ classdef arduinoSerialPort < handle
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<3
+			if a.chkp && a.sketchType<3
 				disp('Warning: the sketch running on the Arduino does not support the motor shield');
 				disp('No operation will be performed on the Arduino board');
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% RUN THE MOTOR %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<3,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<3,
 				% handle demo mode
 				
 				% minimum analog output delay
@@ -1879,14 +1819,14 @@ classdef arduinoSerialPort < handle
 				end
 				
 				% warning if sketch is inadequate and a.chkp is true
-				if a.chkp && a.sktc<3
+				if a.chkp && a.sketchType<3
 					disp('Warning: the sketch running on the Arduino does not support the motor shield');
 					disp('No operation will be performed on the Arduino board');
 				end
 				
 				%%%%%%%%%%%%%%%%%%%%%%%%% SET STEPPER SPEED %%%%%%%%%%%%%%%%%%%%%%%%%%%
 				
-				if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<3,
+				if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<3,
 					% handle demo mode
 					
 					% minimum analog output delay
@@ -2041,14 +1981,14 @@ classdef arduinoSerialPort < handle
 			end
 			
 			% warning if sketch is inadequate and a.chkp is true
-			if a.chkp && a.sktc<3
+			if a.chkp && a.sketchType<3
 				disp('Warning: the sketch running on the Arduino does not support the motor shield');
 				disp('No operation will be performed on the Arduino board');
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%% ROTATE THE STEPPER %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			
-			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sktc<3,
+			if strcmpi(get(a.conn,'Port'),'DEMO') || a.sketchType<3,
 				% handle demo mode
 				
 				% minimum analog output delay

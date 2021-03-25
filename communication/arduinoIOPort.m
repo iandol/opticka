@@ -3,12 +3,12 @@ classdef arduinoIOPort < handle
 	% This class defines an "arduino" object
 	% Giampiero Campa, Aug 2013, Copyright 2013 The MathWorks, Inc.
 	% Modified for use with PTB
-	
-	properties
-		nPins = 13 % number of controllable pins
-	end
+	% This version uses IOPort from PTB.
+	% Also added a timedTTL function, requiring
+	% a compatible arduino sketch: adio.ino
 	
 	properties (SetAccess=private,GetAccess=public)
+		nPins = 13 % number of controllable pins
 		port   % the assigned port
 		conn   % Serial Connection
 		pins   % Pin Status Vector
@@ -24,7 +24,6 @@ classdef arduinoIOPort < handle
 		
 		% constructor, connects to the board and creates an arduino object
 		function a=arduinoIOPort(port,nPins)
-			
 			% check nargin
 			if nargin<1
 				port='DEMO';
@@ -34,38 +33,32 @@ classdef arduinoIOPort < handle
 			elseif nargin == 2
 				a.nPins = nPins;
 			end
-			
 			% check port
 			if ~ischar(port)
 				error('The input argument must be a string, e.g. ''/dev/ttyACM0'' ');
 			end
-			
 			if strcmp(port,'DEMO')
 				a.isDemo = true;
 				return
 			end
-			
-			allPorts = serialportlist('all');
-			avPorts = serialportlist('available');
-
-			fprintf('===> All possible serial ports:\n');
-			fprintf('%s\n',allPorts);
-			
-			if any(strcmpi(allPorts,port))
-				fprintf('===> Your specified port is present\n')
-			else
-				error('===> No port with the specified name is present on the system!');
+			if ~verLessThan('matlab','9.7')	% use the nice serialport list command
+				allPorts = serialportlist('all');
+				avPorts = serialportlist('available');
+				fprintf('===> All possible serial ports:\n');
+				fprintf('%s\n',allPorts);
+				if any(strcmpi(allPorts,port))
+					fprintf('===> Your specified port is present\n')
+				else
+					warning('===> No port with the specified name is present on the system!');
+				end
+				if any(strcmpi(avPorts,port))
+					fprintf('===> Your specified port is available\n')
+				else
+					warning('===> The port is occupied, please release it first!');
+				end
 			end
-			
-			if any(strcmpi(avPorts,port))
-				fprintf('===> Your specified port is available\n')
-			else
-				error('===> The port is occupied, please release it first!');
-			end
-			
 			% define serial object
 			a.conn=IOPort('OpenSerialPort',port,'BaudRate=115200');
-			
 			% test connection
 			try
 				IOPort('Flush',a.conn);
@@ -75,68 +68,55 @@ classdef arduinoIOPort < handle
 				delete(a);
 				error(['Could not use port: ' port]);
 			end
-
 			% query sketch type
-			r = [];
-			tout = [];
-			t = GetSecs;
-			while isempty(r) && GetSecs < t+1
+			r = []; tout = []; t = GetSecs;
+			while isempty(r) && GetSecs < t+2
 				IOPort('Write',a.conn,'99'); % our command to query the sketch type
 				pause(0.1);
 				if IOPort('BytesAvailable',a.conn) > 0
 					r = IOPort('Read',a.conn);
-					tout = GetSecs - t;
+					if r(1) ~= 48
+						r = [];
+					else
+						tout = GetSecs - t;
+					end
 				end
 			end
-			a.sktc = r(1);
-			fprintf('===> It took %.3f secs to establish response: %i...\n',tout,a.sktc);
-			
 			% exit if there was no answer
-			if isempty(a.sktc)
+			if isempty(r)
 				IOPort('CloseAll');
 				delete(a.conn);
 				delete(a);
 				error('Connection unsuccessful, please make sure that the board is powered on, running a sketch provided with the package, and connected to the indicated serial port. You might also try to unplug and re-plug the USB cable before attempting a reconnection.');
 			end
-				
-			
+			a.sktc = r(1);
+			fprintf('===> It took %.3f secs to establish response: %i...\n',tout,a.sktc);
 			% check returned value
 			if a.sktc==48
-				disp('===> Basic Analog and Digital I/O (adio.pde) sketch detected !');
+				disp('===> Basic Analog and Digital I/O (adio.ino) sketch detected !');
 			elseif a.sktc==49
-				disp('===> Analog & Digital I/O + Encoders (adioe.pde) sketch detected !');
+				disp('===> Analog & Digital I/O + Encoders (adioe.ino) sketch detected !');
 			elseif a.sktc==50
-				disp('===> Analog & Digital I/O + Encoders + Servos (adioes.pde) sketch detected !');
+				disp('===> Analog & Digital I/O + Encoders + Servos (adioes.ino) sketch detected !');
 			elseif a.sktc==51
-				disp('===> Motor Shield V1 (plus adioes.pde functions) sketch detected !');
+				disp('===> Motor Shield V1 (plus adioes.ino functions) sketch detected !');
 			elseif a.sktc==52
-				disp('===> Motor Shield V2 (plus adioes.pde functions) sketch detected !');
+				disp('===> Motor Shield V2 (plus adioes.ino functions) sketch detected !');
 			else
 				IOPort('CloseAll')
 				error('Unknown sketch. Please make sure that a sketch provided with the package is running on the board');
 			end
-			
 			% initialize pin vector (-1 is unassigned, 0 is input, 1 is output)
 			a.pins=-1*ones(1,a.nPins);
-			
 			% initialize servo vector (0 is detached, 1 is attached)
 			a.srvs=0*ones(1,a.nPins);
-			
 			% initialize encoder vector (0 is detached, 1 is attached)
 			a.encs=0*ones(1,3);
-			
 			% initialize motor vector (0 to 255 is the speed)
 			a.mspd=0*ones(1,4);
-			
 			% initialize stepper vector (0 to 255 is the speed)
 			a.sspd=0*ones(1,2);
-			
 			a.flush();
-			for i=2:a.nPins
-				a.pinMode(i,'output');
-				a.digitalWrite(i,0);
-			end
-			
 			% notify successful installation
 			a.port = port;
 			disp(['===> Arduino successfully connected to port ' a.port '!']);
@@ -149,6 +129,7 @@ classdef arduinoIOPort < handle
 				for i=2:a.nPins
 					a.pinMode(i,'output');
 					a.digitalWrite(i,0);
+					a.pinMode(i,'output');
 				end
 				IOPort('CloseAll');
 			catch ME
@@ -161,7 +142,6 @@ classdef arduinoIOPort < handle
 		
 		% disp, displays the object
 		function disp(a)
-			
 			% disp(a) or a.disp, displays the arduino object properties
 			% The first and only argument is the arduino object, there is no
 			% output, but the basic information and properties of the arduino
@@ -170,19 +150,14 @@ classdef arduinoIOPort < handle
 			% is typed on the command line, followed by enter. The command
 			% str=evalc('a.disp'), (or str=evalc('a')), can be used to capture
 			% the output in the string 'str'.
-			
 			if a.isDemo; disp('Arduino is in DEMO mode');return;end
-
-			disp(['Arduino object connected to ' a.port ' port']);
+			fprintf('===>>> Arduino object connected to %s with %i pins\n',a.port,a.nPins);
 			if a.sktc==4
 				disp('Motor Shield sketch V2 (plus adioes.pde functions) running on the board');
 				disp(' ');
-				disp(' ');
 				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
 				disp(' ');
-				disp(' ');
 				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
-				disp(' ');
 				disp(' ');
 				disp('DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
 				disp(' ');
@@ -190,12 +165,9 @@ classdef arduinoIOPort < handle
 			elseif a.sktc==3
 				disp('Motor Shield sketch V1 (plus adioes.pde functions) running on the board');
 				disp(' ');
-				disp(' ');
 				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
 				disp(' ');
-				disp(' ');
 				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
-				disp(' ');
 				disp(' ');
 				disp('DC Motor and Steppers Methods: <a href="matlab:help motorSpeed">motorSpeed</a> <a href="matlab:help motorRun">motorRun</a> <a href="matlab:help stepperSpeed">stepperSpeed</a> <a href="matlab:help stepperStep">stepperStep</a>');
 				disp(' ');
@@ -203,12 +175,9 @@ classdef arduinoIOPort < handle
 			elseif a.sktc==2
 				disp('Analog & Digital I/O + Encoders + Servos (adioes.pde) sketch running on the board');
 				disp(' ');
-				disp(' ');
 				disp('Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
 				disp(' ');
-				disp(' ');
 				disp('Servo Methods: <a href="matlab:help servoStatus">servoStatus</a> <a href="matlab:help servoAttach">servoAttach</a> <a href="matlab:help servoDetach">servoDetach</a> <a href="matlab:help servoRead">servoRead</a> <a href="matlab:help servoWrite">servoWrite</a>');
-				disp(' ');
 				disp(' ');
 				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
 				disp(' ');
@@ -220,43 +189,36 @@ classdef arduinoIOPort < handle
 				disp(' ');
 				disp('Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
 				disp(' ');
-				disp(' ');
 				disp('Encoder Methods: <a href="matlab:help encoderStatus">encoderStatus</a> <a href="matlab:help encoderAttach">encoderAttach</a> <a href="matlab:help encoderDetach">encoderDetach</a> <a href="matlab:help encoderRead">encoderRead</a> <a href="matlab:help encoderReset">encoderReset</a>');
 				disp(' ');
 				disp('Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
 			else
 				disp('Basic Analog & Digital I/O sketch (adio.pde) running on the board');
 				disp(' ');
-				disp(' ');
 			end
 		end
 		
 		% serial, returns the serial port
 		function str=serial(a)
-
-			% serial(a) (or a.serial), returns the name of the serial port
-			% The first and only argument is the arduino object, the output
-			% is a string containing the name of the serial port to which
-			% the arduino board is connected (e.g. 'COM9', 'DEMO', or
-			% '/dev/ttyS101'). The string 'Invalid' is returned if
-			% the serial port is invalid
-
-			if ~isempty(a.port)
+			if a.isDemo 
+				str='DEMO';
+			elseif ~isempty(a.port)
 				str=a.port;
 			else
 				str='Invalid';
 			end
-			
 		end  % serial
 		
 		% flush, clears the pc's serial port buffer
-		function flush(a)
+		function val=flush(a)
 			% val=flush(a) (or val=a.flush) reads all the bytes available
 			% (if any) in the computer's serial port buffer, therefore
 			% clearing said buffer.
 			% The first and only argument is the arduino object, the
 			% output is a vector of bytes that were still in the buffer.
 			% The value '-1' is returned if the buffer was already empty.
+			if a.isDemo; return;end
+			val=IOPort('BytesAvailable',a.conn);
 			IOPort('Flush',a.conn);
 		end  % flush
 		
@@ -284,16 +246,14 @@ classdef arduinoIOPort < handle
 			% pinMode(a);            % prints the status of all pins
 			%
 			%%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				
+			if a.isDemo; return; end
 			if lower(str(1))=='o'; val = 1; else; val = 0; end
 			IOPort('Write',a.conn,uint8([48 97+pin 48+val]),1);
 			a.pins(pin)=val;
-			
 		end % pinmode
 		
 		% digital read
 		function val=digitalRead(a,pin)
-			
 			% val=digitalRead(a,pin); performs digital input on a given arduino pin.
 			% The first argument, a, is the arduino object.
 			% The second argument, pin, is the number of the digital pin (2 to a.nPins)
@@ -307,10 +267,9 @@ classdef arduinoIOPort < handle
 			% val=digitalRead(a,4); % reads pin #4
 			% val=a.digitalRead(4); % just as above (reads pin #4)
 			%
-				
+			if a.isDemo; return; end
 			IOPort('Write',a.conn,uint8([49 97+pin]),1);
 			val=IOPort('Read',a.conn,1,1);
-			
 		end % digitalread
 		
 		%==========================================digital write
@@ -331,9 +290,8 @@ classdef arduinoIOPort < handle
 			% digitalWrite(a,13,0); % sets pin #13 low
 			% a.digitalWrite(13,0); % just as above (sets pin #13 to low)
 			%
-			
+			if a.isDemo; return; end
 			IOPort('Write',a.conn,uint8([50 97+pin 48+val]),1);
-			
 		end % digitalwrite
 		
 		%===================================================timedTTL
@@ -341,6 +299,7 @@ classdef arduinoIOPort < handle
 			% timedTTL(a, pin, time) -- this method allows us to send a
 			% long low-high-low transition time (in ms) interval without blocking
 			% matlab, using modified adio code.
+			if a.isDemo; return; end
 			if time < 0; time = 0; end
 			if time > 65536; time = 65536; end
 			time = typecast(uint16(time),'uint8');
@@ -368,17 +327,14 @@ classdef arduinoIOPort < handle
 			% val=analogRead(a,0); % reads analog input pin # 0
 			% val=a.analogRead(0); % just as above, reads analog input pin # 0
 			%
-			%%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-			
+			if a.isDemo; return; end
 			IOPort('Write',a.conn,uint8([51 97+pin]),1);
 			val=IOPort('Read',a.conn,1,1);
-			
 		end % analogread
 		
 		% function analog write
 		function analogWrite(a,pin,val)
-			
-			% analogWrite(a,pin,val); Performs analog output on a given arduino pin.
+						% analogWrite(a,pin,val); Performs analog output on a given arduino pin.
 			% The first argument, a, is the arduino object. The second argument,
 			% pin, is the number of the DIGITAL pin where the analog (PWM) output
 			% needs to be performed. Allowed pins for AO on the Mega board
@@ -390,16 +346,14 @@ classdef arduinoIOPort < handle
 			% Examples:
 			% analogWrite(a,11,90); % sets pin #11 to 90/255
 			% a.analogWrite(3,10); % sets pin #3 to 10/255
-	
-			%%%%%%%%%%%%%%%%%%%%%%%%% PERFORM ANALOG OUTPUT %%%%%%%%%%%%%%%%%%%%%%%%%%%
+			%
+			if a.isDemo; return; end
 			IOPort('Write',a.conn,uint8([52 97+pin val]),1);
-
 		end % analogwrite
 		
 		% function analog reference
 		function analogReference(a,str)
-			
-			% analogReference(a,str); Changes voltage reference on analog input pins
+						% analogReference(a,str); Changes voltage reference on analog input pins
 			% The first argument, a, is the arduino object. The second argument,
 			% str, is one of these strings: 'default', 'internal' or 'external'.
 			% This sets the reference voltage used at the top of the input ranges.
@@ -410,51 +364,40 @@ classdef arduinoIOPort < handle
 			% analogReference(a,'external'); % sets external reference
 			% a.analogReference('external'); % just as above (sets external reference)
 			%
-			
-			%%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-			
-			% check arguments if a.chkp is true
-			if a.chkp,
-				
-				% check nargin
-				if nargin~=2,
-					error('Function must have the "reference" argument');
-				end
-				
-				% check val
-				errstr=arduinoLegacy.checkstr(str,'reference',{'default','internal','external'});
-				if ~isempty(errstr), error(errstr); end
-				
+			if a.isDemo; return; end
+			if lower(str(1))=='e', num=2;
+			elseif lower(str(1))=='i', num=1;
+			else; num=0;
 			end
-			
-			%%%%%%%%%%%%%%%%%%%% CHANGE ANALOG INPUT REFERENCE %%%%%%%%%%%%%%%%%%%%%%%%%
-			
-			if strcmpi(get(a.conn,'Port'),'DEMO'),
-				% handle demo mode
-				
-				% minimum analog output delay
-				pause(0.0014);
-				
-			else
-				
-				% check a.conn for openness if a.chks is true
-				if a.chks,
-					errstr=arduinoLegacy.checkser(a.conn,'open');
-					if ~isempty(errstr), error(errstr); end
-				end
-				
-				if lower(str(1))=='e', num=2;
-				elseif lower(str(1))=='i', num=1;
-				else num=0;
-				end
-				
-				% send mode, pin and value
-				IOPort('Write',a.conn,[82 48+num],'char');
-				
-			end
-			
-			
+			% send mode, pin and value
+			IOPort('Write',a.conn,[82 48+num],'char',1);
+
 		end % analogreference
+		
+		% round trip
+		function val=roundTrip(a,byte)
+			% roundTrip(a,byte); sends something to the arduino and back
+			% The first argument, a, is the arduino object.
+			% The second argument, byte, is any integer from 0 to 255.
+			% The output is the same byte, which was received from the
+			% arduino and sent back along the serial connection unchanged.
+			%
+			% This is provided as an example for people that want to add
+			% their own code to this arduino class (the section handling
+			% this dummy function in the pde file is handled as "case 400:",
+			% one might take the parameter, perform some potentially useful
+			% operation, and then send any result back via serial connection).
+			%
+			% Examples:
+			% roundTrip(a,48); % sends '48' to the arduino and back.
+			% a.roundTrip(53); % sends '53' to the arduino and back.
+			%
+			if a.isDemo; return; end
+			% send mode and byte
+			IOPort('Write',a.conn,[88 byte],'char',1);
+			% get value back
+			val=IOPort('Read',a.conn,1,1);
+		end % roundtrip
 		
 	end % methods
 	
