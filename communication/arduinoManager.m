@@ -3,14 +3,14 @@ classdef arduinoManager < optickaCore
 	%hardware package
 	properties
 		port char				= ''
-		board char				= ''
+		board char				= 'Uno'
 		silentMode logical		= false %this allows us to be called even if no arduino is attached
 		verbose					= true
 		openGUI logical			= true
 		mode char				= 'original' %original is built-in, otherwise needs matlab hardware package
 		rewardPin double		= 2
 		rewardTime double		= 150
-		availablePins cell		= {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
+		availablePins cell
 	end
 	properties (SetAccess = private, GetAccess = public)
 		ports
@@ -78,12 +78,18 @@ classdef arduinoManager < optickaCore
 									me.board = 'Uno';
 								end
 								switch me.board
-									case 'Seeduino'
+									case {'Xiao','xiao'}
+										if isempty(me.availablePins)
+											me.availablePins = {0,1,2,3,4,5,6,7,8,9,10}; %XIAO board
+										end
 									otherwise
-										me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
-										nPins = max(cell2mat(me.availablePins));
+										if isempty(me.availablePins)
+											me.availablePins = {2,3,4,5,6,7,8,9,10,11,12,13}; %UNO board
+										end
 								end
-								me.device = arduinoSerialPort(me.port,nPins);
+								endPin = max(cell2mat(me.availablePins));
+								startPin = min(cell2mat(me.availablePins));
+								me.device = arduinoIOPort(me.port,endPin,startPin);
 								me.deviceID = me.port;
 								me.isOpen = true;setLow(me);
 							else
@@ -140,9 +146,6 @@ classdef arduinoManager < optickaCore
 				switch me.mode
 					case 'original'
 						timedTTL(me.device, line, time);
-						%digitalWrite(me.device, line, 1);
-						%WaitSecs(time/1e3);
-						%digitalWrite(me.device, line, 0);
 					otherwise
 						time = time - 30; %there is an arduino 30ms delay
 						if time < 0; time = 0; end
@@ -544,7 +547,7 @@ classdef arduinoManager < optickaCore
 	
 	methods ( Access = private ) %----------PRIVATE METHODS---------%
 		
-		%===========Delete Method==========%
+		%===========setLow Method==========%
 		function setLow(me)
 			if me.silentMode || ~me.isOpen; return; end
 			switch me.mode
@@ -554,7 +557,7 @@ classdef arduinoManager < optickaCore
 						me.device.digitalWrite(i,0);
 					end
 				otherwise
-					for i = 2:13
+					for i = me.availablePins{1} : me.availablePins{end}
 						configurePin(me.device,['D' num2str(i)],'unset')
 						writeDigitalPin(me.device,['D' num2str(i)],0);
 					end

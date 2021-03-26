@@ -41,7 +41,7 @@
 void setup() {
   Serial.begin(115200);
   while (!Serial) { } // wait for serial to come up
-  for (byte i = 2; i < 14; i++) {
+  for (byte i = 2; i < 11; i++) { //safe range of 2-10, uno can't access pins 0 1
     pinMode(i,OUTPUT); // assume we want TTL output by default
     digitalWrite(i,LOW);
   }
@@ -52,8 +52,7 @@ void loop() {
   static int  s   = -1;    // state                         
   static int  pin = 13;    // generic pin number             
   static byte rbyte[2] = {0,0}; //two bytes used to encode the timedTTL time
-  static word ttime = 0;   // calculated time
-  static byte av = 0;
+  static word pausetime = 0;   // calculated time
   int  val =  0;           // generic value read from serial 
   int  agv =  0;           // generic analog value           
   int  dgv =  0;           // generic digital value          
@@ -111,8 +110,8 @@ void loop() {
       /* s = 0 to 2 means CHANGE PIN MODE                      */
       case 0:
         /* the second received value indicates the pin
-          from abs('c')=99, pin 2, to abs('¦')=166, pin 69    */
-        if (val > 98 && val < 167) {
+          from abs('a')=97, pin 0, to abs('¦')=166, pin 69    */
+        if (val > 96 && val < 167) {
           pin = val - 97;            /* calculate pin          */
           s = 1; /* next we will need to get 0 or 1 from serial  */
         }
@@ -140,11 +139,11 @@ void loop() {
       /* s=10 means DIGITAL INPUT ************************** */
       case 10:
         /* the second received value indicates the pin
-          from abs('c')=99, pin 2, to abs('¦')=166, pin 69    */
-        if (val > 98 && val < 167) {
+          from abs('a')=97, pin 0, to abs('¦')=166, pin 69    */
+        if (val > 96 && val < 167) {
           pin = val - 97;            /* calculate pin          */
           dgv = digitalRead(pin);    /* perform Digital Input  */
-          Serial.println(dgv);       /* send value via serial  */
+          Serial.write(dgv);       /* send value via serial  */
         }
         s = -1; /* we are done with DI so next state is -1      */
         break; /* s=10 taken care of                           */
@@ -155,8 +154,8 @@ void loop() {
       /* s=20 or 21 means DIGITAL OUTPUT ******************* */
       case 20:
         /* the second received value indicates the pin
-          from abs('c')=99, pin 2, to abs('¦')=166, pin 69    */
-        if (val > 98 && val < 167) {
+          from abs('a')=97, pin 0, to abs('¦')=166, pin 69    */
+        if (val > 96 && val < 167) {
           pin = val - 97;            /* calculate pin          */
           s = 21; /* next we will need to get 0 or 1 from serial */
         }
@@ -183,7 +182,7 @@ void loop() {
         if (val > 96 && val < 113) {
           pin = val - 97;            /* calculate pin          */
           agv = analogRead(pin);     /* perform Analog Input   */
-          Serial.println(agv);       /* send value via serial  */
+          Serial.write(agv);       /* send value via serial  */
         }
         s = -1; /* we are done with AI so next state is -1      */
         break; /* s=30 taken care of                           */
@@ -218,7 +217,7 @@ void loop() {
         if (val > 98 && val < 167) {
           pin = val - 97;            /* calculate pin          */
           val = 0;
-          rbyte[0] = 0; rbyte[1] = 0; ttime = 0;
+          rbyte[0] = 0; rbyte[1] = 0; pausetime = 0;
           s = 51; /* next we will need to get value from serial  */
         }
         else {
@@ -233,10 +232,10 @@ void loop() {
       case 52:
         /* combine two bytes into a 16bit (unsigned) word      */
         rbyte[1] = val;
-        ttime = word(rbyte[1],rbyte[0]);
-        if (ttime > 0) {
+        pausetime = word(rbyte[1],rbyte[0]);  //(rbyte[1]<<8) | rbyte[0]
+        if (pausetime > 0) {
           digitalWrite(pin, HIGH);    /* perform Digital Output */
-          delay(ttime);
+          delay(pausetime);
           digitalWrite(pin, LOW);    /* perform Digital Output */
         }
         s = -1; /* we are done with AO so next state is -1      */
@@ -298,9 +297,9 @@ void loop() {
            value of its first argument. It is provided as an
            example for people that want to add their own code  
            your own code goes here instead of the serial print */
-        Serial.println(val);
-        s = -1; /* we are done with the aux function so -1      */
-        break; /* s=400 taken care of                          */
+          Serial.write(val);
+          s = -1; /* we are done with the aux function so -1      */
+          break; /* s=400 taken care of                          */
       /*=====================================================*/
 
 
