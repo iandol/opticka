@@ -8,7 +8,7 @@ classdef arduinoIOPort < handle
 	% a compatible arduino sketch: adio.ino
 	
 	properties (SetAccess=private,GetAccess=public)
-		startPin = 2 % first addressable pin (
+		startPin = 2 % first addressable pin (arduino=2,xiao=0)
 		endPin = 13 % number of controllable pins
 		port   % the assigned port
 		conn   % Serial Connection
@@ -272,6 +272,7 @@ classdef arduinoIOPort < handle
 			%
 			%%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			if a.isDemo; return; end
+			if pin < a.startPin || pin > a.endPin; warning('Pin is not in range!!!');return;end
 			if nargin == 3
 				if ischar(str)
 					if lower(str(1))=='o'; val = 1; else; val = 0; end
@@ -331,6 +332,7 @@ classdef arduinoIOPort < handle
 			% a.digitalWrite(13,0); % just as above (sets pin #13 to low)
 			%
 			if a.isDemo; return; end
+			if pin < a.startPin || pin > a.endPin; warning('Pin is not in range!!!');return;end
 			IOPort('Write',a.conn,uint8([50 97+pin 48+val]),1);
 		end % digitalwrite
 		
@@ -340,9 +342,10 @@ classdef arduinoIOPort < handle
 			% long low-high-low transition time (in ms) interval without blocking
 			% matlab, using modified adio code.
 			if a.isDemo; return; end
-			if time < 0; time = 0; end
-			if time > 65536; time = 65536; end
-			time = typecast(uint16(time),'uint8');
+			if pin < a.startPin || pin > a.endPin; warning('Pin is not in range!!!');return;end
+			if time <= 0; return; end
+			if time > 2^16-1; time = 2^16-1; end
+			time = typecast(uint16(time),'uint8'); %convert to 2 uint8 bytes
 			% send mode and pin
 			IOPort('Write',a.conn,uint8([53 97+pin time(1) time(2)]),1);
 		end % timedTTL
@@ -388,6 +391,7 @@ classdef arduinoIOPort < handle
 			% a.analogWrite(3,10); % sets pin #3 to 10/255
 			%
 			if a.isDemo; return; end
+			if pin<a.startPin || pin > a.endPin;warning('Pin is not in range!!!');return;end
 			IOPort('Write',a.conn,uint8([52 97+pin val]),1);
 		end % analogwrite
 		

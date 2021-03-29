@@ -1,10 +1,12 @@
 
-/* Analog and Digital Input and Output Server for MATLAB     */
-/* Giampiero Campa, Copyright 2013 The MathWorks, Inc        */
-/*                                                           */
-/* This version is modified for timed TTLs (see command 50)  */
+/* Analog and Digital Input and Output Server for MATLAB     
+   Giampiero Campa, Copyright 2013 The MathWorks, Inc        
+                                                             
+   This version is modified for timed TTLs (see command 50)  
+   Version V1.01                                             
 
-/* This file is meant to be used with the MATLAB arduino IO
+
+   This file is meant to be used with the MATLAB arduino IO
 	 package, however, it can be used from the IDE environment
 	 (or any other serial terminal) by typing commands like:
 
@@ -193,8 +195,8 @@ void loop() {
       /* s=40 or 41 means ANALOG OUTPUT ******************** */
       case 40:
         /* the second received value indicates the pin
-          from abs('c')=99, pin 2, to abs('¦')=166, pin 69    */
-        if (val > 98 && val < 167) {
+          from abs('a')=97, pin 0, to abs('¦')=166, pin 69    */
+        if (val > 96 && val < 167) {
           pin = val - 97;            /* calculate pin          */
           s = 41; /* next we will need to get value from serial  */
         }
@@ -213,8 +215,8 @@ void loop() {
       /* s=50 to 52 means TIMED TTL  ******************** */
       case 50:
         /* the second received value indicates the pin
-          from abs('c')=99, pin 2, to abs('¦')=166, pin 69    */
-        if (val > 98 && val < 167) {
+          from abs('a')=97, pin 0, to abs('¦')=166, pin 69    */
+        if (val > 96 && val < 167) {
           pin = val - 97;            /* calculate pin          */
           val = 0;
           rbyte[0] = 0; rbyte[1] = 0; pausetime = 0;
@@ -238,6 +240,7 @@ void loop() {
           delay(pausetime);
           digitalWrite(pin, LOW);    /* perform Digital Output */
         }
+        rbyte[0] = 0; rbyte[1] = 0; pausetime = 0;
         s = -1; /* we are done with AO so next state is -1      */
         break; /* s=52 taken care of                           */
       /*=====================================================*/
@@ -293,13 +296,13 @@ void loop() {
       /* s=400 roundtrip example function (returns the input)*/
       case 400:
         /* The second value (val) can really be anything here. 
-           This is an auxiliary function that returns the ASCII
+           This is an auxiliary function that returns the BYTE
            value of its first argument. It is provided as an
            example for people that want to add their own code  
            your own code goes here instead of the serial print */
           Serial.write(val);
-          s = -1; /* we are done with the aux function so -1      */
-          break; /* s=400 taken care of                          */
+          s = -1; /* we are done with the aux function so -1   */
+          break; /* s=400 taken care of                        */
       /*=====================================================*/
 
 
