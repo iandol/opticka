@@ -977,23 +977,31 @@ classdef calibrateLuminance < handle
 			if doClose && ~me.keepOpen; me.closeSpectroCAL(); end
 		end
 		
-		%===============reset======================%
+		%===============makeSPD======================%
 		function Phosphors = makeSPD(me)
+			Phosphors = [];
 			if me.isTested && ~isempty(me.spectrumTest)
-				Phosphors.wavelength = me.wavelengths';
-				nm = {'Red','Green','Blue'};
-				for i = 1:3
-					Phosphors.(nm{i}) = me.spectrumTest(i+1).in(:,end);
-				end
-				figure;
-				hold on
-				plot(Phosphors.wavelength, Phosphors.Red, 'r')
-				plot(Phosphors.wavelength, Phosphors.Green, 'g')
-				plot(Phosphors.wavelength, Phosphors.Blue, 'b')
-				xlabel('Wavelength');box on;grid on;
-				title(['SPD for ' me.comments])
-				fprintf('Phosphors SPD exported!\n');
+				spectrum = me.spectrumTest;
+			elseif me.canAnalyze && ~isempty(me.spectrum)
+				spectrum = me.spectrum;
+				warning('The SPD will be generated from the uncorrected values, this shouldn''t be an issue')
+			else
+				warning('No data is available...');
+				return
+			end	
+			Phosphors.wavelength = me.wavelengths';
+			nm = {'Red','Green','Blue'};
+			for i = 1:3
+				Phosphors.(nm{i}) = spectrum(i+1).in(:,end);
 			end
+			figure;
+			hold on
+			plot(Phosphors.wavelength, Phosphors.Red, 'r')
+			plot(Phosphors.wavelength, Phosphors.Green, 'g')
+			plot(Phosphors.wavelength, Phosphors.Blue, 'b')
+			xlabel('Wavelength');box on;grid on;
+			title(['SPD for ' me.comments])
+			fprintf('Phosphors SPD exported!\n');
 		end
 		
 		%===============reset======================%
@@ -1036,7 +1044,7 @@ classdef calibrateLuminance < handle
 		%===============init======================%
 		function closeSpectroCAL(me)
 			if isa(me.spCAL,'serial') && strcmp(me.spCAL.Status,'open')
-				try fclose(me.spCAL); end
+				try; fclose(me.spCAL); end
 				me.spCAL = [];
 			end
 		end
