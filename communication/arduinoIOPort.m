@@ -272,7 +272,7 @@ classdef arduinoIOPort < handle
 			%
 			%%%%%%%%%%%%%%%%%%%%%%%%% ARGUMENT CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			if a.isDemo; return; end
-			if pin < a.startPin || pin > a.endPin; warning('Pin is not in range!!!');return;end
+			if exist('pin','var') && (pin < a.startPin || pin > a.endPin); warning('Pin is not in range!!!');return;end
 			if nargin == 3
 				if ischar(str)
 					if lower(str(1))=='o'; val = 1; else; val = 0; end
