@@ -8,22 +8,18 @@ classdef arduinoIOPort < handle
 	% a compatible arduino sketch: adio.ino
 	
 	properties (SetAccess=private,GetAccess=public)
-		startPin = 2 % first addressable pin (arduino=2,xiao=0)
-		endPin = 13 % number of controllable pins
-		port   % the assigned port
-		conn   % Serial Connection
-		pinn   % pin number
-		pins   % Pin Status Vector
-		srvs   % Servo Status Vector
-		mspd   % DC Motors Speed Status
-		sspd   % Stepper Motors Speed Status
-		encs   % Encoders Status
-		sktc   % Motor Server Running on the Arduino Board
+		startPin = 2 % First addressable pin (arduino=2,xiao=0)
+		endPin = 13 % Number of controllable pins (arduino=13, xiao=10)
+		port   % The assigned port
+		conn   % IOPort connection number
+		pinn   % Pin numbers
+		pins   % Pin status vector
+		srvs   % Servo status vector
+		mspd   % DC motors speed status
+		sspd   % Stepper motors speed status
+		encs   % Encoders status
+		sktc   % Which sketch is running on the Arduino board?
 		isDemo = false
-	end
-	
-	properties (SetAccess=private,GetAccess=private)
-		
 	end
 	
 	methods
@@ -35,7 +31,7 @@ classdef arduinoIOPort < handle
 				port='DEMO';
 				a.isDemo = true;
 				disp('Note: a DEMO connection will be created');
-				disp('Use a com port, e.g. ''/dev/ttyACM0'' as input argument to connect to the real board');
+				disp('Use a com port, e.g. ''/dev/ttyACM0'' as input argument to connect to a real board');
 			elseif nargin == 2
 				a.endPin = endPin;
 			elseif nargin == 3
@@ -46,7 +42,7 @@ classdef arduinoIOPort < handle
 			if ~ischar(port)
 				error('The input argument must be a string, e.g. ''/dev/ttyACM0'' ');
 			end
-			if strcmp(port,'DEMO')
+			if strcmpi(port,'DEMO')
 				a.isDemo = true;
 				return
 			end
