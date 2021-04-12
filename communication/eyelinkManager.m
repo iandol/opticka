@@ -40,7 +40,8 @@ classdef eyelinkManager < optickaCore
 		%> really tell if a subject is blinking or has removed their head using the 
 		%> float data.
 		ignoreBlinks logical		= false
-		%> exclusion zone no eye movement allowed inside
+		%> exclusion zone[s] where no eye movement allowed inside,[-degX -degY +degX +degY]
+		%> rows are succesive exclusion zones
 		exclusionZone				= []
 		%> tracker update speed (Hz), should be 250 500 1000 2000
 		sampleRate double			= 1000
@@ -91,7 +92,7 @@ classdef eyelinkManager < optickaCore
 		fixInitTotal				= 0
 		%> total time searching and holding fixation
 		fixTotal					= 0
-		%> last isFixated treu/false result
+		%> last isFixated true/false result
 		fixTrue;
 		%> last time offset betweeen tracker and display computers
 		currentOffset				= 0
@@ -525,16 +526,24 @@ classdef eyelinkManager < optickaCore
 					me.fixTotal = 0;
 					me.fixTrue = false;
 				end
+				eZ = me.exclusionZone; x = me.x; y = me.y;
 				if ~isempty(me.exclusionZone)
-					eZ = me.exclusionZone; x = me.x; y = me.y;
-					if (x >= eZ(1) && x <= eZ(2)) && (y <= eZ(3) && y >= eZ(4))
-						fixated = false; fixtime = false; searching = false; exclusion = true;
-						fprintf(' ==> EXCLUSION ZONE ENTERED!\n');
-						return
+					for i = 1:size(eZ,1)
+						if (x >= eZ(i,1) && x <= eZ(i,2)) && (y >= eZ(i,3) && y <= eZ(i,4))
+							searching = false; exclusion = true;
+							return
+						end
 					end
 				end
-				r = sqrt((me.x - me.fixationX).^2 + (me.y - me.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixationRadius);
-				window = find(r < me.fixationRadius);
+				if length(me.fixationRadius) == 1
+					r = sqrt((me.x - me.fixationX).^2 + (me.y - me.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixationRadius);
+					window = find(r < me.fixationRadius);
+				else
+					if (x >= (me.fixationX - me.fixationRadius(1))) && (x <= (me.fixationX + me.fixationRadius(1))) ...
+							&& (y >= (me.fixationY - me.fixationRadius(2))) && (y <= (me.fixationY + me.fixationRadius(2)))
+						window = 1;
+					end
+				end
 				if any(window)
 					if me.fixN == 0
 						me.fixN = 1;
@@ -591,10 +600,11 @@ classdef eyelinkManager < optickaCore
 			out = false;
 			if (me.isConnected || me.isDummy) && ~isempty(me.currentSample) && ~isempty(me.exclusionZone)
 				eZ = me.exclusionZone; x = me.x; y = me.y;
-				if (x >= eZ(1) && x <= eZ(2)) && (y <= eZ(3) && y >= eZ(4))
-					out = true;
-					fprintf(' ==> EXCLUSION ZONE ENTERED!\n');
-					return
+				for i = 1:size(eZ,1)
+					if (x >= eZ(i,1) && x <= eZ(i,2)) && (y >= eZ(i,3) && y <= eZ(i,4))
+						out = true;
+						return
+					end
 				end
 			end
 		end
@@ -1009,7 +1019,7 @@ classdef eyelinkManager < optickaCore
 				s = screenManager('debug',true,'pixelsPerCm',27,'distance',66);
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
-				o = dotsStimulus('size',me.fixationRadius*2,'speed',2,'mask',true,'density',50); %test stimulus
+				o = dotsStimulus('size',me.fixationRadius(1)*2,'speed',2,'mask',true,'density',50); %test stimulus
 				%x,y,inittime,fixtime,radius,strict)
 				updateFixationValues(me,0,0,1,1,1,true); % set up default fixation window
 				open(s); %open our screen
@@ -1022,14 +1032,20 @@ classdef eyelinkManager < optickaCore
 				% define our fixation widow and stimulus for first trial
 				me.fixationX = 0;
 				me.fixationY = 0;
-				me.fixationRadius = 1;
-				o.sizeOut = me.fixationRadius*2;
+				me.fixationRadius = [1 1];
+				o.sizeOut = me.fixationRadius(1)*2;
 				o.xPositionOut = me.fixationX;
 				o.yPositionOut = me.fixationY;
 				ts.x = me.fixationX; %ts is a simple structure that we can pass to eyelink to draw on its screen
 				ts.y = me.fixationY;
 				ts.size = o.sizeOut;
 				ts.selected = true;
+				
+				% set up an exclusion zone where eye is not allowed
+				me.exclusionZone = [10 15 10 15];
+				exc = [me.toPixels(me.exclusionZone)];
+				%[left,top,right,bottom]
+				exc = [exc(1) exc(3) exc(2) exc(4)];  
 				
 				setOffline(me); %Eyelink('Command', 'set_idle_mode');
 				trackerClearScreen(me); % clear eyelink screen
@@ -1057,10 +1073,12 @@ classdef eyelinkManager < optickaCore
 					vbl=flip(s);
 					syncTime(me);
 					while trialLoop
+						Screen('FillRect',s.win,[0.7 0.7 0.7 0.5],exc);
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
 						drawCross(s,0.5,[1 1 0],me.fixationX,me.fixationY);
+						
 						% get the current eye position and save x and y for local
 						% plotting
 						getSample(me); xst(b)=me.x; yst(b)=me.y;
@@ -1068,12 +1086,12 @@ classdef eyelinkManager < optickaCore
 						% if we have an eye position, plot the info on the display
 						% screen
 						if ~isempty(me.currentSample)
-							isFixated(me);
+							[~, ~, searching, ~, exclusion] = isFixated(me);
 							x = me.toPixels(me.x,'x'); %#ok<*PROP>
 							y = me.toPixels(me.y,'y');
-							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | RADIUS = %.1f | FIXATION = %.1f | BLINK = %i',...
-								x, me.x, y, me.y, me.fixationRadius, me.fixLength, me.isBlink);
-							Screen('DrawText', s.win, txt, 10, 10);
+							txt = sprintf('Press Q to finish. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | RADIUS = %.1f | FIXATION = %.1f | SEARCH = %i | BLINK = %i | EXCLUSION = %i',...
+								x, me.x, y, me.y, me.fixationRadius(1), me.fixLength, searching, me.isBlink, exclusion);
+							Screen('DrawText', s.win, txt, 10, 10,[1 1 1]);
 							drawEyePosition(me);
 						end
 						
@@ -1109,6 +1127,7 @@ classdef eyelinkManager < optickaCore
 					me.fixationY = randi([-5 5]);
 					me.fixationRadius = randi([1 5]);
 					o.sizeOut = me.fixationRadius*2;
+					me.fixationRadius = [me.fixationRadius me.fixationRadius];
 					o.xPositionOut = me.fixationX;
 					o.yPositionOut = me.fixationY;
 					ts.x = me.fixationX;
@@ -1129,20 +1148,21 @@ classdef eyelinkManager < optickaCore
 				close(s);
 				close(me);
 				clear s o
+				if ~me.isDummy
 				an = questdlg('Do you want to load the data and plot it?');
-				if strcmpi(an,'yes')
-					commandwindow;
-					evalin('base',['eA=eyelinkAnalysis(''dir'',''' ...
-						me.paths.savedData ''', ''file'',''myData.edf'');eA.parseSimple;eA.plot']);
+					if strcmpi(an,'yes')
+						commandwindow;
+						evalin('base',['eA=eyelinkAnalysis(''dir'',''' ...
+							me.paths.savedData ''', ''file'',''myData.edf'');eA.parseSimple;eA.plot']);
+					end
 				end
-				
 			catch ME
 				ListenChar(0);
 				me.salutation('runDemo ERROR!!!')
 				Eyelink('Shutdown');
-				close(s);
+				try close(s); end
 				sca;
-				close(me);
+				try close(me); end
 				clear s o
 				me.error = ME;
 				me.salutation(ME.message);
