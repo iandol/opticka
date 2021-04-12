@@ -376,7 +376,7 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function success = driftCorrection(me,force)
-			if ~exist('force','var');force = false;end
+			if ~exist('force','var');force = true;end
 			success = false;
 			if me.forceDriftCorrect || force
 				Eyelink('command', 'driftcorrect_cr_disable = ON');
@@ -390,15 +390,16 @@ classdef eyelinkManager < optickaCore
 				Screen('DrawText',me.screen.win,'Drift Correction...');
 				Screen('gluDisk',me.screen.win,[1 0 0 0.5],x,y,8)
 				Screen('Flip',me.screen.win);
-				WaitSecs(0.25);
-				success = EyelinkDoDriftCorrect(me.defaults, round(x), round(y), 1, 0);
+				WaitSecs('YieldSecs',0.25);
+				success = EyelinkDoDriftCorrect(me.defaults, round(x), round(y), 1, 1);
 			end
-			if success ~= 0 
+			if success ~= 0 || success ~= 27
 				me.salutation('Drift Correct','FAILED',true);
-			elseif me.forceDriftCorrect
-				me.salutation('Drift Correct','TRY TO APPLY',true);
+			end
+			if me.forceDriftCorrect
+				me.salutation('Drift Correct','Apply Drift correct',true);
 				res=Eyelink('ApplyDriftCorr');
-				me.salutation('Drift Correct',sprintf('Result: %f\n',res),true);
+				me.salutation('Drift Correct',sprintf('DC Result: %f\n',res),true);
 			end
 		end
 		
@@ -1010,28 +1011,30 @@ classdef eyelinkManager < optickaCore
 				s.backgroundColour = [0.5 0.5 0.5 0];
 				o = dotsStimulus('size',me.fixationRadius*2,'speed',2,'mask',true,'density',50); %test stimulus
 				%x,y,inittime,fixtime,radius,strict)
-				updateFixationValues(me,0,0,1,1,1,true);open(s); %open out screen
-				setup(o,s); %setup our stimulus with open screen
+				updateFixationValues(me,0,0,1,1,1,true); % set up default fixation window
+				open(s); %open our screen
+				setup(o,s); %setup our stimulus with our screen object
 				
-				ListenChar(1);
 				initialise(me,s); %initialise eyelink with our screen
-				setup(me); %setup eyelink
+				ListenChar(-1); %capture the keyboard settings
+				setup(me); %setup / calibrate the eyelink
 				
+				% define our fixation widow and stimulus for first trial
 				me.fixationX = 0;
 				me.fixationY = 0;
 				me.fixationRadius = 1;
 				o.sizeOut = me.fixationRadius*2;
 				o.xPositionOut = me.fixationX;
 				o.yPositionOut = me.fixationY;
-				ts.x = me.fixationX;
+				ts.x = me.fixationX; %ts is a simple structure that we can pass to eyelink to draw on its screen
 				ts.y = me.fixationY;
 				ts.size = o.sizeOut;
 				ts.selected = true;
 				
 				setOffline(me); %Eyelink('Command', 'set_idle_mode');
-				trackerClearScreen(me);
-				trackerDrawFixation(me);
-				trackerDrawStimuli(me,ts);
+				trackerClearScreen(me); % clear eyelink screen
+				trackerDrawFixation(me); % draw fixation window on tracker
+				trackerDrawStimuli(me,ts); % draw stimulus on tracker
 				
 				blockLoop = true;
 				a = 1;
@@ -1042,10 +1045,14 @@ classdef eyelinkManager < optickaCore
 					xst = [];
 					yst = [];
 					correct = false;
+					% !!! these messages define the trail start in the EDF for
+					% offline analysis
 					edfMessage(me,'V_RT MESSAGE END_FIX END_RT');
 					edfMessage(me,['TRIALID ' num2str(a)]);
+					% start the eyelink recording data for this trail
 					startRecording(me);
-					statusMessage(me,sprintf('DEMO Running Trial=%i',a));
+					% this draws the text to the tracker info box
+					statusMessage(me,sprintf('DEMO Running Trial=%i X Pos = %g | Y Pos = %g | Radius = %g',a,me.fixationX,me.fixationY,me.fixationRadius));
 					WaitSecs(0.25);
 					vbl=flip(s);
 					syncTime(me);
@@ -1054,8 +1061,12 @@ classdef eyelinkManager < optickaCore
 						drawGrid(s);
 						drawScreenCenter(s);
 						drawCross(s,0.5,[1 1 0],me.fixationX,me.fixationY);
+						% get the current eye position and save x and y for local
+						% plotting
 						getSample(me); xst(b)=me.x; yst(b)=me.y;
 						
+						% if we have an eye position, plot the info on the display
+						% screen
 						if ~isempty(me.currentSample)
 							isFixated(me);
 							x = me.toPixels(me.x,'x'); %#ok<*PROP>
@@ -1066,27 +1077,34 @@ classdef eyelinkManager < optickaCore
 							drawEyePosition(me);
 						end
 						
+						% tell PTB we've finished drawing
 						Screen('DrawingFinished', s.win);
+						% animate out stimulus
 						animate(o);
+						% flip the screen
 						vbl=Screen('Flip',s.win, vbl + s.screenVals.halfisi);
 						
+						% check the keyboard
 						[~, ~, keyCode] = KbCheck(-1);
 						if keyCode(stopkey); trialLoop = 0; blockLoop = 0; break;	end
 						if keyCode(nextKey); trialLoop = 0; correct = true; break; end
 						if keyCode(calibkey); trackerSetup(me); break; end
 						if keyCode(driftkey); driftCorrection(me); break; end
+						%send a message for the EDF after 60 frames
 						if b == 60; edfMessage(me,'END_FIX');end
 						b=b+1;
 					end
+					% tell EDF end of reaction time portion
 					edfMessage(me,'END_RT');
-					stopRecording(me);
-					trackerClearScreen(me);
 					if correct
 						edfMessage(me,'TRIAL_RESULT 1');
 					else
 						edfMessage(me,'TRIAL_RESULT 0');
 					end
-					hold on;plot(ax,xst,yst);
+					% stop recording data
+					stopRecording(me);
+					setOffline(me); %Eyelink('Command', 'set_idle_mode');
+					% prepare a random position for next trial
 					me.fixationX = randi([-5 5]);
 					me.fixationY = randi([-5 5]);
 					me.fixationRadius = randi([1 5]);
@@ -1097,18 +1115,26 @@ classdef eyelinkManager < optickaCore
 					ts.y = me.fixationY;
 					ts.size = o.sizeOut;
 					ts.selected = true;
-					setOffline(me); %Eyelink('Command', 'set_idle_mode');
-					statusMessage(me,sprintf('X Pos = %g | Y Pos = %g | Radius = %g',me.fixationX,me.fixationY,me.fixationRadius));
+					% clear tracker display
+					trackerClearScreen(me);
 					trackerDrawFixation(me);
 					trackerDrawStimuli(me,ts);
+					% update stimuli, plot eye position for last trial and ITI
 					update(o);
-					WaitSecs(0.5)
+					plot(ax,xst,yst);drawnow;
+					WaitSecs('YieldSecs',0.5);
 					a=a+1;
 				end
 				ListenChar(0);
 				close(s);
 				close(me);
 				clear s o
+				an = questdlg('Do you want to load the data and plot it?');
+				if strcmpi(an,'yes')
+					commandwindow;
+					evalin('base',['eA=eyelinkAnalysis(''dir'',''' ...
+						me.paths.savedData ''', ''file'',''myData.edf'');eA.parseSimple;eA.plot']);
+				end
 				
 			catch ME
 				ListenChar(0);
