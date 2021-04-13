@@ -15,13 +15,13 @@ classdef rfMapper < barStimulus
 		%> normally should be left at 1 (1 is added to this number so doublebuffering is enabled)
 		doubleBuffer = 1
 		%> multisampling sent to the graphics card, try values []=disabled, 4, 8 and 16
-		antiAlias = 4
+		antiAlias = []
 		%> use OpenGL blending mode 1 = yes | 0 = no
 		blend = true
 		%> GL_ONE %src mode
-		srcMode = 'GL_ONE'
+		srcMode = 'GL_SRC_ALPHA'
 		%> GL_ONE % dst mode
-		dstMode = 'GL_ZERO'
+		dstMode = 'GL_ONE_MINUS_SRC_ALPHA'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -33,6 +33,8 @@ classdef rfMapper < barStimulus
 		xyDots = [0;0]
 		showClicks = 0
 		stimulus = 'bar'
+        tf = 0
+		phase = 0
 		backgroundColour = [0 0 0 0];
 	end
 	
@@ -41,15 +43,11 @@ classdef rfMapper < barStimulus
 		dStartTick = 1
 		dEndTick = 1
 		gratingTexture
-		sf
-		tf
-		phase
 		colourIndex = 1
 		bgcolourIndex = 2
 		colourList = {[1 1 1];[0 0 0];[1 0 0];[0 1 0];[0 0 1];[1 1 0];[1 0 1];[0 1 1];[.5 .5 .5]}
 		textureIndex = 1
-		textureList = {'simple','random','randomColour','randomN','randomBW'};
-		allowedProperties='type|screen|blend|antiAlias'
+		textureList = {'simple','checkerboard','random','randomColour','randomN','randomBW'};
 	end
 	
 	%=======================================================================
@@ -115,7 +113,7 @@ classdef rfMapper < barStimulus
 				Priority(MaxPriority(obj.sM.win)); %bump our priority to maximum allowed
 				FlushEvents;
 				HideCursor;
-				ListenChar(2);
+				%ListenChar(-1);
 				obj.tick = 1;
 				Finc = 6;
 				keyHold = 1;
@@ -128,12 +126,12 @@ classdef rfMapper < barStimulus
 					Screen('FillRect',obj.sM.win,obj.backgroundColour,[]);
 					
 					%draw text
-					t=sprintf('Buttons: %i\t',obj.buttons);
-					t=[t sprintf(' | X = %2.3g| Y = %2.3g',xOut,yOut)];
-					if ischar(obj.rchar); t=[t sprintf('| Char: %s',obj.rchar)]; end
-					t=[t sprintf('Scale = %2.2g',obj.scale)];
-					t=[t sprintf(' | Texture = %g',obj.textureIndex)];
-					Screen('DrawText', obj.sM.win, t, 0, 0, [1 1 0]);
+					t=sprintf('X = %2.3g | Y = %2.3g ',xOut,yOut);
+					if ischar(obj.rchar); t=[t sprintf('| Char: %s ',obj.rchar)]; end
+					t=[t sprintf('| Scale = %2.2g ',obj.scale)];
+					t=[t sprintf('| Texture = %g',obj.textureIndex)];
+                    t=[t sprintf('Buttons: %i\t',obj.buttons)];
+					Screen('DrawText', obj.sM.win, t, 5, 5, [1 1 0]);
 					
 					%draw central spot
 					sColour = obj.backgroundColour./2;
@@ -155,7 +153,7 @@ classdef rfMapper < barStimulus
 						end
 					end
 					
-					Screen('gluDisk',obj.sM.win,sColour,obj.sM.xCenter,obj.sM.yCenter,2);
+					sM.drawCross();
 					
 					Screen('DrawingFinished', obj.sM.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
@@ -519,9 +517,11 @@ classdef rfMapper < barStimulus
 		%>  regenerates the texture
 		% ===================================================================
 		function regenerate(obj)
-			Screen('Close',obj.texture);
-			constructMatrix(obj) %make our matrix
-			obj.texture=Screen('MakeTexture',obj.sM.win,obj.matrix,1,[],2);
+            obj.barWidthOut = obj.barWidth;
+            obj.barHeightOut = obj.barHeight;
+            obj.colourOut = obj.colour;
+            obj.regenerateTexture = true;
+            update(obj);
 		end
 	end
 end

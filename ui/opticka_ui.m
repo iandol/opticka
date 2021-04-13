@@ -684,6 +684,32 @@ if isappdata(handles.output,'o')
 end
 
 % --------------------------------------------------------------------
+function OKMenuFixationCross_Callback(hObject, eventdata, handles)
+% hObject    handle to OKMenuSpot (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if isappdata(handles.output,'o')
+	
+	o = getappdata(handles.output,'o');
+	
+	if isfield(o.store,'visibleStimulus')
+		o.store.visibleStimulus.closePanel();
+		o.store = rmfield(o.store,'visibleStimulus');
+	end
+	
+	set(handles.OKPanelStimulusText,'String','Loading Stimulus Panel...'); drawnow
+	if o.r.stimuli.n == 0;handles.OKStimList.String='Once you''ve edited this stimulus, click [add]';end
+	
+	if ~isfield(o.store,'fixationCrossStimulus')
+		o.store.fixationCrossStimulus=fixationCrossStimulus('name','Fixation Cross');
+	end
+	o.store.visibleStimulus = o.store.fixationCrossStimulus;
+	set(handles.OKPanelStimulusText,'String','')
+	o.store.visibleStimulus.makePanel(handles.OKPanelStimulus);
+	set(handles.OKAddStimulus,'Enable','on');
+end
+
+% --------------------------------------------------------------------
 function OKMenuTexture_Callback(hObject, eventdata, handles)
 % hObject    handle to OKMenuTexture (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -2041,6 +2067,12 @@ h17 = uimenu(...
 'Callback',@(hObject,eventdata)opticka_ui('OKMenuNDots_Callback',hObject,eventdata,guidata(hObject)),...
 'Label','Newsome Dots',...
 'Tag','OKMenuNDots');
+
+h18a = uimenu(...
+'Parent',h12,...
+'Callback',@(hObject,eventdata)opticka_ui('OKMenuFixationCross_Callback',hObject,eventdata,guidata(hObject)),...
+'Label','Fixation Cross',...
+'Tag','OKMenuSpot');
 
 h18 = uimenu(...
 'Parent',h12,...

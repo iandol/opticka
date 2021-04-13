@@ -1,9 +1,10 @@
 % ========================================================================
-%> @brief single disc stimulus, inherits from baseStimulus
-%> SPOTSTIMULUS single spot stimulus, inherits from baseStimulus
-%>   The current properties are:
+%> @brief draw fixation cross from Thaler L, Schütz AC, 
+%>  Goodale MA, & Gegenfurtner KR (2013) "What is the best fixation target:
+%>  The effect of target shape on stability of fixational eye movements."
+%>  Vision research 76, 31-42 <http://doi.org/10.1016/j.visres.2012.10.012>
 % ========================================================================
-classdef spotStimulus < baseStimulus
+classdef fixationCrossStimulus < baseStimulus
 	
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> type can be "simple" or "flash"
@@ -17,11 +18,17 @@ classdef spotStimulus < baseStimulus
 		contrast = 1
 		%> colour for flash, empty to inherit from screen background with 0 alpha
 		flashOffColour = []
+		%> second colour
+		colour2 = [0 0 0 1]
+		%> width of the cross lines
+		lineWidth = 0.05
+		%> ahow background disk
+		showDisk = true
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> stimulus family
-		family = 'spot'
+		family = 'fixationcross'
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
@@ -44,7 +51,7 @@ classdef spotStimulus < baseStimulus
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
 		stopLoop = false
-		allowedProperties='type|flashTime|flashOn|flashOffColour|contrast'
+		allowedProperties='showDisk|type|flashTime|flashOn|flashOffColour|contrast|colour2|lineWidth'
 		ignoreProperties = 'flashSwitch|FlashOn';
 	end
 	
@@ -66,9 +73,9 @@ classdef spotStimulus < baseStimulus
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function me = spotStimulus(varargin)
+		function me = fixationCrossStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','spot','colour',[1 1 0 1]));
+				struct('name','fix','colour',[1 1 1 1]));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
@@ -89,23 +96,23 @@ classdef spotStimulus < baseStimulus
 			me.inSetup = true;
 			if isempty(me.isVisible)
 				me.show;
-			end
-			
-			addlistener(me,'changeColour',@me.computeColour);
+            end
 			
 			me.sM = [];
 			me.sM = sM;
 			me.ppd=sM.ppd;
 			
-			fn = fieldnames(spotStimulus);
+			fn = fieldnames(fixationCrossStimulus);
 			for j=1:length(fn)
 				if isempty(me.findprop([fn{j} 'Out'])) && isempty(regexp(fn{j},me.ignoreProperties, 'once'))%create a temporary dynamic property
 					p=me.addprop([fn{j} 'Out']);
 					p.Transient = true;%p.Hidden = true;
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
+					if strcmp(fn{j},'lineWidth');p.SetMethod = @set_lineWidthOut;end
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
+					if strcmp(fn{j},'colour2');p.SetMethod = @set_colour2Out;end
 					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
 					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
 				end
@@ -155,9 +162,17 @@ classdef spotStimulus < baseStimulus
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				if me.doFlash == false
-					Screen('gluDisk',me.sM.win,me.colourOut,me.xOut,me.yOut,me.sizeOut/2);
+					if me.showDisk;Screen('gluDisk', me.sM.win, me.colourOut, me.xOut,me.yOut,me.sizeOut/2);end
+					Screen('FillRect', me.sM.win, [me.colour2Out(1:3) 1], CenterRectOnPointd([0 0 me.sizeOut me.lineWidthOut], me.xOut,me.yOut));
+					Screen('FillRect', me.sM.win, [me.colour2Out(1:3) 1], CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xOut,me.yOut));
+					Screen('gluDisk', me.sM.win, [me.colourOut(1:3) 1], me.xOut, me.yOut, me.lineWidthOut);
+					%Screen('gluDisk',me.sM.win,me.colourOut,me.xOut,me.yOut,me.sizeOut/2);
 				else
-					Screen('gluDisk',me.sM.win,me.currentColour,me.xOut,me.yOut,me.sizeOut/2);
+					if me.showDisk;Screen('gluDisk', me.sM.win, me.currentColour, me.xOut,me.yOut,me.sizeOut/2);end
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.sizeOut dotSize], me.xOut,me.yOut));
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 dotSize me.sizeOut], me.xOut,me.yOut));
+					Screen('gluDisk', me.sM.win, colour, x(p), y(p), me.lineWidthOut);
+					%Screen('gluDisk',me.sM.win,me.currentColour,me.xOut,me.yOut,me.sizeOut/2);
 				end
 			end
 			me.tick = me.tick + 1;
@@ -243,6 +258,15 @@ classdef spotStimulus < baseStimulus
 		end
 		
 		% ===================================================================
+		%> @brief sizeOut Set method
+		%>
+		% ===================================================================
+		function set_lineWidthOut(me,value)
+			me.lineWidthOut = value * me.ppd; %divide by 2 to get diameter
+			if me.lineWidthOut < 2; me.lineWidthOut = 2; end
+		end
+		
+		% ===================================================================
 		%> @brief colourOut SET method
 		%>
 		% ===================================================================
@@ -266,10 +290,42 @@ classdef spotStimulus < baseStimulus
 					value = [value(1:3) alpha];
 				case 1
 					value = [value value value alpha];
-			end
-			
+            end
 			me.colourOutTemp = value;
 			me.colourOut = value;
+			me.isInSetColour = false;
+			if ~isempty(me.findprop('contrastOut')) && me.contrastOut < 1 && me.stopLoop == false
+				notify(me,'changeColour');
+			end
+		end
+		
+		% ===================================================================
+		%> @brief colourOut SET method
+		%>
+		% ===================================================================
+		function set_colour2Out(me, value)
+			me.isInSetColour = true;
+			if length(value)==4 
+				alpha = value(4);
+			elseif isempty(me.findprop('alphaOut'))
+				alpha = me.alpha;
+			else
+				alpha = me.alphaOut;
+			end
+			switch length(value)
+				case 4
+					if isempty(me.findprop('alphaOut'))
+						me.alpha = alpha;
+					else
+						me.alphaOut = alpha;
+					end
+				case 3
+					value = [value(1:3) alpha];
+				case 1
+					value = [value value value alpha];
+			end
+			me.colourOutTemp = value;
+			me.colour2Out = value;
 			me.isInSetColour = false;
 			if ~isempty(me.findprop('contrastOut')) && me.contrastOut < 1 && me.stopLoop == false
 				notify(me,'changeColour');
