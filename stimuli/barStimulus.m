@@ -116,6 +116,7 @@ classdef barStimulus < baseStimulus
 					if strcmp(fn{j},'size');p.SetMethod = @set_sizeOut;end
 					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
 					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
+					if strcmp(fn{j},'scale');p.SetMethod = @set_scaleOut;end
 					if isempty(regexpi(fn{j},me.ignoreProperties, 'once'))
 						me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
 					end
@@ -279,6 +280,19 @@ classdef barStimulus < baseStimulus
 		end
 		
 		% ===================================================================
+		%> @brief barWidth set method
+		%>
+		%> @param width of bar in degrees
+		%> @return
+		% ===================================================================
+		function set.scale(me,value)
+			if value < 1
+				value = 1;
+			end
+			me.scale = round(value);
+		end
+		
+		% ===================================================================
 		%> @brief SET Colour2 method
 		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
 		%> alpha will not be updated is RGBA is used
@@ -314,6 +328,17 @@ classdef barStimulus < baseStimulus
 				me.barHeightOut = me.sizeOut;
 				me.barWidthOut = me.sizeOut;
 			end
+		end
+		
+		% ===================================================================
+		%> @brief sizeOut Set method
+		%>
+		% ===================================================================
+		function set_scaleOut(me,value)
+			if value < 1
+				value = 1;
+			end
+			me.scaleOut = round(value);
 		end
 		
 		% ===================================================================
@@ -388,6 +413,11 @@ classdef barStimulus < baseStimulus
 				if ~strcmpi(me.type,'checkerboard')
 					if rem(bwpixels,2);bwpixels=bwpixels+1;end
 					if rem(blpixels,2);blpixels=blpixels+1;end
+					% some scales cause rounding errors so find the next
+					% best scale
+					while rem(bwpixels,scale)>0 && rem(bwpixels,scale)>0
+						scale = scale - 1;
+					end
 					bwscale = round(bwpixels/scale)+1;
 					blscale = round(blpixels/scale)+1;
 					rmat = ones(blscale,bwscale);

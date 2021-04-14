@@ -482,8 +482,8 @@ classdef runExperiment < optickaCore
 		%> @param me required class object
 		% ===================================================================
 		function runTask(me)
-			global rM %eyelink calibration needs access for reward
-			global aM %audio manager we can use with eyelink
+			global rM %eyetracker calibration needs access for reward
+			global aM %audio manager we can use with eyetracker
 			
 			if ~isa(rM,'arduinoManager') 
 				rM=arduinoManager();
@@ -1276,7 +1276,6 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function needEyeSample(me,value)
 			me.needSample = value;
-			%if value;fprintf('***\n');else;fprintf('_-_\n');end
 		end
 		
 		% ===================================================================
@@ -1690,7 +1689,7 @@ classdef runExperiment < optickaCore
 				switch rchar
 					case 'q' %quit
 						me.stopTask = true;
-					case {'UpArrow','up'} %give a reward at any time
+					case {'UpArrow','up'}
 						if tS.keyTicks > tS.keyHold
 							if ~isempty(me.stimuli.controlTable)
 								maxl = length(me.stimuli.controlTable);
@@ -2024,8 +2023,8 @@ classdef runExperiment < optickaCore
 			end
 %  q		=		quit
 %  UP		=		next control table
-%  DOWN	=		previous control table
-%  LEFT	=		increase value
+%  DOWN		=		previous control table
+%  LEFT		=		increase value
 %  RIGHT	=		decrease value
 %  <,		=		previous stimulus set
 %  >.		= 		next stimulus set

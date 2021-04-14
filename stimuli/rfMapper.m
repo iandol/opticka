@@ -40,11 +40,13 @@ classdef rfMapper < barStimulus
 	
 	properties (SetAccess = private, GetAccess = private)
 		fhandle
+		ax
 		dStartTick = 1
 		dEndTick = 1
 		gratingTexture
 		colourIndex = 1
 		bgcolourIndex = 2
+		stopTask = false
 		colourList = {[1 1 1];[0 0 0];[1 0 0];[0 1 0];[0 0 1];[1 1 0];[1 0 1];[0 1 1];[.5 .5 .5]}
 		textureIndex = 1
 		textureList = {'simple','checkerboard','random','randomColour','randomN','randomBW'};
@@ -98,11 +100,15 @@ classdef rfMapper < barStimulus
 			try
 				obj.sM.debug = true;
 				
+				oldbg = obj.sM.backgroundColour;
+				obj.sM.backgroundColour = [0 0 0];
+				
 				open(obj.sM);
 				
 				obj.setup(obj.sM);
 				
 				secondaryFigure(obj);
+				commandwindow;
 				
 				obj.buttons = [0 0 0]; % When the user clicks the mouse, 'buttons' becomes nonzero.
 				mX = 0; % The x-coordinate of the mouse cursor
@@ -113,25 +119,18 @@ classdef rfMapper < barStimulus
 				Priority(MaxPriority(obj.sM.win)); %bump our priority to maximum allowed
 				FlushEvents;
 				HideCursor;
-				%ListenChar(-1);
+				ListenChar(-1);
 				obj.tick = 1;
 				Finc = 6;
 				keyHold = 1;
+				obj.stopTask = false;
 				
 				vbl = Screen('Flip', obj.sM.win);
 				
-				while isempty(regexpi(obj.rchar,'^esc'))
+				while ~obj.stopTask
 					
 					%draw background
 					Screen('FillRect',obj.sM.win,obj.backgroundColour,[]);
-					
-					%draw text
-					t=sprintf('X = %2.3g | Y = %2.3g ',xOut,yOut);
-					if ischar(obj.rchar); t=[t sprintf('| Char: %s ',obj.rchar)]; end
-					t=[t sprintf('| Scale = %2.2g ',obj.scale)];
-					t=[t sprintf('| Texture = %g',obj.textureIndex)];
-                    t=[t sprintf('Buttons: %i\t',obj.buttons)];
-					Screen('DrawText', obj.sM.win, t, 5, 5, [1 1 0]);
 					
 					%draw central spot
 					sColour = obj.backgroundColour./2;
@@ -153,7 +152,20 @@ classdef rfMapper < barStimulus
 						end
 					end
 					
-					sM.drawCross();
+					%draw text
+					width=abs(obj.dstRect(1)-obj.dstRect(3))/obj.ppd;
+					height=abs(obj.dstRect(2)-obj.dstRect(4))/obj.ppd;
+					t=sprintf('X = %2.3g | Y = %2.3g ',xOut,yOut);
+					t=[t sprintf('| W = %.2f H = %.2f ',width,height)];
+					t=[t sprintf('| Scale = %i ',obj.scaleOut)];
+					t=[t sprintf('| SF = %.2f ',obj.sfOut)];
+					t=[t sprintf('| Texture = %g',obj.textureIndex)];
+                    t=[t sprintf('| Buttons: %i\t',obj.buttons)];
+					if ischar(obj.rchar); t=[t sprintf(' | Char: %s ',obj.rchar)]; end
+					Screen('DrawText', obj.sM.win, t, 5, 5, [1 1 0]);
+					
+					%drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha)
+					obj.sM.drawCross(0.75,[],[],[],[],[],0.5);
 					
 					Screen('DrawingFinished', obj.sM.win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 					
@@ -168,7 +180,7 @@ classdef rfMapper < barStimulus
 						updateFigure(obj);
 					end
 					
-					checkKeys(obj,mX,mY,keyHold,Finc);
+					checkKeys(obj,mX,mY);
 					
 					obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
 					
@@ -184,9 +196,11 @@ classdef rfMapper < barStimulus
 				ListenChar(0)
 				ShowCursor;
 				sca;
-				if ~isempty(obj.xClick)
-					obj.drawMap;
+				if ~isempty(obj.xClick) && ~isempty(obj.yClick))
+					obj.drawMap; 
 				end
+				obj.fhandle = [];
+				obj.ax = [];
 				
 			catch ME
 				close(obj.sM)
@@ -248,13 +262,14 @@ classdef rfMapper < barStimulus
 			try
 				%obj.xClick = unique(obj.xClick);
 				%obj.yClick = unique(obj.yClick);
-				obj.fhandle = figure;
+				figure;
 				plot(obj.xClick,obj.yClick,'k.-.')
 				xax = obj.sM.winRect(3)/obj.ppd;
 				xax = xax - (xax/2);
 				yax = obj.sM.winRect(4)/obj.ppd;
 				yax = yax - (yax/2);
 				axis([-xax xax -yax yax]);
+				set(gca,'YDir','reverse');
 				title('Marked Positions during RF Mapping')
 				xlabel('X Position (degs)')
 				ylabel('Y Position (degs)');
@@ -269,8 +284,15 @@ classdef rfMapper < barStimulus
 		%> @param
 		%> @return
 		% ===================================================================
-		function updateFigure(obj)
-			plot(obj.xClick(obj.dStartTick:end), obj.yClick(obj.dStartTick:end), 'r-o');
+		function updateFigure(obj,clear)
+			if ~exist('clear','var');clear = false; end
+			if ~ishandle(obj.fhandle);return;end
+			figure(obj.fhandle);
+			if clear
+				plot(0,0);
+			else
+			plot(obj.xClick(obj.dStartTick:end), obj.yClick(obj.dStartTick:end), 'r-.');
+			end
 		end
 		
 		% ===================================================================
@@ -286,6 +308,7 @@ classdef rfMapper < barStimulus
 			yax = obj.sM.winRect(4)/obj.ppd;
 			yax = yax - (yax/2);
 			axis([-xax xax -yax yax]);
+			set(gca,'YDir','reverse');
 			title('Marked Positions during RF Mapping')
 			xlabel('X Position (degs)')
 			ylabel('Y Position (degs)')
@@ -299,23 +322,31 @@ classdef rfMapper < barStimulus
 		%> @param
 		%> @return
 		% ===================================================================
-		function keyHold = checkKeys(obj,mX,mY,keyHold,Finc)
+		function checkKeys(obj,mX,mY)
+			persistent keyTicks
+			fInc = 4;
+			if isempty(keyTicks);keyTicks = 0; end
+			keyTicks = keyTicks + 1;
 			[keyIsDown, ~, keyCode] = KbCheck;
 			if keyIsDown == 1
 				obj.rchar = KbName(keyCode);
 				if iscell(obj.rchar);obj.rchar=obj.rchar{1};end
 				switch obj.rchar
+					case 'q' %quit
+						obj.stopTask = true;
 					case 'l' %increase length
-						switch obj.stimulus
-							case 'bar'
-								obj.dstRect=ScaleRect(obj.dstRect,1,1.05);
-								obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
-						end
+						
+							switch obj.stimulus
+								case 'bar'
+									obj.dstRect=ScaleRect(obj.dstRect,1,1.05);
+									obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
+							end
+					
 					case 'k' %decrease length
 						switch obj.stimulus
-							case 'bar'
-								obj.dstRect=ScaleRect(obj.dstRect,1,0.95);
-								obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
+						case 'bar'
+							obj.dstRect=ScaleRect(obj.dstRect,1,0.95);
+							obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
 						end
 					case 'j' %increase width
 						switch obj.stimulus
@@ -325,48 +356,55 @@ classdef rfMapper < barStimulus
 						end
 					case 'h' %decrease width
 						switch obj.stimulus
-							case 'bar'
-								obj.dstRect=ScaleRect(obj.dstRect,0.95,1);
-								obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
+						case 'bar'
+							obj.dstRect=ScaleRect(obj.dstRect,0.95,1);
+							obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
 						end
 					case 'm' %increase size
+						
 						switch obj.stimulus
-							case 'bar'
-								[w,h]=RectSize(obj.dstRect);
-								if w ~= h
-									m = max(w,h);
-									obj.dstRect = SetRect(0,0,m,m);
+						case 'bar'
+							[w,h]=RectSize(obj.dstRect);
+							if w ~= h
+								m = max(w,h);
+								obj.dstRect = SetRect(0,0,m,m);
 
-								end
-								obj.dstRect=ScaleRect(obj.dstRect,1.05,1.05);
-								obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
+							end
+							obj.dstRect=ScaleRect(obj.dstRect,1.05,1.05);
+							obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
 						end
+						
 					case 'n' %decrease size
+						
 						switch obj.stimulus
-							case 'bar'
-								[w,h]=RectSize(obj.dstRect);
-								if w ~= h
-									m = max(w,h);
-									obj.dstRect =  SetRect(0,0,m,m);
-								end
-								obj.dstRect=ScaleRect(obj.dstRect,0.95,0.95);
-								obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
+						case 'bar'
+							[w,h]=RectSize(obj.dstRect);
+							if w ~= h
+								m = max(w,h);
+								obj.dstRect =  SetRect(0,0,m,m);
+							end
+							obj.dstRect=ScaleRect(obj.dstRect,0.95,0.95);
+							obj.dstRect=CenterRectOnPointd(obj.dstRect,mX,mY);
 						end
+						
 					case 's'
-						switch obj.stimulus
+						if keyTicks > fInc
+							keyTicks = 0;
+							switch obj.stimulus
 							case 'bar'
 								%obj.stimulus = 'grating';
 							case 'grating'
 								%obj.stimulus = 'bar';
+							end
 						end
 					case 'x'
-						if obj.tick > keyHold
+						if keyTicks > fInc
+							keyTicks = 0;
 							if obj.isVisible == true
 								obj.hide;
 							else
 								obj.show;
 							end
-							keyHold = obj.tick + Finc;
 						end
 					case {'LeftArrow','left'}
 						obj.angleOut = obj.angleOut-3;
@@ -379,120 +417,156 @@ classdef rfMapper < barStimulus
 						obj.alpha = obj.alpha * 0.9;
 						if obj.alpha < 0;obj.alpha = 0;end
 					case ',<'
-						if max(obj.backgroundColour)>0.1
-							obj.backgroundColour = obj.backgroundColour .* 0.9;
-							obj.backgroundColour(obj.backgroundColour<0) = 0;
+						if keyTicks > fInc
+							keyTicks = 0;
+							if max(obj.backgroundColour)>0.1
+								obj.backgroundColour = obj.backgroundColour .* 0.9;
+								obj.backgroundColour(obj.backgroundColour<0) = 0;
+							end
 						end
 					case '.>'
-						obj.backgroundColour = obj.backgroundColour .* 1.1;
-						obj.backgroundColour(obj.backgroundColour>1) = 1;
+						if keyTicks > fInc
+							keyTicks = 0;
+							obj.backgroundColour = obj.backgroundColour .* 1.1;
+							obj.backgroundColour(obj.backgroundColour>1) = 1;
+						end
 					case 'r'
-						if obj.tick > keyHold
+						if keyTicks > fInc
+							keyTicks = 0;
 							obj.backgroundColour(1) = obj.backgroundColour(1) + 0.01;
 							if obj.backgroundColour(1) > 1
 								obj.backgroundColour(1) = 0;
 							end
-							keyHold = obj.tick + Finc;
 						end
 
 					case 'g'
-						if obj.tick > keyHold
-						obj.backgroundColour(2) = obj.backgroundColour(2) + 0.01;
-						if obj.backgroundColour(2) > 1
-							obj.backgroundColour(2) = 0;
-						end
-						keyHold = obj.tick + Finc;
+						if keyTicks > fInc
+							keyTicks = 0;
+							obj.backgroundColour(2) = obj.backgroundColour(2) + 0.01;
+							if obj.backgroundColour(2) > 1
+								obj.backgroundColour(2) = 0;
+							end
 						end
 					case 'b'
-						if obj.tick > keyHold
-						obj.backgroundColour(3) = obj.backgroundColour(3) + 0.01;
-						if obj.backgroundColour(3) > 1
-							obj.backgroundColour(3) = 0;
-						end
-						keyHold = obj.tick + Finc;
+						if keyTicks > fInc
+							keyTicks = 0;
+							obj.backgroundColour(3) = obj.backgroundColour(3) + 0.01;
+							if obj.backgroundColour(3) > 1
+								obj.backgroundColour(3) = 0;
+							end
 						end
 					case 'e'
-						if obj.tick > keyHold
-						obj.backgroundColour(1) = obj.backgroundColour(1) - 0.01;
-						if obj.backgroundColour(1) < 0.01
-							obj.backgroundColour(1) = 1;
-						end
-						keyHold = obj.tick + Finc;
+						if keyTicks > fInc
+							keyTicks = 0;
+							obj.backgroundColour(1) = obj.backgroundColour(1) - 0.01;
+							if obj.backgroundColour(1) < 0.01
+								obj.backgroundColour(1) = 1;
+							end
 						end
 					case 'f'
-						if obj.tick > keyHold
-						obj.backgroundColour(2) = obj.backgroundColour(2) - 0.01;
-						if obj.backgroundColour(2) < 0.01
-							obj.backgroundColour(2) = 1;
-						end
-						keyHold = obj.tick + Finc;
+						if keyTicks > fInc
+							keyTicks = 0;
+							obj.backgroundColour(2) = obj.backgroundColour(2) - 0.01;
+							if obj.backgroundColour(2) < 0.01
+								obj.backgroundColour(2) = 1;
+							end
 						end
 					case 'v'
-						if obj.tick > keyHold
-						obj.backgroundColour(3) = obj.backgroundColour(3) - 0.01;
-						if obj.backgroundColour(3) < 0.01
-							obj.backgroundColour(3) = 1;
-						end
-						keyHold = obj.tick + Finc;
+						if keyTicks > fInc
+							obj.backgroundColour(3) = obj.backgroundColour(3) - 0.01;
+							if obj.backgroundColour(3) < 0.01
+								obj.backgroundColour(3) = 1;
+							end
+							keyTicks = 0;
 						end
 					case '1!'
-						if obj.tick > keyHold
-						obj.colourIndex = obj.colourIndex+1;
-						obj.setColours;
-						obj.regenerate;
-						keyHold = obj.tick + Finc;
+						if keyTicks > fInc
+							obj.colourIndex = obj.colourIndex+1;
+							obj.setColours;
+							obj.regenerate;
+							keyTicks = 0;
 						end
 					case '2@'
-						if obj.tick > keyHold
-						obj.bgcolourIndex = obj.bgcolourIndex+1;
-						obj.setColours;
-						WaitSecs(0.05);
-						obj.regenerate;
-						keyHold = obj.tick + Finc;
+						if keyTicks > fInc
+							obj.bgcolourIndex = obj.bgcolourIndex+1;
+							obj.setColours;
+							WaitSecs(0.05);
+							obj.regenerate;
+							keyTicks = 0;
 						end
 					case '3#'
-						if obj.tick > keyHold
-						switch obj.stimulus
-							case 'bar'
-								obj.scale = obj.scale * 1.1;
-								if obj.scale > 8;obj.scale = 8;end
-						end
-						keyHold = obj.tick + Finc;
+						if keyTicks > fInc
+							ol = obj.scaleOut;
+							switch obj.stimulus
+								case 'bar'
+									obj.scaleOut = obj.scaleOut - 1;
+									if obj.scaleOut < 1;obj.scaleOut = 1;end
+									nw = obj.scaleOut;
+							end
+							if ol~=nw;obj.regenerate;end
+							keyTicks = 0;
 						end
 					case '4$'
-						if obj.tick > keyHold
-						switch obj.stimulus
-							case 'bar'
-								obj.scale = obj.scale * 0.9;
-								if obj.scale <1;obj.scale = 1;end
+						if keyTicks > fInc
+							ol = obj.scaleOut;
+							switch obj.stimulus
+								case 'bar'
+									obj.scaleOut = obj.scaleOut + 1;
+									if obj.scaleOut >50;obj.scaleOut = 50;end
+									nw = obj.scaleOut;
+							end
+							if ol~=nw;obj.regenerate;end
+							keyTicks = 0;
 						end
-						keyHold = obj.tick + Finc;
-						end
+					case '5%'
+							ol = obj.sfOut;
+							switch obj.stimulus
+								case 'bar'
+									obj.sfOut = obj.sfOut + 0.25;
+									if obj.sfOut > 10;obj.scaleOut = 10;end
+							end
+							nw = obj.sfOut;
+							if ol~=nw;obj.regenerate;end
+							
+					case '6^'
+							ol = obj.sfOut;
+							switch obj.stimulus
+								case 'bar'
+									obj.sfOut = obj.sfOut -0.25;
+									if obj.sfOut <0.25;obj.sfOut = 0.25;end
+							end
+							nw = obj.sfOut;
+							if ol~=nw;obj.regenerate;end
+							
 					case 'space'
-						if obj.tick > keyHold
-						switch obj.stimulus
+						if keyTicks > fInc
+							switch obj.stimulus
 							case 'bar'
 								obj.textureIndex = obj.textureIndex + 1;
-								obj.barWidth = obj.dstRect(3)/obj.ppd;
-								obj.barHeight = obj.dstRect(4)/obj.ppd;
+								%obj.barWidth = obj.dstRect(3)/obj.ppd;
+								%obj.barHeight = obj.dstRect(4)/obj.ppd;
 								obj.type = obj.textureList{obj.textureIndex};
 								obj.regenerate;
 							case 'grating'
-
-						end
-						keyHold = obj.tick + Finc;
+							end
+							keyTicks = 0;
 						end
 					case {';:',';'}
-						if obj.tick > keyHold
-						obj.showClicks = ~obj.showClicks;
-						keyHold = obj.tick + Finc;
+						if keyTicks > fInc
+							obj.showClicks = ~obj.showClicks;
+							keyTicks = 0;
 						end
 					case {'''"',''''}
-						obj.xClick = 0;
-						obj.yClick = 0;
-						obj.dStartTick = 1;
-						obj.dEndTick = 1;
-						obj.xyDots = vertcat((obj.xClick.*obj.ppd),(obj.yClick*obj.ppd));
+						if keyTicks > fInc
+							figure(obj.fhandle);
+							cla;
+							obj.xClick = 0;
+							obj.yClick = 0;
+							obj.dStartTick = 1;
+							obj.dEndTick = 1;
+							obj.xyDots = vertcat((obj.xClick.*obj.ppd),(obj.yClick*obj.ppd));
+							keyTicks = 0;
+						end
 				end
 			end
 		end
@@ -517,10 +591,14 @@ classdef rfMapper < barStimulus
 		%>  regenerates the texture
 		% ===================================================================
 		function regenerate(obj)
-            obj.barWidthOut = obj.barWidth;
-            obj.barHeightOut = obj.barHeight;
+			width = abs(obj.dstRect(3)-obj.dstRect(1));
+			height = abs(obj.dstRect(4)-obj.dstRect(2));
+			if width ~= height
+				obj.sizeOut = 0;
+			end
+            obj.barWidthOut = width / obj.ppd;
+            obj.barHeightOut = height / obj.ppd;
             obj.colourOut = obj.colour;
-            obj.regenerateTexture = true;
             update(obj);
 		end
 	end

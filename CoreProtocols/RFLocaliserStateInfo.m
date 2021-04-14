@@ -1,16 +1,24 @@
 %RFLOCALISER state configuration file, this gets loaded by opticka via
-%runExperiment class. The following class objects are loaded and available to
-%use: 
+% runExperiment class. 
+%
+% This protocol uses mouse and keyboard control of many different classes
+% of stimuli. You can change which stimulus and what variables are during
+% the task, while the subject maintains fixation. 
+%
+% The following class objects are loaded and available to
+% use: 
+%
 % me = runExperiment object
 % io = digital I/O to recording system
-% s  = PTB screenManager
+% s = screenManager
+% aM = audioManager
 % sM = State Machine
 % eL = eyetracker manager
 % t  = task sequence (stimulusSequence class)
-% rM = Reward Manager (LabJack or Arduino TTL trigger to Crist reward system/Magstim)
+% rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 % bR = behavioural record plot (on screen GUI during task run)
 % me.stimuli = our list of stimuli
-% tS = general struct to hold variables for this run
+% tS = general struct to hold variables for this run, will be saved
 
 %------------General Settings-----------------
 tS.useTask              = false; %==use stimulusSequence (randomised variable task object)
@@ -20,56 +28,63 @@ tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in per
 tS.recordEyePosition	= false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments		= false; %==little UI requestor asks for comments before/after run
 tS.saveData				= false; %we don't want to save any data
-tS.dummyEyelink			= false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim			= false; %enable the magstim manager
 tS.name					= 'RF Localiser'; %==name of this protocol
-me.useEyeLink = true;
-me.useArduino = true;
-rM.verbose = true;
 
-%------------Eyelink Settings----------------
-tS.fixX = 0;
-tS.fixY = 0;
-tS.firstFixInit = 0.75;
-tS.firstFixTime = 1.5;
-tS.firstFixRadius = 4;
-tS.strict			= true; %do we allow (strict==false) multiple entry/exits of fix window within the time limit
-me.lastXPosition	= tS.fixX;
-me.lastYPosition	= tS.fixY;
+%------------Eyetracker Settings-----------------
+tS.fixX						= 0; % X position in degrees
+tS.fixY						= 0; % X position in degrees
+tS.firstFixInit				= 0.75; % time to search and enter fixation window
+tS.firstFixTime				= 2; % time to maintain fixation within windo
+tS.firstFixRadius			= 2; % radius in degrees
+tS.strict					= true; %do we forbid eye to enter-exit-reenter fixation window?
+me.lastXPosition			= tS.fixX;
+me.lastYPosition			= tS.fixY;
 
 %------------------------Eyelink setup--------------------------
-eL.name = tS.name;
-if tS.saveData == true; eL.recordData = true; end %===save EDF file?
-if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
-eL.sampleRate = 250;
-eL.calibrationStyle = 'HV5'; %===5 point calibration
+me.useEyeLink				= true; % make sure we are using eyetracker
+eL.name						= tS.name;
+if tS.saveData == true;		eL.recordData = true; end %===save EDF file?
+if me.dummyMode;			eL.isDummy = true; end %===use dummy or real eyetracker? 
+eL.sampleRate 				= 250; % sampling rate
 %===========================
 % remote calibration enables manual control and selection of each fixation
 % this is useful for a baby or monkey who has not been trained for fixation
 % use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
 % accept calibration!
-eL.remoteCalibration = true; 
+eL.remoteCalibration			= false; 
 %===========================
+eL.calibrationStyle 			= 'HV5'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 1];
-eL.modify.calibrationtargetsize = 2;
-eL.modify.calibrationtargetwidth = 0.01;
-eL.modify.waitformodereadytime = 500;
-eL.modify.targetbeep = 1;
-eL.modify.devicenumber = -1; % -1 = use any keyboard
+eL.modify.calibrationtargetsize = 1; % size of calibration target as percentage of screen
+eL.modify.calibrationtargetwidth = 0.1; % width of calibration target's border as percentage of screen
+eL.modify.waitformodereadytime	= 500;
+eL.modify.devicenumber 			= -1; % -1==use any keyboard
+eL.modify.targetbeep 			= 1;
+eL.verbose 						= false;
+%oldverbosity					= Eyelink('Verbosity',10);
 
-% X, Y, FixInitTime, FixTime, Radius, StrictFix
-eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, true);
+%Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
+eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
-%-------randomise stimulus variables every trial?
-% me.stimuli.choice = [];
-% n = 1;
-% in(n).name = 'xyPosition';
-% in(n).values = [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
-% in(n).stimuli = [7 8];
-% in(n).offset = [];
-% me.stimuli.stimulusTable = in;
-me.stimuli.choice = [];
-me.stimuli.stimulusTable = [];
+%-------------------randomise stimulus variables every trial?-----------
+% if you want to have some randomisation of stimuls variables without
+% using stimulusSequence task, you can uncomment this and runExperiment can
+% use this structure to change e.g. X or Y position, size, angle
+% see metaStimulus for more details. Remember this will not be "Saved" for
+% later use, if you want to do controlled methods of constants experiments
+% use stimulusSequence to define proper randomised and balanced variable
+% sets and triggers to send to recording equipment etc...
+%
+% me.stimuli.choice				= [];
+% n								= 1;
+% in(n).name					= 'xyPosition';
+% in(n).values					= [6 6; 6 -6; -6 6; -6 -6; -6 0; 6 0];
+% in(n).stimuli					= 1;
+% in(n).offset					= [];
+% me.stimuli.stimulusTable		= in;
+me.stimuli.choice 				= [];
+me.stimuli.stimulusTable 		= [];
 
 %--------allows using arrow keys to control this table during presentation
 me.stimuli.tableChoice = 1;
@@ -130,10 +145,14 @@ me.stimuli.setChoice = 1;
 showSet(me.stimuli);
 
 %----------------------State Machine States-------------------------
-% these are our functions that will execute as the stateMachine runs,
-% in the scope of the runExperiemnt object.
-% each "function" is a cell array of anonymous function handles that enables
-% each state to perform a set of actions on entry, during and on exit of that state.
+% each cell {array} holds a set of anonymous function handles which are executed by the
+% state machine to control the experiment. The state machine can run sets
+% at entry, during, to trigger a transition, and at exit. Remember these
+% {sets} need to access the objects that are available within the
+% runExperiment context (see top of file). You can also add global
+% variables/objects then use these. The values entered here are set on
+% load, if you want up-to-date values then you need to use methods/function
+% wrappers to retrieve/set them.
 
 %--------------------pause entry
 pauseEntryFcn = {
@@ -258,8 +277,9 @@ gridFcn = { @()drawGrid(s); @()drawScreenCenter(s) };
 
 %==================================================================
 %----------------------State Machine Table-------------------------
+% this table defines the states and relationships and function sets
+%==================================================================
 disp('================>> Building state info file <<================')
-%specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
 'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
 'pause'		'blank'			inf 	pauseEntryFcn	[]				[]				[]; ...
