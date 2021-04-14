@@ -40,7 +40,17 @@ classdef movieStimulus < baseStimulus
 		%> 256 = revent automatic deinterlacing of video
 		%> 512 = marks the movie as encoded in Psychtoolbox's own proprietary 16 bpc high precision format
 		%> 1024 = video frames are encoded as raw Bayer sensor data
-		specialFlags1 double = []
+		specialFlagsOpen double = []
+        %> special flags for 'GetMovieImage'
+        %> 1 = use GL_TEXTURE_2D
+        %> 2 = high precision
+        %> 8 = no mipmap with GL_TEXTURE_2D
+        %> 32 = prevent closing the texture by a call to Screen('Close')
+        specialFlagsFrame double = []
+        %> special flags for 'GetMovieImage'
+        %> 1 = don't return any time info (maybe slightly faster?)
+        %> 2 = don't return any textures, for bechmarking.
+        specialFlags2Frame double = 1;
 		%> how to handle looping (1=PTB default)
 		loopStrategy double = 1
 		%> mask out a colour? e.g. [0 0 0]
@@ -81,9 +91,9 @@ classdef movieStimulus < baseStimulus
 		msrcMode			= 'GL_SRC_ALPHA'
 		mdstMode			= 'GL_ONE_MINUS_SRC_ALPHA'
 		%> allowed properties passed to object upon construction
-		allowedProperties='fileName|blocking|pixelFormat|preloadSecs|specialFlags1|loopStrategy|mask|maskTolerance|enforceBlending|direction';
+		allowedProperties='fileName|blocking|pixelFormat|preloadSecs|specialFlagsOpen|specialFlagsFrame|specialFlags2Frame|loopStrategy|mask|maskTolerance|enforceBlending|direction';
 		%>properties to not create transient copies of during setup phase
-		ignoreProperties = 'buffertex|shader|screenVals|movie|duration|fps|width|height|count|scale|fileName|pixelFormat|preloadSecs|specialFlags1|loopStrategy'
+		ignoreProperties = 'buffertex|shader|screenVals|movie|duration|fps|width|height|count|scale|fileName|pixelFormat|preloadSecs|specialFlagsOpen|specialFlagsFrame|specialFlags2Frame|loopStrategy'
 	end
 	
 	%=======================================================================
@@ -161,11 +171,11 @@ classdef movieStimulus < baseStimulus
 			
 			tic;
 			[me.movie, me.duration, me.fps, me.width, me.height] = Screen('OpenMovie', ...
-				me.sM.win, me.fileName, [], me.preloadSecs, me.specialFlags1, me.pixelFormat);
+				me.sM.win, me.fileName, [], me.preloadSecs, me.specialFlagsOpen, me.pixelFormat);
 			fprintf('\n--->>> movieStimulus: %s\n\t%.2f seconds duration, %f fps, w x h = %i x %i, in %ims\n', ...
 				me.fileName, me.duration, me.fps, me.width, me.height, round(toc*1e3));
 			fprintf('\tBlocking: %i | Loop: %i | Preloadsecs: %i | Pixelformat: %i | Flags: %i\n', me.blocking, ...
-				me.loopStrategy, me.preloadSecs, me.pixelFormat, me.specialFlags1);
+				me.loopStrategy, me.preloadSecs, me.pixelFormat, me.specialFlagsOpen);
 			
 			if me.sizeOut > 0
 				me.scale = me.sizeOut / (me.width / me.ppd);
@@ -349,12 +359,6 @@ classdef movieStimulus < baseStimulus
 			end
 		end
 		
-	end
-	
-	
-	%=======================================================================
-	methods ( Access = private ) %-------PRIVATE METHODS-----%
-	%=======================================================================
-		
-	end
-end
+    end %-------END PROTECTED METHODS-----%
+
+end %-------END CLASSDEF-----%

@@ -20,8 +20,8 @@ classdef fixationCrossStimulus < baseStimulus
 		flashOffColour = []
 		%> second colour
 		colour2 = [0 0 0 1]
-		%> width of the cross lines
-		lineWidth = 0.05
+		%> width of the cross lines in degrees
+		lineWidth = 0.075
 		%> ahow background disk
 		showDisk = true
 	end
@@ -75,7 +75,7 @@ classdef fixationCrossStimulus < baseStimulus
 		% ===================================================================
 		function me = fixationCrossStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','fix','colour',[1 1 1 1]));
+				struct('name','fix','colour',[1 1 1 1],'size',0.8));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
