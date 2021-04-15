@@ -196,7 +196,7 @@ classdef rfMapper < barStimulus
 				ListenChar(0)
 				ShowCursor;
 				sca;
-				if ~isempty(obj.xClick) && ~isempty(obj.yClick))
+				if ~isempty(obj.xClick) && ~isempty(obj.yClick)
 					obj.drawMap; 
 				end
 				obj.fhandle = [];

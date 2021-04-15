@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '1.21'
+		optickaVersion char = '1.22'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -41,7 +41,8 @@ classdef opticka < optickaCore
 		uiPrefsList cell = {'OKOmniplexIP','OKMonitorDistance','OKpixelsPerCm',...
 			'OKbackgroundColour','OKAntiAliasing','OKbitDepth','OKUseRetina',...
 			'OKHideFlash','OKUsePhotoDiode','OKTrainingResearcherName',...
-			'OKTrainingName','OKarduinoPort','OKdPPMode','OKDummyMode'}
+			'OKTrainingName','OKarduinoPort','OKdPPMode','OKDummyMode',...
+			'OKOpenGLBlending'}
 	end
 	
 	%=======================================================================
