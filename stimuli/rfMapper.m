@@ -66,16 +66,9 @@ classdef rfMapper < barStimulus
 		%> @return instance of the class.
 		% ===================================================================
 		function me = rfMapper(varargin)
-			%Initialise for superclass, stops a noargs error
-			if nargin == 0
-				varargin.family = 'rfMapper';
-			end
+			args = optickaCore.addDefaults(varargin,struct('name','rfMapper'));
 			
-			me=me@barStimulus(varargin); %we call the superclass constructor first
-			
-			if nargin>0
-				me.parseArgs(varargin, me.allowedProperties);
-			end
+			me=me@barStimulus(args); %we call the superclass constructor first
 			
 			me.backgroundColour = [0 0 0 0];
 			me.family = 'rfMapper';

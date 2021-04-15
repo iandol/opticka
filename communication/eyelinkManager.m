@@ -40,7 +40,7 @@ classdef eyelinkManager < optickaCore
 		%> really tell if a subject is blinking or has removed their head using the 
 		%> float data.
 		ignoreBlinks logical		= false
-		%> exclusion zone[s] where no eye movement allowed inside,[-degX -degY +degX +degY]
+		%> exclusion zone[s] where no eye movement allowed inside: [-degX +degX -degY +degY]
 		%> rows are succesive exclusion zones
 		exclusionZone				= []
 		%> tracker update speed (Hz), should be 250 500 1000 2000
@@ -654,7 +654,7 @@ classdef eyelinkManager < optickaCore
 			[fix, fixtime, searching, window, exclusion] = me.isFixated();
 			if exclusion
 				fprintf('-+-+-> Eyelink:testSearchHoldFixation EXCLUSION ZONE ENTERED!\n')
-				out = 'EXCLUDED!'; window = [];
+				out = 'EXCLUDED!';
 				return
 			end
 			if searching
@@ -801,7 +801,7 @@ classdef eyelinkManager < optickaCore
 		function close(me)
 			try
 				me.isConnected = false;
-				me.isDummy = false;
+				%me.isDummy = false;
 				me.eyeUsed = -1;
 				me.screen = [];
 				trackerClearScreen(me);
@@ -836,7 +836,6 @@ classdef eyelinkManager < optickaCore
 			end
 			Eyelink('Shutdown');
 			me.isConnected = false;
-			me.isDummy = false;
 			me.isRecording = false;
 			me.eyeUsed = -1;
 			me.screen = [];
@@ -1032,7 +1031,7 @@ classdef eyelinkManager < optickaCore
 				% define our fixation widow and stimulus for first trial
 				me.fixationX = 0;
 				me.fixationY = 0;
-				me.fixationRadius = [1 1];
+				me.fixationRadius = 1;
 				o.sizeOut = me.fixationRadius(1)*2;
 				o.xPositionOut = me.fixationX;
 				o.yPositionOut = me.fixationY;
@@ -1042,15 +1041,16 @@ classdef eyelinkManager < optickaCore
 				ts.selected = true;
 				
 				% set up an exclusion zone where eye is not allowed
-				me.exclusionZone = [10 15 10 15];
-				exc = [me.toPixels(me.exclusionZone)];
-				%[left,top,right,bottom]
-				exc = [exc(1) exc(3) exc(2) exc(4)];  
+				me.exclusionZone = [8 15 10 15];
+				exc = me.toPixels(me.exclusionZone);
+				exc = [exc(1) exc(3) exc(2) exc(4)]; %psychrect=[left,top,right,bottom] 
 				
 				setOffline(me); %Eyelink('Command', 'set_idle_mode');
 				trackerClearScreen(me); % clear eyelink screen
 				trackerDrawFixation(me); % draw fixation window on tracker
 				trackerDrawStimuli(me,ts); % draw stimulus on tracker
+				
+				Screen('TextSize', s.win, 18);
 				
 				blockLoop = true;
 				a = 1;
@@ -1074,6 +1074,7 @@ classdef eyelinkManager < optickaCore
 					syncTime(me);
 					while trialLoop
 						Screen('FillRect',s.win,[0.7 0.7 0.7 0.5],exc);
+						Screen('DrawText',s.win,'Exclusion Zone',exc(1),exc(2),[0.8 0.8 0.8]);
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
@@ -1127,7 +1128,7 @@ classdef eyelinkManager < optickaCore
 					me.fixationY = randi([-5 5]);
 					me.fixationRadius = randi([1 5]);
 					o.sizeOut = me.fixationRadius*2;
-					me.fixationRadius = [me.fixationRadius me.fixationRadius];
+					%me.fixationRadius = [me.fixationRadius me.fixationRadius];
 					o.xPositionOut = me.fixationX;
 					o.yPositionOut = me.fixationY;
 					ts.x = me.fixationX;
@@ -1149,7 +1150,7 @@ classdef eyelinkManager < optickaCore
 				close(me);
 				clear s o
 				if ~me.isDummy
-				an = questdlg('Do you want to load the data and plot it?');
+					an = questdlg('Do you want to load the data and plot it?');
 					if strcmpi(an,'yes')
 						commandwindow;
 						evalin('base',['eA=eyelinkAnalysis(''dir'',''' ...
