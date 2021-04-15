@@ -171,6 +171,9 @@ classdef barStimulus < baseStimulus
 		function update(me)
 			resetTicks(me);
 			if me.sizeOut > 0; me.barHeightOut = me.sizeOut; me.barWidthOut = me.sizeOut; end
+			if me.phaseReverseTime > 0 
+				me.phaseCounter = round( me.phaseReverseTime / me.sM.screenVals.ifi );
+			end
 			if me.regenerateTexture && Screen(me.sM.win,'WindowKind') == 1
 				refreshTexture(me);
 			end
@@ -470,23 +473,28 @@ classdef barStimulus < baseStimulus
 				end
 				me.matrix = outmat;
 				if me.phaseReverseTime > 0
-					c2 = me.mix(me.colour2Out);
-					out = zeros(size(outmat));
-					for i = 1:3
-						tmp = outmat(:,:,i);
-						u = unique(tmp);
-						if length(u) >= 2
-							idx1 = tmp == u(1);
-							idx2 = tmp == u(2);
-							tmp(idx1) = u(2);
-							tmp(idx2) = u(1);
-						elseif length(u) == 1 %only 1 colour, probably low sf
-							tmp(tmp == u(1)) = c2(i);
-						end
-						out(:,:,i) = tmp;
+					switch me.type
+						case {'solid','checkerboard'}
+							c2 = me.mix(me.colour2Out);
+							out = zeros(size(outmat));
+							for i = 1:3
+								tmp = outmat(:,:,i);
+								u = unique(tmp);
+								if length(u) >= 2
+									idx1 = tmp == u(1);
+									idx2 = tmp == u(2);
+									tmp(idx1) = u(2);
+									tmp(idx2) = u(1);
+								elseif length(u) == 1 %only 1 colour, probably low sf
+									tmp(tmp == u(1)) = c2(i);
+								end
+								out(:,:,i) = tmp;
+							end
+							out(:,:,4) = ones(size(out,1),size(out,2)).*alpha;
+							me.matrix2 = out;
+						otherwise
+							me.matrix2 = fliplr(me.matrix);
 					end
-					out(:,:,4) = ones(size(out,1),size(out,2)).*alpha;
-					me.matrix2 = out;
 				end
 			catch ME %#ok<CTCH>
 				warning('--->>> barStimulus texture generation failed, making plain texture...')
