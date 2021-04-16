@@ -126,6 +126,7 @@ me.stimuli.fixationChoice			= 2;
 %--------------------enter pause state
 pauseEntryFcn = { 
 	@()drawBackground(s); %blank the subject display
+	@()flip(s); % flip the PTB screen
 	@()drawTextNow(s,'Paused, press [p] to resume...');
 	@()disp('Paused, press [p] to resume...');
 	@()trackerClearScreen(eL); % blank the eyelink screen
@@ -295,7 +296,7 @@ disp('================>> Building state info file <<================')
 stateInfoTmp = {
 'name'      'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 'pause'		'blank'		inf		pauseEntryFcn	[]				[]					pauseExitFcn;
-'blank'		'stimulus'	1		psEntryFcn		prestimulusFcn	[]					psExitFcn;
+'blank'		'stimulus'	0.5		psEntryFcn		prestimulusFcn	[]					psExitFcn;
 'stimulus'  'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn		stimExitFcn;
 'incorrect'	'blank'		2		incEntryFcn		breakFcn		[]					breakExitFcn;
 'breakfix'	'blank'		2		breakEntryFcn	breakFcn		[]					breakExitFcn;

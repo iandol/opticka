@@ -25,6 +25,8 @@ classdef eyelinkManager < optickaCore
 		%> fixation Y position(s) in degrees
 		fixationY double			= 0
 		%> fixation radius in degrees
+		%> default is circular window but if you enter [x y] then you can
+		%> define a rectangular fixation window shape.
 		fixationRadius double		= 1
 		%> fixation time in seconds
 		fixationTime double			= 1
