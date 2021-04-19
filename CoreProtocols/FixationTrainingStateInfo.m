@@ -37,6 +37,7 @@ tS.firstFixInit				= 2; % time to search and enter fixation window
 tS.firstFixTime				= 2; % time to maintain fixation within windo
 tS.firstFixRadius			= 2; % radius in degrees
 tS.strict					= true; %do we forbid eye to enter-exit-reenter fixation window?
+tS.exclusionZone			= []; %do we add an exclusion zone where subject cannot saccade to...
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 

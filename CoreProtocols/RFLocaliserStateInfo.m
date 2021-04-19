@@ -34,9 +34,9 @@ tS.name					= 'RF Localiser'; %==name of this protocol
 %------------Eyetracker Settings-----------------
 tS.fixX						= 0; % X position in degrees
 tS.fixY						= 0; % X position in degrees
-tS.firstFixInit				= 0.75; % time to search and enter fixation window
-tS.firstFixTime				= 2; % time to maintain fixation within windo
-tS.firstFixRadius			= 2; % radius in degrees
+tS.firstFixInit				= 1; % time to search and enter fixation window
+tS.firstFixTime				= 3; % time to maintain fixation within windo
+tS.firstFixRadius			= 10; % radius in degrees
 tS.strict					= true; %do we forbid eye to enter-exit-reenter fixation window?
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
@@ -226,7 +226,7 @@ stimExitFcn = {
 };
 
 %if the subject is correct (small reward)
-correctEntryFcn = { 
+correctEntryFcn = {
 	@()timedTTL(rM,tS.rewardPin,tS.rewardTime); % labjack sends a TTL to Crist reward system
 	@()beep(aM,2000); % correct beep
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]); 
