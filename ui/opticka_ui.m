@@ -281,6 +281,7 @@ if isappdata(handles.output,'o')
 		set(hObject,'Checked','on');
 		set(handles.OKuseDisplayPP,'Checked','off');
 		set(handles.OKuseLabJackStrobe,'Checked','off');
+		set(handles.OKuseLabJackTStrobe,'Checked','off');
 	end
 	o.getScreenVals;
 end
@@ -295,6 +296,7 @@ if isappdata(handles.output,'o')
 		set(hObject,'Checked','on');
 		set(handles.OKuseDataPixx,'Checked','off');
 		set(handles.OKuseLabJackStrobe,'Checked','off');
+		set(handles.OKuseLabJackTStrobe,'Checked','off');
 	end
 	o.getScreenVals;
 end
@@ -309,6 +311,22 @@ if isappdata(handles.output,'o')
 		set(hObject,'Checked','on');
 		set(handles.OKuseDataPixx,'Checked','off');
 		set(handles.OKuseDisplayPP,'Checked','off');
+		set(handles.OKuseLabJackTStrobe,'Checked','off');
+	end
+	o.getScreenVals;
+end
+
+% --- Executes on button press in OKuseLabJack.
+function OKuseLabJackTStrobe_Callback(hObject, eventdata, handles)
+if isappdata(handles.output,'o')
+	o = getappdata(handles.output,'o');
+	if strcmpi(get(hObject,'Checked'),'on')
+		set(hObject,'Checked','off');
+	else
+		set(hObject,'Checked','on');
+		set(handles.OKuseDataPixx,'Checked','off');
+		set(handles.OKuseDisplayPP,'Checked','off');
+		set(handles.OKuseLabJackStrobe,'Checked','off');
 	end
 	o.getScreenVals;
 end
@@ -326,7 +344,7 @@ if isappdata(handles.output,'o')
 	o.getScreenVals;
 end
 
-% --- Executes on button press in OKuseLabJack.
+% --- Executes on button press
 function OKuseArduino_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
@@ -339,7 +357,7 @@ if isappdata(handles.output,'o')
 	o.getScreenVals;
 end
 
-% --- Executes on button press in OKuseLabJack.
+% --- Executes on button press
 function OKuseEyeOccluder_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
@@ -351,7 +369,7 @@ if isappdata(handles.output,'o')
 	o.getScreenVals;
 end
 
-% --- Executes on button press in OKuseEyelink.
+% --- Executes on button press 
 function OKuseEyeLink_Callback(hObject, eventdata, handles)
 if isappdata(handles.output,'o')
 	o = getappdata(handles.output,'o');
@@ -2214,21 +2232,28 @@ h59 = uimenu(...
 'Separator','on',...
 'Callback',@(hObject,eventdata)opticka_ui('OKuseDataPixx_Callback',hObject,eventdata,guidata(hObject)),...
 'Checked','off',...
-'Label','Use DataPixx for Strobe',...
+'Label','Enable DataPixx for Strobe',...
 'Tag','OKuseDataPixx');
 
 h59b = uimenu(...
 'Parent',h57,...
 'Callback',@(hObject,eventdata)opticka_ui('OKuseDisplayPP_Callback',hObject,eventdata,guidata(hObject)),...
 'Checked','off',...
-'Label','Use Display++ for Strobe',...
+'Label','Enable Display++ for Strobe',...
 'Tag','OKuseDisplayPP');
 
 h60 = uimenu(...
 'Parent',h57,...
+'Callback',@(hObject,eventdata)opticka_ui('OKuseLabJackTStrobe_Callback',hObject,eventdata,guidata(hObject)),...
+'Checked','off',...
+'Label','Enable LabJack T4 for Strobe',...
+'Tag','OKuseLabJackTStrobe');
+
+h60d = uimenu(...
+'Parent',h57,...
 'Callback',@(hObject,eventdata)opticka_ui('OKuseLabJackStrobe_Callback',hObject,eventdata,guidata(hObject)),...
 'Checked','off',...
-'Label','Use LabJack for Strobe',...
+'Label','Use LabJack U3/U6 for Strobe',...
 'Tag','OKuseLabJackStrobe');
 
 h60a = uimenu(...

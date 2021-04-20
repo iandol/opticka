@@ -40,8 +40,10 @@ classdef runExperiment < optickaCore
 		useDisplayPP logical = false
 		%> use dataPixx for strobed digital I/O?
 		useDataPixx logical = false
-		%> use LabJack for strobed digital I/O?
+		%> use LabJack U3/U6 for strobed digital I/O?
 		useLabJackStrobe logical = false
+		%> use LabJack T4 for strobed digital I/O?
+		useLabJackTStrobe logical = false
 		%> use LabJack for reward TTL?
 		useLabJackReward logical = false
 		%> use Arduino for reward TTL?
@@ -1357,6 +1359,7 @@ classdef runExperiment < optickaCore
 				io.name = 'runinstance';
 				open(io);
 				me.useLabJackStrobe = false;
+				me.useLabJackTStrobe = false;
 				me.useDataPixx = false;
 				fprintf('===> Using Display++ for I/O...\n')
 			elseif me.useDataPixx
@@ -1370,8 +1373,35 @@ classdef runExperiment < optickaCore
 				io.name = 'runinstance';
 				open(io);
 				me.useLabJackStrobe = false;
+				me.useLabJackTStrobe = false;
 				me.useDisplayPP = false;
 				fprintf('===> Using dataPixx for I/O...\n')
+			elseif me.useLabJackTStrobe
+				if ~isa(me.lJack,'labjackT')
+					me.ljack = labJackT('openNow',false);
+				end
+				io = me.lJack; io.name = me.name;
+				io.silentMode = false;
+				io.verbose = me.verbose;
+				io.name = 'runinstance';
+				open(io);
+				me.useDataPixx = false;
+				me.useLabJackStrobe = false;
+				me.useDisplayPP = false;
+				fprintf('===> Using labjackT for I/O...\n')
+			elseif me.useLabJackStrobe
+				if ~isa(me.lJack,'labjack')
+					me.ljack = labJack('openNow',false);
+				end
+				io = me.lJack; io.name = me.name;
+				io.silentMode = false;
+				io.verbose = me.verbose;
+				io.name = 'runinstance';
+				open(io);
+				me.useDataPixx = false;
+				me.useLabJackTStrobe = false;
+				me.useDisplayPP = false;
+				fprintf('===> Using labJack for I/O...\n')
 			else
 				io = ioManager();
 				io.silentMode = true;
