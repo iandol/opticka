@@ -31,7 +31,7 @@ classdef arduinoIOPort < handle
 				port='DEMO';
 				a.isDemo = true;
 				disp('Note: a DEMO connection will be created');
-				disp('Use a com port, e.g. ''/dev/ttyACM0'' as input argument to connect to a real board');
+				disp('Use a com port, e.g. ''/dev/ttyACM0'' as first input argument to connect to a real board');
 			elseif nargin == 2
 				a.endPin = endPin;
 			elseif nargin == 3
@@ -62,7 +62,7 @@ classdef arduinoIOPort < handle
 					warning('===> The port is occupied, please release it first!');
 				end
 			end
-			% define serial object
+			% define IOPort serial object
 			a.conn=IOPort('OpenSerialPort',port,'BaudRate=115200');
 			% test connection
 			try
@@ -76,7 +76,7 @@ classdef arduinoIOPort < handle
 			% query sketch type
 			r = []; tout = []; t = GetSecs;
 			while isempty(r) && GetSecs < t+2
-				IOPort('Write',a.conn,'99'); % our command to query the sketch type
+				IOPort('Write',a.conn,'99'); % our command to query the sketch type, should return 48 ('0' as a char).
 				WaitSecs('YieldSecs',0.01);
 				if IOPort('BytesAvailable',a.conn) > 0
 					r = IOPort('Read',a.conn);
@@ -94,7 +94,7 @@ classdef arduinoIOPort < handle
 				delete(a);
 				error('Connection unsuccessful, please make sure that the board is powered on, running a sketch provided with the package, and connected to the indicated serial port. You might also try to unplug and re-plug the USB cable before attempting a reconnection.');
 			end
-			a.sktc = r(1)-48; %-48 to get the numeric value from the ASCII one
+			a.sktc = r(1)-48; %-48 to get the numeric value from the ASCII one [char(48)==0]
 			fprintf('===> It took %.3f secs to establish response: %i...\n',tout,a.sktc);
 			% check returned value
 			if a.sktc==0
@@ -213,8 +213,8 @@ classdef arduinoIOPort < handle
 				disp(' ');
 				a.pinMode
 				disp(' ');
-				disp('===>>> Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help analogReference">analogReference</a>');
-				disp('===>>> Serial port and other Methods: <a href="matlab:help serial">serial</a> <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
+				disp('===>>> Pin IO Methods: <a href="matlab:help pinMode">pinMode</a> <a href="matlab:help digitalRead">digitalRead</a> <a href="matlab:help digitalWrite">digitalWrite</a> <a href="matlab:help analogRead">analogRead</a> <a href="matlab:help analogWrite">analogWrite</a> <a href="matlab:help timedTTL">timedTTL</a> <a href="matlab:help strobeWord">strobeWord</a> <a href="matlab:help analogReference">analogReference</a>');
+				disp('===>>> Serial port and other Methods: <a href="matlab:help flush">flush</a> <a href="matlab:help roundTrip">roundTrip</a>');
 			end
 		end
 		
@@ -335,8 +335,8 @@ classdef arduinoIOPort < handle
 		%===================================================timedTTL
 		function timedTTL(a,pin,time)
 			% timedTTL(a, pin, time) -- this method allows us to send a
-			% long low-high-low transition time (in ms) interval without blocking
-			% matlab, using modified adio code.
+			% long low-high-low transition time (in ms, max=65535ms) interval without 
+			% blocking matlab, using modified adio sketch code.
 			if a.isDemo; return; end
 			if pin < a.startPin || pin > a.endPin; warning('Pin is not in range!!!');return;end
 			if time <= 0; return; end
@@ -346,7 +346,18 @@ classdef arduinoIOPort < handle
 			IOPort('Write',a.conn,uint8([53 97+pin time(1) time(2)]),1);
 		end % timedTTL
 		
-		% analog read
+		%===================================================strobeWord
+		function strobeWord(a,value)
+			% strobeWord(a, value) -- send a byte [0-255] value to the 8 pins
+			% 2-9 as a 1ms strobed word.
+			if a.isDemo; return; end
+			if value < 0; value = 0; end
+			if value > 255; value = 255; end
+			% send mode and pin
+			IOPort('Write',a.conn,uint8([54 value]),1);
+		end % strobeWord
+		
+		%===================================================analog read
 		function val=analogRead(a,pin)
 			% val=analogRead(a,pin); Performs analog input on a given arduino pin.
 			% The first argument, a, is the arduino object. The second argument,
@@ -371,9 +382,9 @@ classdef arduinoIOPort < handle
 			val=IOPort('Read',a.conn,1,1);
 		end % analogread
 		
-		% function analog write
+		%===================================================function analog write
 		function analogWrite(a,pin,val)
-						% analogWrite(a,pin,val); Performs analog output on a given arduino pin.
+			% analogWrite(a,pin,val); Performs analog output on a given arduino pin.
 			% The first argument, a, is the arduino object. The second argument,
 			% pin, is the number of the DIGITAL pin where the analog (PWM) output
 			% needs to be performed. Allowed pins for AO on the Mega board
@@ -391,7 +402,7 @@ classdef arduinoIOPort < handle
 			IOPort('Write',a.conn,uint8([52 97+pin val]),1);
 		end % analogwrite
 		
-		% function analog reference
+		%===================================================function analog reference
 		function analogReference(a,str)
 			% analogReference(a,str); Changes voltage reference on analog input pins
 			% The first argument, a, is the arduino object. The second argument,
@@ -413,7 +424,7 @@ classdef arduinoIOPort < handle
 			IOPort('Write',a.conn,uint8([82 48+num]),1);
 		end % analogreference
 		
-		% round trip
+		%===================================================round trip
 		function val=roundTrip(a,byte,verbose)
 			% roundTrip(a,byte); sends something to the arduino and back
 			% The first argument, a, is the arduino object.
@@ -450,7 +461,10 @@ classdef arduinoIOPort < handle
 			if verbose;fprintf('Roundtrip %i took %.4f ms\n',nl,(GetSecs-tin)*1e3);end
 		end % roundtrip
 		
+		%===================================================
 		function val=checkSketch(a)
+			% checkSketch(a); checks what type of sketch is running on the
+			% arduino. 0 is the standard adio sketch.
 			if a.isDemo; return; end
 			val = [];
 			flush(a);
@@ -463,7 +477,9 @@ classdef arduinoIOPort < handle
 			end
 		end
 		
+		%===================================================
 		function val=rawCommand(a,str)
+			% rawCommand(a); send a raw command (e.g.'2c1')
 			if a.isDemo; return; end
 			val = [];
 			flush(a);
@@ -477,7 +493,9 @@ classdef arduinoIOPort < handle
 			end
 		end
 		
+		%===================================================
 		function val = serialRead(a)
+			% serialRead(a); read a value from the serial interface
 			if a.isDemo; return; end
 			val = [];
 			if IOPort('BytesAvailable',a.conn) > 0
@@ -485,7 +503,9 @@ classdef arduinoIOPort < handle
 			end
 		end
 		
+		%===================================================
 		function n = bytesAvailable(a)
+			% bytesAvailable(a); check how many bytes are available to read
 			if a.isDemo; return; end
 			n = IOPort('BytesAvailable',a.conn);
 		end

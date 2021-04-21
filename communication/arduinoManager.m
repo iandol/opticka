@@ -159,6 +159,13 @@ classdef arduinoManager < optickaCore
 			end
 		end
 		
+		function strobeWord(me, value)
+			if me.silentMode == false
+				strobeWord(me.device, value);
+				if me.verbose;fprintf('===>>> STROBE WORD: %i sent to pins 2-8\n',value);end
+			end
+		end
+		
 		%===============TIMED DOUBLE TTL================%
 		function timedDoubleTTL(me, line, time)
 			if me.silentMode == false
@@ -300,6 +307,7 @@ classdef arduinoManager < optickaCore
 				'ForegroundColor',[1 0.5 0],...
 				'FontSize',fontSize+2,...
 				'Position',[155 5 40 55],...
+				'TooltipString','1-8 to give diff reward sizes, 0 to exit. Use bluetooth keyboard with manual training',...
 				'String','L1');
 			
 			handles.loop2Button = uicontrol('Style','pushbutton',...
@@ -310,6 +318,7 @@ classdef arduinoManager < optickaCore
 				'ForegroundColor',[1 0.5 0],...
 				'FontSize',fontSize+2,...
 				'Position',[205 5 40 55],...
+				'TooltipString','1-8 to show movie+reward, 0 to exit. Use bluetooth keyboard and manual training',...
 				'String','L2');
 			
 			me.handles = handles;
@@ -340,19 +349,19 @@ classdef arduinoManager < optickaCore
 				for nn = 0:9
 					nl = [nl KbName(num2str(nn))];
 				end
-				nl = [nl KbName('0)') KbName('-_') KbName('1!')];
+				nl = [nl KbName('q') KbName('0)') KbName('-_') KbName('1!')];
 				oldkeys=RestrictKeysForKbCheck(nl);
 				doLoop = true;
-				ListenChar(2);
+				ListenChar(-1);
 				while doLoop
 					[~, keyCode] = KbWait(-1);
 					if any(keyCode)
 						rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end
 						switch lower(rchar)
-							case {'0','0)','-_','-'}
+							case {'q','0','0)','-_','-'}
 								doLoop = false;
 							case{'1','1!'}
-								me.timedTTL(pin,200);
+								me.timedTTL(pin,250);
 							case{'2','2@'}
 								me.timedTTL(pin,300);
 							case{'3','3#'}
@@ -388,7 +397,7 @@ classdef arduinoManager < optickaCore
 				for nn = 0:9
 					nl = [nl KbName(num2str(nn))];
 				end
-				nl = [nl KbName('-') KbName('+') KbName('0)') KbName('-_') KbName('1!')];
+				nl = [nl KbName('q') KbName('-') KbName('+') KbName('0)') KbName('-_') KbName('1!')];
 				oldkeys=RestrictKeysForKbCheck(nl);
 				doLoop = true;
 				
@@ -413,7 +422,7 @@ classdef arduinoManager < optickaCore
 					if isDown
 						rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end
 						switch lower(rchar)
-							case {'0','0)','-_','-'}
+							case {'q','0','0)','-_','-'}
 								doLoop = false;
 							case{'1','1!','kp_end'}
 								mv.xPositionOut = 0;
@@ -430,7 +439,7 @@ classdef arduinoManager < optickaCore
 									if i == 60; me.timedTTL(pin,val); end
 									i=i+1;
 								end
-								me.timedTTL(pin,val*2);
+								me.timedTTL(pin,val);
 							case{'2','2@','kp_down'}
 								mv.xPositionOut = 16;
 								mv.yPositionOut = 10;
@@ -446,7 +455,7 @@ classdef arduinoManager < optickaCore
 									if i == 60; me.timedTTL(pin,val); end
 									i=i+1;
 								end
-								me.timedTTL(pin,val*2);
+								me.timedTTL(pin,val);
 							case{'3','3#','kp_next'}
 								mv.xPositionOut = -16;
 								mv.yPositionOut = -10;
@@ -462,7 +471,7 @@ classdef arduinoManager < optickaCore
 									if i == 60; me.timedTTL(pin,val); end
 									i=i+1;
 								end
-								me.timedTTL(pin,val*2);
+								me.timedTTL(pin,val);
 							case{'4','4$','kp_left'}
 								mv.xPositionOut = 16;
 								mv.yPositionOut = -10;
@@ -498,9 +507,9 @@ classdef arduinoManager < optickaCore
 							case{'6','6^','kp_right'}
 								me.timedTTL(pin,val);
 							case{'7','7&','kp_home'}
-								me.timedTTL(pin,val*2);
+								me.timedTTL(pin,val);
 							case{'8','8*','kp_up'}
-								me.timedTTL(pin,val*2);
+								me.timedTTL(pin,val);
 						end
 					else
 						flip(sM);

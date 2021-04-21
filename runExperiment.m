@@ -1843,7 +1843,7 @@ classdef runExperiment < optickaCore
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'r'
-						timedTTL(rM,0,150);
+						timedTTL(rM,rM.rewardPin,rM.rewardTime);
 					case '=+'
 						if tS.keyTicks > tS.keyHold
 							me.screen.screenXOffset = me.screen.screenXOffset + 1;
@@ -2064,7 +2064,7 @@ classdef runExperiment < optickaCore
 %  ]}		=		Screen Center DOWN
 %  k		=		Increase Prestimulus Time
 %  l		=		Decrease Prestimulus Time
-%  r		=		1000ms reward
+%  r		=		give reward
 %  m		=		calibrate
 %  f		=		flash screen
 %  o		=		override mode (causes debug state)

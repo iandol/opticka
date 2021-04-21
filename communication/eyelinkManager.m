@@ -34,13 +34,14 @@ classdef eyelinkManager < optickaCore
 		fixationTime double			= 1
 		%> only allow 1 entry into fixation window?
 		strictFixation logical		= true
-		%> exclusion zones where no eye movement allowed inside: [-degX +degX -degY +degY]
-		%> rows are succesive exclusion zones
+		%> When using the test for eye position functions, 
+		%> exclusion zones where no eye movement allowed: [-degX +degX -degY +degY]
+		%> Add rows to generate succesive exclusion zones.
 		exclusionZone				= []
 		%> we can optional set an initial window that the subject must stay
 		%> inside of before they saccade to the target window. This
 		%> restricts guessing and "cheating", by forcing a minimum delay
-		%> (default = 100ms) before starting a saccade. Only used if X is not
+		%> (default = 100ms) before initiating a saccade. Only used if X is not
 		%> empty.
 		fixInit	struct				= struct('X',[],'Y',[],'time',0.1,'radius',2)
 		%> do we ignore blinks, if true then we do not update X and Y position from
@@ -678,9 +679,14 @@ classdef eyelinkManager < optickaCore
 		%>   zone was entered or the yesString or noString.
 		% ===================================================================
 		function [out, window, exclusion] = testSearchHoldFixation(me, yesString, noString)
-			[fix, fixtime, searching, window, exclusion] = me.isFixated();
+			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
 				fprintf('-+-+-> Eyelink:testSearchHoldFixation EXCLUSION ZONE ENTERED!\n')
+				out = 'EXCLUDED!';
+				return
+			end
+			if initfail
+				if me.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation FIX INIT TIME FAILED!\n'); end
 				out = 'EXCLUDED!';
 				return
 			end
@@ -708,63 +714,6 @@ classdef eyelinkManager < optickaCore
 			elseif searching == false
 				out = noString;
 				if me.verbose;fprintf('-+-+-> Eyelink:testSearchHoldFixation SEARCH FAIL: %s [%.2f %.2f %.2f]\n', out, fix, fixtime, searching);end
-			else
-				out = '';
-			end
-			return
-		end
-		
-		% ===================================================================
-		%> @brief Checks if we're looking for fixation a set time. Input is
-		%> 2 strings, either one is returned depending on success or
-		%> failure, 'searching' may also be returned meaning the fixation
-		%> window hasn't been entered yet, and 'fixing' means the fixation
-		%> time is not yet met...
-		%>
-		%> This function is different than testSearchHoldFixation
-		%>
-		%> @param yesString if this function succeeds return this string
-		%> @param noString if this function fails return this string
-		%> @return out the output string which is 'searching' if fixation is
-		%>   still being initiated, 'fixing' if the fixation window was entered
-		%>   but not for the requisite fixation time, or the yes or no string.
-		% ===================================================================
-		function [out, window, exclusion] = testMoveHoldFixation(me, yesString, noString)
-			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
-			if exclusion
-				if me.verbose; fprintf('-+-+-> Eyelink:testMoveHoldFixation EXCLUSION ZONE ENTERED!\n'); end
-				out = 'EXCLUDED!';
-				return
-			end
-			if initfail
-				if me.verbose; fprintf('-+-+-> Eyelink:testMoveHoldFixation FIX INIT TIME FAILED!\n'); end
-				out = 'EXCLUDED!';
-				return
-			end
-			if searching
-				if (me.strictFixation==true && (me.fixN == 0)) || me.strictFixation==false
-					out = 'searching';
-				else
-					out = noString;
-					if me.verbose; fprintf('-+-+-> Eyelink:testMoveHoldFixation STRICT SEARCH FAIL: %s [%.2f %.2f %.2f]\n', out, fix, fixtime, searching);end
-				end
-				return
-			elseif fix
-				if (me.strictFixation==true && ~(me.fixN == -100)) || me.strictFixation==false
-					if fixtime
-						out = yesString;
-						if me.verbose; fprintf('-+-+-> Eyelink:testMoveHoldFixation FIXATION SUCCESSFUL!: %s [%.2f %.2f %.2f]\n', out, fix, fixtime, searching);end
-					else
-						out = 'fixing';
-					end
-				else
-					out = noString;
-					if me.verbose;fprintf('-+-+-> Eyelink:testMoveHoldFixation FIX FAIL: %s [%.2f %.2f %.2f]\n', out, fix, fixtime, searching);end
-				end
-				return
-			elseif searching == false
-				out = noString;
-				if me.verbose;fprintf('-+-+-> Eyelink:testMoveHoldFixation SEARCH FAIL: %s [%.2f %.2f %.2f]\n', out, fix, fixtime, searching);end
 			else
 				out = '';
 			end

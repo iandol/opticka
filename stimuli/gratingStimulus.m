@@ -357,6 +357,7 @@ classdef gratingStimulus < baseStimulus
 		%> requirements.
 		% ===================================================================
 		function setRect(me)
+			if isempty(me.texture);return;end
 			me.dstRect=Screen('Rect',me.texture);
 			me.dstRect=ScaleRect(me.dstRect,me.scale,me.scale);
 			if me.mouseOverride && me.mouseValid
@@ -420,6 +421,7 @@ classdef gratingStimulus < baseStimulus
 			me.scale = me.sizeOut/(me.size*me.ppd);
 			me.sfRecurse = true;
 			me.sfOut = me.sfCache * me.scale;
+			me.setRect();
 			%fprintf('\nCalculate SFOut: %d | in: %d | scale: %d\n', me.sfOut, me.sfCache, me.scale);
 		end
 

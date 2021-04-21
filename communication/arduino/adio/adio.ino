@@ -101,7 +101,7 @@ void loop() {
         /* the following statements are needed to handle
           unexpected first values coming from the serial (if
           the value is unrecognized then it defaults to s=-1) */
-        if ((s > 50 && s < 90) || (s > 90 && s != 340 && s != 400)) {
+        if ((s > 60 && s < 90) || (s > 90 && s != 340 && s != 400)) {
           s = -1;
         }
         /* the break statements gets out of the switch-case, so
@@ -212,7 +212,7 @@ void loop() {
 
 
       /*=====================================================*/
-      /* s=50 to 52 means TIMED TTL  ******************** */
+      /* s=50 to 52 means TIMED TTL  *********************** */
       case 50:
         /* the second received value indicates the pin
           from abs('a')=97, pin 0, to abs('¦')=166, pin 69    */
@@ -230,19 +230,39 @@ void loop() {
         rbyte[0] = val;
         val = 0;
         s = 52;
-        break; /* s=51 taken care of                           */
+        break; /* s=51 taken care of                        */
       case 52:
-        /* combine two bytes into a 16bit (unsigned) word      */
+        /* combine two bytes into a 16bit (unsigned) word   */
         rbyte[1] = val;
         pausetime = word(rbyte[1],rbyte[0]);  //(rbyte[1]<<8) | rbyte[0]
         if (pausetime > 0) {
-          digitalWrite(pin, HIGH);    /* perform Digital Output */
+          digitalWrite(pin, HIGH);/* perform Digital Output */
           delay(pausetime);
-          digitalWrite(pin, LOW);    /* perform Digital Output */
+          digitalWrite(pin, LOW); /* perform Digital Output */
         }
         rbyte[0] = 0; rbyte[1] = 0; pausetime = 0;
+        s = -1; /* we are done with AO so next state is -1   */
+        break; /* s=52 taken care of                         */
+      /*=====================================================*/
+
+      /*=====================================================*/
+      /* s=60 to means 2-9 pin strobe word 0-255  ********** */
+      case 60:
+        for (int i = 0; i <= 7; i++) {
+          int test = bitRead(val,i);
+          if (test == 1) {
+            digitalWrite(i+2, HIGH);
+          }
+          else {
+            digitalWrite(i+2, LOW);
+          }
+        }
+        delay(1);
+        for (int i = 0; i <= 7; i++) {
+            digitalWrite(i+2, LOW);
+        }
         s = -1; /* we are done with AO so next state is -1      */
-        break; /* s=52 taken care of                           */
+        break; /* s=60 taken care of                           */
       /*=====================================================*/
 
 

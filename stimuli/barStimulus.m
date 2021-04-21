@@ -315,6 +315,18 @@ classdef barStimulus < baseStimulus
 			me.colour2(me.colour2<0)=0; me.colour2(me.colour2>1)=1;
 		end
 		
+		% ===================================================================
+		%> @brief sfOut Pseudo Get method
+		%>
+		% ===================================================================
+		function sf = getsfOut(me)
+			sf = 0;
+			if ~isempty(me.findprop('sfOut'))
+				sf = me.sfOut;
+			end
+		end
+
+		
 	end %---END PUBLIC METHODS---%
 	
 	%=======================================================================
