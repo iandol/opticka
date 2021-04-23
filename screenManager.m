@@ -933,28 +933,6 @@ classdef screenManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief draw small spot centered on the screen
-		%>
-		%> @param radius size in degrees
-		%> @param colour of spot
-		%> @param x position in degrees relative to screen center
-		%> @param y position in degrees relative to screen center
-		%> @return
-		% ===================================================================
-		function drawSpot(me,size,colour,x,y)
-			if nargin < 5 || isempty(y); y = 0; end
-			if nargin < 4 || isempty(x); x = 0; end
-			if nargin < 3 || isempty(colour); colour = [1 1 1 1]; end
-			if nargin < 2 || isempty(size); size = 1; end
-			
-			x = me.xCenter + (x * me.ppd_);
-			y = me.yCenter + (y * me.ppd_);
-			size = size/2 * me.ppd_;
-			
-			Screen('gluDisk', me.win, colour, x, y, size*2);
-		end
-		
-		% ===================================================================
 		%> @brief draw fixation cross from Thaler L, Schütz AC, 
 		%>  Goodale MA, & Gegenfurtner KR (2013) “What is the best fixation target? 
 		%>  The effect of target shape on stability of fixational eye movements.�? 
@@ -1032,6 +1010,28 @@ classdef screenManager < optickaCore
 			
 			Screen('DrawLines', me.win, [-size size 0 0;0 0 -size size],...
 				lineWidth, colour, [x y]);
+		end
+		
+		% ===================================================================
+		%> @brief draw small spot centered on the screen
+		%>
+		%> @param radius size in degrees
+		%> @param colour of spot
+		%> @param x position in degrees relative to screen center
+		%> @param y position in degrees relative to screen center
+		%> @return
+		% ===================================================================
+		function drawSpot(me,size,colour,x,y)
+			if nargin < 5 || isempty(y); y = 0; end
+			if nargin < 4 || isempty(x); x = 0; end
+			if nargin < 3 || isempty(colour); colour = [1 1 1 1]; end
+			if nargin < 2 || isempty(size); size = 1; end
+			
+			x = me.xCenter + (x * me.ppd_);
+			y = me.yCenter + (y * me.ppd_);
+			size = size * me.ppd_;
+			
+			Screen('gluDisk', me.win, colour, x, y, size);
 		end
 		
 		% ===================================================================
@@ -1124,14 +1124,37 @@ classdef screenManager < optickaCore
 		%> @param xy x is row1 and y is row2
 		%> @return
 		% ===================================================================
-		function drawLines(me,xy,size,colour,center)
+		function drawLines(me,xy,size,colour)
 			if ~exist('xy','var');return;end
 			if ~exist('size','var') || isempty(size); size = 2; end
 			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]; end
-			if ~exist('center','var') || isempty(center); center = [0 0]; end
 			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
 			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
 			Screen('DrawLines', me.win, xy);
+		end
+		
+		% ===================================================================
+		%> @brief draw box specified with x and y and size in degrees
+		%>
+		%> @param xy x is row1 and y is row2 in degrees
+		%> @param size in degrees
+		%> @param colour RGB[A]
+		%> @return
+		% ===================================================================
+		function drawBox(me,xy,size,colour)
+			if ~exist('xy','var');return;end
+			if ~exist('size','var') || isempty(size); size = 2; end
+			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]; end
+			size = size * me.ppd_;
+			if length(size) == 1
+				rect = [0 0 size size];
+			else
+				rect = [0 0 size(1) size(2)];
+			end
+			xy(1,:) = me.xCenter + (xy(1,:) * me.ppd_);
+			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
+			rect = CenterRectOnPointd(rect,xy(1),xy(2));
+			Screen('FillRect', me.win, color, rect);
 		end
 		
 		% ===================================================================

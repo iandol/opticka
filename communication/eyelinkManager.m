@@ -6,8 +6,6 @@
 classdef eyelinkManager < optickaCore
 	
 	properties
-		%> the PTB screen to work on, passed in during initialise
-		screen						= []
 		%> eyetracker defaults structure
 		defaults struct				= struct()
 		%> IP address of host
@@ -80,6 +78,8 @@ classdef eyelinkManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
+		%> the PTB screen to work on, passed in during initialise
+		screen						= []
 		%> Gaze X position in degrees
 		x							= []
 		%> Gaze Y position in degrees
@@ -534,87 +534,81 @@ classdef eyelinkManager < optickaCore
 		function [fixated, fixtime, searching, window, exclusion, fixinit] = isFixated(me)
 			fixated = false; fixtime = false; searching = true; exclusion = false;
 			window = []; fixinit = false;
-			if (me.isConnected || me.isDummy) && ~isempty(me.currentSample)
-				if me.isExclusion || me.isInitFail
-					exclusion = me.isExclusion; fixinit = me.isInitFail; searching = false;
-					return % we previously matched either rule, now cannot pass fixation until a reset.
-				end
-				if me.fixInitStartTime == 0
-					me.fixInitStartTime = me.currentSample.time;
-					me.fixTotal = 0;
-					me.fixInitLength = 0;
-				end
-				% ---- test for exclusion zones first
-				if ~isempty(me.exclusionZone)
-					for i = 1:size(me.exclusionZone,1)
-						if (me.x >= me.exclusionZone(i,1) && me.x <= me.exclusionZone(i,2)) && ...
-							(me.y >= me.exclusionZone(i,3) && me.y <= me.exclusionZone(i,4))
-							searching = false; exclusion = true; me.isExclusion = true;
-							return
-						end
+			if ~me.isConnected || me.isDummy || isempty(me.currentSample);return;end
+			if me.isExclusion || me.isInitFail
+				exclusion = me.isExclusion; fixinit = me.isInitFail; searching = false;
+				return; % we previously matched either rule, now cannot pass fixation until a reset.
+			end
+			if me.fixInitStartTime == 0
+				me.fixInitStartTime = me.currentSample.time;
+				me.fixTotal = 0;
+				me.fixInitLength = 0;
+			end
+			% ---- test for exclusion zones first
+			if ~isempty(me.exclusionZone)
+				for i = 1:size(me.exclusionZone,1)
+					if (me.x >= me.exclusionZone(i,1) && me.x <= me.exclusionZone(i,2)) && ...
+						(me.y >= me.exclusionZone(i,3) && me.y <= me.exclusionZone(i,4))
+						searching = false; exclusion = true; me.isExclusion = true;
+						return;
 					end
 				end
-				% ---- test for fix initiation start window
-				if ~isempty(me.fixInit.X)
-					if (me.currentSample.time - me.fixInitStartTime) < me.fixInit.time
-						r = sqrt((me.x - me.fixInit.X).^2 + (me.y - me.fixInit.Y).^2);
-						window = find(r < me.fixInit.radius);
-						if ~any(window)
-							searching = false; exclusion = true; fixinit = true;
-							me.isInitFail = fixinit;
-							return
-						end
+			end
+			% ---- test for fix initiation start window
+			if ~isempty(me.fixInit.X)
+				if (me.currentSample.time - me.fixInitStartTime) < me.fixInit.time
+					r = sqrt((me.x - me.fixInit.X).^2 + (me.y - me.fixInit.Y).^2);
+					window = find(r < me.fixInit.radius);
+					if ~any(window)
+						searching = false; exclusion = true; fixinit = true;
+						me.isInitFail = fixinit;
+						return;
 					end
 				end
-				% ---- now test if we are still searching or in fixation
-				% window
-				if length(me.fixationRadius) == 1 % circular test
-					r = sqrt((me.x - me.fixationX).^2 + (me.y - me.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixationRadius);
-					window = find(r < me.fixationRadius);
-				else % x y rectangular window test
-					if (me.x >= (me.fixationX - me.fixationRadius(1))) && (me.x <= (me.fixationX + me.fixationRadius(1))) ...
-							&& (me.y >= (me.fixationY - me.fixationRadius(2))) && (me.y <= (me.fixationY + me.fixationRadius(2)))
-						window = 1;
-					end
+			end
+			% now test if we are still searching or in fixation window, if
+			% radius is single value, assume circular, otherwise assume
+			% rectangular
+			if length(me.fixationRadius) == 1 % circular test
+				r = sqrt((me.x - me.fixationX).^2 + (me.y - me.fixationY).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixationRadius);
+				window = find(r < me.fixationRadius);
+			else % x y rectangular window test
+				if (me.x >= (me.fixationX - me.fixationRadius(1))) && (me.x <= (me.fixationX + me.fixationRadius(1))) ...
+						&& (me.y >= (me.fixationY - me.fixationRadius(2))) && (me.y <= (me.fixationY + me.fixationRadius(2)))
+					window = 1;
 				end
-				if any(window) % inside fixation window
-					if me.fixN == 0
-						me.fixN = 1;
-						me.fixSelection = window(1);
-					end
-					if me.fixSelection == window(1)
-						if me.fixStartTime == 0
-							me.fixStartTime = me.currentSample.time;
-						end
-						me.fixLength = (me.currentSample.time - me.fixStartTime) / 1000;
-						me.fixTotal = (me.currentSample.time - me.fixInitStartTime) / 1000;
-						if me.fixLength >= me.fixationTime
-							fixtime = true;
-						end
-						searching = false;
-						fixated = true;
-											else
-						fixated = false;
-						fixtime = false;
-						searching = false;
-					end
-					me.isFix = fixated;
-				else %not inside the fixation window
-					if me.fixN == 1
-						me.fixN = -100;
-					end
-					me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1000;
-					me.fixTotal = me.fixInitLength;
-					if me.fixInitLength < me.fixationInitTime
-						searching = true;
-					else
-						searching = false;
-					end
-					me.fixStartTime = 0;
-					me.fixLength = 0;
-					me.isFix = false;
-					return
+			end
+			if any(window) % inside fixation window
+				if me.fixN == 0
+					me.fixN = 1;
+					me.fixSelection = window(1);
 				end
+				if me.fixSelection == window(1)
+					if me.fixStartTime == 0
+						me.fixStartTime = me.currentSample.time;
+					end
+					fixated = true; searching = false;
+					me.fixLength = (me.currentSample.time - me.fixStartTime) / 1e3;
+					me.fixTotal = (me.currentSample.time - me.fixInitStartTime) / 1e3;
+					if me.fixLength >= me.fixationTime
+						fixtime = true;
+					end
+				else
+					fixated = false; fixtime = false; searching = false;
+				end
+				me.isFix = fixated;
+			else % not inside the fixation window
+				if me.fixN == 1
+					me.fixN = -100;
+				end
+				me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1e3;
+				me.fixTotal = me.fixInitLength;
+				if me.fixInitLength < me.fixationInitTime
+					searching = true;
+				else
+					searching = false;
+				end
+				me.isFix = false;
 			end
 		end
 		
@@ -717,7 +711,6 @@ classdef eyelinkManager < optickaCore
 			else
 				out = '';
 			end
-			return
 		end
 		
 		% ===================================================================
@@ -1041,15 +1034,16 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function runDemo(me,forcescreen)
-			stopkey=KbName('Q');
-			nextKey=KbName('SPACE');
-			calibkey=KbName('C');
-			driftkey=KbName('D');
-			oldx = me.fixationX;
-			oldy = me.fixationY;
-			oldexc = me.exclusionZone;
-			oldfixinit = me.fixInit;
-			me.recordData = true; %lets save an EDF file
+			KbName('UnifyKeyNames')
+			stopkey				= KbName('Q');
+			nextKey				= KbName('SPACE');
+			calibkey			= KbName('C');
+			driftkey			= KbName('D');
+			oldx				= me.fixationX;
+			oldy				= me.fixationY;
+			oldexc				= me.exclusionZone;
+			oldfixinit			= me.fixInit;
+			me.recordData		= true; %lets save an EDF file
 			figure;plot(0,0,'ro');ax=gca;hold on;xlim([-20 20]);ylim([-20 20]);set(ax,'YDir','reverse');
 			title('eyelinkManager Demo');xlabel('X eye position (deg)');ylabel('Y eye position (deg)');grid on;grid minor;drawnow;
 			try
@@ -1125,13 +1119,13 @@ classdef eyelinkManager < optickaCore
 							x = me.toPixels(me.x,'x'); %#ok<*PROP>
 							y = me.toPixels(me.y,'y');
 							txt = sprintf('Press Q to finish, SPACE for next stimulus. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | RADIUS = %.1f | TIME = %.1f | FIXATION = %.1f | SEARCH = %i | BLINK = %i | EXCLUSION = %i | FAIL INIT = %i',...
-								x, me.x, y, me.y, me.fixationRadius(1), me.fixTotal, me.fixLength, searching, me.isBlink, exclusion, me.isInitFail);
+								x, me.x, y, me.y, sprintf('%1.1f ',me.fixationRadius), me.fixTotal, me.fixLength, searching, me.isBlink, exclusion, me.isInitFail);
 							Screen('DrawText', s.win, txt, 10, 10,[1 1 1]);
 							drawEyePosition(me);
 						end
 						
 						% tell PTB we've finished drawing
-						Screen('DrawingFinished', s.win);
+						finishDrawing(s);
 						% animate out stimulus
 						animate(o);
 						% flip the screen
