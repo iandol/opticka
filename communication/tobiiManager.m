@@ -1351,8 +1351,15 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function trackerDrawFixation(me)
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
-			drawSpot(me.operatorScreen,...
-				me.fixation.radius,[0.5 0.6 0.5 1],me.fixation.X,me.fixation.Y);
+			if length(me.fixation.radius) == 1
+				drawSpot(me.operatorScreen,me.fixation.radius,[0.5 0.6 0.5 1],me.fixation.X,me.fixation.Y);
+			else
+				rect = [me.fixation.X - me.fixation.radius(1), ...
+					me.fixation.Y - me.fixation.radius(2), ...
+					me.fixation.X + me.fixation.radius(1), ...
+					me.fixation.Y + me.fixation.radius(2)];
+				drawRect(me.operatorScreen,rect,[0.5 0.6 0.5 1]);
+			end
 			if me.isFix
 				if me.fixLength > me.fixation.fixTime
 					drawSpot(me.operatorScreen,0.25,[0 1 0.25 0.75],me.x,me.y);
