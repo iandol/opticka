@@ -562,21 +562,14 @@ classdef screenManager < optickaCore
 		% ===================================================================
 		%> @brief Flip the screen
 		%>
-		%> @param vbl - a vbl time from a previous flip
+		%> [VBLTimestamp StimulusOnsetTime FlipTimestamp Missed Beampos] = Screen('Flip', windowPtr [, when] [, dontclear] [, dontsync] [, multiflip]);
+		%>
+		%> @param varargin - pass other options to screen flip
 		%> @return vbl - a vbl from this flip
 		% ===================================================================
-		function [vbl, when] = flip(me, vbl, varargin)
+		function [vbl, when, flipTime, missed] = flip(me, varargin)
 			if ~me.isOpen; return; end
-			switch nargin
-				case 4
-					[vbl, when] = Screen('Flip',me.win,vbl,varargin{1},varargin{2});
-				case 3
-					[vbl, when] = Screen('Flip',me.win,vbl,varargin{1});
-				case 2
-					[vbl, when] = Screen('Flip',me.win,vbl);
-				otherwise
-					[vbl, when] = Screen('Flip',me.win);
-			end
+			[vbl, when, flipTime, missed] = Screen('Flip',me.win,varargin{:});
 		end
 		
 		% ===================================================================
@@ -1155,6 +1148,21 @@ classdef screenManager < optickaCore
 			xy(2,:) = me.yCenter + (xy(2,:) * me.ppd_);
 			rect = CenterRectOnPointd(rect,xy(1),xy(2));
 			Screen('FillRect', me.win, color, rect);
+		end
+		
+		% ===================================================================
+		%> @brief draw Rect specified in degrees
+		%>
+		%> @param rect [left, top, right, bottom] in degrees
+		%> @param colour RGB[A]
+		%> @return
+		% ===================================================================
+		function drawRect(me,rect,colour)
+			if ~exist('rect','var');return;end
+			if ~exist('colour','var') || isempty(colour); colour = [1 1 0]; end
+			x = me.xCenter + ([rect(1) rect(3)] * me.ppd_);
+			y = me.yCenter + ([rect(2) rect(4)] * me.ppd_);
+			Screen('FillRect', me.win, colour, [x(1) y(1) x(2) y(2)]);
 		end
 		
 		% ===================================================================

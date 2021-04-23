@@ -1149,7 +1149,7 @@ classdef tobiiManager < optickaCore
 				f.xPositionOut = me.fixation.X;
 				
 				% set up an exclusion zone where eye is not allowed
-				me.exclusionZone = [8 15 10 15];
+				me.exclusionZone = [8 12 9 12];
 				exc = me.toPixels(me.exclusionZone);
 				exc = [exc(1) exc(3) exc(2) exc(4)]; %psychrect=[left,top,right,bottom] 
 
@@ -1200,10 +1200,7 @@ classdef tobiiManager < optickaCore
 						drawGrid(s);
 						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
 						drawPhotoDiodeSquare(s,[1 1 1 1]);
-						if useS2
-							drawGrid(s2);
-							trackerDrawFixation(me);
-						end
+						
 						getSample(me); isFixated(me);
 						
 						if ~isempty(me.currentSample)
@@ -1214,6 +1211,11 @@ classdef tobiiManager < optickaCore
 							Screen('DrawText', s.win, txt, 10, 10,[1 1 1]);
 							drawEyePosition(me,true);
 							%psn{trialn} = me.tobii.buffer.peekN('positioning',1);
+						end
+						if useS2
+							drawGrid(s2);
+							trackerDrawExclusion(me);
+							trackerDrawFixation(me);
 						end
 						finishDrawing(s);
 						animate(o);
@@ -1354,7 +1356,11 @@ classdef tobiiManager < optickaCore
 			drawSpot(me.operatorScreen,...
 				me.fixation.radius,[0.5 0.6 0.5 1],me.fixation.X,me.fixation.Y);
 			if me.isFix
-				drawSpot(me.operatorScreen,0.25,[0 1 0.25 0.75],me.x,me.y);
+				if me.fixLength > me.fixation.fixTime
+					drawSpot(me.operatorScreen,0.25,[0 1 0.25 0.75],me.x,me.y);
+				else
+					drawSpot(me.operatorScreen,0.25,[0.75 0.25 0.75 0.75],me.x,me.y);
+				end
 			else
 				drawSpot(me.operatorScreen,0.25,[0.7 0.5 0 0.75],me.x,me.y);
 			end
@@ -1380,7 +1386,12 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawExclusion(me)
-			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
+			if ~me.isConnected || ~me.operatorScreen.isOpen || isempty(me.exclusionZone); return; end
+			for i = 1:size(me.exclusionZone,1)
+				drawRect(me.operatorScreen, [me.exclusionZone(1), ...
+					me.exclusionZone(3), me.exclusionZone(2), ...
+					me.exclusionZone(4)],[0.7 0.6 0.6]);
+			end
 		end
 		
 		% ===================================================================
