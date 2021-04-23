@@ -204,7 +204,7 @@ classdef tobiiManager < optickaCore
 				end
 				me.screen			= sM;
 			end
-			if ~exist('sM2','var') || ~isa(sM2,'screenManager') || me.isDummy
+			if ~exist('sM2','var') || ~isa(sM2,'screenManager')
 				me.secondScreen		= false;
 			else
 				me.operatorScreen	= sM2;
@@ -380,9 +380,9 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function cal = trackerSetup(me,incal)
-			if ~me.isConnected && ~me.screen.isOpen; return; end
-			if ~exist('incal','var');incal=[];end
 			cal = [];
+			if ~me.isConnected || ~me.screen.isOpen || me.isDummy; return; end
+			if ~exist('incal','var');incal=[];end
 			wasRecording = me.isRecording;
 			if wasRecording; stopRecording(me);	end
 			updateDefaults(me); % make sure we send any other settings changes
@@ -1331,9 +1331,7 @@ classdef tobiiManager < optickaCore
 			if exist('ts','var') && isstruct(ts)
 				me.stimulusPositions = ts;
 			end
-			if ~exist('clearScreen','var')
-				clearScreen = false;
-			end
+			if ~exist('clearScreen','var');clearScreen = false;end
 			for i = 1:length(me.stimulusPositions)
 				x = me.stimulusPositions(i).x; 
 				y = me.stimulusPositions(i).y; 
