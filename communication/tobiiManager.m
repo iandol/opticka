@@ -717,9 +717,6 @@ classdef tobiiManager < optickaCore
 					end
 				end
 			end
-	
-			me.fixTotal = (me.currentSample.time - me.fixInitStartTime) / 1e6;
-			
 			% now test if we are still searching or in fixation window, if
 			% radius is single value, assume circular, otherwise assume
 			% rectangular
@@ -732,7 +729,8 @@ classdef tobiiManager < optickaCore
 					window = 1;
 				end
 			end
-			
+			% update our logic depending on if we are in or out of fixation window
+			me.fixTotal = (me.currentSample.time - me.fixInitStartTime) / 1e6;
 			if any(window) % inside fixation window
 				if me.fixN == 0
 					me.fixN = 1;
@@ -763,7 +761,7 @@ classdef tobiiManager < optickaCore
 				else
 					searching = false;
 				end
-				me.isFix = false;
+				me.isFix = false; me.fixLength = 0; me.fixStartTime = 0;
 			end
 		end
 		
@@ -1125,6 +1123,7 @@ classdef tobiiManager < optickaCore
 				if useS2
 					me.closeSecondScreen = false;
 					initialise(me, s, s2); %initialise tobii with our screen
+					s2.open();
 				else
 					initialise(me, s); %initialise tobii with our screen
 				end
@@ -1135,16 +1134,16 @@ classdef tobiiManager < optickaCore
 				% set up the size and position of the stimulus
 				o = dotsStimulus('size',me.fixation.radius(1)*2,'speed',2,'mask',true,'density',50); %test stimulus
 				if length(me.fixation.radius) == 1
-					f = discStimulus('size',me.fixation.radius(1)*2);
+					f = discStimulus('size',me.fixation.radius(1)*2,'colour',[0 0 0],'alpha',0.25);
 				else
-					f = barStimulus('barWidth',me.fixation.radius(1),'barHeight',me.fixation.radius(2));
+					f = barStimulus('barWidth',me.fixation.radius(1)*2,'barHeight',me.fixation.radius(2)*2,...
+						'colour',[0 0 0],'alpha',0.25);
 				end
 				setup(o,s); %setup our stimulus with open screen
 				setup(f,s); %setup our stimulus with open screen
-				o.sizeOut = me.fixation.radius(1)*2;
 				o.xPositionOut = me.fixation.X;
 				o.yPositionOut = me.fixation.Y;
-				f.colourOut = [0.45 0.45 0.45 1];
+				f.alpha
 				f.xPositionOut = me.fixation.X;
 				f.xPositionOut = me.fixation.X;
 				
@@ -1170,15 +1169,16 @@ classdef tobiiManager < optickaCore
 				startRecording(me);
 				WaitSecs('YieldSecs',1);
 				for i = 1 : s.screenVals.fps
-					draw(o);
+					draw(o);draw(f);
 					drawBackground(s);
+					drawPhotoDiodeSquare(s,[0 0 0 1]);
 					Screen('DrawText',s.win,['Warm up frame: ' num2str(i)],65,10);
 					finishDrawing(s);
 					animate(o);
 					getSample(me); isFixated(me); resetFixation(me);
 					flip(s);
 				end
-				s.drawPhotoDiodeSquare([0 0 0 1]);
+				drawPhotoDiodeSquare(s,[0 0 0 1]);
 				flip(s);
 				if useS2;flip(s2);end
 				ListenChar(-1);
@@ -1195,8 +1195,7 @@ classdef tobiiManager < optickaCore
 					trackerMessage(me,'STARTVBL',vbl);
 					while vbl < tstart + 6
 						Screen('FillRect',s.win,[0.7 0.7 0.7 0.5],exc); Screen('DrawText',s.win,'Exclusion Zone',exc(1),exc(2),[0.8 0.8 0.8]);
-						draw(f);
-						draw(o);
+						draw(o); draw(f);
 						drawGrid(s);
 						drawCross(s,0.5,[1 1 0],me.fixation.X,me.fixation.Y);
 						drawPhotoDiodeSquare(s,[1 1 1 1]);
@@ -1204,10 +1203,10 @@ classdef tobiiManager < optickaCore
 						getSample(me); isFixated(me);
 						
 						if ~isempty(me.currentSample)
-							txt = sprintf('Q to finish. X: %3.1f / %2.2f | Y: %3.1f / %2.2f | # = %2i %s %s | RADIUS = %s | FIXATION = %3i | EXC = %i | INIT FAIL = %i',...
+							txt = sprintf('Q to finish. X: %3.1f / %2.2f | Y: %3.1f / %2.2f | # = %2i %s %s | RADIUS = %s | TIME = %.2f | FIXATION = %.2f | EXC = %i | INIT FAIL = %i',...
 								me.currentSample.gx, me.x, me.currentSample.gy, me.y, me.smoothing.nSamples,...
 								me.smoothing.method, me.smoothing.eyes, sprintf('%1.1f ',me.fixation.radius), ...
-								me.fixLength,me.isExclusion,me.isInitFail);
+								me.fixTotal,me.fixLength,me.isExclusion,me.isInitFail);
 							Screen('DrawText', s.win, txt, 10, 10,[1 1 1]);
 							drawEyePosition(me,true);
 							%psn{trialn} = me.tobii.buffer.peekN('positioning',1);
@@ -1220,7 +1219,7 @@ classdef tobiiManager < optickaCore
 						finishDrawing(s);
 						animate(o);
 						
-						vbl = Screen('Flip', s.win, vbl + s.screenVals.halfifi);
+						vbl(end+1) = Screen('Flip', s.win, vbl(end) + s.screenVals.halfifi);
 						if trialtick==1; me.tobii.sendMessage('SYNC = 255', vbl);end
 						if useS2; flip(s2,[],[],2); end
 						[keyDown, ~, keyCode] = KbCheck(-1);
@@ -1245,23 +1244,21 @@ classdef tobiiManager < optickaCore
 						resetFixation(me);
 						me.fixation.X = randi([-7 7]);
 						me.fixation.Y = randi([-7 7]);
-						if length(me.fixation.radius) == 2
-							me.fixation.radius = [randi([1 3]) randi([1 3])];
-						else
+						if length(me.fixation.radius) == 1
 							me.fixation.radius = randi([1 3]);
+							o.sizeOut = me.fixation.radius * 2;
+							f.sizeOut = me.fixation.radius * 2;
+						else
+							me.fixation.radius = [randi([1 3]) randi([1 3])];
+							o.sizeOut = mean(me.fixation.radius) * 2;
+							f.barWidthOut = me.fixation.radius(1) * 2;
+							f.barHeightOut = me.fixation.radius(2) * 2;
 						end
-						o.sizeOut = me.fixation.radius(1) * 2;
 						o.xPositionOut = me.fixation.X;
 						o.yPositionOut = me.fixation.Y;
-						if length(me.fixation.radius) == 1
-							f.sizeOut = me.fixation.radius(1) * 2;
-						else
-							f.barWidth = me.fixation.radius(1);
-							f.barHeight = me.fixation.radius(2);
-						end
 						f.xPositionOut = me.fixation.X;
 						f.yPositionOut = me.fixation.Y;
-						update(o);
+						update(o);update(f);
 						WaitSecs(0.3);
 						trialn = trialn + 1;
 					else
@@ -1362,12 +1359,12 @@ classdef tobiiManager < optickaCore
 			end
 			if me.isFix
 				if me.fixLength > me.fixation.fixTime
-					drawSpot(me.operatorScreen,0.25,[0 1 0.25 0.75],me.x,me.y);
+					drawSpot(me.operatorScreen,0.3,[0 1 0.25 0.75],me.x,me.y);
 				else
-					drawSpot(me.operatorScreen,0.25,[0.75 0.25 0.75 0.75],me.x,me.y);
+					drawSpot(me.operatorScreen,0.3,[0.75 0.25 0.75 0.75],me.x,me.y);
 				end
 			else
-				drawSpot(me.operatorScreen,0.25,[0.7 0.5 0 0.75],me.x,me.y);
+				drawSpot(me.operatorScreen,0.3,[0.7 0.5 0 0.75],me.x,me.y);
 			end
 			
 		end
@@ -1379,9 +1376,13 @@ classdef tobiiManager < optickaCore
 		function trackerDrawEyePosition(me)
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
 			if me.isFix
-				drawSpot(me.operatorScreen,0.25,[0 1 0.25 0.75],me.x,me.y)
+				if me.fixLength > me.fixation.fixTime
+					drawSpot(me.operatorScreen,0.3,[0 1 0.25 0.75],me.x,me.y);
+				else
+					drawSpot(me.operatorScreen,0.3,[0.75 0.25 0.75 0.75],me.x,me.y);
+				end
 			else
-				drawSpot(me.operatorScreen,0.25,[0.7 0.5 0 0.75],me.x,me.y);
+				drawSpot(me.operatorScreen,0.3,[0.7 0.5 0 0.75],me.x,me.y);
 			end
 			
 		end
