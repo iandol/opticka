@@ -11,7 +11,7 @@ classdef spotStimulus < baseStimulus
 		%> colour for flash, empty to inherit from screen background with 0 alpha
 		flashColour = []
 		%> time to flash on and off in seconds
-		flashTime = [0.5 0.5]
+		flashTime = [0.25 0.25]
 		%> is the ON flash the first flash we see?
 		flashOn = true
 		%> contrast scales from foreground to screen background colour
@@ -34,6 +34,8 @@ classdef spotStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> current flash state
+		flashState
 		%> internal counter
 		flashCounter = 1
 		%> the OFF colour of the flash, usually this is set to the screen background
@@ -45,7 +47,7 @@ classdef spotStimulus < baseStimulus
 		flashColourOutTemp = [1 1 1]
 		stopLoop = false
 		allowedProperties='type|flashTime|flashOn|flashColour|contrast'
-		ignoreProperties = 'flashSwitch|flashOn';
+		ignoreProperties = 'flashSwitch';
 	end
 	
 	%=======================================================================
@@ -181,12 +183,11 @@ classdef spotStimulus < baseStimulus
 						me.flashCounter=me.flashCounter+1;
 					else
 						me.flashCounter = 1;
-						me.flashOnOut = ~me.flashOnOut;
-						if me.flashOnOut == true
+						me.flashState = ~me.flashState;
+						if me.flashState == true
 							me.currentColour = me.flashFG;
 						else
 							me.currentColour = me.flashBG;
-							%fprintf('Current: %s | %s\n',num2str(me.colourOut), num2str(me.flashOnOut));
 						end
 					end
 				end
@@ -210,7 +211,6 @@ classdef spotStimulus < baseStimulus
 			me.flashFG = [];
 			me.flashBG = [];
 			me.flashCounter = [];
-			delete(me.ln); me.ln = [];
 		end
 		
 		% ===================================================================
@@ -218,18 +218,12 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function flashSwitch = get.flashSwitch(me)
-			if isempty(me.findprop('flashOnOut'))
-				trigger = me.flashOn;
-			else
-				trigger = me.flashOnOut;
-			end
-			if trigger
+			if me.flashState
 				flashSwitch = round(me.flashTimeOut(1) / me.sM.screenVals.ifi);
 			else
 				flashSwitch = round(me.flashTimeOut(2) / me.sM.screenVals.ifi);
 			end
 		end
-		
 		
 	end %---END PUBLIC METHODS---%
 	
@@ -358,7 +352,9 @@ classdef spotStimulus < baseStimulus
 			if me.inSetup || me.stopLoop; return; end
 			me.stopLoop = true;
 			me.colourOut = [me.mix(me.colourOutTemp(1:3)) me.alphaOut];
-			me.flashColourOut = [me.mix(me.flashColourOutTemp(1:3)) me.alphaOut];
+			if ~isempty(me.flashColourOut)
+				me.flashColourOut = [me.mix(me.flashColourOutTemp(1:3)) me.alphaOut];
+			end
 			me.stopLoop = false;
 			me.setupFlash();
 		end
@@ -368,6 +364,7 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function setupFlash(me)
+			me.flashState = me.flashOn;
 			me.flashFG = me.colourOut;
 			me.flashCounter = 1;
 			if me.doFlash
@@ -377,7 +374,7 @@ classdef spotStimulus < baseStimulus
 					me.flashBG = [me.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
 				end
 			end
-			if me.flashOnOut == true
+			if me.flashState
 				me.currentColour = me.flashFG;
 			else
 				me.currentColour = me.flashBG;

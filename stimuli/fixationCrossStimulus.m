@@ -10,7 +10,7 @@ classdef fixationCrossStimulus < baseStimulus
 		%> type can be "simple" or "flash"
 		type = 'simple'
 		%> time to flash on and off in seconds
-		flashTime = [0.5 0.5]
+		flashTime = [0.25 0.25]
 		%> is the ON flash the first flash we see?
 		flashOn = true
 		%> contrast is realy a multiplier to the stimulus colour, not
@@ -22,7 +22,7 @@ classdef fixationCrossStimulus < baseStimulus
 		colour2 = [0 0 0 1]
 		%> width of the cross lines in degrees
 		lineWidth = 0.075
-		%> ahow background disk
+		%> show background disk
 		showDisk = true
 	end
 	
@@ -42,6 +42,8 @@ classdef fixationCrossStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> current flash state
+		flashState
 		%> internal counter
 		flashCounter = 1
 		%> the OFF colour of the flash, usually this is set to the screen background
@@ -52,12 +54,7 @@ classdef fixationCrossStimulus < baseStimulus
 		colourOutTemp = [1 1 1]
 		stopLoop = false
 		allowedProperties='showDisk|type|flashTime|flashOn|flashColour|contrast|colour2|lineWidth'
-		ignoreProperties = 'flashSwitch|FlashOn';
-	end
-	
-	events
-		%> triggered when changing colour, so we can change contrast+alpha 
-		changeColour
+		ignoreProperties = 'flashSwitch';
 	end
 	
 	%=======================================================================
@@ -94,11 +91,8 @@ classdef fixationCrossStimulus < baseStimulus
 			
 			reset(me);
 			me.inSetup = true;
-			if isempty(me.isVisible)
-				me.show;
-            end
+			if isempty(me.isVisible); me.show; end
 			
-			me.sM = [];
 			me.sM = sM;
 			me.ppd=sM.ppd;
 			
@@ -134,6 +128,7 @@ classdef fixationCrossStimulus < baseStimulus
 			
 			me.inSetup = false;
 			
+			computeColour(me);
 			computePosition(me);
 			setAnimationDelta(me);
 		end
@@ -146,11 +141,12 @@ classdef fixationCrossStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
+			me.colourOutTemp = [];
+			me.stopLoop = false;
+			me.inSetup = false;
 			computePosition(me);
 			setAnimationDelta(me);
-			if me.doFlash
-				me.resetFlash;
-			end
+			if me.doFlash; me.setupFlash; end
 		end
 		
 		% ===================================================================
@@ -166,13 +162,11 @@ classdef fixationCrossStimulus < baseStimulus
 					Screen('FillRect', me.sM.win, [me.colour2Out(1:3) 1], CenterRectOnPointd([0 0 me.sizeOut me.lineWidthOut], me.xOut,me.yOut));
 					Screen('FillRect', me.sM.win, [me.colour2Out(1:3) 1], CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xOut,me.yOut));
 					Screen('gluDisk', me.sM.win, [me.colourOut(1:3) 1], me.xOut, me.yOut, me.lineWidthOut);
-					%Screen('gluDisk',me.sM.win,me.colourOut,me.xOut,me.yOut,me.sizeOut/2);
 				else
 					if me.showDisk;Screen('gluDisk', me.sM.win, me.currentColour, me.xOut,me.yOut,me.sizeOut/2);end
-					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.sizeOut dotSize], me.xOut,me.yOut));
-					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 dotSize me.sizeOut], me.xOut,me.yOut));
-					Screen('gluDisk', me.sM.win, colour, x(p), y(p), me.lineWidthOut);
-					%Screen('gluDisk',me.sM.win,me.currentColour,me.xOut,me.yOut,me.sizeOut/2);
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.sizeOut me.lineWidthOut], me.xOut,me.yOut));
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xOut,me.yOut));
+					Screen('gluDisk', me.sM.win, me.currentColour, me.xOut, me.yOut, me.lineWidthOut);
 				end
 			end
 			me.tick = me.tick + 1;
@@ -202,12 +196,11 @@ classdef fixationCrossStimulus < baseStimulus
 						me.flashCounter=me.flashCounter+1;
 					else
 						me.flashCounter = 1;
-						me.flashOnOut = ~me.flashOnOut;
-						if me.flashOnOut == true
+						me.flashState = ~me.flashState;
+						if me.flashState == true
 							me.currentColour = me.flashFG;
 						else
 							me.currentColour = me.flashBG;
-							%fprintf('Current: %s | %s\n',num2str(me.colourOut), num2str(me.flashOnOut));
 						end
 					end
 				end
@@ -231,12 +224,7 @@ classdef fixationCrossStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function flashSwitch = get.flashSwitch(me)
-			if isempty(me.findprop('flashOnOut'))
-				trigger = me.flashOn;
-			else
-				trigger = me.flashOnOut;
-			end
-			if trigger
+			if me.flashState
 				flashSwitch = round(me.flashTimeOut(1) / me.sM.screenVals.ifi);
 			else
 				flashSwitch = round(me.flashTimeOut(2) / me.sM.screenVals.ifi);
@@ -290,12 +278,17 @@ classdef fixationCrossStimulus < baseStimulus
 					value = [value(1:3) alpha];
 				case 1
 					value = [value value value alpha];
-            end
-			me.colourOutTemp = value;
+			end
+			if isempty(me.colourOutTemp);me.colourOutTemp = value;end
 			me.colourOut = value;
 			me.isInSetColour = false;
-			if ~isempty(me.findprop('contrastOut')) && me.contrastOut < 1 && me.stopLoop == false
-				notify(me,'changeColour');
+			if isempty(me.findprop('contrastOut'))
+				contrast = me.contrast; %#ok<*PROPLC>
+			else
+				contrast = me.contrastOut;
+			end
+			if ~me.inSetup && ~me.stopLoop && contrast < 1
+				computeColour(me);
 			end
 		end
 		
@@ -305,31 +298,15 @@ classdef fixationCrossStimulus < baseStimulus
 		% ===================================================================
 		function set_colour2Out(me, value)
 			me.isInSetColour = true;
-			if length(value)==4 
-				alpha = value(4);
-			elseif isempty(me.findprop('alphaOut'))
-				alpha = me.alpha;
-			else
-				alpha = me.alphaOut;
-			end
+			alpha = 1;
 			switch length(value)
-				case 4
-					if isempty(me.findprop('alphaOut'))
-						me.alpha = alpha;
-					else
-						me.alphaOut = alpha;
-					end
-				case 3
+				case {3,4}
 					value = [value(1:3) alpha];
 				case 1
 					value = [value value value alpha];
 			end
-			me.colourOutTemp = value;
 			me.colour2Out = value;
 			me.isInSetColour = false;
-			if ~isempty(me.findprop('contrastOut')) && me.contrastOut < 1 && me.stopLoop == false
-				notify(me,'changeColour');
-			end
 		end
 		
 		% ===================================================================
@@ -354,7 +331,9 @@ classdef fixationCrossStimulus < baseStimulus
 		function set_contrastOut(me, value)
 			if iscell(value); value = value{1}; end
 			me.contrastOut = value;
-			if me.contrastOut < 1; notify(me,'changeColour'); end
+			if ~me.inSetup && ~me.stopLoop && value < 1
+				computeColour(me);
+			end
 		end
 		
 		% ===================================================================
@@ -363,12 +342,11 @@ classdef fixationCrossStimulus < baseStimulus
 		%> many more times), than an event which is only called on update
 		% ===================================================================
 		function computeColour(me,~,~)
-			if ~isempty(me.findprop('contrastOut')) && ~isempty(me.findprop('colourOut'))
-				me.stopLoop = true;
-				me.colourOut = [(me.colourOutTemp(1:3) .* me.contrastOut) me.alpha];
-				me.stopLoop = false;
-				if me.verbose; fprintf('Contrast: %g | Colour out is: %g %g %g \n',me.contrastOut,me.colourOut(1),me.colourOut(2),me.colourOut(3)); end
-			end
+			if me.inSetup || me.stopLoop; return; end
+			me.stopLoop = true;
+			me.colourOut = [me.mix(me.colourOutTemp(1:3)) me.alphaOut];
+			me.stopLoop = false;
+			me.setupFlash();
 		end
 		
 		% ===================================================================
@@ -376,9 +354,17 @@ classdef fixationCrossStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function setupFlash(me)
+			me.flashState = me.flashOn;
 			me.flashFG = me.colourOut;
 			me.flashCounter = 1;
-			if me.flashOnOut == true
+			if me.doFlash
+				if ~isempty(me.flashColourOut)
+					me.flashBG = [me.flashColourOut(1:3) me.alphaOut];
+				else
+					me.flashBG = [me.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
+				end
+			end
+			if me.flashState == true
 				me.currentColour = me.flashFG;
 			else
 				me.currentColour = me.flashBG;
@@ -386,18 +372,11 @@ classdef fixationCrossStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief resetFlash
+		%> @brief linear interpolation between two arrays
 		%>
 		% ===================================================================
-		function resetFlash(me)
-			me.flashFG = me.colourOut;
-			me.flashOnOut = me.flashOn;
-			if me.flashOnOut == true
-				me.currentColour = me.flashFG;
-			else
-				me.currentColour = me.flashBG;
-			end
-			me.flashCounter = 1;
+		function out = mix(me,c)
+			out = me.sM.backgroundColour(1:3) * (1 - me.contrastOut) + c(1:3) * me.contrastOut;
 		end
 	end
 end
