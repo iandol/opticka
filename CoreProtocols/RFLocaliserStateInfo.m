@@ -22,7 +22,7 @@
 
 %------------General Settings-----------------
 tS.useTask              = false; %==use stimulusSequence (randomised variable task object)
-tS.rewardTime           = 150; %==TTL time in milliseconds
+tS.rewardTime           = 300; %==TTL time in milliseconds
 tS.rewardPin            = 2; %==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition	= false; %==record eye position within PTB, **in addition** to the EDF?
@@ -140,7 +140,8 @@ me.stimuli.controlTable(n).stimuli = [10];
 me.stimuli.controlTable(n).limits = [0.04 0.51];
 
 %------this allows us to enable subsets from our stimulus list
-me.stimuli.stimulusSets = {[11], [2 11], [3 11], [4 11], [5 11], [6 11], [7 11], [8 11], [9 11], [10 11]};
+me.stimuli.stimulusSets = {[11], [2 11], [3 11], [4 11], [5 11],...
+	[6 11], [7 11], [8 11], [9 11], [10 11]};
 me.stimuli.setChoice = 1;
 showSet(me.stimuli);
 

@@ -7,12 +7,14 @@ classdef discStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> type can be "simple" or "flash"
 		type = 'simple'
+		%> colour for flash, empty to inherit from screen background with 0 alpha
+		flashColour = []
 		%> time to flash on and off in seconds
 		flashTime = [0.5 0.5]
 		%> is the ON flash the first flash we see?
 		flashOn = true
-		%> colour for flash, empty to inherit from screen background with 0 alpha
-		flashOffColour = []
+		%> contrast scales from foreground to screen background colour
+		contrast = 1
 		%> cosine smoothing sigma in pixels for mask
 		sigma = 11.0
 		%> use colour or alpha [default] channel for smoothing?
@@ -45,10 +47,11 @@ classdef discStimulus < baseStimulus
 		flashFG = [1 1 1]
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
+		flashColourOutTemp = [1 1 1]
 		stopLoop = false
 		scale = 1
-		allowedProperties='type|flashTime|flashOn|flashOffColour|sigma|useAlpha|smoothMethod'
-		ignoreProperties = 'type|name|flashSwitch|FlashOn';
+		allowedProperties='type|flashTime|flashOn|flashColour|contrast|sigma|useAlpha|smoothMethod'
+		ignoreProperties = 'flashSwitch|FlashOn';
 	end
 	
 	%=======================================================================
@@ -70,7 +73,7 @@ classdef discStimulus < baseStimulus
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
-			me.isRect = true;
+			me.isRect = true; %uses a rect for drawing?
 			
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor','Stimulus initialisation complete');
@@ -105,7 +108,9 @@ classdef discStimulus < baseStimulus
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
+					if strcmp(fn{j},'flashColour');p.SetMethod = @set_flashColourOut;end
 					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
+					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
 				end
 				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
@@ -130,8 +135,8 @@ classdef discStimulus < baseStimulus
 						me.useAlpha, me.smoothMethod);
 			
 			if me.doFlash
-				if ~isempty(me.flashOffColour)
-					me.flashBG = [me.flashOffColour(1:3) 0];
+				if ~isempty(me.flashColourOut)
+					me.flashBG = [me.flashColourOut(1:3) me.alphaOut];
 				else
 					me.flashBG = [me.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
 				end
@@ -153,9 +158,13 @@ classdef discStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
+			me.colourOutTemp = [];
+			me.flashColourOutTemp = [];
+			me.stopLoop = false;
+			me.inSetup = false;
 			computePosition(me);
 			setRect(me);
-			if me.doFlash; me.resetFlash; end
+			if me.doFlash; me.setupFlash; end
 			if me.doAnimator; me.animator.reset(); end
 		end
 		
@@ -229,6 +238,13 @@ classdef discStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
+			me.stopLoop = false;
+			me.inSetup = false;
+			me.colourOutTemp = [];
+			me.flashColourOutTemp = [];
+			me.flashFG = [];
+			me.flashBG = [];
+			me.flashCounter = [];
 			if isprop(me,'texture'); me.texture = []; end
 			if isprop(me,'discSize'); me.discSize = []; end
 			if isprop(me,'radius'); me.radius = []; end
@@ -326,9 +342,49 @@ classdef discStimulus < baseStimulus
 				case 1
 					value = [value value value alpha];
 			end
-			me.colourOutTemp = value;
+			if isempty(me.colourOutTemp);me.colourOutTemp = value;end
 			me.colourOut = value;
 			me.isInSetColour = false;
+			if isempty(me.findprop('contrastOut'))
+				contrast = me.contrast; %#ok<*PROPLC>
+			else
+				contrast = me.contrastOut;
+			end
+			if ~me.inSetup && ~me.stopLoop && contrast < 1
+				computeColour(me);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief colourOut SET method
+		%>
+		% ===================================================================
+		function set_flashColourOut(me, value)
+			me.isInSetColour = true;
+			if length(value)==4 
+				alpha = value(4);
+			elseif isempty(me.findprop('alphaOut'))
+				alpha = me.alpha;
+			else
+				alpha = me.alphaOut;
+			end
+			switch length(value)
+				case 3
+					value = [value(1:3) alpha];
+				case 1
+					value = [value value value alpha];
+			end
+			if isempty(me.flashColourOutTemp);me.flashColourOutTemp = value;end
+			me.flashColourOut = value;
+			me.isInSetColour = false;
+			if isempty(me.findprop('contrastOut'))
+				contrast = me.contrast; %#ok<*PROPLC>
+			else
+				contrast = me.contrastOut;
+			end
+			if ~isempty(value) && ~me.inSetup && ~me.stopLoop && contrast < 1
+				computeColour(me);
+			end
 		end
 		
 		% ===================================================================
@@ -336,14 +392,48 @@ classdef discStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_alphaOut(me, value)
-			if ~me.isInSetColour
-				me.alphaOut = value;
-				if isempty(me.findprop('colourOut'))
-					me.colour = [me.colour(1:3) me.alphaOut];
-				else
-					me.colourOut = [me.colourOut(1:3) me.alphaOut];
+			if me.isInSetColour; return; end
+			me.alphaOut = value;
+			if isempty(me.findprop('colourOut'))
+				me.colour = [me.colour(1:3) me.alphaOut];
+			else
+				me.colourOut = [me.colourOut(1:3) me.alphaOut];
+			end
+			if isempty(me.findprop('flashColourOut'))
+				if ~isempty(me.flashColour)
+					me.flashColour = [me.flashColour(1:3) me.alphaOut];
+				end
+			else
+				if ~isempty(me.flashColourOut)
+					me.flashColourOut = [me.flashColourOut(1:3) me.alphaOut];
 				end
 			end
+		end
+		
+		% ===================================================================
+		%> @brief contrastOut SET method
+		%>
+		% ===================================================================
+		function set_contrastOut(me, value)
+			if iscell(value); value = value{1}; end
+			me.contrastOut = value;
+			if ~me.inSetup && ~me.stopLoop && value < 1
+				computeColour(me);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief computeColour triggered event
+		%> Use an event to recalculate as get method is slower (called
+		%> many more times), than an event which is only called on update
+		% ===================================================================
+		function computeColour(me,~,~)
+			if me.inSetup || me.stopLoop; return; end
+			me.stopLoop = true;
+			me.colourOut = [me.mix(me.colourOutTemp(1:3)) me.alphaOut];
+			me.flashColourOut = [me.mix(me.flashColourOutTemp(1:3)) me.alphaOut];
+			me.stopLoop = false;
+			me.setupFlash();
 		end
 		
 		% ===================================================================
@@ -361,18 +451,12 @@ classdef discStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief resetFlash
+		%> @brief linear interpolation between two arrays
 		%>
 		% ===================================================================
-		function resetFlash(me)
-			me.flashFG = me.colourOut;
-			me.flashOnOut = me.flashOn;
-			if me.flashOnOut == true
-				me.currentColour = me.flashFG;
-			else
-				me.currentColour = me.flashBG;
-			end
-			me.flashCounter = 1;
+		function out = mix(me,c)
+			out = me.sM.backgroundColour(1:3) * (1 - me.contrastOut) + c(1:3) * me.contrastOut;
 		end
+		
 	end
 end

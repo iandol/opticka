@@ -17,7 +17,7 @@ classdef fixationCrossStimulus < baseStimulus
 		%> formally defined contrast in this case
 		contrast = 1
 		%> colour for flash, empty to inherit from screen background with 0 alpha
-		flashOffColour = []
+		flashColour = []
 		%> second colour
 		colour2 = [0 0 0 1]
 		%> width of the cross lines in degrees
@@ -51,7 +51,7 @@ classdef fixationCrossStimulus < baseStimulus
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
 		stopLoop = false
-		allowedProperties='showDisk|type|flashTime|flashOn|flashOffColour|contrast|colour2|lineWidth'
+		allowedProperties='showDisk|type|flashTime|flashOn|flashColour|contrast|colour2|lineWidth'
 		ignoreProperties = 'flashSwitch|FlashOn';
 	end
 	
@@ -124,8 +124,8 @@ classdef fixationCrossStimulus < baseStimulus
 			doProperties(me);
 			
 			if me.doFlash
-				if ~isempty(me.flashOffColour)
-					me.flashBG = [me.flashOffColour(1:3) 0];
+				if ~isempty(me.flashColour)
+					me.flashBG = [me.flashColour(1:3) me.alphaOut];
 				else
 					me.flashBG = [me.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
 				end

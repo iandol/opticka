@@ -106,8 +106,8 @@ myStims{8}=barStimulus('type','checkerboard','sf',2,'barWidth',1,'barHeight',4,.
 
 %%
 % an edge-smoothed spot; spots can also flash if needed
-myStims{9}=discStimulus('type','flash','speed',2,'xPosition',4,...
-	'yPosition',4,'colour',[1 1 0],'size',2,'flashTime',[0.2 0.15],...
+myStims{9}=discStimulus('type','flash','speed',2,'xPosition',4,'sigma',40,...
+	'yPosition',4,'colour',[1 1 0],'flashColour',[0 0 1],'size',3,'flashTime',[0.2 0.15],...
 	'name','Flashing disc');
 
 %%
@@ -232,9 +232,12 @@ getRunLog(rExp);
 
 %%
 % You don't need to use opticka's stimuli via runExperiment(), you can
-% use them in your own experiments, lets have a quick look here.
+% use them in your own experiments, lets have a quick look here, set
+% runThis to true.
 % We'll use the movie stimulus, and run it on its own, using its methods
 % to draw() and animate() in a standard PTB loop
+runThis = false;
+if ~runThis; return; end
 WaitSecs('YieldSecs',2);
 reset(myStims); % reset them back to their defaults
 myMovie = myStims{11}; % the movie stimulus from above

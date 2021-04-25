@@ -311,7 +311,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			global mouseTick
 			me.mouseValid = false;
 			if me.tick > mouseTick
-				if isa(me.sM,'screenManager') && me.sM.isOpen
+				if ~isempty(me.sM) && isa(me.sM,'screenManager') && me.sM.isOpen
 					[me.mouseX,me.mouseY] = GetMouse(me.sM.win);
 					if me.mouseX <= me.sM.screenVals.width && me.mouseY <= me.sM.screenVals.height
 						me.mouseValid = true;

@@ -8,15 +8,14 @@ classdef spotStimulus < baseStimulus
 	properties %--------------------PUBLIC PROPERTIES----------%
 		%> type can be "simple" or "flash"
 		type = 'simple'
+		%> colour for flash, empty to inherit from screen background with 0 alpha
+		flashColour = []
 		%> time to flash on and off in seconds
 		flashTime = [0.5 0.5]
 		%> is the ON flash the first flash we see?
 		flashOn = true
-		%> contrast is realy a multiplier to the stimulus colour, not
-		%> formally defined contrast in this case
+		%> contrast scales from foreground to screen background colour
 		contrast = 1
-		%> colour for flash, empty to inherit from screen background with 0 alpha
-		flashOffColour = []
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -43,14 +42,10 @@ classdef spotStimulus < baseStimulus
 		flashFG = [1 1 1]
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
+		flashColourOutTemp = [1 1 1]
 		stopLoop = false
-		allowedProperties='type|flashTime|flashOn|flashOffColour|contrast'
-		ignoreProperties = 'flashSwitch|FlashOn';
-	end
-	
-	events
-		%> triggered when changing colour, so we can change contrast+alpha 
-		changeColour
+		allowedProperties='type|flashTime|flashOn|flashColour|contrast'
+		ignoreProperties = 'flashSwitch|flashOn';
 	end
 	
 	%=======================================================================
@@ -68,11 +63,11 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function me = spotStimulus(varargin)
 			args = optickaCore.addDefaults(varargin,...
-				struct('name','spot','colour',[1 1 0 1]));
+				struct('name','Spot','colour',[1 1 0 1]));
 			me=me@baseStimulus(args); %we call the superclass constructor first
 			me.parseArgs(args, me.allowedProperties);
 			
-			me.isRect = false; %uses a rect for drawing
+			me.isRect = false; %uses a rect for drawing?
 
 			me.ignoreProperties = ['^(' me.ignorePropertiesBase '|' me.ignoreProperties ')$'];
 			me.salutation('constructor','Stimulus initialisation complete');
@@ -87,13 +82,8 @@ classdef spotStimulus < baseStimulus
 			
 			reset(me);
 			me.inSetup = true;
-			if isempty(me.isVisible)
-				me.show;
-			end
+			if isempty(me.isVisible); me.show; end
 			
-			addlistener(me,'changeColour',@me.computeColour);
-			
-			me.sM = [];
 			me.sM = sM;
 			me.ppd=sM.ppd;
 			
@@ -106,6 +96,7 @@ classdef spotStimulus < baseStimulus
 					if strcmp(fn{j},'xPosition');p.SetMethod = @set_xPositionOut;end
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
+					if strcmp(fn{j},'flashColour');p.SetMethod = @set_flashColourOut;end
 					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
 					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
 				end
@@ -117,8 +108,8 @@ classdef spotStimulus < baseStimulus
 			doProperties(me);
 			
 			if me.doFlash
-				if ~isempty(me.flashOffColour)
-					me.flashBG = [me.flashOffColour(1:3) 0];
+				if ~isempty(me.flashColourOut)
+					me.flashBG = [me.flashColourOut(1:3) me.alphaOut];
 				else
 					me.flashBG = [me.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
 				end
@@ -127,6 +118,7 @@ classdef spotStimulus < baseStimulus
 			
 			me.inSetup = false;
 			
+			computeColour(me);
 			computePosition(me);
 			setAnimationDelta(me);
 		end
@@ -139,11 +131,13 @@ classdef spotStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
+			me.colourOutTemp = [];
+			me.flashColourOutTemp = [];
+			me.stopLoop = false;
+			me.inSetup = false;
 			computePosition(me);
 			setAnimationDelta(me);
-			if me.doFlash
-				me.resetFlash;
-			end
+			if me.doFlash; me.setupFlash; end
 		end
 		
 		% ===================================================================
@@ -209,6 +203,14 @@ classdef spotStimulus < baseStimulus
 			resetTicks(me);
 			me.texture=[];
 			me.removeTmpProperties;
+			me.stopLoop = false;
+			me.inSetup = false;
+			me.colourOutTemp = [];
+			me.flashColourOutTemp = [];
+			me.flashFG = [];
+			me.flashBG = [];
+			me.flashCounter = [];
+			delete(me.ln); me.ln = [];
 		end
 		
 		% ===================================================================
@@ -267,12 +269,48 @@ classdef spotStimulus < baseStimulus
 				case 1
 					value = [value value value alpha];
 			end
-			
-			me.colourOutTemp = value;
+			if isempty(me.colourOutTemp);me.colourOutTemp = value;end
 			me.colourOut = value;
 			me.isInSetColour = false;
-			if ~isempty(me.findprop('contrastOut')) && me.contrastOut < 1 && me.stopLoop == false
-				notify(me,'changeColour');
+			if isempty(me.findprop('contrastOut'))
+				contrast = me.contrast; %#ok<*PROPLC>
+			else
+				contrast = me.contrastOut;
+			end
+			if ~me.inSetup && ~me.stopLoop && contrast < 1
+				computeColour(me);
+			end
+		end
+		
+		% ===================================================================
+		%> @brief colourOut SET method
+		%>
+		% ===================================================================
+		function set_flashColourOut(me, value)
+			me.isInSetColour = true;
+			if length(value)==4 
+				alpha = value(4);
+			elseif isempty(me.findprop('alphaOut'))
+				alpha = me.alpha;
+			else
+				alpha = me.alphaOut;
+			end
+			switch length(value)
+				case 3
+					value = [value(1:3) alpha];
+				case 1
+					value = [value value value alpha];
+			end
+			if isempty(me.flashColourOutTemp);me.flashColourOutTemp = value;end
+			me.flashColourOut = value;
+			me.isInSetColour = false;
+			if isempty(me.findprop('contrastOut'))
+				contrast = me.contrast; %#ok<*PROPLC>
+			else
+				contrast = me.contrastOut;
+			end
+			if ~me.inSetup && ~me.stopLoop && contrast < 1
+				computeColour(me);
 			end
 		end
 		
@@ -281,12 +319,20 @@ classdef spotStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_alphaOut(me, value)
-			if ~me.isInSetColour
-				me.alphaOut = value;
-				if isempty(me.findprop('colourOut'))
-					me.colour = [me.colour(1:3) me.alphaOut];
-				else
-					me.colourOut = [me.colourOut(1:3) me.alphaOut];
+			if me.isInSetColour; return; end
+			me.alphaOut = value;
+			if isempty(me.findprop('colourOut'))
+				me.colour = [me.colour(1:3) me.alphaOut];
+			else
+				me.colourOut = [me.colourOut(1:3) me.alphaOut];
+			end
+			if isempty(me.findprop('flashColourOut'))
+				if ~isempty(me.flashColour)
+					me.flashColour = [me.flashColour(1:3) me.alphaOut];
+				end
+			else
+				if ~isempty(me.flashColourOut)
+					me.flashColourOut = [me.flashColourOut(1:3) me.alphaOut];
 				end
 			end
 		end
@@ -298,7 +344,9 @@ classdef spotStimulus < baseStimulus
 		function set_contrastOut(me, value)
 			if iscell(value); value = value{1}; end
 			me.contrastOut = value;
-			if me.contrastOut < 1; notify(me,'changeColour'); end
+			if ~me.inSetup && ~me.stopLoop && value < 1
+				computeColour(me);
+			end
 		end
 		
 		% ===================================================================
@@ -307,12 +355,12 @@ classdef spotStimulus < baseStimulus
 		%> many more times), than an event which is only called on update
 		% ===================================================================
 		function computeColour(me,~,~)
-			if ~isempty(me.findprop('contrastOut')) && ~isempty(me.findprop('colourOut'))
-				me.stopLoop = true;
-				me.colourOut = [(me.colourOutTemp(1:3) .* me.contrastOut) me.alpha];
-				me.stopLoop = false;
-				if me.verbose; fprintf('Contrast: %g | Colour out is: %g %g %g \n',me.contrastOut,me.colourOut(1),me.colourOut(2),me.colourOut(3)); end
-			end
+			if me.inSetup || me.stopLoop; return; end
+			me.stopLoop = true;
+			me.colourOut = [me.mix(me.colourOutTemp(1:3)) me.alphaOut];
+			me.flashColourOut = [me.mix(me.flashColourOutTemp(1:3)) me.alphaOut];
+			me.stopLoop = false;
+			me.setupFlash();
 		end
 		
 		% ===================================================================
@@ -322,6 +370,13 @@ classdef spotStimulus < baseStimulus
 		function setupFlash(me)
 			me.flashFG = me.colourOut;
 			me.flashCounter = 1;
+			if me.doFlash
+				if ~isempty(me.flashColourOut)
+					me.flashBG = [me.flashColourOut(1:3) me.alphaOut];
+				else
+					me.flashBG = [me.sM.backgroundColour(1:3) 0]; %make sure alpha is 0
+				end
+			end
 			if me.flashOnOut == true
 				me.currentColour = me.flashFG;
 			else
@@ -330,18 +385,11 @@ classdef spotStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief resetFlash
+		%> @brief linear interpolation between two arrays
 		%>
 		% ===================================================================
-		function resetFlash(me)
-			me.flashFG = me.colourOut;
-			me.flashOnOut = me.flashOn;
-			if me.flashOnOut == true
-				me.currentColour = me.flashFG;
-			else
-				me.currentColour = me.flashBG;
-			end
-			me.flashCounter = 1;
+		function out = mix(me,c)
+			out = me.sM.backgroundColour(1:3) * (1 - me.contrastOut) + c(1:3) * me.contrastOut;
 		end
 	end
 end
