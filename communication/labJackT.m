@@ -48,6 +48,10 @@ classdef labJackT < handle
 		isOpen = false
 		%> is streaming?
 		isStreaming logical = false
+		%> send this value for the next sendStrobe
+		sendValue double = 0
+		%> last value sent
+		lastValue double = []
 		%> function list returned from loading LJM
 		functionList
 		%> firmware library version returned on first open
@@ -315,6 +319,20 @@ classdef labJackT < handle
 		% ===================================================================
 		function strobeServer(me, value)
 			if me.silentMode || isempty(me.handle); return; end
+			if ~exist('value','var'); value = me.sendValue; end
+			fprintf('SS Sending strobe: %i\n',value);
+			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_FLOAT32, value);
+		end
+		
+		% ===================================================================
+		%> @brief sends a value to RAMAddress, requires the Lua server to
+		%> be running, 0-255 control EIO, 256-271 controls CIO
+		%>	
+		% ===================================================================
+		function sendStrobe(me, value)
+			if me.silentMode || isempty(me.handle); return; end
+			if ~exist('value','var'); value = me.sendValue; end
+			fprintf('Sending strobe: %i\n',value);
 			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_FLOAT32, value);
 		end
 		
@@ -354,6 +372,8 @@ classdef labJackT < handle
 		% ===================================================================
 		function prepareStrobe(me,value)
 			if me.silentMode || isempty(me.handle); return; end
+			me.lastValue = me.sendValue;
+			me.sendValue = value;
 			cmd = zeros(64,1);
 			[err,~,~,~,~,~,~,cmd] = calllib(me.libName, 'LJM_AddressesToMBFB',...
 				64, [2501 61590 2501], [0 1 0], [1 1 1], [1 1 1], [value me.strobeTime*1000 0], 3, cmd);
@@ -581,6 +601,92 @@ classdef labJackT < handle
 		end
 		
 	end
+	
+	%=======================================================================
+	methods (Hidden = true)
+	%=======================================================================
+	
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function resetStrobe(obj,value)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function startRecording(obj,value)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function resumeRecording(obj,value)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function pauseRecording(obj,value)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function stopRecording(obj,value)
+
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function startFixation(obj)
+			sendStrobe(me,248);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function correct(obj)
+			sendStrobe(me,251);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function incorrect(obj)
+			sendStrobe(me,250);
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function breakFixation(obj)
+			sendStrobe(me,249);
+		end
+	end % END HIDDEN METHODS
 	
 	%=======================================================================
 	methods ( Static ) % STATIC METHODS

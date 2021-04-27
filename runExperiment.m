@@ -40,10 +40,10 @@ classdef runExperiment < optickaCore
 		useDisplayPP logical = false
 		%> use dataPixx for strobed digital I/O?
 		useDataPixx logical = false
-		%> use LabJack U3/U6 for strobed digital I/O?
-		useLabJackStrobe logical = false
 		%> use LabJack T4 for strobed digital I/O?
 		useLabJackTStrobe logical = false
+		%> use LabJack U3/U6 for strobed digital I/O?
+		useLabJackStrobe logical = false
 		%> use LabJack for reward TTL?
 		useLabJackReward logical = false
 		%> use Arduino for reward TTL?
@@ -56,8 +56,6 @@ classdef runExperiment < optickaCore
 		useEyeOccluder logical = false
 		%> use a dummy mode for the eyetrackers?
 		dummyMode logical = false
-		%> this lets the opticka UI leave commands to runExperiment
-		uiCommand char = ''
 		%> do we flip or not?
 		doFlip logical = true
 		%> log all frame times?
@@ -78,6 +76,8 @@ classdef runExperiment < optickaCore
 		subjectName char = 'Simulcra'
 		%> researcher name
 		researcherName char = 'Joanna Doe'
+		%> this lets the opticka UI leave commands to runExperiment
+		uiCommand char = ''
 	end
 	
 	properties (Transient = true)
@@ -104,7 +104,7 @@ classdef runExperiment < optickaCore
 		%just uses simple threshold reading
 		dPPMode char = 'plexon'
 		%> which port is the arduino on?
-		arduinoPort char = 'COM4'
+		arduinoPort char = '/dev/ttyACM0'
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
@@ -129,7 +129,7 @@ classdef runExperiment < optickaCore
 		%> Arduino control object
 		arduino 
 		%> state machine control cell array
-		stateInfo cell = {}
+		stateInfo cell		= {}
 		%> general computer info
 		computer
 		%> PTB info
@@ -149,14 +149,16 @@ classdef runExperiment < optickaCore
 		%> previous info populated during load of a saved object
 		previousInfo struct = struct()
 		%> check if runExperiment is running or not
-		isRunning logical = false
+		isRunning logical	= false
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
 		%> is it MOC run (false) or stateMachine runTask (true)?
-		isRunTask logical = true
+		isRunTask logical	= true
+		%> are we using stimulusSequeence or not?
+		isTask logical		= true
 		%> should we stop the task?
-		stopTask logical = false
+		stopTask logical	= false
 		%> properties allowed to be modified during construction
 		allowedProperties='stimuli|task|screen|visualDebug|useLabJack|useDataPixx|logFrames|debug|verbose|screenSettings|benchmark'
 	end
@@ -484,15 +486,24 @@ classdef runExperiment < optickaCore
 		%> @param me required class object
 		% ===================================================================
 		function runTask(me)
-			global rM %eyetracker calibration needs access for reward
-			global aM %audio manager we can use with eyetracker
-			
+			global rM %global reward manager we can share with eyetracker
+			global aM %global audio manager we can share with eyetracker
+			me.stateInfo = {};
+			%------initialise the rM global
 			if ~isa(rM,'arduinoManager') 
 				rM=arduinoManager();
 			end
-			if ~rM.isOpen
-				rM.open
+			if rM.isOpen
+				rM.close; rM.reset;
 			end
+			
+			%------initialise an audioManager for beeps,playing sounds etc.
+			if ~exist('aM','var') || isempty(aM) || ~isa(aM,'audioManager')
+				aM=audioManager;
+			end
+			aM.silentMode = false;
+			if ~aM.isSetup;	aM.setup; end
+			aM.beep(1000,0.1,0.1);
 			
 			if isempty(regexpi(me.comment, '^Protocol','once'))
 				me.comment = '';
@@ -512,93 +523,84 @@ classdef runExperiment < optickaCore
 			
 			%------a general structure to hold various parameters, 
 			% will be saved after the run; prefer structure over class 
-			% to keep it light. These defaults will be overwritten in StateFile.m
-			
-			tS = struct();
-			tS.name = 'generic'; %==name of this protocol
-			tS.useTask = false; %use stimulusSequence (randomised variable task object)
-			tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
-			tS.keyExclusionPattern = '^(fixate|stim)';
-			tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
-			tS.askForComments = false; %==little UI requestor asks for comments before/after run
-			tS.saveData = false; %==save behavioural and eye movement data?
-			tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
-			tS.useMagStim = false;
-			tS.rewardTime = 250; %==TTL time in milliseconds
-			tS.rewardPin = 2; %==Output pin, 2 by default with Arduino.
+			% to keep it light. These defaults may be overwritten by the StateFile.m
+			tS							= struct();
+			tS.name						= 'generic'; %==name of this protocol
+			tS.useTask					= false; %use stimulusSequence (randomised variable task object)
+			tS.checkKeysDuringStimulus	= false; %==allow keyboard control? Slight drop in performance
+			tS.keyExclusionPattern		= '^(fixate|stim)';
+			tS.recordEyePosition		= false; %==record eye position within PTB, **in addition** to the EDF?
+			tS.askForComments			= false; %==little UI requestor asks for comments before/after run
+			tS.saveData					= false; %==save behavioural and eye movement data?
+			tS.dummyMode				= true; %==use mouse as a dummy eyelink, good for testing away from the lab.
+			tS.useMagStim				= false;
+			tS.rewardTime				= 250; %==TTL time in milliseconds
+			tS.rewardPin				= 2; %==Output pin, 2 by default with Arduino.
 	
 			%------initialise time logs for this run
-			me.previousInfo.taskLog = me.taskLog;
-			me.runLog = timeLogger();
-			me.taskLog = timeLogger();
-			tL = me.taskLog; %short handle to log
-			tL.name = me.name;
+			me.previousInfo.taskLog		= me.taskLog;
+			me.runLog					= timeLogger();
+			me.taskLog					= timeLogger();
+			tL							= me.taskLog; %short handle to log
+			tL.name						= me.name;
 			
 			%-----behavioural record
-			me.behaviouralRecord = behaviouralRecord('name',me.name); %#ok<*CPROP>
-			bR = me.behaviouralRecord; %short handle
+			me.behaviouralRecord		= behaviouralRecord('name',me.name); %#ok<*CPROP>
+			bR							= me.behaviouralRecord; %short handle
 		
 			%------make a short handle to the screenManager
-			s = me.screen; 
-			me.stimuli.screen = s;
+			s							= me.screen; 
+			me.stimuli.screen			= s;
 			
 			%------initialise task
-			t = me.task;
+			t							= me.task;
 			initialise(t);
 			
 			%-----try to open eyeOccluder
 			if me.useEyeOccluder
 				if ~isfield(tS,'eO') || ~isa(tS.eO,'eyeOccluder')
-					tS.eO = eyeOccluder;
+					tS.eO				= eyeOccluder;
 				end
 				if tS.eO.isOpen == true
 					pause(0.1);
 					tS.eO.bothEyesOpen;
 				else
-					tS.eO = [];
-					tS=rmfield(tS,'eO');
+					tS.eO				= [];
+					tS					= rmfield(tS,'eO');
 				end
 			end
 			
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 			try %================This is our main TASK setup=====================
 			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				me.isRunning = true;
-				me.isRunTask = true;
+				me.isRunning			= true;
+				me.isRunTask			= true;
 				
 				%-----open the eyelink interface
 				if me.useEyeLink
-					me.eyeTracker = eyelinkManager();
+					me.eyeTracker		= eyelinkManager();
 				else
-					me.eyeTracker = tobiiManager();
+					me.eyeTracker		= tobiiManager();
 				end
 				
-				eL = me.eyeTracker;
-				eL.verbose = me.verbose;
-				eL.saveFile = [me.paths.savedData filesep me.subjectName '-' me.savePrefix '.edf'];
+				eL						= me.eyeTracker;
+				eL.verbose				= me.verbose;
+				eL.saveFile				= [me.paths.savedData filesep me.subjectName '-' me.savePrefix '.edf'];
 				if ~me.useEyeLink && ~me.useTobii
-					eL.isDummy = true;
+					eL.isDummy			= true;
 				else
-					eL.isDummy = me.dummyMode;
+					eL.isDummy			= me.dummyMode;
 				end
 				
 				if isfield(tS,'rewardTime')
-					bR.rewardTime = tS.rewardTime;
+					bR.rewardTime		= tS.rewardTime;
 				end
 				
 				%------open the PTB screen and setup stimuli
-				me.screenVals = s.open(me.debug,tL);
-				me.stimuli.verbose = me.verbose;
+				me.screenVals			= s.open(me.debug,tL);
+				me.stimuli.verbose		= me.verbose;
 				setup(me.stimuli); %run setup() for each stimulus
-				t.fps = s.screenVals.fps;
-				
-				%------initialise an audioManager for beeps,playing sounds etc.
-				if ~exist('aM','var') || isempty(aM) || ~isa(aM,'audioManager')
-					aM=audioManager;
-				end
-				aM.silentMode = false;
-				if ~aM.isSetup;	aM.setup; end
-				aM.beep(1000,0.1,0.1);
+				t.fps					= s.screenVals.fps;
 				
 				%-----set up the eyelink interface
 				if me.useEyeLink
@@ -608,18 +610,18 @@ classdef runExperiment < optickaCore
 				end
 				
 				%---------initialise and set up I/O
-				io = configureIO(me);
+				io						= configureIO(me);
 				
 				%-----initialise the state machine
-				me.stateMachine = stateMachine('verbose',me.verbose,'realTime',true,'timeDelta',1e-4,'name',me.name); 
-				sM = me.stateMachine;
+				me.stateMachine			= stateMachine('verbose',me.verbose,'realTime',true,'timeDelta',1e-4,'name',me.name); 
+				sM						= me.stateMachine;
 				if isempty(me.paths.stateInfoFile) || ~exist(me.paths.stateInfoFile,'file')
 					errordlg('Please specify a valid State Machine file...')
 				else
 					cd(fileparts(me.paths.stateInfoFile))
 					me.paths.stateInfoFile = regexprep(me.paths.stateInfoFile,'\s+','\\ ');
 					run(me.paths.stateInfoFile)
-					me.stateInfo = stateInfoTmp;
+					me.stateInfo		= stateInfoTmp;
 					addStates(sM, me.stateInfo);
 				end
 
@@ -634,9 +636,9 @@ classdef runExperiment < optickaCore
 				end
 				
 				%-----set up our behavioural plot
-				commandwindow;
 				createPlot(bR, eL);
-				drawnow;
+				drawnow; 
+				commandwindow;
 
 				%------------------------------------------------------------
 				% lets draw 1 seconds worth of the stimuli we will be using
@@ -671,7 +673,7 @@ classdef runExperiment < optickaCore
 				save([tempdir filesep me.name '.mat'],'rE','tS');
 				me.screenSettings.optickahandle = htmp;
 				
-				%-----open the reward manager
+				%-----ensure we open the reward manager
 				if me.useArduino && isa(rM,'arduinoManager')
 					fprintf('===>>> Opening Arduino for sending reward TTLs\n')
 					open(rM);
@@ -688,19 +690,23 @@ classdef runExperiment < optickaCore
 					WaitSecs(1);
 				end
 				
-				%-----initialise out various counters
-				t.tick = 1;
-				t.switched = 1;
-				t.totalRuns = 1;
-				if tS.useTask == true
+				%-----initialise our various counters
+				t.tick					= 1;
+				t.switched				= 1;
+				t.totalRuns				= 1;
+				me.isTask				= tS.useTask;
+				if me.isTask 
 					updateVariables(me, t.totalRuns, true, false); % set to first variable
 					update(me.stimuli); %update our stimuli ready for display
+				else
+					updateVariables(me, 1, false, false); % set to first variable
+					update(me.stimuli); %update our stimuli ready for display
 				end
-				tS.keyTicks = 0; %tick counter for reducing sensitivity of keyboard
-				tS.keyHold = 1; %a small loop to stop overeager key presses
-				tS.totalTicks = 1; % a tick counter
-				tS.pauseToggle = 1; %toggle pause/unpause
-				tS.eyePos = []; %locally record eye position
+				tS.keyTicks				= 0; %tick counter for reducing sensitivity of keyboard
+				tS.keyHold				= 1; %a small loop to stop overeager key presses
+				tS.totalTicks			= 1; % a tick counter
+				tS.pauseToggle			= 1; %toggle pause/unpause
+				tS.eyePos				= []; %locally record eye position
 				
 				%-----profiling starts here
 				%profile clear; profile on;
@@ -715,14 +721,15 @@ classdef runExperiment < optickaCore
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
 				%-----initialise our vbl's
-				me.needSample = false;
-				me.stopTask = false;
-				tL.screenLog.beforeDisplay = GetSecs;
+				me.needSample				= false;
+				me.stopTask					= false;
+				tL.screenLog.beforeDisplay	= GetSecs;
 				tL.screenLog.trackerStartTime = getTrackerTime(eL);
 				tL.screenLog.trackerStartOffset = getTimeOffset(eL);
-				tL.vbl(1) = Screen('Flip', s.win);
-				tL.startTime = tL.vbl(1);
-				io.verbose=true;
+				tL.vbl(1)					= Screen('Flip', s.win);
+				tL.startTime				= tL.vbl(1);
+				io.verbose					= true;
+				
 				%-----ignite the stateMachine!
 				start(sM); 
 
@@ -734,29 +741,29 @@ classdef runExperiment < optickaCore
 				while me.stopTask == false
 					
 					%------run the stateMachine one tick forward
-					if me.needSample; getSample(eL); end
 					update(sM);
 					
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
 					% the EDF this is just a backup wrapped in the PTB loop. 
+					if me.needSample; getSample(eL); end
 					if me.useEyeLink && tS.recordEyePosition == true
 						saveEyeInfo(me, sM, eL, tS);
 					end
 					
 					%------Check keyboard for commands
-					if tS.checkKeysDuringStimulus || isempty(regexpi(sM.currentName,tS.keyExclusionPattern))
+					if tS.checkKeysDuringStimulus || isempty(regexpi(sM.currentName,tS.keyExclusionPattern,'ONCE'))
 						tS = checkKeys(me,tS);
-					end
-					
-					%------Tell I/O to send strobe on this screen flip
-					if me.sendStrobe && me.useDisplayPP
-						sendStrobe(io);
-					elseif me.sendStrobe && me.useDataPixx
-						triggerStrobe(io);
 					end
 					
 					%----- FLIP: Show it at correct retrace: -----%
 					if me.doFlip
+						%------Display++ or DataPixx: I/O send strobe on this screen flip
+						if me.sendStrobe && me.useDisplayPP
+							sendStrobe(io); me.sendStrobe = false;
+						elseif me.sendStrobe && me.useDataPixx
+							triggerStrobe(io); me.sendStrobe = false;
+						end
+						
 						nextvbl = tL.vbl(end) + me.screenVals.halfisi;
 						if me.logFrames == true
 							[tL.vbl(tS.totalTicks),tL.show(tS.totalTicks),tL.flip(tS.totalTicks),tL.miss(tS.totalTicks)] = Screen('Flip', s.win, nextvbl);
@@ -765,11 +772,12 @@ classdef runExperiment < optickaCore
 						else
 							tL.vbl = Screen('Flip', s.win, nextvbl);
 						end
-						%----- Send Eyelink messages
-						if me.sendStrobe %if strobe sent with value and VBL time
+						%-----LabJack: I/O send strobe after this screen flip
+						if me.sendStrobe && me.useLabJackTStrobe
+							sendStrobe(io); me.sendStrobe = false;
 							%Eyelink('Message', sprintf('MSG:SYNCSTROBE value:%i @ vbl:%20.40g / totalTicks: %i', io.sendValue, tL.vbl(end), tS.totalTicks));
-							me.sendStrobe = false;
 						end
+						%----- Send Eyelink messages
 						if me.sendSyncTime % sends SYNCTIME message to eyelink
 							syncTime(eL);
 							me.sendSyncTime = false;
@@ -818,9 +826,11 @@ classdef runExperiment < optickaCore
 				
 				close(s); %screen
 				close(aM);
+				close(io);
 				close(eL); % eyelink, should save the EDF for us we've already given it our name and folder
 				WaitSecs(0.25);
-				close(rM); 
+				close(rM);
+				me.stateInfo = [];
 				
 				fprintf('\n\n===>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
 				fprintf('===>>> Tracker Time: %g | PTB time: %g | Drift Offset: %g\n', ...
@@ -1124,13 +1134,13 @@ classdef runExperiment < optickaCore
 				prepareStrobe(me.dPP, value);
 			elseif me.useDataPixx == true
 				prepareStrobe(me.dPixx, value);
-			elseif isa(me.lJack,'labJack') && me.lJack.isOpen == true
+			elseif me.useLabJackTStrobe || me.useLabJackStrobe
 				prepareStrobe(me.lJack, value)
 			end
 		end
 		
 		% ===================================================================
-		%> @brief set strobe to trigger on next flip
+		%> @brief set strobe method to trigger on next flip
 		%>
 		%> 
 		% ===================================================================
@@ -1216,10 +1226,14 @@ classdef runExperiment < optickaCore
 			if ~exist('override','var') || isempty(override)
 				override = false;
 			end
-			if me.useDataPixx || me.useDisplayPP
-				setStrobeValue(me, me.task.outIndex(index));
+			if me.useDataPixx || me.useDisplayPP || me.useLabJackTStrobe
+				if me.isTask
+					setStrobeValue(me, me.task.outIndex(index));
+				else
+					setStrobeValue(me, index);
+				end
 			end
-			if (index > me.lastIndex) || override == true
+			if me.isTask && ((index > me.lastIndex) || override == true)
 				[thisBlock, thisRun] = me.task.findRun(index);
 				t = sprintf('Total#%g|Block#%g|Run#%g = ',index,thisBlock,thisRun);
 				for i=1:me.task.nVars
@@ -1378,7 +1392,7 @@ classdef runExperiment < optickaCore
 				fprintf('===> Using dataPixx for I/O...\n')
 			elseif me.useLabJackTStrobe
 				if ~isa(me.lJack,'labjackT')
-					me.ljack = labJackT('openNow',false);
+					me.lJack = labJackT('openNow',false,'device',1);
 				end
 				io = me.lJack; io.name = me.name;
 				io.silentMode = false;
@@ -1388,10 +1402,14 @@ classdef runExperiment < optickaCore
 				me.useDataPixx = false;
 				me.useLabJackStrobe = false;
 				me.useDisplayPP = false;
-				fprintf('===> Using labjackT for I/O...\n')
+				if io.isOpen
+					fprintf('===> Using labjackT for I/O...\n')
+				else
+					warning('===> !!! labJackT could not properly open !!!');
+				end
 			elseif me.useLabJackStrobe
 				if ~isa(me.lJack,'labjack')
-					me.ljack = labJack('openNow',false);
+					me.lJack = labJack('openNow',false);
 				end
 				io = me.lJack; io.name = me.name;
 				io.silentMode = false;
@@ -1401,7 +1419,11 @@ classdef runExperiment < optickaCore
 				me.useDataPixx = false;
 				me.useLabJackTStrobe = false;
 				me.useDisplayPP = false;
-				fprintf('===> Using labJack for I/O...\n')
+				if io.isOpen
+					fprintf('===> Using labjack for I/O...\n')
+				else
+					warning('===> !!! labJackT could not properly open !!!');
+				end
 			else
 				io = ioManager();
 				io.silentMode = true;
@@ -1415,22 +1437,26 @@ classdef runExperiment < optickaCore
 			if me.useArduino
                 if ~isa(rM,'arduinoManager')
                     rM = arduinoManager();
-                end
-                rM.port = me.arduinoPort;
+				end
+				if ~rM.isOpen || rM.silentMode
+					rM.reset();
+					rM.silentMode = false;
+					rM.port = me.arduinoPort;
+					rM.open();
+				end
 				me.arduino = rM;
 				fprintf('===> Using Arduino for reward TTLs...\n')
 			elseif ~me.useArduino && ~me.useLabJackReward
 				if isa(rM,'arduinoManager')
-					rM.close
+					rM.close();
 					rM.silentMode = true;
 				else
 					rM = ioManager();
 				end
 				fprintf('===> No reward TTLs will be sent...\n')
 			elseif me.useLabJackReward
-				me.lJack = labJack('name',me.name,'readResponse', false,'verbose',me.verbose);
-				rM = me.lJack;
-				fprintf('===> Using LabJack for reward TTLs...\n')
+				rM = ioManager();
+				warning('===> Currently not enabled to use LabJack U3/U6 for reward...')
 			else
 				rM = ioManager();
 			end

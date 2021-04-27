@@ -104,6 +104,16 @@ classdef ioManager < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
+		function strobeServer(obj,value)
+			obj.lastValue = obj.sendValue;
+			obj.sendValue = value;
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
 		function sendTTL(obj,value)
 
 		end
@@ -219,6 +229,10 @@ classdef ioManager < optickaCore
 			else
 				if isa(obj.io,'plusplusManager')
 					type = 'Display++';
+				elseif isa(obj.io,'labJackT')
+					type = 'LabJack T4/T7';
+				elseif isa(obj.io,'labJack')
+					type = 'LabJack U3/U6';
 				elseif isa(obj.io,'dPixxManager')
 					type = 'DataPixx';
 				elseif isa(obj.io,'arduinoManager')

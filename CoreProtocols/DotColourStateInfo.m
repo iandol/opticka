@@ -1,12 +1,15 @@
 %DOT COLOUR state configuration file, this gets loaded by opticka via runExperiment class
-% io = datapixx (digital I/O to plexon)
+% me = runExperiment object
+% io = digital I/O to recording system
 % s = screenManager
+% aM = audioManager
 % sM = State Machine
-% eL = eyelink manager
-% lJ = LabJack (reward trigger to Crist reward system)
-% bR = behavioural record plot
+% eL = eyetracker manager
+% t  = task sequence (stimulusSequence class)
+% rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
+% bR = behavioural record plot (on screen GUI during task run)
 % me.stimuli = our list of stimuli
-% tS = general simple struct to hold variables for this run
+% tS = general struct to hold variables for this run, will be saved
 %
 %------------General Settings-----------------
 tS.rewardTime = 150; %TTL time in milliseconds

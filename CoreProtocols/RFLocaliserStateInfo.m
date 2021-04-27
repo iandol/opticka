@@ -170,6 +170,11 @@ pauseEntryFcn = {
 	@()needEyeSample(me,false); % no need to check eye position
 };
 
+%--------------------within pause state
+pauseFcn = { 
+	@()WaitSecs('YieldSecs',0.01);
+};
+
 %--------------------exit pause state
 pauseExitFcn = { 
 	@()fprintf('\n===>>>EXIT PAUSE STATE\n')
@@ -178,13 +183,13 @@ pauseExitFcn = {
 
 %---------------------prestim entry
 psEntryFcn = {
-	@()trackerClearScreen(eL); % blank the eyelink screen
 	@()resetFixation(eL); %reset the fixation counters ready for a new trial
 	@()startRecording(eL); % start eyelink recording for this trial
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
-	@()edfMessage(eL,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
+	@()edfMessage(eL,sprintf('TRIALID %i',1)); %Eyelink start trial marker
 	@()edfMessage(eL,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()statusMessage(eL,'Pre-fixation...'); %status text on the eyelink
+	@()trackerClearScreen(eL); % blank the eyelink screen
 	@()trackerDrawFixation(eL); % draw the fixation window
 	@()needEyeSample(me,true); % make sure we start measuring eye position
 	@()showSet(me.stimuli); % make sure we prepare to show the stimulus set
@@ -204,6 +209,7 @@ psExitFcn = {
 
 %---------------------stimulus entry state
 stimEntryFcn = { 
+	@()doStrobe(me,true);
 	@()logRun(me,'SHOW Fixation Spot'); % log start to command window
 };
 
@@ -223,47 +229,54 @@ maintainFixFcn = {
 
 %as we exit stim presentation state
 stimExitFcn = {
+	@()setStrobeValue(me,255);
+	@()doStrobe(me,true);
 	@()mousePosition(s,true);
 };
 
 %if the subject is correct (small reward)
 correctEntryFcn = {
 	@()timedTTL(rM,tS.rewardPin,tS.rewardTime); % labjack sends a TTL to Crist reward system
+	@()sendStrobe(io,251); % strobe 250 to signal a correct
 	@()beep(aM,2000); % correct beep
 	@()drawTimedSpot(s, 0.5, [0 1 0 1]); 
 	@()statusMessage(eL,'Correct! :-)'); 
 	@()stopRecording(eL); 
 	@()setOffline(eL); %set eyelink offline
+	@()trackerClearScreen(eL);
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 };
 
 %correct stimulus
 correctFcn = { 
 	@()drawBackground(s);
-	@()drawTimedSpot(s, 0.5, [0 1 0 1]); 
+	@()drawTimedSpot(s, 0.25, [0 1 0 1]); 
 };
 
 %when we exit the correct state
 ExitFcn = { 
+	@()updateVariables(me,1);
 	@()updatePlot(bR, eL, sM); 
-	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); %reset the timer on the green spot
 };
 
 %break entry
 breakEntryFcn = { 
 	@()beep(aM,400,0.5,1);
+	@()sendStrobe(io,249); % strobe 250 to signal a break
 	@()trackerClearScreen(eL);
-	@()trackerClearScreen(eL); 
 	@()statusMessage(eL,'Broke Fixation :-('); 
 	@()stopRecording(eL); 
+	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 };
 
 %incorrect entry
 incorrEntryFcn = { 
 	@()beep(aM,400,0.5,1);
+	@()sendStrobe(io,250); % strobe 252 to signal a incorrect
 	@()trackerClearScreen(eL); 
 	@()statusMessage(eL,'Incorrect :-('); 
 	@()stopRecording(eL); 
+	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
 };
 
 %our incorrect stimulus
@@ -308,7 +321,7 @@ sM.skipExitStates = {'fixate','incorrect|breakfix'};
 disp('================>> Building state info file <<================')
 stateInfoTmp = {
 'name'      'next'			'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; 
-'pause'		'blank'			inf 	pauseEntryFcn	[]				[]				pauseExitFcn; 
+'pause'		'blank'			inf 	pauseEntryFcn	pauseFcn		[]				pauseExitFcn; 
 'blank'		'stimulus'		0.5		psEntryFcn		prestimulusFcn	[]				psExitFcn;
 'stimulus'  'incorrect'		5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'incorrect'	'blank'			1		incorrEntryFcn	breakFcn		[]				ExitFcn;

@@ -421,6 +421,11 @@ classdef opticka < optickaCore
 			else
 				me.r.useLabJackStrobe = false;
 			end
+			if strcmpi(get(me.h.OKuseLabJackTStrobe,'Checked'),'on')
+				me.r.useLabJackTStrobe = true;
+			else
+				me.r.useLabJackTStrobe = false;
+			end
 			if strcmpi(get(me.h.OKuseLabJackReward,'Checked'),'on')
 				me.r.useLabJackReward = true;
 			else
@@ -1091,6 +1096,9 @@ classdef opticka < optickaCore
 					
 					if isprop(tmp.r,'useDataPixx'); me.r.useDataPixx = tmp.r.useDataPixx; end
 					if me.r.useDataPixx == true; me.h.OKuseDataPixx.Checked = 'on'; end
+					
+					if isprop(tmp.r,'useLabJackTStrobe'); me.r.useLabJackTStrobe = tmp.r.useLabJackTStrobe; end
+					if me.r.useLabJackTStrobe == true; me.h.OKuseLabJackTStrobe.Checked = 'on'; end
 					
 					if isprop(tmp.r,'useArduino'); me.r.useArduino = tmp.r.useArduino; end
 					if me.r.useArduino == true; me.h.OKuseArduino.Checked = 'on'; end

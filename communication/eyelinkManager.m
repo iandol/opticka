@@ -532,9 +532,11 @@ classdef eyelinkManager < optickaCore
 		%> @return searching boolean for if we are still searching for fixation
 		% ===================================================================
 		function [fixated, fixtime, searching, window, exclusion, fixinit] = isFixated(me)
-			fixated = false; fixtime = false; searching = true; exclusion = false;
-			window = []; fixinit = false;
-			if ~me.isConnected || me.isDummy || isempty(me.currentSample);return;end
+			fixated = false; fixtime = false; searching = true; 
+			exclusion = false; window = []; fixinit = false;
+			
+			if isempty(me.currentSample); return; end
+			
 			if me.isExclusion || me.isInitFail
 				exclusion = me.isExclusion; fixinit = me.isInitFail; searching = false;
 				return; % we previously matched either rule, now cannot pass fixation until a reset.
@@ -561,7 +563,7 @@ classdef eyelinkManager < optickaCore
 					window = find(r < me.fixInit.radius);
 					if ~any(window)
 						searching = false; exclusion = true; fixinit = true;
-						me.isInitFail = fixinit;
+						me.isInitFail = fixinit; me.isFix = false;
 						return;
 					end
 				end
@@ -578,6 +580,7 @@ classdef eyelinkManager < optickaCore
 					window = 1;
 				end
 			end
+			me.fixTotal = (me.currentSample.time - me.fixInitStartTime) / 1e3;
 			if any(window) % inside fixation window
 				if me.fixN == 0
 					me.fixN = 1;
@@ -589,7 +592,6 @@ classdef eyelinkManager < optickaCore
 					end
 					fixated = true; searching = false;
 					me.fixLength = (me.currentSample.time - me.fixStartTime) / 1e3;
-					me.fixTotal = (me.currentSample.time - me.fixInitStartTime) / 1e3;
 					if me.fixLength >= me.fixationTime
 						fixtime = true;
 					end
@@ -602,13 +604,12 @@ classdef eyelinkManager < optickaCore
 					me.fixN = -100;
 				end
 				me.fixInitLength = (me.currentSample.time - me.fixInitStartTime) / 1e3;
-				me.fixTotal = me.fixInitLength;
 				if me.fixInitLength < me.fixationInitTime
 					searching = true;
 				else
 					searching = false;
 				end
-				me.isFix = false;
+				me.isFix = false; me.fixLength = 0; me.fixStartTime = 0;
 			end
 		end
 		
@@ -776,19 +777,18 @@ classdef eyelinkManager < optickaCore
 			if (me.isDummy || me.isConnected) && isa(me.screen,'screenManager') && me.screen.isOpen && ~isempty(me.x) && ~isempty(me.y)
 				xy = toPixels(me,[me.x me.y]);
 				if me.isFix
-					if ~me.isBlink
-						Screen('DrawDots', me.win, xy, 10, [1 0.4 1 1], [], 1);
+					if me.fixLength > me.fixationTime && ~me.isBlink
+						Screen('DrawDots', me.win, xy, 6, [0 1 0.25 1], [], 3);
+					elseif ~me.isBlink
+						Screen('DrawDots', me.win, xy, 6, [0.75 0 0.75 1], [], 3);
 					else
-						Screen('DrawDots', me.win, xy, 7, [0.75 0 0 1], [], 1);
-					end
-					if me.fixLength > me.fixationTime
-						Screen('DrawText', me.win, 'FIX', xy(1), xy(2), [1 1 1]);
+						Screen('DrawDots', me.win, xy, 6, [0.75 0 0 1], [], 3);
 					end
 				else
 					if ~me.isBlink
-						Screen('DrawDots', me.win, xy, 10, [0.75 0.5 0 1], [], 1);
+						Screen('DrawDots', me.win, xy, 6, [0.75 0.5 0 1], [], 3);
 					else
-						Screen('DrawDots', me.win, xy, 7, [0.75 0 0 1], [], 1);
+						Screen('DrawDots', me.win, xy, 6, [0.75 0 0 1], [], 3);
 					end
 				end
 			end
@@ -1060,7 +1060,7 @@ classdef eyelinkManager < optickaCore
 				
 				% define our fixation widow and stimulus for first trial
 				% x,y,inittime,fixtime,radius,strict
-				me.updateFixationValues(0,0,1,1,1,true);
+				me.updateFixationValues(0,0,3,1,1,true);
 				o.sizeOut = me.fixationRadius(1)*2;
 				o.xPositionOut = me.fixationX;
 				o.yPositionOut = me.fixationY;
@@ -1080,7 +1080,8 @@ classdef eyelinkManager < optickaCore
 				trackerDrawStimuli(me,ts); % draw stimulus on tracker
 				
 				Screen('TextSize', s.win, 18);
-				
+				HideCursor(s.win);
+				Priority(MaxPriority(s.win));
 				blockLoop = true;
 				a = 1;
 				
@@ -1115,11 +1116,11 @@ classdef eyelinkManager < optickaCore
 						% if we have an eye position, plot the info on the display
 						% screen
 						if ~isempty(me.currentSample)
-							[~, ~, searching, ~, exclusion] = isFixated(me);
+							[~, ~, searching] = isFixated(me);
 							x = me.toPixels(me.x,'x'); %#ok<*PROP>
 							y = me.toPixels(me.y,'y');
-							txt = sprintf('Press Q to finish, SPACE for next stimulus. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | RADIUS = %.1f | TIME = %.1f | FIXATION = %.1f | SEARCH = %i | BLINK = %i | EXCLUSION = %i | FAIL INIT = %i',...
-								x, me.x, y, me.y, sprintf('%1.1f ',me.fixationRadius), me.fixTotal, me.fixLength, searching, me.isBlink, exclusion, me.isInitFail);
+							txt = sprintf('Q = finish, SPACE = next. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | RADIUS = %s | TIME = %.1f | FIXATION = %.1f | SEARCH = %i | BLINK = %i | EXCLUSION = %i | FAIL-INIT = %i',...
+								x, me.x, y, me.y, sprintf('%1.1f ',me.fixationRadius), me.fixTotal, me.fixLength, searching, me.isBlink, me.isExclusion, me.isInitFail);
 							Screen('DrawText', s.win, txt, 10, 10,[1 1 1]);
 							drawEyePosition(me);
 						end
@@ -1151,13 +1152,14 @@ classdef eyelinkManager < optickaCore
 					% stop recording data
 					stopRecording(me);
 					setOffline(me); %Eyelink('Command', 'set_idle_mode');
+					resetFixation(me);
 					
 					% set up the fix init system, whereby the subject must
 					% remain a certain time at the origin of the eye
-					% position before saccadibg to next target, use previous fixation location.
-					me.fixInit.X = me.fixationX;
-					me.fixInit.Y = me.fixationY;
-					me.fixInit.radius = 3;
+					% position before saccading to next target, use previous fixation location.
+					%me.fixInit.X = me.fixationX;
+					%me.fixInit.Y = me.fixationY;
+					%me.fixInit.radius = 3;
 					% prepare a random position for next trial
 					me.updateFixationValues(randi([-5 5]),randi([-5 5]),[],[],randi([1 5]));
 					o.sizeOut = me.fixationRadius*2;
@@ -1180,7 +1182,7 @@ classdef eyelinkManager < optickaCore
 					WaitSecs('YieldSecs',1);
 					a=a+1;
 				end
-				ListenChar(0);
+				ListenChar(0);Priority(0);ShowCursor;
 				close(s);
 				close(me);
 				clear s o
@@ -1201,7 +1203,7 @@ classdef eyelinkManager < optickaCore
 				me.fixationY = oldy;
 				me.exclusionZone = oldexc;
 				me.fixInit = oldfixinit;
-				ListenChar(0);
+				ListenChar(0);Priority(0);ShowCursor;
 				me.salutation('runDemo ERROR!!!')
 				Eyelink('Shutdown');
 				try close(s); end

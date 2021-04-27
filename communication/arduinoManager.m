@@ -126,11 +126,10 @@ classdef arduinoManager < optickaCore
 		
 		%===============ANALOG WRITE================%
 		function analogWrite(me,line,value)
-			if me.silentMode == false
-				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
-				if ~exist('value','var') || isempty(value); value = 255; end
-				analogWrite(me.device, line, value);
-			end
+			if ~me.isOpen || me.silentMode; return; end
+			if ~exist('line','var') || isempty(line); line = me.rewardPin; end
+			if ~exist('value','var') || isempty(value); value = 255; end
+			analogWrite(me.device, line, value);
 		end
 		
 		%===============SEND TTL (legacy)================%
@@ -140,6 +139,7 @@ classdef arduinoManager < optickaCore
 		
 		%===============TIMED TTL================%
 		function timedTTL(me, line, time)
+			if ~me.isOpen; return; end
 			if me.silentMode == false
 				if ~exist('line','var') || isempty(line); line = me.rewardPin; end
 				if ~exist('time','var') || isempty(time); time = me.rewardTime; end
@@ -160,6 +160,7 @@ classdef arduinoManager < optickaCore
 		end
 		
 		function strobeWord(me, value)
+			if ~me.isOpen; return; end
 			if me.silentMode == false
 				strobeWord(me.device, value);
 				if me.verbose;fprintf('===>>> STROBE WORD: %i sent to pins 2-8\n',value);end
