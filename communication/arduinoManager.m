@@ -90,8 +90,14 @@ classdef arduinoManager < optickaCore
 								endPin = max(cell2mat(me.availablePins));
 								startPin = min(cell2mat(me.availablePins));
 								me.device = arduinoIOPort(me.port,endPin,startPin);
-								me.deviceID = me.port;
-								me.isOpen = true;setLow(me);
+								if me.device.isDemo
+									me.isOpen = false; me.silentMode = true;
+									warning('--->arduinoManager: IOport couldn''t open the port, going into silent mode!');
+								else
+									me.deviceID = me.port;
+									me.isOpen = true;setLow(me);
+								end
+								
 							else
 								warning('--->arduinoManager: Please specify the port to use, going into silent mode!')
 								me.isOpen = false; me.silentMode = true;

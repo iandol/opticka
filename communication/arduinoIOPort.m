@@ -51,19 +51,27 @@ classdef arduinoIOPort < handle
 				avPorts = serialportlist('available');
 				fprintf('===> All possible serial ports: ');
 				fprintf(' %s ',allPorts); fprintf('\n');
-				if any(strcmpi(allPorts,port))
+				if any(strcmpi(allPorts, port))
 					fprintf('===> Your specified port is present\n')
 				else
 					warning('===> No port with the specified name is present on the system!');
 				end
-				if any(strcmpi(avPorts,port))
+				if any(strcmpi(avPorts, port))
 					fprintf('===> Your specified port is available\n')
 				else
 					warning('===> The port is occupied, please release it first!');
 				end
 			end
 			% define IOPort serial object
-			a.conn=IOPort('OpenSerialPort',port,'BaudRate=115200');
+			oldv = IOPort('Verbosity',0);
+			[a.conn, err] = IOPort('OpenSerialPort', port,'BaudRate=115200');
+			IOPort('Verbosity',oldv)
+			if a.conn == -1
+				warning('===>! Port CANNOt be opended: %s',err);
+				a.isDemo = true;
+				a.conn = [];
+				return
+			end
 			% test connection
 			try
 				IOPort('Flush',a.conn);

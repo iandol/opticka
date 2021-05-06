@@ -1435,7 +1435,7 @@ classdef runExperiment < optickaCore
 				fprintf('===> No strobe output I/O...\n')
 			end
 			if me.useArduino
-                if ~isa(rM,'arduinoManager')
+				if ~isa(rM,'arduinoManager')
                     rM = arduinoManager();
 				end
 				if ~rM.isOpen || rM.silentMode
