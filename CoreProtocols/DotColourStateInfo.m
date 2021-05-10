@@ -1,4 +1,7 @@
 %DOT COLOUR state configuration file, this gets loaded by opticka via runExperiment class
+% The following class objects are loaded and available to
+% use: 
+%
 % me = runExperiment object
 % io = digital I/O to recording system
 % s = screenManager
@@ -9,18 +12,19 @@
 % rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 % bR = behavioural record plot (on screen GUI during task run)
 % me.stimuli = our list of stimuli
-% tS = general struct to hold variables for this run, will be saved
+% tS = general struct to hold variables for this run, will be saved after experiment run
 %
 %------------General Settings-----------------
-tS.rewardTime = 150; %TTL time in milliseconds
-tS.useTask = true;
-tS.checkKeysDuringStimulus = false;
-tS.recordEyePosition = true;
-tS.askForComments = true;
-tS.saveData = true; %*** save behavioural and eye movement data? ***
-tS.dummyEyelink = true; %==use mouse as a dummy eyelink, good for testing away from the lab.
-tS.useMagStim = false; %enable the magstim manager
-tS.name = 'dot-colour';
+%------------General Settings-----------------
+tS.useTask              = false; %==use stimulusSequence (randomised variable task object)
+tS.rewardTime           = 300; %==TTL time in milliseconds
+tS.rewardPin            = 2; %==Output pin, 2 by default with Arduino.
+tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
+tS.recordEyePosition	= false; %==record eye position within PTB, **in addition** to the EDF?
+tS.askForComments		= false; %==little UI requestor asks for comments before/after run
+tS.saveData				= false; %we don't want to save any data
+tS.useMagStim			= false; %enable the magstim manager
+tS.name					= 'Dot Colour'; %==name of this protocol
 
 %-----enable the magstimManager which uses FOI2 of the LabJack
 if tS.useMagStim

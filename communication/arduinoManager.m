@@ -1,6 +1,7 @@
 classdef arduinoManager < optickaCore
-	%ARDUINOMANAGER Connects and manages arduino communication, uses matlab
-	%hardware package
+	%ARDUINOMANAGER Connects and manages arduino communication, by default
+	%it connects using arduinoIOPort and the adio.ino arduino sketch, which
+	%provide much better performance than MATLAB's hardware package.
 	properties
 		port char				= ''
 		board char				= 'Uno'
@@ -9,7 +10,7 @@ classdef arduinoManager < optickaCore
 		openGUI logical			= true
 		mode char				= 'original' %original is built-in, otherwise needs matlab hardware package
 		rewardPin double		= 2
-		rewardTime double		= 150
+		rewardTime double		= 300
 		availablePins cell
 	end
 	properties (SetAccess = private, GetAccess = public)
@@ -18,21 +19,28 @@ classdef arduinoManager < optickaCore
 		device					= []
 		deviceID				= ''
 	end
-	properties (SetAccess = private, GetAccess = private)
+	properties (SetAccess = private, GetAccess = private, Transient = true)
 		handles					= []
 		screen screenManager
+	end
+	properties (SetAccess = private, GetAccess = private)
 		allowedProperties char	= ['availablePins|rewardPin|rewardTime|openGUI|board|mode|'...
 			'port|silentMode|verbose']
 	end
+	
 	methods%------------------PUBLIC METHODS--------------%
 		
 		%==============CONSTRUCTOR============%
 		function me = arduinoManager(varargin)
-			if nargin>0
-				me.parseArgs(varargin,me.allowedProperties);
-			end
+			args = optickaCore.addDefaults(varargin,struct('name','arduino manager'));
+			me=me@optickaCore(args); %we call the superclass constructor first
+			me.parseArgs(args, me.allowedProperties);
 			if isempty(me.port)
-				me.ports = seriallist;
+				if ~verLessThan('matlab','9.7')	% use the nice serialport list command
+					me.ports = serialportlist;
+				else
+					me.ports = seriallist;
+				end
 				if ~isempty(me.ports)
 					fprintf('--->arduinoManager: Ports available: %s\n',me.ports);
 					if isempty(me.port); me.port = char(me.ports{end}); end
@@ -93,6 +101,7 @@ classdef arduinoManager < optickaCore
 								if me.device.isDemo
 									me.isOpen = false; me.silentMode = true;
 									warning('--->arduinoManager: IOport couldn''t open the port, going into silent mode!');
+									return
 								else
 									me.deviceID = me.port;
 									me.isOpen = true;setLow(me);
@@ -101,6 +110,7 @@ classdef arduinoManager < optickaCore
 							else
 								warning('--->arduinoManager: Please specify the port to use, going into silent mode!')
 								me.isOpen = false; me.silentMode = true;
+								return;
 							end
 							
 						otherwise
@@ -223,7 +233,7 @@ classdef arduinoManager < optickaCore
 		
 		%===============Manual Reward GUI================%
 		function GUI(me)
-			if me.silentMode; return; end
+			if me.silentMode || ~me.isOpen; return; end
 			if ~isempty(me.handles) && isfield(me.handles,'parent') && ishandle(me.handles.parent)
 				disp('--->>> arduinoManager: GUI already open...\n')
 				return;

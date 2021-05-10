@@ -18,7 +18,7 @@
 % rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 % bR = behavioural record plot (on screen GUI during task run)
 % me.stimuli = our list of stimuli
-% tS = general struct to hold variables for this run, will be saved
+% tS = general struct to hold variables for this run, will be saved after experiment run
 
 %------------General Settings-----------------
 tS.useTask              = false; %==use stimulusSequence (randomised variable task object)
@@ -36,16 +36,16 @@ tS.fixX						= 0; % X position in degrees
 tS.fixY						= 0; % X position in degrees
 tS.firstFixInit				= 1; % time to search and enter fixation window
 tS.firstFixTime				= 3; % time to maintain fixation within windo
-tS.firstFixRadius			= 20; % radius in degrees
+tS.firstFixRadius			= 2; % radius in degrees
 tS.strict					= true; %do we forbid eye to enter-exit-reenter fixation window?
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 
 %------------------------Eyelink setup--------------------------
-me.useEyeLink				= true; % make sure we are using eyetracker
+me.useEyeLink				= true; % make sure we are using eyetracker, override UI setting
 eL.name						= tS.name;
 if tS.saveData == true;		eL.recordData = true; end %===save EDF file?
-if me.dummyMode;			eL.isDummy = true; end %===use dummy or real eyetracker? 
+if me.dummyMode;			eL.isDummy = true; end %===use dummy or real eyetracker, from UI...
 eL.sampleRate 				= 250; % sampling rate
 %===========================
 % remote calibration enables manual control and selection of each fixation
@@ -239,7 +239,7 @@ correctEntryFcn = {
 	@()timedTTL(rM,tS.rewardPin,tS.rewardTime); % labjack sends a TTL to Crist reward system
 	@()sendStrobe(io,251); % strobe 250 to signal a correct
 	@()beep(aM,2000); % correct beep
-	@()drawTimedSpot(s, 0.5, [0 1 0 1]); 
+	%@()drawTimedSpot(s, 0.5, [0 1 0 1]); 
 	@()statusMessage(eL,'Correct! :-)'); 
 	@()stopRecording(eL); 
 	@()setOffline(eL); %set eyelink offline
@@ -250,13 +250,7 @@ correctEntryFcn = {
 %correct stimulus
 correctFcn = { 
 	@()drawBackground(s);
-	@()drawTimedSpot(s, 0.25, [0 1 0 1]); 
-};
-
-%when we exit the correct state
-ExitFcn = { 
-	@()updateVariables(me,1);
-	@()updatePlot(bR, eL, sM); 
+	%@()drawTimedSpot(s, 0.25, [0 1 0 1]); 
 };
 
 %break entry
@@ -282,6 +276,13 @@ incorrEntryFcn = {
 %our incorrect stimulus
 breakFcn =  {
 	@()drawBackground(s);
+};
+
+%when we exit the correct/incorrect/breakfix state
+ExitFcn = { 
+	@()updateVariables(me,1);
+	@()updatePlot(bR, eL, sM);
+	@()drawnow;
 };
 
 %--------------------calibration function

@@ -10,8 +10,8 @@ classdef labJackT < handle
 		name char = 'labJackT'
 		%> what LabJack device to use; 4 = T4, 7 = T7
 		deviceID double = 4
-		%> if more than one labJack connected, which one to open?
-		device double = []
+		%> if more than one labJack connected, which one to open? Default is first device
+		device double = 1
 		%> Connection type: ANY, USB, TCP, ETHERNET, WIFI
 		connectType char = 'ANY'
 		%> IP address if using network
@@ -189,8 +189,7 @@ classdef labJackT < handle
 			end
 
 			if isempty(me.device)
-				[err,me.devCount,me.devTypes] = calllib(me.libName,'LJM_ListAll',0,0,0,0,[],[],[]);
-				me.checkError(err);
+				me.listAll();
 			end
 
 			if me.devCount == 0
@@ -270,8 +269,8 @@ classdef labJackT < handle
 						me.salutation('CLOSE method','LabJack Handle has been closed');
 					end
 				end
-				me.devCount = [];
-				me.devTypes = [];
+				%me.devCount = [];
+				%me.devTypes = [];
 				me.handle=[];
 				me.isOpen = false;
 				me.isValid = false;
@@ -300,8 +299,21 @@ classdef labJackT < handle
 		%> @brief 
 		%>	
 		% ===================================================================
-		function result = isHandleValid(me)
+		function [devCount,devTypes] = listAll(me)
 			if me.silentMode || isempty(me.handle); return; end
+			[err,devCount,devTypes] = calllib(me.libName,'LJM_ListAll',0,0,0,0,[],[],[]);
+			me.checkError(err);
+			me.devCount = devCount;
+			me.devTypes = devTypes;
+		end
+		
+		
+		% ===================================================================
+		%> @brief 
+		%>	
+		% ===================================================================
+		function result = isHandleValid(me)
+			if me.silentMode || isempty(me.handle); me.isValid = false; result = false; return; end
 			me.isValid = false;
 			[err, ~, val] = calllib(me.libName, 'LJM_eReadName', me.handle, 'TEST', 0);
 			me.checkError(err);

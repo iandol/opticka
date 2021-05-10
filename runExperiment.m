@@ -488,7 +488,14 @@ classdef runExperiment < optickaCore
 		function runTask(me)
 			global rM %global reward manager we can share with eyetracker
 			global aM %global audio manager we can share with eyetracker
+			
+			%-----make sure we reset any state machine functions to not
+			% cause problems when they are reassigned below. For example, io
+			% interfaces can be reset unless we clear this before we open
+			% the io.	
 			me.stateInfo = {};
+			if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; me.stateMachine = []; end
+			
 			%------initialise the rM global
 			if ~isa(rM,'arduinoManager') 
 				rM=arduinoManager();
@@ -613,8 +620,8 @@ classdef runExperiment < optickaCore
 				io						= configureIO(me);
 				
 				%-----initialise the state machine
-				me.stateMachine			= stateMachine('verbose',me.verbose,'realTime',true,'timeDelta',1e-4,'name',me.name); 
-				sM						= me.stateMachine;
+				sM						= stateMachine('verbose',me.verbose,'realTime',true,'timeDelta',1e-4,'name',me.name); 
+				me.stateMachine			= sM;
 				if isempty(me.paths.stateInfoFile) || ~exist(me.paths.stateInfoFile,'file')
 					errordlg('Please specify a valid State Machine file...')
 				else
@@ -670,11 +677,12 @@ classdef runExperiment < optickaCore
 				%-----Premptive save in case of crash or error SAVE IN /TMP
 				rE = me;
 				htmp = me.screenSettings.optickahandle; me.screenSettings.optickahandle = [];
+				%h2tmp = me.behaviouralRecord.h; me.behaviouralRecord.h = [];
 				save([tempdir filesep me.name '.mat'],'rE','tS');
-				me.screenSettings.optickahandle = htmp;
+				me.screenSettings.optickahandle = htmp; %me.behaviouralRecord.h = h2tmp;
 				
 				%-----ensure we open the reward manager
-				if me.useArduino && isa(rM,'arduinoManager')
+				if me.useArduino && isa(rM,'arduinoManager') && ~rM.isOpen
 					fprintf('===>>> Opening Arduino for sending reward TTLs\n')
 					open(rM);
 				elseif  me.useLabJackReward && isa(rM,'labJack')
@@ -711,6 +719,14 @@ classdef runExperiment < optickaCore
 				%-----profiling starts here
 				%profile clear; profile on;
 				
+				%-----double check the labJackT handle is still valid
+				% (sometimes it disconnects)
+				if isa(io','labJackT') && ~io.isHandleValid
+					io.close;
+					io.open;
+					warning('We had to reopen the labJackT, ensure connection is stable...')
+				end
+				
 				%-----take over the keyboard!
 				KbReleaseWait; %make sure keyboard keys are all released
 				commandwindow;
@@ -728,7 +744,6 @@ classdef runExperiment < optickaCore
 				tL.screenLog.trackerStartOffset = getTimeOffset(eL);
 				tL.vbl(1)					= Screen('Flip', s.win);
 				tL.startTime				= tL.vbl(1);
-				io.verbose					= true;
 				
 				%-----ignite the stateMachine!
 				start(sM); 
@@ -830,7 +845,6 @@ classdef runExperiment < optickaCore
 				close(eL); % eyelink, should save the EDF for us we've already given it our name and folder
 				WaitSecs(0.25);
 				close(rM);
-				me.stateInfo = [];
 				
 				fprintf('\n\n===>>> Total ticks: %g | stateMachine ticks: %g\n', tS.totalTicks, sM.totalTicks);
 				fprintf('===>>> Tracker Time: %g | PTB time: %g | Drift Offset: %g\n', ...
@@ -868,6 +882,9 @@ classdef runExperiment < optickaCore
 					me.screenSettings.optickahandle = htmp;
 					fprintf('\n===>>> SAVED DATA to: %s\n',[me.paths.savedData filesep me.name '.mat'])
 				end
+				
+				me.stateInfo = [];
+				if isa(me.stateMachine,'stateMachine'); me.stateMachine.reset; end
 				
 				clear rE tL s tS bR rM eL io sM	
 				
@@ -1445,7 +1462,7 @@ classdef runExperiment < optickaCore
 					rM.open();
 				end
 				me.arduino = rM;
-				fprintf('===> Using Arduino for reward TTLs...\n')
+				if rM.isOpen; fprintf('===> Using Arduino for reward TTLs...\n'); end
 			elseif ~me.useArduino && ~me.useLabJackReward
 				if isa(rM,'arduinoManager')
 					rM.close();

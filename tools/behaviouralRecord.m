@@ -19,7 +19,7 @@ classdef behaviouralRecord < optickaCore
 		rewardVolume = 3.6067e-04; %for 1ms
 	end
 	
-	properties (SetAccess = protected, GetAccess = public, Transient = true)
+	properties (SetAccess = ?runExperiment, Transient = true)
 		%> handles for the GUI
 		h
 	end

@@ -433,12 +433,20 @@ classdef stateMachine < optickaCore
 			me.totalTicks = [];
 			me.currentName = '';
 			me.currentUUID = '';
+			me.currentTime = [];
+			me.currentEntryFcn = {};
+			me.currentExitFcn = {};
+			me.currentTransitionFcn = {};
+			me.currentWithinFcn = {};
+			me.currentEntryTime = {};
 			me.currentIndex = [];
 			me.currentTick = [];
 			me.currentState = [];
 			me.startTime = [];
 			me.finalTime = [];
 			me.finalTick = [];
+			me.nextTickOut = [];
+			me.nextTimeOut = [];
 		end
 		
 		% ===================================================================

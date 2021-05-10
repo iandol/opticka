@@ -20,6 +20,8 @@ classdef arduinoIOPort < handle
 		encs   % Encoders status
 		sktc   % Which sketch is running on the Arduino board?
 		isDemo = false
+		allPorts = []
+		avPorts = []
 	end
 	
 	methods
@@ -47,19 +49,26 @@ classdef arduinoIOPort < handle
 				return
 			end
 			if ~verLessThan('matlab','9.7')	% use the nice serialport list command
-				allPorts = serialportlist('all');
-				avPorts = serialportlist('available');
+				me.allPorts = serialportlist('all');
+				me.avPorts = serialportlist('available');
 				fprintf('===> All possible serial ports: ');
-				fprintf(' %s ',allPorts); fprintf('\n');
-				if any(strcmpi(allPorts, port))
+				fprintf(' %s ',me.allPorts); fprintf('\n');
+				if any(strcmpi(me.allPorts, port))
 					fprintf('===> Your specified port is present\n')
 				else
 					warning('===> No port with the specified name is present on the system!');
 				end
-				if any(strcmpi(avPorts, port))
+				if any(strcmpi(me.avPorts, port))
 					fprintf('===> Your specified port is available\n')
 				else
 					warning('===> The port is occupied, please release it first!');
+				end
+			else
+				me.allPorts = seriallist; me.avPorts = [];
+				if any(strcmpi(me.allPorts, port))
+					fprintf('===> Your specified port is present\n')
+				else
+					warning('===> No port with the specified name is present on the system!');
 				end
 			end
 			% define IOPort serial object
@@ -67,7 +76,7 @@ classdef arduinoIOPort < handle
 			[a.conn, err] = IOPort('OpenSerialPort', port,'BaudRate=115200');
 			IOPort('Verbosity',oldv)
 			if a.conn == -1
-				warning('===>! Port CANNOt be opended: %s',err);
+				warning('===>! Port CANNOT be opened: %s',err);
 				a.isDemo = true;
 				a.conn = [];
 				return
