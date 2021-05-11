@@ -52,7 +52,7 @@ classdef eyelinkManager < optickaCore
 		ignoreBlinks logical		= false
 		%> tracker update speed (Hz), should be 250 500 1000 2000
 		sampleRate double			= 1000
-		%> calibration style
+		%> calibration style, [H3 HV3 HV5 HV8 HV13]
 		calibrationStyle char		= 'HV5'
 		%> remote calibration enables manual control and selection of each fixation
 		%> this is useful for a baby or monkey who has not been trained for fixation
@@ -65,7 +65,10 @@ classdef eyelinkManager < optickaCore
 		%> calibration, can trigger reward system etc.)
 		callback char				= 'eyelinkCustomCallback'
 		%> eyelink defaults modifiers as a struct()
-		modify struct				= struct()
+		modify struct				= struct('calibrationtargetcolour',[1 1 1],...
+									'calibrationtargetsize',2,'calibrationtargetwidth',0.1,...
+									'displayCalResults',1,'targetbeep',1,'devicenumber',-1,...
+									'waitformodereadytime',500)
 		%> stimulus positions to draw on screen
 		stimulusPositions			= []
 	end
@@ -214,7 +217,7 @@ classdef eyelinkManager < optickaCore
 			end
 			
 			rect=me.screen.winRect;
-			Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3)-1,rect(4)-1);
+			Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',rect(1),rect(2),rect(3),rect(4));
 			if ~isempty(me.callback) && exist(me.callback,'file')
 				me.defaults.callback = me.callback;
 			end
@@ -1050,6 +1053,7 @@ classdef eyelinkManager < optickaCore
 				s = screenManager('debug',true,'pixelsPerCm',27,'distance',66);
 				if exist('forcescreen','var'); s.screen = forcescreen; end
 				s.backgroundColour = [0.5 0.5 0.5 0];
+				%s.windowed = [0 0 900 900];
 				o = dotsStimulus('size',me.fixationRadius(1)*2,'speed',2,'mask',true,'density',50); %test stimulus
 				open(s); %open our screen
 				setup(o,s); %setup our stimulus with our screen object

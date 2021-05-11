@@ -732,7 +732,7 @@ classdef runExperiment < optickaCore
 				commandwindow;
 				if me.debug == false
 					%warning('off'); %#ok<*WNOFF>
-					%ListenChar(-1); %2=capture all keystrokes
+					ListenChar(-1); %2=capture all keystrokes
 				end
 				Priority(MaxPriority(s.win)); %bump our priority to maximum allowed
 				
@@ -822,6 +822,7 @@ classdef runExperiment < optickaCore
 				Screen('Flip', s.win);
 				Priority(0);
 				ListenChar(0);
+				RestrictKeysForKbCheck([]);
 				ShowCursor;
 				warning('on');
 				
@@ -905,7 +906,7 @@ classdef runExperiment < optickaCore
 					tS.eO=[];
 				end
 				Priority(0);
-				ListenChar(0);
+				ListenChar(0); RestrictKeysForKbCheck([]);
 				ShowCursor;
 				try close(s); end
 				try close(aM); end
