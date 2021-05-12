@@ -778,7 +778,7 @@ classdef runExperiment < optickaCore
 						elseif me.sendStrobe && me.useDataPixx
 							triggerStrobe(io); me.sendStrobe = false;
 						end
-						
+						%------Do the actual flip
 						nextvbl = tL.vbl(end) + me.screenVals.halfisi;
 						if me.logFrames == true
 							[tL.vbl(tS.totalTicks),tL.show(tS.totalTicks),tL.flip(tS.totalTicks),tL.miss(tS.totalTicks)] = Screen('Flip', s.win, nextvbl);
@@ -797,7 +797,7 @@ classdef runExperiment < optickaCore
 							syncTime(eL);
 							me.sendSyncTime = false;
 						end
-						%------Log stim / no stim condition to log
+						%------Log stim / no stim condition
 						if strcmpi(sM.currentName,'stimulus')
 							tL.stimTime(tS.totalTicks)=1;
 						else

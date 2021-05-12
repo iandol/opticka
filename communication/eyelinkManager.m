@@ -6,27 +6,12 @@
 classdef eyelinkManager < optickaCore
 	
 	properties
-		%> eyetracker defaults structure
-		defaults struct				= struct()
-		%> IP address of host
-		IP char						= ''
-		%> start eyetracker in dummy mode?
-		isDummy logical				= false
-		%> do we record and retrieve eyetracker EDF file?
-		recordData logical			= false;
-		%> name of eyetracker EDF file
-		saveFile char				= 'myData.edf'
-		%> do we log messages to the command window?
-		verbose						= false
 		%> fixation window:
 		%> if X and Y have multiple rows, assume each one is a different fixation window.
 		%> if radius is a single value, assume a circular window
 		%> if radius has 2 values assume width x height rectangle
 		fixation struct				= struct('X',0,'Y',0,'initTime',1,'fixTime',1,...
 									'radius',1,'strictFixation',true)
-		%> add a manual offset to the eye position, similar to a drift correction
-		%> but handled by the eyelinkManager.
-		offset struct				= struct('X',0,'Y',0)
 		%> When using the test for eye position functions, 
 		%> exclusion zones where no eye movement allowed: [-degX +degX -degY +degY]
 		%> Add rows to generate succesive exclusion zones.
@@ -37,6 +22,13 @@ classdef eyelinkManager < optickaCore
 		%> (default = 100ms) before initiating a saccade. Only used if X is not
 		%> empty.
 		fixInit	struct				= struct('X',[],'Y',[],'time',0.1,'radius',2)
+		%> add a manual offset to the eye position, similar to a drift correction
+		%> but handled by the eyelinkManager.
+		offset struct				= struct('X',0,'Y',0)
+		%> start eyetracker in dummy mode?
+		isDummy logical				= false
+		%> do we record and retrieve eyetracker EDF file?
+		recordData logical			= false;
 		%> do we ignore blinks, if true then we do not update X and Y position from
 		%> previous eye location, meaning the various methods will maintain position,
 		%> e.g. if you are fixated and blink, the within-fixation X and Y position are
@@ -45,15 +37,23 @@ classdef eyelinkManager < optickaCore
 		%> really tell if a subject is blinking or has removed their head using the 
 		%> float data.
 		ignoreBlinks logical		= false
-		%> tracker update speed (Hz), should be 250 500 1000 2000
-		sampleRate double			= 1000
-		%> calibration style, [H3 HV3 HV5 HV8 HV13]
-		calibrationStyle char		= 'HV5'
 		%> remote calibration enables manual control and selection of each fixation
 		%> this is useful for a baby or monkey who has not been trained for fixation
 		%> use 1-9 to show each dot, space to select fix as valid, and 
 		%> INS key ON EYELINK KEYBOARD to accept calibration!
 		remoteCalibration logical	= false
+		%> do we log messages to the command window?
+		verbose						= false
+		%> name of eyetracker EDF file
+		saveFile char				= 'myData.edf'
+		%> eyetracker defaults structure
+		defaults struct				= struct()
+		%> IP address of host
+		IP char						= ''
+		%> tracker update speed (Hz), should be 250 500 1000 2000
+		sampleRate double			= 1000
+		%> calibration style, [H3 HV3 HV5 HV8 HV13]
+		calibrationStyle char		= 'HV5'
 		% use callbacks
 		enableCallbacks logical		= true
 		%> cutom calibration callback (enables better handling of
@@ -64,11 +64,11 @@ classdef eyelinkManager < optickaCore
 									'calibrationtargetsize',2,'calibrationtargetwidth',0.1,...
 									'displayCalResults',1,'targetbeep',1,'devicenumber',-1,...
 									'waitformodereadytime',500)
-		%> stimulus positions to draw on screen
-		stimulusPositions			= []
 	end
 	
 	properties (Hidden = true)
+		%> stimulus positions to draw on screen
+		stimulusPositions			= []
 		%> verbosity level
 		verbosityLevel double		= 4
 		%> force drift correction?
