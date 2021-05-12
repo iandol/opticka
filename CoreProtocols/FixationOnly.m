@@ -20,12 +20,12 @@ eL.modify.calibrationtargetwidth = 0.1;
 eL.modify.waitformodereadytime = 500;
 eL.modify.devicenumber = -1; % -1==use any keyboard
 
-eL.fixationX = 0;
-eL.fixationY = 0;
-eL.fixationRadius = 7;
-eL.fixationInitTime = 1.5;
-eL.fixationTime = 0.5;
-eL.strictFixation = false;
+eL.fixation.X = 0;
+eL.fixation.Y = 0;
+eL.fixation.radius = 7;
+eL.fixation.initTime = 1.5;
+eL.fixation.time = 0.5;
+eL.fixation.strictFixation = false;
 
 %randomise stimulus variables every trial?
 me.stimuli.choice = [];

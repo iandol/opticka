@@ -61,11 +61,12 @@ persistent GL_RGBA;
 persistent GL_RGBA8;
 persistent hostDataFormat;
 
+persistent verbose;
 persistent inDrift;
 offscreen = 0;
 newImage = 0;
 
-verbose = false;
+if isempty(verbose); verbose = false; end
 
 if 0 == Screen('WindowKind', eyelinktex)
     eyelinktex = []; % got persisted from a previous ptb window which has now been closed; needs to be recreated
@@ -119,6 +120,9 @@ if isstruct(callArgs) && isfield(callArgs,'window')
     lastImageTime=GetSecs;
     ineyeimagemodedisplay=0;
     drawInstructions=1;
+	if isfield(el,'verbose')
+		verbose = el.verbose;
+	end
     return;
 end
 
@@ -380,7 +384,7 @@ try
         %oldFont=Screen(eyewin,'TextFont',el.imgtitlefont);
         %oldFontSize=Screen('TextSize',eyewin,el.imgtitlefontsize);
         rect=Screen('TextBounds', eyewin, imgtitle );
-        [w2, h2]=RectSize(rect);
+        [~, h2]=RectSize(rect);
 
         % added by NJ as a quick way to prevent over drawing and to clear text
         if newImage || isempty(lasttitle) || ~strcmp(imgtitle,lasttitle)
@@ -461,23 +465,28 @@ end
 
 %=========================================================================================
 function EyelinkDrawCalibrationTarget(eyewin, el, calxy)
-[width, ~]=Screen('WindowSize', eyewin);
-size=round(el.calibrationtargetsize/100*width);
-if el.calibrationtargetwidth > 0
-    insetSize=round(el.calibrationtargetwidth/100*width);
-    if insetSize < 2; insetSize = 2;end
+width = el.winRect(3);
+if isempty(el.customTarget)
+	size=round(el.calibrationtargetsize/100*width);
+	if el.calibrationtargetwidth > 0
+		insetSize=round(el.calibrationtargetwidth/100*width);
+		if insetSize < 2; insetSize = 2;end
+	else
+		insetSize = 0; 
+	end
+	if sum(el.calibrationtargetcolour) < 0.6
+		insetColour = [1 1 1];
+	else
+		insetColour = [0 0 0];
+	end
+	Screen('gluDisk', eyewin, el.calibrationtargetcolour, calxy(1), calxy(2), size/2);
+	if insetSize>0
+		Screen('FillRect', eyewin, insetColour, CenterRectOnPointd([0 0 size insetSize], calxy(1), calxy(2)));
+		Screen('FillRect', eyewin, insetColour, CenterRectOnPointd([0 0 insetSize size], calxy(1), calxy(2)));
+		Screen('gluDisk', eyewin, el.calibrationtargetcolour, calxy(1), calxy(2), insetSize);
+	end
 else
-    insetSize = 0; 
-end
-if sum(el.calibrationtargetcolour) < 0.6
-    insetColour = [1 1 1];
-else
-    insetColour = [0 0 0];
-end
-Screen('gluDisk', eyewin, el.calibrationtargetcolour, calxy(1), calxy(2), size/2);
-if insetSize>0
-    Screen('FillRect', eyewin, insetColour, CenterRectOnPointd([0 0 size insetSize], calxy(1), calxy(2)));
-    Screen('FillRect', eyewin, insetColour, CenterRectOnPointd([0 0 insetSize size], calxy(1), calxy(2)));
-    Screen('gluDisk', eyewin, el.calibrationtargetcolour, calxy(1), calxy(2), insetSize);
-end
+	el.customTarget.draw
+	el.customTarget.animate;
+end	
 %fprintf('--->>> EYELINKCALLBACK EyelinkDrawCalibrationTarget: %.5g %.5g | size:%i / %i px\n',calxy(1),calxy(2),size,insetSize);

@@ -721,7 +721,7 @@ classdef tobiiManager < optickaCore
 			% radius is single value, assume circular, otherwise assume
 			% rectangular
 			if length(me.fixation.radius) == 1 % circular test
-				r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixationX, me.y, me.fixationY,r,me.fixationRadius);
+				r = sqrt((me.x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',me.x, me.fixation.X, me.y, me.fixation.Y,r,me.fixation.radius);
 				window = find(r < me.fixation.radius);
 			elseif length(me.fixation.radius) == 2 % x y rectangular window test
 				if (me.x >= (me.fixation.X - me.fixation.radius(1))) && (me.x <= (me.fixation.X + me.fixation.radius(1))) ...
