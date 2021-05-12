@@ -8,16 +8,20 @@ classdef eyelinkManager < optickaCore
 	properties
 		%> fixation window:
 		%> if X and Y have multiple rows, assume each one is a different fixation window.
-		%> if radius is a single value, assume a circular window
+		%> if radius has a single value, assume circular window
 		%> if radius has 2 values assume width x height rectangle
+		%> initTime is the time the subject has to initiate fixation
+		%> time is the time the sbject must maintain fixation within the window
+		%> strict = false allows subject to exit and enter window without
+		%> failure, useful during training
 		fixation struct				= struct('X',0,'Y',0,'initTime',1,'fixTime',1,...
 									'radius',1,'strictFixation',true)
 		%> When using the test for eye position functions, 
 		%> exclusion zones where no eye movement allowed: [-degX +degX -degY +degY]
 		%> Add rows to generate succesive exclusion zones.
 		exclusionZone				= []
-		%> we can optional set an initial window that the subject must stay
-		%> inside of before they saccade to the target window. This
+		%> we can set an optional initial window that the subject must stay
+		%> inside before they saccade to the target window. This
 		%> restricts guessing and "cheating", by forcing a minimum delay
 		%> (default = 100ms) before initiating a saccade. Only used if X is not
 		%> empty.
@@ -78,8 +82,6 @@ classdef eyelinkManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		%> the PTB screen to work on, passed in during initialise
-		screen						= []
 		%> Gaze X position in degrees
 		x							= []
 		%> Gaze Y position in degrees
@@ -120,6 +122,8 @@ classdef eyelinkManager < optickaCore
 		eyeUsed						= -1
 		%version of eyelink
 		version						= ''
+		%> the PTB screen to work on, passed in during initialise
+		screen						= []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -413,12 +417,14 @@ classdef eyelinkManager < optickaCore
 				x=me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
 				y=me.toPixels(me.fixation.Y,'y');
 				fprintf('Drift Correct @ %.2f/%.2f px (%.2f/%.2f deg)\n', x,y, me.fixation.X, me.fixation.Y);
-				Screen('DrawText',me.screen.win,'Drift Correction...');
-				Screen('gluDisk',me.screen.win,[1 0 0 0.5],x,y,8)
+				Screen('DrawText',me.screen.win,'Drift Correction...',10,10);
+				Screen('gluDisk',me.screen.win,[1 0 0 0.5],x,y,8);
 				Screen('Flip',me.screen.win);
 				WaitSecs('YieldSecs',0.25);
 				success = EyelinkDoDriftCorrect(me.defaults, round(x), round(y), 1, 1);
 			end
+			[result,out] = Eyelink('CalMessage');
+			fprintf('DriftCorrect: result = %i msg = %s',result,out);
 			if success ~= 0
 				me.salutation('Drift Correct','FAILED',true);
 			end
