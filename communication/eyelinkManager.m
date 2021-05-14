@@ -217,8 +217,8 @@ classdef eyelinkManager < optickaCore
 			end
 			
 			me.defaults.winRect=me.screen.winRect;
-			% this command is send from EyelinkInitDefaults
- 			Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',me.screen.winRect(1),me.screen.winRect(2),me.screen.winRect(3)-1,me.screen.winRect(4)-1);
+			% this command is sent from EyelinkInitDefaults
+ 			% Eyelink('Command', 'screen_pixel_coords = %ld %ld %ld %ld',me.screen.winRect(1),me.screen.winRect(2),me.screen.winRect(3)-1,me.screen.winRect(4)-1);
 			if ~isempty(me.callback) && exist(me.callback,'file')
 				me.defaults.callback = me.callback;
 			end
@@ -346,6 +346,7 @@ classdef eyelinkManager < optickaCore
 			if ~me.isConnected; return; end
 			fprintf('\n===>>> CALIBRATING EYELINK... <<<===\n');
 			Eyelink('Verbosity',me.verbosityLevel);
+			Eyelink('Command','horizontal_target_y = %i',me.screen.winRect(4)/2);
 			Eyelink('Command','calibration_type = %s', me.calibrationStyle);
 			Eyelink('Command','normal_click_dcorr = ON');
 			Eyelink('Command','randomize_calibration_order = NO');
@@ -353,8 +354,8 @@ classdef eyelinkManager < optickaCore
 			Eyelink('Command','cal_repeat_first_target = YES');
 			Eyelink('Command','val_repeat_first_target = YES');
 			Eyelink('Command','validation_online_fixup  = NO');
+			Eyelink('Command','generate_default_targets = YES');
 			if me.remoteCalibration
-				Eyelink('Command','generate_default_targets = YES');
 				Eyelink('Command','remote_cal_enable = 1');
 				Eyelink('Command','key_function 1 ''remote_cal_target 1''');
 				Eyelink('Command','key_function 2 ''remote_cal_target 2''');
@@ -369,15 +370,15 @@ classdef eyelinkManager < optickaCore
 				Eyelink('Command','key_function ins ''remote_cal_complete''');
 				fprintf('\n===>>> REMOTE CALIBRATION ENABLED: 1-9 show point, space to choose point.\nINS key ON EYELINK == accept calibration!!!\n');
 			else
-				Eyelink('Command','generate_default_targets = YES');
 				Eyelink('Command','remote_cal_enable = 0');
 			end
+			commandwindow;
 			EyelinkDoTrackerSetup(me.defaults);
 			if ~isempty(me.screen) && me.screen.isOpen
 				Screen('Flip',me.screen.win);
 			end
 			[result,out] = Eyelink('CalMessage');
-			fprintf('===>>> RESULT =  %.2g | message: %s\n\n',result,out);
+			fprintf('===>>> CAL RESULT =  %.2f | message: %s\n\n',result,out);
 		end
 		
 		% ===================================================================
@@ -405,18 +406,16 @@ classdef eyelinkManager < optickaCore
 		%> @brief wrapper for EyelinkDoDriftCorrection
 		%>
 		% ===================================================================
-		function success = driftCorrection(me,force)
-			if ~exist('force','var');force = true;end
+		function success = driftCorrection(me)
 			success = false;
-			if me.forceDriftCorrect || force
-				Eyelink('command', 'driftcorrect_cr_disable = ON');
-			else
-				Eyelink('command', 'driftcorrect_cr_disable = OFF');
-			end
+% 			if me.forceDriftCorrect || force
+% 				Eyelink('command', 'driftcorrect_cr_disable = ON');
+% 			else
+% 				Eyelink('command', 'driftcorrect_cr_disable = OFF');
+% 			end
 			if me.isConnected
 				x=me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
 				y=me.toPixels(me.fixation.Y,'y');
-				fprintf('Drift Correct @ %.2f/%.2f px (%.2f/%.2f deg)\n', x,y, me.fixation.X, me.fixation.Y);
 				Screen('DrawText',me.screen.win,'Drift Correction...',10,10);
 				Screen('gluDisk',me.screen.win,[1 0 0 0.5],x,y,8);
 				Screen('Flip',me.screen.win);
@@ -424,14 +423,15 @@ classdef eyelinkManager < optickaCore
 				success = EyelinkDoDriftCorrect(me.defaults, round(x), round(y), 1, 1);
 			end
 			[result,out] = Eyelink('CalMessage');
-			fprintf('DriftCorrect: result = %i msg = %s',result,out);
+			fprintf('DriftCorrect @ %.2f/%.2f px (%.2f/%.2f deg): result = %i msg = %s\n',...
+				x,y, me.fixation.X, me.fixation.Y,result,out);
 			if success ~= 0
 				me.salutation('Drift Correct','FAILED',true);
 			end
 			if me.forceDriftCorrect
-				me.salutation('Drift Correct','Apply Drift correct',true);
 				res=Eyelink('ApplyDriftCorr');
-				me.salutation('Drift Correct',sprintf('DC Result: %f\n',res),true);
+				[result,out] = Eyelink('CalMessage');
+				me.salutation('Drift Correct',sprintf('Results: %f %i %s\n',res,result,out),true);
 			end
 		end
 		
