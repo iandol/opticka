@@ -10,7 +10,7 @@ classdef tobiiManager < optickaCore
 		%> model of eyetracker:
 		%> 'Tobi Pro Spectrum' - 'IS4_Large_Peripheral' - 'Tobii TX300'
 		model char {mustBeMember(model,{'Tobii Pro Spectrum','Tobii TX300',...
-			'IS4_Large_Peripheral', 'Tobii Pro Nano'})} = 'Tobii Pro Spectrum'
+			'Tobii 4C','IS4_Large_Peripheral', 'Tobii Pro Nano'})} = 'Tobii Pro Spectrum'
 		%> tracker update speed (Hz)
 		%> Spectrum Pro: [60, 120, 150, 300, 600 or 1200]
 		%> 4C: 90
@@ -177,7 +177,7 @@ classdef tobiiManager < optickaCore
 				me.tobii = [];
 				me.isDummy = true;
 			end
-			if contains(me.model,'IS4_Large_Peripheral'); 
+			if contains(me.model,{'Tobii 4C','IS4_Large_Peripheral'})
 				me.sampleRate = 90; 
 				me.trackingMode = 'Default';
 			end
@@ -210,7 +210,7 @@ classdef tobiiManager < optickaCore
 				me.operatorScreen	= sM2;
 				me.secondScreen		= true;
 			end
-			if contains(me.model,'IS4_Large_Peripheral'); 
+			if contains(me.model,{'Tobii 4C','IS4_Large_Peripheral'})
 				me.sampleRate = 90; 
 				me.trackingMode = 'Default';
 			end
@@ -222,9 +222,11 @@ classdef tobiiManager < optickaCore
 			end
 			
 			me.settings								= Titta.getDefaults(me.model);
-			me.settings.freq						= me.sampleRate;
+			if ~contains(me.model,{'Tobii 4C','IS4_Large_Peripheral'})
+				me.settings.freq						= me.sampleRate;
+				me.settings.trackingMode				= me.trackingMode;
+			end
 			me.settings.calibrateEye				= me.eyeUsed;
-			me.settings.trackingMode				= me.trackingMode;
 			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
 			me.settings.UI.setup.bgColor			= me.settings.cal.bgColor;
 			me.settings.UI.setup.showFixPointsToSubject		= false;
@@ -1472,14 +1474,14 @@ classdef tobiiManager < optickaCore
 		function set.model(me,value)
 			me.model = value;
 			switch me.model
-				case {'IS4_Large_Peripheral','4C'}
+				case {'IS4_Large_Peripheral','Tobii 4C'}
 					me.sampleRate = 90; %#ok<*MCSUP>
 					me.trackingMode = 'Default';
 				case {'Tobii TX300','TX300'}
-					me.sampleRate = 300; %#ok<*MCSUP>
+					me.sampleRate = 300; 
 					me.trackingMode = 'Default';
 				otherwise
-					me.sampleRate = 300; %#ok<*MCSUP>
+					me.sampleRate = 300; 
 					me.trackingMode = 'macaque';
 			end
 		end
