@@ -221,6 +221,9 @@ classdef tobiiManager < optickaCore
 				me.tobii			= me.tobii.setDummyMode();
 			end
 			
+			if contains(me.model,'Tobii 4C')
+				me.model = 'IS4_Large_Peripheral';
+			end
 			me.settings								= Titta.getDefaults(me.model);
 			if ~contains(me.model,{'Tobii 4C','IS4_Large_Peripheral'})
 				me.settings.freq						= me.sampleRate;
