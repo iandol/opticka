@@ -265,7 +265,7 @@ classdef arduinoManager < optickaCore
 			handles.value = uicontrol('Style','edit',...
 				'Parent',handles.parent,...
 				'Tag','RewardValue',...
-				'String',300,...
+				'String',me.rewardTime,...
 				'FontName',MonoFont,...
 				'FontSize', fontSize,...
 				'Position',[5 115 95 25],...
@@ -282,7 +282,7 @@ classdef arduinoManager < optickaCore
 			handles.pin = uicontrol('Style','edit',...
 				'Parent',handles.parent,...
 				'Tag','RewardPin',...
-				'String',2,...
+				'String',me.rewardTime,...
 				'FontName',MonoFont,...
 				'FontSize', fontSize,...
 				'Position',[140 115 95 25],...
@@ -369,8 +369,12 @@ classdef arduinoManager < optickaCore
 				nl = [nl KbName('q') KbName('0)') KbName('-_') KbName('1!')];
 				oldkeys=RestrictKeysForKbCheck(nl);
 				doLoop = true;
+				fInc = 6;
+				tick = 0;
+				kTick = 0;
 				ListenChar(-1);
 				while doLoop
+					tick = tick + 1;
 					[~, keyCode] = KbWait(-1);
 					if any(keyCode)
 						rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end
@@ -378,28 +382,52 @@ classdef arduinoManager < optickaCore
 							case {'q','0','0)','-_','-'}
 								doLoop = false;
 							case{'1','1!'}
-								me.timedTTL(pin,250);
+								if tick > kTick
+									me.timedTTL(pin,250);
+									kTick = tick + fInc;
+								end
 							case{'2','2@'}
-								me.timedTTL(pin,300);
+								if tick > kTick
+									me.timedTTL(pin,300);
+									kTick = tick + fInc;
+								end
 							case{'3','3#'}
-								me.timedTTL(pin,400);
+								if tick > kTick
+									me.timedTTL(pin,400);
+									kTick = tick + fInc;
+								end
 							case{'4','4$'}
-								me.timedTTL(pin,500);
+								if tick > kTick
+									me.timedTTL(pin,500);
+									kTick = tick + fInc;
+								end
 							case{'5','5%'}
-								me.timedTTL(pin,600);
+								if tick > kTick
+									me.timedTTL(pin,600);
+									kTick = tick + fInc;
+								end
 							case{'6','6^'}
-								me.timedTTL(pin,700);
+								if tick > kTick
+									me.timedTTL(pin,700);
+									kTick = tick + fInc;
+								end
 							case{'7'}
-								me.timedTTL(pin,800);
+								if tick > kTick
+									me.timedTTL(pin,800);
+									kTick = tick + fInc;
+								end
 							case{'8'}
-								me.timedTTL(pin,900);
+								if tick > kTick
+									me.timedTTL(pin,900);
+									kTick = tick + fInc;
+								end
 						end
 					end
-					WaitSecs(0.2);
+					WaitSecs(0.02);
 				end
 				ListenChar(0);
 				fprintf('===>>> Exit pressed!!!\n');
-				RestrictKeysForKbCheck(oldkeys);
+				RestrictKeysForKbCheck([]);
 				set(me.handles.loopButton,'ForegroundColor',[1 0.5 0]);
 			end
 			
@@ -422,19 +450,27 @@ classdef arduinoManager < optickaCore
 				sM.backgroundColour = [0.1 0.1 0.1];
 				sM.open();
 				
-				ad = audioManager();ad.close();
-				if IsLinux
-					ad.device = [];
-				elseif IsWin
-					ad.device = 6;
+				global aM
+				if isempty(aM) || ~isa('aM','audioManager')
+					aM = audioManager();aM.close();
 				end
-				ad.setup();
+				if IsLinux
+					aM.device = [];
+				elseif IsWin
+					aM.device = 6;
+				end
+				aM.open();aM.loadSamples();
 				
 				mv = movieStimulus();
 				mv.setup(sM);
 				
-				ListenChar(2);
+				fInc = 6;
+				tick = 0;
+				kTick = 1;
+				
+				ListenChar(-1);
 				while doLoop
+					tick = tick + 1;
 					[isDown, ~, keyCode] = KbCheck(-1);
 					if isDown
 						rchar = KbName(keyCode); if iscell(rchar);rchar=rchar{1};end
@@ -442,27 +478,30 @@ classdef arduinoManager < optickaCore
 							case {'q','0','0)','-_','-'}
 								doLoop = false;
 							case{'1','1!','kp_end'}
-								mv.xPositionOut = 0;
-								mv.yPositionOut = 0;
-								update(mv);
-								start = flip(sM); vbl = start;
-								play(ad);
-								me.timedTTL(pin,val);
-								i=1;
-								while vbl < start + 2
-									draw(mv); sM.drawCross([],[],0,0);
-									finishDrawing(sM);
-									vbl = flip(sM);
-									if i == 60; me.timedTTL(pin,val); end
-									i=i+1;
+								if tick > kTick
+									mv.xPositionOut = 0;
+									mv.yPositionOut = 0;
+									update(mv);
+									start = flip(sM); vbl = start;
+									play(aM);
+									me.timedTTL(pin,val);
+									i=1;
+									while vbl < start + 2
+										draw(mv); sM.drawCross([],[],0,0);
+										finishDrawing(sM);
+										vbl = flip(sM);
+										if i == 60; me.timedTTL(pin,val); end
+										i=i+1;
+									end
+									me.timedTTL(pin,val);
+									kTick = tick + fInc;
 								end
-								me.timedTTL(pin,val);
 							case{'2','2@','kp_down'}
 								mv.xPositionOut = 16;
 								mv.yPositionOut = 10;
 								update(mv);
 								start = flip(sM); vbl = start;
-								play(ad);
+								play(aM);
 								me.timedTTL(pin,val);
 								i=1;
 								while vbl < start + 2
@@ -478,7 +517,7 @@ classdef arduinoManager < optickaCore
 								mv.yPositionOut = -10;
 								update(mv);
 								start = flip(sM); vbl = start;
-								play(ad);
+								play(aM);
 								me.timedTTL(pin,val);
 								i=1;
 								while vbl < start + 2
@@ -494,7 +533,7 @@ classdef arduinoManager < optickaCore
 								mv.yPositionOut = -10;
 								update(mv);
 								start = flip(sM); vbl = start;
-								play(ad);
+								play(aM);
 								me.timedTTL(pin,200);
 								i=1;
 								while vbl < start + 2
@@ -510,7 +549,7 @@ classdef arduinoManager < optickaCore
 								mv.yPositionOut = 10;
 								update(mv);
 								start = flip(sM); vbl = start;
-								play(ad);
+								play(aM);
 								me.timedTTL(pin,200);
 								i=1;
 								while vbl < start + 2
@@ -522,21 +561,30 @@ classdef arduinoManager < optickaCore
 								end
 								me.timedTTL(pin,val);
 							case{'6','6^','kp_right'}
-								me.timedTTL(pin,val);
+								if tick > kTick
+									me.timedTTL(pin,val);
+									kTick = tick + fInc;
+								end
 							case{'7','7&','kp_home'}
-								me.timedTTL(pin,val);
+								if tick > kTick
+									me.timedTTL(pin,val);
+									kTick = tick + fInc;
+								end
 							case{'8','8*','kp_up'}
-								me.timedTTL(pin,val);
+								if tick > kTick
+									me.timedTTL(pin,val);
+									kTick = tick + fInc;
+								end
 						end
-					else
-						flip(sM);
+
 					end
+					flip(sM);
 				end
 				ListenChar(0);
-				ad.close;mv.reset;
+				aM.close; mv.reset;
 				sM.close;
 				fprintf('===>>> Exit pressed!!!\n');
-				RestrictKeysForKbCheck(oldkeys);
+				RestrictKeysForKbCheck([]);
 				set(me.handles.loop2Button,'ForegroundColor',[1 0.5 0]);
 			end
 		end
