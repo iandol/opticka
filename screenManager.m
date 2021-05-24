@@ -939,6 +939,7 @@ classdef screenManager < optickaCore
 		%> @return
 		% ===================================================================
 		function drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha)
+			if ~me.isOpen; fprintf('drawCross(me,size,colour,x,y,lineWidth,showDisk,alpha)\n');return; end
 			% drawCross(me, size, colour, x, y, lineWidth)
 			if nargin < 8 || isempty(alpha); alpha = 1; end
 			if nargin < 7 || isempty(showDisk); showDisk = true; end

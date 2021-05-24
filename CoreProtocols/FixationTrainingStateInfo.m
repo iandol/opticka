@@ -20,13 +20,12 @@
 %==================================================================
 %------------General Settings-----------------
 tS.useTask					= false; %==use stimulusSequence (randomised variable task object)
-tS.rewardTime				= 100; %==TTL time in milliseconds
-tS.rewardPin				= 2; %==Output pin, 2 by default with Arduino.
+tS.rewardTime				= 300; %==TTL time in milliseconds
+tS.rewardPin				= 11; %==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus  = false; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition		= false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= false; %==save behavioural and eye movement data?
-tS.useMagStim				= false; %enable the magstim manager
 tS.name						= 'fixation-training'; %==name of this protocol
 
 %==================================================================
@@ -55,7 +54,7 @@ eL.sampleRate 				= 250; % sampling rate
 % accept calibration!
 eL.remoteCalibration			= false; 
 %===========================
-eL.calibrationStyle 			= 'HV5'; % calibration style
+eL.calibrationStyle 			= 'HV3'; % calibration style
 eL.modify.calibrationtargetcolour = [1 1 1];
 eL.modify.calibrationtargetsize = 1; % size of calibration target as percentage of screen
 eL.modify.calibrationtargetwidth = 0.1; % width of calibration target's border as percentage of screen
@@ -180,7 +179,7 @@ stimEntryFcn = {
 stimFcn = {
 	@()draw(me.stimuli); % draw the stimuli
 	@()drawText(s,'Stim'); % draw test to show what state we are in
-	@()drawEyePosition(eL); % draw the eye position to PTB screen
+	%@()drawEyePosition(eL); % draw the eye position to PTB screen
 	@()finishDrawing(s); % tell PTB we have finished drawing
 	@()animate(me.stimuli); % animate stimuli for subsequent draw
 };
@@ -239,7 +238,7 @@ breakEntryFcn = {
 	@()logRun(me,'BREAKFIX'); %fprintf current trial info
 };
 
-%----------------------break entry
+%----------------------inc entry
 incEntryFcn = { 
 	@()beep(aM,400,0.5,1);
 	@()trackerClearScreen(eL);
@@ -252,8 +251,12 @@ incEntryFcn = {
 };
 
 %----------------------our incorrect stimulus
-breakFcn =  { @()drawBackground(s); @()drawText(s,'Wrong'); };
+breakFcn =  {
+	@()drawBackground(s);
+	@()drawText(s,'Wrong');
+};
 
+%----------------------break exit
 breakExitFcn = { 
 	@()update(me.stimuli); %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM);
@@ -273,7 +276,7 @@ offsetFcn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eL); % stop eyelink recording data
 	@()setOffline(eL); % set eyelink offline
-	@()driftOffset(eL) % enter tracker calibrate/validate setup mode
+	@()driftOffset(eL) % enter tracker offset
 };
 
 %--------------------drift correction function
@@ -281,7 +284,7 @@ driftFcn = {
 	@()drawBackground(s); %blank the display
 	@()stopRecording(eL); % stop eyelink recording data
 	@()setOffline(eL); % set eyelink offline
-	@()driftCorrection(eL) % enter tracker calibrate/validate setup mode
+	@()driftCorrection(eL) % enter drift correct
 };
 
 %--------------------screenflash
@@ -291,7 +294,9 @@ flashFcn = {
 };
 
 %----------------------allow override
-overrideFcn = { @()keyOverride(me); };
+overrideFcn = { 
+	@()keyOverride(me); 
+};
 
 %----------------------show 1deg size grid
 gridFcn = { 

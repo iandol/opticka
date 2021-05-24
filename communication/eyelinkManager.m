@@ -466,13 +466,18 @@ classdef eyelinkManager < optickaCore
 					getSample(me);
 					xs(i) = me.x;
 					ys(i) = me.y;
-					flash = mod(i,round(ifi/6)) == 1;
+					if mod(i,10) == 0
+						flash = ~flash;
+					end
 					Screen('DrawText',me.screen.win,'Drift Correction...',10,10,[0.4 0.4 0.4]);
 					if flash
-						Screen('gluDisk',me.screen.win,[1 0 1 0.5],x,y,8);
+						Screen('gluDisk',me.screen.win,[1 0 1 0.75],x,y,10);
+						Screen('gluDisk',me.screen.win,[1 1 1 1],x,y,4);
 					else
-						Screen('gluDisk',me.screen.win,[1 1 0 0.5],x,y,8);
+						Screen('gluDisk',me.screen.win,[1 1 0 0.75],x,y,10);
+						Screen('gluDisk',me.screen.win,[0 0 0 1],x,y,4);
 					end
+					me.screen.drawCross(0.6,[0 0 0],x,y,0.1,false);
 					Screen('Flip',me.screen.win);
 					[~, ~, keyCode] = KbCheck(-1);
 					if keyCode(stopkey) || keyCode(escapeKey); breakLoop = true; break;	end
@@ -1247,8 +1252,6 @@ classdef eyelinkManager < optickaCore
 					% stop recording data
 					stopRecording(me);
 					setOffline(me); %Eyelink('Command', 'set_idle_mode');
-					trackerClearScreen(me); % clear eyelink screen
-					trackerDrawText(me,'FINISHED!!!');
 					resetFixation(me);
 					
 					% set up the fix init system, whereby the subject must
@@ -1281,9 +1284,13 @@ classdef eyelinkManager < optickaCore
 						[~, ~, keyCode] = KbCheck(-1);
 						if keyCode(calibkey); trackerSetup(me); break; end
 						if keyCode(driftkey); driftCorrection(me); break; end
+						if keyCode(offsetkey); driftOffset(me); break; end
 					end
 					a=a+1;
 				end
+				% clear tracker display
+				trackerClearScreen(me);
+				trackerDrawText(me,'FINISHED eyelinkManager Demo!!!');
 				ListenChar(0);Priority(0);ShowCursor;RestrictKeysForKbCheck([])
 				close(s);
 				close(me);

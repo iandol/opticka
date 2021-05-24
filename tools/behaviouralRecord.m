@@ -67,17 +67,17 @@ classdef behaviouralRecord < optickaCore
 			obj.tick = 1;
 			obj.date = datestr(now);
 			if ~exist('eL','var')
-				eL.fixationRadius = 1;
-				eL.fixationTime = 1;
-				eL.fixationInitTime = 1;
+				eL.fixation.radius = 1;
+				eL.fixation.fixTime = 1;
+				eL.fixation.initTime = 1;
 			end
 			t = {['INFORMATION @ ' obj.date]};
 			t{end+1} = ['RUN = ' obj.comment];
-			t{end+1} = ['RADIUS = ' num2str(eL.fixationRadius)];
+			t{end+1} = ['RADIUS = ' num2str(eL.fixation.radius)];
 			t{end+1} = ' ';
-			t{end+1} = ['TIME = ' num2str(eL.fixationTime)];
+			t{end+1} = ['TIME = ' num2str(eL.fixation.fixTime)];
 			t{end+1} = ' ';
-			t{end+1} = ['INIT TIME = ' num2str(eL.fixationInitTime)];
+			t{end+1} = ['INIT TIME = ' num2str(eL.fixation.initTime)];
 			
 			if ismac
 				nfont = 'avenir next';
@@ -165,9 +165,9 @@ classdef behaviouralRecord < optickaCore
 				else
 					obj.response(end+1) = 0;
 				end
-				obj.radius(end+1) = eL.fixationRadius;
-				obj.time(end+1) = eL.fixationTime;
-				obj.inittime(end+1) = eL.fixationInitTime;
+				obj.radius(end+1) = eL.fixation.radius;
+				obj.time(end+1) = eL.fixation.fixTime;
+				obj.inittime(end+1) = eL.fixation.initTime;
 			end
 			
 			hitn = length( obj.response(obj.response > 0) );

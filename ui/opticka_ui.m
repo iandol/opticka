@@ -1987,9 +1987,9 @@ h146 = uibuttongroup(...
 
 if verLessThan('matlab','8.4');tp='top';else;tp='right';end
 tabgp = uitabgroup(h1,'Position',[0 0.72 1 0.28],'TabLocation',tp,'Tag','OKtabgp');
-tab1 = uitab(tabgp,'Title','Display','Tag','OKtab1');
-tab3 = uitab(tabgp,'Title','Options','Tag','OKtab3');
-tab2 = uitab(tabgp,'Title','Task','Tag','OKtab2');
+tab1 = uitab(tabgp,'Title','Display','Tag','OKtab1','ForegroundColor',[0.75 0.1 0.1]);
+tab2 = uitab(tabgp,'Title','Task','Tag','OKtab2','ForegroundColor',[0.75 0.1 0.1]);
+tab3 = uitab(tabgp,'Title','Options','Tag','OKtab3','ForegroundColor',[0.75 0.1 0.1]);
 %tab4 = uitab(tabgp,'Title','Settings','Tag','OKtab4');
 
 h2 = uimenu(...
