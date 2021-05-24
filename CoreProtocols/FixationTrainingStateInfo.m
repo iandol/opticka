@@ -125,7 +125,7 @@ me.stimuli.fixationChoice			= 2;
 % wrappers to retrieve/set them.
 
 %--------------------enter pause state
-pauseEntryFcn = { 
+pauseEntryFcn = {
 	@()drawBackground(s); %blank the subject display
 	@()flip(s); % flip the PTB screen
 	@()drawTextNow(s,'Paused, press [p] to resume...');
@@ -140,7 +140,7 @@ pauseEntryFcn = {
 };
 
 %--------------------exit pause state
-pauseExitFcn = { 
+pauseExitFcn = {
 	@()fprintf('\n===>>>EXIT PAUSE STATE\n')
 	@()enableFlip(me); % start PTB screen flips
 };
@@ -161,23 +161,23 @@ psEntryFcn = {
 };
 
 %---------------------prestimulus blank
-prestimulusFcn = { 
+prestimulusFcn = {
 	@()drawBackground(s); % only draw a background colour to the PTB screen
 	@()drawText(s,'Prefix'); % gives a text lable of what state we are in
 };
 
 %---------------------exiting prestimulus state
-psExitFcn = { 
+psExitFcn = {
 	@()statusMessage(eL,'Stimulus...'); % show eyetracker status message
 };
 
 %---------------------stimulus entry state
-stimEntryFcn = { 
+stimEntryFcn = {
 	@()logRun(me,'SHOW Fixation Spot'); % log start to command window
 };
 
 %---------------------stimulus within state
-stimFcn = { 
+stimFcn = {
 	@()draw(me.stimuli); % draw the stimuli
 	@()drawText(s,'Stim'); % draw test to show what state we are in
 	@()drawEyePosition(eL); % draw the eye position to PTB screen
@@ -186,7 +186,7 @@ stimFcn = {
 };
 
 %-----------------------test we are maintaining fixation
-maintainFixFcn = { 
+maintainFixFcn = {
 	% this command performs the logic to search and then maintain fixation inside the
 	% fixation window. The parameters are defined above. If the subject does initiate
 	% and then maintain fixation, then 'correct' is returned and the state machine
@@ -196,7 +196,7 @@ maintainFixFcn = {
 };
 
 %-----------------------as we exit stim presentation state
-stimExitFcn = { 
+stimExitFcn = {
 	@()edfMessage(eL,'END_FIX'); % tell EDF we finish fix
 	@()edfMessage(eL,'END_RT'); % tell EDF we finish reaction time
 };
@@ -215,20 +215,20 @@ correctEntryFcn = {
 };
 
 %-----------------------correct stimulus
-correctFcn = { 
+correctFcn = {
 	@()drawBackground(s); % draw background colour
 	@()drawText(s,'Correct'); % draw text
 };
 
 %----------------------when we exit the correct state
-correctExitFcn = { 
+correctExitFcn = {
 	@()update(me.stimuli); % prepare stimuli for the next trial
 	@()updatePlot(bR, eL, sM); % update the behavioural report plot
 	@()drawnow; % ensure we update the figure
 };
 
 %----------------------break entry
-breakEntryFcn = { 
+breakEntryFcn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerClearScreen(eL);
 	@()trackerDrawText(eL,'Broke fix! :-(');
@@ -268,6 +268,22 @@ calibrateFcn = {
 	@()trackerSetup(eL) % enter tracker calibrate/validate setup mode
 };
 
+%--------------------drift offset function
+offsetFcn = { 
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eL); % stop eyelink recording data
+	@()setOffline(eL); % set eyelink offline
+	@()driftOffset(eL) % enter tracker calibrate/validate setup mode
+};
+
+%--------------------drift correction function
+driftFcn = { 
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eL); % stop eyelink recording data
+	@()setOffline(eL); % set eyelink offline
+	@()driftCorrection(eL) % enter tracker calibrate/validate setup mode
+};
+
 %--------------------screenflash
 flashFcn = { 
 	@()drawBackground(s);
@@ -295,14 +311,16 @@ sM.skipExitStates = {'fixate','incorrect|breakfix'};
 %==================================================================
 disp('================>> Building state info file <<================')
 stateInfoTmp = {
-'name'      'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+'name'		'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'		'exitFcn';
 'pause'		'blank'		inf		pauseEntryFcn	[]				[]					pauseExitFcn;
 'blank'		'stimulus'	0.5		psEntryFcn		prestimulusFcn	[]					psExitFcn;
-'stimulus'  'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn		stimExitFcn;
+'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn		stimExitFcn;
 'incorrect'	'blank'		2		incEntryFcn		breakFcn		[]					breakExitFcn;
 'breakfix'	'blank'		2		breakEntryFcn	breakFcn		[]					breakExitFcn;
 'correct'	'blank'		0.5		correctEntryFcn	correctFcn		[]					correctExitFcn;
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]					[];
+'offset'	'pause'		0.5		offsetFcn		[]				[]					[];
+'drift'		'pause'		0.5		driftFcn		[]				[]					[];
 'flash'		'pause'		0.5		[]				flashFcn		[]					[];
 'override'	'pause'		0.5		[]				overrideFcn		[]					[];
 'showgrid'	'pause'		1		[]				gridFcn			[]					[];
@@ -315,4 +333,4 @@ disp('================>> Loaded state info file <<================')
 clear maintainFixFcn prestimulusFcn singleStimulus pauseEntryFcn ...
 	prestimulusFcn stimFcn stimEntryFcn stimExitfcn correctEntry ...
 	correctWithin correctExitFcn breakFcn maintainFixFcn psExitFcn ...
-	incorrectFcn calibrateFcn gridFcn overrideFcn flashFcn breakFcn
+	incorrectFcn calibrateFcn offsetFcn driftFcn gridFcn overrideFcn flashFcn breakFcn

@@ -614,6 +614,9 @@ classdef runExperiment < optickaCore
 					fprintf('\n===>>> Handing over to eyelink for calibration & validation...\n')
 					initialise(eL, s);
 					setup(eL);
+					if ~eL.isConnected && ~eL.isDummy
+						warning('Eyelink is not connected and not in dummy mode, potential connection issue...')
+					end
 				end
 				
 				%---------initialise and set up I/O
@@ -1943,14 +1946,30 @@ classdef runExperiment < optickaCore
 							end
 							tS.keyHold = tS.keyTicks + fInc;
 						end
-					case 'm'
+					case 'y'
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Calibrate ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
 							tS.keyHold = tS.keyTicks + fInc;
 							forceTransition(me.stateMachine, 'calibrate');	
 							return
-						end						
+						end	
+					case 'u'
+						if tS.keyTicks > tS.keyHold
+							fprintf('===>>> Drift OFFSET ENGAGED!\n');
+							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
+							tS.keyHold = tS.keyTicks + fInc;
+							forceTransition(me.stateMachine, 'offset');	
+							return
+						end
+					case 'i'
+						if tS.keyTicks > tS.keyHold
+							fprintf('===>>> Drift CORRECT ENGAGED!\n');
+							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
+							tS.keyHold = tS.keyTicks + fInc;
+							forceTransition(me.stateMachine, 'drift');	
+							return
+						end
 					case 'f'
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Flash ENGAGED!\n');
@@ -1967,7 +1986,7 @@ classdef runExperiment < optickaCore
 							forceTransition(me.stateMachine, 'magstim');
 							return
 						end
-					case 'o'
+					case ';'
 						if tS.keyTicks > tS.keyHold
 							fprintf('===>>> Override ENGAGED!\n');
 							tS.pauseToggle = tS.pauseToggle + 1; %we go to pause after this so toggle this
@@ -2109,9 +2128,11 @@ classdef runExperiment < optickaCore
 %  k		=		Increase Prestimulus Time
 %  l		=		Decrease Prestimulus Time
 %  r		=		give reward
-%  m		=		calibrate
+%  y		=		calibrate
+%  u		=		offset
+%  i		=		drift
 %  f		=		flash screen
-%  o		=		override mode (causes debug state)
+%  ;		=		override mode (causes debug state)
 %  z		=		DEC fix init time
 %  x		=		INC fix init time
 %  c		=		DEC fix time

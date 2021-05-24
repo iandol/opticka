@@ -77,6 +77,8 @@ classdef eyelinkManager < optickaCore
 		verbosityLevel double		= 4
 		%> force drift correction?
 		forceDriftCorrect logical	= true
+		%> drift correct max
+		driftMaximum double			= 15
 		%> custom calibration target
 		customTarget				= []
 	end
@@ -173,7 +175,8 @@ classdef eyelinkManager < optickaCore
 		%> and opening the EDF file if me.recordData is true
 		%>
 		% ===================================================================
-		function initialise(me,sM)
+		function success = initialise(me,sM)
+			success = false;
 			if ~exist('sM','var')
 				warning('Cannot initialise without a PTB screen')
 				return
@@ -197,15 +200,18 @@ classdef eyelinkManager < optickaCore
 			end
 			
 			if ~isempty(me.callback) && me.enableCallbacks
-				[~,dummy] = EyelinkInit(me.isDummy,me.callback);
+				[res,dummy] = EyelinkInit(me.isDummy,me.callback);
 			elseif me.enableCallbacks
-				[~,dummy] = EyelinkInit(me.isDummy,1);
+				[res,dummy] = EyelinkInit(me.isDummy,1);
 			else
-				[~,dummy] = EyelinkInit(me.isDummy,0);
+				[res,dummy] = EyelinkInit(me.isDummy,0);
 			end
 			me.isDummy = logical(dummy);
-			
 			me.checkConnection();
+			if ~me.isConnected && ~me.isDummy
+				me.salutation('Eyelink Initialise','Could not connect, or enter Dummy mode...',true)
+				return
+			end
 			
 			if me.screen.isOpen == true 
 				me.win = me.screen.win;
@@ -254,29 +260,30 @@ classdef eyelinkManager < optickaCore
 			getTrackerTime(me);
 			getTimeOffset(me);
 			me.salutation('Initialise Method', sprintf('Running on a %s @ %2.5g (time offset: %2.5g)', me.version, me.trackerTime,me.currentOffset),true);
-			
 			% try to open file to record data to
-			if me.isConnected && me.recordData
-				err = Eyelink('Openfile', me.tempFile);
-				if err ~= 0
-					warning('eyelinkManager Cannot setup Eyelink data file, aborting data recording');
-					me.isRecording = false;
-				else
-					Eyelink('Command', ['add_file_preamble_text ''Recorded by:' me.fullName ' tracker'''],true);
-					me.isRecording = true;
+			if me.isConnected 
+				if me.recordData
+					err = Eyelink('Openfile', me.tempFile);
+					if err ~= 0
+						warning('eyelinkManager Cannot setup Eyelink data file, aborting data recording');
+						me.isRecording = false;
+					else
+						Eyelink('Command', ['add_file_preamble_text ''Recorded by:' me.fullName ' tracker'''],true);
+						me.isRecording = true;
+					end
 				end
+				Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld',me.screen.winRect(1),me.screen.winRect(2),me.screen.winRect(3)-1,me.screen.winRect(4)-1);
+				Eyelink('Message', 'FRAMERATE %ld',round(me.screen.screenVals.fps));
+				Eyelink('Message', 'DISPLAY_PPD %ld', round(me.ppd_));
+				Eyelink('Message', 'DISPLAY_DISTANCE %ld', round(me.screen.distance));
+				Eyelink('Message', 'DISPLAY_PIXELSPERCM %ld', round(me.screen.pixelsPerCm));
+				Eyelink('Command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
+				Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
+				Eyelink('Command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
+				Eyelink('Command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,AREA,GAZERES,STATUS');
+				%Eyelink('Command', 'use_ellipse_fitter = no');
+				Eyelink('Command', 'sample_rate = %d',me.sampleRate);
 			end
-			Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld',me.screen.winRect(1),me.screen.winRect(2),me.screen.winRect(3)-1,me.screen.winRect(4)-1);
-			Eyelink('Message', 'FRAMERATE %ld',round(me.screen.screenVals.fps));
-			Eyelink('Message', 'DISPLAY_PPD %ld', round(me.ppd_));
-			Eyelink('Message', 'DISPLAY_DISTANCE %ld', round(me.screen.distance));
-			Eyelink('Message', 'DISPLAY_PIXELSPERCM %ld', round(me.screen.pixelsPerCm));
-			Eyelink('Command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
-			Eyelink('Command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
-			Eyelink('Command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
-			Eyelink('Command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,AREA,GAZERES,STATUS');
-			%Eyelink('Command', 'use_ellipse_fitter = no');
-			Eyelink('Command', 'sample_rate = %d',me.sampleRate);
 		end
 		
 		% ===================================================================
@@ -349,6 +356,8 @@ classdef eyelinkManager < optickaCore
 			Eyelink('Command','horizontal_target_y = %i',me.screen.winRect(4)/2);
 			Eyelink('Command','calibration_type = %s', me.calibrationStyle);
 			Eyelink('Command','normal_click_dcorr = ON');
+			Eyelink('command', 'driftcorrect_cr_disable = OFF');
+			Eyelink('command', 'online_dcorr_maxangle = 15.0');
 			Eyelink('Command','randomize_calibration_order = NO');
 			Eyelink('Command','randomize_validation_order = NO');
 			Eyelink('Command','cal_repeat_first_target = YES');
@@ -408,30 +417,87 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function success = driftCorrection(me)
 			success = false;
-% 			if me.forceDriftCorrect || force
-% 				Eyelink('command', 'driftcorrect_cr_disable = ON');
-% 			else
-% 				Eyelink('command', 'driftcorrect_cr_disable = OFF');
-% 			end
+			x=me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
+			y=me.toPixels(me.fixation.Y,'y');
 			if me.isConnected
+				Eyelink('command', 'driftcorrect_cr_disable = OFF');
+				Eyelink('command', 'online_dcorr_maxangle = 15.0');
+				Screen('DrawText',me.screen.win,'Drift Correction...',10,10);
+				Screen('gluDisk',me.screen.win,[1 0 1 0.5],x,y,8);
+				Screen('Flip',me.screen.win);
+				WaitSecs('YieldSecs',0.2);
+				success = EyelinkDoDriftCorrect(me.defaults, round(x), round(y), 1, 1);
+				[result,out] = Eyelink('CalMessage');
+				fprintf('DriftCorrect @ %.2f/%.2f px (%.2f/%.2f deg): result = %i msg = %s\n',...
+					x,y, me.fixation.X, me.fixation.Y,result,out);
+				if success ~= 0
+					me.salutation('Drift Correct','FAILED',true);
+				end
+				if me.forceDriftCorrect
+					res=Eyelink('ApplyDriftCorr');
+					[result,out] = Eyelink('CalMessage');
+					me.salutation('Drift Correct',sprintf('Results: %f %i %s\n',res,result,out),true);
+				end
+			end
+			WaitSecs('YieldSecs',1);
+		end
+		
+		% ===================================================================
+		%> @brief wrapper for EyelinkDoDriftCorrection
+		%>
+		% ===================================================================
+		function success = driftOffset(me)
+			success = false;
+			escapeKey			= KbName('ESCAPE');
+			stopkey				= KbName('Q');
+			nextKey				= KbName('SPACE');
+			calibkey			= KbName('C');
+			driftkey			= KbName('D');
+			if me.isConnected || me.isDummy
 				x=me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
 				y=me.toPixels(me.fixation.Y,'y');
-				Screen('DrawText',me.screen.win,'Drift Correction...',10,10);
-				Screen('gluDisk',me.screen.win,[1 0 0 0.5],x,y,8);
 				Screen('Flip',me.screen.win);
-				WaitSecs('YieldSecs',0.25);
-				success = EyelinkDoDriftCorrect(me.defaults, round(x), round(y), 1, 1);
-			end
-			[result,out] = Eyelink('CalMessage');
-			fprintf('DriftCorrect @ %.2f/%.2f px (%.2f/%.2f deg): result = %i msg = %s\n',...
-				x,y, me.fixation.X, me.fixation.Y,result,out);
-			if success ~= 0
-				me.salutation('Drift Correct','FAILED',true);
-			end
-			if me.forceDriftCorrect
-				res=Eyelink('ApplyDriftCorr');
-				[result,out] = Eyelink('CalMessage');
-				me.salutation('Drift Correct',sprintf('Results: %f %i %s\n',res,result,out),true);
+				ifi = me.screen.screenVals.ifi;
+				breakLoop = false; i = 1; flash = true;
+				correct = false;
+				xs = [];
+				ys = [];
+				while ~breakLoop
+					getSample(me);
+					xs(i) = me.x;
+					ys(i) = me.y;
+					flash = mod(i,round(ifi/6)) == 1;
+					Screen('DrawText',me.screen.win,'Drift Correction...',10,10,[0.4 0.4 0.4]);
+					if flash
+						Screen('gluDisk',me.screen.win,[1 0 1 0.5],x,y,8);
+					else
+						Screen('gluDisk',me.screen.win,[1 1 0 0.5],x,y,8);
+					end
+					Screen('Flip',me.screen.win);
+					[~, ~, keyCode] = KbCheck(-1);
+					if keyCode(stopkey) || keyCode(escapeKey); breakLoop = true; break;	end
+					if keyCode(nextKey); correct = true; break; end
+					if keyCode(calibkey); trackerSetup(me); break; end
+					if keyCode(driftkey); driftCorrection(me); break; end
+					i = i + 1;
+				end
+				if correct && length(xs) > 5 && length(ys) > 5
+					success = true;
+					me.offset.X = median(xs) - me.fixation.X;
+					me.offset.Y = median(ys) - me.fixation.Y;
+					t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
+					me.salutation('Drift [SELF]Correct',t,true);
+					Screen('DrawText',me.screen.win,t,10,10,[0.4 0.4 0.4]);
+					Screen('Flip',me.screen.win);
+				else
+					me.offset.X = 0;
+					me.offset.Y = 0;
+					t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
+					me.salutation('REMOVE Drift [SELF]Offset',t,true);
+					Screen('DrawText',me.screen.win,'Reset Drift Offset...',10,10,[0.4 0.4 0.4]);
+					Screen('Flip',me.screen.win);
+				end
+				WaitSecs('YieldSecs',1);
 			end
 		end
 		
@@ -562,7 +628,7 @@ classdef eyelinkManager < optickaCore
 				me.fixInitLength = 0;
 			end
 			
-			x = me.x + me.offset.X; y = me.y + me.offset.Y;
+			x = me.x - me.offset.X; y = me.y - me.offset.Y;
 			% ---- test for exclusion zones first
 			if ~isempty(me.exclusionZone)
 				for i = 1:size(me.exclusionZone,1)
@@ -638,7 +704,7 @@ classdef eyelinkManager < optickaCore
 		function out = testExclusion(me)
 			out = false;
 			if (me.isConnected || me.isDummy) && ~isempty(me.currentSample) && ~isempty(me.exclusionZone)
-				eZ = me.exclusionZone; x = me.x + me.offset.X; y = me.y + me.offset.Y;
+				eZ = me.exclusionZone; x = me.x - me.offset.X; y = me.y - me.offset.Y;
 				for i = 1:size(eZ,1)
 					if (x >= eZ(i,1) && x <= eZ(i,2)) && (y >= eZ(i,3) && y <= eZ(i,4))
 						out = true;
@@ -792,7 +858,7 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function drawEyePosition(me)
 			if (me.isDummy || me.isConnected) && isa(me.screen,'screenManager') && me.screen.isOpen && ~isempty(me.x) && ~isempty(me.y)
-				xy = toPixels(me,[me.x+me.offset.X me.y+me.offset.Y]);
+				xy = toPixels(me,[me.x-me.offset.X me.y-me.offset.Y]);
 				if me.isFix
 					if me.fixLength > me.fixation.time && ~me.isBlink
 						Screen('DrawDots', me.win, xy, 6, [0 1 0.25 1], [], 3);
@@ -1056,6 +1122,7 @@ classdef eyelinkManager < optickaCore
 			nextKey				= KbName('SPACE');
 			calibkey			= KbName('C');
 			driftkey			= KbName('D');
+			offsetkey			= KbName('O');
 			oldx				= me.fixation.X;
 			oldy				= me.fixation.Y;
 			oldexc				= me.exclusionZone;
@@ -1075,6 +1142,11 @@ classdef eyelinkManager < optickaCore
 				setup(o,s); % setup our stimulus with our screen object
 				
 				initialise(me,s); % initialise eyelink with our screen
+				if ~me.isDummy && ~me.isConnected
+					reset(o);
+					close(s);
+					error('Could not connect to Eyelink or use Dummy mode...')
+				end
 				%ListenChar(-1); % capture the keyboard settings
 				setup(me); % setup + calibrate the eyelink
 				
@@ -1132,16 +1204,17 @@ classdef eyelinkManager < optickaCore
 						
 						% get the current eye position and save x and y for local
 						% plotting
-						getSample(me); xst(b)=me.x+me.offset.X; yst(b)=me.y+me.offset.Y;
+						getSample(me); xst(b)=me.x - me.offset.X; yst(b)=me.y - me.offset.Y;
 						
 						% if we have an eye position, plot the info on the display
 						% screen
 						if ~isempty(me.currentSample)
 							[~, ~, searching] = isFixated(me);
-							x = me.toPixels(me.x,'x'); %#ok<*PROP>
-							y = me.toPixels(me.y,'y');
+							x = me.toPixels(me.x - me.offset.X,'x'); %#ok<*PROP>
+							y = me.toPixels(me.y - me.offset.Y,'y');
 							txt = sprintf('Q = finish, SPACE = next. X = %3.1f / %2.2f | Y = %3.1f / %2.2f | RADIUS = %s | TIME = %.1f | FIX = %.1f | SEARCH = %i | BLINK = %i | EXCLUSION = %i | FAIL-INIT = %i',...
-								x, me.x, y, me.y, sprintf('%1.1f ',me.fixation.radius), me.fixTotal, me.fixLength, searching, me.isBlink, me.isExclusion, me.isInitFail);
+								x, me.x - me.offset.X, y, me.y - me.offset.Y, sprintf('%1.1f ',me.fixation.radius), ...
+								me.fixTotal, me.fixLength, searching, me.isBlink, me.isExclusion, me.isInitFail);
 							Screen('DrawText', s.win, txt, 10, 10,[1 1 1]);
 							drawEyePosition(me);
 						end
@@ -1159,6 +1232,7 @@ classdef eyelinkManager < optickaCore
 						if keyCode(nextKey); trialLoop = 0; correct = true; break; end
 						if keyCode(calibkey); trackerSetup(me); break; end
 						if keyCode(driftkey); driftCorrection(me); break; end
+						if keyCode(offsetkey); driftOffset(me); break; end
 						% send a message for the EDF after 60 frames
 						if b == 60; edfMessage(me,'END_FIX');end
 						b=b+1;
@@ -1173,6 +1247,8 @@ classdef eyelinkManager < optickaCore
 					% stop recording data
 					stopRecording(me);
 					setOffline(me); %Eyelink('Command', 'set_idle_mode');
+					trackerClearScreen(me); % clear eyelink screen
+					trackerDrawText(me,'FINISHED!!!');
 					resetFixation(me);
 					
 					% set up the fix init system, whereby the subject must

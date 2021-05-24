@@ -75,14 +75,14 @@ showSet(me.stimuli);
 % in the scope of the runExperiemnt object.
 
 %pause entry
-pauseEntryFcn = { @()hide(me.stimuli); ...
-	@()drawBackground(s); ... %blank the display
-	@()rstop(io); ...
-	@()setOffline(eL); ... %set eyelink offline
-	@()stopRecording(eL); ...
-	@()edfMessage(eL,'TRIAL_RESULT -10'); ...
+pauseEntryFcn = { @()hide(me.stimuli);
+	@()drawBackground(s); %blank the display
+	@()rstop(io);
+	@()setOffline(eL); %set eyelink offline
+	@()stopRecording(eL);
+	@()edfMessage(eL,'TRIAL_RESULT -10');
 	@()fprintf('\n===>>>ENTER PAUSE STATE\n');
-	@()disableFlip(me); ...
+	@()disableFlip(me);
 	};
 
 %pause exit
@@ -92,39 +92,39 @@ prefixEntryFcn = { @()enableFlip(me); };
 prefixFcn = []; %@()draw(me.stimuli);
 
 %fixate entry
-fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); ... %status text on the eyelink
-	@()sendTTL(io,3); ...
+fixEntryFcn = { @()statusMessage(eL,'Initiate Fixation...'); %status text on the eyelink
+	@()sendTTL(io,3);
 	@()updateFixationValues(eL,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset 
-	@()setOffline(eL); ... %make sure offline before start recording
-	@()show(me.stimuli{2}); ...
-	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); ...
-	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(me))]); ...
-	@()startRecording(eL); ... %fire up eyelink
-	@()syncTime(eL); ... %EDF sync message
-	@()draw(me.stimuli); ... %draw stimulus
+	@()setOffline(eL); %make sure offline before start recording
+	@()show(me.stimuli{2});
+	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT');
+	@()edfMessage(eL,['TRIALID ' num2str(getTaskIndex(me))]);
+	@()startRecording(eL); %fire up eyelink
+	@()syncTime(eL); %EDF sync message
+	@()draw(me.stimuli); %draw stimulus
 	};
 
 %fix within
-fixFcn = {@()draw(me.stimuli); ... %draw stimulus
+fixFcn = {@()draw(me.stimuli); %draw stimulus
 	};
 
 %test we are fixated for a certain length of time
 initFixFcn = @()testSearchHoldFixation(eL,'stimulus','incorrect');
 
 %exit fixation phase
-fixExitFcn = { @()statusMessage(eL,'Show Stimulus...'); ...
+fixExitFcn = { @()statusMessage(eL,'Show Stimulus...');
 	@()updateFixationValues(eL,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
-	@()show(me.stimuli); ...
-	@()edfMessage(eL,'END_FIX'); ...
+	@()show(me.stimuli);
+	@()edfMessage(eL,'END_FIX');
 	}; 
 
 %what to run when we enter the stim presentation state
 stimEntryFcn = @()doStrobe(me,true);
 
 %what to run when we are showing stimuli
-stimFcn =  { @()draw(me.stimuli); ...
-	@()finishDrawing(s); ...
-	@()animate(me.stimuli); ... % animate stimuli for subsequent draw
+stimFcn =  { @()draw(me.stimuli);
+	@()finishDrawing(s);
+	@()animate(me.stimuli); % animate stimuli for subsequent draw
 	};
 
 %test we are maintaining fixation
@@ -134,39 +134,39 @@ maintainFixFcn = @()testSearchHoldFixation(eL,'correct','breakfix');
 stimExitFcn = { @()setStrobeValue(me,inf); @()doStrobe(me,true) };
 
 %if the subject is correct (small reward)
-correctEntryFcn = { @()timedTTL(lJ,0,tS.rewardTime); ... % labjack sends a TTL to Crist reward system
-	@()sendTTL(io,4); ...
-	@()statusMessage(eL,'Correct! :-)'); ...
-	@()edfMessage(eL,'END_RT'); ...
-	@()stopRecording(eL); ...
-	@()edfMessage(eL,'TRIAL_RESULT 1'); ...
-	@()hide(me.stimuli); ...
-	@()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
+correctEntryFcn = { @()timedTTL(lJ,0,tS.rewardTime); % labjack sends a TTL to Crist reward system
+	@()sendTTL(io,4);
+	@()statusMessage(eL,'Correct! :-)');
+	@()edfMessage(eL,'END_RT');
+	@()stopRecording(eL);
+	@()edfMessage(eL,'TRIAL_RESULT 1');
+	@()hide(me.stimuli);
+	@()drawTimedSpot(s, 0.5, [0 1 0 1]);
 	};
 
 %correct stimulus
-correctFcn = { @()drawTimedSpot(s, 0.5, [0 1 0 1]); ...
+correctFcn = { @()drawTimedSpot(s, 0.5, [0 1 0 1]);
 	};
 
 %when we exit the correct state
 correctExitFcn = {
-	@()setOffline(eL); ... %set eyelink offline
-	@()updateVariables(me,[],[],true); ... %randomise our stimuli, set strobe value too
-	@()update(me.stimuli); ... %update our stimuli ready for display
-	@()updatePlot(bR, eL, sM); ... %update our behavioural plot
-	@()getStimulusPositions(me.stimuli); ... %make a struct the eL can use for drawing stim positions
-	@()trackerClearScreen(eL); ... 
-	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
-	@()trackerDrawStimuli(eL,me.stimuli.stimulusPositions); ... %draw location of stimulus on eyelink
-	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); ... %reset the timer on the green spot
+	@()setOffline(eL); %set eyelink offline
+	@()updateVariables(me,[],[],true); %randomise our stimuli, set strobe value too
+	@()update(me.stimuli); %update our stimuli ready for display
+	@()updatePlot(bR, eL, sM); %update our behavioural plot
+	@()getStimulusPositions(me.stimuli); %make a struct the eL can use for drawing stim positions
+	@()trackerClearScreen(eL); 
+	@()trackerDrawFixation(eL); %draw fixation window on eyelink computer
+	@()trackerDrawStimuli(eL,me.stimuli.stimulusPositions); %draw location of stimulus on eyelink
+	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); %reset the timer on the green spot
 	};
 %incorrect entry
-incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); ... %status message on eyelink
-	@()sendTTL(io,6); ...
-	@()edfMessage(eL,'END_RT'); ...
-	@()stopRecording(eL); ...
-	@()edfMessage(eL,'TRIAL_RESULT 0'); ...
-	@()hide(me.stimuli); ...
+incEntryFcn = { @()statusMessage(eL,'Incorrect :-('); %status message on eyelink
+	@()sendTTL(io,6);
+	@()edfMessage(eL,'END_RT');
+	@()stopRecording(eL);
+	@()edfMessage(eL,'TRIAL_RESULT 0');
+	@()hide(me.stimuli);
 	}; 
 
 %our incorrect stimulus
@@ -174,67 +174,93 @@ incFcn = [];
 
 %incorrect / break exit
 incExitFcn = { 
-	@()setOffline(eL); ... %set eyelink offline
-	@()updateVariables(me,[],[],false); ...
-	@()update(me.stimuli); ... %update our stimuli ready for display
-	@()updatePlot(bR, eL, sM); ... %update our behavioural plot;
-	@()trackerClearScreen(eL); ... 
-	@()trackerDrawFixation(eL); ... %draw fixation window on eyelink computer
-	@()trackerDrawStimuli(eL); ... %draw location of stimulus on eyelink
+	@()setOffline(eL); %set eyelink offline
+	@()updateVariables(me,[],[],false);
+	@()update(me.stimuli); %update our stimuli ready for display
+	@()updatePlot(bR, eL, sM); %update our behavioural plot;
+	@()trackerClearScreen(eL); 
+	@()trackerDrawFixation(eL); %draw fixation window on eyelink computer
+	@()trackerDrawStimuli(eL); %draw location of stimulus on eyelink
 	};
 
 %break entry
-breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); ...%status message on eyelink
+breakEntryFcn = { @()statusMessage(eL,'Broke Fixation :-('); status message on eyelink
 	@()sendTTL(io,5);
-	@()edfMessage(eL,'END_RT'); ...
-	@()stopRecording(eL); ...
-	@()edfMessage(eL,'TRIAL_RESULT -1'); ...
-	@()hide(me.stimuli); ...
+	@()edfMessage(eL,'END_RT');
+	@()stopRecording(eL);
+	@()edfMessage(eL,'TRIAL_RESULT -1');
+	@()hide(me.stimuli);
 	};
 
-%calibration function
-calibrateFcn = { @()setOffline(eL); @()rstop(io); @()trackerSetup(eL) }; %enter tracker calibrate/validate setup mode
+%--------------------calibration function
+calibrateFcn = { 
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eL); % stop eyelink recording data
+	@()setOffline(eL); % set eyelink offline
+	@()trackerSetup(eL) % enter tracker calibrate/validate setup mode
+};
 
-%debug override
-overrideFcn = @()keyOverride(me); %a special mode which enters a matlab debug state so we can manually edit object values
+%--------------------drift offset function
+offsetFcn = { 
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eL); % stop eyelink recording data
+	@()setOffline(eL); % set eyelink offline
+	@()driftOffset(eL) % enter tracker calibrate/validate setup mode
+};
+
+%--------------------drift correction function
+driftFcn = { 
+	@()drawBackground(s); %blank the display
+	@()stopRecording(eL); % stop eyelink recording data
+	@()setOffline(eL); % set eyelink offline
+	@()driftCorrection(eL) % enter tracker calibrate/validate setup mode
+};
+
+%----------------------allow override
+overrideFcn = { @()keyOverride(me); };
+
+%----------------------show 1deg size grid
+gridFcn = { 
+	@()drawGrid(s); 
+	@()drawScreenCenter(s);
+};
 
 %screenflash
-flashFcn = { @()drawBackground(s); ...
+flashFcn = { 
+	@()drawBackground(s);
 	@()flashScreen(s, 0.2); % fullscreen flash mode for visual background activity detection
 };
 
 %magstim
-magstimFcn = { @()rstop(io); ...
-	@()drawBackground(s); ...
+magstimFcn = { @()rstop(io);
+	@()drawBackground(s);
 	@()stimulate(mS); % run the magstim
 };
 
 magstimExitFcn = @()rstart(io);%lets unpause the plexon!...
 
-%show 1deg size grid
-gridFcn = @()drawGrid(s);
 
 %----------------------State Machine Table-------------------------
 disp('================>> Building state info file <<================')
 %specify our cell array that is read by the stateMachine
 stateInfoTmp = { ...
-'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn'; ...
-'pause'		'fixate'		inf		pauseEntryFcn	[]					[]				pauseExitFcn; ...
-'prefix'		'fixate'		0.5		prefixEntryFcn	prefixFcn		[]				[]; ...
-'fixate'		'incorrect'	1			fixEntryFcn		fixFcn			initFixFcn		fixExitFcn; ...
-'stimulus'  'incorrect'	2			stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn; ...
-'incorrect'	'prefix'		0.5		incEntryFcn		incFcn			[]				incExitFcn; ...
-'breakfix'	'prefix'		0.5		breakEntryFcn	incFcn			[]				incExitFcn; ...
-'correct'	'prefix'		0.5		correctEntryFcn	correctFcn	[]				correctExitFcn; ...
-'calibrate' 'pause'		0.5		calibrateFcn	[]					[]				[]; ...
-'override'	'pause'		0.5		overrideFcn		[]					[]				[]; ...
-'flash'		'pause'		0.5		flashFcn			[]					[]				[]; ...
-'magstim'	'prefix'		0.5		[]					magstimFcn		[]				magstimExitFcn; ...
-'showgrid'	'pause'		10			[]					gridFcn			[]				[]; ...
+'name'		'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
+'pause'		'fixate'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
+'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		[]				[];
+'fixate'	'incorrect'	1		fixEntryFcn		fixFcn			initFixFcn		fixExitFcn;
+'stimulus'	'incorrect'	2		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
+'incorrect'	'prefix'	0.5		incEntryFcn		incFcn			[]				incExitFcn;
+'breakfix'	'prefix'	0.5		breakEntryFcn	incFcn			[]				incExitFcn;
+'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
+'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
+'override'	'pause'		0.5		overrideFcn		[]				[]				[];
+'flash'		'pause'		0.5		flashFcn		[]				[]				[];
+'magstim'	'prefix'	0.5		[]				magstimFcn		[]				magstimExitFcn;
+'showgrid'	'pause'		10		[]				gridFcn			[]				[];
 };
 
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')
 clear pauseEntryFcn fixEntryFcn fixFcn initFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
 	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
-	calibrateFcn overrideFcn flashFcn gridFcn
+	calibrateFcn offsetFcn driftFcn overrideFcn flashFcn gridFcn
