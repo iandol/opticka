@@ -292,7 +292,27 @@
 % 30/07/19
 % Release Version 2.13
 % ############################################################
-
+%
+% 02/08/19
+% Fixed display bug.
+%
+% 02/08/19
+% Added find() method.
+%
+% 02/08/19
+% Removed rejection of re-select()-ing managed objects of a
+% panel, because it seems an unnecessary restriction.
+%
+% 21/11/19
+% Changed uistack position of axes that are present only to
+% position labels to 'bottom', allowing mouse interactions
+% with the underlying axes (thanks to File Exchange user
+% 'zwbxyzeng' for the heads-up).
+%
+% ############################################################
+% 21/11/19
+% Release Version 2.14
+% ############################################################
 
 classdef (Sealed = true) panel < handle
 	
@@ -875,7 +895,19 @@ classdef (Sealed = true) panel < handle
 			
         end
         
-		function display(p, indent)
+		function display(p, label)
+			
+			if nargin == 2
+				disp([10 label ' =' 10])
+			end
+		
+			display_sub(p);
+			
+			disp(' ')
+			
+		end
+			
+		function display_sub(p, indent)
 
 			% default
 			if nargin < 2
@@ -941,7 +973,7 @@ classdef (Sealed = true) panel < handle
 			
 			% children
 			for c = 1:length(p.m_children)
-				p.m_children(c).display([indent '  ']);
+				p.m_children(c).display_sub([indent '  ']);
 			end
 						
 		end
@@ -1943,6 +1975,67 @@ classdef (Sealed = true) panel < handle
 			
 		end
 		
+		function q = find(p, varargin)
+			
+			% find panel according to some search conditions
+			%
+			% p.find(...)
+			%   you can use this to recover the panel
+			%   associated with a particular graphics
+			%   object, for example. conditions are
+			%   specified as {type, data} pairs, as listed
+			%   below.
+			%
+			% {'object', h}
+			%   returned panels must be managing the object
+			%   "h".
+			%
+			% example:
+			%   q = p.find({'object', h_axis})
+			
+			% get all panels
+			f = p.getPanels('*');
+			
+			% return value
+			q = {};
+			
+			% search
+			for i = 1:length(f)
+				
+				% get panel
+				p = f{i};
+				
+				% check conditions
+				for c = 1:length(varargin)
+					
+					% get condition
+					cond = varargin{c};
+					
+					% switch on type
+					switch cond{1}
+						
+						case 'object'
+							h = cond{2};
+							if ~any(h == p.h_object)
+								p = [];
+							end
+							
+						otherwise
+							error(['unrecognised condition type "' cond{1} '"']);
+						
+					end
+					
+				end
+				
+				% if still there
+				if ~isempty(p)
+					q{end+1} = p;
+				end
+				
+			end
+			
+		end
+		
 		function identify(p)
 
 			% add annotations to help identify individual panels
@@ -2398,7 +2491,11 @@ classdef (Sealed = true) panel < handle
 				
 				% validate
 				if ~isempty(p.h_object)
-					error('panel:SelectWithObjectWhenObject', 'cannot select() new objects into this panel - it is already managing objects');
+					% 02/08/19 I disabled this check because
+					% I don't see why it's needed (why
+					% should we not change the managed
+					% objects on the fly?)
+% 					error('panel:SelectWithObjectWhenObject', 'cannot select() new objects into this panel - it is already managing objects');
 				end
 				
 				% store
@@ -2791,6 +2888,7 @@ classdef (Sealed = true) panel < handle
 				case { ...
 						'select' 'fixdash' ...
 						'xlabel' 'ylabel' 'zlabel' 'title' ...
+						 'find' ...
 						}
 					
 					% validate
@@ -3885,6 +3983,12 @@ classdef (Sealed = true) panel < handle
 			set(get(p.h_object, 'title'), ...
 				'VerticalAlignment', 'Bottom', ...
 				'Position', [0.5 1+y 1]);
+			
+			% 21/11/19 move to bottom of z-index stack so
+			% that it does not interfere with mouse
+			% interactions with the other axes (e.g.
+			% zooming)
+			uistack(p.h_object, 'bottom')
 
 		end
 		
