@@ -329,6 +329,15 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief reset the fixation offset to 0
+		%>
+		% ===================================================================
+		function resetOffset(me)
+			me.offset.X = 0;
+			me.offset.Y = 0;
+		end
+		
+		% ===================================================================
 		%> @brief check the connection with the eyelink
 		%>
 		% ===================================================================
@@ -356,8 +365,10 @@ classdef eyelinkManager < optickaCore
 			Eyelink('Command','horizontal_target_y = %i',me.screen.winRect(4)/2);
 			Eyelink('Command','calibration_type = %s', me.calibrationStyle);
 			Eyelink('Command','normal_click_dcorr = ON');
-			Eyelink('command', 'driftcorrect_cr_disable = OFF');
-			Eyelink('command', 'online_dcorr_maxangle = 15.0');
+			Eyelink('Command', 'driftcorrect_cr_disable = OFF');
+			
+			Eyelink('Command', 'drift_correction_rpt_error = 10.0');
+			Eyelink('Command', 'online_dcorr_maxangle = 15.0');
 			Eyelink('Command','randomize_calibration_order = NO');
 			Eyelink('Command','randomize_validation_order = NO');
 			Eyelink('Command','cal_repeat_first_target = YES');
@@ -420,8 +431,10 @@ classdef eyelinkManager < optickaCore
 			x=me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
 			y=me.toPixels(me.fixation.Y,'y');
 			if me.isConnected
-				Eyelink('command', 'driftcorrect_cr_disable = OFF');
-				Eyelink('command', 'online_dcorr_maxangle = 15.0');
+				Eyelink('Command', 'driftcorrect_cr_disable = OFF');
+				Eyelink('Command', 'drift_correct_cr_disable = OFF');
+				Eyelink('Command', 'drift_correction_rpt_error = 10.0');
+				Eyelink('Command', 'online_dcorr_maxangle = 15.0');
 				Screen('DrawText',me.screen.win,'Drift Correction...',10,10);
 				Screen('gluDisk',me.screen.win,[1 0 1 0.5],x,y,8);
 				Screen('Flip',me.screen.win);
