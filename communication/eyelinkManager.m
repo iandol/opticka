@@ -338,6 +338,15 @@ classdef eyelinkManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief reset the fixation offset to 0
+		%>
+		% ===================================================================
+		function resetFixInit(me)
+			me.fixInit.X = 0;
+			me.fixInit.Y = 0;
+		end
+		
+		% ===================================================================
 		%> @brief check the connection with the eyelink
 		%>
 		% ===================================================================
@@ -366,7 +375,6 @@ classdef eyelinkManager < optickaCore
 			Eyelink('Command','calibration_type = %s', me.calibrationStyle);
 			Eyelink('Command','normal_click_dcorr = ON');
 			Eyelink('Command', 'driftcorrect_cr_disable = OFF');
-			
 			Eyelink('Command', 'drift_correction_rpt_error = 10.0');
 			Eyelink('Command', 'online_dcorr_maxangle = 15.0');
 			Eyelink('Command','randomize_calibration_order = NO');
@@ -432,7 +440,6 @@ classdef eyelinkManager < optickaCore
 			y=me.toPixels(me.fixation.Y,'y');
 			if me.isConnected
 				Eyelink('Command', 'driftcorrect_cr_disable = OFF');
-				Eyelink('Command', 'drift_correct_cr_disable = OFF');
 				Eyelink('Command', 'drift_correction_rpt_error = 10.0');
 				Eyelink('Command', 'online_dcorr_maxangle = 15.0');
 				Screen('DrawText',me.screen.win,'Drift Correction...',10,10);
@@ -646,7 +653,9 @@ classdef eyelinkManager < optickaCore
 				me.fixInitLength = 0;
 			end
 			
+			% ---- add any offsets for following calculations
 			x = me.x - me.offset.X; y = me.y - me.offset.Y;
+			
 			% ---- test for exclusion zones first
 			if ~isempty(me.exclusionZone)
 				for i = 1:size(me.exclusionZone,1)
@@ -658,23 +667,22 @@ classdef eyelinkManager < optickaCore
 				end
 			end
 			% ---- test for fix initiation start window
-			if ~isempty(me.fixInit.X)
-				if (me.currentSample.time - me.fixInitStartTime) < me.fixInit.time
-					r = sqrt((x - me.fixInit.X).^2 + (me.y - me.fixInit.Y).^2);
-					window = find(r < me.fixInit.radius);
-					fprintf('fixInit r = %.2f window = %.2f time = %.3f\n',r,window,me.currentSample.time - me.fixInitStartTime)
-					if ~any(window)
-						searching = false; exclusion = true; fixinit = true;
-						me.isInitFail = fixinit; me.isFix = false;
-						return;
-					end
+			ft = (me.currentSample.time - me.fixInitStartTime) / 1e3;
+			if ~isempty(me.fixInit.X) && ft <= me.fixInit.time
+				r = sqrt((x - me.fixInit.X).^2 + (y - me.fixInit.Y).^2);
+				window = find(r < me.fixInit.radius);
+				if ~any(window)
+					searching = false; exclusion = true; fixinit = true;
+					me.isInitFail = fixinit; me.isFix = false;
+					fprintf('-+-+-> eyelinkManager: eye left fix init window @ %.3f secs!\n',ft);
+					return;
 				end
 			end
 			% now test if we are still searching or in fixation window, if
 			% radius is single value, assume circular, otherwise assume
 			% rectangular
-			if length(me.fixation.radius) == 1 % circular test
-				r = sqrt((x - me.fixation.X).^2 + (me.y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',x, me.fixation.X, me.y, me.fixation.Y,r,me.fixation.radius);
+			     if length(me.fixation.radius) == 1 % circular test
+				r = sqrt((x - me.fixation.X).^2 + (y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',x, me.fixation.X, me.y, me.fixation.Y,r,me.fixation.radius);
 				window = find(r < me.fixation.radius);
 			else % x y rectangular window test
 				if (x >= (me.fixation.X - me.fixation.radius(1))) && (x <= (me.fixation.X + me.fixation.radius(1))) ...
@@ -1218,7 +1226,7 @@ classdef eyelinkManager < optickaCore
 					vbl=flip(s);
 					syncTime(me);
 					while trialLoop
-						Screen('FillRect',s.win,[0.7 0.7 0.7 0.5],exc); Screen('DrawText',s.win,'Exclusion Zone',exc(1),exc(2),[0.8 0.8 0.8]);
+						 Screen('FillRect',s.win,[0.7 0.7 0.7 0.5],exc); Screen('DrawText',s.win,'Exclusion Zone',exc(1),exc(2),[0.8 0.8 0.8]);
 						draw(o);
 						drawGrid(s);
 						drawScreenCenter(s);
@@ -1249,7 +1257,7 @@ classdef eyelinkManager < optickaCore
 						vbl=Screen('Flip',s.win, vbl + s.screenVals.halfisi);
 						
 						% check the keyboard
-						[~, ~, keyCode] = KbCheck(-1);
+						   [~, ~, keyCode] = KbCheck(-1);
 						if keyCode(stopkey); trialLoop = 0; blockLoop = 0; break;	end
 						if keyCode(nextKey); trialLoop = 0; correct = true; break; end
 						if keyCode(calibkey); trackerSetup(me); break; end
@@ -1274,10 +1282,10 @@ classdef eyelinkManager < optickaCore
 					% set up the fix init system, whereby the subject must
 					% remain a certain time at the origin of the eye
 					% position before saccading to next target, use previous fixation location.
-					me.fixInit.X = me.fixation.X;
-					me.fixInit.Y = me.fixation.Y;
-					me.fixInit.time = 1;
-					me.fixInit.radius = 3;
+					%me.fixInit.X = me.fixation.X;
+					%me.fixInit.Y = me.fixation.Y;
+					%me.fixInit.time = 0.1;
+					%me.fixInit.radius = 3;
 					
 					% prepare a random position for next trial
 					me.updateFixationValues(randi([-5 5]),randi([-5 5]),[],[],randi([1 5]));
@@ -1293,8 +1301,7 @@ classdef eyelinkManager < optickaCore
 					ts.size = me.fixation.radius;
 					ts.selected = true;
 					% clear tracker display
-					trackerClearScreen(me);
-					trackerDrawStimuli(me,ts);
+					trackerDrawStimuli(me,ts,true);
 					trackerDrawFixation(me);
 					% plot eye position for last trial and ITI
 					plot(ax,xst,yst);drawnow;
@@ -1322,6 +1329,8 @@ classdef eyelinkManager < optickaCore
 							me.paths.savedData ''', ''file'',''myData.edf'');eA.parseSimple;eA.plot']);
 					end
 				end
+				me.resetFixation;
+				me.resetOffset;
 				me.fixation.X = oldx;
 				me.fixation.Y = oldy;
 				me.exclusionZone = oldexc;
@@ -1331,6 +1340,8 @@ classdef eyelinkManager < optickaCore
 				me.fixation.Y = oldy;
 				me.exclusionZone = oldexc;
 				me.fixInit = oldfixinit;
+				me.resetFixation;
+				me.resetOffset;
 				ListenChar(0);Priority(0);ShowCursor;RestrictKeysForKbCheck([])
 				me.salutation('runDemo ERROR!!!')
 				Eyelink('Shutdown');

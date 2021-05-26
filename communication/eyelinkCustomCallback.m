@@ -50,7 +50,7 @@ persistent eyeheight;
 
 % Cached(!) eyelink stucture containing keycodes
 persistent el;
-persistent lastImageTime; %#ok<PUSE>
+persistent lastImageTime;
 persistent drawcount;
 persistent ineyeimagemodedisplay;
 persistent clearScreen;
@@ -152,9 +152,10 @@ switch eyecmd
     case 2
         % Eyelink Keyboard query:
         [rc, el] = EyelinkGetKey(el);
-        if rc == 32
+        if rc == 32 || rc == 10 || rc == 13
             if exist('rM','var') && isa(rM,'arduinoManager') && rM.isOpen
-                timedTTL(rM,2,160)
+                timedTTL(rM,rM.rewardPin,rM.rewardTime);
+				if verbose; fprintf('--->>> EYELINKCALLBACK:2 Send reward\n'); end
             end
         end
         if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end
@@ -455,24 +456,24 @@ end
 % function Beeper(frequency, [fVolume], [durationSec]);
 if doBeep
     if exist('aM','var') && isa(aM,'audioManager')
-		%fprintf('--->>> EYELINKCALLBACK: Audio %.2f %.2f %.2f\n',f,v,d)
+		if verbose; fprintf('--->>> EYELINKCALLBACK: Audio %.2f %.2f %.2f\n',f,v,d); end
         aM.beep(f, d, v);
 	else
-		%fprintf('--->>> EYELINKCALLBACK: Beeper %.2f %.2f %.2f\n',f,v,d)
+		if verbose; fprintf('--->>> EYELINKCALLBACK: Beeper %.2f %.2f %.2f\n',f,v,d); end
         Beeper(f, v, d);
     end
 end
 
 %=========================================================================================
 function EyelinkDrawCalibrationTarget(eyewin, el, calxy)
-width = el.winRect(3);
-if isempty(el.customTarget)
-	size=round(el.calibrationtargetsize/100*width);
+if ~isfield(el,'customTarget') || isempty(el.customTarget)
+	width			= el.winRect(3);
+	size			= round(el.calibrationtargetsize/100*width);
 	if el.calibrationtargetwidth > 0
-		insetSize=round(el.calibrationtargetwidth/100*width);
+		insetSize	= round(el.calibrationtargetwidth/100*width);
 		if insetSize < 2; insetSize = 2;end
 	else
-		insetSize = 0; 
+		insetSize	= 0; 
 	end
 	if sum(el.calibrationtargetcolour) < 0.6
 		insetColour = [1 1 1];

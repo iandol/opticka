@@ -221,13 +221,10 @@ classdef tobiiManager < optickaCore
 				me.tobii			= me.tobii.setDummyMode();
 			end
 			
-			if contains(me.model,'Tobii 4C')
-				me.model = 'IS4_Large_Peripheral';
-			end
 			me.settings								= Titta.getDefaults(me.model);
 			if ~contains(me.model,{'Tobii 4C','IS4_Large_Peripheral'})
-				me.settings.freq						= me.sampleRate;
-				me.settings.trackingMode				= me.trackingMode;
+				me.settings.freq					= me.sampleRate;
+				me.settings.trackingMode			= me.trackingMode;
 			end
 			me.settings.calibrateEye				= me.eyeUsed;
 			me.settings.cal.bgColor					= floor(me.screen.backgroundColour*255);
@@ -392,7 +389,7 @@ classdef tobiiManager < optickaCore
 			if wasRecording; stopRecording(me);	end
 			updateDefaults(me); % make sure we send any other settings changes
 			ListenChar(-1);
-			if me.secondScreen && ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
+			if ~isempty(me.operatorScreen) && isa(me.operatorScreen,'screenManager')
 				if ~me.operatorScreen.isOpen
 					me.operatorScreen.open();
 				end
@@ -410,11 +407,7 @@ classdef tobiiManager < optickaCore
 					end
 				end
 			else
-				if me.manualCalibration
-					me.calibration = me.tobii.calibrateManual(me.screen.win); %start calibration
-				else
-					me.calibration = me.tobii.calibrate(me.screen.win,[],incal); %start calibration
-				end
+				me.calibration = me.tobii.calibrate(me.screen.win,[],incal); %start calibration
 			end
 			ListenChar(0);
 			if strcmpi(me.calibrationStimulus,'movie')
