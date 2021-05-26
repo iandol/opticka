@@ -14,8 +14,8 @@ classdef eyelinkManager < optickaCore
 		%> time is the time the sbject must maintain fixation within the window
 		%> strict = false allows subject to exit and enter window without
 		%> failure, useful during training
-		fixation struct				= struct('X',0,'Y',0,'initTime',1,'fixTime',1,...
-									'radius',1,'strictFixation',true)
+		fixation struct				= struct('X',0,'Y',0,'initTime',1,'time',1,...
+									'radius',1,'strict',true)
 		%> When using the test for eye position functions, 
 		%> exclusion zones where no eye movement allowed: [-degX +degX -degY +degY]
 		%> Add rows to generate succesive exclusion zones.
@@ -607,7 +607,7 @@ classdef eyelinkManager < optickaCore
 					me.fixation.initTime = inittime{1};
 					me.fixation.time = inittime{2};
 					me.fixation.radius = inittime{3};
-					me.fixation.strictFixation = inittime{4};
+					me.fixation.strict = inittime{4};
 				elseif length(inittime) == 2
 					me.fixation.initTime = randi(inittime.*1000)/1000;
 				elseif length(inittime)==1
@@ -622,11 +622,11 @@ classdef eyelinkManager < optickaCore
 				end
 			end
 			if nargin > 5 && ~isempty(radius); me.fixation.radius = radius; end
-			if nargin > 6 && ~isempty(strict); me.fixation.strictFixation = strict; end
+			if nargin > 6 && ~isempty(strict); me.fixation.strict = strict; end
 			if me.verbose 
 				fprintf('-+-+-> eyelinkManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g | Strict=%i\n', ... 
 				me.fixation.X, me.fixation.Y, num2str(me.fixation.initTime), num2str(me.fixation.time), ...
-				me.fixation.radius,me.fixation.strictFixation); 
+				me.fixation.radius,me.fixation.strict); 
 			end
 		end
 		
@@ -708,7 +708,7 @@ classdef eyelinkManager < optickaCore
 				else
 					fixated = false; fixtime = false; searching = false;
 				end
-				me.isFix = fixated;
+				me.isFix = fixated; me.fixInitLength = 0;
 			else % not inside the fixation window
 				if me.fixN == 1
 					me.fixN = -100;
@@ -796,29 +796,33 @@ classdef eyelinkManager < optickaCore
 				return
 			end
 			if searching
-				if (me.fixation.strictFixation==true && (me.fixN == 0)) || me.fixation.strictFixation==false
+				if (me.fixation.strict==true && (me.fixN == 0)) || me.fixation.strict==false
 					out = 'searching';
 				else
 					out = noString;
-					if me.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation STRICT SEARCH FAIL: %s [%.2f %.2f %.2f]\n', out, fix, fixtime, searching);end
+					if me.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation STRICT SEARCH FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 				end
 				return
 			elseif fix
-				if (me.fixation.strictFixation==true && ~(me.fixN == -100)) || me.fixation.strictFixation==false
+				if (me.fixation.strict==true && ~(me.fixN == -100)) || me.fixation.strict==false
 					if fixtime
 						out = yesString;
-						if me.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation FIXATION SUCCESSFUL!: %s [%.2f %.2f %.2f]\n', out, fix, fixtime, searching);end
+						if me.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation FIXATION SUCCESSFUL!: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+								out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 					else
 						out = 'fixing';
 					end
 				else
 					out = noString;
-					if me.verbose;fprintf('-+-+-> Eyelink:testSearchHoldFixation FIX FAIL: %s [%.2f %.2f %.2f]\n', out, fix, fixtime, searching);end
+					if me.verbose;fprintf('-+-+-> Eyelink:testSearchHoldFixation FIX FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 				end
 				return
 			elseif searching == false
 				out = noString;
-				if me.verbose;fprintf('-+-+-> Eyelink:testSearchHoldFixation SEARCH FAIL: %s [%.2f %.2f %.2f]\n', out, fix, fixtime, searching);end
+				if me.verbose;fprintf('-+-+-> Eyelink:testSearchHoldFixation SEARCH FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+						out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 			else
 				out = '';
 			end
@@ -835,28 +839,36 @@ classdef eyelinkManager < optickaCore
 		%>   but not for the requisite fixation time, or the yes or no string.
 		% ===================================================================
 		function [out, window, exclusion] = testHoldFixation(me, yesString, noString)
-			[fix, fixtime, searching, window, exclusion] = me.isFixated();
+			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
 				fprintf('-+-+-> Eyelink:testHoldFixation EXCLUSION ZONE ENTERED!\n')
 				out = 'EXCLUDED!'; window = [];
 				return
 			end
+			if initfail
+				if me.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation FIX INIT TIME FAILED!\n'); end
+				out = 'EXCLUDED!';
+				return
+			end
 			if fix
-				if (me.fixation.strictFixation==true && ~(me.fixN == -100)) || me.fixation.strictFixation==false
+				if (me.fixation.strict==true && ~(me.fixN == -100)) || me.fixation.strict==false
 					if fixtime
 						out = yesString;
-						if me.verbose; fprintf('-+-+-> Eyelink:testHoldFixation FIXATION SUCCESSFUL!: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+						if me.verbose; fprintf('-+-+-> Eyelink:testHoldFixation FIXATION SUCCESSFUL!: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 					else
 						out = 'fixing';
 					end
 				else
 					out = noString;
-					if me.verbose;fprintf('-+-+-> Eyelink:testHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+					if me.verbose;fprintf('-+-+-> Eyelink:testHoldFixation FIX FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 				end
 				return
 			else
 				out = noString;
-				if me.verbose; fprintf('-+-+-> Eyelink:testHoldFixation FIX FAIL: %s [%g %g %g]\n', out, fix, fixtime, searching);end
+				if me.verbose; fprintf('-+-+-> Eyelink:testHoldFixation FIX FAIL: %s time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+							out, me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);end
 				return
 			end
 		end

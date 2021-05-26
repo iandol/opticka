@@ -54,7 +54,6 @@ eL.name					= tS.name;
 if tS.saveData == true; eL.recordData = true; end %===save EDF file?
 if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
 eL.sampleRate			= 250;
-eL.strictFixation		= tS.strict;
 %===========================
 % remote calibration enables manual control and selection of each fixation
 % this is useful for a baby or monkey who has not been trained for fixation

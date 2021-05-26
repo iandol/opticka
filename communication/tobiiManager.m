@@ -7,6 +7,29 @@
 classdef tobiiManager < optickaCore
 	
 	properties
+		%> fixation window:
+		%> if X and Y have multiple rows, assume each one is a different fixation window.
+		%> if radius has a single value, assume circular window
+		%> if radius has 2 values assume width x height rectangle
+		%> initTime is the time the subject has to initiate fixation
+		%> time is the time the sbject must maintain fixation within the window
+		%> strict = false allows subject to exit and enter window without
+		%> failure, useful during training
+		fixation struct					= struct('X',0,'Y',0,'initTime',1,'time',1,...
+										'radius',1,'strict',true)
+		%> When using the test for eye position functions, 
+		%> exclusion zones where no eye movement allowed: [-degX +degX -degY +degY]
+		%> Add rows to generate succesive exclusion zones.
+		exclusionZone					= []
+		%> we can optional set an initial window that the subject must stay
+		%> inside of before they saccade to the target window. This
+		%> restricts guessing and "cheating", by forcing a minimum delay
+		%> (default = 100ms) before initiating a saccade. Only used if X is not
+		%> empty.
+		fixInit	struct					= struct('X',[],'Y',[],'time',0.1,'radius',2)
+		%> add a manual offset to the eye position, similar to a drift correction
+		%> but handled by the eyelinkManager.
+		offset struct				= struct('X',0,'Y',0)
 		%> model of eyetracker:
 		%> 'Tobi Pro Spectrum' - 'IS4_Large_Peripheral' - 'Tobii TX300'
 		model char {mustBeMember(model,{'Tobii Pro Spectrum','Tobii TX300',...
@@ -18,22 +41,6 @@ classdef tobiiManager < optickaCore
 		%> use human, macaque, Default or other tracking mode
 		trackingMode char {mustBeMember(trackingMode,{'human','macaque','Default', ...
 			'Infant', 'Bright light'})} = 'human'
-		%> fixation window:
-		%> if X and Y have multiple rows, assume each one is a different fixation window.
-		%> if radius is a single value, assume a circular window
-		%> if radius has 2 values assume width x height rectangle
-		fixation struct					= struct('X',0,'Y',0,'initTime',1,'fixTime',1,...
-										'radius',1,'strictFixation',true)
-		%> When using the test for eye position functions, 
-		%> exclusion zones where no eye movement allowed: [-degX +degX -degY +degY]
-		%> Add rows to generate succesive exclusion zones.
-		exclusionZone					= []
-		%> we can optional set an initial window that the subject must stay
-		%> inside of before they saccade to the target window. This
-		%> restricts guessing and "cheating", by forcing a minimum delay
-		%> (default = 100ms) before initiating a saccade. Only used if X is not
-		%> empty.
-		fixInit	struct					= struct('X',[],'Y',[],'time',0.1,'radius',2)
 		%> options for online smoothing of peeked data {'median','heuristic','savitsky-golay'}
 		smoothing struct				= struct('nSamples',8,'method','median','window',3,...
 			'eyes','both')
@@ -66,14 +73,17 @@ classdef tobiiManager < optickaCore
 	
 	properties (Hidden = true)
 		%> do we log messages to the command window?
-		verbose							= true
+		verbose							= false
 		%> stimulus positions to draw on screen
 		stimulusPositions				= []
+		%> 
 		sampletime						= []
 		%> operator screen used during calibration
 		operatorScreen screenManager
+		%> is operator screen being used?
 		secondScreen logical			= false
-		closeSecondScreen logical		= true
+		%> should we close it after calibration
+		closeSecondScreen logical		= false
 		%> size to draw eye position on screen
 		eyeSize double					= 6
 	end
@@ -86,14 +96,6 @@ classdef tobiiManager < optickaCore
 	end
 	
 	properties (SetAccess = private, GetAccess = public)
-		%> the PTB screen to work with, passed in during initialise
-		screen screenManager
-		% are we connected to Tobii?
-		isConnected logical				= false
-		%> data streamed out from the Tobii
-		data struct						= struct()
-		%> calibration data
-		calibration						= []
 		%> Last gaze X position in degrees
 		x								= []
 		%> Last gaze Y position in degrees
@@ -132,6 +134,14 @@ classdef tobiiManager < optickaCore
 		trackerTime						= 0
 		%> tracker time stamp
 		systemTime						= 0
+		%> the PTB screen to work with, passed in during initialise
+		screen screenManager
+		% are we connected to Tobii?
+		isConnected logical				= false
+		%> data streamed out from the Tobii
+		data struct						= struct()
+		%> calibration data
+		calibration						= []
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -367,6 +377,24 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief reset the fixation offset to 0
+		%>
+		% ===================================================================
+		function resetOffset(me)
+			me.offset.X = 0;
+			me.offset.Y = 0;
+		end
+		
+		% ===================================================================
+		%> @brief reset the fixation offset to 0
+		%>
+		% ===================================================================
+		function resetFixInit(me)
+			me.fixInit.X = 0;
+			me.fixInit.Y = 0;
+		end
+		
+		% ===================================================================
 		%> @brief check the connection with the tobii
 		%>
 		% ===================================================================
@@ -517,32 +545,74 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Save the data
+		%> @brief wrapper for EyelinkDoDriftCorrection
 		%>
 		% ===================================================================
-		function saveData(me,tofile)
-			if ~exist('tofile','var') || isempty(tofile); tofile = true; end
-			ts = tic;
-			me.data = [];
-			if me.isConnected
-				me.data = me.tobii.collectSessionData();
-			end
-			me.initialiseSaveFile();
-			if ~isempty(me.data) && tofile
-				tobii = me;
-				if exist(me.saveFile,'file')
-					[p,f,e] = fileparts(me.saveFile);
-					me.saveFile = [p filesep f me.savePrefix e];
+		function success = driftCorrection(me)
+			driftOffset(me);
+		end
+		
+		% ===================================================================
+		%> @brief wrapper for EyelinkDoDriftCorrection
+		%>
+		% ===================================================================
+		function success = driftOffset(me)
+			success = false;
+			escapeKey			= KbName('ESCAPE');
+			stopkey				= KbName('Q');
+			nextKey				= KbName('SPACE');
+			calibkey			= KbName('C');
+			driftkey			= KbName('D');
+			if me.isConnected || me.isDummy
+				x=me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
+				y=me.toPixels(me.fixation.Y,'y');
+				Screen('Flip',me.screen.win);
+				ifi = me.screen.screenVals.ifi;
+				breakLoop = false; i = 1; flash = true;
+				correct = false;
+				xs = [];
+				ys = [];
+				while ~breakLoop
+					getSample(me);
+					xs(i) = me.x;
+					ys(i) = me.y;
+					if mod(i,10) == 0
+						flash = ~flash;
+					end
+					Screen('DrawText',me.screen.win,'Drift Correction...',10,10,[0.4 0.4 0.4]);
+					if flash
+						Screen('gluDisk',me.screen.win,[1 0 1 0.75],x,y,10);
+						Screen('gluDisk',me.screen.win,[1 1 1 1],x,y,4);
+					else
+						Screen('gluDisk',me.screen.win,[1 1 0 0.75],x,y,10);
+						Screen('gluDisk',me.screen.win,[0 0 0 1],x,y,4);
+					end
+					me.screen.drawCross(0.6,[0 0 0],x,y,0.1,false);
+					Screen('Flip',me.screen.win);
+					[~, ~, keyCode] = KbCheck(-1);
+					if keyCode(stopkey) || keyCode(escapeKey); breakLoop = true; break;	end
+					if keyCode(nextKey); correct = true; break; end
+					if keyCode(calibkey); trackerSetup(me); break; end
+					if keyCode(driftkey); driftCorrection(me); break; end
+					i = i + 1;
 				end
-				save(me.saveFile,'tobii')
-				disp('===========================')
-				me.salutation('saveData',sprintf('Save: %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3),true);
-				disp('===========================')
-				clear tobii
-			elseif isempty(me.data)
-				me.salutation('saveData',sprintf('NO data available... (%.1fms)...\n',toc(ts)*1e3),true);
-			elseif ~isempty(me.data)
-				me.salutation('saveData',sprintf('Data retrieved to object in %.1fms)...\n',toc(ts)*1e3),true);
+				if correct && length(xs) > 5 && length(ys) > 5
+					success = true;
+					me.offset.X = median(xs) - me.fixation.X;
+					me.offset.Y = median(ys) - me.fixation.Y;
+					t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
+					me.salutation('Drift [SELF]Correct',t,true);
+					Screen('DrawText',me.screen.win,t,10,10,[0.4 0.4 0.4]);
+					Screen('Flip',me.screen.win);
+				else
+					me.offset.X = 0;
+					me.offset.Y = 0;
+					t = sprintf('Offset: X = %.2f Y = %.2f\n',me.offset.X,me.offset.Y);
+					me.salutation('REMOVE Drift [SELF]Offset',t,true);
+					Screen('DrawText',me.screen.win,'Reset Drift Offset...',10,10,[0.4 0.4 0.4]);
+					Screen('Flip',me.screen.win);
+				end
+				WaitSecs('YieldSecs',1);
 			end
 		end
 		
@@ -648,9 +718,9 @@ classdef tobiiManager < optickaCore
 			if nargin > 3 && ~isempty(inittime)
 				if iscell(inittime) && length(inittime)==4
 					me.fixation.initTime = inittime{1};
-					me.fixation.fixTime = inittime{2};
+					me.fixation.time = inittime{2};
 					me.fixation.radius = inittime{3};
-					me.fixation.strictFixation = inittime{4};
+					me.fixation.strict = inittime{4};
 				elseif length(inittime) == 2
 					me.fixation.initTime = randi(inittime.*1000)/1000;
 				elseif length(inittime)==1
@@ -659,16 +729,16 @@ classdef tobiiManager < optickaCore
 			end
 			if nargin > 4 && ~isempty(fixtime)
 				if length(fixtime) == 2
-					me.fixation.fixTime = randi(fixtime.*1000)/1000;
+					me.fixation.time = randi(fixtime.*1000)/1000;
 				elseif length(fixtime) == 1
-					me.fixation.fixTime = fixtime;
+					me.fixation.time = fixtime;
 				end
 			end
 			if nargin > 5 && ~isempty(radius); me.fixation.radius = radius; end
-			if nargin > 6 && ~isempty(strict); me.fixation.strictFixation = strict; end
+			if nargin > 6 && ~isempty(strict); me.fixation.strict = strict; end
 			if me.verbose
 				fprintf('-+-+-> eyelinkManager:updateFixationValues: X=%g | Y=%g | IT=%s | FT=%s | R=%g\n', ...
-					me.fixation.X, me.fixation.Y, num2str(me.fixation.initTime), num2str(me.fixation.fixTime), ...
+					me.fixation.X, me.fixation.Y, num2str(me.fixation.initTime), num2str(me.fixation.time), ...
 					me.fixation.radius);
 			end
 		end
@@ -740,7 +810,7 @@ classdef tobiiManager < optickaCore
 					end
 					fixated = true; searching = false;
 					me.fixLength = (me.currentSample.time - me.fixStartTime) / 1e6;
-					if me.fixLength >= me.fixation.fixTime
+					if me.fixLength >= me.fixation.time
 						fixtime = true;
 					else
 						fixtime = false;
@@ -835,7 +905,7 @@ classdef tobiiManager < optickaCore
 				return
 			end
 			if searching
-				if (me.fixation.strictFixation==true && (me.fixN == 0)) || me.fixation.strictFixation==false
+				if (me.fixation.strict==true && (me.fixN == 0)) || me.fixation.strict==false
 					out = 'searching';
 				else
 					out = noString;
@@ -843,7 +913,7 @@ classdef tobiiManager < optickaCore
 				end
 				return
 			elseif fix
-				if (me.fixation.strictFixation==true && ~(me.fixN == -100)) || me.fixation.strictFixation==false
+				if (me.fixation.strict==true && ~(me.fixN == -100)) || me.fixation.strict==false
 					if fixtime
 						out = yesString;
 						if me.verbose; fprintf('-+-+-> Tobii:testSearchHoldFixation FIXATION SUCCESSFUL!: %s [%g %g %g]\n', out, fix, fixtime, searching);end
@@ -886,7 +956,7 @@ classdef tobiiManager < optickaCore
 				return
 			end
 			if fix
-				if (me.fixation.strictFixation==true && ~(me.fixN == -100)) || me.fixation.strictFixation==false
+				if (me.fixation.strict==true && ~(me.fixN == -100)) || me.fixation.strict==false
 					if fixtime
 						out = yesString;
 						if me.verbose; fprintf('-+-+-> Tobii:testHoldFixation FIXATION SUCCESSFUL!: %s [%g %g %g]\n', out, fix, fixtime, searching);end
@@ -906,6 +976,36 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief Save the data
+		%>
+		% ===================================================================
+		function saveData(me,tofile)
+			if ~exist('tofile','var') || isempty(tofile); tofile = true; end
+			ts = tic;
+			me.data = [];
+			if me.isConnected
+				me.data = me.tobii.collectSessionData();
+			end
+			me.initialiseSaveFile();
+			if ~isempty(me.data) && tofile
+				tobii = me;
+				if exist(me.saveFile,'file')
+					[p,f,e] = fileparts(me.saveFile);
+					me.saveFile = [p filesep f me.savePrefix e];
+				end
+				save(me.saveFile,'tobii')
+				disp('===========================')
+				me.salutation('saveData',sprintf('Save: %s in %.1fms\n',strrep(me.saveFile,'\','/'),toc(ts)*1e3),true);
+				disp('===========================')
+				clear tobii
+			elseif isempty(me.data)
+				me.salutation('saveData',sprintf('NO data available... (%.1fms)...\n',toc(ts)*1e3),true);
+			elseif ~isempty(me.data)
+				me.salutation('saveData',sprintf('Data retrieved to object in %.1fms)...\n',toc(ts)*1e3),true);
+			end
+		end
+		
+		% ===================================================================
 		%> @brief draw the current eye position on the PTB display
 		%>
 		% ===================================================================
@@ -916,7 +1016,7 @@ classdef tobiiManager < optickaCore
 				xy = [me.currentSample.gx me.currentSample.gy];
 				if details
 					if me.isFix
-						if me.fixLength > me.fixation.fixTime
+						if me.fixLength > me.fixation.time
 							Screen('DrawDots', me.win, xy, me.eyeSize, [0 1 0.25 1], [], 0);
 						else
 							Screen('DrawDots', me.win, xy, me.eyeSize, [0.75 0 0.75 1], [], 0);
@@ -1356,7 +1456,7 @@ classdef tobiiManager < optickaCore
 				drawRect(me.operatorScreen,rect,[0.5 0.6 0.5 1]);
 			end
 			if me.isFix
-				if me.fixLength > me.fixation.fixTime
+				if me.fixLength > me.fixation.time
 					drawSpot(me.operatorScreen,0.3,[0 1 0.25 0.75],me.x,me.y);
 				else
 					drawSpot(me.operatorScreen,0.3,[0.75 0.25 0.75 0.75],me.x,me.y);
@@ -1374,7 +1474,7 @@ classdef tobiiManager < optickaCore
 		function trackerDrawEyePosition(me)
 			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
 			if me.isFix
-				if me.fixLength > me.fixation.fixTime
+				if me.fixLength > me.fixation.time
 					drawSpot(me.operatorScreen,0.3,[0 1 0.25 0.75],me.x,me.y);
 				else
 					drawSpot(me.operatorScreen,0.3,[0.75 0.25 0.75 0.75],me.x,me.y);

@@ -68,14 +68,14 @@ classdef behaviouralRecord < optickaCore
 			obj.date = datestr(now);
 			if ~exist('eL','var')
 				eL.fixation.radius = 1;
-				eL.fixation.fixTime = 1;
+				eL.fixation.time = 1;
 				eL.fixation.initTime = 1;
 			end
 			t = {['INFORMATION @ ' obj.date]};
 			t{end+1} = ['RUN = ' obj.comment];
 			t{end+1} = ['RADIUS = ' num2str(eL.fixation.radius)];
 			t{end+1} = ' ';
-			t{end+1} = ['TIME = ' num2str(eL.fixation.fixTime)];
+			t{end+1} = ['TIME = ' num2str(eL.fixation.time)];
 			t{end+1} = ' ';
 			t{end+1} = ['INIT TIME = ' num2str(eL.fixation.initTime)];
 			
@@ -166,7 +166,7 @@ classdef behaviouralRecord < optickaCore
 					obj.response(end+1) = 0;
 				end
 				obj.radius(end+1) = eL.fixation.radius;
-				obj.time(end+1) = eL.fixation.fixTime;
+				obj.time(end+1) = eL.fixation.time;
 				obj.inittime(end+1) = eL.fixation.initTime;
 			end
 			

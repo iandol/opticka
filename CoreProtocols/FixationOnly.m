@@ -25,7 +25,7 @@ eL.fixation.Y = 0;
 eL.fixation.radius = 7;
 eL.fixation.initTime = 1.5;
 eL.fixation.time = 0.5;
-eL.fixation.strictFixation = false;
+eL.fixation.strict = false;
 
 %randomise stimulus variables every trial?
 me.stimuli.choice = [];
