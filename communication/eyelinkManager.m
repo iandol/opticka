@@ -662,6 +662,7 @@ classdef eyelinkManager < optickaCore
 				if (me.currentSample.time - me.fixInitStartTime) < me.fixInit.time
 					r = sqrt((x - me.fixInit.X).^2 + (me.y - me.fixInit.Y).^2);
 					window = find(r < me.fixInit.radius);
+					fprintf('fixInit r = %.2f window = %.2f time = %.3f\n',r,window,me.currentSample.time - me.fixInitStartTime)
 					if ~any(window)
 						searching = false; exclusion = true; fixinit = true;
 						me.isInitFail = fixinit; me.isFix = false;
@@ -990,14 +991,15 @@ classdef eyelinkManager < optickaCore
 				if ~exist('clearScreen','var')
 					clearScreen = false;
 				end
+				if clearScreen; Eyelink('Command', 'clear_screen 0'); end
 				for i = 1:length(me.stimulusPositions)
 					x = me.stimulusPositions(i).x; 
 					y = me.stimulusPositions(i).y; 
 					size = me.stimulusPositions(i).size;
-					if isempty(size); size = 1 * me.ppd_; end
+					if isempty(size); size = 1; end
 					rect = [0 0 size size];
-					rect = round(CenterRectOnPoint(rect, x, y)); 
-					if clearScreen; Eyelink('Command', 'clear_screen 0'); end
+					rect = CenterRectOnPoint(rect, x, y); 
+					rect = round(toPixels(me, rect,'rect'));
 					if me.stimulusPositions(i).selected == true
 						Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
 					else
@@ -1013,12 +1015,11 @@ classdef eyelinkManager < optickaCore
 		% ===================================================================
 		function trackerDrawFixation(me)
 			if me.isConnected
-				size = (me.fixation.radius * 2) * me.ppd_;
+				size = me.fixation.radius * 2;
 				rect = [0 0 size size];
-				x = toPixels(me, me.fixation.X, 'x');
-				y = toPixels(me, me.fixation.Y, 'y');
-				rect = round(CenterRectOnPoint(rect, x, y));
-				Eyelink('Command', 'draw_filled_box %d %d %d %d 12', rect(1), rect(2), rect(3), rect(4));
+				rect = CenterRectOnPoint(rect, me.fixation.X, me.fixation.Y);
+				rect = round(toPixels(me, rect, 'rect'));
+				Eyelink('Command', 'draw_filled_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
 			end
 		end
 		
@@ -1027,9 +1028,12 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawExclusion(me)
-			if me.isConnected && ~isempty(me.exclusionZone) && length(me.exclusionZone)==4
-				rect = toPixels(me, me.exclusionZone);
-				Eyelink('Command', 'draw_box %d %d %d %d 10', rect(1), rect(2), rect(3), rect(4));
+			if me.isConnected && ~isempty(me.exclusionZone) && size(me.exclusionZone,2)==4
+				for i = 1:size(me.exclusionZone,1)
+					rect = round(toPixels(me, me.exclusionZone(i,:)));
+					% exclusion zone is [-degX +degX -degY +degY], but rect is left,top,right,bottom
+					Eyelink('Command', 'draw_box %d %d %d %d 12', rect(1), rect(3), rect(2), rect(4));
+				end
 			end
 		end
 		
@@ -1266,13 +1270,15 @@ classdef eyelinkManager < optickaCore
 					stopRecording(me);
 					setOffline(me); %Eyelink('Command', 'set_idle_mode');
 					resetFixation(me);
-					
+
 					% set up the fix init system, whereby the subject must
 					% remain a certain time at the origin of the eye
 					% position before saccading to next target, use previous fixation location.
-					%me.fixInit.X = me.fixation.X;
-					%me.fixInit.Y = me.fixation.Y;
-					%me.fixInit.radius = 3;
+					me.fixInit.X = me.fixation.X;
+					me.fixInit.Y = me.fixation.Y;
+					me.fixInit.time = 1;
+					me.fixInit.radius = 3;
+					
 					% prepare a random position for next trial
 					me.updateFixationValues(randi([-5 5]),randi([-5 5]),[],[],randi([1 5]));
 					o.sizeOut = me.fixation.radius*2;
@@ -1401,20 +1407,25 @@ classdef eyelinkManager < optickaCore
 		function out = toPixels(me,in,axis)
 			if ~exist('axis','var');axis='';end
 			switch axis
+				case ''
+					if length(in)==4
+						out(1:2) = (in(1:2) * me.ppd_) + me.screen.xCenter;
+						out(3:4) = (in(3:4) * me.ppd_) + me.screen.yCenter;
+					elseif length(in)==2
+						out(1) = (in(1) * me.ppd_) + me.screen.xCenter;
+						out(2) = (in(2) * me.ppd_) + me.screen.yCenter;
+					else
+						out = 0;
+					end
+				case 'rect'
+					out(1) = (in(1) * me.ppd_) + me.screen.xCenter;
+					out(2) = (in(2) * me.ppd_) + me.screen.yCenter;
+					out(3) = (in(3) * me.ppd_) + me.screen.xCenter;
+					out(4) = (in(4) * me.ppd_) + me.screen.yCenter;
 				case 'x'
 					out = (in * me.ppd_) + me.screen.xCenter;
 				case 'y'
 					out = (in * me.ppd_) + me.screen.yCenter;
-				otherwise
-					if length(in)==2
-						out(1) = (in(1) * me.ppd_) + me.screen.xCenter;
-						out(2) = (in(2) * me.ppd_) + me.screen.yCenter;
-					elseif length(in)==4
-						out(1:2) = (in(1:2) * me.ppd_) + me.screen.xCenter;
-						out(3:4) = (in(3:4) * me.ppd_) + me.screen.yCenter;
-					else
-						out = 0;
-					end
 			end
 		end
 		
