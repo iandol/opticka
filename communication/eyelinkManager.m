@@ -666,13 +666,14 @@ classdef eyelinkManager < optickaCore
 					end
 				end
 			end
+			
 			% ---- test for fix initiation start window
 			ft = (me.currentSample.time - me.fixInitStartTime) / 1e3;
 			if ~isempty(me.fixInit.X) && ft <= me.fixInit.time
 				r = sqrt((x - me.fixInit.X).^2 + (y - me.fixInit.Y).^2);
 				window = find(r < me.fixInit.radius);
 				if ~any(window)
-					searching = false; exclusion = true; fixinit = true;
+					searching = false; fixinit = true;
 					me.isInitFail = fixinit; me.isFix = false;
 					fprintf('-+-+-> eyelinkManager: eye left fix init window @ %.3f secs!\n',ft);
 					return;
@@ -786,13 +787,15 @@ classdef eyelinkManager < optickaCore
 		function [out, window, exclusion] = testSearchHoldFixation(me, yesString, noString)
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
-				fprintf('-+-+-> Eyelink:testSearchHoldFixation EXCLUSION ZONE ENTERED!\n')
 				out = 'EXCLUDED!';
-				return
+				fprintf('-+-+-> Eyelink:testSearchHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);
+				return;
 			end
 			if initfail
-				if me.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation FIX INIT TIME FAILED!\n'); end
 				out = 'EXCLUDED!';
+				fprintf('-+-+-> Eyelink:testSearchHoldFixation FIX INIT TIME FAIL time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);
 				return
 			end
 			if searching
@@ -841,13 +844,15 @@ classdef eyelinkManager < optickaCore
 		function [out, window, exclusion] = testHoldFixation(me, yesString, noString)
 			[fix, fixtime, searching, window, exclusion, initfail] = me.isFixated();
 			if exclusion
-				fprintf('-+-+-> Eyelink:testHoldFixation EXCLUSION ZONE ENTERED!\n')
-				out = 'EXCLUDED!'; window = [];
-				return
+				out = 'EXCLUDED!';
+				fprintf('-+-+-> Eyelink:testHoldFixation EXCLUSION ZONE ENTERED time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);
+				return;
 			end
 			if initfail
-				if me.verbose; fprintf('-+-+-> Eyelink:testSearchHoldFixation FIX INIT TIME FAILED!\n'); end
 				out = 'EXCLUDED!';
+				fprintf('-+-+-> Eyelink:testHoldFixation FIX INIT TIME FAIL time:[%.2f %.2f %.2f] f:%i ft:%i s:%i e:%i fi:%i\n', ...
+						me.fixTotal, me.fixInitLength, me.fixLength, fix, fixtime, searching, exclusion, initfail);
 				return
 			end
 			if fix
@@ -925,7 +930,7 @@ classdef eyelinkManager < optickaCore
 			if ~strcmpi(message,me.previousMessage) && me.isConnected
 				me.previousMessage = message;
 				Eyelink('Command',['record_status_message ''' message '''']);
-				if me.verbose; fprintf('-+-+->Eyelink status message: %s\n',message);end
+				if me.verbose; fprintf('-+-+-> Eyelink status message: %s\n',message);end
 			end
 		end
 		
@@ -937,7 +942,7 @@ classdef eyelinkManager < optickaCore
 		function trackerMessage(me, message)
 			if me.isConnected
 				Eyelink('Message', message );
-				if me.verbose; fprintf('-+-+->EDF Message: %s\n',message);end
+				if me.verbose; fprintf('-+-+-> EDF Message: %s\n',message);end
 			end
 		end
 		
