@@ -3,6 +3,24 @@
 %> offering a interface consistent with the previous eyelinkManager, offering
 %> methods to check and change fixation windows gaze contingent tasks easily.
 %>
+%> The core methods enable the user to test for common behavioural eye
+%> tracking tasks with single commands. For example, to initiate a task we
+%> normally place a fixation cross on the screen and ask the subject to
+%> saccade to the cross and maintain fixation for a particular duration. This
+%> is achieved using testSearchHoldFixation('yes','no'), using the properties:
+%> fixation.initTime to time how long the subject has to saccade into the
+%> window, fixation.time for how long they must maintain fixation,
+%> fixation.radius for the radius around fixation.X and fixation.Y
+%> position. The method returns the 'yes' string if the rules are matched, 
+%> and 'no' if they are not, thus enabling experiment code to simply define what 
+%> happened. Other methods include isFixated(), testFixationTime(),
+%> testHoldFixation(). 
+%>
+%> Multiple fixation windows can be assigned, and in addition exclusion
+%> windows can ensure a subject doesn't saccade to particular parts of the
+%> screen. fixInit allows you to define a minimum time with which the subject
+%> must initiate a saccade away from a position (which stops a subject cheating).
+%>
 % ========================================================================
 classdef tobiiManager < optickaCore
 	
@@ -542,14 +560,6 @@ classdef tobiiManager < optickaCore
 				end
 			end
 			me.isRecording_ = me.isRecording;
-		end
-		
-		% ===================================================================
-		%> @brief wrapper for EyelinkDoDriftCorrection
-		%>
-		% ===================================================================
-		function success = driftCorrection(me)
-			driftOffset(me);
 		end
 		
 		% ===================================================================
@@ -1640,7 +1650,7 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function success = driftCorrection(me)
-			success = true;
+			driftOffset(me);
 		end
 		
 		% ===================================================================
