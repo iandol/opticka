@@ -88,6 +88,8 @@ classdef gratingStimulus < baseStimulus
 		squareWave = false
 		%> mask value
 		maskValue
+		%> change blend?
+		changeBlend = false
 	end
 
 	events (ListenAccess = 'protected', NotifyAccess = 'protected') %only this class can access these
@@ -226,6 +228,12 @@ classdef gratingStimulus < baseStimulus
 						me.res(2), me.colourOut, me.maskValue, me.contrastMult);
 				end
 			end
+			
+			if me.sM.blend == true && strcmpi(me.sM.srcMode,'GL_SRC_ALPHA') && strcmpi(me.sM.dstMode,'GL_ONE_MINUS_SRC_ALPHA')
+				me.changeBlend = false;
+			else
+				me.changeBlend = true;
+			end
 
 			me.inSetup = false;
 			computePosition(me);
@@ -239,6 +247,7 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function update(me)
 			resetTicks(me);
+			updateShader(me);
 			if me.correctPhase
 				ps=me.calculatePhase;
 				me.driftPhase=me.phaseOut-ps;
@@ -256,9 +265,11 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function draw(me)
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
+				if me.changeBlend;Screen('BlendFunction', me.sM.win, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');end
 				Screen('DrawTexture', me.sM.win, me.texture, [],me.mvRect,...
 					me.angleOut, [], [], [], [], me.rotateMode,...
 					[me.driftPhase, me.sfOut, me.contrastOut, me.sigmaOut]);
+				if me.changeBlend;Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);end
 			end
 			me.tick = me.tick + 1;
 		end
@@ -295,7 +306,12 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
-			me.texture=[];
+			if isprop(me,'texture')
+				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+					try Screen('Close',me.texture); end %#ok<*TRYNC>
+				end
+				me.texture = []; 
+			end
 			me.phaseCounter = 0;
 			if me.mask > 0
 				me.mask = true;
@@ -444,11 +460,40 @@ classdef gratingStimulus < baseStimulus
 		% ===================================================================
 		%> @brief sizeOut Set method
 		%> we also need to change scale when sizeOut is changed, used for both
-		%setting sfOut and the dstRect properly
+		%> setting sfOut and the dstRect properly
 		% ===================================================================
 		function set_sizeOut(me,value)
 			me.sizeOut = value*me.ppd;
 			notify(me,'changeScale');
+		end
+		
+		% ===================================================================
+		%> @brief updateShader 
+		%> check if we need and update shader texture
+		%> 
+		% ===================================================================
+		function updateShader(me)
+			if isprop(me,'texture')
+				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+					try Screen('Close',me.texture); end %#ok<*TRYNC>
+				end
+				me.texture = []; 
+			end
+			if ~all(me.colour == me.colourOut)
+				if strcmpi(me.type,'square')
+					me.texture = CreateProceduralSquareWaveGrating(me.sM.win, me.res(1),...
+						me.res(2), me.colourOut, me.maskValue, me.contrastMult);
+				else
+					if me.sigmaOut > 0
+						me.texture = CreateProceduralSmoothedApertureSineGrating(me.sM.win, me.res(1), ...
+							me.res(2), me.colourOut, me.maskValue, me.contrastMult, me.sigmaOut, ...
+							me.useAlpha, me.smoothMethod);
+					else
+						me.texture = CreateProceduralSineGrating(me.sM.win, me.res(1),...
+							me.res(2), me.colourOut, me.maskValue, me.contrastMult);
+					end
+				end
+			end
 		end
 
 	end

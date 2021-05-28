@@ -39,6 +39,8 @@ classdef discStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
+		%> change blend mode?
+		changeBlend = false
 		%> current flash state
 		flashState
 		%> internal counter
@@ -145,6 +147,12 @@ classdef discStimulus < baseStimulus
 				setupFlash(me);
 			end
 			
+			if strcmpi(me.sM.srcMode,'GL_SRC_ALPHA') && strcmpi(me.sM.dstMode,'GL_ONE_MINUS_SRC_ALPHA')
+				me.changeBlend = false;
+			else
+				me.changeBlend = true;
+			end
+			
 			me.inSetup = false;
 			computePosition(me);
 			setRect(me);
@@ -181,7 +189,7 @@ classdef discStimulus < baseStimulus
 				%Screen('DrawTexture', windowPointer, texturePointer [,sourceRect] [,destinationRect] 
 				%[,rotationAngle] [, filterMode] [, globalAlpha] [, modulateColor] [, textureShader] 
 				%[, specialFlags] [, auxParameters]);
-				Screen('BlendFunction', me.sM.win, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');
+				if me.changeBlend;Screen('BlendFunction', me.sM.win, 'GL_SRC_ALPHA', 'GL_ONE_MINUS_SRC_ALPHA');end
 				if me.doFlash == false
 					Screen('DrawTexture', me.sM.win, me.texture, [], me.mvRect,...
 					me.angleOut, [], [], me.colourOut, [], [],...
@@ -191,7 +199,7 @@ classdef discStimulus < baseStimulus
 					me.angleOut, [], [], me.currentColour, [], [],...
 					[]);
 				end
-				Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);
+				if me.changeBlend;Screen('BlendFunction', me.sM.win, me.sM.srcMode, me.sM.dstMode);end
 			end
 			me.tick = me.tick + 1;
 		end
@@ -247,7 +255,12 @@ classdef discStimulus < baseStimulus
 			me.flashFG = [];
 			me.flashBG = [];
 			me.flashCounter = [];
-			if isprop(me,'texture'); me.texture = []; end
+			if isprop(me,'texture')
+				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+					try Screen('Close',me.texture); end %#ok<*TRYNC>
+				end
+				me.texture = []; 
+			end
 			if isprop(me,'discSize'); me.discSize = []; end
 			if isprop(me,'radius'); me.radius = []; end
 			if isprop(me,'res'); me.res = []; end

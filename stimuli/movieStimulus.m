@@ -200,9 +200,9 @@ classdef movieStimulus < baseStimulus
 			Screen('PlayMovie', me.movie, 0);
 			Screen('SetMovieTimeIndex', me.movie, 0); %reset movie
 			if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-					try Screen('Close',me.texture); end %#ok<*TRYNC>
+				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			elseif ~isempty(me.buffertex) && ~isempty(me.texture) && me.buffertex ~= me.texture && Screen(me.buffertex,'WindowKind') == -1
-					try Screen('Close',me.buffertex); end 
+				try Screen('Close',me.buffertex); end 
 			end
 			me.texture = []; me.buffertex = [];
 			if me.sizeOut > 0
