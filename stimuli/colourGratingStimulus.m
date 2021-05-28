@@ -324,7 +324,7 @@ classdef colourGratingStimulus < baseStimulus
 		function reset(me)
 			resetTicks(me);
 			if ~isempty(me.texture) && Screen(me.texture,'WindowKind') == -1
-				try Screen('Close',me.texture); end
+				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			end
 			me.texture=[];
 			me.shader=[];

@@ -218,10 +218,10 @@ classdef barStimulus < baseStimulus
 				try Screen('Close',me.texture); end %#ok<*TRYNC>
 			end
 			if ~isempty(me.texture2) && me.texture2 > 0 && Screen(me.texture2,'WindowKind') == -1
-				if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture,'WindowKind')); end
+				if me.verbose; fprintf('!!!>>>Closing texture: %i kind: %i\n',me.texture,Screen(me.texture2,'WindowKind')); end
 				try Screen('Close',me.texture2); end %#ok<*TRYNC>
 			end
-			me.texture=[];
+			me.texture=[]; me.texture2 = [];
 			me.mvRect = [];
 			me.dstRect = [];
 			me.screenWidth = [];

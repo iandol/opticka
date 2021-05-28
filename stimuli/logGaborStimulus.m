@@ -280,7 +280,7 @@ classdef logGaborStimulus < baseStimulus
 			end
 			if me.wasMaskColourBlank;me.maskColour=[];end
 			resetTicks(me);
-			me.texture=[];
+			me.texture=[]; me.maskTexture = [];
 			me.scale = 1;
 			me.mvRect = [];
 			me.dstRect = [];

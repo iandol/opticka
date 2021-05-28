@@ -268,7 +268,12 @@ classdef gaborStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
-			me.texture=[];
+			if isprop(me,'texture')
+				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+					try Screen('Close',me.texture); end %#ok<*TRYNC>
+				end
+				me.texture = []; 
+			end
 			me.removeTmpProperties;
 		end
 		
