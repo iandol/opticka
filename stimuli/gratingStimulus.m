@@ -473,13 +473,13 @@ classdef gratingStimulus < baseStimulus
 		%> 
 		% ===================================================================
 		function updateShader(me)
-			if isprop(me,'texture')
-				if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
-					try Screen('Close',me.texture); end %#ok<*TRYNC>
-				end
-				me.texture = []; 
-			end
 			if ~all(me.colour == me.colourOut)
+				if isprop(me,'texture')
+					if ~isempty(me.texture) && me.texture > 0 && Screen(me.texture,'WindowKind') == -1
+						try Screen('Close',me.texture); end %#ok<*TRYNC>
+					end
+					me.texture = []; 
+				end
 				if strcmpi(me.type,'square')
 					me.texture = CreateProceduralSquareWaveGrating(me.sM.win, me.res(1),...
 						me.res(2), me.colourOut, me.maskValue, me.contrastMult);
