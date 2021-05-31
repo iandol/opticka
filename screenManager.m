@@ -1096,7 +1096,7 @@ classdef screenManager < optickaCore
 		function drawTextNow(me,text)
 			% drawTextNow(me,text)
 			if ~exist('text','var');return;end
-			Screen('DrawText',me.win,text,10,10,[1 1 1],[0.5 0.5 0.5]);
+			Screen('DrawText',me.win,text,10,10,[1 1 1],[0.3 0.3 0.1]);
 			flip(me,[],[],2);
 		end
 		
@@ -1109,7 +1109,7 @@ classdef screenManager < optickaCore
 		function drawText(me,text)
 			% drawTextNow(me,text)
 			if ~exist('text','var');return;end
-			Screen('DrawText',me.win,text,10,10,[1 1 1],[0.5 0.5 0.5]);
+			Screen('DrawText',me.win,text,10,10,[1 1 1],[0.3 0.3 0.1]);
 		end
 		
 		% ===================================================================

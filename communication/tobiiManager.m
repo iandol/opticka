@@ -1482,7 +1482,18 @@ classdef tobiiManager < optickaCore
 			else
 				drawSpot(me.operatorScreen,0.3,[0.7 0.5 0 0.75],me.x,me.y);
 			end
-			
+		end
+		
+		% ===================================================================
+		%> @brief draw the sampled eye positions in xAll yAll
+		%>
+		% ===================================================================
+		function trackerDrawEyePositions(me)
+			if ~me.isConnected || ~me.operatorScreen.isOpen; return;end
+			if ~isempty(me.xAll) && ~isempty(me.yAll) && (length(me.xAll)==length(me.yAll))
+				xy = [me.xAll;me.yAll];
+				drawDots(me.operatorScreen,xy,8,[0.5 1 0 0.2]);
+			end
 		end
 		
 		% ===================================================================
@@ -1503,8 +1514,8 @@ classdef tobiiManager < optickaCore
 		%>
 		% ===================================================================
 		function trackerDrawText(me,textIn)
-			if ~me.isConnected || ~me.operatorScreen.isOpen || ~exist(textIn,'var'); return;end
-			Screen('DrawText',me.win,textIn,10,10,[1 1 1],[0.5 0.5 0.5]);
+			if ~me.isConnected || ~me.operatorScreen.isOpen || ~exist('textIn','var'); return; end
+			drawText(me.operatorScreen,textIn);
 		end
 		
 		% ===================================================================
