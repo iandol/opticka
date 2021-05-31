@@ -20,6 +20,8 @@ classdef fixationCrossStimulus < baseStimulus
 		flashColour = []
 		%> second colour
 		colour2 = [0 0 0 1]
+		%> alpha for second colour
+		alpha2 = 1
 		%> width of the cross lines in degrees
 		lineWidth = 0.075
 		%> show background disk
@@ -52,6 +54,7 @@ classdef fixationCrossStimulus < baseStimulus
 		flashFG = [1 1 1]
 		currentColour = [1 1 1]
 		colourOutTemp = [1 1 1]
+		colour2OutTemp = [1 1 1]
 		stopLoop = false
 		allowedProperties='showDisk|type|flashTime|flashOn|flashColour|contrast|colour2|lineWidth'
 		ignoreProperties = 'flashSwitch';
@@ -109,6 +112,7 @@ classdef fixationCrossStimulus < baseStimulus
 					if strcmp(fn{j},'colour2');p.SetMethod = @set_colour2Out;end
 					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
 					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
+					if strcmp(fn{j},'alpha2');p.SetMethod = @set_alpha2Out;end
 				end
 				if isempty(regexp(fn{j},me.ignoreProperties, 'once'))
 					me.([fn{j} 'Out']) = me.(fn{j}); %copy our property value to our tempory copy
@@ -159,9 +163,9 @@ classdef fixationCrossStimulus < baseStimulus
 			if me.isVisible && me.tick >= me.delayTicks && me.tick < me.offTicks
 				if me.doFlash == false
 					if me.showDisk;Screen('gluDisk', me.sM.win, me.colourOut, me.xOut,me.yOut,me.sizeOut/2);end
-					Screen('FillRect', me.sM.win, [me.colour2Out(1:3) 1], CenterRectOnPointd([0 0 me.sizeOut me.lineWidthOut], me.xOut,me.yOut));
-					Screen('FillRect', me.sM.win, [me.colour2Out(1:3) 1], CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xOut,me.yOut));
-					Screen('gluDisk', me.sM.win, [me.colourOut(1:3) 1], me.xOut, me.yOut, me.lineWidthOut);
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.sizeOut me.lineWidthOut], me.xOut,me.yOut));
+					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.lineWidthOut me.sizeOut], me.xOut,me.yOut));
+					Screen('gluDisk', me.sM.win, me.colourOut, me.xOut, me.yOut, me.lineWidthOut);
 				else
 					if me.showDisk;Screen('gluDisk', me.sM.win, me.currentColour, me.xOut,me.yOut,me.sizeOut/2);end
 					Screen('FillRect', me.sM.win, me.colour2Out, CenterRectOnPointd([0 0 me.sizeOut me.lineWidthOut], me.xOut,me.yOut));
@@ -215,7 +219,9 @@ classdef fixationCrossStimulus < baseStimulus
 		% ===================================================================
 		function reset(me)
 			resetTicks(me);
-			me.texture=[];
+			me.texture			= [];
+			me.colourOutTemp	= [];
+			me.currentColour	= [];
 			me.removeTmpProperties;
 		end
 		
@@ -231,6 +237,39 @@ classdef fixationCrossStimulus < baseStimulus
 			end
 		end
 		
+		% ===================================================================
+		%> @brief colour set method
+		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
+		% ===================================================================
+		function set.colour2(me,value)
+			me.isInSetColour = true; %#ok<*MCSUP>
+			len=length(value);
+			switch len
+				case 4
+					me.colour2 = value(1:4);
+					me.alpha2 = value(4);
+				case 3
+					me.colour2 = [value(1:3) me.alpha2]; %force our alpha to override
+				case 1
+					me.colour2 = [value value value me.alpha2]; %construct RGBA
+				otherwise
+					me.colour2 = [1 1 1 me.alpha2]; %return white for everything else	
+			end
+			me.colour2(me.colour2<0)=0; me.colour2(me.colour2>1)=1;
+			me.isInSetColour = false;
+		end
+		
+		% ===================================================================
+		%> @brief alpha set method
+		%> 
+		% ===================================================================
+		function set.alpha2(me,value)
+			if value<0; value=0;elseif value>1; value=1; end
+			me.alpha2 = value;
+			if ~me.isInSetColour
+				me.colour2 = me.colour2(1:3); %force colour to be regenerated
+			end
+		end
 		
 	end %---END PUBLIC METHODS---%
 	
@@ -279,8 +318,8 @@ classdef fixationCrossStimulus < baseStimulus
 				case 1
 					value = [value value value alpha];
 			end
-			if isempty(me.colourOutTemp);me.colourOutTemp = value;end
 			me.colourOut = value;
+			me.colourOutTemp = value;
 			me.isInSetColour = false;
 			if isempty(me.findprop('contrastOut'))
 				contrast = me.contrast; %#ok<*PROPLC>
@@ -298,15 +337,36 @@ classdef fixationCrossStimulus < baseStimulus
 		% ===================================================================
 		function set_colour2Out(me, value)
 			me.isInSetColour = true;
-			alpha = 1;
+			if length(value)==4 
+				alpha = value(4);
+			elseif isempty(me.findprop('alpha2Out'))
+				alpha = me.alpha2;
+			else
+				alpha = me.alpha2Out;
+			end
 			switch length(value)
-				case {3,4}
+				case {4}
+					if isempty(me.findprop('alpha2Out'))
+						me.alpha2 = alpha;
+					else
+						me.alpha2Out = alpha;
+					end
+				case {3}
 					value = [value(1:3) alpha];
 				case 1
 					value = [value value value alpha];
 			end
 			me.colour2Out = value;
+			me.colour2OutTemp = value;
 			me.isInSetColour = false;
+			if isempty(me.findprop('contrastOut'))
+				contrast = me.contrast; %#ok<*PROPLC>
+			else
+				contrast = me.contrastOut;
+			end
+			if ~me.inSetup && ~me.stopLoop && contrast < 1
+				computeColour(me);
+			end
 		end
 		
 		% ===================================================================
@@ -314,12 +374,29 @@ classdef fixationCrossStimulus < baseStimulus
 		%>
 		% ===================================================================
 		function set_alphaOut(me, value)
+			if value < 0 || value > 1; return; end
 			if ~me.isInSetColour
 				me.alphaOut = value;
 				if isempty(me.findprop('colourOut'))
 					me.colour = [me.colour(1:3) me.alphaOut];
 				else
 					me.colourOut = [me.colourOut(1:3) me.alphaOut];
+				end
+			end
+		end
+		
+		% ===================================================================
+		%> @brief alphaOut SET method
+		%>
+		% ===================================================================
+		function set_alpha2Out(me, value)
+			if value < 0 || value > 1; return; end
+			if ~me.isInSetColour
+				me.alpha2Out = value;
+				if isempty(me.findprop('colour2Out'))
+					me.colour2 = [me.colour2(1:3) me.alpha2Out];
+				else
+					me.colour2Out = [me.colour2Out(1:3) me.alpha2Out];
 				end
 			end
 		end
@@ -345,6 +422,7 @@ classdef fixationCrossStimulus < baseStimulus
 			if me.inSetup || me.stopLoop; return; end
 			me.stopLoop = true;
 			me.colourOut = [me.mix(me.colourOutTemp(1:3)) me.alphaOut];
+			me.colour2Out = [me.mix(me.colour2OutTemp(1:3)) me.alpha2Out];
 			me.stopLoop = false;
 			me.setupFlash();
 		end

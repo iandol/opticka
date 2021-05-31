@@ -53,7 +53,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		mouseOverride logical = false
 		%> true or false, whether to draw() this object
 		isVisible logical = true
-		%> show the position on the Eyelink display?
+		%> show the position on the Eyetracker display?
 		showOnTracker logical = true
 		%> Do we print details to the commandline?
 		verbose = false
@@ -123,7 +123,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> the setup method
 		ignorePropertiesBase char = ['handles|ppd|sM|name|comment|fullName|'...
 			'family|type|dX|dY|delta|verbose|texture|dstRect|mvRect|xOut|'...
-			'yOut|isVisible|dateStamp|paths|uuid|tick|doAnimator|doDots|mouseOverride|isRect'];
+			'yOut|isVisible|dateStamp|paths|uuid|tick|doAnimator|doDots|mouseOverride|isRect'...
+			'dstRect|mvRect|sM|screenVals|isSetup'];
 	end
 	
 	properties (SetAccess = private, GetAccess = private)
@@ -176,7 +177,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%> Allow 1 (R=G=B) 3 (RGB) or 4 (RGBA) value colour
 		% ===================================================================
 		function set.colour(me,value)
-			me.isInSetColour = true;
+			me.isInSetColour = true; %#ok<*MCSUP>
 			len=length(value);
 			switch len
 				case 4
