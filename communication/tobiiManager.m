@@ -378,7 +378,8 @@ classdef tobiiManager < optickaCore
 		%> @brief reset the fixation counters ready for a new trial
 		%>
 		% ===================================================================
-		function resetFixation(me)
+		function resetFixation(me,removeHistory)
+			if ~exist('removeHistory','var');removeHistory=true;end
 			me.fixStartTime		= 0;
 			me.fixLength		= 0;
 			me.fixInitStartTime	= 0;
@@ -386,12 +387,26 @@ classdef tobiiManager < optickaCore
 			me.fixTotal			= 0;
 			me.fixN				= 0;
 			me.fixSelection		= 0;
-			me.xAll				= [];
-			me.yAll				= [];
-			me.pupilAll			= [];
+			if removeHistory
+				me.xAll				= [];
+				me.yAll				= [];
+				me.pupilAll			= [];
+			end
 			me.isFix			= false;
 			me.isExclusion		= false;
 			me.isInitFail		= false;
+		end
+		
+		% ===================================================================
+		%> @brief reset the fixation counters ready for a new trial
+		%>
+		% ===================================================================
+		function resetFixationTime(me)
+			me.fixStartTime		= 0;
+			me.fixLength		= 0;
+			me.fixInitStartTime	= 0;
+			me.fixInitLength	= 0;
+			me.fixTotal			= 0;
 		end
 		
 		% ===================================================================
