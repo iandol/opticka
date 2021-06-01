@@ -388,9 +388,7 @@ classdef tobiiManager < optickaCore
 			me.fixN				= 0;
 			me.fixSelection		= 0;
 			if removeHistory
-				me.xAll				= [];
-				me.yAll				= [];
-				me.pupilAll			= [];
+				resetFixationHistory(me);
 			end
 			me.isFix			= false;
 			me.isExclusion		= false;
@@ -404,6 +402,16 @@ classdef tobiiManager < optickaCore
 		function resetFixationTime(me)
 			me.fixStartTime		= 0;
 			me.fixLength		= 0;
+		end
+		
+		% ===================================================================
+		%> @brief reset the fixation history: xAll yAll pupilAll
+		%>
+		% ===================================================================
+		function resetFixationHistory(me)
+			me.xAll				= [];
+			me.yAll				= [];
+			me.pupilAll			= [];
 		end
 		
 		% ===================================================================
@@ -722,7 +730,7 @@ classdef tobiiManager < optickaCore
 		% ===================================================================
 		function updateFixationValues(me,x,y,inittime,fixtime,radius,strict)
 			%tic
-			resetFixation(me)
+			resetFixation(me,false)
 			if nargin > 1 && ~isempty(x)
 				if isinf(x)
 					me.fixation.X = me.screen.screenXOffset;
