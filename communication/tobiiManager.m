@@ -404,9 +404,6 @@ classdef tobiiManager < optickaCore
 		function resetFixationTime(me)
 			me.fixStartTime		= 0;
 			me.fixLength		= 0;
-			me.fixInitStartTime	= 0;
-			me.fixInitLength	= 0;
-			me.fixTotal			= 0;
 		end
 		
 		% ===================================================================
@@ -959,7 +956,7 @@ classdef tobiiManager < optickaCore
 		end
 		
 		% ===================================================================
-		%> @brief Checks if we're still within fix window. Input is
+		%> @brief Checks if we're within fix window. Input is
 		%> 2 strings, either one is returned depending on success or
 		%> failure, 'fixing' means the fixation time is not yet met...
 		%>
