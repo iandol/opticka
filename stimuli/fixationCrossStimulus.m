@@ -13,17 +13,14 @@ classdef fixationCrossStimulus < baseStimulus
 		flashTime = [0.25 0.25]
 		%> is the ON flash the first flash we see?
 		flashOn = true
-		%> contrast is realy a multiplier to the stimulus colour, not
-		%> formally defined contrast in this case
-		contrast = 1
 		%> colour for flash, empty to inherit from screen background with 0 alpha
 		flashColour = []
-		%> second colour
+		%> second colour, used for the cross
 		colour2 = [0 0 0 1]
-		%> alpha for second colour
+		%> alpha for second colour, can be controlled independently of alpha for colour
 		alpha2 = 1
 		%> width of the cross lines in degrees
-		lineWidth = 0.075
+		lineWidth = 0.1
 		%> show background disk
 		showDisk = true
 	end
@@ -56,7 +53,7 @@ classdef fixationCrossStimulus < baseStimulus
 		colourOutTemp = [1 1 1]
 		colour2OutTemp = [1 1 1]
 		stopLoop = false
-		allowedProperties='showDisk|type|flashTime|flashOn|flashColour|contrast|colour2|lineWidth'
+		allowedProperties='showDisk|type|flashTime|flashOn|flashColour|colour2|alpha2|lineWidth'
 		ignoreProperties = 'flashSwitch';
 	end
 	
@@ -110,7 +107,6 @@ classdef fixationCrossStimulus < baseStimulus
 					if strcmp(fn{j},'yPosition');p.SetMethod = @set_yPositionOut;end
 					if strcmp(fn{j},'colour');p.SetMethod = @set_colourOut;end
 					if strcmp(fn{j},'colour2');p.SetMethod = @set_colour2Out;end
-					if strcmp(fn{j},'contrast');p.SetMethod = @set_contrastOut;end
 					if strcmp(fn{j},'alpha');p.SetMethod = @set_alphaOut;end
 					if strcmp(fn{j},'alpha2');p.SetMethod = @set_alpha2Out;end
 				end
@@ -132,7 +128,7 @@ classdef fixationCrossStimulus < baseStimulus
 			
 			me.inSetup = false;
 			
-			computeColour(me);
+			setupFlash(me);
 			computePosition(me);
 			setAnimationDelta(me);
 		end
@@ -321,14 +317,6 @@ classdef fixationCrossStimulus < baseStimulus
 			me.colourOut = value;
 			me.colourOutTemp = value;
 			me.isInSetColour = false;
-			if isempty(me.findprop('contrastOut'))
-				contrast = me.contrast; %#ok<*PROPLC>
-			else
-				contrast = me.contrastOut;
-			end
-			if ~me.inSetup && ~me.stopLoop && contrast < 1
-				computeColour(me);
-			end
 		end
 		
 		% ===================================================================
@@ -359,14 +347,6 @@ classdef fixationCrossStimulus < baseStimulus
 			me.colour2Out = value;
 			me.colour2OutTemp = value;
 			me.isInSetColour = false;
-			if isempty(me.findprop('contrastOut'))
-				contrast = me.contrast; %#ok<*PROPLC>
-			else
-				contrast = me.contrastOut;
-			end
-			if ~me.inSetup && ~me.stopLoop && contrast < 1
-				computeColour(me);
-			end
 		end
 		
 		% ===================================================================
@@ -402,32 +382,6 @@ classdef fixationCrossStimulus < baseStimulus
 		end
 		
 		% ===================================================================
-		%> @brief contrastOut SET method
-		%>
-		% ===================================================================
-		function set_contrastOut(me, value)
-			if iscell(value); value = value{1}; end
-			me.contrastOut = value;
-			if ~me.inSetup && ~me.stopLoop && value < 1
-				computeColour(me);
-			end
-		end
-		
-		% ===================================================================
-		%> @brief computeColour triggered event
-		%> Use an event to recalculate as get method is slower (called
-		%> many more times), than an event which is only called on update
-		% ===================================================================
-		function computeColour(me,~,~)
-			if me.inSetup || me.stopLoop; return; end
-			me.stopLoop = true;
-			me.colourOut = [me.mix(me.colourOutTemp(1:3)) me.alphaOut];
-			me.colour2Out = [me.mix(me.colour2OutTemp(1:3)) me.alpha2Out];
-			me.stopLoop = false;
-			me.setupFlash();
-		end
-		
-		% ===================================================================
 		%> @brief setupFlash
 		%>
 		% ===================================================================
@@ -448,13 +402,6 @@ classdef fixationCrossStimulus < baseStimulus
 				me.currentColour = me.flashBG;
 			end
 		end
-		
-		% ===================================================================
-		%> @brief linear interpolation between two arrays
-		%>
-		% ===================================================================
-		function out = mix(me,c)
-			out = me.sM.backgroundColour(1:3) * (1 - me.contrastOut) + c(1:3) * me.contrastOut;
-		end
+
 	end
 end
