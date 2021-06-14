@@ -805,7 +805,7 @@ classdef tobiiManager < optickaCore
 			end
 			% ---- test for fix initiation start window
 			if ~isempty(me.fixInit.X)
-				if (me.currentSample.time - me.fixInitStartTime) < me.fixInit.time
+				if (me.currentSample.time - me.fixInitStartTime) < (me.fixInit.time * 1e6)
 					r = sqrt((me.x - me.fixInit.X).^2 + (me.y - me.fixInit.Y).^2);
 					window = find(r < me.fixInit.radius);
 					if ~any(window)
