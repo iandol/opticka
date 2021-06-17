@@ -47,7 +47,7 @@ classdef tobiiManager < optickaCore
 		fixInit	struct					= struct('X',[],'Y',[],'time',0.1,'radius',2)
 		%> add a manual offset to the eye position, similar to a drift correction
 		%> but handled by the eyelinkManager.
-		offset struct				= struct('X',0,'Y',0)
+		offset struct					= struct('X',0,'Y',0)
 		%> model of eyetracker:
 		%> 'Tobi Pro Spectrum' - 'IS4_Large_Peripheral' - 'Tobii TX300'
 		model char {mustBeMember(model,{'Tobii Pro Spectrum','Tobii TX300',...
