@@ -398,6 +398,9 @@ classdef eyelinkManager < optickaCore
 			if ~isempty(me.calibrationProportion)
 				Eyelink('Command','calibration_area_proportion = %s', num2str(me.calibrationProportion));
 				Eyelink('Command','validation_area_proportion = %s', num2str(me.calibrationProportion));
+				% see https://www.sr-support.com/forum-37-page-2.html
+				%Eyelink('Command','calibration_corner_scaling = %s', num2str([me.calibrationProportion(1)-0.1 me.calibrationProportion(2)-0.1])-);
+				%Eyelink('Command','validation_corner_scaling = %s', num2str([me.calibrationProportion(1)-0.1 me.calibrationProportion(2)-0.1]));
 			end
 			Eyelink('Command','horizontal_target_y = %i',me.screen.winRect(4)/2);
 			Eyelink('Command','calibration_type = %s', me.calibrationStyle);
