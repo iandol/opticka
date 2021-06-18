@@ -18,6 +18,7 @@ classdef arduinoIOPort < handle
 		mspd   % DC motors speed status
 		sspd   % Stepper motors speed status
 		encs   % Encoders status
+
 		sktc   % Which sketch is running on the Arduino board?
 		isDemo = false
 		allPorts = []
@@ -107,8 +108,8 @@ classdef arduinoIOPort < handle
 			% exit if there was no answer
 			if isempty(r)
 				IOPort('CloseAll');
-				delete(a.conn);
-				delete(a);
+				try delete(a.conn); end
+				try delete(a); end
 				error('Connection unsuccessful, please make sure that the board is powered on, running a sketch provided with the package, and connected to the indicated serial port. You might also try to unplug and re-plug the USB cable before attempting a reconnection.');
 			end
 			a.sktc = r(1)-48; %-48 to get the numeric value from the ASCII one [char(48)==0]

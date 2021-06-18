@@ -154,7 +154,7 @@ switch eyecmd
         [rc, el] = EyelinkGetKey(el);
         if rc == 32
             if exist('rM','var') && isa(rM,'arduinoManager') && rM.isOpen
-                timedTTL(rM);
+                timedTTL(rM,rM.rewardPin,rM.rewardTime);
             end
         end
         if rc>0 && verbose; fprintf('--->>> EYELINKCALLBACK:2 Get Key: %g\n',rc); end

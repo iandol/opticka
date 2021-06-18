@@ -20,7 +20,7 @@
 %==================================================================
 %------------General Settings-----------------
 tS.useTask					= false; %==use stimulusSequence (randomised variable task object)
-tS.rewardTime				= 300; %==TTL time in milliseconds
+tS.rewardTime				= 250; %==TTL time in milliseconds
 tS.rewardPin				= 11; %==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus  = false; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition		= false; %==record eye position within PTB, **in addition** to the EDF?
