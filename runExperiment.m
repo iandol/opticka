@@ -1234,7 +1234,7 @@ classdef runExperiment < optickaCore
 		%> Updates the stimulus objects with the current variable set
 		%> @param index a single value
 		% ===================================================================
-		function updateVariables(me,index,override,update)
+		function updateVariables(me, index, override, update)
 			if ~exist('update','var') || isempty(update)
 				update = false;
 			end
@@ -2004,53 +2004,53 @@ classdef runExperiment < optickaCore
 						end		
 					case 'z' 
 						if tS.keyTicks > tS.keyHold
-							me.eyeTracker.fixationInitTime = me.eyeTracker.fixationInitTime - 0.1;
-							if me.eyeTracker.fixationInitTime < 0.01
-								me.eyeTracker.fixationInitTime = 0.01;
+							me.eyeTracker.fixation.initTime = me.eyeTracker.fixation.initTime - 0.1;
+							if me.eyeTracker.fixation.initTime < 0.01
+								me.eyeTracker.fixation.initTime = 0.01;
 							end
-							tS.firstFixInit = me.eyeTracker.fixationInitTime;
-							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixationInitTime)
+							tS.firstFixInit = me.eyeTracker.fixation.initTime;
+							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'x' 
 						if tS.keyTicks > tS.keyHold
-							me.eyeTracker.fixationInitTime = me.eyeTracker.fixationInitTime + 0.1;
-							tS.firstFixInit = me.eyeTracker.fixationInitTime;
-							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixationInitTime)
+							me.eyeTracker.fixationInitTime = me.eyeTracker.fixation.initTime + 0.1;
+							tS.firstFixInit = me.eyeTracker.fixation.initTime;
+							fprintf('===>>> FIXATION INIT TIME: %g\n',me.eyeTracker.fixation.initTime)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'c' 
 						if tS.keyTicks > tS.keyHold
-							me.eyeTracker.fixationTime = me.eyeTracker.fixationTime - 0.1;
-							if me.eyeTracker.fixationTime < 0.01
-								me.eyeTracker.fixationTime = 0.01;
+							me.eyeTracker.fixationTime = me.eyeTracker.fixation.time - 0.1;
+							if me.eyeTracker.fixation.time < 0.01
+								me.eyeTracker.fixation.time = 0.01;
 							end
-							tS.firstFixTime = me.eyeTracker.fixationTime;
-							fprintf('===>>> FIXATION TIME: %g\n',me.eyeTracker.fixationTime)
+							tS.firstFixTime = me.eyeTracker.fixation.time;
+							fprintf('===>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'v'
 						if tS.keyTicks > tS.keyHold
-							me.eyeTracker.fixationTime = me.eyeTracker.fixationTime + 0.1;
-							tS.firstFixTime = me.eyeTracker.fixationTime;
-							fprintf('===>>> FIXATION TIME: %g\n',me.eyeTracker.fixationTime)
+							me.eyeTracker.fixation.time = me.eyeTracker.fixation.time + 0.1;
+							tS.firstFixTime = me.eyeTracker.fixation.time;
+							fprintf('===>>> FIXATION TIME: %g\n',me.eyeTracker.fixation.time)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'b'
 						if tS.keyTicks > tS.keyHold
-							me.eyeTracker.fixationRadius = me.eyeTracker.fixationRadius - 0.1;
-							if me.eyeTracker.fixationRadius < 0.1
-								me.eyeTracker.fixationRadius = 0.1;
+							me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius - 0.1;
+							if me.eyeTracker.fixation.radius < 0.1
+								me.eyeTracker.fixation.radius = 0.1;
 							end
-							tS.firstFixRadius = me.eyeTracker.fixationRadius;
-							fprintf('===>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixationRadius)
+							tS.firstFixRadius = me.eyeTracker.fixation.radius;
+							fprintf('===>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'n'
 						if tS.keyTicks > tS.keyHold
-							me.eyeTracker.fixationRadius = me.eyeTracker.fixationRadius + 0.1;
-							tS.firstFixRadius = me.eyeTracker.fixationRadius;
-							fprintf('===>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixationRadius)
+							me.eyeTracker.fixation.radius = me.eyeTracker.fixation.radius + 0.1;
+							tS.firstFixRadius = me.eyeTracker.fixation.radius;
+							fprintf('===>>> FIXATION RADIUS: %g\n',me.eyeTracker.fixation.radius)
 							tS.keyHold = tS.keyTicks + fInc;
 						end
 					case 'p' %pause the display

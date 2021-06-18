@@ -19,7 +19,7 @@
 
 %==================================================================
 %------------General Settings-----------------
-tS.useTask					= false; %==use stimulusSequence (randomised variable task object)
+tS.useTask					= true; %==use stimulusSequence (randomised variable task object)
 tS.rewardTime				= 250; %==TTL time in milliseconds
 tS.rewardPin				= 11; %==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus  = false; %==allow keyboard control? Slight drop in performance
@@ -55,14 +55,14 @@ eL.sampleRate 				= 250; % sampling rate
 eL.remoteCalibration			= false; 
 %===========================
 eL.calibrationStyle 			= 'HV3'; % calibration style
+eL.calibrationProportion		= [0.3 0.25]; %the proportion of the screen occupied by the calibration stimuli
 eL.modify.calibrationtargetcolour = [1 1 1];
-eL.modify.calibrationtargetsize = 1; % size of calibration target as percentage of screen
-eL.modify.calibrationtargetwidth = 0.1; % width of calibration target's border as percentage of screen
+eL.modify.calibrationtargetsize = 2; % size of calibration target as percentage of screen
+eL.modify.calibrationtargetwidth = 0.15; % width of calibration target's border as percentage of screen
 eL.modify.waitformodereadytime	= 500;
 eL.modify.devicenumber 			= -1; % -1==use any keyboard
 eL.modify.targetbeep 			= 1;
 eL.verbose 						= false;
-%oldverbosity					= Eyelink('Verbosity',10);
 
 %Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
@@ -99,10 +99,10 @@ me.stimuli.controlTable(n).delta	= 0.5;
 me.stimuli.controlTable(n).stimuli	= [1];
 me.stimuli.controlTable(n).limits	= [0.5 20];
 n									= n + 1;
-me.stimuli.controlTable(n).variable = 'size';
+me.stimuli.controlTable(n).variable = 'angle';
 me.stimuli.controlTable(n).delta	= 0.5;
 me.stimuli.controlTable(n).stimuli	= [2];
-me.stimuli.controlTable(n).limits	= [0.5 20];
+me.stimuli.controlTable(n).limits	= [0 180];
 
 %this allows us to enable subsets from our stimulus list
 me.stimuli.stimulusSets				= {[1,2],[2]};
@@ -221,7 +221,8 @@ correctFcn = {
 
 %----------------------when we exit the correct state
 correctExitFcn = {
-	@()update(me.stimuli); % prepare stimuli for the next trial
+	@()updateVariables(me,[],[],true); ... %update the task variables
+	@()update(me.stimuli); ... %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM); % update the behavioural report plot
 	@()drawnow; % ensure we update the figure
 };
@@ -258,6 +259,7 @@ breakFcn =  {
 
 %----------------------break exit
 breakExitFcn = { 
+	@()updateVariables(me,[],[],false); ... %update the task variables
 	@()update(me.stimuli); %update our stimuli ready for display
 	@()updatePlot(bR, eL, sM);
 	@()drawnow;

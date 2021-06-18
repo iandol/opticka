@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '1.23'
+		optickaVersion char = '1.24'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -694,11 +694,9 @@ classdef opticka < optickaCore
 					me.r.task.nVar(revertN+1).offsetstimulus = offset(1);
 					me.r.task.nVar(revertN+1).offsetvalue = offset(2);
 				end
-				validate(me.r.task);
 				me.r.task.randomiseStimuli;
-
+				validate(me.r.task);
 				me.refreshVariableList;
-			
 			catch ME
 				getReport(ME)
 				rethrow(ME);

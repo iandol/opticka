@@ -626,22 +626,25 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> Check we have a minimal task structure
 		% ===================================================================
 		function validate(obj)
-			vin = obj.nVar;
-			vout = vin;
-			obj.nVar = [];
-			shift = 0;
-			for i = 1:length(vin)
-				if isempty(vin(i).name) || isempty(vin(i).values) || isempty(vin(i).stimulus)
-					vout(i + shift) = [];
-					shift = shift-1;
-				end
-			end
-			obj.nVar = vout;
-			clear vin vout shift
 			if obj.nVars == 0
 				obj.outIndex = 1; %there is only one stimulus, no variables
+				obj.varLabels = {};
+				obj.varList = {};
+			else
+				vin = obj.nVar;
+				vout = vin;
+				obj.nVar = [];
+				shift = 0;
+				for i = 1:length(vin)
+					if isempty(vin(i).name) || isempty(vin(i).values) || isempty(vin(i).stimulus)
+						vout(i + shift) = [];
+						shift = shift-1;
+					end
+				end
+				obj.nVar = vout;
+				clear vin vout shift
+				makeLabels(obj);
 			end
-			makeLabels(obj);
 		end
 		
 	end % END METHODS
@@ -656,7 +659,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function makeLabels(obj)
-			if ~obj.taskInitialised; return; end
+			if ~obj.taskInitialised || obj.nVars == 0; return; end
 			varIndex = sort(unique(obj.outIndex));
 			list = cell(length(varIndex),obj.nVars+2);
 			for i = 1:length(varIndex)

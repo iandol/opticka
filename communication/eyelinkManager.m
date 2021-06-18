@@ -79,6 +79,9 @@ classdef eyelinkManager < optickaCore
 		sampleRate double			= 1000
 		%> calibration style, [H3 HV3 HV5 HV8 HV13]
 		calibrationStyle char		= 'HV5'
+		%> proportion of screen used in horizontal and vertical co-ordinates
+		%> for calibration and validation, e.g. [0.5 0.45]
+		calibrationProportion		= []
 		% use callbacks
 		enableCallbacks logical		= true
 		%> cutom calibration callback (enables better handling of
@@ -392,6 +395,10 @@ classdef eyelinkManager < optickaCore
 			if ~me.isConnected; return; end
 			fprintf('\n===>>> CALIBRATING EYELINK... <<<===\n');
 			Eyelink('Verbosity',me.verbosityLevel);
+			if ~isempty(me.calibrationProportion)
+				Eyelink('Command','calibration_area_proportion = %s', num2str(me.calibrationProportion));
+				Eyelink('Command','validation_area_proportion = %s', num2str(me.calibrationProportion));
+			end
 			Eyelink('Command','horizontal_target_y = %i',me.screen.winRect(4)/2);
 			Eyelink('Command','calibration_type = %s', me.calibrationStyle);
 			Eyelink('Command','normal_click_dcorr = ON');
@@ -460,6 +467,7 @@ classdef eyelinkManager < optickaCore
 			x=me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
 			y=me.toPixels(me.fixation.Y,'y');
 			if me.isConnected
+				me.offset.X = 0; me.offset.Y = 0;
 				Eyelink('Command', 'driftcorrect_cr_disable = OFF');
 				Eyelink('Command', 'drift_correction_rpt_error = 10.0');
 				Eyelink('Command', 'online_dcorr_maxangle = 15.0');
@@ -703,7 +711,7 @@ classdef eyelinkManager < optickaCore
 			% now test if we are still searching or in fixation window, if
 			% radius is single value, assume circular, otherwise assume
 			% rectangular
-			     if length(me.fixation.radius) == 1 % circular test
+			if length(me.fixation.radius) == 1 % circular test
 				r = sqrt((x - me.fixation.X).^2 + (y - me.fixation.Y).^2); %fprintf('x: %g-%g y: %g-%g r: %g-%g\n',x, me.fixation.X, me.y, me.fixation.Y,r,me.fixation.radius);
 				window = find(r < me.fixation.radius);
 			else % x y rectangular window test
