@@ -53,10 +53,10 @@ eL.sampleRate 				= 250; % sampling rate
 % this is useful for a baby or monkey who has not been trained for fixation
 % use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
 % accept calibration!
-eL.remoteCalibration			= false; 
+eL.remoteCalibration			= true; 
 %-----------------------
 eL.calibrationStyle 			= 'HV3'; % calibration style
-eL.calibrationProportion		= [0.25 0.25]; %the proportion of the screen occupied by the calibration stimuli
+eL.calibrationProportion		= [0.2 0.2]; %the proportion of the screen occupied by the calibration stimuli
 eL.modify.calibrationtargetcolour = [1 1 1];
 eL.modify.calibrationtargetsize = 2; % size of calibration target as percentage of screen
 eL.modify.calibrationtargetwidth = 0.15; % width of calibration target's border as percentage of screen
@@ -99,10 +99,10 @@ me.stimuli.controlTable(n).delta	= 0.5;
 me.stimuli.controlTable(n).stimuli	= [1];
 me.stimuli.controlTable(n).limits	= [0.5 20];
 n									= n + 1;
-me.stimuli.controlTable(n).variable = 'angle';
-me.stimuli.controlTable(n).delta	= 10;
+me.stimuli.controlTable(n).variable = 'contrast';
+me.stimuli.controlTable(n).delta	= 0.05;
 me.stimuli.controlTable(n).stimuli	= [1];
-me.stimuli.controlTable(n).limits	= [0 180];
+me.stimuli.controlTable(n).limits	= [0 1];
 
 %==================================================================
 %this allows us to enable subsets from our stimulus list
