@@ -83,7 +83,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		isStimulus
 		%> cache value for nVars
 		nVars_
-		%> handles from obj.showLog
+		%> handles from me.showLog
 		h
 		%> properties allowed during initial construction
 		allowedProperties char = ['randomise|nVar|nBlocks|trialTime|isTime|ibTime|realTime|randomSeed|fps'...
@@ -119,13 +119,13 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function obj = stimulusSequence(varargin)
+		function me = stimulusSequence(varargin)
 			if nargin == 0; varargin.name = 'stimulusSequence'; end
-			obj=obj@optickaCore(varargin); %superclass constructor
-			if nargin > 0; obj.parseArgs(varargin,obj.allowedProperties); end
-			obj.nVar = obj.varTemplate;
-			obj.initialiseGenerator();
-			obj.isLoading = false;
+			me=me@optickaCore(varargin); %superclass constructor
+			if nargin > 0; me.parseArgs(varargin,me.allowedProperties); end
+			me.nVar = me.varTemplate;
+			me.initialiseGenerator();
+			me.isLoading = false;
 		end
 		
 		% ===================================================================
@@ -133,25 +133,25 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%> set up the random number generator
 		% ===================================================================
-		function initialiseGenerator(obj)
-			if isnan(obj.mversion) || obj.mversion == 0
-				obj.mversion = str2double(regexp(version,'(?<ver>^\d+\.\d+)','match','once'));
+		function initialiseGenerator(me)
+			if isnan(me.mversion) || me.mversion == 0
+				me.mversion = str2double(regexp(version,'(?<ver>^\d+\.\d+)','match','once'));
 			end
-			if isempty(obj.randomSeed)
-				obj.randomSeed=round(rand*sum(clock));
+			if isempty(me.randomSeed)
+				me.randomSeed=round(rand*sum(clock));
 			end
-			if isempty(obj.oldStream)
-				if obj.mversion > 7.11
-					obj.oldStream = RandStream.getGlobalStream;
+			if isempty(me.oldStream)
+				if me.mversion > 7.11
+					me.oldStream = RandStream.getGlobalStream;
 				else
-					obj.oldStream = RandStream.getDefaultStream; %#ok<*GETRS>
+					me.oldStream = RandStream.getDefaultStream; %#ok<*GETRS>
 				end
 			end
-			obj.taskStream = RandStream.create(obj.randomGenerator,'Seed',obj.randomSeed);
-			if obj.mversion > 7.11
-				RandStream.setGlobalStream(obj.taskStream);
+			me.taskStream = RandStream.create(me.randomGenerator,'Seed',me.randomSeed);
+			if me.mversion > 7.11
+				RandStream.setGlobalStream(me.taskStream);
 			else
-				RandStream.setDefaultStream(obj.taskStream); %#ok<*SETRS>
+				RandStream.setDefaultStream(me.taskStream); %#ok<*SETRS>
 			end
 		end
 		
@@ -160,12 +160,12 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%> reset the random number generator
 		% ===================================================================
-		function resetRandom(obj)
-			obj.randomSeed=[];
-			if obj.mversion > 7.11
-				RandStream.setGlobalStream(obj.oldStream);
+		function resetRandom(me)
+			me.randomSeed=[];
+			if me.mversion > 7.11
+				RandStream.setGlobalStream(me.oldStream);
 			else
-				RandStream.setDefaultStream(obj.oldStream);
+				RandStream.setDefaultStream(me.oldStream);
 			end
 		end
 		
@@ -174,59 +174,59 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%> Do the randomisation
 		% ===================================================================
-		function randomiseStimuli(obj)
-			if obj.nVars > 0 %no need unless we have some variables
-				if obj.verbose==true;rSTime = tic;end
-				obj.currentState=obj.taskStream.State;
-				nLevels = zeros(obj.nVars_, 1);
-				for f = 1:obj.nVars_
-					nLevels(f) = length(obj.nVar(f).values);
+		function randomiseStimuli(me)
+			if me.nVars > 0 %no need unless we have some variables
+				if me.verbose==true;rSTime = tic;end
+				me.currentState=me.taskStream.State;
+				nLevels = zeros(me.nVars_, 1);
+				for f = 1:me.nVars_
+					nLevels(f) = length(me.nVar(f).values);
 				end
-				obj.minBlocks = prod(nLevels);
-				if obj.addBlank
-					obj.minBlocks = obj.minBlocks + 1;
+				me.minBlocks = prod(nLevels);
+				if me.addBlank
+					me.minBlocks = me.minBlocks + 1;
 				end
-				if isempty(obj.minBlocks)
-					obj.minBlocks = 1;
+				if isempty(me.minBlocks)
+					me.minBlocks = 1;
 				end
-				if obj.minBlocks > 255
+				if me.minBlocks > 255
 					warning('WARNING: You are exceeding the number of stimulus numbers in an 8bit strbed word!')
 				end
 				
 				% initialize cell array that will hold balanced variables
-				Vars = cell(obj.nBlocks, obj.nVars_);
-				Vals = cell(obj.nBlocks*obj.minBlocks, obj.nVars_);
+				Vars = cell(me.nBlocks, me.nVars_);
+				Vals = cell(me.nBlocks*me.minBlocks, me.nVars_);
 				Indx = [];
 				% the following initializes and runs the main loop in the function, which
 				% generates enough repetitions of each factor, ensuring a balanced design,
 				% and randomizes them
-				for i = 1:obj.nBlocks
-					if obj.randomise == true
-						[~, index] = sort(rand(obj.minBlocks, 1));
+				for i = 1:me.nBlocks
+					if me.randomise == true
+						[~, index] = sort(rand(me.minBlocks, 1));
 					else
-						index = (1:obj.minBlocks)';
+						index = (1:me.minBlocks)';
 					end
 					Indx = [Indx; index];
-					if obj.addBlank
-						pos1 = obj.minBlocks - 1;
+					if me.addBlank
+						pos1 = me.minBlocks - 1;
 					else
-						pos1 = obj.minBlocks;
+						pos1 = me.minBlocks;
 					end
 					pos2 = 1;
-					for f = 1:obj.nVars_
+					for f = 1:me.nVars_
 						pos1 = pos1 / nLevels(f);
-						if size(obj.nVar(f).values, 1) ~= 1
+						if size(me.nVar(f).values, 1) ~= 1
 							% ensure that factor levels are arranged in one row
-							obj.nVar(f).values = reshape(obj.nVar(f).values, 1, numel(obj.nVar(1).values));
+							me.nVar(f).values = reshape(me.nVar(f).values, 1, numel(me.nVar(f).values));
 						end
 						% this is the critical line: it ensures there are enough repetitions
 						% of the current factor in the correct order
-						mb = obj.minBlocks;
-						if obj.addBlank; mb = mb - 1; end
-						Vars{i,f} = repmat(reshape(repmat(obj.nVar(f).values, pos1, pos2), mb, 1), obj.nVars_, 1);
+						mb = me.minBlocks;
+						if me.addBlank; mb = mb - 1; end
+						Vars{i,f} = repmat(reshape(repmat(me.nVar(f).values, pos1, pos2), mb, 1), me.nVars_, 1);
 						Vars{i,f} = Vars{i,f}(index);
 						pos2 = pos2 * nLevels(f);
-						if obj.addBlank
+						if me.addBlank
 							if iscell(Vars{i,f})
 								Vars{i,f}{index==max(index)} = NaN;
 							else
@@ -236,7 +236,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					end
 				end
 				
-				% generate obj.outValues
+				% generate me.outValues
 				offset = 0;
 				for i = 1:size(Vars,1)
 					for j = 1:size(Vars,2)
@@ -248,38 +248,38 @@ classdef stimulusSequence < optickaCore & dynamicprops
 							end
 						end
 					end
-					offset = offset + obj.minBlocks;
+					offset = offset + me.minBlocks;
 				end
 				
 				% assign to properties
-				obj.outVars = Vars;
-				obj.outValues = Vals;
-				obj.outIndex = Indx;
+				me.outVars = Vars;
+				me.outValues = Vals;
+				me.outIndex = Indx;
 				
 				% generate outMap
-				obj.outMap=zeros(size(obj.outValues));
-				for f = 1:obj.nVars_
-					for g = 1:length(obj.nVar(f).values)
-						for hh = 1:length(obj.outValues(:,f))
-							if iscell(obj.nVar(f).values(g))
-								if (ischar(obj.nVar(f).values{g}) && ischar(obj.outValues{hh,f})) && strcmpi(obj.outValues{hh,f},obj.nVar(f).values{g})
-									obj.outMap(hh,f) = g;
-								elseif (isnumeric(obj.nVar(f).values{g}) && isnumeric(obj.outValues{hh,f})) && isequal(obj.outValues{hh,f}, obj.nVar(f).values{g})
-									obj.outMap(hh,f) = g;
-									%elseif ~ischar(obj.nVar(f).values{g}) && isequal(obj.outValues{hh,f}, obj.nVar(f).values{g})
-									%	obj.outMap(hh,f) = g;
+				me.outMap=zeros(size(me.outValues));
+				for f = 1:me.nVars_
+					for g = 1:length(me.nVar(f).values)
+						for hh = 1:length(me.outValues(:,f))
+							if iscell(me.nVar(f).values(g))
+								if (ischar(me.nVar(f).values{g}) && ischar(me.outValues{hh,f})) && strcmpi(me.outValues{hh,f},me.nVar(f).values{g})
+									me.outMap(hh,f) = g;
+								elseif (isnumeric(me.nVar(f).values{g}) && isnumeric(me.outValues{hh,f})) && isequal(me.outValues{hh,f}, me.nVar(f).values{g})
+									me.outMap(hh,f) = g;
+									%elseif ~ischar(me.nVar(f).values{g}) && isequal(me.outValues{hh,f}, me.nVar(f).values{g})
+									%	me.outMap(hh,f) = g;
 								end
 							else
-								if obj.outValues{hh,f} == obj.nVar(f).values(g)
-									obj.outMap(hh,f) = g;
+								if me.outValues{hh,f} == me.nVar(f).values(g)
+									me.outMap(hh,f) = g;
 								end
 							end
 						end
 					end
 				end
-				if obj.verbose; obj.salutation(sprintf('randomiseStimuli took %g ms\n',toc(rSTime)*1000)); end
+				if me.verbose; me.salutation(sprintf('randomiseStimuli took %g ms\n',toc(rSTime)*1000)); end
 			else
-				obj.outIndex = 1; %there is only one stimulus, no variables
+				me.outIndex = 1; %there is only one stimulus, no variables
 			end
 		end
 		
@@ -287,9 +287,9 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> @brief Initialise the variables and task together
 		%>
 		% ===================================================================
-		function initialise(obj)
-			obj.randomiseStimuli();
-			obj.initialiseTask();
+		function initialise(me)
+			me.randomiseStimuli();
+			me.initialiseTask();
 			fprintf('---> stimulusSequence.initialise: Randomised and Initialised!\n');
 		end
 		
@@ -299,28 +299,28 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> Initialise the properties used to track the run. These are dynamic
 		%> props.
 		% ===================================================================
-		function initialiseTask(obj)
-			resetTask(obj);
-			t = obj.tProp;
+		function initialiseTask(me)
+			resetTask(me);
+			t = me.tProp;
 			for i = 1:2:length(t)
-				if isempty(obj.findprop(t{i}))
-					p = obj.addprop(t{i}); %add new dynamic property
+				if isempty(me.findprop(t{i}))
+					p = me.addprop(t{i}); %add new dynamic property
 				end
-				obj.(t{i}) = t{i+1}; %#ok<*MCNPR>
+				me.(t{i}) = t{i+1}; %#ok<*MCNPR>
 			end
-			obj.taskInitialised = true;
-			obj.makeLabels();
-			randomiseTimes(obj);
+			me.taskInitialised = true;
+			me.makeLabels();
+			randomiseTimes(me);
 		end
 		
 		% ===================================================================
 		%> @brief update the task with a response
 		%>
 		% ===================================================================
-		function updateTask(obj, thisResponse, runTime, info)
-			if ~obj.taskInitialised; return; end
-			if obj.totalRuns > obj.nRuns
-				obj.taskFinished = true;
+		function updateTask(me, thisResponse, runTime, info)
+			if ~me.taskInitialised; return; end
+			if me.totalRuns > me.nRuns
+				me.taskFinished = true;
 				fprintf('---> stimulusSequence.updateTask: Task FINISHED, no more updates allowed\n');
 				return
 			end
@@ -329,21 +329,21 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				if isempty(thisResponse); thisResponse = NaN; end
 				if ~exist('runTime','var') || isempty(runTime); runTime = GetSecs; end
 				if ~exist('info','var') || isempty(info); info = 'none'; end
-				obj.response(obj.totalRuns) = thisResponse;
-				obj.responseInfo{obj.totalRuns} = info;
-				obj.runTimeList(obj.totalRuns) = runTime - obj.startTime;
-				if obj.verbose
-					obj.salutation(sprintf('Task Run %i: response = %.2g @ %.2g secs',...
-						obj.totalRuns, thisResponse, obj.runTimeList(obj.totalRuns)));
+				me.response(me.totalRuns) = thisResponse;
+				me.responseInfo{me.totalRuns} = info;
+				me.runTimeList(me.totalRuns) = runTime - me.startTime;
+				if me.verbose
+					me.salutation(sprintf('Task Run %i: response = %.2g @ %.2g secs',...
+						me.totalRuns, thisResponse, me.runTimeList(me.totalRuns)));
 				end
 			end
 			
-			if obj.totalRuns < obj.nRuns
-				obj.totalRuns = obj.totalRuns + 1;
-				[obj.thisBlock, obj.thisRun] = findRun(obj);
-				randomiseTimes(obj);
-			elseif obj.totalRuns == obj.nRuns
-				obj.taskFinished = true;
+			if me.totalRuns < me.nRuns
+				me.totalRuns = me.totalRuns + 1;
+				[me.thisBlock, me.thisRun] = findRun(me);
+				randomiseTimes(me);
+			elseif me.totalRuns == me.nRuns
+				me.taskFinished = true;
 				fprintf('---> stimulusSequence.updateTask: Task FINISHED, no more updates allowed\n');
 			end
 		end
@@ -352,24 +352,24 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> @brief returns block and run from number of runs
 		%>
 		% ===================================================================
-		function [block, run] = findRun(obj, index)
-			if ~exist('index','var') || isempty(index); index = obj.totalRuns; end
-			block = floor( (index - 1) / obj.minBlocks ) + 1;
-			run = index - (obj.minBlocks * (block - 1));
+		function [block, run] = findRun(me, index)
+			if ~exist('index','var') || isempty(index); index = me.totalRuns; end
+			block = floor( (index - 1) / me.minBlocks ) + 1;
+			run = index - (me.minBlocks * (block - 1));
 		end
 		
 		% ===================================================================
 		%> @brief the opposite of updateTask, step back one run
 		%>
 		% ===================================================================
-		function rewindTask(obj)
-			if obj.taskInitialised
-				obj.response(obj.totalRuns) = [];
-				obj.responseInfo{obj.totalRuns} = [];
-				obj.runTimeList(obj.totalRuns) = [];
-				obj.totalRuns = obj.totalRuns - 1;
-				[obj.thisBlock, obj.thisRun] = findRun(obj);
-				fprintf('===!!! REWIND Run to %i:',obj.totalRuns);
+		function rewindTask(me)
+			if me.taskInitialised
+				me.response(me.totalRuns) = [];
+				me.responseInfo{me.totalRuns} = [];
+				me.runTimeList(me.totalRuns) = [];
+				me.totalRuns = me.totalRuns - 1;
+				[me.thisBlock, me.thisRun] = findRun(me);
+				fprintf('===!!! REWIND Run to %i:',me.totalRuns);
 				
 			end
 		end
@@ -381,61 +381,61 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> stimulus repeatedly until there is a correct response...
 		%>
 		% ===================================================================
-		function success = resetRun(obj)
+		function success = resetRun(me)
 			success = false;
-			if obj.taskInitialised
-				iLow = obj.totalRuns; % select from this run...
-				iHigh = obj.thisBlock * obj.minBlocks; %...to the last run in the current block
+			if me.taskInitialised
+				iLow = me.totalRuns; % select from this run...
+				iHigh = me.thisBlock * me.minBlocks; %...to the last run in the current block
 				iRange = (iHigh - iLow) + 1;
 				if iRange < 2
 					return
 				end
 				randomChoice = randi(iRange); %random from 0 to range
-				trialToSwap = obj.totalRuns + (randomChoice - 1);
+				trialToSwap = me.totalRuns + (randomChoice - 1);
 				
-				blockOffset = ((obj.thisBlock-1) * obj.minBlocks);
-				blockSource = obj.totalRuns - blockOffset;
+				blockOffset = ((me.thisBlock-1) * me.minBlocks);
+				blockSource = me.totalRuns - blockOffset;
 				blockDestination = trialToSwap - blockOffset;
 				
 				%outValues
-				aTrial = obj.outValues(obj.totalRuns,:);
-				bTrial = obj.outValues(trialToSwap,:);
-				obj.outValues(obj.totalRuns,:) = bTrial;
-				obj.outValues(trialToSwap,:) = aTrial;
+				aTrial = me.outValues(me.totalRuns,:);
+				bTrial = me.outValues(trialToSwap,:);
+				me.outValues(me.totalRuns,:) = bTrial;
+				me.outValues(trialToSwap,:) = aTrial;
 				
 				%outVars
-				for i = 1:obj.nVars
-					aVal = obj.outVars{obj.thisBlock,i}(blockSource);
-					bVal = obj.outVars{obj.thisBlock,i}(blockDestination);
-					obj.outVars{obj.thisBlock,i}(blockSource) = bVal;
-					obj.outVars{obj.thisBlock,i}(blockDestination) = aVal;
+				for i = 1:me.nVars
+					aVal = me.outVars{me.thisBlock,i}(blockSource);
+					bVal = me.outVars{me.thisBlock,i}(blockDestination);
+					me.outVars{me.thisBlock,i}(blockSource) = bVal;
+					me.outVars{me.thisBlock,i}(blockDestination) = aVal;
 				end
 				
 				%outIndex
-				aIdx = obj.outIndex(obj.totalRuns,1);
-				bIdx = obj.outIndex(trialToSwap,1);
-				obj.outIndex(obj.totalRuns,1) = bIdx;
-				obj.outIndex(trialToSwap,1) = aIdx;
+				aIdx = me.outIndex(me.totalRuns,1);
+				bIdx = me.outIndex(trialToSwap,1);
+				me.outIndex(me.totalRuns,1) = bIdx;
+				me.outIndex(trialToSwap,1) = aIdx;
 				
 				%outMap
-				aMap = obj.outMap(obj.totalRuns,:);
-				bMap = obj.outMap(trialToSwap,:);
-				obj.outMap(obj.totalRuns,:) = bMap;
-				obj.outMap(trialToSwap,:) = aMap;
+				aMap = me.outMap(me.totalRuns,:);
+				bMap = me.outMap(trialToSwap,:);
+				me.outMap(me.totalRuns,:) = bMap;
+				me.outMap(trialToSwap,:) = aMap;
 				
 				%log this change
-				if isempty(obj.resetLog); myN = 1; else; myN = length(obj.resetLog)+1; end
-				obj.resetLog(myN).randomChoice = randomChoice;
-				obj.resetLog(myN).totalRuns = obj.totalRuns;
-				obj.resetLog(myN).trialToSwap = trialToSwap;
-				obj.resetLog(myN).blockSource = blockSource;
-				obj.resetLog(myN).blockDestination = blockDestination;
-				obj.resetLog(myN).aTrial = aTrial;
-				obj.resetLog(myN).bTrial = bTrial;
-				obj.resetLog(myN).aIdx = aIdx;
-				obj.resetLog(myN).bIdx = bIdx;
+				if isempty(me.resetLog); myN = 1; else; myN = length(me.resetLog)+1; end
+				me.resetLog(myN).randomChoice = randomChoice;
+				me.resetLog(myN).totalRuns = me.totalRuns;
+				me.resetLog(myN).trialToSwap = trialToSwap;
+				me.resetLog(myN).blockSource = blockSource;
+				me.resetLog(myN).blockDestination = blockDestination;
+				me.resetLog(myN).aTrial = aTrial;
+				me.resetLog(myN).bTrial = bTrial;
+				me.resetLog(myN).aIdx = aIdx;
+				me.resetLog(myN).bIdx = bIdx;
 				success = true;
-				if obj.verbose;fprintf('--->>> stimulusSequence.resetRun() Task %i(v=%i): swap with = %i(v=%i) (random choice=%i)\n',obj.totalRuns, aIdx, trialToSwap, bIdx, randomChoice);end
+				if me.verbose;fprintf('--->>> stimulusSequence.resetRun() Task %i(v=%i): swap with = %i(v=%i) (random choice=%i)\n',me.totalRuns, aIdx, trialToSwap, bIdx, randomChoice);end
 			end
 		end
 		
@@ -445,25 +445,25 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> Check we have a minimal nVar structure and deals new values
 		%> appropriately.
 		% ===================================================================
-		function set.nVar(obj,invalue)
+		function set.nVar(me,invalue)
 			if ~exist('invalue','var')
 				return
 			end
-			if isempty(obj.nVar) || isempty(invalue) || length(fieldnames(obj.nVar)) ~= length(fieldnames(obj.varTemplate))
-				obj.nVar = obj.varTemplate;
+			if isempty(me.nVar) || isempty(invalue) || length(fieldnames(me.nVar)) ~= length(fieldnames(me.varTemplate))
+				me.nVar = me.varTemplate;
 			end
 			if ~isempty(invalue) && isstruct(invalue)
 				idx = length(invalue);
 				fn = fieldnames(invalue);
-				fnTemplate = fieldnames(obj.varTemplate); %#ok<*MCSUP>
+				fnTemplate = fieldnames(me.varTemplate); %#ok<*MCSUP>
 				fnOut = intersect(fn,fnTemplate);
 				for ii = 1:idx
 					for i = 1:length(fnOut)
 						if ~isempty(invalue(ii).(fn{i}))
-							obj.nVar(ii).(fn{i}) = invalue(ii).(fn{i});
+							me.nVar(ii).(fn{i}) = invalue(ii).(fn{i});
 						end
 					end
-					%  					if isempty(obj.nVar(idx).(fnTemplate{1})) || obj.nVar(idx).(fnTemplate{2}) == 0 || isempty(obj.nVar(idx).(fnTemplate{3}))
+					%  					if isempty(me.nVar(idx).(fnTemplate{1})) || me.nVar(idx).(fnTemplate{2}) == 0 || isempty(me.nVar(idx).(fnTemplate{3}))
 					%  						fprintf('---> Variable %g is not properly formed!!!\n',idx);
 					%  					end
 				end
@@ -475,12 +475,12 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%> Dependent property nVars get method
 		% ===================================================================
-		function nVars = get.nVars(obj)
+		function nVars = get.nVars(me)
 			nVars = 0;
-			if length(obj.nVar) > 0 && ~isempty(obj.nVar(1).name) %#ok<ISMT>
-				nVars = length(obj.nVar);
+			if length(me.nVar) > 0 && ~isempty(me.nVar(1).name) %#ok<ISMT>
+				nVars = length(me.nVar);
 			end
-			obj.nVars_ = nVars; %cache value
+			me.nVars_ = nVars; %cache value
 		end
 		
 		% ===================================================================
@@ -488,8 +488,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%> Dependent property nruns get method
 		% ===================================================================
-		function nRuns = get.nRuns(obj)
-			nRuns = obj.minBlocks*obj.nBlocks;
+		function nRuns = get.nRuns(me)
+			nRuns = me.minBlocks*me.nBlocks;
 		end
 		
 		% ===================================================================
@@ -497,9 +497,9 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%> Dependent property nFrames get method
 		% ===================================================================
-		function nFrames = get.nFrames(obj)
-			nSecs = (obj.nRuns * obj.trialTime) + (obj.minBlocks-1 * obj.isTime) + (obj.nBlocks-1 * obj.ibTime);
-			nFrames = ceil(nSecs) * ceil(obj.fps); %be a bit generous in defining how many frames the task will take
+		function nFrames = get.nFrames(me)
+			nSecs = (me.nRuns * me.trialTime) + (me.minBlocks-1 * me.isTime) + (me.nBlocks-1 * me.ibTime);
+			nFrames = ceil(nSecs) * ceil(me.fps); %be a bit generous in defining how many frames the task will take
 		end
 		
 		% ===================================================================
@@ -507,40 +507,40 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%> Generates a table with the randomised stimulus values
 		% ===================================================================
-		function showLog(obj)
-			obj.makeLabels();
-			obj.h = struct();
+		function showLog(me)
+			me.makeLabels();
+			me.h = struct();
 			build_gui();
-			outvals = obj.outValues;
+			outvals = me.outValues;
 			data = cell(size(outvals,1),size(outvals,2)+2);
 			for i = 1:size(outvals,1)
-				for j = 1:obj.nVars
+				for j = 1:me.nVars
 					if iscell(outvals{i,j})
 						data{i,j} = num2str(outvals{i,j}{1},'%2.3g ');
+					elseif length(outvals{i,j}) > 1
+						data{i,j} = num2str(outvals{i,j},'%2.3g ');
 					else
 						data{i,j} = outvals{i,j};
 					end
 				end
-				data{i,obj.nVars+1} = obj.outIndex(i);
-				for k = 1:size(obj.outMap,2)
-					data{i,obj.nVars+(k+1)} = obj.outMap(i,k);
+				data{i,me.nVars+1} = me.outIndex(i);
+				for k = 1:size(me.outMap,2)
+					data{i,me.nVars+(k+1)} = me.outMap(i,k);
 				end
 			end
 			if isempty(data)
 				data = 'No variables!';
 			end
-			cnames = cell(obj.nVars,1);
-			for ii = 1:obj.nVars
-				cnames{ii} = obj.nVar(ii).name;
+			cnames = cell(me.nVars,1);
+			for ii = 1:me.nVars
+				cnames{ii} = me.nVar(ii).name;
 			end
 			cnames{end+1} = 'outIndex';
-			for ii = 1:size(obj.outMap,2)
+			for ii = 1:size(me.outMap,2)
 				cnames{end+1} = ['Var' num2str(ii) 'Index'];
 			end
-			
-			set(obj.h.uitable1,'Data',data);
-			set(obj.h.uitable1,'ColumnName',cnames);
-			set(obj.h.uitable1,'RowStriping','on');
+			data = cell2table(data,'VariableNames',cnames);
+			set(me.h.uitable1,'Data',data);
 			
 			function build_gui()
 				fsmall = 12;
@@ -549,27 +549,27 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				elseif ispc
 					mfont = 'consolas';
 				else %linux
-					mfont = 'Ubuntu mono';
+					mfont = 'Liberation Mono';
 				end
-				obj.h.figure1 = figure( ...
+				me.h.figure1 = uifigure( ...
 					'Tag', 'sSLog', ...
 					'Units', 'normalized', ...
-					'Position', [0 0.2 0.2 0.7], ...
-					'Name', ['Log: ' obj.fullName], ...
+					'Position', [0 0.2 0.25 0.7], ...
+					'Name', ['Log: ' me.fullName], ...
 					'MenuBar', 'none', ...
 					'NumberTitle', 'off', ...
 					'Color', [0.94 0.94 0.94], ...
 					'Resize', 'on');
-				obj.h.uitable1 = uitable( ...
-					'Parent', obj.h.figure1, ...
+				me.h.uitable1 = uitable( ...
+					'Parent', me.h.figure1, ...
 					'Tag', 'uitable1', ...
 					'Units', 'normalized', ...
 					'Position', [0 0 1 1], ...
 					'FontName', mfont, ...
 					'FontSize', fsmall, ...
 					'BackgroundColor', [1 1 1;0.95 0.95 0.95], ...
-					'ColumnEditable', [false,false], ...
-					'ColumnFormat', {'char'}, ...
+					'RowStriping','on', ...
+					'ColumnEditable', [], ...
 					'ColumnWidth', {'auto'});
 			end
 		end
@@ -580,10 +580,10 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%> Generates a table with the randomised stimulus values
 		% ===================================================================
-		function [meta, key] = getMeta(obj)
+		function [meta, key] = getMeta(me)
 			meta = [];
-			vals = obj.outValues;
-			idx = obj.outMap;
+			vals = me.outValues;
+			idx = me.outMap;
 			if iscell(vals)
 				for i = 1:size(vals,2)
 					cc = [vals{:,i}]';
@@ -602,7 +602,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 					
 				end
 			else
-				meta = obj.outValues;
+				meta = me.outValues;
 			end
 		end
 		
@@ -612,12 +612,12 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%> Generates a table with the randomised stimulus values
 		% ===================================================================
-		function [labels, list] = getLabels(obj)
+		function [labels, list] = getLabels(me)
 			labels = [];
 			list = [];
-			obj.makeLabels()
-			if ~isempty(obj.varLabels); labels = obj.varLabels; end
-			if ~isempty(obj.varList); list = obj.varList; end
+			me.makeLabels()
+			if ~isempty(me.varLabels); labels = me.varLabels; end
+			if ~isempty(me.varList); list = me.varList; end
 		end
 		
 		% ===================================================================
@@ -625,15 +625,15 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%> Check we have a minimal task structure
 		% ===================================================================
-		function validate(obj)
-			if obj.nVars == 0
-				obj.outIndex = 1; %there is only one stimulus, no variables
-				obj.varLabels = {};
-				obj.varList = {};
+		function validate(me)
+			if me.nVars == 0
+				me.outIndex = 1; %there is only one stimulus, no variables
+				me.varLabels = {};
+				me.varList = {};
 			else
-				vin = obj.nVar;
+				vin = me.nVar;
 				vout = vin;
-				obj.nVar = [];
+				me.nVar = [];
 				shift = 0;
 				for i = 1:length(vin)
 					if isempty(vin(i).name) || isempty(vin(i).values) || isempty(vin(i).stimulus)
@@ -641,9 +641,9 @@ classdef stimulusSequence < optickaCore & dynamicprops
 						shift = shift-1;
 					end
 				end
-				obj.nVar = vout;
+				me.nVar = vout;
 				clear vin vout shift
-				makeLabels(obj);
+				makeLabels(me);
 			end
 		end
 		
@@ -658,23 +658,23 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%>
 		% ===================================================================
-		function makeLabels(obj)
-			if ~obj.taskInitialised || obj.nVars == 0; return; end
-			varIndex = sort(unique(obj.outIndex));
-			list = cell(length(varIndex),obj.nVars+2);
+		function makeLabels(me)
+			if ~me.taskInitialised || me.nVars == 0; return; end
+			varIndex = sort(unique(me.outIndex));
+			list = cell(length(varIndex),me.nVars+2);
 			for i = 1:length(varIndex)
 				st = '';
-				idx = find(obj.outIndex==varIndex(i));
+				idx = find(me.outIndex==varIndex(i));
 				list{i,1} = varIndex(i);
 				list{i,2} = idx;
 				idx = idx(1);
-				for j = 1:obj.nVars
-					if iscell(obj.outValues{i,j})
-						st = [st ' | ' obj.nVar(j).name ':' num2str([obj.outValues{idx,j}{:}])];
-						list{i,j+2} = obj.outValues{idx,j}{:};
+				for j = 1:me.nVars
+					if iscell(me.outValues{i,j})
+						st = [st ' | ' me.nVar(j).name ':' num2str([me.outValues{idx,j}{:}])];
+						list{i,j+2} = me.outValues{idx,j}{:};
 					else
-						st = [st ' | ' obj.nVar(j).name ':' num2str(obj.outValues{idx,j})];
-						list{i,j+2} = obj.outValues{idx,j};
+						st = [st ' | ' me.nVar(j).name ':' num2str(me.outValues{idx,j})];
+						list{i,j+2} = me.outValues{idx,j};
 					end
 				end
 				st = regexprep(st,'^\s+\|\s+','');
@@ -683,8 +683,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			[~,res] = sort(varIndex);
 			str = str(res);
 			if size(str,1) < size(str,2); str = str'; end
-			obj.varLabels = str;
-			obj.varList = list;
+			me.varLabels = str;
+			me.varList = list;
 		end
 		
 		% ===================================================================
@@ -692,17 +692,17 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%>
 		% ===================================================================
-		function resetTask(obj)
-			t = obj.tProp;
+		function resetTask(me)
+			t = me.tProp;
 			for i = 1:2:length(t)
-				p = obj.findprop(t{i});
+				p = me.findprop(t{i});
 				if ~isempty(p)
 					delete(p);
 				end
 			end
-			obj.resetLog = [];
-			obj.taskInitialised = false;
-			obj.taskFinished = false;
+			me.resetLog = [];
+			me.taskInitialised = false;
+			me.taskFinished = false;
 		end
 		
 		% ===================================================================
@@ -710,17 +710,17 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		%>
 		% ===================================================================
-		function randomiseTimes(obj)
-			if ~obj.taskInitialised;return;end
-			if length(obj.isTime) == 2 %randomise isTime within a range
-				t = obj.isTime;
-				obj.isTimeNow = (rand * (t(2)-t(1))) + t(1);
-				obj.isTimeNow = round(obj.isTimeNow*100)/100;
+		function randomiseTimes(me)
+			if ~me.taskInitialised;return;end
+			if length(me.isTime) == 2 %randomise isTime within a range
+				t = me.isTime;
+				me.isTimeNow = (rand * (t(2)-t(1))) + t(1);
+				me.isTimeNow = round(me.isTimeNow*100)/100;
 			end
-			if length(obj.ibTime) == 2 %randomise ibTime within a range
-				t = obj.ibTime;
-				obj.ibTimeNow = (rand * (t(2)-t(1))) + t(1);
-				obj.ibTimeNow = round(obj.ibTimeNow*100)/100;
+			if length(me.ibTime) == 2 %randomise ibTime within a range
+				t = me.ibTime;
+				me.ibTimeNow = (rand * (t(2)-t(1))) + t(1);
+				me.ibTimeNow = round(me.ibTimeNow*100)/100;
 			end
 		end
 		

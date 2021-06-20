@@ -64,6 +64,7 @@ function hFig = uiinspect(obj, fig)
 %    Please send to Yair Altman (altmany at gmail dot com)
 %
 % Change log:
+%    2015-03-02: Fix for R2014a and older Matlab releases
 %    2014-11-21: Additional fixes for R2014b (HG2)
 %    2014-10-24: Fixed properties panel for .Net objects
 %    2014-10-24: Fixed a reported "invalid object handle" bug
@@ -106,7 +107,7 @@ function hFig = uiinspect(obj, fig)
 % referenced and attributed as such. The original author maintains the right to be solely associated with this work.
 
 % Programmed by Yair M. Altman: altmany(at)gmail.com
-% $Revision: 1.31 $  $Date: 2014/11/21 15:46:34 $
+% $Revision: 1.32 $  $Date: 2015/03/02 10:12:52 $
 
   try
       % Arg check
@@ -1381,7 +1382,12 @@ function handleTree = getHandleTree(obj, hFig)
       try
           set(tree_h, 'userdata',userdata);
       catch
-          setappdata(tree_h, 'userdata',userdata);
+          try
+              setappdata(tree_h, 'userdata',userdata);
+          catch
+              tree_h = handle(tree_h, 'CallbackProperties');
+              setappdata(tree_h, 'userdata',userdata);
+          end
       end
 
       % Set the callback functions

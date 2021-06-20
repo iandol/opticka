@@ -684,7 +684,6 @@ classdef opticka < optickaCore
 				else
 					me.r.task.nVar(revertN+1).values = eval(s);
 				end
-				%me.r.task.nVar(revertN+1).values = me.gn(me.h.OKVariableValues);
 				me.r.task.nVar(revertN+1).stimulus = me.gn(me.h.OKVariableStimuli);
 				offset = me.gn(me.h.OKVariableOffset);
 				if isempty(offset)
@@ -694,8 +693,12 @@ classdef opticka < optickaCore
 					me.r.task.nVar(revertN+1).offsetstimulus = offset(1);
 					me.r.task.nVar(revertN+1).offsetvalue = offset(2);
 				end
-				me.r.task.randomiseStimuli;
-				validate(me.r.task);
+				try 
+					me.r.task.randomiseStimuli;
+					validate(me.r.task);
+				catch
+					warndlg('There is a problem with the stimulus variables, please check!')
+				end
 				me.refreshVariableList;
 			catch ME
 				getReport(ME)
@@ -731,7 +734,7 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function editVariable(me)
-			
+
 			if isobject(me.r.task)
 				val = me.gv(me.h.OKVarList);
 				set(me.h.OKVariableName,'String', me.r.task.nVar(val).name);

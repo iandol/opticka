@@ -40,7 +40,7 @@ classdef eyelinkManager < optickaCore
 		%> When using the test for eye position functions, 
 		%> exclusion zones where no eye movement allowed: [-degX +degX -degY +degY]
 		%> Add rows to generate succesive exclusion zones.
-		exclusionZone				= []
+		exclusionZone double		= []
 		%> we can set an optional initial window that the subject must stay
 		%> inside before they saccade to the target window. This
 		%> restricts guessing and "cheating", by forcing a minimum delay
@@ -67,6 +67,13 @@ classdef eyelinkManager < optickaCore
 		%> use 1-9 to show each dot, space to select fix as valid, and 
 		%> INS key ON EYELINK KEYBOARD to accept calibration!
 		remoteCalibration logical	= false
+		%> tracker update speed (Hz), should be 250 500 1000 2000
+		sampleRate double			= 1000
+		%> calibration style, [H3 HV3 HV5 HV8 HV13]
+		calibrationStyle char		= 'HV5'
+		%> proportion of screen used in horizontal and vertical co-ordinates
+		%> for calibration and validation, e.g. [0.3 0.3]
+		calibrationProportion double= []
 		%> do we log messages to the command window?
 		verbose						= false
 		%> name of eyetracker EDF file
@@ -75,13 +82,6 @@ classdef eyelinkManager < optickaCore
 		defaults struct				= struct()
 		%> IP address of host
 		IP char						= ''
-		%> tracker update speed (Hz), should be 250 500 1000 2000
-		sampleRate double			= 1000
-		%> calibration style, [H3 HV3 HV5 HV8 HV13]
-		calibrationStyle char		= 'HV5'
-		%> proportion of screen used in horizontal and vertical co-ordinates
-		%> for calibration and validation, e.g. [0.5 0.45]
-		calibrationProportion		= []
 		% use callbacks
 		enableCallbacks logical		= true
 		%> cutom calibration callback (enables better handling of
@@ -166,8 +166,9 @@ classdef eyelinkManager < optickaCore
 		%> previous message sent to eyelink
 		previousMessage char		= ''
 		%> allowed properties passed to object upon construction
-		allowedProperties char		= ['IP|fixation|ignoreBlink|sampleRate|calibrationStyle|' ...
-			'enableCallbacks|callback|name|verbose|isDummy|remoteCalibration']
+		allowedProperties char		= ['fixation|exclusionZone|fixInit|offset|ignoreBlinks|sampleRate|'...
+			'calibrationStyle|calibrationProportion|recordData|modify|' ...
+			'enableCallbacks|callback|name|verbose|isDummy|remoteCalibration|IP']
 	end
 	
 	methods
@@ -366,8 +367,8 @@ classdef eyelinkManager < optickaCore
 		%>
 		% ===================================================================
 		function resetFixInit(me)
-			me.fixInit.X = 0;
-			me.fixInit.Y = 0;
+			me.fixInit.X = [];
+			me.fixInit.Y = [];
 		end
 		
 		% ===================================================================
@@ -395,7 +396,7 @@ classdef eyelinkManager < optickaCore
 			if ~me.isConnected; return; end
 			fprintf('\n===>>> CALIBRATING EYELINK... <<<===\n');
 			Eyelink('Verbosity',me.verbosityLevel);
-			if ~isempty(me.calibrationProportion)
+			if ~isempty(me.calibrationProportion) && length(me.calibrationProportion)==2
 				Eyelink('Command','calibration_area_proportion = %s', num2str(me.calibrationProportion));
 				Eyelink('Command','validation_area_proportion = %s', num2str(me.calibrationProportion));
 				% see https://www.sr-support.com/forum-37-page-2.html
@@ -470,7 +471,7 @@ classdef eyelinkManager < optickaCore
 			x=me.toPixels(me.fixation.X,'x'); %#ok<*PROPLC>
 			y=me.toPixels(me.fixation.Y,'y');
 			if me.isConnected
-				me.offset.X = 0; me.offset.Y = 0;
+				resetOffset(me);
 				Eyelink('Command', 'driftcorrect_cr_disable = OFF');
 				Eyelink('Command', 'drift_correction_rpt_error = 10.0');
 				Eyelink('Command', 'online_dcorr_maxangle = 15.0');
