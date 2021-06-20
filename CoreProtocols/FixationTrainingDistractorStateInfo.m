@@ -23,10 +23,10 @@
 tS.useTask					= true; %==use stimulusSequence (randomised variable task object)
 tS.rewardTime				= 250; %==TTL time in milliseconds
 tS.rewardPin				= 11; %==Output pin, 2 by default with Arduino.
-tS.checkKeysDuringStimulus  = false; %==allow keyboard control? Slight drop in performance
+tS.checkKeysDuringStimulus  = true; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition		= false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
-tS.saveData					= false; %==save behavioural and eye movement data?
+tS.saveData					= true; %==save behavioural and eye movement data?
 tS.name						= 'fixation+distractor'; %==name of this protocol
 
 %==================================================================
@@ -48,13 +48,13 @@ eL.name 					= tS.name;
 if tS.saveData == true;		eL.recordData = true; end %===save EDF file?
 if me.dummyMode;			eL.isDummy = true; end %===use dummy or real eyetracker? 
 eL.sampleRate 				= 250; % sampling rate
-%===========================
+%-----------------------
 % remote calibration enables manual control and selection of each fixation
 % this is useful for a baby or monkey who has not been trained for fixation
 % use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
 % accept calibration!
 eL.remoteCalibration			= false; 
-%===========================
+%-----------------------
 eL.calibrationStyle 			= 'HV3'; % calibration style
 eL.calibrationProportion		= [0.25 0.25]; %the proportion of the screen occupied by the calibration stimuli
 eL.modify.calibrationtargetcolour = [1 1 1];
@@ -63,7 +63,6 @@ eL.modify.calibrationtargetwidth = 0.15; % width of calibration target's border 
 eL.modify.waitformodereadytime	= 500;
 eL.modify.devicenumber 			= -1; % -1==use any keyboard
 eL.modify.targetbeep 			= 1;
-
 %Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
 
@@ -92,6 +91,7 @@ me.stimuli.stimulusTable 		= [];
 % another option is to enable manual control of a table of variables
 % this is useful to probe RF properties or other features while still
 % allowing for fixation or other behavioural control.
+% Use arrow keys <- -> to control value and up/down to control variable
 me.stimuli.tableChoice				= 1;
 n									= 1;
 me.stimuli.controlTable(n).variable = 'size';
@@ -104,11 +104,13 @@ me.stimuli.controlTable(n).delta	= 10;
 me.stimuli.controlTable(n).stimuli	= [1];
 me.stimuli.controlTable(n).limits	= [0 180];
 
+%==================================================================
 %this allows us to enable subsets from our stimulus list
 me.stimuli.stimulusSets				= {[1,2,3],[2,3]};
 me.stimuli.setChoice				= 1;
 showSet(me.stimuli);
 
+%==================================================================
 %which stimulus in the list from the GUI is used for a fixation target? 
 me.stimuli.fixationChoice			= 3;
 
