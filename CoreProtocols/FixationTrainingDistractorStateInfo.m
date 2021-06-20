@@ -100,8 +100,8 @@ me.stimuli.controlTable(n).stimuli	= [1];
 me.stimuli.controlTable(n).limits	= [0.5 20];
 n									= n + 1;
 me.stimuli.controlTable(n).variable = 'angle';
-me.stimuli.controlTable(n).delta	= 0.5;
-me.stimuli.controlTable(n).stimuli	= [2];
+me.stimuli.controlTable(n).delta	= 10;
+me.stimuli.controlTable(n).stimuli	= [1];
 me.stimuli.controlTable(n).limits	= [0 180];
 
 %this allows us to enable subsets from our stimulus list
