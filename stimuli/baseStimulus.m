@@ -76,6 +76,15 @@ classdef baseStimulus < optickaCore & dynamicprops
 		isRect logical = true
 	end
 	
+	properties (Dependent = true, SetAccess = protected, GetAccess = public)
+		%> What our per-frame motion delta is
+		delta double
+		%> X update which is computed from our speed and angle
+		dX double
+		%> X update which is computed from our speed and angle
+		dY double
+	end
+	
 	properties (SetAccess = protected, Transient = true)
 		%> Our texture pointer for texture-based stimuli
 		texture double
@@ -87,15 +96,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 		screenVals struct = struct('ifi',1/60,'fps',60,'winRect',[0 0 1920 1080])
 		%. is object set up?
 		isSetup logical = false
-	end
-	
-	properties (Dependent = true, SetAccess = private, GetAccess = public)
-		%> What our per-frame motion delta is
-		delta double
-		%> X update which is computed from our speed and angle
-		dX double
-		%> X update which is computed from our speed and angle
-		dY double
 	end
 	
 	properties (SetAccess = protected, GetAccess = protected)
@@ -169,7 +169,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		% ===================================================================
 		function me = baseStimulus(varargin)
 			me=me@optickaCore(varargin); %superclass constructor
-			me.parseArgs(varargin,me.allowedProperties);
+			me.parseArgs(varargin, me.allowedProperties);
 		end
 		
 		% ===================================================================
@@ -453,24 +453,28 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function handles = makePanel(me, parent)
-			
-			if ~isempty(me.handles) && isa(me.handles.root,'uiextras.BoxPanel') && ishandle(me.handles.root)
+			if ~isempty(me.handles) && isfield(me.handles, 'root') && isa(me.handles.root,'matlab.ui.container.Panel')
 				fprintf('---> Panel already open for %s\n', me.fullName);
 				return
 			end
 			
+			handles = [];
+			
 			if ~exist('parent','var')
-				parent = figure('Tag','gFig',...
+				parent = uifigure('Tag','gFig',...
 					'Name', [me.fullName 'Properties'], ...
-					'CloseRequestFcn', @me.closePanel,...
+					'Position', [ 10 10 800 500 ],...
 					'MenuBar', 'none', ...
+					'CloseRequestFcn', @me.closePanel, ...
 					'NumberTitle', 'off');
-				figpos(1,[800 300]);
+				me.handles(1).parent = parent;
+				handles(1).parent = parent;
 			end
 			
 			bgcolor = [0.91 0.91 0.91];
-			bgcoloredit = [0.95 0.95 0.95];
-			fsmall = 8;
+			bgcoloredit = [1 1 0.9];
+			fsmall = 10;
+			fmed = 11;
 			if ismac
 				SansFont = 'avenir next';
 				MonoFont = 'menlo';
@@ -482,23 +486,26 @@ classdef baseStimulus < optickaCore & dynamicprops
 				MonoFont = 'Fira Code';
 			end
 			
-			handles.parent = parent;
-			handles.root = uiextras.BoxPanel('Parent',parent,...
+
+			handles.root = uipanel('Parent',parent,...
+				'Units','normalized',...
+				'Position',[0 0 1 1],...
 				'Title',me.fullName,...
+				'TitlePosition','centertop',...
 				'FontName',SansFont,...
-				'FontSize',fsmall,...
-				'FontWeight','normal',...
-				'Padding',0,...
-				'TitleColor',[0.8 0.78 0.76],...
-				'BackgroundColor',bgcolor);
-			handles.hbox = uiextras.HBox('Parent', handles.root,'Padding',1,'Spacing',1,'BackgroundColor',bgcolor);
-			handles.grid1 = uiextras.Grid('Parent', handles.hbox,'Padding',1,'Spacing',1,'BackgroundColor',bgcolor);
-			handles.grid2 = uiextras.Grid('Parent', handles.hbox,'Padding',1,'Spacing',1,'BackgroundColor',bgcolor);
-			handles.grid3 = uiextras.VButtonBox('Parent',handles.hbox,'Padding',0,...
-				'ButtonSize', [100 25],'Spacing',0,'BackgroundColor',bgcolor);
-			set(handles.hbox,'Sizes', [-1 -1 102]);
+				'FontSize',fmed,...
+				'FontWeight','bold',...
+				'BackgroundColor',[1 1 1]);
+			handles.grid = uigridlayout(handles.root,[1 3]);
+			handles.grid1 = uigridlayout(handles.grid,'Padding',[5 5 5 5],'BackgroundColor',bgcolor);
+			handles.grid2 = uigridlayout(handles.grid,'Padding',[5 5 5 5],'BackgroundColor',bgcolor);
+			handles.grid.ColumnWidth = {'1x','1x',130};
+			handles.grid1.ColumnWidth = {'2x','1x'};
+			handles.grid2.ColumnWidth = {'2x','1x'};
 			
 			idx = {'handles.grid1','handles.grid2','handles.grid3'};
+			
+			disableList = 'fullName';
 			
 			pr = findAttributesandType(me,'SetAccess','public','notlogical');
 			pr = sort(pr);
@@ -507,6 +514,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			pr2 = findAttributesandType(me,'SetAccess','public','logical');
 			pr2 = sort(pr2);
 			lp2 = length(pr2);
+			handles.grid3 = uigridlayout(handles.grid,[lp2 1],'Padding',[1 1 1 1],'BackgroundColor',bgcolor);
 
 			for i = 1:2
 				for j = 1:lp
@@ -516,111 +524,112 @@ classdef baseStimulus < optickaCore & dynamicprops
 						if ischar(val)
 							if isprop(me,[pr{cur} 'List'])
 								if strcmp(me.([pr{cur} 'List']),'filerequestor')
-									val = regexprep(val,'\s+',' ');
-									handles.([pr{cur} '_char']) = uicontrol('Style','edit',...
+									val = regexprep(val,'\s+','  ');
+									handles.([pr{cur} '_char']) = uieditfield(...
 										'Parent',eval(idx{i}),...
-										'Tag',['panel' pr{cur}],...
-										'Callback',@me.readPanel,...
-										'String',val,...
+										'Tag',[pr{cur} '_char'],...
+										'HorizontalAlignment','center',...
+										'ValueChangedFcn',@me.readPanel,...
+										'Value',val,...
 										'FontName',MonoFont,...
 										'BackgroundColor',bgcoloredit);
+									if ~isempty(regexpi(pr{cur},disableList,'once')) 
+										handles.([pr{cur} '_char']).Enable = false; 
+									end
 								else
 									txt=me.([pr{cur} 'List']);
-									fidx = strcmpi(txt,me.(pr{cur}));
-									fidx = find(fidx > 0);
-									handles.([pr{cur} '_list']) = uicontrol('Style','popupmenu',...
+									handles.([pr{cur} '_list']) = uidropdown(...
 										'Parent',eval(idx{i}),...
-										'Tag',['panel' pr{cur} 'List'],...
-										'String',txt,...
-										'Callback',@me.readPanel,...
-										'Value',fidx,...
+										'Tag',[pr{cur} '_list'],...
+										'Items',txt,...
+										'ValueChangedFcn',@me.readPanel,...
+										'Value',val,...
 										'BackgroundColor',bgcolor);
+									if ~isempty(regexpi(pr{cur},disableList,'once')) 
+										handles.([pr{cur} '_list']).Enable = false; 
+									end
 								end
 							else
-								val = regexprep(val,'\s+',' ');
-								handles.([pr{cur} '_char']) = uicontrol('Style','edit',...
+								val = regexprep(val,'\s+','  ');
+								handles.([pr{cur} '_char']) = uieditfield(...
 									'Parent',eval(idx{i}),...
-									'Tag',['panel' pr{cur}],...
-									'Callback',@me.readPanel,...
-									'String',val,...
+									'Tag',[pr{cur} '_char'],...
+									'HorizontalAlignment','center',...
+									'ValueChangedFcn',@me.readPanel,...
+									'Value',val,...
 									'BackgroundColor',bgcoloredit);
+								if ~isempty(regexpi(pr{cur},disableList,'once')) 
+									handles.([pr{cur} '_char']).Enable = false; 
+								end
 							end
 						elseif isnumeric(val)
 							val = num2str(val);
-							val = regexprep(val,'\s+',' ');
-							handles.([pr{cur} '_num']) = uicontrol('Style','edit',...
+							val = regexprep(val,'\s+','  ');
+							handles.([pr{cur} '_num']) = uieditfield('text',...
 								'Parent',eval(idx{i}),...
-								'Tag',['panel' pr{cur}],...
-								'String',val,...
-								'Callback',@me.readPanel,...
+								'Tag',[pr{cur} '_num'],...
+								'HorizontalAlignment','center',...
+								'Value',val,...
+								'ValueChangedFcn',@me.readPanel,...
 								'FontName',MonoFont,...
 								'BackgroundColor',bgcoloredit);
+							if ~isempty(regexpi(pr{cur},disableList,'once')) 
+								handles.([pr{cur} '_num']).Enable = false; 
+							end
 						else
-							uiextras.Empty('Parent',eval(idx{i}),'BackgroundColor',bgcolor);
+							uitextarea('Parent',eval(idx{i}),'BackgroundColor',bgcolor);
 						end
-					else
-						uiextras.Empty('Parent',eval(idx{i}),'BackgroundColor',bgcolor);
-					end
-				end
-				
-				for j = 1:lp
-					cur = lp*(i-1)+j;
-					if cur <= length(pr)
 						if isprop(me,[pr{cur} 'List'])
 							if strcmp(me.([pr{cur} 'List']),'filerequestor')
-								uicontrol('Style','pushbutton',...
+								uibutton(...
 								'Parent',eval(idx{i}),...
 								'HorizontalAlignment','left',...
-								'String','Select file...',...
+								'Text','Select file...',...
 								'FontName',SansFont,...
 								'Tag',[pr{cur} '_button'],...
-								'Callback',@me.selectFilePanel,...
+								'ValueChangedFcn',@me.readPanel,...
 								'FontSize', fsmall);
 							else
-								uicontrol('Style','text',...
+								uilabel(...
 								'Parent',eval(idx{i}),...
 								'HorizontalAlignment','left',...
-								'String',pr{cur},...
+								'Text',pr{cur},...
 								'FontName',SansFont,...
 								'FontSize', fsmall,...
 								'BackgroundColor',bgcolor);
 							end
 						else
-							uicontrol('Style','text',...
+							uilabel(...
 							'Parent',eval(idx{i}),...
 							'HorizontalAlignment','left',...
-							'String',pr{cur},...
+							'Text',pr{cur},...
 							'FontName',SansFont,...
 							'FontSize', fsmall,...
 							'BackgroundColor',bgcolor);
 						end
 					else
-						uiextras.Empty('Parent',eval(idx{i}),...
-							'BackgroundColor',bgcolor);
+						uitextarea('Parent',eval(idx{i}),'BackgroundColor',bgcolor);
 					end
 				end
-				set(eval(idx{i}),'ColumnSizes',[-2 -1]);
 			end
 			for j = 1:lp2
 				val = me.(pr2{j});
 				if j <= length(pr2)
-					handles.([pr2{j} '_bool']) = uicontrol('Style','checkbox',...
+					handles.([pr2{j} '_bool']) = uicheckbox(...
 						'Parent',eval(idx{end}),...
-						'Tag',['panel' pr2{j}],...
-						'String',pr2{j},...
+						'Tag',[pr2{j} '_bool'],...
+						'Text',pr2{j},...
 						'FontName',SansFont,...
 						'FontSize', fsmall,...
-						'Value',val,...
-						'BackgroundColor',bgcolor);
+						'ValueChangedFcn',@me.readPanel,...
+						'Value',val);
 				end
 			end
-			handles.readButton = uicontrol('Style','pushbutton',...
+			handles.readButton = uibutton(...
 				'Parent',eval(idx{end}),...
-				'Tag','readButton',...
-				'Callback',@me.readPanel,...
-				'String','Update');
+				'Tag','readButton',...%'Callback',@me.readPanel,...
+				'Text','Update');
 			me.handles = handles;
-			
 		end
 		
 		% ===================================================================
@@ -646,46 +655,47 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function readPanel(me,varargin)
-			if isempty(me.handles) || ~isa(me.handles.root,'uiextras.BoxPanel')
+
+			if isempty(me.handles) || ~(isfield(me.handles, 'root') && isa(me.handles.root,'matlab.ui.container.Panel'))
 				return
 			end
-				
-			pList = findAttributes(me,'SetAccess','public'); %our public properties
-			dList = findAttributes(me,'Dependent', true); %find dependent properties
-			pList = setdiff(pList,dList); %remove dependent properties as we don't want to set them!
-			handleList = fieldnames(me.handles); %the handle name list
-			handleListMod = regexprep(handleList,'_.+$',''); %we remove the suffix so names are equivalent
-			outList = intersect(pList,handleListMod);
 			
-			for i=1:length(outList)
-				hidx = strcmpi(handleListMod,outList{i});
-				handleNameOut = handleListMod{hidx};
-				handleName = handleList{hidx};
-				handleType = regexprep(handleName,'^.+_','');
-				while iscell(handleType);handleType=handleType{1};end
-				switch handleType
-					case 'list'
-						str = get(me.handles.(handleName),'String');
-						v = get(me.handles.(handleName),'Value');
-						me.(handleNameOut) = str{v};
-					case 'bool'
-						me.(handleNameOut) = logical(get(me.handles.(handleName),'Value'));
-						if isempty(me.(handleNameOut))
-							me.(handleNameOut) = false;
-						end
-					case 'num'
-						val = get(me.handles.(handleName),'String');
-						if strcmpi(val,'true') %convert to logical
-							me.(handleNameOut) = true;
-						elseif strcmpi(val,'false') %convert to logical
-							me.(handleNameOut) = true;
-						else
-							me.(handleNameOut) = str2num(val); %#ok<ST2NM>
-						end
-					case 'char'
-						me.(handleNameOut) = get(me.handles.(handleName),'String');
-				end
+			source = varargin{1};
+			tag = source.Tag;
+			if isempty(tag); return; end
+			tagName = regexprep(tag,'_.+$','');
+			tagType = regexprep(tag,'^.+_','');
+			
+			pList = findAttributes(me,'SetAccess','public'); %our public properties
+			
+			if ~any(contains(pList,tagName)); return; end
+			
+			switch tagType
+				case 'list'
+					me.(tagName) = source.Value;
+				case 'bool'	
+					me.(tagName) = logical(source.Value);
+				case 'num'
+					me.(tagName) = str2num(source.Value);
+				case 'char'
+					me.(tagName) = source.Value;
+				otherwise
+					warning('Can''t set property');
 			end
+			
+			if strcmpi(tagName,'name')
+				me.handles.fullName_char.Value = me.fullName;
+				me.handles.root.Title = me.fullName;
+			end
+			
+			if strcmpi(tagName,'alpha')
+				me.handles.colour_num.Value = num2str(me.colour, '%g ');
+			end
+			
+			if strcmpi(tagName,'colour')
+				me.handles.alpha_num.Value = num2str(me.alpha, '%g ');
+			end
+			
 			notify(me,'readPanelUpdate');
 		end
 			
@@ -718,11 +728,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function closePanel(me,varargin)
-			if isempty(me.handles)
-				return
-			end
 			if isfield(me.handles,'root') && isgraphics(me.handles.root)
-				readPanel(me);
 				delete(me.handles.root);
 			end
 			if isfield(me.handles,'parent') && isgraphics(me.handles.parent,'figure')

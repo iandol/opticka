@@ -30,9 +30,9 @@ sca %PTB screen clear all
 % draw method on a metaStimulus myStims.draw(), it tells each of its child stimuli to draw in order
 myStims = metaStimulus();
 
-myStims{1}=discStimulus
+myStims{1}=discStimulus();
 
-myStims{2}=spotStimulus
+myStims{2}=fixationCrossStimulus();
 
 %% Setup screenManager Object
 % we initialise the object with parameter options to open the PTB screen
@@ -50,7 +50,7 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 	'windowed', [],... %set to a widthxheight for debugging i.e. [800 600]; set to empty for fullscreen
 	'antiAlias', 0,... %can be set to 4 or 8x oversampling with no dropped frames on macOS ATI 5870
 	'bitDepth', 'FloatingPoint32bitIfPossible',... %8bit, FloatingPoint16bit FloatingPoint32bit etc.
-	'displayPPRefresh', 120); %ensure refresh is 120Hz if a Display++ is attached
+); %ensure refresh is 120Hz if a Display++ is attached
 
 %% Setup runExperiment Object
 % We now pass our stimulus screen and sequence objects to the
@@ -58,7 +58,7 @@ myScreen = screenManager('distance', 57.3,... %display distance from observer
 % runs the task.
 rExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'screen', myScreen,... %screen manager object
-	'stateInfoFile', '~/Code/opticka/CoreProtocols/FixationTrainingStateInfo.m', ...
+	'stateInfoFile', 'CoreProtocols/FixationTrainingStateInfo.m', ...
 	'debug', false,... %disable debug mode
 	'verbose', false, ...
 	'useEyelink', true, ...

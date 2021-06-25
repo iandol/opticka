@@ -294,12 +294,12 @@ classdef opticka < optickaCore
 					me.paths.savedData = [root 'SavedData'];
 				end
 
-				uihandle = opticka_ui; %our GUI file
-				me.centerGUI(uihandle);
-				me.h=guidata(uihandle);
-				guidata(uihandle,me.h); %save back this change
-				setappdata(me.h.output,'o',me); %we stash our object in the root appdata store for retirieval from the UI
-				set(me.h.OKOptickaVersion,'String','Initialising GUI, please wait...');
+				me.h = opticka_uiapp; %our GUI file
+				%me.centerGUI(uihandle);
+				%me.h=guidata(uihandle);
+				%guidata(uihandle,me.h); %save back this change
+				%setappdata(me.h.output,'o',me); %we stash our object in the root appdata store for retirieval from the UI
+				set(me.h.OKOptickaVersion,'Value','Initialising GUI, please wait...');
 				set(me.h.OKRoot,'Name',['Opticka Stimulus Generator V' me.optickaVersion]);
 				drawnow;
 					
@@ -321,20 +321,16 @@ classdef opticka < optickaCore
 					me.r.stateInfoFile = me.paths.stateInfoFile;
 				end
 				
-				me.h.OKTrainingResearcherName.String = me.r.researcherName;
-				me.h.OKTrainingName.String = me.r.subjectName;
+				me.h.OKTrainingResearcherName.Value = me.r.researcherName;
+				me.h.OKTrainingName.Value = me.r.subjectName;
 				getStateInfo(me);
 
 				set(me.h.OKVarList,'String','');
 				set(me.h.OKStimList,'String','');
-				set(me.h.OKOptickaVersion,'String',['Opticka Stimulus Generator V' me.optickaVersion]);
+				set(me.h.OKOptickaVersion,'Value',['Opticka Stimulus Generator V' me.optickaVersion]);
 				
 			catch ME
-				if  isfield(me.h,'output') && ~isempty(me.h.output) && isappdata(me.h.output,'o')
-					rmappdata(me.h.output,'o');
-					clear o;
-				end
-				if isfield(me.h,'output'); close(me.h.output); end
+				try close(me.h); me.h = []; end %#ok<*TRYNC>
 				errordlg('Problem initialising Opticka UI, please check errors on the commandline!')
 				rethrow(ME)
 			end
