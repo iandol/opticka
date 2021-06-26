@@ -23,12 +23,17 @@ tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in pe
 tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = false; %==little UI requestor asks for comments before/after run
 tS.saveData = true; %==save behavioural and eye movement data?
-tS.dummyEyelink = false; %==use mouse as a dummy eyelink, good for testing away from the lab.
 tS.useMagStim = false; %enable the magstim manager
 tS.name = 'figure-ground'; %==name of this protocol
 %io.verbose = true; %==show the triggers sent in the command window
 %eL.verbose=true;
 tS.luminancePedestal = [0.5 0.5 0.5]; %used during training, it sets the clip behind the figure to a different luminance which makes the figure more salient and thus easier to train to.
+
+%==================================================================
+%------------Debug logging to command window-----------------
+io.verbose					= true; %print out io commands for debugging
+eL.verbose					= false; %print out eyelink commands for debugging
+rM.verbose					= false; %print out reward commands for debugging
 
 %==================================================================
 %-----enable the magstimManager which uses FOI2 of the LabJack
@@ -54,18 +59,28 @@ tS.targetFixInit = 1;
 tS.targetFixTime = 0.6;
 tS.targetRadius = 5;
 
+%==================================================================
 %------------------------Eyelink setup--------------------------
-eL.name = tS.name;
-if tS.saveData == true; eL.recordData = true; end %===save EDF file?
-if tS.dummyEyelink; eL.isDummy = true; end %===use dummy or real eyelink? 
-eL.sampleRate = 250;
-eL.remoteCalibration = true; %===manual calibration
-eL.calibrationStyle = 'HV5'; %===5 point calibration
-eL.modify.calibrationtargetcolour = [1 1 0];
-eL.modify.calibrationtargetsize = 0.5;
-eL.modify.calibrationtargetwidth = 0.1;
-eL.modify.waitformodereadytime = 500;
-eL.modify.devicenumber = -1; % -1 == use any keyboard
+me.useEyeLink				= true; % make sure we are using eyetracker
+eL.name 					= tS.name;
+if tS.saveData == true;		eL.recordData = true; end %===save EDF file?
+if me.dummyMode;			eL.isDummy = true; end %===use dummy or real eyetracker? 
+eL.sampleRate 				= 250; % sampling rate
+%-----------------------
+% remote calibration enables manual control and selection of each fixation
+% this is useful for a baby or monkey who has not been trained for fixation
+% use 1-9 to show each dot, space to select fix as valid, INS key ON EYELINK KEYBOARD to
+% accept calibration!
+eL.remoteCalibration			= true; 
+%-----------------------
+eL.calibrationStyle 			= 'HV5'; % calibration style
+eL.calibrationProportion		= [0.6 0.6]; %the proportion of the screen occupied by the calibration stimuli
+eL.modify.calibrationtargetcolour = [1 1 1];
+eL.modify.calibrationtargetsize = 2; % size of calibration target as percentage of screen
+eL.modify.calibrationtargetwidth = 0.15; % width of calibration target's border as percentage of screen
+eL.modify.waitformodereadytime	= 500;
+eL.modify.devicenumber 			= -1; % -1==use any keyboard
+eL.modify.targetbeep 			= 1;
 
 %Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
@@ -192,6 +207,7 @@ correctEntryFcn = {
 	@()timedTTL(rM,0,tS.rewardTime); ... % labjack sends a TTL to Crist reward system
 	@()statusMessage(eL,'Correct! :-)'); ...
 	@()hide(me.stimuli{4}); ...
+	@()logRun(me,'CORRECT'); ... %fprintf current trial info
 };
 
 %--------------------correct stimulus
@@ -219,6 +235,7 @@ incEntryFcn = {
 	@()edfMessage(eL,'END_RT'); ... %send END_RT to eyelink
 	@()trackerDrawText(eL,'Incorrect! :-(');
 	@()hide(me.stimuli{4}); ... %hide fixation spot
+	@()logRun(me,'INCORRECT'); ... %fprintf current trial info
 }; 
 
 %--------------------our incorrect stimulus
@@ -243,6 +260,7 @@ breakEntryFcn = {
 	@()edfMessage(eL,'END_RT'); ...
 	@()trackerDrawText(eL,'Broke Fixation!');
 	@()hide(me.stimuli{4}); ...
+	@()logRun(me,'BREAKFIX'); ... %fprintf current trial info
 };
 
 %--------------------incorrect / break exit
