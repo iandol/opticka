@@ -227,6 +227,7 @@ correctExitFcn = {
 	@()updateFixationTarget(me, true); % make sure the fixation follows me.stimuli.fixationChoice
 	@()updatePlot(bR, eL, sM); % update the behavioural report plot
 	@()drawnow; % ensure we update the figure
+	@()checkTaskEnded(me); ... %check if task is finished
 };
 
 %----------------------break entry
@@ -265,6 +266,7 @@ breakExitFcn = {
 	@()updateFixationTarget(me, true); % make sure the fixation follows me.stimuli.fixationChoice
 	@()updatePlot(bR, eL, sM);
 	@()drawnow;
+	@()checkTaskEnded(me); %check if task is finished
 };
 
 %--------------------calibration function
