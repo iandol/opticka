@@ -216,6 +216,7 @@ correctExitFcn = {
 	@()trackerDrawStimuli(eL,me.stimuli.stimulusPositions); %draw location of stimulus on eyelink
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); %reset the timer on the green spot
 	@()updatePlot(bR, eL, sM); %update our behavioural plot
+	@()checkTaskEnded(me); %check if task is finished
 };
 
 %incorrect entry
@@ -244,6 +245,7 @@ incExitFcn = {
 	@()trackerClearScreen(eL); 
 	@()trackerDrawFixation(eL); %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); %draw location of stimulus on eyelink
+	@()checkTaskEnded(me); %check if task is finished
 };
 
 %break entry
