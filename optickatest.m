@@ -212,8 +212,9 @@ rExp = runExperiment('stimuli', myStims,... %stimulus objects
 	'verbose', false); %minimal verbosity
 
 %%
-% run our experiment; to exit early, press [q] during the interstimulus period.
-run(rExp);
+% run our method of constants (MOC) experiment; 
+% to exit early, press [q] during the interstimulus period.
+runMOC(rExp);
 
 %%
 % Plot a timing log of every frame against the stimulus on/off times:

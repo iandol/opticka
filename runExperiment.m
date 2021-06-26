@@ -201,7 +201,7 @@ classdef runExperiment < optickaCore
 		%>
 		%> @param me required class object
 		% ===================================================================
-		function run(me)
+		function runMOC(me)
 			global rM %eyetracker calibration needs access to reward manager
 					
 			if isempty(me.screen) || isempty(me.task)
@@ -482,8 +482,10 @@ classdef runExperiment < optickaCore
 	
 		% ===================================================================
 		%> @brief runTask runs a state machine (behaviourally) driven task. Uses a StateInfo.m
-		%> file to control the behavioural paradigm. 
-		%> @param me required class object
+		%> file to control the behavioural paradigm. The state machine
+		%> controls the logic of the experiment, and this method manages the
+		%> display loop.
+		%> 
 		% ===================================================================
 		function runTask(me)
 			global rM %global reward manager we can share with eyetracker
@@ -764,7 +766,7 @@ classdef runExperiment < optickaCore
 					%------check eye position manually. REMEMBER eyelink will save the real eye data in
 					% the EDF this is just a backup wrapped in the PTB loop. 
 					if me.needSample; getSample(eL); end
-					if me.useEyeLink && tS.recordEyePosition == true
+					if tS.recordEyePosition && me.useEyeLink
 						saveEyeInfo(me, sM, eL, tS);
 					end
 					
@@ -775,7 +777,7 @@ classdef runExperiment < optickaCore
 					
 					%----- FLIP: Show it at correct retrace: -----%
 					if me.doFlip
-						%------Display++ or DataPixx: I/O send strobe on this screen flip
+						%------Display++ or DataPixx: I/O send strobe for this screen flip
 						if me.sendStrobe && me.useDisplayPP
 							sendStrobe(io); me.sendStrobe = false;
 						elseif me.sendStrobe && me.useDataPixx

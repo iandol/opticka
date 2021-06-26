@@ -533,7 +533,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			end
 			cnames = cell(me.nVars,1);
 			for ii = 1:me.nVars
-				cnames{ii} = me.nVar(ii).name;
+				cnames{ii} = [me.nVar(ii).name num2str(me.nVar(ii).stimulus,'-%i')];
 			end
 			cnames{end+1} = 'outIndex';
 			for ii = 1:size(me.outMap,2)

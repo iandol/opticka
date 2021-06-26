@@ -93,7 +93,7 @@ classdef stateMachine < optickaCore
 		nextTimeOut
 		%> Index with name and index number for each state
 		stateListIndex
-		%> previous state information
+		%> run state information
 		log = struct([])
 	end
 	
@@ -427,7 +427,6 @@ classdef stateMachine < optickaCore
 			me.stateList = struct([]);
 			me.stateListIndex = containers.Map('uniformValues', false);
 			me.isRunning = false;
-			me.log = struct([]); %empty struct
 			if me.timeDelta == 0; me.realTime = true; end %stops a divide by zero infinite loop
 			me.isFinishing = false;
 			me.totalTicks = [];

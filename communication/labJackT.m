@@ -323,7 +323,6 @@ classdef labJackT < handle
 			result = me.isValid;
 		end
 		
-		
 		% ===================================================================
 		%> @brief sends a value to RAMAddress, requires the Lua server to
 		%> be running, 0-255 control EIO, 256-271 controls CIO
@@ -344,8 +343,9 @@ classdef labJackT < handle
 		function sendStrobe(me, value)
 			if me.silentMode || isempty(me.handle); return; end
 			if ~exist('value','var'); value = me.sendValue; end
-			fprintf('Sending strobe: %i\n',value);
+			if me.verbose; fprintf('--->>> LabjackT Sending strobe: %i\n',value); end
 			calllib(me.libName, 'LJM_eWriteAddress', me.handle, me.RAMAddress, me.LJM_FLOAT32, value);
+		
 		end
 		
 		% ===================================================================
@@ -359,7 +359,6 @@ classdef labJackT < handle
 			result = logical(value);
 		end
 
-		
 		% ===================================================================
 		%> @brief 
 		% ===================================================================
@@ -391,6 +390,7 @@ classdef labJackT < handle
 				64, [2501 61590 2501], [0 1 0], [1 1 1], [1 1 1], [value me.strobeTime*1000 0], 3, cmd);
 			me.command = cmd;
 			me.checkError(err);
+			if me.verbose;fprintf('--->>> LabJackT saving strobe value: %i\n',value);end
 		end
 		
 		% ===================================================================
@@ -623,7 +623,7 @@ classdef labJackT < handle
 		%> 
 		%> @param 
 		% ===================================================================
-		function resetStrobe(obj,value)
+		function resetStrobe(me,varargin)
 
 		end
 		
@@ -632,7 +632,7 @@ classdef labJackT < handle
 		%> 
 		%> @param 
 		% ===================================================================
-		function startRecording(obj,value)
+		function startRecording(me,varargin)
 
 		end
 		
@@ -641,7 +641,7 @@ classdef labJackT < handle
 		%> 
 		%> @param 
 		% ===================================================================
-		function resumeRecording(obj,value)
+		function resumeRecording(me,varargin)
 
 		end
 		
@@ -650,7 +650,7 @@ classdef labJackT < handle
 		%> 
 		%> @param 
 		% ===================================================================
-		function pauseRecording(obj,value)
+		function pauseRecording(me,varargin)
 
 		end
 		
@@ -659,7 +659,7 @@ classdef labJackT < handle
 		%> 
 		%> @param 
 		% ===================================================================
-		function stopRecording(obj,value)
+		function stopRecording(me,varargin)
 
 		end
 		
@@ -668,7 +668,7 @@ classdef labJackT < handle
 		%> 
 		%> @param 
 		% ===================================================================
-		function startFixation(obj)
+		function startFixation(me, varargin)
 			sendStrobe(me,248);
 		end
 		
@@ -677,7 +677,16 @@ classdef labJackT < handle
 		%> 
 		%> @param 
 		% ===================================================================
-		function correct(obj)
+		function sendTTL(me, varargin)
+			
+		end
+		
+		% ===================================================================
+		%> @brief 
+		%> 
+		%> @param 
+		% ===================================================================
+		function correct(me)
 			sendStrobe(me,251);
 		end
 		
@@ -686,7 +695,7 @@ classdef labJackT < handle
 		%> 
 		%> @param 
 		% ===================================================================
-		function incorrect(obj)
+		function incorrect(me)
 			sendStrobe(me,250);
 		end
 		
@@ -695,9 +704,11 @@ classdef labJackT < handle
 		%> 
 		%> @param 
 		% ===================================================================
-		function breakFixation(obj)
+		function breakFixation(me)
 			sendStrobe(me,249);
 		end
+		
+		
 	end % END HIDDEN METHODS
 	
 	%=======================================================================

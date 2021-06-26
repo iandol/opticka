@@ -1,16 +1,21 @@
 %FIGURE GROUND state configuration file, this gets loaded by opticka via
-%runExperiment class. The following class objects are already loaded and available to
-%use: 
+%runExperiment class. 
+% The following class objects (easily named handle copies) are already 
+% loaded and available to use: 
+%
 % me = runExperiment object
 % io = digital I/O to recording system
-% s = screen manager
+% s = screenManager
+% aM = audioManager
 % sM = State Machine
-% eL = eyelink manager
-% rM = Reward Manager (LabJack or Arduino TTL trigger to Crist reward system/Magstim)
-% bR = behavioural record plot
+% eL = eyetracker manager
+% t  = task sequence (stimulusSequence class)
+% rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
+% bR = behavioural record plot (on screen GUI during task run)
 % me.stimuli = our list of stimuli
-% tS = general simple struct to hold variables for this run
+% tS = general struct to hold variables for this run, will be saved
 
+%==================================================================
 %------------General Settings-----------------
 tS.rewardTime = 150; %==TTL time in milliseconds
 tS.useTask = true; %==use stimulusSequence (randomised variable task object)
@@ -25,6 +30,7 @@ tS.name = 'figure-ground'; %==name of this protocol
 %eL.verbose=true;
 tS.luminancePedestal = [0.5 0.5 0.5]; %used during training, it sets the clip behind the figure to a different luminance which makes the figure more salient and thus easier to train to.
 
+%==================================================================
 %-----enable the magstimManager which uses FOI2 of the LabJack
 if tS.useMagStim
 	mS = magstimManager('lJ',rM,'defaultTTL',2);
