@@ -113,6 +113,7 @@ hide(me.stimuli);
 
 %pause entry
 pauseEntryFcn = { 
+	@()hide(me.stimuli);
 	@()drawBackground(s); %blank the subject display
 	@()drawTextNow(s,'Paused, press [p] to resume...');
 	@()disp('Paused, press [p] to resume...');
@@ -130,20 +131,23 @@ pauseExitFcn = {
 	
 }; 
 
-prefixEntryFcn = { @()enableFlip(me); };
+prefixEntryFcn = { 
+	@()enableFlip(me); 
+};
+
 prefixFcn = {};
 
 %fixate entry
 fixEntryFcn = { 
-	@()trackerClearScreen(eL); % blank the eyelink screen
+	@()updateFixationValues(eL,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
 	@()startRecording(eL); % start eyelink recording for this trial
 	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
 	@()edfMessage(eL,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
 	@()edfMessage(eL,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()statusMessage(eL,'Initiate Fixation...'); %status text on the eyelink
+	@()trackerClearScreen(eL); % blank the eyelink screen
 	@()trackerDrawFixation(eL); % draw the fixation window
 	@()needEyeSample(me,true); % make sure we start measuring eye position
-	@()updateFixationValues(eL,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset 
 	@()show(me.stimuli{2});
 	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
 };
@@ -154,7 +158,9 @@ fixFcn = {
 };
 
 %test we are fixated for a certain length of time
-initFixFcn = {@()testSearchHoldFixation(eL,'stimulus','incorrect')};
+inFixFcn = { 
+	@()testSearchHoldFixation(eL,'stimulus','incorrect')
+};
 
 %exit fixation phase
 fixExitFcn = { 
@@ -177,7 +183,9 @@ stimFcn =  {
 };
 
 %test we are maintaining fixation
-maintainFixFcn = {@()testHoldFixation(eL,'correct','breakfix')};
+maintainFixFcn = {
+	@()testHoldFixation(eL,'correct','breakfix')
+};
 
 %as we exit stim presentation state
 stimExitFcn = { 
@@ -292,7 +300,7 @@ stateInfoTmp = {
 'name'      'next'		'time'  'entryFcn'		'withinFcn'		'transitionFcn'	'exitFcn';
 'pause'		'prefix'	inf		pauseEntryFcn	[]				[]				pauseExitFcn;
 'prefix'	'fixate'	0.5		prefixEntryFcn	prefixFcn		[]				[];
-'fixate'	'incorrect'	5	 	fixEntryFcn		fixFcn			initFixFcn		fixExitFcn;
+'fixate'	'incorrect'	5	 	fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
 'stimulus'  'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'incorrect'	'prefix'	3		incEntryFcn		incFcn			[]				incExitFcn;
 'breakfix'	'prefix'	3		breakEntryFcn	incFcn			[]				incExitFcn;
@@ -306,6 +314,6 @@ stateInfoTmp = {
 
 disp(stateInfoTmp)
 disp('================>> Loaded state info file  <<================')
-clear pauseEntryFcn fixEntryFcn fixFcn initFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
+clear pauseEntryFcn fixEntryFcn fixFcn inFixFcn fixExitFcn stimFcn maintainFixFcn incEntryFcn ...
 	incFcn incExitFcn breakEntryFcn breakFcn correctEntryFcn correctFcn correctExitFcn ...
 	calibrateFcn overrideFcn flashFcn gridFcn
