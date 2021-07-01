@@ -18,6 +18,7 @@ tS.recordEyePosition		= false; %==record eye position within PTB, **in addition*
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= true; %==save behavioural and eye movement data?
 tS.name						= 'area-summation-dots'; %==name of this protocol
+tS.tOut						= 10; %if wrong response, how long to time out before next trial
 
 %==================================================================
 %------------Debug logging to command window-----------------
@@ -260,7 +261,7 @@ incExitFcn = {
 breakEntryFcn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerClearScreen(eL);
-	@()trackerDrawText(eL,'Broke fix! :-(');
+	@()trackerDrawText(eL,'Broke maintain fix! :-(');
 	@()edfMessage(eL,'END_RT');
 	@()edfMessage(eL,'TRIAL_RESULT -1');
 	@()stopRecording(eL);
@@ -303,7 +304,7 @@ stateInfoTmp = {
 'fixate'	'incorrect'	5	 	fixEntryFcn		fixFcn			inFixFcn		fixExitFcn;
 'stimulus'  'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn	stimExitFcn;
 'incorrect'	'prefix'	3		incEntryFcn		incFcn			[]				incExitFcn;
-'breakfix'	'prefix'	3		breakEntryFcn	incFcn			[]				incExitFcn;
+'breakfix'	'prefix'	tS.tOut	breakEntryFcn	incFcn			[]				incExitFcn;
 'correct'	'prefix'	0.5		correctEntryFcn	correctFcn		[]				correctExitFcn;
 'calibrate' 'pause'		0.5		calibrateFcn	[]				[]				[];
 'override'	'pause'		0.5		overrideFcn		[]				[]				[];
