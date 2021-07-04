@@ -659,7 +659,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if isempty(me.handles) || ~(isfield(me.handles, 'root') && isa(me.handles.root,'matlab.ui.container.Panel'))
 				return
 			end
-			
+			if isempty(varargin{1}); return; end
 			source = varargin{1};
 			tag = source.Tag;
 			if isempty(tag); return; end

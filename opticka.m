@@ -20,7 +20,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public, Transient = true)
 		%> all of the handles to the opticka_ui GUI
-		h struct
+		h opticka_uiapp
 	end
 	
 	properties (SetAccess = protected, GetAccess = public)
@@ -294,12 +294,8 @@ classdef opticka < optickaCore
 					me.paths.savedData = [root 'SavedData'];
 				end
 
-				me.h = opticka_uiapp; %our GUI file
-				%me.centerGUI(uihandle);
-				%me.h=guidata(uihandle);
-				%guidata(uihandle,me.h); %save back this change
-				%setappdata(me.h.output,'o',me); %we stash our object in the root appdata store for retirieval from the UI
-				set(me.h.OKOptickaVersion,'Value','Initialising GUI, please wait...');
+				me.h = opticka_uiapp(me); %our GUI file
+				set(me.h.OKOptickaVersion,'Text','Initialising GUI, please wait...');
 				set(me.h.OKRoot,'Name',['Opticka Stimulus Generator V' me.optickaVersion]);
 				drawnow;
 					
@@ -325,14 +321,12 @@ classdef opticka < optickaCore
 				me.h.OKTrainingName.Value = me.r.subjectName;
 				getStateInfo(me);
 
-				set(me.h.OKVarList,'String','');
-				set(me.h.OKStimList,'String','');
-				set(me.h.OKOptickaVersion,'Value',['Opticka Stimulus Generator V' me.optickaVersion]);
+				set(me.h.OKOptickaVersion,'Text',['Opticka Stimulus Generator V' me.optickaVersion]);
 				
 			catch ME
-				try close(me.h); me.h = []; end %#ok<*TRYNC>
-				errordlg('Problem initialising Opticka UI, please check errors on the commandline!')
-				rethrow(ME)
+				try close(me.h.OKRoot); me.h = []; end %#ok<*TRYNC>
+				warning('Problem initialising Opticka UI, please check errors on the commandline!');
+				rethrow(ME);
 			end
 			
 		end
@@ -345,8 +339,8 @@ classdef opticka < optickaCore
 		function getScreenVals(me)
 			
 			if isempty(me.r)
-				olds = get(me.h.OKOptickaVersion,'String');
-				set(me.h.OKOptickaVersion,'String','Initialising Stimulus and Task objects...')
+				olds = me.h.OKOptickaVersion.Text;
+				me.h.OKOptickaVersion.Text = 'Initialising Stimulus and Task objects...';
 				%drawnow
 				me.r = runExperiment();
 				initialise(me.r); % set up the runExperiment object
@@ -354,29 +348,26 @@ classdef opticka < optickaCore
 				for i=0:me.r.screen.maxScreen
 					s{i+1} = num2str(i);
 				end
-				set(me.h.OKSelectScreen,'String', s);
-				set(me.h.OKSelectScreen, 'Value', me.r.screen.screen+1);
+				me.h.OKSelectScreen.Items = s;
+				me.h.OKSelectScreen.Value = s{end};
 				clear s;
-				set(me.h.OKOptickaVersion,'String',olds)
+				me.h.OKOptickaVersion.Text = olds;
 			end
 			
-			me.r.screenSettings.optickahandle = me.h.output;
+			me.r.screenSettings.optickahandle = me.h.OKRoot;
 			
-			me.r.screen.screen = me.gv(me.h.OKSelectScreen)-1;
+			me.r.screen.screen = me.gd(me.h.OKSelectScreen)-1;
 			
 			me.r.screen.distance = me.gd(me.h.OKMonitorDistance);
 			me.r.screen.pixelsPerCm = me.gd(me.h.OKpixelsPerCm);
 			me.r.screen.screenXOffset = me.gd(me.h.OKscreenXOffset);
 			me.r.screen.screenYOffset = me.gd(me.h.OKscreenYOffset);
 			
-			value = me.gv(me.h.OKGLSrc);
-			me.r.screen.srcMode = me.gs(me.h.OKGLSrc, value);
+			me.r.screen.srcMode = me.gv(me.h.OKGLSrc);
 			
-			value = me.gv(me.h.OKGLDst);
-			me.r.screen.dstMode = me.gs(me.h.OKGLDst, value);
+			me.r.screen.dstMode = me.gv(me.h.OKGLDst);
 			
-			value = me.gv(me.h.OKbitDepth);
-			me.r.screen.bitDepth = me.gs(me.h.OKbitDepth, value);
+			me.r.screen.bitDepth = me.gv(me.h.OKbitDepth);
 			
 			me.r.screen.blend = me.gv(me.h.OKOpenGLBlending);
 			
@@ -385,7 +376,7 @@ classdef opticka < optickaCore
 				me.r.screen.gammaTable.choice = value - 1;
 			end
 			
-			s=str2num(get(me.h.OKWindowSize,'String')); %#ok<ST2NM>
+			s=str2num(me.gv(me.h.OKWindowSize)); %#ok<ST2NM>
 			if isempty(s)
 				me.r.screen.windowed = false;
 			else
@@ -396,8 +387,8 @@ classdef opticka < optickaCore
 			me.r.benchmark = logical(me.gv(me.h.OKbenchmark));
 			me.r.screen.hideFlash = logical(me.gv(me.h.OKHideFlash));
 			me.r.screen.useRetina = logical(me.gv(me.h.OKUseRetina));
-			me.r.drawFixation = logical(me.gv(me.h.OKDrawFixation));
-			me.r.dummyMode = logical(me.gv(me.h.OKDummyMode));
+			%me.r.drawFixation = logical(me.gv(me.h.OKUseFixation));
+			me.r.dummyMode = logical(me.gv(me.h.OKUseDummy));
 			if strcmpi(me.r.screen.bitDepth,'8bit')
 				set(me.h.OKAntiAliasing,'String','0');
 			end
@@ -440,7 +431,7 @@ classdef opticka < optickaCore
 			end
 			if strcmpi(get(me.h.OKuseArduino,'Checked'),'on')
 				me.r.useArduino = true;
-				me.r.arduinoPort = get(me.h.OKarduinoPort,'String');
+				me.r.arduinoPort = me.gv(me.h.OKarduinoPort);
 			else
 				me.r.useArduino = false;
 			end
@@ -478,8 +469,7 @@ classdef opticka < optickaCore
 			end
 			me.r.task.trialTime = me.gd(me.h.OKtrialTime);
 			me.r.task.randomSeed = me.gn(me.h.OKRandomSeed);
-			v = me.gv(me.h.OKrandomGenerator);
-			me.r.task.randomGenerator = me.gs(me.h.OKrandomGenerator,v);
+			me.r.task.randomGenerator = me.gs(me.h.OKrandomGenerator);
 			me.r.task.ibTime = me.gn(me.h.OKibTime);
 			me.r.task.randomise = logical(me.gv(me.h.OKRandomise));
 			me.r.task.isTime = me.gn(me.h.OKisTime);
@@ -516,11 +506,11 @@ classdef opticka < optickaCore
 						i=i+1;
 					end
 					fclose(fid);
-					set(me.h.OKTrainingText,'String',o.store.statetext);
-					set(me.h.OKTrainingFileName,'String',['FileName:' me.r.paths.stateInfoFile]);
+					set(me.h.OKTrainingText,'Value',o.store.statetext);
+					set(me.h.OKTrainingFileName,'Text',['FileName:' me.r.paths.stateInfoFile]);
 				else
-					set(me.h.OKTrainingText,'String','');
-					set(me.h.OKTrainingFileName,'String','No File Specified...');
+					set(me.h.OKTrainingText,'Value','');
+					set(me.h.OKTrainingFileName,'Text','No File Specified...');
 				end
 			end
 		end
@@ -831,22 +821,22 @@ classdef opticka < optickaCore
 					if isfield(me.h, prfname) %ui widget exists
 						myhandle = me.h.(prfname);
 						prf = getpref('opticka',prfname);
-						uiType = get(myhandle,'Style');
+						uiType = myhandle.Type;
 						switch uiType
-							case 'edit'
+							case 'uieditfield'
 								if ischar(prf)
-									set(myhandle, 'String', prf);
+									myhandle.Value = prf;
 								else
-									set(myhandle, 'String', num2str(prf));
+									myhandle.Value = num2str(prf);
 								end
-							case 'checkbox'
+							case 'uicheckbox'
 								if islogical(prf) || isnumeric(prf)
-									set(myhandle, 'Value', prf);
+									myhandle.Value = prf;
 								end
-							case 'popupmenu'
-								str = get(myhandle,'String');
-								if isnumeric(prf) && prf <= length(str)
-									set(myhandle, 'Value', prf);
+							case 'uidropdown'
+								str = myhandle.Items;
+								if ischar(prf) && contains(str,prf)
+									myhandle.Item = prf;
 								end
 						end
 					end
@@ -1198,14 +1188,14 @@ classdef opticka < optickaCore
 		% ======================================================================
 		function refreshProtocolsList(me)
 			
-			set(me.h.OKProtocolsList,'String',{''});
+			set(me.h.OKProtocolsList,'Items',{''});
 			me.paths.currentPath = pwd;
 			cd(me.paths.protocols);
 			
 			% Generate path based on given root directory
 			files = dir(pwd);
 			if isempty(files)
-				set(me.h.OKProtocolsList,'String',{''});
+				set(me.h.OKProtocolsList,'Items',{''});
 				return
 			end
 			
@@ -1223,8 +1213,7 @@ classdef opticka < optickaCore
 				end
 			end
 			
-			set(me.h.OKProtocolsList,'Value', 1);
-			set(me.h.OKProtocolsList,'String',filelist);
+			set(me.h.OKProtocolsList,'Items',filelist);
 			cd(me.paths.currentPath);
 		end
 		
@@ -1508,12 +1497,21 @@ classdef opticka < optickaCore
 		%> @param inhandle handle to UI element
 		%> @param value
 		% ===================================================================
-		function outhandle = gs(inhandle,value)
-			if exist('value','var')
-				s = get(inhandle,'String');
-				outhandle = s{value};
-			else
-				outhandle = get(inhandle,'String');
+		function outv = gs(inhandle,value)
+			if isprop(inhandle,'String')
+				if exist('value','var') 
+					s = get(inhandle,'String');
+					outv = s{value};
+				else
+					outv = get(inhandle,'String');
+				end
+			elseif isprop(inhandle,'Value')
+				if exist('value','var') 
+					s = get(inhandle,'Value');
+					outv = s{value};
+				else
+					outv = get(inhandle,'Value');
+				end
 			end
 		end
 		
@@ -1522,9 +1520,15 @@ classdef opticka < optickaCore
 		%> 
 		%> @param inhandle handle to UI element
 		% ===================================================================
-		function outhandle = gd(inhandle)
+		function outv = gd(inhandle)
 		%quick alias to get double value
-			outhandle = str2double(get(inhandle,'String'));
+			if isprop(inhandle,'String')
+				outv = str2double(inhandle.String);
+			elseif isprop(inhandle,'Value')
+				outv = str2double(inhandle.Value);
+			else
+				outv = [];
+			end
 		end
 		
 		% ===================================================================
@@ -1532,9 +1536,15 @@ classdef opticka < optickaCore
 		%> 
 		%> @param inhandle handle to UI element
 		% ===================================================================
-		function outhandle = gn(inhandle)
+		function outv = gn(inhandle)
 		%quick alias to get number value
-			outhandle = str2num(get(inhandle,'String')); %#ok<ST2NM>
+			if isprop(inhandle,'String')
+				outv = str2num(inhandle.String); %#ok<ST2NM>
+			elseif isprop(inhandle,'Value')
+				outv = str2num(inhandle.Value); %#ok<ST2NM>
+			else
+				outv = '';
+			end
 		end
 		
 		% ===================================================================
@@ -1542,9 +1552,13 @@ classdef opticka < optickaCore
 		%> 
 		%> @param inhandle handle to UI element
 		% ===================================================================
-		function outhandle = gv(inhandle)
+		function outv = gv(inhandle)
 		%quick alias to get ui value
-			outhandle = get(inhandle,'Value');
+			if isprop(inhandle,'Value')
+				outv = inhandle.Value;
+			else
+				outv = [];
+			end
 		end
 		
 		% ===================================================================
