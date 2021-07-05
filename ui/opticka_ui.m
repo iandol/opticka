@@ -1263,8 +1263,6 @@ if isappdata(handles.output,'o')
 		o.r.stimuli.choice = [];
 		if isa(o.r.screen,'screenManager')
 			runSingle(o.r.stimuli, o.r.screen);
-		else
-			runSingle(o.r.stimuli, o.r.screen);
 		end
 	end
 end

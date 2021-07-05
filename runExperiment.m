@@ -102,7 +102,7 @@ classdef runExperiment < optickaCore
 		%> what mode to run the Display++ digital I/O in? Plexon requires
 		%the use of a strobe trigger line, whereas most other equipment
 		%just uses simple threshold reading
-		dPPMode char = 'plexon'
+		dPPMode char = 'plain'
 		%> which port is the arduino on?
 		arduinoPort char = '/dev/ttyACM0'
 	end

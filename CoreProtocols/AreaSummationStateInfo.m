@@ -1,12 +1,18 @@
 %AREA SUMMATION state configuration file, this gets loaded by opticka via runExperiment class
-% io = datapixx (digital I/O to plexon)
+% The following class objects (easily named handle copies) are already 
+% loaded and available to use: 
+%
+% me = runExperiment object
+% io = digital I/O to recording system
 % s = screenManager
+% aM = audioManager
 % sM = State Machine
-% eL = eyelink manager
-% lJ = LabJack (reward trigger to Crist reward system)
-% bR = behavioural record plot
+% eL = eyetracker manager
+% t  = task sequence (stimulusSequence class)
+% rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
+% bR = behavioural record plot (on screen GUI during task run)
 % me.stimuli = our list of stimuli
-% tS = general simple struct to hold variables for this run
+% tS = general struct to hold variables for this run, will be saved as part of the data
 
 %==================================================================
 %------------General Settings-----------------
@@ -17,7 +23,7 @@ tS.checkKeysDuringStimulus  = true; %==allow keyboard control? Slight drop in pe
 tS.recordEyePosition		= false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= true; %==save behavioural and eye movement data?
-tS.name						= 'area-summation-dots'; %==name of this protocol
+tS.name						= 'area-summation'; %==name of this protocol
 tS.tOut						= 10; %if wrong response, how long to time out before next trial
 
 %==================================================================
