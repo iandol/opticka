@@ -34,7 +34,7 @@ void main() {
     float radiusMatrix = length(pos - radius);
 
     //create our sinusoid in -1 to 1 range, radialFrequency need to be integer to avoid clipping effect
-    float sv = sin( angleMatrix * round(radialFrequency) + radiusMatrix * circularFrequency + phase );
+    float sv = sin( angleMatrix * floor(radialFrequency) + radiusMatrix * circularFrequency + phase );
 
     //if sigma >= 0, we want a squarewave grating, step or smoothstep does this depending on sigma value
     if ( sigma == 0.0 ) {
