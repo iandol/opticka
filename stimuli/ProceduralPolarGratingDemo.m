@@ -61,7 +61,7 @@ frequency = 0.06; % cycles/pixel
 % calculate frequency of both radial and circular gratings
 middleRadius = virtualSize/2;
 middlePerimeter = 2*pi*middleRadius; % pixels
-radiusFrequency = frequency*middlePerimeter / (2*pi); % cycles/degree, must be integral to avoid clip effect, corrected in the frag file
+radialFrequency = frequency*middlePerimeter / (2*pi); % cycles/degree, must be integral to avoid clip effect, corrected in the frag file
 circularFrequency = 0;
 % contrast
 contrast = 0.75;
@@ -76,8 +76,7 @@ maskDstRects = CenterRectOnPointd(maskrect, width/2, height/2);
 
 % Preperatory flip
 showTime = 5;
-phaseJump = 15;
-WaitSecs(5);
+phaseJump = 20;
 vbl = Screen('Flip', win);
 tstart = vbl + ifi; %start is on the next frame
 
@@ -87,14 +86,14 @@ while vbl < tstart + showTime
 	% Draw the shader with parameters
 	Screen('DrawTexture', win, texture, [], [],...
 		angle, [], [], baseColor, [], [],...
-		[phase, radiusFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
+		[phase, radialFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
 	Screen('DrawTexture', win, masktex, [], maskDstRects, [], [], 1, baseColor, [], []);
 	phase = phase + phaseJump;
 	vbl = Screen('Flip', win, vbl + 0.5 * ifi);
 end
 
 tstart = vbl + ifi; %start is on the next frame
-sigma = 0.5;
+sigma = 0.5; % sigma => 0 makes a square wave where the edge is smoothed by sigma
 
 while vbl < tstart + showTime
 	% Draw a message
@@ -102,16 +101,16 @@ while vbl < tstart + showTime
 	% Draw the shader with parameters
 	Screen('DrawTexture', win, texture, [], [],...
 		angle, [], [], baseColor, [], [],...
-		[phase, radiusFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
+		[phase, radialFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
 	Screen('DrawTexture', win, masktex, [], maskDstRects, [], [], 1, baseColor, [], []);
 	phase = phase + phaseJump;
 	vbl = Screen('Flip', win, vbl + 0.5 * ifi);
 end
 
-tstart = vbl + ifi; %start is on the next frame
-sigma = -1;
-tmp = radiusFrequency;
-radiusFrequency = 0;
+tstart = vbl + ifi; 
+sigma = -1; % sigma < 0 is a sinusoidal grating
+tmp = radialFrequency; % save the radialFrequency
+radialFrequency = 0;
 circularFrequency = frequency;
 
 while vbl < tstart + showTime
@@ -120,7 +119,7 @@ while vbl < tstart + showTime
 	% Draw the shader texture with parameters
 	Screen('DrawTexture', win, texture, [], [],...
 		angle, [], [], baseColor, [], [],...
-		[phase, radiusFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
+		[phase, radialFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
 	Screen('DrawTexture', win, masktex, [], maskDstRects, [], [], 1, baseColor, [], []);
 	phase = phase + phaseJump;
 	vbl = Screen('Flip', win, vbl + 0.5 * ifi);
@@ -135,7 +134,7 @@ while vbl < tstart + showTime
 	% Draw the shader texture with parameters
 	Screen('DrawTexture', win, texture, [], [],...
 		angle, [], [], baseColor, [], [],...
-		[phase, radiusFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
+		[phase, radialFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
 	Screen('DrawTexture', win, masktex, [], maskDstRects, [], [], 1, baseColor, [], []);
 	phase = phase + phaseJump;
 	vbl = Screen('Flip', win, vbl + 0.5 * ifi);
@@ -143,7 +142,7 @@ end
 
 tstart = vbl + ifi; %start is on the next frame
 sigma = -1;
-radiusFrequency = tmp;
+radialFrequency = tmp;
 circularFrequency = frequency;
 
 while vbl < tstart + showTime
@@ -152,7 +151,7 @@ while vbl < tstart + showTime
 	% Draw the shader texture with parameters
 	Screen('DrawTexture', win, texture, [], [],...
 		angle, [], [], baseColor, [], [],...
-		[phase, radiusFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
+		[phase, radialFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
 	Screen('DrawTexture', win, masktex, [], maskDstRects, [], [], 1, baseColor, [], []);
 	phase = phase + phaseJump;
 	vbl = Screen('Flip', win, vbl + 0.5 * ifi);
@@ -167,7 +166,7 @@ while vbl < tstart + showTime
 	% Draw the shader texture with parameters
 	Screen('DrawTexture', win, texture, [], [],...
 		angle, [], [], baseColor, [], [],...
-		[phase, radiusFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
+		[phase, radialFrequency, contrast, sigma, circularFrequency, 0, 0, 0]);
 	Screen('DrawTexture', win, masktex, [], maskDstRects, [], [], 1, baseColor, [], []);
 	phase = phase + phaseJump;
 	vbl = Screen('Flip', win, vbl + 0.5 * ifi);
