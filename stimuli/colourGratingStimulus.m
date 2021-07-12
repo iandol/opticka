@@ -258,7 +258,7 @@ classdef colourGratingStimulus < baseStimulus
 				me.driftPhase=me.phaseOut;
 			end
 			if ~all(me.colourCache(1:3) == me.colourOut(1:3)) || ...
-				~all(me.colourCache(1:3) == me.colourOut(1:3))
+				~all(me.colour2Cache(1:3) == me.colour2Out(1:3))
 				glUseProgram(me.shader);
 				glUniform4f(glGetUniformLocation(me.shader, 'color1'),...
 					me.colourOut(1),me.colourOut(2),me.colourOut(3),me.colourOut(4));
