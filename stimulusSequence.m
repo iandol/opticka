@@ -318,7 +318,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function updateTask(me, thisResponse, runTime, info)
-			if ~me.taskInitialised; return; end
+			if ~me.taskInitialised; warning('--->>> stimulusSequence not initialised, cannot update!');return; end
 			if me.totalRuns > me.nRuns
 				me.taskFinished = true;
 				fprintf('---> stimulusSequence.updateTask: Task FINISHED, no more updates allowed\n');

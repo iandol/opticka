@@ -24,16 +24,16 @@ tS.recordEyePosition		= false; %==record eye position within PTB, **in addition*
 tS.askForComments			= false; %==little UI requestor asks for comments before/after run
 tS.saveData					= true; %==save behavioural and eye movement data?
 tS.name						= 'area-summation'; %==name of this protocol
-tS.tOut						= 10; %if wrong response, how long to time out before next trial
+tS.tOut						= 5; %if wrong response, how long to time out before next trial
 
 %==================================================================
 %------------Debug logging to command window-----------------
-io.verbose					= true; %print out io commands for debugging
+io.verbose					= false; %print out io commands for debugging
 eL.verbose					= false; %print out eyelink commands for debugging
 rM.verbose					= false; %print out reward commands for debugging
 
 %==================================================================
-%------------Eyetracker Settings-----------------
+%--------------------Eyetracker Settings---------------------------
 tS.fixX						= 0; % X position in degrees
 tS.fixY						= 0; % X position in degrees
 tS.firstFixInit				= 3; % time to search and enter fixation window
@@ -46,7 +46,7 @@ me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 
 %==================================================================
-%------------------------Eyelink setup--------------------------
+%---------------------------Eyelink setup--------------------------
 me.useEyeLink				= true; % make sure we are using eyetracker
 eL.name 					= tS.name;
 eL.sampleRate 				= 250; % sampling rate
@@ -69,6 +69,11 @@ eL.modify.devicenumber 			= -1; % -1 = use any attachedkeyboard
 eL.modify.targetbeep 			= 1; % beep during calibration
 %Initialise the eyeLink object with X, Y, FixInitTime, FixTime, Radius, StrictFix
 eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.firstFixRadius, tS.strict);
+
+%==================================================================
+%----which states assigned as correct or break for online plot?----
+bR.correctStateName				= 'correct';
+bR.breakStateName				= 'breakfix';
 
 %==================================================================
 %-------------------randomise stimulus variables every trial?-----------
@@ -223,7 +228,7 @@ correctFcn = {
 
 %when we exit the correct state
 correctExitFcn = {
-	@()updateVariables(me,[],[],true); %randomise our stimuli, set strobe value too
+	@()updateVariables(me,[],[],true); %randomise our stimuli, run updateTask(t), and set strobe value too
 	@()update(me.stimuli); %update our stimuli ready for display
 	@()getStimulusPositions(me.stimuli); %make a struct the eL can use for drawing stim positions
 	@()trackerClearScreen(eL); 
@@ -232,6 +237,7 @@ correctExitFcn = {
 	@()drawTimedSpot(s, 0.5, [0 1 0 1], 0.2, true); %reset the timer on the green spot
 	@()updatePlot(bR, eL, sM); %update our behavioural plot
 	@()checkTaskEnded(me); %check if task is finished
+	@()drawnow;
 };
 
 %incorrect entry
@@ -254,13 +260,14 @@ incFcn = {};
 
 %incorrect / break exit
 incExitFcn = { 
-	@()updateVariables(me,[],[],false);
+	@()updateVariables(me,[],[],false); %randomise our stimuli, don't run updateTask(t), and set strobe value too
 	@()update(me.stimuli); %update our stimuli ready for display
-	@()updatePlot(bR, eL, sM); %update our behavioural plot;
 	@()trackerClearScreen(eL); 
 	@()trackerDrawFixation(eL); %draw fixation window on eyelink computer
 	@()trackerDrawStimuli(eL); %draw location of stimulus on eyelink
 	@()checkTaskEnded(me); %check if task is finished
+	@()updatePlot(bR, eL, sM); %update our behavioural plot;
+	@()drawnow;
 };
 
 %break entry
