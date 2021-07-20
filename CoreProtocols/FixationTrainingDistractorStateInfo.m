@@ -34,7 +34,7 @@ tS.name						= 'fixation+distractor'; %==name of this protocol
 tS.fixX						= 0; % X position in degrees
 tS.fixY						= 0; % X position in degrees
 tS.firstFixInit				= 2; % time to search and enter fixation window
-tS.firstFixTime				= 2; % time to maintain fixation within windo
+tS.firstFixTime				= 7; % time to maintain fixation within windo
 tS.firstFixRadius			= 2; % radius in degrees
 tS.strict					= true; %do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionZone			= []; %do we add an exclusion zone where subject cannot saccade to...
@@ -115,7 +115,7 @@ showSet(me.stimuli);
 me.stimuli.fixationChoice			= 3;
 
 %===================================================================
-%----------------------State Machine States-------------------------
+%-----------------State Machine State Functions---------------------
 % each cell {array} holds a set of anonymous function handles which are executed by the
 % state machine to control the experiment. The state machine can run sets
 % at entry, during, to trigger a transition, and at exit. Remember these
@@ -128,7 +128,6 @@ me.stimuli.fixationChoice			= 3;
 %--------------------enter pause state
 pauseEntryFcn = {
 	@()drawBackground(s); %blank the subject display
-	@()flip(s); % flip the PTB screen
 	@()drawTextNow(s,'Paused, press [p] to resume...');
 	@()disp('Paused, press [p] to resume...');
 	@()trackerClearScreen(eL); % blank the eyelink screen
@@ -228,6 +227,7 @@ correctExitFcn = {
 	@()updateFixationTarget(me, true); % make sure the fixation follows me.stimuli.fixationChoice
 	@()updatePlot(bR, eL, sM); % update the behavioural report plot
 	@()drawnow; % ensure we update the figure
+	@()checkTaskEnded(me); ... %check if task is finished
 };
 
 %----------------------break entry
@@ -266,6 +266,7 @@ breakExitFcn = {
 	@()updateFixationTarget(me, true); % make sure the fixation follows me.stimuli.fixationChoice
 	@()updatePlot(bR, eL, sM);
 	@()drawnow;
+	@()checkTaskEnded(me); %check if task is finished
 };
 
 %--------------------calibration function
@@ -311,20 +312,32 @@ gridFcn = {
 
 % N x 2 cell array of regexpi strings, list to skip the current -> next state's exit functions; for example
 % skipExitStates = {'fixate','incorrect|breakfix'}; means that if the currentstate is
-% 'fixate' and the next state is either incorrect OR breakfix, then skip the FIXATE exit
-% state. Add multiple rows for skipping multiple state's exit states.
+% 'fixate' and the next state is either incorrect OR breakfix, then skip running the fixate exit
+% state functions. Add multiple rows for skipping multiple exit states.
+% Sometimes the exit functions prepare for some new state, and those
+% functions are not relevant if another state comes after. In the example,
+% the idea is fixate should go to stimulus, so run preparatory functions in
+% exitFcn, but if the subject didn't properly fixate, then when going to
+% incorrect we don't need to prepare the stimulus.
 sM.skipExitStates = {'fixate','incorrect|breakfix'};
 
 %==================================================================
 %----------------------State Machine Table-------------------------
 % this table defines the states and relationships and function sets
+% name = state name
+% next = the next state to switch to
+% time = the time in seconds to run this state
+% entryFcn = {array} of functions to run when entering the state
+% withinFcn = {array} of functions to run during state
+% transitionFcn = function to test a condition (i.e. fixation) during the state to switch to another state.
+% exitFcn = {array} of functions to run when leaving a state.
 %==================================================================
 disp('================>> Building state info file <<================')
 stateInfoTmp = {
 'name'		'next'		'time' 'entryFcn'		'withinFcn'		'transitionFcn'		'exitFcn';
 'pause'		'blank'		inf		pauseEntryFcn	[]				[]					pauseExitFcn;
 'blank'		'stimulus'	0.5		psEntryFcn		prestimulusFcn	[]					psExitFcn;
-'stimulus'	'incorrect'	5		stimEntryFcn	stimFcn			maintainFixFcn		stimExitFcn;
+'stimulus'	'incorrect'	10		stimEntryFcn	stimFcn			maintainFixFcn		stimExitFcn;
 'incorrect'	'blank'		2		incEntryFcn		breakFcn		[]					breakExitFcn;
 'breakfix'	'blank'		2		breakEntryFcn	breakFcn		[]					breakExitFcn;
 'correct'	'blank'		0.5		correctEntryFcn	correctFcn		[]					correctExitFcn;

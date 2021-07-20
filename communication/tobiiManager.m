@@ -104,6 +104,8 @@ classdef tobiiManager < optickaCore
 		closeSecondScreen logical		= false
 		%> size to draw eye position on screen
 		eyeSize double					= 6
+		% not used, compatibility with eyelinkManager
+		recordData
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Dependent = true)

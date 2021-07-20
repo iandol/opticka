@@ -93,7 +93,7 @@ classdef stateMachine < optickaCore
 		nextTimeOut
 		%> Index with name and index number for each state
 		stateListIndex
-		%> previous state information
+		%> run state information
 		log = struct([])
 	end
 	
@@ -427,7 +427,6 @@ classdef stateMachine < optickaCore
 			me.stateList = struct([]);
 			me.stateListIndex = containers.Map('uniformValues', false);
 			me.isRunning = false;
-			me.log = struct([]); %empty struct
 			if me.timeDelta == 0; me.realTime = true; end %stops a divide by zero infinite loop
 			me.isFinishing = false;
 			me.totalTicks = [];
@@ -620,7 +619,7 @@ classdef stateMachine < optickaCore
 			me.log(end).nextTimeOut = me.nextTimeOut;
 			me.log(end).nextTickOut = me.nextTickOut;
 			me.log(end).stateTimeToNow = me.log(end).tnow - me.log(end).entryTime;
-			me.log(end).totalTime = me.log(end).startTime - me.log(end).entryTime;
+			me.log(end).totalTime = me.log(end).entryTime - me.startTime;
 			me.log(end).timeError = me.log(end).tnow - me.log(end).nextTimeOut;
 			me.log(end).tickError = me.log(end).tick - me.log(end).nextTickOut;
 			me.log(end).fevalTime = me.fevalTime;
@@ -665,28 +664,29 @@ classdef stateMachine < optickaCore
 				for i = 1:length(log)
 					names{i} = log(i).name;
 				end
-				figure;
-				plot([log.entryTime]-[log.startTime],'ko','MarkerSize',12)
+				f = figure('Position',[0 0 1500 1000],'Name','State Machine Time Logs');
+				tiledlayout(f,'flow','TileSpacing','compact');
+				nexttile;
+				plot([log.entryTime]-[log.startTime],'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
 				hold on
-				plot([log.tnow]-[log.startTime],'ro','MarkerSize',12)
-				legend('State Enter time ','State End time');
+				plot([log.tnow]-[log.startTime],'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
+				legend('Enter time','Exit time');
 				%axis([-inf inf 0.97 1.02]);
 				title('State Enter/Exit Times from Start');
 				ylabel('Time (seconds)');
 				set(gca,'XTick',1:length(log));
 				set(gca,'XTickLabel',names);
 				try set(gca,'XTickLabelRotation',45); end
-				box on;
-				grid on;
+				box on; grid on; axis tight;
 				if isfield(log(1).fevalTime,'enter')
 					for i = 1:length(log)
 						int(i) = log(i).fevalTime.enter;
 						outt(i) = log(i).fevalTime.exit;
 					end
-					figure;
-					h = plot(int,'ko','MarkerSize',12);
+					nexttile;
+					plot(int,'ko','MarkerSize',12, 'MarkerFaceColor', [1 1 1]);
 					hold on
-					plot(outt,'ro','MarkerSize',12)
+					plot(outt,'ro','MarkerSize',12, 'MarkerFaceColor', [1 1 1])
 					set(gca,'YScale','log');
 					set(gca,'XTick',1:length(log));
 					set(gca,'XTickLabel',names);
@@ -694,8 +694,7 @@ classdef stateMachine < optickaCore
 					legend('enter','exit')
 					title('Time the enter and exit state function evals ran')
 					ylabel('Time (milliseconds)')
-					box on;
-					grid on;
+					box on; grid on; axis tight;
 				end
 			end
 		end
