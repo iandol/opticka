@@ -75,7 +75,7 @@ classdef tobiiManager < optickaCore
 		isDummy logical					= false
 		%> do we use manual calibration mode?
 		manualCalibration logical		= false
-		%> custom calibration positions, e.g. [ .1 .5; .5 .5; .8 .5]
+		%> custom calibration positions, e.g. [ .2 .5; .5 .5; .8 .5]
 		calPositions					= []
 		%> custom validation positions
 		valPositions					= []

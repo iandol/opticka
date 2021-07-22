@@ -32,7 +32,7 @@ classdef logGaborStimulus < baseStimulus
 		%> smooth the alpha edge of the mask by this number of pixels
 		maskSmoothing		= 55
 		%> type
-		type char			= 'logGabor'
+		type char			= 'image'
 		modulateColour		= []
 		%> update() method also regenerates the texture, this can be slow but 
 		%> normally update() is only called after a trial has finished
@@ -53,7 +53,7 @@ classdef logGaborStimulus < baseStimulus
 	end
 	
 	properties (SetAccess = private, GetAccess = public, Hidden = true)
-		typeList = {'image'}
+		typeList = {'image','logGabor'}
 		fileNameList = 'filerequestor';
 	end
 	

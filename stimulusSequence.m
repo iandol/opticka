@@ -280,6 +280,13 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				if me.verbose; me.salutation(sprintf('randomiseStimuli took %g ms\n',toc(rSTime)*1000)); end
 			else
 				me.outIndex = 1; %there is only one stimulus, no variables
+				me.outValues = [];
+				me.outVars = {};
+				me.outMap = [];
+				me.varLabels = {};
+				me.varList = {};
+				me.taskInitialised = false;
+				me.taskFinished = false;
 			end
 		end
 		

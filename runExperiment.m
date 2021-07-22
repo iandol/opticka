@@ -586,12 +586,11 @@ classdef runExperiment < optickaCore
 				me.isRunTask			= true;
 				
 				%-----open the eyelink interface
-				if me.useEyeLink
-					me.eyeTracker		= eyelinkManager();
-				else
+				if me.useTobii
 					me.eyeTracker		= tobiiManager();
+				else
+					me.eyeTracker		= eyelinkManager();
 				end
-				
 				eL						= me.eyeTracker;
 				eL.verbose				= me.verbose;
 				eL.saveFile				= [me.paths.savedData filesep me.subjectName '-' me.savePrefix '.edf'];
@@ -600,6 +599,7 @@ classdef runExperiment < optickaCore
 				else
 					eL.isDummy			= me.dummyMode;
 				end
+				
 				
 				if isfield(tS,'rewardTime')
 					bR.rewardTime		= tS.rewardTime;
@@ -612,13 +612,29 @@ classdef runExperiment < optickaCore
 				t.fps					= s.screenVals.fps;
 				
 				%-----set up the eyelink interface
-				if me.useEyeLink
+				if me.useEyeLink && ~me.dummyMode
 					fprintf('\n===>>> Handing over to eyelink for calibration & validation...\n')
 					initialise(eL, s);
 					setup(eL);
 					if ~eL.isConnected && ~eL.isDummy
 						warning('Eyelink is not connected and not in dummy mode, potential connection issue...')
 					end
+				elseif me.useTobii
+					if length(Screen('Screens')) > 1 && s.screen - 1 >= 0
+						ss					= screenManager;
+						ss.screen			= 0;
+						ss.windowed			= [0 0 1000 1000];
+						ss.backgroundColour	= s.backgroundColour;
+						ss.bitDepth			= '8bit';
+						ss.blend			= true;
+						ss.pixelsPerCm		= 30;
+					end
+					if exist('ss','var')
+						initialise(eL,s,ss);
+					else
+						initialise(eL,s);
+					end
+					cal = trackerSetup(eL, ana.cal); ShowCursor();
 				end
 				
 				%---------initialise and set up I/O

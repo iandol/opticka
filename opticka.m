@@ -25,7 +25,7 @@ classdef opticka < optickaCore
 	
 	properties (SetAccess = protected, GetAccess = public)
 		%> version number
-		optickaVersion char = '1.24'
+		optickaVersion char = '1.30'
 		%> history of display objects
 		history
 		%> is this a remote instance?
@@ -295,10 +295,7 @@ classdef opticka < optickaCore
 				end
 
 				me.h = opticka_uiapp(me); %our GUI file
-				set(me.h.OKOptickaVersion,'Text','Initialising GUI, please wait...');
-				set(me.h.OKRoot,'Name',['Opticka Stimulus Generator V' me.optickaVersion]);
-				drawnow;
-					
+				
 				me.loadPrefs();
 				me.getScreenVals();
 				me.getTaskVals();
@@ -320,9 +317,6 @@ classdef opticka < optickaCore
 				me.h.OKTrainingResearcherName.Value = me.r.researcherName;
 				me.h.OKTrainingName.Value = me.r.subjectName;
 				getStateInfo(me);
-
-				set(me.h.OKOptickaVersion,'Text',['Opticka Stimulus Generator V' me.optickaVersion]);
-				
 			catch ME
 				try close(me.h.OKRoot); me.h = []; end %#ok<*TRYNC>
 				warning('Problem initialising Opticka UI, please check errors on the commandline!');
@@ -356,7 +350,7 @@ classdef opticka < optickaCore
 			
 			me.r.screenSettings.optickahandle = me.h.OKRoot;
 			
-			me.r.screen.screen = me.gd(me.h.OKSelectScreen)-1;
+			me.r.screen.screen = me.gd(me.h.OKSelectScreen);
 			
 			me.r.screen.distance = me.gd(me.h.OKMonitorDistance);
 			me.r.screen.pixelsPerCm = me.gd(me.h.OKpixelsPerCm);
@@ -387,10 +381,9 @@ classdef opticka < optickaCore
 			me.r.benchmark = logical(me.gv(me.h.OKbenchmark));
 			me.r.screen.hideFlash = logical(me.gv(me.h.OKHideFlash));
 			me.r.screen.useRetina = logical(me.gv(me.h.OKUseRetina));
-			%me.r.drawFixation = logical(me.gv(me.h.OKUseFixation));
 			me.r.dummyMode = logical(me.gv(me.h.OKUseDummy));
 			if strcmpi(me.r.screen.bitDepth,'8bit')
-				set(me.h.OKAntiAliasing,'String','0');
+				me.h.OKAntiAliasing.Value = '0';
 			end
 			me.r.screen.antiAlias = me.gd(me.h.OKAntiAliasing);
 			me.r.screen.photoDiode = logical(me.gv(me.h.OKUsePhotoDiode));
@@ -403,20 +396,17 @@ classdef opticka < optickaCore
 			me.r.screen.backgroundColour = me.gn(me.h.OKbackgroundColour);
 			%deprecated me.r.screen.nativeBeamPosition = logical(me.gv(me.h.OKNativeBeamPosition));
 			
-			if strcmpi(get(me.h.OKuseLabJackStrobe,'Checked'),'on')
+			if me.h.OKuseLabJackStrobe.Checked == true
 				me.r.useLabJackStrobe = true;
+				me.r.useLabJackTStrobe = false;
 			else
 				me.r.useLabJackStrobe = false;
 			end
-			if strcmpi(get(me.h.OKuseLabJackTStrobe,'Checked'),'on')
+			if me.h.OKuseLabJackTStrobe.Checked == true
 				me.r.useLabJackTStrobe = true;
+				me.r.useLabJackStrobe = false;
 			else
 				me.r.useLabJackTStrobe = false;
-			end
-			if strcmpi(get(me.h.OKuseLabJackReward,'Checked'),'on')
-				me.r.useLabJackReward = true;
-			else
-				me.r.useLabJackReward = false;
 			end
 			if strcmpi(get(me.h.OKuseDataPixx,'Checked'),'on')
 				me.r.useDataPixx = true;
@@ -425,7 +415,7 @@ classdef opticka < optickaCore
 			end
 			if strcmpi(get(me.h.OKuseDisplayPP,'Checked'),'on')
 				me.r.useDisplayPP = true;
-				me.r.dPPMode = get(me.h.OKdPPMode,'String');
+				%me.r.dPPMode = get(me.h.OKdPPMode,'String');
 			else
 				me.r.useDisplayPP = false;
 			end
@@ -435,15 +425,22 @@ classdef opticka < optickaCore
 			else
 				me.r.useArduino = false;
 			end
-			if strcmpi(get(me.h.OKuseEyelink,'Checked'),'on')
+			if strcmpi(get(me.h.OKuseLabJackReward,'Checked'),'on')
+				me.r.useLabJackReward = true;
+			else
+				me.r.useLabJackReward = false;
+			end
+			if me.h.OKuseEyelink.Checked == true
 				me.r.useEyeLink = true;
 				me.r.useTobii = false;
+				me.h.OKuseTobii.Checked = false;
 			else
 				me.r.useEyeLink = false;
 			end
-			if strcmpi(get(me.h.OKuseTobii,'Checked'),'on')
-				me.r.useEyeLink = false;
+			if me.h.OKuseTobii.Checked == true
 				me.r.useTobii = true;
+				me.r.useEyeLink = false;
+				e.h.OKuseEyelink.Checked = false;
 			else
 				me.r.useTobii = false;
 			end
@@ -538,9 +535,7 @@ classdef opticka < optickaCore
 					delete(ch(i))
 				end
 			end
-			set(me.h.OKPanelStimulusText,'String','Stimulus Properties here...')
-			set(me.h.OKStimList,'Value',1);
-			set(me.h.OKStimList,'String','');			
+			me.h.OKStimList.Items = {}; me.h.OKStimList.Value = {};
 		end
 		
 		% ===================================================================
@@ -550,12 +545,10 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function clearVariableList(me)
 			if ~isempty(me.r)
-				if ~isempty(me.r.task)
+				if ~isempty(me.r.task) && me.r.task.nVars > 0
 					me.r.task = [];
 				end
 			end
-			set(me.h.OKVarList,'Value',1);
-			set(me.h.OKVarList,'String','');
 		end
 		
 		% ===================================================================
@@ -565,8 +558,8 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function deleteStimulus(me)
 			if ~isempty(me.r.stimuli.n) && me.r.stimuli.n > 0
-				v=me.gv(me.h.OKStimList);
-				if isfield(me.store,'visibleStimulus');
+				v=find(strcmpi(me.h.OKStimList.Value,me.h.OKStimList.Items)==true);
+				if isfield(me.store,'visibleStimulus')
 					if strcmp(me.store.visibleStimulus.uuid,me.r.stimuli{v}.uuid)
 						closePanel(me.r.stimuli{v})
 					end
@@ -574,8 +567,7 @@ classdef opticka < optickaCore
 				me.r.stimuli(v) = [];
 				me.refreshStimulusList;
 			else
-				set(me.h.OKStimList,'Value',1);
-				set(me.h.OKStimList,'String','');
+				me.h.OKStimList.Items = {};
 			end
 		end
 		
@@ -587,13 +579,13 @@ classdef opticka < optickaCore
 		function addStimulus(me)
 			me.refreshStimulusList;
 			nidx = me.r.stimuli.n;
-			set(me.h.OKStimList,'Value',nidx);
+			me.h.OKStimList.Value = me.h.OKStimList.Items{end};
 			if isfield(me.store,'evnt') %delete our previous event
 				delete(me.store.evnt);
 				me.store = rmfield(me.store,'evnt');
 			end
 			me.store.evnt = addlistener(me.r.stimuli{nidx},'readPanelUpdate',@me.readPanel);
-			if isfield(me.store,'visibleStimulus');
+			if isfield(me.store,'visibleStimulus')
 				me.store.visibleStimulus.closePanel();
 			end
 			makePanel(me.r.stimuli{nidx},me.h.OKPanelStimulus);
@@ -622,9 +614,9 @@ classdef opticka < optickaCore
 					v = 1;
 					me.store.visibleStimulus = me.r.stimuli{1};
 				else
-					v = get(me.h.OKStimList,'Value');
+					v = find(strcmpi(me.h.OKStimList.Items, me.h.OKStimList.Value)==true);
 					if strcmpi(me.r.stimuli{v}.uuid,me.store.visibleStimulus.uuid)
-						skip = false;
+						skip = true;
 					end
 				end
 				if v <= me.r.stimuli.n && skip == false
@@ -701,9 +693,10 @@ classdef opticka < optickaCore
 			if isobject(me.r.task)
 				nV = me.r.task.nVar;
 				val = me.gv(me.h.OKVarList);
-				if isempty(val);val=1;end %sometimes guide disables list, need workaround
-				if val <= length(me.r.task.nVar);
-					nV(val)=[];
+				pos = find(strcmpi(me.h.OKVarList.Items,val)==true); pos = pos(1);
+				if isempty(pos) || pos < 1; pos=1; end %sometimes guide disables list, need workaround
+				if pos <= me.r.task.nVars
+					nV(pos)=[];
 					me.r.task.nVar = [];
 					me.r.task.nVar = nV;
 					if me.r.task.nVars > 0
@@ -836,13 +829,13 @@ classdef opticka < optickaCore
 							case 'uidropdown'
 								str = myhandle.Items;
 								if ischar(prf) && contains(str,prf)
-									myhandle.Item = prf;
+									myhandle.Value = prf;
 								end
 						end
 					end
 				end	
 			end
-			%drawnow
+			fprintf('\n===>>> Opticka loaded its local preferences...\n');
 		end
 		
 		% ===================================================================
@@ -852,22 +845,23 @@ classdef opticka < optickaCore
 		function savePrefs(me)
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
+				if ~isfield(me.h,prfname); continue; end
 				myhandle = me.h.(prfname);
-				uiType = get(myhandle,'Style');
+				uiType = myhandle.Type;
 				switch uiType
-					case 'edit'
-						prf = get(myhandle, 'String');
+					case 'uieditfield'
+						prf = myhandle.Value;
 						setpref('opticka', prfname, prf);
-					case 'checkbox'
-						prf = get(myhandle, 'Value');
+					case 'uicheckbox'
+						prf = myhandle.Value;
 						if ~islogical(prf); prf=logical(prf);end
 						setpref('opticka', prfname, prf);
-					case 'popupmenu'
-						prf = get(myhandle, 'Value');
+					case 'uidropdown'
+						prf = myhandle.Value;
 						setpref('opticka', prfname, prf);
 				end
 			end
-			fprintf('>>> Opticka saved its preferences...\n');
+			fprintf('\n===>>> Opticka saved its local preferences...\n');
 		end
 		
 	end
@@ -1223,7 +1217,12 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function refreshStimulusList(me)
-			pos = get(me.h.OKStimList, 'Value');
+			if me.r.stimuli.n == 0
+				me.h.OKStimList.Items = {};
+				return
+			end
+			v = me.h.OKStimList.Value;
+			pos = find(contains(me.h.OKStimList.Items,v)==true);
 			str = cell(me.r.stimuli.n,1);
 			for i=1:me.r.stimuli.n
 				s = me.r.stimuli{i};
@@ -1234,7 +1233,7 @@ classdef opticka < optickaCore
 				end
 				switch s.family
 					case 'grating'
-						tstr = [num2str(i) '.' name ': '];
+						tstr = [num2str(i) '.' name ':'];
 						tstr = [tstr ' x=' num2str(s.xPosition)];
 						tstr = [tstr ' y=' num2str(s.yPosition)];
 						tstr = [tstr ' c=' num2str(s.contrast)];
@@ -1246,7 +1245,7 @@ classdef opticka < optickaCore
 						tstr = [tstr ' sg=' num2str(s.sigma)];
 						str{i} = tstr;
 					case 'gabor'
-						tstr = [num2str(i) '.' name ': '];
+						tstr = [num2str(i) '.' name ':'];
 						tstr = [tstr ' x=' num2str(s.xPosition)];
 						tstr = [tstr ' y=' num2str(s.yPosition)];
 						tstr = [tstr ' c=' num2str(s.contrast)];
@@ -1302,6 +1301,12 @@ classdef opticka < optickaCore
 						sp=s.speed;
 						p=s.fileName;
 						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' sp=' num2str(sp) ' [' p ']'];
+					case 'fixationcross'
+						x=s.xPosition;
+						y=s.yPosition;
+						sz=s.size;
+						c=s.colour;
+						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' sz=' num2str(sz) ' col=' num2str(c, '%.2f ')];
 					otherwise
 						x=s.xPosition;
 						y=s.yPosition;
@@ -1309,11 +1314,10 @@ classdef opticka < optickaCore
 						str{i} = [num2str(i) '.' name ': x=' num2str(x) ' y=' num2str(y) ' ang=' num2str(a)];
 				end
 			end
-			if isempty(pos) || pos > length(str)
-				pos = 1;
+			me.h.OKStimList.Items = str;
+			if ~isempty(pos) && pos <= length(str)
+				me.h.OKStimList.Value = str{pos};
 			end
-			set(me.h.OKStimList,'String', str);
-			set(me.h.OKStimList, 'Value', pos);
 		end
 		
 		% ===================================================================
@@ -1322,7 +1326,17 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function refreshVariableList(me)
-			pos = get(me.h.OKVarList, 'Value');
+			if me.r.task.nVars == 0
+				me.h.OKVarList.Items = {};
+				me.h.OKVarList.Value = {};
+				return; 
+			end
+			if ~isempty(me.h.OKVarList.Items) && ~isempty(me.h.OKVarList.Value)
+				v = me.h.OKVarList.Value;
+				pos = find(contains(me.h.OKVarList.Items,v)==true); pos = pos(1);
+			else
+				pos = [];
+			end
 			str = cell(me.r.task.nVars,1);
 			V = me.r.task.nVar;
 			for i=1:me.r.task.nVars
@@ -1337,14 +1351,14 @@ classdef opticka < optickaCore
 				end
 				str{i}=regexprep(str{i},'\s+',' ');
 			end
-			set(me.h.OKVarList,'String',str);
+			me.h.OKVarList.Items = str;
 			if pos > me.r.task.nVars
 				pos = me.r.task.nVars;
 			end
 			if isempty(pos) || pos <= 0
 				pos = 1;
 			end
-			set(me.h.OKVarList,'Value',pos);
+			me.h.OKVarList.Value = str{pos};
 		end
 		
 		% ===================================================================

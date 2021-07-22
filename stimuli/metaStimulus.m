@@ -457,30 +457,31 @@ classdef metaStimulus < optickaCore
 				end
 
 				if benchmark
-					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.', 5,5,[0 0 0]);
+					Screen('DrawText', s.win, 'BENCHMARK: screen won''t update properly, see FPS in command window at end.', 5,5,[0.25 0.15 0]);
 				else
-					Screen('DrawText', s.win, 'Stim will be static for 1 seconds, then animate...', 5,5,[0 0 0]);
+					Screen('DrawText', s.win, ['Preview of ALL stimuli will be static for 1 seconds, then animate for ' num2str(runtime) ' seconds...'], 5,5,[0.25 0.15 0]);
 				end
 
+				draw(me);
 				flip(s);
 				WaitSecs('YieldSecs',1);
 				nFrames = 0;
-			
-				vbl(1) = flip(s); startT = vbl(1)+sv.ifi;
 				for i = 1:(s.screenVals.fps*runtime) 
 					nFrames = nFrames + 1;
 					draw(me); %draw stimuli
-					if s.visualDebug&&~benchmark; drawGrid(s); end
+					if ~benchmark; drawGrid(s); end
 					finishDrawing(s); %tell PTB/GPU to draw
 					animate(me); %animate stimuli, ready for next draw();
 					if benchmark
 						Screen('Flip',s.win,0,2,2);
+						if i == 1; vbl = GetSecs; end
 					else
-						Screen('Flip',s.win); %flip the buffer
+						vbl = Screen('Flip',s.win); %flip the buffer
 					end
+					if i == 1; startT = vbl; end
 				end
-				endT = flip(s)-sv.ifi;
-				WaitSecs(0.25);
+				vbl = flip(s); endT = vbl;
+				WaitSecs(0.5);
 				Priority(0); ShowCursor; ListenChar(0);
 				reset(me); %reset our stimulus ready for use again
 				close(s); %close screen
@@ -488,7 +489,8 @@ classdef metaStimulus < optickaCore
 				s.windowed = oldwindowed;
 				s.bitDepth = oldbitdepth;
 				fps = nFrames / (endT-startT);
-				fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.2f secs) = <strong>%g</strong> fps <<<=======\n\n',nFrames, endT-startT, fps);
+				fprintf('\n\n======>>> <strong>SPEED</strong> (%i frames in %.3f secs) = <strong>%.3f</strong> fps <<<=======\n\n',...
+					nFrames, endT-startT, fps);
 				clear s fps benchmark runtime b bb i; %clear up a bit
 				warning on
 			catch ME

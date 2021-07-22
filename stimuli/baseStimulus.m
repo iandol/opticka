@@ -471,22 +471,21 @@ classdef baseStimulus < optickaCore & dynamicprops
 				handles(1).parent = parent;
 			end
 			
-			bgcolor = [0.91 0.91 0.91];
-			bgcoloredit = [1 1 0.9];
+			bgcolor = [0.95 0.95 0.95];
+			bgcoloredit = [1 1 1];
 			fsmall = 10;
 			fmed = 11;
 			if ismac
-				SansFont = 'avenir next';
-				MonoFont = 'menlo';
+				SansFont = 'Avenir next';
+				MonoFont = 'Menlo';
 			elseif ispc
-				SansFont = 'calibri';
-				MonoFont = 'consolas';
+				SansFont = 'Calibri';
+				MonoFont = 'Consolas';
 			else %linux
 				SansFont = 'Liberation Sans'; %get(0,'defaultAxesFontName');
 				MonoFont = 'Fira Code';
 			end
 			
-
 			handles.root = uipanel('Parent',parent,...
 				'Units','normalized',...
 				'Position',[0 0 1 1],...
@@ -494,8 +493,8 @@ classdef baseStimulus < optickaCore & dynamicprops
 				'TitlePosition','centertop',...
 				'FontName',SansFont,...
 				'FontSize',fmed,...
-				'FontWeight','bold',...
-				'BackgroundColor',[1 1 1]);
+				'FontAngle','italic',...
+				'BackgroundColor',[0.94 0.94 0.94]);
 			handles.grid = uigridlayout(handles.root,[1 3]);
 			handles.grid1 = uigridlayout(handles.grid,'Padding',[5 5 5 5],'BackgroundColor',bgcolor);
 			handles.grid2 = uigridlayout(handles.grid,'Padding',[5 5 5 5],'BackgroundColor',bgcolor);
@@ -538,15 +537,24 @@ classdef baseStimulus < optickaCore & dynamicprops
 									end
 								else
 									txt=me.([pr{cur} 'List']);
-									handles.([pr{cur} '_list']) = uidropdown(...
+									if contains(val,txt)
+										handles.([pr{cur} '_list']) = uidropdown(...
 										'Parent',eval(idx{i}),...
 										'Tag',[pr{cur} '_list'],...
 										'Items',txt,...
 										'ValueChangedFcn',@me.readPanel,...
 										'Value',val,...
 										'BackgroundColor',bgcolor);
-									if ~isempty(regexpi(pr{cur},disableList,'once')) 
-										handles.([pr{cur} '_list']).Enable = false; 
+										if ~isempty(regexpi(pr{cur},disableList,'once')) 
+											handles.([pr{cur} '_list']).Enable = false; 
+										end
+									else
+										handles.([pr{cur} '_list']) = uidropdown(...
+										'Parent',eval(idx{i}),...
+										'Tag',[pr{cur} '_list'],...
+										'Items',txt,...
+										'ValueChangedFcn',@me.readPanel,...
+										'BackgroundColor',bgcolor);
 									end
 								end
 							else
@@ -587,7 +595,6 @@ classdef baseStimulus < optickaCore & dynamicprops
 								'Text','Select file...',...
 								'FontName',SansFont,...
 								'Tag',[pr{cur} '_button'],...
-								'ValueChangedFcn',@me.readPanel,...
 								'FontSize', fsmall);
 							else
 								uilabel(...
@@ -659,7 +666,7 @@ classdef baseStimulus < optickaCore & dynamicprops
 			if isempty(me.handles) || ~(isfield(me.handles, 'root') && isa(me.handles.root,'matlab.ui.container.Panel'))
 				return
 			end
-			if isempty(varargin{1}); return; end
+			if isempty(varargin) || isempty(varargin{1}); return; end
 			source = varargin{1};
 			tag = source.Tag;
 			if isempty(tag); return; end
