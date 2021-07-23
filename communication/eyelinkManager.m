@@ -53,7 +53,7 @@ classdef eyelinkManager < optickaCore
 		%> start eyetracker in dummy mode?
 		isDummy logical				= false
 		%> do we record and retrieve eyetracker EDF file?
-		recordData logical			= false;
+		recordData logical			= true
 		%> do we ignore blinks, if true then we do not update X and Y position from
 		%> previous eye location, meaning the various methods will maintain position,
 		%> e.g. if you are fixated and blink, the within-fixation X and Y position are

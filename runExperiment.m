@@ -611,16 +611,6 @@ classdef runExperiment < optickaCore
 				setup(me.stimuli); %run setup() for each stimulus
 				t.fps					= s.screenVals.fps;
 				
-				%-----set up the eyelink interface
-				if me.useEyeLink
-					fprintf('\n===>>> Handing over to eyelink for calibration & validation...\n')
-					initialise(eL, s);
-					setup(eL);
-					if ~eL.isConnected && ~eL.isDummy
-						warning('Eyelink is not connected and not in dummy mode, potential connection issue...')
-					end
-				end
-				
 				%---------initialise and set up I/O
 				io						= configureIO(me);
 				
@@ -635,6 +625,16 @@ classdef runExperiment < optickaCore
 					run(me.paths.stateInfoFile)
 					me.stateInfo		= stateInfoTmp;
 					addStates(sM, me.stateInfo);
+				end
+				
+				%-----set up the eyelink interface
+				if me.useEyeLink
+					fprintf('\n===>>> Handing over to eyelink for calibration & validation...\n')
+					initialise(eL, s);
+					setup(eL);
+					if ~eL.isConnected && ~eL.isDummy
+						warning('Eyelink is not connected and not in dummy mode, potential connection issue...')
+					end
 				end
 
 				%--------get pre-run comments for this data collection
