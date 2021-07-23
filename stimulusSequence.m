@@ -1,16 +1,18 @@
 % ========================================================================
-%> @brief stimulusSequence a method of constanst variable manager
+%> @brief stimulusSequence a method of constants variable manager
 %>
-%> This class takes a series of visual variables (contrast, angle etc) with
+%> This class takes a series of variables (contrast, angle etc) with
 %> a set of values and randomly interleves them into a pseudorandom variable
-%> list each of which has a unique index number
+%> list each of which has a unique index number. 
 % ========================================================================
 classdef stimulusSequence < optickaCore & dynamicprops
 	properties
 		%> whether to randomise (true) or run sequentially (false)
 		randomise logical = true
 		%> structure holding each independant variable
-		nVar
+		nVar struct
+		%> structure holding details of block level variable
+		blockVar struct
 		%> number of repeat blocks to present
 		nBlocks double = 1
 		%> time stimulus trial is shown
@@ -42,6 +44,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		outIndex
 		%> mapping the stimulus to the number as a X Y and Z etc position for display
 		outMap
+		%> block level randomised variable
+		outBlock 
 		%> variable labels
 		varLabels
 		%> variable list
@@ -100,6 +104,8 @@ classdef stimulusSequence < optickaCore & dynamicprops
 			'outIndex', 'outMap', 'minBlocks','states','nState','name'}
 		%> nVar template and default values
 		varTemplate struct = struct('name','','stimulus',[],'values',[],'offsetstimulus',[],'offsetvalue',[])
+		%> nVar template and default values
+		blockTemplate struct = struct('values',{'normal'})
 		%> Set up the task structures needed
 		tProp cell = {'totalRuns',1,'thisBlock',1,'thisRun',1,'isBlank',false,...
 			'isTimeNow',1,'ibTimeNow',1,'response',[],'responseInfo',{},'tick',0,'blankTick',0,...
@@ -120,10 +126,13 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> @return instance of the class.
 		% ===================================================================
 		function me = stimulusSequence(varargin)
-			if nargin == 0; varargin.name = 'stimulusSequence'; end
-			me=me@optickaCore(varargin); %superclass constructor
-			if nargin > 0; me.parseArgs(varargin,me.allowedProperties); end
+			
+			args = optickaCore.addDefaults(varargin,struct('name','stimulusSequence'));
+			me=me@optickaCore(args); %superclass constructor
+			me.parseArgs(args,me.allowedProperties);
+			
 			me.nVar = me.varTemplate;
+			me.blockVar = me.blockTemplate;
 			me.initialiseGenerator();
 			me.isLoading = false;
 		end
@@ -191,6 +200,13 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				end
 				if me.minBlocks > 255
 					warning('WARNING: You are exceeding the number of stimulus numbers in an 8bit strbed word!')
+				end
+				
+				% ---- deal with block level variable randomisation
+				me.outBlock = cell(me.nBlocks,1);
+				divBlock = me.nBlocks / length(
+				for i = 1:me.nBlocks
+					me.outBlock{i} = me.blockVar.values{1};
 				end
 				
 				% initialize cell array that will hold balanced variables
@@ -283,6 +299,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				me.outValues = [];
 				me.outVars = {};
 				me.outMap = [];
+				me.outBlock = {};
 				me.varLabels = {};
 				me.varList = {};
 				me.taskInitialised = false;
@@ -470,9 +487,9 @@ classdef stimulusSequence < optickaCore & dynamicprops
 							me.nVar(ii).(fn{i}) = invalue(ii).(fn{i});
 						end
 					end
-					%  					if isempty(me.nVar(idx).(fnTemplate{1})) || me.nVar(idx).(fnTemplate{2}) == 0 || isempty(me.nVar(idx).(fnTemplate{3}))
-					%  						fprintf('---> Variable %g is not properly formed!!!\n',idx);
-					%  					end
+					% if isempty(me.nVar(idx).(fnTemplate{1})) || me.nVar(idx).(fnTemplate{2}) == 0 || isempty(me.nVar(idx).(fnTemplate{3}))
+					%  	fprintf('---> Variable %g is not properly formed!!!\n',idx);
+					% end
 				end
 			end
 		end

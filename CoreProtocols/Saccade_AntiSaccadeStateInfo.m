@@ -43,21 +43,22 @@ rM.verbose					= false; %print out reward commands for debugging
 tS.fixX						= 0; % X position in degrees (screen center)
 tS.fixY						= 0; % X position in degrees (screen center)
 tS.firstFixInit				= 3; % time to search and enter fixation window
-tS.firstFixTime				= 0.5; % time to maintain fixation within windo
-tS.firstFixRadius			= 2; % radius in degrees
+tS.firstFixTime				= 0.75; % time to maintain fixation within windo
+tS.firstFixRadius			= 3; % radius in degrees
 tS.strict					= true; % do we forbid eye to enter-exit-reenter fixation window?
 tS.exclusionZone			= []; % do we add an exclusion zone where subject cannot saccade to...
 tS.stimulusFixTime			= 1.5; % time to fix on the stimulus
 me.lastXPosition			= tS.fixX;
 me.lastYPosition			= tS.fixY;
 tS.targetFixInit			= 1; % time to find the target
-tS.targetFixTime			= 0.6; % to to maintain fixation on target 
-tS.targetRadius				= 5; %radius to fix within.
+tS.targetFixTime			= 0.5; % to to maintain fixation on target 
+tS.targetRadius				= 4; %radius to fix within.
 
 
 %==================================================================
 %---------------------------Eyetracker setup-----------------------
 if me.useEyeLink
+	warndlg('Note this protocol is designed for use with Tobii eyetracker, beware')
 	eL.name 					= tS.name;
 	eL.sampleRate 				= 250; % sampling rate
 	eL.calibrationStyle 		= 'HV3'; % calibration style
@@ -180,6 +181,7 @@ fixEntryFcn = {
 	@()trackerClearScreen(eL); % blank the eyelink screen
 	@()trackerDrawFixation(eL); % draw the fixation window
 	@()needEyeSample(me,true); % make sure we start measuring eye position
+	@()edit(me.stimuli,2,'alphaOut',1); %dim fix spot
 	@()show(me.stimuli{2});
 	@()logRun(me,'INITFIX'); %fprintf current trial info to command window
 };
@@ -198,7 +200,7 @@ inFixFcn = {
 fixExitFcn = { 
 	@()updateFixationTarget(me, tS.useTask, tS.targetFixInit, tS.targetFixTime, tS.targetRadius, tS.strict); ... %use our stimuli values for next fix X and Y
 	@()show(me.stimuli{1});
-	@()edit(me.stimuli,2,'alphaOut',0); ... %dim fix spot
+	@()edit(me.stimuli,2,'alphaOut',0); %dim fix spot
 	@()trackerMessage(eL,'END_FIX');
 }; 
 

@@ -112,7 +112,7 @@ classdef opticka < optickaCore
 			rAddress = me.gs(me.h.OKOmniplexIP);
 			status = me.ping(rAddress);
 			if status > 0
-				set(me.h.OKOmniplexStatus,'String','Omniplex: machine ping ERROR!')
+				set(me.h.OKOmniplexStatus,'Value','Omniplex: machine ping ERROR!')
 					errordlg('Cannot ping Omniplex machine, please ensure it is connected!!!')
 				error('Cannot ping Omniplex, please ensure it is connected!!!')
 			end
@@ -141,11 +141,11 @@ classdef opticka < optickaCore
 					fprintf('\n{opticka said: %s}\n',in)
 					if regexpi(in,'(opened|ping)')
 						fprintf('\nWe can ping omniplex master on try: %d\n',loop)
-						set(me.h.OKOmniplexStatus,'String','Omniplex: connected via TCP')
+						set(me.h.OKOmniplexStatus,'Value','Omniplex: connected via TCP')
 						break
 					else
 						fprintf('\nOmniplex master not responding, try: %d\n',loop)
-						set(me.h.OKOmniplexStatus,'String','Omniplex: not responding')
+						set(me.h.OKOmniplexStatus,'Value','Omniplex: not responding')
 					end
 					loop=loop+1;
 					pause(0.2);
@@ -186,10 +186,10 @@ classdef opticka < optickaCore
 					in = me.oc.read(0);
 					fprintf('\n{omniplex said: %s}\n',in)
 					if regexpi(in,'(stimulusReceived)')
-						set(me.h.OKOmniplexStatus,'String','Omniplex: connected+stimulus received')
+						set(me.h.OKOmniplexStatus,'Value','Omniplex: connected+stimulus received')
 						break
 					elseif regexpi(in,'(stimulusFailed)')
-						set(me.h.OKOmniplexStatus,'String','Omniplex: connected, stimulus ERROR!')
+						set(me.h.OKOmniplexStatus,'Value','Omniplex: connected, stimulus ERROR!')
 					end
 					loop=loop+1;
 					pause(0.2);
@@ -408,14 +408,14 @@ classdef opticka < optickaCore
 			else
 				me.r.useLabJackTStrobe = false;
 			end
-			if strcmpi(get(me.h.OKuseDataPixx,'Checked'),'on')
+			if me.h.OKuseDataPixx.Checked == true
 				me.r.useDataPixx = true;
 			else
 				me.r.useDataPixx = false;
 			end
 			if strcmpi(get(me.h.OKuseDisplayPP,'Checked'),'on')
 				me.r.useDisplayPP = true;
-				%me.r.dPPMode = get(me.h.OKdPPMode,'String');
+				%me.r.dPPMode = get(me.h.OKdPPMode,'Value');
 			else
 				me.r.useDisplayPP = false;
 			end
@@ -558,7 +558,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function deleteStimulus(me)
 			if ~isempty(me.r.stimuli.n) && me.r.stimuli.n > 0
-				v=find(strcmpi(me.h.OKStimList.Value,me.h.OKStimList.Items)==true);
+				v=me.gp(me.h.OKStimList);
 				if isfield(me.store,'visibleStimulus')
 					if strcmp(me.store.visibleStimulus.uuid,me.r.stimuli{v}.uuid)
 						closePanel(me.r.stimuli{v})
@@ -597,7 +597,7 @@ classdef opticka < optickaCore
 		%> 
 		%> @param 
 		% ===================================================================
-		function readPanel(me,src,evnt)
+		function readPanel(me,src,~)
 			me.salutation('readPanel',['Triggered by: ' src.fullName],true);
 			me.refreshStimulusList;
 		end
@@ -614,7 +614,7 @@ classdef opticka < optickaCore
 					v = 1;
 					me.store.visibleStimulus = me.r.stimuli{1};
 				else
-					v = find(strcmpi(me.h.OKStimList.Items, me.h.OKStimList.Value)==true);
+					v = me.gp(me.h.OKStimList);
 					if strcmpi(me.r.stimuli{v}.uuid,me.store.visibleStimulus.uuid)
 						skip = true;
 					end
@@ -692,9 +692,8 @@ classdef opticka < optickaCore
 		function deleteVariable(me)
 			if isobject(me.r.task)
 				nV = me.r.task.nVar;
-				val = me.gv(me.h.OKVarList);
-				pos = find(strcmpi(me.h.OKVarList.Items,val)==true); pos = pos(1);
-				if isempty(pos) || pos < 1; pos=1; end %sometimes guide disables list, need workaround
+				pos = me.gp(me.h.OKVarList);
+				if isempty(pos) || pos < 1; return; end 
 				if pos <= me.r.task.nVars
 					nV(pos)=[];
 					me.r.task.nVar = [];
@@ -713,24 +712,23 @@ classdef opticka < optickaCore
 		%> @param 
 		% ===================================================================
 		function editVariable(me)
-
 			if isobject(me.r.task)
-				val = me.gv(me.h.OKVarList);
-				set(me.h.OKVariableName,'String', me.r.task.nVar(val).name);
-				v=me.r.task.nVar(val).values;
+				pos = me.gp(me.h.OKVarList);
+				me.h.OKVariableName.Value = me.r.task.nVar(pos).name;
+				v=me.r.task.nVar(pos).values;
 				if iscell(v)
 					v = me.cell2str(v);
 				else
-					v = num2str(me.r.task.nVar(val).values);
+					v = num2str(me.r.task.nVar(pos).values);
 				end
 				str = v;
 				str = regexprep(str,'\s+',' ');
-				set(me.h.OKVariableValues,'String', str);
-				str = num2str(me.r.task.nVar(val).stimulus);
+				set(me.h.OKVariableValues,'Value', str);
+				str = num2str(me.r.task.nVar(pos).stimulus);
 				str = regexprep(str,'\s+',' ');
-				set(me.h.OKVariableStimuli, 'String', str);
-				str=[num2str(me.r.task.nVar(val).offsetstimulus) ';' num2str(me.r.task.nVar(val).offsetvalue)];
-				set(me.h.OKVariableOffset,'String',str);
+				set(me.h.OKVariableStimuli, 'Value', str);
+				str=[num2str(me.r.task.nVar(pos).offsetstimulus) ';' num2str(me.r.task.nVar(pos).offsetvalue)];
+				set(me.h.OKVariableOffset,'Value',str);
 				me.deleteVariable
 			end
 			
@@ -773,8 +771,7 @@ classdef opticka < optickaCore
 					tmp.filename = [me.paths.calibration filesep d(idx).name];
 					if isa(me.r,'runExperiment') && isa(me.r.screen,'screenManager')
 						me.r.screen.gammaTable = tmp;
-						set(me.h.OKUseGamma,'Value',1);
-						set(me.h.OKUseGamma,'String',['None'; 'Gamma'; me.r.screen.gammaTable.analysisMethods]);
+						me.h.OKUseGamma.Items = {'None'; 'Gamma'; me.r.screen.gammaTable.analysisMethods};
 						me.r.screen.gammaTable.choice = 2;
 					end
 				end
@@ -1059,18 +1056,24 @@ classdef opticka < optickaCore
 						me.getStateInfo();
 					end
 					
-					if isprop(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;me.h.OKdrawFixation.Value=me.r.drawFixation;end
-					if isprop(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; me.h.OKdPPMode.String=me.r.dPPMode;end
-					if isprop(tmp.r,'subjectName');me.r.subjectName = tmp.r.subjectName;me.h.OKTrainingName.String = me.r.subjectName;end
-					if isprop(tmp.r,'researcherName');me.r.researcherName = tmp.r.researcherName;me.h.OKTrainingResearcherName.String=me.r.researcherName;end
+					if isprop(tmp.r,'drawFixation');me.r.drawFixation=tmp.r.drawFixation;end
+					if isprop(tmp.r,'dPPMode'); me.r.dPPMode = tmp.r.dPPMode; end
+					if isprop(tmp.r,'subjectName');me.r.subjectName = tmp.r.subjectName;me.h.OKTrainingName.Value = me.r.subjectName;end
+					if isprop(tmp.r,'researcherName');me.r.researcherName = tmp.r.researcherName;me.h.OKTrainingResearcherName.Value=me.r.researcherName;end
 					
-					me.h.OKuseLabJackStrobe.Checked = 'off';
-					me.h.OKuseDataPixx.Checked = 'off';
-					me.h.OKuseDisplayPP.Checked = 'off';
-					me.h.OKuseEyelink.Checked = 'off';
-					me.h.OKuseTobii.Checked = 'on';
-					me.h.OKuseLabJackReward.Checked = 'off';
-					me.h.OKuseArduino.Checked = 'off';
+					me.h.OKuseLabJackStrobe.Checked		= 'off';
+					me.h.OKuseLabJackTStrobe.Checked	= 'off';
+					me.h.OKuseDataPixx.Checked			= 'off';
+					me.h.OKuseDisplayPP.Checked			= 'off';
+					me.h.OKuseEyelink.Checked			= 'on';
+					me.h.OKuseTobii.Checked				= 'off';
+					me.h.OKuseLabJackReward.Checked		= 'off';
+					me.h.OKuseArduino.Checked			= 'off';
+					me.h.OKuseEyeOccluder.Checked		= 'off';
+					me.h.OKuseMagStim.Checked			= 'off';
+					
+					if isprop(tmp.r,'useLabJackTStrobe'); me.r.useLabJackTStrobe = tmp.r.useLabJackTStrobe; end
+					if me.r.useLabJackTStrobe == true; me.h.OKuseLabJackTStrobe.Checked = 'on'; end
 					
 					if isprop(tmp.r,'useDisplayPP'); me.r.useDisplayPP = tmp.r.useDisplayPP; end
 					if me.r.useDisplayPP == true; me.h.OKuseDisplayPP.Checked = 'on'; end
@@ -1078,48 +1081,51 @@ classdef opticka < optickaCore
 					if isprop(tmp.r,'useDataPixx'); me.r.useDataPixx = tmp.r.useDataPixx; end
 					if me.r.useDataPixx == true; me.h.OKuseDataPixx.Checked = 'on'; end
 					
-					if isprop(tmp.r,'useLabJackTStrobe'); me.r.useLabJackTStrobe = tmp.r.useLabJackTStrobe; end
-					if me.r.useLabJackTStrobe == true; me.h.OKuseLabJackTStrobe.Checked = 'on'; end
-					
 					if isprop(tmp.r,'useArduino'); me.r.useArduino = tmp.r.useArduino; end
 					if me.r.useArduino == true; me.h.OKuseArduino.Checked = 'on'; end
 					
-					if isprop(tmp.r,'useEyeLink'); me.r.useEyeLink = tmp.r.useEyeLink; end
-					if me.r.useEyeLink == true; me.h.OKuseEyelink.Checked = 'on'; me.h.OKuseTobii.Checked = 'off';end
-					
 					if isprop(tmp.r,'useTobii'); me.r.useTobii = tmp.r.useTobii; end
 					if me.r.useTobii == true; me.h.OKuseTobii.Checked = 'on'; me.h.OKuseEyelink.Checked = 'off';end
+					
+					if isprop(tmp.r,'useEyeLink'); me.r.useEyeLink = tmp.r.useEyeLink; end
+					if me.r.useEyeLink == true; me.h.OKuseEyelink.Checked = 'on'; me.h.OKuseTobii.Checked = 'off';end
 				end
 				
 				%copy screen parameters
 				if isa(tmp.r.screen,'screenManager')
-					set(me.h.OKscreenXOffset,'String', num2str(tmp.r.screen.screenXOffset));
-					set(me.h.OKscreenYOffset,'String', num2str(tmp.r.screen.screenYOffset));
+					me.h.OKscreenXOffset.Value = num2str(tmp.r.screen.screenXOffset);
+					me.h.OKscreenYOffset.Value = num2str(tmp.r.screen.screenYOffset);
 					
 					%set(me.h.OKNativeBeamPosition,'Value', tmp.r.screen.nativeBeamPosition);
 					
-					list = me.gs(me.h.OKGLSrc);
+					list = me.gi(me.h.OKGLSrc);
 					val = me.findValue(list,tmp.r.screen.srcMode);
-					me.r.screen.srcMode = list{val};
-					set(me.h.OKGLSrc,'Value',val);
+					if ~isempty(val) && val > 0 && val <=length(list)
+						me.r.screen.srcMode = list{val(1)};
+						me.h.OKGLSrc.Value = me.r.screen.srcMode;
+					end
 					
-					list = me.gs(me.h.OKGLDst);
+					list = me.gi(me.h.OKGLDst);
 					val = me.findValue(list,tmp.r.screen.dstMode);
-					me.r.screen.dstMode = list{val};
-					set(me.h.OKGLDst,'Value',val);
+					if ~isempty(val) && val > 0
+						me.r.screen.dstMode = list{val(1)};
+						me.h.OKGLDst.Value = me.r.screen.dstMode;
+					end
 					
-					list = me.gs(me.h.OKbitDepth);
+					list = me.gi(me.h.OKbitDepth);
 					val = me.findValue(list,tmp.r.screen.bitDepth);
-					me.r.screen.bitDepth = list{val};
-					set(me.h.OKbitDepth,'Value',val);
+					if ~isempty(val) && val > 0
+						me.r.screen.bitDepth = list{val(1)};
+						me.h.OKbitDepth.Value = me.r.screen.bitDepth;
+					end
 					
 					set(me.h.OKOpenGLBlending,'Value', tmp.r.screen.blend);
-					set(me.h.OKAntiAliasing,'String', num2str(tmp.r.screen.antiAlias));
+					set(me.h.OKAntiAliasing,'Value', num2str(tmp.r.screen.antiAlias));
 					set(me.h.OKHideFlash,'Value', tmp.r.screen.hideFlash);
 					set(me.h.OKUseRetina,'Value', tmp.r.screen.useRetina);
 					string = num2str(tmp.r.screen.backgroundColour);
 					string = regexprep(string,'\s+',' '); %collapse spaces
-					set(me.h.OKbackgroundColour,'String',string);
+					set(me.h.OKbackgroundColour,'Value',string);
 				else
 					me.salutation('No screenManager settings loaded!','',true);
 				end
@@ -1137,11 +1143,11 @@ classdef opticka < optickaCore
 					end
 				end
 				
-				set(me.h.OKtrialTime, 'String', num2str(me.r.task.trialTime));
-				set(me.h.OKRandomSeed, 'String', num2str(me.r.task.randomSeed));
-				set(me.h.OKisTime,'String',sprintf('%g ',me.r.task.isTime));
-				set(me.h.OKibTime,'String',sprintf('%g ',me.r.task.ibTime));
-				set(me.h.OKnBlocks,'String',num2str(me.r.task.nBlocks));
+				set(me.h.OKtrialTime, 'Value', num2str(me.r.task.trialTime));
+				set(me.h.OKRandomSeed, 'Value', num2str(me.r.task.randomSeed));
+				set(me.h.OKisTime,'Value',sprintf('%g ',me.r.task.isTime));
+				set(me.h.OKibTime,'Value',sprintf('%g ',me.r.task.ibTime));
+				set(me.h.OKnBlocks,'Value',num2str(me.r.task.nBlocks));
 				
 				me.getScreenVals;
 				me.getTaskVals;
@@ -1151,6 +1157,7 @@ classdef opticka < optickaCore
 				me.getTaskVals;
 				
 				if me.r.task.nVars > 0
+					set(me.h.OKAddVariable,'Enable','on');
 					set(me.h.OKDeleteVariable,'Enable','on');
 					set(me.h.OKCopyVariable,'Enable','on');
 					set(me.h.OKEditVariable,'Enable','on');
@@ -1172,7 +1179,6 @@ classdef opticka < optickaCore
 				
 			end
 			me.refreshProtocolsList;
-			setappdata(me.h.output,'o',me);
 		end
 		
 		% ======================================================================
@@ -1221,8 +1227,7 @@ classdef opticka < optickaCore
 				me.h.OKStimList.Items = {};
 				return
 			end
-			v = me.h.OKStimList.Value;
-			pos = find(contains(me.h.OKStimList.Items,v)==true);
+			pos = me.gp(me.h.OKStimList);
 			str = cell(me.r.stimuli.n,1);
 			for i=1:me.r.stimuli.n
 				s = me.r.stimuli{i};
@@ -1332,8 +1337,7 @@ classdef opticka < optickaCore
 				return; 
 			end
 			if ~isempty(me.h.OKVarList.Items) && ~isempty(me.h.OKVarList.Value)
-				v = me.h.OKVarList.Value;
-				pos = find(contains(me.h.OKVarList.Items,v)==true); pos = pos(1);
+				pos = me.gp(me.h.OKVarList);
 			else
 				pos = [];
 			end
@@ -1368,6 +1372,7 @@ classdef opticka < optickaCore
 		% ===================================================================
 		function value = findValue(me,list,entry)
 			value = 1;
+			if ischar(list); list = {list}; end
 			for i=1:length(list)
 				if strcmpi(list{i},entry)
 					value = i;
@@ -1505,6 +1510,7 @@ classdef opticka < optickaCore
 				str = regexprep(str,',$','}');
 			end
 		end
+		
 		% ===================================================================
 		%> @brief gs (getstring)
 		%> 
@@ -1530,6 +1536,32 @@ classdef opticka < optickaCore
 		end
 		
 		% ===================================================================
+		%> @brief gi (getitems) items of a dropdown menu
+		%> 
+		%> @param inhandle handle to UI element
+		% ===================================================================
+		function outv = gi(inhandle)
+			if isprop(inhandle,'Items')
+				outv = inhandle.Items;
+			else
+				outv = {};
+			end
+		end
+		
+		% ===================================================================
+		%> @brief gi (getposition) 1st position of selection in dropdown menu
+		%> 
+		%> @param inhandle handle to UI element
+		% ===================================================================
+		function outv = gp(inhandle)
+			if isprop(inhandle,'Items') && ~isempty(inhandle.Value)
+				outv = find(contains(inhandle.Items,inhandle.Value)==true, 1);
+			else
+				outv = [];
+			end
+		end
+		
+		% ===================================================================
 		%> @brief gd (getdouble)
 		%> 
 		%> @param inhandle handle to UI element
@@ -1538,8 +1570,10 @@ classdef opticka < optickaCore
 		%quick alias to get double value
 			if isprop(inhandle,'String')
 				outv = str2double(inhandle.String);
-			elseif isprop(inhandle,'Value')
+			elseif isprop(inhandle,'Value') && ~isnumeric(inhandle.Value)
 				outv = str2double(inhandle.Value);
+			elseif isprop(inhandle,'Value') && isnumeric(inhandle.Value)
+				outv = inhandle.Value;
 			else
 				outv = [];
 			end
@@ -1556,6 +1590,8 @@ classdef opticka < optickaCore
 				outv = str2num(inhandle.String); %#ok<ST2NM>
 			elseif isprop(inhandle,'Value')
 				outv = str2num(inhandle.Value); %#ok<ST2NM>
+			elseif isprop(inhandle,'Text')
+				outv = str2num(inhandle.Text); %#ok<ST2NM>
 			else
 				outv = '';
 			end

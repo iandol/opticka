@@ -132,7 +132,7 @@ pauseEntryFcn = {
 	@()disp('Paused, press [p] to resume...');
 	@()trackerClearScreen(eL); % blank the eyelink screen
 	@()trackerDrawText(eL,'PAUSED, press [P] to resume...');
-	@()edfMessage(eL,'TRIAL_RESULT -100'); %store message in EDF
+	@()trackerMessage(eL,'TRIAL_RESULT -100'); %store message in EDF
 	@()setOffline(eL); % make sure we set offline
 	@()stopRecording(eL); %stop recording eye position data
 	@()disableFlip(me); % no need to flip the PTB screen
@@ -150,9 +150,9 @@ psEntryFcn = {
 	@()trackerClearScreen(eL); % blank the eyelink screen
 	@()resetFixation(eL); %reset the fixation counters ready for a new trial
 	@()startRecording(eL); % start eyelink recording for this trial
-	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
-	@()edfMessage(eL,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
-	@()edfMessage(eL,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
+	@()trackerMessage(eL,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
+	@()trackerMessage(eL,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
+	@()trackerMessage(eL,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()statusMessage(eL,'Pre-fixation...'); %status text on the eyelink
 	@()trackerDrawFixation(eL); % draw the fixation window
 	@()needEyeSample(me,true); % make sure we start measuring eye position
@@ -197,15 +197,15 @@ maintainFixFcn = {
 
 %-----------------------as we exit stim presentation state
 stimExitFcn = {
-	@()edfMessage(eL,'END_FIX'); % tell EDF we finish fix
-	@()edfMessage(eL,'END_RT'); % tell EDF we finish reaction time
+	@()trackerMessage(eL,'END_FIX'); % tell EDF we finish fix
+	@()trackerMessage(eL,'END_RT'); % tell EDF we finish reaction time
 };
 
 %-----------------------if the subject is correct (small reward)
 correctEntryFcn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()beep(aM,2000); % correct beep
-	@()edfMessage(eL,'TRIAL_RESULT 1'); % tell EDF trial was a correct
+	@()trackerMessage(eL,'TRIAL_RESULT 1'); % tell EDF trial was a correct
 	@()statusMessage(eL,'Correct! :-)'); %show it on the eyelink screen
 	@()trackerDrawText(eL,'Correct! :-)');
 	@()stopRecording(eL); % stop recording for this trial
@@ -235,7 +235,7 @@ breakEntryFcn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerClearScreen(eL);
 	@()trackerDrawText(eL,'Broke fix! :-(');
-	@()edfMessage(eL,'TRIAL_RESULT 0'); %trial incorrect message
+	@()trackerMessage(eL,'TRIAL_RESULT 0'); %trial incorrect message
 	@()stopRecording(eL); %stop eyelink recording data
 	@()setOffline(eL); %set eyelink offline
 	@()needEyeSample(me,false);
@@ -247,7 +247,7 @@ incEntryFcn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerClearScreen(eL);
 	@()trackerDrawText(eL,'Incorrect! :-(');
-	@()edfMessage(eL,'TRIAL_RESULT 0'); %trial incorrect message
+	@()trackerMessage(eL,'TRIAL_RESULT 0'); %trial incorrect message
 	@()stopRecording(eL); % stop eyelink recording data
 	@()setOffline(eL); % set eyelink offline
 	@()needEyeSample(me,false);

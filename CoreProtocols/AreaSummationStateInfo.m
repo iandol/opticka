@@ -131,7 +131,7 @@ pauseEntryFcn = {
 	@()disp('Paused, press [p] to resume...');
 	@()trackerClearScreen(eL); % blank the eyelink screen
 	@()trackerDrawText(eL,'PAUSED, press [P] to resume...');
-	@()edfMessage(eL,'TRIAL_RESULT -100'); %store message in EDF
+	@()trackerMessage(eL,'TRIAL_RESULT -100'); %store message in EDF
 	@()setOffline(eL); % make sure we set offline
 	@()stopRecording(eL); %stop recording eye position data
 	@()disableFlip(me); % no need to flip the PTB screen
@@ -153,9 +153,9 @@ prefixFcn = {};
 fixEntryFcn = { 
 	@()updateFixationValues(eL,tS.fixX,tS.fixY,[],tS.firstFixTime); %reset fixation window
 	@()startRecording(eL); % start eyelink recording for this trial
-	@()edfMessage(eL,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
-	@()edfMessage(eL,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
-	@()edfMessage(eL,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
+	@()trackerMessage(eL,'V_RT MESSAGE END_FIX END_RT'); % Eyelink commands
+	@()trackerMessage(eL,sprintf('TRIALID %i',getTaskIndex(me))); %Eyelink start trial marker
+	@()trackerMessage(eL,['UUID ' UUID(sM)]); %add in the uuid of the current state for good measure
 	@()statusMessage(eL,'Initiate Fixation...'); %status text on the eyelink
 	@()trackerClearScreen(eL); % blank the eyelink screen
 	@()trackerDrawFixation(eL); % draw the fixation window
@@ -179,7 +179,7 @@ fixExitFcn = {
 	@()statusMessage(eL,'Show Stimulus...');
 	@()updateFixationValues(eL,[],[],[],tS.stimulusFixTime); %reset a maintained fixation of 1 second
 	@()show(me.stimuli{1});
-	@()edfMessage(eL,'END_FIX');
+	@()trackerMessage(eL,'END_FIX');
 }; 
 
 %what to run when we enter the stim presentation state
@@ -210,8 +210,8 @@ correctEntryFcn = {
 	@()timedTTL(rM, tS.rewardPin, tS.rewardTime); % send a reward TTL
 	@()beep(aM,2000); % correct beep
 	@()trackerDrawText(eL,'Correct! :-)');
-	@()edfMessage(eL,'END_RT');
-	@()edfMessage(eL,'TRIAL_RESULT 1');
+	@()trackerMessage(eL,'END_RT');
+	@()trackerMessage(eL,'TRIAL_RESULT 1');
 	@()stopRecording(eL);
 	@()setOffline(eL); %set eyelink offline
 	@()needEyeSample(me,false); % no need to collect eye data until we start the next trial
@@ -245,8 +245,8 @@ incEntryFcn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerClearScreen(eL);
 	@()trackerDrawText(eL,'Incorrect! :-(');
-	@()edfMessage(eL,'END_RT');
-	@()edfMessage(eL,'TRIAL_RESULT -5');
+	@()trackerMessage(eL,'END_RT');
+	@()trackerMessage(eL,'TRIAL_RESULT -5');
 	@()stopRecording(eL);
 	@()setOffline(eL); %set eyelink offline
 	@()needEyeSample(me,false);
@@ -275,8 +275,8 @@ breakEntryFcn = {
 	@()beep(aM,400,0.5,1);
 	@()trackerClearScreen(eL);
 	@()trackerDrawText(eL,'Broke maintain fix! :-(');
-	@()edfMessage(eL,'END_RT');
-	@()edfMessage(eL,'TRIAL_RESULT -1');
+	@()trackerMessage(eL,'END_RT');
+	@()trackerMessage(eL,'TRIAL_RESULT -1');
 	@()stopRecording(eL);
 	@()setOffline(eL); %set eyelink offline
 	@()needEyeSample(me,false);

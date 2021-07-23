@@ -346,7 +346,10 @@ classdef screenManager < optickaCore
 				me.isPlusPlus = screenManager.bitsCheckOpen();
 				if me.isPlusPlus
 					fprintf('\tFound Display++ ');
-					if regexpi(me.bitDepth, '^EnableBits')
+					if regexpi(me.bitDepth, 'Bits++','ONCE')
+						if regexpi(me.bitDepth, '^Bits++','ONCE')
+							me.bitDepth = ['Enable' me.bitDepth];
+						end
 						fprintf('-> mode: %s\n', me.bitDepth);
 						PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
 						if regexp(me.bitDepth, 'Color')
@@ -361,7 +364,7 @@ classdef screenManager < optickaCore
 				if ~me.isPlusPlus
 					fprintf('\tNO Display++...\n'); 
 					switch lower(me.bitDepth)
-						case {'hdr'}
+						case {'hdr','enablehdr'}
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 							PsychImaging('AddTask', 'General', 'EnableHDR');
 						case {'native10bit','native11bit','native16bit'}
@@ -372,7 +375,7 @@ classdef screenManager < optickaCore
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 							PsychImaging('AddTask', 'General', ['Enable' me.bitDepth 'ingPointFramebuffer']);
 							fprintf('\n---> screenManager: 32-bit internal / %s Output bit-depth\n', me.bitDepth);
-						case {'peudogray'}
+						case {'pseudogray','enablepseudograyoutput'}
 							PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
 							PsychImaging('AddTask', 'General', 'EnablePseudoGrayOutput');
 							fprintf('\n---> screenManager: Internal processing set to: %s\n', 'PseudoGrayOutput');
