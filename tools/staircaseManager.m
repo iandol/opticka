@@ -1,14 +1,14 @@
 % ========================================================================
-%> @brief [WIP] staircaseManager links a stimulusSequence to Palamedes staircase
+%> @brief [WIP] staircaseManager links a taskSequence to Palamedes staircase
 %> 
-%> Use a stimulusSequence to randomise a variable, then for each value of  
+%> Use a taskSequence to randomise a variable, then for each value of  
 %> that variable, run a Palamedes staricase
 %> 
 % ========================================================================
 classdef staircaseManager < optickaCore & dynamicprops
 	properties
-		%> stimulusSequence task
-		task stimulusSequence
+		%> taskSequence task
+		task taskSequence
 		%> cell structure holding each independant variable staircase
 		stair cell
 		%> verbose

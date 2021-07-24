@@ -1,22 +1,22 @@
-% SACCADE / ANTISACCADE state file, this gets loaded by opticka via 
-% runExperiment class. You can set up any state and define the logic of
-% which functions to run when you enter, are within, or exit a state.
-% Objects provide many methods you can run, like sending triggers, showing
-% stimuli, controlling the eyetracker etc.
+%> SACCADE / ANTISACCADE state file, this gets loaded by opticka via 
+%> runExperiment class. You can set up any state and define the logic of
+%> which functions to run when you enter, are within, or exit a state.
+%> Objects provide many methods you can run, like sending triggers, showing
+%> stimuli, controlling the eyetracker etc.
 %
-% The following class objects are already loaded and available to use: 
+%> The following class objects are already loaded and available to use: 
 %
-% me = runExperiment object
-% io = digital I/O to recording system
-% s = screenManager
-% aM = audioManager
-% sM = State Machine
-% eL = eyetracker manager
-% t  = task sequence (stimulusSequence class)
-% rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
-% bR = behavioural record plot (on screen GUI during task run)
-% me.stimuli = our list of stimuli
-% tS = general struct to hold variables for this run, will be saved as part of the data
+%> me = runExperiment object
+%> io = digital I/O to recording system
+%> s = screenManager
+%> aM = audioManager
+%> sM = State Machine
+%> eL = eyetracker manager
+%> t  = task sequence (stimulusSequence class)
+%> rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
+%> bR = behavioural record plot (on screen GUI during task run)
+%> me.stimuli = our list of stimuli
+%> tS = general struct to hold variables for this run, will be saved as part of the data
 
 %==================================================================
 %------------General Settings-----------------

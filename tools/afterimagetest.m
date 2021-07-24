@@ -53,7 +53,7 @@ stimuli{1} = a;
 stimuli{2} = p;
 
 %-----Setup task
-task						= stimulusSequence();
+task						= taskSequence();
 task.name				= name;
 task.nBlocks			= 10;
 

@@ -1,11 +1,11 @@
 % ========================================================================
-%> @brief stimulusSequence a method of constants variable manager
+%> @brief taskSequence a method of constants variable manager
 %>
 %> This class takes a series of variables (contrast, angle etc) with
 %> a set of values and randomly interleves them into a pseudorandom variable
 %> list each of which has a unique index number. 
 % ========================================================================
-classdef stimulusSequence < optickaCore & dynamicprops
+classdef taskSequence < optickaCore & dynamicprops
 	properties
 		%> whether to randomise (true) or run sequentially (false)
 		randomise logical = true
@@ -105,7 +105,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> nVar template and default values
 		varTemplate struct = struct('name','','stimulus',[],'values',[],'offsetstimulus',[],'offsetvalue',[])
 		%> nVar template and default values
-		blockTemplate struct = struct('values',{'normal'})
+		blockTemplate struct = struct('values',{{'normal'}},'comment','block level variables')
 		%> Set up the task structures needed
 		tProp cell = {'totalRuns',1,'thisBlock',1,'thisRun',1,'isBlank',false,...
 			'isTimeNow',1,'ibTimeNow',1,'response',[],'responseInfo',{},'tick',0,'blankTick',0,...
@@ -125,9 +125,9 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> parsed.
 		%> @return instance of the class.
 		% ===================================================================
-		function me = stimulusSequence(varargin)
+		function me = taskSequence(varargin)
 			
-			args = optickaCore.addDefaults(varargin,struct('name','stimulusSequence'));
+			args = optickaCore.addDefaults(varargin,struct('name','taskSequence'));
 			me=me@optickaCore(args); %superclass constructor
 			me.parseArgs(args,me.allowedProperties);
 			
@@ -203,13 +203,30 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				end
 				
 				% ---- deal with block level variable randomisation
-				me.outBlock = cell(me.nBlocks,1);
-				divBlock = me.nBlocks / length(
-				for i = 1:me.nBlocks
-					me.outBlock{i} = me.blockVar.values{1};
+				if isempty(me.blockVar.values)
+					me.outBlock = {};
+				elseif ~isempty(length(me.blockVar.values)) && length(me.blockVar) > me.nBlocks
+					warning('Your block variables are greater than the number of blocks!')
+					me.outBlock = cell(me.nBlocks,1);
+					for i = 1:me.nBlocks
+						me.outBlock{i} = me.blockVar.values{1};
+					end
+				else
+					divBlock = floor(me.nBlocks / size(me.blockVar.values,1));
+					a = 1;
+					block = {};
+					for i = 1:length(me.blockVar.values)
+						block = [block; repmat(me.blockVar.values(i),divBlock,1)];
+					end
+					while length(block) < me.nBlocks
+						block(end+1) = me.blockVar.values(randi(length(me.blockVar.values)));
+					end
+					[~,idx] = sort(rand(length(block),1));
+					block = block(idx);
+					me.outBlock = block;
 				end
 				
-				% initialize cell array that will hold balanced variables
+				% ---- initialize cell array that will hold balanced variables
 				Vars = cell(me.nBlocks, me.nVars_);
 				Vals = cell(me.nBlocks*me.minBlocks, me.nVars_);
 				Indx = [];
@@ -302,6 +319,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				me.outBlock = {};
 				me.varLabels = {};
 				me.varList = {};
+				me.minBlocks = 1;
 				me.taskInitialised = false;
 				me.taskFinished = false;
 			end
@@ -314,7 +332,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		function initialise(me)
 			me.randomiseStimuli();
 			me.initialiseTask();
-			fprintf('---> stimulusSequence.initialise: Randomised and Initialised!\n');
+			fprintf('---> taskSequence.initialise: Randomised and Initialised!\n');
 		end
 		
 		% ===================================================================
@@ -342,10 +360,10 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%>
 		% ===================================================================
 		function updateTask(me, thisResponse, runTime, info)
-			if ~me.taskInitialised; warning('--->>> stimulusSequence not initialised, cannot update!');return; end
+			if ~me.taskInitialised; warning('--->>> taskSequence not initialised, cannot update!');return; end
 			if me.totalRuns > me.nRuns
 				me.taskFinished = true;
-				fprintf('---> stimulusSequence.updateTask: Task FINISHED, no more updates allowed\n');
+				fprintf('---> taskSequence.updateTask: Task FINISHED, no more updates allowed\n');
 				return
 			end
 			
@@ -368,7 +386,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				randomiseTimes(me);
 			elseif me.totalRuns == me.nRuns
 				me.taskFinished = true;
-				fprintf('---> stimulusSequence.updateTask: Task FINISHED, no more updates allowed\n');
+				fprintf('---> taskSequence.updateTask: Task FINISHED, no more updates allowed\n');
 			end
 		end
 		
@@ -459,7 +477,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 				me.resetLog(myN).aIdx = aIdx;
 				me.resetLog(myN).bIdx = bIdx;
 				success = true;
-				if me.verbose;fprintf('--->>> stimulusSequence.resetRun() Task %i(v=%i): swap with = %i(v=%i) (random choice=%i)\n',me.totalRuns, aIdx, trialToSwap, bIdx, randomChoice);end
+				if me.verbose;fprintf('--->>> taskSequence.resetRun() Task %i(v=%i): swap with = %i(v=%i) (random choice=%i)\n',me.totalRuns, aIdx, trialToSwap, bIdx, randomChoice);end
 			end
 		end
 		
@@ -645,7 +663,7 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		end
 		
 		% ===================================================================
-		%> @brief validate the stimulusSequence is ok
+		%> @brief validate the taskSequence is ok
 		%>
 		%> Check we have a minimal task structure
 		% ===================================================================
@@ -783,23 +801,23 @@ classdef stimulusSequence < optickaCore & dynamicprops
 		%> and use a conditional in set.nVar to do the right thing.
 		% ===================================================================
 		function lobj=loadobj(in)
-			if ~isa(in,'stimulusSequence') && isstruct(in)
-				fprintf('---> stimulusSequence loadobj: Rebuilding  structure...\n');
-				lobj = stimulusSequence;
+			if ~isa(in,'taskSequence') && isstruct(in)
+				fprintf('---> taskSequence loadobj: Rebuilding  structure...\n');
+				lobj = taskSequence;
 				lobj.isLoading = true;
 				fni = fieldnames(in);
 				fn = intersect(lobj.loadProperties,fni);
 				for i=1:length(fn)
 					lobj.(fn{i}) = in.(fn{i});
 				end
-			elseif isa(in,'stimulusSequence')
-				%fprintf('--->  stimulusSequence loadobj: Loading stimulusSequence object...\n');
+			elseif isa(in,'taskSequence')
+				%fprintf('--->  taskSequence loadobj: Loading taskSequence object...\n');
 				in.currentState = []; %lets strip the old random streams
 				in.oldStream = [];
 				in.taskStream = [];
 				lobj = in;
 			else
-				fprintf('--->  stimulusSequence loadobj: Loading stimulusSequence FAILED...\n');
+				fprintf('--->  taskSequence loadobj: Loading taskSequence FAILED...\n');
 			end
 			lobj.isLoading = false;
 		end

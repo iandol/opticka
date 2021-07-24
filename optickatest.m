@@ -128,7 +128,7 @@ myStims{11}=movieStimulus('speed', 1, 'xPosition', -7, 'yPosition', -10,...
 	'name', 'AVI transparent movie');
 
 %% Task Initialisation
-% The stimulusSequence class defines a stimulus sequence (task) which is composed
+% The taskSequence class defines a stimulus sequence (task) which is composed
 % of randomised stimulus parameter changes (called variables) repeated over
 % a set of blocks. A trial is an individual stimulus presentation. This
 % example has three different variables changing over 3*2*2 values (12 unique trials) which is
@@ -136,7 +136,7 @@ myStims{11}=movieStimulus('speed', 1, 'xPosition', -7, 'yPosition', -10,...
 %
 % NOTE: for more complex behavioural tasks, Opticka uses a finite state machine to generate flexible
 % experimental protocols, see stateMachine() for more details.
-myTask = stimulusSequence; %new stimulusSequence object instance
+myTask = taskSequence(); %new taskSequence object instance
 myTask.nBlocks = 2; %number of blocks
 myTask.trialTime = 2; %time of stimulus display: 2 seconds
 myTask.isTime = 0.25; %inter-trial time: 0.25 seconds

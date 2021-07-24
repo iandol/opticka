@@ -1,7 +1,7 @@
 % ========================================================================
 %> @brief runExperiment is the main Experiment manager; Inherits from optickaCore
 %>
-%>RUNEXPERIMENT The main class which accepts a task (stimulusSequence) and 
+%>RUNEXPERIMENT The main class which accepts a task (taskSequence) and 
 %>stimulus (metaStimulus) object and runs the stimuli based on the task object passed.
 %>This class uses the fundamental configuration of the screen (calibration, size
 %>etc. via screenManager), and manages communication to the DAQ systems
@@ -11,11 +11,10 @@
 %>  1) MOC (method of constants) tasks -- uses stimuli and task objects directly to run standard
 %>     randomised variable tasks. See optickatest.m for an example. Does not use the stateMachine.
 %>  2) Behavioural tasks that use state machines for control logic. These
-%>     tasks still use stimuli and task objects to provide stimuli and variable lists), 
-%>but use a state machine to control the task structure.
+%>     tasks still use stimuli and task objects to provide stimuli and variable lists, 
+%>     but use a state machine to control the task structure.
 %>
-%>  stimuli must be metaStimulus class managing gratingStimulus and friends,
-%>  so for example:
+%>  Stimuli must be metaStimulus class, so for example:
 %>
 %>  gStim = gratingStimulus('mask',1,'sf',1);
 %>  myStim = metaStimulus;
@@ -30,7 +29,7 @@ classdef runExperiment < optickaCore
 	properties
 		%> a metaStimulus class holding our stimulus objects
 		stimuli
-		%> the stimulusSequence object(s) for the task
+		%> the taskSequence object(s) for the task
 		task
 		%> screen manager object
 		screen
@@ -521,7 +520,7 @@ classdef runExperiment < optickaCore
 			initialiseSaveFile(me); %generate a savePrefix for this run
 			me.name = [me.subjectName '-' me.savePrefix]; %give us a run name
 			if isempty(me.screen) || isempty(me.task)
-				me.initialise; %we set up screenManager and stimulusSequence objects
+				me.initialise; %we set up screenManager and taskSequence objects
 			end
 			if me.screen.isPTB == false %NEED PTB!
 				errordlg('There is no working PTB available!')
@@ -535,7 +534,7 @@ classdef runExperiment < optickaCore
 			% to keep it light. These defaults may be overwritten by the StateFile.m
 			tS							= struct();
 			tS.name						= 'generic'; %==name of this protocol
-			tS.useTask					= false; %use stimulusSequence (randomised variable task object)
+			tS.useTask					= false; %use taskSequence (randomised variable task object)
 			tS.checkKeysDuringStimulus	= false; %==allow keyboard control? Slight drop in performance
 			tS.keyExclusionPattern		= '^(fixate|stim)';
 			tS.recordEyePosition		= false; %==record eye position within PTB, **in addition** to the EDF?
@@ -965,7 +964,7 @@ classdef runExperiment < optickaCore
 			end
 			
 			if isempty(regexpi('notask',config)) && isempty(me.task)
-				me.task = stimulusSequence();
+				me.task = taskSequence();
 			end
 			
 			if me.useDisplayPP == true
@@ -1099,7 +1098,7 @@ classdef runExperiment < optickaCore
 		function set.verbose(me,value)
 			value = logical(value);
 			me.verbose = value;
-			if isa(me.task,'stimulusSequence') %#ok<*MCSUP>
+			if isa(me.task,'taskSequence') %#ok<*MCSUP>
 				me.task.verbose = value;
 			end
 			if isa(me.screen,'screenManager')
@@ -1507,7 +1506,7 @@ classdef runExperiment < optickaCore
 		% ===================================================================
 		function initialiseTask(me)
 			if isempty(me.task) %we have no task setup, so we generate one.
-				me.task=stimulusSequence;
+				me.task=taskSequence;
 			end
 			me.task.initialise();
 		end
@@ -2330,16 +2329,49 @@ classdef runExperiment < optickaCore
 							fprintf('stateInfoFile assigned');
 						end
 					end
-					if isa(in.task,'stimulusSequence') && ~isObject
+					if isa(in.task,'taskSequence') 
 						lobj.task = in.task;
-						%lobj.previousInfo.task = in.task;
-						fprintf(' | loaded stimulusSequence');
-					elseif isa(lobj.task,'stimulusSequence')
+						fprintf(' | loaded taskSequence');
+					elseif isa(in.task,'stimulusSequence')
+						if isstruct(in.task)
+							tso = in.task;
+						else
+							tso = clone(in.task);
+						end
+						ts = taskSequence();
+						if isprop(tso,'nVar') || isfield(tso,'nVar')
+							ts.nVar = tso.nVar;
+						end
+						if isprop(tso,'nBlocks') || isfield(tso,'nBlocks')
+							ts.nBlocks = in.task.nBlocks;
+						end
+						if isprop(tso,'randomSeed') || isfield(tso,'randomSeed')
+							ts.randomSeed = in.task.randomSeed;
+						end
+						if isfield(tso,'isTime') || isprop(tso,'isTime')
+							ts.isTime = in.task.isTime;
+						end
+						if isfield(tso,'ibTime') || isprop(tso,'ibTime')
+							ts.ibTime = in.task.ibTime;
+						end
+						if isfield(tso,'trialTime') || isprop(tso,'trialTime')
+							ts.trialTime = in.task.trialTime;
+						end
+						if isfield(tso,'randomise') || isprop(tso,'randomise')
+							ts.randomise = in.task.randomise;
+						end
+						if isfield(tso,'realTime') || isprop(tso,'realTime')
+							ts.realTime = in.task.realTime;
+						end
+						lobj.task = ts;
+						fprintf(' | reconstructed taskSequence %s from %s',ts.fullName,tso.fullName);
+						clear tso ts
+					elseif isa(lobj.task,'taskSequence')
 						lobj.previousInfo.task = in.task;
-						fprintf(' | inherited stimulusSequence');
+						fprintf(' | inherited taskSequence');
 					else
-						lobj.task = stimulusSequence();
-						fprintf(' | new stimulusSequence');
+						lobj.task = taskSequence();
+						fprintf(' | new taskSequence');
 					end
 					if ~isObject && isfield(in,'verbose')
 						lobj.verbose = in.verbose;

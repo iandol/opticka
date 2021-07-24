@@ -13,7 +13,7 @@
 
 %------------General Settings-----------------
 tS.rewardTime = 150; %==TTL time in milliseconds
-tS.useTask = true; %==use stimulusSequence (randomised variable task object)
+tS.useTask = true; %==use taskSequence (randomised variable task object)
 tS.checkKeysDuringStimulus = false; %==allow keyboard control? Slight drop in performance
 tS.recordEyePosition = false; %==record eye position within PTB, **in addition** to the EDF?
 tS.askForComments = true; %==little UI requestor asks for comments before/after run

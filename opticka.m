@@ -614,7 +614,7 @@ classdef opticka < optickaCore
 					v = 1;
 					me.store.visibleStimulus = me.r.stimuli{1};
 				else
-					v = me.gp(me.h.OKStimList);
+					v = me.gp(me.h.OKStimList); if v==0;v=1;end
 					if strcmpi(me.r.stimuli{v}.uuid,me.store.visibleStimulus.uuid)
 						skip = true;
 					end
@@ -808,7 +808,7 @@ classdef opticka < optickaCore
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
 				if ispref('opticka',prfname) %pref exists
-					if isfield(me.h, prfname) %ui widget exists
+					if isprop(me.h, prfname) %ui widget exists
 						myhandle = me.h.(prfname);
 						prf = getpref('opticka',prfname);
 						uiType = myhandle.Type;
@@ -825,7 +825,7 @@ classdef opticka < optickaCore
 								end
 							case 'uidropdown'
 								str = myhandle.Items;
-								if ischar(prf) && contains(str,prf)
+								if ischar(prf) & contains(str,prf)
 									myhandle.Value = prf;
 								end
 						end
@@ -842,7 +842,7 @@ classdef opticka < optickaCore
 		function savePrefs(me)
 			for i = 1:length(me.uiPrefsList)
 				prfname = me.uiPrefsList{i};
-				if ~isfield(me.h,prfname); continue; end
+				if ~isprop(me.h,prfname); continue; end
 				myhandle = me.h.(prfname);
 				uiType = myhandle.Type;
 				switch uiType
@@ -980,11 +980,10 @@ classdef opticka < optickaCore
 
 			if ui == true
 				v = me.gv(me.h.OKProtocolsList);
-				s = me.h.OKProtocolsList.String;
-				if isempty(s)
+				if isempty(v)
 					[file,p] = uigetfile('*.mat','Select an Opticka Protocol (saved as a .mat)');
 				else
-					file = s{v};
+					file = v;
 					p = me.paths.protocols;
 				end
 			else
@@ -992,11 +991,14 @@ classdef opticka < optickaCore
 			end
 			
 			if isempty(file) | file == 0
-				disp('No file specified...')
+				disp('--->>> Opticka loadProtocol: No file specified...')
 				return
 			end
 			cd(p);
 			load(file);
+			
+			if ~isa(tmp,'opticka');warndlg('This is not an opticka protocol file...');return;end
+			
 			me.paths.protocols = p;
 			
 			me.comment = ['Prt: ' file];
@@ -1556,6 +1558,9 @@ classdef opticka < optickaCore
 		function outv = gp(inhandle)
 			if isprop(inhandle,'Items') && ~isempty(inhandle.Value)
 				outv = find(contains(inhandle.Items,inhandle.Value)==true, 1);
+			elseif isprop(inhandle,'Items') && ~isempty(inhandle.Items) && isempty(inhandle.Value)
+				inhandle.Value = inhandle.Items{1};
+				outv = 1;
 			else
 				outv = [];
 			end

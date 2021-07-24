@@ -8,7 +8,7 @@
 % aM = audioManager
 % sM = State Machine
 % eL = eyetracker manager
-% t  = task sequence (stimulusSequence class)
+% t  = task sequence (taskSequence class)
 % rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 % bR = behavioural record plot (on screen GUI during task run)
 % me.stimuli = our list of stimuli
@@ -16,7 +16,7 @@
 %
 %------------General Settings-----------------
 %------------General Settings-----------------
-tS.useTask              = false; %==use stimulusSequence (randomised variable task object)
+tS.useTask              = false; %==use taskSequence (randomised variable task object)
 tS.rewardTime           = 300; %==TTL time in milliseconds
 tS.rewardPin            = 2; %==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance

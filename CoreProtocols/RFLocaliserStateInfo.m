@@ -14,14 +14,14 @@
 % aM = audioManager
 % sM = State Machine
 % eL = eyetracker manager
-% t  = task sequence (stimulusSequence class)
+% t  = task sequence (taskSequence class)
 % rM = Reward Manager (LabJack or Arduino TTL trigger to reward system/Magstim)
 % bR = behavioural record plot (on screen GUI during task run)
 % me.stimuli = our list of stimuli
 % tS = general struct to hold variables for this run, will be saved after experiment run
 
 %------------General Settings-----------------
-tS.useTask              = false; %==use stimulusSequence (randomised variable task object)
+tS.useTask              = false; %==use taskSequence (randomised variable task object)
 tS.rewardTime           = 300; %==TTL time in milliseconds
 tS.rewardPin            = 2; %==Output pin, 2 by default with Arduino.
 tS.checkKeysDuringStimulus = true; %==allow keyboard control? Slight drop in performance
@@ -69,11 +69,11 @@ eL.updateFixationValues(tS.fixX, tS.fixY, tS.firstFixInit, tS.firstFixTime, tS.f
 
 %-------------------randomise stimulus variables every trial?-----------
 % if you want to have some randomisation of stimuls variables without
-% using stimulusSequence task, you can uncomment this and runExperiment can
+% using taskSequence task, you can uncomment this and runExperiment can
 % use this structure to change e.g. X or Y position, size, angle
 % see metaStimulus for more details. Remember this will not be "Saved" for
 % later use, if you want to do controlled methods of constants experiments
-% use stimulusSequence to define proper randomised and balanced variable
+% use taskSequence to define proper randomised and balanced variable
 % sets and triggers to send to recording equipment etc...
 %
 % me.stimuli.choice				= [];
